@@ -7,6 +7,10 @@ import type { BlokConfig, OutputData, SanitizerConfig } from '../../../../types'
 import type { SavedData } from '../../../../types/data-formats';
 import * as sanitizer from '../../../../src/components/utils/sanitizer';
 import * as utils from '../../../../src/components/utils';
+import { BlockChanged } from '../../../../src/components/events';
+import { EventsDispatcher } from '../../../../src/components/utils/events';
+import type { BlokEventMap } from '../../../../src/components/events';
+import type { BlockMutationEvent } from '../../../../types/events/block';
 
 /**
  * What a tool's `save()` may resolve. Every field is optional: the saver's
@@ -63,6 +67,8 @@ interface CreateSaverOptions {
   onError?: BlokConfig['onError'];
   dataModel?: BlokConfig['dataModel'];
   renderer?: RendererStub;
+  /** Wire the real event bus, so a BlockChanged emit reaches the saver itself. */
+  liveEvents?: boolean;
 }
 
 const createBlockMock = (options: BlockMockOptions): BlockMock => {
@@ -111,11 +117,13 @@ const createSaver = (options: CreateSaverOptions = {}): { saver: Saver; eventsDi
     ...(options.dataModel !== undefined ? { dataModel: options.dataModel } : {}),
   };
 
-  const eventsDispatcher = {
-    on: vi.fn(),
-    off: vi.fn(),
-    emit: vi.fn(),
-  } as unknown as Saver['eventsDispatcher'];
+  const eventsDispatcher = (options.liveEvents === true
+    ? new EventsDispatcher<BlokEventMap>()
+    : {
+      on: vi.fn(),
+      off: vi.fn(),
+      emit: vi.fn(),
+    }) as unknown as Saver['eventsDispatcher'];
 
   const saver = new Saver({
     config,
@@ -184,6 +192,15 @@ const blockById = (result: OutputData | undefined, id: string): OutputData['bloc
 
 const gridOf = (result: OutputData | undefined, id: string): unknown[][] =>
   (blockById(result, id)?.data as { content: unknown[][] }).content;
+
+/** The change signal the BlockManager emits on every block mutation. */
+const emitBlockChanged = (eventsDispatcher: Saver['eventsDispatcher'], blockId: string): void => {
+  eventsDispatcher.emit(BlockChanged, {
+    event: new CustomEvent('block-changed', {
+      detail: { target: { id: blockId } },
+    }) as unknown as BlockMutationEvent,
+  });
+};
 
 describe('Saver — mutation coverage', () => {
   beforeEach(() => {
@@ -289,7 +306,7 @@ describe('Saver — mutation coverage', () => {
       expect(result?.blocks[0].data).toStrictEqual({ text: 'Arrives with the render' });
     });
 
-    it('shares one in-flight save between two concurrent host callers', async () => {
+    it('shares one in-flight save between two concurrent host callers while the document is unchanged', async () => {
       const block = createBlockMock({ id: 'shared-1', tool: 'paragraph', data: { text: 'Read once' } });
       const { saver } = createSaver({ blocks: [block.block] });
 
@@ -297,6 +314,27 @@ describe('Saver — mutation coverage', () => {
 
       expect(block.saveMock).toHaveBeenCalledTimes(1);
       expect(first).toBe(second);
+    });
+
+    it('refuses to share the in-flight save with a caller that arrived after a document change', async () => {
+      const block = createBlockMock({ id: 'shared-2', tool: 'paragraph', data: { text: 'Before the edit' } });
+      const { saver, eventsDispatcher } = createSaver({
+        blocks: [block.block],
+        liveEvents: true,
+      });
+
+      const first = saver.save();
+
+      // The edit lands while the first serialization is still in flight — the
+      // shared promise predates it, so handing it over loses the edit.
+      block.saveMock.mockResolvedValue({ id: 'shared-2', tool: 'paragraph', data: { text: 'After the edit' }, time: 0 });
+      emitBlockChanged(eventsDispatcher, 'shared-2');
+
+      const second = await saver.save();
+
+      expect(second?.blocks[0].data).toStrictEqual({ text: 'After the edit' });
+      expect(block.saveMock).toHaveBeenCalledTimes(2);
+      expect(await first).not.toBe(second);
     });
 
     it('never serves an internal save from the host dedup slot', async () => {

@@ -30,7 +30,16 @@ export class Uploader {
 
   public async handleFile(file: File, options: UploadOptions = {}): Promise<FileUploadResult> {
     this.validateFile(file);
+    // Nested rather than reordered: a configured `endpoints` still has to beat
+    // the editor-level uploader, so the routing swap happens inside this
+    // branch. `api.uploader` resolves this tool's own uploader ahead of the
+    // editor-level one, so the same uploader runs — and only this route records
+    // the asset for the orphan sweep.
     if (this.config.uploader?.uploadByFile) {
+      if (this.assets?.isConfigured('file', 'uploadByFile')) {
+        return this.assets.uploadByFile(file, { kind: 'file', tool: 'file', onProgress: options.onProgress });
+      }
+
       return this.config.uploader.uploadByFile(file, { onProgress: options.onProgress });
     }
 
@@ -53,6 +62,10 @@ export class Uploader {
   public async handleUrl(raw: string, options: UploadOptions = {}): Promise<FileUploadResult> {
     this.validateUrl(raw);
     if (this.config.uploader?.uploadByUrl) {
+      if (this.assets?.isConfigured('file', 'uploadByUrl')) {
+        return this.assets.uploadByUrl(raw, { kind: 'file', tool: 'file', onProgress: options.onProgress });
+      }
+
       return this.config.uploader.uploadByUrl(raw, { onProgress: options.onProgress });
     }
 

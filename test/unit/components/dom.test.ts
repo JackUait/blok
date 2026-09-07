@@ -106,6 +106,9 @@ describe('Dom helper utilities', () => {
       expect(parent.children[1]).toBe(second);
     });
 
+    // Identity, not shape: three empty spans compare equal under toEqual, so an
+    // assertion on the array of nodes passes in any order and cannot see the
+    // reverse() that keeps the caller's order.
     it('prepends arrays with preserved order via prepend()', () => {
       const parent = document.createElement('div');
       const initial = document.createElement('span');
@@ -115,7 +118,9 @@ describe('Dom helper utilities', () => {
       parent.appendChild(initial);
       Dom.prepend(parent, [first, second]);
 
-      expect(Array.from(parent.children)).toEqual([second, first, initial]);
+      expect(parent.children[0]).toBe(first);
+      expect(parent.children[1]).toBe(second);
+      expect(parent.children[2]).toBe(initial);
     });
   });
 

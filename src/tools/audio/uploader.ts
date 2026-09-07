@@ -61,9 +61,8 @@ export class Uploader {
       );
     }
 
-    if (this.config.uploader?.uploadByUrl) {
-      return this.config.uploader.uploadByUrl(share?.url ?? raw, { onProgress: options.onProgress });
-    }
+    // Asked before the tool's own uploader on purpose: this route resolves to
+    // the same uploader and is the only one that records for the orphan sweep.
     if (this.assets?.isConfigured('audio', 'uploadByUrl')) {
       return this.assets.uploadByUrl(share?.url ?? raw, {
         kind: 'audio',
@@ -71,17 +70,20 @@ export class Uploader {
         onProgress: options.onProgress,
       });
     }
+    if (this.config.uploader?.uploadByUrl) {
+      return this.config.uploader.uploadByUrl(share?.url ?? raw, { onProgress: options.onProgress });
+    }
 
     return { url: share?.url ?? raw };
   }
 
   public async handleFile(file: File, options: UploadOptions = {}): Promise<UploadResult> {
     this.validateFile(file);
-    if (this.config.uploader?.uploadByFile) {
-      return this.config.uploader.uploadByFile(file, { onProgress: options.onProgress });
-    }
     if (this.assets?.isConfigured('audio', 'uploadByFile')) {
       return this.assets.uploadByFile(file, { kind: 'audio', tool: 'audio', onProgress: options.onProgress });
+    }
+    if (this.config.uploader?.uploadByFile) {
+      return this.config.uploader.uploadByFile(file, { onProgress: options.onProgress });
     }
 
     return { url: URL.createObjectURL(file), fileName: file.name };

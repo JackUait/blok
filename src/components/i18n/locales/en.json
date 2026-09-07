@@ -19,6 +19,8 @@
   "toolbox.sectionColor": "Color",
   "popover.nothingFound": "Nothing found",
   "popover.convertTo": "Convert to",
+  "emoji.search": "Search emoji",
+  "emoji.nothingFound": "No emoji found",
   "toolNames.text": "Text",
   "toolNames.heading": "Heading",
   "toolNames.link": "Link",

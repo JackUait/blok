@@ -8,7 +8,6 @@ import { expect, gotoTestPage, test } from '../helpers/shared-page';
 const HOLDER_ID = 'blok';
 const SETTINGS_BUTTON = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const POPOVER = '[data-blok-testid="block-tunes-popover"]';
-const POPOVER_CONTEXT_LABEL = `${POPOVER} [data-blok-testid="popover-context-label"]`;
 
 declare global {
   interface Window {
@@ -23,10 +22,6 @@ const TWO_PARAGRAPHS: OutputData = {
   ],
 };
 
-/**
- * Build a Blok instance with a non-English locale so we can assert the
- * multi-select block-settings header is translated rather than hard-coded.
- */
 const createLocalizedBlok = async (page: Page, locale: string, data: OutputData): Promise<void> => {
   await gotoTestPage(page);
   await page.waitForFunction(() => typeof window.Blok === 'function');
@@ -73,7 +68,7 @@ test.beforeAll(async () => {
   await ensureBlokBundleBuilt();
 });
 
-test('multi-select block settings header is localized', async ({ page }) => {
+test('multi-select menus start with localized actions without a block label', async ({ page }) => {
   await createLocalizedBlok(page, 'ru', TWO_PARAGRAPHS);
 
   await selectBlocksByIndex(page, [0, 1]);
@@ -87,8 +82,10 @@ test('multi-select block settings header is localized', async ({ page }) => {
   await expect(settingsButton).toBeVisible();
   await settingsButton.click();
 
-  const header = page.locator(POPOVER_CONTEXT_LABEL);
+  const menu = page.locator(POPOVER);
 
-  await expect(header).toBeVisible();
-  await expect(header).toHaveText('Блоков: 2');
+  await expect(menu.getByRole('menuitem').first()).toHaveAccessibleName('Преобразовать в');
+  await expect(menu.getByRole('menuitem', { name: 'Дублировать', exact: true })).toBeVisible();
+  await expect(menu.getByTestId('popover-context-label')).toHaveCount(0);
+  await expect(menu.locator('[data-blok-item-name="block-identity"]')).toHaveCount(0);
 });

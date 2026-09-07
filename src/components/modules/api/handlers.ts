@@ -1,6 +1,7 @@
 import type { Handlers, LiveHandlers } from '../../../../types/api';
 import { Module } from '../../__module';
 import { isFunction } from '../../utils';
+import { composePersistenceSave } from '../../utils/persistence';
 
 /**
  * @class HandlersAPI
@@ -35,6 +36,13 @@ export class HandlersAPI extends Module {
    * handler without knowing about the others. A key whose value is `undefined`
    * (or anything non-callable) unsets the handler — the clearing direction is
    * what keeps callback presence genuinely reactive instead of a one-way latch.
+   *
+   * `onSave` is the one key that is not written straight through. When the
+   * editor was configured with `persistence`, its save queue is part of that
+   * key's value, and a plain assignment here would drop the endpoint, the
+   * retries, the unload guard and the orphan sweep on the floor — permanently,
+   * because nothing else can reach the queue. The host's handler is composed
+   * with the queue instead, and unsetting it unsets only the host's half.
    * @param handlers - partial map of live handlers to install or unset
    */
   public set(handlers: LiveHandlers): void {
@@ -44,8 +52,15 @@ export class HandlersAPI extends Module {
       }
 
       const value = handlers[key];
+      const handler = isFunction(value) ? value : undefined;
 
-      this.config[key] = isFunction(value) ? value : undefined;
+      if (key === 'onSave') {
+        this.config.onSave = composePersistenceSave(this.config.persistence, handler);
+
+        return;
+      }
+
+      this.config[key] = handler;
     };
 
     apply('onChange');

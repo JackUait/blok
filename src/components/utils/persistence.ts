@@ -5,11 +5,22 @@ import { attachOrphanSweep, createOrphanSweep } from './orphan-sweep';
 /**
  * What `persistence.load` may answer with: the document, a versioned envelope
  * around it, or nothing.
+ *
+ * `undefined` is in the union even though the published type stops at `null`,
+ * because `const row = await db.get(id); if (!row) return; return row.doc;` is
+ * the natural shape of a load and it resolves `undefined`. TypeScript refuses
+ * that in a strict host and nothing refuses it in a JavaScript one.
  */
-type LoadResult = OutputData | PersistedDocument | null;
+type LoadResult = OutputData | PersistedDocument | null | undefined;
+
+/** What the published type promises `persistence.load` resolves with. */
+type PublishedLoadResult = OutputData | PersistedDocument | null;
 
 /** The expanded `persistence` block one editor's queue and sweep are keyed by. */
 type ExpandedPersistence = NonNullable<BlokConfig['persistence']>;
+
+/** A live save handler — the queue's pump and a host's `onSave` share the shape. */
+type SaveHandler = NonNullable<BlokConfig['onSave']>;
 
 /**
  * How long to wait before each retry of a rejecting save, in milliseconds. One
@@ -25,6 +36,18 @@ type ExpandedPersistence = NonNullable<BlokConfig['persistence']>;
 const RETRY_DELAYS_MS = [500, 2000];
 
 /**
+ * How many rejections IN A ROW make an outage worth reporting, counted across
+ * payloads rather than within one.
+ *
+ * Per-payload counting starves `onError` completely while the user types: every
+ * delivery supersedes the payload in flight, so no payload ever reaches its
+ * third attempt and the report never fires — measured at zero over thirty
+ * seconds of editing against a dead endpoint. A landed save resets the count,
+ * so a blip inside a healthy run still says nothing.
+ */
+const REPORTABLE_FAILURE_RUN = RETRY_DELAYS_MS.length + 1;
+
+/**
  * Unwraps the versioned envelope a store may answer with, so the rest of the
  * editor only ever sees a document. `data` is the discriminator — `OutputData`
  * has no such key.
@@ -35,7 +58,15 @@ const RETRY_DELAYS_MS = [500, 2000];
  * @param loaded - whatever `persistence.load()` resolved with
  */
 export function unwrapPersistedDocument(loaded: LoadResult): OutputData | null {
-  if (loaded !== null && 'data' in loaded) {
+  // Anything that is not an object cannot be a document, and `in` throws on
+  // every one of them. The only trace of that throw was a console line: it
+  // escapes core's render(), so `isReady` rejects and the editor comes up with
+  // no blocks at all — not even the default paragraph.
+  if (typeof loaded !== 'object' || loaded === null) {
+    return null;
+  }
+
+  if ('data' in loaded) {
     return loaded.data;
   }
 
@@ -53,6 +84,54 @@ export function unwrapPersistedDocument(loaded: LoadResult): OutputData | null {
  * unwritten save.
  */
 const disposers = new WeakMap<ExpandedPersistence, () => void>();
+
+/**
+ * The queue's own entry point, kept OFF `config.onSave` and keyed by the same
+ * handle as the disposer and the candidate set.
+ *
+ * `config.onSave` is public and writable at runtime: `handlers.set({ onSave })`
+ * assigns straight onto the object core holds, and every React and Angular host
+ * reaches that setter without asking for it. While the pump lived in that key,
+ * one such write replaced it — and `persistence.save` has exactly one call site,
+ * inside the closure that key held, so the endpoint became unreachable for the
+ * life of the editor with no error anywhere.
+ */
+const pumps = new WeakMap<ExpandedPersistence, SaveHandler>();
+
+/**
+ * The `onSave` an editor should carry: the persistence queue's pump, the host's
+ * own handler, or both.
+ *
+ * Both is the answer whenever both exist. A host `onSave` is not a replacement
+ * for a configured endpoint — the adapters synthesize one for their own
+ * bindings (`v-model:data`, `[formControl]`), so treating its presence as "the
+ * host took over saving" silently unplugged the endpoint the host explicitly
+ * configured.
+ *
+ * The pump runs FIRST so a throwing host handler cannot cost the document its
+ * save.
+ * @param persistence - the editor's expanded `persistence` block, if it has one
+ * @param hostOnSave - the handler the host wants called, if any
+ */
+export function composePersistenceSave(
+  persistence: ExpandedPersistence | undefined,
+  hostOnSave: SaveHandler | undefined
+): SaveHandler | undefined {
+  const pump = persistence === undefined ? undefined : pumps.get(persistence);
+
+  if (pump === undefined) {
+    return hostOnSave;
+  }
+
+  if (hostOnSave === undefined) {
+    return pump;
+  }
+
+  return (data, api): void => {
+    pump(data, api);
+    hostOnSave(data, api);
+  };
+}
 
 /**
  * Drop the unload guard an editor's save queue is holding.
@@ -82,6 +161,11 @@ export function releasePersistenceQueue(owner: ExpandedPersistence | undefined):
 /**
  * Turns a `persistence` block into the `onSave` handler the editor already has.
  *
+ * A host that set `onSave` itself keeps it — it is called alongside the queue,
+ * not instead of it. The queue is what carries the endpoint, the retries, the
+ * unload guard and the orphan sweep, and none of that is something a host
+ * callback replaces.
+ *
  * Loading is deliberately NOT wired into `data`: that key is read synchronously
  * while the config is normalized, so it cannot hold a promise. The editor awaits
  * `load()` once, right before its first render.
@@ -100,7 +184,7 @@ export function releasePersistenceQueue(owner: ExpandedPersistence | undefined):
 export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
   const persistence = config.persistence;
 
-  if (persistence === undefined || config.onSave !== undefined) {
+  if (persistence === undefined) {
     return config;
   }
 
@@ -120,10 +204,19 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
     cancelBackoff: (() => void) | null;
     guarding: boolean;
     /**
-     * Set once the editor is gone. A save still in flight then runs to its own
-     * end — it can reject, back off and park long afterwards — and every one of
-     * those steps re-reads the queue's state, so without this the queue would
-     * re-attach the listener the release just took off.
+     * Rejections in a row, counted ACROSS payloads and reset by a save that
+     * lands. Reporting an outage per payload never fires while the user types.
+     */
+    failures: number;
+    /**
+     * Set once the editor is gone. The queue stops there: no retry, no new
+     * save, no sweep and no `onError`. A retry of a destroyed editor can land
+     * after the replacement editor's first save and write an older document
+     * over a newer one — the out-of-order write this queue exists to prevent —
+     * and a sweep would delete files with no undo left to put the block back.
+     *
+     * The one thing that cannot be stopped is the `save()` call already in
+     * flight when the release ran; its result is discarded.
      */
     released: boolean;
   } = {
@@ -133,6 +226,7 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
     parked: false,
     cancelBackoff: null,
     guarding: false,
+    failures: 0,
     released: false,
   };
 
@@ -175,7 +269,30 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
     };
   });
 
+  /**
+   * Report the rejection of a payload a newer one has already replaced.
+   *
+   * Nothing is parked and nothing is retried — the newer payload carries this
+   * one's content. Only the run of failures is news, and only once it is long
+   * enough to mean an outage rather than a blip.
+   * @param outage - true once enough saves have rejected in a row
+   * @param error - whatever `save` rejected with
+   */
+  const reportSuperseded = (outage: boolean, error: unknown): void => {
+    if (outage) {
+      persistence.onError?.(error);
+    }
+  };
+
   const attemptSave = async (payload: OutputData, attempt: number): Promise<void> => {
+    if (queue.released) {
+      return;
+    }
+
+    // Taken BEFORE the save leaves: an upload that resolves while it is in
+    // flight must not be swept by it. See `beginSave` in orphan-sweep.ts.
+    const recordedBefore = sweep.beginSave();
+
     try {
       const result = await persistence.save(payload, { version: queue.version });
 
@@ -184,11 +301,26 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
       if (result != null && typeof result.version === 'string') {
         queue.version = result.version;
       }
+
+      queue.failures = 0;
     } catch (error: unknown) {
+      if (queue.released) {
+        return;
+      }
+
+      queue.failures += 1;
+
+      // Reporting and retrying are separate questions, and conflating them
+      // costs the document attempts: a payload delivered after a long outage
+      // would be parked on its first rejection instead of retried.
+      const outage = queue.failures >= REPORTABLE_FAILURE_RUN;
+
       // A newer document is already queued, so this one's content is
-      // superseded: retrying it would write stale content, and its failure is
-      // not a loss to report because the newer payload carries it.
+      // superseded: retrying it would write stale content, and it must not be
+      // parked because the newer payload already carries its content.
       if (queue.pending !== null) {
+        reportSuperseded(outage, error);
+
         return;
       }
 
@@ -205,7 +337,15 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
 
       await backoff(RETRY_DELAYS_MS[attempt]);
 
+      if (queue.released) {
+        return;
+      }
+
+      // Superseded while the backoff ran. This is the branch a typing user
+      // takes every time, so it is the one an outage has to be reportable from.
       if (queue.pending !== null) {
+        reportSuperseded(outage, error);
+
         return;
       }
 
@@ -213,6 +353,19 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
       // is finished either way.
       await attemptSave(payload, attempt + 1);
 
+      return;
+    }
+
+    if (queue.released) {
+      return;
+    }
+
+    // A newer payload is already queued, and IT is the live document: the one
+    // that just landed may have dropped a URL the newer one still names — an
+    // undo, or an image added while this save was in flight. Sweeping now would
+    // delete a file a visible block points at. The candidates stay recorded, so
+    // the save that drains the queue sweeps them against the newest document.
+    if (queue.pending !== null) {
       return;
     }
 
@@ -224,11 +377,11 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
     // The sweep sits after the catch rather than inside the try so that nothing
     // it does can be mistaken for the save rejecting — a retry here would write
     // the document a second time.
-    await sweep.sweep(payload);
+    await sweep.sweep(payload, recordedBefore);
   };
 
   const drain = (): void => {
-    if (queue.inFlight !== null || queue.pending === null || queue.parked) {
+    if (queue.released || queue.inFlight !== null || queue.pending === null || queue.parked) {
       return;
     }
 
@@ -245,14 +398,20 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
 
   const expanded = {
     ...persistence,
-    load: async (): Promise<LoadResult> => {
-      const loaded = await persistence.load();
+    load: async (): Promise<PublishedLoadResult> => {
+      const loaded: LoadResult = await persistence.load();
 
-      if (loaded !== null && 'data' in loaded && typeof loaded.version === 'string') {
+      // Same guard as unwrapPersistedDocument, and needed independently: this
+      // wrapper runs FIRST, so an unguarded `in` here throws before the unwrap
+      // is ever reached.
+      if (typeof loaded === 'object' && loaded !== null && 'data' in loaded && typeof loaded.version === 'string') {
         queue.version = loaded.version;
       }
 
-      return loaded;
+      // Normalized so only ONE shape of "nothing saved yet" leaves this wrapper.
+      // The published type promises `null`, and everything downstream — core's
+      // render gate included — is written against it.
+      return loaded ?? null;
     },
   };
 
@@ -268,19 +427,25 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
     queue.released = true;
     queue.guarding = false;
     window.removeEventListener('beforeunload', guardUnload);
+    // A backoff is a live timer holding a retry: without waking it the retry
+    // fires up to 2s after the editor is gone, and `released` is only read once
+    // the timer resolves.
+    queue.cancelBackoff?.();
+  });
+
+  pumps.set(expanded, (data: OutputData): void => {
+    queue.pending = data;
+    queue.parked = false;
+    // A backoff still running belongs to a document this one replaces; waking
+    // it now lets the queue move on to the newest payload immediately.
+    queue.cancelBackoff?.();
+    syncUnloadGuard();
+    drain();
   });
 
   return {
     ...config,
     persistence: expanded,
-    onSave: (data: OutputData): void => {
-      queue.pending = data;
-      queue.parked = false;
-      // A backoff still running belongs to a document this one replaces; waking
-      // it now lets the queue move on to the newest payload immediately.
-      queue.cancelBackoff?.();
-      syncUnloadGuard();
-      drain();
-    },
+    onSave: composePersistenceSave(expanded, config.onSave),
   };
 }

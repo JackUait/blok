@@ -87,6 +87,9 @@ export class PopoverInline extends PopoverDesktop {
     super(
       {
         ...params,
+        items: params.items.map(item => 'children' in item && item.children !== undefined
+          ? { ...item, children: { ...item.children, placement: item.children.placement ?? 'below' } }
+          : item),
         flipper: inlineFlipper,
       },
       {
@@ -135,12 +138,11 @@ export class PopoverInline extends PopoverDesktop {
       );
     }
 
-    // Apply inline items container styles: a five-column grid with the convert
-    // row and separator stretched across the full width.
+    // Keep configured tool order while allowing narrow screens to wrap.
     if (this.nodes.items) {
       this.nodes.items.className = twMerge(css.items, cssInline.items);
     }
-    this.applyGridItemSpans();
+    this.styleConvertControl();
 
     // Set inline height CSS variables
     this.nodes.popover.style.setProperty('--height', INLINE_HEIGHT);
@@ -170,22 +172,15 @@ export class PopoverInline extends PopoverDesktop {
   }
 
   /**
-   * Dress the convert row as the card's header — the current block's identity
-   * badge plus its turn-into affordance — and stretch it and the separators
-   * across the full grid width. Item elements are owned by the popover-item
-   * components, so their look is patched here where the grid card is defined:
-   * the icon gets the canonical squircle chip back (the inline item style
-   * strips it for the icon-only formatting buttons), the row grows to chip
-   * height with a chip-to-label gap, and the chevron nudges toward the
-   * submenu on row hover and holds that position while the submenu is open.
+   * Conversion keeps its label and fixed icon box beside the icon-only tools.
    */
-  private applyGridItemSpans(): void {
+  private styleConvertControl(): void {
     const root = this.nodes.popover;
 
     for (const convertEl of root.querySelectorAll(`[${DATA_ATTR.itemName}="convert-to"]`)) {
       // group/convert is named so only row hover, not whole-card hover,
       // drives the chevron motion below.
-      convertEl.className = twMerge(convertEl.className, 'col-span-full w-full max-h-9 gap-2 group/convert');
+      convertEl.className = twMerge(convertEl.className, 'w-auto max-w-full min-w-0 py-2 gap-2 group/convert mobile:basis-full');
 
       for (const icon of convertEl.querySelectorAll('[data-blok-testid="popover-item-icon"]')) {
         icon.className = popoverItemCls.icon;
@@ -199,19 +194,20 @@ export class PopoverInline extends PopoverDesktop {
         .querySelectorAll('[data-blok-testid="popover-item-chevron-right"]')
         .forEach((chevron) => chevron.classList.add(
           'ml-auto',
+          'rotate-90',
           'text-text-secondary',
           'transition-transform',
           'duration-150',
           'ease-out',
-          'can-hover:group-hover/convert:translate-x-0.5',
-          'group-data-[blok-popover-item-children-open]/convert:translate-x-0.5',
+          'can-hover:group-hover/convert:translate-y-0.5',
+          'group-data-[blok-popover-item-children-open]/convert:translate-y-0.5',
           'group-data-[blok-popover-item-children-open]/convert:text-text-primary'
         ));
     }
 
     root
       .querySelectorAll('[data-blok-testid="popover-item-separator"]')
-      .forEach((separator) => separator.classList.add('col-span-full', 'w-full'));
+      .forEach((separator) => separator.setAttribute('aria-orientation', 'vertical'));
   }
 
   /**
@@ -243,7 +239,7 @@ export class PopoverInline extends PopoverDesktop {
         cssInline.popoverContainerOpened
       );
 
-      // The grid card sizes to its rows — no fixed single-row height.
+      // Measure wrapped rows rather than assuming a single-row height.
     }
 
     const containerRect = this.nestingLevel === 0
@@ -355,9 +351,7 @@ export class PopoverInline extends PopoverDesktop {
      */
     nestedPopoverEl.setAttribute(DATA_ATTR.nestedLevel, getNestedLevelAttrValue(nestedPopover.nestingLevel));
 
-    // Horizontal/vertical placement is the shared desktop one: the submenu opens
-    // beside the toolbar card (to its right, viewport-clamped), not below the
-    // trigger row. Nothing to override here.
+    // The shared desktop placement clamps dropdowns to the viewport.
 
     return nestedPopover;
   }

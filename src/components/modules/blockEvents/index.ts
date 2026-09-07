@@ -4,13 +4,16 @@
 import { Module } from '../../__module';
 import { Dom as $ } from '../../dom';
 import { keyCodes } from '../../utils';
+import { isInlineEmojiEnabled } from '../../utils/emoji/inline-emoji-config';
 import { YjsManager } from '../yjs';
 
 import { BlockSelectionKeys } from './composers/blockSelectionKeys';
+import { EmojiTrigger } from './composers/emojiTrigger';
 import { KeyboardNavigation } from './composers/keyboardNavigation';
 import { MarkdownShortcuts } from './composers/markdownShortcuts';
 import { NavigationMode } from './composers/navigationMode';
 import { isPrintableKeyEvent, isInsideKeyboardOwner, keyCodeFromEvent } from './utils/keyboard';
+import { isTextLikeBlock } from './utils/text-like-block';
 
 /**
  * All keydowns on Block
@@ -24,6 +27,7 @@ export class BlockEvents extends Module {
   private _markdownShortcuts?: MarkdownShortcuts;
   private _blockSelectionKeys?: BlockSelectionKeys;
   private _keyboardNavigation?: KeyboardNavigation;
+  private _emojiTrigger?: EmojiTrigger;
 
   /**
    * Get the NavigationMode composer instance
@@ -43,6 +47,19 @@ export class BlockEvents extends Module {
       this._markdownShortcuts = new MarkdownShortcuts(this.Blok);
     }
     return this._markdownShortcuts;
+  }
+
+  /**
+   * Get the EmojiTrigger composer instance. Public: KeyboardController's
+   * capture-phase Escape handler reads `emojiTrigger.opened` and calls
+   * `close()` directly (see keyboard.ts) — the same pattern it already uses
+   * for `Toolbar.toolbox`.
+   */
+  public get emojiTrigger(): EmojiTrigger {
+    if (!this._emojiTrigger) {
+      this._emojiTrigger = new EmojiTrigger(this.Blok);
+    }
+    return this._emojiTrigger;
   }
 
   /**
@@ -83,6 +100,16 @@ export class BlockEvents extends Module {
      * the block shortcuts and the caret navigation are all skipped in one place.
      */
     if (isInsideKeyboardOwner(event.target)) {
+      return;
+    }
+
+    /**
+     * The emoji menu owns Escape/ArrowUp/ArrowDown/Home/End/Enter/Tab while it
+     * is open. This must run before navigationMode.handleEscape below — that
+     * handler has no knowledge of the emoji menu, so an unclaimed Escape would
+     * enter block navigation mode instead of closing the menu.
+     */
+    if (this.emojiTrigger.opened && this.emojiTrigger.handleKeydown(event)) {
       return;
     }
 
@@ -304,8 +331,15 @@ export class BlockEvents extends Module {
     // Handle smart grouping for undo
     this.handleSmartGrouping(event);
 
-    // Handle markdown shortcuts
+    /**
+     * Markdown shortcuts first: a markdown conversion rewrites the block, and
+     * an emoji span resolved against the pre-conversion text would be stale.
+     */
     this.markdownShortcuts.handleInput(event);
+
+    if (isInlineEmojiEnabled(this.config)) {
+      void this.emojiTrigger.handleInput(event);
+    }
   }
 
   /**
@@ -495,7 +529,7 @@ export class BlockEvents extends Module {
      * not open. Bail out (without preventing default) so the slash is typed
      * normally. Generalizes to ALL non-text blocks via the tool's own settings.
      */
-    if (!this.isTextLikeBlock()) {
+    if (!isTextLikeBlock(this.Blok.BlockManager.currentBlock?.tool)) {
       return;
     }
 
@@ -529,37 +563,6 @@ export class BlockEvents extends Module {
     this.Blok.Toolbar.discardPlusContext();
 
     this.activateToolbox();
-  }
-
-  /**
-   * Whether the current block is "text-like" — i.e. a block where "/" should
-   * open the command menu (paragraph, header, list, quote…) rather than be
-   * inserted as a literal character (code, table…).
-   *
-   * A block is treated as text-like when its tool is the default block, or
-   * when it opts into the inline toolbar AND does not manage its own line
-   * breaks. Tools that manage line breaks (Code, Table) own the full keyboard
-   * inside their content, so "/" must stay a literal character there.
-   *
-   * When no block can be resolved the prior behavior is preserved (treat as
-   * text-like) so the regular paragraph/header slash menu is never blocked.
-   */
-  private isTextLikeBlock(): boolean {
-    const tool = this.Blok.BlockManager.currentBlock?.tool;
-
-    if (tool === undefined) {
-      return true;
-    }
-
-    if (tool.isDefault) {
-      return true;
-    }
-
-    if (tool.isLineBreaksEnabled) {
-      return false;
-    }
-
-    return tool.enabledInlineTools !== false;
   }
 
   /**
@@ -645,6 +648,11 @@ export class BlockEvents extends Module {
      * 2. When Toolbar is opened and Tab leafs its Tools
      * 3. When Toolbar's component is opened and some its item selected
      * 4. When Toolbox is open for inline slash search (allow typing to filter)
+     *
+     * The emoji menu does not need an entry here: the keydown() guard above
+     * returns before this method runs for every key the menu claims (Escape,
+     * arrows, Home/End, Enter, Tab), so a matching flag here would never be
+     * reachable — checked and confirmed by code review.
      */
     return !(event.shiftKey ||
       flippingToolbarItems ||
@@ -655,4 +663,13 @@ export class BlockEvents extends Module {
     );
   }
 
+  /**
+   * Blok.destroy() calls this on every module that has it. The emoji
+   * trigger's picker element is otherwise never removed from the DOM (only
+   * hidden by close()) — without this, destroying the editor leaves it
+   * behind as a permanent orphan node.
+   */
+  public destroy(): void {
+    this._emojiTrigger?.destroy();
+  }
 }

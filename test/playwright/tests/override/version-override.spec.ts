@@ -160,8 +160,13 @@ test.describe('blok version override', () => {
       // triples the TEST budget and leaves `expect` on the global 5s, which the
       // whole chain does not fit into on a loaded runner — the test then fails
       // once and passes on retry, which `failOnFlakyTests` counts as a failure.
+      //
+      // 15s was still too tight: the test measures 18s wall-clock on an idle
+      // laptop, and CI runs three workers per runner, so the chain overran and
+      // went red twice in a row. 30s keeps the assertion meaningful — an origin
+      // that never arms still fails — with room for a loaded runner.
       await expect(page.getByTestId('blok-editor'))
-        .toHaveAttribute('data-blok-version', /-dev\./, { timeout: 15_000 });
+        .toHaveAttribute('data-blok-version', /-dev\./, { timeout: 30_000 });
       await expect(popup.getByRole('button', { name: 'Reload' })).toHaveCount(0);
       await expect(popup.getByText('Running your build')).toBeVisible();
 

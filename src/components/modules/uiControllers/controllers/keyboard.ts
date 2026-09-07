@@ -683,6 +683,27 @@ export class KeyboardController extends Controller {
     }
 
     /**
+     * The emoji menu needs the same specific handling as the toolbox, for the
+     * same reason: it keeps DOM focus on the block's contentEditable while
+     * open (the user is still typing the query), so an Escape here still
+     * targets an element INSIDE the block holder. Read `opened` and call
+     * `stopPropagation()` before `close()` resets it — closing via the
+     * generic PopoverRegistry branch below fires `PopoverEvent.Closed`
+     * synchronously, which flips `opened` to false, so a check made AFTER
+     * that close would always read false and this branch would never fire.
+     * Without the stopPropagation, the event keeps bubbling to the block's
+     * keydown handler, whose emoji guard now also sees `opened === false`,
+     * and falls through to `navigationMode.handleEscape`, which does not
+     * know about this menu and incorrectly enables navigation mode.
+     */
+    if (this.Blok.BlockEvents.emojiTrigger.opened) {
+      event.stopPropagation();
+      this.Blok.BlockEvents.emojiTrigger.close();
+
+      return;
+    }
+
+    /**
      * Close any open popover via registry (BlockSettings, table grips, future popovers).
      * Must come before block selection clearing to prevent navigation mode
      * from being enabled when closing block settings.

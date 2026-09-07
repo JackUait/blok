@@ -239,6 +239,7 @@ export class MarkerInlineTool implements InlineTool {
       },
       children: {
         hideChevron: true,
+        isFlippable: false,
         items: [
           {
             type: PopoverItemType.Html,
@@ -247,6 +248,9 @@ export class MarkerInlineTool implements InlineTool {
         ],
         onOpen: () => {
           this.onPickerOpen();
+          queueMicrotask(() => {
+            this.picker.element.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus({ preventScroll: true });
+          });
         },
         onClose: () => {
           this.onPickerClose();
@@ -336,8 +340,7 @@ export class MarkerInlineTool implements InlineTool {
   }
 
   /**
-   * Called when the picker popover opens — save selection, reset tab state,
-   * and detect the current selection's color to highlight the active swatch.
+   * Read the selected text's colors before focus moves into the picker.
    */
   private onPickerOpen(): void {
     this.activeTextColor = null;

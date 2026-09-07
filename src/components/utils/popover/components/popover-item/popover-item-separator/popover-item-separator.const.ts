@@ -11,10 +11,8 @@ export const css = {
  * Tailwind CSS classes for inline popover separator
  */
 export const cssInline = {
-  // Inline context: the toolbar is a vertical card, so the separator under the
-  // convert row is a full-width horizontal rule
-  container: 'px-0 py-1 max-h-none',
-  line: 'h-px w-full bg-popover-border/60',
+  container: 'px-1 py-0 h-6 max-h-none shrink-0 mobile:hidden',
+  line: 'h-full w-px bg-popover-border/60',
   // Nested inline context: back to vertical separator
   nestedContainer: 'py-1 px-[3px]',
   nestedLine: 'w-full h-px',

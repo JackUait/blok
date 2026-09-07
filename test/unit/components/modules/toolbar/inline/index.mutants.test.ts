@@ -872,12 +872,15 @@ describe('InlineToolbar (mutation coverage)', () => {
       expect(toolbar.nodes.wrapper?.style.top).toBe(`${40 + 20 + INLINE_TOOLBAR_VERTICAL_MARGIN_DESKTOP}px`);
     });
 
-    it('pulls the wrapper back inside the content area using the popover width', async () => {
-      Object.defineProperty(blok.UI, 'contentRect', { value: new DOMRect(0, 0, 200, 600), configurable: true });
+    it.each([
+      { contentRight: 280, left: '80px' },
+      { contentRight: 200, left: '8px' },
+    ])('clamps the wrapper to the content and viewport using the popover width ($contentRight px)', async ({ contentRight, left }) => {
+      Object.defineProperty(blok.UI, 'contentRect', { value: new DOMRect(0, 0, contentRight, 600), configurable: true });
 
       await toolbar.tryToShow();
 
-      expect(toolbar.nodes.wrapper?.style.left).toBe('0px');
+      expect(toolbar.nodes.wrapper?.style.left).toBe(left);
     });
 
     it('measures the popover from its element when it reports no size', async () => {

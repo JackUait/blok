@@ -5,7 +5,7 @@ import {
   IconMinus,
   IconPlayerBackward,
   IconPlayerForward,
-  IconPlayerFullscreenExit,
+  IconCollapseFullscreen,
   IconPlayerLoop,
   IconPlayerPause,
   IconPlayerPip,
@@ -481,7 +481,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   const onFullscreenChange = (): void => {
     const isFull = document.fullscreenElement === figure;
     figure.setAttribute('data-fullscreen', String(isFull));
-    fullscreen.innerHTML = isFull ? IconPlayerFullscreenExit : IconExpandFullscreen;
+    fullscreen.innerHTML = isFull ? IconCollapseFullscreen : IconExpandFullscreen;
     fullscreen.setAttribute('aria-label', isFull ? i18nLabel('fullscreenExit', 'Exit full screen') : i18nLabel('fullscreen', 'Full screen'));
     // Lift the live caption into the top title bar on entry; clear it on exit so
     // it can pick up later edits next time. Empty caption → no bar.

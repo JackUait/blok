@@ -7,9 +7,10 @@
 import type { OutputData, SanitizerConfig } from '../../../types';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import type { SavedData, ValidatedData } from '../../../types/data-formats';
+import type { ModuleConfig } from '../../types-internal/module-config';
 import { Module } from '../__module';
 import type { Block } from '../block';
-import { SaveFailed } from '../events';
+import { BlockChanged, SaveFailed } from '../events';
 import { getBlokVersion, isEmpty, isObject, log, logLabeled } from '../utils';
 import { collapseToLegacy, shouldCollapseToLegacy } from '../utils/data-model-transform';
 import { resolveRuntimeEnv, validateHierarchy, validateHolderAttachment } from '../utils/hierarchy-invariant';
@@ -57,8 +58,46 @@ export class Saver extends Module {
   private pendingSave: Promise<OutputData | undefined> | null = null;
 
   /**
+   * Counts document mutations. Only the ordering matters: a save started at a
+   * lower value read the document before the change that produced the higher one.
+   */
+  private documentRevision = 0;
+
+  /**
+   * {@link documentRevision} at the moment the in-flight save was started.
+   */
+  private pendingSaveRevision = 0;
+
+  /**
+   * The single follow-up save queued behind the in-flight one, shared by every
+   * caller whose change the in-flight save missed.
+   */
+  private queuedSave: Promise<OutputData | undefined> | null = null;
+
+  /**
+   * @param options - module options
+   * @param options.config - Blok configuration object
+   * @param options.eventsDispatcher - common Blok event bus
+   */
+  constructor({ config, eventsDispatcher }: ModuleConfig) {
+    super({
+      config,
+      eventsDispatcher,
+    });
+
+    /**
+     * The same signal the modifications observer keys onSave off, so a save it
+     * schedules for a change always runs after the bump that change produced.
+     */
+    this.eventsDispatcher.on(BlockChanged, () => {
+      this.documentRevision += 1;
+    });
+  }
+
+  /**
    * Composes new chain of Promises to fire them alternatelly.
-   * Deduplicates concurrent calls — if a save is already in-flight, returns the same promise.
+   * Deduplicates concurrent calls — if a save is already in-flight AND the
+   * document has not changed since it started reading, returns the same promise.
    * @param options - save behaviour
    * @param options.dialect - `'host'` (default) produces what the host asked
    *   for, including the legacy collapse when the document was loaded in that
@@ -83,16 +122,69 @@ export class Saver extends Module {
     }
 
     if (this.pendingSave !== null) {
-      return this.pendingSave;
+      /*
+       * Sharing the in-flight promise is only safe while the document has not
+       * moved: its blocks were read before the change, so a caller trying to
+       * persist that change would receive a serialization that predates it —
+       * the edit is silently lost, because nothing re-arms on a stale result.
+       */
+      if (this.documentRevision === this.pendingSaveRevision) {
+        return this.pendingSave;
+      }
+
+      return this.queueSave(dialect);
     }
 
-    this.pendingSave = this.doSave({ dialect });
+    return this.startSave(dialect);
+  }
 
-    try {
-      return await this.pendingSave;
-    } finally {
+  /**
+   * Runs a serialization and installs it as the in-flight one.
+   * @param dialect - output dialect, see {@link Saver.save}
+   */
+  private startSave(dialect: 'host' | 'internal'): Promise<OutputData | undefined> {
+    this.pendingSaveRevision = this.documentRevision;
+
+    const started = this.doSave({ dialect }).finally(() => {
       this.pendingSave = null;
+    });
+
+    this.pendingSave = started;
+
+    return started;
+  }
+
+  /**
+   * Queues one follow-up serialization behind the in-flight save for callers
+   * whose change it missed. It runs AFTER the in-flight one, never alongside
+   * it, so two serializations still never read the document — or race over
+   * `lastSaveError` — at the same time. Later callers join the same follow-up:
+   * it has not read anything yet, so it covers their changes too.
+   * @param dialect - output dialect, see {@link Saver.save}
+   */
+  private queueSave(dialect: 'host' | 'internal'): Promise<OutputData | undefined> {
+    if (this.queuedSave !== null) {
+      return this.queuedSave;
     }
+
+    const inFlight = this.pendingSave;
+
+    const queued = (async (): Promise<OutputData | undefined> => {
+      await inFlight?.catch(() => undefined);
+
+      // Free the slot before reading: callers from here on belong to the next save.
+      this.queuedSave = null;
+
+      if (this.isDestroyed) {
+        return undefined;
+      }
+
+      return this.startSave(dialect);
+    })();
+
+    this.queuedSave = queued;
+
+    return queued;
   }
 
   /**

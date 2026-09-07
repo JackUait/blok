@@ -1172,11 +1172,15 @@ test.describe('popover', () => {
 
       await expect(nestedPopover).toBeVisible();
 
-      // Get all popover items in nested popover
+      // The convert menu is searchable, so opening it puts the caret in its
+      // search field; ArrowDown then hands focus to the first option, skipping
+      // the decorative section label.
+      await expect(nestedPopover.getByRole('combobox')).toBeFocused();
+
+      await page.keyboard.press('ArrowDown');
+
       const nestedItems = nestedPopover.locator('[data-blok-testid="popover-item"]');
 
-      // When opening nested popover via keyboard (Enter), first item should be auto-focused for accessibility
-       
       await expect(nestedItems.first()).toHaveAttribute('data-blok-focused', 'true');
     });
 

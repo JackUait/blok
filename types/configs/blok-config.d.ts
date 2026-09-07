@@ -288,11 +288,6 @@ export interface BlokState {
   inlineToolbar?: string[]|boolean;
 
   /**
-   * Inline emoji menu opened by typing ":" followed by a name. On by default.
-   */
-  inlineEmoji?: boolean;
-
-  /**
    * Fires when something changed in DOM.
    *
    * Delivery latency is bounded, so this is safe to drive UI from ("document is
@@ -827,6 +822,13 @@ export interface BlokMountOptions {
    * @default false
    */
   captureClicksBelowEditor?: boolean;
+
+  /**
+   * Inline emoji menu opened by typing ":" followed by a name.
+   *
+   * @default true
+   */
+  inlineEmoji?: boolean;
 
   /**
    * Blok's log level (how many logs you want to see)

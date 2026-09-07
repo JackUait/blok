@@ -4,9 +4,9 @@ export interface EmojiTriggerSpan {
   query: string;
 }
 
-// A contenteditable renders a trailing space as U+00A0, so both forms must
-// count as the word boundary before the colon.
-const WHITESPACE = /[\s ]/;
+// Requiring whitespace (or start-of-text) before the colon is what keeps
+// "10:30" and "a:b" from opening the menu.
+const WHITESPACE = /\s/;
 
 /**
  * Plain-text span of a ":query" the caret currently sits in, or null when the
@@ -15,6 +15,12 @@ const WHITESPACE = /[\s ]/;
  * @param caretOffset - caret position as a plain-text offset
  */
 export function resolveEmojiTriggerSpan(text: string, caretOffset: number): EmojiTriggerSpan | null {
+  // A caret outside the text means our view of the text is stale; fail
+  // closed rather than slicing/clamping to a wrong range.
+  if (caretOffset < 0 || caretOffset > text.length) {
+    return null;
+  }
+
   const colonIndex = text.lastIndexOf(':', Math.max(0, caretOffset - 1));
 
   if (colonIndex === -1 || colonIndex >= caretOffset) {

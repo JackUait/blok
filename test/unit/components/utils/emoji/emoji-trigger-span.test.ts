@@ -14,6 +14,8 @@ describe('resolveEmojiTriggerSpan', () => {
     ['caret before the colon',         ':fire',      0, null],
     ['second colon wins',              ':a :fi',     6, { start: 3, end: 6, query: 'fi' }],
     ['non-breaking space counts as whitespace', 'x :fi', 5, { start: 2, end: 5, query: 'fi' }],
+    ['caret past the end of the text returns null', ':fi', 10, null],
+    ['caret exactly at text.length still resolves', ':fire', 5, { start: 0, end: 5, query: 'fire' }],
   ];
 
   it.each(cases)('%s', (_label, text, caret, expected) => {

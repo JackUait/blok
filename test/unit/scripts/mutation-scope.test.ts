@@ -10,6 +10,8 @@ import {
   isPartialRun,
   nextTotal,
   resolveDiffBase,
+  scopeFingerprint,
+  scopeMoved,
   splitByBudget,
   updateSurvivorAges,
 } from '../../../scripts/mutation-scope.mjs';
@@ -128,6 +130,78 @@ describe('mutation-scope', () => {
       });
 
       expect(index.get('src/blok.ts')).toEqual(['test/unit/blok.test.ts']);
+    });
+
+    // A barrel is the module the test names; the files behind it are what run.
+    // CI skipped two changed popover files as untested because the only suite
+    // for them imports `.../popover-item`, and the leaf is reached through it.
+    it('credits a barrel\u2019s tests to the files the barrel imports', () => {
+      const index = buildImporterIndex({
+        testFiles: ['test/unit/tools/table.test.ts'],
+        sourceFiles: ['src/tools/table/index.ts', 'src/tools/table/table-core.ts'],
+        readFile: read({
+          'test/unit/tools/table.test.ts': "import T from '../../../src/tools/table';",
+          'src/tools/table/index.ts': "import { Core } from './table-core';",
+        }),
+      });
+
+      expect(index.get('src/tools/table/table-core.ts')).toEqual(['test/unit/tools/table.test.ts']);
+    });
+
+    it('follows a barrel that re-exports through another barrel', () => {
+      const index = buildImporterIndex({
+        testFiles: ['test/unit/utils/popover.test.ts'],
+        sourceFiles: [
+          'src/utils/popover/index.ts',
+          'src/utils/popover/item/index.ts',
+          'src/utils/popover/item/item-default.ts',
+        ],
+        readFile: read({
+          'test/unit/utils/popover.test.ts': "import { P } from '../../../src/utils/popover';",
+          'src/utils/popover/index.ts': "export * from './item';",
+          'src/utils/popover/item/index.ts': "import { D } from './item-default';",
+        }),
+      });
+
+      expect(index.get('src/utils/popover/item/item-default.ts')).toEqual([
+        'test/unit/utils/popover.test.ts',
+      ]);
+    });
+
+    // Measuring a file against fewer tests than actually load it is what made
+    // sanitize.ts report 205 survivors for 141 real ones, so the barrel's tests
+    // join the direct ones instead of being an alternative to them.
+    it('adds the barrel\u2019s tests to a file that already has a direct importer', () => {
+      const index = buildImporterIndex({
+        testFiles: ['test/unit/direct.test.ts', 'test/unit/barrel.test.ts'],
+        sourceFiles: ['src/tools/table/index.ts', 'src/tools/table/table-core.ts'],
+        readFile: read({
+          'test/unit/direct.test.ts': "import { Core } from '../../src/tools/table/table-core';",
+          'test/unit/barrel.test.ts': "import T from '../../src/tools/table';",
+          'src/tools/table/index.ts': "import { Core } from './table-core';",
+        }),
+      });
+
+      expect(index.get('src/tools/table/table-core.ts')).toEqual([
+        'test/unit/direct.test.ts',
+        'test/unit/barrel.test.ts',
+      ]);
+    });
+
+    // Only barrels forward. `blok.ts` imports the whole editor, so following
+    // every source-to-source edge would pair one central file with the entire
+    // suite and make a run cost more than a full sweep.
+    it('does not forward a plain module\u2019s tests to what it imports', () => {
+      const index = buildImporterIndex({
+        testFiles: ['test/unit/blok.test.ts'],
+        sourceFiles: ['src/blok.ts', 'src/components/modules/caret.ts'],
+        readFile: read({
+          'test/unit/blok.test.ts': "import Blok from '@bloklabs/core';",
+          'src/blok.ts': "import { Caret } from './components/modules/caret';",
+        }),
+      });
+
+      expect(index.has('src/components/modules/caret.ts')).toBe(false);
     });
 
     it('leaves a source no test imports out of the index', () => {
@@ -651,6 +725,19 @@ describe('mutation-scope', () => {
       })).toBe(9);
     });
 
+    // Widening the pairing rule made 43 files measurable in one commit, and the
+    // survivors they had been carrying unseen read as a regression on whichever
+    // commit later drained the queue. A moved scope re-baselines instead.
+    it('re-baselines the bar when the measurable scope moved, parked or not', () => {
+      expect(nextTotal({
+        previousTotal: 12,
+        currentTotal: 400,
+        parked: true,
+        seeding: false,
+        scopeChanged: true,
+      })).toBe(400);
+    });
+
     // Nothing to hold on to on the very first run, so the partial total is still
     // better than no bar at all.
     it('takes the first total it sees when there is no bar yet', () => {
@@ -660,6 +747,30 @@ describe('mutation-scope', () => {
         parked: true,
         seeding: false,
       })).toBe(400);
+    });
+  });
+
+  describe('scopeMoved', () => {
+    it('holds still when the same files are measured again', () => {
+      expect(scopeMoved('abc', 'abc')).toBe(false);
+    });
+
+    // The ledger that is live in CI was written before the fingerprint existed,
+    // and it cannot prove it covered the same files. Reading a missing
+    // fingerprint as "unchanged" would leave the widening unabsorbed until the
+    // queue drained, which is the red this whole mechanism exists to prevent.
+    it('treats a ledger with no fingerprint as a moved scope', () => {
+      expect(scopeMoved(undefined, 'abc')).toBe(true);
+    });
+  });
+
+  describe('scopeFingerprint', () => {
+    it('ignores the order the files arrive in', () => {
+      expect(scopeFingerprint(['src/b.ts', 'src/a.ts'])).toBe(scopeFingerprint(['src/a.ts', 'src/b.ts']));
+    });
+
+    it('moves when a file joins the measurable set', () => {
+      expect(scopeFingerprint(['src/a.ts'])).not.toBe(scopeFingerprint(['src/a.ts', 'src/b.ts']));
     });
   });
 

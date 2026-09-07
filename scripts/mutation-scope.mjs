@@ -49,6 +49,29 @@ const IMPORT_PATTERN = /(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/g;
 
 const RESOLUTION_SUFFIXES = ['', '.ts', '.tsx', '/index.ts', '/index.tsx'];
 
+const BARREL_PATTERN = /(?:^|\/)index\.tsx?$/;
+
+const relativeImportsOf = (file, sources, readFile) => {
+  const deps = [];
+
+  for (const [, specifier] of readFile(file).matchAll(IMPORT_PATTERN)) {
+    if (!specifier.startsWith('.')) {
+      continue;
+    }
+
+    const base = relative('.', resolve(dirname(file), specifier));
+    const resolved = RESOLUTION_SUFFIXES
+      .map((suffix) => base + suffix)
+      .find((candidate) => sources.has(candidate));
+
+    if (resolved !== undefined) {
+      deps.push(resolved);
+    }
+  }
+
+  return deps;
+};
+
 /**
  * Maps every source to the test files that import it.
  *
@@ -93,6 +116,34 @@ export const buildImporterIndex = ({ testFiles, sourceFiles, readFile }) => {
 
       if (resolved !== undefined) {
         add(resolved, test);
+      }
+    }
+  }
+
+  // A test names the barrel; the files behind it are what actually run. CI
+  // skipped two changed popover files as untested because their only suite
+  // imports `.../popover-item` and the leaves hang off that index. Barrels only:
+  // `blok.ts` imports the whole editor, so forwarding every source-to-source
+  // edge would pair one central file with the entire suite.
+  for (const barrel of [...index.keys()].filter((path) => BARREL_PATTERN.test(path))) {
+    const tests = [...index.get(barrel)];
+    const seen = new Set([barrel]);
+    const stack = [barrel];
+
+    while (stack.length > 0) {
+      for (const dep of relativeImportsOf(stack.pop(), sources, readFile)) {
+        if (seen.has(dep)) {
+          continue;
+        }
+        seen.add(dep);
+
+        for (const test of tests) {
+          add(dep, test);
+        }
+
+        if (BARREL_PATTERN.test(dep)) {
+          stack.push(dep);
+        }
       }
     }
   }
@@ -375,16 +426,33 @@ export const isPartialRun = ({ pending, seeding }) => pending.length > 0 || seed
 /**
  * Which total the ledger keeps as the bar. A run that parked files must not
  * raise the bar to include its own new survivors, or the regression the muted
- * ratchet let through would never be caught afterwards either. The seed is the
- * exception: there the growing ledger IS the new bar.
+ * ratchet let through would never be caught afterwards either. Two exceptions:
+ * the seed, where the growing ledger IS the new bar, and a run whose measurable
+ * set moved, where the old bar counted a different set of files.
  */
-export const nextTotal = ({ previousTotal, currentTotal, parked, seeding }) => {
-  if (parked && !seeding && previousTotal !== null && previousTotal !== undefined) {
+export const nextTotal = ({ previousTotal, currentTotal, parked, seeding, scopeChanged = false }) => {
+  if (parked && !seeding && !scopeChanged && previousTotal !== null && previousTotal !== undefined) {
     return previousTotal;
   }
 
   return currentTotal;
 };
+
+/**
+ * Identifies the set of files the bar was measured over. Two totals are only
+ * comparable when this matches: widening the pairing rule made 43 files
+ * measurable in one commit, and the survivors they had been carrying unseen
+ * would have read as a regression on whichever commit drained the queue.
+ */
+export const scopeFingerprint = (files) =>
+  createHash('sha1').update([...files].sort().join('\n')).digest('hex');
+
+/**
+ * Whether the bar was measured over a different set of files than this run. A
+ * ledger written before the fingerprint existed cannot prove it covered the same
+ * set, so it counts as moved and costs one un-enforced run.
+ */
+export const scopeMoved = (previousHash, currentHash) => previousHash !== currentHash;
 
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
 
@@ -515,9 +583,12 @@ const record = (stateDir, reportPath, pending) => {
     throw new Error(`No mutation report at ${reportPath}`);
   }
 
-  const survivors = collectSurvivors(report, measurableSources());
+  const measurable = measurableSources();
+  const survivors = collectSurvivors(report, measurable);
   const sha = git('rev-parse', 'HEAD');
   const previousTotal = state.survivorTotal ?? null;
+  const measuredHash = scopeFingerprint(measurable);
+  const scopeChanged = scopeMoved(state.measuredHash, measuredHash);
   const parked = pending.length > 0;
   // Seeding survives only as long as its queue does, so a wide push after the
   // baseline is built is parked work, not seeding.
@@ -525,7 +596,7 @@ const record = (stateDir, reportPath, pending) => {
   const ratchet = checkRatchet({
     previousTotal,
     currentTotal: survivors.length,
-    partial: isPartialRun({ pending, seeding: state.seeding }),
+    partial: isPartialRun({ pending, seeding: state.seeding }) || scopeChanged,
   });
 
   const ages = updateSurvivorAges({
@@ -546,16 +617,18 @@ const record = (stateDir, reportPath, pending) => {
         currentTotal: survivors.length,
         parked,
         seeding,
+        scopeChanged,
       }),
+      measuredHash,
       pending,
       seeding,
     }, null, 2)}\n`,
   );
 
-  return { survivors, ages, ratchet, pending };
+  return { survivors, ages, ratchet, pending, scopeChanged };
 };
 
-const summarise = ({ survivors, ages, ratchet, pending }) => {
+const summarise = ({ survivors, ages, ratchet, pending, scopeChanged }) => {
   const oldest = survivors
     .map((survivor) => ({ ...survivor, ...ages[survivor.key] }))
     .sort((a, b) => a.firstSeenAt.localeCompare(b.firstSeenAt))
@@ -564,6 +637,10 @@ const summarise = ({ survivors, ages, ratchet, pending }) => {
   process.stdout.write(
     `Survivors: ${survivors.length} (${ratchet.delta >= 0 ? '+' : ''}${ratchet.delta})\n`,
   );
+
+  if (scopeChanged) {
+    process.stdout.write('Measurable scope moved; the bar is re-baselined and this total is not a verdict.\n');
+  }
 
   if (pending.length > 0) {
     process.stdout.write(`${pending.length} file(s) parked for the next run.\n`);

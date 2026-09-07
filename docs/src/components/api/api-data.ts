@@ -669,17 +669,17 @@ const editor = new Blok(config);`,
       },
       {
         option: "user",
-        type: "{ id: string }",
+        type: "{ id: string; name?: string }",
         default: "undefined",
         description:
-          "Identity of the current editor. Blok stamps `user.id` onto the `lastEditedBy` of every block this user edits — without it `lastEditedBy` stays null. Pair it with `resolveUser` to render a name in the block settings footer.",
+          "Identity of the current editor. Blok stamps `user.id` onto the `lastEditedBy` of every block this user edits — without it `lastEditedBy` stays null. Add `name` and the block settings footer reads \"Last edited by <name>\" with no callback to wire. For other people\'s ids Blok asks `resolveUser`, and in a collaborative room it also learns names from the peers themselves.",
       },
       {
         option: "resolveUser",
         type: "(id: string) => UserInfo | Promise<UserInfo | null> | null",
         default: "undefined",
         description:
-          "Resolves the `lastEditedBy` user id Blok shows in the block settings footer. May return synchronously or asynchronously; return null for an unknown user and Blok falls back to showing the date only.",
+          "Resolves the `lastEditedBy` user id Blok shows in the block settings footer. May return synchronously or asynchronously; return null for an unknown user and Blok falls back to a name it already knows, or to the date alone. Blok asks once per id and caches the answer for the editor\'s lifetime, and a callback that throws or rejects is absorbed rather than breaking the menu.",
       },
       {
         option: "notifierPosition",

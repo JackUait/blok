@@ -1388,17 +1388,20 @@ export class DocumentStore {
     // Defensive equality guard — if both fields already match, skip the write to avoid
     // adding an empty/no-op entry to the Yjs undo stack.
     const currentEditedAt = yblock.get('lastEditedAt');
-    const currentEditedBy = yblock.get('lastEditedBy');
-    const editedByMatches = lastEditedBy === null || currentEditedBy === lastEditedBy;
+    const currentEditedBy = yblock.get('lastEditedBy') ?? null;
 
-    if (currentEditedAt === lastEditedAt && editedByMatches) {
+    if (currentEditedAt === lastEditedAt && currentEditedBy === lastEditedBy) {
       return false;
     }
 
     this.transact(() => {
       yblock.set('lastEditedAt', lastEditedAt);
 
-      if (lastEditedBy !== null) {
+      if (lastEditedBy === null) {
+        // An editor with no identity made this edit, so the previous author
+        // must go: keeping the key would credit them with somebody else's work.
+        yblock.delete('lastEditedBy');
+      } else {
         yblock.set('lastEditedBy', stripNulIfString(lastEditedBy));
       }
     }, 'local');

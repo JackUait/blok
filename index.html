@@ -1267,6 +1267,25 @@
     }
 
     /**
+     * Who the playground says is editing. Without it every block's "Last
+     * edited" footer shows a date and no author, which is what the editor
+     * looks like to a host that configured no identity at all.
+     *
+     * The id is derived from `?name=` so two tabs opened under different names
+     * attribute their edits to different people.
+     */
+    function userConfig() {
+      const params = new URLSearchParams(window.location.search);
+      const name = params.get('name')?.trim();
+
+      if (!name) {
+        return { id: 'playground-user', name: 'Playground user' };
+      }
+
+      return { id: `playground-${name.toLowerCase()}`, name };
+    }
+
+    /**
      * Build Blok config from current state
      */
     function buildConfig() {
@@ -1352,6 +1371,7 @@
         i18n: { locale: state.locale, direction: state.rtl ? 'rtl' : 'ltr' },
         toolbarPosition: state.toolbarPosition,
         hideToolbar: state.hideToolbar,
+        user: userConfig(),
         style: { contentAlign: 'center', fontSize: buildFontScaleConfig(state.fontScale) },
         // Under collaboration the document comes from the sync service, which
         // seeds it from this same file — passing `data` too would give it two owners.

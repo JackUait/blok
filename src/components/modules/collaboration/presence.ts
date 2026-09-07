@@ -35,13 +35,18 @@ export interface PresenceState {
  * is still somebody in the room.
  */
 export interface DrawableState extends PresenceState {
-  state: Record<string, unknown> & { user: { name?: unknown; color?: unknown } };
+  state: Record<string, unknown> & { user: { name?: unknown; color?: unknown; id?: unknown } };
 }
 
 export interface PresenceOptions {
   yjs: PresenceSeam;
   /** Display identity from `config.collaboration.user`, if the host set one. */
   user?: { name?: string; color?: string };
+  /**
+   * Attribution id from `config.user.id`. Published so peers can put a name to
+   * the `lastEditedBy` this editor writes into the shared document.
+   */
+  userId?: string;
   /** The block the caret sits in right now. */
   currentBlockId: () => string | null;
   /**
@@ -296,10 +301,15 @@ export const createPresence = (options: PresenceOptions): Presence => {
     const name = options.user?.name;
     const configured = options.user?.color;
     const color = isPresenceColor(configured) ? configured : presenceColorFor(state.localClientId ?? 0);
+    const id = options.userId?.trim();
 
     yjs.setAwarenessField(
       'user',
-      typeof name === 'string' && name.trim() !== '' ? { name, color } : { color }
+      {
+        ...typeof name === 'string' && name.trim() !== '' ? { name } : {},
+        color,
+        ...id !== undefined && id !== '' ? { id } : {},
+      }
     );
   };
 

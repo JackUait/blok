@@ -42,6 +42,7 @@ import { UI } from './ui';
 
 import { Collaboration } from './collaboration';
 import { ThemeManager } from './themeManager';
+import { UserDirectory } from './userDirectory';
 import { YjsManager } from './yjs';
 
 /**
@@ -94,6 +95,7 @@ export const Modules = {
   Tools,
   UI,
   ThemeManager,
+  UserDirectory,
 
   // Collaboration comes BEFORE YjsManager: destroy walks this map in order, and
   // the provider's teardown needs a live document and a live awareness.

@@ -637,19 +637,43 @@ describe('DocumentStore', () => {
       expect(yblock.get('lastEditedBy')).toBe('Alice');
     });
 
-    it('should not set lastEditedBy when null', () => {
+    it('clears lastEditedBy when the editor has no identity', () => {
       store.fromJSON([{ id: 'block1', type: 'paragraph', data: { text: 'Hello' } }]);
 
-      // First set a value for lastEditedBy
       store.updateBlockMetadata('block1', 1700000000000, 'Alice');
-
-      // Now call with null — lastEditedBy should retain its previous value
       store.updateBlockMetadata('block1', 1700000001000, null);
 
       const yblock = requireBlock(store, 'block1');
 
+      // Keeping Alice would credit her with an edit somebody else made.
+      expect(yblock.get('lastEditedBy')).toBeUndefined();
       expect(yblock.get('lastEditedAt')).toBe(1700000001000);
-      expect(yblock.get('lastEditedBy')).toBe('Alice');
+    });
+
+    it('reports a write when only the author changed', () => {
+      store.fromJSON([{ id: 'block1', type: 'paragraph', data: { text: 'Hello' } }]);
+
+      store.updateBlockMetadata('block1', 1700000000000, 'Alice');
+
+      // Same timestamp, no author: the guard must not read this as a no-op.
+      expect(store.updateBlockMetadata('block1', 1700000000000, null)).toBe(true);
+      expect(requireBlock(store, 'block1').get('lastEditedBy')).toBeUndefined();
+    });
+
+    it('skips the write when nothing changed', () => {
+      store.fromJSON([{ id: 'block1', type: 'paragraph', data: { text: 'Hello' } }]);
+
+      store.updateBlockMetadata('block1', 1700000000000, 'Alice');
+
+      expect(store.updateBlockMetadata('block1', 1700000000000, 'Alice')).toBe(false);
+    });
+
+    it('skips the write when neither the time nor the missing author changed', () => {
+      store.fromJSON([{ id: 'block1', type: 'paragraph', data: { text: 'Hello' } }]);
+
+      store.updateBlockMetadata('block1', 1700000000000, null);
+
+      expect(store.updateBlockMetadata('block1', 1700000000000, null)).toBe(false);
     });
 
     it('does nothing if block not found', () => {

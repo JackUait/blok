@@ -8,6 +8,10 @@ import type { PopoverItemParams } from '../../../../../types/utils/popover/popov
 import { SelectionUtils } from '../../../../../src/components/selection';
 import { simulateKeydown } from '../../../../helpers/simulate';
 import type { Dom } from '../../../../../src/components/dom';
+import { UserDirectory } from '../../../../../src/components/modules/userDirectory';
+import type { EventsDispatcher } from '../../../../../src/components/utils/events';
+import type { BlokEventMap } from '../../../../../src/components/events';
+import type { BlokConfig } from '../../../../../types';
 
 type PopoverMock = {
   on: Mock<(event: string, handler: () => void) => void>;
@@ -224,9 +228,10 @@ type BlokMock = {
     has: Mock<(key: string) => boolean>;
     getLocale: Mock<() => string>;
   };
+  UserDirectory: UserDirectory;
 };
 
-const createBlokMock = (): BlokMock => {
+const createBlokMock = (config: Partial<BlokConfig> = {}): BlokMock => {
   const redactor = document.createElement('div');
   const blockSelection = {
     selectBlock: vi.fn(),
@@ -296,6 +301,10 @@ const createBlokMock = (): BlokMock => {
     Caret: caret,
     Toolbar: toolbar,
     I18n: i18n,
+    UserDirectory: new UserDirectory({
+      config: config,
+      eventsDispatcher: { on: vi.fn(), off: vi.fn(), emit: vi.fn() } as unknown as EventsDispatcher<BlokEventMap>,
+    }),
   } satisfies BlokMock;
 };
 
@@ -1337,6 +1346,7 @@ describe('BlockSettings', () => {
         eventsDispatcher: eventsDispatcher as unknown as typeof blockSettings['eventsDispatcher'],
       });
 
+      blokMock = createBlokMock({ resolveUser });
       blockSettings.state = blokMock as unknown as BlokModules;
 
       const block = createBlock();
@@ -1403,6 +1413,7 @@ describe('BlockSettings', () => {
         eventsDispatcher: eventsDispatcher as unknown as typeof blockSettings['eventsDispatcher'],
       });
 
+      blokMock = createBlokMock({ resolveUser });
       blockSettings.state = blokMock as unknown as BlokModules;
 
       const block = createBlock();
@@ -1441,6 +1452,7 @@ describe('BlockSettings', () => {
         eventsDispatcher: eventsDispatcher as unknown as typeof blockSettings['eventsDispatcher'],
       });
 
+      blokMock = createBlokMock({ resolveUser });
       blockSettings.state = blokMock as unknown as BlokModules;
 
       const block = createBlock();
@@ -1468,6 +1480,137 @@ describe('BlockSettings', () => {
         'blockSettings.lastEditedBy',
         expect.anything()
       );
+    });
+
+    it('names the editor on the first paint when the name is already known', async () => {
+      const user = { id: 'user-123', name: 'Ada Lovelace' };
+
+      blockSettings = new BlockSettings({
+        config: { user },
+        eventsDispatcher: eventsDispatcher as unknown as typeof blockSettings['eventsDispatcher'],
+      });
+
+      blokMock = createBlokMock({ user });
+      blockSettings.state = blokMock as unknown as BlokModules;
+
+      const block = createBlock();
+
+      block.lastEditedAt = 1712700720000;
+      block.lastEditedBy = 'user-123';
+
+      getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+
+      const items = await (blockSettings as unknown as {
+        getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      }).getTunesItems(block, []);
+
+      const element = (items[items.length - 1] as { element: HTMLElement }).element;
+
+      // No waitFor: the name must be there before anything is painted, or the
+      // footer shows the generic label and swaps it under the reader's eyes.
+      expect(element.querySelector('[data-edit-meta-label]')?.textContent)
+        .toBe('blockSettings.lastEditedBy');
+      expect(blokMock.I18n.t).toHaveBeenCalledWith('blockSettings.lastEditedBy', { name: 'Ada Lovelace' });
+    });
+
+    it('asks the host directory once however often the menu is reopened', async () => {
+      const resolveUser = vi.fn(() => ({ name: 'Jack Uait' }));
+
+      blockSettings = new BlockSettings({
+        config: { resolveUser },
+        eventsDispatcher: eventsDispatcher as unknown as typeof blockSettings['eventsDispatcher'],
+      });
+
+      blokMock = createBlokMock({ resolveUser });
+      blockSettings.state = blokMock as unknown as BlokModules;
+
+      const block = createBlock();
+
+      block.lastEditedAt = 1712700720000;
+      block.lastEditedBy = 'user-123';
+
+      const openFooter = async (): Promise<void> => {
+        getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+        await (blockSettings as unknown as {
+          getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+        }).getTunesItems(block, []);
+      };
+
+      await openFooter();
+      await vi.waitFor(() => {
+        expect(resolveUser).toHaveBeenCalledTimes(1);
+      });
+      await openFooter();
+      await openFooter();
+
+      expect(resolveUser).toHaveBeenCalledTimes(1);
+    });
+
+    it('still builds the menu when the host directory throws', async () => {
+      const resolveUser = vi.fn(() => {
+        throw new Error('directory is down');
+      });
+
+      blockSettings = new BlockSettings({
+        config: { resolveUser },
+        eventsDispatcher: eventsDispatcher as unknown as typeof blockSettings['eventsDispatcher'],
+      });
+
+      blokMock = createBlokMock({ resolveUser });
+      blockSettings.state = blokMock as unknown as BlokModules;
+
+      const block = createBlock();
+
+      block.lastEditedAt = 1712700720000;
+      block.lastEditedBy = 'user-123';
+
+      getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+
+      const items = await (blockSettings as unknown as {
+        getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      }).getTunesItems(block, []);
+
+      const element = (items[items.length - 1] as { element: HTMLElement }).element;
+
+      expect(element.querySelector('[data-edit-meta-label]')?.textContent).toBe('blockSettings.lastEdited');
+    });
+
+    it('swallows a rejected host lookup instead of leaking it', async () => {
+      const rejection = new Error('network down');
+      const resolveUser = vi.fn(() => Promise.reject(rejection));
+      const unhandled = vi.fn();
+
+      process.on('unhandledRejection', unhandled);
+
+      try {
+        blockSettings = new BlockSettings({
+          config: { resolveUser },
+          eventsDispatcher: eventsDispatcher as unknown as typeof blockSettings['eventsDispatcher'],
+        });
+
+        blokMock = createBlokMock({ resolveUser });
+        blockSettings.state = blokMock as unknown as BlokModules;
+
+        const block = createBlock();
+
+        block.lastEditedAt = 1712700720000;
+        block.lastEditedBy = 'user-123';
+
+        getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+
+        await (blockSettings as unknown as {
+          getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+        }).getTunesItems(block, []);
+
+        await vi.waitFor(() => {
+          expect(resolveUser).toHaveBeenCalledTimes(1);
+        });
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(unhandled).not.toHaveBeenCalled();
+      } finally {
+        process.off('unhandledRejection', unhandled);
+      }
     });
 
     it('should format the date using the Blok locale, not the browser default', async () => {

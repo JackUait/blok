@@ -46,6 +46,7 @@ import { I18n } from '../components/modules/i18n';
 
 import { Collaboration } from '../components/modules/collaboration';
 import { ThemeManager } from '../components/modules/themeManager';
+import { UserDirectory } from '../components/modules/userDirectory';
 import { YjsManager } from '../components/modules/yjs';
 
 export interface BlokModules {
@@ -95,6 +96,7 @@ export interface BlokModules {
   Tools: Tools,
   UI: UI,
   ThemeManager: ThemeManager,
+  UserDirectory: UserDirectory,
   Collaboration: Collaboration,
   YjsManager: YjsManager,
 }

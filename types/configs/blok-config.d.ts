@@ -1136,6 +1136,13 @@ export interface BlokMountOptions {
      * Stored on each block the user edits.
      */
     id: string;
+
+    /**
+     * Display name for this user, shown in the "Last edited by" footer of
+     * every block they edited. Without it Blok falls back to `resolveUser`,
+     * and to the name this user publishes to a collaborative room.
+     */
+    name?: string;
   };
 
   /**

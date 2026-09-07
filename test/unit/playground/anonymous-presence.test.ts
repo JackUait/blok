@@ -16,6 +16,15 @@ const section = (start: string, end: string): string => {
   return html.slice(from, to);
 };
 
+const userFor = (search = ''): unknown => {
+  return structuredClone(runInNewContext(`${section('const DEV_SERVER_URL =', 'function buildConfig(')} userConfig();`, {
+    window: { location: { search } },
+    URLSearchParams,
+    sessionStorage: window.sessionStorage,
+    __BLOK_DEV_BACKEND__: true,
+  }));
+};
+
 const configFor = (search = '', backend = true): unknown => {
   return structuredClone(runInNewContext(`${section('const DEV_SERVER_URL =', 'function buildConfig(')} collaborationConfig();`, {
     window: { location: { search } },
@@ -74,5 +83,19 @@ describe('playground anonymous presence', () => {
 
   it.each(['', '?collab=custom-doc&name=Alice'])('stays local without the backend for %s', (search) => {
     expect(configFor(search, false)).toBeNull();
+  });
+
+  describe('editor identity', () => {
+    it('names the anonymous playground visitor so the last-edited footer has an author', () => {
+      expect(userFor()).toStrictEqual({ id: 'playground-user', name: 'Playground user' });
+    });
+
+    it('gives a named visitor their own attribution id', () => {
+      expect(userFor('?name=Alice')).toStrictEqual({ id: 'playground-alice', name: 'Alice' });
+    });
+
+    it('treats a blank name as anonymous', () => {
+      expect(userFor('?name=%20%09%20')).toStrictEqual({ id: 'playground-user', name: 'Playground user' });
+    });
   });
 });

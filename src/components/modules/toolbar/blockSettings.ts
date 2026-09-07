@@ -1,5 +1,6 @@
 import type { MenuConfigItem } from '../../../../types/tools';
 import type { BlockTuneRenderContext } from '../../../../types/block-tunes/block-tune';
+import type { UserInfo } from '../../../../types/configs/user-info';
 import { Module } from '../../__module';
 import type { Block } from '../../block';
 import { BlockAPI } from '../../block/api';
@@ -722,14 +723,22 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     label.setAttribute('data-edit-meta-label', '');
 
-    label.textContent = this.Blok.I18n.t('blockSettings.lastEdited');
+    const editorId = block.lastEditedBy;
+    const directory = this.Blok.UserDirectory;
+    const paint = (userInfo: UserInfo | null): void => {
+      label.textContent = userInfo === null
+        ? this.Blok.I18n.t('blockSettings.lastEdited')
+        : this.Blok.I18n.t('blockSettings.lastEditedBy', { name: userInfo.name });
+    };
 
-    if (block.lastEditedBy != null && this.config.resolveUser != null) {
-      void Promise.resolve(this.config.resolveUser(block.lastEditedBy)).then((userInfo) => {
-        if (userInfo?.name != null) {
-          label.textContent = this.Blok.I18n.t('blockSettings.lastEditedBy', { name: userInfo.name });
-        }
-      });
+    // Paint what is known before the popover mounts, so a name the directory
+    // already holds never arrives as a swap the reader can see.
+    paint(editorId != null ? directory.known(editorId) : null);
+
+    if (editorId != null) {
+      // The directory absorbs a host callback that throws or rejects, so this
+      // can neither break the menu nor leak an unhandled rejection.
+      void directory.resolve(editorId).then(paint);
     }
 
     container.appendChild(label);

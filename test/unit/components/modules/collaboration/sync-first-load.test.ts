@@ -2493,6 +2493,22 @@ describe('collaboration — sync-first load', () => {
       // Two syncs and a reconnect on real timers.
     }, 20_000);
 
+    it('learns a peer name so the last-edited footer can use it', async () => {
+      const harness = await boot();
+      const socket = firstSync(harness, [{ type: 'paragraph', data: { text: 'synced' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'remote block');
+
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      peer.enableAwareness();
+      peer.setAwarenessField('user', { name: 'Ada', color: '#0b6e99', id: 'account-7' });
+      socket.deliver({ type: 'awareness', update: peer.encodeAwarenessUpdate() });
+      peer.destroy();
+
+      expect(harness.core.moduleInstances.UserDirectory.known('account-7')?.name).toBe('Ada');
+    });
+
     it('publishes a peer who configured no name — the default configuration', async () => {
       const harness = await boot();
       const seen: CollaborationStatusChangedPayload[] = [];

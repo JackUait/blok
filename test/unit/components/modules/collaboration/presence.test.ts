@@ -249,6 +249,7 @@ const setupWith = (states: Map<number, Record<string, unknown>>) => {
 interface SetupOptions {
   clientId?: number;
   user?: { name?: string; color?: string };
+  userId?: string;
   blockId?: string | null;
   position?: CaretPosition | null;
 }
@@ -265,6 +266,7 @@ const setup = (options: SetupOptions = {}) => {
   const presence = createPresence({
     yjs: seam,
     user: options.user,
+    userId: options.userId,
     currentBlockId: () => caret.blockId,
     currentCaret: () => caret.position,
     eventTarget: target,
@@ -356,6 +358,36 @@ describe('presence — local awareness upkeep', () => {
       presence.start();
 
       expect(seam.localState().blockId).toBeNull();
+    });
+
+    it('publishes the attribution id alongside the display identity', () => {
+      const { seam, presence } = setup({ user: { name: 'Ada' }, userId: 'account-7' });
+
+      presence.start();
+
+      const write = seam.writes.filter((entry) => entry.field === 'user').at(-1);
+
+      expect(write?.value).toMatchObject({ name: 'Ada', id: 'account-7' });
+    });
+
+    it('publishes no id when the host configured no attribution', () => {
+      const { seam, presence } = setup({ user: { name: 'Ada' } });
+
+      presence.start();
+
+      const write = seam.writes.filter((entry) => entry.field === 'user').at(-1);
+
+      expect(write?.value).not.toHaveProperty('id');
+    });
+
+    it('refuses a blank attribution id rather than publishing an empty one', () => {
+      const { seam, presence } = setup({ userId: '   ' });
+
+      presence.start();
+
+      const write = seam.writes.filter((entry) => entry.field === 'user').at(-1);
+
+      expect(write?.value).not.toHaveProperty('id');
     });
   });
 

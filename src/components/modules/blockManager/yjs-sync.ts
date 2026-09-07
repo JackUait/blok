@@ -705,6 +705,20 @@ export class BlockYjsSync {
       : {};
     const { lastEditedAt, lastEditedBy } = record;
 
+    /**
+     * The doc is authoritative about who edited last, and most remote edits
+     * take the in-place `setData` branch below, which never recomposes the
+     * block. Without this the live block keeps the previous editor's stamps
+     * until a reload — and `Saver` reads them off the live block, so the wrong
+     * author would be persisted, not merely shown.
+     *
+     * Both move together: they describe ONE edit, so adopting the time without
+     * the author (or the other way round) would credit that edit to whoever
+     * happened to be there before.
+     */
+    block.lastEditedAt = lastEditedAt;
+    block.lastEditedBy = lastEditedBy;
+
     // Mirror a parentId the doc changed BEFORE any recreate below, so a
     // replacement never carries a stale parent. A missing key is "no
     // authoritative value" (no-op); explicit null is "root". Runs inside the

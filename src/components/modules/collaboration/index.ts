@@ -209,6 +209,8 @@ interface CollabSettings {
   doc: string;
   url: string;
   user: { name?: string; color?: string } | undefined;
+  /** Attribution id from `config.user`, published so peers can name this editor. */
+  userId: string | undefined;
   offline: boolean;
 
   /** Identity partition the local copy is keyed by. Empty unless `offline`. */
@@ -408,6 +410,7 @@ export class Collaboration extends Module {
       doc: collaboration.doc,
       url: syncUrl(server, collaboration.doc),
       user: collaboration.user,
+      userId: this.config.user?.id,
       offline: collaboration.offline === true,
       // Core refuses `offline: true` without a non-empty scope, so the fallback
       // is only ever reached on a session that opens no database at all.
@@ -740,9 +743,15 @@ export class Collaboration extends Module {
     this.Blok.YjsManager.enableAwareness();
     this.awarenessUnhook = this.Blok.YjsManager.onAwarenessChange(() => this.emitStatus());
 
+    // The room never sends this editor its own state back, so the local pair
+    // is taught directly — otherwise a host with a collaboration name but no
+    // `user.name` could name every peer except themselves.
+    this.Blok.UserDirectory.learn(settings.userId, settings.user?.name);
+
     this.presence = createPresence({
       yjs: this.Blok.YjsManager,
       user: settings.user,
+      userId: settings.userId,
       currentBlockId: () => this.Blok.BlockManager.currentBlock?.id ?? null,
       currentCaret: () => {
         const block = this.Blok.BlockManager.currentBlock;
@@ -1400,10 +1409,18 @@ export class Collaboration extends Module {
     // The walk the presence renderer takes: not this client, carrying an
     // identity, at most MAX_PEERS after a bounded scan — so one hostile frame
     // full of fabricated states cannot hand the host a list its size.
-    const peers = selectDrawableStates(
+    // The walk is already bounded, so learning from it inherits that bound —
+    // a peer minting ids cannot grow this past what the renderer draws.
+    const drawable = selectDrawableStates(
       presenceStates(this.Blok.YjsManager.getAwarenessStates()),
       this.presence?.localClientId ?? null
-    ).map(toPeer);
+    );
+
+    for (const entry of drawable) {
+      this.Blok.UserDirectory.learn(entry.state.user.id, entry.state.user.name);
+    }
+
+    const peers = drawable.map(toPeer);
 
     // A host listener that throws must not reach the frame handler above this
     // (where it would end the session) or skip the arbitration that follows a

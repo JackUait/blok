@@ -41,7 +41,7 @@
 [data-blok-popover-container]:not(:has(> [data-blok-testid='popover-search-field'] > input:not(:placeholder-shown))) {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 4px;
+  gap: var(--blok-space-1);
   grid-column: span 6;
   grid-column: span 3;
   min-width: 0;
@@ -4008,7 +4008,7 @@
 [data-blok-tool="image"] .blok-image-caption-row__alt {
   flex: 0 0 auto;
   margin-top: var(--blok-space-1);
-  padding: 2px 6px;
+  padding: var(--blok-space-0-5) var(--blok-space-1-5);
   font: inherit;
   font-size: 10px;
   font-weight: 500;
@@ -8134,8 +8134,8 @@
 [data-blok-presence-caret-label] {
   position: absolute;
   z-index: 2;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: var(--blok-space-0-5) var(--blok-space-1-5);
+  border-radius: var(--blok-space-1);
   background: var(--blok-presence-color);
   color: var(--blok-text-on-dark);
   font-size: 11px;

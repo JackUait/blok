@@ -51,7 +51,7 @@
   > [data-blok-popover-items]:has(> :is([data-blok-header-level], [data-blok-convert-item])) {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 4px;
+    gap: var(--blok-space-1);
 
     > * {
       grid-column: span 6;

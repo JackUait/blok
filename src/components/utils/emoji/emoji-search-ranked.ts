@@ -6,6 +6,15 @@ const DEFAULT_LIMIT = 10;
 // Lower is better. Gaps left between tiers so a tier can be inserted later
 // without renumbering the others.
 const RANK_EXACT_ID = 0;
+// An emoji's id is its literal shortcode — a primary key, unique per emoji.
+// A keyword (or a locale's translated name/keyword) is a descriptive tag
+// that can collide: "fire" is also a keyword of "firefighter", "candle" and
+// "name_badge" in the real @emoji-mart/data set. Both used to share
+// RANK_EXACT_ID, so a query like "fire" tied between the "fire" emoji and
+// "firefighter", and the tie broke on dataset (category) order — not
+// relevance — sometimes putting the keyword collision first. This tier sits
+// strictly below the id tier so an id match always wins that tie.
+const RANK_EXACT_KEYWORD = 5;
 const RANK_ID_PREFIX = 10;
 const RANK_KEYWORD_PREFIX = 20;
 const RANK_NAME_PREFIX = 30;
@@ -20,8 +29,12 @@ function rankOne(emoji: ProcessedEmoji, query: string, localeData?: EmojiLocaleD
   const localizedName = localized?.n.toLowerCase() ?? '';
   const localizedKeywords = (localized?.k ?? []).map(k => k.toLowerCase());
 
-  if (id === query || keywords.includes(query) || localizedName === query || localizedKeywords.includes(query)) {
+  if (id === query) {
     return RANK_EXACT_ID;
+  }
+
+  if (keywords.includes(query) || localizedName === query || localizedKeywords.includes(query)) {
+    return RANK_EXACT_KEYWORD;
   }
 
   if (id.startsWith(query)) {
@@ -44,18 +57,22 @@ function rankOne(emoji: ProcessedEmoji, query: string, localeData?: EmojiLocaleD
 }
 
 /**
- * True when `query` is an exact shortcode match for `emoji` — the same
- * predicate searchEmojisRanked's top tier (RANK_EXACT_ID) uses, id OR
- * keyword OR localized name/keyword. Exported so a caller that needs a yes/no
- * answer (e.g. committing on a closing ":") shares this single rule instead
- * of re-deriving its own, narrower copy of it (which would silently drop the
- * keyword case — see rankOne).
+ * True when `query` is an exact shortcode match for `emoji` — the same two
+ * top tiers searchEmojisRanked uses, id OR keyword OR localized name/keyword
+ * (RANK_EXACT_ID or RANK_EXACT_KEYWORD). Exported so a caller that needs a
+ * yes/no answer (e.g. committing on a closing ":") shares this single rule
+ * instead of re-deriving its own, narrower copy of it (which would silently
+ * drop the keyword case — see rankOne). Does not distinguish which of the two
+ * tiers matched — callers that need an id match to win a collision (see
+ * emojiTrigger.ts's commitOnClosingColon) check the id separately first.
  * @param emoji - candidate emoji
  * @param query - the text typed after ":", already without whitespace
  * @param localeData - translated names/keywords, when loaded
  */
 export function isExactShortcodeMatch(emoji: ProcessedEmoji, query: string, localeData?: EmojiLocaleData | null): boolean {
-  return rankOne(emoji, query.toLowerCase(), localeData) === RANK_EXACT_ID;
+  const rank = rankOne(emoji, query.toLowerCase(), localeData);
+
+  return rank === RANK_EXACT_ID || rank === RANK_EXACT_KEYWORD;
 }
 
 /**

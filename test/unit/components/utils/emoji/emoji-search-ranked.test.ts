@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { isExactShortcodeMatch, searchEmojisRanked } from '../../../../../src/components/utils/emoji/emoji-search-ranked';
+import { loadEmojiData } from '../../../../../src/components/utils/emoji/emoji-data';
 import type { ProcessedEmoji } from '../../../../../src/components/utils/emoji/emoji-data';
 
 function emoji(id: string, name: string, keywords: string[], native: string): ProcessedEmoji {
@@ -73,6 +74,49 @@ describe('searchEmojisRanked', () => {
     const natives = searchEmojisRanked(data, 'огонь', locale).map(e => e.native);
 
     expect(natives[0]).toBe('🔥');
+  });
+
+  it('ranks an exact id match above an exact keyword collision on a DIFFERENT emoji, regardless of dataset order', () => {
+    // "firefighter" carries "fire" as a keyword (mirrors the real dataset —
+    // see the closing-colon task report). Listed BEFORE the "fire" emoji
+    // itself, so a same-tier tie-break on dataset order would pick it.
+    const keywordCollision = emoji('firefighter', 'Firefighter', ['fire'], '🧑‍🚒');
+    const data = [keywordCollision, ...DATA];
+
+    expect(searchEmojisRanked(data, 'fire')[0]?.native).toBe('🔥');
+  });
+});
+
+describe('searchEmojisRanked — real dataset: id beats an incidental keyword collision', () => {
+  // These pin the bug the coordinator found: rankOne used to award the SAME
+  // tier to an exact id match and an exact keyword match, so a query whose
+  // id-emoji lost the dataset-order tie-break (category ordering, not
+  // relevance) returned the wrong top result — "fire" returned firefighter
+  // (🧑‍🚒, keyword "fire"), not the fire emoji (🔥) itself.
+  it('ranks "fire" first for the query "fire", not "firefighter" (keyword collision)', async () => {
+    const emojis = await loadEmojiData();
+
+    expect(searchEmojisRanked(emojis, 'fire')[0]?.native).toBe('🔥');
+  });
+
+  it('ranks "heart" first for the query "heart"', async () => {
+    const emojis = await loadEmojiData();
+
+    expect(searchEmojisRanked(emojis, 'heart')[0]?.native).toBe('❤️');
+  });
+
+  it('ranks "smile" first for the query "smile"', async () => {
+    const emojis = await loadEmojiData();
+
+    expect(searchEmojisRanked(emojis, 'smile')[0]?.native).toBe('😄');
+  });
+
+  // Unaffected by the fix: no emoji's id is "thumbsup" — it is a keyword of
+  // "+1" — so nothing can outrank it in the new id-only tier.
+  it('still resolves "thumbsup" to "+1" (👍) via the keyword tier', async () => {
+    const emojis = await loadEmojiData();
+
+    expect(searchEmojisRanked(emojis, 'thumbsup')[0]?.native).toBe('👍');
   });
 });
 

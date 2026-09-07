@@ -51,13 +51,17 @@ interface MockEmojiPickerOptions {
 
 /** Same stub strategy as emojiTrigger.test.ts: a real EmojiPicker needs window.matchMedia, which jsdom lacks. */
 const mockPickerElement = document.createElement('div');
+/** Captures the options object EmojiTrigger passes to `new EmojiPicker(...)` — the mouse path's onSelect is only reachable through this, mirroring emojiTrigger.test.ts's own use of it to assert `.inline`. */
+const mockPickerConstructor = vi.fn<(options: MockEmojiPickerOptions) => void>();
 const mockPickerOpen = vi.fn<(anchor: HTMLElement, anchorRect?: DOMRect) => Promise<void>>().mockResolvedValue(undefined);
 const mockPickerSetQuery = vi.fn<(query: string) => void>();
 const mockPickerClose = vi.fn<() => void>();
 
 vi.mock('../../../../../../src/tools/callout/emoji-picker', () => ({
   prefetchEmojiPickerData: vi.fn(),
-  EmojiPicker: vi.fn(function emojiPickerMock(_options: MockEmojiPickerOptions) {
+  EmojiPicker: vi.fn(function emojiPickerMock(options: MockEmojiPickerOptions) {
+    mockPickerConstructor(options);
+
     return {
       open: mockPickerOpen,
       setQuery: mockPickerSetQuery,
@@ -209,6 +213,43 @@ describe('EmojiTrigger — insertion', () => {
 
     trigger.commit(FIRE);
 
+    expect(trigger.opened).toBe(false);
+  });
+
+  /**
+   * Nothing else in this file ever calls the picker's onSelect — commit()
+   * (the keyboard path) never touches it. A regression on the single wiring
+   * line in ensurePicker() (e.g. reverting to Task 6's `onSelect: () =>
+   * this.close()`) would pass every other test here. mockPickerConstructor
+   * captures the real options object EmojiTrigger builds, so calling its
+   * onSelect exercises exactly what a real mouse click on a picker button
+   * would trigger.
+   */
+  it('wires the picker constructor onSelect to insert the mouse-picked emoji', async () => {
+    const block = createBlock(':fi');
+
+    document.body.appendChild(block.holder);
+    setCaret(block, 3);
+
+    const trigger = new EmojiTrigger(createBlokModules(block));
+
+    await trigger.handleInput({ inputType: 'insertText', data: 'i', isComposing: false } as InputEvent);
+
+    const call = mockPickerConstructor.mock.calls[0];
+
+    if (call === undefined) {
+      throw new Error('EmojiPicker was never constructed');
+    }
+
+    const [options] = call;
+
+    // The picker resolves skin tone itself (getSkinnedNative) before calling
+    // back, so a real click delivers an already-skinned native — not a
+    // ProcessedEmoji — which is why this goes through onSelect directly
+    // rather than through commit().
+    options.onSelect('🎉');
+
+    expect(block.currentInput?.textContent).toBe('🎉');
     expect(trigger.opened).toBe(false);
   });
 });

@@ -245,6 +245,93 @@ describe('preview scroll haze mutants', () => {
     });
   });
 
+  describe('how it listens', () => {
+    it('catches scroll in the capture phase, passively', () => {
+      const body = document.createElement('div');
+
+      document.body.appendChild(body);
+
+      const listen = vi.spyOn(body, 'addEventListener');
+
+      new ScrollHaze().init(body);
+
+      expect(listen).toHaveBeenCalledWith('scroll', expect.any(Function), { capture: true, passive: true });
+    });
+
+    it('watches for the content and view changes that move the edges', () => {
+      const observe = vi.spyOn(MutationObserver.prototype, 'observe');
+      const { body } = mount();
+
+      expect(observe).toHaveBeenCalledTimes(1);
+      expect(observe.mock.calls[0][0]).toBe(body);
+      expect(observe.mock.calls[0][1]).toStrictEqual({
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['hidden', 'style', 'class'],
+      });
+    });
+
+    it('schedules a frame again after the previous one has run', () => {
+      const scroller = view({ scrollTop: 0, scrollHeight: 300, clientHeight: 100 });
+
+      mount([scroller]);
+
+      vi.mocked(globalThis.requestAnimationFrame).mockClear();
+
+      scroller.dispatchEvent(new Event('scroll'));
+      scroller.dispatchEvent(new Event('scroll'));
+
+      expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('clearing', () => {
+    it('hides every edge once the views are gone', () => {
+      const scroller = view({ scrollTop: 150, scrollHeight: 300, clientHeight: 100 });
+      const { haze, body } = mount([scroller]);
+
+      expect(shown(body, 'top')).toBe(true);
+
+      scroller.remove();
+      haze.update();
+
+      for (const side of ['top', 'bottom', 'left', 'right']) {
+        expect(shown(body, side)).toBe(false);
+      }
+    });
+
+    it('tracks the surface even when it is transparent', () => {
+      const { body } = mount([view({ scrollTop: 10, scrollHeight: 300, clientHeight: 100 })]);
+
+      expect(body.style.getPropertyValue('--blok-haze-color')).toBe('rgba(0, 0, 0, 0)');
+    });
+  });
+
+  describe('edge cases at the exact threshold', () => {
+    it('hides the bottom edge when the view is scrolled one pixel from its end', () => {
+      const { body } = mount([view({ scrollTop: 199, scrollHeight: 300, clientHeight: 100 })]);
+
+      expect(shown(body, 'bottom')).toBe(false);
+    });
+
+    it('hides the right edge when the view is scrolled one pixel from its end', () => {
+      const { body } = mount([view({ scrollLeft: 199, scrollWidth: 300, clientWidth: 100 })]);
+
+      expect(shown(body, 'right')).toBe(false);
+    });
+
+    it('never measures a strip, even one that would look like it overflows', () => {
+      const flat = view({ scrollTop: 0, scrollHeight: 100, clientHeight: 100 });
+      const { body } = mount([flat]);
+
+      withMetrics(strip(body, 'top'), { scrollHeight: 400, clientHeight: 100, scrollTop: 200 });
+      new ScrollHaze().update();
+
+      expect(shown(body, 'top')).toBe(false);
+    });
+  });
+
   describe('destroy', () => {
     it('removes the strips and stops refreshing', () => {
       const scroller = view({ scrollTop: 0, scrollHeight: 300, clientHeight: 100 });
@@ -262,6 +349,19 @@ describe('preview scroll haze mutants', () => {
 
     it('is safe to call before anything was mounted', () => {
       expect(() => new ScrollHaze().destroy()).not.toThrow();
+    });
+
+    it('can be mounted again after being torn down', () => {
+      const first = view({ scrollTop: 0, scrollHeight: 300, clientHeight: 100 });
+      const { haze, body } = mount([first]);
+
+      haze.destroy();
+      haze.init(body);
+
+      Object.defineProperty(first, 'scrollTop', { value: 150, configurable: true });
+      first.dispatchEvent(new Event('scroll'));
+
+      expect(shown(body, 'top')).toBe(true);
     });
   });
 });

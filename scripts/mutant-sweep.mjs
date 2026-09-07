@@ -9,13 +9,54 @@
 // assertion fails on its own under machine load, and scoring on the process exit
 // code alone turns that into a kill nobody asserted.
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, existsSync, rmSync, readdirSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
 
 import { applyMutant, assertSourceMatchesReport } from './mutant-apply.mjs';
 
 const RUN_TIMEOUT_MS = 180_000;
+
+/**
+ * Pristine copies of every file a sweep has mutated, so a sweep that dies
+ * without running its `finally` still leaves the cure behind.
+ *
+ * The repository is shared with other sessions: a mutant left in the tree is
+ * their problem, not just ours, and `kill -9` skips both the finally block and
+ * the signal handlers. A stale file here is the alarm AND the fix — recover with
+ * `node scripts/mutant-sweep.mjs --restore`.
+ */
+const BACKUP_DIR = '.mutation-state/sweep-backups';
+
+const backupPathFor = (source) => join(BACKUP_DIR, `${source.replace(/[/\\]/g, '__')}.orig`);
+
+const restoreAll = () => {
+  if (!existsSync(BACKUP_DIR)) {
+    process.stdout.write('No sweep backups; nothing to restore.\n');
+
+    return;
+  }
+
+  const backups = readdirSync(BACKUP_DIR).filter((name) => name.endsWith('.orig'));
+
+  for (const name of backups) {
+    const backup = join(BACKUP_DIR, name);
+    const { source, contents } = JSON.parse(readFileSync(backup, 'utf8'));
+
+    if (readFileSync(source, 'utf8') === contents) {
+      process.stdout.write(`${source} is already pristine.\n`);
+    } else {
+      writeFileSync(source, contents);
+      process.stdout.write(`Restored ${source}.\n`);
+    }
+
+    rmSync(backup);
+  }
+
+  if (backups.length === 0) {
+    process.stdout.write('No sweep backups; nothing to restore.\n');
+  }
+};
 
 const argOf = (name) => {
   const hit = process.argv.slice(2).find((arg) => arg.startsWith(`--${name}=`));
@@ -66,6 +107,12 @@ const runTests = (tests) => {
 };
 
 const main = () => {
+  if (process.argv.includes('--restore')) {
+    restoreAll();
+
+    return;
+  }
+
   const reportPath = argOf('report');
   const source = argOf('source');
   const tests = (argOf('tests') ?? '').split(',').filter(Boolean);
@@ -106,8 +153,16 @@ const main = () => {
 
   process.stdout.write(`Baseline failing tests: ${baseline.failures.size}\n`);
 
+  const backup = backupPathFor(source);
+
+  mkdirSync(BACKUP_DIR, { recursive: true });
+  writeFileSync(backup, JSON.stringify({ source, contents: original }));
+
   const verdicts = [];
-  const restore = () => writeFileSync(source, original);
+  const restore = () => {
+    writeFileSync(source, original);
+    rmSync(backup, { force: true });
+  };
 
   process.on('SIGINT', () => { restore(); process.exit(130); });
   process.on('SIGTERM', () => { restore(); process.exit(143); });
@@ -138,7 +193,7 @@ const main = () => {
       );
     }
   } finally {
-    writeFileSync(source, original);
+    restore();
   }
 
   writeFileSync(outPath, `${JSON.stringify(verdicts, null, 2)}\n`);

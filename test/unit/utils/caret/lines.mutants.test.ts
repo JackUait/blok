@@ -128,37 +128,37 @@ describe('caret/lines mutants', () => {
     };
 
     it('keeps a caret rect that has height', () => {
-      const { range, input } = setup({ top: 0, height: 12 }, { top: 40, height: 20 }, { top: 90, height: 20 });
+      const { range, input } = setup({ top: 0, height: 12 }, { top: 40, height: 20 }, { top: 90, height: 33 });
 
       expect(getValidCaretRect(range, input).height).toBe(12);
     });
 
     it('keeps a caret rect that has a top even with no height', () => {
-      const { range, input } = setup({ top: 7, height: 0 }, { top: 40, height: 20 }, { top: 90, height: 20 });
+      const { range, input } = setup({ top: 7, height: 0 }, { top: 40, height: 20 }, { top: 90, height: 33 });
 
       expect(getValidCaretRect(range, input).top).toBe(7);
     });
 
     it('falls back to the containing element when the caret rect is empty', () => {
-      const { range, input } = setup(ZERO, { top: 40, height: 20 }, { top: 90, height: 20 });
+      const { range, input } = setup(ZERO, { top: 40, height: 20 }, { top: 90, height: 33 });
 
       expect(getValidCaretRect(range, input).top).toBe(40);
     });
 
     it('accepts a container rect that has height but no top', () => {
-      const { range, input } = setup(ZERO, { top: 0, height: 20 }, { top: 90, height: 20 });
+      const { range, input } = setup(ZERO, { top: 0, height: 20 }, { top: 90, height: 33 });
 
       expect(getValidCaretRect(range, input).height).toBe(20);
     });
 
     it('accepts a container rect that has a top but no height', () => {
-      const { range, input } = setup(ZERO, { top: 40, height: 0 }, { top: 90, height: 20 });
+      const { range, input } = setup(ZERO, { top: 40, height: 0 }, { top: 90, height: 33 });
 
       expect(getValidCaretRect(range, input).top).toBe(40);
     });
 
     it('falls back to the input when the containing element is empty too', () => {
-      const { range, input } = setup(ZERO, ZERO, { top: 90, height: 20 });
+      const { range, input } = setup(ZERO, ZERO, { top: 90, height: 33 });
 
       expect(getValidCaretRect(range, input).top).toBe(90);
     });
@@ -178,7 +178,7 @@ describe('caret/lines mutants', () => {
 
       stubGeometry(
         [],
-        [{ element: holder, rect: { top: 40, height: 20 } }, { element: input, rect: { top: 90, height: 20 } }],
+        [{ element: holder, rect: { top: 40, height: 20 } }, { element: input, rect: { top: 90, height: 33 } }],
       );
 
       expect(getValidCaretRect(range, input).top).toBe(40);
@@ -195,7 +195,7 @@ describe('caret/lines mutants', () => {
       range.setStart(orphan, 1);
       range.collapse(true);
 
-      stubGeometry([], [{ element: input, rect: { top: 90, height: 20 } }]);
+      stubGeometry([], [{ element: input, rect: { top: 90, height: 33 } }]);
 
       expect(orphan.parentElement).toBeNull();
       expect(getValidCaretRect(range, input).top).toBe(90);
@@ -494,6 +494,21 @@ describe('caret/lines mutants', () => {
       );
 
       expect(isCaretAtLastLine(input)).toBe(false);
+    });
+
+    it('compares against a last line scrolled to a zero bottom', () => {
+      const { input, firstText, lastText } = makeEditable();
+
+      placeCaret(firstText, 1);
+      stubGeometry(
+        [
+          { container: firstText, offset: 1, rect: { top: -17, height: 20 } },
+          { container: lastText, offset: 3, rect: { top: -20, height: 20 } },
+        ],
+        [{ element: input, rect: { top: 0, height: 60 } }],
+      );
+
+      expect(isCaretAtLastLine(input)).toBe(true);
     });
 
     it('treats a caret exactly one line above the input bottom as before the last line', () => {

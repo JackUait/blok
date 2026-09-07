@@ -2,7 +2,7 @@ ARG BUILDPLATFORM
 # The embedded document runtime is JavaScript, so it is built once on the build
 # host — the .NET SDK image has no node, and the bundle is the same for every
 # target architecture.
-FROM --platform=$BUILDPLATFORM node:24-bookworm-slim AS runtime-build
+FROM --platform=$BUILDPLATFORM node:26-bookworm-slim AS runtime-build
 WORKDIR /workspace
 
 COPY package.json yarn.lock .yarnrc.yml ./
@@ -12,7 +12,14 @@ COPY packages/presets/package.json packages/presets/package.json
 COPY packages/react/package.json packages/react/package.json
 COPY packages/server/package.json packages/server/package.json
 COPY packages/vue/package.json packages/vue/package.json
-RUN corepack enable && yarn install --immutable
+# node:26 ships neither Corepack (Node stopped distributing it in 25,
+# nodejs/node#57617) nor Yarn Classic (the node:24 image installed that
+# separately; node:26 does not), so installing Corepack is the only route to
+# the pinned yarn@4.9.4. Without it this step exits 127.
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN npm install -g corepack@0.35.0 \
+    && corepack enable \
+    && yarn install --immutable
 COPY . .
 RUN node scripts/build-server-runtime.mjs
 

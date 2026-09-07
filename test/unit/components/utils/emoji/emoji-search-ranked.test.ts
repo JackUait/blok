@@ -62,4 +62,16 @@ describe('searchEmojisRanked', () => {
 
     expect(searchEmojisRanked(DATA, 'огонь', locale)[0]?.native).toBe('🔥');
   });
+
+  it('ranks an exact localized-name match above a lower-tier id-prefix competitor', () => {
+    const locale = { '🔥': { n: 'Огонь', k: ['жар'] } };
+    // id starts with the same query, so this only reaches RANK_ID_PREFIX —
+    // it must not outrank an exact localized match.
+    const competitor = emoji('огонь_show', 'Fireworks Show', ['show'], '🎆');
+    const data = [...DATA, competitor];
+
+    const natives = searchEmojisRanked(data, 'огонь', locale).map(e => e.native);
+
+    expect(natives[0]).toBe('🔥');
+  });
 });

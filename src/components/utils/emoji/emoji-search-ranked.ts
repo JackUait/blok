@@ -20,7 +20,7 @@ function rankOne(emoji: ProcessedEmoji, query: string, localeData?: EmojiLocaleD
   const localizedName = localized?.n.toLowerCase() ?? '';
   const localizedKeywords = (localized?.k ?? []).map(k => k.toLowerCase());
 
-  if (id === query || keywords.includes(query)) {
+  if (id === query || keywords.includes(query) || localizedName === query || localizedKeywords.includes(query)) {
     return RANK_EXACT_ID;
   }
 

@@ -2,7 +2,7 @@ ARG BUILDPLATFORM
 # The embedded document runtime is JavaScript, so it is built once on the build
 # host — the .NET SDK image has no node, and the bundle is the same for every
 # target architecture.
-FROM --platform=$BUILDPLATFORM node:24-bookworm-slim AS runtime-build
+FROM --platform=$BUILDPLATFORM node:26-bookworm-slim AS runtime-build
 WORKDIR /workspace
 
 COPY package.json yarn.lock .yarnrc.yml ./

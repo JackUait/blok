@@ -261,12 +261,12 @@ export class Collaboration extends Module {
   /**
    * How many of this module's own observer suspensions are outstanding.
    *
-   * `ModificationsObserver.disable()/enable()` is a boolean, not a counter, so
-   * an inner `enable()` re-arms the observer while an outer suspension is still
-   * rewriting the DOM. The degrade render is the one window here that spans an
-   * await — a tool with a genuinely async `render` holds it open for as long as
-   * it likes — and a first sync landing inside it drops the degraded view,
-   * which suspends again. Only the outermost pair may touch the module.
+   * `ModificationsObserver.disable()/enable()` keeps a suspension count of its
+   * own, so this one is only about keeping the module to a SINGLE outstanding
+   * suspension on the observer. The degrade render is the one window here that
+   * spans an await — a tool with a genuinely async `render` holds it open for as
+   * long as it likes — and a first sync landing inside it drops the degraded
+   * view, which suspends again.
    */
   private observerSuspensions = 0;
 

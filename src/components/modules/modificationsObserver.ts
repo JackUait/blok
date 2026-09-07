@@ -5,6 +5,7 @@ import { Module } from '../__module';
 import { modificationsObserverBatchTimeout } from '../constants';
 import { BlockChanged, FakeCursorAboutToBeToggled, FakeCursorHaveBeenSet, RedactorDomChanged } from '../events';
 import { isFunction } from '../utils';
+import { registerUnsavedWork } from '../utils/persistence';
 
 /**
  * We use map of block mutations to filter only unique events
@@ -27,6 +28,15 @@ export class ModificationsObserver extends Module {
    * user has touched anything.
    */
   private disabled = true;
+
+  /**
+   * How many suspensions are outstanding.
+   *
+   * `disable()`/`enable()` nest: a host-driven rewrite takes the mutex and an
+   * i18n repaint or a `blocks.render()` running inside it takes its own. Only
+   * the outermost `enable()` may re-arm the observer.
+   */
+  private suspendDepth = 0;
 
   /**
    * Blocks wrapper mutation observer instance
@@ -61,10 +71,15 @@ export class ModificationsObserver extends Module {
   private pendingSave = false;
 
   /**
-   * True from the moment a serialization starts until it settles. The host does
-   * not have the document yet, so it still counts as unsaved.
+   * How many serializations have started and not yet settled. The host does not
+   * have those documents yet, so they still count as unsaved.
+   *
+   * A count, not a flag: two windows overlap whenever a change lands while the
+   * previous serialization is still running, and with a flag the FIRST one to
+   * settle cleared it — reporting the document clean while a serialization the
+   * host never received was still outstanding.
    */
-  private saveInFlight = false;
+  private savesInFlight = 0;
 
   /**
    * Array of onChange events used to batch them
@@ -85,6 +100,14 @@ export class ModificationsObserver extends Module {
   private destroyed = false;
 
   /**
+   * Re-evaluates the tab's unload prompt. Registered with the save queue, which
+   * arms that prompt only once it holds a payload — so an edit still inside its
+   * batch window, or a serialization still running, is invisible to it without
+   * this. A no-op for an editor configured without `persistence`.
+   */
+  private readonly syncUnloadGuard: () => void;
+
+  /**
    * Prepare the module
    * @param options - options used by the modification observer module
    * @param options.config - Blok configuration object
@@ -95,6 +118,8 @@ export class ModificationsObserver extends Module {
       config,
       eventsDispatcher,
     });
+
+    this.syncUnloadGuard = registerUnsavedWork(this.config.persistence, () => this.hasUnsavedChanges);
 
     this.mutationObserver = new MutationObserver((mutations) => {
       this.redactorChanged(mutations);
@@ -122,10 +147,12 @@ export class ModificationsObserver extends Module {
    * one that never reached `onSave` — rejected, suppressed by a read-only flip,
    * or cut short by teardown.
    *
-   * This is what an unload guard reads to decide whether leaving loses work.
+   * This is what the tab's unload guard reads to decide whether leaving loses
+   * work — see the {@link registerUnsavedWork} call in the constructor, which is
+   * what actually wires it to the guard.
    */
   public get hasUnsavedChanges(): boolean {
-    return this.pendingSave || this.saveInFlight;
+    return this.pendingSave || this.savesInFlight > 0;
   }
 
   /**
@@ -141,9 +168,16 @@ export class ModificationsObserver extends Module {
   }
 
   /**
-   * Enables onChange event
+   * Releases one suspension, re-arming onChange/onSave only once the last one is
+   * gone — see {@link suspendDepth}.
    */
   public enable(): void {
+    this.suspendDepth = Math.max(0, this.suspendDepth - 1);
+
+    if (this.suspendDepth > 0) {
+      return;
+    }
+
     this.mutationObserver.observe(
       this.Blok.UI.nodes.redactor,
       {
@@ -154,12 +188,47 @@ export class ModificationsObserver extends Module {
       }
     );
     this.disabled = false;
+
+    /**
+     * The edit that opened the window before the suspension is still
+     * undelivered: `disable()` cancelled its timer and nothing else arms one.
+     * Without a fresh window it waits for the user's NEXT edit — and when none
+     * comes, the host never receives it at all.
+     */
+    if (this.pendingSave && this.batchingTimeout === null) {
+      this.openBatchWindow();
+    }
   }
 
   /**
-   * Disables onChange event
+   * Throws away every undelivered change: the queued onChange events, the open
+   * window and the dirty bit `enable()` would otherwise re-arm a window for.
+   *
+   * For a caller that REPLACES the document — `blocks.render()`. An edit still
+   * waiting out its window was made against the document being replaced, so
+   * saving it hands the host its own pushed document back to its save endpoint.
+   * A caller that keeps the same document (the read-only toggle, an i18n
+   * repaint) must NOT call this: the pending edit there is still the user's, and
+   * still has to be delivered.
+   */
+  public discardPendingChanges(): void {
+    this.pendingSave = false;
+    this.batchingOnChangeQueue.clear();
+
+    if (this.batchingTimeout !== null) {
+      clearTimeout(this.batchingTimeout);
+      this.batchingTimeout = null;
+    }
+
+    this.syncUnloadGuard();
+  }
+
+  /**
+   * Takes onChange/onSave out of service for the caller's DOM rewrite. Nests:
+   * see {@link suspendDepth}.
    */
   public disable(): void {
+    this.suspendDepth += 1;
     this.mutationObserver.disconnect();
     this.disabled = true;
 
@@ -171,7 +240,7 @@ export class ModificationsObserver extends Module {
      *
      * `pendingSave` deliberately survives: the edit that opened the window was
      * made while the document was still editable, so it stays dirty and rides
-     * the next window.
+     * the fresh window the outermost `enable()` opens for it.
      */
     if (this.batchingTimeout !== null) {
       clearTimeout(this.batchingTimeout);
@@ -194,6 +263,7 @@ export class ModificationsObserver extends Module {
 
     this.batchingOnChangeQueue.set(`block:${event.detail.target.id}:event:${event.type as BlockMutationType}`, event);
     this.pendingSave = true;
+    this.syncUnloadGuard();
 
     /**
      * A window is already open — this change rides its trailing edge. Leaving
@@ -207,6 +277,13 @@ export class ModificationsObserver extends Module {
 
     this.scheduleLeadingFlush();
 
+    this.openBatchWindow();
+  }
+
+  /**
+   * Arms the trailing edge of a batch window.
+   */
+  private openBatchWindow(): void {
     this.batchingTimeout = setTimeout(() => {
       this.batchingTimeout = null;
       this.flushTrailing();
@@ -259,6 +336,7 @@ export class ModificationsObserver extends Module {
 
     if (!isFunction(this.config.onSave)) {
       this.pendingSave = false;
+      this.syncUnloadGuard();
 
       return;
     }
@@ -323,11 +401,11 @@ export class ModificationsObserver extends Module {
    * and puts the document back to dirty when it does.
    */
   private emitOnSave(): void {
-    this.saveInFlight = true;
+    this.savesInFlight += 1;
 
     void this.Blok.Saver.save()
       .then((data) => {
-        this.saveInFlight = false;
+        this.savesInFlight = Math.max(0, this.savesInFlight - 1);
 
         /**
          * Re-checked after the await: the host can freeze or tear down the
@@ -339,6 +417,7 @@ export class ModificationsObserver extends Module {
          */
         if (this.isDeliverySuppressed || data === undefined) {
           this.pendingSave = true;
+          this.syncUnloadGuard();
 
           return;
         }
@@ -348,6 +427,11 @@ export class ModificationsObserver extends Module {
         if (isFunction(onSave)) {
           onSave(data, this.Blok.API.methods);
         }
+
+        // After onSave, never before: the queue's pump IS an onSave, so syncing
+        // first would drop the guard for an instant and re-attach it — and a
+        // browser that unloads in that gap asks nothing.
+        this.syncUnloadGuard();
       })
       .catch(() => {
         /**
@@ -355,8 +439,9 @@ export class ModificationsObserver extends Module {
          * own channel, so swallow here to avoid an unhandled rejection. The
          * batch is not swallowed with it.
          */
-        this.saveInFlight = false;
+        this.savesInFlight = Math.max(0, this.savesInFlight - 1);
         this.pendingSave = true;
+        this.syncUnloadGuard();
       });
   }
 

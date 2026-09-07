@@ -11,6 +11,26 @@ type SweepOwner = NonNullable<BlokConfig['persistence']>;
 /** Deletes one stored asset. Rejecting is how a host says it did not happen. */
 type RemoveAsset = (url: string) => Promise<void>;
 
+/** One remembered upload, with what the sweep needs to decide about it. */
+type Candidate = {
+  remove: RemoveAsset;
+  /** Which recording this was, so a save only sweeps what predates it. */
+  recordedAt: number;
+  /** Removals already refused for this URL — see {@link MAX_REMOVE_ATTEMPTS}. */
+  attempts: number;
+};
+
+/**
+ * How many times a refused removal is offered again, in all.
+ *
+ * A refused delete leaves the asset there and still ours, so retrying it on the
+ * next save is right for a blip. It is wrong forever: an endpoint answering 403
+ * or 404 refuses every time, and an uncapped candidate is re-issued on every
+ * save for the rest of the session. Giving up leaks one stored file, which is a
+ * bill; the other direction is a request per save that can never succeed.
+ */
+const MAX_REMOVE_ATTEMPTS = 3;
+
 /**
  * Tracks the assets THIS editing session uploaded, and deletes the ones a
  * saved document no longer references.
@@ -80,10 +100,62 @@ function decodeSerializerEntities(value: string): string {
 }
 
 /**
+ * A URL only a string can be. `UploadedAsset` comes from host code, so a
+ * JavaScript uploader may offer anything — `{ url: response.headers.get(
+ * 'Location') }` with no such header offers `undefined`.
+ * @param value - what a host handed over as a URL
+ */
+function isUrl(value: unknown): value is string {
+  return typeof value === 'string' && value !== '';
+}
+
+/**
+ * Collect every string the saved document holds, each decoded.
+ *
+ * Serializing the document instead would put JSON's own escaping between a
+ * candidate and its match: `JSON.stringify` writes `"` as `\"` and `\` as
+ * `\\`, so a URL carrying either is absent from the blob, is called an orphan,
+ * and the file a visible block points at is deleted with no undo. A
+ * `Content-Disposition` filename is enough to produce such a URL.
+ * @param value - a document node, or anything a tool nested inside one
+ * @param into - the strings found so far
+ * @param seen - objects already walked, so a self-referencing payload ends
+ */
+function collectStrings(value: unknown, into: string[], seen: Set<unknown>): void {
+  if (typeof value === 'string') {
+    into.push(decodeSerializerEntities(value));
+
+    return;
+  }
+
+  if (value === null || typeof value !== 'object' || seen.has(value)) {
+    return;
+  }
+
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    for (const nested of value) {
+      collectStrings(nested, into, seen);
+    }
+
+    return;
+  }
+
+  // Keys count as referenced text: a tool may key its data BY url
+  // (`{ [url]: meta }`), and missing that deletes a file the document still
+  // points at.
+  for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
+    into.push(decodeSerializerEntities(key));
+    collectStrings(nested, into, seen);
+  }
+}
+
+/**
  * Build a candidate set for one editing session.
  */
 export function createOrphanSweep(): OrphanSweep {
-  const candidates = new Map<string, { remove: RemoveAsset; recordedAt: number }>();
+  const candidates = new Map<string, Candidate>();
   /**
    * Counts recordings, so a save can tell which candidates already existed when
    * it left. An upload that resolves mid-save records its URL ~400ms before the
@@ -95,8 +167,19 @@ export function createOrphanSweep(): OrphanSweep {
 
   return {
     record(url: string, remove: RemoveAsset): void {
+      // A poisoned key would reject every later sweep, so orphan cleanup would
+      // be dead for the rest of the session and a genuine orphan beside it
+      // would never be deleted.
+      if (!isUrl(url)) {
+        return;
+      }
+
       counter.recordings += 1;
-      candidates.set(url, { remove, recordedAt: counter.recordings });
+      candidates.set(url, {
+        remove,
+        recordedAt: counter.recordings,
+        attempts: 0,
+      });
     },
 
     beginSave(): number {
@@ -108,10 +191,12 @@ export function createOrphanSweep(): OrphanSweep {
         return;
       }
 
-      // Presence is a substring test against the serialized document rather
-      // than a walk of block data per tool: a per-tool rule would be wrong the
-      // day a tool nests a URL, and audio cover art already does. The candidate
-      // set is a handful of session uploads, so the cost is irrelevant.
+      // Presence is a substring test against the strings the document holds
+      // rather than a walk of block data per tool: a per-tool rule would be
+      // wrong the day a tool nests a URL, and audio cover art already does. The
+      // test matches WITHIN a string because a URL may sit inside a larger one
+      // — an `<img src>` in a block's text. The candidate set is a handful of
+      // session uploads, so the cost is irrelevant.
       //
       // Both sides are decoded because the saved document does not hold the URL
       // byte-for-byte: the sanitizer parses strings and reads the markup back,
@@ -119,19 +204,52 @@ export function createOrphanSweep(): OrphanSweep {
       // referenced asset an orphan and DELETE the file a visible block points
       // at. Decoding can only widen the match, and a false "still referenced"
       // leaks a file where a false "orphan" loses one.
-      const serialized = decodeSerializerEntities(JSON.stringify(savedDocument));
+      const referenced: string[] = [];
+
+      collectStrings(savedDocument, referenced, new Set());
+
       const orphans = Array.from(candidates)
         .filter(([, { recordedAt }]) => recordedBefore === undefined || recordedAt <= recordedBefore)
-        .filter(([url]) => !serialized.includes(decodeSerializerEntities(url)));
+        .filter(([url]) => {
+          // Reading a non-string key as a URL is what used to reject the whole
+          // pass, which killed cleanup for the rest of the session. `record`
+          // no longer admits one, so no single entry can take the pass down.
+          if (!isUrl(url)) {
+            return false;
+          }
 
-      await Promise.all(orphans.map(async ([url, { remove }]) => {
+          const decoded = decodeSerializerEntities(url);
+
+          return !referenced.some((value) => value.includes(decoded));
+        });
+
+      // Dropped as the decision is made, not when the delete answers: the save
+      // queue issues these removals DETACHED, so the next save's sweep runs
+      // while they are still open — and a candidate still listed there would be
+      // deleted a second time. A refused removal is put back below.
+      orphans.forEach(([url]) => {
+        candidates.delete(url);
+      });
+
+      await Promise.all(orphans.map(async ([url, candidate]) => {
         try {
-          await remove(url);
-          candidates.delete(url);
+          await candidate.remove(url);
         } catch {
           // The host refused, so the asset is still there and still ours: it
-          // stays a candidate for the next save rather than leaking silently.
+          // goes back for the next save to retry rather than leaking silently.
           // A failed cleanup must never look like a failed save.
+          //
+          // `has` guards a re-upload that claimed this URL while the delete was
+          // open — that record is newer, and putting the stale one back over it
+          // would sweep a file the live document points at.
+          const attempts = candidate.attempts + 1;
+
+          if (attempts < MAX_REMOVE_ATTEMPTS && !candidates.has(url)) {
+            candidates.set(url, {
+              ...candidate,
+              attempts,
+            });
+          }
         }
       }));
     },

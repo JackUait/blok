@@ -343,6 +343,36 @@ describe('ModificationsObserver', () => {
     expect(instance?.observe).toHaveBeenCalledTimes(2);
   });
 
+  it('re-observes the redactor only when the outermost suspension lifts', () => {
+    const { observer, eventsDispatcher, onChange, apiMethods } = createObserver();
+
+    observer.enable();
+
+    const instance = MutationObserverStub.lastInstance;
+
+    expect(instance?.observe).toHaveBeenCalledTimes(1);
+
+    // An outer host rewrite takes the mutex; a repaint nested inside it takes and
+    // releases one of its own. Re-observing here would hand the outer rewrite's
+    // own DOM mutations to the host as if the user had made them.
+    observer.disable();
+    observer.disable();
+    observer.enable();
+
+    expect(instance?.observe).toHaveBeenCalledTimes(1);
+
+    observer.enable();
+
+    expect(instance?.observe).toHaveBeenCalledTimes(2);
+
+    const event = createBlockMutationEvent('block-1');
+
+    eventsDispatcher.emit(BlockChanged, { event });
+    vi.advanceTimersByTime(modificationsObserverBatchTimeout);
+
+    expect(onChange).toHaveBeenCalledWith(apiMethods, event);
+  });
+
   /**
    * Delivery timing is a consumer-facing contract: hosts drive UI off onChange
    * ("document is dirty" → reveal the Save button), so a change that sits in a

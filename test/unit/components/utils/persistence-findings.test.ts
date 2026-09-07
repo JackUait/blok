@@ -1,5 +1,5 @@
 /**
- * Regressions for five defects in the `persistence` save queue.
+ * Regressions for the defects found in the `persistence` save queue.
  *
  * Each `describe` below names the defect it pins. They live in their own file
  * rather than in `persistence.test.ts` because that file pins the CONTRACT the
@@ -202,6 +202,67 @@ describe('persistence — the sweep must not delete assets a newer payload still
 
     expect(remove).not.toHaveBeenCalled();
   });
+
+  // A retry is not a new save: it carries the SAME payload, serialized before
+  // the upload resolved. Taking the mark per attempt hands the retry one that
+  // already counts the upload, so the attempt that lands calls a brand-new
+  // asset an orphan and deletes the file the document is about to reference.
+  it('does not sweep an asset uploaded while a rejected save was backing off', async () => {
+    vi.useFakeTimers();
+
+    const url = asset('uploaded-during-backoff');
+    const remove = vi.fn().mockResolvedValue(undefined);
+    const save = vi.fn()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValue(undefined);
+
+    const result = expandPersistenceConfig({
+      persistence: { load: async () => null, save, onError: vi.fn() },
+    });
+
+    result.onSave?.(DOC, API_STUB);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(save).toHaveBeenCalledTimes(1);
+
+    orphanSweepFor(result.persistence)?.record(url, remove);
+
+    await vi.advanceTimersByTimeAsync(FIRST_RETRY_DELAY_MS);
+
+    expect(remove).not.toHaveBeenCalled();
+    expect(save).toHaveBeenCalledTimes(2);
+  });
+
+  // A queued payload was serialized when it was DELIVERED, not when the queue
+  // got round to sending it. An upload that resolves while it waits belongs to
+  // the payload after it, so folding it into the queued payload's mark at
+  // dispatch deletes the file that later payload names.
+  it('does not sweep an asset uploaded while the payload behind it waited in the queue', async () => {
+    const url = asset('uploaded-while-queued');
+    const remove = vi.fn().mockResolvedValue(undefined);
+    const gate: { release: (() => void) | null } = { release: null };
+    const save = vi.fn()
+      .mockImplementationOnce(async () => {
+        await new Promise<void>((resolve) => {
+          gate.release = resolve;
+        });
+      })
+      .mockResolvedValue(undefined);
+
+    const result = expandPersistenceConfig({ persistence: { load: async () => null, save } });
+
+    result.onSave?.(DOC, API_STUB);
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+
+    result.onSave?.({ ...DOC, time: 2 }, API_STUB);
+    orphanSweepFor(result.persistence)?.record(url, remove);
+
+    gate.release?.();
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+    await Promise.resolve();
+
+    expect(remove).not.toHaveBeenCalled();
+  });
 });
 
 describe('persistence — a released queue must stop working (F12)', () => {
@@ -376,6 +437,60 @@ describe('persistence — a run of failures must be reported while the user type
     result.onSave?.({ ...DOC, time: 4 }, API_STUB);
     await vi.advanceTimersByTimeAsync(0);
   });
+
+  // The failure run keeps counting for the whole outage, so once it is long
+  // enough EVERY payload the next keystroke supersedes reports: measured at the
+  // real typing cadence, twenty saves produced seventeen reports. A host wiring
+  // onError to a toast or to Sentry gets a report every 400ms, against a
+  // documented promise of one report per spent save.
+  it('reports a continuing outage once, not once per superseded payload', async () => {
+    vi.useFakeTimers();
+
+    const onError = vi.fn();
+    const save = vi.fn().mockRejectedValue(new Error('offline'));
+    const result = expandPersistenceConfig({ persistence: { load: async () => null, save, onError } });
+
+    for (let edit = 0; edit < 20; edit += 1) {
+      result.onSave?.({ ...DOC, time: edit }, API_STUB);
+      await vi.advanceTimersByTimeAsync(TYPING_CADENCE_MS);
+    }
+
+    expect(onError).toHaveBeenCalledTimes(1);
+
+    // Leave the shared window quiet: a parked payload keeps the unload guard.
+    save.mockResolvedValue(undefined);
+    result.onSave?.(DOC, API_STUB);
+    await vi.advanceTimersByTimeAsync(0);
+  });
+
+  // A landed save has to clear what silences the report as well as the counter,
+  // or the second outage of a session would be silent for good.
+  it('reports a second outage after a save has landed in between', async () => {
+    vi.useFakeTimers();
+
+    const onError = vi.fn();
+    const save = vi.fn().mockRejectedValue(new Error('offline'));
+    const result = expandPersistenceConfig({ persistence: { load: async () => null, save, onError } });
+
+    result.onSave?.({ ...DOC, time: 1 }, API_STUB);
+    await vi.advanceTimersByTimeAsync(RETRY_WINDOW_MS);
+
+    expect(onError).toHaveBeenCalledTimes(1);
+
+    save.mockResolvedValue(undefined);
+    result.onSave?.({ ...DOC, time: 2 }, API_STUB);
+    await vi.advanceTimersByTimeAsync(0);
+
+    save.mockRejectedValue(new Error('offline again'));
+    result.onSave?.({ ...DOC, time: 3 }, API_STUB);
+    await vi.advanceTimersByTimeAsync(RETRY_WINDOW_MS);
+
+    expect(onError).toHaveBeenCalledTimes(2);
+
+    save.mockResolvedValue(undefined);
+    result.onSave?.({ ...DOC, time: 4 }, API_STUB);
+    await vi.advanceTimersByTimeAsync(0);
+  });
 });
 
 describe('persistence — load() resolving undefined must not break the boot (F14)', () => {
@@ -403,5 +518,175 @@ describe('persistence — load() resolving undefined must not break the boot (F1
     });
 
     await expect(result.persistence?.load()).resolves.toBeNull();
+  });
+});
+
+describe('persistence — a throwing host onError must not escape the queue', () => {
+  const unhandled = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.on('unhandledRejection', unhandled);
+  });
+
+  afterEach(() => {
+    process.off('unhandledRejection', unhandled);
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  /** Lets Node deliver a rejection nothing caught, which needs a real tick. */
+  const flushRejections = async (): Promise<void> => {
+    vi.useRealTimers();
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
+  };
+
+  // `queue.inFlight` is never awaited, so anything the catch block throws
+  // becomes an unhandled rejection — and the host's own unhandledrejection
+  // reporter logs a crash attributed to Blok on every failed save.
+  it('does not leak an unhandled rejection when a spent save reports through it', async () => {
+    vi.useFakeTimers();
+
+    const onError = vi.fn(() => {
+      throw new Error('host onError threw');
+    });
+    const save = vi.fn().mockRejectedValue(new Error('offline'));
+    const result = expandPersistenceConfig({ persistence: { load: async () => null, save, onError } });
+
+    result.onSave?.(DOC, API_STUB);
+    await vi.advanceTimersByTimeAsync(RETRY_WINDOW_MS);
+
+    // Leave the shared window quiet: a parked payload keeps the unload guard.
+    save.mockResolvedValue(undefined);
+    result.onSave?.({ ...DOC, time: 2 }, API_STUB);
+    await vi.advanceTimersByTimeAsync(0);
+
+    await flushRejections();
+
+    expect(unhandled).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalled();
+    expect(save).toHaveBeenLastCalledWith({ ...DOC, time: 2 }, { version: null });
+  });
+
+  // The other call site: the payload a newer one superseded. This is the branch
+  // a typing user takes, and the first one an outage is reported from.
+  it('does not leak an unhandled rejection when a superseded save reports through it', async () => {
+    vi.useFakeTimers();
+
+    const onError = vi.fn(() => {
+      throw new Error('host onError threw');
+    });
+    const save = vi.fn().mockRejectedValue(new Error('offline'));
+    const result = expandPersistenceConfig({ persistence: { load: async () => null, save, onError } });
+
+    for (let edit = 0; edit < 6; edit += 1) {
+      result.onSave?.({ ...DOC, time: edit }, API_STUB);
+      await vi.advanceTimersByTimeAsync(TYPING_CADENCE_MS);
+    }
+
+    save.mockResolvedValue(undefined);
+    result.onSave?.({ ...DOC, time: 99 }, API_STUB);
+    await vi.advanceTimersByTimeAsync(0);
+
+    await flushRejections();
+
+    expect(unhandled).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalled();
+    expect(save).toHaveBeenLastCalledWith({ ...DOC, time: 99 }, { version: null });
+  });
+});
+
+describe('persistence — a numeric document version must not be discarded', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  // The documented load is `fetch('/api/doc/42').then((r) => r.json())`, and a
+  // Postgres integer `rev` comes back from it as a NUMBER. Refusing it left the
+  // version null forever, so the documented `If-Match` example took its
+  // no-precondition branch on every write: optimistic concurrency silently off
+  // for the life of the editor, and the conflict detection the feature exists
+  // for never ran. Zero is a real first revision, so it must survive too.
+  it('carries a numeric version load reported through to save', async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+
+    const result = expandPersistenceConfig({
+      persistence: { load: async () => ({ data: DOC, version: 0 }), save },
+    });
+
+    await result.persistence?.load();
+    result.onSave?.(DOC, API_STUB);
+
+    expect(save).toHaveBeenCalledWith(DOC, { version: '0' });
+  });
+
+  it('carries a numeric version a save returned into the next save', async () => {
+    const save = vi.fn()
+      .mockResolvedValueOnce({ version: 7 })
+      .mockResolvedValue(undefined);
+
+    const result = expandPersistenceConfig({ persistence: { load: async () => null, save } });
+
+    result.onSave?.(DOC, API_STUB);
+
+    expect(save).toHaveBeenNthCalledWith(1, DOC, { version: null });
+
+    result.onSave?.({ ...DOC, time: 2 }, API_STUB);
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+
+    expect(save).toHaveBeenNthCalledWith(2, { ...DOC, time: 2 }, { version: '7' });
+  });
+
+  // Coercing anything at all would put `"[object Object]"` in an If-Match
+  // header, which is worse than sending none: the endpoint would reject every
+  // write. The version Blok already holds is the better answer.
+  it('keeps the version it holds when a save answers with an object', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const save = vi.fn()
+      .mockResolvedValueOnce({ version: {} as never })
+      .mockResolvedValue(undefined);
+
+    const result = expandPersistenceConfig({
+      persistence: { load: async () => ({ data: DOC, version: 'v1' }), save },
+    });
+
+    await result.persistence?.load();
+    result.onSave?.(DOC, API_STUB);
+
+    expect(save).toHaveBeenNthCalledWith(1, DOC, { version: 'v1' });
+
+    result.onSave?.({ ...DOC, time: 2 }, API_STUB);
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+
+    expect(save).toHaveBeenNthCalledWith(2, { ...DOC, time: 2 }, { version: 'v1' });
+    // Ignoring it silently would leave a host wondering why its If-Match never
+    // changes, so the one thing Blok can do about it is say so.
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('neither a string nor a finite number'), {});
+  });
+
+  it('keeps the version it holds when a save answers with NaN', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const save = vi.fn()
+      .mockResolvedValueOnce({ version: Number.NaN })
+      .mockResolvedValue(undefined);
+
+    const result = expandPersistenceConfig({
+      persistence: { load: async () => ({ data: DOC, version: 'v1' }), save },
+    });
+
+    await result.persistence?.load();
+    result.onSave?.(DOC, API_STUB);
+    result.onSave?.({ ...DOC, time: 2 }, API_STUB);
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+
+    expect(save).toHaveBeenNthCalledWith(2, { ...DOC, time: 2 }, { version: 'v1' });
   });
 });

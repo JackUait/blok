@@ -28,7 +28,11 @@ type RendererMock = {
 
 type BlokStub = {
   BlockManager: { clear: ReturnType<typeof vi.fn>; getBlockById: ReturnType<typeof vi.fn> };
-  ModificationsObserver: { disable: ReturnType<typeof vi.fn>; enable: ReturnType<typeof vi.fn> };
+  ModificationsObserver: {
+    disable: ReturnType<typeof vi.fn>;
+    enable: ReturnType<typeof vi.fn>;
+    discardPendingChanges: ReturnType<typeof vi.fn>;
+  };
   Renderer: RendererMock;
   Saver: { save: ReturnType<typeof vi.fn> };
   BlockSelection: { selectBlock: ReturnType<typeof vi.fn> };
@@ -49,6 +53,7 @@ const createBlocksApi = (currentContent: OutputData | undefined): { blocksApi: B
     ModificationsObserver: {
       disable: vi.fn(),
       enable: vi.fn(),
+      discardPendingChanges: vi.fn(),
     },
     Renderer: {
       render: vi.fn().mockResolvedValue(undefined),

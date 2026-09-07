@@ -18,11 +18,13 @@ import type { OutputData } from '../../../../types';
 type ObserverMock = {
   disable: ReturnType<typeof vi.fn>;
   enable: ReturnType<typeof vi.fn>;
+  discardPendingChanges: ReturnType<typeof vi.fn>;
 };
 
 const createObserverMock = (): ObserverMock => ({
   disable: vi.fn(),
   enable: vi.fn(),
+  discardPendingChanges: vi.fn(),
 });
 
 const createBlocksApi = (

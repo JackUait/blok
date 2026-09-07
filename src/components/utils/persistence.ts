@@ -1,6 +1,7 @@
 import type { BlokConfig, OutputData } from '../../../types';
 import type { PersistedDocument } from '../../../types/configs/blok-config';
 import { attachOrphanSweep, createOrphanSweep } from './orphan-sweep';
+import { log } from './logger';
 
 /**
  * What `persistence.load` may answer with: the document, a versioned envelope
@@ -21,6 +22,21 @@ type ExpandedPersistence = NonNullable<BlokConfig['persistence']>;
 
 /** A live save handler — the queue's pump and a host's `onSave` share the shape. */
 type SaveHandler = NonNullable<BlokConfig['onSave']>;
+
+/**
+ * A document waiting for its turn, with the orphan-sweep mark it arrived with.
+ *
+ * The mark belongs to the PAYLOAD, not to the attempt that sends it: it says
+ * which uploads existed when this document was serialized, so an asset the
+ * document could not possibly name yet is never swept by it. Taken per attempt
+ * instead, a retry — or a payload that sat in the queue while an upload resolved
+ * — is handed a mark that already counts the new asset, and the attempt that
+ * lands deletes the file a visible block is about to point at.
+ */
+type PendingSave = {
+  document: OutputData;
+  recordedBefore: number;
+};
 
 /**
  * How long to wait before each retry of a rejecting save, in milliseconds. One
@@ -74,6 +90,45 @@ export function unwrapPersistedDocument(loaded: LoadResult): OutputData | null {
 }
 
 /**
+ * The version a host reported, as the string every `save` is handed, or `null`
+ * when nothing usable was reported.
+ *
+ * A store that versions with an integer `rev` reports a NUMBER: the documented
+ * load is `fetch('/api/doc/42').then((r) => r.json())`, which hands one straight
+ * over. Refusing it left the version `null` for the life of the editor, so the
+ * documented `If-Match` example took its no-precondition branch on every write
+ * — optimistic concurrency off, silently, and the conflict detection versioning
+ * exists for never running.
+ *
+ * `null` leaves whatever version Blok already holds standing, because an
+ * endpoint that does not version answers with nothing at all.
+ * @param version - whatever the host put in the `version` key
+ */
+function readVersion(version: unknown): string | null {
+  if (typeof version === 'string') {
+    return version;
+  }
+
+  if (typeof version === 'number' && Number.isFinite(version)) {
+    return String(version);
+  }
+
+  // `undefined` and `null` are how an endpoint says it does not version;
+  // anything else — an object, NaN — would coerce to text no precondition
+  // header can carry, and an endpoint would refuse every write made with it.
+  if (version !== undefined && version !== null) {
+    log(
+      '`persistence` reported a document version that is neither a string nor a finite number, ' +
+      'so it was ignored and the previous version stands. Report an ETag, a revision number or a hash.',
+      'warn',
+      version
+    );
+  }
+
+  return null;
+}
+
+/**
  * One queue teardown per editor, keyed by the expanded `persistence` object
  * the expansion built for it — the same handle the orphan sweep is keyed by,
  * because it is still the only one both sides reach: the queue creates it, and
@@ -97,6 +152,49 @@ const disposers = new WeakMap<ExpandedPersistence, () => void>();
  * life of the editor with no error anywhere.
  */
 const pumps = new WeakMap<ExpandedPersistence, SaveHandler>();
+
+/**
+ * Registers one more dirty-state source with an editor's unload guard, and
+ * answers with the callback to run whenever that source's answer changes.
+ */
+type UnsavedWorkRegistrar = (isDirty: () => boolean) => () => void;
+
+/**
+ * How an editor module tells the unload guard about work of its own, keyed by
+ * the same handle as the pump and the disposer.
+ *
+ * The dependency points one way — a module reaches into this util, never the
+ * other way round — because the queue is built while the config is normalized,
+ * before a single module exists.
+ */
+const registrars = new WeakMap<ExpandedPersistence, UnsavedWorkRegistrar>();
+
+const noop = (): void => undefined;
+
+/**
+ * Let the unload guard count work that has not reached the save queue yet.
+ *
+ * The queue arms the guard once it holds a payload, which is the LAST step of a
+ * save: the batch window that debounces the change and the serialization that
+ * follows it both sit before that, and an edit stranded in either is every bit
+ * as unsaved. Without this the tab closed silently on anything the user typed in
+ * the last window.
+ *
+ * The returned callback re-evaluates the guard; the source has to run it on
+ * every transition, because the guard holds a listener only while there is
+ * something to lose. An editor with no `persistence` has no queue and no guard,
+ * so registering with it is a no-op.
+ * @param owner - the editor's expanded `persistence` block, if it has one
+ * @param isDirty - answers whether that source is holding unsaved work
+ */
+export function registerUnsavedWork(
+  owner: ExpandedPersistence | undefined,
+  isDirty: () => boolean
+): () => void {
+  const register = owner === undefined ? undefined : registrars.get(owner);
+
+  return register === undefined ? noop : register(isDirty);
+}
 
 /**
  * The `onSave` an editor should carry: the persistence queue's pump, the host's
@@ -192,7 +290,7 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
 
   const queue: {
     inFlight: Promise<void> | null;
-    pending: OutputData | null;
+    pending: PendingSave | null;
     version: string | null;
     /**
      * Set while a payload sits in `pending` only because its own attempts ran
@@ -208,6 +306,15 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
      * lands. Reporting an outage per payload never fires while the user types.
      */
     failures: number;
+    /**
+     * Set once THIS outage has been reported, cleared by a save that lands.
+     *
+     * The failure run stays long enough to count as an outage for as long as the
+     * outage lasts, so without a latch every payload the next keystroke
+     * supersedes reports again — a report every 400ms while the user types,
+     * against a documented promise of one per spent save.
+     */
+    reported: boolean;
     /**
      * Set once the editor is gone. The queue stops there: no retry, no new
      * save, no sweep and no `onError`. A retry of a destroyed editor can land
@@ -227,11 +334,27 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
     cancelBackoff: null,
     guarding: false,
     failures: 0,
+    reported: false,
     released: false,
   };
 
   const guardUnload = (event: BeforeUnloadEvent): void => {
     event.preventDefault();
+  };
+
+  /**
+   * Dirty-state sources outside the queue — see {@link registerUnsavedWork}.
+   */
+  const unsavedWork = new Set<() => boolean>();
+
+  const hasUnsavedWorkOutsideQueue = (): boolean => {
+    for (const isDirty of unsavedWork) {
+      if (isDirty()) {
+        return true;
+      }
+    }
+
+    return false;
   };
 
   /**
@@ -241,7 +364,11 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
    * attempts ran out — and `releasePersistenceQueue` covers that one.
    */
   const syncUnloadGuard = (): void => {
-    const hasWork = !queue.released && (queue.inFlight !== null || queue.pending !== null);
+    const hasWork = !queue.released && (
+      queue.inFlight !== null ||
+      queue.pending !== null ||
+      hasUnsavedWorkOutsideQueue()
+    );
 
     if (hasWork === queue.guarding) {
       return;
@@ -270,6 +397,31 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
   });
 
   /**
+   * Tell the host the endpoint is down — once for this outage, and without
+   * letting the host's own failure become the queue's.
+   *
+   * Both call sites sit inside a catch block whose promise nothing ever awaits —
+   * `queue.inFlight` is only ever read for `!== null` — so a handler that
+   * rethrows into a global reporter, or calls `setState` on an unmounted
+   * component, would escape as an unhandled rejection and the host's own
+   * reporter would log a crash attributed to Blok on every failed save.
+   * @param error - whatever `save` rejected with
+   */
+  const reportOutage = (error: unknown): void => {
+    if (queue.reported) {
+      return;
+    }
+
+    queue.reported = true;
+
+    try {
+      persistence.onError?.(error);
+    } catch (thrown: unknown) {
+      log('`persistence.onError` threw. The save queue ignored it and carried on.', 'warn', thrown);
+    }
+  };
+
+  /**
    * Report the rejection of a payload a newer one has already replaced.
    *
    * Nothing is parked and nothing is retried — the newer payload carries this
@@ -280,29 +432,28 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
    */
   const reportSuperseded = (outage: boolean, error: unknown): void => {
     if (outage) {
-      persistence.onError?.(error);
+      reportOutage(error);
     }
   };
 
-  const attemptSave = async (payload: OutputData, attempt: number): Promise<void> => {
+  const attemptSave = async (payload: PendingSave, attempt: number): Promise<void> => {
     if (queue.released) {
       return;
     }
 
-    // Taken BEFORE the save leaves: an upload that resolves while it is in
-    // flight must not be swept by it. See `beginSave` in orphan-sweep.ts.
-    const recordedBefore = sweep.beginSave();
-
     try {
-      const result = await persistence.save(payload, { version: queue.version });
+      const result = await persistence.save(payload.document, { version: queue.version });
 
       // An endpoint that does not version answers with nothing, and the
       // version it was given has to survive that.
-      if (result != null && typeof result.version === 'string') {
-        queue.version = result.version;
+      const nextVersion = result == null ? null : readVersion(result.version);
+
+      if (nextVersion !== null) {
+        queue.version = nextVersion;
       }
 
       queue.failures = 0;
+      queue.reported = false;
     } catch (error: unknown) {
       if (queue.released) {
         return;
@@ -330,7 +481,7 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
         // goes back on the queue for the next change to carry out.
         queue.pending = payload;
         queue.parked = true;
-        persistence.onError?.(error);
+        reportOutage(error);
 
         return;
       }
@@ -377,7 +528,17 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
     // The sweep sits after the catch rather than inside the try so that nothing
     // it does can be mistaken for the save rejecting — a retry here would write
     // the document a second time.
-    await sweep.sweep(payload, recordedBefore);
+    //
+    // DETACHED, not awaited: this promise IS `queue.inFlight`, `drain()` refuses
+    // to start while that is non-null, and `syncUnloadGuard` reads it too — so
+    // awaiting deletion I/O stopped every later document save and kept the tab
+    // asking to confirm a close over a document already stored. A `/delete`
+    // route that never answers is enough (the fetch uploader sends it with no
+    // timeout and no AbortSignal). The DECISION is still made here, before the
+    // sweep's first await, so it is made against THIS payload's document.
+    void sweep.sweep(payload.document, payload.recordedBefore).catch((error: unknown) => {
+      log('The orphan sweep failed. The document was saved either way.', 'warn', error);
+    });
   };
 
   const drain = (): void => {
@@ -388,11 +549,18 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
     const payload = queue.pending;
 
     queue.pending = null;
+    // Nothing awaits `inFlight` — it is only ever read for `!== null` — so the
+    // terminal catch is the queue's only handler. Without it any throw the catch
+    // block itself makes, or a rejecting sweep, leaves the page with an
+    // unhandled rejection that reads as a Blok crash.
     queue.inFlight = attemptSave(payload, 0)
       .finally(() => {
         queue.inFlight = null;
         syncUnloadGuard();
         drain();
+      })
+      .catch((error: unknown) => {
+        log('The save queue swallowed an unexpected error and carried on.', 'warn', error);
       });
   };
 
@@ -404,8 +572,12 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
       // Same guard as unwrapPersistedDocument, and needed independently: this
       // wrapper runs FIRST, so an unguarded `in` here throws before the unwrap
       // is ever reached.
-      if (typeof loaded === 'object' && loaded !== null && 'data' in loaded && typeof loaded.version === 'string') {
-        queue.version = loaded.version;
+      if (typeof loaded === 'object' && loaded !== null && 'data' in loaded) {
+        const loadedVersion = readVersion(loaded.version);
+
+        if (loadedVersion !== null) {
+          queue.version = loadedVersion;
+        }
       }
 
       // Normalized so only ONE shape of "nothing saved yet" leaves this wrapper.
@@ -419,6 +591,12 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
   // candidate set by, so an asset recorded here can never be swept by the
   // editor next to it on the page.
   attachOrphanSweep(expanded, sweep);
+
+  registrars.set(expanded, (isDirty) => {
+    unsavedWork.add(isDirty);
+
+    return syncUnloadGuard;
+  });
 
   // Keyed by the same handle, for the same reason: the guard removed on
   // destroy has to be THIS editor's, never the one the editor beside it on the
@@ -434,7 +612,9 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
   });
 
   pumps.set(expanded, (data: OutputData): void => {
-    queue.pending = data;
+    // The sweep mark is taken HERE, as the serialized document arrives, and
+    // travels with it through the queue and through every retry. See PendingSave.
+    queue.pending = { document: data, recordedBefore: sweep.beginSave() };
     queue.parked = false;
     // A backoff still running belongs to a document this one replaces; waking
     // it now lets the queue move on to the newest payload immediately.

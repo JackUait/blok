@@ -295,6 +295,14 @@ export class BlocksAPI extends Module {
      * So we need to disable modifications observer temporarily
      */
     this.Blok.ModificationsObserver.disable();
+    /**
+     * An edit made in the batch window just before this call was made against
+     * the document being replaced, so it is moot — and delivering it would send
+     * the host's own pushed document back to its save endpoint as an edit.
+     * Only render() replaces the document: the read-only toggle and the i18n
+     * repaint re-render the SAME document, so a pending edit there still counts.
+     */
+    this.Blok.ModificationsObserver.discardPendingChanges();
     this.Blok.Renderer.markRenderStart();
 
     try {

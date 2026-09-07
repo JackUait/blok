@@ -17,7 +17,7 @@ export interface PersistedDocument {
   /** The saved document, or `null` for "nothing saved yet". */
   data: OutputData | null;
   /** Whatever your store versions with — an ETag, a revision number, a hash. */
-  version?: string;
+  version?: string | number;
 }
 
 /**
@@ -26,8 +26,9 @@ export interface PersistedDocument {
 export interface SaveContext {
   /**
    * The version of the document this save overwrites: what `load` reported,
-   * then what the previous `save` returned. `null` until a version is known —
-   * including forever, for an endpoint that does not version.
+   * then what the previous `save` returned. Always a string — a numeric version
+   * either of them reported arrives here stringified. `null` until a version is
+   * known — including forever, for an endpoint that does not version.
    */
   version: string | null;
 }
@@ -38,7 +39,7 @@ export interface SaveContext {
  */
 export interface SaveResult {
   /** The version the write produced. Omit it and the previous one stands. */
-  version?: string;
+  version?: string | number;
 }
 
 /**

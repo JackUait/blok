@@ -262,6 +262,7 @@ type BlokStub = {
   ModificationsObserver: {
     disable: ReturnType<typeof vi.fn>;
     enable: ReturnType<typeof vi.fn>;
+    discardPendingChanges: ReturnType<typeof vi.fn>;
   };
   Renderer: {
     render: ReturnType<typeof vi.fn>;
@@ -322,6 +323,7 @@ const createBlokStub = (
     ModificationsObserver: {
       disable: vi.fn(),
       enable: vi.fn(),
+      discardPendingChanges: vi.fn(),
     },
     Renderer: {
       render: vi.fn(async (_blocks: OutputBlockData[]) => {}) as ReturnType<typeof vi.fn>,

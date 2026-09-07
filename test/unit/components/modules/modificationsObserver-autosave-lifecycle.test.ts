@@ -2,7 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { ModificationsObserver } from '../../../../src/components/modules/modificationsObserver';
 import { modificationsObserverBatchTimeout } from '../../../../src/components/constants';
-import { BlockChanged } from '../../../../src/components/events';
+import {
+  BlockChanged,
+  FakeCursorAboutToBeToggled,
+  FakeCursorHaveBeenSet
+} from '../../../../src/components/events';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../src/components/events';
 import type { BlokConfig, OutputData } from '../../../../types';
@@ -255,6 +259,150 @@ describe('ModificationsObserver — autosave lifecycle', () => {
 
       expect(onSave).toHaveBeenCalledTimes(1);
       expect(observer.hasUnsavedChanges).toBe(false);
+    });
+  });
+  describe('nested suspension — an inner enable() inside an outer disable()', () => {
+    it('does not serialize the outer rewrite\'s own mutations', async () => {
+      const { observer, eventsDispatcher, saverSave, onSave, onChange } = createObserver();
+
+      observer.enable();
+
+      // The outer host rewrite takes the mutex; a repaint nested inside it takes
+      // and releases one of its own.
+      observer.disable();
+      observer.disable();
+      observer.enable();
+
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1', 'block-removed') });
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-2', 'block-removed') });
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout + 1);
+
+      expect(saverSave).not.toHaveBeenCalled();
+      expect(onSave).not.toHaveBeenCalled();
+      expect(onChange).not.toHaveBeenCalled();
+      expect(observer.hasUnsavedChanges).toBe(false);
+    });
+
+    it('delivers again once the outermost enable() lands', async () => {
+      const { observer, eventsDispatcher, saverSave, onSave } = createObserver();
+
+      observer.enable();
+
+      observer.disable();
+      observer.disable();
+      observer.enable();
+      observer.enable();
+
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout + 1);
+
+      expect(saverSave).toHaveBeenCalledTimes(1);
+      expect(onSave).toHaveBeenCalledTimes(1);
+    });
+
+    it('clamps the count so unbalanced enable() calls cannot cancel a later suspension', async () => {
+      const { observer, eventsDispatcher, saverSave } = createObserver();
+
+      // Two releases with nothing to release. The count has to sit at zero, not
+      // go below it, or the nested pair below comes back up short and arms.
+      observer.enable();
+      observer.enable();
+
+      observer.disable();
+      observer.disable();
+      observer.enable();
+
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout + 1);
+
+      expect(saverSave).not.toHaveBeenCalled();
+    });
+
+    it('does not double-arm an open window when an unbalanced enable() lands', async () => {
+      const { observer, eventsDispatcher, saverSave } = createObserver();
+
+      observer.enable();
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+
+      // Nothing was suspended and a window is already open, so the resume must
+      // not open a second one on top of it.
+      observer.enable();
+
+      expect(vi.getTimerCount()).toBe(1);
+
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout + 1);
+
+      expect(saverSave).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('an edit stranded by a suspension inside its own window', () => {
+    it('serializes when the suspension lifts, without waiting for a later edit', async () => {
+      const { observer, eventsDispatcher, saverSave, onSave } = createObserver();
+
+      observer.enable();
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+
+      // A suspension lands inside the open window, so disable() clears its timer.
+      await vi.advanceTimersByTimeAsync(Math.round(modificationsObserverBatchTimeout / 8));
+      observer.disable();
+      observer.enable();
+
+      // No further edit: the stranded one has to ride a window of its own.
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout + 1);
+
+      expect(saverSave).toHaveBeenCalledTimes(1);
+      expect(onSave).toHaveBeenCalledTimes(1);
+      expect(observer.hasUnsavedChanges).toBe(false);
+    });
+
+    it('serializes when the fake-cursor mutex releases the observer', async () => {
+      const { observer, eventsDispatcher, onSave } = createObserver();
+
+      observer.enable();
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+      await vi.advanceTimersByTimeAsync(Math.round(modificationsObserverBatchTimeout / 8));
+
+      // Selecting a block toggles the fake cursor, which mutexes the observer on
+      // every selection — the shortest path to a stranded edit.
+      eventsDispatcher.emit(FakeCursorAboutToBeToggled, { state: true });
+      eventsDispatcher.emit(FakeCursorHaveBeenSet, { state: true });
+
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout + 1);
+
+      expect(onSave).toHaveBeenCalledTimes(1);
+    });
+
+    it('still honors read-only when the resumed window closes', async () => {
+      const { observer, eventsDispatcher, saverSave, readOnly } = createObserver();
+
+      observer.enable();
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+      observer.disable();
+
+      // The host freezes the document before releasing the mutex.
+      readOnly.isEnabled = true;
+      observer.enable();
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout + 1);
+
+      expect(saverSave).not.toHaveBeenCalled();
+      expect(observer.hasUnsavedChanges).toBe(true);
+    });
+
+    it('does not serialize a resumed window after destroy', async () => {
+      const { observer, eventsDispatcher, saverSave } = createObserver();
+
+      observer.enable();
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+      observer.disable();
+      observer.destroy();
+
+      expect(saverSave).not.toHaveBeenCalled();
+
+      observer.enable();
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout + 1);
+
+      expect(saverSave).not.toHaveBeenCalled();
     });
   });
 });

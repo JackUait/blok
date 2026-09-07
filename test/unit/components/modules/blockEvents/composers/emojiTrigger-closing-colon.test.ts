@@ -102,4 +102,75 @@ describe('EmojiTrigger — closing colon', () => {
     expect(block.currentInput?.textContent).toBe('hello:');
     expect(trigger.opened).toBe(false);
   });
+
+  // Regression for the uniqueness rule in commitOnClosingColon: mutating
+  // `keywordMatches.length === 1` to `>= 1` would still pass every other
+  // test in this file (":fire:" never reaches the keyword branch — the id
+  // match wins first; ":thumbsup:" has exactly one keyword match either
+  // way; ":fir:" has zero either way). "happy" is a real, non-hypothetical
+  // case the rule exists for: no emoji's id is "happy", but 13 different
+  // emoji (grinning, smiley, smile, grin, laughing, sweat_smile, joy, wink,
+  // blush, yum, smiley_cat, joy_cat, rainbow) carry it as an exact keyword.
+  it('closes without inserting for ":happy:" — thirteen emoji share it as an exact keyword, none as an id', async () => {
+    const block = createBlock(':happy');
+
+    document.body.appendChild(block.holder);
+    setCaret(block, 6);
+
+    const trigger = new EmojiTrigger(createBlokModules(block));
+
+    await trigger.handleInput({ inputType: 'insertText', data: 'y', isComposing: false } as InputEvent);
+    await typeClosingColon(trigger, block, ':happy:');
+
+    expect(block.currentInput?.textContent).toBe(':happy:');
+    expect(trigger.opened).toBe(false);
+  });
+
+  it('suppresses the shortcut for a span the user just dismissed with Escape', async () => {
+    const block = createBlock(':fire');
+
+    document.body.appendChild(block.holder);
+    setCaret(block, 5);
+
+    const trigger = new EmojiTrigger(createBlokModules(block));
+
+    await trigger.handleInput({ inputType: 'insertText', data: 'e', isComposing: false } as InputEvent);
+    expect(trigger.opened).toBe(true);
+
+    const escaped = trigger.handleKeydown(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+    expect(escaped).toBe(true);
+    expect(trigger.opened).toBe(false);
+
+    // The user just refused this suggestion — the closing colon must not
+    // silently insert the emoji they dismissed.
+    await typeClosingColon(trigger, block, ':fire:');
+
+    expect(block.currentInput?.textContent).toBe(':fire:');
+    expect(trigger.opened).toBe(false);
+  });
+
+  it('does not suppress a genuinely new span opened after an earlier Escape dismissal', async () => {
+    const block = createBlock(':fire');
+
+    document.body.appendChild(block.holder);
+    setCaret(block, 5);
+
+    const trigger = new EmojiTrigger(createBlokModules(block));
+
+    await trigger.handleInput({ inputType: 'insertText', data: 'e', isComposing: false } as InputEvent);
+    trigger.handleKeydown(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+    // A different trigger, at a different position — not the one dismissed.
+    const input = block.currentInput;
+
+    if (input !== null && input !== undefined) {
+      input.textContent = ':fire :thumbsup';
+    }
+    setCaret(block, ':fire :thumbsup'.length);
+    await trigger.handleInput({ inputType: 'insertText', data: 'p', isComposing: false } as InputEvent);
+    await typeClosingColon(trigger, block, ':fire :thumbsup:');
+
+    expect(block.currentInput?.textContent).toBe(':fire 👍');
+  });
 });

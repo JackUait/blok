@@ -173,6 +173,17 @@ export class EmojiTrigger extends BlockEventComposer {
    * routes through — see this file's own opened-write inventory.
    */
   private readonly scrollLocker = new ScrollLocker();
+  /**
+   * `span.start` of the trigger the user most recently dismissed with
+   * Escape, or undefined when nothing was dismissed. Escape is the user's
+   * explicit "not this" — commitOnClosingColon checks this so a closing
+   * colon typed right after cannot silently insert the emoji they just
+   * refused. Keyed by span position (not cleared on every keystroke) so the
+   * suppression survives continued typing within that SAME span; a
+   * genuinely different span (a different position) is never suppressed by
+   * this — see commitOnClosingColon and renderMenu.
+   */
+  private escapeDismissedSpanStart: number | undefined;
 
   /**
    * Handle an input event: resolve the ":query" span at the caret and open,
@@ -281,6 +292,9 @@ export class EmojiTrigger extends BlockEventComposer {
     }
 
     if (event.key === 'Escape') {
+      // Captured BEFORE close(), which resets activeSpanStart to undefined —
+      // see commitOnClosingColon and the escapeDismissedSpanStart field doc.
+      this.escapeDismissedSpanStart = this.activeSpanStart;
       this.close();
 
       return true;
@@ -440,6 +454,13 @@ export class EmojiTrigger extends BlockEventComposer {
       return false;
     }
 
+    // The user explicitly dismissed THIS span with Escape — falling through
+    // (return false) lets handleInput treat the colon as an ordinary
+    // character, same as the "no valid prior span" case above.
+    if (priorSpan.start === this.escapeDismissedSpanStart) {
+      return false;
+    }
+
     const emojis = await loadEmojiData();
 
     if (token !== this.renderToken) {
@@ -537,13 +558,31 @@ export class EmojiTrigger extends BlockEventComposer {
   /**
    * Close the menu, if open, and restore the block's contentEditable to a
    * plain editor element. Safe to call when the menu is already closed.
+   *
+   * Deliberately NOT gated on `this.opened`: EmojiPicker.open() makes the
+   * element visible synchronously, before its own promise settles, while
+   * `opened` only flips true once THIS composer's async chain (pendingOpen +
+   * the render-token freshness check in renderMenu) resolves. A keystroke
+   * that bumps `renderToken` without itself completing that chain — a
+   * span-breaking character, or the closing-colon commit in
+   * commitOnClosingColon, neither of which ever calls renderMenu — silently
+   * invalidates an in-flight renderMenu call's token check, so it returns
+   * without ever setting `opened = true`. Gating close() on `opened` meant
+   * that call, and the stale renderMenu call, both no-op — nothing ever hid
+   * the already-visible element or released the page scroll lock it holds
+   * (see scrollLocker below): a ghost picker on a page the user could no
+   * longer scroll, dismissible only by reloading. Gate on `this.picker`
+   * instead — every step below is already idempotent
+   * (ScrollLocker.unlock, removeEventListener, removeComboboxRoles all
+   * no-op safely on their own), so running this body when nothing was
+   * actually open is harmless.
    */
   public close(): void {
-    if (!this.opened) {
+    if (this.picker === null) {
       return;
     }
 
-    this.picker?.close();
+    this.picker.close();
 
     document.removeEventListener('selectionchange', this.handleSelectionChange);
     this.removeComboboxRoles();
@@ -654,6 +693,14 @@ export class EmojiTrigger extends BlockEventComposer {
     if (isFreshTrigger) {
       this.anchorRect = rectAtOffset(input, span.start) ?? input.getBoundingClientRect();
       this.activeSpanStart = span.start;
+
+      // A genuinely different span (not the SAME position reopening after
+      // Escape, per isFreshTrigger's `!this.opened` clause) starts clean —
+      // forget any earlier dismissal so it can never wrongly suppress an
+      // unrelated later trigger that happens to land at the same offset.
+      if (span.start !== this.escapeDismissedSpanStart) {
+        this.escapeDismissedSpanStart = undefined;
+      }
     }
 
     const anchorRect = this.anchorRect;

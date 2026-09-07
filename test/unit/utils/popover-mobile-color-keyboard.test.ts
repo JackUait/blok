@@ -29,8 +29,8 @@ const openColors = async (): Promise<PopoverMobile> => {
     trigger,
     items: [
       ...(Array.isArray(config) ? config : [config]),
-      { title: 'Duplicate' },
-      { title: 'More', children: { items: [{ title: 'Nested action' }] } },
+      { title: 'Duplicate', onActivate: vi.fn() },
+      { title: 'More', children: { items: [{ title: 'Nested action', onActivate: vi.fn() }] } },
     ],
   });
   popover.show();

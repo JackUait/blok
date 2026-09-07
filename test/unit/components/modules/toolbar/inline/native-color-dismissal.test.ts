@@ -25,7 +25,7 @@ const openMarker = async (): Promise<PopoverInline> => {
 
   range.selectNodeContents(editor);
   window.getSelection()?.addRange(range);
-  const api = { i18n, inlineToolbar: { close: vi.fn() } } as API;
+  const api = { i18n, inlineToolbar: { close: vi.fn() } } as unknown as API;
   const config = new MarkerInlineTool({ api }).render();
   const popover = new PopoverInline({ items: Array.isArray(config) ? config : [config] });
   const handler = new InlineKeyboardHandler(() => popover, () => popover.hide());

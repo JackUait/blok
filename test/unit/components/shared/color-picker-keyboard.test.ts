@@ -113,7 +113,7 @@ describe('native keyboard in color submenus', () => {
     window.getSelection()?.removeAllRanges();
     window.getSelection()?.addRange(range);
     const close = vi.fn();
-    const api = { i18n, inlineToolbar: { close } } as API;
+    const api = { i18n, inlineToolbar: { close } } as unknown as API;
     const marker = new MarkerInlineTool({ api });
     const popover = await openMenu(marker.render(), 'marker', true);
 
@@ -137,7 +137,7 @@ describe('native keyboard in color submenus', () => {
 
     range.selectNodeContents(editor);
     window.getSelection()?.addRange(range);
-    const api = { i18n, inlineToolbar: { close: vi.fn() } } as API;
+    const api = { i18n, inlineToolbar: { close: vi.fn() } } as unknown as API;
     const config = new MarkerInlineTool({ api }).render();
     const popover = new PopoverInline({ items: Array.isArray(config) ? config : [config] });
     const closeToolbar = vi.fn();

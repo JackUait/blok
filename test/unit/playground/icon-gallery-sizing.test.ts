@@ -26,7 +26,7 @@ describe('icon gallery working sizes', () => {
     const controls = getByRole(container, 'group', { name: 'Icon preview size' });
 
     for (const size of [16, 20, 24]) {
-      const button = getByRole(controls, 'button', { name: `${size} px`, exact: true });
+      const button = getByRole(controls, 'button', { name: `${size} px` });
 
       fireEvent.click(button);
 
@@ -43,8 +43,8 @@ describe('icon gallery working sizes', () => {
   });
 
   it('restores intrinsic sizes after a uniform comparison', () => {
-    fireEvent.click(getByRole(container, 'button', { name: '24 px', exact: true }));
-    fireEvent.click(getByRole(container, 'button', { name: 'Native', exact: true }));
+    fireEvent.click(getByRole(container, 'button', { name: '24 px' }));
+    fireEvent.click(getByRole(container, 'button', { name: 'Native' }));
 
     // eslint-disable-next-line testing-library/no-node-access -- SVG dimensions have no accessible role query.
     const sizes = Array.from(container.querySelectorAll('svg')).map(svg => svg.getAttribute('width'));

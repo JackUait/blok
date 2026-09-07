@@ -63,7 +63,13 @@ test('block color modes, recents and reset remain independent', async ({ page })
   await picker.getByTestId('block-color-swatch-textColor-red').click();
   await picker.getByRole('tab').last().click();
   await picker.getByTestId('block-color-swatch-backgroundColor-blue').click();
-  const data = async () => page.evaluate(async () => (await window.blokInstance.save()).blocks[0].data);
+  const data = async () => page.evaluate(async () => {
+    if (!window.blokInstance) {
+      throw new Error('Blok instance not found');
+    }
+
+    return (await window.blokInstance.save()).blocks[0].data;
+  });
 
   await expect.poll(data).toMatchObject({ textColor: 'red', backgroundColor: 'blue' });
   await expect(picker.getByTestId('block-color-section-recent')).toBeVisible();

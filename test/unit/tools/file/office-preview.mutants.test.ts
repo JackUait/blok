@@ -52,7 +52,9 @@ describe('office preview mutants', () => {
 
     it('rejects a non-office preview kind', () => {
       expect(isOfficeKind('pdf')).toBe(false);
-      expect(isOfficeKind('image')).toBe(false);
+      expect(isOfficeKind('markdown')).toBe(false);
+      expect(isOfficeKind('code')).toBe(false);
+      expect(isOfficeKind('text')).toBe(false);
     });
 
     it('rejects a missing kind', () => {

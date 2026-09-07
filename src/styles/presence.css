@@ -21,13 +21,7 @@
   --blok-presence-face-line: 1.5rem;
 }
 
-/* Holders are already `relative` (BLOCK_WRAPPER_CLASSES), so a caret parks at
-   the coordinates the renderer measured without it touching layout.
-
-   A painted box, not the two-border trick collaborative carets usually use:
-   that trick exists to keep an INLINE widget from shifting text, and this caret
-   is absolutely positioned, so it already costs no layout. A real box is what
-   lets the ends be rounded. */
+/* Holder-relative coordinates keep carets out of the text layout. */
 [data-blok-presence-caret] {
   position: absolute;
   z-index: 2;
@@ -41,17 +35,7 @@
   user-select: none;
 }
 
-/* The resting state pulses, and that is the whole point.
-
-   Idle is when a peer needs announcing: while they type, the text itself is
-   visibly changing, so the caret is the least of what tells you they are
-   there. Parked, a static 2px line reads as a rendering
-   artefact rather than a person — the motion is what makes it a cursor.
-
-   Deliberately NOT the local caret's blink. That one is a hard on/off step at
-   about a second, and it means "your keystrokes go here"; this is a slow soft
-   fade that never reaches zero, so several peers can rest in one document
-   without any of them being mistaken for your own insertion point. */
+/* A slow fade distinguishes remote idle carets from the local cursor's blink. */
 [data-blok-presence-caret-idle] {
   animation: blok-presence-caret-pulse var(--blok-presence-pulse) ease-in-out infinite;
 }
@@ -73,14 +57,7 @@
   }
 }
 
-/* The face beside the block, the way Notion parks it in the page margin.
-
-   Mounted on the block's CONTENT wrapper, not its holder: the holder spans the
-   editor's full width with the content column centred inside it, so a strip
-   parked against the holder would sit a hundred-odd pixels out in the margin
-   instead of beside the text. `inset-inline-end` and not `right`, because the
-   control gutter mirrors under RTL and a physical side would strand the face
-   over the text. */
+/* Use the content wrapper, not the full-width holder, to stay beside the text. */
 [data-blok-presence-gutter] {
   position: absolute;
   top: 0;
@@ -96,25 +73,13 @@
   user-select: none;
 }
 
-/* Hovering the block summons the +/⠿ controls into exactly this space, so the
-   face steps aside for them rather than vanishing — Notion's order across the
-   margin is face, +, ⠿, text.
-
-   It slides by the gutter token, which is the width Blok reserves for those
-   controls, so the two stay in step if either changes. In read-only that token
-   collapses to zero, and so does this: no controls appear, so nothing has to
-   move.
-
-   Only the INNERMOST hovered block: `:hover` is true for every ancestor of the
-   hovered element, and the controls attach to the innermost block, so a
-   container's face stays put while one of its children is hovered. The
-   direct-child chain keeps it to that block's own strip. */
+/* Only the innermost hovered block owns the controls.
+   The toolbar gutter collapses to zero in read-only mode. */
 [data-blok-element]:hover:not(:has([data-blok-element]:hover)) > [data-blok-element-content] > [data-blok-presence-gutter] {
   transform: translateX(calc(-1 * var(--blok-editor-gutter-start, 0px)));
 }
 
-/* The mirrored side. `translateX` is physical, so RTL needs the other sign —
-   inset-inline-end already put the strip on the right there. */
+/* Transforms are physical, so the RTL gutter needs the opposite sign. */
 [data-blok-rtl="true"] [data-blok-element]:hover:not(:has([data-blok-element]:hover)) > [data-blok-element-content] > [data-blok-presence-gutter] {
   transform: translateX(var(--blok-editor-gutter-start, 0px));
 }
@@ -139,9 +104,7 @@
   text-transform: uppercase;
 }
 
-/* The monogram is painted from an attribute, never written as text: the strip
-   sits inside the holder, and block copy sanitizes `holder.innerHTML`, which
-   unwraps the strip and keeps every text node it held. */
+/* Block copy unwraps the strip, so initials must not be text nodes. */
 [data-blok-presence-face]::after,
 [data-blok-presence-face-overflow]::after {
   content: attr(data-blok-presence-initials);
@@ -197,19 +160,13 @@
   text-transform: none;
 }
 
-/* `pointer-events` inherits, and the strip and the stack are transparent so the
-   +/⠿ hover zone beneath them is untouched. The discs opt back in: a face's
-   `title` is the only thing that names the peer, and a tooltip needs a hover
-   target. */
+/* The face's title needs hover; the surrounding strip must not block controls. */
 [data-blok-presence-face],
 [data-blok-presence-avatar] {
   pointer-events: auto;
 }
 
-/* A peer who published no name wears a space silhouette instead of a monogram.
-   The shape is a MASK from a data URI and never a child node: the gutter face
-   sits inside a block holder, and block copy unwraps the strip and keeps every
-   node it held, so an inline <svg> would ride into the next document. */
+/* Block copy unwraps the gutter. Keep artwork in a CSS mask, never child SVG. */
 [data-blok-presence-glyph]::after {
   content: "";
   width: 75%;
@@ -226,41 +183,41 @@
 }
 
 [data-blok-presence-glyph="astronaut"] {
-  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath fill-rule='evenodd' d='M10 1.5a7.5 7.5 0 0 1 7.5 7.5v1.5a7.45 7.45 0 0 1-3.25 6.18V18H5.75v-1.32A7.45 7.45 0 0 1 2.5 10.5V9A7.5 7.5 0 0 1 10 1.5ZM5 8a4 4 0 0 1 4-4h2a4 4 0 0 1 4 4v1a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2Z'/%3E%3C/svg%3E");
+  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath fill-rule='evenodd' d='M10 1.5a7 7 0 0 1 7 7v3a5.5 5.5 0 0 1-5.5 5.5h-3A5.5 5.5 0 0 1 3 11.5v-3a7 7 0 0 1 7-7ZM5 8a4 4 0 0 1 4-4h2a4 4 0 0 1 4 4v2.5a2.5 2.5 0 0 1-2.5 2.5h-5A2.5 2.5 0 0 1 5 10.5Z'/%3E%3Cpath d='M6.7 8.2a2.5 2.5 0 0 1 2.5-2.5M1.5 8.5v3M18.5 8.5v3' fill='none' stroke='currentColor' stroke-width='1.3' stroke-linecap='round'/%3E%3Cpath d='M5.5 17.5h9V19h-9Z'/%3E%3C/svg%3E");
 }
 [data-blok-presence-glyph="rocket"] {
-  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Cg transform='rotate(45 10 10)'%3E%3Cpath fill-rule='evenodd' d='M10 1.25c2.85 2 4.5 5.05 4.5 8.5l2 2a2 2 0 0 1 .5 1.5v2.5l-3.5-1.5H6.5L3 15.75v-2.5a2 2 0 0 1 .5-1.5l2-2c0-3.45 1.65-6.5 4.5-8.5ZM10 5a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z'/%3E%3Cpath d='M8 15.75h4c0 1.5-.75 2.5-2 3-1.25-.5-2-1.5-2-3Z'/%3E%3C/g%3E%3C/svg%3E");
+  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Cg transform='translate(.4 -.4) rotate(45 10 10)'%3E%3Cpath d='M7.2 4C7.8 2.7 8.8 1.5 10 .6 11.2 1.5 12.2 2.7 12.8 4Z'/%3E%3Cpath fill-rule='evenodd' d='M6.8 5.2h6.4c.9 3 .55 5.6-1.2 8H8c-1.75-2.4-2.1-5-1.2-8ZM10 6.3a2.1 2.1 0 1 0 0 4.2 2.1 2.1 0 0 0 0-4.2Z'/%3E%3Cpath d='M5.4 8.9 3.5 11a2 2 0 0 0-.5 1.3V15l3.9-1.3a13 13 0 0 1-1.5-4.8ZM14.6 8.9l1.9 2.1a2 2 0 0 1 .5 1.3V15l-3.9-1.3a13 13 0 0 0 1.5-4.8Z'/%3E%3Cpath fill-rule='evenodd' d='M8 14.4h4c.3 2-1 3.9-2 5-1-1.1-2.3-3-2-5Zm2 1.2-.8 1.2.8 1.2.8-1.2Z'/%3E%3C/g%3E%3C/svg%3E");
 }
 [data-blok-presence-glyph="comet"] {
-  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath d='M3.1 9.5 10.6 2a1 1 0 0 1 1.4 1.4L8.8 6.6l7-4.6a1 1 0 0 1 1.25 1.55L11.6 9l5-2.35a1 1 0 0 1 1.1 1.65l-7.2 8a5.1 5.1 0 0 1-7.4-6.8Z'/%3E%3C/svg%3E");
+  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath fill-rule='evenodd' d='M17.8 2.2c-2.2 4.4-3.9 8.9-6.7 12.9a5 5 0 0 1-7.8.9c-2.5-2.7-1.4-6.6 1.3-8.6 2.2-1.6 4.4-3.1 6.4-5.2-.2 2.7-2.6 4.6-4.4 6.2C11 7.6 14.3 5.2 17.8 2.2ZM6.8 10a2.6 2.6 0 1 0 0 5.2 2.6 2.6 0 0 0 0-5.2Z'/%3E%3Cpath d='M14 15c1.7-1.9 3.1-4.5 4-7-2.4 1.5-3.9 4.1-4 7Z'/%3E%3Cpath d='M5.4 12.8c0-.8.6-1.4 1.4-1.4' fill='none' stroke='currentColor' stroke-width='1.1' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 [data-blok-presence-glyph="satellite"] {
-  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Cg transform='rotate(-40 10 10)'%3E%3Cpath d='M5 10.5h10M10 6V3.5' fill='none' stroke='currentColor' stroke-width='1.75' stroke-linecap='round'/%3E%3Crect x='1.5' y='7' width='4.5' height='7' rx='1'/%3E%3Crect x='7.5' y='6' width='5' height='9' rx='1.25'/%3E%3Crect x='14' y='7' width='4.5' height='7' rx='1'/%3E%3Cpath d='M7.5 2.25h5a2.5 2.5 0 0 1-5 0Z'/%3E%3C/g%3E%3C/svg%3E");
+  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Cg transform='rotate(-35 10 10)'%3E%3Cpath d='M5.5 10.5h9M10 6V4.5' fill='none' stroke='currentColor' stroke-width='1.3'/%3E%3Cg fill='none' stroke='currentColor' stroke-width='1.3'%3E%3Crect x='1.5' y='7' width='4.5' height='7' rx='.8'/%3E%3Crect x='7.5' y='6' width='5' height='9' rx='1.25' fill='currentColor'/%3E%3Crect x='14' y='7' width='4.5' height='7' rx='.8'/%3E%3Cpath d='M2 10.5h3.5m9 0H18'/%3E%3C/g%3E%3Cpath d='M7.5 2.25h5a2.5 2.5 0 0 1-5 0ZM9.3 8.25h1.4v4.5H9.3Z'/%3E%3C/g%3E%3C/svg%3E");
 }
 [data-blok-presence-glyph="planet"] {
-  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Cg transform='rotate(-30 10 10)'%3E%3Cpath d='M4 8.5a6.2 6.2 0 0 1 12 0c-3.5 1.6-8.5 1.6-12 0ZM5.15 14a6.2 6.2 0 0 0 9.7 0c-2.9.45-6.8.45-9.7 0Z'/%3E%3Cpath d='M3.1 7.75C-.9 9.7 1.5 12.5 10 12.5s10.9-2.8 6.9-4.75' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E");
+  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Cg transform='rotate(-25 10 10)'%3E%3Cpath fill-rule='evenodd' d='M4.1 9a6 6 0 0 1 11.8 0c-3.5 1.1-8.3 1.1-11.8 0ZM6.4 6.6c1.6-1.5 4.1-1.9 6.2-.9l.5 1.2c-2.4-.8-4.7-.6-6.7.6Z'/%3E%3Cpath d='M5 13.8a6 6 0 0 0 10 0 31 31 0 0 1-10 0Z'/%3E%3Cpath d='M3.1 7.5C-.8 9 .2 12.4 10 12.4S20.8 9 16.9 7.5' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E");
 }
 [data-blok-presence-glyph="moon"] {
-  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath d='M11.65 1.85a.6.6 0 0 1 .48.95 6.5 6.5 0 0 0 5.07 10.45.6.6 0 0 1 .55.86A8.3 8.3 0 1 1 11.65 1.85Z'/%3E%3C/svg%3E");
+  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath fill-rule='evenodd' d='M11.6 2a.5.5 0 0 1 .4.8A6.6 6.6 0 0 0 17.2 13.4a.5.5 0 0 1 .45.75A8.25 8.25 0 1 1 11.6 2ZM5 6.5a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4ZM7 12a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z'/%3E%3Cpath d='m15 2 .8 2.2L18 5l-2.2.8L15 8l-.8-2.2L12 5l2.2-.8Z'/%3E%3C/svg%3E");
 }
 [data-blok-presence-glyph="star"] {
-  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor' stroke-width='1.5' stroke-linejoin='round'%3E%3Cpath d='m10 2 2.45 5.05 5.55.8-4 3.9.95 5.5L10 14.65l-4.95 2.6.95-5.5-4-3.9 5.55-.8Z' stroke='currentColor'/%3E%3C/svg%3E");
+  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor' stroke-width='1.5' stroke-linejoin='round'%3E%3Cpath d='m10 2 2.45 5.05 5.55.8-4 3.9.95 5.5L10 14.65l-4.95 2.6.95-5.5-4-3.9 5.55-.8Z' fill='none' stroke='currentColor'/%3E%3Cpath d='M10 3.7v6.65L3.8 8.3l3 3.05L6 15.6l4-5.25 4 5.25-.8-4.25 3-3.05L10 10.35Z'/%3E%3C/svg%3E");
 }
 [data-blok-presence-glyph="sun"] {
-  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor' stroke-width='1.5' stroke-linecap='round'%3E%3Ccircle cx='10' cy='10' r='4'/%3E%3Cpath d='M10 1.5v1.25M10 17.25v1.25M1.5 10h1.25M17.25 10h1.25M4 4l.9.9M15.1 15.1l.9.9M16 4l-.9.9M4.9 15.1l-.9.9' fill='none' stroke='currentColor'/%3E%3C/svg%3E");
+  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath fill-rule='evenodd' d='M10 5.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9ZM8.5 7.2a3.2 3.2 0 0 0 4.3 4.3c-2.9 0-4.3-1.4-4.3-4.3Z'/%3E%3Cpath d='M10 1.25c-1.6 1.4-1.1 2.4 0 2.75 1.1-.35 1.6-1.35 0-2.75ZM10 18.75c1.6-1.4 1.1-2.4 0-2.75-1.1.35-1.6 1.35 0 2.75ZM1.25 10c1.4 1.6 2.4 1.1 2.75 0-.35-1.1-1.35-1.6-2.75 0ZM18.75 10c-1.4-1.6-2.4-1.1-2.75 0 .35 1.1 1.35 1.6 2.75 0Z'/%3E%3Cpath d='m3.8 3.8 1.3 1.3m9.8 9.8 1.3 1.3m0-12.4-1.3 1.3m-9.8 9.8-1.3 1.3' fill='none' stroke='currentColor'/%3E%3C/svg%3E");
 }
 [data-blok-presence-glyph="telescope"] {
-  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath d='m10 11-4.5 6.5M10 11l4.5 6.5M10 11v6.5' fill='none' stroke='currentColor' stroke-width='1.75' stroke-linecap='round'/%3E%3Cg transform='rotate(-30 10 7.5)'%3E%3Cpath d='M2 6.25h3V5.5a1 1 0 0 1 1-1h9V4a.75.75 0 0 1 1.5 0v7a.75.75 0 0 1-1.5 0v-.5H6a1 1 0 0 1-1-1v-.75H2a.75.75 0 0 1-.75-.75v-1A.75.75 0 0 1 2 6.25Z'/%3E%3C/g%3E%3C/svg%3E");
+  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath d='M10 11.5V18m-.4-5.8L5.2 18m5.2-5.8 4.4 5.8' fill='none' stroke='currentColor' stroke-width='1.4' stroke-linecap='round'/%3E%3Cg transform='rotate(-30 10 7.5)'%3E%3Cpath d='M1.5 6.3H5v2.4H1.5Z'/%3E%3Cpath fill-rule='evenodd' d='M5.7 4.9h8.4v5.2H5.7ZM7 6.2h5.8v1.2H7Z'/%3E%3Cpath d='M15.3 3.8H17v7.4h-1.7Z'/%3E%3C/g%3E%3Ccircle cx='10' cy='11.5' r='1.5'/%3E%3C/svg%3E");
 }
 [data-blok-presence-glyph="galaxy"] {
-  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath d='M10 1.75c4.9 0 8.25 3.5 8.25 7.5 0 3.65-2.75 5.75-5.5 5.75-2.35 0-3.9-1.5-3.9-3.4 0-1.4 1-2.55 2.35-2.55-1.5-.95-3.6-.25-4.5 1.4C4.25 14.85 8.4 18 12 18.25c-5 1.05-10.25-2.65-10.25-7.8 0-3.75 2.65-6.2 5.4-6.2 2.25 0 3.9 1.45 3.9 3.2 0 .55-.15 1-.35 1.3 2.25-1.1 2.4-4.4-.7-7Z'/%3E%3C/svg%3E");
+  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Ccircle cx='10' cy='10' r='1.7'/%3E%3Cg%3E%3Cpath d='M10 1.5c4.8 0 8.4 3.7 8.4 8.1 0 1.6-.4 3-1.2 4.3.8-4.1-1.9-8-5.2-8-1.2 0-2.3.5-3 1.3C9.5 4.8 12.2 3.7 14.6 4.2A9.4 9.4 0 0 0 10 1.5Z'/%3E%3Cpath transform='rotate(120 10 10)' d='M10 1.5c4.8 0 8.4 3.7 8.4 8.1 0 1.6-.4 3-1.2 4.3.8-4.1-1.9-8-5.2-8-1.2 0-2.3.5-3 1.3C9.5 4.8 12.2 3.7 14.6 4.2A9.4 9.4 0 0 0 10 1.5Z'/%3E%3Cpath transform='rotate(240 10 10)' d='M10 1.5c4.8 0 8.4 3.7 8.4 8.1 0 1.6-.4 3-1.2 4.3.8-4.1-1.9-8-5.2-8-1.2 0-2.3.5-3 1.3C9.5 4.8 12.2 3.7 14.6 4.2A9.4 9.4 0 0 0 10 1.5Z'/%3E%3C/g%3E%3C/svg%3E");
 }
 [data-blok-presence-glyph="saucer"] {
-  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath d='M5.25 7.75a4.75 4.75 0 0 1 9.5 0Z'/%3E%3Cpath fill-rule='evenodd' d='M10 9.25c4.8 0 8.75 1.1 8.75 3.25 0 1.9-3.95 3.5-8.75 3.5s-8.75-1.6-8.75-3.5c0-2.15 3.95-3.25 8.75-3.25Zm-4.75 2a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Zm9.5 0a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Z'/%3E%3C/svg%3E");
+  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Cg transform='translate(0 -1)'%3E%3Cpath fill-rule='evenodd' d='M4.8 8.3a5.2 5.2 0 0 1 10.4 0ZM6.7 7.2h6.6a3.5 3.5 0 0 0-6.6 0Z'/%3E%3Cpath fill-rule='evenodd' d='M10 9.5c4.6 0 8.75 1.2 8.75 2.7s-4.15 3.2-8.75 3.2S1.25 13.7 1.25 12.2 5.4 9.5 10 9.5Zm0 1.5a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2Zm-5 .1a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm10 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z'/%3E%3Cpath d='m6.3 16.8-.6 1M10 17v1.3m3.7-1.5.6 1' fill='none' stroke='currentColor' stroke-width='1.3' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E");
 }
 [data-blok-presence-glyph="asteroid"] {
-  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath fill-rule='evenodd' d='M6.75 2.5 11.5 1.75c1.35-.2 2.5.4 3.15 1.5l2.85 4.5c.7 1.15.95 2.45.5 3.7l-1.6 4.2c-.45 1.15-1.55 1.95-2.8 2.05l-4.85.5a3.5 3.5 0 0 1-3.15-1.35l-3-3.7a3.5 3.5 0 0 1-.55-3.35l1.8-5.1A3.4 3.4 0 0 1 6.75 2.5ZM7.5 5.25a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm5 5a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5Z'/%3E%3C/svg%3E");
+  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath fill-rule='evenodd' d='m6.3 2.2 4.3-.8 2 1.1 2.4.3 2.6 3.9-.1 2.7 1 2.8-2.5 3.9-3.2 2.1-4.6.4-3.5-2.2-2.5-3.9.6-2.6L2 7.2l1.8-3.4ZM7.3 4.6a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM12.5 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM5.3 11.8l.9 3.1 2.6 1.3-1.4-2.5Z'/%3E%3Cpath d='M8.5 7.4c0 .9-.7 1.6-1.6 1.6-.4 0-.8-.1-1-.4 1.4.1 2.1-.7 2.2-1.8.3.1.4.3.4.6Z'/%3E%3C/svg%3E");
 }
 [data-blok-presence-glyph="unknown"] {
-  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Ccircle cx='10' cy='5.75' r='3.75'/%3E%3Cpath d='M3 16.5c0-3.2 3.1-5 7-5s7 1.8 7 5v.75a.75.75 0 0 1-.75.75H3.75a.75.75 0 0 1-.75-.75Z'/%3E%3C/svg%3E");
+  --blok-presence-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='currentColor'%3E%3Ccircle cx='10' cy='5.7' r='3.7'/%3E%3Cpath fill-rule='evenodd' d='M10 11.2c4 0 7 2.1 7 5.4v1.2H3v-1.2c0-3.3 3-5.4 7-5.4Zm0 1.6c-2.9 0-5.3 1.4-5.3 3.5h10.6c0-2.1-2.4-3.5-5.3-3.5Z'/%3E%3C/svg%3E");
 }

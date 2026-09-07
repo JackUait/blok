@@ -21,7 +21,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AngleSharp" Version="1.7.2" />
+    <PackageReference Include="AngleSharp" Version="1.8.0" />
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.7.0" />
     <!--
       Compile assets deliberately withheld from consumers: nothing public

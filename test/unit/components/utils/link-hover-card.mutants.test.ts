@@ -273,6 +273,154 @@ describe('LinkHoverCard mutants', () => {
     });
   });
 
+  describe('the three actions', () => {
+    const showIt = (harness: Harness): HTMLElement => {
+      harness.card.show(harness.link);
+      vi.advanceTimersByTime(SHOW_DELAY);
+      runFrames();
+
+      const wrapper = wrapperOf();
+
+      if (wrapper === null) {
+        throw new Error('the card never appeared');
+      }
+
+      return wrapper;
+    };
+
+    const press = (wrapper: HTMLElement, testid: string): void => {
+      wrapper.querySelector<HTMLElement>(`[data-blok-testid="${testid}"]`)?.click();
+    };
+
+    it('opens the destination and closes', () => {
+      const harness = build();
+      const wrapper = showIt(harness);
+
+      press(wrapper, 'link-hover-card-url');
+
+      expect(harness.onOpen).toHaveBeenCalledWith('https://example.test/a');
+      expect(harness.card.anchor).toBeNull();
+    });
+
+    it('copies the href and closes', () => {
+      const harness = build();
+      const wrapper = showIt(harness);
+
+      press(wrapper, 'link-hover-card-copy');
+
+      expect(harness.onCopy).toHaveBeenCalledWith('https://example.test/a');
+      expect(harness.card.anchor).toBeNull();
+    });
+
+    it('hands the ANCHOR to the editor, not its href', () => {
+      const harness = build();
+      const wrapper = showIt(harness);
+
+      press(wrapper, 'link-hover-card-edit');
+
+      expect(harness.onEdit).toHaveBeenCalledWith(harness.link);
+      expect(harness.card.anchor).toBeNull();
+    });
+
+    it('reports the href as authored rather than as resolved', () => {
+      const harness = build();
+
+      harness.link.setAttribute('href', '/docs/relative');
+      showIt(harness);
+
+      const wrapper = wrapperOf();
+
+      press(wrapper as HTMLElement, 'link-hover-card-copy');
+
+      expect(harness.onCopy).toHaveBeenCalledWith('/docs/relative');
+    });
+
+    it('labels the copy button and names the edit one', () => {
+      const harness = build();
+      const wrapper = showIt(harness);
+
+      expect(wrapper.querySelector('[data-blok-testid="link-hover-card-copy"]')?.getAttribute('aria-label'))
+        .toBe('Copy link');
+      expect(wrapper.querySelector('[data-blok-testid="link-hover-card-edit"]')?.textContent).toBe('Edit');
+    });
+
+    it('stays open while the pointer is over it, and leaves when it goes', () => {
+      const harness = build();
+      const wrapper = showIt(harness);
+
+      harness.card.scheduleHide();
+      wrapper.dispatchEvent(new MouseEvent('mouseenter'));
+      vi.advanceTimersByTime(GRACE_HIDE_DURATION * 2);
+
+      expect(harness.card.anchor).toBe(harness.link);
+
+      wrapper.dispatchEvent(new MouseEvent('mouseleave'));
+      vi.advanceTimersByTime(GRACE_HIDE_DURATION);
+
+      expect(harness.card.anchor).toBeNull();
+    });
+  });
+
+  describe('placement', () => {
+    const VIEWPORT = { width: 1000, height: 600 };
+    const CARD = { width: 200, height: 40 };
+
+    const placeAt = (rect: { top: number; bottom: number; left: number }, cursor?: { x: number; y: number }) => {
+      const harness = build();
+
+      vi.spyOn(harness.link, 'getBoundingClientRect').mockReturnValue({
+        ...rect,
+        right: rect.left + 50,
+        width: 50,
+        height: rect.bottom - rect.top,
+        x: rect.left,
+        y: rect.top,
+        toJSON: () => rect,
+      });
+
+      const wrapper = wrapperOf();
+
+      if (wrapper === null) {
+        throw new Error('no wrapper');
+      }
+
+      Object.defineProperty(wrapper, 'offsetWidth', { value: CARD.width, configurable: true });
+      Object.defineProperty(wrapper, 'offsetHeight', { value: CARD.height, configurable: true });
+      Object.defineProperty(window, 'innerWidth', { value: VIEWPORT.width, configurable: true });
+      Object.defineProperty(window, 'innerHeight', { value: VIEWPORT.height, configurable: true });
+
+      harness.card.show(harness.link, cursor);
+      vi.advanceTimersByTime(SHOW_DELAY);
+
+      return { top: parseFloat(wrapper.style.top), left: parseFloat(wrapper.style.left) };
+    };
+
+    it('sits below the link, at the anchor gap, when no cursor is given', () => {
+      expect(placeAt({ top: 100, bottom: 120, left: 300 })).toStrictEqual({ top: 126, left: 300 });
+    });
+
+    it('sits below the link at the wider cursor gap, centred on the pointer', () => {
+      expect(placeAt({ top: 100, bottom: 120, left: 300 }, { x: 400, y: 110 }))
+        .toStrictEqual({ top: 130, left: 300 });
+    });
+
+    it('flips above the link when it would spill past the bottom', () => {
+      expect(placeAt({ top: 540, bottom: 560, left: 300 })).toStrictEqual({ top: 494, left: 300 });
+    });
+
+    it('never sits closer than the margin to the top edge', () => {
+      expect(placeAt({ top: 0, bottom: 4, left: 300 }, { x: 400, y: 2 }).top).toBe(14);
+    });
+
+    it('shifts right rather than hanging off the left edge', () => {
+      expect(placeAt({ top: 100, bottom: 120, left: 0 }, { x: 10, y: 110 }).left).toBe(4);
+    });
+
+    it('shifts left rather than hanging off the right edge', () => {
+      expect(placeAt({ top: 100, bottom: 120, left: 980 }, { x: 995, y: 110 }).left).toBe(796);
+    });
+  });
+
   describe('destroy', () => {
     it('detaches at once and cancels every pending timer', () => {
       const harness = build();

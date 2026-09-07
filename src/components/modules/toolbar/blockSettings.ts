@@ -20,7 +20,7 @@ import { buildConvertMenuEntries, buildConvertMenuItems } from '../../utils/conv
 import type { PopoverItemParams, Popover } from '../../utils/popover';
 import { PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
 import { css as popoverItemCls } from '../../utils/popover/components/popover-item';
-import { isToolConvertable, translateToolName, translateToolTitle } from '../../utils/tools';
+import { isToolConvertable } from '../../utils/tools';
 
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -277,38 +277,6 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       const anchorRect = providedAnchorRect
         ?? (trigger === undefined ? block.holder.getBoundingClientRect() : undefined);
 
-      const activeEntry = hasMultipleBlocksSelected
-        ? undefined
-        : await block.getActiveToolboxEntry();
-      const contextLabel = ((): string => {
-        if (hasMultipleBlocksSelected) {
-          return this.Blok.I18n.t('blockSettings.blocksSelected', { count: selectedBlocks.length });
-        }
-
-        if (activeEntry) {
-          return translateToolTitle(this.Blok.I18n, activeEntry, block.name);
-        }
-
-        return translateToolName(this.Blok.I18n, undefined, block.name);
-      })();
-
-      const identity = document.createElement('div');
-      const identityTitle = document.createElement('span');
-
-      identity.className = 'flex items-center gap-2 px-2 pt-1 pb-2 text-sm font-medium text-text-primary';
-      if (activeEntry?.icon) {
-        const icon = document.createElement('span');
-
-        icon.className = 'flex size-7 shrink-0 items-center justify-center [&_svg]:size-5';
-        icon.setAttribute('aria-hidden', 'true');
-        icon.innerHTML = activeEntry.icon;
-        identity.append(icon);
-      }
-      identityTitle.className = 'min-w-0 truncate';
-      identityTitle.textContent = contextLabel;
-      identity.append(identityTitle);
-      items.unshift({ type: PopoverItemType.Html, name: 'block-identity', element: identity });
-
       const PopoverClass = isMobileScreen() ? PopoverMobile : PopoverDesktop;
       const popoverBaseParams = {
         searchable: true,
@@ -518,11 +486,10 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     /**
      * Tool-specific tunes come first (e.g. heading level selector)
      */
-    if (!hasMultipleBlocksSelected && toolTunes !== undefined && toolTunes.length > 0) {
+    const hasToolTunes = !hasMultipleBlocksSelected && toolTunes !== undefined && toolTunes.length > 0;
+
+    if (hasToolTunes) {
       items.push(...toolTunes);
-      items.push({
-        type: PopoverItemType.Separator,
-      });
     }
 
     /**
@@ -626,9 +593,15 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         children: {
           items: convertToItems,
           searchable: true,
-          width: '280px',
+          width: '320px',
         },
       });
+      items.push({
+        type: PopoverItemType.Separator,
+      });
+    } else if (hasToolTunes) {
+      // Formatting still needs a boundary before the actions when the block
+      // converts to nothing (image, table, file, audio).
       items.push({
         type: PopoverItemType.Separator,
       });
@@ -1278,11 +1251,24 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     this.deleteKeyHandler = (event: KeyboardEvent) => {
-      if (event.key === 'Delete') {
-        event.preventDefault();
-        deleteItem.onActivate(deleteItem);
-        this.close();
+      if (event.key !== 'Delete') {
+        return;
       }
+
+      /**
+       * Inside a field the menu owns (its search, a tool's own input) Delete
+       * edits text. Deleting the block there would destroy the document while
+       * the user is typing.
+       */
+      const target = event.target;
+
+      if (target instanceof HTMLElement && ($.isNativeInput(target) || $.isContentEditable(target))) {
+        return;
+      }
+
+      event.preventDefault();
+      deleteItem.onActivate(deleteItem);
+      this.close();
     };
 
     this.popover.getElement().addEventListener('keydown', this.deleteKeyHandler);

@@ -124,7 +124,7 @@ export class ConvertInlineTool implements InlineTool {
       children: {
         items: convertToItems,
         searchable: true,
-        width: '280px',
+        width: '320px',
         onOpen: () => {
           if (isDesktop) {
             this.selectionAPI.setFakeBackground();

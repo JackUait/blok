@@ -105,6 +105,10 @@ export const buildConvertMenuItems = (
   const items: MenuConfigItem[] = [];
 
   entries.forEach((entry, index) => {
+    if (index > 0 && entries[index - 1]?.group !== entry.group) {
+      items.push({ type: PopoverItemType.Separator });
+    }
+
     if (entry.group !== undefined && entries[index - 1]?.group !== entry.group) {
       const label = document.createElement('div');
 

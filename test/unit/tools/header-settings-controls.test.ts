@@ -79,6 +79,19 @@ describe('Header settings controls', () => {
     expect(header.save(document.body).level).toBe(4);
   });
 
+  it.each([false, true])('separates configured heading levels from Color (toggleable: %s)', (isToggleable) => {
+    const header = createHeader({ isToggleable }, { levels: [1, 3, 6] });
+    const popover = new PopoverDesktop({ items: settingsItems(header) });
+
+    popovers.push(popover);
+    popover.show();
+    const separators = popover.getElement().querySelectorAll('[role="separator"]');
+
+    expect(separators).toHaveLength(1);
+    expect(separators[0].previousElementSibling?.getAttribute('data-blok-header-level')).toBe('6');
+    expect(separators[0].nextElementSibling?.getAttribute('data-blok-item-name')).toBe('block-color');
+  });
+
   it('keeps level settings searchable without falling back to block conversion', () => {
     const header = createHeader({ anchor: 'search-anchor' });
 

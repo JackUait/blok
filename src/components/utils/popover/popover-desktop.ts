@@ -1397,7 +1397,18 @@ export class PopoverDesktop extends PopoverAbstract {
     // edge by `overlap` px, then convert to parent-root-relative pixels.
     const viewportLeft = parentRect.right - overlap;
 
-    nestedContainer.style.left = `${viewportLeft - parentRootRect.left}px`;
+    // The side never flips, but a wide submenu (the 320px convert menu) opened
+    // near the right edge would run off-screen, so slide it back in. A submenu
+    // wider than the viewport keeps its left margin instead of hanging left.
+    const nestedWidth = nestedContainer.offsetWidth > 0
+      ? nestedContainer.offsetWidth
+      : this.nestedPopover?.size.width ?? 0;
+    const rightLimit = window.innerWidth - NESTED_POPOVER_VIEWPORT_MARGIN - nestedWidth;
+    const clampedLeft = nestedWidth > 0
+      ? Math.max(NESTED_POPOVER_VIEWPORT_MARGIN, Math.min(viewportLeft, rightLimit))
+      : viewportLeft;
+
+    nestedContainer.style.left = `${clampedLeft - parentRootRect.left}px`;
 
     // Stamp the resolved side/align so CSS/animation can key off it, mirroring
     // the root popover's data-side/data-align contract.

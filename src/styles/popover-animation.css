@@ -63,6 +63,10 @@
       min-height: 40px;
       max-height: none;
       margin: 0;
+
+      @media (max-width: 650px) {
+        min-height: 44px;
+      }
     }
 
     > [data-blok-convert-group] + [data-blok-convert-item]:not([data-blok-convert-group]) {
@@ -96,6 +100,92 @@
         height: 20px;
       }
     }
+  }
+}
+
+/* Scope the denser chrome to block settings and conversion, not tool pickers. */
+:is([data-blok-testid='block-tunes-popover'] > [data-blok-popover-container], [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item])) {
+  padding-inline: var(--blok-space-2);
+
+  @media (min-width: 651px) {
+    max-height: min(var(--max-height), calc(100dvh - 16px));
+  }
+
+  > [data-blok-testid='popover-search-field'] {
+    margin-top: var(--blok-space-2);
+    background: transparent;
+    border-color: var(--blok-popover-border);
+
+    &:focus-within {
+      border-color: var(--blok-text-secondary);
+    }
+  }
+
+  > [data-blok-popover-items] {
+    padding-block: var(--blok-space-1) var(--blok-space-1-5);
+    row-gap: var(--blok-space-0-5);
+
+    > [data-blok-popover-item]:not([data-blok-hidden]) {
+      min-height: 32px;
+      max-height: none;
+      margin-block: 0;
+      border-radius: var(--blok-space-1-5);
+
+      &:not([data-blok-header-level], [data-blok-convert-group]) {
+        padding-block: var(--blok-space-1);
+
+        > [data-blok-popover-item-icon] {
+          margin-inline-end: var(--blok-space-2);
+        }
+      }
+
+      > [data-blok-popover-item-secondary-title] {
+        padding-inline-start: var(--blok-space-3);
+        font-size: 11px;
+      }
+    }
+
+    > [role='separator'] {
+      padding-block: var(--blok-space-1);
+    }
+
+    > [data-blok-item-name='header-levels'] > div {
+      padding: var(--blok-space-0-5) var(--blok-space-2);
+      line-height: 16px;
+    }
+
+    /* Keep metadata legible despite the inline scroll-reel distortion. */
+    > [data-blok-item-name='edit-metadata']:not([data-blok-hidden]) {
+      transform: none !important;
+      opacity: 1 !important;
+    }
+
+    > [data-blok-item-name='edit-metadata'] > div {
+      padding: var(--blok-space-0-5) var(--blok-space-2);
+      font-size: 11px;
+      line-height: 14px;
+    }
+  }
+}
+
+/* Built utilities are unlayered; beat their active, hover, and focus selectors. */
+[data-blok-popover-items] > [data-blok-popover-item][data-blok-header-level][data-blok-popover-item-active] {
+  color: var(--blok-text-primary);
+  background-color: var(--blok-item-hover-bg);
+  box-shadow: inset 0 0 0 1px var(--blok-popover-border);
+}
+
+/* Labelled choices may wrap in narrow menus or longer translations. */
+[data-blok-convert-item]:not([data-blok-convert-group]) > [data-blok-popover-item-title] {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 650px) {
+  :is([data-blok-testid='block-tunes-popover'] > [data-blok-popover-container], [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]))
+    > [data-blok-popover-items] > [data-blok-popover-item]:not([data-blok-hidden]) {
+    min-height: 44px;
   }
 }
 

@@ -13,6 +13,8 @@ type LifecycleCategory =
 const SRC_DIR = resolve(__dirname, '../../../../src');
 const ENGLISH_PATH = join(SRC_DIR, 'components/i18n/locales/en.json');
 const CATALOG_ONLY_KEYS = new Set([
+  // Retain this key for public BlokMessageKey compatibility.
+  'blockSettings.blocksSelected',
   'blockSettings.convertWithChildrenWarning',
   'tools.columns.turnInto',
 ]);
@@ -252,7 +254,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 429 + 122 + 25 + 2 closure for all 578 keys', () => {
+  it('rebuilds a disjoint 428 + 122 + 25 + 3 closure for all 578 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -282,10 +284,10 @@ describe('current English catalog lifecycle coverage', () => {
       // emoji.search / emoji.nothingFound moved catalog-only -> executable-
       // literal once the inline emoji trigger composer called
       // I18n.t('emoji.search') / t('emoji.nothingFound') at a literal call site.
-      'executable-literal': 429,
+      'executable-literal': 428,
       'finite-dynamic': 122,
       'registered-namespace-compatible': 25,
-      'catalog-only': 2,
+      'catalog-only': 3,
     });
     expect(
       [...lifecycle.entries()]

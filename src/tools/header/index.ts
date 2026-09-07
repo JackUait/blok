@@ -591,6 +591,7 @@ export class Header implements BlockTool {
         element: label,
       },
       ...levelEntries,
+      { type: PopoverItemType.Separator },
       ...colorItems,
     ] as MenuConfig;
   }

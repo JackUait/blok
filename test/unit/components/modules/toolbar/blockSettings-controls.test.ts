@@ -1,10 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BlockSettings } from '../../../../../src/components/modules/toolbar/blockSettings';
+import { BlockToolAdapter } from '../../../../../src/components/tools/block';
+import { Header } from '../../../../../src/tools/header';
+import type { API } from '../../../../../types';
 import type { Block } from '../../../../../src/components/block';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import type { MenuConfigItem } from '../../../../../types/tools';
+import { PopoverItemType } from '../../../../../src/components/utils/popover';
 import en from '../../../../../src/components/i18n/locales/en.json';
 
 const translations: Record<string, string> = en;
@@ -17,7 +21,7 @@ const createSettings = (commonTunes: MenuConfigItem[], toolTunes: MenuConfigItem
   holder.append(content);
   document.body.append(holder);
   const block = {
-    id: 'section', name: 'custom-heading', holder, pluginsContent: content,
+    id: 'section', name: 'custom-heading', parentId: null, holder, pluginsContent: content,
     createdAt: 0, lastEditedAt: 0,
     getTunes: () => ({ commonTunes, toolTunes }),
     getActiveToolboxEntry: async () => ({ title: 'Custom title', icon: '<svg></svg>' }),
@@ -27,21 +31,26 @@ const createSettings = (commonTunes: MenuConfigItem[], toolTunes: MenuConfigItem
   const duplicate = vi.fn();
   const modules = {
     ReadOnly: { isEnabled: false, isControlsHidden: false },
-    BlockSelection: { selectedBlocks: [], selectBlock: vi.fn(), clearCache: vi.fn(), unselectBlock: vi.fn() },
+    BlockSelection: { selectedBlocks: [] as Block[], selectBlock: vi.fn(), clearCache: vi.fn(), unselectBlock: vi.fn() },
     BlockManager: { currentBlock: block },
     CrossBlockSelection: { isCrossBlockSelectionStarted: false },
-    Tools: { blockTools: new Map() },
+    Tools: { blockTools: new Map<string, BlockToolAdapter>() },
     API: { methods: {} },
     Toolbar: { close: vi.fn(), isPositionedRight: false },
     DragManager: { duplicateBlocksInPlace: duplicate },
-    I18n: { t: (key: string) => translations[key] ?? key, has: (key: string) => key in translations, getLocale: () => 'en' },
-  } as unknown as BlokModules;
+    I18n: {
+      t: (key: string) => translations[key] ?? key,
+      has: (key: string) => key in translations,
+      getLocale: () => 'en',
+      getEnglishTranslation: (key: string) => translations[key] ?? key,
+    },
+  };
 
-  settings.state = modules;
+  settings.state = modules as unknown as BlokModules;
   settings.make();
   settingsInstances.push(settings);
 
-  return { settings, block, duplicate };
+  return { settings, block, duplicate, modules };
 };
 
 describe('Block settings control groups', () => {
@@ -58,27 +67,189 @@ describe('Block settings control groups', () => {
     vi.restoreAllMocks();
   });
 
-  it('identifies the target block with its registered title and icon', async () => {
-    const { settings, block } = createSettings([]);
+  it.each(['heading', 'color'])('starts with %s controls instead of a current-block label', async (firstControl) => {
+    const { settings, block } = createSettings([], [
+      { name: firstControl, title: firstControl === 'heading' ? 'Heading' : 'Color' },
+    ]);
 
     await settings.open(block);
-    const identity = document.querySelector('[data-blok-item-name="block-identity"]');
+    const menu = document.querySelector('[data-blok-testid="block-tunes-popover"]');
+    const items = menu?.querySelector('[data-blok-popover-items]');
 
-    expect(identity?.textContent).toBe('Custom title');
-    expect(identity?.querySelector('svg')).not.toBeNull();
-    expect(identity?.querySelector('button')).toBeNull();
+    expect(items?.firstElementChild?.getAttribute('data-blok-item-name')).toBe(firstControl);
+    expect(menu?.textContent).not.toContain('Custom title');
+    expect(menu?.querySelector('[data-blok-item-name="block-identity"]')).toBeNull();
   });
 
-  it('shows the identity icon as a bare glyph, with no chip behind it', async () => {
-    const { settings, block } = createSettings([]);
+  it.each([false, true])('keeps tool tunes and conversion in one formatting group (selected: %s)', async (selected) => {
+    const { settings, block, modules } = createSettings([
+      { name: 'first-custom', title: 'First custom' },
+      { name: 'delete', title: 'Delete' },
+      { name: 'last-custom', title: 'Last custom' },
+    ], [
+      { name: 'heading', title: 'Heading' },
+      { name: 'color', title: 'Color' },
+    ]);
+
+    modules.Tools.blockTools.set('header', new BlockToolAdapter({
+      name: 'header', constructable: Header, config: {}, api: modules.API.methods as API,
+      isDefault: false, isInternal: false,
+    }));
+    modules.BlockSelection.selectedBlocks = selected ? [block] : [];
 
     await settings.open(block);
-    const svg = document.querySelector('[data-blok-item-name="block-identity"] svg');
-    const icon = svg?.parentElement;
+    const menu = document.querySelector('[data-blok-testid="block-tunes-popover"]');
+    const convert = menu?.querySelector('[data-blok-item-name="convert-to"]');
 
-    expect(icon?.className).toContain('size-7');
-    expect(icon?.className).not.toContain('bg-popover-icon-bg');
-    expect(icon?.className).not.toContain('rounded-md');
+    expect(convert?.previousElementSibling?.getAttribute('data-blok-item-name')).toBe('color');
+    expect(convert?.nextElementSibling?.getAttribute('role')).toBe('separator');
+    const items = Array.from(menu?.querySelectorAll('[role="menuitem"], [role="separator"]') ?? []);
+
+    expect(items.map(item => item.getAttribute('data-blok-item-name') ?? item.getAttribute('role'))).toEqual([
+      'heading', 'color', 'convert-to', 'separator',
+      'first-custom', 'last-custom', 'duplicate', 'separator', 'delete', 'separator',
+    ]);
+  });
+
+  it('separates tool controls from actions when the block converts to nothing', async () => {
+    const { settings, block } = createSettings([
+      { name: 'first-custom', title: 'First custom' },
+      { name: 'delete', title: 'Delete' },
+    ], [{ name: 'text-size', title: 'Text size' }]);
+
+    await settings.open(block);
+    const menu = document.querySelector('[data-blok-testid="block-tunes-popover"]');
+    const items = Array.from(menu?.querySelectorAll('[role="menuitem"], [role="separator"]') ?? []);
+
+    expect(items.map(item => item.getAttribute('data-blok-item-name') ?? item.getAttribute('role'))).toEqual([
+      'text-size', 'separator', 'first-custom', 'duplicate', 'separator', 'delete', 'separator',
+    ]);
+  });
+
+  it('keeps read-only menus limited to copy link', async () => {
+    const { settings, block, modules } = createSettings([
+      { name: 'delete', title: 'Delete' },
+      { name: 'copy-link', title: 'Copy link' },
+    ], [{ name: 'color', title: 'Color' }]);
+
+    modules.Tools.blockTools.set('header', new BlockToolAdapter({
+      name: 'header', constructable: Header, config: {}, api: modules.API.methods as API,
+      isDefault: false, isInternal: false,
+    }));
+    modules.ReadOnly.isEnabled = true;
+
+    await settings.open(block);
+    const menu = document.querySelector('[data-blok-testid="block-tunes-popover"]');
+    const actions = Array.from(menu?.querySelectorAll('[role="menuitem"]') ?? []);
+
+    expect(actions.map(item => item.getAttribute('data-blok-item-name'))).toEqual(['copy-link']);
+  });
+
+  it('keeps multi-selection formatting separate from duplicate and delete', async () => {
+    const { settings, block, modules } = createSettings([
+      { name: 'custom-action', title: 'Custom action' },
+      { name: 'delete', title: 'Delete' },
+    ], [{ name: 'color', title: 'Color' }]);
+
+    modules.BlockSelection.selectedBlocks = [block, { ...block, id: 'second' }];
+
+    await settings.open(block);
+    const menu = document.querySelector('[data-blok-testid="block-tunes-popover"]');
+    const items = Array.from(menu?.querySelectorAll('[role="menuitem"], [role="separator"]') ?? []);
+
+    expect(items.map(item => item.getAttribute('data-blok-item-name') ?? item.getAttribute('role'))).toEqual([
+      'convert-to', 'separator', 'duplicate', 'separator', 'delete', 'separator',
+    ]);
+  });
+
+  it.each(['root', 'nested'] as const)('keeps Delete editing the %s search without deleting the block', async (level) => {
+    const { settings, block } = createSettings([
+      { name: 'delete', title: 'Delete', onActivate: () => block.holder.remove() },
+    ], [{
+      name: 'search-submenu',
+      title: 'More actions',
+      children: {
+        searchable: true,
+        items: [{ name: 'nested-action', title: 'Nested action' }],
+      },
+    }]);
+
+    await settings.open(block);
+    const menu = document.querySelector('[data-blok-testid="block-tunes-popover"]');
+
+    if (!(menu instanceof HTMLElement)) {
+      throw new Error('Block settings did not open');
+    }
+    if (level === 'nested') {
+      const trigger = menu.querySelector('[data-blok-item-name="search-submenu"]');
+
+      if (!(trigger instanceof HTMLElement)) {
+        throw new Error('Nested menu trigger is missing');
+      }
+      trigger.click();
+    }
+
+    const inputs = menu.querySelectorAll('input[type="search"]');
+
+    expect(inputs).toHaveLength(level === 'root' ? 1 : 2);
+    const input = inputs.item(inputs.length - 1);
+
+    if (!(input instanceof HTMLInputElement)) {
+      throw new Error('Search input is missing');
+    }
+    input.focus();
+    input.value = 'Heading';
+    const event = new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true });
+
+    input.dispatchEvent(event);
+
+    expect(block.holder.isConnected).toBe(true);
+    expect(settings.opened).toBe(true);
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it.each(['textarea', 'contenteditable', 'plaintext-only'] as const)(
+    'keeps Delete editing a custom %s control without deleting the block',
+    async (kind) => {
+      const input = document.createElement(kind === 'textarea' ? 'textarea' : 'div');
+
+      if (kind !== 'textarea') {
+        input.contentEditable = kind === 'plaintext-only' ? 'plaintext-only' : 'true';
+      }
+      const { settings, block } = createSettings([
+        { name: 'delete', title: 'Delete', onActivate: () => block.holder.remove() },
+      ], [{ type: PopoverItemType.Html, element: input }]);
+
+      await settings.open(block);
+      expect(settings.contains(input)).toBe(true);
+      const event = new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true });
+
+      input.dispatchEvent(event);
+
+      expect(block.holder.isConnected).toBe(true);
+      expect(settings.opened).toBe(true);
+      expect(event.defaultPrevented).toBe(false);
+    }
+  );
+
+  it('keeps Delete removing the block from a noneditable menu action', async () => {
+    const { settings, block } = createSettings([
+      { name: 'delete', title: 'Delete', onActivate: () => block.holder.remove() },
+    ]);
+
+    await settings.open(block);
+    const action = document.querySelector('[data-blok-testid="block-tunes-popover"] [data-blok-item-name="duplicate"]');
+
+    if (!(action instanceof HTMLElement)) {
+      throw new Error('Noneditable menu action is missing');
+    }
+    const event = new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true });
+
+    action.dispatchEvent(event);
+
+    expect(block.holder.isConnected).toBe(false);
+    expect(settings.opened).toBe(false);
+    expect(event.defaultPrevented).toBe(true);
   });
 
   it('keeps custom action order and duplicate behavior while separating delete last', async () => {

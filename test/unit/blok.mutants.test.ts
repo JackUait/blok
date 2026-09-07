@@ -27,6 +27,8 @@ interface CoreState {
   modules: Record<string, unknown>;
   configuration: unknown;
   instances: MockCoreInstance[];
+  /** Overrides the promise MockCore hands Blok, so a boot can be made to fail. */
+  isReady: Promise<void> | null;
 }
 
 const h = vi.hoisted(() => {
@@ -35,6 +37,7 @@ const h = vi.hoisted(() => {
     modules: {},
     configuration: undefined,
     instances: [],
+    isReady: null,
   };
 
   return {
@@ -84,7 +87,7 @@ vi.mock('../../src/components/core', () => {
   class MockCore {
     public configuration: unknown;
     public moduleInstances: Record<string, unknown>;
-    public isReady: Promise<void> = Promise.resolve();
+    public isReady: Promise<void>;
 
     /**
      * @param _configuration - user config, ignored: tests drive Core's own
@@ -93,6 +96,7 @@ vi.mock('../../src/components/core', () => {
     public constructor(_configuration?: unknown) {
       this.configuration = h.coreState.configuration;
       this.moduleInstances = h.coreState.modules;
+      this.isReady = h.coreState.isReady ?? Promise.resolve();
       h.coreState.instances.push(this);
     }
   }
@@ -360,6 +364,7 @@ describe('Blok entry point — mutation coverage', () => {
     h.coreState.modules = {};
     h.coreState.configuration = {};
     h.coreState.instances = [];
+    h.coreState.isReady = null;
 
     originalScrollTo = window.scrollTo;
     scrollTo = vi.fn();
@@ -884,6 +889,92 @@ describe('Blok entry point — mutation coverage', () => {
       await ready;
 
       expect(Object.prototype.hasOwnProperty.call(editor, 'configuration')).toBe(false);
+    });
+
+    // Settling the registry marks the entry booted and hangs a render-state
+    // MutationObserver off the wrapper, so an entry left behind here outlives
+    // the editor and holds every later `whenAllReady` aggregate open.
+    it('drops the instance from the registry', async () => {
+      install(makeKit());
+
+      const editor = new Blok({});
+      const ready = editor.isReady;
+
+      editor.destroy();
+
+      await ready;
+
+      expect(h.unregisterInstance.mock.calls[0][0]).toBe(editor);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Boot rejected (persistence.load() failed) — the editor is already live
+  // -------------------------------------------------------------------------
+
+  describe('boot failure', () => {
+    /** Makes the next MockCore hand Blok a promise the test rejects by hand. */
+    const failingBoot = (): (error: Error) => void => {
+      let reject: (error: Error) => void = () => {};
+
+      h.coreState.isReady = new Promise<void>((_resolve, r) => { reject = r; });
+
+      return reject;
+    };
+
+    it('installs the real teardown so a later destroy() releases everything', async () => {
+      const kit = install(makeKit());
+      const reject = failingBoot();
+      const editor = new Blok({});
+      const settled = editor.isReady.catch((error: unknown) => error);
+
+      reject(new Error('offline'));
+      await settled;
+
+      editor.destroy();
+
+      expect(kit.probe.markDestroyed).toHaveBeenCalledTimes(1);
+      expect(kit.probe.destroy).toHaveBeenCalledTimes(1);
+      expect(kit.probe.listeners.removeAll).toHaveBeenCalledTimes(1);
+      expect(h.destroyTooltip).toHaveBeenCalled();
+      expect(h.unregisterInstance.mock.calls[0][0]).toBe(editor);
+    });
+
+    it('tears down without a second call when destroy() landed before the rejection', async () => {
+      const kit = install(makeKit());
+      const reject = failingBoot();
+      const editor = new Blok({});
+      const settled = editor.isReady.catch((error: unknown) => error);
+
+      editor.destroy();
+      reject(new Error('offline'));
+      await settled;
+
+      expect(kit.probe.destroy).toHaveBeenCalledTimes(1);
+      expect(h.unregisterInstance.mock.calls[0][0]).toBe(editor);
+    });
+
+    it('never exports the API', async () => {
+      install(makeKit());
+      const reject = failingBoot();
+      const editor = new Blok({});
+      const settled = editor.isReady.catch((error: unknown) => error);
+
+      reject(new Error('offline'));
+      await settled;
+
+      expect(Object.prototype.hasOwnProperty.call(editor, 'configuration')).toBe(false);
+    });
+
+    it('still rejects isReady with the boot error', async () => {
+      install(makeKit());
+      const reject = failingBoot();
+      const editor = new Blok({});
+      const failure = new Error('offline');
+      const settled = expect(editor.isReady).rejects.toBe(failure);
+
+      reject(failure);
+      await settled;
     });
   });
 

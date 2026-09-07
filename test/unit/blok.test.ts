@@ -1084,6 +1084,239 @@ describe('Blok', () => {
       // Restore original Core
       (coreModule as Record<string, unknown>).Core = OriginalMockCore;
     });
+
+    // The pre-ready teardown branch is a second copy of destroy() and it was
+    // missing this release, so a host that destroyed during boot kept the save
+    // queue's beforeunload guard for the rest of the page's life.
+    it('releases the persistence save queue when destroy() lands before isReady', async () => {
+      const deferred = createDeferred();
+
+      const coreModule = await import('../../src/components/core') as {
+        Core: new (...args: unknown[]) => Core;
+        lastInstance?: () => Core | undefined;
+      };
+      const OriginalMockCore = coreModule.Core;
+      const deferredIsReady = deferred.promise;
+
+      const PatchedCore = class extends OriginalMockCore {
+        constructor(...args: unknown[]) {
+          super(...args);
+          this.isReady = deferredIsReady;
+        }
+      } as unknown as typeof coreModule.Core;
+
+      (coreModule as Record<string, unknown>).Core = PatchedCore;
+
+      const fireBeforeUnload = (): boolean => {
+        const event = new Event('beforeunload', { cancelable: true });
+
+        window.dispatchEvent(event);
+
+        return event.defaultPrevented;
+      };
+
+      try {
+        const blok = new Blok();
+        const core = coreModule.lastInstance?.();
+
+        if (core === undefined) {
+          throw new Error('Core instance was not created');
+        }
+
+        const expanded = expandPersistenceConfig({
+          persistence: {
+            load: async () => null,
+            save: () => new Promise<void>(() => {}),
+          },
+        });
+
+        core.config = expanded;
+        expanded.onSave?.({ blocks: [] }, {} as API);
+
+        expect(fireBeforeUnload()).toBe(true);
+
+        blok.destroy();
+
+        deferred.resolve();
+        await blok.isReady;
+
+        expect(fireBeforeUnload()).toBe(false);
+      } finally {
+        (coreModule as Record<string, unknown>).Core = OriginalMockCore;
+      }
+    });
+  });
+
+  /**
+   * A rejected boot leaves the editor fully alive: `init()` and `start()` have
+   * already run (modules constructed and prepared, the UI wrapper mounted,
+   * document listeners attached) before `render()` — and `persistence.load()`
+   * is only awaited inside `render()`. So the ONLY handler on the readiness
+   * chain must still install the real teardown, or the host's `destroy()` hits
+   * the placeholder that just sets `pendingDestroy` and nothing is released.
+   */
+  describe('destroy after a failed boot', () => {
+    const createRejectable = (): { promise: Promise<void>; reject: (error: Error) => void } => {
+      let reject: (error: Error) => void = () => {};
+      const promise = new Promise<void>((_resolve, r) => { reject = r; });
+
+      return { promise, reject };
+    };
+
+    /**
+     * Swaps the mocked Core for one whose `isReady` is the given promise, runs
+     * the body, and always restores it — a red-phase failure otherwise leaves
+     * Core patched for every later test in this file.
+     * @param isReady - promise the patched Core hands to Blok
+     * @param body - test body, receives nothing
+     */
+    const withCoreReady = async (isReady: Promise<void>, body: () => Promise<void>): Promise<void> => {
+      const coreModule = await import('../../src/components/core') as {
+        Core: new (...args: unknown[]) => Core;
+      };
+      const OriginalMockCore = coreModule.Core;
+      const PatchedCore = class extends OriginalMockCore {
+        constructor(...args: unknown[]) {
+          super(...args);
+          this.isReady = isReady;
+        }
+      } as unknown as typeof coreModule.Core;
+
+      (coreModule as Record<string, unknown>).Core = PatchedCore;
+
+      try {
+        await body();
+      } finally {
+        (coreModule as Record<string, unknown>).Core = OriginalMockCore;
+      }
+    };
+
+    const lastCore = async (): Promise<Core> => {
+      const coreModule = await import('../../src/components/core') as {
+        lastInstance?: () => Core | undefined;
+      };
+      const core = coreModule.lastInstance?.();
+
+      if (core === undefined) {
+        throw new Error('Core instance was not created');
+      }
+
+      return core;
+    };
+
+    const fireBeforeUnload = (): boolean => {
+      const event = new Event('beforeunload', { cancelable: true });
+
+      window.dispatchEvent(event);
+
+      return event.defaultPrevented;
+    };
+
+    /** Arms the save queue's unload guard on the config the live Core hands out. */
+    const armSaveQueue = async (): Promise<void> => {
+      const core = await lastCore();
+      const expanded = expandPersistenceConfig({
+        persistence: {
+          load: async () => null,
+          save: () => new Promise<void>(() => {}),
+        },
+      });
+
+      core.config = expanded;
+
+      expanded.onSave?.({ blocks: [] }, {} as API);
+    };
+
+    it('installs the real teardown so destroy() releases the modules', async () => {
+      const deferred = createRejectable();
+      const mockModule = {
+        markDestroyed: vi.fn(),
+        destroy: vi.fn(),
+        listeners: { removeAll: vi.fn() },
+      };
+
+      if (mocks.mockModuleInstances) {
+        mocks.mockModuleInstances.Toolbar = mockModule as unknown as BlokModules['Toolbar'];
+      }
+
+      await withCoreReady(deferred.promise, async () => {
+        const blok = new Blok();
+        const settled = blok.isReady.catch((error: unknown) => error);
+
+        deferred.reject(new Error('offline'));
+        await settled;
+
+        blok.destroy();
+
+        expect(mockModule.markDestroyed).toHaveBeenCalledTimes(1);
+        expect(mockModule.destroy).toHaveBeenCalledTimes(1);
+        expect(mockModule.listeners.removeAll).toHaveBeenCalledTimes(1);
+        expect(mocks.mockDestroyTooltip).toHaveBeenCalledTimes(1);
+        expect(Object.getPrototypeOf(blok)).toBeNull();
+      });
+    });
+
+    it('installs the real teardown so destroy() releases the persistence save queue', async () => {
+      const deferred = createRejectable();
+
+      await withCoreReady(deferred.promise, async () => {
+        const blok = new Blok();
+        const settled = blok.isReady.catch((error: unknown) => error);
+
+        await armSaveQueue();
+        expect(fireBeforeUnload()).toBe(true);
+
+        deferred.reject(new Error('offline'));
+        await settled;
+
+        blok.destroy();
+
+        expect(fireBeforeUnload()).toBe(false);
+      });
+    });
+
+    // The host asked for teardown while the load was still in flight: nobody
+    // will call destroy() a second time, so the rejection has to run it.
+    it('tears down when destroy() was called before the boot rejected', async () => {
+      const deferred = createRejectable();
+      const mockModule = {
+        destroy: vi.fn(),
+        listeners: { removeAll: vi.fn() },
+      };
+
+      if (mocks.mockModuleInstances) {
+        mocks.mockModuleInstances.Toolbar = mockModule as unknown as BlokModules['Toolbar'];
+      }
+
+      await withCoreReady(deferred.promise, async () => {
+        const blok = new Blok();
+        const settled = blok.isReady.catch((error: unknown) => error);
+
+        await armSaveQueue();
+        blok.destroy();
+
+        deferred.reject(new Error('offline'));
+        await settled;
+
+        expect(mockModule.destroy).toHaveBeenCalledTimes(1);
+        expect(fireBeforeUnload()).toBe(false);
+      });
+    });
+
+    // Teardown is the fix, error propagation is not: the host still has to
+    // learn the boot failed.
+    it('still rejects isReady with the original boot error', async () => {
+      const deferred = createRejectable();
+      const failure = new Error('offline');
+
+      await withCoreReady(deferred.promise, async () => {
+        const blok = new Blok();
+        const settled = expect(blok.isReady).rejects.toBe(failure);
+
+        deferred.reject(failure);
+        await settled;
+      });
+    });
   });
 
   describe('theme API availability before isReady', () => {

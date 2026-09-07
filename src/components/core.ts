@@ -486,9 +486,19 @@ export class Core {
       const blocks = loaded?.blocks;
 
       if (blocks !== undefined && blocks.length > 0) {
-        this.config.data = { ...loaded, blocks: cloneOutputBlocks(normalizeOutputBlocks(blocks)) };
+        /**
+         * `loaded` is the host's own object graph (frozen store state, a cached
+         * response), so clone ONCE and hand the same clone to both
+         * `config.data` and the renderer. Normalization copies the block but
+         * keeps its `data` by reference, so a second pass over `blocks` would
+         * put the host's objects straight back into the block tree — where
+         * tools write into `data` in place.
+         */
+        const cloned = cloneOutputBlocks(normalizeOutputBlocks(blocks));
 
-        return renderer.render(normalizeOutputBlocks(blocks));
+        this.config.data = { ...loaded, blocks: cloned };
+
+        return renderer.render(cloned);
       }
 
       return renderer.render(normalizeOutputBlocks(data.blocks));

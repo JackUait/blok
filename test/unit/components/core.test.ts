@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { BlokConfig } from '../../../types';
+import type { BlokConfig, OutputBlockData, OutputData } from '../../../types';
 import type { BlokModules } from '../../../src/types-internal/blok-modules';
 import { CriticalError } from '../../../src/components/errors/critical';
 
@@ -28,7 +28,7 @@ const mockRegistry = vi.hoisted(() => ({
     crossBlockSelectionPrepare: vi.fn(),
     readOnlyPrepare: vi.fn(),
     rendererPrepare: vi.fn(),
-    rendererRender: vi.fn(() => Promise.resolve()),
+    rendererRender: vi.fn((_blocks: OutputBlockData[]) => Promise.resolve()),
     modificationsObserverPrepare: vi.fn(),
     modificationsObserverEnable: vi.fn(),
     caretPrepare: vi.fn(),
@@ -481,6 +481,44 @@ describe('Core', () => {
 
       expect(core.configuration.data?.blocks).toHaveLength(1);
       expect(core.configuration.data?.blocks[0]?.type).toBe('paragraph');
+    });
+
+    /**
+     * `config.data` got a clone, but the renderer was handed a SECOND
+     * normalization over the same nested `data` objects the host resolved —
+     * and normalization copies the block, never the `data` inside it. A store
+     * that answers with frozen state (Redux/Immer) then crashes on the first
+     * in-place write a tool makes, and a store that does not gets its cached
+     * response mutated underneath it.
+     */
+    it('hands the renderer a clone, not the loaded document objects', async () => {
+      const hostBlockData = { text: 'saved' };
+      const hostDocument: OutputData = {
+        blocks: [ {
+          id: 'p1',
+          type: 'paragraph',
+          data: hostBlockData,
+        } ],
+      };
+
+      // Frozen as statements, so the mock keeps `load`'s declared mutable type
+      // while the objects the host hands over really are immutable.
+      Object.freeze(hostBlockData);
+      Object.freeze(hostDocument.blocks);
+      Object.freeze(hostDocument);
+
+      await createReadyCore({
+        holder: 'holder',
+        persistence: {
+          load: async () => hostDocument,
+          save: async (): Promise<void> => {},
+        },
+      });
+
+      const rendered = mockRendererRender.mock.calls[0][0];
+
+      expect(rendered[0].data).not.toBe(hostBlockData);
+      expect(Object.isFrozen(rendered[0].data)).toBe(false);
     });
   });
 

@@ -45,6 +45,72 @@ export { TEST_ID } from './components/constants/test-ids';
 export { BLOK_FONT_SIZE_TOKENS } from './components/utils/font-size-tokens';
 
 /**
+ * Full teardown of an instance: modules and their listeners, the save queue's
+ * `beforeunload` guard, the shared tooltip, and the readiness-registry entry
+ * (whose render-state MutationObserver outlives the editor otherwise).
+ *
+ * Shared by every path that ends an instance — `destroy()` after a successful
+ * boot, `destroy()` called while the boot was still in flight, and a boot that
+ * REJECTED. That last one is why this is one function: `persistence.load()` is
+ * awaited inside `render()`, long after `init()`/`start()` mounted the wrapper
+ * and attached the listeners, so a rejected boot leaves a complete live editor
+ * that only a real teardown can release.
+ * @param instance - the Blok facade being torn down
+ * @param blok - its Core
+ */
+function teardown(instance: Blok, blok: Core): void {
+  // Drop this instance from the readiness registry first, so aggregates
+  // scoped to a subtree stop counting an editor that is going away.
+  unregisterInstance(instance);
+
+  // Mark all modules as destroyed first so any in-flight async work stops gracefully
+  Object.values(blok.moduleInstances)
+    .forEach((moduleInstance) => {
+      if (moduleInstance === undefined || moduleInstance === null) {
+        return;
+      }
+
+      if (isFunction((moduleInstance as { markDestroyed?: () => void }).markDestroyed)) {
+        (moduleInstance as { markDestroyed: () => void }).markDestroyed();
+      }
+    });
+
+  Object.values(blok.moduleInstances)
+    .forEach((moduleInstance) => {
+      if (moduleInstance === undefined || moduleInstance === null) {
+        return;
+      }
+
+      if (isFunction((moduleInstance as { destroy?: () => void }).destroy)) {
+        (moduleInstance as { destroy: () => void }).destroy();
+      }
+
+      const listeners = (moduleInstance as { listeners?: { removeAll?: () => void } }).listeners;
+
+      if (listeners && isFunction(listeners.removeAll)) {
+        listeners.removeAll();
+      }
+    });
+
+  // The save queue's `beforeunload` listener hangs off window rather than off a
+  // module, so the walk above cannot reach it. Left attached it outlives the
+  // editor and asks the user to confirm every later navigation in a
+  // single-page app, over a document that is already gone.
+  releasePersistenceQueue(blok.config?.persistence);
+
+  destroyTooltip();
+
+  const target = instance as unknown as Record<string, unknown>;
+
+  for (const field of Object.keys(target)) {
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- needed to clear instance properties
+    delete target[field];
+  }
+
+  Object.setPrototypeOf(instance, null);
+}
+
+/**
  * Blok
  * @license Apache-2.0
  */
@@ -391,43 +457,7 @@ class Blok {
      */
     this.isReady = blok.isReady.then(() => {
       if (lifecycle.pendingDestroy) {
-        Object.values(blok.moduleInstances)
-          .forEach((moduleInstance) => {
-            if (moduleInstance === undefined || moduleInstance === null) {
-              return;
-            }
-
-            if (isFunction((moduleInstance as { markDestroyed?: () => void }).markDestroyed)) {
-              (moduleInstance as { markDestroyed: () => void }).markDestroyed();
-            }
-          });
-
-        Object.values(blok.moduleInstances)
-          .forEach((moduleInstance) => {
-            if (moduleInstance === undefined || moduleInstance === null) {
-              return;
-            }
-
-            if (isFunction((moduleInstance as { destroy?: () => void }).destroy)) {
-              (moduleInstance as { destroy: () => void }).destroy();
-            }
-
-            const listeners = (moduleInstance as { listeners?: { removeAll?: () => void } }).listeners;
-
-            if (listeners && isFunction(listeners.removeAll)) {
-              listeners.removeAll();
-            }
-          });
-
-        destroyTooltip();
-
-        const thisKeys = Object.keys(this) as Array<keyof Blok>;
-        for (const field of thisKeys) {
-          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- needed to clear instance properties
-          delete this[field];
-        }
-
-        Object.setPrototypeOf(this, null);
+        teardown(this, blok);
 
         return this;
       }
@@ -508,6 +538,25 @@ class Blok {
       onReady(this);
 
       return this;
+    }, (error: unknown) => {
+      /**
+       * The boot failed with the editor already live — `init()`/`start()` ran
+       * before `render()`, and `persistence.load()` is only awaited inside
+       * `render()`. `exportAPI`, the only other place the real `destroy` is
+       * installed, was never reached, so without this the host's `destroy()`
+       * would hit the placeholder above and release nothing: a retry then
+       * stacks a second editor on the same holder.
+       *
+       * The error is re-thrown untouched: this fixes the teardown, not the
+       * failure reaching the host.
+       */
+      if (lifecycle.pendingDestroy) {
+        teardown(this, blok);
+      } else {
+        this.destroy = (): void => teardown(this, blok);
+      }
+
+      throw error;
     });
 
     /**
@@ -529,56 +578,6 @@ class Blok {
    */
   public exportAPI(blok: Core): void {
     const fieldsToExport = [ 'configuration' ];
-    const destroy = (): void => {
-      // Drop this instance from the readiness registry first, so aggregates
-      // scoped to a subtree stop counting an editor that is going away.
-      unregisterInstance(this);
-
-      // Mark all modules as destroyed first so any in-flight async work stops gracefully
-      Object.values(blok.moduleInstances)
-        .forEach((moduleInstance) => {
-          if (moduleInstance === undefined || moduleInstance === null) {
-            return;
-          }
-
-          if (isFunction((moduleInstance as { markDestroyed?: () => void }).markDestroyed)) {
-            (moduleInstance as { markDestroyed: () => void }).markDestroyed();
-          }
-        });
-
-      Object.values(blok.moduleInstances)
-        .forEach((moduleInstance) => {
-          if (moduleInstance === undefined || moduleInstance === null) {
-            return;
-          }
-
-          if (isFunction((moduleInstance as { destroy?: () => void }).destroy)) {
-            (moduleInstance as { destroy: () => void }).destroy();
-          }
-
-          const listeners = (moduleInstance as { listeners?: { removeAll?: () => void } }).listeners;
-
-          if (listeners && isFunction(listeners.removeAll)) {
-            listeners.removeAll();
-          }
-        });
-
-      // The save queue's `beforeunload` listener hangs off window rather than
-      // off a module, so the walk above cannot reach it. Left attached it
-      // outlives the editor and asks the user to confirm every later
-      // navigation in a single-page app, over a document that is already gone.
-      releasePersistenceQueue(blok.config?.persistence);
-
-      destroyTooltip();
-
-      const thisKeys = Object.keys(this) as Array<keyof Blok>;
-      for (const field of thisKeys) {
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- needed to clear instance properties
-        delete this[field];
-      }
-
-      Object.setPrototypeOf(this, null);
-    };
 
     fieldsToExport.forEach((field) => {
       if (field !== 'configuration') {
@@ -599,7 +598,7 @@ class Blok {
       (this as Record<string, unknown>)[field] = configurationToExport;
     });
 
-    this.destroy = destroy;
+    this.destroy = (): void => teardown(this, blok);
 
     const apiMethods = blok.moduleInstances.API.methods;
     const eventsDispatcherApi = blok.moduleInstances.EventsAPI.methods;

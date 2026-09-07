@@ -579,16 +579,11 @@ test.describe('onChange callback', () => {
 
     await openBlockSettings(page, 0);
 
-    // Heading 1-6 entries live in a nested 'Heading' submenu; open it first.
-    // dispatchEvent avoids Playwright's pointer-move pre-click phase, which can
-    // generate a mouseover that destroys the nested popover.
-    const headingSubmenu = page.getByTestId('block-tunes-popover').locator('[data-blok-item-name="header-levels"]');
-
-    await headingSubmenu.dispatchEvent('mouseover');
-
+    // Heading 1-6 are flat radio tiles in the block menu itself.
     const tuneOption = page
-      .locator('[data-blok-testid="popover"][data-blok-nested="true"] [data-blok-testid="popover-item"]')
-      .filter({ hasText: 'Heading 1', hasNotText: 'Toggle' });
+      .getByTestId('block-tunes-popover')
+      .getByRole('menuitemradio', { name: 'Heading 1',
+        exact: true });
 
     await expect(tuneOption).toBeVisible();
     await tuneOption.dispatchEvent('click');

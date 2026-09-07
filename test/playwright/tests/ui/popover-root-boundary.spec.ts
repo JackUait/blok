@@ -333,6 +333,13 @@ test.describe('root popover boundary', () => {
       horizontalScroll: true,
     });
 
+    // The menu docks beside the six-dots handle only when it fully fits there
+    // (280px menu + 8px gap, so handle.x >= 288). Park the handle clear of that
+    // threshold before opening: the 80px scroll below would otherwise cross it
+    // and the assertion would measure a placement change, not anchor tracking.
+    await page.locator(BOOKMARK_SELECTOR).scrollIntoViewIfNeeded();
+    await page.evaluate(() => window.scrollBy(-160, 0));
+
     const { bookmark, menu, triggerBox, menuBox } = await openBookmarkMenu(page);
     const bookmarkBox = await requireBoundingBox(bookmark, 'Bookmark before horizontal scroll');
 

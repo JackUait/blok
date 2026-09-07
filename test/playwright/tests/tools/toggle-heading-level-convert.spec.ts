@@ -239,11 +239,8 @@ test.describe('toggle heading level conversion keeps children', () => {
 
     await openBlockTunes(page, 'Toggle parent');
 
-    const headingSubmenu = page.locator(`${POPOVER_CONTAINER_SELECTOR} [data-blok-item-name="header-levels"]`);
-
-    await headingSubmenu.dispatchEvent('mouseover');
-
-    const levelEntry = page.locator(`${NESTED_POPOVER} [data-blok-header-level="3"]`);
+    // Heading 1-6 are flat radio tiles in the block menu itself.
+    const levelEntry = page.locator(`${POPOVER_CONTAINER_SELECTOR} [data-blok-header-level="3"]`);
 
     await expect(levelEntry).toBeVisible();
     await levelEntry.click();

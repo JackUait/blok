@@ -272,7 +272,15 @@ describe('Blok Line layout geometry', () => {
 
       expect(['cx', 'cy', 'r'].map(attribute => numberOf(outline, attribute))).toStrictEqual([10, 10, 6.5]);
     }
-    expect(svgOf(IconEmojiBall).querySelectorAll('path')).toHaveLength(1);
+    const ball = svgOf(IconEmojiBall);
+    const seams = Array.from(ball.querySelectorAll('path'))
+      .flatMap(path => path.getAttribute('d')?.match(/M[^M]+/g) ?? []);
+
+    expect(ball.querySelector('polygon, [fill="currentColor"]')).toBeNull();
+    expect(seams).toHaveLength(3);
+    for (const seam of seams) {
+      expect(seam).not.toMatch(/[zZ]/);
+    }
   });
 
   it('keeps placement dots lighter than the gaps between them', () => {

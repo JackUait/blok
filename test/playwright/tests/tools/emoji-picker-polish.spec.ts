@@ -1,5 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
-import { IconTrash } from '../../../../src/components/icons';
+import { IconEmojiTrash } from '../../../../src/components/icons';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
@@ -397,7 +397,7 @@ test('moves the section highlight straight to the clicked category throughout sm
   await expect(picker.locator('[data-emoji-nav="callout"]')).toHaveAttribute('aria-current', 'true');
 });
 
-test('announces skin-tone expansion, restores focus, and removes the icon with the shared trash glyph', async ({ page }) => {
+test('announces skin-tone expansion, restores focus, and removes the icon with the picker trash glyph', async ({ page }) => {
   const picker = await openCalloutPicker(page);
   const toggle = picker.getByRole('button', { name: 'Skin tone', exact: true });
   const tones = picker.locator('[data-emoji-picker-skin-tone]');
@@ -408,7 +408,7 @@ test('announces skin-tone expansion, restores focus, and removes the icon with t
     template.innerHTML = trash;
 
     return button.querySelector('svg')?.isEqualNode(template.content.querySelector('svg')) ?? false;
-  }, IconTrash);
+  }, IconEmojiTrash);
 
   expect(usesTrash).toBe(true);
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');

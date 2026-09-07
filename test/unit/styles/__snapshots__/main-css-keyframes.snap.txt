@@ -59,6 +59,11 @@
   to { opacity: 1 }
 }
 
+@keyframes blok-emoji-card-in {
+  from { opacity: 0; transform: translateY(10px) rotate(0deg) scale(0.8) }
+  to { opacity: 1; transform: translateY(0) rotate(var(--emoji-card-tilt)) scale(1) }
+}
+
 @keyframes blok-emoji-empty-in {
   from { opacity: 0; transform: translateY(6px) }
   to { opacity: 1; transform: translateY(0) }
@@ -66,6 +71,11 @@
 
 @keyframes blok-emoji-picker-in {
   from { opacity: 0; transform: translateY(4px) scale(0.96) }
+  to { opacity: 1; transform: translateY(0) scale(1) }
+}
+
+@keyframes blok-emoji-tones-in {
+  from { opacity: 0; transform: translateY(-5px) scale(0.82, 0.94) }
   to { opacity: 1; transform: translateY(0) scale(1) }
 }
 

@@ -33,8 +33,9 @@ describe('emoji category icon relationships', () => {
     expect(stem[1] + stem[2]).toBe(16.5);
   });
 
-  it('gives the tennis ball two opposed seams that meet the shared circular frame', () => {
-    const paths = pathsOf(IconEmojiBall).flatMap(path => path.match(/M[^M]+/g) ?? []);
+  it('gives the ball two opposed curved seams that meet the shared circular frame', () => {
+    const paths = pathsOf(IconEmojiBall).flatMap(path => path.match(/M[^M]+/g) ?? [])
+      .filter(path => path.includes('C'));
 
     expect(paths).toHaveLength(2);
     expect(paths[0]).toMatch(/^M[\d. ]+C[\d. ]+$/);
@@ -64,19 +65,16 @@ describe('emoji category icon relationships', () => {
     }
   });
 
-  it('centers a tapered bulb socket under the neck with a full stroke of clear space', () => {
+  it('centers the bulb base under its broad neck with a full stroke of clear space', () => {
     const paths = pathsOf(IconEmojiLightbulb);
 
-    expect(paths[1]).toBe('M8 15.5l.5 1h3l.5-1');
+    expect(paths[1]).toMatch(/^M[\d. ]+h[\d.]+$/);
     const neck = valuesOf(paths[0]);
-    const socket = valuesOf(paths[1]);
-    const socketRight = socket[0] + socket[2] + socket[4] + socket[5];
+    const [left, baseline, width] = valuesOf(paths[1]);
 
-    expect(socket[0]).toBe(neck[0]);
-    expect((socket[0] + socketRight) / 2).toBe(10);
-    expect(socket[2]).toBe(socket[5]);
-    expect(socket[3]).toBe(-socket[6]);
-    expect(socket[1] - neck[1] - 1.25).toBeGreaterThanOrEqual(1.25);
-    expect(socket[1] + socket[3]).toBe(16.5);
+    expect(left + width / 2).toBe(10);
+    expect(width).toBeGreaterThanOrEqual(4);
+    expect(left).toBeGreaterThanOrEqual(neck[0]);
+    expect(baseline - neck[1] - 1.25).toBeGreaterThanOrEqual(1.25);
   });
 });

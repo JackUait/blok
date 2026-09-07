@@ -68,37 +68,106 @@ describe('Blok Line small-detail geometry', () => {
     expect(brackets[6] - slashAtTop - 1.25).toBeGreaterThan(1);
   });
 
-  it('balances the star around its vertical axis with open lower notches', () => {
-    const points = valuesOf(pathOf(IconEmojiStar));
+  it('balances the rounded star around its vertical axis with open lower notches', () => {
+    const outline = pathOf(IconEmojiStar);
+    const coordinates = valuesOf(outline);
+    const points = coordinates.filter((_value, index) => index % 2 === 0)
+      .map((x, index) => [x, coordinates[index * 2 + 1]]);
 
-    expect(points).toStrictEqual([10, 3.5, 12, 7.5, 16.5, 8.25, 13.25, 11.5, 14, 16, 10, 13.75, 6, 16, 6.75, 11.5, 3.5, 8.25, 8, 7.5]);
-    expect(points[8] - points[6]).toBe(points[14] - points[12]);
+    expect(outline).toMatch(/^[MLQZ\d. ]+$/);
+    expect(outline.endsWith('Z')).toBe(true);
+    for (const [x, y] of points) {
+      expect(points.some(([otherX, otherY]) => Math.abs(x + otherX - 20) < 0.001 && y === otherY)).toBe(true);
+    }
+    const corners = Array.from(outline.matchAll(/[ML][\d. ]+Q[\d. ]+/g), match => {
+      const values = valuesOf(match[0]);
+
+      expect(values).toHaveLength(6);
+
+      return [(values[0] + 2 * values[2] + values[4]) / 4, (values[1] + 2 * values[3] + values[5]) / 4];
+    });
+
+    expect(corners).toHaveLength(10);
+    const lowerNotch = corners.find(([x, y]) => x === 10 && y > 10);
+
+    if (lowerNotch === undefined) {
+      throw new Error('Missing lower star notch');
+    }
+    const lowerTips = corners.filter(([, y]) => y - lowerNotch[1] >= 1.25);
+
+    expect(lowerTips).toHaveLength(2);
+    expect(Math.abs(lowerTips[0][0] - lowerTips[1][0])).toBeGreaterThan(6);
   });
 
   it('keeps the smile centered and separated from the eyes', () => {
     const eyes = Array.from(svgOf(IconEmojiSmile).querySelectorAll('circle')).slice(1);
 
     expect(eyes.map(eye => attributesOf(eye, ['cx', 'cy', 'r']))).toStrictEqual([[7.5, 8, 0.75], [12.5, 8, 0.75]]);
-    expect(pathOf(IconEmojiSmile)).toBe('M7 11.5c.75 2 5.25 2 6 0');
-    const mouth = valuesOf(pathOf(IconEmojiSmile));
-    const eye = eyes.map(element => attributesOf(element, ['cy', 'r']))[0];
+    const outline = pathOf(IconEmojiSmile);
 
-    expect(mouth[1] - eye[0] - eye[1] - 0.625).toBeGreaterThan(1.25);
+    expect(outline).toMatch(/^M[\d. ]+L[\d. ]+C[\d. ]+Z$/);
+    const mouth = valuesOf(outline);
+
+    expect(mouth).toHaveLength(10);
+    expect((mouth[0] + mouth[2]) / 2).toBe(10);
+    expect(mouth[1]).toBe(mouth[3]);
+    expect(mouth[4] + mouth[6]).toBe(20);
+    expect(mouth[5]).toBe(mouth[7]);
+    expect(mouth.slice(8)).toStrictEqual(mouth.slice(0, 2));
+    for (const eye of eyes) {
+      const [cy, radius] = attributesOf(eye, ['cy', 'r']);
+
+      expect(mouth[1] - cy - radius - 0.625).toBeGreaterThan(1.25);
+    }
   });
 
-  it('gives the sprout two roomy leaves on one uninterrupted stem', () => {
-    expect(pathOf(IconEmojiSprout)).toBe('M10 16.5v-7');
-    expect(pathOf(IconEmojiSprout, 1)).toBe('M10 12C6 12 3.5 9.5 3.5 6c4 0 6.5 2.5 6.5 6Z');
-    expect(pathOf(IconEmojiSprout, 2)).toBe('M10 9.5C10 5.5 12.5 3.5 16.5 3.5c0 4-2.5 6-6.5 6Z');
+  it('gives the single nature leaf room on both sides of its uninterrupted diagonal vein', () => {
+    expect(svgOf(IconEmojiSprout).querySelectorAll('path')).toHaveLength(2);
+    expect(pathOf(IconEmojiSprout)).toMatch(/^M[\d. ]+C[\d. ]+C[\d. ]+Z$/);
+    expect(pathOf(IconEmojiSprout, 1)).toMatch(/^M[\d. ]+L[\d. ]+$/);
+    const leaf = valuesOf(pathOf(IconEmojiSprout));
+    const vein = valuesOf(pathOf(IconEmojiSprout, 1));
+
+    expect(leaf).toHaveLength(14);
+    expect(vein).toHaveLength(4);
+    expect(leaf.slice(12)).toStrictEqual(leaf.slice(0, 2));
+    expect(vein[0] + vein[1]).toBe(20);
+    expect(vein[2] + vein[3]).toBe(20);
+    expect(vein[0]).toBeLessThan(leaf[0]);
+    expect(vein[2]).toBeGreaterThan(leaf[0]);
+    expect(vein[2]).toBeLessThan(leaf[6]);
+    // Signed, because the vein lies on x + y = 20: an unsigned distance is
+    // also satisfied by a second curve that retraces the first, leaving no
+    // leaf body at all.
+    const clearances = [leaf.slice(0, 8), leaf.slice(6)].map(side => {
+      const x = (side[0] + 3 * side[2] + 3 * side[4] + side[6]) / 8;
+      const y = (side[1] + 3 * side[3] + 3 * side[5] + side[7]) / 8;
+
+      return (x + y - 20) / Math.SQRT2;
+    });
+
+    expect(clearances[0] * clearances[1]).toBeLessThan(0);
+    for (const clearance of clearances) {
+      expect(Math.abs(clearance) - 1.25).toBeGreaterThanOrEqual(1.25);
+    }
   });
 
-  it('uses matching flag waves with constant cloth height', () => {
+  it('uses matching flag waves with constant cloth height around the swallowtail', () => {
     expect(pathOf(IconEmojiFlag)).toBe('M4.5 16.5v-13');
-    expect(pathOf(IconEmojiFlag, 1)).toBe('M4.5 4C8 1.5 12.5 6.5 16 4v7.5C12.5 14 8 9 4.5 11.5');
+    expect(pathOf(IconEmojiFlag, 1)).toMatch(/^M[\d. ]+C[\d. ]+L[\d. ]+L[\d. ]+C[\d. ]+$/);
     const wave = valuesOf(pathOf(IconEmojiFlag, 1));
 
-    expect(wave[10] - wave[5]).toBe(wave[8]);
-    expect(wave[12] - wave[3]).toBe(wave[8]);
+    expect(wave).toHaveLength(18);
+    const height = wave[17] - wave[1];
+
+    expect(height).toBeGreaterThanOrEqual(7.5);
+    for (const [top, bottom] of [[0, 16], [2, 14], [4, 12], [6, 10]]) {
+      expect(wave[top]).toBe(wave[bottom]);
+      expect(wave[bottom + 1] - wave[top + 1]).toBe(height);
+    }
+    expect(wave[0]).toBe(valuesOf(pathOf(IconEmojiFlag))[0]);
+    expect(wave[6] - wave[8]).toBeGreaterThanOrEqual(1.25);
+    expect(wave[9]).toBe((wave[7] + wave[11]) / 2);
   });
 
   it('gives the database three evenly spaced shallow shelves', () => {

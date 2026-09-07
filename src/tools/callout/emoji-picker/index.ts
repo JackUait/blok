@@ -27,16 +27,16 @@ const CATEGORY_I18N_KEYS: Readonly<Record<string, string>> = {
   flags: EMOJI_CATEGORY_FLAGS_KEY,
 };
 import {
-  IconTrash,
+  IconEmojiTrash,
   IconCross,
-  IconDice,
+  IconEmojiDice,
   IconSearch,
   IconEmojiStar,
   IconEmojiSmile,
   IconEmojiSprout,
   IconEmojiUtensils,
   IconEmojiBall,
-  IconGlobe,
+  IconEmojiGlobe,
   IconEmojiLightbulb,
   IconHash,
   IconEmojiFlag,
@@ -76,7 +76,7 @@ const CATEGORY_NAV: ReadonlyArray<readonly [id: string, icon: string]> = [
   ['nature', IconEmojiSprout],
   ['foods', IconEmojiUtensils],
   ['activity', IconEmojiBall],
-  ['places', IconGlobe],
+  ['places', IconEmojiGlobe],
   ['objects', IconEmojiLightbulb],
   ['symbols', IconHash],
   ['flags', IconEmojiFlag],
@@ -114,7 +114,7 @@ function saveSkinTone(index: number): void {
 }
 
 /** Dice SVG for the random button. */
-const ICON_DICE = IconDice;
+const ICON_DICE = IconEmojiDice;
 
 /**
  * Warm the caches the picker blocks on when it opens.
@@ -148,6 +148,7 @@ export class EmojiPicker {
 
   private _element: HTMLElement;
   private _body: HTMLElement;
+  private _header!: HTMLElement;
   private _nav: HTMLElement;
   private _filterInput: HTMLInputElement;
   private _announcer: HTMLElement;
@@ -189,6 +190,7 @@ export class EmojiPicker {
   private _skinToneButtons: HTMLButtonElement[] = [];
   private _skinToneToggle!: HTMLButtonElement;
   private _skinTonePopover!: HTMLElement;
+  private _skinToneCloseAnimation: Animation | null = null;
 
   constructor(options: EmojiPickerOptions) {
     this.onSelect = options.onSelect;
@@ -221,7 +223,7 @@ export class EmojiPicker {
       }
 
       // Skin-tone popover intercepts Escape first, keeping the picker open.
-      if (!this._skinTonePopover.hidden) {
+      if (!this._skinTonePopover.hidden && this._skinToneCloseAnimation === null) {
         this.closeSkinTonePopover();
       } else {
         this.close();
@@ -277,7 +279,7 @@ export class EmojiPicker {
 
     if (toneChanged) {
       this._skinTone = storedTone;
-      this._skinToneToggle.textContent = SKIN_TONE_HANDS[storedTone];
+      this.updateSkinGlyph(this._skinToneToggle, SKIN_TONE_HANDS[storedTone]);
 
       for (const [i, btn] of this._skinToneButtons.entries()) {
         this.applySkinToneActiveStyle(btn, i === storedTone);
@@ -396,6 +398,7 @@ export class EmojiPicker {
     const el = document.createElement('div');
 
     el.setAttribute('data-blok-emoji-picker', '');
+    el.toggleAttribute('data-emoji-picker-inline', this._inline);
     // The picker mounts on document.body (callout/index.ts), OUTSIDE Blok's
     // interface roots. Blok's compiled Tailwind utilities are scoped to only
     // match inside [data-blok-interface]/[data-blok-popover] (see
@@ -422,6 +425,8 @@ export class EmojiPicker {
 
     // Header: search input + random button + remove button
     const header = document.createElement('div');
+
+    this._header = header;
 
     header.setAttribute('data-emoji-picker-header', '');
     header.className = 'flex items-center gap-2.5 px-3 pt-3 pb-2';
@@ -485,7 +490,7 @@ export class EmojiPicker {
       'hover:bg-neutral-100 theme-dark:hover:bg-neutral-800',
       'active:scale-90 transition-all duration-100',
     ].join(' ');
-    skinToggle.textContent = SKIN_TONE_HANDS[this._skinTone];
+    this.updateSkinGlyph(skinToggle, SKIN_TONE_HANDS[this._skinTone]);
     skinToggle.addEventListener('click', () => this.toggleSkinTonePopover());
     this._skinToneToggle = skinToggle;
     skinToneWrapper.appendChild(skinToggle);
@@ -520,7 +525,7 @@ export class EmojiPicker {
       'theme-dark:hover:bg-neutral-800 theme-dark:hover:text-neutral-300',
       'transition-colors duration-100 cursor-pointer',
     ].join(' ');
-    removeBtn.innerHTML = IconTrash;
+    removeBtn.innerHTML = IconEmojiTrash;
     removeBtn.addEventListener('click', () => {
       this.onRemove();
       this.close();
@@ -575,6 +580,11 @@ export class EmojiPicker {
     // Close skin tone popover on click outside toggle/popover
     el.addEventListener('mousedown', (e: MouseEvent) => {
       const target = e.target as Node;
+
+      // Inline controls must not take the caret from the typed query.
+      if (this._inline && target instanceof Element && target.closest('button') !== null) {
+        e.preventDefault();
+      }
 
       if (!this._skinTonePopover.hidden
         && !this._skinTonePopover.contains(target)
@@ -738,13 +748,20 @@ export class EmojiPicker {
       this._skinToneButtons[(index + direction + this._skinToneButtons.length) % this._skinToneButtons.length]?.focus();
     });
 
+    const indicator = document.createElement('span');
+
+    indicator.setAttribute('data-emoji-skin-indicator', '');
+    indicator.setAttribute('aria-hidden', 'true');
+    popover.appendChild(indicator);
+    popover.style.setProperty('--emoji-skin-index', String(this._skinTone));
     this._skinToneButtons = [];
 
     for (const [index, hand] of SKIN_TONE_HANDS.entries()) {
       const btn = document.createElement('button');
 
       btn.type = 'button';
-      btn.textContent = hand;
+      this.updateSkinGlyph(btn, hand);
+      btn.style.setProperty('--emoji-tone-order', String(index));
       btn.setAttribute('aria-label', `${this.i18n.t(SKIN_TONE_KEY)} ${index + 1}`);
       btn.className = [
         'w-[32px] h-[32px] flex items-center justify-center rounded-lg',
@@ -755,7 +772,7 @@ export class EmojiPicker {
       this.applySkinToneActiveStyle(btn, index === this._skinTone);
       btn.addEventListener('click', () => {
         this.setSkinTone(index);
-        this.closeSkinTonePopover();
+        this.closeSkinTonePopover(true);
       });
       popover.appendChild(btn);
       this._skinToneButtons.push(btn);
@@ -777,28 +794,51 @@ export class EmojiPicker {
   }
 
   private toggleSkinTonePopover(): void {
-    if (!this._skinTonePopover.hidden) {
+    if (!this._skinTonePopover.hidden && this._skinToneCloseAnimation === null) {
       this.closeSkinTonePopover();
 
       return;
     }
 
+    this._skinToneCloseAnimation?.cancel();
+    this._skinToneCloseAnimation = null;
+    this._skinTonePopover.inert = false;
+    this._skinTonePopover.removeAttribute('aria-hidden');
+    this._skinTonePopover.style.setProperty('--emoji-skin-index', String(this._skinTone));
     this._skinTonePopover.hidden = false;
     this.updateSkinToneToggleActive();
-    this._skinToneButtons[this._skinTone]?.focus();
+    if (!this._inline) {
+      this._skinToneButtons[this._skinTone]?.focus();
+    }
   }
 
-  private closeSkinTonePopover(): void {
-    if (this._open && this._skinTonePopover.contains(document.activeElement)) {
+  private closeSkinTonePopover(animate = false): void {
+    this._skinToneCloseAnimation?.cancel();
+    this._skinToneCloseAnimation = null;
+
+    if (this._open && !this._inline && this._skinTonePopover.contains(document.activeElement)) {
       this._skinToneToggle.focus();
     }
 
-    this._skinTonePopover.hidden = true;
+    this._skinTonePopover.inert = true;
+    this._skinTonePopover.setAttribute('aria-hidden', 'true');
+
+    if (animate && this._open && typeof this._skinTonePopover.animate === 'function'
+      && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      this._skinToneCloseAnimation = this._skinTonePopover.animate([
+        { opacity: 1, transform: 'scale(1)' },
+        { opacity: 0, transform: 'translateY(-3px) scale(0.96)' },
+      ], { duration: 140, delay: 120, easing: 'ease-in', fill: 'forwards' });
+      this._skinToneCloseAnimation.onfinish = () => this.closeSkinTonePopover();
+    } else {
+      this._skinTonePopover.hidden = true;
+    }
+
     this.updateSkinToneToggleActive();
   }
 
   private updateSkinToneToggleActive(): void {
-    const active = !this._skinTonePopover.hidden;
+    const active = !this._skinTonePopover.hidden && this._skinToneCloseAnimation === null;
 
     this._skinToneToggle.setAttribute('aria-expanded', String(active));
 
@@ -816,35 +856,75 @@ export class EmojiPicker {
     saveSkinTone(index);
 
     // Update the hand toggle to reflect current skin tone
-    this._skinToneToggle.textContent = SKIN_TONE_HANDS[index];
+    this.updateSkinGlyph(this._skinToneToggle, SKIN_TONE_HANDS[index], true);
+    this._skinTonePopover.style.setProperty('--emoji-skin-index', String(index));
 
     // Update skin tone popover button visuals
     for (const [i, btn] of this._skinToneButtons.entries()) {
       this.applySkinToneActiveStyle(btn, i === index);
     }
 
-    this.applySkinToneToGrid();
+    this.applySkinToneToGrid(true);
+  }
+
+  private updateSkinGlyph(host: HTMLElement, native: string, animate = false, delay = 0): void {
+    const existingGlyph = host.querySelector<HTMLElement>('[data-emoji-skin-glyph]');
+    const glyph = existingGlyph ?? document.createElement('span');
+
+    if (existingGlyph === null) {
+      glyph.setAttribute('data-emoji-skin-glyph', '');
+      host.replaceChildren(glyph);
+    }
+
+    if (glyph.textContent === native) {
+      return;
+    }
+
+    glyph.getAnimations?.().forEach(animation => animation.cancel());
+    glyph.textContent = native;
+
+    if (animate && typeof glyph.animate === 'function'
+      && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      // The outer glyph owns the reel transform; the inner span owns the swap.
+      glyph.animate([
+        { transform: 'translateY(8px) rotateX(-65deg) scale(0.8)', opacity: 0 },
+        { transform: 'translateY(-2px) rotateX(0deg) scale(1.08)', opacity: 1, offset: 0.65 },
+        { transform: 'translateY(0) rotateX(0deg) scale(1)', opacity: 1 },
+      ], { duration: 360, delay, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'backwards' });
+    }
   }
 
   /** Repaints every rendered emoji button at the current tone, preserving scroll. */
-  private applySkinToneToGrid(): void {
-    const buttons = Array.from(this._body.querySelectorAll<HTMLButtonElement>('[data-emoji-native]'));
+  private applySkinToneToGrid(animate = false): void {
+    const emojis = new Map(this._allEmojis.map(emoji => [emoji.native, emoji]));
+    const top = this._body.scrollTop;
+    const bottom = top + this._body.clientHeight;
+    const changes: Array<{ glyph: HTMLElement; native: string; visible: boolean }> = [];
 
-    for (const btn of buttons) {
-      const native = btn.getAttribute('data-emoji-native');
+    for (const button of this._emojiButtons) {
+      const emoji = emojis.get(button.getAttribute('data-emoji-native') ?? '');
+      const glyph = button.firstElementChild;
 
-      if (native === null) {
+      if (emoji === undefined || !(glyph instanceof HTMLElement)) {
         continue;
       }
 
-      const emoji = this._allEmojis.find(e => e.native === native);
+      const native = this.getSkinnedNative(emoji);
 
-      const glyph = btn.firstElementChild;
-
-      if (emoji !== undefined && glyph !== null) {
-        glyph.textContent = this.getSkinnedNative(emoji);
+      if (glyph.textContent !== native) {
+        changes.push({
+          glyph, native,
+          visible: animate && button.offsetTop < bottom && button.offsetTop + button.offsetHeight > top,
+        });
       }
     }
+
+    // Finish layout reads before changing any glyph text.
+    changes.reduce((stagger, change) => {
+      this.updateSkinGlyph(change.glyph, change.native, change.visible, Math.min(stagger, 96));
+
+      return stagger + (change.visible ? 12 : 0);
+    }, 0);
   }
 
   // ─── Random ─────────────────────────────────────────────────
@@ -889,7 +969,9 @@ export class EmojiPicker {
   }
 
   private measureReelRows(): void {
-    for (const button of this._emojiButtons) {
+    const items = this._body.querySelectorAll<HTMLElement>('[data-emoji-native], [data-emoji-section-title]');
+
+    for (const button of items) {
       const glyph = button.firstElementChild;
       const height = button.offsetHeight;
 
@@ -1209,8 +1291,15 @@ export class EmojiPicker {
     ].join(' ');
 
     const icon = document.createElement('span');
-    icon.className = 'mb-3 opacity-20 [&>svg]:w-9 [&>svg]:h-9';
-    icon.innerHTML = IconSearch;
+    icon.setAttribute('aria-hidden', 'true');
+    icon.setAttribute('data-emoji-picker-empty-art', '');
+
+    for (const emoji of ['🙂', '🧐', '✨']) {
+      const card = document.createElement('span');
+
+      card.textContent = emoji;
+      icon.appendChild(card);
+    }
 
     const text = document.createElement('span');
     text.className = 'text-[13px] font-medium';
@@ -1232,8 +1321,16 @@ export class EmojiPicker {
     empty.appendChild(icon);
     empty.appendChild(text);
     empty.appendChild(hint);
-    empty.appendChild(back);
+    if (!this._inline) {
+      empty.appendChild(back);
+    }
+
     this._body.appendChild(empty);
+
+    if (this._inline) {
+      this._header.hidden = true;
+      this._body.appendChild(this._header);
+    }
   }
 
   private translateCategory(categoryId: string): string {
@@ -1252,7 +1349,16 @@ export class EmojiPicker {
       'text-neutral-400/80 theme-dark:text-neutral-500/80',
       'sticky top-0 bg-white theme-dark:bg-neutral-900 z-10',
     ].join(' ');
-    heading.textContent = title;
+    const label = document.createElement('span');
+
+    label.textContent = title;
+    heading.appendChild(label);
+
+    if (this._inline && this._sectionEls.size === 0) {
+      this._header.hidden = false;
+      heading.appendChild(this._header);
+    }
+
     section.appendChild(heading);
     section.appendChild(this.buildGrid(emojis));
 
@@ -1276,7 +1382,12 @@ export class EmojiPicker {
 
       glyph.setAttribute('data-emoji-glyph', '');
       glyph.setAttribute('aria-hidden', 'true');
-      glyph.textContent = this.getSkinnedNative(emoji);
+      if (emoji.skins.length > 1) {
+        this.updateSkinGlyph(glyph, this.getSkinnedNative(emoji));
+      } else {
+        glyph.textContent = emoji.native;
+      }
+
       btn.appendChild(glyph);
       btn.setAttribute('aria-label', this.getDisplayName(emoji));
       btn.setAttribute('data-emoji-native', emoji.native);

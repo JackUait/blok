@@ -150,6 +150,10 @@ describe('EmojiPicker — inline mode', () => {
 
   it('positions using the anchorRect override passed to open(), not the anchor element\'s own rect', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    // Far from every viewport edge (1024x768 in jsdom) so the assertion below
+    // stays true regardless of any viewport-clamping the positioning math
+    // does — this test's only job is proving the override rect wins over the
+    // anchor's own, not pinning exact clamp behavior.
     const anchor = createAnchor({ top: 500, bottom: 520, left: 500, right: 540 });
     const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en', inline: true });
     const el = picker.getElement();
@@ -160,13 +164,13 @@ describe('EmojiPicker — inline mode', () => {
     });
 
     const anchorRect: DOMRect = {
-      top: 10, bottom: 30, left: 15, right: 55, width: 40, height: 20, x: 15, y: 10, toJSON: () => ({}),
+      top: 300, bottom: 320, left: 400, right: 440, width: 40, height: 20, x: 400, y: 300, toJSON: () => ({}),
     };
 
     await picker.open(anchor, anchorRect);
 
-    expect(el.style.top).toBe('34px');
-    expect(el.style.left).toBe('7px');
+    expect(el.style.top).toBe('324px');
+    expect(el.style.left).toBe('392px');
 
     picker.close();
   });

@@ -125,10 +125,10 @@ describe('server quality gates', () => {
       'image-ref': 'blok-server:ci',
     });
     expect(codeqlUses).toContain(
-      'github/codeql-action/init@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28',
+      'github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938',
     );
     expect(codeqlUses).toContain(
-      'github/codeql-action/analyze@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28',
+      'github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938',
     );
   });
 

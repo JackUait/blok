@@ -79,6 +79,51 @@ describe('image alt popover mutants', () => {
       expect(textarea.placeholder).toBe('i18n:tools.image.altPlaceholder');
     });
 
+    it('names the popover and its field for the stylesheet', () => {
+      const { popover, textarea, description } = open();
+
+      expect(popover.className).toBe('blok-image-alt-popover');
+      expect(textarea.className).toContain('blok-image-alt-popover__input');
+      expect(description.className).toBe('blok-image-alt-popover__description');
+    });
+
+    it('opens as a labelled dialog with the field focused', () => {
+      const { popover, textarea } = open();
+      const dialog = popover.closest('[role="dialog"]') ?? popover.parentElement;
+
+      expect(dialog?.getAttribute('role')).toBe('dialog');
+      expect(dialog?.getAttribute('aria-label')).toBe('i18n:tools.image.altEdit');
+      expect(textarea).toHaveFocus();
+    });
+
+    it('parks the caret at the end rather than trusting the browser default', () => {
+      const setSelectionRange = vi.spyOn(HTMLTextAreaElement.prototype, 'setSelectionRange');
+
+      open({ value: 'a cat' });
+
+      expect(setSelectionRange).toHaveBeenCalledWith(5, 5);
+    });
+
+    it('anchors itself below the trigger', () => {
+      const { popover } = open();
+
+      expect(popover.style.position).toBe('fixed');
+      expect(popover.getAttribute('data-side')).toBe('bottom');
+    });
+
+    it('counts description ids upward', () => {
+      const first = open();
+      const firstNumber = Number(/-(\d+)$/.exec(first.description.id)?.[1] ?? NaN);
+
+      first.detach();
+
+      const second = open({ anchor: document.createElement('button') });
+      const secondNumber = Number(/-(\d+)$/.exec(second.description.id)?.[1] ?? NaN);
+
+      expect(firstNumber).not.toBeNaN();
+      expect(secondNumber).toBe(firstNumber + 1);
+    });
+
     it('describes the dialog by the paragraph it just minted', () => {
       const { popover, description } = open();
       const dialog = popover.closest('[role="dialog"]') ?? popover.parentElement;
@@ -129,6 +174,21 @@ describe('image alt popover mutants', () => {
       textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true }));
 
       expect(onSave).not.toHaveBeenCalled();
+    });
+
+    it('keeps the Enter keystroke from reaching the page behind it', () => {
+      const { textarea } = open();
+      const seen = vi.fn();
+
+      document.addEventListener('keydown', seen);
+
+      try {
+        pressEnter(textarea);
+      } finally {
+        document.removeEventListener('keydown', seen);
+      }
+
+      expect(seen).not.toHaveBeenCalled();
     });
 
     it('saves only once however many times Enter is pressed', () => {
@@ -220,6 +280,27 @@ describe('image alt popover mutants', () => {
 
       document.body.appendChild(other);
       openAltPopover({ anchor: other, value: 'x', onSave: vi.fn(), onCancel: vi.fn(), i18n: echoI18n() });
+
+      expect(document.querySelector('[data-role="image-alt-popover"]')).not.toBeNull();
+    });
+
+    it('still swallows a re-open at exactly the end of the bounce window', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+
+      const anchor = document.createElement('button');
+
+      document.body.appendChild(anchor);
+      open({ anchor });
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+      vi.setSystemTime(new Date('2026-01-01T00:00:00.199Z'));
+      openAltPopover({ anchor, value: 'x', onSave: vi.fn(), onCancel: vi.fn(), i18n: echoI18n() });
+
+      expect(document.querySelector('[data-role="image-alt-popover"]')).toBeNull();
+
+      vi.setSystemTime(new Date('2026-01-01T00:00:00.200Z'));
+      openAltPopover({ anchor, value: 'x', onSave: vi.fn(), onCancel: vi.fn(), i18n: echoI18n() });
 
       expect(document.querySelector('[data-role="image-alt-popover"]')).not.toBeNull();
     });

@@ -138,10 +138,11 @@ describe('platter spin mutants', () => {
       expect(heavy.velocity).toBeGreaterThan(brisk.velocity);
     });
 
-    it('integrates the new velocity into the angle', () => {
-      const stepped = stepPlatter(at(0, 90), 1, 90, PLATTER_SPINUP_TAU);
+    it('integrates the new velocity over the frame duration, not per frame', () => {
+      // dt of 1 would make a multiply and a divide indistinguishable.
+      const stepped = stepPlatter(at(0, 90), 2, 90, PLATTER_SPINUP_TAU);
 
-      expect(stepped.angle).toBeCloseTo(90, 6);
+      expect(stepped.angle).toBeCloseTo(180, 6);
     });
 
     it('wraps the angle back into a single turn', () => {
@@ -165,6 +166,70 @@ describe('platter spin mutants', () => {
       createPlatterSpin(figure).start();
 
       expect(frames.pending()).toBe(false);
+      expect(globalThis.matchMedia).toHaveBeenCalledWith('(prefers-reduced-motion: reduce)');
+    });
+
+    it('turns the disc by exactly the frame the clock reports', () => {
+      const frames = fakeFrames();
+      const { figure, disc } = figureWithDisc();
+
+      createPlatterSpin(figure).start();
+      frames.advance(1000);
+      frames.advance(1040);
+
+      const first = stepPlatter({ angle: 0, velocity: 0 }, 0, PLATTER_FULL_DPS, PLATTER_SPINUP_TAU);
+      const second = stepPlatter(first, 0.04, PLATTER_FULL_DPS, PLATTER_SPINUP_TAU);
+
+      expect(rotationOf(disc)).toBe(Number(second.angle.toFixed(2)));
+    });
+
+    it('coasts on the heavier constant once the motor is cut', () => {
+      const frames = fakeFrames();
+      const { figure, disc } = figureWithDisc();
+      const platter = createPlatterSpin(figure);
+
+      platter.start();
+      frames.advance(1000);
+      frames.advance(1040);
+      platter.stop();
+      frames.advance(1080);
+
+      const first = stepPlatter({ angle: 0, velocity: 0 }, 0, PLATTER_FULL_DPS, PLATTER_SPINUP_TAU);
+      const second = stepPlatter(first, 0.04, PLATTER_FULL_DPS, PLATTER_SPINUP_TAU);
+      const coasting = stepPlatter(second, 0.04, 0, PLATTER_SPINDOWN_TAU);
+
+      expect(rotationOf(disc)).toBe(Number(coasting.angle.toFixed(2)));
+    });
+
+    it('keeps turning for many frames after the motor is cut', () => {
+      const frames = fakeFrames();
+      const { figure, disc } = figureWithDisc();
+      const platter = createPlatterSpin(figure);
+
+      platter.start();
+      frames.advance(1000);
+      frames.advance(1040);
+      platter.stop();
+
+      const afterStop = rotationOf(disc);
+
+      frames.advance(1080);
+      frames.advance(1120);
+      frames.advance(1160);
+
+      expect(frames.pending()).toBe(true);
+      expect(rotationOf(disc)).not.toBe(afterStop);
+    });
+
+    it('survives the disc being torn out from under a running loop', () => {
+      const frames = fakeFrames();
+      const { figure, disc } = figureWithDisc();
+
+      createPlatterSpin(figure).start();
+      frames.advance(1000);
+      disc.remove();
+
+      expect(() => frames.advance(1040)).not.toThrow();
     });
 
     it('spins on a platform with no matchMedia at all', () => {

@@ -235,7 +235,7 @@ jobs:
       # build more than one platform at a time. Runner image 20260831 stopped
       # defaulting to a container builder and the push started failing.
       - name: Set up a container builder for the multi-architecture push
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
       - name: Log in to GHCR
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0

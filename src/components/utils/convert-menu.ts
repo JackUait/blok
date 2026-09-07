@@ -85,7 +85,13 @@ export const buildConvertMenuEntries = (
     });
   });
 
-  return entries;
+  // Heading tiles carry their own section labels, so a label-less entry above
+  // them reads as an orphan row. Stable partition: heading stays before
+  // toggle-heading, and each side keeps tool registration order.
+  return [
+    ...entries.filter((entry) => entry.group !== undefined),
+    ...entries.filter((entry) => entry.group === undefined),
+  ];
 };
 
 /**

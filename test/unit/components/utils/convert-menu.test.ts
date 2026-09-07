@@ -86,6 +86,23 @@ describe('buildConvertMenuEntries', () => {
     expect(entries[0].title).toBe('translated:toolNames.quote');
   });
 
+  it('sinks ungrouped entries below the heading tile groups', () => {
+    const tools = [
+      createToolStub('paragraph', [{ icon: '<svg>p</svg>', titleKey: 'text' }]),
+      createToolStub('header', [
+        { icon: '<svg>h2</svg>', titleKey: 'tools.header.heading2', name: 'header-2', data: { level: 2 } },
+        { icon: '<svg>t1</svg>', titleKey: 'tools.header.toggleHeading1', name: 'toggle-header-1', data: { level: 1, isToggleable: true } },
+      ]),
+      createToolStub('list', [
+        { icon: '<svg>ul</svg>', titleKey: 'bulletedList', name: 'bulleted-list', data: { style: 'unordered' } },
+      ]),
+    ];
+
+    const entries = buildConvertMenuEntries(tools, createI18n());
+
+    expect(entries.map((e) => e.name)).toEqual(['header-2', 'toggle-header-1', 'paragraph', 'bulleted-list']);
+  });
+
   it('falls back englishTitle to the raw title when no titleKey', () => {
     const external = createToolStub('external', [
       { icon: '<svg>x</svg>', title: 'External' },

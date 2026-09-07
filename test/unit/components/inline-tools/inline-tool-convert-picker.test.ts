@@ -80,14 +80,14 @@ describe('Inline conversion picker', () => {
     vi.restoreAllMocks();
   });
 
-  it('groups configured heading variants without changing custom registration order or data', async () => {
+  it('leads with heading variants and keeps custom registration order below them', async () => {
     const { tool, convert } = createPicker();
     const children = await childrenOf(tool);
     const items = children.items ?? [];
 
     expect(children.searchable).toBe(true);
     expect(items.filter(item => item.type === PopoverItemType.Html).map(item => item.element.textContent)).toEqual(['Heading', 'Toggle heading']);
-    expect(names(items)).toEqual(['callout-custom', 'header-1', 'header-2', 'header-4', 'toggle-header-1', 'toggle-header-2', 'toggle-header-4', 'quote-custom']);
+    expect(names(items)).toEqual(['header-1', 'header-2', 'header-4', 'toggle-header-1', 'toggle-header-2', 'toggle-header-4', 'callout-custom', 'quote-custom']);
     const quote = items.find(item => 'name' in item && item.name === 'quote-custom');
 
     if (!quote || !('onActivate' in quote) || !quote.onActivate) {

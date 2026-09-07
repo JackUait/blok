@@ -2030,7 +2030,7 @@ __metadata:
     isbot: "npm:^5"
     jpeg-js: "npm:^0.4.4"
     jsdom: "npm:^30.0.1"
-    lucide-react: "npm:^1.40.0"
+    lucide-react: "npm:^1.41.0"
     pngjs: "npm:^7.0.0"
     react: "npm:^19.2.8"
     react-dom: "npm:^19.2.8"
@@ -2985,12 +2985,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lucide-react@npm:^1.40.0":
-  version: 1.40.0
-  resolution: "lucide-react@npm:1.40.0"
+"lucide-react@npm:^1.41.0":
+  version: 1.41.0
+  resolution: "lucide-react@npm:1.41.0"
   peerDependencies:
     react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
-  checksum: 10c0/1476dc55fb8775152f535d1155bd2c7f62eb723ad63e3b1548dfb80be4a4984a979eda0023da49ea221014a8884321b40b2716c60f517b4089ff3d8f8521bb08
+  checksum: 10c0/28e1ac1087c153e7adfa007daa39d738e23372eb35d78cf93c4f91bfe44457a3d1b3e9e2a83ad62f9552206a37fbdf36a3255459bfb06ef2b1e7746c3ef65868
   languageName: node
   linkType: hard
 

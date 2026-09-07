@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "އައިކަން ބަދަލުކުރޭ",
   "tools.callout.removeEmoji": "އައިކަން ފޮހެލާ",
   "tools.callout.filterEmojis": "އިމޯޖީ ހޯދާ…",
+  "tools.callout.clearEmojiSearch": "ހޯދުން ސާފުކުރޭ",
+  "tools.callout.emojiSearchHint": "އެހެން ބަހެއް ލިޔެބަލާ ނުވަތަ ހޯދުން ސާފުކުރޭ.",
   "tools.callout.calloutEmojiCategory": "ނޯޓް",
   "tools.callout.noEmojisFound": "އިމޯޖީ ނުފެނުނު",
   "tools.callout.pickRandom": "ރެންޑަމް އިމޯޖީއެއް ހޮވާ",

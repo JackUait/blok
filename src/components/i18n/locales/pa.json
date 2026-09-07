@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "ਆਈਕਨ ਸੰਪਾਦਿਤ ਕਰੋ",
   "tools.callout.removeEmoji": "ਆਈਕਨ ਹਟਾਓ",
   "tools.callout.filterEmojis": "ਇਮੋਜੀ ਖੋਜੋ…",
+  "tools.callout.clearEmojiSearch": "ਖੋਜ ਸਾਫ਼ ਕਰੋ",
+  "tools.callout.emojiSearchHint": "ਕੋਈ ਹੋਰ ਸ਼ਬਦ ਅਜ਼ਮਾਓ ਜਾਂ ਖੋਜ ਸਾਫ਼ ਕਰੋ।",
   "tools.callout.calloutEmojiCategory": "ਕਾਲਆਊਟ",
   "tools.callout.noEmojisFound": "ਕੋਈ ਇਮੋਜੀ ਨਹੀਂ ਮਿਲੇ",
   "tools.callout.pickRandom": "ਬੇਤਰਤੀਬ ਇਮੋਜੀ ਚੁਣੋ",

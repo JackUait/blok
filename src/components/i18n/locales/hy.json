@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "Խմբագրել պատկերակը",
   "tools.callout.removeEmoji": "Հեռացնել պատկերակը",
   "tools.callout.filterEmojis": "Որոնել էմոջիներ…",
+  "tools.callout.clearEmojiSearch": "Մաքրել որոնումը",
+  "tools.callout.emojiSearchHint": "Փորձեք մեկ այլ բառ կամ մաքրեք որոնումը։",
   "tools.callout.calloutEmojiCategory": "Ծանուցում",
   "tools.callout.noEmojisFound": "Էմոջիներ չեն գտնվել",
   "tools.callout.pickRandom": "Ընտրել պատահական էմոջի",

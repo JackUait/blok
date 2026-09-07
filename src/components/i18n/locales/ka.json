@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "ხატულის რედაქტირება",
   "tools.callout.removeEmoji": "ხატულის წაშლა",
   "tools.callout.filterEmojis": "ემოჯების ძიება…",
+  "tools.callout.clearEmojiSearch": "ძიების გასუფთავება",
+  "tools.callout.emojiSearchHint": "სცადეთ სხვა სიტყვა ან გაასუფთავეთ ძიება.",
   "tools.callout.calloutEmojiCategory": "შენიშვნა",
   "tools.callout.noEmojisFound": "ემოჯი ვერ მოიძებნა",
   "tools.callout.pickRandom": "შემთხვევითი ემოჯის არჩევა",

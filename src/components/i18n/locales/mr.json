@@ -189,6 +189,8 @@
   "tools.callout.editIcon": "चिन्ह संपादित करा",
   "tools.callout.removeEmoji": "चिन्ह काढा",
   "tools.callout.filterEmojis": "इमोजी शोधा…",
+  "tools.callout.clearEmojiSearch": "शोध साफ करा",
+  "tools.callout.emojiSearchHint": "दुसरा शब्द वापरून पहा किंवा शोध साफ करा.",
   "tools.callout.calloutEmojiCategory": "कॉलआउट",
   "tools.callout.noEmojisFound": "कोणतेही इमोजी आढळले नाहीत",
   "tools.callout.pickRandom": "यादृच्छिक इमोजी निवडा",

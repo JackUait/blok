@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "แก้ไขไอคอน",
   "tools.callout.removeEmoji": "ลบไอคอน",
   "tools.callout.filterEmojis": "ค้นหาอีโมจิ…",
+  "tools.callout.clearEmojiSearch": "ล้างการค้นหา",
+  "tools.callout.emojiSearchHint": "ลองใช้คำอื่นหรือล้างการค้นหา",
   "tools.callout.calloutEmojiCategory": "กล่องเน้น",
   "tools.callout.noEmojisFound": "ไม่พบอีโมจิ",
   "tools.callout.pickRandom": "สุ่มเลือกอีโมจิ",

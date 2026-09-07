@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "آئیکن میں ترمیم کریں",
   "tools.callout.removeEmoji": "آئیکن ہٹائیں",
   "tools.callout.filterEmojis": "ایموجی تلاش کریں…",
+  "tools.callout.clearEmojiSearch": "تلاش صاف کریں",
+  "tools.callout.emojiSearchHint": "کوئی دوسرا لفظ آزمائیں یا تلاش صاف کریں۔",
   "tools.callout.calloutEmojiCategory": "نوٹ",
   "tools.callout.noEmojisFound": "کوئی ایموجی نہیں ملا",
   "tools.callout.pickRandom": "ایک بے ترتیب ایموجی منتخب کریں",

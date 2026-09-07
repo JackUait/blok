@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "Upravit ikonu",
   "tools.callout.removeEmoji": "Odebrat ikonu",
   "tools.callout.filterEmojis": "Hledat emoji…",
+  "tools.callout.clearEmojiSearch": "Vymazat hledání",
+  "tools.callout.emojiSearchHint": "Zkuste jiné slovo nebo vymažte hledání.",
   "tools.callout.calloutEmojiCategory": "Zvýrazněný blok",
   "tools.callout.noEmojisFound": "Žádné emoji nenalezeno",
   "tools.callout.pickRandom": "Vybrat náhodné emoji",

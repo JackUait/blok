@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "නිරූපකය සංස්කරණය කරන්න",
   "tools.callout.removeEmoji": "නිරූපකය ඉවත් කරන්න",
   "tools.callout.filterEmojis": "ඉමෝජි සොයන්න…",
+  "tools.callout.clearEmojiSearch": "සෙවුම හිස් කරන්න",
+  "tools.callout.emojiSearchHint": "වෙනත් වචනයක් උත්සාහ කරන්න හෝ සෙවුම හිස් කරන්න.",
   "tools.callout.calloutEmojiCategory": "අවධාරක සටහන",
   "tools.callout.noEmojisFound": "ඉමෝජි හමු නොවීය",
   "tools.callout.pickRandom": "අහඹු ඉමෝජියක් තෝරන්න",

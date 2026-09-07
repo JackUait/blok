@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "ویرایش نماد",
   "tools.callout.removeEmoji": "حذف نماد",
   "tools.callout.filterEmojis": "جستجوی ایموجی‌ها…",
+  "tools.callout.clearEmojiSearch": "پاک کردن جستجو",
+  "tools.callout.emojiSearchHint": "واژهٔ دیگری را امتحان کنید یا جستجو را پاک کنید.",
   "tools.callout.calloutEmojiCategory": "یادداشت",
   "tools.callout.noEmojisFound": "هیچ ایموجی‌ای یافت نشد",
   "tools.callout.pickRandom": "انتخاب یک ایموجی تصادفی",

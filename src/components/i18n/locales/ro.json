@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "Editează pictograma",
   "tools.callout.removeEmoji": "Șterge pictograma",
   "tools.callout.filterEmojis": "Căutați emoji…",
+  "tools.callout.clearEmojiSearch": "Șterge căutarea",
+  "tools.callout.emojiSearchHint": "Încercați un alt cuvânt sau ștergeți căutarea.",
   "tools.callout.calloutEmojiCategory": "Evidențiere",
   "tools.callout.noEmojisFound": "Niciun emoji găsit",
   "tools.callout.pickRandom": "Alege un emoji aleatoriu",

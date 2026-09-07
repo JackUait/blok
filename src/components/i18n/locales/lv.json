@@ -189,6 +189,8 @@
   "tools.callout.editIcon": "Rediģēt ikonu",
   "tools.callout.removeEmoji": "Noņemt ikonu",
   "tools.callout.filterEmojis": "Meklēt emocijzīmes…",
+  "tools.callout.clearEmojiSearch": "Notīrīt meklēšanu",
+  "tools.callout.emojiSearchHint": "Izmēģiniet citu vārdu vai notīriet meklēšanu.",
   "tools.callout.calloutEmojiCategory": "Izcēlums",
   "tools.callout.noEmojisFound": "Emocijzīmes nav atrastas",
   "tools.callout.pickRandom": "Izvēlēties nejaušu emocijzīmi",

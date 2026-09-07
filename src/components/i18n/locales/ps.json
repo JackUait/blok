@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "آیکون سم کړئ",
   "tools.callout.removeEmoji": "آیکون لرې کړئ",
   "tools.callout.filterEmojis": "ایموجي ولټوئ…",
+  "tools.callout.clearEmojiSearch": "لټون پاک کړئ",
+  "tools.callout.emojiSearchHint": "بله کلمه وازمویئ یا لټون پاک کړئ.",
   "tools.callout.calloutEmojiCategory": "یادونه",
   "tools.callout.noEmojisFound": "هېڅ ایموجي ونه موندل شو",
   "tools.callout.pickRandom": "یو تصادفي ایموجي وټاکئ",

@@ -4,6 +4,7 @@ import { loadEmojiData, groupEmojisByCategory, CURATED_CALLOUT_EMOJIS, type Proc
 import { searchEmojisRanked } from '../../../components/utils/emoji/emoji-search-ranked';
 import { loadEmojiLocale, type EmojiLocaleData } from '../../../components/utils/emoji/emoji-locale';
 import { hide as hideTooltip, onHover } from '../../../components/utils/tooltip';
+import { DATA_ATTR } from '../../../components/constants';
 import { getTabbables } from '../../../components/utils/modal-dialog';
 import { createPositionTracker, type PositionTracker } from '../../../components/utils/popover/anchored-position';
 import {
@@ -26,7 +27,8 @@ const CATEGORY_I18N_KEYS: Readonly<Record<string, string>> = {
   flags: EMOJI_CATEGORY_FLAGS_KEY,
 };
 import {
-  IconCloseThick,
+  IconTrash,
+  IconCross,
   IconDice,
   IconSearch,
   IconEmojiStar,
@@ -59,6 +61,13 @@ interface EmojiPickerOptions {
 }
 
 const UNCAPPED_RESULTS = Number.POSITIVE_INFINITY;
+const REEL_DISTORTION = {
+  maxTiltDeg: 50,
+  maxSquashX: 0.09,
+  maxSquashY: 0.25,
+  maxDim: 0.32,
+  perspective: 400,
+};
 
 /** SVG icon for each emoji category (display order). */
 const CATEGORY_NAV: ReadonlyArray<readonly [id: string, icon: string]> = [
@@ -142,6 +151,7 @@ export class EmojiPicker {
   private _nav: HTMLElement;
   private _filterInput: HTMLInputElement;
   private _announcer: HTMLElement;
+  private _clearSearchButton: HTMLButtonElement;
   private _open = false;
   private _allEmojis: ProcessedEmoji[] = [];
   private _skinTone = 0;
@@ -166,8 +176,13 @@ export class EmojiPicker {
   private _sectionEls = new Map<string, HTMLElement>();
   /** Currently highlighted category in the nav bar. */
   private _activeNavId = '';
+  private _scrollDestination: number | null = null;
   /** rAF handle for scroll-based nav updates. */
   private _navRafId = 0;
+  private _emojiButtons: HTMLButtonElement[] = [];
+  private _focusedEmoji: HTMLButtonElement | null = null;
+  private _reelRows: Array<{ top: number; height: number; glyphs: HTMLElement[] }> = [];
+  private _curledGlyphs = new Set<HTMLElement>();
   /** Bound capture-phase Escape handler, registered on `document` while open. */
   private _onDocumentKeydown: (e: KeyboardEvent) => void;
   /** Skin tone selector buttons for visual updates. */
@@ -188,7 +203,9 @@ export class EmojiPicker {
     const filterInput = this._element.querySelector<HTMLInputElement>('input[type="text"]');
     const announcer = this._element.querySelector<HTMLElement>('[data-emoji-picker-announcer]');
 
-    if (body === null || nav === null || filterInput === null || announcer === null) {
+    const clearSearchButton = this._element.querySelector<HTMLButtonElement>('[data-emoji-picker-clear]');
+
+    if (body === null || nav === null || filterInput === null || announcer === null || clearSearchButton === null) {
       throw new Error('EmojiPicker: failed to build required elements');
     }
 
@@ -196,6 +213,7 @@ export class EmojiPicker {
     this._nav = nav;
     this._filterInput = filterInput;
     this._announcer = announcer;
+    this._clearSearchButton = clearSearchButton;
 
     this._onDocumentKeydown = (e: KeyboardEvent): void => {
       if (e.key !== 'Escape' || !this._open) {
@@ -210,10 +228,22 @@ export class EmojiPicker {
       }
     };
 
-    this._body.addEventListener('scroll', () => {
-      cancelAnimationFrame(this._navRafId);
-      this._navRafId = requestAnimationFrame(() => this.updateActiveNav());
-    }, { passive: true });
+    this._body.addEventListener('scroll', () => this.scheduleScrollEffects(), { passive: true });
+
+    const resumeScrollTracking = (): void => {
+      this._scrollDestination = null;
+      this.scheduleScrollEffects();
+    };
+
+    for (const type of ['wheel', 'touchstart', 'pointerdown']) {
+      this._body.addEventListener(type, resumeScrollTracking, { passive: true });
+    }
+
+    this._element.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End', ' ', 'Tab'].includes(event.key)) {
+        resumeScrollTracking();
+      }
+    });
   }
 
   public getElement(): HTMLElement {
@@ -237,7 +267,9 @@ export class EmojiPicker {
     this._anchorEl = anchor;
     this._anchorRectOverride = anchorRect ?? null;
     this._open = true;
+    this._scrollDestination = null;
     this._filterInput.value = '';
+    this._clearSearchButton.hidden = true;
     this._element.setAttribute('data-theme', this.resolveTheme());
 
     const storedTone = loadSkinTone();
@@ -273,7 +305,7 @@ export class EmojiPicker {
 
       this._nav.hidden = false;
       this._body.scrollTop = 0;
-      requestAnimationFrame(() => this.updateActiveNav());
+      this.scheduleScrollEffects();
     } else {
       this.renderEmojiGrid(this._allEmojis);
     }
@@ -289,9 +321,18 @@ export class EmojiPicker {
     this._element.hidden = false;
     this.position(anchor);
     this._positionTracker?.detach();
-    this._positionTracker = createPositionTracker(this._element, () => {
+    this._positionTracker = createPositionTracker(this._element, (event) => {
+      if (event?.target === this._body) {
+        return;
+      }
+
       if (this._open && this._anchorEl !== null) {
         this.position(this._anchorEl);
+
+        if (event === undefined) {
+          this._reelRows = [];
+          this.scheduleScrollEffects();
+        }
       }
     });
     this._positionTracker.attach();
@@ -311,6 +352,10 @@ export class EmojiPicker {
 
   public close(): void {
     this._open = false;
+    this._scrollDestination = null;
+    cancelAnimationFrame(this._navRafId);
+    this._navRafId = 0;
+    this.resetReel();
     this._positionTracker?.detach();
     this._positionTracker = null;
 
@@ -360,6 +405,7 @@ export class EmojiPicker {
     el.setAttribute('data-blok-popover', '');
 
     if (!this._inline) {
+      el.setAttribute(DATA_ATTR.keyboardOwner, '');
       // Inline mode isn't a modal dialog — it's a suggestion menu anchored in
       // a contentEditable, and the composer that owns it sets its own id/role.
       el.setAttribute('role', 'dialog');
@@ -376,10 +422,13 @@ export class EmojiPicker {
 
     // Header: search input + random button + remove button
     const header = document.createElement('div');
+
+    header.setAttribute('data-emoji-picker-header', '');
     header.className = 'flex items-center gap-2.5 px-3 pt-3 pb-2';
 
     const searchWrapper = document.createElement('div');
     searchWrapper.className = 'relative flex-1 min-w-0';
+    searchWrapper.setAttribute('data-emoji-picker-search', '');
 
     const iconSpan = document.createElement('span');
     iconSpan.className = [
@@ -405,6 +454,19 @@ export class EmojiPicker {
     searchWrapper.appendChild(iconSpan);
     searchWrapper.appendChild(input);
 
+    const clearSearch = document.createElement('button');
+
+    clearSearch.type = 'button';
+    clearSearch.hidden = true;
+    clearSearch.setAttribute('data-emoji-picker-clear', '');
+    clearSearch.setAttribute('aria-label', this.i18n.t('tools.callout.clearEmojiSearch'));
+    clearSearch.innerHTML = IconCross;
+    clearSearch.addEventListener('click', () => {
+      this.setQuery('');
+      input.focus();
+    });
+    searchWrapper.appendChild(clearSearch);
+
     // Skin tone hand toggle (separate button next to search input)
     const skinToneWrapper = document.createElement('div');
 
@@ -415,6 +477,7 @@ export class EmojiPicker {
     skinToggle.type = 'button';
     skinToggle.setAttribute('data-emoji-picker-skin-toggle', '');
     skinToggle.setAttribute('aria-label', this.i18n.t(SKIN_TONE_KEY));
+    skinToggle.setAttribute('aria-expanded', 'false');
     skinToggle.title = this.i18n.t(SKIN_TONE_KEY);
     skinToggle.className = [
       'w-[28px] h-[28px] flex items-center justify-center rounded-lg',
@@ -457,7 +520,7 @@ export class EmojiPicker {
       'theme-dark:hover:bg-neutral-800 theme-dark:hover:text-neutral-300',
       'transition-colors duration-100 cursor-pointer',
     ].join(' ');
-    removeBtn.innerHTML = IconCloseThick;
+    removeBtn.innerHTML = IconTrash;
     removeBtn.addEventListener('click', () => {
       this.onRemove();
       this.close();
@@ -474,6 +537,16 @@ export class EmojiPicker {
     header.appendChild(actionGroup);
     el.appendChild(header);
 
+    if (this._inline) {
+      // Inline mode's search surface is the typed ":query" text itself
+      // (see EmojiTrigger.setQuery) — no visible field to show. Random-pick
+      // and remove don't apply either: there is no already-chosen emoji
+      // glyph to reroll or clear.
+      searchWrapper.hidden = true;
+      randomBtn.hidden = true;
+      removeBtn.hidden = true;
+    }
+
     // Scrollable body
     const body = document.createElement('div');
     body.setAttribute('data-emoji-picker-body', '');
@@ -487,23 +560,16 @@ export class EmojiPicker {
       'flex items-center gap-1 px-2 pt-1 pb-1',
       'border-t border-neutral-100 theme-dark:border-neutral-800',
     ].join(' ');
-    el.appendChild(nav);
+    const footer = document.createElement('div');
 
-    // Visually-hidden results live region (mirrors the popover announcer shape).
+    footer.setAttribute('data-emoji-picker-footer', '');
+    footer.appendChild(nav);
+    el.appendChild(footer);
+
     const announcer = document.createElement('div');
     announcer.setAttribute('data-emoji-picker-announcer', '');
     announcer.setAttribute('role', 'status');
     announcer.setAttribute('aria-live', 'polite');
-    // Visually hidden, same shape as the popover results announcer.
-    announcer.style.position = 'absolute';
-    announcer.style.width = '1px';
-    announcer.style.height = '1px';
-    announcer.style.padding = '0';
-    announcer.style.margin = '-1px';
-    announcer.style.overflow = 'hidden';
-    announcer.style.clipPath = 'inset(50%)';
-    announcer.style.whiteSpace = 'nowrap';
-    announcer.style.border = '0';
     el.appendChild(announcer);
 
     // Close skin tone popover on click outside toggle/popover
@@ -523,6 +589,24 @@ export class EmojiPicker {
     // Tab containment: the backdrop only blocks pointers, so cycle Tab /
     // Shift+Tab within the picker's tabbables while it is open.
     el.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (this._inline) {
+        // The caret must stay in the document in inline mode (see the
+        // `inline` option) — EmojiTrigger owns grid navigation externally
+        // and never gives this picker real focus. But a mouse click on a
+        // remaining control (skin tone toggle, category nav, a grid emoji
+        // button — plain <button>s, all natively focusable) still can, and
+        // a keydown from there would otherwise reach handleEmojiKeydown's
+        // native-focus-based nav and this Tab trap, both wrong here.
+        return;
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- Keep the IME 229 fallback when isComposing is false.
+      if (e.isComposing || e.keyCode === 229) {
+        return;
+      }
+
+      this.handleEmojiKeydown(e);
+
       if (e.key !== 'Tab' || !this._open) {
         return;
       }
@@ -553,6 +637,73 @@ export class EmojiPicker {
     return el;
   }
 
+  private handleEmojiKeydown(event: KeyboardEvent): void {
+    if (!this._open) {
+      return;
+    }
+
+    if (event.target === this._filterInput && event.key === 'ArrowDown') {
+      if (this._emojiButtons.length > 0) {
+        event.preventDefault();
+        this.focusEmoji(0);
+      }
+
+      return;
+    }
+
+    const target = event.target;
+
+    if (!(target instanceof HTMLButtonElement)) {
+      return;
+    }
+
+    const index = this._emojiButtons.indexOf(target);
+    const grid = target.parentElement;
+
+    if (index < 0 || grid === null) {
+      return;
+    }
+
+    const tracks = getComputedStyle(grid).gridTemplateColumns;
+    const columns = tracks && tracks !== 'none' ? tracks.split(' ').length : 10;
+    const steps: Record<string, number> = {
+      ArrowLeft: -1, ArrowRight: 1, ArrowUp: -columns, ArrowDown: columns,
+      Home: -index, End: this._emojiButtons.length - 1 - index,
+    };
+    const step = steps[event.key];
+
+    if (step === undefined) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (event.key === 'ArrowUp' && index < columns) {
+      this._filterInput.focus();
+
+      return;
+    }
+
+    this.focusEmoji(Math.max(0, Math.min(this._emojiButtons.length - 1, index + step)));
+  }
+
+  private focusEmoji(index: number): void {
+    const button = this._emojiButtons[index];
+
+    if (button === undefined) {
+      return;
+    }
+
+    if (this._focusedEmoji !== null) {
+      this._focusedEmoji.tabIndex = -1;
+    }
+
+    this._focusedEmoji = button;
+    button.tabIndex = 0;
+    button.focus({ preventScroll: true });
+    button.scrollIntoView?.({ block: 'nearest', behavior: 'instant' });
+  }
+
   // ─── Skin Tone Selector ─────────────────────────────────────
 
   private buildSkinTonePopover(): HTMLElement {
@@ -566,6 +717,26 @@ export class EmojiPicker {
       'theme-dark:bg-neutral-800 theme-dark:border-neutral-700/50',
     ].join(' ');
     popover.hidden = true;
+    popover.setAttribute('role', 'group');
+    popover.setAttribute('aria-label', this.i18n.t(SKIN_TONE_KEY));
+    popover.addEventListener('keydown', (event: KeyboardEvent) => {
+      const target = event.target;
+
+      if (!(target instanceof HTMLButtonElement)) {
+        return;
+      }
+
+      const index = this._skinToneButtons.indexOf(target);
+      const directions: Record<string, number> = { ArrowRight: 1, ArrowLeft: -1 };
+      const direction = directions[event.key] ?? 0;
+
+      if (index < 0 || direction === 0) {
+        return;
+      }
+
+      event.preventDefault();
+      this._skinToneButtons[(index + direction + this._skinToneButtons.length) % this._skinToneButtons.length]?.focus();
+    });
 
     this._skinToneButtons = [];
 
@@ -606,17 +777,31 @@ export class EmojiPicker {
   }
 
   private toggleSkinTonePopover(): void {
-    this._skinTonePopover.hidden = !this._skinTonePopover.hidden;
+    if (!this._skinTonePopover.hidden) {
+      this.closeSkinTonePopover();
+
+      return;
+    }
+
+    this._skinTonePopover.hidden = false;
     this.updateSkinToneToggleActive();
+    this._skinToneButtons[this._skinTone]?.focus();
   }
 
   private closeSkinTonePopover(): void {
+    if (this._open && this._skinTonePopover.contains(document.activeElement)) {
+      this._skinToneToggle.focus();
+    }
+
     this._skinTonePopover.hidden = true;
     this.updateSkinToneToggleActive();
   }
 
   private updateSkinToneToggleActive(): void {
     const active = !this._skinTonePopover.hidden;
+
+    this._skinToneToggle.setAttribute('aria-expanded', String(active));
+
     const classes = ['bg-neutral-100', 'theme-dark:bg-neutral-700'];
 
     if (active) {
@@ -654,8 +839,10 @@ export class EmojiPicker {
 
       const emoji = this._allEmojis.find(e => e.native === native);
 
-      if (emoji !== undefined) {
-        btn.textContent = this.getSkinnedNative(emoji);
+      const glyph = btn.firstElementChild;
+
+      if (emoji !== undefined && glyph !== null) {
+        glyph.textContent = this.getSkinnedNative(emoji);
       }
     }
   }
@@ -677,10 +864,107 @@ export class EmojiPicker {
     this.onSelect(this.getSkinnedNative(emoji));
   }
 
+  private scheduleScrollEffects(): void {
+    cancelAnimationFrame(this._navRafId);
+    this._navRafId = requestAnimationFrame(() => {
+      this._navRafId = 0;
+
+      if (!this._open) {
+        return;
+      }
+
+      this.updateActiveNav();
+      this.updateReel();
+    });
+  }
+
+  private resetReel(): void {
+    for (const glyph of this._curledGlyphs) {
+      glyph.style.removeProperty('transform');
+      glyph.style.removeProperty('transform-origin');
+      glyph.style.removeProperty('opacity');
+    }
+
+    this._curledGlyphs.clear();
+  }
+
+  private measureReelRows(): void {
+    for (const button of this._emojiButtons) {
+      const glyph = button.firstElementChild;
+      const height = button.offsetHeight;
+
+      if (!(glyph instanceof HTMLElement) || height === 0) {
+        continue;
+      }
+
+      const top = button.offsetTop;
+      const row = this._reelRows.at(-1);
+
+      if (row?.top === top) {
+        row.glyphs.push(glyph);
+      } else {
+        this._reelRows.push({ top, height, glyphs: [glyph] });
+      }
+    }
+  }
+
+  private updateReel(): void {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      || this._body.scrollHeight <= this._body.clientHeight) {
+      this.resetReel();
+
+      return;
+    }
+
+    // Measure after layout changes, not on every scroll frame.
+    if (this._reelRows.length === 0) {
+      this.measureReelRows();
+    }
+
+    const viewTop = this._body.scrollTop;
+    const viewBottom = viewTop + this._body.clientHeight;
+
+    this.resetReel();
+
+    for (const row of this._reelRows) {
+      if (row.top + row.height <= viewTop || row.top >= viewBottom) {
+        continue;
+      }
+
+      // Start one row from the edge; waiting for clipping hides most of the curl.
+      const center = row.top + row.height / 2;
+      const topCurl = viewTop > 0 ? Math.max(0, 1 - (center - viewTop) / row.height) : 0;
+      const bottomCurl = viewBottom < this._body.scrollHeight ? Math.max(0, 1 - (viewBottom - center) / row.height) : 0;
+      const curl = Math.min(1, Math.max(topCurl, bottomCurl));
+
+      if (curl === 0) {
+        continue;
+      }
+
+      const atTop = topCurl >= bottomCurl;
+      const tilt = (REEL_DISTORTION.maxTiltDeg * curl * (atTop ? 1 : -1)).toFixed(2);
+      const scaleX = (1 - REEL_DISTORTION.maxSquashX * curl).toFixed(3);
+      const scaleY = (1 - REEL_DISTORTION.maxSquashY * curl).toFixed(3);
+
+      for (const glyph of row.glyphs) {
+        glyph.style.transform = `perspective(${REEL_DISTORTION.perspective}px) rotateX(${tilt}deg) scaleX(${scaleX}) scaleY(${scaleY})`;
+        glyph.style.transformOrigin = atTop ? 'center bottom' : 'center top';
+        glyph.style.opacity = (1 - REEL_DISTORTION.maxDim * curl).toFixed(3);
+        this._curledGlyphs.add(glyph);
+      }
+    }
+  }
+
   // ─── Category Navigation ──────────────────────────────────
 
   private buildCategoryNav(visibleCategories: Set<string>): void {
     this._nav.innerHTML = '';
+
+    const indicator = document.createElement('span');
+
+    indicator.setAttribute('data-emoji-nav-indicator', '');
+    indicator.setAttribute('aria-hidden', 'true');
+    this._nav.appendChild(indicator);
     this._navButtons.clear();
     this._activeNavId = '';
 
@@ -721,18 +1005,49 @@ export class EmojiPicker {
 
     const bodyRect = this._body.getBoundingClientRect();
     const sectionRect = section.getBoundingClientRect();
+    const top = Math.max(0, Math.min(
+      this._body.scrollTop + (sectionRect.top - bodyRect.top),
+      this._body.scrollHeight - this._body.clientHeight
+    ));
 
+    this._scrollDestination = top;
+    this.setActiveNav(categoryId);
     this._body.scrollTo({
-      top: this._body.scrollTop + (sectionRect.top - bodyRect.top),
-      behavior: 'smooth',
+      top,
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
     });
+    this.scheduleScrollEffects();
   }
 
   private updateActiveNav(): void {
-    const bodyTop = this._body.getBoundingClientRect().top;
-    const activeId = [...this._sectionEls.entries()]
-      .filter(([, el]) => el.getBoundingClientRect().top - bodyTop <= 20)
-      .reduce<string>((_, [id]) => id, '');
+    if (this._scrollDestination !== null) {
+      // Smooth scrolling must not select the sections it passes through.
+      if (Math.abs(this._body.scrollTop - this._scrollDestination) > 1) {
+        return;
+      }
+
+      this._scrollDestination = null;
+    }
+
+    const sections = [...this._sectionEls.entries()];
+    const atEnd = this._body.scrollHeight > this._body.clientHeight
+      && this._body.scrollTop + this._body.clientHeight >= this._body.scrollHeight - 1;
+    const activeId = atEnd
+      ? sections.at(-1)?.[0] ?? ''
+      : sections.filter(([, el]) => el.offsetTop - this._body.scrollTop <= 20)
+        .reduce<string>((_, [id]) => id, sections[0]?.[0] ?? '');
+
+    this.setActiveNav(activeId);
+  }
+
+  private setActiveNav(activeId: string): void {
+    const activeButton = this._navButtons.get(activeId);
+    const indicator = this._nav.querySelector<HTMLElement>('[data-emoji-nav-indicator]');
+
+    if (activeButton !== undefined && indicator !== null) {
+      indicator.style.width = `${activeButton.offsetWidth}px`;
+      indicator.style.transform = `translateX(${activeButton.offsetLeft}px)`;
+    }
 
     if (activeId === this._activeNavId) {
       return;
@@ -741,6 +1056,8 @@ export class EmojiPicker {
     this._activeNavId = activeId;
 
     for (const [id, btn] of this._navButtons) {
+      btn.setAttribute('aria-current', String(id === activeId));
+
       if (id === activeId) {
         btn.classList.remove('opacity-50');
         btn.classList.add('opacity-100', 'bg-neutral-100', 'theme-dark:bg-neutral-800');
@@ -769,6 +1086,11 @@ export class EmojiPicker {
   }
 
   private handleFilterChange(query: string): void {
+    this._scrollDestination = null;
+    this._clearSearchButton.hidden = query.length === 0;
+    this._body.scrollTop = 0;
+    this.scheduleScrollEffects();
+
     if (query.trim() === '') {
       this._announcer.textContent = '';
       this._nav.hidden = false;
@@ -790,6 +1112,10 @@ export class EmojiPicker {
       }
     } else {
       this._body.innerHTML = '';
+      this._emojiButtons = [];
+      this._focusedEmoji = null;
+      this._reelRows = [];
+      this.resetReel();
       this._sectionEls.clear();
       this._showingEmptyState = false;
       this._hasFullGrid = false;
@@ -815,26 +1141,36 @@ export class EmojiPicker {
 
   private renderEmojiGrid(emojis: ProcessedEmoji[]): void {
     this._body.innerHTML = '';
+    this._emojiButtons = [];
+    this._focusedEmoji = null;
+    this._reelRows = [];
+    this.resetReel();
     this._sectionEls.clear();
     this._showingEmptyState = false;
 
     const visibleCategories = new Set<string>();
 
-    // Curated callout section first
-    const calloutEmojis = CURATED_CALLOUT_EMOJIS
-      .map(native => emojis.find(e => e.native === native))
-      .filter((e): e is ProcessedEmoji => e !== undefined);
+    if (!this._inline) {
+      // Curated callout section first — inline mode has no callout-specific
+      // affordance to curate for, so it skips straight to standard categories.
+      const calloutEmojis = CURATED_CALLOUT_EMOJIS
+        .map(native => emojis.find(e => e.native === native))
+        .filter((e): e is ProcessedEmoji => e !== undefined);
 
-    if (calloutEmojis.length > 0) {
-      visibleCategories.add('callout');
-      const section = this.buildSection(this.translateCategory('callout'), calloutEmojis);
-      section.setAttribute('data-emoji-section', 'callout');
-      this._sectionEls.set('callout', section);
-      this._body.appendChild(section);
+      if (calloutEmojis.length > 0) {
+        visibleCategories.add('callout');
+        const section = this.buildSection(this.translateCategory('callout'), calloutEmojis);
+        section.setAttribute('data-emoji-section', 'callout');
+        this._sectionEls.set('callout', section);
+        this._body.appendChild(section);
+      }
     }
 
-    // Standard categories (exclude curated emojis to avoid duplicates)
-    const curatedSet = new Set(CURATED_CALLOUT_EMOJIS);
+    // Standard categories. In Callout mode, exclude curated emojis here —
+    // they already have their own section above, so this avoids duplicates.
+    // Inline mode built no curated section, so nothing to exclude: those
+    // twenty emojis are ordinary emojis that stay in their own category.
+    const curatedSet = this._inline ? new Set<string>() : new Set(CURATED_CALLOUT_EMOJIS);
     const byCategory = groupEmojisByCategory(emojis.filter(e => !curatedSet.has(e.native)));
 
     for (const [category, categoryEmojis] of byCategory) {
@@ -850,16 +1186,22 @@ export class EmojiPicker {
     this._hasFullGrid = true;
 
     // Set initial active nav after layout
-    requestAnimationFrame(() => this.updateActiveNav());
+    this.scheduleScrollEffects();
   }
 
   private renderEmptyState(): void {
     this._body.innerHTML = '';
+    this._emojiButtons = [];
+    this._focusedEmoji = null;
+    this._reelRows = [];
+    this.resetReel();
     this._showingEmptyState = true;
     this._sectionEls.clear();
     this._hasFullGrid = false;
 
     const empty = document.createElement('div');
+
+    empty.setAttribute('data-emoji-picker-empty', '');
     empty.className = [
       'flex flex-col items-center justify-center py-10',
       'text-neutral-400 theme-dark:text-neutral-500 select-none',
@@ -874,8 +1216,23 @@ export class EmojiPicker {
     text.className = 'text-[13px] font-medium';
     text.textContent = this.i18n.t(NO_EMOJIS_FOUND_KEY);
 
+    const back = document.createElement('button');
+
+    back.type = 'button';
+    back.textContent = this.i18n.t('tools.callout.clearEmojiSearch');
+    back.addEventListener('click', () => {
+      this.setQuery('');
+      this._filterInput.focus();
+    });
+
+    const hint = document.createElement('p');
+
+    hint.setAttribute('data-emoji-picker-hint', '');
+    hint.textContent = this.i18n.t('tools.callout.emojiSearchHint');
     empty.appendChild(icon);
     empty.appendChild(text);
+    empty.appendChild(hint);
+    empty.appendChild(back);
     this._body.appendChild(empty);
   }
 
@@ -888,6 +1245,8 @@ export class EmojiPicker {
   private buildSection(title: string, emojis: ProcessedEmoji[]): HTMLElement {
     const section = document.createElement('div');
     const heading = document.createElement('div');
+
+    heading.setAttribute('data-emoji-section-title', '');
     heading.className = [
       'text-[11px] font-semibold uppercase tracking-wider px-2 pt-3 pb-1.5',
       'text-neutral-400/80 theme-dark:text-neutral-500/80',
@@ -906,18 +1265,32 @@ export class EmojiPicker {
 
   private buildGrid(emojis: ProcessedEmoji[]): HTMLElement {
     const grid = document.createElement('div');
+
+    grid.setAttribute('data-emoji-grid', '');
     grid.className = 'grid grid-cols-10 gap-0.5 px-0.5 pt-1';
 
     for (const emoji of emojis) {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.textContent = this.getSkinnedNative(emoji);
+      const glyph = document.createElement('span');
+
+      glyph.setAttribute('data-emoji-glyph', '');
+      glyph.setAttribute('aria-hidden', 'true');
+      glyph.textContent = this.getSkinnedNative(emoji);
+      btn.appendChild(glyph);
+      btn.setAttribute('aria-label', this.getDisplayName(emoji));
       btn.setAttribute('data-emoji-native', emoji.native);
+      btn.tabIndex = this._emojiButtons.length === 0 ? 0 : -1;
+
+      if (this._emojiButtons.length === 0) {
+        this._focusedEmoji = btn;
+      }
+
+      this._emojiButtons.push(btn);
       btn.className = [
         'aspect-square flex items-center justify-center',
         'text-[1.25rem] leading-none rounded-lg cursor-pointer',
         'hover:bg-neutral-100 theme-dark:hover:bg-neutral-800',
-        'hover:scale-110 active:scale-95',
         'transition-transform duration-75',
       ].join(' ');
       btn.addEventListener('click', () => {
@@ -1001,20 +1374,18 @@ export class EmojiPicker {
   private position(anchor: HTMLElement): void {
     const rect = this._anchorRectOverride ?? anchor.getBoundingClientRect();
     const pickerRect = this._element.getBoundingClientRect();
+    // Layout sizes stay stable while the opening transform is running.
+    const height = this._element.offsetHeight || pickerRect.height;
+    const width = this._element.offsetWidth || pickerRect.width;
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
-
-    // Coordinates are viewport-relative (fixed positioning, backdrop or not)
-    const top = rect.bottom + pickerRect.height > viewportHeight
-      ? rect.top - pickerRect.height - 4
-      : rect.bottom + 4;
-
-    const idealLeft = rect.left - 8;
-    const left = idealLeft + pickerRect.width > viewportWidth
-      ? rect.right - pickerRect.width
-      : Math.max(0, idealLeft);
+    const above = rect.bottom + height + 4 > viewportHeight - 8 && rect.top > viewportHeight - rect.bottom;
+    const preferredTop = above ? rect.top - height - 4 : rect.bottom + 4;
+    const top = Math.max(8, Math.min(preferredTop, viewportHeight - height - 8));
+    const left = Math.max(8, Math.min(rect.left - 8, viewportWidth - width - 8));
 
     this._element.style.top = `${top}px`;
     this._element.style.left = `${left}px`;
+    this._element.style.transformOrigin = `${Math.max(0, Math.min(width, rect.left + rect.width / 2 - left))}px ${above ? 'bottom' : 'top'}`;
   }
 }

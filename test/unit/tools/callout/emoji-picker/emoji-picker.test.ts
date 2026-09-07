@@ -1,6 +1,7 @@
 // test/unit/tools/callout/emoji-picker/emoji-picker.test.ts
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { IconDice, IconTrash } from '../../../../../src/components/icons';
 import { simulateInput, simulateKeydown, simulateMousedown } from '../../../../helpers/simulate';
 import type { ProcessedEmoji } from '../../../../../src/components/utils/emoji/emoji-data';
 
@@ -595,21 +596,21 @@ describe('EmojiPicker', () => {
       expect(randomBtn.parentElement!.className).toContain('gap-1');
     });
 
-    it('random and remove button SVG icons are 14×14 to match larger button proportions', async () => {
+    it('random and remove buttons use the shared dice and trash SVGs unchanged', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
       const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en' });
       const el = picker.getElement();
 
-      const randomBtn = el.querySelector('[data-emoji-picker-random]') as HTMLButtonElement;
-      const removeBtn = el.querySelector('[data-emoji-picker-remove]') as HTMLButtonElement;
+      for (const [selector, icon] of [
+        ['[data-emoji-picker-random] > svg', IconDice],
+        ['[data-emoji-picker-remove] > svg', IconTrash],
+      ]) {
+        const expected = document.createElement('div');
 
-      const randomSvg = randomBtn.querySelector('svg') as SVGElement;
-      const removeSvg = removeBtn.querySelector('svg') as SVGElement;
+        expected.innerHTML = icon;
 
-      expect(randomSvg.getAttribute('width')).toBe('14');
-      expect(randomSvg.getAttribute('height')).toBe('14');
-      expect(removeSvg.getAttribute('width')).toBe('14');
-      expect(removeSvg.getAttribute('height')).toBe('14');
+        expect(el.querySelector(selector)?.isEqualNode(expected.firstElementChild)).toBe(true);
+      }
     });
   });
 

@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "చిహ్నాన్ని సవరించండి",
   "tools.callout.removeEmoji": "చిహ్నాన్ని తీసివేయండి",
   "tools.callout.filterEmojis": "ఎమోజీలను వెతకండి…",
+  "tools.callout.clearEmojiSearch": "శోధనను క్లియర్ చేయి",
+  "tools.callout.emojiSearchHint": "వేరే పదాన్ని ప్రయత్నించండి లేదా శోధనను క్లియర్ చేయండి.",
   "tools.callout.calloutEmojiCategory": "కాలౌట్",
   "tools.callout.noEmojisFound": "ఎమోజీలు కనుగొనబడలేదు",
   "tools.callout.pickRandom": "యాదృచ్ఛిక ఎమోజీని ఎంచుకోండి",

@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "Rediger ikon",
   "tools.callout.removeEmoji": "Fjern ikon",
   "tools.callout.filterEmojis": "Søg efter emojis…",
+  "tools.callout.clearEmojiSearch": "Ryd søgning",
+  "tools.callout.emojiSearchHint": "Prøv et andet ord, eller ryd søgningen.",
   "tools.callout.calloutEmojiCategory": "Fremhævning",
   "tools.callout.noEmojisFound": "Ingen emojis fundet",
   "tools.callout.pickRandom": "Vælg en tilfældig emoji",

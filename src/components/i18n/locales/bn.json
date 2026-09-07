@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "আইকন সম্পাদনা করুন",
   "tools.callout.removeEmoji": "আইকন সরান",
   "tools.callout.filterEmojis": "ইমোজি খুঁজুন…",
+  "tools.callout.clearEmojiSearch": "অনুসন্ধান সাফ করুন",
+  "tools.callout.emojiSearchHint": "অন্য একটি শব্দ দিয়ে চেষ্টা করুন বা অনুসন্ধান সাফ করুন।",
   "tools.callout.calloutEmojiCategory": "কলআউট",
   "tools.callout.noEmojisFound": "কোনো ইমোজি পাওয়া যায়নি",
   "tools.callout.pickRandom": "একটি এলোমেলো ইমোজি বেছে নিন",

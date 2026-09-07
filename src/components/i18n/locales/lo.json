@@ -189,6 +189,8 @@
   "tools.callout.editIcon": "ແກ້ໄຂໄອຄອນ",
   "tools.callout.removeEmoji": "ລຶບໄອຄອນ",
   "tools.callout.filterEmojis": "ຄົ້ນຫາອີໂມຈິ…",
+  "tools.callout.clearEmojiSearch": "ລ້າງການຄົ້ນຫາ",
+  "tools.callout.emojiSearchHint": "ລອງໃຊ້ຄຳອື່ນ ຫຼື ລ້າງການຄົ້ນຫາ.",
   "tools.callout.calloutEmojiCategory": "ກ່ອງເນັ້ນ",
   "tools.callout.noEmojisFound": "ບໍ່ພົບອີໂມຈິ",
   "tools.callout.pickRandom": "ເລືອກອີໂມຈິແບບສຸ່ມ",

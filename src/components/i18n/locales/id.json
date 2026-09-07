@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "Edit ikon",
   "tools.callout.removeEmoji": "Hapus ikon",
   "tools.callout.filterEmojis": "Cari emoji…",
+  "tools.callout.clearEmojiSearch": "Hapus pencarian",
+  "tools.callout.emojiSearchHint": "Coba kata lain atau hapus pencarian.",
   "tools.callout.calloutEmojiCategory": "Info",
   "tools.callout.noEmojisFound": "Emoji tidak ditemukan",
   "tools.callout.pickRandom": "Pilih emoji acak",

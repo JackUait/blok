@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "Изменить значок",
   "tools.callout.removeEmoji": "Удалить значок",
   "tools.callout.filterEmojis": "Поиск эмодзи…",
+  "tools.callout.clearEmojiSearch": "Очистить поиск",
+  "tools.callout.emojiSearchHint": "Попробуйте другое слово или очистите поиск.",
   "tools.callout.calloutEmojiCategory": "Выноска",
   "tools.callout.noEmojisFound": "Эмодзи не найдены",
   "tools.callout.pickRandom": "Выбрать случайный эмодзи",

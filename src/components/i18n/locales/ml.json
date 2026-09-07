@@ -189,6 +189,8 @@
   "tools.callout.editIcon": "ഐക്കൺ തിരുത്തുക",
   "tools.callout.removeEmoji": "ഐക്കൺ നീക്കുക",
   "tools.callout.filterEmojis": "ഇമോജികൾ തിരയുക…",
+  "tools.callout.clearEmojiSearch": "തിരയൽ മായ്ക്കുക",
+  "tools.callout.emojiSearchHint": "മറ്റൊരു വാക്ക് പരീക്ഷിക്കുക അല്ലെങ്കിൽ തിരയൽ മായ്ക്കുക.",
   "tools.callout.calloutEmojiCategory": "കോളൗട്ട്",
   "tools.callout.noEmojisFound": "ഇമോജികൾ കണ്ടെത്തിയില്ല",
   "tools.callout.pickRandom": "ക്രമരഹിതമായ ഒരു ഇമോജി തിരഞ്ഞെടുക്കുക",

@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "ஐகானைத் திருத்து",
   "tools.callout.removeEmoji": "ஐகானை நீக்கு",
   "tools.callout.filterEmojis": "எமோஜிகளைத் தேடு…",
+  "tools.callout.clearEmojiSearch": "தேடலை அழி",
+  "tools.callout.emojiSearchHint": "வேறு சொல்லை முயற்சிக்கவும் அல்லது தேடலை அழிக்கவும்.",
   "tools.callout.calloutEmojiCategory": "குறிப்புப்பெட்டி",
   "tools.callout.noEmojisFound": "எமோஜிகள் எதுவும் கிடைக்கவில்லை",
   "tools.callout.pickRandom": "சீரற்ற எமோஜியைத் தேர்ந்தெடு",

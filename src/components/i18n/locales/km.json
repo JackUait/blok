@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "កែសម្រួលរូបតំណាង",
   "tools.callout.removeEmoji": "លុបរូបតំណាង",
   "tools.callout.filterEmojis": "ស្វែងរករូបអារម្មណ៍…",
+  "tools.callout.clearEmojiSearch": "សម្អាតការស្វែងរក",
+  "tools.callout.emojiSearchHint": "សាកល្បងពាក្យផ្សេង ឬសម្អាតការស្វែងរក។",
   "tools.callout.calloutEmojiCategory": "ប្រអប់រំលេច",
   "tools.callout.noEmojisFound": "រកមិនឃើញរូបអារម្មណ៍ទេ",
   "tools.callout.pickRandom": "ជ្រើសរើសរូបអារម្មណ៍ដោយចៃដន្យ",

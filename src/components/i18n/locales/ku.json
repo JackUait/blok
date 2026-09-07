@@ -189,6 +189,8 @@
   "tools.callout.editIcon": "ئایکۆن دەستکاری بکە",
   "tools.callout.removeEmoji": "ئایکۆن بسڕەوە",
   "tools.callout.filterEmojis": "بەدوای ئیمۆجییەکاندا بگەڕێ…",
+  "tools.callout.clearEmojiSearch": "گەڕانەکە پاک بکەرەوە",
+  "tools.callout.emojiSearchHint": "وشەیەکی تر تاقی بکەرەوە یان گەڕانەکە پاک بکەرەوە.",
   "tools.callout.calloutEmojiCategory": "تێبینی",
   "tools.callout.noEmojisFound": "هیچ ئیمۆجییەک نەدۆزرایەوە",
   "tools.callout.pickRandom": "ئیمۆجییەکی هەڕەمەکی هەڵبژێرە",

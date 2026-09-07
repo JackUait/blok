@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "Uredi ikonu",
   "tools.callout.removeEmoji": "Ukloni ikonu",
   "tools.callout.filterEmojis": "Pretraži emojije…",
+  "tools.callout.clearEmojiSearch": "Očisti pretragu",
+  "tools.callout.emojiSearchHint": "Pokušaj s drugom riječi ili očisti pretragu.",
   "tools.callout.calloutEmojiCategory": "Isticanje",
   "tools.callout.noEmojisFound": "Nisu pronađeni emojiji",
   "tools.callout.pickRandom": "Odaberi nasumični emoji",

@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "编辑图标",
   "tools.callout.removeEmoji": "删除图标",
   "tools.callout.filterEmojis": "搜索表情符号…",
+  "tools.callout.clearEmojiSearch": "清除搜索",
+  "tools.callout.emojiSearchHint": "试试其他词语，或清除搜索。",
   "tools.callout.calloutEmojiCategory": "标注",
   "tools.callout.noEmojisFound": "未找到表情符号",
   "tools.callout.pickRandom": "随机选择表情符号",

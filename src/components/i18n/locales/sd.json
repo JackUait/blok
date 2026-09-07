@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "آئڪن تبديل ڪريو",
   "tools.callout.removeEmoji": "آئڪن هٽايو",
   "tools.callout.filterEmojis": "ايموجي ڳوليو…",
+  "tools.callout.clearEmojiSearch": "ڳولا صاف ڪريو",
+  "tools.callout.emojiSearchHint": "ٻيو لفظ آزمايو يا ڳولا صاف ڪريو.",
   "tools.callout.calloutEmojiCategory": "نوٽ",
   "tools.callout.noEmojisFound": "ڪي به ايموجي نه مليا",
   "tools.callout.pickRandom": "بي ترتيب ايموجي چونڊيو",

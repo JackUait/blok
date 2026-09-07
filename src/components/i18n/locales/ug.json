@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "سىنبەلگە تەھرىرلەش",
   "tools.callout.removeEmoji": "سىنبەلگە ئۆچۈرۈش",
   "tools.callout.filterEmojis": "ئېموجى ئىزدەش…",
+  "tools.callout.clearEmojiSearch": "ئىزدەشنى تازىلاش",
+  "tools.callout.emojiSearchHint": "باشقا سۆزنى سىناپ بېقىڭ ياكى ئىزدەشنى تازىلاڭ.",
   "tools.callout.calloutEmojiCategory": "ئەسكەرتىش",
   "tools.callout.noEmojisFound": "ئېموجى تېپىلمىدى",
   "tools.callout.pickRandom": "ئىختىيارىي بىر ئېموجى تاللاش",

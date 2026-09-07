@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "Редагувати іконку",
   "tools.callout.removeEmoji": "Видалити іконку",
   "tools.callout.filterEmojis": "Пошук емодзі…",
+  "tools.callout.clearEmojiSearch": "Очистити пошук",
+  "tools.callout.emojiSearchHint": "Спробуйте інше слово або очистьте пошук.",
   "tools.callout.calloutEmojiCategory": "Виноска",
   "tools.callout.noEmojisFound": "Емодзі не знайдено",
   "tools.callout.pickRandom": "Вибрати випадкове емодзі",

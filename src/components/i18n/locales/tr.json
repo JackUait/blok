@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "Simgeyi düzenle",
   "tools.callout.removeEmoji": "Simgeyi kaldır",
   "tools.callout.filterEmojis": "Emoji ara…",
+  "tools.callout.clearEmojiSearch": "Aramayı temizle",
+  "tools.callout.emojiSearchHint": "Başka bir kelime deneyin veya aramayı temizleyin.",
   "tools.callout.calloutEmojiCategory": "Bilgi kutusu",
   "tools.callout.noEmojisFound": "Emoji bulunamadı",
   "tools.callout.pickRandom": "Rastgele bir emoji seç",

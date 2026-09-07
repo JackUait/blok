@@ -189,6 +189,8 @@
   "tools.callout.editIcon": "Sunting ikon",
   "tools.callout.removeEmoji": "Alih keluar ikon",
   "tools.callout.filterEmojis": "Cari emoji…",
+  "tools.callout.clearEmojiSearch": "Kosongkan carian",
+  "tools.callout.emojiSearchHint": "Cuba perkataan lain atau kosongkan carian.",
   "tools.callout.calloutEmojiCategory": "Serlahan",
   "tools.callout.noEmojisFound": "Tiada emoji ditemui",
   "tools.callout.pickRandom": "Pilih emoji rawak",

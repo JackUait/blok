@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "Editar ícone",
   "tools.callout.removeEmoji": "Remover ícone",
   "tools.callout.filterEmojis": "Pesquisar emojis…",
+  "tools.callout.clearEmojiSearch": "Limpar pesquisa",
+  "tools.callout.emojiSearchHint": "Tente outra palavra ou limpe a pesquisa.",
   "tools.callout.calloutEmojiCategory": "Destaque",
   "tools.callout.noEmojisFound": "Nenhum emoji encontrado",
   "tools.callout.pickRandom": "Escolher um emoji aleatório",

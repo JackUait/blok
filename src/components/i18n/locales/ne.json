@@ -189,6 +189,8 @@
   "tools.callout.editIcon": "आइकन सम्पादन गर्नुहोस्",
   "tools.callout.removeEmoji": "आइकन हटाउनुहोस्",
   "tools.callout.filterEmojis": "इमोजी खोज्नुहोस्…",
+  "tools.callout.clearEmojiSearch": "खोज खाली गर्नुहोस्",
+  "tools.callout.emojiSearchHint": "अर्को शब्द प्रयोग गर्नुहोस् वा खोज खाली गर्नुहोस्।",
   "tools.callout.calloutEmojiCategory": "कलआउट",
   "tools.callout.noEmojisFound": "कुनै इमोजी भेटिएन",
   "tools.callout.pickRandom": "अनियमित इमोजी छान्नुहोस्",

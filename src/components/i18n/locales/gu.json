@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "આઇકન સંપાદિત કરો",
   "tools.callout.removeEmoji": "આઇકન દૂર કરો",
   "tools.callout.filterEmojis": "ઇમોજી શોધો…",
+  "tools.callout.clearEmojiSearch": "શોધ સાફ કરો",
+  "tools.callout.emojiSearchHint": "બીજો શબ્દ અજમાવો અથવા શોધ સાફ કરો.",
   "tools.callout.calloutEmojiCategory": "કૉલઆઉટ",
   "tools.callout.noEmojisFound": "કોઈ ઇમોજી મળ્યાં નથી",
   "tools.callout.pickRandom": "રેન્ડમ ઇમોજી પસંદ કરો",

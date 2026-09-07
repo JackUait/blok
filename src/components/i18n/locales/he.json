@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "ערוך סמל",
   "tools.callout.removeEmoji": "הסר סמל",
   "tools.callout.filterEmojis": "חפש אימוג׳ים…",
+  "tools.callout.clearEmojiSearch": "נקה חיפוש",
+  "tools.callout.emojiSearchHint": "נסה מילה אחרת או נקה את החיפוש.",
   "tools.callout.calloutEmojiCategory": "תיבת הדגשה",
   "tools.callout.noEmojisFound": "לא נמצאו אימוג׳ים",
   "tools.callout.pickRandom": "בחר אימוג׳י אקראי",

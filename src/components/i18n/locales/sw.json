@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "Hariri ikoni",
   "tools.callout.removeEmoji": "Ondoa ikoni",
   "tools.callout.filterEmojis": "Tafuta emoji…",
+  "tools.callout.clearEmojiSearch": "Futa utafutaji",
+  "tools.callout.emojiSearchHint": "Jaribu neno lingine au futa utafutaji.",
   "tools.callout.calloutEmojiCategory": "Angazio",
   "tools.callout.noEmojisFound": "Hakuna emoji zilizopatikana",
   "tools.callout.pickRandom": "Chagua emoji bila mpangilio",

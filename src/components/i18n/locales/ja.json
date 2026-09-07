@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "アイコンを編集",
   "tools.callout.removeEmoji": "アイコンを削除",
   "tools.callout.filterEmojis": "絵文字を検索…",
+  "tools.callout.clearEmojiSearch": "検索をクリア",
+  "tools.callout.emojiSearchHint": "別の言葉を試すか、検索をクリアしてください。",
   "tools.callout.calloutEmojiCategory": "コールアウト",
   "tools.callout.noEmojisFound": "絵文字が見つかりません",
   "tools.callout.pickRandom": "ランダムな絵文字を選択",

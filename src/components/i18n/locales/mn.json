@@ -189,6 +189,8 @@
   "tools.callout.editIcon": "Дүрсийг засах",
   "tools.callout.removeEmoji": "Дүрсийг устгах",
   "tools.callout.filterEmojis": "Эможи хайх…",
+  "tools.callout.clearEmojiSearch": "Хайлтыг арилгах",
+  "tools.callout.emojiSearchHint": "Өөр үг оруулж үзнэ үү эсвэл хайлтыг арилгана уу.",
   "tools.callout.calloutEmojiCategory": "Тодруулга",
   "tools.callout.noEmojisFound": "Эможи олдсонгүй",
   "tools.callout.pickRandom": "Санамсаргүй эможи сонгох",

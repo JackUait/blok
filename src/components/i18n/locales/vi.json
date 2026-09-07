@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "Chỉnh sửa biểu tượng",
   "tools.callout.removeEmoji": "Xóa biểu tượng",
   "tools.callout.filterEmojis": "Tìm biểu tượng cảm xúc…",
+  "tools.callout.clearEmojiSearch": "Xóa tìm kiếm",
+  "tools.callout.emojiSearchHint": "Thử một từ khác hoặc xóa tìm kiếm.",
   "tools.callout.calloutEmojiCategory": "Chú thích",
   "tools.callout.noEmojisFound": "Không tìm thấy emoji",
   "tools.callout.pickRandom": "Chọn một biểu tượng cảm xúc ngẫu nhiên",

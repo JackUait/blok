@@ -552,7 +552,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Keep 56 bytes of headroom after the measured 1,162-byte net CSS growth.
     // Scoped block-menu layout, group separators and mobile hit areas add
     // 2,854 bytes in popover-animation.css.
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854;
+    // Picker layout, search states and reduced motion add 9,383 bytes.
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

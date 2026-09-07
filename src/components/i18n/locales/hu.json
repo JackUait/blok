@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "Ikon szerkesztése",
   "tools.callout.removeEmoji": "Ikon eltávolítása",
   "tools.callout.filterEmojis": "Emojik keresése…",
+  "tools.callout.clearEmojiSearch": "Keresés törlése",
+  "tools.callout.emojiSearchHint": "Próbáljon másik szót, vagy törölje a keresést.",
   "tools.callout.calloutEmojiCategory": "Kiemelés",
   "tools.callout.noEmojisFound": "Nem található emoji",
   "tools.callout.pickRandom": "Véletlenszerű emoji kiválasztása",

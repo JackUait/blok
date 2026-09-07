@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "Επεξεργασία εικονιδίου",
   "tools.callout.removeEmoji": "Αφαίρεση εικονιδίου",
   "tools.callout.filterEmojis": "Αναζήτηση emoji…",
+  "tools.callout.clearEmojiSearch": "Εκκαθάριση αναζήτησης",
+  "tools.callout.emojiSearchHint": "Δοκιμάστε μια άλλη λέξη ή εκκαθαρίστε την αναζήτηση.",
   "tools.callout.calloutEmojiCategory": "Επεξήγηση",
   "tools.callout.noEmojisFound": "Δεν βρέθηκαν emoji",
   "tools.callout.pickRandom": "Επιλογή τυχαίου emoji",

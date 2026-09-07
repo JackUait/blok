@@ -189,6 +189,8 @@
   "tools.callout.editIcon": "아이콘 편집",
   "tools.callout.removeEmoji": "아이콘 삭제",
   "tools.callout.filterEmojis": "이모지 검색…",
+  "tools.callout.clearEmojiSearch": "검색 지우기",
+  "tools.callout.emojiSearchHint": "다른 단어를 입력하거나 검색을 지워 보세요.",
   "tools.callout.calloutEmojiCategory": "콜아웃",
   "tools.callout.noEmojisFound": "이모지를 찾을 수 없음",
   "tools.callout.pickRandom": "무작위 이모지 선택",

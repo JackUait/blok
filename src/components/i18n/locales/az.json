@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "Simvolu redaktə et",
   "tools.callout.removeEmoji": "Simvolu sil",
   "tools.callout.filterEmojis": "Emoji axtarın…",
+  "tools.callout.clearEmojiSearch": "Axtarışı təmizlə",
+  "tools.callout.emojiSearchHint": "Başqa söz sınayın və ya axtarışı təmizləyin.",
   "tools.callout.calloutEmojiCategory": "Vurğu",
   "tools.callout.noEmojisFound": "Emoji tapılmadı",
   "tools.callout.pickRandom": "Təsadüfi emoji seç",

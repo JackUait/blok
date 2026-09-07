@@ -189,6 +189,8 @@
   "tools.callout.editIcon": "Redaguoti piktogramą",
   "tools.callout.removeEmoji": "Pašalinti piktogramą",
   "tools.callout.filterEmojis": "Ieškoti jaustukų…",
+  "tools.callout.clearEmojiSearch": "Išvalyti paiešką",
+  "tools.callout.emojiSearchHint": "Pabandykite kitą žodį arba išvalykite paiešką.",
   "tools.callout.calloutEmojiCategory": "Pastaba",
   "tools.callout.noEmojisFound": "Jaustukų nerasta",
   "tools.callout.pickRandom": "Pasirinkti atsitiktinį jaustuką",

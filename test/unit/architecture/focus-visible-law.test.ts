@@ -95,6 +95,11 @@ const EXEMPT_FOCUS_SELECTORS: FocusExemption[] = [
     reason: 'Text input: the emoji picker search field.',
   },
   {
+    file: 'src/styles/emoji-picker.css',
+    match: 'input:focus',
+    reason: 'Text input: the emoji picker search field may look active however it was focused.',
+  },
+  {
     file: 'src/components/inline-tools/inline-tool-link.ts',
     match: 'focus:bg-popover-bg',
     reason: 'Text input: the link URL field.',

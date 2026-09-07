@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "Muokkaa kuvaketta",
   "tools.callout.removeEmoji": "Poista kuvake",
   "tools.callout.filterEmojis": "Hae emojeja…",
+  "tools.callout.clearEmojiSearch": "Tyhjennä haku",
+  "tools.callout.emojiSearchHint": "Kokeile toista sanaa tai tyhjennä haku.",
   "tools.callout.calloutEmojiCategory": "Huomioruutu",
   "tools.callout.noEmojisFound": "Emojeja ei löytynyt",
   "tools.callout.pickRandom": "Valitse satunnainen emoji",

@@ -244,4 +244,151 @@ describe('EmojiPicker — inline mode', () => {
 
     picker.close();
   });
+
+  it('hides the search field, random button and remove button — the caller\'s typed query is the search surface', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const anchor = createAnchor();
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en', inline: true });
+
+    container.appendChild(picker.getElement());
+    await picker.open(anchor);
+
+    const el = picker.getElement();
+    const search = el.querySelector('[data-emoji-picker-search]') as HTMLElement;
+    const random = el.querySelector('[data-emoji-picker-random]') as HTMLElement;
+    const remove = el.querySelector('[data-emoji-picker-remove]') as HTMLElement;
+
+    expect(search.hidden).toBe(true);
+    expect(random.hidden).toBe(true);
+    expect(remove.hidden).toBe(true);
+
+    // Skin tone and category nav stay.
+    expect(el.querySelector('[data-emoji-picker-skin-toggle]')).not.toBeNull();
+    expect(el.querySelectorAll('[data-emoji-nav]').length).toBeGreaterThan(0);
+
+    picker.close();
+  });
+
+  it('keeps the search field, random button and remove button for the Callout tool\'s own (non-inline) use', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const anchor = createAnchor();
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en' });
+
+    container.appendChild(picker.getElement());
+    await picker.open(anchor);
+
+    const el = picker.getElement();
+    const search = el.querySelector('[data-emoji-picker-search]') as HTMLElement;
+    const random = el.querySelector('[data-emoji-picker-random]') as HTMLElement;
+    const remove = el.querySelector('[data-emoji-picker-remove]') as HTMLElement;
+
+    expect(search.hidden).toBe(false);
+    expect(random.hidden).toBe(false);
+    expect(remove.hidden).toBe(false);
+
+    picker.close();
+  });
+
+  it('omits the curated callout section and its star nav button from the full grid, without dropping those emoji from their real category', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const anchor = createAnchor();
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en', inline: true });
+
+    container.appendChild(picker.getElement());
+    await picker.open(anchor);
+
+    const el = picker.getElement();
+
+    expect(el.querySelector('[data-emoji-section="callout"]')).toBeNull();
+    expect(el.querySelector('[data-emoji-nav="callout"]')).toBeNull();
+
+    // 💡 is one of the twenty curated emoji, and here also the only emoji
+    // in the "objects" category fixture — it must still render, just inside
+    // its real category, not vanish because there is no curated section.
+    const objectsSection = el.querySelector('[data-emoji-section="objects"]');
+
+    expect(objectsSection).not.toBeNull();
+    expect(Array.from(objectsSection?.querySelectorAll('[data-emoji-native]') ?? []).map(b => b.getAttribute('data-emoji-native')))
+      .toEqual(['🔦', '💡']);
+
+    // At least one non-callout nav button remains, so the nav is still usable.
+    const navButtons = Array.from(el.querySelectorAll('[data-emoji-nav]'));
+
+    expect(navButtons.length).toBeGreaterThan(0);
+
+    // Scroll-spy must not assume a "callout" section exists.
+    const body = el.querySelector('[data-emoji-picker-body]') as HTMLElement;
+
+    expect(() => body.dispatchEvent(new Event('scroll'))).not.toThrow();
+
+    picker.close();
+  });
+
+  it('keeps the curated callout section for the Callout tool\'s own (non-inline) use', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const anchor = createAnchor();
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en' });
+
+    container.appendChild(picker.getElement());
+    await picker.open(anchor);
+
+    const el = picker.getElement();
+    const calloutSection = el.querySelector('[data-emoji-section="callout"]');
+
+    expect(calloutSection).not.toBeNull();
+    expect(calloutSection?.querySelector('[data-emoji-native]')?.getAttribute('data-emoji-native')).toBe('💡');
+    expect(el.querySelector('[data-emoji-nav="callout"]')).not.toBeNull();
+
+    picker.close();
+  });
+
+  it('does not let a focused grid button\'s arrow key move native focus — the caret must stay in the document', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const anchor = createAnchor();
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en', inline: true });
+
+    container.appendChild(picker.getElement());
+    await picker.open(anchor);
+
+    const buttons = Array.from(picker.getElement().querySelectorAll<HTMLButtonElement>('[data-emoji-native]'));
+
+    expect(buttons.length).toBeGreaterThanOrEqual(2);
+
+    const first = buttons[0];
+    const second = buttons[1];
+
+    if (first === undefined || second === undefined) {
+      throw new Error('fixture needs at least two grid buttons');
+    }
+
+    // A plain <button> takes real focus on click in real browsers even
+    // though EmojiTrigger never gives it focus itself — model that directly.
+    first.focus();
+
+    const event = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true });
+
+    first.dispatchEvent(event);
+
+    expect(first).toHaveFocus();
+    expect(event.defaultPrevented).toBe(false);
+
+    picker.close();
+  });
+
+  it('still finds a curated emoji through search in inline mode — only the curated SECTION is gone, not the emoji', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const anchor = createAnchor();
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en', inline: true });
+
+    container.appendChild(picker.getElement());
+    await picker.open(anchor);
+
+    picker.setQuery('light');
+
+    const natives = Array.from(picker.getElement().querySelectorAll('[data-emoji-native]')).map(b => b.getAttribute('data-emoji-native'));
+
+    expect(natives).toContain('💡');
+
+    picker.close();
+  });
 });

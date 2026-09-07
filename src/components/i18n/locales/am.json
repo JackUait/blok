@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "አዶ አርትዕ",
   "tools.callout.removeEmoji": "አዶ አስወግድ",
   "tools.callout.filterEmojis": "ኢሞጂዎችን ፈልግ…",
+  "tools.callout.clearEmojiSearch": "ፍለጋውን አጽዳ",
+  "tools.callout.emojiSearchHint": "ሌላ ቃል ይሞክሩ ወይም ፍለጋውን ያጽዱ።",
   "tools.callout.calloutEmojiCategory": "ማስታወሻ",
   "tools.callout.noEmojisFound": "ኢሞጂዎች አልተገኙም",
   "tools.callout.pickRandom": "የዘፈቀደ ኢሞጂ ምረጥ",

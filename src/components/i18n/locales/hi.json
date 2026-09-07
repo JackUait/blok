@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "आइकन संपादित करें",
   "tools.callout.removeEmoji": "आइकन हटाएं",
   "tools.callout.filterEmojis": "इमोजी खोजें…",
+  "tools.callout.clearEmojiSearch": "खोज साफ़ करें",
+  "tools.callout.emojiSearchHint": "कोई दूसरा शब्द आज़माएं या खोज साफ़ करें।",
   "tools.callout.calloutEmojiCategory": "कॉलआउट",
   "tools.callout.noEmojisFound": "कोई इमोजी नहीं मिला",
   "tools.callout.pickRandom": "कोई रैंडम इमोजी चुनें",

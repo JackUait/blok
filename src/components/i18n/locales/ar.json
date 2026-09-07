@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "تعديل الأيقونة",
   "tools.callout.removeEmoji": "إزالة الأيقونة",
   "tools.callout.filterEmojis": "البحث عن رموز تعبيرية…",
+  "tools.callout.clearEmojiSearch": "مسح البحث",
+  "tools.callout.emojiSearchHint": "جرّب كلمة أخرى أو امسح البحث.",
   "tools.callout.calloutEmojiCategory": "وسيلة شرح",
   "tools.callout.noEmojisFound": "لم يتم العثور على رموز تعبيرية",
   "tools.callout.pickRandom": "اختيار رمز تعبيري عشوائي",

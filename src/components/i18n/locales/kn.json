@@ -189,6 +189,8 @@
   "tools.callout.editIcon": "ಐಕಾನ್ ಸಂಪಾದಿಸಿ",
   "tools.callout.removeEmoji": "ಐಕಾನ್ ತೆಗೆದುಹಾಕಿ",
   "tools.callout.filterEmojis": "ಎಮೋಜಿಗಳನ್ನು ಹುಡುಕಿ…",
+  "tools.callout.clearEmojiSearch": "ಹುಡುಕಾಟವನ್ನು ತೆರವುಗೊಳಿಸಿ",
+  "tools.callout.emojiSearchHint": "ಬೇರೆ ಪದವನ್ನು ಪ್ರಯತ್ನಿಸಿ ಅಥವಾ ಹುಡುಕಾಟವನ್ನು ತೆರವುಗೊಳಿಸಿ.",
   "tools.callout.calloutEmojiCategory": "ಕಾಲ್‌ಔಟ್",
   "tools.callout.noEmojisFound": "ಯಾವುದೇ ಎಮೋಜಿಗಳು ಕಂಡುಬಂದಿಲ್ಲ",
   "tools.callout.pickRandom": "ಯಾದೃಚ್ಛಿಕ ಎಮೋಜಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿ",

@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "Редактирай иконата",
   "tools.callout.removeEmoji": "Премахни иконата",
   "tools.callout.filterEmojis": "Търсене на емоджи…",
+  "tools.callout.clearEmojiSearch": "Изчисти търсенето",
+  "tools.callout.emojiSearchHint": "Опитайте друга дума или изчистете търсенето.",
   "tools.callout.calloutEmojiCategory": "Бележка",
   "tools.callout.noEmojisFound": "Не са намерени емоджита",
   "tools.callout.pickRandom": "Избери произволно емоджи",

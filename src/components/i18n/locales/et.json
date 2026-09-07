@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "Muuda ikooni",
   "tools.callout.removeEmoji": "Eemalda ikoon",
   "tools.callout.filterEmojis": "Otsi emojisid…",
+  "tools.callout.clearEmojiSearch": "Tühjenda otsing",
+  "tools.callout.emojiSearchHint": "Proovi teist sõna või tühjenda otsing.",
   "tools.callout.calloutEmojiCategory": "Vihjekast",
   "tools.callout.noEmojisFound": "Emojisid ei leitud",
   "tools.callout.pickRandom": "Vali juhuslik emoji",

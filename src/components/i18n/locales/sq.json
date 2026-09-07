@@ -178,6 +178,8 @@
   "tools.callout.editIcon": "Ndrysho ikonën",
   "tools.callout.removeEmoji": "Fshi ikonën",
   "tools.callout.filterEmojis": "Kërko emoji…",
+  "tools.callout.clearEmojiSearch": "Pastro kërkimin",
+  "tools.callout.emojiSearchHint": "Provoni një fjalë tjetër ose pastroni kërkimin.",
   "tools.callout.calloutEmojiCategory": "Theksim",
   "tools.callout.noEmojisFound": "Nuk u gjetën emoji",
   "tools.callout.pickRandom": "Zgjidh një emoji rastësisht",

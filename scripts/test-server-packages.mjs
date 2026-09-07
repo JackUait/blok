@@ -233,16 +233,20 @@ function assertPackageMetadata(packageId, nuspec) {
     assert.equal(blokDependencies[0].version, packageVersion);
   } else {
     assert.deepEqual(blokDependencies, []);
+    // `exclude` is asserted, not just id and version: withholding Compile is
+    // the entire point of Jint's PrivateAssets, and dropping it lets a
+    // consumer write `using Jint.Runtime;` against a package they never
+    // declared. 1.13.0 shipped without it and this gate saw nothing.
     assert.deepEqual(
       dependencies
-        .map(({ id, version }) => ({ id, version }))
+        .map(({ id, version, exclude }) => ({ id, version, exclude }))
         .sort((left, right) => left.id.localeCompare(right.id)),
       [
-        { id: 'AngleSharp', version: '1.7.2' },
-        { id: 'BouncyCastle.Cryptography', version: '2.7.0' },
-        { id: 'Jint', version: '4.16.1' },
+        { id: 'AngleSharp', version: '1.7.2', exclude: 'Build,Analyzers' },
+        { id: 'BouncyCastle.Cryptography', version: '2.7.0', exclude: 'Build,Analyzers' },
+        { id: 'Jint', version: '4.16.1', exclude: 'Compile,Build,Analyzers' },
       ],
-      'Blok.Server must retain its exact direct package dependencies',
+      'Blok.Server must retain its exact direct package dependencies and asset exclusions',
     );
   }
 }

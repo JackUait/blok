@@ -7,6 +7,8 @@ import type { ModuleConfig } from '../../../../src/types-internal/module-config'
 import type { BlokConfig } from '../../../../types';
 import type { ToolConstructable, ToolSettings } from '../../../../types/tools';
 import type { BlokEventMap } from '../../../../src/components/events';
+import { INLINE_TOOL_ORDER } from '../../../../src/components/constants/inline-tool-order';
+import { allTools } from '../../../../src/full';
 
 /**
  * Creates a Tools module instance with provided blok config.
@@ -941,5 +943,99 @@ describe('tools module', () => {
       });
     });
   });
-});
 
+  describe('inline tool ordering', () => {
+    /**
+     * Builds a minimal inline tool class for the given name.
+     * @param name - tool name used only for readable failures
+     */
+    const makeInlineTool = (name: string): ToolConstructable => {
+      /**
+       * Minimal inline tool stub.
+       */
+      class InlineStub {
+        public static isInline = true;
+
+        public static toolName = name;
+
+        /**
+         * Renders nothing; the toolbar is not exercised here.
+         */
+        public render(): Record<string, unknown> {
+          return {};
+        }
+      }
+
+      return InlineStub as unknown as ToolConstructable;
+    };
+
+    /**
+     * Builds a Tools module whose block tool enables every registered inline tool.
+     * @param inlineToolNames - names to register, in the given (scrambled) order
+     * @param enabled - value for the block tool's `inlineToolbar` setting
+     */
+    const prepareWith = async (
+      inlineToolNames: string[],
+      enabled: boolean | string[] = true
+    ): Promise<string[]> => {
+      const tools: Record<string, ToolConstructable | ToolSettings> = {};
+
+      inlineToolNames.forEach((name) => {
+        tools[name] = makeInlineTool(name);
+      });
+
+      /**
+       * Minimal block tool stub the inline tools get assigned to.
+       */
+      class BlockStub {
+        /**
+         * Renders nothing; only the assigned collection is inspected.
+         */
+        public render(): Record<string, unknown> {
+          return {};
+        }
+      }
+
+      tools.blockTool = {
+        class: BlockStub as unknown as ToolConstructable,
+        inlineToolbar: enabled,
+      };
+
+      const module = createModule({ tools });
+
+      await module.prepare();
+
+      return Array.from(module.blockTools.get('blockTool')?.inlineTools.keys() ?? []);
+    };
+
+    it('sorts built-in inline tools into the canonical order whatever the registration order', async () => {
+      const scrambled = [...INLINE_TOOL_ORDER].filter(name => name !== 'convertTo').reverse();
+
+      await expect(prepareWith(scrambled)).resolves.toStrictEqual(INLINE_TOOL_ORDER);
+    });
+
+    it('sorts an explicit inlineToolbar array into the canonical order', async () => {
+      const order = await prepareWith(
+        ['bold', 'clearFormat', 'link'],
+        ['clearFormat', 'link', 'bold']
+      );
+
+      expect(order).toStrictEqual(['convertTo', 'bold', 'link', 'clearFormat']);
+    });
+
+    it('places unknown inline tools after the built-ins, keeping their registration order', async () => {
+      const order = await prepareWith(['zeta', 'clearFormat', 'alpha', 'bold']);
+
+      expect(order).toStrictEqual(['convertTo', 'bold', 'clearFormat', 'zeta', 'alpha']);
+    });
+
+    it('lists every inline tool shipped in allTools', () => {
+      const shippedInlineTools = Object.entries(allTools)
+        .filter(([, entry]) => (entry as { class: { isInline?: boolean } }).class?.isInline === true)
+        .map(([name]) => name);
+
+      expect(shippedInlineTools.length).toBeGreaterThan(0);
+      expect(INLINE_TOOL_ORDER).toEqual(expect.arrayContaining(shippedInlineTools));
+    });
+  });
+});

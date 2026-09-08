@@ -1,25 +1,14 @@
 import { describe, it, expect } from 'vitest';
+import { INLINE_TOOL_ORDER } from '../../../src/components/constants/inline-tool-order';
 import { defaultInlineTools } from '../../../src/tools/index';
 
-describe('defaultInlineTools order (grid toolbar layout)', () => {
-  it('matches the two-row grid: marker, bold, italic, underline, clearFormat / link, strikethrough, inlineCode, equation, supSub', () => {
-    // The inline toolbar derives its render order from the key order of
-    // `defaultInlineTools` (see src/components/modules/tools.ts:511 which spreads
-    // `...this.inlineTools.keys()` after the prepended `convertTo`). The toolbar
-    // renders as a 5-column grid below the convert row, so this key order IS the
-    // visual grid order: row 1 = color (marker), bold, italic, underline, clear
-    // format; row 2 = link, strikethrough, inline code, equation, sup/sub.
-    expect(Object.keys(defaultInlineTools)).toEqual([
-      'marker',
-      'bold',
-      'italic',
-      'underline',
-      'clearFormat',
-      'link',
-      'strikethrough',
-      'inlineCode',
-      'equation',
-      'supSub',
-    ]);
+describe('defaultInlineTools order', () => {
+  it('mirrors the canonical toolbar order, minus the internal convertTo tool', () => {
+    // The toolbar sorts by INLINE_TOOL_ORDER, so this list's key order does not
+    // drive rendering. Keeping the two in step means the registration list reads
+    // the way the toolbar looks.
+    const expected = INLINE_TOOL_ORDER.filter(name => name !== 'convertTo');
+
+    expect(Object.keys(defaultInlineTools)).toEqual(expected);
   });
 });

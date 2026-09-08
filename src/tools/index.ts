@@ -86,17 +86,18 @@ export const defaultBlockTools = {
   bookmark: {},
 } as const;
 
+// Key order mirrors INLINE_TOOL_ORDER (minus the internal convertTo) so this
+// list reads the way the toolbar renders. The toolbar sorts by that constant
+// regardless, so a stray order here changes nothing but the reading.
 export const defaultInlineTools = {
-  // Grid toolbar order: row 1 = color, bold, italic, underline, clear format;
-  // row 2 = link, strikethrough, inline code, equation, superscript/subscript.
-  marker: {},
   bold: {},
   italic: {},
   underline: {},
-  clearFormat: {},
-  link: {},
   strikethrough: {},
   inlineCode: {},
   equation: {},
   supSub: {},
+  link: {},
+  marker: {},
+  clearFormat: {},
 } as const;

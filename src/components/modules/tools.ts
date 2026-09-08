@@ -3,6 +3,7 @@ import { Stub } from '../../tools/stub';
 import { Module } from '../__module';
 import { CopyLinkTune } from '../block-tunes/block-tune-copy-link';
 import { DeleteTune } from '../block-tunes/block-tune-delete';
+import { INLINE_TOOL_ORDER } from '../constants/inline-tool-order';
 import { CriticalError } from '../errors/critical';
 import { ConvertInlineTool } from '../inline-tools/inline-tool-convert';
 import { BlockToolAdapter } from '../tools/block';
@@ -721,7 +722,26 @@ export class Tools extends Module {
       entries.push([name, inlineTool]);
     }
 
-    return new ToolsCollection<InlineToolAdapter>(entries);
+    return new ToolsCollection<InlineToolAdapter>(this.sortInlineTools(entries));
+  }
+
+  /**
+   * Orders Inline Tools by the canonical toolbar sequence.
+   *
+   * Built-in tools take their rank from INLINE_TOOL_ORDER; anything absent
+   * from it (a third-party Inline Tool) ranks last. Array.prototype.sort is
+   * stable, so unknown tools keep the order they were registered in.
+   * @param entries - inline tool entries in registration order
+   * @returns the same entries in canonical order
+   */
+  private sortInlineTools(entries: [string, InlineToolAdapter][]): [string, InlineToolAdapter][] {
+    const rankOf = (name: string): number => {
+      const index = INLINE_TOOL_ORDER.indexOf(name);
+
+      return index === -1 ? INLINE_TOOL_ORDER.length : index;
+    };
+
+    return [ ...entries ].sort(([a], [b]) => rankOf(a) - rankOf(b));
   }
 
   /**

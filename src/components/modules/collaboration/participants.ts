@@ -23,8 +23,11 @@ interface Member {
 
 /**
  * The member whose fields the row is published under: identity (name, color,
- * silhouette) and, on an exact activity tie, activity — always the LOWEST
- * client id in the group.
+ * silhouette). A member that published a name wins over one that has not —
+ * a signed-in person's lowest-id tab can load before its awareness state
+ * carries a name while a higher-id tab of theirs already has one, and
+ * publishing the silhouette in that case would draw a named person as
+ * anonymous. Ties (all named, or all nameless) go to the LOWEST client id.
  *
  * Deterministic on client id rather than map-iteration order, which the
  * awareness map does not guarantee is the same in every browser. Without this
@@ -33,8 +36,12 @@ interface Member {
  * face in every tab that is watching them.
  * @param members - every connection folded into one row, unsorted
  */
-const lowestClientId = (members: Member[]): Member =>
-  members.reduce((lowest, candidate) => (candidate.clientId < lowest.clientId ? candidate : lowest));
+const identityMember = (members: Member[]): Member => {
+  const named = members.filter((member) => member.name !== '');
+  const pool = named.length > 0 ? named : members;
+
+  return pool.reduce((lowest, candidate) => (candidate.clientId < lowest.clientId ? candidate : lowest));
+};
 
 /**
  * The member whose `lastActiveAt`/`blockId` the row publishes: the highest
@@ -61,9 +68,9 @@ const mostRecentlyActive = (members: Member[]): Member =>
  *
  * The join key is the verified id when the room supplied one and the client id
  * otherwise, so two tabs of one signed-in person collapse while two anonymous
- * connections stay apart. `identities` is empty until the server half ships;
- * every row then keys on its own client id, which is exactly the behaviour the
- * old per-connection `peers` list had.
+ * connections stay apart. `identities` is empty until the room's first frame
+ * lands; every row then keys on its own client id, which is exactly the
+ * behaviour the old per-connection `peers` list had.
  * @param states - the drawable states PLUS this editor's own, so `self` exists
  * @param localClientId - this editor's own id, marked `self`
  * @param identities - client id to verified actor id, from the room
@@ -119,7 +126,7 @@ export const buildParticipants = (
   const rows: CollaborationParticipant[] = [];
 
   for (const { userId, members } of groups.values()) {
-    const identity = lowestClientId(members);
+    const identity = identityMember(members);
     const activity = mostRecentlyActive(members);
     const glyph = identity.name === '' ? glyphs.get(identity.clientId) ?? null : null;
 

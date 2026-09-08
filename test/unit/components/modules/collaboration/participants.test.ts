@@ -109,6 +109,26 @@ describe('buildParticipants', () => {
     expect(participant.user.glyph).toBe('sun');
   });
 
+  // clientId 7 (lowest) has published no name; clientId 9's tab has. The
+  // lowest-id rule alone would draw this verified person as a silhouette
+  // while a tab of theirs is visibly named — a named member must win.
+  it('prefers a member that published a name over the lowest client id', () => {
+    const [participant] = buildParticipants(
+      [
+        state(7, { user: {} }),
+        state(9, { user: { name: 'Ada', color: '#ff0000' } }),
+      ],
+      42,
+      new Map([[7, 'u_7'], [9, 'u_7']]),
+      undefined,
+      NOW
+    );
+
+    expect(participant.user.name).toBe('Ada');
+    expect(participant.user.color).toBe('#ff0000');
+    expect(participant.user.glyph).toBeNull();
+  });
+
   it('clamps a stamp from the future and drops one past the age cap', () => {
     const [ahead, ancient] = buildParticipants(
       [

@@ -346,6 +346,15 @@ export interface CollabProviderOptions {
    * quarantine it belongs to.
    */
   onOperationAcknowledged?: (serverSequence: string) => void;
+
+  /**
+   * The room's full client-id-to-verified-actor-id map, sent on join and
+   * again on every change. REPLACE whatever this callback held before —
+   * the frame is a snapshot, not a delta, so merging into the old map would
+   * keep an entry the room already dropped (a peer who left, or one whose
+   * verification changed).
+   */
+  onVerifiedIdentities?: (identities: ReadonlyArray<{ clientId: number; actorId: string }>) => void;
 }
 
 /** What {@link createCollabProvider} hands back. */

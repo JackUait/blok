@@ -576,11 +576,13 @@ describe('createCollabProvider', () => {
       expect(harness.provider.tag).toEqual({ format: 1, epoch: 0, lineage: LINEAGE_A });
     });
 
-    // Same guard, same reason: before task 1 the codec decoded 106/107 as
-    // `unknown` (already dropped at the same site), so this was inert. Now
-    // that the codec recognises them, they must be dropped explicitly or a
-    // peer sending 64+ before the control frame trips MAX_BUFFERED_INBOUND
-    // and tears the connection down over frames nothing here acts on yet.
+    // `activity` is client→server only, dropped unconditionally. `identities`
+    // now has a handler, but a real room never sends it before control (see
+    // `CollabRoom`: control, then limits, then identities, in that order on
+    // every join) and the post-control join frame re-sends the whole map
+    // anyway — so an early one is dropped rather than buffered. Buffering it
+    // would count toward MAX_BUFFERED_INBOUND, and a peer sending 64+ before
+    // the control frame would trip the cap and tear the connection down.
     it('drops activity and identities frames before the control frame instead of buffering them', () => {
       const harness = createHarness();
       const frames: SyncWireFrame[] = [

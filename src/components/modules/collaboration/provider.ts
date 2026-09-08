@@ -1144,7 +1144,9 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
         // misbehaving, and `onmessage` drops it before this anyway.
         break;
       case 'identities':
-        // No handler yet; task 5 gives this frame meaning.
+        // Presence-adjacent, same as awareness: a throw here must not end
+        // the session over a peer list.
+        dropOnThrow(() => options.onVerifiedIdentities?.(frame.identities));
         break;
     }
   };
@@ -1431,13 +1433,12 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
         // `unknown` is forward compatibility; `malformed` is a frame we refuse to
         // guess at; `operation` is a client→server frame a server has no
         // business sending; `activity` is client→server only, symmetrically.
-        // `identities` has no handler yet (a later task adds one) -- none of
-        // these is worth buffering: buffering counts toward
+        // None of these is worth buffering: buffering counts toward
         // MAX_BUFFERED_INBOUND, and a peer sending 64+ would force a teardown
         // and a reconnect over frames nothing here acts on.
         if (
           frame === null || frame.type === 'unknown' || frame.type === 'malformed' ||
-          frame.type === 'operation' || frame.type === 'activity' || frame.type === 'identities'
+          frame.type === 'operation' || frame.type === 'activity'
         ) {
           return;
         }
@@ -1452,10 +1453,16 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
 
         // A v2 acknowledgement or rejection names a lineage the control frame
         // has not announced yet, so there is nothing to check it against.
-        // DROPPED rather than buffered: buffering would count them toward
+        // `identities` before control is likewise moot: the room re-sends its
+        // whole map right after control on every join (see `CollabRoom`), so
+        // an earlier copy is redundant, not lost. All three DROPPED rather
+        // than buffered: buffering would count them toward
         // MAX_BUFFERED_INBOUND, and a peer sending 64+ would force a teardown
         // and a reconnect over frames that mean nothing here.
-        if (beforeControl && (frame.type === 'acknowledgement' || frame.type === 'rejection')) {
+        if (
+          beforeControl &&
+          (frame.type === 'acknowledgement' || frame.type === 'rejection' || frame.type === 'identities')
+        ) {
           return;
         }
 

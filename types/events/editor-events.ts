@@ -58,8 +58,10 @@ export interface CollaborationParticipant {
    * Server-verified identity of this person, or null when the room could not
    * verify one. NEVER what the peer claims about itself.
    *
-   * Null for everyone until the server-side identity frame ships. Do not use
-   * this as a map key without a fallback (e.g. `clientIds[0]`), or every
+   * The room's identity frame and this person's awareness state arrive on
+   * independent schedules, so this can read null right after joining for a
+   * peer who does have one, until a later status catches up. Do not use this
+   * as a map key without a fallback (e.g. `clientIds[0]`), or every
    * participant collapses under the key `null`.
    */
   userId: string | null;

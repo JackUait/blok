@@ -2645,6 +2645,90 @@ describe('collaboration — sync-first load', () => {
 
       expect(remote.length).toBeLessThanOrEqual(MAX_PEERS);
     });
+
+    // The room's own verification, not what either tab claims about itself —
+    // and the join key `buildParticipants` already groups two client ids of
+    // one signed-in person under.
+    it('reports the verified userId once the identities frame lands, collapsing two client ids into one entry', async () => {
+      const harness = await boot();
+      const seen: CollaborationStatusChangedPayload[] = [];
+
+      harness.core.moduleInstances.API.methods.events.on('collaboration:status', (payload) => {
+        seen.push(payload);
+      });
+
+      const socket = firstSync(harness, [{ type: 'paragraph', data: { text: 'synced' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'remote block');
+
+      const peerOne = new DocumentStore(new YBlockSerializer());
+      const peerTwo = new DocumentStore(new YBlockSerializer());
+
+      peerOne.enableAwareness();
+      peerOne.setAwarenessField('user', { name: 'Ada' });
+      const peerOneClientId = Array.from(peerOne.getAwarenessStates().keys())[0];
+
+      peerTwo.enableAwareness();
+      peerTwo.setAwarenessField('user', { name: 'Ada' });
+      const peerTwoClientId = Array.from(peerTwo.getAwarenessStates().keys())[0];
+
+      socket.deliver({ type: 'awareness', update: peerOne.encodeAwarenessUpdate() });
+      socket.deliver({ type: 'awareness', update: peerTwo.encodeAwarenessUpdate() });
+      socket.deliver({
+        type: 'identities',
+        identities: [
+          { clientId: peerOneClientId, actorId: 'account-9' },
+          { clientId: peerTwoClientId, actorId: 'account-9' },
+        ],
+      });
+
+      peerOne.destroy();
+      peerTwo.destroy();
+
+      const remote = seen.at(-1)?.participants.filter((participant) => !participant.self) ?? [];
+
+      expect(remote).toHaveLength(1);
+      expect(remote[0]?.userId).toBe('account-9');
+      expect(remote[0]?.clientIds).toEqual([peerOneClientId, peerTwoClientId].sort((a, b) => a - b));
+    });
+
+    // Awareness and the identities frame arrive on independent schedules, so
+    // the FIRST status published after the awareness frame reports userId
+    // null even for a peer who does have one — only the identities frame
+    // that follows corrects it. Pinned deliberately: a later reader must not
+    // "fix" this into a stall that withholds a peer until identities lands.
+    it('reports userId null until the identities frame catches up, then corrects it', async () => {
+      const harness = await boot();
+      const seen: CollaborationStatusChangedPayload[] = [];
+
+      harness.core.moduleInstances.API.methods.events.on('collaboration:status', (payload) => {
+        seen.push(payload);
+      });
+
+      const socket = firstSync(harness, [{ type: 'paragraph', data: { text: 'synced' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'remote block');
+
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      peer.enableAwareness();
+      peer.setAwarenessField('user', { name: 'Ada' });
+      const peerClientId = Array.from(peer.getAwarenessStates().keys())[0];
+
+      socket.deliver({ type: 'awareness', update: peer.encodeAwarenessUpdate() });
+
+      const beforeIdentities = seen.at(-1)?.participants.find((participant) => !participant.self);
+
+      expect(beforeIdentities?.userId).toBeNull();
+
+      socket.deliver({ type: 'identities', identities: [{ clientId: peerClientId, actorId: 'account-9' }] });
+
+      const afterIdentities = seen.at(-1)?.participants.find((participant) => !participant.self);
+
+      expect(afterIdentities?.userId).toBe('account-9');
+
+      peer.destroy();
+    });
   });
 
   // `emitStatus` runs inside the awareness change callback, inside the frame

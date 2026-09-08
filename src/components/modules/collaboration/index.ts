@@ -369,8 +369,16 @@ export class Collaboration extends Module {
   private presence: Presence | null = null;
 
   /**
-   * Client id to verified actor id, from the room. Empty until the server half
-   * ships; every participant then keys on its own client id.
+   * Client id to verified actor id, from the room's `identities` frame.
+   * REPLACED whole on every frame, never merged into — the frame is a
+   * snapshot of the room, not a delta. Empty until the first frame lands,
+   * so a participant published before then keys on its own client id.
+   *
+   * The frame and awareness states arrive on independent schedules, so the
+   * first status emitted after joining can report `userId: null` for a peer
+   * who does have one; a later emit, once the frame lands, corrects it. This
+   * is deliberate, not a bug to fix — see `sync-first-load.test.ts`'s lazy
+   * merge test.
    */
   private identities = new Map<number, string>();
 
@@ -788,6 +796,14 @@ export class Collaboration extends Module {
       keepsLocalCopy: settings.offline,
       onOperationAcknowledged: (serverSequence) => {
         this.serverSequence = serverSequence;
+      },
+      // Replace, not merge: the frame is the room's whole map, so keeping an
+      // old entry past this point would hold onto a peer the room already
+      // dropped. `buildParticipants` only reads the field at emit time, so
+      // reassigning it here is enough — nothing else has to be told.
+      onVerifiedIdentities: (identities) => {
+        this.identities = new Map(identities.map(({ clientId, actorId }) => [clientId, actorId]));
+        this.emitStatus();
       },
       // The provider issues two store writes of its own — the post-drain
       // residual append and a lineage quarantine — and neither goes through

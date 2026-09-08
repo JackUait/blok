@@ -717,14 +717,14 @@ Remove the listed symbols from `presence-renderer.ts` and the listed rules from 
 
 **Keep `nameTheNameless`, `readPeer` and `buildAvatar`.** The gutter faces are drawn from all three, and `nameTheNameless` is what gives a nameless peer their silhouette and localized label. Only the wrapper-mounted stack goes.
 
-`stackSignature` holds a raw NUL byte as its join separator, which is why git reports this file as binary. After deleting it, confirm:
+**Stale note, corrected 2026-09-08.** The superseded spec claimed `stackSignature` holds a raw NUL byte as its join separator, making git treat this file as binary. Measured: true at `2d843e17`, false from `ad3d522f` onward, so there is nothing to clean up and no check to run.
+
+If you ever do need to count NUL bytes here, do not reach for `grep -cP '\x00'`. This machine's grep has no `-P`: it prints nothing and exits non-zero, which reads exactly like a clean result. Use a method you have a positive control for:
 
 ```bash
-grep -cP '\x00' src/components/modules/collaboration/presence-renderer.ts
-git diff --stat -- src/components/modules/collaboration/presence-renderer.ts
+nulcount() { perl -0777 -ne 'print scalar(() = /\x00/g), "\n"'; }
+printf 'a\0b\n' | nulcount   # must print 1 before you trust it
 ```
-
-Expected: `0` from the grep, and a diffstat with real insertion and deletion counts rather than the word `Bin`. Git decides binary from content, so the NUL leaving is what changes this; there is no attribute to check.
 
 - [ ] **Step 4: Regenerate the CSS snapshot and run both suites**
 

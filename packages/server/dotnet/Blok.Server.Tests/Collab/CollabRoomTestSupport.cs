@@ -687,6 +687,10 @@ internal readonly record struct CollabActivityRecord(
 internal sealed class RecordingActivityObserver : ICollabActivityObserver
 {
   private readonly List<CollabActivityRecord> records = [];
+  private TaskCompletionSource awaited =
+      new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+  private int awaitedCount = int.MaxValue;
 
   /// <summary>While set, every call throws it. The room must survive that.</summary>
   internal Exception? Failure { get; set; }
@@ -712,6 +716,11 @@ internal sealed class RecordingActivityObserver : ICollabActivityObserver
     lock (records)
     {
       records.Add(new CollabActivityRecord(documentId, actorId, at, kind));
+
+      if (records.Count >= awaitedCount)
+      {
+        awaited.TrySetResult();
+      }
     }
 
     // Thrown SYNCHRONOUSLY, before any ValueTask exists: a dispatch that only
@@ -722,6 +731,27 @@ internal sealed class RecordingActivityObserver : ICollabActivityObserver
     }
 
     return ValueTask.CompletedTask;
+  }
+
+  /// <summary>
+  /// Completes once <paramref name="count"/> records have arrived. Only for a
+  /// close that DISCARDS the room: the manager has forgotten it by then, so
+  /// its settle has nothing left to drain and cannot be the seam.
+  /// </summary>
+  internal Task WaitForAsync(int count)
+  {
+    lock (records)
+    {
+      if (records.Count >= count)
+      {
+        return Task.CompletedTask;
+      }
+
+      awaitedCount = count;
+      awaited = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+      return awaited.Task;
+    }
   }
 }
 

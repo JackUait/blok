@@ -747,9 +747,9 @@ internal sealed class CollabRoom : IDisposable
   /// a room whose store or endpoint fails still closes — otherwise one sick
   /// room would hold the shutdown open forever.
   /// </summary>
-  internal Task DrainAsync(CancellationToken cancellationToken)
+  internal async Task DrainAsync(CancellationToken cancellationToken)
   {
-    return RunAsync(
+    await RunAsync(
         async () =>
         {
           if (state == RoomState.Ready)
@@ -771,6 +771,11 @@ internal sealed class CollabRoom : IDisposable
           }
         },
         CancellationToken.None);
+
+    // The close above emits the last Left of every session, and dispatch runs
+    // OFF the lane. Returning without it drops exactly the events a graceful
+    // shutdown exists to record.
+    await SettleAsync();
   }
 
   /// <summary>Completes once every lane operation queued before it has run.</summary>
@@ -2559,12 +2564,18 @@ internal sealed class CollabRoom : IDisposable
   {
     state = RoomState.Closed;
 
-    if (reason is not null)
+    foreach (var membership in members)
     {
-      foreach (var membership in members)
+      if (reason is not null)
       {
         CloseMember(membership, reason.Value);
       }
+
+      // The clear below is the only end these sessions get. Without this a
+      // drain, a reset or a commit failure leaves every Joined unpaired, and a
+      // host reconstructing "who is here" holds those people in the document
+      // for good. A member that left on its own is already out of this set.
+      RecordActivityLocked(membership.Member.ActorId, CollabActivityKind.Left);
     }
 
     members.Clear();

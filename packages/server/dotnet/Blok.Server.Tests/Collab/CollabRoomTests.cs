@@ -4525,6 +4525,94 @@ public sealed class CollabRoomTests
         entry => entry.Contains("activity observer failed", StringComparison.Ordinal));
   }
 
+  /// <summary>
+  /// A close CLEARS the member set with no per-member leave, so without a hook
+  /// there every Joined it holds is stranded and a host keeps those people in
+  /// the document forever.
+  /// </summary>
+  [Fact]
+  public async Task ARoomThatClosesOnACommitFailureReportsLeftForEveryMember()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateActivityManager(journalled: true);
+    var writer = V2Member("user-1");
+    var reader = new FakeMember(canWrite: false, actorId: "user-2");
+    var membership = await Join(manager, writer);
+    await Join(manager, reader);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    operations.FailAppends = _ => new IOException("the journal is down");
+
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, update),
+        CancellationToken.None);
+
+    // The manager forgets a closed room, so its settle has nothing to drain
+    // here and the record count is the only seam.
+    await activity.WaitForAsync(4).WaitAsync(TimeSpan.FromSeconds(10));
+
+    Assert.Equal([CollabCloseReason.CommitUnavailable], writer.Closes);
+    Assert.Equal([CollabCloseReason.CommitUnavailable], reader.Closes);
+    Assert.Collection(
+        activity.Records
+            .Where(record => record.Kind == CollabActivityKind.Left)
+            .Select(record => record.ActorId)
+            .OrderBy(actor => actor, StringComparer.Ordinal),
+        actor => Assert.Equal("user-1", actor),
+        actor => Assert.Equal("user-2", actor));
+  }
+
+  /// <summary>
+  /// The drain awaits the dispatch itself, so this list is exact rather than a
+  /// snapshot — which is also what proves the anonymous member's silence is
+  /// the null-actor rule and not a race. Its close reason proves the room
+  /// walked it.
+  /// </summary>
+  [Fact]
+  public async Task ADrainReportsLeftForEveryVerifiedMemberItStillHeld()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateActivityManager();
+    var member = new FakeMember(actorId: "user-1");
+    var anonymous = new FakeMember();
+    await Join(manager, member);
+    await Join(manager, anonymous);
+
+    await manager.DrainAsync(CancellationToken.None);
+
+    Assert.Collection(
+        activity.Records,
+        record => Assert.Equal(CollabActivityKind.Joined, record.Kind),
+        record =>
+        {
+          Assert.Equal(CollabActivityKind.Left, record.Kind);
+          Assert.Equal("user-1", record.ActorId);
+          Assert.Equal(time.GetUtcNow(), record.At);
+        });
+    Assert.Equal([CollabCloseReason.Draining], member.Closes);
+    Assert.Equal([CollabCloseReason.Draining], anonymous.Closes);
+  }
+
+  [Fact]
+  public async Task AMemberThatLeftIsNotReportedLeftAgainWhenTheRoomCloses()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateActivityManager();
+    var member = new FakeMember(actorId: "user-1");
+    var membership = await Join(manager, member);
+
+    await membership.LeaveAsync();
+    await manager.DrainAsync(CancellationToken.None);
+
+    Assert.Collection(
+        activity.Records,
+        record => Assert.Equal(CollabActivityKind.Joined, record.Kind),
+        record => Assert.Equal(CollabActivityKind.Left, record.Kind));
+
+    // Never closed by the room: it was already out of the member set.
+    Assert.Empty(member.Closes);
+  }
+
   [Fact]
   public async Task WithNoObserverAnActivityFrameChangesNothing()
   {

@@ -9,7 +9,12 @@ public enum CollabActivityKind
   /// <summary>The member said it is still there without writing anything.</summary>
   Active,
 
-  /// <summary>The member's write was journalled.</summary>
+  /// <summary>
+  /// The member's write was journalled. Reported only where an
+  /// <see cref="ICollabOperationStore"/> is registered, because it is raised
+  /// where a committed operation is journalled; without a store an editing
+  /// person still surfaces as <see cref="Active"/>.
+  /// </summary>
   Edited,
 
   /// <summary>The member's connection left the document's room.</summary>

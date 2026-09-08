@@ -385,7 +385,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Callout',
     description:
-      'A container block for highlighted content with an emoji icon. It supports customisable text and background colours via a colour picker.\n\nChild blocks are nested inside the callout. It is useful for tips, warnings, notes, and other call-to-action content.\n\nEnter adds a line inside the panel. Pressing it again on the empty last line leaves the callout, so the blank line becomes the paragraph below instead of padding the panel out.',
+      'A container block for highlighted content with an emoji icon. It supports customisable text and background colours via a colour picker. In the emoji picker, category buttons show their names after a brief hover or on keyboard focus.\n\nChild blocks are nested inside the callout. It is useful for tips, warnings, notes, and other call-to-action content.\n\nEnter adds a line inside the panel. Pressing it again on the empty last line leaves the callout, so the blank line becomes the paragraph below instead of padding the panel out.',
     importExample: `import { Callout } from '@bloklabs/core/tools';`,
     configOptions: [
       {

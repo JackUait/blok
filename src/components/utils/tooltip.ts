@@ -516,6 +516,12 @@ class Tooltip {
    * cancels it so brief exits do not flicker the bubble.
    */
   private scheduleGraceHide(): void {
+    // A delayed reveal would cancel this hide after the pointer has left.
+    if (this.showingTimeout) {
+      clearTimeout(this.showingTimeout);
+      this.showingTimeout = null;
+    }
+
     this.cancelGraceHide();
 
     this.graceHideTimeout = setTimeout(() => {

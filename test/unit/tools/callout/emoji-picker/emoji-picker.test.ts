@@ -768,7 +768,7 @@ describe('EmojiPicker', () => {
       }
     });
 
-    it('uses i18n-translated text for nav button tooltips and aria-labels', async () => {
+    it('keeps translated nav aria-labels without native browser tooltips', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
       const i18nSpy = vi.fn((k: string) => `[translated:${k}]`);
       const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: i18nSpy }, locale: 'en' });
@@ -783,8 +783,7 @@ describe('EmojiPicker', () => {
         const title = btn.getAttribute('title');
         const ariaLabel = btn.getAttribute('aria-label');
 
-        // Should be translated, not hardcoded English
-        expect(title).toContain('[translated:');
+        expect(title).toBeNull();
         expect(ariaLabel).toContain('[translated:');
       }
     });

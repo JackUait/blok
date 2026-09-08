@@ -1082,7 +1082,7 @@ export class EmojiPicker {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.innerHTML = catIcon;
-      btn.title = catLabel;
+      onHover(btn, catLabel, { placement: 'top', delay: 300 });
       btn.setAttribute('aria-label', catLabel);
       btn.setAttribute('data-emoji-nav', catId);
       btn.className = [
@@ -1094,7 +1094,10 @@ export class EmojiPicker {
         'theme-dark:hover:bg-neutral-800',
         'transition-all duration-100',
       ].join(' ');
-      btn.addEventListener('click', () => this.scrollToSection(catId));
+      btn.addEventListener('click', () => {
+        hideTooltip();
+        this.scrollToSection(catId);
+      });
 
       this._nav.appendChild(btn);
       this._navButtons.set(catId, btn);
@@ -1191,6 +1194,7 @@ export class EmojiPicker {
   }
 
   private handleFilterChange(query: string): void {
+    hideTooltip();
     this._scrollDestination = null;
     this._clearSearchButton.hidden = query.length === 0;
     this._body.scrollTop = 0;

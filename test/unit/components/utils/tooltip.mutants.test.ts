@@ -516,7 +516,7 @@ describe('Tooltip utility — mutation coverage', () => {
       expect(wrapper.getAttribute('aria-hidden')).toBe('true');
     });
 
-    it('cancels a grace hide that was armed while the show delay was still running', () => {
+    it('cancels a pending reveal on leave and gives reentry a fresh delay', () => {
       vi.useFakeTimers();
 
       const anchor = createAnchor({ left: 10,
@@ -524,7 +524,7 @@ describe('Tooltip utility — mutation coverage', () => {
         width: 100,
         height: 40 });
 
-      onHover(anchor, 'reveal cancels grace', { delay: 100 });
+      onHover(anchor, 'delayed reentry', { delay: 100 });
       dispatchHover(anchor, 'mouse');
 
       vi.advanceTimersByTime(50);
@@ -533,12 +533,19 @@ describe('Tooltip utility — mutation coverage', () => {
 
       const wrapper = requireWrapper();
 
+      expect(wrapper.getAttribute('aria-hidden')).toBe('true');
+
+      dispatchHover(anchor, 'mouse');
+      vi.advanceTimersByTime(99);
+
+      expect(wrapper.getAttribute('aria-hidden')).toBe('true');
+
+      vi.advanceTimersByTime(1);
+
       expect(wrapper.getAttribute('aria-hidden')).toBe('false');
 
       vi.advanceTimersByTime(60);
 
-      // The grace timer armed at 50ms would land at 150ms; the reveal at 100ms
-      // has to disarm it or the bubble blinks out right after opening.
       expect(wrapper.getAttribute('aria-hidden')).toBe('false');
     });
 

@@ -695,6 +695,13 @@ internal sealed class RecordingActivityObserver : ICollabActivityObserver
   /// <summary>While set, every call throws it. The room must survive that.</summary>
   internal Exception? Failure { get; set; }
 
+  /// <summary>
+  /// While set, every call stays inside <see cref="RecordAsync"/> until it is
+  /// completed. This is how a SLOW host is modelled; a throwing one returns in
+  /// microseconds and proves nothing about the lane.
+  /// </summary>
+  internal TaskCompletionSource? Gate { get; set; }
+
   internal IReadOnlyList<CollabActivityRecord> Records
   {
     get
@@ -730,7 +737,7 @@ internal sealed class RecordingActivityObserver : ICollabActivityObserver
       throw failure;
     }
 
-    return ValueTask.CompletedTask;
+    return Gate is { } gate ? new ValueTask(gate.Task) : ValueTask.CompletedTask;
   }
 
   /// <summary>

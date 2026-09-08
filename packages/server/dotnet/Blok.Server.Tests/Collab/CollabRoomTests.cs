@@ -4526,6 +4526,111 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// The property the whole off-lane seam exists for, and the only test that
+  /// measures it: running the observer UNDER the lane passes every other test
+  /// here, because the throwing one returns in microseconds. This one hangs
+  /// instead, so its waits are bounded and it fails rather than wedging.
+  /// </summary>
+  [Fact]
+  public async Task AnObserverStillInsideRecordAsyncDoesNotHoldTheLane()
+  {
+    endpoint.Holds(DocId, "hello");
+    var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    activity.Gate = gate;
+    var manager = CreateActivityManager();
+    var member = new FakeMember(actorId: "user-1");
+    var membership = await Join(manager, member).WaitAsync(TimeSpan.FromSeconds(10));
+
+    // The record is added before the gate is returned, so once it appears the
+    // observer is inside RecordAsync and staying there.
+    await activity.WaitForAsync(1).WaitAsync(TimeSpan.FromSeconds(10));
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncStep1Frame(YDocs.StateVector(YDocs.NewClient()))),
+        CancellationToken.None)
+        .AsTask()
+        .WaitAsync(TimeSpan.FromSeconds(10));
+
+    Assert.Contains(member.Received, frame => frame is SyncStep2Frame);
+    Assert.False(gate.Task.IsCompleted);
+
+    gate.SetResult();
+    await manager.SettleAsync();
+  }
+
+  /// <summary>
+  /// DrainAsync's own contract is that no sick dependency holds the shutdown
+  /// open, and the observer is the one dependency here with no token of its
+  /// own — so the wait for the final Left events is bounded and then
+  /// abandoned.
+  /// </summary>
+  [Fact]
+  public async Task ADrainAbandonsAnActivityObserverThatNeverCompletes()
+  {
+    endpoint.Holds(DocId, "hello");
+    var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    activity.Gate = gate;
+    var manager = CreateActivityManager();
+    await Join(manager, new FakeMember(actorId: "user-1"))
+        .WaitAsync(TimeSpan.FromSeconds(10));
+    await activity.WaitForAsync(1).WaitAsync(TimeSpan.FromSeconds(10));
+
+    var drain = manager.DrainAsync(CancellationToken.None).AsTask();
+
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(2),
+        () => drain.IsCompleted,
+        "the drain to abandon the stuck activity observer");
+    await drain;
+
+    Assert.False(gate.Task.IsCompleted);
+    Assert.Contains(
+        log,
+        entry => entry.Contains("abandoned its activity dispatch", StringComparison.Ordinal));
+
+    gate.SetResult();
+  }
+
+  /// <summary>
+  /// Joined and Left are exempt from the 60-second window, so nothing else
+  /// bounds the queue: a client flapping against a slow host would grow it
+  /// without limit.
+  /// </summary>
+  [Fact]
+  public async Task TheActivityQueueDropsItsOldestPastTheBound()
+  {
+    endpoint.Holds(DocId, "hello");
+    var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    activity.Gate = gate;
+    var manager = CreateActivityManager();
+
+    // Held inside the observer with the queue empty behind it, so everything
+    // below queues up and the arithmetic is exact.
+    await Join(manager, new FakeMember(actorId: "user-0"))
+        .WaitAsync(TimeSpan.FromSeconds(10));
+    await activity.WaitForAsync(1).WaitAsync(TimeSpan.FromSeconds(10));
+
+    // 258 records against a bound of 256, one join and one leave apiece. The
+    // room never holds two of them at once, so no join broadcasts to another.
+    for (var index = 1; index <= 129; index++)
+    {
+      var flapping = await Join(manager, new FakeMember(actorId: $"user-{index}"));
+      await flapping.LeaveAsync();
+    }
+
+    gate.SetResult();
+    await manager.SettleAsync();
+
+    // user-1's pair is the oldest, so it is the pair that goes.
+    Assert.Equal(257, activity.Records.Count);
+    Assert.DoesNotContain(activity.Records, record => record.ActorId == "user-1");
+    Assert.Contains(
+        log,
+        entry => entry.Contains("the activity observer is behind", StringComparison.Ordinal));
+  }
+
+  /// <summary>
   /// A close CLEARS the member set with no per-member leave, so without a hook
   /// there every Joined it holds is stranded and a host keeps those people in
   /// the document forever.

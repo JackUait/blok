@@ -12,6 +12,15 @@ namespace Blok.Server.Collab;
 /// <param name="Clock">The clock every peer holds that client at.</param>
 internal readonly record struct AwarenessOwner(CollabMembership Membership, ulong Clock);
 
+/// <summary>One activity record the room owes the host observer.</summary>
+/// <param name="Actor">The verified actor; never null, the room drops those before queueing.</param>
+/// <param name="At">The server's clock when the room observed it.</param>
+/// <param name="Kind">What the member did.</param>
+internal readonly record struct PendingActivity(
+    string Actor,
+    DateTimeOffset At,
+    CollabActivityKind Kind);
+
 /// <summary>
 /// A member's handle onto its room; the sync endpoint pumps inbound frames
 /// through <see cref="ReceiveAsync"/> and calls <see cref="LeaveAsync"/> when
@@ -91,6 +100,15 @@ internal sealed class CollabRoom : IDisposable
   /// </summary>
   private static readonly TimeSpan ActivityWindow = TimeSpan.FromSeconds(60);
 
+  /// <summary>
+  /// Activity records the room holds for a host that is behind. Joined and
+  /// Left are deliberately exempt from <see cref="ActivityWindow"/>, so
+  /// nothing else bounds this: a client in a reconnect loop produces a pair
+  /// per attempt for as long as it flaps. Sized comfortably past any real
+  /// room's member count, so a mass disconnect is still delivered whole.
+  /// </summary>
+  private const int ActivityQueueLimit = 256;
+
   private static readonly byte[] QueryAwareness =
       SyncWire.Encode(new QueryAwarenessFrame());
 
@@ -121,6 +139,13 @@ internal sealed class CollabRoom : IDisposable
   /// </summary>
   private readonly Dictionary<string, DateTimeOffset> activityStamps =
       new(StringComparer.Ordinal);
+
+  /// <summary>
+  /// Activity the host has not been told about yet, oldest first. Guarded by
+  /// its OWN lock rather than the lane, because the pump that drains it runs
+  /// off the lane and must never take it.
+  /// </summary>
+  private readonly Queue<PendingActivity> activityQueue = new();
 
   /// <summary>Scratch for the structural walk of one inbound awareness frame; reused, never escapes the lane.</summary>
   private readonly List<AwarenessEntry> awarenessScratch = [];
@@ -193,11 +218,11 @@ internal sealed class CollabRoom : IDisposable
   private Task<string?>? inFlightSave;
   private bool disposed;
 
-  // The room's observer calls, chained so one is in flight at a time and the
-  // host sees them in the order the room made them. Never faults: the
-  // continuation swallows everything, and a faulted tail would poison every
-  // later call. Written under the lane, awaited off it.
+  // The pump draining activityQueue, and whether one is running. Both guarded
+  // by activityQueue's lock, never by the lane. One pump at a time is what
+  // makes the host see a room's activity in the order the room produced it.
   private Task activityDispatch = Task.CompletedTask;
+  private bool activityPumping;
 
   internal CollabRoom(
       string docId,
@@ -772,23 +797,43 @@ internal sealed class CollabRoom : IDisposable
         },
         CancellationToken.None);
 
-    // The close above emits the last Left of every session, and dispatch runs
-    // OFF the lane. Returning without it drops exactly the events a graceful
-    // shutdown exists to record.
-    await SettleAsync();
+    // The close above emits the last Left of every session and the pump runs
+    // OFF the lane, so waiting is what makes a graceful shutdown deliver them.
+    // BOUNDED, and abandoned past the bound, in the shape of the session
+    // release in CloseRoomLocked: this method's whole contract is that no sick
+    // dependency holds the shutdown open, and the host observer is the one
+    // dependency here that carries no token of its own.
+    try
+    {
+      await SettleAsync().WaitAsync(options.CommitTimeout, timeProvider);
+    }
+    catch (TimeoutException)
+    {
+      log?.Invoke(
+          $"collab: room \"{DocId}\" abandoned its activity dispatch while draining");
+    }
   }
 
-  /// <summary>Completes once every lane operation queued before it has run.</summary>
+  /// <summary>
+  /// Completes once every lane operation queued before it has run AND the
+  /// activity those operations handed to the host has been delivered. That
+  /// second half awaits HOST code and carries no bound of its own, so a caller
+  /// that must not hang has to bound it — <see cref="DrainAsync"/> does.
+  /// </summary>
   internal async Task SettleAsync()
   {
-    // Activity is dispatched OFF the lane, so draining the lane alone would
-    // race the observer calls it queued — including the ones a test asserts
-    // never happened. Read under the lane so the tail is the final one.
-    var pendingActivity = await RunAsync<Task>(
-        () => Task.FromResult(activityDispatch),
-        CancellationToken.None);
+    await RunAsync(() => Task.CompletedTask, CancellationToken.None);
 
-    await pendingActivity;
+    Task pending;
+
+    // Read AFTER the lane pass: every enqueue a queued operation makes has
+    // happened by then, so this is the pump that will drain them.
+    lock (activityQueue)
+    {
+      pending = activityDispatch;
+    }
+
+    await pending;
   }
 
   /// <summary>
@@ -915,24 +960,94 @@ internal sealed class CollabRoom : IDisposable
       activityStamps[actor] = at;
     }
 
-    var previous = activityDispatch;
-    var docId = DocId;
-    var logger = log;
+    PendingActivity? dropped = null;
 
-    activityDispatch = Task.Run(async () =>
+    lock (activityQueue)
     {
-      await previous;
+      if (activityQueue.Count == ActivityQueueLimit)
+      {
+        // The OLDEST goes, not the newest. Past the bound the host is behind
+        // reality, and the newest records are the ones that say who is in the
+        // document NOW: dropping a stale Joined leaves nobody stuck, while
+        // dropping the Left that ends it would.
+        dropped = activityQueue.Dequeue();
+      }
 
-      try
+      activityQueue.Enqueue(new PendingActivity(actor, at, kind));
+
+      if (!activityPumping)
       {
-        await observer.RecordAsync(docId, actor, at, kind, CancellationToken.None);
+        activityPumping = true;
+        activityDispatch = Task.Run(() => PumpActivityAsync(observer));
       }
-      catch (Exception error)
+    }
+
+    if (dropped is { } lost)
+    {
+      // Outside the lock: this is the host's logger, and it must not be able
+      // to leave the queue half-updated.
+      log?.Invoke(
+          $"collab: room \"{DocId}\" dropped a {lost.Kind} record for \"{lost.Actor}\"; " +
+          "the activity observer is behind");
+    }
+  }
+
+  /// <summary>
+  /// Drains <see cref="activityQueue"/> on the pool, one call at a time so the
+  /// host sees a room's activity in the order the room produced it. It NEVER
+  /// takes the lane — that is the entire point of the seam, and a host that
+  /// blocks in here must not stop the document.
+  /// </summary>
+  private async Task PumpActivityAsync(ICollabActivityObserver observer)
+  {
+    try
+    {
+      while (true)
       {
-        logger?.Invoke(
-            $"collab: room \"{docId}\" activity observer failed: {error.Message}");
+        PendingActivity next;
+
+        lock (activityQueue)
+        {
+          if (activityQueue.Count == 0)
+          {
+            // Cleared under the same lock that would start the next pump, or
+            // an enqueue racing this exit would find the flag set and queue
+            // its record with nothing left to drain it.
+            activityPumping = false;
+
+            return;
+          }
+
+          next = activityQueue.Dequeue();
+        }
+
+        try
+        {
+          await observer.RecordAsync(
+              DocId,
+              next.Actor,
+              next.At,
+              next.Kind,
+              CancellationToken.None);
+        }
+        catch (Exception error)
+        {
+          log?.Invoke(
+              $"collab: room \"{DocId}\" activity observer failed: {error.Message}");
+        }
       }
-    });
+    }
+    catch (Exception)
+    {
+      // Nothing above is meant to reach here; the host's own logger is the one
+      // thing that could, and it cannot be trusted to report itself. Clearing
+      // the flag is what matters — left set, this room's activity would be
+      // dead for the rest of its life.
+      lock (activityQueue)
+      {
+        activityPumping = false;
+      }
+    }
   }
 
   /// <summary>

@@ -2273,6 +2273,13 @@ internal sealed class CollabRoom : IDisposable
     // price: it charges an awareness frame for one verbatim relay per member.
     var changed = false;
 
+    // Counted here, logged ONCE below. A frame carrying 256 fabricated ids is
+    // well-formed, is relayed normally and trips no expel path, so a per-entry
+    // log is the same amplification the coalesced broadcast just removed — one
+    // 3.6 KB frame would buy 256 lines, and the awareness-byte budget admits
+    // dozens of those a second.
+    var skipped = 0;
+
     foreach (var entry in entries)
     {
       // Fabricated ids never reach the map. The frame itself is still relayed
@@ -2282,9 +2289,7 @@ internal sealed class CollabRoom : IDisposable
       // would go dark permanently. A stock Yjs client id is uint32.
       if (entry.ClientId > SyncWire.MaxAwarenessClientId)
       {
-        log?.Invoke(
-            $"collab: room \"{DocId}\" ignored an awareness client id past the safe-integer " +
-            $"ceiling ({entry.ClientId})");
+        skipped++;
 
         continue;
       }
@@ -2318,6 +2323,13 @@ internal sealed class CollabRoom : IDisposable
         awarenessOwners[entry.ClientId] = new AwarenessOwner(membership, entry.Clock);
         changed |= membership.Member.ActorId is not null;
       }
+    }
+
+    if (skipped > 0)
+    {
+      log?.Invoke(
+          $"collab: room \"{DocId}\" ignored {skipped} awareness client id(s) past the " +
+          $"safe-integer ceiling in one frame");
     }
 
     // Only a change to the VERIFIED view is worth a frame: an

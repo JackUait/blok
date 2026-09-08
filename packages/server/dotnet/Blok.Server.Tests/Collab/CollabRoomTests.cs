@@ -4512,6 +4512,32 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// One line per FRAME, not per entry. A frame full of fabricated ids is
+  /// well-formed, is relayed normally and trips no expel path, so a per-entry
+  /// log is the amplification the coalesced identities broadcast just removed,
+  /// one layer down: 256 ids fit a 3.6 KB frame, and the awareness-byte budget
+  /// admits dozens of those a second.
+  /// </summary>
+  [Fact]
+  public async Task AFrameOfFabricatedClientIdsIsLoggedOncePerFrameWithItsCount()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var membership = await Join(manager, new FakeMember(actorId: "user-1"));
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(
+            AwarenessForBoth((1UL << 53, 1), ((1UL << 53) + 1, 1)))),
+        CancellationToken.None);
+
+    var line = Assert.Single(
+        log,
+        entry => entry.Contains("safe-integer ceiling", StringComparison.Ordinal));
+
+    Assert.Contains("ignored 2 awareness client id", line, StringComparison.Ordinal);
+  }
+
+  /// <summary>
   /// The last id below the ceiling still binds, so the guard above is a
   /// boundary and not a blanket refusal of large ids.
   /// </summary>

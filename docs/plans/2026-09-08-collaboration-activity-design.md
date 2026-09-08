@@ -126,7 +126,7 @@ A new outer message type in Blok's own namespace:
 const MESSAGE_ACTIVITY = 106;   // 105 is taken, see below
 ```
 
-**Not 105.** `scripts/generate-sync-frames.mjs:79` reserves 105 as
+**Not 105.** `scripts/generate-sync-frames.mjs:83` reserves 105 as
 `MESSAGE_UNKNOWN_OUTER`, the sentinel that generates the conformance fixture
 proving an unknown outer type decodes to `UnknownFrame` and is never malformed.
 That guarantee is precisely what makes both new frames safe for old peers, so the

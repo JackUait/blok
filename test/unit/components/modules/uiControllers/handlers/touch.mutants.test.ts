@@ -19,7 +19,7 @@ import {
   getClickedNode,
 } from '../../../../../../src/components/modules/uiControllers/handlers/touch';
 import { PopoverRegistry } from '../../../../../../src/components/utils/popover/popover-registry';
-import type { BlokModules } from '../../../../../../types-internal/blok-modules';
+import type { BlokModules } from '../../../../../../src/types-internal/blok-modules';
 
 interface Fixture {
   redactor: HTMLElement;

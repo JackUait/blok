@@ -347,16 +347,12 @@ internal sealed class CollabRoom : IDisposable
             }
           }
 
-          // The joiner's own first look at who else is verified; later
-          // changes reach it the same way everyone else's do, as a broadcast.
-          // Skipped when empty: a client's own map already starts that way,
-          // so an empty frame would tell it nothing it doesn't already know.
-          var identities = BuildIdentitiesFrameLocked();
-
-          if (identities.Identities.Count > 0)
-          {
-            Send(membership, SyncWire.Encode(identities));
-          }
+          // The joiner's own first look at who else is verified — sent even
+          // when it's empty, so a reconnect always overwrites whatever stale
+          // map the client (a per-editor field, not per-connection) still
+          // holds from before. Later changes reach it the same way everyone
+          // else's do, as a broadcast.
+          Send(membership, SyncWire.Encode(BuildIdentitiesFrameLocked()));
 
           BroadcastLocked(QueryAwareness, membership);
 
@@ -2274,7 +2270,9 @@ internal sealed class CollabRoom : IDisposable
       {
         if (entry.Clock > owner.Clock)
         {
+          var previousActorId = owner.Membership.Member.ActorId;
           awarenessOwners[entry.ClientId] = new AwarenessOwner(membership, entry.Clock);
+          BroadcastIdentitiesIfChangedLocked(membership, previousActorId);
         }
 
         continue;
@@ -2283,15 +2281,22 @@ internal sealed class CollabRoom : IDisposable
       if (ownPublish && awarenessOwners.Count < options.MaxAwarenessClients)
       {
         awarenessOwners[entry.ClientId] = new AwarenessOwner(membership, entry.Clock);
-
-        // Scope: only a brand-new binding broadcasts here. An ownership
-        // transfer in the "known" branch above does not, even where it
-        // changes which actor a clientId maps to.
-        if (membership.Member.ActorId is not null)
-        {
-          BroadcastLocked(SyncWire.Encode(BuildIdentitiesFrameLocked()), null);
-        }
+        BroadcastIdentitiesIfChangedLocked(membership, previousActorId: null);
       }
+    }
+  }
+
+  /// <summary>
+  /// Broadcasts the current identities map, but only when this clientId's
+  /// owner change actually altered it — an anonymous-to-anonymous transfer,
+  /// or a reconnect under the same ActorId, leaves the verified view exactly
+  /// as it was and earns no broadcast.
+  /// </summary>
+  private void BroadcastIdentitiesIfChangedLocked(CollabMembership newOwner, string? previousActorId)
+  {
+    if (newOwner.Member.ActorId != previousActorId)
+    {
+      BroadcastLocked(SyncWire.Encode(BuildIdentitiesFrameLocked()), null);
     }
   }
 

@@ -256,8 +256,7 @@ public sealed class SyncHandshakeTests
     Assert.Null(client.SubProtocol);
     var doc = YDocs.NewClient();
     await client.SendAsync(new SyncStep1Frame(YDocs.StateVector(doc)));
-    var first = await client.ReceiveAsync();
-    var step2 = Assert.IsType<SyncStep2Frame>(first);
+    var step2 = await client.ReceiveAsync<SyncStep2Frame>();
     YDocs.Apply(doc, step2.Update);
     Assert.Equal("seeded", YDocs.Text(doc));
     await client.ReceiveAsync<SyncStep1Frame>();

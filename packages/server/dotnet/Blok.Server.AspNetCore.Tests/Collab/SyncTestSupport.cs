@@ -700,8 +700,9 @@ internal sealed class SyncClient(WebSocket socket) : IAsyncDisposable
 
   /// <summary>
   /// The next frame of type <typeparamref name="T"/>. Join-time queryAwareness
-  /// broadcasts from other members are skipped unless that is what is asked
-  /// for — they may land between any two frames.
+  /// broadcasts from other members, and every join's own identities frame,
+  /// are skipped unless that is what is asked for — they may land between
+  /// any two frames.
   /// </summary>
   internal async Task<T> ReceiveAsync<T>() where T : SyncWireMessage
   {
@@ -710,6 +711,11 @@ internal sealed class SyncClient(WebSocket socket) : IAsyncDisposable
       var message = await ReceiveAsync();
 
       if (message is QueryAwarenessFrame && typeof(T) != typeof(QueryAwarenessFrame))
+      {
+        continue;
+      }
+
+      if (message is IdentitiesFrame && typeof(T) != typeof(IdentitiesFrame))
       {
         continue;
       }

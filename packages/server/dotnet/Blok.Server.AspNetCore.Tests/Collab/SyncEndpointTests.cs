@@ -717,6 +717,7 @@ public sealed class SyncEndpointTests
         v2Frames,
         frame => Assert.IsType<BlokControlFrame>(frame),
         frame => Assert.IsType<BlokLimitsFrame>(frame),
+        frame => Assert.IsType<IdentitiesFrame>(frame),
         frame => Assert.IsType<SyncStep2Frame>(frame),
         frame => Assert.IsType<SyncStep1Frame>(frame));
     Assert.Equal(v1Frames.Select(SyncWire.Encode), v2Frames.Select(SyncWire.Encode));
@@ -928,18 +929,19 @@ public sealed class SyncEndpointTests
   }
 
   /// <summary>
-  /// The join frames in order — control, limits, then the SyncStep2 and
-  /// SyncStep1 that one SyncStep1 earns. Raw receives: the type-filtering
-  /// overload skips a join-time queryAwareness, which is exactly the frame a
-  /// v2-only greeting would hide behind.
+  /// The join frames in order — control, limits, identities, then the
+  /// SyncStep2 and SyncStep1 that one SyncStep1 earns. Raw receives: the
+  /// type-filtering overload skips a join-time queryAwareness, which is
+  /// exactly the frame a v2-only greeting would hide behind.
   /// </summary>
   private static async Task<SyncWireMessage[]> HandshakeFramesAsync(SyncClient client)
   {
     var control = await client.ReceiveAsync();
     var limits = await client.ReceiveAsync();
+    var identities = await client.ReceiveAsync();
     await client.SendAsync(new SyncStep1Frame(YDocs.StateVector(YDocs.NewClient())));
 
-    return [control, limits, await client.ReceiveAsync(), await client.ReceiveAsync()];
+    return [control, limits, identities, await client.ReceiveAsync(), await client.ReceiveAsync()];
   }
 
   /// <summary>Drives a v2 socket through the handshake and returns the document's lineage.</summary>

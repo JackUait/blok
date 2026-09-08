@@ -36,6 +36,7 @@ public sealed class CollabRoomTests
     var member = new FakeMember();
     var membership = await Join(manager, member);
     var client = YDocs.NewClient();
+    member.Received.Clear();
 
     await membership.ReceiveAsync(
         SyncWire.Encode(new SyncStep1Frame(YDocs.StateVector(client))),
@@ -297,8 +298,10 @@ public sealed class CollabRoomTests
 
     await Join(manager, second);
 
-    Assert.IsType<QueryAwarenessFrame>(Assert.Single(first.Received));
-    Assert.Empty(second.Received);
+    // Predicate-based, not exact: both members also get their own join-time
+    // identities frame, which is not what this test is about.
+    Assert.Single(first.Received, frame => frame is QueryAwarenessFrame);
+    Assert.DoesNotContain(second.Received, frame => frame is QueryAwarenessFrame);
   }
 
   [Fact]
@@ -4368,7 +4371,7 @@ public sealed class CollabRoomTests
   /// so it is not excluded.
   /// </summary>
   [Fact]
-  public async Task BindingANewClientIdBroadcastsADeltaNamingItToEveryoneIncludingTheSender()
+  public async Task BindingANewClientIdBroadcastsTheWholeMapToEveryoneIncludingTheSender()
   {
     endpoint.Holds(DocId, "hello");
     var manager = CreateManager();
@@ -4389,7 +4392,52 @@ public sealed class CollabRoomTests
   }
 
   [Fact]
-  public async Task LeavingBroadcastsADeltaRemovingEveryClientIdTheMemberOwned()
+  public async Task AnAnonymousBindBroadcastsNoIdentitiesFrame()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var membership = await Join(manager, new FakeMember());
+    var observer = new FakeMember();
+    await Join(manager, observer);
+    observer.Received.Clear();
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(42, 3))),
+        CancellationToken.None);
+
+    Assert.DoesNotContain(observer.Received, frame => frame is IdentitiesFrame);
+  }
+
+  /// <summary>
+  /// The "known" branch (a clock advancing on an already-tracked clientId,
+  /// not a fresh binding) also changes the verified view here: the id moves
+  /// from an anonymous owner to a verified one.
+  /// </summary>
+  [Fact]
+  public async Task AnOwnershipTransferFromAnonymousToVerifiedBroadcastsTheChange()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var anonymousMembership = await Join(manager, new FakeMember());
+    await anonymousMembership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(42, 1))),
+        CancellationToken.None);
+    var verifiedMembership = await Join(manager, new FakeMember(actorId: "user-1"));
+    var observer = new FakeMember();
+    await Join(manager, observer);
+    observer.Received.Clear();
+
+    // Same clientId, a higher clock: the "known" branch, not a new binding.
+    await verifiedMembership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(42, 2))),
+        CancellationToken.None);
+
+    var frame = observer.Received.OfType<IdentitiesFrame>().Single();
+    Assert.Equal([new AwarenessIdentity(42, "user-1")], frame.Identities);
+  }
+
+  [Fact]
+  public async Task LeavingBroadcastsTheRemainingMapWithoutTheClientIdsItOwned()
   {
     endpoint.Holds(DocId, "hello");
     var manager = CreateManager();
@@ -4410,6 +4458,25 @@ public sealed class CollabRoomTests
 
     var frame = observer.Received.OfType<IdentitiesFrame>().Single();
     Assert.Equal([new AwarenessIdentity(10, "user-1")], frame.Identities);
+  }
+
+  [Fact]
+  public async Task AnAnonymousMemberLeavingBroadcastsNoIdentitiesFrame()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var leaving = await Join(manager, new FakeMember());
+    var observer = new FakeMember();
+    await Join(manager, observer);
+
+    await leaving.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(42, 3))),
+        CancellationToken.None);
+    observer.Received.Clear();
+
+    await leaving.LeaveAsync();
+
+    Assert.DoesNotContain(observer.Received, frame => frame is IdentitiesFrame);
   }
 
   [Fact]
@@ -4490,6 +4557,7 @@ public sealed class CollabRoomTests
     var manager = CreateActivityManager();
     var member = new FakeMember(actorId: "user-1");
     var membership = await Join(manager, member);
+    member.Received.Clear();
 
     // Moved AFTER the join, so the reported time cannot be the join's or the
     // clock's seed value.
@@ -4938,6 +5006,7 @@ public sealed class CollabRoomTests
     var manager = CreateManager();
     var member = new FakeMember(actorId: "user-1");
     var membership = await Join(manager, member);
+    member.Received.Clear();
 
     await membership.ReceiveAsync(
         SyncWire.Encode(new ActivityFrame()),

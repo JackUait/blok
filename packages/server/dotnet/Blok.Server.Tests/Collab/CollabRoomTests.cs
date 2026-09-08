@@ -4314,6 +4314,131 @@ public sealed class CollabRoomTests
     Assert.Empty(other.Received);
   }
 
+  /// <summary>
+  /// Frame 107: the room's clientId-to-actor map, built from
+  /// <c>awarenessOwners</c> and each owner's verified <see cref="ICollabMember.ActorId"/>.
+  /// </summary>
+  [Fact]
+  public async Task AJoiningMemberReceivesTheFullVerifiedIdentitiesMap()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var named = new FakeMember(actorId: "user-1");
+    var membership = await Join(manager, named);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(42, 3))),
+        CancellationToken.None);
+
+    var joiner = new FakeMember(actorId: "user-2");
+    await Join(manager, joiner);
+
+    var frame = Assert.IsType<IdentitiesFrame>(Assert.Single(joiner.Received));
+    Assert.Equal([new AwarenessIdentity(42, "user-1")], frame.Identities);
+  }
+
+  [Fact]
+  public async Task AMemberWithNoVerifiedIdentityAppearsInNoIdentitiesEntry()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var anonymous = new FakeMember();
+    var anonymousMembership = await Join(manager, anonymous);
+    await anonymousMembership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(42, 3))),
+        CancellationToken.None);
+    var named = new FakeMember(actorId: "user-1");
+    var namedMembership = await Join(manager, named);
+    await namedMembership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(43, 3))),
+        CancellationToken.None);
+
+    var joiner = new FakeMember(actorId: "user-2");
+    await Join(manager, joiner);
+
+    // Names 43 (user-1's), never 42 (the anonymous connection's).
+    var frame = Assert.IsType<IdentitiesFrame>(Assert.Single(joiner.Received));
+    Assert.Equal([new AwarenessIdentity(43, "user-1")], frame.Identities);
+    // Unverified, but still a member: its presence keeps relaying to others.
+    Assert.Empty(anonymous.Closes);
+  }
+
+  /// <summary>
+  /// <c>except: null</c> on this broadcast, unlike the awareness relay right
+  /// beside it: the sender does not already know its own verified mapping,
+  /// so it is not excluded.
+  /// </summary>
+  [Fact]
+  public async Task BindingANewClientIdBroadcastsADeltaNamingItToEveryoneIncludingTheSender()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var named = new FakeMember(actorId: "user-1");
+    var membership = await Join(manager, named);
+    var other = new FakeMember();
+    await Join(manager, other);
+    named.Received.Clear();
+    other.Received.Clear();
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(42, 3))),
+        CancellationToken.None);
+
+    var expected = new[] { new AwarenessIdentity(42, "user-1") };
+    Assert.Equal(expected, Assert.IsType<IdentitiesFrame>(Assert.Single(named.Received)).Identities);
+    Assert.Equal(expected, other.Received.OfType<IdentitiesFrame>().Single().Identities);
+  }
+
+  [Fact]
+  public async Task LeavingBroadcastsADeltaRemovingEveryClientIdTheMemberOwned()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var staying = await Join(manager, new FakeMember(actorId: "user-1"));
+    var leaving = await Join(manager, new FakeMember(actorId: "user-2"));
+    var observer = new FakeMember();
+    await Join(manager, observer);
+
+    await staying.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(10, 1))),
+        CancellationToken.None);
+    await leaving.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(20, 1))),
+        CancellationToken.None);
+    observer.Received.Clear();
+
+    await leaving.LeaveAsync();
+
+    var frame = observer.Received.OfType<IdentitiesFrame>().Single();
+    Assert.Equal([new AwarenessIdentity(10, "user-1")], frame.Identities);
+  }
+
+  [Fact]
+  public async Task TheIdentitiesFrameNeverExceedsTheAwarenessClientCap()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager(new CollabRoomOptions { MaxAwarenessClients = 2 });
+    var first = await Join(manager, new FakeMember(actorId: "user-1"));
+    var second = await Join(manager, new FakeMember(actorId: "user-2"));
+    var third = await Join(manager, new FakeMember(actorId: "user-3"));
+
+    await first.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(1, 1))),
+        CancellationToken.None);
+    await second.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(2, 1))),
+        CancellationToken.None);
+    // Over the cap: dropped from awarenessOwners, so no broadcast either.
+    await third.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(3, 1))),
+        CancellationToken.None);
+
+    var joiner = new FakeMember();
+    await Join(manager, joiner);
+
+    var frame = Assert.IsType<IdentitiesFrame>(Assert.Single(joiner.Received));
+    Assert.Equal(2, frame.Identities.Count);
+  }
+
   [Fact]
   public async Task AJoinReportsTheActorAsJoined()
   {

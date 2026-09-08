@@ -347,6 +347,17 @@ internal sealed class CollabRoom : IDisposable
             }
           }
 
+          // The joiner's own first look at who else is verified; later
+          // changes reach it the same way everyone else's do, as a broadcast.
+          // Skipped when empty: a client's own map already starts that way,
+          // so an empty frame would tell it nothing it doesn't already know.
+          var identities = BuildIdentitiesFrameLocked();
+
+          if (identities.Identities.Count > 0)
+          {
+            Send(membership, SyncWire.Encode(identities));
+          }
+
           BroadcastLocked(QueryAwareness, membership);
 
           return new CollabJoinResult(CollabJoinStatus.Joined, membership, null);
@@ -2272,6 +2283,14 @@ internal sealed class CollabRoom : IDisposable
       if (ownPublish && awarenessOwners.Count < options.MaxAwarenessClients)
       {
         awarenessOwners[entry.ClientId] = new AwarenessOwner(membership, entry.Clock);
+
+        // Scope: only a brand-new binding broadcasts here. An ownership
+        // transfer in the "known" branch above does not, even where it
+        // changes which actor a clientId maps to.
+        if (membership.Member.ActorId is not null)
+        {
+          BroadcastLocked(SyncWire.Encode(BuildIdentitiesFrameLocked()), null);
+        }
       }
     }
   }
@@ -2310,6 +2329,34 @@ internal sealed class CollabRoom : IDisposable
     BroadcastLocked(
         SyncWire.Encode(new AwarenessFrame(SyncWire.EncodeAwarenessRemoval(gone))),
         membership);
+
+    // Every id just withdrawn shared this one owner, so one ActorId check
+    // covers all of them.
+    if (membership.Member.ActorId is not null)
+    {
+      BroadcastLocked(SyncWire.Encode(BuildIdentitiesFrameLocked()), null);
+    }
+  }
+
+  /// <summary>
+  /// The room's client-id-to-actor map right now, entries whose owner
+  /// carries a verified identity only. Always the WHOLE map: the wire has no
+  /// way to name a single removed entry, so every send — first look or
+  /// later change alike — lets the receiver replace what it had wholesale.
+  /// </summary>
+  private IdentitiesFrame BuildIdentitiesFrameLocked()
+  {
+    var identities = new List<AwarenessIdentity>();
+
+    foreach (var (clientId, owner) in awarenessOwners)
+    {
+      if (owner.Membership.Member.ActorId is { } actorId)
+      {
+        identities.Add(new AwarenessIdentity(clientId, actorId));
+      }
+    }
+
+    return new IdentitiesFrame(identities);
   }
 
   private void CloseMember(CollabMembership membership, CollabCloseReason reason)

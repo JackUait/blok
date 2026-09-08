@@ -59,7 +59,7 @@ describe('list dom-builder mutants', () => {
 
   describe('setPlaceholder', () => {
     it('installs a getter that cannot be reassigned, redefined or hidden', () => {
-      const el = document.createElement('div');
+      const el: HTMLElement = document.createElement('div');
 
       setPlaceholder(el, 'Type here');
 

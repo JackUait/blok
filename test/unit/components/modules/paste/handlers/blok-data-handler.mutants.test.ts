@@ -481,6 +481,30 @@ describe('BlokDataHandler — mutation coverage', () => {
       ]);
     });
 
+    it('lets the identified table own a cell an id-less table also references', async () => {
+      const harness = createHarness();
+      const handler = createHandler(harness);
+
+      // A table with no id can own nothing. Recording its references anyway
+      // would claim the child first and lock out the table that really owns it.
+      await handler.handle(JSON.stringify([
+        { tool: 'table',
+          data: { content: [[{ blocks: ['c1'] }]] } },
+        { id: 't2',
+          tool: 'table',
+          data: { content: [[{ blocks: ['c1'] }]] } },
+        { id: 'c1',
+          tool: 'paragraph',
+          data: { text: 'C' } },
+      ]), { canReplaceCurrentBlock: false });
+
+      expect(harness.inserts.map(insert => insert.tool)).toEqual(['paragraph', 'table', 'table']);
+      expect(harness.parentCalls).toEqual([
+        { blockId: harness.blocks[0].id,
+          parentId: harness.blocks[2].id },
+      ]);
+    });
+
     it('ignores cell references that are not strings', async () => {
       const harness = createHarness();
       const handler = createHandler(harness);

@@ -48,7 +48,7 @@ describe('file empty state mutants', () => {
     renderEmptyState({
       acceptTypes: ['application/pdf', 'text/plain'],
       maxSize: 4096,
-      sources: 'file',
+      sources: 'upload',
       i18n: echoI18n(),
       onFile: vi.fn(),
       onUrl: vi.fn(),
@@ -56,7 +56,7 @@ describe('file empty state mutants', () => {
 
     expect(passed().acceptTypes).toStrictEqual(['application/pdf', 'text/plain']);
     expect(passed().maxSize).toBe(4096);
-    expect(passed().sources).toBe('file');
+    expect(passed().sources).toBe('upload');
   });
 
   it('hands the callbacks on unwrapped', () => {
@@ -70,8 +70,9 @@ describe('file empty state mutants', () => {
   });
 
   it('returns whatever the shared empty state built', () => {
-    const built = document.createElement('section');
+    const built = document.createElement('div');
 
+    built.setAttribute('data-built-by', 'shared-empty-state');
     media.render.mockReturnValueOnce(built);
 
     expect(renderEmptyState({ acceptTypes: [], i18n: echoI18n(), onFile: vi.fn(), onUrl: vi.fn() })).toBe(built);

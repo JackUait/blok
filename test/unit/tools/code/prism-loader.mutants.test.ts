@@ -356,17 +356,24 @@ describe('prism-loader', () => {
       expect(await mermaid('graph TD')).toBe('<span class="token diagram-name">graph</span> <span class="token keyword">TD</span>');
     });
 
-    // Last in the file: the deleted grammar cannot be put back, because the
-    // component that registers it only ever evaluates once per process.
     it('returns null and warns when Prism throws while highlighting', async () => {
       await tokenizePrism('<?php echo "hi";', 'php');
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
       // php reaches for this grammar from a before-tokenize hook on every run.
+      // Prism's registry is process-wide and its components evaluate once, so
+      // the entry has to be handed back or php stops highlighting for every
+      // later test file sharing this worker.
+      const templating = Prism.languages['markup-templating'];
+
       delete Prism.languages['markup-templating'];
 
-      expect(await tokenizePrism('<?php echo "hi";', 'php')).toBeNull();
-      expect(warn).toHaveBeenCalledWith('[blok] Prism highlight error for "php":', expect.anything());
+      try {
+        expect(await tokenizePrism('<?php echo "hi";', 'php')).toBeNull();
+        expect(warn).toHaveBeenCalledWith('[blok] Prism highlight error for "php":', expect.anything());
+      } finally {
+        Prism.languages['markup-templating'] = templating;
+      }
     });
   });
 });

@@ -141,6 +141,26 @@ const trackStyleWrites = (el: HTMLElement, property: 'marginTop' | 'paddingBotto
   return writes;
 };
 
+/**
+ * The ghost's position is written twice per move: once while the element is
+ * built, then again by the follow-the-cursor pass. Only the state at insertion
+ * time shows whether it was placed before it reached the page.
+ */
+const ghostPositionsAtInsert = (): Array<{ left: string; top: string }> => {
+  const seen: Array<{ left: string; top: string }> = [];
+  const append = Node.prototype.appendChild;
+
+  vi.spyOn(document.body, 'appendChild').mockImplementation(<T extends Node>(node: T): T => {
+    if (node instanceof HTMLElement && node.hasAttribute('data-blok-database-ghost')) {
+      seen.push({ left: node.style.left, top: node.style.top });
+    }
+
+    return append.call(document.body, node) as T;
+  });
+
+  return seen;
+};
+
 const assertClean = (board: Board): void => {
   expect(ghost()).toBeNull();
   expect(cardOf(board, 'a1').style.opacity).toBe('');
@@ -271,6 +291,25 @@ describe('database card drag mutants', () => {
       startDrag(board);
 
       expect(board.wrapper.getAttribute('data-blok-database-dragging')).toBe('');
+    });
+
+    it('is placed under the cursor before it reaches the page', () => {
+      const board = buildBoard(TWO_COLUMNS);
+      const inserted = ghostPositionsAtInsert();
+
+      startDrag(board);
+
+      expect(inserted).toEqual([{ left: '130px', top: '50px' }]);
+    });
+
+    it('is placed on the cursor before it reaches the page when the card is missing', () => {
+      const board = buildBoard(TWO_COLUMNS);
+      const inserted = ghostPositionsAtInsert();
+
+      board.drag.beginTracking('gone', START_X, START_Y);
+      document.dispatchEvent(pointer('pointermove', 170, 80));
+
+      expect(inserted).toEqual([{ left: '170px', top: '80px' }]);
     });
 
     it('sits on the cursor itself when the dragged card is missing', () => {
@@ -489,6 +528,16 @@ describe('database card drag mutants', () => {
         beforeRowId: null,
         afterRowId: 'b2',
       });
+    });
+
+    it('reports nothing when the drop lands left of the first column', () => {
+      const board = buildBoard(TWO_COLUMNS);
+
+      startDrag(board, COLUMN_LEFT - 50, 200);
+      document.dispatchEvent(pointer('pointerup', COLUMN_LEFT - 50, 200));
+
+      expect(board.onDrop).not.toHaveBeenCalled();
+      assertClean(board);
     });
 
     it('reports nothing and cleans up when the drop lands outside every column', () => {

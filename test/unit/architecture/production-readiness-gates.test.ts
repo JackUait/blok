@@ -349,6 +349,18 @@ describe('production readiness gates', () => {
     );
   });
 
+  // The pin policy walks into composite actions, and this repository cannot see
+  // that far: `actions/upload-pages-artifact` v3 called `actions/upload-artifact@v4`
+  // in its own action.yml, so "Set up job" rejected Build Docs for eight days
+  // while every reference written here was pinned and CI stayed green. The gate
+  // has to read the upstream definitions, so it runs as a workflow step.
+  it('checks the pins of the actions our actions use', () => {
+    const step = job(workflow('.github/workflows/ci.yml'), 'workflow-lint')
+      .steps?.find(candidate => candidate.run?.includes('check-action-pins.mjs'));
+
+    expect(step?.run).toContain('node scripts/check-action-pins.mjs');
+  });
+
   it('cleans temporary npm credentials on every exit', () => {
     const release = read('scripts/release.mjs');
 

@@ -85,6 +85,18 @@ jobs:
           version: 1.7.7
           fail-on-error: true
 
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      # actionlint only reads the files in this repository. It cannot see that a
+      # pinned action's own action.yml calls something unpinned, which is what
+      # GitHub rejects at "Set up job". Reads the upstream definitions, so it
+      # needs the network.
+      - name: Check nested action pins
+        run: node scripts/check-action-pins.mjs
+
   frontend-coverage:
     name: Frontend Coverage
     needs: [unit-tests]

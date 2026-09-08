@@ -225,6 +225,13 @@ describe('native keyboard in color submenus', () => {
     if (colorItem === null) {
       throw new Error('Missing cell color action');
     }
+    /**
+     * The pill only opens on pointerdown, which leaves the modality tracker in
+     * pointer mode where the tab is deliberately NOT focused. This test covers
+     * the keyboard path, so hand the tracker a key first; the pointer path
+     * lives in color-picker-focus-modality.test.ts.
+     */
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }));
     fireEvent.click(colorItem);
     await Promise.resolve();
 

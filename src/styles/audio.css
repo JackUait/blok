@@ -531,7 +531,7 @@
   transition: width var(--blok-duration-slow) ease, opacity var(--blok-duration-slow) ease;
 }
 [data-blok-tool="audio"] .blok-audio-controls__volume-wrap:hover .blok-audio-controls__volume,
-[data-blok-tool="audio"] .blok-audio-controls__volume-wrap:focus-within .blok-audio-controls__volume {
+[data-blok-tool="audio"] .blok-audio-controls__volume:focus-visible {
   width: 64px;
   opacity: 1;
 }

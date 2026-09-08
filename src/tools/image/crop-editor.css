@@ -207,8 +207,7 @@
 }
 
 .blok-image-crop-editor__rect:hover .blok-image-crop-editor__grid-line,
-.blok-image-crop-editor__rect:active .blok-image-crop-editor__grid-line,
-.blok-image-crop-editor__rect:focus-within .blok-image-crop-editor__grid-line {
+.blok-image-crop-editor__rect:active .blok-image-crop-editor__grid-line {
   opacity: 1;
 }
 

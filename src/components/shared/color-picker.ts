@@ -2,6 +2,7 @@ import type { I18n } from '../../../types/api';
 import { DATA_ATTR } from '../constants/data-attributes';
 import { parseColor } from '../utils/color-mapping';
 import { generateId } from '../utils/id-generator';
+import { isKeyboardModality } from '../utils/input-modality';
 import { onHover } from '../utils/tooltip';
 import { twMerge } from '../utils/tw';
 import { COLOR_PRESETS, COLOR_PRESETS_DARK } from './color-presets';
@@ -403,7 +404,12 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
       modeTabs[index].tabIndex = active ? 0 : -1;
     });
 
-    if (focusedPanel?.hidden || tabList.contains(document.activeElement)) {
+    /**
+     * A tab's mousedown calls preventDefault, so a click never moves focus and
+     * never clears Blink's document-level focus-visible flag. Focusing the tab
+     * after a mouse click would therefore paint a real ring.
+     */
+    if ((focusedPanel?.hidden || tabList.contains(document.activeElement)) && isKeyboardModality()) {
       modeTabs[modeIndex].focus({ preventScroll: true });
     }
   };

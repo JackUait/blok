@@ -11,6 +11,7 @@
 import type { I18n } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
+import { isKeyboardModality } from '../utils/input-modality';
 import { createColorPicker, formatSwatchLabel, getActivePresets } from './color-picker';
 import { COLOR_PRESETS, COLOR_PRESETS_DARK, colorVarName } from './color-presets';
 
@@ -211,6 +212,13 @@ export const buildBlockColorTunes = (options: BlockColorTuneOptions): MenuConfig
         searchable: false,
         isFlippable: false,
         onOpen: () => {
+          // Focusing the tab after a mouse click paints a real focus ring:
+          // the tab's mousedown preventDefault keeps the browser's
+          // focus-visible flag alive across the click.
+          if (!isKeyboardModality()) {
+            return;
+          }
+
           queueMicrotask(() => {
             handle.element.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus({ preventScroll: true });
           });

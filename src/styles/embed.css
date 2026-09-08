@@ -188,7 +188,7 @@
   transition: border-color .15s ease, box-shadow .15s ease;
 }
 .blok-embed-empty__bar:hover { border-color: var(--blok-border-primary); }
-.blok-embed-empty__bar:focus-within {
+.blok-embed-empty__bar:has(input:focus) {
   border-color: var(--blok-color-accent);
 }
 
@@ -200,7 +200,7 @@
   transition: color .15s ease;
 }
 .blok-embed-empty__bar-icon svg { width: 16px; height: 16px; }
-.blok-embed-empty__bar:focus-within .blok-embed-empty__bar-icon,
+.blok-embed-empty__bar:has(input:focus) .blok-embed-empty__bar-icon,
 .blok-embed-empty__bar[data-valid="true"] .blok-embed-empty__bar-icon {
   color: var(--blok-color-accent);
 }
@@ -407,7 +407,7 @@
   transition: opacity .15s ease;
 }
 .blok-embed-linkcard:hover .blok-embed-linkcard__actions,
-.blok-embed-linkcard:focus-within .blok-embed-linkcard__actions {
+.blok-embed-linkcard:has(:focus-visible) .blok-embed-linkcard__actions {
   opacity: 1;
 }
 

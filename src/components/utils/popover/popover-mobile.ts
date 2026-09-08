@@ -2,6 +2,7 @@ import { DATA_ATTR } from '../../constants/data-attributes';
 import { Dom } from '../../dom';
 import { Flipper } from '../../flipper';
 import { keyCodes } from '../../utils';
+import { isKeyboardModality } from '../input-modality';
 import { ScrollLocker } from '../scroll-locker';
 import { twMerge } from '../tw';
 
@@ -204,11 +205,29 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
     // (Radix Dialog/Drawer behaviour). The flipper drives virtual focus over
     // the current page's items.
     this.flipper.activate(this.flippableElements);
-    this.flipper.focusItem(0, { skipNextTab: true });
+    this.placeInitialCursor();
 
     // Take real DOM focus so keydowns target the sheet (not the block behind
     // it) and AT perceives focus as inside the dialog.
     this.nodes.items.focus();
+  }
+
+  /**
+   * Places the focus cursor on the first item, unless the sheet was reached by
+   * a tap. The cursor is a keyboard affordance, so a sheet opened or navigated
+   * with the finger starts with no row highlighted — the desktop popover makes
+   * the same call in `focusInitialElement`.
+   */
+  private placeInitialCursor(): void {
+    if (this.params.autoFocusFirstItem === false) {
+      return;
+    }
+
+    if (!isKeyboardModality()) {
+      return;
+    }
+
+    this.flipper.focusItem(0, { skipNextTab: true });
   }
 
   /**
@@ -353,7 +372,7 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
 
     if (flippable) {
       this.flipper.activate(this.flippableElements);
-      this.flipper.focusItem(0, { skipNextTab: true });
+      this.placeInitialCursor();
     }
   }
 

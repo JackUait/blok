@@ -846,7 +846,17 @@
       letter-spacing: -0.005em;
     }
     .settings-select:hover { border-color: #222222; }
-    .settings-select:focus { border-color: #222222; box-shadow: 0 0 0 3px rgba(34,34,34,0.08); }
+    /*
+     * Keyboard-only, and gated on the modality attribute rather than on
+     * `:focus-visible` alone: Chromium matches `:focus-visible` on a
+     * mouse-clicked <select> (measured), so the pseudo-class cannot tell a
+     * tabbed-to picker from a clicked one. The <button> language trigger
+     * carries the same class, and for it `:focus-visible` alone would do.
+     */
+    html[data-pg-modality="keyboard"] .settings-select:focus-visible {
+      border-color: #222222;
+      box-shadow: 0 0 0 3px rgba(34,34,34,0.08);
+    }
     /*
      * Language picker. A native <select> renders ~70 locales as one unbounded
      * OS list that spills across the whole window and cannot be searched, so
@@ -1037,6 +1047,28 @@
     .dark-mode .settings-divider { border-color: #2f2f2f !important; }
    </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <script>
+    /*
+     * Which gesture the user last drove the page with. Mirrors
+     * src/components/utils/input-modality.ts: focus affordances are a keyboard
+     * affordance, and `:focus-visible` alone cannot express that for a
+     * <select>, which Chromium matches on a plain mouse click.
+     *
+     * Capture phase so a handler calling stopPropagation cannot blind it, and
+     * inline in <head> so the very first gesture is already recorded.
+     */
+    (function () {
+      var root = document.documentElement;
+
+      var set = function (modality) {
+        root.setAttribute('data-pg-modality', modality);
+      };
+
+      set('keyboard');
+      document.addEventListener('keydown', function () { set('keyboard'); }, true);
+      document.addEventListener('pointerdown', function () { set('pointer'); }, true);
+    })();
+  </script>
 </head>
 <body class="m-0 text-black transition-colors duration-150" style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; font-size: 14px; line-height: 1.6;">
   <div class="text-base" id="main-content">

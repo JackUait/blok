@@ -304,7 +304,8 @@ export class PopoverInline extends PopoverDesktop {
    */
   protected override showNestedItems(item: PopoverItemDefault | PopoverItemHtml): void {
     if (this.nestedPopoverTriggerItem === item) {
-      this.destroyNestedPopoverIfExists();
+      // Toggling shut is a click, so the trigger must not keep the focus cursor.
+      this.destroyNestedPopoverIfExists(false);
 
       this.nestedPopoverTriggerItem = null;
 
@@ -370,9 +371,10 @@ export class PopoverInline extends PopoverDesktop {
       this.nestedPopoverTriggerItem?.handleClick();
 
       /**
-       * Then close the nested popover
+       * Then close the nested popover. This path is a click on another tool,
+       * so the trigger must not keep the focus cursor.
        */
-      super.destroyNestedPopoverIfExists();
+      super.destroyNestedPopoverIfExists(false);
     }
 
     super.handleItemClick(item);

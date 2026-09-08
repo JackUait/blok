@@ -31,9 +31,16 @@ import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = resolve(__dirname, '../../..');
-const SCAN_ROOTS = [ 'src', 'packages' ];
-const SCAN_EXTENSIONS = [ '.css', '.ts', '.tsx', '.vue' ];
+/**
+ * `docs/src` and the root `index.html` ship to real readers and users too, and
+ * both grew violations while this guard could only see `src` and `packages`.
+ */
+const SCAN_ROOTS = [ 'src', 'packages', 'docs/src' ];
+const SCAN_FILES = [ 'index.html' ];
+const SCAN_EXTENSIONS = [ '.css', '.ts', '.tsx', '.vue', '.html' ];
 const SKIP_DIRECTORIES = new Set([ 'node_modules', 'dist', 'build' ]);
+/** A spec asserting the law is not a surface that can paint a ring. */
+const TEST_FILE_PATTERN = /\.(test|spec)\.[cm]?[jt]sx?$/;
 
 /**
  * Matches the `:focus` pseudo-class and the Tailwind `focus:` variant, while
@@ -47,13 +54,27 @@ const TOKEN_DELIMITERS = new Set([ ' ', '\t', '\n', ',', '{', '}', "'", '"', '`'
 interface FocusExemption {
   /** Repo-relative file the exemption applies to. */
   file: string;
-  /** Substring the flagged selector/class token must contain. */
+  /**
+   * Substring the flagged token — or the source line holding it — must contain.
+   * Matching the line lets ONE entry cover a single element whose class string
+   * spreads the variant over many tokens, e.g. the docs skip link.
+   */
   match: string;
   /** Why this occurrence is allowed to react to a non-keyboard focus. */
   reason: string;
 }
 
 const EXEMPT_FOCUS_SELECTORS: FocusExemption[] = [
+  {
+    file: 'index.html',
+    match: '#locale-search:focus',
+    reason: 'Text input: the language picker search field may look active however it was focused.',
+  },
+  {
+    file: 'docs/src/components/layout/Nav.tsx',
+    match: 'focus:not-sr-only',
+    reason: 'Skip link: sr-only at rest, so no pointer can reach it. The `focus:` variants REVEAL it for Tab; the indicator on top is already focus-visible:ring-2.',
+  },
   {
     file: 'src/styles/preflight.css',
     match: ':focus:not(:focus-visible)',
@@ -68,6 +89,16 @@ const EXEMPT_FOCUS_SELECTORS: FocusExemption[] = [
     file: 'src/styles/media-empty.css',
     match: '[aria-invalid="true"]',
     reason: 'Text input: the invalid-value border belongs to the field, not to keyboard navigation.',
+  },
+  {
+    file: 'src/styles/embed.css',
+    match: ':has(input:focus)',
+    reason: 'Text input: the URL bar accent tracks the field, not the submit button beside it.',
+  },
+  {
+    file: 'src/styles/media-empty.css',
+    match: ':has(input:focus)',
+    reason: 'Text input: the URL bar accent tracks the field, not the submit button beside it.',
   },
   {
     file: 'src/styles/image.css',
@@ -206,6 +237,8 @@ interface FocusOccurrence {
   file: string;
   line: number;
   token: string;
+  /** Full source line, so an exemption can cover a whole element at once. */
+  lineText: string;
 }
 
 /**
@@ -213,7 +246,8 @@ interface FocusOccurrence {
  * @returns occurrences across the scanned roots
  */
 const findFocusOccurrences = (): FocusOccurrence[] => {
-  const files = SCAN_ROOTS.flatMap(root => collectFiles(root));
+  const files = [ ...SCAN_ROOTS.flatMap(root => collectFiles(root)), ...SCAN_FILES ]
+    .filter(file => !TEST_FILE_PATTERN.test(file));
 
   return files.flatMap((file) => {
     const source = readFileSync(join(REPO_ROOT, file), 'utf-8');
@@ -230,10 +264,13 @@ const findFocusOccurrences = (): FocusOccurrence[] => {
         continue;
       }
 
+      const lines = source.slice(0, match.index).split('\n');
+
       found.push({
         file,
-        line: source.slice(0, match.index).split('\n').length,
+        line: lines.length,
         token,
+        lineText: source.split('\n')[lines.length - 1] ?? '',
       });
     }
 
@@ -245,7 +282,8 @@ describe('Focus-Visible Law', () => {
   it('styles focus state only through :focus-visible, outside text-entry fields', () => {
     const violations = findFocusOccurrences()
       .filter(occurrence => !EXEMPT_FOCUS_SELECTORS.some(
-        exemption => occurrence.file === exemption.file && occurrence.token.includes(exemption.match)
+        exemption => occurrence.file === exemption.file
+          && (occurrence.token.includes(exemption.match) || occurrence.lineText.includes(exemption.match))
       ))
       .map(occurrence => `${occurrence.file}:${occurrence.line} — ${occurrence.token}`);
 
@@ -256,7 +294,8 @@ describe('Focus-Visible Law', () => {
     const occurrences = findFocusOccurrences();
     const unused = EXEMPT_FOCUS_SELECTORS
       .filter(exemption => !occurrences.some(
-        occurrence => occurrence.file === exemption.file && occurrence.token.includes(exemption.match)
+        occurrence => occurrence.file === exemption.file
+          && (occurrence.token.includes(exemption.match) || occurrence.lineText.includes(exemption.match))
       ))
       .map(exemption => `${exemption.file} — ${exemption.match}`);
 

@@ -312,6 +312,23 @@
     border-radius: revert;
   }
 
+  /* A pointer gesture must never leave a ring, even where Blink still scores
+     the element :focus-visible. Its focus-visible flag is set by a keypress and
+     cleared only by a click that MOVES focus — and Blok's controls
+     preventDefault their mousedown to keep the caret, so an ordinary click
+     leaves the flag (and the ring) standing on whatever holds focus. A
+     mouse-clicked <select> matches the pseudo-class outright. `:focus-visible`
+     therefore cannot express "keyboard only" on its own; the modality attribute
+     written by src/components/utils/input-modality.ts can.
+
+     Text-entry fields keep their state however focus arrived — they are the
+     law's one exception — and the attribute is absent until that module loads,
+     so the default is the keyboard behaviour. */
+  :root[data-blok-modality="pointer"] :is([data-blok-interface], [data-blok-popover], [data-blok-top-layer])
+    :focus-visible:not(:is([contenteditable], input, textarea)) {
+    outline: none;
+  }
+
   /* Define the text-selection highlight inside Blok boundaries as a single
      design token (--blok-selection-inline) instead of leaving it to the
      unpredictable per-browser default. This is the one source of truth for the

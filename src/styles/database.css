@@ -140,7 +140,7 @@
 
 [data-blok-database-card]:hover [data-blok-database-card-actions],
 [data-blok-database-card][data-popover-open] [data-blok-database-card-actions],
-[data-blok-database-card-actions]:focus-within {
+[data-blok-database-card-actions]:has(:focus-visible) {
   opacity: 1;
   pointer-events: auto;
 }

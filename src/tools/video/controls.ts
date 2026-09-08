@@ -18,6 +18,7 @@ import {
   IconPlus,
 } from '../../components/icons';
 import { promoteToTopLayer, removeFromTopLayer, supportsPopoverAPI } from '../../components/utils/top-layer';
+import { isKeyboardModality } from '../../components/utils/input-modality';
 import { tr } from './i18n';
 import type { I18nInstance } from '../../components/utils/tools';
 import type { VideoGlow } from '../../../types/tools/video';
@@ -1236,6 +1237,11 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     figure.setAttribute('data-controls-hidden', 'false');
     if (state.playing) scheduleHide();
   };
+  // Clicking a control focuses it, so focusin fires for the mouse too. Only a
+  // keyboard gesture should pull the bar back up.
+  const revealOnKeyboardFocus = (): void => {
+    if (isKeyboardModality()) revealControls();
+  };
 
   // ----- right-click context menu + stats overlay -----
   const ctxMenu = document.createElement('div');
@@ -1427,7 +1433,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   video.addEventListener('volumechange', persistVolume);
   video.addEventListener('loadedmetadata', restoreState);
   figure.addEventListener('pointermove', revealControls);
-  figure.addEventListener('focusin', revealControls);
+  figure.addEventListener('focusin', revealOnKeyboardFocus);
   document.addEventListener('fullscreenchange', onFullscreenChange);
   updateCenter();
 
@@ -1461,7 +1467,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     video.removeEventListener('volumechange', persistVolume);
     video.removeEventListener('loadedmetadata', restoreState);
     figure.removeEventListener('pointermove', revealControls);
-    figure.removeEventListener('focusin', revealControls);
+    figure.removeEventListener('focusin', revealOnKeyboardFocus);
     if (pipBtn) {
       video.removeEventListener('enterpictureinpicture', onEnterPip);
       video.removeEventListener('leavepictureinpicture', onLeavePip);

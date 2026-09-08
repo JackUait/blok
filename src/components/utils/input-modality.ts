@@ -14,12 +14,30 @@ type InputModality = 'keyboard' | 'pointer';
  */
 const state: { modality: InputModality } = { modality: 'keyboard' };
 
+/**
+ * Mirrors the modality onto the document so CSS can see it.
+ *
+ * `:focus-visible` alone cannot: Blink keeps a document-level focus-visible
+ * flag that a keypress sets and only a focus-MOVING click clears, and Blok's
+ * controls preventDefault their mousedown to keep the caret — so the flag
+ * survives the click and the ring stays. A `<select>` matches `:focus-visible`
+ * on a plain click too. This attribute is what `preflight.css` gates on.
+ * @param modality - the gesture just recorded
+ */
+const publish = (modality: InputModality): void => {
+  state.modality = modality;
+
+  if (typeof document !== 'undefined' && document.documentElement !== null) {
+    document.documentElement.setAttribute('data-blok-modality', modality);
+  }
+};
+
 const rememberKeyboard = (): void => {
-  state.modality = 'keyboard';
+  publish('keyboard');
 };
 
 const rememberPointer = (): void => {
-  state.modality = 'pointer';
+  publish('pointer');
 };
 
 /**
@@ -28,6 +46,7 @@ const rememberPointer = (): void => {
  * a lazy install would run after the pointerdown that opened the first menu.
  */
 if (typeof document !== 'undefined') {
+  publish(state.modality);
   document.addEventListener('keydown', rememberKeyboard, true);
   document.addEventListener('pointerdown', rememberPointer, true);
 }

@@ -400,6 +400,87 @@ describe('PopoverMobile', () => {
     });
   });
 
+
+  describe('focus cursor modality (Focus-Visible Law)', () => {
+    /**
+     * `input-modality` tracks the last gesture on a module-level singleton and
+     * starts as 'keyboard', so a test that never presses must restore that
+     * default or it poisons every later test in the file.
+     */
+    const pressPointer = (): void => {
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    };
+
+    afterEach(() => {
+      document.body.dispatchEvent(new KeyboardEvent('keydown', {
+        bubbles: true,
+        key: 'Shift',
+      }));
+    });
+
+    /**
+     * The rendered elements of every item the sheet currently holds.
+     * @param popover - sheet under test
+     * @returns elements that exist in the DOM
+     */
+    const renderedItems = (popover: PopoverMobile): HTMLElement[] => {
+      const internals = popover as unknown as {
+        items: Array<{ getElement: () => HTMLElement | null }>;
+      };
+
+      return internals.items
+        .map(item => item.getElement())
+        .filter((element): element is HTMLElement => element !== null);
+    };
+
+    it('does not place the cursor when the sheet is opened by a tap', () => {
+      const { popover } = createPopover();
+
+      pressPointer();
+      popover.show();
+
+      const focused = renderedItems(popover).filter(element => element.hasAttribute(DATA_ATTR.focused));
+
+      expect(focused).toEqual([]);
+    });
+
+    it('honours autoFocusFirstItem false the way the desktop popover does', () => {
+      const { popover } = createPopover({ autoFocusFirstItem: false });
+
+      popover.show();
+
+      const focused = renderedItems(popover).filter(element => element.hasAttribute(DATA_ATTR.focused));
+
+      expect(focused).toEqual([]);
+    });
+
+    it('does not place the cursor when a nested page is opened by a tap', () => {
+      const { popover } = createPopover();
+      const popoverPrivate = getPrivateApi(popover);
+      const nodes = getNodes(popover);
+      const parentItem = new PopoverItemDefault({
+        title: 'Parent',
+        children: {
+          items: [
+            {
+              title: 'Nested child',
+              onActivate: vi.fn(),
+            },
+          ],
+        },
+      });
+
+      popover.show();
+      pressPointer();
+      popoverPrivate.showNestedItems(parentItem);
+
+      const focused = Array.from(nodes.items.children)
+        .filter(element => element.hasAttribute(DATA_ATTR.focused));
+
+      expect(focused).toEqual([]);
+    });
+  });
+
   describe('showNestedItems', () => {
     it('updates rendered items and stores nested state in history', () => {
       const { popover } = createPopover();

@@ -1260,6 +1260,21 @@ describe('video controls — idle auto-hide', () => {
     expect(h.figure.getAttribute('data-controls-hidden')).toBe('false');
   });
 
+  it('reveals on focusin only when the last gesture was the keyboard', () => {
+    vi.useFakeTimers();
+    // A click on a control focuses it, so focusin fires for the mouse too.
+    // Revealing then would paint the bar after the pointer has left.
+    document.dispatchEvent(new Event('pointerdown'));
+    h.video.dispatchEvent(new Event('play'));
+    vi.advanceTimersByTime(3000);
+    h.figure.dispatchEvent(new Event('focusin', { bubbles: true }));
+    expect(h.figure.getAttribute('data-controls-hidden')).toBe('true');
+
+    document.dispatchEvent(new Event('keydown'));
+    h.figure.dispatchEvent(new Event('focusin', { bubbles: true }));
+    expect(h.figure.getAttribute('data-controls-hidden')).toBe('false');
+  });
+
   it('never hides while paused', () => {
     vi.useFakeTimers();
     vi.advanceTimersByTime(5000);

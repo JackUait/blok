@@ -365,6 +365,10 @@ export const createPresence = (options: PresenceOptions): Presence => {
    * first keystroke.
    */
   const publishActivity = (): void => {
+    if (!state.running) {
+      return;
+    }
+
     const now = Date.now();
 
     if (state.publishedActiveAt !== undefined && now - state.publishedActiveAt < ACTIVITY_RESOLUTION_MS) {

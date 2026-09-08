@@ -840,6 +840,32 @@ describe('presence — local awareness upkeep', () => {
       expect(seam.writes.length).toBe(before);
     });
 
+    it('does not restamp activity after stop, even when a trailing throttle call is already in flight', () => {
+      vi.setSystemTime(new Date(1_700_000_000_000));
+
+      const { seam, target, caret, presence } = setup();
+
+      presence.start();
+
+      // Land just under the one-second dedupe window, so the throttle's
+      // LEADING call skips the stamp — leaving the TRAILING call, ~100ms
+      // later, as the first attempt old enough not to be deduped on its own,
+      // so only the running guard can still stop it.
+      vi.setSystemTime(new Date(1_700_000_000_950));
+      caret.blockId = 'block-2';
+      moveCaret(target);
+      caret.blockId = 'block-3';
+      moveCaret(target);
+
+      presence.stop();
+
+      const before = seam.writes.filter((write) => write.field === 'activeAt').length;
+
+      vi.advanceTimersByTime(200);
+
+      expect(seam.writes.filter((write) => write.field === 'activeAt')).toHaveLength(before);
+    });
+
     it('unsubscribes from awareness', () => {
       const { seam, renderer, presence } = setup({ user: { name: 'Ada' } });
 

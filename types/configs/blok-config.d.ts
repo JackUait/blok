@@ -283,6 +283,11 @@ export interface BlokState {
   /**
    * Defines default toolbar for all tools.
    *
+   * The array picks WHICH inline tools appear, never where they sit. Built-in
+   * tools always render in a fixed order (convert, bold, italic, underline,
+   * strikethrough, inline code, equation, sup/sub, link, color, clear format);
+   * custom inline tools follow them in registration order.
+   *
    * Runtime setter: `tools.setInlineToolbar(config)` — re-assigns inline
    * tools for every block tool and recomposes paste-time sanitization.
    */

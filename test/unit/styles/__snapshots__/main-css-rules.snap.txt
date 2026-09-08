@@ -1086,13 +1086,13 @@
   border-radius: revert;
 }
 
-[@layer base] :root[data-blok-modality="pointer"] :is([data-blok-interface], [data-blok-popover], [data-blok-top-layer]) :focus-visible:not(:is([contenteditable], input, textarea)) {
-  outline: none;
-}
-
 [@layer base] [data-blok-interface]:where(:not([data-blok-native-selection])) ::selection, [data-blok-popover] ::selection {
   background-color: var(--blok-selection-inline);
   color: revert;
+}
+
+:root[data-blok-modality="pointer"] :is([data-blok-interface], [data-blok-popover], [data-blok-top-layer]) :focus-visible:not(:is([contenteditable], input, textarea)) {
+  outline: none !important;
 }
 
 [data-blok-top-layer][popover] {

@@ -44,9 +44,19 @@ const rememberPointer = (): void => {
  * Capture phase: a handler that calls stopPropagation must not blind the
  * tracker. Installed at import so the very first gesture is already recorded —
  * a lazy install would run after the pointerdown that opened the first menu.
+ *
+ * `window` as well as `document`, and this is load-bearing. `Flipper.activate()`
+ * listens on both in capture and calls `stopImmediatePropagation()` for every
+ * key it owns, and capture runs window before document — so a document-only
+ * tracker goes blind to arrows and Enter for as long as a popover is open. Blind
+ * means a menu opened by mouse never returns to keyboard modality, which left
+ * the colour picker unreachable by keyboard. Installing at import wins the
+ * capture order against every later `activate()`.
  */
 if (typeof document !== 'undefined') {
   publish(state.modality);
+  window.addEventListener('keydown', rememberKeyboard, true);
+  window.addEventListener('pointerdown', rememberPointer, true);
   document.addEventListener('keydown', rememberKeyboard, true);
   document.addEventListener('pointerdown', rememberPointer, true);
 }

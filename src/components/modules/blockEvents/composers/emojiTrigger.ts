@@ -42,7 +42,15 @@ const CLAIMED_KEYS: ReadonlySet<string> = new Set(['ArrowUp', 'ArrowDown', 'Arro
  */
 const EMOJI_GRID_COLUMNS = 10;
 
-/** Same visual treatment as the picker's own skin-tone "active" state. */
+/**
+ * Same visual treatment as the picker's own skin-tone "active" state.
+ *
+ * Deliberately NOT gated on `isKeyboardModality()`, unlike the popover focus
+ * cursor. This marks the combobox's ACTIVE OPTION — it is what Enter commits,
+ * and what `aria-activedescendant` points at — so it has to be set whenever the
+ * menu re-ranks, including after a paste. Suppressing it for a pointer gesture
+ * would leave Enter with nothing to commit and break the ARIA contract.
+ */
 const EMOJI_HIGHLIGHT_CLASSES = ['bg-neutral-100', 'theme-dark:bg-neutral-800', 'ring-2', 'ring-neutral-300/60', 'theme-dark:ring-neutral-600/60'];
 
 function isInsertOrDeleteText(inputType: string): boolean {

@@ -125,7 +125,7 @@ Expected: PASS, 4 tests.
 
 - [ ] **Step 5: Write the failing tests for publishing**
 
-Add to the same file, inside the existing `describe` that uses the `setup` helper:
+Add these inside the existing `describe('what it publishes')` block (line 325). Its enclosing `describe` installs fake timers in `beforeEach` at line 313, which `vi.setSystemTime` needs. `FakeAwareness` already records everything these read: `seam.states` is the published state keyed by client id, and `seam.writes` is every `{ field, value }` written. Do not add helpers to it.
 
 ```ts
 it('stamps activity when the session starts, so opening the document counts', () => {
@@ -135,7 +135,7 @@ it('stamps activity when the session starts, so opening the document counts', ()
 
   presence.start();
 
-  expect(seam.fields.activeAt).toBe(1_700_000_000_000);
+  expect(seam.states.get(42)?.activeAt).toBe(1_700_000_000_000);
 });
 
 it('moves the stamp forward as the caret moves', () => {
@@ -148,7 +148,7 @@ it('moves the stamp forward as the caret moves', () => {
   moveCaret(target);
   vi.advanceTimersByTime(200);
 
-  expect(seam.fields.activeAt).toBe(1_700_000_005_000);
+  expect(seam.states.get(42)?.activeAt).toBe(1_700_000_005_000);
 });
 
 // The caret publisher runs every 100ms and skips an unchanged value. A stamp
@@ -161,29 +161,15 @@ it('does not rewrite the stamp more than once a second', () => {
   const { seam, target, presence } = setup();
 
   presence.start();
-  const writes = seam.writeCount('activeAt');
+  const before = seam.writes.filter((write) => write.field === 'activeAt').length;
 
   vi.setSystemTime(new Date(1_700_000_000_300));
   moveCaret(target);
   vi.advanceTimersByTime(200);
 
-  expect(seam.writeCount('activeAt')).toBe(writes);
+  expect(seam.writes.filter((write) => write.field === 'activeAt')).toHaveLength(before);
 });
 ```
-
-`FakeAwareness` in this file already records writes. If it does not expose `fields` and `writeCount`, add them:
-
-```ts
-  /** Last value written per field, so a test can read the published state. */
-  public readonly fields: Record<string, unknown> = {};
-  private readonly writes: Record<string, number> = {};
-
-  public writeCount(field: string): number {
-    return this.writes[field] ?? 0;
-  }
-```
-
-and increment both inside its `setAwarenessField`.
 
 - [ ] **Step 6: Run the tests to verify they fail**
 
@@ -465,6 +451,10 @@ export const buildParticipants = (
   now: number
 ): CollaborationParticipant[] => {
   const rows = new Map<string, CollaborationParticipant>();
+  // Which client id currently owns a row's `lastActiveAt` and `blockId`. Kept
+  // beside the rows rather than inside them, because it is bookkeeping and not
+  // part of the published shape.
+  const owner = new Map<string, number>();
 
   // One pass over every nameless client, so the assignment matches what each
   // other browser computes for the same room. Per-row assignment would give the
@@ -502,6 +492,8 @@ export const buildParticipants = (
         },
       });
 
+      owner.set(key, entry.clientId);
+
       continue;
     }
 
@@ -509,15 +501,19 @@ export const buildParticipants = (
     existing.self = existing.self || entry.clientId === localClientId;
 
     // A tie goes to the lower client id, the same rule the glyph assignment
-    // uses, because two tabs can stamp the identical millisecond.
+    // uses, because two tabs can stamp the identical millisecond. Compared
+    // against the CURRENT owner, never against the row's own id list — that
+    // list already contains this entry, so the test would never fire.
+    const held = owner.get(key) ?? entry.clientId;
     const wins = activeAt !== null &&
       (existing.lastActiveAt === null ||
         activeAt > existing.lastActiveAt ||
-        (activeAt === existing.lastActiveAt && entry.clientId < Math.min(...existing.clientIds)));
+        (activeAt === existing.lastActiveAt && entry.clientId < held));
 
     if (wins) {
       existing.lastActiveAt = activeAt;
       existing.blockId = blockId;
+      owner.set(key, entry.clientId);
     }
   }
 
@@ -719,14 +715,16 @@ Expected: FAIL, the stack element is found.
 
 Remove the listed symbols from `presence-renderer.ts` and the listed rules from `presence.css`. Delete every other test in the renderer suite that asserted on the stack.
 
+**Keep `nameTheNameless`, `readPeer` and `buildAvatar`.** The gutter faces are drawn from all three, and `nameTheNameless` is what gives a nameless peer their silhouette and localized label. Only the wrapper-mounted stack goes.
+
 `stackSignature` holds a raw NUL byte as its join separator, which is why git reports this file as binary. After deleting it, confirm:
 
 ```bash
 grep -cP '\x00' src/components/modules/collaboration/presence-renderer.ts
-git check-attr --all src/components/modules/collaboration/presence-renderer.ts
+git diff --stat -- src/components/modules/collaboration/presence-renderer.ts
 ```
 
-Expected: `0`, and git no longer treats the file as binary.
+Expected: `0` from the grep, and a diffstat with real insertion and deletion counts rather than the word `Bin`. Git decides binary from content, so the NUL leaving is what changes this; there is no attribute to check.
 
 - [ ] **Step 4: Regenerate the CSS snapshot and run both suites**
 

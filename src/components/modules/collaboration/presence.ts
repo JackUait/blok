@@ -76,6 +76,14 @@ export interface Presence {
 const DEFAULT_THROTTLE_MS = 100;
 
 /**
+ * Coarsest step the activity stamp moves in. The caret publisher fires ten
+ * times a second and skips an unchanged value; a stamp written at that rate
+ * would make every pass a wire frame, for a number consumers compare against a
+ * five-minute threshold.
+ */
+const ACTIVITY_RESOLUTION_MS = 1000;
+
+/**
  * Default cursor colours. Each is at least 4.5:1 against white, so a name
  * label printed in white on top of one is readable, and they stay
  * distinguishable under the common forms of colour blindness.
@@ -102,6 +110,36 @@ export const PRESENCE_PALETTE = [
  */
 export const isPresenceColor = (value: unknown): value is string =>
   typeof value === 'string' && /^#([\da-f]{3}|[\da-f]{4}|[\da-f]{6}|[\da-f]{8})$/i.test(value);
+
+/**
+ * Oldest activity stamp worth reporting. Past this the number says nothing
+ * useful about a live session and is far more likely to be a peer whose clock
+ * is wrong than a person who really has been idle for a day.
+ */
+export const MAX_ACTIVE_AGE_MS = 86_400_000;
+
+/**
+ * One peer's `activeAt`, made safe against their clock and against a hostile
+ * value.
+ *
+ * Clamped rather than rejected on the future side: a browser a minute ahead is
+ * ordinary, and dropping its stamp would report an active person as one who
+ * published nothing. Dropped outright on the old side, where a wrong clock and
+ * a genuinely stale value are indistinguishable and neither is worth drawing.
+ * @param value - the raw field off the awareness wire
+ * @param now - the receiver's own clock
+ */
+export const readActiveAt = (value: unknown, now: number): number | null => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return null;
+  }
+
+  if (value > now) {
+    return now;
+  }
+
+  return now - value > MAX_ACTIVE_AGE_MS ? null : value;
+};
 
 /** The custom property every presence colour is written to; presence.css reads it. */
 export const PRESENCE_COLOR_PROPERTY = '--blok-presence-color';
@@ -239,6 +277,7 @@ export const createPresence = (options: PresenceOptions): Presence => {
     publishedBlockId: undefined as string | null | undefined,
     /** The last caret tuple put on the wire, as its comparison key. */
     publishedCaret: undefined as string | undefined,
+    publishedActiveAt: undefined as number | undefined,
     unhookAwareness: null as (() => void) | null,
     unhookAwarenessUpdate: null as (() => void) | null,
     onCaretMove: null as (() => void) | null,
@@ -318,6 +357,22 @@ export const createPresence = (options: PresenceOptions): Presence => {
         ...named && id !== undefined && id !== '' ? { id } : {},
       }
     );
+  };
+
+  /**
+   * Say when this user last did something. Written on `start()` too, so
+   * opening the document is itself activity rather than a blank until the
+   * first keystroke.
+   */
+  const publishActivity = (): void => {
+    const now = Date.now();
+
+    if (state.publishedActiveAt !== undefined && now - state.publishedActiveAt < ACTIVITY_RESOLUTION_MS) {
+      return;
+    }
+
+    state.publishedActiveAt = now;
+    yjs.setAwarenessField('activeAt', now);
   };
 
   const notify = (): void => {
@@ -426,6 +481,7 @@ export const createPresence = (options: PresenceOptions): Presence => {
       state.running = true;
       state.publishedBlockId = undefined;
       state.publishedCaret = undefined;
+      state.publishedActiveAt = undefined;
       state.unhookAwareness = yjs.onAwarenessChange(onAwarenessChange);
       state.unhookAwarenessUpdate = yjs.onAwarenessUpdate(onAwarenessUpdate);
 
@@ -436,12 +492,14 @@ export const createPresence = (options: PresenceOptions): Presence => {
       publishBlockId();
       publishCaret();
       publishUser();
+      publishActivity();
 
       // A fresh throttle per start: the previous one's clock would suppress the
       // first caret move of a restarted session.
       const publish = throttle(() => {
         publishBlockId();
         publishCaret();
+        publishActivity();
 
         // Local typing reflows the line every remote caret in this block points
         // into. Nothing on the wire announces that — the peers did not move,

@@ -9,12 +9,14 @@ import * as encoding from 'lib0/encoding';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  MAX_ACTIVE_AGE_MS,
   MAX_PEERS,
   PRESENCE_PALETTE,
   PRESENCE_SCAN_LIMIT,
   createPresence,
   isPresenceColor,
   presenceColorFor,
+  readActiveAt,
   type Presence,
   type PresenceSeam,
   type PresenceState,
@@ -332,6 +334,7 @@ describe('presence — local awareness upkeep', () => {
         blockId: 'block-1',
         caret: null,
         user: { name: 'Ada', color: presenceColorFor(42) },
+        activeAt: expect.any(Number),
       });
     });
 
@@ -348,8 +351,9 @@ describe('presence — local awareness upkeep', () => {
         blockId: 'block-1',
         caret: null,
         user: { color: presenceColorFor(42) },
+        activeAt: expect.any(Number),
       });
-      expect(seam.writes.map((write) => write.field)).toEqual(['blockId', 'caret', 'user']);
+      expect(seam.writes.map((write) => write.field)).toEqual(['blockId', 'caret', 'user', 'activeAt']);
     });
 
     it('publishes a null block when the caret is nowhere', () => {
@@ -400,6 +404,48 @@ describe('presence — local awareness upkeep', () => {
       const write = seam.writes.filter((entry) => entry.field === 'user').at(-1);
 
       expect(write?.value).not.toHaveProperty('id');
+    });
+
+    it('stamps activity when the session starts, so opening the document counts', () => {
+      vi.setSystemTime(new Date(1_700_000_000_000));
+
+      const { seam, presence } = setup();
+
+      presence.start();
+
+      expect(seam.states.get(42)?.activeAt).toBe(1_700_000_000_000);
+    });
+
+    it('moves the stamp forward as the caret moves', () => {
+      vi.setSystemTime(new Date(1_700_000_000_000));
+
+      const { seam, target, presence } = setup();
+
+      presence.start();
+      vi.setSystemTime(new Date(1_700_000_005_000));
+      moveCaret(target);
+      vi.advanceTimersByTime(200);
+
+      expect(seam.states.get(42)?.activeAt).toBe(1_700_000_005_000);
+    });
+
+    // The caret publisher runs every 100ms and skips an unchanged value. A stamp
+    // that moved every pass would defeat that dedupe and put a fresh awareness
+    // frame on the wire for every keystroke, for a number nobody reads at that
+    // resolution.
+    it('does not rewrite the stamp more than once a second', () => {
+      vi.setSystemTime(new Date(1_700_000_000_000));
+
+      const { seam, target, presence } = setup();
+
+      presence.start();
+      const before = seam.writes.filter((write) => write.field === 'activeAt').length;
+
+      vi.setSystemTime(new Date(1_700_000_000_300));
+      moveCaret(target);
+      vi.advanceTimersByTime(200);
+
+      expect(seam.writes.filter((write) => write.field === 'activeAt')).toHaveLength(before);
     });
   });
 
@@ -758,6 +804,7 @@ describe('presence — local awareness upkeep', () => {
         blockId: 'block-2',
         caret: null,
         user: { name: 'Ada', color: presenceColorFor(42) },
+        activeAt: expect.any(Number),
       });
     });
   });
@@ -903,5 +950,33 @@ describe('presence — local awareness upkeep', () => {
         caret: { blockId: 'block-1', head: 4 },
       });
     });
+  });
+});
+
+describe('readActiveAt', () => {
+  const now = 1_700_000_000_000;
+
+  it('keeps a plausible stamp as it is', () => {
+    expect(readActiveAt(now - 5_000, now)).toBe(now - 5_000);
+  });
+
+  // Two browsers do not agree on the time. A peer whose clock runs fast would
+  // otherwise report activity that has not happened yet, and every "was this
+  // within five minutes" test against it would answer yes forever.
+  it('clamps a stamp from the future down to now', () => {
+    expect(readActiveAt(now + 60_000, now)).toBe(now);
+  });
+
+  it('drops a stamp older than the age cap', () => {
+    expect(readActiveAt(now - MAX_ACTIVE_AGE_MS - 1, now)).toBeNull();
+    expect(readActiveAt(now - MAX_ACTIVE_AGE_MS + 1, now)).toBe(now - MAX_ACTIVE_AGE_MS + 1);
+  });
+
+  it('drops anything that is not a finite number', () => {
+    expect(readActiveAt('1700000000000', now)).toBeNull();
+    expect(readActiveAt(Number.NaN, now)).toBeNull();
+    expect(readActiveAt(Number.POSITIVE_INFINITY, now)).toBeNull();
+    expect(readActiveAt(undefined, now)).toBeNull();
+    expect(readActiveAt(null, now)).toBeNull();
   });
 });

@@ -14,12 +14,12 @@ import type { ChildToolRestrictions } from '@/types/tools';
 /**
  * Mutant notes for src/components/utils/child-tools.ts
  *
- * KILLABLE, DELIBERATELY NOT KILLED — OptionalChaining at line 31,
- * `parent?.tool?.childTools` narrowed to `parent?.tool.childTools`.
- * The two differ only when `parent` exists and `parent.tool` does not, and
- * `Block.tool` is a readonly, always-assigned `BlockToolAdapter`. Every call
- * site (block-insertion, block-mutation, yjs-sync, toolbox) hands over a real
- * Block. Only a stub that violates the Block type can tell them apart.
+ * The `parent?.tool?.childTools` chain needs both links: the two forms differ
+ * only when `parent` exists and `parent.tool` does not. `Block.tool` is a
+ * readonly, always-assigned `BlockToolAdapter` and every call site hands over
+ * a real Block, so the fixture below is deliberately off-contract — it models
+ * a block held mid-construction, which is the state the second link exists
+ * for.
  *
  * PROVEN EQUIVALENT — OptionalChaining at line 100, the first `?.` of
  * `getChildToolRestrictions(parent)?.allow?.[0]`.
@@ -50,6 +50,15 @@ const makeParent = (childTools?: ChildToolRestrictions | null): Block => {
 };
 
 describe('getChildToolRestrictions', () => {
+  // A Block assigns its tool during construction, so a caller holding one
+  // mid-construction has none. The declared type says the field is always
+  // there; the guard is what keeps that assumption from throwing.
+  it('answers nothing for a block whose tool is not attached', () => {
+    const halfBuilt = { id: 'b1' } as unknown as Block;
+
+    expect(getChildToolRestrictions(halfBuilt)).toBeUndefined();
+  });
+
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
 

@@ -8,16 +8,13 @@ import type { API as ApiMethods } from '@/types';
 /**
  * Mutant notes for src/components/tools/base.ts
  *
- * KILLABLE, DELIBERATELY NOT KILLED — BooleanLiteral at line 212,
- * `isInternal = false` in the constructor destructuring.
- * The only way to observe the default is to construct an adapter with
- * `isInternal` absent, and `ConstructorOptions.isInternal` is a REQUIRED
- * boolean. The single call site in src (ToolsFactory) applies its own
- * `isInternal = false` default before it builds the options object, and the
- * adapter classes are not exported from any runtime entry — `types/tools/
- * adapters/base-tool-adapter.d.ts` publishes an interface with no constructor,
- * so no consumer can reach the parameter default either. Killing it needs an
- * out-of-contract stub that omits a required option.
+ * The `isInternal = false` default in the constructor destructuring is only
+ * observable from an off-contract caller: `ConstructorOptions.isInternal` is a
+ * REQUIRED boolean, the single call site in src (ToolsFactory) applies its own
+ * default first, and the adapter classes have no runtime export. The test
+ * below builds the options without it deliberately — the default is what keeps
+ * a host-registered tool from being filed as one of Blok's own, and nothing
+ * else in the file pins it.
  */
 
 /** The adapter only stores the api object; nothing exercised here reads it. */
@@ -54,7 +51,37 @@ const makeAdapter = (
   });
 };
 
+/**
+ * ConstructorOptions declares `isInternal` required, so only an off-contract
+ * caller reaches the parameter default. The default is what keeps a tool the
+ * host registered from being filed as one of Blok's own.
+ */
+const makeAdapterWithoutInternalFlag = (): BlockToolAdapter => {
+  class StubTool {
+    public render(): HTMLElement {
+      return document.createElement('div');
+    }
+    public save(): unknown {
+      return {};
+    }
+  }
+
+  const options = {
+    name: 'stub',
+    constructable: StubTool as never,
+    config: {},
+    api: stubApi,
+    isDefault: false,
+  };
+
+  return new BlockToolAdapter(options as ConstructorParameters<typeof BlockToolAdapter>[0]);
+};
+
 describe('BaseToolAdapter settings', () => {
+  it('files a tool whose options omit the internal flag as not internal', () => {
+    expect(makeAdapterWithoutInternalFlag().isInternal).toBe(false);
+  });
+
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
 

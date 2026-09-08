@@ -4587,7 +4587,42 @@ public sealed class CollabRoomTests
     Assert.False(gate.Task.IsCompleted);
     Assert.Contains(
         log,
-        entry => entry.Contains("abandoned its activity dispatch", StringComparison.Ordinal));
+        entry => entry.Contains(
+            "abandoned its activity dispatch while draining: the observer is past its bound",
+            StringComparison.Ordinal));
+
+    gate.SetResult();
+  }
+
+  /// <summary>
+  /// The other escape, and the one the clock cannot supply: the caller is
+  /// aborting its own shutdown, so nothing here may outlast it. The manual
+  /// clock NEVER moves in this test, so the CommitTimeout timer is never due
+  /// and only the token can end the wait.
+  /// </summary>
+  [Fact]
+  public async Task ADrainAlreadyCancelledDoesNotWaitOutTheActivityObserver()
+  {
+    endpoint.Holds(DocId, "hello");
+    var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    activity.Gate = gate;
+    var manager = CreateActivityManager();
+    await Join(manager, new FakeMember(actorId: "user-1"))
+        .WaitAsync(TimeSpan.FromSeconds(10));
+    await activity.WaitForAsync(1).WaitAsync(TimeSpan.FromSeconds(10));
+    using var cancelled = new CancellationTokenSource();
+    cancelled.Cancel();
+
+    await manager.DrainAsync(cancelled.Token)
+        .AsTask()
+        .WaitAsync(TimeSpan.FromSeconds(10));
+
+    Assert.False(gate.Task.IsCompleted);
+    Assert.Contains(
+        log,
+        entry => entry.Contains(
+            "abandoned its activity dispatch while draining: the drain was cancelled",
+            StringComparison.Ordinal));
 
     gate.SetResult();
   }

@@ -799,26 +799,53 @@ internal sealed class CollabRoom : IDisposable
 
     // The close above emits the last Left of every session and the pump runs
     // OFF the lane, so waiting is what makes a graceful shutdown deliver them.
-    // BOUNDED, and abandoned past the bound, in the shape of the session
-    // release in CloseRoomLocked: this method's whole contract is that no sick
-    // dependency holds the shutdown open, and the host observer is the one
-    // dependency here that carries no token of its own.
+    // TWO independent escapes, because they answer different failures: the
+    // timeout bounds a host that hangs — no dependency holds the shutdown
+    // open, in the shape of the session release in CloseRoomLocked — and the
+    // token is the caller aborting its own shutdown, which nothing here should
+    // be able to outlast. The token bounding this wait does not make it bound
+    // the CLOSE; the close is already done above.
+    var settling = SettleAsync();
+
     try
     {
-      await SettleAsync().WaitAsync(options.CommitTimeout, timeProvider);
+      await settling.WaitAsync(options.CommitTimeout, timeProvider, cancellationToken);
     }
     catch (TimeoutException)
     {
-      log?.Invoke(
-          $"collab: room \"{DocId}\" abandoned its activity dispatch while draining");
+      AbandonActivityDispatch(settling, "the observer is past its bound");
     }
+    catch (OperationCanceledException)
+    {
+      AbandonActivityDispatch(settling, "the drain was cancelled");
+    }
+  }
+
+  /// <summary>
+  /// The drain's wait ended and the settle did not. Nothing will await that
+  /// task again, so its outcome is observed here: an unobserved fault on a
+  /// task nobody holds is a process-level event, not a room-level one.
+  /// </summary>
+  private void AbandonActivityDispatch(Task settling, string why)
+  {
+    _ = settling.ContinueWith(
+        static settled => { _ = settled.Exception; },
+        CancellationToken.None,
+        TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+        TaskScheduler.Default);
+
+    log?.Invoke(
+        $"collab: room \"{DocId}\" abandoned its activity dispatch while draining: {why}");
   }
 
   /// <summary>
   /// Completes once every lane operation queued before it has run AND the
   /// activity those operations handed to the host has been delivered. That
   /// second half awaits HOST code and carries no bound of its own, so a caller
-  /// that must not hang has to bound it — <see cref="DrainAsync"/> does.
+  /// that must not hang has to bound it. <see cref="DrainAsync"/> bounds it
+  /// twice — by <see cref="CollabRoomOptions.CommitTimeout"/> for a host that
+  /// hangs, and by its caller's token for a shutdown that is itself aborted —
+  /// and abandons the wait either way.
   /// </summary>
   internal async Task SettleAsync()
   {

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 
 import { TableResize } from '../../../../src/tools/table/table-resize';
 
@@ -58,10 +58,10 @@ const release = (): void => {
  */
 describe('TableResize mutants', () => {
   let grid: HTMLTableElement;
-  let onChange: ReturnType<typeof vi.fn>;
-  let onDragStart: ReturnType<typeof vi.fn>;
-  let onDrag: ReturnType<typeof vi.fn>;
-  let onResetWidths: ReturnType<typeof vi.fn>;
+  let onChange: Mock<(widths: number[]) => void>;
+  let onDragStart: Mock<() => void>;
+  let onDrag: Mock<() => void>;
+  let onResetWidths: Mock<() => void>;
 
   const build = (widths: number[], skipInitialApply = false): TableResize =>
     new TableResize(grid, widths, onChange, onDragStart, onDrag, skipInitialApply, onResetWidths);

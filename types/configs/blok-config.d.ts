@@ -670,8 +670,8 @@ export interface BlokMountOptions {
    * - `user` — the display identity shown to the other people in the document
    *   (their name, and an optional cursor/avatar `color`). OPTIONAL: without
    *   it this editor still appears to everyone else, as an anonymous avatar in
-   *   a colour assigned from the built-in palette, and their peer entry carries
-   *   an empty `name`. This is PURELY presentational and is INDEPENDENT of the
+   *   a colour assigned from the built-in palette, and their participant entry
+   *   carries an empty `name`. This is PURELY presentational and is INDEPENDENT of the
    *   {@link BlokMountOptions.user} `{ id }` option, which records edit
    *   attribution on each block: one is "who gets credit for this edit", the
    *   other is "whose cursor is that". Set either, both, or neither.
@@ -698,8 +698,9 @@ export interface BlokMountOptions {
    * operation journal registered on the service — without one, every session
    * reports `save.state: 'unavailable'`.
    *
-   * Once connected: `collaboration:status` lists at most 50 peers, chosen
-   * after a bounded scan of the presence map; destroying the editor, and
+   * Once connected: `collaboration:status` lists at most 51 participants — up
+   * to 50 others, chosen after a bounded scan of the presence map, plus the
+   * reader's own row; destroying the editor, and
    * `pagehide`, flush pending typing to the wire; a block a peer wrote with a
    * non-string `id`/`type` or a non-map `data` is skipped on save with one
    * console warning naming it; a value nested past 256 levels saves as

@@ -1,7 +1,7 @@
 export type { CollaborationStatusChangedPayload, CollaborationTerminalReason, CollaborationParticipant } from '../../../types/events/editor-events';
 
 /**
- * Fired when the collaboration session's connection state or peer set changes.
+ * Fired when the collaboration session's connection state or participant set changes.
  *
  * This is the surface a host uses to render a sync pill and a presence stack:
  * subscribe via `blok.events.on('collaboration:status', ...)`. The collaboration

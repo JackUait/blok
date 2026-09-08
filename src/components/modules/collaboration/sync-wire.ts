@@ -35,6 +35,8 @@ const MESSAGE_BLOK_LIMITS = 101;
 const MESSAGE_OPERATION = 102;
 const MESSAGE_ACKNOWLEDGEMENT = 103;
 const MESSAGE_REJECTION = 104;
+const MESSAGE_ACTIVITY = 106;
+const MESSAGE_IDENTITIES = 107;
 
 const SYNC_STEP1 = 0;
 const SYNC_STEP2 = 1;
@@ -125,6 +127,13 @@ export function encode(frame: SyncWireFrame): Uint8Array {
       encoding.writeVarUint(encoder, MESSAGE_REJECTION);
       encoding.writeVarString(encoder, encodeRejectionMetadata(frame.lineage, frame.operationId, frame.code));
       break;
+    case 'activity':
+      encoding.writeVarUint(encoder, MESSAGE_ACTIVITY);
+      break;
+    case 'identities':
+      encoding.writeVarUint(encoder, MESSAGE_IDENTITIES);
+      encoding.writeVarString(encoder, encodeIdentities(frame.identities));
+      break;
   }
 
   return encoding.toUint8Array(encoder);
@@ -195,6 +204,23 @@ export function decode(bytes: Uint8Array): SyncWireDecodeResult {
       return decodeAcknowledgement(decoder);
     case MESSAGE_REJECTION:
       return decodeRejection(decoder);
+    case MESSAGE_ACTIVITY:
+      return requireEnd(decoder) ?? { type: 'activity' };
+    case MESSAGE_IDENTITIES: {
+      const json = readVarBytes(decoder);
+
+      if (json === null) {
+        return malformed('the identities payload is missing or truncated');
+      }
+
+      const identities = decodeIdentities(json);
+
+      if (!identities.ok) {
+        return malformed(identities.reason);
+      }
+
+      return requireEnd(decoder) ?? { type: 'identities', identities: identities.identities };
+    }
     default:
       // Unknown OUTER type: ignorable, and the payload is left unread — so no
       // trailing-byte check here, matching the server (SyncWire.cs TryDecode).
@@ -364,6 +390,78 @@ function decodeLimits(json: Uint8Array): LimitsResult {
   }
 
   return { ok: true, maxMessageBytes };
+}
+
+type IdentitiesResult =
+  | { ok: true; identities: Array<{ clientId: number; actorId: string }> }
+  | { ok: false; reason: string };
+
+/**
+ * MESSAGE_IDENTITIES carries a JSON ARRAY inside an {identities: [...]}
+ * wrapper. decodeControl assumes a flat object and rejects arrays; decodeV2Metadata
+ * is for the rule-numbered blok-sync.v2 family this frame is not part of. So
+ * this is a decoder of its own, not a reuse of either.
+ */
+function decodeIdentities(json: Uint8Array): IdentitiesResult {
+  const text = tryDecodeUtf8(json);
+
+  if (text === null) {
+    return { ok: false, reason: 'the identities payload is not valid UTF-8' };
+  }
+
+  const parsed = tryParseJson(text);
+
+  if (!parsed.ok) {
+    return { ok: false, reason: 'the identities payload is not valid JSON' };
+  }
+
+  const record = parsed.value;
+
+  if (typeof record !== 'object' || record === null || Array.isArray(record)) {
+    return { ok: false, reason: 'the identities payload is not a JSON object' };
+  }
+
+  const fields = record as Record<string, unknown>;
+  const keys = Object.keys(fields);
+
+  if (keys.length !== 1 || keys[0] !== 'identities') {
+    return { ok: false, reason: 'the identities payload needs exactly the key "identities"' };
+  }
+
+  const list = fields.identities;
+
+  if (!Array.isArray(list)) {
+    return { ok: false, reason: 'the identities payload\'s "identities" value must be an array' };
+  }
+
+  const identities: Array<{ clientId: number; actorId: string }> = [];
+
+  for (const entry of list) {
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+      return { ok: false, reason: 'an identities entry is not a JSON object' };
+    }
+
+    const entryFields = entry as Record<string, unknown>;
+    const entryKeys = Object.keys(entryFields);
+
+    if (entryKeys.length !== 2 || !entryKeys.includes('clientId') || !entryKeys.includes('actorId')) {
+      return { ok: false, reason: 'an identities entry needs exactly clientId and actorId' };
+    }
+
+    const { clientId, actorId } = entryFields;
+
+    if (typeof clientId !== 'number' || !Number.isInteger(clientId) || clientId < 0) {
+      return { ok: false, reason: 'an identities entry clientId must be a finite non-negative integer' };
+    }
+
+    if (typeof actorId !== 'string' || actorId.length === 0) {
+      return { ok: false, reason: 'an identities entry actorId must be a non-empty string' };
+    }
+
+    identities.push({ clientId, actorId });
+  }
+
+  return { ok: true, identities };
 }
 
 // --- v2: operation (102) / acknowledgement (103) / rejection (104) ---
@@ -779,6 +877,17 @@ function encodeLimits(maxMessageBytes: number): string {
   }
 
   return JSON.stringify({ maxMessageBytes });
+}
+
+function encodeIdentities(identities: ReadonlyArray<{ clientId: number; actorId: string }>): string {
+  identities.forEach(({ clientId, actorId }) => {
+    if (!Number.isSafeInteger(clientId) || clientId < 0 || actorId.length === 0) {
+      throw new Error(`collab: the identity ${JSON.stringify({ clientId, actorId })} is not encodable.`);
+    }
+  });
+
+  // Key order {identities: [{clientId, actorId}, ...]} — the fixture pins these bytes.
+  return JSON.stringify({ identities: identities.map(({ clientId, actorId }) => ({ clientId, actorId })) });
 }
 
 function encodeOperationMetadata(lineage: string, operationId: string): string {

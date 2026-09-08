@@ -32,6 +32,10 @@
 //                                                          json = {"lineage","operationId"}
 //   blok ack        [103][varuint len][utf8 json]          {"lineage","operationId","serverSequence"}
 //   blok rejection  [104][varuint len][utf8 json]          {"lineage","operationId","code"}
+//   blok activity   [106]                                  Blok-only, no payload: client->server signal;
+//                                                          the server reads identity and time itself
+//   blok identities [107][varuint len][utf8 json]          Blok-only, server->client:
+//                                                          {"identities":[{"clientId":N,"actorId":"<id>"}]}
 //
 // The v2 metadata keys are emitted in exactly the order listed above and the
 // fixture pins those bytes; serverSequence is a decimal STRING because its
@@ -77,6 +81,10 @@ const MESSAGE_BLOK_ACK = 103;
 const MESSAGE_BLOK_REJECTION = 104;
 // Outside 0-3 and 100-104, so a v2 decoder must report it ignorable, not malformed.
 const MESSAGE_UNKNOWN_OUTER = 105;
+// Activity (client->server, no payload) and verified identities (server->client,
+// JSON {identities:[{clientId,actorId}]}). Collaboration activity plan, task 1.
+const MESSAGE_ACTIVITY = 106;
+const MESSAGE_IDENTITIES = 107;
 
 // A single fixed client id keeps every update/state vector byte-deterministic.
 const CLIENT_ID = 1000;
@@ -187,6 +195,20 @@ const control = frame((encoder) => {
 const limits = frame((encoder) => {
   encoding.writeVarUint(encoder, MESSAGE_BLOK_LIMITS);
   encoding.writeVarString(encoder, JSON.stringify(LIMITS));
+});
+
+const activity = frame((encoder) => {
+  encoding.writeVarUint(encoder, MESSAGE_ACTIVITY);
+});
+
+const IDENTITIES = [
+  { clientId: CLIENT_ID, actorId: 'user-ada' },
+  { clientId: CLIENT_ID + 1, actorId: 'user-bob' },
+];
+const IDENTITIES_JSON = JSON.stringify({ identities: IDENTITIES });
+const identities = frame((encoder) => {
+  encoding.writeVarUint(encoder, MESSAGE_IDENTITIES);
+  encoding.writeVarString(encoder, IDENTITIES_JSON);
 });
 
 // The metadata section goes through writeVarUint8Array rather than
@@ -569,6 +591,17 @@ const negative = [
     OVER_LENGTH_CODE,
     'A 65-character code, one past the grammar; rejectionCodeMaxLength pins the other side of the same boundary.',
   ),
+  // Not part of the rule-numbered blok-sync.v2 family (no `rule`, matching the
+  // decoder, which uses plain `malformed(...)`): the identities payload must be
+  // {"identities":[{"clientId":N,"actorId":"<id>"}]}, and this is the object
+  // shape instead of the array.
+  {
+    name: 'identitiesValueNotAnArray',
+    messageType: MESSAGE_IDENTITIES,
+    expect: 'malformed',
+    description: 'The identities payload\'s "identities" value is an object, not an array.',
+    frameHex: hex(v2Frame(MESSAGE_IDENTITIES, utf8('{"identities":{}}'))),
+  },
   {
     name: 'outerVarUintTooLong',
     expect: 'malformed',
@@ -781,6 +814,22 @@ const fixture = {
       frameHex: hex(limits),
       payloadHex: hex(payloadOf(limits, 1)),
       limits: LIMITS,
+    },
+    {
+      name: 'activity',
+      messageType: MESSAGE_ACTIVITY,
+      description: 'Client activity signal; the type varuint is the whole frame, like queryAwareness.',
+      frameHex: hex(activity),
+      payloadHex: '',
+    },
+    {
+      name: 'identities',
+      messageType: MESSAGE_IDENTITIES,
+      description:
+        'Server verified-identities frame: JSON {identities:[{clientId,actorId}]} as a lib0 var-string.',
+      frameHex: hex(identities),
+      payloadHex: hex(payloadOf(identities, 1)),
+      identities: IDENTITIES,
     },
   ],
   // blok-sync.v2 lives in its own section: the v1 `frames` list above is

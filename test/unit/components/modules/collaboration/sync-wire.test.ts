@@ -124,7 +124,10 @@ const v2FrameByName = (name: string): V2FrameFixture => {
 describe('sync-wire codec — committed fixtures (cross-impl contract)', () => {
   it('the fixture carries every message type this codec speaks', () => {
     expect(fixture.frames.map((frame) => frame.name).sort()).toEqual(
-      ['awareness', 'blokControl', 'blokLimits', 'permissionDenied', 'queryAwareness', 'syncStep1', 'syncStep2', 'update'].sort(),
+      [
+        'activity', 'awareness', 'blokControl', 'blokLimits', 'identities', 'permissionDenied',
+        'queryAwareness', 'syncStep1', 'syncStep2', 'update',
+      ].sort(),
     );
   });
 
@@ -304,6 +307,49 @@ const limitsFrame = (json: string): Uint8Array => {
 
   return out;
 };
+
+const identitiesFrameCarrying = (json: string): Uint8Array => {
+  const payload = new TextEncoder().encode(json);
+  const out = new Uint8Array(payload.length + 2);
+
+  // [107][varuint len < 128][utf8 json]; every JSON below fits one length byte.
+  out[0] = 107;
+  out[1] = payload.length;
+  out.set(payload, 2);
+
+  return out;
+};
+
+describe('sync-wire codec — activity and identities frames', () => {
+  it('round-trips the activity frame, which carries no payload', () => {
+    const bytes = encode({ type: 'activity' });
+
+    expect(decode(bytes)).toEqual({ type: 'activity' });
+    // One outer varuint and nothing else: the server reads identity and time from
+    // the connection, so the frame has nothing to carry.
+    expect(bytes).toHaveLength(1);
+  });
+
+  it('round-trips an identities frame', () => {
+    const frame = {
+      type: 'identities' as const,
+      identities: [{ clientId: 7, actorId: 'u_7' }, { clientId: 9, actorId: 'u_9' }],
+    };
+
+    expect(decode(encode(frame))).toEqual(frame);
+  });
+
+  // The payload is a JSON ARRAY, which every existing decoder in this file
+  // rejects. A decoder that accepted an object here would silently report an
+  // empty room.
+  it('refuses an identities payload that is not an array of pairs', () => {
+    const bad = ['{"identities":{}}', '{"identities":[{"clientId":7}]}', '{"identities":[{"clientId":"7","actorId":"u"}]}', '[]'];
+
+    bad.forEach((json) => {
+      expect(decode(identitiesFrameCarrying(json)).type).toBe('malformed');
+    });
+  });
+});
 
 describe('sync-wire codec — fuzz / hostile input never throws', () => {
   const malformedCases: Array<{ name: string; input: Uint8Array }> = [

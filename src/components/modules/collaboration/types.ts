@@ -51,7 +51,9 @@ export type SyncWireFrame =
   | { type: 'limits'; maxMessageBytes: number }
   | { type: 'operation'; lineage: string; operationId: string; update: Uint8Array }
   | { type: 'acknowledgement'; lineage: string; operationId: string; serverSequence: string }
-  | { type: 'rejection'; lineage: string; operationId: string; code: string };
+  | { type: 'rejection'; lineage: string; operationId: string; code: string }
+  | { type: 'activity' }
+  | { type: 'identities'; identities: Array<{ clientId: number; actorId: string }> };
 
 /**
  * What {@link decode} returns. Either a frame this codec understands, an

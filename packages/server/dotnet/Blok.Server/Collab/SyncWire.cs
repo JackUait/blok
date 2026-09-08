@@ -65,6 +65,15 @@ internal sealed record AcknowledgementFrame(
 /// </summary>
 internal sealed record RejectionFrame(string Lineage, string OperationId, string Code) : SyncWireMessage;
 
+/// <summary>Client activity signal, no payload: the server reads identity and time from the connection.</summary>
+internal sealed record ActivityFrame : SyncWireMessage;
+
+/// <summary>One verified identity: an awareness client id mapped to the actor id the server confirmed for it.</summary>
+internal readonly record struct AwarenessIdentity(ulong ClientId, string ActorId);
+
+/// <summary>Server-to-client verified-identity map, so a host can key live presence the way it keys its own records.</summary>
+internal sealed record IdentitiesFrame(IReadOnlyList<AwarenessIdentity> Identities) : SyncWireMessage;
+
 /// <summary>A message type this codec does not know; the payload is left unread.</summary>
 internal sealed record UnknownFrame(ulong MessageType) : SyncWireMessage;
 
@@ -82,6 +91,8 @@ internal sealed record UnknownFrame(ulong MessageType) : SyncWireMessage;
 ///   operation       [102][len]{"lineage":"&lt;32 hex&gt;","operationId":"&lt;32 hex&gt;"}[len][update]
 ///   acknowledgement [103][len]{"lineage":"&lt;32 hex&gt;","operationId":"&lt;32 hex&gt;","serverSequence":"&lt;u64&gt;"}
 ///   rejection       [104][len]{"lineage":"&lt;32 hex&gt;","operationId":"&lt;32 hex&gt;","code":"&lt;code&gt;"}
+///   activity        [106]                                Blok-only, client to server, no payload
+///   identities      [107][len]{"identities":[{"clientId":N,"actorId":"&lt;id&gt;"}]}   Blok-only, server to client
 /// </code>
 /// Pinned byte-for-byte by test/unit/server-conformance/fixtures/sync-frames.json
 /// and, for 102-104, by its <c>v2</c> section (packages/server/protocol/blok-sync-v2.md).
@@ -97,6 +108,8 @@ internal static class SyncWire
   internal const ulong MessageOperation = 102;
   internal const ulong MessageAcknowledgement = 103;
   internal const ulong MessageRejection = 104;
+  internal const ulong MessageActivity = 106;
+  internal const ulong MessageIdentities = 107;
 
   /// <summary>Internal because the inbound budget classifies frames by it.</summary>
   internal const ulong SyncStep1 = 0;
@@ -111,6 +124,10 @@ internal static class SyncWire
   // Room for the JSON metadata of every fixed-shape v2/v1 frame; a rejection
   // at the 64-char code ceiling tops out near 170 bytes.
   private const int JsonPayloadBytes = 192;
+
+  // Rough JSON cost of one {"clientId":N,"actorId":"..."} entry, for sizing an
+  // IdentitiesFrame buffer from its entry count instead of JsonPayloadBytes.
+  private const int IdentityEntryBytes = 96;
 
   // Rule 11's required key set per message type: a decoded object with any
   // other key set (missing, unknown, or a duplicate) is rejected.
@@ -176,6 +193,13 @@ internal static class SyncWire
         WriteVarUint(writer, MessageRejection);
         WriteVarBytes(writer, EncodeRejectionMetadata(rejection.Lineage, rejection.OperationId, rejection.Code));
         break;
+      case ActivityFrame:
+        WriteVarUint(writer, MessageActivity);
+        break;
+      case IdentitiesFrame identities:
+        WriteVarUint(writer, MessageIdentities);
+        WriteVarBytes(writer, EncodeIdentities(identities.Identities));
+        break;
       default:
         throw new ArgumentException(
             $"collab: {message.GetType().Name} cannot be put on the wire.",
@@ -199,6 +223,7 @@ internal static class SyncWire
       AwarenessFrame awareness => awareness.Update?.Length ?? 0,
       PermissionDeniedFrame denied => Encoding.UTF8.GetMaxByteCount(denied.Reason?.Length ?? 0),
       OperationFrame operation => JsonPayloadBytes + (operation.Update?.Length ?? 0),
+      IdentitiesFrame identities => JsonPayloadBytes + (identities.Identities.Count * IdentityEntryBytes),
       _ => JsonPayloadBytes,
     };
 
@@ -289,6 +314,24 @@ internal static class SyncWire
         return TryDecodeAcknowledgement(frame, out message, out error, out rule);
       case MessageRejection:
         return TryDecodeRejection(frame, out message, out error, out rule);
+      case MessageActivity:
+        message = new ActivityFrame();
+        break;
+      case MessageIdentities:
+        if (!TryReadVarBytes(ref frame, out var identitiesJson))
+        {
+          error = "the identities payload is missing or truncated";
+
+          return false;
+        }
+
+        if (!TryDecodeIdentities(identitiesJson, out var identities, out error))
+        {
+          return false;
+        }
+
+        message = new IdentitiesFrame(identities);
+        break;
       default:
         message = new UnknownFrame(type);
         error = "";
@@ -779,6 +822,40 @@ internal static class SyncWire
     return buffer.WrittenSpan.ToArray();
   }
 
+  private static byte[] EncodeIdentities(IReadOnlyList<AwarenessIdentity> identities)
+  {
+    ArgumentNullException.ThrowIfNull(identities);
+
+    foreach (var identity in identities)
+    {
+      if (string.IsNullOrEmpty(identity.ActorId))
+      {
+        throw new ArgumentException("collab: an identity needs a non-empty ActorId.", nameof(identities));
+      }
+    }
+
+    var buffer = new ArrayBufferWriter<byte>(JsonPayloadBytes + (identities.Count * IdentityEntryBytes));
+
+    using (var json = new Utf8JsonWriter(buffer))
+    {
+      json.WriteStartObject();
+      json.WriteStartArray("identities");
+
+      foreach (var identity in identities)
+      {
+        json.WriteStartObject();
+        json.WriteNumber("clientId", identity.ClientId);
+        json.WriteString("actorId", identity.ActorId);
+        json.WriteEndObject();
+      }
+
+      json.WriteEndArray();
+      json.WriteEndObject();
+    }
+
+    return buffer.WrittenSpan.ToArray();
+  }
+
   // Key order is an emitter rule only (blok-sync.v2 4.2): decoders validate
   // the key SET, never the order, so these three Encode*Metadata functions
   // are the only place the {lineage, operationId, ...} order is enforced.
@@ -1022,6 +1099,175 @@ internal static class SyncWire
       return false;
     }
 
+    error = "";
+
+    return true;
+  }
+
+  /// <summary>
+  /// Type 107: <c>{"identities":[{"clientId":N,"actorId":"..."}]}</c>. Not part
+  /// of the rule-numbered blok-sync.v2 family (no <c>rule</c> attribution) and
+  /// not a flat object like control/limits, so <see cref="HasKeySetViolation"/>
+  /// does not apply -- this hand-rolls its own Utf8JsonReader walk, one object
+  /// then an array of objects, in the same repeated-key-rejects style as
+  /// <see cref="TryDecodeControl"/>.
+  /// </summary>
+  private static bool TryDecodeIdentities(
+      ReadOnlySpan<byte> json,
+      out IReadOnlyList<AwarenessIdentity> identities,
+      out string error)
+  {
+    identities = [];
+
+    var list = new List<AwarenessIdentity>();
+    var sawIdentitiesKey = false;
+
+    try
+    {
+      var reader = new Utf8JsonReader(json);
+
+      if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
+      {
+        error = "the identities payload is not a JSON object";
+
+        return false;
+      }
+
+      while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+      {
+        var isIdentities = reader.ValueTextEquals("identities"u8);
+
+        if (!reader.Read())
+        {
+          error = "an identities property has no value";
+
+          return false;
+        }
+
+        if (!isIdentities || sawIdentitiesKey || reader.TokenType != JsonTokenType.StartArray)
+        {
+          error = "the identities payload has an unknown, repeated or ill-typed property";
+
+          return false;
+        }
+
+        sawIdentitiesKey = true;
+
+        while (true)
+        {
+          if (!reader.Read())
+          {
+            error = "the identities array is not terminated";
+
+            return false;
+          }
+
+          if (reader.TokenType == JsonTokenType.EndArray)
+          {
+            break;
+          }
+
+          if (!TryDecodeIdentityEntry(ref reader, out var entry, out error))
+          {
+            return false;
+          }
+
+          list.Add(entry);
+        }
+      }
+
+      if (reader.TokenType != JsonTokenType.EndObject || reader.Read())
+      {
+        error = "the identities payload has trailing content";
+
+        return false;
+      }
+    }
+    catch (JsonException)
+    {
+      error = "the identities payload is not valid JSON";
+
+      return false;
+    }
+
+    if (!sawIdentitiesKey)
+    {
+      error = "the identities payload needs the identities key";
+
+      return false;
+    }
+
+    identities = list;
+    error = "";
+
+    return true;
+  }
+
+  /// <summary>One <c>{"clientId":N,"actorId":"..."}</c> array element; the reader is positioned on its StartObject.</summary>
+  private static bool TryDecodeIdentityEntry(
+      ref Utf8JsonReader reader,
+      out AwarenessIdentity entry,
+      out string error)
+  {
+    entry = default;
+
+    if (reader.TokenType != JsonTokenType.StartObject)
+    {
+      error = "an identities entry is not a JSON object";
+
+      return false;
+    }
+
+    ulong? clientId = null;
+    string? actorId = null;
+
+    while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+    {
+      var isClientId = reader.ValueTextEquals("clientId"u8);
+      var isActorId = reader.ValueTextEquals("actorId"u8);
+
+      if (!reader.Read())
+      {
+        error = "an identities entry property has no value";
+
+        return false;
+      }
+
+      if (isClientId && clientId is null &&
+          reader.TokenType == JsonTokenType.Number &&
+          reader.TryGetUInt64(out var clientIdValue))
+      {
+        clientId = clientIdValue;
+      }
+      else if (isActorId && actorId is null &&
+          reader.TokenType == JsonTokenType.String &&
+          !string.IsNullOrEmpty(reader.GetString()))
+      {
+        actorId = reader.GetString();
+      }
+      else
+      {
+        error = "an identities entry has an unknown, repeated or ill-typed property";
+
+        return false;
+      }
+    }
+
+    if (reader.TokenType != JsonTokenType.EndObject)
+    {
+      error = "an identities entry is not terminated";
+
+      return false;
+    }
+
+    if (clientId is null || actorId is null)
+    {
+      error = "an identities entry needs both clientId and actorId";
+
+      return false;
+    }
+
+    entry = new AwarenessIdentity(clientId.Value, actorId);
     error = "";
 
     return true;

@@ -87,6 +87,30 @@
       "limits": {
         "maxMessageBytes": 1048576
       }
+    },
+    {
+      "name": "activity",
+      "messageType": 106,
+      "description": "Client activity signal; the type varuint is the whole frame, like queryAwareness.",
+      "frameHex": "6a",
+      "payloadHex": ""
+    },
+    {
+      "name": "identities",
+      "messageType": 107,
+      "description": "Server verified-identities frame: JSON {identities:[{clientId,actorId}]} as a lib0 var-string.",
+      "frameHex": "6b5e7b226964656e746974696573223a5b7b22636c69656e744964223a313030302c226163746f724964223a22757365722d616461227d2c7b22636c69656e744964223a313030312c226163746f724964223a22757365722d626f62227d5d7d",
+      "payloadHex": "7b226964656e746974696573223a5b7b22636c69656e744964223a313030302c226163746f724964223a22757365722d616461227d2c7b22636c69656e744964223a313030312c226163746f724964223a22757365722d626f62227d5d7d",
+      "identities": [
+        {
+          "clientId": 1000,
+          "actorId": "user-ada"
+        },
+        {
+          "clientId": 1001,
+          "actorId": "user-bob"
+        }
+      ]
     }
   ],
   "v2": {
@@ -547,6 +571,13 @@
         "description": "A 65-character code, one past the grammar; rejectionCodeMaxLength pins the other side of the same boundary.",
         "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"code\":\"code-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
         "frameHex": "68aa017b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a22636f64652d616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161227d"
+      },
+      {
+        "name": "identitiesValueNotAnArray",
+        "messageType": 107,
+        "expect": "malformed",
+        "description": "The identities payload's \"identities\" value is an object, not an array.",
+        "frameHex": "6b117b226964656e746974696573223a7b7d7d"
       },
       {
         "name": "outerVarUintTooLong",

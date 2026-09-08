@@ -274,8 +274,9 @@ describe('PlusButtonHandler — mutation coverage', () => {
   });
 
   describe('handleClick() — same-trigger law', () => {
-    /** Puts an open popover anchored to `trigger` into the registry. */
-    const registerOpenPopoverFor = (trigger: HTMLElement): void => {
+    it('runs normally when the toolbox is closed even though this button anchors a popover', () => {
+      const fixture = setup({ toolboxOpened: false });
+      const plusButton = fixture.handler.make(emptyNodes());
       const popoverEl = document.createElement('div');
       const popover = {
         hide: vi.fn(),
@@ -284,14 +285,7 @@ describe('PlusButtonHandler — mutation coverage', () => {
         getFocusHost: vi.fn(() => null),
       } as unknown as PopoverAbstract;
 
-      PopoverRegistry.instance.register(popover, trigger);
-    };
-
-    it('runs normally when the toolbox is closed even though this button anchors a popover', () => {
-      const fixture = setup({ toolboxOpened: false });
-      const plusButton = fixture.handler.make(emptyNodes());
-
-      registerOpenPopoverFor(plusButton);
+      PopoverRegistry.instance.register(popover, plusButton);
 
       fixture.handler.handleClick();
 

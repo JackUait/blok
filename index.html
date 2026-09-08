@@ -1409,8 +1409,43 @@
       };
     }
 
+    /**
+     * Draws the header's presence stack from `collaboration:status`.
+     *
+     * Takes the EDITOR INSTANCE explicitly rather than reading the outer `blok`
+     * variable: `reinitEditor` destroys and reassigns it on every tool toggle,
+     * and a listener attached to the variable instead of the instance that
+     * fired `isReady` would end up subscribed to whichever instance happened to
+     * be current when the callback ran — not necessarily the one that resolved.
+     * @param editor - the Blok instance whose presence to draw
+     */
+    function wireCollaborationPresence(editor) {
+      const presenceStack = document.getElementById('presence-stack');
+
+      editor.on('collaboration:status', ({ participants }) => {
+        presenceStack.replaceChildren(
+          ...participants
+            .filter((person) => !person.self)
+            .slice(0, 4)
+            .map((person) => {
+              const face = document.createElement('span');
+
+              face.className = 'playground-presence-face';
+              face.style.background = person.user.color || '#888';
+              face.textContent = person.user.name.slice(0, 1).toUpperCase() || '?';
+              face.title = person.lastActiveAt === null
+                ? person.user.name
+                : `${person.user.name} · ${Math.round((Date.now() - person.lastActiveAt) / 1000)}s ago`;
+
+              return face;
+            })
+        );
+      });
+    }
+
     let blok = new Blok(buildConfig());
     window.blok = blok;
+    blok.isReady.then(() => wireCollaborationPresence(blok));
 
     /**
      * Reinitialize editor with current state.
@@ -1421,9 +1456,13 @@
       clearTimeout(reinitTimeout);
       reinitTimeout = setTimeout(() => {
         blok.destroy();
-        blok = new Blok(buildConfig());
+        const editor = new Blok(buildConfig());
+        blok = editor;
         window.blok = blok;
-        blok.isReady?.then(refreshBlokView);
+        blok.isReady?.then(() => {
+          refreshBlokView();
+          wireCollaborationPresence(editor);
+        });
       }, 50);
     }
 
@@ -2890,31 +2929,7 @@
     }
 
     // Reveal page once editor is ready (Tailwind CSS is injected during Blok init)
-    blok.isReady.then(() => {
-      document.body.classList.add('ready');
-
-      const presenceStack = document.getElementById('presence-stack');
-
-      blok.on('collaboration:status', ({ participants }) => {
-        presenceStack.replaceChildren(
-          ...participants
-            .filter((person) => !person.self)
-            .slice(0, 4)
-            .map((person) => {
-              const face = document.createElement('span');
-
-              face.className = 'playground-presence-face';
-              face.style.background = person.user.color || '#888';
-              face.textContent = person.user.name.slice(0, 1).toUpperCase() || '?';
-              face.title = person.lastActiveAt === null
-                ? person.user.name
-                : `${person.user.name} · ${Math.round((Date.now() - person.lastActiveAt) / 1000)}s ago`;
-
-              return face;
-            })
-        );
-      });
-    });
+    blok.isReady.then(() => document.body.classList.add('ready'));
   </script>
 </body>
 </html>

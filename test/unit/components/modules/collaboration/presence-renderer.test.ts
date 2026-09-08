@@ -11,6 +11,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  MAX_PEERS,
   PRESENCE_SCAN_LIMIT,
   presenceColorFor,
   type PresenceState,
@@ -492,6 +493,23 @@ describe('presence renderer', () => {
       harness.renderer.render([...junk, named(9999, 'Real Person', 'real')], 42);
 
       expect(face(harness.holderOf('real'))).toBeNull();
+    });
+
+    /**
+     * Distinct block per peer, so every one of them — up to the cap — draws its
+     * OWN face: nothing here shares a block's maxFaces limit, which would cap
+     * the DOM count for an unrelated reason and hide a broken peer cap. This
+     * exercises createPresenceRenderer's own render() path, not the stubbed
+     * renderer presence.test.ts checks selectDrawableStates through.
+     */
+    it('never draws more than the peer cap, however large the room', () => {
+      const blockIds = Array.from({ length: MAX_PEERS + 10 }, (_unused, index) => `block-${index}`);
+      const harness = setup({ blockIds });
+      const crowd = blockIds.map((blockId, index) => named(100 + index, `Peer ${index}`, blockId));
+
+      harness.renderer.render(crowd, 42);
+
+      expect(harness.host.querySelectorAll('[data-blok-presence-face]')).toHaveLength(MAX_PEERS);
     });
   });
 

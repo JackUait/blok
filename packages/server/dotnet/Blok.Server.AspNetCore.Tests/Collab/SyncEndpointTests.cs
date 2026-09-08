@@ -724,6 +724,23 @@ public sealed class SyncEndpointTests
   }
 
   /// <summary>
+  /// <see cref="SyncClient.ReceiveAsync{T}"/> transparently skips a join-time
+  /// identities frame — that is what protects every other test in this file
+  /// from needing to know about it, but it also means none of them can prove
+  /// the frame is actually sent. This one reads raw, so if the server
+  /// stopped sending it, this is the test that would notice.
+  /// </summary>
+  [Fact]
+  public async Task AJoinSendsAnIdentitiesFrame()
+  {
+    await using var app = await SyncApp.StartAsync();
+    await using var client = await app.ConnectAsync(protocols: [SyncApp.Protocol]);
+
+    Assert.IsType<BlokControlFrame>(await client.ReceiveAsync());
+    Assert.IsType<IdentitiesFrame>(await client.ReceiveAsync());
+  }
+
+  /// <summary>
   /// Every inbound SyncStep1 is answered SyncStep2 then the server's own
   /// SyncStep1, resyncs included — that second answer is how a client which
   /// has just drained its outbox learns the fresh server state vector.

@@ -63,7 +63,7 @@ public sealed class CollabRoomManagerTests
     Assert.Equal(0, converter.Seeds);
     Assert.Equal(Tags.At(3), result.Membership.Tag);
     var replica = YDocs.NewClient();
-    YDocs.Apply(replica, Assert.IsType<SyncStep2Frame>(member.Received[0]).Update);
+    YDocs.Apply(replica, member.Received.OfType<SyncStep2Frame>().Single().Update);
     Assert.Equal("from disk", YDocs.Text(replica));
   }
 
@@ -125,7 +125,7 @@ public sealed class CollabRoomManagerTests
     Assert.Empty(store.FramesOf(DocId));
     Tags.AssertMinted(0, store.Stored(DocId).Tag);
     var replica = YDocs.NewClient();
-    YDocs.Apply(replica, Assert.IsType<SyncStep2Frame>(member.Received[0]).Update);
+    YDocs.Apply(replica, member.Received.OfType<SyncStep2Frame>().Single().Update);
     Assert.Equal("", YDocs.Text(replica));
   }
 

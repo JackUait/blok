@@ -68,9 +68,12 @@ describe('emoji category icon relationships', () => {
   it('centers the bulb base under its broad neck with a full stroke of clear space', () => {
     const paths = pathsOf(IconEmojiLightbulb);
 
-    expect(paths[1]).toMatch(/^M[\d. ]+h[\d.]+$/);
+    // H then two curves and a close: a flat top edge over a rounded cup, which
+    // is what makes [left, baseline, right] a valid read of the first three.
+    expect(paths[1]).toMatch(/^M[\d. ]+H[\d.]+C[\d. ]+C[\d. ]+Z$/);
     const neck = valuesOf(paths[0]);
-    const [left, baseline, width] = valuesOf(paths[1]);
+    const [left, baseline, right] = valuesOf(paths[1]);
+    const width = right - left;
 
     expect(left + width / 2).toBe(10);
     expect(width).toBeGreaterThanOrEqual(4);

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
+import { CALLOUT_CHILDREN_CLASSES, CALLOUT_WRAPPER_CLASSES } from '../../../src/shared/tool-classes/callout';
 import { CODE_AREA_CLASSES, CODE_WRAPPER_CLASSES } from '../../../src/shared/tool-classes/code';
 import { DIVIDER_WRAPPER_CLASSES, DIVIDER_RULE_CLASSES } from '../../../src/shared/tool-classes/divider';
 import { SPACER_WRAPPER_CLASSES } from '../../../src/shared/tool-classes/spacer';
@@ -11,6 +12,8 @@ import {
 } from '../../../src/shared/tool-classes/toggle';
 
 const lists = {
+  CALLOUT_WRAPPER_CLASSES,
+  CALLOUT_CHILDREN_CLASSES,
   CODE_AREA_CLASSES,
   CODE_WRAPPER_CLASSES,
   DIVIDER_WRAPPER_CLASSES,
@@ -32,6 +35,45 @@ describe('shared tool classes mutants', () => {
         expect(className).not.toBe('');
         expect(className).not.toMatch(/\s/);
       }
+    });
+  });
+
+  describe('callout', () => {
+    it('gives the wrapper its full set', () => {
+      expect(CALLOUT_WRAPPER_CLASSES).toStrictEqual([
+        'text-[length:var(--blok-callout-font-size,var(--blok-paragraph-font-size,inherit))]',
+        'rounded-xl',
+        'pl-8',
+        'pr-4',
+        'pt-[var(--blok-callout-padding-block,5px)]',
+        'pb-[var(--blok-callout-padding-block,5px)]',
+        'my-1',
+        'flex',
+        'items-start',
+        'gap-2',
+        'relative',
+      ]);
+    });
+
+    it('gives the children container its full set', () => {
+      expect(CALLOUT_CHILDREN_CLASSES).toStrictEqual(['flex-1', 'min-w-0']);
+    });
+
+    // The wrapper is the only place the callout scale may be applied: the child
+    // paragraph re-declaring it squared any relative value.
+    it('declares the callout font-size hook once, falling back to the paragraph one', () => {
+      expect(CALLOUT_WRAPPER_CLASSES.filter((name) => name.startsWith('text-[length:'))).toStrictEqual([
+        'text-[length:var(--blok-callout-font-size,var(--blok-paragraph-font-size,inherit))]',
+      ]);
+    });
+
+    // The panel inset is deliberately its own token, not the block rhythm one,
+    // so a compact read-only render cannot collapse the card onto its text.
+    it('keeps its own padding token rather than the block rhythm one', () => {
+      expect(CALLOUT_WRAPPER_CLASSES.filter((name) => name.includes('padding'))).toStrictEqual([
+        'pt-[var(--blok-callout-padding-block,5px)]',
+        'pb-[var(--blok-callout-padding-block,5px)]',
+      ]);
     });
   });
 

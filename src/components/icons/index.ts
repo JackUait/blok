@@ -877,7 +877,7 @@ export const IconPlayerForward = `
 // Volume on — speaker + sound waves
 export const IconPlayerVolume = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M9.5 5L6.5 7.5H4.5a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h2L9.5 15" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M9.5 5L6.5 7.5H4.5a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h2L9.5 15Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M12 7.5a3.5 3.5 0 0 1 0 5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M14.5 5.5a6.5 6.5 0 0 1 0 9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
@@ -886,7 +886,7 @@ export const IconPlayerVolume = `
 // Volume muted — speaker + cross
 export const IconPlayerVolumeMute = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M9.5 5L6.5 7.5H4.5a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h2L9.5 15" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M9.5 5L6.5 7.5H4.5a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h2L9.5 15Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M13 8L17 12M17 8L13 12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;

@@ -105,14 +105,14 @@ describe('Blok Line media completion', () => {
     });
   });
 
-  it('shares an open speaker mouth with space before either sound or mute marks', () => {
+  it('shares a closed speaker cone with space before either sound or mute marks', () => {
     const audible = Array.from(svgOf(Icons.IconPlayerVolume).querySelectorAll('path'));
     const muted = Array.from(svgOf(Icons.IconPlayerVolumeMute).querySelectorAll('path'));
     const speaker = audible[0].getAttribute('d') ?? '';
     const mouth = numbers(audible[0])[0];
     const stroke = Number(audible[0].getAttribute('stroke-width'));
 
-    expect(speaker).not.toMatch(/z/i);
+    expect(speaker).toMatch(/z$/i);
     expect(muted[0].getAttribute('d')).toBe(speaker);
     expect(speaker.match(/a1 1/g)).toHaveLength(2);
     for (const mark of [audible[1], muted[1]]) {

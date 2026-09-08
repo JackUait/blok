@@ -26,7 +26,7 @@ afterEach(() => {
 
 describe('compact emoji picker artwork', () => {
   it.each([
-    'Star', 'Smile', 'Sprout', 'Utensils', 'Ball', 'Globe', 'Lightbulb', 'Flag', 'Dice', 'Trash',
+    'Star', 'Smile', 'Sprout', 'Utensils', 'Ball', 'Globe', 'Lightbulb', 'Heart', 'Flag', 'Dice', 'Trash',
   ])('%s keeps the standard canvas, self-contained paint and decorative accessibility', (name) => {
     const svg = parse(`IconEmoji${name}`);
 
@@ -42,6 +42,34 @@ describe('compact emoji picker artwork', () => {
       expect(stroke.getAttribute('stroke-linecap')).toBe('round');
       expect(stroke.getAttribute('stroke-linejoin')).toBe('round');
     }
+  });
+
+  it('mirrors the heart lobes about the canvas centre and spans the family circle box', () => {
+    const svg = parse('IconEmojiHeart');
+    const outline = pathOf(svg);
+    const values = numbers(outline);
+    const points = values.flatMap((value, index) => (index % 2 === 1 ? [[values[index - 1] ?? 0, value]] : []));
+    const key = (x: number, y: number): string => `${x},${y}`;
+    const drawn = points.map(([x, y]) => key(x ?? 0, y ?? 0));
+    const face = parse('IconEmojiSmile').querySelector('circle');
+
+    if (face === null) {
+      throw new Error('IconEmojiSmile lost the family circle');
+    }
+
+    expect(outline.endsWith('Z')).toBe(true);
+    expect(svg.getAttribute('fill')).toBe('none');
+
+    // A lopsided heart reads as a scribble next to the family's symmetric shapes.
+    for (const [x, y] of points) {
+      expect(drawn, `unmirrored point ${key(x ?? 0, y ?? 0)}`).toContain(key(20 - (x ?? 0), y ?? 0));
+    }
+
+    const edge = numeric(face, 'cx') - numeric(face, 'r');
+    const xs = points.map(([x]) => x ?? 0);
+
+    expect(Math.min(...xs)).toBe(edge);
+    expect(Math.max(...xs)).toBe(20 - edge);
   });
 
   it('rounds both the five star tips and their inner valleys without filling the silhouette', () => {

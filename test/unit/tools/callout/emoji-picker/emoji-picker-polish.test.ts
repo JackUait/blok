@@ -177,13 +177,14 @@ describe('EmojiPicker polish', () => {
     await picker.open(anchor);
     const body = get('[data-emoji-picker-body]');
     const buttons = Array.from(body.querySelectorAll<HTMLElement>('[data-emoji-native]'));
+    const glyphs = Array.from(body.querySelectorAll<HTMLElement>('[data-emoji-native] [data-emoji-glyph]'));
 
     Object.defineProperties(body, {
       clientHeight: { configurable: true, value: 100 },
       scrollHeight: { configurable: true, value: 160 },
     });
-    buttons.forEach((button, index) => {
-      Object.defineProperties(button, {
+    glyphs.forEach((glyph, index) => {
+      Object.defineProperties(glyph, {
         offsetTop: { configurable: true, value: index * 40 },
         offsetHeight: { configurable: true, value: 40 },
       });

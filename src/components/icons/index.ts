@@ -619,6 +619,13 @@ export const IconEmojiLightbulb = `
 </svg>
 `;
 
+// Heart icon (Symbols category)
+export const IconEmojiHeart = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M10 16.4C10 16.4 3.5 12.2 3.5 7.9C3.5 5.6 5.4 4 7.4 4C8.7 4 9.6 4.7 10 5.5C10.4 4.7 11.3 4 12.6 4C14.6 4 16.5 5.6 16.5 7.9C16.5 12.2 10 16.4 10 16.4Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Flag icon (Flags category)
 export const IconEmojiFlag = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

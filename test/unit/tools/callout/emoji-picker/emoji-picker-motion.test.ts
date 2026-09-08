@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmojiPicker } from '../../../../../src/tools/callout/emoji-picker';
-import { IconHash } from '../../../../../src/components/icons';
+import { IconEmojiHeart, IconHash } from '../../../../../src/components/icons';
 
 vi.mock('../../../../../src/components/utils/tooltip', () => ({
   onHover: vi.fn(),
@@ -87,13 +87,16 @@ describe('EmojiPicker motion', () => {
     }
   });
 
-  it('uses the shared hash glyph for the Symbols category', async () => {
+  it('draws the Symbols category with the category family, not the type-set hash', async () => {
     await open();
     const symbols = get('[data-emoji-nav="symbols"]');
-    const expected = new DOMParser().parseFromString(IconHash, 'text/html').querySelector('svg');
+    const drawing = (markup: string): string | undefined =>
+      new DOMParser().parseFromString(markup, 'text/html').querySelector('svg')?.innerHTML;
 
-    expect(expected).not.toBeNull();
-    expect(symbols.querySelector('svg')?.innerHTML).toBe(expected?.innerHTML);
+    // A hash is a letterform among pictograms: it is the only nav icon a
+    // reader sees as text, so it reads as a foreign mark in the row.
+    expect(symbols.querySelector('svg')?.innerHTML).not.toBe(drawing(IconHash));
+    expect(symbols.querySelector('svg')?.innerHTML).toBe(drawing(IconEmojiHeart));
     expect(symbols).toHaveAttribute('aria-label', 'tools.callout.emojiCategorySymbols');
   });
 
@@ -181,7 +184,7 @@ describe('EmojiPicker motion', () => {
       clientHeight: { configurable: true, value: 100 },
       scrollHeight: { configurable: true, value: 300 },
     });
-    Object.defineProperties(title, {
+    Object.defineProperties(get('[data-emoji-section-title] > span'), {
       offsetTop: { configurable: true, value: 40 },
       offsetHeight: { configurable: true, value: 40 },
     });
@@ -207,6 +210,77 @@ describe('EmojiPicker motion', () => {
     expect(label.style.transform).toBe('');
   });
 
+  it('measures the reel band on the section label, not on its padded heading box', async () => {
+    await open();
+    const body = get('[data-emoji-picker-body]');
+    const title = get('[data-emoji-section-title]');
+    const label = get('[data-emoji-section-title] > span');
+
+    Object.defineProperties(body, {
+      clientHeight: { configurable: true, value: 100 },
+      scrollHeight: { configurable: true, value: 300 },
+    });
+    // A heading box is mostly padding: 12 units of it sit above the label.
+    Object.defineProperties(title, {
+      offsetTop: { configurable: true, value: 40 },
+      offsetHeight: { configurable: true, value: 35 },
+    });
+    Object.defineProperties(label, {
+      offsetTop: { configurable: true, value: 52 },
+      offsetHeight: { configurable: true, value: 18 },
+    });
+
+    // Where scrollToSection lands: the heading box meets the top edge while
+    // the label still clears it.
+    body.scrollTop = 40;
+    body.dispatchEvent(new Event('scroll'));
+    vi.advanceTimersByTime(20);
+
+    expect(label.style.transform).toBe('');
+    expect(label.style.opacity).toBe('');
+
+    body.scrollTop = 52;
+    body.dispatchEvent(new Event('scroll'));
+    vi.advanceTimersByTime(20);
+
+    expect(label.style.transform).toContain('rotateX(');
+  });
+
+  it('adds up nested offsets when a heading positions its own label', async () => {
+    // Inline mode makes the heading that carries the tone controls a
+    // positioned box, so its label measures from the heading, not the body.
+    await open(true);
+    const body = get('[data-emoji-picker-body]');
+    const title = get('[data-emoji-section-title]');
+    const label = get('[data-emoji-section-title] > span');
+
+    Object.defineProperties(body, {
+      clientHeight: { configurable: true, value: 100 },
+      scrollHeight: { configurable: true, value: 300 },
+    });
+    Object.defineProperties(title, {
+      offsetTop: { configurable: true, value: 40 },
+      offsetParent: { configurable: true, value: body },
+    });
+    Object.defineProperties(label, {
+      offsetTop: { configurable: true, value: 14 },
+      offsetHeight: { configurable: true, value: 18 },
+      offsetParent: { configurable: true, value: title },
+    });
+
+    body.scrollTop = 54;
+    body.dispatchEvent(new Event('scroll'));
+    vi.advanceTimersByTime(20);
+
+    expect(label.style.transform).toContain('rotateX(');
+
+    body.scrollTop = 40;
+    body.dispatchEvent(new Event('scroll'));
+    vi.advanceTimersByTime(20);
+
+    expect(label.style.transform).toBe('');
+  });
+
   it('resets curled section labels when reduced motion is enabled', async () => {
     await open();
     const body = get('[data-emoji-picker-body]');
@@ -216,7 +290,7 @@ describe('EmojiPicker motion', () => {
       clientHeight: { configurable: true, value: 100 },
       scrollHeight: { configurable: true, value: 300 },
     });
-    Object.defineProperties(title, {
+    Object.defineProperties(get('[data-emoji-section-title] > span'), {
       offsetTop: { configurable: true, value: 40 },
       offsetHeight: { configurable: true, value: 40 },
     });

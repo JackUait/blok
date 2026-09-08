@@ -85,6 +85,7 @@ export declare const IconEmojiSprout: string;
 export declare const IconEmojiUtensils: string;
 export declare const IconEmojiBall: string;
 export declare const IconEmojiLightbulb: string;
+export declare const IconEmojiHeart: string;
 export declare const IconEmojiFlag: string;
 export declare const IconEmojiGlobe: string;
 export declare const IconEmojiDice: string;

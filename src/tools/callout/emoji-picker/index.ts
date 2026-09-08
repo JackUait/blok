@@ -38,7 +38,7 @@ import {
   IconEmojiBall,
   IconEmojiGlobe,
   IconEmojiLightbulb,
-  IconHash,
+  IconEmojiHeart,
   IconEmojiFlag,
 } from '../../../components/icons';
 
@@ -78,7 +78,7 @@ const CATEGORY_NAV: ReadonlyArray<readonly [id: string, icon: string]> = [
   ['activity', IconEmojiBall],
   ['places', IconEmojiGlobe],
   ['objects', IconEmojiLightbulb],
-  ['symbols', IconHash],
+  ['symbols', IconEmojiHeart],
   ['flags', IconEmojiFlag],
 ];
 
@@ -968,18 +968,41 @@ export class EmojiPicker {
     this._curledGlyphs.clear();
   }
 
+  /**
+   * Distance from the scroll container's top. Inline mode positions the
+   * heading that carries the tone controls, which makes it the label's
+   * offsetParent, so a single offsetTop read is short by the heading's own.
+   */
+  private offsetWithinBody(element: HTMLElement): number {
+    if (element === this._body) {
+      return 0;
+    }
+
+    const parent = element.offsetParent;
+
+    return element.offsetTop + (parent instanceof HTMLElement ? this.offsetWithinBody(parent) : 0);
+  }
+
   private measureReelRows(): void {
     const items = this._body.querySelectorAll<HTMLElement>('[data-emoji-native], [data-emoji-section-title]');
 
-    for (const button of items) {
-      const glyph = button.firstElementChild;
-      const height = button.offsetHeight;
+    for (const item of items) {
+      const glyph = item.firstElementChild;
 
-      if (!(glyph instanceof HTMLElement) || height === 0) {
+      if (!(glyph instanceof HTMLElement)) {
         continue;
       }
 
-      const top = button.offsetTop;
+      // Measure the glyph, not its box: the band is one glyph deep, and a
+      // section heading's box is mostly padding, so measuring that curls the
+      // label a padding-height early — exactly where scrollToSection lands.
+      const height = glyph.offsetHeight;
+
+      if (height === 0) {
+        continue;
+      }
+
+      const top = this.offsetWithinBody(glyph);
       const row = this._reelRows.at(-1);
 
       if (row?.top === top) {

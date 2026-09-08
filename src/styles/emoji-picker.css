@@ -335,12 +335,14 @@
   transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-[data-blok-emoji-picker] [data-emoji-picker-footer]:has([data-emoji-picker-nav][hidden]) {
+[data-blok-emoji-picker][data-emoji-picker-navless] [data-emoji-picker-footer] {
   display: none;
 }
 
-/* Search uses the footer's space without resizing the picker. */
-[data-blok-emoji-picker]:has([data-emoji-picker-nav][hidden]) [data-emoji-picker-body] {
+/* Search uses the footer's space without resizing the picker.
+   Keyed off the root attribute, never `:has()`: a `:has()` anchored here makes
+   every glyph text swap below invalidate all ~8300 nodes of the grid. */
+[data-blok-emoji-picker][data-emoji-picker-navless] [data-emoji-picker-body] {
   flex-basis: 306px;
   height: 306px;
   max-height: 306px;

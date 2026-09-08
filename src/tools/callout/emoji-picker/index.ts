@@ -305,7 +305,7 @@ export class EmojiPicker {
         this.applySkinToneToGrid();
       }
 
-      this._nav.hidden = false;
+      this.setNavHidden(false);
       this._body.scrollTop = 0;
       this.scheduleScrollEffects();
     } else {
@@ -1175,13 +1175,13 @@ export class EmojiPicker {
 
     if (query.trim() === '') {
       this._announcer.textContent = '';
-      this._nav.hidden = false;
+      this.setNavHidden(false);
       this.renderEmojiGrid(this._allEmojis);
 
       return;
     }
 
-    this._nav.hidden = true;
+    this.setNavHidden(true);
     // Uncapped: the grid renders every match, unlike the inline trigger's
     // flat, length-limited menu.
     const results = searchEmojisRanked(this._allEmojis, query, this._localeData, UNCAPPED_RESULTS);
@@ -1264,7 +1264,7 @@ export class EmojiPicker {
     }
 
     this.buildCategoryNav(visibleCategories);
-    this._nav.hidden = false;
+    this.setNavHidden(false);
     this._hasFullGrid = true;
 
     // Set initial active nav after layout
@@ -1363,6 +1363,18 @@ export class EmojiPicker {
     section.appendChild(this.buildGrid(emojis));
 
     return section;
+  }
+
+  /**
+   * Hides the category nav and publishes that state on the picker root, where
+   * the CSS reads it. The root may not carry a `:has()` for this: it holds
+   * every emoji button, so a `:has()` anchored there turns each glyph text
+   * swap below it into a full-subtree style invalidation.
+   * @param hidden - whether the category nav is hidden
+   */
+  private setNavHidden(hidden: boolean): void {
+    this._nav.hidden = hidden;
+    this._element.toggleAttribute('data-emoji-picker-navless', hidden);
   }
 
   private getDisplayName(emoji: ProcessedEmoji): string {

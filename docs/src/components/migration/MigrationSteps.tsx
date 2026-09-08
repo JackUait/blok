@@ -8,6 +8,7 @@ import { MigrationSectionHeader } from "./MigrationSectionHeader";
 import { Diff } from "./Diff";
 import { useI18n } from "../../contexts/I18nContext";
 import { Typo } from "../common/Typo";
+import { Prose } from '../common/Prose';
 
 const stepNumber = (id: string): number =>
   MIGRATION_STEPS.findIndex((step) => step.id === id) + 1;
@@ -120,9 +121,9 @@ export const MigrationSteps: React.FC = () => {
 
         <div className="mt-10" data-blok-testid="dropped-fields-note">
           <h3 className="text-sm font-bold tracking-tight text-foreground"><Typo>{t('migration.droppedFieldsTitle')}</Typo></h3>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            <Typo>{t('migration.droppedFieldsWarning')}</Typo>
-          </p>
+          <div className="mt-2 max-w-2xl">
+            <Prose text={t('migration.droppedFieldsWarning')} className="text-sm leading-relaxed text-muted-foreground" />
+          </div>
           <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
             <div className="divide-y divide-border">
               <div className="grid grid-cols-[7rem_1fr] items-center gap-3 bg-secondary/50 px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground sm:grid-cols-[10rem_1fr]">

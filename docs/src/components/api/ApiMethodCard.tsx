@@ -7,6 +7,7 @@ import { useFramework } from "../../contexts/FrameworkContext";
 import { adaptExample } from "../common/framework-adapt";
 import { Typo } from "../common/Typo";
 import { renderInline } from "./inline-code";
+import { Prose } from "../common/Prose";
 import { Badge } from "../ui/badge";
 
 export interface ApiMethodCardProps {
@@ -49,7 +50,7 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => 
           </Badge>
         )}
       </div>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground"><Typo>{method.description}</Typo></p>
+      <div className="mt-2"><Prose text={method.description} className="text-sm leading-relaxed text-muted-foreground" /></div>
       {(method.deprecated || method.deprecatedSince) && (
         <p className="mt-1 text-xs text-muted-foreground" data-blok-testid="api-method-deprecated">
           {method.deprecatedSince && (
@@ -79,9 +80,9 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => 
           <p className="font-display text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">
             <Typo>{t("api.whenToUse")}</Typo>
           </p>
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            {renderInline(method.note)}
-          </p>
+          <div className="mt-1">
+            <Prose text={method.note} className="text-sm leading-relaxed text-muted-foreground" />
+          </div>
         </div>
       )}
       {method.params && method.params.length > 0 && (
@@ -113,7 +114,7 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => 
                     <td className={tdClass}>
                       {param.default ? <code className={codeClass}>{param.default}</code> : "—"}
                     </td>
-                    <td className={tdClass}>{renderInline(param.description)}</td>
+                    <td className={tdClass}><Prose text={param.description} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -138,7 +139,9 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => 
                 {error.message !== undefined && (
                   <p data-lang-exempt className="mt-1 break-all font-mono text-xs text-muted-foreground">{error.message}</p>
                 )}
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{renderInline(error.resolution)}</p>
+                <div className="mt-1">
+                  <Prose text={error.resolution} className="text-sm leading-relaxed text-muted-foreground" />
+                </div>
               </li>
             ))}
           </ul>

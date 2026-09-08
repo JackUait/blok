@@ -5,7 +5,7 @@ import { useI18n } from "../../contexts/I18nContext";
 import { useFramework } from "../../contexts/FrameworkContext";
 import { adaptExample } from "../common/framework-adapt";
 import { TUTORIAL_MOUNT_SNIPPETS } from "../common/framework-snippets";
-import { renderInline } from "./inline-code";
+import { Prose } from "../common/Prose";
 import { BLOK_VERSION } from "../../utils/constants";
 
 const SAVE_CODE = `const data = await editor.save();
@@ -67,9 +67,9 @@ export const TutorialContent: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-12">
-      <p className="max-w-2xl text-lg leading-relaxed text-foreground/90">
-        {renderInline(t("api.tutorial.lead"))}
-      </p>
+      <div className="max-w-2xl">
+        <Prose text={t("api.tutorial.lead")} className="text-lg leading-relaxed text-foreground/90" />
+      </div>
 
       <div className="flex flex-col gap-10">
         {STEPS.map((step, index) => {
@@ -96,17 +96,15 @@ export const TutorialContent: React.FC = () => {
                 <h2 className="font-display text-lg font-bold tracking-tight text-foreground">
                   <Typo>{t(`api.tutorial.steps.${step.key}.title`)}</Typo>
                 </h2>
-                <p className="mt-1 mb-4 text-sm leading-relaxed text-muted-foreground">
-                  {renderInline(t(`api.tutorial.steps.${step.key}.body`))}
-                </p>
+                <div className="mt-1 mb-4">
+                  <Prose text={t(`api.tutorial.steps.${step.key}.body`)} className="text-sm leading-relaxed text-muted-foreground" />
+                </div>
                 {snippet && (
                   <CodeBlock code={snippet.code} language={snippet.language} />
                 )}
                 {step.payoffKey && (
                   <div className="mt-4 rounded-xl border border-border bg-secondary/40 px-5 py-4">
-                    <p className="text-sm leading-relaxed text-foreground/90">
-                      {renderInline(t(step.payoffKey))}
-                    </p>
+                    <Prose text={t(step.payoffKey)} className="text-sm leading-relaxed text-foreground/90" />
                   </div>
                 )}
               </div>
@@ -120,9 +118,7 @@ export const TutorialContent: React.FC = () => {
         <h2 className="font-display text-lg font-bold tracking-tight text-foreground">
           <Typo>{t("api.tutorial.checkpoint.title")}</Typo>
         </h2>
-        <p className="text-sm leading-relaxed text-foreground/90">
-          {renderInline(t("api.tutorial.checkpoint.body"))}
-        </p>
+        <Prose text={t("api.tutorial.checkpoint.body")} className="text-sm leading-relaxed text-foreground/90" />
       </div>
 
       {/* Where to go next */}

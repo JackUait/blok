@@ -2,6 +2,7 @@
 import { CodeBlock } from '../common/CodeBlock';
 import { Link } from '../common/Link';
 import { Typo } from '../common/Typo';
+import { Prose } from '../common/Prose';
 import { useI18n } from '../../contexts/I18nContext';
 import type { ServerCodeSample, ServerPath } from './server-data';
 
@@ -45,9 +46,9 @@ export const ServerPathSection: React.FC<ServerPathSectionProps> = ({ section })
         <p className="mt-2 max-w-2xl text-base font-semibold leading-relaxed text-foreground">
           <Typo>{section.situation}</Typo>
         </p>
-        <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-          <Typo>{section.description}</Typo>
-        </p>
+        <div className="mt-3 max-w-2xl">
+          <Prose text={section.description} className="text-base leading-relaxed text-muted-foreground" />
+        </div>
       </div>
 
       {section.presetsPath !== undefined && (
@@ -93,7 +94,7 @@ export const ServerPathSection: React.FC<ServerPathSectionProps> = ({ section })
                     <Typo>{mode.symptom}</Typo>
                   </td>
                   <td className="px-4 py-3 align-top text-muted-foreground">
-                    <Typo>{mode.cause}</Typo>
+                    <Prose text={mode.cause} />
                   </td>
                   <td className="px-4 py-3 align-top text-muted-foreground">
                     <Typo>{mode.fix}</Typo>

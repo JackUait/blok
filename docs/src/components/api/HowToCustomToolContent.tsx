@@ -4,7 +4,7 @@ import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
 import { useFramework } from "../../contexts/FrameworkContext";
 import { adaptExample } from "../common/framework-adapt";
-import { renderInline } from "./inline-code";
+import { Prose } from "../common/Prose";
 
 const TOOL_CLASS_CODE = `// callout-tool.ts
 export class CalloutTool {
@@ -500,9 +500,9 @@ export const HowToCustomToolContent: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-12">
-      <p className="max-w-2xl text-lg leading-relaxed text-foreground/90">
-        {renderInline(t("api.howToCustomTool.lead"))}
-      </p>
+      <div className="max-w-2xl">
+        <Prose text={t("api.howToCustomTool.lead")} className="text-lg leading-relaxed text-foreground/90" />
+      </div>
 
       <div className="flex flex-col gap-10">
         {STEPS.map((step, index) => {
@@ -526,9 +526,9 @@ export const HowToCustomToolContent: React.FC = () => {
                 <h2 className={headingClass}>
                   <Typo>{t(`api.howToCustomTool.steps.${step.key}.title`)}</Typo>
                 </h2>
-                <p className="mt-1 mb-4 text-sm leading-relaxed text-muted-foreground">
-                  {renderInline(t(`api.howToCustomTool.steps.${step.key}.body`))}
-                </p>
+                <div className="mt-1 mb-4">
+                  <Prose text={t(`api.howToCustomTool.steps.${step.key}.body`)} className="text-sm leading-relaxed text-muted-foreground" />
+                </div>
                 <CodeBlock code={snippet.code} language={snippet.language} />
               </div>
             </div>
@@ -547,13 +547,9 @@ export const HowToCustomToolContent: React.FC = () => {
             <h2 className={headingClass}>
               <Typo>{t('api.howToCustomTool.component.title')}</Typo>
             </h2>
-            <p className={proseClass}>
-              {renderInline(t(`api.howToCustomTool.component.body.${framework}`))}
-            </p>
+            <Prose text={t(`api.howToCustomTool.component.body.${framework}`)} className={proseClass} />
             <CodeBlock code={snippet.code} language={snippet.language} />
-            <p className={proseClass}>
-              {renderInline(t('api.howToCustomTool.component.registerNote'))}
-            </p>
+            <Prose text={t('api.howToCustomTool.component.registerNote')} className={proseClass} />
           </div>
         );
       })()}
@@ -569,13 +565,9 @@ export const HowToCustomToolContent: React.FC = () => {
             <h2 className={headingClass}>
               <Typo>{t('api.howToCustomTool.container.title')}</Typo>
             </h2>
-            <p className={proseClass}>
-              {renderInline(t(`api.howToCustomTool.container.body.${framework}`))}
-            </p>
+            <Prose text={t(`api.howToCustomTool.container.body.${framework}`)} className={proseClass} />
             <CodeBlock code={snippet.code} language={snippet.language} />
-            <p className={proseClass}>
-              {renderInline(t('api.howToCustomTool.container.holderNote'))}
-            </p>
+            <Prose text={t('api.howToCustomTool.container.holderNote')} className={proseClass} />
           </div>
         );
       })()}
@@ -586,9 +578,7 @@ export const HowToCustomToolContent: React.FC = () => {
           <h2 className={headingClass}>
             <Typo>{t('api.howToCustomTool.inlineTool.title')}</Typo>
           </h2>
-          <p className={proseClass}>
-            {renderInline(t('api.howToCustomTool.inlineTool.body'))}
-          </p>
+          <Prose text={t('api.howToCustomTool.inlineTool.body')} className={proseClass} />
           <CodeBlock code={INLINE_TOOL_AUTHORING_CODE} language="tsx" />
         </div>
       )}
@@ -598,9 +588,7 @@ export const HowToCustomToolContent: React.FC = () => {
         <h2 className={headingClass}>
           <Typo>{t("api.howToCustomTool.further.title")}</Typo>
         </h2>
-        <p className={proseClass}>
-          {renderInline(t("api.howToCustomTool.further.body"))}
-        </p>
+        <Prose text={t("api.howToCustomTool.further.body")} className={proseClass} />
         <CodeBlock code={VALIDATE_AND_TUNE_CODE} language="typescript" />
         {(() => {
           const registerSnippet = adaptExample(TUNES_REGISTER_CODE, framework);
@@ -611,9 +599,7 @@ export const HowToCustomToolContent: React.FC = () => {
             />
           );
         })()}
-        <p className={proseClass}>
-          {renderInline(t("api.howToCustomTool.further.exampleNote"))}
-        </p>
+        <Prose text={t("api.howToCustomTool.further.exampleNote")} className={proseClass} />
       </div>
 
       {/* Where to go next */}

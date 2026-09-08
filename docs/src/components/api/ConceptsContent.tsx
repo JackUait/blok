@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import { Link } from "../common/Link";
 import { CodeBlock } from "../common/CodeBlock";
+import { Prose } from "../common/Prose";
 import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
 
@@ -65,30 +66,28 @@ export const ConceptsContent: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-12">
-      <p className="max-w-2xl text-lg leading-relaxed text-foreground/90">
-        {renderInline(t("api.concepts.lead"))}
-      </p>
+      <div className="max-w-2xl">
+        <Prose text={t("api.concepts.lead")} className="text-lg leading-relaxed text-foreground/90" />
+      </div>
 
       {/* The shape of a block */}
       <div className="flex flex-col gap-4">
         <h2 className={headingClass}><Typo>{t("api.concepts.shape.title")}</Typo></h2>
-        <p className={proseClass}>{renderInline(t("api.concepts.shape.body"))}</p>
+        <Prose text={t("api.concepts.shape.body")} className={proseClass} />
         <CodeBlock code={BLOCK_SHAPE_CODE} language="typescript" />
       </div>
 
       {/* Blocks form a tree */}
       <div className="flex flex-col gap-4">
         <h2 className={headingClass}><Typo>{t("api.concepts.tree.title")}</Typo></h2>
-        <p className={proseClass}>{renderInline(t("api.concepts.tree.body"))}</p>
+        <Prose text={t("api.concepts.tree.body")} className={proseClass} />
         <CodeBlock code={BLOCK_TREE_CODE} language="typescript" />
       </div>
 
       {/* The same idea, all the way up */}
       <div className="flex flex-col gap-4">
         <h2 className={headingClass}><Typo>{t("api.concepts.everywhere.title")}</Typo></h2>
-        <p className={proseClass}>
-          {renderInline(t("api.concepts.everywhere.body"))}
-        </p>
+        <Prose text={t("api.concepts.everywhere.body")} className={proseClass} />
         <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
           <table className="w-full border-collapse text-sm">
             <thead>
@@ -120,15 +119,13 @@ export const ConceptsContent: React.FC = () => {
       {/* What is not a block */}
       <div className="flex flex-col gap-4">
         <h2 className={headingClass}><Typo>{t("api.concepts.notBlocks.title")}</Typo></h2>
-        <p className={proseClass}>
-          {renderInline(t("api.concepts.notBlocks.body"))}
-        </p>
+        <Prose text={t("api.concepts.notBlocks.body")} className={proseClass} />
       </div>
 
       {/* Why this matters to you */}
       <div className="flex flex-col gap-4">
         <h2 className={headingClass}><Typo>{t("api.concepts.why.title")}</Typo></h2>
-        <p className={proseClass}>{renderInline(t("api.concepts.why.body"))}</p>
+        <Prose text={t("api.concepts.why.body")} className={proseClass} />
         <div className="flex flex-col gap-3">
           {whyItems.map((item) => (
             <div
@@ -149,9 +146,7 @@ export const ConceptsContent: React.FC = () => {
       {/* Extending Blok? Ask one question */}
       <div className="flex flex-col gap-4 rounded-2xl border border-border bg-secondary/40 px-6 py-6">
         <h2 className={headingClass}><Typo>{t("api.concepts.decision.title")}</Typo></h2>
-        <p className={proseClass}>
-          {renderInline(t("api.concepts.decision.body"))}
-        </p>
+        <Prose text={t("api.concepts.decision.body")} className={proseClass} />
         <ul className="flex flex-col gap-2">
           {decisionExamples.map((example) => (
             <li

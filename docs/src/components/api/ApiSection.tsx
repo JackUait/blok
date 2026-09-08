@@ -18,6 +18,7 @@ import { getRouteMetadata } from "../../seo/route-metadata";
 import { localizedPath } from "../../seo/locales";
 import { generatePropertyId, generateOptionId } from "./api-anchors";
 import { renderInline } from "./inline-code";
+import { Prose } from "../common/Prose";
 import type { ApiSection as ApiSectionType } from "./api-data";
 import type { PackageManager } from "../common/PackageManagerToggle";
 
@@ -228,7 +229,7 @@ const SectionHeader: React.FC<{ section: ApiSectionType }> = ({ section }) => {
         <Typo>{heading}</Typo>
       </h1>
       {section.description && (
-        <p className="max-w-2xl text-base leading-relaxed text-muted-foreground"><Typo>{section.description}</Typo></p>
+        <div className="max-w-2xl"><Prose text={section.description} className="text-base leading-relaxed text-muted-foreground" /></div>
       )}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
         {section.lastUpdated && (
@@ -380,7 +381,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
                       <td className={tdClass}>
                         <code className={codeClass}>{prop.type}</code>
                       </td>
-                      <td className={tdClass}><Typo>{prop.description}</Typo></td>
+                      <td className={tdClass}><Prose text={prop.description} /></td>
                     </tr>
                   );
                 })}
@@ -430,7 +431,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
                           <code className={codeClass}>{row.default}</code>
                         </td>
                       )}
-                      <td className={tdClass}><Typo>{row.description}</Typo></td>
+                      <td className={tdClass}><Prose text={row.description} /></td>
                     </tr>
                   );
                 })}

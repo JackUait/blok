@@ -10,6 +10,15 @@ const BLOK_ROOT = resolve(__dirname, '..', '..', '..', '..');
 const readSource = (rel: string): string => readFileSync(join(BLOK_ROOT, rel), 'utf8');
 
 /**
+ * A "these facts, in this order" matcher for a `<Prose>` value. The gap must be
+ * `[\s\S]` rather than `.`: a value is broken into paragraphs and list items by
+ * newlines, so a plain `.*` stops matching the moment prose is restructured
+ * without a single word changing.
+ * @param parts - the fact fragments, in the order they must appear
+ */
+const inOrder = (...parts: string[]): RegExp => new RegExp(parts.join('[\\s\\S]*'), 'i');
+
+/**
  * Walks a dot path in one bundle. NOT `getTranslation`: that falls back to
  * English on a Russian miss, so it answers a string for a key ru.json does not
  * have.
@@ -420,13 +429,13 @@ describe('server docs data', () => {
       ...serverLimits.map((limit) => limit.body),
     ].join(' ');
 
-    expect(prose).toMatch(/MaxUploadBytes.*Array\.MaxLength.*storage.*unfurl/i);
-    expect(prose).toMatch(/RateLimitPerMinute.*zero or greater/i);
-    expect(prose).toMatch(/PublicUrl.*HTTP.*root-relative/i);
-    expect(prose).toMatch(/S3BucketUrl.*absolute HTTP/i);
-    expect(prose).toMatch(/S3Endpoint.*HTTPS.*loopback HTTP/i);
-    expect(prose).toMatch(/ListenAddress.*DNS host.*every network interface/i);
-    expect(prose).toMatch(/--rate-limit.*ticket.*60.*otherwise.*0/i);
+    expect(prose).toMatch(inOrder('MaxUploadBytes', 'Array\\.MaxLength', 'storage', 'unfurl'));
+    expect(prose).toMatch(inOrder('RateLimitPerMinute', 'zero or greater'));
+    expect(prose).toMatch(inOrder('PublicUrl', 'HTTP', 'root-relative'));
+    expect(prose).toMatch(inOrder('S3BucketUrl', 'absolute HTTP'));
+    expect(prose).toMatch(inOrder('S3Endpoint', 'HTTPS', 'loopback HTTP'));
+    expect(prose).toMatch(inOrder('ListenAddress', 'DNS host', 'every network interface'));
+    expect(prose).toMatch(inOrder('--rate-limit', 'ticket', '60', 'otherwise', '0'));
   });
 
   it('states the thirty service limits the design refuses to bury', () => {
@@ -762,8 +771,8 @@ describe('server docs data', () => {
     expect(body).toMatch(/1 to 128/);
     expect(body).toContain('Blok-Doc-Lineage');
     expect(body).toContain('Blok-Doc-Sequence');
-    expect(body).toMatch(/operation journal.*same key.*first result.*409/i);
-    expect(body).toMatch(/working-copy-only.*does not deduplicat.*never answers 409.*ordinary retry/i);
+    expect(body).toMatch(inOrder('operation journal', 'same key', 'first result', '409'));
+    expect(body).toMatch(inOrder('working-copy-only', 'does not deduplicat', 'never answers 409', 'ordinary retry'));
     expect(body).toMatch(/durable/i);
     expect(body).toContain('has no children list, so nothing can be placed under it.');
     expect(body).toContain('is not in the document order, so nothing can be placed after it.');

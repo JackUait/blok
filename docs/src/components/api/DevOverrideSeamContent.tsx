@@ -1,6 +1,6 @@
 import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
-import { renderInline } from "./inline-code";
+import { Prose } from "../common/Prose";
 
 const headingClass =
   "font-display text-lg font-bold tracking-tight text-foreground";
@@ -24,9 +24,7 @@ export const DevOverrideSeamContent: React.FC = () => {
           <h2 className={headingClass}>
             <Typo>{t(`api.devOverrideSeam.${section}.title`)}</Typo>
           </h2>
-          <p className={proseClass}>
-            {renderInline(t(`api.devOverrideSeam.${section}.body`))}
-          </p>
+          <Prose text={t(`api.devOverrideSeam.${section}.body`)} className={proseClass} />
         </div>
       ))}
     </div>

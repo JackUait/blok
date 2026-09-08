@@ -1,6 +1,7 @@
 // docs/src/components/tools/ToolSection.tsx
 import { CodeBlock } from '../common/CodeBlock';
 import { Typo } from '../common/Typo';
+import { Prose } from '../common/Prose';
 import type { ToolSection as ToolSectionType } from './tools-data';
 import { useI18n } from '../../contexts/I18nContext';
 import { useFramework } from '../../contexts/FrameworkContext';
@@ -31,9 +32,9 @@ export const ToolSection: React.FC<ToolSectionProps> = ({ section }) => {
         <h1 className="scroll-mt-24 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
           <Typo>{heading}</Typo>
         </h1>
-        <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-          <Typo>{section.description}</Typo>
-        </p>
+        <div className="mt-3 max-w-2xl">
+          <Prose text={section.description} className="text-base leading-relaxed text-muted-foreground" />
+        </div>
       </div>
 
       <div className="mt-8">
@@ -68,7 +69,7 @@ export const ToolSection: React.FC<ToolSectionProps> = ({ section }) => {
                     <td className="px-4 py-3 align-top"><code className="rounded-md bg-secondary px-1.5 py-0.5 font-mono text-xs text-primary">{opt.option}</code></td>
                     <td className="px-4 py-3 align-top"><code className="rounded-md bg-secondary px-1.5 py-0.5 font-mono text-xs text-foreground">{opt.type}</code></td>
                     <td className="px-4 py-3 align-top"><code className="rounded-md bg-secondary px-1.5 py-0.5 font-mono text-xs text-muted-foreground">{opt.default}</code></td>
-                    <td className="px-4 py-3 align-top text-muted-foreground"><Typo>{opt.description}</Typo></td>
+                    <td className="px-4 py-3 align-top text-muted-foreground"><Prose text={opt.description} /></td>
                   </tr>
                 ))}
               </tbody>

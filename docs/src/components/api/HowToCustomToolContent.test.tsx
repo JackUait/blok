@@ -185,7 +185,9 @@ describe('HowToCustomToolContent', () => {
 
     it('states the holder-write guarantee and where it stops', () => {
       const { container } = renderHowTo('react');
-      const code = container.textContent ?? '';
+      // Prose typographically binds short words with a non-breaking space, so a
+      // phrase is matched on its words rather than on its exact spacing.
+      const code = (container.textContent ?? '').replace(/\u00A0/g, ' ');
       expect(code).toContain('DIRECT children of the nested slot');
       expect(code).toContain('tool root');
     });

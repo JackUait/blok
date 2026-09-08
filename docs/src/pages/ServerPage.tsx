@@ -2,6 +2,7 @@
 import { Nav } from '../components/layout/Nav';
 import { Footer } from '../components/layout/Footer';
 import { Typo } from '../components/common/Typo';
+import { Prose } from '../components/common/Prose';
 import { ServerPathSection } from '../components/server/ServerPathSection';
 import { useServerTranslations } from '../hooks/useServerTranslations';
 import { NAV_LINKS } from '../utils/constants';
@@ -30,9 +31,9 @@ export const ServerContent: React.FC = () => {
         <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
           <Typo>{heading}</Typo>
         </h1>
-        <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-          <Typo>{t('server.intro')}</Typo>
-        </p>
+        <div className="mt-3 max-w-2xl">
+          <Prose text={t('server.intro')} className="text-base leading-relaxed text-muted-foreground" />
+        </div>
       </div>
 
       <div
@@ -42,9 +43,9 @@ export const ServerContent: React.FC = () => {
         <p className="text-sm font-bold uppercase tracking-wide text-foreground">
           {t('server.coverageLabel')}
         </p>
-        <p className="mt-2 text-base leading-relaxed text-muted-foreground">
-          <Typo>{coverageNote}</Typo>
-        </p>
+        <div className="mt-2">
+          <Prose text={coverageNote} className="text-base leading-relaxed text-muted-foreground" />
+        </div>
       </div>
 
       <div className="mb-12 overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
@@ -98,9 +99,9 @@ export const ServerContent: React.FC = () => {
               <p className="text-base font-bold text-foreground">
                 <Typo>{limit.title}</Typo>
               </p>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                <Typo>{limit.body}</Typo>
-              </p>
+              <div className="mt-2">
+                <Prose text={limit.body} className="text-sm leading-relaxed text-muted-foreground" />
+              </div>
             </div>
           ))}
         </div>

@@ -1,6 +1,7 @@
 // docs/src/components/presets/PresetSection.tsx
 import { CodeBlock } from '../common/CodeBlock';
 import { Typo } from '../common/Typo';
+import { Prose } from '../common/Prose';
 import { useI18n } from '../../contexts/I18nContext';
 import type { PresetSection as PresetSectionType } from './presets-data';
 
@@ -22,16 +23,16 @@ export const PresetSection: React.FC<PresetSectionProps> = ({ section }) => {
         <h2 className="scroll-mt-24 text-2xl font-extrabold tracking-tight text-foreground">
           <Typo>{section.title}</Typo>
         </h2>
-        <p className="mt-2 max-w-2xl text-base leading-relaxed text-muted-foreground">
-          <Typo>{section.description}</Typo>
-        </p>
+        <div className="mt-2 max-w-2xl">
+          <Prose text={section.description} className="text-base leading-relaxed text-muted-foreground" />
+        </div>
       </div>
 
       <div className="mt-6 rounded-2xl border border-border bg-card p-4 shadow-sm">
         <p className="text-sm font-bold uppercase tracking-wide text-foreground">{t('presets.reHosting')}</p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          <Typo>{section.uploadByUrlNote}</Typo>
-        </p>
+        <div className="mt-2">
+          <Prose text={section.uploadByUrlNote} className="text-sm text-muted-foreground" />
+        </div>
       </div>
 
       {!section.productionReady && section.productionNote && (
@@ -39,9 +40,9 @@ export const PresetSection: React.FC<PresetSectionProps> = ({ section }) => {
           <p className="text-sm font-bold uppercase tracking-wide text-destructive">
             {t('presets.notForProduction')}
           </p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            <Typo>{section.productionNote}</Typo>
-          </p>
+          <div className="mt-2">
+            <Prose text={section.productionNote} className="text-sm text-muted-foreground" />
+          </div>
         </div>
       )}
 
@@ -83,7 +84,7 @@ export const PresetSection: React.FC<PresetSectionProps> = ({ section }) => {
                       </code>
                     </td>
                     <td className="px-4 py-3 align-top text-muted-foreground">
-                      <Typo>{opt.description}</Typo>
+                      <Prose text={opt.description} />
                     </td>
                   </tr>
                 ))}

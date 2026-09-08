@@ -337,10 +337,12 @@ Gutter faces and remote carets are untouched. `data-attributes.ts` is untouched:
 the presence attributes are local constants in the presence files and were never
 in the published map, so `scripts/generate-data-attributes-dts.mjs` does not run.
 
-**Stale note, corrected 2026-09-08.** The superseded spec claimed `stackSignature`
-holds a raw NUL byte as its join separator, making git treat
-`presence-renderer.ts` as binary. Measured: true at `2d843e17`, false from
-`ad3d522f` onward. Nothing to clean up.
+**The NUL byte was real and it shipped.** `stackSignature` held a raw NUL as its
+join separator, so git treated `presence-renderer.ts` as binary and reading it
+at a tag needs `git show -a`. Measured: v1.13.0 carries it; it was gone by
+`1b978e52`, before this plan began, so there is nothing to clean up here. An
+earlier note in this file said the byte was never there after `ad3d522f` — that
+was a bad measurement and is retracted.
 
 The playground gains a small host-rendered stack driven by
 `collaboration:status`, so the dev page keeps showing who is present.

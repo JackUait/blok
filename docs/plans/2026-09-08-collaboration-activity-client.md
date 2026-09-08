@@ -717,13 +717,15 @@ Remove the listed symbols from `presence-renderer.ts` and the listed rules from 
 
 **Keep `nameTheNameless`, `readPeer` and `buildAvatar`.** The gutter faces are drawn from all three, and `nameTheNameless` is what gives a nameless peer their silhouette and localized label. Only the wrapper-mounted stack goes.
 
-**Stale note, corrected 2026-09-08.** The superseded spec claimed `stackSignature` holds a raw NUL byte as its join separator, making git treat this file as binary. Measured: true at `2d843e17`, false from `ad3d522f` onward, so there is nothing to clean up and no check to run.
+**The NUL byte was real and it shipped, but it is already gone.** `stackSignature` held a raw NUL as its join separator, so git treated this file as binary. Measured: v1.13.0 carries it, and it was gone by `1b978e52`, before this plan began. Nothing to clean up and no check to run here. An earlier note claiming it was never there after `ad3d522f` was a bad measurement and is retracted.
 
-If you ever do need to count NUL bytes here, do not reach for `grep -cP '\x00'`. This machine's grep has no `-P`: it prints nothing and exits non-zero, which reads exactly like a clean result. Use a method you have a positive control for:
+Counting NUL bytes on this machine fails in two ways that both look clean. `grep -cP '\x00'` prints nothing and exits non-zero because this grep has no `-P`. And `git show <ref>:<path> | <counter>` inside a shell `for` loop yields an EMPTY stream, so the counter honestly reports zero; the same command standalone works. Write the blob to a file and count there, and run a positive control first:
 
 ```bash
-nulcount() { perl -0777 -ne 'print scalar(() = /\x00/g), "\n"'; }
-printf 'a\0b\n' | nulcount   # must print 1 before you trust it
+git show v1.13.0:src/components/modules/collaboration/presence-renderer.ts > /tmp/f
+printf 'a\0b\n' > /tmp/control
+perl -0777 -ne 'print scalar(() = /\x00/g), "\n"' /tmp/control   # must print 1
+perl -0777 -ne 'print scalar(() = /\x00/g), "\n"' /tmp/f
 ```
 
 - [ ] **Step 4: Regenerate the CSS snapshot and run both suites**

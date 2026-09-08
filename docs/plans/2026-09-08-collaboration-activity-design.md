@@ -208,11 +208,10 @@ be a second source of the same flicker with worse latency. This is the same
 eventual-consistency behaviour awareness itself has. It is written down here so
 that it is not later mistaken for a bug and "fixed".
 
-**This is the one piece of the design that is not strictly required by the
-user's stated goal, and it is called out for review.** Without it the payload
-still reports live activity and the host still receives durable events, but the
-host must join the two by a client-claimed id, which is spoofable, or by no key
-at all.
+**Confirmed on review: the frame is in.** The alternative was to let the host
+join live presence to its own stored history by the client-claimed id, which any
+peer can forge, or by no key at all. Showing one person as one row is the point
+of the feature, so the join key has to be one the server vouches for.
 
 ### B3. The host observer
 
@@ -429,13 +428,13 @@ playground reflects it.
 - Changing `resolveUser` or the block-level `lastEditedAt` / `lastEditedBy`
   fields.
 
-## Open for review
+## Closed on review
 
-1. **Frame 106.** It is what makes present and departed people one keyable list.
-   Dropping it shrinks the change to two frames' worth of work but leaves the
-   host joining live presence to stored history by a spoofable id or not at all.
-2. **The 60-second floors.** One on the client for frame 105, one on the server
-   for observer deduplication. Both are guesses tuned to a five-minute
-   threshold. If a host wants minute-accurate activity they are right; if the
-   threshold is an hour they are ten times too chatty. They are constants in
-   this spec, not configuration, and that is the cheap thing to change later.
+1. **Frame 106 ships.** Without a server-vouched join key, one person can appear
+   as two rows, and a forged id can attach a stranger to somebody's history.
+2. **The two 60-second floors stay constants, not configuration.** One on the
+   client for frame 105, one on the server for observer deduplication. They make
+   a recorded time accurate to about a minute, which is a fifth of the
+   five-minute threshold the feature was asked for. A constant is cheap to
+   change later; a configuration key is public surface forever. Revisit only if
+   a host asks for a threshold far from five minutes.

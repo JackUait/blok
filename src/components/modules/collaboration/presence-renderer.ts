@@ -11,15 +11,15 @@ import {
   type DrawableState,
   type PresenceState,
 } from './presence';
-import { buildAvatar, createAvatarLayer, type AvatarLayer } from './presence-avatars';
+import { createAvatarLayer, type AvatarLayer } from './presence-avatars';
 import { createCaretLayer, type CaretLayer } from './presence-carets';
 
 export interface PresenceRendererOptions {
   /**
-   * Where the avatar stack mounts. Pass the editor WRAPPER, not the redactor:
-   * the redactor is under the modifications observer, and a stack rebuilt on
-   * every awareness change would be a stream of records for every block to
-   * filter.
+   * The editor WRAPPER, not the redactor: the redactor is under the
+   * modifications observer, and writes there would be a stream of records
+   * for every block to filter. Watched for reflow so carets stay on the text
+   * they point into.
    */
   host: HTMLElement;
   /** The holder of a block, or null when the id names nothing here. */
@@ -32,8 +32,6 @@ export interface PresenceRendererOptions {
    * runtime toggle takes effect on the next awareness change, not instantly.
    */
   isHidden?: () => boolean;
-  /** How many faces the stack shows before it starts counting (default 4). */
-  maxAvatars?: number;
   /** How long after its last move a peer's caret counts as still moving. */
   restAfterMs?: number;
   /**
@@ -69,12 +67,6 @@ export interface PresenceRenderer {
   /** Undo everything this renderer wrote. */
   clear(): void;
 }
-
-const STACK_ATTR = 'data-blok-presence-stack';
-const AVATAR_ATTR = 'data-blok-presence-avatar';
-const OVERFLOW_ATTR = 'data-blok-presence-overflow';
-
-const DEFAULT_MAX_AVATARS = 4;
 
 /** Longest name drawn. A peer can publish megabytes; the label shows a name. */
 const MAX_NAME_LENGTH = 32;
@@ -136,17 +128,6 @@ const readPeer = (entry: DrawableState): DrawablePeer => {
 };
 
 /**
- * What the drawn stack depends on, so an unchanged one is left alone.
- *
- * Load-bearing now that carets exist: a peer republishes on every keystroke, so
- * without this the stack would be torn down and rebuilt ten times a second per
- * typing peer, for a row of faces that did not change.
- * @param peers - the peers this pass would draw
- */
-const stackSignature = (peers: DrawablePeer[]): string =>
-  peers.map((peer) => `${peer.clientId}:${peer.color}:${peer.glyph ?? ''}:${peer.name}`).join('\u0000');
-
-/**
  * Give every peer who published no name a silhouette and a localized label.
  *
  * The READER is counted too, though they are never drawn: the assignment has
@@ -183,30 +164,29 @@ const nameTheNameless = (
 };
 
 /**
- * Renders remote presence the way Notion splits it three ways: a roster of
- * avatars on the editor wrapper, a face parked in the gutter beside each
- * peer's block, and a caret line at their exact position.
+ * Renders remote presence the way Notion splits it two ways: a face parked in
+ * the gutter beside each peer's block, and a caret line at their exact
+ * position.
  *
- * Each answers a different question — who is here, who is on this block, and
- * where in the sentence they are — which is why the caret carries no name.
- * There is deliberately NO block outline: an outline says only "somebody is in
- * this paragraph", which the gutter face says better and the caret says
- * exactly.
+ * Each answers a different question — who is on this block, and where in the
+ * sentence they are — which is why the caret carries no name. There is
+ * deliberately NO block outline: an outline says only "somebody is in this
+ * paragraph", which the gutter face says better and the caret says exactly.
+ * Who is in the document at all is the HOST's to draw, from the
+ * `collaboration:status` event's `participants` list.
  *
- * Both writes sit at levels the child-holder decoration law blesses — the
- * stack on the wrapper, a caret appended to a block's holder. They are inert
- * for change tracking: for the edited block, `isMutationBelongsToElement`
- * compares against the TOOL ROOT, and a node appended to the holder is not
- * inside it — the childList escape hatch only covers the tool root being added
- * or removed. For a container whose slot holds that holder, the record's
- * nearest `data-blok-mutation-free` ancestor is the container's own, so it
- * scores mutation-free. Nothing is written at or below a tool root, and no
- * holder is ever wrapped.
+ * The caret write sits at a level the child-holder decoration law blesses — a
+ * caret appended to a block's holder. It is inert for change tracking: for the
+ * edited block, `isMutationBelongsToElement` compares against the TOOL ROOT,
+ * and a node appended to the holder is not inside it — the childList escape
+ * hatch only covers the tool root being added or removed. For a container
+ * whose slot holds that holder, the record's nearest `data-blok-mutation-free`
+ * ancestor is the container's own, so it scores mutation-free. Nothing is
+ * written at or below a tool root, and no holder is ever wrapped.
  * @param options - host, block lookups, and the chromeless gate
  */
 export const createPresenceRenderer = (options: PresenceRendererOptions): PresenceRenderer => {
   const { host } = options;
-  const maxAvatars = options.maxAvatars ?? DEFAULT_MAX_AVATARS;
 
   const carets: CaretLayer = createCaretLayer({
     resolveHolder: options.resolveHolder,
@@ -220,8 +200,6 @@ export const createPresenceRenderer = (options: PresenceRendererOptions): Presen
   });
 
   const state = {
-    stack: null as HTMLElement | null,
-    signature: null as string | null,
     reflow: null as ResizeObserver | null,
   };
 
@@ -243,57 +221,11 @@ export const createPresenceRenderer = (options: PresenceRendererOptions): Presen
     state.reflow.observe(host);
   };
 
-  const renderStack = (peers: DrawablePeer[]): void => {
-    if (peers.length === 0) {
-      state.stack?.remove();
-      state.stack = null;
-      state.signature = null;
-
-      return;
-    }
-
-    const signature = stackSignature(peers);
-
-    if (state.stack !== null && signature === state.signature) {
-      return;
-    }
-
-    state.signature = signature;
-
-    if (state.stack === null) {
-      state.stack = document.createElement('div');
-      state.stack.setAttribute(STACK_ATTR, '');
-      host.appendChild(state.stack);
-    }
-
-    const stack = state.stack;
-
-    stack.replaceChildren();
-
-    peers.slice(0, maxAvatars).forEach((peer) => {
-      stack.appendChild(buildAvatar(peer, AVATAR_ATTR, 'text'));
-    });
-
-    if (peers.length > maxAvatars) {
-      const overflow = document.createElement('span');
-
-      // Deliberately NOT an avatar: it is a count, and anything that asks "how
-      // many faces are shown" must not get this one back.
-      overflow.setAttribute(OVERFLOW_ATTR, '');
-      overflow.textContent = `+${peers.length - maxAvatars}`;
-
-      stack.appendChild(overflow);
-    }
-  };
-
   const clear = (): void => {
     carets.clear();
     avatars.clear();
     state.reflow?.disconnect();
     state.reflow = null;
-    state.stack?.remove();
-    state.stack = null;
-    state.signature = null;
   };
 
   return {
@@ -306,15 +238,14 @@ export const createPresenceRenderer = (options: PresenceRendererOptions): Presen
 
       // Select, THEN cap — the order is the defence. `selectDrawableStates`
       // counts only peers it would actually draw against the cap, so junk
-      // planted ahead of a real collaborator cannot take their place in the
-      // stack or their caret off their block.
+      // planted ahead of a real collaborator cannot take their place beside
+      // their block or their caret off it.
       const peers = nameTheNameless(
         selectDrawableStates(states, localClientId).map(readPeer),
         localClientId,
         options
       );
 
-      renderStack(peers);
       avatars.render(peers);
       carets.render(peers);
       watchReflow();

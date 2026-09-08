@@ -5,7 +5,7 @@
  * The sheet is injected as authored and read back through jsdom's cascade
  * (declared properties, plus inheritance for the ones jsdom implements —
  * `pointer-events` and `display` among them), so each case pins a computed
- * value on a real face, strip, avatar or stack rather than a line of text.
+ * value on a real face or strip rather than a line of text.
  * Pseudo-element styles are the one thing jsdom cannot compute, and its CSSOM
  * drops `attr()` as a `content` value on read-back, so the rule that paints
  * the monogram is pinned by its parsed selector and its authored declaration.
@@ -240,20 +240,6 @@ describe('presence stylesheet', () => {
 
       expect(getComputedStyle(ghostStrip).display).toBe('none');
       expect(getComputedStyle(query(harness.holder, '[data-blok-presence-gutter]')).display).not.toBe('none');
-    });
-  });
-
-  describe('the avatar stack', () => {
-    it('is hoverable per avatar for its tooltip while the stack stays transparent', () => {
-      const harness = setup();
-
-      harness.renderer.render([grace(99)], 42);
-
-      const stack = query(harness.root, '[data-blok-presence-stack]');
-      const avatar = query(stack, '[data-blok-presence-avatar]');
-
-      expect(getComputedStyle(stack).pointerEvents).toBe('none');
-      expect(getComputedStyle(avatar).pointerEvents).toBe('auto');
     });
   });
 });

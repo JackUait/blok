@@ -120,39 +120,6 @@ describe('anonymous presence micro-illustrations', () => {
     expect(declarations.get('height')).toBe(declarations.get('width'));
   });
 
-  it('keeps compact stack glyphs legible without enlarging the stack', () => {
-    const stack = new Map<string, string>();
-    let ring = 0;
-    let scale = 0;
-
-    stylesheet.walkRules(rule => {
-      if (rule.selector.includes('[data-blok-presence-overflow]') && rule.selector.includes('[data-blok-presence-avatar]')) {
-        rule.walkDecls(declaration => {
-          stack.set(declaration.prop, declaration.value);
-        });
-      }
-      if (rule.selector === '[data-blok-interface]') {
-        rule.walkDecls('--blok-presence-ring', declaration => {
-          ring = parseFloat(declaration.value);
-        });
-      }
-      if (rule.selector === '[data-blok-presence-glyph]::after') {
-        rule.walkDecls('width', declaration => {
-          scale = parseFloat(declaration.value) / 100;
-        });
-      }
-    });
-
-    expect(stack.get('width')).toBe('24px');
-    expect(stack.get('height')).toBe(stack.get('width'));
-    expect(stack.get('border')).toContain('var(--blok-presence-ring)');
-
-    const canvas = (parseFloat(stack.get('width') ?? '0') - 2 * ring) * scale;
-
-    expect(canvas).toBeGreaterThanOrEqual(15);
-    expect(canvas).toBeLessThanOrEqual(16);
-  });
-
   it.each(['star', 'sun', 'saucer', 'asteroid'])('%s declares closed evenodd contours for its cutouts', glyph => {
     const path = glyphSvg(glyph).querySelector('path');
     const contours = path?.getAttribute('d')?.match(/[Mm][^Mm]*/g) ?? [];

@@ -11,7 +11,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  MAX_PEERS,
   PRESENCE_SCAN_LIMIT,
   presenceColorFor,
   type PresenceState,
@@ -67,7 +66,6 @@ const makeHolder = (blockId: string): HTMLElement => {
 
 const setup = (
   options: {
-    maxAvatars?: number;
     blockIds?: string[];
     translate?: (key: string) => string;
     isLocalAnonymous?: () => boolean;
@@ -97,7 +95,6 @@ const setup = (
       return toolRoot === null || toolRoot === undefined ? [] : [toolRoot];
     },
     isHidden: () => hidden.value,
-    maxAvatars: options.maxAvatars,
     translate: options.translate,
     isLocalAnonymous: options.isLocalAnonymous,
   });
@@ -146,12 +143,6 @@ const named = (clientId: number, name: string, blockId: string | null, color?: s
     caret: caretAt(blockId),
   });
 
-const stack = (host: HTMLElement): HTMLElement | null =>
-  host.querySelector<HTMLElement>('[data-blok-presence-stack]');
-
-const avatars = (host: HTMLElement): HTMLElement[] =>
-  Array.from(host.querySelectorAll<HTMLElement>('[data-blok-presence-avatar]'));
-
 const caret = (holder: HTMLElement): HTMLElement | null =>
   holder.querySelector<HTMLElement>('[data-blok-presence-caret]');
 
@@ -172,7 +163,16 @@ describe('presence renderer', () => {
   });
 
   describe('a remote peer', () => {
-    it('gets an avatar in the stack and a coloured caret where they are working', () => {
+    it('draws no avatar stack, only the gutter face', () => {
+      const { host, renderer } = setup();
+
+      renderer.render([{ clientId: 7, state: { user: { name: 'Ada' }, blockId: 'block-1' } }], 42);
+
+      expect(host.querySelector('[data-blok-presence-stack]')).toBeNull();
+      expect(host.querySelector('[data-blok-presence-face]')).not.toBeNull();
+    });
+
+    it('gets a coloured caret and a gutter face where they are working', () => {
       const harness = setup();
 
       harness.renderer.render([named(99, 'Grace Hopper', 'block-2', '#0b6e99')], 42);
@@ -187,8 +187,6 @@ describe('presence renderer', () => {
       // name in its label.
       expect(face(holder)?.getAttribute(INITIALS_ATTR)).toBe('GH');
       expect(face(holder)?.getAttribute('aria-label')).toBe('Grace Hopper');
-      expect(avatars(harness.host)).toHaveLength(1);
-      expect(avatars(harness.host)[0].getAttribute('aria-label')).toBe('Grace Hopper');
     });
 
     it('is drawn on the holder only — never at or below the tool root', () => {
@@ -243,7 +241,7 @@ describe('presence renderer', () => {
       const harness = setup();
 
       // `collaboration.user` is optional, so a nameless peer is the DEFAULT
-      // configuration, not a broken one. They get a caret and an avatar in their
+      // configuration, not a broken one. They get a caret and a face in their
       // assigned colour; only the name flag has nothing to say.
       harness.renderer.render([peer(98, { user: {}, blockId: 'block-3', caret: caretAt('block-3') })], 42);
 
@@ -251,11 +249,10 @@ describe('presence renderer', () => {
 
       expect(caret(holder)).not.toBeNull();
       expect(caret(holder)?.style.getPropertyValue(PRESENCE_COLOR)).toBe(presenceColorFor(98));
-      expect(avatars(harness.host)).toHaveLength(1);
-      expect(avatars(harness.host)[0].style.getPropertyValue(PRESENCE_COLOR)).toBe(presenceColorFor(98));
       // A face in their colour, wearing a silhouette instead of a monogram —
       // and with no label, because nothing here localizes one.
       expect(face(holder)).not.toBeNull();
+      expect(face(holder)?.style.getPropertyValue(PRESENCE_COLOR)).toBe(presenceColorFor(98));
       expect(face(holder)?.hasAttribute(GLYPH_ATTR)).toBe(true);
       expect(face(holder)?.hasAttribute(INITIALS_ATTR)).toBe(false);
       expect(face(holder)?.hasAttribute('aria-label')).toBe(false);
@@ -278,8 +275,6 @@ describe('presence renderer', () => {
       // The silhouette REPLACES the monogram: initials of a generated label
       // would be initials of nothing.
       expect(face(holder)?.hasAttribute(INITIALS_ATTR)).toBe(false);
-      expect(avatars(harness.host)[0].getAttribute(GLYPH_ATTR)).toBe(glyph);
-      expect(avatars(harness.host)[0].textContent).toBe('');
     });
 
     /**
@@ -305,7 +300,7 @@ describe('presence renderer', () => {
 
       const contested = assignAnonymousGlyphs([localClientId]).get(localClientId);
 
-      expect(avatars(harness.host)[0].getAttribute(GLYPH_ATTR)).not.toBe(contested);
+      expect(face(harness.holderOf('block-1'))?.getAttribute(GLYPH_ATTR)).not.toBe(contested);
     });
 
     it('never shares a silhouette with another nameless peer in the room', () => {
@@ -319,7 +314,8 @@ describe('presence renderer', () => {
         42
       );
 
-      const drawn = avatars(harness.host).map((avatar) => avatar.getAttribute(GLYPH_ATTR));
+      const drawn = Array.from(harness.holderOf('block-1').querySelectorAll<HTMLElement>('[data-blok-presence-face]'))
+        .map((face_) => face_.getAttribute(GLYPH_ATTR));
 
       expect(drawn).toHaveLength(2);
       expect(new Set(drawn).size).toBe(2);
@@ -331,7 +327,7 @@ describe('presence renderer', () => {
       harness.renderer.render([peer(99, { blockId: 'block-2', caret: caretAt('block-2') })], 42);
 
       expect(caret(harness.holderOf('block-2'))).toBeNull();
-      expect(avatars(harness.host)).toHaveLength(0);
+      expect(face(harness.holderOf('block-2'))).toBeNull();
     });
   });
 
@@ -355,7 +351,6 @@ describe('presence renderer', () => {
 
       expect(face(holder)?.getAttribute('aria-label')).toBe('Grace');
       expect(caret(holder)).toBeNull();
-      expect(avatars(harness.host)).toHaveLength(1);
     });
 
     it('gets no face when the caret is present but malformed', () => {
@@ -383,7 +378,6 @@ describe('presence renderer', () => {
 
       expect(caret(harness.holderOf('block-1'))).toBeNull();
       expect(caret(harness.holderOf('block-2'))).not.toBeNull();
-      expect(avatars(harness.host)).toHaveLength(1);
     });
   });
 
@@ -398,7 +392,6 @@ describe('presence renderer', () => {
 
       expect(element?.getAttribute('aria-label')).toBe(hostile);
       expect(element?.children).toHaveLength(0);
-      expect(avatars(harness.host)[0].children).toHaveLength(0);
     });
 
     it('survives a state that is not an object at all', () => {
@@ -412,7 +405,7 @@ describe('presence renderer', () => {
         named(99, 'Grace', 'block-2'),
       ], 42)).not.toThrow();
 
-      expect(avatars(harness.host)).toHaveLength(1);
+      expect(face(harness.holderOf('block-2'))).not.toBeNull();
     });
 
     it('caps a very long name instead of letting it paint the page', () => {
@@ -455,19 +448,7 @@ describe('presence renderer', () => {
         peer(97, { user: { name: 'Alan' }, blockId: { nope: true } }),
       ], 42)).not.toThrow();
 
-      expect(avatars(harness.host)).toHaveLength(3);
       expect(harness.host.querySelectorAll('[data-blok-presence-caret]')).toHaveLength(0);
-    });
-
-    it('caps how many avatars it draws and counts the rest', () => {
-      const harness = setup({ maxAvatars: 3 });
-      const crowd = Array.from({ length: 9 }, (_unused, index) =>
-        named(100 + index, `Peer ${index}`, null));
-
-      harness.renderer.render(crowd, 42);
-
-      expect(avatars(harness.host)).toHaveLength(3);
-      expect(stack(harness.host)?.querySelector('[data-blok-presence-overflow]')?.textContent).toBe('+6');
     });
   });
 
@@ -484,8 +465,7 @@ describe('presence renderer', () => {
 
       harness.renderer.render([...junk, named(9999, 'Real Person', 'real')], 42);
 
-      expect(avatars(harness.host)).toHaveLength(1);
-      expect(avatars(harness.host)[0].getAttribute('aria-label')).toBe('Real Person');
+      expect(face(harness.holderOf('real'))?.getAttribute('aria-label')).toBe('Real Person');
       expect(caret(harness.holderOf('real'))).not.toBeNull();
     });
 
@@ -495,35 +475,8 @@ describe('presence renderer', () => {
 
       harness.renderer.render([...junk, named(9999, 'Real Person', 'real')], 42);
 
-      expect(avatars(harness.host)).toHaveLength(1);
+      expect(face(harness.holderOf('real'))).not.toBeNull();
       expect(caret(harness.holderOf('block-1'))).toBeNull();
-    });
-
-    it('counts junk in neither the avatars nor the +N', () => {
-      const harness = setup({ maxAvatars: 3 });
-      // Junk is a state with NO identity at all. A `user` object without a name
-      // is a real (anonymous) peer since `collaboration.user` became optional,
-      // so it is no longer what this cap is defending against.
-      const junk = Array.from({ length: 40 }, (_unused, index) => peer(2000 + index, { blockId: null }));
-      const crowd = Array.from({ length: 9 }, (_unused, index) =>
-        named(100 + index, `Peer ${index}`, null));
-
-      harness.renderer.render([...junk, ...crowd], 42);
-
-      expect(avatars(harness.host)).toHaveLength(3);
-      expect(stack(harness.host)?.querySelector('[data-blok-presence-overflow]')?.textContent).toBe('+6');
-    });
-
-    it('never draws more than the peer cap, however large the room', () => {
-      const harness = setup({ maxAvatars: 4 });
-      const crowd = Array.from({ length: 400 }, (_unused, index) =>
-        named(100 + index, `Peer ${index}`, null));
-
-      harness.renderer.render(crowd, 42);
-
-      expect(avatars(harness.host)).toHaveLength(4);
-      expect(stack(harness.host)?.querySelector('[data-blok-presence-overflow]')?.textContent)
-        .toBe(`+${MAX_PEERS - 4}`);
     });
 
     /**
@@ -538,7 +491,7 @@ describe('presence renderer', () => {
 
       harness.renderer.render([...junk, named(9999, 'Real Person', 'real')], 42);
 
-      expect(avatars(harness.host)).toHaveLength(0);
+      expect(face(harness.holderOf('real'))).toBeNull();
     });
   });
 
@@ -550,7 +503,7 @@ describe('presence renderer', () => {
       harness.hidden.value = true;
       harness.renderer.render([named(99, 'Grace', 'block-2')], 42);
 
-      expect(stack(harness.host)).toBeNull();
+      expect(face(harness.holderOf('block-2'))).toBeNull();
       expect(caret(harness.holderOf('block-2'))).toBeNull();
     });
   });
@@ -633,7 +586,7 @@ describe('presence renderer', () => {
       expect(harness.holderOf('block-2').querySelectorAll('[data-blok-presence-caret]')).toHaveLength(1);
     });
 
-    it('clear() takes the stack and every caret with it', () => {
+    it('clear() takes every face and caret with it', () => {
       const harness = setup();
       const holder = harness.holderOf('block-2');
       const before = holder.outerHTML;
@@ -641,7 +594,7 @@ describe('presence renderer', () => {
       harness.renderer.render([named(99, 'Grace', 'block-2')], 42);
       harness.renderer.clear();
 
-      expect(stack(harness.host)).toBeNull();
+      expect(face(holder)).toBeNull();
       expect(holder.outerHTML).toBe(before);
     });
   });

@@ -159,46 +159,8 @@
   display: none;
 }
 
-[data-blok-presence-stack] {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 3;
-  display: flex;
-  pointer-events: none;
-}
-
-[data-blok-presence-stack] > :first-child {
-  margin-left: 0;
-}
-
-[data-blok-presence-avatar],
-[data-blok-presence-overflow] {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  margin-left: var(--blok-presence-overlap);
-  border: var(--blok-presence-ring) solid var(--blok-bg-primary);
-  border-radius: 50%;
-  background: var(--blok-presence-color);
-  color: var(--blok-text-on-dark);
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 1;
-  text-transform: uppercase;
-  user-select: none;
-}
-
-[data-blok-presence-overflow] {
-  background: var(--blok-text-secondary);
-  text-transform: none;
-}
-
 /* The face's title needs hover; the surrounding strip must not block controls. */
-[data-blok-presence-face],
-[data-blok-presence-avatar] {
+[data-blok-presence-face] {
   pointer-events: auto;
 }
 

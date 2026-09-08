@@ -194,6 +194,20 @@ Rules:
 - A client merges the mapping into its participant list. A `clientId` with no
   entry keeps `userId: null`.
 
+**The merge is lazy, and that is deliberate.** Awareness states arrive on their
+own schedule, through the `QueryAwareness` reply and through relayed frames, so
+a client will routinely see a peer's state before the identities frame that
+names them. The first `emitStatus` after joining may therefore report
+`userId: null` for a peer who does have a verified identity, and a later emit
+flips them to their `ActorId` when the map lands. A host that keys a DOM list on
+`userId` will see that entry re-key once.
+
+Holding the first emit until a 106 arrives was considered and rejected: an old
+server never sends one, so the wait would need a timeout, and the timeout would
+be a second source of the same flicker with worse latency. This is the same
+eventual-consistency behaviour awareness itself has. It is written down here so
+that it is not later mistaken for a bug and "fixed".
+
 **This is the one piece of the design that is not strictly required by the
 user's stated goal, and it is called out for review.** Without it the payload
 still reports live activity and the host still receives durable events, but the
@@ -267,7 +281,10 @@ participants: Array<{
   /**
    * The block this person's caret is in, carried over from `peers[].blockId`
    * so the released information is not lost. For an entry that collapsed two
-   * tabs, the block of the more recently active one.
+   * tabs, the block of the more recently active one; on an exact tie, the
+   * lowest `clientId`, the same tie-break `assignAnonymousGlyphs` uses. Two
+   * tabs can publish the identical millisecond, so the rule cannot be left
+   * to map order.
    */
   blockId: string | null;
   user: {

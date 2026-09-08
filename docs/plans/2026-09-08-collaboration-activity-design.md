@@ -81,6 +81,11 @@ Written in `start()`, so entering the document is itself activity, and
 refreshed by the existing throttled publisher that already rides
 `selectionchange` and `focusin`.
 
+**The stamp moves at most once a second.** That publisher fires ten times a
+second and skips a value that did not change. A stamp rewritten on every pass
+would defeat that skip and put an awareness frame on the wire for every
+keystroke, for a number consumers compare against a multi-minute threshold.
+
 **Why an absolute timestamp and not a relative age.** y-protocols re-announces
 the unchanged local state about every 15 seconds so the room does not prune the
 client. That re-announcement does not call our publish functions, so a relative

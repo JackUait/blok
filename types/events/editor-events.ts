@@ -46,49 +46,55 @@ export interface BlockChildrenMountedPayload {
 }
 
 /**
- * One collaborator visible in the shared session, as surfaced to the host for
- * rendering a presence stack / sync pill.
+ * One person visible in the shared session, as surfaced to the host.
+ *
+ * One entry per PERSON, not per connection: two browser tabs signed in as the
+ * same user collapse into one entry with two `clientIds`. Without a verified
+ * identity from the room the two cannot be recognised as one, so each keys on
+ * its own client id.
  */
-export interface CollaborationPeer {
+export interface CollaborationParticipant {
   /**
-   * Awareness client id of the peer. Unique per live connection, not per user.
+   * Server-verified identity of this person, or null when the room could not
+   * verify one. NEVER what the peer claims about itself.
    */
-  clientId: number;
+  userId: string | null;
+
+  /** In the document right now. Always true today; Blok reports nobody absent. */
+  present: boolean;
+
+  /** This editor's own reader. */
+  self: boolean;
+
+  /** Awareness client ids behind this entry, ascending. At least one. */
+  clientIds: number[];
 
   /**
-   * Display identity of the peer. Host-rendered, so treat as untrusted text.
+   * When this person last did something, in epoch ms on THIS browser's clock
+   * after clamping for the peer's clock. Null when they published none.
+   *
+   * Blok does not decide who counts as idle and carries no threshold: compare
+   * against your own clock with whatever window your product wants.
    */
-  user: {
-    /**
-     * Display name shown in the presence stack.
-     *
-     * EMPTY STRING when that peer configured no `collaboration.user` — which is
-     * the default, since `user` is optional. They are still in the room and
-     * still get an avatar; render them anonymously, in `color`.
-     */
-    name: string;
-
-    /**
-     * CSS color used for the peer's cursor, avatar and gutter face.
-     */
-    color: string;
-  };
+  lastActiveAt: number | null;
 
   /**
-   * Id of the block the peer's caret is in, or `null` when the peer has no
-   * caret in the document (e.g. focus is elsewhere).
+   * The block this person's caret is in, or null when they have none. For an
+   * entry that collapsed two tabs, the block of the more recently active one.
    */
   blockId: string | null;
 
-  /**
-   * RESERVED — never populated today, so it is always `undefined`.
-   *
-   * Peers are built from the awareness state each browser broadcasts, and that
-   * state carries no write claim: only the server knows a member's grant, and
-   * it does not publish other members' grants to the room. Do not branch on
-   * it; a `false`-y read means "not reported", not "cannot write".
-   */
-  canWrite?: boolean;
+  /** Display identity. Host-rendered, so treat every field as untrusted text. */
+  user: {
+    /** Published display name, trimmed and capped. Empty when they published none. */
+    name: string;
+    /** Cursor and avatar colour. Empty when the peer published none. */
+    color: string;
+    /** Space silhouette for a nameless participant, else null. */
+    glyph: string | null;
+    /** Localized anonymous phrase for that silhouette, else null. */
+    label: string | null;
+  };
 }
 
 /**
@@ -139,9 +145,10 @@ export interface CollaborationStatusChangedPayload {
   status: 'connecting' | 'connected' | 'offline' | 'error';
 
   /**
-   * Peers currently present in the session (excludes the local client).
+   * People in the session, the reader included. Blok reports nobody who has
+   * left: presence is ephemeral, and durable activity is the host's own record.
    */
-  peers: CollaborationPeer[];
+  participants: CollaborationParticipant[];
 
   /**
    * Set on `error` only: why the session stopped for good.

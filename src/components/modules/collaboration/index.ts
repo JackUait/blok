@@ -1,5 +1,5 @@
 import type { OutputBlockData } from '../../../../types';
-import type { CollaborationPeer, CollaborationStatusChangedPayload } from '../../../../types/events/editor-events';
+import type { CollaborationStatusChangedPayload } from '../../../../types/events/editor-events';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import { Module } from '../../__module';
 import { CollaborationStatusChanged } from '../../events';
@@ -7,10 +7,11 @@ import { createTicketSource, readTicketClaims, type TicketRequest } from '../../
 import { logLabeled } from '../../utils/logger';
 
 import { readCaretPosition } from './caret-position';
+import { buildParticipants } from './participants';
 import {
   createPresence,
+  hasDrawableIdentity,
   selectDrawableStates,
-  type DrawableState,
   type Presence,
   type PresenceState,
 } from './presence';
@@ -133,28 +134,6 @@ const syncUrl = (server: string, doc: string): string => {
   const path = base.pathname === '/' ? '' : base.pathname;
 
   return `${scheme}//${base.host}${path}/sync/${encodeURIComponent(doc)}`;
-};
-
-/**
- * Maps one drawable awareness state to the peer shape the host renders. A NAME
- * is not required: `collaboration.user` is optional, so requiring one hid every
- * peer in a default-configured room from every other peer. A nameless peer is
- * published with an empty `name`, which is what "anonymous" looks like in a
- * shape whose `name` is a string.
- * @param entry - one peer's raw, untrusted state, already known to carry a `user`
- */
-const toPeer = ({ clientId, state }: DrawableState): CollaborationPeer => {
-  const { name, color } = state.user;
-  const blockId = state.blockId;
-
-  return {
-    clientId,
-    user: {
-      name: typeof name === 'string' ? name : '',
-      color: typeof color === 'string' ? color : '',
-    },
-    blockId: typeof blockId === 'string' ? blockId : null,
-  };
 };
 
 /**
@@ -388,6 +367,12 @@ export class Collaboration extends Module {
 
   /** Publishes this editor's presence and draws everybody else's. */
   private presence: Presence | null = null;
+
+  /**
+   * Client id to verified actor id, from the room. Empty until the server half
+   * ships; every participant then keys on its own client id.
+   */
+  private identities = new Map<number, string>();
 
   /**
    * @param moduleConfig - the editor config and the shared event bus
@@ -1423,7 +1408,27 @@ export class Collaboration extends Module {
       this.Blok.UserDirectory.learn(entry.state.user.id, entry.state.user.name);
     }
 
-    const peers = drawable.map(toPeer);
+    // `selectDrawableStates` drops the reader, because the renderer must never
+    // draw the reader's own caret. This list includes them: every product that
+    // draws "who is in this document" draws the person reading it.
+    const localClientId = this.presence?.localClientId ?? null;
+    const local = localClientId === null
+      ? undefined
+      : this.Blok.YjsManager.getAwarenessStates().get(localClientId);
+    const localEntry = localClientId !== null && local !== undefined
+      ? { clientId: localClientId, state: local }
+      : null;
+    const states = localEntry !== null && hasDrawableIdentity(localEntry)
+      ? [...drawable, localEntry]
+      : drawable;
+
+    const participants = buildParticipants(
+      states,
+      localClientId,
+      this.identities,
+      (key) => this.Blok.I18n.t(key),
+      Date.now()
+    );
 
     // A host listener that throws must not reach the frame handler above this
     // (where it would end the session) or skip the arbitration that follows a
@@ -1431,7 +1436,7 @@ export class Collaboration extends Module {
     try {
       this.eventsDispatcher.emit(CollaborationStatusChanged, {
         status: this.status,
-        peers,
+        participants,
         ...(detail?.error === undefined ? {} : { error: detail.error }),
         ...(detail?.code === undefined ? {} : { code: detail.code }),
         ...(detail?.reason === undefined ? {} : { reason: detail.reason }),

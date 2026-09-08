@@ -18,16 +18,23 @@ describe('CollaborationStatusChanged event', () => {
 
     const payload: CollaborationStatusChangedPayload = {
       status: 'connected',
-      peers: [
+      participants: [
         {
-          clientId: 42,
-          user: { name: 'Ada', color: '#ff0000' },
+          userId: 'u_42',
+          present: true,
+          self: true,
+          clientIds: [42],
+          lastActiveAt: 1_700_000_000_000,
+          user: { name: 'Ada', color: '#ff0000', glyph: null, label: null },
           blockId: 'block-1',
-          canWrite: true,
         },
         {
-          clientId: 7,
-          user: { name: 'Grace', color: '#00ff00' },
+          userId: null,
+          present: true,
+          self: false,
+          clientIds: [7],
+          lastActiveAt: null,
+          user: { name: 'Grace', color: '#00ff00', glyph: null, label: null },
           blockId: null,
         },
       ],
@@ -49,14 +56,14 @@ describe('CollaborationStatusChanged event', () => {
 
     const retrying: CollaborationStatusChangedPayload = {
       status: 'offline',
-      peers: [],
+      participants: [],
       code: 1006,
       reason: 'connection lost',
       retryInMs: 30_000,
     };
     const dead: CollaborationStatusChangedPayload = {
       status: 'error',
-      peers: [],
+      participants: [],
       error: 'forbidden',
       code: 4403,
       reason: 'this user may not open this document',
@@ -80,7 +87,7 @@ describe('CollaborationStatusChanged event', () => {
 
     const pending: CollaborationStatusChangedPayload = {
       status: 'connected',
-      peers: [],
+      participants: [],
       save: {
         state: 'pending',
         pendingOperations: 2,
@@ -92,7 +99,7 @@ describe('CollaborationStatusChanged event', () => {
     // decimal string and has to reach the listener as one.
     const saved: CollaborationStatusChangedPayload = {
       status: 'connected',
-      peers: [],
+      participants: [],
       save: {
         state: 'saved',
         pendingOperations: 0,
@@ -120,7 +127,7 @@ describe('CollaborationStatusChanged event', () => {
 
     const broken: CollaborationStatusChangedPayload = {
       status: 'connected',
-      peers: [],
+      participants: [],
       save: {
         state: 'blocked',
         reason: 'local-storage-failed',

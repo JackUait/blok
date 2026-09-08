@@ -119,6 +119,6 @@ describe("collaboration status event", () => {
 
     expect(example).toContain("collaboration:status");
     expect(example).toMatch(/status/);
-    expect(example).toMatch(/peers/);
+    expect(example).toMatch(/participants/);
   });
 });

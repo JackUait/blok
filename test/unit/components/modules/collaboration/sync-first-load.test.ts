@@ -2310,7 +2310,7 @@ describe('collaboration — sync-first load', () => {
       expect(collabAttr(harness.core)).toBe('connected');
     });
 
-    it('keeps publishing peers afterwards, on the awareness the reset rebuilt', async () => {
+    it('keeps publishing participants afterwards, on the awareness the reset rebuilt', async () => {
       const harness = await boot();
       const seen: CollaborationStatusChangedPayload[] = [];
 
@@ -2340,7 +2340,7 @@ describe('collaboration — sync-first load', () => {
       second.deliver({ type: 'awareness', update: peer.encodeAwarenessUpdate() });
       peer.destroy();
 
-      expect(seen.at(-1)?.peers.map((entry) => entry.user.name)).toContain('Ada');
+      expect(seen.at(-1)?.participants.map((entry) => entry.user.name)).toContain('Ada');
     });
   });
 
@@ -2416,7 +2416,8 @@ describe('collaboration — sync-first load', () => {
         .filter((status, index, all) => status !== all[index - 1]);
 
       expect(transitions).toEqual(['connected', 'offline']);
-      expect(seen[0].peers).toEqual([]);
+      // No REMOTE participant yet; the local reader may already be its own row.
+      expect(seen[0].participants.filter((participant) => !participant.self)).toEqual([]);
     });
 
     it('reports a terminal stop as error, with why it stopped', async () => {
@@ -2545,11 +2546,16 @@ describe('collaboration — sync-first load', () => {
       socket.deliver({ type: 'awareness', update: peer.encodeAwarenessUpdate() });
       peer.destroy();
 
-      expect(seen.at(-1)?.peers).toHaveLength(1);
-      expect(seen.at(-1)?.peers[0].user).toEqual({ name: '', color: '#0b6e99' });
+      // The local reader may also be in the list now, as its own row.
+      const remote = seen.at(-1)?.participants.find((participant) => !participant.self);
+
+      expect(remote).toBeDefined();
+      expect(remote?.user.name).toBe('');
+      expect(remote?.user.color).toBe('#0b6e99');
+      expect(remote?.user.glyph).not.toBeNull();
     });
 
-    it('leaves the local user out of peers, now that presence publishes an identity', async () => {
+    it('reports the local user as self, now that participants include the reader', async () => {
       const harness = await boot({ user: { name: 'Me' } });
       const seen: CollaborationStatusChangedPayload[] = [];
 
@@ -2561,20 +2567,25 @@ describe('collaboration — sync-first load', () => {
 
       await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'remote block');
 
-      // The local state is REAL and would satisfy `toPeer` — before presence
-      // existed it was excluded only because it carried no name. The exclusion
-      // has to be by client id now, or the host sees itself in its own roster.
+      // The local state is REAL, published by presence like any peer's. Unlike
+      // the renderer, which must never draw the reader's own caret, this list
+      // is the one place that IS supposed to draw them, marked `self`.
       const states = Array.from(harness.core.moduleInstances.YjsManager.getAwarenessStates().values());
 
       expect(states).toHaveLength(1);
       expect(states[0].user).toMatchObject({ name: 'Me' });
-      expect(seen.at(-1)?.peers).toEqual([]);
+
+      const participants = seen.at(-1)?.participants ?? [];
+
+      expect(participants).toHaveLength(1);
+      expect(participants[0].self).toBe(true);
+      expect(participants[0].user.name).toBe('Me');
     });
 
     // A hostile frame can carry thousands of fabricated client states, and
     // every awareness change re-walks the map. The host's peer list is built
     // through the same cap the presence renderer applies.
-    it('caps the published peer list at MAX_PEERS however many states a frame carries', async () => {
+    it('caps the published participant list at MAX_PEERS however many states a frame carries', async () => {
       const harness = await boot();
       const seen: CollaborationStatusChangedPayload[] = [];
 
@@ -2601,7 +2612,12 @@ describe('collaboration — sync-first load', () => {
       socket.deliver({ type: 'awareness', update: encoding.toUint8Array(encoder) });
 
       expect(harness.core.moduleInstances.YjsManager.getAwarenessStates().size).toBeGreaterThan(MAX_PEERS);
-      expect(seen.at(-1)?.peers.length).toBeLessThanOrEqual(MAX_PEERS);
+
+      // Same cap, self excluded: `selectDrawableStates` bounds the FABRICATED
+      // peers, and the reader's own row rides in beside them afterwards.
+      const remote = seen.at(-1)?.participants.filter((participant) => !participant.self) ?? [];
+
+      expect(remote.length).toBeLessThanOrEqual(MAX_PEERS);
     });
   });
 

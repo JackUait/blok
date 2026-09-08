@@ -1,4 +1,4 @@
-export type { CollaborationStatusChangedPayload, CollaborationTerminalReason } from '../../../types/events/editor-events';
+export type { CollaborationStatusChangedPayload, CollaborationTerminalReason, CollaborationParticipant } from '../../../types/events/editor-events';
 
 /**
  * Fired when the collaboration session's connection state or peer set changes.

@@ -747,8 +747,8 @@ export class Collaboration extends Module {
           : readCaretPosition(block.id, block.inputs, window.getSelection());
       },
       renderer: createPresenceRenderer({
-        // The WRAPPER, not the redactor: the stack must not sit inside the
-        // subtree the modifications observer watches.
+        // The WRAPPER, not the redactor: the redactor is under the
+        // modifications observer, and this host is only watched for reflow.
         host: this.Blok.UI.nodes.wrapper,
         resolveHolder: (blockId) => this.Blok.BlockManager.getBlockById(blockId)?.holder ?? null,
         resolveInputs: (blockId) => this.Blok.BlockManager.getBlockById(blockId)?.inputs ?? [],
@@ -945,7 +945,7 @@ export class Collaboration extends Module {
     }
 
     // Presence first: awareness prunes a vanished peer only after 30 seconds,
-    // so the outlines and the stack have to come down now, not then.
+    // so the outlines and the gutter faces have to come down now, not then.
     this.presence?.stop();
     this.presence = null;
     this.awarenessUnhook?.();

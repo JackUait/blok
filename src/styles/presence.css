@@ -3,15 +3,14 @@
 
 [data-blok-interface] {
   --blok-presence-color: #0b6e99;
-  /* Overlap of the avatar stack, and the gutter strip's inline gap. */
+  /* The gutter strip's inline gap. */
   --blok-presence-gap: 6px;
-  --blok-presence-overlap: -6px;
   --blok-presence-caret-width: 2px;
   /* Half the width, so both ends read as a cap rather than a cut corner. */
   --blok-presence-caret-radius: 1px;
   --blok-presence-pulse: 1.6s;
   --blok-presence-face-size: 32px;
-  /* Ring around a face, and the same ring on the editor-wide stack. */
+  /* Ring around a gutter face. */
   --blok-presence-ring: 2px;
   --blok-presence-face-gap: 2px;
   --blok-presence-slide: 180ms;
@@ -120,7 +119,7 @@
   transform: translateX(var(--blok-editor-gutter-start, 0px));
 }
 
-/* The gutter and stack share each peer's color and silhouette. */
+/* Shared disc geometry for the gutter face and its overflow badge. */
 [data-blok-presence-face],
 [data-blok-presence-face-overflow] {
   display: inline-flex;

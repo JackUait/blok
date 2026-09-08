@@ -998,6 +998,11 @@ describe('readActiveAt', () => {
     expect(readActiveAt(now - MAX_ACTIVE_AGE_MS + 1, now)).toBe(now - MAX_ACTIVE_AGE_MS + 1);
   });
 
+  // Exactly at the cap the stamp is kept — only OLDER than the cap is dropped.
+  it('keeps a stamp exactly at the age cap', () => {
+    expect(readActiveAt(now - MAX_ACTIVE_AGE_MS, now)).toBe(now - MAX_ACTIVE_AGE_MS);
+  });
+
   it('drops anything that is not a finite number', () => {
     expect(readActiveAt('1700000000000', now)).toBeNull();
     expect(readActiveAt(Number.NaN, now)).toBeNull();

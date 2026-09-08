@@ -377,6 +377,11 @@ Removing the corner stack is still a visible behaviour change for anyone who
 styled `[data-blok-presence-stack]`. It is not a typed surface and not in the
 published attribute map, but it should be called out in the release notes.
 
+The gutter strip stays `aria-hidden`, so adopting `participants` is now the
+only accessible presence surface Blok offers. A host that draws its own
+stack from this data is responsible for labelling it, or a screen-reader user
+has no way to learn who else is in the document.
+
 ## Privacy
 
 `activeAt` is new disclosure. Before this change, a peer could see where your

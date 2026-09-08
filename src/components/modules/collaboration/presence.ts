@@ -11,10 +11,10 @@ import type { PresenceRenderer } from './presence-renderer';
  * Both events, for two different jobs. RENDERING rides `change` only:
  * y-protocols renews the local state with equal content every 3s to keep peers
  * from pruning it, and that renewal rides `update`, so drawing from `update`
- * would repaint the whole stack on every keepalive of every peer. LATCHING the
- * local client id rides `update`, because `change` is emitted only when the new
- * local state differs from the old one — and after a lineage reset the restored
- * state is identical, so `change` never comes.
+ * would repaint every caret and gutter face on every keepalive of every peer.
+ * LATCHING the local client id rides `update`, because `change` is emitted only
+ * when the new local state differs from the old one — and after a lineage
+ * reset the restored state is identical, so `change` never comes.
  */
 export interface PresenceSeam {
   setAwarenessField(field: string, value: unknown): void;
@@ -260,9 +260,9 @@ function* asPresenceStates(states: Map<number, Record<string, unknown>>): Genera
  * caret is in, and feeds the peers worth drawing to the renderer.
  *
  * Publishing is unconditional — a read-only viewer broadcasts exactly what an
- * editor does, which is what puts them in everyone else's avatar stack. Only
- * the DRAWING is suppressed for a chromeless editor, and that decision lives in
- * the renderer.
+ * editor does, which is what puts them in every peer's gutter faces and
+ * carets. Only the DRAWING is suppressed for a chromeless editor, and that
+ * decision lives in the renderer.
  * @param options - the seam, the identity, the caret, and where to draw
  */
 export const createPresence = (options: PresenceOptions): Presence => {

@@ -1,7 +1,7 @@
 import type { CollaborationParticipant } from '../../../../types/events/editor-events';
 
 import { ANONYMOUS_LABEL_KEYS, assignAnonymousGlyphs } from './anonymous-identity';
-import { readActiveAt, type DrawableState } from './presence';
+import { isPresenceColor, presenceColorFor, readActiveAt, type DrawableState } from './presence';
 import { normalizeUserId } from '../userDirectory';
 
 /** Longest name drawn, matching what the renderer already caps at. */
@@ -97,7 +97,7 @@ export const buildParticipants = (
       activeAt: readActiveAt(entry.state.activeAt, now),
       blockId: typeof entry.state.blockId === 'string' ? entry.state.blockId : null,
       name: readName(entry.state.user.name),
-      color: typeof entry.state.user.color === 'string' ? entry.state.user.color : '',
+      color: isPresenceColor(entry.state.user.color) ? entry.state.user.color : presenceColorFor(entry.clientId),
     };
     const group = groups.get(key);
 

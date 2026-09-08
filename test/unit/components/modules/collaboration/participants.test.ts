@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { buildParticipants } from '../../../../../src/components/modules/collaboration/participants';
-import type { DrawableState } from '../../../../../src/components/modules/collaboration/presence';
+import { presenceColorFor, type DrawableState } from '../../../../../src/components/modules/collaboration/presence';
 
 const NOW = 1_700_000_000_000;
 
@@ -236,5 +236,36 @@ describe('buildParticipants', () => {
     expect(Array.from(participant.user.name)).toHaveLength(32);
     expect(participant.user.name).not.toMatch(/[\uD800-\uDBFF]$/u);
     expect(participant.user.name).toBe(`A${'\u{1F680}'.repeat(31)}`);
+  });
+
+  // Awareness is unauthenticated: a tampered peer can publish any string as
+  // `color`. It must resolve to a palette colour, matching what the renderer
+  // already draws for the same peer — never the wire value verbatim.
+  it('resolves a hostile colour string to a palette colour instead of passing it through', () => {
+    const [participant] = buildParticipants(
+      [state(7, { user: { name: 'Ada', color: 'javascript:alert(1)' } })],
+      42,
+      new Map(),
+      undefined,
+      NOW
+    );
+
+    expect(participant.user.color).toBe(presenceColorFor(7));
+    expect(participant.user.color).not.toBe('javascript:alert(1)');
+  });
+
+  // `color` is never empty in the payload: a peer who published none still
+  // gets the same deterministic palette colour the renderer falls back to.
+  it('gives a peer who published no colour the palette colour instead of an empty string', () => {
+    const [participant] = buildParticipants(
+      [state(7, { user: { name: 'Ada' } })],
+      42,
+      new Map(),
+      undefined,
+      NOW
+    );
+
+    expect(participant.user.color).toBe(presenceColorFor(7));
+    expect(participant.user.color).not.toBe('');
   });
 });

@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Core } from '../../../../../src/components/core';
 import { Modules } from '../../../../../src/components/modules';
 import type { CollaborationConfig } from '../../../../../src/components/modules/collaboration';
+import { ANONYMOUS_LABEL_KEYS } from '../../../../../src/components/modules/collaboration/anonymous-identity';
 import * as operationStore from '../../../../../src/components/modules/collaboration/operation-store';
 import { MAX_PEERS } from '../../../../../src/components/modules/collaboration/presence';
 import * as collabProvider from '../../../../../src/components/modules/collaboration/provider';
@@ -2553,6 +2554,13 @@ describe('collaboration — sync-first load', () => {
       expect(remote?.user.name).toBe('');
       expect(remote?.user.color).toBe('#0b6e99');
       expect(remote?.user.glyph).not.toBeNull();
+      // The glyph is non-deterministic, so the label cannot be pinned to one
+      // phrase — but it must be ONE of the translated anonymous phrases,
+      // proving the translator wired at index.ts actually ran.
+      const knownLabels = Object.values(ANONYMOUS_LABEL_KEYS).map((key) =>
+        harness.core.moduleInstances.I18n.t(key));
+
+      expect(knownLabels).toContain(remote?.user.label);
     });
 
     it('reports the local user as self, now that participants include the reader', async () => {
@@ -2563,7 +2571,7 @@ describe('collaboration — sync-first load', () => {
         seen.push(payload);
       });
 
-      firstSync(harness, [{ type: 'paragraph', data: { text: 'synced' } }]);
+      const socket = firstSync(harness, [{ type: 'paragraph', data: { text: 'synced' } }]);
 
       await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'remote block');
 
@@ -2575,11 +2583,29 @@ describe('collaboration — sync-first load', () => {
       expect(states).toHaveLength(1);
       expect(states[0].user).toMatchObject({ name: 'Me' });
 
-      const participants = seen.at(-1)?.participants ?? [];
+      // Pinned only now, after the local reader's own (real-clock) activeAt
+      // was already published — so this stamp is the only one measured
+      // against the frozen clock, proving the reported lastActiveAt travels
+      // through the RECEIVER's own Date.now() at index.ts, not a fixed value.
+      const NOW = 1_700_000_000_000;
 
-      expect(participants).toHaveLength(1);
-      expect(participants[0].self).toBe(true);
-      expect(participants[0].user.name).toBe('Me');
+      vi.spyOn(Date, 'now').mockReturnValue(NOW);
+
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      peer.enableAwareness();
+      peer.setAwarenessField('user', { name: 'Ada' });
+      peer.setAwarenessField('activeAt', NOW - 5_000);
+      socket.deliver({ type: 'awareness', update: peer.encodeAwarenessUpdate() });
+      peer.destroy();
+
+      const participants = seen.at(-1)?.participants ?? [];
+      const self = participants.find((participant) => participant.self);
+      const remote = participants.find((participant) => !participant.self);
+
+      expect(participants).toHaveLength(2);
+      expect(self?.user.name).toBe('Me');
+      expect(remote?.lastActiveAt).toBe(NOW - 5_000);
     });
 
     // A hostile frame can carry thousands of fabricated client states, and

@@ -67,9 +67,9 @@ const GLYPH_ATTR = 'data-blok-presence-glyph';
 /**
  * Faces one block shows before it starts counting.
  *
- * Smaller than the editor-wide avatar stack's four: this strip lives in the
- * gutter beside a single block, and a column of faces taller than the block it
- * belongs to stops pointing at anything.
+ * Kept small: this strip lives in the gutter beside a single block, and a
+ * column of faces taller than the block it belongs to stops pointing at
+ * anything.
  */
 const DEFAULT_MAX_FACES = 3;
 
@@ -92,8 +92,8 @@ const FALLBACK_LINE_CENTRE = 12;
  *
  * `monogram` says where the initials go. The gutter face sits INSIDE a block
  * holder, and block copy sanitizes `holder.innerHTML` keeping every text node
- * it held, so the face carries them in an attribute presence.css paints. The
- * editor-wide stack sits outside every holder and writes them as text.
+ * it held, so the face carries them in an attribute presence.css paints. A
+ * caller mounted outside any holder would write them as text instead.
  * @param peer - the peer's sanitized identity
  * @param attr - the attribute that marks this avatar shape
  * @param monogram - where the initials are written
@@ -240,8 +240,9 @@ export const createAvatarLayer = (options: AvatarLayerOptions): AvatarLayer => {
 
     strip.setAttribute(GUTTER_ATTR, '');
     // Inert on purpose: out of caret traversal, out of a copied selection, and
-    // out of the accessibility tree — the editor-wide stack already names who
-    // is in the document.
+    // out of the accessibility tree. Blok ships `participants` data, not
+    // presence UI, so nothing here announces who else is in the document — a
+    // host rendering its own stack from that data owns the accessible surface.
     strip.setAttribute('contenteditable', 'false');
     strip.setAttribute('aria-hidden', 'true');
     mount.appendChild(strip);

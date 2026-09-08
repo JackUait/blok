@@ -57,10 +57,14 @@ export interface CollaborationParticipant {
   /**
    * Server-verified identity of this person, or null when the room could not
    * verify one. NEVER what the peer claims about itself.
+   *
+   * Null for everyone until the server-side identity frame ships. Do not use
+   * this as a map key without a fallback (e.g. `clientIds[0]`), or every
+   * participant collapses under the key `null`.
    */
   userId: string | null;
 
-  /** In the document right now. Always true today; Blok reports nobody absent. */
+  /** In the document right now. Blok reports only people currently in the room, never someone who has left. */
   present: boolean;
 
   /** This editor's own reader. */
@@ -80,7 +84,10 @@ export interface CollaborationParticipant {
 
   /**
    * The block this person's caret is in, or null when they have none. For an
-   * entry that collapsed two tabs, the block of the more recently active one.
+   * entry that collapsed two tabs, the block of the more recently active one;
+   * on an exact tie, the lowest `clientId`. A connection that never published
+   * `activeAt` ranks older than any real stamp, so it only wins the tie when
+   * neither tab has ever been active.
    */
   blockId: string | null;
 
@@ -88,7 +95,7 @@ export interface CollaborationParticipant {
   user: {
     /** Published display name, trimmed and capped. Empty when they published none. */
     name: string;
-    /** Cursor and avatar colour. Empty when the peer published none. */
+    /** Resolved hex colour, never empty. */
     color: string;
     /** Space silhouette for a nameless participant, else null. */
     glyph: string | null;

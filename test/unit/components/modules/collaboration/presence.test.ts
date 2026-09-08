@@ -799,7 +799,7 @@ describe('presence — local awareness upkeep', () => {
 
       // A read-only viewer with `hideControls` renders no presence UI at all;
       // the state it broadcasts is identical, which is what puts it in
-      // everybody else's avatar stack.
+      // everybody else's participant list.
       expect(seam.localState()).toEqual({
         blockId: 'block-2',
         caret: null,

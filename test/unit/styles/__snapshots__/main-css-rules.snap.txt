@@ -8574,7 +8574,6 @@
 [data-blok-interface] {
   --blok-presence-color: #0b6e99;
   --blok-presence-gap: 6px;
-  --blok-presence-overlap: -6px;
   --blok-presence-caret-width: 2px;
   --blok-presence-caret-radius: 1px;
   --blok-presence-pulse: 1.6s;

@@ -22,6 +22,9 @@ const isExpression = (text) => {
   }
 };
 
+/** Mutators whose replacement must be spliced exactly as reported. */
+const UNWRAPPED_MUTATORS = new Set(['StringLiteral', 'BooleanLiteral', 'Regex', 'BlockStatement']);
+
 /**
  * Replaces the exact span a Stryker mutant reports.
  *
@@ -35,13 +38,18 @@ export const applyMutant = (source, mutant) => {
   const { start, end } = mutant.location;
   const head = lines.slice(0, start.line - 1);
   const tail = lines.slice(end.line);
-  // Only LogicalOperator changes an operator's PRECEDENCE, and only it needs
-  // the grouping Stryker's re-printed AST already carries. Spliced raw,
-  // `a || b` for the node `a && b` in `a && b && c` yields `a || (b && c)` — a
-  // mutant nobody generated, scored under the real one's id — and `a && b` for
-  // a `??` node is a SyntaxError, which reads as a survivor. Every other
-  // mutator swaps within one precedence class or emits a statement.
-  const replacement = mutant.mutatorName === 'LogicalOperator' && isExpression(mutant.replacement)
+  // Stryker mutates the AST and re-prints, so its replacement carries whatever
+  // grouping the surrounding expression needs. Spliced raw, `a || b` for the
+  // node `a && b` in `a && b && c` yields `a || (b && c)` — a mutant nobody
+  // generated, scored under the real one's id — and `a ?? ''` for the node
+  // `(a ?? '').trim()` inside an `&&` chain is a SyntaxError, which the sweep
+  // reads as a kill because no test can load the module. Parentheses are inert
+  // around any expression, so they go on every compound one.
+  //
+  // The exceptions are the mutators whose replacement is not an expression to
+  // wrap: a literal is already primary (and an import source may not be
+  // parenthesised at all), and a block body would turn into an object literal.
+  const replacement = !UNWRAPPED_MUTATORS.has(mutant.mutatorName) && isExpression(mutant.replacement)
     ? `(${mutant.replacement})`
     : mutant.replacement;
   const patched = lines[start.line - 1].slice(0, start.column - 1)

@@ -16,6 +16,7 @@ describe('applyMutant', () => {
   // patching by text hits whichever comes first.
   it('replaces exactly the reported span', () => {
     const mutated = applyMutant(SOURCE, {
+      mutatorName: 'BooleanLiteral',
       location: { start: { line: 2, column: 14 }, end: { line: 2, column: 21 } },
       replacement: 'true',
     });
@@ -25,6 +26,7 @@ describe('applyMutant', () => {
 
   it('leaves every other line byte-identical', () => {
     const mutated = applyMutant(SOURCE, {
+      mutatorName: 'BooleanLiteral',
       location: { start: { line: 2, column: 14 }, end: { line: 2, column: 21 } },
       replacement: 'true',
     });
@@ -34,12 +36,13 @@ describe('applyMutant', () => {
   });
 
   it('replaces a span covering several lines', () => {
-    const mutated = applyMutant('a(\n  1,\n  2\n);', {
-      location: { start: { line: 1, column: 1 }, end: { line: 4, column: 2 } },
-      replacement: 'b()',
+    const mutated = applyMutant('if (x) {\n  a();\n  b();\n}', {
+      mutatorName: 'BlockStatement',
+      location: { start: { line: 1, column: 8 }, end: { line: 4, column: 2 } },
+      replacement: '{}',
     });
 
-    expect(mutated).toBe('b();');
+    expect(mutated).toBe('if (x) {}');
   });
 
   // Stryker mutates the AST and re-prints, so its `a || b` for the node `a && b`
@@ -54,6 +57,32 @@ describe('applyMutant', () => {
     });
 
     expect(mutated).toBe('const r = (a || b) && c;');
+  });
+
+  // Precedence is not a logical-operator problem. Dropping the call from
+  // `(a ?? '').trim()` leaves a `??` expression where a member call stood, and
+  // spliced raw into an `&&` chain that is a SyntaxError — which the sweep
+  // scores as a kill, because no test in the run can even load the module.
+  it('parenthesises a compound replacement from any mutator', () => {
+    const mutated = applyMutant("const r = ok && (a ?? '').trim() !== '';", {
+      mutatorName: 'MethodExpression',
+      location: { start: { line: 1, column: 17 }, end: { line: 1, column: 33 } },
+      replacement: "a ?? ''",
+    });
+
+    expect(mutated).toBe("const r = ok && (a ?? '') !== '';");
+  });
+
+  // A literal is already a primary expression, and an import source may not be
+  // parenthesised at all.
+  it('leaves a literal replacement unwrapped', () => {
+    const mutated = applyMutant("import x from 'a';", {
+      mutatorName: 'StringLiteral',
+      location: { start: { line: 1, column: 15 }, end: { line: 1, column: 18 } },
+      replacement: '""',
+    });
+
+    expect(mutated).toBe('import x from "";');
   });
 
   // A block body, a case label and a removed call are statements, and wrapping
@@ -71,11 +100,12 @@ describe('applyMutant', () => {
 
   it('replaces a span on the first line without losing it', () => {
     const mutated = applyMutant(SOURCE, {
+      mutatorName: 'StringLiteral',
       location: { start: { line: 1, column: 11 }, end: { line: 1, column: 12 } },
-      replacement: '9',
+      replacement: '""',
     });
 
-    expect(mutated.split('\n')[0]).toBe('const a = 9;');
+    expect(mutated.split('\n')[0]).toBe('const a = "";');
   });
 });
 

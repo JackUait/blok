@@ -59,34 +59,46 @@ const main = () => {
 
   const [, fileCoverage] = entry;
   const hitLines = new Set();
+  const measuredLines = new Set();
 
   // The START line only. A top-level `export const fn = () => {…}` is ONE
   // statement spanning the whole function, so expanding its range would mark
   // every line of an unreached function as executed.
-  for (const [id, count] of Object.entries(fileCoverage.s)) {
+  const note = (line, count) => {
+    measuredLines.add(line);
+
     if (count > 0) {
-      hitLines.add(fileCoverage.statementMap[id].start.line);
+      hitLines.add(line);
     }
+  };
+
+  for (const [id, count] of Object.entries(fileCoverage.s)) {
+    note(fileCoverage.statementMap[id].start.line, count);
   }
 
   for (const [id, counts] of Object.entries(fileCoverage.b)) {
     counts.forEach((count, index) => {
-      if (count > 0) {
-        hitLines.add(fileCoverage.branchMap[id].locations[index].start.line);
-      }
+      note(fileCoverage.branchMap[id].locations[index].start.line, count);
     });
   }
 
   const report = JSON.parse(readFileSync(reportPath, 'utf8'));
   const live = report.files[source].mutants
     .filter((mutant) => mutant.status === 'Survived' || mutant.status === 'NoCoverage');
-  const covered = live.filter((mutant) => hitLines.has(mutant.location.start.line));
+  // Three answers, not two. A line carrying no statement and no branch was
+  // never MEASURED — every property of one big object literal belongs to the
+  // single assignment statement above it — so "not hit" would be a lie there.
+  // Unmeasured lines go to the sweep with the executed ones.
+  const unreached = live.filter((mutant) => (
+    measuredLines.has(mutant.location.start.line) && !hitLines.has(mutant.location.start.line)
+  ));
+  const toSweep = live.filter((mutant) => !unreached.includes(mutant));
 
-  writeFileSync(outPath, `${JSON.stringify(covered.map((mutant) => mutant.id), null, 2)}\n`);
+  writeFileSync(outPath, `${JSON.stringify(toSweep.map((mutant) => mutant.id), null, 2)}\n`);
 
   process.stdout.write(
-    `${live.length} live mutants: ${covered.length} on executed lines (sweep these), `
-    + `${live.length - covered.length} on lines these tests never reach (already alive).\n`,
+    `${live.length} live mutants: ${unreached.length} on lines these tests provably never execute `
+    + `(already alive, no run needed); ${toSweep.length} to sweep.\n`,
   );
 };
 

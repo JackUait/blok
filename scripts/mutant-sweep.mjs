@@ -105,13 +105,24 @@ const runTests = (tests) => {
   }
 
   const failures = new Set();
+  let assertions = 0;
 
   for (const suite of report.testResults ?? []) {
     for (const assertion of suite.assertionResults ?? []) {
+      assertions += 1;
+
       if (assertion.status === 'failed') {
         failures.add(`${assertion.ancestorTitles.join(' > ')} > ${assertion.title}`);
       }
     }
+  }
+
+  // A report with no assertions at all means the module never loaded, and
+  // "nothing failed" would read that as a survivor. Stryker parenthesizes its
+  // replacements; this script splices raw text, so a LogicalOperator mutant can
+  // produce `a && b ?? c` — a SyntaxError, and a silent false-alive.
+  if (assertions === 0) {
+    return { failures: null, crashed: true, note: '<no assertions ran: unparseable mutant or empty suite>' };
   }
 
   return { failures, crashed: false };
@@ -201,7 +212,7 @@ const main = () => {
 
       const run = runTests(tests);
       const fresh = run.crashed
-        ? ['<no report: crash or timeout>']
+        ? [run.note ?? '<no report: crash or timeout>']
         : [...run.failures].filter((name) => !baseline.failures.has(name));
 
       verdicts.push({

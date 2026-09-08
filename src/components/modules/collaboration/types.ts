@@ -349,10 +349,8 @@ export interface CollabProviderOptions {
 
   /**
    * The room's full client-id-to-verified-actor-id map, sent on join and
-   * again on every change. REPLACE whatever this callback held before —
-   * the frame is a snapshot, not a delta, so merging into the old map would
-   * keep an entry the room already dropped (a peer who left, or one whose
-   * verification changed).
+   * again on every change — a snapshot, not a delta. See the wiring at
+   * `Collaboration`'s `onVerifiedIdentities` for why that means REPLACE.
    */
   onVerifiedIdentities?: (identities: ReadonlyArray<{ clientId: number; actorId: string }>) => void;
 }

@@ -129,6 +129,28 @@ describe('buildParticipants', () => {
     expect(participant.user.glyph).toBeNull();
   });
 
+  // Both members published a name, so the named-only pool still has to break
+  // its OWN tie on the lowest client id — a rule that could split into
+  // "first" or "last" of the named pool instead, unnoticed by the nameless
+  // tie test above, and draw the same person under a different name in each
+  // browser that happens to enumerate the pool differently. States arrive
+  // with the higher client id first so map-iteration order cannot be what
+  // makes this pass.
+  it('breaks a tie between two named members on the lowest client id', () => {
+    const [participant] = buildParticipants(
+      [
+        state(9, { user: { name: 'Grace', color: '#00ff00' } }),
+        state(7, { user: { name: 'Ada', color: '#ff0000' } }),
+      ],
+      42,
+      new Map([[7, 'u_7'], [9, 'u_7']]),
+      undefined,
+      NOW
+    );
+
+    expect(participant.user.name).toBe('Ada');
+  });
+
   it('clamps a stamp from the future and drops one past the age cap', () => {
     const [ahead, ancient] = buildParticipants(
       [

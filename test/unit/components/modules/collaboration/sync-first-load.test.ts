@@ -2692,6 +2692,61 @@ describe('collaboration — sync-first load', () => {
       expect(remote[0]?.clientIds).toEqual([peerOneClientId, peerTwoClientId].sort((a, b) => a - b));
     });
 
+    // The room re-sends its WHOLE map on every change (see `CollabRoom`), so
+    // a client id missing from a later frame means the room revoked it — e.g.
+    // its awareness ownership moved to an unverified membership. A merging
+    // client would keep drawing that connection as the person it used to
+    // belong to, which is the exact harm this feature exists to prevent.
+    it('revokes a mapping the room omits from a later, shrunk identities frame', async () => {
+      const harness = await boot();
+      const seen: CollaborationStatusChangedPayload[] = [];
+
+      harness.core.moduleInstances.API.methods.events.on('collaboration:status', (payload) => {
+        seen.push(payload);
+      });
+
+      const socket = firstSync(harness, [{ type: 'paragraph', data: { text: 'synced' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'remote block');
+
+      const peerOne = new DocumentStore(new YBlockSerializer());
+      const peerTwo = new DocumentStore(new YBlockSerializer());
+
+      peerOne.enableAwareness();
+      peerOne.setAwarenessField('user', { name: 'Ada' });
+      const peerOneClientId = Array.from(peerOne.getAwarenessStates().keys())[0];
+
+      peerTwo.enableAwareness();
+      peerTwo.setAwarenessField('user', { name: 'Ada' });
+      const peerTwoClientId = Array.from(peerTwo.getAwarenessStates().keys())[0];
+
+      socket.deliver({ type: 'awareness', update: peerOne.encodeAwarenessUpdate() });
+      socket.deliver({ type: 'awareness', update: peerTwo.encodeAwarenessUpdate() });
+      socket.deliver({
+        type: 'identities',
+        identities: [
+          { clientId: peerOneClientId, actorId: 'account-9' },
+          { clientId: peerTwoClientId, actorId: 'account-9' },
+        ],
+      });
+
+      // The room's next frame no longer names peerTwoClientId at all.
+      socket.deliver({
+        type: 'identities',
+        identities: [{ clientId: peerOneClientId, actorId: 'account-9' }],
+      });
+
+      peerOne.destroy();
+      peerTwo.destroy();
+
+      const remote = seen.at(-1)?.participants.filter((participant) => !participant.self) ?? [];
+      const revoked = remote.find((participant) => participant.clientIds.includes(peerTwoClientId));
+
+      expect(remote).toHaveLength(2);
+      expect(revoked?.userId).toBeNull();
+      expect(revoked?.clientIds).toEqual([peerTwoClientId]);
+    });
+
     // Awareness and the identities frame arrive on independent schedules, so
     // the FIRST status published after the awareness frame reports userId
     // null even for a peer who does have one — only the identities frame

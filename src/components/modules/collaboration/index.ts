@@ -370,9 +370,9 @@ export class Collaboration extends Module {
 
   /**
    * Client id to verified actor id, from the room's `identities` frame.
-   * REPLACED whole on every frame, never merged into — the frame is a
-   * snapshot of the room, not a delta. Empty until the first frame lands,
-   * so a participant published before then keys on its own client id.
+   * Empty until the first frame lands, so a participant published before
+   * then keys on its own client id. See `onVerifiedIdentities` below for why
+   * this is replaced whole, never merged into.
    *
    * The frame and awareness states arrive on independent schedules, so the
    * first status emitted after joining can report `userId: null` for a peer
@@ -797,10 +797,14 @@ export class Collaboration extends Module {
       onOperationAcknowledged: (serverSequence) => {
         this.serverSequence = serverSequence;
       },
-      // Replace, not merge: the frame is the room's whole map, so keeping an
-      // old entry past this point would hold onto a peer the room already
-      // dropped. `buildParticipants` only reads the field at emit time, so
-      // reassigning it here is enough — nothing else has to be told.
+      // REPLACE, never merge: the frame is the room's whole map, sent again
+      // on every change, so an id missing from a later frame means the room
+      // revoked it — e.g. `CollabRoom.RecordAwarenessOwnersLocked` sends a
+      // SHRUNK map when a client id's ownership moves to a differently
+      // verified (or unverified) membership. Merging would keep drawing that
+      // connection as the person it used to belong to. `buildParticipants`
+      // only reads the field at emit time, so reassigning it here is enough
+      // — nothing else has to be told.
       onVerifiedIdentities: (identities) => {
         this.identities = new Map(identities.map(({ clientId, actorId }) => [clientId, actorId]));
         this.emitStatus();

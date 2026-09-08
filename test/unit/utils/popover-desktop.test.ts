@@ -200,7 +200,7 @@ type PopoverDesktopInternal = PopoverDesktop & {
   size: { height: number; width: number };
   setTriggerItemPosition: (nestedPopoverEl: HTMLElement, item: PopoverItemDefault) => void;
   showNestedPopoverForItem: (item: PopoverItemDefault) => PopoverDesktop;
-  destroyNestedPopoverIfExists: () => void;
+  destroyNestedPopoverIfExists: (restoreFocus?: boolean) => void;
   handleHover: (event: Event) => void;
   handleMouseLeave: (event: Event) => void;
   showNestedItems: (item: PopoverItemDefault) => void;

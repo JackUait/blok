@@ -12,6 +12,9 @@
  * legitimately show a focused state after a click, because a click into them
  * starts text entry.
  */
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { readMainCss } from './helpers/read-main-css';
@@ -19,6 +22,68 @@ import { readMainCss } from './helpers/read-main-css';
 const stripComments = (source: string): string => source.replace(/\/\*[\s\S]*?\*\//g, '');
 
 const css = stripComments(readMainCss());
+
+const REPO_ROOT = resolve(__dirname, '../../..');
+const SRC_ROOT = join(REPO_ROOT, 'src');
+const MAIN_CSS = join(SRC_ROOT, 'styles/main.css');
+
+/**
+ * Stylesheets under `src/` that main.css does NOT import, and which this guard
+ * therefore has to open itself. Without an entry here a file is in a blind
+ * spot: `focus-visible-law.test.ts` deliberately lets `:focus-within` through
+ * (policing it is this file's job), and this file used to read only the
+ * flattened main.css graph — so a `:focus-within` rule planted in
+ * playground.css was caught by neither guard.
+ */
+const STANDALONE_CSS_ENTRIES = [
+  {
+    file: 'src/playground/playground.css',
+    reason: 'Dev-page Tailwind entry, loaded by index.html alone — never reachable from main.css.',
+  },
+];
+
+/** Every local .css file main.css pulls in, transitively. */
+function reachableFromMainCss(): Set<string> {
+  const seen = new Set<string>();
+
+  const walk = (filePath: string): void => {
+    if (seen.has(filePath)) return;
+    seen.add(filePath);
+
+    const source = readFileSync(filePath, 'utf-8');
+    const baseDir = dirname(filePath);
+
+    for (const [ , spec ] of source.matchAll(/@import\s+['"]([^'"]+)['"]/g)) {
+      // Package specifiers (tailwindcss/…) are framework output, not authored source.
+      if (!spec.startsWith('.')) continue;
+      walk(resolve(baseDir, spec));
+    }
+  };
+
+  walk(MAIN_CSS);
+
+  return seen;
+}
+
+/** Every .css file under src/, whatever imports it. */
+function allSrcCssFiles(directory: string = SRC_ROOT): string[] {
+  return readdirSync(directory).flatMap((entry) => {
+    const fullPath = join(directory, entry);
+
+    if (statSync(fullPath).isDirectory()) return allSrcCssFiles(fullPath);
+
+    return fullPath.endsWith('.css') ? [ fullPath ] : [];
+  });
+}
+
+/** Named sources this guard reads: the flattened main.css graph, plus the standalone entries. */
+const SCANNED_SOURCES = [
+  { label: 'src/styles/main.css (flattened)', source: css },
+  ...STANDALONE_CSS_ENTRIES.map(({ file }) => ({
+    label: file,
+    source: stripComments(readFileSync(join(REPO_ROOT, file), 'utf-8')),
+  })),
+];
 
 /**
  * The only `:focus-within` selectors allowed to survive, each with the reason
@@ -65,20 +130,35 @@ function splitSelectorList(list: string): string[] {
   return parts;
 }
 
-/** Every `:focus-within` selector still present in the flattened stylesheet. */
-function focusWithinSelectors(): string[] {
-  return [...css.matchAll(/(?:^|[};])\s*([^{};@]*:focus-within[^{};@]*)\{/gm)]
+/** Every `:focus-within` selector still present in the given stylesheet source. */
+function focusWithinSelectors(source: string): string[] {
+  return [...source.matchAll(/(?:^|[};])\s*([^{};@]*:focus-within[^{};@]*)\{/gm)]
     .flatMap(match => splitSelectorList(match[1]))
     .map(part => part.trim())
     .filter(part => part.includes(':focus-within'));
 }
 
 describe('focus-within modality law', () => {
-  it('leaves no :focus-within outside the documented allowlist', () => {
+  it.each(SCANNED_SOURCES)('leaves no :focus-within outside the documented allowlist ($label)', ({ source }) => {
     const allowed = new Set(ALLOWED_FOCUS_WITHIN.map(entry => entry.selector));
-    const unexpected = focusWithinSelectors().filter(selector => !allowed.has(selector));
+    const unexpected = focusWithinSelectors(source).filter(selector => !allowed.has(selector));
 
     expect(unexpected).toEqual([]);
+  });
+
+  it('reads every stylesheet under src/ — nothing sits in the gap between the two focus guards', () => {
+    const reachable = reachableFromMainCss();
+    const standalone = new Set(STANDALONE_CSS_ENTRIES.map(entry => join(REPO_ROOT, entry.file)));
+
+    const unread = allSrcCssFiles()
+      .filter(file => !reachable.has(file) && !standalone.has(file))
+      .map(file => relative(REPO_ROOT, file))
+      .sort();
+
+    expect(
+      unread,
+      'this stylesheet is neither imported by main.css nor listed in STANDALONE_CSS_ENTRIES, so no focus guard reads it — add it to that list with a reason'
+    ).toEqual([]);
   });
 
   it('reveals link-card actions only for keyboard focus', () => {

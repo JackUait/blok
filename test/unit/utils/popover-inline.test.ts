@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { PopoverInline } from '../../../src/components/utils/popover/popover-inline';
 import { PopoverItemDefault, PopoverItemType } from '../../../src/components/utils/popover/components/popover-item';
 import type { PopoverItemSeparator } from '../../../src/components/utils/popover/components/popover-item';
 import { PopoverDesktop } from '../../../src/components/utils/popover/popover-desktop';
+import { Flipper } from '../../../src/components/flipper';
 import { CSSVariables } from '../../../src/components/utils/popover/popover.const';
 import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 import type { PopoverParams, PopoverParamsBase } from '@/types/utils/popover/popover';
@@ -33,6 +34,32 @@ type PopoverInlineInternal = PopoverInline & {
     items: HTMLElement;
   };
 };
+
+/**
+ * A Flipper listens for keydown on document AND window in capture, and calls
+ * `stopImmediatePropagation()` for every key it owns. A flipper left activated
+ * by an earlier test therefore swallows keystrokes aimed at a later one — a
+ * measured failure, not a theory: with these tests as written, the ArrowLeft
+ * case below never reached its own nested flipper.
+ *
+ * Tests here rarely hide their popovers, so track what gets activated and shut
+ * it down between cases.
+ */
+const activatedFlippers = new Set<Flipper>();
+const originalFlipperActivate = Flipper.prototype.activate;
+
+Flipper.prototype.activate = function activate(
+  this: Flipper,
+  ...args: Parameters<typeof originalFlipperActivate>
+): void {
+  activatedFlippers.add(this);
+  originalFlipperActivate.apply(this, args);
+};
+
+afterEach(() => {
+  activatedFlippers.forEach(flipper => flipper.deactivate());
+  activatedFlippers.clear();
+});
 
 describe('PopoverInline', () => {
 
@@ -749,6 +776,218 @@ describe('PopoverInline', () => {
       // The 6px before-first-element gap lives on the scrollable items list instead, so it
       // sits above "Heading 1" and scrolls with the list inside the reel clip.
       expect(nestedItems?.className).toContain('pt-1.5');
+    });
+  });
+
+
+  /**
+   * `destroyNestedPopoverIfExists(restoreFocus = true)` calls
+   * `flipper.focusItem(triggerIndex)`, which stamps Blok's own keyboard cursor
+   * (`data-blok-focused`) back onto the trigger row and leaves a blue tint
+   * behind. That is right for a keyboard close and wrong for a mouse one, so
+   * both pointer-driven close paths in this class pass `false`.
+   *
+   * Reverting BOTH of them to the default left the entire unit suite green:
+   * only an e2e spec defended it, and that needs a full build.
+   *
+   * Trap: `input-modality` starts in 'keyboard', so a case that forgets the
+   * pointer gesture passes whatever the source does. Every pointer case below
+   * dispatches a real `pointerdown` on a node INSIDE the popover — on
+   * `document.body` it would read as an outside click and dismiss the popover
+   * under test.
+   */
+  describe('focus cursor after a nested submenu closes', () => {
+    type NestedPopoverDestroyer = {
+      destroyNestedPopoverIfExists: (restoreFocus?: boolean) => void;
+    };
+
+    const buildToolbar = (): PopoverInline => new PopoverInline({
+      items: [
+        {
+          icon: 'T',
+          title: 'Turn into',
+          name: 'convert-to',
+          children: {
+            items: [ { icon: 'H', title: 'Heading', name: 'header', onActivate: vi.fn() } ],
+          },
+        },
+        { icon: 'B', title: 'Bold', name: 'bold', onActivate: vi.fn() },
+      ],
+    });
+
+    const openToolbar = async (): Promise<PopoverInline> => {
+      const popover = buildToolbar();
+
+      document.body.appendChild(popover.getElement());
+      popover.show();
+
+      /**
+       * show() defers `flipper.deactivate()` + `activate()` to a microtask, and
+       * deactivate() drops the cursor. Flushing it here keeps that teardown from
+       * erasing the very attribute these cases assert on.
+       */
+      await Promise.resolve();
+
+      return popover;
+    };
+
+    const itemElement = (popover: PopoverInline, name: string): HTMLElement => {
+      const element = popover.getElement().querySelector(`[${DATA_ATTR.itemName}="${name}"]`);
+
+      if (!(element instanceof HTMLElement)) {
+        throw new Error(`popover has no item named ${name}`);
+      }
+
+      return element;
+    };
+
+    /** A mouse gesture on a node inside the popover: records pointer modality, then activates. */
+    const mouseClick = (element: HTMLElement): void => {
+      element.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+      element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    };
+
+    /**
+     * Keyboard activation of a popover item is a bare `click()` from the
+     * flipper's Enter handler — no pointer event, so modality stays keyboard.
+     */
+    const keyboardActivate = (element: HTMLElement): void => {
+      element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    };
+
+    const pressKey = (key: string): void => {
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key }));
+    };
+
+    /**
+     * Records the `restoreFocus` arguments of every
+     * `destroyNestedPopoverIfExists` call made ON THIS POPOVER. The nested
+     * popover tears itself down through the same prototype method, so calls
+     * have to be filtered by instance.
+     * @param popover - the popover whose calls should be recorded
+     */
+    const recordRestoreFocusArgs = (popover: PopoverInline): Array<[boolean?]> => {
+      const prototype = PopoverDesktop.prototype as unknown as NestedPopoverDestroyer;
+      const original = prototype.destroyNestedPopoverIfExists;
+      const recorded: Array<[boolean?]> = [];
+
+      vi.spyOn(prototype, 'destroyNestedPopoverIfExists').mockImplementation(function (
+        this: NestedPopoverDestroyer,
+        ...args: [boolean?]
+      ): void {
+        if (this === (popover as unknown as NestedPopoverDestroyer)) {
+          recorded.push(args);
+        }
+
+        original.apply(this, args);
+      });
+
+      return recorded;
+    };
+
+    afterEach(() => {
+      // input-modality is a module singleton shared by every test in the process.
+      pressKey('Shift');
+      vi.restoreAllMocks();
+    });
+
+    it('leaves no cursor on the trigger when a click toggles its own submenu shut', async () => {
+      const popover = await openToolbar();
+      const trigger = itemElement(popover, 'convert-to');
+
+      mouseClick(trigger);
+
+      expect(popover.hasNestedPopoverOpen, 'first click should open the submenu').toBe(true);
+
+      // The submenu defers its own first-item focus to a microtask.
+      await Promise.resolve();
+
+      expect(
+        popover.getElement().querySelectorAll(`[${DATA_ATTR.focused}]`),
+        'a submenu opened by mouse starts with no row highlighted — this is what proves the pointerdown above registered'
+      ).toHaveLength(0);
+
+      const restoreFocusArgs = recordRestoreFocusArgs(popover);
+
+      mouseClick(trigger);
+
+      expect(popover.hasNestedPopoverOpen).toBe(false);
+      expect(
+        trigger,
+        'a mouse gesture must not leave the keyboard cursor tint on the trigger'
+      ).not.toHaveAttribute(DATA_ATTR.focused);
+      expect(
+        restoreFocusArgs,
+        'showNestedItems toggles shut on a click, so it must opt out of focus restore'
+      ).toEqual([ [ false ] ]);
+    });
+
+    it('leaves no cursor on the trigger when a click on another tool closes the submenu', async () => {
+      const popover = await openToolbar();
+      const trigger = itemElement(popover, 'convert-to');
+      const otherTool = itemElement(popover, 'bold');
+
+      mouseClick(trigger);
+
+      expect(popover.hasNestedPopoverOpen, 'first click should open the submenu').toBe(true);
+
+      const restoreFocusArgs = recordRestoreFocusArgs(popover);
+
+      mouseClick(otherTool);
+
+      expect(popover.hasNestedPopoverOpen).toBe(false);
+      expect(
+        trigger,
+        'the trigger of the submenu a mouse click dismissed must not keep the cursor'
+      ).not.toHaveAttribute(DATA_ATTR.focused);
+      expect(otherTool).not.toHaveAttribute(DATA_ATTR.focused);
+      expect(
+        restoreFocusArgs[0],
+        'handleItemClick closes the submenu for a click on another tool, so it must opt out of focus restore'
+      ).toEqual([ false ]);
+    });
+
+    /**
+     * The counter-cases. Without them the pointer cases above could be
+     * satisfied by deleting the focus restore outright. These reach
+     * `destroyNestedPopoverIfExists` through callers that pass no argument, so
+     * `restoreFocus` keeps its `true` default.
+     */
+    it('restores the cursor when Escape closes the submenu (closeNestedPopover)', async () => {
+      const popover = await openToolbar();
+      const trigger = itemElement(popover, 'convert-to');
+
+      keyboardActivate(trigger);
+
+      expect(popover.hasNestedPopoverOpen).toBe(true);
+
+      // What the editor's Escape handler calls: InlineToolbar.closeNestedPopover().
+      popover.closeNestedPopover();
+
+      expect(popover.hasNestedPopoverOpen).toBe(false);
+      expect(
+        trigger,
+        'a keyboard close must hand the cursor back to the trigger row'
+      ).toHaveAttribute(DATA_ATTR.focused, 'true');
+    });
+
+    it('restores the cursor when ArrowLeft navigates back out of the submenu', async () => {
+      const popover = await openToolbar();
+      const trigger = itemElement(popover, 'convert-to');
+
+      keyboardActivate(trigger);
+
+      expect(popover.hasNestedPopoverOpen).toBe(true);
+
+      // The nested flipper's onArrowLeft is bound to the parent's
+      // destroyNestedPopoverIfExists with no argument.
+      pressKey('ArrowLeft');
+
+      expect(popover.hasNestedPopoverOpen).toBe(false);
+      expect(
+        trigger,
+        'ArrowLeft is keyboard navigation back to the trigger, so the cursor belongs there'
+      ).toHaveAttribute(DATA_ATTR.focused, 'true');
     });
   });
 

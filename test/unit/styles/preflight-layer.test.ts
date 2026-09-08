@@ -99,3 +99,66 @@ describe('preflight.css cascade-layer safety', () => {
     expect(declarationsMissingImportant(body)).toEqual([]);
   });
 });
+
+/**
+ * The pointer-modality outline reset is the single central rule that keeps a
+ * mouse click from leaving a focus ring anywhere in the editor, its popovers
+ * and the top layer. Before this block it was pinned only by the auto-updatable
+ * `main-css-rules` file snapshot, whose accepted remedy for any diff is `-u` —
+ * so deleting the rule, moving it back under `@layer base`, or dropping the
+ * `!important` all went green with one keystroke.
+ *
+ * Both properties are load-bearing, not style:
+ * - UNLAYERED, because component stylesheets are imported unlayered and
+ *   unlayered beats layered at any specificity. Inside `@layer base` this rule
+ *   suppresses nothing but the UA default.
+ * - `!important`, which is the consequence of being unlayered (and is required
+ *   of every unlayered rule by the parser test above).
+ */
+describe('pointer-modality outline reset', () => {
+  const MODALITY_SELECTOR = '[data-blok-modality="pointer"]';
+
+  const modalityBlocks = topLevelBlocks.filter((b) => b.prelude.includes(MODALITY_SELECTOR));
+
+  it('exists as an unlayered top-level rule', () => {
+    expect(
+      modalityBlocks.map((b) => b.prelude.replace(/\s+/g, ' ')),
+      'preflight.css must keep exactly one unlayered :root[data-blok-modality="pointer"] rule — it is what stops a mouse click leaving a focus ring'
+    ).toHaveLength(1);
+  });
+
+  it('covers the editor, popovers and the top layer, excluding text-entry fields', () => {
+    const prelude = modalityBlocks[0].prelude.replace(/\s+/g, ' ');
+
+    expect(prelude, 'the reset must start at :root so the attribute on <html> drives it').toContain(
+      ':root[data-blok-modality="pointer"]'
+    );
+
+    for (const root of [ '[data-blok-interface]', '[data-blok-popover]', '[data-blok-top-layer]' ]) {
+      expect(prelude, `${root} must stay in the modality reset scope`).toContain(root);
+    }
+
+    expect(
+      prelude,
+      'text-entry fields are the documented exception: a click into them starts typing, so they keep their ring'
+    ).toContain(':focus-visible:not(:is([contenteditable], input, textarea))');
+  });
+
+  it('is never nested inside an @layer block', () => {
+    const layered = topLevelBlocks.filter(
+      (b) => b.prelude.startsWith('@layer') && b.body.includes(MODALITY_SELECTOR)
+    );
+
+    expect(
+      layered.map((b) => b.prelude),
+      'moving this rule into a layer makes it lose to every unlayered component stylesheet — it would then suppress only the UA outline'
+    ).toEqual([]);
+  });
+
+  it('carries !important on its outline declaration', () => {
+    expect(
+      modalityBlocks[0].body.replace(/\s+/g, ' ').trim(),
+      'an unlayered rule without !important cannot beat a host page, and preflight-layer.test.ts requires !important of every unlayered rule'
+    ).toMatch(/outline:\s*none\s*!important/);
+  });
+});

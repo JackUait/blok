@@ -117,8 +117,8 @@ describe('file card UI mutants', () => {
     });
 
     it('labels the download link only when a label was supplied', () => {
-      expect(downloadLinkOf(card({ url: SAFE_URL })).hasAttribute('aria-label')).toBe(false);
-      expect(downloadLinkOf(card({ url: SAFE_URL }, undefined, 'Download')).getAttribute('aria-label'))
+      expect(downloadLinkOf(card({ url: SAFE_URL }))?.hasAttribute('aria-label')).toBe(false);
+      expect(downloadLinkOf(card({ url: SAFE_URL }, undefined, 'Download'))?.getAttribute('aria-label'))
         .toBe('Download');
     });
 

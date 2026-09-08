@@ -1,8 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { onHover } from '../../../src/components/utils/tooltip';
 import { buildPresenceFace } from '../../../src/playground/presence-face';
 
 import type { CollaborationParticipant } from '../../../types/events/editor-events';
+
+vi.mock('../../../src/components/utils/tooltip', () => ({ onHover: vi.fn() }));
 
 const participant = (overrides: Partial<CollaborationParticipant['user']> = {},
   rest: Partial<CollaborationParticipant> = {}): CollaborationParticipant => ({
@@ -22,7 +25,18 @@ const participant = (overrides: Partial<CollaborationParticipant['user']> = {},
   },
 });
 
+/** What the face registered as its hover text. */
+const hoverText = (): unknown => vi.mocked(onHover).mock.calls[0]?.[1];
+
 describe('playground presence face', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('wears the silhouette the editor assigned a nameless participant', () => {
     const face = buildPresenceFace(participant());
 
@@ -49,29 +63,43 @@ describe('playground presence face', () => {
     expect(face.style.background).toBe('rgb(105, 64, 165)');
   });
 
-  it('names an anonymous participant by its label rather than by nothing', () => {
-    const face = buildPresenceFace(participant());
+  it('names a participant through Blok tooltip rather than the browser one', () => {
+    const face = buildPresenceFace(participant({ name: 'Alice', glyph: null, label: null }));
 
-    expect(face.title).toBe('Anonymous Planet');
+    expect(vi.mocked(onHover).mock.calls[0]?.[0]).toBe(face);
+    expect(hoverText()).toBe('Alice');
+    expect(face.hasAttribute('title')).toBe(false);
+  });
+
+  it('names an anonymous participant by its label rather than by nothing', () => {
+    buildPresenceFace(participant());
+
+    expect(hoverText()).toBe('Anonymous Planet');
   });
 
   it('names a participant no translator could label', () => {
-    const face = buildPresenceFace(participant({ label: null }));
+    buildPresenceFace(participant({ label: null }));
 
-    expect(face.title).toBe('Anonymous');
+    expect(hoverText()).toBe('Anonymous');
   });
 
   it('reports how long ago a participant was last active', () => {
-    const face = buildPresenceFace(participant({ name: 'Alice', glyph: null, label: null }, {
+    buildPresenceFace(participant({ name: 'Alice', glyph: null, label: null }, {
       lastActiveAt: 8_000,
     }), 20_400);
 
-    expect(face.title).toBe('Alice · 12s ago');
+    expect(hoverText()).toBe('Alice · 12s ago');
   });
 
   it('reports no age for a participant that published none', () => {
-    const face = buildPresenceFace(participant({ name: 'Alice', glyph: null, label: null }), 20_400);
+    buildPresenceFace(participant({ name: 'Alice', glyph: null, label: null }), 20_400);
 
-    expect(face.title).toBe('Alice');
+    expect(hoverText()).toBe('Alice');
+  });
+
+  it('reaches assistive tech, which never sees a hover', () => {
+    const face = buildPresenceFace(participant());
+
+    expect(face.getAttribute('aria-label')).toBe('Anonymous Planet');
   });
 });

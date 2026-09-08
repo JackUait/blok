@@ -10,6 +10,8 @@
  * `data-blok-presence-glyph`, so writing the event's glyph name into that
  * attribute IS the whole integration — the artwork is already on the page.
  */
+import { onHover } from '../components/utils/tooltip';
+
 import type { CollaborationParticipant } from '../../types/events/editor-events';
 
 /** The attribute presence.css turns into a silhouette. */
@@ -43,10 +45,16 @@ export const buildPresenceFace = (
   }
 
   const who = name === '' ? label ?? UNLABELLED : name;
-
-  face.title = person.lastActiveAt === null
+  const caption = person.lastActiveAt === null
     ? who
     : `${who} · ${Math.round((now - person.lastActiveAt) / 1000)}s ago`;
+
+  // Blok's own tooltip, never `title`: the browser draws that one itself, half
+  // a second late and in the platform's styling, which is the wrong bubble on a
+  // page wearing Blok's chrome. Assistive tech never hovers, so it reads the
+  // label instead.
+  face.setAttribute('aria-label', caption);
+  onHover(face, caption);
 
   return face;
 };

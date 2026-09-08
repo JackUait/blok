@@ -15,13 +15,29 @@ vi.mock('../../../../src/components/utils/upload-xhr', () => ({
 }));
 
 import { createFetchUploader } from '../../../../src/components/utils/fetch-uploader';
-import type { DeleteContext, UploadContext } from '../../../../types/configs/uploader';
+import type { BlokUploader, DeleteContext, UploadContext } from '../../../../types/configs/uploader';
 
 const CONTEXT = { onProgress: (): void => undefined } as unknown as UploadContext;
 const DELETE_CONTEXT = {} as unknown as DeleteContext;
 
-const uploader = (): ReturnType<typeof createFetchUploader> =>
-  createFetchUploader({ baseUrl: 'https://api.example.com//' });
+interface Uploader {
+  uploadByFile: NonNullable<BlokUploader['uploadByFile']>;
+  uploadByUrl: NonNullable<BlokUploader['uploadByUrl']>;
+  delete: NonNullable<BlokUploader['delete']>;
+}
+
+/** Every method is optional on the published type; this one implements them all. */
+const uploader = (): Uploader => {
+  const built = createFetchUploader({ baseUrl: 'https://api.example.com//' });
+  const { uploadByFile, uploadByUrl } = built;
+  const remove = built.delete;
+
+  if (uploadByFile === undefined || uploadByUrl === undefined || remove === undefined) {
+    throw new Error('the uploader is missing a method');
+  }
+
+  return { uploadByFile, uploadByUrl, delete: remove };
+};
 
 const file = (name: string): File => new File([new Uint8Array(4)], name, { type: 'image/png' });
 

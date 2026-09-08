@@ -296,7 +296,12 @@ internal sealed class CollabRoomManager : ICollabRoomManager
     }
   }
 
-  /// <summary>Test hook: completes once every room has run the work queued before the call.</summary>
+  /// <summary>
+  /// Test hook: completes once every room has run the work queued before the
+  /// call AND delivered the activity that work handed to the host. That second
+  /// half awaits HOST code with NO bound — unlike <see cref="DrainAsync"/>,
+  /// which bounds it twice — so this belongs in tests and nowhere else.
+  /// </summary>
   internal async Task SettleAsync()
   {
     foreach (var room in LiveRooms())

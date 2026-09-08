@@ -4526,10 +4526,12 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
-  /// The property the whole off-lane seam exists for, and the only test that
-  /// measures it: running the observer UNDER the lane passes every other test
-  /// here, because the throwing one returns in microseconds. This one hangs
-  /// instead, so its waits are bounded and it fails rather than wedging.
+  /// What this measures is AWAIT PLACEMENT: the observer has returned a
+  /// ValueTask that has not completed, and the question is whether the room
+  /// awaited it with the lane held. It is the only test that asks — running
+  /// the observer under the lane passes every other test here, because the
+  /// throwing one returns in microseconds. A wrong answer hangs rather than
+  /// asserts, so every wait below is bounded.
   /// </summary>
   [Fact]
   public async Task AnObserverStillInsideRecordAsyncDoesNotHoldTheLane()
@@ -4541,8 +4543,8 @@ public sealed class CollabRoomTests
     var member = new FakeMember(actorId: "user-1");
     var membership = await Join(manager, member).WaitAsync(TimeSpan.FromSeconds(10));
 
-    // The record is added before the gate is returned, so once it appears the
-    // observer is inside RecordAsync and staying there.
+    // The record is added before the incomplete ValueTask is returned, so once
+    // it appears the room's own await is the only thing left outstanding.
     await activity.WaitForAsync(1).WaitAsync(TimeSpan.FromSeconds(10));
 
     await membership.ReceiveAsync(
@@ -4625,6 +4627,57 @@ public sealed class CollabRoomTests
             StringComparison.Ordinal));
 
     gate.SetResult();
+  }
+
+  /// <summary>
+  /// The boundary exemption is worth nothing if the bound can drop a Left. A
+  /// heartbeat flood from OTHER actors must not cost the queue the Left that
+  /// ends an already-delivered Joined, or that person is in the document for
+  /// good and the host never learns otherwise.
+  /// </summary>
+  [Fact]
+  public async Task AHeartbeatFloodIsDroppedBeforeASessionBoundary()
+  {
+    endpoint.Holds(DocId, "hello");
+    var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    activity.Gate = gate;
+    var manager = CreateActivityManager();
+    var leaving = await Join(manager, new FakeMember(actorId: "user-a"))
+        .WaitAsync(TimeSpan.FromSeconds(10));
+
+    // Joined(user-a) is now DELIVERED and stuck in the observer, so the Left
+    // below is the only thing that can still end that session.
+    await activity.WaitForAsync(1).WaitAsync(TimeSpan.FromSeconds(10));
+    await leaving.LeaveAsync();
+
+    var beating = await Join(manager, new FakeMember(actorId: "user-b"));
+
+    // Two boundaries plus 256 heartbeats against a bound of 256: the last two
+    // enqueues have to give something up, and it must not be a boundary.
+    for (var beat = 0; beat < 256; beat++)
+    {
+      time.Advance(TimeSpan.FromSeconds(60));
+      await beating.ReceiveAsync(
+          SyncWire.Encode(new ActivityFrame()),
+          CancellationToken.None);
+    }
+
+    gate.SetResult();
+    await manager.SettleAsync();
+
+    Assert.Contains(
+        activity.Records,
+        record => record.Kind == CollabActivityKind.Left && record.ActorId == "user-a");
+    Assert.Contains(
+        activity.Records,
+        record => record.Kind == CollabActivityKind.Joined && record.ActorId == "user-b");
+    Assert.Contains(
+        log,
+        entry => entry.Contains("dropped an activity record (Active)", StringComparison.Ordinal));
+    Assert.DoesNotContain(
+        log,
+        entry => entry.Contains("dropped an activity record (Left)", StringComparison.Ordinal) ||
+            entry.Contains("dropped an activity record (Joined)", StringComparison.Ordinal));
   }
 
   /// <summary>

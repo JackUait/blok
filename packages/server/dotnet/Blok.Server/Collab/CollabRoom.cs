@@ -143,9 +143,11 @@ internal sealed class CollabRoom : IDisposable
   /// <summary>
   /// Activity the host has not been told about yet, oldest first. Guarded by
   /// its OWN lock rather than the lane, because the pump that drains it runs
-  /// off the lane and must never take it.
+  /// off the lane and must never take it. A list rather than a queue because
+  /// the record it gives up when full is not always the head — see
+  /// <see cref="OldestExpendableActivity"/>.
   /// </summary>
-  private readonly Queue<PendingActivity> activityQueue = new();
+  private readonly LinkedList<PendingActivity> activityQueue = new();
 
   /// <summary>Scratch for the structural walk of one inbound awareness frame; reused, never escapes the lane.</summary>
   private readonly List<AwarenessEntry> awarenessScratch = [];
@@ -993,14 +995,20 @@ internal sealed class CollabRoom : IDisposable
     {
       if (activityQueue.Count == ActivityQueueLimit)
       {
-        // The OLDEST goes, not the newest. Past the bound the host is behind
-        // reality, and the newest records are the ones that say who is in the
-        // document NOW: dropping a stale Joined leaves nobody stuck, while
-        // dropping the Left that ends it would.
-        dropped = activityQueue.Dequeue();
+        // HEARTBEATS are sacrificed first, oldest of them, and a session
+        // boundary only when no heartbeat is left to give up. The two classes
+        // cost different things: a lost Active or Edited costs the host one
+        // stale "last seen", which the next heartbeat corrects, while a lost
+        // Left strands its Joined and leaves that person in the document for
+        // good — the very outcome Joined and Left are exempt from
+        // ActivityWindow to prevent. Oldest within each class, because the
+        // newest records are the ones that say who is here now.
+        var victim = OldestExpendableActivity();
+        dropped = victim.Value;
+        activityQueue.Remove(victim);
       }
 
-      activityQueue.Enqueue(new PendingActivity(actor, at, kind));
+      activityQueue.AddLast(new PendingActivity(actor, at, kind));
 
       if (!activityPumping)
       {
@@ -1014,9 +1022,27 @@ internal sealed class CollabRoom : IDisposable
       // Outside the lock: this is the host's logger, and it must not be able
       // to leave the queue half-updated.
       log?.Invoke(
-          $"collab: room \"{DocId}\" dropped a {lost.Kind} record for \"{lost.Actor}\"; " +
-          "the activity observer is behind");
+          $"collab: room \"{DocId}\" dropped an activity record ({lost.Kind}) " +
+          $"for \"{lost.Actor}\"; the activity observer is behind");
     }
+  }
+
+  /// <summary>
+  /// The record a full queue gives up: the oldest heartbeat if it holds one,
+  /// else the oldest record of any kind. Call with activityQueue's lock held,
+  /// and only when the queue is full, so the fallback is never null.
+  /// </summary>
+  private LinkedListNode<PendingActivity> OldestExpendableActivity()
+  {
+    for (var node = activityQueue.First; node is not null; node = node.Next)
+    {
+      if (node.Value.Kind is CollabActivityKind.Active or CollabActivityKind.Edited)
+      {
+        return node;
+      }
+    }
+
+    return activityQueue.First!;
   }
 
   /// <summary>
@@ -1045,7 +1071,8 @@ internal sealed class CollabRoom : IDisposable
             return;
           }
 
-          next = activityQueue.Dequeue();
+          next = activityQueue.First!.Value;
+          activityQueue.RemoveFirst();
         }
 
         try
@@ -1067,12 +1094,22 @@ internal sealed class CollabRoom : IDisposable
     catch (Exception)
     {
       // Nothing above is meant to reach here; the host's own logger is the one
-      // thing that could, and it cannot be trusted to report itself. Clearing
-      // the flag is what matters — left set, this room's activity would be
-      // dead for the rest of its life.
+      // thing that could, and it cannot be trusted to report itself. Left set,
+      // the flag would make this room's activity dead for the rest of its
+      // life.
       lock (activityQueue)
       {
-        activityPumping = false;
+        if (activityQueue.Count == 0)
+        {
+          activityPumping = false;
+
+          return;
+        }
+
+        // Records are still waiting. A fresh pump takes them now rather than
+        // leaving them for whenever the next enqueue happens — which is a wait
+        // SettleAsync would otherwise return in front of.
+        activityDispatch = Task.Run(() => PumpActivityAsync(observer));
       }
     }
   }

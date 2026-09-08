@@ -129,21 +129,21 @@ describe('buildParticipants', () => {
     expect(participant.user.glyph).toBeNull();
   });
 
-  // Both members published a name, so the named-only pool still has to break
-  // its OWN tie on the lowest client id — a rule that could split into
-  // "first" or "last" of the named pool instead, unnoticed by the nameless
-  // tie test above, and draw the same person under a different name in each
-  // browser that happens to enumerate the pool differently. States arrive
-  // with the higher client id first so map-iteration order cannot be what
-  // makes this pass.
-  it('breaks a tie between two named members on the lowest client id', () => {
+  // Three named members, lowest client id (7) in the MIDDLE position — not
+  // first, not last. A two-member fixture cannot tell "reduce to lowest id"
+  // apart from "take the last of the named pool" whenever the lowest id also
+  // happens to sit last; this one forces the three apart: first-of yields
+  // Grace (9), last-of yields Rosalind (11), and only the correct reduce
+  // yields Ada (7).
+  it('breaks a tie among three named members on the lowest client id, not the first or last seen', () => {
     const [participant] = buildParticipants(
       [
         state(9, { user: { name: 'Grace', color: '#00ff00' } }),
         state(7, { user: { name: 'Ada', color: '#ff0000' } }),
+        state(11, { user: { name: 'Rosalind', color: '#0000ff' } }),
       ],
       42,
-      new Map([[7, 'u_7'], [9, 'u_7']]),
+      new Map([[7, 'u_7'], [9, 'u_7'], [11, 'u_7']]),
       undefined,
       NOW
     );

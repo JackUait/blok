@@ -413,14 +413,16 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
    * document state, so there is nothing lost in skipping it on a dead or
    * unready socket — the next one covers it.
    */
-  const sendActivity = (): void => {
+  const sendActivity = (): boolean => {
     const socket = state.socket;
 
     if (socket === null || state.phase !== 'ready') {
-      return;
+      return false;
     }
 
     send(socket, { type: 'activity' });
+
+    return true;
   };
 
   /**
@@ -1568,9 +1570,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     announceDeparture: (): void => {
       announceDeparture();
     },
-    sendActivity: (): void => {
-      sendActivity();
-    },
+    sendActivity: (): boolean => sendActivity(),
     destroy: (): void => {
       if (state.destroyed) {
         return;

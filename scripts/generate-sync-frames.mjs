@@ -201,9 +201,16 @@ const activity = frame((encoder) => {
   encoding.writeVarUint(encoder, MESSAGE_ACTIVITY);
 });
 
+// 2^53-1: the largest id both codecs carry. The identities payload is JSON and
+// every JavaScript client parses it into a double, so this is the ceiling the
+// TypeScript decoder enforces and the one the C# reader has to stop at too —
+// otherwise a fabricated id encodes fine here and makes the frame undecodable
+// for every peer in the room. The negative one past it is below.
+const MAX_SAFE_CLIENT_ID = Number.MAX_SAFE_INTEGER;
 const IDENTITIES = [
   { clientId: CLIENT_ID, actorId: 'user-ada' },
   { clientId: CLIENT_ID + 1, actorId: 'user-bob' },
+  { clientId: MAX_SAFE_CLIENT_ID, actorId: 'user-cal' },
 ];
 const IDENTITIES_JSON = JSON.stringify({ identities: IDENTITIES });
 const identities = frame((encoder) => {
@@ -645,6 +652,14 @@ const negative = [
     expect: 'malformed',
     description: 'One entry with clientId repeated (JSON.parse would keep the last value).',
     frameHex: hex(v2Frame(MESSAGE_IDENTITIES, utf8('{"identities":[{"clientId":1,"clientId":2,"actorId":"a"}]}'))),
+  },
+  {
+    name: 'identitiesClientIdPastSafeInteger',
+    messageType: MESSAGE_IDENTITIES,
+    expect: 'malformed',
+    description:
+      'A clientId of 2^53, one past the ceiling the `identities` frame pins. A ulong reader takes it happily, so without an explicit bound the C# encoder emits an id no JavaScript peer can decode and the room\'s whole verified map goes dark.',
+    frameHex: hex(v2Frame(MESSAGE_IDENTITIES, utf8('{"identities":[{"clientId":9007199254740992,"actorId":"a"}]}'))),
   },
   {
     name: 'identitiesDuplicateActorIdInEntry',

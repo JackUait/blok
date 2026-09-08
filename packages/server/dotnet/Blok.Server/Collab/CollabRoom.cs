@@ -93,12 +93,18 @@ internal sealed class CollabRoom : IDisposable
   private const int CheckpointFailureLimit = 3;
 
   /// <summary>
-  /// How long one actor's Active/Edited report silences the next. It matches
-  /// the client's own activity cadence, which sends ON the minute, so the
-  /// suppression test is strictly less-than: a frame exactly a window later
-  /// must get through or every second one would be dropped.
+  /// How long one actor's Active/Edited report silences the next.
+  ///
+  /// SHORTER than the client's 60-second send cadence on purpose. The client
+  /// measures its gap on ITS clock at the moment it sends; the server measures
+  /// arrival-to-arrival on this one. Equal thresholds leave no room for the
+  /// difference, so any jitter that shortens one gap below a minute drops that
+  /// heartbeat, the stamp does not advance, and the next one is accepted —
+  /// alternating, which halves the resolution to two minutes. The margin has
+  /// to stay well under the client's 60s or two genuine heartbeats in one
+  /// client window would both be reported.
   /// </summary>
-  private static readonly TimeSpan ActivityWindow = TimeSpan.FromSeconds(60);
+  private static readonly TimeSpan ActivityWindow = TimeSpan.FromSeconds(55);
 
   /// <summary>
   /// Activity records the room holds for a host that is behind. Joined and
@@ -2220,10 +2226,19 @@ internal sealed class CollabRoom : IDisposable
   /// <summary>Stops serving one member and closes it; the room may be left empty, so the linger is re-armed.</summary>
   private void ExpelLocked(CollabMembership membership, CollabCloseReason reason)
   {
-    members.Remove(membership);
+    // Removing it from the set IS the never-twice guard: LeaveAsync runs when
+    // the socket closes a moment later and finds nothing to remove, so it
+    // reports no second Left. Without the report here that session never ends
+    // at all and the host holds an expelled person in the document for good.
+    if (!members.Remove(membership))
+    {
+      return;
+    }
+
     WithdrawAwarenessLocked(membership);
     UpdateEvictionLocked();
     CloseMember(membership, reason);
+    RecordActivityLocked(membership.Member.ActorId, CollabActivityKind.Left);
   }
 
   /// <summary>
@@ -2252,8 +2267,28 @@ internal sealed class CollabRoom : IDisposable
   {
     var ownPublish = entries.Count == 1;
 
+    // At most ONE identities broadcast per relayed frame. Broadcasting inside
+    // the loop let one 256-entry frame encode and send the whole map 256 times
+    // to every member, which is an amplification the inbound budget does not
+    // price: it charges an awareness frame for one verbatim relay per member.
+    var changed = false;
+
     foreach (var entry in entries)
     {
+      // Fabricated ids never reach the map. The frame itself is still relayed
+      // verbatim — presence is not interpreted — but an id past the ceiling
+      // would be encoded into every later identities frame, and a JavaScript
+      // client refuses the whole frame over it, so the room's verified map
+      // would go dark permanently. A stock Yjs client id is uint32.
+      if (entry.ClientId > SyncWire.MaxAwarenessClientId)
+      {
+        log?.Invoke(
+            $"collab: room \"{DocId}\" ignored an awareness client id past the safe-integer " +
+            $"ceiling ({entry.ClientId})");
+
+        continue;
+      }
+
       var known = awarenessOwners.TryGetValue(entry.ClientId, out var owner);
 
       if (entry.Removed)
@@ -2272,7 +2307,7 @@ internal sealed class CollabRoom : IDisposable
         {
           var previousActorId = owner.Membership.Member.ActorId;
           awarenessOwners[entry.ClientId] = new AwarenessOwner(membership, entry.Clock);
-          BroadcastIdentitiesIfChangedLocked(membership, previousActorId);
+          changed |= membership.Member.ActorId != previousActorId;
         }
 
         continue;
@@ -2281,20 +2316,14 @@ internal sealed class CollabRoom : IDisposable
       if (ownPublish && awarenessOwners.Count < options.MaxAwarenessClients)
       {
         awarenessOwners[entry.ClientId] = new AwarenessOwner(membership, entry.Clock);
-        BroadcastIdentitiesIfChangedLocked(membership, previousActorId: null);
+        changed |= membership.Member.ActorId is not null;
       }
     }
-  }
 
-  /// <summary>
-  /// Broadcasts the current identities map, but only when this clientId's
-  /// owner change actually altered it — an anonymous-to-anonymous transfer,
-  /// or a reconnect under the same ActorId, leaves the verified view exactly
-  /// as it was and earns no broadcast.
-  /// </summary>
-  private void BroadcastIdentitiesIfChangedLocked(CollabMembership newOwner, string? previousActorId)
-  {
-    if (newOwner.Member.ActorId != previousActorId)
+    // Only a change to the VERIFIED view is worth a frame: an
+    // anonymous-to-anonymous transfer, or a reconnect under the same ActorId,
+    // leaves the map the receivers hold exactly as it was.
+    if (changed)
     {
       BroadcastLocked(SyncWire.Encode(BuildIdentitiesFrameLocked()), null);
     }

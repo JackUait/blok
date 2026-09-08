@@ -472,8 +472,17 @@ function decodeIdentities(json: Uint8Array): IdentitiesResult {
     // isSafeInteger (not isInteger) matches decodeLimits, and closes an
     // encode/decode inconsistency: encodeIdentities already rejects an unsafe
     // integer, so a decoder that accepted one here would decode fine and then
-    // throw on re-encode. -0 is rejected explicitly: Number.isSafeInteger(-0)
-    // is true and -0 < 0 is false in JS, so neither check alone catches it.
+    // throw on re-encode. The server stops at the same 2^53-1 ceiling, both in
+    // its decoder and before an awareness client id ever enters the room's map
+    // — an id past it would make every identities frame that room sends
+    // undecodable here, which rejects the whole frame and not just the entry.
+    //
+    // Two shapes this is deliberately looser about than the C# reader, both
+    // unreachable: -0 is rejected explicitly (Number.isSafeInteger(-0) is true
+    // and -0 < 0 is false, so neither check alone catches it), and a decimal
+    // token such as `7.0` is accepted here while Utf8JsonReader.TryGetUInt64
+    // refuses it. Neither can arrive, because Utf8JsonWriter.WriteNumber(ulong)
+    // is the only thing that ever emits this frame.
     if (
       typeof clientId !== 'number' || !Number.isSafeInteger(clientId) ||
       clientId < 0 || Object.is(clientId, -0)

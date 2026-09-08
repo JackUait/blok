@@ -118,7 +118,7 @@ Blok does not compute an idle boolean and does not carry a threshold. The host
 compares against its own clock. A threshold in the payload would freeze the
 five-minute rule into the public contract for every consumer.
 
-### B1. Frame 105: the activity signal (client to server)
+### B1. Frame 106: the activity signal (client to server)
 
 A new outer message type in Blok's own namespace:
 
@@ -142,8 +142,8 @@ consumer of the observer has been shown to need it.
 `{ type: 'unknown', messageType }` for an unrecognised outer type, and
 `SyncWire.TryDecode` on the server returns `UnknownFrame` with no error, which
 `CollabRoom.ReceiveLocked` drops through `default: break;` without counting it
-malformed and without closing the member. An old server ignores frame 105; an
-old client ignores frame 106. No protocol version bump, no negotiation change.
+malformed and without closing the member. An old server ignores frame 106; an
+old client ignores frame 107. No protocol version bump, no negotiation change.
 
 **Client cadence.** At most once per 60 seconds per connection, plus one
 immediately after the handshake completes. Triggered by the same events that
@@ -164,7 +164,7 @@ onActivity?: () => void;
 calls a new `provider.sendActivity()`, which is a no-op before the socket is
 open. The rate limit lives in `presence.ts` next to the existing throttle.
 
-### B2. Frame 106: verified identities (server to client)
+### B2. Frame 107: verified identities (server to client)
 
 Present participants and departed participants must be one list keyed the same
 way, or a host shows the same person twice. The join key has to be the verified
@@ -200,7 +200,7 @@ Rules:
 - Entries are emitted only for clients whose owner has a non-null `ActorId`.
   An unauthenticated connection appears in the room with no verified identity,
   exactly as it does today.
-- A joining member receives the full map as its first frame 106. The room
+- A joining member receives the full map as its first frame 107. The room
   receives a delta afterwards: the entries added or removed when a member
   joins, a member leaves, or `RecordAwarenessOwnersLocked` binds a new client
   id.
@@ -222,7 +222,7 @@ names them. The first `emitStatus` after joining may therefore report
 flips them to their `ActorId` when the map lands. A host that keys a DOM list on
 `userId` will see that entry re-key once.
 
-Holding the first emit until a 106 arrives was considered and rejected: an old
+Holding the first emit until a 107 arrives was considered and rejected: an old
 server never sends one, so the wait would need a timeout, and the timeout would
 be a second source of the same flicker with worse latency. This is the same
 eventual-consistency behaviour awareness itself has. It is written down here so
@@ -286,8 +286,10 @@ public enum CollabActivityKind { Joined, Active, Edited, Left }
 - A `Left` on a connection the server never saw activity from is still
   reported. "Opened the document and read for two minutes" is a real data
   point, and suppressing it would lose exactly the case the user asked for.
-- No observer registered: the server does not decode frame 105 past its header
-  and makes no calls. The feature costs nothing when unused.
+- No observer registered: the server reads frame 106's header, which is the
+  whole frame, and makes no calls. The feature costs nothing when unused.
+  Frame 105 stays the unknown-outer sentinel and is not decoded past its
+  header at all.
 
 ### B4. The published payload
 
@@ -297,7 +299,7 @@ two sources for the same person.
 
 ```ts
 participants: Array<{
-  /** Verified ActorId from frame 106, or null when the room could not verify one. */
+  /** Verified ActorId from frame 107, or null when the room could not verify one. */
   userId: string | null;
   /** In the document right now. */
   present: boolean;
@@ -344,7 +346,7 @@ awareness walk. A `userId` longer than 128 characters is refused rather than
 truncated, because a truncated id collides with a real one.
 
 Emission rides the existing `emitStatus`, which already fires on every
-awareness change. A frame 106 becomes a second trigger.
+awareness change. A frame 107 becomes a second trigger.
 
 `CollaborationPeer` is deleted along with `peers`. See Breaking change below.
 
@@ -432,26 +434,28 @@ Client, Vitest:
    the `blockId` the old `peers` entry had; `peers` is gone from the payload.
 4. Two client ids carrying the same verified `userId` collapse into one entry
    with two `clientIds` and the newer `lastActiveAt`.
-5. Frame 105 is sent once after the handshake and at most once per 60 seconds
-   under continuous typing.
+5. Frame 106 is sent once after the handshake and at most once per 60 seconds
+   under continuous typing, and a send that did not reach the socket does not
+   spend that minute.
 6. An unknown outer message type is still ignored, both directions.
 7. No `[data-blok-presence-stack]` mounts on a collaboration editor, while a
    gutter face and a caret still do.
 
 Server, .NET:
 
-8. A frame 105 from a member with a non-null `ActorId` calls the observer with
+8. A frame 106 from a member with a non-null `ActorId` calls the observer with
    that id and the server's clock; the frame's contents never supply either.
-9. A frame 105 from a member with a null `ActorId` calls nothing.
-10. `Active` and `Edited` are deduplicated to one call per minute per
-    `(document, actor)`; `Joined` and `Left` are not.
+9. A frame 106 from a member with a null `ActorId` calls nothing.
+10. `Active` and `Edited` are deduplicated to one call per suppression window
+    per `(document, actor)`; `Joined` and `Left` are not.
 11. A member that joins, reads and leaves without editing produces `Joined` and
     `Left`.
 12. A throwing observer is logged and does not close the session or stall the
     room lane.
-13. Frame 106 lists only clients whose owner has a verified `ActorId`, and is
-    re-broadcast when a member leaves.
-14. With no observer registered, a frame 105 changes nothing observable.
+13. Frame 107 lists only clients whose owner has a verified `ActorId`, and is
+    re-broadcast when a member leaves. An awareness client id past 2^53-1 never
+    enters the map, and one relayed frame earns at most one broadcast.
+14. With no observer registered, a frame 106 changes nothing observable.
 
 E2E: two clients, one idles past the threshold, and a host-rendered stack in the
 playground reflects it.
@@ -468,11 +472,14 @@ playground reflects it.
 
 ## Closed on review
 
-1. **Frame 106 ships.** Without a server-vouched join key, one person can appear
+1. **Frame 107 ships.** Without a server-vouched join key, one person can appear
    as two rows, and a forged id can attach a stranger to somebody's history.
-2. **The two 60-second floors stay constants, not configuration.** One on the
-   client for frame 105, one on the server for observer deduplication. They make
-   a recorded time accurate to about a minute, which is a fifth of the
+2. **The two activity floors stay constants, not configuration.** The client
+   sends frame 106 at most once per 60 seconds; the server suppresses a repeat
+   report within 55. They are deliberately UNEQUAL: the two gaps are measured
+   on different clocks at different points, and equal thresholds let jitter
+   drop every other heartbeat, which halves the resolution to two minutes. A
+   recorded time is accurate to about a minute either way, a fifth of the
    five-minute threshold the feature was asked for. A constant is cheap to
    change later; a configuration key is public surface forever. Revisit only if
    a host asks for a threshold far from five minutes.

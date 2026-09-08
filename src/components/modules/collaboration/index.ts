@@ -769,7 +769,7 @@ export class Collaboration extends Module {
       }),
       // Lazy: `this.provider` is not created until after `presence.start()`
       // below, so a captured reference here would close over `null` forever.
-      onActivity: () => this.provider?.sendActivity(),
+      onActivity: () => this.provider?.sendActivity() ?? false,
     });
     this.presence.start();
 

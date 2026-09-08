@@ -374,8 +374,10 @@ export interface CollabProvider {
    * connection has validated its control frame. The provider itself sends one
    * right after the handshake; presence rate-limits every later call to at
    * most once a minute.
+   * @returns whether a frame actually went out, so the caller's rate limit is
+   * not spent on a socket that was not ready.
    */
-  sendActivity(): void;
+  sendActivity(): boolean;
   /** Last reported status. */
   readonly status: CollabStatus;
   /** The working-set tag from the last validated control frame. */

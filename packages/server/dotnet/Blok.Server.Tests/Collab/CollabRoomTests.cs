@@ -4479,6 +4479,99 @@ public sealed class CollabRoomTests
     Assert.DoesNotContain(observer.Received, frame => frame is IdentitiesFrame);
   }
 
+  /// <summary>
+  /// One fabricated id would otherwise be stored, encoded into every later
+  /// identities frame, and refused whole by every JavaScript peer — the room's
+  /// verified map goes dark for everyone, permanently, with nothing logged.
+  /// The frame itself is still relayed: presence is never interpreted.
+  /// </summary>
+  [Fact]
+  public async Task AnAwarenessClientIdPastTheSafeIntegerCeilingIsNeverMapped()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var membership = await Join(manager, new FakeMember(actorId: "user-1"));
+    var observer = new FakeMember();
+    await Join(manager, observer);
+    observer.Received.Clear();
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(1UL << 53, 1))),
+        CancellationToken.None);
+
+    Assert.DoesNotContain(observer.Received, frame => frame is IdentitiesFrame);
+    Assert.Contains(observer.Received, frame => frame is AwarenessFrame);
+    Assert.Contains(
+        log,
+        entry => entry.Contains("past the safe-integer ceiling", StringComparison.Ordinal));
+
+    var joiner = new FakeMember();
+    await Join(manager, joiner);
+
+    Assert.Empty(Assert.IsType<IdentitiesFrame>(Assert.Single(joiner.Received)).Identities);
+  }
+
+  /// <summary>
+  /// The last id below the ceiling still binds, so the guard above is a
+  /// boundary and not a blanket refusal of large ids.
+  /// </summary>
+  [Fact]
+  public async Task TheLargestSafeAwarenessClientIdStillBinds()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var membership = await Join(manager, new FakeMember(actorId: "user-1"));
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor((1UL << 53) - 1, 1))),
+        CancellationToken.None);
+
+    var joiner = new FakeMember();
+    await Join(manager, joiner);
+
+    Assert.Equal(
+        [new AwarenessIdentity((1UL << 53) - 1, "user-1")],
+        Assert.IsType<IdentitiesFrame>(Assert.Single(joiner.Received)).Identities);
+  }
+
+  /// <summary>
+  /// One relayed frame earns at most one identities broadcast. Encoding the
+  /// whole map once per changed entry is an amplification the inbound budget
+  /// does not price: it charges an awareness frame for one verbatim relay per
+  /// member, so 255 transfers in one frame would be 255 full-map encodes to
+  /// everybody.
+  /// </summary>
+  [Fact]
+  public async Task ARelayedFrameTransferringTwoClientIdsBroadcastsIdentitiesOnce()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var first = await Join(manager, new FakeMember(actorId: "user-1"));
+    await first.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(1, 1))),
+        CancellationToken.None);
+    await first.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(2, 1))),
+        CancellationToken.None);
+
+    var second = await Join(manager, new FakeMember(actorId: "user-2"));
+    var observer = new FakeMember();
+    await Join(manager, observer);
+    observer.Received.Clear();
+
+    // Both ids at a higher clock in ONE frame: two ownership transfers.
+    await second.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessForBoth((1, 2), (2, 2)))),
+        CancellationToken.None);
+
+    var frame = Assert.Single(observer.Received.OfType<IdentitiesFrame>());
+
+    // Ordered here, not in the room: awarenessOwners is a Dictionary.
+    Assert.Equal(
+        [new AwarenessIdentity(1, "user-2"), new AwarenessIdentity(2, "user-2")],
+        frame.Identities.OrderBy(identity => identity.ClientId).ToArray());
+  }
+
   [Fact]
   public async Task TheIdentitiesFrameNeverExceedsTheAwarenessClientCap()
   {
@@ -4634,6 +4727,44 @@ public sealed class CollabRoomTests
         {
           Assert.Equal(CollabActivityKind.Edited, record.Kind);
           Assert.Equal(opened + TimeSpan.FromSeconds(60), record.At);
+        });
+  }
+
+  /// <summary>
+  /// The suppression window has to be SHORTER than the client's 60-second send
+  /// cadence. The client measures its gap on its own clock at the moment it
+  /// sends; the server measures arrival to arrival on this one. With equal
+  /// thresholds any jitter that shortens a gap below a minute drops that
+  /// heartbeat, the stamp does not advance, and the next one is accepted —
+  /// alternating, which makes the effective resolution two minutes.
+  /// </summary>
+  [Fact]
+  public async Task AHeartbeatArrivingJustUnderTheClientsMinuteIsStillReported()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateActivityManager();
+    var membership = await Join(manager, new FakeMember(actorId: "user-1"));
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new ActivityFrame()),
+        CancellationToken.None);
+
+    // A minute of client cadence that lost a second on the way here.
+    time.Advance(TimeSpan.FromSeconds(59));
+    var late = time.GetUtcNow();
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new ActivityFrame()),
+        CancellationToken.None);
+    await manager.SettleAsync();
+
+    Assert.Collection(
+        activity.Records,
+        record => Assert.Equal(CollabActivityKind.Joined, record.Kind),
+        record => Assert.Equal(CollabActivityKind.Active, record.Kind),
+        record =>
+        {
+          Assert.Equal(CollabActivityKind.Active, record.Kind);
+          Assert.Equal(late, record.At);
         });
   }
 
@@ -4997,6 +5128,61 @@ public sealed class CollabRoomTests
 
     // Never closed by the room: it was already out of the member set.
     Assert.Empty(member.Closes);
+  }
+
+  /// <summary>
+  /// An expelled member's session has to END. The expel drops it from the
+  /// member set, so the socket close that follows finds nothing to remove and
+  /// reports nothing of its own — without a report at the expel a host reads
+  /// Joined, Joined, Left across a reconnect and holds that person in the
+  /// document for good. The drain makes this list exact, which is what proves
+  /// the report is made ONCE across all three paths.
+  /// </summary>
+  [Fact]
+  public async Task AnExpelledMemberIsReportedLeftExactlyOnce()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateActivityManager();
+    var member = new FakeMember(actorId: "user-1");
+    var membership = await Join(manager, member);
+    var malformed = SyncWire.Encode(new AwarenessFrame([0x01, 0x02, 0x03]));
+    var expelled = time.GetUtcNow();
+
+    await membership.ReceiveAsync(malformed, CancellationToken.None);
+    await membership.ReceiveAsync(malformed, CancellationToken.None);
+    await membership.ReceiveAsync(malformed, CancellationToken.None);
+
+    // What the socket does next: its close calls LeaveAsync on a membership
+    // the room has already let go.
+    await membership.LeaveAsync();
+    await manager.DrainAsync(CancellationToken.None);
+
+    Assert.Equal([CollabCloseReason.BadAwareness], member.Closes);
+    Assert.Collection(
+        activity.Records,
+        record => Assert.Equal(CollabActivityKind.Joined, record.Kind),
+        record =>
+        {
+          Assert.Equal(CollabActivityKind.Left, record.Kind);
+          Assert.Equal("user-1", record.ActorId);
+          Assert.Equal(expelled, record.At);
+        });
+  }
+
+  [Fact]
+  public async Task AnExpelledMemberWithNoVerifiedActorIsNeverReported()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateActivityManager();
+    var membership = await Join(manager, new FakeMember());
+    var malformed = SyncWire.Encode(new AwarenessFrame([0x01, 0x02, 0x03]));
+
+    await membership.ReceiveAsync(malformed, CancellationToken.None);
+    await membership.ReceiveAsync(malformed, CancellationToken.None);
+    await membership.ReceiveAsync(malformed, CancellationToken.None);
+    await manager.DrainAsync(CancellationToken.None);
+
+    Assert.Empty(activity.Records);
   }
 
   [Fact]

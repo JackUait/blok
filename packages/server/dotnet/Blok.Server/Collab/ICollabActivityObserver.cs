@@ -66,9 +66,12 @@ public interface ICollabActivityObserver
   /// <returns>A task that completes when the host has recorded the moment.</returns>
   /// <remarks>
   /// <see cref="CollabActivityKind.Active"/> and
-  /// <see cref="CollabActivityKind.Edited"/> arrive at most once a minute per
-  /// document-and-actor pair, so an implementation does not have to rate-limit
-  /// them. <see cref="CollabActivityKind.Joined"/> and
+  /// <see cref="CollabActivityKind.Edited"/> arrive at most once per 55 seconds
+  /// per document-and-actor pair, so an implementation does not have to
+  /// rate-limit them. The window is a little under the editor's own 60-second
+  /// send cadence on purpose: the two are measured on different clocks, and
+  /// equal thresholds drop every other heartbeat.
+  /// <see cref="CollabActivityKind.Joined"/> and
   /// <see cref="CollabActivityKind.Left"/> are never suppressed: they are the
   /// boundaries of a session, and a host may want to store them as such.
   /// </remarks>

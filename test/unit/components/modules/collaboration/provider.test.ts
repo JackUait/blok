@@ -1353,6 +1353,21 @@ describe('createCollabProvider', () => {
       expect(socket.sent.length).toBe(before);
     });
 
+    // Presence spends its once-a-minute budget on this answer, so a send that
+    // no-oped on an unready socket must not read as a delivered signal.
+    it('reports whether the frame actually went out', () => {
+      const harness = createHarness();
+
+      harness.provider.connect();
+      harness.socket().open();
+
+      expect(harness.provider.sendActivity()).toBe(false);
+
+      harness.socket().deliver(controlFrame());
+
+      expect(harness.provider.sendActivity()).toBe(true);
+    });
+
     it('sends exactly one activity frame even if the control frame repeats', () => {
       const harness = createHarness();
       const socket = connectAndHandshake(harness);

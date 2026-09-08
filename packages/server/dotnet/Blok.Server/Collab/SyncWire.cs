@@ -129,6 +129,16 @@ internal static class SyncWire
   // IdentitiesFrame buffer from its entry count instead of JsonPayloadBytes.
   private const int IdentityEntryBytes = 96;
 
+  /// <summary>
+  /// The largest awareness client id this protocol carries, 2^53-1.
+  ///
+  /// The identities payload is JSON, and every JavaScript client parses it
+  /// with a double: past this an id loses precision, so the TypeScript decoder
+  /// refuses the WHOLE frame. Both codecs stop here or one fabricated id would
+  /// make every identities broadcast in that room undecodable.
+  /// </summary>
+  internal const ulong MaxAwarenessClientId = (1UL << 53) - 1;
+
   // Rule 11's required key set per message type: a decoded object with any
   // other key set (missing, unknown, or a duplicate) is rejected.
   private static readonly HashSet<string> OperationKeys = ["lineage", "operationId"];
@@ -1237,6 +1247,13 @@ internal static class SyncWire
           reader.TokenType == JsonTokenType.Number &&
           reader.TryGetUInt64(out var clientIdValue))
       {
+        if (clientIdValue > MaxAwarenessClientId)
+        {
+          error = "an identities entry clientId is past the safe-integer ceiling";
+
+          return false;
+        }
+
         clientId = clientIdValue;
       }
       else if (isActorId && actorId is null &&

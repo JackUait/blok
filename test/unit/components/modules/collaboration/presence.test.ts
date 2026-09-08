@@ -254,7 +254,7 @@ interface SetupOptions {
   userId?: string;
   blockId?: string | null;
   position?: CaretPosition | null;
-  onActivity?: () => void;
+  onActivity?: () => boolean;
 }
 
 const setup = (options: SetupOptions = {}) => {
@@ -455,7 +455,8 @@ describe('presence — local awareness upkeep', () => {
     it('signals activity once on start and then at most once a minute', () => {
       vi.setSystemTime(new Date(1_700_000_000_000));
 
-      const onActivity = vi.fn();
+      // true = the frame reached the socket, which is what spends the budget.
+      const onActivity = vi.fn(() => true);
       const { target, presence } = setup({ onActivity });
 
       presence.start();
@@ -469,6 +470,25 @@ describe('presence — local awareness upkeep', () => {
       vi.setSystemTime(new Date(1_700_000_061_000));
       moveCaret(target);
       vi.advanceTimersByTime(200);
+      expect(onActivity).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps the minute unspent when the signal did not reach the socket', () => {
+      vi.setSystemTime(new Date(1_700_000_000_000));
+
+      // A socket mid-reconnect: the provider has nothing to write to.
+      const onActivity = vi.fn(() => false);
+      const { target, presence } = setup({ onActivity });
+
+      presence.start();
+      expect(onActivity).toHaveBeenCalledTimes(1);
+
+      vi.setSystemTime(new Date(1_700_000_030_000));
+      moveCaret(target);
+      vi.advanceTimersByTime(200);
+
+      // Well inside the minute, and asked again anyway: the first attempt sent
+      // nothing, so it bought no silence.
       expect(onActivity).toHaveBeenCalledTimes(2);
     });
   });

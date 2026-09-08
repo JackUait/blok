@@ -69,6 +69,12 @@ durability unavailable rather than replaying them through v1.
 | 102 | **operation** | client → server | v2 |
 | 103 | **acknowledgement** | server → client | v2 |
 | 104 | **rejection** | server → client | v2 |
+| 106 | **activity** | client → server | v2 |
+| 107 | **identities** | server → client | v2 |
+
+Type 105 is reserved and MUST NOT be used: it is the conformance fixture's
+unknown-outer-type sentinel, the vector that proves an unrecognised outer type
+decodes as ignorable rather than malformed.
 
 Types 0–3, 100 and 101 are byte-for-byte identical in v1 and v2. A decoder MUST
 treat an unrecognised **outer** type as an ignorable frame (skip it, keep the
@@ -134,8 +140,10 @@ the reference server never answers it, because in this implementation the
 verdict is reached client-side against this frame before the operation is
 sent.
 
-Both Blok payloads keep the v1 decoder rules they shipped with; section 5's
-rules are v2 metadata rules and do not retroactively change them.
+Both v1 Blok payloads keep the decoder rules they shipped with; section 5's
+rules are v2 metadata rules and do not retroactively change them. Types 106 and
+107 in sections 3.4 and 3.5 are outside those rules too: they carry no lineage
+and no operation id, so a violation is plain malformed with no rule number.
 
 ### 3.1 Type 102 — Operation
 
@@ -178,6 +186,71 @@ varuint(104)  varstring(metadata)
 ```json
 {"lineage":"<32 lowercase hex>","operationId":"<32 lowercase hex>","code":"<code>"}
 ```
+
+### 3.4 Type 106 — Activity
+
+```text
+varuint(106)
+```
+
+One varuint and nothing else. The frame says "the person on this connection did
+something"; the server supplies the identity from the handshake and the time
+from its own clock, so there is nothing here to read and nothing a client could
+put here that a server would trust. Trailing bytes are malformed.
+
+A client sends one immediately after the control frame validates — opening a
+document is itself activity, so a reader who never types still counts — and at
+most one per 60 seconds per connection afterwards.
+
+The frame is never answered. A server that records nothing MAY ignore it
+entirely; this is not observable to the client.
+
+### 3.5 Type 107 — Identities
+
+```text
+varuint(107)  varstring({"identities":[{"clientId":N,"actorId":"<id>"}, …]})
+```
+
+The room's map from awareness client id to the actor the SERVER verified for
+the connection that owns it. Presence carries only what a peer claims about
+itself, so this is the one join key a client can key its own records on.
+
+- The object has exactly the one key `identities`, whose value MUST be an
+  array. A repeated key at either level is malformed — `JSON.parse` keeps the
+  last value silently, so a decoder MUST check for duplicates rather than only
+  inspect the parsed key set.
+- Each element has exactly the keys `clientId` and `actorId`. An emitter writes
+  them in that order (section 4.2); a decoder checks the key SET, never the
+  order.
+- `clientId` is an integer in `[0, 2^53-1]`. The upper bound is normative: the
+  payload is JSON and JavaScript clients read it into a double, so an id past
+  it loses precision and MUST be refused. A server MUST NOT emit one, which
+  means it MUST NOT record an awareness client id past the bound either — a
+  stock Yjs client id is a uint32, so the bound refuses only fabricated input.
+- `actorId` is a non-empty string.
+- An entry appears only for a client whose owner has a verified identity. An
+  unauthenticated connection is simply absent, and a client keys it null.
+- Every frame carries the WHOLE map, first look and later change alike: the
+  wire has no way to name a single removed entry, so a receiver replaces what
+  it held rather than merging.
+- A server sends one to a joining member right after the control frame — even
+  when the map is empty, so a reconnect overwrites a stale copy — and
+  broadcasts one whenever the VERIFIED view changes: a verified member leaves
+  and its ids are withdrawn, or an awareness client id binds to an owner whose
+  actor differs from the previous one. A transfer between two unverified
+  owners, or back to the same actor, changes nothing and earns no frame. One
+  relayed awareness frame earns at most one broadcast however many entries it
+  changed.
+- The entry count is capped at the server's awareness-client bound, 256 in this
+  implementation.
+
+A client that receives one before the control frame MAY drop it: the server
+re-sends the whole map right after control on every join, so nothing is lost.
+
+A server that never sends this frame still passes every other rule in this
+document, and the failure is silent on both sides: every participant a Blok
+client reports carries a null user id forever, and nothing is logged. Emitting
+it is not optional for a server that wants presence joined to stored records.
 
 ## 4. Metadata grammar
 

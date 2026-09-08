@@ -331,6 +331,63 @@ Run this drill before you roll back.
 
 Rolling forward again is not symmetric either. With the store registered, the journal wins the open, so whatever was typed while the old build was serving is not in it.
 
+## Who was in a document, and when
+
+The service can tell your app when a person was in a document, including people
+who have already left. Blok stores none of it. The room reports and forgets; you
+decide where the records live, how long you keep them, and who may read them.
+Not registering an observer is how you opt out — with none, the room makes no
+calls and the feature costs nothing.
+
+```csharp
+using Blok.Server.AspNetCore;
+using Blok.Server.Collab;
+
+public sealed class SqlCollabActivityObserver(IConfiguration configuration) : ICollabActivityObserver
+{
+  public ValueTask RecordAsync(
+      string documentId,
+      string actorId,
+      DateTimeOffset at,
+      CollabActivityKind kind,
+      CancellationToken cancellationToken = default)
+  {
+    // Upsert one row per (document, actor) — or append, if you want history.
+  }
+}
+
+builder.Services
+  .AddBlokServer(options =>
+  {
+    options.CollabEnabled = true;
+    options.DocEndpoint = "https://myapp.com/api/documents";
+  })
+  .UseCollabActivityObserver<SqlCollabActivityObserver>();
+```
+
+It is resolved as a singleton and is used for several documents at once.
+
+Four kinds arrive:
+
+| Kind | When |
+| --- | --- |
+| `Joined` | A connection joined the document's room |
+| `Active` | The editor said this person is still there — opening the document counts, and so does typing, without anything being written |
+| `Edited` | A write from this person was journalled |
+| `Left` | The connection left, was closed by the room, or was still held when the room drained |
+
+What the service promises about them:
+
+- **`actorId` is the server's, never the client's.** It is what the connection was verified as at its handshake, from your ticket's user claim or the signed-in principal. **A connection with no verified identity produces no call at all**, of any kind: an unknown person stays unknown rather than getting a fabricated key. That is the same rule the operation journal applies to an author.
+- **`at` is the server's clock.** Nothing a client sends supplies it.
+- **`Edited` needs an operation store.** It is raised where a committed operation is journalled, so a working-copy-only service never emits it. An editing person still surfaces there as `Active`, about once a minute.
+- **`Active` and `Edited` are deduplicated** to at most one call per 55 seconds per document-and-actor pair, so your implementation does not have to rate-limit them. The window is deliberately shorter than the editor's own 60-second send cadence: the two are measured on different clocks, and equal thresholds would drop every other heartbeat. `Joined` and `Left` are never suppressed — they are the boundaries of a session, and you may want to store them as such. Every `Joined` is paired: an expel, a drain and a room that closes on a commit failure all report `Left` for the members they still held.
+- **A reader who never types is still a session.** "Opened the document and read for two minutes" produces `Joined` and `Left` with no `Edited` between them, which is the case the feature exists for.
+- **This is best-effort telemetry, not the journal.** An observer that throws or never completes is logged and dropped; it never closes a room and never refuses an edit, which is the opposite of what a failed journal append does. Calls are made off the room's lane, so a slow implementation costs you your own latency and nobody else's. One room's calls are serialized and arrive in the order it made them, and a room that gets more than 256 records ahead of a stalled observer drops its oldest heartbeats first, keeping the session boundaries.
+- **Blok draws nothing from this.** There is no built-in activity UI, no retention policy and no idle threshold; the editor's `collaboration:status` event carries the live half separately.
+
+A backend that is not .NET implements the wire side instead: frame 106 is the client's activity signal and frame 107 is the verified-identity map that lets you key live presence the way you key your stored records. Both are in `packages/server/protocol/blok-sync-v2.md`.
+
 ## Quality gates
 
 The .NET solution keeps three test layers: `Blok.Server.Tests` for core behavior, `Blok.Server.AspNetCore.Tests` for in-process integration, and `Blok.Server.Host.Tests` for real-process end-to-end behavior. CI also runs the cross-runtime conformance and package smoke tests.

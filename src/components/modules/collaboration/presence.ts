@@ -61,8 +61,13 @@ export interface PresenceOptions {
   eventTarget?: EventTarget;
   /** Publish window in ms (default 100). */
   throttleMs?: number;
-  /** Tell the sync service this client is active, at most once a minute. */
-  onActivity?: () => void;
+  /**
+   * Tell the sync service this client is active, at most once a minute.
+   * Returns whether the signal actually went out; a false answer leaves the
+   * budget unspent, so a signal spent on a socket that was mid-reconnect does
+   * not cost the next real minute.
+   */
+  onActivity?: () => boolean;
 }
 
 export interface Presence {
@@ -407,8 +412,12 @@ export const createPresence = (options: PresenceOptions): Presence => {
       return;
     }
 
-    state.lastActivitySignalAt = now;
-    options.onActivity?.();
+    // Stamped only where the frame REACHED the socket. A send that no-ops on a
+    // socket that is not ready would otherwise buy a full minute of silence
+    // for a signal nobody received.
+    if (options.onActivity?.() === true) {
+      state.lastActivitySignalAt = now;
+    }
   };
 
   const notify = (): void => {

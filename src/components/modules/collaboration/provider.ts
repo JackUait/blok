@@ -82,6 +82,9 @@ const BACKOFF_CAP_MS = 30_000;
 /** A planned restart is back within moments; do not make the user wait a second. */
 const SHORT_RECONNECT_MS = 250;
 
+/** Budget for the handshake-time activity send; matches presence's own gate. */
+const ACTIVITY_HANDSHAKE_INTERVAL_MS = 60_000;
+
 /**
  * How long one operation may stay unacknowledged before the connection is
  * dropped and the SAME id redriven on the next one. Nothing is deleted: an
@@ -210,6 +213,16 @@ interface ProviderState {
    * own, and a second round would ping-pong for the life of the socket.
    */
   residual: 'none' | 'requested' | 'done';
+  /**
+   * Last time the handshake-time activity send actually shipped, across every
+   * connection generation — deliberately NOT reset by `teardownGeneration`. A
+   * fast reconnect loop (a rolling deploy closing with 1001, which
+   * `nextDelayMs` answers in `SHORT_RECONNECT_MS`, and `markSynced` resets
+   * `attempt` to 0 on every completed sync) would otherwise re-arm the budget
+   * on every new socket and turn a once-a-minute signal into one per
+   * reconnect.
+   */
+  lastActivitySentAt: number | null;
 }
 
 /**
@@ -292,6 +305,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     draining: false,
     resyncOwed: false,
     residual: 'none',
+    lastActivitySentAt: null,
   };
 
   /** True once this continuation belongs to a connection nobody is waiting for. */
@@ -407,6 +421,25 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     }
 
     send(socket, { type: 'activity' });
+  };
+
+  /**
+   * The activity send that follows a validated handshake, budgeted across
+   * generations rather than reset by every reconnect. A close-and-reconnect
+   * loop revalidates a control frame on every new socket; without a budget
+   * that outlives `teardownGeneration`, each of those would put a fresh
+   * activity frame on the wire. A genuine first connection still sends
+   * immediately, since `lastActivitySentAt` starts `null`.
+   */
+  const sendActivityOnHandshake = (): void => {
+    const now = Date.now();
+
+    if (state.lastActivitySentAt !== null && now - state.lastActivitySentAt < ACTIVITY_HANDSHAKE_INTERVAL_MS) {
+      return;
+    }
+
+    state.lastActivitySentAt = now;
+    sendActivity();
   };
 
   /**
@@ -1159,8 +1192,8 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     hookSeam(origin);
 
     // A reader who never touches the keyboard is still activity: opening the
-    // document is proof enough, so this fires once per validated connection.
-    sendActivity();
+    // document is proof enough, budgeted across reconnects by sendActivityOnHandshake.
+    sendActivityOnHandshake();
 
     const buffered = state.buffered;
 

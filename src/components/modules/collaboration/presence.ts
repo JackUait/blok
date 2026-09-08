@@ -61,11 +61,7 @@ export interface PresenceOptions {
   eventTarget?: EventTarget;
   /** Publish window in ms (default 100). */
   throttleMs?: number;
-  /**
-   * Tell the sync service this client is active. Rate-limited to at most once
-   * a minute — a much coarser cadence than the `activeAt` awareness field, and
-   * a separate gate from it.
-   */
+  /** Tell the sync service this client is active, at most once a minute. */
   onActivity?: () => void;
 }
 
@@ -89,12 +85,7 @@ const DEFAULT_THROTTLE_MS = 100;
  */
 const ACTIVITY_RESOLUTION_MS = 1000;
 
-/**
- * How often presence signals the sync service about activity, separate from
- * and much coarser than {@link ACTIVITY_RESOLUTION_MS}: that one dedupes an
- * awareness field peers redraw from; this one throttles an actual frame to
- * the server.
- */
+/** How often presence signals the sync service about activity (see `signalActivity`). */
 const ACTIVITY_SIGNAL_INTERVAL_MS = 60_000;
 
 /**

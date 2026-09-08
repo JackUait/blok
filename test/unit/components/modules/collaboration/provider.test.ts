@@ -1329,6 +1329,15 @@ describe('createCollabProvider', () => {
       expect(harness.socket().frameTypes).toEqual(['syncStep1']);
     });
 
+    it('says nothing when it never reached a server', () => {
+      const harness = createHarness();
+
+      harness.provider.connect();
+      harness.provider.sendActivity();
+
+      expect(harness.socket().frames).toEqual([]);
+    });
+
     it('sends nothing once the connection is torn down', () => {
       const harness = createHarness();
       const socket = connectAndHandshake(harness);
@@ -1349,6 +1358,56 @@ describe('createCollabProvider', () => {
       socket.deliver(controlFrame());
 
       expect(socket.frameTypes.filter((type) => type === 'activity')).toHaveLength(1);
+    });
+
+    // markSynced resets `attempt` to 0 on every completed sync, and a 1001
+    // close at attempt 1 gets the flat SHORT_RECONNECT_MS — so a server that
+    // closes with 1001 right after every sync reconnects every ~250ms. Without
+    // a budget that survives the generation, each of those reconnects would
+    // put a fresh activity frame on the wire.
+    it('does not resend activity on a fast reconnect inside the 60-second budget', () => {
+      const harness = createHarness();
+      const first = connectAndHandshake(harness);
+
+      first.serverClose(1001, 'going away');
+      advanceToReconnect(harness);
+
+      const second = harness.socket();
+
+      second.open();
+      second.deliver(controlFrame());
+
+      const activityFrames = [...first.frameTypes, ...second.frameTypes]
+        .filter((type) => type === 'activity');
+
+      expect(activityFrames).toHaveLength(1);
+    });
+
+    it('resends activity on a reconnect once the 60-second budget has passed', () => {
+      const harness = createHarness();
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      stores.push(peer);
+
+      const first = connectAndHandshake(harness);
+
+      // Complete the first sync so nothing else is armed to fire during the
+      // idle advance below.
+      completeFirstSync(harness, first, peer);
+      vi.advanceTimersByTime(60_000);
+
+      first.serverClose(1001, 'going away');
+      advanceToReconnect(harness);
+
+      const second = harness.socket();
+
+      second.open();
+      second.deliver(controlFrame());
+
+      const activityFrames = [...first.frameTypes, ...second.frameTypes]
+        .filter((type) => type === 'activity');
+
+      expect(activityFrames).toHaveLength(2);
     });
   });
 
@@ -1736,7 +1795,7 @@ describe('createCollabProvider', () => {
         second.deliver(controlFrame());
         second.deliver({ type: 'syncStep1', stateVector: fresh.getStateVector() });
 
-        expect(second.frameTypes).toEqual(['syncStep1', 'activity']);
+        expect(second.frameTypes).toEqual(['syncStep1']);
         expect(harness.statuses.at(-1)).toEqual({
           status: 'error',
           detail: expect.objectContaining({
@@ -1798,7 +1857,7 @@ describe('createCollabProvider', () => {
         room.applyRemoteUpdate(harness.store.encodeStateAsUpdate(), { source: 'room' });
         second.deliver({ type: 'syncStep1', stateVector: room.getStateVector() });
 
-        expect(second.frameTypes).toEqual(['syncStep1', 'activity', 'syncStep2']);
+        expect(second.frameTypes).toEqual(['syncStep1', 'syncStep2']);
         expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
       });
 
@@ -1862,11 +1921,11 @@ describe('createCollabProvider', () => {
         completeFirstSync(harness, second, room);
 
         expect(harness.statuses.at(-1)?.status).toBe('connected');
-        expect(second.frameTypes).toEqual(['syncStep1', 'activity', 'syncStep2']);
+        expect(second.frameTypes).toEqual(['syncStep1', 'syncStep2']);
 
         second.deliver({ type: 'syncStep1', stateVector: fresh.getStateVector() });
 
-        expect(second.frameTypes).toEqual(['syncStep1', 'activity', 'syncStep2', 'syncStep2']);
+        expect(second.frameTypes).toEqual(['syncStep1', 'syncStep2', 'syncStep2']);
         expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
       });
 
@@ -1915,7 +1974,7 @@ describe('createCollabProvider', () => {
       room.applyRemoteUpdate(harness.store.encodeStateAsUpdate(), { source: 'room' });
       completeFirstSync(harness, second, room);
 
-      expect(second.frameTypes).toEqual(['syncStep1', 'activity', 'syncStep2']);
+      expect(second.frameTypes).toEqual(['syncStep1', 'syncStep2']);
 
       second.serverClose(1009, 'message too big');
 

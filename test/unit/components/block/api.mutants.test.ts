@@ -191,6 +191,23 @@ describe('BlockAPI mutants', () => {
       expect(insertInsideParent.mock.lastCall?.[4]).toStrictEqual({ id: 'ghost' });
     });
 
+    // A host whose transact swallows its callback leaves nothing assigned. Both
+    // the seeded null and an unseeded undefined are wrong for the declared
+    // BlockAPI return, so this pins the seed itself, not a useful answer.
+    it('yields the seeded null when a transact never runs its callback', () => {
+      const { api, transact } = makeApi(tree());
+      const blockAPI = new BlockAPIConstructor(containerBlock(), api);
+
+      transact.mockImplementation(() => undefined);
+
+      const child = blockAPI.insertChild({ text: 'x' }, { before: 'b' }, 'header', {
+        replace: true,
+        id: 'a',
+      });
+
+      expect(child).toBeNull();
+    });
+
     it('replaces a child whose id already exists instead of returning it', () => {
       const { api, insert } = makeApi(tree());
       const blockAPI = new BlockAPIConstructor(containerBlock(), api);

@@ -6,6 +6,21 @@
 import { fileURLToPath } from 'node:url';
 import { basename } from 'node:path';
 import { readFileSync, writeFileSync } from 'node:fs';
+import { Script } from 'node:vm';
+
+/**
+ * Whether the replacement can stand as an expression, decided by compiling it
+ * rather than by pattern-matching the text.
+ */
+const isExpression = (text) => {
+  try {
+    new Script(`(${text});`);
+
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 /**
  * Replaces the exact span a Stryker mutant reports.
@@ -20,8 +35,17 @@ export const applyMutant = (source, mutant) => {
   const { start, end } = mutant.location;
   const head = lines.slice(0, start.line - 1);
   const tail = lines.slice(end.line);
+  // Only LogicalOperator changes an operator's PRECEDENCE, and only it needs
+  // the grouping Stryker's re-printed AST already carries. Spliced raw,
+  // `a || b` for the node `a && b` in `a && b && c` yields `a || (b && c)` — a
+  // mutant nobody generated, scored under the real one's id — and `a && b` for
+  // a `??` node is a SyntaxError, which reads as a survivor. Every other
+  // mutator swaps within one precedence class or emits a statement.
+  const replacement = mutant.mutatorName === 'LogicalOperator' && isExpression(mutant.replacement)
+    ? `(${mutant.replacement})`
+    : mutant.replacement;
   const patched = lines[start.line - 1].slice(0, start.column - 1)
-    + mutant.replacement
+    + replacement
     + lines[end.line - 1].slice(end.column - 1);
 
   return [...head, patched, ...tail].join('\n');

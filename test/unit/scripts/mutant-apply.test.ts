@@ -42,6 +42,33 @@ describe('applyMutant', () => {
     expect(mutated).toBe('b();');
   });
 
+  // Stryker mutates the AST and re-prints, so its `a || b` for the node `a && b`
+  // inside `a && b && c` means `(a || b) && c`. Splicing the text raw would
+  // produce `a || b && c`, which JS parses as `a || (b && c)` — a mutant nobody
+  // generated, scored under the real mutant's id.
+  it('parenthesises an expression replacement so it cannot reassociate', () => {
+    const mutated = applyMutant('const r = a && b && c;', {
+      mutatorName: 'LogicalOperator',
+      location: { start: { line: 1, column: 11 }, end: { line: 1, column: 17 } },
+      replacement: 'a || b',
+    });
+
+    expect(mutated).toBe('const r = (a || b) && c;');
+  });
+
+  // A block body, a case label and a removed call are statements, and wrapping
+  // any of them turns the patch into a syntax error or an object literal.
+  it('leaves a replacement that is not an expression alone', () => {
+    const span = { start: { line: 1, column: 11 }, end: { line: 1, column: 17 } };
+
+    expect(applyMutant('const r = a && b && c;', { mutatorName: 'BlockStatement', location: span, replacement: '{}' }))
+      .toBe('const r = {} && c;');
+    expect(applyMutant('const r = a && b && c;', { mutatorName: 'CallExpression', location: span, replacement: ';' }))
+      .toBe('const r = ; && c;');
+    expect(applyMutant('const r = a && b && c;', { mutatorName: 'ConditionalExpression', location: span, replacement: 'default:' }))
+      .toBe('const r = default: && c;');
+  });
+
   it('replaces a span on the first line without losing it', () => {
     const mutated = applyMutant(SOURCE, {
       location: { start: { line: 1, column: 11 }, end: { line: 1, column: 12 } },

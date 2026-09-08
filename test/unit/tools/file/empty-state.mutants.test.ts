@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const media = vi.hoisted(() => ({ render: vi.fn(() => document.createElement('div')) }));
+const media = vi.hoisted(() => ({ render: vi.fn((_options: unknown) => document.createElement('div')) }));
 
 vi.mock('../../../../src/components/utils/media-empty-state', () => ({
   renderMediaEmptyState: (options: unknown) => media.render(options),

@@ -80,6 +80,7 @@ internal sealed class CollabRoomManager : ICollabRoomManager
   private readonly Dictionary<string, CommitCooldown> cooldowns = new(StringComparer.Ordinal);
   private readonly ICollabWorkingSetStore store;
   private readonly ICollabOperationStore? operationStore;
+  private readonly ICollabActivityObserver? activityObserver;
   private readonly IDocEndpointClient endpoint;
   private readonly ICollabDocConverter converter;
   private readonly CollabRoomOptions options;
@@ -94,7 +95,8 @@ internal sealed class CollabRoomManager : ICollabRoomManager
       CollabRoomOptions options,
       TimeProvider timeProvider,
       Action<string>? log = null,
-      ICollabOperationStore? operationStore = null)
+      ICollabOperationStore? operationStore = null,
+      ICollabActivityObserver? activityObserver = null)
   {
     ArgumentNullException.ThrowIfNull(store);
     ArgumentNullException.ThrowIfNull(endpoint);
@@ -109,6 +111,7 @@ internal sealed class CollabRoomManager : ICollabRoomManager
     this.timeProvider = timeProvider;
     this.log = log;
     this.operationStore = operationStore;
+    this.activityObserver = activityObserver;
   }
 
   internal int LiveRoomCount
@@ -340,7 +343,8 @@ internal sealed class CollabRoomManager : ICollabRoomManager
             options,
             timeProvider,
             log,
-            operationStore);
+            operationStore,
+            activityObserver);
         room.Closed += OnRoomClosed;
         rooms[docId] = room;
       }

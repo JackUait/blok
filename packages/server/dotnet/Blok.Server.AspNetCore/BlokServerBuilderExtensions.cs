@@ -57,4 +57,29 @@ public static class BlokServerBuilderExtensions
 
     return builder;
   }
+
+  /// <summary>
+  /// Registers <typeparamref name="T"/> as this server's collaboration
+  /// activity observer, replacing one registered earlier. It is resolved as a
+  /// singleton.
+  /// </summary>
+  /// <remarks>
+  /// Blok keeps no activity history of its own, so this call is the only way a
+  /// host learns when a person was last in a document. Without it no
+  /// <see cref="ICollabActivityObserver"/> is resolved and a room makes no
+  /// calls at all — the feature costs nothing when it is not used.
+  /// </remarks>
+  /// <typeparam name="T">The application's activity observer.</typeparam>
+  /// <param name="builder">The server being built.</param>
+  /// <returns>The same builder, so hooks chain.</returns>
+  public static BlokServerBuilder UseCollabActivityObserver<T>(this BlokServerBuilder builder)
+      where T : class, ICollabActivityObserver
+  {
+    ArgumentNullException.ThrowIfNull(builder);
+
+    builder.Services.RemoveAll<ICollabActivityObserver>();
+    builder.Services.AddSingleton<ICollabActivityObserver, T>();
+
+    return builder;
+  }
 }

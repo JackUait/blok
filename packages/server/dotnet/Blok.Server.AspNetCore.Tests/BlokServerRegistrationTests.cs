@@ -326,6 +326,58 @@ public sealed class BlokServerRegistrationTests
   }
 
   [Fact]
+  public void RegistersACustomCollabActivityObserver()
+  {
+    var services = new ServiceCollection();
+
+    services
+        .AddBlokServer(options =>
+        {
+          options.CollabEnabled = true;
+          options.DocEndpoint = "https://app.example.com/api/blok-docs";
+          options.CollabDirectory = "/srv/blok/collab";
+        })
+        .UseCollabActivityObserver<StubCollabActivityObserver>();
+
+    var descriptor = Assert.Single(
+        services,
+        candidate => candidate.ServiceType == typeof(ICollabActivityObserver));
+    Assert.Equal(typeof(StubCollabActivityObserver), descriptor.ImplementationType);
+    Assert.Equal(ServiceLifetime.Singleton, descriptor.Lifetime);
+
+    using var provider = services.BuildServiceProvider();
+
+    Assert.IsType<StubCollabActivityObserver>(
+        provider.GetRequiredService<ICollabActivityObserver>());
+  }
+
+  /// <summary>
+  /// Not registering one is how a host opts out, so nothing may register a
+  /// default: the manager factory resolves the observer with GetService and
+  /// has to get null back.
+  /// </summary>
+  [Fact]
+  public void RegistersNoCollabActivityObserverByDefault()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer(options =>
+    {
+      options.CollabEnabled = true;
+      options.DocEndpoint = "https://app.example.com/api/blok-docs";
+      options.CollabDirectory = "/srv/blok/collab";
+    });
+
+    Assert.DoesNotContain(
+        services,
+        candidate => candidate.ServiceType == typeof(ICollabActivityObserver));
+
+    using var provider = services.BuildServiceProvider();
+
+    Assert.Null(provider.GetService<ICollabActivityObserver>());
+  }
+
+  [Fact]
   public void RejectsACollabS3PrefixWithoutCollab()
   {
     var services = new ServiceCollection();
@@ -1071,6 +1123,19 @@ public sealed class BlokServerRegistrationTests
   {
     public ValueTask<CollabDocumentOpen> OpenAsync(
         string documentId,
+        CancellationToken cancellationToken = default)
+    {
+      throw new NotSupportedException();
+    }
+  }
+
+  private sealed class StubCollabActivityObserver : ICollabActivityObserver
+  {
+    public ValueTask RecordAsync(
+        string documentId,
+        string actorId,
+        DateTimeOffset at,
+        CollabActivityKind kind,
         CancellationToken cancellationToken = default)
     {
       throw new NotSupportedException();

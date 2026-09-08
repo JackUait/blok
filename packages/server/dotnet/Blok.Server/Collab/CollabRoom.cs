@@ -83,11 +83,20 @@ internal sealed class CollabRoom : IDisposable
   /// <summary>Consecutive checkpoint failures the room tolerates before it stops serving.</summary>
   private const int CheckpointFailureLimit = 3;
 
+  /// <summary>
+  /// How long one actor's Active/Edited report silences the next. It matches
+  /// the client's own activity cadence, which sends ON the minute, so the
+  /// suppression test is strictly less-than: a frame exactly a window later
+  /// must get through or every second one would be dropped.
+  /// </summary>
+  private static readonly TimeSpan ActivityWindow = TimeSpan.FromSeconds(60);
+
   private static readonly byte[] QueryAwareness =
       SyncWire.Encode(new QueryAwarenessFrame());
 
   private readonly ICollabWorkingSetStore store;
   private readonly ICollabOperationStore? operationStore;
+  private readonly ICollabActivityObserver? activityObserver;
   private readonly IDocEndpointClient endpoint;
   private readonly ICollabDocConverter converter;
   private readonly CollabRoomOptions options;
@@ -103,6 +112,15 @@ internal sealed class CollabRoom : IDisposable
   /// leaves without saying so. Room-owned, touched only under the lane.
   /// </summary>
   private readonly Dictionary<ulong, AwarenessOwner> awarenessOwners = [];
+
+  /// <summary>
+  /// When each actor's Active/Edited was last handed to the observer. One
+  /// window shared by both kinds: they answer the same "was here" question,
+  /// so an edit and a heartbeat in the same minute are one report. Joined and
+  /// Left neither read nor write it. Room-owned, touched only under the lane.
+  /// </summary>
+  private readonly Dictionary<string, DateTimeOffset> activityStamps =
+      new(StringComparer.Ordinal);
 
   /// <summary>Scratch for the structural walk of one inbound awareness frame; reused, never escapes the lane.</summary>
   private readonly List<AwarenessEntry> awarenessScratch = [];
@@ -175,6 +193,12 @@ internal sealed class CollabRoom : IDisposable
   private Task<string?>? inFlightSave;
   private bool disposed;
 
+  // The room's observer calls, chained so one is in flight at a time and the
+  // host sees them in the order the room made them. Never faults: the
+  // continuation swallows everything, and a faulted tail would poison every
+  // later call. Written under the lane, awaited off it.
+  private Task activityDispatch = Task.CompletedTask;
+
   internal CollabRoom(
       string docId,
       ICollabWorkingSetStore store,
@@ -183,11 +207,13 @@ internal sealed class CollabRoom : IDisposable
       CollabRoomOptions options,
       TimeProvider timeProvider,
       Action<string>? log,
-      ICollabOperationStore? operationStore = null)
+      ICollabOperationStore? operationStore = null,
+      ICollabActivityObserver? activityObserver = null)
   {
     DocId = docId;
     this.store = store;
     this.operationStore = operationStore;
+    this.activityObserver = activityObserver;
     this.endpoint = endpoint;
     this.converter = converter;
     this.options = options;
@@ -281,6 +307,7 @@ internal sealed class CollabRoom : IDisposable
           var membership = new CollabMembership(this, member, tag);
           members.Add(membership);
           UpdateEvictionLocked();
+          RecordActivityLocked(member.ActorId, CollabActivityKind.Joined);
 
           if (member.AcceptsControlFrames)
           {
@@ -327,6 +354,7 @@ internal sealed class CollabRoom : IDisposable
           {
             WithdrawAwarenessLocked(membership);
             UpdateEvictionLocked();
+            RecordActivityLocked(membership.Member.ActorId, CollabActivityKind.Left);
           }
 
           return Task.CompletedTask;
@@ -746,9 +774,16 @@ internal sealed class CollabRoom : IDisposable
   }
 
   /// <summary>Completes once every lane operation queued before it has run.</summary>
-  internal Task SettleAsync()
+  internal async Task SettleAsync()
   {
-    return RunAsync(() => Task.CompletedTask, CancellationToken.None);
+    // Activity is dispatched OFF the lane, so draining the lane alone would
+    // race the observer calls it queued — including the ones a test asserts
+    // never happened. Read under the lane so the tail is the final one.
+    var pendingActivity = await RunAsync<Task>(
+        () => Task.FromResult(activityDispatch),
+        CancellationToken.None);
+
+    await pendingActivity;
   }
 
   /// <summary>
@@ -827,6 +862,72 @@ internal sealed class CollabRoom : IDisposable
     {
       log?.Invoke($"collab: room \"{DocId}\" background work failed: {error.Message}");
     }
+  }
+
+  /// <summary>
+  /// Hands one moment of a member's presence to the host's observer.
+  ///
+  /// Called with the lane HELD, and it must stay that way: the decision needs
+  /// the room's state. The CALL does not, so it is dispatched off the lane —
+  /// an observer is not the operation store. A slow one must not stall the
+  /// document and a throwing one must not close it, which is the opposite of
+  /// what <see cref="FailCommitLocked"/> does for a failed append. Failures
+  /// reach the log and nowhere else.
+  ///
+  /// The token is None on purpose: the room's lifetime is cancelled AND
+  /// disposed when it closes, and a report the room already decided to make
+  /// should still be attempted after that.
+  /// </summary>
+  private void RecordActivityLocked(string? actorId, CollabActivityKind kind)
+  {
+    // A connection with no verified identity produces no call of any kind: an
+    // unknown person stays unknown rather than getting a fabricated key.
+    // Bound as non-null locals, because both are captured by the dispatch
+    // below and a lambda does not inherit a narrowed flow state.
+    if (actorId is not { } actor)
+    {
+      return;
+    }
+
+    if (activityObserver is not { } observer)
+    {
+      return;
+    }
+
+    var at = timeProvider.GetUtcNow();
+
+    if (kind is CollabActivityKind.Active or CollabActivityKind.Edited)
+    {
+      if (activityStamps.TryGetValue(actor, out var reported) &&
+          at - reported < ActivityWindow)
+      {
+        return;
+      }
+
+      // Stamped only where a call is actually made. Stamping a SUPPRESSED one
+      // would slide the window along with the traffic and silence a busy
+      // actor for as long as it kept sending.
+      activityStamps[actor] = at;
+    }
+
+    var previous = activityDispatch;
+    var docId = DocId;
+    var logger = log;
+
+    activityDispatch = Task.Run(async () =>
+    {
+      await previous;
+
+      try
+      {
+        await observer.RecordAsync(docId, actor, at, kind, CancellationToken.None);
+      }
+      catch (Exception error)
+      {
+        logger?.Invoke(
+            $"collab: room \"{docId}\" activity observer failed: {error.Message}");
+      }
+    });
   }
 
   /// <summary>
@@ -1495,6 +1596,11 @@ internal sealed class CollabRoom : IDisposable
       case QueryAwarenessFrame:
         BroadcastLocked(SyncWire.Encode(message), membership);
         break;
+      case ActivityFrame:
+        // Payload-free by design: identity comes from the handshake and the
+        // time from this server's clock, so there is nothing here to read.
+        RecordActivityLocked(membership.Member.ActorId, CollabActivityKind.Active);
+        break;
       default:
         break;
     }
@@ -1776,6 +1882,10 @@ internal sealed class CollabRoom : IDisposable
     }
 
     committedThrough = appended.ServerSequence;
+
+    // After the append, never before: an edit is reported once it is durable.
+    RecordActivityLocked(actorId, CollabActivityKind.Edited);
+
     operationsSinceCheckpoint++;
     bytesSinceCheckpoint += update.Length;
 

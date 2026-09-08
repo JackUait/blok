@@ -22,6 +22,7 @@ public sealed class CollabRoomTests
 
   private readonly FakeWorkingSetStore store = new();
   private readonly FakeCollabOperationStore operations = new();
+  private readonly RecordingActivityObserver activity = new();
   private readonly FakeDocEndpoint endpoint = new();
   private readonly FakeDocConverter converter = new();
   private readonly ManualTimeProvider time = new();
@@ -4313,6 +4314,245 @@ public sealed class CollabRoomTests
     Assert.Empty(other.Received);
   }
 
+  [Fact]
+  public async Task AJoinReportsTheActorAsJoined()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateActivityManager();
+
+    await Join(manager, new FakeMember(actorId: "user-1"));
+    await manager.SettleAsync();
+
+    var record = Assert.Single(activity.Records);
+
+    Assert.Equal(CollabActivityKind.Joined, record.Kind);
+    Assert.Equal(DocId, record.DocumentId);
+    Assert.Equal("user-1", record.ActorId);
+    Assert.Equal(time.GetUtcNow(), record.At);
+  }
+
+  /// <summary>
+  /// The journalled commit proves the Edited hook was REACHED, so the empty
+  /// record list is the null-actor rule and not a dead code path.
+  /// </summary>
+  [Fact]
+  public async Task AConnectionWithNoVerifiedActorIsNeverReported()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateActivityManager(journalled: true);
+    var member = V2Member();
+    var membership = await Join(manager, member);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new ActivityFrame()),
+        CancellationToken.None);
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, update),
+        CancellationToken.None);
+    await membership.LeaveAsync();
+    await manager.SettleAsync();
+
+    Assert.Single(operations.Committed(DocId));
+    Assert.Empty(activity.Records);
+  }
+
+  [Fact]
+  public async Task AnActivityFrameReportsActiveWithTheDocumentAndTheServerClock()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateActivityManager();
+    var member = new FakeMember(actorId: "user-1");
+    var membership = await Join(manager, member);
+
+    // Moved AFTER the join, so the reported time cannot be the join's or the
+    // clock's seed value.
+    time.Advance(TimeSpan.FromSeconds(90));
+    var sent = time.GetUtcNow();
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new ActivityFrame()),
+        CancellationToken.None);
+    await manager.SettleAsync();
+
+    Assert.Collection(
+        activity.Records,
+        record => Assert.Equal(CollabActivityKind.Joined, record.Kind),
+        record =>
+        {
+          Assert.Equal(CollabActivityKind.Active, record.Kind);
+          Assert.Equal(DocId, record.DocumentId);
+          Assert.Equal("user-1", record.ActorId);
+          Assert.Equal(sent, record.At);
+        });
+
+    // The frame carries no payload and earns no answer.
+    Assert.Empty(member.Received);
+  }
+
+  /// <summary>
+  /// One window, shared: an edit and a heartbeat in the same minute are one
+  /// report. The suppressed edit at +30s must NOT re-stamp, or the edit at
+  /// +60s would be silenced too and a busy actor would never be reported.
+  /// </summary>
+  [Fact]
+  public async Task ActiveAndEditedShareOneMinuteWindowPerActor()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateActivityManager(journalled: true);
+    var member = V2Member("user-1");
+    var membership = await Join(manager, member);
+    var client = await SyncedClientAsync(manager, "hello");
+    var opened = time.GetUtcNow();
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new ActivityFrame()),
+        CancellationToken.None);
+
+    time.Advance(TimeSpan.FromSeconds(30));
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "a")),
+        CancellationToken.None);
+
+    time.Advance(TimeSpan.FromSeconds(30));
+    await membership.ReceiveAsync(
+        Operation(membership, OpTwo, YDocs.UpdateAppending(client, "b")),
+        CancellationToken.None);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new ActivityFrame()),
+        CancellationToken.None);
+    await manager.SettleAsync();
+
+    Assert.Equal(2, operations.Committed(DocId).Count);
+    Assert.Collection(
+        activity.Records,
+        record =>
+        {
+          Assert.Equal(CollabActivityKind.Joined, record.Kind);
+          Assert.Equal(opened, record.At);
+        },
+        record =>
+        {
+          Assert.Equal(CollabActivityKind.Active, record.Kind);
+          Assert.Equal(opened, record.At);
+        },
+        record =>
+        {
+          Assert.Equal(CollabActivityKind.Edited, record.Kind);
+          Assert.Equal(opened + TimeSpan.FromSeconds(60), record.At);
+        });
+  }
+
+  [Fact]
+  public async Task JoinAndLeaveAreNeverSuppressed()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateActivityManager();
+
+    var first = await Join(manager, new FakeMember(actorId: "user-1"));
+    await first.LeaveAsync();
+    var second = await Join(manager, new FakeMember(actorId: "user-1"));
+    await second.LeaveAsync();
+    await manager.SettleAsync();
+
+    Assert.Collection(
+        activity.Records,
+        record => Assert.Equal(CollabActivityKind.Joined, record.Kind),
+        record => Assert.Equal(CollabActivityKind.Left, record.Kind),
+        record => Assert.Equal(CollabActivityKind.Joined, record.Kind),
+        record => Assert.Equal(CollabActivityKind.Left, record.Kind));
+    Assert.All(activity.Records, record => Assert.Equal("user-1", record.ActorId));
+  }
+
+  /// <summary>
+  /// "Opened the document and read for two minutes" is exactly the case this
+  /// feature exists for, so a reader that never writes is still a session.
+  /// </summary>
+  [Fact]
+  public async Task AReaderThatNeverEditsIsReportedJoinedThenLeft()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateActivityManager();
+    var membership = await Join(
+        manager,
+        new FakeMember(canWrite: false, actorId: "user-1"));
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncStep1Frame(YDocs.StateVector(YDocs.NewClient()))),
+        CancellationToken.None);
+    time.Advance(TimeSpan.FromMinutes(2));
+    await membership.LeaveAsync();
+    await manager.SettleAsync();
+
+    Assert.Collection(
+        activity.Records,
+        record => Assert.Equal(CollabActivityKind.Joined, record.Kind),
+        record => Assert.Equal(CollabActivityKind.Left, record.Kind));
+  }
+
+  /// <summary>
+  /// The opposite of a failed append, which closes the room. Host telemetry is
+  /// best-effort: it is logged and dropped, the member keeps its connection,
+  /// and the lane is free for the next frame.
+  /// </summary>
+  [Fact]
+  public async Task AThrowingObserverIsLoggedAndNeitherClosesTheRoomNorStallsIt()
+  {
+    endpoint.Holds(DocId, "hello");
+    activity.Failure = new InvalidOperationException("the activity table is down");
+    var manager = CreateActivityManager();
+    var member = new FakeMember(actorId: "user-1");
+    var membership = await Join(manager, member);
+    await manager.SettleAsync();
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncStep1Frame(YDocs.StateVector(YDocs.NewClient()))),
+        CancellationToken.None);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new ActivityFrame()),
+        CancellationToken.None);
+    await manager.SettleAsync();
+
+    Assert.Collection(
+        activity.Records,
+        record => Assert.Equal(CollabActivityKind.Joined, record.Kind),
+        record => Assert.Equal(CollabActivityKind.Active, record.Kind));
+    Assert.Empty(member.Closes);
+    Assert.Contains(member.Received, frame => frame is SyncStep2Frame);
+    Assert.Contains(
+        log,
+        entry => entry.Contains("activity observer failed", StringComparison.Ordinal));
+  }
+
+  [Fact]
+  public async Task WithNoObserverAnActivityFrameChangesNothing()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var member = new FakeMember(actorId: "user-1");
+    var membership = await Join(manager, member);
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new ActivityFrame()),
+        CancellationToken.None);
+    await manager.SettleAsync();
+
+    Assert.Empty(activity.Records);
+    Assert.Empty(member.Received);
+    Assert.DoesNotContain(
+        log,
+        entry => entry.Contains("activity", StringComparison.OrdinalIgnoreCase) ||
+            entry.Contains("dropped a frame", StringComparison.Ordinal));
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncStep1Frame(YDocs.StateVector(YDocs.NewClient()))),
+        CancellationToken.None);
+    await manager.SettleAsync();
+
+    Assert.Contains(member.Received, frame => frame is SyncStep2Frame);
+  }
+
   /// <summary>
   /// A well-formed awareness payload carrying <paramref name="clients"/>
   /// entries: y-protocols writes [varuint clients]{[clientId][clock][varstring
@@ -4417,6 +4657,24 @@ public sealed class CollabRoomTests
         options ?? new CollabRoomOptions(),
         time,
         log.Add);
+  }
+
+  /// <summary>
+  /// A room that reports activity to the host. <paramref name="journalled"/>
+  /// also gives it an operation store, which the Edited hook needs: it hangs
+  /// off the append, and a store-less room never appends.
+  /// </summary>
+  private CollabRoomManager CreateActivityManager(bool journalled = false)
+  {
+    return new CollabRoomManager(
+        store,
+        endpoint,
+        converter,
+        new CollabRoomOptions(),
+        time,
+        log.Add,
+        journalled ? operations : null,
+        activity);
   }
 
   /// <summary>A room backed by an operation store, which is what turns on the commit path.</summary>

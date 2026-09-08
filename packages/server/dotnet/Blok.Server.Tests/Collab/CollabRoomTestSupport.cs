@@ -671,6 +671,60 @@ internal sealed class FakeMember(
   }
 }
 
+/// <summary>One call the room made to the activity observer.</summary>
+internal readonly record struct CollabActivityRecord(
+    string DocumentId,
+    string ActorId,
+    DateTimeOffset At,
+    CollabActivityKind Kind);
+
+/// <summary>
+/// A host observer that keeps what it was told. The room dispatches OFF its
+/// lane, so calls land on pool threads and the list is locked; the room chains
+/// them, so the order read back is the order the room made them. Settle the
+/// manager before asserting — that is what waits for the dispatch.
+/// </summary>
+internal sealed class RecordingActivityObserver : ICollabActivityObserver
+{
+  private readonly List<CollabActivityRecord> records = [];
+
+  /// <summary>While set, every call throws it. The room must survive that.</summary>
+  internal Exception? Failure { get; set; }
+
+  internal IReadOnlyList<CollabActivityRecord> Records
+  {
+    get
+    {
+      lock (records)
+      {
+        return [.. records];
+      }
+    }
+  }
+
+  public ValueTask RecordAsync(
+      string documentId,
+      string actorId,
+      DateTimeOffset at,
+      CollabActivityKind kind,
+      CancellationToken cancellationToken = default)
+  {
+    lock (records)
+    {
+      records.Add(new CollabActivityRecord(documentId, actorId, at, kind));
+    }
+
+    // Thrown SYNCHRONOUSLY, before any ValueTask exists: a dispatch that only
+    // guards the awaited fault would still be taken down by this one.
+    if (Failure is { } failure)
+    {
+      throw failure;
+    }
+
+    return ValueTask.CompletedTask;
+  }
+}
+
 /// <summary>Client-side Yjs helpers over the same "content" text root.</summary>
 internal static class YDocs
 {

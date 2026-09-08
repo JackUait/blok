@@ -254,6 +254,7 @@ interface SetupOptions {
   userId?: string;
   blockId?: string | null;
   position?: CaretPosition | null;
+  onActivity?: () => void;
 }
 
 const setup = (options: SetupOptions = {}) => {
@@ -273,6 +274,7 @@ const setup = (options: SetupOptions = {}) => {
     currentCaret: () => caret.position,
     eventTarget: target,
     renderer,
+    onActivity: options.onActivity,
   });
 
   started.push(presence);
@@ -446,6 +448,28 @@ describe('presence — local awareness upkeep', () => {
       vi.advanceTimersByTime(200);
 
       expect(seam.writes.filter((write) => write.field === 'activeAt')).toHaveLength(before);
+    });
+  });
+
+  describe('signalling activity to the sync service', () => {
+    it('signals activity once on start and then at most once a minute', () => {
+      vi.setSystemTime(new Date(1_700_000_000_000));
+
+      const onActivity = vi.fn();
+      const { target, presence } = setup({ onActivity });
+
+      presence.start();
+      expect(onActivity).toHaveBeenCalledTimes(1);
+
+      vi.setSystemTime(new Date(1_700_000_030_000));
+      moveCaret(target);
+      vi.advanceTimersByTime(200);
+      expect(onActivity).toHaveBeenCalledTimes(1);
+
+      vi.setSystemTime(new Date(1_700_000_061_000));
+      moveCaret(target);
+      vi.advanceTimersByTime(200);
+      expect(onActivity).toHaveBeenCalledTimes(2);
     });
   });
 

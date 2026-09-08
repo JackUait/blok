@@ -61,6 +61,12 @@ export interface PresenceOptions {
   eventTarget?: EventTarget;
   /** Publish window in ms (default 100). */
   throttleMs?: number;
+  /**
+   * Tell the sync service this client is active. Rate-limited to at most once
+   * a minute — a much coarser cadence than the `activeAt` awareness field, and
+   * a separate gate from it.
+   */
+  onActivity?: () => void;
 }
 
 export interface Presence {
@@ -82,6 +88,14 @@ const DEFAULT_THROTTLE_MS = 100;
  * five-minute threshold.
  */
 const ACTIVITY_RESOLUTION_MS = 1000;
+
+/**
+ * How often presence signals the sync service about activity, separate from
+ * and much coarser than {@link ACTIVITY_RESOLUTION_MS}: that one dedupes an
+ * awareness field peers redraw from; this one throttles an actual frame to
+ * the server.
+ */
+const ACTIVITY_SIGNAL_INTERVAL_MS = 60_000;
 
 /**
  * Default cursor colours. Each is at least 4.5:1 against white, so a name
@@ -278,6 +292,7 @@ export const createPresence = (options: PresenceOptions): Presence => {
     /** The last caret tuple put on the wire, as its comparison key. */
     publishedCaret: undefined as string | undefined,
     publishedActiveAt: undefined as number | undefined,
+    lastActivitySignalAt: undefined as number | undefined,
     unhookAwareness: null as (() => void) | null,
     unhookAwarenessUpdate: null as (() => void) | null,
     onCaretMove: null as (() => void) | null,
@@ -377,6 +392,32 @@ export const createPresence = (options: PresenceOptions): Presence => {
 
     state.publishedActiveAt = now;
     yjs.setAwarenessField('activeAt', now);
+  };
+
+  /**
+   * Tell the sync service this client is active, at most once a minute.
+   *
+   * A gate of its own, not `publishedActiveAt`'s: that one dedupes a field
+   * peers redraw from at a one-second resolution, and coupling the two would
+   * mean an unrelated cadence change to the wire field silently changes how
+   * often the server hears from this client.
+   */
+  const signalActivity = (): void => {
+    if (!state.running) {
+      return;
+    }
+
+    const now = Date.now();
+
+    if (
+      state.lastActivitySignalAt !== undefined &&
+      now - state.lastActivitySignalAt < ACTIVITY_SIGNAL_INTERVAL_MS
+    ) {
+      return;
+    }
+
+    state.lastActivitySignalAt = now;
+    options.onActivity?.();
   };
 
   const notify = (): void => {
@@ -486,6 +527,7 @@ export const createPresence = (options: PresenceOptions): Presence => {
       state.publishedBlockId = undefined;
       state.publishedCaret = undefined;
       state.publishedActiveAt = undefined;
+      state.lastActivitySignalAt = undefined;
       state.unhookAwareness = yjs.onAwarenessChange(onAwarenessChange);
       state.unhookAwarenessUpdate = yjs.onAwarenessUpdate(onAwarenessUpdate);
 
@@ -497,6 +539,7 @@ export const createPresence = (options: PresenceOptions): Presence => {
       publishCaret();
       publishUser();
       publishActivity();
+      signalActivity();
 
       // A fresh throttle per start: the previous one's clock would suppress the
       // first caret move of a restarted session.
@@ -504,6 +547,7 @@ export const createPresence = (options: PresenceOptions): Presence => {
         publishBlockId();
         publishCaret();
         publishActivity();
+        signalActivity();
 
         // Local typing reflows the line every remote caret in this block points
         // into. Nothing on the wire announces that — the peers did not move,

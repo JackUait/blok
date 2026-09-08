@@ -393,6 +393,23 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
   };
 
   /**
+   * Tell the sync service this client is here, right now.
+   *
+   * A no-op before a connection is negotiated: an `activity` frame carries no
+   * document state, so there is nothing lost in skipping it on a dead or
+   * unready socket — the next one covers it.
+   */
+  const sendActivity = (): void => {
+    const socket = state.socket;
+
+    if (socket === null || state.phase !== 'ready') {
+      return;
+    }
+
+    send(socket, { type: 'activity' });
+  };
+
+  /**
    * Coalesces presence traffic into one frame per window — including the reply
    * to queryAwareness, so a peer spamming type-3 cannot push us past the
    * server's own inbound budget.
@@ -1089,6 +1106,13 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
         // Client → server only, and `onmessage` drops it before this; the case
         // stays so a new frame type cannot fall into a silent default.
         break;
+      case 'activity':
+        // Client → server only, same as `operation` — a server sending one is
+        // misbehaving, and `onmessage` drops it before this anyway.
+        break;
+      case 'identities':
+        // No handler yet; task 5 gives this frame meaning.
+        break;
     }
   };
 
@@ -1133,6 +1157,10 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     state.phase = 'ready';
 
     hookSeam(origin);
+
+    // A reader who never touches the keyboard is still activity: opening the
+    // document is proof enough, so this fires once per validated connection.
+    sendActivity();
 
     const buffered = state.buffered;
 
@@ -1499,6 +1527,9 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     },
     announceDeparture: (): void => {
       announceDeparture();
+    },
+    sendActivity: (): void => {
+      sendActivity();
     },
     destroy: (): void => {
       if (state.destroyed) {

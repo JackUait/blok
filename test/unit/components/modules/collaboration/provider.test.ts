@@ -317,7 +317,7 @@ describe('createCollabProvider', () => {
       noTicket.store.addBlock({ id: 'b1', type: 'paragraph', data: { text: 'hi' } });
 
       expect(socket.frameTypes, 'a stock session stopped broadcasting its local writes')
-        .toEqual(['syncStep1', 'update']);
+        .toEqual(['syncStep1', 'activity', 'update']);
     });
 
     it('exposes the server-selected subprotocol once the socket opens', () => {
@@ -459,7 +459,7 @@ describe('createCollabProvider', () => {
 
       harness.socket().deliver(controlFrame());
 
-      expect(harness.socket().frameTypes).toEqual(['syncStep1']);
+      expect(harness.socket().frameTypes).toEqual(['syncStep1', 'activity']);
     });
 
     it('never answers a peer SyncStep1 with SyncStep2 before the control frame', () => {
@@ -492,7 +492,7 @@ describe('createCollabProvider', () => {
       harness.socket().deliver(controlFrame());
 
       expect(harness.store.toJSON().map((block) => block.id)).toEqual(['p1']);
-      expect(harness.socket().frameTypes).toEqual(['syncStep1', 'syncStep2']);
+      expect(harness.socket().frameTypes).toEqual(['syncStep1', 'activity', 'syncStep2']);
     });
 
     // Dropping a frame is worse than dropping the connection: Yjs parks every
@@ -951,7 +951,7 @@ describe('createCollabProvider', () => {
 
       harness.store.addBlock({ id: 'b1', type: 'paragraph', data: { text: 'hi' } });
 
-      expect(socket.frameTypes).toEqual(['syncStep1', 'update']);
+      expect(socket.frameTypes).toEqual(['syncStep1', 'activity', 'update']);
     });
 
     /**
@@ -967,7 +967,7 @@ describe('createCollabProvider', () => {
       harness.store.addBlock({ id: 'b1', type: 'paragraph', data: { text: 'hi' } });
 
       expect(socket.frameTypes, 'a v2 local edit went on the wire before the store committed it')
-        .toEqual(['syncStep1']);
+        .toEqual(['syncStep1', 'activity']);
     });
 
     /** The other half of the same switch: v1 has no outbox, so v1 still sends. */
@@ -977,7 +977,7 @@ describe('createCollabProvider', () => {
 
       harness.store.addBlock({ id: 'b1', type: 'paragraph', data: { text: 'hi' } });
 
-      expect(socket.frameTypes).toEqual(['syncStep1', 'update']);
+      expect(socket.frameTypes).toEqual(['syncStep1', 'activity', 'update']);
     });
 
     it('reports the protocol the server selected', () => {
@@ -1076,11 +1076,11 @@ describe('createCollabProvider', () => {
       harness.store.setAwarenessField('user', { name: 'Ada' });
       harness.store.setAwarenessField('user', { name: 'Ada v2' });
 
-      expect(socket.frameTypes).toEqual(['syncStep1']);
+      expect(socket.frameTypes).toEqual(['syncStep1', 'activity']);
 
       vi.advanceTimersByTime(100);
 
-      expect(socket.frameTypes).toEqual(['syncStep1', 'awareness']);
+      expect(socket.frameTypes).toEqual(['syncStep1', 'activity', 'awareness']);
     });
 
     it('broadcasts from the update channel, so keepalive renewals reach peers', () => {
@@ -1167,7 +1167,7 @@ describe('createCollabProvider', () => {
 
       vi.advanceTimersByTime(100);
 
-      expect(socket.frameTypes).toEqual(['syncStep1', 'awareness']);
+      expect(socket.frameTypes).toEqual(['syncStep1', 'activity', 'awareness']);
     });
 
     it('does not echo an applied remote awareness update back out', () => {
@@ -1295,6 +1295,60 @@ describe('createCollabProvider', () => {
 
         expect(harness.socket().frames).toEqual([]);
       });
+    });
+  });
+
+  describe('activity', () => {
+    it('sends one activity frame right after the handshake completes', () => {
+      const harness = createHarness();
+      const socket = connectAndHandshake(harness);
+
+      expect(socket.frameTypes).toEqual(['syncStep1', 'activity']);
+    });
+
+    it('puts one activity frame on the socket when asked, once the session is ready', () => {
+      const harness = createHarness();
+      const socket = connectAndHandshake(harness);
+
+      const before = socket.frames.length;
+
+      harness.provider.sendActivity();
+
+      const written = socket.frames.slice(before);
+
+      expect(written.map((frame) => frame.type)).toEqual(['activity']);
+    });
+
+    it('sends nothing before the control frame validates', () => {
+      const harness = createHarness();
+
+      harness.provider.connect();
+      harness.socket().open();
+      harness.provider.sendActivity();
+
+      expect(harness.socket().frameTypes).toEqual(['syncStep1']);
+    });
+
+    it('sends nothing once the connection is torn down', () => {
+      const harness = createHarness();
+      const socket = connectAndHandshake(harness);
+
+      harness.provider.destroy();
+
+      const before = socket.sent.length;
+
+      harness.provider.sendActivity();
+
+      expect(socket.sent.length).toBe(before);
+    });
+
+    it('sends exactly one activity frame even if the control frame repeats', () => {
+      const harness = createHarness();
+      const socket = connectAndHandshake(harness);
+
+      socket.deliver(controlFrame());
+
+      expect(socket.frameTypes.filter((type) => type === 'activity')).toHaveLength(1);
     });
   });
 
@@ -1682,7 +1736,7 @@ describe('createCollabProvider', () => {
         second.deliver(controlFrame());
         second.deliver({ type: 'syncStep1', stateVector: fresh.getStateVector() });
 
-        expect(second.frameTypes).toEqual(['syncStep1']);
+        expect(second.frameTypes).toEqual(['syncStep1', 'activity']);
         expect(harness.statuses.at(-1)).toEqual({
           status: 'error',
           detail: expect.objectContaining({
@@ -1744,7 +1798,7 @@ describe('createCollabProvider', () => {
         room.applyRemoteUpdate(harness.store.encodeStateAsUpdate(), { source: 'room' });
         second.deliver({ type: 'syncStep1', stateVector: room.getStateVector() });
 
-        expect(second.frameTypes).toEqual(['syncStep1', 'syncStep2']);
+        expect(second.frameTypes).toEqual(['syncStep1', 'activity', 'syncStep2']);
         expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
       });
 
@@ -1808,11 +1862,11 @@ describe('createCollabProvider', () => {
         completeFirstSync(harness, second, room);
 
         expect(harness.statuses.at(-1)?.status).toBe('connected');
-        expect(second.frameTypes).toEqual(['syncStep1', 'syncStep2']);
+        expect(second.frameTypes).toEqual(['syncStep1', 'activity', 'syncStep2']);
 
         second.deliver({ type: 'syncStep1', stateVector: fresh.getStateVector() });
 
-        expect(second.frameTypes).toEqual(['syncStep1', 'syncStep2', 'syncStep2']);
+        expect(second.frameTypes).toEqual(['syncStep1', 'activity', 'syncStep2', 'syncStep2']);
         expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
       });
 
@@ -1861,7 +1915,7 @@ describe('createCollabProvider', () => {
       room.applyRemoteUpdate(harness.store.encodeStateAsUpdate(), { source: 'room' });
       completeFirstSync(harness, second, room);
 
-      expect(second.frameTypes).toEqual(['syncStep1', 'syncStep2']);
+      expect(second.frameTypes).toEqual(['syncStep1', 'activity', 'syncStep2']);
 
       second.serverClose(1009, 'message too big');
 
@@ -2172,7 +2226,7 @@ describe('createCollabProvider', () => {
       // Not an exact list: destroy also withdraws this client's presence, and
       // that goodbye is the one frame it is allowed to send on the way out.
       expect(socket.frameTypes).not.toContain('update');
-      expect(socket.frameTypes.filter((type) => type !== 'awareness')).toEqual(['syncStep1']);
+      expect(socket.frameTypes.filter((type) => type !== 'awareness')).toEqual(['syncStep1', 'activity']);
     });
 
     it('never opens a socket when the ticket resolves after destroy', async () => {
@@ -2416,7 +2470,7 @@ describe('createCollabProvider', () => {
         socket.frameTypes,
         'a v2 session answered the server SyncStep1 with a raw SyncStep2, putting history on the wire outside an operation envelope'
       ).not.toContain('syncStep2');
-      expect(socket.frameTypes).toEqual(['syncStep1', 'syncStep1']);
+      expect(socket.frameTypes).toEqual(['syncStep1', 'activity', 'syncStep1']);
     });
 
     it('drains only after applying the server SyncStep2', async () => {
@@ -2429,7 +2483,7 @@ describe('createCollabProvider', () => {
       await settle();
 
       expect(socket.frameTypes, 'an operation was sent before the server SyncStep2 had been applied')
-        .toEqual(['syncStep1']);
+        .toEqual(['syncStep1', 'activity']);
 
       // ONLY the SyncStep2, without the server SyncStep1 that normally follows
       // it: the sync this frame completes is what has to unblock the drain.
@@ -2449,7 +2503,7 @@ describe('createCollabProvider', () => {
       await settle();
 
       expect(socket.frameTypes, 'the server SyncStep1 was served while operations were still pending')
-        .toEqual(['syncStep1', 'operation']);
+        .toEqual(['syncStep1', 'activity', 'operation']);
 
       socket.deliver({
         type: 'acknowledgement',
@@ -2460,7 +2514,7 @@ describe('createCollabProvider', () => {
       await settle();
 
       expect(socket.frameTypes, 'a drained outbox never re-requested the server state vector')
-        .toEqual(['syncStep1', 'operation', 'syncStep1']);
+        .toEqual(['syncStep1', 'activity', 'operation', 'syncStep1']);
     });
 
     it('residual local state after draining is enveloped as one operation', async () => {
@@ -3201,7 +3255,7 @@ describe('createCollabProvider', () => {
           'a row went missing on a session that cannot get a receipt for it'
         ).toEqual([row.operationId]);
         // v1 keeps its raw answer: withholding it would strand the room's sync.
-        expect(socket.frameTypes).toEqual(['syncStep1', 'syncStep2']);
+        expect(socket.frameTypes).toEqual(['syncStep1', 'activity', 'syncStep2']);
       });
 
       it('v1 never deletes or acknowledges a v2 row', async () => {

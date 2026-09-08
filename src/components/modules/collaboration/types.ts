@@ -361,6 +361,14 @@ export interface CollabProvider {
    * A no-op unless a synced connection is open. `destroy` calls it first.
    */
   announceDeparture(): void;
+
+  /**
+   * Tell the sync service this client is here, right now. A no-op unless a
+   * connection has validated its control frame. The provider itself sends one
+   * right after the handshake; presence rate-limits every later call to at
+   * most once a minute.
+   */
+  sendActivity(): void;
   /** Last reported status. */
   readonly status: CollabStatus;
   /** The working-set tag from the last validated control frame. */

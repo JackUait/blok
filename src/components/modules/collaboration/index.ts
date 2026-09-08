@@ -759,6 +759,9 @@ export class Collaboration extends Module {
         // them one.
         isLocalAnonymous: () => (settings.user?.name ?? '').trim() === '',
       }),
+      // Lazy: `this.provider` is not created until after `presence.start()`
+      // below, so a captured reference here would close over `null` forever.
+      onActivity: () => this.provider?.sendActivity(),
     });
     this.presence.start();
 

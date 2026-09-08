@@ -1304,7 +1304,7 @@ describe('collaboration — sync-first load', () => {
      * sharp: the first-sync seed is a write the module itself would make, and
      * it is gated on the applied read-only state.
      */
-    it('storage failure blocks editing and sends nothing', async () => {
+    it('storage failure blocks editing and writes nothing to the wire', async () => {
       const factory = new IDBFactory();
 
       vi.spyOn(factory, 'open').mockImplementation(() => {
@@ -1321,7 +1321,7 @@ describe('collaboration — sync-first load', () => {
         harness.core.moduleInstances.ReadOnly.isEnabled,
         'editing resumed on a session whose local copy could not be opened'
       ).toBe(true);
-      expect(socket.sent.map((bytes) => decode(bytes).type)).toEqual(['syncStep1']);
+      expect(socket.sent.map((bytes) => decode(bytes).type)).toEqual(['syncStep1', 'activity']);
       expect(harness.core.moduleInstances.BlockManager.blocks.length).toBe(0);
     }, 20_000);
 
@@ -1748,7 +1748,7 @@ describe('collaboration — sync-first load', () => {
         'a v1 session with nothing waiting for a receipt stopped accepting edits'
       ).toBe(false);
       expect(wireTypes(socket), 'a v1 session stopped broadcasting its local writes')
-        .toEqual(['syncStep1', 'update']);
+        .toEqual(['syncStep1', 'activity', 'update']);
       expect(
         (await readStore()).pending,
         'a v1 session journalled an operation row nothing can ever acknowledge'
@@ -1795,7 +1795,7 @@ describe('collaboration — sync-first load', () => {
         'a v1 server was sent an operation frame on behalf of a row it can neither acknowledge nor reject'
       ).toBeUndefined();
       expect(wireTypes(socket), 'a v1 session stopped answering the server resync it has always answered')
-        .toEqual(['syncStep1', 'syncStep2']);
+        .toEqual(['syncStep1', 'activity', 'syncStep2']);
       expect(
         (await readStore()).pending?.operationId,
         'the retained row did not survive the v1 session that could not take it'

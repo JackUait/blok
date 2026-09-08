@@ -278,6 +278,29 @@ const stubComputedFont = (
       : real(element, pseudo)) as typeof window.getComputedStyle);
 };
 
+/**
+ * A listener that throws inside dispatchEvent never reaches the call site —
+ * jsdom reports it as window's error event instead. Capturing and cancelling it
+ * keeps such a failure assertable here and out of the runner's unhandled channel.
+ */
+const listenerErrors = (run: () => void): string[] => {
+  const messages: string[] = [];
+  const handler = (event: ErrorEvent): void => {
+    messages.push(event.message);
+    event.preventDefault();
+  };
+
+  window.addEventListener('error', handler);
+
+  try {
+    run();
+  } finally {
+    window.removeEventListener('error', handler);
+  }
+
+  return messages;
+};
+
 describe('LinkInlineTool — mutation coverage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -1356,6 +1379,193 @@ describe('LinkInlineTool — mutation coverage', () => {
       expect(harness.suggestionEnterHint.getAttribute('aria-hidden')).toBe('true');
       expect(harness.suggestionEnterHint.className).toContain('hidden');
       expect(harness.suggestionUrl.parentElement?.className).toBe('flex-1 min-w-0');
+    });
+  });
+  describe('degraded hosts and stale state', () => {
+    it('finishes the suggestion pass when its inner markup has been torn out', () => {
+      const harness = openOnPlainText();
+
+      // Every part the pass writes to lives inside the row.
+      harness.suggestionRow.remove();
+
+      const errors = listenerErrors(() => typeUrl(harness, 'example.com'));
+
+      expect(errors).toEqual([]);
+      expect(harness.suggestion.classList.contains('hidden')).toBe(false);
+    });
+
+    it('does not schedule the focus retry when there is no document to poll', () => {
+      vi.useFakeTimers();
+      selectWithin(firstText(paragraph('para-one')), 0, 5);
+
+      const harness = createHarness();
+
+      // The retry guard is read right after the first focus() call, which is
+      // the only point where the globals it names can be taken away.
+      const focusSpy = vi.spyOn(harness.input, 'focus').mockImplementation(() => {
+        vi.stubGlobal('document', undefined);
+      });
+
+      let thrown: unknown = null;
+
+      try {
+        harness.menu.children.onOpen();
+      } catch (error) {
+        thrown = error;
+      } finally {
+        vi.unstubAllGlobals();
+      }
+
+      // A scheduled retry would find the stubbed focus never took and call it again.
+      vi.runAllTimers();
+
+      expect(thrown).toBeNull();
+      expect(focusSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not reach for a timer host that is gone', () => {
+      vi.useFakeTimers();
+      selectWithin(firstText(paragraph('para-one')), 0, 5);
+
+      const harness = createHarness();
+
+      const focusSpy = vi.spyOn(harness.input, 'focus').mockImplementation(() => {
+        vi.stubGlobal('window', undefined);
+      });
+
+      let thrown: unknown = null;
+
+      try {
+        harness.menu.children.onOpen();
+      } catch (error) {
+        thrown = error;
+      } finally {
+        vi.unstubAllGlobals();
+      }
+
+      vi.runAllTimers();
+
+      expect(thrown).toBeNull();
+      expect(focusSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('focuses the field once when nothing steals it back', () => {
+      vi.useFakeTimers();
+      selectWithin(firstText(paragraph('para-one')), 0, 5);
+
+      const harness = createHarness();
+      const focusSpy = vi.spyOn(harness.input, 'focus');
+
+      harness.menu.children.onOpen();
+      vi.runAllTimers();
+
+      expect(harness.input).toHaveFocus();
+      expect(focusSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('closes cleanly after the toolbar button left the DOM', () => {
+      const harness = openOnPlainText();
+
+      toolbarButton().remove();
+
+      expect(() => harness.menu.children.onClose()).not.toThrow();
+      expect(harness.input.getAttribute('data-blok-link-tool-input-opened')).toBe('false');
+    });
+
+    it('keeps a second close inert once the field state is already cleared', () => {
+      const harness = openOnPlainText();
+
+      harness.menu.children.onClose();
+
+      const resting = document.activeElement;
+
+      if (!(resting instanceof HTMLElement)) {
+        throw new Error('expected the first close to leave focus on an element');
+      }
+
+      expect(resting).not.toBe(paragraph('para-two'));
+
+      selectWithin(firstText(paragraph('para-two')), 0, 6);
+      harness.menu.children.onClose();
+
+      expect(resting).toHaveFocus();
+    });
+  });
+
+  describe('selection restore around unfocusable containers', () => {
+    it('puts the saved caret back when the selection never left the field', () => {
+      const em = must<HTMLElement>(paragraph('para-rich'), 'em');
+
+      placeCaret(firstText(em), 1);
+
+      const harness = createHarness();
+
+      harness.menu.children.onOpen();
+
+      // <em> cannot take focus, so the focus() that ends the restore cannot
+      // stand in for putting the range back.
+      expect(em.contains(liveSelection().anchorNode)).toBe(false);
+
+      harness.menu.children.onClose();
+
+      expect(em.contains(liveSelection().anchorNode)).toBe(true);
+    });
+
+    it('re-applies the selection the user moved to before closing', () => {
+      const em = must<HTMLElement>(paragraph('para-rich'), 'em');
+
+      placeCaret(firstText(paragraph('para-one')), 3);
+
+      const harness = createHarness();
+
+      harness.menu.children.onOpen();
+      selectWithin(firstText(em), 0, 3);
+      harness.menu.children.onClose();
+
+      expect(em.contains(liveSelection().anchorNode)).toBe(true);
+      expect(paragraph('para-one').contains(liveSelection().anchorNode)).toBe(false);
+    });
+
+    it('survives a saved caret parked on the document itself', () => {
+      const range = document.createRange();
+
+      // A caret on the document: its container is not an element and has no
+      // parent element either, so there is nothing to hand focus to.
+      range.setStart(document, document.childNodes.length);
+      range.collapse(true);
+
+      const selection = liveSelection();
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      const harness = createHarness();
+
+      harness.menu.children.onOpen();
+
+      expect(() => harness.menu.children.onClose()).not.toThrow();
+    });
+
+    it('survives a closing selection that reaches up to the document', () => {
+      placeCaret(firstText(paragraph('para-one')), 3);
+
+      const harness = createHarness();
+
+      harness.menu.children.onOpen();
+
+      const range = document.createRange();
+
+      // Starts in a block, so the editor still owns the selection, but ends on
+      // the document, which leaves the common ancestor without a parent element.
+      range.setStart(firstText(paragraph('para-two')), 0);
+      range.setEnd(document, document.childNodes.length);
+
+      const selection = liveSelection();
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      expect(() => harness.menu.children.onClose()).not.toThrow();
     });
   });
 });

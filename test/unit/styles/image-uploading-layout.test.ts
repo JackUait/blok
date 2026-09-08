@@ -26,4 +26,12 @@ describe('image uploading status layout', () => {
     expect(body).toMatch(/overflow:\s*hidden\s*;/);
     expect(body).toMatch(/text-overflow:\s*ellipsis\s*;/);
   });
+
+  // The house cross is intrinsically 20px and would overflow the 24px button.
+  it('sizes the cancel glyph instead of letting the icon decide', () => {
+    const body = ruleBody('.blok-image-uploading__cancel svg');
+
+    expect(body).toMatch(/width:\s*16px\s*;/);
+    expect(body).toMatch(/height:\s*16px\s*;/);
+  });
 });

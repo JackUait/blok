@@ -535,13 +535,6 @@ export const IconPaintRoller = `
 </svg>
 `;
 
-// Divider icon
-export const IconDivider = `
-<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3 10h14" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
-`;
-
 // Spacer icon (two lines pushed apart by a vertical double-headed arrow)
 export const IconSpacer = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
@@ -773,16 +766,12 @@ export const IconImage = `
 const wrapImageSvg = (inner: string): string =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${inner}</svg>`;
 
-// Thick close (×) — 14×14 fixed size. Distinct from IconCross (20×20, 1.25 stroke).
-export const IconCloseThick = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true" focusable="false"><path d="M7.2 7.2l9.6 9.6M16.8 7.2l-9.6 9.6" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
 // Broken image alert — error state
 export const IconImageBroken = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14.4 4.8H6a2.4 2.4 0 0 0-2.4 2.4v9.6A2.4 2.4 0 0 0 6 19.2h12a2.4 2.4 0 0 0 2.4-2.4v-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.4 4.8 16.2 7.2 18 5.4 20.4 8.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8.4" cy="9" r="1.02" fill="currentColor" stroke="none"/><path d="m3.6 15.6 4.2-4.2 3.6 3.6 4.2-4.2 4.8 4.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 // Keep the failure mark clear of the cloud outline.
 export const IconUploadFailed = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7.2 16.8a3.6 3.6 0 0 1 0-7.2a4.8 4.8 0 0 1 9.6 0a3.6 3.6 0 0 1 0 7.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.9 15L14.1 19.2M14.1 15L9.9 19.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-export const IconUpload = wrapImageSvg('<path d="M12 15V4.2m-3.6 3.6 3.6-3.6 3.6 3.6M4.2 15.6v1.8a2.4 2.4 0 0 0 2.4 2.4h10.8a2.4 2.4 0 0 0 2.4-2.4V15.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>');
 // External link — rounded square with arrow exiting top-right (open original)
 export const IconLinkExternal = wrapImageSvg('<path d="M19.2 13.2v4.2a2.4 2.4 0 0 1-2.4 2.4H6.6a2.4 2.4 0 0 1-2.4-2.4V7.2a2.4 2.4 0 0 1 2.4-2.4h4.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.4 4.2h5.4v5.4M19.8 4.2l-9 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>');
 export const IconArrowDownLine = wrapImageSvg('<path d="M12 4.2v10.8m-3.6-3.6 3.6 3.6 3.6-3.6M4.2 19.8h15.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>');
@@ -946,6 +935,13 @@ export const IconPlayerLoop = `
 </svg>
 `;
 
+// Upload — arrow out of tray; mirrors IconDownload's shaft and tray
+export const IconUpload = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M10 12.5V3.5m-3 3 3-3 3 3M3.5 13v1.5a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Download — arrow into tray
 export const IconDownload = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
@@ -973,12 +969,6 @@ export const IconMultiSelect = `
 // ============================================================================
 // Misc shared icons
 // ============================================================================
-
-// Keep the 14×14 picker button at a lighter 1-unit stroke.
-export const IconDice = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" focusable="false"><rect x="2" y="2" width="10" height="10" rx="2.25" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="4.5" cy="4.5" r=".8" fill="currentColor"/><circle cx="7" cy="7" r=".8" fill="currentColor"/><circle cx="9.5" cy="9.5" r=".8" fill="currentColor"/></svg>';
-
-// Toggle expand/collapse chevron — 12×12 so it fits the toggle arrow button
-export const IconChevronRightSmall = '<svg aria-hidden="true" focusable="false" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 3L7.5 6L4.5 9" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 // Columns layout tool — framed container split by a divider (layout columns;
 // IconSplitView is the code editor/preview split, drawn as two separate panels)

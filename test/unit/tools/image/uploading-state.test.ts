@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderUploadingState } from '../../../../src/tools/image/uploading-state';
+import { IconCross } from '../../../../src/components/icons';
 
 describe('renderUploadingState', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -60,7 +61,10 @@ describe('renderUploadingState', () => {
     if (!btn) throw new Error('cancel button missing');
     // Observable render output: accessible label and an icon glyph.
     expect(btn.getAttribute('aria-label')).toBe('Cancel upload');
-    expect(btn.innerHTML).not.toBe('');
+    const house = new DOMParser().parseFromString(IconCross, 'image/svg+xml');
+
+    expect(btn.querySelector('path')?.getAttribute('d'))
+      .toBe(house.querySelector('path')?.getAttribute('d'));
     btn.click();
     expect(onCancel).toHaveBeenCalledTimes(1);
   });

@@ -4,11 +4,8 @@ import {
   IconBoard,
   IconCalendar,
   IconCallout,
-  IconChevronRightSmall,
   IconColumns,
   IconDatabase,
-  IconDice,
-  IconDivider,
   IconEmojiBall,
   IconEmojiFlag,
   IconEmojiLightbulb,
@@ -31,15 +28,16 @@ import {
   IconSplitCell,
   IconSplitView,
   IconTable,
+  IconUpload,
 } from '../../../../src/components/icons';
 
 const layoutIcons = {
-  IconBoard, IconCalendar, IconCallout, IconColumns, IconDatabase, IconDivider,
+  IconBoard, IconCalendar, IconCallout, IconColumns, IconDatabase,
   IconEmojiBall, IconEmojiFlag, IconEmojiLightbulb, IconEmojiSmile,
   IconEmojiSprout, IconEmojiStar, IconEmojiUtensils, IconGallery,
   IconHeaderColumn, IconHeaderRow, IconImage, IconList, IconMergeCells,
   IconMultiSelect, IconPaintRoller, IconPlacement, IconPreview, IconSelect,
-  IconSpacer, IconSplitCell, IconSplitView, IconTable,
+  IconSpacer, IconSplitCell, IconSplitView, IconTable, IconUpload,
 };
 
 const svgOf = (icon: string): Document => new DOMParser().parseFromString(icon, 'image/svg+xml');
@@ -293,21 +291,5 @@ describe('Blok Line layout geometry', () => {
     });
     expect(new Set(dots.map(dot => numberOf(dot, 'cx'))).size).toBe(3);
     expect(new Set(dots.map(dot => numberOf(dot, 'cy'))).size).toBe(3);
-  });
-
-  it.each([
-    ['dice', IconDice, 14],
-    ['chevron', IconChevronRightSmall, 12],
-  ] as const)('%s preserves its intrinsic size without the heavy 1.5-unit stroke', (_name, icon, size) => {
-    const svg = required(svgOf(icon), 'svg');
-    const strokes = Array.from(svg.querySelectorAll('[stroke="currentColor"]'));
-
-    expect(svg.getAttribute('width')).toBe(String(size));
-    expect(svg.getAttribute('height')).toBe(String(size));
-    expect(svg.getAttribute('viewBox')).toBe(`0 0 ${size} ${size}`);
-    expect(strokes.length).toBeGreaterThan(0);
-    strokes.forEach(stroke => {
-      expect(stroke.getAttribute('stroke-width')).toBe('1');
-    });
   });
 });

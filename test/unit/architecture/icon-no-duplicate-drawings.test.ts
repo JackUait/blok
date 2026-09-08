@@ -17,8 +17,9 @@
  * same drawn either way.
  *
  * Deliberately different optical weights stay legal: the signature carries the
- * stroke ratio, so IconCross (6.25%) and IconCloseThick (7.29%) are distinct,
- * as are IconChevronRight and IconChevronRightSmall.
+ * stroke ratio, so one skeleton drawn at two weights is two drawings. No
+ * exported pair relies on that today, so it is pinned with fixture markup
+ * rather than with a pair a future cleanup could delete.
  *
  * Line caps and joins are deliberately NOT in the signature. They only change
  * open ends and hard corners, the current families were verified pixel-equal
@@ -263,8 +264,18 @@ describe('icon duplication law', () => {
   });
 
   it('keeps deliberately heavier optical variants distinct', () => {
-    expect(signatureOf(icons.IconCross)).not.toEqual(signatureOf(icons.IconCloseThick));
-    expect(signatureOf(icons.IconChevronRight)).not.toEqual(signatureOf(icons.IconChevronRightSmall));
+    const cross = (strokeWidth: string): string =>
+      `<svg viewBox="0 0 20 20" fill="none"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" stroke-width="${strokeWidth}"/></svg>`;
+
+    expect(signatureOf(cross('1.25'))).toEqual(signatureOf(cross('1.25')));
+    expect(signatureOf(cross('1.25'))).not.toEqual(signatureOf(cross('1.75')));
+  });
+
+  it('still calls one drawing at two canvas sizes a duplicate', () => {
+    const chevron = (grid: number, scale: number): string =>
+      `<svg viewBox="0 0 ${grid} ${grid}" fill="none"><path d="M${4 * scale} ${3 * scale}L${6 * scale} ${5 * scale}L${4 * scale} ${7 * scale}" stroke="currentColor" stroke-width="${1.25 * scale}"/></svg>`;
+
+    expect(signatureOf(chevron(10, 1))).toEqual(signatureOf(chevron(20, 2)));
   });
 
   it('never exports the same drawing under two names', () => {

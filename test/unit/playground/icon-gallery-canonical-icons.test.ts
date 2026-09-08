@@ -92,12 +92,12 @@ describe('playground canonical icons', () => {
     expect(css).toMatch(/height:\s*12px/);
   });
 
-  it('renders the toggle tool using the canonical small disclosure', () => {
+  it('renders the toggle tool using the canonical disclosure chevron', () => {
     runInNewContext(section('const TOOL_DEFS =', 'for (const tool of TOOL_DEFS)'), { document: page, Icons });
 
     const toggle = page.querySelector('#toggle-tool-toggle')?.closest('label');
 
-    expect(toggle?.querySelector('svg')?.outerHTML).toBe(svgOf(Icons.IconChevronRightSmall).outerHTML);
+    expect(toggle?.querySelector('svg')?.outerHTML).toBe(svgOf(Icons.IconChevronRight).outerHTML);
     expect(toggle?.textContent).toContain('Toggle');
   });
 

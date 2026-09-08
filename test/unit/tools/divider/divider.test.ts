@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 import type { DividerData } from '../../../../src/tools/divider/types';
+import { IconMinus } from '../../../../src/components/icons';
 
 const createMockAPI = (): API =>
   ({
@@ -112,7 +113,7 @@ describe('DividerTool', () => {
       const toolbox = DividerTool.toolbox;
 
       expect(toolbox).toBeDefined();
-      expect(!Array.isArray(toolbox) && toolbox.icon).toBeTruthy();
+      expect(!Array.isArray(toolbox) && toolbox.icon).toBe(IconMinus);
       expect(!Array.isArray(toolbox) && toolbox.titleKey).toBe('divider');
     });
 

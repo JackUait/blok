@@ -2567,11 +2567,11 @@
   transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-[data-blok-emoji-picker] [data-emoji-picker-footer]:has([data-emoji-picker-nav][hidden]) {
+[data-blok-emoji-picker][data-emoji-picker-navless] [data-emoji-picker-footer] {
   display: none;
 }
 
-[data-blok-emoji-picker]:has([data-emoji-picker-nav][hidden]) [data-emoji-picker-body] {
+[data-blok-emoji-picker][data-emoji-picker-navless] [data-emoji-picker-body] {
   flex-basis: 306px;
   height: 306px;
   max-height: 306px;
@@ -4856,6 +4856,11 @@
   color: var(--blok-text-tertiary);
   cursor: pointer;
   transition: color .12s ease, background .12s ease;
+}
+
+.blok-image-uploading__cancel svg {
+  width: 16px;
+  height: 16px;
 }
 
 .blok-image-uploading__cancel:hover {

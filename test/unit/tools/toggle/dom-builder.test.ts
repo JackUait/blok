@@ -2,6 +2,7 @@ import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Mock } from 'vitest';
 
 import { DATA_ATTR } from '../../../../src/components/constants';
+import { IconChevronRight } from '../../../../src/components/icons';
 import {
   TOGGLE_ATTR,
   TOOL_NAME,
@@ -186,6 +187,16 @@ describe('Toggle DOM Builder', () => {
         const result = buildToggleItem(context);
 
         expect(result.arrowElement.querySelector('svg')).not.toBeNull();
+      });
+
+      // buildArrow stamps an inline transition on the SVG, so compare geometry.
+      it('draws the house disclosure chevron, not a private copy', () => {
+        const house = new DOMParser().parseFromString(IconChevronRight, 'image/svg+xml');
+        const result = buildToggleItem(createDefaultContext());
+        const svg = result.arrowElement.querySelector('svg');
+
+        expect(svg?.getAttribute('viewBox')).toBe(house.documentElement.getAttribute('viewBox'));
+        expect(svg?.querySelector('path')?.getAttribute('d')).toBe(house.querySelector('path')?.getAttribute('d'));
       });
 
       it('has no rotation transform on arrow container when closed', () => {
@@ -436,8 +447,8 @@ describe('Toggle DOM Builder', () => {
     it('scales the chevron with the arrow font size via an em-based clamp', () => {
       const arrow = buildArrow(false, vi.fn());
 
-      expect(arrow.className).toContain('[&>svg]:w-[clamp(0.75rem,0.75em,1.375rem)]');
-      expect(arrow.className).toContain('[&>svg]:h-[clamp(0.75rem,0.75em,1.375rem)]');
+      expect(arrow.className).toContain('[&>svg]:w-[clamp(0.9375rem,0.9375em,1.71875rem)]');
+      expect(arrow.className).toContain('[&>svg]:h-[clamp(0.9375rem,0.9375em,1.71875rem)]');
     });
 
     it('reveals the hover pill when the pointer is anywhere over the title row', () => {

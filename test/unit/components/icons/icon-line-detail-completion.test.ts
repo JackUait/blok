@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  IconChevronRightSmall, IconClearFormat, IconCode, IconCodeBlock, IconDatabase, IconDice,
+  IconClearFormat, IconCode, IconCodeBlock, IconDatabase,
   IconEmojiFlag, IconEmojiSmile, IconEmojiSprout, IconEmojiStar, IconEquation,
   IconMergeCells, IconSplitCell, IconText,
 } from '../../../../src/components/icons';
@@ -190,17 +190,5 @@ describe('Blok Line small-detail geometry', () => {
     expect(pathOf(IconMergeCells, 2)).toBe('M17 10h-4M15 8l-2 2 2 2');
     expect(pathOf(IconSplitCell, 1)).toBe('M7 10H3M5 8l-2 2 2 2');
     expect(pathOf(IconSplitCell, 2)).toBe('M13 10h4M15 8l2 2-2 2');
-  });
-
-  it('keeps the dice pips clear of its softer inset frame', () => {
-    const svg = svgOf(IconDice);
-    const frame = svg.querySelector('rect');
-
-    expect(frame && attributesOf(frame, ['x', 'y', 'width', 'height', 'rx'])).toStrictEqual([2, 2, 10, 10, 2.25]);
-    expect(Array.from(svg.querySelectorAll('circle')).map(pip => attributesOf(pip, ['cx', 'cy', 'r']))).toStrictEqual([[4.5, 4.5, 0.8], [7, 7, 0.8], [9.5, 9.5, 0.8]]);
-  });
-
-  it('centers the micro disclosure around a 45-degree three-unit skeleton', () => {
-    expect(pathOf(IconChevronRightSmall)).toBe('M4.5 3L7.5 6L4.5 9');
   });
 });

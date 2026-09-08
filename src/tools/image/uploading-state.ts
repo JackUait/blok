@@ -1,4 +1,4 @@
-import { IconCloseThick, IconImage } from '../../components/icons';
+import { IconCross, IconImage } from '../../components/icons';
 import type { I18nInstance } from '../../components/utils/tools';
 import { tr } from './i18n';
 
@@ -41,7 +41,7 @@ export function renderUploadingState(opts: UploadingStateOptions): UploadingStat
   cancel.className = 'blok-image-uploading__cancel';
   cancel.setAttribute('data-action', 'cancel');
   cancel.setAttribute('aria-label', tr(opts.i18n, 'tools.image.cancelUpload'));
-  cancel.innerHTML = IconCloseThick;
+  cancel.innerHTML = IconCross;
   cancel.addEventListener('click', () => {
     opts.onCancel?.();
   });

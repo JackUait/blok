@@ -462,6 +462,11 @@
   cursor: pointer;
   transition: color .12s ease, background .12s ease;
 }
+.blok-image-uploading__cancel svg {
+  width: 16px;
+  height: 16px;
+}
+
 .blok-image-uploading__cancel:hover {
   background: var(--blok-bg-hover);
   color: var(--blok-text-primary);

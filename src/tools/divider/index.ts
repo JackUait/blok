@@ -8,7 +8,7 @@ import type {
 } from '../../../types';
 import type { DividerData } from './types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { IconDivider } from '../../components/icons';
+import { IconMinus } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 import { DIVIDER_RULE_CLASSES, DIVIDER_WRAPPER_CLASSES } from '../../shared/tool-classes/divider';
 
@@ -67,7 +67,7 @@ export class DividerTool implements BlockTool {
    */
   public static get toolbox(): ToolboxConfig {
     return {
-      icon: IconDivider,
+      icon: IconMinus,
       titleKey: 'divider',
       shortcut: '---',
       searchTerms: ['hr', 'line', 'separator', 'rule', '---', 'divider', 'delimiter', 'splitter'],

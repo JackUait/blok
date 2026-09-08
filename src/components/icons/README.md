@@ -38,9 +38,6 @@ Existing exports keep their sizing contracts:
   20-unit icons at the same display size — which is why an overlay icon must
   never be a 1.2x copy of one. Import the 20-unit export instead; the overlay
   container already sets a pixel size.
-- `IconDice`: 14-unit canvas / 1 stroke.
-- `IconChevronRightSmall`: 12-unit canvas / 1 stroke.
-- `IconCloseThick`: 24-unit canvas / 1.75 stroke, displayed intrinsically at 14 px.
 - Heading and script numerals may use 1.1 or 1.05; numbered-list markers use 1.05.
   These small counters need more space than full-size letters.
 

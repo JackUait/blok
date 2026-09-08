@@ -458,7 +458,7 @@ describe('Header Tool - Custom Configurations', () => {
         const element = header.render();
         const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`);
 
-        expect(arrow?.className).toContain('[&>svg]:w-[clamp(0.75rem,0.75em,1.375rem)]');
+        expect(arrow?.className).toContain('[&>svg]:w-[clamp(0.9375rem,0.9375em,1.71875rem)]');
         expect(arrow?.className).toMatch(/\btext-(?:xs|sm|base|lg|xl|\dxl)\b/);
       });
 

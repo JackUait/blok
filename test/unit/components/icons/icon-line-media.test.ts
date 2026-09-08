@@ -58,19 +58,13 @@ const pointsOf = (path: Element): { x: number; y: number }[] => {
 };
 
 /**
- * IconCloseThick is the only icon still drawn as a scaled copy of another: it
- * is IconCross at 1.2x with a heavier stroke, for the 14-pixel cancel controls
- * where the menu weight disappears. Every other 20-unit/24-unit twin was
- * merged into one export.
+ * No icon is a rescaled copy of another any more. The overlay family exists
+ * only to be CSS-sized; a drawing that also exists at 20 units is imported
+ * from there instead of redrawn here.
  */
-const pairedIcons = [
-  ['close', Icons.IconCross, Icons.IconCloseThick],
-] as const;
-
 const overlayIcons = {
   IconImageBroken: Icons.IconImageBroken,
   IconUploadFailed: Icons.IconUploadFailed,
-  IconUpload: Icons.IconUpload,
   IconLinkExternal: Icons.IconLinkExternal,
   IconArrowDownLine: Icons.IconArrowDownLine,
 };
@@ -82,43 +76,6 @@ describe('Blok Line media family', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-  });
-
-  it.each(pairedIcons)('%s keeps the same geometry at menu and overlay sizes', (_name, standard, overlay) => {
-    const small = Array.from(svgOf(standard).children);
-    const large = Array.from(svgOf(overlay).children);
-
-    expect(large).toHaveLength(small.length);
-    small.forEach((shape, index) => {
-      const counterpart = large[index];
-
-      expect(counterpart.tagName).toBe(shape.tagName);
-
-      if (shape.tagName === 'path') {
-        const smallCommands = commands(shape);
-        const largeCommands = commands(counterpart);
-
-        expect(largeCommands.map(({ command }) => command)).toEqual(smallCommands.map(({ command }) => command));
-        smallCommands.forEach(({ command, values }, commandIndex) => {
-          const scaled = largeCommands[commandIndex].values;
-
-          expect(scaled).toHaveLength(values.length);
-          values.forEach((value, valueIndex) => {
-            const arcFlag = command.toUpperCase() === 'A' && [2, 3, 4].includes(valueIndex % 7);
-
-            expect(scaled[valueIndex]).toBeCloseTo(value * (arcFlag ? 1 : 1.2), 5);
-          });
-        });
-
-        return;
-      }
-
-      for (const attribute of ['x', 'y', 'width', 'height', 'rx', 'cx', 'cy', 'r']) {
-        if (shape.hasAttribute(attribute)) {
-          expect(Number(required(counterpart, attribute))).toBeCloseTo(Number(required(shape, attribute)) * 1.2, 5);
-        }
-      }
-    });
   });
 
   it.each(Object.entries(overlayIcons))('%s retains CSS sizing and uses the same optical stroke as menu icons', (_name, icon) => {
@@ -140,16 +97,6 @@ describe('Blok Line media family', () => {
       expect(shape.getAttribute('stroke-linecap') ?? svg.getAttribute('stroke-linecap')).toBe('round');
       expect(shape.getAttribute('stroke-linejoin') ?? svg.getAttribute('stroke-linejoin')).toBe('round');
     }
-  });
-
-  it('keeps the tiny close at 14 pixels with its small optical stroke correction', () => {
-    const svg = svgOf(Icons.IconCloseThick);
-    const path = svg.querySelector('path');
-
-    expect(svg.getAttribute('width')).toBe('14');
-    expect(svg.getAttribute('height')).toBe('14');
-    expect(svg.getAttribute('viewBox')).toBe('0 0 24 24');
-    expect(path?.getAttribute('stroke-width')).toBe('1.75');
   });
 
   it.each([

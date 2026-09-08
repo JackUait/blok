@@ -6,8 +6,7 @@ const entries = Object.entries(icons).filter(
 );
 
 const overlays = new Set([
-  'IconCloseThick', 'IconImageBroken', 'IconUploadFailed', 'IconUpload',
-  'IconLinkExternal', 'IconArrowDownLine',
+  'IconImageBroken', 'IconUploadFailed', 'IconLinkExternal', 'IconArrowDownLine',
 ]);
 
 const parse = (markup: string): SVGSVGElement => {
@@ -32,15 +31,7 @@ describe('Blok Line authoring contract', () => {
 
   it.each(entries)('%s keeps its intrinsic grid and decorative accessibility', (name, markup) => {
     const svg = parse(markup);
-    let grid = 20;
-
-    if (name === 'IconDice') {
-      grid = 14;
-    } else if (name === 'IconChevronRightSmall') {
-      grid = 12;
-    } else if (overlays.has(name)) {
-      grid = 24;
-    }
+    const grid = overlays.has(name) ? 24 : 20;
 
     expect(svg.getAttribute('viewBox')).toBe(`0 0 ${grid} ${grid}`);
     expect(svg.getAttribute('aria-hidden')).toBe('true');
@@ -70,10 +61,6 @@ describe('Blok Line authoring contract', () => {
       allowed = [1.25, 1.1, 1.05];
     } else if (name === 'IconListNumbered') {
       allowed = [1.25, 1.05];
-    } else if (['IconDice', 'IconChevronRightSmall'].includes(name)) {
-      allowed = [1];
-    } else if (name === 'IconCloseThick') {
-      allowed = [1.75];
     }
 
     const solidControls = [

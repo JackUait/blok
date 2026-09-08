@@ -1250,6 +1250,7 @@
     import { ALL_LOCALE_CODES, getDirection } from './src/components/i18n/locales/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
     import { PRESENCE_GLYPH_GROUP, PRESENCE_GLYPH_ICONS } from './src/playground/presence-glyph-icons.ts';
+    import { buildPresenceFace } from './src/playground/presence-face.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
@@ -1459,18 +1460,7 @@
           ...participants
             .filter((person) => !person.self)
             .slice(0, 4)
-            .map((person) => {
-              const face = document.createElement('span');
-
-              face.className = 'playground-presence-face';
-              face.style.background = person.user.color || '#888';
-              face.textContent = person.user.name.slice(0, 1).toUpperCase() || '?';
-              face.title = person.lastActiveAt === null
-                ? person.user.name
-                : `${person.user.name} · ${Math.round((Date.now() - person.lastActiveAt) / 1000)}s ago`;
-
-              return face;
-            })
+            .map((person) => buildPresenceFace(person))
         );
       });
     }

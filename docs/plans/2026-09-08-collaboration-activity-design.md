@@ -123,8 +123,14 @@ five-minute rule into the public contract for every consumer.
 A new outer message type in Blok's own namespace:
 
 ```
-const MESSAGE_ACTIVITY = 105;
+const MESSAGE_ACTIVITY = 106;   // 105 is taken, see below
 ```
+
+**Not 105.** `scripts/generate-sync-frames.mjs:79` reserves 105 as
+`MESSAGE_UNKNOWN_OUTER`, the sentinel that generates the conformance fixture
+proving an unknown outer type decodes to `UnknownFrame` and is never malformed.
+That guarantee is precisely what makes both new frames safe for old peers, so the
+sentinel stays where it is and the new types take 106 and 107, both measured free.
 
 Body: **empty**. The frame says one thing, "the person on this connection did
 something", and the server supplies the identity and the time. A reason byte
@@ -141,7 +147,9 @@ old client ignores frame 106. No protocol version bump, no negotiation change.
 
 **Client cadence.** At most once per 60 seconds per connection, plus one
 immediately after the handshake completes. Triggered by the same events that
-already move `activeAt`: input, caret movement, focus. The 60-second floor is
+already move `activeAt`, which are `selectionchange` and `focusin` only
+(`presence.ts:519-520`). There is no `input` listener today; typing reaches the
+publisher through `selectionchange`. The 60-second floor is
 independent of the 100 ms presence throttle.
 
 **Wiring.** `presence.ts` is created before the provider exists, so it cannot
@@ -171,9 +179,16 @@ decision 11 forbids.
 So the mapping travels on its own:
 
 ```
-const MESSAGE_IDENTITIES = 106;   // server to client only
+const MESSAGE_IDENTITIES = 107;   // server to client only
 // JSON body: { "identities": [ { "clientId": 123, "actorId": "u_7" }, ... ] }
 ```
+
+**It needs its own decoder on both sides.** The existing JSON decoders assume a
+FLAT object with a closed key set, and `decodeControl` explicitly rejects an array
+(`sync-wire.ts:295`); the duplicate-key substring trick at `:317-319` does not
+generalise across array elements. On the server, `SizeHint` (`SyncWire.cs:192-206`)
+is a buffer hint whose `_ => JsonPayloadBytes` default assumes 192 bytes, which
+badly undersizes a 256-entry frame, so this type needs its own arm.
 
 The server already holds this mapping. `awarenessOwners` keys an awareness
 client id to the `CollabMembership` that owns it, and `ICollabMember.ActorId`
@@ -220,6 +235,11 @@ of the feature, so the join key has to be one the server vouches for.
 
 ### B3. The host observer
 
+**The interface lives in core, not in the web layer.** `Blok.Server.csproj` has no
+ASP.NET reference and `Blok.Server.AspNetCore` depends on it one way, so
+`ICollabActivityObserver` sits in `Blok.Server/Collab/` beside
+`ICollabOperationStore`; only the `Use...<T>` extension belongs in AspNetCore.
+
 Registered like every other host service, matching
 `UseCollabOperationStore`:
 
@@ -251,7 +271,12 @@ public enum CollabActivityKind { Joined, Active, Edited, Left }
   operation journal already applies.
 - The room calls members inside its lane and must never block there. The
   observer is therefore invoked **outside the room lock, fire-and-forget on the
-  task pool**. A faulted task is logged through the room's existing `log`
+  task pool**. **There is no precedent for this in the server and one must be
+  designed rather than copied.** `ICollabMember`'s "never block, never throw" is
+  documented only and unenforced (`ICollabMember.cs:37-41`), and
+  `ICollabOperationStore` failures are deliberately fatal — `FailCommitLocked`
+  closes the whole room (`CollabRoom.cs:1730-1747`). The closest existing shape is
+  the off-lane `Post(...)` used for checkpoints (`CollabRoom.cs:1783`). A faulted task is logged through the room's existing `log`
   callback and never touches the session, mirroring how a throwing
   `collaboration:status` listener is handled on the client.
 - Deduplication: at most one call per 60 seconds per `(documentId, actorId)`

@@ -781,7 +781,7 @@ describe('server docs data', () => {
     );
     expect(body).toMatch(/U\+FFFD/);
     expect(body).toMatch(/surrogate/i);
-    expect(body).toMatch(/integrates nothing|never integrate/i);
+    expect(body).toMatch(/integrates? nothing|never integrate/i);
     expect(body).toMatch(/not refused|relayed/i);
     expect(body).toMatch(/evict/i);
     expect(body).toContain('childTools');
@@ -1045,7 +1045,7 @@ describe('server docs data', () => {
     // above pass vacuously against the English body. Only Cyrillic from this
     // entry can go red when the Russian key is deleted.
     expect(getTranslation('ru', key)).toMatch(/в вашем журнале операций/);
-    expect(getTranslation('ru', key)).toMatch(/поднятый сокет — это ещё не сохранение/);
+    expect(getTranslation('ru', key)).toMatch(/поднятый сокет ещё не означает сохранение/);
   });
 
   // Staying editable offline is only kind if the price of a reload is written

@@ -30,7 +30,7 @@ describe('useApiTranslations', () => {
     
     const quickStart = result.current.apiSections.find(s => s.id === 'quick-start');
     expect(quickStart?.title).toBe('Quick Start');
-    expect(quickStart?.description).toBe('Get up and running with Blok in just a few simple steps.');
+    expect(quickStart?.description).toBe('Get up and running with Blok in a few steps.');
   });
 
   it('should return translated API sections in Russian when locale is changed', () => {
@@ -90,13 +90,13 @@ describe('useApiTranslations', () => {
     const coreSection = result.current.apiSections.find(s => s.id === 'core');
 
     const saveMethod = coreSection?.methods?.find(m => m.name === 'save()');
-    expect(saveMethod?.description).toBe('Извлекает содержимое редактора в виде JSON-данных. Основной метод для сохранения контента.');
+    expect(saveMethod?.description).toBe('Извлекает текущее содержимое редактора в виде структурированных JSON-данных. Это основной метод для сохранения содержимого редактора.');
 
     const renderMethod = coreSection?.methods?.find(m => m.name === 'render(data)');
-    expect(renderMethod?.description).toBe('Отображает содержимое редактора из ранее сохранённых JSON-данных. Принимает нестрогий формат (`LooseOutputData`) — значения `null` для `data`, `id` или `time` блока из backend-DTO нормализуются на границе.');
+    expect(renderMethod?.description).toBe('Отображает содержимое редактора из ранее сохранённых JSON-данных. Принимает нестрогий формат (`LooseOutputData`). Значение `null` для `data`, `id` или `time` блока из backend-DTO нормализуется на границе.');
 
     const focusMethod = coreSection?.methods?.find(m => m.name === 'focus(atEnd?)');
-    expect(focusMethod?.description).toBe('Устанавливает фокус на редактор. Опционально позиционирует курсор в конце содержимого.');
+    expect(focusMethod?.description).toBe('Устанавливает фокус на редактор. Может также поставить курсор в конец содержимого.');
 
     const clearMethod = coreSection?.methods?.find(m => m.name === 'clear()');
     // The description now also documents what clear() leaves behind (one empty
@@ -160,7 +160,7 @@ describe('useApiTranslations', () => {
     const coreSection = result.current.apiSections.find(s => s.id === 'core');
 
     const saveMethod = coreSection?.methods?.find(m => m.name === 'save()');
-    expect(saveMethod?.description).toBe('Extracts the current editor content as structured JSON data. This is the primary method for persisting editor content.');
+    expect(saveMethod?.description).toBe('Extracts the current editor content as structured JSON data. This is the main method for saving editor content.');
   });
 
   it('should keep English table descriptions unchanged in English locale', () => {

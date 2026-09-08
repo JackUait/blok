@@ -30,7 +30,7 @@ export const TOOL_SECTIONS: ToolSection[] = [
     type: 'block',
     title: 'Paragraph',
     description:
-      'The default text block. Supports rich inline formatting (bold, italic, links, colour). Empty top-level paragraphs are excluded from saved output unless `preserveBlank` is enabled; empty paragraphs nested inside another block (callout, toggle, column, …) are always kept.',
+      'The default text block. It supports rich inline formatting: bold, italic, links and colour. Empty top-level paragraphs are left out of the saved output unless `preserveBlank` is enabled. Empty paragraphs nested inside another block (callout, toggle, column, …) are always kept.',
     importExample: `import { Paragraph } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -44,7 +44,7 @@ export const TOOL_SECTIONS: ToolSection[] = [
         type: 'boolean',
         default: 'false',
         description:
-          'When true, empty paragraph blocks are kept in the saved output. Exception: a document consisting of a single empty block of the default tool always saves as `blocks: []`, regardless of this option.',
+          'When true, empty paragraph blocks are kept in the saved output. There is one exception. A document that holds a single empty block of the default tool always saves as `blocks: []`, whatever this option says.',
       },
       {
         option: 'styles.size',
@@ -103,7 +103,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Header',
     description:
-      'Heading blocks from H1 to H6. Supports multiple toolbox entries (one per heading level), keyboard shortcuts (# ## ### etc.), and optional toggle (collapse/expand children) at every level — the toolbox lists "Toggle heading 1" through "Toggle heading 6", reachable with the markdown shortcuts `>#` through `>######`. Converting an existing block into a toggle heading (via "Turn into" or `blocks.convert` with `isToggleable: true`) adopts its section — every following sibling until the next heading of the same or higher rank becomes a child of the new toggle, matching Notion.',
+      'Heading blocks from H1 to H6. It supports several toolbox entries, one per heading level, and keyboard shortcuts (# ## ### etc.). Every level also has an optional toggle that collapses and expands its children. The toolbox lists "Toggle heading 1" through "Toggle heading 6", reachable with the markdown shortcuts `>#` through `>######`. Converting an existing block into a toggle heading adopts its section: use "Turn into" or `blocks.convert` with `isToggleable: true`. Every following sibling becomes a child of the new toggle, up to the next heading of the same or higher rank. This matches Notion.',
     importExample: `import { Header } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -135,14 +135,14 @@ const editor = new Blok({
         type: 'Record<number, string>',
         default: 'undefined',
         description:
-          'Custom markdown prefixes per heading level. If omitted, the default markdown prefixes (#, ## …) are used. Pass an empty object {} to disable the plain heading prefixes — the toggle-heading prefixes (`>#` … `>######`) are matched separately, are always active, and cannot be configured or disabled here (they still respect `levels`).',
+          'Custom markdown prefixes per heading level. If omitted, the default markdown prefixes (#, ## …) are used. Pass an empty object {} to disable the plain heading prefixes. The toggle-heading prefixes (`>#` … `>######`) are matched separately and are always active. You cannot configure or disable them here, and they still respect `levels`.',
       },
       {
         option: 'anchorIds',
         type: 'boolean | (text: string, blockId: string) => string',
         default: 'undefined',
         description:
-          'Opt-in text-derived anchor ids on rendered headings. true uses the built-in slugifier (keeps Unicode letters/digits and letter case, strips punctuation and zero-width chars, joins words with hyphens, e.g. «Обучайте команду» → id "Обучайте-команду"); a function lets you generate ids yourself (empty string = no id). Ids stay in sync on text edits and survive level changes. A heading that carries its own data.anchor keeps that instead. Cross-block duplicate dedup is out of scope — consumers dedup themselves.',
+          'Opt-in text-derived anchor ids on rendered headings. true uses the built-in slugifier. It keeps Unicode letters/digits and letter case, strips punctuation and zero-width chars, and joins words with hyphens, e.g. «Обучайте команду» → id "Обучайте-команду". A function lets you generate ids yourself (empty string = no id). Ids stay in sync on text edits and survive level changes. A heading that carries its own data.anchor keeps that instead. Cross-block duplicate dedup is out of scope, so consumers dedup themselves.',
       },
     ],
     saveDataShape: `interface HeaderData {
@@ -183,7 +183,7 @@ const editor = new Blok({
     type: 'block',
     title: 'List',
     description:
-      'Bulleted, numbered, and to-do (checklist) lists with unlimited nesting. Each list item is a separate block. The toolbox shows three entries by default — one for each style — and items can be converted between styles via the block settings menu.',
+      'Bulleted, numbered, and to-do (checklist) lists with unlimited nesting. Each list item is a separate block. The toolbox shows three entries by default, one for each style. You can convert items between styles from the block settings menu.',
     importExample: `import { List } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -251,7 +251,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Table',
     description:
-      'A full-featured table block. Each cell contains its own block editor (any block type except `header`, `table` and `column_list`, which are always restricted inside cells). Supports merging and splitting cells (`colspan`/`rowspan`, with covered cells recorded as `mergedInto`), heading rows, heading columns, column resizing, cell background/text colours, row/column add and delete controls, copy/paste, and a text density switch (compact or comfortable) in the block settings menu.',
+      'A full-featured table block. Each cell contains its own block editor. A cell accepts any block type except `header`, `table` and `column_list`, which are always restricted inside cells. The tool supports merging and splitting cells. That uses `colspan`/`rowspan`, and covered cells are recorded as `mergedInto`. You also get heading rows, heading columns and column resizing. Cell background and text colours are supported too. So are row and column add and delete controls, and copy and paste. The block settings menu holds a text density switch, either compact or comfortable.',
     importExample: `import { Table } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -344,7 +344,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Toggle',
     description:
-      'A collapsible toggle block with a clickable arrow. Child blocks are nested inside the toggle and hidden when collapsed. Toggling is controlled by clicking the arrow icon, or programmatically via the public Block API: `api.blocks.getById(id)?.call("expand")` / `.call("collapse")`. Toggle headings (Header blocks with `isToggleable: true`) accept the same two commands. These are string-addressed commands routed through `BlockAPI.call()` — they are not declared as methods on the exported tool classes. The open/collapsed state is persisted via `isOpen` and restored on reload; toggles default to open.',
+      'A collapsible toggle block with a clickable arrow. Child blocks are nested inside the toggle and hidden when it is collapsed. You toggle it by clicking the arrow icon, or programmatically through the public Block API: `api.blocks.getById(id)?.call("expand")` / `.call("collapse")`. Toggle headings (Header blocks with `isToggleable: true`) accept the same two commands. These are string-addressed commands routed through `BlockAPI.call()`. They are not declared as methods on the exported tool classes. The open or collapsed state is saved in `isOpen` and restored on reload. Toggles default to open.',
     importExample: `import { Toggle } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -385,7 +385,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Callout',
     description:
-      'A container block for highlighted content with an emoji icon. Supports customisable text and background colours via a colour picker. Child blocks are nested inside the callout. Useful for tips, warnings, notes, and other call-to-action content. Enter adds a line inside the panel; pressing it again on the empty last line leaves the callout, so the blank line becomes the paragraph below instead of padding the panel out.',
+      'A container block for highlighted content with an emoji icon. It supports customisable text and background colours via a colour picker. Child blocks are nested inside the callout. It is useful for tips, warnings, notes, and other call-to-action content. Enter adds a line inside the panel. Pressing it again on the empty last line leaves the callout, so the blank line becomes the paragraph below instead of padding the panel out.',
     importExample: `import { Callout } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -429,7 +429,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Database',
     description:
-      'A multi-view database block supporting board (Kanban) and list views. Stores a schema of typed properties (text, select, multiSelect, date, checkbox, etc.) and view configurations. Rows are stored as child `database-row` blocks. Supports grouping, drag-and-drop reordering, inline editing, and an optional backend sync adapter. (`sorts` and `filters` are persisted in the view config but are not applied yet.)',
+      'A multi-view database block supporting board (Kanban) and list views. It stores a schema of typed properties (text, select, multiSelect, date, checkbox, etc.) and view configurations. Rows are stored as child `database-row` blocks. It supports grouping, drag-and-drop reordering, inline editing, and an optional backend sync adapter. (`sorts` and `filters` are persisted in the view config but are not applied yet.)',
     importExample: `import { Database } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -494,7 +494,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Database Row',
     description:
-      'An internal block tool that stores a single database row. Not user-insertable — rows are created and managed by the parent Database block. Each row stores property values conforming to the parent database schema and a position string for ordering.',
+      'An internal block tool that stores a single database row. It is not user-insertable: rows are created and managed by the parent Database block. Each row stores property values that conform to the parent database schema, plus a position string for ordering.',
     importExample: `import { DatabaseRow } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `interface DatabaseRowData {
@@ -532,7 +532,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Divider',
     description:
-      'A horizontal line separator. Renders a semantic `<hr>` element. Has no editable content or settings. Can be inserted via the toolbox or by typing `---` in an empty paragraph.',
+      'A horizontal line separator. Renders a semantic `<hr>` element. It has no editable content or settings. You can insert it from the toolbox, or by typing `---` in an empty paragraph.',
     importExample: `import { Divider } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `interface DividerData {
@@ -562,7 +562,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Spacer',
     description:
-      'An adjustable vertical gap. Drag either edge grip — or focus one and press ArrowUp/ArrowDown — to resize. Its main job is lining up content across sibling columns of unequal length, replacing piles of empty paragraphs. Invisible in read-only mode.',
+      'An adjustable vertical gap. To resize it, drag either edge grip, or focus one and press ArrowUp/ArrowDown. Its main job is lining up content across sibling columns of unequal length, so it replaces piles of empty paragraphs. It is invisible in read-only mode.',
     importExample: `import { Spacer } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `interface SpacerData {
@@ -594,7 +594,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Quote',
     description:
-      'A blockquote with a left border accent. Supports two sizes (default and large) switchable via the block settings menu. Pasting a `<blockquote>` element automatically creates a quote block.',
+      'A blockquote with a left border accent. It supports two sizes, default and large. You switch between them in the block settings menu. Pasting a `<blockquote>` element automatically creates a quote block.',
     importExample: `import { Quote } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `interface QuoteData {
@@ -628,7 +628,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Code',
     description:
-      'A syntax-highlighted code block with a language picker, an optional line-number gutter, and a copy-to-clipboard button. Supports 30+ languages via Prism. LaTeX and Mermaid languages include a live preview tab. Pasting markdown fenced code blocks (```) or `<pre>` elements automatically creates a code block, and the language comes across whenever the pasted source names it — a fence that opens with ```sql, or a labelled code block copied out of an app such as Gemini.',
+      'A syntax-highlighted code block with a language picker, an optional line-number gutter, and a copy-to-clipboard button. It supports 30+ languages via Prism. The LaTeX and Mermaid languages include a live preview tab. Pasting markdown fenced code blocks (```) or `<pre>` elements automatically creates a code block. The language comes across whenever the pasted source names it: a fence that opens with ```sql, or a labelled code block copied out of an app such as Gemini.',
     importExample: `import { Code } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `interface CodeData {
@@ -664,7 +664,7 @@ const editor = new Blok({
     exportName: 'Image',
     type: 'block',
     title: 'Image',
-    description: 'Embed an image via URL upload or file paste.',
+    description: 'Embed an image by URL, by upload, or by pasting a file.',
     importExample: "import { Image } from '@bloklabs/core/tools';",
     configOptions: [
       {
@@ -686,19 +686,19 @@ const editor = new Blok({
         type: 'MaxSizeConfig',
         default: '30 MiB',
         description:
-          'Max upload size. A number caps every type (bytes); an object caps per MIME type with `\'*\'` as the fallback. Pass Infinity for unlimited.',
+          'Max upload size. A number caps every type, in bytes. An object caps each MIME type, with `\'*\'` as the fallback. Pass Infinity for unlimited.',
       },
       {
         option: 'sources',
         type: "'upload' | 'url' | 'both'",
         default: "'both'",
-        description: 'Restrict how an image may be added — file upload only, URL only, or both.',
+        description: 'Restrict how an image may be added: file upload only, URL only, or both.',
       },
       {
         option: 'convertGifToVideo',
         type: 'boolean',
         default: 'true',
-        description: 'Auto-convert animated GIFs to a looping WebM video block on insert. Only applies when a video tool is registered — without one, GIFs stay image blocks. Set false to always keep GIFs as image blocks.',
+        description: 'Auto-convert animated GIFs to a looping WebM video block on insert. It only applies when a video tool is registered. GIFs stay image blocks without one. Set false to always keep GIFs as image blocks.',
       },
       {
         option: 'captionPlaceholder',
@@ -711,7 +711,7 @@ const editor = new Blok({
         type: 'boolean | ImageCompressionConfig',
         default: 'true',
         description:
-          'Re-encode uploaded images before they reach the uploader. On by default in a deliberately safe mode: same format, quality 0.92, original dimensions, and the result is only used when it saves at least 10% — otherwise the original bytes are uploaded untouched. Pass an object to opt into smaller output: `format` (`\'original\'` | `\'jpeg\'` | `\'webp\'` | `\'avif\'` | `\'auto\'`), `fallbackFormat` (format to try when the browser cannot encode `format`, before falling back to the source format — e.g. `{ format: \'avif\', fallbackFormat: \'webp\' }` uploads AVIF where the browser can produce it and WebP everywhere else), `quality` (0–1), `maxWidth` / `maxHeight`, `minSize` (skip files below it, default 100 KiB), `minSavings` (default 0.1), or `transform(file)` to plug in your own encoder. Set `false` to upload the exact original bytes. Compression never breaks an upload — when it cannot help, the original is used.',
+          'Re-encode uploaded images before they reach the uploader. It is on by default in a deliberately safe mode: the same format, quality 0.92, and the original dimensions. The result is only used when it saves at least 10%, otherwise the original bytes are uploaded untouched. Pass an object to opt into smaller output. The keys are `format`, `fallbackFormat`, `quality`, `maxWidth` / `maxHeight`, `minSize`, `minSavings` and `transform(file)`. `format` takes `\'original\'` | `\'jpeg\'` | `\'webp\'` | `\'avif\'` | `\'auto\'`. `fallbackFormat` is the format to try when the browser cannot encode `format`, before falling back to the source format. So `{ format: \'avif\', fallbackFormat: \'webp\' }` uploads AVIF where the browser can produce it, and WebP everywhere else. `quality` runs from 0 to 1. `minSize` skips files below it, and defaults to 100 KiB. `minSavings` defaults to 0.1. `transform(file)` plugs in your own encoder. Set `false` to upload the exact original bytes. Compression never breaks an upload. When it cannot help, the original is used.',
       },
       {
         option: 'reloadAttempts',
@@ -773,7 +773,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Columns',
     description:
-      'A layout block that arranges its children into side-by-side columns. The column list itself holds no content — each column is a child `column` block, and the blocks you write live inside those columns (via `contentIds`). Columns can be created three ways: from the toolbox · by dragging a block beside another · by selecting multiple blocks and choosing "Turn into columns". Column widths are resizable via the separators between columns. Both tools can be registered at once with the `Columns` group handle — `tools: { columns: Columns }` expands to the `column_list` and `column` tools; saved JSON still contains `column_list` and `column` blocks.',
+      'A layout block that arranges its children into side-by-side columns. The column list itself holds no content. Each column is a child `column` block, and the blocks you write live inside those columns (via `contentIds`). You can create columns three ways: from the toolbox, by dragging a block beside another, or by selecting several blocks and choosing "Turn into columns". Column widths are resizable via the separators between columns. You can register both tools at once with the `Columns` group handle: `tools: { columns: Columns }` expands to the `column_list` and `column` tools. The saved JSON still contains `column_list` and `column` blocks.',
     importExample: `import { ColumnList } from '@bloklabs/core/tools';
 // …or register both column tools at once with the group handle:
 import { Columns } from '@bloklabs/core/tools';`,
@@ -811,7 +811,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Column',
     description:
-      'A single column inside a column list. Not user-insertable on its own — columns are created and managed by the parent `column_list` block. Child blocks are nested inside the column via `contentIds`. The optional `widthRatio` controls the column’s width relative to its siblings (applied as flex-grow); omit it for equal width.',
+      'A single column inside a column list. It is not user-insertable on its own. The parent `column_list` block creates and manages the columns. Child blocks are nested inside the column via `contentIds`. The optional `widthRatio` sets the column\'s width relative to its siblings, applied as flex-grow. Omit it for equal width.',
     importExample: `import { Column } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `interface ColumnData {
@@ -845,7 +845,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Embed',
     description:
-      'A live interactive iframe for a pasted provider URL (YouTube, Vimeo, Figma, CodePen, and 100+ other services), like Notion’s "Create embed". Pure client-side: the URL is matched against a built-in embed registry and resolved into a provider-sanctioned iframe URL. By default only registry-matched URLs are embedded; set the editor-level `linkPaste.allowGenericEmbed: true` to also embed unmatched https URLs in a generic sandboxed iframe (saved with an empty `service`). Supports resizing (document-style providers such as Google Docs, Sheets, Slides, Forms and Drive also get a bottom handle for adjusting the embed height), alignment (left/center/right), and an optional caption.',
+      'A live interactive iframe for a pasted provider URL (YouTube, Vimeo, Figma, CodePen, and 100+ other services), like Notion\'s "Create embed". It works purely on the client: the URL is matched against a built-in embed registry and resolved into a provider-sanctioned iframe URL. By default only registry-matched URLs are embedded. Set the editor-level `linkPaste.allowGenericEmbed: true` to also embed unmatched https URLs in a generic sandboxed iframe (saved with an empty `service`). It supports resizing, alignment (left/center/right), and an optional caption. A document-style provider such as Google Docs, Sheets, Slides, Forms or Drive also gets a bottom handle for adjusting the embed height.',
     importExample: `import { Embed } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `interface EmbedData {
@@ -890,7 +890,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Bookmark',
     description:
-      'A static OpenGraph card for a pasted link, like Notion’s "Create bookmark". Shows the page title, description, preview image, favicon, and domain. Metadata is fetched from a consumer-supplied unfurl endpoint (CORS makes a backend mandatory) — Blok ships only the contract.',
+      'A static OpenGraph card for a pasted link, like Notion\'s "Create bookmark". It shows the page title, description, preview image, favicon, and domain. The metadata comes from an unfurl endpoint that you supply. A backend is mandatory because of CORS. Blok ships only the contract.',
     importExample: `import { Bookmark } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -898,7 +898,7 @@ const editor = new Blok({
         type: 'string',
         default: '""',
         description:
-          'Consumer-supplied unfurl endpoint. Required. Called as `endpoint?url=<encoded>` and expected to return `{ success: 1, link, meta: { title, description, image: { url }, favicon, domain } }` (note `image` is an object, not a string).',
+          'The unfurl endpoint you supply. Required. It is called as `endpoint?url=<encoded>` and should return `{ success: 1, link, meta: { title, description, image: { url }, favicon, domain } }`. Note that `image` is an object, not a string.',
       },
       {
         option: 'headers',
@@ -948,7 +948,7 @@ const editor = new Blok({
     type: 'block',
     title: 'File',
     description:
-      'An attachment card for any uploaded file. Shows a type icon, filename, human-readable size, a download action, and an optional caption. Files are sent through a consumer-supplied uploader; when none is provided the tool falls back to a local blob URL (uploadByFile) or the pasted URL itself (uploadByUrl). An optional MIME allowlist and max size can gate what is accepted.',
+      'An attachment card for any uploaded file. It shows a type icon, filename, human-readable size, a download action, and an optional caption. Files are sent through an uploader that you supply. When there is none, the tool falls back to a local blob URL (uploadByFile) or to the pasted URL itself (uploadByUrl). An optional MIME allowlist and max size can gate what is accepted.',
     importExample: `import { File } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -956,14 +956,14 @@ const editor = new Blok({
         type: 'FileUploader',
         default: 'undefined',
         description:
-          'Consumer-supplied uploader with optional `uploadByFile(file, ctx)` and `uploadByUrl(url, ctx)` methods, each resolving to `{ url, fileName?, size?, mimeType? }`. The `ctx.onProgress(percent)` callback reports upload progress. When omitted, files fall back to a blob URL or the pasted URL.',
+          'An uploader you supply. It has two optional methods, `uploadByFile(file, ctx)` and `uploadByUrl(url, ctx)`, and each one resolves to `{ url, fileName?, size?, mimeType? }`. The `ctx.onProgress(percent)` callback reports upload progress. When you omit the uploader, files fall back to a blob URL or the pasted URL.',
       },
       {
         option: 'endpoints',
         type: 'string | { byFile?: string; byUrl?: string }',
         default: 'undefined',
         description:
-          'Upload endpoint(s) — Blok POSTs the upload itself (multipart/form-data for files, JSON `{ url }` for embedded URLs) and expects a `{ url, fileName?, size?, mimeType? }` body back. A string is used for both; an object targets each separately. An explicit `uploader` always takes precedence.',
+          'Upload endpoint or endpoints. Blok POSTs the upload itself: multipart/form-data for files, JSON `{ url }` for embedded URLs. It expects a `{ url, fileName?, size?, mimeType? }` body back. A string is used for both. An object targets each separately. An explicit `uploader` always takes precedence.',
       },
       {
         option: 'field',
@@ -987,14 +987,14 @@ const editor = new Blok({
         option: 'sources',
         type: "'upload' | 'url' | 'both'",
         default: "'both'",
-        description: 'Restrict how a file may be added — file upload only, URL only, or both.',
+        description: 'Restrict how a file may be added: file upload only, URL only, or both.',
       },
       {
         option: 'maxSize',
         type: 'MaxSizeConfig',
         default: '30 MiB',
         description:
-          'Max upload size. A number caps every type (bytes); an object caps per MIME type with `\'*\'` as the fallback. Pass Infinity for unlimited.',
+          'Max upload size. A number caps every type, in bytes. An object caps each MIME type, and `\'*\'` is the fallback. Pass Infinity for unlimited.',
       },
       {
         option: 'captionPlaceholder',
@@ -1051,7 +1051,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Audio',
     description:
-      'A music-player style audio block. Renders an uploaded or linked audio file with a custom control bar (play/pause, a waveform scrubber, volume, playback speed, loop), optional cover art, title/artist metadata, and an optional caption you switch on from the block settings menu (`captionVisible`). Waveform peaks and duration are decoded once and cached in the saved data so playback renders instantly on reload. Audio is sent through a consumer-supplied uploader; when none is provided the tool falls back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl). Share links from Dropbox, GitHub, GitLab, Hugging Face, Google Cloud Storage, and the Internet Archive are rewritten to their direct-content form automatically; Google Drive and OneDrive links additionally require an `uploadByUrl` backend because those hosts block anonymous browser hotlinking. An optional MIME allowlist and max size gate what is accepted.',
+      'A music-player style audio block. It renders an uploaded or linked audio file with a custom control bar. The bar has play/pause, a waveform scrubber, volume, playback speed and loop. The block also takes optional cover art and title/artist metadata. An optional caption is switched on from the block settings menu (`captionVisible`). Waveform peaks and duration are decoded once and cached in the saved data, so playback renders instantly on reload. Audio is sent through a consumer-supplied uploader. When none is provided, the tool falls back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl). Share links from Dropbox, GitHub, GitLab, Hugging Face, Google Cloud Storage, and the Internet Archive are rewritten to their direct-content form automatically. Google Drive and OneDrive links also need an `uploadByUrl` backend, because those hosts block anonymous browser hotlinking. An optional MIME allowlist and max size gate what is accepted.',
     importExample: `import { Audio } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -1073,13 +1073,13 @@ const editor = new Blok({
         type: 'MaxSizeConfig',
         default: '30 MiB',
         description:
-          'Max upload size. A number caps every type (bytes); an object caps per MIME type with `\'*\'` as the fallback.',
+          'Max upload size. A number caps every type (bytes). An object caps each MIME type, with `\'*\'` as the fallback.',
       },
       {
         option: 'sources',
         type: "'upload' | 'url' | 'both'",
         default: "'both'",
-        description: 'Restrict how the media may be added — file upload only, URL only, or both.',
+        description: 'Restrict how the media may be added: file upload only, URL only, or both.',
       },
       {
         option: 'captionPlaceholder',
@@ -1142,7 +1142,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Video',
     description:
-      'A full-featured video player block. Renders an uploaded or linked video with a custom control bar (play/pause, scrubber with buffered range and hover preview, volume, playback speed, loop, picture-in-picture, theater and fullscreen modes), an optional caption, and an ambient glow behind the player. Videos are sent through a consumer-supplied uploader; when none is provided the tool falls back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl). An optional MIME allowlist and max size gate what is accepted.',
+      'A video player block. It renders an uploaded or linked video with a custom control bar. The bar has play/pause, a scrubber with buffered range and hover preview, volume, playback speed, loop, picture-in-picture, theater and fullscreen modes. It can also show a caption and an ambient glow behind the player. Videos are sent through a consumer-supplied uploader. When none is provided, the tool falls back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl). An optional MIME allowlist and max size gate what is accepted.',
     importExample: `import { Video } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -1150,7 +1150,7 @@ const editor = new Blok({
         type: 'VideoUploader',
         default: 'undefined',
         description:
-          'Consumer-supplied uploader with optional `uploadByFile(file, ctx)` (resolving to `{ url, fileName? }`) and `uploadByUrl(url, ctx)` (resolving to `{ url }`) methods. The `ctx.onProgress(percent)` callback reports upload progress. When omitted, videos fall back to a blob URL or the entered URL — which then has to be a direct media file (`.mp4`, `.webm`, `.ogg`, `.mov`, `.m4v`), since it becomes the `<video src>` verbatim. Provide `uploadByUrl` to accept any URL and resolve it yourself.',
+          'Consumer-supplied uploader with optional `uploadByFile(file, ctx)` (resolving to `{ url, fileName? }`) and `uploadByUrl(url, ctx)` (resolving to `{ url }`) methods. The `ctx.onProgress(percent)` callback reports upload progress. When omitted, videos fall back to a blob URL or the entered URL. That URL then has to be a direct media file (`.mp4`, `.webm`, `.ogg`, `.mov`, `.m4v`), because it becomes the `<video src>` verbatim. Provide `uploadByUrl` to accept any URL and resolve it yourself.',
       },
       {
         option: 'types',
@@ -1164,13 +1164,13 @@ const editor = new Blok({
         type: 'MaxSizeConfig',
         default: '100 MiB',
         description:
-          'Max upload size. A number caps every type (bytes); an object caps per MIME type with `\'*\'` as the fallback.',
+          'Max upload size. A number caps every type, in bytes. An object caps each MIME type, with `\'*\'` as the fallback.',
       },
       {
         option: 'sources',
         type: "'upload' | 'url' | 'both'",
         default: "'both'",
-        description: 'Restrict how the media may be added — file upload only, URL only, or both.',
+        description: 'Restrict how the media may be added: file upload only, URL only, or both.',
       },
       {
         option: 'captionPlaceholder',
@@ -1297,7 +1297,7 @@ const editor = new Blok({
     type: 'inline',
     title: 'Link',
     description:
-      'Wraps selected text in `<a href="...">`. Activated with Cmd/Ctrl+K. Clicking the button on existing linked text opens the URL input allowing the link to be edited or removed. `target` and `rel` are always written alongside `href` and come from `BlokConfig.link` — defaults `_blank` and `nofollow`, with `target="_self"` forced for same-page hrefs (a `#anchor`, or a URL resolving to the current origin and pathname). A `link.transform` can override any of href, target and rel.',
+      'Wraps selected text in `<a href="...">`. Activated with Cmd/Ctrl+K. Clicking the button on existing linked text opens the URL input, so the link can be edited or removed. `target` and `rel` are always written alongside `href` and come from `BlokConfig.link`. The defaults are `_blank` and `nofollow`. For same-page hrefs, `target="_self"` is forced: that means a `#anchor`, or a URL resolving to the current origin and pathname. A `link.transform` can override any of href, target and rel.',
     importExample: `import { Link } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `// Stored as HTML inside the block's text field.
@@ -1328,7 +1328,7 @@ const editor = new Blok({
     type: 'inline',
     title: 'Marker',
     description:
-      'Applies text colour or background colour to selected text using `<mark style="color:...">` or `<mark style="background-color:...">`. Click the toolbar button, then choose the Text color or Background tab. Each tab shows preset swatches, a selected-colour preview, and a Default reset. Recently used colours appear below the palette. Every colour is normalised to a CSS custom property (`var(--blok-color-<name>-<text|bg>)`) so themes can restyle it: the picker offers only the nine presets, and any other CSS colour applied programmatically is snapped to the perceptually nearest preset. There is no distance threshold — only values already written as `var(...)`, values the colour parser cannot read (a CSS named colour such as `rebeccapurple`), and the default page background colours pass through untouched. Raw colours found on `<mark>` elements — e.g. pasted from another editor — are rewritten to the nearest preset var on load, so arbitrary hex values are not preserved. Cmd/Ctrl+Shift+H does not open the picker: it re-applies the last colour picked in this session straight to the selection, defaulting to a yellow highlight (`var(--blok-color-yellow-bg)`) on first use, and does nothing when the selection is collapsed.',
+      'Applies text colour or background colour to selected text. It uses `<mark style="color:...">` or `<mark style="background-color:...">`. Click the toolbar button, then choose the Text color or Background tab. Each tab shows preset swatches, a selected-colour preview, and a Default reset. Recently used colours appear below the palette. Every colour is normalised to a CSS custom property (`var(--blok-color-<name>-<text|bg>)`), so themes can restyle it. The picker offers only the nine presets. Any other CSS colour applied programmatically is snapped to the perceptually nearest preset. There is no distance threshold. Three kinds of value pass through untouched. The first is a value already written as `var(...)`. The second is a value the colour parser cannot read, such as the CSS named colour `rebeccapurple`. The third is the default page background colours. Raw colours can sit on `<mark>` elements, for example when pasted from another editor. On load they are rewritten to the nearest preset var. So arbitrary hex values are not preserved. Cmd/Ctrl+Shift+H does not open the picker. It re-applies the last colour picked in this session straight to the selection. On first use that is a yellow highlight (`var(--blok-color-yellow-bg)`). It does nothing when the selection is collapsed.',
     importExample: `import { Marker } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `// Stored as HTML inside the block's text field.
@@ -1443,7 +1443,7 @@ const editor = new Blok({
     type: 'inline',
     title: 'Equation',
     description:
-      'Renders inline math (LaTeX) with KaTeX. Activated with Cmd/Ctrl+Shift+E — wraps the selected text, or a formula typed into the popover input, in a `<span data-latex="...">`. The `data-latex` attribute is the formula: the KaTeX markup is derived from it, is stripped on save, and is regenerated whenever the block renders (load, paste, undo). Read-only surfaces that never mount an editor — `blocksToHtml` / `<BlokView>` — display the source instead; pass an `inlineRenderers` entry to render the math there too.',
+      'Renders inline math (LaTeX) with KaTeX. Press Cmd/Ctrl+Shift+E to activate it. It wraps the selected text, or a formula typed into the popover input, in a `<span data-latex="...">`. The `data-latex` attribute is the formula. The KaTeX markup is derived from it, is stripped on save, and is regenerated whenever the block renders (load, paste, undo). Read-only surfaces that never mount an editor, `blocksToHtml` and `<BlokView>`, display the source instead. Pass an `inlineRenderers` entry to render the math there too.',
     importExample: `import { Equation } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `// Stored as HTML inside the block's text field. The data-latex attribute is
@@ -1484,7 +1484,7 @@ const editor = new Blok({
     type: 'inline',
     title: 'Clear Format',
     description:
-      'Removes inline formatting (bold, italic, underline, strikethrough, inline code, highlight) from the selected text while keeping links intact. Applied by clicking the Tx button in the inline toolbar.',
+      'Removes inline formatting (bold, italic, underline, strikethrough, inline code, highlight) from the selected text. Links stay intact. Apply it by clicking the Tx button in the inline toolbar.',
     importExample: `import { ClearFormat } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `// Removes formatting tags from the block's text field.
@@ -1512,7 +1512,7 @@ const editor = new Blok({
     type: 'inline',
     title: 'Superscript & Subscript',
     description:
-      'One toolbar button with a two-option popover that toggles superscript (`<sup>`) or subscript (`<sub>`) on the selection. The two modes are mutually exclusive — applying one removes the other. Shortcuts: Cmd/Ctrl+Period for superscript, Cmd/Ctrl+Comma for subscript.',
+      'One toolbar button with a two-option popover. It toggles superscript (`<sup>`) or subscript (`<sub>`) on the selection. The two modes are mutually exclusive, so applying one removes the other. Shortcuts: Cmd/Ctrl+Period for superscript, Cmd/Ctrl+Comma for subscript.',
     importExample: `import { SupSub } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `// Stored as HTML inside the block's text field:

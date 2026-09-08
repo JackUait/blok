@@ -602,6 +602,57 @@ const negative = [
     description: 'The identities payload\'s "identities" value is an object, not an array.',
     frameHex: hex(v2Frame(MESSAGE_IDENTITIES, utf8('{"identities":{}}'))),
   },
+  // TryDecodeIdentityEntry coverage: the shared negative above only reaches
+  // TryDecodeIdentities, never the per-entry walk.
+  {
+    name: 'identitiesEntryMissingActorId',
+    messageType: MESSAGE_IDENTITIES,
+    expect: 'malformed',
+    description: 'An identities entry with clientId but no actorId.',
+    frameHex: hex(v2Frame(MESSAGE_IDENTITIES, utf8('{"identities":[{"clientId":1}]}'))),
+  },
+  {
+    name: 'identitiesEntryStringClientId',
+    messageType: MESSAGE_IDENTITIES,
+    expect: 'malformed',
+    description: 'An identities entry whose clientId is a JSON string, not a number.',
+    frameHex: hex(v2Frame(MESSAGE_IDENTITIES, utf8('{"identities":[{"clientId":"1","actorId":"a"}]}'))),
+  },
+  {
+    name: 'identitiesEntryEmptyActorId',
+    messageType: MESSAGE_IDENTITIES,
+    expect: 'malformed',
+    description: 'An identities entry with an empty-string actorId.',
+    frameHex: hex(v2Frame(MESSAGE_IDENTITIES, utf8('{"identities":[{"clientId":1,"actorId":""}]}'))),
+  },
+  {
+    name: 'identitiesEntryNotAnObject',
+    messageType: MESSAGE_IDENTITIES,
+    expect: 'malformed',
+    description: 'An identities array element that is a JSON number, not an object.',
+    frameHex: hex(v2Frame(MESSAGE_IDENTITIES, utf8('{"identities":[1]}'))),
+  },
+  {
+    name: 'identitiesDuplicateTopLevelKey',
+    messageType: MESSAGE_IDENTITIES,
+    expect: 'malformed',
+    description: 'The "identities" key repeated at the top level with different values.',
+    frameHex: hex(v2Frame(MESSAGE_IDENTITIES, utf8('{"identities":[],"identities":[{"clientId":1,"actorId":"a"}]}'))),
+  },
+  {
+    name: 'identitiesDuplicateClientIdInEntry',
+    messageType: MESSAGE_IDENTITIES,
+    expect: 'malformed',
+    description: 'One entry with clientId repeated (JSON.parse would keep the last value).',
+    frameHex: hex(v2Frame(MESSAGE_IDENTITIES, utf8('{"identities":[{"clientId":1,"clientId":2,"actorId":"a"}]}'))),
+  },
+  {
+    name: 'identitiesDuplicateActorIdInEntry',
+    messageType: MESSAGE_IDENTITIES,
+    expect: 'malformed',
+    description: 'One entry with actorId repeated (JSON.parse would keep the last value).',
+    frameHex: hex(v2Frame(MESSAGE_IDENTITIES, utf8('{"identities":[{"clientId":1,"actorId":"a","actorId":"b"}]}'))),
+  },
   {
     name: 'outerVarUintTooLong',
     expect: 'malformed',

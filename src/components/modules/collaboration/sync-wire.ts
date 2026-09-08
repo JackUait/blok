@@ -428,10 +428,29 @@ function decodeIdentities(json: Uint8Array): IdentitiesResult {
     return { ok: false, reason: 'the identities payload needs exactly the key "identities"' };
   }
 
+  // JSON.parse silently keeps the LAST value of a duplicate key, so a repeated
+  // top-level "identities" key still looks like exactly one key above. A raw
+  // quote+colon can only ever follow a KEY (a value's closing quote is always
+  // followed by ',' or '}', never ':'), so this counts key occurrences exactly
+  // regardless of what a string value here contains.
+  if (occurrences(text, '"identities":') > 1) {
+    return { ok: false, reason: 'the identities payload repeats the "identities" key' };
+  }
+
   const list = fields.identities;
 
   if (!Array.isArray(list)) {
     return { ok: false, reason: 'the identities payload\'s "identities" value must be an array' };
+  }
+
+  // Same collapse risk per entry, but "clientId": and "actorId": legitimately
+  // occur once PER ELEMENT — not "at most once" in the whole payload — so this
+  // checks the count against list.length. A MISSING key (fewer occurrences,
+  // or an element that is not even an object) is a different, more specific
+  // violation the per-entry loop below reports; only an EXCESS is a duplicate,
+  // which can only happen if some element repeated a key.
+  if (occurrences(text, '"clientId":') > list.length || occurrences(text, '"actorId":') > list.length) {
+    return { ok: false, reason: 'an identities entry repeats clientId or actorId' };
   }
 
   const identities: Array<{ clientId: number; actorId: string }> = [];
@@ -450,7 +469,15 @@ function decodeIdentities(json: Uint8Array): IdentitiesResult {
 
     const { clientId, actorId } = entryFields;
 
-    if (typeof clientId !== 'number' || !Number.isInteger(clientId) || clientId < 0) {
+    // isSafeInteger (not isInteger) matches decodeLimits, and closes an
+    // encode/decode inconsistency: encodeIdentities already rejects an unsafe
+    // integer, so a decoder that accepted one here would decode fine and then
+    // throw on re-encode. -0 is rejected explicitly: Number.isSafeInteger(-0)
+    // is true and -0 < 0 is false in JS, so neither check alone catches it.
+    if (
+      typeof clientId !== 'number' || !Number.isSafeInteger(clientId) ||
+      clientId < 0 || Object.is(clientId, -0)
+    ) {
       return { ok: false, reason: 'an identities entry clientId must be a finite non-negative integer' };
     }
 

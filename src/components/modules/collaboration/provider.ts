@@ -1369,8 +1369,15 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
 
         // `unknown` is forward compatibility; `malformed` is a frame we refuse to
         // guess at; `operation` is a client→server frame a server has no
-        // business sending. None is worth dropping the connection over.
-        if (frame === null || frame.type === 'unknown' || frame.type === 'malformed' || frame.type === 'operation') {
+        // business sending; `activity` is client→server only, symmetrically.
+        // `identities` has no handler yet (a later task adds one) -- none of
+        // these is worth buffering: buffering counts toward
+        // MAX_BUFFERED_INBOUND, and a peer sending 64+ would force a teardown
+        // and a reconnect over frames nothing here acts on.
+        if (
+          frame === null || frame.type === 'unknown' || frame.type === 'malformed' ||
+          frame.type === 'operation' || frame.type === 'activity' || frame.type === 'identities'
+        ) {
           return;
         }
 

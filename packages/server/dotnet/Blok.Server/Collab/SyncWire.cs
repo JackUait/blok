@@ -223,7 +223,7 @@ internal static class SyncWire
       AwarenessFrame awareness => awareness.Update?.Length ?? 0,
       PermissionDeniedFrame denied => Encoding.UTF8.GetMaxByteCount(denied.Reason?.Length ?? 0),
       OperationFrame operation => JsonPayloadBytes + (operation.Update?.Length ?? 0),
-      IdentitiesFrame identities => JsonPayloadBytes + (identities.Identities.Count * IdentityEntryBytes),
+      IdentitiesFrame identities => JsonPayloadBytes + ((identities.Identities?.Count ?? 0) * IdentityEntryBytes),
       _ => JsonPayloadBytes,
     };
 

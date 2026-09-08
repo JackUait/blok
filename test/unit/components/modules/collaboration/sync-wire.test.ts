@@ -31,6 +31,7 @@ interface FixtureFrame {
   awareness?: { clientId: number; clock: number; stateJson: string };
   control?: { epoch: number; format: number; lineage: string };
   limits?: { maxMessageBytes: number };
+  identities?: Array<{ clientId: number; actorId: string }>;
 }
 
 interface V2Metadata {
@@ -237,6 +238,28 @@ describe('sync-wire codec — committed fixtures (cross-impl contract)', () => {
     expect(decoded.maxMessageBytes).toBe(frame.limits?.maxMessageBytes);
     expect(hex(encode(decoded))).toBe(frame.frameHex);
   });
+
+  it('decodes activity and re-encodes byte-identically', () => {
+    const frame = frameByName('activity');
+    const decoded = decode(bytes(frame.frameHex));
+
+    expect(decoded).toEqual({ type: 'activity' });
+    expect(hex(encode(goodFrame(decoded)))).toBe(frame.frameHex);
+  });
+
+  it('decodes the identities frame to its verified map and re-encodes byte-identically', () => {
+    const frame = frameByName('identities');
+    const decoded = decode(bytes(frame.frameHex));
+
+    expect(decoded.type).toBe('identities');
+
+    if (decoded.type !== 'identities') {
+      throw new Error('unreachable');
+    }
+
+    expect(decoded.identities).toEqual(frame.identities);
+    expect(hex(encode(decoded))).toBe(frame.frameHex);
+  });
 });
 
 describe('sync-wire codec — encode contract', () => {
@@ -308,17 +331,19 @@ const limitsFrame = (json: string): Uint8Array => {
   return out;
 };
 
-const identitiesFrameCarrying = (json: string): Uint8Array => {
-  const payload = new TextEncoder().encode(json);
+const identitiesFrameCarryingBytes = (payload: Uint8Array): Uint8Array => {
   const out = new Uint8Array(payload.length + 2);
 
-  // [107][varuint len < 128][utf8 json]; every JSON below fits one length byte.
+  // [107][varuint len < 128][payload]; every payload below fits one length byte.
   out[0] = 107;
   out[1] = payload.length;
   out.set(payload, 2);
 
   return out;
 };
+
+const identitiesFrameCarrying = (json: string): Uint8Array =>
+  identitiesFrameCarryingBytes(new TextEncoder().encode(json));
 
 describe('sync-wire codec — activity and identities frames', () => {
   it('round-trips the activity frame, which carries no payload', () => {
@@ -339,14 +364,108 @@ describe('sync-wire codec — activity and identities frames', () => {
     expect(decode(encode(frame))).toEqual(frame);
   });
 
-  // The payload is a JSON ARRAY, which every existing decoder in this file
-  // rejects. A decoder that accepted an object here would silently report an
-  // empty room.
-  it('refuses an identities payload that is not an array of pairs', () => {
-    const bad = ['{"identities":{}}', '{"identities":[{"clientId":7}]}', '{"identities":[{"clientId":"7","actorId":"u"}]}', '[]'];
+  // Each case pins the SPECIFIC reason (not just `.type === 'malformed'`), the
+  // same discipline as the v2 negative loop below, which asserts `.rule`: a
+  // decoder that refused every case for the wrong reason must not pass.
+  const malformedIdentities: Array<{ name: string; input: Uint8Array; reason: string }> = [
+    {
+      name: 'a non-UTF-8 payload',
+      input: identitiesFrameCarryingBytes(new Uint8Array([0xff, 0xfe])),
+      reason: 'the identities payload is not valid UTF-8',
+    },
+    {
+      name: 'a payload that is not JSON',
+      input: identitiesFrameCarrying('not json'),
+      reason: 'the identities payload is not valid JSON',
+    },
+    {
+      name: 'a JSON array at the top level',
+      input: identitiesFrameCarrying('[]'),
+      reason: 'the identities payload is not a JSON object',
+    },
+    {
+      name: 'the wrong wrapper key',
+      input: identitiesFrameCarrying('{"peers":[]}'),
+      reason: 'the identities payload needs exactly the key "identities"',
+    },
+    {
+      // JSON.parse silently keeps the LAST value of a duplicate key, so a
+      // decoder that only checked the parsed key set would accept this.
+      name: 'a duplicate top-level "identities" key',
+      input: identitiesFrameCarrying('{"identities":[],"identities":[{"clientId":1,"actorId":"a"}]}'),
+      reason: 'the identities payload repeats the "identities" key',
+    },
+    {
+      name: 'an object instead of an array for "identities"',
+      input: identitiesFrameCarrying('{"identities":{}}'),
+      reason: 'the identities payload\'s "identities" value must be an array',
+    },
+    {
+      name: 'a duplicate clientId within one entry',
+      input: identitiesFrameCarrying('{"identities":[{"clientId":1,"clientId":2,"actorId":"a"}]}'),
+      reason: 'an identities entry repeats clientId or actorId',
+    },
+    {
+      name: 'a duplicate actorId within one entry',
+      input: identitiesFrameCarrying('{"identities":[{"clientId":1,"actorId":"a","actorId":"b"}]}'),
+      reason: 'an identities entry repeats clientId or actorId',
+    },
+    {
+      name: 'a non-object element',
+      input: identitiesFrameCarrying('{"identities":[1]}'),
+      reason: 'an identities entry is not a JSON object',
+    },
+    {
+      name: 'an entry missing actorId',
+      input: identitiesFrameCarrying('{"identities":[{"clientId":7}]}'),
+      reason: 'an identities entry needs exactly clientId and actorId',
+    },
+    {
+      name: 'a string clientId',
+      input: identitiesFrameCarrying('{"identities":[{"clientId":"7","actorId":"u"}]}'),
+      reason: 'an identities entry clientId must be a finite non-negative integer',
+    },
+    {
+      name: 'a negative clientId',
+      input: identitiesFrameCarrying('{"identities":[{"clientId":-1,"actorId":"u"}]}'),
+      reason: 'an identities entry clientId must be a finite non-negative integer',
+    },
+    {
+      name: 'a non-integer clientId',
+      input: identitiesFrameCarrying('{"identities":[{"clientId":1.5,"actorId":"u"}]}'),
+      reason: 'an identities entry clientId must be a finite non-negative integer',
+    },
+    {
+      // Number.isSafeInteger(-0) and -0 < 0 are both true/false the wrong way
+      // in JS (-0 reads as an integer, and -0 < 0 is false), so this needs its
+      // own explicit check to match a ulong reader, which has no negative zero.
+      name: 'negative zero as clientId',
+      input: identitiesFrameCarrying('{"identities":[{"clientId":-0,"actorId":"u"}]}'),
+      reason: 'an identities entry clientId must be a finite non-negative integer',
+    },
+    {
+      name: 'a non-string actorId',
+      input: identitiesFrameCarrying('{"identities":[{"clientId":1,"actorId":5}]}'),
+      reason: 'an identities entry actorId must be a non-empty string',
+    },
+    {
+      name: 'an empty actorId',
+      input: identitiesFrameCarrying('{"identities":[{"clientId":1,"actorId":""}]}'),
+      reason: 'an identities entry actorId must be a non-empty string',
+    },
+  ];
 
-    bad.forEach((json) => {
-      expect(decode(identitiesFrameCarrying(json)).type).toBe('malformed');
+  malformedIdentities.forEach(({ name, input, reason }) => {
+    it(`refuses ${name} with the matching reason`, () => {
+      const result = decode(input);
+
+      expect(result.type, name).toBe('malformed');
+
+      if (result.type !== 'malformed') {
+        throw new Error('unreachable');
+      }
+
+      expect(result.reason, name).toBe(reason);
     });
   });
 });
@@ -444,8 +563,8 @@ describe('sync-wire codec — fuzz / hostile input never throws', () => {
 
   it('never throws and always returns a known discriminator on random bytes', () => {
     const known = new Set([
-      'syncStep1', 'syncStep2', 'update', 'awareness',
-      'queryAwareness', 'permissionDenied', 'control', 'limits', 'unknown', 'malformed',
+      'syncStep1', 'syncStep2', 'update', 'awareness', 'queryAwareness', 'permissionDenied',
+      'control', 'limits', 'activity', 'identities', 'unknown', 'malformed',
     ]);
     let seed = 0x12345678;
     const nextByte = (): number => {

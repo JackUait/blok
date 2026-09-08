@@ -580,6 +580,55 @@
         "frameHex": "6b117b226964656e746974696573223a7b7d7d"
       },
       {
+        "name": "identitiesEntryMissingActorId",
+        "messageType": 107,
+        "expect": "malformed",
+        "description": "An identities entry with clientId but no actorId.",
+        "frameHex": "6b1f7b226964656e746974696573223a5b7b22636c69656e744964223a317d5d7d"
+      },
+      {
+        "name": "identitiesEntryStringClientId",
+        "messageType": 107,
+        "expect": "malformed",
+        "description": "An identities entry whose clientId is a JSON string, not a number.",
+        "frameHex": "6b2f7b226964656e746974696573223a5b7b22636c69656e744964223a2231222c226163746f724964223a2261227d5d7d"
+      },
+      {
+        "name": "identitiesEntryEmptyActorId",
+        "messageType": 107,
+        "expect": "malformed",
+        "description": "An identities entry with an empty-string actorId.",
+        "frameHex": "6b2c7b226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a22227d5d7d"
+      },
+      {
+        "name": "identitiesEntryNotAnObject",
+        "messageType": 107,
+        "expect": "malformed",
+        "description": "An identities array element that is a JSON number, not an object.",
+        "frameHex": "6b127b226964656e746974696573223a5b315d7d"
+      },
+      {
+        "name": "identitiesDuplicateTopLevelKey",
+        "messageType": 107,
+        "expect": "malformed",
+        "description": "The \"identities\" key repeated at the top level with different values.",
+        "frameHex": "6b3d7b226964656e746974696573223a5b5d2c226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a2261227d5d7d"
+      },
+      {
+        "name": "identitiesDuplicateClientIdInEntry",
+        "messageType": 107,
+        "expect": "malformed",
+        "description": "One entry with clientId repeated (JSON.parse would keep the last value).",
+        "frameHex": "6b3a7b226964656e746974696573223a5b7b22636c69656e744964223a312c22636c69656e744964223a322c226163746f724964223a2261227d5d7d"
+      },
+      {
+        "name": "identitiesDuplicateActorIdInEntry",
+        "messageType": 107,
+        "expect": "malformed",
+        "description": "One entry with actorId repeated (JSON.parse would keep the last value).",
+        "frameHex": "6b3b7b226964656e746974696573223a5b7b22636c69656e744964223a312c226163746f724964223a2261222c226163746f724964223a2262227d5d7d"
+      },
+      {
         "name": "outerVarUintTooLong",
         "expect": "malformed",
         "rule": 1,

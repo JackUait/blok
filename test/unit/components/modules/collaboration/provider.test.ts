@@ -576,6 +576,33 @@ describe('createCollabProvider', () => {
       expect(harness.provider.tag).toEqual({ format: 1, epoch: 0, lineage: LINEAGE_A });
     });
 
+    // Same guard, same reason: before task 1 the codec decoded 106/107 as
+    // `unknown` (already dropped at the same site), so this was inert. Now
+    // that the codec recognises them, they must be dropped explicitly or a
+    // peer sending 64+ before the control frame trips MAX_BUFFERED_INBOUND
+    // and tears the connection down over frames nothing here acts on yet.
+    it('drops activity and identities frames before the control frame instead of buffering them', () => {
+      const harness = createHarness();
+      const frames: SyncWireFrame[] = [
+        { type: 'activity' },
+        { type: 'identities', identities: [{ clientId: 1, actorId: 'u_1' }] },
+      ];
+
+      harness.provider.connect();
+      harness.socket().open();
+
+      for (let index = 0; index < 70 * frames.length; index += 1) {
+        harness.socket().deliver(frames[index % frames.length]);
+      }
+
+      expect(harness.socket().closedWith).toBeNull();
+      expect(harness.statuses.some((entry) => entry.status === 'offline')).toBe(false);
+
+      harness.socket().deliver(controlFrame());
+
+      expect(harness.provider.tag).toEqual({ format: 1, epoch: 0, lineage: LINEAGE_A });
+    });
+
     it('reads frames delivered as an ArrayBuffer', () => {
       const harness = createHarness();
 

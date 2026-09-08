@@ -560,6 +560,56 @@ export const IconCodeBlock = `
 
 // Emoji Picker Category Icons
 
+export const IconEmojiSparkles = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M7.5 6C8.25 9.5 9 10.25 12.5 11C9 11.75 8.25 12.5 7.5 16C6.75 12.5 6 11.75 2.5 11C6 10.25 6.75 9.5 7.5 6Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14.25 2.5C14.75 4.5 15.25 5 17.25 5.5C15.25 6 14.75 6.5 14.25 8.5C13.75 6.5 13.25 6 11.25 5.5C13.25 5 13.75 4.5 14.25 2.5Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+export const IconEmojiWink = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="7.25" cy="8" r="0.8" fill="currentColor"/>
+  <path d="M11 8.5Q12.25 7 13.5 8.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6.75 11C8 14.25 11.75 14.75 13.25 10.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+export const IconEmojiBowl = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3 9.5H17C16.5 13 14 15 10 15C6 15 3.5 13 3 9.5Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7 17h6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7 6.75C5.5 5.25 8.5 4.5 7 3M12.5 6.75C11 5.25 14 4.5 12.5 3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+export const IconEmojiGamepad = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M6.25 5C4.6 5 3.75 6.3 3.25 8.5L2.5 12.5C2.2 14.5 3.7 15.25 5 14L7.25 11.75H12.75L15 14C16.3 15.25 17.8 14.5 17.5 12.5L16.75 8.5C16.25 6.3 15.4 5 13.75 5C12.25 5 12 5.75 10 5.75C8 5.75 7.75 5 6.25 5Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M5.25 8.5h3M6.75 7v3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="12.5" cy="8" r="0.75" fill="currentColor"/>
+  <circle cx="15" cy="9.5" r="0.75" fill="currentColor"/>
+  <path d="M10 5.75V4.5Q10 3 12 3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+export const IconEmojiMap = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M17 10.5V14.25L12 16L7.5 14.25L3 16V7L7.5 5.25L8.5 5.625" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7.5 5.25V14.25M12 12V16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M13 10.25C12 9 10 7.25 10 5.5a3 3 0 0 1 6 0C16 7.25 14 9 13 10.25Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="13" cy="5.5" r="0.8" fill="currentColor"/>
+</svg>
+`;
+
+export const IconEmojiHearts = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M7.5 17C6.25 16 2.5 13.2 2.5 10.5C2.5 8 5.5 7.25 7.5 9.5C9.5 7.25 12.5 8 12.5 10.5C12.5 13.2 8.75 16 7.5 17Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14.75 7.5C14 7 12 5.5 12 4C12 2.25 13.75 1.75 14.75 3.25C15.75 1.75 17.5 2.25 17.5 4C17.5 5.5 15.5 7 14.75 7.5Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Star icon (Callout category)
 export const IconEmojiStar = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
@@ -573,15 +623,16 @@ export const IconEmojiSmile = `
   <circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <circle cx="7.5" cy="8" r="0.75" fill="currentColor"/>
   <circle cx="12.5" cy="8" r="0.75" fill="currentColor"/>
-  <path d="M6.75 11L13.25 11C12.75 14.5 7.25 14.5 6.75 11Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7 11.25C8.25 14 11.75 14 13 11.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
 // Sprout icon (Nature category)
 export const IconEmojiSprout = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M5.5 14.5C2.5 11.5 5 4 16.5 3.5C16 15 8.5 17.5 5.5 14.5Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M3.5 16.5L12.5 7.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10 12C5.5 12 3 9.5 3 6C7.5 6 10 8.5 10 12Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10 8C10 4.5 12.75 3 16.5 3C16.5 6.5 14 8 10 8Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10 17V8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
@@ -600,15 +651,15 @@ export const IconEmojiBall = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M3.5 10C7.09 10 10 7.09 10 3.5M16.5 10C12.91 10 10 12.91 10 16.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M5.404 5.404L14.596 14.596" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
 // Lightbulb icon (Objects category)
 export const IconEmojiLightbulb = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M7.5 13.5V12.75C7.5 10.75 5 10.25 5 7.5a5 5 0 0 1 10 0c0 2.75-2.5 3.25-2.5 5.25v.75Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M8 16h4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7.5 13.5C7.5 11.5 5 11 5 7.5a5 5 0 0 1 10 0C15 11 12.5 11.5 12.5 13.5Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7.5 16H12.5C12.5 17 11.5 17.5 10 17.5C8.5 17.5 7.5 17 7.5 16Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7.5 7.5A2.5 2.5 0 0 1 10 5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
@@ -623,15 +674,15 @@ export const IconEmojiHeart = `
 export const IconEmojiFlag = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path d="M4.5 16.5v-13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M4.5 4.5C8 2 11 7 15.5 4.5L13.5 8.5L15.5 12.5C11 15 8 10 4.5 12.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4.5 4.5C8.5 1 11.5 8 16 4.5L16 12.5C11.5 16 8.5 9 4.5 12.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
 export const IconEmojiGlobe = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M7 4.234L8 7L6.5 9.5L9.5 11L10.5 14L9 16.423" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M15.63 6.75L12 7.5L12.75 10.5L16.325 11.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7 4.234C6 6.5 6.5 8 9 8.5C11.5 9 12 10.5 10.5 12C9.5 13 10 14.5 9 16.423" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M15.63 6.75C13 6.75 12.75 8.5 14 9.5C14.75 10.25 15.5 10.25 16.325 11.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 

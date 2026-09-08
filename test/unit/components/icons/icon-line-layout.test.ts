@@ -275,7 +275,7 @@ describe('Blok Line layout geometry', () => {
       .flatMap(path => path.getAttribute('d')?.match(/M[^M]+/g) ?? []);
 
     expect(ball.querySelector('polygon, [fill="currentColor"]')).toBeNull();
-    expect(seams).toHaveLength(3);
+    expect(seams).toHaveLength(2);
     for (const seam of seams) {
       expect(seam).not.toMatch(/[zZ]/);
     }

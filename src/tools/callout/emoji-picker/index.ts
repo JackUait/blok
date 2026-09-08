@@ -31,14 +31,14 @@ import {
   IconCross,
   IconEmojiDice,
   IconSearch,
-  IconEmojiStar,
-  IconEmojiSmile,
+  IconEmojiSparkles,
+  IconEmojiWink,
   IconEmojiSprout,
-  IconEmojiUtensils,
-  IconEmojiBall,
-  IconEmojiGlobe,
+  IconEmojiBowl,
+  IconEmojiGamepad,
+  IconEmojiMap,
   IconEmojiLightbulb,
-  IconEmojiHeart,
+  IconEmojiHearts,
   IconEmojiFlag,
 } from '../../../components/icons';
 
@@ -71,14 +71,14 @@ const REEL_DISTORTION = {
 
 /** SVG icon for each emoji category (display order). */
 const CATEGORY_NAV: ReadonlyArray<readonly [id: string, icon: string]> = [
-  ['callout', IconEmojiStar],
-  ['people', IconEmojiSmile],
+  ['callout', IconEmojiSparkles],
+  ['people', IconEmojiWink],
   ['nature', IconEmojiSprout],
-  ['foods', IconEmojiUtensils],
-  ['activity', IconEmojiBall],
-  ['places', IconEmojiGlobe],
+  ['foods', IconEmojiBowl],
+  ['activity', IconEmojiGamepad],
+  ['places', IconEmojiMap],
   ['objects', IconEmojiLightbulb],
-  ['symbols', IconEmojiHeart],
+  ['symbols', IconEmojiHearts],
   ['flags', IconEmojiFlag],
 ];
 

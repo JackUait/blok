@@ -81,47 +81,55 @@ describe('compact emoji picker artwork', () => {
     expect(svg.getAttribute('fill')).toBe('none');
   });
 
-  it('keeps the open grin centered between the eyes with room inside the face', () => {
+  it('centers one open smile curve with clear space below the eyes and above the frame', () => {
     const svg = parse('IconEmojiSmile');
     const mouth = pathOf(svg);
 
-    expect(mouth.endsWith('Z')).toBe(true);
-    const [left, top, right, rightY, controlX1, controlY1, controlX2, controlY2, endX, endY] = numbers(mouth);
+    expect(mouth).toMatch(/^M[\d. ]+C[\d. ]+$/);
+    const [left, top, controlX1, controlY1, controlX2, controlY2, right, endY] = numbers(mouth);
 
     expect(left + right).toBe(20);
-    expect(top).toBe(rightY);
-    expect(endX).toBe(left);
-    expect(endY).toBe(top);
+    expect(top).toBe(endY);
     expect(controlX1 + controlX2).toBe(20);
     expect(controlY1).toBe(controlY2);
     const bottom = (top + 3 * controlY1 + 3 * controlY2 + endY) / 8;
 
-    expect(bottom - top - 1.25).toBeGreaterThanOrEqual(1.25);
+    expect(bottom - top).toBeGreaterThanOrEqual(1.25);
+    expect(top - 8 - 0.75 - 0.625).toBeGreaterThanOrEqual(1.25);
     expect(16.5 - bottom - 1.25).toBeGreaterThanOrEqual(1.25);
   });
 
-  it('gives one open leaf a continuous diagonal vein extending into its stem', () => {
+  it('attaches both leaves to a centered vertical stem that stops at the upper leaf', () => {
     const svg = parse('IconEmojiSprout');
+    const stemPath = pathOf(svg, 2);
 
-    expect(svg.querySelectorAll('path')).toHaveLength(2);
-    const outline = pathOf(svg);
-    const vein = pathOf(svg, 1);
+    expect(stemPath).toMatch(/^M[\d. ]+V[\d.]+$/);
+    expect(svg.querySelectorAll('path')).toHaveLength(3);
+    const stem = numbers(stemPath);
 
-    expect(outline.endsWith('Z')).toBe(true);
-    expect(outline.match(/C/g)).toHaveLength(2);
-    expect(vein).toMatch(/^M[\d. ]+L[\d. ]+$/);
-    const leaf = numbers(outline);
-    const [startX, startY, endX, endY] = numbers(vein);
+    expect(stem).toHaveLength(3);
+    expect(stem[0]).toBe(10);
 
-    expect(startX).toBeLessThan(leaf[0]);
-    expect(startY).toBeGreaterThan(leaf[1]);
-    expect(startX + startY).toBe(20);
-    expect(endX + endY).toBe(20);
-    expect(endX).toBeGreaterThan(leaf[0]);
-    expect(endX).toBeLessThan(leaf[6]);
-    expect(endY).toBeLessThan(leaf[1]);
-    expect(endY).toBeGreaterThan(leaf[7]);
-    expect(Math.hypot(leaf[6] - endX, leaf[7] - endY) - 1.25).toBeGreaterThanOrEqual(1.25);
+    for (const index of [0, 1]) {
+      const outline = pathOf(svg, index);
+
+      expect(outline).toMatch(/^M[\d. ]+C[\d. ]+C[\d. ]+Z$/);
+      const leaf = numbers(outline);
+
+      expect(leaf).toHaveLength(14);
+      expect(leaf.slice(12)).toStrictEqual(leaf.slice(0, 2));
+      expect(leaf[0]).toBe(stem[0]);
+      expect(leaf[1]).toBeGreaterThanOrEqual(stem[2]);
+      expect(stem[1] - Math.max(...leaf.filter((_, coordinate) => coordinate % 2 === 1)) - 1.25).toBeGreaterThanOrEqual(1.25);
+    }
+
+    const left = numbers(pathOf(svg));
+    const right = numbers(pathOf(svg, 1));
+
+    expect(left[6]).toBeLessThan(stem[0]);
+    expect(right[6]).toBeGreaterThan(stem[0]);
+    expect(left[1]).toBeGreaterThan(right[1]);
+    expect(stem[2]).toBe(right[1]);
   });
 
   it('aligns the spoon handle with its bowl and the fork baseline', () => {
@@ -140,17 +148,17 @@ describe('compact emoji picker artwork', () => {
     expect(x - numeric(bowl, 'rx') - 8.5 - 1.25).toBeGreaterThanOrEqual(1.25);
   });
 
-  it('anchors the ball diagonal and both continental edges to the shared circular frame', () => {
-    const ball = parse('IconEmojiBall');
-    const diameter = Array.from(ball.querySelectorAll('path')).find(path => /^M[\d. ]+L[\d. ]+$/.test(path.getAttribute('d') ?? ''));
+  it('keeps the ball interior open between its two curved seams', () => {
+    const paths = Array.from(parse('IconEmojiBall').querySelectorAll('path'))
+      .flatMap(path => path.getAttribute('d')?.match(/M[^M]+/g) ?? []);
 
-    expect(diameter).toBeDefined();
-    const line = numbers(diameter?.getAttribute('d') ?? '');
+    expect(paths).toHaveLength(2);
+    for (const seam of paths) {
+      expect(seam).toMatch(/^M[\d. ]+C[\d. ]+$/);
+    }
+  });
 
-    expect(line).toHaveLength(4);
-    expect(line[0] + line[2]).toBe(20);
-    expect(line[1] + line[3]).toBe(20);
-
+  it('anchors smooth continental edges to the shared circular frame', () => {
     const globe = parse('IconEmojiGlobe');
     const face = parse('IconEmojiSmile').querySelector('circle');
     const frame = globe.querySelector('circle');
@@ -158,51 +166,87 @@ describe('compact emoji picker artwork', () => {
     for (const attribute of ['cx', 'cy', 'r']) {
       expect(frame?.getAttribute(attribute)).toBe(face?.getAttribute(attribute));
     }
-    for (const path of [line, numbers(pathOf(globe)), numbers(pathOf(globe, 1))]) {
+    expect(globe.querySelectorAll('path')).toHaveLength(2);
+    for (const element of globe.querySelectorAll('path')) {
+      const outline = element.getAttribute('d') ?? '';
+
+      expect(outline).toMatch(/^M[\d. ]+(C[\d. ]+){2,3}$/);
+      const path = numbers(outline);
+
       expect(Math.hypot(path[0] - 10, path[1] - 10)).toBeCloseTo(6.5, 1);
       expect(Math.hypot(path[path.length - 2] - 10, path[path.length - 1] - 10)).toBeCloseTo(6.5, 1);
+      for (let index = 0; index < path.length; index += 2) {
+        expect(Math.hypot(path[index] - 10, path[index + 1] - 10)).toBeLessThanOrEqual(6.51);
+      }
     }
   });
 
-  it('keeps the rounded bulb clear of rays with a broad neck and simple base', () => {
+  it('keeps symmetric glass clear of its rounded base and internal shine', () => {
     const svg = parse('IconEmojiLightbulb');
 
-    expect(svg.querySelectorAll('path')).toHaveLength(2);
-    const glass = pathOf(svg);
-    const base = pathOf(svg, 1);
-    const neck = numbers(glass);
+    expect(svg.querySelectorAll('path')).toHaveLength(3);
+    expect(svg.querySelector('line, polyline, polygon, circle, ellipse')).toBeNull();
+    expect(svg.getAttribute('fill')).toBe('none');
+    expect(pathOf(svg)).toMatch(/^M[\d. ]+C[\d. ]+a[\d. ]+C[\d. ]+Z$/);
+    expect(pathOf(svg, 1)).toMatch(/^M[\d. ]+H[\d.]+C[\d. ]+C[\d. ]+Z$/);
+    expect(pathOf(svg, 2)).toMatch(/^M[\d. ]+A[\d. ]+$/);
+    const glass = numbers(pathOf(svg));
+    const base = numbers(pathOf(svg, 1));
+    const shine = numbers(pathOf(svg, 2));
 
-    expect(glass.endsWith('Z')).toBe(true);
-    expect(glass).toContain('a5 5 0 0 1 10 0');
-    expect(base).toMatch(/^M[\d. ]+h[\d.]+$/);
-    const [left, baseline, width] = numbers(base);
+    expect(glass).toHaveLength(21);
+    expect(base).toHaveLength(15);
+    expect(shine).toHaveLength(9);
+    for (const [left, right] of [[0, 19], [2, 17], [4, 15]]) {
+      expect(glass[left] + glass[right]).toBe(20);
+      expect(glass[left + 1]).toBe(glass[right + 1]);
+    }
+    expect(glass[6] + glass[13] / 2).toBe(10);
+    expect(glass[8]).toBe(glass[9]);
+    expect(glass.slice(10, 13)).toStrictEqual([0, 0, 1]);
+    expect(glass[13]).toBe(2 * glass[8]);
+    expect(glass[14]).toBe(0);
 
-    expect(glass.match(/[A-Za-z]/g)).toStrictEqual(['M', 'V', 'C', 'a', 'c', 'v', 'Z']);
-    expect(neck).toHaveLength(23);
-    const rightX = neck[7] + neck[14] + neck[20];
-    const rightY = neck[8] + neck[15] + neck[21] + neck[22];
+    expect(base[0]).toBe(glass[0]);
+    expect(base[2]).toBe(glass[19]);
+    expect(base[2] - base[0]).toBeGreaterThanOrEqual(4);
+    expect(base[1] - glass[1] - 1.25).toBeGreaterThanOrEqual(1.25);
+    expect(base.slice(13)).toStrictEqual(base.slice(0, 2));
+    expect(base[7]).toBe(10);
+    for (const [left, right] of [[3, 11], [5, 9]]) {
+      expect(base[left] + base[right]).toBe(20);
+      expect(base[left + 1]).toBe(base[right + 1]);
+      expect(base[left + 1]).toBeGreaterThan(base[1]);
+    }
+    expect(base[8]).toBeGreaterThan(base[1]);
 
-    expect(rightX - neck[0]).toBeGreaterThanOrEqual(5);
-    expect((neck[0] + rightX) / 2).toBe(10);
-    expect(rightY).toBe(neck[1]);
-    expect(width).toBeGreaterThanOrEqual(4);
-    expect(left + width / 2).toBe(10);
-    expect(left).toBeGreaterThanOrEqual(neck[0]);
-    expect(left + width).toBeLessThanOrEqual(rightX);
-    expect(baseline - rightY - 1.25).toBeGreaterThanOrEqual(1.25);
+    expect(shine[0] + shine[2]).toBe(10);
+    expect(shine[1]).toBe(glass[7]);
+    expect(shine[2]).toBe(shine[3]);
+    expect(shine.slice(4, 7)).toStrictEqual([0, 0, 1]);
+    expect(shine[7]).toBe(10);
+    expect(shine[8] + shine[3]).toBe(glass[7]);
+    expect(glass[8] - shine[2] - 1.25).toBeGreaterThanOrEqual(1.25);
   });
 
-  it('leaves a visible swallowtail inset while the flag meets its pole', () => {
+  it('attaches both cloth ends to an upright flagpole without a transform', () => {
     const svg = parse('IconEmojiFlag');
     const flag = pathOf(svg, 1);
-    const tail = flag.match(/L[\d. ]+L[\d. ]+/)?.[0] ?? '';
 
-    expect(tail).not.toBe('');
-    const [notchX, notchY, tipX, tipY] = numbers(tail);
+    expect(svg.querySelector('g, [transform]')).toBeNull();
+    expect(svg.hasAttribute('transform')).toBe(false);
+    expect(svg.querySelectorAll(':scope > path')).toHaveLength(2);
+    expect(pathOf(svg)).toMatch(/^M[\d. ]+v-[\d.]+$/);
+    expect(flag).toMatch(/^M[\d. ]+C[\d. ]+L[\d. ]+C[\d. ]+$/);
+    const wave = numbers(flag);
+    const pole = numbers(pathOf(svg));
 
-    expect(tipX - notchX).toBeGreaterThanOrEqual(1.25);
-    expect(tipY - notchY).toBeGreaterThanOrEqual(2.5);
-    expect(numbers(flag)[0]).toBe(numbers(pathOf(svg))[0]);
+    expect(wave[6]).toBe(wave[8]);
+    expect(wave[9] - wave[7]).toBeGreaterThanOrEqual(7.5);
+    expect(wave[0]).toBe(pole[0]);
+    expect(wave[14]).toBe(pole[0]);
+    expect(wave[1]).toBeGreaterThan(pole[1] + pole[2]);
+    expect(wave[15]).toBeLessThan(pole[1]);
   });
 
   it('centers five pips in a single tilted die with generous edge clearance', () => {

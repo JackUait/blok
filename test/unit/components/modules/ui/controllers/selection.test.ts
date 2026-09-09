@@ -164,9 +164,11 @@ describe('SelectionController', () => {
       controller: SelectionController,
       blok: BlokModules,
       wrapper: HTMLElement
-    ): void => {
+    ): HTMLElement => {
       const blockContent = document.createElement('div');
 
+      blockContent.contentEditable = 'true';
+      blockContent.setAttribute('contenteditable', 'true');
       blockContent.setAttribute('data-blok-testid', 'block-content');
       wrapper.appendChild(blockContent);
 
@@ -185,28 +187,33 @@ describe('SelectionController', () => {
         isCollapsed: false,
       } as unknown as ReturnType<typeof Selection.get>);
       vi.spyOn(Selection, 'text', 'get').mockReturnValue('selected text');
+
+      return blockContent;
     };
 
-    it('shows inline toolbar synchronously on pointerup without waiting for debounce', () => {
+    it('shows inline toolbar on the next frame without waiting for debounce', () => {
       const { controller, blok, wrapper } = createSelectionController();
 
-      setupValidSelection(controller, blok, wrapper);
+      const blockContent = setupValidSelection(controller, blok, wrapper);
+      const markedText = document.createElement('strong');
 
-      // Release the pointer after a drag-selection — toolbar must appear immediately,
-      // without advancing the selectionchange debounce timers.
-      document.dispatchEvent(new Event('pointerup'));
+      markedText.textContent = 'selected text';
+      blockContent.appendChild(markedText);
+      markedText.dispatchEvent(new Event('pointerup', { bubbles: true }));
 
+      expect(blok.InlineToolbar.tryToShow).not.toHaveBeenCalled();
+      vi.advanceTimersToNextFrame();
       expect(blok.InlineToolbar.tryToShow).toHaveBeenCalledWith(true);
     });
 
     it('does not show inline toolbar on selectionchange while the pointer is held down', () => {
       const { controller, blok, wrapper } = createSelectionController();
 
-      setupValidSelection(controller, blok, wrapper);
+      const blockContent = setupValidSelection(controller, blok, wrapper);
 
       // User is still dragging: pointer is down and the selection grows. Even if the
       // selectionchange debounce fires mid-drag (e.g. a pause), the toolbar must stay hidden.
-      document.dispatchEvent(new Event('pointerdown'));
+      blockContent.dispatchEvent(new Event('pointerdown', { bubbles: true }));
       document.dispatchEvent(new Event('selectionchange'));
       vi.runAllTimers();
 
@@ -216,17 +223,108 @@ describe('SelectionController', () => {
     it('shows inline toolbar only once the pointer is released after dragging', () => {
       const { controller, blok, wrapper } = createSelectionController();
 
-      setupValidSelection(controller, blok, wrapper);
+      const blockContent = setupValidSelection(controller, blok, wrapper);
 
-      document.dispatchEvent(new Event('pointerdown'));
+      blockContent.dispatchEvent(new Event('pointerdown', { bubbles: true }));
       document.dispatchEvent(new Event('selectionchange'));
       vi.runAllTimers();
 
       expect(blok.InlineToolbar.tryToShow).not.toHaveBeenCalled();
 
-      document.dispatchEvent(new Event('pointerup'));
+      blockContent.dispatchEvent(new Event('pointerup', { bubbles: true }));
+      vi.advanceTimersToNextFrame();
 
       expect(blok.InlineToolbar.tryToShow).toHaveBeenCalledWith(true);
+    });
+
+    it('restores the current block for a collapsed caret before a menu item click', () => {
+      const { controller, blok, wrapper } = createSelectionController();
+      const blockContent = document.createElement('div');
+      const text = document.createTextNode(':fi');
+      const item = document.createElement('button');
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('Selection is unavailable');
+      }
+
+      blockContent.setAttribute('data-blok-testid', 'block-content');
+      blockContent.appendChild(text);
+      wrapper.appendChild(blockContent);
+      document.body.appendChild(item);
+      selection.collapse(text, text.length);
+      controller.enable();
+
+      const handled: Array<Node | string> = [];
+
+      vi.mocked(blok.BlockManager.setCurrentBlockByChildNode).mockImplementation(node => {
+        handled.push(node);
+
+        return undefined;
+      });
+      item.addEventListener('click', () => handled.push('click'));
+
+      item.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      item.dispatchEvent(new Event('pointerup', { bubbles: true }));
+      item.click();
+
+      expect(handled).toEqual([blockContent, 'click']);
+    });
+
+    it('does not read the stale range that a click collapses after pointerup', () => {
+      const { controller, blok, wrapper } = createSelectionController();
+      const blockContent = document.createElement('div');
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('Selection is unavailable');
+      }
+
+      blockContent.contentEditable = 'true';
+      blockContent.setAttribute('contenteditable', 'true');
+      blockContent.setAttribute('data-blok-testid', 'block-content');
+      blockContent.textContent = 'Fully selected paragraph';
+      wrapper.appendChild(blockContent);
+      selection.selectAllChildren(blockContent);
+      controller.enable();
+
+      const selectionsAtShow: string[] = [];
+
+      vi.mocked(blok.InlineToolbar.tryToShow).mockImplementation(() => {
+        selectionsAtShow.push(selection.toString());
+
+        return Promise.resolve();
+      });
+
+      blockContent.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      blockContent.dispatchEvent(new Event('pointerup', { bubbles: true }));
+      selection.collapse(blockContent, 0);
+      vi.advanceTimersToNextFrame();
+
+      expect(selectionsAtShow).not.toContain('Fully selected paragraph');
+    });
+
+    it('does not reopen from a queued release after disable and re-enable', () => {
+      const { controller, blok, wrapper } = createSelectionController();
+
+      const blockContent = setupValidSelection(controller, blok, wrapper);
+      blockContent.dispatchEvent(new Event('pointerup', { bubbles: true }));
+      controller.disable();
+      controller.enable();
+      vi.advanceTimersToNextFrame();
+
+      expect(blok.InlineToolbar.tryToShow).not.toHaveBeenCalled();
+    });
+
+    it('does not reopen from a queued release during the next click', () => {
+      const { controller, blok, wrapper } = createSelectionController();
+
+      const blockContent = setupValidSelection(controller, blok, wrapper);
+      blockContent.dispatchEvent(new Event('pointerup', { bubbles: true }));
+      blockContent.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      vi.advanceTimersToNextFrame();
+
+      expect(blok.InlineToolbar.tryToShow).not.toHaveBeenCalled();
     });
   });
 
@@ -493,6 +591,43 @@ describe('SelectionController', () => {
   });
 
   describe('nested popover handling', () => {
+    it.each(['nested', 'root'])('does not reopen after a %s item closes the toolbar between pointerup and the next frame', (location) => {
+      const { controller, blok, wrapper } = createSelectionController();
+      const blockContent = document.createElement('div');
+      const popover = document.createElement('div');
+      const item = document.createElement('button');
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('Selection is unavailable');
+      }
+
+      blockContent.setAttribute('data-blok-testid', 'block-content');
+      blockContent.textContent = 'Selected text';
+      wrapper.appendChild(blockContent);
+      popover.appendChild(item);
+      document.body.appendChild(popover);
+      blok.InlineToolbar.opened = true;
+      Object.assign(blok.InlineToolbar, { hasNestedPopoverOpen: location === 'nested' });
+      vi.mocked(blok.InlineToolbar.containsNode).mockImplementation(node => popover.contains(node));
+      item.addEventListener('click', () => {
+        blok.InlineToolbar.opened = false;
+        Object.assign(blok.InlineToolbar, { hasNestedPopoverOpen: false });
+        popover.remove();
+      });
+      controller.enable();
+      item.focus();
+      selection.selectAllChildren(blockContent);
+
+      item.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      item.dispatchEvent(new Event('pointerup', { bubbles: true }));
+      item.click();
+      vi.advanceTimersToNextFrame();
+
+      expect(blok.InlineToolbar.tryToShow).not.toHaveBeenCalled();
+      expect(selection.toString()).toBe('Selected text');
+    });
+
     it.each(['pointerup', 'selectionchange'])('keeps a focused nested popover open without a document range on %s', (eventName) => {
       const { controller, blok } = createSelectionController();
       const popover = document.createElement('div');

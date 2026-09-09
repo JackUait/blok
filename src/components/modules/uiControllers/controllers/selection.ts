@@ -1,4 +1,5 @@
 import { selectionChangeDebounceTimeout } from '../../../constants';
+import { Dom as $ } from '../../../dom';
 import { SelectionUtils as Selection } from '../../../selection/index';
 import { debounce } from '../../../utils';
 
@@ -44,6 +45,8 @@ export class SelectionController extends Controller {
    */
   private isPointerDown = false;
 
+  private pointerUpFrame: number | null = null;
+
   /**
    * Remember that a drag may be starting so the inline toolbar stays hidden
    * until the pointer is released.
@@ -52,17 +55,32 @@ export class SelectionController extends Controller {
     this.isPointerDown = true;
   };
 
-  /**
-   * Show the inline toolbar the moment a pointer drag-selection is released.
-   *
-   * While the pointer is down the debounced selectionchange handler suppresses
-   * the toolbar (see handleSelectionChange), so it never flickers mid-drag.
-   * Clearing the flag and running the handler synchronously here makes the
-   * toolbar appear instantly on release.
-   */
-  private handlePointerUp = (): void => {
+  private handlePointerUp = (event: Event): void => {
     this.isPointerDown = false;
-    this.handleSelectionChange();
+
+    if (this.pointerUpFrame !== null) {
+      cancelAnimationFrame(this.pointerUpFrame);
+      this.pointerUpFrame = null;
+    }
+
+    const editable = event.target instanceof Element
+      ? event.target.closest('[contenteditable]')
+      : null;
+
+    // Menu clicks need selection handling before their click handlers run.
+    if (!(editable instanceof HTMLElement) || !$.isContentEditable(editable)) {
+      this.handleSelectionChange();
+
+      return;
+    }
+
+    // Mouseup can collapse the old selection after pointerup has fired.
+    this.pointerUpFrame = requestAnimationFrame(() => {
+      this.pointerUpFrame = null;
+      if (this.isEnabled && !this.isPointerDown) {
+        this.handleSelectionChange();
+      }
+    });
   };
 
   /**
@@ -90,6 +108,11 @@ export class SelectionController extends Controller {
    */
   public override disable(): void {
     this.isEnabled = false;
+    this.isPointerDown = false;
+    if (this.pointerUpFrame !== null) {
+      cancelAnimationFrame(this.pointerUpFrame);
+      this.pointerUpFrame = null;
+    }
     super.disable();
   }
 

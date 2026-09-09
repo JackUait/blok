@@ -74,7 +74,7 @@ const makeAdapterWithoutInternalFlag = (): BlockToolAdapter => {
     isDefault: false,
   };
 
-  return new BlockToolAdapter(options as ConstructorParameters<typeof BlockToolAdapter>[0]);
+  return new BlockToolAdapter(options as unknown as ConstructorParameters<typeof BlockToolAdapter>[0]);
 };
 
 describe('BaseToolAdapter settings', () => {

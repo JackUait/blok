@@ -145,7 +145,7 @@
         border-end-start-radius: var(--blok-space-1-5);
       }
 
-      @media (max-width: 374px) {
+      @media (max-width: 383px) {
         grid-template-columns: repeat(6, minmax(0, 1fr));
 
         > [data-blok-popover-item-html] {

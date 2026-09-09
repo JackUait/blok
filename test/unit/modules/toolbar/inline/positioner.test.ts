@@ -1,8 +1,19 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { InlinePositioner } from '../../../../../src/components/modules/toolbar/inline/index';
 
 describe('InlinePositioner', () => {
   let positioner: InlinePositioner;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal('innerWidth', 1000);
+    vi.stubGlobal('innerHeight', 600);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
 
   describe('desktop', () => {
     beforeEach(() => {
@@ -64,7 +75,7 @@ describe('InlinePositioner', () => {
       expect(wrapper.style.top).toBe('126px');
     });
 
-    it('should prevent overflow on right side', () => {
+    it('should keep an eight-pixel inset from the viewport right edge', () => {
       const wrapper = document.createElement('div');
       const selectionRect: DOMRect = {
         x: 900,
@@ -94,7 +105,7 @@ describe('InlinePositioner', () => {
         width: 1000,
         height: 500,
         top: 0,
-        right: 1000, // Content area ends at 1000
+        right: 1000,
         bottom: 500,
         left: 0,
         toJSON: () => ({}),
@@ -109,9 +120,7 @@ describe('InlinePositioner', () => {
         popoverWidth,
       });
 
-      // realRightCoord would be 900 + 200 + 0 = 1100, which exceeds contentRect.right (1000)
-      // So x should be adjusted: 1000 - 200 - 0 = 800
-      expect(wrapper.style.left).toBe('800px');
+      expect(wrapper.style.left).toBe('792px');
     });
 
     it('should handle popover width of 0', () => {

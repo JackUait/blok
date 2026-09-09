@@ -501,6 +501,13 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
 
     this.popover.show?.();
 
+    // Opened styles and inherited fonts can change the measured size.
+    const renderedRect = popoverElement?.getBoundingClientRect();
+
+    if (renderedRect && renderedRect.width > 0) {
+      this.applyPosition(renderedRect.width, renderedRect.height);
+    }
+
     if (directName !== null) {
       this.applyDirectMenuLook();
       this.directMenuChildren?.onOpen?.();

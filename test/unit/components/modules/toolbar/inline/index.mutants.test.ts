@@ -159,6 +159,8 @@ describe('InlineToolbar (mutation coverage)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    vi.stubGlobal('innerWidth', 1000);
+    vi.stubGlobal('innerHeight', 800);
 
     popoverHolder.params = [];
     popoverHolder.instances = [];
@@ -263,6 +265,7 @@ describe('InlineToolbar (mutation coverage)', () => {
     window.getSelection()?.removeAllRanges();
     vi.useRealTimers();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   describe('initialization', () => {
@@ -873,10 +876,10 @@ describe('InlineToolbar (mutation coverage)', () => {
     });
 
     it.each([
-      { contentRight: 280, left: '80px' },
-      { contentRight: 200, left: '8px' },
-    ])('clamps the wrapper to the content and viewport using the popover width ($contentRight px)', async ({ contentRight, left }) => {
-      Object.defineProperty(blok.UI, 'contentRect', { value: new DOMRect(0, 0, contentRight, 600), configurable: true });
+      { viewportWidth: 288, left: '80px' },
+      { viewportWidth: 208, left: '8px' },
+    ])('clamps the wrapper to the viewport using the popover width ($viewportWidth px)', async ({ viewportWidth, left }) => {
+      vi.stubGlobal('innerWidth', viewportWidth);
 
       await toolbar.tryToShow();
 
@@ -884,7 +887,7 @@ describe('InlineToolbar (mutation coverage)', () => {
     });
 
     it('measures the popover from its element when it reports no size', async () => {
-      Object.defineProperty(blok.UI, 'contentRect', { value: new DOMRect(0, 0, 200, 600), configurable: true });
+      vi.stubGlobal('innerWidth', 208);
       vi.spyOn(popoverElement, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 120, 38));
       popoverHolder.factory = () => ({
         show,
@@ -897,6 +900,20 @@ describe('InlineToolbar (mutation coverage)', () => {
       await toolbar.tryToShow();
 
       expect(toolbar.nodes.wrapper?.style.left).toBe('80px');
+    });
+
+    it('clamps using the shown popover width instead of its cached size', async () => {
+      vi.spyOn(SelectionUtils, 'rect', 'get').mockReturnValue(new DOMRect(850, 40, 50, 20));
+      const measurePopover = vi.spyOn(popoverElement, 'getBoundingClientRect')
+        .mockReturnValue(new DOMRect(0, 0, 200, 38));
+
+      show.mockImplementation(() => {
+        measurePopover.mockReturnValue(new DOMRect(0, 0, 240, 38));
+      });
+
+      await toolbar.tryToShow();
+
+      expect(toolbar.nodes.wrapper?.style.left).toBe('752px');
     });
 
     it('offsets by its own containing block when the wrapper is laid out inside the UI wrapper', async () => {

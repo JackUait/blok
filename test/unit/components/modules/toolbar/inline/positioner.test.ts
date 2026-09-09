@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InlinePositioner } from '../../../../../../src/components/modules/toolbar/inline/positioner';
 import type { InlinePositioningOptions } from '../../../../../../src/components/modules/toolbar/inline/types';
 
@@ -8,6 +8,9 @@ describe('InlinePositioner', () => {
   let mockOptions: InlinePositioningOptions;
 
   beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal('innerWidth', 800);
+    vi.stubGlobal('innerHeight', 600);
     mockWrapper = document.createElement('div');
     document.body.appendChild(mockWrapper);
 
@@ -18,6 +21,12 @@ describe('InlinePositioner', () => {
       contentRect: new DOMRect(0, 0, 800, 600),
       popoverWidth: 200,
     };
+  });
+
+  afterEach(() => {
+    mockWrapper.remove();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   describe('constructor', () => {
@@ -68,7 +77,7 @@ describe('InlinePositioner', () => {
       expect(mockWrapper.style.left).toBe('100px');
     });
 
-    it('prevents overflow on right side', () => {
+    it('keeps an eight-pixel inset from the viewport right edge', () => {
       positioner = new InlinePositioner(false);
 
       // Selection is near right edge
@@ -77,10 +86,7 @@ describe('InlinePositioner', () => {
 
       positioner.apply(mockOptions);
 
-      // Toolbar should be positioned to not overflow content area
-      // contentRect.right = 800, popoverWidth = 200
-      // Expected x = 800 - 200 - 0 = 600
-      expect(parseInt(mockWrapper.style.left, 10)).toBeLessThanOrEqual(600);
+      expect(mockWrapper.style.left).toBe('592px');
     });
 
     it('handles mobile positioning with larger margin', () => {

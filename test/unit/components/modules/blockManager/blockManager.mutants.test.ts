@@ -5,8 +5,12 @@ import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
+import type { PasteEvent } from '../../../../../types';
 import { BlockChanged } from '../../../../../src/components/events';
 import { BlockRemovedMutationType } from '../../../../../types/events/block/BlockRemoved';
+import { BlockAddedMutationType } from '../../../../../types/events/block/BlockAdded';
+import { BlockChangedMutationType } from '../../../../../types/events/block/BlockChanged';
+import { BlockMovedMutationType } from '../../../../../types/events/block/BlockMoved';
 
 type BlockStubOptions = {
   id: string;
@@ -14,7 +18,31 @@ type BlockStubOptions = {
   depth?: number;
   selected?: boolean;
   withInput?: boolean;
+  /** tool name; defaults to 'paragraph' */
+  name?: string;
+  parentId?: string | null;
+  contentIds?: string[];
+  preservedTunes?: Record<string, unknown>;
+  preservedData?: Record<string, unknown>;
+  /** `block.save()` resolves to `{ data: saveData }`; undefined means save() resolves undefined */
+  saveData?: Record<string, unknown>;
+  /** extra markup rendered inside the holder (toggle markers, heading tags) */
+  holderHtml?: string;
 };
+
+/**
+ * Calls a private method. Only used where the public path runs the full
+ * editor boot (initializeServices wires the real collaborators), which the
+ * stub harness cannot provide.
+ */
+const invokePrivate = (instance: unknown, method: string, ...args: unknown[]): unknown => {
+  const fn = (instance as Record<string, (...args: unknown[]) => unknown>)[method];
+
+  return fn.call(instance, ...args);
+};
+
+/** Flushes every queued microtask before resolving. */
+const settle = (): Promise<void> => new Promise((resolve) => { setTimeout(resolve, 0); });
 
 /**
  * Minimal Block double. `getBlockNestingDepth` reads the depth off the holder,
@@ -23,8 +51,14 @@ type BlockStubOptions = {
 const createBlockStub = (options: BlockStubOptions): Block => {
   const holder = document.createElement('div');
 
+  holder.setAttribute('data-stub-id', options.id);
+
   if (options.depth !== undefined) {
     holder.setAttribute('data-blok-depth', String(options.depth));
+  }
+
+  if (options.holderHtml !== undefined) {
+    holder.innerHTML = options.holderHtml;
   }
 
   const input = document.createElement('div');
@@ -36,25 +70,59 @@ const createBlockStub = (options: BlockStubOptions): Block => {
     holder,
     selected: options.selected ?? false,
     firstInput: options.withInput === false ? undefined : input,
+    name: options.name ?? 'paragraph',
+    parentId: options.parentId ?? null,
+    contentIds: [...(options.contentIds ?? [])],
+    preservedTunes: options.preservedTunes ?? {},
+    preservedData: options.preservedData ?? {},
+    save: vi.fn(() => Promise.resolve(options.saveData === undefined ? undefined : { data: options.saveData })),
+    call: vi.fn(),
+    destroy: vi.fn(() => Promise.resolve()),
+    setPlaceholder: vi.fn(),
   } as unknown as Block;
+};
+
+type Mock = ReturnType<typeof vi.fn>;
+
+type YjsStub = {
+  transact: Mock;
+  transactWithoutCapture: Mock;
+  transactMoves: Mock;
+  removeBlock: Mock;
+  addBlock: Mock;
+  stopCapturing: Mock;
+  fromJSON: Mock;
+  onBlocksChanged: Mock;
+  getBlockById: Mock;
+  getBlockPlacement: Mock;
+  applyBlockPlacement: Mock;
+  recordParentChangeForPendingMove: Mock;
+  updateBlockData: Mock;
+  pruneBlockData: Mock;
+  updateBlockMetadata: Mock;
+  enqueueBlockDataWrite: Mock;
+  isInMoveGroup: boolean;
+  isDragMoveGroupActive: boolean;
 };
 
 type Harness = {
   blockManager: BlockManager;
   store: Block[];
-  yjs: {
-    transact: ReturnType<typeof vi.fn>;
-    removeBlock: ReturnType<typeof vi.fn>;
-    addBlock: ReturnType<typeof vi.fn>;
-    stopCapturing: ReturnType<typeof vi.fn>;
-  };
-  operationsRemoveBlock: ReturnType<typeof vi.fn>;
-  operationsInsert: ReturnType<typeof vi.fn>;
-  operationsMove: ReturnType<typeof vi.fn>;
-  operationsSplit: ReturnType<typeof vi.fn>;
-  checkEmptiness: ReturnType<typeof vi.fn>;
+  yjs: YjsStub;
+  yjsSync: Record<string, unknown>;
+  operations: Record<string, unknown>;
+  hierarchy: Record<string, unknown>;
+  eventBinder: Record<string, unknown>;
+  shortcuts: Record<string, unknown>;
+  factory: Record<string, unknown>;
+  operationsRemoveBlock: Mock;
+  operationsInsert: Mock;
+  operationsMove: Mock;
+  operationsSplit: Mock;
+  checkEmptiness: Mock;
   removedIndices: number[];
-  mutations: { type: string; index: unknown }[];
+  mutations: Record<string, unknown>[];
+  events: CustomEvent<unknown>[];
 };
 
 type HarnessOptions = {
@@ -63,6 +131,22 @@ type HarnessOptions = {
   currentBlock?: Block | undefined;
   /** stands in for a REMOVED hook that drains siblings out of the store */
   cascadeRemove?: (removed: Block, store: Block[]) => void;
+  /** merged over the default repository stub */
+  repository?: Record<string, unknown>;
+  /** merged over the default YjsManager stub */
+  yjs?: Record<string, unknown>;
+  /** merged over the default operations stub */
+  operations?: Record<string, unknown>;
+  /** merged over the default yjsSync stub */
+  yjsSync?: Record<string, unknown>;
+  /** merged over the default hierarchy stub */
+  hierarchy?: Record<string, unknown>;
+  /** merged into blockManager.state */
+  state?: Record<string, unknown>;
+  /** leave the operations module unset (pre-prepare state) */
+  omitOperations?: boolean;
+  /** leave the blocks store unset, so the blocksStore getter throws */
+  omitStore?: boolean;
 };
 
 /**
@@ -82,23 +166,48 @@ const createHarness = (options: HarnessOptions): Harness => {
   const store = [...options.blocks];
   const removedIndices: number[] = [];
 
-  const yjs = {
+  const yjs: YjsStub = {
     transact: vi.fn((fn: () => void) => fn()),
+    transactWithoutCapture: vi.fn((fn: () => void) => fn()),
+    transactMoves: vi.fn((fn: () => void) => fn()),
     removeBlock: vi.fn(),
     addBlock: vi.fn(),
     stopCapturing: vi.fn(),
+    fromJSON: vi.fn(),
+    onBlocksChanged: vi.fn(() => () => undefined),
+    // A minimal Yjs record: without it setBlockParent exits before the doc write.
+    getBlockById: vi.fn(() => ({ get: () => undefined })),
+    getBlockPlacement: vi.fn(() => null),
+    applyBlockPlacement: vi.fn(),
+    recordParentChangeForPendingMove: vi.fn(),
+    updateBlockData: vi.fn(() => true),
+    pruneBlockData: vi.fn(() => false),
+    updateBlockMetadata: vi.fn(),
+    enqueueBlockDataWrite: vi.fn(),
+    isInMoveGroup: false,
+    isDragMoveGroupActive: false,
+    ...(options.yjs as Partial<YjsStub>),
   };
 
   const operationsRemoveBlock = vi.fn().mockResolvedValue(undefined);
   const operationsMove = vi.fn();
   const operationsSplit = vi.fn(() => createBlockStub({ id: 'split-tail' }));
   const checkEmptiness = vi.fn();
-  const mutations: { type: string; index: unknown }[] = [];
+  const mutations: Record<string, unknown>[] = [];
+  const events: CustomEvent<unknown>[] = [];
 
   config.eventsDispatcher.on(BlockChanged, ({ event }) => {
-    const detail = event.detail as { index?: unknown };
+    const detail = event.detail as unknown as Record<string, unknown>;
+    const entry: Record<string, unknown> = { type: event.type, index: detail.index };
 
-    mutations.push({ type: event.type, index: detail.index });
+    if (detail.fromIndex !== undefined) {
+      entry.fromIndex = detail.fromIndex;
+    }
+    if (detail.toIndex !== undefined) {
+      entry.toIndex = detail.toIndex;
+    }
+    mutations.push(entry);
+    events.push(event);
   });
   const operationsInsert = vi.fn((insertOptions: { id?: string }) =>
     createBlockStub({ id: insertOptions.id ?? 'inserted' }));
@@ -123,41 +232,120 @@ const createHarness = (options: HarnessOptions): Harness => {
         options.cascadeRemove?.(removed, store);
       }
     },
+    insertMany: (inserted: Block[], index: number): void => {
+      store.splice(index, 0, ...inserted);
+    },
   };
 
   const privateFields = blockManager as unknown as Record<string, unknown>;
+
+  const hierarchy = {
+    setBlockParent: vi.fn((block: Block, parentId: string | null) => {
+      const writable = block as { parentId: string | null };
+      writable.parentId = parentId;
+    }),
+    updateBlockIndentation: vi.fn(),
+    getBlockDepth: vi.fn(() => 0),
+    ...options.hierarchy,
+  };
+  const eventBinder = {
+    bindBlockEvents: vi.fn(),
+    enableBindings: vi.fn(),
+    disableBindings: vi.fn(),
+  };
+  const shortcuts = {
+    register: vi.fn(),
+    unregister: vi.fn(),
+  };
+  const factory = {
+    composeBlock: vi.fn(() => createBlockStub({ id: 'composed' })),
+  };
 
   privateFields.repository = {
     get blocks(): Block[] {
       return store;
     },
+    get firstBlock(): Block | undefined {
+      return store[0];
+    },
+    get lastBlock(): Block | undefined {
+      return store[store.length - 1];
+    },
+    get topLevelBlocks(): Block[] {
+      return store.filter((block) => block.parentId === null);
+    },
     getBlockIndex: (block: Block): number => store.indexOf(block),
+    getBlockByIndex: (index: number): Block | undefined => store[index],
+    getBlockById: (id: string): Block | undefined => store.find((block) => block.id === id),
+    getBlockByChildNode: (): Block | undefined => undefined,
+    getBlock: (): Block | undefined => undefined,
+    getNextContentfulBlock: (): Block | undefined => undefined,
+    getPreviousContentfulBlock: (): Block | undefined => undefined,
+    resolveToRootBlock: (block: Block): Block => block,
+    resolveToSelectableBlock: (block: Block): Block => block,
+    isSelectionUnit: (): boolean => true,
+    getSelectionSiblingRange: (): Block[] => [],
+    isBlokEmpty: (): boolean => store.length === 0,
+    ...options.repository,
   };
   privateFields.yjsSync = {
     isSyncingFromYjs: false,
     isReconciling: (): boolean => false,
+    isMaterializing: (): boolean => false,
+    settleMaterialization: vi.fn(),
+    withAtomicOperation: vi.fn((fn: () => void): void => fn()),
+    withAtomicOperationAsync: vi.fn((fn: () => Promise<void>): Promise<void> => fn()),
+    subscribe: vi.fn(),
+    destroy: vi.fn(),
+    ...options.yjsSync,
   };
-  privateFields.operations = {
-    suppressStopCapturing: false,
-    currentBlockIndexValue: 0,
-    currentBlock: 'currentBlock' in options ? options.currentBlock : undefined,
-    removeBlock: operationsRemoveBlock,
-    insert: operationsInsert,
-    move: operationsMove,
-    split: operationsSplit,
-  };
-  privateFields._blocks = blocksStore;
+  if (!options.omitOperations) {
+    privateFields.operations = {
+      suppressStopCapturing: false,
+      currentBlockIndexValue: 0,
+      currentBlock: 'currentBlock' in options ? options.currentBlock : undefined,
+      removeBlock: operationsRemoveBlock,
+      insert: operationsInsert,
+      move: operationsMove,
+      split: operationsSplit,
+      insertDefaultBlockAtIndex: vi.fn(() => createBlockStub({ id: 'index-inserted' })),
+      paste: vi.fn(async () => createBlockStub({ id: 'pasted' })),
+      update: vi.fn(async () => createBlockStub({ id: 'updated' })),
+      replace: vi.fn(() => createBlockStub({ id: 'replaced' })),
+      mergeBlocks: vi.fn(async () => undefined),
+      insertAtEnd: vi.fn(() => createBlockStub({ id: 'end-inserted' })),
+      moveCurrentBlockUp: vi.fn(),
+      moveCurrentBlockDown: vi.fn(),
+      insertInsideParent: vi.fn(() => createBlockStub({ id: 'inside-inserted' })),
+      splitBlockWithData: vi.fn(() => createBlockStub({ id: 'split-data' })),
+      ...options.operations,
+    };
+  }
+  if (!options.omitStore) {
+    privateFields._blocks = blocksStore;
+  }
+  privateFields.hierarchy = hierarchy;
+  privateFields.eventBinder = eventBinder;
+  privateFields.shortcuts = shortcuts;
+  privateFields.factory = factory;
 
   blockManager.state = {
     YjsManager: yjs,
-    UI: { checkEmptiness },
+    UI: { checkEmptiness, nodes: { wrapper: document.createElement('div') } },
     API: {},
+    ...options.state,
   } as unknown as BlokModules;
 
   return {
     blockManager,
     store,
     yjs,
+    yjsSync: privateFields.yjsSync as Record<string, unknown>,
+    operations: privateFields.operations as Record<string, unknown>,
+    hierarchy,
+    eventBinder,
+    shortcuts,
+    factory,
     operationsRemoveBlock,
     operationsInsert,
     operationsMove,
@@ -165,6 +353,7 @@ const createHarness = (options: HarnessOptions): Harness => {
     checkEmptiness,
     removedIndices,
     mutations,
+    events,
   };
 };
 
@@ -837,5 +1026,1379 @@ describe('BlockManager.split', () => {
 
     expect(harness.operationsSplit).toHaveBeenCalledOnce();
     expect(result).toBe(harness.operationsSplit.mock.results[0]?.value);
+  });
+});
+/*
+ * Mutation-campaign notes. Survivors left alive after the sweep, each with a
+ * one-line proof.
+ *
+ * EQUIVALENT (no behaviour test can distinguish them):
+ * - 2794 `?.` on yjsSync in the hierarchy's isSyncing getter: initializeServices
+ *   assigns yjsSync (L437) right after the hierarchy (L410), before any callback
+ *   can fire, so the chain never sees undefined.
+ * - 2904/2907/2908 withFlatIndentFollowers' startIndex guard: the only caller
+ *   passes members of the same array the helper indexOf's, so startIndex < 0 is
+ *   unreachable.
+ * - 3277/3278/3302/3303 clear() default-block guards: defaultBlockId is derived
+ *   from needToAddDefaultBlock, so conjunct 2 is true whenever conjunct 1 is;
+ *   && vs || vs true are indistinguishable.
+ * - 3332/3334 selectedBlocksForMove: empty array and undefined both yield a
+ *   zero-iteration reselect loop.
+ * - 3362/3363 breaking the CustomEvent's detail at construction is inert: the
+ *   enumerability fix-up below re-installs detail from eventDetail (jsdom keeps
+ *   detail non-enumerable, so the fix-up always runs).
+ * - 3365/3367/3375/3377 forcing the enumerability guard either way runs the same
+ *   defineProperty, because CustomEvent type/detail are non-enumerable here.
+ * - 3373/3383 mutate `configurable`, an attribute nothing re-reads.
+ * - 3402/3404 reconcileChildrenToParents' null-parent skip: get(null) is
+ *   undefined, so the fall-through assigns parentId = null (no-op) and continues.
+ * - 3417/3419 reconcileParentsToChildren's empty-contentIds skip: filtering []
+ *   is identity.
+ * - 3208 first conjunct `candidateParentId !== null` -> true: sectionIds never
+ *   contains null, so has(candidateParentId) is false exactly when the conjunct
+ *   was false.
+ * - 3442/3448/3449 snapshot spreads forced always-on add `parent: null` /
+ *   `content: []`, which the validators treat exactly like absent keys.
+ * - 3452/3455/3456 typeof-process / env guards: process always exists under
+ *   node/vitest, so all three forms read the same NODE_ENV.
+ * - 3479 size===0 forced true: the extra microtask flushes an empty set.
+ * - 3487 promises array seeded with a non-thenable: Promise.all timing is
+ *   unchanged and the resolution value is never read.
+ * - 3495/3497 pending assigned on empty promises: Promise.all([]) settles before
+ *   the double-microtask reader in endToolTransaction observes it.
+ * - 3500 dropping the pending=null reset leaves a resolved promise in the field;
+ *   every reader path still calls stopCapturing exactly once.
+ * - 3510 dataChangedRef {} vs {value:false}: falsy-identical at every read.
+ * - 3554 resolveHeadingLevel's parentId-null guard is duplicated by the callee:
+ *   getBlockById(null) is undefined so the depth lookup is false anyway.
+ *
+ * UNRESOLVED — unreachable through this stub harness (would need the real
+ * collaborators that only the full editor boot constructs, or a forbidden
+ * import): 2767 (shortcuts.register), 2772 + 2773-2785 (eventBinder closures:
+ * getBlockIndex, shouldHandleEvent), 2787-2793 (hierarchy onParentChanged
+ * closure), 2797 + 2800/2801 + 2804/2805/2806/2808/2809/2811 (BlockYjsSync
+ * closures: isReadOnly, insertDefaultBlock, replaceBlock, onBlockRemoved/Added),
+ * 2813/2814 (BlockShortcuts handler closures).
+ *
+ * CRASH-CLASS (defect only surfaces as an unhandled rejection, which per-test
+ * scoring ignores): 3489 (parent !== undefined forced true calls
+ * syncBlockDataToYjs(undefined), whose save() rejects).
+ */
+
+/**
+ * Getter and delegate one-liners. Identity assertions: every early return and
+ * optional chain here fails into a value that only identity can tell apart.
+ */
+describe('BlockManager getters and delegate one-liners', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('exposes the repository views by identity', () => {
+    const harness = createHarness({
+      blocks: [
+        createBlockStub({ id: 'a' }),
+        createBlockStub({ id: 'b' }),
+        createBlockStub({ id: 'c', parentId: 'a' }),
+      ],
+    });
+
+    expect(harness.blockManager.firstBlock).toBe(harness.store[0]);
+    expect(harness.blockManager.lastBlock).toBe(harness.store[2]);
+    expect(harness.blockManager.isBlokEmpty).toBe(false);
+    expect(harness.blockManager.topLevelBlocks).toEqual([harness.store[0], harness.store[1]]);
+  });
+
+  it('surfaces repository sentinels through the query delegates', () => {
+    const target = createBlockStub({ id: 'target' });
+    const root = createBlockStub({ id: 'root' });
+    const selectable = createBlockStub({ id: 'selectable' });
+    const siblingRange = [root, selectable];
+    const harness = createHarness({
+      blocks: [target],
+      repository: {
+        getBlockByIndex: () => target,
+        getBlockById: () => target,
+        getBlock: () => target,
+        getBlockByChildNode: () => target,
+        resolveToRootBlock: () => root,
+        resolveToSelectableBlock: () => selectable,
+        isSelectionUnit: () => true,
+        getSelectionSiblingRange: () => siblingRange,
+      },
+      hierarchy: {
+        getBlockDepth: () => 3,
+      },
+    });
+
+    expect(harness.blockManager.getBlockByIndex(0)).toBe(target);
+    expect(harness.blockManager.getBlockById('x')).toBe(target);
+    expect(harness.blockManager.getBlock(document.createElement('div'))).toBe(target);
+    expect(harness.blockManager.getBlockByChildNode(document.createElement('span'))).toBe(target);
+    expect(harness.blockManager.resolveToRootBlock(target)).toBe(root);
+    expect(harness.blockManager.resolveToSelectableBlock(target)).toBe(selectable);
+    expect(harness.blockManager.isSelectionUnit(target)).toBe(true);
+    expect(harness.blockManager.getSelectionSiblingRange(target, root)).toBe(siblingRange);
+    expect(harness.blockManager.getBlockDepth(target)).toBe(3);
+  });
+
+  it('reads operation-backed neighbours through to the operations stub', () => {
+    const next = createBlockStub({ id: 'next' });
+    const prev = createBlockStub({ id: 'prev' });
+    const nextVisible = createBlockStub({ id: 'next-visible' });
+    const prevVisible = createBlockStub({ id: 'prev-visible' });
+    const harness = createHarness({
+      blocks: [],
+      operations: {
+        nextBlock: next,
+        previousBlock: prev,
+        nextVisibleBlock: nextVisible,
+        previousVisibleBlock: prevVisible,
+      },
+    });
+
+    expect(harness.blockManager.nextBlock).toBe(next);
+    expect(harness.blockManager.previousBlock).toBe(prev);
+    expect(harness.blockManager.nextVisibleBlock).toBe(nextVisible);
+    expect(harness.blockManager.previousVisibleBlock).toBe(prevVisible);
+  });
+
+  it('answers null neighbours before the operations module exists', () => {
+    const { blockManager } = createHarness({ blocks: [], omitOperations: true });
+
+    expect(blockManager.nextBlock).toBeNull();
+    expect(blockManager.previousBlock).toBeNull();
+    expect(blockManager.nextVisibleBlock).toBeNull();
+    expect(blockManager.previousVisibleBlock).toBeNull();
+    expect(blockManager.currentBlock).toBeUndefined();
+  });
+
+  it('surfaces the repository contentful-block sentinels', () => {
+    const nextContentful = createBlockStub({ id: 'nc' });
+    const prevContentful = createBlockStub({ id: 'pc' });
+    const harness = createHarness({
+      blocks: [],
+      repository: {
+        getNextContentfulBlock: () => nextContentful,
+        getPreviousContentfulBlock: () => prevContentful,
+      },
+    });
+
+    expect(harness.blockManager.nextContentfulBlock).toBe(nextContentful);
+    expect(harness.blockManager.previousContentfulBlock).toBe(prevContentful);
+  });
+
+  it('reports the current block and a raised suppression flag', () => {
+    const current = createBlockStub({ id: 'current' });
+    const harness = createHarness({
+      blocks: [],
+      operations: { currentBlock: current, suppressStopCapturing: true },
+    });
+
+    expect(harness.blockManager.currentBlock).toBe(current);
+    expect(harness.blockManager.suppressStopCapturing).toBe(true);
+  });
+
+  it('defaults suppression to false with and without an operations module', () => {
+    const without = createHarness({ blocks: [], omitOperations: true });
+    const withUnsetFlag = createHarness({ blocks: [], operations: {} });
+
+    // The flag is genuinely absent, not false: the ?? fallback is the behavior.
+    delete (withUnsetFlag.operations).suppressStopCapturing;
+
+    expect(without.blockManager.suppressStopCapturing).toBe(false);
+    expect(withUnsetFlag.blockManager.suppressStopCapturing).toBe(false);
+  });
+
+  it('tracks the pointer-drag flag', () => {
+    const harness = createHarness({ blocks: [] });
+
+    expect(harness.blockManager.isPointerDragActive).toBe(false);
+    harness.blockManager.setPointerDragActive(true);
+    expect(harness.blockManager.isPointerDragActive).toBe(true);
+  });
+});
+
+/**
+ * The index/block setters. Setting currentBlock = undefined must short-circuit
+ * to unsetCurrentBlock without consulting the repository.
+ */
+describe('BlockManager.currentBlockIndex and currentBlock setters', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('stores the index without an operations module', () => {
+    const { blockManager } = createHarness({ blocks: [], omitOperations: true });
+
+    blockManager.currentBlockIndex = 5;
+
+    expect(blockManager.currentBlockIndex).toBe(5);
+  });
+
+  it('mirrors the index into operations when present', () => {
+    const harness = createHarness({ blocks: [] });
+
+    harness.blockManager.currentBlockIndex = 3;
+
+    expect(harness.blockManager.currentBlockIndex).toBe(3);
+    expect((harness.operations as { currentBlockIndexValue: number }).currentBlockIndexValue).toBe(3);
+  });
+
+  it('unsets through undefined without asking the repository where the block was', () => {
+    const block = createBlockStub({ id: 'b' });
+    const getBlockIndex = vi.fn(() => 1);
+    const harness = createHarness({ blocks: [block], repository: { getBlockIndex } });
+
+    harness.blockManager.currentBlockIndex = 2;
+    harness.blockManager.currentBlock = undefined;
+
+    expect(harness.blockManager.currentBlockIndex).toBe(-1);
+    expect(getBlockIndex).not.toHaveBeenCalled();
+    expect((harness.operations as { currentBlockIndexValue: number }).currentBlockIndexValue).toBe(-1);
+  });
+});
+
+describe('BlockManager.setPlaceholder', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('pushes the placeholder into the default tool and every block', () => {
+    const setDefaultPlaceholder = vi.fn();
+    const a = createBlockStub({ id: 'a' });
+    const b = createBlockStub({ id: 'b' });
+    const harness = createHarness({
+      blocks: [a, b],
+      state: { Tools: { blockTools: new Map([['paragraph', { setDefaultPlaceholder }]]) } },
+    });
+
+    harness.blockManager.setPlaceholder('Type here');
+
+    expect(setDefaultPlaceholder).toHaveBeenCalledOnce();
+    expect(setDefaultPlaceholder).toHaveBeenCalledWith('Type here');
+    expect(a.setPlaceholder).toHaveBeenCalledWith('Type here');
+    expect(b.setPlaceholder).toHaveBeenCalledWith('Type here');
+  });
+
+  it('falls back to the paragraph tool when no default block is configured', () => {
+    const setDefaultPlaceholder = vi.fn();
+    const harness = createHarness({
+      blocks: [],
+      defaultBlock: undefined,
+      state: { Tools: { blockTools: new Map([['paragraph', { setDefaultPlaceholder }]]) } },
+    });
+
+    harness.blockManager.setPlaceholder('Hi');
+
+    expect(setDefaultPlaceholder).toHaveBeenCalledWith('Hi');
+  });
+
+  it('survives a tool map without the default tool', () => {
+    const a = createBlockStub({ id: 'a' });
+    const harness = createHarness({
+      blocks: [a],
+      state: { Tools: { blockTools: new Map() } },
+    });
+
+    expect(() => harness.blockManager.setPlaceholder('Hi')).not.toThrow();
+    expect(a.setPlaceholder).toHaveBeenCalledWith('Hi');
+  });
+});
+
+describe('BlockManager.withViewRebuild', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('holds the sync window open through the next animation frame', async () => {
+    const harness = createHarness({ blocks: [] });
+    let ran = false;
+    const rebuild = async (): Promise<void> => {
+      ran = true;
+    };
+
+    await harness.blockManager.withViewRebuild(rebuild);
+
+    const atomicAsync = harness.yjsSync.withAtomicOperationAsync as Mock;
+
+    expect(atomicAsync).toHaveBeenCalledOnce();
+    expect(atomicAsync.mock.calls[0]?.[1]).toEqual({ extendThroughRAF: true });
+    expect(ran).toBe(true);
+  });
+});
+
+describe('BlockManager.toggleReadOnly', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('binds events back when leaving read-only, on the exact blocks array', () => {
+    const harness = createHarness({ blocks: [createBlockStub({ id: 'a' })] });
+
+    harness.blockManager.toggleReadOnly(false);
+
+    expect(harness.eventBinder.enableBindings).toHaveBeenCalledOnce();
+    expect((harness.eventBinder.enableBindings as Mock).mock.calls[0]?.[0]).toBe(harness.store);
+    expect(harness.eventBinder.disableBindings).not.toHaveBeenCalled();
+  });
+
+  it('unbinds events when entering read-only', () => {
+    const harness = createHarness({ blocks: [createBlockStub({ id: 'a' })] });
+
+    harness.blockManager.toggleReadOnly(true);
+
+    expect(harness.eventBinder.disableBindings).toHaveBeenCalledOnce();
+    expect(harness.eventBinder.enableBindings).not.toHaveBeenCalled();
+  });
+});
+
+describe('BlockManager.blocksStore guard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('refuses block operations before prepare() built the store', async () => {
+    const harness = createHarness({ blocks: [], omitStore: true });
+
+    await expect(harness.blockManager.update(createBlockStub({ id: 'a' })))
+      .rejects.toThrowError(new Error('BlockManager: blocks store is not initialized. Call prepare() before accessing blocks.'));
+  });
+});
+
+describe('BlockManager thin delegations', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('defaults insertDefaultBlockAtIndex to unfocused, yjs-synced, top-level', () => {
+    const insertDefaultBlockAtIndex = vi.fn(() => createBlockStub({ id: 'inserted' }));
+    const harness = createHarness({ blocks: [], operations: { insertDefaultBlockAtIndex } });
+
+    harness.blockManager.insertDefaultBlockAtIndex(2);
+
+    expect(insertDefaultBlockAtIndex).toHaveBeenCalledWith(2, false, false, expect.anything(), false);
+  });
+
+  it('defaults paste to the non-replacing variant', async () => {
+    const paste = vi.fn(async () => createBlockStub({ id: 'pasted' }));
+    const harness = createHarness({ blocks: [], operations: { paste } });
+    const pasteEvent = { detail: { data: '' } } as unknown as PasteEvent;
+
+    await harness.blockManager.paste('heading', pasteEvent);
+
+    expect(paste).toHaveBeenCalledWith('heading', pasteEvent, false, expect.anything(), undefined);
+  });
+
+  it('hands mergeBlocks the target, the donor and the store, and returns the continuation', async () => {
+    const continuation = Symbol('continuation');
+    const mergeBlocks = vi.fn(() => continuation);
+    const a = createBlockStub({ id: 'a' });
+    const b = createBlockStub({ id: 'b' });
+    const harness = createHarness({ blocks: [a, b], operations: { mergeBlocks } });
+
+    const result = await harness.blockManager.mergeBlocks(a, b);
+
+    expect(result).toBe(continuation);
+    expect(mergeBlocks).toHaveBeenCalledWith(a, b, expect.anything());
+  });
+
+  it('defaults removeBlock to adding a replacement last block', () => {
+    const block = createBlockStub({ id: 'gone' });
+    const harness = createHarness({ blocks: [block] });
+
+    void harness.blockManager.removeBlock(block);
+
+    expect(harness.operationsRemoveBlock).toHaveBeenCalledWith(block, true, false, expect.anything());
+  });
+});
+
+/**
+ * insertMany serialization: the Yjs payload must carry tunes / parent /
+ * content keys exactly when they are non-empty, and the side effects
+ * (indentation, atomic window, notification) must fire.
+ */
+describe('BlockManager.insertMany serialization and side effects', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('serializes tunes, parent and content onto the document payload', () => {
+    const parent = createBlockStub({ id: 'p0', contentIds: ['c9'] });
+    const child = createBlockStub({
+      id: 'c9',
+      parentId: 'p0',
+      preservedTunes: { mark: { bold: true } },
+      preservedData: { text: 'hi' },
+    });
+    const harness = createHarness({ blocks: [parent, child] });
+
+    harness.blockManager.insertMany([parent, child], 0);
+
+    const payloads = ((harness.yjs.fromJSON).mock.calls[0]?.[0] ?? []) as Array<Record<string, unknown>>;
+
+    expect(payloads[0]).toStrictEqual({ id: 'p0', type: 'paragraph', data: {}, content: ['c9'] });
+    expect(payloads[1]).toStrictEqual({
+      id: 'c9',
+      type: 'paragraph',
+      data: { text: 'hi' },
+      parent: 'p0',
+      tunes: { mark: { bold: true } },
+    });
+    expect(harness.mutations).toHaveLength(0);
+  });
+
+  it('omits empty tunes and absent content keys entirely', () => {
+    const plain = createBlockStub({ id: 'plain' });
+    const harness = createHarness({ blocks: [plain] });
+
+    harness.blockManager.insertMany([plain], 0);
+
+    const payloads = ((harness.yjs.fromJSON).mock.calls[0]?.[0] ?? []) as Array<Record<string, unknown>>;
+
+    expect(payloads[0]).toStrictEqual({ id: 'plain', type: 'paragraph', data: {} });
+  });
+
+  it('re-indents every block that carried a parent, and only those', () => {
+    const parent = createBlockStub({ id: 'p0', contentIds: ['c9'] });
+    const child = createBlockStub({ id: 'c9', parentId: 'p0' });
+    const harness = createHarness({ blocks: [parent, child] });
+
+    harness.blockManager.insertMany([parent, child], 0);
+
+    expect(harness.hierarchy.updateBlockIndentation).toHaveBeenCalledOnce();
+    expect((harness.hierarchy.updateBlockIndentation as Mock).mock.calls[0]?.[0]).toBe(child);
+  });
+
+  it('keeps the whole store write inside one RAF-extended atomic window', () => {
+    const plain = createBlockStub({ id: 'plain' });
+    const harness = createHarness({ blocks: [plain] });
+
+    harness.blockManager.insertMany([plain], 0);
+
+    const atomic = harness.yjsSync.withAtomicOperation as Mock;
+
+    expect(atomic).toHaveBeenCalledOnce();
+    expect(atomic.mock.calls[0]?.[1]).toEqual({ extendThroughRAF: true });
+  });
+
+  it('announces a notified batch with the batch insertion index', () => {
+    const a = createBlockStub({ id: 'a' });
+    const b = createBlockStub({ id: 'b' });
+    const harness = createHarness({ blocks: [a, b] });
+
+    harness.blockManager.insertMany([a, b], 2, { notify: true });
+
+    expect(harness.mutations).toHaveLength(1);
+    expect(harness.mutations[0]?.type).toBe(BlockAddedMutationType);
+    expect(harness.mutations[0]?.index).toBe(2);
+  });
+
+  it('stays silent for a notified batch that carries no blocks', () => {
+    const harness = createHarness({ blocks: [] });
+
+    harness.blockManager.insertMany([], 3, { notify: true });
+
+    expect(harness.mutations).toHaveLength(0);
+  });
+
+  it('leaves Yjs untouched when the caller owns the sync', () => {
+    const plain = createBlockStub({ id: 'plain' });
+    const harness = createHarness({ blocks: [plain] });
+
+    harness.blockManager.insertMany([plain], 0, { skipYjsSync: true });
+
+    expect(harness.yjs.fromJSON).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * assertInsertManyHierarchy picks its strategy from NODE_ENV: assert and throw
+ * in test/development, validate and log in production. These tests move the
+ * environment to reach both branches. Duplicate content ids survive the
+ * insertMany reconcilers, so they are the drift signal here.
+ */
+describe('BlockManager.insertMany hierarchy assertion (environment-dependent)', () => {
+  const originalEnv = process.env.NODE_ENV;
+  let consoleError: Mock;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalEnv;
+    vi.restoreAllMocks();
+  });
+
+  it('logs drift instead of throwing outside test and development environments', () => {
+    process.env.NODE_ENV = 'production';
+    const parent = createBlockStub({ id: 'p0', contentIds: ['c1', 'c1', 'c2', 'c2'] });
+    const c1 = createBlockStub({ id: 'c1', parentId: 'p0' });
+    const c2 = createBlockStub({ id: 'c2', parentId: 'p0' });
+    const harness = createHarness({ blocks: [parent, c1, c2] });
+
+    harness.blockManager.insertMany([parent, c1, c2], 0);
+
+    expect(consoleError).toHaveBeenCalledOnce();
+    const firstArg = consoleError.mock.calls[0]?.[0] as string;
+
+    expect(firstArg).toContain('hierarchy drift');
+    expect(firstArg).toContain('contains duplicate id c1; Block');
+    expect(firstArg).toContain('contains duplicate id c2');
+  });
+
+  it('logs nothing when the reconciled batch is consistent', () => {
+    process.env.NODE_ENV = 'production';
+    const plain = createBlockStub({ id: 'plain' });
+    const harness = createHarness({ blocks: [plain] });
+
+    harness.blockManager.insertMany([plain], 0);
+
+    expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  it('throws on drift in a development environment', () => {
+    process.env.NODE_ENV = 'development';
+    const parent = createBlockStub({ id: 'p0', contentIds: ['c1', 'c1'] });
+    const c1 = createBlockStub({ id: 'c1', parentId: 'p0' });
+    const harness = createHarness({ blocks: [parent, c1] });
+
+    expect(() => harness.blockManager.insertMany([parent, c1], 0))
+      .toThrowError(new Error('Hierarchy invariant violated at BlockManager.insertMany:\n  - Block p0.content[] contains duplicate id c1'));
+  });
+});
+
+/**
+ * The undo-group plumbing: suppression must survive a begin/end pair, restore
+ * on a bare end, and stopCapturing must wait for a pending parent sync.
+ */
+describe('BlockManager tool transactions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('restores the outer suppression level after a begin/end pair', async () => {
+    const harness = createHarness({ blocks: [], operations: { suppressStopCapturing: true } });
+
+    harness.blockManager.beginToolTransaction();
+    harness.blockManager.endToolTransaction();
+    await settle();
+
+    expect((harness.operations as { suppressStopCapturing: boolean }).suppressStopCapturing).toBe(true);
+    // begin() opens the group, end() closes it after the parent-sync window.
+    expect(harness.yjs.stopCapturing).toHaveBeenCalledTimes(2);
+  });
+
+  it('restores plain false when an end has no matching begin', async () => {
+    const harness = createHarness({ blocks: [] });
+
+    harness.blockManager.endToolTransaction();
+    await settle();
+
+    expect((harness.operations as { suppressStopCapturing: boolean }).suppressStopCapturing).toBe(false);
+    expect(harness.yjs.stopCapturing).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the undo group open until a pre-set pending parent sync settles', async () => {
+    const harness = createHarness({ blocks: [] });
+    let resolvePending: (() => void) | undefined;
+    const pending = new Promise<void>((resolve) => {
+      resolvePending = resolve;
+    });
+
+    (harness.blockManager as unknown as Record<string, unknown>).pendingParentSyncPromise = pending;
+
+    harness.blockManager.endToolTransaction();
+    await settle();
+
+    expect(harness.yjs.stopCapturing).not.toHaveBeenCalled();
+
+    resolvePending?.();
+    await settle();
+    await settle();
+
+    expect(harness.yjs.stopCapturing).toHaveBeenCalledOnce();
+  });
+
+  it('delays stopCapturing until a scheduled parent sync has flushed', async () => {
+    const parent = createBlockStub({ id: 'parent' });
+    let releaseSave: (() => void) | undefined;
+
+    (parent as unknown as { save: () => Promise<unknown> }).save = () => new Promise((resolve) => {
+      releaseSave = () => resolve({ data: { text: 'x' } });
+    });
+    const harness = createHarness({ blocks: [parent] });
+
+    invokePrivate(harness.blockManager, 'scheduleParentSync', 'parent');
+    harness.blockManager.endToolTransaction();
+    await settle();
+
+    expect(harness.yjs.stopCapturing).not.toHaveBeenCalled();
+
+    releaseSave?.();
+    await settle();
+    await settle();
+
+    expect(harness.yjs.stopCapturing).toHaveBeenCalledOnce();
+    expect(harness.yjs.enqueueBlockDataWrite).toHaveBeenCalledOnce();
+  });
+
+  it('flushes each scheduled parent once per batch, and again next batch', async () => {
+    const parent = createBlockStub({ id: 'parent', saveData: { text: 'x' } });
+    const harness = createHarness({ blocks: [parent] });
+
+    invokePrivate(harness.blockManager, 'scheduleParentSync', 'parent');
+    await settle();
+    invokePrivate(harness.blockManager, 'scheduleParentSync', 'parent');
+    await settle();
+
+    expect(harness.yjs.enqueueBlockDataWrite).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores a scheduled parent that is no longer in the document', async () => {
+    const harness = createHarness({ blocks: [] });
+
+    expect(() => invokePrivate(harness.blockManager, 'scheduleParentSync', 'ghost')).not.toThrow();
+    await settle();
+
+    expect(harness.yjs.enqueueBlockDataWrite).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * setBlockParent: emission guards (same parent, drag, sync replay), the doc
+ * write (capture / no-capture / pending-move), and resolveYjsPlacement's
+ * sibling resolution.
+ */
+describe('BlockManager.setBlockParent', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('emits BlockMoved and fires the MOVED hook with the flat index', () => {
+    const block = createBlockStub({ id: 'mover', parentId: 'old' });
+    const harness = createHarness({ blocks: [block] });
+
+    harness.blockManager.setBlockParent(block, 'new');
+
+    expect(harness.hierarchy.setBlockParent).toHaveBeenCalledWith(block, 'new');
+    expect(harness.mutations).toHaveLength(1);
+    expect(harness.mutations[0]?.type).toBe(BlockMovedMutationType);
+    expect(harness.mutations[0]?.fromIndex).toBe(0);
+    expect(harness.mutations[0]?.toIndex).toBe(0);
+    expect(block.call).toHaveBeenCalledWith(expect.anything(), { fromIndex: 0, toIndex: 0 });
+  });
+
+  it('emits nothing when the parent did not actually change', () => {
+    const block = createBlockStub({ id: 'mover', parentId: 'same' });
+    const harness = createHarness({ blocks: [block] });
+
+    harness.blockManager.setBlockParent(block, 'same');
+
+    expect(harness.mutations).toHaveLength(0);
+    expect(block.call).not.toHaveBeenCalled();
+  });
+
+  it('stays silent while a pointer drag owns the move', () => {
+    const block = createBlockStub({ id: 'mover', parentId: 'old' });
+    const harness = createHarness({ blocks: [block] });
+
+    harness.blockManager.setPointerDragActive(true);
+    harness.blockManager.setBlockParent(block, 'new');
+
+    expect(harness.mutations).toHaveLength(0);
+    expect(block.call).not.toHaveBeenCalled();
+    expect(harness.hierarchy.setBlockParent).toHaveBeenCalledOnce();
+  });
+
+  it('stays silent while a drag move group owns the move', () => {
+    const block = createBlockStub({ id: 'mover', parentId: 'old' });
+    const harness = createHarness({ blocks: [block], yjs: { isDragMoveGroupActive: true } });
+
+    harness.blockManager.setBlockParent(block, 'new');
+
+    expect(harness.mutations).toHaveLength(0);
+    expect(block.call).not.toHaveBeenCalled();
+  });
+
+  it('skips the doc write when a sync replay already agrees', () => {
+    const block = createBlockStub({ id: 'mover', parentId: 'old' });
+    const harness = createHarness({
+      blocks: [block],
+      yjs: { getBlockById: vi.fn(() => ({ id: 'mover', get: () => 'new' })) },
+    });
+
+    (harness.yjsSync as { isSyncingFromYjs: boolean }).isSyncingFromYjs = true;
+    harness.blockManager.setBlockParent(block, 'new');
+
+    expect(harness.yjs.applyBlockPlacement).not.toHaveBeenCalled();
+  });
+
+  it('still writes the doc when a non-sync re-assert already agrees', () => {
+    const block = createBlockStub({ id: 'mover', parentId: 'same' });
+    const harness = createHarness({
+      blocks: [block],
+      yjs: { getBlockById: vi.fn(() => ({ id: 'mover', get: () => 'same' })) },
+    });
+
+    harness.blockManager.setBlockParent(block, 'same');
+
+    expect(harness.yjs.applyBlockPlacement).toHaveBeenCalledOnce();
+  });
+
+  it('treats an undefined Yjs parent as agreement with a root move during replay', () => {
+    const block = createBlockStub({ id: 'mover', parentId: 'old' });
+    const harness = createHarness({
+      blocks: [block],
+      yjs: { getBlockById: vi.fn(() => ({ id: 'mover', get: () => undefined })) },
+    });
+
+    (harness.yjsSync as { isSyncingFromYjs: boolean }).isSyncingFromYjs = true;
+    harness.blockManager.setBlockParent(block, null);
+
+    expect(harness.yjs.applyBlockPlacement).not.toHaveBeenCalled();
+  });
+
+  it('attaches the placement to an in-flight move group without capture', () => {
+    const block = createBlockStub({ id: 'mover', parentId: 'old' });
+    const fromPlacement = { parentId: 'old', afterId: null };
+    const harness = createHarness({
+      blocks: [block],
+      yjs: {
+        isInMoveGroup: true,
+        getBlockPlacement: vi.fn(() => fromPlacement),
+      },
+    });
+
+    harness.blockManager.setBlockParent(block, 'new');
+
+    expect(harness.yjs.applyBlockPlacement).toHaveBeenCalledWith(block.id, { parentId: 'new', afterId: null }, { capture: false });
+    expect(harness.yjs.recordParentChangeForPendingMove).toHaveBeenCalledWith(block.id, fromPlacement, { parentId: 'new', afterId: null });
+  });
+
+  it('skips pending-move recording when the old placement is unknown', () => {
+    const block = createBlockStub({ id: 'mover', parentId: 'old' });
+    const harness = createHarness({
+      blocks: [block],
+      yjs: { isInMoveGroup: true, getBlockPlacement: vi.fn(() => null) },
+    });
+
+    harness.blockManager.setBlockParent(block, 'new');
+
+    expect(harness.yjs.applyBlockPlacement).toHaveBeenCalledOnce();
+    expect(harness.yjs.recordParentChangeForPendingMove).not.toHaveBeenCalled();
+  });
+
+  it('writes the placement with capture on the normal path', () => {
+    const block = createBlockStub({ id: 'mover', parentId: 'old' });
+    const parentInStore = createBlockStub({ id: 'p0', contentIds: ['sib1', 'mover'] });
+    const harness = createHarness({ blocks: [parentInStore, block] });
+
+    harness.blockManager.setBlockParent(block, 'p0');
+
+    expect(harness.yjs.applyBlockPlacement).toHaveBeenCalledOnce();
+    expect(harness.yjs.applyBlockPlacement).toHaveBeenCalledWith(block.id, { parentId: 'p0', afterId: 'sib1' }, { capture: true });
+  });
+
+  it('appends after the last listed sibling when the hierarchy lost the child', () => {
+    const block = createBlockStub({ id: 'mover', parentId: 'old' });
+    const parentInStore = createBlockStub({ id: 'p0', contentIds: ['other'] });
+    const harness = createHarness({ blocks: [parentInStore, block] });
+
+    harness.blockManager.setBlockParent(block, 'p0');
+
+    expect(harness.yjs.applyBlockPlacement).toHaveBeenCalledWith(block.id, { parentId: 'p0', afterId: 'other' }, { capture: true });
+  });
+
+  it('gives a first-child placement no predecessor', () => {
+    const block = createBlockStub({ id: 'mover', parentId: 'old' });
+    const parentInStore = createBlockStub({ id: 'p0', contentIds: ['mover', 'other'] });
+    const harness = createHarness({ blocks: [parentInStore, block] });
+
+    harness.blockManager.setBlockParent(block, 'p0');
+
+    expect(harness.yjs.applyBlockPlacement).toHaveBeenCalledWith(block.id, { parentId: 'p0', afterId: null }, { capture: true });
+  });
+
+  it('resolves a dangling child with an empty sibling list to a null predecessor', () => {
+    const block = createBlockStub({ id: 'mover', parentId: 'old' });
+    const parentInStore = createBlockStub({ id: 'p0', contentIds: [] });
+    const harness = createHarness({ blocks: [parentInStore, block] });
+
+    harness.blockManager.setBlockParent(block, 'p0');
+
+    expect(harness.yjs.applyBlockPlacement).toHaveBeenCalledWith(block.id, { parentId: 'p0', afterId: null }, { capture: true });
+  });
+
+  it('keeps a dangling parent id in the doc placement', () => {
+    const block = createBlockStub({ id: 'mover', parentId: 'old' });
+    const harness = createHarness({ blocks: [block] });
+
+    harness.blockManager.setBlockParent(block, 'ghost');
+
+    expect(harness.yjs.applyBlockPlacement).toHaveBeenCalledWith(block.id, { parentId: 'ghost', afterId: null }, { capture: true });
+  });
+
+  it('anchors a root move after the nearest preceding root block', () => {
+    const rootA = createBlockStub({ id: 'root-a', parentId: null });
+    const rootB = createBlockStub({ id: 'root-b', parentId: null });
+    const child = createBlockStub({ id: 'child', parentId: 'root-a' });
+    const block = createBlockStub({ id: 'mover', parentId: 'old' });
+    const harness = createHarness({ blocks: [rootA, rootB, child, block] });
+
+    harness.blockManager.setBlockParent(block, null);
+
+    expect(harness.yjs.applyBlockPlacement).toHaveBeenCalledWith(block.id, { parentId: null, afterId: 'root-b' }, { capture: true });
+  });
+
+  it('gives a leading root move no predecessor', () => {
+    const block = createBlockStub({ id: 'mover', parentId: 'old' });
+    const harness = createHarness({ blocks: [block] });
+
+    harness.blockManager.setBlockParent(block, null);
+
+    expect(harness.yjs.applyBlockPlacement).toHaveBeenCalledWith(block.id, { parentId: null, afterId: null }, { capture: true });
+  });
+});
+
+/**
+ * Indentation delegate, history-replay hook, teardown, and the private event
+ * binding (whose only public path is the factory callback wired at boot).
+ */
+describe('BlockManager.indentation, history replay, teardown and binding', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('delegates indentation to the hierarchy module', () => {
+    const block = createBlockStub({ id: 'a' });
+    const harness = createHarness({ blocks: [block] });
+
+    harness.blockManager.updateBlockIndentation(block);
+
+    expect(harness.hierarchy.updateBlockIndentation).toHaveBeenCalledWith(block);
+  });
+
+  it('replays a structural move into the tool hook', () => {
+    const block = createBlockStub({ id: 'moved', parentId: 'p1' });
+    const harness = createHarness({ blocks: [block] });
+
+    harness.blockManager.reparentFromHistoryReplay(block, null);
+
+    expect(harness.hierarchy.setBlockParent).toHaveBeenCalledWith(block, null);
+    expect(block.call).toHaveBeenCalledOnce();
+    expect(block.call).toHaveBeenCalledWith(expect.anything(), { fromIndex: 0, toIndex: 0, structural: true });
+  });
+
+  it('tears down shortcuts, sync and every block', async () => {
+    const a = createBlockStub({ id: 'a' });
+    const b = createBlockStub({ id: 'b' });
+    const harness = createHarness({ blocks: [a, b] });
+
+    await harness.blockManager.destroy();
+
+    expect(harness.shortcuts.unregister).toHaveBeenCalledOnce();
+    expect(harness.yjsSync.destroy).toHaveBeenCalledOnce();
+    expect(a.destroy).toHaveBeenCalledOnce();
+    expect(b.destroy).toHaveBeenCalledOnce();
+  });
+
+  it('routes composed-block event binding through the event binder', () => {
+    const block = createBlockStub({ id: 'a' });
+    const harness = createHarness({ blocks: [] });
+
+    invokePrivate(harness.blockManager, 'bindBlockEvents', block);
+
+    expect(harness.eventBinder.bindBlockEvents).toHaveBeenCalledWith(block);
+  });
+
+  it('moves blocks without a drag manager present', () => {
+    const harness = createHarness({
+      blocks: [createBlockStub({ id: 'a' }), createBlockStub({ id: 'b' })],
+    });
+
+    expect(() => harness.blockManager.moveCurrentBlockUp()).not.toThrow();
+    expect(() => harness.blockManager.moveCurrentBlockDown()).not.toThrow();
+    expect(harness.operations.moveCurrentBlockUp).toHaveBeenCalledOnce();
+    expect(harness.operations.moveCurrentBlockDown).toHaveBeenCalledOnce();
+  });
+
+  it('reselects the moved selection after a keyboard move', () => {
+    const selected = createBlockStub({ id: 'sel' });
+    const selectBlock = vi.fn();
+    const harness = createHarness({
+      blocks: [selected, createBlockStub({ id: 'b' })],
+      state: {
+        BlockSelection: { anyBlockSelected: true, selectedBlocks: [selected], selectBlock },
+        DragManager: { isDragging: false },
+      },
+    });
+
+    harness.blockManager.moveCurrentBlockUp();
+
+    expect(selectBlock).toHaveBeenCalledWith(selected);
+  });
+});
+
+/**
+ * convert(): a standalone toggle LIST keeps its children nested (M-5); a
+ * toggle HEADING releases them; converting INTO a toggle heading adopts the
+ * following section up to the next same-rank heading.
+ */
+describe('BlockManager.convert — toggle handling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const toggleMarker = '<div data-blok-toggle-open=""></div>';
+  const setIdOfFirst = (harness: Harness): string[] =>
+    ((harness.hierarchy.setBlockParent as Mock).mock.calls.map((call) => (call[0] as Block).id));
+
+  it('keeps a standalone toggle list children nested on convert', async () => {
+    const source = createBlockStub({ id: 'src', name: 'toggle', contentIds: ['c1'], holderHtml: toggleMarker });
+    const child = createBlockStub({ id: 'c1', parentId: 'src' });
+    const converted = createBlockStub({ id: 'converted' });
+    const harness = createHarness({
+      blocks: [source, child],
+      operations: { convert: vi.fn(async () => converted) },
+    });
+
+    const result = await harness.blockManager.convert(source, 'paragraph');
+
+    expect(result).toBe(converted);
+    expect(harness.hierarchy.setBlockParent).not.toHaveBeenCalled();
+  });
+
+  it('releases a toggle heading children as root siblings', async () => {
+    const source = createBlockStub({ id: 'src', name: 'header', contentIds: ['c1', 'ghost'], holderHtml: toggleMarker });
+    const child = createBlockStub({ id: 'c1', parentId: 'src' });
+    const converted = createBlockStub({ id: 'converted' });
+    const harness = createHarness({
+      blocks: [source, child],
+      operations: { convert: vi.fn(async () => converted) },
+    });
+
+    await harness.blockManager.convert(source, 'paragraph');
+
+    const setParent = harness.hierarchy.setBlockParent as Mock;
+
+    expect(setParent).toHaveBeenCalledOnce();
+    expect(setParent.mock.calls[0]?.[0]).toBe(child);
+    expect(setParent.mock.calls[0]?.[1]).toBeNull();
+  });
+
+  it('does not adopt a section when the target header carries no toggle override', async () => {
+    const source = createBlockStub({ id: 'src' });
+    const converted = createBlockStub({ id: 'converted', name: 'header', holderHtml: '<h2>H</h2>' });
+    const follower = createBlockStub({ id: 'follower' });
+    const harness = createHarness({
+      blocks: [source, follower],
+      operations: { convert: vi.fn(async () => converted) },
+    });
+
+    harness.store.splice(1, 0, converted);
+    await harness.blockManager.convert(source, 'header');
+
+    expect(harness.hierarchy.setBlockParent).not.toHaveBeenCalled();
+    expect(harness.yjs.transactMoves).not.toHaveBeenCalled();
+  });
+
+  it('does not adopt a section when the target tool is not a header, override or not', async () => {
+    const source = createBlockStub({ id: 'src' });
+    const converted = createBlockStub({ id: 'converted', name: 'header', holderHtml: '<h2>H</h2>' });
+    const follower = createBlockStub({ id: 'follower' });
+    const harness = createHarness({
+      blocks: [source, follower],
+      operations: { convert: vi.fn(async () => converted) },
+    });
+
+    harness.store.splice(1, 0, converted);
+    await harness.blockManager.convert(source, 'paragraph', { isToggleable: true });
+
+    expect(harness.hierarchy.setBlockParent).not.toHaveBeenCalled();
+  });
+
+  it('adopts the following section into a fresh toggle heading', async () => {
+    const source = createBlockStub({ id: 'src' });
+    const converted = createBlockStub({ id: 'converted', name: 'header', holderHtml: '<h2>H</h2>' });
+    const para = createBlockStub({ id: 'para' });
+    const deep = createBlockStub({ id: 'deep', parentId: 'para' });
+    const otherHeader = createBlockStub({ id: 'other', name: 'header', holderHtml: '<h2>Stop</h2>' });
+    const tail = createBlockStub({ id: 'tail' });
+    const harness = createHarness({
+      blocks: [source, para, deep, otherHeader, tail],
+      operations: { convert: vi.fn(async () => converted) },
+    });
+
+    harness.store.splice(1, 0, converted);
+
+    const result = await harness.blockManager.convert(source, 'header', { isToggleable: true });
+
+    expect(result).toBe(converted);
+    // Deep descendants ride along with their container; only the top sibling
+    // of each subtree is reparented directly.
+    expect(setIdOfFirst(harness)).toEqual(['para']);
+    expect((harness.hierarchy.setBlockParent as Mock).mock.calls.every((call) => call[1] === 'converted')).toBe(true);
+    expect(harness.yjs.transactMoves).toHaveBeenCalledOnce();
+  });
+
+  it('adopts grandchildren that ride under an adopted sibling', async () => {
+    const source = createBlockStub({ id: 'src' });
+    const converted = createBlockStub({ id: 'converted', name: 'header', holderHtml: '<h2>H</h2>' });
+    const para = createBlockStub({ id: 'para' });
+    const child = createBlockStub({ id: 'child', parentId: 'para' });
+    const grand = createBlockStub({ id: 'grand', parentId: 'child' });
+    const tail = createBlockStub({ id: 'tail' });
+    const harness = createHarness({
+      blocks: [source, para, child, grand, tail],
+      operations: { convert: vi.fn(async () => converted) },
+    });
+
+    harness.store.splice(1, 0, converted);
+    await harness.blockManager.convert(source, 'header', { isToggleable: true });
+
+    // The whole para subtree is section members, so the tail after it is
+    // still inside the section and gets adopted too.
+    expect(setIdOfFirst(harness)).toEqual(['para', 'tail']);
+  });
+
+  it('adopts nothing when the converted block is not a header', async () => {
+    const source = createBlockStub({ id: 'src' });
+    const converted = createBlockStub({ id: 'converted', name: 'paragraph' });
+    const follower = createBlockStub({ id: 'follower' });
+    const harness = createHarness({
+      blocks: [source, follower],
+      operations: { convert: vi.fn(async () => converted) },
+    });
+
+    harness.store.splice(1, 0, converted);
+    await harness.blockManager.convert(source, 'header', { isToggleable: true });
+
+    expect(harness.hierarchy.setBlockParent).not.toHaveBeenCalled();
+  });
+
+  it('adopts nothing when the converted block never entered the document', async () => {
+    const source = createBlockStub({ id: 'src' });
+    const converted = createBlockStub({ id: 'converted', name: 'header', holderHtml: '<h2>H</h2>' });
+    const follower = createBlockStub({ id: 'follower' });
+    const harness = createHarness({
+      blocks: [source, follower],
+      operations: { convert: vi.fn(async () => converted) },
+    });
+
+    await harness.blockManager.convert(source, 'header', { isToggleable: true });
+
+    expect(harness.hierarchy.setBlockParent).not.toHaveBeenCalled();
+  });
+
+  it('adopts from the block right after a first-position heading', async () => {
+    const source = createBlockStub({ id: 'src' });
+    const converted = createBlockStub({ id: 'converted', name: 'header', holderHtml: '<h2>H</h2>' });
+    const follower = createBlockStub({ id: 'follower' });
+    const harness = createHarness({
+      blocks: [source, follower],
+      operations: { convert: vi.fn(async () => converted) },
+    });
+
+    harness.store.splice(1, 0, converted);
+    await harness.blockManager.convert(source, 'header', { isToggleable: true });
+
+    expect(setIdOfFirst(harness)).toEqual(['follower']);
+  });
+
+  it('skips the move transaction when no sibling follows the heading', async () => {
+    const source = createBlockStub({ id: 'src' });
+    const converted = createBlockStub({ id: 'converted', name: 'header', holderHtml: '<h2>H</h2>' });
+    const harness = createHarness({
+      blocks: [source],
+      operations: { convert: vi.fn(async () => converted) },
+    });
+
+    harness.store.splice(1, 0, converted);
+    await harness.blockManager.convert(source, 'header', { isToggleable: true });
+
+    expect(harness.yjs.transactMoves).not.toHaveBeenCalled();
+  });
+
+  it('ignores a heading tag inside a non-header follower', async () => {
+    const source = createBlockStub({ id: 'src' });
+    const converted = createBlockStub({ id: 'converted', name: 'header', holderHtml: '<h2>H</h2>' });
+    const paraWithHeading = createBlockStub({ id: 'para-h2', holderHtml: '<h2>Inside</h2>' });
+    const after = createBlockStub({ id: 'after' });
+    const harness = createHarness({
+      blocks: [source, paraWithHeading, after],
+      operations: { convert: vi.fn(async () => converted) },
+    });
+
+    harness.store.splice(1, 0, converted);
+    await harness.blockManager.convert(source, 'header', { isToggleable: true });
+
+    expect(setIdOfFirst(harness)).toEqual(['para-h2', 'after']);
+  });
+
+  it('does not crash resolving the level of a header block without a heading tag', async () => {
+    const source = createBlockStub({ id: 'src' });
+    const converted = createBlockStub({ id: 'converted', name: 'header' });
+    const follower = createBlockStub({ id: 'follower' });
+    const harness = createHarness({
+      blocks: [source, follower],
+      operations: { convert: vi.fn(async () => converted) },
+    });
+
+    harness.store.splice(1, 0, converted);
+
+    await expect(harness.blockManager.convert(source, 'header', { isToggleable: true })).resolves.toBe(converted);
+    expect(harness.hierarchy.setBlockParent).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * prepare() wires the document copy listener to BlockEvents. The real service
+ * constructors only store dependencies, so they boot cleanly over stubs.
+ */
+describe('BlockManager.prepare copy wiring', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('routes the document copy event to BlockEvents.handleCommandC', async () => {
+    const handleCommandC = vi.fn();
+    const checkEmptiness = vi.fn();
+    const harness = createHarness({
+      blocks: [],
+      state: {
+        UI: { checkEmptiness, nodes: { redactor: document.createElement('div'), wrapper: document.createElement('div') } },
+        BlockEvents: { handleCommandC },
+        Tools: { blockTools: new Map() },
+        Caret: {},
+        I18n: {},
+        ReadOnly: { isEnabled: false },
+      },
+    });
+
+    harness.blockManager.prepare();
+
+    const copyEvent = new Event('copy');
+
+    document.dispatchEvent(copyEvent);
+
+    expect(handleCommandC).toHaveBeenCalledOnce();
+    expect(handleCommandC.mock.calls[0]?.[0]).toBe(copyEvent);
+
+    await harness.blockManager.destroy();
+  });
+});
+
+describe('BlockManager.clear event shape', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('publishes enumerable type and detail on mutation events', async () => {
+    const harness = createHarness({ blocks: [createBlockStub({ id: 'a' })] });
+
+    await harness.blockManager.clear();
+
+    const event = harness.events[0];
+
+    expect(event).toBeDefined();
+    expect(Object.prototype.propertyIsEnumerable.call(event, 'type')).toBe(true);
+    expect(Object.prototype.propertyIsEnumerable.call(event, 'detail')).toBe(true);
+  });
+
+  it('carries the removal index on a non-null detail object', async () => {
+    const harness = createHarness({ blocks: [createBlockStub({ id: 'a' })] });
+
+    await harness.blockManager.clear();
+
+    const event = harness.events[0];
+
+    expect(event).toBeDefined();
+    expect(event.detail).not.toBeNull();
+    expect(event.detail).toBeTypeOf('object');
+    expect((event.detail as { index?: unknown }).index).toBe(0);
+  });
+});
+
+/**
+ * blockDidMutated → syncBlockDataToYjs → flushBlockDataWrites: saved keys go
+ * to Yjs through the coalescing buffer, prune-only changes still count as
+ * changes, and a structurally nested list item derives its depth instead of
+ * persisting it.
+ */
+describe('BlockManager block-change to Yjs data flush', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const emitChanged = (harness: Harness, block: Block): void => {
+    invokePrivate(harness.blockManager, 'blockDidMutated', BlockChangedMutationType, block, {});
+  };
+
+  const flushOf = (harness: Harness): ((entries: ReadonlyMap<string, unknown>) => boolean) => {
+    const enqueue = harness.yjs.enqueueBlockDataWrite;
+
+    expect(enqueue).toHaveBeenCalledOnce();
+
+    return enqueue.mock.calls[0]?.[2] as (entries: ReadonlyMap<string, unknown>) => boolean;
+  };
+
+  it('writes saved data keys and bumps edit metadata', async () => {
+    const block = createBlockStub({ id: 'b', saveData: { text: 'y' } });
+    const harness = createHarness({ blocks: [block] });
+
+    emitChanged(harness, block);
+    await settle();
+
+    flushOf(harness)(new Map([['text', 'y']]));
+
+    expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('b', 'text', 'y');
+    expect(harness.yjs.pruneBlockData).toHaveBeenCalledWith('b', new Set(['text']));
+    expect(harness.yjs.updateBlockMetadata).toHaveBeenCalledWith('b', expect.any(Number), null);
+    expect(block.lastEditedAt).toEqual(expect.any(Number));
+  });
+
+  it('counts a prune-only change as a real change', async () => {
+    const block = createBlockStub({ id: 'b', saveData: { text: 'y' } });
+    const harness = createHarness({
+      blocks: [block],
+      yjs: { updateBlockData: vi.fn(() => false), pruneBlockData: vi.fn(() => true) },
+    });
+
+    emitChanged(harness, block);
+    await settle();
+
+    const before = block.lastEditedAt;
+
+    flushOf(harness)(new Map([['text', 'y']]));
+
+    expect(harness.yjs.updateBlockMetadata).toHaveBeenCalledOnce();
+    expect(block.lastEditedAt).not.toBe(before);
+  });
+
+  it('derives a nested list item depth instead of persisting it', async () => {
+    const parent = createBlockStub({ id: 'p1', name: 'list' });
+    const block = createBlockStub({ id: 'li', name: 'list', parentId: 'p1', saveData: { text: 'x', depth: 2 } });
+    const harness = createHarness({ blocks: [parent, block] });
+
+    emitChanged(harness, block);
+    await settle();
+
+    flushOf(harness)(new Map<string, unknown>([['text', 'x'], ['depth', 2]]));
+
+    expect(harness.yjs.updateBlockData).toHaveBeenCalledTimes(1);
+    expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('li', 'text', 'x');
+    expect(harness.yjs.pruneBlockData).toHaveBeenCalledWith('li', new Set(['text', 'depth']));
+  });
+
+  it('keeps depth as source of truth for a root-level list item', async () => {
+    const block = createBlockStub({ id: 'li', name: 'list', saveData: { text: 'x', depth: 2 } });
+    const harness = createHarness({ blocks: [block] });
+
+    emitChanged(harness, block);
+    await settle();
+
+    flushOf(harness)(new Map<string, unknown>([['depth', 2]]));
+
+    expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('li', 'depth', 2);
+  });
+
+  it('still writes depth when the parent is a list but the block is not', async () => {
+    const parent = createBlockStub({ id: 'p1', name: 'list' });
+    const block = createBlockStub({ id: 'p', name: 'paragraph', parentId: 'p1', saveData: { text: 'x', depth: 2 } });
+    const harness = createHarness({ blocks: [parent, block] });
+
+    emitChanged(harness, block);
+    await settle();
+
+    flushOf(harness)(new Map<string, unknown>([['depth', 2]]));
+
+    expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('p', 'depth', 2);
+  });
+
+  it('keeps depth for a list item whose parent is not a list', async () => {
+    const column = createBlockStub({ id: 'c1', name: 'column' });
+    const block = createBlockStub({ id: 'li', name: 'list', parentId: 'c1', saveData: { text: 'x', depth: 2 } });
+    const harness = createHarness({ blocks: [column, block] });
+
+    emitChanged(harness, block);
+    await settle();
+
+    flushOf(harness)(new Map<string, unknown>([['depth', 2]]));
+
+    expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('li', 'depth', 2);
+  });
+
+  it('survives a dangling list parent without throwing', async () => {
+    const block = createBlockStub({ id: 'li', name: 'list', parentId: 'ghost', saveData: { text: 'x', depth: 2 } });
+    const harness = createHarness({ blocks: [block] });
+
+    emitChanged(harness, block);
+    await settle();
+
+    expect(() => flushOf(harness)(new Map<string, unknown>([['depth', 2]]))).not.toThrow();
+    expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('li', 'depth', 2);
   });
 });

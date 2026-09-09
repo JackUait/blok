@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/components/utils/persistence.ts",
+    "src/components/modules/api/handlers.ts",
+    "test/unit/components/utils/persistence-findings.test.ts",
+    "test/unit/components/modules/persistence-live-handlers.test.ts",
+    "test/unit/components/utils/persistence.test.ts"
+  ]
+}

@@ -3,6 +3,7 @@ import { ConvertInlineTool } from '../../../../src/components/inline-tools/inlin
 import { BlockToolAdapter } from '../../../../src/components/tools/block';
 import { PopoverDesktop, PopoverItemType } from '../../../../src/components/utils/popover';
 import { Header } from '../../../../src/tools/header';
+import { IconH2, IconToggleH2 } from '../../../../src/components/icons';
 import type { API, BlockAPI, ToolboxConfigEntry } from '../../../../types';
 import type { MenuConfigItem } from '../../../../types/tools';
 import en from '../../../../src/components/i18n/locales/en.json';
@@ -51,7 +52,7 @@ const createPicker = (data: Record<string, unknown> = { text: 'Section' }, name 
     custom('quote-custom', [{ title: 'Citation', icon: '<svg></svg>', data: { style: 'quote' } }]),
   ];
 
-  return { tool: new ConvertInlineTool({ api }), convert, caret, selection };
+  return { tool: new ConvertInlineTool({ api }), api, currentBlock, holder, convert, caret, selection };
 };
 
 const childrenOf = async (tool: ConvertInlineTool) => {
@@ -86,7 +87,11 @@ describe('Inline conversion picker', () => {
     const items = children.items ?? [];
 
     expect(children.searchable).toBe(true);
-    expect(items.filter(item => item.type === PopoverItemType.Html).map(item => item.element.textContent)).toEqual(['Heading', 'Toggle heading']);
+    const tablists = items.filter(item => item.type === PopoverItemType.Html).map(item => item.element);
+
+    expect(tablists).toHaveLength(1);
+    expect(tablists[0].getAttribute('role')).toBe('tablist');
+    expect(Array.from(tablists[0].querySelectorAll('[role="tab"]'), tab => tab.textContent)).toEqual(['Heading', 'Toggle heading']);
     expect(names(items)).toEqual(['header-1', 'header-2', 'header-4', 'toggle-header-1', 'toggle-header-2', 'toggle-header-4', 'callout-custom', 'quote-custom']);
     const quote = items.find(item => 'name' in item && item.name === 'quote-custom');
 
@@ -121,13 +126,47 @@ describe('Inline conversion picker', () => {
     expect(caret).toHaveBeenCalledWith(expect.objectContaining({ id: 'current' }), 'default', 0);
   });
 
-  it('does not reintroduce the current variant while preserving the toggle alternative', async () => {
-    const { tool } = createPicker({ text: 'Section', level: 2 }, 'section');
+  it.each([
+    { isToggleable: false, title: 'Heading 2', icon: IconH2 },
+    { isToggleable: true, title: 'Toggle heading 2', icon: IconToggleH2 },
+  ])('uses the exact current heading for the trigger with toggle state $isToggleable', async ({ isToggleable, title, icon }) => {
+    const { tool, api, currentBlock } = createPicker({
+      text: 'Section', level: 2,
+      ...(isToggleable ? { isToggleable: true } : {}),
+    }, 'section');
+
+    vi.spyOn(currentBlock, 'getActiveToolboxEntry').mockResolvedValue({
+      title: 'Heading 2', icon: IconH2,
+    });
+    vi.spyOn(api.i18n, 't').mockImplementation(key => key === 'toolNames.section' ? 'Section' : t(key));
+
+    expect(await tool.render()).toMatchObject({ title, icon });
+  });
+
+  it.each([false, true])('retains the current heading as a no-op with toggle state %s', async (isToggleable) => {
+    const { tool, currentBlock, holder, convert, caret } = createPicker({
+      text: 'Section', level: 2, anchor: 'section', textColor: 'red',
+      ...(isToggleable ? { isToggleable: true, isOpen: false } : {}),
+    }, 'section');
+    const saved = await currentBlock.save();
+    const originalContent = holder.firstChild;
     const children = await childrenOf(tool);
     const items = children.items ?? [];
+    const currentName = isToggleable ? 'toggle-header-2' : 'header-2';
+    const current = items.find(item => 'name' in item && item.name === currentName);
 
-    expect(items.some(item => 'dataset' in item && item.dataset?.['blok-convert-group'] === 'toggle-heading')).toBe(true);
-    expect(names(items)).not.toContain('header-2');
+    expect(names(items)).toContain('header-2');
     expect(names(items)).toContain('toggle-header-2');
+    expect(current).toMatchObject({ isActive: true });
+    if (!current || !('onActivate' in current) || !current.onActivate) {
+      throw new Error('Missing current heading');
+    }
+    await current.onActivate(current);
+
+    expect(convert).not.toHaveBeenCalled();
+    expect(caret).not.toHaveBeenCalled();
+    expect(await currentBlock.save()).toEqual(saved);
+    expect(holder.firstChild).toBe(originalContent);
+    expect(holder.isConnected).toBe(true);
   });
 });

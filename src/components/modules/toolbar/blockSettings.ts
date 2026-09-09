@@ -503,13 +503,19 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
           selectedBlocks.map((block) => new BlockAPI(block, this.Blok.API)),
           allBlockTools
         )
-      : await getConvertibleToolsForBlock(new BlockAPI(currentBlock, this.Blok.API), allBlockTools);
+      : await getConvertibleToolsForBlock(new BlockAPI(currentBlock, this.Blok.API), allBlockTools, { keepCurrentVariant: true });
 
     const convertToItems = buildConvertMenuItems(
       buildConvertMenuEntries(convertibleTools, this.Blok.I18n),
       this.Blok.I18n,
       async (entry) => {
         const { Caret, Toolbar } = this.Blok;
+
+        if (entry.isCurrent) {
+          Toolbar.close();
+
+          return;
+        }
 
         // The builder returns a tool NAME; convertBlock needs the adapter.
         const tool = convertibleTools.find((candidate) => candidate.name === entry.toolName);

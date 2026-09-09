@@ -92,26 +92,33 @@ export class ConvertInlineTool implements InlineTool {
     const caretOffset = getCaretOffset();
 
     const allBlockTools = this.toolsAPI.getBlockTools() as BlockToolAdapter[];
-    const convertibleTools = await getConvertibleToolsForBlock(currentBlock, allBlockTools);
+    const convertibleTools = await getConvertibleToolsForBlock(currentBlock, allBlockTools, { keepCurrentVariant: true });
 
-    if (convertibleTools.length === 0) {
+    const entries = buildConvertMenuEntries(convertibleTools, this.i18nInstance);
+
+    if (entries.length === 0) {
       return [];
     }
 
     const convertToItems = buildConvertMenuItems(
-      buildConvertMenuEntries(convertibleTools, this.i18nInstance),
+      entries,
       this.i18nInstance,
       async (entry) => {
+        if (entry.isCurrent) {
+          return;
+        }
+
         const newBlock = await this.blocksAPI.convert(currentBlock.id, entry.toolName, entry.data);
 
         this.caretAPI.setToBlock(newBlock, 'default', caretOffset);
       }
     );
 
-    const currentBlockToolboxItem = await currentBlock.getActiveToolboxEntry();
-    const currentBlockTitle = currentBlockToolboxItem
+    const currentHeading = entries.find(entry => entry.isCurrent);
+    const currentBlockToolboxItem = currentHeading ?? await currentBlock.getActiveToolboxEntry();
+    const currentBlockTitle = currentHeading?.title ?? (currentBlockToolboxItem
       ? translateToolTitle(this.i18nInstance, currentBlockToolboxItem, currentBlock.name)
-      : translateToolName(this.i18nInstance, currentBlock.name, capitalize(currentBlock.name));
+      : translateToolName(this.i18nInstance, currentBlock.name, capitalize(currentBlock.name)));
     const isDesktop =  !isMobileScreen();
 
     return {

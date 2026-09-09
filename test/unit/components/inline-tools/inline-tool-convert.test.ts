@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ConvertInlineTool } from '../../../../src/components/inline-tools/inline-tool-convert';
 import { SelectionUtils } from '../../../../src/components/selection';
@@ -79,6 +79,10 @@ const createTool = (): {
 describe('ConvertInlineTool', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
     vi.restoreAllMocks();
   });
 
@@ -120,7 +124,29 @@ describe('ConvertInlineTool', () => {
     vi.spyOn(BlocksUtils, 'getConvertibleToolsForBlock').mockResolvedValue([]);
 
     await expect(tool.render()).resolves.toEqual([]);
-    expect(BlocksUtils.getConvertibleToolsForBlock).toHaveBeenCalledWith(currentBlock, []);
+    expect(BlocksUtils.getConvertibleToolsForBlock).toHaveBeenCalledWith(currentBlock, [], { keepCurrentVariant: true });
+  });
+
+  it('returns empty config when only the current ungrouped variant is retained', async () => {
+    const { tool, blocksAPI, toolsAPI } = createTool();
+    const anchorNode = document.createElement('div');
+    const currentBlock = {
+      id: 'list-1',
+      name: 'list',
+      save: async () => ({ data: { text: 'Item', style: 'unordered' } }),
+      getActiveToolboxEntry: async () => ({ title: 'List', icon: '<svg>list</svg>' }),
+    };
+    const list = {
+      name: 'list',
+      conversionConfig: { import: 'text', export: 'text' },
+      toolbox: [{ title: 'List', icon: '<svg>list</svg>', data: { style: 'unordered' } }],
+    } as unknown as BlockToolAdapter;
+
+    vi.spyOn(SelectionUtils, 'get').mockReturnValue(createSelectionMock(anchorNode));
+    blocksAPI.getBlockByElement.mockReturnValue(currentBlock);
+    toolsAPI.getBlockTools.mockReturnValue([list]);
+
+    await expect(tool.render()).resolves.toEqual([]);
   });
 
   it('builds menu config and handles desktop-only selection behavior', async () => {

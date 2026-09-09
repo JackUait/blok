@@ -52,6 +52,8 @@ const createSettings = (data: Partial<HeaderData> = {}, locale: 'en' | 'ru' = 'e
     name: 'header', constructable: Header, config: {}, api, isDefault: false, isInternal: false,
   });
   const convert = vi.fn(async () => null);
+  const closeToolbar = vi.fn();
+  const setCaret = vi.fn();
   const settings = new BlockSettings({ config: {}, eventsDispatcher: new EventsDispatcher<BlokEventMap>() });
 
   settings.state = {
@@ -61,14 +63,14 @@ const createSettings = (data: Partial<HeaderData> = {}, locale: 'en' | 'ru' = 'e
     CrossBlockSelection: { isCrossBlockSelectionStarted: false },
     Tools: { blockTools: new Map([['header', tool]]) },
     API: { methods: api },
-    Toolbar: { close: vi.fn(), isPositionedRight: false },
-    Caret: { setToBlock: vi.fn(), positions: { DEFAULT: 'default', END: 'end' } },
+    Toolbar: { close: closeToolbar, isPositionedRight: false },
+    Caret: { setToBlock: setCaret, positions: { DEFAULT: 'default', END: 'end' } },
     I18n: i18n,
   } as unknown as BlokModules;
   settings.make();
   settingsInstances.push(settings);
 
-  return { settings, block, header, holder, convert };
+  return { settings, block, header, holder, convert, closeToolbar, setCaret };
 };
 
 const getMenu = (): HTMLElement => {
@@ -150,6 +152,46 @@ describe('Heading search in real block settings', () => {
     });
     expect(holder.querySelector('h3')?.id).toBe('original-anchor');
     expect(convert).not.toHaveBeenCalled();
+    if (isToggleable) {
+      expect(holder.querySelector('[data-blok-nested-blocks]')?.firstChild).toBe(child);
+    }
+  });
+
+  it.each([false, true])('keeps the current heading unchanged and closes the toolbar with toggle state %s', async (isToggleable) => {
+    const { settings, block, header, holder, convert, closeToolbar, setCaret } = createSettings({
+      textColor: 'red', backgroundColor: 'blue',
+      ...(isToggleable ? { isToggleable: true, isOpen: false } : {}),
+    });
+    const child = document.createElement('p');
+
+    child.textContent = 'Nested content';
+    holder.querySelector('[data-blok-nested-blocks]')?.append(child);
+    const saved = header.save(holder);
+    const originalRoot = holder.firstChild;
+
+    await settings.open(block);
+    const convertTo = getMenu().querySelector<HTMLElement>('[data-blok-item-name="convert-to"]');
+
+    if (convertTo === null) {
+      throw new Error('Missing conversion menu');
+    }
+    convertTo.click();
+    const currentName = isToggleable ? 'toggle-header-2' : 'header-2';
+    const current = document.querySelector<HTMLElement>(`[data-blok-item-name="${currentName}"]`);
+
+    expect(current).not.toBeNull();
+    if (current === null) {
+      throw new Error('Missing current heading');
+    }
+    current.click();
+    await vi.waitFor(() => expect(closeToolbar).toHaveBeenCalledTimes(1));
+
+    expect(convert).not.toHaveBeenCalled();
+    expect(setCaret).not.toHaveBeenCalled();
+    expect(header.save(holder)).toEqual(saved);
+    expect(block.holder).toBe(holder);
+    expect(holder.firstChild).toBe(originalRoot);
+    expect(holder.isConnected).toBe(true);
     if (isToggleable) {
       expect(holder.querySelector('[data-blok-nested-blocks]')?.firstChild).toBe(child);
     }

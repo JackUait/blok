@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import type { BlockAPI, ToolConfig } from '../../../types';
 import type { ConversionConfig } from '../../../types/configs/conversion-config';
 import type { BlockToolData } from '../../../types/tools/block-tool-data';
@@ -8,6 +8,7 @@ import {
   isBlockConvertable,
   isSameBlockData,
   getConvertibleToolsForBlock,
+  CURRENT_CONVERT_VARIANT,
   getConvertibleToolsForBlocks,
   areBlocksMergeable,
   convertBlockDataToString,
@@ -262,6 +263,81 @@ describe('blocks utilities', () => {
       name,
       save: mockSave,
     } as unknown as BlockAPI);
+
+    describe('current variant retention', () => {
+      beforeEach(() => {
+        vi.clearAllMocks();
+      });
+
+      afterEach(() => {
+        vi.restoreAllMocks();
+      });
+
+      it.each([false, true])('retains only an exact marked copy with toggle state %s', async (isToggleable) => {
+        const toolbox = [
+          { icon: 'H1', data: { level: 1 } },
+          { icon: 'H2', data: { level: 2 } },
+          { icon: 'TH1', data: { level: 1, isToggleable: true } },
+          { icon: 'TH2', data: { level: 2, isToggleable: true } },
+        ];
+        const tool = {
+          name: 'header',
+          conversionConfig: { import: 'text', export: 'text' },
+          toolbox,
+        } as unknown as BlockToolAdapter;
+        const block = createMockBlock('header');
+
+        mockSave.mockResolvedValue({
+          data: { text: 'Section', level: 2, ...(isToggleable ? { isToggleable: true } : {}) },
+        });
+        const retained = await getConvertibleToolsForBlock(block, [tool], { keepCurrentVariant: true });
+        const items = retained[0]?.toolbox ?? [];
+        const currentIcon = isToggleable ? 'TH2' : 'H2';
+        const current = items.find(item => item.icon === currentIcon);
+        const original = toolbox.find(item => item.icon === currentIcon);
+
+        expect(items.map(item => item.icon)).toEqual(['H1', 'H2', 'TH1', 'TH2']);
+        expect(current !== undefined && CURRENT_CONVERT_VARIANT in current && current[CURRENT_CONVERT_VARIANT]).toBe(true);
+        expect(current).not.toBe(original);
+        expect(items.filter(item => CURRENT_CONVERT_VARIANT in item)).toEqual([current]);
+        expect(toolbox.every(item => !(CURRENT_CONVERT_VARIANT in item))).toBe(true);
+        expect(items.find(item => item.icon === 'H1')).toBe(toolbox[0]);
+
+        const filtered = await getConvertibleToolsForBlock(block, [tool]);
+
+        expect(filtered[0]?.toolbox?.map(item => item.icon)).toEqual(
+          toolbox.filter(item => item.icon !== currentIcon).map(item => item.icon)
+        );
+      });
+
+      it('still excludes data-less entries for the current tool', async () => {
+        const tool = {
+          name: 'paragraph',
+          conversionConfig: { import: 'text', export: 'text' },
+          toolbox: [{ icon: 'P' }],
+        } as unknown as BlockToolAdapter;
+
+        mockSave.mockResolvedValue({ data: { text: 'Section' } });
+
+        expect(await getConvertibleToolsForBlock(createMockBlock('paragraph'), [tool], {
+          keepCurrentVariant: true,
+        })).toEqual([]);
+      });
+
+      it('does not mark a different tool with matching data as current', async () => {
+        const tool = {
+          name: 'other',
+          conversionConfig: { import: 'text', export: 'text' },
+          toolbox: [{ icon: 'H2', data: { level: 2 } }],
+        } as unknown as BlockToolAdapter;
+
+        mockSave.mockResolvedValue({ data: { text: 'Section', level: 2 } });
+
+        expect(await getConvertibleToolsForBlock(createMockBlock('header'), [tool], {
+          keepCurrentVariant: true,
+        })).toEqual([]);
+      });
+    });
 
     it('should return empty array when block tool has no export conversion config', async () => {
       const mockTool = {

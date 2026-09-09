@@ -106,7 +106,8 @@ const { getConvertibleToolsForBlockMock, getConvertibleToolsForBlocksMock } = vi
   getConvertibleToolsForBlocksMock: vi.fn(),
 }));
 
-vi.mock('../../../../../src/components/utils/blocks', () => ({
+vi.mock(import('../../../../../src/components/utils/blocks'), async (importOriginal) => ({
+  ...await importOriginal(),
   getConvertibleToolsForBlock: getConvertibleToolsForBlockMock,
   getConvertibleToolsForBlocks: getConvertibleToolsForBlocksMock,
 }));
@@ -1018,9 +1019,9 @@ describe('BlockSettings — mutation coverage', () => {
       expect(convertTo.title).toBe('popover.convertTo');
       expect((convertTo.children as { width?: string }).width).toBe('320px');
       expect((convertTo.children as { searchable?: boolean }).searchable).toBe(true);
-      expect(itemKeys(childrenOf(items, 'convert-to'))).toStrictEqual(['convert-heading-label', 'header']);
+      expect(itemKeys(childrenOf(items, 'convert-to'))).toStrictEqual(['convert-heading-tabs', 'header']);
 
-      const groupLabel = itemNamed(childrenOf(items, 'convert-to'), 'convert-heading-label');
+      const groupLabel = itemNamed(childrenOf(items, 'convert-to'), 'convert-heading-tabs');
 
       expect(groupLabel).toMatchObject({ type: 'html', element: expect.any(HTMLElement) });
       expect((groupLabel.element as HTMLElement).textContent).toBe('toolNames.heading');

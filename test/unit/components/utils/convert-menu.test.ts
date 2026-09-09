@@ -118,11 +118,19 @@ describe('buildConvertMenuEntries', () => {
 });
 
 describe('buildConvertMenuItems', () => {
+  const scrollIntoViewDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollIntoView');
+
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { value: vi.fn(), configurable: true });
   });
 
   afterEach(() => {
+    if (scrollIntoViewDescriptor) {
+      Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', scrollIntoViewDescriptor);
+    } else {
+      Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
+    }
     vi.restoreAllMocks();
   });
 
@@ -135,25 +143,25 @@ describe('buildConvertMenuItems', () => {
       description: 'all sections without separating entries in the same section',
       groups: ['heading', 'heading', 'toggle-heading', 'toggle-heading', undefined, undefined],
       expected: [
-        'convert-heading-label', 'choice-0', 'choice-1', 'separator',
-        'convert-toggle-heading-label', 'choice-2', 'choice-3', 'separator',
+        'convert-heading-tabs', 'choice-0', 'choice-1',
+        'choice-2', 'choice-3', 'separator',
         'choice-4', 'choice-5',
       ],
     },
     {
       description: 'headings followed directly by ordinary choices',
       groups: ['heading', undefined, undefined],
-      expected: ['convert-heading-label', 'choice-0', 'separator', 'choice-1', 'choice-2'],
+      expected: ['convert-heading-tabs', 'choice-0', 'separator', 'choice-1', 'choice-2'],
     },
     {
       description: 'toggle headings followed directly by ordinary choices',
       groups: ['toggle-heading', undefined],
-      expected: ['convert-toggle-heading-label', 'choice-0', 'separator', 'choice-1'],
+      expected: ['convert-heading-tabs', 'choice-0', 'separator', 'choice-1'],
     },
     {
       description: 'heading sections without ordinary choices',
       groups: ['heading', 'toggle-heading'],
-      expected: ['convert-heading-label', 'choice-0', 'separator', 'convert-toggle-heading-label', 'choice-1'],
+      expected: ['convert-heading-tabs', 'choice-0', 'choice-1'],
     },
     {
       description: 'only ordinary choices',
@@ -163,12 +171,12 @@ describe('buildConvertMenuItems', () => {
     {
       description: 'only headings',
       groups: ['heading', 'heading'],
-      expected: ['convert-heading-label', 'choice-0', 'choice-1'],
+      expected: ['convert-heading-tabs', 'choice-0', 'choice-1'],
     },
     {
       description: 'only toggle headings',
       groups: ['toggle-heading', 'toggle-heading'],
-      expected: ['convert-toggle-heading-label', 'choice-0', 'choice-1'],
+      expected: ['convert-heading-tabs', 'choice-0', 'choice-1'],
     },
     {
       description: 'no choices',
@@ -210,7 +218,7 @@ describe('buildConvertMenuItems', () => {
       const searchInput = root.querySelector<HTMLInputElement>('[data-blok-testid="popover-search-input"]');
       const itemsContainer = root.querySelector('[data-blok-popover-items]');
 
-      expect(separators).toHaveLength(2);
+      expect(separators).toHaveLength(1);
 
       if (searchInput === null || itemsContainer === null) {
         throw new Error('Searchable conversion menu is missing its search input or items');
@@ -239,7 +247,7 @@ describe('buildConvertMenuItems', () => {
       searchInput.value = '';
       searchInput.dispatchEvent(new Event('input', { bubbles: true }));
 
-      expect(root.querySelectorAll('[data-blok-convert-item]:not([data-blok-hidden])')).toHaveLength(3);
+      expect(root.querySelectorAll('[data-blok-convert-item]:not([data-blok-hidden])')).toHaveLength(2);
       separators.forEach((separator) => expect(separator).not.toHaveAttribute('data-blok-hidden'));
       Array.from(itemsContainer.children).forEach((item, index) => expect(item).toBe(originalOrder[index]));
     } finally {
@@ -248,7 +256,7 @@ describe('buildConvertMenuItems', () => {
     }
   });
 
-  it('keeps translated section labels before their first choice', () => {
+  it('keeps translated family tabs before the searchable choices', () => {
     const entries = buildConvertMenuEntries([
       createToolStub('header', [
         { icon: '<svg>h1</svg>', titleKey: 'tools.header.heading1' },
@@ -259,12 +267,129 @@ describe('buildConvertMenuItems', () => {
     const items = buildConvertMenuItems(entries, createI18n(), () => undefined);
 
     expect(items).toMatchObject([
-      { type: PopoverItemType.Html, element: { textContent: 'translated:toolNames.heading' } },
+      { type: PopoverItemType.Html, element: { textContent: 'translated:toolNames.headingtranslated:tools.header.toggleHeading' } },
       { title: 'translated:tools.header.heading1' },
-      { type: PopoverItemType.Separator },
-      { type: PopoverItemType.Html, element: { textContent: 'translated:tools.header.toggleHeading' } },
       { title: 'translated:tools.header.toggleHeading1' },
     ]);
+  });
+
+  it.each(['heading', 'toggle-heading'] as const)('keeps the current %s selected without a checkmark', (group) => {
+    const popover = new PopoverDesktop({
+      items: buildConvertMenuItems([
+        { name: 'current-heading', title: 'Heading 1', icon: '<svg/>', toolName: 'header', group, data: { level: 1 }, isCurrent: true },
+      ], createI18n(), () => undefined),
+    });
+    const root = popover.getElement();
+
+    document.body.appendChild(root);
+
+    try {
+      const current = root.querySelector('[data-blok-item-name="current-heading"]');
+
+      if (current === null) {
+        throw new Error('Current heading is missing');
+      }
+
+      expect(current.querySelector('[data-blok-testid="popover-item-trailing-icon"]')).toBeNull();
+      expect(current).toHaveAttribute('data-blok-popover-item-active', 'true');
+      expect(current).toHaveAttribute('aria-checked', 'true');
+    } finally {
+      popover.destroy();
+      root.remove();
+    }
+  });
+
+  it.each(['Tab', 'ArrowDown'])('leaves search results unfocused until %s navigation', async (key) => {
+    const activated: string[] = [];
+    const popover = new PopoverDesktop({
+      items: buildConvertMenuItems([
+        { name: 'heading-2', title: 'Heading 2', icon: '<svg/>', toolName: 'header', group: 'heading', data: { level: 2 }, isCurrent: true },
+        { name: 'paragraph', title: 'Text', icon: '<svg/>', toolName: 'paragraph' },
+      ], createI18n(), entry => { activated.push(entry.name); }),
+      searchable: true,
+    });
+    const root = popover.getElement();
+
+    document.body.appendChild(root);
+    popover.show();
+    await Promise.resolve();
+
+    try {
+      const search = root.querySelector<HTMLInputElement>('[data-blok-testid="popover-search-input"]');
+      const text = root.querySelector('[data-blok-item-name="paragraph"]');
+
+      if (search === null || text === null) {
+        throw new Error('Search or Text option is missing');
+      }
+
+      search.value = 'text';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+      expect(activated).toEqual([]);
+      expect(text).not.toHaveAttribute('data-blok-focused');
+      expect(search).not.toHaveAttribute('aria-activedescendant');
+      search.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+      expect(text).toHaveAttribute('data-blok-focused', 'true');
+      expect(text).not.toHaveAttribute('data-blok-popover-item-active');
+
+      search.value = 'tex';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+      expect(text).not.toHaveAttribute('data-blok-focused');
+      expect(search).not.toHaveAttribute('aria-activedescendant');
+    } finally {
+      popover.destroy();
+      root.remove();
+    }
+  });
+
+  it('switches families without converting and restores the chosen tab after search', () => {
+    const activated: string[] = [];
+    const popover = new PopoverDesktop({
+      items: buildConvertMenuItems([
+        { name: 'heading-1', title: 'Heading 1', icon: '<svg/>', toolName: 'header', group: 'heading', data: { level: 1 } },
+        { name: 'toggle-1', title: 'Toggle heading 1', icon: '<svg/>', toolName: 'header', group: 'toggle-heading', data: { level: 1, isToggleable: true } },
+      ], createI18n(), entry => { activated.push(entry.name); }),
+      searchable: true,
+    });
+    const root = popover.getElement();
+
+    document.body.appendChild(root);
+
+    try {
+      const heading = root.querySelector('[data-blok-item-name="heading-1"]');
+      const toggle = root.querySelector('[data-blok-item-name="toggle-1"]');
+      const toggleTab = root.querySelector<HTMLButtonElement>('[role="tab"][data-blok-popover-tab="toggle-heading"]');
+      const search = root.querySelector<HTMLInputElement>('[data-blok-testid="popover-search-input"]');
+
+      if (toggleTab === null || search === null) {
+        throw new Error('Picker tabs or search are missing');
+      }
+
+      expect(heading).not.toHaveAttribute('data-blok-hidden');
+      expect(toggle).toHaveAttribute('data-blok-hidden', 'true');
+      toggleTab.click();
+      expect(toggleTab).toHaveAttribute('aria-selected', 'true');
+      expect(heading).toHaveAttribute('data-blok-hidden', 'true');
+      expect(toggle).not.toHaveAttribute('data-blok-hidden');
+      expect(activated).toEqual([]);
+
+      search.value = 'heading';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+      expect(heading).not.toHaveAttribute('data-blok-hidden');
+      expect(toggle).not.toHaveAttribute('data-blok-hidden');
+      expect(toggle).toHaveAccessibleName('Toggle heading 1');
+
+      search.value = '';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+      expect(heading).toHaveAttribute('data-blok-hidden', 'true');
+      expect(toggle).not.toHaveAttribute('data-blok-hidden');
+      expect(toggleTab).toHaveAttribute('aria-selected', 'true');
+      expect(activated).toEqual([]);
+    } finally {
+      popover.destroy();
+      root.remove();
+    }
   });
 
   it('keeps native searchable choices and their conversion payloads across a separator', () => {

@@ -80,7 +80,8 @@ const { getConvertibleToolsForBlockMock, getConvertibleToolsForBlocksMock } = vi
   getConvertibleToolsForBlocksMock: vi.fn(),
 }));
 
-vi.mock('../../../../../src/components/utils/blocks', () => ({
+vi.mock(import('../../../../../src/components/utils/blocks'), async (importOriginal) => ({
+  ...await importOriginal(),
   getConvertibleToolsForBlock: getConvertibleToolsForBlockMock,
   getConvertibleToolsForBlocks: getConvertibleToolsForBlocksMock,
 }));
@@ -1227,7 +1228,7 @@ describe('BlockSettings', () => {
     const children = convertTo?.children?.items ?? [];
 
     expect(children).toHaveLength(2);
-    expect(children[0]).toMatchObject({ type: PopoverItemType.Html, name: 'convert-heading-label' });
+    expect(children[0]).toMatchObject({ type: PopoverItemType.Html, name: 'convert-heading-tabs' });
     expect('element' in children[0] && children[0].element.textContent).toBe('toolNames.heading');
 
     const headerItem = children[1];

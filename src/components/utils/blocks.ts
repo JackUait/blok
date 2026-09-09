@@ -8,6 +8,8 @@ import { isFunction, isString, log, equals, isEmpty } from '../utils';
 
 import { isToolConvertable } from './tools';
 
+export const CURRENT_CONVERT_VARIANT = Symbol('current-convert-variant');
+
 
 /**
  * Check if block has valid conversion config for export or import.
@@ -44,8 +46,13 @@ export const isSameBlockData = (data1: BlockToolData, data2: BlockToolData): boo
  * Returns list of tools you can convert specified block to
  * @param block - block to get conversion items for
  * @param allBlockTools - all block tools available in the blok
+ * @param options - retain the current data variant for selected-state menus
  */
-export const getConvertibleToolsForBlock = async (block: BlockAPI, allBlockTools: BlockToolAdapter[]): Promise<BlockToolAdapter[]> => {
+export const getConvertibleToolsForBlock = async (
+  block: BlockAPI,
+  allBlockTools: BlockToolAdapter[],
+  options: { keepCurrentVariant?: boolean } = {},
+): Promise<BlockToolAdapter[]> => {
   const savedData = await block.save() as SavedData;
   const blockData = savedData.data;
 
@@ -90,12 +97,12 @@ export const getConvertibleToolsForBlock = async (block: BlockAPI, allBlockTools
     );
 
     /** Filter out invalid toolbox entries */
-    const actualToolboxItems = tool.toolbox.filter((toolboxItem) => {
+    const actualToolboxItems = tool.toolbox.flatMap((toolboxItem) => {
       /**
        * Skip items that don't pass 'toolbox' property or do not have an icon
        */
       if (isEmpty(toolboxItem) || toolboxItem.icon === undefined) {
-        return false;
+        return [];
       }
 
       const hasToolboxData = toolboxItem.data !== undefined;
@@ -116,15 +123,18 @@ export const getConvertibleToolsForBlock = async (block: BlockAPI, allBlockTools
         });
 
         if (wouldProduceSameBlock) {
-          return false;
+          // Toolbox entries are shared with other menus.
+          return options.keepCurrentVariant && tool.name === block.name
+            ? [{ ...toolboxItem, [CURRENT_CONVERT_VARIANT]: true }]
+            : [];
         }
       }
 
       if (!hasToolboxData && tool.name === block.name) {
-        return false;
+        return [];
       }
 
-      return true;
+      return [toolboxItem];
     });
 
     if (actualToolboxItems.length > 0) {

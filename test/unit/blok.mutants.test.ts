@@ -1,3 +1,15 @@
+/**
+ * PROVEN EQUIVALENT (no test can distinguish these mutants):
+ *
+ * - exportAPI L583 `field !== 'configuration'` forced false AND its block emptied:
+ *   fieldsToExport holds exactly 'configuration', so the branch never runs either way.
+ * - constructor L248 `lifecycle = { pendingDestroy: false }` -> `{}`: the flag is
+ *   only truthy-checked (L459, L553); an absent property and false are
+ *   indistinguishable there, and the L274 write recreates the property.
+ * - L620 `getPrototypeOf(apiMethods) !== Blok.prototype` forced true:
+ *   setPrototypeOf to a prototype the object already has is a no-op, so the
+ *   unconditional call equals the guarded one.
+ */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Mock } from 'vitest';
 import type {

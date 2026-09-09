@@ -1,3 +1,16 @@
+/**
+ * PROVEN EQUIVALENT (no test can distinguish this mutant):
+ *
+ * - exportMarkdown L384 `block.id !== undefined` forced true: an id-less block
+ *   only adds a parentOf entry KEYED by undefined; depthOf early-returns on
+ *   undefined ids before any get, and string ids never equal that key, so the
+ *   write has no reader.
+ *
+ * - exportMarkdown L395 `id === undefined` removed: depthOf(undefined) still
+ *   returns 0 — parentOf.get(undefined) is undefined while 2514 is inactive
+ *   (single-mutant scoring never co-activates them), and the cycle guard in
+ *   the same condition keeps the recursion bounded.
+ */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Mock } from 'vitest';
 

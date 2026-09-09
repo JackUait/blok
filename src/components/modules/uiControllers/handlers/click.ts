@@ -1,4 +1,5 @@
 import type { BlokModules } from '../../../../types-internal/blok-modules';
+import { Dom as $ } from '../../../dom';
 import { SelectionUtils as Selection } from '../../../selection/index';
 
 /**
@@ -124,12 +125,15 @@ export const createDocumentClickedHandler = (
       Blok.BlockSelection.clearSelection(event);
     }
 
-    /**
-     * Close Inline Toolbar when clicking outside of it
-     * This handles clicks anywhere outside the inline toolbar,
-     * including inside the editor content area or on page controls
-     */
-    if (Blok.InlineToolbar.opened && !context.clickedInsideInlineToolbar) {
+    const editable = context.target instanceof Element
+      ? context.target.closest('[contenteditable]')
+      : null;
+    const selectsEditorText = context.clickedInsideRedactor &&
+      editable instanceof HTMLElement && $.isContentEditable(editable) &&
+      !Blok.InlineToolbar.hasNestedPopoverOpen && !Blok.InlineToolbar.hasDirectMenuOpen;
+
+    // Text presses may retain the range; SelectionController reconciles it after the gesture.
+    if (Blok.InlineToolbar.opened && !context.clickedInsideInlineToolbar && !selectsEditorText) {
       Blok.InlineToolbar.close();
     }
   };

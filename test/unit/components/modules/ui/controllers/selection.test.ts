@@ -304,6 +304,81 @@ describe('SelectionController', () => {
       expect(selectionsAtShow).not.toContain('Fully selected paragraph');
     });
 
+    it.each(['release', 'drag', 'cancel'])('refreshes an open toolbar when the pointer changes the range during %s', (phase) => {
+      const { controller, blok, wrapper } = createSelectionController();
+      const blockContent = document.createElement('div');
+      const text = document.createTextNode('first second');
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('Selection is unavailable');
+      }
+
+      blockContent.contentEditable = 'true';
+      blockContent.setAttribute('contenteditable', 'true');
+      blockContent.setAttribute('data-blok-testid', 'block-content');
+      blockContent.appendChild(text);
+      wrapper.appendChild(blockContent);
+      selection.setBaseAndExtent(text, 0, text, 5);
+      blok.InlineToolbar.opened = true;
+      vi.mocked(blok.InlineToolbar.close).mockImplementation(() => {
+        blok.InlineToolbar.opened = false;
+      });
+      controller.enable();
+
+      blockContent.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      selection.setBaseAndExtent(text, 6, text, 12);
+
+      if (phase === 'drag') {
+        document.dispatchEvent(new Event('selectionchange'));
+        vi.advanceTimersByTime(200);
+        expect(blok.InlineToolbar.opened).toBe(false);
+        expect(blok.InlineToolbar.tryToShow).not.toHaveBeenCalled();
+      }
+
+      blockContent.dispatchEvent(new Event(phase === 'cancel' ? 'pointercancel' : 'pointerup', { bubbles: true }));
+      vi.advanceTimersToNextFrame();
+
+      expect(blok.InlineToolbar.opened).toBe(false);
+      expect(blok.InlineToolbar.tryToShow).toHaveBeenCalledWith(true);
+    });
+
+    it('refreshes the original toolbar when a second pointer gesture retains the changed range before the next frame', () => {
+      const { controller, blok, wrapper } = createSelectionController();
+      const blockContent = document.createElement('div');
+      const text = document.createTextNode('first second');
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('Selection is unavailable');
+      }
+
+      blockContent.contentEditable = 'true';
+      blockContent.setAttribute('contenteditable', 'true');
+      blockContent.setAttribute('data-blok-testid', 'block-content');
+      blockContent.appendChild(text);
+      wrapper.appendChild(blockContent);
+      selection.setBaseAndExtent(text, 0, text, 5);
+      blok.InlineToolbar.opened = true;
+      vi.mocked(blok.InlineToolbar.close).mockImplementation(() => {
+        blok.InlineToolbar.opened = false;
+      });
+      controller.enable();
+
+      blockContent.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      selection.setBaseAndExtent(text, 6, text, 12);
+      blockContent.dispatchEvent(new Event('pointerup', { bubbles: true }));
+      blockContent.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      blockContent.dispatchEvent(new Event('pointerup', { bubbles: true }));
+      vi.advanceTimersToNextFrame();
+
+      expect(blok.InlineToolbar.tryToShow).toHaveBeenCalledWith(true);
+      expect(blok.InlineToolbar.tryToShow).toHaveBeenCalledTimes(1);
+      expect(blok.InlineToolbar.close).toHaveBeenCalledTimes(1);
+      expect(blok.BlockManager.setCurrentBlockByChildNode).toHaveBeenCalledWith(blockContent);
+      expect(selection.toString()).toBe('second');
+    });
+
     it('does not reopen from a queued release after disable and re-enable', () => {
       const { controller, blok, wrapper } = createSelectionController();
 

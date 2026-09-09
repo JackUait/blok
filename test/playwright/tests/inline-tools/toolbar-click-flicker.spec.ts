@@ -44,6 +44,40 @@ test.describe('inline toolbar click flicker', () => {
     }, PARAGRAPH_TEXT);
   });
 
+  test('keeps the same toolbar while repeated clicks retain the full paragraph selection', async ({ page }) => {
+    const paragraph = page.getByTestId('block-wrapper').locator('[data-blok-tool="paragraph"][contenteditable="true"]');
+    const toolbar = page.getByTestId('inline-toolbar');
+
+    await paragraph.click({ clickCount: 3 });
+    await expect.poll(() => page.evaluate(() => window.getSelection()?.toString().trim())).toBe(PARAGRAPH_TEXT);
+    await expect(toolbar.getByTestId('popover-container')).toBeVisible();
+
+    const popover = await toolbar.getByTestId('popover').elementHandle();
+    const box = await paragraph.boundingBox();
+
+    if (!popover || !box) {
+      throw new Error('Expected the selected paragraph and its toolbar');
+    }
+
+    await page.mouse.move(box.x + 20, box.y + box.height / 2);
+    await page.mouse.down({ clickCount: 3 });
+
+    try {
+      await expect.poll(() => page.evaluate(() => window.getSelection()?.toString().trim())).toBe(PARAGRAPH_TEXT);
+      expect(await popover.evaluate((element) => element.isConnected)).toBe(true);
+      await expect(toolbar.getByTestId('popover-container')).toBeVisible();
+    } finally {
+      await page.mouse.up({ clickCount: 3 });
+    }
+
+    // Observe past the selection debounce to catch delayed replacement.
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- The existing popover must survive the full interaction.
+    await page.waitForTimeout(500);
+    expect(await popover.evaluate((element) => element.isConnected)).toBe(true);
+    await expect(toolbar.getByTestId('popover-container')).toBeVisible();
+    await popover.dispose();
+  });
+
   for (const scenario of cases) {
     test(scenario.name, async ({ page }) => {
       const paragraph = page.getByTestId('block-wrapper').locator('[data-blok-tool="paragraph"][contenteditable="true"]');

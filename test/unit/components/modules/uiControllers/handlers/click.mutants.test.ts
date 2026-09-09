@@ -274,6 +274,53 @@ describe('document click handler mutants', () => {
       expect(fake.closeInlineToolbar).toHaveBeenCalledTimes(1);
     });
 
+    it.each(['true', 'plaintext-only'])('defers toolbar dismissal for a %s editable descendant', (mode) => {
+      const fake = makeFake();
+      const editable = document.createElement('div');
+      const target = document.createElement('strong');
+
+      editable.contentEditable = mode;
+      editable.setAttribute('contenteditable', mode);
+      editable.appendChild(target);
+      fake.redactor.appendChild(editable);
+      fake.setInlineToolbarOpen(true);
+
+      createDocumentClickedHandler(fake.deps)(clickOn(target));
+
+      expect(fake.closeInlineToolbar).not.toHaveBeenCalled();
+    });
+
+    it.each(['hasNestedPopoverOpen', 'hasDirectMenuOpen'])('dismisses an open %s menu when returning to text', (property) => {
+      const fake = makeFake();
+      const editable = document.createElement('div');
+
+      editable.contentEditable = 'true';
+      editable.setAttribute('contenteditable', 'true');
+      fake.redactor.appendChild(editable);
+      fake.setInlineToolbarOpen(true);
+      Object.assign(fake.deps.Blok.InlineToolbar, { [property]: true });
+
+      createDocumentClickedHandler(fake.deps)(clickOn(editable));
+
+      expect(fake.closeInlineToolbar).toHaveBeenCalledOnce();
+    });
+
+    it('still dismisses the toolbar for a noneditable child inside the editor', () => {
+      const fake = makeFake();
+      const editable = document.createElement('div');
+      const target = document.createElement('button');
+
+      editable.setAttribute('contenteditable', 'true');
+      target.setAttribute('contenteditable', 'false');
+      editable.appendChild(target);
+      fake.redactor.appendChild(editable);
+      fake.setInlineToolbarOpen(true);
+
+      createDocumentClickedHandler(fake.deps)(clickOn(target));
+
+      expect(fake.closeInlineToolbar).toHaveBeenCalledOnce();
+    });
+
     it('leaves an open inline toolbar alone when the click lands inside it', () => {
       const fake = makeFake();
 

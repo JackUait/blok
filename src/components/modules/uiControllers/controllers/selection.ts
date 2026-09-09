@@ -38,21 +38,38 @@ export class SelectionController extends Controller {
     this.wrapperElement = element;
   }
 
-  /**
-   * Whether a pointer is currently pressed (an in-progress drag selection).
-   * While true, the inline toolbar is kept hidden so it doesn't pop up mid-drag;
-   * it appears the moment the pointer is released.
-   */
   private isPointerDown = false;
 
   private pointerUpFrame: number | null = null;
 
-  /**
-   * Remember that a drag may be starting so the inline toolbar stays hidden
-   * until the pointer is released.
-   */
-  private handlePointerDown = (): void => {
+  // Range objects are live; preserve boundary values before the browser changes them.
+  private pointerSelection: Pick<Range, 'startContainer' | 'startOffset' | 'endContainer' | 'endOffset'> | null = null;
+
+  private handlePointerDown = (event: Event): void => {
     this.isPointerDown = true;
+
+    // Another press can arrive before the previous release frame.
+    if (this.pointerSelection !== null && this.Blok.InlineToolbar.opened) {
+      return;
+    }
+
+    this.pointerSelection = null;
+
+    const editable = event.target instanceof Element
+      ? event.target.closest('[contenteditable]')
+      : null;
+    const range = Selection.range;
+
+    if (this.Blok.InlineToolbar.opened && range &&
+      editable instanceof HTMLElement && $.isContentEditable(editable) &&
+      this.wrapperElement?.contains(editable)) {
+      this.pointerSelection = {
+        startContainer: range.startContainer,
+        startOffset: range.startOffset,
+        endContainer: range.endContainer,
+        endOffset: range.endOffset,
+      };
+    }
   };
 
   private handlePointerUp = (event: Event): void => {
@@ -70,6 +87,7 @@ export class SelectionController extends Controller {
     // Menu clicks need selection handling before their click handlers run.
     if (!(editable instanceof HTMLElement) || !$.isContentEditable(editable)) {
       this.handleSelectionChange();
+      this.pointerSelection = null;
 
       return;
     }
@@ -79,6 +97,7 @@ export class SelectionController extends Controller {
       this.pointerUpFrame = null;
       if (this.isEnabled && !this.isPointerDown) {
         this.handleSelectionChange();
+        this.pointerSelection = null;
       }
     });
   };
@@ -90,6 +109,8 @@ export class SelectionController extends Controller {
    */
   private handlePointerCancel = (): void => {
     this.isPointerDown = false;
+    this.handleSelectionChange();
+    this.pointerSelection = null;
   };
 
   /**
@@ -109,6 +130,7 @@ export class SelectionController extends Controller {
   public override disable(): void {
     this.isEnabled = false;
     this.isPointerDown = false;
+    this.pointerSelection = null;
     if (this.pointerUpFrame !== null) {
       cancelAnimationFrame(this.pointerUpFrame);
       this.pointerUpFrame = null;
@@ -176,6 +198,18 @@ export class SelectionController extends Controller {
       this.Blok.InlineToolbar.close();
 
       return;
+    }
+
+    const previousRange = this.pointerSelection;
+    const range = Selection.range;
+
+    if (this.Blok.InlineToolbar.opened && previousRange &&
+      (!range || range.startContainer !== previousRange.startContainer ||
+        range.startOffset !== previousRange.startOffset ||
+        range.endContainer !== previousRange.endContainer ||
+        range.endOffset !== previousRange.endOffset)) {
+      this.Blok.InlineToolbar.close();
+      this.pointerSelection = null;
     }
 
     if (this.Blok.InlineToolbar.opened && !this.Blok.InlineToolbar.hasNestedPopoverOpen) {

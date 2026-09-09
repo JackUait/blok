@@ -183,7 +183,7 @@ export class Flipper {
     }
 
     if (cursorPosition !== undefined) {
-      this.iterator?.setCursor(cursorPosition);
+      this.moveCursor(() => this.iterator?.setCursor(cursorPosition));
     }
 
     /**
@@ -197,6 +197,8 @@ export class Flipper {
      */
     document.addEventListener('keydown', this.onKeyDown, true);
     window.addEventListener('keydown', this.onKeyDown, true);
+    document.addEventListener('focus', this.onFocus, true);
+    this.syncTabCursor(document.activeElement);
   }
 
   /**
@@ -209,6 +211,7 @@ export class Flipper {
 
     document.removeEventListener('keydown', this.onKeyDown, true);
     window.removeEventListener('keydown', this.onKeyDown, true);
+    document.removeEventListener('focus', this.onFocus, true);
   }
 
   /**
@@ -216,7 +219,7 @@ export class Flipper {
    * @param host - element that should receive aria-activedescendant, or null to disable
    */
   public setActiveDescendantHost(host: HTMLElement | null): void {
-    this.iterator?.setActiveDescendantHost(host);
+    this.moveCursor(() => this.iterator?.setActiveDescendantHost(host));
   }
 
   /**
@@ -245,7 +248,7 @@ export class Flipper {
     }
 
     if (position < 0) {
-      iterator.dropCursor();
+      this.dropCursor();
 
       return;
     }
@@ -256,14 +259,14 @@ export class Flipper {
       this.skipNextTabFocus = true;
     }
 
-    iterator.setCursor(position);
+    this.moveCursor(() => iterator.setCursor(position));
   }
 
   /**
    * Focuses previous flipper iterator item
    */
   public flipLeft(): void {
-    this.iterator?.previous();
+    this.moveCursor(() => this.iterator?.previous());
     this.flipCallback();
   }
 
@@ -271,7 +274,7 @@ export class Flipper {
    * Focuses next flipper iterator item
    */
   public flipRight(): void {
-    this.iterator?.next();
+    this.moveCursor(() => this.iterator?.next());
     this.flipCallback();
   }
 
@@ -279,7 +282,7 @@ export class Flipper {
    * Focuses the first (non-disabled) flipper iterator item (Home key)
    */
   public flipToFirst(): void {
-    this.iterator?.setCursorToFirst();
+    this.moveCursor(() => this.iterator?.setCursorToFirst());
     this.flipCallback();
   }
 
@@ -287,7 +290,7 @@ export class Flipper {
    * Focuses the last (non-disabled) flipper iterator item (End key)
    */
   public flipToLast(): void {
-    this.iterator?.setCursorToLast();
+    this.moveCursor(() => this.iterator?.setCursorToLast());
     this.flipCallback();
   }
 
@@ -333,7 +336,49 @@ export class Flipper {
    * @see DomIterator#dropCursor
    */
   private dropCursor(): void {
-    this.iterator?.dropCursor();
+    this.moveCursor(() => this.iterator?.dropCursor());
+  }
+
+  private onFocus = (event: FocusEvent): void => {
+    this.syncTabCursor(event.target);
+  };
+
+  private syncTabCursor(target: EventTarget | null): void {
+    if (!(target instanceof HTMLElement)
+      || !target.matches('[data-blok-popover-tabs] [role="tab"][data-blok-popover-tab][aria-selected="true"]')) {
+      return;
+    }
+
+    const index = this.iterator?.getItems().indexOf(target) ?? -1;
+
+    if (index < 0) {
+      return;
+    }
+
+    // Sync on focus entry, not each Down: rows keep DOM focus on the tab.
+    this.focusItem(index, { skipNextTab: false });
+    this.skipNextTabFocus = false;
+  }
+
+  private focusCurrentTab(): void {
+    const item = this.iterator?.currentItem;
+
+    if (item?.matches('[data-blok-popover-tabs] [role="tab"][data-blok-popover-tab][aria-selected="true"]')) {
+      item.focus({ preventScroll: true });
+    }
+  }
+
+  private moveCursor(move: () => void): void {
+    const previous = this.iterator?.currentItem;
+    const selected = previous?.getAttribute('aria-selected');
+
+    move();
+
+    // The tablist owns selection; the virtual cursor must not erase it.
+    if (previous?.matches('[data-blok-popover-tabs] [role="tab"][data-blok-popover-tab]')
+      && selected !== null && selected !== undefined) {
+      previous.setAttribute('aria-selected', selected);
+    }
   }
 
   /**
@@ -506,6 +551,7 @@ export class Flipper {
 
     if (this.skipNextTabFocus) {
       this.skipNextTabFocus = false;
+      this.focusCurrentTab();
 
       return;
     }
@@ -604,7 +650,7 @@ export class Flipper {
     const matchIndex = this.findTypeAheadMatch(this.typeAheadBuffer);
 
     if (matchIndex !== -1) {
-      this.iterator?.setCursor(matchIndex);
+      this.moveCursor(() => this.iterator?.setCursor(matchIndex));
       this.flipCallback();
     }
 
@@ -637,6 +683,8 @@ export class Flipper {
    * Fired after flipping in any direction
    */
   private flipCallback(): void {
+    this.focusCurrentTab();
+
     if (this.iterator?.currentItem) {
       this.scrollElementIntoView(this.iterator.currentItem);
     }
@@ -652,6 +700,11 @@ export class Flipper {
   private shouldSkipTarget(target: HTMLElement | null, event: KeyboardEvent): boolean {
     if (!target) {
       return false;
+    }
+
+    if (target.closest('[data-blok-popover-tabs] [role="tab"][data-blok-popover-tab]')
+      && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+      return true;
     }
 
     const isNativeInput = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;

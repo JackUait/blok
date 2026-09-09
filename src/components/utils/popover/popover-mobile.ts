@@ -126,6 +126,15 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
     });
   }
 
+  protected override onTabsChange(): void {
+    super.onTabsChange();
+
+    if (this.flipper.isActivated) {
+      this.flipper.deactivate();
+      this.flipper.activate(this.flippableElements);
+    }
+  }
+
   /**
    * Returns the list of item elements available for keyboard navigation.
    */
@@ -141,13 +150,20 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
    * @param item - popover item to resolve elements for
    */
   private getFlippableElementsForItem(item: PopoverItem): HTMLElement[] {
+    if (item.getElement()?.hasAttribute(DATA_ATTR.hidden)) {
+      return [];
+    }
+
     if (item instanceof PopoverItemHtml) {
       // The wrapper is role="presentation" and non-focusable: only the inner
       // interactive controls are focus stops. A decorative item (section header,
       // metadata footer) contributes none — falling back to the wrapper would
       // put a role="presentation" element under aria-activedescendant and steal
       // index 0 from the first real option.
-      return item.getControls();
+      return item.getControls().filter(control => {
+        return !control.hasAttribute(DATA_ATTR.hidden)
+          && (!control.matches('[role="tab"][data-blok-popover-tab]') || control.getAttribute('aria-selected') === 'true');
+      });
     }
 
     if (!(item instanceof PopoverItemDefault) || item.isDisabled) {
@@ -357,14 +373,7 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
 
     this.items = this.buildItems(items);
 
-    this.items.forEach(item => {
-      const itemEl = item.getMountElement?.() ?? item.getElement();
-
-      if (itemEl === null) {
-        return;
-      }
-      this.nodes.items?.appendChild(itemEl);
-    });
+    this.appendItemElements();
 
     // Re-activate the flipper over the freshly-rendered page so keyboard
     // navigation keeps working after the swap, and move focus to the first item.

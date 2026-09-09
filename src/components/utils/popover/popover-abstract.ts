@@ -97,6 +97,13 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     // Set up scroll listener on items container for the edge reel distortion
     // and the scroll-activity marker that reveals the auto-hidden scrollbar.
     if (this.nodes.items) {
+      this.listeners.on(this.nodes.items, 'blok-popover-tabs-change', (event: Event) => {
+        if (event.target instanceof HTMLElement
+          && event.target.matches('[data-blok-popover-tabs]')
+          && event.target.closest(`[${DATA_ATTR.popoverItems}]`) === this.nodes.items) {
+          this.onTabsChange();
+        }
+      });
       this.listeners.on(this.nodes.items, 'scroll', () => {
         this.updateScrollReel();
         this.updateScrollbar();
@@ -417,6 +424,43 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    */
   protected isNamePermanentlyHidden(name: string): boolean {
     return this.permanentlyHiddenNames.has(name);
+  }
+
+  protected isItemHiddenByTab(item: PopoverItem): boolean {
+    const family = item.getElement()?.getAttribute('data-blok-popover-tab');
+
+    if (family === null || family === undefined) {
+      return false;
+    }
+
+    const selected = this.nodes.items.querySelector(
+      '[data-blok-popover-tabs] [role="tab"][aria-selected="true"]'
+    )?.getAttribute('data-blok-popover-tab');
+
+    return selected !== null && selected !== undefined && family !== selected;
+  }
+
+  protected onTabsChange(): void {
+    this.updateTabVisibility();
+  }
+
+  private updateTabVisibility(): void {
+    if (!this.nodes.items.querySelector('[data-blok-popover-tabs]')) {
+      return;
+    }
+
+    for (const item of this.items) {
+      if (!item.getElement()?.hasAttribute('data-blok-popover-tab')) {
+        continue;
+      }
+
+      item.toggleHidden(this.isItemHiddenByTab(item)
+        || (item.name !== undefined && this.isNamePermanentlyHidden(item.name)));
+    }
+
+    this.nodes.items.scrollTop = 0;
+    this.updateScrollReel();
+    this.updateScrollbar();
   }
 
   /**
@@ -1079,7 +1123,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   /**
    * Appends item elements to the items container
    */
-  private appendItemElements(): void {
+  protected appendItemElements(): void {
     this.items.forEach(item => {
       const itemEl = item.getMountElement?.() ?? item.getElement();
 
@@ -1089,5 +1133,6 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
       this.nodes.items?.appendChild(itemEl);
     });
+    this.updateTabVisibility();
   }
 }

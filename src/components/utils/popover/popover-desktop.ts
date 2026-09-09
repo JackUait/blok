@@ -321,6 +321,8 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   private topLevelSeparator: HTMLElement | null = null;
 
+  private isSearching = false;
+
   /**
    * Construct the instance
    * @param params - popover params
@@ -1555,6 +1557,21 @@ export class PopoverDesktop extends PopoverAbstract {
     this._size = undefined;
   }
 
+  protected override onTabsChange(): void {
+    if (this.isSearching) {
+      return;
+    }
+
+    super.onTabsChange();
+    this.invalidateSizeCache();
+    this.reposition();
+
+    if (this.flipper?.isActivated) {
+      this.flipper.deactivate();
+      this.flipper.activate(this.flippableElements);
+    }
+  }
+
   /**
    * Returns list of elements available for keyboard navigation.
    */
@@ -1572,13 +1589,20 @@ export class PopoverDesktop extends PopoverAbstract {
    * @returns array of HTML elements for keyboard navigation
    */
   private getFlippableElementsForItem(item: PopoverItem): HTMLElement[] {
+    if (item.getElement()?.hasAttribute(DATA_ATTR.hidden)) {
+      return [];
+    }
+
     if (item instanceof PopoverItemHtml) {
       // The wrapper is role="presentation" and non-focusable: only the inner
       // interactive controls are focus stops. A decorative item (section header,
       // metadata footer) contributes none — falling back to the wrapper would
       // put a role="presentation" element under aria-activedescendant and steal
       // index 0 from the first real option.
-      return item.getControls();
+      return item.getControls().filter(control => {
+        return !control.hasAttribute(DATA_ATTR.hidden)
+          && (!control.matches('[role="tab"][data-blok-popover-tab]') || control.getAttribute('aria-selected') === 'true');
+      });
     }
 
     if (!(item instanceof PopoverItemDefault)) {
@@ -1890,6 +1914,8 @@ export class PopoverDesktop extends PopoverAbstract {
     promotedItems: Array<{ item: PopoverItemDefault; score: number; chain: string[] }>;
   }): void => {
     const isEmptyQuery = data.query === '';
+
+    this.isSearching = !isEmptyQuery;
     const allTopLevel = data.topLevelItems as unknown as PopoverItemDefault[];
 
     if (this.nodes.contextLabel !== undefined) {
@@ -1917,7 +1943,7 @@ export class PopoverDesktop extends PopoverAbstract {
         const isSeparatorOrHtml = item instanceof PopoverItemSeparator || item instanceof PopoverItemHtml;
         const isPermanentlyHidden = item.name !== undefined && this.isNamePermanentlyHidden(item.name);
         const isHidden = isDefaultItem
-          ? !matchingTopLevel.includes(item) || isPermanentlyHidden
+          ? !matchingTopLevel.includes(item) || isPermanentlyHidden || (isEmptyQuery && this.isItemHiddenByTab(item))
           : (isSeparatorOrHtml && (isNothingFound || !isEmptyQuery)) || isPermanentlyHidden;
 
         item.toggleHidden(isHidden);
@@ -2017,7 +2043,7 @@ export class PopoverDesktop extends PopoverAbstract {
     const flippableElements = [
       ...topLevelFlippable,
       ...promotedFlippable,
-    ].filter((el): el is HTMLElement => el !== null);
+    ].filter((el): el is HTMLElement => el !== null && !el.hasAttribute(DATA_ATTR.hidden));
 
     if (!this.flipper?.isActivated) {
       return;
@@ -2026,7 +2052,7 @@ export class PopoverDesktop extends PopoverAbstract {
     this.flipper.deactivate();
     this.flipper.activate(flippableElements);
 
-    if (flippableElements.length > 0) {
+    if (flippableElements.length > 0 && !this.nodes.items.querySelector('[data-blok-convert-item]')) {
       this.flipper.focusItem(0, { skipNextTab: true });
     }
   };

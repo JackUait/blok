@@ -69,8 +69,97 @@
       }
     }
 
-    > [data-blok-convert-group] + [data-blok-convert-item]:not([data-blok-convert-group]) {
-      grid-column: 1 / span 3;
+    &:has(> [data-blok-convert-group]) {
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      column-gap: 0;
+      row-gap: var(--blok-space-1);
+
+      > * {
+        grid-column: 1 / -1;
+      }
+
+      > [data-blok-convert-item]:not([data-blok-convert-group]) {
+        grid-column: span 4;
+      }
+
+      > :is([data-blok-item-name='convert-heading-label'], [data-blok-item-name='convert-toggle-heading-label']) {
+        grid-column: 1 / span 2;
+        align-self: center;
+
+        > div {
+          padding: var(--blok-space-0-5) var(--blok-space-1) var(--blok-space-0-5) 0;
+          font-size: 12px;
+          line-height: 16px;
+          white-space: normal;
+          overflow-wrap: anywhere;
+        }
+      }
+
+      > [data-blok-convert-group] + [role='separator'] {
+        padding-block: var(--blok-space-0-5);
+
+        &:has(+ [data-blok-item-name='convert-toggle-heading-label']) {
+          display: none;
+        }
+      }
+
+      > [data-blok-convert-group] {
+        grid-column: span 1;
+        height: auto;
+        border-radius: 0;
+        background-color: color-mix(in srgb, var(--blok-item-hover-bg) 50%, transparent);
+
+        &:not([data-blok-convert-level='']) {
+          &::before {
+            /* The full title supplies the accessible name, not the visible numeral. */
+            content: attr(data-blok-convert-level) / '';
+            font-size: 14px;
+            font-weight: 500;
+            line-height: 20px;
+            font-variant-numeric: tabular-nums;
+          }
+
+          > [data-blok-popover-item-icon] {
+            display: none;
+          }
+        }
+
+        @media (hover: hover) {
+          &:hover {
+            background-color: var(--blok-item-hover-bg);
+          }
+        }
+
+        &:is([data-blok-focused='true'], [data-blok-force-hover]) {
+          background-color: var(--blok-item-hover-bg);
+        }
+
+        &:not(:has(+ [data-blok-convert-group])) {
+          border-start-end-radius: var(--blok-space-1-5);
+          border-end-end-radius: var(--blok-space-1-5);
+        }
+      }
+
+      > [data-blok-popover-item-html] + [data-blok-convert-group] {
+        border-start-start-radius: var(--blok-space-1-5);
+        border-end-start-radius: var(--blok-space-1-5);
+      }
+
+      @media (max-width: 374px) {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+
+        > [data-blok-popover-item-html] {
+          grid-column: 1 / -1;
+        }
+
+        > [data-blok-convert-item]:not([data-blok-convert-group]) {
+          grid-column: span 3;
+        }
+      }
+
+      > [data-blok-convert-group] + [data-blok-convert-item]:not([data-blok-convert-group]) {
+        grid-column-start: 1;
+      }
     }
 
     > :is([data-blok-header-level], [data-blok-convert-group]) {
@@ -101,6 +190,12 @@
       }
     }
   }
+}
+
+/* The inline toolbar sets width on the element. */
+[data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-group]) {
+  width: min(400px, calc(100vw - 16px)) !important;
+  min-width: 0;
 }
 
 /* Scope the denser chrome to block settings and conversion, not tool pickers. */

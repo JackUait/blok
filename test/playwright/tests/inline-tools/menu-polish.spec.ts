@@ -57,7 +57,7 @@ for (const width of [1280, 390]) {
         await expect(page.getByRole('heading', { name: 'A better way to work', level: 2 })).toHaveAttribute('id', 'keep-anchor');
       });
 
-      test('separates heading controls and conversion sections with full-width lines', async ({ page }) => {
+      test('keeps heading strips together above a full-width conversion divider', async ({ page }) => {
         const settings = page.getByTestId('block-tunes-popover');
         const color = settings.getByRole('menuitem', { name: 'Color', exact: true });
 
@@ -70,8 +70,11 @@ for (const width of [1280, 390]) {
 
         await expect(conversion).toHaveCSS('transform', 'none');
         const dividers = conversion.getByRole('separator');
+        const allDividers = conversion.getByRole('separator', { includeHidden: true });
 
-        await expect(dividers).toHaveCount(2);
+        await expect(allDividers).toHaveCount(2);
+        await expect(allDividers.first()).toBeHidden();
+        await expect(dividers).toHaveCount(1);
         const sections = await dividers.evaluateAll(elements => elements.map(element => {
           const section = element.parentElement;
 
@@ -88,13 +91,12 @@ for (const width of [1280, 390]) {
         }));
 
         expect(sections.map(({ before, after }) => ({ before, after }))).toEqual([
-          { before: 'heading', after: 'convert-toggle-heading-label' },
           { before: 'toggle-heading', after: 'paragraph' },
         ]);
         for (const section of sections) {
           expect(section.width).toBeCloseTo(section.sectionWidth, 1);
         }
-        const lines = conversion.locator('[data-blok-popover-item-separator-line]');
+        const lines = dividers.locator('[data-blok-popover-item-separator-line]');
 
         for (const line of await lines.all()) {
           await expect(line).toHaveCSS('height', '1px');
@@ -181,14 +183,19 @@ for (const width of [1280, 390]) {
           const conversion = page.getByTestId('popover-container').filter({
             has: page.locator('[data-blok-convert-group="toggle-heading"]'),
           }).last();
-          const dividers = conversion.getByRole('separator');
+          const dividers = conversion.getByRole('separator', { includeHidden: true });
           const search = conversion.getByRole('combobox');
 
           await expect(dividers).toHaveCount(2);
+          await expect(dividers.first()).toBeHidden();
+          await expect(dividers.last()).toBeVisible();
           await search.fill('Heading');
           await expect(conversion.locator('[role="separator"]:not([data-blok-hidden])')).toHaveCount(0);
+          await expect(dividers.last()).toBeHidden();
           await search.fill('');
           await expect(dividers).toHaveCount(2);
+          await expect(dividers.first()).toBeHidden();
+          await expect(dividers.last()).toBeVisible();
         });
 
         test('keeps the menu within a short viewport', async ({ page }) => {

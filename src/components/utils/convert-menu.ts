@@ -121,6 +121,8 @@ export const buildConvertMenuItems = (
       });
     }
 
+    const level = entry.data?.level;
+
     items.push({
       icon: entry.icon,
       title: entry.title,
@@ -129,7 +131,10 @@ export const buildConvertMenuItems = (
       searchTerms: entry.searchTerms,
       dataset: {
         'blok-convert-item': 'true',
-        ...(entry.group === undefined ? {} : { 'blok-convert-group': entry.group }),
+        ...(entry.group === undefined ? {} : {
+          'blok-convert-group': entry.group,
+          'blok-convert-level': typeof level === 'number' ? String(level) : '',
+        }),
       },
       closeOnActivate: true,
       onActivate: () => onActivate(entry),

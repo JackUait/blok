@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
-import type { Blok } from '@/types';
+import type { Page } from '@playwright/test';
+import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { selectAllInEditable } from '../helpers/selection';
 import { gotoTestPage } from '../helpers/shared-page';
@@ -10,6 +11,31 @@ declare global {
     blokInstance?: Blok;
   }
 }
+
+const openConversion = async (page: Page, surface: 'settings' | 'inline', currentType = 'Text'): Promise<void> => {
+  const content = page.getByText('A clearer convert menu', { exact: true });
+
+  if (surface === 'inline') {
+    await selectAllInEditable(content);
+    await page.getByTestId('inline-toolbar').getByRole('menuitem', { name: currentType, exact: true }).click();
+  } else {
+    await content.click();
+    await page.getByTestId('settings-toggler').click();
+    await page.getByRole('menuitem', { name: 'Convert to', exact: true }).click();
+  }
+};
+
+const saveBlocks = async (page: Page): Promise<OutputData['blocks']> => page.evaluate(async () => {
+  if (window.blokInstance === undefined) {
+    throw new Error('Editor is unavailable');
+  }
+
+  return (await window.blokInstance.save()).blocks;
+});
+
+// Fake-selection highlights can stamp edit time without changing saved content.
+const withoutLastEditedAt = (blocks: OutputData['blocks']): OutputData['blocks'] =>
+  blocks.map(({ lastEditedAt: _lastEditedAt, ...block }) => block);
 
 test.beforeAll(ensureBlokBundleBuilt);
 
@@ -44,197 +70,307 @@ for (const surface of ['settings', 'inline'] as const) {
     test.describe(`${surface}, ${theme}, ${width}px`, () => {
       test.use({ viewport: { width, height: 900 } });
 
-      test(`conversion number strips stay readable and aligned in ${surface}, ${theme}, ${width}px`, async ({ page }) => {
+      test('family tabs show readable, flat 3-by-2 previews without converting the block', async ({ page }) => {
         await page.evaluate(value => document.documentElement.setAttribute('data-blok-theme', value), theme);
-        const paragraph = page.getByText('A clearer convert menu', { exact: true });
+        const before = await saveBlocks(page);
 
-        if (surface === 'inline') {
-          await selectAllInEditable(paragraph);
-        } else {
-          await paragraph.click();
-          await page.getByTestId('settings-toggler').click();
-        }
+        await openConversion(page, surface);
+        const headingTab = page.getByRole('tab', { name: 'Heading', exact: true });
+        const toggleTab = page.getByRole('tab', { name: 'Toggle heading', exact: true });
 
-        await page.getByRole('menuitem', { name: surface === 'inline' ? 'Text' : 'Convert to', exact: true }).click();
-        const heading = page.getByRole('menuitem', { name: 'Heading 1', exact: true });
-
-        await expect(heading).toBeVisible();
-        const levels = page.locator('[data-blok-convert-group]');
-
-        await expect(levels).toHaveCount(12);
-        await heading.evaluate(async element => {
+        await expect(headingTab).toBeVisible();
+        await expect(toggleTab).toBeVisible();
+        await headingTab.evaluate(async element => {
           const animations = element.closest('[data-blok-popover]')?.getAnimations({ subtree: true }) ?? [];
 
           await Promise.all(animations.map(animation => animation.finished.catch(() => undefined)));
         });
-        await page.getByText('Heading', { exact: true }).hover();
-        let headingRowBottom = 0;
-        let toggleHeadingRowTop = 0;
+        await expect(headingTab).toHaveAttribute('aria-selected', 'true');
+        await expect(toggleTab).toHaveAttribute('aria-selected', 'false');
 
-        for (const [group, title] of [
-          ['heading', 'Heading'],
-          ['toggle-heading', 'Toggle heading'],
+        for (const tab of [headingTab, toggleTab]) {
+          const bounds = await tab.boundingBox();
+          const minimumSize = width < 651 ? 44 : 1;
+
+          expect.soft(bounds?.width).toBeGreaterThanOrEqual(minimumSize);
+          expect.soft(bounds?.height).toBeGreaterThanOrEqual(minimumSize);
+        }
+
+        for (const [group, title, tab, otherTab, inactiveGroup] of [
+          ['heading', 'Heading', headingTab, toggleTab, 'toggle-heading'],
+          ['toggle-heading', 'Toggle heading', toggleTab, headingTab, 'heading'],
         ] as const) {
-          const label = page.locator(`[data-blok-item-name="convert-${group}-label"]`);
+          await tab.click();
+          await expect(tab).toHaveAttribute('aria-selected', 'true');
+          await expect(otherTab).toHaveAttribute('aria-selected', 'false');
+          await expect(page.locator('[data-blok-convert-group][data-blok-convert-level]:visible')).toHaveCount(6);
+          expect(await saveBlocks(page)).toEqual(before);
+          await tab.hover();
 
-          await expect(label).toBeVisible();
-          await expect(label).toHaveText(title);
-          const labelBounds = await label.boundingBox();
-
-          if (labelBounds === null) {
-            throw new Error(`${title} label has no visible bounds`);
-          }
+          const items = page.locator(`[data-blok-convert-group="${group}"][data-blok-convert-level]`);
 
           for (const level of [1, 2, 3, 4, 5, 6]) {
-            const item = page.getByRole('menuitem', { name: `${title} ${level}`, exact: true });
+            const item = items.and(page.locator(`[data-blok-convert-level="${level}"]`));
+            const preview = item.getByTestId('popover-item-title');
 
             await expect(item).toBeVisible();
-            await expect(item).toHaveAttribute('data-blok-convert-level', String(level));
+            await expect(item).toHaveAccessibleName(`${title} ${level}`);
+            await expect(preview).toBeVisible();
+            expect(await preview.innerText()).toMatch(new RegExp(`^(?:Toggle )?[Hh]eading ${level}$`));
+            await expect(page.locator(`[data-blok-convert-group="${inactiveGroup}"][data-blok-convert-level="${level}"]`))
+              .not.toBeVisible();
           }
 
-          const measurements = await page.locator(`[data-blok-convert-group="${group}"]`)
-            .evaluateAll(elements => elements.map(element => {
-              const rect = element.getBoundingClientRect();
-              const style = getComputedStyle(element);
-              const numberStyle = getComputedStyle(element, '::before');
-              const icon = element.querySelector('svg');
-              const iconBounds = icon?.getBoundingClientRect();
+          await items.first().evaluate(async element => {
+            const animations = element.closest('[data-blok-popover]')?.getAnimations({ subtree: true }) ?? [];
 
-              return {
-                x: rect.x,
-                y: rect.y,
-                right: rect.right,
-                bottom: rect.bottom,
-                width: rect.width,
-                height: rect.height,
-                background: style.backgroundColor,
-                focused: element.getAttribute('data-blok-focused') === 'true',
-                leftRadius: style.borderTopLeftRadius,
-                rightRadius: style.borderTopRightRadius,
-                number: numberStyle.content,
-                fontSize: parseFloat(numberStyle.fontSize),
-                numberDisplay: numberStyle.display,
-                numberVisibility: numberStyle.visibility,
-                numberOpacity: parseFloat(numberStyle.opacity),
-                iconHidden: icon !== null && (iconBounds?.width === 0 || iconBounds?.height === 0 ||
-                  getComputedStyle(icon).visibility === 'hidden'),
-              };
-            }));
-          const first = measurements[0];
+            await Promise.all(animations.map(animation => animation.finished.catch(() => undefined)));
+          });
+          const measurements = await items.evaluateAll(elements => elements.map(element => {
+            const rect = element.getBoundingClientRect();
+            const style = getComputedStyle(element);
+            const preview = element.querySelector('[data-blok-testid="popover-item-title"]');
 
-          if (first === undefined) {
-            throw new Error(`${title} strip has no level controls`);
-          }
+            if (preview === null) {
+              throw new Error('Heading preview is unavailable');
+            }
+
+            const range = document.createRange();
+
+            range.selectNodeContents(preview);
+            const text = range.getBoundingClientRect();
+            const textStyle = getComputedStyle(preview);
+
+            return {
+              x: rect.x, y: rect.y, right: rect.right, bottom: rect.bottom,
+              width: rect.width, height: rect.height,
+              background: style.backgroundColor, shadow: style.boxShadow,
+              border: parseFloat(style.borderTopWidth),
+              textFits: text.width > 0 && text.height > 0 &&
+                text.left >= rect.left && text.right <= rect.right + 1 &&
+                text.top >= rect.top && text.bottom <= rect.bottom + 1 &&
+                preview.scrollWidth <= preview.clientWidth + 1 &&
+                preview.scrollHeight <= preview.clientHeight + 1,
+              textOpacity: parseFloat(textStyle.opacity),
+              fontSize: parseFloat(textStyle.fontSize),
+            };
+          }));
 
           expect(measurements).toHaveLength(6);
-          expect.soft(labelBounds.x).toBeGreaterThanOrEqual(0);
-          expect.soft(labelBounds.x + labelBounds.width).toBeLessThanOrEqual(width);
+          measurements.forEach((item, index) => {
+            const column = measurements[index % 3];
+            const row = measurements[index < 3 ? 0 : 3];
 
-          for (const [index, item] of measurements.entries()) {
-            expect.soft(item.number).toMatch(new RegExp(`^"${index + 1}"(?: / "")?$`));
-            expect.soft(item.fontSize).toBeGreaterThanOrEqual(13);
-            expect.soft(item.fontSize).toBeLessThanOrEqual(15);
-            expect.soft(item.numberDisplay).not.toBe('none');
-            expect.soft(item.numberVisibility).toBe('visible');
-            expect.soft(item.numberOpacity).toBeGreaterThan(0);
-            expect.soft(item.iconHidden).toBe(true);
-            expect.soft(item.background).not.toBe('rgba(0, 0, 0, 0)');
+            if (column === undefined || row === undefined) {
+              throw new Error('Heading preview grid is incomplete');
+            }
+
+            expect.soft(item.textFits).toBe(true);
+            expect.soft(item.textOpacity).toBeGreaterThan(0);
+            expect.soft(item.background).toBe('rgba(0, 0, 0, 0)');
+            expect.soft(item.shadow).toBe('none');
+            expect.soft(item.border).toBe(0);
             expect.soft(item.width).toBeGreaterThanOrEqual(width < 651 ? 44 : 40);
             expect.soft(item.height).toBeGreaterThanOrEqual(width < 651 ? 44 : 40);
             expect.soft(item.x).toBeGreaterThanOrEqual(0);
             expect.soft(item.right).toBeLessThanOrEqual(width);
-            expect.soft(Math.abs(item.y - first.y)).toBeLessThanOrEqual(1);
+            expect.soft(Math.abs(item.x - column.x)).toBeLessThanOrEqual(1);
+            expect.soft(Math.abs(item.y - row.y)).toBeLessThanOrEqual(1);
+
+          });
+          for (const index of [1, 2, 4, 5]) {
+            expect.soft(measurements[index]?.x).toBeGreaterThanOrEqual(measurements[index - 1]?.right ?? Infinity);
+          }
+          for (const index of [3, 4, 5]) {
+            expect.soft(measurements[index]?.y).toBeGreaterThanOrEqual(measurements[index - 3]?.bottom ?? Infinity);
+          }
+          expect.soft(measurements[0]?.fontSize).toBeGreaterThan(measurements[5]?.fontSize ?? Infinity);
+
+          for (const name of ['Bulleted list', 'Numbered list', 'To-do list', 'Toggle list', 'Quote', 'Callout', 'Code']) {
+            await expect(page.locator('[data-blok-convert-item]').and(page.getByRole('menuitem', { name, exact: true })))
+              .toBeVisible();
           }
 
-          const gaps = measurements.slice(1).map((item, index) =>
-            Math.abs(item.x - (measurements[index]?.right ?? NaN)));
-          const labelAligned = width < 384 || measurements.every(item =>
-            Math.abs(labelBounds.y + labelBounds.height / 2 - item.y - item.height / 2) <= 1);
-          const labelTrailingEdge = width < 384 ? labelBounds.y + labelBounds.height : labelBounds.x + labelBounds.width;
-          const stripLeadingEdge = width < 384 ? first.y : first.x;
-          const restingBackgrounds = measurements.filter(item => !item.focused).map(item => item.background);
+          const second = items.and(page.locator('[data-blok-convert-level="2"]'));
 
-          expect.soft(gaps.every(gap => gap <= 1)).toBe(true);
-          expect.soft(measurements.slice(1).map(item => item.leftRadius)).toEqual(['0px', '0px', '0px', '0px', '0px']);
-          expect.soft(measurements.slice(0, -1).map(item => item.rightRadius)).toEqual(['0px', '0px', '0px', '0px', '0px']);
-          expect.soft(labelAligned).toBe(true);
-          expect.soft(labelTrailingEdge).toBeLessThanOrEqual(stripLeadingEdge);
-          expect.soft(new Set(restingBackgrounds).size).toBe(1);
+          await second.hover();
+          await expect.poll(() => second.evaluate(element => {
+            const color = getComputedStyle(element).backgroundColor;
+            const alpha = color.includes('/') ? color.split('/')[1] : color.split(',')[3];
 
-          if (group === 'heading') {
-            headingRowBottom = first.bottom;
-          } else {
-            toggleHeadingRowTop = first.y;
-          }
+            return parseFloat(alpha ?? '1') / (alpha?.includes('%') ? 100 : 1);
+          })).toBeGreaterThan(0);
+          const hover = await second.evaluate(element => {
+            const style = getComputedStyle(element);
+            const alpha = style.backgroundColor.includes('/') ?
+              style.backgroundColor.split('/')[1] : style.backgroundColor.split(',')[3];
+
+            return {
+              alpha: parseFloat(alpha ?? '1') / (alpha?.includes('%') ? 100 : 1),
+              radius: parseFloat(style.borderRadius),
+              shadow: style.boxShadow,
+            };
+          });
+
+          expect.soft(hover.alpha).toBeLessThanOrEqual(0.15);
+          expect.soft(hover.radius).toBeGreaterThan(0);
+          expect.soft(hover.shadow).toBe('none');
+          await tab.hover();
+          await expect.poll(() => second.evaluate(element => getComputedStyle(element).backgroundColor))
+            .toBe('rgba(0, 0, 0, 0)');
         }
 
-        const dividersBetweenRows = await heading.evaluate((element, bounds) => {
+        await headingTab.click();
+        await expect(headingTab).toHaveAttribute('aria-selected', 'true');
+        await expect(page.locator('[data-blok-convert-group="heading"][data-blok-convert-level="1"]')).toBeVisible();
+        expect(await saveBlocks(page)).toEqual(before);
+        const overflow = await headingTab.evaluate(element => {
           const menu = element.closest('[data-blok-popover-container]');
-          const separators = menu?.querySelectorAll('[role="separator"]') ?? [];
+          const scroller = menu?.querySelector('[data-blok-popover-items]');
 
-          return Array.from(separators).filter(separator => {
-            const rect = separator.getBoundingClientRect();
-
-            return rect.height > 0 && rect.bottom > bounds.top && rect.y < bounds.bottom;
-          }).length;
-        }, { top: headingRowBottom, bottom: toggleHeadingRowTop });
-        const rowGap = toggleHeadingRowTop - headingRowBottom;
-        const rowsTightlySpaced = width < 384 || (rowGap >= 0 && rowGap <= 4);
-
-        expect.soft(dividersBetweenRows).toBe(0);
-        expect.soft(rowsTightlySpaced).toBe(true);
-
-        const overflow = await heading.evaluate(element => {
-          const menu = element.closest('[data-blok-popover-container]');
+          if (scroller === null || scroller === undefined) {
+            throw new Error('Conversion items scroller is unavailable');
+          }
 
           return {
             page: document.documentElement.scrollWidth > window.innerWidth,
             menu: menu !== null && menu.scrollWidth > menu.clientWidth,
+            items: scroller.scrollHeight > scroller.clientHeight + 1,
           };
         });
 
-        expect.soft(overflow).toEqual({ page: false, menu: false });
-        const secondHeading = page.getByRole('menuitem', { name: 'Heading 2', exact: true });
-        const restingBackground = await secondHeading.evaluate(element => getComputedStyle(element).backgroundColor);
-
-        await secondHeading.hover();
-        await expect.poll(() => secondHeading.evaluate(element => getComputedStyle(element).backgroundColor))
-          .not.toBe(restingBackground);
-        await page.getByText('Heading', { exact: true }).hover();
-        await expect.poll(() => secondHeading.evaluate(element => getComputedStyle(element).backgroundColor))
-          .toBe(restingBackground);
-
-        const checkKeyboard = surface === 'settings' && theme === 'light' && width === 1280;
-
-        if (checkKeyboard) {
-          const search = page.getByRole('combobox', { name: 'Find an action…', exact: true }).last();
-
-          await search.fill('Heading');
-          await search.fill('');
-        }
-
-        await expect.poll(() => checkKeyboard ? heading.getAttribute('data-blok-focused') : null)
-          .toBe(checkKeyboard ? 'true' : null);
-
-        if (checkKeyboard) {
-          await page.keyboard.press('ArrowDown');
-        }
-
-        const expectedKeyboardState = checkKeyboard ?
-          { firstFocused: false, secondFocused: true, highlighted: true } : null;
-
-        await expect.poll(async () => {
-          if (!checkKeyboard) {
-            return null;
-          }
-
-          return {
-            firstFocused: await heading.getAttribute('data-blok-focused') === 'true',
-            secondFocused: await secondHeading.getAttribute('data-blok-focused') === 'true',
-            highlighted: await secondHeading.evaluate(element => getComputedStyle(element).backgroundColor) !== restingBackground,
-          };
-        }).toEqual(expectedKeyboardState);
+        expect.soft(overflow).toEqual({ page: false, menu: false, items: false });
+        await page.locator('[data-blok-convert-item]').and(page.getByRole('menuitem', { name: 'Quote', exact: true })).click();
+        expect(await saveBlocks(page)).toEqual([
+          expect.objectContaining({ type: 'quote', data: expect.objectContaining({ text: 'A clearer convert menu' }) }),
+        ]);
       });
+    });
+  }
+
+  for (const entryKey of ['Tab', 'ArrowDown']) {
+    test(`${surface}: tab arrows switch families and native navigation skips hidden previews (${entryKey} entry)`, async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      const before = await saveBlocks(page);
+
+      await openConversion(page, surface);
+      const headingTab = page.getByRole('tab', { name: 'Heading', exact: true });
+      const toggleTab = page.getByRole('tab', { name: 'Toggle heading', exact: true });
+      const search = page.getByRole('combobox', { name: 'Find an action…', exact: true }).last();
+
+      await expect(search).toBeFocused();
+      await page.keyboard.press(entryKey);
+      await page.keyboard.press('ArrowRight');
+      await expect(toggleTab).toBeFocused();
+      await expect(toggleTab).toHaveAttribute('aria-selected', 'true');
+      await page.keyboard.press('ArrowLeft');
+      await expect(headingTab).toBeFocused();
+      await expect(headingTab).toHaveAttribute('aria-selected', 'true');
+      await page.keyboard.press('ArrowRight');
+      await expect(toggleTab).toHaveAttribute('aria-selected', 'true');
+      expect(await saveBlocks(page)).toEqual(before);
+
+      await page.keyboard.press('ArrowDown');
+      const first = page.locator('[data-blok-convert-group="toggle-heading"][data-blok-convert-level="1"]');
+      const second = page.locator('[data-blok-convert-group="toggle-heading"][data-blok-convert-level="2"]');
+
+      await expect(first).toHaveAttribute('data-blok-focused', 'true');
+      await page.keyboard.press('Tab');
+      await expect(second).toHaveAttribute('data-blok-focused', 'true');
+      await page.keyboard.press('ArrowUp');
+      await expect(first).toHaveAttribute('data-blok-focused', 'true');
+
+      for (const level of [2, 3, 4, 5, 6]) {
+        await page.keyboard.press('ArrowDown');
+        const item = page.locator(`[data-blok-convert-group="toggle-heading"][data-blok-convert-level="${level}"]`);
+
+        await expect(item).toBeVisible();
+        await expect(item).toHaveAttribute('data-blok-focused', 'true');
+      }
+
+      await page.keyboard.press('ArrowDown');
+      await expect(page.locator('[data-blok-convert-item][data-blok-focused="true"]:not([data-blok-convert-group])')).toBeVisible();
+      await page.keyboard.press('ArrowUp');
+      await page.keyboard.press('Enter');
+      await expect(page.getByRole('heading', { name: 'A clearer convert menu', level: 6 })).toBeVisible();
+      expect(await saveBlocks(page)).toEqual([
+        expect.objectContaining({
+          type: 'header',
+          data: expect.objectContaining({ text: 'A clearer convert menu', level: 6, isToggleable: true }),
+        }),
+      ]);
+    });
+  }
+
+  for (const isToggleable of [false, true]) {
+    test(`${surface}: current ${isToggleable ? 'Toggle heading' : 'Heading'} 1 stays marked and selecting it is a no-op`, async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.evaluate(async toggle => {
+        const blok = window.blokInstance;
+
+        if (blok === undefined) {
+          throw new Error('Editor is unavailable');
+        }
+
+        await blok.blocks.render({ blocks: [
+          { id: 'current-heading', type: 'header', data: { text: 'A clearer convert menu', level: 1, isToggleable: toggle } },
+        ] });
+      }, isToggleable);
+      const before = withoutLastEditedAt(await saveBlocks(page));
+      const holder = await page.evaluateHandle(() => window.blokInstance?.blocks.getBlockByIndex(0)?.holder);
+      const title = isToggleable ? 'Toggle heading' : 'Heading';
+      const group = isToggleable ? 'toggle-heading' : 'heading';
+
+      await openConversion(page, surface, `${title} 1`);
+      await expect(page.getByRole('tab', { name: title, exact: true })).toHaveAttribute('aria-selected', 'true');
+      await expect(page.getByRole('tab', { name: isToggleable ? 'Heading' : 'Toggle heading', exact: true }))
+        .toHaveAttribute('aria-selected', 'false');
+      const current = page.locator(`[data-blok-convert-item][data-blok-convert-group="${group}"][data-blok-convert-level="1"]`);
+
+      await expect(current).toBeVisible();
+      await expect(current).toHaveAccessibleName(`${title} 1`);
+      await expect(current.getByTestId('popover-item-title')).toBeVisible();
+      await expect(current.getByTestId('popover-item-trailing-icon')).toHaveCount(0);
+      await expect(current).toHaveAttribute('data-blok-popover-item-active', 'true');
+      await expect(page.locator('[data-blok-convert-item][data-blok-popover-item-active="true"]')).toHaveCount(1);
+      await expect(page.locator('[data-blok-convert-group][data-blok-convert-level]:visible')).toHaveCount(6);
+      const search = page.getByRole('combobox', { name: 'Find an action…', exact: true }).last();
+
+      await search.fill('te');
+      await page.mouse.move(5, 850);
+      const textOption = page.locator('[data-blok-convert-item]').and(page.getByRole('menuitem', { name: 'Text', exact: true }));
+
+      await expect(textOption).toBeVisible();
+      await expect(textOption).not.toHaveAttribute('data-blok-focused', 'true');
+      await expect(textOption).not.toHaveAttribute('data-blok-popover-item-active');
+      await expect(textOption).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+      await expect(textOption).toHaveCSS('outline-style', 'none');
+      await page.keyboard.press('Enter');
+      expect(withoutLastEditedAt(await saveBlocks(page))).toEqual(before);
+      await page.keyboard.press('ArrowDown');
+      await expect(textOption).toHaveAttribute('data-blok-focused', 'true');
+
+      await search.fill(`${title} 1`);
+      await expect(current).toBeVisible();
+      await expect(current).toHaveAccessibleName(`${title} 1`);
+      await expect(current).toHaveAttribute('data-blok-popover-item-active', 'true');
+      await expect.poll(() => current.getByTestId('popover-item-title').innerText()).toBe(`${title} 1`);
+      await expect(page.locator('[data-blok-convert-item][data-blok-popover-item-active="true"]')).toHaveCount(1);
+
+      await search.fill('');
+      await expect(page.getByRole('tab', { name: title, exact: true })).toHaveAttribute('aria-selected', 'true');
+      await expect(page.getByRole('tab', { name: isToggleable ? 'Heading' : 'Toggle heading', exact: true }))
+        .toHaveAttribute('aria-selected', 'false');
+      await expect(current).toBeVisible();
+      await expect(current).toHaveAttribute('data-blok-popover-item-active', 'true');
+      await expect(page.locator('[data-blok-convert-item][data-blok-popover-item-active="true"]')).toHaveCount(1);
+      await expect(page.locator('[data-blok-convert-group][data-blok-convert-level]:visible')).toHaveCount(6);
+      expect(withoutLastEditedAt(await saveBlocks(page))).toEqual(before);
+      await current.click();
+      expect(withoutLastEditedAt(await saveBlocks(page))).toEqual(before);
+      expect(await page.evaluate(original => window.blokInstance?.blocks.getBlockByIndex(0)?.holder === original, holder))
+        .toBe(true);
+      await holder.dispose();
     });
   }
 }
@@ -333,6 +469,8 @@ test('search keeps full conversion labels and keyboard activation', async ({ pag
   const titleBounds = await title.boundingBox();
 
   expect(titleBounds?.width).toBeGreaterThan(1);
+  await expect(result).not.toHaveAttribute('data-blok-focused', 'true');
+  await page.keyboard.press('ArrowDown');
   await expect(result).toHaveAttribute('data-blok-focused', 'true');
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'A clearer convert menu', level: 6 })).toBeVisible();

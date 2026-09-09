@@ -194,6 +194,21 @@ describe('main.css split — cascade-preserving equivalence', () => {
     );
   });
 
+  it('ordinary conversions start a row after grouped heading previews', () => {
+    const starts: string[] = [];
+
+    postcss.parse(inlined).walkRules(
+      '> [data-blok-convert-group] + [data-blok-convert-item]:not([data-blok-convert-group])',
+      rule => {
+        rule.walkDecls('grid-column-start', declaration => {
+          starts.push(declaration.value);
+        });
+      }
+    );
+
+    expect(starts).toEqual(['1']);
+  });
+
   it('every @keyframes name is defined exactly once', () => {
     const names = collectKeyframeNames(inlined);
     const duplicates = names.filter((n, idx) => names.indexOf(n) !== idx);
@@ -555,9 +570,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Picker layout, search states and reduced motion add 9,383 bytes.
     // Picker skin controls, reel labels and empty-state motion add 3,437 bytes.
     // Richer anonymous presence silhouettes add 952 bytes in presence.css.
-    // Measured popover-animation.css growth; keep the 150-byte headroom.
-    const CONVERSION_NUMBER_STRIPS_BYTES = 2_772;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952 + CONVERSION_NUMBER_STRIPS_BYTES;
+    // Picker rules add 2,380 bytes to the prior 2,772-byte allowance; retain 150 bytes of headroom.
+    const CONVERSION_TYPOGRAPHY_PICKER_BYTES = 5_152;
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952 + CONVERSION_TYPOGRAPHY_PICKER_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

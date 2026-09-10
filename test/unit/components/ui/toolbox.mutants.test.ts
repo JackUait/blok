@@ -2107,4 +2107,234 @@ describe('Toolbox — surviving-mutant coverage', () => {
       expect(svg.getAttribute('aria-label')).toBe('Diagram');
     });
   });
+
+  describe('shortcut activation with no block under the caret', () => {
+    it('never converts a block when the shortcut fires with no current block', async () => {
+      const { api } = buildToolbox({
+        tools: [['testTool', createTool('testTool', { title: 'Test',
+          icon: '<svg />' }, { shortcut: 'CMD+T' })]],
+      });
+      const registration = vi.mocked(Shortcuts.add).mock.calls[0];
+
+      if (registration === undefined) {
+        throw new Error('Toolbox registered no shortcut to fire');
+      }
+
+      await registration[0].handler(new KeyboardEvent('keydown'));
+
+      expect(api.convert).not.toHaveBeenCalled();
+      expect(api.setToBlock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('a space typed straight after the slash', () => {
+    /**
+     * Types into the block and reports what the Toolbox asked the popover to do.
+     * @param text - the block's text, slash first
+     */
+    const typeInto = (text: string): { filterQueries: string[], hides: number } => {
+      const { block, editable } = createBlock({ text,
+        isEmpty: false });
+      const { toolbox } = buildToolbox({ block });
+
+      toolbox.open();
+      placeCaret(editable.childNodes[0], text.length);
+      popoverSpies.filterItems.mockClear();
+      popoverSpies.hide.mockClear();
+      editable.dispatchEvent(new Event('input', { bubbles: true }));
+
+      return { filterQueries: popoverSpies.filterItems.mock.calls.map(([query]) => query),
+        hides: popoverSpies.hide.mock.calls.length };
+    };
+
+    it('cancels the menu when a plain space follows the slash', () => {
+      const result = typeInto('/ ');
+
+      expect(result.hides).toBe(1);
+      expect(result.filterQueries).toStrictEqual(['']);
+    });
+
+    it('cancels the menu when a non-breaking space follows the slash', () => {
+      const result = typeInto('/\u00a0');
+
+      expect(result.hides).toBe(1);
+      expect(result.filterQueries).toStrictEqual(['']);
+    });
+
+    it('keeps filtering when a real character follows the slash', () => {
+      const result = typeInto('/a');
+
+      expect(result.hides).toBe(0);
+      expect(result.filterQueries).toStrictEqual(['a']);
+    });
+  });
+
+  describe('the caret a non-HTML editable host reports', () => {
+    it('measures the query from the block end when the host is an SVG element', () => {
+      const holder = document.createElement('div');
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+
+      svg.setAttribute('contenteditable', 'true');
+      svg.appendChild(document.createTextNode('/ab'));
+      holder.appendChild(svg);
+      document.body.appendChild(holder);
+
+      const block = { id: 'svg-caret',
+        name: 'testTool',
+        isEmpty: false,
+        parentId: null,
+        holder } as unknown as BlockAPI;
+      const { toolbox } = buildToolbox({ block });
+
+      toolbox.open();
+      placeCaret(svg.firstChild as Text, 1);
+      popoverSpies.filterItems.mockClear();
+      holder.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(popoverSpies.filterItems).toHaveBeenCalledWith('ab');
+    });
+  });
+
+  /**
+   * Runs a listener-throwing body while watching for the error jsdom reports on
+   * window instead of failing the test.
+   * @param body - the interaction to run
+   */
+  const errorsDuring = (body: () => void): unknown[] => {
+    const errors: unknown[] = [];
+    const onError = (event: ErrorEvent): void => {
+      errors.push(event.error ?? event.message);
+    };
+
+    window.addEventListener('error', onError);
+    body();
+    window.removeEventListener('error', onError);
+
+    return errors;
+  };
+
+  describe('input on a block with nothing to search', () => {
+    it('raises no window error when the input listener has no contentEditable to read', () => {
+      const { block, holder } = createBlock({ editable: false,
+        isEmpty: false });
+      const { toolbox } = buildToolbox({ block });
+
+      toolbox.open();
+
+      expect(errorsDuring(() => {
+        holder.dispatchEvent(new Event('input', { bubbles: true }));
+      })).toStrictEqual([]);
+    });
+  });
+
+  describe('block-colour commands with no block under the caret', () => {
+    it('settles without rejecting when there is no block to recolour', async () => {
+      const { toolbox, api } = buildToolbox({
+        tools: [['paragraph', createColorTool({ textColor: false,
+          backgroundColor: false })]],
+      });
+      const rejections: unknown[] = [];
+      const onRejection = (reason: unknown): void => {
+        rejections.push(reason);
+      };
+
+      process.on('unhandledRejection', onRejection);
+
+      toolbox.open();
+      activateItem('block-color-bg-red');
+      await new Promise((resolve) => {
+        setTimeout(resolve, 0);
+      });
+      process.off('unhandledRejection', onRejection);
+
+      expect(rejections).toStrictEqual([]);
+      expect(api.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('a rebuild that fails before the popover exists', () => {
+    const gate = { armed: false };
+
+    /**
+     * A tool whose toolbox config becomes unreadable on demand — the untyped-JS
+     * config shape the item builder already tolerates elsewhere.
+     */
+    const createFlakyTableTool = (): BlockToolAdapter => ({
+      name: 'table',
+      get toolbox(): ToolboxConfigEntry {
+        if (gate.armed) {
+          throw new Error('unreadable toolbox config');
+        }
+
+        return { title: 'Table',
+          icon: '<svg />',
+          section: 'basic' };
+      },
+    } as unknown as BlockToolAdapter);
+
+    beforeEach(() => {
+      gate.armed = false;
+    });
+
+    /**
+     * A Toolbox whose popover is gone: refreshItems() destroys it, then the item
+     * rebuild throws before initPopover() can construct a replacement.
+     */
+    const buildWithoutPopover = (): { toolbox: Toolbox, holder: HTMLElement } => {
+      const { block, holder } = createBlock({ insideTableCell: true,
+        text: '/x',
+        isEmpty: false });
+      const { toolbox } = buildToolbox({ block,
+        tools: [['table', createFlakyTableTool()]] });
+
+      gate.armed = true;
+      expect(() => {
+        toolbox.refreshItems();
+      }).toThrowError(new Error('unreadable toolbox config'));
+      gate.armed = false;
+
+      return { toolbox,
+        holder };
+    };
+
+    it('keeps every public entry point safe while the popover is missing', () => {
+      const { toolbox, holder } = buildWithoutPopover();
+
+      expect(toolbox.contains(document.createElement('div'))).toBe(false);
+      expect(() => {
+        toolbox.updateLeftAlignElement(document.createElement('div'));
+      }).not.toThrow();
+      expect(() => {
+        toolbox.setCalloutBackground('red');
+      }).not.toThrow();
+      expect(() => {
+        toolbox.open();
+      }).not.toThrow();
+      // The inline slash search drives the popover on every input event.
+      expect(errorsDuring(() => {
+        holder.dispatchEvent(new Event('input', { bubbles: true }));
+      })).toStrictEqual([]);
+      expect(() => {
+        toolbox.close();
+      }).not.toThrow();
+      expect(() => {
+        toolbox.destroy();
+      }).not.toThrow();
+    });
+
+    it('reports the rebuild failure itself, not a crash on the missing popover', () => {
+      const { toolbox } = buildWithoutPopover();
+
+      gate.armed = true;
+
+      expect(() => {
+        toolbox.refreshItems();
+      }).toThrowError(new Error('unreadable toolbox config'));
+      gate.armed = false;
+
+      expect(() => {
+        toolbox.destroy();
+      }).not.toThrow();
+    });
+  });
 });

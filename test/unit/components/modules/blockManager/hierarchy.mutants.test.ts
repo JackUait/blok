@@ -29,7 +29,12 @@ vi.mock('../../../../../src/components/utils/html', async (importOriginal) => {
  * behaviour-preserving edit, not a coverage hole — do not chase them.
  *
  * `repository.getBlockById(null)` is `blocks.find(b => b.id === null)`, i.e.
- * always `undefined`, because a Block id is a string. So every `x !== null`
+ * always `undefined`, because a Block id is a string. Not an assumption about
+ * Block — the constructor mints `validatedId = typeof id === 'string' && id !== ''
+ * ? id : generateBlockId()` (a wire DTO's `id: null` is regenerated) and assigns
+ * `parentId ?? null`, so no Block carries a null/undefined id or an undefined
+ * parentId. Pinned for the repository half by the last test in this file.
+ * So every `x !== null`
  * guard that only decides whether to make that lookup is inert:
  *   - getBlockDepth's `parentId === null` early return (both the condition and
  *     its body): falling through looks the null up, misses, and returns the
@@ -764,6 +769,24 @@ describe('BlockHierarchy — mutation coverage', () => {
 
       expect(c.holder.getAttribute('data-blok-depth')).toBe('0');
       expect(c.holder.style.getPropertyValue('--_blok-block-depth')).toBe('0');
+    });
+  });
+
+  /*
+   * Not a mutant kill — the premise the equivalences above rest on, measured
+   * against the real repository instead of asserted in a comment. If a lookup
+   * for a null parent id ever found a block, the null guards in getBlockDepth,
+   * wouldFormCycle and hasColumnAncestor would stop being inert and every
+   * "fall-through returns the same value" equivalence would need re-checking.
+   */
+  describe('equivalence premise', () => {
+    it('never resolves a null parent id to a block', () => {
+      const { repository } = createFixture([
+        { id: 'a', parentId: null },
+        { id: 'b', parentId: null },
+      ]);
+
+      expect(repository.getBlockById(null as unknown as string)).toBeUndefined();
     });
   });
 });

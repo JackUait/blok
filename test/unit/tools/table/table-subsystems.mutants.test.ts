@@ -4364,3 +4364,400 @@ describe('heading column after a columns-only paste', () => {
     expect(harness.cellOf(1, 0).hasAttribute('data-blok-table-heading-col')).toBe(true);
   });
 });
+
+// ─── Second sweep round: call sites a passing test never noticed ─────
+/*
+ * Each test here pins a statement whose removal changed nothing any earlier
+ * test observed: a repaint that happened to be repeated elsewhere, a guard
+ * whose callee re-decides, a throw that jsdom routed to window's error event
+ * instead of the test. The last group needs `windowErrorsWhile` — inside a
+ * listener `dispatchEvent` swallows the exception, so "the test still passed"
+ * is not evidence that nothing threw.
+ */
+
+/** The messages window reports while `fn` runs. A listener throw lands here. */
+const windowErrorsWhile = (fn: () => void): string[] => {
+  const messages: string[] = [];
+  const onError = (event: ErrorEvent): void => {
+    messages.push(String(event.error ?? event.message));
+  };
+
+  window.addEventListener('error', onError);
+
+  try {
+    fn();
+  } finally {
+    window.removeEventListener('error', onError);
+  }
+
+  return messages;
+};
+
+describe('add-controls — the statements a repaint repeated elsewhere', () => {
+  it('pins the widths of a percent table when a drag adds a column', () => {
+    const harness = createHarness({ colWidths: [40, 60] });
+
+    applyPixelWidths(harness.gridEl, [40, 60]);
+    harness.model.setColWidths(undefined);
+    addControlsOptions().onDragAddCol();
+
+    expect(harness.model.colWidths).toEqual([40, 60, 25]);
+  });
+
+  it('drops the trailing column from the DOM, not the one past it', () => {
+    const harness = createHarness({ colWidths: [40, 60], seed: false });
+
+    expect(addControlsOptions().onDragRemoveCol()).toBe(true);
+    expect(harness.grid.getColumnCount(harness.gridEl)).toBe(1);
+  });
+
+  it('removes a trailing column of a percent table without pinning widths', () => {
+    const harness = createHarness({ seed: false });
+
+    expect(addControlsOptions().onDragRemoveCol()).toBe(true);
+    expect(harness.model.cols).toBe(1);
+    expect(harness.model.colWidths).toBeUndefined();
+  });
+
+  it('re-creates the resize handles when a drag removes a column', () => {
+    createHarness({ colWidths: [40, 60], seed: false });
+
+    const before = captured.resizeSelf.length;
+
+    addControlsOptions().onDragRemoveCol();
+
+    expect(captured.resizeSelf.length).toBe(before + 1);
+  });
+
+  it('re-creates the resize handles when a drag ends', () => {
+    createHarness({ colWidths: [40, 60] });
+
+    const before = captured.resizeSelf.length;
+
+    addControlsOptions().onDragEnd();
+
+    expect(captured.resizeSelf.length).toBe(before + 1);
+  });
+});
+
+describe('corner drag — the statements a repaint repeated elsewhere', () => {
+  it('drops the trailing column from the DOM on the corner drag', () => {
+    const harness = createHarness({ seed: false });
+
+    cornerDragOptions().onRemoveLastColumn();
+
+    expect(harness.model.cols).toBe(1);
+    expect(harness.grid.getColumnCount(harness.gridEl)).toBe(1);
+  });
+
+  it('re-creates the resize handles on the corner tap', () => {
+    createHarness({ colWidths: [40, 60] });
+
+    const before = captured.resizeSelf.length;
+
+    cornerDragOptions().onClickAdd();
+
+    expect(captured.resizeSelf.length).toBe(before + 1);
+  });
+});
+
+describe('gestures that run after their collaborators are gone', () => {
+  it('parks the affordances on a drag start that follows a teardown', () => {
+    const harness = createHarness();
+    const options = rowColOptions();
+
+    harness.subsystems.teardown();
+
+    expect(() => options.onDragStateChange(true, 'row', 0)).not.toThrow();
+    expect(() => options.onDragStateChange(true, 'col', 0)).not.toThrow();
+  });
+
+  it('selects on a grip click that follows a teardown', () => {
+    const harness = createHarness();
+    const options = rowColOptions();
+
+    harness.subsystems.teardown();
+
+    expect(() => options.onGripClick('row', 0)).not.toThrow();
+    expect(() => options.onGripClick('col', 0)).not.toThrow();
+  });
+
+  it('paints the moved column after a teardown', () => {
+    const harness = createHarness();
+
+    harness.subsystems.teardown();
+
+    expect(() => rowColOptions().onAction({ type: 'move-col', fromIndex: 0, toIndex: 1 })).not.toThrow();
+  });
+
+  it('repositions the grips on refreshResize after a teardown', () => {
+    const harness = createHarness();
+
+    harness.subsystems.teardown();
+
+    expect(() => harness.subsystems.refreshResize(harness.gridEl)).not.toThrow();
+  });
+
+  it('runs the resize callbacks after a teardown', () => {
+    const harness = createHarness();
+    const args = resizeArgs();
+    const onResizeDragStart = args[3] as () => void;
+    const onResizeDragEnd = args[4] as () => void;
+
+    harness.subsystems.teardown();
+
+    expect(() => onResizeDragStart()).not.toThrow();
+    expect(() => onResizeDragEnd()).not.toThrow();
+  });
+});
+
+describe('the copy button puts the payload in the blobs', () => {
+  it('writes the html and the plain text, not two empty blobs', () => {
+    const harness = createHarness();
+    const write = vi.fn<(items: Array<{ items: Record<string, Blob> }>) => Promise<void>>(() => Promise.resolve());
+
+    vi.stubGlobal('ClipboardItem', class {
+      public constructor(public readonly items: Record<string, Blob>) {}
+    });
+    Object.defineProperty(navigator, 'clipboard', { value: { write }, configurable: true });
+
+    cellSelectionOptions().onCopyViaButton([harness.cellOf(0, 0)]);
+
+    const items = write.mock.calls[0][0];
+
+    expect(items[0].items['text/plain'].size).toBe('r0c0'.length);
+    expect(items[0].items['text/html'].size).toBeGreaterThan('r0c0'.length);
+  });
+});
+
+
+describe('grid paste — the exceptions jsdom swallows', () => {
+  it('ignores a grid paste whose focus is not inside any cell', () => {
+    const harness = createHarness();
+    const errors = windowErrorsWhile(() => {
+      pasteAt(harness.gridEl, clipHtml([
+        { row: 0, col: 0, blocks: [para('P00')] },
+        { row: 0, col: 1, blocks: [para('P01')] },
+      ]));
+    });
+
+    expect(errors).toStrictEqual([]);
+    expect(harness.textOf(0, 0)).toBe('r0c0');
+  });
+
+  it('inserts nothing at all when the caret is gone', () => {
+    const harness = createHarness();
+    const errors = windowErrorsWhile(() => {
+      const editable = harness.cellOf(0, 0).querySelector<HTMLElement>('[contenteditable="true"]');
+
+      editable?.focus();
+      window.getSelection()?.removeAllRanges();
+      pasteAt(harness.cellOf(0, 0), clipHtml([{ row: 0, col: 0, blocks: [para('TAIL')] }]));
+    });
+
+    expect(errors).toStrictEqual([]);
+    expect(harness.textOf(0, 0)).toBe('r0c0');
+  });
+
+  it('leaves the caret alone when the inline insert ends on a childless element', () => {
+    const harness = createHarness();
+    const errors = windowErrorsWhile(() => {
+      caretAtEndOf(harness, 0, 0);
+      pasteInto(harness, 0, 0, clipHtml([{ row: 0, col: 0, blocks: [para('<br>')] }]));
+    });
+
+    expect(errors).toStrictEqual([]);
+  });
+
+  it('recreates a list item carrying text instead of joining its text inline', () => {
+    const harness = createHarness();
+
+    caretAtEndOf(harness, 0, 0);
+    pasteInto(harness, 0, 0, clipHtml([{ row: 0, col: 0, blocks: [{ tool: 'list-item', data: { text: 'item' } }] }]));
+
+    expect(harness.insertCalls.map((call) => call.tool)).toEqual(['list-item']);
+  });
+
+  it('joins only the blocks that carry text, with no blank line', () => {
+    const harness = createHarness();
+
+    caretAtEndOf(harness, 0, 0);
+    pasteInto(harness, 0, 0, clipHtml([{ row: 0, col: 0, blocks: [para(''), para('TAIL')] }]));
+
+    expect(editableHtml(harness, 0, 0)).toBe('r0c0TAIL');
+  });
+});
+
+describe('duplicate row/column — the axis the copy walks', () => {
+  it('copies every column of a duplicated row, not just as many as there are rows', () => {
+    const harness = createHarness({ rows: 2, cols: 4 });
+
+    rowColOptions().onAction({ type: 'duplicate-row', index: 0 });
+
+    expect(harness.textOf(1, 3)).toBe('r0c3');
+  });
+
+  it('adds the duplicated column to the RIGHT of its source in the model', () => {
+    const harness = createHarness({ rows: 2, cols: 2 });
+
+    rowColOptions().onAction({ type: 'duplicate-col', index: 0 });
+
+    expect(harness.model.getCellBlocks(0, 0)).toStrictEqual(['b-0-0']);
+    expect(harness.model.getCellBlocks(0, 2)).toStrictEqual(['b-0-1']);
+  });
+});
+
+describe('cell colour — an invalid colour is dropped, an empty one is applied', () => {
+  it('clears a painted text colour off the cell when the picker hands back null', () => {
+    const harness = createHarness();
+    const cell = harness.cellOf(0, 0);
+
+    cell.style.color = 'red';
+    cellSelectionOptions().onColorChange([cell], null, 'textColor');
+
+    expect(cell.style.color).toBe('');
+  });
+});
+
+describe('paste over a merge splits every origin in the region', () => {
+  it('splits a merge whose origin sits below the first row of the region', () => {
+    const harness = createHarness({
+      rows: 5,
+      cols: 2,
+      merges: [{ minRow: 3, maxRow: 4, minCol: 0, maxCol: 0 }],
+      liveRebuild: true,
+    });
+
+    pasteInto(harness, 2, 0, clipHtml([
+      { row: 0, col: 0, blocks: [para('P0')] },
+      { row: 1, col: 0, blocks: [para('P1')] },
+      { row: 2, col: 0, blocks: [para('P2')] },
+    ]));
+
+    expect(harness.textOf(3, 0)).toBe('P1');
+  });
+
+  it('splits both merge origins the region covers, not just the last one', () => {
+    const harness = createHarness({
+      rows: 3,
+      cols: 2,
+      merges: [
+        { minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 },
+        { minRow: 2, maxRow: 2, minCol: 0, maxCol: 1 },
+      ],
+      liveRebuild: true,
+    });
+
+    pasteInto(harness, 0, 0, clipHtml([
+      { row: 0, col: 0, blocks: [para('P0')] },
+      { row: 1, col: 0, blocks: [para('P1')] },
+      { row: 2, col: 0, blocks: [para('P2')] },
+    ]));
+
+    expect(harness.model.isMergedCell(0, 0)).toBe(false);
+    expect(harness.model.isMergedCell(2, 0)).toBe(false);
+  });
+});
+
+describe('heading column markup follows a grip toggle', () => {
+  it('marks the heading column in the DOM when a grip action turns it on', () => {
+    const harness = createHarness();
+
+    // The variant does not declare an index, and that is the point: the mutant
+    // under test ignores what the action carries.
+    rowColOptions().onAction(
+      { type: 'toggle-heading-column', index: 0 } as unknown as Parameters<ReturnType<typeof rowColOptions>['onAction']>[0]
+    );
+
+    expect(harness.cellOf(1, 0).hasAttribute('data-blok-table-heading-col')).toBe(true);
+  });
+});
+
+describe('pasted coordinates are read from the destination, not mirrored', () => {
+  it('records a pasted cell at the row it actually landed on', () => {
+    const harness = createHarness({ rows: 3, cols: 3 });
+
+    pasteInto(harness, 1, 1, clipHtml([
+      { row: 0, col: 0, blocks: [para('P00')] },
+      { row: 1, col: 0, blocks: [para('P10')] },
+    ]));
+
+    expect(harness.model.getCellBlocks(2, 1)).toStrictEqual(harness.idsOf(2, 1));
+  });
+
+  it('records an empty block list for a pasted cell with no cell-blocks manager', () => {
+    const harness = createHarness({ rows: 2, cols: 2, noCellBlocks: true });
+
+    pasteInto(harness, 0, 0, clipHtml([
+      { row: 0, col: 0, blocks: [para('P00')] },
+      { row: 0, col: 1, blocks: [para('P01')] },
+    ]));
+
+    expect(harness.model.getCellBlocks(0, 0)).toStrictEqual([]);
+  });
+
+  it('seeds every cell a paste grows the grid with', () => {
+    const harness = createHarness({ rows: 2, cols: 2 });
+
+    pasteInto(harness, 1, 1, clipHtml([
+      { row: 0, col: 0, blocks: [para('P00')] },
+      { row: 0, col: 1, blocks: [para('P01')] },
+      { row: 1, col: 0, blocks: [para('P10')] },
+      { row: 1, col: 1, blocks: [para('P11')] },
+    ]));
+
+    expect(harness.idsOf(2, 0)).toHaveLength(1);
+    expect(harness.idsOf(0, 2)).toHaveLength(1);
+  });
+
+  it('lands a payload merge on the destination the payload names, clearing what it covers', () => {
+    const harness = createHarness({ rows: 4, cols: 4, liveRebuild: true });
+
+    harness.model.setCellColor(2, 3, 'red');
+    harness.model.setCellTextColor(2, 3, 'blue');
+
+    pasteInto(harness, 1, 1, buildClipboardHtml({
+      rows: 3,
+      cols: 3,
+      cells: [
+        [{ blocks: [para('A')] }, { blocks: [para('B')] }, { blocks: [para('C')] }],
+        [{ blocks: [para('D')] }, { blocks: [para('WIDE')], colspan: 2 }, { blocks: [], covered: true }],
+        [{ blocks: [para('G')] }, { blocks: [para('H')] }, { blocks: [para('I')] }],
+      ],
+    }));
+
+    expect(harness.model.getCellSpan(2, 2)).toEqual({ colspan: 2, rowspan: 1 });
+    expect(harness.model.getCellBlocks(2, 2)).toHaveLength(1);
+    expect(harness.model.getCellColor(2, 3)).toBeUndefined();
+    expect(harness.model.getCellTextColor(2, 3)).toBeUndefined();
+  });
+
+  it('skips a target cell with no block container instead of throwing', () => {
+    const harness = createHarness();
+
+    harness.cellOf(0, 1).querySelector(`[${CELL_BLOCKS_ATTR}]`)?.remove();
+
+    const errors = windowErrorsWhile(() => {
+      pasteInto(harness, 0, 0, clipHtml([
+        { row: 0, col: 0, blocks: [para('P00')] },
+        { row: 0, col: 1, blocks: [para('P01')] },
+      ]));
+    });
+
+    expect(errors).toStrictEqual([]);
+    expect(harness.textOf(0, 0)).toBe('P00');
+  });
+});
+
+describe('pasted colours land on the destination too', () => {
+  it('paints the second payload row at the row it landed on', () => {
+    const harness = createHarness({ rows: 3, cols: 3 });
+
+    pasteInto(harness, 1, 1, clipHtml([
+      { row: 0, col: 0, blocks: [para('P00')], color: '#eee' },
+      { row: 1, col: 0, blocks: [para('P10')], color: '#ddd' },
+    ]));
+
+    expect(harness.model.getCellColor(2, 1)).toBe('#ddd');
+  });
+});

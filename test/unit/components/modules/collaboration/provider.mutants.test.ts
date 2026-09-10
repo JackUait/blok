@@ -2267,7 +2267,7 @@ describe('createCollabProvider (mutation hardening)', () => {
       expect(harness.statuses.at(-1)?.status).toBe('connected');
 
       if (release !== null) {
-        release();
+        (release as () => void)();
       }
 
       await flushMicrotasks();
@@ -2301,7 +2301,7 @@ describe('createCollabProvider (mutation hardening)', () => {
       harness.provider.destroy();
 
       if (release !== null) {
-        release();
+        (release as () => void)();
       }
 
       await flushMicrotasks();

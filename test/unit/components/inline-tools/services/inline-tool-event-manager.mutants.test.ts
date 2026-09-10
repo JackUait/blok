@@ -107,6 +107,7 @@ describe('InlineToolEventManager mutants', () => {
   afterEach(() => {
     InlineToolEventManager.reset();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     window.getSelection()?.removeAllRanges();
   });
 
@@ -474,6 +475,23 @@ describe('InlineToolEventManager mutants', () => {
       expect(onInput).toHaveBeenCalledTimes(1);
     });
 
+    it('still sees the input when the block stops the bubble', () => {
+      const { manager, editable } = setup();
+      const onInput = vi.fn();
+
+      manager.register('marker', { onInput });
+
+      // The listener is registered in the capture phase, so a block that swallows
+      // its own input must not blind the manager to it.
+      editable.addEventListener('input', (event) => {
+        event.stopPropagation();
+      });
+
+      fire(editable, input());
+
+      expect(onInput).toHaveBeenCalledTimes(1);
+    });
+
     it('tolerates a handler with no input callback', () => {
       const { manager, editable } = setup();
 
@@ -588,6 +606,109 @@ describe('InlineToolEventManager mutants', () => {
 
       expect(second).not.toBe(first);
       expect(second.hasHandler('bold')).toBe(false);
+    });
+  });
+
+  describe('listener lifecycle', () => {
+    it('clears the previous instance handler map on reset', () => {
+      const first = InlineToolEventManager.getInstance();
+
+      first.register('bold', { shortcut: { key: 'b', meta: true }, onShortcut: vi.fn() });
+      InlineToolEventManager.reset();
+
+      expect(first.hasHandler('bold')).toBe(false);
+    });
+
+    it('detaches the previous instance document listeners on reset', () => {
+      useAgent(MAC_AGENT);
+
+      const orphan = InlineToolEventManager.getInstance();
+      const onShortcut = vi.fn();
+      const onSelectionChange = vi.fn();
+      const onInput = vi.fn();
+      const onBeforeInput = vi.fn();
+
+      InlineToolEventManager.reset();
+
+      orphan.register('shortcut', { shortcut: { key: 'b', meta: true }, onShortcut });
+      orphan.register('selection', { onSelectionChange });
+      orphan.register('input', { onInput });
+      orphan.register('beforeinput', { onBeforeInput });
+
+      // setup() puts a fresh, empty singleton on the document. It absorbs
+      // nothing, so any callback here proves the orphan kept its listener.
+      const { editable } = setup();
+
+      fire(editable, keydown({ key: 'b', metaKey: true }));
+      fire(editable, new Event('input', { bubbles: true, cancelable: true }));
+      fire(editable, new InputEvent('beforeinput', { bubbles: true, cancelable: true, data: 'x' }));
+      fire(document, new Event('selectionchange'));
+
+      expect(onShortcut).not.toHaveBeenCalled();
+      expect(onSelectionChange).not.toHaveBeenCalled();
+      expect(onInput).not.toHaveBeenCalled();
+      expect(onBeforeInput).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('absent globals', () => {
+    it('registers nothing when there is no document', () => {
+      vi.stubGlobal('document', undefined);
+
+      expect(() => InlineToolEventManager.getInstance()).not.toThrow();
+    });
+
+    it('removes nothing when the document is gone', () => {
+      const manager = InlineToolEventManager.getInstance();
+
+      manager.register('marker', { onInput: vi.fn() });
+
+      vi.stubGlobal('document', undefined);
+
+      expect(() => InlineToolEventManager.reset()).not.toThrow();
+    });
+
+    it('matches a Ctrl shortcut when there is no navigator', () => {
+      const { manager, editable } = setup();
+      const onShortcut = vi.fn();
+
+      manager.register('code', { shortcut: { key: 'k', ctrl: true }, onShortcut });
+
+      vi.stubGlobal('navigator', undefined);
+
+      const result = fire(editable, keydown({ key: 'k', ctrlKey: true }));
+
+      expect(result.errors).toEqual([]);
+      expect(onShortcut).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to no selection when there is no window', () => {
+      const realWindow = window;
+      const { manager, editable } = setup();
+      const onInput = vi.fn();
+      const errors: unknown[] = [];
+
+      manager.register('marker', { onInput });
+
+      const onError = (errorEvent: ErrorEvent): void => {
+        errors.push(errorEvent.error ?? errorEvent.message);
+        errorEvent.preventDefault();
+      };
+
+      // The error recorder has to be wired to the real window object before the
+      // global one goes away: a throw inside the manager's listener reaches the
+      // test as a window error event, never as a rejected assertion.
+      realWindow.addEventListener('error', onError);
+      vi.stubGlobal('window', undefined);
+
+      try {
+        editable.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+      } finally {
+        realWindow.removeEventListener('error', onError);
+      }
+
+      expect(errors).toEqual([]);
+      expect(onInput).not.toHaveBeenCalled();
     });
   });
 });

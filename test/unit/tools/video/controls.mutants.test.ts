@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Mock } from 'vitest';
-import { attachControls, bufferedPct } from '../../../../src/tools/video/controls';
+import { attachControls, bufferedPct, formatTime, timeAtRatio } from '../../../../src/tools/video/controls';
 import {
   IconExpandFullscreen,
   IconPlayerBackward,
@@ -2416,5 +2416,400 @@ describe('video controls — teardown of optional surfaces', () => {
     h.figure.remove();
     expect(() => h.destroy()).not.toThrow();
     document.body.appendChild(h.figure);
+  });
+});
+
+describe('video controls — playback helpers at their edges', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('reads a missing buffered range as no progress instead of a crash', () => {
+    // Mutating the guard away leaves `buffered.length` on a null receiver.
+    expect(bufferedPct(null, 12, 100)).toBe(0);
+  });
+
+  it('keeps a negative duration out of the multiplier', () => {
+    // `-0.5 * -1` is where dropping the `duration <= 0` guard shows up; the
+    // zero case is masked because every ratio times zero is zero.
+    expect(timeAtRatio(0.5, -1)).toBe(0);
+  });
+});
+
+describe('video controls — preview chase after the pointer leaves', () => {
+  let h: Harness;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h = mount();
+    setProp(h.video, 'duration', 100);
+    h.video.dispatchEvent(new Event('loadedmetadata'));
+  });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  const seekEl = (): HTMLElement => q(h.controls, '[data-role="seek"]');
+  const previewEl = (): HTMLVideoElement => q<HTMLVideoElement>(h.controls, '[data-role="seek-preview-source"]');
+
+  it('never seeks a preview to a position the pointer has already left', () => {
+    h.video.setAttribute('src', 'blob:test');
+    setProp(seekEl(), 'getBoundingClientRect', () => wideRect(200));
+    seekEl().dispatchEvent(new MouseEvent('pointermove', { clientX: 100, bubbles: true }));
+    // Dropping the hover clears the queued time; the frame that arrives after it
+    // must not resurrect it.
+    seekEl().dispatchEvent(new MouseEvent('pointerleave', { bubbles: true }));
+    previewEl().dispatchEvent(new Event('loadeddata'));
+    const writes = pinCurrentTime(previewEl(), 0);
+
+    previewEl().dispatchEvent(new Event('seeked'));
+    expect(writes).not.toHaveBeenCalled();
+  });
+});
+
+describe('video controls — secondary-state labels', () => {
+  let h: Harness;
+
+  beforeEach(() => { vi.clearAllMocks(); });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  const label = (sel: string): string | null => q(h.figure, sel).getAttribute('aria-label');
+
+  it('labels the mute button for muting again once the sound comes back', () => {
+    h = mount();
+    setProp(h.video, 'muted', true);
+    h.video.dispatchEvent(new Event('volumechange'));
+    expect(label('[data-action="mute-toggle"]')).toBe('Unmute');
+    setProp(h.video, 'muted', false);
+    h.video.dispatchEvent(new Event('volumechange'));
+    expect(label('[data-action="mute-toggle"]')).toBe('Mute');
+  });
+
+  it('resolves the mute-again label through its own key', () => {
+    h = mount({ i18n: fakeI18n() });
+    setProp(h.video, 'muted', true);
+    h.video.dispatchEvent(new Event('volumechange'));
+    expect(label('[data-action="mute-toggle"]')).toBe(sentinel('unmute'));
+    setProp(h.video, 'muted', false);
+    h.video.dispatchEvent(new Event('volumechange'));
+    expect(label('[data-action="mute-toggle"]')).toBe(sentinel('mute'));
+  });
+
+  it('labels the fullscreen button to re-enter once it has left fullscreen', () => {
+    h = mount();
+    setProp(document, 'fullscreenElement', h.figure);
+    document.dispatchEvent(new Event('fullscreenchange'));
+    expect(label('[data-action="fullscreen"]')).toBe('Exit full screen');
+    setProp(document, 'fullscreenElement', null);
+    document.dispatchEvent(new Event('fullscreenchange'));
+    expect(label('[data-action="fullscreen"]')).toBe('Full screen');
+  });
+
+  it('resolves the re-enter-label for fullscreen through its own key', () => {
+    h = mount({ i18n: fakeI18n() });
+    setProp(document, 'fullscreenElement', h.figure);
+    document.dispatchEvent(new Event('fullscreenchange'));
+    expect(label('[data-action="fullscreen"]')).toBe(sentinel('fullscreenExit'));
+    setProp(document, 'fullscreenElement', null);
+    document.dispatchEvent(new Event('fullscreenchange'));
+    expect(label('[data-action="fullscreen"]')).toBe(sentinel('fullscreen'));
+  });
+
+  it('labels the theater button back to entering once it has left', () => {
+    h = mount();
+    q(h.figure, '[data-action="theater"]').click();
+    expect(label('[data-action="theater"]')).toBe('Exit theater mode');
+    q(h.figure, '[data-action="theater"]').click();
+    expect(label('[data-action="theater"]')).toBe('Theater mode');
+  });
+
+  it('resolves the re-enter-label for theater through its own key', () => {
+    h = mount({ i18n: fakeI18n() });
+    q(h.figure, '[data-action="theater"]').click();
+    expect(label('[data-action="theater"]')).toBe(sentinel('theaterExit'));
+    q(h.figure, '[data-action="theater"]').click();
+    expect(label('[data-action="theater"]')).toBe(sentinel('theater'));
+  });
+
+  it('reads the loop row as on at mount and off after its own toggle', () => {
+    h = mount({ loop: true });
+    const value = q(h.figure, '[data-role="menu-value-loop"]');
+
+    expect(value.textContent).toBe('On');
+    q(h.figure, '[data-action="loop"]').click();
+    expect(value.textContent).toBe('Off');
+  });
+
+  it('resolves the loop on and off rows through their own keys', () => {
+    h = mount({ loop: true, i18n: fakeI18n() });
+    const value = q(h.figure, '[data-role="menu-value-loop"]');
+
+    expect(value.textContent).toBe(sentinel('on'));
+    q(h.figure, '[data-action="loop"]').click();
+    expect(value.textContent).toBe(sentinel('off'));
+  });
+
+  it('resolves the picture-in-picture label through its own key', () => {
+    setProp(document, 'pictureInPictureEnabled', true);
+    h = mount({ i18n: fakeI18n() });
+    expect(label('[data-action="picture-in-picture"]')).toBe(sentinel('pip'));
+    delete (document as Partial<{ pictureInPictureEnabled: unknown }>).pictureInPictureEnabled;
+    h.destroy();
+    document.body.innerHTML = '';
+    h = mount();
+  });
+});
+
+describe('video controls — preset glide ownership', () => {
+  let h: Harness;
+  let queue: Map<number, FrameRequestCallback>;
+  let nextId: number;
+  let now: number;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    queue = new Map();
+    nextId = 0;
+    now = 1000;
+    vi.stubGlobal('requestAnimationFrame', vi.fn((cb: FrameRequestCallback) => {
+      nextId += 1;
+      queue.set(nextId, cb);
+
+      return nextId;
+    }));
+    // Honours the cancel, so a frame the code dropped cannot run later.
+    vi.stubGlobal('cancelAnimationFrame', vi.fn((id: number) => { queue.delete(id); }));
+    vi.spyOn(performance, 'now').mockImplementation(() => now);
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false }));
+    h = mount();
+  });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+  const slider = (): HTMLInputElement => q<HTMLInputElement>(h.figure, '[data-role="speed-slider"]');
+  const flush = (at: number): void => {
+    now = at;
+    const cbs = [...queue.values()];
+
+    queue.clear();
+    cbs.forEach((cb) => cb(at));
+  };
+
+  it('drops a preset glide the moment a stepper takes the rate over', () => {
+    q(h.figure, '[data-action="speed-2"]').click();
+    // setRate lands on 2, then the glide repaints the start of its tween.
+    expect(slider().value).toBe('1');
+    q(h.figure, '[data-action="speed-dec"]').click();
+    expect(slider().value).toBe('1.95');
+    // The preset's tween must not still own the thumb once the stepper set it.
+    flush(2000);
+    expect(slider().value).toBe('1.95');
+  });
+});
+
+describe('video controls — theater teardown when the card cannot be measured', () => {
+  let h: Harness;
+  let anims: FakeAnimation[];
+  let open: boolean;
+
+  const inlineRect = { left: 200, top: 600, width: 320, height: 180, right: 520, bottom: 780, x: 200, y: 600, toJSON: () => ({}) } as DOMRect;
+  const centreRect = { left: 100, top: 50, width: 800, height: 450, right: 900, bottom: 500, x: 100, y: 50, toJSON: () => ({}) } as DOMRect;
+
+  const install = (): void => {
+    (HTMLElement.prototype as unknown as { popover: unknown }).popover = null;
+    (HTMLElement.prototype as unknown as { showPopover: unknown }).showPopover = vi.fn(() => { open = true; });
+    (HTMLElement.prototype as unknown as { hidePopover: unknown }).hidePopover = vi.fn(() => { open = false; });
+    (HTMLElement.prototype as unknown as { animate: unknown }).animate = vi.fn((
+      keyframes: Array<Record<string, string>>,
+      options: KeyframeAnimationOptions,
+    ): FakeAnimation => {
+      const anim: FakeAnimation = { keyframes, options, cancel: vi.fn(), onfinish: null };
+
+      anims.push(anim);
+
+      return anim;
+    });
+    const realMatches = HTMLElement.prototype.matches;
+
+    vi.spyOn(HTMLElement.prototype, 'matches').mockImplementation(function (this: HTMLElement, sel: string) {
+      return sel === ':popover-open' ? open : realMatches.call(this, sel);
+    });
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (open || this.getAttribute('data-theater') === 'true') return centreRect;
+
+      return inlineRect;
+    });
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false }));
+    h = mount();
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    anims = [];
+    open = false;
+  });
+  afterEach(() => {
+    h.destroy();
+    document.body.innerHTML = '';
+    delete (HTMLElement.prototype as Partial<{ popover: unknown }>).popover;
+    delete (HTMLElement.prototype as Partial<{ showPopover: unknown }>).showPopover;
+    delete (HTMLElement.prototype as Partial<{ hidePopover: unknown }>).hidePopover;
+    delete (HTMLElement.prototype as Partial<{ animate: unknown }>).animate;
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  const enter = (): void => q(h.figure, '[data-action="theater"]').click();
+
+  it('tears theater down at once when the video has no measurable frame to shrink onto', () => {
+    install();
+    enter();
+    const grow = anims[anims.length - 1];
+
+    expect(grow).toBeDefined();
+    // A zero-width video is exactly the case the FLIP cannot describe: the exit
+    // must finalize on the spot rather than start a morph nothing can run.
+    setProp(h.video, 'getBoundingClientRect', () => ({ ...centreRect, width: 0, toJSON: () => ({}) }));
+    enter();
+    expect(h.figure.getAttribute('data-theater')).toBe('false');
+    expect(h.figure.hasAttribute('data-theater-leaving')).toBe(false);
+    expect(anims).toHaveLength(1);
+    // The in-flight grow is cancelled by the teardown, not left running.
+    expect(grow.cancel).toHaveBeenCalled();
+  });
+});
+
+describe('video controls — teardown leaves no live gesture', () => {
+  let h: Harness;
+
+  beforeEach(() => { vi.clearAllMocks(); vi.useFakeTimers(); h = mount(); });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.useRealTimers(); vi.restoreAllMocks(); });
+
+  const engageHold = (): void => {
+    h.video.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    vi.advanceTimersByTime(300);
+    expect(h.video.playbackRate).toBe(2);
+  };
+
+  it('keeps the engaged double-speed when a pointerup lands after teardown', () => {
+    engageHold();
+    h.destroy();
+    h.video.dispatchEvent(new Event('pointerup'));
+    expect(h.video.playbackRate).toBe(2);
+    h = mount();
+  });
+
+  it('keeps the engaged double-speed when a pointerleave lands after teardown', () => {
+    engageHold();
+    h.destroy();
+    h.video.dispatchEvent(new Event('pointerleave'));
+    expect(h.video.playbackRate).toBe(2);
+    h = mount();
+  });
+
+  it('keeps the engaged double-speed when a pointercancel lands after teardown', () => {
+    engageHold();
+    h.destroy();
+    h.video.dispatchEvent(new Event('pointercancel'));
+    expect(h.video.playbackRate).toBe(2);
+    h = mount();
+  });
+
+  it('does not reveal the bar for a keyboard focus after teardown', () => {
+    h.video.dispatchEvent(new Event('play'));
+    vi.advanceTimersByTime(3000);
+    expect(h.figure.getAttribute('data-controls-hidden')).toBe('true');
+    h.destroy();
+    // Keyboard is the modality the reveal is gated on.
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    h.figure.dispatchEvent(new Event('focusin', { bubbles: true }));
+    expect(h.figure.getAttribute('data-controls-hidden')).toBe('true');
+  });
+
+  it('leaves the hover tooltip where the teardown left it', () => {
+    setProp(h.video, 'duration', 100);
+    h.video.dispatchEvent(new Event('loadedmetadata'));
+    const seek = q(h.controls, '[data-role="seek"]');
+
+    setProp(seek, 'getBoundingClientRect', () => wideRect(200));
+    seek.dispatchEvent(new MouseEvent('pointermove', { clientX: 100, bubbles: true }));
+    const tooltip = q(h.controls, '[data-role="seek-tooltip"]');
+
+    expect(tooltip.getAttribute('aria-hidden')).toBe('false');
+    h.destroy();
+    seek.dispatchEvent(new MouseEvent('pointerleave', { bubbles: true }));
+    expect(tooltip.getAttribute('aria-hidden')).toBe('false');
+    h = mount();
+  });
+
+  it('does not mirror a play that arrives after teardown', () => {
+    h.destroy();
+    h.video.dispatchEvent(new Event('play'));
+    expect(q(h.controls, '[data-action="play-toggle"]').getAttribute('aria-label')).toBe('Play');
+    expect(h.figure.getAttribute('data-playing')).toBe('false');
+    h = mount();
+  });
+});
+
+describe('video controls — teardown of the picture-in-picture mirror', () => {
+  let h: Harness;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setProp(document, 'pictureInPictureEnabled', true);
+    h = mount();
+  });
+  afterEach(() => {
+    h.destroy();
+    document.body.innerHTML = '';
+    delete (document as Partial<{ pictureInPictureEnabled: unknown }>).pictureInPictureEnabled;
+    vi.restoreAllMocks();
+  });
+
+  it('leaves the pressed state alone for an exit that lands after teardown', () => {
+    const pip = q(h.controls, '[data-action="picture-in-picture"]');
+
+    h.video.dispatchEvent(new Event('enterpictureinpicture'));
+    expect(pip.getAttribute('aria-pressed')).toBe('true');
+    h.destroy();
+    h.video.dispatchEvent(new Event('leavepictureinpicture'));
+    expect(pip.getAttribute('aria-pressed')).toBe('true');
+    h = mount();
+  });
+});
+
+// The zero and the exact-boundary readings below are the values the guard-free
+// arms produce too — they pin the coincidence, not a difference.
+describe('video controls — guard coincidences at the edges', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('reads a zero duration as an empty scrubber rather than a NaN one', () => {
+    expect(timeAtRatio(0.9, 0)).toBe(0);
+  });
+
+  it('names zero and negative times the same way', () => {
+    expect(formatTime(0)).toBe('0:00');
+    expect(formatTime(-3)).toBe('0:00');
+  });
+
+  it('counts a buffered range that ends exactly on the playhead', () => {
+    expect(bufferedPct(fakeRanges([[0, 5]]), 5, 10)).toBe(50);
+  });
+});
+
+describe('video controls — time readout cycling', () => {
+  let h: Harness;
+
+  beforeEach(() => { vi.clearAllMocks(); h = mount(); });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  it('alternates elapsed and remaining on every press', () => {
+    setProp(h.video, 'currentTime', 30);
+    setProp(h.video, 'duration', 100);
+    h.video.dispatchEvent(new Event('timeupdate'));
+    const time = q(h.controls, '[data-role="time"]');
+
+    expect(time.textContent).toBe('0:30 / 1:40');
+    for (const expected of ['-1:10', '0:30 / 1:40', '-1:10', '0:30 / 1:40']) {
+      time.click();
+      expect(time.textContent).toBe(expected);
+    }
   });
 });

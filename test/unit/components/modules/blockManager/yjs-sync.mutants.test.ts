@@ -1923,4 +1923,343 @@ describe('BlockYjsSync — mutation kills', () => {
       expect(() => harness.emit({ blockId: 'a', type: 'update', origin: 'remote' })).not.toThrow();
     });
   });
+
+  describe('settling window', () => {
+    const stopCapturingSpy = (harness: Harness): ReturnType<typeof vi.fn> =>
+      harness.doc.manager.stopCapturing as unknown as ReturnType<typeof vi.fn>;
+
+    /** Materialise `block` through the remote-add path, with the doc order taken from memory. */
+    const materializeRemotely = (harness: Harness, block: Block): void => {
+      composeSpy(harness.factory, () => block);
+      harness.doc.put(block.id, { type: 'paragraph' });
+      harness.doc.setOrder([...harness.repository.blocks.map((entry) => entry.id), block.id]);
+      harness.emit({ blockId: block.id, type: 'add', origin: 'remote' });
+    };
+
+    const materializeReplay = (harness: Harness, block: Block): void => {
+      composeSpy(harness.factory, () => block);
+      harness.doc.put(block.id, { type: 'paragraph' });
+      harness.doc.setOrder([...harness.repository.blocks.map((entry) => entry.id), block.id]);
+      harness.emit({ blockId: block.id, type: 'add', origin: 'undo' });
+    };
+
+    it('marks a remotely added block as materializing, and no other block', () => {
+      const other = createBlock({ id: 'other' });
+      const created = createBlock({ id: 'arrived' });
+      const harness = createHarness({ blocks: [other] });
+
+      materializeRemotely(harness, created);
+
+      expect(harness.yjsSync.isMaterializing(created)).toBe(true);
+      // A root block's ancestor walk ends at "no parent": reading `.id` off the
+      // absent parent, or answering "yes" for every block while a window is
+      // open, both make every keystroke look like the editor's own write.
+      expect(harness.yjsSync.isMaterializing(other)).toBe(false);
+    });
+
+    it('marks a remotely replayed block identical to a remote add', () => {
+      const replay = createBlock({ id: 'replayed' });
+      const harness = createHarness({ blocks: [createBlock({ id: 'anchor' })] });
+
+      materializeReplay(harness, replay);
+
+      expect(harness.yjsSync.isMaterializing(replay)).toBe(false);
+    });
+
+    it('opens a settling window for a remote batch and none for a replayed one', () => {
+      const remote = createBlock({ id: 'remote-member' });
+      const replayed = createBlock({ id: 'replay-member' });
+      const harness = createHarness({ blocks: [createBlock({ id: 'anchor' })] });
+      const byId = new Map<string, Block>([
+        ['remote-member', remote],
+        ['replay-member', replayed],
+      ]);
+
+      composeSpy(harness.factory, (options) => byId.get(options.id ?? '') ?? createBlock({ id: 'composed' }));
+
+      harness.doc.put('remote-member', { type: 'paragraph' });
+      harness.doc.put('replay-member', { type: 'paragraph' });
+      harness.doc.setOrder(['anchor', 'remote-member', 'replay-member']);
+
+      harness.emit({ blockIds: ['remote-member'], type: 'batch-add', origin: 'remote' });
+
+      expect(harness.yjsSync.isMaterializing(remote)).toBe(true);
+
+      harness.emit({ blockIds: ['replay-member'], type: 'batch-add', origin: 'redo' });
+
+      expect(harness.yjsSync.isMaterializing(replayed)).toBe(false);
+    });
+
+    it('treats a block inside a materialised subtree as materialising', () => {
+      const child = createBlock({ id: 'child', parentId: 'container' });
+      const container = createBlock({ id: 'container', name: 'toggle', contentIds: ['child'] });
+      const harness = createHarness({ blocks: [child] });
+
+      materializeRemotely(harness, container);
+
+      // The container is the block the doc materialised; the child's own write
+      // is the editor's too, and only the ancestor walk can see that.
+      expect(harness.yjsSync.isMaterializing(child)).toBe(true);
+    });
+
+    it('does not look the root up as if it were a block while walking parents', () => {
+      const root = createBlock({ id: 'root-block' });
+      const parent = createBlock({ id: 'container' });
+      const child = createBlock({ id: 'child', parentId: 'container' });
+      const harness = createHarness({ blocks: [root, parent, child] });
+
+      materializeRemotely(harness, createBlock({ id: 'arrived' }));
+      // The add's window is held through the next frame; close it so the
+      // scoped window below is the only one open.
+      harness.flushFrames();
+
+      const lookup = vi.spyOn(harness.repository, 'getBlockById');
+
+      harness.yjsSync.withAtomicOperation(() => {
+        expect(harness.yjsSync.isReconciling(root)).toBe(false);
+        expect(harness.yjsSync.isMaterializing(root)).toBe(false);
+      }, { blockId: 'container' });
+
+      expect(lookup).not.toHaveBeenCalledWith(null);
+    });
+
+    it('does not recurse forever when a settling walk meets a parent cycle', () => {
+      const a = createBlock({ id: 'cyc-a', parentId: 'cyc-b' });
+      const b = createBlock({ id: 'cyc-b', parentId: 'cyc-a' });
+      const harness = createHarness({ blocks: [a, b] });
+
+      materializeRemotely(harness, createBlock({ id: 'arrived' }));
+
+      // A peer can write a parent cycle; without the visited set the ancestor
+      // walk overflows the stack and takes the whole dispatch down.
+      expect(harness.yjsSync.isMaterializing(a)).toBe(false);
+    });
+
+    it('does not seal capture when asked to settle a block with no open window', () => {
+      const harness = createHarness({ blocks: [createBlock({ id: 'a' })] });
+
+      harness.yjsSync.settleMaterialization('nobody');
+
+      expect(stopCapturingSpy(harness)).not.toHaveBeenCalled();
+    });
+
+    it('seals capture only when the last settling window closes', () => {
+      const first = createBlock({ id: 'member-one' });
+      const second = createBlock({ id: 'member-two' });
+      const harness = createHarness({ blocks: [createBlock({ id: 'anchor' })] });
+      const byId = new Map<string, Block>([
+        ['member-one', first],
+        ['member-two', second],
+      ]);
+
+      composeSpy(harness.factory, (options) => byId.get(options.id ?? '') ?? createBlock({ id: 'composed' }));
+
+      harness.doc.put('member-one', { type: 'paragraph' });
+      harness.doc.put('member-two', { type: 'paragraph' });
+      harness.doc.setOrder(['anchor', 'member-one', 'member-two']);
+      harness.emit({ blockIds: ['member-one', 'member-two'], type: 'batch-add', origin: 'remote' });
+
+      harness.yjsSync.settleMaterialization('member-one');
+
+      // Sealing here would cut the still-settling block's write out of its own
+      // undo entry — the one Ctrl+Z that must revert it would revert the user's
+      // next word instead.
+      expect(stopCapturingSpy(harness)).not.toHaveBeenCalled();
+      expect(harness.yjsSync.isMaterializing(second)).toBe(true);
+
+      harness.yjsSync.settleMaterialization('member-two');
+
+      expect(stopCapturingSpy(harness)).toHaveBeenCalledTimes(1);
+    });
+
+    it('restarts the settling window when the same block is materialised again', () => {
+      vi.useFakeTimers();
+
+      try {
+        const harness = createHarness({ blocks: [createBlock({ id: 'anchor' })] });
+
+        materializeRemotely(harness, createBlock({ id: 'arrived' }));
+
+        vi.advanceTimersByTime(300);
+
+        harness.emit({ blockId: 'arrived', type: 'remove', origin: 'remote' });
+
+        const second = createBlock({ id: 'arrived' });
+
+        materializeRemotely(harness, second);
+
+        // Past the FIRST window's deadline, short of the second's: the timer
+        // the re-materialisation replaced must be gone, or it seals early and
+        // the block's own write-back lands as a user edit.
+        vi.advanceTimersByTime(150);
+
+        expect(harness.yjsSync.isMaterializing(second)).toBe(true);
+        expect(stopCapturingSpy(harness)).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('clears the timer of a settled window so it cannot seal a later reopen', () => {
+      vi.useFakeTimers();
+
+      try {
+        const harness = createHarness({ blocks: [createBlock({ id: 'anchor' })] });
+
+        materializeRemotely(harness, createBlock({ id: 'arrived' }));
+
+        vi.advanceTimersByTime(100);
+
+        harness.emit({ blockId: 'arrived', type: 'remove', origin: 'remote' });
+        harness.yjsSync.settleMaterialization('arrived');
+
+        const second = createBlock({ id: 'arrived' });
+
+        materializeRemotely(harness, second);
+
+        // The settled window's timer is still queued unless it was cancelled;
+        // when it fires it closes the NEW window and seals capture early.
+        vi.advanceTimersByTime(350);
+
+        expect(stopCapturingSpy(harness)).toHaveBeenCalledTimes(1);
+        expect(harness.yjsSync.isMaterializing(second)).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('drops every settling window and its timer on destroy', () => {
+      vi.useFakeTimers();
+
+      try {
+        const created = createBlock({ id: 'arrived' });
+        const harness = createHarness({ blocks: [createBlock({ id: 'anchor' })] });
+
+        materializeRemotely(harness, created);
+
+        expect(harness.yjsSync.isMaterializing(created)).toBe(true);
+        expect(vi.getTimerCount()).toBe(1);
+
+        harness.yjsSync.destroy();
+
+        // A torn-down editor must neither report itself as materialising nor
+        // leave a timer that reaches back into the Yjs manager it no longer owns.
+        expect(harness.yjsSync.isMaterializing(created)).toBe(false);
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
+  describe('walk guards', () => {
+    it('does not walk the reconciliation tree while no window is open', () => {
+      const parent = createBlock({ id: 'p' });
+      const child = createBlock({ id: 'c', parentId: 'p' });
+      const harness = createHarness({ blocks: [parent, child] });
+      const lookup = vi.spyOn(harness.repository, 'getBlockById');
+
+      // Neither walk can find anything with no window open, and the size check
+      // is what keeps this path — asked on every block mutation — from reading
+      // the repository at all.
+      expect(harness.yjsSync.isReconciling(child)).toBe(false);
+      expect(harness.yjsSync.isMaterializing(child)).toBe(false);
+
+      expect(lookup).not.toHaveBeenCalled();
+    });
+
+    it('does not look the root up as if it were a block when removing a root block', () => {
+      const root = createBlock({ id: 'solo' });
+      const harness = createHarness({ blocks: [root] });
+
+      harness.doc.setOrder(['solo']);
+
+      const lookup = vi.spyOn(harness.repository, 'getBlockById');
+
+      harness.emit({ blockId: 'solo', type: 'remove', origin: 'undo' });
+
+      expect(lookup).not.toHaveBeenCalledWith(null);
+    });
+  });
+
+  describe('removed-subtree lift', () => {
+    it('lifts a nested child out of the removed subtree, not just the outermost stray', () => {
+      const parent = createBlock({ id: 'p', name: 'toggle', contentIds: ['inner'] });
+      const outer = createBlock({ id: 'outer' });
+      const inner = createBlock({ id: 'inner', parentId: 'p' });
+      const harness = createHarness({ blocks: [parent, outer, inner] });
+      const container = document.createElement('div');
+      const innerBody = document.createElement('div');
+
+      container.setAttribute('data-blok-toggle-children', '');
+      innerBody.setAttribute('data-blok-toggle-children', '');
+      parent.holder.appendChild(container);
+      container.appendChild(outer.holder);
+      outer.holder.appendChild(innerBody);
+      innerBody.appendChild(inner.holder);
+      harness.doc.setOrder(['p']);
+
+      harness.emit({ blockId: 'p', type: 'remove', origin: 'undo' });
+
+      // The stray sweep moves OUTERMOST holders only, so `inner` rides inside
+      // the stray that carried it — and the removed holder's teardown destroys
+      // that whole subtree. Only the contentIds lift reaches it.
+      expect(inner.holder.parentElement).toBe(harness.workingArea);
+      expect(outer.holder.parentElement).toBe(harness.workingArea);
+    });
+  });
+
+  describe('move replay', () => {
+    it('re-asserts root holder order after a move whose doc record names no parent', () => {
+      const first = createBlock({ id: 'a-first' });
+      const second = createBlock({ id: 'b-second' });
+      const harness = createHarness({ blocks: [first, second] });
+
+      harness.workingArea.insertBefore(second.holder, first.holder);
+      harness.doc.put('b-second', { type: 'paragraph' });
+      harness.doc.setOrder(['a-first', 'b-second']);
+
+      harness.emit({ blockId: 'b-second', type: 'move', origin: 'remote' });
+      harness.runScheduled();
+
+      // With no parentId key the move names the ROOT group; skipping it leaves
+      // the holder where the stale-flat-array reparent left it, and the
+      // invariant tripwire downstream trips on the next sync.
+      expect([...harness.workingArea.children]).toEqual([first.holder, second.holder]);
+    });
+
+    it('does not re-reconcile a block an earlier move batch named', () => {
+      const parent = createBlock({ id: 'p', name: 'toggle', contentIds: ['c-one', 'c-two'] });
+      const first = createBlock({ id: 'c-one', parentId: 'p' });
+      const second = createBlock({ id: 'c-two', parentId: 'p' });
+      const solo = createBlock({ id: 'solo' });
+      const harness = createHarness({ blocks: [parent, first, second, solo] });
+      const container = document.createElement('div');
+
+      container.setAttribute('data-blok-toggle-children', '');
+      parent.holder.appendChild(container);
+      container.appendChild(first.holder);
+      container.appendChild(second.holder);
+
+      harness.doc.put('p', { type: 'toggle', contentIds: ['c-two', 'c-one'] });
+      harness.doc.put('c-one', { type: 'paragraph', parentId: 'p' });
+      harness.doc.put('c-two', { type: 'paragraph', parentId: 'p' });
+      harness.doc.put('solo', { type: 'paragraph' });
+      harness.doc.setOrder(['p', 'c-one', 'c-two', 'solo']);
+
+      harness.emit({ blockId: 'c-one', type: 'move', origin: 'remote' });
+      harness.runScheduled();
+
+      expect(parent.contentIds).toStrictEqual(['c-two', 'c-one']);
+
+      parent.contentIds = ['c-one', 'c-two'];
+
+      harness.emit({ blockId: 'solo', type: 'move', origin: 'remote' });
+      harness.runScheduled();
+
+      // A second batch that keeps the first batch's ids re-applies the doc's
+      // order to a container nobody touched in this batch.
+      expect(parent.contentIds).toStrictEqual(['c-one', 'c-two']);
+    });
+  });
 });

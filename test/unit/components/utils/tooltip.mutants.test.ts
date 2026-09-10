@@ -340,6 +340,74 @@ describe('Tooltip utility — mutation coverage', () => {
     });
   });
 
+  describe('teardown', () => {
+    /**
+     * destroy() sets the `destroyed` flag before it touches the DOM, so a
+     * failure part-way through leaves the singleton reachable with the flag
+     * already set. These three tests drive that state through the public API:
+     * a wrapper whose `remove()` rejects is the only way to observe the flag
+     * from outside, because a clean destroy() also drops the singleton.
+     */
+    const destroyWithFailingRemove = (): void => {
+      const wrapper = requireWrapper();
+      const removeSpy = vi.spyOn(wrapper, 'remove').mockImplementation(() => {
+        throw new Error('remove failed');
+      });
+
+      expect(() => destroy()).toThrowError(new Error('remove failed'));
+
+      removeSpy.mockRestore();
+    };
+
+    it('takes the bubble out of the document on destroy', () => {
+      show(createAnchor({ left: 10,
+        top: 20,
+        width: 100,
+        height: 40 }), 'detached');
+
+      const wrapper = requireWrapper();
+
+      expect(document.body.contains(wrapper)).toBe(true);
+
+      destroy();
+
+      // A bubble left in the body outlives the editor: nothing else removes
+      // it, so it keeps painting over the host page forever.
+      expect(document.body.contains(wrapper)).toBe(false);
+      expect(document.querySelector(TOOLTIP_SELECTOR)).toBeNull();
+    });
+
+    it('refuses to bind trigger listeners from an instance that was already destroyed', () => {
+      const anchor = createAnchor({ left: 10,
+        top: 20,
+        width: 100,
+        height: 40 });
+
+      show(anchor, 'destroyed instance stays inert');
+      destroyWithFailingRemove();
+
+      const addSpy = vi.spyOn(anchor, 'addEventListener');
+
+      onHover(anchor, 'never bound');
+
+      expect(addSpy).not.toHaveBeenCalled();
+    });
+
+    it('stays callable when a second destroy follows an interrupted first one', () => {
+      const anchor = createAnchor({ left: 10,
+        top: 20,
+        width: 100,
+        height: 40 });
+
+      show(anchor, 'interrupted destroy');
+      destroyWithFailingRemove();
+
+      // The interrupted destroy already cleared the observer, so the resumed
+      // one must not dereference it.
+      expect(() => destroy()).not.toThrow();
+    });
+  });
+
   describe('document and window listeners', () => {
     it('registers the scroll listener passively in the capture phase and removes the same one on destroy', () => {
       const addSpy = vi.spyOn(window, 'addEventListener');

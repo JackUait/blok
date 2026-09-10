@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getCumulativeColEdges, TableRowColDrag } from '../../../../src/tools/table/table-row-col-drag';
+import type { RowColAction } from '../../../../src/tools/table/table-row-col-controls';
 
 const ROW_ATTR = 'data-blok-table-row';
 const CELL_ATTR = 'data-blok-table-cell';
@@ -869,6 +870,288 @@ describe('TableRowColDrag mutation coverage', () => {
       expect(errors).toEqual([]);
       expect(getIndicator(grid).style.left).toBe('-1.5px');
       expect(getIndicator(grid).style.height).toBe('1px');
+    });
+  });
+
+  describe('a row drag on a grid with no rows', () => {
+    /**
+     * The drag starts, then the drop math reads a row that is not there. The
+     * indicator position throws before the cursor is re-derived, which is the
+     * only observable left in that move; the release still runs to completion.
+     */
+    it('leaves the grabbing cursor from the drag start in place', () => {
+      const grid = createGrid({ rows: 0 });
+
+      drag = new TableRowColDrag({ grid, onAction: vi.fn() });
+
+      const tracked = drag;
+      captureWindowErrors(() => {
+        void tracked.beginTracking('row', 0, 250, 120);
+        move(250, 205);
+      });
+
+      expect(document.body.style.cursor).toBe('grabbing');
+    });
+
+    it('resolves the drop at -1 instead of reading the missing row', () => {
+      const grid = createGrid({ rows: 0 });
+      const onAction = vi.fn();
+
+      drag = new TableRowColDrag({ grid, onAction });
+
+      const tracked = drag;
+      captureWindowErrors(() => {
+        void tracked.beginTracking('row', 0, 250, 120);
+        move(250, 205);
+      });
+
+      captureWindowErrors(() => {
+        release(250, 205);
+      });
+
+      expect(onAction).toHaveBeenCalledWith({ type: 'move-row', fromIndex: 0, toIndex: -1 });
+    });
+  });
+
+  describe('a callback that tears the drag down mid-gesture', () => {
+    it('leaves the indicator and the ghost alone once canDrop has cleaned up', () => {
+      const grid = createGrid();
+      const onAction = vi.fn();
+
+      drag = new TableRowColDrag({
+        grid,
+        onAction,
+        // The drop target is refused by tearing the whole gesture down, which
+        // nulls the indicator and the ghost before the move finishes with them.
+        canDrop: () => {
+          drag?.cleanup();
+
+          return true;
+        },
+      });
+
+      const tracked = drag;
+      const moveErrors = captureWindowErrors(() => {
+        void tracked.beginTracking('row', 0, 250, 120);
+        move(250, 205);
+      });
+
+      expect(moveErrors).toEqual([]);
+      expect(document.body.style.cursor).toBe('grabbing');
+
+      const releaseErrors = captureWindowErrors(() => {
+        release(250, 205);
+      });
+
+      expect(releaseErrors).toEqual([]);
+      expect(onAction).not.toHaveBeenCalled();
+    });
+
+    it('does not call the resolver that cleanup dropped before the drop action ran', () => {
+      const grid = createGrid();
+      const onAction = vi.fn();
+      let canDropCalls = 0;
+
+      drag = new TableRowColDrag({
+        grid,
+        onAction,
+        canDrop: () => {
+          canDropCalls += 1;
+
+          // Only the drop itself tears the gesture down; the live feedback of
+          // the move must leave it running.
+          if (canDropCalls > 1) {
+            drag?.cleanup();
+          }
+
+          return true;
+        },
+      });
+
+      const tracked = drag;
+      const moveErrors = captureWindowErrors(() => {
+        void tracked.beginTracking('row', 0, 250, 120);
+        move(250, 205);
+      });
+      const releaseErrors = captureWindowErrors(() => {
+        release(250, 205);
+      });
+
+      expect(releaseErrors).toEqual([]);
+      expect(moveErrors).toEqual([]);
+      expect(onAction).toHaveBeenCalledTimes(1);
+    });
+
+    it('detaches the pointer listeners before the drop action runs', () => {
+      const grid = createGrid();
+      const onAction = vi.fn(() => {
+        throw new Error('consumer blew up');
+      });
+      const onDragStateChange = vi.fn();
+
+      drag = new TableRowColDrag({ grid, onAction, onDragStateChange });
+
+      const tracked = drag;
+      captureWindowErrors(() => {
+        void tracked.beginTracking('row', 0, 250, 120);
+        move(250, 205);
+      });
+
+      // The action throws, so the release never reaches its cleanup and the
+      // gesture stays armed. Only the detach at the top of the handler decides
+      // whether the next pointer event still reaches it.
+      captureWindowErrors(() => {
+        release(250, 205);
+      });
+
+      const ghost = getGhost();
+      const ghostTop = ghost.style.top;
+
+      captureWindowErrors(() => {
+        move(600, 400);
+      });
+
+      expect(ghost.style.top).toBe(ghostTop);
+
+      captureWindowErrors(() => {
+        release(600, 400);
+      });
+
+      expect(onAction).toHaveBeenCalledTimes(1);
+
+      onDragStateChange.mockClear();
+
+      captureWindowErrors(() => {
+        document.dispatchEvent(new PointerEvent('pointercancel'));
+      });
+
+      expect(onDragStateChange).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('a gesture re-armed from its own drag-state callback', () => {
+    interface ReArmedGesture {
+      drag: TableRowColDrag;
+      calls: Array<[boolean, 'row' | 'col' | null, number]>;
+    }
+
+    /**
+     * Runs a whole gesture whose end chains another one from inside the
+     * drag-state callback. `cleanup()` keeps going after that callback returns,
+     * so the fresh gesture is left with no type, no source index and no
+     * resolver — the state a caller can put the drag in without touching a
+     * private field.
+     */
+    const startReArmedGesture = (grid: HTMLElement, onAction: (action: RowColAction) => void): ReArmedGesture => {
+      const calls: Array<[boolean, 'row' | 'col' | null, number]> = [];
+      let rearmed = false;
+      let instance: TableRowColDrag | null = null;
+
+      instance = new TableRowColDrag({
+        grid,
+        onAction,
+        onDragStateChange: (isDragging, dragType, dragIndex) => {
+          calls.push([isDragging, dragType, dragIndex]);
+
+          if (!isDragging && !rearmed) {
+            rearmed = true;
+            void instance?.beginTracking('row', 1, 250, 170);
+          }
+        },
+      });
+
+      const created = instance;
+
+      void created.beginTracking('row', 0, 250, 120);
+      move(250, 205);
+      release(250, 205);
+
+      return { drag: created, calls };
+    };
+
+    it('reports the re-armed gesture with the state the callback left behind', () => {
+      const grid = createGrid();
+      const armed = startReArmedGesture(grid, vi.fn());
+
+      drag = armed.drag;
+
+      move(250, 250);
+
+      expect(armed.calls).toContainEqual([true, null, -1]);
+    });
+
+    it('does not aim the drop indicator at a column for a gesture with no type', () => {
+      const grid = createGrid();
+      const armed = startReArmedGesture(grid, vi.fn());
+
+      drag = armed.drag;
+
+      move(250, 250);
+
+      expect(getIndicator(grid).style.left).toBe('');
+    });
+
+    it('does not move a column for a gesture with no type', () => {
+      const grid = createGrid();
+      const onAction = vi.fn();
+      const armed = startReArmedGesture(grid, onAction);
+
+      drag = armed.drag;
+
+      move(250, 250);
+      release(330, 250);
+
+      // Only the row move of the first gesture.
+      expect(onAction).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call a resolver the cleanup already dropped when the pointer is cancelled', () => {
+      const grid = createGrid();
+      const armed = startReArmedGesture(grid, vi.fn());
+
+      drag = armed.drag;
+
+      const errors = captureWindowErrors(() => {
+        document.dispatchEvent(new PointerEvent('pointercancel'));
+      });
+
+      expect(errors).toEqual([]);
+    });
+
+    it('does not call a resolver the cleanup already dropped when the pointer is released', () => {
+      const grid = createGrid();
+      const armed = startReArmedGesture(grid, vi.fn());
+
+      drag = armed.drag;
+
+      const errors = captureWindowErrors(() => {
+        release(250, 170);
+      });
+
+      expect(errors).toEqual([]);
+    });
+  });
+
+  describe('a drag that never began', () => {
+    it('ignores pointer events until a gesture is tracked', () => {
+      const grid = createGrid();
+      const onAction = vi.fn();
+      const onDragStateChange = vi.fn();
+
+      drag = new TableRowColDrag({ grid, onAction, onDragStateChange });
+
+      const errors = captureWindowErrors(() => {
+        move(400, 400);
+        release(400, 400);
+        document.dispatchEvent(new PointerEvent('pointercancel'));
+      });
+
+      expect(errors).toEqual([]);
+      expect(document.body.style.cursor).toBe('');
+      expect(document.querySelector(GHOST_SELECTOR)).toBeNull();
+      expect(hasIndicator(grid)).toBe(false);
+      expect(onAction).not.toHaveBeenCalled();
+      expect(onDragStateChange).not.toHaveBeenCalled();
     });
   });
 });

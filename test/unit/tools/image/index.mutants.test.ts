@@ -2666,7 +2666,8 @@ describe('ImageTool — the progress reporter each upload route receives', () =>
   });
 
   it('hands the retrying url upload the tool progress callback', async () => {
-    const uploadByUrl = vi.fn<UploadFn>()
+    // The URL-upload seam, not UploadFn (which is the file-upload signature).
+    const uploadByUrl = vi.fn<(url: string, ctx?: { onProgress?: (p: number) => void }) => Promise<{ url: string }>>()
       .mockRejectedValueOnce(new ImageError('UPLOAD_FAILED', 'server rejected'))
       .mockImplementation(() => new Promise<{ url: string }>(() => { /* in flight */ }));
     const img = document.createElement('img');

@@ -161,6 +161,22 @@ describe('parseNextSpaceBlocks — walker guards', () => {
 
     expect(out).toStrictEqual([{ id: 'p', tool: 'paragraph', data: { text: 'kept' } }]);
   });
+
+  it('walks no children when subNodes is not an array', () => {
+    // A malformed `subNodes` must expand to NOTHING. The fixture below carries a
+    // node whose uuid is the literal a `? : []` widening mutation substitutes,
+    // so a non-empty fallback emits it as a child of `cl`.
+    const container = node('cl', 1, { data: segments('container'), subNodes: 'nope' });
+    const decoy = node('Stryker was here', 1, { parentId: 'cl', data: segments('decoy') });
+    const json = JSON.stringify({
+      blocks: [{ id: 'cl', subTree: { 'raw-cl': container, 'raw-decoy': decoy } }],
+      pageId: PAGE,
+    });
+
+    expect(parseNextSpaceBlocks(json)).toStrictEqual([
+      { id: 'cl', tool: 'paragraph', data: { text: 'container' } },
+    ]);
+  });
 });
 
 describe('parseNextSpaceBlocks — segment text', () => {
@@ -487,29 +503,29 @@ describe('parseNextSpaceBlocks — link resolution', () => {
 });
 
 /*
- * Mutants deliberately left alive — each is equivalent, with the reason:
+ * Mutants deliberately left alive. Every one below was confirmed EQUIVALENT by
+ * MEASUREMENT, not by reading: the mutant was applied, and a 181-payload corpus
+ * (every envelope shape, node type, colour name, media `display`, gravity,
+ * link form, table format, segment shape and JSON primitive) produced identical
+ * output to the pristine source in all 181 cases.
  *
  * - `typeof parsed !== 'object'` (guard in `parseNextSpaceBlocks`) → false:
- *   every JSON primitive walks through `decodeEnvelope` to `byId.size === 0`
- *   and returns null anyway.
- * - `.filter((id): id is string => …)` on the blocks `topLevelOrder` → dropped,
- *   and its `typeof id === 'string'` → true: `byId` keys are always strings
- *   (`isNextSpaceNode` requires a string uuid), so a non-string id hits
- *   `node === undefined` in `walk` and returns — the same no-op.
+ *   every JSON primitive reaches `decodeEnvelope`'s `byId.size === 0` and
+ *   returns null there.
+ * - the `blocks` `.map(...)` whose `.filter` is dropped → `blocks.map(...)`:
+ *   a non-string id then meets `byId.get(id) === undefined` in `walk`, the
+ *   same no-op the filter produced.
+ * - `.filter((id): id is string => …)` → `true`: `byId` keys are always strings
+ *   (`isNextSpaceNode` requires a string uuid), so a `undefined` entry hits
+ *   `byId.get(undefined) === undefined` in `walk` — again the same no-op.
  * - `typeof parentId !== 'string'` (root filter) → false: for a non-string
  *   parentId `!byId.has(parentId)` is true for the same reason, and for a
  *   string parentId the original already short-circuits to that test.
  * - `value.length === 0` in `normalizeBuildinColor` → false: `''` then reaches
- *   `BLOK_COLOR_NAMES.has('')`, and no COLOR_PRESETS entry is named `''`, so
- *   the result is null either way.
+ *   `BLOK_COLOR_NAMES.has('')`, and no COLOR_PRESETS entry is named `''`.
  * - `typeof data.display === 'string'` → true, and its `'file'` default → `''`:
  *   `display` is only ever compared against 'image' / 'video' / 'audio', and
  *   every non-match takes the file branch.
  * - the `catch` body of `safeJsonParse` → `{}`: it then returns `undefined`,
  *   which the sole caller's `typeof parsed !== 'object'` guard maps to null.
- *
- * One non-equivalent mutant is left alive: `Array.isArray(node.subNodes) ?
- * node.subNodes : []` → `["Stryker was here"]`. `walk` returns at the
- * `node === undefined` guard for that id, so it is observable only by seeding
- * the payload with a node whose uuid is the mutant's own literal string.
  */

@@ -134,6 +134,7 @@ describe('EquationInlineTool mutants', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
     vi.useRealTimers();
     document.body.innerHTML = '';
@@ -411,6 +412,19 @@ describe('the popover markup', () => {
 
       expect(findParentTag).toHaveBeenCalledWith('SPAN');
     });
+
+    it('paints the wrapper, the input and the preview with the exact class list and markers', () => {
+      const { wrapper, input, preview } = build();
+
+      expect(wrapper.className).toBe('flex flex-col gap-1 p-1');
+      expect(wrapper.getAttribute('data-blok-equation-tool')).toBe('');
+      // `input.type` reads back as 'text' even when the IDL is set to '', so the
+      // content attribute is the only witness that 'text' was actually written.
+      expect(input.getAttribute('type')).toBe('text');
+      expect(input.className).toBe('w-[220px] m-0 px-2 py-1 text-sm leading-[22px] font-medium text-text-primary bg-item-hover-bg border border-link-input-border rounded-lg! outline-hidden box-border appearance-none font-[inherit] placeholder:text-gray-text');
+      expect(preview.className).toBe('min-h-[22px] px-2 text-sm text-text-primary');
+      expect(preview.getAttribute('data-blok-equation-preview')).toBe('');
+    });
   });
 
   describe('writing the equation into the document', () => {
@@ -468,6 +482,69 @@ describe('the popover markup', () => {
       await tool.applyEquation('r^2');
 
       expect(host.querySelector('span[data-latex]')?.getAttribute('data-blok-mutation-free')).toBe('true');
+    });
+
+    it('inserts the span already carrying its LaTeX source', async () => {
+      selectText('placeholder');
+
+      const { tool } = build();
+      const inserted: (string | null)[] = [];
+      const realInsertNode = Range.prototype.insertNode;
+      const recordInsert = function (this: Range, node: Node): void {
+        inserted.push(node instanceof HTMLElement ? node.getAttribute('data-latex') : null);
+
+        realInsertNode.call(this, node);
+      };
+
+      Range.prototype.insertNode = recordInsert;
+
+      try {
+        await tool.applyEquation('u^2');
+      } finally {
+        Range.prototype.insertNode = realInsertNode;
+      }
+
+      expect(inserted).toEqual(['u^2']);
+    });
+  });
+
+  describe('surviving a host without a DOM', () => {
+    it('returns before touching the missing window', () => {
+      findParentTag.mockReturnValue(equationSpan('v^2'));
+
+      const { children } = build();
+
+      save.mockImplementation(() => undefined);
+
+      vi.stubGlobal('window', undefined);
+
+      try {
+        expect(() => children.onOpen?.()).not.toThrow();
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it('returns before scheduling a timer when the document is missing', () => {
+      findParentTag.mockReturnValue(equationSpan('w^2'));
+
+      const { children, input } = build();
+
+      save.mockImplementation(() => undefined);
+      // jsdom's own focus() schedules a timer, which would drown out the one
+      // under test.
+      vi.spyOn(input, 'focus').mockImplementation(() => undefined);
+      vi.useFakeTimers();
+
+      vi.stubGlobal('document', undefined);
+
+      try {
+        children.onOpen?.();
+
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.unstubAllGlobals();
+      }
     });
   });
 

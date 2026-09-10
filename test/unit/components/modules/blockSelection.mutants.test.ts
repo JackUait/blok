@@ -1803,4 +1803,128 @@ describe('BlockSelection — surviving mutants', () => {
       ]);
     });
   });
+
+  describe('stage and focus guards', () => {
+    it('skips a subtree child id that points at no Block while other Blocks are still unselected', () => {
+      const parent = createBlockStub({ id: 'parent',
+        contentIds: [ 'kid', 'ghost' ] });
+      const kid = createBlockStub({ id: 'kid',
+        parentId: 'parent' });
+      const other = createBlockStub({ id: 'other' });
+      const { pressCmdA } = createSetup({ blocks: [ parent, kid, other ] });
+
+      pressCmdA(parent.holder);
+      pressCmdA(parent.holder);
+
+      // A second unselected Block keeps `allBlocksSelected` false, so the third
+      // press reaches the subtree stage instead of the terminal no-op.
+      expect(() => pressCmdA(parent.holder)).not.toThrow();
+      expect(parent.selected).toBe(true);
+      expect(kid.selected).toBe(true);
+      expect(other.selected).toBe(false);
+    });
+
+    it('abandons the container stage when the parent Block is gone', () => {
+      const orphan = createBlockStub({ id: 'orphan',
+        parentId: 'ghost' });
+      const other = createBlockStub({ id: 'other' });
+      const { pressCmdA, modules } = createSetup({ blocks: [ orphan, other ] });
+
+      pressCmdA(orphan.holder);
+      pressCmdA(orphan.holder);
+      vi.mocked(modules.InlineToolbar.close).mockClear();
+
+      expect(() => pressCmdA(orphan.holder)).not.toThrow();
+      expect(other.selected).toBe(false);
+      expect(modules.InlineToolbar.close).not.toHaveBeenCalled();
+    });
+
+    it('stays silent when the subtree stage selected nothing beyond the Block itself', () => {
+      const parent = createBlockStub({ id: 'parent',
+        contentIds: [ 'ghost' ] });
+      const other = createBlockStub({ id: 'other' });
+      const { pressCmdA } = createSetup({ blocks: [ parent, other ] });
+
+      pressCmdA(parent.holder);
+      pressCmdA(parent.holder);
+      vi.mocked(announce).mockClear();
+
+      pressCmdA(parent.holder);
+
+      expect(announcements()).toEqual([]);
+    });
+
+    it('never writes the selection off the Block it is about to focus', () => {
+      const { blockSelection, blocks } = createSetup();
+
+      blocks[0].selected = true;
+
+      blockSelection.adoptSelectionIntoNavigationMode();
+
+      // One write for the test's own setup, one for the focus. A third means the
+      // Block was unselected and re-selected while the move was in flight.
+      // selectedWrites is the fixture's own counter, not part of Block.
+      expect((blocks[0] as unknown as { selectedWrites?: number }).selectedWrites).toBe(2);
+    });
+
+    it('blurs only an element that is an HTML element', () => {
+      const { blockSelection } = createSetup();
+      const blur = vi.fn();
+
+      Object.defineProperty(document, 'activeElement', {
+        configurable: true,
+        get: () => ({ blur }),
+      });
+
+      try {
+        blockSelection.enableNavigationMode();
+
+        expect(blur).not.toHaveBeenCalled();
+      } finally {
+        Reflect.deleteProperty(document, 'activeElement');
+      }
+    });
+
+    it('does not promote a selection that holds no range', () => {
+      const block = createBlockStub({ text: 'a b' });
+      const { pressCmdA } = createSetup({ blocks: [ block ] });
+      const selection = {
+        isCollapsed: false,
+        rangeCount: 0,
+        removeAllRanges: vi.fn(),
+        toString: () => 'a b',
+      };
+
+      vi.mocked(SelectionUtils.get).mockReturnValue(selection as unknown as Selection);
+
+      pressCmdA(block.holder);
+
+      expect(block.selected).toBe(false);
+    });
+
+    it('does not reject when the pending Block vanished before the announcement', async () => {
+      const { blockSelection, blockManager } = createSetup();
+      const rejections: unknown[] = [];
+      const record = (reason: unknown): void => {
+        rejections.push(reason);
+      };
+
+      process.on('unhandledRejection', record);
+
+      try {
+        blockSelection.enableNavigationMode();
+        blockSelection.navigateNext();
+        blockManager.getBlockByIndex.mockReturnValue(undefined);
+
+        await vi.advanceTimersByTimeAsync(300);
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      } finally {
+        process.off('unhandledRejection', record);
+      }
+
+      expect(rejections).toEqual([]);
+    });
+  });
 });

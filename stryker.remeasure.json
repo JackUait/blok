@@ -1,0 +1,66 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "packageManager": "yarn",
+  "testRunner": "vitest",
+  "vitest": {
+    "configFile": "vitest.mutation.drifted.config.ts"
+  },
+  "incremental": false,
+  "incrementalFile": ".mutation-state/stryker-incremental-drifted.json",
+  "ignoreStatic": true,
+  "timeoutMS": 60000,
+  "timeoutFactor": 3,
+  "dryRunTimeoutMinutes": 240,
+  "concurrency": 2,
+  "reporters": [
+    "clear-text",
+    "json"
+  ],
+  "htmlReporter": {
+    "fileName": ".mutation-state/report-drifted.html"
+  },
+  "jsonReporter": {
+    "fileName": ".mutation-state/report-remeasure.json"
+  },
+  "ignorePatterns": [
+    "docs/**",
+    "storybook-static/**",
+    "playwright-report/**",
+    "test-results/**",
+    ".server-test-results/**",
+    ".server-coverage/**",
+    "static/**",
+    "public/**",
+    "packages/server/dotnet/**",
+    ".playwright-cli/**",
+    ".playwright-mcp/**",
+    ".venv/**",
+    ".dev/**",
+    "override-extension/**",
+    "*.png",
+    "*.json.gz"
+  ],
+  "mutate": [
+    "src/components/flipper.ts",
+    "src/components/inline-tools/inline-tool-convert.ts",
+    "src/components/modules/collaboration/presence.ts",
+    "src/components/modules/collaboration/provider.ts",
+    "src/components/modules/collaboration/sync-wire.ts",
+    "src/components/modules/toolbar/blockSettings.ts",
+    "src/components/modules/toolbar/inline/index.ts",
+    "src/components/modules/toolbar/inline/positioner.ts",
+    "src/components/modules/uiControllers/handlers/click.ts",
+    "src/components/shared/block-color.ts",
+    "src/components/shared/color-picker.ts",
+    "src/components/utils/convert-menu.ts",
+    "src/components/utils/popover/popover-abstract.ts",
+    "src/components/utils/popover/popover-desktop.ts",
+    "src/components/utils/popover/popover-inline.ts",
+    "src/components/utils/popover/popover-mobile.ts",
+    "src/components/utils/tooltip.ts",
+    "src/tools/image/uploading-state.ts",
+    "src/tools/table/table-cell-selection.ts",
+    "src/tools/toggle/constants.ts",
+    "src/tools/video/controls.ts"
+  ]
+}

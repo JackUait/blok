@@ -193,6 +193,49 @@ const pressKey = (element: HTMLElement, key: string): KeyboardEvent => {
   return event;
 };
 
+/**
+ * jsdom reports an exception thrown inside an event listener to window's
+ * `error` event; it never leaves `dispatchEvent`. A bare try/catch therefore
+ * cannot see it, and the test would pass while the listener blew up.
+ */
+const recordWindowErrors = (): (() => string[]) => {
+  const messages: string[] = [];
+  const listener = (event: ErrorEvent): void => { messages.push(event.message); };
+
+  window.addEventListener('error', listener);
+
+  return (): string[] => {
+    window.removeEventListener('error', listener);
+
+    return messages;
+  };
+};
+
+/** Geometry of an affordance at the moment it is handed to the tooltip. */
+interface AffordanceGeometry {
+  left: string;
+  right: string;
+  bottom: string;
+}
+
+/**
+ * Snapshots each affordance as the tooltip is attached to it. `onHover` fires
+ * inside the button factories, before the constructor's geometry sync runs, so
+ * this is the only point where the constructed geometry is still readable — the
+ * sync overwrites every one of these values immediately afterwards.
+ */
+const captureAffordancesAtTooltip = (): AffordanceGeometry[] => {
+  const seen: AffordanceGeometry[] = [];
+
+  mockOnHover.mockImplementation((...args: unknown[]): void => {
+    const btn = args[0] as HTMLElement;
+
+    seen.push({ left: btn.style.left, right: btn.style.right, bottom: btn.style.bottom });
+  });
+
+  return seen;
+};
+
 describe('TableAddControls — surviving-mutant coverage', () => {
   let created: TableAddControls[] = [];
   let wrapper: HTMLDivElement;
@@ -449,6 +492,20 @@ describe('TableAddControls — surviving-mutant coverage', () => {
       scroller.appendChild(grid);
       wrapper.appendChild(scroller);
       Object.defineProperty(scroller, 'clientWidth', { value: 0, configurable: true });
+      grid.style.width = `${GRID_PIXEL_WIDTH}px`;
+      const controls = build();
+
+      controls.syncRowButtonWidth();
+
+      expect(rowButton().style.width).toBe(`${GRID_PIXEL_WIDTH}px`);
+    });
+
+    it('keeps the full grid width when the grid has been detached from the wrapper', () => {
+      // No parent at all: there is no scroll container to clamp against, so the
+      // grid width must pass through untouched.
+      grid.remove();
+      stubRect(grid, GRID_BOX);
+      stubRect(wrapper, WRAPPER_BOX);
       grid.style.width = `${GRID_PIXEL_WIDTH}px`;
       const controls = build();
 
@@ -1208,6 +1265,17 @@ describe('TableAddControls — surviving-mutant coverage', () => {
       expect(colButton().style.pointerEvents).toBe('none');
     });
 
+    it('leaves no transform on the row button after a pixel-mode sync', () => {
+      stubRect(grid, GRID_BOX);
+      stubRect(wrapper, WRAPPER_BOX);
+      grid.style.width = `${GRID_PIXEL_WIDTH}px`;
+      const controls = build();
+
+      controls.syncRowButtonWidth();
+
+      expect(rowButton().style.transform).toBe('');
+    });
+
     it('stretches the row visual across the width and the column visual down the height', () => {
       build();
 
@@ -1304,6 +1372,125 @@ describe('TableAddControls — surviving-mutant coverage', () => {
       scroller.dispatchEvent(new Event('scroll'));
 
       expect(sync).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('drag listener lifetime', () => {
+    /**
+     * Ends a drag on the column button while leaving the row button's handlers
+     * attached: both pointerdowns register the SAME bound handlers, and the
+     * column button's pointerup only detaches its own. The row button is then
+     * listening for a drag that no longer exists.
+     */
+    const strandRowDragListeners = (): HTMLElement => {
+      const row = rowButton();
+      const col = colButton();
+
+      stubPointerCapture(row);
+      stubPointerCapture(col);
+      row.dispatchEvent(pointerEvent('pointerdown', 0, 0));
+      col.dispatchEvent(pointerEvent('pointerdown', 0, 0));
+      col.dispatchEvent(pointerEvent('pointerup', 0, 0));
+
+      return row;
+    };
+
+    it('ignores a pointer move that arrives after its drag state is gone', () => {
+      const errors = recordWindowErrors();
+
+      build();
+      const stale = strandRowDragListeners();
+
+      stale.dispatchEvent(pointerEvent('pointermove', 0, 90));
+
+      expect(errors()).toStrictEqual([]);
+    });
+
+    it('ignores a pointer up that arrives after its drag state is gone', () => {
+      const errors = recordWindowErrors();
+
+      build();
+      const stale = strandRowDragListeners();
+
+      stale.dispatchEvent(pointerEvent('pointerup', 0, 90));
+
+      expect(errors()).toStrictEqual([]);
+    });
+
+    it('ignores a pointer cancel that arrives after its drag state is gone', () => {
+      const errors = recordWindowErrors();
+
+      build();
+      const stale = strandRowDragListeners();
+
+      stale.dispatchEvent(pointerEvent('pointercancel', 0, 0));
+
+      expect(errors()).toStrictEqual([]);
+    });
+
+    it('leaves the drag callbacks alone when no drag is in flight', () => {
+      const errors = recordWindowErrors();
+
+      build();
+      const stale = strandRowDragListeners();
+
+      stale.dispatchEvent(pointerEvent('pointerup', 0, 90));
+
+      expect({ errors: errors(), dragEnd: callbacks.onDragEnd.mock.calls.length })
+        .toStrictEqual({ errors: [], dragEnd: 0 });
+    });
+  });
+
+  describe('dimension tooltip without a drag', () => {
+    it('does nothing when asked for the table size with no drag in flight', () => {
+      const controls = build();
+      const internals = controls as unknown as { showDimensionTooltip: () => void };
+
+      expect(() => { internals.showDimensionTooltip(); }).not.toThrow();
+    });
+
+    it('asks for no table size when it has no drag to describe', () => {
+      const controls = build();
+      const internals = controls as unknown as { showDimensionTooltip: () => void };
+
+      internals.showDimensionTooltip();
+
+      expect(callbacks.getTableSize).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('constructed affordance geometry', () => {
+    it('hands the add-row affordance to the tooltip at the grid left edge', () => {
+      const seen = captureAffordancesAtTooltip();
+
+      build();
+
+      // cssstyle serialises the source's `'0'` back as `'0px'`.
+      expect(seen[0].left).toBe('0px');
+    });
+
+    it('hands the add-row affordance to the tooltip hanging 36px below the grid', () => {
+      const seen = captureAffordancesAtTooltip();
+
+      build();
+
+      expect(seen[0].bottom).toBe('-36px');
+    });
+
+    it('hands the add-column affordance to the tooltip 36px right of the grid', () => {
+      const seen = captureAffordancesAtTooltip();
+
+      build();
+
+      expect(seen[1].right).toBe('-36px');
+    });
+
+    it('hands the add-column affordance to the tooltip flush with the grid top', () => {
+      const seen = captureAffordancesAtTooltip();
+
+      build();
+
+      expect(seen[1].bottom).toBe('0px');
     });
   });
 });

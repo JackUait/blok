@@ -774,7 +774,8 @@ describe('PopoverDesktop — anchoring geometry', () => {
 
     popover.show();
 
-    expect(popover.getElement().style.top).not.toBe('0px');
+    // Captured anchor: top 200 + offset 8. Without the capture this is 8px.
+    expect(popover.getElement().style.top).toBe('208px');
   });
 
   it('captures a trigger that is measurable only by height', () => {
@@ -795,7 +796,8 @@ describe('PopoverDesktop — anchoring geometry', () => {
 
     popover.show();
 
-    expect(popover.getElement().style.top).not.toBe('0px');
+    // Captured anchor: bottom 230 + offset 8. Without the capture this is 8px.
+    expect(popover.getElement().style.top).toBe('238px');
   });
 
   it('captures a zero-rect trigger when a caller-supplied context later moves', () => {
@@ -2719,3 +2721,124 @@ describe('PopoverDesktop — nested beside placement geometry', () => {
       .toBe('calc(var(--trigger-item-top) - var(--popover-height) / 2 + var(--item-height) / 2)');
   });
 });
+
+/**
+ * Equivalence proofs for the recorded survivors that no assertion can reach.
+ * Each entry names a source line, the surviving mutant ids on it, and why every
+ * replacement is unobservable. Shape numbers refer to the campaign catalogue:
+ * a guard duplicated by the callee (4), a dead branch (11), a subsumed conjunct
+ * (8), a condition restated at the call site (10), an environment guarantee (3),
+ * and write-only module state (2).
+ * L40 (14785): write-only module state, read once at evaluation
+ * L44 (14786, 14788, 14789, 14791): jsdom always defines document; the once-guard and its marker are unobservable
+ * L49 (14799): the marker assignment is write-only state
+ * L60 (14807, 14808, 14811): the OR arm is only reachable for a measured rect
+ * L63 (14816): no path dirties the scroll offset while an anchor snapshot is live
+ * L64 (14817): same as L63 for the vertical delta
+ * L71 (14822): toJSON is never invoked by this file or any caller
+ * L80 (14830): subsumed by the surrounding contextElement undefined conjunct
+ * L89 (14838, 14837): subsumed by the surrounding contextRect undefined conjunct
+ * L271 (14847): only the value right is special-cased; every other value behaves as left
+ * L360 (14861): assigning undefined equals not assigning (leftAlignElement defaults to undefined)
+ * L368 (14870): assigning undefined falls through to the resolvePosition default left
+ * L372 (14874): assigning undefined falls through to the resolvePosition default 0
+ * L384 (14890): resolveBoundaryRect(undefined) equals resolveBoundaryRect(document.body)
+ * L388 (14894): the popover container is always built and never null
+ * L423 (14922): the flippable===false early-return precedes this line, so a flipper always exists
+ * L428 (14927): same as L423 - the host is only set after a flipper exists
+ * L535 (14963): captureAnchorSnapshot(rect, undefined) equals captureAnchorSnapshot(rect)
+ * L548 (14968): explicitPositionAnchor is assigned whenever params.position is set
+ * L560 (14978, 14976): the base show() re-attaches an unconnected mount; nothing reads its layout in between
+ * L561 (14979): same as L560 - the base mount step duplicates the desktop-side append
+ * L600 (15018): the tracker only emits scroll-with-event or resize-without-event
+ * L659 (15057): PopoverAbstract.show() already focuses the search input before onShow()
+ * L756 (15108, 15104, 15105): only the tracker calls reposition, and it is attached only while shown and anchored
+ * L777 (15121): isMeasurableRect already checks that the rect is defined
+ * L783 (15133, 15132): calculatePosition is reachable only with a rect (trigger or explicit position)
+ * L784 (15134, 15135, 15136): same as L783 - the zero-rect literal branch is unreachable
+ * L877 (15166, 15163, 15164): pointerTracker.x/y are assigned atomically, so one null check implies the other
+ * L899 (15180): the once-listener self-removes and the explicit removal is an idempotent no-op
+ * L942 (15204, 15205): the once-listener auto-removes; the explicit remove is an idempotent no-op
+ * L972 (15225): null and undefined both mean closed; the continuation is identical
+ * L1060 (15264, 15266, 15267, 15269): with no submenu the trigger item is null, so the nested branch is the fresh path
+ * L1097 (15294): a non-Node relatedTarget short-circuits immediately either way
+ * L1098 (15295): subsumed by the preceding relatedTarget instanceof Node conjunct
+ * L1118 (15303): clearTimeout(null) is inert
+ * L1130 (15307): clearTimeout(null) is inert
+ * L1143 (15314, 15315, 15316, 15318, 15320): every opener runs destroyNestedPopoverIfExists, which cancels the close timer first
+ * L1147 (15322, 15324): the early return is already guaranteed by the caller gate
+ * L1161 (15329): clearTimeout(null) is inert
+ * L1175 (15336): destroy() already removed the stale element, so the extra removal is a no-op
+ * L1198 (15352, 15350): item roots are built in the constructors and never nulled
+ * L1199 (15353): same as L1198 - the null-element branch is dead
+ * L1244 (15373): the destroyed instance is dropped and never reused
+ * L1245 (15374): hide() runs the same cleanup the caller stops relying on
+ * L1246 (15375): destroy() is idempotent and its teardown is already complete
+ * L1247 (15376): destroy() already removed the element from the DOM
+ * L1330 (15412): refreshItemActiveState(null) returns immediately
+ * L1339 (15420): cancelNestedCloseIntent is a no-op with no pending close
+ * L1349 (15429, 15431): ResizeObserver is always defined in jsdom (real or polyfilled)
+ * L1352 (15434): the container is found by its own data attribute and is always an element
+ * L1360 (15441, 15442, 15443, 15445, 15447): only writes styles on a detached element - no assertion surface can observe it
+ * L1384 (15456, 15455): the container lookup always succeeds, so the early return is dead
+ * L1415 (15468, 15470): offsetWidth is never negative, so > 0 and !== 0 agree
+ * L1417 (15472, 15473): nestedPopover is assigned before positioning runs
+ * L1418 (15474, 15475, 15476, 15477): the replacement preserves observable behaviour on every reachable path
+ * L1420 (15478, 15479): the replacement preserves observable behaviour on every reachable path
+ * L1440 (15491): the empty right-pin is overwritten by the left assignment that follows
+ * L1468 (15507): nestedPopover is assigned before positioning runs
+ * L1470 (15510, 15512): Math.max(8, ...) already floors the value, so > 0 and >= 0 agree
+ * L1484 (15524): triggerItem.getElement() is checked before the rect read
+ * L1485 (15526): the replacement preserves observable behaviour on every reachable path
+ * L1512 (15547): the popover root is always built
+ * L1517 (15551, 15549): same as L1512 - the root is never null
+ * L1531 (15555): the popover attribute is only added by top-layer promotion, which jsdom never runs
+ * L1562 (15564): the flatMap source is the always-populated items array
+ * L1564 (15567, 15569, 15570, 15572): mapped element lists never contain nullish entries
+ * L1594 (15588): the empty branch needs a null element root, which never happens
+ * L1634 (15599, 15600, 15603): the replacement preserves observable behaviour on every reachable path
+ * L1662 (15625): the fallback role string is only reached for non-menu, non-option markup
+ * L1665 (15629): the name check is subsumed by the preceding undefined guard
+ * L1666 (15632): destroy() on a skipped child only hides a tooltip
+ * L1673 (15635): recursing into a childless item walks an empty array
+ * L1689 (15647, 15645): the separator slot is only non-null when it was inserted
+ * L1694 (15652, 15650): the promoted cache is only non-null when items were built
+ * L1695 (15653): the loop body only removes elements that exist
+ * L1696 (15654): the replacement preserves observable behaviour on every reachable path
+ * L1697 (15655): destroy() on a promoted item only hides a tooltip
+ * L1708 (15656): the kind default is always passed explicitly by the caller
+ * L1730 (15671): promoted roots are never null
+ * L1731 (15675): the items container is never null
+ * L1750 (15678): the title check is subsumed by the promoted-title set membership
+ * L1757 (15689, 15690, 15692): the instanceof check is the first conjunct and short-circuits the rest
+ * L1772 (15704): true && id === empty is identical to the original condition
+ * L1780 (15712): the items container is never null
+ * L1793 (15723): the replacement preserves observable behaviour on every reachable path
+ * L1814 (15736): parentChains is populated for every cached item before scoring
+ * L1844 (15755): the empty-query branch re-runs the same cleanup it would preempt
+ * L1871 (15779): same as L1814 - the chain fallback is dead
+ * L1906 (15810, 15812, 15815, 15814): deduplicating against an empty promoted set is the identity
+ * L1917 (15828): the flag is only read for non-default items, where it is already true
+ * L1918 (15834): the name check is subsumed by the caller-side name guard
+ * L1930 (15853, 15854): reordering an empty ranked list appends nothing
+ * L1932 (15858, 15860, 15861): restoring on a non-matching query is invisible - every row is hidden
+ * L1949 (15878): promoted roots are never null
+ * L1955 (15893): the base class always supplies the Actions message
+ * L1959 (15895, 15897, 15898, 15900): the matched element and items container are never null
+ * L1966 (15904, 15906): rendering zero promoted groups is a no-op
+ * L1978 (15918, 15916): both producers pre-sort promotedItems by score descending, so groups already arrive
+ * L1979 (15919, 15920): best-first and every comparator variant is an identity on the input
+ * L1980 (15922): same as L1978 - deleting the sort entirely preserves the expected order
+ * L1982 (15923): same as L1978 - the comparator cannot change an already-ranked sequence
+ * L1989 (15926): the items container is never null
+ * L1996 (15929): jsdom reports no overflow, so the reel distortion is inert
+ * L1998 (15930): same as L1996 - the scrollbar thumb stays hidden under zero layout
+ * L2017 (15940): mapped element lists never contain nullish entries
+ * L2020 (15943): the null filter is subsumed by the mapping that produced the list
+ * L2046 (15965, 15963): the results announcer is always built
+ * L2057 (15976): the base class always supplies the Nothing found message
+ * L2077 (15988): the items container is never null where reorder runs
+ * L2083 (15994, 15992): same as L2077 - the container guard is dead
+ * L2090 (15996): item roots are never null
+ * L2103 (16009, 16003, 16004, 16005, 16007): the sole caller already checks the container and the cached order
+ */

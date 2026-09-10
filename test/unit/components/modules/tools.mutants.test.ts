@@ -107,6 +107,28 @@ class NamedBlockTune {
   public static isTune = true;
 }
 
+/**
+ * Block tool that records the config the module hands to its static prepare.
+ */
+class ConfigCapturingTool {
+  public static seen: Record<string, unknown> | null = null;
+
+  /**
+   * Records the tool config the module resolved for this tool.
+   * @param data - prepare payload built by the Tools module
+   */
+  public static prepare(data: { config: Record<string, unknown> }): void {
+    ConfigCapturingTool.seen = data.config;
+  }
+
+  /**
+   * Renders an empty holder.
+   */
+  public render(): HTMLElement {
+    return document.createElement('div');
+  }
+}
+
 describe('tools module — mutant coverage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -648,30 +670,147 @@ describe('tools module — mutant coverage', () => {
     });
   });
 
+  describe('tool config extraction', () => {
+    it('hands the tool its non-blok settings flattened over the nested config, and nothing else', async () => {
+      ConfigCapturingTool.seen = null;
+
+      const module = createModule({
+        tools: {
+          capture: {
+            class: ConfigCapturingTool as unknown as ToolConstructable,
+            inlineToolbar: false,
+            tunes: [],
+            shortcut: 'CMD+SHIFT+K',
+            toolbox: { title: 'Capture' },
+            config: { nestedOnly: 'nested' },
+            isInternal: false,
+            customOption: 42,
+          } as unknown as ToolSettings,
+        },
+      });
+
+      await module.prepare();
+
+      // Every key listed in BLOK_SETTINGS_KEYS must be withheld from the tool.
+      expect(Object.keys(ConfigCapturingTool.seen ?? {})).toStrictEqual([
+        'nestedOnly',
+        'customOption',
+      ]);
+      expect(ConfigCapturingTool.seen).toStrictEqual({
+        nestedOnly: 'nested',
+        customOption: 42,
+      });
+    });
+  });
+
+  describe('prepare metadata guard', () => {
+    /**
+     * A value that coerces to a registered tool name but is not a primitive
+     * string, so `typeof` cannot vouch for it. A tool's prepare receives the
+     * SAME object the module reads its `toolName` back from, so a tool can put
+     * this in place of its own name before the registration callbacks run.
+     * @param name - the registered name the value must coerce to
+     */
+    const nameLike = (name: string): { toString(): string } => ({ toString: (): string => name });
+
+    /**
+     * Block tool whose prepare replaces the metadata name with such a value.
+     */
+    class OpaqueNameTool {
+      /**
+       * Replaces the tool name with a name-like non-string.
+       * @param data - prepare payload built by the Tools module
+       */
+      public static prepare(data: { toolName: string }): void {
+        Reflect.set(data, 'toolName', nameLike('opaque'));
+      }
+
+      /**
+       * Renders an empty holder.
+       */
+      public render(): HTMLElement {
+        return document.createElement('div');
+      }
+    }
+
+    /**
+     * Block tool that does the same and then fails preparation.
+     */
+    class OpaqueNameRejectingTool {
+      /**
+       * Replaces the tool name with a name-like non-string, then rejects.
+       * @param data - prepare payload built by the Tools module
+       */
+      public static prepare(data: { toolName: string }): Promise<void> {
+        Reflect.set(data, 'toolName', nameLike('opaqueRejecting'));
+
+        return Promise.reject(new Error('prepare failed'));
+      }
+
+      /**
+       * Renders an empty holder.
+       */
+      public render(): HTMLElement {
+        return document.createElement('div');
+      }
+    }
+
+    it('registers neither a successful tool nor a failed one once the metadata name is not a string', async () => {
+      const module = createModule({
+        tools: {
+          opaque: OpaqueNameTool as unknown as ToolConstructable,
+          opaqueRejecting: OpaqueNameRejectingTool as unknown as ToolConstructable,
+        },
+      });
+
+      await module.prepare();
+
+      // The internal tools are the only survivors.
+      expect(Array.from(module.available.keys())).toStrictEqual([
+        'stub',
+        'delete',
+        'copyLink',
+        'convertTo',
+      ]);
+      expect(Array.from(module.unavailable.keys())).toStrictEqual([]);
+    });
+  });
+
   /*
-   * Proven equivalent — no test can observe these on the current source:
+   * MEASURED equivalent (swept, verdict "alive" for every one of these) —
+   * no test can observe them on the current source:
    *
-   * L175 `sequenceData.length === 0` (2 mutants): line 159 already threw unless
+   * L176 `sequenceData.length === 0` (2 mutants): line 160 already threw unless
    *   `Object.keys(toolsConfig).length > 0`, and getListOfPrepareFunctions maps
-   *   one entry per own key, so the length is never 0 here.
-   * L180 / L188 `!this.isToolPrepareData(data)` (4 mutants): the only caller
-   *   passes `callbackData`, which line 199 pins to `chainData.data` — always the
-   *   `{ toolName, config }` object built at line 450 — so the guard is never true.
-   * L619 `!toolsConfig` (2 mutants): validateTools is called only from prepare,
-   *   four lines after `this.config.tools` is assigned the object expandToolGroups
-   *   returned.
-   * L629 hasOwnProperty guard in validateTools (2 mutants): the only keys it
-   *   skips are inherited ones, and line 633 skips those again — `toolName in
+   *   one entry per own key of the very same object, so the length is never 0.
+   * L620 `!toolsConfig` in validateTools (2 mutants): its only caller reads
+   *   `this.config.tools` two lines after assigning it the object expandToolGroups
+   *   returned. Even a config whose `tools` accessor drops the write is dead here:
+   *   line 160 reads the same falsy value and throws first, and a `for…in` over
+   *   undefined iterates zero times, so the emptied guard is a no-op either way.
+   * L630 hasOwnProperty in validateTools (2 mutants): the only keys it can skip
+   *   are inherited ones, and line 634 skips those again — `toolName in
    *   internalTools` resolves through the same Object.prototype the key came from.
-   *   The "ignores an enumerable key inherited from Object.prototype" test above
-   *   drives that exact path: it kills the same guard at L361 and L665, and only
-   *   L629 stays alive because line 633 catches the key first.
-   * L690 `typeof candidate?.toolName === 'string'` (2 mutants): same single
-   *   caller as L180/L188, so `candidate` is never nullish and `toolName` is
-   *   always the string key from Object.entries.
-   * L698 / L699 `this.factory === null` (3 mutants): all three call sites run
-   *   after line 165 assigned the factory — toolPrepareMethodSuccess/Fallback from
-   *   inside prepare's queue, and updateToolConfig only past a registration check
-   *   that no tool can pass before prepare filled the collections.
+   *   The "ignores an enumerable key inherited from Object.prototype" test drives
+   *   that path and stays green under both mutants, which is what the sweep saw.
+   * L691 `candidate?.toolName` (1 mutant, OptionalChaining): both callers pass
+   *   `callbackData`, which line 200 pins to `chainData.data` — always the
+   *   `{ toolName, config }` object built in getListOfPrepareFunctions — or to
+   *   `{}`. It is never nullish, so dropping `?.` cannot change anything.
+   * L699 `this.factory === null` (3 mutants): all three call sites run after line
+   *   166 assigned the factory — toolPrepareMethodSuccess/Fallback from inside
+   *   prepare's queue, and updateToolConfig only past a registration check that no
+   *   tool can pass before prepare filled the collections. Confirmed by triage:
+   *   line 700 provably never executes, so the throw is unreachable.
+   *
+   * The two pairs at L181/L189 and the L691 `typeof` check are NOT equivalent —
+   * they are killed by the "prepare metadata guard" tests above. A tool's
+   * `prepare` receives the very object `handlePrepareSuccess` reads back, so it
+   * can leave a non-primitive name-like value there. Two traps met on the way:
+   * a plain number is invisible (the twin guard at L189 swallows the resulting
+   * TypeError, and the queue's `completed` getter reads `failure` before the
+   * catch handler sets it, so prepare() resolves anyway), and the value must
+   * coerce back to a registered name or `factory.get` throws instead of
+   * registering.
    */
 });

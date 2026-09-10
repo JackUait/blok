@@ -9,7 +9,7 @@
 // assertion fails on its own under machine load, and scoring on the process exit
 // code alone turns that into a kill nobody asserted.
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync, mkdtempSync, existsSync, rmSync, readdirSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, existsSync, rmSync, readdirSync, mkdirSync, statSync, utimesSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, basename } from 'node:path';
 
@@ -40,6 +40,22 @@ const BACKUP_DIR = '.mutation-state/sweep-backups';
 const STOP_FILE = '.mutation-state/sweep-stop';
 
 const backupPathFor = (source) => join(BACKUP_DIR, `${source.replace(/[/\\]/g, '__')}.orig`);
+
+/**
+ * Forces vite's transform cache to miss after a mutant is written.
+ *
+ * Many mutant splices preserve the file's byte length (`&&` -> `||`,
+ * `?? false` -> `?? true`, `''` -> `""`), and a rewrite that lands in the same
+ * clock second as the previous transform keeps the cache key identical — the
+ * next vitest run then executes the PREVIOUS source and scores a live verdict
+ * for a mutant the tests actually kill (measured on keyboard-handler.ts:
+ * 2026-09-10). An index-derived mtime cannot collide with any earlier key.
+ */
+const bustTransformCache = (source, index) => {
+  const stat = statSync(source);
+
+  utimesSync(source, stat.atime, stat.mtimeMs / 1000 - (index + 2) * 2);
+};
 
 const restoreAll = () => {
   if (!existsSync(BACKUP_DIR)) {
@@ -209,6 +225,7 @@ const main = () => {
       }
 
       writeFileSync(source, applyMutant(original, mutant));
+      bustTransformCache(source, index);
 
       const run = runTests(tests);
       const fresh = run.crashed

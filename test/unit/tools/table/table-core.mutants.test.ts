@@ -160,6 +160,14 @@ describe('TableGrid — mutation coverage', () => {
       });
     });
 
+    it('a width that already carries its unit is written verbatim, not suffixed with %', () => {
+      // createCol declares `number | string` for its width; every in-tree caller
+      // passes a number, so this is the only way the unit-carrying branch runs.
+      const table = grid.createGrid(1, 2, ['10px', '20px'] as unknown as number[]);
+
+      expect(colWidthsOf(table)).toEqual(['10px', '20px']);
+    });
+
     it('rows are flagged with a valueless attribute', () => {
       const table = grid.createGrid(1, 1);
 

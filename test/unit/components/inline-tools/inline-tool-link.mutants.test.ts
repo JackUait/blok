@@ -25,6 +25,7 @@ type LinkMenu = {
 };
 
 type Harness = {
+  tool: LinkInlineTool;
   menu: LinkMenu;
   wrapper: HTMLElement;
   input: HTMLInputElement;
@@ -152,6 +153,7 @@ const createHarness = (options: { link?: LinkConfig; translations?: Record<strin
   const suggestion = must<HTMLElement>(wrapper, '[data-link-suggestion]');
 
   return {
+    tool,
     menu,
     wrapper,
     input: must<HTMLInputElement>(wrapper, '[data-blok-testid="inline-tool-input"]'),
@@ -1567,5 +1569,170 @@ describe('LinkInlineTool — mutation coverage', () => {
 
       expect(() => harness.menu.children.onClose()).not.toThrow();
     });
+  });
+});
+
+/**
+ * The two branches the tool re-decides after a node handle is taken away.
+ *
+ * Every element handle lives in the private `nodes` table, typed `| null` and
+ * re-checked at each use, but the constructor fills all of them and nothing in
+ * the class ever empties one. These tests take a handle directly to prove the
+ * degradation contract those checks encode: with a node missing, the tool stays
+ * inert instead of reaching through the null. They are the only way to reach
+ * those guards — no user-reachable state produces a null handle.
+ */
+type ToolNodeKey =
+  | 'input'
+  | 'urlLabel'
+  | 'titleInput'
+  | 'titleLabel'
+  | 'inputWrapper'
+  | 'suggestion'
+  | 'error'
+  | 'errorMessage'
+  | 'divider'
+  | 'removeButton'
+  | 'button';
+
+const nullOutNodes = (harness: Harness, ...keys: ToolNodeKey[]): void => {
+  const nodes = (harness.tool as unknown as { nodes: Record<string, unknown> }).nodes;
+
+  for (const key of keys) {
+    nodes[key] = null;
+  }
+};
+
+describe('LinkInlineTool — a node handle taken away', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    document.body.innerHTML = EDITOR_HTML;
+    window.getSelection()?.removeAllRanges();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  it('opens without an input node', () => {
+    const harness = openOnPlainText();
+
+    nullOutNodes(harness, 'input');
+
+    expect(() => harness.menu.children.onOpen()).not.toThrow();
+  });
+
+  it('closes without an input node', () => {
+    const harness = openOnPlainText();
+
+    nullOutNodes(harness, 'input');
+
+    expect(() => harness.menu.children.onClose()).not.toThrow();
+  });
+
+  it('confirms from the suggestion row without an input node', () => {
+    const harness = openOnPlainText();
+
+    typeUrl(harness, 'example.com');
+    nullOutNodes(harness, 'input');
+
+    expect(listenerErrors(() => click(harness.suggestionRow))).toEqual([]);
+  });
+
+  it('ignores Enter without an input node', () => {
+    const harness = openOnPlainText();
+
+    nullOutNodes(harness, 'input');
+
+    expect(listenerErrors(() => pressKey(harness.input, 'Enter'))).toEqual([]);
+  });
+
+  it('skips the width pass without an input node', () => {
+    const harness = openOnPlainText();
+
+    nullOutNodes(harness, 'input');
+
+    expect(listenerErrors(() => typeUrl(harness, 'example.com'))).toEqual([]);
+  });
+
+  it('types and rejects a URL without an error region', () => {
+    const harness = openOnPlainText();
+
+    nullOutNodes(harness, 'error');
+
+    expect(listenerErrors(() => typeUrl(harness, 'javascript:alert(1)'))).toEqual([]);
+    expect(listenerErrors(() => pressKey(harness.input, 'Enter'))).toEqual([]);
+  });
+
+  it('types and rejects a URL without an error message span', () => {
+    const harness = openOnPlainText();
+
+    nullOutNodes(harness, 'errorMessage');
+
+    expect(listenerErrors(() => typeUrl(harness, 'javascript:alert(1)'))).toEqual([]);
+    expect(listenerErrors(() => pressKey(harness.input, 'Enter'))).toEqual([]);
+  });
+
+  it('types without a suggestion node', () => {
+    const harness = openOnPlainText();
+
+    nullOutNodes(harness, 'suggestion');
+
+    expect(listenerErrors(() => typeUrl(harness, 'example.com'))).toEqual([]);
+  });
+
+  it('closes without a suggestion node', () => {
+    const harness = openOnPlainText();
+
+    nullOutNodes(harness, 'suggestion');
+
+    expect(() => harness.menu.children.onClose()).not.toThrow();
+  });
+
+  it('rejects a URL without a suggestion node', () => {
+    const harness = openOnPlainText();
+
+    typeUrl(harness, 'javascript:alert(1)');
+    nullOutNodes(harness, 'suggestion');
+
+    expect(listenerErrors(() => pressKey(harness.input, 'Enter'))).toEqual([]);
+  });
+
+  it('opens without any of the edit-mode affordances', () => {
+    selectWithin(firstText(paragraph('para-one')), 0, 5);
+
+    const harness = createHarness();
+
+    nullOutNodes(harness, 'titleInput', 'urlLabel', 'titleLabel', 'divider', 'removeButton');
+
+    expect(() => harness.menu.children.onOpen()).not.toThrow();
+  });
+
+  it('does not reach through a field that vanished before the focus retry', () => {
+    vi.useFakeTimers();
+    selectWithin(firstText(paragraph('para-one')), 0, 5);
+
+    const harness = createHarness();
+
+    // The retry re-reads the handle a tick later, which is the only point where
+    // it can be gone: the first focus is what takes it away.
+    vi.spyOn(harness.input, 'focus').mockImplementation(() => {
+      nullOutNodes(harness, 'input');
+    });
+
+    harness.menu.children.onOpen();
+
+    expect(() => vi.runAllTimers()).not.toThrow();
+  });
+
+  it('rewrites the link title without a title field', () => {
+    const harness = openOnExistingLink();
+
+    nullOutNodes(harness, 'titleInput');
+
+    expect(listenerErrors(() => pressKey(harness.input, 'Enter'))).toEqual([]);
   });
 });

@@ -34,18 +34,29 @@ class HighlightStub {
   }
 }
 
-const createStub = (id: string, options: { parentId?: string | null; ownsChildren?: boolean } = {}): BlockStub => {
+const createStub = (
+  id: string,
+  options: { parentId?: string | null; ownsChildren?: boolean; inputs?: number } = {}
+): BlockStub => {
   const holder = document.createElement('div');
 
   holder.setAttribute(DATA_ATTR.element, '');
   holder.setAttribute('data-stub-id', id);
   holder.scrollIntoView = vi.fn();
 
-  const input = document.createElement('div');
+  const inputs: HTMLElement[] = [];
 
-  input.setAttribute('contenteditable', 'true');
-  input.textContent = `text of ${id}`;
-  holder.appendChild(input);
+  for (let index = 0; index < (options.inputs ?? 1); index += 1) {
+    const input = document.createElement('div');
+
+    input.setAttribute('contenteditable', 'true');
+    input.textContent = `text of ${id} #${index}`;
+    holder.appendChild(input);
+    inputs.push(input);
+  }
+
+  const first = inputs[0];
+  const last = inputs[inputs.length - 1];
 
   let selected = false;
 
@@ -59,12 +70,12 @@ const createStub = (id: string, options: { parentId?: string | null; ownsChildre
 
   Object.defineProperty(stub, 'firstInput', {
     configurable: true,
-    get: () => (holder.contains(input) ? input : undefined),
+    get: () => (holder.contains(first) ? first : undefined),
   });
 
   Object.defineProperty(stub, 'lastInput', {
     configurable: true,
-    get: () => (holder.contains(input) ? input : undefined),
+    get: () => (holder.contains(last) ? last : undefined),
   });
 
   Object.defineProperty(stub, 'selected', {
@@ -94,6 +105,14 @@ describe('CrossBlockSelection — mutation coverage', () => {
   let cellABlocks: BlockStub[];
   let cellBBlock: BlockStub;
   let tail: BlockStub;
+  /** A block one container deeper than cellA — never a direct child of cellA. */
+  let deepBlock: BlockStub;
+  /** A block with two editing hosts, so firstInput and lastInput differ. */
+  let paired: BlockStub;
+  /** A holder inside cellA that no block owns. */
+  let strayHolder: HTMLElement;
+  /** When set, replaces the repository's answer for a range gesture. */
+  let siblingRangeOverride: Block[] | null;
 
   let toolbarClose: ReturnType<typeof vi.fn>;
   let toolbarOpenMultiple: ReturnType<typeof vi.fn>;
@@ -105,6 +124,10 @@ describe('CrossBlockSelection — mutation coverage', () => {
   let isRectActivated: ReturnType<typeof vi.fn>;
   let removeAllRanges: ReturnType<typeof vi.fn>;
   let addRange: ReturnType<typeof vi.fn>;
+  let disableHoverForCooldown: ReturnType<typeof vi.fn>;
+  let resetBlockHoverState: ReturnType<typeof vi.fn>;
+  /** What the mocked `window.getSelection()` reports about the live selection. */
+  let selectionAnchors: { anchorNode: Node | null; focusNode: Node | null; anchorOffset: number };
   let caretPoints: Map<string, { node: Node; offset: number }>;
   let highlights: Map<string, unknown>;
   let selectionRange: Range | null;
@@ -217,6 +240,11 @@ describe('CrossBlockSelection — mutation coverage', () => {
     });
     caretPoints = new Map<string, { node: Node; offset: number }>();
     selectionRange = null;
+    selectionAnchors = { anchorNode: null,
+      focusNode: null,
+      anchorOffset: 0 };
+    disableHoverForCooldown = vi.fn();
+    resetBlockHoverState = vi.fn();
 
     p = ['p0', 'p1', 'p2', 'p3'].map((id) => createStub(id));
     toggle = createStub('toggle');
@@ -224,9 +252,11 @@ describe('CrossBlockSelection — mutation coverage', () => {
     table = createStub('table', { ownsChildren: true });
     cellABlocks = ['c0', 'c1', 'c2', 'c3'].map((id) => createStub(id, { parentId: 'table' }));
     cellBBlock = createStub('c4', { parentId: 'table' });
+    deepBlock = createStub('deep', { parentId: 'table' });
+    paired = createStub('pair', { inputs: 2 });
     tail = createStub('p4');
 
-    blocks = [...p, toggle, ...toggleChildren, table, ...cellABlocks, cellBBlock, tail];
+    blocks = [...p, toggle, ...toggleChildren, table, ...cellABlocks, cellBBlock, deepBlock, tail, paired];
 
     redactor = document.createElement('div');
     wrapper = document.createElement('div');
@@ -246,11 +276,28 @@ describe('CrossBlockSelection — mutation coverage', () => {
     cellB = document.createElement('div');
     cellA.setAttribute(DATA_ATTR.nestedBlocks, '');
     cellB.setAttribute(DATA_ATTR.nestedBlocks, '');
-    cellABlocks.forEach((block) => cellA.appendChild(block.holder));
+
+    /**
+     * Between c0 and c1 sit two holders that are NOT direct children of cellA:
+     * one owned by a deeper container, one owned by no block at all. A child
+     * range must never count either of them.
+     */
+    const deepContainer = document.createElement('div');
+
+    deepContainer.setAttribute(DATA_ATTR.nestedBlocks, '');
+    deepContainer.appendChild(deepBlock.holder);
+    strayHolder = document.createElement('div');
+    strayHolder.setAttribute(DATA_ATTR.element, '');
+    cellA.appendChild(cellABlocks[0].holder);
+    cellABlocks[0].holder.after(deepContainer);
+    deepContainer.after(cellABlocks[1].holder);
+    cellABlocks[1].holder.after(cellABlocks[2].holder, cellABlocks[3].holder, strayHolder);
     cellB.appendChild(cellBBlock.holder);
     table.holder.append(cellA, cellB);
+    siblingRangeOverride = null;
 
     redactor.appendChild(tail.holder);
+    redactor.appendChild(paired.holder);
     wrapper.appendChild(redactor);
     document.body.appendChild(wrapper);
     document.body.appendChild(toolbarWrapper);
@@ -286,7 +333,7 @@ describe('CrossBlockSelection — mutation coverage', () => {
         resolveToSelectableBlock: vi.fn((block: Block) => repository.resolveToSelectableBlock(block)),
         isSelectionUnit: vi.fn((block: Block) => repository.isSelectionUnit(block)),
         getSelectionSiblingRange: vi.fn(
-          (anchor: Block, target: Block) => repository.getSelectionSiblingRange(anchor, target)
+          (anchor: Block, target: Block) => siblingRangeOverride ?? repository.getSelectionSiblingRange(anchor, target)
         ),
       },
       BlockSelection: {
@@ -313,8 +360,8 @@ describe('CrossBlockSelection — mutation coverage', () => {
       },
       UI: {
         nodes: redactorHolder,
-        disableHoverForCooldown: vi.fn(),
-        resetBlockHoverState: vi.fn(),
+        disableHoverForCooldown,
+        resetBlockHoverState,
         get someToolbarOpened() {
           return uiState.someToolbarOpened;
         },
@@ -335,8 +382,11 @@ describe('CrossBlockSelection — mutation coverage', () => {
         return selectionRange === null ? 0 : 1;
       },
       getRangeAt: () => selectionRange,
-      anchorNode: null,
-      focusNode: null,
+      anchorNode: selectionAnchors.anchorNode,
+      focusNode: selectionAnchors.focusNode,
+      get anchorOffset() {
+        return selectionAnchors.anchorOffset;
+      },
       get isCollapsed() {
         return selectionRange === null;
       },
@@ -702,7 +752,7 @@ describe('CrossBlockSelection — mutation coverage', () => {
     });
 
     it('does nothing at the end of the document', () => {
-      blockManagerState.currentBlock = tail;
+      blockManagerState.currentBlock = paired;
 
       module.toggleBlockSelectedState(true);
 
@@ -1040,6 +1090,985 @@ describe('CrossBlockSelection — mutation coverage', () => {
       }).not.toThrow();
 
       expect(selectedIds()).toEqual(['p0', 'p2', 'p3', 'c1', 'c2']);
+    });
+
+    it('still steps the keyboard selection with no selection object to drop', () => {
+      blockManagerState.currentBlock = p[1];
+
+      expect(() => module.toggleBlockSelectedState(true)).not.toThrow();
+      expect(selectedIds()).toEqual(['p1', 'p2']);
+    });
+  });
+
+  describe('markDestroyed with a partial UI', () => {
+    it('survives a UI whose node registry is missing', () => {
+      const bare = new CrossBlockSelection({
+        config: {},
+        eventsDispatcher: {
+          on: vi.fn(),
+          off: vi.fn(),
+        } as unknown as CrossBlockSelection['eventsDispatcher'],
+      });
+
+      bare.state = { UI: {} } as unknown as CrossBlockSelection['Blok'];
+
+      expect(() => bare.markDestroyed()).not.toThrow();
+    });
+
+    it('survives a Blok state with no UI module at all', () => {
+      const bare = new CrossBlockSelection({
+        config: {},
+        eventsDispatcher: {
+          on: vi.fn(),
+          off: vi.fn(),
+        } as unknown as CrossBlockSelection['eventsDispatcher'],
+      });
+
+      bare.state = {} as unknown as CrossBlockSelection['Blok'];
+
+      expect(() => bare.markDestroyed()).not.toThrow();
+    });
+  });
+
+  describe('selectBlocksOfTextSelection — refused promotion', () => {
+    it('reports no promotion when the endpoints have no selectable range', () => {
+      selectAcross(p[1], p[2]);
+      siblingRangeOverride = [];
+
+      expect(module.selectBlocksOfTextSelection()).toBe(false);
+      expect(selectedIds()).toEqual([]);
+      expect(toolbarOpenMultiple).not.toHaveBeenCalled();
+    });
+
+    it('drops the paint that went with the range it replaced', () => {
+      selectAcross(p[1], p[2]);
+      module.syncTextSelectionHighlight();
+      expect(highlights.has(HIGHLIGHT_NAME)).toBe(true);
+
+      module.selectBlocksOfTextSelection();
+
+      expect(highlights.has(HIGHLIGHT_NAME)).toBe(false);
+    });
+  });
+
+  describe('syncTextSelectionHighlight — wrapper edge cases', () => {
+    it('survives a wrapper that is already gone', () => {
+      redactorHolder.wrapper = undefined;
+      selectAcross(p[1], p[2]);
+
+      expect(() => module.syncTextSelectionHighlight()).not.toThrow();
+    });
+
+    it('touches the wrapper attribute only on a transition', () => {
+      const setAttribute = vi.spyOn(wrapper, 'setAttribute');
+      const removeAttribute = vi.spyOn(wrapper, 'removeAttribute');
+
+      selectAcross(p[1], p[2]);
+      module.syncTextSelectionHighlight();
+      module.syncTextSelectionHighlight();
+
+      expect(setAttribute).toHaveBeenCalledTimes(1);
+      expect(removeAttribute).not.toHaveBeenCalled();
+    });
+
+    it('marks the wrapper with an empty attribute value', () => {
+      selectAcross(p[1], p[2]);
+
+      module.syncTextSelectionHighlight();
+
+      expect(wrapper.getAttribute(DATA_ATTR.crossSelection)).toBe('');
+    });
+
+    it('does not touch the wrapper attribute when there was nothing stamped', () => {
+      const removeAttribute = vi.spyOn(wrapper, 'removeAttribute');
+
+      expect(wrapper.hasAttribute(DATA_ATTR.crossSelection)).toBe(false);
+
+      module.syncTextSelectionHighlight();
+
+      expect(removeAttribute).not.toHaveBeenCalled();
+    });
+
+    it('paints one sub-range per editing host, not a placeholder', () => {
+      selectAcross(p[1], p[2]);
+
+      module.syncTextSelectionHighlight();
+
+      const painted = highlights.get(HIGHLIGHT_NAME) as HighlightStub;
+
+      expect(painted.ranges).toHaveLength(2);
+      expect(painted.ranges.map((range) => range.startContainer)).toEqual([textNodeOf(p[1]), inputOf(p[2])]);
+    });
+  });
+
+  describe('engine paint trust', () => {    it('leaves the paint to an engine that reports a spanning selection', () => {
+      selectionAnchors.anchorNode = textNodeOf(p[1]);
+      selectionAnchors.focusNode = textNodeOf(p[2]);
+      selectAcross(p[1], p[2]);
+
+      module.syncTextSelectionHighlight();
+
+      expect(highlights.has(HIGHLIGHT_NAME)).toBe(false);
+      expect(wrapper.hasAttribute(DATA_ATTR.crossSelection)).toBe(false);
+    });
+  });
+
+  /** A mouseover with no relatedTarget — the pointer entering the window. */
+  const mouseOverFromOutside = (block: BlockStub): void => {
+    inputOf(block).dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+  };
+
+  /** A mousedown on the redactor itself — inside the editor, in no block. */
+  const mouseDownOnRedactor = (init: MouseEventInit = {}): MouseEvent => {
+    const event = new MouseEvent('mousedown', {
+      bubbles: true,
+      button: 0,
+      ...init,
+    });
+
+    redactor.dispatchEvent(event);
+
+    return event;
+  };
+
+  /** Register a caret hit test at a point that resolves to any node. */
+  const atPointNode = (x: number, y: number, node: Node, offset: number): void => {
+    caretPoints.set(`${x},${y}`, { node,
+      offset });
+  };
+
+  const inputOfIndex = (block: BlockStub, index: number): HTMLElement => {
+    const inputs = block.holder.querySelectorAll('[contenteditable="true"]');
+    const input = inputs[index];
+
+    if (!(input instanceof HTMLElement)) {
+      throw new Error(`stub ${block.id} has no editable input #${index}`);
+    }
+
+    return input;
+  };
+
+  describe('mouseover with no related target', () => {
+    it('anchors on the last selected block', () => {
+      module.watchSelection(mouseDownOn(p[1]));
+
+      mouseOverFromOutside(p[3]);
+
+      expect(selectedIds()).toEqual(['p1', 'p2', 'p3']);
+    });
+  });
+
+  describe('mouseover side effects', () => {
+    it('closes the toolbar as a block-level range moves', () => {
+      module.watchSelection(mouseDownOn(p[1]));
+      toolbarClose.mockClear();
+
+      mouseOverOn(p[3], p[1]);
+
+      expect(toolbarClose).toHaveBeenCalled();
+    });
+
+    it('drops a stale child selection when the drag never reaches a range', () => {
+      module.watchSelection(mouseDownOn(cellABlocks[0]));
+      mouseOverOn(cellABlocks[1], cellABlocks[0]);
+      expect(cellABlocks[1].selected).toBe(true);
+
+      siblingRangeOverride = [];
+      mouseOverOn(p[0], cellABlocks[1]);
+
+      expect(selectedIds()).toEqual([]);
+    });
+  });
+
+  describe('mouseover during a text drag', () => {
+    beforeEach(async () => {
+      await module.prepare();
+      atPoint(10, 10, p[1], 1);
+      atPoint(20, 50, p[2], 2);
+    });
+
+    it('does not let the block path rewrite the range a text drag set', () => {
+      mouseDownOn(p[1], { clientX: 10,
+        clientY: 10 });
+      mouseMove(20, 50, p[2]);
+      mouseOverOn(p[3], p[2]);
+
+      expect(selectedIds()).toEqual([]);
+    });
+  });
+
+  describe('nested (same-container) drag — foreign holders', () => {
+    it('never counts a deeper container or an unowned holder as a child', () => {
+      module.watchSelection(mouseDownOn(cellABlocks[0]));
+      mouseOverOn(cellABlocks[1], cellABlocks[0]);
+
+      expect(selectedIds()).toEqual(['c0', 'c1']);
+      expect(deepBlock.selected).toBe(false);
+    });
+
+    it('closes both toolbars once a child range stands', () => {
+      module.watchSelection(mouseDownOn(cellABlocks[0]));
+      inlineToolbarClose.mockClear();
+      toolbarClose.mockClear();
+
+      mouseOverOn(cellABlocks[1], cellABlocks[0]);
+
+      expect(inlineToolbarClose).toHaveBeenCalled();
+      expect(toolbarClose).toHaveBeenCalled();
+    });
+  });
+
+  describe('Shift+DRAG side effects', () => {
+    beforeEach(async () => {
+      await module.prepare();
+    });
+
+    it('invalidates the selection cache and closes the toolbar as the range extends', () => {
+      blockManagerState.currentBlock = p[2];
+      p[0].selected = true;
+
+      mouseDownOn(p[2], { shiftKey: true });
+      clearCache.mockClear();
+      toolbarClose.mockClear();
+
+      mouseOverOn(p[3], p[2]);
+
+      expect(clearCache).toHaveBeenCalled();
+      expect(toolbarClose).toHaveBeenCalled();
+    });
+
+    it('reopens the multi-block toolbar and announces when the drag ends', () => {
+      blockManagerState.currentBlock = p[2];
+      mouseDownOn(p[2], { shiftKey: true });
+      mouseOverOn(p[3], p[2]);
+      disableHoverForCooldown.mockClear();
+      resetBlockHoverState.mockClear();
+      toolbarOpenMultiple.mockClear();
+      vi.mocked(announce).mockClear();
+
+      mouseUp();
+
+      expect(disableHoverForCooldown).toHaveBeenCalled();
+      expect(resetBlockHoverState).toHaveBeenCalled();
+      expect(toolbarOpenMultiple).toHaveBeenCalled();
+      expect(announce).toHaveBeenCalledWith('a11y.blocksSelected', { politeness: 'polite' });
+    });
+
+    it('does not reopen the toolbar when a Shift+CLICK never became a drag', () => {
+      blockManagerState.currentBlock = p[1];
+      mouseDownOn(p[3], { shiftKey: true });
+      disableHoverForCooldown.mockClear();
+      toolbarOpenMultiple.mockClear();
+      vi.mocked(announce).mockClear();
+
+      mouseUp();
+
+      expect(disableHoverForCooldown).not.toHaveBeenCalled();
+      expect(toolbarOpenMultiple).not.toHaveBeenCalled();
+      expect(announce).not.toHaveBeenCalled();
+    });
+
+    it('stands down while a block drag is in progress', () => {
+      blockManagerState.currentBlock = p[2];
+      mouseDownOn(p[2], { shiftKey: true });
+      dragState.isDragging = true;
+
+      mouseOverOn(p[3], p[2]);
+
+      expect(selectedIds()).toEqual(['p2']);
+    });
+  });
+
+  describe('Cmd+Shift+Click side effects', () => {
+    beforeEach(async () => {
+      await module.prepare();
+    });
+
+    it('invalidates the cache, closes the inline toolbar and opens the multi-block one', () => {
+      mouseDownOn(p[2], { shiftKey: true,
+        metaKey: true });
+
+      expect(clearCache).toHaveBeenCalled();
+      expect(inlineToolbarClose).toHaveBeenCalled();
+      expect(toolbarOpenMultiple).toHaveBeenCalled();
+    });
+
+    it('keeps the first toggled block as the anchor for later gestures', () => {
+      mouseDownOn(p[2], { shiftKey: true,
+        metaKey: true });
+      mouseDownOn(p[3], { shiftKey: true,
+        metaKey: true });
+
+      expect(module.isCrossBlockSelectionStarted).toBe(true);
+    });
+  });
+
+  describe('Shift+Click side effects', () => {
+    beforeEach(async () => {
+      await module.prepare();
+    });
+
+    it('closes the inline toolbar and opens the multi-block one', () => {
+      blockManagerState.currentBlock = p[1];
+
+      mouseDownOn(p[3], { shiftKey: true });
+
+      expect(inlineToolbarClose).toHaveBeenCalled();
+      expect(toolbarOpenMultiple).toHaveBeenCalled();
+    });
+
+    it('still clears the old selection when the press hit no block', () => {
+      selectAcross(p[1], p[2]);
+      clearSelection.mockClear();
+
+      redactor.dispatchEvent(new MouseEvent('mousedown', { bubbles: true,
+        button: 0,
+        shiftKey: true }));
+
+      expect(clearSelection).toHaveBeenCalled();
+    });
+
+    it('still clears the old selection when there is no block to anchor on', () => {
+      blockManagerState.currentBlock = undefined;
+      selectAcross(p[1], p[2]);
+      clearSelection.mockClear();
+
+      mouseDownOn(p[3], { shiftKey: true });
+
+      expect(clearSelection).toHaveBeenCalled();
+    });
+  });
+
+  describe('cross-block TEXT drag — re-assertion', () => {
+    beforeEach(async () => {
+      await module.prepare();
+      atPoint(10, 10, p[1], 1);
+    });
+
+    const rangeBetween = (from: BlockStub, fromOffset: number, to: BlockStub, toOffset: number): Range => {
+      const range = document.createRange();
+
+      range.setStart(textNodeOf(from), fromOffset);
+      range.setEnd(textNodeOf(to), toOffset);
+
+      return range;
+    };
+
+    const dragToSecondBlock = (): void => {
+      mouseDownOn(p[1], { clientX: 10,
+        clientY: 10 });
+      atPoint(20, 50, p[2], 2);
+      mouseMove(20, 50, p[2]);
+    };
+
+    it('leaves a selection that already matches the drag alone', () => {
+      dragToSecondBlock();
+      removeAllRanges.mockClear();
+
+      document.dispatchEvent(new Event('selectionchange'));
+
+      expect(removeAllRanges).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['start container', () => rangeBetween(p[0], 1, p[2], 2)],
+      ['start offset', () => rangeBetween(p[1], 0, p[2], 2)],
+      ['end container', () => rangeBetween(p[1], 1, p[1], 2)],
+      ['end offset', () => rangeBetween(p[1], 1, p[2], 1)],
+    ])('re-asserts when only the %s differs', (_component, build) => {
+      dragToSecondBlock();
+      removeAllRanges.mockClear();
+      selectionRange = build();
+
+      document.dispatchEvent(new Event('selectionchange'));
+
+      expect(removeAllRanges).toHaveBeenCalledTimes(1);
+    });
+
+    it('paints its own range once the engine has been caught clamping it', () => {
+      selectionAnchors.anchorNode = textNodeOf(p[1]);
+      selectionAnchors.focusNode = textNodeOf(p[2]);
+      dragToSecondBlock();
+
+      const clamped = rangeBetween(p[1], 0, p[1], 2);
+
+      selectionRange = clamped;
+      document.dispatchEvent(new Event('selectionchange'));
+
+      expect(highlights.has(HIGHLIGHT_NAME)).toBe(true);
+    });
+
+    it('does not latch a clamp for a rewrite that still spans two hosts', () => {
+      selectionAnchors.anchorNode = textNodeOf(p[1]);
+      selectionAnchors.focusNode = textNodeOf(p[2]);
+      dragToSecondBlock();
+
+      /** A different spanning range: another writer, not the engine's clamp. */
+      selectionRange = rangeBetween(p[0], 1, p[2], 2);
+      document.dispatchEvent(new Event('selectionchange'));
+
+      expect(selectionRange?.startContainer).toBe(textNodeOf(p[1]));
+      expect(highlights.has(HIGHLIGHT_NAME)).toBe(false);
+    });
+  });
+
+  describe('cross-block TEXT drag — anchor capture', () => {
+    beforeEach(async () => {
+      await module.prepare();
+    });
+
+    it('reads the anchor from the live selection once and reuses it', () => {
+      caretPoints.clear();
+      selectionAnchors.anchorNode = textNodeOf(p[1]);
+      selectionAnchors.anchorOffset = 2;
+      atPoint(20, 50, p[2], 2);
+
+      mouseDownOn(p[1], { clientX: 10,
+        clientY: 10 });
+      mouseMove(20, 50, p[2]);
+
+      expect(selectionRange?.startContainer).toBe(textNodeOf(p[1]));
+      expect(selectionRange?.startOffset).toBe(2);
+
+      /** The engine moves the caret; the drag must keep the anchor it captured. */
+      selectionAnchors.anchorNode = textNodeOf(p[0]);
+      selectionAnchors.anchorOffset = 3;
+      mouseMove(20, 50, p[2]);
+
+      expect(selectionRange?.startContainer).toBe(textNodeOf(p[1]));
+      expect(selectionRange?.startOffset).toBe(2);
+    });
+
+    it('falls back to the pointer origin when the selection reports no caret', () => {
+      caretPoints.clear();
+      atPoint(10, 10, p[1], 1);
+      atPoint(20, 50, p[2], 2);
+
+      mouseDownOn(p[1], { clientX: 10,
+        clientY: 10 });
+      mouseMove(20, 50, p[2]);
+
+      expect(selectionRange?.startContainer).toBe(textNodeOf(p[1]));
+      expect(selectionRange?.startOffset).toBe(1);
+    });
+  });
+
+  describe('cross-block TEXT drag — focus edge from geometry', () => {
+    beforeEach(async () => {
+      await module.prepare();
+    });
+
+    it('snaps to the end of a block that follows the anchor', () => {
+      caretPoints.clear();
+      atPoint(10, 10, p[1], 1);
+
+      mouseDownOn(p[1], { clientX: 10,
+        clientY: 10 });
+      mouseMove(20, 0, p[2]);
+
+      expect(selectionRange?.endContainer).toBe(inputOf(p[2]));
+      expect(selectionRange?.endOffset).toBe(1);
+    });
+
+    it('snaps to the start of a block that precedes the anchor', () => {
+      caretPoints.clear();
+      atPoint(10, 10, p[2], 1);
+
+      mouseDownOn(p[2], { clientX: 10,
+        clientY: 10 });
+      mouseMove(20, 0, p[0]);
+
+      expect(selectionRange?.startContainer).toBe(inputOf(p[0]));
+      expect(selectionRange?.startOffset).toBe(0);
+    });
+  });
+
+  describe('clear — a block that left the document', () => {    it('keeps the caret still when the anchor block is gone', () => {
+      module.watchSelection(mouseDownOn(p[0]));
+      mouseOverOn(p[2], p[0]);
+      expect(selectedIds()).toEqual(['p0', 'p1', 'p2']);
+
+      const [removed] = blocks.splice(0, 1);
+
+      try {
+        module.clear(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+        expect(setToBlock).not.toHaveBeenCalled();
+      } finally {
+        blocks.unshift(removed);
+      }
+    });
+
+    it('keeps the caret still when the target block is gone', () => {
+      module.watchSelection(mouseDownOn(p[0]));
+      mouseOverOn(p[2], p[0]);
+
+      const [removed] = blocks.splice(2, 1);
+
+      try {
+        module.clear(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+        expect(setToBlock).not.toHaveBeenCalled();
+      } finally {
+        blocks.splice(2, 0, removed);
+      }
+    });
+  });
+
+  describe('clear — arrow keys', () => {
+    const selectForwardRange = (): void => {
+      module.watchSelection(mouseDownOn(p[1]));
+      mouseOverOn(p[3], p[1]);
+    };
+
+    it('moves the caret to the end of the range on ArrowRight', () => {
+      selectForwardRange();
+
+      module.clear(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+
+      expect(setToBlock.mock.calls[0][0]).toBe(p[3]);
+      expect(setToBlock.mock.calls[0][1]).toBe('end');
+    });
+
+    it('moves the caret to the start of the range on ArrowLeft', () => {
+      selectForwardRange();
+
+      module.clear(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+
+      expect(setToBlock.mock.calls[0][0]).toBe(p[1]);
+      expect(setToBlock.mock.calls[0][1]).toBe('start');
+    });
+
+    it('moves the caret to the end of the range on ArrowDown when the anchor comes first', () => {
+      selectForwardRange();
+
+      module.clear(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+
+      expect(setToBlock.mock.calls[0][0]).toBe(p[3]);
+      expect(setToBlock.mock.calls[0][1]).toBe('end');
+    });
+  });
+
+  describe('mousedown on the editor but not on a block', () => {
+    beforeEach(async () => {
+      await module.prepare();
+    });
+
+    it('registers no drag watchers', () => {
+      module.watchSelection(mouseDownOnRedactor());
+
+      mouseOverOn(p[3], p[1]);
+
+      expect(selectedIds()).toEqual([]);
+    });
+
+    it('still clears the old selection on a modifier+Shift+Click', () => {
+      selectAcross(p[1], p[2]);
+      clearSelection.mockClear();
+
+      mouseDownOnRedactor({ shiftKey: true,
+        metaKey: true });
+
+      expect(clearSelection).toHaveBeenCalled();
+    });
+  });
+
+  describe('mousedown routing — refused and stood-down paths', () => {
+    beforeEach(async () => {
+      await module.prepare();
+    });
+
+    it('leaves the old selection to the outside-click path when the UI has no redactor', () => {
+      selectAcross(p[1], p[2]);
+      redactorHolder.redactor = undefined;
+      clearSelection.mockClear();
+
+      document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true,
+        button: 0 }));
+
+      expect(clearSelection).not.toHaveBeenCalled();
+    });
+
+    it('does not range-select while rectangle selection owns the gesture', () => {
+      isRectActivated.mockReturnValue(true);
+      blockManagerState.currentBlock = p[1];
+
+      mouseDownOn(p[3], { shiftKey: true });
+
+      expect(selectedIds()).toEqual([]);
+    });
+
+    it('does not toggle a block when the press was not a left click', () => {
+      mouseDownOn(p[3], { shiftKey: true,
+        metaKey: true,
+        button: 2 });
+
+      expect(selectedIds()).toEqual([]);
+    });
+
+    it('does not range-select a Shift+Click made with a non-left button', () => {
+      blockManagerState.currentBlock = p[1];
+
+      mouseDownOn(p[3], { shiftKey: true,
+        button: 2 });
+
+      expect(selectedIds()).toEqual([]);
+    });
+
+    it('clears the old text selection on a plain press inside the editor', () => {
+      selectAcross(p[1], p[2]);
+      clearSelection.mockClear();
+
+      mouseDownOn(p[1]);
+
+      expect(clearSelection).toHaveBeenCalled();
+    });
+  });
+
+  describe('a range that cannot be resolved', () => {
+    beforeEach(async () => {
+      await module.prepare();
+    });
+
+    it('opens no toolbar on a Shift+Click that resolves to no range', () => {
+      blockManagerState.currentBlock = p[1];
+      siblingRangeOverride = [];
+      toolbarOpenMultiple.mockClear();
+
+      mouseDownOn(p[3], { shiftKey: true });
+
+      expect(toolbarOpenMultiple).not.toHaveBeenCalled();
+      expect(selectedIds()).toEqual([]);
+    });
+
+    it('stops the keyboard step that resolves to no range', () => {
+      blockManagerState.currentBlock = p[1];
+      siblingRangeOverride = [];
+      toolbarClose.mockClear();
+
+      module.toggleBlockSelectedState(true);
+
+      expect(toolbarClose).not.toHaveBeenCalled();
+      expect(p[2].holder.scrollIntoView).not.toHaveBeenCalled();
+    });
+
+    it('extends the Shift+drag base selection but drops it when no range resolves', () => {
+      p[0].selected = true;
+      blockManagerState.currentBlock = p[2];
+
+      mouseDownOn(p[2], { shiftKey: true });
+      expect(selectedIds()).toEqual(['p2']);
+
+      siblingRangeOverride = [];
+      mouseOverOn(p[3], p[2]);
+
+      expect(selectedIds()).toEqual(['p2']);
+    });
+  });
+
+  describe('cross-block TEXT drag — a point outside every editing host', () => {
+    beforeEach(async () => {
+      await module.prepare();
+    });
+
+    it('falls back to the hovered block edge for a point with no host', () => {
+      caretPoints.clear();
+      atPoint(10, 10, p[1], 1);
+      atPointNode(20, 50, redactor, 0);
+
+      mouseDownOn(p[1], { clientX: 10,
+        clientY: 10 });
+      mouseMove(20, 50, p[2]);
+
+      expect(selectionRange?.endContainer).toBe(inputOf(p[2]));
+      expect(selectionRange?.endOffset).toBe(1);
+    });
+
+    it('anchors the edge on the hovered block last editing host', () => {
+      caretPoints.clear();
+      atPoint(10, 10, p[1], 1);
+
+      mouseDownOn(p[1], { clientX: 10,
+        clientY: 10 });
+      mouseMove(20, 50, paired);
+
+      expect(selectionRange?.endContainer).toBe(inputOfIndex(paired, 1));
+    });
+  });
+
+  describe('cross-block TEXT drag — stood-down gestures', () => {
+    beforeEach(async () => {
+      await module.prepare();
+      atPoint(10, 10, p[1], 1);
+      atPoint(20, 50, p[2], 2);
+    });
+
+    const startDrag = (): void => {
+      mouseDownOn(p[1], { clientX: 10,
+        clientY: 10 });
+    };
+
+    it('stands down while a block drag owns the gesture', () => {
+      startDrag();
+      dragState.isDragging = true;
+
+      mouseMove(20, 50, p[2]);
+
+      expect(selectionRange).toBeNull();
+    });
+
+    it('stands down while a toolbar is open', () => {
+      startDrag();
+      uiState.someToolbarOpened = true;
+
+      mouseMove(20, 50, p[2]);
+
+      expect(selectionRange).toBeNull();
+    });
+
+    it('stands down while rectangle selection owns the gesture', () => {
+      startDrag();
+      isRectActivated.mockReturnValue(true);
+
+      mouseMove(20, 50, p[2]);
+
+      expect(selectionRange).toBeNull();
+    });
+
+    it('does not re-run the block teardown on every move', () => {
+      startDrag();
+      atPoint(20, 50, p[2], 2);
+      mouseMove(20, 50, p[2]);
+
+      expect(inlineToolbarClose).toHaveBeenCalled();
+      expect(toolbarClose).toHaveBeenCalled();
+
+      inlineToolbarClose.mockClear();
+      toolbarClose.mockClear();
+      atPoint(30, 60, p[2], 0);
+      mouseMove(30, 60, p[2]);
+
+      expect(inlineToolbarClose).not.toHaveBeenCalled();
+      expect(toolbarClose).not.toHaveBeenCalled();
+    });
+
+    it('clears the paint when the gesture ends with nothing selected', () => {
+      startDrag();
+      atPoint(20, 50, p[2], 2);
+      mouseMove(20, 50, p[2]);
+      expect(highlights.has(HIGHLIGHT_NAME)).toBe(true);
+
+      selectionRange = null;
+      mouseUp();
+
+      expect(highlights.has(HIGHLIGHT_NAME)).toBe(false);
+    });
+  });
+
+  describe('cross-block TEXT drag — focus in another host of the same block', () => {
+    beforeEach(async () => {
+      await module.prepare();
+    });
+
+    it('drops the standing intent when the drag stays inside one block', () => {
+      caretPoints.clear();
+      atPointNode(10, 10, inputOfIndex(paired, 0).firstChild ?? inputOfIndex(paired, 0), 1);
+      atPointNode(20, 50, inputOfIndex(paired, 1), 0);
+
+      mouseDownOn(paired, { clientX: 10,
+        clientY: 10 });
+      mouseMove(20, 50, paired);
+
+      expect(selectionRange).toBeNull();
+    });
+  });
+
+  describe('cross-block TEXT drag — handed back to the block path', () => {
+    beforeEach(async () => {
+      await module.prepare();
+      atPoint(10, 10, p[1], 1);
+    });
+
+    const startDrag = (): void => {
+      mouseDownOn(p[1], { clientX: 10,
+        clientY: 10 });
+    };
+
+    it('does not select blocks when no text range was ever standing', () => {
+      p[2].holder.setAttribute(DATA_ATTR.keyboardOwner, '');
+      atPoint(20, 50, p[2], 2);
+
+      startDrag();
+      mouseMove(20, 50, p[2]);
+
+      expect(selectedIds()).toEqual([]);
+    });
+
+    it('opens the multi-block toolbar after the block path takes over', () => {
+      atPoint(20, 50, p[2], 2);
+      startDrag();
+      atPoint(5, 5, p[0], 1);
+      mouseMove(5, 5, p[0]);
+
+      inputOf(p[2]).remove();
+      atPoint(20, 90, p[3], 2);
+      toolbarOpenMultiple.mockClear();
+      mouseMove(20, 90, p[3]);
+      mouseUp();
+
+      expect(toolbarOpenMultiple).toHaveBeenCalled();
+    });
+
+    it('closes both toolbars and keeps the anchor when the takeover applies', () => {
+      atPoint(20, 50, p[2], 2);
+      startDrag();
+      atPoint(5, 5, p[0], 1);
+      mouseMove(5, 5, p[0]);
+
+      inputOf(p[2]).remove();
+      atPoint(20, 90, p[3], 2);
+      inlineToolbarClose.mockClear();
+      toolbarClose.mockClear();
+      mouseMove(20, 90, p[3]);
+
+      expect(inlineToolbarClose).toHaveBeenCalled();
+      expect(toolbarClose).toHaveBeenCalled();
+    });
+
+    it('drops the child selection and paints nothing when no range resolves', () => {
+      atPoint(20, 50, p[2], 2);
+      startDrag();
+      atPoint(5, 5, p[0], 1);
+      mouseMove(5, 5, p[0]);
+
+      cellABlocks[0].selected = true;
+      inputOf(p[2]).remove();
+      atPoint(20, 90, p[3], 2);
+      siblingRangeOverride = [];
+      toolbarClose.mockClear();
+      mouseMove(20, 90, p[3]);
+
+      expect(cellABlocks[0].selected).toBe(false);
+      expect(toolbarClose).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when both endpoints resolve to the same container', () => {
+      caretPoints.clear();
+      atPoint(10, 10, cellABlocks[0], 1);
+      atPointNode(20, 50, inputOf(cellABlocks[1]), 0);
+      cellABlocks[1].holder.setAttribute(DATA_ATTR.keyboardOwner, '');
+
+      inputOf(cellABlocks[0]).dispatchEvent(new MouseEvent('mousedown', {
+        bubbles: true,
+        button: 0,
+        clientX: 10,
+        clientY: 10,
+      }));
+      mouseMove(20, 50, cellABlocks[1]);
+
+      expect(selectedIds()).toEqual([]);
+    });
+
+    it('does nothing when a standing text range ends on its own container', () => {
+      caretPoints.clear();
+      atPoint(10, 10, cellABlocks[0], 1);
+      atPointNode(20, 50, inputOf(cellABlocks[1]), 0);
+
+      inputOf(cellABlocks[0]).dispatchEvent(new MouseEvent('mousedown', {
+        bubbles: true,
+        button: 0,
+        clientX: 10,
+        clientY: 10,
+      }));
+      mouseMove(20, 50, cellABlocks[1]);
+      expect(selectionRange).not.toBeNull();
+
+      /** The range is now illegal, but both ends resolve to the table. */
+      cellABlocks[1].holder.setAttribute(DATA_ATTR.keyboardOwner, '');
+      mouseMove(20, 50, cellABlocks[1]);
+
+      expect(selectedIds()).toEqual([]);
+    });
+  });
+
+  describe('nested (same-container) drag — selection bookkeeping', () => {
+    it('invalidates the cache once the child range stands', () => {
+      module.watchSelection(mouseDownOn(cellABlocks[0]));
+      clearCache.mockClear();
+
+      mouseOverOn(cellABlocks[1], cellABlocks[0]);
+
+      expect(clearCache).toHaveBeenCalled();
+    });
+  });
+
+  describe('text drag — deselection bookkeeping', () => {
+    beforeEach(async () => {
+      await module.prepare();
+      atPoint(10, 10, p[1], 1);
+      atPoint(20, 50, p[2], 2);
+    });
+
+    const startDrag = (): void => {
+      mouseDownOn(p[1], { clientX: 10,
+        clientY: 10 });
+    };
+
+    it('invalidates the cache when a block selection has to be dropped', () => {
+      p[0].selected = true;
+      startDrag();
+      clearCache.mockClear();
+
+      mouseMove(20, 50, p[2]);
+
+      expect(clearCache).toHaveBeenCalled();
+      expect(selectedIds()).toEqual([]);
+    });
+
+    it('does not invalidate the cache when no block was selected', () => {
+      startDrag();
+      clearCache.mockClear();
+
+      mouseMove(20, 50, p[2]);
+
+      expect(clearCache).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('nested child cleanup', () => {
+    it('clears only selected children, and only when there are some', () => {
+      module.watchSelection(mouseDownOn(cellABlocks[0]));
+      mouseOverOn(cellABlocks[1], cellABlocks[0]);
+      p[3].selected = true;
+
+      siblingRangeOverride = [];
+      clearCache.mockClear();
+      mouseOverOn(p[0], cellABlocks[1]);
+
+      expect(selectedIds()).toEqual(['p3']);
+      expect(clearCache).toHaveBeenCalled();
+    });
+
+    it('leaves the cache alone when no child block is selected', () => {
+      module.watchSelection(mouseDownOn(cellABlocks[0]));
+      siblingRangeOverride = [];
+      clearCache.mockClear();
+
+      mouseOverOn(p[0], cellABlocks[0]);
+
+      expect(clearCache).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('block-path mouseup bookkeeping', () => {
+    it('disables hover and resets the hover state', () => {
+      module.watchSelection(mouseDownOn(p[1]));
+      mouseOverOn(p[3], p[1]);
+      disableHoverForCooldown.mockClear();
+      resetBlockHoverState.mockClear();
+
+      mouseUp();
+
+      expect(disableHoverForCooldown).toHaveBeenCalled();
+      expect(resetBlockHoverState).toHaveBeenCalled();
     });
   });
 });

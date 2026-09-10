@@ -343,6 +343,50 @@ describe('I18n module — mutation coverage', () => {
 
       expect(warn).not.toHaveBeenCalled();
     });
+
+    it('routes config.i18n.messages into the store t() reads', async () => {
+      const { i18n } = createHarness({ i18n: { messages: { 'toolNames.heading': 'Config heading' } } });
+
+      await i18n.prepare();
+
+      expect(i18n.t('toolNames.heading')).toBe('Config heading');
+      // Untouched keys still come from the base English bundle.
+      expect(i18n.t('toolNames.quote')).toBe('Quote');
+    });
+
+    it('detects the browser locale for config.i18n.locale "auto"', async () => {
+      vi.stubGlobal('navigator', { languages: ['ru-RU'], language: 'ru-RU' });
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const { i18n } = createHarness({ i18n: { locale: 'auto' } });
+
+      await i18n.prepare();
+
+      expect(i18n.getLocale()).toBe('ru');
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('treats an empty locale tag as unsupported, not as "auto"', async () => {
+      vi.stubGlobal('navigator', { languages: ['ru-RU'], language: 'ru-RU' });
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const { i18n } = createHarness({ i18n: { locale: '', defaultLocale: 'fr' } });
+
+      await i18n.prepare();
+
+      expect(i18n.getLocale()).toBe('fr');
+      expect(warn).toHaveBeenCalledWith(
+        'Unsupported locale "" in config.i18n.locale. Falling back to "fr".'
+      );
+    });
+  });
+
+  describe('direction lookup', () => {
+    it('resolves the direction of any locale without changing the active one', () => {
+      const { i18n } = createHarness();
+
+      expect(i18n.getDirectionForLocale('ar')).toBe('rtl');
+      expect(i18n.getDirectionForLocale('fr')).toBe('ltr');
+      expect(i18n.getLocale()).toBe('en');
+    });
   });
 
   describe('browser locale detection', () => {
@@ -368,6 +412,18 @@ describe('I18n module — mutation coverage', () => {
 
     it('falls back to the configured default when nothing matches', async () => {
       vi.stubGlobal('navigator', { languages: ['xx', 'yy'], language: 'xx' });
+
+      const { i18n } = createHarness({ i18n: { defaultLocale: 'fr' } });
+
+      await i18n.prepare();
+
+      expect(i18n.getLocale()).toBe('fr');
+    });
+
+    it('uses the default locale in a runtime that has no navigator at all', async () => {
+      // A server-side run: the global is genuinely absent, so `navigator.languages`
+      // would be a TypeError rather than a miss.
+      vi.stubGlobal('navigator', undefined);
 
       const { i18n } = createHarness({ i18n: { defaultLocale: 'fr' } });
 

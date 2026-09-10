@@ -32,6 +32,8 @@ interface BlockOptions {
   /** Set to null to model a block whose editing host is gone. */
   lastInput?: null;
   firstInput?: null;
+  /** Models a block whose holder was never mounted. */
+  holderGone?: boolean;
 }
 
 interface BlockFixture {
@@ -101,6 +103,10 @@ const createBlockFixture = (options: BlockOptions): BlockFixture => {
     })),
   } as unknown as Block;
 
+  if (options.holderGone === true) {
+    (block as unknown as { holder?: HTMLElement }).holder = undefined;
+  }
+
   return {
     block,
     holder,
@@ -147,6 +153,8 @@ interface HarnessOptions {
   insertedBlock?: Block;
   /** Replaces the faithful index → block lookup for the vanishing-block case. */
   getBlockByIndex?: (index: number) => Block | undefined;
+  /** Replaces the default index lookup, for blocks the store cannot place at all. */
+  getBlockIndex?: (block: Block) => number | undefined;
   /** Runs before each `update` resolves, to model DOM changes landing mid-loop. */
   onUpdate?: (block: Block) => void;
 }
@@ -203,7 +211,7 @@ const createHarness = (options: HarnessOptions) => {
       blocks,
       currentBlock: blocks[0],
       // Mirrors repository.getBlockIndex: a number, -1 when the block is unknown.
-      getBlockIndex: vi.fn((block: Block) => blocks.indexOf(block)),
+      getBlockIndex: vi.fn(options.getBlockIndex ?? ((block: Block) => blocks.indexOf(block))),
       getBlockByIndex,
       getBlockById: vi.fn((id: string) => blocks.find((block) => block.id === id)),
       getBlock,
@@ -1195,5 +1203,92 @@ describe('BlockSelectionKeys — replaceCrossBlockTextSelection', () => {
 
     expect(harness.mocks.setCurrentBlockByChildNode).not.toHaveBeenCalled();
     expect(harness.mocks.setToInput).not.toHaveBeenCalled();
+  });
+});
+
+describe('BlockSelectionKeys — a store that cannot place a selected list item', () => {
+  it('refuses to re-depth a list item the store has no index for', async () => {
+    const listItem = createBlock({ id: 'li-target', depth: 0, selected: true });
+    const paragraph = createBlock({ id: 'para', name: 'paragraph', selected: true });
+    const harness = createHarness({
+      blocks: [listItem, paragraph],
+      // Only the list item is unplaceable; the paragraph keeps its real index.
+      getBlockIndex: (block) => (block === listItem ? undefined : [listItem, paragraph].indexOf(block)),
+    });
+
+    harness.keys.handleIndent(keyboardEvent({ key: 'Tab' }));
+
+    await flushAsync();
+
+    // No index means no predecessor to compare against, so the depth pass is refused.
+    // An unplaceable index is filtered out of the pass, so a pass that RUNS is
+    // visible only in its trailing cache clear, never in an update call.
+    expect(harness.mocks.clearCache).not.toHaveBeenCalled();
+    expect(harness.mocks.update).not.toHaveBeenCalled();
+    // The structural half is decided independently and still moves.
+    expect(harness.mocks.setBlockParent).toHaveBeenCalledWith(paragraph, 'li-target');
+  });
+});
+
+describe('BlockSelectionKeys — a list block whose holder never mounted', () => {
+  it('treats a holderless list item as having no checkbox', async () => {
+    const holderless = createBlock({ id: 'li-holderless', holderGone: true, selected: true });
+    const todo = createBlock({ id: 'todo', checkbox: 'unchecked', selected: true });
+    const harness = createHarness({ blocks: [holderless, todo] });
+    const event = keyboardEvent({ key: 'Enter', metaKey: true });
+
+    const handled = harness.keys.handleToggleCheckbox(event);
+
+    await flushAsync();
+
+    // The unreadable item is skipped, not fatal: the checklist item beside it toggles.
+    expect(handled).toBe(true);
+    expect(harness.mocks.update).toHaveBeenCalledTimes(1);
+    expect(harness.mocks.update).toHaveBeenCalledWith(todo, { checked: true });
+  });
+
+  it('reads a holderless list item as depth 0 instead of failing', async () => {
+    const holderless = createBlock({ id: 'li-holderless', holderGone: true, selected: true });
+    const paragraph = createBlock({ id: 'para', name: 'paragraph', selected: true });
+    const harness = createHarness({ blocks: [holderless, paragraph] });
+
+    harness.keys.handleIndent(keyboardEvent({ key: 'Tab' }));
+
+    await flushAsync();
+
+    // A missing holder has no depth marker, so the item indents from the root.
+    expect(harness.mocks.update).toHaveBeenCalledWith(holderless, expect.objectContaining({ depth: 1 }));
+  });
+});
+
+describe('BlockSelectionKeys — handleToggleCheckbox modifiers and payload', () => {
+  it('leaves a plain Enter to the browser when a checklist item is selected', async () => {
+    const todo = createBlock({ id: 'todo', checkbox: 'unchecked', selected: true });
+    const harness = createHarness({ blocks: [todo] });
+    const event = keyboardEvent({ key: 'Enter' });
+
+    const handled = harness.keys.handleToggleCheckbox(event);
+
+    await flushAsync();
+
+    // Without Cmd/Ctrl the key is a block split, never a checkbox toggle.
+    expect(handled).toBe(false);
+    expect(harness.mocks.update).not.toHaveBeenCalled();
+    expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('flips the rendered checkbox state into the update payload and consumes the key', async () => {
+    const todo = createBlock({ id: 'todo', checkbox: 'unchecked', selected: true });
+    const harness = createHarness({ blocks: [todo] });
+    const event = keyboardEvent({ key: 'Enter', metaKey: true });
+
+    const handled = harness.keys.handleToggleCheckbox(event);
+
+    await flushAsync();
+
+    // The toggled state is the negation of what the checkbox renders.
+    expect(harness.mocks.update).toHaveBeenCalledWith(todo, { checked: true });
+    expect(handled).toBe(true);
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
   });
 });

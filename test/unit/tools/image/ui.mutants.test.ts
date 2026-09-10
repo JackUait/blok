@@ -2304,3 +2304,305 @@ describe('openLightbox wheel zoom', () => {
     expect(displayEl().style.transform).not.toBe('translate(0px, 0px) scale(1.5625)');
   });
 });
+
+/**
+ * Collects the exceptions jsdom routes to `window`'s error event instead of
+ * rethrowing out of `dispatchEvent`. An exception thrown inside an event
+ * listener does NOT fail a test on its own, so the only way to assert
+ * "this handler does not blow up" is to record them.
+ */
+function listenerErrors(run: () => void): string[] {
+  const errors: string[] = [];
+  const onError = (event: ErrorEvent): void => {
+    errors.push(String(event.error));
+    event.preventDefault();
+  };
+
+  window.addEventListener('error', onError);
+  try {
+    run();
+  } finally {
+    window.removeEventListener('error', onError);
+  }
+
+  return errors;
+}
+
+/** Runs `install` with `document.activeElement` faked, then restores it. */
+function withActiveElement(value: unknown, install: () => (() => void)): () => void {
+  const descriptor = Object.getOwnPropertyDescriptor(document, 'activeElement');
+
+  Object.defineProperty(document, 'activeElement', { configurable: true, get: () => value });
+  try {
+    return install();
+  } finally {
+    if (descriptor) {
+      Object.defineProperty(document, 'activeElement', descriptor);
+    } else {
+      Reflect.deleteProperty(document, 'activeElement');
+    }
+  }
+}
+
+const sequenceItems = [
+  { url: 'https://x/one.png', alt: 'one', fileName: 'one.png' },
+  { url: 'https://x/two.png', alt: 'two', fileName: 'two.png' },
+  { url: 'https://x/three.png', alt: 'three', fileName: 'three.png' },
+];
+
+describe('openLightbox arrows at the ends of the sequence', () => {
+  it('does not walk off the start of the sequence on ArrowLeft', () => {
+    open({ url: sequenceItems[0].url, navigation: { items: sequenceItems, startIndex: 0 } });
+
+    expect(listenerErrors(() => {
+      simulateKeydown(document, 'ArrowLeft');
+    })).toEqual([]);
+  });
+
+  it('does not walk off the end of the sequence on ArrowRight', () => {
+    open({ url: sequenceItems[2].url, navigation: { items: sequenceItems, startIndex: 2 } });
+
+    expect(listenerErrors(() => {
+      simulateKeydown(document, 'ArrowRight');
+    })).toEqual([]);
+  });
+});
+
+describe('openLightbox chrome hit testing', () => {
+  it('treats a non-Node event target as outside the lightbox chrome', () => {
+    open({ url: 'https://x/a.png' });
+
+    const dialog = dialogEl();
+    const reachedBody = vi.fn();
+
+    document.body.addEventListener('mousedown', reachedBody);
+
+    const event = new MouseEvent('mousedown', { bubbles: true });
+
+    // An EventTarget that is not a Node (window, XHR, AbortSignal) is a legal
+    // dispatch target, so the guard has to decide about it.
+    Object.defineProperty(event, 'target', { value: 'not-a-node' });
+    dialog.dispatchEvent(event);
+
+    document.body.removeEventListener('mousedown', reachedBody);
+
+    expect(reachedBody).not.toHaveBeenCalled();
+  });
+});
+
+describe('openLightbox origin retargeting', () => {
+  it('leaves a detached origin thumbnail untouched when navigating', () => {
+    const detached = document.createElement('div');
+    const items = [
+      { url: 'https://x/a.png', origin: detached },
+      { url: 'https://x/b.png', origin: detached },
+    ];
+
+    open({ url: items[0].url, navigation: { items, startIndex: 0 } });
+    action(navEl(), 'lightbox-next').click();
+
+    expect(detached.style.opacity).toBe('');
+  });
+});
+
+describe('openLightbox focus restore', () => {
+  it('closes when the document has no focused element to hand focus back to', () => {
+    const close = withActiveElement(null, () => open({ url: 'https://x/a.png' }));
+
+    expect(() => {
+      close();
+      flushAnimations();
+    }).not.toThrow();
+  });
+
+  it('closes when the previously focused element cannot take focus back', () => {
+    const focusless = document.createElement('div');
+
+    Object.defineProperty(focusless, 'focus', { configurable: true, value: undefined });
+
+    const close = withActiveElement(focusless, () => open({ url: 'https://x/a.png' }));
+
+    expect(() => {
+      close();
+      flushAnimations();
+    }).not.toThrow();
+  });
+});
+
+describe('closeWithFlip backdrop fade', () => {
+  it('skips the backdrop fade when the backdrop cannot animate', () => {
+    const origin = document.createElement('img');
+
+    document.body.appendChild(origin);
+    planRect((el) => el === origin, { left: 0, top: 0, width: 120, height: 80 });
+
+    const close = open({ url: 'https://x/a.png', origin });
+    const backdrop = backdropEl();
+
+    Object.defineProperty(backdrop, 'animate', { configurable: true, value: undefined });
+
+    expect(() => {
+      close();
+    }).not.toThrow();
+  });
+});
+
+describe('openLightbox pointer handling', () => {
+  it('captures the pointer when a drag starts so moves keep arriving', () => {
+    open({ url: 'https://x/a.png' });
+
+    const dialog = dialogEl();
+    const capture = vi.fn();
+
+    Object.defineProperty(dialog, 'setPointerCapture', { configurable: true, value: capture });
+    dialog.dispatchEvent(pointer('pointerdown', 20, 30));
+
+    expect(capture).toHaveBeenCalledWith(1);
+  });
+
+  it('ignores a pointer move that never started a drag', () => {
+    planDisplayRect({ width: 800, height: 600 });
+    open({ url: 'https://x/a.png' });
+
+    const dialog = dialogEl();
+
+    dialog.dispatchEvent(pointer('pointermove', 100, 100));
+
+    expect(dialog.classList.contains('is-dragging')).toBe(false);
+    expect(displayEl().style.transform).toBe('translate(0px, 0px) scale(1)');
+  });
+});
+
+describe('lightbox toolbar chrome', () => {
+  it('gives the toolbar bar its own class', () => {
+    open({ url: 'https://x/a.png' });
+
+    expect(toolbarEl().className).toBe('blok-image-lightbox__bar');
+  });
+
+  it('makes every toolbar control a real button', () => {
+    open({ url: 'https://x/a.png' });
+
+    expect(action(toolbarEl(), 'zoom-in').type).toBe('button');
+    expect(action(toolbarEl(), 'lightbox-collapse').type).toBe('button');
+  });
+
+  it('keeps a toolbar control click from reaching the toolbar itself', () => {
+    open({ url: 'https://x/a.png' });
+
+    const bar = toolbarEl();
+    const reachedBar = vi.fn();
+
+    bar.addEventListener('click', reachedBar);
+    action(bar, 'zoom-in').click();
+    bar.removeEventListener('click', reachedBar);
+
+    expect(reachedBar).not.toHaveBeenCalled();
+  });
+
+  it('names the tooltip wrapper and keeps the label ahead of the shortcut', () => {
+    open({ url: 'https://x/a.png' });
+
+    const content = hoverArg(action(toolbarEl(), 'zoom-out'), 1);
+
+    if (!(content instanceof HTMLElement)) {
+      throw new Error('the zoom-out tooltip is not an element');
+    }
+
+    expect(content.className).toBe('blok-image-lightbox-tooltip');
+    expect(content.textContent).toBe('Zoom out−');
+  });
+
+  it('anchors the navigation tooltips to the right of their buttons', () => {
+    open({ url: 'https://x/a.png', navigation: { items: sequenceItems, startIndex: 0 } });
+
+    expect(hoverArg(action(navEl(), 'lightbox-prev'), 2)).toEqual({ placement: 'right' });
+    expect(hoverArg(action(navEl(), 'lightbox-next'), 2)).toEqual({ placement: 'right' });
+  });
+});
+
+describe('renderOverlay chrome', () => {
+  it('gives the overlay root its own class', () => {
+    expect(renderOverlay(overlayOptions()).className).toBe('blok-image-toolbar');
+  });
+
+  it('hides both toolbar dividers from assistive tech', () => {
+    const root = renderOverlay(overlayOptions());
+    const dividers = [...root.querySelectorAll('.blok-image-toolbar__divider')];
+
+    expect(dividers.map((divider) => divider.getAttribute('aria-hidden'))).toEqual(['true', 'true']);
+  });
+});
+
+describe('alignment popover keyboard', () => {
+  function mountOpenPopover(): HTMLElement {
+    const toolRoot = document.createElement('div');
+
+    toolRoot.setAttribute('data-blok-tool', 'image');
+    const root = renderOverlay(overlayOptions());
+
+    toolRoot.appendChild(root);
+    document.body.appendChild(toolRoot);
+    action(root, 'align-trigger').click();
+
+    return required(root.querySelector<HTMLElement>('[data-role="align-popover"]'), 'popover');
+  }
+
+  it('leaves a non-Escape key alone while the popover is open', () => {
+    const popover = mountOpenPopover();
+
+    simulateKeydown(document, 'a');
+
+    expect(popover.hidden).toBe(false);
+  });
+
+  it('leaves a non-Escape key to the editor while the popover is open', () => {
+    mountOpenPopover();
+
+    const reachedWindow = vi.fn();
+
+    window.addEventListener('keydown', reachedWindow);
+    simulateKeydown(document, 'a');
+    window.removeEventListener('keydown', reachedWindow);
+
+    expect(reachedWindow).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('isTinyImage non-positive intrinsics', () => {
+  it('refuses to treat a non-positive natural width as tiny', () => {
+    expect(isTinyImage(-100, 10, 800)).toBe(false);
+  });
+});
+
+describe('wheel zoom ratio anchoring', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('keeps the image pixel under the cursor fixed across consecutive ticks', () => {
+    planRect((el) => el.classList.contains('blok-image-lightbox'), { left: 0, top: 0, width: 1000, height: 800 });
+    planDisplayRect({ width: 800, height: 600 });
+    open({ url: 'https://x/a.png' });
+
+    const dialog = dialogEl();
+
+    dialog.dispatchEvent(wheel(-100, { clientX: 700, clientY: 600 }));
+    dialog.dispatchEvent(wheel(-100, { clientX: 700, clientY: 600 }));
+
+    const transform = displayEl().style.transform;
+    const match = /^translate\((-?[\d.]+)px, (-?[\d.]+)px\) scale\(([\d.]+)\)$/.exec(transform);
+
+    if (!match) {
+      throw new Error(`unexpected transform: ${transform}`);
+    }
+
+    expect(Number(match[1])).toBeCloseTo(-112.5, 4);
+    expect(Number(match[2])).toBeCloseTo(-112.5, 4);
+    expect(Number(match[3])).toBeCloseTo(1.5625, 4);
+  });
+});

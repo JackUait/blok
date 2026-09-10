@@ -127,7 +127,18 @@ vi.mock('../../../../src/tools/database/database-view-popover', () => {
   return { DatabaseViewPopover: MockDatabaseViewPopover };
 });
 
+/**
+ * The tab bar's only observable statement about where the overflow dropdown
+ * goes is the option object it hands to the placement engine, so the engine is
+ * replaced by a recorder.
+ */
+vi.mock('../../../../src/components/utils/popover/anchored-position', () => ({
+  positionFixedAnchored: vi.fn(),
+  createPositionTracker: () => ({ attach: (): void => undefined, detach: (): void => undefined }),
+}));
+
 import { DatabaseTabBar, type TabBarOptions } from '../../../../src/tools/database/database-tab-bar';
+import { positionFixedAnchored } from '../../../../src/components/utils/popover/anchored-position';
 import type { DatabaseViewConfig, ViewType } from '../../../../src/tools/database/types';
 import type { API } from '../../../../types';
 
@@ -427,6 +438,35 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
     });
   });
 
+  describe('tab order', () => {
+    const tabIds = (root: ParentNode): (string | null)[] =>
+      Array.from(root.querySelectorAll('[data-blok-database-tab]')).map((tab) =>
+        tab.getAttribute('data-view-id')
+      );
+
+    it('lays the tabs out by position, not by the order the views arrived in', () => {
+      const { el } = mount(
+        [
+          makeView({ id: 'v3', name: 'Three', position: 'a2' }),
+          makeView({ id: 'v1', name: 'One', position: 'a0' }),
+          makeView({ id: 'v2', name: 'Two', position: 'a1' }),
+        ],
+        'v1'
+      );
+
+      expect(tabIds(el)).toStrictEqual(['v1', 'v2', 'v3']);
+    });
+
+    it('keeps two views that share a position in the order they arrived', () => {
+      const { el } = mount(
+        [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a0' })],
+        'v1'
+      );
+
+      expect(tabIds(el)).toStrictEqual(['v1', 'v2']);
+    });
+  });
+
   describe('roving tab stop', () => {
     it('parks the single tab stop on the active tab, not the first one', () => {
       const { el } = mount(
@@ -596,6 +636,17 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
 
       el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
 
+      expect(probes.contexts.length).toBe(0);
+    });
+
+    it('reaches a double-click outside any tab without throwing', () => {
+      const { el } = mount(threeViews(), 'v1');
+
+      expect(
+        uncaughtDuring(() => {
+          el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+        })
+      ).toStrictEqual([]);
       expect(probes.contexts.length).toBe(0);
     });
 
@@ -950,8 +1001,7 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(dropdown.style.zIndex).toBe('1000');
     });
 
-    it('lists every view in position order, whatever order they were passed in', () => {
-      const views = [
+    it('lists every view in position order, whatever order they were passed in', () => {      const views = [
         makeView({ id: 'v3', name: 'Three', position: 'a2' }),
         makeView({ id: 'v1', name: 'One', position: 'a0' }),
         makeView({ id: 'v2', name: 'Two', position: 'a1' }),
@@ -961,6 +1011,37 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
 
       expect(items.map((item) => item.getAttribute('data-view-id'))).toStrictEqual(['v1', 'v2', 'v3']);
       expect(items.map((item) => item.lastElementChild?.textContent)).toStrictEqual(['One', 'Two', 'Three']);
+    });
+
+    it('keeps two views that share a position in the order they arrived', () => {
+      const { dropdown } = openDropdown(
+        [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a0' })],
+        'v1'
+      );
+      const items = Array.from(dropdown.querySelectorAll('[data-blok-database-tab-overflow-item]'));
+
+      expect(items.map((item) => item.getAttribute('data-view-id'))).toStrictEqual(['v1', 'v2']);
+    });
+
+    it('places the dropdown below its anchor with the gap the design asks for', () => {
+      const { dropdown, more } = openDropdown(threeViews(), 'v1');
+      const calls = vi.mocked(positionFixedAnchored).mock.calls;
+      const last = calls[calls.length - 1];
+
+      expect(last?.[0]).toBe(dropdown);
+      expect(last?.[1]).toBe(more);
+      expect(last?.[2]).toStrictEqual({ side: 'bottom', offset: 4 });
+    });
+
+    it('reaches the new-view action without throwing when the bar has no add button', () => {
+      const { dropdown } = openDropdown(threeViews(), 'v1', { readOnly: true });
+
+      expect(
+        uncaughtDuring(() => {
+          queryOne(dropdown, '[data-blok-database-tab-overflow-new]').click();
+        })
+      ).toStrictEqual([]);
+      expect(probes.views.length).toBe(0);
     });
 
     it('marks only the active view', () => {
@@ -1204,6 +1285,19 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
 
       expect(ghost()).toBeNull();
       expect(el.getAttribute('data-dragging')).toBe('');
+    });
+
+    it('reaches the move after the dragged tab is gone without throwing', () => {
+      const { el } = mount(threeViews(), 'v1');
+
+      dragFrom(el, 'v1', 50);
+      el.querySelector('[data-view-id="v1"]')?.remove();
+
+      expect(
+        uncaughtDuring(() => {
+          document.dispatchEvent(pointer('pointermove', 200));
+        })
+      ).toStrictEqual([]);
     });
 
     it('does not drag a tab that carries no view id', () => {

@@ -343,6 +343,21 @@ describe('peaksFromAudioBuffer channel selection', () => {
 
     expect(peaksFromAudioBuffer(buffer, 2)).toEqual([0.5, 1]);
   });
+
+  it('keeps the mix at the samples own scale, so full-scale channels cannot overflow it', () => {
+    // Float32 tops out at 3.4e38, so two full-scale channels already fill it.
+    // Dividing each contribution keeps the mix representable; multiplying turns
+    // it into Infinity, and the global-max divide then yields NaN for every
+    // bucket instead of a normalised waveform.
+    const loud = new Float32Array([3e38, 1e38, 2e38, 3e38]);
+    const buffer = {
+      numberOfChannels: 2,
+      length: 4,
+      getChannelData: (): Float32Array => loud,
+    };
+
+    expect(peaksFromAudioBuffer(buffer, 2)).toEqual([1, 1]);
+  });
 });
 
 describe('ratioFromPointer', () => {
@@ -618,6 +633,19 @@ describe('attachWaveform seeking', () => {
     expect(mount.style.getPropertyValue('--blok-audio-seek-pct')).toBe('');
   });
 
+  it('a zero-length track drops the seek instead of publishing a 0% position', () => {
+    // A real duration of 0 is falsy exactly like the NaN an unloaded element
+    // reports, so the guard has to cover it too: with nothing to seek to there
+    // is no position to publish and no frame to repaint.
+    const { mount, canvas } = attach({ duration: 0, currentTime: 0 });
+    recorder.paints.length = 0;
+
+    canvas.dispatchEvent(pointer('pointerdown', LEFT + WIDTH / 2));
+
+    expect(mount.style.getPropertyValue('--blok-audio-seek-pct')).toBe('');
+    expect(recorder.paints).toEqual([]);
+  });
+
   it('does not repaint on a seek while the animation loop is already running', () => {
     const { media, canvas } = attach({ duration: DURATION, currentTime: CURRENT });
     media.dispatchEvent(new Event('play'));
@@ -681,6 +709,44 @@ describe('attachWaveform media events', () => {
 
     expect(recorder.paints).toEqual(liveFrame({ now: 1325, entranceStart: 1000, energy: 1 }));
     expect(scheduled).toBe(2);
+  });
+
+  it('a head blend that lands exactly on the 0.001 threshold paints no tint', () => {
+    // The tint is gated on `blend > 0.001`, and the blend is
+    // `headFocus(distance) * energy * entrance`. These three numbers put the
+    // product on the threshold exactly (a single bar 0.619 behind the playhead,
+    // playing, with 0.4337ms of the entrance ramp elapsed), so the bar is the
+    // one case where the strictness of the comparison decides the paint.
+    const played = 0.6189999999557707;
+    const now = 0.4336780805117677;
+    const { media } = attach({ peaks: [0.5], duration: 1, currentTime: played });
+    media.dispatchEvent(new Event('play'));
+    recorder.paints.length = 0;
+
+    flush(now);
+
+    const amp = liveAmplitude({
+      basePeak: 0.5,
+      index: 0,
+      playheadIndex: played,
+      timeSeconds: now / 1000,
+      reduced: false,
+      energy: 1,
+    });
+    const height = Math.max(2, amp * HEIGHT * 0.92);
+    expect(recorder.paints).toEqual([
+      {
+        shape: 'roundRect',
+        x: 0,
+        y: (HEIGHT - height) / 2,
+        w: WIDTH - 2,
+        h: height,
+        radius: 2,
+        fillStyle: PLAYED,
+        alpha: 1,
+      },
+    ]);
+    expect(headColorBlend({ distance: -played, energy: 1, entrance: entranceEase(now / ENTRANCE_MS) })).toBe(0.001);
   });
 
   it('pause ramps the boost down over the settle window and then stops the loop', () => {

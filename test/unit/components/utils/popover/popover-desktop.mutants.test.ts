@@ -270,6 +270,7 @@ const flushAnimationFrame = (): void => {
 };
 
 beforeEach(() => {
+  vi.clearAllMocks();
   document.body.innerHTML = '';
   createdPopovers.length = 0;
   flipperRegistry.reset();
@@ -362,6 +363,27 @@ describe('PopoverDesktop — synthesized-hover suppression', () => {
     expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
   });
 
+  // These two probes need pointerTracker to still be untouched, so they sit
+  // before any test that dispatches a mousemove.
+  it('re-arming cancels the previous safety frame', () => {
+    const popover = createPopover();
+
+    popover.show();
+    popover.show();
+
+    // Frame id 1 is the first arm's safety frame; the re-arm must cancel it.
+    expect(window.cancelAnimationFrame).toHaveBeenCalledWith(1);
+  });
+
+  it('hiding cancels the armed safety frame', () => {
+    const popover = createPopover();
+
+    popover.show();
+    popover.hide();
+
+    expect(window.cancelAnimationFrame).toHaveBeenCalledWith(1);
+  });
+
   it('captures the resting pointer at show() and swallows only the matching synthesized hover', () => {
     vi.useFakeTimers();
     document.dispatchEvent(new MouseEvent('mousemove', { clientX: 50, clientY: 60 }));
@@ -424,6 +446,33 @@ describe('PopoverDesktop — synthesized-hover suppression', () => {
     expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
   });
 
+  it('tracks pointer motion that does not bubble into the tracker', () => {
+    const mover = document.createElement('div');
+
+    document.body.appendChild(mover);
+
+    // bubbles:false — only the capture-phase tracker listener sees it.
+    mover.dispatchEvent(new MouseEvent('mousemove', { bubbles: false, clientX: 70, clientY: 80 }));
+
+    const popover = createPopover();
+    const instance = asInternal(popover);
+
+    popover.show();
+
+    expect(instance.suppressSyncHoverPointer).toEqual({ x: 70, y: 80 });
+  });
+
+  it('a pointer-anchored arm schedules no safety frame to cancel', () => {
+    document.dispatchEvent(new MouseEvent('mousemove', { clientX: 3, clientY: 4 }));
+
+    const popover = createPopover();
+
+    popover.show();
+    popover.hide();
+
+    expect(window.cancelAnimationFrame).not.toHaveBeenCalled();
+  });
+
   it('hide tears the suppression down so a later show starts from a known state', () => {
     document.dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 6 }));
 
@@ -470,6 +519,17 @@ describe('PopoverDesktop — constructor wiring', () => {
     expect(getFlipper(0).options.allowedKeys).toEqual([9, 38, 40, 13, 39, 37]);
   });
 
+  it('keeps a caller-supplied listbox id off the search assignment path', () => {
+    const popover = createPopover({ searchable: true, listboxId: 'custom-listbox' });
+    const instance = asInternal(popover);
+
+    expect(instance.nodes.items.id).toBe('custom-listbox');
+
+    const generated = createPopover({ searchable: true });
+
+    expect(asInternal(generated).nodes.items.id.startsWith('blok-popover-items-')).toBe(true);
+  });
+
   it('mirrors the search input onto the flipper as the active-descendant host', () => {
     const popover = createPopover({ searchable: true });
     const input = popover.getElement().querySelector('input');
@@ -506,6 +566,17 @@ describe('PopoverDesktop — show() side effects', () => {
     // Anchored popovers pin the CSS-var offsets to zero; pixels go inline.
     expect(popover.getElement().style.getPropertyValue('--popover-top')).toBe('0px');
     expect(popover.getElement().style.getPropertyValue('--popover-left')).toBe('0px');
+  });
+
+  it('locks --width for an explicit auto width parameter', () => {
+    const popover = createPopover({ width: 'auto' });
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 120, width: 250 });
+
+    popover.show();
+
+    expect(popover.getElement().style.getPropertyValue('--width')).toBe('250px');
   });
 
   it('locks --width to minWidth when the measurement is narrower', () => {
@@ -685,6 +756,79 @@ describe('PopoverDesktop — anchoring geometry', () => {
     expect(popover.getElement().style.left).not.toBe('0px');
   });
 
+  it('captures a trigger that is measurable only by width', () => {
+    const trigger = document.createElement('button');
+
+    document.body.appendChild(trigger);
+
+    const rectSpy = vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ top: 200, bottom: 200, left: 400, right: 420, width: 20, height: 0 })
+    );
+
+    const popover = createPopover({ trigger });
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100, width: 150 });
+
+    rectSpy.mockReturnValue(makeRect({}));
+
+    popover.show();
+
+    expect(popover.getElement().style.top).not.toBe('0px');
+  });
+
+  it('captures a trigger that is measurable only by height', () => {
+    const trigger = document.createElement('button');
+
+    document.body.appendChild(trigger);
+
+    const rectSpy = vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ top: 200, bottom: 230, left: 400, right: 400, width: 0, height: 30 })
+    );
+
+    const popover = createPopover({ trigger });
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100, width: 150 });
+
+    rectSpy.mockReturnValue(makeRect({}));
+
+    popover.show();
+
+    expect(popover.getElement().style.top).not.toBe('0px');
+  });
+
+  it('captures a zero-rect trigger when a caller-supplied context later moves', () => {
+    const context = document.createElement('div');
+
+    document.body.appendChild(context);
+    vi.spyOn(context, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ top: 0, bottom: 200, left: 0, right: 200, width: 200, height: 200 })
+    );
+
+    const trigger = document.createElement('button');
+
+    document.body.appendChild(trigger);
+    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(makeRect({}));
+
+    const popover = createPopover({ trigger, positionContext: context });
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 50, width: 150 });
+
+    // The context moves 100px right before show(); the trigger never gains a
+    // box, so a (never-captured) snapshot must not shift the anchor.
+    vi.spyOn(context, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ top: 0, bottom: 200, left: 100, right: 300, width: 200, height: 200 })
+    );
+
+    popover.show();
+
+    // rawTop = anchor.bottom(0) + offset(8); left stays at the raw anchor.
+    expect(popover.getElement().style.left).toBe('0px');
+    expect(popover.getElement().style.top).toBe('8px');
+  });
+
   it('keeps following a healthy live trigger rather than its construction-time snapshot', () => {
     const trigger = document.createElement('button');
 
@@ -767,6 +911,58 @@ describe('PopoverDesktop — position tracker', () => {
     scrollSource.dispatchEvent(new Event('scroll'));
 
     expect(popover.isShown).toBe(false);
+  });
+
+  it('keeps a context-less virtual anchor glued to the document on window scroll', () => {
+    const popover = createPopover({ position: makeRect({ top: 100, bottom: 200, left: 100, right: 300 }) });
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 50, width: 150 });
+
+    popover.show();
+
+    // Document coordinates: top = 208 at scroll 0.
+    expect(popover.getElement().style.top).toBe('208px');
+
+    const originalScrollY = window.scrollY;
+
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 100, writable: true });
+
+    try {
+      window.dispatchEvent(new Event('scroll'));
+
+      // The anchor is glued to its document position: the snapshot delta
+      // cancels the scroll, so the document-coordinate top never moves.
+      expect(popover.getElement().style.top).toBe('208px');
+    } finally {
+      Object.defineProperty(window, 'scrollY', { configurable: true, value: originalScrollY, writable: true });
+    }
+  });
+
+  it('follows a position context that becomes measurable only after capture', () => {
+    const context = document.createElement('div');
+
+    document.body.appendChild(context);
+
+    const contextSpy = vi.spyOn(context, 'getBoundingClientRect').mockReturnValue(makeRect({}));
+
+    const popover = createPopover({
+      position: makeRect({ top: 100, bottom: 200, left: 100, right: 300 }),
+      positionContext: context,
+    });
+
+    vi.spyOn(asInternal(popover), 'size', 'get').mockReturnValue({ height: 50, width: 150 });
+
+    // The context was unmeasurable at capture; by show() it sits 100px right.
+    contextSpy.mockReturnValue(
+      makeRect({ top: 0, bottom: 200, left: 100, right: 300, width: 200, height: 200 })
+    );
+
+    popover.show();
+
+    // The context was not measurable at capture, so there is no snapshot
+    // context: the raw anchor survives the (zero) scroll delta.
+    expect(popover.getElement().style.left).toBe('100px');
   });
 
   it('keeps a virtual anchor with a measurable live context through nested scrolls', () => {
@@ -1159,6 +1355,17 @@ describe('PopoverDesktop — nested submenu lifecycle', () => {
     expect(popover.hasNode(asInternal(popover).nodes.popover)).toBe(true);
   });
 
+  it('hasNode still answers after the submenu was destroyed (null, not undefined)', () => {
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+
+    instance.showNestedItems(itemByName(popover, 'c-parent'));
+    instance.destroyNestedPopoverIfExists();
+
+    expect(instance.nestedPopover).toBeNull();
+    expect(popover.hasNode(document.createElement('span'))).toBe(false);
+  });
+
   it('hasNode reports nodes of the open submenu', () => {
     const popover = createPopover({ items: [parentWithChildren()] });
     const instance = asInternal(popover);
@@ -1271,6 +1478,36 @@ describe('PopoverDesktop — hover open/close intents', () => {
     vi.advanceTimersByTime(10);
 
     expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+  });
+
+  it('moving onto another trigger drops the first trigger open intent', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({
+      items: [
+        parentWithChildren(),
+        {
+          title: 'Sibling',
+          name: 'sibling',
+          children: {
+            items: [{ title: 'Other', name: 'other', onActivate: vi.fn() }],
+          },
+        },
+      ],
+    });
+    const instance = asInternal(popover);
+    const parentElement = itemByName(popover, 'c-parent').getElement();
+    const siblingElement = itemByName(popover, 'sibling').getElement();
+
+    instance.handleHover(hoverOn(parentElement as Element));
+    vi.advanceTimersByTime(50);
+
+    // The sibling schedule must cancel the parent intent, and the chrome hover
+    // must then cancel the sibling intent — nothing may open afterwards.
+    instance.handleHover(hoverOn(siblingElement as Element));
+    instance.handleHover(hoverOn(instance.nodes.popoverContainer));
+    vi.advanceTimersByTime(60);
+
+    expect(instance.nestedPopover).toBeFalsy();
   });
 
   it('a close scheduled with no submenu open must not kill a submenu opened inside its window', () => {
@@ -1391,10 +1628,16 @@ describe('PopoverDesktop — hover open/close intents', () => {
 
     expect(instance.nestedPopoverTriggerItem).toBe(siblingItem);
 
+    getFlipper(0).focusItem.mockClear();
+    getFlipper(0).focusFirst.mockClear();
+
     vi.advanceTimersByTime(400);
 
     expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
     expect(instance.nestedPopoverTriggerItem).toBe(siblingItem);
+    // Pointer-driven teardown must not move keyboard focus.
+    expect(getFlipper(0).focusItem).not.toHaveBeenCalled();
+    expect(getFlipper(0).focusFirst).not.toHaveBeenCalled();
   });
 
   it('hovering a plain sibling abandons a sibling open intent and closes the submenu', () => {
@@ -1416,15 +1659,17 @@ describe('PopoverDesktop — hover open/close intents', () => {
     const plainElement = itemByName(popover, 'plain').getElement();
     const siblingElement = itemByName(popover, 'sibling').getElement();
 
+    // The plain-row hover must land while the sibling open intent is STILL
+    // pending: cancelling it is exactly what keeps the submenu from opening.
     instance.handleHover(hoverOn(siblingElement as Element));
+    instance.handleHover(hoverOn(plainElement as Element));
     vi.advanceTimersByTime(100);
 
-    expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+    expect(instance.nestedPopover).toBeFalsy();
 
-    instance.handleHover(hoverOn(plainElement as Element));
     vi.advanceTimersByTime(300);
 
-    expect(instance.nestedPopover).toBeNull();
+    expect(instance.nestedPopover).toBeFalsy();
   });
 
   it('entering the open submenu cancels the pending grace close', () => {
@@ -1472,6 +1717,80 @@ describe('PopoverDesktop — hover open/close intents', () => {
     vi.advanceTimersByTime(400);
 
     expect(instance.nestedPopover).toBe(opened);
+  });
+
+  it('a hover or leave targeting a destroyed submenu mount is inert', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+    const parentElement = itemByName(popover, 'c-parent').getElement();
+
+    instance.handleHover(hoverOn(parentElement as Element));
+    vi.advanceTimersByTime(100);
+
+    const nested = instance.nestedPopover;
+    const mount = nested?.getMountElement() as HTMLElement;
+
+    expect(nested).toBeInstanceOf(PopoverDesktop);
+
+    instance.destroyNestedPopoverIfExists(false);
+
+    const staleHover = new MouseEvent('mouseover');
+
+    Object.defineProperty(staleHover, 'target', { value: mount });
+    Object.defineProperty(staleHover, 'composedPath', { value: () => [mount] });
+
+    expect(() => instance.handleHover(staleHover)).not.toThrow();
+
+    const staleLeave = new MouseEvent('mouseleave', { relatedTarget: mount });
+
+    expect(() => instance.handleMouseLeave(staleLeave)).not.toThrow();
+    expect(instance.nestedPopover).toBeFalsy();
+  });
+
+  it('hover resolves trigger items through the promoted cache and opens their submenu', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({
+      items: [
+        {
+          title: 'Convert',
+          name: 'c-parent',
+          children: {
+            items: [{ title: 'Convoluted', name: 'c-child', onActivate: vi.fn() }],
+          },
+        },
+      ],
+    });
+    const instance = asInternal(popover);
+
+    popover.show();
+    popover.filterItems('con');
+
+    const parentElement = itemByName(popover, 'c-parent').getElement();
+
+    instance.handleHover(hoverOn(parentElement as Element));
+    vi.advanceTimersByTime(100);
+
+    expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+    expect(instance.nestedPopoverTriggerItem).toBe(itemByName(popover, 'c-parent'));
+  });
+
+  it('hovering a separator is chrome, not an item', () => {
+    const popover = createPopover({
+      items: [
+        { type: PopoverItemType.Separator },
+        parentWithChildren(),
+      ],
+    });
+    const instance = asInternal(popover);
+    const separatorElement = instance.items[0]?.getElement();
+
+    expect(separatorElement).not.toBeNull();
+
+    instance.showNestedItems(itemByName(popover, 'c-parent'));
+    instance.handleHover(hoverOn(separatorElement as Element));
+
+    expect(instance.previouslyHoveredItem).toBeNull();
   });
 
   it('hover over a promoted item activates it through the click pipeline', () => {
@@ -1548,6 +1867,20 @@ describe('PopoverDesktop — mouseleave', () => {
     vi.advanceTimersByTime(400);
 
     expect(instance.nestedPopover).toBe(nested);
+  });
+
+  it('hiding the popover abandons a pending open intent', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+    const parentElement = itemByName(popover, 'c-parent').getElement();
+
+    instance.handleHover(hoverOn(parentElement as Element));
+
+    popover.hide();
+    vi.advanceTimersByTime(100);
+
+    expect(instance.nestedPopover).toBeFalsy();
   });
 
   it('a leave with no related target abandons a pending open intent', () => {
@@ -1663,11 +1996,27 @@ describe('PopoverDesktop — filterItems and search', () => {
     expect(separator).not.toBeNull();
     expect(separator?.textContent).toBe('Convert');
     expect(separator?.getAttribute('role')).toBe('separator');
+    expect(separator?.getAttribute(ATTR_PROMOTED_GROUP)).toBe('');
     expect(separator?.tagName).toBe('DIV');
+    expect(separator?.className).toBe('pl-2 pr-3 pt-2.5 pb-1 text-xs font-medium text-gray-text cursor-default');
 
     // Same title at the top level is deduplicated away; the plain row hides.
     expect(itemByName(popover, 'c-parent').getElement()).toHaveAttribute(ATTR_HIDDEN, 'true');
     expect(itemByName(popover, 'plain').getElement()).toHaveAttribute(ATTR_HIDDEN, 'true');
+  });
+
+  it('renders no top-level group header when only top-level items match', () => {
+    const popover = createPopover({
+      items: [
+        { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+        { title: 'Alpine', name: 'alpine', onActivate: vi.fn() },
+      ],
+    });
+    const instance = asInternal(popover);
+
+    popover.filterItems('alp');
+
+    expect(instance.nodes.items.querySelectorAll(`[${ATTR_TOP_LEVEL_GROUP}]`)).toHaveLength(0);
   });
 
   it('ranks promoted children within a group by score', () => {
@@ -1699,6 +2048,44 @@ describe('PopoverDesktop — filterItems and search', () => {
 
     // Declared order is weak-then-strong; ranking must append strong first.
     expect(order.indexOf(strongElement as HTMLElement)).toBeLessThan(order.indexOf(weakElement as HTMLElement));
+
+    // A second non-empty filter reuses the cache instead of rebuilding it.
+    const cacheBefore = instance.promotedItemCache;
+
+    popover.filterItems('conv');
+
+    expect(instance.promotedItemCache).toBe(cacheBefore);
+  });
+
+  it('removes a promoted child that stops matching on the next filter', () => {
+    const popover = createPopover({
+      items: [
+        {
+          title: 'Convert',
+          name: 'c-parent',
+          children: {
+            items: [
+              { title: 'Conva', name: 'c-keep', onActivate: vi.fn() },
+              { title: 'Conzzz', name: 'c-drop', onActivate: vi.fn() },
+            ],
+          },
+        },
+      ],
+    });
+    const instance = asInternal(popover);
+
+    // 'con' prefix-matches both children; both land in the container.
+    popover.filterItems('con');
+
+    const dropElement = instance.promotedItemCache?.items.find(item => item.name === 'c-drop')?.getElement();
+
+    expect(dropElement).toBeDefined();
+    expect(instance.nodes.items.contains(dropElement as Node)).toBe(true);
+
+    // 'conv' drops Conzzz to score 0: the stale element must leave the DOM.
+    popover.filterItems('conv');
+
+    expect(instance.nodes.items.contains(dropElement as Node)).toBe(false);
   });
 
   it('keeps a toggle control with the same title as a promoted entry', () => {
@@ -1794,7 +2181,10 @@ describe('PopoverDesktop — filterItems and search', () => {
           title: 'Group One',
           name: 'group-one',
           children: {
-            items: [{ title: 'Convoluted', name: 'one-child', onActivate: vi.fn() }],
+            items: [
+              { title: 'Unrelated', name: 'one-noise', onActivate: vi.fn() },
+              { title: 'Convoluted', name: 'one-child', onActivate: vi.fn() },
+            ],
           },
         },
         {
@@ -1816,7 +2206,12 @@ describe('PopoverDesktop — filterItems and search', () => {
         },
       ],
     });
+    const instance = asInternal(popover);
     const input = popover.getElement().querySelector('input');
+
+    // Activate the flipper so the post-filter rebuild is observable.
+    popover.show();
+    getFlipper(0).activate.mockClear();
 
     (input as HTMLInputElement).value = 'conv';
     input?.dispatchEvent(new Event('input'));
@@ -1827,6 +2222,17 @@ describe('PopoverDesktop — filterItems and search', () => {
     // Best scores: Group Two 100 (exact), Group One 90 (prefix), Group Three 75
     // (substring). Insertion order is One, Two, Three — the sort must reorder.
     expect(labels).toEqual(['Group Two', 'Group One', 'Group Three']);
+
+    // Zero-score children never join the rendered promoted set.
+    const noiseElement = instance.promotedItemCache?.items.find(item => item.name === 'one-noise')?.getElement();
+
+    expect(instance.nodes.items.contains(noiseElement as Node)).toBe(false);
+
+    // The rebuilt flippable list carries the promoted elements in ranked order.
+    const ranked = ['two-strong', 'one-child', 'three-child', 'two-weak'].map(
+      name => instance.promotedItemCache?.items.find(item => item.name === name)?.getElement()
+    );
+    expect(getFlipper(0).activate).toHaveBeenLastCalledWith(ranked);
   });
 
   it('clearing the search input restores the unfiltered list', () => {
@@ -1872,6 +2278,19 @@ describe('PopoverDesktop — filterItems and search', () => {
     expect(getFlipper(0).focusItem).toHaveBeenCalledWith(0, { skipNextTab: true });
   });
 
+  it('rebuilds an empty flippable list and skips refocusing when nothing matches', () => {
+    const popover = createPopover({ items: [parentWithChildren()] });
+
+    popover.show();
+    getFlipper(0).activate.mockClear();
+    getFlipper(0).focusItem.mockClear();
+
+    popover.filterItems('zzz');
+
+    expect(getFlipper(0).activate).toHaveBeenCalledWith([]);
+    expect(getFlipper(0).focusItem).not.toHaveBeenCalled();
+  });
+
   it('does not touch an inactive flipper when filtering before show', () => {
     const popover = createPopover();
 
@@ -1914,6 +2333,31 @@ describe('PopoverDesktop — filterItems and search', () => {
 
     expect(menuChild?.getElement()?.getAttribute('role')).toBe('menuitem');
     expect(listboxChild?.getElement()?.getAttribute('role')).toBe('option');
+  });
+
+  it('promotes explicit-default children but never separator children', () => {
+    const popover = createPopover({
+      items: [
+        {
+          title: 'Convert',
+          name: 'c-parent',
+          children: {
+            items: [
+              { type: PopoverItemType.Separator },
+              { type: PopoverItemType.Default, title: 'Typed', name: 'c-typed', onActivate: vi.fn() },
+              { title: 'Plain', name: 'c-plain', onActivate: vi.fn() },
+            ],
+          },
+        },
+      ],
+    });
+    const instance = asInternal(popover);
+
+    popover.filterItems('typed');
+
+    const names = instance.promotedItemCache?.items.map(item => item.name) ?? [];
+
+    expect(names).toEqual(['c-typed', 'c-plain']);
   });
 
   it('excludes permanently hidden names from the promoted cache', () => {
@@ -1971,13 +2415,20 @@ describe('PopoverDesktop — filterItems and search', () => {
       messages: { nothingFound: 'Nope', searchResults: 'Got {count} hits' },
       items: [
         { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
-        { title: 'Alpine', name: 'alpine', onActivate: vi.fn() },
+        {
+          title: 'Convert',
+          name: 'c-parent',
+          children: {
+            items: [{ title: 'Conv', name: 'c-child', onActivate: vi.fn() }],
+          },
+        },
       ],
     });
     const instance = asInternal(popover);
     const announcer = instance.nodes.resultsAnnouncer;
 
-    popover.filterItems('alp');
+    // One top-level match plus one promoted match.
+    popover.filterItems('conv');
 
     expect(announcer.textContent).toBe('Got 2 hits');
 
@@ -2195,6 +2646,56 @@ describe('PopoverDesktop — nested beside placement geometry', () => {
       expect(nestedContainer.style.top).toBe('20px');
       expect(nested.getElement().getAttribute('data-side')).toBe('right');
       expect(nested.getElement().getAttribute('data-align')).toBe('center');
+    } finally {
+      sizeSpy.mockRestore();
+    }
+  });
+
+  it('slides a wide submenu back when its width shrinks the right limit', () => {
+    const popover = createPopover({
+      items: [
+        {
+          title: 'Wide Trigger',
+          name: 'wide-trigger',
+          children: {
+            items: [{ title: 'Child', name: 'child', onActivate: vi.fn() }],
+          },
+        },
+      ],
+    });
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance.nodes.popoverContainer, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ left: 700, top: 100, right: 900, bottom: 190, width: 200, height: 90 })
+    );
+    vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ left: 680, top: 80, right: 920, bottom: 210, width: 240, height: 130 })
+    );
+
+    const triggerItem = itemByName(popover, 'wide-trigger');
+    const triggerElement = triggerItem.getElement();
+
+    expect(triggerElement).not.toBeNull();
+
+    if (triggerElement !== null) {
+      vi.spyOn(triggerElement, 'getBoundingClientRect').mockReturnValue(
+        makeRect({ top: 120, bottom: 160, left: 710, right: 790, width: 80, height: 40 })
+      );
+    }
+
+    const sizeSpy = vi.spyOn(PopoverDesktop.prototype, 'size', 'get')
+      .mockReturnValue({ width: 320, height: 80 });
+
+    try {
+      const nested = instance.showNestedPopoverForItem(triggerItem);
+      const nestedContainer = asInternal(nested).nodes.popoverContainer;
+
+      // viewportLeft = 900 - 4 = 896; rightLimit = 1024 - 8 - 320 = 696;
+      // clamped to 696, converted into the root space: 696 - 680 = 16.
+      expect(nestedContainer.style.left).toBe('16px');
+
+      // Centered on the trigger with the mocked height: 140 - 40 = 100 - 80.
+      expect(nestedContainer.style.top).toBe('20px');
     } finally {
       sizeSpy.mockRestore();
     }

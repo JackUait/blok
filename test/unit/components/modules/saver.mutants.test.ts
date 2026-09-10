@@ -1552,4 +1552,230 @@ describe('Saver — mutation coverage', () => {
       expect(message).toContain('orphan-1 references missing parent ghost-y');
     });
   });
+
+  describe('residual coverage: no render to wait for', () => {
+    /**
+     * `doSave` only yields when there is a render in flight. Awaiting a
+     * null/absent `pendingRender` costs a microtask that the saver never pays:
+     * the read of the model belongs to the caller's own tick.
+     */
+    it('reads the model in the calling tick when the renderer exposes no pending render', () => {
+      const block = createBlockMock({ id: 'no-render-1', tool: 'paragraph', data: { text: 'Ready' } });
+      const { saver } = createSaver({ blocks: [block.block] });
+
+      void saver.save();
+
+      expect(block.saveMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('reads the model in the calling tick when the renderer reports a null pending render', () => {
+      const block = createBlockMock({ id: 'null-render-1', tool: 'paragraph', data: { text: 'Ready' } });
+      const { saver } = createSaver({ blocks: [block.block], renderer: { pendingRender: null } });
+
+      void saver.save();
+
+      expect(block.saveMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('residual coverage: dangling parentId repair', () => {
+    it('warns about the dangling parentId it promoted to root level', async () => {
+      passthroughSanitizer();
+      const logSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      const orphan = createBlockMock({
+        id: 'orphan-1',
+        tool: 'paragraph',
+        data: { text: 'Orphan body' },
+        parentId: 'vanished-parent',
+      });
+      const { saver } = createSaver({ blocks: [orphan.block] });
+
+      const result = await saver.save();
+
+      // A dangling parent that survives into the output is unrecoverable for
+      // the consumer: the block is emitted under a parent that never existed.
+      expect(saver.getLastSaveError()).toBeUndefined();
+      expect(result?.blocks).toStrictEqual([{
+        id: 'orphan-1',
+        type: 'paragraph',
+        data: { text: 'Orphan body' },
+      }]);
+      expect(logSpy).toHaveBeenCalledWith(
+        'Saver: treating dangling parentId vanished-parent on block orphan-1 as root in output',
+        'warn'
+      );
+    });
+  });
+
+  describe('residual coverage: environment probe without a usable process', () => {
+    /**
+     * Runs `body` twice: once with `process` bound to undefined, once with a
+     * `process` carrying no `env`. Both are how Blok looks in a browser, which
+     * is the only place this saver ships.
+     */
+    const underHiddenProcess = async (body: () => Promise<void>): Promise<void> => {
+      for (const value of [undefined, {}]) {
+        vi.stubGlobal('process', value);
+        try {
+          await body();
+        } finally {
+          vi.unstubAllGlobals();
+        }
+      }
+    };
+
+    /** A container whose children sit in the DOM in the reverse of their flat order. */
+    const divergentDomOrder = (): Block[] => {
+      const parentHolder = document.createElement('div');
+      const firstHolder = document.createElement('div');
+      const secondHolder = document.createElement('div');
+
+      parentHolder.textContent = 'Parent body';
+      firstHolder.textContent = 'Flat position one';
+      secondHolder.textContent = 'Flat position two';
+      document.body.appendChild(parentHolder);
+      parentHolder.append(secondHolder, firstHolder);
+
+      return [
+        createBlockMock({ id: 'container-1', tool: 'column', data: { text: 'Container body' }, holder: parentHolder }).block,
+        createBlockMock({
+          id: 'child-first',
+          tool: 'paragraph',
+          data: { text: 'Flat position one' },
+          parentId: 'container-1',
+          holder: firstHolder,
+        }).block,
+        createBlockMock({
+          id: 'child-second',
+          tool: 'paragraph',
+          data: { text: 'Flat position two' },
+          parentId: 'container-1',
+          holder: secondHolder,
+        }).block,
+      ];
+    };
+
+    /** A table whose grid skips one of its own children. */
+    const divergentGrid = (): Block[] => {
+      const tableHolder = document.createElement('div');
+      const cellBlocks = document.createElement('div');
+      const cellHolder = document.createElement('div');
+      const ghostHolder = document.createElement('div');
+
+      cellBlocks.setAttribute('data-blok-table-cell-blocks', '');
+      cellHolder.textContent = 'Cell body';
+      ghostHolder.textContent = 'Ghost body';
+      cellBlocks.append(cellHolder, ghostHolder);
+      tableHolder.appendChild(cellBlocks);
+      document.body.appendChild(tableHolder);
+
+      return [
+        createBlockMock({
+          id: 'tbl-1',
+          tool: 'table',
+          data: { withHeadings: false, content: [[{ blocks: ['cell-a'] }]] },
+          holder: tableHolder,
+        }).block,
+        createBlockMock({
+          id: 'cell-a',
+          tool: 'paragraph',
+          data: { text: 'Cell body' },
+          parentId: 'tbl-1',
+          holder: cellHolder,
+        }).block,
+        createBlockMock({
+          id: 'ghost-1',
+          tool: 'paragraph',
+          data: { text: 'Ghost body' },
+          parentId: 'tbl-1',
+          holder: ghostHolder,
+        }).block,
+      ];
+    };
+
+    /** A table whose single cell lists its blocks in the reverse of their DOM order. */
+    const divergentCellOrder = (): Block[] => {
+      const tableHolder = document.createElement('div');
+      const cellBlocks = document.createElement('div');
+      const alphaHolder = document.createElement('div');
+      const betaHolder = document.createElement('div');
+
+      cellBlocks.setAttribute('data-blok-table-cell-blocks', '');
+      alphaHolder.textContent = 'Alpha body';
+      betaHolder.textContent = 'Beta body';
+      cellBlocks.append(betaHolder, alphaHolder);
+      tableHolder.appendChild(cellBlocks);
+      document.body.appendChild(tableHolder);
+
+      return [
+        createBlockMock({
+          id: 'tbl-1',
+          tool: 'table',
+          data: { withHeadings: false, content: [[{ blocks: ['cell-a', 'cell-b'] }]] },
+          holder: tableHolder,
+        }).block,
+        createBlockMock({ id: 'cell-a', tool: 'paragraph', data: { text: 'Alpha body' }, parentId: 'tbl-1', holder: alphaHolder }).block,
+        createBlockMock({ id: 'cell-b', tool: 'paragraph', data: { text: 'Beta body' }, parentId: 'tbl-1', holder: betaHolder }).block,
+      ];
+    };
+
+    /** A valid block whose invalid root parent is dropped from the output. */
+    const driftedHierarchy = (): Block[] => [
+      createBlockMock({ id: 'ghost-x', tool: 'paragraph', data: { text: 'Invalid root body' }, isValid: false }).block,
+      createBlockMock({ id: 'orphan-0', tool: 'paragraph', data: { text: 'Ejected body' }, parentId: 'ghost-x' }).block,
+    ];
+
+    it('repairs a diverged DOM order rather than throwing when no process env is readable', async () => {
+      passthroughSanitizer();
+      silenceLogs();
+
+      await underHiddenProcess(async () => {
+        const { saver } = createSaver({ blocks: divergentDomOrder() });
+        const result = await saver.save();
+
+        expect(saver.getLastSaveError()).toBeUndefined();
+        expect(result?.blocks.map(block => block.id)).toStrictEqual(['container-1', 'child-second', 'child-first']);
+      });
+    });
+
+    it('repairs a table whose grid skips a child when no process env is readable', async () => {
+      passthroughSanitizer();
+      silenceLogs();
+
+      await underHiddenProcess(async () => {
+        const { saver } = createSaver({ blocks: divergentGrid() });
+        const result = await saver.save();
+
+        expect(saver.getLastSaveError()).toBeUndefined();
+        expect(blockById(result, 'ghost-1')).not.toHaveProperty('parent');
+      });
+    });
+
+    it('repairs a table cell whose blocks are out of DOM order when no process env is readable', async () => {
+      passthroughSanitizer();
+      silenceLogs();
+
+      await underHiddenProcess(async () => {
+        const { saver } = createSaver({ blocks: divergentCellOrder() });
+        const result = await saver.save();
+
+        expect(saver.getLastSaveError()).toBeUndefined();
+        expect(gridOf(result, 'tbl-1')[0][0]).toStrictEqual({ blocks: ['cell-b', 'cell-a'] });
+      });
+    });
+
+    it('reports hierarchy drift instead of crashing when no process env is readable', async () => {
+      passthroughSanitizer();
+      silenceLogs();
+
+      await underHiddenProcess(async () => {
+        const { saver } = createSaver({ blocks: driftedHierarchy() });
+        const result = await saver.save();
+
+        expect(saver.getLastSaveError()).toBeUndefined();
+        expect(result?.blocks.map(block => block.id)).toStrictEqual(['orphan-0']);
+      });
+    });
+  });
 });

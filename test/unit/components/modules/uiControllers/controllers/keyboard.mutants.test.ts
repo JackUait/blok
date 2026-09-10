@@ -1752,4 +1752,68 @@ describe('KeyboardController — mutation coverage', () => {
       expect(harness.blok.Toolbar.close).not.toHaveBeenCalled();
     });
   });
+
+  describe('keydown bubbling from a non-element target', () => {
+    /**
+     * `harness.press` only accepts elements. A keydown can also bubble out of a
+     * Text node inside the redactor, and the handlers branch on
+     * `target instanceof Element` / `target instanceof HTMLElement`, so the two
+     * types must be told apart rather than treated as one.
+     */
+    const pressOnNode = (
+      target: EventTarget,
+      init: KeyboardEventInit = {}
+    ): { event: KeyboardEvent; reachedLaterDocumentListener: boolean } => {
+      const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
+      const laterDocumentCapture = vi.fn();
+
+      document.addEventListener('keydown', laterDocumentCapture, true);
+
+      try {
+        target.dispatchEvent(event);
+      } finally {
+        document.removeEventListener('keydown', laterDocumentCapture, true);
+      }
+
+      return { event, reachedLaterDocumentListener: laterDocumentCapture.mock.calls.length > 0 };
+    };
+
+    it('does not enter navigation mode for an Escape whose target is a text node', () => {
+      const harness = enabledHarness();
+      const text = document.createTextNode('caret text');
+
+      harness.state.currentBlock = makeBlock('current');
+      harness.redactor.appendChild(text);
+
+      const { event } = pressOnNode(text, { key: 'Escape' });
+
+      expect(harness.blok.BlockSelection.enableNavigationMode).not.toHaveBeenCalled();
+      expect(harness.blok.Toolbar.close).toHaveBeenCalledTimes(1);
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('leaves a keydown raised on a text node to the rest of the pipeline', () => {
+      const harness = enabledHarness();
+      const text = document.createTextNode('caret text');
+
+      harness.redactor.appendChild(text);
+
+      // A throw from inside a capture listener is swallowed by the DOM and
+      // reported as an uncaught error instead, so it is invisible to
+      // `not.toThrow()` and has to be observed on `window`.
+      const uncaught = vi.fn();
+
+      window.addEventListener('error', uncaught);
+
+      try {
+        pressOnNode(text, { key: 'Enter' });
+      } finally {
+        window.removeEventListener('error', uncaught);
+      }
+
+      expect(uncaught).not.toHaveBeenCalled();
+      expect(harness.blok.BlockManager.insert).not.toHaveBeenCalled();
+      expect(harness.blok.BlockSelection.clearSelection).toHaveBeenCalledTimes(1);
+    });
+  });
 });

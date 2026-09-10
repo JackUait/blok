@@ -1,13 +1,25 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   analyzeDataFormat,
   collapseToLegacy,
+  expandToHierarchical,
   normalizeTableChildParents,
   reclaimDetachedTableCells,
   shouldCollapseToLegacy,
   shouldExpandToHierarchical,
 } from '../../../../src/components/utils/data-model-transform';
 import type { OutputBlockData } from '../../../../types';
+
+/** Wire-tolerant fixtures: `null` ids, `null` data and function cells are the
+ * shapes an external DTO can carry, and the module accepts them at runtime. */
+const blocksOf = (input: unknown[]): OutputBlockData[] => input as OutputBlockData[];
+
+const payloadOf = (block: OutputBlockData | undefined): Record<string, unknown> =>
+  block?.data ?? {};
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('data-model-transform - transform decision gates', () => {
   describe('shouldExpandToHierarchical', () => {
@@ -608,5 +620,650 @@ describe('data-model-transform - reclaimDetachedTableCells', () => {
     ];
 
     expect(reclaimDetachedTableCells(blocks)).toBe(blocks);
+  });
+});
+
+describe('data-model-transform - expandToHierarchical lossy-field warnings', () => {
+  it('warns once per distinct dropped field and once per repeated one', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expandToHierarchical(blocksOf([
+      { type: 'list', data: { style: 'ordered', items: [{ content: 'a' }], meta: { counterType: 'numeric' } } },
+      { type: 'list', data: { style: 'ordered', items: [{ content: 'b' }], meta: { counterType: 'numeric' } } },
+      { type: 'quote', data: { caption: 'q', alignment: 'center' } },
+    ]));
+
+    expect(warn.mock.calls.map((call) => call[0] as unknown)).toStrictEqual([
+      '[Blok migration] list block dropped unsupported field "meta.counterType" (no Blok equivalent)',
+      '[Blok migration] quote block ignored unsupported field "alignment" (no Blok equivalent)',
+    ]);
+  });
+});
+
+describe('data-model-transform - analyzeDataFormat content-only refs', () => {
+  it('treats a non-empty content array as hierarchy on its own', () => {
+    // The parent ref is absent; only content[] carries the relationship.
+    expect(analyzeDataFormat(blocksOf([
+      { id: 'p1', type: 'paragraph', data: { text: 'root' }, content: ['p2'] },
+    ]))).toStrictEqual({ format: 'hierarchical', hasHierarchy: true });
+  });
+});
+
+describe('data-model-transform - list item data guards', () => {
+  const nestedChildItem = (childData: unknown): unknown => {
+    const result = collapseToLegacy(blocksOf([
+      { id: 'l1', type: 'list', data: { text: 'Parent', style: 'unordered' }, content: ['l2'] },
+      { id: 'l2', type: 'list', data: childData, parent: 'l1' },
+    ]));
+
+    const items = payloadOf(result[0]).items as Array<{ items?: unknown[] }>;
+
+    return items[0].items?.[0];
+  };
+
+  it('reads no text or checked flag from a non-object item payload', () => {
+    const expected = { content: '', checked: undefined };
+
+    expect(nestedChildItem(null)).toStrictEqual(expected);
+    expect(nestedChildItem('not an object')).toStrictEqual(expected);
+    expect(nestedChildItem({})).toStrictEqual(expected);
+  });
+
+  it('ignores a text field that is not a string', () => {
+    expect(nestedChildItem({ text: 5 })).toStrictEqual({ content: '', checked: undefined });
+  });
+
+  it('ignores a checked field that is not a boolean', () => {
+    expect(nestedChildItem({ text: 'Task', checked: 'yes' })).toStrictEqual({
+      content: 'Task',
+      checked: undefined,
+    });
+  });
+
+  it('drops a content ref that resolves to no block', () => {
+    // Without the undefined guard the filter dereferences the missing block.
+    const result = collapseToLegacy(blocksOf([
+      { id: 'l1', type: 'list', data: { text: 'Item', style: 'unordered' }, content: ['ghost'] },
+    ]));
+
+    expect(result).toStrictEqual([
+      {
+        id: 'l1',
+        type: 'list',
+        data: { style: 'unordered', items: [{ content: 'Item', checked: undefined }] },
+      },
+    ]);
+  });
+
+  it('omits the start key entirely for an ordered list of one', () => {
+    // toStrictEqual, not toEqual: an `start: undefined` key reaches consumers.
+    expect(collapseToLegacy(blocksOf([
+      { id: 'l1', type: 'list', data: { text: 'Item', style: 'ordered' } },
+    ]))).toStrictEqual([
+      {
+        id: 'l1',
+        type: 'list',
+        data: { style: 'ordered', items: [{ content: 'Item', checked: undefined }] },
+      },
+    ]);
+  });
+
+  it('consumes a referenced child list exactly once', () => {
+    // The parent ref is absent, so only the processed-id set stops the flat
+    // model from emitting the child a second time at the document root.
+    const result = collapseToLegacy(blocksOf([
+      { id: 'l1', type: 'list', data: { text: 'P', style: 'unordered' }, content: ['l2'] },
+      { id: 'l2', type: 'list', data: { text: 'C', style: 'unordered' } },
+    ]));
+
+    expect(result).toHaveLength(1);
+  });
+});
+
+describe('data-model-transform - collapseToLegacy toggle payload guards', () => {
+  it('keeps an empty title when the toggle carries no text', () => {
+    expect(collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: {} },
+    ]))).toStrictEqual([
+      { id: 'tog', type: 'toggleList', data: { title: '' } },
+    ]);
+  });
+
+  it('ignores an isOpen that is not a boolean', () => {
+    expect(collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: { text: 'T', isOpen: 'yes' } },
+    ]))).toStrictEqual([
+      { id: 'tog', type: 'toggleList', data: { title: 'T' } },
+    ]);
+  });
+
+  it('survives a toggle whose data is null', () => {
+    expect(collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: null },
+    ]))).toStrictEqual([
+      { id: 'tog', type: 'toggleList', data: { title: '' } },
+    ]);
+  });
+});
+
+describe('data-model-transform - collapseToLegacy toggleable header payload guards', () => {
+  it('keeps an empty title when the header carries no text', () => {
+    expect(collapseToLegacy(blocksOf([
+      { id: 'h1', type: 'header', data: { isToggleable: true } },
+    ]))).toStrictEqual([
+      { id: 'h1', type: 'toggleList', data: { title: '' } },
+    ]);
+  });
+
+  it('ignores a level that is not a number and an isOpen that is not a boolean', () => {
+    expect(collapseToLegacy(blocksOf([
+      { id: 'h1', type: 'header', data: { text: 'H', isToggleable: true, level: '2', isOpen: 'yes' } },
+    ]))).toStrictEqual([
+      { id: 'h1', type: 'toggleList', data: { title: 'H' } },
+    ]);
+  });
+
+  it('leaves a non-header block alone even when its data says isToggleable', () => {
+    // Only `type === 'header'` may enter the toggleable-header path.
+    const result = collapseToLegacy(blocksOf([
+      { id: 'l1', type: 'list', data: { text: 'Item', style: 'unordered', isToggleable: true } },
+    ]));
+
+    expect(result).toHaveLength(1);
+  });
+});
+
+describe('data-model-transform - collapseToLegacy callout data guards', () => {
+  it('survives a callout whose data is null', () => {
+    expect(collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: { text: 'T' } },
+      { id: 'c1', type: 'callout', data: null },
+    ]))).toStrictEqual([
+      { id: 'tog', type: 'toggleList', data: { title: 'T' } },
+      { id: 'c1', type: 'callout', data: null },
+    ]);
+  });
+
+  it('survives a callout whose data is a primitive', () => {
+    expect(collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: { text: 'T' } },
+      { id: 'c1', type: 'callout', data: 'oops' },
+    ]))).toHaveLength(2);
+  });
+});
+
+describe('data-model-transform - collapseToLegacy derived-content reconciliation', () => {
+  it('groups a child under a parent that never listed it', () => {
+    // The parent carries no content[]; only the child's parent ref says where
+    // it belongs, and losing it drops the child from the toggle body.
+    const result = collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: { text: 'T' } },
+      { id: 'p1', type: 'paragraph', data: { text: 'X' }, parent: 'tog' },
+    ]));
+
+    expect(result).toEqual([
+      { id: 'tog', type: 'toggleList', data: { title: 'T', body: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'X' } }] } } },
+    ]);
+  });
+
+  it('never groups a child that carries no id', () => {
+    // An id-less block cannot be named in any content[], so it must not be
+    // appended to its parent's list of children.
+    const result = collapseToLegacy(blocksOf([
+      { id: 'col', type: 'column', data: {}, content: ['a'] },
+      { id: 'a', type: 'paragraph', data: { text: 'A' }, parent: 'col' },
+      { type: 'paragraph', data: { text: 'NoId' }, parent: 'col' },
+    ]));
+
+    expect(result.find((block) => block.id === 'col')?.content).toStrictEqual(['a']);
+  });
+});
+
+describe('data-model-transform - collapseToLegacy preserved-container subtree walk', () => {
+  it('keeps a grandchild that hangs off an absorbing child of a column', () => {
+    // The list child is legacy-absorbing, so the outer scan skips it and only
+    // the recursion keeps its own children with their refs.
+    const result = collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: { text: 'T' } },
+      { id: 'col', type: 'column', data: {}, content: ['a'] },
+      { id: 'a', type: 'list', data: { text: 'A', style: 'unordered' }, parent: 'col', content: ['b'] },
+      { id: 'b', type: 'list', data: { text: 'B', style: 'unordered' }, parent: 'a' },
+    ]));
+
+    expect(result.map((block) => block.id)).toStrictEqual(['tog', 'col', 'a', 'b']);
+  });
+
+  it('walks the whole descendant chain of a preserved container', () => {
+    const result = collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: { text: 'T' }, content: ['col'] },
+      { id: 'col', type: 'column', data: {}, parent: 'tog', content: ['a'] },
+      { id: 'a', type: 'paragraph', data: { text: 'A' }, parent: 'col', content: ['b'] },
+      { id: 'b', type: 'paragraph', data: { text: 'B' }, parent: 'a' },
+      { id: 'orph', type: 'paragraph', data: { text: 'Orphan' } },
+    ]));
+
+    const body = payloadOf(result[0]).body as { blocks: Array<{ id?: string }> };
+
+    expect(body.blocks.map((block) => block.id)).toStrictEqual(['col', 'a', 'b']);
+  });
+
+  it('emits a container listed twice in one body only once', () => {
+    const result = collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: { text: 'T' }, content: ['col', 'col'] },
+      { id: 'col', type: 'column', data: {}, parent: 'tog', content: ['a'] },
+      { id: 'a', type: 'paragraph', data: { text: 'A' }, parent: 'col' },
+    ]));
+
+    const body = payloadOf(result[0]).body as { blocks: Array<{ id?: string }> };
+
+    expect(body.blocks.map((block) => block.id)).toStrictEqual(['col', 'a']);
+  });
+
+  it('collapses a toggleable header that sits directly in a body', () => {
+    const result = collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: { text: 'T' }, content: ['h1'] },
+      { id: 'h1', type: 'header', data: { text: 'H', level: 2, isToggleable: true }, parent: 'tog', content: ['p1'] },
+      { id: 'p1', type: 'paragraph', data: { text: 'P' }, parent: 'h1' },
+    ]));
+
+    const body = payloadOf(result[0]).body as { blocks: Array<{ type: string }> };
+
+    expect(body.blocks.map((block) => block.type)).toStrictEqual(['toggleList']);
+  });
+
+  it('terminates when two blocks name each other as parent', () => {
+    const result = collapseToLegacy(blocksOf([
+      { id: 'col', type: 'column', data: {}, parent: 'a', content: ['a'] },
+      { id: 'a', type: 'paragraph', data: { text: 'A' }, parent: 'col' },
+    ]));
+
+    expect(result.map((block) => block.id)).toStrictEqual(['col', 'a']);
+  });
+
+  it('keeps hierarchy refs only on a parent that can absorb them', () => {
+    // The no-id child's parent is a legacy list, but a legacy list folds only
+    // list children into items[], so the child keeps its refs as a flat block.
+    const result = collapseToLegacy(blocksOf([
+      { id: 'l1', type: 'list', data: { items: [{ content: 'A' }] }, content: ['p1'] },
+      { id: 'p1', type: 'paragraph', data: { text: 'P' }, parent: 'l1' },
+      { type: 'paragraph', data: { text: 'NoId' }, parent: 'l1' },
+    ]));
+
+    expect(result[2].parent).toBeUndefined();
+  });
+
+  it('strips refs of a non-list child whose parent is a container', () => {
+    const result = collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: { text: 'T' } },
+      { id: 'col', type: 'column', data: {}, content: ['x'] },
+      { type: 'paragraph', data: { text: 'NoId' }, parent: 'col' },
+    ]));
+
+    expect(result[2].parent).toBeUndefined();
+  });
+
+  it('takes the collapse path when a plain header pair needs no rewriting', () => {
+    // No flat list/toggle/callout exists, so the early strip path is taken and
+    // the list-parented child must not keep its ref.
+    const result = collapseToLegacy(blocksOf([
+      { id: 'l1', type: 'list', data: { items: [{ content: 'A' }] }, content: ['p1'] },
+      { id: 'p1', type: 'paragraph', data: { text: 'P' }, parent: 'l1' },
+      { type: 'paragraph', data: { text: 'NoId' }, parent: 'l1' },
+    ]));
+
+    expect(result).toHaveLength(3);
+  });
+});
+
+describe('data-model-transform - collapseToLegacy table cell refs', () => {
+  it('does not read a blocks field that is not an array as a cell ref', () => {
+    const result = collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: { text: 'T' } },
+      { id: 't1', type: 'table', data: { content: [[{ blocks: 'oops' }]] }, content: ['gone'] },
+    ]));
+
+    expect(result.find((block) => block.id === 't1')?.content).toBeUndefined();
+  });
+
+  it('does not read string entries of a cell as block refs', () => {
+    const result = collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: { text: 'T' } },
+      { id: 't1', type: 'table', data: { content: [[{ blocks: [5] }]] }, content: ['gone'] },
+    ]));
+
+    expect(result.find((block) => block.id === 't1')?.content).toBeUndefined();
+  });
+
+  it('survives a row that is not an array', () => {
+    const result = collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: { text: 'T' } },
+      { id: 't1', type: 'table', data: { content: [[{ blocks: ['c1'] }], 'not a row'] } },
+      { id: 'c1', type: 'paragraph', data: { text: 'X' }, parent: 't1' },
+    ]));
+
+    expect(result.find((block) => block.id === 'c1')?.parent).toBe('t1');
+  });
+
+  it('does not read cell refs from a table that carries no id', () => {
+    // An id-less table cannot be named as a parent, so it is not a block-ref
+    // table and its children must not be held back from the strip path.
+    const result = collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: { text: 'T' } },
+      { type: 'table', data: { content: [[{ blocks: ['c1'] }]] } },
+      { id: 'c1', type: 'paragraph', data: { text: 'X' }, parent: 't0' },
+    ]));
+
+    expect(result.find((block) => block.id === 'c1')?.parent).toBeUndefined();
+  });
+
+  it('does not read cell refs from a table whose id is null', () => {
+    const result = collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: { text: 'T' } },
+      { id: null, type: 'table', data: { content: [[{ blocks: ['c1'] }]] } },
+      { id: 'c1', type: 'paragraph', data: { text: 'X' }, parent: 't0' },
+    ]));
+
+    expect(result.find((block) => block.id === 'c1')?.parent).toBeUndefined();
+  });
+});
+
+describe('data-model-transform - normalizeTableChildParents guards', () => {
+  it('ignores a cell entry that is not a block id string', () => {
+    const blocks = blocksOf([
+      { id: 't1', type: 'table', data: { content: [[{ blocks: [5] }]] } },
+      { id: 'p1', type: 'paragraph', data: { text: 'loose' } },
+    ]);
+
+    expect(normalizeTableChildParents(blocks)).toBe(blocks);
+  });
+
+  it('ignores a table that carries no id', () => {
+    const blocks = blocksOf([
+      { type: 'table', data: { content: [[{ blocks: ['c1'] }]] } },
+      { id: 'c1', type: 'paragraph', data: { text: 'Cell' } },
+    ]);
+
+    expect(normalizeTableChildParents(blocks)).toBe(blocks);
+  });
+
+  it('ignores a table whose data is null', () => {
+    const blocks = blocksOf([
+      { id: 't1', type: 'table', data: null },
+      { id: 'p1', type: 'paragraph', data: { text: 'loose' } },
+    ]);
+
+    expect(normalizeTableChildParents(blocks)).toBe(blocks);
+  });
+
+  it('leaves no parent key behind on a block no table references', () => {
+    const result = normalizeTableChildParents(blocksOf([
+      { id: 't1', type: 'table', data: { content: [[{ blocks: ['c1'] }]] } },
+      { id: 'p1', type: 'paragraph', data: { text: 'loose' } },
+    ]));
+
+    expect(result[1]).toStrictEqual({ id: 'p1', type: 'paragraph', data: { text: 'loose' } });
+  });
+
+  it('adopts a cell child whose parent ref is null', () => {
+    const result = normalizeTableChildParents(blocksOf([
+      { id: 't1', type: 'table', data: { content: [[{ blocks: ['c1'] }]] } },
+      { id: 'c1', type: 'paragraph', data: { text: 'Cell' }, parent: null },
+    ]));
+
+    expect(result[1].parent).toBe('t1');
+  });
+});
+
+describe('data-model-transform - reclaimDetachedTableCells guards', () => {
+  it('ignores a table whose data carries no cell grid', () => {
+    const blocks = blocksOf([
+      { id: 't1', type: 'table', data: {} },
+      { id: 'cell-1-1', type: 'paragraph', data: { text: 'x' } },
+    ]);
+
+    expect(reclaimDetachedTableCells(blocks)).toBe(blocks);
+  });
+
+  it('ignores a null cell when looking for an empty cell', () => {
+    const blocks = blocksOf([
+      { id: 't1', type: 'table', data: { content: [[null]] } },
+      { id: 'cell-1-1', type: 'paragraph', data: { text: 'x' } },
+    ]);
+
+    expect(reclaimDetachedTableCells(blocks)).toBe(blocks);
+  });
+
+  it('does not treat a cell ref on a non-table block as a reference', () => {
+    const result = reclaimDetachedTableCells(blocksOf([
+      { id: 't1', type: 'table', data: { content: [[{ blocks: [] }]] } },
+      { id: 'q1', type: 'quote', data: { content: [[{ blocks: ['cell-1-1'] }]] } },
+      { id: 'cell-1-1', type: 'paragraph', data: { text: 'x' } },
+    ]));
+
+    expect(result[2].parent).toBe('t1');
+  });
+
+  it('counts only tables that carry an id as candidate owners', () => {
+    // Two id-less/impossible tables would make the owner ambiguous; only the
+    // real table may take part in the reclamation.
+    const result = reclaimDetachedTableCells(blocksOf([
+      { type: 'table', data: { content: [[{ blocks: [] }]] } },
+      { id: null, type: 'table', data: { content: [[{ blocks: [] }]] } },
+      { id: 't1', type: 'table', data: { content: [[{ blocks: [] }, { blocks: [] }]] } },
+      { id: 'cell-1-2', type: 'paragraph', data: { text: 'x' } },
+    ]));
+
+    expect(result[3].parent).toBe('t1');
+  });
+
+  it('reclaims a detached cell whose parent ref is null', () => {
+    const result = reclaimDetachedTableCells(blocksOf([
+      { id: 't1', type: 'table', data: { content: [[{ blocks: [] }]] } },
+      { id: 'cell-1-1', type: 'paragraph', data: { text: 'x' }, parent: null },
+    ]));
+
+    expect(result[1].parent).toBe('t1');
+  });
+});
+
+describe('data-model-transform - preserved ids for id-less children', () => {
+  it('drops a stale content ref when the only child carries no id', () => {
+    // An id-less child cannot be named by any parent ref, so it never turns its
+    // container into a preserved subtree — the stale ref must be stripped.
+    const result = collapseToLegacy(blocksOf([
+      { id: 'col', type: 'column', data: {}, content: ['a'] },
+      { type: 'paragraph', data: { text: 'NoId' }, parent: 'col' },
+    ]));
+
+    expect(result[0].content).toBeUndefined();
+  });
+
+  it('drops a stale content ref when the only child has a null id', () => {
+    const result = collapseToLegacy(blocksOf([
+      { id: 'col', type: 'column', data: {}, content: ['a'] },
+      { id: null, type: 'paragraph', data: { text: 'NoId' }, parent: 'col' },
+    ]));
+
+    expect(result[0].content).toBeUndefined();
+  });
+
+  it('keeps a container that has a named child', () => {
+    const result = collapseToLegacy(blocksOf([
+      { id: 'col', type: 'column', data: {}, content: ['a'] },
+      { id: 'a', type: 'paragraph', data: { text: 'A' }, parent: 'col' },
+    ]));
+
+    expect(result[0].content).toStrictEqual(['a']);
+  });
+});
+
+describe('data-model-transform - toggleable header data guards', () => {
+  it('survives a header whose data is null', () => {
+    const result = collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: { text: 'T' } },
+      { id: 'h1', type: 'header', data: null },
+    ]));
+
+    expect(result).toHaveLength(2);
+  });
+});
+
+describe('data-model-transform - collapseToLegacy processes each container once', () => {
+  it('emits a content-referenced toggle only once', () => {
+    const result = collapseToLegacy(blocksOf([
+      { id: 'tog1', type: 'toggle', data: { text: 'T1' }, content: ['tog2'] },
+      { id: 'tog2', type: 'toggle', data: { text: 'T2' }, content: ['p1'] },
+      { id: 'p1', type: 'paragraph', data: { text: 'P' }, parent: 'tog2' },
+    ]));
+
+    expect(result).toHaveLength(1);
+  });
+
+  it('emits a content-referenced toggleable header only once', () => {
+    const result = collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: { text: 'T' }, content: ['h1'] },
+      { id: 'h1', type: 'header', data: { text: 'H', isToggleable: true }, content: ['p1'] },
+      { id: 'p1', type: 'paragraph', data: { text: 'P' }, parent: 'h1' },
+    ]));
+
+    expect(result).toHaveLength(1);
+  });
+
+  it('emits a content-referenced callout only once', () => {
+    const result = collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: { text: 'T' }, content: ['c1'] },
+      { id: 'c1', type: 'callout', data: { text: 'C' }, content: ['p1'] },
+      { id: 'p1', type: 'paragraph', data: { text: 'P' }, parent: 'c1' },
+    ]));
+
+    expect(result).toHaveLength(1);
+  });
+});
+
+describe('data-model-transform - mergeContentIds', () => {
+  it('drops existing ids that resolve to no block', () => {
+    const result = collapseToLegacy(blocksOf([
+      { id: 'col', type: 'column', data: {}, content: ['ghost'] },
+      { id: 'a', type: 'paragraph', data: { text: 'A' }, parent: 'col' },
+    ]));
+
+    expect(result[0].content).toStrictEqual(['a']);
+  });
+
+  it('keeps an existing id that resolves to a block without a parent ref', () => {
+    const result = collapseToLegacy(blocksOf([
+      { id: 'col', type: 'column', data: {}, content: ['a', 'b'] },
+      { id: 'a', type: 'paragraph', data: { text: 'A' }, parent: 'col' },
+      { id: 'b', type: 'paragraph', data: { text: 'B' } },
+    ]));
+
+    expect(result[0].content).toStrictEqual(['a', 'b']);
+  });
+});
+
+describe('data-model-transform - table ref scanning guards', () => {
+  it('ignores a table whose rows are all non-arrays', () => {
+    const result = collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: { text: 'T' } },
+      { id: 't1', type: 'table', data: { content: ['not a row'] }, content: ['gone'] },
+    ]));
+
+    expect(result.find((block) => block.id === 't1')?.content).toBeUndefined();
+  });
+
+  it('ignores a table row that is not an array', () => {
+    const blocks = blocksOf([
+      { id: 't1', type: 'table', data: { content: ['not a row'] } },
+      { id: 'p1', type: 'paragraph', data: { text: 'loose' } },
+    ]);
+
+    expect(normalizeTableChildParents(blocks)).toBe(blocks);
+  });
+
+  it('ignores a table whose id is null', () => {
+    const blocks = blocksOf([
+      { id: null, type: 'table', data: { content: [[{ blocks: ['c1'] }]] } },
+      { id: 'c1', type: 'paragraph', data: { text: 'Cell' } },
+    ]);
+
+    expect(normalizeTableChildParents(blocks)).toBe(blocks);
+  });
+});
+
+describe('data-model-transform - reclaimDetachedTableCells leaves foreign blocks alone', () => {
+  it('returns the same block object for a non-table that owns a content grid', () => {
+    const blocks = blocksOf([
+      { id: 't1', type: 'table', data: { content: [[{ blocks: [] }]] } },
+      { id: 'q1', type: 'quote', data: { content: [[{ blocks: [] }]] } },
+      { id: 'cell-1-1', type: 'paragraph', data: { text: 'x' } },
+    ]);
+
+    expect(reclaimDetachedTableCells(blocks)[1]).toBe(blocks[1]);
+  });
+});
+
+describe('data-model-transform - normalizeTableChildParents cell shape', () => {
+  it('does not treat a callable carrying a blocks array as a table cell', () => {
+    // isCellWithBlockRefs accepts only plain objects. A function that happens to
+    // carry a blocks array must not be adopted as a cell owner.
+    const callableCell = Object.assign(() => undefined, { blocks: ['c1'] });
+    const blocks = blocksOf([
+      { id: 't1', type: 'table', data: { content: [[callableCell]] } },
+      { id: 'c1', type: 'paragraph', data: { text: 'Cell' } },
+    ]);
+
+    expect(normalizeTableChildParents(blocks)).toBe(blocks);
+  });
+});
+
+describe('data-model-transform - an omitted child list means no children', () => {
+  it('invents no child id for a block that lists no children', () => {
+    // `?? []` defaults must not resolve to a real block: a document carrying a
+    // block under that literal id would otherwise gain refs and bodies.
+    const result = collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: { text: 'T' } },
+      { id: 'h1', type: 'header', data: { text: 'H', isToggleable: true } },
+      { id: 'c1', type: 'callout', data: { text: 'C' } },
+      { id: 'l1', type: 'list', data: { text: 'L', style: 'unordered' } },
+      { id: 'col', type: 'column', data: {}, content: ['a'] },
+      { id: 'a', type: 'paragraph', data: { text: 'A' }, parent: 'col' },
+      { id: 'q1', type: 'quote', data: { text: 'Q' }, content: 'oops' },
+      { id: 'qchild', type: 'paragraph', data: { text: 'QC' }, parent: 'q1' },
+      { id: 'Stryker was here', type: 'paragraph', data: { text: 'S' }, content: ['ghost'] },
+    ]));
+
+    const blockById = (id: string): OutputBlockData | undefined =>
+      result.find((block) => block.id === id);
+
+    expect(blockById('Stryker was here')?.content).toBeUndefined();
+    expect(blockById('l1')?.content).toBeUndefined();
+    expect(blockById('q1')?.content).toStrictEqual(['qchild']);
+    expect(payloadOf(blockById('tog')).body).toBeUndefined();
+    expect(payloadOf(blockById('h1')).body).toBeUndefined();
+    expect(payloadOf(blockById('c1')).body).toBeUndefined();
+  });
+});
+
+describe('data-model-transform - an id-less block is never addressable', () => {
+  it('drops a dead entry from a content list', () => {
+    // The undefined entry names no block, so it must not survive into the saved
+    // content[] — not even when an id-less block is present in the document.
+    const result = collapseToLegacy(blocksOf([
+      { id: 'col', type: 'column', data: {}, content: [undefined] },
+      { id: 'a', type: 'paragraph', data: { text: 'A' }, parent: 'col' },
+      { type: 'paragraph', data: { text: 'NoId' } },
+    ]));
+
+    expect(result.find((block) => block.id === 'col')?.content).toStrictEqual(['a']);
+  });
+
+  it('does not resolve an undefined child id to an id-less block', () => {
+    const result = collapseToLegacy(blocksOf([
+      { id: 'tog', type: 'toggle', data: { text: 'T' } },
+      { id: 'l1', type: 'list', data: { text: 'Item', style: 'unordered' }, content: [undefined] },
+      { type: 'paragraph', data: { text: 'NoId' } },
+    ]));
+
+    expect(result.find((block) => block.id === 'l1')?.content).toBeUndefined();
   });
 });

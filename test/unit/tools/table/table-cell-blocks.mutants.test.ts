@@ -186,7 +186,11 @@ const createStore = (): Store => {
         return Promise.resolve();
       },
       getBlockByIndex: (index: number): BlockAPI | undefined => {
-        const found = blocks[index];
+        // Mirrors the repository: -1 is the LAST block, everything else indexes
+        // straight into the store. Dropping the -1 rule makes guards that only
+        // exist to keep a negative index out look redundant.
+        const target = index === -1 ? blocks.length - 1 : index;
+        const found = blocks[target];
 
         return found === undefined || hiddenFromIndex.has(found.id) ? undefined : found.api;
       },
@@ -3306,5 +3310,547 @@ describe('TableCellBlocks — blank-space clicks only answer for the cell chrome
     orphan.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     expect(fixture.store.caretCalls).toEqual([]);
+  });
+});
+
+
+/**
+ * Dispatches a click and returns whatever jsdom routed to the window error
+ * event: a throw inside a listener does NOT escape dispatchEvent, so the only
+ * way an assertion can see it is here.
+ */
+const clickErrors = (target: HTMLElement): string[] => {
+  const errors: string[] = [];
+  const onError = (event: ErrorEvent): void => {
+    errors.push(event.message);
+  };
+
+  window.addEventListener('error', onError);
+
+  try {
+    target.dispatchEvent(new Event('click', { bubbles: true }));
+  } finally {
+    window.removeEventListener('error', onError);
+  }
+
+  return errors;
+};
+
+describe('TableCellBlocks — staying navigable and quiet at the grid edges', () => {
+  it('navigates ArrowUp on position alone when no caret can be resolved', () => {
+    const fixture = setup({ rows: 2, cols: 1 });
+
+    fillGridWithEditables(fixture.grid, 2, 1);
+
+    const outside = document.createElement('div');
+
+    outside.setAttribute('contenteditable', 'true');
+    outside.textContent = 'elsewhere';
+    document.body.appendChild(outside);
+    placeCaret(outside, 0);
+
+    const event = keyEvent('ArrowUp');
+
+    fixture.instance.handleArrowNavigation(event, { row: 1, col: 0 });
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(editableIn(fixture.grid, 0, 0, 1)).toHaveFocus();
+  });
+
+  it('navigates ArrowLeft on position alone when no caret can be resolved', () => {
+    const fixture = setup({ rows: 1, cols: 2 });
+
+    fillGridWithEditables(fixture.grid, 1, 2);
+
+    const outside = document.createElement('div');
+
+    outside.setAttribute('contenteditable', 'true');
+    outside.textContent = 'elsewhere';
+    document.body.appendChild(outside);
+    placeCaret(outside, 0);
+
+    const event = keyEvent('ArrowLeft');
+
+    fixture.instance.handleArrowNavigation(event, { row: 0, col: 1 });
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(editableIn(fixture.grid, 0, 0, 1)).toHaveFocus();
+  });
+
+  it('navigates when the window reports no selection object at all', () => {
+    const fixture = setup({ rows: 2, cols: 1 });
+    const spy = vi.spyOn(window, 'getSelection').mockReturnValue(null);
+
+    try {
+      fillGridWithEditables(fixture.grid, 2, 1);
+
+      const event = keyEvent('ArrowDown');
+
+      fixture.instance.handleArrowNavigation(event, { row: 0, col: 0 });
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(editableIn(fixture.grid, 1, 0, 0)).toHaveFocus();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('exits the table when the only row below the caret is merge-covered', () => {
+    const content: CellContent[][] = [
+      [{ blocks: [] }],
+      [{ blocks: [] }],
+      [{ blocks: [], mergedInto: [1, 0] }],
+    ];
+    const fixture = setup({ rows: 3, cols: 1, content });
+
+    fixture.store.add('after');
+    fillGridWithEditables(fixture.grid, 3, 1);
+    placeCaret(editableIn(fixture.grid, 1, 0, 1), 0);
+    fixture.instance.handleArrowNavigation(keyEvent('ArrowDown'), { row: 1, col: 0 });
+
+    expect(fixture.store.caretCalls).toEqual([{ id: 'after', position: 'start' }]);
+  });
+
+  it('exits the table backward when the only row above the caret is merge-covered', () => {
+    const content: CellContent[][] = [
+      [{ blocks: [], mergedInto: [1, 0] }],
+      [{ blocks: [] }],
+      [{ blocks: [] }],
+    ];
+    const fixture = setup({ rows: 3, cols: 1, content });
+    const before = fixture.store.add('before');
+
+    fixture.store.blocks.splice(fixture.store.blocks.indexOf(before), 1);
+    fixture.store.blocks.unshift(before);
+    fillGridWithEditables(fixture.grid, 3, 1);
+    placeCaret(editableIn(fixture.grid, 1, 0, 0), 0);
+    fixture.instance.handleArrowNavigation(keyEvent('ArrowUp'), { row: 1, col: 0 });
+
+    expect(fixture.store.caretCalls).toEqual([{ id: 'before', position: 'end' }]);
+  });
+});
+
+describe('TableCellBlocks — resolving the table among its own siblings', () => {
+  it('does nothing on Shift+Tab once the table block left the document', () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+
+    fillGridWithEditables(fixture.grid, 1, 1);
+    fixture.store.blocks.length = 0;
+
+    expect(() => fixture.instance.handleKeyDown(keyEvent('Tab', { shiftKey: true }), { row: 0, col: 0 }))
+      .not.toThrow();
+    expect(fixture.store.caretCalls).toEqual([]);
+  });
+
+  it('counts a sibling whose parentId is an empty string as a root sibling', () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+
+    fillGridWithEditables(fixture.grid, 1, 1);
+    fixture.store.add('other', 'paragraph', {}, '');
+    fixture.instance.handleKeyDown(keyEvent('Tab'), { row: 0, col: 0 });
+
+    expect(fixture.store.caretCalls).toEqual([{ id: 'other', position: 'start' }]);
+  });
+
+  it('keeps rooting the sibling scan on the table own parent, not the flat list', () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+
+    fillGridWithEditables(fixture.grid, 1, 1);
+    fixture.store.byId('table-1').parentId = '';
+    fixture.store.add('other');
+    fixture.instance.handleKeyDown(keyEvent('Tab'), { row: 0, col: 0 });
+
+    expect(fixture.store.caretCalls).toEqual([{ id: 'other', position: 'start' }]);
+  });
+
+  it('ignores a flat sibling the store cannot resolve', () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+
+    fillGridWithEditables(fixture.grid, 1, 1);
+    fixture.store.add('other');
+    fixture.store.hiddenFromIndex.add('other');
+
+    expect(() => fixture.instance.handleKeyDown(keyEvent('Tab'), { row: 0, col: 0 })).not.toThrow();
+    expect(fixture.store.insertCalls).toHaveLength(1);
+  });
+});
+
+describe('TableCellBlocks — initializeCells leaves no phantom row behind', () => {
+  it('leaves a rendered row with no cells as an empty row', () => {
+    const fixture = setup({ rows: 2, cols: 1, content: emptyContent(1, 1) });
+    const rows = fixture.grid.element.querySelectorAll(`[${ROW_ATTR}]`);
+
+    rows[1].replaceChildren();
+
+    const result = fixture.instance.initializeCells([[{ blocks: [] }]]);
+
+    expect(result).toHaveLength(2);
+    expect(result[1]).toEqual([]);
+  });
+});
+
+describe('TableCellBlocks — reclaiming references from a legacy string model', () => {
+  it('ignores legacy string cells when reclaiming model references', () => {
+    const fixture = setup({ rows: 1, cols: 1, content: [['legacy text']] });
+
+    expect(() => fixture.instance.reclaimReferencedBlocks()).not.toThrow();
+    expect(holderIds(fixture.grid.container(0, 0))).toEqual([]);
+  });
+});
+
+describe('TableCellBlocks — a block anchored after the wrapper is only claimed when it is the current block', () => {
+  it('leaves it alone when the next flat block is a different cell block', () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+    const created = fixture.store.add('below');
+
+    fixture.store.add('cell-block');
+    mountStoredBlock(fixture, 0, 0, 'cell-block');
+    fixture.store.add('anchor');
+    mountStoredBlock(fixture, 0, 0, 'anchor');
+    fixture.store.blocks.splice(fixture.store.blocks.indexOf(created), 1);
+    fixture.store.blocks.splice(1, 0, created);
+    document.body.appendChild(created.holder);
+    fixture.store.currentBlockIndex = 3;
+    fixture.store.eventHandler()(blockAddedEvent('below', created.holder, 1));
+
+    expect(created.holder.parentElement).toBe(document.body);
+    expect(fixture.model.getCellBlocks(0, 0)).toEqual(['cell-block', 'anchor']);
+  });
+});
+
+describe('TableCellBlocks — a removal with no rendered cell never blocks a later repair', () => {
+  it('still repairs the cell a later removal emptied', async () => {
+    const fixture = setup({ rows: 1, cols: 1, content: emptyContent(2, 1) });
+    const handler = fixture.store.eventHandler();
+    const stray = fixture.store.add('stray');
+
+    document.body.appendChild(stray.holder);
+    fixture.model.addBlockToCell(1, 0, 'stray');
+    handler(blockRemovedEvent('stray', stray.holder, 1));
+
+    fixture.store.add('only');
+    mountStoredBlock(fixture, 0, 0, 'only');
+    handler(blockRemovedEvent('only', fixture.store.byId('only').holder, 2));
+    fixture.store.byId('only').holder.remove();
+
+    await flushMicrotasks();
+
+    expect(holderIds(fixture.grid.container(0, 0))).toHaveLength(1);
+    expect(fixture.model.getCellBlocks(0, 0)).toHaveLength(1);
+  });
+});
+
+describe('TableCellBlocks — a move inside the grid but outside any cell', () => {
+  it('is ignored instead of re-syncing a cell that does not hold it', () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+    const loose = fixture.store.add('loose');
+
+    fixture.model.addBlockToCell(0, 0, 'loose');
+    fixture.grid.element.appendChild(loose.holder);
+
+    expect(() => fixture.store.eventHandler()(blockMovedEvent('loose', loose.holder))).not.toThrow();
+    expect(holderIds(fixture.grid.container(0, 0))).toEqual([]);
+  });
+});
+
+describe('TableCellBlocks — tracked ids with no holder in the cell', () => {
+  it('skips a tracked id whose holder never reached the container', () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+    const handler = fixture.store.eventHandler();
+
+    fixture.store.add('anchor');
+    fixture.store.add('target');
+    mountStoredBlock(fixture, 0, 0, 'anchor');
+    mountStoredBlock(fixture, 0, 0, 'target');
+    fixture.model.addBlockToCell(0, 0, 'missing');
+
+    expect(() => handler(blockMovedEvent('target', fixture.store.byId('target').holder))).not.toThrow();
+    expect(holderIds(fixture.grid.container(0, 0))).toEqual(['anchor', 'target']);
+  });
+});
+
+describe('TableCellBlocks — adjacency through an unresolvable neighbour', () => {
+  it('claims a replacement when the table block precedes it and the block after cannot be resolved', () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+    const handler = fixture.store.eventHandler();
+
+    fixture.store.add('old');
+    mountStoredBlock(fixture, 0, 0, 'old');
+    handler(blockRemovedEvent('old', fixture.store.byId('old').holder, 1));
+    fixture.store.byId('old').holder.remove();
+    fixture.store.blocks.splice(1, 1);
+
+    const ghost = fixture.store.add('ghost');
+    const tail = fixture.store.add('tail');
+
+    fixture.store.hiddenFromIndex.add(tail.id);
+    document.body.appendChild(ghost.holder);
+    handler(blockAddedEvent('ghost', ghost.holder, 1));
+
+    expect(fixture.model.getCellBlocks(0, 0)).toEqual(['ghost']);
+  });
+
+  it('refuses the replacement when the table block is at index zero and nothing precedes it', () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+    const handler = fixture.store.eventHandler();
+
+    fixture.store.add('old');
+    mountStoredBlock(fixture, 0, 0, 'old');
+    handler(blockRemovedEvent('old', fixture.store.byId('old').holder, 0));
+    fixture.store.byId('old').holder.remove();
+    fixture.store.blocks.splice(1, 1);
+
+    const ghostHolder = document.createElement('div');
+
+    document.body.appendChild(ghostHolder);
+    handler(blockAddedEvent('ghost', ghostHolder, 0));
+
+    expect(fixture.model.getCellBlocks(0, 0)).toEqual([]);
+  });
+
+  it('survives an unresolvable block just before the added one', () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+    const handler = fixture.store.eventHandler();
+
+    fixture.store.add('hidden');
+    fixture.store.hiddenFromIndex.add('hidden');
+    fixture.store.add('old');
+    mountStoredBlock(fixture, 0, 0, 'old');
+    handler(blockRemovedEvent('old', fixture.store.byId('old').holder, 2));
+    fixture.store.byId('old').holder.remove();
+    fixture.store.blocks.splice(2, 1);
+
+    const ghostHolder = document.createElement('div');
+
+    document.body.appendChild(ghostHolder);
+
+    expect(() => handler(blockAddedEvent('ghost', ghostHolder, 2))).not.toThrow();
+    expect(fixture.model.getCellBlocks(0, 0)).toEqual([]);
+  });
+});
+
+describe('TableCellBlocks — payloads and clicks that carry nothing', () => {
+  it('ignores a payload whose event is not an object', () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+    const handler = fixture.store.eventHandler();
+
+    expect(() => handler({ event: undefined })).not.toThrow();
+    expect(holderIds(fixture.grid.container(0, 0))).toEqual([]);
+  });
+
+  it('ignores a click event that carries no target', () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+    const event = new Event('click', { bubbles: true, cancelable: true });
+    const errors: string[] = [];
+    const onError = (errorEvent: ErrorEvent): void => {
+      errors.push(errorEvent.message);
+    };
+
+    Object.defineProperty(event, 'target', { value: null, configurable: true });
+    window.addEventListener('error', onError);
+
+    try {
+      fixture.grid.element.dispatchEvent(event);
+    } finally {
+      window.removeEventListener('error', onError);
+    }
+
+    expect(errors).toEqual([]);
+    expect(fixture.store.caretCalls).toEqual([]);
+  });
+
+  it('ignores a click on a cell that lost its blocks container', () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+    const container = fixture.grid.container(0, 0);
+    const cell = fixture.grid.cell(0, 0);
+
+    container.remove();
+
+    expect(clickErrors(cell)).toEqual([]);
+    expect(fixture.store.caretCalls).toEqual([]);
+  });
+
+  it('ignores a click on a cell container that holds no blocks', () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+    const container = fixture.grid.container(0, 0);
+
+    expect(clickErrors(container)).toEqual([]);
+    expect(fixture.store.caretCalls).toEqual([]);
+  });
+});
+
+describe('TableCellBlocks — teardown cancels the work it left queued', () => {
+  it('does not repair a cell once the table has been destroyed', async () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+
+    fixture.store.add('only');
+    mountStoredBlock(fixture, 0, 0, 'only');
+    fixture.store.eventHandler()(blockRemovedEvent('only', fixture.store.byId('only').holder, 1));
+    fixture.store.byId('only').holder.remove();
+    fixture.instance.destroy();
+
+    await flushMicrotasks();
+
+    expect(fixture.store.insertCalls).toEqual([]);
+    expect(holderIds(fixture.grid.container(0, 0))).toEqual([]);
+  });
+
+  it('forgets removal records once the table has been destroyed', () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+    const handler = fixture.store.eventHandler();
+
+    fixture.store.add('old');
+    mountStoredBlock(fixture, 0, 0, 'old');
+    handler(blockRemovedEvent('old', fixture.store.byId('old').holder, 1));
+    fixture.store.byId('old').holder.remove();
+    fixture.store.blocks.splice(1, 1);
+    fixture.instance.destroy();
+
+    const created = fixture.store.add('new');
+
+    document.body.appendChild(created.holder);
+    handler(blockAddedEvent('new', created.holder, 1));
+
+    expect(holderIds(fixture.grid.container(0, 0))).toEqual([]);
+  });
+});
+
+describe('TableCellBlocks — a routed block cancels the repair its cell was owed', () => {
+  it('drops the pending check for a cell the replacement search matched', async () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+    const handler = fixture.store.eventHandler();
+
+    fixture.store.add('anchor');
+    mountStoredBlock(fixture, 0, 0, 'anchor');
+    fixture.store.add('old');
+    mountStoredBlock(fixture, 0, 0, 'old');
+    handler(blockRemovedEvent('old', fixture.store.byId('old').holder, 3));
+    fixture.store.byId('old').holder.remove();
+    fixture.store.blocks.splice(2, 1);
+
+    const added = fixture.store.add('added', 'paragraph', {}, 'other-owner');
+
+    fixture.grid.element.appendChild(added.holder);
+    handler(blockAddedEvent('added', added.holder, 2));
+
+    const anchorHolder = fixture.store.byId('anchor').holder;
+
+    document.body.appendChild(anchorHolder);
+    handler(blockMovedEvent('anchor', anchorHolder));
+
+    await flushMicrotasks();
+
+    expect(fixture.store.insertCalls).toEqual([]);
+  });
+
+  it('drops the pending check for a cell an outside block was routed to', async () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+    const handler = fixture.store.eventHandler();
+
+    fixture.store.add('anchor');
+    mountStoredBlock(fixture, 0, 0, 'anchor');
+    fixture.store.add('old');
+    mountStoredBlock(fixture, 0, 0, 'old');
+    handler(blockRemovedEvent('old', fixture.store.byId('old').holder, 3));
+    fixture.store.byId('old').holder.remove();
+    fixture.store.blocks.splice(2, 1);
+
+    const added = fixture.store.add('added', 'paragraph', {}, 'other-owner');
+
+    fixture.store.blocks.splice(fixture.store.blocks.indexOf(added), 1);
+    fixture.store.blocks.splice(1, 0, added);
+    document.body.appendChild(added.holder);
+    fixture.store.currentBlockIndex = 2;
+    handler(blockAddedEvent('added', added.holder, 1));
+
+    const anchorHolder = fixture.store.byId('anchor').holder;
+
+    document.body.appendChild(anchorHolder);
+    handler(blockMovedEvent('anchor', anchorHolder));
+
+    await flushMicrotasks();
+
+    expect(fixture.store.insertCalls).toEqual([]);
+  });
+});
+
+describe('TableCellBlocks — a negative flat index is not the last block', () => {
+  it('finds no cell when the index before the first block would be the last one', () => {
+    const fixture = setup({ rows: 1, cols: 2 });
+    const added = fixture.store.add('added');
+    const other = fixture.store.add('other');
+
+    mountStoredBlock(fixture, 0, 1, other.id);
+    fixture.grid.element.appendChild(added.holder);
+    fixture.store.eventHandler()(blockAddedEvent('added', added.holder, 0));
+
+    expect(holderIds(fixture.grid.container(0, 1))).toEqual(['other']);
+  });
+
+  it('refuses a replacement when the last flat block is the only owned neighbour', () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+    const handler = fixture.store.eventHandler();
+
+    fixture.store.add('gone');
+    mountStoredBlock(fixture, 0, 0, 'gone');
+    fixture.store.add('filler');
+    fixture.store.add('anchor');
+    mountStoredBlock(fixture, 0, 0, 'anchor');
+    handler(blockRemovedEvent('gone', fixture.store.byId('gone').holder, 0));
+    fixture.store.byId('gone').holder.remove();
+    fixture.store.blocks.splice(1, 1);
+
+    const addedHolder = document.createElement('div');
+
+    document.body.appendChild(addedHolder);
+    handler(blockAddedEvent('ghost', addedHolder, 0));
+
+    expect(fixture.model.getCellBlocks(0, 0)).toEqual(['anchor']);
+  });
+
+  it('leaves an outside block alone while no block is current', () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+    const added = fixture.store.add('added');
+
+    fixture.store.add('anchor');
+    mountStoredBlock(fixture, 0, 0, 'anchor');
+    document.body.appendChild(added.holder);
+    fixture.store.eventHandler()(blockAddedEvent('added', added.holder, 1));
+
+    expect(added.holder.parentElement).toBe(document.body);
+    expect(fixture.model.getCellBlocks(0, 0)).toEqual(['anchor']);
+  });
+});
+
+describe('TableCellBlocks — a drained pending check is done with its cell', () => {
+  it('does not repair a cell a later schedule finds empty', async () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+    const handler = fixture.store.eventHandler();
+
+    fixture.store.add('a');
+    fixture.store.add('b');
+    mountStoredBlock(fixture, 0, 0, 'a');
+    mountStoredBlock(fixture, 0, 0, 'b');
+
+    handler(blockRemovedEvent('a', fixture.store.byId('a').holder, 1));
+    fixture.store.byId('a').holder.remove();
+
+    await flushMicrotasks();
+
+    expect(fixture.store.insertCalls).toEqual([]);
+
+    const bHolder = fixture.store.byId('b').holder;
+
+    document.body.appendChild(bHolder);
+    handler(blockMovedEvent('b', bHolder));
+
+    const ghostHolder = document.createElement('div');
+
+    document.body.appendChild(ghostHolder);
+    handler(blockRemovedEvent('ghost', ghostHolder, 5));
+
+    await flushMicrotasks();
+
+    expect(fixture.store.insertCalls).toEqual([]);
   });
 });

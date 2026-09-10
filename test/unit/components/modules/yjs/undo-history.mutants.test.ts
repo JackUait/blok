@@ -1270,3 +1270,32 @@ describe('UndoHistory — captureCaretSnapshot before initialization', () => {
     expect(uninitialized.captureCaretSnapshot()).toBeNull();
   });
 });
+
+/**
+ * PROVEN EQUIVALENT (no test can distinguish these mutants):
+ *
+ * - undo L373 / redo L422 second-conjunct mutations (`lastMoveGroup.length > 0`
+ *   forced true, or weakened to >= 0): endMoveGroup only records a group when
+ *   it holds at least one entry, so every group reachable at L373/L422 is
+ *   non-empty and the conjunct is settled by `!== undefined` alone.
+ */
+describe('UndoHistory — undo and redo with no recorded operations', () => {
+  let h: Harness;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    document.body.replaceChildren();
+    clearCaret();
+    h = createHarness();
+  });
+
+  it('undo() on an empty history delegates to yjs without throwing', () => {
+    expect(() => h.history.undo()).not.toThrow();
+    expect(h.placement).not.toHaveBeenCalled();
+  });
+
+  it('redo() on an empty history delegates to yjs without throwing', () => {
+    expect(() => h.history.redo()).not.toThrow();
+    expect(h.placement).not.toHaveBeenCalled();
+  });
+});

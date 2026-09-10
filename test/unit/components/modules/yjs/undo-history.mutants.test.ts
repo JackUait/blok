@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Mock, MockInstance } from 'vitest';
 import * as Y from 'yjs';
 
+import { BOUNDARY_TIMEOUT_MS } from '../../../../../src/components/modules/yjs/serializer';
 import { UndoHistory } from '../../../../../src/components/modules/yjs/undo-history';
 import type { BlockPlacement, MoveReplayCallback, SingleMoveEntry, UndoScopeType } from '../../../../../src/components/modules/yjs/types';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
@@ -1198,5 +1199,74 @@ describe('UndoHistory — mutation coverage', () => {
 
       expect(lastCaretInput(h)).toBe(settled.inputs[0]);
     });
+  });
+});
+
+/**
+ * PROVEN EQUIVALENT (no test can distinguish this mutant):
+ *
+ * - markBoundary L952 `if (this.pendingBoundary)` forced true: pendingBoundary
+ *   is set false only by clearBoundary — which cancels the very timer that
+ *   reads the flag — so the callback never runs with the flag false.
+ */
+describe('UndoHistory — boundary checkpoints', () => {
+  let h: Harness;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    document.body.replaceChildren();
+    clearCaret();
+    h = createHarness();
+    vi.useFakeTimers();
+  });
+
+  // The file-level afterEach restores real timers.
+
+  it('checkpoints once the boundary timeout elapses', () => {
+    const stop = vi.spyOn(h.history, 'stopCapturing');
+
+    h.history.markBoundary();
+    vi.advanceTimersByTime(BOUNDARY_TIMEOUT_MS);
+
+    expect(stop).toHaveBeenCalledOnce();
+  });
+
+  it('does not checkpoint a boundary that was cleared', () => {
+    const stop = vi.spyOn(h.history, 'stopCapturing');
+
+    h.history.markBoundary();
+    h.history.clearBoundary();
+    vi.advanceTimersByTime(BOUNDARY_TIMEOUT_MS);
+
+    expect(stop).not.toHaveBeenCalled();
+  });
+
+  it('does not touch any timer when the first boundary is marked', () => {
+    const clear = vi.spyOn(window, 'clearTimeout');
+
+    h.history.markBoundary();
+
+    expect(clear).not.toHaveBeenCalled();
+  });
+
+  it('does not touch any timer when a boundary is cleared with none pending', () => {
+    const clear = vi.spyOn(window, 'clearTimeout');
+
+    h.history.clearBoundary();
+
+    expect(clear).not.toHaveBeenCalled();
+  });
+});
+
+describe('UndoHistory — captureCaretSnapshot before initialization', () => {
+  it('returns null instead of dereferencing an uninitialized Blok', () => {
+    const ydoc = new Y.Doc();
+    const yblocks = ydoc.getArray<Y.Map<unknown>>('blocks');
+    const uninitialized = new UndoHistory(
+      [yblocks as unknown as UndoScopeType],
+      undefined as unknown as BlokModules
+    );
+
+    expect(uninitialized.captureCaretSnapshot()).toBeNull();
   });
 });

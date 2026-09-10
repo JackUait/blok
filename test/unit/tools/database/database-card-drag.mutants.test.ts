@@ -161,6 +161,22 @@ const ghostPositionsAtInsert = (): Array<{ left: string; top: string }> => {
   return seen;
 };
 
+/**
+ * jsdom reports an exception raised inside a document listener as a window
+ * `error` event and lets the dispatch return normally, so a guard that turns
+ * that exception into nothing is only observable here.
+ */
+const recordWindowErrors = (): { errors: string[]; stop: () => void } => {
+  const errors: string[] = [];
+  const listener = (event: Event): void => {
+    errors.push(String((event as ErrorEvent).message));
+  };
+
+  window.addEventListener('error', listener);
+
+  return { errors, stop: () => window.removeEventListener('error', listener) };
+};
+
 const assertClean = (board: Board): void => {
   expect(ghost()).toBeNull();
   expect(cardOf(board, 'a1').style.opacity).toBe('');
@@ -323,6 +339,27 @@ describe('database card drag mutants', () => {
       expect(ghost()?.style.top).toBe('80px');
       expect(ghost()?.firstElementChild).toBeNull();
       expect(board.wrapper.getAttribute('data-blok-database-dragging')).toBe('');
+    });
+
+    it('absorbs a move that lands with no ghost to move', () => {
+      const board = buildBoard(TWO_COLUMNS);
+      const { errors, stop } = recordWindowErrors();
+
+      // The build is the only step between arming the drag and having a ghost,
+      // so a throw there leaves the drag armed with nothing to follow the cursor.
+      vi.spyOn(cardOf(board, 'a1'), 'cloneNode').mockImplementationOnce(() => {
+        throw new Error('clone failed');
+      });
+
+      startDrag(board);
+      errors.length = 0;
+
+      document.dispatchEvent(pointer('pointermove', 250, 200));
+
+      expect(errors).toEqual([]);
+      expect(ghost()).toBeNull();
+
+      stop();
     });
   });
 

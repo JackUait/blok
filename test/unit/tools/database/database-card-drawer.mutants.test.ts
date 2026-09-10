@@ -553,12 +553,45 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
       expect(drawer.isOpen).toBe(false);
       expect(options.wrapper.querySelector('[data-blok-database-drawer]')).toBeNull();
     });
+
+    it('stops touching the document once its listeners are already gone', () => {
+      const options = createOptions();
+      const drawer = makeDrawer(options);
+
+      drawer.open(makeRow());
+
+      const remove = vi.spyOn(document, 'removeEventListener');
+
+      drawer.close();
+      expect(remove.mock.calls.map((call) => call[0])).toEqual(['keydown', 'mousedown']);
+
+      // The handlers are nulled by the first close, so a second one has nothing
+      // left to unregister.
+      drawer.close();
+      expect(remove).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('refreshSchema', () => {
     it('does nothing while the drawer is closed', () => {
       const options = createOptions();
       const drawer = makeDrawer(options);
+
+      expect(() => drawer.refreshSchema([makeDef({ type: 'text', name: 'Notes' })])).not.toThrow();
+      expect(options.wrapper.querySelector('[data-blok-database-drawer-props]')).toBeNull();
+    });
+
+    it('does nothing when a failed open() left the row set but the panel unbuilt', () => {
+      const options = createOptions();
+      const drawer = makeDrawer(options);
+
+      // open() records the row before it builds the panel, so a throw in between
+      // leaves currentRow set with no drawer behind it.
+      expect(() => drawer.open({
+        id: 'row-1',
+        position: 'a0',
+        properties: undefined as unknown as DatabaseRow['properties'],
+      })).toThrow();
 
       expect(() => drawer.refreshSchema([makeDef({ type: 'text', name: 'Notes' })])).not.toThrow();
       expect(options.wrapper.querySelector('[data-blok-database-drawer-props]')).toBeNull();
@@ -959,6 +992,23 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
         properties: { 'prop-title': 'Card', 'prop-status': ['opt-1', 'missing'] },
       }))).not.toThrow();
       expect(options.wrapper.querySelectorAll('[data-blok-database-drawer-prop-pill]')).toHaveLength(1);
+    });
+
+    it('treats a multiSelect value that is not an array as no selection at all', () => {
+      // The option id is the sentinel a substituted default array would carry,
+      // and a scalar value that happens to equal a real id must still resolve
+      // to nothing.
+      const options = createOptions({
+        schema: [makeDef({
+          type: 'multiSelect',
+          config: { options: [makeOption({ id: 'Stryker was here', label: 'Ghost' })] },
+        })],
+      });
+      const drawer = makeDrawer(options);
+
+      drawer.open(makeRow({ properties: { 'prop-title': 'Card', 'prop-status': 'opt-1' } }));
+
+      expect(options.wrapper.querySelectorAll('[data-blok-database-drawer-prop-pill]')).toHaveLength(0);
     });
 
     it('renders no pills for a multiSelect definition that carries no options config', () => {

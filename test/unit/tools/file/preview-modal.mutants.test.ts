@@ -203,7 +203,32 @@ describe('openFilePreview — modal chrome', () => {
   it('drops the file name into the title text only when there is one', () => {
     teardown = openFilePreview({ url: 'https://example.com/a.pdf', labels: FULL_LABELS });
 
-    expect(childAt(childAt(childAt(dialogEl(), 0), 0), 1).children.length).toBe(0);
+    const titleText = childAt(childAt(childAt(dialogEl(), 0), 0), 1);
+    expect(titleText.children.length).toBe(0);
+    expect(titleText.textContent).toBe('');
+  });
+
+  it('never writes to the title text when there is no file name', () => {
+    // jsdom turns `textContent = undefined` into '' (measured), so the element's
+    // final text cannot witness a write carrying an absent file name — the
+    // assignment itself has to be the one watched.
+    const writes: Node[] = [];
+    const originalSet = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent')?.set;
+    if (originalSet === undefined) {
+      throw new Error('Node.prototype.textContent has no setter to spy on');
+    }
+    vi.spyOn(Node.prototype, 'textContent', 'set').mockImplementation(function record(
+      this: Node,
+      value: string | null,
+    ): void {
+      writes.push(this);
+      originalSet.call(this, value);
+    });
+
+    teardown = openFilePreview({ url: 'https://example.com/a.pdf', labels: FULL_LABELS });
+
+    const titleText = childAt(childAt(childAt(dialogEl(), 0), 0), 1);
+    expect(writes).not.toContain(titleText);
   });
 
   it('writes role, aria-modal and the file-name label before the modal primitive does', () => {

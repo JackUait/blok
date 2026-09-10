@@ -188,6 +188,27 @@ const defineOn = (target: Window, property: string, value: unknown): void => {
   });
 };
 
+/**
+ * Stops a document part from answering, the way the harness stops `window.scrollY`.
+ * `documentElement` and `body` are prototype accessors, so the restore deletes the
+ * own property we install and lets the accessor show through again.
+ */
+const hideDocumentPart = (property: 'documentElement' | 'body'): void => {
+  const original = Object.getOwnPropertyDescriptor(document, property);
+
+  Object.defineProperty(document, property, {
+    configurable: true,
+    get: () => undefined,
+  });
+  cleanups.push(() => {
+    if (original === undefined) {
+      Reflect.deleteProperty(document, property);
+    } else {
+      Object.defineProperty(document, property, original);
+    }
+  });
+};
+
 const SLOT_MARKERS: Record<string, string> = {
   childToolbar: 'data-blok-child-toolbar',
   cell: 'data-blok-table-cell-blocks',
@@ -1812,6 +1833,42 @@ describe('RectangleSelection — surviving mutants', () => {
 
       expect(h.errors).toEqual([]);
       expect(h.blockSelection.selectBlockByIndex.mock.calls).toEqual([ [ 0 ], [ 2 ] ]);
+    });
+  });
+
+  describe('a drag whose overlay rectangle is missing', () => {
+    it('drops the move instead of dereferencing the rectangle it no longer has', () => {
+      const h = createHarness();
+
+      h.rect.startSelection(640, 500);
+
+      /**
+       * prepare() is the only thing that gives the module a rectangle, so the
+       * missing-overlay state has to be installed on the field directly.
+       */
+      Reflect.set(h.rect, 'overlayRectangle', null);
+
+      h.moveTo(700, 560);
+
+      expect(h.errors).toEqual([]);
+      expect(h.rect.isRectActivated()).toBe(true);
+      expect(h.overlayRectangle.style.display).toBe('');
+    });
+  });
+
+  describe('the scroll fallback when the document has no element tree', () => {
+    it('reads a zero offset instead of dereferencing the missing document parts', () => {
+      const h = createHarness({ scrollSource: 'documentElement' });
+
+      hideDocumentPart('documentElement');
+      hideDocumentPart('body');
+
+      h.rect.startSelection(640, 500);
+
+      expect(h.errors).toEqual([]);
+      expect(h.rect.isRectActivated()).toBe(true);
+
+      expect(h.overlayRectangle.style.left).toBe('');
     });
   });
 });

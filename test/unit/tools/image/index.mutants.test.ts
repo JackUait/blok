@@ -21,6 +21,7 @@ import type {
   BlockToolConstructorOptions,
   FilePasteEvent,
   HTMLPasteEvent,
+  PasteEvent,
   PatternPasteEvent,
 } from '../../../../types';
 import type * as ImageUiModule from '../../../../src/tools/image/ui';
@@ -2592,5 +2593,408 @@ describe('ImageTool — frame and rounding', () => {
     tool.setRounded(false);
 
     expect(block.dispatchChange).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * jsdom routes a throw inside an event listener to window's error event instead
+ * of failing the test, so a listener that throws is invisible to `not.toThrow`.
+ */
+const watchWindowErrors = (): { errors: Error[]; stop: () => void } => {
+  const errors: Error[] = [];
+  const onError = (event: ErrorEvent): void => { errors.push(event.error as Error); };
+
+  window.addEventListener('error', onError);
+
+  return { errors, stop: () => { window.removeEventListener('error', onError); } };
+};
+
+const activateSetting = (tool: ImageTool, name: string): void => {
+  settingsItem(tool, name).onActivate?.();
+};
+
+const activateAlignment = (tool: ImageTool, value: ImageAlignment): void => {
+  settingsItem(tool, 'image-alignment').children?.items
+    ?.find((item) => item.name === `image-alignment-${value}`)?.onActivate?.();
+};
+
+describe('ImageTool — paste types the tool has no case for', () => {
+  it('does not route an unrecognised paste into the file-upload path', () => {
+    const uploadByFile = vi.fn(async () => ({ url: 'https://cdn/a.png' }));
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByFile } }));
+    const root = tool.render();
+    const event = new CustomEvent('paste', { detail: {} }) as unknown as PasteEvent;
+
+    Object.defineProperty(event, 'type', { value: 'clipboard' });
+
+    expect(() => { tool.onPaste(event); }).not.toThrow();
+    expect(uploadByFile).not.toHaveBeenCalled();
+    expect(root.getAttribute('data-state')).toBe('empty');
+  });
+});
+
+describe('ImageTool — the progress reporter each upload route receives', () => {
+  it('hands the converter a progress callback that reaches the uploading bar', async () => {
+    mockConvert.mockImplementation(async (_bytes, options) => {
+      options?.onProgress?.(20);
+
+      return new Promise<Blob | null>(() => { /* still converting */ });
+    });
+    const { api } = createConvertApi({ index: 0 });
+    const tool = new ImageTool({ ...createOptions(), api });
+    const root = tool.render();
+
+    pasteFile(tool, gifFile());
+    await tick();
+
+    expect(el<HTMLElement>(root, '[data-role="fill"]').style.width).toBe('20%');
+  });
+
+  it('hands the retrying file upload the tool progress callback', async () => {
+    const uploadByFile = vi.fn<UploadFn>()
+      .mockRejectedValueOnce(new ImageError('UPLOAD_FAILED', 'server rejected'))
+      .mockImplementation(() => new Promise<{ url: string }>(() => { /* in flight */ }));
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByFile } }));
+    const root = tool.render();
+
+    pasteFile(tool, new File([new Uint8Array(4)], 'a.png', { type: 'image/png' }));
+    await tick();
+    el<HTMLButtonElement>(root, '[data-role="error-state"] [data-action="retry"]').click();
+    await tick();
+
+    expect(uploadByFile.mock.calls.at(-1)?.[1]).toStrictEqual({ onProgress: expect.any(Function) });
+  });
+
+  it('hands the retrying url upload the tool progress callback', async () => {
+    const uploadByUrl = vi.fn<UploadFn>()
+      .mockRejectedValueOnce(new ImageError('UPLOAD_FAILED', 'server rejected'))
+      .mockImplementation(() => new Promise<{ url: string }>(() => { /* in flight */ }));
+    const img = document.createElement('img');
+
+    img.setAttribute('src', 'https://x/y.png');
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByUrl } }));
+    const root = tool.render();
+
+    pasteTag(tool, img);
+    await tick();
+    el<HTMLButtonElement>(root, '[data-role="error-state"] [data-action="retry"]').click();
+    await tick();
+
+    expect(uploadByUrl.mock.calls.at(-1)?.[1]).toStrictEqual({ onProgress: expect.any(Function) });
+  });
+});
+
+describe('ImageTool — the copy an upload failure shows', () => {
+  const failingApi = (): API => createMockApi({
+    'tools.image.errorUploadFailed': 'Upload failed',
+    'tools.image.errorUploadFailedTitle': 'Upload failed title',
+  });
+
+  it('writes the generic copy into the message slot for an unexpected failure', async () => {
+    const tool = new ImageTool({
+      ...createOptions({}, { uploader: { uploadByFile: async () => { throw new Error('socket closed'); } } }),
+      api: failingApi(),
+    });
+    const root = tool.render();
+
+    pasteFile(tool, new File([new Uint8Array(4)], 'a.png', { type: 'image/png' }));
+    await tick();
+
+    expect(el(root, '.blok-image-error__msg').textContent).toBe('Upload failed');
+  });
+
+  it('writes the generic copy into the message slot for a coded failure', async () => {
+    const tool = new ImageTool({
+      ...createOptions({}, {
+        uploader: { uploadByFile: async () => { throw new ImageError('UPLOAD_FAILED', 'server rejected'); } },
+      }),
+      api: failingApi(),
+    });
+    const root = tool.render();
+
+    pasteFile(tool, new File([new Uint8Array(4)], 'a.png', { type: 'image/png' }));
+    await tick();
+
+    expect(el(root, '.blok-image-error__msg').textContent).toBe('Upload failed');
+  });
+});
+
+describe('ImageTool — GIF conversion the configuration switches off', () => {
+  it('keeps a remote GIF as an image when convertGifToVideo is false', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(8) })));
+    mockConvert.mockResolvedValue(webmBlob());
+    const parts = createConvertApi({ index: 0 });
+    const tool = new ImageTool({ ...createOptions({}, { convertGifToVideo: false }), api: parts.api });
+    const root = tool.render();
+
+    pastePattern(tool, 'https://x/cat.gif');
+    await tick();
+    await tick();
+
+    expect(mockConvert).not.toHaveBeenCalled();
+    expect(parts.insert).not.toHaveBeenCalled();
+    expect(el<HTMLImageElement>(root, 'img').getAttribute('src')).toBe('https://x/cat.gif');
+  });
+});
+
+describe('ImageTool — re-caching the intrinsic size', () => {
+  it('re-caches when only the width changes', () => {
+    const block = createMockBlock();
+    const tool = new ImageTool(createOptions({ url: 'u' }, {}, block));
+    const root = tool.render();
+    const img = el<HTMLImageElement>(root, 'img');
+
+    setNatural(img, 300, 200);
+    img.dispatchEvent(new Event('load'));
+    setNatural(img, 400, 200);
+    img.dispatchEvent(new Event('load'));
+
+    expect(tool.save().naturalWidth).toBe(400);
+    expect(block.dispatchChange).toHaveBeenCalledTimes(2);
+  });
+
+  it('clears the retry placeholder sizing once the image finally loads', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png', naturalWidth: 400, naturalHeight: 100 }));
+    const root = tool.render();
+    const figure = el<HTMLElement>(root, '.blok-image-inner');
+    const img = el<HTMLImageElement>(root, 'img');
+
+    img.dispatchEvent(new Event('error'));
+    expect(figure.style.getPropertyValue('min-height')).toBe('0px');
+    expect(img.style.getPropertyValue('min-height')).toBe('0px');
+
+    img.dispatchEvent(new Event('load'));
+
+    expect(figure.style.getPropertyValue('min-height')).toBe('');
+    expect(img.style.getPropertyValue('min-height')).toBe('');
+  });
+});
+
+describe('ImageTool — the pre-size a half-known intrinsic size must not produce', () => {
+  it('does not pre-size the figure from a zero height', () => {
+    const tool = new ImageTool(createOptions({ url: 'u', naturalWidth: 300, naturalHeight: 0 }));
+    const root = tool.render();
+
+    expect(el<HTMLElement>(root, '.blok-image-inner').style.getPropertyValue('aspect-ratio')).toBe('');
+  });
+});
+
+describe('ImageTool — lightbox slides that are decoded', () => {
+  it('keeps a thumbnail whose picture decoded to a real size', () => {
+    const self = createMockBlock('b1');
+    const api = withBlocks([self, stubBlock({ id: 'b2', src: 'https://x/2.png' })]);
+    const tool = new ImageTool({ ...createOptions({ url: 'https://x/1.png' }, {}, self), api });
+
+    self.holder.appendChild(tool.render());
+    stubImageDecoding(true, 640, 480);
+    activateSetting(tool, 'image-fullscreen');
+
+    expect(lastNavigation()?.items.map((item) => item.url))
+      .toStrictEqual(['https://x/1.png', 'https://x/2.png']);
+  });
+});
+
+describe('ImageTool — clicking controls a re-render has already replaced', () => {
+  it('opens the crop modal even after the alignment trigger is gone', () => {
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+    const root = tool.render();
+    const trigger = el<HTMLButtonElement>(root, '[data-action="align-trigger"]');
+
+    trigger.click();
+    trigger.remove();
+    el<HTMLButtonElement>(root, '[data-action="crop"]').click();
+
+    expect(mockCropModal).toHaveBeenCalledOnce();
+  });
+
+  it('opens no alt popover from a button the caption row no longer holds', () => {
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+    const root = tool.render();
+    const staleAlt = el<HTMLButtonElement>(root, '[data-action="alt-edit"]');
+    const watched = watchWindowErrors();
+
+    tool.setReadOnly(true);
+    expect(root.querySelector('[data-action="alt-edit"]')).toBeNull();
+
+    staleAlt.click();
+    watched.stop();
+
+    expect(watched.errors).toStrictEqual([]);
+    expect(document.querySelector('[data-role="image-alt-popover"]')).toBeNull();
+  });
+
+  it('raises nothing when the editor has no block-settings toolbar', () => {
+    const harness = createSettingsApi(false);
+    const tool = new ImageTool({ ...createOptions({ url: 'u' }), api: harness.api });
+    const root = tool.render();
+    const watched = watchWindowErrors();
+
+    el<HTMLButtonElement>(root, '[data-action="more"]').click();
+    watched.stop();
+
+    expect(watched.errors).toStrictEqual([]);
+    expect(root.hasAttribute('data-settings-open')).toBe(false);
+  });
+
+  it('raises nothing when the editor exposes no delete', () => {
+    const api = createMockApi();
+
+    (api as unknown as { blocks: unknown }).blocks = {};
+    const tool = new ImageTool({ ...createOptions({ url: 'u' }), api });
+    const root = tool.render();
+    const watched = watchWindowErrors();
+
+    el<HTMLButtonElement>(root, '[data-action="delete"]').click();
+    watched.stop();
+
+    expect(watched.errors).toStrictEqual([]);
+  });
+
+  it('raises nothing when the editor exposes no blocks API at all', () => {
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+    const root = tool.render();
+    const watched = watchWindowErrors();
+
+    el<HTMLButtonElement>(root, '[data-action="delete"]').click();
+    watched.stop();
+
+    expect(watched.errors).toStrictEqual([]);
+  });
+});
+
+describe('ImageTool — swapping to the uploader', () => {
+  it('swaps at once when there is no window to ask about motion', () => {
+    const played = stubWebAnimations();
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+
+    tool.render();
+    vi.stubGlobal('window', undefined);
+    activateSetting(tool, 'image-replace');
+
+    // The exit fade is the only animation: there is no reduced-motion query to
+    // consult outside a browser, so the swap still has to wait for it.
+    expect(played.map((animation) => animation.options.duration)).toStrictEqual([140]);
+  });
+});
+
+describe('ImageTool — the auto-full verdict', () => {
+  const stubNaturalSize = (): { complete: boolean; w: number; h: number } => {
+    const state = { complete: true, w: 0, h: 0 };
+
+    vi.spyOn(HTMLImageElement.prototype, 'complete', 'get').mockImplementation(() => state.complete);
+    vi.spyOn(HTMLImageElement.prototype, 'naturalWidth', 'get').mockImplementation(() => state.w);
+    vi.spyOn(HTMLImageElement.prototype, 'naturalHeight', 'get').mockImplementation(() => state.h);
+
+    return state;
+  };
+
+  const hostWide = (width: number): HTMLElement => {
+    const host = document.createElement('div');
+
+    Object.defineProperty(host, 'clientWidth', { value: width, configurable: true });
+    document.body.appendChild(host);
+
+    return host;
+  };
+
+  it('leaves the verdict alone while the source has no measured width', () => {
+    const syncs: (() => void)[] = [];
+
+    class TrackingResizeObserver {
+      public constructor(callback: () => void) { syncs.push(callback); }
+      public observe(): void { /* unused */ }
+      public unobserve(): void { /* unused */ }
+      public disconnect(): void { /* unused */ }
+    }
+
+    vi.stubGlobal('ResizeObserver', TrackingResizeObserver);
+    const state = stubNaturalSize();
+
+    state.complete = true;
+    state.w = 1000;
+    state.h = 50;
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+    const root = tool.render();
+
+    hostWide(800).appendChild(root);
+    // A ResizeObserver tick, not a re-render: a re-render of an image whose
+    // stubbed natural size is zero flips the card to the broken variant first.
+    for (const sync of syncs) sync();
+    expect(root.getAttribute('data-auto-full')).toBe('true');
+
+    state.w = 0;
+    state.h = 0;
+    for (const sync of syncs) sync();
+
+    expect(root.getAttribute('data-auto-full')).toBe('true');
+  });
+
+  it('does not re-measure for an image that was already decoded', () => {
+    const state = stubNaturalSize();
+
+    state.complete = true;
+    state.w = 1000;
+    state.h = 50;
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+    const root = tool.render();
+
+    expect(root.hasAttribute('data-auto-full')).toBe(false);
+
+    hostWide(800).appendChild(root);
+    el<HTMLImageElement>(root, 'img').dispatchEvent(new Event('load'));
+
+    expect(root.hasAttribute('data-auto-full')).toBe(false);
+  });
+
+  it('re-measures a not-yet-decoded image only once', () => {
+    const state = stubNaturalSize();
+
+    state.complete = false;
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+    const root = tool.render();
+
+    hostWide(800).appendChild(root);
+    tool.setReadOnly(false);
+    expect(root.hasAttribute('data-auto-full')).toBe(false);
+
+    const img = el<HTMLImageElement>(root, 'img');
+
+    img.dispatchEvent(new Event('load'));
+    state.w = 1000;
+    state.h = 50;
+    img.dispatchEvent(new Event('load'));
+
+    expect(root.hasAttribute('data-auto-full')).toBe(false);
+  });
+});
+
+describe('ImageTool — a picture that goes bad mid-render', () => {
+  it('survives an alignment change when the re-render produces no figure', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    const root = tool.render();
+
+    expect(root.querySelector('.blok-image-inner')).not.toBeNull();
+
+    stubImageDecoding(true, 0, 0);
+    activateAlignment(tool, 'left');
+
+    expect(root.querySelector('.blok-image-inner')).toBeNull();
+  });
+});
+
+describe('ImageTool — the slide cleanup', () => {
+  it('runs once, so a later transition cannot wipe a fresh slide', () => {
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+    const root = tool.render();
+
+    stubFigureLefts(100, 40);
+    activateAlignment(tool, 'left');
+    const figure = el<HTMLElement>(root, '.blok-image-inner');
+
+    figure.dispatchEvent(new Event('transitionend'));
+    figure.style.transition = 'transform 320ms cubic-bezier(0.22, 1, 0.36, 1)';
+    figure.dispatchEvent(new Event('transitionend'));
+
+    expect(figure.style.transition).toBe('transform 320ms cubic-bezier(0.22, 1, 0.36, 1)');
   });
 });

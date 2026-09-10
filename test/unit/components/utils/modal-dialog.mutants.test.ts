@@ -601,6 +601,183 @@ describe('openModalDialog — focus restore', () => {
   });
 });
 
+describe('openModalDialog — press tracking', () => {
+  it('records the opening press in the capture phase, ahead of a page handler that swallows it', () => {
+    const wrapper = makeDiv('wrapper');
+    const opener = makeButton('opener');
+    const icon = document.createElement('span');
+
+    opener.appendChild(icon);
+    wrapper.appendChild(opener);
+    document.body.appendChild(wrapper);
+
+    // Bubble-phase swallow: only a capture-phase document listener sees the press.
+    wrapper.addEventListener('pointerdown', (event) => event.stopPropagation());
+
+    icon.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+    expect(document.body).toHaveFocus();
+
+    const { content, surface } = buildDialog(makeButton('only'));
+    const handle = openModalDialog({ content, surface, onDismiss: vi.fn() });
+
+    handle.close();
+
+    expect(opener).toHaveFocus();
+  });
+});
+
+describe('openModalDialog — animation support probe', () => {
+  it('tears down at once when the environment reports no user agent', () => {
+    // An animation name is set so a live probe would park the close instead.
+    stubAnimationName('blok-fade');
+    vi.stubGlobal('navigator', undefined);
+
+    const onClose = vi.fn();
+    const { content, surface } = buildDialog(makeButton('only'));
+    const handle = openModalDialog({ content, surface, onDismiss: vi.fn(), onClose });
+
+    handle.closeAnimated();
+
+    expect(content.isConnected).toBe(false);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('openModalDialog — inert without a body', () => {
+  it('leaves the page alone when the document exposes no body', () => {
+    const sibling = makeDiv('sibling');
+
+    document.body.appendChild(sibling);
+
+    const { content, surface } = buildDialog(makeButton('only'));
+
+    document.body.appendChild(content);
+
+    const descriptor = Object.getOwnPropertyDescriptor(document, 'body');
+
+    Object.defineProperty(document, 'body', { configurable: true, get: () => null });
+
+    let handle: ReturnType<typeof openModalDialog> | undefined;
+    let thrown: unknown = null;
+
+    try {
+      handle = openModalDialog({ content, surface, onDismiss: vi.fn() });
+    } catch (error) {
+      thrown = error;
+    } finally {
+      if (descriptor === undefined) {
+        Reflect.deleteProperty(document, 'body');
+      } else {
+        Object.defineProperty(document, 'body', descriptor);
+      }
+    }
+
+    expect(thrown).toBeNull();
+    expect(sibling.hasAttribute('inert')).toBe(false);
+    expect(content.isConnected).toBe(true);
+
+    handle?.close();
+  });
+});
+
+describe('openModalDialog — deferred inert pass', () => {
+  it('skips the deferred pass when the document is gone by then', () => {
+    const queued: Array<() => void> = [];
+
+    vi.stubGlobal('queueMicrotask', (callback: () => void) => {
+      queued.push(callback);
+    });
+
+    const { content, surface } = buildDialog(makeButton('only'));
+    const handle = openModalDialog({
+      content,
+      surface,
+      container: null,
+      topLayer: false,
+      onDismiss: vi.fn(),
+    });
+
+    expect(content.isConnected).toBe(false);
+    expect(queued).toHaveLength(1);
+
+    vi.stubGlobal('document', undefined);
+
+    expect(() => {
+      for (const callback of queued) {
+        callback();
+      }
+    }).not.toThrow();
+
+    vi.unstubAllGlobals();
+
+    handle.close();
+  });
+});
+
+describe('openModalDialog — settle guard', () => {
+  it('tears down once when the fallback timer outlives the animation', () => {
+    pretendAnimationsRun();
+    stubAnimationName('blok-fade');
+    vi.useFakeTimers();
+
+    const onClose = vi.fn();
+    const { content, surface } = buildDialog(makeButton('only'));
+    const handle = openModalDialog({ content, surface, onDismiss: vi.fn(), onClose });
+    const removeEventListener = vi.spyOn(surface, 'removeEventListener');
+
+    // An engine that cannot cancel an already-queued timer task: the fallback
+    // reaches the settle pass after the animation already tore the dialog down.
+    vi.spyOn(window, 'clearTimeout').mockImplementation(() => {});
+
+    const clearTimeout = vi.mocked(window.clearTimeout);
+
+    handle.closeAnimated();
+    surface.dispatchEvent(animationEnd());
+    vi.advanceTimersByTime(400);
+
+    expect(removeEventListener.mock.calls.filter((call) => call[0] === 'animationend')).toHaveLength(1);
+    expect(clearTimeout).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(content.isConnected).toBe(false);
+
+    vi.useRealTimers();
+  });
+
+  it('does not cancel a fallback timer whose handle it does not hold yet', () => {
+    pretendAnimationsRun();
+    stubAnimationName('blok-fade');
+
+    const onClose = vi.fn();
+    const { content, surface } = buildDialog(makeButton('only'));
+    const handle = openModalDialog({ content, surface, onDismiss: vi.fn(), onClose });
+    const realSetTimeout = window.setTimeout;
+
+    // The fallback runs before setTimeout returns its handle, so the cancel
+    // step must not fire against the never-assigned initial value.
+    // The bridge is type-only: the spy must match setTimeout's declared
+    // signature, while the implementation deliberately returns early for the
+    // fallback delay instead of scheduling.
+    vi.spyOn(window, 'setTimeout').mockImplementation(((callback: (...args: unknown[]) => void, timeout?: number, ...rest: unknown[]) => {
+      if (timeout === 260) {
+        callback();
+
+        return 0;
+      }
+
+      return realSetTimeout(callback, timeout, ...rest);
+    }) as unknown as typeof window.setTimeout);
+
+    const clearTimeout = vi.spyOn(window, 'clearTimeout');
+
+    handle.closeAnimated();
+
+    expect(content.isConnected).toBe(false);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(clearTimeout).not.toHaveBeenCalled();
+  });
+});
+
 describe('openModalDialog — exit animation', () => {
   it('waits for the animation on the surface before tearing down', () => {
     pretendAnimationsRun();

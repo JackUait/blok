@@ -122,6 +122,7 @@ type PopoverDesktopInternal = Omit<
   handleHover: (event: Event) => void;
   handleMouseLeave: (event: Event) => void;
   showNestedItems: (item: PopoverItemDefault) => void;
+  onTabsChange: () => void;
 };
 
 const asInternal = (popover: PopoverDesktop): PopoverDesktopInternal =>
@@ -2722,123 +2723,1040 @@ describe('PopoverDesktop — nested beside placement geometry', () => {
   });
 });
 
+describe('PopoverDesktop — container event wiring', () => {
+  it('opens a submenu from a real mouseover on the popover container', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+    const parentElement = itemByName(popover, 'c-parent').getElement();
+
+    expect(parentElement).not.toBeNull();
+
+    instance.nodes.popoverContainer.dispatchEvent(hoverOn(parentElement as Element));
+    vi.advanceTimersByTime(100);
+
+    expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+  });
+
+  it('closes the submenu from a real mouseleave on the popover container', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+
+    instance.showNestedItems(itemByName(popover, 'c-parent'));
+    expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+
+    instance.nodes.popoverContainer.dispatchEvent(
+      new MouseEvent('mouseleave', { relatedTarget: document.body })
+    );
+    vi.advanceTimersByTime(300);
+
+    expect(instance.nestedPopover).toBeNull();
+  });
+
+  it('keeps the submenu when the pointer left into it', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+    const nested = instance.showNestedPopoverForItem(itemByName(popover, 'c-parent'));
+
+    instance.nodes.popoverContainer.dispatchEvent(
+      new MouseEvent('mouseleave', { relatedTarget: nested.getElement() })
+    );
+    vi.advanceTimersByTime(400);
+
+    expect(instance.nestedPopover).toBe(nested);
+  });
+});
+
+describe('PopoverDesktop — show() collaborator wiring', () => {
+  it('observes the popover container, not the zero-size positioning host', () => {
+    const trigger = document.createElement('button');
+
+    document.body.appendChild(trigger);
+    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ top: 100, bottom: 140, left: 100, right: 140, width: 40, height: 40 })
+    );
+
+    const popover = createPopover({ trigger });
+
+    ResizeObserverStub.instances = [];
+    popover.show();
+
+    expect(ResizeObserverStub.instances.length).toBeGreaterThan(0);
+
+    const tracker = ResizeObserverStub.instances[ResizeObserverStub.instances.length - 1];
+
+    expect(tracker.observed).toStrictEqual([asInternal(popover).nodes.popoverContainer]);
+  });
+
+  it('reports a null focus host while focus lives inside the popover', () => {
+    const popover = createPopover();
+
+    expect(popover.getFocusHost()).toBeNull();
+  });
+
+  it('reports the search input as the focus host once search is wired', () => {
+    const popover = createPopover({ searchable: true });
+
+    expect(popover.getFocusHost()).toBe(popover.getElement().querySelector('input'));
+  });
+});
+
+describe('PopoverDesktop — anchor snapshot fallback', () => {
+  it('cancels a horizontal document scroll for a context-less virtual anchor', () => {
+    const popover = createPopover({ position: makeRect({ top: 100, bottom: 200, left: 100, right: 300 }) });
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 50, width: 150 });
+
+    popover.show();
+
+    const anchoredLeft = popover.getElement().style.left;
+    const originalScrollX = window.scrollX;
+
+    Object.defineProperty(window, 'scrollX', { configurable: true, value: 100, writable: true });
+
+    try {
+      window.dispatchEvent(new Event('scroll'));
+
+      expect(popover.getElement().style.left).toBe(anchoredLeft);
+    } finally {
+      Object.defineProperty(window, 'scrollX', { configurable: true, value: originalScrollX, writable: true });
+    }
+  });
+
+  it('follows a measurable position context that moved since capture', () => {
+    const context = document.createElement('div');
+
+    document.body.appendChild(context);
+
+    const contextSpy = vi.spyOn(context, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ top: 100, bottom: 200, left: 100, right: 200, width: 100, height: 100 })
+    );
+
+    const popover = createPopover({
+      position: makeRect({ top: 100, bottom: 200, left: 900, right: 1000, width: 100, height: 100 }),
+      positionContext: context,
+    });
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 150, width: 150 });
+
+    // The context moved right by 50 and down by 20 after the snapshot was taken.
+    contextSpy.mockReturnValue(
+      makeRect({ top: 120, bottom: 220, left: 150, right: 250, width: 100, height: 100 })
+    );
+
+    popover.show();
+
+    // Tracked rect is 950..1050 x 120..220: no room on the right of 950 for a
+    // 150px menu, so it flips left and clamps to the right viewport boundary.
+    expect(popover.getElement()).toHaveAttribute(ATTR_OPEN_LEFT);
+    expect(popover.getElement().style.left).toBe('874px');
+    expect(popover.getElement().style.top).toBe('228px');
+  });
+
+  it('tracks the vertical movement of a context for a popover that flips above its anchor', () => {
+    const context = document.createElement('div');
+
+    document.body.appendChild(context);
+
+    const contextSpy = vi.spyOn(context, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ top: 100, bottom: 200, left: 100, right: 200, width: 100, height: 100 })
+    );
+
+    const popover = createPopover({
+      position: makeRect({ top: 700, bottom: 740, left: 400, right: 500, width: 100, height: 40 }),
+      positionContext: context,
+    });
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 150, width: 150 });
+
+    // Only the vertical offset moved: +20.
+    contextSpy.mockReturnValue(
+      makeRect({ top: 120, bottom: 220, left: 100, right: 200, width: 100, height: 100 })
+    );
+
+    popover.show();
+
+    expect(popover.getElement().getAttribute('data-side')).toBe('top');
+    expect(popover.getElement().style.top).toBe('562px');
+  });
+
+  it('stops following a context that became unmeasurable after capture', () => {
+    const context = document.createElement('div');
+
+    document.body.appendChild(context);
+
+    const contextSpy = vi.spyOn(context, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ top: 100, bottom: 200, left: 100, right: 300, width: 200, height: 100 })
+    );
+
+    const popover = createPopover({
+      position: makeRect({ top: 100, bottom: 200, left: 100, right: 300 }),
+      positionContext: context,
+    });
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 50, width: 150 });
+
+    contextSpy.mockReturnValue(makeRect({}));
+
+    popover.show();
+
+    // With no measurable context the anchor falls back to the raw rect and the
+    // (zero) scroll delta, so the snapshot position survives untouched.
+    expect(popover.getElement().style.left).toBe('100px');
+  });
+});
+
+describe('PopoverDesktop — synthesized-hover coordinate matching', () => {
+  it('treats a hover matching only one pointer coordinate as a genuine one', () => {
+    document.dispatchEvent(new MouseEvent('mousemove', { clientX: 10, clientY: 20, bubbles: true }));
+
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+    const parentItem = itemByName(popover, 'c-parent');
+    const parentElement = parentItem.getElement() as Element;
+
+    popover.show();
+    expect(instance.suppressSyncHover).toBe(true);
+
+    // Same X, different Y: real motion, must not be swallowed.
+    instance.handleHover(hoverOn(parentElement, { clientX: 10, clientY: 99 }));
+    expect(instance.previouslyHoveredItem).toBe(parentItem);
+
+    instance.previouslyHoveredItem = null;
+
+    // Same Y, different X: real motion, must not be swallowed.
+    instance.handleHover(hoverOn(parentElement, { clientX: 99, clientY: 20 }));
+    expect(instance.previouslyHoveredItem).toBe(parentItem);
+  });
+});
+
+describe('PopoverDesktop — reposition guard', () => {
+  const triggerAt = (left: number): { trigger: HTMLElement; rectSpy: Mock } => {
+    const trigger = document.createElement('button');
+
+    document.body.appendChild(trigger);
+
+    const rectSpy = vi.spyOn(trigger, 'getBoundingClientRect')
+      .mockReturnValue(makeRect({ top: 100, bottom: 140, left, right: left + 40, width: 40, height: 40 }));
+
+    return { trigger, rectSpy };
+  };
+
+  it('a tab change on a closed popover writes no stale pixel position', () => {
+    const { trigger } = triggerAt(100);
+    const popover = createPopover({ trigger });
+    const instance = asInternal(popover);
+
+    popover.show();
+    popover.hide();
+
+    expect(popover.getElement().style.top).toBe('');
+
+    instance.onTabsChange();
+
+    expect(popover.getElement().style.top).toBe('');
+    expect(popover.getElement().style.left).toBe('');
+  });
+
+  it('a tab change on an open popover re-anchors to the moved trigger', () => {
+    const { trigger, rectSpy } = triggerAt(100);
+    const popover = createPopover({ trigger });
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100, width: 150 });
+
+    popover.show();
+    expect(popover.getElement().style.left).toBe('100px');
+
+    rectSpy.mockReturnValue(makeRect({ top: 100, bottom: 140, left: 300, right: 340, width: 40, height: 40 }));
+    instance.onTabsChange();
+
+    expect(popover.getElement().style.left).toBe('300px');
+  });
+
+  it('a tab change re-measures the cached popover size', () => {
+    const popover = createPopover();
+    const instance = asInternal(popover);
+
+    popover.show();
+
+    const cached = instance.size;
+
+    instance.onTabsChange();
+
+    expect(instance.size).not.toBe(cached);
+  });
+
+  it('a tab change leaves an inactive flipper untouched', () => {
+    const popover = createPopover();
+    const instance = asInternal(popover);
+
+    instance.onTabsChange();
+
+    expect(getFlipper(0).deactivate).not.toHaveBeenCalled();
+    expect(getFlipper(0).activate).not.toHaveBeenCalled();
+  });
+
+  it('a tab change deactivates the active flipper before rebuilding it', () => {
+    const popover = createPopover();
+    const instance = asInternal(popover);
+
+    popover.show();
+    expect(getFlipper(0).isActivated).toBe(true);
+
+    instance.onTabsChange();
+
+    expect(getFlipper(0).deactivate).toHaveBeenCalledOnce();
+    expect(getFlipper(0).isActivated).toBe(true);
+  });
+
+  it('a tab change without a flipper does not throw', () => {
+    const popover = createPopover({ flippable: false });
+
+    expect(() => asInternal(popover).onTabsChange()).not.toThrow();
+  });
+
+  it('stamps data-align end when the menu resolves to the left of the anchor', () => {
+    const scopeElement = document.createElement('div');
+
+    document.body.appendChild(scopeElement);
+    vi.spyOn(scopeElement, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ top: 0, left: 0, right: 600, bottom: 768, width: 600, height: 768 })
+    );
+
+    const trigger = document.createElement('button');
+
+    document.body.appendChild(trigger);
+    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ top: 100, bottom: 140, left: 500, right: 540, width: 40, height: 40 })
+    );
+
+    const popover = createPopover({ trigger, scopeElement });
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100, width: 200 });
+
+    popover.show();
+
+    expect(popover.getElement()).toHaveAttribute(ATTR_OPEN_LEFT);
+    expect(popover.getElement().getAttribute('data-align')).toBe('end');
+  });
+
+  it('re-stamps the resolved side when the trigger moves across the viewport', () => {
+    const trigger = document.createElement('button');
+
+    document.body.appendChild(trigger);
+
+    const rectSpy = vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ top: 100, bottom: 140, left: 100, right: 140, width: 40, height: 40 })
+    );
+
+    const popover = createPopover({ trigger });
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100, width: 150 });
+
+    popover.show();
+    expect(popover.getElement().getAttribute('data-side')).toBe('bottom');
+
+    // No room below the trigger any more → the menu flips above it.
+    rectSpy.mockReturnValue(makeRect({ top: 700, bottom: 740, left: 100, right: 140, width: 40, height: 40 }));
+    window.dispatchEvent(new Event('resize'));
+
+    expect(popover.getElement().getAttribute('data-side')).toBe('top');
+  });
+});
+
+describe('PopoverDesktop — submenu lifecycle after teardown', () => {
+  it('reopens a submenu after the previous one was destroyed', () => {
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+
+    instance.showNestedItems(itemByName(popover, 'c-parent'));
+    instance.destroyNestedPopoverIfExists();
+
+    expect(instance.nestedPopover).toBeNull();
+
+    instance.showNestedItems(itemByName(popover, 'c-parent'));
+
+    expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+  });
+
+  it('keeps the original open deadline when the pointer re-enters the row after a teardown', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+    const parentItem = itemByName(popover, 'c-parent');
+    const parentElement = parentItem.getElement() as Element;
+
+    instance.showNestedItems(parentItem);
+    instance.destroyNestedPopoverIfExists();
+    expect(instance.nestedPopover).toBeNull();
+
+    instance.handleHover(hoverOn(parentElement));
+    vi.advanceTimersByTime(60);
+    instance.handleHover(hoverOn(parentElement));
+    vi.advanceTimersByTime(50);
+
+    expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+  });
+
+  it('a close intent scheduled with no submenu open never cuts a later submenu short', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+    const parentItem = itemByName(popover, 'c-parent');
+
+    // Bring the popover into the "destroyed" (null) state, then park the
+    // pointer on chrome with nothing open.
+    instance.showNestedPopoverForItem(parentItem);
+    instance.destroyNestedPopoverIfExists();
+
+    instance.handleHover(hoverOn(instance.nodes.popoverContainer));
+    vi.advanceTimersByTime(10);
+
+    // showNestedItems would cancel a pending close itself, hiding the defect:
+    // open the submenu through the path that does not.
+    const reopened = instance.showNestedPopoverForItem(parentItem);
+
+    vi.advanceTimersByTime(295);
+
+    expect(instance.nestedPopover).toBe(reopened);
+  });
+
+  it('a rescheduled grace close never kills a submenu opened after it', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+    const parentItem = itemByName(popover, 'c-parent');
+
+    instance.showNestedPopoverForItem(parentItem);
+
+    // Grace close starts at t=0 and is rescheduled at t=100.
+    instance.handleHover(hoverOn(instance.nodes.popoverContainer));
+    vi.advanceTimersByTime(100);
+    instance.handleHover(hoverOn(instance.nodes.popoverContainer));
+    vi.advanceTimersByTime(205);
+
+    expect(instance.nestedPopover).toBeNull();
+
+    const reopened = instance.showNestedPopoverForItem(parentItem);
+
+    // The rescheduled deadline must not outlive the close it belongs to.
+    vi.advanceTimersByTime(100);
+
+    expect(instance.nestedPopover).toBe(reopened);
+  });
+
+  it('reaching the submenu cancels a pending open intent for a sibling row', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({
+      items: [
+        parentWithChildren(),
+        {
+          title: 'Sibling',
+          name: 'sibling',
+          children: { items: [{ title: 'Other', name: 'other', onActivate: vi.fn() }] },
+        },
+      ],
+    });
+    const instance = asInternal(popover);
+    const siblingItem = itemByName(popover, 'sibling');
+    const nested = instance.showNestedPopoverForItem(itemByName(popover, 'c-parent'));
+
+    // The pointer clipped the sibling trigger on its way into the submenu.
+    instance.handleHover(hoverOn(siblingItem.getElement() as Element));
+
+    nested.getMountElement().dispatchEvent(new Event('pointerenter'));
+    vi.advanceTimersByTime(100);
+
+    expect(instance.nestedPopover).toBe(nested);
+  });
+
+  it('a leave with no submenu ever opened is inert', () => {
+    const popover = createPopover({ items: [parentWithChildren()] });
+
+    expect(() => asInternal(popover).handleMouseLeave(
+      new MouseEvent('mouseleave', { relatedTarget: document.body })
+    )).not.toThrow();
+  });
+
+  it('keeps the original grace deadline while the pointer keeps wandering', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+
+    instance.showNestedItems(itemByName(popover, 'c-parent'));
+    expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+
+    instance.handleHover(hoverOn(instance.nodes.popoverContainer));
+    vi.advanceTimersByTime(100);
+    instance.handleHover(hoverOn(instance.nodes.popoverContainer));
+    vi.advanceTimersByTime(205);
+
+    // The grace window started at the first chrome hover: 300ms, not 400.
+    expect(instance.nestedPopover).toBeNull();
+  });
+
+  it('the below-card observer stops writing once the submenu is destroyed', () => {
+    const popover = createPopover({
+      items: [
+        {
+          title: 'Link Field',
+          name: 'link-field',
+          children: {
+            placement: 'below',
+            items: [{ title: 'Child', name: 'child', onActivate: vi.fn() }],
+          },
+        },
+      ],
+    });
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance.nodes.popoverContainer, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ left: 300, top: 200, right: 640, bottom: 290, width: 340, height: 90 })
+    );
+    vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ left: 280, top: 180, right: 660, bottom: 300, width: 380, height: 120 })
+    );
+
+    const nested = instance.showNestedPopoverForItem(itemByName(popover, 'link-field'));
+    const nestedContainer = asInternal(nested).nodes.popoverContainer;
+    const observer = ResizeObserverStub.instances[ResizeObserverStub.instances.length - 1];
+
+    instance.destroyNestedPopoverIfExists(false);
+    expect(instance.nestedPopover).toBeNull();
+
+    nestedContainer.style.left = '77px';
+    Object.defineProperty(nestedContainer, 'offsetWidth', { configurable: true, value: 300 });
+
+    observer.trigger();
+    flushAnimationFrame();
+
+    expect(nestedContainer.style.left).toBe('77px');
+  });
+});
+
+describe('PopoverDesktop — nested below placement from the measured size', () => {
+  const belowPopover = (): PopoverDesktop => createPopover({
+    items: [
+      {
+        title: 'Link Field',
+        name: 'link-field',
+        children: {
+          placement: 'below',
+          items: [{ title: 'Child', name: 'child', onActivate: vi.fn() }],
+        },
+      },
+    ],
+  });
+
+  it('pins the below card to the right margin when its measured width overflows', () => {
+    const popover = belowPopover();
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance.nodes.popoverContainer, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ left: 300, top: 200, right: 640, bottom: 290, width: 340, height: 90 })
+    );
+    vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ left: 280, top: 180, right: 660, bottom: 300, width: 380, height: 120 })
+    );
+
+    const sizeSpy = vi.spyOn(PopoverDesktop.prototype, 'size', 'get')
+      .mockReturnValue({ width: 800, height: 60 });
+
+    try {
+      const nested = instance.showNestedPopoverForItem(itemByName(popover, 'link-field'));
+      const nestedContainer = asInternal(nested).nodes.popoverContainer;
+
+      // 800px wide cannot keep the parent's left edge (300) inside the 8px
+      // margin, so the card is pinned by its right edge instead.
+      expect(nestedContainer.style.left).toBe('auto');
+      expect(nestedContainer.style.right).toBe('-356px');
+    } finally {
+      sizeSpy.mockRestore();
+    }
+  });
+
+  it('keeps the below card inside the viewport when its measured height outgrows the room below', () => {
+    const popover = belowPopover();
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance.nodes.popoverContainer, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ left: 800, top: 200, right: 1140, bottom: 290, width: 340, height: 90 })
+    );
+    vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ left: 780, top: 180, right: 1160, bottom: 300, width: 380, height: 120 })
+    );
+
+    const sizeSpy = vi.spyOn(PopoverDesktop.prototype, 'size', 'get')
+      .mockReturnValue({ width: 200, height: 60 });
+
+    try {
+      const nested = instance.showNestedPopoverForItem(itemByName(popover, 'link-field'));
+      const nestedContainer = asInternal(nested).nodes.popoverContainer;
+
+      // A real layout box: the live offsetHeight wins over the measured size.
+      Object.defineProperty(nestedContainer, 'offsetWidth', { configurable: true, value: 300 });
+      Object.defineProperty(nestedContainer, 'offsetHeight', { configurable: true, value: 500 });
+
+      const observer = ResizeObserverStub.instances[ResizeObserverStub.instances.length - 1];
+
+      observer.trigger();
+      flushAnimationFrame();
+
+      // 500px tall under a parent ending at 290: pinned to the bottom margin.
+      expect(nested.getElement().getAttribute('data-side')).toBe('bottom');
+      expect(nestedContainer.style.top).toBe('80px');
+    } finally {
+      sizeSpy.mockRestore();
+    }
+  });
+
+  it('flips the below card above the parent when its measured height does not fit', () => {
+    const popover = belowPopover();
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance.nodes.popoverContainer, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ left: 300, top: 200, right: 640, bottom: 700, width: 340, height: 500 })
+    );
+    vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ left: 280, top: 180, right: 660, bottom: 720, width: 380, height: 540 })
+    );
+
+    const sizeSpy = vi.spyOn(PopoverDesktop.prototype, 'size', 'get')
+      .mockReturnValue({ width: 200, height: 60 });
+
+    try {
+      const nested = instance.showNestedPopoverForItem(itemByName(popover, 'link-field'));
+      const nestedContainer = asInternal(nested).nodes.popoverContainer;
+
+      expect(nested.getElement().getAttribute('data-side')).toBe('top');
+      expect(nestedContainer.style.top).toBe('-44px');
+    } finally {
+      sizeSpy.mockRestore();
+    }
+  });
+});
+
+describe('PopoverDesktop — size measurement clone', () => {
+  it('measures on a clone stripped of the promoted popover attribute', () => {
+    const popover = createPopover();
+    const instance = asInternal(popover);
+
+    // Simulate the root popover having been promoted into the CSS Top Layer,
+    // as a browser does — jsdom never runs that promotion itself.
+    instance.nodes.popover.setAttribute('popover', 'manual');
+
+    const appendSpy = vi.spyOn(document.body, 'appendChild');
+
+    instance.size;
+
+    const clone = appendSpy.mock.calls
+      .map(call => call[0])
+      .find((node): node is HTMLElement => node instanceof HTMLElement && node.hasAttribute(ATTR_OPENED));
+
+    expect(clone).toBeDefined();
+    expect(clone?.hasAttribute('popover')).toBe(false);
+  });
+});
+
+describe('PopoverDesktop — promoted cache lifecycle', () => {
+  const searchableParent = (): PopoverParams['items'][number] => ({
+    title: 'Convert',
+    name: 'c-parent',
+    children: {
+      items: [{ title: 'Convert', name: 'c-child', onActivate: vi.fn() }],
+    },
+  });
+
+  const promotedChildElement = (popover: PopoverDesktop): HTMLElement | null | undefined =>
+    asInternal(popover).promotedItemCache?.items.find(item => item.name === 'c-child')?.getElement();
+
+  it('rebuilds the promoted cache after the query was cleared through filterItems', () => {
+    const popover = createPopover({ items: [searchableParent()] });
+
+    popover.filterItems('convert');
+
+    const first = promotedChildElement(popover);
+
+    expect(first).toBeDefined();
+
+    popover.filterItems('');
+
+    expect(asInternal(popover).promotedItemCache).toBeNull();
+
+    popover.filterItems('convert');
+
+    const second = promotedChildElement(popover);
+
+    expect(second).toBeDefined();
+    expect(second).not.toBe(first);
+  });
+
+  it('rebuilds the promoted cache after the search input was cleared', () => {
+    const popover = createPopover({ searchable: true, items: [searchableParent()] });
+    const input = popover.getElement().querySelector('input');
+
+    expect(input).not.toBeNull();
+
+    (input as HTMLInputElement).value = 'convert';
+    input?.dispatchEvent(new Event('input'));
+
+    const first = promotedChildElement(popover);
+
+    expect(first).toBeDefined();
+
+    (input as HTMLInputElement).value = '';
+    input?.dispatchEvent(new Event('input'));
+
+    expect(asInternal(popover).promotedItemCache).toBeNull();
+
+    (input as HTMLInputElement).value = 'convert';
+    input?.dispatchEvent(new Event('input'));
+
+    const second = promotedChildElement(popover);
+
+    expect(second).toBeDefined();
+    expect(second).not.toBe(first);
+  });
+
+  it('never promotes anything from a top-level separator', () => {
+    const popover = createPopover({
+      items: [
+        { type: PopoverItemType.Separator },
+        searchableParent(),
+      ],
+    });
+    const instance = asInternal(popover);
+
+    expect(() => popover.filterItems('convert')).not.toThrow();
+    expect(instance.promotedItemCache?.items.map(item => item.name)).toEqual(['c-child']);
+  });
+
+  it('never promotes the children of an html item', () => {
+    const htmlElement = document.createElement('div');
+
+    htmlElement.textContent = 'Section';
+
+    const popover = createPopover({
+      items: [
+        {
+          type: PopoverItemType.Html,
+          element: htmlElement,
+          name: 'html-parent',
+          children: { items: [{ title: 'Convert', name: 'html-child', onActivate: vi.fn() }] },
+        },
+        searchableParent(),
+      ],
+    });
+    const instance = asInternal(popover);
+
+    popover.filterItems('convert');
+
+    expect(instance.promotedItemCache?.items.map(item => item.name)).toStrictEqual(['c-child']);
+  });
+
+  it('orders promoted groups by their best-scoring child', () => {
+    const popover = createPopover({
+      items: [
+        {
+          title: 'Alpha',
+          name: 'alpha-parent',
+          children: {
+            items: [
+              { title: 'Con', name: 'p-exact', onActivate: vi.fn() },
+              { title: 'Cocoon', name: 'p-weak', onActivate: vi.fn() },
+            ],
+          },
+        },
+        {
+          title: 'Beta',
+          name: 'beta-parent',
+          children: {
+            items: [{ title: 'Cons', name: 'q-prefix', onActivate: vi.fn() }],
+          },
+        },
+      ],
+    });
+    const instance = asInternal(popover);
+
+    popover.filterItems('con');
+
+    const labels = Array.from(instance.nodes.items.querySelectorAll(`[${ATTR_PROMOTED_GROUP}]`))
+      .map(element => element.textContent);
+
+    // Alpha's exact match (100) outranks Beta's prefix match (90) even though
+    // Alpha also carries a weak match (35).
+    expect(labels).toStrictEqual(['Alpha', 'Beta']);
+  });
+
+  it('leaves the below-card right edge unset when the card keeps the parent left edge', () => {
+    const popover = createPopover({
+      items: [
+        {
+          title: 'Link Field',
+          name: 'link-field',
+          children: {
+            placement: 'below',
+            items: [{ title: 'Child', name: 'child', onActivate: vi.fn() }],
+          },
+        },
+      ],
+    });
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance.nodes.popoverContainer, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ left: 300, top: 200, right: 640, bottom: 290, width: 340, height: 90 })
+    );
+    vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ left: 280, top: 180, right: 660, bottom: 300, width: 380, height: 120 })
+    );
+
+    const nested = instance.showNestedPopoverForItem(itemByName(popover, 'link-field'));
+    const nestedContainer = asInternal(nested).nodes.popoverContainer;
+
+    expect(nestedContainer.style.left).toBe('20px');
+    expect(nestedContainer.style.right).toBe('auto');
+  });
+
+  it('keeps the ranked DOM order when a later query matches nothing', () => {
+    const popover = createPopover({
+      items: [
+        { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+        { title: 'Zebra', name: 'zebra', onActivate: vi.fn() },
+      ],
+    });
+    const instance = asInternal(popover);
+
+    const alphaElement = itemByName(popover, 'alpha').getElement();
+    const zebraElement = itemByName(popover, 'zebra').getElement();
+
+    popover.filterItems('alpha');
+
+    expect(Array.from(instance.nodes.items.children)).toStrictEqual([ zebraElement, alphaElement ]);
+
+    popover.filterItems('nomatchnomatch');
+
+    // The ranked order survives: a query that matched nothing restores nothing.
+    expect(Array.from(instance.nodes.items.children)).toStrictEqual([ zebraElement, alphaElement ]);
+  });
+});
+
+describe('PopoverDesktop — unmeasurable trigger rect', () => {
+  const triggerWithoutRect = (): HTMLElement => {
+    const trigger = document.createElement('button');
+
+    document.body.appendChild(trigger);
+    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(undefined as unknown as DOMRect);
+
+    return trigger;
+  };
+
+  it('falls back to the zero position when the live trigger rect cannot be read', () => {
+    const popover = createPopover({ trigger: triggerWithoutRect() });
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100, width: 150 });
+
+    popover.show();
+
+    expect(popover.getElement().style.top).toBe('0px');
+    expect(popover.getElement().style.left).toBe('0px');
+    expect(popover.getElement().getAttribute('data-side')).toBe('bottom');
+    expect(popover.getElement().getAttribute('data-align')).toBe('start');
+  });
+
+  it('prefers the live trigger rect over the construction-time snapshot', () => {
+    const trigger = document.createElement('button');
+
+    document.body.appendChild(trigger);
+
+    const rectSpy = vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ top: 100, bottom: 140, left: 100, right: 140, width: 40, height: 40 })
+    );
+
+    const popover = createPopover({ trigger });
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100, width: 150 });
+
+    rectSpy.mockReturnValue(makeRect({ top: 100, bottom: 140, left: 300, right: 340, width: 40, height: 40 }));
+    popover.show();
+
+    expect(popover.getElement().style.left).toBe('300px');
+    expect(popover.getElement().style.top).toBe('148px');
+  });
+
+  it('treats an unreadable live rect as no rect even when a snapshot exists', () => {
+    const trigger = document.createElement('button');
+
+    document.body.appendChild(trigger);
+
+    const rectSpy = vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ top: 100, bottom: 140, left: 100, right: 140, width: 40, height: 40 })
+    );
+
+    const popover = createPopover({ trigger });
+    const instance = asInternal(popover);
+
+    vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100, width: 150 });
+
+    rectSpy.mockReturnValue(undefined as unknown as DOMRect);
+    popover.show();
+
+    expect(popover.getElement().style.left).toBe('0px');
+    expect(popover.getElement().style.top).toBe('0px');
+  });
+});
+
+describe('PopoverDesktop — pointer tracker install guard', () => {
+  const MARKER = '__blokPopoverPointerTracker__';
+  const documentWithMarker = document as unknown as Record<string, unknown>;
+
+  it('marks the document under the shared key once the tracker is installed', async () => {
+    Reflect.deleteProperty(documentWithMarker, MARKER);
+
+    vi.resetModules();
+
+    await import('../../../../../src/components/utils/popover/popover-desktop');
+
+    expect(documentWithMarker[MARKER]).toBe(true);
+  });
+
+  it('does not install a second tracker when the document already carries the marker', async () => {
+    documentWithMarker[MARKER] = true;
+
+    const addSpy = vi.spyOn(document, 'addEventListener');
+
+    vi.resetModules();
+
+    await import('../../../../../src/components/utils/popover/popover-desktop');
+
+    expect(addSpy.mock.calls.filter(([type]) => type === 'mousemove')).toHaveLength(0);
+  });
+});
+
 /**
  * Equivalence proofs for the recorded survivors that no assertion can reach.
  * Each entry names a source line, the surviving mutant ids on it, and why every
- * replacement is unobservable. Shape numbers refer to the campaign catalogue:
- * a guard duplicated by the callee (4), a dead branch (11), a subsumed conjunct
- * (8), a condition restated at the call site (10), an environment guarantee (3),
- * and write-only module state (2).
- * L40 (14785): write-only module state, read once at evaluation
- * L44 (14786, 14788, 14789, 14791): jsdom always defines document; the once-guard and its marker are unobservable
- * L49 (14799): the marker assignment is write-only state
- * L60 (14807, 14808, 14811): the OR arm is only reachable for a measured rect
- * L63 (14816): no path dirties the scroll offset while an anchor snapshot is live
- * L64 (14817): same as L63 for the vertical delta
- * L71 (14822): toJSON is never invoked by this file or any caller
- * L80 (14830): subsumed by the surrounding contextElement undefined conjunct
- * L89 (14838, 14837): subsumed by the surrounding contextRect undefined conjunct
- * L271 (14847): only the value right is special-cased; every other value behaves as left
- * L360 (14861): assigning undefined equals not assigning (leftAlignElement defaults to undefined)
- * L368 (14870): assigning undefined falls through to the resolvePosition default left
- * L372 (14874): assigning undefined falls through to the resolvePosition default 0
- * L384 (14890): resolveBoundaryRect(undefined) equals resolveBoundaryRect(document.body)
- * L388 (14894): the popover container is always built and never null
- * L423 (14922): the flippable===false early-return precedes this line, so a flipper always exists
- * L428 (14927): same as L423 - the host is only set after a flipper exists
- * L535 (14963): captureAnchorSnapshot(rect, undefined) equals captureAnchorSnapshot(rect)
- * L548 (14968): explicitPositionAnchor is assigned whenever params.position is set
- * L560 (14978, 14976): the base show() re-attaches an unconnected mount; nothing reads its layout in between
- * L561 (14979): same as L560 - the base mount step duplicates the desktop-side append
- * L600 (15018): the tracker only emits scroll-with-event or resize-without-event
- * L659 (15057): PopoverAbstract.show() already focuses the search input before onShow()
- * L756 (15108, 15104, 15105): only the tracker calls reposition, and it is attached only while shown and anchored
- * L777 (15121): isMeasurableRect already checks that the rect is defined
- * L783 (15133, 15132): calculatePosition is reachable only with a rect (trigger or explicit position)
- * L784 (15134, 15135, 15136): same as L783 - the zero-rect literal branch is unreachable
- * L877 (15166, 15163, 15164): pointerTracker.x/y are assigned atomically, so one null check implies the other
- * L899 (15180): the once-listener self-removes and the explicit removal is an idempotent no-op
- * L942 (15204, 15205): the once-listener auto-removes; the explicit remove is an idempotent no-op
- * L972 (15225): null and undefined both mean closed; the continuation is identical
- * L1060 (15264, 15266, 15267, 15269): with no submenu the trigger item is null, so the nested branch is the fresh path
- * L1097 (15294): a non-Node relatedTarget short-circuits immediately either way
- * L1098 (15295): subsumed by the preceding relatedTarget instanceof Node conjunct
- * L1118 (15303): clearTimeout(null) is inert
- * L1130 (15307): clearTimeout(null) is inert
- * L1143 (15314, 15315, 15316, 15318, 15320): every opener runs destroyNestedPopoverIfExists, which cancels the close timer first
- * L1147 (15322, 15324): the early return is already guaranteed by the caller gate
- * L1161 (15329): clearTimeout(null) is inert
- * L1175 (15336): destroy() already removed the stale element, so the extra removal is a no-op
- * L1198 (15352, 15350): item roots are built in the constructors and never nulled
- * L1199 (15353): same as L1198 - the null-element branch is dead
- * L1244 (15373): the destroyed instance is dropped and never reused
- * L1245 (15374): hide() runs the same cleanup the caller stops relying on
- * L1246 (15375): destroy() is idempotent and its teardown is already complete
- * L1247 (15376): destroy() already removed the element from the DOM
- * L1330 (15412): refreshItemActiveState(null) returns immediately
- * L1339 (15420): cancelNestedCloseIntent is a no-op with no pending close
- * L1349 (15429, 15431): ResizeObserver is always defined in jsdom (real or polyfilled)
- * L1352 (15434): the container is found by its own data attribute and is always an element
- * L1360 (15441, 15442, 15443, 15445, 15447): only writes styles on a detached element - no assertion surface can observe it
- * L1384 (15456, 15455): the container lookup always succeeds, so the early return is dead
- * L1415 (15468, 15470): offsetWidth is never negative, so > 0 and !== 0 agree
- * L1417 (15472, 15473): nestedPopover is assigned before positioning runs
- * L1418 (15474, 15475, 15476, 15477): the replacement preserves observable behaviour on every reachable path
- * L1420 (15478, 15479): the replacement preserves observable behaviour on every reachable path
- * L1440 (15491): the empty right-pin is overwritten by the left assignment that follows
- * L1468 (15507): nestedPopover is assigned before positioning runs
- * L1470 (15510, 15512): Math.max(8, ...) already floors the value, so > 0 and >= 0 agree
- * L1484 (15524): triggerItem.getElement() is checked before the rect read
- * L1485 (15526): the replacement preserves observable behaviour on every reachable path
- * L1512 (15547): the popover root is always built
- * L1517 (15551, 15549): same as L1512 - the root is never null
- * L1531 (15555): the popover attribute is only added by top-layer promotion, which jsdom never runs
- * L1562 (15564): the flatMap source is the always-populated items array
- * L1564 (15567, 15569, 15570, 15572): mapped element lists never contain nullish entries
- * L1594 (15588): the empty branch needs a null element root, which never happens
- * L1634 (15599, 15600, 15603): the replacement preserves observable behaviour on every reachable path
- * L1662 (15625): the fallback role string is only reached for non-menu, non-option markup
- * L1665 (15629): the name check is subsumed by the preceding undefined guard
- * L1666 (15632): destroy() on a skipped child only hides a tooltip
- * L1673 (15635): recursing into a childless item walks an empty array
- * L1689 (15647, 15645): the separator slot is only non-null when it was inserted
- * L1694 (15652, 15650): the promoted cache is only non-null when items were built
- * L1695 (15653): the loop body only removes elements that exist
- * L1696 (15654): the replacement preserves observable behaviour on every reachable path
- * L1697 (15655): destroy() on a promoted item only hides a tooltip
- * L1708 (15656): the kind default is always passed explicitly by the caller
- * L1730 (15671): promoted roots are never null
- * L1731 (15675): the items container is never null
- * L1750 (15678): the title check is subsumed by the promoted-title set membership
- * L1757 (15689, 15690, 15692): the instanceof check is the first conjunct and short-circuits the rest
- * L1772 (15704): true && id === empty is identical to the original condition
- * L1780 (15712): the items container is never null
- * L1793 (15723): the replacement preserves observable behaviour on every reachable path
- * L1814 (15736): parentChains is populated for every cached item before scoring
- * L1844 (15755): the empty-query branch re-runs the same cleanup it would preempt
- * L1871 (15779): same as L1814 - the chain fallback is dead
- * L1906 (15810, 15812, 15815, 15814): deduplicating against an empty promoted set is the identity
- * L1917 (15828): the flag is only read for non-default items, where it is already true
- * L1918 (15834): the name check is subsumed by the caller-side name guard
- * L1930 (15853, 15854): reordering an empty ranked list appends nothing
- * L1932 (15858, 15860, 15861): restoring on a non-matching query is invisible - every row is hidden
- * L1949 (15878): promoted roots are never null
- * L1955 (15893): the base class always supplies the Actions message
- * L1959 (15895, 15897, 15898, 15900): the matched element and items container are never null
- * L1966 (15904, 15906): rendering zero promoted groups is a no-op
- * L1978 (15918, 15916): both producers pre-sort promotedItems by score descending, so groups already arrive
- * L1979 (15919, 15920): best-first and every comparator variant is an identity on the input
- * L1980 (15922): same as L1978 - deleting the sort entirely preserves the expected order
- * L1982 (15923): same as L1978 - the comparator cannot change an already-ranked sequence
- * L1989 (15926): the items container is never null
- * L1996 (15929): jsdom reports no overflow, so the reel distortion is inert
- * L1998 (15930): same as L1996 - the scrollbar thumb stays hidden under zero layout
- * L2017 (15940): mapped element lists never contain nullish entries
- * L2020 (15943): the null filter is subsumed by the mapping that produced the list
- * L2046 (15965, 15963): the results announcer is always built
- * L2057 (15976): the base class always supplies the Nothing found message
- * L2077 (15988): the items container is never null where reorder runs
- * L2083 (15994, 15992): same as L2077 - the container guard is dead
- * L2090 (15996): item roots are never null
- * L2103 (16009, 16003, 16004, 16005, 16007): the sole caller already checks the container and the cached order
+ * replacement is unobservable. Every entry marked ARGUED rests on the source
+ * reading quoted after it; the two marked MEASURED were checked by running
+ * something (the coverage triage, or the randomized experiment noted inline).
+ * Shape numbers refer to the campaign catalogue: a guard duplicated by the
+ * callee (4), a dead branch (11), a subsumed conjunct (8), a condition restated
+ * at the call site (10), an environment guarantee (3), a defaulted parameter
+ * (12), and write-only module state (2).
+ * L44 (5458, 5460): ARGUED - jsdom always defines document, so the typeof guard
+ *   is an environment guarantee (3) and only the flag half can decide
+ * L63 (5485): ARGUED - resolvePosition consumes anchor.left/right/top/bottom;
+ *   nothing reads .x on these synthetic rects
+ * L64 (5486): ARGUED - same as L63 for .y
+ * L71 (5491): MEASURED - the coverage triage reports this line as never
+ *   executed; toJSON is not called by this file or any caller
+ * L80 (5499): ARGUED - contextRect is undefined exactly when contextElement is
+ *   (it is produced by contextElement?.getBoundingClientRect())
+ * L89 (5507): ARGUED - subsumed conjunct (8): the first conjunct is false
+ *   whenever contextRect is undefined
+ * L271 (5516): ARGUED - only the value 'right' is special-cased downstream
+ * L362 (5531): ARGUED - assigning undefined equals the field's own undefined
+ *   default
+ * L370 (5540): ARGUED - defaulted parameter (12): resolvePosition destructures
+ *   asideSide = 'left', so an explicit undefined behaves as 'left'
+ * L374 (5544): ARGUED - defaulted parameter (12): resolvePosition destructures
+ *   viewportMargin = 0
+ * L386 (5560): ARGUED - resolveBoundaryRect(undefined) and
+ *   resolveBoundaryRect(document.body) both return the viewport rect
+ * L390 (5564): ARGUED - PopoverAbstract always builds popoverContainer, so the
+ *   guarded arm is the only reachable one
+ * L425 (5592): ARGUED - the flippable === false early return precedes this
+ *   line, so a flipper always exists here
+ * L430 (5597): ARGUED - same as L425 - the host is only set after a flipper
+ *   exists
+ * L537 (5633): ARGUED - captureAnchorSnapshot(rect, undefined) equals
+ *   captureAnchorSnapshot(rect)
+ * L550 (5638): ARGUED - explicitPositionAnchor is assigned whenever
+ *   params.position is set, and cleared whenever it is cleared
+ * L562 (5646, 5648): ARGUED - guard duplicated by the callee (4):
+ *   PopoverAbstract.show() re-appends a disconnected mount target
+ * L563 (5649): ARGUED - same as L562 - the callee's append makes this one
+ *   redundant
+ * L661 (5727): ARGUED - guard duplicated by the callee (4):
+ *   PopoverAbstract.show() already focuses the search input
+ * L879 (5833, 5834, 5836): ARGUED - the two tracker fields are assigned
+ *   together in one mousemove listener, so one nullness check implies the other
+ * L901 (5850): ARGUED - the listener self-removes via once, and disarm removes
+ *   it either way
+ * L944 (5874, 5875): ARGUED - same as L901 - the once-listener is already gone,
+ *   so the explicit removal is an idempotent no-op
+ * L1062 (5939): ARGUED - with nestedPopover null, nestedPopoverTriggerItem is
+ *   null too (one teardown clears both), so the nested branch and the fresh
+ *   path schedule the same open intent and the close is inert
+ * L1132 (5977): ARGUED - clearTimeout(null) is inert
+ * L1145 (5986): ARGUED - "false || x === null" is "x === null"
+ * L1163 (5999): ARGUED - clearTimeout(null) is inert
+ * L1200 (6022): ARGUED - dead branch (11): both item classes that reach this
+ *   filter build their element in the constructor and never null it
+ * L1201 (6023): MEASURED - the coverage triage reports this line as never
+ *   executed, for the same never-null reason
+ * L1332 (6082): ARGUED - refreshItemActiveState(null) returns at its
+ *   instanceof guard
+ * L1351 (6099, 6101): ARGUED - environment guarantee (3): ResizeObserver is
+ *   always defined in jsdom, real or polyfilled
+ * L1354 (6104): ARGUED - the container is looked up by its own data attribute
+ *   and is always present
+ * L1362 (6115): ARGUED - the observer callback only runs while nestedPopover is
+ *   non-null; teardown sets null, never undefined
+ * L1386 (6126): ARGUED - the same container lookup always succeeds, so the
+ *   early return is a dead branch (11)
+ * L1419 (6143): ARGUED - nestedPopover is assigned before the below-placement
+ *   math runs
+ * L1422 (6149): ARGUED - same as L1419
+ * L1514 (6217): ARGUED - dead branch (11): this literal is only read behind the
+ *   null-popover guard
+ * L1519 (6219, 6221): ARGUED - PopoverAbstract always builds the popover root,
+ *   so the null branch is unreachable
+ * L1579 (6247): ARGUED - the applied replacement is the semantically identical
+ *   block-bodied form of the same arrow
+ * L1581 (6250, 6252, 6253, 6255): ARGUED - dead branch (11): the mapped element
+ *   lists never contain a nullish entry, so the predicate never sees one
+ * L1592 (6260): ARGUED - the item root is never null for the classes that reach
+ *   here
+ * L1618 (6290): ARGUED - dead branch (11): the same never-null root makes the
+ *   empty-array arm unreachable
+ * L1690 (6334): ARGUED - destroy() on a never-rendered child resolves to the
+ *   tooltip hide, which has no DOM or state effect when no tooltip is shown
+ * L1713 (6347): ARGUED - the following onSearch() removes and clears the same
+ *   separator unconditionally, so the removal here is redundant
+ * L1796 (6406): ARGUED - environment guarantee (3): the items container is
+ *   always built, so the first conjunct cannot decide
+ * L1804 (6414): ARGUED - same as L1796
+ * L1838 (6438): ARGUED - buildPromotedItemCache maps every cached item to a
+ *   chain, so the fallback arm is never taken
+ * L1895 (6481): ARGUED - same as L1838 for the filterItems path
+ * L1958 (6568): ARGUED - condition restated at the call site (10):
+ *   restoreOriginalItemOrder returns when the cached order is undefined
+ * L1981 (6600): ARGUED - messages.actions is populated by the base defaults, so
+ *   the fallback is unreachable through the public Partial<PopoverMessages> type
+ * L2004 (6625): MEASURED - randomized over 200k arrangements that respect the
+ *   descending-best-score group insertion order: a zero comparator is a stable
+ *   no-op on an already sorted array
+ * L2005 (6626, 6627): MEASURED - same experiment: the best-of-group comparator
+ *   can only restate the order the groups were created in, and a NaN comparator
+ *   is a stable no-op
+ * L2006 (6629): MEASURED - same as L2005
+ * L2008 (6630): MEASURED - same experiment: an always-positive comparator
+ *   leaves this already ordered two-to-five element array unchanged
+ * L2072 (6679): ARGUED - dead branch (11): the announcer node is always built
+ * L2083 (6690): ARGUED - messages.nothingFound is populated by the base
+ *   defaults, so the fallback is unreachable through the public type
+ * L2109 (6708): ARGUED - dead branch (11): the items container is never null
+ * L2129 (6717, 6718, 6719, 6721, 6723): ARGUED - the sole caller gates on
+ *   originalItemOrder !== undefined, so every arm of this guard is dead (11)
  */

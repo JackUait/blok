@@ -1145,6 +1145,20 @@ describe('MarkdownShortcuts — mutation coverage', () => {
       expect(input.querySelector('a')?.textContent).toBe('x');
     });
 
+    // The span's first character sits at the END of one inline element while the
+    // closing paren is typed inside the NEXT one, so "end of the first node" and
+    // "start of the second" are the same text offset but two different DOM
+    // positions. The anchor is rebuilt at the span's own start boundary — the
+    // one after the <b> — not inside the element the paren was typed in.
+    it('rebuilds the link where the span started, not inside the element holding the closing paren', () => {
+      const { input, run } = setup({ html: '<b>ab</b><i>[x](y)</i>' });
+
+      expect(run(')')).toBe(true);
+      expect(input.querySelector('i a')).toBeNull();
+      expect(input.querySelector('a')?.parentElement).toBe(input);
+      expect(input.textContent).toBe('abx');
+    });
+
     it('leaves the caret directly after the new link', () => {
       const { input, run } = setup({ html: '[x](y)' });
 

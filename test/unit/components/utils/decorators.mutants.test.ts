@@ -464,3 +464,38 @@ describe('cacheable — legacy descriptor building', () => {
     expect(Object.getOwnPropertyDescriptor(descriptor, 'value')?.get).toBe(valueGetter);
   });
 });
+
+/**
+ * Witnesses for the four guard equivalences named above. Each one pins the
+ * branch the dropped conjunct feeds: remove the re-check on line 106 or 98 and
+ * the corresponding assertion below starts failing.
+ */
+describe('cacheable — legacy guard boundaries', () => {
+  it('leaves a lone getter wrapped and adds no set member', () => {
+    const originalGetter = (): string => 'g';
+    const descriptor: Descriptor = {
+      configurable: true,
+      enumerable: false,
+      get: originalGetter,
+    };
+
+    expect(raw({}, 'member', descriptor)).toBe(descriptor);
+    expect(Object.keys(descriptor)).toStrictEqual(['configurable', 'enumerable', 'get']);
+    expect(descriptor.get).not.toBe(originalGetter);
+    expect(callOn(descriptor.get, {})).toBe('g');
+  });
+
+  it('builds a bare descriptor for a key a callable target does not carry', () => {
+    class Owner {}
+
+    const built = asDescriptor(raw(Owner, 'absent'));
+
+    expect(built).toStrictEqual({
+      configurable: true,
+      enumerable: false,
+      writable: true,
+      value: undefined,
+    });
+    expect(Object.keys(built)).toStrictEqual(['configurable', 'enumerable', 'writable', 'value']);
+  });
+});

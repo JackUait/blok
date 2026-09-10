@@ -192,6 +192,24 @@ describe('preprocessGoogleDocsHtml — surviving-mutant coverage', () => {
       expect(result).not.toContain('<mark');
     });
 
+    /**
+     * The background lookup must tolerate an anchor style that carries no
+     * background at all: `bgMatch` is null there, and reading its capture group
+     * reaches through an absent value. A lookup that assumes the match exists
+     * throws on every coloured link pasted from Docs.
+     */
+    it('strips the colour of an anchor whose style carries no background', () => {
+      const result = preprocessGoogleDocsHtml(gdocs('<a href="https://a.test" style="color: #1155cc;">link</a>'));
+
+      expect(result).toBe('<a href="https://a.test" style="">link</a>');
+    });
+
+    it('strips the colour of an anchor whose style is empty', () => {
+      const result = preprocessGoogleDocsHtml(gdocs('<a href="https://a.test" style="">link</a>'));
+
+      expect(result).toBe('<a href="https://a.test" style="">link</a>');
+    });
+
     it('does not touch anchor colours outside Google Docs content', () => {
       const result = preprocessGoogleDocsHtml('<a href="https://a.test" style="background-color: #ffff00">link</a>');
 

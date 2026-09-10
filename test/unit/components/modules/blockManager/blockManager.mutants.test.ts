@@ -1,16 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { BlockManager } from '../../../../../src/components/modules/blockManager/blockManager';
 import type { Block } from '../../../../../src/components/block';
+import { Blocks } from '../../../../../src/components/blocks';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import type { PasteEvent } from '../../../../../types';
+import { Map as YMap } from 'yjs';
 import { BlockChanged } from '../../../../../src/components/events';
 import { BlockRemovedMutationType } from '../../../../../types/events/block/BlockRemoved';
 import { BlockAddedMutationType } from '../../../../../types/events/block/BlockAdded';
 import { BlockChangedMutationType } from '../../../../../types/events/block/BlockChanged';
 import { BlockMovedMutationType } from '../../../../../types/events/block/BlockMoved';
+import { BlockShortcuts } from '../../../../../src/components/modules/blockManager/shortcuts';
 
 type BlockStubOptions = {
   id: string;
@@ -1072,17 +1075,9 @@ describe('BlockManager.split', () => {
  * - 3554 resolveHeadingLevel's parentId-null guard is duplicated by the callee:
  *   getBlockById(null) is undefined so the depth lookup is false anyway.
  *
- * UNRESOLVED — unreachable through this stub harness (would need the real
- * collaborators that only the full editor boot constructs, or a forbidden
- * import): 2767 (shortcuts.register), 2772 + 2773-2785 (eventBinder closures:
- * getBlockIndex, shouldHandleEvent), 2787-2793 (hierarchy onParentChanged
- * closure), 2797 + 2800/2801 + 2804/2805/2806/2808/2809/2811 (BlockYjsSync
- * closures: isReadOnly, insertDefaultBlock, replaceBlock, onBlockRemoved/Added),
- * 2813/2814 (BlockShortcuts handler closures).
- *
- * CRASH-CLASS (defect only surfaces as an unhandled rejection, which per-test
- * scoring ignores): 3489 (parent !== undefined forced true calls
- * syncBlockDataToYjs(undefined), whose save() rejects).
+ * The 34 former "unresolved" closure mutants (2767, 2772-2785, 2787-2814) and
+ * crash-class 3489 are all KILLED by the "prepared boot — real sub-module
+ * closures" describe below, which boots prepare() with real sub-modules.
  */
 
 /**
@@ -1659,7 +1654,7 @@ describe('BlockManager tool transactions', () => {
   });
 
   it('delays stopCapturing until a scheduled parent sync has flushed', async () => {
-    const parent = createBlockStub({ id: 'parent' });
+    const parent = createBlockStub({ id: 'parent', saveData: {} });
     let releaseSave: (() => void) | undefined;
 
     (parent as unknown as { save: () => Promise<unknown> }).save = () => new Promise((resolve) => {
@@ -2400,5 +2395,385 @@ describe('BlockManager block-change to Yjs data flush', () => {
 
     expect(() => flushOf(harness)(new Map<string, unknown>([['depth', 2]]))).not.toThrow();
     expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('li', 'depth', 2);
+  });
+});
+
+/**
+ * Second pass: the closure survivors. These mutants live inside the arrow
+ * functions initializeServices hands to the REAL sub-modules, so every test
+ * here boots BlockManager with prepare() (real BlockRepository / BlockEventBinder
+ * / BlockFactory / BlockHierarchy / BlockOperations / BlockYjsSync /
+ * BlockShortcuts over stub module state) and drives real sub-module methods.
+ */
+describe('BlockManager prepared boot — real sub-module closures', () => {
+  const originalEnv = process.env.NODE_ENV;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalEnv;
+    vi.restoreAllMocks();
+  });
+
+  type BootOptions = {
+    readOnly?: boolean;
+    blocks?: Block[];
+    yjs?: Record<string, unknown>;
+    state?: Record<string, unknown>;
+    beforePrepare?: (harness: Harness) => void;
+  };
+
+  const editorState = (readOnly: boolean, extra: Record<string, unknown> = {}): Record<string, unknown> => {
+    const wrapper = document.createElement('div');
+
+    wrapper.setAttribute('data-blok-testid', 'blok-editor');
+
+    const redactor = document.createElement('div');
+
+    wrapper.appendChild(redactor);
+
+    return {
+      UI: { checkEmptiness: vi.fn(), nodes: { redactor, wrapper } },
+      BlockEvents: { keydown: vi.fn(), keyup: vi.fn(), input: vi.fn(), handleCommandC: vi.fn(), handleCommandX: vi.fn() },
+      Tools: { blockTools: new Map([['paragraph', {}]]) },
+      Caret: {},
+      I18n: {},
+      ReadOnly: { isEnabled: readOnly },
+      ...extra,
+    };
+  };
+
+  /** A harness booted with prepare(): every sub-module below the manager is real. */
+  const buildBooted = (options: BootOptions = {}): Harness => {
+    const harness = createHarness({
+      blocks: options.blocks ?? [],
+      yjs: {
+        orderedIds: vi.fn(() => []),
+        yMapToObject: vi.fn((map: { toJSON: () => unknown }) => map.toJSON()),
+        ...(options.yjs ?? {}),
+      },
+      state: editorState(options.readOnly ?? false, options.state),
+    });
+
+    options.beforePrepare?.(harness);
+    harness.blockManager.prepare();
+
+    return harness;
+  };
+
+  const privateOf = (harness: Harness): Record<string, unknown> =>
+    harness.blockManager as unknown as Record<string, unknown>;
+
+  const realYjsSyncOf = (harness: Harness): Record<string, (...args: unknown[]) => unknown> =>
+    privateOf(harness).yjsSync as Record<string, (...args: unknown[]) => unknown>;
+
+  const binderOf = (harness: Harness): { bindBlockEvents: (b: Block) => void } =>
+    privateOf(harness).eventBinder as { bindBlockEvents: (b: Block) => void };
+
+  const stubOperationsAfterBoot = (harness: Harness): Mock => {
+    const insert = vi.fn(() => createBlockStub({ id: 'repair', name: 'paragraph' }));
+
+    privateOf(harness).operations = { insert };
+
+    return insert;
+  };
+
+  /** The REAL post-prepare blocks array (Blocks instance behind the proxy). */
+  const rawArrayOf = (harness: Harness): Block[] =>
+    (privateOf(harness)._blocks as { array: Block[] }).array;
+
+  const blokOf = (harness: Harness): { BlockEvents: Record<string, Mock> } =>
+    (harness.blockManager as unknown as { Blok: { BlockEvents: Record<string, Mock> } }).Blok;
+
+  it('registers shortcuts and routes the four handler callbacks', async () => {
+    const copySelected = vi.fn();
+    const harness = createHarness({
+      blocks: [],
+      yjs: { orderedIds: vi.fn(() => []) },
+      state: editorState(false, {
+        BlockSelection: { anyBlockSelected: false, selectedBlocks: [], copySelectedBlocksAsMarkdown: copySelected },
+      }),
+    });
+    const registerSpy = vi.spyOn(BlockShortcuts.prototype, 'register');
+    const moveUpSpy = vi.spyOn(harness.blockManager, 'moveCurrentBlockUp').mockImplementation(() => undefined);
+
+    harness.blockManager.prepare();
+
+    expect(registerSpy).toHaveBeenCalledOnce();
+
+    const shortcuts = privateOf(harness).shortcuts as { handlers: Record<string, () => void> };
+
+    expect(typeof shortcuts.handlers.onMoveUp).toBe('function');
+    expect(typeof shortcuts.handlers.onCopyAsMarkdown).toBe('function');
+
+    shortcuts.handlers.onMoveUp();
+    expect(moveUpSpy).toHaveBeenCalledOnce();
+
+    shortcuts.handlers.onCopyAsMarkdown();
+    expect(copySelected).toHaveBeenCalledOnce();
+
+    await harness.blockManager.destroy();
+  });
+
+  it('routes a block didMutated callback through the repository index', async () => {
+    const block = createBlockStub({ id: 'bound' });
+    const harness = buildBooted({ blocks: [block] });
+
+    const didMutatedCallbacks: Array<(b: Block) => unknown> = [];
+    const bindable = {
+      ...block,
+      on: vi.fn((_event: string, cb: (b: Block) => unknown) => {
+        didMutatedCallbacks.push(cb);
+      }),
+    } as unknown as Block;
+
+    rawArrayOf(harness).push(bindable);
+    binderOf(harness).bindBlockEvents(bindable);
+
+    expect(didMutatedCallbacks).toHaveLength(1);
+    didMutatedCallbacks[0]?.(bindable);
+    await settle();
+
+    expect(harness.mutations[0]?.type).toBe(BlockChangedMutationType);
+    expect(harness.mutations[0]?.index).toBe(0);
+
+    await harness.blockManager.destroy();
+  });
+
+  describe('shouldHandleEvent — which editor owns the event', () => {
+    const bootBoundHolder = async (harness: Harness, holderParent: HTMLElement, holder: HTMLElement): Promise<Harness> => {
+      holderParent.appendChild(holder);
+      binderOf(harness).bindBlockEvents({ holder, on: vi.fn() } as unknown as Block);
+
+      return harness;
+    };
+
+    it('handles events from a block inside the booted editor', async () => {
+      const holder = document.createElement('div');
+      const target = document.createElement('p');
+
+      holder.appendChild(target);
+
+      const harness = buildBooted();
+      const redactor = ((harness.blockManager as unknown as { Blok: { UI: { nodes: { redactor: HTMLElement } } } }).Blok).UI.nodes.redactor;
+      await bootBoundHolder(harness, redactor, holder);
+      const blockEvents = blokOf(harness).BlockEvents as { input: Mock };
+
+      target.dispatchEvent(new InputEvent('input', { bubbles: true }));
+
+      expect(blockEvents.input).toHaveBeenCalledOnce();
+      await harness.blockManager.destroy();
+    });
+
+    it('ignores events from a block inside a foreign editor', async () => {
+      const holder = document.createElement('div');
+      const target = document.createElement('p');
+
+      holder.appendChild(target);
+
+      const foreign = document.createElement('div');
+
+      foreign.setAttribute('data-blok-testid', 'blok-editor');
+
+      const harness = buildBooted();
+
+      await bootBoundHolder(harness, foreign, holder);
+      const blockEvents = blokOf(harness).BlockEvents as { input: Mock };
+
+      target.dispatchEvent(new InputEvent('input', { bubbles: true }));
+
+      expect(blockEvents.input).not.toHaveBeenCalled();
+      await harness.blockManager.destroy();
+    });
+
+    it('handles events from a block under no editor at all', async () => {
+      const holder = document.createElement('div');
+      const target = document.createElement('p');
+
+      holder.appendChild(target);
+
+      const harness = buildBooted();
+
+      await bootBoundHolder(harness, document.createElement('div'), holder);
+      const blockEvents = blokOf(harness).BlockEvents as { input: Mock };
+
+      target.dispatchEvent(new InputEvent('input', { bubbles: true }));
+
+      expect(blockEvents.input).toHaveBeenCalledOnce();
+      await harness.blockManager.destroy();
+    });
+
+    it('handles events whose target is a text node', async () => {
+      const holder = document.createElement('div');
+      const text = document.createTextNode('hi');
+
+      holder.appendChild(text);
+
+      const harness = buildBooted();
+      const redactor = ((harness.blockManager as unknown as { Blok: { UI: { nodes: { redactor: HTMLElement } } } }).Blok).UI.nodes.redactor;
+
+      await bootBoundHolder(harness, redactor, holder);
+      const blockEvents = blokOf(harness).BlockEvents as { input: Mock };
+
+      text.dispatchEvent(new InputEvent('input', { bubbles: true }));
+
+      expect(blockEvents.input).toHaveBeenCalledOnce();
+      await harness.blockManager.destroy();
+    });
+  });
+
+  it('schedules a parent sync when a real reparent assigns a parent', async () => {
+    const parent = createBlockStub({ id: 'parent', saveData: {} });
+    const child = createBlockStub({ id: 'child', parentId: null });
+    const harness = buildBooted();
+
+    rawArrayOf(harness).push(parent, child);
+    harness.blockManager.setBlockParent(child, 'parent');
+    await settle();
+
+    expect(harness.yjs.enqueueBlockDataWrite).toHaveBeenCalledOnce();
+    expect((harness.yjs.enqueueBlockDataWrite).mock.calls[0]?.[0]).toBe('parent');
+
+    await harness.blockManager.destroy();
+  });
+
+  it('skips the parent sync while a real atomic sync window is open', async () => {
+    const parent = createBlockStub({ id: 'parent', saveData: {} });
+    const child = createBlockStub({ id: 'child', parentId: null });
+    const harness = buildBooted();
+
+    rawArrayOf(harness).push(parent, child);
+    await harness.blockManager.withViewRebuild(async () => {
+      harness.blockManager.setBlockParent(child, 'parent');
+    });
+    await settle();
+
+    expect(harness.yjs.enqueueBlockDataWrite).not.toHaveBeenCalled();
+
+    await harness.blockManager.destroy();
+  });
+
+  it('exempts a dangling parent id during a real sync replay', async () => {
+    process.env.NODE_ENV = 'test';
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const child = createBlockStub({ id: 'child', parentId: null });
+    const harness = buildBooted({ blocks: [child] });
+
+    rawArrayOf(harness).push(child);
+
+    await harness.blockManager.withViewRebuild(async () => {
+      expect(() => harness.blockManager.setBlockParent(child, 'ghost')).not.toThrow();
+    });
+
+    expect(child.parentId).toBeNull();
+    expect(errorSpy).toHaveBeenCalled();
+
+    await harness.blockManager.destroy();
+  });
+
+  it('gates the empty-document repair on the read-only state', async () => {
+    // The store stays EMPTY: the gate fires before the emptiness check, so a
+    // broken gate is visible only when nothing else returns early.
+    const harness = buildBooted({ readOnly: true });
+    const insert = stubOperationsAfterBoot(harness);
+
+    invokePrivate(realYjsSyncOf(harness), 'restoreDefaultBlockIfDocEmptied', 'b1');
+    await settle();
+
+    expect(insert).not.toHaveBeenCalled();
+    expect(harness.yjs.addBlock).not.toHaveBeenCalled();
+
+    await harness.blockManager.destroy();
+  });
+
+  it('repairs an emptied document with one default block after a replayed removal', async () => {
+    const block = createBlockStub({ id: 'b1' });
+    const harness = buildBooted();
+
+    rawArrayOf(harness).push(block);
+    const insert = stubOperationsAfterBoot(harness);
+
+    invokePrivate(realYjsSyncOf(harness), 'handleYjsRemove', 'b1');
+    await settle();
+
+    expect(harness.mutations[0]?.type).toBe(BlockRemovedMutationType);
+    expect(harness.mutations[0]?.index).toBe(0);
+    expect((insert).mock.calls[0]?.[0]).toEqual({ skipYjsSync: true, id: 'after-b1' });
+    expect(harness.yjs.addBlock).toHaveBeenCalledWith({ id: 'repair', type: 'paragraph', data: {} });
+
+    await harness.blockManager.destroy();
+  });
+
+  it('rematerializes a block through the store replace path', async () => {
+    const block = createBlockStub({ id: 'b1' });
+    const harness = buildBooted();
+
+    rawArrayOf(harness).push(block);
+    const newBlock = createBlockStub({ id: 'b1' });
+    const composeSpy = vi.spyOn(
+      privateOf(harness).factory as { composeBlock: (o: unknown) => Block },
+      'composeBlock'
+    ).mockReturnValue(newBlock);
+    const replaceSpy = vi.spyOn(Blocks.prototype, 'replace');
+
+    invokePrivate(realYjsSyncOf(harness), 'rematerialize', block, {
+      tool: 'paragraph',
+      data: {},
+      tunes: {},
+      lastEditedAt: undefined,
+      lastEditedBy: null,
+    });
+
+    expect(composeSpy).toHaveBeenCalledOnce();
+    expect(replaceSpy).toHaveBeenCalledWith(0, newBlock);
+
+    await harness.blockManager.destroy();
+  });
+
+  it('materialises an undo add and announces the block-added index', async () => {
+    const block = createBlockStub({ id: 'b1' });
+    const harness = buildBooted({
+      blocks: [block],
+      yjs: { orderedIds: vi.fn(() => ['b1']) },
+    });
+    const newBlock = createBlockStub({ id: 'b1' });
+    const composeSpy = vi.spyOn(
+      privateOf(harness).factory as { composeBlock: (o: unknown) => Block },
+      'composeBlock'
+    ).mockReturnValue(newBlock);
+
+    const dataMap = new YMap<unknown>();
+
+    dataMap.set('text', 'x');
+
+    const record: Record<string, unknown> = { id: 'b1', type: 'paragraph', data: dataMap };
+
+    (harness.yjs.getBlockById).mockImplementation((_id: string) => ({
+      get: (key: string): unknown => record[key],
+    }));
+
+    invokePrivate(realYjsSyncOf(harness), 'handleYjsAdd', 'b1', 'undo');
+
+    expect(composeSpy).toHaveBeenCalledOnce();
+    expect(harness.mutations[0]?.type).toBe(BlockAddedMutationType);
+    expect(harness.mutations[0]?.index).toBe(0);
+
+    await harness.blockManager.destroy();
+  });
+
+  it('never syncs a scheduled parent that is missing from the document', async () => {
+    const harness = createHarness({ blocks: [] });
+    const syncSpy = vi.spyOn(
+      harness.blockManager as unknown as { syncBlockDataToYjs: (b: Block) => Promise<void> },
+      'syncBlockDataToYjs'
+    );
+
+    invokePrivate(harness.blockManager, 'scheduleParentSync', 'ghost');
+    await settle();
+
+    expect(syncSpy).not.toHaveBeenCalled();
+    expect(syncSpy).not.toHaveBeenCalledWith(undefined);
   });
 });

@@ -58,6 +58,36 @@ const select = (node: Node, start: number, end: number): void => {
   selection?.addRange(range);
 };
 
+/** Host whose content is built node by node — innerHTML drops empty text nodes. */
+const mountBuilt = (build: (host: HTMLElement) => void): { host: HTMLElement; activate: () => void } => {
+  const tool = new CodeInlineTool();
+  const config = tool.render() as PopoverItemDefaultBaseParams;
+  const host = document.createElement('div');
+
+  document.body.appendChild(host);
+  build(host);
+
+  const { onActivate } = config;
+
+  if (typeof onActivate !== 'function') {
+    throw new Error('the code tool did not expose its activate callback');
+  }
+
+  return { host, activate: () => onActivate(config) };
+};
+
+/** Makes every `window.getSelection()` after the first one return null. */
+const hideSelectionAfterFirstCall = (): void => {
+  const live = window.getSelection.bind(window);
+  let calls = 0;
+
+  vi.spyOn(window, 'getSelection').mockImplementation(() => {
+    calls += 1;
+
+    return calls === 1 ? live() : null;
+  });
+};
+
 const putCaret = (node: Node, offset: number): void => select(node, offset, offset);
 
 describe('CodeInlineTool mutants', () => {
@@ -230,6 +260,219 @@ describe('CodeInlineTool mutants', () => {
       window.getSelection()?.removeAllRanges();
 
       expect(isActive()).toBe(false);
+    });
+  });
+
+  describe('a whitespace-only gap between two code spans', () => {
+    it('unwraps both spans instead of wrapping the gap', () => {
+      const { host, activate } = mount('<code>a</code> <code>b</code>');
+
+      select(host, 0, host.childNodes.length);
+      activate();
+
+      expect(host.querySelectorAll('code')).toHaveLength(0);
+      expect(host.innerHTML).toBe('a b');
+    });
+
+    it('counts as active', () => {
+      const { host, isActive } = mount('<code>a</code> <code>b</code>');
+
+      select(host, 0, host.childNodes.length);
+
+      expect(isActive()).toBe(true);
+    });
+  });
+
+  describe('the selection left behind', () => {
+    it('sits after the zero-width space when stepping out of a code span', () => {
+      const { host, activate } = mount('a<code>bcd</code>e');
+
+      putCaret(textNodeOf(host, 'bcd'), 2);
+      activate();
+
+      const selection = window.getSelection();
+      const range = selection?.getRangeAt(0);
+      const zeroWidth = textNodeOf(host, ZERO_WIDTH);
+
+      expect(selection?.rangeCount).toBe(1);
+      expect(range?.startContainer).toBe(zeroWidth);
+      expect(range?.startOffset).toBe(1);
+      expect(range?.endContainer).toBe(zeroWidth);
+      expect(range?.endOffset).toBe(1);
+    });
+
+    it('spans the text it unwrapped', () => {
+      const { host, activate } = mount('a<code>bcd</code>e');
+
+      select(textNodeOf(host, 'bcd'), 1, 3);
+      activate();
+
+      const selection = window.getSelection();
+      const range = selection?.getRangeAt(0);
+
+      expect(host.innerHTML).toBe('a<code>b</code>cde');
+      expect(selection?.rangeCount).toBe(1);
+      expect(range?.startContainer).toBe(host);
+      expect(range?.startOffset).toBe(2);
+      expect(range?.endContainer).toBe(host);
+      expect(range?.endOffset).toBe(3);
+      expect(range?.toString()).toBe('cd');
+    });
+
+    it('covers the contents of the code span it created', () => {
+      const { host, activate } = mount('a&nbsp;bc');
+
+      select(textNodeOf(host, 'a\u00A0bc'), 0, 4);
+      activate();
+
+      const selection = window.getSelection();
+      const range = selection?.getRangeAt(0);
+      const code = host.querySelector('code');
+
+      expect(host.innerHTML).toBe('<code>a bc</code>');
+      expect(selection?.rangeCount).toBe(1);
+      expect(range?.startContainer).toBe(code);
+      expect(range?.startOffset).toBe(0);
+      expect(range?.endOffset).toBe(code?.childNodes.length ?? -1);
+    });
+  });
+
+  describe('wrapping a selection that holds a code span', () => {
+    it('flattens the inner span instead of nesting code in code', () => {
+      const { host, activate } = mount('a<code>b</code>c');
+
+      select(host, 0, host.childNodes.length);
+      activate();
+
+      expect(host.innerHTML).toBe('<code>abc</code>');
+      expect(host.querySelectorAll('code')).toHaveLength(1);
+    });
+  });
+
+  describe('unwrapping a code span whose only child is another element', () => {
+    it('drops the emptied span and keeps the wrapper it split off', () => {
+      const { host, activate } = mount('<code><span>a</span></code>');
+
+      select(textNodeOf(host, 'a'), 0, 1);
+      activate();
+
+      expect(host.innerHTML).toBe('a<code></code>');
+    });
+  });
+
+  describe('a code span holding an empty text node', () => {
+    it('drops the empty node before deciding where the marker sits', () => {
+      const { host, activate } = mountBuilt((root) => {
+        const outer = document.createElement('code');
+        const inner = document.createElement('code');
+
+        inner.append(document.createTextNode(''), document.createTextNode('x'));
+        outer.appendChild(inner);
+        root.appendChild(outer);
+      });
+
+      select(textNodeOf(host, 'x'), 0, 1);
+      activate();
+
+      expect(host.innerHTML).toBe('x');
+    });
+  });
+
+  describe('unwrapping inside a code span that wraps another one', () => {
+    it('moves the content out of the inner span', () => {
+      const { host, activate } = mount('<code>a<code>b</code></code>');
+
+      select(textNodeOf(host, 'b'), 0, 1);
+      activate();
+
+      expect(host.innerHTML).toBe('<code>a</code>b');
+    });
+
+    it('moves the content out through both spans', () => {
+      const { host, activate } = mount('<code><code>x</code></code>');
+
+      select(textNodeOf(host, 'x'), 0, 1);
+      activate();
+
+      expect(host.innerHTML).toBe('x');
+    });
+
+    it('lifts both spans out while keeping the text that followed them', () => {
+      const { host, activate } = mount('<code><code>x</code></code>y');
+
+      select(textNodeOf(host, 'x'), 0, 1);
+      activate();
+
+      expect(host.innerHTML).toBe('xy');
+    });
+
+    it('splits the inner span without leaving a stray span behind', () => {
+      const { host, activate } = mount('<code>a<code>bcd</code></code>');
+
+      select(textNodeOf(host, 'bcd'), 0, 2);
+      activate();
+
+      expect(host.innerHTML).toBe('<code>a</code>bc<code><code>d</code></code>');
+    });
+
+    it('moves a selection that runs past the inner span out of the outer one', () => {
+      const { host, activate } = mount('<code>ab<code>cd</code>ef</code>');
+      const range = document.createRange();
+
+      range.setStart(textNodeOf(host, 'cd'), 0);
+      range.setEnd(host, host.childNodes.length);
+
+      const selection = window.getSelection();
+
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      activate();
+
+      expect(host.innerHTML).toBe('<code>ab</code>cdef');
+    });
+  });
+
+  describe('a code span holding an empty element', () => {
+    it('keeps the empty element while moving the marker out', () => {
+      const { host, activate } = mountBuilt((root) => {
+        const code = document.createElement('code');
+
+        code.append(document.createTextNode('b'), document.createElement('span'), document.createTextNode('cd'));
+        root.appendChild(code);
+      });
+
+      select(textNodeOf(host, 'cd'), 0, 2);
+      activate();
+
+      expect(host.innerHTML).toBe('<code>b<span></span></code>cd');
+    });
+  });
+
+  describe('a selection that disappears while the tool runs', () => {
+    it('wraps without touching a selection that has gone', () => {
+      const { host, activate } = mount('alpha, beta');
+
+      select(textNodeOf(host, 'alpha, beta'), 0, 5);
+
+      hideSelectionAfterFirstCall();
+
+      expect(() => {
+        activate();
+      }).not.toThrow();
+      expect(host.innerHTML).toBe('<code>alpha</code>, beta');
+    });
+
+    it('unwraps without touching a selection that has gone', () => {
+      const { host, activate } = mount('a<code>bcd</code>e');
+
+      select(textNodeOf(host, 'bcd'), 0, 3);
+
+      hideSelectionAfterFirstCall();
+
+      expect(() => {
+        activate();
+      }).not.toThrow();
+      expect(host.innerHTML).toBe('a<code>bcd</code>e');
     });
   });
 });

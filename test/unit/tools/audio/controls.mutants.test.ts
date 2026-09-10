@@ -49,6 +49,26 @@ const makeMedia = (options: { duration?: number; currentTime?: number } = {}): H
   return media;
 };
 
+/**
+ * A real `<audio>` whose `muted` write does not echo back a `volumechange`.
+ * jsdom (and a browser) fires one for every change, which repaints the bar from
+ * the element's own listener — masking whether the click handler repaints at all.
+ */
+const silentVolumeEcho = (): HTMLAudioElement => {
+  const media = makeMedia();
+  let muted = false;
+
+  Object.defineProperty(media, 'muted', {
+    configurable: true,
+    get: (): boolean => muted,
+    set: (next: boolean): void => {
+      muted = next;
+    },
+  });
+
+  return media;
+};
+
 const must = <T extends Element>(root: ParentNode, selector: string): T => {
   const found = root.querySelector<T>(selector);
 
@@ -536,6 +556,22 @@ describe('attachControls — position restore', () => {
 });
 
 describe('attachControls — volume and mute', () => {
+  it('repaints the mute state from the click itself, not from the element echoing it', () => {
+    const storage = memoryStorage();
+    const media = silentVolumeEcho();
+    const ui = mount({ media, storage });
+
+    ui.mute.click();
+
+    expect(ui.mute.getAttribute('aria-pressed')).toBe('true');
+    expect(ui.mute.getAttribute('aria-label')).toBe('Unmute');
+    expect(ui.mute.innerHTML).toBe(iconMarkup(IconPlayerVolumeMute));
+    expect(ui.volume.value).toBe('0');
+    expect(ui.volume.style.getPropertyValue('--blok-audio-vol-pct')).toBe('0%');
+    expect(storage.entries.get(VOL_KEY)).toBe('{"volume":1,"muted":true}');
+    ui.handle.destroy();
+  });
+
   it('mutes the element and repaints the button, slider and fill', () => {
     const storage = memoryStorage();
     const media = makeMedia();

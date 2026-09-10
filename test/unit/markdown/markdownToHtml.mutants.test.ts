@@ -215,4 +215,175 @@ describe('markdownToHtml mutants', () => {
       expect(html).toContain('<br>');
     });
   });
+
+  // The whole output is one string built by joining parts with ''. Only an
+  // exact-output assertion sees a changed separator or a stray default value.
+  describe('exact output', () => {
+    it('puts nothing between two block siblings', async () => {
+      expect(await render('one\n\ntwo')).toBe('<p>one</p><p>two</p>');
+    });
+
+    it('renders nothing for a document that is only a link definition', async () => {
+      expect(await render('[r]: https://e.test/x')).toBe('');
+    });
+
+    it('renders nothing after the body when no footnote is referenced', async () => {
+      expect(await render('plain paragraph')).toBe('<p>plain paragraph</p>');
+    });
+
+    it('puts nothing between two inline siblings', async () => {
+      expect(await render('**a**b')).toBe('<p><strong>a</strong>b</p>');
+    });
+
+    it('puts nothing between two list items', async () => {
+      expect(await render('- a\n- b')).toBe('<ul><li><p>a</p></li><li><p>b</p></li></ul>');
+    });
+
+    it('puts nothing between two table cells or two table rows', async () => {
+      expect(await render('| a | b |\n| - | - |\n| 1 | 2 |\n| 3 | 4 |'))
+        .toBe('<table><thead><tr><th>a</th><th>b</th></tr></thead>'
+          + '<tbody><tr><td>1</td><td>2</td></tr><tr><td>3</td><td>4</td></tr></tbody></table>');
+    });
+
+    it('puts nothing between two footnote items', async () => {
+      expect(await render('a[^x] b[^y]\n\n[^x]: one\n\n[^y]: two'))
+        .toBe('<p>a<sup class="blok-md-fnref" id="fnref-x"><a href="#fn-x">1</a></sup>'
+          + ' b<sup class="blok-md-fnref" id="fnref-y"><a href="#fn-y">2</a></sup></p>'
+          + '<section class="blok-md-footnotes"><hr><ol>'
+          + '<li id="fn-x"><p>one</p><a class="blok-md-fnback" href="#fnref-x" '
+          + 'aria-label="Back to content">↩</a></li>'
+          + '<li id="fn-y"><p>two</p><a class="blok-md-fnback" href="#fnref-y" '
+          + 'aria-label="Back to content">↩</a></li>'
+          + '</ol></section>');
+    });
+
+    it('renders an ordered list with its start attribute', async () => {
+      expect(await render('3. a\n4. b')).toBe('<ol start="3"><li><p>a</p></li><li><p>b</p></li></ol>');
+    });
+
+    it('renders an unchecked task item without the checked attribute', async () => {
+      expect(await render('- [ ] a'))
+        .toBe('<ul><li class="blok-md-task"><input type="checkbox" disabled><p>a</p></li></ul>');
+    });
+
+    it('renders a checked task item with the checked attribute', async () => {
+      expect(await render('- [x] a'))
+        .toBe('<ul><li class="blok-md-task"><input type="checkbox" disabled checked><p>a</p></li></ul>');
+    });
+  });
+
+  describe('heading slug edge cases', () => {
+    it('collapses dashes that came from separated words but not one inside a word', async () => {
+      expect(await render('# a - b')).toBe('<h1 id="a-b">a - b</h1>');
+    });
+
+    it('strips the dashes a trailing separator produced', async () => {
+      expect(await render('# a --')).toBe('<h1 id="a">a --</h1>');
+    });
+
+    it('takes the slug from the source of an inline equation', async () => {
+      const html = await render('# $a+b$');
+
+      expect(html).toContain('<h1 id="ab">');
+    });
+
+    it('falls back to "section" for a heading whose only content is an image', async () => {
+      const html = await render('# ![a](https://e.test/i.png)');
+
+      expect(html).toContain('<h1 id="section">');
+    });
+  });
+
+  describe('blockquotes and alerts', () => {
+    it('renders an empty blockquote', async () => {
+      expect(await render('>')).toBe('<blockquote></blockquote>');
+    });
+
+    it('leaves a quote whose first block is not a paragraph alone', async () => {
+      expect(await render('> ---')).toBe('<blockquote><hr></blockquote>');
+    });
+
+    it('renders the alert title in title case', async () => {
+      expect(await render('> [!NOTE]\n> body'))
+        .toBe('<div class="blok-md-alert blok-md-alert-note">'
+          + '<p class="blok-md-alert-title">Note</p><p>body</p></div>');
+    });
+
+    it('drops the marker paragraph when the marker sits alone', async () => {
+      expect(await render('> [!NOTE]'))
+        .toBe('<div class="blok-md-alert blok-md-alert-note">'
+          + '<p class="blok-md-alert-title">Note</p></div>');
+    });
+
+    it('drops the hard break left behind by a marker on its own line', async () => {
+      expect(await render('> [!NOTE]  \n> body'))
+        .toBe('<div class="blok-md-alert blok-md-alert-note">'
+          + '<p class="blok-md-alert-title">Note</p><p>body</p></div>');
+    });
+
+    it('only reads the marker out of a leading text node', async () => {
+      expect(await render('> `[!NOTE]` body'))
+        .toBe('<blockquote><p><code>[!NOTE]</code> body</p></blockquote>');
+    });
+  });
+
+  describe('references defined outside the top level', () => {
+    it('renders an unresolved link reference as its literal source', async () => {
+      expect(await render('> [ref]: https://e.test/x\n\n[text][ref]'))
+        .toBe('<blockquote></blockquote><p>[text][ref]</p>');
+    });
+
+    it('renders an unresolved image reference as its literal source, marked as an image', async () => {
+      expect(await render('> [ref]: https://e.test/i.png\n\n![alt][ref]'))
+        .toBe('<blockquote></blockquote><p>![alt][ref]</p>');
+    });
+
+    it('leaves a footnote reference whose definition is out of scope empty', async () => {
+      expect(await render('> [^x]: note\n\na[^x]'))
+        .toBe('<blockquote></blockquote>'
+          + '<p>a<sup class="blok-md-fnref" id="fnref-x"><a href="#fn-x">1</a></sup></p>'
+          + '<section class="blok-md-footnotes"><hr><ol>'
+          + '<li id="fn-x"><a class="blok-md-fnback" href="#fnref-x" '
+          + 'aria-label="Back to content">↩</a></li></ol></section>');
+    });
+
+    // The fallback prints the LABEL as written, not the lowercased identifier.
+    // A reference only becomes a node when a definition matches it, so the
+    // case difference has to live in the label, not the identifier.
+    it('falls back to the label as written for a link reference', async () => {
+      expect(await render('> [ref]: https://e.test/x\n\n[text][Ref]'))
+        .toBe('<blockquote></blockquote><p>[text][Ref]</p>');
+    });
+
+    it('falls back to the label as written for an image reference', async () => {
+      expect(await render('> [pic]: https://e.test/i.png\n\n![alt][Pic]'))
+        .toBe('<blockquote></blockquote><p>![alt][Pic]</p>');
+    });
+  });
+
+  describe('math', () => {
+    it('renders a flow equation in display mode', async () => {
+      const html = await render('$$\nx\n$$');
+
+      expect(html.startsWith('<span class="katex-display">')).toBe(true);
+      expect(html).toContain('<annotation encoding="application/x-tex">x</annotation>');
+    });
+
+    it('renders an inline equation without display mode', async () => {
+      const html = await render('a $x$ b');
+
+      expect(html.startsWith('<p>a <span class="katex">')).toBe(true);
+      expect(html).not.toContain('katex-display');
+    });
+
+    it('leaves dollars alone when they are not a complete equation', async () => {
+      expect(await render('$5 and $10')).toBe('<p>$5 and $10</p>');
+    });
+  });
+
+  describe('images with an unusable source', () => {
+    it('renders nothing, not even the alt text', async () => {
+      expect(await render('![a](javascript:alert(1))')).toBe('<p></p>');
+    });
+  });
 });

@@ -1330,6 +1330,29 @@ describe('AudioTool — caption', () => {
     }
   });
 
+  it('survives a collapse finishing after the caption was switched back on', () => {
+    vi.useFakeTimers();
+
+    try {
+      const { tool, root } = mount({ url: 'https://cdn/a.mp3', caption: 'Hello' });
+      const row = requireEl(root, '[data-role="audio-caption-row"]');
+
+      activate(tool, 'audio-caption');
+      // Switched back on mid-collapse: the row is reopened and the fallback
+      // timer cancelled, but the fade-out listener is still attached.
+      activate(tool, 'audio-caption');
+      row.dispatchEvent(new TransitionEvent('transitionend', { propertyName: 'opacity' }));
+
+      expect(root.querySelector('[data-role="audio-caption-row"]')).toBeNull();
+
+      // No row is left to collapse — the off switch must not assume one exists.
+      expect(() => activate(tool, 'audio-caption')).not.toThrow();
+      expect(tool.save().captionVisible).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('cancels the collapse fallback when the card is rebuilt', () => {
     vi.useFakeTimers();
 
@@ -1648,6 +1671,142 @@ describe('AudioTool — cover picker', () => {
     await flush();
 
     expect(revoke).not.toHaveBeenCalled();
+  });
+});
+
+describe('AudioTool — a cover that lands after the picker closed', () => {
+  /**
+   * Runs `act` and collects the promise rejections that escape to the process.
+   * jsdom never routes one to a window error event, so a `void` chain that
+   * throws on a closed picker reads as success unless the process is watched.
+   */
+  const leakedRejections = async (act: () => Promise<void>): Promise<string[]> => {
+    const leaked: string[] = [];
+    const onRejection = (reason: unknown): void => {
+      leaked.push(String(reason));
+    };
+
+    process.on('unhandledRejection', onRejection);
+
+    try {
+      await act();
+      // Node announces a rejection only once the microtask queue drains.
+      await flush();
+      await flush();
+    } finally {
+      process.removeListener('unhandledRejection', onRejection);
+    }
+
+    return leaked;
+  };
+
+  const chooseImage = (tool: AudioTool): void => {
+    activate(tool, 'audio-cover-set');
+    lastPicker().onFile(new File(['x'], 'art.png', { type: 'image/png' }));
+  };
+
+  it('stores a cover file that lands after the picker closed, without leaking a rejection', async () => {
+    let settle: (result: { url: string }) => void = () => undefined;
+
+    uploaderApi.uploadByFile.mockReturnValue(new Promise((resolve) => {
+      settle = resolve;
+    }));
+
+    const { tool } = mount({ url: 'https://cdn/a.mp3' });
+
+    chooseImage(tool);
+    lastPicker().onClose?.();
+
+    const leaked = await leakedRejections(async () => {
+      settle({ url: 'https://cdn/stored.png' });
+    });
+
+    expect(leaked).toStrictEqual([]);
+    expect(tool.save().coverUrl).toBe('https://cdn/stored.png');
+  });
+
+  it('stores a cover url that lands after the picker closed, without leaking a rejection', async () => {
+    let settle: (result: { url: string }) => void = () => undefined;
+
+    uploaderApi.uploadByUrl.mockReturnValue(new Promise((resolve) => {
+      settle = resolve;
+    }));
+
+    const { tool } = mount({ url: 'https://cdn/a.mp3' });
+
+    activate(tool, 'audio-cover-set');
+    lastPicker().onUrl('https://origin/art.png');
+    lastPicker().onClose?.();
+
+    const leaked = await leakedRejections(async () => {
+      settle({ url: 'https://cdn/stored.png' });
+    });
+
+    expect(leaked).toStrictEqual([]);
+    expect(tool.save().coverUrl).toBe('https://cdn/stored.png');
+  });
+
+  it('survives a cover file upload failing after the picker closed, without leaking a rejection', async () => {
+    let fail: (error: Error) => void = () => undefined;
+
+    uploaderApi.uploadByFile.mockReturnValue(new Promise((_resolve, reject) => {
+      fail = reject;
+    }));
+
+    const { tool } = mount({ url: 'https://cdn/a.mp3' });
+
+    chooseImage(tool);
+    lastPicker().onClose?.();
+
+    const leaked = await leakedRejections(async () => {
+      fail(new Error('bucket refused'));
+    });
+
+    expect(leaked).toStrictEqual([]);
+    expect(tool.save().coverUrl).toBeUndefined();
+  });
+
+  it('survives a cover url upload failing after the picker closed, without leaking a rejection', async () => {
+    let fail: (error: Error) => void = () => undefined;
+
+    uploaderApi.uploadByUrl.mockReturnValue(new Promise((_resolve, reject) => {
+      fail = reject;
+    }));
+
+    const { tool } = mount({ url: 'https://cdn/a.mp3' });
+
+    activate(tool, 'audio-cover-set');
+    lastPicker().onUrl('https://origin/art.png');
+    lastPicker().onClose?.();
+
+    const leaked = await leakedRejections(async () => {
+      fail(new Error('bucket refused'));
+    });
+
+    expect(leaked).toStrictEqual([]);
+    expect(tool.save().coverUrl).toBeUndefined();
+  });
+});
+
+describe('AudioTool — a rendered menu outliving the state it was built for', () => {
+  it('survives removing the cover twice through the same menu config', () => {
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const { tool, dispatchChange } = mount({ url: 'https://cdn/a.mp3', coverUrl: 'blob:cover-1' });
+    const removeItem = settingsItem(tool, 'audio-cover-remove');
+    const fire = removeItem.onActivate;
+
+    if (!fire) {
+      throw new Error('the remove-cover item cannot be activated');
+    }
+
+    fire();
+    // The toolbar holds the menu it rendered, so the item can fire again after
+    // the cover it was built for is already gone.
+    fire();
+
+    expect(revoke.mock.calls.map((call) => call[0])).toStrictEqual(['blob:cover-1']);
+    expect(tool.save().coverUrl).toBeUndefined();
+    expect(dispatchChange).toHaveBeenCalledTimes(2);
   });
 });
 

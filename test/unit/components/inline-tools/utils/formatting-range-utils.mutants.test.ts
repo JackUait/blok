@@ -52,6 +52,18 @@ const walked = (range: Range): string[] => {
   return found;
 };
 
+/**
+ * Forces the Safari fallback: jsdom's `intersectsNode` never throws, so the
+ * catch branch is only reachable when the platform call is made to fail.
+ */
+const throwingIntersects = (range: Range): Range => {
+  vi.spyOn(range, 'intersectsNode').mockImplementation(() => {
+    throw new Error('node is detached from DOM');
+  });
+
+  return range;
+};
+
 describe('formatting range utils mutants', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -76,6 +88,16 @@ describe('formatting range utils mutants', () => {
       const range = over(textHolding(root, 'a'), 0, textHolding(root, 'b'), 1);
 
       expect(walked(range)).toStrictEqual(['a', 'b']);
+    });
+
+    it('rejects text nodes outside the range when intersectsNode throws', () => {
+      const root = host('<i>a</i><i>b</i>');
+
+      // Covers only the second <i>: 'a' ends before the range starts.
+      expect(walked(throwingIntersects(over(root, 1, root, 2)))).not.toContain('a');
+
+      // Covers only the first <i>: 'b' starts after the range ends.
+      expect(walked(throwingIntersects(over(root, 0, root, 1)))).not.toContain('b');
     });
   });
 
@@ -121,6 +143,13 @@ describe('formatting range utils mutants', () => {
 
       expect(findFormattingAncestor(bold, isBold, bold)).toBeNull();
     });
+
+    it('returns the matching element, never a non-element the predicate accepts', () => {
+      const root = host('<b>bold</b>');
+      const text = textHolding(root, 'bold');
+
+      expect(findFormattingAncestor(text, () => true)).toBe(root.children[0]);
+    });
   });
 
   describe('isRangeFormatted', () => {
@@ -153,6 +182,20 @@ describe('formatting range utils mutants', () => {
 
       expect(isRangeFormatted(over(bold, 0, bold, 1), isBold)).toBe(true);
     });
+
+    it('is false when the range holds no text and its start is unformatted', () => {
+      const root = host('<br>');
+
+      expect(isRangeFormatted(over(root, 0, root, 1), isBold)).toBe(false);
+    });
+
+    it('ignores an empty text node instead of counting it as unformatted', () => {
+      const root = host('<b>a</b>');
+
+      root.appendChild(document.createTextNode(''));
+
+      expect(isRangeFormatted(over(root, 0, root, root.childNodes.length), isBold)).toBe(true);
+    });
   });
 
   describe('extendRangeToTrailingWhitespace', () => {
@@ -174,6 +217,16 @@ describe('formatting range utils mutants', () => {
       extendRangeToTrailingWhitespace(range);
 
       expect(range.endOffset).toBe(5);
+    });
+
+    it('leaves a mid-text range alone when the text node ends in whitespace', () => {
+      const root = host('ab   cd   ');
+      const text = textHolding(root, 'ab   cd   ');
+      const range = over(text, 0, text, 3);
+
+      extendRangeToTrailingWhitespace(range);
+
+      expect(range.endOffset).toBe(3);
     });
 
     it('leaves a range already at the end of its text node alone', () => {
@@ -230,6 +283,15 @@ describe('formatting range utils mutants', () => {
       const range = over(root, 0, root, root.childNodes.length);
 
       expect(() => extendRangeToTrailingWhitespace(range)).not.toThrow();
+      expect(range.endContainer).toBe(root);
+    });
+
+    it('leaves the range alone when the deepest last child is not a text node', () => {
+      const root = host('a<!--trailing   -->');
+      const range = over(root, 0, root, root.childNodes.length);
+
+      extendRangeToTrailingWhitespace(range);
+
       expect(range.endContainer).toBe(root);
     });
   });

@@ -1,7 +1,25 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import JSZip from 'jszip';
 
-import { isOfficeKind, renderXlsxInto } from '../../../../src/tools/file/office-preview';
+const loaders = vi.hoisted(() => ({
+  loadBinaryPreview: vi.fn(),
+  loadDocxRenderer: vi.fn(),
+  loadZip: vi.fn(),
+  loadPptxRenderer: vi.fn(),
+}));
+
+vi.mock('../../../../src/tools/file/binary-preview', () => ({
+  loadBinaryPreview: loaders.loadBinaryPreview,
+}));
+
+vi.mock('../../../../src/tools/file/office-loaders', () => ({
+  loadDocxRenderer: loaders.loadDocxRenderer,
+  loadZip: loaders.loadZip,
+  loadPptxRenderer: loaders.loadPptxRenderer,
+}));
+
+import { fillOfficeBody, isOfficeKind, renderXlsxInto } from '../../../../src/tools/file/office-preview';
+import type { FilePreviewOptions } from '../../../../src/tools/file/preview-modal';
 
 const SHEET_NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
 
@@ -37,6 +55,9 @@ const rowTexts = (container: HTMLElement): string[][] =>
 describe('office preview mutants', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // restoreAllMocks in afterEach drops the implementations, so re-prime here.
+    loaders.loadZip.mockResolvedValue(JSZip);
+    loaders.loadBinaryPreview.mockResolvedValue({ ok: false, reason: 'fetch-error' });
     document.body.innerHTML = '';
   });
 
@@ -95,6 +116,34 @@ describe('office preview mutants', () => {
 
       expect(container.querySelectorAll('table')).toHaveLength(1);
     });
+
+    it('ignores an archive entry whose name only starts like a worksheet', async () => {
+      const container = await renderSheet({
+        'xl/worksheets/sheet1.xml': sheetXml('<row><c r="A1" t="inlineStr"><is><t>one</t></is></c></row>'),
+        'xl/worksheets/sheet1.xml.bak': sheetXml('<row><c r="A1" t="inlineStr"><is><t>bak</t></is></c></row>'),
+      });
+
+      expect(container.querySelectorAll('table')).toHaveLength(1);
+      expect(container.querySelector('table')?.textContent).toBe('one');
+    });
+
+    it('ignores a worksheet path nested below the archive root', async () => {
+      const container = await renderSheet({
+        'xl/worksheets/sheet1.xml': sheetXml('<row><c r="A1" t="inlineStr"><is><t>one</t></is></c></row>'),
+        'backup/xl/worksheets/sheet2.xml': sheetXml('<row><c r="A1" t="inlineStr"><is><t>nested</t></is></c></row>'),
+      });
+
+      expect(container.querySelectorAll('table')).toHaveLength(1);
+      expect(container.querySelector('table')?.textContent).toBe('one');
+    });
+
+    it('class-names every worksheet table', async () => {
+      const container = await renderSheet({
+        'xl/worksheets/sheet1.xml': sheetXml('<row><c r="A1" t="inlineStr"><is><t>one</t></is></c></row>'),
+      });
+
+      expect(container.querySelector('table')?.className).toBe('blok-file-preview-xlsx-table');
+    });
   });
 
   describe('cell text', () => {
@@ -148,6 +197,23 @@ describe('office preview mutants', () => {
 
       expect(container.querySelector('td')?.textContent).toBe('');
     });
+
+    it('resolves a shared cell with no value element to the first shared string', async () => {
+      const container = await renderSheet({
+        'xl/sharedStrings.xml': sharedXml(['<t>zero</t>', '<t>one</t>']),
+        'xl/worksheets/sheet1.xml': sheetXml('<row><c r="A1" t="s"/></row>'),
+      });
+
+      expect(container.querySelector('td')?.textContent).toBe('zero');
+    });
+
+    it('renders an empty cell when the workbook has no sharedStrings part', async () => {
+      const container = await renderSheet({
+        'xl/worksheets/sheet1.xml': sheetXml('<row><c r="A1" t="s"><v>0</v></c></row>'),
+      });
+
+      expect(container.querySelector('td')?.textContent).toBe('');
+    });
   });
 
   describe('numeric alignment', () => {
@@ -173,6 +239,15 @@ describe('office preview mutants', () => {
         'xl/worksheets/sheet1.xml': sheetXml('<row><c r="A1" t="str"><v>42</v></c></row>'),
       });
 
+      expect(container.querySelector('td')?.className).toBe('');
+    });
+
+    it('leaves an inline string that looks like a number unmarked', async () => {
+      const container = await renderSheet({
+        'xl/worksheets/sheet1.xml': sheetXml('<row><c r="A1" t="inlineStr"><is><t>42</t></is></c></row>'),
+      });
+
+      expect(container.querySelector('td')?.textContent).toBe('42');
       expect(container.querySelector('td')?.className).toBe('');
     });
 
@@ -221,6 +296,116 @@ describe('office preview mutants', () => {
       });
 
       expect(rowTexts(container)).toStrictEqual([['a', 'b']]);
+    });
+
+    it('reads a reference with no column letters as the first column', async () => {
+      const container = await renderSheet({
+        'xl/worksheets/sheet1.xml': sheetXml('<row><c r="1" t="inlineStr"><is><t>a</t></is></c></row>'),
+      });
+
+      expect(rowTexts(container)).toStrictEqual([['']]);
+    });
+  });
+
+  describe('fillOfficeBody', () => {
+    const options = (): FilePreviewOptions => ({
+      url: 'blob:file',
+      fileName: 'report.docx',
+      labels: { close: 'Close', error: 'Preview failed', download: 'Save file' },
+    });
+
+    const sheetBuffer = async (): Promise<ArrayBuffer> => workbook({
+      'xl/worksheets/sheet1.xml': sheetXml('<row><c r="A1" t="inlineStr"><is><t>one</t></is></c></row>'),
+    });
+
+    it('shows the error block and no office container when the fetch fails', async () => {
+      loaders.loadBinaryPreview.mockResolvedValue({ ok: false, reason: 'fetch-error' });
+      const body = document.createElement('div');
+
+      await fillOfficeBody(body, options(), 'xlsx', () => false);
+
+      // A failed fetch must not pull a renderer chunk in to render nothing.
+      expect(loaders.loadZip).not.toHaveBeenCalled();
+      expect(body.querySelector('[data-role="file-preview-error"]')?.textContent).toBe('Preview failed');
+      expect(body.querySelector('.blok-file-preview-office')).toBeNull();
+    });
+
+    it('renders a workbook into a kind-named container', async () => {
+      loaders.loadBinaryPreview.mockResolvedValue({ ok: true, buf: await sheetBuffer() });
+      const body = document.createElement('div');
+
+      await fillOfficeBody(body, options(), 'xlsx', () => false);
+
+      const container = body.querySelector<HTMLElement>('.blok-file-preview-office');
+
+      expect(body.children).toHaveLength(1);
+      expect(container?.className).toBe('blok-file-preview-office blok-file-preview-xlsx');
+      expect(container?.getAttribute('data-role')).toBe('file-preview-xlsx');
+      expect(container?.querySelector('table')?.textContent).toBe('one');
+      expect(loaders.loadPptxRenderer).not.toHaveBeenCalled();
+    });
+
+    it('hands a docx body to the docx renderer', async () => {
+      const buf = new ArrayBuffer(8);
+      const render = vi.fn<(data: ArrayBuffer, host: HTMLElement) => Promise<void>>(async () => undefined);
+
+      loaders.loadBinaryPreview.mockResolvedValue({ ok: true, buf });
+      loaders.loadDocxRenderer.mockResolvedValue(render);
+      const body = document.createElement('div');
+
+      await fillOfficeBody(body, options(), 'docx', () => false);
+
+      expect(render).toHaveBeenCalledTimes(1);
+      expect(render.mock.calls[0][0]).toBe(buf);
+      expect(render.mock.calls[0][1].className).toBe('blok-file-preview-office blok-file-preview-docx');
+      expect(loaders.loadPptxRenderer).not.toHaveBeenCalled();
+    });
+
+    it('hands a pptx body to the pptx viewer', async () => {
+      const buf = new ArrayBuffer(8);
+      const open = vi.fn<(data: ArrayBuffer, host: HTMLElement) => Promise<unknown>>(async () => ({}));
+
+      loaders.loadBinaryPreview.mockResolvedValue({ ok: true, buf });
+      loaders.loadPptxRenderer.mockResolvedValue({ open });
+      const body = document.createElement('div');
+
+      await fillOfficeBody(body, options(), 'pptx', () => false);
+
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(open.mock.calls[0][0]).toBe(buf);
+      expect(open.mock.calls[0][1].getAttribute('data-role')).toBe('file-preview-pptx');
+      expect(loaders.loadDocxRenderer).not.toHaveBeenCalled();
+    });
+
+    it('warns with the failing kind and shows the error block when the renderer throws', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+      loaders.loadBinaryPreview.mockResolvedValue({ ok: true, buf: new ArrayBuffer(8) });
+      loaders.loadDocxRenderer.mockResolvedValue(vi.fn(async () => {
+        throw new Error('boom');
+      }));
+      const body = document.createElement('div');
+
+      await fillOfficeBody(body, options(), 'docx', () => false);
+
+      expect(warn.mock.calls[0][0]).toBe('[blok] Failed to render docx preview:');
+      expect(warn.mock.calls[0][1]).toStrictEqual(new Error('boom'));
+      expect(body.querySelector('[data-role="file-preview-error"]')?.textContent).toBe('Preview failed');
+    });
+
+    it('keeps the container when the modal closed during a failing render', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      loaders.loadBinaryPreview.mockResolvedValue({ ok: true, buf: new ArrayBuffer(8) });
+      loaders.loadDocxRenderer.mockResolvedValue(vi.fn(async () => {
+        throw new Error('boom');
+      }));
+      const isClosed = vi.fn().mockReturnValueOnce(false).mockReturnValue(true);
+      const body = document.createElement('div');
+
+      await fillOfficeBody(body, options(), 'docx', isClosed);
+
+      expect(body.querySelector('[data-role="file-preview-error"]')).toBeNull();
+      expect(body.querySelector('.blok-file-preview-office')).not.toBeNull();
     });
   });
 });

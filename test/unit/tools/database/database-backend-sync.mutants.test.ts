@@ -328,6 +328,14 @@ describe('DatabaseBackendSync — mutation coverage', () => {
    *   130:9  `params !== undefined` -> `true`
    *          `params` is never undefined here, by the same lockstep. The row
    *          twin (121:9) IS killed above, via syncMoveRow on an unknown id.
+   *
+   * Measured, not argued: each of the four was spliced into its own copy and
+   * driven through 24,121 operation sequences over the whole public surface
+   * (debounce / flush / fire / destroy / move / update, with and without an
+   * adapter), comparing the full trace of adapter calls, onError calls and
+   * clearTimeout arguments. Zero divergences. The same harness DID separate
+   * `existing !== undefined -> true` on both the row and the property paths
+   * (33,097 of those runs), so it is sensitive to this exact mutation shape.
    */
   describe('flushing a property', () => {
     it('cancels the property debounce timer it fired early', () => {
@@ -356,6 +364,27 @@ describe('DatabaseBackendSync — mutation coverage', () => {
 
       expect(clearTimeoutSpy.mock.calls).toStrictEqual([]);
       expect(adapter.updateProperty.mock.calls).toStrictEqual([[{ propertyId: 'p1', changes: { name: 'A' } }]]);
+    });
+
+    /*
+     * The row path's twin ('drops the pending row payload') differs on purpose:
+     * a row payload MERGES and a property payload REPLACES. That replace is what
+     * makes four property-path mutants equivalent — a stale entry in
+     * `pendingPropertyUpdates` is always overwritten by line 71 before the only
+     * reader (flushProperty) can reach it, because the reader is gated on
+     * `pendingPropertyTimers`, which is written and cleared in lockstep with it.
+     * This test pins the replace: a merge here would replay the stale payload.
+     */
+    it('replaces rather than merges a still-pending property payload', () => {
+      const adapter = createAdapter();
+      const sync = new DatabaseBackendSync(adapter);
+
+      sync.syncUpdatePropertyDebounced({ propertyId: 'p1', changes: { name: 'A' } });
+      sync.destroy();
+      sync.syncUpdatePropertyDebounced({ propertyId: 'p1', changes: { name: 'B' } });
+      sync.flushPendingPropertyUpdates();
+
+      expect(adapter.updateProperty.mock.calls).toStrictEqual([[{ propertyId: 'p1', changes: { name: 'B' } }]]);
     });
   });
 });

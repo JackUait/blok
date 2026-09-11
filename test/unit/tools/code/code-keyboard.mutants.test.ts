@@ -70,10 +70,15 @@ const press = (el: HTMLElement, name: string, shiftKey = false, onExit = vi.fn()
   handleCodeKeydown(key(name, shiftKey), el, onExit);
 
 /**
- * Eighteen mutants in this file survive, and the sweep confirmed every one:
+ * Thirteen mutants in this file survive, every one of them measured against a
+ * differential harness (the original module and each mutated copy run over the
+ * same ~4000 inputs — every caret position, non-collapsed selections, selection
+ * outside the element, multi-text-node and empty elements — with zero
+ * differences in return value, text, caret or DOM shape):
  *
- * - `?? ''` on `textContent` (three of them): an element's textContent and a
- *   text node's textContent are always strings, never null.
+ * - `?? ''` on `textContent` in removeTab: an element's textContent is never
+ *   null; and that writer uses the text only to count leading spaces, which is
+ *   zero for `''` and for any placeholder that does not begin with a space.
  * - dropping the start anchor from the two leading-whitespace patterns: a
  *   zero-or-more pattern already matches at position 0, so the unanchored form
  *   finds the same match.
@@ -81,25 +86,29 @@ const press = (el: HTMLElement, name: string, shiftKey = false, onExit = vi.fn()
  * - the three mutants on `before.length > 0 ? before.charAt(before.length - 1)
  *   : ''`: `charAt(-1)` is `''`, which is what the false arm returns, and the
  *   replacement string is not a key of BRACKET_PAIRS either way.
- * - `if (!selection) return` in restoreCaretOffset: `window.getSelection()` is
- *   never null in a document that has a defaultView.
- * - every remaining mutant in restoreCaretOffset (`!current`, the
- *   accumulate-and-recurse arithmetic, `collapse(false)`, and the
- *   `accumulated + nodeLength >= offset` widening): both writers rebuild the
- *   element into exactly ONE text node before calling it, and both pass an
- *   offset inside that node — so the walk always succeeds on its first step and
- *   the recursion is dead.
+ * - `if (!selection) return` in restoreCaretOffset: both callers read the same
+ *   global and return before calling it, and `window.getSelection()` is never
+ *   null in a document that has a defaultView.
+ * - the accumulate-and-recurse arithmetic and `offset - accumulated` in
+ *   restoreCaretOffset: both writers rebuild the element into exactly ONE text
+ *   node before calling it and pass an offset inside that node (the caller adds
+ *   at most what it just inserted and at least what it just removed), so the
+ *   walk succeeds on its first step — `accumulated` is 0 wherever
+ *   `offset - accumulated` runs, and the recursion is entered only once the
+ *   walker is exhausted, where `findNode` returns before it reads its argument.
  * - forcing `expectedCloser !== undefined` true in the betweenMatchedPair test:
  *   the other operand still compares the following character against
  *   `undefined`, which no character equals.
- * - `collapse(true)` in insertTab: `setStartAfter` has already pushed the start
- *   past the end, and the DOM collapses the end onto it, so both directions
- *   collapse to the same point.
+ * - `collapse(false)` at either call site: `setStart`/`setStartAfter` put the
+ *   new start after the range's end, which the DOM resolves by moving the end
+ *   onto it, so the range is already collapsed and both directions are the
+ *   same operation (measured on jsdom).
  *
- * One is not equivalent, only unkillable HERE: dropping
- * `selection.removeAllRanges()` in insertTab. The spec says `addRange` is a
- * no-op while a range exists, which would strand the caret; jsdom replaces the
- * range instead, so the removal has no observable effect in this environment.
+ * `selection.removeAllRanges()` in insertTab is not equivalent but has no
+ * behavioral consequence in jsdom: the selection holds this very Range object,
+ * so mutating it already moved the caret (measured — the second `addRange` is
+ * ignored, not applied, and the caret lands either way). Its test therefore
+ * pins the call itself, which the spec requires before `addRange`.
  */
 describe('code keyboard mutants', () => {
   beforeEach(() => {
@@ -299,6 +308,55 @@ describe('code keyboard mutants', () => {
 
       expect(press(el, 'Tab', true)).toBe(true);
       expect(el.textContent).toBe('  hello');
+    });
+  });
+
+  describe('a null text read', () => {
+    /**
+     * No live element returns null from `textContent`, so stubbing the getter is
+     * the only way to reach the `?? ''` arms. What the arms must do is treat the
+     * read as EMPTY — a placeholder fallback is written straight into the block,
+     * and the length it reports decides whether the caret walk lands.
+     */
+    it('inserts a newline over a null read as nothing, not as a placeholder', () => {
+      const el = makeCode('ab', 1);
+
+      vi.spyOn(Node.prototype, 'textContent', 'get').mockReturnValue(null);
+
+      press(el, 'Enter');
+
+      expect(el.firstChild?.nodeValue).toBe('\n');
+    });
+
+    it('gives up on the caret walk when a null read measures zero, without throwing', () => {
+      const el = makeCode('ab', 1);
+
+      vi.spyOn(Node.prototype, 'textContent', 'get').mockReturnValue(null);
+
+      expect(press(el, 'Enter')).toBe(true);
+    });
+  });
+
+  describe('the selection the tab is inserted into', () => {
+    it('clears the range the selection already holds before adding the new one', () => {
+      const el = makeCode('hello', 2);
+      const selection = window.getSelection();
+
+      if (selection === null) {
+        throw new Error('the document has no selection to spy on');
+      }
+
+      const removeAllRanges = vi.spyOn(selection, 'removeAllRanges');
+
+      press(el, 'Tab');
+
+      /**
+       * `addRange` is specified as a no-op while the selection already holds a
+       * range, so the old one is dropped first. jsdom keeps this Range object
+       * live, which is why the caret lands either way here and only the call
+       * itself is observable.
+       */
+      expect(removeAllRanges).toHaveBeenCalledTimes(1);
     });
   });
 });

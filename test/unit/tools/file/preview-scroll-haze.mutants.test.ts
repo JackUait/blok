@@ -95,6 +95,12 @@ describe('preview scroll haze mutants', () => {
       expect(shown(body, 'bottom')).toBe(true);
     });
 
+    it('marks a visible edge with a bare attribute', () => {
+      const { body } = mount([view({ scrollTop: 150, scrollHeight: 300, clientHeight: 100 })]);
+
+      expect(strip(body, 'top').getAttribute('data-blok-haze-visible')).toBe('');
+    });
+
     it('shows the top edge on a view scrolled to its bottom', () => {
       const { body } = mount([view({ scrollTop: 200, scrollHeight: 300, clientHeight: 100 })]);
 
@@ -192,6 +198,33 @@ describe('preview scroll haze mutants', () => {
 
       expect(shown(body, 'bottom')).toBe(false);
     });
+
+    it('prefers a view that overflows sideways over a flat one', () => {
+      const flat = view({ scrollTop: 0, scrollHeight: 100, clientHeight: 100 });
+      const wide = view({ scrollLeft: 150, scrollWidth: 300, clientWidth: 100, scrollHeight: 100, clientHeight: 100 });
+
+      const { body } = mount([flat, wide]);
+
+      expect(shown(body, 'left')).toBe(true);
+      expect(shown(body, 'right')).toBe(true);
+    });
+
+    it('never measures a child that is not an HTML element', () => {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+
+      Object.defineProperty(svg, 'scrollTop', { value: 150, configurable: true });
+      Object.defineProperty(svg, 'scrollHeight', { value: 300, configurable: true });
+      Object.defineProperty(svg, 'clientHeight', { value: 100, configurable: true });
+
+      const body = document.createElement('div');
+
+      body.appendChild(svg);
+      document.body.appendChild(body);
+
+      new ScrollHaze().init(body);
+
+      expect(shown(body, 'top')).toBe(false);
+    });
   });
 
   describe('the haze colour', () => {
@@ -203,6 +236,28 @@ describe('preview scroll haze mutants', () => {
       const { body } = mount([scroller]);
 
       expect(body.style.getPropertyValue('--blok-haze-color')).toBe('rgb(12, 34, 56)');
+    });
+
+    it('leaves the haze colour alone when the surface reports no colour', () => {
+      const scroller = view({ scrollTop: 10, scrollHeight: 300, clientHeight: 100 });
+      const body = document.createElement('div');
+
+      body.appendChild(scroller);
+      document.body.appendChild(body);
+
+      const nativeGetComputedStyle = globalThis.getComputedStyle.bind(globalThis);
+
+      vi.spyOn(globalThis, 'getComputedStyle').mockImplementation((el: Element) =>
+        el === scroller
+          ? ({ backgroundColor: '', display: 'block' } as unknown as CSSStyleDeclaration)
+          : nativeGetComputedStyle(el),
+      );
+
+      const setProperty = vi.spyOn(body.style, 'setProperty');
+
+      new ScrollHaze().init(body);
+
+      expect(setProperty).not.toHaveBeenCalled();
     });
   });
 
@@ -256,6 +311,18 @@ describe('preview scroll haze mutants', () => {
       new ScrollHaze().init(body);
 
       expect(listen).toHaveBeenCalledWith('scroll', expect.any(Function), { capture: true, passive: true });
+    });
+
+    it('passes the resize listener on passively', () => {
+      const body = document.createElement('div');
+
+      document.body.appendChild(body);
+
+      const listen = vi.spyOn(window, 'addEventListener');
+
+      new ScrollHaze().init(body);
+
+      expect(listen).toHaveBeenCalledWith('resize', expect.any(Function), { passive: true });
     });
 
     it('watches for the content and view changes that move the edges', () => {
@@ -321,12 +388,26 @@ describe('preview scroll haze mutants', () => {
       expect(shown(body, 'right')).toBe(false);
     });
 
+    // A rubber-band overscroll reports a negative offset past the end; the edge
+    // there is still the end, not a hidden side.
+    it('keeps the bottom edge hidden one pixel before the end while overscrolling', () => {
+      const { body } = mount([view({ scrollTop: -5, scrollHeight: 101, clientHeight: 100 })]);
+
+      expect(shown(body, 'bottom')).toBe(false);
+    });
+
+    it('keeps the right edge hidden one pixel before the end while overscrolling', () => {
+      const { body } = mount([view({ scrollLeft: -5, scrollWidth: 101, clientWidth: 100 })]);
+
+      expect(shown(body, 'right')).toBe(false);
+    });
+
     it('never measures a strip, even one that would look like it overflows', () => {
       const flat = view({ scrollTop: 0, scrollHeight: 100, clientHeight: 100 });
-      const { body } = mount([flat]);
+      const { haze, body } = mount([flat]);
 
       withMetrics(strip(body, 'top'), { scrollHeight: 400, clientHeight: 100, scrollTop: 200 });
-      new ScrollHaze().update();
+      haze.update();
 
       expect(shown(body, 'top')).toBe(false);
     });
@@ -349,6 +430,39 @@ describe('preview scroll haze mutants', () => {
 
     it('is safe to call before anything was mounted', () => {
       expect(() => new ScrollHaze().destroy()).not.toThrow();
+    });
+
+    it('detaches both listeners it attached', () => {
+      const scroller = view({ scrollTop: 0, scrollHeight: 300, clientHeight: 100 });
+      const body = document.createElement('div');
+
+      body.appendChild(scroller);
+      document.body.appendChild(body);
+
+      const haze = new ScrollHaze();
+
+      haze.init(body);
+
+      const detachFromBody = vi.spyOn(body, 'removeEventListener');
+      const detachFromWindow = vi.spyOn(window, 'removeEventListener');
+
+      haze.destroy();
+
+      expect(detachFromBody).toHaveBeenCalledWith('scroll', expect.any(Function), { capture: true });
+      expect(detachFromWindow).toHaveBeenCalledWith('resize', expect.any(Function));
+    });
+
+    it('forgets the strips it removed, so a later update cannot reach them', () => {
+      const scroller = view({ scrollTop: 150, scrollHeight: 300, clientHeight: 100 });
+      const { haze, body } = mount([scroller]);
+      const topStrip = strip(body, 'top');
+
+      expect(topStrip.hasAttribute('data-blok-haze-visible')).toBe(true);
+
+      haze.destroy();
+      haze.update();
+
+      expect(topStrip.hasAttribute('data-blok-haze-visible')).toBe(true);
     });
 
     it('can be mounted again after being torn down', () => {

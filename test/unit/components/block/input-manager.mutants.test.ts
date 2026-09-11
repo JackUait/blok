@@ -286,6 +286,130 @@ describe('InputManager mutants', () => {
     });
   });
 
+  describe('equivalence measurements', () => {
+    /**
+     * The model the class documents: the current input becomes the single input
+     * that contains the resolved element (inclusive), or nothing changes.
+     */
+    const indexHolding = (inputs: HTMLElement[], node: Node): number => {
+      const element = node instanceof HTMLElement ? node : node.parentElement;
+
+      if (element === null) {
+        return -1;
+      }
+
+      return inputs.findIndex((input) => input === element || input.contains(element));
+    };
+
+    const everyNode = (root: Node): Node[] => {
+      const collected: Node[] = [];
+
+      const walk = (node: Node): void => {
+        collected.push(node);
+        node.childNodes.forEach(walk);
+      };
+
+      walk(root);
+
+      return collected;
+    };
+
+    const everyElement = (root: Node): HTMLElement[] =>
+      everyNode(root).filter((node): node is HTMLElement => node instanceof HTMLElement);
+
+    it('resolves every node in the block through containment alone', () => {
+      const { wrapper, first, second, span, textNode } = createNestedInputs();
+      const nativeInput = document.createElement('input');
+      const plain = document.createElement('div');
+
+      holder.append(nativeInput, plain);
+
+      const inputManager = createManager();
+      const inputs = inputManager.inputs;
+
+      expect(inputs).toEqual([first, second, nativeInput]);
+      expect(wrapper).not.toBe(first);
+      expect(span.contains(textNode)).toBe(true);
+
+      inputManager.currentInput = nativeInput;
+
+      const start = inputManager.currentInputIndex;
+      const anchor = { node: null as Node | null };
+
+      vi.spyOn(SelectionUtils, 'anchorNode', 'get').mockImplementation(() => anchor.node);
+      vi.spyOn(document, 'activeElement', 'get').mockReturnValue(null);
+
+      const detached = document.createElement('div');
+
+      for (const node of [...everyNode(holder), document.body, detached, document.createTextNode('orphan')]) {
+        inputManager.currentInput = nativeInput;
+        anchor.node = node;
+        inputManager.updateCurrentInput();
+
+        const expected = indexHolding(inputs, node);
+
+        expect(inputManager.currentInputIndex).toBe(expected === -1 ? start : expected);
+      }
+    });
+
+    it('resolves every focused element in the block through containment alone', () => {
+      const { first, second } = createNestedInputs();
+      const nativeInput = document.createElement('input');
+      const plain = document.createElement('div');
+
+      holder.append(nativeInput, plain);
+
+      const inputManager = createManager();
+      const inputs = inputManager.inputs;
+
+      expect(inputs).toEqual([first, second, nativeInput]);
+
+      inputManager.currentInput = nativeInput;
+
+      const start = inputManager.currentInputIndex;
+      const focused = { element: null as Element | null };
+
+      vi.spyOn(SelectionUtils, 'anchorNode', 'get').mockReturnValue(null);
+      vi.spyOn(document, 'activeElement', 'get').mockImplementation(() => focused.element);
+
+      for (const element of everyElement(holder)) {
+        inputManager.currentInput = nativeInput;
+        focused.element = element;
+        inputManager.updateCurrentInput();
+
+        const expected = indexHolding(inputs, element);
+
+        expect(inputManager.currentInputIndex).toBe(expected === -1 ? start : expected);
+      }
+    });
+
+    it('clamps the index only when it is past the last input', () => {
+      const first = createContentEditable('1');
+      const second = createContentEditable('2');
+      const third = createContentEditable('3');
+
+      holder.append(first, second, third);
+
+      const inputManager = createManager();
+
+      inputManager.currentInput = third;
+      inputManager.dropCache();
+
+      // The index already sits at the last input: the two comparison operators
+      // differ here, and both leave the index untouched.
+      expect(inputManager.currentInputIndex).toBe(2);
+      expect(inputManager.inputs).toEqual([first, second, third]);
+      expect(inputManager.currentInputIndex).toBe(2);
+
+      third.remove();
+      inputManager.dropCache();
+
+      expect(inputManager.currentInputIndex).toBe(2);
+      expect(inputManager.inputs).toEqual([first, second]);
+      expect(inputManager.currentInputIndex).toBe(1);
+    });
+  });
+
   describe('focus handler', () => {
     it('drops the cache so a detached input leaves the list', () => {
       const first = createContentEditable('1');

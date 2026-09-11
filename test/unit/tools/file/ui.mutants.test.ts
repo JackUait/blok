@@ -30,9 +30,10 @@ const attributes = (el: Element | null): Record<string, string> =>
   Object.fromEntries(Array.from(el?.attributes ?? []).map((attr) => [attr.name, attr.value]));
 
 /**
- * Two mutants here are equivalent: both `?? ''` fallbacks read `textContent`
- * off an element, which is never null — only a document or a doctype node
- * returns null from that property.
+ * Both `?? ''` fallbacks read `textContent` off an element, and only a document
+ * or a doctype node returns null from that property. The guard is still
+ * type-required (`Node.textContent` is `string | null`), so the null read is
+ * witnessed by hand instead of left to the mutant.
  */
 describe('file card UI mutants', () => {
   beforeEach(() => {
@@ -209,6 +210,26 @@ describe('file card UI mutants', () => {
 
       expect(onRename).not.toHaveBeenCalled();
     });
+
+    it('restores the old name when the field reads a null text content', () => {
+      const { name, onRename } = renameable();
+      const written: string[] = [];
+
+      // A null read falls through to the `?? ''` fallback, which must land in
+      // the same restore branch an emptied field takes.
+      Object.defineProperty(name, 'textContent', {
+        configurable: true,
+        get: () => null,
+        set: (value: string): void => {
+          written.push(value);
+        },
+      });
+
+      name.dispatchEvent(new FocusEvent('blur'));
+
+      expect(onRename).not.toHaveBeenCalled();
+      expect(written).toEqual(['report.pdf']);
+    });
   });
 
   describe('the caption row', () => {
@@ -248,6 +269,26 @@ describe('file card UI mutants', () => {
       caption.dispatchEvent(new FocusEvent('blur'));
 
       expect(onChange).toHaveBeenCalledWith('edited');
+    });
+
+    it('reports the empty string when the caption reads a null text content', () => {
+      const onChange = vi.fn();
+      const row = renderCaptionRow({ value: 'hi', placeholder: 'Add a caption', readOnly: false, onChange });
+      const caption = row.querySelector('[data-role="file-caption"]');
+
+      if (caption === null) {
+        throw new Error('no caption');
+      }
+
+      // A null read must land on the empty string, not on a placeholder.
+      Object.defineProperty(caption, 'textContent', {
+        configurable: true,
+        get: () => null,
+      });
+
+      caption.dispatchEvent(new FocusEvent('blur'));
+
+      expect(onChange).toHaveBeenCalledWith('');
     });
   });
 });

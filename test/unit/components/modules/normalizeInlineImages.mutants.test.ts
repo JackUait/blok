@@ -66,8 +66,11 @@ const makeCellParagraph = (id: string, text: string, parentId = 't'): BlockEntry
 /*
  * Mutants left alive on purpose, each unobservable through the public function:
  *
- * - `\s+` -> `\s` in IMG_TAG_REGEX: the following `[^>]*` absorbs whitespace, so
- *   both forms accept exactly the same strings.
+ * - `\s+` -> `\s` in IMG_TAG_REGEX: `\s+[^>]*` and `\s[^>]*` accept the same
+ *   strings, because whitespace is never `>` so the `[^>]*` absorbs the rest of
+ *   the run. Measured: 2 162 688 exhaustive strings over a `<img s=`-sized
+ *   alphabet (to length 7) plus 1 296 tag shapes, no input differs in match,
+ *   capture or `replace` result.
  * - `block.id !== undefined` -> `true` when filling `blockById`: the extra entry
  *   is keyed `undefined`, and every later `.get()` is passed a string
  *   (`block.parentId` past its undefined/null guard, or a `parentTableId`).
@@ -78,11 +81,12 @@ const makeCellParagraph = (id: string, text: string, parentId = 't'): BlockEntry
  *   extraction map stays empty and line 118 returns the same array reference.
  * - `block.parentId === undefined` -> `false` and `block.parentId === null` ->
  *   `false` in the skip guard: `blockById` can hold neither key (it is only ever
- *   written with an `id` that passed `!== undefined`), so the lookup returns
- *   undefined and the next guard performs the same `continue`. Killable only by
- *   smuggling in a `null` id, which the published type forbids.
+ *   written with an `id` that passed `!== undefined`, and a null id is outside
+ *   the published type, `id?: string`), so the lookup returns undefined and the
+ *   next guard performs the same `continue`.
  * - `original === undefined` and its block (line 160): `parentTableId` is copied
- *   from a `parentId` that already resolved to a table in this same map.
+ *   from a `parentId` that already resolved to a table in this same map, and
+ *   `blockById` is never written after the fill loop.
  * - `info === undefined` (187) and `clonedTable === undefined` (193) and their
  *   blocks: `newImageBlocksPerParagraph` is built by iterating `extractionMap`,
  *   and `clonedTables` by iterating the same infos; nothing deletes from either.
@@ -92,7 +96,8 @@ const makeCellParagraph = (id: string, text: string, parentId = 't'): BlockEntry
  *   `clonedTables.has(...)` / `extractionMap.has(...)` returns false for an
  *   undefined key, so the branch is not entered either way.
  * - `?? []` at 247 and `?? ''` at 252 plus `info?.cleanedText` -> `info.cleanedText`:
- *   both maps are keyed by the very id whose `has()` just returned true.
+ *   both maps are keyed by the very id whose `has()` just returned true, and
+ *   `cleanedText` is a `String.replace` result.
  */
 describe('normalizeInlineImages — mutation coverage', () => {
   let normalizeInlineImages: NormalizeModule['normalizeInlineImages'];
@@ -298,6 +303,84 @@ describe('normalizeInlineImages — mutation coverage', () => {
       { id: 'img-1', tool: 'image', data: { url: 'a.png' }, isValid: true, parentId: 't' },
       { id: 'p-1', tool: 'paragraph', data: { text: '' }, isValid: true, parentId: 't' },
     ]);
+  });
+
+  it('reads a hidden "src=" as the source when an attribute before it ends in "src="', () => {
+    /**
+     * Pins a defect, not a contract: the leading `[^>]*` in IMG_TAG_REGEX is
+     * greedy and backtracks to the LAST `src=` in the tag, so `data-src` is
+     * captured and the real url is dropped. This test exists to describe what
+     * the regex does today; a fix changes the url to `real.png`.
+     */
+    const table = makeTable([[{ blocks: ['p-1'] }]], ['p-1']);
+    const result = normalizeInlineImages([
+      table,
+      makeCellParagraph('p-1', '<img src="real.png" data-src="lazy.png">'),
+    ]);
+
+    expect(result).toStrictEqual([
+      {
+        id: 't',
+        tool: 'table',
+        data: { withHeadings: false, content: [[{ blocks: ['img-1', 'p-1'] }]] },
+        isValid: true,
+        contentIds: ['p-1', 'img-1'],
+      },
+      { id: 'img-1', tool: 'image', data: { url: 'lazy.png' }, isValid: true, parentId: 't' },
+      { id: 'p-1', tool: 'paragraph', data: { text: '' }, isValid: true, parentId: 't' },
+    ]);
+  });
+
+  it('extracts one image per row of a table, single and double quotes alike', () => {
+    const table = makeTable([[{ blocks: ['p-1'] }], [{ blocks: ['p-2'] }]], ['p-1', 'p-2']);
+    const result = normalizeInlineImages([
+      table,
+      makeCellParagraph('p-1', "x<img src='a.png'>"),
+      makeCellParagraph('p-2', '<img src="b.png">y'),
+    ]);
+
+    expect(result).toStrictEqual([
+      {
+        id: 't',
+        tool: 'table',
+        data: {
+          withHeadings: false,
+          content: [[{ blocks: ['img-1', 'p-1'] }], [{ blocks: ['img-2', 'p-2'] }]],
+        },
+        isValid: true,
+        contentIds: ['p-1', 'p-2', 'img-1', 'img-2'],
+      },
+      { id: 'img-1', tool: 'image', data: { url: 'a.png' }, isValid: true, parentId: 't' },
+      { id: 'p-1', tool: 'paragraph', data: { text: 'x' }, isValid: true, parentId: 't' },
+      { id: 'img-2', tool: 'image', data: { url: 'b.png' }, isValid: true, parentId: 't' },
+      { id: 'p-2', tool: 'paragraph', data: { text: 'y' }, isValid: true, parentId: 't' },
+    ]);
+  });
+
+  it('returns the input unchanged when no table can parent the image paragraph', () => {
+    /**
+     * Neither a paragraph naming a non-table parent nor a paragraph with no
+     * parent at all can reach extraction, so the `hasTable` pre-filter and the
+     * parent-resolution guard decide the same question and the early return is
+     * never the only thing keeping the input intact.
+     */
+    const list: BlockEntry = {
+      id: 'list-1',
+      tool: 'list',
+      data: { items: [] },
+      isValid: true,
+      contentIds: ['p-1'],
+    };
+    const orphan: BlockEntry = {
+      id: 'p-2',
+      tool: 'paragraph',
+      data: { text: '<img src="b.png">' },
+      isValid: true,
+      parentId: null,
+    };
+    const input = [list, orphan, makeCellParagraph('p-1', '<img src="a.png">', 'list-1')];
+
+    expect(normalizeInlineImages(input)).toBe(input);
   });
 
   it('references an image with an empty id when the generator yields none', () => {

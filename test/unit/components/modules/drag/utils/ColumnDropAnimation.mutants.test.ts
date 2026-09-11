@@ -406,11 +406,96 @@ describe('ColumnDropAnimation — mutation coverage', () => {
       expect(block.getAttribute('style')).toBe('');
     });
   });
+
+  /**
+   * Strongest attempts at the mutants the equivalence block below claims are
+   * unkillable. Each one drives the exact input the mutant would need to
+   * diverge on; they pass under the mutant too, which is the measurement behind
+   * those claims.
+   */
+  describe('equivalence probes', () => {
+    it('returns nothing when the parent element is undefined rather than null', () => {
+      const block = makeBlock();
+
+      // Reaches the `?? []` fallback through the OTHER nullish value, so the
+      // only thing left between the injected filler and the result is the
+      // `instanceof HTMLElement` filter.
+      Object.defineProperty(block, 'parentElement', { value: undefined, configurable: true });
+
+      expect(captureSiblingTops(block)).toEqual([]);
+    });
+
+    it('never reads the media queries for an empty holder list', () => {
+      const matchMedia = vi.fn((query: string) => ({
+        matches: false,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }));
+
+      vi.stubGlobal('matchMedia', matchMedia);
+
+      animateColumnWidths({ holders: [], startWidths: [] });
+
+      // Returns on the length guard, short of the reduced-motion query. The
+      // zero-sum guard sits next in line and would return on its own.
+      expect(matchMedia).not.toHaveBeenCalled();
+    });
+
+    it('animates holders whose row container is undefined', () => {
+      const first = makeHolder('1');
+      const second = makeHolder('1');
+
+      Object.defineProperty(first, 'parentElement', { value: undefined, configurable: true });
+
+      expect(() => animateColumnWidths({
+        holders: [first, second],
+        startWidths: [600, 200],
+        newColumnHolder: second,
+      })).not.toThrow();
+
+      // `container?.height ?? 0` collapsed the missing container to a zero
+      // height, so the pin was skipped and nothing needed releasing.
+      expect(first.getAttribute('style')).toBe(`transition: ${WIDTH_TRANSITION}; flex-grow: 1;`);
+
+      expect(() => finishColumnDropAnimations()).not.toThrow();
+
+      expect(first.getAttribute('style')).toBe('flex-grow: 1;');
+    });
+
+    it('flushes every in-flight animation exactly once across repeated flushes', () => {
+      const first = document.createElement('div');
+      const second = document.createElement('div');
+
+      document.body.append(first, second);
+
+      const firstRemove = vi.spyOn(first, 'remove');
+      const secondRemove = vi.spyOn(second, 'remove');
+
+      // Leaving each listener attached is what lets the later entry points
+      // reach the once-guard instead of short-circuiting on a missing listener.
+      vi.spyOn(first, 'removeEventListener').mockReturnValue(undefined);
+      vi.spyOn(second, 'removeEventListener').mockReturnValue(undefined);
+
+      settleDragPreview({ preview: first, targetRect: { left: 0, top: 0 } });
+      settleDragPreview({ preview: second, targetRect: { left: 0, top: 0 } });
+
+      finishColumnDropAnimations();
+      finishColumnDropAnimations();
+      first.dispatchEvent(new Event('transitionend'));
+      second.dispatchEvent(new Event('transitionend'));
+
+      expect(firstRemove).toHaveBeenCalledTimes(1);
+      expect(secondRemove).toHaveBeenCalledTimes(1);
+    });
+  });
 });
 
 /*
  * Proven-equivalent mutants — no input can distinguish them, so no test can
- * kill them. Evidence for each:
+ * kill them. Measured: each survives the `equivalence probes` block above,
+ * which drives the exact input the mutant would need to diverge on. Evidence
+ * for each:
  *
  * - ObjectLiteral `{ done: false }` -> `{}` (runOnce state): `state.done` is
  *   read only by the once-guard. `undefined` and `false` are both falsy, and

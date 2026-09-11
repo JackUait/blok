@@ -220,6 +220,17 @@ describe('image alt popover mutants', () => {
       expect(() => detach()).not.toThrow();
     });
 
+    it('tears the dialog down once however many times the handle is called', () => {
+      const remove = vi.spyOn(Element.prototype, 'remove');
+      const { detach } = open();
+
+      detach();
+      detach();
+      detach();
+
+      expect(remove.mock.calls.length).toBe(1);
+    });
+
     it('stops a later Enter from saving', () => {
       const { textarea, detach, onSave } = open();
 
@@ -238,6 +249,19 @@ describe('image alt popover mutants', () => {
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
 
       expect(onCancel).toHaveBeenCalledTimes(1);
+      expect(onSave).not.toHaveBeenCalled();
+      expect(document.querySelector('[data-role="image-alt-popover"]')).toBeNull();
+    });
+
+    it('ignores events that arrive after the caller already detached it', () => {
+      const { detach, onCancel, onSave } = open({ value: 'old' });
+
+      detach();
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+      expect(onCancel).not.toHaveBeenCalled();
       expect(onSave).not.toHaveBeenCalled();
     });
 
@@ -320,6 +344,62 @@ describe('image alt popover mutants', () => {
       openAltPopover({ anchor, value: 'x', onSave: vi.fn(), onCancel: vi.fn(), i18n: echoI18n() });
 
       expect(document.querySelector('[data-role="image-alt-popover"]')).not.toBeNull();
+    });
+  });
+
+  describe('staying anchored', () => {
+    it('mints description ids as one dash plus a run of digits', () => {
+      const first = open();
+      const firstNumber = Number(/-(\d+)$/.exec(first.description.id)?.[1] ?? NaN);
+
+      first.detach();
+
+      const second = open({ anchor: document.createElement('button') });
+      const secondNumber = Number(/-(\d+)$/.exec(second.description.id)?.[1] ?? NaN);
+
+      expect(first.description.id).toMatch(/^blok-image-alt-popover-description-\d+$/);
+      expect(second.description.id).toMatch(/^blok-image-alt-popover-description-\d+$/);
+      expect(secondNumber).toBeGreaterThan(firstNumber);
+    });
+
+    it('re-measures the anchor when the page scrolls or resizes', () => {
+      const anchor = document.createElement('button');
+
+      document.body.appendChild(anchor);
+
+      const measure = vi.spyOn(anchor, 'getBoundingClientRect');
+
+      open({ anchor });
+
+      const afterOpen = measure.mock.calls.length;
+
+      expect(afterOpen).toBe(1);
+
+      window.dispatchEvent(new Event('scroll'));
+      window.dispatchEvent(new Event('resize'));
+
+      expect(measure.mock.calls.length).toBe(afterOpen + 2);
+    });
+
+    it('unhooks the window listeners it installed when it closes', () => {
+      const added = vi.spyOn(window, 'addEventListener');
+      const removed = vi.spyOn(window, 'removeEventListener');
+      const anchor = document.createElement('button');
+
+      document.body.appendChild(anchor);
+
+      const { detach } = open({ anchor });
+
+      const scrollHandler = added.mock.calls.find((call) => call[0] === 'scroll')?.[1];
+      const resizeHandler = added.mock.calls.find((call) => call[0] === 'resize')?.[1];
+
+      expect(scrollHandler).toBeDefined();
+      expect(resizeHandler).toBeDefined();
+
+      detach();
+
+      expect(removed.mock.calls.some((call) => call[0] === 'scroll' && call[1] === scrollHandler)).toBe(true);
+      expect(removed.mock.calls.some((call) => call[0] === 'resize' && call[1] === resizeHandler)).toBe(true);
     });
   });
 });

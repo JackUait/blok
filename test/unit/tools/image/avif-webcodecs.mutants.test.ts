@@ -275,6 +275,18 @@ describe('avif-webcodecs mutants', () => {
       expect(mux.buildCalls).toStrictEqual([]);
     });
 
+    // The canvas is asked for a context here and hands back null. Guards that
+    // bail out on it survive only because the dereference they skip throws
+    // instead, into the same catch, for the same null.
+    it('gives up when the canvas has no 2d context', async () => {
+      state.contextAvailable = false;
+
+      expect(await encode()).toBeNull();
+      expect(state.contextIds).toStrictEqual(['2d']);
+      expect(state.drawCalls).toBe(0);
+      expect(mux.buildCalls).toStrictEqual([]);
+    });
+
     it('gives up, without muxing, when no chunk arrives', async () => {
       state.emitChunk = false;
 
@@ -331,6 +343,27 @@ describe('avif-webcodecs mutants', () => {
 
     it('falls back to BT.709 limited range for names it does not know', async () => {
       state.meta = { decoderConfig: { colorSpace: { primaries: 'unknown', transfer: null } } };
+      await encode();
+
+      expect(mux.buildCalls).toStrictEqual([{
+        width: 8,
+        height: 8,
+        seqProfile: 0,
+        seqLevelIdx: 0,
+        tier: 0,
+        colorPrimaries: 1,
+        transferCharacteristics: 1,
+        matrixCoefficients: 1,
+        fullRange: false,
+      }]);
+    });
+
+    // WebCodecs reports the empty string for an unnamed colour field. It is not
+    // a CICP table key either, so the lookup misses and the fallback answers —
+    // the same answer any other miss gives, which is why the table's MISS KEY
+    // itself is unobservable.
+    it('falls back when a reported colour name is the empty string', async () => {
+      state.meta = { decoderConfig: { colorSpace: { primaries: '', transfer: '', matrix: '' } } };
       await encode();
 
       expect(mux.buildCalls).toStrictEqual([{

@@ -112,7 +112,7 @@ npx migrate-from-editorjs ./src --dry-run
 
 ### Tool Configuration Transformations
 
-Old Blok static property references are converted to direct imports:
+The codemod converts old Blok static property references to direct imports:
 ```diff
 tools: {
 -   header: Blok.Header,
@@ -124,7 +124,7 @@ tools: {
 }
 ```
 
-Combined Blok imports are split into core and tools:
+The codemod splits combined Blok imports into core and tools:
 ```diff
 - import { Blok, Header, Paragraph, List } from '@bloklabs/core';
 + import { Blok } from '@bloklabs/core';
@@ -156,13 +156,13 @@ Combined Blok imports are split into core and tools:
 
 ### Using `--use-library-i18n`
 
-If your EditorJS project had custom translations, the codemod will by default convert them to Blok's flat format. However, Blok now ships with built-in translations for 36 languages. If you prefer to use these library translations instead of maintaining your own, use the `--use-library-i18n` flag:
+If your EditorJS project had custom translations, the codemod converts them to Blok's flat format by default. Blok also ships with built-in translations for 36 languages. To use those instead of maintaining your own, pass the `--use-library-i18n` flag:
 
 ```bash
 npx -p @bloklabs/core migrate-from-editorjs ./src --use-library-i18n
 ```
 
-This will remove the `messages` property from your i18n config, allowing Blok to auto-detect the user's locale from the browser and use the appropriate built-in translations.
+This removes the `messages` property from your i18n config. Blok then auto-detects the user's locale from the browser and uses the matching built-in translations.
 
 ## Supported File Types
 

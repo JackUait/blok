@@ -1,8 +1,10 @@
 # @bloklabs/server
 
-Blok's shared C# server handles file uploads, link previews and live collaboration, and converts saved documents. Use it inside an ASP.NET Core app, or run the same routes as a standalone npm binary or Docker image.
+Blok's shared server is written in C#. It handles file uploads, link previews and live collaboration, and it converts saved documents. Use it inside an ASP.NET Core app, or run the same routes as a standalone npm binary or Docker image.
 
-Documents stay yours: saving and loading them is a small endpoint in your own app, and that endpoint remains the record. With live collaboration on, the service keeps only a working copy of each open document, in storage you point it at, and writes what people type back to your endpoint every few seconds. Register an operation journal and that changes: the document keeps no working copy, the journal is where an edit becomes durable, and your endpoint's record is refreshed from a published checkpoint, on eviction and on drain rather than on a timer. The packages include no database-block or MySQL integration; those follow this delivery migration.
+Your documents stay yours. Your own app saves and loads them through a small endpoint, and that endpoint stays the record. With live collaboration on, the service keeps only a working copy of each open document. The copy lives in storage you point it at. Every few seconds, the service writes what people type back to your endpoint.
+
+Register an operation journal and that changes. The document keeps no working copy. The journal is where an edit becomes durable. Your endpoint's record is refreshed from a published checkpoint, on eviction and on drain, rather than on a timer. The packages include no database-block or MySQL integration; those follow this delivery migration.
 
 ## ASP.NET Core
 
@@ -36,7 +38,7 @@ In-process defaults expose health only. Storage and outbound routes must be enab
 
 ## Convert documents
 
-`Blok.Server` carries Blok's own serializer as an embedded JavaScript bundle and runs it in this process, so a document converts through the editor's implementation rather than a port of it. A port has to be taught every block Blok gains and silently drops the ones nobody remembered.
+`Blok.Server` embeds Blok's own serializer as a JavaScript bundle and runs it in this process. A document therefore converts through the editor's implementation, not a port of it. A port has to be taught every block Blok gains, and it silently drops the ones nobody remembered.
 
 Conversion needs no storage, no outbound access and no route, so it registers on its own:
 
@@ -78,10 +80,10 @@ public sealed class ArticleExport(IBlokDocumentConverter blok, ILogger<ArticleEx
 
 ### Translate a document without handing a model its JSON
 
-A model asked to translate a document's JSON breaks the structure — it drops
-ids, reorders blocks, invents fields. Take the strings out instead, translate
-the list, and put it back; the model never sees the structure, so it cannot
-break it.
+A model asked to translate a document's JSON breaks the structure. It drops
+ids, reorders blocks, and invents fields. Take the strings out instead,
+translate the list, and put it back. The model never sees the structure, so it
+cannot break it.
 
 ```csharp
 var texts = await blok.ExtractTextsAsync(documentJson, cancellationToken: ct);
@@ -89,13 +91,13 @@ var translated = await TranslateAsync(texts, ct);       // your own model call
 var document = await blok.InjectTextsAsync(documentJson, translated, cancellationToken: ct);
 ```
 
-The list is in document order, skips empty values, and holds no URLs — nor a
-file's name, which is what the reader downloads rather than prose. Code blocks
-are out by default; pass `includeCode: true` to both calls if you want them.
-A list whose length does not match the document is an `ArgumentException`
-rather than a silently misplaced translation, and a block too malformed to read
-is carried through untouched — the result of `InjectTextsAsync` is what you
-store.
+The list is in document order and skips empty values. It holds no URLs, and no
+file's name either, since the name is what the reader downloads rather than
+prose. Code blocks are out by default; pass `includeCode: true` to both calls
+if you want them. A list whose length does not match the document is an
+`ArgumentException` rather than a silently misplaced translation. A block too
+malformed to read is carried through untouched. The result of `InjectTextsAsync`
+is what you store.
 
 ### Stamp the version the editor stamps
 
@@ -112,15 +114,15 @@ var document = new JsonObject
 };
 ```
 
-Markdown cannot express every block — a callout becomes a blockquote, columns flatten, a spacer disappears — so both directions report what changed. A caller handing the result to something that cannot ask a follow-up question, an export or a model, should read that report rather than assume the round trip was lossless.
+Markdown cannot express every block. A callout becomes a blockquote, columns flatten, and a spacer disappears. Both directions therefore report what changed. A caller handing the result to something that cannot ask a follow-up question, such as an export or a model, should read that report rather than assume the round trip was lossless.
 
-An instance holds a pool of engines and is expensive to construct — every engine parses the embedded bundle, about a second in total — so register one for the lifetime of the process. `AddBlokDocuments` builds it at startup rather than during the first request; pass `warmUp: false` where a host starts often and converts rarely, such as a test host. The pool size bounds how many documents convert at once; further callers wait. A conversion is bounded by a timeout, a per-call allocation budget and a stack guard, so a pathological document fails rather than wedging the process.
+An instance holds a pool of engines and is expensive to construct. Every engine parses the embedded bundle, about a second in total. Register one for the lifetime of the process. `AddBlokDocuments` builds it at startup rather than during the first request. Pass `warmUp: false` where a host starts often and converts rarely, such as a test host. The pool size bounds how many documents convert at once; further callers wait. A conversion is bounded by a timeout, a per-call allocation budget and a stack guard, so a pathological document fails rather than wedging the process.
 
-`allocationBudgetBytes` is allocation churn for ONE conversion, not resident memory: the runtime counts every allocation a call makes rather than what it still holds, and nothing is reserved. It defaults to 512 MiB because that is what a long article carrying inline markup, or one holding a large inline base64 image, was measured to need — a 700 KB article with a third of its fields marked up exhausted the old 64 MiB in every reader. Lower it only to bound a hostile document.
+`allocationBudgetBytes` is allocation churn for ONE conversion, not resident memory. The runtime counts every allocation a call makes rather than what it still holds, and nothing is reserved. It defaults to 512 MiB because that is what a long article carrying inline markup, or one holding a large inline base64 image, was measured to need. A 700 KB article with a third of its fields marked up exhausted the old 64 MiB in every reader. Lower it only to bound a hostile document.
 
 A conversion that fails throws `BlokDocumentConversionException`. Read its `Reason` rather than its message: `InvalidDocument` (not JSON, or JSON with no `blocks`), `TimedOut`, `DocumentTooLarge` (the allocation budget), `Unknown` (everything else). Nothing about the JavaScript engine reaches a caller, so explaining the failure to your own users needs no reference to it. Your own cancelled `CancellationToken` still arrives as `OperationCanceledException`, never as this.
 
-A degradation report's `Action` is one of `BlokDegradationActions.Dropped` / `BlokDegradationActions.Degraded`. It stays an open string so a Blok release naming a new outcome cannot fail deserialization in an app already deployed — compare against the constants, and treat anything else as news.
+A degradation report's `Action` is one of `BlokDegradationActions.Dropped` / `BlokDegradationActions.Degraded`. It stays an open string, so a Blok release naming a new outcome cannot fail deserialization in an app already deployed. Compare against the constants, and treat anything else as news.
 
 ## Standalone
 
@@ -130,7 +132,7 @@ Run the self-contained host through npm:
 npx @bloklabs/server --listen 127.0.0.1:4000
 ```
 
-The npm package is a small wrapper. On first run it downloads the C# host for macOS, Windows or Linux (including Alpine/musl), verifies it against `checksums.txt`, and caches it. Both x64 and arm64 are published. The host is fully managed: every archive and the NuGet package are built from managed code alone, with no native library, so there is no extraction directory and nothing to set for a service account with no home.
+The npm package is a small wrapper. On first run it downloads the C# host for macOS, Windows or Linux (including Alpine/musl), verifies it against `checksums.txt`, and caches it. Both x64 and arm64 are published. The host is fully managed. Every archive and the NuGet package are built from managed code alone, with no native library. There is no extraction directory, and nothing to set for a service account with no home.
 
 The same host is available at the existing image name. In proxy mode it must stay on loopback, so this example uses the host network. The named volume keeps uploads in the image's writable `/data` directory:
 
@@ -182,7 +184,7 @@ docker run \
   --doc-endpoint https://myapp.com/api/documents
 ```
 
-`--collab` turns the sync routes on. `--doc-endpoint` names the routes in your own app the service loads a document from and writes it back to; `BLOK_DOC_ENDPOINT_AUTH` holds the header value those routes expect, sent verbatim on every call, and it has to be a single line: a value carrying a carriage return or newline refuses to start rather than losing the header on every call. `--collab-dir` (or `--collab-s3-prefix`) is where the working copy lives; it holds document content, so it must not be publicly readable and may not sit inside `--storage-dir`, where everything is served. In-process, the same switches are `options.CollabEnabled` and `options.DocEndpoint`, and the app must call `app.UseWebSockets()`.
+`--collab` turns the sync routes on. `--doc-endpoint` names the routes in your own app that the service loads a document from and writes it back to. `BLOK_DOC_ENDPOINT_AUTH` holds the header value those routes expect, sent verbatim on every call. It has to be a single line: a value carrying a carriage return or newline refuses to start rather than losing the header on every call. `--collab-dir` (or `--collab-s3-prefix`) is where the working copy lives. It holds document content, so it must not be publicly readable, and it may not sit inside `--storage-dir`, where everything is served. In-process, the same switches are `options.CollabEnabled` and `options.DocEndpoint`, and the app must call `app.UseWebSockets()`.
 
 ## Point the editor at it
 
@@ -229,7 +231,7 @@ new Blok({
 
 The editor caches the pass and replaces it ahead of expiry, and uploads and link previews share the same one.
 
-A pass is a plain HS256 JWT carrying `user`, `doc`, `write` and `exp`, signed with the secret the service runs with (at least 32 characters). Any backend can mint one with its own JWT library — `blokTicket` exists so a JavaScript one does not have to. Routes running inside your own ASP.NET app need none of this: they already know who the caller is.
+A pass is a plain HS256 JWT carrying `user`, `doc`, `write` and `exp`, signed with the secret the service runs with (at least 32 characters). Any backend can mint one with its own JWT library; `blokTicket` exists so a JavaScript one does not have to. Routes running inside your own ASP.NET app need none of this: they already know who the caller is.
 
 ## Routes
 
@@ -243,17 +245,19 @@ A pass is a plain HS256 JWT carrying `user`, `doc`, `write` and `exp`, signed wi
 | `POST /sync/{doc}/reset` | Drops the working copy, reloads the document from your endpoint and tells every open tab to pick it up |
 | `POST /sync/{doc}/edit` | Inserts, updates or removes blocks from outside; all-or-nothing, reaches every open tab, and requires an idempotency key |
 
-`POST /sync/{doc}/edit` needs one `Blok-Idempotency-Key` header with 1 to 128 printable ASCII characters. With an operation journal, retrying the same key returns the first result without applying it again; reusing it for different work receives 409. A 204 then means the edit is durable, and the response carries `Blok-Doc-Lineage` and `Blok-Doc-Sequence`; a working-copy-only service answers 204 without those headers and without that promise. If that journal cannot commit, the endpoint returns 503 without relaying the edit. A working-copy-only service does not deduplicate the key or make reuse a 409: requests have ordinary retry behavior, and its 204 starts the existing write-back retry path.
+`POST /sync/{doc}/edit` needs one `Blok-Idempotency-Key` header with 1 to 128 printable ASCII characters. With an operation journal, retrying the same key returns the first result without applying it again; reusing it for different work receives 409. A 204 then means the edit is durable, and the response carries `Blok-Doc-Lineage` and `Blok-Doc-Sequence`. A working-copy-only service answers 204 without those headers and without that promise. If that journal cannot commit, the endpoint returns 503 without relaying the edit. A working-copy-only service does not deduplicate the key or make reuse a 409: requests have ordinary retry behavior, and its 204 starts the existing write-back retry path.
 
 Upload routes exist only when local or S3-compatible storage is configured. Consumer-supplied URLs pass through one guarded outbound client that blocks private and cloud-metadata addresses. Send `POST /upload-by-url` a `{"url":"..."}` body with an `application/json` media type; parameters such as `charset=utf-8` are allowed, but JSON suffix types are not.
 
-A request that carries `Origin` must match an allowed origin in every auth mode. In `none` and `proxy`, a genuinely originless backend request remains allowed, but an originless browser request carrying `Sec-Fetch-Site: cross-site` is rejected. `ticket` always requires an allowed `Origin`. A ticket with `write: false` may call `GET /unfurl` and open `GET /sync/{doc}` read-only; both upload routes, `reset` and `edit` require `write: true`. The `doc` claim scopes the collaboration routes: `/sync/{doc}`, its `reset` and its `edit` are refused when the pass names no document or a different one. A collaboration pass must also name its `user`: `GET /sync/{doc}` closes one with an empty `user` as 4401 `pass names no user`, because the per-user connection cap and rate window key on that name. The upload and unfurl routes ignore it, so a pass minted for one page works for every upload and preview that page can make.
+A request that carries `Origin` must match an allowed origin in every auth mode. In `none` and `proxy`, a genuinely originless backend request remains allowed, but an originless browser request carrying `Sec-Fetch-Site: cross-site` is rejected. `ticket` always requires an allowed `Origin`.
+
+A ticket with `write: false` may call `GET /unfurl` and open `GET /sync/{doc}` read-only; both upload routes, `reset` and `edit` require `write: true`. The `doc` claim scopes the collaboration routes: `/sync/{doc}`, its `reset` and its `edit` are refused when the pass names no document or a different one. A collaboration pass must also name its `user`: `GET /sync/{doc}` closes one with an empty `user` as 4401 `pass names no user`, because the per-user connection cap and rate window key on that name. The upload and unfurl routes ignore it, so a pass minted for one page works for every upload and preview that page can make.
 
 ## Live collaboration profiles
 
 `--collab` (or `options.CollabEnabled`) gives you the working-copy profile: the service keeps a working copy of every open document and writes it back to your document endpoint. Nothing keeps a record of the individual changes that produced it, so `POST /sync/{doc}/edit` cannot tell a retry from new work, and a socket gets no per-change receipt.
 
-Registering an operation store turns on the acknowledged profile. The journal becomes the record: every accepted change is appended to it before it is broadcast, the edit route deduplicates its `Blok-Idempotency-Key` and answers 409 for a key reused for different work, and a socket that negotiated `blok-sync.v2` receives one acknowledgement per operation naming the sequence it committed at. The service ships no store you can switch on — there is no flag for one on the standalone host, and the working set under `--collab-dir` or `--collab-s3-prefix` is not a journal. An in-process app registers its own. The store's own bodies are elided below — writing them is the work, and the laws further down are what they have to keep; the registration is complete as written:
+Registering an operation store turns on the acknowledged profile. The journal becomes the record. Every accepted change is appended to it before it is broadcast. The edit route deduplicates its `Blok-Idempotency-Key`, and answers 409 for a key reused for different work. A socket that negotiated `blok-sync.v2` receives one acknowledgement per operation, naming the sequence it committed at. The service ships no store you can switch on: there is no flag for one on the standalone host, and the working set under `--collab-dir` or `--collab-s3-prefix` is not a journal. An in-process app registers its own. The store's own bodies are elided below. Writing them is the work, and the laws further down are what they have to keep; the registration is complete as written:
 
 ```csharp
 using Blok.Server.AspNetCore;
@@ -292,40 +296,40 @@ The store is resolved as a singleton and is used for several documents at once. 
 
 What the service requires of it:
 
-- **One live writer per document.** `OpenAsync` returns `CollabDocumentOpen.DocumentOpenElsewhere` while a live process holds the document, and it must be able to reclaim the fence of a holder that has died. Refusing whenever a holder record exists satisfies the first half and locks the document forever the first time a process is killed. How liveness is decided is yours: an exclusive file the kernel releases when the process ends does it, and a store over SQL needs a lease with an expiry it renews.
+- **One live writer per document.** `OpenAsync` returns `CollabDocumentOpen.DocumentOpenElsewhere` while a live process holds the document, and it must be able to reclaim the fence of a holder that has died. Refusing whenever a holder record exists satisfies the first half, and locks the document forever the first time a process is killed. How liveness is decided is yours. An exclusive file the kernel releases when the process ends does it, and a store over SQL needs a lease with an expiry it renews.
 - **The fence is re-verified on every call.** A session that has lost it throws `CollabOperationFenceLostException` from every method rather than writing, or answering, as if it still owned the document. An open may throw it too: reading a document back is not instantaneous, and another process may take the document meanwhile.
 - **The read-back is linearizable.** An open observes every operation, checkpoint and reset committed under any earlier fence, including one committed microseconds before the previous holder died. A read that may lag its own writes hands back a stale head, and the room then reassigns a sequence that is already taken.
 - **Durable means durable.** When `AppendAsync` completes with `Committed`, the record survives the process dying immediately afterwards. The room broadcasts the update and reports the save on the strength of that completion.
 - **The id check and the sequence assignment are one atomic step.** No two operations receive the same sequence on one lineage, and no id is committed twice.
-- **`FindCommittedAsync` answers from the durable index**, never from a memo of what this session appended: an append that threw may still have committed, and that retry is the one lookup a memo gets wrong. Its answer must match what `AppendAsync` would give for the same id.
-- **A failure is thrown, not swallowed** — including an outcome the store cannot determine. The room then broadcasts nothing, acknowledges nothing, closes every member with `4503 commit unavailable, retry` and reloads from committed data; the producer retries the same operation id, and the duplicate check settles the unknown outcome.
-- **`WriteCheckpointAsync` never touches history.** A `Through` that is not a committed sequence, or is below one already published, is `ArgumentOutOfRangeException`; republishing at the sequence already published succeeds and changes nothing, because that is both the retry after an unknown outcome and what a periodic checkpointer does when nothing has advanced.
+- **`FindCommittedAsync` answers from the durable index**, never from a memo of what this session appended. An append that threw may still have committed, and that retry is the one lookup a memo gets wrong. Its answer must match what `AppendAsync` would give for the same id.
+- **A failure is thrown, not swallowed.** That includes an outcome the store cannot determine. The room then broadcasts nothing, acknowledges nothing, closes every member with `4503 commit unavailable, retry` and reloads from committed data; the producer retries the same operation id, and the duplicate check settles the unknown outcome.
+- **`WriteCheckpointAsync` never touches history.** A `Through` that is not a committed sequence, or is below one already published, is `ArgumentOutOfRangeException`. Republishing at the sequence already published succeeds and changes nothing. That is both the retry after an unknown outcome, and what a periodic checkpointer does when nothing has advanced.
 - **`ResetAsync` replaces the document atomically** with a new epoch, lineage and sequence-zero baseline, and is also how a document that has never been seeded is seeded. The caller owns the epoch law; a store may refuse a regression but never invents an epoch of its own.
 - **Cancellation belongs to the caller.** A store-side timeout or abort surfaces as some other exception, because the caller reads a cancellation it did not ask for as its own shutdown.
-- **Disposal releases the fence, unless it is already gone.** `DisposeAsync` lets another process open the document, and never throws because the fence was already lost; every method throws `ObjectDisposedException` afterwards. A session that HAS lost the fence releases nothing — the fence it would release now belongs to somebody else, so a `DisposeAsync` that unconditionally drops its lock row hands a third writer the document while the second is mid-write.
+- **Disposal releases the fence, unless it is already gone.** `DisposeAsync` lets another process open the document, and never throws because the fence was already lost; every method throws `ObjectDisposedException` afterwards. A session that HAS lost the fence releases nothing. The fence it would release now belongs to somebody else, so a `DisposeAsync` that unconditionally drops its lock row hands a third writer the document while the second is mid-write.
 
-A backend that is not .NET implements the wire protocol instead of this interface: `packages/server/protocol/blok-sync-v2.md` is a normative spec written so a server outside this repository can be built from it alone, and the frame vectors it pins live in `test/unit/server-conformance/fixtures/sync-frames.json`. This repository's conformance runner builds and drives the C# host only (`node scripts/test-server-conformance.mjs --target csharp`), so another backend runs those vectors, and the same durability scenarios — restart the process, fail the next append, inspect history — in its own harness.
+A backend that is not .NET implements the wire protocol instead of this interface. `packages/server/protocol/blok-sync-v2.md` is a normative spec written so a server outside this repository can be built from it alone, and the frame vectors it pins live in `test/unit/server-conformance/fixtures/sync-frames.json`. This repository's conformance runner builds and drives the C# host only (`node scripts/test-server-conformance.mjs --target csharp`). Another backend runs those vectors in its own harness, along with the same durability scenarios: restart the process, fail the next append, inspect history.
 
-Stock `y-websocket` never offers `blok-sync.v2`, so it negotiates v1 and is compatible with the working-copy profile alone: ordinary y-protocol sync, no acknowledgement, no durability claim. On a journal-backed document a v1 write is still journaled before it is relayed; it simply earns no receipt. The same holds for any client that offers only v1.
+Stock `y-websocket` never offers `blok-sync.v2`, so it negotiates v1 and is compatible with the working-copy profile alone: ordinary y-protocol sync, no acknowledgement, no durability claim. On a journal-backed document a v1 write is still journaled before it is relayed; it earns no receipt. The same holds for any client that offers only v1.
 
 S3 stays v1-only. `--collab-s3-prefix` puts the working set in your bucket, and there is no S3 operation store, so an S3-configured service runs the working-copy profile unless it also registers one.
 
 ### Going back to the working-copy profile
 
-Registering an operation store is close to one-way per document. A journal-backed document is written to the journal and nowhere else: it gets no working-set blob at all, and the whole-JSON projection your document endpoint holds is refreshed by a published checkpoint, by an eviction and by a drain — not once per edit window. Read that as a ceiling rather than a promise: step 3 below is what tells you how fresh the record actually is. Between those moments the journal is ahead of everything a build without your store can read.
+Registering an operation store is close to one-way per document. A journal-backed document is written to the journal and nowhere else: it gets no working-set blob at all. The whole-JSON projection your document endpoint holds is refreshed by a published checkpoint, by an eviction and by a drain, not once per edit window. Read that as a ceiling rather than a promise: step 3 below is what tells you how fresh the record actually is. Between those moments the journal is ahead of everything a build without your store can read.
 
-A build without your store does not read the journal. Unregistering the store — or rolling back to a binary that never had it — lands each document on whatever else it has:
+A build without your store does not read the journal. Unregistering the store, or rolling back to a binary that never had it, lands each document on whatever else it has:
 
 - **Journal-backed from the start.** There is no blob, so the room seeds from your document endpoint and comes back as the last projection that endpoint accepted. Every operation acknowledged since then is still in your journal and nothing serves it.
-- **Working set from before the switch.** A document that ran under `--collab-dir` or `--collab-s3-prefix` before you registered the store still holds the blob it had that day, and registering the store never touched it — a journal-backed room writes no blob, and it seeds its journal from your endpoint rather than from the blob. A blob with any frame in it is authoritative on open and the endpoint is never consulted, so that document comes back as it was on the day you switched, with no error and nothing in the log.
+- **Working set from before the switch.** A document that ran under `--collab-dir` or `--collab-s3-prefix` before you registered the store still holds the blob it had that day, and registering the store never touched it. A journal-backed room writes no blob, and it seeds its journal from your endpoint rather than from the blob. A blob with any frame in it is authoritative on open. The endpoint is never consulted, so that document comes back as it was on the day you switched. There is no error, and nothing in the log.
 
 Blok does not keep a second whole-document copy beside the journal to make the switch back instant. The journal is the record; the JSON is a projection of it. Buying instant rollback with a hidden dual write would mean two records that can disagree, and the second one carries no fence.
 
 Run this drill before you roll back.
 
-1. **Stop admission and drain.** The standalone host drains on a graceful stop: new upgrades get 503, every open room flushes its projection, and members close 1001. An in-process app calls `ICollabRoomManager.DrainAsync` before it stops Kestrel. A document nobody had open was already flushed when its room was evicted — unless the process holding it crashed, which is what step 3 catches.
-2. **Read what the drain said.** `warning: collab: the shutdown drain did not complete` on stderr means the shutdown timeout cut the drain short, so at least one projection did not land. `could not export during flush` names one room whose PUT failed. `cannot export its document` is the converter refusing that document — no wait produces that projection, and the room evicts without one.
-3. **Compare per document, not per room.** For each document in your store, the last write-back your endpoint accepted carries `Blok-Doc-Lineage` and `Blok-Doc-Sequence`. `Blok-Doc-Sequence` must equal the head's `DurableThrough` on that lineage. Anything short of it is exactly what the rollback drops, and it is the only place that gap is visible. For every document the comparison flags, open it once on the new build — a read-only join is enough — and then re-run steps 1 to 3. Loading a journal-backed room marks its projection owed, and the room is not evicted until that PUT lands, so the next drain publishes it. A document whose process crashed with a projection owed has no room for step 1 to drain, and opening it is the only thing that gives it one.
+1. **Stop admission and drain.** The standalone host drains on a graceful stop: new upgrades get 503, every open room flushes its projection, and members close 1001. An in-process app calls `ICollabRoomManager.DrainAsync` before it stops Kestrel. A document nobody had open was already flushed when its room was evicted. The exception is a process that crashed while holding one, which is what step 3 catches.
+2. **Read what the drain said.** `warning: collab: the shutdown drain did not complete` on stderr means the shutdown timeout cut the drain short, so at least one projection did not land. `could not export during flush` names one room whose PUT failed. `cannot export its document` is the converter refusing that document. No wait produces that projection, and the room evicts without one.
+3. **Compare per document, not per room.** For each document in your store, the last write-back your endpoint accepted carries `Blok-Doc-Lineage` and `Blok-Doc-Sequence`. `Blok-Doc-Sequence` must equal the head's `DurableThrough` on that lineage. Anything short of it is exactly what the rollback drops, and it is the only place that gap is visible. For every document the comparison flags, open it once on the new build (a read-only join is enough), and then re-run steps 1 to 3. Loading a journal-backed room marks its projection owed, and the room is not evicted until that PUT lands, so the next drain publishes it. A document whose process crashed with a projection owed has no room for step 1 to drain. Opening it is the only thing that gives it one.
 4. **Start the old build with clients still held off.** The block you put up in step 1 stays up through step 5. A legacy room hydrated from a working set carries no document version yet, so its first write-back goes out with no `Blok-Doc-Version` and your endpoint has nothing to answer 409 on. One character typed by one user before the reset lands writes the day-of-switch document over the record you just verified, and step 5 then seeds from what it wrote.
 5. **Clear the blobs left from before the switch.** For every document that had a working set before you registered the store, call `POST /sync/{doc}/reset` once on the old build. It rewrites the working set to an empty log, so the next open seeds from your endpoint instead of from the day you switched. A document that was only ever journal-backed has no blob and needs nothing here. Let clients back in after the last reset has returned, not before.
 
@@ -336,7 +340,7 @@ Rolling forward again is not symmetric either. With the store registered, the jo
 The service can tell your app when a person was in a document, including people
 who have already left. Blok stores none of it. The room reports and forgets; you
 decide where the records live, how long you keep them, and who may read them.
-Not registering an observer is how you opt out — with none, the room makes no
+Not registering an observer is how you opt out. With none, the room makes no
 calls and the feature costs nothing.
 
 ```csharp
@@ -381,12 +385,12 @@ What the service promises about them:
 - **`actorId` is the server's, never the client's.** It is what the connection was verified as at its handshake, from your ticket's user claim or the signed-in principal. **A connection with no verified identity produces no call at all**, of any kind: an unknown person stays unknown rather than getting a fabricated key. That is the same rule the operation journal applies to an author.
 - **`at` is the server's clock.** Nothing a client sends supplies it.
 - **`Edited` needs an operation store.** It is raised where a committed operation is journalled, so a working-copy-only service never emits it. An editing person still surfaces there as `Active`, about once a minute.
-- **`Active` and `Edited` are deduplicated** to at most one call per 55 seconds per document-and-actor pair, so your implementation does not have to rate-limit them. The window is deliberately shorter than the editor's own 60-second send cadence: the two are measured on different clocks, and equal thresholds would drop every other heartbeat. `Joined` and `Left` are never suppressed — they are the boundaries of a session, and you may want to store them as such. Every `Joined` is paired: an expel, a drain and a room that closes on a commit failure all report `Left` for the members they still held.
+- **`Active` and `Edited` are deduplicated** to at most one call per 55 seconds per document-and-actor pair, so your implementation does not have to rate-limit them. The window is deliberately shorter than the editor's own 60-second send cadence: the two are measured on different clocks, and equal thresholds would drop every other heartbeat. `Joined` and `Left` are never suppressed. They are the boundaries of a session, and you may want to store them as such. Every `Joined` is paired: an expel, a drain and a room that closes on a commit failure all report `Left` for the members they still held.
 - **A reader who never types is still a session.** "Opened the document and read for two minutes" produces `Joined` and `Left` with no `Edited` between them, which is the case the feature exists for.
-- **This is best-effort telemetry, not the journal.** An observer that throws or never completes is logged and dropped; it never closes a room and never refuses an edit, which is the opposite of what a failed journal append does. Calls are made off the room's lane, so a slow implementation costs you your own latency and nobody else's. One room's calls are serialized and arrive in the order it made them, and a room that gets more than 256 records ahead of a stalled observer drops its oldest heartbeats first, keeping the session boundaries.
+- **This is best-effort telemetry, not the journal.** An observer that throws or never completes is logged and dropped. It never closes a room and never refuses an edit, which is the opposite of what a failed journal append does. Calls are made off the room's lane, so a slow implementation costs you your own latency and nobody else's. One room's calls are serialized and arrive in the order it made them. A room that gets more than 256 records ahead of a stalled observer drops its oldest heartbeats first, keeping the session boundaries.
 - **Blok draws nothing from this.** There is no built-in activity UI, no retention policy and no idle threshold; the editor's `collaboration:status` event carries the live half separately.
 
-A backend that is not .NET implements the wire side instead: frame 106 is the client's activity signal and frame 107 is the verified-identity map that lets you key live presence the way you key your stored records. Both are in `packages/server/protocol/blok-sync-v2.md`.
+A backend that is not .NET implements the wire side instead. Frame 106 is the client's activity signal. Frame 107 is the verified-identity map, and it lets you key live presence the way you key your stored records. Both are in `packages/server/protocol/blok-sync-v2.md`.
 
 ## Quality gates
 
@@ -398,7 +402,7 @@ dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes
 dotnet restore packages/server/dotnet/Blok.Server.slnx
 ```
 
-CI collects merged production coverage and requires at least 80% line and 80% branch coverage. It also runs the SDK analyzers with warnings as errors, audits all direct and transitive NuGet packages, scans committed secrets with Gitleaks, scans the server tree and built image with Trivy, and analyzes C# with CodeQL. Dependabot keeps NuGet, Docker, and GitHub Actions dependencies current.
+CI collects merged production coverage and requires at least 80% line and 80% branch coverage. It also runs the SDK analyzers with warnings as errors, and audits all direct and transitive NuGet packages. It scans committed secrets with Gitleaks, scans the server tree and built image with Trivy, and analyzes C# with CodeQL. Dependabot keeps NuGet, Docker, and GitHub Actions dependencies current.
 
 ## Docs
 

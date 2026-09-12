@@ -1,6 +1,6 @@
 # @bloklabs/cli
 
-Command-line tools for [Blok](https://blokeditor.com) — the headless, Notion-like block editor whose content is JSON blocks, not HTML. Converts legacy HTML into Blok JSON and prints the Editor.js migration guide.
+Command-line tools for [Blok](https://blokeditor.com). Blok is a headless, Notion-like block editor whose content is JSON blocks, not HTML. Converts legacy HTML into Blok JSON and prints the Editor.js migration guide.
 
 ## Install
 

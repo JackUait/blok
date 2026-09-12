@@ -1,6 +1,6 @@
 # @bloklabs/presets
 
-Ready-made [`uploader`](https://blokeditor.com/docs/uploader-api) implementations for [Blok](https://blokeditor.com) — plug in storage you already have instead of hand-writing an upload handler. Five presets ship today: Supabase, S3-compatible storage (presigned URLs), Cloudinary, a generic fetch endpoint, and IndexedDB.
+Ready-made [`uploader`](https://blokeditor.com/docs/uploader-api) implementations for [Blok](https://blokeditor.com). Plug in storage you already have instead of writing an upload handler yourself. Five presets ship today: Supabase, S3-compatible storage (presigned URLs), Cloudinary, a generic fetch endpoint, and IndexedDB.
 
 ## Install
 
@@ -10,7 +10,7 @@ npm install @bloklabs/presets @bloklabs/core
 
 ## What a preset is
 
-Blok's `uploader` config option takes an object shaped like this — store the file, return where it landed:
+Blok's `uploader` config option takes an object shaped like this. Store the file, return where it landed:
 
 ```ts
 import { Blok } from '@bloklabs/core';
@@ -26,7 +26,7 @@ new Blok({
 });
 ```
 
-Without an `uploadByFile`, an uploaded asset becomes a `blob:` URL that doesn't survive a reload — most projects need to configure one. Each preset in this package is a ready-made implementation of that shape for one storage backend, so you import a preset instead of writing `uploadByFile` yourself.
+Without an `uploadByFile`, an uploaded asset becomes a `blob:` URL. That URL does not survive a reload, so most projects need to configure one. Each preset in this package implements that shape for one storage backend. Import a preset instead of writing `uploadByFile` yourself.
 
 ## Which preset, and what it needs
 
@@ -38,7 +38,7 @@ Without an `uploadByFile`, an uploaded asset becomes a `blob:` URL that doesn't 
 | `cloudinaryStorage` | **Yes** — Cloudinary fetches it itself | An **unsigned** upload preset in the Cloudinary dashboard |
 | `indexedDBStorage` | No | Nothing — see the warning below |
 
-Only `fetchStorage` and `cloudinaryStorage` can turn a pasted remote URL into a re-hosted copy: both have something that fetches the URL on the server side (your endpoint, or Cloudinary's). The other three cannot — a browser is not allowed to fetch a third-party URL and re-upload it itself. Their `uploadByUrl` is deliberately left undefined rather than faked, so Blok falls back to its documented behavior and stores the pasted URL verbatim.
+Only `fetchStorage` and `cloudinaryStorage` can turn a pasted remote URL into a re-hosted copy. Both have something that fetches the URL on the server side, either your endpoint or Cloudinary's. The other three cannot. A browser is not allowed to fetch a third-party URL and re-upload it itself. Their `uploadByUrl` is deliberately left undefined rather than faked. Blok then falls back to its documented behavior and stores the pasted URL verbatim.
 
 ### fetchStorage
 
@@ -48,7 +48,7 @@ import { fetchStorage } from '@bloklabs/presets';
 new Blok({ holder: 'editor', uploader: fetchStorage({ baseUrl: 'https://api.myapp.com' }) });
 ```
 
-Your own backend does the actual storing; this preset just calls it. It must answer `POST {baseUrl}/upload` (multipart) and `POST {baseUrl}/upload-by-url` (`{ url }` JSON), both returning `{ url, fileName? }`. The URL you receive on `/upload-by-url` is user-supplied — validate it server-side and block requests to internal/private addresses before fetching it, or the endpoint becomes an SSRF vector.
+Your own backend does the actual storing. This preset only calls it. The backend must answer `POST {baseUrl}/upload` (multipart) and `POST {baseUrl}/upload-by-url` (`{ url }` JSON). Both return `{ url, fileName? }`. The URL you receive on `/upload-by-url` is user-supplied. Validate it server-side and block requests to internal or private addresses before fetching. Otherwise the endpoint becomes an SSRF vector.
 
 ### supabaseStorage
 
@@ -60,7 +60,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 new Blok({ holder: 'editor', uploader: supabaseStorage(supabase, { bucket: 'blok' }) });
 ```
 
-Create the bucket first (default name `"blok"`), make it public or add an anon `SELECT` policy — this preset returns `getPublicUrl()` directly, so an unreadable object is a broken image — and add an `INSERT` policy for whichever role the client authenticates as.
+Create the bucket first (default name `"blok"`). Make it public or add an anon `SELECT` policy. This preset returns `getPublicUrl()` directly, so an unreadable object is a broken image. Then add an `INSERT` policy for whichever role the client authenticates as.
 
 ### presignedStorage
 
@@ -70,7 +70,7 @@ import { presignedStorage } from '@bloklabs/presets';
 new Blok({ holder: 'editor', uploader: presignedStorage({ sign: (request) => api.sign(request) }) });
 ```
 
-For S3, R2, MinIO, or any S3-compatible store. `sign` is your function: it gets `{ fileName, mimeType, size, kind }` and returns a presigned `{ uploadUrl, publicUrl, headers? }` from your backend. The browser then `PUT`s the file straight to `uploadUrl`, so the bucket needs a CORS rule allowing `PUT` (and `Content-Type`) from your app's origin — that CORS rule is the part that actually blocks people.
+For S3, R2, MinIO, or any S3-compatible store. `sign` is your function. It gets `{ fileName, mimeType, size, kind }` and returns a presigned `{ uploadUrl, publicUrl, headers? }` from your backend. The browser then `PUT`s the file straight to `uploadUrl`. So the bucket needs a CORS rule allowing `PUT` (and `Content-Type`) from your app's origin. That CORS rule is the part that actually blocks people.
 
 ### cloudinaryStorage
 
@@ -83,7 +83,7 @@ new Blok({
 });
 ```
 
-`uploadPreset` must be **unsigned** (Cloudinary dashboard → Settings → Upload → Upload presets). A signed preset needs a server to sign the request, which defeats the point of a no-backend preset.
+`uploadPreset` must be **unsigned** (Cloudinary dashboard → Settings → Upload → Upload presets). A signed preset needs a server to sign the request. That defeats the point of a preset with no backend.
 
 ### indexedDBStorage
 
@@ -96,7 +96,15 @@ new Blok({ holder: 'editor', uploader: indexedDBStorage() });
 const displayUrl = await resolveBlokObjectUrl(asset.url);
 ```
 
-**Not for production.** This preset stores uploaded bytes in the visitor's own browser via IndexedDB. They are gone on another device, in another browser, or the moment the user clears site data — nothing is actually shared or backed up. It exists because Blok's built-in fallback (a `blob:` URL) doesn't even survive a page reload, which makes local demos and prototypes look broken before you've wired up real storage. `uploadByFile` returns a `blok:asset/…` reference, not a directly usable URL — resolve it with `resolveBlokObjectUrl` wherever you render an uploaded asset. If you pass a custom `dbName` to `indexedDBStorage()`, pass the same `dbName` to `resolveBlokObjectUrl(url, { dbName })` — a mismatch resolves to `null` with no error, not a thrown exception. Each call to `resolveBlokObjectUrl` mints a fresh `blob:` URL — nothing is cached, and nothing is revoked. Call `URL.revokeObjectURL()` yourself once a displayed asset is no longer needed, or a view that re-renders it repeatedly will leak memory.
+**Not for production.** This preset stores uploaded bytes in the visitor's own browser via IndexedDB. They are gone on another device, in another browser, or the moment the user clears site data. Nothing is actually shared or backed up.
+
+It exists because Blok's built-in fallback (a `blob:` URL) does not even survive a page reload. Before you wire up real storage, that makes local demos and prototypes look broken.
+
+`uploadByFile` returns a `blok:asset/…` reference, not a directly usable URL. Resolve it with `resolveBlokObjectUrl` wherever you render an uploaded asset.
+
+If you pass a custom `dbName` to `indexedDBStorage()`, pass the same `dbName` to `resolveBlokObjectUrl(url, { dbName })`. A mismatch resolves to `null` with no error, not a thrown exception.
+
+Each call to `resolveBlokObjectUrl` mints a fresh `blob:` URL. Nothing is cached, and nothing is revoked. Call `URL.revokeObjectURL()` yourself once a displayed asset is no longer needed. Otherwise a view that re-renders it repeatedly will leak memory.
 
 ## Docs
 

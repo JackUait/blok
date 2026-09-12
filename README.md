@@ -21,9 +21,11 @@
   <a href="https://www.nuget.org/packages/Blok.Server.AspNetCore"><img alt="Blok.Server.AspNetCore on NuGet" src="https://img.shields.io/nuget/v/Blok.Server.AspNetCore?style=flat-square&logo=nuget&logoColor=white&label=Blok.Server.AspNetCore&color=004880"></a>
 </p>
 
-A block-based rich text editor for the web, like the one in Notion: every paragraph, heading, image or list is its own block you can drag, nest, and convert into something else.
+A block-based rich text editor for the web, like the one in Notion. Every paragraph, heading, image or list is its own block. You can drag it, nest it, or convert it into something else.
 
-The difference from a plain `contenteditable` field is what you get back. `contenteditable` hands you one HTML blob and leaves you to parse it; Blok saves typed JSON blocks, so the same content can go into a database column, be diffed between revisions, or be rendered on a server that never touches the DOM. And it's headless: Blok ships the engine and the tools, not a theme, so the chrome is yours.
+A plain `contenteditable` field hands you one HTML blob and leaves you to parse it. Blok saves typed JSON blocks instead. The same content can then go into a database column, be diffed between revisions, or be rendered on a server that never touches the DOM.
+
+Blok is also headless. It ships the engine and the tools, not a theme, so the chrome is yours.
 
 - **JSON in, JSON out.** `save()` returns `{ id, type, data }` blocks — no HTML parsing on your side.
 - **Renders without a browser.** `@bloklabs/core/view` turns saved documents into sanitized HTML synchronously, in Node, workers, or React Server Components.
@@ -31,7 +33,7 @@ The difference from a plain `contenteditable` field is what you get back. `conte
 - **69 languages, RTL included.** Locales lazy-load by browser language; right-to-left scripts lay out correctly.
 - **CRDT-backed undo.** History runs on Yjs: undo restores the caret, groups small edits, and batches atomically via `blocks.transact()`.
 - **Extensible by design.** Block tools, inline tools and block tunes, each reaching the editor through 21 API namespaces (`blocks`, `caret`, `selection`, `marks`, …).
-- **Migration path from Editor.js.** Blok is a fork; a codemod (`npx migrate-from-editorjs`) and a data migration guide ship with it.
+- **Migration path from Editor.js.** Blok is a fork of Editor.js. A codemod (`npx migrate-from-editorjs`) and a data migration guide ship with it.
 
 ```js
 import { Blok, defaultTools } from '@bloklabs/core/full';
@@ -150,13 +152,15 @@ const [data, setData] = useState(initialData);
 <BlokEditor tools={tools} data={data} onSave={setData} theme={theme} />;
 ```
 
-`data` + `onSave` make it a **true controlled component**: `data` is reactive, and `onSave` fires (debounced) with the full serialized `OutputData` on every content change — no polling `ref.current.save()` by hand. Wiring `onSave={setData}` is caret-stable: the adapter records its own emitted output as the baseline, so echoing it back deduplicates to a no-op while genuine external changes still render.
+`data` + `onSave` make it a **true controlled component**. `data` is reactive, and `onSave` fires (debounced) with the full serialized `OutputData` on every content change. No polling `ref.current.save()` by hand.
 
-Three things worth knowing:
+Wiring `onSave={setData}` is caret-stable. The adapter records its own emitted output as the baseline. Echoing it back deduplicates to a no-op, while genuine external changes still render.
+
+Three things to know:
 
 - **Reactive props sync without remounting** — `readOnly`, `theme`, `width`, `autofocus`.
-- **Structural config needs `deps`** — pass a `deps` array to recreate the editor when values like `tools` change. Keep each value referentially stable (primitives or `useMemo`), or you recreate the editor on every render.
-- **Don't wrap it in `styled()`** — styled-components claims the `theme` prop for its own `ThemeProvider`, so it never reaches the editor and theme sync silently breaks. Render `<BlokEditor>` directly and style it via `className`.
+- **Structural config needs `deps`** — pass a `deps` array to recreate the editor when values like `tools` change. Keep each value referentially stable (primitives or `useMemo`). Otherwise you recreate the editor on every render.
+- **Don't wrap it in `styled()`** — styled-components claims the `theme` prop for its own `ThemeProvider`. The prop never reaches the editor, so theme sync breaks silently. Render `<BlokEditor>` directly and style it via `className`.
 
 For advanced control (e.g. rendering outside a single container) use `useBlok` + `BlokContent` directly.
 
@@ -174,11 +178,11 @@ For advanced control (e.g. rendering outside a single container) use `useBlok` +
 | **Block tools** | Paragraph, heading, list, quote, callout, code, image, divider, table, toggle, and a column layout. Plus a Notion-style database block (rows are child blocks) and embed/bookmark blocks for pasted links. |
 | **Inline formatting** | Bold, italic, underline, strikethrough, inline code, link, and a highlight marker. |
 | **Slash menu and markdown** | Type `/` in an empty block to search and insert, or type markdown (`#`, `-`, `1.`, `[]`, `>`) and it converts on space. |
-| **Drag and drop** | Pointer-based reordering (not the flaky HTML5 drag API). Grab multiple blocks, hold Alt to duplicate while dragging, auto-scrolls near edges. Keyboard works too. |
+| **Drag and drop** | Pointer-based reordering (not the flaky HTML5 drag API). Grab multiple blocks, hold Alt to duplicate while dragging, and it auto-scrolls near edges. Keyboard works too. |
 | **Undo/redo on Yjs** | History is CRDT-backed: undo restores the caret, groups small edits, and batches atomically via `blocks.transact()`. |
 | **69 locales, RTL** | Reads the browser language, lazy-loads the matching locale, and lays out right-to-left scripts correctly. |
 | **Plugin system** | Three extension points — block tools, inline tools, block tunes — with lifecycle hooks, paste handling, and conversion rules, over 21 API namespaces. |
-| **Smart paste** | Copy an answer out of ChatGPT, Claude or Gemini, or a page out of Notion or Google Docs, and it arrives as real blocks — headings, lists, tables, quotes and code, not one flat paragraph. A handler chain keeps block structure intact on internal paste, and tools can claim specific file types or patterns. |
+| **Smart paste** | Copy an answer out of ChatGPT, Claude or Gemini, or a page out of Notion or Google Docs. It arrives as real blocks — headings, lists, tables, quotes and code — not one flat paragraph. A handler chain keeps block structure intact on internal paste. Tools can also claim specific file types or patterns. |
 | **Block conversion** | Turn one block type into another from the inline toolbar or in code, one block or a whole selection at a time. |
 | **Read-only mode** | Call `readOnly.set(true)` and the editor re-renders without editing affordances. |
 | **Accessibility** | ARIA live announcements for drag and block ops, Notion-style vertical caret movement, semantic data attributes for tests. |
@@ -187,7 +191,7 @@ For advanced control (e.g. rendering outside a single container) use `useBlok` +
 
 ## Rendering saved content
 
-`@bloklabs/core/view` renders a saved document to HTML **synchronously, without a DOM** — so it runs in Node, in a worker, or inside a React Server Component. Every inline field is sanitized against the allowlist before interpolation:
+`@bloklabs/core/view` renders a saved document to HTML **synchronously, without a DOM**. It runs in Node, in a worker, or inside a React Server Component. Every inline field is sanitized against the allowlist before interpolation:
 
 ```js
 import { blocksToHtml, blocksToPlainText } from '@bloklabs/core/view';
@@ -202,9 +206,9 @@ Ship `@bloklabs/core/view.css` alongside it to match the editor's own look, or s
 
 ## Styling and theming
 
-Blok's chrome is customizable through public `--blok-*` CSS custom properties. Pass them as `style.tokens` in the constructor config (or swap them at runtime with `editor.tokens.set()`) to recolor popovers, surfaces, selection, headings, lists, and block rhythm. The full token list is in the [API reference](https://blokeditor.com).
+You can customize Blok's chrome with public `--blok-*` CSS custom properties. Pass them as `style.tokens` in the constructor config, or swap them at runtime with `editor.tokens.set()`. They recolor popovers, surfaces, selection, headings, lists, and block rhythm. The full token list is in the [API reference](https://blokeditor.com).
 
-Layout hooks are CSS-only. The most commonly overridden one is the **editor gutter**: Blok reserves `--blok-editor-gutter-start: 56px` in edit mode for the floating +/⠿ block controls and collapses it automatically in read-only mode, so don't hand-roll wrapper padding for those controls. To change or remove it, declare the token on the wrapper element itself:
+Layout hooks are CSS-only. The most commonly overridden one is the **editor gutter**. Blok reserves `--blok-editor-gutter-start: 56px` in edit mode for the floating +/⠿ block controls, and collapses it automatically in read-only mode. Don't hand-roll wrapper padding for those controls. To change or remove the gutter, declare the token on the wrapper element itself:
 
 ```css
 [data-blok-interface] {
@@ -212,7 +216,7 @@ Layout hooks are CSS-only. The most commonly overridden one is the **editor gutt
 }
 ```
 
-Blok declares its defaults at zero specificity via `:where()`, so any host declaration wins. The gutter tokens are state-dependent and therefore rejected by `style.tokens` / `tokens.set()` — set them in CSS as above.
+Blok declares its defaults at zero specificity via `:where()`, so any host declaration wins. The gutter tokens are state-dependent, so `style.tokens` / `tokens.set()` rejects them. Set them in CSS as above.
 
 ---
 
@@ -236,7 +240,7 @@ There's a Telegram channel at [t.me/that_ai_guy](https://t.me/that_ai_guy) for u
 
 ## Contributing
 
-Contributions are welcome — issues, discussions and pull requests alike. Read [CONTRIBUTING.md](./CONTRIBUTING.md) first: it covers proposing a change before you build it, the code style, and the test and docs expectations for a PR.
+Contributions are welcome — issues, discussions and pull requests alike. Read [CONTRIBUTING.md](./CONTRIBUTING.md) first. It covers how to propose a change before you build it, the code style, and what tests and docs a PR needs.
 
 ```bash
 yarn install
@@ -249,4 +253,4 @@ yarn lint    # ESLint + TypeScript
 
 Blok is licensed under the [Apache License 2.0](./LICENSE). See [NOTICE](./NOTICE) for attribution.
 
-Blok was forked from [Editor.js](https://github.com/codex-team/editor.js) by [CodeX](https://codex.so/) in November 2025 and reworked heavily since. The original Editor.js code remains © CodeX under Apache-2.0; Blok-specific changes are © JackUait, also under Apache-2.0.
+Blok was forked from [Editor.js](https://github.com/codex-team/editor.js) by [CodeX](https://codex.so/) in November 2025 and reworked heavily since. The original Editor.js code remains © CodeX under Apache-2.0. Blok-specific changes are © JackUait, also under Apache-2.0.

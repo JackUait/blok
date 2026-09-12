@@ -1,24 +1,24 @@
 # AI chat clipboard fixtures
 
-Real clipboard payloads copied out of AI chat web apps, used by
+Real clipboard payloads, copied out of AI chat web apps. They are used by
 `test/unit/components/modules/paste/ai-chat-preprocessor.test.ts`.
 
 Captured **2026-08-25**.
 
 ## Capture method
 
-Not a DOM dump — these are the exact bytes a `paste` listener receives, so the
-fixtures include whatever the app's own `copy` handler and the browser between
-them decided to emit.
+These are not a DOM dump. They are the exact bytes a `paste` listener receives.
+So each fixture includes whatever the app's own `copy` handler and the browser
+decided to emit.
 
 1. Open the public share page in headless Chromium (Playwright).
 2. Select the message body with a `Range` over the app's message container
    (`.markdown` for ChatGPT, `message-content` for Gemini) and press `Meta+C`.
-3. In a second tab, focus a `contenteditable` and press `Meta+V`; a `paste`
+3. In a second tab, focus a `contenteditable` and press `Meta+V`. A `paste`
    listener records `event.clipboardData.getData(type)` for every entry in
    `types`.
 
-The OS clipboard is not involved: headless Chromium keeps its own, and reading
+The OS clipboard is not involved. Headless Chromium keeps its own, and reading
 it back through a real paste event is what makes these faithful.
 
 ## Files
@@ -30,65 +30,65 @@ it back through a real paste event is what makes these faithful.
 | `chatgpt-table.*` | [share/cecf8c8d](https://chatgpt.com/share/cecf8c8d-40ba-47da-b2b4-7bb60e996f3a) | table, empty citation spans |
 | `gemini-response.*` | [share/060ac63490d7](https://gemini.google.com/share/060ac63490d7) | code block with language header + copy/download buttons, table, list |
 
-`.html` is the `text/html` flavor, `.txt` the `text/plain` twin. The two ChatGPT
-`.html` files and the Gemini one are **trimmed** to a representative excerpt —
-markup is verbatim, whole elements were dropped to keep the files small (the
-sanitizer takes ~5s on the untrimmed 69KB payload).
+`.html` is the `text/html` flavor, `.txt` the `text/plain` twin.
+
+The two ChatGPT `.html` files and the Gemini one are **trimmed** to a
+representative excerpt. The markup is verbatim, but whole elements were dropped
+to keep the files small. The sanitizer takes ~5s on the untrimmed 69KB payload.
 
 ## Key facts (verified against these files)
 
 - **Every construct is selection-copy.** No capture of the apps' **Copy button**
-  exists here — that path is reported to emit different markup (ChatGPT a fresh
-  markdown→HTML render; both apps raw markdown as `text/plain`). Nothing in the
-  preprocessor should assume it.
+  exists here. That path is reported to emit different markup: a fresh
+  markdown→HTML render from ChatGPT, and raw markdown as `text/plain` from both
+  apps. Nothing in the preprocessor should assume it.
 - **ChatGPT stamps `data-start`/`data-end`** source offsets on every node. This
   survives a partial selection, unlike the `.markdown` wrapper class.
 - **ChatGPT ships no MathML.** The only recoverable TeX is `data-math-source`
-  on the wrapper; everything visible is `aria-hidden` KaTeX layout.
+  on the wrapper. Everything visible is `aria-hidden` KaTeX layout.
 - **ChatGPT code blocks are a CodeMirror instance**: `<pre>` → ~12 divs →
   `<pre class="cm-content">`. **No language is present anywhere** in the payload.
-- **`text/plain` is rendered text, not markdown**: a table arrives tab-separated
+- **`text/plain` is rendered text, not markdown**: a table arrives tab-separated,
   and a code block arrives with no ``` fence.
-- **Gemini prints the code language as text** in `.code-block-decoration`, next
-  to `<gem-icon-button>` copy/download buttons that copy along with it.
-- Gemini emits `<th>` in `<thead>` and no `data-language` on `<pre>` — both
-  contrary to older third-party reports, which is why the preprocessor relies on
-  neither.
+- **Gemini prints the code language as text** in `.code-block-decoration`. It
+  sits next to `<gem-icon-button>` copy/download buttons that copy along with it.
+- Gemini emits `<th>` in `<thead>` and no `data-language` on `<pre>`. Both are
+  contrary to older third-party reports, so the preprocessor relies on neither.
 
 ## Claude
 
 `claude-code.html`, `claude-math.html`, `claude-lists.html` — captured the same
 way, from public `claude.ai/share/...` pages. **Style-stripped**: Chrome's
-serializer writes a full computed `style="..."` onto every element, so these
-carry every tag, attribute and class of the real payload with only `style`
+serializer writes a full computed `style="..."` onto every element. So these
+carry every tag, attribute and class of the real payload, with only `style`
 removed. Capture the raw bytes again before writing a detector against them.
 
 Capturing Claude needs a **headed** browser (`playwright-cli open --persistent
---headed`). Headless sits on the Cloudflare interstitial forever; headed clears
+--headed`). Headless sits on the Cloudflare interstitial forever. Headed clears
 the JS challenge on its own, with no login and no interaction.
 
 - **Claude's prose is already semantic HTML** — `<p>`, `<ul>`/`<ol>` with text
   directly in `<li>` (no `<p>` wrapper), `<h3>`/`<h4>`, `<blockquote>`,
-  `<table><thead><th scope>`, `<pre><code>`, `<strong>`, inline `<code>`. All of
-  that needs no rewrite. Two constructs do, which is why "no Claude branch" is a
+  `<table><thead><th scope>`, `<pre><code>`, `<strong>`, inline `<code>`. None of
+  that needs a rewrite. Two constructs do, which is why "no Claude branch" is a
   scoping decision and not a claim that the payload is clean:
 - **A code block sheds its language as loose text.** The label sits in a `<div>`
-  that is a SIBLING of the `<pre>`, inside a wrapper the sanitizer unwraps, so
+  that is a SIBLING of the `<pre>`, inside a wrapper the sanitizer unwraps. So
   running `claude-code.html` through preprocess + the real `clean()` yields
   `<br>python<pre><code>…` — Gemini's stray "SQL" line in a different app. The
-  code itself survives intact; the language is not carried onto the block.
+  code itself survives intact. The language is not carried onto the block.
 - **The LaTeX source does NOT survive the clipboard.** The live page has
-  `<annotation encoding="application/x-tex">` on every formula; the payload has
+  `<annotation encoding="application/x-tex">` on every formula. The payload has
   zero (`grep -c annotation claude-math.html` → 0). What arrives is presentation
-  MathML BESIDE the `aria-hidden` KaTeX layout, and both are made of tags the
+  MathML beside the `aria-hidden` KaTeX layout, and both are made of tags the
   sanitizer keeps, so every formula doubles: `X∣n ∼ Gamma(n+1,p)X∣n∼Gamma(n+1,p)`.
-  Dropping the `aria-hidden` half would halve it; nothing recovers the TeX.
+  Dropping the `aria-hidden` half would halve it. Nothing recovers the TeX.
 - **Detect on `font-claude-response-body`**, which is on every `<p>` and `<li>`
   and so survives a partial selection. `standard-markdown` sits on the message
-  wrapper and is lost when the selection starts mid-answer.
+  wrapper, and it is lost when the selection starts mid-answer.
 - **Code language rides on `<code class="language-python">`**, and again as the
-  label div above the block; an unlabelled block has neither, plus
-  `aria-label="Code"`. Blok reads neither today — the class is stripped, and the
+  label div above the block. An unlabelled block has neither, plus
+  `aria-label="Code"`. Blok reads neither today: the class is stripped, and the
   div is what becomes the stray line above.
 - Chrome's serializer — not claude.ai — adds `<span> </span>` around inter-element
   spaces and `<br class="Apple-interchange-newline"`. Verified against the live DOM.

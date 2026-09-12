@@ -1,6 +1,6 @@
 # @bloklabs/vue
 
-The Vue 3 block editor bindings for [Blok](https://blokeditor.com) — a headless, Notion-like rich text editor whose content is JSON blocks, not HTML.
+The Vue 3 block editor bindings for [Blok](https://blokeditor.com). Blok is a headless, Notion-like rich text editor whose content is JSON blocks, not HTML.
 
 ## Install
 
@@ -52,7 +52,7 @@ const data = ref<OutputData>();
 
 ## Also exported
 
-- `useBlok(config, recreateKey?)` — the composable behind the component, returns a `Ref<Blok | null>`.
+- `useBlok(config, recreateKey?)` — the composable behind the component. Returns a `Ref<Blok | null>`.
 - `BlokContent` — the mount-point element, if you want to wire the composable yourself.
 - `useBlocks(editor)` — a reactive snapshot of the block tree plus a manipulation API.
 - `createVueBlock` — author block tools as Vue components.

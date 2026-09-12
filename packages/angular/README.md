@@ -1,6 +1,6 @@
 # @bloklabs/angular
 
-The Angular block editor bindings for [Blok](https://blokeditor.com) — a headless, Notion-like rich text editor whose content is JSON blocks, not HTML.
+The Angular block editor bindings for [Blok](https://blokeditor.com). Blok is a headless, Notion-like rich text editor whose content is JSON blocks, not HTML.
 
 ## Install
 

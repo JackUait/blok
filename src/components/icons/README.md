@@ -1,7 +1,8 @@
 # Blok Line
 
-Blok's editor icons are one light, precise line family. Design for a menu at
-16 px, not a large illustration. Keep silhouettes familiar and interiors open.
+Blok's editor icons form one light, precise line family. Design each icon for a
+menu at 16 px, not for a large illustration. Keep silhouettes familiar and
+interiors open.
 
 ## Construction
 
@@ -18,15 +19,16 @@ Blok's editor icons are one light, precise line family. Design for a menu at
 | Disclosure chevron | Four-unit arms on the 20-unit canvas; rotate or mirror the same skeleton |
 | Detail | Prefer fewer, larger details over dense miniatures |
 
-These are key shapes, not a command to put every icon in a box. A document is
-tall, a screen is wide, and a disclosure chevron is deliberately smaller than
+These are key shapes. They do not mean every icon must sit in a box. A document
+is tall, a screen is wide. A disclosure chevron is deliberately smaller than
 a framed tool icon.
 
 Use one path per continuous stroke. Do not draw a shared edge twice. Keep
-separate features at least one stroke width apart where possible. Filled dots,
-play controls and highlighted regions carry meaning; do not use solid fills
-to make a letter or outline heavier. No opacity tints, gradients, font glyphs,
-embedded images, or external SVG references.
+separate features at least one stroke width apart where possible.
+
+Filled dots, play controls and highlighted regions carry meaning. Do not use
+solid fills to make a letter or outline heavier. Do not use opacity tints,
+gradients, font glyphs, embedded images, or external SVG references.
 
 ## Optical sizes
 
@@ -34,10 +36,10 @@ Existing exports keep their sizing contracts:
 
 - Standard icons: 20-unit canvas / 1.25 stroke, intrinsic width and height 20.
 - Overlay icons: 24-unit canvas / 1.5 stroke and no intrinsic width or height,
-  so CSS sizes them. Same 6.25% stroke ratio, so they look identical to the
-  20-unit icons at the same display size — which is why an overlay icon must
-  never be a 1.2x copy of one. Import the 20-unit export instead; the overlay
-  container already sets a pixel size.
+  so CSS sizes them. They use the same 6.25% stroke ratio, so they look
+  identical to the 20-unit icons at the same display size. This is why an
+  overlay icon must never be a 1.2x copy of one. Import the 20-unit export
+  instead. The overlay container already sets a pixel size.
 - Heading and script numerals may use 1.1 or 1.05; numbered-list markers use 1.05.
   These small counters need more space than full-size letters.
 
@@ -48,11 +50,11 @@ Adjust its geometry instead.
 ## Authoring
 
 1. Find the closest relative in `index.ts`. If an existing icon already draws
-   what you need, import that one — the same export may be used in as many
-   places as it fits, and a second name for one drawing is rejected by
+   what you need, import that one. The same export may be used in as many
+   places as it fits. A second name for one drawing is rejected by
    `test/unit/architecture/icon-no-duplicate-drawings.test.ts`. Otherwise reuse
    its frame, arrow, numeral, or circle before drawing a new one.
-   Heading/toggle numerals match exactly; script numerals are scaled from the
+   Heading/toggle numerals match exactly. Script numerals are scaled from the
    heading skeleton.
 2. Draw the fewest features that clearly explain the action. Look at the
    result without its label. Neighboring icons must remain distinguishable.
@@ -69,10 +71,10 @@ Adjust its geometry instead.
 
 ## Review
 
-Open `/icons` in the playground. Compare the whole group at 16, 20 and 24 px
-using the size controls, then inspect individual icons in the lightbox.
-Check light and dark backgrounds. Large previews help find rough curves;
-small previews decide whether the icon works.
+Open `/icons` in the playground. Use the size controls to compare the whole
+group at 16, 20 and 24 px. Then inspect individual icons in the lightbox.
+Check light and dark backgrounds. Large previews help find rough curves.
+Small previews decide whether the icon works.
 
 Ask:
 
@@ -85,7 +87,7 @@ Ask:
 `test/unit/components/icons/icon-line-system.test.ts` checks every exported
 icon's grid, paint and allowed stroke weights. The type, layout and media
 tests check relationships within each family. Mechanical checks prevent
-drift; they do not replace looking at the actual pixels.
+drift. They do not replace looking at the actual pixels.
 
 This guide covers editor-owned icons. Host-supplied toolbox icons, brand
 marks, keyboard keycaps and the docs site's separate React icons are not

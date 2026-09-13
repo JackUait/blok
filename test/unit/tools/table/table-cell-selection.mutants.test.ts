@@ -4635,5 +4635,855 @@ describe('TableCellSelection — mutation gaps', () => {
     });
   });
 
-});
+  /* ---------------------------------------------------------------- *
+   * Drag arming and the listeners a finished drag must give back.
+   * ---------------------------------------------------------------- */
 
+  describe('drag arming', () => {
+    it('a pointerdown that hits no cell leaves the drag unarmed', () => {
+      grid = createGrid(2, 2);
+
+      const drags: boolean[] = [];
+
+      selection = makeSelection({ onPointerDragActiveChange: active => drags.push(active) });
+
+      const colgroup = grid.querySelector('colgroup');
+
+      if (colgroup === null) {
+        throw new Error('no colgroup');
+      }
+
+      sendPointer('pointerdown', colgroup);
+
+      expect(drags).toStrictEqual([]);
+      expect(selection.getSelectedRange()).toBeNull();
+      expect(selectedCoords(grid)).toStrictEqual([]);
+    });
+
+    /**
+     * The public API repaints and drops the drag anchor while the move and up
+     * listeners the pointerdown installed are still attached, so both handlers
+     * meet a null anchor.
+     */
+    it('a pointermove and pointerup after the anchor was dropped keep the programmatic range', () => {
+      grid = createGrid(3, 3);
+      selection = makeSelection();
+
+      sendPointer('pointerdown', cellAt(grid, 0, 0));
+      selection.selectRange({ minRow: 2, maxRow: 2, minCol: 2, maxCol: 2 });
+
+      pointerTarget = cellAt(grid, 1, 1);
+      sendPointer('pointermove', document, { clientX: 20, clientY: 20 });
+      sendPointer('pointerup', document);
+
+      expect(listenerErrors).toStrictEqual([]);
+      expect(selectedCoords(grid)).toStrictEqual([[2, 2]]);
+      expect(selection.getSelectedRange()).toStrictEqual({
+        minRow: 2,
+        maxRow: 2,
+        minCol: 2,
+        maxCol: 2,
+      });
+    });
+
+    it('a second pointerdown mid-drag keeps the rectangle painted so far', () => {
+      grid = createGrid(2, 2);
+      selection = makeSelection();
+
+      sendPointer('pointerdown', cellAt(grid, 0, 0));
+      pointerTarget = cellAt(grid, 0, 1);
+      sendPointer('pointermove', document, { clientX: 1, clientY: 1 });
+
+      expect(selectedCoords(grid)).toStrictEqual([[0, 0], [0, 1]]);
+
+      sendPointer('pointerdown', cellAt(grid, 1, 1));
+
+      expect(selectedCoords(grid)).toStrictEqual([[0, 0], [0, 1]]);
+    });
+
+    it('announces the selection start once, not on every crossing', () => {
+      grid = createGrid(2, 2);
+
+      const active: Array<[boolean, boolean]> = [];
+
+      selection = makeSelection({
+        onSelectionActiveChange: (has, multi) => active.push([has, multi]),
+      });
+
+      sendPointer('pointerdown', cellAt(grid, 0, 0));
+      pointerTarget = cellAt(grid, 0, 1);
+      sendPointer('pointermove', document, { clientX: 1, clientY: 1 });
+      pointerTarget = cellAt(grid, 1, 1);
+      sendPointer('pointermove', document, { clientX: 2, clientY: 2 });
+
+      expect(active).toStrictEqual([[true, true]]);
+    });
+
+    it('stops cancelling the rectangle once the drag is over', () => {
+      grid = createGrid(2, 2);
+
+      const cancels: string[] = [];
+
+      selection = makeSelection({
+        rectangleSelection: { cancelActiveSelection: () => cancels.push('cancel') },
+      });
+
+      sendPointer('pointerdown', cellAt(grid, 0, 0));
+      document.body.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+      sendPointer('pointerup', document);
+      document.body.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+
+      expect(cancels).toStrictEqual(['cancel']);
+    });
+
+    it('a repeat click on the boxed cell keeps the clear-on-click-away handler', () => {
+      grid = createGrid(2, 2);
+      selection = makeSelection();
+
+      sendPointer('pointerdown', cellAt(grid, 0, 0));
+      sendPointer('pointerup', document);
+      // The same cell again: the selection survives, but clicking away must still clear it.
+      sendPointer('pointerdown', cellAt(grid, 0, 0));
+      sendPointer('pointerup', document);
+
+      expect(selectedCoords(grid)).toStrictEqual([[0, 0]]);
+
+      sendPointer('pointerdown', document.body);
+
+      expect(selectedCoords(grid)).toStrictEqual([]);
+      expect(selection.getSelectedRange()).toBeNull();
+    });
+
+    it('lets focus box another cell once the drag has ended', () => {
+      grid = createGrid(2, 2);
+      selection = makeSelection();
+
+      sendPointer('pointerdown', cellAt(grid, 0, 0));
+      pointerTarget = cellAt(grid, 0, 1);
+      sendPointer('pointermove', document, { clientX: 1, clientY: 1 });
+      sendPointer('pointerup', document);
+
+      addBlockInput(cellAt(grid, 1, 1)).dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+
+      expect(selectedCoords(grid)).toStrictEqual([[1, 1]]);
+    });
+  });
+
+  describe('repaint on a row-only step', () => {
+    it('a drag straight down paints every row it crossed', () => {
+      grid = createGrid(3, 2);
+      selection = makeSelection();
+
+      sendPointer('pointerdown', cellAt(grid, 0, 0));
+      pointerTarget = cellAt(grid, 1, 0);
+      sendPointer('pointermove', document, { clientX: 1, clientY: 40 });
+      pointerTarget = cellAt(grid, 2, 0);
+      sendPointer('pointermove', document, { clientX: 1, clientY: 80 });
+
+      expect(selectedCoords(grid)).toStrictEqual([[0, 0], [1, 0], [2, 0]]);
+
+      sendPointer('pointerup', document);
+      expect(selection.getSelectedRange()).toStrictEqual({
+        minRow: 0,
+        maxRow: 2,
+        minCol: 0,
+        maxCol: 0,
+      });
+    });
+
+    it("a pointer over another table's cell does not adopt its coordinates", () => {
+      grid = createGrid(2, 2);
+      mockRects(grid, PAINT_ROW_HEIGHT, 2, 2);
+
+      const foreign = createGrid(4, 4);
+
+      selection = makeSelection();
+
+      sendPointer('pointerdown', cellAt(grid, 0, 0));
+      pointerTarget = cellAt(grid, 0, 1);
+      sendPointer('pointermove', document, { clientX: GRID_LEFT + 1, clientY: GRID_TOP + 1 });
+
+      pointerTarget = cellAt(foreign, 3, 3);
+      sendPointer('pointermove', document, { clientX: GRID_LEFT + 1, clientY: GRID_TOP + 1 });
+
+      expect(selectedCoords(grid)).toStrictEqual([[0, 0], [0, 1]]);
+
+      foreign.remove();
+    });
+  });
+
+  describe('clamping when only the row changes', () => {
+    it('extends to the last row when the pointer leaves below', () => {
+      grid = createGrid(3, 3);
+      mockRects(grid, PAINT_ROW_HEIGHT, 3, 3);
+      selection = makeSelection();
+
+      sendPointer('pointerdown', cellAt(grid, 0, 0));
+      pointerTarget = cellAt(grid, 0, 1);
+      sendPointer('pointermove', document, { clientX: GRID_LEFT + 1, clientY: GRID_TOP + 1 });
+
+      // Inside horizontally, past the bottom edge vertically.
+      pointerTarget = document.body;
+      sendPointer('pointermove', document.body, { clientX: GRID_LEFT + 20, clientY: 9999 });
+      sendPointer('pointerup', document);
+
+      expect(selection.getSelectedRange()).toStrictEqual({
+        minRow: 0,
+        maxRow: 2,
+        minCol: 0,
+        maxCol: 1,
+      });
+    });
+
+    it('a grid whose columns vanished mid-drag stops clamping', () => {
+      grid = createGrid(3, 3);
+      mockRects(grid, PAINT_ROW_HEIGHT, 3, 3);
+      selection = makeSelection();
+
+      sendPointer('pointerdown', cellAt(grid, 1, 0));
+      pointerTarget = cellAt(grid, 2, 0);
+      sendPointer('pointermove', document, { clientX: GRID_LEFT + 1, clientY: GRID_TOP + 80 });
+
+      // No colgroup and an empty first row leaves zero logical columns.
+      grid.querySelector('colgroup')?.remove();
+      grid.querySelectorAll(`[${ROW_ATTR}]`)[0]?.replaceChildren();
+
+      pointerTarget = document.body;
+      sendPointer('pointermove', document.body, { clientX: 9999, clientY: GRID_TOP + 80 });
+      sendPointer('pointerup', document);
+
+      expect(selection.getSelectedRange()).toStrictEqual({
+        minRow: 1,
+        maxRow: 2,
+        minCol: 0,
+        maxCol: 0,
+      });
+    });
+  });
+
+  /* ---------------------------------------------------------------- *
+   * Where a keyboard extension is allowed to start from.
+   * ---------------------------------------------------------------- */
+
+  describe('keyboard origin', () => {
+    it('does not adopt a rectangle the pointer is still drawing', () => {
+      grid = createGrid(3, 3);
+      selection = makeSelection();
+
+      sendPointer('pointerdown', cellAt(grid, 0, 0));
+      pointerTarget = cellAt(grid, 0, 1);
+      sendPointer('pointermove', document, { clientX: 1, clientY: 1 });
+
+      const event = pressKey({ key: 'ArrowRight', shiftKey: true });
+
+      expect(selection.getSelectedRange()).toBeNull();
+      expect(event.defaultPrevented).toBe(false);
+      expect(selectedCoords(grid)).toStrictEqual([[0, 0], [0, 1]]);
+    });
+
+    it("ignores a caret sitting in another table's cell", () => {
+      grid = createGrid(3, 3);
+
+      const foreign = createGrid(3, 3);
+
+      selection = makeSelection();
+
+      caret.atEnd = true;
+      stubSelection({ anchorNode: addBlockInput(cellAt(foreign, 1, 1)) });
+
+      const event = pressKey({ key: 'ArrowRight', shiftKey: true });
+
+      expect(selection.getSelectedRange()).toBeNull();
+      expect(selectedCoords(grid)).toStrictEqual([]);
+      expect(event.defaultPrevented).toBe(false);
+
+      foreign.remove();
+    });
+
+    it('extends from a cell that holds its editable directly, with no blocks container', () => {
+      grid = createGrid(3, 3);
+      selection = makeSelection();
+
+      const cell = cellAt(grid, 1, 1);
+
+      cell.querySelector(`[${CELL_BLOCKS_ATTR}]`)?.remove();
+
+      const holder = document.createElement('div');
+
+      holder.setAttribute('data-blok-id', 'loose-holder');
+
+      const input = document.createElement('div');
+
+      input.setAttribute('contenteditable', 'true');
+      holder.appendChild(input);
+      cell.appendChild(holder);
+
+      caret.atEnd = true;
+      stubSelection({ anchorNode: input });
+
+      const event = pressKey({ key: 'ArrowRight', shiftKey: true });
+
+      expect(listenerErrors).toStrictEqual([]);
+      expect(event.defaultPrevented).toBe(true);
+      expect(selection.getSelectedRange()).toStrictEqual({
+        minRow: 1,
+        maxRow: 1,
+        minCol: 1,
+        maxCol: 2,
+      });
+    });
+
+    it('extends from an editable that sits in the blocks container with no block holder', () => {
+      grid = createGrid(3, 3);
+      selection = makeSelection();
+
+      const blocks = cellAt(grid, 1, 1).querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+
+      if (blocks === null) {
+        throw new Error('no blocks container');
+      }
+
+      const input = document.createElement('div');
+
+      input.setAttribute('contenteditable', 'true');
+      blocks.appendChild(input);
+
+      caret.atEnd = true;
+      stubSelection({ anchorNode: input });
+
+      const event = pressKey({ key: 'ArrowRight', shiftKey: true });
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(selection.getSelectedRange()).toStrictEqual({
+        minRow: 1,
+        maxRow: 1,
+        minCol: 1,
+        maxCol: 2,
+      });
+    });
+  });
+
+  /* ---------------------------------------------------------------- *
+   * Which edge of the painted range a Shift+Arrow steps off.
+   * ---------------------------------------------------------------- */
+
+  describe('keyboard stepping off the painted range', () => {
+    const arrow = (key: string): void => {
+      pressKey({ key, shiftKey: true });
+    };
+
+    it('steps back right off the left edge of the rectangle', () => {
+      grid = createGrid(3, 4);
+      selection = makeSelection();
+      caret.atEnd = true;
+      caret.atStart = true;
+      stubSelection({ anchorNode: addBlockInput(cellAt(grid, 1, 1)) });
+
+      arrow('ArrowLeft');
+      expect(selection.getSelectedRange()).toStrictEqual({
+        minRow: 1,
+        maxRow: 1,
+        minCol: 0,
+        maxCol: 1,
+      });
+
+      arrow('ArrowRight');
+      expect(selection.getSelectedRange()).toStrictEqual({
+        minRow: 1,
+        maxRow: 1,
+        minCol: 1,
+        maxCol: 1,
+      });
+    });
+
+    it('shrinks from the bottom of a rectangle built downwards', () => {
+      grid = createGrid(3, 3);
+      selection = makeSelection();
+
+      sendPointer('pointerdown', cellAt(grid, 0, 0));
+      pointerTarget = cellAt(grid, 1, 0);
+      sendPointer('pointermove', document, { clientX: 1, clientY: 40 });
+      pointerTarget = cellAt(grid, 2, 0);
+      sendPointer('pointermove', document, { clientX: 1, clientY: 80 });
+      sendPointer('pointerup', document);
+
+      arrow('ArrowUp');
+
+      expect(selectedCoords(grid)).toStrictEqual([[0, 0], [1, 0]]);
+      expect(selection.getSelectedRange()).toStrictEqual({
+        minRow: 0,
+        maxRow: 1,
+        minCol: 0,
+        maxCol: 0,
+      });
+    });
+
+    /**
+     * A merge makes the PAINTED range taller (or wider) than the anchor cell,
+     * so the two branches of `extent <= anchor` stop agreeing: one steps off the
+     * near edge of the merge, the other off its far edge.
+     */
+    describe('from inside a merge whose extent equals its anchor', () => {
+      const buildRowspanGrid = (): void => {
+        const table = document.createElement('table');
+
+        addColgroup(table, 2);
+        addRow(table, row => {
+          addCell(row, 0, 0);
+          addCell(row, 0, 1);
+        });
+        addRow(table, row => {
+          addCell(row, 1, 0, 1, 3);
+          addCell(row, 1, 1);
+        });
+        addRow(table, row => addCell(row, 2, 1));
+        addRow(table, row => addCell(row, 3, 1));
+        addRow(table, row => {
+          addCell(row, 4, 0);
+          addCell(row, 4, 1);
+        });
+        document.body.appendChild(table);
+        grid = table;
+
+        selection = makeSelection({
+          getCellSpan: (row, col) =>
+            row === 1 && col === 0 ? { colspan: 1, rowspan: 3 } : { colspan: 1, rowspan: 1 },
+          getMergeOrigin: (row, col) => (col === 0 && row >= 1 && row <= 3 ? [1, 0] : null),
+        });
+
+        caret.atStart = true;
+        caret.atEnd = true;
+
+        const input = addBlockInput(cellAt(grid, 1, 0));
+
+        stubSelection({ anchorNode: input });
+        input.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+      };
+
+      const buildColspanGrid = (): void => {
+        const table = document.createElement('table');
+
+        addColgroup(table, 5);
+        addRow(table, row => {
+          addCell(row, 0, 0);
+          addCell(row, 0, 1, 3, 1);
+          addCell(row, 0, 4);
+        });
+        addRow(table, row => {
+          for (let c = 0; c < 5; c++) {
+            addCell(row, 1, c);
+          }
+        });
+        document.body.appendChild(table);
+        grid = table;
+
+        selection = makeSelection({
+          getCellSpan: (row, col) =>
+            row === 0 && col === 1 ? { colspan: 3, rowspan: 1 } : { colspan: 1, rowspan: 1 },
+          getMergeOrigin: (row, col) => (row === 0 && col >= 1 && col <= 3 ? [0, 1] : null),
+        });
+
+        caret.atStart = true;
+        caret.atEnd = true;
+
+        const input = addBlockInput(cellAt(grid, 0, 1));
+
+        stubSelection({ anchorNode: input });
+        input.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+      };
+
+      it('grows upwards off the top of the merge', () => {
+        buildRowspanGrid();
+
+        expect(selection.getSelectedRange()).toStrictEqual({
+          minRow: 1,
+          maxRow: 3,
+          minCol: 0,
+          maxCol: 0,
+        });
+
+        arrow('ArrowUp');
+
+        expect(selectedCoords(grid)).toStrictEqual([[0, 0], [1, 0]]);
+        expect(selection.getSelectedRange()).toStrictEqual({
+          minRow: 0,
+          maxRow: 3,
+          minCol: 0,
+          maxCol: 0,
+        });
+      });
+
+      it('grows downwards off the bottom of the merge', () => {
+        buildRowspanGrid();
+
+        arrow('ArrowDown');
+
+        expect(selectedCoords(grid)).toStrictEqual([[1, 0], [4, 0]]);
+        expect(selection.getSelectedRange()).toStrictEqual({
+          minRow: 1,
+          maxRow: 4,
+          minCol: 0,
+          maxCol: 0,
+        });
+      });
+
+      it('grows left off the near edge of the merge', () => {
+        buildColspanGrid();
+
+        expect(selection.getSelectedRange()).toStrictEqual({
+          minRow: 0,
+          maxRow: 0,
+          minCol: 1,
+          maxCol: 3,
+        });
+
+        arrow('ArrowLeft');
+
+        expect(selectedCoords(grid)).toStrictEqual([[0, 0], [0, 1]]);
+        expect(selection.getSelectedRange()).toStrictEqual({
+          minRow: 0,
+          maxRow: 0,
+          minCol: 0,
+          maxCol: 3,
+        });
+      });
+
+      it('grows right off the far edge of the merge', () => {
+        buildColspanGrid();
+
+        arrow('ArrowRight');
+
+        expect(selectedCoords(grid)).toStrictEqual([[0, 1], [0, 4]]);
+        expect(selection.getSelectedRange()).toStrictEqual({
+          minRow: 0,
+          maxRow: 0,
+          minCol: 1,
+          maxCol: 4,
+        });
+      });
+    });
+  });
+
+  /* ---------------------------------------------------------------- *
+   * What the pill menu offers, and what it must not.
+   * ---------------------------------------------------------------- */
+
+  describe('pill menu availability', () => {
+    const openOver = (
+      range: SelectionRange,
+      over: Partial<ConstructorParameters<typeof TableCellSelection>[0]>
+    ): void => {
+      mockRects(grid, PAINT_ROW_HEIGHT, 3, 3);
+      selection = makeSelection(over);
+      selection.selectRange(range);
+      openPillMenu(grid);
+    };
+
+    it('offers no merge entry when there is no merge handler', () => {
+      grid = createGrid(3, 3);
+      openOver(
+        { minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 },
+        { canMergeCells: () => true }
+      );
+
+      expect(itemTitles()).toStrictEqual([
+        'tools.table.copySelection',
+        'tools.table.clearSelection',
+      ]);
+    });
+
+    it('offers a merge entry when a merge handler exists', () => {
+      grid = createGrid(3, 3);
+      openOver(
+        { minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 },
+        { canMergeCells: () => true, onMergeCells: vi.fn() }
+      );
+
+      expect(itemTitles()).toStrictEqual([
+        'tools.table.mergeCells',
+        'tools.table.copySelection',
+        'tools.table.clearSelection',
+      ]);
+    });
+
+    /**
+     * A rectangle the user dragged across two rows is not a single cell, so the
+     * merged cell inside it must not offer Split — the gesture would undo a
+     * merge the user only brushed past.
+     */
+    it('offers no split entry for a dragged rectangle that merely contains a merge', () => {
+      grid = createGrid(3, 3);
+      mockRects(grid, PAINT_ROW_HEIGHT, 3, 3);
+      selection = makeSelection({
+        isMergedCell: (row, col) => row === 0 && col === 0,
+        onSplitCell: vi.fn(),
+      });
+
+      sendPointer('pointerdown', cellAt(grid, 0, 0));
+      pointerTarget = cellAt(grid, 1, 0);
+      sendPointer('pointermove', document, { clientX: GRID_LEFT + 1, clientY: GRID_TOP + 50 });
+      sendPointer('pointerup', document);
+
+      expect(selection.getSelectedRange()).toStrictEqual({
+        minRow: 0,
+        maxRow: 1,
+        minCol: 0,
+        maxCol: 0,
+      });
+
+      openPillMenu(grid);
+
+      expect(itemTitles()).toStrictEqual([
+        'tools.table.copySelection',
+        'tools.table.clearSelection',
+      ]);
+    });
+
+    it('offers a split entry for the merged cell on its own', () => {
+      grid = createGrid(3, 3);
+      openOver(
+        { minRow: 0, maxRow: 0, minCol: 0, maxCol: 0 },
+        { isMergedCell: (row, col) => row === 0 && col === 0, onSplitCell: vi.fn() }
+      );
+
+      expect(itemTitles()).toStrictEqual([
+        'tools.table.splitCell',
+        'tools.table.copySelection',
+        'tools.table.clearSelection',
+      ]);
+    });
+
+    it('takes the open menu down with the selection', () => {
+      grid = createGrid(3, 3);
+      openOver({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 }, {});
+
+      const menu = popoverState.params as { items: unknown[] } | null;
+
+      expect(menu).not.toBeNull();
+      expect(document.body.querySelector('[data-blok-popover-mock]')).toBeNull();
+
+      popoverState.destroyed = 0;
+      selection.clearActiveSelection();
+
+      expect(popoverState.destroyed).toBe(1);
+    });
+  });
+
+  describe('clearing an empty selection', () => {
+    it('tells nobody the selection went away when there was none', () => {
+      grid = createGrid(2, 2);
+
+      const active: Array<[boolean, boolean]> = [];
+
+      selection = makeSelection({
+        onSelectionActiveChange: (has, multi) => active.push([has, multi]),
+      });
+
+      selection.clearActiveSelection();
+
+      expect(active).toStrictEqual([]);
+    });
+  });
+
+  describe('focus into a cell of a painted rectangle', () => {
+    it('collapses the rectangle to the cell that took the caret', () => {
+      grid = createGrid(2, 2);
+      mockRects(grid, PAINT_ROW_HEIGHT, 2, 2);
+      selection = makeSelection();
+      selection.selectRange({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
+
+      expect(selectedCoords(grid)).toStrictEqual([[0, 0], [0, 1]]);
+
+      addBlockInput(cellAt(grid, 0, 0)).dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+
+      expect(selectedCoords(grid)).toStrictEqual([[0, 0]]);
+      expect(selection.getSelectedRange()).toStrictEqual({
+        minRow: 0,
+        maxRow: 0,
+        minCol: 0,
+        maxCol: 0,
+      });
+    });
+
+    it('keeps the box when focus moves to the selection pill', () => {
+      grid = createGrid(2, 2);
+      mockRects(grid, PAINT_ROW_HEIGHT, 2, 2);
+      selection = makeSelection();
+      selection.selectRange({ minRow: 1, maxRow: 1, minCol: 1, maxCol: 1 });
+
+      const pill = grid.querySelector<HTMLElement>(`[${PILL_ATTR}]`);
+
+      if (pill === null) {
+        throw new Error('no pill');
+      }
+
+      pill.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+
+      expect(selectedCoords(grid)).toStrictEqual([[1, 1]]);
+    });
+  });
+
+  describe('merge expansion keeps iterating', () => {
+    /**
+     * The first pass widens the rect and changes nothing else; only a second
+     * pass sees the rowspan that the new column brought into range.
+     */
+    it('runs another pass when the first one only moved the right edge', () => {
+      grid = createGrid(2, 2);
+      mockRects(grid, PAINT_ROW_HEIGHT, 2, 2);
+      selection = makeSelection({
+        getCellSpan: (row, col) => {
+          if (row === 0 && col === 0) {
+            return { colspan: 2, rowspan: 1 };
+          }
+
+          if (row === 0 && col === 1) {
+            return { colspan: 1, rowspan: 2 };
+          }
+
+          return { colspan: 1, rowspan: 1 };
+        },
+      });
+
+      selection.selectRange({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 0 });
+
+      expect(selection.getSelectedRange()).toStrictEqual({
+        minRow: 0,
+        maxRow: 1,
+        minCol: 0,
+        maxCol: 1,
+      });
+    });
+  });
+
+  describe('overlay reposition with one corner gone', () => {
+    let notifyResize: (() => void) | null;
+
+    beforeEach(() => {
+      notifyResize = null;
+
+      class CapturingResizeObserver {
+        constructor(callback: () => void) {
+          notifyResize = callback;
+        }
+
+        observe(): void {
+          // no-op
+        }
+
+        unobserve(): void {
+          // no-op
+        }
+
+        disconnect(): void {
+          // no-op
+        }
+      }
+
+      vi.stubGlobal('ResizeObserver', CapturingResizeObserver);
+    });
+
+    it('leaves the overlay alone when only the far corner has gone', () => {
+      grid = createPlainGrid();
+      mockRects(grid, PAINT_ROW_HEIGHT, 2, 2);
+      selection = makeSelection();
+      selection.selectRange({ minRow: 0, maxRow: 1, minCol: 0, maxCol: 1 });
+
+      const overlay = grid.querySelector<HTMLElement>(OVERLAY_SELECTOR) as HTMLElement;
+      const before = { width: overlay.style.width, height: overlay.style.height };
+
+      // Only the last row goes: the first corner still resolves, the last does not.
+      grid.querySelectorAll(`[${ROW_ATTR}]`)[1]?.remove();
+      notifyResize?.();
+
+      expect({ width: overlay.style.width, height: overlay.style.height }).toStrictEqual(before);
+    });
+  });
+
+  describe('index fallback over a non-HTML cell', () => {
+    it('marks only the HTML cells of the range', () => {
+      grid = createAttrlessGrid(2, 2);
+
+      const svgCell = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+
+      svgCell.setAttribute(CELL_ATTR, '');
+      grid.querySelectorAll(`[${ROW_ATTR}]`)[0]?.appendChild(svgCell);
+
+      const cleared: HTMLElement[][] = [];
+
+      selection = makeSelection({ onClearContent: cells => cleared.push(cells) });
+      selection.selectRange({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 2 });
+      pressKey({ key: 'Delete' });
+
+      expect(svgCell.hasAttribute(SELECTED_ATTR)).toBe(false);
+      expect(cleared).toHaveLength(1);
+      expect(cleared[0].every(cell => cell instanceof HTMLElement)).toBe(true);
+      expect(cleared[0]).toHaveLength(2);
+    });
+  });
+
+  describe('pointerup after the selection was cleared under it', () => {
+    /**
+     * The pointerdown armed the drag, then the API painted and cleared, which
+     * drops the anchor and the selection both. The pointerup that follows has
+     * no cell to fall back on and must do nothing at all.
+     */
+    it('selects nothing when the anchor and the selection have both gone', () => {
+      grid = createGrid(3, 3);
+
+      const active: Array<[boolean, boolean]> = [];
+
+      selection = makeSelection({
+        onSelectionActiveChange: (has, multi) => active.push([has, multi]),
+      });
+
+      sendPointer('pointerdown', cellAt(grid, 1, 1));
+      selection.selectRange({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 0 });
+      selection.clearActiveSelection();
+      active.length = 0;
+
+      sendPointer('pointerup', document);
+
+      expect(listenerErrors).toStrictEqual([]);
+      expect(selection.getSelectedRange()).toBeNull();
+      expect(selectedCoords(grid)).toStrictEqual([]);
+      expect(active).toStrictEqual([]);
+    });
+  });
+
+  describe('colour submenu with no active tab', () => {
+    /**
+     * The deferred focus runs in a microtask, where a throw escapes the test's
+     * own stack — the recorder is what makes it visible.
+     */
+    it('does not explode when the picker has no selected tab', async () => {
+      const uncaught: unknown[] = [];
+      const record = (error: unknown): void => {
+        uncaught.push(error);
+      };
+
+      process.on('uncaughtException', record);
+
+      try {
+        grid = createPlainGrid();
+        mockRects(grid, PAINT_ROW_HEIGHT, 2, 2);
+        selection = makeSelection({ onColorChange: vi.fn() });
+        selection.selectRange({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
+        openPillMenu(grid);
+
+        const children = itemNamed('tools.table.cellColor')?.children as { onOpen: () => void };
+
+        colorPickerState.tab?.remove();
+        document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
+        children.onOpen();
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(uncaught).toStrictEqual([]);
+      } finally {
+        process.off('uncaughtException', record);
+      }
+    });
+  });
+
+});

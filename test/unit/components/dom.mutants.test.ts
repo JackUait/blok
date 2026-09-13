@@ -159,6 +159,23 @@ describe('Dom — behaviours that no other test pins', () => {
       expect(Dom.make('div', ['btn  primary']).className).toBe('btn primary');
       expect(Dom.make('div', 'btn  primary').className).toBe('btn primary');
     });
+
+    it('splits a multi-word class into every word, from an array entry', () => {
+      /**
+       * The array filter drops only '' — it must not drop any other value.
+       * The exact string is the mutation sentinel: a filter comparing against
+       * anything but '' swallows the whole entry and the element gets no class.
+       */
+      expect(Dom.make('div', ['Stryker was here!']).className).toBe('Stryker was here!');
+    });
+
+    it('splits a multi-word class into every word, from a string argument', () => {
+      /**
+       * Same sentinel for the string branch: its guard must compare against ''
+       * only, or the branch is skipped and the classes are lost.
+       */
+      expect(Dom.make('div', 'Stryker was here!').className).toBe('Stryker was here!');
+    });
   });
 
   describe('make() — attributes', () => {

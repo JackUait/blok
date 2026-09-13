@@ -1980,4 +1980,100 @@ describe('BlockSettings — mutation coverage', () => {
       expect(onDelete).not.toHaveBeenCalled();
     });
   });
+
+  /* --------------------------------------------- footer date part trimming */
+
+  describe('footer date parts', () => {
+    /** Drives the day/month/year formatter only; the time formatter uses format(). */
+    const stubDateParts = (parts: Intl.DateTimeFormatPart[]): void => {
+      vi.spyOn(Intl.DateTimeFormat.prototype, 'formatToParts').mockReturnValue(parts);
+    };
+
+    const footerDate = async (): Promise<string> => {
+      getConvertibleToolsForBlockMock.mockResolvedValue([]);
+
+      const block = createBlockStub({ lastEditedAt: Date.UTC(2026, 8, 5, 12, 0) });
+
+      blok.BlockManager.currentBlock = asBlock(block);
+      await settings.open(asBlock(block));
+
+      const element = itemNamed(lastPopover().params.items, 'edit-metadata').element;
+
+      if (!(element instanceof HTMLElement)) {
+        throw new Error('the footer item carries no element');
+      }
+
+      return element.lastElementChild?.textContent ?? '';
+    };
+
+    it('stops trimming when every part has been popped instead of reading past the start', async () => {
+      // A format made entirely of abbreviation literals empties the array; the
+      // length guard is the only thing standing between that and dateParts[-1].
+      stubDateParts([{ type: 'literal', value: '.' }]);
+
+      const text = await footerDate();
+      const time = new Intl.DateTimeFormat('en', { timeStyle: 'short' }).format(new Date(Date.UTC(2026, 8, 5, 12, 0)));
+
+      expect(text).toBe(`, ${time}`);
+      expect(settings.opened).toBe(true);
+    });
+
+    it('trims only trailing literals, never a real field that happens to hold a period', async () => {
+      stubDateParts([
+        { type: 'day', value: '5' },
+        { type: 'literal', value: ' ' },
+        { type: 'month', value: 'sept.' },
+      ]);
+
+      const text = await footerDate();
+
+      expect(text.startsWith('5 sept.,')).toBe(true);
+    });
+  });
+
+  /* ------------------------------------------------- footer name, no resolve */
+
+  describe('footer editor name known up front', () => {
+    it('paints a name the directory already holds before any resolve settles', async () => {
+      // The resolve never settles, so the label can only carry a name that the
+      // synchronous `known()` paint put there.
+      vi.spyOn(blok.UserDirectory, 'resolve').mockReturnValue(new Promise(() => { /* pending forever */ }));
+      Object.assign(config, {
+        user: { id: 'u1', name: 'Ada' },
+        resolveUser: vi.fn(),
+      });
+
+      getConvertibleToolsForBlockMock.mockResolvedValue([]);
+
+      const block = createBlockStub({ lastEditedBy: 'u1', lastEditedAt: Date.UTC(2026, 8, 5, 12, 0) });
+
+      blok.BlockManager.currentBlock = asBlock(block);
+      await settings.open(asBlock(block));
+
+      const element = itemNamed(lastPopover().params.items, 'edit-metadata').element;
+
+      if (!(element instanceof HTMLElement)) {
+        throw new Error('the footer item carries no element');
+      }
+
+      await nextTick();
+
+      expect(element.querySelector('[data-edit-meta-label]')?.textContent)
+        .toBe('blockSettings.lastEditedBy:{"name":"Ada"}');
+    });
+  });
+
+  /* ------------------------------------------------ columns entry attributes */
+
+  describe('turn into columns markup', () => {
+    it('carries the convert-item dataset flag that styles it as a conversion', async () => {
+      blok.BlockSelection.selectedBlocks = [asBlock(createBlockStub()), asBlock(createBlockStub())];
+      getConvertibleToolsForBlocksMock.mockResolvedValue([]);
+      await settings.open();
+
+      const entry = itemNamed(childrenOf(lastPopover().params.items, 'convert-to'), 'turn-into-columns');
+
+      expect(entry.dataset).toStrictEqual({ 'blok-convert-item': 'true' });
+    });
+  });
 });

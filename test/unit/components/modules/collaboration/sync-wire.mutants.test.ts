@@ -18,8 +18,9 @@ import { decode, encode } from '../../../../../src/components/modules/collaborat
  * PROVEN-EQUIVALENT mutants (measured, not assumed — see the probe results
  * quoted on each line):
  *
- *  - 308:5 `typeof epoch !== 'number'`, 309:5 `typeof format !== 'number'` and
- *    358:7 `typeof maxMessageBytes !== 'number'` forced to false. Each is
+ *  - `typeof epoch !== 'number'`, `typeof format !== 'number'`,
+ *    `typeof maxMessageBytes !== 'number'` and an identities entry's
+ *    `typeof clientId !== 'number'` forced to false. Each is
  *    followed by `!Number.isSafeInteger(sameValue)`, and Number.isSafeInteger
  *    returns false for every non-Number (measured: '7' -> false, undefined ->
  *    false, null -> false, [1] -> false, true -> false), so the negation is
@@ -702,6 +703,150 @@ describe('sync-wire encode — contract-violation messages', () => {
       encode({ type: 'rejection', lineage: ID, operationId: OTHER_ID, code: 'Read-Only' }),
     ).toThrow(
       'collab: a rejection frame needs a 32-lowercase-hex lineage/operationId and a code matching ^[a-z][a-z0-9-]{0,63}$.',
+    );
+  });
+});
+
+const identitiesFrame = (json: string): Uint8Array => frame(107, json);
+
+const identitiesPayloadIsNotAnObject = 'the identities payload is not a JSON object';
+const identitiesEntryKeys = 'an identities entry needs exactly clientId and actorId';
+
+describe('sync-wire — the 32-hex patterns are anchored at BOTH ends', () => {
+  it('refuses a control lineage carrying a non-hex PREFIX before 32 hex characters', () => {
+    // Without the leading `^`, /[0-9a-f]{32}$/ still matches the tail of this.
+    const input = controlFrame(`{"epoch":7,"format":1,"lineage":"z${ID}"}`);
+
+    expect(decode(input)).toStrictEqual({
+      type: 'malformed',
+      reason: 'the control payload needs epoch >= 0, format >= 1 and a 32-hex lineage',
+    });
+  });
+
+  it('refuses a control lineage carrying a non-hex SUFFIX after 32 hex characters', () => {
+    // Without the trailing `$`, /^[0-9a-f]{32}/ still matches the head of this.
+    const input = controlFrame(`{"epoch":7,"format":1,"lineage":"${ID}z"}`);
+
+    expect(decode(input)).toStrictEqual({
+      type: 'malformed',
+      reason: 'the control payload needs epoch >= 0, format >= 1 and a 32-hex lineage',
+    });
+  });
+
+  it('refuses a v2 operationId carrying a non-hex PREFIX before 32 hex characters', () => {
+    const input = operationFrame(`{"lineage":"${ID}","operationId":"z${OTHER_ID}"}`);
+
+    expect(decode(input)).toStrictEqual({
+      type: 'malformed',
+      reason: 'operationId must be 32 lowercase hex characters',
+      rule: 12,
+    });
+  });
+
+  it('refuses a v2 operationId carrying a non-hex SUFFIX after 32 hex characters', () => {
+    const input = operationFrame(`{"lineage":"${ID}","operationId":"${OTHER_ID}z"}`);
+
+    expect(decode(input)).toStrictEqual({
+      type: 'malformed',
+      reason: 'operationId must be 32 lowercase hex characters',
+      rule: 12,
+    });
+  });
+});
+
+describe('sync-wire decode — identities (type 107) refusal reasons', () => {
+  it('names the truncated identities payload instead of decoding zero bytes as JSON', () => {
+    // [107][len 5] with nothing left. If the null guard goes, TextDecoder turns
+    // the absent payload into '' and the frame is refused as "not valid JSON".
+    expect(decode(hex('6b05'))).toStrictEqual({
+      type: 'malformed',
+      reason: 'the identities payload is missing or truncated',
+    });
+  });
+
+  it('refuses a bare JSON number payload as a non-object, not as a wrong wrapper key', () => {
+    expect(decode(identitiesFrame('1'))).toStrictEqual({
+      type: 'malformed',
+      reason: identitiesPayloadIsNotAnObject,
+    });
+  });
+
+  it('refuses a JSON null payload instead of throwing out of Object.keys(null)', () => {
+    expect(decode(identitiesFrame('null'))).toStrictEqual({
+      type: 'malformed',
+      reason: identitiesPayloadIsNotAnObject,
+    });
+  });
+
+  it('refuses an extra sibling of "identities" even though "identities" comes first', () => {
+    // keys[0] is 'identities', so only the length half of the guard sees this.
+    const input = identitiesFrame('{"identities":[{"clientId":1,"actorId":"a"}],"extra":1}');
+
+    expect(decode(input)).toStrictEqual({
+      type: 'malformed',
+      reason: 'the identities payload needs exactly the key "identities"',
+    });
+  });
+
+  it('refuses a null entry instead of throwing out of Object.keys(null)', () => {
+    expect(decode(identitiesFrame('{"identities":[null]}'))).toStrictEqual({
+      type: 'malformed',
+      reason: 'an identities entry is not a JSON object',
+    });
+  });
+
+  it('refuses an entry that carries a THIRD key alongside clientId and actorId', () => {
+    const input = identitiesFrame('{"identities":[{"clientId":1,"actorId":"a","extra":2}]}');
+
+    expect(decode(input)).toStrictEqual({
+      type: 'malformed',
+      reason: identitiesEntryKeys,
+    });
+  });
+
+  it('accepts clientId 0, which is a legal awareness client id', () => {
+    const input = identitiesFrame('{"identities":[{"clientId":0,"actorId":"a"}]}');
+
+    expect(decode(input)).toStrictEqual({
+      type: 'identities',
+      identities: [{ clientId: 0, actorId: 'a' }],
+    });
+  });
+});
+
+describe('sync-wire encode — identities contract violations', () => {
+  it('quotes the offending identity in the throw', () => {
+    expect(() => encode({ type: 'identities', identities: [{ clientId: -1, actorId: 'a' }] })).toThrow(
+      'collab: the identity {"clientId":-1,"actorId":"a"} is not encodable.',
+    );
+  });
+
+  it('refuses a non-integer clientId whose actorId is perfectly fine', () => {
+    expect(() => encode({ type: 'identities', identities: [{ clientId: 1.5, actorId: 'a' }] })).toThrow(
+      'collab: the identity {"clientId":1.5,"actorId":"a"} is not encodable.',
+    );
+  });
+
+  it('refuses an empty actorId whose clientId is perfectly fine', () => {
+    expect(() => encode({ type: 'identities', identities: [{ clientId: 7, actorId: '' }] })).toThrow(
+      'collab: the identity {"clientId":7,"actorId":""} is not encodable.',
+    );
+  });
+
+  it('checks EVERY entry, not just the first', () => {
+    expect(() =>
+      encode({
+        type: 'identities',
+        identities: [{ clientId: 7, actorId: 'ok' }, { clientId: -2, actorId: 'b' }],
+      }),
+    ).toThrow('collab: the identity {"clientId":-2,"actorId":"b"} is not encodable.');
+  });
+
+  it('encodes clientId 0 to its exact wire bytes instead of refusing it', () => {
+    const json = '{"identities":[{"clientId":0,"actorId":"a"}]}';
+
+    expect(encode({ type: 'identities', identities: [{ clientId: 0, actorId: 'a' }] })).toStrictEqual(
+      frame(107, json),
     );
   });
 });

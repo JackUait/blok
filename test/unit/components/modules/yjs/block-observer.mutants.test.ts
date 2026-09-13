@@ -40,40 +40,46 @@ const contentIdsOf = (blocksMap: Y.Map<Y.Map<unknown>>, id: string): Y.Array<unk
 };
 
 /**
- * The survivors here fall into four groups, none of which a test can reach:
+ * The number of afterTransaction listeners a document carries. `unobserve`
+ * has to give its own back, and nothing it emits afterwards can show that.
+ */
+const afterTransactionListenersOf = (target: Y.Doc): number =>
+  target._observers.get('afterTransaction')?.size ?? 0;
+
+/**
+ * The listener set a document currently holds for afterTransaction, as plain
+ * values, so a freshly added one can be told from the ones already there.
+ */
+const afterTransactionHandlersOf = (target: Y.Doc): unknown[] =>
+  [...(target._observers.get('afterTransaction') ?? [])] as unknown[];
+
+/**
+ * What is left alive on this file is alive for one of two reasons, both
+ * measured: the mutated expression cannot change an answer, or the state it
+ * guards cannot exist.
  *
- * - **Switch-case mutants that land in `default`.** The default arm returns the
- *   origin value itself, so blanking `case 'local'` or `case 'load'` returns the
- *   same string, and dropping `case 'no-capture'`'s return falls through to
- *   `case 'move'`, which returns 'local' too. The `default` arm and its body are
- *   themselves unreachable: `isLocalOriginTag` gates entry and the switch is
- *   exhaustive over LOCAL_ORIGIN_TAGS. `typeof value === 'string'` forced true
- *   changes nothing either — `includes` on a non-string is false regardless.
+ * - **Switch arms that fall into `default`.** The default arm returns the
+ *   origin value itself, so blanking `case 'local'` or `case 'load'` returns
+ *   the same string, and dropping `case 'no-capture'`'s return falls through to
+ *   `case 'move'`, which returns 'local' too. The enumeration test above asserts
+ *   all six results, and they hold under every one of those mutants. Forcing
+ *   `typeof value === 'string'` to true changes nothing either — `includes` on
+ *   a non-string is false regardless, which the "anything else is remote" test
+ *   measures.
  *
- * - **The `blocksMap === null` guards**, in `collectEvent` and in
- *   `walkToOwningBlock`. The deep observer that calls them is registered on
- *   those very roots and is detached before the fields are nulled, so no event
- *   can arrive while they are null.
+ * - **The two roots are never half-null.** `observe` assigns `blocksMap` and
+ *   `rootOrder` together and `unobserve` nulls them together, so
+ *   `blocksMap === null || rootOrder === null` is false with both set and true
+ *   with both null, whichever operand or operator a mutant replaces. The
+ *   replay test below drives the both-null state — it kills the guard when the
+ *   whole condition is forced false — and the operand mutants stay alive there.
+ *   `walkToOwningBlock`'s own `blocksMap === null` guard is unreachable for the
+ *   same reason: `collectEvent` returns before the walk when the map is null.
  *
- * - **The "target never reached the blocks map" path**, and with it both
- *   recursion guards in `walkToOwningBlock` and the `collectEvent` catch with
- *   its two log strings. Observers sit on the blocks map and the root order
- *   only; the root order holds strings, which are never event targets, so every
- *   target's parent chain terminates at the blocks map in one step from its
- *   block. Nothing in `collectEvent` can throw for a document built through the
- *   typed API.
- *
- * - **`unobserve`'s remaining guards.** When `deepObserver` is null both roots
- *   are null too, so the extra detach call is a no-op; and once the deep
- *   observers are gone nothing fills a transaction's buckets, so an
- *   afterTransaction handler left registered dispatches nothing.
- *
- * One more survives without an equivalence proof: dropping the
- * `pendingBuckets.delete` before emitting. A subscriber that writes during
- * dispatch gets a NEW transaction, so the stale entry is never read again and
- * the WeakMap collects it — no reachable input through the public write path
- * makes it observable. The delete stays load-bearing if yjs ever delivers such
- * a write inside the original transaction, which is what it was written for.
+ * - **`unobserve`'s remaining guards.** `deepObserver` is null exactly when
+ *   both roots are, and `afterTransactionHandler` is null exactly when `doc`
+ *   is, so forcing either guard open runs a body of optional calls that all
+ *   short-circuit, and dropping the `?.` never dereferences null.
  */
 describe('BlockObserver mutants', () => {
   let observer: BlockObserver;
@@ -82,6 +88,8 @@ describe('BlockObserver mutants', () => {
   let rootOrder: Y.Array<string>;
   let undoManager: Y.UndoManager;
   let events: BlockChangeEvent[];
+  let doc: Y.Doc;
+  let spare: BlockObserver[];
 
   const addBlocks = (ids: string[]): void => {
     store.transact(() => {
@@ -100,16 +108,137 @@ describe('BlockObserver mutants', () => {
       captureTimeout: 500,
       trackedOrigins: new Set(['local']),
     });
+    const attachedDoc = blocksMap.doc;
+
+    if (attachedDoc === null) {
+      throw new Error("the store map is not attached to a document");
+    }
+
+    doc = attachedDoc;
+    spare = [];
     observer.observe({ blocksMap, rootOrder }, undoManager);
     observer.onBlocksChanged((event) => events.push(event));
   });
 
   afterEach(() => {
+    spare.forEach((extra) => extra.destroy());
     observer.destroy();
     undoManager.destroy();
     store.destroy();
     vi.restoreAllMocks();
   });
+
+  /**
+   * A second observer on the same roots, plus the two callbacks it registered:
+   * the deep observer yjs would call with events, and the document hook that
+   * dispatches a transaction. Holding them directly is what lets a test hand
+   * the observer a target from outside its roots, or one that arrives after
+   * `unobserve` — inputs the public writers cannot produce.
+   */
+  const attach = (): {
+    observer: BlockObserver;
+    emitted: BlockChangeEvent[];
+    deliver: (events: Y.YEvent<Y.AbstractType<unknown>>[], transaction: Y.Transaction) => void;
+    dispatch: (transaction: Y.Transaction, target: Y.Doc) => void;
+  } => {
+    const fresh = new BlockObserver();
+    const emitted: BlockChangeEvent[] = [];
+    const before = new Set<unknown>(afterTransactionHandlersOf(doc));
+    const deepSpy = vi.spyOn(blocksMap, 'observeDeep');
+
+    spare.push(fresh);
+    fresh.observe({ blocksMap, rootOrder }, undoManager);
+    fresh.onBlocksChanged((event) => emitted.push(event));
+
+    const deliver = deepSpy.mock.calls[0]?.[0];
+
+    deepSpy.mockRestore();
+
+    const dispatch = afterTransactionHandlersOf(doc).find((handler) => !before.has(handler));
+
+    if (typeof deliver !== 'function' || typeof dispatch !== 'function') {
+      throw new Error('BlockObserver did not register its observers');
+    }
+
+    return {
+      observer: fresh,
+      emitted,
+      deliver,
+      dispatch: dispatch as (transaction: Y.Transaction, target: Y.Doc) => void,
+    };
+  };
+
+  /**
+   * A change in a document the observer knows nothing about, captured as the
+   * (events, transaction) pair yjs hands a deep observer. The holder map is
+   * top-level, so its parent chain ends at null.
+   */
+  const foreignChange = (
+    setUp: (holder: Y.Map<unknown>) => void,
+    mutate: (holder: Y.Map<unknown>) => void
+  ): { events: Y.YEvent<Y.AbstractType<unknown>>[]; transaction: Y.Transaction } => {
+    const foreignDoc = new Y.Doc();
+    const holder = foreignDoc.getMap<unknown>('holder');
+
+    foreignDoc.transact(() => setUp(holder), 'local');
+
+    const captured: Y.YEvent<Y.AbstractType<unknown>>[] = [];
+    const transactions: Y.Transaction[] = [];
+
+    // Touch `changes` while the transaction is still live: yjs computes it
+    // lazily off the transaction, and a real deep observer reads it during
+    // delivery, not after the document has merged the transaction away.
+    holder.observeDeep((events) => {
+      events.forEach((event) => event.changes);
+      captured.push(...events);
+    });
+    foreignDoc.on('afterTransaction', (transaction) => transactions.push(transaction));
+    foreignDoc.transact(() => mutate(holder), 'local');
+
+    const transaction = transactions[transactions.length - 1];
+
+    if (captured.length === 0 || transaction === undefined) {
+      throw new Error('the foreign change produced no event');
+    }
+
+    return { events: captured, transaction };
+  };
+
+  /**
+   * A real blocks-map event and its transaction, taken from an ordinary add so
+   * a replay can carry something the observer must still classify.
+   */
+  const realBlocksMapChange = (id: string): {
+    event: Y.YEvent<Y.AbstractType<unknown>>;
+    transaction: Y.Transaction;
+  } => {
+    const captured: Y.YEvent<Y.AbstractType<unknown>>[] = [];
+    const transactions: Y.Transaction[] = [];
+    const collect = (incoming: Y.YEvent<Y.AbstractType<unknown>>[]): void => {
+      captured.push(...incoming.filter((event) => event.target === blocksMap));
+    };
+    const record = (transaction: Y.Transaction): void => {
+      transactions.push(transaction);
+    };
+
+    blocksMap.observeDeep(collect);
+    doc.on('afterTransaction', record);
+    addBlocks([id]);
+    blocksMap.unobserveDeep(collect);
+    doc.off('afterTransaction', record);
+    events.length = 0;
+
+    const event = captured[0];
+    const transaction = transactions[transactions.length - 1];
+
+    if (event === undefined || transaction === undefined) {
+      throw new Error('the add produced no blocks-map event');
+    }
+
+    return { event, transaction };
+  };
+
+  const afterTransactionListeners = (): number => afterTransactionListenersOf(doc);
 
   describe('observe', () => {
     it('tolerates a scope whose map is not attached to a document', () => {
@@ -404,6 +533,133 @@ describe('BlockObserver mutants', () => {
 
       expect(late).toHaveBeenCalledTimes(1);
       expect(logged()).toBe(0);
+    });
+  });
+
+  describe('events from outside the two roots', () => {
+    // A target whose parent chain never reaches the blocks map must drop
+    // silently. Both recursion guards in the walk are what makes it silent:
+    // without them the walk dereferences `null.parent`, or `collectEvent`
+    // dereferences a null block, and the transaction's catch logs.
+    it('drops a target that never reaches the blocks map without logging', () => {
+      const foreign = foreignChange(
+        (holder) => holder.set('nested', new Y.Map<unknown>()),
+        (holder) => {
+          const nested = holder.get('nested');
+
+          if (nested instanceof Y.Map) {
+            nested.set('k', 'v');
+          }
+        }
+      );
+      const attached = attach();
+
+      attached.deliver(foreign.events, foreign.transaction);
+      attached.dispatch(foreign.transaction, doc);
+
+      expect(vi.mocked(logLabeled)).not.toHaveBeenCalled();
+      expect(attached.emitted).toStrictEqual([]);
+    });
+
+    // Remote payloads are untrusted: one event that throws must not cost the
+    // transaction the blocks carried by the events after it.
+    it('logs a throwing event and still classifies the ones after it', () => {
+      const failure = new Error('hostile event');
+      const hostile = {
+        get target(): never {
+          throw failure;
+        },
+      } as unknown as Y.YEvent<Y.AbstractType<unknown>>;
+
+      const real = realBlocksMapChange('b9');
+      const attached = attach();
+
+      attached.deliver([hostile, real.event], real.transaction);
+      attached.dispatch(real.transaction, doc);
+
+      expect(vi.mocked(logLabeled)).toHaveBeenCalledWith(
+        'Failed to process a document change event.',
+        'error',
+        failure
+      );
+      expect(vi.mocked(logLabeled)).toHaveBeenCalledTimes(1);
+      expect(attached.emitted).toStrictEqual([{ type: 'add', blockId: 'b9', origin: 'local' }]);
+    });
+
+    // yjs hands a deep observer the listener list it captured, so an event can
+    // still arrive after `unobserve` nulled the roots. Classifying it would
+    // emit a move for an id this observer no longer knows anything about.
+    it('ignores an order-shaped event replayed after the roots are detached', () => {
+      const foreign = foreignChange(
+        (holder) => holder.set('contentIds', new Y.Array<string>()),
+        (holder) => {
+          const contentIds = holder.get('contentIds');
+
+          if (contentIds instanceof Y.Array) {
+            contentIds.insert(0, ['x']);
+          }
+        }
+      );
+      const attached = attach();
+
+      attached.observer.unobserve();
+      attached.deliver(foreign.events, foreign.transaction);
+      attached.dispatch(foreign.transaction, doc);
+
+      expect(attached.emitted).toStrictEqual([]);
+    });
+  });
+
+  describe('repeated dispatch', () => {
+    // The buckets are popped before emitting, so a second delivery of the same
+    // transaction has nothing left to re-emit.
+    it('emits nothing when the same transaction is dispatched twice', () => {
+      const seen: Y.Transaction[] = [];
+
+      doc.on('afterTransaction', (transaction) => seen.push(transaction));
+      addBlocks(['b1']);
+      events.length = 0;
+
+      const last = seen[seen.length - 1];
+
+      doc.emit('afterTransaction', [last, doc]);
+
+      expect(events).toStrictEqual([]);
+    });
+  });
+
+  describe('unobserve listener release', () => {
+    it('takes its afterTransaction listener off the document', () => {
+      const before = afterTransactionListeners();
+      const fresh = new BlockObserver();
+
+      spare.push(fresh);
+      fresh.observe({ blocksMap, rootOrder }, undoManager);
+
+      const attached = afterTransactionListeners();
+
+      fresh.unobserve();
+
+      expect(afterTransactionListeners()).toBe(before);
+      expect(attached).toBe(before + 1);
+    });
+  });
+
+  describe('mapTransactionOrigin exhaustiveness', () => {
+    // The `default` arm is the runtime half of the compile-time exhaustiveness
+    // guard: a tag registered in LOCAL_ORIGIN_TAGS but never taught to the
+    // switch comes back as itself, so the drift is visible to the caller
+    // instead of arriving as `undefined`.
+    it('returns a registered tag the switch does not handle', () => {
+      const tags = LOCAL_ORIGIN_TAGS as unknown as string[];
+
+      tags.push('future-tag');
+
+      try {
+        expect(observer.mapTransactionOrigin('future-tag')).toBe('future-tag');
+      } finally {
+        tags.pop();
+      }
     });
   });
 });

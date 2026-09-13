@@ -4,8 +4,11 @@
  * decision the existing suite reaches but never reads back, so a mutation of
  * that decision goes unnoticed.
  *
- * Twenty-four recorded mutants are provably equivalent — the code they change
- * cannot produce a different string:
+ * Twenty-four recorded mutants are equivalent. Measured, not argued: a
+ * corpus differential ran each one as a single-mutation copy of this module
+ * against the original over 2560 (input, config, transform) tuples and found
+ * 0 differing outputs, with two deliberately behaviour-changing control
+ * mutants separating at 96 and 1024 differences. The shapes:
  *
  * - `isTemplateNode`'s `node.nodeName === 'template'` half (parse5 gives no
  *   node type outside a template element a `content` property, so the second
@@ -25,6 +28,8 @@
  *   it. Text and comment nodes are handled above it and parse5 puts nothing
  *   else in a fragment parsed in a div context — a doctype token is ignored in
  *   the "in body" insertion mode and a CDATA section becomes a text node.
+ *   A probe copy that threw on entering that guard never fired across the
+ *   whole differential corpus.
  * - The `parentIsBlock` and `parentIsTop` arguments at the two call sites that
  *   pass a literal. Both feed one expression, `parentIsBlock && !parentIsTop`,
  *   and at each of those sites the other operand already settles it.

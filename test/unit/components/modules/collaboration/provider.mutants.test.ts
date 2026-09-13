@@ -2309,4 +2309,312 @@ describe('createCollabProvider (mutation hardening)', () => {
       expect(harness.rec.resets).toBe(0);
     });
   });
+
+  describe('the generation the host can still reach', () => {
+    it('lets a host reconnect from the offline report a dropped connection left behind', () => {
+      const statuses: CollabStatus[] = [];
+      let target: CollabProvider | null = null;
+      const harness = createHarness({
+        options: {
+          onStatus: (status): void => {
+            statuses.push(status);
+
+            if (status === 'offline' && statuses.filter((entry) => entry === 'offline').length === 1) {
+              target?.connect();
+            }
+          },
+        },
+      });
+
+      target = harness.provider;
+      harness.provider.connect();
+
+      const socket = harness.socket();
+
+      socket.open();
+      socket.deliver(controlFrame());
+      socket.serverClose(1006, 'gone');
+
+      expect(harness.sockets).toHaveLength(2);
+    });
+
+    it('lets a host reconnect from the offline report a refused transport left behind', () => {
+      const statuses: CollabStatus[] = [];
+      const opened: MockSocket[] = [];
+      let target: CollabProvider | null = null;
+      let attempts = 0;
+      const harness = createHarness({
+        options: {
+          socketFactory: (url, protocols): WebSocketLike => {
+            attempts += 1;
+
+            if (attempts === 1) {
+              throw new Error('the CSP refused the connection');
+            }
+
+            const socket = new MockSocket(url, protocols);
+
+            opened.push(socket);
+
+            return socket;
+          },
+          onStatus: (status): void => {
+            statuses.push(status);
+
+            if (status === 'offline' && statuses.filter((entry) => entry === 'offline').length === 1) {
+              target?.connect();
+            }
+          },
+        },
+      });
+
+      target = harness.provider;
+      harness.provider.connect();
+
+      expect(opened).toHaveLength(1);
+    });
+
+    it('lets a host reconnect from the offline report a ticket rejection left behind', async () => {
+      const statuses: CollabStatus[] = [];
+      let target: CollabProvider | null = null;
+      let attempts = 0;
+      const ticketSource = (): Promise<string> => {
+        attempts += 1;
+
+        return attempts === 1 ? Promise.reject(new Error('no ticket')) : Promise.resolve('tok-2');
+      };
+      const harness = createHarness({
+        options: {
+          ticketSource,
+          onStatus: (status): void => {
+            statuses.push(status);
+
+            if (status === 'offline' && statuses.filter((entry) => entry === 'offline').length === 1) {
+              target?.connect();
+            }
+          },
+        },
+      });
+
+      target = harness.provider;
+      harness.provider.connect();
+      await flushMicrotasks();
+
+      expect(harness.sockets).toHaveLength(1);
+      expect(harness.socket().protocols).toStrictEqual(['blok-sync.v1', 'tok-2']);
+    });
+
+    it('announces connecting under that exact name when a generation opens', () => {
+      const harness = createHarness();
+
+      harness.provider.connect();
+
+      expect(harness.statuses.map((entry) => entry.status)).toStrictEqual(['connecting']);
+      expect(harness.provider.status).toBe('connecting');
+    });
+
+    it('says nothing more to a host that destroyed the provider inside a status report', () => {
+      const statuses: CollabStatus[] = [];
+      let target: CollabProvider | null = null;
+      const harness = createHarness({
+        options: {
+          socketFactory: (): WebSocketLike => {
+            throw new Error('the CSP refused the connection');
+          },
+          onStatus: (status): void => {
+            statuses.push(status);
+
+            if (status === 'connecting') {
+              target?.destroy();
+            }
+          },
+        },
+      });
+
+      target = harness.provider;
+      harness.provider.connect();
+
+      expect(statuses).toStrictEqual(['connecting']);
+    });
+
+    it('opens nothing when a retry armed after destroy comes due', () => {
+      const statuses: CollabStatus[] = [];
+      let target: CollabProvider | null = null;
+      const harness = createHarness({
+        options: {
+          onStatus: (status): void => {
+            statuses.push(status);
+
+            if (status === 'offline') {
+              target?.destroy();
+            }
+          },
+        },
+      });
+
+      target = harness.provider;
+      harness.provider.connect();
+
+      const socket = harness.socket();
+
+      socket.open();
+      socket.deliver(controlFrame());
+      socket.serverClose(1006, 'gone');
+
+      vi.advanceTimersByTime(60_000);
+
+      expect(harness.sockets).toHaveLength(1);
+    });
+
+    it('leaves no retry armed when the ticket of a destroyed provider rejects', async () => {
+      let rejectTicket: (reason: unknown) => void = () => undefined;
+      const harness = createHarness({
+        options: {
+          ticketSource: (): Promise<string> =>
+            new Promise<string>((_resolve, reject) => {
+              rejectTicket = reject;
+            }),
+        },
+      });
+
+      harness.provider.connect();
+      harness.provider.destroy();
+
+      // The store's awareness interval outlives the provider, so the retry has
+      // to be counted as a CHANGE rather than as the only timer in the world.
+      const armed = vi.getTimerCount();
+
+      rejectTicket(new Error('no ticket'));
+      await flushMicrotasks();
+
+      expect(vi.getTimerCount()).toBe(armed);
+      expect(harness.sockets).toHaveLength(0);
+    });
+  });
+
+  describe('events from a transport the provider has moved on from', () => {
+    /**
+     * Drives a socket whose generation is gone. The provider detaches the
+     * handlers on teardown, so the test holds its own references — which is
+     * the only way to reach the staleness guard that stands behind them.
+     */
+    const abandoned = (harness: Harness): {
+      stale: MockSocket;
+      live: MockSocket;
+      onopen: (event: unknown) => void;
+      onmessage: (event: { data: unknown }) => void;
+      onclose: (event: { code: number; reason: string }) => void;
+    } => {
+      harness.provider.connect();
+
+      const stale = harness.socket();
+      const onopen = stale.onopen;
+      const onmessage = stale.onmessage;
+      const onclose = stale.onclose;
+
+      if (onopen === null || onmessage === null || onclose === null) {
+        throw new Error('the transport was never wired');
+      }
+
+      stale.open();
+      stale.deliver(controlFrame());
+      stale.serverClose(1006, 'gone');
+      advanceToReconnect(harness);
+
+      const live = harness.socket();
+
+      live.open();
+      live.deliver(controlFrame());
+
+      return { stale, live, onopen, onmessage, onclose };
+    };
+
+    it('writes nothing on an abandoned transport that opens late', () => {
+      const harness = createHarness();
+      const { stale, onopen } = abandoned(harness);
+      const written = stale.sent.length;
+
+      onopen({});
+
+      expect(stale.sent).toHaveLength(written);
+    });
+
+    it('does not let an abandoned transport relineage the live document', () => {
+      const harness = createHarness();
+      const { live, onmessage } = abandoned(harness);
+
+      onmessage({ data: encode(controlFrame(LINEAGE_B)) });
+
+      expect(live.closedWith).toBeNull();
+      expect(harness.rec.resets).toBe(0);
+      expect(harness.sockets).toHaveLength(2);
+    });
+
+    it('does not let an abandoned transport close the live connection', () => {
+      const harness = createHarness();
+      const { live, onclose } = abandoned(harness);
+
+      onclose({ code: 1006, reason: 'late' });
+      completeSync(harness, live);
+
+      expect(harness.statuses.at(-1)?.status).toBe('connected');
+      expect(harness.statuses.filter((entry) => entry.status === 'offline')).toHaveLength(1);
+    });
+
+    it('writes nothing for a local edit that reaches the seam after the socket is gone', () => {
+      const harness = createHarness();
+      const socket = ready(harness);
+
+      socket.deliver({ type: 'limits', maxMessageBytes: 4 });
+      socket.serverClose(1006, 'gone');
+
+      // The teardown unhooked this callback; the guard behind it is what keeps
+      // a seam that calls back anyway from ending the session.
+      driveDocUpdate(harness, peerUpdate(), { from: 'local' });
+
+      expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
+      expect(harness.provider.status).toBe('offline');
+    });
+
+    it('does not leak a rejection when no outbox-failure listener was provided', async () => {
+      const rejections: unknown[] = [];
+      const onUnhandled = (reason: unknown): void => {
+        rejections.push(reason);
+      };
+      const outbox = new FakeOutbox();
+      const harness = createHarness({ outbox });
+      const socket = ready(harness, PROTOCOL_V2);
+
+      completeSync(harness, socket);
+      await flushMicrotasks();
+
+      harness.store.applyRemoteUpdate(peerUpdate(), { from: 'seed' });
+
+      const { vector } = peerVectorWith();
+
+      socket.deliver({ type: 'syncStep1', stateVector: vector });
+      await flushMicrotasks();
+
+      outbox.appendFails = true;
+      process.on('unhandledRejection', onUnhandled);
+
+      try {
+        socket.deliver({ type: 'syncStep1', stateVector: vector });
+        await flushMicrotasks();
+        vi.useRealTimers();
+        await new Promise((resolve) => {
+          setTimeout(resolve, 5);
+        });
+      } finally {
+        process.off('unhandledRejection', onUnhandled);
+      }
+
+      expect(rejections).toStrictEqual([]);
+      expect(lastLog()).toStrictEqual({
+        message: `collaboration could not journal the residual state of ${DOC_ID}`,
+        level: 'error',
+      });
+    });
+  });
+
 });

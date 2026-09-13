@@ -231,4 +231,181 @@ describe('convert-html preprocessor mutants', () => {
       expect(wrapper.querySelector('p')?.textContent).toBe('-dash');
     });
   });
+  describe('shorthand background parsing', () => {
+    it('leaves a styled div with no background at all as a div', () => {
+      const wrapper = run('<div style="color: red"><p>x</p></div>');
+
+      expect(wrapper.querySelector('aside')).toBeNull();
+      expect(wrapper.querySelector('div > p')?.textContent).toBe('x');
+    });
+
+    it('accepts a bare colour keyword the CSS parser rejects', () => {
+      const wrapper = run('<div style="background: bogus"><p>x</p></div>');
+
+      expect(wrapper.querySelector('aside > p')?.textContent).toBe('x');
+      expect(wrapper.querySelector('div')).toBeNull();
+    });
+
+    it('accepts a hex colour the CSS parser rejects', () => {
+      const wrapper = run('<div style="background: #ffcc0"><p>x</p></div>');
+
+      expect(wrapper.querySelector('aside > p')?.textContent).toBe('x');
+    });
+
+    it('accepts an rgb() value with no space after the colon', () => {
+      const wrapper = run('<div style="background:rgb(1,2)"><p>x</p></div>');
+
+      expect(wrapper.querySelector('aside > p')?.textContent).toBe('x');
+    });
+
+    it('accepts an rgba() value the CSS parser rejects', () => {
+      const wrapper = run('<div style="background: rgba(1,2)"><p>x</p></div>');
+
+      expect(wrapper.querySelector('aside > p')?.textContent).toBe('x');
+    });
+
+    it('rejects a shorthand value that does not start with a colour', () => {
+      const wrapper = run('<div style="background: 9bogus"><p>x</p></div>');
+
+      expect(wrapper.querySelector('aside')).toBeNull();
+      expect(wrapper.querySelector('div > p')?.textContent).toBe('x');
+    });
+
+    it('rejects a shorthand value with trailing words after the colour', () => {
+      const wrapper = run('<div style="background: bogus rubbish"><p>x</p></div>');
+
+      expect(wrapper.querySelector('aside')).toBeNull();
+      expect(wrapper.querySelector('div > p')?.textContent).toBe('x');
+    });
+
+    it('trims the shorthand value before matching it', () => {
+      const wrapper = run('<div style="background: bogus ; color: red"><p>x</p></div>');
+
+      expect(wrapper.querySelector('aside > p')?.textContent).toBe('x');
+    });
+  });
+
+  describe('colour spuriousness boundaries', () => {
+    it('treats a colour keyword the rgb() test cannot parse as a real background', () => {
+      const wrapper = run('<div style="background-color: red"><p>x</p></div>');
+
+      expect(wrapper.querySelector('aside')).not.toBeNull();
+      expect(wrapper.querySelector('aside')?.style.backgroundColor).toBe('red');
+    });
+
+    it('treats a half-transparent white as spurious', () => {
+      const wrapper = run('<div style="background-color: rgba(255,255,255,0.5)"><p>x</p></div>');
+
+      expect(wrapper.querySelector('aside')).toBeNull();
+      expect(wrapper.querySelector('div')).not.toBeNull();
+    });
+
+    it.each([
+      ['red', 'rgb(250, 255, 255)'],
+      ['green', 'rgb(255, 250, 255)'],
+      ['blue', 'rgb(255, 255, 250)'],
+    ])('treats exactly 250 on the %s channel as near-white', (_name, colour) => {
+      const wrapper = run(`<div style="background-color: ${colour}"><p>x</p></div>`);
+
+      expect(wrapper.querySelector('aside')).toBeNull();
+      expect(wrapper.querySelector('div > p')?.textContent).toBe('x');
+    });
+
+    it.each([
+      ['red', 'rgb(0, 255, 255)'],
+      ['green', 'rgb(255, 0, 255)'],
+      ['blue', 'rgb(255, 255, 0)'],
+    ])('keeps a colour whose %s channel is dark', (_name, colour) => {
+      const wrapper = run(`<div style="background-color: ${colour}"><p>x</p></div>`);
+
+      expect(wrapper.querySelector('aside')).not.toBeNull();
+      expect(wrapper.querySelector('aside')?.style.backgroundColor).toBe(colour);
+    });
+
+    it('leaves an element whose background-color the CSS parser rejected untouched', () => {
+      const wrapper = run('<p><span style="color: red; background-color: bogus">b</span></p>');
+
+      expect(wrapper.querySelector('span')?.getAttribute('style')).toBe('color: red; background-color: bogus');
+    });
+
+    it('keeps a blank wrapper that still carries another attribute', () => {
+      const wrapper = run('<p>a<span class="k" style="background-color: rgb(255,255,255)"> </span>c</p>');
+
+      expect(wrapper.querySelector('span.k')).not.toBeNull();
+      expect(wrapper.querySelector('span')?.hasAttribute('style')).toBe(false);
+    });
+
+    it('keeps an inner div that carries only a style of its own', () => {
+      const wrapper = run(
+        '<div style="background-color: rgb(255, 240, 200)"><div style="color: red"><p>x</p></div></div>',
+      );
+
+      expect(wrapper.querySelector('aside > div[style]')).not.toBeNull();
+      expect(wrapper.querySelector('aside > div > p')?.textContent).toBe('x');
+    });
+  });
+
+  describe('table cell trailing content', () => {
+    it('leaves a cell with no paragraphs completely alone', () => {
+      const wrapper = run('<table><tbody><tr><td>x<br></td></tr></tbody></table>');
+
+      expect(wrapper.querySelector('td br')).not.toBeNull();
+    });
+
+    it('drops a whitespace-only cell paragraph', () => {
+      const wrapper = run('<table><tbody><tr><td><p>  </p><p>kept</p></td></tr></tbody></table>');
+      const cell = wrapper.querySelector('td');
+
+      expect(cell?.textContent).toBe('kept');
+      expect(cell?.querySelectorAll('br')).toHaveLength(0);
+    });
+
+    it('drops a padded nbsp-only cell paragraph', () => {
+      const wrapper = run(`<table><tbody><tr><td><p> ${NBSP} </p><p>kept</p></td></tr></tbody></table>`);
+
+      expect(wrapper.querySelector('td')?.textContent).toBe('kept');
+    });
+
+    it('handles a cell emptied by dropping its only paragraph', () => {
+      const wrapper = run('<table><tbody><tr><td><p> </p></td></tr></tbody></table>');
+
+      expect(wrapper.querySelector('td')?.textContent).toBe('');
+      expect(wrapper.querySelector('td')?.firstChild).toBeNull();
+    });
+
+    it('strips a blank text node sitting after the last paragraph', () => {
+      const wrapper = run('<table><tbody><tr><td><p>x</p> </td></tr></tbody></table>');
+
+      expect(wrapper.querySelector('td')?.innerHTML).toBe('x');
+    });
+
+    it('stops at a trailing element that merely has no text', () => {
+      const wrapper = run('<table><tbody><tr><td><p>x</p><img src="i.png"></td></tr></tbody></table>');
+
+      expect(wrapper.querySelector('td img')).not.toBeNull();
+    });
+  });
+
+  describe('pseudo-list edges', () => {
+    it('leaves a non-paragraph element starting with a bullet alone', () => {
+      const wrapper = run('<div>• x</div><p>after</p>');
+
+      expect(wrapper.querySelector('ul')).toBeNull();
+      expect(wrapper.querySelector('div')?.textContent).toBe('• x');
+    });
+
+    it('starts a list after a preceding non-paragraph element', () => {
+      const wrapper = run('<h2>t</h2><p>• one</p>');
+
+      expect(wrapper.querySelector('ul li')?.textContent).toBe('one');
+      expect(wrapper.querySelector('h2')?.textContent).toBe('t');
+    });
+
+    it('strips the bullet from the first text node even when markup precedes it', () => {
+      const wrapper = run('<p><img src="i.png">• one</p>');
+
+      expect(wrapper.querySelector('ul li')?.textContent).toBe('one');
+      expect(wrapper.querySelector('ul li img')).not.toBeNull();
+    });
+  });
 });

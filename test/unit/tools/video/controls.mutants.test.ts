@@ -2813,3 +2813,141 @@ describe('video controls — time readout cycling', () => {
     }
   });
 });
+
+describe('video controls — helper boundaries', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('reports no buffered progress when the element exposes no ranges at all', () => {
+    expect(bufferedPct(null, 12, 60)).toBe(0);
+  });
+
+  it('prefers the range the playhead sits on its very end of, not the one starting there', () => {
+    // Two ranges touch at t=5. The playhead at 5 is inside the FIRST one (it ends
+    // there), so the loaded bar must read 5/10 — not the far end of the next range.
+    expect(bufferedPct(fakeRanges([[0, 5], [5, 9]]), 5, 10)).toBe(50);
+  });
+
+  it('clamps to zero for an unknown ratio on a zero-length media', () => {
+    expect(timeAtRatio(Number.NaN, 0)).toBe(0);
+  });
+
+  it('formats a zero timestamp as 0:00', () => {
+    expect(formatTime(0)).toBe('0:00');
+  });
+});
+
+describe('video controls — play toggle identity', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('tags the play button with its action and the English label by default', () => {
+    const h = mount();
+    const toggle = q<HTMLButtonElement>(h.controls, '[data-action="play-toggle"]');
+
+    expect(toggle.getAttribute('aria-label')).toBe('Play');
+    h.destroy();
+  });
+
+  it('resolves the play button label through the editor i18n key', () => {
+    const h = mount({ i18n: fakeI18n() as unknown as ControlsOptions['i18n'] });
+
+    expect(q<HTMLButtonElement>(h.controls, '[data-action="play-toggle"]').getAttribute('aria-label'))
+      .toBe(sentinel('play'));
+    h.destroy();
+  });
+
+  it('starts paused, so the first click on the video begins playback', () => {
+    const h = mount();
+
+    h.video.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    // The centre burst mirrors the intent of the click: play glyph on a start.
+    expect(q(h.figure, '[data-role="play-burst"]').innerHTML).toBe(iconHtml(IconPlayerPlay));
+    expect(h.video.pause).not.toHaveBeenCalled();
+    expect(h.video.play).toHaveBeenCalledTimes(1);
+    h.destroy();
+  });
+});
+
+describe('video controls — volume repaint without a media event', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('repaints the volume fill even when the nudge leaves the media untouched', () => {
+    // Volume is already at the ceiling, so ArrowUp writes the same value back and
+    // jsdom (like a browser) fires no volumechange — the UI must repaint anyway.
+    const h = mount();
+
+    press(h.video, 'ArrowUp');
+    expect(q(h.figure, '[data-role="volume"]').style.getPropertyValue('--blok-vol-pct')).toBe('100%');
+    h.destroy();
+  });
+
+  it('repaints the volume fill after restoring a stored level that matches the media', () => {
+    const store = {
+      getItem: vi.fn((key: string): string | null =>
+        (key === 'blok:video:volume' ? '{"volume":1,"muted":false}' : null)),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    };
+    const h = mount({ storage: store });
+
+    h.video.dispatchEvent(new Event('loadedmetadata'));
+    expect(q(h.figure, '[data-role="volume"]').style.getPropertyValue('--blok-vol-pct')).toBe('100%');
+    h.destroy();
+  });
+});
+
+describe('video controls — speed glide ownership', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('drops an in-flight preset glide the moment another rate change lands', () => {
+    const frames = new Map<number, FrameRequestCallback>();
+    let nextId = 0;
+
+    vi.spyOn(performance, 'now').mockReturnValue(1000);
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
+      nextId += 1;
+      frames.set(nextId, cb);
+
+      return nextId;
+    });
+    vi.spyOn(globalThis, 'cancelAnimationFrame').mockImplementation((id: number) => { frames.delete(id); });
+
+    const h = mount();
+    const slider = q<HTMLInputElement>(h.figure, '[data-role="speed-slider"]');
+
+    q<HTMLButtonElement>(h.figure, '[data-action="speed-2"]').click(); // 1× → 2×, glide armed
+    q<HTMLButtonElement>(h.figure, '[data-action="speed-dec"]').click(); // steps to 1.95×
+
+    const pending = [...frames.values()];
+
+    frames.clear();
+    pending.forEach((cb) => cb(1120)); // halfway through the 240ms glide
+
+    expect(slider.value).toBe('1.95');
+    h.destroy();
+  });
+});
+
+describe('video controls — idle auto-hide rearming', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('drops the previous idle countdown when the pointer moves, not just adds another', () => {
+    vi.useFakeTimers();
+    const h = mount();
+
+    h.video.dispatchEvent(new Event('play')); // arms the 3s hide
+    vi.advanceTimersByTime(1500);
+    h.figure.dispatchEvent(new Event('pointermove')); // reveal → the old countdown must die
+    vi.advanceTimersByTime(1600); // past the ORIGINAL 3s deadline, short of the new one
+
+    expect(h.figure.getAttribute('data-controls-hidden')).toBe('false');
+    h.destroy();
+  });
+});

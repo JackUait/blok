@@ -51,6 +51,16 @@ import { DomIterator } from '../../../src/components/domIterator';
  * - `findTypeAheadMatch`'s `?? []` -> `?? ["Stryker was here"]` (getItems always
  *   returns an array) and `?? ''` -> `?? "Stryker was here!"` (Element
  *   textContent is a string, never null).
+ * - `syncTabCursor`'s `{ skipNextTab: false }` (emptied, and flipped to `true`).
+ *   The very next statement sets `skipNextTabFocus = false` unconditionally, so
+ *   neither variant survives into observable state.
+ * - `item.focus({ preventScroll: true })` (emptied, and flipped to `false`).
+ *   jsdom's `focus()` ignores its options argument entirely.
+ * - `moveCursor`'s `selected !== undefined` -> `true`. `selected` is only
+ *   `undefined` when `previous` is, and then the leading `previous?.matches(...)`
+ *   is already falsy.
+ * - `syncTabCursor`'s `?? -1` -> `?? +1`. `iterator` is never null, so the
+ *   right-hand side is never evaluated.
  */
 
 const focusedClass = 'is-focused';
@@ -960,6 +970,232 @@ describe('Flipper — mutation coverage', () => {
 
       expect(focusedFlags(items)).toStrictEqual([false, false]);
       expect(event.defaultPrevented).toBe(false);
+
+      flipper.deactivate();
+    });
+  });
+  describe('popover tab synchronisation', () => {
+    /**
+     * Builds a `[role="tab"]` inside a `[data-blok-popover-tabs]` host, the
+     * exact shape every tab selector in flipper.ts matches on.
+     * @param ariaSelected - value for aria-selected, or null to omit it
+     */
+    const createTab = (ariaSelected: string | null): HTMLElement => {
+      const host = document.createElement('div');
+      const tab = document.createElement('button');
+
+      host.setAttribute('data-blok-popover-tabs', '');
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('data-blok-popover-tab', '');
+
+      if (ariaSelected !== null) {
+        tab.setAttribute('aria-selected', ariaSelected);
+      }
+
+      host.appendChild(tab);
+      document.body.appendChild(host);
+
+      return tab;
+    };
+
+    it('adopts the already-focused selected tab as the cursor when activated', () => {
+      const [one, three] = createItems(['One', 'Three']);
+      const tab = createTab('true');
+      const items = [one, tab, three];
+      const flipper = new Flipper({
+        focusedItemClass: focusedClass,
+        items,
+      });
+
+      tab.focus();
+      flipper.activate();
+
+      expect(focusedFlags(items)).toStrictEqual([false, true, false]);
+
+      flipper.deactivate();
+    });
+
+    it('stops syncing the cursor from focus events once deactivated', () => {
+      const [one] = createItems(['One']);
+      const tab = createTab('true');
+      const items = [one, tab];
+      const flipper = new Flipper({
+        focusedItemClass: focusedClass,
+        items,
+      });
+
+      flipper.activate();
+      flipper.deactivate();
+
+      tab.focus();
+
+      expect(focusedFlags(items)).toStrictEqual([false, false]);
+    });
+
+    it('ignores focus on a listed item that is not a selected tab', () => {
+      const items = createItems(['One', 'Two']);
+      const flipper = new Flipper({
+        focusedItemClass: focusedClass,
+        items,
+      });
+
+      flipper.activate();
+      items[1].focus();
+
+      expect(focusedFlags(items)).toStrictEqual([false, false]);
+      expect(flipper.hasFocus()).toBe(false);
+
+      flipper.deactivate();
+    });
+
+    it('syncs to a selected tab that sits at a non-zero index', () => {
+      const [one, two] = createItems(['One', 'Two']);
+      const tab = createTab('true');
+      const items = [one, two, tab];
+      const flipper = new Flipper({
+        focusedItemClass: focusedClass,
+        items,
+      });
+
+      flipper.activate();
+      tab.focus();
+
+      expect(focusedFlags(items)).toStrictEqual([false, false, true]);
+
+      flipper.deactivate();
+    });
+
+    it('keeps the cursor when a selected tab outside the item list gets focus', () => {
+      const items = createItems(['One', 'Two']);
+      const strayTab = createTab('true');
+      const flipper = new Flipper({
+        focusedItemClass: focusedClass,
+        items,
+      });
+
+      flipper.activate();
+      flipper.focusItem(1);
+      strayTab.focus();
+
+      expect(focusedFlags(items)).toStrictEqual([false, true]);
+
+      flipper.deactivate();
+    });
+
+    it('does not write an "aria-selected" attribute onto a tab that had none', () => {
+      const [two] = createItems(['Two']);
+      const tab = createTab(null);
+      const items = [tab, two];
+      const flipper = new Flipper({
+        focusedItemClass: focusedClass,
+        items,
+      });
+
+      flipper.focusItem(0);
+      flipper.flipRight();
+
+      expect(tab.getAttribute('aria-selected')).toBeNull();
+      expect(focusedFlags(items)).toStrictEqual([false, true]);
+    });
+
+    it('does not restore a stale "aria-selected" onto a non-tab item it just left', () => {
+      const items = createItems(['One', 'Two']);
+      const host = document.createElement('div');
+
+      document.body.appendChild(host);
+
+      const flipper = new Flipper({
+        focusedItemClass: focusedClass,
+        items,
+        activeDescendantHost: host,
+      });
+
+      flipper.flipRight();
+
+      expect(items[0].getAttribute('aria-selected')).toBe('true');
+
+      flipper.flipRight();
+
+      expect(items[0].getAttribute('aria-selected')).toBeNull();
+      expect(items[1].getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('restores DOM focus to the current tab on the Tab press it skips', () => {
+      const [two] = createItems(['Two']);
+      const tab = createTab('true');
+      const items = [tab, two];
+      const flipper = new Flipper({
+        focusedItemClass: focusedClass,
+        items,
+      });
+
+      flipper.activate();
+      flipper.focusItem(0);
+      flipper.handleExternalKeydown(createKeyboardEvent('Tab'));
+
+      expect(tab).toHaveFocus();
+      expect(focusedFlags(items)).toStrictEqual([true, false]);
+
+      flipper.deactivate();
+    });
+
+    it('moves real DOM focus onto the selected tab it flips to', () => {
+      const [one] = createItems(['One']);
+      const tab = createTab('true');
+      const items = [one, tab];
+      const flipper = new Flipper({
+        focusedItemClass: focusedClass,
+        items,
+      });
+
+      flipper.flipRight();
+      flipper.flipRight();
+
+      expect(tab).toHaveFocus();
+      expect(focusedFlags(items)).toStrictEqual([false, true]);
+    });
+
+    it.each([
+      ['Home'],
+      ['End'],
+    ])('leaves %s alone when it comes from inside the tab list', (key) => {
+      const items = createItems(['One', 'Two', 'Three']);
+      const tab = createTab(null);
+      const flipper = new Flipper({
+        focusedItemClass: focusedClass,
+        items,
+      });
+
+      flipper.activate();
+      flipper.focusItem(1);
+
+      const event = createKeyboardEvent(key, { target: tab });
+
+      flipper.handleExternalKeydown(event);
+
+      expect(focusedFlags(items)).toStrictEqual([false, true, false]);
+      expect(event.defaultPrevented).toBe(false);
+
+      flipper.deactivate();
+    });
+  });
+
+  describe('typeahead label source', () => {
+    it('matches the label attribute in preference to the text content', () => {
+      const items = createItems(['Apple', 'Zebra']);
+
+      items[0].setAttribute('data-blok-flipper-label', 'Zebra');
+
+      const flipper = new Flipper({
+        focusedItemClass: focusedClass,
+        items,
+        typeAhead: true,
+      });
+
+      flipper.activate();
+      flipper.handleExternalKeydown(createKeyboardEvent('z'));
+
+      expect(focusedFlags(items)).toStrictEqual([true, false]);
 
       flipper.deactivate();
     });

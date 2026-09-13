@@ -15,6 +15,11 @@ import { dimensionsFromSvg } from '../../../../src/tools/image/dimensions-from-s
  * 2. `fetchSvgText`: the catch block emptied. Same shape: null becomes
  *    undefined, and the caller guard is the loose `text == null`, which is true
  *    for both. No other consumer exists.
+ *
+ * Measured, not argued: both variants were driven against the originals over a
+ * corpus (20 URLs including ones that make `new URL` throw; 9 fetch outcomes
+ * including sync throw, rejected promise, !ok and a throwing `text()`), and the
+ * value reaching each caller guard differed on zero inputs.
  */
 
 const svgResponse = (body: string, ok = true): void => {

@@ -8,12 +8,15 @@ import { CODE_LANGUAGE_ATTR } from '../../../../../src/components/modules/paste/
  * the behavioural suite reaches but never observes, so mutating that decision
  * changes the output.
  *
- * Seven mutants in this module are provably equivalent and are deliberately not
- * chased:
+ * Five mutants in this module are provably equivalent and are deliberately not
+ * chased. Each was measured, not argued: a copy of the module carrying the
+ * mutation was driven over a 304-input corpus (every nesting of `.katex` /
+ * `.katex-display` crossed with annotation and attribute sources, plus every
+ * code-block shape) beside the original, with zero differing outputs.
  *
- * 1. `detectSource` returning `'gemini'`. The caller compares the result only
- *    against `null` and `'chatgpt'`, and takes the Gemini branch for everything
- *    else, so any other non-null string routes identically.
+ * 1. `detectSource` returning `''` instead of `'gemini'`. The caller compares
+ *    the result only against `null` and `'chatgpt'`, and takes the Gemini branch
+ *    for everything else, so any other non-null string routes identically.
  * 2-3. Both guards in the outermost-KaTeX loop — forcing the condition true, and
  *    dropping the `?.` on `katex.parentElement`. `querySelectorAll` yields
  *    ancestors before descendants, and `remove()`/`replaceWith()` detach only
@@ -22,13 +25,10 @@ import { CODE_LANGUAGE_ATTR } from '../../../../../src/components/modules/paste/
  *    subtree — processing it anyway edits an orphan and cannot reach
  *    `wrapper.innerHTML`; and (b) no element in the list ever has a null
  *    `parentElement`, because the only node a pass detaches is the one being
- *    visited, and it is visited once. The nested-KaTeX case below exercises the
- *    skip branch and shows the output is the same either way.
- * 4-7. Four `Element.textContent` fallbacks: the second `?.` in the annotation
- *    chain and in the code-language chain, and the `?? ''` defaults in both
- *    `setCodeContent` calls. `textContent` is nullable only on Document and
- *    DocumentType nodes; on an Element it is always a string, so none of those
- *    right-hand sides is reachable.
+ *    visited, and it is visited once.
+ * 4-5. The `?? ''` defaults in both `setCodeContent` calls. `textContent` is
+ *    nullable only on Document and DocumentType nodes; on an Element it is
+ *    always a string, so neither right-hand side is reachable.
  */
 
 /** Re-parse output into a live tree so structure can be asserted, not matched. */

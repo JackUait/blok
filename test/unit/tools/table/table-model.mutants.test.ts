@@ -1942,3 +1942,399 @@ describe('TableModel handing a three-column origin to its right', () => {
     expect(() => model.validateInvariants()).not.toThrow();
   });
 });
+
+describe('TableModel snapshot key shape', () => {
+  it('omits colspan/rowspan keys entirely for a plain cell', () => {
+    const model = new TableModel(makeData({ content: [[cell('a'), cell('b')]] }));
+
+    // A present-but-undefined colspan/rowspan key survives JSON round-trips as
+    // an explicit null in some serializers, so the key must be absent.
+    const [[first, second]] = model.snapshot().content;
+
+    expect(Object.keys(first)).toStrictEqual(['blocks']);
+    expect(Object.keys(second)).toStrictEqual(['blocks']);
+    expect(model.snapshot().content).toStrictEqual([[{ blocks: ['a'] }, { blocks: ['b'] }]]);
+  });
+});
+
+describe('TableModel block relocation between cells', () => {
+  it('moves only the relocated block out of its previous cell', () => {
+    const model = makeGrid(1, 2);
+
+    model.setCellBlocks(0, 0, []);
+    model.setCellBlocks(0, 1, []);
+    model.addBlockToCell(0, 0, 'x');
+    model.addBlockToCell(0, 0, 'y');
+    model.addBlockToCell(0, 1, 'x');
+
+    expect(model.getCellBlocks(0, 0)).toStrictEqual(['y']);
+    expect(model.getCellBlocks(0, 1)).toStrictEqual(['x']);
+  });
+});
+
+describe('TableModel canMergeCells bounds', () => {
+  it('refuses a rectangle that starts above row 0', () => {
+    const model = makeGrid(2, 2);
+
+    expect(model.canMergeCells({ minRow: -1, maxRow: 0, minCol: 0, maxCol: 1 })).toBe(false);
+  });
+
+  it('refuses a rectangle that starts left of column 0', () => {
+    const model = makeGrid(2, 2);
+
+    expect(model.canMergeCells({ minRow: 0, maxRow: 1, minCol: -1, maxCol: 0 })).toBe(false);
+  });
+});
+
+describe('TableModel merging next to other merges', () => {
+  it('leaves merges outside the merged rectangle intact', () => {
+    const model = new TableModel(makeData({ content: [
+      [{ blocks: ['a'] }, { blocks: ['b'] }, { blocks: ['c'], rowspan: 2 }],
+      [{ blocks: ['d'], colspan: 2 }, { blocks: [], mergedInto: [1, 0] }, { blocks: [], mergedInto: [0, 2] }],
+      [{ blocks: ['g'] }, { blocks: ['h'] }, { blocks: ['i'] }],
+    ] }));
+
+    const result = model.mergeCells({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
+
+    expect(model.getCellSpan(1, 0)).toStrictEqual({ colspan: 2, rowspan: 1 });
+    expect(model.getCellSpan(0, 2)).toStrictEqual({ colspan: 1, rowspan: 2 });
+    expect(result.blocksToRelocate).toStrictEqual(['b']);
+    expect(model.snapshot().content).toStrictEqual([
+      [{ blocks: ['a', 'b'], colspan: 2 }, { blocks: [], mergedInto: [0, 0] }, { blocks: ['c'], rowspan: 2 }],
+      [{ blocks: ['d'], colspan: 2 }, { blocks: [], mergedInto: [1, 0] }, { blocks: [], mergedInto: [0, 2] }],
+      [{ blocks: ['g'] }, { blocks: ['h'] }, { blocks: ['i'] }],
+    ]);
+  });
+});
+
+describe('TableModel splitCell on an unmerged cell', () => {
+  it('keeps the placement of a cell that was never merged', () => {
+    const model = makeGrid(1, 2);
+
+    model.setCellPlacement(0, 0, 'middle-center');
+    model.splitCell(0, 0);
+
+    expect(model.getCellPlacement(0, 0)).toBe('middle-center');
+    expect(model.getCellBlocks(0, 0)).toStrictEqual(['r0c0']);
+  });
+});
+
+describe('TableModel validateInvariants on malformed merge data', () => {
+  it('accepts colWidths whose length matches the column count', () => {
+    const model = new TableModel(makeData({ content: [[cell('a'), cell('b')]], colWidths: [10, 20] }));
+
+    expect(() => model.validateInvariants()).not.toThrow();
+  });
+
+  it('rejects colWidths whose length does not match the column count', () => {
+    const model = new TableModel(makeData({ content: [[cell('a'), cell('b')]], colWidths: [10, 20, 30] }));
+
+    expect(() => model.validateInvariants()).toThrow(/colWidths has 3 entries but grid has 2 columns/);
+  });
+
+  it('rejects a mergedInto row past the last row', () => {
+    const model = new TableModel(makeData({ content: [
+      [{ blocks: [] }, { blocks: [] }],
+      [{ blocks: [] }, { blocks: [], mergedInto: [2, 0] }],
+    ] }));
+
+    expect(() => model.validateInvariants()).toThrow(/mergedInto at \[1,1\] points to out-of-bounds \[2,0\]/);
+  });
+
+  it('rejects a mergedInto column past the last column', () => {
+    const model = new TableModel(makeData({ content: [
+      [{ blocks: [] }, { blocks: [] }],
+      [{ blocks: [] }, { blocks: [], mergedInto: [0, 2] }],
+    ] }));
+
+    expect(() => model.validateInvariants()).toThrow(/mergedInto at \[1,1\] points to out-of-bounds \[0,2\]/);
+  });
+
+  it('rejects a covered cell above its origin', () => {
+    const model = new TableModel(makeData({ content: [
+      [{ blocks: [] }, { blocks: [], mergedInto: [1, 1] }, { blocks: [] }],
+      [{ blocks: [] }, { blocks: [], colspan: 2, rowspan: 2 }, { blocks: [], mergedInto: [1, 1] }],
+      [{ blocks: [] }, { blocks: [], mergedInto: [1, 1] }, { blocks: [], mergedInto: [1, 1] }],
+    ] }));
+
+    expect(() => model.validateInvariants()).toThrow(/mergedInto at \[0,1\] is outside the span of origin \[1,1\]/);
+  });
+
+  it('rejects a covered cell below its origin span', () => {
+    const model = new TableModel(makeData({ content: [
+      [{ blocks: [], colspan: 2, rowspan: 2 }, { blocks: [], mergedInto: [0, 0] }, { blocks: [] }],
+      [{ blocks: [], mergedInto: [0, 0] }, { blocks: [], mergedInto: [0, 0] }, { blocks: [] }],
+      [{ blocks: [], mergedInto: [0, 0] }, { blocks: [] }, { blocks: [] }],
+    ] }));
+
+    expect(() => model.validateInvariants()).toThrow(/mergedInto at \[2,0\] is outside the span of origin \[0,0\]/);
+  });
+
+  it('rejects a covered cell left of its origin', () => {
+    const model = new TableModel(makeData({ content: [
+      [{ blocks: [] }, { blocks: [] }, { blocks: [] }],
+      [{ blocks: [], mergedInto: [1, 1] }, { blocks: [], colspan: 2, rowspan: 2 }, { blocks: [], mergedInto: [1, 1] }],
+      [{ blocks: [] }, { blocks: [], mergedInto: [1, 1] }, { blocks: [], mergedInto: [1, 1] }],
+    ] }));
+
+    expect(() => model.validateInvariants()).toThrow(/mergedInto at \[1,0\] is outside the span of origin \[1,1\]/);
+  });
+});
+
+describe('TableModel movability next to a same-line merge', () => {
+  it('lets a row holding only a horizontal merge move', () => {
+    const model = new TableModel(makeData({ content: [
+      [{ blocks: ['a'], colspan: 2 }, { blocks: [], mergedInto: [0, 0] }],
+      [{ blocks: ['c'] }, { blocks: ['d'] }],
+      [{ blocks: ['e'] }, { blocks: ['f'] }],
+    ] }));
+
+    expect(model.isRowMovable(0)).toBe(true);
+  });
+
+  it('lets a column holding only a vertical merge move', () => {
+    const model = new TableModel(makeData({ content: [
+      [{ blocks: ['a'], rowspan: 2 }, { blocks: ['b'] }],
+      [{ blocks: [], mergedInto: [0, 0] }, { blocks: ['d'] }],
+    ] }));
+
+    expect(model.isColumnMovable(0)).toBe(true);
+  });
+});
+
+describe('TableModel moving a row that carries a horizontal merge', () => {
+  it('rewrites mergedInto to the row the merge landed on', () => {
+    const model = new TableModel(makeData({ content: [
+      [{ blocks: ['a'], colspan: 2 }, { blocks: [], mergedInto: [0, 0] }],
+      [{ blocks: ['c'] }, { blocks: ['d'] }],
+      [{ blocks: ['e'] }, { blocks: ['f'] }],
+    ] }));
+
+    model.moveRow(0, 2);
+
+    expect(model.snapshot().content).toStrictEqual([
+      [{ blocks: ['c'] }, { blocks: ['d'] }],
+      [{ blocks: ['e'] }, { blocks: ['f'] }],
+      [{ blocks: ['a'], colspan: 2 }, { blocks: [], mergedInto: [2, 0] }],
+    ]);
+    expect(() => model.validateInvariants()).not.toThrow();
+  });
+});
+
+describe('TableModel normalizing malformed content', () => {
+  it('treats a non-array content field as an empty table', () => {
+    const model = new TableModel(makeData({ content: {} as unknown as CellContent[][] }));
+
+    expect(model.rows).toBe(0);
+    expect(model.snapshot().content).toStrictEqual([]);
+  });
+
+  it('treats a missing row as a row of zero cells', () => {
+    const model = new TableModel(makeData({ content: [null as unknown as CellContent[]] }));
+
+    expect(model.cols).toBe(0);
+    expect(model.snapshot().content).toStrictEqual([[]]);
+  });
+});
+
+describe('TableModel out-of-range indices', () => {
+  it('reports no color for the row just past the last one', () => {
+    const model = makeGrid(2, 2);
+
+    expect(model.getCellColor(2, 0)).toBeUndefined();
+  });
+
+  it('deletes nothing for the row index just past the last one', () => {
+    const model = makeGrid(2, 2);
+
+    expect(model.deleteRow(2)).toStrictEqual({ type: 'delete-row', index: 2, blocksToDelete: [] });
+    expect(model.rows).toBe(2);
+  });
+});
+
+describe('TableModel deleting a column whose colspan overruns the grid', () => {
+  it('drops the overrunning origin without reaching past the last column', () => {
+    const model = new TableModel(makeData({ content: [
+      [{ blocks: ['a'] }, { blocks: ['b'], colspan: 2 }],
+    ] }));
+
+    expect(model.deleteColumn(1)).toStrictEqual({ type: 'delete-column', index: 1, blocksToDelete: ['b'] });
+    expect(model.snapshot().content).toStrictEqual([[{ blocks: ['a'] }]]);
+  });
+});
+
+describe('TableModel refusing impossible moves', () => {
+  const threeByTwo = (): TableModel => new TableModel(makeData({
+    content: [
+      [cell('a'), cell('b')],
+      [cell('c'), cell('d')],
+      [cell('e'), cell('f')],
+    ],
+    colWidths: [10, 20],
+  }));
+
+  it.each([[5, 0], [0, 5], [1, 1]])('leaves the grid untouched for moveRow(%i, %i)', (from, to) => {
+    const model = threeByTwo();
+
+    expect(model.moveRow(from, to)).toStrictEqual({ type: 'move-row', index: from, toIndex: to });
+    expect(model.snapshot().content).toStrictEqual([
+      [{ blocks: ['a'] }, { blocks: ['b'] }],
+      [{ blocks: ['c'] }, { blocks: ['d'] }],
+      [{ blocks: ['e'] }, { blocks: ['f'] }],
+    ]);
+  });
+
+  it.each([[3, 0], [0, 3], [1, 1]])('leaves the grid and widths untouched for moveColumn(%i, %i)', (from, to) => {
+    const model = threeByTwo();
+
+    expect(model.moveColumn(from, to)).toStrictEqual({ type: 'move-column', index: from, toIndex: to });
+    expect(model.colWidths).toStrictEqual([10, 20]);
+    expect(model.snapshot().content).toStrictEqual([
+      [{ blocks: ['a'] }, { blocks: ['b'] }],
+      [{ blocks: ['c'] }, { blocks: ['d'] }],
+      [{ blocks: ['e'] }, { blocks: ['f'] }],
+    ]);
+  });
+});
+
+describe('TableModel deleting the top row of a 2x2 merge', () => {
+  it('hands the origin to the row below and keeps one row of span', () => {
+    const model = new TableModel(makeData({ content: [
+      [{ blocks: ['a'], colspan: 2, rowspan: 2 }, { blocks: [], mergedInto: [0, 0] }, { blocks: ['c'] }],
+      [{ blocks: [], mergedInto: [0, 0] }, { blocks: [], mergedInto: [0, 0] }, { blocks: ['f'] }],
+      [{ blocks: ['g'] }, { blocks: ['h'] }, { blocks: ['i'] }],
+    ] }));
+
+    expect(model.deleteRow(0)).toStrictEqual({ type: 'delete-row', index: 0, blocksToDelete: ['c'] });
+    expect(model.snapshot().content).toStrictEqual([
+      [{ blocks: ['a'], colspan: 2 }, { blocks: [], mergedInto: [0, 0] }, { blocks: ['f'] }],
+      [{ blocks: ['g'] }, { blocks: ['h'] }, { blocks: ['i'] }],
+    ]);
+    expect(() => model.validateInvariants()).not.toThrow();
+  });
+});
+
+describe('TableModel deleting the covered row of a vertical merge', () => {
+  it('dissolves the merge and leaves the origin plain', () => {
+    const model = new TableModel(makeData({ content: [
+      [{ blocks: ['a'], rowspan: 2 }, { blocks: ['b'] }],
+      [{ blocks: [], mergedInto: [0, 0] }, { blocks: ['d'] }],
+      [{ blocks: ['e'] }, { blocks: ['f'] }],
+    ] }));
+
+    expect(model.deleteRow(1)).toStrictEqual({ type: 'delete-row', index: 1, blocksToDelete: ['d'] });
+    expect(model.snapshot().content).toStrictEqual([
+      [{ blocks: ['a'] }, { blocks: ['b'] }],
+      [{ blocks: ['e'] }, { blocks: ['f'] }],
+    ]);
+    expect(() => model.validateInvariants()).not.toThrow();
+  });
+});
+
+describe('TableModel deleting the left column of a 2x2 merge', () => {
+  it('hands the origin to the column at its right and keeps one column of span', () => {
+    const model = new TableModel(makeData({ content: [
+      [{ blocks: ['a'], colspan: 2, rowspan: 2 }, { blocks: [], mergedInto: [0, 0] }, { blocks: ['c'] }],
+      [{ blocks: [], mergedInto: [0, 0] }, { blocks: [], mergedInto: [0, 0] }, { blocks: ['f'] }],
+      [{ blocks: ['g'] }, { blocks: ['h'] }, { blocks: ['i'] }],
+    ] }));
+
+    expect(model.deleteColumn(0)).toStrictEqual({ type: 'delete-column', index: 0, blocksToDelete: ['g'] });
+    expect(model.snapshot().content).toStrictEqual([
+      [{ blocks: ['a'], rowspan: 2 }, { blocks: ['c'] }],
+      [{ blocks: [], mergedInto: [0, 0] }, { blocks: ['f'] }],
+      [{ blocks: ['h'] }, { blocks: ['i'] }],
+    ]);
+    expect(() => model.validateInvariants()).not.toThrow();
+  });
+});
+
+describe('TableModel deleting the covered column of a horizontal merge', () => {
+  it('dissolves the merge and leaves the origin plain', () => {
+    const model = new TableModel(makeData({ content: [
+      [{ blocks: ['a'], colspan: 2 }, { blocks: [], mergedInto: [0, 0] }, { blocks: ['c'] }],
+      [{ blocks: ['d'] }, { blocks: ['e'] }, { blocks: ['f'] }],
+    ] }));
+
+    expect(model.deleteColumn(1)).toStrictEqual({ type: 'delete-column', index: 1, blocksToDelete: ['e'] });
+    expect(model.snapshot().content).toStrictEqual([
+      [{ blocks: ['a'] }, { blocks: ['c'] }],
+      [{ blocks: ['d'] }, { blocks: ['f'] }],
+    ]);
+    expect(() => model.validateInvariants()).not.toThrow();
+  });
+});
+
+describe('TableModel inserting inside a merge', () => {
+  it('stretches a rowspan over a row inserted through it', () => {
+    const model = new TableModel(makeData({ content: [
+      [{ blocks: ['a'], rowspan: 2 }, { blocks: ['b'] }],
+      [{ blocks: [], mergedInto: [0, 0] }, { blocks: ['d'] }],
+    ] }));
+
+    model.addRow(1);
+
+    expect(model.snapshot().content).toStrictEqual([
+      [{ blocks: ['a'], rowspan: 3 }, { blocks: ['b'] }],
+      [{ blocks: [], mergedInto: [0, 0] }, { blocks: [] }],
+      [{ blocks: [], mergedInto: [0, 0] }, { blocks: ['d'] }],
+    ]);
+    expect(() => model.validateInvariants()).not.toThrow();
+  });
+
+  it('stretches a colspan over a column inserted through it', () => {
+    const model = new TableModel(makeData({ content: [
+      [{ blocks: ['a'], colspan: 2 }, { blocks: [], mergedInto: [0, 0] }],
+      [{ blocks: ['c'] }, { blocks: ['d'] }],
+    ] }));
+
+    model.addColumn(1);
+
+    expect(model.snapshot().content).toStrictEqual([
+      [{ blocks: ['a'], colspan: 3 }, { blocks: [], mergedInto: [0, 0] }, { blocks: [], mergedInto: [0, 0] }],
+      [{ blocks: ['c'] }, { blocks: [] }, { blocks: ['d'] }],
+    ]);
+    expect(() => model.validateInvariants()).not.toThrow();
+  });
+});
+
+describe('TableModel moving a row past a rowspan', () => {
+  const withSpan = (): TableModel => new TableModel(makeData({ content: [
+    [{ blocks: ['a'] }, { blocks: ['b'] }],
+    [{ blocks: ['c'], rowspan: 2 }, { blocks: ['d'] }],
+    [{ blocks: [], mergedInto: [1, 0] }, { blocks: ['f'] }],
+    [{ blocks: ['g'] }, { blocks: ['h'] }],
+  ] }));
+
+  it('allows a landing slot outside the span and refuses one inside it', () => {
+    const model = withSpan();
+
+    expect(model.canMoveRow(3, 1)).toBe(true);
+    expect(model.canMoveRow(3, 2)).toBe(false);
+    expect(model.canMoveRow(0, 2)).toBe(true);
+  });
+
+  it('keeps the span contiguous after a legal move', () => {
+    const model = withSpan();
+
+    model.moveRow(3, 1);
+
+    expect(model.snapshot().content).toStrictEqual([
+      [{ blocks: ['a'] }, { blocks: ['b'] }],
+      [{ blocks: ['g'] }, { blocks: ['h'] }],
+      [{ blocks: ['c'], rowspan: 2 }, { blocks: ['d'] }],
+      [{ blocks: [], mergedInto: [2, 0] }, { blocks: ['f'] }],
+    ]);
+    expect(() => model.validateInvariants()).not.toThrow();
+  });
+});
+
+describe('TableModel normalizing a cell with a nonsense span', () => {
+  it('reports a span of one for a saved colspan/rowspan of zero', () => {
+    const model = new TableModel(makeData({ content: [[{ blocks: ['a'], colspan: 0, rowspan: 0 }]] }));
+
+    expect(model.getCellSpan(0, 0)).toStrictEqual({ colspan: 1, rowspan: 1 });
+    expect(model.hasMerges()).toBe(false);
+    expect(model.snapshot().content).toStrictEqual([[{ blocks: ['a'] }]]);
+  });
+});

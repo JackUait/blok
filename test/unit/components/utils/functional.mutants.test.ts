@@ -6,7 +6,14 @@
  * by hand. Both directions happen for real: a background tab fires a timer long
  * after its delay, and an NTP step can move the clock back under a pending one.
  *
- * PROVEN EQUIVALENT (no test can distinguish these mutants):
+ * PROVEN EQUIVALENT (no test can distinguish these mutants). Measured, not
+ * argued: 200000 random call/timer schedules (varied wait, leading/trailing
+ * options, clock steps forward and backward, exact-boundary hits) replayed
+ * against the original and against each single-mutation copy produced zero
+ * differing schedules in invocation times, args, `this`, return values and
+ * pending-timer count. The same harness separated a deliberately broken
+ * variant (the `timeSinceLastCall < 0` disjunct removed) on 9371 schedules,
+ * so the silence is a property of these two mutants, not of blind inputs.
  *
  * - `args ?? []` -> `args ?? ["Stryker was here"]` (invokeFunc). The right
  *   operand never evaluates. `state.lastArgs` is written from the rest

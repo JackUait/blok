@@ -1751,6 +1751,50 @@ describe('KeyboardController — mutation coverage', () => {
       expect(harness.blok.BlockManager.unsetCurrentBlock).not.toHaveBeenCalled();
       expect(harness.blok.Toolbar.close).not.toHaveBeenCalled();
     });
+
+    /**
+     * One modifier at a time, so a flipped operator in the modifier chain that
+     * feeds the "ignore keydowns on blok and meta keys" guard cannot hide behind
+     * a combo where several modifiers agree.
+     */
+    describe.each([
+      ['Alt', { altKey: true }],
+      ['Ctrl', { ctrlKey: true }],
+      ['Meta', { metaKey: true }],
+      ['Shift', { shiftKey: true }],
+      ['no modifier', {}],
+    ])('with %s held', (_name, modifier: KeyboardEventInit) => {
+      it('drops the current block for a key outside the editor when no block is current', () => {
+        const harness = enabledHarness();
+
+        harness.press(harness.outside, { key: 'a', ...modifier });
+
+        expect(harness.blok.BlockManager.unsetCurrentBlock).toHaveBeenCalledTimes(1);
+        expect(harness.blok.Toolbar.close).toHaveBeenCalledTimes(1);
+      });
+
+      it('routes a key outside the editor to the current block instead of dropping it', () => {
+        const harness = enabledHarness();
+
+        harness.state.currentBlock = makeBlock('current');
+
+        const { event } = harness.press(harness.outside, { key: 'a', ...modifier });
+
+        expect(harness.blok.BlockManager.unsetCurrentBlock).not.toHaveBeenCalled();
+        expect(harness.blok.BlockEvents.keydown).toHaveBeenCalledWith(event);
+      });
+
+      it('leaves a key typed inside the editor untouched', () => {
+        const harness = enabledHarness();
+
+        harness.state.currentBlock = makeBlock('current');
+        harness.press(harness.inside, { key: 'a', ...modifier });
+
+        expect(harness.blok.BlockManager.unsetCurrentBlock).not.toHaveBeenCalled();
+        expect(harness.blok.Toolbar.close).not.toHaveBeenCalled();
+        expect(harness.blok.BlockEvents.keydown).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('keydown bubbling from a non-element target', () => {

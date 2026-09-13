@@ -15,7 +15,7 @@ const mount = (html: string): Fixture => {
   const config = tool.render() as PopoverItemDefaultBaseParams;
   const host = document.createElement('div');
 
-  host.contentEditable = 'true';
+  host.setAttribute('contenteditable', 'true');
   host.innerHTML = html;
   document.body.appendChild(host);
 
@@ -143,7 +143,7 @@ describe('ClearFormatInlineTool mutants', () => {
       select(textNodeOf(host, 'bold'), 2, 2);
       clear();
 
-      expect(host.querySelector('b')).not.toBeNull();
+      expect(host.innerHTML).toBe('<b>bold</b>');
     });
 
     it('leaves the document alone with no selection', () => {
@@ -168,16 +168,17 @@ describe('ClearFormatInlineTool mutants', () => {
     });
 
     it('lifts the leading part out in front of the wrapper', () => {
-      const { host, clear } = mount('a<b>bcd</b>e');
+      const { host, clear } = mount('a<b id="orig">bcd</b>e');
+      const originalBold = host.querySelector('b');
 
       select(textNodeOf(host, 'bcd'), 0, 1);
       clear();
 
       const bold = host.querySelector('b');
 
-      expect(bold?.textContent).toBe('cd');
+      expect(bold).toBe(originalBold);
+      expect(host.innerHTML).toBe('a' + 'b<b id="orig">cd</b>e');
       expect(bold?.previousSibling?.textContent).toBe('b');
-      expect(host.textContent).toBe('abcde');
     });
 
     it('lifts the trailing part out behind the wrapper', () => {
@@ -188,23 +189,80 @@ describe('ClearFormatInlineTool mutants', () => {
 
       const bold = host.querySelector('b');
 
-      expect(bold?.textContent).toBe('bc');
+      expect(host.innerHTML).toBe('a<b>bc</b>de');
       expect(bold?.nextSibling?.textContent).toBe('d');
-      expect(host.textContent).toBe('abcde');
     });
 
     it('splits the wrapper in two around a middle part', () => {
       const { host, clear } = mount('a<b>bcd</b>e');
+      const originalBold = host.querySelector('b');
 
       select(textNodeOf(host, 'bcd'), 1, 2);
       clear();
 
       const bolds = host.querySelectorAll('b');
 
+      expect(host.innerHTML).toBe('a<b>b</b>c<b>d</b>e');
       expect(bolds).toHaveLength(2);
-      expect(bolds[0].textContent).toBe('b');
-      expect(bolds[1].textContent).toBe('d');
-      expect(host.textContent).toBe('abcde');
+      expect(bolds[0]).toBe(originalBold);
+    });
+  });
+
+  describe('edge shapes of the wrapper walk', () => {
+    it('clears a selection that extracts nothing without touching the selection', () => {
+      const { host, clear } = mount('<b></b>');
+
+      selectAll(host);
+      clear();
+
+      expect(host.innerHTML).toBe('');
+      expect(window.getSelection()?.rangeCount).toBe(0);
+    });
+
+    it('deletes the wrappers the extraction emptied but left in place', () => {
+      const { host, clear } = mount('<b>ab</b><i>cd</i>');
+      const range = document.createRange();
+
+      range.setStart(textNodeOf(host, 'ab'), 0);
+      range.setEnd(textNodeOf(host, 'cd'), 2);
+
+      const selection = window.getSelection();
+
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      clear();
+
+      expect(host.innerHTML).toBe('abcd');
+    });
+
+    it('keeps a childless element that only looks empty, like a line break', () => {
+      const { host, clear } = mount('<b>ab<br>cd</b>');
+
+      select(textNodeOf(host, 'ab'), 0, 1);
+      clear();
+
+      expect(host.innerHTML).toBe('a<b>b<br>cd</b>');
+    });
+
+    it('unwraps every wrapper when the marker is the sole child of each', () => {
+      const { host, clear } = mount('<b><i>xy</i></b>');
+
+      select(textNodeOf(host, 'xy'), 0, 2);
+      clear();
+
+      expect(host.innerHTML).toBe('xy');
+    });
+
+    it('splits a wrapper whose sole child is a plain element around the marker', () => {
+      const { host, clear } = mount('<b><span>xy</span></b>');
+
+      select(textNodeOf(host, 'xy'), 0, 2);
+      clear();
+
+      // The emptied outer <b> survives: only the nearest formatting ancestor of
+      // each text node is collected for cleanup, and here that was <b> itself,
+      // already detached by the split. Known stray-wrapper behaviour.
+      expect(host.innerHTML).toBe('xy<b></b>');
     });
   });
 

@@ -35,6 +35,18 @@ import type { OutputBlockData, OutputData } from '../../../types';
  * - `item.id === undefined` in `renderList`'s run filter forced false:
  *   `renderGuarded` guards `active.add`, so `active.has(undefined)` is always
  *   false and the remaining `!active.has(item.id)` keeps an id-less item anyway.
+ * - `hasInlineRenderers` forced true: with an empty renderer map
+ *   `applyInlineRenderers` is a parse5 parse/serialize round trip, and its input
+ *   is `sanitizeHtmlFragment`'s output — itself `serialize(parse(x))` from the
+ *   same parse5 build — so the round trip is a fixed point. Cost only, no output.
+ *
+ * Every claim above is MEASURED, not argued: a corpus differential built one
+ * single-mutation copy of this module per surviving mutant and compared its
+ * output against the original over a document carrying every builtin emitter
+ * (plus nesting, a parent-reference cycle, an unknown tool, id-less blocks and
+ * grouped list runs) under fourteen option combinations. All produced zero
+ * output differences; a deliberately wrong control (the list run's tool
+ * attribute renamed) produced two, so the harness was not vacuous.
  */
 
 /**

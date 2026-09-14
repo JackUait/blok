@@ -50,3 +50,15 @@ if (hasDom && typeof window.Range.prototype.getBoundingClientRect !== 'function'
     return new window.DOMRect(0, 0, 0, 0);
   };
 }
+
+// Polyfill Element.scrollIntoView for jsdom, which ships no layout and so
+// implements neither scrollIntoView nor scrollIntoViewIfNeeded. Every real
+// engine has it; roving-focus code (Flipper, block selection) calls it on every
+// move, and without this the call throws asynchronously inside a jsdom event
+// listener, surfacing as an unhandled error that fails the whole run.
+// Installed on Element.prototype on purpose: several suites stub and then
+// `Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView')` in teardown,
+// which must not strip the baseline back out.
+if (hasDom && typeof window.Element.prototype.scrollIntoView !== 'function') {
+  window.Element.prototype.scrollIntoView = vi.fn();
+}

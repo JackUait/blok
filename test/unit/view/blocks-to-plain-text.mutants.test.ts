@@ -218,6 +218,10 @@ describe('blocksToPlainText — malformed and cyclic wire data', () => {
      * The `: []` a non-array `blocks` falls back to is an array literal, and
      * the only value that can tell one array literal from another is a block
      * whose id IS the other literal — nothing else can reach that lookup.
+     *
+     * The child is a table child no cell names, so it is emitted AFTER the
+     * grid. What the mutant changes is the cell itself: it would render
+     * 'Sentinel child' in place of 'Fallback'.
      */
     it('a cell whose blocks field is not an array ignores a block named after the sentinel', () => {
       const text = blocksToPlainText(doc([
@@ -225,7 +229,7 @@ describe('blocksToPlainText — malformed and cyclic wire data', () => {
         { id: 'Stryker was here', type: 'paragraph', parent: 'grid', data: { text: 'Sentinel child' } },
       ]));
 
-      expect(text).toBe('Fallback');
+      expect(text).toBe('Fallback\n\nSentinel child');
     });
   });
 

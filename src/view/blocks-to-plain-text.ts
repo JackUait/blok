@@ -230,6 +230,25 @@ export const blocksToPlainText = (
   };
 
   /**
+   * Every block id named by any cell of a table.
+   * @param block - table block
+   */
+  const referencedCellIds = (block: ViewBlock): Set<string> => {
+    const content = Array.isArray(block.data.content) ? block.data.content : [];
+    const rows = content.filter((row): row is unknown[] => Array.isArray(row));
+
+    const cellIds = (cell: unknown): string[] => {
+      if (!isRecord(cell) || !Array.isArray(cell.blocks)) {
+        return [];
+      }
+
+      return cell.blocks.filter((id): id is string => typeof id === 'string');
+    };
+
+    return new Set(rows.flat().flatMap(cellIds));
+  };
+
+  /**
    * The block's own segments (no children). Empty texts produce no segment,
    * so contentless blocks add no stray separators.
    * @param block - block to read
@@ -265,10 +284,18 @@ export const blocksToPlainText = (
     try {
       segments.push(...ownSegments(block));
 
-      /** Table children live inside the grid — never re-emitted after it. */
-      if (block.type !== 'table' || renderers[block.type] !== undefined) {
-        model.childrenOf(block.id).forEach((child) => visit(child, segments));
-      }
+      /**
+       * A table's cells already emitted the children they name, so those are
+       * not re-emitted. A child no cell names is emitted here instead of being
+       * dropped — silently indexing as nothing makes content unfindable.
+       */
+      const referenced = block.type === 'table' && renderers[block.type] === undefined
+        ? referencedCellIds(block)
+        : undefined;
+
+      model.childrenOf(block.id)
+        .filter((child) => referenced === undefined || child.id === undefined || !referenced.has(child.id))
+        .forEach((child) => visit(child, segments));
     } finally {
       if (block.id !== undefined) {
         active.delete(block.id);

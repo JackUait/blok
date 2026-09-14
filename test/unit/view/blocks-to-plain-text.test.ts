@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { blocksToPlainText } from '../../../src/view';
+import { blocksToPlainText, extractTexts } from '../../../src/view';
 
 import type { OutputBlockData, OutputData } from '../../../types';
 
@@ -93,6 +93,53 @@ describe('blocksToPlainText', () => {
     ]));
 
     expect(text).toBe('In cell\tX');
+  });
+
+  /**
+   * A block whose `parent` is the table but which no cell's `blocks` array
+   * names is emitted nowhere unless the walk picks it up after the grid.
+   * Silently indexing as nothing makes the content unfindable.
+   */
+  it('emits a table child that no cell references', () => {
+    const text = blocksToPlainText(doc([
+      { id: 't', type: 'table', data: { content: [[{ blocks: ['p1'] }]] } },
+      { id: 'p1', type: 'paragraph', parent: 't', data: { text: 'Referenced' } },
+      { id: 'p2', type: 'paragraph', parent: 't', data: { text: 'ORPHANED-IN-TABLE' } },
+    ]));
+
+    expect(text).toBe('Referenced\n\nORPHANED-IN-TABLE');
+  });
+
+  it('agrees with extractTexts about an unreferenced table child', () => {
+    const document_ = doc([
+      { id: 't', type: 'table', data: { content: [[{ blocks: ['p1'] }]] } },
+      { id: 'p1', type: 'paragraph', parent: 't', data: { text: 'Referenced' } },
+      { id: 'p2', type: 'paragraph', parent: 't', data: { text: 'ORPHANED-IN-TABLE' } },
+    ]);
+
+    for (const piece of extractTexts(document_)) {
+      expect(blocksToPlainText(document_)).toContain(piece);
+    }
+  });
+
+  it('does not double-emit a table child a cell references', () => {
+    const text = blocksToPlainText(doc([
+      { id: 't', type: 'table', data: { content: [[{ blocks: ['p1'] }, { blocks: ['p2'] }]] } },
+      { id: 'p1', type: 'paragraph', parent: 't', data: { text: 'One' } },
+      { id: 'p2', type: 'paragraph', parent: 't', data: { text: 'Two' } },
+    ]));
+
+    expect(text).toBe('One\tTwo');
+  });
+
+  it('emits an unreferenced table child nested under a referenced one', () => {
+    const text = blocksToPlainText(doc([
+      { id: 't', type: 'table', data: { content: [[{ blocks: ['p1'] }]] } },
+      { id: 'p1', type: 'paragraph', parent: 't', data: { text: 'Referenced' } },
+      { id: 'p2', type: 'paragraph', parent: 'p1', data: { text: 'Nested' } },
+    ]));
+
+    expect(text).toBe('Referenced\nNested');
   });
 
   it('keeps code literal', () => {

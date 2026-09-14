@@ -105,7 +105,7 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
     // Keep the scroll region focusable for accessibility checks while inert
     // keeps the closed sheet out of sequential focus navigation.
     this.nodes.items.tabIndex = 0;
-    this.nodes.items.inert = true;
+    this.setSheetInert(true);
 
     this.flipper = new Flipper({
       items: this.flippableElements,
@@ -215,7 +215,7 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
     this.scrollLocker.lock();
 
     this.isHidden = false;
-    this.nodes.items.inert = false;
+    this.setSheetInert(false);
 
     // Move focus into the sheet so keyboard users land on the first item
     // (Radix Dialog/Drawer behaviour). The flipper drives virtual focus over
@@ -247,6 +247,20 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
   }
 
   /**
+   * Mirrors the closed-sheet inert state onto both panes. The tab strip is
+   * mounted outside the items container, so it needs the flag of its own or it
+   * stays in the tab order while the sheet is closed.
+   * @param isInert - true while the sheet is closed
+   */
+  private setSheetInert(isInert: boolean): void {
+    this.nodes.items.inert = isInert;
+
+    if (this.tabStrip !== null) {
+      this.tabStrip.inert = isInert;
+    }
+  }
+
+  /**
    * Closes popover
    */
   public hide(): void {
@@ -257,7 +271,7 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
     super.hide();
 
     this.flipper.deactivate();
-    this.nodes.items.inert = true;
+    this.setSheetInert(true);
 
     this.restorePreviousFocus();
 

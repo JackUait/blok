@@ -36,6 +36,16 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   protected nodes: Nodes;
 
   /**
+   * The `[data-blok-popover-tabs]` strip of the popover, when one of the items
+   * carries it. Mounted above the items container, NOT inside it: the items
+   * container is role="menu" and a menu may own only menuitem/-checkbox/-radio,
+   * group and separator children (ARIA 1.2 "Required Owned Elements"), so a
+   * `role="tablist"` living there is an invalid child (axe: aria-required-children).
+   * The strip is chrome that filters the menu, not an entry of it.
+   */
+  private tabs: HTMLElement | null = null;
+
+  /**
    * List of default popover items that are searchable and may have confirmation state
    */
   protected get itemsDefault(): PopoverItemDefault[] {
@@ -94,16 +104,20 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       this.listeners.on(this.nodes.popoverContainer, 'click', (event: Event) => this.handleClick(event));
     }
 
-    // Set up scroll listener on items container for the edge reel distortion
-    // and the scroll-activity marker that reveals the auto-hidden scrollbar.
-    if (this.nodes.items) {
-      this.listeners.on(this.nodes.items, 'blok-popover-tabs-change', (event: Event) => {
-        if (event.target instanceof HTMLElement
-          && event.target.matches('[data-blok-popover-tabs]')
-          && event.target.closest(`[${DATA_ATTR.popoverItems}]`) === this.nodes.items) {
+    // The tab strip lives outside the items container, so its change event is
+    // caught on the shared ancestor and matched by identity: a strip belonging
+    // to a nested (or unrelated) popover must not refilter this one.
+    if (this.nodes.popoverContainer) {
+      this.listeners.on(this.nodes.popoverContainer, 'blok-popover-tabs-change', (event: Event) => {
+        if (event.target === this.tabs) {
           this.onTabsChange();
         }
       });
+    }
+
+    // Scroll listener on the items container drives the edge reel distortion
+    // and the scroll-activity marker that reveals the auto-hidden scrollbar.
+    if (this.nodes.items) {
       this.listeners.on(this.nodes.items, 'scroll', () => {
         this.updateScrollReel();
         this.updateScrollbar();
@@ -433,8 +447,8 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       return false;
     }
 
-    const selected = this.nodes.items.querySelector(
-      '[data-blok-popover-tabs] [role="tab"][aria-selected="true"]'
+    const selected = this.tabs?.querySelector(
+      '[role="tab"][aria-selected="true"]'
     )?.getAttribute('data-blok-popover-tab');
 
     return selected !== null && selected !== undefined && family !== selected;
@@ -445,7 +459,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   }
 
   private updateTabVisibility(): void {
-    if (!this.nodes.items.querySelector('[data-blok-popover-tabs]')) {
+    if (this.tabs === null) {
       return;
     }
 
@@ -1131,8 +1145,38 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
         return;
       }
 
+      const tabs = itemEl.querySelector<HTMLElement>('[data-blok-popover-tabs]');
+
+      if (tabs !== null) {
+        this.mountTabStrip(itemEl, tabs);
+
+        return;
+      }
+
       this.nodes.items?.appendChild(itemEl);
     });
     this.updateTabVisibility();
+  }
+
+  /**
+   * Mounts a tab strip above the items container instead of inside it, keeping
+   * the role="menu" container free of the invalid `role="tablist"` child.
+   * The item stays in {@link items}, so search, hiding and the flipper's focus
+   * order are unchanged.
+   * @param itemEl - the popover item element wrapping the strip
+   * @param tabs - the `[data-blok-popover-tabs]` element itself
+   */
+  private mountTabStrip(itemEl: HTMLElement, tabs: HTMLElement): void {
+    this.tabs = tabs;
+    // The container is a flex column whose items pane takes the free space.
+    itemEl.classList.add('shrink-0');
+    this.nodes.popoverContainer.insertBefore(itemEl, this.nodes.items);
+  }
+
+  /**
+   * The mounted tab strip, if this popover has one.
+   */
+  protected get tabStrip(): HTMLElement | null {
+    return this.tabs;
   }
 }

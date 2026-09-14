@@ -37,6 +37,9 @@ const NESTED_POPOVER = '[data-blok-nested="true"]';
 const BLOCK_COLOR_PICKER = '[data-blok-testid="block-color-picker"]';
 const LINK_INPUT = '[data-blok-testid="inline-tool-input"]';
 
+// The popover container fades in over 120ms (src/styles/popover-animation.css).
+// An axe scan started mid-fade measures translucent text over whatever is
+// behind the menu and reports colour-contrast failures that do not exist.
 const expectPopoverSettled = async (popover: Locator): Promise<void> => {
   await expect(popover).toHaveCSS('opacity', '1');
 };
@@ -373,6 +376,7 @@ test.describe('editor chrome accessibility', () => {
 
       await expect(firstItem).toBeVisible();
       await expect(firstItem).toHaveAttribute('role', /menuitem/);
+      await expectPopoverSettled(popover.locator(POPOVER_CONTAINER).first());
 
       await expectNoA11yViolations(page, {
         include: BLOCK_TUNES_POPOVER_SELECTOR,
@@ -403,6 +407,7 @@ test.describe('editor chrome accessibility', () => {
       await searchInput.fill('move');
 
       await expect(visibleItems).not.toHaveCount(unfilteredCount);
+      await expectPopoverSettled(popover.locator(POPOVER_CONTAINER).first());
 
       await expectNoA11yViolations(page, {
         include: BLOCK_TUNES_POPOVER_SELECTOR,
@@ -461,6 +466,7 @@ test.describe('editor chrome accessibility', () => {
 
       await expect(nested).toBeVisible();
       await expect(convertTo).toHaveAttribute('aria-expanded', 'true');
+      await expectPopoverSettled(nested);
 
       await expectNoA11yViolations(page, {
         include: `${INLINE_TOOLBAR_INTERFACE_SELECTOR} ${NESTED_POPOVER}`,
@@ -548,6 +554,8 @@ test.describe('editor chrome accessibility', () => {
       await expect(page.getByTestId('inline-tool-remove-link')).toBeVisible();
 
       const field = page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} ${NESTED_POPOVER}`);
+
+      await expectPopoverSettled(field.locator(POPOVER_CONTAINER).first());
 
       await expectNoA11yViolations(page, {
         include: `${INLINE_TOOLBAR_INTERFACE_SELECTOR} ${NESTED_POPOVER}`,

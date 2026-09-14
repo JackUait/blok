@@ -1152,8 +1152,31 @@ export class PopoverDesktop extends PopoverAbstract {
 
     this.nestedCloseIntentTimer = window.setTimeout(() => {
       this.nestedCloseIntentTimer = null;
+
+      // Pointer intent must never evict a submenu the keyboard is inside:
+      // typing into its search field or stepping through its items is an
+      // active interaction that the pointer position says nothing about.
+      // Without this the grace fires ~300ms after the mouse wanders off and
+      // the submenu vanishes mid-typing, dropping focus to <body>.
+      if (this.isNestedPopoverFocused()) {
+        return;
+      }
+
       this.destroyNestedPopoverIfExists(false);
     }, PopoverDesktop.NESTED_CLOSE_INTENT_DELAY_MS);
+  }
+
+  /**
+   * Whether the keyboard focus currently sits inside the open submenu.
+   */
+  private isNestedPopoverFocused(): boolean {
+    const active = document.activeElement;
+
+    if (active === null || this.nestedPopover === undefined || this.nestedPopover === null) {
+      return false;
+    }
+
+    return this.nestedPopover.hasNode(active);
   }
 
   /**

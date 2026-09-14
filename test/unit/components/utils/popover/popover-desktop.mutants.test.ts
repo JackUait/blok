@@ -1324,6 +1324,51 @@ describe('PopoverDesktop — nested submenu lifecycle', () => {
     expect(instance.nestedPopover).toBe(opened);
   });
 
+  it('keeps a submenu that holds the keyboard focus when the pointer grace elapses', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+    const parentItem = itemByName(popover, 'c-parent');
+
+    popover.show();
+    instance.showNestedItems(parentItem);
+
+    const opened = instance.nestedPopover;
+
+    expect(opened).toBeInstanceOf(PopoverDesktop);
+
+    // The user typed/tabbed into the submenu, so the keyboard lives there now.
+    const focusTarget = document.createElement('input');
+
+    (opened as PopoverDesktop).getElement().appendChild(focusTarget);
+    focusTarget.focus();
+    expect(focusTarget).toHaveFocus();
+
+    // Pointer leaves the parent popover entirely → grace close scheduled.
+    instance.handleMouseLeave(new MouseEvent('mouseleave'));
+    vi.advanceTimersByTime(1000);
+
+    expect(instance.nestedPopover).toBe(opened);
+    expect(focusTarget).toHaveFocus();
+  });
+
+  it('still closes on the pointer grace when the keyboard focus is outside the submenu', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+    const parentItem = itemByName(popover, 'c-parent');
+
+    popover.show();
+    instance.showNestedItems(parentItem);
+
+    expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+
+    instance.handleMouseLeave(new MouseEvent('mouseleave'));
+    vi.advanceTimersByTime(1000);
+
+    expect(instance.nestedPopover).toBeNull();
+  });
+
   it('abandons a sibling hover open-intent when the keyboard opens another submenu', () => {
     vi.useFakeTimers();
     const popover = createPopover({

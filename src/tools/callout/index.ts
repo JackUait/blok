@@ -64,9 +64,9 @@ const VARIANT_TO_BG_PRESET: Record<string, string | null> = {
 
 /**
  * Origins that mean "the author just made this block" — the only ones allowed to
- * seed the first child paragraph. Allow-list so a future origin fails CLOSED.
- * `undefined` means a host hand-built the constructor options (core always
- * supplies one), which is an explicit creation.
+ * seed the first child paragraph unconditionally. Allow-list so a future origin
+ * fails CLOSED. `undefined` means a host hand-built the constructor options
+ * (core always supplies one), which is an explicit creation.
  */
 const CREATION_ORIGINS: ReadonlySet<BlockOrigin | undefined> = new Set<BlockOrigin | undefined>([
   undefined,
@@ -99,11 +99,19 @@ export class CalloutTool implements BlockTool {
    * creation may seed its child paragraph.
    */
   private readonly isCreation: boolean;
+  /**
+   * True when the document itself named this callout's children. Only `load`
+   * carries that declaration (the renderer composes the block with the stored
+   * `contentIds`), which is what lets a load tell a genuinely bodyless callout
+   * apart from one whose children have simply not mounted yet.
+   */
+  private readonly isDeclaredLoad: boolean;
 
   constructor({ data, api, readOnly, block, config, origin }: BlockToolConstructorOptions<CalloutData, CalloutConfig>) {
     this.api = api;
     this.readOnly = readOnly;
     this.isCreation = CREATION_ORIGINS.has(origin);
+    this.isDeclaredLoad = origin === 'load' && (block?.contentIds?.length ?? 0) === 0;
 
     const importedText = typeof (data as Record<string, unknown>).__importedText === 'string'
       ? (data as Record<string, unknown>).__importedText as string
@@ -266,33 +274,54 @@ export class CalloutTool implements BlockTool {
     mountChildBlocks(this._dom.childContainer, children);
 
     // Auto-create initial paragraph child when callout has no children.
-    // Only for a genuine creation: a re-materialised callout renders as a FRESH
-    // instance and its restored children's add events land AFTER this call, so
-    // getChildren() is only TRANSIENTLY empty. Seeding then writes a phantom
-    // paragraph back into the shared document. Mirrors Column.rendered().
-    if (children.length === 0 && this.isCreation) {
-      const blockIndex = this.api.blocks.getBlockIndex(this.blockId);
-
-      if (blockIndex !== undefined) {
-        // If conversion handed us source text to preserve, seed the first
-        // child paragraph with it (single-shot — cleared immediately).
-        const seedText = this._pendingChildText;
-
-        this._pendingChildText = null;
-
-        const childData = seedText !== null && seedText.length > 0
-          ? { text: seedText }
-          : undefined;
-
-        const newBlock = this.api.blocks.insertInsideParent(this.blockId, blockIndex + 1, childData);
-
-        // Manually append the new child's holder — insertInsideParent places it in the
-        // flat block list but doesn't know about our childContainer DOM.
-        this._dom.childContainer.appendChild(newBlock.holder);
-
-        this.api.caret.setToBlock(newBlock.id, seedText !== null ? 'end' : 'start');
-      }
+    // Only for a genuine creation, or for a stored document that declares none:
+    // a re-materialised callout renders as a FRESH instance and its restored
+    // children's add events land AFTER this call, so getChildren() is only
+    // TRANSIENTLY empty. Seeding then writes a phantom paragraph back into the
+    // shared document. Mirrors Column.rendered(). `load` is exempt from that
+    // trap only because it brings the document's own contentIds with it — an
+    // empty declaration there is authoritative, and a callout keeps its body in
+    // children, so skipping the seed would render a panel nothing can type in.
+    if (children.length === 0 && (this.isCreation || this.isDeclaredLoad)) {
+      this.seedBodyParagraph();
     }
+  }
+
+  /** Give a bodyless callout the child paragraph its content lives in. */
+  private seedBodyParagraph(): void {
+    if (this.blockId === undefined || this._dom === null) {
+      return;
+    }
+
+    const blockIndex = this.api.blocks.getBlockIndex(this.blockId);
+
+    if (blockIndex === undefined) {
+      return;
+    }
+
+    // If conversion handed us source text to preserve, seed the first
+    // child paragraph with it (single-shot — cleared immediately).
+    const seedText = this._pendingChildText;
+
+    this._pendingChildText = null;
+
+    const childData = seedText !== null && seedText.length > 0
+      ? { text: seedText }
+      : undefined;
+
+    const newBlock = this.api.blocks.insertInsideParent(this.blockId, blockIndex + 1, childData);
+
+    // Manually append the new child's holder — insertInsideParent places it in the
+    // flat block list but doesn't know about our childContainer DOM.
+    this._dom.childContainer.appendChild(newBlock.holder);
+
+    // A load is the document being read, not authored: moving the caret there
+    // would pull focus into whichever callout the page happens to hold.
+    if (this.isDeclaredLoad) {
+      return;
+    }
+
+    this.api.caret.setToBlock(newBlock.id, seedText !== null ? 'end' : 'start');
   }
 
   public save(): CalloutData {

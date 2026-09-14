@@ -13,10 +13,18 @@ vi.mock('../../../../src/components/utils/emoji/emoji-data', () => ({
 /**
  * Callout stores its content in child blocks, so it seeds a first paragraph when
  * it has none. That seed is only correct for a genuine creation: on a restore
- * (document load, undo/redo replay, a remote collaborative update, paste, or an
- * off-tree probe) the real children's add events land AFTER rendered(), so
- * getChildren() is transiently empty and seeding mints a phantom child that is
- * written back into the shared document. Gate mirrors src/tools/column/index.ts.
+ * (undo/redo replay, a remote collaborative update, paste, or an off-tree probe)
+ * the real children's add events land AFTER rendered(), so getChildren() is
+ * transiently empty and seeding mints a phantom child that is written back into
+ * the shared document. Gate mirrors src/tools/column/index.ts.
+ *
+ * `load` is the exception, because it is the ONE re-materialisation that carries
+ * its own declaration: the renderer composes the block with the `contentIds` the
+ * stored document names. A load whose contentIds are non-empty is the transient
+ * case and must not seed. A load whose contentIds are EMPTY is a document that
+ * genuinely declares a bodyless callout — a hand-authored `{ type: 'callout' }`,
+ * which is the shape the docs and every host example use — and without a seed it
+ * renders an inert panel with nothing to click into or type in.
  */
 describe('callout seeds only for a genuine creation', () => {
   beforeEach(() => {
@@ -56,13 +64,14 @@ describe('callout seeds only for a genuine creation', () => {
   const createOptions = (
     api: API,
     origin: BlockToolConstructorOptions<CalloutData, CalloutConfig>['origin'],
-    data: Partial<CalloutData> = {}
+    data: Partial<CalloutData> = {},
+    contentIds: readonly string[] = ['declared-child']
   ): BlockToolConstructorOptions<CalloutData, CalloutConfig> => ({
     data: { emoji: '💡', textColor: null, backgroundColor: null, ...data },
     config: {},
     api,
     readOnly: false,
-    block: { id: 'callout-block-id' } as never,
+    block: { id: 'callout-block-id', contentIds } as never,
     origin,
   });
 
@@ -71,6 +80,40 @@ describe('callout seeds only for a genuine creation', () => {
     (origin) => {
       const { insertInsideParent, api } = seedProbe();
       const tool = new CalloutTool(createOptions(api, origin));
+
+      tool.render();
+      tool.rendered();
+
+      expect(insertInsideParent).not.toHaveBeenCalled();
+    }
+  );
+
+  it('seeds a body paragraph for a stored document that declares no children', () => {
+    const { insertInsideParent, api } = seedProbe();
+    const tool = new CalloutTool(createOptions(api, 'load', {}, []));
+
+    tool.render();
+    tool.rendered();
+
+    expect(insertInsideParent).toHaveBeenCalledTimes(1);
+  });
+
+  /** The document is being read, not authored — the seed must not steal the caret. */
+  it('does not move the caret when the seed comes from a load', () => {
+    const { api } = seedProbe();
+    const tool = new CalloutTool(createOptions(api, 'load', {}, []));
+
+    tool.render();
+    tool.rendered();
+
+    expect(api.caret.setToBlock).not.toHaveBeenCalled();
+  });
+
+  it.each(['replay', 'paste', 'probe'] as const)(
+    'still does NOT seed with origin «%s» even when nothing is declared',
+    (origin) => {
+      const { insertInsideParent, api } = seedProbe();
+      const tool = new CalloutTool(createOptions(api, origin, {}, []));
 
       tool.render();
       tool.rendered();

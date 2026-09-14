@@ -72,8 +72,9 @@ for (const width of [1280, 390]) {
         const dividers = conversion.getByRole('separator');
         const allDividers = conversion.getByRole('separator', { includeHidden: true });
 
-        await expect(allDividers).toHaveCount(2);
-        await expect(allDividers.first()).toBeHidden();
+        // Family tabs replaced the two section labels, so a single divider now
+        // parts the heading picker from the ordinary conversions.
+        await expect(allDividers).toHaveCount(1);
         await expect(dividers).toHaveCount(1);
         const sections = await dividers.evaluateAll(elements => elements.map(element => {
           const section = element.parentElement;
@@ -186,15 +187,13 @@ for (const width of [1280, 390]) {
           const dividers = conversion.getByRole('separator', { includeHidden: true });
           const search = conversion.getByRole('combobox');
 
-          await expect(dividers).toHaveCount(2);
-          await expect(dividers.first()).toBeHidden();
+          await expect(dividers).toHaveCount(1);
           await expect(dividers.last()).toBeVisible();
           await search.fill('Heading');
           await expect(conversion.locator('[role="separator"]:not([data-blok-hidden])')).toHaveCount(0);
           await expect(dividers.last()).toBeHidden();
           await search.fill('');
-          await expect(dividers).toHaveCount(2);
-          await expect(dividers.first()).toBeHidden();
+          await expect(dividers).toHaveCount(1);
           await expect(dividers.last()).toBeVisible();
         });
 
@@ -256,9 +255,13 @@ for (const width of [1280, 390]) {
 
         await expect(result).toBeVisible();
         await expect(visibleLabel).toHaveCSS('clip-path', 'none');
-        if (width < 650) {
+        // The convert menu never auto-focuses a choice (the family tabs take the
+        // first cursor stop), so walk the cursor down onto Heading 3 first.
+        await expect.poll(async () => {
           await keyboardTarget.press('ArrowDown');
-        }
+
+          return result.getAttribute('data-blok-focused');
+        }).toBe('true');
         await keyboardTarget.press('Enter');
         await expect(page.getByRole('heading', { name: 'A better way to work', level: 3 })).toBeVisible();
       });

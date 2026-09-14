@@ -353,6 +353,14 @@ test.describe('cross-block text selection', () => {
         offset: 6 }
     );
 
+    // The formatting toolbar opens a beat after the drag settles, and it is the
+    // first of the two layers this test walks through. Pressing before it is up
+    // promotes on the FIRST Escape and lets the second clear the selection
+    // again, so wait for the layer to exist rather than racing it.
+    await expect(
+      page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"]`)
+    ).toBeVisible();
+
     // One Escape dismisses exactly one layer: the formatting toolbar the
     // selection opened goes first, the selection itself second.
     await page.keyboard.press('Escape');

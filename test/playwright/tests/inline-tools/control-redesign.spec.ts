@@ -59,7 +59,9 @@ for (const width of [1280, 390, 320]) {
   });
 }
 
-test('configured formatting order stays intact in the compact bar', async ({ page }) => {
+// `inlineToolbar` picks WHICH tools appear, never where: the bar renders them in
+// INLINE_TOOL_ORDER (src/components/constants/inline-tool-order.ts).
+test('configured formatting set renders in canonical order in the compact bar', async ({ page }) => {
   await gotoTestPage(page);
   await page.evaluate(async () => {
     const holder = document.createElement('div');
@@ -79,15 +81,18 @@ test('configured formatting order stays intact in the compact bar', async ({ pag
   const tools = page.locator('[data-blok-interface="inline-toolbar"]').getByRole('menuitemcheckbox');
 
   await expect(tools).toHaveCount(3);
-  await expect(tools.nth(0)).toHaveAccessibleName('Underline');
-  await expect(tools.nth(1)).toHaveAccessibleName('Bold');
-  await expect(tools.nth(2)).toHaveAccessibleName('Italic');
+  await expect(tools.nth(0)).toHaveAccessibleName('Bold');
+  await expect(tools.nth(1)).toHaveAccessibleName('Italic');
+  await expect(tools.nth(2)).toHaveAccessibleName('Underline');
   await page.keyboard.press('Tab');
   await expect(tools.nth(0)).toHaveAttribute('data-blok-focused', 'true');
   await page.keyboard.press('ArrowRight');
   await expect(tools.nth(1)).toHaveAttribute('data-blok-focused', 'true');
   await page.keyboard.press('ArrowLeft');
   await expect(tools.nth(0)).toHaveAttribute('data-blok-focused', 'true');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect(tools.nth(2)).toHaveAttribute('data-blok-focused', 'true');
   await page.keyboard.press('Enter');
   await expect.poll(() => paragraph.innerHTML()).toBe('<u>Keep my tools in order.</u>');
 });

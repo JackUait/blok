@@ -67,21 +67,33 @@ for (const width of [1280, 390]) {
 
       await expect(headings).toHaveCount(6);
       await expect(toggles).toHaveCount(6);
+      // Family tabs show one strip at a time, three previews per row.
+      await expect(menu.locator('[data-blok-convert-group="toggle-heading"]:visible')).toHaveCount(0);
       const rects = await headings.evaluateAll(elements => elements.map(element => {
         const rect = element.getBoundingClientRect();
 
         return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
       }));
 
-      for (const rect of rects) {
-        expect(rect.y).toBeCloseTo(rects[0].y, 0);
+      rects.forEach((rect, index) => {
+        const row = rects[index < 3 ? 0 : 3];
+        const column = rects[index % 3];
+
+        expect(Math.abs(rect.y - row.y)).toBeLessThanOrEqual(1);
+        expect(Math.abs(rect.x - column.x)).toBeLessThanOrEqual(1);
         expect(rect.height).toBeGreaterThanOrEqual(40);
         expect(rect.x).toBeGreaterThanOrEqual(0);
         expect(rect.x + rect.width).toBeLessThanOrEqual(width);
-      }
+      });
+      expect(rects[3].y).toBeGreaterThan(rects[0].y);
+      await menu.getByRole('tab', { name: 'Toggle heading', exact: true }).click();
+      await expect(menu.locator('[data-blok-convert-group="toggle-heading"]:visible')).toHaveCount(6);
+      await expect(menu.locator('[data-blok-convert-group="heading"]:visible')).toHaveCount(0);
       const toggleBounds = await toggles.first().boundingBox();
 
-      expect(toggleBounds?.y).toBeGreaterThan(rects[0].y);
+      // The other family takes over the same strip instead of stacking below it.
+      expect(Math.abs((toggleBounds?.y ?? -1) - rects[0].y)).toBeLessThanOrEqual(1);
+      await menu.getByRole('tab', { name: 'Heading', exact: true }).click();
       const search = menu.getByRole('combobox');
 
       await search.fill('no-matching-shape-xyz');

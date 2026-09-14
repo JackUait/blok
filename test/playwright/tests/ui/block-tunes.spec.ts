@@ -1029,7 +1029,14 @@ test.describe('ui.block-tunes', () => {
 
       expect(nestedItemsCount).toBeGreaterThan(0);
 
-      // Nested popover opens without auto-focus; navigate to first item
+      // Nested popover opens without auto-focus. The convert menu's heading
+      // family tab strip is a focus stop, so it takes the first ArrowDown.
+      const selectedTab = nestedPopover.locator('[data-blok-popover-tabs] [role="tab"][aria-selected="true"]');
+
+      await page.keyboard.press('ArrowDown');
+
+      await expect(selectedTab).toHaveAttribute('data-blok-focused', 'true');
+
       await page.keyboard.press('ArrowDown');
        
       await expect(nestedItems.first()).toHaveAttribute('data-blok-focused', 'true');

@@ -839,7 +839,7 @@ test.describe('inline toolbar', () => {
 
   // Firefox has different text layout behavior for selections near line wraps,
   // causing the selection bounding box to be positioned differently than in Chromium/WebKit
-  test('should align with the right edge when toolbar width exceeds available space', async ({ page, browserName }) => {
+  test('should stay inside the viewport when toolbar width exceeds available space', async ({ page, browserName }) => {
     // eslint-disable-next-line playwright/no-skipped-test -- conditional skip for browser-specific behavior
     test.skip(browserName === 'firefox', 'Firefox has different text layout behavior near line wraps');
     await createBlok(page, {
@@ -871,17 +871,22 @@ test.describe('inline toolbar', () => {
     await expect(toolbar).toBeVisible();
 
     const toolbarBox = await getRequiredBoundingBox(toolbar);
-    // Use the contenteditable element's bounding box for more accurate comparison
-    const paragraphBox = await getRequiredBoundingBox(paragraph);
+    const selectionLeft = await page.evaluate(() => {
+      const range = window.getSelection()?.getRangeAt(0);
 
-    const toolbarRight = toolbarBox.x + toolbarBox.width;
-    const paragraphRight = paragraphBox.x + paragraphBox.width;
+      return range?.getBoundingClientRect().x ?? null;
+    });
+    const viewportWidth = page.viewportSize()?.width ?? 0;
 
-    // Increased from 35 to 50 px: toolbar right-aligns to block-content div,
-    // while the test measures against the inner [contenteditable] element,
-    // which has a slightly different right edge. Delta grew after Underline and
-    // Strikethrough were added as default tools, widening the toolbar (~43 px on Chromium).
-    expect(Math.abs(toolbarRight - paragraphRight)).toBeLessThanOrEqual(50);
+    expect(selectionLeft).not.toBeNull();
+    expect(viewportWidth).toBeGreaterThan(0);
+
+    // The toolbar starts at the selection and is clamped to the VIEWPORT (with
+    // an 8px gutter), not to the editor column — see the inline positioner. A
+    // toolbar too wide for the space to its right may only shift left.
+    expect(toolbarBox.x).toBeGreaterThanOrEqual(7);
+    expect(toolbarBox.x + toolbarBox.width).toBeLessThanOrEqual(viewportWidth - 7);
+    expect(toolbarBox.x).toBeLessThanOrEqual((selectionLeft ?? 0) + 1);
   });
 
   test('should position toolbar near selection when page is scrolled', async ({ page }) => {

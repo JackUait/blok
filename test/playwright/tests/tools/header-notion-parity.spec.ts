@@ -11,6 +11,12 @@ const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="
 const POPOVER_CONTAINER_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
 const NESTED_POPOVER_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-nested="true"] [data-blok-testid="popover-container"]';
 const TOGGLE_ARROW_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-toggle-arrow]`;
+// The convert menu shows Heading and Toggle heading as two tabs over one tile
+// strip; only the selected family's tiles are visible, and the tab that starts
+// selected is the one the block already belongs to. Reaching the other family
+// means picking its tab first.
+const convertTab = (group: 'heading' | 'toggle-heading'): string =>
+  `${NESTED_POPOVER_SELECTOR} [data-blok-popover-tabs] [role="tab"][data-blok-popover-tab="${group}"]`;
 
 declare global {
   interface Window {
@@ -99,6 +105,8 @@ test.describe('header Notion parity', () => {
 
     await convertTo.dispatchEvent('mouseover');
 
+    await page.locator(convertTab('toggle-heading')).click();
+
     const toggleEntry = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="toggle-header-2"]`);
 
     await expect(toggleEntry).toBeVisible();
@@ -142,6 +150,8 @@ test.describe('header Notion parity', () => {
     const convertTo = page.locator(`${POPOVER_CONTAINER_SELECTOR} [data-blok-item-name="convert-to"]`);
 
     await convertTo.dispatchEvent('mouseover');
+
+    await page.locator(convertTab('heading')).click();
 
     const headingEntry = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header-2"]`);
 

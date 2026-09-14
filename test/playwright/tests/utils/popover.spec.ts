@@ -1173,9 +1173,15 @@ test.describe('popover', () => {
       await expect(nestedPopover).toBeVisible();
 
       // The convert menu is searchable, so opening it puts the caret in its
-      // search field; ArrowDown then hands focus to the first option, skipping
-      // the decorative section label.
+      // search field. ArrowDown then walks the focus ring: the heading family
+      // tab strip is a focus stop and comes before the first option.
       await expect(nestedPopover.getByRole('combobox')).toBeFocused();
+
+      const selectedTab = nestedPopover.locator('[data-blok-popover-tabs] [role="tab"][aria-selected="true"]');
+
+      await page.keyboard.press('ArrowDown');
+
+      await expect(selectedTab).toHaveAttribute('data-blok-focused', 'true');
 
       await page.keyboard.press('ArrowDown');
 

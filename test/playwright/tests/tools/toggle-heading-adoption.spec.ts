@@ -222,6 +222,10 @@ test.describe('Toggle heading conversion adopts its section (Notion parity)', ()
     await page.locator('[data-blok-id="c"] [contenteditable]').hover();
     await page.locator('[data-blok-testid="settings-toggler"]').click();
     await page.getByRole('menuitem', { name: 'Convert to' }).click();
+    // Heading and Toggle heading are two tabs over one tile strip, and Heading
+    // is the one selected by default — the toggle tiles are hidden until its
+    // tab is picked.
+    await page.locator('[data-blok-popover-tabs] [role="tab"][data-blok-popover-tab="toggle-heading"]').click();
     await page.getByRole('menuitem', { name: 'Toggle heading 1' }).click();
 
     // Every original block became a root-level toggle heading; none swallowed

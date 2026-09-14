@@ -51,14 +51,14 @@
   font-size: 12px;
   font-weight: 550;
   min-height: 44px;
-  gap: 3px;
+  gap: var(--blok-space-0-75);
   --_blok-convert-size-limit: 19px;
   position: relative;
   grid-column: span 2;
   height: 65px;
   padding: 0 var(--blok-space-2);
   justify-content: flex-start;
-  border-radius: 7px;
+  border-radius: var(--blok-space-1-75);
   background-color: transparent;
   --_blok-convert-size: 19px;
   --_blok-convert-weight: 750;
@@ -92,7 +92,7 @@
   color: var(--blok-text-primary);
   background-color: var(--blok-item-hover-bg);
   --_blok-convert-size-limit: 17px;
-  padding-inline: 7px;
+  padding-inline: var(--blok-space-1-75);
   --_blok-convert-size-limit: 15px;
   --_blok-convert-size-limit: 16px;
   padding-inline: var(--blok-space-1);
@@ -4326,7 +4326,7 @@
 }
 
 .blok-media-empty__input--bare {
-  padding: 7px 0;
+  padding: var(--blok-space-1-75) 0;
   border: 0;
   background: transparent;
   border-radius: 0;
@@ -4599,7 +4599,7 @@
 }
 
 [@container (min-width: 360px)] [data-blok-tool="image"] .blok-image-caption-row__alt {
-  padding: 3px 8px;
+  padding: var(--blok-space-0-75) var(--blok-space-2);
   font-size: 11px;
 }
 

@@ -113,7 +113,7 @@
      scale entirely: one host-chosen size at every figure width. */
   [data-blok-tool="image"] .blok-image-caption { font-size: var(--blok-image-caption-font-size, 13.5px); }
   [data-blok-tool="image"] .blok-image-caption-row__alt {
-    padding: 3px 8px;
+    padding: var(--blok-space-0-75) var(--blok-space-2);
     font-size: 11px;
   }
 }

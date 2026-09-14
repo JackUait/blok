@@ -385,7 +385,7 @@
 }
 .blok-media-empty__search-icon svg { width: 14px; height: 14px; }
 .blok-media-empty__input--bare {
-  padding: 7px 0;
+  padding: var(--blok-space-1-75) 0;
   border: 0; background: transparent; border-radius: 0;
   flex: 1; min-width: 0;
 }

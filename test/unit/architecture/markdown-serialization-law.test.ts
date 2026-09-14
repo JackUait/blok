@@ -3,6 +3,7 @@ import { resolve } from 'path';
 import { describe, expect, it } from 'vitest';
 
 import { defaultBlockTools } from '../../../src/tools';
+import { isInstrumented } from '../helpers/instrumented';
 
 /**
  * MARKDOWN SERIALIZATION LAW
@@ -60,7 +61,7 @@ const readSerializedTools = (): Set<string> => {
 describe('Markdown serialization law', () => {
   const registeredTools = Object.keys(defaultBlockTools);
 
-  it('every registered block tool is either serialized or explicitly exempt', () => {
+  it.skipIf(isInstrumented())('every registered block tool is either serialized or explicitly exempt', () => {
     const serialized = readSerializedTools();
     const undecided = registeredTools.filter(
       (tool) => !serialized.has(tool) && EXEMPT_TOOLS[tool] === undefined
@@ -74,7 +75,7 @@ describe('Markdown serialization law', () => {
     ).toEqual([]);
   });
 
-  it('the table tool is serialized (the regression this law exists for)', () => {
+  it.skipIf(isInstrumented())('the table tool is serialized (the regression this law exists for)', () => {
     expect(readSerializedTools().has('table')).toBe(true);
   });
 

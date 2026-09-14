@@ -14,6 +14,7 @@ import {
 } from '../../../src/shared/tool-classes/list';
 import { PARAGRAPH_CLASSES } from '../../../src/shared/tool-classes/paragraph';
 import { quoteClasses } from '../../../src/shared/tool-classes/quote';
+import { isInstrumented } from '../helpers/instrumented';
 
 /**
  * These modules are the single source of truth for the presentational classes
@@ -55,7 +56,7 @@ describe('shared tool classes', () => {
       expect(headerClasses(2, false)).not.toContain('pl-8');
     });
 
-    it('is the single source for the tool level config', async () => {
+    it.skipIf(isInstrumented())('is the single source for the tool level config', async () => {
       /**
        * Header.DEFAULT_LEVELS builds its `styles` strings from
        * HEADER_LEVEL_CLASSES. If someone reintroduces literals there, the

@@ -59,6 +59,7 @@ import { EquationInlineTool } from '../../../src/components/inline-tools/inline-
 import { LinkInlineTool } from '../../../src/components/inline-tools/inline-tool-link';
 import type { PasteConfig } from '../../../types/configs/paste-config';
 import type { SanitizerConfig } from '../../../types/configs/sanitizer-config';
+import { isInstrumented } from '../helpers/instrumented';
 
 const REPO_ROOT = resolve(__dirname, '../../..');
 const SCAN_ROOT = 'src/components/modules/paste';
@@ -206,7 +207,7 @@ describe('Paste Stamp Law: attributes the paste pipeline stamps must survive san
     expect(violations).toEqual([]);
   });
 
-  it('every exemption still matches real code (stale exemptions must be removed)', () => {
+  it.skipIf(isInstrumented())('every exemption still matches real code (stale exemptions must be removed)', () => {
     const stale = EXEMPT_STAMPS
       .filter((exempt) => {
         const fullPath = join(REPO_ROOT, exempt.file);

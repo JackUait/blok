@@ -66,6 +66,7 @@ import { Table } from '../../../src/tools/table';
 import { ToggleItem } from '../../../src/tools/toggle';
 import { VideoTool } from '../../../src/tools/video';
 import type { PasteConfig } from '../../../types/configs/paste-config';
+import { isInstrumented } from '../helpers/instrumented';
 
 const REPO_ROOT = resolve(__dirname, '../../..');
 
@@ -385,7 +386,7 @@ describe('Paste Attribute Law: every attribute a paste path reads must be whitel
     expect(violations).toEqual([]);
   });
 
-  it('dynamic getAttribute/hasAttribute calls are declared and their pasted attrs whitelisted', () => {
+  it.skipIf(isInstrumented())('dynamic getAttribute/hasAttribute calls are declared and their pasted attrs whitelisted', () => {
     const scannedFiles = [
       ...TOOL_REGISTRY.flatMap((entry) => [...entry.files, ...(entry.strictFiles ?? [])]),
       ...PIPELINE_FILES,

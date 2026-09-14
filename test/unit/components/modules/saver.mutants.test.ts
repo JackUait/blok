@@ -11,6 +11,7 @@ import { BlockChanged } from '../../../../src/components/events';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../src/components/events';
 import type { BlockMutationEvent } from '../../../../types/events/block';
+import { isInstrumented } from '../../helpers/instrumented';
 
 /**
  * What a tool's `save()` may resolve. Every field is optional: the saver's
@@ -1608,7 +1609,7 @@ describe('Saver — mutation coverage', () => {
     });
   });
 
-  describe('residual coverage: environment probe without a usable process', () => {
+  describe.skipIf(isInstrumented())('residual coverage: environment probe without a usable process', () => {
     /**
      * Runs `body` twice: once with `process` bound to undefined, once with a
      * `process` carrying no `env`. Both are how Blok looks in a browser, which

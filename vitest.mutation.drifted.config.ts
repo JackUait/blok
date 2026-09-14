@@ -57,7 +57,18 @@ const INERT_BUILD_TESTS = ['test/unit/build/**'];
  * Cost of the exclusion: the a11y file also imports the icon module, so its 100+
  * decorative-icon cases stop scoring mutants in icons/index.ts.
  */
-const STATIC_SOURCE_SCANNERS = ['test/unit/architecture/a11y-law.test.ts'];
+const STATIC_SOURCE_SCANNERS = [
+  'test/unit/architecture/a11y-law.test.ts',
+  'test/unit/architecture/body-mount-scope-law.test.ts',
+  'test/unit/architecture/floating-positioning-law.test.ts',
+  'test/unit/architecture/link-url-sink-law.test.ts',
+  'test/unit/architecture/table-cell-keyboard-guard-law.test.ts',
+  'test/unit/architecture/tool-owned-children-law.test.ts',
+  'test/unit/architecture/top-level-block-enumeration-law.test.ts',
+  'test/unit/architecture/url-sink-law.test.ts',
+  'test/unit/components/i18n/lifecycle-coverage.test.ts',
+  'test/unit/styles/tailwind-class-emits-law.test.ts',
+];
 
 /**
  * Room for a correct test to be slow, which is not the same as being wrong.

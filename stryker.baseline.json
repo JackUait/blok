@@ -21,11 +21,18 @@
   "concurrency": 4,
   "fileLogLevel": "info",
   "logLevel": "info",
-  "reporters": ["clear-text", "html", "json"],
-  "htmlReporter": { "fileName": ".mutation-state/report-baseline.html" },
-  "jsonReporter": { "fileName": ".mutation-state/report-baseline.json" },
+  "reporters": [
+    "clear-text",
+    "html",
+    "json"
+  ],
+  "htmlReporter": {
+    "fileName": ".mutation-state/report-baseline.html"
+  },
+  "jsonReporter": {
+    "fileName": ".mutation-state/report-baseline.json"
+  },
   "ignorePatterns": [
-    "docs/**",
     "storybook-static/**",
     "playwright-report/**",
     "test-results/**",
@@ -33,12 +40,10 @@
     ".server-coverage/**",
     "static/**",
     "public/**",
-    "packages/server/dotnet/**",
     ".playwright-cli/**",
     ".playwright-mcp/**",
     ".venv/**",
     ".dev/**",
-    "override-extension/**",
     "*.png",
     "*.json.gz"
   ]

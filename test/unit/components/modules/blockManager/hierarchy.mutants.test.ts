@@ -7,6 +7,7 @@ import { BlockRepository } from '../../../../../src/components/modules/blockMana
 import type { BlocksStore } from '../../../../../src/components/modules/blockManager/types';
 import type * as HtmlUtils from '../../../../../src/components/utils/html';
 import { moveElementAfter } from '../../../../../src/components/utils/html';
+import { isInstrumented } from '../../../helpers/instrumented';
 
 /**
  * The DOM-move helpers keep their real behaviour; only `moveElementAfter` is
@@ -150,14 +151,6 @@ const createFixture = (configs: FixtureBlockConfig[]): Fixture => {
  * @param id - block id
  * @returns the block, or throws when the fixture is wrong
  */
-/**
- * Stryker instruments this file's source, and the instrumented env read throws
- * when `process` has no `env` — so the case below fails for a reason that has
- * nothing to do with the mutant it pins. Skipped only while instrumented; a
- * normal run still executes it.
- */
-const INSTRUMENTED = '__stryker__' in globalThis;
-
 const requireBlock = (repository: BlockRepository, id: string): Block => {
   const block = repository.getBlockById(id);
 
@@ -305,7 +298,7 @@ describe('BlockHierarchy — mutation coverage', () => {
       expect(logSpy).toHaveBeenCalledWith(expect.stringMatching(/dangling parent id/), 'error');
     });
 
-    it.skipIf(INSTRUMENTED)('coerces instead of throwing when the process global carries no env', async () => {
+    it.skipIf(isInstrumented())('coerces instead of throwing when the process global carries no env', async () => {
       const { repository } = createFixture([{ id: 'child', parentId: null }]);
       const hierarchy = new BlockHierarchy(repository);
       const utils = await import('../../../../../src/components/utils');

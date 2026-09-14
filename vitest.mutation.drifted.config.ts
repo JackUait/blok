@@ -47,6 +47,19 @@ const WALL_CLOCK_SENSORS = [
 const INERT_BUILD_TESTS = ['test/unit/build/**'];
 
 /**
+ * Laws that scan src/ as TEXT, which instrumentation rewrites out from under them.
+ *
+ * Stryker copies the tree into a sandbox and instruments every mutated file, so
+ * `setAttribute('role', 'button')` becomes `setAttribute(stryMutAct_9fa48("88601") ? … )`
+ * on disk. A law that greps that text finds nothing and fails its own self-check
+ * (measured: the a11y law's role scan wants >= 10 and sees 0). These tests read
+ * files rather than executing src/, so they can never kill a mutant either way.
+ * Cost of the exclusion: the a11y file also imports the icon module, so its 100+
+ * decorative-icon cases stop scoring mutants in icons/index.ts.
+ */
+const STATIC_SOURCE_SCANNERS = ['test/unit/architecture/a11y-law.test.ts'];
+
+/**
  * Room for a correct test to be slow, which is not the same as being wrong.
  *
  * The base 30s cap was set for an idle machine. This one runs at load 280-660
@@ -69,6 +82,7 @@ export default defineConfig({
       ...RED_AT_HEAD,
       ...WALL_CLOCK_SENSORS,
       ...INERT_BUILD_TESTS,
+      ...STATIC_SOURCE_SCANNERS,
     ],
   },
 });

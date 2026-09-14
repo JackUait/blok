@@ -2045,14 +2045,6 @@ export class BlockManager extends Module {
         }
       }
 
-      // A key the tool's save() dropped — a transient import field, a tune the
-      // user switched off — must leave the document too. Nothing else anywhere
-      // removes a top-level data key, so without this the value survives every
-      // reload and the tool's own normalizer keeps re-deriving from it.
-      if (this.Blok.YjsManager.pruneBlockData(block.id, keptKeys)) {
-        dataChangedRef.value = true;
-      }
-
       if (!dataChangedRef.value) {
         return;
       }
@@ -2072,6 +2064,28 @@ export class BlockManager extends Module {
     } else {
       this.Blok.YjsManager.transact(write);
     }
+
+    // A key the tool's save() dropped — a transient import field, a legacy
+    // `items` array, `checked` on an unordered list — must leave the document
+    // too. Nothing else anywhere removes a top-level data key, so without this
+    // the value survives every reload and the tool's own normalizer keeps
+    // re-deriving from it.
+    //
+    // It is NORMALISATION, not an edit: the tool's save() never emitted the key,
+    // so nobody typed it. Hence its own untracked transaction, outside `write`:
+    //   - it must not bump lastEditedAt/lastEditedBy. A Tab on one list item
+    //     flushes its parent too, and crediting that user with "last edited"
+    //     on a sibling they never touched is wrong.
+    //   - it must not become an undo step. The document is seeded verbatim from
+    //     host-authored data, so the first flush of a block often prunes; landing
+    //     that after a structural move let one Cmd+Z pop the normalisation and
+    //     leave the move standing (the "undo after Tab indentation restores
+    //     original depth" regression).
+    // Untracked still writes to the document, so persistence is unchanged, and
+    // `flushAll` is re-entrancy guarded so the nested flush here is a no-op.
+    this.Blok.YjsManager.transactWithoutCapture(() => {
+      this.Blok.YjsManager.pruneBlockData(block.id, keptKeys);
+    });
 
     // The write-back the settling window was waiting for has landed: close the
     // window now rather than at its timeout, so a user edit that follows in the

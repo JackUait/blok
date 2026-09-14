@@ -2315,7 +2315,7 @@ describe('BlockManager block-change to Yjs data flush', () => {
     expect(block.lastEditedAt).toEqual(expect.any(Number));
   });
 
-  it('counts a prune-only change as a real change', async () => {
+  it('treats a prune-only change as normalisation, not an edit', async () => {
     const block = createBlockStub({ id: 'b', saveData: { text: 'y' } });
     const harness = createHarness({
       blocks: [block],
@@ -2329,8 +2329,11 @@ describe('BlockManager block-change to Yjs data flush', () => {
 
     flushOf(harness)(new Map([['text', 'y']]));
 
-    expect(harness.yjs.updateBlockMetadata).toHaveBeenCalledOnce();
-    expect(block.lastEditedAt).not.toBe(before);
+    // Dropping a key the tool's save() never emitted credits nobody and must
+    // not become an undo step, so it runs untracked and skips the metadata bump.
+    expect(harness.yjs.transactWithoutCapture).toHaveBeenCalled();
+    expect(harness.yjs.updateBlockMetadata).not.toHaveBeenCalled();
+    expect(block.lastEditedAt).toBe(before);
   });
 
   it('derives a nested list item depth instead of persisting it', async () => {

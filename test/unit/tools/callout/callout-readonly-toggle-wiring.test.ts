@@ -32,7 +32,9 @@ vi.mock('../../../../src/tools/callout/emoji-picker', () => {
 
   return {
     EmojiPicker: MockEmojiPicker,
-    prefetchEmojiPickerData: (locale: string): void => prefetchSpy(locale),
+    prefetchEmojiPickerData: (locale: string): void => {
+      prefetchSpy(locale);
+    },
   };
 });
 

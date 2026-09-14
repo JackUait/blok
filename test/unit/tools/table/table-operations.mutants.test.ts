@@ -967,7 +967,7 @@ describe('table-operations — surviving-mutant coverage', () => {
     });
 
     it('treats null data as a table with no content', () => {
-      const result = normalizeTableData(null as unknown as unknown as TableData, {});
+      const result = normalizeTableData(null as unknown as TableData, {});
 
       expect(result).toStrictEqual({
         withHeadings: false,
@@ -978,7 +978,7 @@ describe('table-operations — surviving-mutant coverage', () => {
     });
 
     it('treats a primitive as data that is not a table', () => {
-      const result = normalizeTableData('hello' as unknown as unknown as TableData, {});
+      const result = normalizeTableData('hello' as unknown as TableData, {});
 
       expect(result).toStrictEqual({
         withHeadings: false,
@@ -989,7 +989,7 @@ describe('table-operations — surviving-mutant coverage', () => {
     });
 
     it('treats a table whose content key is present but empty as having no content', () => {
-      const result = normalizeTableData({ content: undefined } as unknown as unknown as TableData, {});
+      const result = normalizeTableData({ content: undefined } as unknown as TableData, {});
 
       expect(result.content).toEqual([]);
     });

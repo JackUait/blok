@@ -9,6 +9,11 @@ import { runInOwnProcessGroup, findOrphanedWorkers, reapOrphanedWorkers } from '
 
 const scratch = mkdtempSync(join(tmpdir(), 'sweep-timeout-'));
 
+// Absolute path to a POSIX shell, not `zsh` off PATH: the CI runner image
+// (ubuntu-latest) ships bash and dash only, so `zsh` resolved to nothing, the
+// helper scripts never ran, and every pid read below died with ENOENT.
+const SHELL = '/bin/sh';
+
 const spawned: number[] = [];
 
 const hangScript = (pidFile: string, exitCode: number) => {
@@ -26,10 +31,46 @@ const hangScript = (pidFile: string, exitCode: number) => {
   return script;
 };
 
-const runScript = (script: string, timeout: number) => runInOwnProcessGroup('zsh', [script], timeout);
+// `spawnSync` types its `error` as plain `Error`, but a launch failure carries an
+// errno `code`. Narrow rather than cast.
+const errnoCode = (error: Error | undefined): string | undefined =>
+  error !== undefined && 'code' in error && typeof error.code === 'string' ? error.code : undefined;
 
+const runScript = (script: string, timeout: number) => {
+  const result = runInOwnProcessGroup(SHELL, [script], timeout);
+
+  // A shell that failed to launch writes no pid file, and the ENOENT that
+  // surfaces later names the pid file rather than the missing binary. ETIMEDOUT
+  // is not a launch failure — it is the behaviour under test.
+  expect(errnoCode(result.error), `${SHELL} did not launch`).not.toBe('ENOENT');
+
+  return result;
+};
+
+// The pid file is written by a shell the test does not wait on directly, so poll
+// for it instead of assuming it has landed. Bounded, so a genuinely absent file
+// still fails the test rather than hanging it.
 const readPid = (pidFile: string) => {
-  const pid = Number(readFileSync(pidFile, 'utf8').trim());
+  const deadline = Date.now() + 5000;
+  let raw = '';
+
+  while (Date.now() < deadline) {
+    try {
+      raw = readFileSync(pidFile, 'utf8').trim();
+    } catch {
+      raw = '';
+    }
+
+    if (raw !== '') {
+      break;
+    }
+
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20);
+  }
+
+  expect(raw, `no pid written to ${pidFile}`).not.toBe('');
+
+  const pid = Number(raw);
 
   spawned.push(pid);
 
@@ -157,7 +198,9 @@ describe('reapOrphanedWorkers', () => {
       `echo $! > ${pidFile}`,
     ].join('\n'));
 
-    spawnSync('zsh', [script], { encoding: 'utf8' });
+    const orphaned = spawnSync(SHELL, [script], { encoding: 'utf8' });
+
+    expect(orphaned.error).toBeUndefined();
 
     const orphan = readPid(pidFile);
 

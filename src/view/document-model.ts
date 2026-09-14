@@ -75,6 +75,44 @@ const parentIdOf = (entry: unknown): string | null => {
 };
 
 /**
+ * The child ids a container names on its own entry. The Saver writes
+ * containment on BOTH sides (`content` here, `parent` on the child); documents
+ * exist that carry only this one, and their children used to escape.
+ * @param entry - raw entry from a blocks array
+ */
+const contentIdsOf = (entry: unknown): string[] => {
+  if (!isRecord(entry) || !Array.isArray(entry.content)) {
+    return [];
+  }
+
+  return entry.content.filter((id): id is string => typeof id === 'string' && id !== '');
+};
+
+/**
+ * Move an Editor.js-era embed URL to where every reader looks. It was stored at
+ * `data.data`; the markdown and plain-text readers only ever read `url`/
+ * `source`, so the block served as an empty link everywhere. Returns a new
+ * `data` object — the original belongs to the caller's document.
+ * @param block - the normalized block to read
+ */
+const withLegacyEmbedSource = (block: ViewBlock): ViewBlock => {
+  const { data } = block;
+  const legacy = data.data;
+
+  const isBlank = (value: unknown): boolean => typeof value !== 'string' || value === '';
+
+  if (block.type !== 'embed' || typeof legacy !== 'string' || legacy === '') {
+    return block;
+  }
+
+  if (!isBlank(data.url) || !isBlank(data.source)) {
+    return block;
+  }
+
+  return { ...block, data: { ...data, source: legacy } };
+};
+
+/**
  * Types whose LEGACY data nests its child blocks in `data.body.blocks[]`. A
  * current `toggle` keeps its children by reference like every other container.
  */
@@ -201,6 +239,9 @@ export const buildDocumentModel = (input: OutputData | LooseOutputData | null | 
   const entries: Array<{ block: ViewBlock; parentId: string | null }> = [];
   const byId = new Map<string, ViewBlock>();
 
+  /** Containers naming their children by id, in document order. */
+  const contentClaims: Array<{ parentId: string; childIds: string[] }> = [];
+
   /**
    * Every id the document itself uses, so a synthetic one given to a legacy
    * container can never collide with a real block and steal its children.
@@ -236,11 +277,13 @@ export const buildDocumentModel = (input: OutputData | LooseOutputData | null | 
    * @param nestedParentId - the legacy container this came out of, if any
    */
   const visit = (raw: unknown, nestedParentId: string | null): void => {
-    const block = normalizeViewBlock(raw);
+    const normalized = normalizeViewBlock(raw);
 
-    if (block === null) {
+    if (normalized === null) {
       return;
     }
+
+    const block = withLegacyEmbedSource(normalized);
 
     const parentId = nestedParentId ?? parentIdOf(raw);
     const group = legacyItemGroup(block);
@@ -272,6 +315,14 @@ export const buildDocumentModel = (input: OutputData | LooseOutputData | null | 
 
     entries.push({ block, parentId });
 
+    if (block.id !== undefined) {
+      const contentIds = contentIdsOf(raw);
+
+      if (contentIds.length > 0) {
+        contentClaims.push({ parentId: block.id, childIds: contentIds });
+      }
+    }
+
     if (block.id !== undefined && !byId.has(block.id)) {
       byId.set(block.id, block);
     }
@@ -288,17 +339,75 @@ export const buildDocumentModel = (input: OutputData | LooseOutputData | null | 
   const topLevel: ViewBlock[] = [];
   const children = new Map<string, ViewBlock[]>();
 
+  /** A child's own `parent` is authoritative; `content[]` only fills the gaps. */
+  const explicitParent = new Map<string, string>();
+
   for (const { block, parentId } of entries) {
+    if (block.id !== undefined && parentId !== null && !explicitParent.has(block.id)) {
+      explicitParent.set(block.id, parentId);
+    }
+  }
+
+  const claimedParent = new Map<string, string>();
+
+  /**
+   * Whether making `parentId` the parent of `childId` would close a loop —
+   * two containers each naming the other in `content[]` is enough to hang the
+   * renderer's descent.
+   * @param childId - the block being claimed
+   * @param parentId - the container claiming it
+   * @param seen - ancestors already walked, guarding a pre-existing loop
+   */
+  const wouldCycle = (childId: string, parentId: string, seen: Set<string> = new Set()): boolean => {
+    if (parentId === childId) {
+      return true;
+    }
+
+    if (seen.has(parentId)) {
+      return false;
+    }
+
+    seen.add(parentId);
+
+    const next = explicitParent.get(parentId) ?? claimedParent.get(parentId);
+
+    return next !== undefined && wouldCycle(childId, next, seen);
+  };
+
+  /**
+   * Give `childId` to the container that names it, unless something better
+   * already owns it or the edge is unusable.
+   * @param parentId - the container naming the child in its `content[]`
+   * @param childId - the named child
+   */
+  const claimChild = (parentId: string, childId: string): void => {
+    const claimable = byId.has(childId)
+      && !explicitParent.has(childId)
+      && !claimedParent.has(childId)
+      && !wouldCycle(childId, parentId);
+
+    if (claimable) {
+      claimedParent.set(childId, parentId);
+    }
+  };
+
+  for (const { parentId, childIds } of contentClaims) {
+    childIds.forEach((childId) => claimChild(parentId, childId));
+  }
+
+  for (const { block, parentId } of entries) {
+    const resolvedParentId = parentId ?? (block.id === undefined ? null : claimedParent.get(block.id) ?? null);
+
     /** Dangling/self parents promote the block to root — never drop content. */
-    if (parentId === null || parentId === block.id || !byId.has(parentId)) {
+    if (resolvedParentId === null || resolvedParentId === block.id || !byId.has(resolvedParentId)) {
       topLevel.push(block);
       continue;
     }
 
-    const siblings = children.get(parentId) ?? [];
+    const siblings = children.get(resolvedParentId) ?? [];
 
     siblings.push(block);
-    children.set(parentId, siblings);
+    children.set(resolvedParentId, siblings);
   }
 
   return {

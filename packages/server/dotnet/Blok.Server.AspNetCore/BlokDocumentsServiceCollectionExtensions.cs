@@ -32,9 +32,10 @@ public static class BlokDocumentsServiceCollectionExtensions
   /// embedded bundle into every engine of its pool; the first conversion
   /// additionally warms the .NET JIT for the interpreter's hot paths, which
   /// costs far more than the parse. Warming up moves both off the first request
-  /// after a deploy. It never delays or fails startup — it is started, not
-  /// awaited. Pass <c>false</c> for a host that starts many times and converts
-  /// rarely — a test host, for instance.
+  /// after a deploy. It never delays or fails startup — the converter is built
+  /// inside the background warm-up, not while the host starts. Pass <c>false</c>
+  /// for a host that starts many times and converts rarely — a test host, for
+  /// instance.
   /// </param>
   /// <param name="allocationBudgetBytes">
   /// How much ONE conversion may allocate. This is allocation churn per call,
@@ -69,8 +70,9 @@ public static class BlokDocumentsServiceCollectionExtensions
 }
 
 /// <summary>
-/// Builds the engine pool at startup AND converts one document through it, so
-/// the first request pays for neither.
+/// Builds the engine pool AND converts one document through it in the
+/// background, so the first request pays for neither and startup pays for
+/// neither.
 /// </summary>
 /// <remarks>
 /// Resolving the converter alone is not enough. Building the engines parses the
@@ -83,8 +85,14 @@ public static class BlokDocumentsServiceCollectionExtensions
 /// times to promote them, and left the first real conversion no faster than no
 /// warm-up at all.
 /// </remarks>
-/// <param name="converter">Resolved for its construction cost, then exercised.</param>
-internal sealed class BlokDocumentWarmUp(IBlokDocumentConverter converter) : IHostedService
+/// <param name="services">
+/// Resolves the converter INSIDE the warm-up rather than into this constructor.
+/// A hosted service is constructed while the host starts, so injecting the
+/// converter would build the engine pool on the startup path — about a second
+/// of bundle parsing — and a failure there would escape DI resolution and stop
+/// the host from starting.
+/// </param>
+internal sealed class BlokDocumentWarmUp(IServiceProvider services) : IHostedService
 {
   /// <summary>The warm-up run, so a test can wait for what startup does not.</summary>
   internal Task Warmed { get; private set; } = Task.CompletedTask;
@@ -103,6 +111,8 @@ internal sealed class BlokDocumentWarmUp(IBlokDocumentConverter converter) : IHo
         {
           try
           {
+            var converter = services.GetRequiredService<IBlokDocumentConverter>();
+
             await converter.ToPlainTextAsync(WarmUpDocument(), cancellationToken: cancellationToken);
           }
           catch (Exception)

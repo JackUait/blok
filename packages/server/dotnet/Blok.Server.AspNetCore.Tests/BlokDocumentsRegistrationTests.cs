@@ -52,8 +52,10 @@ public sealed class BlokDocumentsRegistrationTests
   /// <summary>
   /// Building the converter parses the embedded bundle into every engine of its
   /// pool. Registered as a plain singleton that is a cost the first request
-  /// after a deploy pays; warming up moves it to startup, where nobody is
-  /// waiting on it.
+  /// after a deploy pays; warming up moves it off that request. It moves it
+  /// into the BACKGROUND warm-up, not onto the startup path — see
+  /// <see cref="BuildsTheConverterOffTheStartupPath"/> — so this waits for the
+  /// warm-up rather than for <c>StartAsync</c> to return.
   /// </summary>
   [Fact]
   public async Task BuildsTheConverterAtStartupInsteadOfOnTheFirstRequest()
@@ -78,6 +80,11 @@ public sealed class BlokDocumentsRegistrationTests
     foreach (var service in provider.GetServices<IHostedService>())
     {
       await service.StartAsync(CancellationToken.None);
+
+      if (service is BlokDocumentWarmUp warmUp)
+      {
+        await warmUp.Warmed;
+      }
     }
 
     Assert.True(built);
@@ -199,6 +206,41 @@ public sealed class BlokDocumentsRegistrationTests
     using var provider = services.BuildServiceProvider();
 
     Assert.ThrowsAny<Exception>(() => provider.GetRequiredService<IBlokDocumentConverter>());
+  }
+
+  /// <summary>
+  /// Warming must not build the converter on the startup path. Building it
+  /// parses the embedded bundle into every engine of its pool, which was
+  /// measured at about a second, and a failure there would escape DI
+  /// resolution and stop the host from starting at all — the opposite of what
+  /// <c>warmUp</c> documents. Asserted by construction, not by a clock: the
+  /// converter's factory must not have run when <c>StartAsync</c> returns, and
+  /// must have run by the time the warm-up finishes.
+  /// </summary>
+  [Fact]
+  public async Task BuildsTheConverterOffTheStartupPath()
+  {
+    var services = new ServiceCollection();
+    var built = false;
+
+    services.AddSingleton<IBlokDocumentConverter>(_ =>
+    {
+      built = true;
+
+      return new CountingConverter();
+    });
+    services.AddBlokDocuments();
+
+    using var provider = services.BuildServiceProvider();
+    var warmUp = provider.GetServices<IHostedService>().OfType<BlokDocumentWarmUp>().Single();
+
+    await warmUp.StartAsync(CancellationToken.None);
+
+    Assert.False(built, "the converter was built while the host was starting");
+
+    await warmUp.Warmed;
+
+    Assert.True(built, "the warm-up never built the converter");
   }
 
   [Fact]

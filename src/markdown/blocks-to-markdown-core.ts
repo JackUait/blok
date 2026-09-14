@@ -72,7 +72,16 @@ const PLAIN_TEXT_LANGUAGE = 'plain text';
  * block is never also emitted as a loose top-level line. Table cells hold their
  * content as child block ids; the rest are structural containers.
  */
-const CONTAINER_TOOLS = new Set(['table', 'callout', 'toggle', 'column_list', 'column']);
+const CONTAINER_TOOLS = new Set([
+  'table',
+  'callout',
+  'toggle',
+  /** Legacy alias of `toggle`; `column_list`'s is `columns`. Both still arrive from imports. */
+  'toggleList',
+  'column_list',
+  'columns',
+  'column',
+]);
 
 /**
  * Coerce an unknown value to a string, treating non-strings as empty. Block data
@@ -342,6 +351,30 @@ const ownedSubtree = (block: SerializableBlock, context: SerializationContext): 
 };
 
 /**
+ * The id of the leading paragraph child a legacy container's `title` was
+ * expanded into, so the container can render that title itself instead of
+ * letting it through as an ordinary body paragraph.
+ * @param block - the legacy container block
+ * @param context - the serialization context
+ * @param title - the container's `data.title` ('' when it has none)
+ */
+const legacyTitleChildId = (
+  block: SerializableBlock,
+  context: SerializationContext,
+  title: string
+): string | undefined => {
+  if (title === '') {
+    return undefined;
+  }
+
+  const first = (context.childrenOf.get(block.id ?? '') ?? [])[0];
+
+  return first !== undefined && first.tool === 'paragraph' && asString(first.data.text) === title
+    ? first.id
+    : undefined;
+};
+
+/**
  * Serialize a container's structural children as a Markdown run.
  *
  * Children are re-based to indent 0 relative to their container: a container
@@ -350,9 +383,14 @@ const ownedSubtree = (block: SerializableBlock, context: SerializationContext): 
  * inward would indent the body into a code block.
  * @param block - the container block
  * @param context - the serialization context
+ * @param omitId - a child the container renders itself and must not repeat
  */
-const childrenToMarkdown = (block: SerializableBlock, context: SerializationContext): string => {
-  const children = ownedSubtree(block, context);
+const childrenToMarkdown = (
+  block: SerializableBlock,
+  context: SerializationContext,
+  omitId?: string
+): string => {
+  const children = ownedSubtree(block, context).filter((child) => child.id !== omitId);
   /**
    * Re-base against the container's ORIGINAL indent, not the copy's: a nested
    * container (a column inside a column list) is itself rendered from a copy
@@ -540,16 +578,26 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
      * Markdown has no collapsible section, so the summary becomes a bold line
      * and the body follows it as ordinary blocks.
      */
-    case 'toggle': {
+    case 'toggle':
+    case 'toggleList': {
       warn(context, block.tool, 'degraded', 'toggle is rendered as a bold summary followed by its body; collapsibility is lost');
 
-      const body = childrenToMarkdown(block, context);
-      const title = `**${text}**`;
+      /**
+       * A legacy `toggleList` keeps its summary in `data.title`, and the view's
+       * document model re-emits that title as a LEADING PARAGRAPH child. So the
+       * summary is read from the data and that child is skipped, or the title
+       * would print twice — once bold, once plain.
+       */
+      const legacyTitle = block.tool === 'toggleList' ? asString(data.title) : '';
+      const summary = legacyTitle === '' ? text : context.inline.inlineToMarkdown(legacyTitle);
+      const body = childrenToMarkdown(block, context, legacyTitleChildId(block, context, legacyTitle));
+      const title = `**${summary}**`;
 
       return body === '' ? title : `${title}\n\n${body}`;
     }
     /** Markdown has no columns; the layout flattens into reading order. */
     case 'column_list':
+    case 'columns':
       warn(context, block.tool, 'degraded', 'columns are flattened into sequential blocks; the side-by-side layout is lost');
 
       return childrenToMarkdown(block, context);
@@ -707,17 +755,40 @@ const collectOwnedIds = (blocks: SerializableBlock[], context: SerializationCont
     .filter((id): id is string => id !== undefined);
 
   /**
+   * Mark one id as rendered inside a container.
+   * @param id - the claimed block's id
+   */
+  const claimId = (id: string): void => {
+    if (owned.has(id)) {
+      return;
+    }
+
+    owned.add(id);
+    queue.push(id);
+  };
+
+  /**
    * Queue a not-yet-owned child id.
    * @param child - a structural child of an owned block
    */
   const claim = (child: SerializableBlock): void => {
-    if (child.id === undefined || owned.has(child.id)) {
-      return;
+    if (child.id !== undefined) {
+      claimId(child.id);
     }
-
-    owned.add(child.id);
-    queue.push(child.id);
   };
+
+  /**
+   * A table cell resolves its content through `byId`, not through the `parent`
+   * edge, so a cell block carrying no `parentId` is rendered inside the table
+   * anyway. Claiming only the structural children left it ALSO emitted as a
+   * loose top-level block — the same content twice.
+   */
+  blocks
+    .filter((block) => block.tool === 'table')
+    .flatMap((block) => readTableGrid(block.data).flat())
+    .flatMap((cell): unknown[] => (Array.isArray(cell.blocks) ? cell.blocks : []))
+    .filter((id): id is string => typeof id === 'string')
+    .forEach(claimId);
 
   while (queue.length > 0) {
     const parentId = queue.shift() ?? '';

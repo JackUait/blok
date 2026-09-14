@@ -104,11 +104,10 @@ describe('legacy nested documents', () => {
       ['a list whose items live in data.items', legacyList, '- first item\n    - nested item\n- second item'],
       ['a callout whose body lives in data.body.blocks', legacyCallout, '> Watch out\n> \n> the floor is wet'],
       /**
-       * Not a blockquote: `toggleList` is a type the serializer never had, so it
-       * falls back to plain output. The current `toggle` bolds its title; the
-       * only difference here is that emphasis, not content.
+       * `toggleList` is the legacy name of `toggle`, so it renders identically:
+       * bold summary, then body. Not a blockquote — that is the callout.
        */
-      ['a toggle list whose body lives in data.body.blocks', legacyToggle, 'More detail\n\nhidden until opened'],
+      ['a toggle list whose body lives in data.body.blocks', legacyToggle, '**More detail**\n\nhidden until opened'],
       ['columns whose content lives in data.cols[].blocks', legacyColumns, 'left side\n\nright side'],
     ])('%s', (_name, document, expected) => {
       expect(blocksToMarkdown(document)).toBe(expected);

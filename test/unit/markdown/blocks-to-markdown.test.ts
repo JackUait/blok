@@ -187,6 +187,26 @@ describe('blocksToMarkdown: table', () => {
     expect(md).not.toContain('\n\na');
   });
 
+  /**
+   * A cell resolves its content straight out of the id map, so a cell block is
+   * rendered inside the table whether or not it carries a `parentId`. The claim
+   * that keeps it off the top level used to follow only the `parentId` edge, so
+   * a parentless cell block was emitted twice.
+   */
+  it('does NOT emit a cell block twice when it carries no parentId', () => {
+    const md = blocksToMarkdown([
+      { id: 'table-1',
+        tool: 'table',
+        data: { withHeadings: false,
+          content: [[{ blocks: ['cc'] }]] } },
+      { id: 'cc',
+        tool: 'paragraph',
+        data: { text: 'cell' } },
+    ]);
+
+    expect(md).toBe('|  |\n| --- |\n| cell |');
+  });
+
   it('keeps surrounding blocks while suppressing only the table cell blocks', () => {
     const md = blocksToMarkdown([
       { tool: 'paragraph',

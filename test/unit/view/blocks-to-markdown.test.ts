@@ -378,6 +378,55 @@ describe('blocksToMarkdown (view)', () => {
     });
   });
 
+  /**
+   * `toggleList` and `columns` are the legacy names of `toggle` and
+   * `column_list`. `document-model.ts` already expands their nested children,
+   * so the content reached the output — but with no case of their own they hit
+   * the `default` branch and were reported as `dropped`, which is what
+   * consumers gate destructive overwrites on.
+   */
+  describe('legacy container aliases', () => {
+    it('renders a legacy toggleList exactly like the toggle that replaced it', () => {
+      const { markdown, warnings } = blocksToMarkdownWithReport(doc([
+        {
+          type: 'toggleList',
+          data: {
+            title: 'Summary',
+            body: { blocks: [{ type: 'paragraph', data: { text: 'body' } }] },
+          },
+        },
+      ]));
+
+      expect(markdown).toBe('**Summary**\n\nbody');
+      expect(warnings).toEqual([
+        { construct: 'toggleList',
+          action: 'degraded',
+          detail: 'toggle is rendered as a bold summary followed by its body; collapsibility is lost' },
+      ]);
+    });
+
+    it('renders legacy columns exactly like the column_list that replaced it', () => {
+      const { markdown, warnings } = blocksToMarkdownWithReport(doc([
+        {
+          type: 'columns',
+          data: {
+            cols: [
+              { blocks: [{ type: 'paragraph', data: { text: 'left' } }] },
+              { blocks: [{ type: 'paragraph', data: { text: 'right' } }] },
+            ],
+          },
+        },
+      ]));
+
+      expect(markdown).toBe('left\n\nright');
+      expect(warnings).toEqual([
+        { construct: 'columns',
+          action: 'degraded',
+          detail: 'columns are flattened into sequential blocks; the side-by-side layout is lost' },
+      ]);
+    });
+  });
+
   it('returns an empty string for an empty or malformed document', () => {
     expect(blocksToMarkdown(undefined)).toBe('');
     expect(blocksToMarkdown(doc([]))).toBe('');

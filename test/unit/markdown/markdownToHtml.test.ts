@@ -96,6 +96,13 @@ describe('markdownToHtml', () => {
     expect(html).not.toContain('$e^');
   });
 
+  it('leaves a price range alone instead of rendering it as math', async () => {
+    const html = await markdownToHtml('\u0446\u0435\u043d\u0430 $5-$10 \u0437\u0430 \u0448\u0442\u0443\u043a\u0443');
+
+    expect(html).not.toContain('katex');
+    expect(html).toContain('$5-$10');
+  });
+
   it('renders block math with KaTeX in display mode', async () => {
     const html = await markdownToHtml('$$\n\\int_0^1 x\\,dx\n$$');
     expect(html).toContain('class="katex');

@@ -263,3 +263,71 @@ describe('markdownToBlocksWithReport', () => {
     expect(warnings.every((warning) => warning.construct === 'html')).toBe(true);
   });
 });
+
+/**
+ * The math extensions are loaded only when the source looks like it carries
+ * math. A price range trips a naive `$...$` gate, and once the extension is on,
+ * `$5-$10` parses as inline math and the paragraph is torn into a latex code
+ * block plus two paragraph fragments — silently, at full fidelity.
+ */
+describe('markdownToBlocks — currency is not math', () => {
+  it.each([
+    ['цена $5-$10 за штуку'],
+    ['цена $5 - $10 за штуку'],
+    ['from $1,000-$2,000 per unit'],
+    ['Cost: $5 to $10'],
+    ['I have $50 and $30'],
+  ])('keeps %s as one plain paragraph', async (md) => {
+    const { blocks, warnings } = await markdownToBlocksWithReport(md);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].type).toBe('paragraph');
+    expect(blocks[0].data.text).toBe(md);
+    expect(warnings).toEqual([]);
+  });
+
+  it('still parses genuine inline math', async () => {
+    const blocks = await markdownToBlocks('The equation $E = mc^2$ is famous.');
+
+    expect(blocks.map(b => b.type)).toEqual(['paragraph', 'code', 'paragraph']);
+    expect(blocks[1].data).toMatchObject({ code: 'E = mc^2', language: 'latex' });
+  });
+
+  it('still parses a short inline math span', async () => {
+    const blocks = await markdownToBlocks('Index $x_i$ here.');
+
+    expect(blocks[1]).toMatchObject({ type: 'code', data: { code: 'x_i', language: 'latex' } });
+  });
+
+  it('still parses display math', async () => {
+    const blocks = await markdownToBlocks('$$\\int_0^1 x\\,dx$$');
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]).toMatchObject({ type: 'code', data: { language: 'latex' } });
+  });
+
+  it('reports the paragraph split when inline math does fire', async () => {
+    const { warnings } = await markdownToBlocksWithReport('The equation $E = mc^2$ is famous.');
+
+    expect(warnings).toEqual([
+      { construct: 'inlineMath', action: 'degraded', detail: expect.stringContaining('paragraph') },
+    ]);
+  });
+});
+
+/**
+ * GFM footnotes have no Blok block. The reference serializes to an empty string
+ * and the definition has no handler, so both vanish — and the import still
+ * reported full fidelity, which a caller gating on `warnings` reads as "safe to
+ * overwrite".
+ */
+describe('markdownToBlocks — footnotes', () => {
+  it('reports the dropped reference and definition', async () => {
+    const { warnings } = await markdownToBlocksWithReport('Text[^1] here.\n\n[^1]: The note body.');
+
+    expect(warnings).toEqual([
+      { construct: 'footnoteReference', action: 'dropped', detail: expect.any(String) },
+      { construct: 'footnoteDefinition', action: 'dropped', detail: expect.any(String) },
+    ]);
+  });
+});

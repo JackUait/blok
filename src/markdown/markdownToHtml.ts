@@ -26,8 +26,12 @@ interface MathNode {
 type BlockNode = RootContent | MathNode;
 type InlineNode = PhrasingContent | MathNode;
 
-/** Detects whether a document contains `$…$`/`$$…$$` worth loading KaTeX for. */
-const MATH_SIGNAL = /\$\$[\s\S]+?\$\$|(?<!\$)\$(?!\$)(?=\S)[^$]+(?<=\S)\$(?!\$)/;
+/**
+ * Detects whether a document contains `$…$`/`$$…$$` worth loading KaTeX for.
+ * A `$` followed by a digit opens a price, not a formula: `$5-$10` must stay
+ * prose. Keep in sync with `MATH_SIGNAL` in `index.ts`.
+ */
+const MATH_SIGNAL = /\$\$[\s\S]+?\$\$|(?<!\$)\$(?![\s\d$])[^$]+(?<=\S)\$(?!\$)/;
 
 /** GitHub alert markers: `> [!NOTE]`, `[!WARNING]`, etc. */
 const ALERT_KINDS = ['note', 'tip', 'important', 'warning', 'caution'] as const;

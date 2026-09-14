@@ -20,7 +20,14 @@ export interface MarkdownImportResult {
   warnings: MarkdownDegradation[];
 }
 
-const MATH_SIGNAL = /\$\$[\s\S]+?\$\$|(?<!\$)\$(?!\$)(?=\S)[^$]+(?<=\S)\$(?!\$)/;
+/**
+ * Does the source look like it carries math? Gates the extension load.
+ *
+ * A `$` followed by a digit opens a price, not a formula: without that guard
+ * `$5-$10` parses as inline math and tears the paragraph into a latex code
+ * block plus two fragments. Real math almost never opens on a bare digit.
+ */
+const MATH_SIGNAL = /\$\$[\s\S]+?\$\$|(?<!\$)\$(?![\s\d$])[^$]+(?<=\S)\$(?!\$)/;
 
 /**
  * Lazily load math micromark/mdast extensions only when needed.
@@ -49,15 +56,40 @@ export async function markdownToBlocks(md: string, config: MarkdownImportConfig 
 }
 
 /**
+ * What each lossy construct costs on the way in, keyed by mdast node type.
+ *
+ * Blok has no raw-HTML block, no math block and no footnote block, so all three
+ * arrive changed or not at all. Reporting them from one tree walk keeps a
+ * collector out of every node handler.
+ */
+const IMPORT_DEGRADATIONS: Record<string, MarkdownDegradation> = {
+  html: {
+    construct: 'html',
+    action: 'degraded',
+    detail: 'HTML is escaped and stored as literal text; Blok has no raw-HTML block',
+  },
+  inlineMath: {
+    construct: 'inlineMath',
+    action: 'degraded',
+    detail: 'Inline math becomes a latex code block, splitting the paragraph around it',
+  },
+  footnoteReference: {
+    construct: 'footnoteReference',
+    action: 'dropped',
+    detail: 'Footnote references are removed; Blok has no footnote block',
+  },
+  footnoteDefinition: {
+    construct: 'footnoteDefinition',
+    action: 'dropped',
+    detail: 'The footnote body is dropped; Blok has no footnote block',
+  },
+};
+
+/**
  * Collect every degradation the import leaves behind.
  *
- * Blok has no raw-HTML block, so markup written into Markdown is escaped and
- * stored as literal text — the right fallback (it can never execute) but a
- * silent one. Walking the parsed tree for `html` nodes reports it without
- * threading a collector through every node handler.
- *
  * @param tree - the parsed Markdown tree
- * @returns one degradation per HTML node, in document order
+ * @returns one degradation per lossy node, in document order
  */
 function collectImportWarnings(tree: Root): MarkdownDegradation[] {
   const warnings: MarkdownDegradation[] = [];
@@ -67,12 +99,10 @@ function collectImportWarnings(tree: Root): MarkdownDegradation[] {
    * @param node - the node to visit
    */
   const visit = (node: RootContent): void => {
-    if (node.type === 'html') {
-      warnings.push({
-        construct: 'html',
-        action: 'degraded',
-        detail: 'HTML is escaped and stored as literal text; Blok has no raw-HTML block',
-      });
+    const degradation = IMPORT_DEGRADATIONS[node.type];
+
+    if (degradation !== undefined) {
+      warnings.push({ ...degradation });
     }
 
     if ('children' in node && Array.isArray(node.children)) {

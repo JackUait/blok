@@ -14,7 +14,7 @@ import { PopoverRegistry } from '../../../../../src/components/utils/popover/pop
 
 import type { PopoverNodes, PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
+import type { PopoverItemChildren, PopoverItemDefaultBaseParams, PopoverItemParams } from '@/types/utils/popover/popover-item';
 
 /**
  * Concrete popover used to drive the abstract base. `showNestedItems` is
@@ -97,6 +97,9 @@ class TestPopover extends PopoverAbstract {
   }
 }
 
+/** Activation handler for fixture items whose activation is not what the test measures. */
+const noop = (): void => {};
+
 const makePopover = (params: PopoverParams): TestPopover => {
   const popover = new TestPopover(params);
 
@@ -167,13 +170,13 @@ const makeTabs = (selected: string, other: string): HTMLElement => {
 const tabbedItems = (tabs: HTMLElement): PopoverItemParams[] => [
   { type: PopoverItemType.Html,
     element: tabs },
-  { title: 'H1',
+  { onActivate: noop, title: 'H1',
     name: 'h1',
     dataset: { 'blok-popover-tab': 'heading' } },
-  { title: 'Toggle H1',
+  { onActivate: noop, title: 'Toggle H1',
     name: 'toggle-h1',
     dataset: { 'blok-popover-tab': 'toggle-heading' } },
-  { title: 'Plain',
+  { onActivate: noop, title: 'Plain',
     name: 'plain' },
 ];
 
@@ -201,7 +204,7 @@ describe('PopoverAbstract', () => {
   describe('messages', () => {
     it('overrides only the supplied messages and keeps the built-in back label', () => {
       const popover = makePopover({
-        items: [{ title: 'A' }],
+        items: [{ onActivate: noop, title: 'A' }],
         messages: { nothingFound: 'Пусто',
           actions: 'Действия' },
       });
@@ -212,7 +215,7 @@ describe('PopoverAbstract', () => {
 
     it('keeps the built-in back label when the override explicitly clears it', () => {
       const popover = makePopover({
-        items: [{ title: 'A' }],
+        items: [{ onActivate: noop, title: 'A' }],
         messages: { back: undefined,
           nothingFound: 'None' },
       });
@@ -229,11 +232,11 @@ describe('PopoverAbstract', () => {
 
       const popover = makePopover({
         items: [
-          { title: 'A' },
+          { onActivate: noop, title: 'A' },
           { type: PopoverItemType.Separator },
           { type: PopoverItemType.Html,
             element: custom },
-          { type: PopoverItemType.Default,
+          { onActivate: noop, type: PopoverItemType.Default,
             title: 'B' },
         ],
       });
@@ -247,7 +250,7 @@ describe('PopoverAbstract', () => {
     });
 
     it('gives default items the option role inside a listbox popover', () => {
-      const popover = makePopover({ items: [{ title: 'A' }],
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }],
         listbox: true });
 
       expect(rootOf(popover.testItems[0]).getAttribute('role')).toBe('option');
@@ -255,7 +258,7 @@ describe('PopoverAbstract', () => {
     });
 
     it('gives default items the menuitem role in a menu popover', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
 
       expect(rootOf(popover.testItems[0]).getAttribute('role')).toBe('menuitem');
       expect(popover.testNodes.items.getAttribute('role')).toBe('menu');
@@ -266,7 +269,7 @@ describe('PopoverAbstract', () => {
   describe('separators', () => {
     it('marks a separator as presentational inside a listbox popover', () => {
       const popover = makePopover({
-        items: [{ title: 'A' }, { type: PopoverItemType.Separator }],
+        items: [{ onActivate: noop, title: 'A' }, { type: PopoverItemType.Separator }],
         listbox: true,
       });
 
@@ -275,7 +278,7 @@ describe('PopoverAbstract', () => {
 
     it('keeps the separator role in a menu popover', () => {
       const popover = makePopover({
-        items: [{ title: 'A' }, { type: PopoverItemType.Separator }],
+        items: [{ onActivate: noop, title: 'A' }, { type: PopoverItemType.Separator }],
       });
 
       expect(rootOf(popover.testItems[1]).getAttribute('role')).toBe('separator');
@@ -284,7 +287,7 @@ describe('PopoverAbstract', () => {
 
   describe('appendItemElements', () => {
     it('mounts the item mount element rather than its focusable root', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
       const item = asDefaultItem(popover.testItems[0]);
       const mount = item.getMountElement();
 
@@ -297,15 +300,15 @@ describe('PopoverAbstract', () => {
     it('promotes every member of a multi-member string toggle group to radio', () => {
       const popover = makePopover({
         items: [
-          { title: 'Left',
+          { onActivate: noop, title: 'Left',
             toggle: 'align' },
-          { title: 'Center',
+          { onActivate: noop, title: 'Center',
             toggle: 'align' },
-          { title: 'Right',
+          { onActivate: noop, title: 'Right',
             toggle: 'align' },
-          { title: 'Lone',
+          { onActivate: noop, title: 'Lone',
             toggle: 'other' },
-          { title: 'Bool',
+          { onActivate: noop, title: 'Bool',
             toggle: true },
         ],
       });
@@ -320,10 +323,10 @@ describe('PopoverAbstract', () => {
     it('reports the initial checked state when promoting to radio', () => {
       const popover = makePopover({
         items: [
-          { title: 'Left',
+          { onActivate: noop, title: 'Left',
             toggle: 'align',
             isActive: true },
-          { title: 'Center',
+          { onActivate: noop, title: 'Center',
             toggle: 'align' },
         ],
       });
@@ -335,7 +338,7 @@ describe('PopoverAbstract', () => {
 
   describe('show()', () => {
     it('stamps the open state and merges the opened container classes', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
 
       expect(popover.isShown).toBe(false);
 
@@ -350,7 +353,7 @@ describe('PopoverAbstract', () => {
     });
 
     it('mounts a detached popover into the body', () => {
-      const popover = new TestPopover({ items: [{ title: 'A' }] });
+      const popover = new TestPopover({ items: [{ onActivate: noop, title: 'A' }] });
 
       expect(popover.getElement().isConnected).toBe(false);
 
@@ -367,7 +370,7 @@ describe('PopoverAbstract', () => {
       context.setAttribute('dir', 'ltr');
       document.body.append(trigger, context);
 
-      const popover = makePopover({ items: [{ title: 'A' }],
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }],
         trigger,
         leftAlignElement: context });
 
@@ -382,7 +385,7 @@ describe('PopoverAbstract', () => {
       leftAlignElement.setAttribute('dir', 'rtl');
       document.body.appendChild(leftAlignElement);
 
-      const popover = makePopover({ items: [{ title: 'A' }],
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }],
         leftAlignElement });
 
       popover.show();
@@ -396,7 +399,7 @@ describe('PopoverAbstract', () => {
       scopeElement.setAttribute('dir', 'rtl');
       document.body.appendChild(scopeElement);
 
-      const popover = makePopover({ items: [{ title: 'A' }],
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }],
         scopeElement });
 
       popover.show();
@@ -407,7 +410,7 @@ describe('PopoverAbstract', () => {
     it('ignores <body> as a scope element rather than reading a direction from it', () => {
       document.body.setAttribute('dir', 'rtl');
 
-      const popover = makePopover({ items: [{ title: 'A' }],
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }],
         scopeElement: document.body });
 
       popover.show();
@@ -422,7 +425,7 @@ describe('PopoverAbstract', () => {
       host.setAttribute('dir', 'rtl');
       document.body.appendChild(host);
 
-      const popover = new TestPopover({ items: [{ title: 'A' }] });
+      const popover = new TestPopover({ items: [{ onActivate: noop, title: 'A' }] });
 
       host.appendChild(popover.getElement());
       popover.show();
@@ -436,7 +439,7 @@ describe('PopoverAbstract', () => {
       trigger.setAttribute('dir', 'rtl');
       document.body.appendChild(trigger);
 
-      const popover = makePopover({ items: [{ title: 'A' }],
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }],
         trigger,
         direction: 'ltr' });
 
@@ -450,9 +453,9 @@ describe('PopoverAbstract', () => {
 
       document.body.appendChild(trigger);
 
-      const first = makePopover({ items: [{ title: 'A' }],
+      const first = makePopover({ items: [{ onActivate: noop, title: 'A' }],
         trigger });
-      const second = makePopover({ items: [{ title: 'B' }],
+      const second = makePopover({ items: [{ onActivate: noop, title: 'B' }],
         trigger });
 
       first.show();
@@ -465,7 +468,7 @@ describe('PopoverAbstract', () => {
     it('refreshes every dynamic item active state on open', () => {
       let active = false;
       const popover = makePopover({
-        items: [{ title: 'A',
+        items: [{ onActivate: noop, title: 'A',
           isActive: () => active }],
       });
 
@@ -480,7 +483,7 @@ describe('PopoverAbstract', () => {
     });
 
     it('focuses the search widget when one is installed', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
       const focus = vi.fn();
       const clear = vi.fn();
 
@@ -496,7 +499,7 @@ describe('PopoverAbstract', () => {
 
   describe('hide()', () => {
     it('clears every open marker and restores the base container class', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
 
       popover.show();
       popover.setTestOpenTop(true);
@@ -512,7 +515,7 @@ describe('PopoverAbstract', () => {
     });
 
     it('emits Closed once per close', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
       const onClosed = vi.fn();
 
       popover.on(PopoverEvent.Closed, onClosed);
@@ -523,7 +526,7 @@ describe('PopoverAbstract', () => {
     });
 
     it('runs the subclass hook before the Closed event', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
       const order: string[] = [];
 
       popover.on(PopoverEvent.Closed, () => order.push('closed'));
@@ -536,7 +539,7 @@ describe('PopoverAbstract', () => {
     });
 
     it('clears the search widget', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
       const clear = vi.fn();
 
       popover.setTestSearch({ focus: vi.fn(),
@@ -553,7 +556,7 @@ describe('PopoverAbstract', () => {
 
       document.body.appendChild(trigger);
 
-      const popover = makePopover({ items: [{ title: 'A' }],
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }],
         trigger });
       const spy = vi.spyOn(popover, 'hide');
 
@@ -561,7 +564,7 @@ describe('PopoverAbstract', () => {
       popover.hide();
       spy.mockClear();
 
-      const other = makePopover({ items: [{ title: 'B' }],
+      const other = makePopover({ items: [{ onActivate: noop, title: 'B' }],
         trigger });
 
       other.show();
@@ -570,7 +573,7 @@ describe('PopoverAbstract', () => {
     });
 
     it('is safe to close a popover that was never opened', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
 
       popover.hide();
 
@@ -628,12 +631,21 @@ describe('PopoverAbstract', () => {
 
     it('opens the nested popover and still runs the handler for an item with children', () => {
       const onActivate = vi.fn();
+      /**
+       * `WithChildren` types `onActivate` as `never`, so an item carrying both is
+       * unbuildable as a literal. Declared as a variable to keep the pair the runtime
+       * has to cope with, which is exactly what this test measures.
+       */
+      const parentWithHandler: PopoverItemDefaultBaseParams & { children: PopoverItemChildren } = {
+        title: 'Parent',
+        onActivate,
+        children: { items: [{ title: 'Child',
+          onActivate: noop }] },
+      };
       const popover = makePopover({
         items: [
-          { title: 'Parent',
-            onActivate,
-            children: { items: [{ title: 'Child' }] } },
-          { title: 'Sibling',
+          parentWithHandler,
+          { onActivate: noop, title: 'Sibling',
             toggle: true,
             isActive: true },
         ],
@@ -647,7 +659,7 @@ describe('PopoverAbstract', () => {
     });
 
     it('toggles a boolean-toggle item on and off', () => {
-      const popover = makePopover({ items: [{ title: 'A',
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A',
         toggle: true }] });
       const root = rootOf(popover.testItems[0]);
 
@@ -661,9 +673,9 @@ describe('PopoverAbstract', () => {
     it('deactivates the other members of the clicked radio group', () => {
       const popover = makePopover({
         items: [
-          { title: 'Left',
+          { onActivate: noop, title: 'Left',
             toggle: 'align' },
-          { title: 'Center',
+          { onActivate: noop, title: 'Center',
             toggle: 'align' },
         ],
       });
@@ -679,7 +691,7 @@ describe('PopoverAbstract', () => {
 
     it('closes on activation and emits ClosedOnActivate after Closed', () => {
       const popover = makePopover({
-        items: [{ title: 'A',
+        items: [{ onActivate: noop, title: 'A',
           closeOnActivate: true }],
       });
       const order: string[] = [];
@@ -694,7 +706,7 @@ describe('PopoverAbstract', () => {
     });
 
     it('stays open and emits nothing when the item does not close on activation', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
       const onClosed = vi.fn();
 
       popover.on(PopoverEvent.ClosedOnActivate, onClosed);
@@ -756,7 +768,7 @@ describe('PopoverAbstract', () => {
     });
 
     it('does not announce for an item that has no confirmation state', async () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
       const announcer = popover.testNodes.resultsAnnouncer;
 
       if (announcer === undefined) {
@@ -776,7 +788,7 @@ describe('PopoverAbstract', () => {
       const onActivate = vi.fn();
       const popover = makePopover({
         items: [
-          { title: 'A',
+          { onActivate: noop, title: 'A',
             name: 'a' },
           { title: 'B',
             name: 'b',
@@ -825,11 +837,11 @@ describe('PopoverAbstract', () => {
     it('hides every item carrying the name and leaves the rest alone', () => {
       const popover = makePopover({
         items: [
-          { title: 'A',
+          { onActivate: noop, title: 'A',
             name: 'dup' },
-          { title: 'B',
+          { onActivate: noop, title: 'B',
             name: 'dup' },
-          { title: 'C',
+          { onActivate: noop, title: 'C',
             name: 'other' },
         ],
       });
@@ -844,7 +856,7 @@ describe('PopoverAbstract', () => {
     });
 
     it('forgets the permanent hidden mark when the item is shown again', () => {
-      const popover = makePopover({ items: [{ title: 'A',
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A',
         name: 'a' }] });
 
       popover.toggleItemHiddenByName('a', true);
@@ -999,7 +1011,7 @@ describe('PopoverAbstract', () => {
 
     it('leaves every item visible when the popover has no tablist', () => {
       const popover = makePopover({
-        items: [{ title: 'A',
+        items: [{ onActivate: noop, title: 'A',
           dataset: { 'blok-popover-tab': 'heading' } }],
       });
 
@@ -1020,7 +1032,7 @@ describe('PopoverAbstract', () => {
 
   describe('nothing-found message', () => {
     it('shows the message and drops the list padding', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
 
       popover.show();
       popover.setTestNothingFound(true);
@@ -1032,7 +1044,7 @@ describe('PopoverAbstract', () => {
     });
 
     it('restores the padding of an open popover when the message goes away', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
 
       popover.show();
       popover.setTestNothingFound(true);
@@ -1047,7 +1059,7 @@ describe('PopoverAbstract', () => {
 
   describe('open direction flags', () => {
     it('flags and clears the open-top state', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
 
       popover.setTestOpenTop(true);
       expect(popover.getElement().getAttribute(DATA_ATTR.popoverOpenTop)).toBe('true');
@@ -1057,7 +1069,7 @@ describe('PopoverAbstract', () => {
     });
 
     it('flags and clears the open-left state', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
 
       popover.setTestOpenLeft(true);
       expect(popover.getElement().getAttribute(DATA_ATTR.popoverOpenLeft)).toBe('true');
@@ -1071,7 +1083,7 @@ describe('PopoverAbstract', () => {
     it('marks the container while scrolling and clears the mark after the idle timeout', () => {
       vi.useFakeTimers();
 
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
 
       popover.testNodes.items.dispatchEvent(new Event('scroll'));
 
@@ -1087,7 +1099,7 @@ describe('PopoverAbstract', () => {
 
   describe('scrollbar sizing', () => {
     it('shows the thumb sized and offset from the scroll metrics', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
       const { items, scrollbarThumb } = popover.testNodes;
 
       if (scrollbarThumb === undefined) {
@@ -1106,7 +1118,7 @@ describe('PopoverAbstract', () => {
     });
 
     it('never draws the thumb shorter than the minimum grabbable height', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
       const { items, scrollbarThumb } = popover.testNodes;
 
       if (scrollbarThumb === undefined) {
@@ -1124,7 +1136,7 @@ describe('PopoverAbstract', () => {
     });
 
     it('hides the thumb when the content fits', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
       const { items, scrollbarThumb } = popover.testNodes;
 
       if (scrollbarThumb === undefined) {
@@ -1145,7 +1157,7 @@ describe('PopoverAbstract', () => {
         clientY }) as PointerEvent;
 
     it('maps thumb movement onto the scroll offset and ends on pointerup', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
       const { items, scrollbarThumb } = popover.testNodes;
 
       if (scrollbarThumb === undefined) {
@@ -1174,7 +1186,7 @@ describe('PopoverAbstract', () => {
     });
 
     it('does not scroll on movement that never began with a press', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
       const { items, scrollbarThumb } = popover.testNodes;
 
       if (scrollbarThumb === undefined) {
@@ -1194,7 +1206,7 @@ describe('PopoverAbstract', () => {
   describe('scroll reel distortion', () => {
     it('curls an item clipped by the top edge back over the reel', () => {
       const popover = makePopover({
-        items: [{ title: 'A' }, { title: 'B' }],
+        items: [{ onActivate: noop, title: 'A' }, { onActivate: noop, title: 'B' }],
       });
       const { items } = popover.testNodes;
       const first = rootOf(popover.testItems[0]);
@@ -1223,7 +1235,7 @@ describe('PopoverAbstract', () => {
 
     it('curls an item clipped by the bottom edge the other way', () => {
       const popover = makePopover({
-        items: [{ title: 'A' }, { title: 'B' }],
+        items: [{ onActivate: noop, title: 'A' }, { onActivate: noop, title: 'B' }],
       });
       const { items } = popover.testNodes;
       const second = rootOf(popover.testItems[1]);
@@ -1242,7 +1254,7 @@ describe('PopoverAbstract', () => {
     });
 
     it('clears the distortion from every item when the popover closes', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
       const { items } = popover.testNodes;
       const first = rootOf(popover.testItems[0]);
 
@@ -1265,7 +1277,7 @@ describe('PopoverAbstract', () => {
 
   describe('destroy()', () => {
     it('removes a never-opened popover from the DOM immediately', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
 
       popover.destroy();
 
@@ -1289,7 +1301,7 @@ describe('PopoverAbstract', () => {
     it('cancels a pending scroll-activity timeout', () => {
       vi.useFakeTimers();
 
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
       const { items } = popover.testNodes;
 
       items.dispatchEvent(new Event('scroll'));
@@ -1300,7 +1312,7 @@ describe('PopoverAbstract', () => {
     });
 
     it('is safe to destroy twice', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
 
       popover.destroy();
       popover.destroy();
@@ -1309,7 +1321,7 @@ describe('PopoverAbstract', () => {
     });
 
     it('plays the exit transition for a visible popover and removes it once', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
 
       popover.show();
       vi.spyOn(popover.getElement(), 'getBoundingClientRect').mockReturnValue({
@@ -1340,7 +1352,7 @@ describe('PopoverAbstract', () => {
     it('removes a visible popover on the fallback timeout when no exit event fires', () => {
       vi.useFakeTimers();
 
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
 
       popover.show();
       vi.spyOn(popover.getElement(), 'getBoundingClientRect').mockReturnValue({
@@ -1367,7 +1379,7 @@ describe('PopoverAbstract', () => {
 
   describe('miscellaneous public surface', () => {
     it('reports containment of its own descendants only', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
       const outside = document.createElement('div');
 
       document.body.appendChild(outside);
@@ -1378,20 +1390,20 @@ describe('PopoverAbstract', () => {
     });
 
     it('mounts the same element it exposes', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
 
       expect(popover.getMountElement()).toBe(popover.getElement());
     });
 
     it('keeps focus inside itself by default', () => {
-      const popover = makePopover({ items: [{ title: 'A' }] });
+      const popover = makePopover({ items: [{ onActivate: noop, title: 'A' }] });
 
       expect(popover.getFocusHost()).toBeNull();
     });
 
     it('leaves every item alone when the base filter runs', () => {
       const popover = makePopover({
-        items: [{ title: 'Alpha' }, { title: 'Beta' }],
+        items: [{ onActivate: noop, title: 'Alpha' }, { onActivate: noop, title: 'Beta' }],
       });
 
       popover.filterItems('zzz');

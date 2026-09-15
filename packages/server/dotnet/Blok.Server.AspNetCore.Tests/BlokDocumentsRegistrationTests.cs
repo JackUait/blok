@@ -213,18 +213,26 @@ public sealed class BlokDocumentsRegistrationTests
   /// parses the embedded bundle into every engine of its pool, which was
   /// measured at about a second, and a failure there would escape DI
   /// resolution and stop the host from starting at all — the opposite of what
-  /// <c>warmUp</c> documents. Asserted by construction, not by a clock: the
-  /// converter's factory must not have run when <c>StartAsync</c> returns, and
-  /// must have run by the time the warm-up finishes.
+  /// <c>warmUp</c> documents.
   /// </summary>
+  /// <remarks>
+  /// The test holds the factory shut until after the assertion, so "not built
+  /// yet" is ordered by the test rather than by whichever thread wins. Simply
+  /// asserting the flag after <c>StartAsync</c> returns is a race the warm-up
+  /// thread can win, and does on a loaded runner. A regression that builds on
+  /// the startup path blocks in <c>StartAsync</c> until the bounded wait gives
+  /// up, and then fails the same assertion.
+  /// </remarks>
   [Fact]
   public async Task BuildsTheConverterOffTheStartupPath()
   {
     var services = new ServiceCollection();
+    var permitted = new TaskCompletionSource();
     var built = false;
 
     services.AddSingleton<IBlokDocumentConverter>(_ =>
     {
+      permitted.Task.Wait(TimeSpan.FromSeconds(30));
       built = true;
 
       return new CountingConverter();
@@ -237,6 +245,8 @@ public sealed class BlokDocumentsRegistrationTests
     await warmUp.StartAsync(CancellationToken.None);
 
     Assert.False(built, "the converter was built while the host was starting");
+
+    permitted.SetResult();
 
     await warmUp.Warmed;
 

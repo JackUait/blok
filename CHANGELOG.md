@@ -2,6 +2,98 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.14.0](https://github.com/JackUait/blok/compare/v1.13.0...v1.14.0) (2026-09-16)
+
+### Breaking Changes
+
+- **`collaboration:status` reports participants, not peers** — One entry per person instead of one per connection, and the editor draws no presence stack.
+  - Each participant carries `lastActiveAt`, `clientIds` and the verified `userId`. `clientIds[0]` is the old `clientId`.
+  - `CollaborationPeer` is removed. `user.name`, `user.color` and `blockId` carry over unchanged.
+  - `[data-blok-presence-stack]`, `[data-blok-presence-avatar]` and `[data-blok-presence-overflow]` are gone. Draw your own stack from `participants`.
+- **Offline collaboration requires `collaboration.offlineScope`** — The local copy belongs to a person now, not to the browser.
+  - Pass a stable, opaque id for the signed-in account, such as `offlineScope: currentUser.id`.
+  - Never pass anything that rotates. A ticket or a session id mints a new partition on every refresh.
+  - `collaboration: { doc, offline: true }` without a scope rejects the editor's ready promise.
+- **A host `onSave` no longer replaces the `persistence` save queue** — The two compose, so an endpoint configured under `persistence` is finally called.
+  - Vue's `v-model:data` and Angular's `[formControl]` synthesize an `onSave`, so those adapters reached no endpoint at all before.
+  - `api.handlers.set()` no longer overwrites the queue, which used to kill autosave for the rest of the session.
+- **19 duplicate icon exports are gone from `@bloklabs/core/icons`** — Every icon is one drawing on a 20-unit canvas with a 1.25 stroke.
+  - Import the survivor: `IconMoveUp` to `IconArrowUp`, `IconZoomIn` to `IconPlus`, `IconCloseThick` to `IconCross`, `IconLinkCopy` to `IconLink`.
+  - The image-only aliases (`IconCropImage`, `IconCaptionImage`, `IconImageAlignLeft` and the rest) drop the `Image` suffix.
+  - Survivors are 20x20 intrinsic where several removed icons were 14x14, so size them in CSS rather than relying on the intrinsic box.
+- **Asset deletion is paired with the uploader that stored the asset** — A tool-level uploader's assets are no longer deleted through the editor-level one.
+  - Add `delete(url, ctx)` to `tools.<image|audio|video|file>.config.uploader`, now typed, or its assets are never swept.
+  - The `server` shorthand and the file tool's `endpoints` shorthand are unaffected.
+- **A block's `lastEditedBy` needs `config.user.id`** — An edit made while `config.user` is unset now removes the previous author instead of leaving it.
+  - Under collaboration, `config.user.id` is published to the room whenever `collaboration.user.name` is set.
+  - Pass an opaque per-document token if an internal account key must not travel to peers.
+  - A name a peer publishes about itself is unauthenticated, so it fills in only where `resolveUser` had nothing.
+- **Server conversions throw `BlokDocumentConversionException`** — The JavaScript engine's own exception types no longer leave any `IBlokDocumentConverter` method.
+  - Catch it and branch on its `Reason`. `OperationCanceledException` is unchanged.
+  - `ToPlainTextAsync` takes `includeHiddenText` before the token, so a positional caller must name the token.
+  - The allocation budget is 512 MiB and configurable, where 64 MiB failed on a 700 KB article.
+- **Readers see the text a media block carries but does not show** — `blocksToPlainText` takes `includeHiddenText`, off by default.
+  - An image's alt text, a media url, an embed source and a bookmark description can now reach a search index.
+  - A quote's legacy `caption` is read by both readers unconditionally, so `extractTexts` yields one more string for such a document.
+  - Re-extract before injecting, or the count check fails.
+- **`markdownToBlocks` imports a standalone image as an `image` block** — It returned a paragraph carrying a raw `<img>` string.
+  - Reference-style links and images resolve against their definitions instead of importing as nothing.
+  - A legacy `toggleList` or `columns` reports `action: 'degraded'` where it wrongly said `'dropped'`, so match on `action`, not on the detail string.
+
+### Features
+
+- **Emoji from the keyboard** — Typing `:` opens a picker inline, ranked by shortcode and then by keyword.
+  - A closing colon commits an exact shortcode, and the insert is one undo step.
+  - `inlineEmoji: false` turns the trigger off. The callout tool's icon picker uses the same component.
+  - The picker has category icons, a tone switch, search, grid navigation and section jumps.
+- **Collaboration says who is here and when they were last active** — `participants` replaces `peers`, with a verified identity per person.
+  - The room broadcasts verified identities, and each peer publishes an activity stamp about once a minute.
+  - A block's settings menu names whoever actually edited it last.
+  - Peers without a name draw as anonymous space silhouettes rather than a question mark.
+- **The convert menu groups headings into families** — A tab strip replaces one long list, with number strips for the levels.
+  - Menu items outside the selected family stay hidden until you pick their tab.
+  - The heading level is exposed on the menu item, so a host building its own menu can read it.
+- **The block menus are laid out as one system** — The inline toolbar is a single row, and the block menus are tiled with section separators.
+  - Inline tools sit in a canonical order, whichever way they were registered.
+  - The colour picker is split into Text and Background tabs.
+- **A host can watch collaboration activity from the server** — `Blok.Server` hands room activity to an observer you register.
+  - HTTP edits and resets are journalled, so an edit that cannot be proven fails closed.
+  - A member's presence is withdrawn when its tab leaves without saying goodbye.
+- **The API reference reads in Russian** — Every reference page is translated, not just the landing pages.
+
+### Bug Fixes
+
+- **Autosave lost edits, wedged, and deleted live assets** — Six defects in the save queue and the orphan sweep, each with a regression test written first.
+  - The sweep deleted assets the live document still referenced, because an upload resolves before the payload naming it arrives.
+  - A destroyed editor kept saving, deleting and reporting errors into an unmounted host.
+  - `onError` never fired while the user kept typing, so a dead endpoint produced 75 rejections and no report.
+- **A reload lost block positions, table text and undo under collaboration** — The document is a projection of the shared state now, not a save receipt.
+  - A prune-only flush is treated as normalisation rather than as an edit, so it no longer races a peer's write.
+  - A stale-lineage sweep is no longer reported to the host as a server rejection.
+- **The Markdown exporter destroyed what it exported** — Conversion mutated the blocks it was handed.
+  - Currency amounts no longer parse as maths, and a dropped footnote is reported rather than silently lost.
+- **Focus rings appeared on mouse gestures** — The keyboard-only gate did not reach, and where it did it stranded keyboard users.
+  - The popover's focus cursor is drawn only for keyboard navigation.
+  - A tabbable inside a hidden ancestor is skipped.
+- **A submenu closed while the keyboard was inside it** — The pointer grace period now stands down for a submenu the keyboard owns.
+- **The toolbar's left-edge shield killed the plus button** — The shield swallowed the click it was meant to protect.
+  - The inline toolbar anchors to the selected text, keeps itself up for an unchanged selection, and no longer flickers on click.
+- **A stored callout with no body rendered empty** — The body paragraph is seeded on load, and the emoji trigger is rewired when read-only is turned off.
+- **Legacy documents read wrong in the view renderer** — Containment resolves from a container's `content[]`, and a legacy embed's URL is read.
+  - A table child that no cell references is indexed rather than dropped.
+
+### Maintenance
+
+- **Mutation testing runs against the whole source tree** — A ratchet now fails the build, measured against a baseline built in batches.
+  - A run is scoped by who imports a file rather than by what the file is named, and a reported mutant can be applied to its source by hand.
+  - A sweep survives SIGKILL, reaps the workers a timeout leaves behind, and refuses to apply a mutant to a file that has drifted.
+- **`blok-sync.v2` drains live** — Writes are envelope-only, acknowledged by exact id, and quarantined on rejection.
+  - Checkpoints publish on a committed-operation threshold, and a failed quarantine no longer loops the drain forever.
+  - The v1 client is still what a browser negotiates. Do not build on the v2 frames yet.
+- **A release refuses to cut a tag whose workflows lack their secrets** — The mirror gate and the delivery check are real checks now, not placeholders.
+- **Icons have a written house spec** — `src/components/icons/README.md` records the canvas, the stroke and the shared frames, pinned by relationship tests.
+  - The playground gallery previews every icon at 16, 20 and 24 px.
+
 ## [1.13.0](https://github.com/JackUait/blok/compare/v1.12.0...v1.13.0) (2026-09-03)
 
 ### Features

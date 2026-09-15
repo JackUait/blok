@@ -353,20 +353,32 @@ test.describe('cross-block text selection', () => {
         offset: 6 }
     );
 
+    const inlineToolbar = page.locator(
+      `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"]`
+    );
+    const selectedBlocks = page.locator(`${BLOCK_WRAPPER_SELECTOR}[data-blok-selected="true"]`);
+
     // The formatting toolbar opens a beat after the drag settles, and it is the
     // first of the two layers this test walks through. Pressing before it is up
     // promotes on the FIRST Escape and lets the second clear the selection
     // again, so wait for the layer to exist rather than racing it.
-    await expect(
-      page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"]`)
-    ).toBeVisible();
+    await expect(inlineToolbar).toBeVisible();
 
-    // One Escape dismisses exactly one layer: the formatting toolbar the
-    // selection opened goes first, the selection itself second.
-    await page.keyboard.press('Escape');
+    /**
+     * One Escape dismisses exactly one layer: the formatting toolbar the
+     * selection opened goes first, the selection itself second. Each press is
+     * checked against the state it produced, because firing both back to back
+     * cannot tell "the toolbar absorbed both" from "the selection was promoted
+     * and then dropped" — the two read identically at the end.
+     */
     await page.keyboard.press('Escape');
 
-    await expect(page.locator(`${BLOCK_WRAPPER_SELECTOR}[data-blok-selected="true"]`)).toHaveCount(2);
+    await expect(inlineToolbar).toBeHidden();
+    await expect(selectedBlocks).toHaveCount(0);
+
+    await page.keyboard.press('Escape');
+
+    await expect(selectedBlocks).toHaveCount(2);
 
     const state = await readSelectionState(page);
 

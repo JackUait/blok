@@ -2,6 +2,50 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.15.0](https://github.com/JackUait/blok/compare/v1.14.0...v1.15.0) (2026-09-16)
+
+### Breaking Changes
+
+- **`IBlokDocumentConverter` gains three methods** — Anyone implementing the interface must add `FromHtmlAsync`, `ValidateAsync` and `ToPlainTextWithReportAsync`.
+  - Callers are unaffected. In practice this touches a test double.
+  - There are no default implementations, because the only possible defaults would be silently wrong.
+- **A server timeout under 100 ms or an allocation budget under 8 MiB is rejected** — `Create` and `AddBlokDocuments` throw `ArgumentOutOfRangeException` at the call.
+  - Both floors sit below the measured failure points, so no value that worked now fails.
+  - A host catching `InvalidOperationException` around construction no longer catches it.
+
+### Features
+
+- **HTML converts into blocks** — `FromHtmlAsync` gives `ToHtmlAsync` an inverse, so a host importing legacy content needs no parser of its own.
+  - Covers headings, lists with depth and start, tables with colspan and rowspan, images, `details` as a toggle, code with its language, and inline marks.
+  - What it cannot represent is reported as a warning rather than dropped quietly, and the text always survives.
+- **A server can say what a document is without converting it** — `ValidateAsync` answers yes or no, and `ToPlainTextWithReportAsync` reports what the reader did not recognise.
+  - A non-document is settled from the JSON in .NET, so no engine is spent on it.
+  - `ToPlainTextAsync` is untouched, since `''` stays the right answer for a preview caller.
+- **The legacy CMS HTML cleaner ships as `@bloklabs/core/preprocess`** — Standard DOM throughout, in both the string and the in-place form.
+- **Three reachable-only-by-copying surfaces are published** — `matchEmbedService` and `buildEmbedUrl` from `./tools`, `USE_BLOK_CONFIG_KEYS` from the React adapter, and the four block mutation-type constants.
+  - A stored link now migrates to exactly what a live paste produces.
+  - The mutation-type constants had no runtime binding, so importing one type-checked and then resolved to `undefined`.
+
+### Bug Fixes
+
+- **A table put every cell's blocks into the first cell when the editor booted detached** — Every framework adapter mounts on a detached holder, where the anti-stealing veto went silent.
+  - Users saw one cell holding every value and the rest empty, on every reload.
+  - A container now claims a holder that descends from it, not only one that is connected.
+- **A pasted table cell carried an invisible background** — Word, Google Docs and legacy CMS HTML stamp the page background onto every `td`.
+  - Near-white mapped to the grey preset, and white or transparent persisted into saved data.
+  - A genuine light grey still maps to the preset.
+- **The view renderer lost children declared only by `content[]`** — A toggle's child rendered as a sibling in HTML, Markdown and plain text alike.
+  - A `content[]` entry naming a block the document does not carry is now reported as a dropped construct.
+  - Markdown import reports a URL it refuses instead of silently losing the image or the link target.
+- **A paragraph holding only an image was deleted as an empty spacer** — The legacy importer and the paste pipeline share one emptiness predicate now.
+  - `<p>&nbsp;</p>` from Word or Summernote no longer arrives as a blank block.
+- **Reduced motion did not reach navigation scrolling** — `scrollToBlock`, the boot-time deep-link scroll and keyboard block navigation now skip the glide.
+
+### Maintenance
+
+- **A flaky CI attempt no longer strands a release tag** — The mirror gate polls until CI is green or the hour is up.
+  - v1.14.0 never reached the mirror, because the gate exited on the first terminal conclusion.
+
 ## [1.14.0](https://github.com/JackUait/blok/compare/v1.13.0...v1.14.0) (2026-09-16)
 
 ### Breaking Changes

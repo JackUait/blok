@@ -412,7 +412,7 @@ const splitListItem = (item: P5Element): ListItemParts => {
    */
   const [first] = parts.blocks;
 
-  if (rawText(parts.inline).trim() === '' && isElement(first) && first.tagName === 'p') {
+  if (rawText(parts.inline).trim() === '' && first !== undefined && isElement(first) && first.tagName === 'p') {
     parts.inline = first.childNodes;
     parts.blocks = parts.blocks.slice(1);
   }
@@ -430,7 +430,9 @@ const emitList = (ctx: Ctx, element: P5Element, depth: number): void => {
   const ordered = element.tagName === 'ol';
   const bulletStyle = ordered ? 'ordered' : 'unordered';
   const start = Number(attr(element, 'start'));
-  const seen = { items: 0 };
+  const firstItem = element.childNodes.find(
+    (node): node is P5Element => isElement(node) && node.tagName === 'li'
+  );
 
   for (const node of element.childNodes) {
     if (!isElement(node)) {
@@ -463,11 +465,10 @@ const emitList = (ctx: Ctx, element: P5Element, depth: number): void => {
       data.checked = attr(parts.checkbox, 'checked') !== undefined;
     }
 
-    if (ordered && seen.items === 0 && Number.isInteger(start)) {
+    if (ordered && node === firstItem && Number.isInteger(start)) {
       data.start = start;
     }
 
-    seen.items += 1;
     push(ctx, 'list', data);
     convertNodes(ctx, parts.blocks);
 

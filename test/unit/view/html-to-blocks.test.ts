@@ -167,6 +167,27 @@ describe('htmlToBlocks — lists', () => {
         { type: 'list', data: { text: 'todo', style: 'checklist', depth: 0, checked: false } },
       ]);
   });
+
+  /**
+   * An item with neither text nor block children left the lone-paragraph
+   * unwrap testing `undefined`, which threw and failed the whole import.
+   */
+  it('reads an item that carries nothing at all', () => {
+    expect(shape(htmlToBlocks('<ul><li>A</li><li></li><li>C</li></ul>'))).toEqual([
+      { type: 'list', data: { text: 'A', style: 'unordered', depth: 0 } },
+      { type: 'list', data: { text: '', style: 'unordered', depth: 0 } },
+      { type: 'list', data: { text: 'C', style: 'unordered', depth: 0 } },
+    ]);
+  });
+
+  it('reads an item holding only whitespace, a break, or a nested list', () => {
+    expect(() => htmlToBlocks('<ul><li>  </li></ul>')).not.toThrow();
+    expect(() => htmlToBlocks('<ul><li><br></li></ul>')).not.toThrow();
+    expect(shape(htmlToBlocks('<ul><li><ul><li>B</li></ul></li></ul>'))).toEqual([
+      { type: 'list', data: { text: '', style: 'unordered', depth: 0 } },
+      { type: 'list', data: { text: 'B', style: 'unordered', depth: 1 } },
+    ]);
+  });
 });
 
 describe('htmlToBlocks — tables', () => {

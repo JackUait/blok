@@ -763,7 +763,7 @@ export class KeyboardController extends Controller {
        * exactly one layer.
        */
       event.stopPropagation();
-      this.Blok.InlineToolbar.close();
+      this.Blok.InlineToolbar.dismiss();
 
       return;
     }

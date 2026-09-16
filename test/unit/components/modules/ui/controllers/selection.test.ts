@@ -20,6 +20,7 @@ const createBlokStub = (): BlokModules => {
     InlineToolbar: {
       opened: false,
       close: vi.fn(),
+      clearDismissal: vi.fn(),
       tryToShow: vi.fn(() => Promise.resolve()),
       containsNode: vi.fn(() => false),
       hasFlipperFocus: false,

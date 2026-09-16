@@ -188,6 +188,7 @@ const createHarness = (options?: {
         return state.hasNestedPopoverOpen;
       },
       close: vi.fn(),
+      dismiss: vi.fn(),
       closeNestedPopover: vi.fn(),
     },
     BlockSettings: {
@@ -1338,6 +1339,7 @@ describe('KeyboardController — mutation coverage', () => {
 
       expect(harness.blok.InlineToolbar.closeNestedPopover).toHaveBeenCalledTimes(1);
       expect(harness.blok.InlineToolbar.close).not.toHaveBeenCalled();
+      expect(harness.blok.InlineToolbar.dismiss).not.toHaveBeenCalled();
       expect(event.defaultPrevented).toBe(true);
       expect(reachedLaterDocumentListener).toBe(false);
     });
@@ -1359,7 +1361,9 @@ describe('KeyboardController — mutation coverage', () => {
 
       const { event, reachedTarget } = harness.press(harness.inside, { key: 'Escape' });
 
-      expect(harness.blok.InlineToolbar.close).toHaveBeenCalledTimes(1);
+      // dismiss() closes AND records the selection, so a selectionchange still
+      // queued from the drag cannot reopen the toolbar before the next Escape.
+      expect(harness.blok.InlineToolbar.dismiss).toHaveBeenCalledTimes(1);
       expect(reachedTarget).toBe(false);
       expect(event.defaultPrevented).toBe(false);
     });

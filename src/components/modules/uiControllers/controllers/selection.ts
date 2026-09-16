@@ -48,6 +48,10 @@ export class SelectionController extends Controller {
   private handlePointerDown = (event: Event): void => {
     this.isPointerDown = true;
 
+    // A fresh gesture retires any Escape dismissal, so re-selecting the very
+    // same text shows the toolbar again.
+    this.Blok.InlineToolbar.clearDismissal();
+
     // Another press can arrive before the previous release frame.
     if (this.pointerSelection !== null && this.Blok.InlineToolbar.opened) {
       return;

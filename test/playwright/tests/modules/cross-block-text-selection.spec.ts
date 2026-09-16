@@ -385,6 +385,60 @@ test.describe('cross-block text selection', () => {
     expect(state.blockTexts).toStrictEqual([]);
   });
 
+  /**
+   * The drag arms a trailing 180ms selectionchange debounce, and webkit/firefox
+   * re-clamp the cross-host range on mouseup, which arms it again. When that
+   * timer fires after Escape has dismissed the toolbar, the selection is still
+   * a live range, so every gate in the controller passes and the toolbar comes
+   * back for a selection the user already dismissed it for. The next Escape
+   * then spends itself closing the toolbar again instead of promoting.
+   *
+   * Dispatching the event by hand is the same input the engine delivers late,
+   * without depending on how loaded the runner is.
+   */
+  test('a late selectionchange does not reopen the toolbar the user dismissed', async ({ page }) => {
+    await createBlokWithBlocks(page, createParagraphs([
+      'First block text',
+      'Second block text',
+      'Third block text',
+    ]));
+
+    await dragBetweenCharacters(
+      page,
+      { editable: editableByIndex(page, 0),
+        offset: 6 },
+      { editable: editableByIndex(page, 1),
+        offset: 6 }
+    );
+
+    const inlineToolbar = page.locator(
+      `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"]`
+    );
+    const selectedBlocks = page.locator(`${BLOCK_WRAPPER_SELECTOR}[data-blok-selected="true"]`);
+
+    await expect(inlineToolbar).toBeVisible();
+
+    await page.keyboard.press('Escape');
+
+    await expect(inlineToolbar).toBeHidden();
+
+    // A fake clock drives the 180ms debounce to completion instead of waiting
+    // on the wall clock, so the assertion does not depend on runner load.
+    await page.clock.install({ time: new Date('2030-01-01T00:00:00Z') });
+
+    await page.evaluate(() => {
+      document.dispatchEvent(new Event('selectionchange'));
+    });
+
+    await page.clock.runFor(400);
+
+    await expect(inlineToolbar).toBeHidden();
+
+    await page.keyboard.press('Escape');
+
+    await expect(selectedBlocks).toHaveCount(2);
+  });
+
   test('copy serializes exactly the selected characters', async ({ page }) => {
     await createBlokWithBlocks(page, createParagraphs([
       'First block text',

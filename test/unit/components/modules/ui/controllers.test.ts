@@ -65,6 +65,7 @@ const createBlokStub = (): BlokModules => {
     InlineToolbar: {
       opened: false,
       close: vi.fn(),
+      dismiss: vi.fn(),
       hasNestedPopoverOpen: false,
       closeNestedPopover: vi.fn(),
     },
@@ -514,8 +515,10 @@ describe('KeyboardController', () => {
       Object.defineProperty(event, 'target', { value: document.body });
       document.dispatchEvent(event);
 
-      expect(blok.InlineToolbar.close).toHaveBeenCalledTimes(1);
-      // InlineToolbar.close() is called without preventing default - event propagates normally
+      // dismiss() closes AND records the selection, so a selectionchange still
+      // queued from the drag cannot reopen the toolbar before the next Escape.
+      expect(blok.InlineToolbar.dismiss).toHaveBeenCalledTimes(1);
+      // Dismissal does not prevent default - the event propagates normally
       expect(event.defaultPrevented).toBe(false);
     });
   });

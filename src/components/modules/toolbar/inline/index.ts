@@ -72,6 +72,17 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
   public opened = false;
 
   /**
+   * Boundary points of the selection the user dismissed the toolbar for.
+   * Cleared as soon as the selection becomes anything else.
+   */
+  private dismissedRange: {
+    startContainer: Node;
+    startOffset: number;
+    endContainer: Node;
+    endOffset: number;
+  } | null = null;
+
+  /**
    * Returns true if a nested popover (like convert-to dropdown) is currently open
    */
   public get hasNestedPopoverOpen(): boolean {
@@ -244,6 +255,12 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
       this.close();
     }
 
+    if (this.isDismissedRange(SelectionUtils.range)) {
+      return;
+    }
+
+    this.dismissedRange = null;
+
     this.initialize();
 
     const { allowed } = this.selectionValidator.canShow();
@@ -285,6 +302,54 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     new SelectionUtils().expandToTag(anchor);
 
     await this.activateToolByShortcut('link');
+  }
+
+  /**
+   * Closes the toolbar and remembers the selection it was closed for, so a
+   * selectionchange still queued from the drag cannot bring it straight back.
+   * The debounce is 180ms and the engines re-clamp a cross-host range on
+   * mouseup, so on a loaded runner that stale event lands after the Escape.
+   * A reopen is only ever legitimate for a DIFFERENT selection.
+   */
+  public dismiss(): void {
+    const range = SelectionUtils.range;
+
+    this.dismissedRange = range === null
+      ? null
+      : {
+        startContainer: range.startContainer,
+        startOffset: range.startOffset,
+        endContainer: range.endContainer,
+        endOffset: range.endOffset,
+      };
+
+    this.close();
+  }
+
+  /**
+   * Forgets a dismissal, so the toolbar may open for that selection again.
+   * Called wherever the user asks for it back: a new pointer gesture, or a
+   * formatting shortcut on the selection they just dismissed it for.
+   */
+  public clearDismissal(): void {
+    this.dismissedRange = null;
+  }
+
+  /**
+   * Whether the given range is the one the toolbar was dismissed for.
+   * @param range - the range to compare against the dismissed one
+   */
+  private isDismissedRange(range: Range | null): boolean {
+    const dismissed = this.dismissedRange;
+
+    if (dismissed === null || range === null) {
+      return false;
+    }
+
+    return range.startContainer === dismissed.startContainer
+      && range.startOffset === dismissed.startOffset
+      && range.endContainer === dismissed.endContainer
+      && range.endOffset === dismissed.endOffset;
   }
 
   /**
@@ -587,6 +652,9 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     if (!this.opened) {
+      // Pressing a formatting shortcut asks for the toolbar, even on a
+      // selection the user had dismissed it for.
+      this.clearDismissal();
       await this.tryToShow();
     }
 

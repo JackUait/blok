@@ -277,4 +277,44 @@ describe('docs release verification', () => {
       'ghcr.io/jackuait/blok-server:2.3.4 unavailable (manifest missing)',
     );
   });
+
+  /**
+   * npm is published before the release commit is pushed, but NuGet, the release
+   * assets and the GHCR image are pushed by release-server.yml, which first waits
+   * for the very CI run that triggers the docs deploy. So on a push to main the
+   * server half cannot be satisfied yet and the job fails for a 12-20 minute
+   * window after every bump. The tag path still checks everything.
+   */
+  describe('server delivery is only checked when the release has had a chance to publish', () => {
+    const manifests = [{ name: '@bloklabs/core',
+      version: '2.3.4' }];
+
+    it('skips the server delivery check when server delivery is excluded', async () => {
+      const { verifyDocsRelease } = await loadVerifier();
+      const verifyPackages = vi.fn(async () => {});
+      const verifyServerDelivery = vi.fn(async () => {});
+
+      await verifyDocsRelease('v2.3.4', {
+        includeServerDelivery: false,
+        manifests,
+        verifyPackages,
+        verifyServerDelivery,
+      });
+
+      expect(verifyPackages).toHaveBeenCalledOnce();
+      expect(verifyServerDelivery).not.toHaveBeenCalled();
+    });
+
+    it('checks server delivery by default', async () => {
+      const { verifyDocsRelease } = await loadVerifier();
+      const verifyPackages = vi.fn(async () => {});
+      const verifyServerDelivery = vi.fn(async () => {});
+
+      await verifyDocsRelease('v2.3.4', { manifests,
+        verifyPackages,
+        verifyServerDelivery });
+
+      expect(verifyServerDelivery).toHaveBeenCalledOnce();
+    });
+  });
 });

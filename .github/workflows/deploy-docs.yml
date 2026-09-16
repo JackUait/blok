@@ -75,7 +75,11 @@ jobs:
           RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag }}
         run: |
           tag="${RELEASE_TAG:-v$(node -p "require('./package.json').version")}"
-          node scripts/verify-docs-release.mjs "$tag"
+          if [ -n "$RELEASE_TAG" ]; then
+            node scripts/verify-docs-release.mjs "$tag"
+          else
+            node scripts/verify-docs-release.mjs "$tag" --packages-only
+          fi
 
   build:
     name: Build Docs

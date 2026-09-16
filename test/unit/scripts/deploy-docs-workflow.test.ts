@@ -84,7 +84,13 @@ describe('docs deployment workflow', () => {
     expect(checkout?.with?.ref).toBe(selectedRef);
     expect(verification).toMatchObject({
       run: 'tag="${RELEASE_TAG:-v$(node -p "require(\'./package.json\').version")}"\n'
-        + 'node scripts/verify-docs-release.mjs "$tag"\n',
+        // A push to main lands before release-server.yml publishes NuGet, the
+        // release assets and the image, so only the npm family is verifiable there.
+        + 'if [ -n "$RELEASE_TAG" ]; then\n'
+        + '  node scripts/verify-docs-release.mjs "$tag"\n'
+        + 'else\n'
+        + '  node scripts/verify-docs-release.mjs "$tag" --packages-only\n'
+        + 'fi\n',
       env: {
         RELEASE_TAG:
           "${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag }}",

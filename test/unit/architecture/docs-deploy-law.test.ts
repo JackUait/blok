@@ -75,9 +75,12 @@ const WORKFLOW_RUN_CHECKOUT_REF =
  */
 const RELEASE_GATED_JOBS: Record<string, string> = {
   'verify-release':
-    'Asserts the npm package family matching the release tag is published, so the docs never ' +
-    'advertise a version nobody can install. There is no tag on a CI workflow run, so the check ' +
-    'is meaningless there — it is skipped, and the build job accepts `skipped` so content still ships.',
+    'Asserts the package family matching the release tag is published, so the docs never ' +
+    'advertise a version nobody can install. A CI workflow run carries no tag, so it checks the ' +
+    'npm family only (`--packages-only`): release-server.yml publishes NuGet, the release assets ' +
+    'and the image after waiting for that same CI run, so the server half cannot be satisfied ' +
+    'yet. The release and dispatch paths carry a tag and check everything. The build job accepts ' +
+    '`skipped` so content still ships.',
 };
 
 const getJob = (id: string): Job => {

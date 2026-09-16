@@ -324,24 +324,42 @@ export async function verifyPublishedServerDelivery(version, {
   );
 }
 
-export async function verifyDocsRelease(tag) {
-  const version = releaseVersionFromTag(tag);
-  const manifests = RELEASE_PACKAGES.map(({ name, manifestPath }) => {
+export function readReleaseManifests() {
+  return RELEASE_PACKAGES.map(({ name, manifestPath }) => {
     const manifestUrl = new URL(`../${manifestPath}`, import.meta.url);
     const manifest = JSON.parse(readFileSync(manifestUrl, 'utf-8'));
 
     return { name, version: manifest.version };
   });
+}
+
+// includeServerDelivery is false on a push to main. npm is published before the
+// release commit is pushed, but NuGet, the release assets and the GHCR image are
+// pushed by release-server.yml, which first waits for the very CI run that
+// triggers this docs deploy — so the server half cannot be satisfied yet. The
+// release and workflow_dispatch paths carry a tag and still check everything.
+export async function verifyDocsRelease(tag, {
+  includeServerDelivery = true,
+  manifests = readReleaseManifests(),
+  verifyPackages = verifyPublishedPackageVersions,
+  verifyServerDelivery = verifyPublishedServerDelivery,
+} = {}) {
+  const version = releaseVersionFromTag(tag);
 
   assertLockstepManifestVersions(version, manifests);
-  await verifyPublishedPackageVersions(version, {
+  await verifyPackages(version, {
     onRetry: ({ attempt, failures }) => {
       console.warn(
         `Package registry verification attempt ${attempt} failed: ${failures.join('; ')}`,
       );
     },
   });
-  await verifyPublishedServerDelivery(version, {
+
+  if (!includeServerDelivery) {
+    return version;
+  }
+
+  await verifyServerDelivery(version, {
     onRetry: ({ attempt, failures }) => {
       console.warn(
         `Server delivery verification attempt ${attempt} failed: ${failures.join('; ')}`,
@@ -355,16 +373,20 @@ export async function verifyDocsRelease(tag) {
 const isDirectRun = process.argv[1] === fileURLToPath(import.meta.url);
 
 if (isDirectRun) {
-  const tag = process.argv[2];
+  const args = process.argv.slice(2);
+  const packagesOnly = args.includes('--packages-only');
+  const tag = args.find((arg) => !arg.startsWith('--'));
 
   if (!tag) {
-    console.error('Usage: node scripts/verify-docs-release.mjs <release-tag>');
+    console.error('Usage: node scripts/verify-docs-release.mjs <release-tag> [--packages-only]');
     process.exitCode = 1;
   } else {
     try {
-      const version = await verifyDocsRelease(tag);
+      const version = await verifyDocsRelease(tag, { includeServerDelivery: !packagesOnly });
 
-      console.log(`Verified published package family and server delivery ${version}.`);
+      console.log(packagesOnly
+        ? `Verified published package family ${version}.`
+        : `Verified published package family and server delivery ${version}.`);
     } catch (error) {
       console.error(error instanceof Error ? error.message : error);
       process.exitCode = 1;

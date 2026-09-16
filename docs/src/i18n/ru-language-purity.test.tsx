@@ -1,5 +1,5 @@
 // docs/src/i18n/ru-language-purity.test.tsx
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { MemoryRouter } from 'react-router';
@@ -10,7 +10,7 @@ import { PresetsContent } from '../pages/PresetsPage';
 import { ToolSection } from '../components/tools/ToolSection';
 import { TOOL_SECTIONS } from '../components/tools/tools-data';
 import { WhyBlok } from '../components/home/WhyBlok';
-import { Features } from '../components/home/Features';
+import { Features, LANGUAGE_COUNT, PHRASES } from '../components/home/Features';
 import { Sidebar } from '../components/common/Sidebar';
 import { CodeBlock } from '../components/common/CodeBlock';
 import { Footer } from '../components/layout/Footer';
@@ -179,6 +179,10 @@ const expectNoEnglish = (container: HTMLElement, surface: string): void => {
 };
 
 describe('/ru pages carry no English body prose', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('renders the server page in Russian', () => {
     expectNoEnglish(renderRu(<ServerContent />, '/ru/server'), 'ServerContent');
   });
@@ -198,6 +202,27 @@ describe('/ru pages carry no English body prose', () => {
   it('renders the home feature tiles in Russian', () => {
     expectNoEnglish(renderRu(<Features />), 'Features');
   });
+
+  /**
+   * The polyglot greeting tile draws one of 69 locales at random on mount, and
+   * its hidden measuring twin holds the FULL word however little has been typed.
+   * Two of those greetings read as English prose to the heuristic above
+   * ("Xin chào", "Përshëndetje"), so the test above failed on roughly one run in
+   * 35 until the tile was marked `data-lang-exempt`. The offenders are derived,
+   * not listed, so a newly added locale is covered the day it lands.
+   */
+  const LATIN_GREETINGS = PHRASES
+    .map((phrase, index) => ({ code: phrase.code, hello: phrase.hello, index }))
+    .filter(({ hello }) => isEnglishProse({ text: hello, fromAttribute: false }));
+
+  it.each(LATIN_GREETINGS)(
+    'renders the home feature tiles in Russian while the greeting tile shows $hello',
+    ({ index }) => {
+      // pickLocaleIndex floors rng() * LANGUAGE_COUNT, so this lands mid-bucket.
+      vi.spyOn(Math, 'random').mockReturnValue((index + 0.5) / LANGUAGE_COUNT);
+      expectNoEnglish(renderRu(<Features />), 'Features');
+    },
+  );
 
   it('renders the docs sidebar in Russian', () => {
     expectNoEnglish(

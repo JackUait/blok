@@ -1640,7 +1640,7 @@ const ShortcutBadge: React.FC<{
 // lines flip and the caret lands on the right edge — "RTL-ready" made watchable.
 // Each entry is [code, hello, what's-up]; both share the locale's direction.
 const RTL_GREET = new Set(["ar", "dv", "fa", "he", "ku", "ps", "sd", "ug", "ur", "yi"]);
-const PHRASES = (
+export const PHRASES = (
   [
     ["en", "Hello", "What's up?"], ["am", "ሰላም", "እንዴት ነህ?"], ["ar", "مرحبا", "ما الأخبار؟"],
     ["az", "Salam", "Nə var nə yox?"], ["bg", "Здравей", "Какво става?"], ["bn", "নমস্কার", "কী খবর?"],
@@ -1814,8 +1814,11 @@ const LanguagesViz: React.FC = () => {
     setScale(w > avail && w > 0 ? Math.max(0.5, avail / w) : 1);
   }, [active.text]);
 
+  // data-lang-exempt: the tile's whole job is to speak all 69 locales, so on /ru
+  // it deliberately shows a non-Russian word. Without it the purity law reads
+  // "Xin chào" and "Përshëndetje" as English prose (ru-language-purity.test).
   return (
-    <div ref={rootRef} aria-hidden="true" className="flex size-full items-center">
+    <div ref={rootRef} aria-hidden="true" data-lang-exempt className="flex size-full items-center">
       <div ref={fieldRef} className="relative h-16 w-full overflow-hidden rounded-2xl border border-border/60 bg-secondary px-5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.05)]">
         <span
           ref={edgeRef}

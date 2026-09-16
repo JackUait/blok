@@ -262,13 +262,14 @@ export declare function injectTexts(
 ): OutputData;
 
 /**
- * A construct Markdown could not express as-is (see
- * {@link blocksToMarkdownWithReport}).
+ * A construct a conversion could not express as-is (see
+ * {@link blocksToMarkdownWithReport} and {@link htmlToBlocksWithReport}).
  */
 export interface MarkdownDegradation {
   /**
-   * What degraded: a block tool name (`callout`) on the way out, a Markdown
-   * construct (`html`) on the way in.
+   * What degraded: a block tool name (`callout`) on the way out, a source
+   * construct on the way in — a Markdown node (`html`) or an HTML tag
+   * (`iframe`).
    */
   construct: string;
   /** `dropped` — nothing was emitted; `degraded` — emitted, but lossily. */
@@ -535,3 +536,40 @@ export type { BlokViewSchema, DefinedBlokSchema, BlokSchemaConfig, ResolvedSchem
  * unconstrained `data` rather than being rejected.
  */
 export declare const blokDocumentSchema: Readonly<Record<string, unknown>>;
+
+/** Blocks parsed out of HTML, plus everything the HTML could not carry into them. */
+export interface HtmlImportResult {
+  /** Blocks ready for `blok.blocks.render()`, `insertMany()`, or storage. */
+  blocks: OutputBlockData[];
+  /** Constructs that arrived degraded or not at all, in document order. */
+  warnings: MarkdownDegradation[];
+}
+
+/**
+ * Parse HTML into Blok blocks — synchronous and DOM-free, the inbound twin of
+ * `blocksToHtml`. Takes a fragment or a whole document.
+ *
+ * Covers the structural subset a document body is made of: headings,
+ * paragraphs, lists (nested, ordered, checklists), tables (merged cells
+ * included), images, links and inline marks, code, blockquotes, toggles and
+ * dividers. Layout containers are unwrapped and their children converted in
+ * place; anything else is reported rather than dropped in silence.
+ *
+ * Reach for {@link htmlToBlocksWithReport} when the caller has to be told what
+ * the HTML could not carry.
+ *
+ * @param html - the HTML source
+ * @returns blocks ready for `render()`, `insertMany()`, or storage
+ */
+export declare function htmlToBlocks(html: string): OutputBlockData[];
+
+/**
+ * Parse HTML into Blok blocks and report what degraded on the way in. The
+ * blocks are identical to {@link htmlToBlocks}; reach for this when the result
+ * is stored — an embedded video or a form has no Blok block, and an import kept
+ * without reading the report is how that loss goes unnoticed.
+ *
+ * @param html - the HTML source
+ * @returns the blocks and their degradations
+ */
+export declare function htmlToBlocksWithReport(html: string): HtmlImportResult;

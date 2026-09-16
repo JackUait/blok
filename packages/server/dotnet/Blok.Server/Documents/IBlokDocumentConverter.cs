@@ -319,4 +319,28 @@ public interface IBlokDocumentConverter
   /// allocation budget was.
   /// </exception>
   ValueTask<BlokImportConversion> FromMarkdownAsync(string markdown, CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Parses HTML into a saved document, reporting what the HTML could not carry
+  /// into it. The inverse of <see cref="ToHtmlAsync"/>.
+  /// </summary>
+  /// <remarks>
+  /// Covers the structural subset a document body is made of: headings,
+  /// paragraphs, lists (nested, ordered, checklists), tables (including merged
+  /// cells), images, links and inline marks, code, blockquotes, toggles and
+  /// dividers. Layout containers are unwrapped and their children converted in
+  /// place. Everything else is reported: embedded media, form controls and
+  /// unknown elements come back as a <see cref="BlokDegradation"/> naming the
+  /// tag, so a caller storing the result can tell what did not survive. Read
+  /// <see cref="BlokImportConversion.Warnings"/> — an import stored without
+  /// reading it is how content goes missing quietly.
+  /// </remarks>
+  /// <param name="html">The HTML source: a fragment or a whole document.</param>
+  /// <param name="cancellationToken">Cancels the conversion.</param>
+  /// <exception cref="BlokDocumentConversionException">
+  /// The conversion failed inside the runtime; <see cref="BlokDocumentConversionException.Reason"/>
+  /// says whether the input was unusable, the timeout was reached, or the
+  /// allocation budget was.
+  /// </exception>
+  ValueTask<BlokImportConversion> FromHtmlAsync(string html, CancellationToken cancellationToken = default);
 }

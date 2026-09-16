@@ -261,8 +261,34 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
   {
     ArgumentNullException.ThrowIfNull(markdown);
 
-    var input = JsonSerializer.Serialize(new MarkdownInput(markdown));
-    var output = await runtime.InvokeAsync("markdownToBlocks", input, cancellationToken);
+    return await ImportAsync(
+        "markdownToBlocks",
+        JsonSerializer.Serialize(new MarkdownInput(markdown)),
+        cancellationToken);
+  }
+
+  public async ValueTask<BlokImportConversion> FromHtmlAsync(
+      string html,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentNullException.ThrowIfNull(html);
+
+    return await ImportAsync(
+        "htmlToBlocks",
+        JsonSerializer.Serialize(new HtmlInput(html)),
+        cancellationToken);
+  }
+
+  /*
+   * Both importers answer with the same envelope — the document plus the report
+   * of what the source could not carry — so both read it the same way.
+   */
+  private async ValueTask<BlokImportConversion> ImportAsync(
+      string operation,
+      string input,
+      CancellationToken cancellationToken)
+  {
+    var output = await runtime.InvokeAsync(operation, input, cancellationToken);
 
     var payload = JsonNode.Parse(output)?.AsObject()
         ?? throw new InvalidOperationException("The Blok runtime returned no document.");
@@ -279,4 +305,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
 
   private sealed record MarkdownInput(
       [property: JsonPropertyName("markdown")] string Markdown);
+
+  private sealed record HtmlInput(
+      [property: JsonPropertyName("html")] string Html);
 }

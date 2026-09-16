@@ -85,6 +85,29 @@ describe('server runtime boundary', () => {
     expect(unreadable).toMatchObject({ isEmpty: true, blockCount: 1, unrecognizedBlockTypes: ['gantt'] });
   });
 
+  it('converts HTML into a serialized OutputData envelope with a report', async () => {
+    const output = JSON.parse(await invoke('htmlToBlocks', '{"html":"<h1>Hello</h1>"}')) as unknown;
+
+    expect(output).toMatchObject({
+      blocks: [{ type: 'header', data: { text: 'Hello', level: 1 } }],
+      warnings: [],
+    });
+  });
+
+  it('reports what the HTML could not carry', async () => {
+    const output = JSON.parse(
+      await invoke('htmlToBlocks', '{"html":"<p>a</p><iframe src=\\"https://x.dev\\"></iframe>"}')
+    ) as { warnings: unknown[] };
+
+    expect(output.warnings).toEqual([
+      { construct: 'iframe', action: 'dropped', detail: expect.stringContaining('iframe') },
+    ]);
+  });
+
+  it('rejects an htmlToBlocks input with no html string', async () => {
+    await expect(invoke('htmlToBlocks', '{}')).rejects.toThrow(TypeError);
+  });
+
   it('renders a serialized document to HTML', async () => {
     const html = await invoke(
       'blocksToHtml',

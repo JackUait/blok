@@ -22,7 +22,7 @@ public sealed record BlokPlainTextConversion(
     [property: JsonPropertyName("text")] string Text,
     [property: JsonPropertyName("warnings")] IReadOnlyList<BlokDegradation> Warnings);
 
-/// <summary>A parsed Markdown document, and everything Markdown could not carry into it.</summary>
+/// <summary>A parsed document, and everything its source could not carry into it.</summary>
 /// <param name="DocumentJson">The saved document: <c>{"blocks":[…]}</c>.</param>
 /// <param name="Warnings">Constructs that arrived degraded, in document order.</param>
 public sealed record BlokImportConversion(
@@ -46,10 +46,11 @@ public static class BlokDegradationActions
   public const string Degraded = "degraded";
 }
 
-/// <summary>A construct a Markdown conversion could not carry across as-is.</summary>
+/// <summary>A construct a conversion could not carry across as-is.</summary>
 /// <param name="Construct">
-/// What degraded: a block tool name (<c>callout</c>) on the way out, a Markdown
-/// construct (<c>html</c>) on the way in.
+/// What degraded: a block tool name (<c>callout</c>) on the way out, a source
+/// construct on the way in — a Markdown node (<c>html</c>) or an HTML tag
+/// (<c>iframe</c>).
 /// </param>
 /// <param name="Action">
 /// <see cref="BlokDegradationActions.Dropped"/> when nothing was emitted,

@@ -4,6 +4,7 @@ import type { LooseOutputBlockData, LooseOutputData } from '../../types/data-for
 import { getBlokVersion } from '../components/utils/version';
 import { markdownToBlocksWithReport } from '../markdown';
 import { blocksToHtml } from './blocks-to-html';
+import { htmlToBlocksWithReport } from './html-to-blocks';
 import type { MarkdownDegradation } from './blocks-to-markdown';
 import { blocksToMarkdownWithReport } from './blocks-to-markdown';
 import type { BlocksToPlainTextOptions } from './blocks-to-plain-text';
@@ -68,6 +69,20 @@ const readBlock = (block: unknown): LooseOutputBlockData | undefined => {
     ...(parent === undefined ? {} : { parent }),
     ...(content === undefined ? {} : { content }),
   };
+};
+
+/**
+ * Read an `htmlToBlocks` request.
+ * @param inputJson - the serialized request
+ */
+const parseHtml = (inputJson: string): string => {
+  const input = parseRecord(inputJson);
+
+  if (typeof input.html !== 'string') {
+    throw new TypeError('htmlToBlocks input requires an `html` string.');
+  }
+
+  return input.html;
 };
 
 const parseMarkdown = (inputJson: string): string => {
@@ -197,6 +212,13 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
   switch (operation) {
     case 'markdownToBlocks':
       return JSON.stringify(await markdownToBlocksWithReport(parseMarkdown(inputJson)));
+    /**
+     * The inverse of `blocksToHtml`, and the twin of `markdownToBlocks` — same
+     * envelope, same warning vocabulary. A caller importing HTML has to be told
+     * what did not survive, so the report rides along.
+     */
+    case 'htmlToBlocks':
+      return JSON.stringify(htmlToBlocksWithReport(parseHtml(inputJson)));
     case 'blocksToHtml':
       return blocksToHtml(parseDocument(inputJson).document);
     /**

@@ -20,6 +20,7 @@ import {
   IconTextSizeSmall,
 } from '../../components/icons';
 import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
+import { isInvisibleBackground } from '../../components/utils/default-page-colors';
 import { twMerge } from '../../components/utils/tw';
 
 import { TableCellBlocks, CELL_BLOCKS_ATTR } from './table-cell-blocks';
@@ -1223,7 +1224,7 @@ export class Table implements BlockTool {
 
     const bgMatch = /background-color\s*:\s*([^;]+)/i.exec(style);
 
-    if (bgMatch?.[1]) {
+    if (bgMatch?.[1] && !isInvisibleBackground(bgMatch[1].trim())) {
       entry.color = mapToNearestPresetColor(bgMatch[1].trim(), 'bg');
     }
 

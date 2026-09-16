@@ -1121,6 +1121,35 @@ describe('table-cell-clipboard', () => {
       expect(result?.cells[0][0].color).toBeUndefined();
     });
 
+    it('does not set cell color for a near-white page background on td', () => {
+      const html = '<table><tr><td style="background-color: rgb(250, 250, 250)">x</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].color).toBeUndefined();
+    });
+
+    it('does not set cell color for a zero-alpha background on td', () => {
+      const html = '<table><tr><td style="background-color: rgba(0, 0, 0, 0)">x</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].color).toBeUndefined();
+    });
+
+    it('does not create <mark> for a near-white page background on span', () => {
+      const html = '<table><tr><td><span style="background-color: rgb(250, 250, 250)">x</span></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('x');
+      expect(result?.cells[0][0].blocks[0].data.text).not.toContain('<mark');
+    });
+
+    it('still sets cell color for a genuinely visible light gray on td (positive control)', () => {
+      const html = '<table><tr><td style="background-color: rgb(217, 217, 217)">x</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].color).toBe('#f1f1ef');
+    });
+
     it('still creates <mark> for intentional yellow highlight on span (positive control)', () => {
       const html = '<table><tr><td><span style="background-color: rgb(255, 226, 153)">x</span></td></tr></table>';
       const result = parseGenericHtmlTable(html);

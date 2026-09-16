@@ -4,6 +4,7 @@ import { mapPastedTableCells } from './table-operations';
 import { parseCellContentToBlocks, serializeCellBlocksToHtml } from './table-cell-paste';
 import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
 import { isDefaultDarkBackground, isDefaultWhiteBackground } from '../../components/modules/paste/google-docs-preprocessor';
+import { isInvisibleBackground } from '../../components/utils/default-page-colors';
 import { clean } from '../../components/utils/sanitizer';
 import { parseUntrustedHtml } from '../../components/utils/inert-html';
 import { trimTrailingBreaks } from '../../components/utils/trailing-breaks';
@@ -466,11 +467,9 @@ function sanitizeCellHtml(td: Element): string {
 
     const isLinkColor = color !== undefined && isLinkContent(span);
     const hasColor = !isLinkColor && color !== undefined && !isDefaultBlack(color);
-    // Filter resolved page bg (white/dark) so plain spans don't collapse onto gray preset.
-    const hasBgColor = bgColor !== undefined
-      && bgColor !== 'transparent'
-      && !isDefaultWhiteBackground(bgColor)
-      && !isDefaultDarkBackground(bgColor);
+    // Filter invisible bg (transparent, near-white light page, near-black dark
+    // page) so plain spans don't collapse onto the gray preset.
+    const hasBgColor = bgColor !== undefined && !isInvisibleBackground(bgColor);
 
     if (!isBold && !isItalic && !hasColor && !hasBgColor) {
       continue;
@@ -614,8 +613,9 @@ function buildCellPayloadFromTd(td: Element): TableClipboardCell {
   if (cellBgMatch?.[1]) {
     const cellBg = cellBgMatch[1].trim();
 
-    // Skip resolved page bg (white/dark) so plain cells don't collapse onto gray preset.
-    if (!isDefaultWhiteBackground(cellBg) && !isDefaultDarkBackground(cellBg)) {
+    // Skip invisible bg (transparent, near-white light page, near-black dark
+    // page) so plain cells don't collapse onto the gray preset.
+    if (!isInvisibleBackground(cellBg)) {
       cell.color = mapToNearestPresetColor(cellBg, 'bg');
     }
   }

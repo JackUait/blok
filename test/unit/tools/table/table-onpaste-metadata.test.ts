@@ -238,6 +238,67 @@ describe('Table onPaste cell colors', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // Invisible cell backgrounds (transparent / near-white page bg) must not
+  // become a visible preset. Word, Google Docs and legacy CMS HTML stamp these
+  // onto every <td>.
+  // ---------------------------------------------------------------------------
+
+  it.each([
+    ['transparent', 'transparent'],
+    ['pure white', 'rgb(255, 255, 255)'],
+    ['zero alpha', 'rgba(0, 0, 0, 0)'],
+    ['near-white', 'rgb(250, 250, 250)'],
+  ])('does not assign color when td background is %s', (_label, bgColor) => {
+    const options = createTableOptions({
+      content: [['A']],
+    });
+    const table = new Table(options);
+
+    const element = table.render();
+
+    document.body.appendChild(element);
+    table.rendered();
+
+    firePasteEvent(table, createPasteTable(`<tr><td style="background-color: ${bgColor}">Cell</td></tr>`));
+
+    const pastedElement = table.render();
+
+    table.rendered();
+
+    const saved = table.save(pastedElement);
+
+    expect(saved.content[0][0]).not.toHaveProperty('color');
+
+    element.parentNode?.removeChild(element);
+    pastedElement.parentNode?.removeChild(pastedElement);
+  });
+
+  it('keeps a genuinely visible light gray background on paste', () => {
+    const options = createTableOptions({
+      content: [['A']],
+    });
+    const table = new Table(options);
+
+    const element = table.render();
+
+    document.body.appendChild(element);
+    table.rendered();
+
+    firePasteEvent(table, createPasteTable('<tr><td style="background-color: rgb(217, 217, 217)">Gray</td></tr>'));
+
+    const pastedElement = table.render();
+
+    table.rendered();
+
+    const saved = table.save(pastedElement);
+
+    expect(saved.content[0][0]).toMatchObject({ color: '#f1f1ef' });
+
+    element.parentNode?.removeChild(element);
+    pastedElement.parentNode?.removeChild(pastedElement);
+  });
+
+  // ---------------------------------------------------------------------------
   // Bug #3: default black text color on <td> should be ignored in onPaste
   // ---------------------------------------------------------------------------
 

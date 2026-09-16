@@ -9,6 +9,19 @@ public sealed record BlokMarkdownConversion(
     [property: JsonPropertyName("markdown")] string Markdown,
     [property: JsonPropertyName("warnings")] IReadOnlyList<BlokDegradation> Warnings);
 
+/// <summary>A document's readable text, and everything the reader could not read.</summary>
+/// <remarks>
+/// The companion to <see cref="BlokMarkdownConversion"/> for the plain-text
+/// path. <see cref="Text"/> is character-for-character what
+/// <see cref="IBlokDocumentConverter.ToPlainTextAsync"/> returns for the same
+/// input; only <see cref="Warnings"/> is new.
+/// </remarks>
+/// <param name="Text">The extracted text.</param>
+/// <param name="Warnings">Blocks that were read as nothing, in document order.</param>
+public sealed record BlokPlainTextConversion(
+    [property: JsonPropertyName("text")] string Text,
+    [property: JsonPropertyName("warnings")] IReadOnlyList<BlokDegradation> Warnings);
+
 /// <summary>A parsed Markdown document, and everything Markdown could not carry into it.</summary>
 /// <param name="DocumentJson">The saved document: <c>{"blocks":[…]}</c>.</param>
 /// <param name="Warnings">Constructs that arrived degraded, in document order.</param>

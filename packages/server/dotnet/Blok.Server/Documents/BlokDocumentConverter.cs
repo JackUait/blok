@@ -176,6 +176,85 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
         cancellationToken);
   }
 
+  public async ValueTask<BlokPlainTextConversion> ToPlainTextWithReportAsync(
+      string documentJson,
+      bool includeHiddenText = false,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentNullException.ThrowIfNull(documentJson);
+
+    var output = await runtime.InvokeAsync(
+        "blocksToPlainTextWithReport",
+        PlainTextRequest(documentJson, includeHiddenText),
+        cancellationToken);
+
+    return JsonSerializer.Deserialize<BlokPlainTextConversion>(output)
+        ?? throw new InvalidOperationException("The Blok runtime returned no plain-text conversion.");
+  }
+
+  /*
+   * Two halves, and the split is the point. "Is this a document at all" is
+   * answered from the JSON, which is why a host may put this in front of every
+   * inbound payload without reserving an engine for the rubbish. Only something
+   * already shaped like a document is worth asking the runtime about, because
+   * only the runtime knows which block types have readers.
+   */
+  public async ValueTask<BlokDocumentValidation> ValidateAsync(
+      string? documentJson,
+      CancellationToken cancellationToken = default)
+  {
+    if (!LooksLikeADocument(documentJson))
+    {
+      return new BlokDocumentValidation { Failure = BlokConversionFailure.InvalidDocument };
+    }
+
+    try
+    {
+      var output = await runtime.InvokeAsync("inspect", documentJson!, cancellationToken);
+
+      return (JsonSerializer.Deserialize<BlokDocumentValidation>(output)
+          ?? new BlokDocumentValidation { Failure = BlokConversionFailure.Unknown })
+          with
+      { IsDocument = true };
+    }
+    /*
+     * Cancellation stays cancellation here as everywhere else; everything the
+     * runtime can raise becomes a Failure, because the promise this method
+     * makes is that asking never throws.
+     */
+    catch (BlokDocumentConversionException exception)
+    {
+      return new BlokDocumentValidation { Failure = exception.Reason };
+    }
+    catch (JsonException)
+    {
+      return new BlokDocumentValidation { Failure = BlokConversionFailure.Unknown };
+    }
+  }
+
+  /// <summary>
+  /// A JSON object with a <c>blocks</c> array — the same bar
+  /// <c>readDocument</c> holds the input to inside the runtime, checked here so
+  /// the common rejection costs a parse rather than an engine.
+  /// </summary>
+  private static bool LooksLikeADocument(string? documentJson)
+  {
+    if (string.IsNullOrWhiteSpace(documentJson))
+    {
+      return false;
+    }
+
+    try
+    {
+      return JsonNode.Parse(documentJson) is JsonObject document
+          && document["blocks"] is JsonArray;
+    }
+    catch (JsonException)
+    {
+      return false;
+    }
+  }
+
   public async ValueTask<BlokImportConversion> FromMarkdownAsync(
       string markdown,
       CancellationToken cancellationToken = default)

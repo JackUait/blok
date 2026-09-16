@@ -331,22 +331,23 @@ public sealed class JintBlokRuntimeTests
 
   /// <summary>
   /// Loading the bundle is bounded by the same budget and timeout a conversion
-  /// is, so a caller who sets either too low fails here rather than later. The
-  /// engine's own exception types are withheld from consumers at compile time,
-  /// so throwing one would name something they cannot catch.
+  /// is, so a caller who sets either too low fails before any document does —
+  /// and now on the argument itself, which names the floor. Above the floor the
+  /// load can still fail, and that is
+  /// <see cref="BlokRuntimeStartupException"/>; see
+  /// <c>Documents/BlokRuntimeStartupTests.cs</c>.
   /// </summary>
   [Theory]
-  [InlineData("budget")]
-  [InlineData("timeout")]
-  public void ExplainsAStartUpTooSmallToLoadTheBundle(string setting)
+  [InlineData("budget", "allocationBudgetBytes")]
+  [InlineData("timeout", "timeout")]
+  public void ExplainsAStartUpTooSmallToLoadTheBundle(string setting, string parameter)
   {
-    var failure = Assert.Throws<InvalidOperationException>(() => JintBlokRuntime.FromEmbeddedResource(
+    var failure = Assert.Throws<ArgumentOutOfRangeException>(() => JintBlokRuntime.FromEmbeddedResource(
         poolSize: 1,
         timeout: setting == "timeout" ? TimeSpan.FromMilliseconds(1) : null,
         allocationBudgetBytes: setting == "budget" ? 1024 : null));
 
-    Assert.NotNull(failure.InnerException);
-    Assert.Contains("Blok", failure.Message, StringComparison.Ordinal);
+    Assert.Equal(parameter, failure.ParamName);
   }
 
   /// <summary>

@@ -7,7 +7,7 @@ import { blocksToHtml } from './blocks-to-html';
 import type { MarkdownDegradation } from './blocks-to-markdown';
 import { blocksToMarkdownWithReport } from './blocks-to-markdown';
 import type { BlocksToPlainTextOptions } from './blocks-to-plain-text';
-import { blocksToPlainText } from './blocks-to-plain-text';
+import { blocksToPlainText, blocksToPlainTextWithReport } from './blocks-to-plain-text';
 import { blokDocumentSchema } from './document-schema';
 import type { DocumentTextsOptions } from './document-texts';
 import { extractTexts, injectTexts } from './document-texts';
@@ -155,14 +155,17 @@ const parseTextsRequest = (inputJson: string): {
  */
 const parsePlainTextRequest = (inputJson: string): {
   document: LooseOutputData;
+  skipped: number;
   options: BlocksToPlainTextOptions;
 } => {
   const input = parseRecord(inputJson);
   const wrapped = !Array.isArray(input.blocks) && isRecord(input.document) ? input.document : input;
+  /** Still through `readDocument`: a read-only operation drops a block it cannot read. */
+  const { document, skipped } = readDocument(wrapped);
 
   return {
-    /** Still through `readDocument`: a read-only operation drops a block it cannot read. */
-    document: readDocument(wrapped).document,
+    document,
+    skipped,
     options: { includeHiddenText: input.includeHiddenText === true },
   };
 };
@@ -215,6 +218,37 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
       const { document, options } = parsePlainTextRequest(inputJson);
 
       return blocksToPlainText(document, options);
+    }
+    /**
+     * The same text, plus what the reader could make nothing of — so a caller
+     * can tell a document that holds no text from one whose every block is a
+     * tool this reader has never heard of. Both read as ''.
+     */
+    case 'blocksToPlainTextWithReport': {
+      const { document, skipped, options } = parsePlainTextRequest(inputJson);
+      const report = blocksToPlainTextWithReport(document, options);
+
+      if (skipped > 0) {
+        report.warnings.push(skippedBlockWarning(skipped));
+      }
+
+      return JSON.stringify(report);
+    }
+    /**
+     * The cheap yes/no question: is this a document, does it hold anything, and
+     * did the reader understand it? One walk, and nothing is serialized beyond
+     * the text the emptiness test needs.
+     */
+    case 'inspect': {
+      const { document, skipped, options } = parsePlainTextRequest(inputJson);
+      const { text, warnings } = blocksToPlainTextWithReport(document, options);
+
+      return JSON.stringify({
+        blockCount: document.blocks.length,
+        malformedBlockCount: skipped,
+        isEmpty: text === '',
+        unrecognizedBlockTypes: [...new Set(warnings.map((warning) => warning.construct))],
+      });
     }
     /**
      * The version the editor stamps into a saved document. A consumer writing

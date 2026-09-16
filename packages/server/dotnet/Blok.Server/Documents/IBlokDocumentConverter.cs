@@ -234,6 +234,78 @@ public interface IBlokDocumentConverter
       CancellationToken cancellationToken = default);
 
   /// <summary>
+  /// Extracts a saved document's readable text AND reports every block the
+  /// reader could make nothing of.
+  /// </summary>
+  /// <remarks>
+  /// The reporting companion to <see cref="ToPlainTextAsync"/>, added because
+  /// its bare <see cref="string"/> cannot say which of two very different
+  /// documents produced an empty one: a document with no text, or a document of
+  /// tools this build of Blok has never heard of. Markdown has reported the
+  /// same list since it shipped.
+  /// <para>
+  /// A block type Blok knows but that carries no text by design — a divider, a
+  /// spacer, a callout — is NOT reported. Only a type with no reader is, once
+  /// per block, in document order, plus one collapsed entry naming how many
+  /// entries of the <c>blocks</c> array were too malformed to read at all.
+  /// </para>
+  /// <para>
+  /// Use <see cref="ToPlainTextAsync"/> when an empty string is an acceptable
+  /// answer on its own — a preview, a snippet. Use this one when it is not — a
+  /// search index deciding whether a document is worth storing, an importer
+  /// deciding whether to warn.
+  /// </para>
+  /// </remarks>
+  /// <param name="documentJson">A saved document: <c>{"blocks":[…]}</c>.</param>
+  /// <param name="includeHiddenText">
+  /// The same option <see cref="ToPlainTextAsync"/> takes, with the same
+  /// meaning and the same default.
+  /// </param>
+  /// <param name="cancellationToken">Cancels the conversion.</param>
+  /// <exception cref="BlokDocumentConversionException">
+  /// The conversion failed inside the runtime; <see cref="BlokDocumentConversionException.Reason"/>
+  /// says whether the input was unusable, the timeout was reached, or the
+  /// allocation budget was. Ask <see cref="ValidateAsync"/> first to get that
+  /// answer without an exception.
+  /// </exception>
+  ValueTask<BlokPlainTextConversion> ToPlainTextWithReportAsync(
+      string documentJson,
+      bool includeHiddenText = false,
+      CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Answers, without throwing, whether an input is a Blok document, whether it
+  /// holds any text, and which of its blocks this build of Blok could not read.
+  /// </summary>
+  /// <remarks>
+  /// The question every other method on this interface answers only by
+  /// succeeding or by throwing. A host guarding stored content — "is this worth
+  /// indexing", "did the editor save anything", "is this payload a document at
+  /// all" — asks here instead of running a conversion and catching
+  /// <see cref="BlokDocumentConversionException"/>.
+  /// <para>
+  /// Cheap in the case it is reached for most: input that is not a document is
+  /// answered from the JSON alone, without spending an engine. Input that IS a
+  /// document costs one walk of its blocks — no Markdown, no HTML, no engine
+  /// pool wait beyond the walk.
+  /// </para>
+  /// <para>
+  /// It does not throw for any input, <c>null</c> included; a guard that throws
+  /// is not a guard. <see cref="BlokDocumentValidation.Failure"/> carries what
+  /// an exception would have carried. The caller's own cancellation is the one
+  /// exception, as everywhere else on this interface.
+  /// </para>
+  /// </remarks>
+  /// <param name="documentJson">
+  /// Anything at all: a saved document, a fragment, malformed JSON, or
+  /// <c>null</c>.
+  /// </param>
+  /// <param name="cancellationToken">Cancels the inspection.</param>
+  ValueTask<BlokDocumentValidation> ValidateAsync(
+      string? documentJson,
+      CancellationToken cancellationToken = default);
+
+  /// <summary>
   /// Parses Markdown into a saved document, reporting what Markdown could not
   /// carry into it. GitHub Flavored Markdown and <c>$…$</c> math are both
   /// understood; Blok has no raw-HTML block, so markup written into the

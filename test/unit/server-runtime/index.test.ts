@@ -35,6 +35,56 @@ describe('server runtime boundary', () => {
     });
   });
 
+  /**
+   * The asymmetry this closes: `blocksToPlainText` answers '' both for a
+   * document with no text and for one made entirely of tools it does not know.
+   */
+  it('reports the blocks the plain-text reader could make nothing of', async () => {
+    const output = JSON.parse(await invoke(
+      'blocksToPlainTextWithReport',
+      '{"blocks":[{"type":"org-chart","data":{}}]}'
+    )) as unknown;
+
+    expect(output).toMatchObject({
+      text: '',
+      warnings: [{ construct: 'org-chart', action: 'dropped' }],
+    });
+  });
+
+  it('counts a malformed block in the plain-text report, as Markdown does', async () => {
+    const output = JSON.parse(await invoke(
+      'blocksToPlainTextWithReport',
+      '{"blocks":[{"type":"paragraph","data":{"text":"Kept"}},{"nope":1}]}'
+    )) as unknown;
+
+    expect(output).toMatchObject({
+      text: 'Kept',
+      warnings: [{ construct: 'block', action: 'dropped', detail: '1 malformed block was skipped' }],
+    });
+  });
+
+  it('answers the cheap questions about a document without converting it', async () => {
+    const output = JSON.parse(await invoke(
+      'inspect',
+      '{"blocks":[{"type":"paragraph","data":{"text":"Body"}},{"type":"org-chart","data":{}},{"nope":1}]}'
+    )) as unknown;
+
+    expect(output).toEqual({
+      blockCount: 2,
+      malformedBlockCount: 1,
+      isEmpty: false,
+      unrecognizedBlockTypes: ['org-chart'],
+    });
+  });
+
+  it('tells an empty document from one it recognised nothing in', async () => {
+    const empty = JSON.parse(await invoke('inspect', '{"blocks":[]}')) as unknown;
+    const unreadable = JSON.parse(await invoke('inspect', '{"blocks":[{"type":"gantt","data":{}}]}')) as unknown;
+
+    expect(empty).toMatchObject({ isEmpty: true, blockCount: 0, unrecognizedBlockTypes: [] });
+    expect(unreadable).toMatchObject({ isEmpty: true, blockCount: 1, unrecognizedBlockTypes: ['gantt'] });
+  });
+
   it('renders a serialized document to HTML', async () => {
     const html = await invoke(
       'blocksToHtml',

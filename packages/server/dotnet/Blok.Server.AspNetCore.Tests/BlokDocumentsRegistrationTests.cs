@@ -175,40 +175,6 @@ public sealed class BlokDocumentsRegistrationTests
   }
 
   /// <summary>
-  /// A timeout under a second or so fails while the bundle is being loaded into
-  /// each engine, which is the honest place for it to fail — not later, on
-  /// somebody's document.
-  /// </summary>
-  [Fact]
-  public void RefusesATimeoutTooShortToLoadTheBundle()
-  {
-    var services = new ServiceCollection();
-
-    services.AddBlokDocuments(poolSize: 1, timeout: TimeSpan.FromMilliseconds(1), warmUp: false);
-
-    using var provider = services.BuildServiceProvider();
-
-    Assert.ThrowsAny<Exception>(() => provider.GetRequiredService<IBlokDocumentConverter>());
-  }
-
-  /// <summary>
-  /// The budget is per-call allocation churn, so a value too small to parse the
-  /// bundle fails here — at registration, on the caller's own argument — rather
-  /// than later, on somebody's document.
-  /// </summary>
-  [Fact]
-  public void RefusesAnAllocationBudgetTooSmallToLoadTheBundle()
-  {
-    var services = new ServiceCollection();
-
-    services.AddBlokDocuments(poolSize: 1, warmUp: false, allocationBudgetBytes: 1024);
-
-    using var provider = services.BuildServiceProvider();
-
-    Assert.ThrowsAny<Exception>(() => provider.GetRequiredService<IBlokDocumentConverter>());
-  }
-
-  /// <summary>
   /// Warming must not build the converter on the startup path. Building it
   /// parses the embedded bundle into every engine of its pool, which was
   /// measured at about a second, and a failure there would escape DI
@@ -305,6 +271,30 @@ public sealed class BlokDocumentsRegistrationTests
     Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(IHostedService));
   }
 
+  /// <summary>
+  /// A starved constraint is a configuration mistake, so it is refused while
+  /// registering, on the caller's own argument — replacing the pair of tests
+  /// that only asked that resolving the converter throw something. Deferring it to the factory hides it completely: the first
+  /// conversion runs inside the warm-up, whose failure is swallowed on purpose.
+  /// </summary>
+  [Fact]
+  public void RefusesAStarvedAllocationBudgetWhileRegistering()
+  {
+    var refusal = Assert.Throws<ArgumentOutOfRangeException>(
+        () => new ServiceCollection().AddBlokDocuments(allocationBudgetBytes: 1024));
+
+    Assert.Equal("allocationBudgetBytes", refusal.ParamName);
+  }
+
+  [Fact]
+  public void RefusesAStarvedTimeoutWhileRegistering()
+  {
+    var refusal = Assert.Throws<ArgumentOutOfRangeException>(
+        () => new ServiceCollection().AddBlokDocuments(timeout: TimeSpan.FromMilliseconds(1)));
+
+    Assert.Equal("timeout", refusal.ParamName);
+  }
+
   private class StubConverter : IBlokDocumentConverter
   {
     public ValueTask<string> GetVersionAsync(CancellationToken cancellationToken = default) =>
@@ -340,6 +330,17 @@ public sealed class BlokDocumentsRegistrationTests
         bool includeHiddenText = false,
         CancellationToken cancellationToken = default) =>
         ValueTask.FromResult(string.Empty);
+
+    public ValueTask<BlokPlainTextConversion> ToPlainTextWithReportAsync(
+        string documentJson,
+        bool includeHiddenText = false,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public ValueTask<BlokDocumentValidation> ValidateAsync(
+        string? documentJson,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
 
     public ValueTask<BlokImportConversion> FromMarkdownAsync(
         string markdown,

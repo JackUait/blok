@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { preprocess } from '../../../../../src/cli/commands/convert-html/preprocessor';
+import { preprocessLegacyCmsHtmlIn } from '../../../src/preprocess/legacy-cms-html';
 
 const NBSP = '\u00A0';
 
@@ -9,7 +9,7 @@ const run = (html: string): HTMLElement => {
 
   wrapper.innerHTML = html;
   document.body.appendChild(wrapper);
-  preprocess(wrapper);
+  preprocessLegacyCmsHtmlIn(wrapper);
 
   return wrapper;
 };

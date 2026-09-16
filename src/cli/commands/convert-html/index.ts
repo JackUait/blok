@@ -1,4 +1,4 @@
-import { preprocess } from './preprocessor';
+import { preprocessLegacyCmsHtmlIn } from '../../../preprocess/legacy-cms-html';
 import { sanitize } from './sanitizer';
 import { buildBlocks } from './block-builder';
 import { normalizeInlineMarkupIn } from '../../../components/utils/inline-normalization';
@@ -14,7 +14,7 @@ export function convertHtml(html: string): string {
   const dom = new DOMParser().parseFromString(html, 'text/html');
   const wrapper = dom.body;
 
-  preprocess(wrapper);
+  preprocessLegacyCmsHtmlIn(wrapper);
   sanitize(wrapper);
   /**
    * buildBlocks stores element innerHTML verbatim, so any fragmentation in the

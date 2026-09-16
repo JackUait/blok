@@ -9,6 +9,7 @@ import {
 import { COLUMNS_CANDIDATE_ATTR } from './constants';
 import { parseUntrustedHtml } from '../../utils/inert-html';
 import { trimTrailingBreaks } from '../../utils/trailing-breaks';
+import { isSpacerParagraph } from '../../utils/spacer-paragraph';
 
 /**
  * Pre-process Google Docs clipboard HTML before sanitization.
@@ -642,16 +643,6 @@ function stampColumnsCandidateTables(wrapper: HTMLElement): void {
  * Only targets `<td>` and `<th>` elements — top-level `<p>` tags are left
  * intact so the paste pipeline can split them into separate blocks.
  */
-/**
- * A spacer is whitespace/nbsp-only text with no element children — an empty
- * `<p>` or `<p>&nbsp;</p>`. A paragraph whose textContent is empty but which
- * holds an `<img>` (or other element) is NOT a spacer; removing it would destroy
- * the media. `\s` matches U+00A0 (the &nbsp; a spacer decodes to).
- */
-function isSpacerParagraph(p: Element): boolean {
-  return p.children.length === 0 && (p.textContent ?? '').replace(/\s/g, '') === '';
-}
-
 /** Replace a cell `<p>` with its content + a `<br>`, or drop it if it is a spacer. */
 function unwrapCellParagraph(p: Element): void {
   if (isSpacerParagraph(p)) {

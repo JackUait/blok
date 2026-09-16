@@ -667,7 +667,10 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
     const children = Array.from(wrapper.childNodes);
 
     const reducer = (nodes: Node[], node: Node): Node[] => {
-      if (dom$.isEmpty(node) && !dom$.isSingleTag(node as HTMLElement)) {
+      // U+00A0 counts as empty here: Word and Summernote write `<p>&nbsp;</p>`
+      // as a visual spacer, and without it every such spacer pastes as a blank
+      // block. Single tags (`<img>`, `<hr>`) are never empty, so media survives.
+      if (dom$.isEmpty(node, '\u00A0') && !dom$.isSingleTag(node as HTMLElement)) {
         return nodes;
       }
 

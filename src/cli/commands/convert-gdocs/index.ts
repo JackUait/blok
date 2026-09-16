@@ -1,5 +1,5 @@
 import { preprocessGoogleDocsHtml } from '../../../components/modules/paste/google-docs-preprocessor';
-import { preprocess } from '../convert-html/preprocessor';
+import { preprocessLegacyCmsHtmlIn } from '../../../preprocess/legacy-cms-html';
 import { sanitize } from '../convert-html/sanitizer';
 import { buildBlocks } from '../convert-html/block-builder';
 import type { OutputData } from '../convert-html/types';
@@ -16,7 +16,7 @@ export function convertGdocs(html: string): string {
   const dom = new DOMParser().parseFromString(preprocessed, 'text/html');
   const wrapper = dom.body;
 
-  preprocess(wrapper);
+  preprocessLegacyCmsHtmlIn(wrapper);
   sanitize(wrapper);
 
   const blocks = buildBlocks(wrapper);

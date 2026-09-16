@@ -37,6 +37,7 @@ export default defineConfig(({ mode }) => {
           migrate: path.resolve(__dirname, 'src', 'migrate', 'index.ts'),
           adapters: path.resolve(__dirname, 'src', 'adapters.ts'),
           icons: path.resolve(__dirname, 'src', 'icons', 'index.ts'),
+          preprocess: path.resolve(__dirname, 'src', 'preprocess', 'index.ts'),
         },
         formats: ['es', 'cjs'],
       },

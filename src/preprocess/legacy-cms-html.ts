@@ -1,7 +1,8 @@
+import { isSpacerParagraph } from '../components/utils/spacer-paragraph';
+
 /**
- * Preprocess old knowledgebase HTML before block conversion.
- *
- * Fixes issues from the old KB's Summernote editor:
+ * Clean up legacy CMS markup (Summernote-era WYSIWYG output) in place, before
+ * it is converted into blocks:
  * 1. `<div style="background: rgb(...)">` callout-like blocks → `<aside>`
  * 2. White/transparent `background-color` on inline elements → stripped
  * 3. Multiple `<p>` inside table cells → `<br>`-separated content
@@ -9,14 +10,16 @@
  * 5. `<del>`/`<strike>` → `<s>` (Blok only recognises `<s>`)
  * 6. `<p>• text</p>` pseudo-lists → `<ul><li>text</li></ul>`
  *
- * Adapted from the knowledgebase frontend's preprocessKnowledgebaseHtml
- * for use with jsdom's DOM API in a Node.js CLI tool.
+ * Uses only standard DOM, so it runs against a browser `document` and against a
+ * jsdom one (the CLI) alike. String-in/string-out callers want
+ * `preprocessLegacyCmsHtml` from `@bloklabs/core/preprocess`.
+ * @param wrapper - element holding the markup; mutated in place
  */
-export function preprocess(wrapper: HTMLElement): void {
+export function preprocessLegacyCmsHtmlIn(wrapper: HTMLElement): void {
   convertBackgroundDivsToCallouts(wrapper);
   stripSpuriousBackgroundColors(wrapper);
   convertTableCellParagraphs(wrapper);
-  stripNbspOnlyParagraphs(wrapper);
+  stripSpacerParagraphs(wrapper);
   convertStrikethroughTags(wrapper);
   convertBulletParagraphsToLists(wrapper);
 }
@@ -243,19 +246,19 @@ function replaceParagraphWithBr(p: HTMLParagraphElement): void {
 }
 
 /**
- * Remove paragraphs whose only content is non-breaking spaces or whitespace.
+ * Remove paragraphs that are nothing but a visual spacer.
+ *
+ * The test is `isSpacerParagraph`, not bare `textContent`: `<p><img></p>` has no
+ * text but holds the image, and removing it destroyed the media.
  */
-function stripNbspOnlyParagraphs(wrapper: HTMLElement): void {
+function stripSpacerParagraphs(wrapper: HTMLElement): void {
   for (const p of Array.from(wrapper.querySelectorAll('p'))) {
     // Skip paragraphs inside table cells — those are handled by convertTableCellParagraphs
     if (p.closest('td') || p.closest('th')) {
       continue;
     }
 
-    const textContent = p.textContent ?? '';
-    const stripped = textContent.replace(/[\s\u00A0]/g, '');
-
-    if (stripped.length === 0) {
+    if (isSpacerParagraph(p, { lineBreaksAreContent: false })) {
       p.remove();
     }
   }

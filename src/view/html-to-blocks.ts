@@ -19,6 +19,7 @@ import { parse, serialize } from 'parse5';
 import type { DefaultTreeAdapterMap } from 'parse5';
 
 import type { OutputBlockData } from '../../types';
+import type { ImageAlignment } from '../../types/tools/image';
 import { INLINE_TEXT_SANITIZE } from '../components/shared/inline-content-sanitize';
 import { safeImageSrc } from '../components/utils/sanitize-url';
 import { normalizeFenceLang } from '../markdown/fence-language';
@@ -215,6 +216,93 @@ const isInline = (node: P5ChildNode): boolean => {
 };
 
 /**
+ * An element's inline style, keyed by property. Both halves are lower-cased,
+ * so a declaration only has to be compared one way.
+ * @param element - element to read
+ */
+const styleOf = (element: P5Element): Map<string, string> => {
+  const declarations = (attr(element, 'style') ?? '').toLowerCase().split(';');
+
+  return new Map(declarations.flatMap((declaration): Array<[string, string]> => {
+    const colon = declaration.indexOf(':');
+
+    return colon === -1 ? [] : [[declaration.slice(0, colon).trim(), declaration.slice(colon + 1).trim()]];
+  }));
+};
+
+const PERCENT = /^(\d+(?:\.\d+)?)%$/;
+
+/**
+ * A CSS width as `ImageData.width` stores it — a percent of the container,
+ * 10–100. Anything else reads as no width at all, a px length included: the
+ * container is not knowable from the HTML, and dividing by a guessed one puts
+ * the result outside the range the field allows.
+ * @param raw - a declaration value or an attribute value
+ */
+const percentWidth = (raw: string | undefined): number | null => {
+  const match = PERCENT.exec((raw ?? '').trim());
+
+  if (match === null) {
+    return null;
+  }
+
+  const percent = Math.round(Number(match[1]));
+
+  return percent >= 10 && percent <= 100 ? percent : null;
+};
+
+/**
+ * The left and right margins in force, the shorthand resolved the way CSS
+ * reads it and the longhands laid over it.
+ * @param style - the element's inline style
+ */
+const marginSides = (style: Map<string, string>): { left: string; right: string } => {
+  const parts = (style.get('margin') ?? '').split(/\s+/).filter((part) => part !== '');
+  const sides = parts[1] ?? parts[0] ?? '';
+
+  return {
+    left: style.get('margin-left') ?? parts[3] ?? sides,
+    right: style.get('margin-right') ?? sides,
+  };
+};
+
+/**
+ * Alignment the margins imply: two `auto` sides centre the box, one `auto`
+ * side pushes it to the other one.
+ * @param style - the element's inline style
+ */
+const marginAlignment = (style: Map<string, string>): ImageAlignment | null => {
+  const { left, right } = marginSides(style);
+
+  if (left === 'auto') {
+    return right === 'auto' ? 'center' : 'right';
+  }
+
+  return right === 'auto' ? 'left' : null;
+};
+
+/** The `align` values that map onto an {@link ImageAlignment}; `justify` and `middle` do not. */
+const LEGACY_ALIGN = new Map<string, ImageAlignment>([['left', 'left'], ['center', 'center'], ['right', 'right']]);
+
+/**
+ * Horizontal alignment of an image, read from the CSS that carries it and only
+ * then from the presentational attribute that CSS would have overridden.
+ * @param element - the `img` element
+ * @param style - the element's inline style
+ */
+const imageAlignment = (element: P5Element, style: Map<string, string>): ImageAlignment | null => {
+  const float = style.get('float');
+
+  if (float === 'left' || float === 'right') {
+    return float;
+  }
+
+  const legacy = (attr(element, 'align') ?? '').trim().toLowerCase();
+
+  return marginAlignment(style) ?? LEGACY_ALIGN.get(legacy) ?? null;
+};
+
+/**
  * An image's block data, or null when the source is missing or unsafe.
  * @param element - the `img` element
  * @param caption - caption text overriding the element's own alt
@@ -228,8 +316,20 @@ const imageData = (element: P5Element, caption?: string): Record<string, unknown
   }
 
   const text = caption ?? attr(element, 'alt') ?? '';
+  const style = styleOf(element);
+  const data: Record<string, unknown> = text === '' ? { url } : { url, caption: text, alt: text };
+  const width = percentWidth(style.get('width')) ?? percentWidth(attr(element, 'width'));
+  const alignment = imageAlignment(element, style);
 
-  return text === '' ? { url } : { url, caption: text, alt: text };
+  if (width !== null) {
+    data.width = width;
+  }
+
+  if (alignment !== null) {
+    data.alignment = alignment;
+  }
+
+  return data;
 };
 
 /**

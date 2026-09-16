@@ -553,6 +553,16 @@ describe('htmlToBlocks — single-field containers', () => {
     ]);
   });
 
+  it('keeps an image a code block carries, after the code', () => {
+    const report = htmlToBlocksWithReport('<pre><code>x</code><img src="https://x.dev/a.png"></pre>');
+
+    expect(shape(report.blocks)).toEqual([
+      { type: 'code', data: { code: 'x', language: 'plain text' } },
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+    ]);
+    expect(report.warnings).toEqual([]);
+  });
+
   it('keeps an image a figure caption carries, after the figure image', () => {
     const report = htmlToBlocksWithReport(
       '<figure><img src="https://x.dev/a.png"><figcaption>See <img src="https://x.dev/b.png"></figcaption></figure>'

@@ -350,7 +350,7 @@ function collectBulletGroups(wrapper: HTMLElement): HTMLParagraphElement[][] {
     }
 
     const lastGroup = groups[groups.length - 1];
-    const previousSibling = findPreviousElementSibling(el);
+    const previousSibling = el.previousElementSibling;
     const belongsToCurrentGroup = lastGroup
       && previousSibling !== null
       && lastGroup[lastGroup.length - 1] === previousSibling;
@@ -363,23 +363,6 @@ function collectBulletGroups(wrapper: HTMLElement): HTMLParagraphElement[][] {
   }
 
   return groups;
-}
-
-/**
- * Find the previous sibling that is an element, skipping non-element nodes.
- */
-function findPreviousElementSibling(el: HTMLElement): Element | null {
-  const prev = el.previousSibling;
-
-  if (!prev) {
-    return null;
-  }
-
-  if (prev.nodeType === Node.ELEMENT_NODE) {
-    return prev as Element;
-  }
-
-  return null;
 }
 
 /**

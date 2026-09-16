@@ -351,6 +351,23 @@ const emitImage = (ctx: Ctx, element: P5Element, caption?: string): void => {
 };
 
 /**
+ * Emit every image a subtree holds, for a caller whose own field is built from
+ * text nodes alone and would otherwise drop them without a trace.
+ * @param ctx - conversion state
+ * @param nodes - nodes to search
+ */
+const emitNestedImages = (ctx: Ctx, nodes: P5ChildNode[]): void => {
+  for (const node of nodes) {
+    if (isElement(node) && node.tagName === 'img') {
+      emitImage(ctx, node);
+      continue;
+    }
+
+    emitNestedImages(ctx, childrenOf(node));
+  }
+};
+
+/**
  * Whether an `img` sits anywhere under a node. An inline wrapper holding one —
  * `<a>`, or the sized `<span>` a Docs export writes — has to be taken apart,
  * because the inline sanitizer keeps the wrapper and strips the image.
@@ -1022,6 +1039,9 @@ const convertElement = (ctx: Ctx, element: P5Element): void => {
       return;
     case 'pre':
       push(ctx, 'code', { code: rawText(element.childNodes).replace(/\n$/, ''), language: codeLanguage(element) });
+      // `rawText` reads text nodes only, so an image inside the block follows it
+      // rather than disappearing.
+      emitNestedImages(ctx, element.childNodes);
 
       return;
     case 'blockquote':

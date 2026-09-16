@@ -250,14 +250,17 @@ const emitImage = (ctx: Ctx, element: P5Element, caption?: string): void => {
   push(ctx, 'image', data);
 };
 
+/** One piece a run of inline nodes splits into, in document order. */
+type InlineSegment = { image: P5Element } | { block: P5Element } | { inline: P5ChildNode[] };
+
 /**
  * Split a run of inline nodes on the images inside it, so a paragraph that
  * mixes prose and an image yields both rather than losing the image to the
  * inline sanitizer, which has no `img` rule.
  * @param nodes - inline nodes
  */
-const splitOnImages = (nodes: P5ChildNode[]): Array<{ image: P5Element } | { inline: P5ChildNode[] }> => {
-  const segments: Array<{ image: P5Element } | { inline: P5ChildNode[] }> = [];
+const splitOnImages = (nodes: P5ChildNode[]): InlineSegment[] => {
+  const segments: InlineSegment[] = [];
   const pending: { run: P5ChildNode[] } = { run: [] };
 
   /** Close the run of inline nodes collected so far. */
@@ -276,10 +279,10 @@ const splitOnImages = (nodes: P5ChildNode[]): Array<{ image: P5Element } | { inl
     }
 
     if (isElement(node) && !INLINE_TAGS.has(node.tagName)) {
-      // A block element inside an inline run: its own descendants may hold
-      // images, so it is walked rather than serialized whole.
+      // Hoisted whole rather than walked: `convertElement` is the only place
+      // that knows an element is dropped, so walking past it drops it silently.
       flush();
-      segments.push(...splitOnImages(node.childNodes));
+      segments.push({ block: node });
       continue;
     }
 
@@ -308,6 +311,11 @@ const emitInlineRun = (
   for (const segment of splitOnImages(nodes)) {
     if ('image' in segment) {
       emitImage(ctx, segment.image);
+      continue;
+    }
+
+    if ('block' in segment) {
+      convertNodes(ctx, [segment.block]);
       continue;
     }
 

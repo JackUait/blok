@@ -259,6 +259,26 @@ describe('htmlToBlocksWithReport — warnings', () => {
     ]);
   });
 
+  it('reports embedded media dropped from inside a paragraph', () => {
+    const report = htmlToBlocksWithReport('<p>before<iframe src="https://x.dev"></iframe>after</p>');
+
+    expect(shape(report.blocks)).toEqual([
+      { type: 'paragraph', data: { text: 'before' } },
+      { type: 'paragraph', data: { text: 'after' } },
+    ]);
+    expect(report.warnings).toEqual([
+      { construct: 'iframe', action: 'dropped', detail: expect.stringContaining('iframe') },
+    ]);
+  });
+
+  it('reports a video dropped from inside a paragraph', () => {
+    expect(warn('<p>a<video src="v.mp4"></video>b</p>')).toEqual([{ construct: 'video', action: 'dropped' }]);
+  });
+
+  it('reports an unknown element dropped from inside a paragraph', () => {
+    expect(warn('<p>a<marquee>scrolling</marquee>b</p>')).toEqual([{ construct: 'marquee', action: 'degraded' }]);
+  });
+
   it('drops script and style without reporting them as lost content', () => {
     const report = htmlToBlocksWithReport('<style>p{color:red}</style><script>alert(1)</script><p>a</p>');
 

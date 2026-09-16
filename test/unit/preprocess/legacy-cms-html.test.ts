@@ -49,6 +49,12 @@ describe('preprocess', () => {
       expect(result).toBe('<ul><li>item</li></ul>');
     });
 
+    it('groups bullet paragraphs separated by pretty-printing whitespace', () => {
+      const result = run('<p>• one</p>\n<p>• two</p>');
+
+      expect(result).toBe('<ul><li>one</li><li>two</li></ul>\n');
+    });
+
     it('splits non-consecutive bullet groups into separate lists', () => {
       const result = run('<p>\u2022 a</p><h2>break</h2><p>\u2022 b</p>');
 

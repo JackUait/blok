@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.15.1](https://github.com/JackUait/blok/compare/v1.15.0...v1.15.1) (2026-09-16)
+
+### Bug Fixes
+
+- **HTML import lost an image wrapped in an inline element** — A Google Docs export wraps every image in a sized `span`, and the sanitizer dropped it with no warning.
+  - Across eight legacy fixtures, 116 of 116 images now import, up from 93.
+  - An image a list item carries in its text survives too.
+  - An `<a href>` around an image is reported as degraded, because the image block has no link field.
+- **An empty list item failed the whole import** — `<ul><li></li></ul>` threw, and a .NET caller saw "This is not a usable Blok document" blaming the input.
+  - An item holding only a nested list, a `<br>`, whitespace or a linked image failed the same way.
+- **An element dropped from inside a paragraph was never reported** — An `<iframe>`, `<video>`, `<form>` or unknown tag inside a `<p>` vanished in silence.
+  - The same tag between two paragraphs already warned.
+  - Block content inside a heading now converts through its own handler.
+- **Sibling-nested lists and heading images were dropped** — `<ol><li>A</li><ol>…</ol></ol>`, the shape Word and old CMSes emit, lost every item of the inner list.
+  - Those items import one depth level in, where a browser renders them.
+  - `<h2>Title<img></h2>` keeps the image, now split into a block of its own.
+
 ## [1.15.0](https://github.com/JackUait/blok/compare/v1.14.0...v1.15.0) (2026-09-16)
 
 ### Breaking Changes

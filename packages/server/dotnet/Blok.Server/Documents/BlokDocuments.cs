@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Blok.Server.Runtime;
 
 namespace Blok.Server.Documents;
@@ -31,6 +33,56 @@ public static class BlokDocuments
   /// against it.
   /// </remarks>
   public static readonly TimeSpan MinimumTimeout = JintBlokRuntime.MinimumTimeout;
+
+  /// <summary>
+  /// Answers, from the JSON alone, whether an input is SHAPED like a saved
+  /// document: an object carrying a <c>blocks</c> array.
+  /// </summary>
+  /// <remarks>
+  /// The cheap half of <see cref="IBlokDocumentConverter.ValidateAsync"/>, on
+  /// its own because the host asking is usually holding a string and no
+  /// converter — a column read out of a database, a request body, a file being
+  /// imported. It is a parse and two type tests: no engine is taken, no block is
+  /// walked, and a two-thousand-block document costs what a one-block document
+  /// costs.
+  /// <para>
+  /// What it does NOT promise. It says nothing about whether the blocks are
+  /// readable, whether any of them has a type this build of Blok knows, whether
+  /// the document holds any text, or whether converting it will succeed:
+  /// <c>true</c> means only that the input is worth asking the runtime about.
+  /// <see cref="IBlokDocumentConverter.ValidateAsync"/> answers those, and pays
+  /// a walk of the document to do it.
+  /// </para>
+  /// <para>
+  /// It never throws, for any input, <c>null</c> included — a guard that throws
+  /// is not a guard.
+  /// </para>
+  /// </remarks>
+  /// <param name="documentJson">
+  /// Anything at all: a saved document, a fragment, malformed JSON, or
+  /// <c>null</c>.
+  /// </param>
+  /// <returns>
+  /// <c>true</c> when the input parses as a JSON object whose <c>blocks</c>
+  /// member is an array.
+  /// </returns>
+  public static bool LooksLikeADocument(string? documentJson)
+  {
+    if (string.IsNullOrWhiteSpace(documentJson))
+    {
+      return false;
+    }
+
+    try
+    {
+      return JsonNode.Parse(documentJson) is JsonObject document
+          && document["blocks"] is JsonArray;
+    }
+    catch (JsonException)
+    {
+      return false;
+    }
+  }
 
   /// <summary>
   /// Creates a converter over a fresh engine pool. Creating one is expensive —

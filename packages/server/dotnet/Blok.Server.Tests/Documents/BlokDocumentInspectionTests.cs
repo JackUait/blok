@@ -107,6 +107,70 @@ public sealed class BlokDocumentInspectionTests
     Assert.Equal(0, runtime.Calls);
   }
 
+  /// <summary>
+  /// The shape check on its own: no converter, no engine, no await. Everything
+  /// here is something a host would otherwise hand-roll around
+  /// <see cref="System.Text.Json.Nodes.JsonNode.Parse(string, System.Text.Json.Nodes.JsonNodeOptions?, System.Text.Json.JsonDocumentOptions)"/>.
+  /// </summary>
+  [Theory]
+  [InlineData(null)]
+  [InlineData("")]
+  [InlineData("   ")]
+  [InlineData("\t\r\n")]
+  [InlineData("not json at all")]
+  [InlineData("[]")]
+  [InlineData("42")]
+  [InlineData("null")]
+  [InlineData("\"a string\"")]
+  [InlineData("{}")]
+  [InlineData("{\"blocks\":null}")]
+  [InlineData("{\"blocks\":\"not an array\"}")]
+  [InlineData("{\"blocks\":{}}")]
+  [InlineData("{\"blocks\":")]
+  public void RefusesTheShapeOfSomethingThatIsNotADocument(string? candidate)
+  {
+    Assert.False(BlokDocuments.LooksLikeADocument(candidate));
+  }
+
+  [Theory]
+  [InlineData("""{"blocks":[]}""")]
+  [InlineData("""{"blocks":[{"type":"paragraph","data":{"text":"Body"}}]}""")]
+  [InlineData("""{"version":"1.15.1","blocks":[{"type":"divider","data":{}}]}""")]
+  public void AcceptsTheShapeOfASavedDocument(string candidate)
+  {
+    Assert.True(BlokDocuments.LooksLikeADocument(candidate));
+  }
+
+  /// <summary>
+  /// A shape check, not a validation: a block type this build has never heard
+  /// of still passes here, and only <see cref="IBlokDocumentConverter.ValidateAsync"/>
+  /// can say so.
+  /// </summary>
+  [Fact]
+  public void SaysNothingAboutWhetherTheBlocksAreReadable()
+  {
+    const string unreadable = """{"blocks":[{"type":"org-chart","data":{}}]}""";
+
+    Assert.True(BlokDocuments.LooksLikeADocument(unreadable));
+  }
+
+  /// <summary>
+  /// The two agree on what is not a document at all — the cheap check is the
+  /// same bar, reached without an engine.
+  /// </summary>
+  [Fact]
+  public async Task AgreesWithTheFullInspectionOnWhatIsNotADocument()
+  {
+    var converter = Converter();
+
+    foreach (var candidate in new[] { null, "", "not json at all", "[]", "{}" })
+    {
+      Assert.Equal(
+          BlokDocuments.LooksLikeADocument(candidate),
+          (await converter.ValidateAsync(candidate)).IsDocument);
+    }
+  }
+
   private sealed class CountingRuntime : Blok.Server.Runtime.IBlokRuntime
   {
     public int Calls { get; private set; }

@@ -123,3 +123,8 @@ const main = async () => {
 };
 
 await main();
+
+// Node's fetch leaves its keep-alive socket open, and undici holds it with a
+// ref'd timer for up to ten minutes — long past the deploy job's timeout, which
+// cancelled a run whose checks had all passed. Exit once stdout has drained.
+process.stdout.write('\n', () => process.exit(0));

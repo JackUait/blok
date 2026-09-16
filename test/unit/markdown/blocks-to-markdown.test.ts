@@ -76,8 +76,11 @@ describe('blocksToMarkdown', () => {
   });
 
   it('serializes an image as a Markdown image, not an empty line', () => {
-    expect(blocksToMarkdown([{ tool: 'image', data: { url: 'https://x.com/a.png', caption: 'A cat' } }]))
+    expect(blocksToMarkdown([{ tool: 'image', data: { url: 'https://x.com/a.png', alt: 'A cat' } }]))
       .toBe('![A cat](https://x.com/a.png)');
+    /** The `![…]` slot is alt text, so a caption never reaches it. */
+    expect(blocksToMarkdown([{ tool: 'image', data: { url: 'https://x.com/a.png', caption: 'A cat' } }]))
+      .toBe('![](https://x.com/a.png)');
     expect(blocksToMarkdown([{ tool: 'image', data: { url: 'https://x.com/a.png' } }]))
       .toBe('![](https://x.com/a.png)');
   });

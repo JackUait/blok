@@ -296,6 +296,56 @@ public sealed class BlokDocumentConverterTests
   }
 
   [Fact]
+  public async Task ImportsHtmlAsADocumentEnvelope()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+
+    var import = await converter.FromHtmlAsync("<h2>Hello</h2><p>A <b>bold</b> claim.</p>");
+
+    using var document = JsonDocument.Parse(import.DocumentJson);
+    var blocks = document.RootElement.GetProperty("blocks");
+    Assert.Equal("header", blocks[0].GetProperty("type").GetString());
+    Assert.Equal("Hello", blocks[0].GetProperty("data").GetProperty("text").GetString());
+    Assert.Equal("A <b>bold</b> claim.", blocks[1].GetProperty("data").GetProperty("text").GetString());
+
+    // The report rides beside the document, never inside what a caller stores.
+    Assert.False(document.RootElement.TryGetProperty("warnings", out _));
+    Assert.Empty(import.Warnings);
+  }
+
+  /// <summary>
+  /// The whole point of the report: a consumer that stores the result without
+  /// reading it would never learn that the embed went missing.
+  /// </summary>
+  [Fact]
+  public async Task ReportsWhatHtmlCouldNotCarryIn()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+
+    var import = await converter.FromHtmlAsync("<p>keep</p><iframe src=\"https://x.dev\"></iframe>");
+
+    var warning = Assert.Single(import.Warnings);
+    Assert.Equal("iframe", warning.Construct);
+    Assert.Equal(BlokDegradationActions.Dropped, warning.Action);
+    Assert.Contains("iframe", warning.Detail);
+  }
+
+  /// <summary>
+  /// The document Blok renders from imported HTML has to be the document the
+  /// HTML described — a structural round trip, not just a parse that succeeds.
+  /// </summary>
+  [Fact]
+  public async Task RoundTripsHtmlThroughBlocks()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+    const string html = "<h2>Release notes</h2><p>Ships <b>today</b>.</p>";
+
+    var import = await converter.FromHtmlAsync(html);
+
+    Assert.Equal(html, await converter.ToHtmlAsync(import.DocumentJson));
+  }
+
+  [Fact]
   public async Task RendersHtmlAndPlainText()
   {
     var converter = BlokDocuments.Create(poolSize: 1);

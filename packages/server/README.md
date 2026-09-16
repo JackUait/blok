@@ -74,9 +74,35 @@ public sealed class ArticleExport(IBlokDocumentConverter blok, ILogger<ArticleEx
 | `ToHtmlAsync` | the document's HTML |
 | `ToPlainTextAsync` | the document's readable text; `includeHiddenText: true` also emits an image's alt, a video/file url, an embed source, an audio title/artist/url and a bookmark description/url |
 | `FromMarkdownAsync` | the saved document, plus what Markdown could not carry into it |
+| `FromHtmlAsync` | the saved document parsed out of HTML, plus what the HTML could not carry into it |
 | `ExtractTextsAsync` / `InjectTextsAsync` | the document's translatable strings, and the document with them put back |
 | `GetVersionAsync` | the `version` the editor stamps into a saved document |
 | `GetSchemaAsync` | the saved format as JSON Schema (draft 2020-12) |
+
+### Import HTML
+
+`FromHtmlAsync` is the inverse of `ToHtmlAsync`. It takes a fragment or a whole
+document and parses the structural subset a document body is made of: headings,
+paragraphs, lists (nested, ordered, checklists), tables (merged cells included),
+images, links and inline marks, code, blockquotes, toggles and dividers. Layout
+containers are unwrapped and their children converted in place.
+
+```csharp
+var import = await blok.FromHtmlAsync(html, ct);
+
+foreach (var warning in import.Warnings)
+{
+  // e.g. construct "iframe", action "dropped", detail "<iframe> and its contents are dropped…"
+  logger.LogInformation("{Construct} {Action}: {Detail}", warning.Construct, warning.Action, warning.Detail);
+}
+
+await Store(import.DocumentJson, ct);
+```
+
+Read the warnings. Blok has no block for an embedded video, a form control or a
+tag nobody has heard of, and every one of them comes back naming the tag rather
+than disappearing. Storing the document without reading the report is how an
+import loses content quietly.
 
 ### Translate a document without handing a model its JSON
 

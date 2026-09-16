@@ -346,6 +346,11 @@ public sealed class BlokDocumentsRegistrationTests
         string markdown,
         CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
+
+    public ValueTask<BlokImportConversion> FromHtmlAsync(
+        string html,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
   }
 
   [Fact]

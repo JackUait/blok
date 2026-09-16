@@ -50,3 +50,5 @@ export { renderLatex, createLatexRenderer } from '../shared/katex';
 export type { LatexRenderOptions } from '../shared/katex';
 export { defineBlokSchema, composeBaseSanitizeConfig } from '../shared/sanitize-schema';
 export type { BlokViewSchema, DefinedBlokSchema, BlokSchemaConfig, ResolvedSchemaTool } from '../shared/sanitize-schema';
+export { htmlToBlocks, htmlToBlocksWithReport } from './html-to-blocks';
+export type { HtmlImportResult } from './html-to-blocks';

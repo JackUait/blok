@@ -30,10 +30,16 @@ const gate = workflow.jobs.mirror.steps?.find(
 
 let dir = '';
 
+/** The `gh run rerun` calls the gate made, one per line. */
+function requestedReruns(): string[] {
+  return readFileSync(join(dir, 'reruns'), 'utf8').split('\n').filter(Boolean);
+}
+
 /** Runs the gate with `gh` answering from `states`, one line per poll. */
-function runGate(states: string[]): { code: number; output: string } {
+function runGate(states: string[]): { code: number; output: string; reruns: string[] } {
   writeFileSync(join(dir, 'states'), `${states.join('\n')}\n`);
   writeFileSync(join(dir, 'cursor'), '0');
+  writeFileSync(join(dir, 'reruns'), '');
 
   try {
     const output = execFileSync('bash', ['-e', join(dir, 'gate.sh')], {
@@ -46,11 +52,15 @@ function runGate(states: string[]): { code: number; output: string } {
       stdio: ['ignore', 'pipe', 'pipe'],
     });
 
-    return { code: 0, output };
+    return { code: 0, output, reruns: requestedReruns() };
   } catch (error) {
     const failure = error as { status?: number; stdout?: string; stderr?: string };
 
-    return { code: failure.status ?? 1, output: `${failure.stdout ?? ''}${failure.stderr ?? ''}` };
+    return {
+      code: failure.status ?? 1,
+      output: `${failure.stdout ?? ''}${failure.stderr ?? ''}`,
+      reruns: requestedReruns(),
+    };
   }
 }
 
@@ -66,12 +76,17 @@ describe('mirror release-tag gate', () => {
       join(dir, 'gh'),
       [
         '#!/usr/bin/env bash',
+        // A re-run request is recorded, not answered from the state list.
+        'if [ "$2" = "rerun" ]; then echo "$@" >> "$STATE_DIR/reruns"; exit 0; fi',
         'cursor="$(cat "$STATE_DIR/cursor")"',
         'total="$(wc -l < "$STATE_DIR/states")"',
         'line=$(( cursor + 1 ))',
         'if [ "$line" -gt "$total" ]; then line="$total"; fi',
         'echo $(( cursor + 1 )) > "$STATE_DIR/cursor"',
-        'sed -n "${line}p" "$STATE_DIR/states"',
+        'answer="$(sed -n "${line}p" "$STATE_DIR/states")"',
+        // Stands for a transient API failure, which prints nothing and exits 1.
+        'if [ "$answer" = "gh-failed" ]; then exit 1; fi',
+        'echo "$answer"',
       ].join('\n'),
     );
     chmodSync(join(dir, 'gh'), 0o755);
@@ -90,29 +105,52 @@ describe('mirror release-tag gate', () => {
   });
 
   it('passes as soon as CI is green', () => {
-    expect(runGate(['completed:success']).code).toBe(0);
+    expect(runGate(['completed:success:7']).code).toBe(0);
   });
 
   it('waits through a failed attempt for the re-run that goes green', () => {
-    const result = runGate(['in_progress:', 'completed:failure', 'completed:failure', 'completed:success']);
+    const result = runGate(['in_progress:none:7', 'completed:failure:7', 'completed:failure:7', 'completed:success:7']);
 
     expect(result.code).toBe(0);
   });
 
   it('waits through a cancelled attempt for the re-run that goes green', () => {
-    expect(runGate(['completed:cancelled', 'completed:success']).code).toBe(0);
+    expect(runGate(['completed:cancelled:7', 'completed:success:7']).code).toBe(0);
   });
 
   it('gives up when CI never goes green', () => {
-    const result = runGate(['completed:failure']);
+    const result = runGate(['completed:failure:7']);
 
     expect(result.code).not.toBe(0);
     expect(result.output).toContain('::error::');
   }, 60_000);
 
   it('gives up when CI never finishes', () => {
-    const result = runGate(['in_progress:']);
+    const result = runGate(['in_progress:none:7']);
 
     expect(result.code).not.toBe(0);
   }, 60_000);
+
+  it('re-runs a red attempt instead of waiting for a human to notice', () => {
+    const result = runGate([
+      'completed:failure:7',
+      'in_progress:none:7',
+      'completed:success:7',
+    ]);
+
+    expect(result.code).toBe(0);
+    expect(result.reruns).toEqual(['run rerun 7 --failed']);
+  });
+
+  it('gives up once its re-runs are spent, rather than idling out the hour', () => {
+    const result = runGate(['completed:failure:7']);
+
+    expect(result.reruns).toHaveLength(2);
+    expect(result.output).not.toContain('after 60 minutes');
+  }, 60_000);
+
+  it('survives a poll that fails', () => {
+    // `gh` 404s transiently, and the step's shell is `bash -e`.
+    expect(runGate(['gh-failed', 'completed:success:7']).code).toBe(0);
+  });
 });

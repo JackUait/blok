@@ -9,7 +9,8 @@ on:
     branches: [main]
 
 permissions:
-  actions: read
+  # write, because the gate re-runs a red CI attempt itself.
+  actions: write
   contents: read
 
 jobs:
@@ -40,18 +41,62 @@ jobs:
           # A failed CI attempt is not the final answer: a re-run replaces the
           # conclusion on the same run, and this job is the only thing that ever
           # pushes the tag. Exiting on the first red strands the tag for good.
+          # So the gate re-runs the red attempt itself. Waiting for a person to
+          # do it burns the whole hour, and CI on a release commit goes red from
+          # a flaky e2e shard often enough for that to be the normal case.
+          RERUN_BUDGET=2
+
+          # `|| echo` because the shell is `bash -e`: one transient 404 from the
+          # API would otherwise kill the gate, and with it the tag.
+          poll() {
+            gh run list --workflow CI --branch main --event push --commit "$GITHUB_SHA" --limit 1 \
+              --json status,conclusion,databaseId \
+              --jq 'if length == 0 then "missing:none:0" else "\(.[0].status):\(.[0].conclusion // "none"):\(.[0].databaseId)" end' \
+              || echo "poll-failed:none:0"
+          }
+
           last=""
+          reruns=0
+
           for _ in $(seq 1 360); do
-            state="$(gh run list --workflow CI --branch main --event push --commit "$GITHUB_SHA" --limit 1 \
-              --json status,conclusion \
-              --jq 'if length == 0 then "missing" else "\(.[0].status):\(.[0].conclusion // "")" end')"
+            answer="$(poll)"
+            state="${answer%:*}"
+            run_id="${answer##*:}"
+
             if [ "$state" = "completed:success" ]; then
               exit 0
             fi
+
             if [ "$state" != "$last" ]; then
               echo "::notice::CI is $state for $GITHUB_SHA; waiting for a green attempt"
               last="$state"
             fi
+
+            case "$state" in
+              completed:*)
+                if [ "$reruns" -ge "$RERUN_BUDGET" ]; then
+                  echo "::error::CI is $state for $GITHUB_SHA after $reruns re-runs"
+                  exit 1
+                fi
+
+                reruns=$(( reruns + 1 ))
+                echo "::notice::re-running the failed jobs of run $run_id ($reruns of $RERUN_BUDGET)"
+                gh run rerun "$run_id" --failed || true
+                last=""
+
+                # The run still reads `completed` for a few seconds after the
+                # request. Judging it again that early would spend the whole
+                # budget on the attempt that is already restarting.
+                for _ in $(seq 1 30); do
+                  sleep 10
+                  case "$(poll)" in
+                    completed:*) ;;
+                    *) break ;;
+                  esac
+                done
+                ;;
+            esac
+
             sleep 10
           done
           echo "::error::CI did not pass for $GITHUB_SHA after 60 minutes"

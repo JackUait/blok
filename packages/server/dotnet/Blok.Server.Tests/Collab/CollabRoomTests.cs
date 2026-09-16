@@ -483,7 +483,13 @@ public sealed class CollabRoomTests
     await Waits.UntilAsync(() => endpoint.Saves.Count == 2, "the retried export");
 
     Assert.Equal("hello!", endpoint.Saves[1].Data["text"]?.GetValue<string>());
-    Assert.Equal(2, store.FramesOf(DocId).Count);
+
+    // The blob write runs beside the lane and nothing above orders it: the
+    // export the wait watched does not carry it, and SettleAsync drains the
+    // lane, not the in-flight persist. Reading once races it.
+    await Waits.UntilAsync(
+        () => store.FramesOf(DocId).Count == 2,
+        "the working set to keep both frames");
   }
 
   /// <summary>

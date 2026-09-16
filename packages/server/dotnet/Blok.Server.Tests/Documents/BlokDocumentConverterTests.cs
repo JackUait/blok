@@ -254,6 +254,47 @@ public sealed class BlokDocumentConverterTests
     Assert.Equal("degraded", warning.Action);
   }
 
+  /// <summary>
+  /// Refusing a script-capable scheme is the sanitizer working; doing it
+  /// silently is not. The image leaves nothing behind at all, so a caller
+  /// gating on the report would have overwritten an article with one less
+  /// picture and been told nothing.
+  /// </summary>
+  [Fact]
+  public async Task ReportsAUrlDroppedForItsScheme()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+
+    var import = await converter.FromMarkdownAsync("![evil](javascript:alert(1))");
+
+    var warning = Assert.Single(import.Warnings);
+    Assert.Equal("image", warning.Construct);
+    Assert.Equal(BlokDegradationActions.Dropped, warning.Action);
+    Assert.Contains("javascript:", warning.Detail, StringComparison.Ordinal);
+  }
+
+  /// <summary>
+  /// A container naming a child the document does not carry loses it. The table
+  /// path said so already; the canonical <c>content[]</c> form did not, which is
+  /// exactly the shape a truncated document arrives in.
+  /// </summary>
+  [Fact]
+  public async Task ReportsAContentReferenceItCouldNotResolve()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+
+    var conversion = await converter.ToMarkdownAsync("""
+        {"blocks":[
+          {"id":"l1","type":"list","data":{"text":"item","style":"unordered"},"content":["gone"]}
+        ]}
+        """);
+
+    var warning = Assert.Single(conversion.Warnings);
+    Assert.Equal("list", warning.Construct);
+    Assert.Equal(BlokDegradationActions.Dropped, warning.Action);
+    Assert.Contains("could not be resolved", warning.Detail, StringComparison.Ordinal);
+  }
+
   [Fact]
   public async Task RendersHtmlAndPlainText()
   {

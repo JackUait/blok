@@ -52,6 +52,16 @@ function explicitScheme(url: string): string | null {
 }
 
 /**
+ * The scheme a URL declares, as a browser resolves it ("javascript:"), or null
+ * when it declares none — relative, anchor, and protocol-relative URLs. Reads
+ * through {@link stripIgnoredUrlChars}, so "java\nscript:" answers
+ * "javascript:", which is what the sanitizer refused.
+ */
+export function urlScheme(url: string): string | null {
+  return explicitScheme(stripIgnoredUrlChars(url));
+}
+
+/**
  * Sanitize a URL for use as an anchor href.
  * Returns the original URL when safe, or null when it must be dropped.
  * Relative, anchor, and protocol-relative URLs have no scheme to abuse and pass.

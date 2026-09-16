@@ -52,11 +52,21 @@ const readBlock = (block: unknown): LooseOutputBlockData | undefined => {
     return undefined;
   }
 
+  /**
+   * `content[]` is the canonical containment form, and a document may declare
+   * containment ONLY that way. Ids that are not strings are left behind rather
+   * than costing the whole block — the document model filters them anyway.
+   */
+  const content = Array.isArray(block.content)
+    ? block.content.filter((id): id is string => typeof id === 'string')
+    : undefined;
+
   return {
     type: block.type,
     ...(block.data === undefined ? {} : { data: block.data }),
     ...(block.id === undefined ? {} : { id: block.id }),
     ...(parent === undefined ? {} : { parent }),
+    ...(content === undefined ? {} : { content }),
   };
 };
 

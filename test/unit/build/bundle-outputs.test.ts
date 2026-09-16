@@ -392,6 +392,19 @@ describe('package.json exports include require conditions', () => {
     expect(iconsExport['types']).toBe('./types/icons.d.ts')
   })
 
+  it('"./preprocess" export is wired to built files that really carry the entry point', () => {
+    const preprocessExport = packageJson.exports['./preprocess'] as Record<string, string>
+    expect(preprocessExport['import']).toBe('./dist/preprocess.mjs')
+    expect(preprocessExport['require']).toBe('./dist/preprocess.cjs')
+    expect(preprocessExport['types']).toBe('./types/preprocess.d.ts')
+
+    for (const file of ['dist/preprocess.mjs', 'dist/preprocess.cjs', 'types/preprocess.d.ts']) {
+      const built = readFileSync(resolve(repoRoot, file), 'utf-8')
+      expect(built).toContain('preprocessLegacyCmsHtml')
+      expect(built).toContain('preprocessLegacyCmsHtmlIn')
+    }
+  })
+
   it('"./umd" export points at the drop-in global bundle', () => {
     expect((packageJson.exports['./umd'] as Record<string, string>)['default']).toBe('./dist/blok.umd.js')
   })

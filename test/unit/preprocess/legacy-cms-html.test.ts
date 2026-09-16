@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { preprocess } from '../../../../../src/cli/commands/convert-html/preprocessor';
+import { preprocessLegacyCmsHtmlIn } from '../../../src/preprocess/legacy-cms-html';
 
 /** Helper: run preprocess on HTML string, return resulting innerHTML */
 function run(html: string): string {
   const dom = new DOMParser().parseFromString(html, 'text/html');
 
-  preprocess(dom.body);
+  preprocessLegacyCmsHtmlIn(dom.body);
 
   return dom.body.innerHTML;
 }
@@ -103,6 +103,20 @@ describe('preprocess', () => {
       // jsdom serialises \u00a0 as &nbsp; in innerHTML
       expect(run('<p>Content with &nbsp; inside</p>'))
         .toBe('<p>Content with &nbsp; inside</p>');
+    });
+
+    it('keeps a paragraph whose only child is an image', () => {
+      expect(run('<p><img src="photo.png"></p>'))
+        .toBe('<p><img src="photo.png"></p>');
+    });
+
+    it('keeps an image that sits next to nbsp-only text', () => {
+      expect(run('<p>&nbsp;<img src="photo.png">&nbsp;</p>'))
+        .toContain('<img src="photo.png">');
+    });
+
+    it('still removes <p><br></p> — a blank line carries nothing', () => {
+      expect(run('<p><br></p>')).toBe('');
     });
   });
 

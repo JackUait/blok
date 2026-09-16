@@ -30,6 +30,9 @@
       ],
       "icons": [
         "./types/icons.d.ts"
+      ],
+      "preprocess": [
+        "./types/preprocess.d.ts"
       ]
     }
   },
@@ -71,6 +74,11 @@
     "./adapters": {
       "import": "./dist/adapters.mjs",
       "require": "./dist/adapters.cjs"
+    },
+    "./preprocess": {
+      "types": "./types/preprocess.d.ts",
+      "import": "./dist/preprocess.mjs",
+      "require": "./dist/preprocess.cjs"
     },
     "./icons": {
       "types": "./types/icons.d.ts",

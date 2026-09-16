@@ -342,6 +342,25 @@ const splitOnImages = (ctx: Ctx, nodes: P5ChildNode[]): InlineSegment[] => {
 };
 
 /**
+ * Emit the non-text segments of an inline run, for a caller that has already
+ * taken the text for a field of its own.
+ * @param ctx - conversion state
+ * @param segments - what the run split into
+ */
+const emitSegmentMedia = (ctx: Ctx, segments: InlineSegment[]): void => {
+  for (const segment of segments) {
+    if ('image' in segment) {
+      emitImage(ctx, segment.image);
+      continue;
+    }
+
+    if ('block' in segment) {
+      convertNodes(ctx, [segment.block]);
+    }
+  }
+};
+
+/**
  * Emit the blocks a run of inline content amounts to: one paragraph, or a
  * paragraph/image sequence when images are mixed in.
  * @param ctx - conversion state
@@ -510,8 +529,15 @@ const emitList = (ctx: Ctx, element: P5Element, depth: number): void => {
 
     const parts = splitListItem(node);
     const style = parts.checkbox === undefined ? bulletStyle : 'checklist';
+
+    /**
+     * An item's text is one field, so an image the inline nodes carry cannot
+     * stay in it. It is lifted out and emitted after the item, the way a block
+     * child of the item already is.
+     */
+    const segments = splitOnImages(ctx, parts.inline);
     const data: Record<string, unknown> = {
-      text: inlineHtml(ctx, parts.inline),
+      text: inlineHtml(ctx, segments.flatMap((segment) => 'inline' in segment ? segment.inline : [])),
       style,
       depth,
     };
@@ -525,6 +551,7 @@ const emitList = (ctx: Ctx, element: P5Element, depth: number): void => {
     }
 
     push(ctx, 'list', data);
+    emitSegmentMedia(ctx, segments);
     convertNodes(ctx, parts.blocks);
 
     for (const nested of parts.nested) {

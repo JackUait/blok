@@ -188,6 +188,27 @@ describe('htmlToBlocks — lists', () => {
       { type: 'list', data: { text: 'B', style: 'unordered', depth: 1 } },
     ]);
   });
+
+  /**
+   * A Docs export wraps an image in a sized `span`, which the inline sanitizer
+   * strips. An item's text is built from its inline nodes, so the image has to
+   * be lifted out of them rather than serialized with them.
+   */
+  it('keeps an image an item carries in its own text', () => {
+    expect(shape(htmlToBlocks(
+      '<ul><li>before<span style="display:inline-block"><img src="https://x.dev/a.png"></span>after</li></ul>'
+    ))).toEqual([
+      { type: 'list', data: { text: 'beforeafter', style: 'unordered', depth: 0 } },
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+    ]);
+  });
+
+  it('keeps a bare image an item carries', () => {
+    expect(shape(htmlToBlocks('<ul><li><img src="https://x.dev/a.png"></li></ul>'))).toEqual([
+      { type: 'list', data: { text: '', style: 'unordered', depth: 0 } },
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+    ]);
+  });
 });
 
 describe('htmlToBlocks — tables', () => {

@@ -251,13 +251,38 @@ const emitImage = (ctx: Ctx, element: P5Element, caption?: string): void => {
 };
 
 /**
+ * Whether an `img` sits anywhere under a node. An inline wrapper holding one —
+ * `<a>`, or the sized `<span>` a Docs export writes — has to be taken apart,
+ * because the inline sanitizer keeps the wrapper and strips the image.
+ * @param node - node to search
+ */
+const hasImage = (node: P5ChildNode): boolean =>
+  childrenOf(node).some((child) => (isElement(child) && child.tagName === 'img') || hasImage(child));
+
+/**
+ * Report the link an image wrapper carries, which the image it wraps cannot
+ * keep — Blok's image block has no link field.
+ * @param ctx - conversion state
+ * @param element - the inline element wrapping an image
+ */
+const reportImageLink = (ctx: Ctx, element: P5Element): void => {
+  if (element.tagName === 'a' && (attr(element, 'href') ?? '').trim() !== '') {
+    warn(ctx, 'a', 'degraded', 'A link around an image is dropped and the image kept; Blok\'s image block has no link field');
+  }
+};
+
+/** One piece a run of inline nodes splits into, in document order. */
+type InlineSegment = { image: P5Element } | { block: P5Element } | { inline: P5ChildNode[] };
+
+/**
  * Split a run of inline nodes on the images inside it, so a paragraph that
  * mixes prose and an image yields both rather than losing the image to the
  * inline sanitizer, which has no `img` rule.
+ * @param ctx - conversion state
  * @param nodes - inline nodes
  */
-const splitOnImages = (nodes: P5ChildNode[]): Array<{ image: P5Element } | { inline: P5ChildNode[] }> => {
-  const segments: Array<{ image: P5Element } | { inline: P5ChildNode[] }> = [];
+const splitOnImages = (ctx: Ctx, nodes: P5ChildNode[]): InlineSegment[] => {
+  const segments: InlineSegment[] = [];
   const pending: { run: P5ChildNode[] } = { run: [] };
 
   /** Close the run of inline nodes collected so far. */
@@ -265,6 +290,25 @@ const splitOnImages = (nodes: P5ChildNode[]): Array<{ image: P5Element } | { inl
     if (pending.run.length > 0) {
       segments.push({ inline: pending.run });
       pending.run = [];
+    }
+  };
+
+  /**
+   * Fold a wrapper's own parts into this run, re-wrapping the inline ones so
+   * `<b>text <img></b>` keeps its bold on the text. The clone borrows the
+   * wrapper's tag and attributes, which is all the serializer reads.
+   * @param wrapper - the inline element being taken apart
+   * @param parts - what its children split into
+   */
+  const absorb = (wrapper: P5Element, parts: InlineSegment[]): void => {
+    for (const part of parts) {
+      if ('inline' in part) {
+        pending.run.push({ ...wrapper, childNodes: part.inline });
+        continue;
+      }
+
+      flush();
+      segments.push(part);
     }
   };
 
@@ -276,10 +320,16 @@ const splitOnImages = (nodes: P5ChildNode[]): Array<{ image: P5Element } | { inl
     }
 
     if (isElement(node) && !INLINE_TAGS.has(node.tagName)) {
-      // A block element inside an inline run: its own descendants may hold
-      // images, so it is walked rather than serialized whole.
+      // Hoisted whole rather than walked: `convertElement` is the only place
+      // that knows an element is dropped, so walking past it drops it silently.
       flush();
-      segments.push(...splitOnImages(node.childNodes));
+      segments.push({ block: node });
+      continue;
+    }
+
+    if (isElement(node) && hasImage(node)) {
+      reportImageLink(ctx, node);
+      absorb(node, splitOnImages(ctx, node.childNodes));
       continue;
     }
 
@@ -289,6 +339,25 @@ const splitOnImages = (nodes: P5ChildNode[]): Array<{ image: P5Element } | { inl
   flush();
 
   return segments;
+};
+
+/**
+ * Emit the non-text segments of an inline run, for a caller that has already
+ * taken the text for a field of its own.
+ * @param ctx - conversion state
+ * @param segments - what the run split into
+ */
+const emitSegmentMedia = (ctx: Ctx, segments: InlineSegment[]): void => {
+  for (const segment of segments) {
+    if ('image' in segment) {
+      emitImage(ctx, segment.image);
+      continue;
+    }
+
+    if ('block' in segment) {
+      convertNodes(ctx, [segment.block]);
+    }
+  }
 };
 
 /**
@@ -305,9 +374,14 @@ const emitInlineRun = (
   type = 'paragraph',
   extra: Record<string, unknown> = {}
 ): void => {
-  for (const segment of splitOnImages(nodes)) {
+  for (const segment of splitOnImages(ctx, nodes)) {
     if ('image' in segment) {
       emitImage(ctx, segment.image);
+      continue;
+    }
+
+    if ('block' in segment) {
+      convertNodes(ctx, [segment.block]);
       continue;
     }
 
@@ -412,7 +486,7 @@ const splitListItem = (item: P5Element): ListItemParts => {
    */
   const [first] = parts.blocks;
 
-  if (rawText(parts.inline).trim() === '' && isElement(first) && first.tagName === 'p') {
+  if (rawText(parts.inline).trim() === '' && first !== undefined && isElement(first) && first.tagName === 'p') {
     parts.inline = first.childNodes;
     parts.blocks = parts.blocks.slice(1);
   }
@@ -430,13 +504,40 @@ const emitList = (ctx: Ctx, element: P5Element, depth: number): void => {
   const ordered = element.tagName === 'ol';
   const bulletStyle = ordered ? 'ordered' : 'unordered';
   const start = Number(attr(element, 'start'));
-  const items = element.childNodes.filter((node): node is P5Element => isElement(node) && node.tagName === 'li');
+  const firstItem = element.childNodes.find(
+    (node): node is P5Element => isElement(node) && node.tagName === 'li'
+  );
 
-  for (const [index, item] of items.entries()) {
-    const parts = splitListItem(item);
+  for (const node of element.childNodes) {
+    if (!isElement(node)) {
+      continue;
+    }
+
+    /**
+     * A `ul`/`ol` that is a SIBLING of the items rather than a child of one:
+     * what HTML5 parsing makes of the unclosed-`li` nesting legacy editors
+     * emit. A browser renders it one level in, so it is imported that way.
+     */
+    if (node.tagName === 'ul' || node.tagName === 'ol') {
+      emitList(ctx, node, depth + 1);
+      continue;
+    }
+
+    if (node.tagName !== 'li') {
+      continue;
+    }
+
+    const parts = splitListItem(node);
     const style = parts.checkbox === undefined ? bulletStyle : 'checklist';
+
+    /**
+     * An item's text is one field, so an image the inline nodes carry cannot
+     * stay in it. It is lifted out and emitted after the item, the way a block
+     * child of the item already is.
+     */
+    const segments = splitOnImages(ctx, parts.inline);
     const data: Record<string, unknown> = {
-      text: inlineHtml(ctx, parts.inline),
+      text: inlineHtml(ctx, segments.flatMap((segment) => 'inline' in segment ? segment.inline : [])),
       style,
       depth,
     };
@@ -445,11 +546,12 @@ const emitList = (ctx: Ctx, element: P5Element, depth: number): void => {
       data.checked = attr(parts.checkbox, 'checked') !== undefined;
     }
 
-    if (ordered && index === 0 && Number.isInteger(start)) {
+    if (ordered && node === firstItem && Number.isInteger(start)) {
       data.start = start;
     }
 
     push(ctx, 'list', data);
+    emitSegmentMedia(ctx, segments);
     convertNodes(ctx, parts.blocks);
 
     for (const nested of parts.nested) {
@@ -737,11 +839,7 @@ const convertElement = (ctx: Ctx, element: P5Element): void => {
   const heading = HEADING.exec(tag);
 
   if (heading !== null) {
-    const text = inlineHtml(ctx, element.childNodes);
-
-    if (text !== '') {
-      push(ctx, 'header', { text, level: Number(heading[1]) });
-    }
+    emitInlineRun(ctx, element.childNodes, 'header', { level: Number(heading[1]) });
 
     return;
   }

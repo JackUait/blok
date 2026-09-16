@@ -113,12 +113,101 @@ describe('htmlToBlocks — lists', () => {
     ]);
   });
 
+  it('indents a list parsed as a sibling of the item it belongs under', () => {
+    expect(shape(htmlToBlocks('<ol><li>A</li><ol><li>B</li><li>C</li></ol></ol>'))).toEqual([
+      { type: 'list', data: { text: 'A', style: 'ordered', depth: 0 } },
+      { type: 'list', data: { text: 'B', style: 'ordered', depth: 1 } },
+      { type: 'list', data: { text: 'C', style: 'ordered', depth: 1 } },
+    ]);
+  });
+
+  it('indents a sibling list that opens the list, before any item', () => {
+    expect(shape(htmlToBlocks('<ul><ul><li>B</li></ul><li>A</li></ul>'))).toEqual([
+      { type: 'list', data: { text: 'B', style: 'unordered', depth: 1 } },
+      { type: 'list', data: { text: 'A', style: 'unordered', depth: 0 } },
+    ]);
+  });
+
+  it('carries each sibling list\'s own bullet style', () => {
+    expect(shape(htmlToBlocks('<ul><li>A</li><ol><li>B</li></ol><li>C</li><ul><li>D</li></ul></ul>'))).toEqual([
+      { type: 'list', data: { text: 'A', style: 'unordered', depth: 0 } },
+      { type: 'list', data: { text: 'B', style: 'ordered', depth: 1 } },
+      { type: 'list', data: { text: 'C', style: 'unordered', depth: 0 } },
+      { type: 'list', data: { text: 'D', style: 'unordered', depth: 1 } },
+    ]);
+  });
+
+  it('nests sibling lists deeper than one level', () => {
+    expect(shape(htmlToBlocks('<ul><li>A</li><ul><li>B</li><ul><li>C</li></ul></ul></ul>'))).toEqual([
+      { type: 'list', data: { text: 'A', style: 'unordered', depth: 0 } },
+      { type: 'list', data: { text: 'B', style: 'unordered', depth: 1 } },
+      { type: 'list', data: { text: 'C', style: 'unordered', depth: 2 } },
+    ]);
+  });
+
+  it('mixes a sibling list with a properly nested one', () => {
+    expect(shape(htmlToBlocks('<ol><li>A<ol><li>B</li></ol></li><ol><li>C</li></ol></ol>'))).toEqual([
+      { type: 'list', data: { text: 'A', style: 'ordered', depth: 0 } },
+      { type: 'list', data: { text: 'B', style: 'ordered', depth: 1 } },
+      { type: 'list', data: { text: 'C', style: 'ordered', depth: 1 } },
+    ]);
+  });
+
+  it('gives start to the first item of the list that declares it, past a sibling list', () => {
+    expect(shape(htmlToBlocks('<ol start="5"><ol><li>B</li></ol><li>A</li></ol>'))).toEqual([
+      { type: 'list', data: { text: 'B', style: 'ordered', depth: 1 } },
+      { type: 'list', data: { text: 'A', style: 'ordered', depth: 0, start: 5 } },
+    ]);
+  });
+
   it('reads a checkbox input as a checklist item', () => {
     expect(shape(htmlToBlocks('<ul><li><input type="checkbox" checked>done</li><li><input type="checkbox">todo</li></ul>')))
       .toEqual([
         { type: 'list', data: { text: 'done', style: 'checklist', depth: 0, checked: true } },
         { type: 'list', data: { text: 'todo', style: 'checklist', depth: 0, checked: false } },
       ]);
+  });
+
+  /**
+   * An item with neither text nor block children left the lone-paragraph
+   * unwrap testing `undefined`, which threw and failed the whole import.
+   */
+  it('reads an item that carries nothing at all', () => {
+    expect(shape(htmlToBlocks('<ul><li>A</li><li></li><li>C</li></ul>'))).toEqual([
+      { type: 'list', data: { text: 'A', style: 'unordered', depth: 0 } },
+      { type: 'list', data: { text: '', style: 'unordered', depth: 0 } },
+      { type: 'list', data: { text: 'C', style: 'unordered', depth: 0 } },
+    ]);
+  });
+
+  it('reads an item holding only whitespace, a break, or a nested list', () => {
+    expect(() => htmlToBlocks('<ul><li>  </li></ul>')).not.toThrow();
+    expect(() => htmlToBlocks('<ul><li><br></li></ul>')).not.toThrow();
+    expect(shape(htmlToBlocks('<ul><li><ul><li>B</li></ul></li></ul>'))).toEqual([
+      { type: 'list', data: { text: '', style: 'unordered', depth: 0 } },
+      { type: 'list', data: { text: 'B', style: 'unordered', depth: 1 } },
+    ]);
+  });
+
+  /**
+   * A Docs export wraps an image in a sized `span`, which the inline sanitizer
+   * strips. An item's text is built from its inline nodes, so the image has to
+   * be lifted out of them rather than serialized with them.
+   */
+  it('keeps an image an item carries in its own text', () => {
+    expect(shape(htmlToBlocks(
+      '<ul><li>before<span style="display:inline-block"><img src="https://x.dev/a.png"></span>after</li></ul>'
+    ))).toEqual([
+      { type: 'list', data: { text: 'beforeafter', style: 'unordered', depth: 0 } },
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+    ]);
+  });
+
+  it('keeps a bare image an item carries', () => {
+    expect(shape(htmlToBlocks('<ul><li><img src="https://x.dev/a.png"></li></ul>'))).toEqual([
+      { type: 'list', data: { text: '', style: 'unordered', depth: 0 } },
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+    ]);
   });
 });
 
@@ -189,6 +278,26 @@ describe('htmlToBlocksWithReport — warnings', () => {
       { construct: 'iframe', action: 'dropped', detail: expect.stringContaining('iframe') },
       { construct: 'video', action: 'dropped', detail: expect.stringContaining('video') },
     ]);
+  });
+
+  it('reports embedded media dropped from inside a paragraph', () => {
+    const report = htmlToBlocksWithReport('<p>before<iframe src="https://x.dev"></iframe>after</p>');
+
+    expect(shape(report.blocks)).toEqual([
+      { type: 'paragraph', data: { text: 'before' } },
+      { type: 'paragraph', data: { text: 'after' } },
+    ]);
+    expect(report.warnings).toEqual([
+      { construct: 'iframe', action: 'dropped', detail: expect.stringContaining('iframe') },
+    ]);
+  });
+
+  it('reports a video dropped from inside a paragraph', () => {
+    expect(warn('<p>a<video src="v.mp4"></video>b</p>')).toEqual([{ construct: 'video', action: 'dropped' }]);
+  });
+
+  it('reports an unknown element dropped from inside a paragraph', () => {
+    expect(warn('<p>a<marquee>scrolling</marquee>b</p>')).toEqual([{ construct: 'marquee', action: 'degraded' }]);
   });
 
   it('drops script and style without reporting them as lost content', () => {
@@ -285,6 +394,77 @@ describe('htmlToBlocks — edges', () => {
       { type: 'image', data: { url: 'https://x.dev/a.png' } },
       { type: 'paragraph', data: { text: 'after' } },
     ]);
+  });
+
+  it('splits a heading that mixes text and an image, keeping both', () => {
+    expect(shape(htmlToBlocks('<h2>Title<img src="https://x.dev/a.png"></h2>'))).toEqual([
+      { type: 'header', data: { text: 'Title', level: 2 } },
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+    ]);
+  });
+
+  it('keeps an image wrapped in a link, reporting the link it cannot carry', () => {
+    const report = htmlToBlocksWithReport('<p><a href="https://x.dev"><img src="https://x.dev/a.png"></a></p>');
+
+    expect(shape(report.blocks)).toEqual([{ type: 'image', data: { url: 'https://x.dev/a.png' } }]);
+    expect(report.warnings).toEqual([
+      { construct: 'a', action: 'degraded', detail: expect.stringContaining('link') },
+    ]);
+  });
+
+  it('keeps an image wrapped in inline markup, and the markup around it', () => {
+    const report = htmlToBlocksWithReport('<p><strong>bold <img src="https://x.dev/a.png"></strong></p>');
+
+    expect(shape(report.blocks)).toEqual([
+      { type: 'paragraph', data: { text: '<strong>bold </strong>' } },
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+    ]);
+    expect(report.warnings).toEqual([]);
+  });
+
+  /**
+   * The wrapper a Google Docs export puts around every image: a sized
+   * `inline-block` span, which the inline sanitizer unwraps — taking the image
+   * with it before this split ran.
+   */
+  it('keeps an image wrapped in a sized span, as a Docs export writes it', () => {
+    const report = htmlToBlocksWithReport(
+      '<p>t<span style="border:none;display:inline-block;overflow:hidden;width:164px;height:321px;">'
+      + '<img src="https://lh7-rt.googleusercontent.com/x"></span>u</p>'
+    );
+
+    expect(shape(report.blocks)).toEqual([
+      { type: 'paragraph', data: { text: 't' } },
+      { type: 'image', data: { url: 'https://lh7-rt.googleusercontent.com/x' } },
+      { type: 'paragraph', data: { text: 'u' } },
+    ]);
+    expect(report.warnings).toEqual([]);
+  });
+
+  it('keeps an image wrapped in nested inline elements', () => {
+    expect(shape(htmlToBlocks('<p><a href="https://x.dev"><span><img src="https://x.dev/a.png"></span></a></p>')))
+      .toEqual([{ type: 'image', data: { url: 'https://x.dev/a.png' } }]);
+  });
+
+  it('keeps a wrapped image in a heading and in a table cell', () => {
+    expect(shape(htmlToBlocks('<h2>T<a href="https://x.dev"><img src="https://x.dev/a.png"></a></h2>'))).toEqual([
+      { type: 'header', data: { text: 'T', level: 2 } },
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+    ]);
+
+    const cell = shape(htmlToBlocks('<table><tr><td><span><img src="https://x.dev/a.png"></span></td></tr></table>'));
+
+    expect(cell[1]).toEqual({ type: 'image', data: { url: 'https://x.dev/a.png' }, parent: 0 });
+  });
+
+  it('leaves an inline run with no image in it serialized whole', () => {
+    expect(shape(htmlToBlocks('<p>a <span class="x"><b>b</b> c</span> d</p>'))).toEqual([
+      { type: 'paragraph', data: { text: 'a <b>b</b> c d' } },
+    ]);
+  });
+
+  it('emits nothing for a heading with no text', () => {
+    expect(shape(htmlToBlocks('<h2></h2><h3>  </h3>'))).toEqual([]);
   });
 
   it('keeps block content that follows a list item\'s own text', () => {

@@ -48,6 +48,33 @@ describe('override extension registrations', () => {
     expect(toRegister).toEqual([]);
   });
 
+  /**
+   * chrome.scripting.getRegisteredContentScripts returns its OWN key order and
+   * adds fields the extension never asked for (matchOriginAsFallback). Comparing
+   * whole-object JSON is key-order sensitive, so it reported "changed" on every
+   * sync and the 30s alarm re-registered the payload forever. A navigation that
+   * commits while the MAIN-world document_start script is unregistered silently
+   * loads the site's own Blok with the badge still showing ON.
+   */
+  it('delta is empty when chrome echoes the same set with its own key order and extra fields', () => {
+    const desired = desiredRegistrations(['http://localhost:4444'], 'f.js');
+    const asChromeReturnsIt = desired.map((r) => ({
+      allFrames: r.allFrames,
+      id: r.id,
+      js: r.js,
+      matchOriginAsFallback: false,
+      matches: r.matches,
+      persistAcrossSessions: r.persistAcrossSessions,
+      runAt: r.runAt,
+      world: r.world,
+    }));
+
+    const { toUnregister, toRegister } = registrationDelta(asChromeReturnsIt, desired);
+
+    expect(toUnregister).toEqual([]);
+    expect(toRegister).toEqual([]);
+  });
+
   it('delta unregisters everything when disarming the last origin', () => {
     const existing = desiredRegistrations(['http://localhost:4444'], 'f.js');
     const { toUnregister, toRegister } = registrationDelta(existing, []);

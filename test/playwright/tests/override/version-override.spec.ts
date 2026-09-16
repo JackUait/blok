@@ -156,15 +156,16 @@ test.describe('blok version override', () => {
       // This one assertion covers strictly more than its sibling at :31, which
       // arms the origin through the service worker directly: here a popup click
       // has to reach the worker and come back before the reload even starts,
-      // and only then does the multi-MB dev payload evaluate. `test.slow()`
-      // triples the TEST budget and leaves `expect` on the global 5s, which the
-      // whole chain does not fit into on a loaded runner — the test then fails
-      // once and passes on retry, which `failOnFlakyTests` counts as a failure.
+      // and only then does the multi-MB dev payload evaluate.
       //
-      // 15s was still too tight: the test measures 18s wall-clock on an idle
-      // laptop, and CI runs three workers per runner, so the chain overran and
-      // went red twice in a row. 30s keeps the assertion meaningful — an origin
-      // that never arms still fails — with room for a loaded runner.
+      // The earlier 5s -> 15s -> 30s bumps here were chasing a symptom. The
+      // page never armed at all: registrationDelta compared whole-object JSON
+      // against what chrome.scripting echoes back, which never matches, so
+      // every sync re-registered the content scripts. The popup's own `status`
+      // refresh lands that churn ~2ms after the reload starts, and a commit
+      // inside it loses the MAIN-world payload for good. Fixed in
+      // override-extension/lib/registrations.mjs. The budget stays generous
+      // because a real arming is now fast — it is headroom, not the fix.
       await expect(page.getByTestId('blok-editor'))
         .toHaveAttribute('data-blok-version', /-dev\./, { timeout: 30_000 });
       await expect(popup.getByRole('button', { name: 'Reload' })).toHaveCount(0);

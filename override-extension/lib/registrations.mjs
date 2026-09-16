@@ -33,9 +33,17 @@ export function desiredRegistrations(armedOrigins, payloadFile) {
 // Whole-set comparison, not per-id: a changed payload filename still leaves
 // the banner registration byte-identical, so a per-id diff would never
 // unregister it even though we must re-register the whole set together.
+// Only the fields the extension sets. chrome.scripting.getRegisteredContentScripts
+// echoes its own key order and adds matchOriginAsFallback, so whole-object JSON
+// never matches and every sync would churn the registrations.
+const fingerprint = (regs) => JSON.stringify(
+  [...regs]
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map((r) => [r.id, r.js, r.matches, r.world, r.runAt, r.allFrames, r.persistAcrossSessions]),
+);
+
 export function registrationDelta(existing, desired) {
-  const sortById = (regs) => [...regs].sort((a, b) => a.id.localeCompare(b.id));
-  const unchanged = JSON.stringify(sortById(existing)) === JSON.stringify(sortById(desired));
+  const unchanged = fingerprint(existing) === fingerprint(desired);
   if (unchanged) {
     return { toUnregister: [], toRegister: [] };
   }

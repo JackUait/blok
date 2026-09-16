@@ -19,6 +19,7 @@ import { parse, serialize } from 'parse5';
 import type { DefaultTreeAdapterMap } from 'parse5';
 
 import type { OutputBlockData } from '../../types';
+import type { ImageAlignment } from '../../types/tools/image';
 import { INLINE_TEXT_SANITIZE } from '../components/shared/inline-content-sanitize';
 import { safeImageSrc } from '../components/utils/sanitize-url';
 import { normalizeFenceLang } from '../markdown/fence-language';
@@ -215,6 +216,93 @@ const isInline = (node: P5ChildNode): boolean => {
 };
 
 /**
+ * An element's inline style, keyed by property. Both halves are lower-cased,
+ * so a declaration only has to be compared one way.
+ * @param element - element to read
+ */
+const styleOf = (element: P5Element): Map<string, string> => {
+  const declarations = (attr(element, 'style') ?? '').toLowerCase().split(';');
+
+  return new Map(declarations.flatMap((declaration): Array<[string, string]> => {
+    const colon = declaration.indexOf(':');
+
+    return colon === -1 ? [] : [[declaration.slice(0, colon).trim(), declaration.slice(colon + 1).trim()]];
+  }));
+};
+
+const PERCENT = /^(\d+(?:\.\d+)?)%$/;
+
+/**
+ * A CSS width as `ImageData.width` stores it — a percent of the container,
+ * 10–100. Anything else reads as no width at all, a px length included: the
+ * container is not knowable from the HTML, and dividing by a guessed one puts
+ * the result outside the range the field allows.
+ * @param raw - a declaration value or an attribute value
+ */
+const percentWidth = (raw: string | undefined): number | null => {
+  const match = PERCENT.exec((raw ?? '').trim());
+
+  if (match === null) {
+    return null;
+  }
+
+  const percent = Math.round(Number(match[1]));
+
+  return percent >= 10 && percent <= 100 ? percent : null;
+};
+
+/**
+ * The left and right margins in force, the shorthand resolved the way CSS
+ * reads it and the longhands laid over it.
+ * @param style - the element's inline style
+ */
+const marginSides = (style: Map<string, string>): { left: string; right: string } => {
+  const parts = (style.get('margin') ?? '').split(/\s+/).filter((part) => part !== '');
+  const sides = parts[1] ?? parts[0] ?? '';
+
+  return {
+    left: style.get('margin-left') ?? parts[3] ?? sides,
+    right: style.get('margin-right') ?? sides,
+  };
+};
+
+/**
+ * Alignment the margins imply: two `auto` sides centre the box, one `auto`
+ * side pushes it to the other one.
+ * @param style - the element's inline style
+ */
+const marginAlignment = (style: Map<string, string>): ImageAlignment | null => {
+  const { left, right } = marginSides(style);
+
+  if (left === 'auto') {
+    return right === 'auto' ? 'center' : 'right';
+  }
+
+  return right === 'auto' ? 'left' : null;
+};
+
+/** The `align` values that map onto an {@link ImageAlignment}; `justify` and `middle` do not. */
+const LEGACY_ALIGN = new Map<string, ImageAlignment>([['left', 'left'], ['center', 'center'], ['right', 'right']]);
+
+/**
+ * Horizontal alignment of an image, read from the CSS that carries it and only
+ * then from the presentational attribute that CSS would have overridden.
+ * @param element - the `img` element
+ * @param style - the element's inline style
+ */
+const imageAlignment = (element: P5Element, style: Map<string, string>): ImageAlignment | null => {
+  const float = style.get('float');
+
+  if (float === 'left' || float === 'right') {
+    return float;
+  }
+
+  const legacy = (attr(element, 'align') ?? '').trim().toLowerCase();
+
+  return marginAlignment(style) ?? LEGACY_ALIGN.get(legacy) ?? null;
+};
+
+/**
  * An image's block data, or null when the source is missing or unsafe.
  * @param element - the `img` element
  * @param caption - caption text overriding the element's own alt
@@ -228,8 +316,20 @@ const imageData = (element: P5Element, caption?: string): Record<string, unknown
   }
 
   const text = caption ?? attr(element, 'alt') ?? '';
+  const style = styleOf(element);
+  const data: Record<string, unknown> = text === '' ? { url } : { url, caption: text, alt: text };
+  const width = percentWidth(style.get('width')) ?? percentWidth(attr(element, 'width'));
+  const alignment = imageAlignment(element, style);
 
-  return text === '' ? { url } : { url, caption: text, alt: text };
+  if (width !== null) {
+    data.width = width;
+  }
+
+  if (alignment !== null) {
+    data.alignment = alignment;
+  }
+
+  return data;
 };
 
 /**
@@ -406,35 +506,86 @@ const codeLanguage = (element: P5Element): string => {
   return normalizeFenceLang(raw) ?? (raw === '' ? 'plain text' : raw);
 };
 
+/** Elements a blockquote unwraps into its own text, the way a browser lays them out. */
+const QUOTE_UNWRAPPED = new Set([...TRANSPARENT, 'p']);
+
+/**
+ * Group a blockquote's children into the runs its text is built from: adjacent
+ * inline nodes read as one run, a paragraph or wrapper contributes its own
+ * children, and anything else stays whole so `splitOnImages` hoists it out
+ * rather than folding it into a field that cannot hold it.
+ * @param nodes - the blockquote's children
+ */
+const quoteRuns = (nodes: P5ChildNode[]): P5ChildNode[][] => {
+  const runs: P5ChildNode[][] = [];
+  const pending: { run: P5ChildNode[] } = { run: [] };
+
+  /** Close the run of inline nodes collected so far. */
+  const flush = (): void => {
+    if (pending.run.length > 0) {
+      runs.push(pending.run);
+      pending.run = [];
+    }
+  };
+
+  for (const node of nodes) {
+    if (isInline(node)) {
+      pending.run.push(node);
+      continue;
+    }
+
+    flush();
+    runs.push(isElement(node) && (QUOTE_UNWRAPPED.has(node.tagName) || HEADING.test(node.tagName))
+      ? node.childNodes
+      : [node]);
+  }
+
+  flush();
+
+  return runs;
+};
+
 /**
  * Convert a blockquote. Its paragraphs join with `<br>`, matching the Markdown
- * importer — Blok's quote holds one inline field, not a block list.
+ * importer — Blok's quote holds one inline field, not a block list. What that
+ * field cannot hold follows the quote as blocks of its own, and a quote left
+ * with no text at all is not emitted.
  * @param ctx - conversion state
  * @param element - the `blockquote` element
  */
 const emitQuote = (ctx: Ctx, element: P5Element): void => {
-  const parts = element.childNodes
-    .map((node) => inlineHtml(ctx, isElement(node) ? node.childNodes : [node]))
-    .filter((part) => part !== '');
+  const segments = quoteRuns(element.childNodes).flatMap((run) => splitOnImages(ctx, run));
+  const text = segments
+    .flatMap((segment) => 'inline' in segment ? [inlineHtml(ctx, segment.inline)] : [])
+    .filter((part) => part !== '')
+    .join('<br>');
 
-  push(ctx, 'quote', { text: parts.join('<br>'), size: 'default' });
+  if (text !== '') {
+    push(ctx, 'quote', { text, size: 'default' });
+  }
+
+  emitSegmentMedia(ctx, segments);
 };
 
 /**
  * Convert `details` into a toggle whose body blocks reference it as `parent`.
+ * A toggle's title is one inline field, so an image the summary carries opens
+ * the body instead, where it stays attached to the toggle.
  * @param ctx - conversion state
  * @param element - the `details` element
  */
 const emitToggle = (ctx: Ctx, element: P5Element): void => {
   const summary = element.childNodes.find((node): node is P5Element => isElement(node) && node.tagName === 'summary');
+  const segments = summary === undefined ? [] : splitOnImages(ctx, summary.childNodes);
   const toggle = push(ctx, 'toggle', {
-    text: summary === undefined ? '' : inlineHtml(ctx, summary.childNodes),
+    text: inlineHtml(ctx, segments.flatMap((segment) => 'inline' in segment ? segment.inline : [])),
     isOpen: attr(element, 'open') !== undefined,
   });
 
   const body = element.childNodes.filter((node) => node !== summary);
   const before = ctx.blocks.length;
 
+  emitSegmentMedia(ctx, segments);
   convertNodes(ctx, body);
 
   for (const block of ctx.blocks.slice(before)) {
@@ -626,6 +777,13 @@ const spanOf = (cell: P5Element, name: 'colspan' | 'rowspan'): number => {
  */
 const emitTable = (ctx: Ctx, element: P5Element): void => {
   const rows = tableRows(element);
+  const caption = element.childNodes.find((node): node is P5Element => isElement(node) && node.tagName === 'caption');
+
+  if (caption !== undefined) {
+    warn(ctx, 'caption', 'degraded', 'A table caption leads the table as a paragraph; Blok\'s table has no caption field');
+    emitInlineRun(ctx, caption.childNodes);
+  }
+
   const table = push(ctx, 'table', {});
   const grid: Array<Array<GridCell | undefined>> = rows.map(() => []);
 
@@ -797,9 +955,12 @@ const emitFigure = (ctx: Ctx, element: P5Element): void => {
   }
 
   const { caption } = found;
-  const text = caption === undefined ? undefined : rawText(caption.childNodes).trim();
+  // A caption is one plain-text field: an image inside it follows the figure.
+  const segments = caption === undefined ? [] : splitOnImages(ctx, caption.childNodes);
+  const text = rawText(segments.flatMap((segment) => 'inline' in segment ? segment.inline : [])).trim();
 
   emitImage(ctx, images[0], text === '' ? undefined : text);
+  emitSegmentMedia(ctx, segments);
 };
 
 /**

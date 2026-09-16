@@ -486,6 +486,87 @@ describe('htmlToBlocks — edges', () => {
 });
 
 /**
+ * Containers Blok stores as ONE inline field — a quote, a toggle's title, an
+ * image's caption. Anything in them that is not text has to leave the field and
+ * survive beside it, or be reported.
+ */
+describe('htmlToBlocks — single-field containers', () => {
+  it('keeps an image a blockquote carries, after the quote', () => {
+    const report = htmlToBlocksWithReport('<blockquote><p>quoted</p><img src="https://x.dev/a.png"></blockquote>');
+
+    expect(shape(report.blocks)).toEqual([
+      { type: 'quote', data: { text: 'quoted', size: 'default' } },
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+    ]);
+    expect(report.warnings).toEqual([]);
+  });
+
+  it('keeps a blockquote that holds nothing but an image', () => {
+    expect(shape(htmlToBlocks('<blockquote><img src="https://x.dev/a.png"></blockquote>'))).toEqual([
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+    ]);
+  });
+
+  it('keeps an image a blockquote wraps in a sized span', () => {
+    expect(shape(htmlToBlocks(
+      '<blockquote>quoted<span style="display:inline-block"><img src="https://x.dev/a.png"></span></blockquote>'
+    ))).toEqual([
+      { type: 'quote', data: { text: 'quoted', size: 'default' } },
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+    ]);
+  });
+
+  it('reports an iframe inside a blockquote, as it does at block level', () => {
+    const report = htmlToBlocksWithReport('<blockquote>said<iframe src="https://y.dev"></iframe></blockquote>');
+
+    expect(shape(report.blocks)).toEqual([{ type: 'quote', data: { text: 'said', size: 'default' } }]);
+    expect(report.warnings).toEqual([
+      { construct: 'iframe', action: 'dropped', detail: expect.stringContaining('iframe') },
+    ]);
+  });
+
+  it('keeps an image a toggle summary carries, inside the toggle', () => {
+    const report = htmlToBlocksWithReport(
+      '<details><summary>S<img src="https://x.dev/s.png"></summary>body</details>'
+    );
+
+    expect(shape(report.blocks)).toEqual([
+      { type: 'toggle', data: { text: 'S', isOpen: false } },
+      { type: 'image', data: { url: 'https://x.dev/s.png' }, parent: 0 },
+      { type: 'paragraph', data: { text: 'body' }, parent: 0 },
+    ]);
+    expect(report.warnings).toEqual([]);
+  });
+
+  it('keeps a table caption, reported as the prose it becomes', () => {
+    const report = htmlToBlocksWithReport(
+      '<table><caption>Table 1<img src="https://x.dev/c.png"></caption><tr><td>a</td></tr></table>'
+    );
+
+    expect(shape(report.blocks).slice(0, 2)).toEqual([
+      { type: 'paragraph', data: { text: 'Table 1' } },
+      { type: 'image', data: { url: 'https://x.dev/c.png' } },
+    ]);
+    expect(report.blocks[2].type).toBe('table');
+    expect(report.warnings).toEqual([
+      { construct: 'caption', action: 'degraded', detail: expect.stringContaining('caption') },
+    ]);
+  });
+
+  it('keeps an image a figure caption carries, after the figure image', () => {
+    const report = htmlToBlocksWithReport(
+      '<figure><img src="https://x.dev/a.png"><figcaption>See <img src="https://x.dev/b.png"></figcaption></figure>'
+    );
+
+    expect(shape(report.blocks)).toEqual([
+      { type: 'image', data: { url: 'https://x.dev/a.png', caption: 'See', alt: 'See' } },
+      { type: 'image', data: { url: 'https://x.dev/b.png' } },
+    ]);
+    expect(report.warnings).toEqual([]);
+  });
+});
+
+/**
  * The failure this whole converter exists to prevent: content that disappears
  * without the report saying so. When nothing is reported, every word of the
  * source has to be findable in the document that came out.
@@ -543,5 +624,152 @@ describe('htmlToBlocks — nothing is lost in silence', () => {
     expect(html).toContain('<td colspan="2">');
     expect(html).toContain('<img src="https://x.dev/chart.png"');
     expect(html).toContain('<hr>');
+  });
+});
+
+describe('htmlToBlocks — image width', () => {
+  it('reads a percentage width off the style, rounding it', () => {
+    expect(shape(htmlToBlocks(
+      '<img src="https://x.dev/a.png" style="width: 25%;">'
+      + '<img src="https://x.dev/b.png" style="max-width: 100%; height: auto; width: 50%">'
+      + '<img src="https://x.dev/c.png" style="WIDTH:33.4%">'
+    ))).toEqual([
+      { type: 'image', data: { url: 'https://x.dev/a.png', width: 25 } },
+      { type: 'image', data: { url: 'https://x.dev/b.png', width: 50 } },
+      { type: 'image', data: { url: 'https://x.dev/c.png', width: 33 } },
+    ]);
+  });
+
+  it('reads a percentage width off the legacy width attribute', () => {
+    expect(shape(htmlToBlocks('<img src="https://x.dev/a.png" width="40%">')))
+      .toEqual([{ type: 'image', data: { url: 'https://x.dev/a.png', width: 40 } }]);
+  });
+
+  it('prefers the style width over the attribute', () => {
+    expect(shape(htmlToBlocks('<img src="https://x.dev/a.png" width="40%" style="width:60%">')))
+      .toEqual([{ type: 'image', data: { url: 'https://x.dev/a.png', width: 60 } }]);
+  });
+
+  it('emits no width for a pixel width, on the style or the attribute', () => {
+    expect(shape(htmlToBlocks(
+      '<img src="https://x.dev/a.png" style="width: 748px;">'
+      + '<img src="https://x.dev/b.png" width="602" height="311">'
+      + '<img src="https://x.dev/c.png" style="width: 686.997px; height: 452.286px;">'
+    ))).toEqual([
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+      { type: 'image', data: { url: 'https://x.dev/b.png' } },
+      { type: 'image', data: { url: 'https://x.dev/c.png' } },
+    ]);
+  });
+
+  it('emits no width for a percentage outside the 10–100 the field allows', () => {
+    expect(shape(htmlToBlocks(
+      '<img src="https://x.dev/a.png" style="width: 4%">'
+      + '<img src="https://x.dev/b.png" style="width: 139%">'
+    ))).toEqual([
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+      { type: 'image', data: { url: 'https://x.dev/b.png' } },
+    ]);
+  });
+
+  it('emits no width for a style it cannot read', () => {
+    expect(shape(htmlToBlocks(
+      '<img src="https://x.dev/a.png" style="width: auto">'
+      + '<img src="https://x.dev/b.png" style="width=">'
+      + '<img src="https://x.dev/c.png" style="">'
+    ))).toEqual([
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+      { type: 'image', data: { url: 'https://x.dev/b.png' } },
+      { type: 'image', data: { url: 'https://x.dev/c.png' } },
+    ]);
+  });
+
+  it('keeps the width on an image a figure or a paragraph carries', () => {
+    expect(shape(htmlToBlocks(
+      '<figure><img src="https://x.dev/a.png" style="width:50%"><figcaption>Cee</figcaption></figure>'
+      + '<p>t<span style="display:inline-block;width:164px"><img src="https://x.dev/b.png" style="width:25%"></span></p>'
+    ))).toEqual([
+      { type: 'image', data: { url: 'https://x.dev/a.png', caption: 'Cee', alt: 'Cee', width: 50 } },
+      { type: 'paragraph', data: { text: 't' } },
+      { type: 'image', data: { url: 'https://x.dev/b.png', width: 25 } },
+    ]);
+  });
+});
+
+describe('htmlToBlocks — image alignment', () => {
+  it('reads a float off the style', () => {
+    expect(shape(htmlToBlocks(
+      '<img src="https://x.dev/a.png" style="margin-left: 0px; float: right;">'
+      + '<img src="https://x.dev/b.png" style="float:left">'
+    ))).toEqual([
+      { type: 'image', data: { url: 'https://x.dev/a.png', alignment: 'right' } },
+      { type: 'image', data: { url: 'https://x.dev/b.png', alignment: 'left' } },
+    ]);
+  });
+
+  it('centres an image whose side margins are both auto', () => {
+    expect(shape(htmlToBlocks(
+      '<img src="https://x.dev/a.png" style="margin: 0 auto">'
+      + '<img src="https://x.dev/b.png" style="padding: 0px; margin: 20px auto 25px; display: block; width: 748px;">'
+      + '<img src="https://x.dev/c.png" style="margin-left: auto; margin-right: auto;">'
+    ))).toEqual([
+      { type: 'image', data: { url: 'https://x.dev/a.png', alignment: 'center' } },
+      { type: 'image', data: { url: 'https://x.dev/b.png', alignment: 'center' } },
+      { type: 'image', data: { url: 'https://x.dev/c.png', alignment: 'center' } },
+    ]);
+  });
+
+  it('pushes an image with one auto side margin to the other side', () => {
+    expect(shape(htmlToBlocks(
+      '<img src="https://x.dev/a.png" style="margin-left: auto">'
+      + '<img src="https://x.dev/b.png" style="margin: 0 0 0 auto">'
+      + '<img src="https://x.dev/c.png" style="margin-right: auto">'
+    ))).toEqual([
+      { type: 'image', data: { url: 'https://x.dev/a.png', alignment: 'right' } },
+      { type: 'image', data: { url: 'https://x.dev/b.png', alignment: 'right' } },
+      { type: 'image', data: { url: 'https://x.dev/c.png', alignment: 'left' } },
+    ]);
+  });
+
+  it('reads the legacy align attribute when no style carries the alignment', () => {
+    expect(shape(htmlToBlocks(
+      '<img src="https://x.dev/a.png" align="center">'
+      + '<img src="https://x.dev/b.png" align="RIGHT">'
+    ))).toEqual([
+      { type: 'image', data: { url: 'https://x.dev/a.png', alignment: 'center' } },
+      { type: 'image', data: { url: 'https://x.dev/b.png', alignment: 'right' } },
+    ]);
+  });
+
+  it('lets the style win over the legacy align attribute', () => {
+    expect(shape(htmlToBlocks('<img src="https://x.dev/a.png" align="center" style="float:left">')))
+      .toEqual([{ type: 'image', data: { url: 'https://x.dev/a.png', alignment: 'left' } }]);
+  });
+
+  it('emits no alignment for an align value the field has no room for', () => {
+    expect(shape(htmlToBlocks(
+      '<img src="https://x.dev/a.png" align="middle">'
+      + '<img src="https://x.dev/b.png" align="justify">'
+    ))).toEqual([
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+      { type: 'image', data: { url: 'https://x.dev/b.png' } },
+    ]);
+  });
+
+  it('emits no alignment for margins that pin no side', () => {
+    expect(shape(htmlToBlocks(
+      '<img src="https://x.dev/a.png" style="margin-left:0px;margin-top:0px;">'
+      + '<img src="https://x.dev/b.png" style="margin: 20px 10px; float: none;">'
+      + '<img src="https://x.dev/c.png">'
+    ))).toEqual([
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+      { type: 'image', data: { url: 'https://x.dev/b.png' } },
+      { type: 'image', data: { url: 'https://x.dev/c.png' } },
+    ]);
+  });
+
+  it('keeps width and alignment together on one image', () => {
+    expect(shape(htmlToBlocks('<figure><img src="https://x.dev/a.png" style="width:25%;margin:0 auto" alt="A"></figure>')))
+      .toEqual([{ type: 'image', data: { url: 'https://x.dev/a.png', caption: 'A', alt: 'A', width: 25, alignment: 'center' } }]);
   });
 });

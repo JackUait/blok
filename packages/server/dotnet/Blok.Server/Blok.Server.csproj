@@ -22,7 +22,15 @@
 
   <ItemGroup>
     <PackageReference Include="AngleSharp" Version="1.8.0" />
-    <PackageReference Include="BouncyCastle.Cryptography" Version="2.7.0" />
+    <!--
+      5 MB that only macOS ever loads, and only for an outbound link preview
+      over https. It cannot be made optional: the assembly has to be present
+      wherever MacOsTlsTransport runs, and that file explains why it runs at
+      all. Compile assets withheld for the reason the Jint note below gives —
+      no public member takes or returns a BouncyCastle type.
+    -->
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.7.0"
+                      PrivateAssets="compile;contentfiles;analyzers;build" />
     <!--
       Compile assets deliberately withheld from consumers: nothing public
       exposes a Jint type any more (a conversion failure is

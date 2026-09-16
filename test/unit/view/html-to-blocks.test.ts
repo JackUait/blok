@@ -486,6 +486,87 @@ describe('htmlToBlocks — edges', () => {
 });
 
 /**
+ * Containers Blok stores as ONE inline field — a quote, a toggle's title, an
+ * image's caption. Anything in them that is not text has to leave the field and
+ * survive beside it, or be reported.
+ */
+describe('htmlToBlocks — single-field containers', () => {
+  it('keeps an image a blockquote carries, after the quote', () => {
+    const report = htmlToBlocksWithReport('<blockquote><p>quoted</p><img src="https://x.dev/a.png"></blockquote>');
+
+    expect(shape(report.blocks)).toEqual([
+      { type: 'quote', data: { text: 'quoted', size: 'default' } },
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+    ]);
+    expect(report.warnings).toEqual([]);
+  });
+
+  it('keeps a blockquote that holds nothing but an image', () => {
+    expect(shape(htmlToBlocks('<blockquote><img src="https://x.dev/a.png"></blockquote>'))).toEqual([
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+    ]);
+  });
+
+  it('keeps an image a blockquote wraps in a sized span', () => {
+    expect(shape(htmlToBlocks(
+      '<blockquote>quoted<span style="display:inline-block"><img src="https://x.dev/a.png"></span></blockquote>'
+    ))).toEqual([
+      { type: 'quote', data: { text: 'quoted', size: 'default' } },
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+    ]);
+  });
+
+  it('reports an iframe inside a blockquote, as it does at block level', () => {
+    const report = htmlToBlocksWithReport('<blockquote>said<iframe src="https://y.dev"></iframe></blockquote>');
+
+    expect(shape(report.blocks)).toEqual([{ type: 'quote', data: { text: 'said', size: 'default' } }]);
+    expect(report.warnings).toEqual([
+      { construct: 'iframe', action: 'dropped', detail: expect.stringContaining('iframe') },
+    ]);
+  });
+
+  it('keeps an image a toggle summary carries, inside the toggle', () => {
+    const report = htmlToBlocksWithReport(
+      '<details><summary>S<img src="https://x.dev/s.png"></summary>body</details>'
+    );
+
+    expect(shape(report.blocks)).toEqual([
+      { type: 'toggle', data: { text: 'S', isOpen: false } },
+      { type: 'image', data: { url: 'https://x.dev/s.png' }, parent: 0 },
+      { type: 'paragraph', data: { text: 'body' }, parent: 0 },
+    ]);
+    expect(report.warnings).toEqual([]);
+  });
+
+  it('keeps a table caption, reported as the prose it becomes', () => {
+    const report = htmlToBlocksWithReport(
+      '<table><caption>Table 1<img src="https://x.dev/c.png"></caption><tr><td>a</td></tr></table>'
+    );
+
+    expect(shape(report.blocks).slice(0, 2)).toEqual([
+      { type: 'paragraph', data: { text: 'Table 1' } },
+      { type: 'image', data: { url: 'https://x.dev/c.png' } },
+    ]);
+    expect(report.blocks[2].type).toBe('table');
+    expect(report.warnings).toEqual([
+      { construct: 'caption', action: 'degraded', detail: expect.stringContaining('caption') },
+    ]);
+  });
+
+  it('keeps an image a figure caption carries, after the figure image', () => {
+    const report = htmlToBlocksWithReport(
+      '<figure><img src="https://x.dev/a.png"><figcaption>See <img src="https://x.dev/b.png"></figcaption></figure>'
+    );
+
+    expect(shape(report.blocks)).toEqual([
+      { type: 'image', data: { url: 'https://x.dev/a.png', caption: 'See', alt: 'See' } },
+      { type: 'image', data: { url: 'https://x.dev/b.png' } },
+    ]);
+    expect(report.warnings).toEqual([]);
+  });
+});
+
+/**
  * The failure this whole converter exists to prevent: content that disappears
  * without the report saying so. When nothing is reported, every word of the
  * source has to be findable in the document that came out.

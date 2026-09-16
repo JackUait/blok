@@ -406,35 +406,86 @@ const codeLanguage = (element: P5Element): string => {
   return normalizeFenceLang(raw) ?? (raw === '' ? 'plain text' : raw);
 };
 
+/** Elements a blockquote unwraps into its own text, the way a browser lays them out. */
+const QUOTE_UNWRAPPED = new Set([...TRANSPARENT, 'p']);
+
+/**
+ * Group a blockquote's children into the runs its text is built from: adjacent
+ * inline nodes read as one run, a paragraph or wrapper contributes its own
+ * children, and anything else stays whole so `splitOnImages` hoists it out
+ * rather than folding it into a field that cannot hold it.
+ * @param nodes - the blockquote's children
+ */
+const quoteRuns = (nodes: P5ChildNode[]): P5ChildNode[][] => {
+  const runs: P5ChildNode[][] = [];
+  const pending: { run: P5ChildNode[] } = { run: [] };
+
+  /** Close the run of inline nodes collected so far. */
+  const flush = (): void => {
+    if (pending.run.length > 0) {
+      runs.push(pending.run);
+      pending.run = [];
+    }
+  };
+
+  for (const node of nodes) {
+    if (isInline(node)) {
+      pending.run.push(node);
+      continue;
+    }
+
+    flush();
+    runs.push(isElement(node) && (QUOTE_UNWRAPPED.has(node.tagName) || HEADING.test(node.tagName))
+      ? node.childNodes
+      : [node]);
+  }
+
+  flush();
+
+  return runs;
+};
+
 /**
  * Convert a blockquote. Its paragraphs join with `<br>`, matching the Markdown
- * importer — Blok's quote holds one inline field, not a block list.
+ * importer — Blok's quote holds one inline field, not a block list. What that
+ * field cannot hold follows the quote as blocks of its own, and a quote left
+ * with no text at all is not emitted.
  * @param ctx - conversion state
  * @param element - the `blockquote` element
  */
 const emitQuote = (ctx: Ctx, element: P5Element): void => {
-  const parts = element.childNodes
-    .map((node) => inlineHtml(ctx, isElement(node) ? node.childNodes : [node]))
-    .filter((part) => part !== '');
+  const segments = quoteRuns(element.childNodes).flatMap((run) => splitOnImages(ctx, run));
+  const text = segments
+    .flatMap((segment) => 'inline' in segment ? [inlineHtml(ctx, segment.inline)] : [])
+    .filter((part) => part !== '')
+    .join('<br>');
 
-  push(ctx, 'quote', { text: parts.join('<br>'), size: 'default' });
+  if (text !== '') {
+    push(ctx, 'quote', { text, size: 'default' });
+  }
+
+  emitSegmentMedia(ctx, segments);
 };
 
 /**
  * Convert `details` into a toggle whose body blocks reference it as `parent`.
+ * A toggle's title is one inline field, so an image the summary carries opens
+ * the body instead, where it stays attached to the toggle.
  * @param ctx - conversion state
  * @param element - the `details` element
  */
 const emitToggle = (ctx: Ctx, element: P5Element): void => {
   const summary = element.childNodes.find((node): node is P5Element => isElement(node) && node.tagName === 'summary');
+  const segments = summary === undefined ? [] : splitOnImages(ctx, summary.childNodes);
   const toggle = push(ctx, 'toggle', {
-    text: summary === undefined ? '' : inlineHtml(ctx, summary.childNodes),
+    text: inlineHtml(ctx, segments.flatMap((segment) => 'inline' in segment ? segment.inline : [])),
     isOpen: attr(element, 'open') !== undefined,
   });
 
   const body = element.childNodes.filter((node) => node !== summary);
   const before = ctx.blocks.length;
 
+  emitSegmentMedia(ctx, segments);
   convertNodes(ctx, body);
 
   for (const block of ctx.blocks.slice(before)) {
@@ -626,6 +677,13 @@ const spanOf = (cell: P5Element, name: 'colspan' | 'rowspan'): number => {
  */
 const emitTable = (ctx: Ctx, element: P5Element): void => {
   const rows = tableRows(element);
+  const caption = element.childNodes.find((node): node is P5Element => isElement(node) && node.tagName === 'caption');
+
+  if (caption !== undefined) {
+    warn(ctx, 'caption', 'degraded', 'A table caption leads the table as a paragraph; Blok\'s table has no caption field');
+    emitInlineRun(ctx, caption.childNodes);
+  }
+
   const table = push(ctx, 'table', {});
   const grid: Array<Array<GridCell | undefined>> = rows.map(() => []);
 
@@ -797,9 +855,12 @@ const emitFigure = (ctx: Ctx, element: P5Element): void => {
   }
 
   const { caption } = found;
-  const text = caption === undefined ? undefined : rawText(caption.childNodes).trim();
+  // A caption is one plain-text field: an image inside it follows the figure.
+  const segments = caption === undefined ? [] : splitOnImages(ctx, caption.childNodes);
+  const text = rawText(segments.flatMap((segment) => 'inline' in segment ? segment.inline : [])).trim();
 
   emitImage(ctx, images[0], text === '' ? undefined : text);
+  emitSegmentMedia(ctx, segments);
 };
 
 /**

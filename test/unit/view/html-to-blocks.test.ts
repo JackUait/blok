@@ -382,6 +382,66 @@ describe('htmlToBlocks — edges', () => {
     ]);
   });
 
+  it('keeps an image wrapped in a link, reporting the link it cannot carry', () => {
+    const report = htmlToBlocksWithReport('<p><a href="https://x.dev"><img src="https://x.dev/a.png"></a></p>');
+
+    expect(shape(report.blocks)).toEqual([{ type: 'image', data: { url: 'https://x.dev/a.png' } }]);
+    expect(report.warnings).toEqual([
+      { construct: 'a', action: 'degraded', detail: expect.stringContaining('link') },
+    ]);
+  });
+
+  it('keeps an image wrapped in inline markup, and the markup around it', () => {
+    const report = htmlToBlocksWithReport('<p><strong>bold <img src="https://x.dev/a.png"></strong></p>');
+
+    expect(shape(report.blocks)).toEqual([
+      { type: 'paragraph', data: { text: '<strong>bold </strong>' } },
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+    ]);
+    expect(report.warnings).toEqual([]);
+  });
+
+  /**
+   * The wrapper a Google Docs export puts around every image: a sized
+   * `inline-block` span, which the inline sanitizer unwraps — taking the image
+   * with it before this split ran.
+   */
+  it('keeps an image wrapped in a sized span, as a Docs export writes it', () => {
+    const report = htmlToBlocksWithReport(
+      '<p>t<span style="border:none;display:inline-block;overflow:hidden;width:164px;height:321px;">'
+      + '<img src="https://lh7-rt.googleusercontent.com/x"></span>u</p>'
+    );
+
+    expect(shape(report.blocks)).toEqual([
+      { type: 'paragraph', data: { text: 't' } },
+      { type: 'image', data: { url: 'https://lh7-rt.googleusercontent.com/x' } },
+      { type: 'paragraph', data: { text: 'u' } },
+    ]);
+    expect(report.warnings).toEqual([]);
+  });
+
+  it('keeps an image wrapped in nested inline elements', () => {
+    expect(shape(htmlToBlocks('<p><a href="https://x.dev"><span><img src="https://x.dev/a.png"></span></a></p>')))
+      .toEqual([{ type: 'image', data: { url: 'https://x.dev/a.png' } }]);
+  });
+
+  it('keeps a wrapped image in a heading and in a table cell', () => {
+    expect(shape(htmlToBlocks('<h2>T<a href="https://x.dev"><img src="https://x.dev/a.png"></a></h2>'))).toEqual([
+      { type: 'header', data: { text: 'T', level: 2 } },
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+    ]);
+
+    const cell = shape(htmlToBlocks('<table><tr><td><span><img src="https://x.dev/a.png"></span></td></tr></table>'));
+
+    expect(cell[1]).toEqual({ type: 'image', data: { url: 'https://x.dev/a.png' }, parent: 0 });
+  });
+
+  it('leaves an inline run with no image in it serialized whole', () => {
+    expect(shape(htmlToBlocks('<p>a <span class="x"><b>b</b> c</span> d</p>'))).toEqual([
+      { type: 'paragraph', data: { text: 'a <b>b</b> c d' } },
+    ]);
+  });
+
   it('emits nothing for a heading with no text', () => {
     expect(shape(htmlToBlocks('<h2></h2><h3>  </h3>'))).toEqual([]);
   });

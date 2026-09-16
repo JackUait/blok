@@ -7,6 +7,7 @@ import type { Root, RootContent } from 'mdast';
 import type { OutputBlockData } from '../../types/data-formats/output-data';
 import type { MarkdownImportConfig } from './types';
 import { mdastToBlocks } from './mdast-to-blocks';
+import { safeHref, safeImageSrc, urlScheme } from '../components/utils/sanitize-url';
 import type { MarkdownDegradation } from './blocks-to-markdown-core';
 
 export type { MarkdownImportConfig, ToolMapEntry } from './types';
@@ -86,6 +87,42 @@ const IMPORT_DEGRADATIONS: Record<string, MarkdownDegradation> = {
 };
 
 /**
+ * What an unsafe scheme costs, if the node carries one.
+ *
+ * Refusing the scheme is the sanitizer working as intended, but the refusal was
+ * silent: an image disappears entirely and a link keeps its text while losing
+ * where it pointed, and a caller reading only the report saw full fidelity.
+ * @param node - the node to inspect
+ * @returns the degradation, or null when nothing was refused
+ */
+function unsafeUrlDegradation(node: RootContent): MarkdownDegradation | null {
+  if (node.type !== 'image' && node.type !== 'link') {
+    return null;
+  }
+
+  /** No explicit scheme is nothing to refuse — a relative or anchor URL passes. */
+  const scheme = urlScheme(node.url);
+
+  if (scheme === null) {
+    return null;
+  }
+
+  if (node.type === 'image') {
+    return safeImageSrc(node.url) === null
+      ? { construct: 'image',
+        action: 'dropped',
+        detail: `${scheme} is not an allowed scheme; the image was removed` }
+      : null;
+  }
+
+  return safeHref(node.url) === null
+    ? { construct: 'link',
+      action: 'degraded',
+      detail: `${scheme} is not an allowed scheme; the link target was removed` }
+    : null;
+}
+
+/**
  * Collect every degradation the import leaves behind.
  *
  * @param tree - the parsed Markdown tree
@@ -99,9 +136,9 @@ function collectImportWarnings(tree: Root): MarkdownDegradation[] {
    * @param node - the node to visit
    */
   const visit = (node: RootContent): void => {
-    const degradation = IMPORT_DEGRADATIONS[node.type];
+    const degradation = IMPORT_DEGRADATIONS[node.type] ?? unsafeUrlDegradation(node);
 
-    if (degradation !== undefined) {
+    if (degradation !== undefined && degradation !== null) {
       warnings.push({ ...degradation });
     }
 

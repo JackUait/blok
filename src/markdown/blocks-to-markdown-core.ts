@@ -36,6 +36,12 @@ export interface SerializableBlock {
    * opening an indented code block.
    */
   indent?: number;
+  /**
+   * Ids this block names in its `content[]` that the document does not carry.
+   * Resolution belongs to whoever built the document (the view's document
+   * model); the core only reports what it is handed.
+   */
+  unresolvedChildIds?: string[];
 }
 
 /** Reads a block's inline HTML. The only part of serialization that needs a parser. */
@@ -127,6 +133,31 @@ const warn = (
   context.warnings.push({ construct,
     action,
     detail });
+};
+
+/**
+ * Report children a container named but the document does not carry.
+ *
+ * A reference that resolves to nothing loses its content with nothing to show
+ * for it. Staying silent here is what let a truncated article keep reporting
+ * fidelity full.
+ * @param context - the serialization context
+ * @param block - the container that named them
+ * @param count - how many references could not be resolved
+ */
+const warnUnresolvedChildren = (context: SerializationContext, block: SerializableBlock, count: number): void => {
+  if (count === 0) {
+    return;
+  }
+
+  const one = count === 1;
+
+  warn(
+    context,
+    block.tool,
+    'dropped',
+    `${count} child block reference${one ? '' : 's'} could not be resolved and ${one ? 'was' : 'were'} dropped`
+  );
 };
 
 /**
@@ -248,21 +279,8 @@ const tableToMarkdown = (block: SerializableBlock, context: SerializationContext
     })
   );
 
-  /**
-   * A cell pointing at a block that is not in the document loses its content
-   * with nothing to show for it. Staying silent here is what let a truncated
-   * article keep reporting fidelity full.
-   */
-  if (unresolved.length > 0) {
-    const one = unresolved.length === 1;
-
-    warn(
-      context,
-      block.tool,
-      'dropped',
-      `${unresolved.length} child block reference${one ? '' : 's'} could not be resolved and ${one ? 'was' : 'were'} dropped`
-    );
-  }
+  /** A cell pointing at a block that is not in the document loses its content. */
+  warnUnresolvedChildren(context, block, unresolved.length);
 
   const withHeadings = block.data.withHeadings === true;
   const header = withHeadings ? rows[0] : Array.from({ length: columns }, () => '');
@@ -514,6 +532,13 @@ const blockToMarkdown = (block: SerializableBlock, context: SerializationContext
   if (block.id !== undefined) {
     context.active.add(block.id);
   }
+
+  /**
+   * `content[]` is the canonical containment form, so a block-level reference
+   * that resolves to nothing costs exactly what an unresolved table cell
+   * reference costs — and said nothing about it.
+   */
+  warnUnresolvedChildren(context, block, block.unresolvedChildIds?.length ?? 0);
 
   try {
     return blockMarkdownBody(block, context);

@@ -158,11 +158,14 @@ const flattenDocument = (data: OutputData | LooseOutputData | null | undefined):
       seen.add(block.id);
     }
 
+    const unresolvedChildIds = model.unresolvedContentOf(block.id);
+
     out.push({ ...(block.id === undefined ? {} : { id: block.id }),
       parentId,
       tool: block.type,
       data: block.data,
-      indent });
+      indent,
+      ...(unresolvedChildIds.length > 0 ? { unresolvedChildIds } : {}) });
 
     for (const child of model.childrenOf(block.id)) {
       visit(child, block.id ?? null, indent + 1);

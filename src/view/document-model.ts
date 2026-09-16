@@ -32,6 +32,13 @@ export interface DocumentModel {
    * @param id - parent block id (undefined → no children)
    */
   childrenOf(id: string | undefined): ViewBlock[];
+  /**
+   * Ids a block names in its `content[]` that no block in the document
+   * carries. That child is gone, and only the container knows it was ever
+   * named — nothing downstream can tell the difference from an empty list.
+   * @param id - container block id (undefined → none)
+   */
+  unresolvedContentOf(id: string | undefined): string[];
 }
 
 /**
@@ -391,8 +398,16 @@ export const buildDocumentModel = (input: OutputData | LooseOutputData | null | 
     }
   };
 
+  const unresolvedContent = new Map<string, string[]>();
+
   for (const { parentId, childIds } of contentClaims) {
     childIds.forEach((childId) => claimChild(parentId, childId));
+
+    const missing = childIds.filter((childId) => !byId.has(childId));
+
+    if (missing.length > 0) {
+      unresolvedContent.set(parentId, [...unresolvedContent.get(parentId) ?? [], ...missing]);
+    }
   }
 
   for (const { block, parentId } of entries) {
@@ -414,5 +429,7 @@ export const buildDocumentModel = (input: OutputData | LooseOutputData | null | 
     topLevel,
     byId,
     childrenOf: (id: string | undefined): ViewBlock[] => (id === undefined ? [] : children.get(id) ?? []),
+    unresolvedContentOf: (id: string | undefined): string[] =>
+      (id === undefined ? [] : unresolvedContent.get(id) ?? []),
   };
 };

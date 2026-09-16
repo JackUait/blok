@@ -341,6 +341,60 @@ describe('blocksToMarkdown (view)', () => {
     });
 
     /**
+     * `content[]` is the canonical containment form, so a container naming a
+     * child the document does not carry loses it exactly the way an unresolved
+     * table cell reference does — and used to say nothing about it.
+     */
+    it('reports a block-level content reference it could not resolve', () => {
+      const { warnings } = blocksToMarkdownWithReport(doc([
+        { id: 'l1', type: 'list', data: { text: 'item', style: 'unordered' }, content: ['gone'] },
+      ]));
+
+      expect(warnings).toEqual([
+        { construct: 'list',
+          action: 'dropped',
+          detail: '1 child block reference could not be resolved and was dropped' },
+      ]);
+    });
+
+    it('pluralizes the unresolved block-level content report', () => {
+      const { warnings } = blocksToMarkdownWithReport(doc([
+        { id: 'p1', type: 'paragraph', data: { text: 'text' }, content: ['gone', 'also-gone'] },
+      ]));
+
+      expect(warnings).toEqual([
+        { construct: 'paragraph',
+          action: 'dropped',
+          detail: '2 child block references could not be resolved and were dropped' },
+      ]);
+    });
+
+    it('reports an unresolved reference inside a nested container once', () => {
+      const { warnings } = blocksToMarkdownWithReport(doc([
+        { id: 'cl1', type: 'column_list', data: {}, content: ['col1'] },
+        { id: 'col1', type: 'column', data: {}, parent: 'cl1', content: ['gone'] },
+      ]));
+
+      expect(warnings).toEqual([
+        { construct: 'column_list',
+          action: 'degraded',
+          detail: 'columns are flattened into sequential blocks; the side-by-side layout is lost' },
+        { construct: 'column',
+          action: 'dropped',
+          detail: '1 child block reference could not be resolved and was dropped' },
+      ]);
+    });
+
+    it('stays silent when every content reference resolves', () => {
+      const { warnings } = blocksToMarkdownWithReport(doc([
+        { id: 'q1', type: 'quote', data: { text: 'q' }, content: ['k1'] },
+        { id: 'k1', type: 'paragraph', data: { text: 'child' } },
+      ]));
+
+      expect(warnings).toEqual([]);
+    });
+
+    /**
      * A block that vanishes from the output must be named. Without this, a
      * custom or unrecognized contentless tool disappeared silently — the same
      * failure mode the Markdown serialization law exists to prevent, but at

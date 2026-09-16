@@ -58,6 +58,42 @@ describe('server runtime boundary', () => {
     expect(html).toBe('<details open><summary>Parent</summary><p>Child</p></details>');
   });
 
+  /**
+   * `content[]` is the canonical containment form, and the boundary used to
+   * read only `parent` — so a document that declares containment one way lost
+   * it here and its children escaped their container.
+   */
+  it('preserves containment declared only by content', async () => {
+    const html = await invoke(
+      'blocksToHtml',
+      JSON.stringify({
+        blocks: [
+          { id: 'toggle', type: 'toggle', data: { text: 'Parent', isOpen: true }, content: ['child'] },
+          { id: 'child', type: 'paragraph', data: { text: 'Child' } },
+        ],
+      })
+    );
+
+    expect(html).toBe('<details open><summary>Parent</summary><p>Child</p></details>');
+  });
+
+  it('reports a content reference the document does not carry', async () => {
+    const report = JSON.parse(await invoke(
+      'blocksToMarkdown',
+      JSON.stringify({
+        blocks: [{ id: 'l1', type: 'list', data: { text: 'item', style: 'unordered' }, content: ['gone'] }],
+      })
+    )) as unknown;
+
+    expect(report).toMatchObject({
+      warnings: [
+        { construct: 'list',
+          action: 'dropped',
+          detail: '1 child block reference could not be resolved and was dropped' },
+      ],
+    });
+  });
+
   it('renders a serialized document to plain text', async () => {
     const plainText = await invoke(
       'blocksToPlainText',

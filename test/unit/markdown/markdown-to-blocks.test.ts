@@ -331,3 +331,48 @@ describe('markdownToBlocks — footnotes', () => {
     ]);
   });
 });
+
+/**
+ * The sanitizer refuses a script-capable scheme, which is right — but it did it
+ * silently, so an import that lost an image or a link's target still reported
+ * full fidelity.
+ */
+describe('markdownToBlocks — unsafe URL schemes', () => {
+  it('reports an image dropped for its scheme', async () => {
+    const { blocks, warnings } = await markdownToBlocksWithReport('![evil](javascript:alert(1))');
+
+    expect(blocks[0]).toMatchObject({ type: 'paragraph', data: { text: '' } });
+    expect(warnings).toEqual([
+      { construct: 'image',
+        action: 'dropped',
+        detail: 'javascript: is not an allowed scheme; the image was removed' },
+    ]);
+  });
+
+  it('reports a link whose target was dropped for its scheme', async () => {
+    const { blocks, warnings } = await markdownToBlocksWithReport('[evil](javascript:alert(1))');
+
+    expect(blocks[0]).toMatchObject({ type: 'paragraph', data: { text: 'evil' } });
+    expect(warnings).toEqual([
+      { construct: 'link',
+        action: 'degraded',
+        detail: 'javascript: is not an allowed scheme; the link target was removed' },
+    ]);
+  });
+
+  it('reports an image dropped for an executable data: media type', async () => {
+    const { warnings } = await markdownToBlocksWithReport('![x](data:image/svg+xml,<svg/>)');
+
+    expect(warnings).toEqual([
+      { construct: 'image', action: 'dropped', detail: expect.stringContaining('data:') },
+    ]);
+  });
+
+  it('stays silent on safe URLs', async () => {
+    const { warnings } = await markdownToBlocksWithReport(
+      '[ok](https://a.b) ![i](https://a.b/i.png)\n\n[rel](./page.md) ![d](data:image/png;base64,AA==)\n\n[anchor](#here) [mail](mailto:a@b.c)'
+    );
+
+    expect(warnings).toEqual([]);
+  });
+});

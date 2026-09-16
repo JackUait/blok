@@ -244,7 +244,7 @@ describe('blocksToMarkdown (view)', () => {
   });
 
   it('serializes media and embeds as links', () => {
-    expect(blocksToMarkdown(doc([{ type: 'image', data: { url: 'https://i/x.png', caption: 'Shot' } }])))
+    expect(blocksToMarkdown(doc([{ type: 'image', data: { url: 'https://i/x.png', alt: 'Shot' } }])))
       .toBe('![Shot](https://i/x.png)');
     expect(blocksToMarkdown(doc([{ type: 'bookmark', data: { url: 'https://x.com', title: 'X' } }])))
       .toBe('[X](https://x.com)');
@@ -428,6 +428,206 @@ describe('blocksToMarkdown (view)', () => {
       ]));
 
       expect(markdown).toBe('# Title\n\nBody');
+      expect(warnings).toEqual([]);
+    });
+  });
+
+  /**
+   * Markdown cannot express any of these, which is exactly why they have to be
+   * REPORTED: dropping them in silence tells a host round-tripping a document
+   * through Markdown that the conversion was lossless.
+   */
+  describe('silently lost constructs', () => {
+    it('reports a quote caption', () => {
+      const { markdown, warnings } = blocksToMarkdownWithReport(doc([
+        { type: 'quote', data: { text: 'Цитата', caption: 'Стандарт' } },
+      ]));
+
+      expect(markdown).toBe('> Цитата');
+      expect(warnings).toEqual([
+        { construct: 'quote', action: 'degraded', detail: expect.stringContaining('caption') },
+      ]);
+    });
+
+    it('stays silent for a quote without a caption', () => {
+      expect(blocksToMarkdownWithReport(doc([
+        { type: 'quote', data: { text: 'Цитата' } },
+      ])).warnings).toEqual([]);
+    });
+
+    it('reports an image width that is not full width', () => {
+      const { markdown, warnings } = blocksToMarkdownWithReport(doc([
+        { type: 'image', data: { url: 'https://i/x.png', width: 50, alignment: 'center' } },
+      ]));
+
+      expect(markdown).toBe('![](https://i/x.png)');
+      expect(warnings).toEqual([
+        { construct: 'image', action: 'degraded', detail: 'image is rendered as a plain Markdown image; its width is lost' },
+      ]);
+    });
+
+    it('names every non-default presentation field the image loses', () => {
+      const { warnings } = blocksToMarkdownWithReport(doc([
+        {
+          type: 'image',
+          data: { url: 'https://i/x.png',
+            width: 50,
+            alignment: 'left',
+            crop: { x: 10, y: 10, w: 50, h: 50 } },
+        },
+      ]));
+
+      expect(warnings).toEqual([
+        { construct: 'image',
+          action: 'degraded',
+          detail: 'image is rendered as a plain Markdown image; its crop, width and alignment are lost' },
+      ]);
+    });
+
+    it('stays silent for an image whose presentation fields hold their defaults', () => {
+      expect(blocksToMarkdownWithReport(doc([
+        { type: 'image', data: { url: 'https://i/x.png', width: 100, alignment: 'center', rounded: true } },
+      ])).warnings).toEqual([]);
+    });
+
+    /**
+     * The `![…]` slot IS the alt slot, so the caption used to be written into
+     * it — inventing an alt the author never typed and overwriting the one they
+     * did. The caption has no Markdown home and is reported instead.
+     */
+    it('writes the alt text into the alt slot and reports the caption', () => {
+      const { markdown, warnings } = blocksToMarkdownWithReport(doc([
+        { type: 'image', data: { url: 'https://i/x.png', alt: 'схема', caption: 'Выдача' } },
+      ]));
+
+      expect(markdown).toBe('![схема](https://i/x.png)');
+      expect(warnings).toEqual([
+        { construct: 'image', action: 'degraded', detail: expect.stringContaining('caption') },
+      ]);
+    });
+
+    it('drops a caption-only image to an empty alt and reports the caption', () => {
+      const { markdown, warnings } = blocksToMarkdownWithReport(doc([
+        { type: 'image', data: { url: 'https://i/x.png', caption: 'Выдача' } },
+      ]));
+
+      expect(markdown).toBe('![](https://i/x.png)');
+      expect(warnings).toEqual([
+        { construct: 'image', action: 'degraded', detail: expect.stringContaining('caption') },
+      ]);
+    });
+
+    /**
+     * `![text](url)` imports as caption AND alt (mdast-to-blocks), so a
+     * Markdown-sourced image always has the two equal. The alt slot carries
+     * that string out again, so nothing is lost and nothing is reported.
+     */
+    it('stays silent when the caption is the alt text the Markdown already carries', () => {
+      const { markdown, warnings } = blocksToMarkdownWithReport(doc([
+        { type: 'image', data: { url: 'https://i/x.png', alt: 'схема', caption: 'схема' } },
+      ]));
+
+      expect(markdown).toBe('![схема](https://i/x.png)');
+      expect(warnings).toEqual([]);
+    });
+
+    it('reports inline colour and highlight, keeping the text', () => {
+      const { markdown, warnings } = blocksToMarkdownWithReport(doc([
+        { type: 'paragraph', data: { text: '<span style="color:#ff0000">красный</span> и <mark>маркер</mark>' } },
+      ]));
+
+      expect(markdown).toBe('красный и маркер');
+      expect(warnings).toEqual([
+        { construct: 'text-color', action: 'degraded', detail: expect.stringContaining('colour') },
+        { construct: 'highlight', action: 'degraded', detail: expect.stringContaining('highlight') },
+      ]);
+    });
+
+    it('reads a background-colour mark as a highlight', () => {
+      const { warnings } = blocksToMarkdownWithReport(doc([
+        { type: 'paragraph', data: { text: '<mark style="background-color:#ff0">жёлтый</mark>' } },
+      ]));
+
+      expect(warnings).toEqual([
+        { construct: 'highlight', action: 'degraded', detail: expect.stringContaining('highlight') },
+      ]);
+    });
+
+    /** The report carries no block location, so N identical lines say no more than one. */
+    it('reports a repeated inline loss once per document', () => {
+      const { warnings } = blocksToMarkdownWithReport(doc([
+        { type: 'paragraph', data: { text: '<mark>один</mark>' } },
+        { type: 'paragraph', data: { text: '<mark>два</mark>' } },
+      ]));
+
+      expect(warnings).toEqual([
+        { construct: 'highlight', action: 'degraded', detail: expect.stringContaining('highlight') },
+      ]);
+    });
+
+    it.each([
+      ['<u>подчёркнутый</u>', 'underline'],
+      ['x<sup>2</sup>', 'superscript'],
+      ['H<sub>2</sub>O', 'subscript'],
+    ])('reports %s as a lost inline construct', (text, construct) => {
+      const { warnings } = blocksToMarkdownWithReport(doc([{ type: 'paragraph', data: { text } }]));
+
+      expect(warnings).toEqual([
+        { construct, action: 'degraded', detail: expect.any(String) },
+      ]);
+    });
+
+    it('stays silent for a plain span carrying no colour', () => {
+      expect(blocksToMarkdownWithReport(doc([
+        { type: 'paragraph', data: { text: '<span>обычный</span>' } },
+      ])).warnings).toEqual([]);
+    });
+
+    it('reports merged cells, a heading column and cell colours', () => {
+      const { warnings } = blocksToMarkdownWithReport(doc([
+        {
+          id: 't1',
+          type: 'table',
+          data: {
+            withHeadings: true,
+            withHeadingColumn: true,
+            content: [
+              [{ text: 'H1', colspan: 2 }, { text: 'H2' }],
+              [{ text: 'a', color: '#fee' }, { text: 'b' }],
+            ],
+          },
+        },
+      ]));
+
+      expect(warnings).toEqual([
+        { construct: 'table',
+          action: 'degraded',
+          detail: 'table is rendered as a GFM pipe table; its merged cells, heading column and cell colours are lost' },
+      ]);
+    });
+
+    it('stays silent for a table a pipe table can express', () => {
+      expect(blocksToMarkdownWithReport(doc([
+        {
+          id: 't1',
+          type: 'table',
+          data: { withHeadings: true, content: [[{ text: 'H1' }, { text: 'H2' }], [{ text: 'a' }, { text: 'b' }]] },
+        },
+      ])).warnings).toEqual([]);
+    });
+
+    /** The anti-noise pin: an ordinary document must still report nothing. */
+    it('reports nothing for a document whose blocks carry no unrepresentable fields', () => {
+      const { warnings } = blocksToMarkdownWithReport(doc([
+        { type: 'header', data: { text: 'Title', level: 2 } },
+        { type: 'paragraph', data: { text: 'Body with <b>bold</b> and a <a href="https://x.com">link</a>' } },
+        { type: 'list', data: { text: 'item', style: 'unordered' } },
+        { type: 'quote', data: { text: 'Цитата' } },
+        { type: 'image', data: { url: 'https://i/x.png', alt: 'схема' } },
+        { type: 'code', data: { code: 'const a = 1;', language: 'js' } },
+        { id: 't1', type: 'table', data: { withHeadings: true, content: [[{ text: 'H' }], [{ text: 'a' }]] } },
+      ]));
+
       expect(warnings).toEqual([]);
     });
   });

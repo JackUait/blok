@@ -267,9 +267,9 @@ export declare function injectTexts(
  */
 export interface MarkdownDegradation {
   /**
-   * What degraded: a block tool name (`callout`) on the way out, a source
-   * construct on the way in — a Markdown node (`html`) or an HTML tag
-   * (`iframe`).
+   * What degraded: on the way out a block tool name (`callout`) or an inline
+   * mark Markdown has no syntax for (`highlight`); on the way in a source
+   * construct — a Markdown node (`html`) or an HTML tag (`iframe`).
    */
   construct: string;
   /** `dropped` — nothing was emitted; `degraded` — emitted, but lossily. */

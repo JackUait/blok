@@ -14,23 +14,28 @@
  */
 
 import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
-import { serializeBlocksToMarkdown } from './blocks-to-markdown-core';
+import { inlineLosses, serializeBlocksToMarkdown } from './blocks-to-markdown-core';
 import type { InlineBackend, SerializableBlock } from './blocks-to-markdown-core';
 
 export type { SerializableBlock, MarkdownDegradation } from './blocks-to-markdown-core';
 
+/** Receives the name of every inline construct the walk had to unwrap. */
+type LossReporter = (construct: string) => void;
+
 /**
  * Serialize all child nodes of an element to inline Markdown.
  * @param node - parent node
+ * @param onLoss - receives every unwrapped inline construct
  */
-const serializeChildren = (node: Node): string =>
-  Array.from(node.childNodes).map(serializeInlineNode).join('');
+const serializeChildren = (node: Node, onLoss: LossReporter): string =>
+  Array.from(node.childNodes).map((child) => serializeInlineNode(child, onLoss)).join('');
 
 /**
  * Serialize a single inline DOM node to Markdown.
  * @param node - the node to serialize
+ * @param onLoss - receives every unwrapped inline construct
  */
-const serializeInlineNode = (node: Node): string => {
+const serializeInlineNode = (node: Node, onLoss: LossReporter): string => {
   if (node.nodeType === Node.TEXT_NODE) {
     return node.textContent ?? '';
   }
@@ -53,7 +58,7 @@ const serializeInlineNode = (node: Node): string => {
     return latex;
   }
 
-  const inner = serializeChildren(element);
+  const inner = serializeChildren(element, onLoss);
 
   switch (element.tagName.toLowerCase()) {
     case 'br':
@@ -86,6 +91,8 @@ const serializeInlineNode = (node: Node): string => {
       return src ? `![${element.getAttribute('alt') ?? ''}](${src})` : '';
     }
     default:
+      inlineLosses(element.tagName.toLowerCase(), element.getAttribute('style')).forEach(onLoss);
+
       return inner;
   }
 };
@@ -95,13 +102,14 @@ const domInlineBackend: InlineBackend = {
   /**
    * Convert a fragment of inline HTML (a block's `text`) into inline Markdown.
    * @param html - inline HTML string
+   * @param onLoss - receives every unwrapped inline construct
    */
-  inlineToMarkdown(html: string): string {
+  inlineToMarkdown(html: string, onLoss: LossReporter = (): void => {}): string {
     const container = document.createElement('div');
 
     container.innerHTML = html ?? '';
 
-    return serializeChildren(container);
+    return serializeChildren(container, onLoss);
   },
 };
 

@@ -10,7 +10,7 @@
 import type { DefaultTreeAdapterMap } from 'parse5';
 
 import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
-import { serializeBlocksToMarkdown } from '../markdown/blocks-to-markdown-core';
+import { inlineLosses, serializeBlocksToMarkdown } from '../markdown/blocks-to-markdown-core';
 import type { InlineBackend, MarkdownDegradation, SerializableBlock } from '../markdown/blocks-to-markdown-core';
 import { buildDocumentModel } from './document-model';
 import type { ViewBlock } from './document-model';
@@ -30,6 +30,9 @@ export interface MarkdownSerializationResult {
 
 type P5ChildNode = DefaultTreeAdapterMap['childNode'];
 
+/** Receives the name of every inline construct the walk had to unwrap. */
+type LossReporter = (construct: string) => void;
+
 /**
  * Read an attribute off a parse5 element.
  * @param node - the node to read
@@ -46,15 +49,18 @@ const attr = (node: P5ChildNode, name: string): string | null => {
 /**
  * Serialize parse5 child nodes to inline Markdown.
  * @param nodes - nodes to walk
+ * @param onLoss - receives every unwrapped inline construct
  */
-const serializeNodes = (nodes: P5ChildNode[]): string => nodes.map(serializeNode).join('');
+const serializeNodes = (nodes: P5ChildNode[], onLoss: LossReporter): string =>
+  nodes.map((node) => serializeNode(node, onLoss)).join('');
 
 /**
  * Serialize one parse5 node to inline Markdown. Mirrors the tag handling of the
  * DOM backend exactly — the parity test fails on any divergence.
  * @param node - the node to serialize
+ * @param onLoss - receives every unwrapped inline construct
  */
-const serializeNode = (node: P5ChildNode): string => {
+const serializeNode = (node: P5ChildNode, onLoss: LossReporter): string => {
   if (node.nodeName === '#text') {
     return (node as DefaultTreeAdapterMap['textNode']).value;
   }
@@ -73,7 +79,7 @@ const serializeNode = (node: P5ChildNode): string => {
     return latex;
   }
 
-  const inner = serializeNodes(node.childNodes);
+  const inner = serializeNodes(node.childNodes, onLoss);
 
   switch (node.nodeName) {
     case 'br':
@@ -106,6 +112,8 @@ const serializeNode = (node: P5ChildNode): string => {
       return src ? `![${attr(node, 'alt') ?? ''}](${src})` : '';
     }
     default:
+      inlineLosses(node.nodeName, attr(node, 'style')).forEach(onLoss);
+
       return inner;
   }
 };
@@ -115,8 +123,9 @@ const parse5InlineBackend: InlineBackend = {
   /**
    * Convert a fragment of inline HTML (a block's `text`) into inline Markdown.
    * @param html - inline HTML string
+   * @param onLoss - receives every unwrapped inline construct
    */
-  inlineToMarkdown(html: string): string {
+  inlineToMarkdown(html: string, onLoss: LossReporter = (): void => {}): string {
     const source = html ?? '';
 
     /**
@@ -129,7 +138,7 @@ const parse5InlineBackend: InlineBackend = {
       return source;
     }
 
-    return serializeNodes(parseInlineFragment(source).childNodes);
+    return serializeNodes(parseInlineFragment(source).childNodes, onLoss);
   },
 };
 

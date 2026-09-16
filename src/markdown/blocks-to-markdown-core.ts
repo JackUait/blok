@@ -46,9 +46,63 @@ export interface SerializableBlock {
 
 /** Reads a block's inline HTML. The only part of serialization that needs a parser. */
 export interface InlineBackend {
-  /** Inline HTML → inline Markdown (marks, links, `<br>`). */
-  inlineToMarkdown(html: string): string;
+  /**
+   * Inline HTML → inline Markdown (marks, links, `<br>`).
+   * @param html - the block field's inline HTML
+   * @param onLoss - called with the construct name of every mark the walk had
+   * to unwrap because Markdown cannot express it (see {@link inlineLosses}).
+   */
+  inlineToMarkdown(html: string, onLoss?: (construct: string) => void): string;
 }
+
+/** Inline marks whose tag alone names the loss. */
+const NAMED_INLINE_LOSSES: Record<string, string> = {
+  u: 'underline',
+  sup: 'superscript',
+  sub: 'subscript',
+};
+
+/** What each inline loss costs, in the report's plain language. */
+const INLINE_LOSS_DETAILS: Record<string, string> = {
+  'text-color': 'inline text colour has no Markdown equivalent; the text is kept, its colour is lost',
+  highlight: 'inline highlighting has no Markdown equivalent; the text is kept, its highlight is lost',
+  underline: 'inline underline has no Markdown equivalent; the text is kept as ordinary text',
+  superscript: 'superscript has no Markdown equivalent; the text is kept as ordinary text',
+  subscript: 'subscript has no Markdown equivalent; the text is kept as ordinary text',
+};
+
+/**
+ * Inline constructs Markdown cannot express, named by the element that carries
+ * them. A backend reports these from the branch that unwraps an unknown tag —
+ * the text survives, the mark does not.
+ * @param tagName - lowercase tag name of the element being unwrapped
+ * @param style - its `style` attribute, if any
+ * @returns construct names to report, empty when the element loses nothing
+ */
+export const inlineLosses = (tagName: string, style: string | null): string[] => {
+  const named = NAMED_INLINE_LOSSES[tagName];
+
+  if (named !== undefined) {
+    return [named];
+  }
+
+  /**
+   * The marker tool writes both colour modes onto ONE `<mark>`, so an element
+   * can carry two losses at once. A bare `<mark>` is the tool's plain
+   * highlight; a bare `<span>` decorates nothing and loses nothing.
+   */
+  if (tagName !== 'mark' && tagName !== 'span') {
+    return [];
+  }
+
+  const declarations = style ?? '';
+  const losses = [
+    /(^|;)\s*color\s*:/i.test(declarations) ? 'text-color' : '',
+    /background-color\s*:/i.test(declarations) ? 'highlight' : '',
+  ].filter((loss) => loss !== '');
+
+  return losses.length === 0 && tagName === 'mark' ? ['highlight'] : losses;
+};
 
 /** A construct that could not be carried into Markdown as-is. */
 export interface MarkdownDegradation {
@@ -115,6 +169,8 @@ interface SerializationContext {
   warnings: MarkdownDegradation[];
   /** Ids already on the render stack — breaks parent-reference cycles. */
   active: Set<string>;
+  /** Inline losses already reported, so one kind is named once per document. */
+  inlineSeen: Set<string>;
 }
 
 /**
@@ -133,6 +189,62 @@ const warn = (
   context.warnings.push({ construct,
     action,
     detail });
+};
+
+/**
+ * Convert one inline field, reporting the marks Markdown cannot carry.
+ *
+ * A kind is reported ONCE per document: the report carries no block location,
+ * so a second identical line says nothing the first did not — and a document
+ * that colours half its words would otherwise bury every other warning.
+ * @param context - the serialization context
+ * @param html - the field's inline HTML
+ */
+const inlineMarkdown = (context: SerializationContext, html: string): string =>
+  context.inline.inlineToMarkdown(html, (construct: string): void => {
+    if (context.inlineSeen.has(construct)) {
+      return;
+    }
+
+    context.inlineSeen.add(construct);
+    warn(context, construct, 'degraded', INLINE_LOSS_DETAILS[construct] ?? `${construct} has no Markdown equivalent`);
+  });
+
+/**
+ * Join loss names into a readable list: `a`, `a and b`, `a, b and c`.
+ * @param items - loss names in report order
+ */
+const joinLosses = (items: string[]): string =>
+  items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+
+/**
+ * Report the presentation fields a block carries that Markdown cannot.
+ *
+ * One line per block, not per field: they degrade together (the block is
+ * rendered as its plain Markdown construct) and a consumer acts on them the
+ * same way. Only NON-DEFAULT values reach here — a field at its default loses
+ * nothing, and warning about it would fire on nearly every document.
+ * @param context - the serialization context
+ * @param block - the block being serialized
+ * @param rendering - what the block is rendered as
+ * @param losses - the fields lost, in report order
+ */
+const warnPresentationLosses = (
+  context: SerializationContext,
+  block: SerializableBlock,
+  rendering: string,
+  losses: string[]
+): void => {
+  if (losses.length === 0) {
+    return;
+  }
+
+  warn(
+    context,
+    block.tool,
+    'degraded',
+    `${block.tool} is rendered as ${rendering}; its ${joinLosses(losses)} ${losses.length === 1 ? 'is' : 'are'} lost`
+  );
 };
 
 /**
@@ -178,6 +290,39 @@ const readTableGrid = (data: BlockToolData): Array<Array<Record<string, unknown>
 
     return row.map((cell: unknown) => (isRecord(cell) ? cell : { text: asString(cell) }));
   });
+};
+
+/**
+ * Whether a cell spans more than the one grid position a pipe table gives it.
+ * @param cell - one cell of the grid
+ */
+const isMerged = (cell: Record<string, unknown>): boolean =>
+  (typeof cell.colspan === 'number' && cell.colspan > 1) || (typeof cell.rowspan === 'number' && cell.rowspan > 1);
+
+/**
+ * The table fields a GFM pipe table cannot carry, in report order.
+ *
+ * Column widths and text size are left out on purpose: the tool writes
+ * `colWidths` on every table it creates, so reporting it would warn on every
+ * document that holds a table at all.
+ * @param data - the table block's data
+ * @param grid - the cell grid, already normalized
+ */
+const tablePresentationLosses = (
+  data: BlockToolData,
+  grid: Array<Array<Record<string, unknown>>>
+): string[] => {
+  const cells = grid.flat();
+  const coloured = cells.some((cell) => asString(cell.color) !== '' || asString(cell.textColor) !== '');
+  const placed = cells.some((cell) => typeof cell.placement === 'string' && cell.placement !== 'top-left');
+
+  return [
+    cells.some(isMerged) ? 'merged cells' : '',
+    data.withHeadingColumn === true ? 'heading column' : '',
+    coloured ? 'cell colours' : '',
+    placed ? 'cell placement' : '',
+    data.stretched === true ? 'full-width layout' : '',
+  ].filter((loss) => loss !== '');
 };
 
 /**
@@ -273,7 +418,7 @@ const tableToMarkdown = (block: SerializableBlock, context: SerializationContext
         return cellBlockLines(cellBlock, context, 0);
       });
 
-      const markdown = lines.length > 0 ? lines.join('\n') : context.inline.inlineToMarkdown(asString(cell.text));
+      const markdown = lines.length > 0 ? lines.join('\n') : inlineMarkdown(context, asString(cell.text));
 
       return escapeTableCell(markdown).trim();
     })
@@ -281,6 +426,7 @@ const tableToMarkdown = (block: SerializableBlock, context: SerializationContext
 
   /** A cell pointing at a block that is not in the document loses its content. */
   warnUnresolvedChildren(context, block, unresolved.length);
+  warnPresentationLosses(context, block, 'a GFM pipe table', tablePresentationLosses(block.data, grid));
 
   const withHeadings = block.data.withHeadings === true;
   const header = withHeadings ? rows[0] : Array.from({ length: columns }, () => '');
@@ -519,6 +665,32 @@ const decodeCharacterReferences = (text: string): string =>
   });
 
 /**
+ * The image fields a Markdown image cannot carry, in report order.
+ *
+ * Defaults come from `types/tools/image.d.ts` (width 100, alignment centre,
+ * frame 'none', rounded true) and count as "not set": an image that never left
+ * them loses nothing, and reporting it would warn on almost every document.
+ * `fileName` and the cached natural dimensions are metadata, not presentation,
+ * so they are not losses.
+ * @param data - the image block's data
+ */
+const imagePresentationLosses = (data: BlockToolData): string[] => {
+  const width = typeof data.width === 'number' && data.width !== 100;
+  const alignment = typeof data.alignment === 'string' && data.alignment !== 'center';
+  const frame = typeof data.frame === 'string' && data.frame !== 'none';
+
+  return [
+    /** The export shows the UNCROPPED image, so a crop is lost content, not chrome. */
+    isRecord(data.crop) ? 'crop' : '',
+    width ? 'width' : '',
+    alignment ? 'alignment' : '',
+    typeof data.size === 'string' && data.size !== '' ? 'size preset' : '',
+    frame ? 'frame' : '',
+    data.rounded === false ? 'square corners' : '',
+  ].filter((loss) => loss !== '');
+};
+
+/**
  * Serialize a single block to a Markdown line (or fenced/quoted block).
  * @param block - the block to serialize
  * @param context - the serialization context
@@ -558,7 +730,7 @@ const blockToMarkdown = (block: SerializableBlock, context: SerializationContext
  */
 const blockMarkdownBody = (block: SerializableBlock, context: SerializationContext): string => {
   const { data } = block;
-  const text = context.inline.inlineToMarkdown(asString(data.text));
+  const text = inlineMarkdown(context, asString(data.text));
 
   switch (block.tool) {
     // A pipe table must start at column 0 — a flat indent of 4 spaces would turn
@@ -614,7 +786,7 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
        * would print twice — once bold, once plain.
        */
       const legacyTitle = block.tool === 'toggleList' ? asString(data.title) : '';
-      const summary = legacyTitle === '' ? text : context.inline.inlineToMarkdown(legacyTitle);
+      const summary = legacyTitle === '' ? text : inlineMarkdown(context, legacyTitle);
       const body = childrenToMarkdown(block, context, legacyTitleChildId(block, context, legacyTitle));
       const title = `**${summary}**`;
 
@@ -654,7 +826,12 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
 
       return `${flatIndent}${'#'.repeat(level)} ${text}`;
     }
-    case 'quote':
+    case 'quote': {
+      /** A blockquote has no attribution line, so the caption has nowhere to go. */
+      if (asString(data.caption) !== '') {
+        warn(context, block.tool, 'degraded', 'quote is rendered as a blockquote; its caption is lost');
+      }
+
       /**
        * EVERY line carries the marker: a `<br>` in the quote reaches here as a
        * newline, and one prefix left line two a plain paragraph — the quote
@@ -666,6 +843,7 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
         .split('\n')
         .map((line) => (line === '' ? `${flatIndent}>` : `${flatIndent}> ${line}`))
         .join('\n');
+    }
     case 'code': {
       const language = asString(data.language).trim();
       const info = language === PLAIN_TEXT_LANGUAGE ? '' : language;
@@ -686,8 +864,25 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
     case 'divider':
     case 'delimiter':
       return `${flatIndent}---`;
-    case 'image':
-      return `${flatIndent}![${context.inline.inlineToMarkdown(asString(data.caption))}](${asString(data.url)})`;
+    /**
+     * `![…]` is the ALT slot, so it carries `data.alt` and nothing else. It used
+     * to carry the caption, which both hid the author's alt text and handed the
+     * importer an alt they never wrote (`mdast-to-blocks.ts` reads that slot
+     * back into `alt` AND `caption`).
+     */
+    case 'image': {
+      const alt = asString(data.alt);
+      const caption = asString(data.caption);
+
+      warnPresentationLosses(context, block, 'a plain Markdown image', imagePresentationLosses(data));
+
+      /** A caption equal to the alt text rides out in the alt slot: nothing is lost. */
+      if (caption !== '' && caption !== alt) {
+        warn(context, block.tool, 'degraded', 'image caption has no Markdown equivalent (the `![…]` slot is alt text); the caption is lost');
+      }
+
+      return `${flatIndent}![${inlineMarkdown(context, alt)}](${asString(data.url)})`;
+    }
     /**
      * Markdown has no media or embed syntax, so these degrade to a link — which
      * still carries the URL. Without a case they serialized to an EMPTY line
@@ -701,7 +896,7 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
       warn(context, block.tool, 'degraded', `${block.tool} is rendered as a plain link; the embedded player or preview is lost`);
 
       const url = asString(data.url) || asString(data.source);
-      const label = context.inline.inlineToMarkdown(asString(data.caption))
+      const label = inlineMarkdown(context, asString(data.caption))
         || asString(data.title)
         || asString(data.fileName)
         || asString(data.service)
@@ -761,7 +956,8 @@ const buildContext = (
     childrenOf,
     inline,
     warnings,
-    active: new Set<string>() };
+    active: new Set<string>(),
+    inlineSeen: new Set<string>() };
 };
 
 /**

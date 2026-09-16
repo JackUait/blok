@@ -11,6 +11,11 @@ const BLOCK_WRAPPER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="bl
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
 const NAVIGATION_FOCUSED_SELECTOR = '[data-blok-navigation-focused="true"]';
 const SELECTED_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-selected="true"]`;
+const INLINE_TOOLBAR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="inline-toolbar"] [data-blok-testid="popover-container"]`;
+// Control+A is "move to line start" on macOS, not select-all. Hard-coding it
+// made this suite select nothing — and therefore assert nothing — locally,
+// while still being a real select-all on CI's Linux runners.
+const SELECT_ALL = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
 
 declare global {
   interface Window {
@@ -140,9 +145,27 @@ test.describe('navigation mode', () => {
 
       const paragraph = getParagraphByIndex(page, 0);
 
+      const inlineToolbar = page.locator(INLINE_TOOLBAR_SELECTOR);
+
       await paragraph.click();
-      await page.keyboard.press('Control+A');
+      await page.keyboard.press(SELECT_ALL);
+
+      /**
+       * Selecting the text opens the formatting toolbar a beat later, through a
+       * 180ms debounce. One Escape dismisses exactly one layer, so the toolbar
+       * goes first and navigation mode second. Pressing once and expecting both
+       * only worked while the press beat the debounce, which a loaded runner
+       * does not — waiting for the layer makes it pass by construction.
+       */
+      await expect(inlineToolbar).toBeVisible();
+
       await page.keyboard.press('Escape');
+
+      await expect(inlineToolbar).toBeHidden();
+
+      await page.keyboard.press('Escape');
+
+      await expect(page.locator(NAVIGATION_FOCUSED_SELECTOR)).toHaveCount(1);
 
       const hasSelection = await page.evaluate(() => {
         const selection = window.getSelection();

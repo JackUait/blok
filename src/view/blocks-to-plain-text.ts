@@ -10,6 +10,7 @@ import { buildDocumentModel } from './document-model';
 import type { DocumentModel, ViewBlock } from './document-model';
 import { createHtmlRenderer } from './blocks-to-html';
 import type { BlocksToHtmlOptions } from './blocks-to-html';
+import { blokDocumentSchema } from './document-schema';
 import { htmlTextContent } from './html-text';
 
 import type { LooseOutputData, OutputData } from '../../types';
@@ -54,6 +55,44 @@ const everyString = (data: Record<string, unknown>, keys: string[]): string[] =>
     .map((key) => data[key])
     .filter((value): value is string => typeof value === 'string' && value !== '');
 
+/**
+ * Every block type this reader is meant to know: the ones the saved-document
+ * schema describes, plus the legacy names imports still carry. Derived from the
+ * schema rather than listed again, so a tool added there cannot be reported as
+ * unrecognised here.
+ *
+ * Membership means "recognised", NOT "has text": a divider, a spacer and a
+ * callout are all in here and all read as ''. That is exactly the distinction
+ * the report exists to draw — a caller has to be able to tell a document that
+ * genuinely holds no text from one this reader could make nothing of.
+ */
+const KNOWN_BLOCK_TYPES = new Set<string>([
+  ...Object.keys(blokDocumentSchema.$defs),
+  /** Editor.js's name for `divider`. */
+  'delimiter',
+  /** Legacy aliases, the same two `blocks-to-markdown-core.ts` accepts. */
+  'toggleList',
+  'columns',
+]);
+
+/** A construct the plain-text reader could not carry across as-is. */
+export interface PlainTextDegradation {
+  /** What degraded: the block tool's name. */
+  construct: string;
+  /** `dropped` — nothing was emitted; `degraded` — emitted, but lossy. */
+  action: 'dropped' | 'degraded';
+  /** Plain-language explanation of what was lost. */
+  detail: string;
+}
+
+/** A document's readable text, and everything the reader could not read. */
+export interface PlainTextResult {
+  /** The extracted text. */
+  text: string;
+  /** Blocks that were read as nothing, in document order. */
+  warnings: PlainTextDegradation[];
+}
+
 /** A rendered text segment; `isList` drives the single-newline separator. */
 interface Segment {
   text: string;
@@ -87,16 +126,21 @@ export interface BlocksToPlainTextOptions extends BlocksToHtmlOptions {
 }
 
 /**
- * Extract the readable text of a saved Blok document, synchronously and
- * DOM-free.
+ * Extract the readable text of a saved Blok document AND report every block the
+ * reader could make nothing of, synchronously and DOM-free.
+ *
+ * The text is identical to what {@link blocksToPlainText} returns; only the
+ * report is new. Reach for this whenever `''` has to mean something — an empty
+ * result alone cannot say whether the document holds no text or holds nothing
+ * this reader understands.
  * @param data - saved document (strict or loose wire shape; nullish tolerated)
  * @param options - `blocksToHtml`'s options (custom renderers are rendered to HTML, then stripped), plus `includeHiddenText`
- * @returns plain text ('' for empty/malformed documents)
+ * @returns the text and its degradations
  */
-export const blocksToPlainText = (
+export const blocksToPlainTextWithReport = (
   data: OutputData | LooseOutputData | null | undefined,
   options: BlocksToPlainTextOptions = {}
-): string => {
+): PlainTextResult => {
   const model: DocumentModel = buildDocumentModel(data);
   const renderers = options.renderers ?? {};
   const htmlRenderer = createHtmlRenderer(model, options);
@@ -104,6 +148,27 @@ export const blocksToPlainText = (
 
   /** Ids currently on the walk stack — breaks parent-reference cycles. */
   const active = new Set<string>();
+
+  const warnings: PlainTextDegradation[] = [];
+
+  /**
+   * Record a block whose type has no case in this reader and no renderer from
+   * the caller, so it contributed nothing. Called once per block, wherever the
+   * block's own text is read — including inside a table cell, which the segment
+   * walk never reaches.
+   * @param block - the block that was read as nothing
+   */
+  const noteUnreadable = (block: ViewBlock): void => {
+    if (KNOWN_BLOCK_TYPES.has(block.type) || renderers[block.type] !== undefined) {
+      return;
+    }
+
+    warnings.push({
+      construct: block.type,
+      action: 'dropped',
+      detail: `\`${block.type}\` is not a block type this reader knows, so none of its own text was read`,
+    });
+  };
 
   /**
    * A media block's label. By default the first non-empty `label` field, which
@@ -174,6 +239,8 @@ export const blocksToPlainText = (
     }
 
     try {
+      noteUnreadable(block);
+
       const parts = [ownText(block), ...model.childrenOf(block.id).map(deepText)];
 
       return parts.filter((part) => part !== '').join('\n');
@@ -262,6 +329,8 @@ export const blocksToPlainText = (
       return text === '' ? [] : [{ text, isList: false }];
     }
 
+    noteUnreadable(block);
+
     const text = block.type === 'table' ? tableText(block) : ownText(block);
 
     return text === '' ? [] : [{ text, isList: block.type === 'list' }];
@@ -325,5 +394,17 @@ export const blocksToPlainText = (
     parts.push(segment.text);
   });
 
-  return parts.join('');
+  return { text: parts.join(''), warnings };
 };
+
+/**
+ * Extract the readable text of a saved Blok document, synchronously and
+ * DOM-free.
+ * @param data - saved document (strict or loose wire shape; nullish tolerated)
+ * @param options - `blocksToHtml`'s options (custom renderers are rendered to HTML, then stripped), plus `includeHiddenText`
+ * @returns plain text ('' for empty/malformed documents)
+ */
+export const blocksToPlainText = (
+  data: OutputData | LooseOutputData | null | undefined,
+  options: BlocksToPlainTextOptions = {}
+): string => blocksToPlainTextWithReport(data, options).text;

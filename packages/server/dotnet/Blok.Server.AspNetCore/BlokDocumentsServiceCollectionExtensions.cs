@@ -22,7 +22,8 @@ public static class BlokDocumentsServiceCollectionExtensions
   /// </param>
   /// <param name="timeout">
   /// How long one conversion may run before it is abandoned. Defaults to ten
-  /// seconds. Raise it for a service that converts long documents: the embedded
+  /// seconds, and must be at least <see cref="BlokDocuments.MinimumTimeout"/>.
+  /// Raise it for a service that converts long documents: the embedded
   /// runtime is an interpreter, so a conversion costs far more here than the
   /// same code costs in a browser, and it grows with the document.
   /// </param>
@@ -44,9 +45,15 @@ public static class BlokDocumentsServiceCollectionExtensions
   /// that converts small documents pays nothing for a large budget. Defaults to
   /// 512 MiB, which is what a long article carrying inline markup, or one
   /// holding a large inline base64 image, was measured to need. Lower it only
-  /// to bound a hostile document.
+  /// to bound a hostile document. Must be at least
+  /// <see cref="BlokDocuments.MinimumAllocationBudgetBytes"/>.
   /// </param>
   /// <returns>The same collection, for chaining.</returns>
+  /// <exception cref="ArgumentOutOfRangeException">
+  /// <paramref name="timeout"/> or <paramref name="allocationBudgetBytes"/> is
+  /// under its floor. Thrown from this call, not deferred to the first
+  /// conversion.
+  /// </exception>
   public static IServiceCollection AddBlokDocuments(
       this IServiceCollection services,
       int? poolSize = null,
@@ -55,6 +62,14 @@ public static class BlokDocumentsServiceCollectionExtensions
       long? allocationBudgetBytes = null)
   {
     ArgumentNullException.ThrowIfNull(services);
+
+    /*
+     * Up front rather than inside the factory: a starved constraint is a
+     * configuration mistake, and a lambda defers it to whenever the first
+     * conversion happens to run — in the background warm-up, where the failure
+     * is deliberately swallowed.
+     */
+    JintBlokRuntime.ValidateConstraints(timeout, allocationBudgetBytes);
 
     services.TryAddSingleton<IBlokRuntime>(
         _ => JintBlokRuntime.FromEmbeddedResource(poolSize, timeout, allocationBudgetBytes));

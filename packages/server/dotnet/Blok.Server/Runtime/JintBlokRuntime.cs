@@ -28,6 +28,29 @@ internal sealed class JintBlokRuntime : IBlokRuntime
    */
   private const long DefaultAllocationBudgetBytes = 512L * 1024 * 1024;
 
+  /*
+   * Floors for the two constraints a host may lower, enforced where a host
+   * names them (`FromEmbeddedResource`, and `BlokDocuments.Create` through it)
+   * rather than in this constructor, which the package's own tests drive with
+   * deliberately starved engines.
+   *
+   * Both are set BELOW the smallest value measured to work, so the check can
+   * never refuse a configuration that would have run:
+   *
+   * - 8 MiB: loading the 1.14.0 bundle allocates 8,406,648 bytes, so 8 MiB is
+   *   measured to fail outright and 9 MiB is the smallest measured to load and
+   *   convert. The count is the engine's own tally of a deterministic parse, so
+   *   it does not vary by machine — only by bundle, and only upwards.
+   * - 100 ms: loading was measured to fail at 300 ms and succeed at 350 ms on
+   *   the development machine. This one IS machine-dependent, which is why the
+   *   floor sits three and a half times under the measurement instead of at it:
+   *   it is here to catch a host that passed milliseconds meaning seconds, not
+   *   to publish a supported minimum.
+   */
+  internal const long MinimumAllocationBudgetBytes = 8L * 1024 * 1024;
+
+  internal static readonly TimeSpan MinimumTimeout = TimeSpan.FromMilliseconds(100);
+
   private readonly string script;
   private readonly TimeSpan timeout;
   private readonly long allocationBudgetBytes;
@@ -71,11 +94,29 @@ internal sealed class JintBlokRuntime : IBlokRuntime
       {
         engine = CreateEngine();
       }
+      catch (MemoryLimitExceededException exception)
+      {
+        throw new BlokRuntimeStartupException(
+            "Loading Blok's runtime bundle into an engine allocated more than the "
+            + $"{this.allocationBudgetBytes}-byte allocation budget this runtime was created with. "
+            + "Loading runs under the same allocation budget as a conversion, so raise "
+            + $"`allocationBudgetBytes`: the default is {DefaultAllocationBudgetBytes} bytes (512 MiB), "
+            + $"and {MinimumAllocationBudgetBytes} bytes is the floor this package accepts at all.",
+            exception);
+      }
+      catch (TimeoutException exception)
+      {
+        throw new BlokRuntimeStartupException(
+            $"Loading Blok's runtime bundle into an engine ran past the {this.timeout} timeout this "
+            + "runtime was created with. Loading runs under the same timeout as a conversion, so "
+            + $"raise `timeout`: the default is {DefaultTimeout}, and {MinimumTimeout} is the floor "
+            + "this package accepts at all.",
+            exception);
+      }
       catch (Exception exception)
       {
-        throw new InvalidOperationException(
-            "Could not load Blok's runtime bundle into an engine. Loading it runs under the "
-            + "same timeout and allocation budget as a conversion, so raise whichever was lowered.",
+        throw new BlokRuntimeStartupException(
+            "Could not load Blok's runtime bundle into an engine.",
             exception);
       }
 
@@ -86,11 +127,32 @@ internal sealed class JintBlokRuntime : IBlokRuntime
     }
   }
 
+  /*
+   * Checked here, before the bundle is even read, so a host that starved one of
+   * the constraints learns it from the argument it passed rather than from an
+   * engine failure a second later.
+   */
+  internal static void ValidateConstraints(TimeSpan? timeout, long? allocationBudgetBytes)
+  {
+    if (allocationBudgetBytes is long budget)
+    {
+      ArgumentOutOfRangeException.ThrowIfLessThan(
+          budget, MinimumAllocationBudgetBytes, nameof(allocationBudgetBytes));
+    }
+
+    if (timeout is TimeSpan limit)
+    {
+      ArgumentOutOfRangeException.ThrowIfLessThan(limit, MinimumTimeout, nameof(timeout));
+    }
+  }
+
   internal static JintBlokRuntime FromEmbeddedResource(
       int? poolSize = null,
       TimeSpan? timeout = null,
       long? allocationBudgetBytes = null)
   {
+    ValidateConstraints(timeout, allocationBudgetBytes);
+
     using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(BundleResourceName)
         ?? throw new InvalidOperationException($"Embedded resource '{BundleResourceName}' was not found.");
     using var reader = new StreamReader(stream);

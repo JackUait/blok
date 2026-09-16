@@ -259,6 +259,39 @@ describe('scroll-to-block', () => {
 
   // -------------------------------------------------------------------------
 
+  it('jumps instantly when the reader asks for reduced motion', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn((query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+
+    setHash('#abc123XYZ0');
+
+    const el = fakeEl(200);
+
+    document.querySelector = vi.fn((selector: string): Element | null => {
+      if (selector === '[data-blok-id="abc123XYZ0"]') {
+        return el;
+      }
+
+      return originalQuerySelector(selector);
+    });
+
+    const editor = new Blok({});
+
+    await editor.isReady;
+
+    expect(mockScrollTo).toHaveBeenCalledWith({ top: 200, behavior: 'instant' });
+
+    window.matchMedia = originalMatchMedia;
+  });
+
+  // -------------------------------------------------------------------------
+
   it('does not scroll when hash is empty', async () => {
     setHash('');
 

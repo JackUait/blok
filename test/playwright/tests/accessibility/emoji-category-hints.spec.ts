@@ -1,6 +1,38 @@
+import type { Locator, Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
 import { TEST_PAGE_URL } from '../helpers/ensure-build';
+
+/**
+ * pauseAt must target a time AFTER the install, or protocol latency turns it
+ * into a backward jump and Playwright throws "Cannot fast-forward to the past".
+ * @param page - the page whose clock is being frozen
+ */
+const installPausedClock = async (page: Page): Promise<void> => {
+  const start = new Date('2030-01-01T00:00:00Z');
+
+  await page.clock.install({ time: start });
+  await page.clock.pauseAt(new Date(start.getTime() + 60_000));
+};
+
+/**
+ * The hint is a 300ms setTimeout, which the fake clock drives exactly. A parked
+ * real pointer does not survive that: any real-time layout move under it (the
+ * picker repositions on ResizeObserver, which no fake clock controls) fires a
+ * mouseleave, and that CANCELS the pending reveal for good. Driving the tool's
+ * own listeners keeps the pointer away from the button entirely.
+ * @param button - the category button to enter or leave
+ */
+const enterCategory = async (button: Locator): Promise<void> => {
+  await button.dispatchEvent('mouseenter');
+};
+
+/**
+ * @param button - the category button to leave
+ */
+const leaveCategory = async (button: Locator): Promise<void> => {
+  await button.dispatchEvent('mouseleave');
+};
 
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -30,11 +62,9 @@ for (const category of ['callout', 'people', 'nature', 'foods', 'activity', 'pla
     const tooltip = page.getByRole('tooltip');
 
     await expect(buttons).toHaveCount(9);
-    await page.clock.install();
-    await page.clock.pauseAt(new Date());
-    await page.mouse.move(0, 0);
+    await installPausedClock(page);
     await page.clock.runFor(400);
-    await button.hover();
+    await enterCategory(button);
     await page.clock.runFor(299);
     await expect(tooltip).not.toBeVisible();
     await page.clock.runFor(1);
@@ -52,13 +82,11 @@ for (const elapsed of [250, 299]) {
     const category = page.getByRole('dialog', { name: 'Edit icon' }).locator('[data-emoji-nav]').first();
     const tooltip = page.getByRole('tooltip');
 
-    await page.clock.install();
-    await page.clock.pauseAt(new Date());
-    await page.mouse.move(0, 0);
+    await installPausedClock(page);
     await page.clock.runFor(400);
-    await category.hover();
+    await enterCategory(category);
     await page.clock.runFor(elapsed);
-    await page.mouse.move(0, 0);
+    await leaveCategory(category);
     await page.clock.runFor(300 - elapsed);
     await expect(tooltip).not.toBeVisible();
     await page.clock.runFor(1000);
@@ -122,11 +150,9 @@ test('keeps category hints attached and inside the viewport at each corner', asy
 });
 
 test('does not reveal a pending hint after the picker closes', async ({ page }) => {
-  await page.clock.install();
-  await page.clock.pauseAt(new Date());
-  await page.mouse.move(0, 0);
+  await installPausedClock(page);
   await page.clock.runFor(400);
-  await page.getByRole('dialog', { name: 'Edit icon' }).locator('[data-emoji-nav]').last().hover();
+  await enterCategory(page.getByRole('dialog', { name: 'Edit icon' }).locator('[data-emoji-nav]').last());
   await page.clock.runFor(100);
   await page.keyboard.press('Escape');
   await page.clock.runFor(400);

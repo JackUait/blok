@@ -40,20 +40,40 @@ const paste = async (locator: Locator, data: Record<string, string>): Promise<vo
 };
 
 /**
- * Poll the saved blocks until at least `count` blocks have the given parent.
+ * Poll the saved blocks until the column owns a block CARRYING each sentinel.
+ *
+ * Counting children is one frame too early. A paste into a column reparents the
+ * new block while its content is still empty, and the tool only fills it after
+ * `block.ready`, which resolves inside a requestAnimationFrame. The child count
+ * is already right in that gap, so a save taken there returns the last pasted
+ * block with `data.text === ''` — and a search by sentinel then finds nothing
+ * and reads as "ejected to root". Waiting on the content closes the gap.
+ * @param page - the page under test
+ * @param parentId - the column expected to own the pasted blocks
+ * @param sentinels - a distinctive string from each pasted block
  */
-const waitForChildCount = async (page: Page, parentId: string, count: number): Promise<void> => {
+const waitForPastedChildren = async (
+  page: Page,
+  parentId: string,
+  sentinels: string[]
+): Promise<void> => {
   await expect.poll(
     async () => {
       const saved = await saveBlok(page);
 
-      return saved.blocks.filter((b) => b.parent === parentId).length;
+      return sentinels.filter((sentinel) => saved.blocks.some(
+        (b) => b.parent === parentId
+          && b.data !== undefined
+          && Object.values(b.data).some(
+            (v) => typeof v === 'string' && v.includes(sentinel)
+          )
+      )).length;
     },
     {
-      message: `waiting for column ${parentId} to own ${count} children`,
+      message: `waiting for column ${parentId} to own every pasted block`,
       timeout: 5000,
     }
-  ).toBeGreaterThanOrEqual(count);
+  ).toBe(sentinels.length);
 };
 
 const TWO_COLUMN_LAYOUT = {
@@ -85,8 +105,8 @@ test.describe('Pasting multi-block content into a column', () => {
       'text/html': '<h2>Pasted header</h2><p>Pasted paragraph</p><ul><li>Pasted item</li></ul>',
     });
 
-    // Wait until the original and all three pasted blocks belong to the column.
-    await waitForChildCount(page, 'c1', 4);
+    // Wait until all three pasted blocks belong to the column WITH their content.
+    await waitForPastedChildren(page, 'c1', ['Pasted header', 'Pasted paragraph', 'Pasted item']);
 
     const saved = await saveBlok(page);
 
@@ -127,7 +147,7 @@ test.describe('Pasting multi-block content into a column', () => {
       'text/html': '<p>Alpha line</p><p>Beta line</p><p>Gamma line</p>',
     });
 
-    await waitForChildCount(page, 'c1', 4);
+    await waitForPastedChildren(page, 'c1', ['Alpha line', 'Beta line', 'Gamma line']);
 
     const saved = await saveBlok(page);
 
@@ -179,7 +199,7 @@ test.describe('Pasting multi-block content into a column', () => {
       ].join(''),
     });
 
-    await waitForChildCount(page, 'c1', 2);
+    await waitForPastedChildren(page, 'c1', ['Col-shaped one', 'Col-shaped two']);
 
     const saved = await saveBlok(page);
 

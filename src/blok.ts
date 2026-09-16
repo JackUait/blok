@@ -6,6 +6,7 @@ import { DATA_ATTR } from './components/constants/data-attributes';
 import { Core } from './components/core';
 import { getBlokVersion, isObject, isFunction } from './components/utils';
 import { announce } from './components/utils/announcer';
+import { prefersReducedMotion } from './components/utils/reduced-motion';
 import {
   readyState,
   registerInstance,
@@ -722,7 +723,7 @@ class Blok {
   private static scrollToHashBlock(blok: Core, el: Element, blockId: string | null, topOffset: number): void {
     const y = el.getBoundingClientRect().top + window.scrollY - topOffset;
 
-    window.scrollTo({ top: y, behavior: 'smooth' });
+    window.scrollTo({ top: y, behavior: prefersReducedMotion() ? 'instant' : 'smooth' });
 
     if (blockId !== null) {
       Blok.selectBlockById(blok, blockId);

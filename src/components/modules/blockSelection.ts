@@ -13,6 +13,7 @@ import type { CrossBlockSubRange, CrossBlockTextSelection } from '../selection/c
 import { SelectionUtils } from '../selection/index';
 import { delay } from '../utils';
 import { clean, composeSanitizerConfig } from '../utils/sanitizer';
+import { prefersReducedMotion } from '../utils/reduced-motion';
 import { announce } from '../utils/announcer';
 import { Shortcuts } from '../utils/shortcuts';
 import { translateToolName, translateToolTitle } from '../utils/tools';
@@ -1041,7 +1042,7 @@ export class BlockSelection extends Module {
      * Scroll block into view if needed
      */
     block.holder.scrollIntoView({
-      behavior: 'smooth',
+      behavior: prefersReducedMotion() ? 'instant' : 'smooth',
       block: 'nearest',
     });
   }

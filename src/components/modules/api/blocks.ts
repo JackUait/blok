@@ -10,6 +10,7 @@ import { BlockAPI } from '../../block/api';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
 import { capitalize } from '../../utils';
 import { announce } from '../../utils/announcer';
+import { prefersReducedMotion } from '../../utils/reduced-motion';
 import { cloneOutputBlocks } from '../../utils/clone-output-blocks';
 import { normalizeTableChildParents } from '../../utils/data-model-transform';
 import { equalsOutputData, normalizeOutputBlocks } from '../../../shared/output-data';
@@ -828,7 +829,11 @@ export class BlocksAPI extends Module {
     const topOffset = this.config.scrollToBlock?.topOffset ?? 0;
     const y = el.getBoundingClientRect().top + window.scrollY - topOffset;
 
-    window.scrollTo({ top: y, behavior: 'smooth' });
+    /**
+     * A reader who asked for reduced motion gets the jump, not the glide. Every
+     * other animated affordance in the editor already honours this.
+     */
+    window.scrollTo({ top: y, behavior: prefersReducedMotion() ? 'instant' : 'smooth' });
 
     const block = target.blockId === null
       ? undefined

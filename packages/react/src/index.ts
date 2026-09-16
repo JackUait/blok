@@ -10,6 +10,10 @@ export type { BlokEditorHandle } from './useBlokHandle';
 export { BlokProvider, useBlokDefaults } from './provide-blok';
 export { useBlokInstance } from './blok-instance-context';
 export type { UseBlokConfig, BlokContentProps } from './types';
+// The config/DOM prop split `BlokEditor` applies: a key not in this list is
+// spread onto the container div instead of routing into the editor config.
+// Hosts that filter props themselves must read it from here, not copy it.
+export { USE_BLOK_CONFIG_KEYS } from './config-keys';
 export type { BlokEditorProps } from './BlokEditor';
 export { useBlocks } from './useBlocks';
 export type { UseBlocksOptions } from './useBlocks';

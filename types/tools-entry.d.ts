@@ -93,7 +93,9 @@ export { FileData, FileConfig, FileUploader, FileUploadContext, FileUploadResult
 export { AudioData, AudioConfig, AudioUploader, AudioUploadContext, AudioAlignment } from './tools/audio';
 export { VideoData, VideoConfig, VideoUploader, VideoUploadContext, VideoAlignment, VideoGlow } from './tools/video';
 export { CodeData } from './tools/code';
-export { EmbedData, EmbedKind, EmbedAlignment } from './tools/embed';
+export { EmbedData, EmbedKind, EmbedAlignment, EmbedMatch, EmbedServiceType } from './tools/embed';
+// Embed-registry lookup for migrating stored links; the registry data stays private.
+export { matchEmbedService, buildEmbedUrl } from './tools/embed';
 export { BookmarkData, BookmarkConfig, BookmarkMeta } from './tools/bookmark';
 export { MediaSource } from './tools/media-source';
 export { ColumnListData } from './tools/column-list';

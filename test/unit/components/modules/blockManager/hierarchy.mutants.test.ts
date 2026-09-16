@@ -77,10 +77,14 @@ vi.mock('../../../../../src/components/utils/html', async (importOriginal) => {
  * unreachable-as-a-difference: that branch runs only when `oldContainer` is
  * truthy, which already required `oldParent !== undefined`.
  *
- * isColumnContainer's SECOND `?.` (`container?.parentElement.matches`) needs a
- * connected element with no parentElement. Its two call sites pass either a
- * container that passed `.isConnected`, or a querySelector hit inside a
- * holder — both always have a parent.
+ * isColumnContainer's SECOND `?.` (`container?.parentElement.matches`) needs an
+ * element with no parentElement. Its two call sites pass either a container the
+ * claim check accepted, or a querySelector hit inside a holder. `contains` is
+ * reflexive, so the accepted set nominally includes `newParent.holder` itself —
+ * which has no parentElement while detached — but core never stamps the
+ * nested-blocks attribute on a holder (only on child containers a tool creates),
+ * and querySelector cannot match the element it is called on. So every value
+ * that reaches it is a container INSIDE some holder, and always has a parent.
  */
 
 interface FixtureBlockConfig {
@@ -119,8 +123,10 @@ const createMockBlock = (config: FixtureBlockConfig): Block => {
 
 /**
  * Creates a repository over a real Blocks store whose working area is IN the
- * document — `currentNestedContainer.isConnected` gates the anti-stealing
- * guard, so a detached fixture silently skips the branch under test.
+ * document. The anti-stealing guard claims a container that is `isConnected`
+ * OR that descends from the destination parent's holder, so a detached fixture
+ * reaches the branch only through the second arm — keep the working area
+ * attached to exercise the first.
  * @param configs - blocks to push, in flat-array order
  * @returns the repository plus its working area
  */

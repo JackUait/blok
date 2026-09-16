@@ -1169,6 +1169,52 @@ describe('BlockHierarchy', () => {
       }
     });
 
+    it('leaves a holder in its own cell when the parent is a MULTI-SLOT container still detached from the document', () => {
+      // Regression: a table holder carries one [data-blok-nested-blocks] container
+      // PER CELL, so the `newContainer` lookup — a querySelector, i.e. the FIRST
+      // match — always resolves to cell (0,0). The anti-stealing veto is what
+      // normally stops the move, but it only counted a container as claiming the
+      // holder while that container was `isConnected`. Every React host boots the
+      // editor on a DETACHED holder (blok-react creates the holder div and attaches
+      // it after render), so during that boot Table.rendered() placed each cell
+      // block correctly and the very next setBlockParent — a no-op parent-wise,
+      // old === new — yanked it back out into cell (0,0). Ten cells, one visible
+      // cell holding everything, nine empty.
+      repository = createRepositoryWithBlocks([
+        { id: 'table', parentId: null, contentIds: ['cell-a', 'cell-b'] },
+        { id: 'cell-a', parentId: 'table', contentIds: [] },
+        { id: 'cell-b', parentId: 'table', contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const cellA = requireBlock('cell-a');
+      const cellB = requireBlock('cell-b');
+      const table = requireBlock('table');
+
+      const firstCell = document.createElement('div');
+
+      firstCell.setAttribute('data-blok-nested-blocks', '');
+      firstCell.appendChild(cellA.holder);
+
+      const secondCell = document.createElement('div');
+
+      secondCell.setAttribute('data-blok-nested-blocks', '');
+      secondCell.appendChild(cellB.holder);
+
+      table.holder.append(firstCell, secondCell);
+
+      // The whole table subtree stays OUT of the document — the boot window.
+      expect(table.holder.isConnected).toBe(false);
+
+      // The table re-asserts a parent link it already holds, exactly as
+      // mountBlocksInCell does right after appending the holder into its cell.
+      hierarchy.setBlockParent(cellB, 'table');
+
+      expect(secondCell.contains(cellB.holder)).toBe(true);
+      expect(firstCell.contains(cellB.holder)).toBe(false);
+      expect(firstCell.children).toHaveLength(1);
+    });
+
     it('mounts a reparented block\'s holder into a column\'s [data-blok-nested-blocks] container', () => {
       // Columns render their child container with [data-blok-nested-blocks] only
       // (no [data-blok-toggle-children]). Reparenting a block INTO a column must

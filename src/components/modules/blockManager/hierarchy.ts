@@ -417,10 +417,40 @@ export class BlockHierarchy {
       // stranded the children in detached DOM — visible content lost while the
       // model still said they were nested (the toggle-heading level-convert
       // data-loss bug). Only a container that is actually in the document can
-      // veto the mount.
+      // veto the mount — EXCEPT one that belongs to the destination parent
+      // itself, which is a legitimate claimant whether or not the editor has
+      // been attached yet. A dead subtree from a replaced block is never a
+      // descendant of the NEW parent, so it still loses its claim.
+      //
+      // That exception is what makes MULTI-SLOT parents survive boot. Because
+      // `newContainer` above is a querySelector, a parent holding one slot per
+      // child position — a table, whose every cell carries the nested-blocks
+      // attribute, or an adapter block rendering two <BlockChildren> — always
+      // resolves to slot ONE. This veto is the only thing standing between that
+      // and "every child moved into the first slot", and it has to hold while
+      // the subtree is still detached: React/Vue/Angular hosts construct the
+      // editor on a holder they attach only after render, and inside that window
+      // Table.rendered() placed each cell's block and the setBlockParent that
+      // immediately follows — a no-op parent-wise, old === new — yanked it right
+      // back out into cell (0,0). Same shape as the table's own guard, which
+      // asks `!this.gridElement.contains(...)` rather than `isConnected`.
+      //
+      // The second arm only ever decides anything while `newParent.holder` is
+      // itself disconnected: `isConnected` is true for everything whose root is
+      // the document, so on an attached editor a descendant of the holder has
+      // already satisfied arm one. Every live path — drag, Yjs replay, paste,
+      // indent, the blocks API — is bit-identical to before.
+      //
+      // It relies on container tools SWAPPING their child slot rather than
+      // appending a new one beside the old: `blocks.ts` replaces a converted
+      // block with `holder.replaceWith(...)` and the header tool with
+      // `replaceChild(...)`, so a replaced block's dead slot leaves the holder
+      // and cannot be a descendant of the new parent. A tool that appended
+      // first and removed second would put a dead slot inside the new parent
+      // and re-open the data loss this `isConnected` gate was added for.
       const claimedByOtherContainer =
         currentNestedContainer !== null &&
-        currentNestedContainer.isConnected &&
+        (currentNestedContainer.isConnected || newParent.holder.contains(currentNestedContainer)) &&
         currentNestedContainer !== newContainer &&
         !(isColumnContainer(currentNestedContainer) && isColumnContainer(newContainer)) &&
         !isColumnsRow(newContainer) &&

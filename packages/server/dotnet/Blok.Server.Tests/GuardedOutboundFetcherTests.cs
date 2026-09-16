@@ -378,6 +378,78 @@ public sealed class GuardedOutboundFetcherTests
     Assert.Equal(GuardedFetchFailure.BlockedDestination, error.Failure);
   }
 
+  /// <summary>
+  /// The reason <see cref="GuardedOutboundFetcher"/> hand-rolls TLS on macOS,
+  /// pinned so it is re-measured rather than remembered. If this ever fails,
+  /// <c>SslStream</c> has been fixed: delete the managed transport and the
+  /// BouncyCastle dependency with it.
+  /// </summary>
+  [Fact]
+  public async Task SslStreamStillLeaksAnIssuerFetchOnMacOs()
+  {
+    if (!OperatingSystem.IsMacOS())
+    {
+      return;
+    }
+
+    byte[] issuerBytes = [];
+    await using var issuer = new LoopbackOrigin(
+        async (request, stream, requestCount, cancellationToken) =>
+        {
+          var headers = Encoding.ASCII.GetBytes(
+              "HTTP/1.1 200 OK\r\n" +
+              "Content-Type: application/pkix-cert\r\n" +
+              $"Content-Length: {issuerBytes.Length}\r\n" +
+              "Connection: close\r\n\r\n");
+          await stream.WriteAsync(headers, cancellationToken);
+          await stream.WriteAsync(issuerBytes, cancellationToken);
+        });
+    using var certificates = TestCertificates.CreateWithIntermediateAia(
+        "sslstream-aia.example",
+        $"http://127.0.0.1:{issuer.Port}/issuer.cer",
+        out issuerBytes);
+    await using var origin = new LoopbackOrigin(certificates.Server);
+
+    // The same policy the fetcher would hand SslStream off macOS.
+    var chainPolicy = new X509ChainPolicy
+    {
+      DisableCertificateDownloads = true,
+      RevocationMode = X509RevocationMode.NoCheck,
+      TrustMode = X509ChainTrustMode.CustomRootTrust,
+    };
+    chainPolicy.CustomTrustStore.Add(certificates.Root);
+
+    using var socket = new Socket(
+        AddressFamily.InterNetwork,
+        SocketType.Stream,
+        ProtocolType.Tcp);
+    await socket.ConnectAsync(
+        new IPEndPoint(IPAddress.Loopback, origin.Port));
+    await using var network = new NetworkStream(socket, ownsSocket: true);
+    await using var tls = new SslStream(network, leaveInnerStreamOpen: false);
+    await tls.AuthenticateAsClientAsync(
+        new SslClientAuthenticationOptions
+        {
+          CertificateChainPolicy = chainPolicy,
+          CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
+          TargetHost = "sslstream-aia.example",
+        },
+        CancellationToken.None);
+
+    Assert.Equal(1, issuer.RequestCount);
+
+    // The flag itself works; only the handshake drops it. Building the same
+    // chain by hand asks for the issuer and never goes out to get it.
+    using var chain = new X509Chain();
+    chain.ChainPolicy.DisableCertificateDownloads = true;
+    chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+    chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+    chain.ChainPolicy.CustomTrustStore.Add(certificates.Root);
+
+    Assert.False(chain.Build(certificates.Server));
+    Assert.Equal(1, issuer.RequestCount);
+  }
+
   [Fact]
   public async Task OffersOnlyHttp11DuringMacOsTlsNegotiation()
   {

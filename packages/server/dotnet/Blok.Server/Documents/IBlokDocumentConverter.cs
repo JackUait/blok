@@ -290,6 +290,12 @@ public interface IBlokDocumentConverter
   /// pool wait beyond the walk.
   /// </para>
   /// <para>
+  /// A caller that only wants the first of the three answers —
+  /// "is this payload a document at all" — asks
+  /// <see cref="BlokDocuments.LooksLikeADocument"/> instead. It is that same
+  /// cheap half, synchronous and without a converter to hold.
+  /// </para>
+  /// <para>
   /// It does not throw for any input, <c>null</c> included; a guard that throws
   /// is not a guard. <see cref="BlokDocumentValidation.Failure"/> carries what
   /// an exception would have carried. The caller's own cancellation is the one

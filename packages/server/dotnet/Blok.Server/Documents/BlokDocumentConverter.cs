@@ -203,7 +203,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
       string? documentJson,
       CancellationToken cancellationToken = default)
   {
-    if (!LooksLikeADocument(documentJson))
+    if (!BlokDocuments.LooksLikeADocument(documentJson))
     {
       return new BlokDocumentValidation { Failure = BlokConversionFailure.InvalidDocument };
     }
@@ -229,29 +229,6 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
     catch (JsonException)
     {
       return new BlokDocumentValidation { Failure = BlokConversionFailure.Unknown };
-    }
-  }
-
-  /// <summary>
-  /// A JSON object with a <c>blocks</c> array — the same bar
-  /// <c>readDocument</c> holds the input to inside the runtime, checked here so
-  /// the common rejection costs a parse rather than an engine.
-  /// </summary>
-  private static bool LooksLikeADocument(string? documentJson)
-  {
-    if (string.IsNullOrWhiteSpace(documentJson))
-    {
-      return false;
-    }
-
-    try
-    {
-      return JsonNode.Parse(documentJson) is JsonObject document
-          && document["blocks"] is JsonArray;
-    }
-    catch (JsonException)
-    {
-      return false;
     }
   }
 

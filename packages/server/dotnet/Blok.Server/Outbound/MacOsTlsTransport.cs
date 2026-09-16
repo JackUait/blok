@@ -9,6 +9,18 @@ using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 
 namespace Blok.Server.Outbound;
 
+/*
+ * TLS in managed code, for macOS only, because SslStream there drops
+ * X509ChainPolicy.DisableCertificateDownloads: the handshake hands the
+ * certificate to the OS, which fetches whatever caIssuers URL it carries. That
+ * fetch is an outbound request to an address the served certificate chose, made
+ * by trustd rather than by this process, so every check in
+ * GuardedOutboundPolicy is bypassed — the one thing the guarded fetcher exists
+ * to prevent. Measured on .NET 10.0.400 / Darwin 25.2 and pinned by
+ * GuardedOutboundFetcherTests.SslStreamStillLeaksAnIssuerFetchOnMacOs, which
+ * fails the day it is fixed; deleting this file then also drops the
+ * BouncyCastle.Cryptography reference, whose only use is here.
+ */
 internal static class MacOsTlsTransport
 {
   internal static async ValueTask<Stream> AuthenticateAsync(

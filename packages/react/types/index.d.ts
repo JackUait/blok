@@ -56,6 +56,19 @@ export interface UseBlokConfig extends Omit<BlokConfig, 'holder'> {
  * Renders a `<div>` that becomes the Blok editor's DOM mount point.
  * Passes through all standard HTML div attributes.
  */
+/**
+ * Every prop key `BlokEditor` routes into the editor config. Any other prop is
+ * spread onto the container `<div>` as a DOM attribute, so a host that filters
+ * props itself (an SSR wrapper, a design-system shim, a test double) must read
+ * the split from here. A hand-copied list drifts silently: the copy keeps
+ * passing unit tests while production sends a real config key to the DOM.
+ *
+ * Typed as `keyof UseBlokConfig` rather than a literal tuple on purpose — a
+ * transcribed tuple in this file would be the same hand-copy this export
+ * exists to delete.
+ */
+export declare const USE_BLOK_CONFIG_KEYS: readonly (keyof UseBlokConfig)[];
+
 export interface BlokContentProps extends React.HTMLAttributes<HTMLDivElement> {
   /** The Blok editor instance from useBlok. Null during SSR or before initialization. */
   editor: Blok | null;

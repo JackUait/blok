@@ -42,6 +42,12 @@ export { Columns } from './columns';
 export { Embed } from './link/embed';
 export { Bookmark } from './link/bookmark';
 
+// Embed-registry lookup. The registry itself stays private — these two are the
+// whole contract a host needs to turn a stored legacy URL into exactly the
+// `{ service, embed, kind }` a live paste would have produced.
+export { matchEmbedService, buildEmbedUrl } from './link/registry';
+export type { EmbedMatch, EmbedServiceType } from './link/registry';
+
 // Tool-authoring helpers
 export { defineTool } from './define-tool';
 export { mountChildBlocks } from './nested-blocks';

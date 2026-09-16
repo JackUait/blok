@@ -35,6 +35,15 @@ import { ToggleItem as Toggle } from './tools/toggle';
 
 export { Blok, version, DATA_ATTR, EMPTY_OUTPUT_DATA, createEmittedEchoWindow, equalsOutputData, isEmptyOutputData, normalizeOutputData, normalizeOutputBlocks, toRenderableData } from './blok';
 
+// types/full.d.ts does `export * from './index'`, so the mutation-type
+// constants are typed here too and need the matching runtime binding.
+export {
+  BlockAddedMutationType,
+  BlockRemovedMutationType,
+  BlockMovedMutationType,
+  BlockChangedMutationType,
+} from './blok';
+
 // Re-export all tools
 export {
   Paragraph,

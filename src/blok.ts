@@ -775,6 +775,18 @@ export { markSanitizerConfig } from './components/marks/mark-engine';
 export { BlockRendered, BlocksRendered, BlockChildrenMounted } from './components/events';
 
 /**
+ * The four block mutation-type names carried by `blok.events` / `onChange`
+ * events. `types/index.d.ts` has always re-exported these as values, so the
+ * import type-checked while the bundle shipped no runtime binding — which is
+ * why hosts hardcode 'block-added'. Keep the runtime re-export and the type
+ * re-export in step.
+ */
+export { BlockAddedMutationType } from '../types/events/block/BlockAdded';
+export { BlockRemovedMutationType } from '../types/events/block/BlockRemoved';
+export { BlockMovedMutationType } from '../types/events/block/BlockMoved';
+export { BlockChangedMutationType } from '../types/events/block/BlockChanged';
+
+/**
  * Structural comparison and emptiness predicates for saved documents, the
  * loose-wire normalizers, the shared empty-document constant, and the
  * `onSave`-echo window. Semver-guaranteed so consumers never hand-write deep

@@ -598,3 +598,40 @@ describe('Angular adapter APF output', () => {
     expect(manifest.peerDependencies?.['@angular/core']).toBeDefined()
   })
 })
+
+describe('runtime reachability of hand-copied public surfaces', () => {
+  // Each of these is declared in `types/` (or `packages/react/types/`), so a
+  // consumer's `tsc` accepts the import. The bundles enumerate their named
+  // exports explicitly, so a missing runtime re-export is invisible until the
+  // import blows up in production. Source-level tests cannot catch that gap —
+  // only reading the emitted bundle can.
+  const exportsName = (file: string, name: string): boolean =>
+    new RegExp(`\\b(?:as\\s+)?${name}\\b`).test(readFileSync(file, 'utf-8').slice(-8192))
+
+  const reactDist = resolve(dist, '../packages/react/dist')
+
+  it.each(['tools.mjs', 'tools.cjs'])('%s exports the embed-registry helpers', (bundle) => {
+    const file = resolve(dist, bundle)
+    expect(exportsName(file, 'matchEmbedService')).toBe(true)
+    expect(exportsName(file, 'buildEmbedUrl')).toBe(true)
+  })
+
+  it.each(['blok.mjs', 'blok.cjs', 'full.mjs', 'full.cjs'])(
+    '%s exports the four block mutation-type constants',
+    (bundle) => {
+      const file = resolve(dist, bundle)
+      for (const name of [
+        'BlockAddedMutationType',
+        'BlockRemovedMutationType',
+        'BlockMovedMutationType',
+        'BlockChangedMutationType',
+      ]) {
+        expect(exportsName(file, name)).toBe(true)
+      }
+    },
+  )
+
+  it.each(['index.mjs', 'index.cjs'])('@bloklabs/react %s exports USE_BLOK_CONFIG_KEYS', (bundle) => {
+    expect(exportsName(resolve(reactDist, bundle), 'USE_BLOK_CONFIG_KEYS')).toBe(true)
+  })
+})

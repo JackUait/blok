@@ -430,10 +430,28 @@ const emitList = (ctx: Ctx, element: P5Element, depth: number): void => {
   const ordered = element.tagName === 'ol';
   const bulletStyle = ordered ? 'ordered' : 'unordered';
   const start = Number(attr(element, 'start'));
-  const items = element.childNodes.filter((node): node is P5Element => isElement(node) && node.tagName === 'li');
+  const seen = { items: 0 };
 
-  for (const [index, item] of items.entries()) {
-    const parts = splitListItem(item);
+  for (const node of element.childNodes) {
+    if (!isElement(node)) {
+      continue;
+    }
+
+    /**
+     * A `ul`/`ol` that is a SIBLING of the items rather than a child of one:
+     * what HTML5 parsing makes of the unclosed-`li` nesting legacy editors
+     * emit. A browser renders it one level in, so it is imported that way.
+     */
+    if (node.tagName === 'ul' || node.tagName === 'ol') {
+      emitList(ctx, node, depth + 1);
+      continue;
+    }
+
+    if (node.tagName !== 'li') {
+      continue;
+    }
+
+    const parts = splitListItem(node);
     const style = parts.checkbox === undefined ? bulletStyle : 'checklist';
     const data: Record<string, unknown> = {
       text: inlineHtml(ctx, parts.inline),
@@ -445,10 +463,11 @@ const emitList = (ctx: Ctx, element: P5Element, depth: number): void => {
       data.checked = attr(parts.checkbox, 'checked') !== undefined;
     }
 
-    if (ordered && index === 0 && Number.isInteger(start)) {
+    if (ordered && seen.items === 0 && Number.isInteger(start)) {
       data.start = start;
     }
 
+    seen.items += 1;
     push(ctx, 'list', data);
     convertNodes(ctx, parts.blocks);
 
@@ -737,11 +756,7 @@ const convertElement = (ctx: Ctx, element: P5Element): void => {
   const heading = HEADING.exec(tag);
 
   if (heading !== null) {
-    const text = inlineHtml(ctx, element.childNodes);
-
-    if (text !== '') {
-      push(ctx, 'header', { text, level: Number(heading[1]) });
-    }
+    emitInlineRun(ctx, element.childNodes, 'header', { level: Number(heading[1]) });
 
     return;
   }

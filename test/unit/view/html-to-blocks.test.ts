@@ -113,6 +113,53 @@ describe('htmlToBlocks — lists', () => {
     ]);
   });
 
+  it('indents a list parsed as a sibling of the item it belongs under', () => {
+    expect(shape(htmlToBlocks('<ol><li>A</li><ol><li>B</li><li>C</li></ol></ol>'))).toEqual([
+      { type: 'list', data: { text: 'A', style: 'ordered', depth: 0 } },
+      { type: 'list', data: { text: 'B', style: 'ordered', depth: 1 } },
+      { type: 'list', data: { text: 'C', style: 'ordered', depth: 1 } },
+    ]);
+  });
+
+  it('indents a sibling list that opens the list, before any item', () => {
+    expect(shape(htmlToBlocks('<ul><ul><li>B</li></ul><li>A</li></ul>'))).toEqual([
+      { type: 'list', data: { text: 'B', style: 'unordered', depth: 1 } },
+      { type: 'list', data: { text: 'A', style: 'unordered', depth: 0 } },
+    ]);
+  });
+
+  it('carries each sibling list\'s own bullet style', () => {
+    expect(shape(htmlToBlocks('<ul><li>A</li><ol><li>B</li></ol><li>C</li><ul><li>D</li></ul></ul>'))).toEqual([
+      { type: 'list', data: { text: 'A', style: 'unordered', depth: 0 } },
+      { type: 'list', data: { text: 'B', style: 'ordered', depth: 1 } },
+      { type: 'list', data: { text: 'C', style: 'unordered', depth: 0 } },
+      { type: 'list', data: { text: 'D', style: 'unordered', depth: 1 } },
+    ]);
+  });
+
+  it('nests sibling lists deeper than one level', () => {
+    expect(shape(htmlToBlocks('<ul><li>A</li><ul><li>B</li><ul><li>C</li></ul></ul></ul>'))).toEqual([
+      { type: 'list', data: { text: 'A', style: 'unordered', depth: 0 } },
+      { type: 'list', data: { text: 'B', style: 'unordered', depth: 1 } },
+      { type: 'list', data: { text: 'C', style: 'unordered', depth: 2 } },
+    ]);
+  });
+
+  it('mixes a sibling list with a properly nested one', () => {
+    expect(shape(htmlToBlocks('<ol><li>A<ol><li>B</li></ol></li><ol><li>C</li></ol></ol>'))).toEqual([
+      { type: 'list', data: { text: 'A', style: 'ordered', depth: 0 } },
+      { type: 'list', data: { text: 'B', style: 'ordered', depth: 1 } },
+      { type: 'list', data: { text: 'C', style: 'ordered', depth: 1 } },
+    ]);
+  });
+
+  it('gives start to the first item of the list that declares it, past a sibling list', () => {
+    expect(shape(htmlToBlocks('<ol start="5"><ol><li>B</li></ol><li>A</li></ol>'))).toEqual([
+      { type: 'list', data: { text: 'B', style: 'ordered', depth: 1 } },
+      { type: 'list', data: { text: 'A', style: 'ordered', depth: 0, start: 5 } },
+    ]);
+  });
+
   it('reads a checkbox input as a checklist item', () => {
     expect(shape(htmlToBlocks('<ul><li><input type="checkbox" checked>done</li><li><input type="checkbox">todo</li></ul>')))
       .toEqual([
@@ -285,6 +332,17 @@ describe('htmlToBlocks — edges', () => {
       { type: 'image', data: { url: 'https://x.dev/a.png' } },
       { type: 'paragraph', data: { text: 'after' } },
     ]);
+  });
+
+  it('splits a heading that mixes text and an image, keeping both', () => {
+    expect(shape(htmlToBlocks('<h2>Title<img src="https://x.dev/a.png"></h2>'))).toEqual([
+      { type: 'header', data: { text: 'Title', level: 2 } },
+      { type: 'image', data: { url: 'https://x.dev/a.png' } },
+    ]);
+  });
+
+  it('emits nothing for a heading with no text', () => {
+    expect(shape(htmlToBlocks('<h2></h2><h3>  </h3>'))).toEqual([]);
   });
 
   it('keeps block content that follows a list item\'s own text', () => {

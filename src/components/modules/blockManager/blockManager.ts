@@ -558,11 +558,22 @@ export class BlockManager extends Module {
    *   re-render. Defaults to false: the render/seed path (Renderer.render) loads a
    *   document without firing a change mutation. The public api.blocks.insertMany
    *   wrapper passes true so a programmatic bulk insert mirrors single insert().
+   * @param options.yjsSync - how the batch reaches the document. 'replace' (default)
+   *   is the LOAD path: `fromJSON` wipes the doc and reloads it from this batch.
+   *   'add' is the INSERT path: the batch is added to whatever the doc already
+   *   holds. Anything inserting into a live document must pass 'add' — 'replace'
+   *   destroys every other block in the doc (and the undo history) while the
+   *   in-memory store, and therefore `save()`, still looks correct.
+   *   Ignored when `skipYjsSync` is set.
    */
   public insertMany(
     blocks: Block[],
     index = 0,
-    { notify = false, skipYjsSync = false }: { notify?: boolean; skipYjsSync?: boolean } = {}
+    { notify = false, skipYjsSync = false, yjsSync = 'replace' }: {
+      notify?: boolean;
+      skipYjsSync?: boolean;
+      yjsSync?: 'replace' | 'add';
+    } = {}
   ): void {
     const blockById = new Map<string, Block>();
 
@@ -600,7 +611,11 @@ export class BlockManager extends Module {
      * keep their ids, so the existing Yjs state already describes them.
      */
     if (!skipYjsSync) {
-      this.Blok.YjsManager.fromJSON(blockDataArray);
+      if (yjsSync === 'add') {
+        this.addBlocksToDocument(blockDataArray, index);
+      } else {
+        this.Blok.YjsManager.fromJSON(blockDataArray);
+      }
     }
 
     // Wrap in atomic operation so that RENDERED lifecycle hooks (which may
@@ -630,6 +645,35 @@ export class BlockManager extends Module {
         index,
       });
     }
+  }
+
+  /**
+   * Add a batch to the document, leaving everything already in it alone.
+   *
+   * ONE `transact`, so the batch is a single undo entry carrying the same
+   * 'local' origin a single `insert()` writes with — a non-local origin would
+   * either skip the undo stack or be replayed back as a remote change.
+   *
+   * A child whose parent is in the SAME batch is dropped from that parent's
+   * `content` payload and placed by its own flat index instead: the serializer
+   * copies `content` into the parent's contentIds verbatim, so keeping both
+   * would list that child twice.
+   * @param blockDataArray - the batch, in flat document order
+   * @param index - flat index the batch starts at
+   */
+  private addBlocksToDocument(blockDataArray: OutputBlockData[], index: number): void {
+    const idsInBatch = new Set(blockDataArray.map((blockData) => blockData.id));
+
+    this.Blok.YjsManager.transact(() => {
+      blockDataArray.forEach((blockData, offset) => {
+        const content = blockData.content?.filter((childId) => !idsInBatch.has(childId));
+
+        this.Blok.YjsManager.addBlock({
+          ...blockData,
+          ...(content !== undefined && { content }),
+        }, index + offset);
+      });
+    });
   }
 
   /**

@@ -1391,10 +1391,11 @@ describe('BlocksAPI', () => {
       expect(blockManager.composeBlock).toHaveBeenCalledTimes(2);
       // notify: true so a programmatic bulk insert emits BlockChanged and
       // reactive consumers (React useBlocks insertTree/insertMarkdown) re-render.
+      // yjsSync 'add' so the batch joins the document instead of replacing it.
       expect(blockManager.insertMany).toHaveBeenCalledWith(
         expect.arrayContaining([ expect.objectContaining({ id: '1' }) ]),
         0,
-        { notify: true }
+        { notify: true, yjsSync: 'add' }
       );
       expect(result).toHaveLength(2);
       expect(result[0]).toHaveProperty('wrappedBlock');
@@ -1425,7 +1426,7 @@ describe('BlocksAPI', () => {
       expect(blockManager.insertMany).toHaveBeenCalledWith(
         expect.arrayContaining([ expect.objectContaining({ id: 'new' }) ]),
         4,
-        { notify: true }
+        { notify: true, yjsSync: 'add' }
       );
     });
 

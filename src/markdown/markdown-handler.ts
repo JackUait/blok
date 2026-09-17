@@ -153,7 +153,10 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
     }));
     const blocksToInsert = composed.map(({ block }) => block);
 
-    BlockManager.insertMany(blocksToInsert, insertIndex);
+    // yjsSync 'add': markdown lands in a LIVE document, and the default
+    // 'replace' reloads the doc from this batch alone, dropping every block
+    // around it from Yjs while the in-memory store still reads correctly.
+    BlockManager.insertMany(blocksToInsert, insertIndex, { yjsSync: 'add' });
 
     // Reparent every top-level produced block into the surrounding container so
     // the paste stays nested (hierarchical children like table cells already

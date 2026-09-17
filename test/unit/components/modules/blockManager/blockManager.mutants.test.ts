@@ -1536,6 +1536,46 @@ describe('BlockManager.insertMany serialization and side effects', () => {
     harness.blockManager.insertMany([plain], 0, { skipYjsSync: true });
 
     expect(harness.yjs.fromJSON).not.toHaveBeenCalled();
+    expect(harness.yjs.addBlock).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Renderer.render's view-only rebuild (repaint, read-only toggle, collaboration
+   * resync) passes skipYjsSync: the blocks are ALREADY in the doc, so any doc
+   * write here would duplicate or reorder them. The store still has to be filled.
+   */
+  it('still fills the store for a view-only rebuild that skips the doc', () => {
+    const plain = createBlockStub({ id: 'plain' });
+    const harness = createHarness({ blocks: [] });
+
+    harness.blockManager.insertMany([plain], 0, { skipYjsSync: true });
+
+    expect(harness.store).toEqual([plain]);
+  });
+
+  /**
+   * The load path is the ONE caller that may wipe the doc: `blocks.render()`
+   * replaces the document with the batch it was handed.
+   */
+  it('replaces the document for the load path and adds for an insert', () => {
+    const loaded = createBlockStub({ id: 'loaded' });
+    const loadHarness = createHarness({ blocks: [] });
+
+    loadHarness.blockManager.insertMany([loaded], 0);
+
+    expect(loadHarness.yjs.fromJSON).toHaveBeenCalledOnce();
+    expect(loadHarness.yjs.addBlock).not.toHaveBeenCalled();
+
+    const added = createBlockStub({ id: 'added' });
+    const addHarness = createHarness({ blocks: [] });
+
+    addHarness.blockManager.insertMany([added], 2, { yjsSync: 'add' });
+
+    expect(addHarness.yjs.fromJSON).not.toHaveBeenCalled();
+    expect(addHarness.yjs.addBlock).toHaveBeenCalledWith(
+      { id: 'added', type: 'paragraph', data: {} },
+      2
+    );
   });
 });
 

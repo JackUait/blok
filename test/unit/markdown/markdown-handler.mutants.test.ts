@@ -569,6 +569,20 @@ describe('MarkdownHandler — converter outcomes', () => {
     }
   });
 
+  /**
+   * Markdown is inserted INTO a live document. The default 'replace' reloads
+   * the Yjs doc from the converted batch alone, deleting every other block
+   * from the doc (and every peer) while the in-memory store still looks right.
+   */
+  it('adds the converted batch to the document instead of replacing it', async () => {
+    converter.mockResolvedValue([{ id: 'x1', type: 'paragraph', data: { text: 'a' } }]);
+    const { blok, insertMany } = createBlokMock({ currentBlockIndex: 3 });
+
+    await createHandler(blok).handle('a', { canReplaceCurrentBlock: false });
+
+    expect(insertMany.mock.calls[0][2]).toEqual({ yjsSync: 'add' });
+  });
+
   it('moves the insertion point past the current block when nothing is replaced', async () => {
     converter.mockResolvedValue([{ id: 'x1', type: 'paragraph', data: { text: 'a' } }]);
     const { blok, insertMany, removeBlock } = createBlokMock({ currentBlockIndex: 3 });

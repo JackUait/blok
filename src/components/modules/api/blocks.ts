@@ -605,12 +605,16 @@ export class BlocksAPI extends Module {
         origin: 'api',
       });
     });
-    
+
     // notify: a programmatic bulk insert through the public API must emit a
     // BlockChanged mutation (mirroring single insert) so reactive consumers like
     // the React useBlocks hook re-render. Renderer.render() bypasses this wrapper
     // and calls BlockManager.insertMany directly, so initial render stays silent.
-    this.Blok.BlockManager.insertMany(blocksToInsert, index, { notify: true });
+    // yjsSync 'add': this inserts into a LIVE document. The default 'replace'
+    // reloads the doc from this batch alone, which silently deleted every other
+    // block from Yjs (peers and the next reload) while the in-memory store —
+    // and so `save()` — still looked right.
+    this.Blok.BlockManager.insertMany(blocksToInsert, index, { notify: true, yjsSync: 'add' });
 
     return blocksToInsert.map((block) => new BlockAPI(block, this.Blok.API));
   };

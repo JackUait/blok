@@ -663,6 +663,11 @@ describe('caret layer — the selection shade', () => {
     const covered: string[] = [];
 
     harness.stubRect(harness.holderOf('block-1'), HOLDER_BOX);
+    // A caret that measures on its own. Left at jsdom's zero height, the caret
+    // pass falls through to probing the character after the offset, and those
+    // one-character ranges land in `covered` beside the selection's.
+    vi.spyOn(Range.prototype, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(140, 210, 0, 18));
     vi.spyOn(Range.prototype, 'getClientRects')
       .mockImplementation(function measured(this: Range): DOMRectList {
         covered.push(this.toString());

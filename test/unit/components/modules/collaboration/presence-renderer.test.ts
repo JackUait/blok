@@ -568,6 +568,94 @@ describe('presence renderer', () => {
         window.ResizeObserver = original;
       }
     });
+
+    /**
+     * A fake FontFaceSet that can run more than one loading cycle. Per CSS Font
+     * Loading, `fonts.ready` is REPLACED with a fresh pending promise every
+     * time the set re-enters loading, so a handle taken once never hears about
+     * the second face — `loadingdone` fires once per cycle instead.
+     */
+    const fakeFontFaceSet = (): { listeners: Set<() => void>; finishLoading: () => void; removed: number } => {
+      const listeners = new Set<() => void>();
+      const set = {
+        listeners,
+        removed: 0,
+        finishLoading: (): void => listeners.forEach((listener) => listener()),
+      };
+
+      Object.defineProperty(document, 'fonts', {
+        configurable: true,
+        value: {
+          ready: Promise.resolve(),
+          addEventListener: (type: string, listener: () => void): void => {
+            if (type === 'loadingdone') {
+              listeners.add(listener);
+            }
+          },
+          removeEventListener: (type: string, listener: () => void): void => {
+            if (type === 'loadingdone' && listeners.delete(listener)) {
+              set.removed += 1;
+            }
+          },
+        },
+      });
+
+      return set;
+    };
+
+    it('re-measures the carets every time a font finishes loading, not just the first', async () => {
+      const fonts = fakeFontFaceSet();
+
+      try {
+        const harness = setup();
+        const rect = vi.spyOn(Range.prototype, 'getBoundingClientRect').mockReturnValue({
+          left: 10, top: 0, height: 18, right: 10, bottom: 18, width: 0, x: 10, y: 0,
+          toJSON: () => ({}),
+        });
+
+        harness.renderer.render([named(99, 'Grace', 'block-2')], 42);
+
+        rect.mockReturnValue({
+          left: 90, top: 0, height: 18, right: 90, bottom: 18, width: 0, x: 90, y: 0,
+          toJSON: () => ({}),
+        });
+        fonts.finishLoading();
+
+        // A font swap moves the text sideways without changing the host's box,
+        // so the ResizeObserver never fires for it. Measured in Chromium at
+        // 16px/24px: the caret moved a full character and the observer did not
+        // run once.
+        expect(caret(harness.holderOf('block-2'))?.style.left).toBe('90px');
+
+        rect.mockReturnValue({
+          left: 200, top: 0, height: 18, right: 200, bottom: 18, width: 0, x: 200, y: 0,
+          toJSON: () => ({}),
+        });
+        // The bold face pulled in the first time somebody bolds text — an
+        // ordinary second cycle, and the one a once-only `fonts.ready` misses.
+        fonts.finishLoading();
+
+        expect(caret(harness.holderOf('block-2'))?.style.left).toBe('200px');
+      } finally {
+        Reflect.deleteProperty(document, 'fonts');
+      }
+    });
+
+    it('stops listening for font loads once the carets are cleared', () => {
+      const fonts = fakeFontFaceSet();
+
+      try {
+        const harness = setup();
+
+        harness.renderer.render([named(99, 'Grace', 'block-2')], 42);
+        harness.renderer.clear();
+
+        expect(fonts.listeners.size).toBe(0);
+        expect(fonts.removed).toBe(1);
+      } finally {
+        Reflect.deleteProperty(document, 'fonts');
+      }
+    });
   });
 
   describe('cleanup', () => {

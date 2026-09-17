@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { toDOMRectList } from '../../../helpers/dom-rect-list';
 import {
+  measureLine,
   measureSelection,
   readCaret,
   readCaretPosition,
@@ -390,5 +391,113 @@ describe('measureSelection', () => {
     const input = makeInput('');
 
     expect(measureSelection(input, 0, 4)).toEqual([]);
+  });
+});
+
+/**
+ * The line a peer's caret sits on.
+ *
+ * A collapsed Range is the obvious thing to measure and the one thing Chromium
+ * will not always measure, so this pins what happens when it reports nothing.
+ */
+describe('measureLine', () => {
+  /**
+   * Answer `rects` for the one Range covering `text`, and nothing for any
+   * other — which is how Chromium answers a collapsed Range it cannot place.
+   * @param text - the probe range's contents
+   * @param rects - the boxes reported for it
+   */
+  const onlyMeasure = (text: string, rects: DOMRect[]): void => {
+    vi.spyOn(Range.prototype, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 0, 0, 0));
+    vi.spyOn(Range.prototype, 'getClientRects')
+      .mockImplementation(function measured(this: Range): DOMRectList {
+        return toDOMRectList(this.toString() === text ? rects : []);
+      });
+  };
+
+  it('measures the next character when the caret itself measures nothing', () => {
+    const input = makeInput('aaaa bbbb cccc dddd <b>eeee</b> ffff');
+
+    vi.spyOn(input, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 3, 220, 72));
+    onlyMeasure('e', [new DOMRect(0, 27, 9.61, 18)]);
+
+    // Chromium reports an EMPTY rect list for a collapsed Range at a soft wrap
+    // whose next text lives in another inline element. Falling back to the
+    // input's box here draws the caret at the top-left of the WHOLE paragraph,
+    // 72px tall, instead of on the line the offset names.
+    expect(measureLine(input, 20)).toEqual({
+      left: 0,
+      top: 27,
+      height: 18,
+    });
+  });
+
+  it('takes the last rect, when the next character straddles the wrap', () => {
+    const input = makeInput('aaaa bbbb cccc dddd <b>eeee</b> ffff');
+
+    vi.spyOn(input, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 3, 220, 72));
+    onlyMeasure('e', [new DOMRect(192, 3, 0, 18), new DOMRect(0, 27, 10, 18)]);
+
+    // WebKit reports the zero-width line-end artifact FIRST and the
+    // character's real box second. The first rect is the line the caret just
+    // left.
+    expect(measureLine(input, 20)).toEqual({
+      left: 0,
+      top: 27,
+      height: 18,
+    });
+  });
+
+  it('falls back to the input box for an empty input, which has no next character', () => {
+    const input = makeInput('');
+
+    vi.spyOn(input, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 72, 220, 24));
+    onlyMeasure('e', [new DOMRect(0, 27, 9.61, 18)]);
+
+    // An empty paragraph is the ordinary case the fallback exists for, and
+    // nothing about probing forward may take it away.
+    expect(measureLine(input, 0)).toEqual({
+      left: 0,
+      top: 72,
+      height: 24,
+    });
+  });
+
+  it('falls back to the input box at the very end of the text', () => {
+    const input = makeInput('hi');
+
+    vi.spyOn(input, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 72, 220, 24));
+    onlyMeasure('e', [new DOMRect(0, 27, 9.61, 18)]);
+
+    // There is no character after the last one, so the probe range collapses
+    // and must not be measured — a collapsed probe reports the same nothing.
+    expect(measureLine(input, 2)).toEqual({
+      left: 0,
+      top: 72,
+      height: 24,
+    });
+  });
+
+  it('measures the caret itself whenever the caret measures', () => {
+    const input = makeInput('hello world');
+    const rects = vi.spyOn(Range.prototype, 'getClientRects')
+      .mockReturnValue(toDOMRectList([new DOMRect(0, 27, 9.61, 18)]));
+
+    vi.spyOn(Range.prototype, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(30, 3, 0, 18));
+
+    expect(measureLine(input, 2)).toEqual({
+      left: 30,
+      top: 3,
+      height: 18,
+    });
+    // Carets reposition on every keystroke of every peer, so the extra Range
+    // is built only where the cheap measurement came back empty.
+    expect(rects).not.toHaveBeenCalled();
   });
 });

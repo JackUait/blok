@@ -201,6 +201,7 @@ export const createPresenceRenderer = (options: PresenceRendererOptions): Presen
 
   const state = {
     reflow: null as ResizeObserver | null,
+    fontsDone: null as (() => void) | null,
   };
 
   /**
@@ -219,6 +220,23 @@ export const createPresenceRenderer = (options: PresenceRendererOptions): Presen
 
     state.reflow = new ResizeObserver(() => carets.reposition());
     state.reflow.observe(host);
+
+    // A web font swapping in moves every line sideways without changing the
+    // host's box, so the observer above never fires for it. Measured in
+    // Chromium at 16px/24px: the caret moved a full character and the observer
+    // did not run once. Undefined in jsdom, hence the guard.
+    //
+    // The event, not `fonts.ready`: that promise is REPLACED with a fresh
+    // pending one every time the set re-enters loading, so a handle taken once
+    // never hears the second cycle — and a second cycle is ordinary here, a
+    // bold face arrives the first time somebody bolds text. `loadingdone`
+    // fires once per cycle.
+    const fonts: FontFaceSet | undefined = document.fonts;
+
+    if (fonts !== undefined) {
+      state.fontsDone = (): void => carets.reposition();
+      fonts.addEventListener('loadingdone', state.fontsDone);
+    }
   };
 
   const clear = (): void => {
@@ -226,6 +244,11 @@ export const createPresenceRenderer = (options: PresenceRendererOptions): Presen
     avatars.clear();
     state.reflow?.disconnect();
     state.reflow = null;
+
+    if (state.fontsDone !== null) {
+      document.fonts?.removeEventListener('loadingdone', state.fontsDone);
+      state.fontsDone = null;
+    }
   };
 
   return {

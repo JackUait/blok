@@ -172,11 +172,57 @@ export interface LineBox {
 }
 
 /**
+ * Measure the character that follows `offset`, for the position a collapsed
+ * Range refuses to measure.
+ *
+ * Chromium reports an EMPTY rect list for a collapsed Range sitting at a soft
+ * wrap when the text after it lives in a different inline element — both
+ * conditions together, neither alone. Measured at 220px on `aaaa bbbb cccc
+ * dddd <b>eeee</b> ffff`, offset 20: Chromium answers `[]`, Firefox and WebKit
+ * answer a real box. Bold and links inside a wrapping paragraph are ordinary,
+ * so this is not a corner. The next character always measures, and its box
+ * starts exactly where the caret belongs.
+ *
+ * The LAST rect: a range that straddles the wrap reports the zero-width
+ * line-end artifact first and the character's own box second (WebKit does this
+ * for that same input), and the first rect names the line the caret has left.
+ * @param input - the editable element the offset counts into
+ * @param start - the collapsed range that measured nothing
+ * @param offset - the peer's published character offset
+ */
+const measureNextCharacter = (
+  input: HTMLElement,
+  start: Range,
+  offset: number
+): DOMRect | null => {
+  const end = resolveCaretRange(input, offset + 1);
+
+  if (end === null) {
+    return null;
+  }
+
+  const probe = document.createRange();
+
+  probe.setStart(start.startContainer, start.startOffset);
+  probe.setEnd(end.startContainer, end.startOffset);
+
+  // The caret is on the last character, so there is nothing after it to
+  // measure — a collapsed probe reports the same nothing as the caret did.
+  if (probe.collapsed) {
+    return null;
+  }
+
+  const rects = probe.getClientRects();
+
+  return rects[rects.length - 1] ?? null;
+};
+
+/**
  * Measure the line a published offset sits on.
  *
  * A collapsed Range measures zero in every engine when the element it sits in
  * has no text — an empty paragraph is the ordinary case, not an edge one — so
- * the input's own box is the fallback. Shared by the caret and the gutter
+ * the input's own box is the last fallback. Shared by the caret and the gutter
  * face, so the two agree about where an empty block's first line is.
  * @param input - the editable element the offset counts into
  * @param offset - the peer's published character offset
@@ -189,7 +235,10 @@ export const measureLine = (input: HTMLElement, offset: number): LineBox | null 
   }
 
   const rect = range.getBoundingClientRect();
-  const box = rect.height > 0 ? rect : input.getBoundingClientRect();
+  const box =
+    rect.height > 0
+      ? rect
+      : (measureNextCharacter(input, range, offset) ?? input.getBoundingClientRect());
 
   return {
     left: box.left,

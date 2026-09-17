@@ -34,9 +34,17 @@
  *   in the document - or in a detached tree, where the roots differ - moves the
  *   end to the new start. The range is already collapsed, so which end it
  *   collapses onto is not a choice.
- * - line 187, both mutants of `if (range === null)` in `measureLine`.
+ * - line 233, both mutants of `if (range === null)` in `measureLine`, and the
+ *   matching `if (end === null)` in `measureNextCharacter`.
  *   `resolveCaretRange` returns its range on both of its paths and never null,
- *   so the guard is unreachable.
+ *   so both guards are unreachable.
+ * - the `if (probe.collapsed)` guard in `measureNextCharacter`. Dropping it
+ *   measures a COLLAPSED probe instead of returning null, and a collapsed
+ *   probe sits at the very position whose measurement `measureLine` has
+ *   already rejected — so it reports the same nothing and the input box is
+ *   still the answer. Measured in all three engines: an empty input's
+ *   collapsed range answers `[]`. The guard buys a skipped `getClientRects`,
+ *   not a different result.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 

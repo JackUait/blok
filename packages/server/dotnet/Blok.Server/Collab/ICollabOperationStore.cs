@@ -323,6 +323,13 @@ public interface ICollabOperationSession : IAsyncDisposable
   /// after a checkpoint whose outcome was unknown, and what a periodic
   /// checkpointer does when nothing has advanced, so it must not force every
   /// caller to track state it should not need.
+  ///
+  /// Once a publication is durable, a store MAY discard any checkpoint it holds
+  /// below the published <see cref="CollabOperationCheckpoint.Through"/>. Only
+  /// the published one is ever read back, so retaining the rest is a choice
+  /// about recovery, not a requirement of this contract — and a store that
+  /// keeps them without collecting them grows one full-document-state file per
+  /// publication for the life of the document.
   /// </remarks>
   ValueTask WriteCheckpointAsync(
       CollabOperationCheckpoint checkpoint,

@@ -1276,13 +1276,30 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
       // an unscoped sweep is a delete of another holder's live checkpoint, with
       // no fence check in front of it.
       //
-      // The cost is a LEAK, and nothing collects it: another session's
-      // checkpoints stay on disk for the life of the document, one
-      // full-document-state file per session per generation, accumulating
-      // across every restart and failover. A "delete anything the manifest does
-      // not name" collector would be wrong — it races a live holder between its
-      // WriteSealed and its publication — so a real one needs the fence, and
-      // there is no such collector.
+      // The cost is a LEAK, and nothing collects it. A fence is minted once per
+      // Open, so it churns at the rate of 0-to-1 member transitions gated by the
+      // 30s eviction linger — far above the restart rate. Each such session
+      // strands one full-document-state file per generation. ResetAsync strands
+      // more: it publishes a new generation and collects nothing, so the whole
+      // superseded generation stays, JOURNAL INCLUDED, which is the larger half.
+      //
+      // Unfixed deliberately: this class is internal and registered only from
+      // BlokServerConformanceExtensions, whose file is entirely inside
+      // #if BLOK_SERVER_CONFORMANCE, and that harness runs in per-run mkdtemp
+      // directories. No shipped configuration reaches this code.
+      //
+      // The collector, if it is ever reachable: under the lock in Open, right
+      // after the fence is minted, delete every checkpoint/journal/baseline
+      // whose fence is < manifest.Fence and which is not one of the three files
+      // the manifest names. No lease and no mtime grace period — a fenced-out
+      // session's Republish throws CollabOperationFenceLostException, so its
+      // bytes are unreferenceable by construction, and mtime freezes during
+      // WriteSealed's flush anyway, so there is no smallest safe age. One
+      // constraint that is not obvious: the manifest is a two-slot double
+      // buffer and ReadManifest falls back to the older slot, which names the
+      // PREVIOUS publication. For checkpoints that fallback is already dead —
+      // this sweep kills it today. For generations it still works, so a
+      // generation collector must retain generation N-1 or knowingly give it up.
       var mine = string.Create(CultureInfo.InvariantCulture, $".{manifest.Fence}");
 
       foreach (var stale in Directory.GetFiles(

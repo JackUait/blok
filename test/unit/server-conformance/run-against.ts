@@ -5,8 +5,15 @@ import { sendRequest, type HttpRequestOptions, type HttpResponse } from './http-
 import { startServerProcess } from './server-process';
 
 const LOOPBACK_PLACEHOLDER = '127.0.0.1:0';
+// A port is allocated by binding and closing, so another worker's server can
+// take it in the gap before ours binds. Linux hands out ephemeral ports from a
+// randomised offset, so a run of this suite collides every so often; macOS
+// counts up and practically never does.
+const START_ATTEMPTS = 3;
 
 export interface StartServerOptions {
+  /** Test seam: the port source, so a lost race can be staged. */
+  allocatePort?: () => Promise<number>;
   args: string[];
   command?: string;
   env?: NodeJS.ProcessEnv;
@@ -42,7 +49,7 @@ function configuredServerCommand(): string {
   return command;
 }
 
-function allocateLoopbackPort(): Promise<number> {
+export function allocateLoopbackPort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const allocator = createServer();
 
@@ -120,9 +127,15 @@ export function runServerCommand(options: RunServerCommandOptions): Promise<Serv
   });
 }
 
-export async function startServer(options: StartServerOptions): Promise<RunningServer> {
-  const command = options.command ?? configuredServerCommand();
-  const port = await allocateLoopbackPort();
+function lostThePort(error: unknown): boolean {
+  return error instanceof Error && error.message.includes('address already in use');
+}
+
+async function startOnPort(
+  options: StartServerOptions,
+  command: string,
+  port: number,
+): Promise<RunningServer> {
   const baseUrl = `http://127.0.0.1:${port}`;
   const serverProcess = await startServerProcess({
     command,
@@ -141,4 +154,30 @@ export async function startServer(options: StartServerOptions): Promise<RunningS
     ),
     stop: () => serverProcess.stop(),
   };
+}
+
+export async function startServer(options: StartServerOptions): Promise<RunningServer> {
+  const command = options.command ?? configuredServerCommand();
+  const allocate = options.allocatePort ?? allocateLoopbackPort;
+  let lastError: unknown = new Error('No start was attempted');
+
+  for (let attempt = 1; attempt <= START_ATTEMPTS; attempt++) {
+    const port = await allocate();
+    const outcome = await startOnPort(options, command, port).then(
+      (server) => ({ server, error: undefined }),
+      (error: unknown) => ({ server: undefined, error }),
+    );
+
+    if (outcome.server !== undefined) {
+      return outcome.server;
+    }
+
+    lastError = outcome.error;
+
+    if (!lostThePort(lastError)) {
+      break;
+    }
+  }
+
+  throw lastError;
 }

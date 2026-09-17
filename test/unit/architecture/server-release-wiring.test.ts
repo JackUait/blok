@@ -219,6 +219,7 @@ describe('server release wiring', () => {
     const runner = read('scripts/test-server-conformance.mjs');
 
     for (const suite of [
+      'test/unit/server-conformance/harness-contract.test.ts',
       'test/unit/server-conformance/server-contract.test.ts',
       'test/unit/server-conformance/sync-contract.test.ts',
       'test/unit/server-conformance/blok-client-contract.test.ts',

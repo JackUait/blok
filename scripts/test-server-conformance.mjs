@@ -141,6 +141,7 @@ async function main() {
       join(repositoryRoot, 'node_modules/vitest/vitest.mjs'),
       'run',
       '--project=unit',
+      'test/unit/server-conformance/harness-contract.test.ts',
       'test/unit/server-conformance/server-contract.test.ts',
       'test/unit/server-conformance/sync-contract.test.ts',
       'test/unit/server-conformance/blok-client-contract.test.ts',

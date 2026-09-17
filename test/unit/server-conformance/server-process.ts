@@ -7,6 +7,11 @@ const HEALTH_POLL_INTERVAL_MS = 25;
 // The first start in a run pays the cold assembly load, and the crash-recovery
 // tests start a dozen servers; 5 s was not enough for the first of them.
 const STARTUP_TIMEOUT_MS = 20_000;
+// Program.cs writes this only after Kestrel has the socket, so it is the one
+// proof the health answer came from OUR child and not from another server that
+// won the same port. Without it a child that lost the bind is declared healthy
+// against the winner, and the test then measures the winner's flags.
+const LISTENING_MARKER = ' listening on ';
 const SHUTDOWN_TIMEOUT_MS = 2_000;
 
 export interface ServerProcessOptions {
@@ -125,7 +130,7 @@ export async function startServerProcess(options: ServerProcessOptions): Promise
 
     const healthError = await healthFailure(options.baseUrl);
 
-    if (healthError === undefined) {
+    if (healthError === undefined && stderr.includes(LISTENING_MARKER)) {
       return {
         get stderr() {
           return stderr;
@@ -135,7 +140,7 @@ export async function startServerProcess(options: ServerProcessOptions): Promise
       };
     }
 
-    lastHealthError = healthError;
+    lastHealthError = healthError ?? 'another server holds the port';
     await delay(HEALTH_POLL_INTERVAL_MS);
   }
 

@@ -205,6 +205,28 @@ The law applies to **tags and downstream parsing too**, not just attributes:
 
 **Custom tools** in E2E: inject the class source as a string via `classCode`, not as a module import.
 
+### Mutation tests — when to write one
+
+A live mutant is a question, not a task: **"if I break this line, does any user-visible behaviour change?"** Write a test only when that question has a real answer. Blok's baseline has tens of thousands of live mutants; chasing the number is not the goal and never was.
+
+**Write the test when the mutant maps to a real defect:**
+
+- **Boundaries and operators in geometry, indices and coordinates** — `<` vs `<=`, `i + 1` vs `i`, `Math.max` vs `Math.min`. These are almost never equivalent, and a live one is usually a real off-by-one.
+- **Silent-data-loss paths** — sanitizers, paste handlers, table cell content, saved-data serialization, hierarchy/reparent. A break here does not throw; it ships and corrupts a consumer's document.
+- **Code that already regressed once.** A live mutant next to an existing regression test means that test asserts the wrong thing.
+- **Conditions that gate visible UI** — show/hide, enabled/disabled, early returns.
+
+**Do NOT write the test when:**
+
+- **The mutant is equivalent.** No honest test can kill it. Mark it and move on — NEVER bend an assertion until it goes green.
+- **It is only for the percentage.** A test written to kill a mutant rather than to describe behaviour is a test on the implementation. It breaks on the next refactor and protects nothing.
+- **The target is logging, a dev-only gate, or a type-only surface.** `import type` is erased at runtime, so a type-only importer can never kill anything.
+- **The mutant is `NoCoverage`.** That does NOT mean "untested" — it usually means the run never reached it. Find out why first.
+
+**How to write it.** The test describes the user-facing scenario the mutant would break, not the mutant. **The assertion about the defect goes FIRST** — otherwise an earlier, unrelated assertion fails and "kills" the mutant without ever checking the thing the test exists for.
+
+**When to run.** Not a per-commit gate. `yarn mutate` (see `scripts/mutation-scope.mjs`, `stryker.config.json`) is a periodic audit, scoped to the area you changed.
+
 ## Accessibility
 
 Accessibility checks run via `@axe-core/playwright`.

@@ -4,7 +4,7 @@
 // NOT under fixtures/collab/, whose case directories generate-collab-fixtures.mjs
 // owns and rewrites).
 //
-//   node scripts/generate-sync-frames.mjs
+//   node scripts/generate-sync-frames.mjs [--out <dir>]
 //
 // Every frame under `frames`, and every `canonical: true` frame under
 // `v2.frames`, is produced by the REAL reference encoders (y-protocols + lib0 +
@@ -57,7 +57,7 @@ import * as syncProtocol from 'y-protocols/sync';
 import * as Y from 'yjs';
 
 const require = createRequire(import.meta.url);
-const OUT = join(
+const DEFAULT_OUT = join(
   dirname(fileURLToPath(import.meta.url)),
   '..',
   'test',
@@ -65,6 +65,31 @@ const OUT = join(
   'server-conformance',
   'fixtures',
 );
+
+/**
+ * @param {string[]} argv
+ * @returns {string}
+ */
+function parseOutDir(argv) {
+  const index = argv.indexOf('--out');
+
+  if (index === -1) {
+    return DEFAULT_OUT;
+  }
+
+  const value = argv[index + 1];
+
+  // A bare `--out --help` would otherwise create a literal `--help/` directory.
+  if (value === undefined || value.startsWith('--')) {
+    throw new Error('--out needs a directory');
+  }
+
+  return value;
+}
+
+// The freshness test regenerates into a temp dir; without --out it could only
+// overwrite the committed fixture it is checking.
+const OUT = parseOutDir(process.argv.slice(2));
 
 // y-websocket.js message types (y-protocols itself only defines the sub-types).
 const MESSAGE_SYNC = 0;

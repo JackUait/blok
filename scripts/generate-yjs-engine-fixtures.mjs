@@ -1659,7 +1659,8 @@ function parseOutDir(argv) {
 
   const value = argv[index + 1];
 
-  if (value === undefined) {
+  // A bare `--out --help` would otherwise create a literal `--help/` directory.
+  if (value === undefined || value.startsWith('--')) {
     throw new Error('--out needs a directory');
   }
 

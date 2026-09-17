@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.15.2](https://github.com/JackUait/blok/compare/v1.15.1...v1.15.2) (2026-09-17)
+
+### Features
+
+- **A server can tell a Blok document from any other JSON** — `BlokDocuments.LooksLikeADocument` answers from the parse alone, with no engine and no instance.
+  - `ValidateAsync` answered the same question only after walking every block, 294 ms on a 2000-block document.
+  - It never throws, `null` included, and promises nothing about whether the blocks are readable.
+- **Imported HTML keeps an image's width and alignment** — `FromHtmlAsync` now fills the `ImageData` fields it already declared but never wrote.
+  - Percentage widths, and float, margin or align alignment, land in the block.
+  - A px width is skipped, because the container it was measured against is not in the HTML.
+
+### Bug Fixes
+
+- **Escape out of a cross-block selection lost the selection** — A `selectionchange` still queued from the drag reopened the inline toolbar, so the second Escape closed it again instead of selecting the blocks.
+  - Re-selecting the same text, or pressing a formatting shortcut, still brings the toolbar back.
+- **The Markdown exporter dropped four constructs without reporting them** — A quote caption, an image's presentation fields, inline colour and highlight, and a table's merges, heading column and cell colours.
+  - An image wrote its caption into the `![…]` alt slot, hiding the author's alt text; the slot now carries `data.alt`.
+  - Only non-default values are reported, so an ordinary document still reports nothing.
+- **HTML import lost media inside single-field containers** — A blockquote, a `<summary>` or a `<figcaption>` swallowed an image with no warning, and a `<caption>` was never read at all.
+  - The image now follows as a block of its own, inside the toggle for a summary.
+  - A table caption leads the table as a paragraph, reported as the downgrade it is.
+- **An image inside a code block vanished on import** — `<pre>` built its text from text nodes only, so the image left no block and no warning.
+- **Legacy CMS bullets became one list per item** — `@bloklabs/core/preprocess` read the newline between two block elements as a break in the bullet run.
+- **The version-override extension could leave a page unarmed** — Every status poll re-registered both content scripts, and a re-registration during the arming reload lost the payload.
+  - The badge showed ON while the page still ran its own Blok.
+
+### Maintenance
+
+- **`Blok.Server` stops flowing BouncyCastle's compile assets** — No public member takes or returns a BouncyCastle type, so no host needs it to compile.
+  - A host that compiled against a BouncyCastle type through this package must now reference it directly.
+  - macOS still loads it at runtime, because `SslStream` there drops `X509ChainPolicy.DisableCertificateDownloads`.
+
 ## [1.15.1](https://github.com/JackUait/blok/compare/v1.15.0...v1.15.1) (2026-09-16)
 
 ### Bug Fixes

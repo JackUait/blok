@@ -18,6 +18,7 @@ import type { YjsManager } from '../yjs';
 import type { BlockChangeEvent } from '../yjs/types';
 
 import type { BlockFactory } from './factory';
+import { captureCaretAcrossRewrite } from './remote-edit-caret';
 import type { BlockOperations } from './operations';
 import type { BlockRepository } from './repository';
 import type { BlocksStore } from './types';
@@ -772,7 +773,9 @@ export class BlockYjsSync {
      * above hand the record to `composeBlock`, and everything that returned
      * earlier left the block's DATA untouched, so stamping it there would make
      * `Saver` — which reads these off the live block — persist an edit the
-     * block never took.
+     * block never took. The data-identical return BELOW is stamped on purpose:
+     * the block already holds the doc's data, so the stamp describes an edit
+     * it really is showing.
      *
      * Gated on the time, and both fields move together: they describe ONE
      * edit. A record carrying no time carries no edit either (a peer's pure
@@ -784,13 +787,44 @@ export class BlockYjsSync {
       block.lastEditedBy = lastEditedBy;
     }
 
+    // Nothing in the data changed — a peer touching a record key outside
+    // `data`, or a key this block already holds. setData rewrites the tool's
+    // content wholesale, which throws away the local user's caret, so a
+    // rewrite that would change nothing must not happen at all.
+    //
+    // Compared against `preservedData` — what the block was last rendered or
+    // set with — not a live `save()`: save() is async and OVERWRITES that same
+    // cache, so reading it here would make the baseline depend on how often
+    // this ran. Stale it can only be when the user has typed since the last
+    // save, and then skipping is what you want anyway: the local text is
+    // newer than the doc, and its own write is already on its way.
+    if (equals(data, block.preservedData)) {
+      // A container whose children moved in the doc while its own data did
+      // not — a peer adding or removing a child block produces exactly that.
+      // The only path that re-homes those children is `rematerialize`, which
+      // this return would otherwise close off, so run the reconcile here. It
+      // mirrors the doc's sibling order itself once it has re-homed anything;
+      // RENDERED is re-fired for the same reason rematerialize re-fires it —
+      // a container that saw no children still shows its empty-body state.
+      this.withAtomicOperation(() => {
+        if (this.reconcileOrphanedChildren(blockId)) {
+          block.call(BlockToolAPI.RENDERED);
+        }
+      });
+
+      return;
+    }
+
     // Update data in-place; if the tool can't take it, recreate the block.
     // The window stays open through setData and one RAF so the DOM mutation
     // observers cannot write back to Yjs and clear the redo stack.
     void this.withAtomicOperationAsync(async () => {
+      const restoreCaret = captureCaretAcrossRewrite(block, document.getSelection());
       const success = await block.setData(data);
 
-      if (!success) {
+      if (success) {
+        restoreCaret?.();
+      } else {
         this.rematerialize(block, { tool: block.name, data, tunes: block.preservedTunes, lastEditedAt, lastEditedBy });
       }
     }, { extendThroughRAF: true, blockId });

@@ -1375,6 +1375,28 @@ describe('BlockYjsSync — mutation kills', () => {
       expect(restored.contentIds).toStrictEqual(['orphan', 'settled']);
     });
 
+    it('re-homes a child the doc moved in while the container data stayed the same', async () => {
+      const { harness, orphan } = orphanHarness();
+      const container = harness.repository.getBlockById('r');
+
+      if (container === undefined) {
+        throw new Error('the harness lost the container');
+      }
+
+      // Applies the update in place, so nothing here can reach rematerialize
+      // — a peer adding a child touches contentIds and leaves data alone, and
+      // that update must still re-home the child.
+      (container.setData as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+
+      harness.emit({ blockId: 'r',
+        type: 'update',
+        origin: 'remote' });
+      await flush();
+
+      expect(harness.handlers.setBlockParent).toHaveBeenCalledWith(orphan, 'r');
+      expect(container.setData).not.toHaveBeenCalled();
+    });
+
     it('leaves the sibling order alone when nothing was re-homed', async () => {
       const restored = createBlock({ id: 'r', name: 'toggle', contentIds: ['settled', 'other'] });
       const settled = createBlock({ id: 'settled', parentId: 'r' });

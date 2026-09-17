@@ -74,6 +74,50 @@ const open = async (page: Page, doc: string, name: string, seedsEmptyRoom: boole
     seedsEmptyRoom });
 };
 
+/**
+ * The live caret in one editor's first paragraph, read in the page.
+ * @param page - the page the editor is on
+ * @param name - the editor's harness name
+ */
+const readCaret = (page: Page, name: string): Promise<unknown> => page.evaluate((harness) => {
+  const selection = document.getSelection();
+  const block = document.querySelector(`[data-blok-testid="${harness}"] [data-blok-component="paragraph"]`);
+
+  if (selection === null || selection.rangeCount === 0 || block === null) {
+    return { rangeCount: selection?.rangeCount ?? 0,
+      insideBlock: false,
+      anchorNode: null,
+      anchorText: null,
+      offset: null,
+      anchorAttached: false };
+  }
+
+  return {
+    rangeCount: selection.rangeCount,
+    insideBlock: block.contains(selection.anchorNode),
+    anchorNode: selection.anchorNode?.nodeName ?? null,
+    anchorText: selection.anchorNode?.textContent ?? null,
+    offset: selection.anchorOffset,
+    anchorAttached: selection.anchorNode?.isConnected ?? false,
+  };
+}, name);
+
+/**
+ * Puts a real caret `offset` characters into one editor's first paragraph, the
+ * way a user would: click, Home, then step right.
+ * @param page - the page the editor is on
+ * @param name - the editor's harness name
+ * @param offset - how many characters in
+ */
+const putCaretAt = async (page: Page, name: string, offset: number): Promise<void> => {
+  await paragraphs(page, name).nth(0).click();
+  await page.keyboard.press('Home');
+
+  for (let step = 0; step < offset; step += 1) {
+    await page.keyboard.press('ArrowRight');
+  }
+};
+
 test.describe('collaboration between two editors', () => {
   test('text typed on either side reaches the other', async ({ context }) => {
     const doc = newDoc();
@@ -262,6 +306,7 @@ test.describe('collaboration between two editors', () => {
     await expect(cellsA).toHaveText(placement);
   });
 
+
   /**
    * KNOWN DEFECT, not a flake — `test.fixme` so it documents the bug without
    * reddening a release gate. Found by this harness.
@@ -304,6 +349,87 @@ test.describe('collaboration between two editors', () => {
 
     expect((await savedBlocks(pageB, 'beta')).map((block) => block.id))
       .toEqual(alphaTree.map((block) => block.id));
+  });
+
+  /**
+   * Regression. A peer's edit to the block the local user is typing in used to
+   * throw that user's caret to the start of the block: `handleYjsUpdate` hands
+   * every remote update to `block.setData`, which rewrites the tool's content
+   * wholesale and detaches the text node the selection anchored into.
+   *
+   * The caret is now read as a character offset before the rewrite and put
+   * back after it, adjusted by what the peer's edit did to the text before it.
+   * An update carrying data the block already holds is skipped entirely — it
+   * used to fire for a peer changing only `textColor` and move the caret just
+   * the same.
+   */
+  test('a peer editing the same paragraph leaves the local caret where it was', async ({ context }) => {
+    const doc = newDoc();
+    const pageA = await context.newPage();
+    const pageB = await context.newPage();
+
+    await open(pageA, doc, 'alpha', true);
+    await typeInto(pageA, 'alpha', 0, 'hello world');
+
+    await open(pageB, doc, 'beta', false);
+    await expect(textIn(pageB, 'beta', 'hello world')).toBeVisible();
+
+    // A real caret, put where a user would put it: five characters in.
+    await putCaretAt(pageA, 'alpha', 5);
+
+    const before = await readCaret(pageA, 'alpha');
+
+    expect(before).toEqual({ rangeCount: 1,
+      insideBlock: true,
+      anchorNode: '#text',
+      anchorText: 'hello world',
+      offset: 5,
+      anchorAttached: true });
+
+    // B edits the SAME paragraph.
+    await typeInto(pageB, 'beta', 0, '!!!');
+    await expect(textIn(pageA, 'alpha', 'hello world!!!')).toBeVisible();
+
+    const after = await readCaret(pageA, 'alpha');
+
+    expect(after).toEqual({ rangeCount: 1,
+      insideBlock: true,
+      anchorNode: '#text',
+      anchorText: 'hello world!!!',
+      offset: 5,
+      anchorAttached: true });
+  });
+
+  /**
+   * The other half of the offset rule, and the only branch a real browser was
+   * not exercising: when the peer types BEFORE the local caret, keeping the
+   * number would leave the caret a word behind — it has to move by what the
+   * peer inserted.
+   */
+  test('a peer typing before the local caret pushes it along', async ({ context }) => {
+    const doc = newDoc();
+    const pageA = await context.newPage();
+    const pageB = await context.newPage();
+
+    await open(pageA, doc, 'alpha', true);
+    await typeInto(pageA, 'alpha', 0, 'hello world');
+
+    await open(pageB, doc, 'beta', false);
+    await expect(textIn(pageB, 'beta', 'hello world')).toBeVisible();
+
+    await putCaretAt(pageA, 'alpha', 5);
+
+    // B types at the very START of the same paragraph.
+    await putCaretAt(pageB, 'beta', 0);
+    await pageB.keyboard.type('say ');
+    await expect(textIn(pageA, 'alpha', 'say hello world')).toBeVisible();
+
+    expect(await readCaret(pageA, 'alpha')).toEqual({ rangeCount: 1,
+      insideBlock: true,
+      anchorNode: '#text',
+      anchorText: 'say hello world',
+      offset: 9,
+      anchorAttached: true });
   });
 
   /**

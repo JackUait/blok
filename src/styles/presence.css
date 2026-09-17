@@ -34,6 +34,19 @@
   user-select: none;
 }
 
+/* The text a peer has selected. Overlay boxes on the holder, one per wrapped
+   line — never spans around the text, which the child-holder decoration law
+   forbids and which would ride into saves and copies. The wash paints OVER the
+   glyphs — measured, and no z-index puts it behind them here — so 22% is a
+   contrast budget, not a taste. Under the caret's z-index so the line stays
+   readable where the two overlap. */
+[data-blok-presence-selection] {
+  position: absolute;
+  z-index: 1;
+  background: color-mix(in srgb, var(--blok-presence-color) 22%, transparent);
+  pointer-events: none;
+}
+
 /* The name above a remote caret. A SIBLING of the caret, not a pseudo-element
    on it: the resting pulse animates the caret's opacity, and a name breathing
    with the line would be unreadable. The text is an attribute this rule paints,

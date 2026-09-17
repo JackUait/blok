@@ -13,6 +13,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { toDOMRectList } from '../../../helpers/dom-rect-list';
 import type { CaretPosition } from '../../../../../src/components/modules/collaboration/caret-position';
 import {
   createCaretLayer,
@@ -24,6 +25,7 @@ const CARET_ATTR = 'data-blok-presence-caret';
 const IDLE_ATTR = 'data-blok-presence-caret-idle';
 const LABEL_ATTR = 'data-blok-presence-caret-label';
 const SHOWN_ATTR = 'data-blok-presence-caret-shown';
+const SELECTION_ATTR = 'data-blok-presence-selection';
 const COLOR_PROPERTY = '--blok-presence-color';
 
 interface Harness {
@@ -33,6 +35,7 @@ interface Harness {
   toolRootOf: (blockId: string) => HTMLElement;
   caretsIn: (blockId: string) => HTMLElement[];
   labelsIn: (blockId: string) => HTMLElement[];
+  shadesIn: (blockId: string) => HTMLElement[];
   /** Give an element a rect, so the holder-relative arithmetic can be asserted. */
   stubRect: (element: Element, rect: { left: number; top: number; height: number }) => void;
 }
@@ -125,6 +128,7 @@ const setup = (options: { blockIds?: string[]; inputCount?: number; restAfterMs?
     },
     caretsIn: (blockId) => Array.from(holderOf(blockId).querySelectorAll<HTMLElement>(`[${CARET_ATTR}]`)),
     labelsIn: (blockId) => Array.from(holderOf(blockId).querySelectorAll<HTMLElement>(`[${LABEL_ATTR}]`)),
+    shadesIn: (blockId) => Array.from(holderOf(blockId).querySelectorAll<HTMLElement>(`[${SELECTION_ATTR}]`)),
     stubRect: (element, rect) => {
       vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({
         left: rect.left,
@@ -145,6 +149,14 @@ const at = (blockId: string, head: number, inputIndex = 0): CaretPosition => ({
   blockId,
   inputIndex,
   anchor: head,
+  head,
+});
+
+/** A non-collapsed selection: the peer started at `anchor` and is at `head`. */
+const spanning = (blockId: string, anchor: number, head: number, inputIndex = 0): CaretPosition => ({
+  blockId,
+  inputIndex,
+  anchor,
   head,
 });
 
@@ -337,6 +349,19 @@ describe('caret layer — what it refuses to draw', () => {
 
     harness.layer.render([peer(1, { caret: at('block-1', 2, 7) })]);
 
+    expect(harness.caretsIn('block-1')).toHaveLength(0);
+  });
+
+  it('leaves nothing behind when a named peer cannot be placed', () => {
+    const harness = setup({ inputCount: 1 });
+
+    harness.layer.render([peer(1, { name: 'Ada Lovelace', caret: at('block-1', 2, 7) })]);
+    harness.layer.render([peer(1, { name: 'Ada Lovelace', caret: at('block-1', 2, 7) })]);
+
+    // The caret built for the pass carries a name flag and a pointer watch on
+    // the holder. An entry that never reaches the ledger is never swept, so
+    // anything it left up stays up — one more dead listener per pass.
+    expect(harness.labelsIn('block-1')).toHaveLength(0);
     expect(harness.caretsIn('block-1')).toHaveLength(0);
   });
 
@@ -568,5 +593,243 @@ describe('caret layer — the name flag', () => {
     harness.layer.render([]);
 
     expect(harness.labelsIn('block-1')).toHaveLength(0);
+  });
+});
+
+/**
+ * The shade over the text a peer has selected.
+ *
+ * Absolutely-positioned divs on the block HOLDER, one per wrapped line — never
+ * `<span>`s wrapped around the text the way the local fake background works.
+ * The child-holder decoration law forbids writing at or below a child's tool
+ * root, and a wrapper there would land in saves, in copied selections and in
+ * the tool's own markup.
+ */
+describe('caret layer — the selection shade', () => {
+  const HOLDER_BOX = { left: 100, top: 200, height: 40 };
+
+  const stubRects = (harness: Harness, rects: DOMRect[]): void => {
+    harness.stubRect(harness.holderOf('block-1'), HOLDER_BOX);
+    vi.spyOn(Range.prototype, 'getClientRects').mockReturnValue(toDOMRectList(rects));
+  };
+
+  it('shades the region a peer has selected, relative to the holder', () => {
+    const harness = setup();
+
+    stubRects(harness, [new DOMRect(140, 210, 60, 18)]);
+
+    harness.layer.render([peer(1, { caret: spanning('block-1', 2, 7) })]);
+
+    const [shade] = harness.shadesIn('block-1');
+
+    expect(shade?.style.left).toBe('40px');
+    expect(shade?.style.top).toBe('10px');
+    expect(shade?.style.width).toBe('60px');
+    expect(shade?.style.height).toBe('18px');
+  });
+
+  it('shades nothing for a peer whose caret is collapsed', () => {
+    const harness = setup();
+
+    stubRects(harness, [new DOMRect(140, 210, 60, 18)]);
+
+    harness.layer.render([peer(1, { caret: at('block-1', 3) })]);
+
+    // A parked peer gets the caret line and nothing else. Shading every
+    // collapsed caret would tint the document for everybody merely present.
+    expect(harness.shadesIn('block-1')).toHaveLength(0);
+    expect(harness.caretsIn('block-1')).toHaveLength(1);
+  });
+
+  it('draws one shade per wrapped line of the selection', () => {
+    const harness = setup();
+
+    stubRects(harness, [
+      new DOMRect(140, 210, 70, 18),
+      new DOMRect(100, 228, 25, 18),
+    ]);
+
+    harness.layer.render([peer(1, { caret: spanning('block-1', 1, 9) })]);
+
+    const shades = harness.shadesIn('block-1');
+
+    expect(shades).toHaveLength(2);
+    expect(shades[1]?.style.top).toBe('28px');
+    expect(shades[1]?.style.left).toBe('0px');
+  });
+
+  it('shades the same region when the selection runs backwards', () => {
+    const harness = setup();
+    const covered: string[] = [];
+
+    harness.stubRect(harness.holderOf('block-1'), HOLDER_BOX);
+    vi.spyOn(Range.prototype, 'getClientRects')
+      .mockImplementation(function measured(this: Range): DOMRectList {
+        covered.push(this.toString());
+
+        return toDOMRectList([new DOMRect(140, 210, 60, 18)]);
+      });
+
+    harness.layer.render([peer(1, { caret: spanning('block-1', 2, 7) })]);
+    harness.layer.render([peer(1, { caret: spanning('block-1', 7, 2) })]);
+
+    // `head` is the end the peer is moving, so dragging leftwards puts it
+    // BEFORE the anchor. Both directions cover the same characters.
+    expect(new Set(covered)).toEqual(new Set(['llo w']));
+  });
+
+  it('appends the shade to the holder, never inside the tool root', () => {
+    const harness = setup();
+
+    stubRects(harness, [new DOMRect(140, 210, 60, 18)]);
+
+    harness.layer.render([peer(1, { caret: spanning('block-1', 2, 7) })]);
+
+    const [shade] = harness.shadesIn('block-1');
+
+    expect(harness.toolRootOf('block-1').contains(shade ?? null)).toBe(false);
+    expect(shade?.parentElement).toBe(harness.holderOf('block-1'));
+  });
+
+  it('carries the peer colour, so two peers shade in their own colours', () => {
+    const harness = setup();
+
+    stubRects(harness, [new DOMRect(140, 210, 60, 18)]);
+
+    harness.layer.render([
+      peer(1, { color: '#0b6e99', caret: spanning('block-1', 2, 7) }),
+      peer(2, { color: '#c1461f', caret: spanning('block-1', 1, 4) }),
+    ]);
+
+    const colours = harness.shadesIn('block-1').map((shade) => shade.style.getPropertyValue(COLOR_PROPERTY));
+
+    expect(colours).toEqual(['#0b6e99', '#c1461f']);
+  });
+
+  it('reuses the shade elements as the selection grows and shrinks', () => {
+    const harness = setup();
+    const rects = vi.spyOn(Range.prototype, 'getClientRects')
+      .mockReturnValue(toDOMRectList([new DOMRect(140, 210, 60, 18)]));
+
+    harness.stubRect(harness.holderOf('block-1'), HOLDER_BOX);
+    harness.layer.render([peer(1, { caret: spanning('block-1', 2, 7) })]);
+
+    const [first] = harness.shadesIn('block-1');
+
+    rects.mockReturnValue(toDOMRectList([
+      new DOMRect(140, 210, 60, 18),
+      new DOMRect(100, 228, 90, 18),
+      new DOMRect(100, 246, 30, 18),
+    ]));
+    harness.layer.render([peer(1, { caret: spanning('block-1', 2, 11) })]);
+
+    // Pooled rather than rebuilt: a selection grows a line at a time while the
+    // peer drags, and tearing the shade down each pass flickers it.
+    expect(harness.shadesIn('block-1')[0]).toBe(first);
+    expect(harness.shadesIn('block-1')).toHaveLength(3);
+
+    rects.mockReturnValue(toDOMRectList([new DOMRect(140, 210, 20, 18)]));
+    harness.layer.render([peer(1, { caret: spanning('block-1', 2, 4) })]);
+
+    expect(harness.shadesIn('block-1')).toHaveLength(1);
+  });
+
+  it('counts the peer as moving while they extend a selection onto their caret', () => {
+    const harness = setup({ restAfterMs: 2000 });
+
+    stubRects(harness, [new DOMRect(140, 210, 60, 18)]);
+
+    harness.layer.render([peer(1, { caret: at('block-1', 3) })]);
+    vi.advanceTimersByTime(2001);
+    // Dragging leftwards from character 8 back onto the caret moves the ANCHOR
+    // while `head` stays put. A position key that omits the anchor reads this
+    // as a peer who has not moved, and leaves them pulsing mid-drag.
+    harness.layer.render([peer(1, { caret: spanning('block-1', 8, 3) })]);
+
+    expect(harness.caretsIn('block-1')[0]?.hasAttribute(IDLE_ATTR)).toBe(false);
+  });
+
+  it('takes the shade down when the peer collapses their selection', () => {
+    const harness = setup();
+
+    stubRects(harness, [new DOMRect(140, 210, 60, 18)]);
+
+    harness.layer.render([peer(1, { caret: spanning('block-1', 2, 7) })]);
+    harness.layer.render([peer(1, { caret: at('block-1', 7) })]);
+
+    expect(harness.shadesIn('block-1')).toHaveLength(0);
+  });
+
+  it('takes the shade down with the peer who left', () => {
+    const harness = setup();
+
+    stubRects(harness, [new DOMRect(140, 210, 60, 18)]);
+
+    harness.layer.render([peer(1, { caret: spanning('block-1', 2, 7) })]);
+    harness.layer.render([]);
+
+    expect(harness.shadesIn('block-1')).toHaveLength(0);
+  });
+
+  it('takes the shade down with the peer who moved to another block', () => {
+    const harness = setup();
+
+    stubRects(harness, [new DOMRect(140, 210, 60, 18)]);
+
+    harness.layer.render([peer(1, { caret: spanning('block-1', 2, 7) })]);
+    harness.layer.render([peer(1, { caret: spanning('block-2', 1, 4) })]);
+
+    expect(harness.shadesIn('block-1')).toHaveLength(0);
+    expect(harness.shadesIn('block-2')).toHaveLength(1);
+  });
+
+  it('takes every shade down on clear', () => {
+    const harness = setup();
+
+    stubRects(harness, [new DOMRect(140, 210, 60, 18)]);
+
+    harness.layer.render([peer(1, { caret: spanning('block-1', 2, 7) })]);
+    harness.layer.clear();
+
+    expect(document.querySelectorAll(`[${SELECTION_ATTR}]`)).toHaveLength(0);
+  });
+
+  it('still says the peer name when the pointer nears a caret that has a shade', () => {
+    const harness = setup();
+
+    stubRects(harness, [new DOMRect(140, 210, 60, 18)]);
+    vi.spyOn(Range.prototype, 'getBoundingClientRect').mockReturnValue({
+      left: 140, top: 210, height: 18, right: 140, bottom: 228, width: 0, x: 140, y: 210,
+      toJSON: () => ({}),
+    });
+
+    harness.layer.render([peer(1, { caret: spanning('block-1', 2, 7) })]);
+    vi.advanceTimersByTime(3000);
+
+    const holder = harness.holderOf('block-1');
+
+    // The hover reach measures the CARET line, which is still one element even
+    // when the peer owns several shades beside it.
+    holder.dispatchEvent(new MouseEvent('pointermove', {
+      clientX: HOLDER_BOX.left + 40,
+      clientY: HOLDER_BOX.top + 12,
+      bubbles: true,
+    }));
+
+    expect(harness.labelsIn('block-1')[0]?.hasAttribute(SHOWN_ATTR)).toBe(true);
+  });
+
+  it('leaves the tool root byte-identical, writing only overlay divs beside it', () => {
+    const harness = setup();
+
+    stubRects(harness, [new DOMRect(140, 210, 60, 18)]);
+
+    const before = harness.toolRootOf('block-1').innerHTML;
+
+    harness.layer.render([peer(1, { caret: spanning('block-1', 2, 7) })]);
+
+    // The local fake background wraps selected text in spans. Presence must
+    // not: a wrapper inside the tool root rides into saves and into copies.
+    expect(harness.toolRootOf('block-1').innerHTML).toBe(before);
   });
 });

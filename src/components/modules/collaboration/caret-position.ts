@@ -197,3 +197,52 @@ export const measureLine = (input: HTMLElement, offset: number): LineBox | null 
     height: box.height,
   };
 };
+
+/** One line of a selection, in viewport coordinates. */
+export interface SelectionRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Measure the region a peer's selection covers, one box per wrapped line.
+ *
+ * `getClientRects` rather than the bounding box: a selection that wraps spans
+ * two part-lines, and a single box over both would also paint the gutter left
+ * of the second line's start and right of the first line's end.
+ * @param input - the editable element the offsets count into
+ * @param anchor - where the peer's selection started
+ * @param head - where their caret is; routinely BEFORE the anchor
+ */
+export const measureSelection = (
+  input: HTMLElement,
+  anchor: number,
+  head: number
+): SelectionRect[] => {
+  const start = resolveCaretRange(input, Math.min(anchor, head));
+  const end = resolveCaretRange(input, Math.max(anchor, head));
+
+  if (start === null || end === null) {
+    return [];
+  }
+
+  const range = document.createRange();
+
+  range.setStart(start.startContainer, start.startOffset);
+  range.setEnd(end.startContainer, end.startOffset);
+
+  if (range.collapsed) {
+    return [];
+  }
+
+  return Array.from(range.getClientRects())
+    .filter((rect) => rect.width > 0 && rect.height > 0)
+    .map((rect) => ({
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
+    }));
+};

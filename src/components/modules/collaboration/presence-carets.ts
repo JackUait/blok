@@ -1,4 +1,4 @@
-import { measureLine, type CaretPosition, type LineBox } from './caret-position';
+import { measureLine, measureSelection, type CaretPosition, type LineBox } from './caret-position';
 import { PRESENCE_COLOR_PROPERTY } from './presence';
 
 /** What the caret layer needs to know about a peer, after sanitization. */
@@ -54,6 +54,14 @@ const LABEL_ATTR = 'data-blok-presence-caret-label';
 /** Present while the flag is up. */
 const SHOWN_ATTR = 'data-blok-presence-caret-shown';
 
+/**
+ * One wrapped line of the text a peer has selected. Overlay divs on the holder
+ * and never `<span>`s around the text: the child-holder decoration law forbids
+ * writing at or below a child's tool root, which is how the LOCAL fake
+ * background works and why that approach cannot be reused here.
+ */
+const SELECTION_ATTR = 'data-blok-presence-selection';
+
 /** How long after its last move a caret counts as still moving. */
 const DEFAULT_REST_AFTER_MS = 2500;
 
@@ -73,6 +81,8 @@ const HOVER_REACH = 12;
 /** What one pass drew for one peer, so the next pass can undo it exactly. */
 interface Drawn {
   element: HTMLElement;
+  /** One div per wrapped line of the peer's selection. Pooled across passes. */
+  selection: HTMLElement[];
   /** The name flag, or null for a peer with no name to say. */
   label: HTMLElement | null;
   holder: HTMLElement;
@@ -90,7 +100,11 @@ interface Drawn {
 const positionKey = (peer: CaretPeer): string => {
   const caret = peer.caret;
 
-  return caret === null ? 'none' : `${caret.blockId}|${caret.inputIndex}|${caret.head}`;
+  // The ANCHOR counts too: dragging a selection back onto the caret moves only
+  // the anchor, and a key without it reads that as a peer who never moved.
+  return caret === null
+    ? 'none'
+    : `${caret.blockId}|${caret.inputIndex}|${caret.anchor}|${caret.head}`;
 };
 
 /**
@@ -138,6 +152,7 @@ export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
     entry.unwatch?.();
     entry.element.remove();
     entry.label?.remove();
+    entry.selection.splice(0).forEach((shade) => shade.remove());
   };
 
   /** Inert the same way the caret is, and for the same reasons. */
@@ -196,6 +211,7 @@ export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
 
     const entry: Drawn = {
       element,
+      selection: [],
       label: null,
       holder,
       key: '',
@@ -254,29 +270,66 @@ export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
    *
    * Holder-relative, because the holder is the offset parent. Viewport
    * coordinates written straight through would drift with every scroll.
-   * @param holder - the holder the caret is parented on
-   * @param caret - the peer's published position
+   * @param box - the holder's own box, measured once for the whole pass
+   * @param input - the editable element the peer's offsets count into
+   * @param offset - the peer's published character offset
    */
-  const locate = (holder: HTMLElement, caret: CaretPosition): LineBox | null => {
-    const input = resolveInputs(caret.blockId)[caret.inputIndex];
-
-    if (input === undefined) {
-      return null;
-    }
-
-    const spot = measureLine(input, caret.head);
+  const locate = (box: DOMRect, input: HTMLElement, offset: number): LineBox | null => {
+    const spot = measureLine(input, offset);
 
     if (spot === null) {
       return null;
     }
-
-    const box = holder.getBoundingClientRect();
 
     return {
       left: spot.left - box.left,
       top: spot.top - box.top,
       height: spot.height,
     };
+  };
+
+  /**
+   * Lay the shade over the text the peer has selected, one div per wrapped
+   * line.
+   *
+   * Pooled rather than rebuilt: a selection grows a line at a time while the
+   * peer drags, and tearing the divs down on every pass flickers the shade.
+   * @param entry - the peer's ledger row, which owns the pool
+   * @param holder - the holder the shade is parented on
+   * @param box - the holder's own box, measured once for the whole pass
+   * @param input - the same element the caret line was measured in
+   * @param caret - the peer's published position
+   * @param color - their already hex-gated colour
+   */
+  const shade = (
+    entry: Drawn,
+    holder: HTMLElement,
+    box: DOMRect,
+    input: HTMLElement,
+    caret: CaretPosition,
+    color: string
+  ): void => {
+    const rects = measureSelection(input, caret.anchor, caret.head);
+
+    while (entry.selection.length > rects.length) {
+      entry.selection.pop()?.remove();
+    }
+
+    rects.forEach((rect, index) => {
+      const element = entry.selection[index] ?? inert(document.createElement('div'));
+
+      if (entry.selection[index] === undefined) {
+        element.setAttribute(SELECTION_ATTR, '');
+        holder.appendChild(element);
+        entry.selection.push(element);
+      }
+
+      element.style.left = `${rect.left - box.left}px`;
+      element.style.top = `${rect.top - box.top}px`;
+      element.style.width = `${rect.width}px`;
+      element.style.height = `${rect.height}px`;
+      element.style.setProperty(PRESENCE_COLOR_PROPERTY, color);
+    });
   };
 
   const draw = (peers: CaretPeer[]): void => {
@@ -301,13 +354,22 @@ export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
       const entry = existing !== undefined && existing.holder === holder
         ? existing
         : create(holder, peer.name);
-      const spot = locate(holder, caret);
+      // Resolved once and shared: the line and its shade must measure the
+      // SAME input, or a table cell gets a caret in one cell and a shade in
+      // another.
+      const input = resolveInputs(caret.blockId)[caret.inputIndex];
+      // One holder measurement for the whole peer: the line and the shade are
+      // placed against the same box, and each read forces a layout.
+      const box = holder.getBoundingClientRect();
+      const spot = input === undefined ? null : locate(box, input, caret.head);
 
-      if (spot === null) {
-        // Nothing could be drawn, so nothing goes in the ledger — and a caret
-        // built for this pass has to come back down.
+      if (input === undefined || spot === null) {
+        // Nothing could be drawn, so nothing goes in the ledger — and an entry
+        // that never reaches the ledger is never swept either. It has to come
+        // down WHOLE: the name flag and the holder's pointer watch are only
+        // reachable through here.
         if (entry !== existing) {
-          entry.element.remove();
+          remove(entry);
         }
 
         return;
@@ -317,6 +379,7 @@ export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
       entry.element.style.top = `${spot.top}px`;
       entry.element.style.height = `${spot.height}px`;
       entry.element.style.setProperty(PRESENCE_COLOR_PROPERTY, peer.color);
+      shade(entry, holder, box, input, caret, peer.color);
 
       if (entry.label !== null) {
         entry.label.style.left = `${spot.left}px`;

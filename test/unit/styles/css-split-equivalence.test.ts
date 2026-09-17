@@ -572,7 +572,16 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Richer anonymous presence silhouettes add 952 bytes in presence.css.
     // Picker rules add 2,380 bytes to the prior 2,772-byte allowance; retain 150 bytes of headroom.
     const CONVERSION_TYPOGRAPHY_PICKER_BYTES = 5_152;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952 + CONVERSION_TYPOGRAPHY_PICKER_BYTES;
+    // Remote selection shading adds 607 measured bytes in presence.css. Only 174
+    // of them are the rule that fills the boxes drawn over text a peer has
+    // selected; the rest is the source comment above it, which records the two
+    // things that break silently: spans around the text would ride into saves,
+    // and the wash paints over the glyphs, so its 22% is a contrast budget.
+    // This budget counts AUTHORED bytes, so a comment costs against it even
+    // though no bundle carries one.
+    const REMOTE_SELECTION_SHADE_BYTES = 607;
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
+      + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

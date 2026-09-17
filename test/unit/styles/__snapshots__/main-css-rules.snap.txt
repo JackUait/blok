@@ -8706,6 +8706,13 @@
   user-select: none;
 }
 
+[data-blok-presence-selection] {
+  position: absolute;
+  z-index: 1;
+  background: color-mix(in srgb, var(--blok-presence-color) 22%, transparent);
+  pointer-events: none;
+}
+
 [data-blok-presence-caret-label] {
   position: absolute;
   z-index: 2;

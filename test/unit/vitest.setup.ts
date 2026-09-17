@@ -2,6 +2,8 @@ import { expect } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 import { vi } from 'vitest';
 
+import { toDOMRectList } from './helpers/dom-rect-list';
+
 // Extend Vitest's expect with jest-dom matchers
 expect.extend(matchers);
 
@@ -48,6 +50,15 @@ if (hasDom && !window.ResizeObserver) {
 if (hasDom && typeof window.Range.prototype.getBoundingClientRect !== 'function') {
   window.Range.prototype.getBoundingClientRect = function getBoundingClientRect(): DOMRect {
     return new window.DOMRect(0, 0, 0, 0);
+  };
+}
+
+// Same gap, the other measuring call: jsdom implements no Range.getClientRects
+// at all, so presence selection shading (one rect per wrapped line) would throw
+// under test rather than measure. Suites that need geometry stub this.
+if (hasDom && typeof window.Range.prototype.getClientRects !== 'function') {
+  window.Range.prototype.getClientRects = function getClientRects(): DOMRectList {
+    return toDOMRectList([]);
   };
 }
 

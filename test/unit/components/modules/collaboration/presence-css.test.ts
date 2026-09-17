@@ -14,6 +14,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { toDOMRectList } from '../../../helpers/dom-rect-list';
 import { DragPreview } from '../../../../../src/components/modules/drag/preview/DragPreview';
 import {
   createPresenceRenderer,
@@ -88,6 +89,16 @@ const grace = (clientId: number): PresenceState => ({
     user: { name: 'Grace Hopper', color: '#0b6e99' },
     blockId: 'block-1',
     caret: { blockId: 'block-1', inputIndex: 0, anchor: 1, head: 1 },
+  },
+});
+
+/** The same peer, mid-selection: four characters of the block are covered. */
+const graceSelecting = (clientId: number): PresenceState => ({
+  clientId,
+  state: {
+    user: { name: 'Grace Hopper', color: '#0b6e99' },
+    blockId: 'block-1',
+    caret: { blockId: 'block-1', inputIndex: 0, anchor: 1, head: 4 },
   },
 });
 
@@ -240,6 +251,49 @@ describe('presence stylesheet', () => {
 
       expect(getComputedStyle(ghostStrip).display).toBe('none');
       expect(getComputedStyle(query(harness.holder, '[data-blok-presence-gutter]')).display).not.toBe('none');
+    });
+  });
+
+  /**
+   * The shade over the text a peer has selected. It lies UNDER their caret and
+   * under the pointer: a filled box across a paragraph that swallowed clicks
+   * would stop anyone putting their own caret in the text it covers.
+   */
+  describe('the selection shade', () => {
+    it('sits below the caret line it belongs to', () => {
+      const sheet = style.sheet;
+
+      if (sheet === null) {
+        throw new Error('stylesheet did not parse');
+      }
+
+      const rules = styleRules(sheet);
+      const shade = rules.find((rule) => rule.selectorText === '[data-blok-presence-selection]');
+      const caret = rules.find((rule) => rule.selectorText === '[data-blok-presence-caret]');
+
+      expect(Number(shade?.style.zIndex)).toBeLessThan(Number(caret?.style.zIndex));
+      expect(shade?.style.position).toBe('absolute');
+    });
+
+    it('tints from the peer colour rather than a fixed one', () => {
+      // A translucent mix, so two peers overlapping still read as two people
+      // and the text underneath stays legible.
+      expect(STYLESHEET).toMatch(
+        /\[data-blok-presence-selection\][^{]*\{[^}]*color-mix\([^)]*var\(--blok-presence-color\)/
+      );
+    });
+
+    it('lets the pointer straight through to the text it covers', () => {
+      const harness = setup();
+
+      vi.spyOn(Range.prototype, 'getClientRects')
+        .mockReturnValue(toDOMRectList([new DOMRect(0, 0, 40, 18)]));
+
+      harness.renderer.render([graceSelecting(99)], 42);
+
+      const shade = query(harness.holder, '[data-blok-presence-selection]');
+
+      expect(getComputedStyle(shade).pointerEvents).toBe('none');
     });
   });
 });

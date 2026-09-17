@@ -8,9 +8,11 @@
  * offsets back into a Range to measure. A disagreement between the two draws
  * every remote caret in the wrong place, with nothing failing loudly.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { toDOMRectList } from '../../../helpers/dom-rect-list';
 import {
+  measureSelection,
   readCaret,
   readCaretPosition,
   resolveCaretRange,
@@ -65,10 +67,15 @@ const textNodeOf = (root: Node): Text => {
   return node as Text;
 };
 
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
 afterEach(() => {
   window.getSelection()?.removeAllRanges();
   mounted.forEach((element) => element.remove());
   mounted.length = 0;
+  vi.restoreAllMocks();
 });
 
 describe('readCaretPosition', () => {
@@ -274,5 +281,114 @@ describe('readCaret', () => {
     // whole rather than repaired: a half-trusted position draws in the wrong
     // place, which is worse than not drawing.
     expect(readCaret(value)).toBeNull();
+  });
+});
+
+/**
+ * The other direction of the same coordinate system: a peer's anchor and head
+ * back into the boxes their selection covers, so the layer can shade them.
+ *
+ * One rect per WRAPPED LINE, which is what `getClientRects` reports and what a
+ * shade drawn as absolutely-positioned divs needs — a single bounding box over
+ * a two-line selection would paint the whole rectangle, including the empty
+ * gutter to the left of the second line's start.
+ */
+describe('measureSelection', () => {
+  it('measures the region between anchor and head', () => {
+    const input = makeInput('hello world');
+
+    vi.spyOn(Range.prototype, 'getClientRects')
+      .mockReturnValue(toDOMRectList([new DOMRect(10, 20, 44, 18)]));
+
+    expect(measureSelection(input, 2, 7)).toEqual([
+      { left: 10, top: 20, width: 44, height: 18 },
+    ]);
+  });
+
+  it('measures nothing when anchor and head are the same offset', () => {
+    const input = makeInput('hello world');
+    const rects = vi.spyOn(Range.prototype, 'getClientRects')
+      .mockReturnValue(toDOMRectList([new DOMRect(10, 20, 44, 18)]));
+
+    // A collapsed caret is the line the caret layer already draws. Shading it
+    // would paint a sliver of colour over every peer who is merely parked.
+    expect(measureSelection(input, 4, 4)).toEqual([]);
+    expect(rects).not.toHaveBeenCalled();
+  });
+
+  it('reports one rect per wrapped line', () => {
+    const input = makeInput('hello world');
+
+    vi.spyOn(Range.prototype, 'getClientRects').mockReturnValue(toDOMRectList([
+      new DOMRect(30, 20, 70, 18),
+      new DOMRect(0, 38, 25, 18),
+    ]));
+
+    expect(measureSelection(input, 1, 9)).toHaveLength(2);
+  });
+
+  it('drops a rect with no area, which could not paint either way', () => {
+    const input = makeInput('hello world');
+
+    vi.spyOn(Range.prototype, 'getClientRects').mockReturnValue(toDOMRectList([
+      new DOMRect(30, 20, 70, 18),
+      new DOMRect(0, 38, 0, 18),
+    ]));
+
+    // Chromium reports zero-width rects for two different things in one list:
+    // the line-end artifact at a soft break, and the EMPTY line of a selection
+    // that runs over a blank one. Width alone cannot tell them apart, and this
+    // drops both. That costs no shading either way — a zero-width box paints
+    // nothing — so what it buys is not pooling a div nobody can ever see.
+    // Showing a sliver on a blank line would mean inventing a width, which is a
+    // different feature from measuring one.
+    expect(measureSelection(input, 1, 9)).toEqual([
+      { left: 30, top: 20, width: 70, height: 18 },
+    ]);
+  });
+
+  it('measures the same region when the selection runs backwards', () => {
+    const input = makeInput('hello world');
+    const covered: string[] = [];
+
+    vi.spyOn(Range.prototype, 'getClientRects')
+      .mockImplementation(function measured(this: Range): DOMRectList {
+        covered.push(this.toString());
+
+        return toDOMRectList([new DOMRect(10, 20, 44, 18)]);
+      });
+
+    const forwards = measureSelection(input, 2, 7);
+    const backwards = measureSelection(input, 7, 2);
+
+    // `head` is the end the peer is moving, so it is routinely BEFORE the
+    // anchor. A Range built in publication order would collapse to nothing.
+    expect(backwards).toEqual(forwards);
+    expect(covered).toEqual(['llo w', 'llo w']);
+  });
+
+  it('clamps both ends against the text that is actually here', () => {
+    const input = makeInput('hi');
+    const covered: string[] = [];
+
+    vi.spyOn(Range.prototype, 'getClientRects')
+      .mockImplementation(function measured(this: Range): DOMRectList {
+        covered.push(this.toString());
+
+        return toDOMRectList([new DOMRect(0, 0, 12, 18)]);
+      });
+
+    measureSelection(input, -5, 99);
+
+    // Both offsets arrived from another browser and the local text may have
+    // shrunk since; an unclamped end throws IndexSizeError and takes the whole
+    // drawing pass down with it.
+    expect(covered).toEqual(['hi']);
+  });
+
+  it('measures nothing inside an empty input, where there is no text to cover', () => {
+    const input = makeInput('');
+
+    expect(measureSelection(input, 0, 4)).toEqual([]);
   });
 });

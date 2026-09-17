@@ -1,0 +1,343 @@
+import { expect, test, type Locator, type Page } from '@playwright/test';
+
+import { gotoCollabPage, mountCollabEditor, savedBlocks, seedDocument, type SavedBlock } from '../helpers/collab';
+
+/**
+ * Two REAL Blok editors, each in its own page with its own DOM and its own
+ * tools, converging against each other in a real browser.
+ *
+ * What already existed covered neither half of this: the server-conformance
+ * tier runs real clients against the real C# server but in a node environment
+ * with no editor mounted, and `sync-first-load.test.ts` mounts a real Core but
+ * as a SINGLE jsdom client against a mock socket. The editor-side corruption
+ * bugs — a root block landing inside a nested predecessor when a batch arrives,
+ * a container re-seeding a child on replay, cell blocks collapsing into one
+ * cell when a second client joins — are invisible to both.
+ *
+ * Transport: an in-page BroadcastChannel relay through the collaboration
+ * module's `socketFactory` seam (test/playwright/tests/helpers/collab.ts). No
+ * server, no .NET build, and the editors are genuinely independent — separate
+ * pages, separate JS realms.
+ */
+
+const PARAGRAPH = '[data-blok-component="paragraph"]';
+
+/** A fresh room per test: the relay is keyed by doc id and lives in the browser. */
+const newDoc = (): string => `room-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+/**
+ * The paragraphs of one editor, in document order.
+ * @param page - the page the editor is on
+ * @param name - the editor's harness name
+ */
+const paragraphs = (page: Page, name: string): Locator => page.getByTestId(name).locator(PARAGRAPH);
+
+/**
+ * Text inside ONE editor, not anywhere on the page: the harness can mount two
+ * editors into a single page, and a page-wide `getByText` would then read the
+ * peer's copy and pass with the editor under test still empty.
+ * @param page - the page the editor is on
+ * @param name - the editor's harness name
+ * @param text - the text to look for
+ */
+const textIn = (page: Page, name: string, text: string): Locator =>
+  page.getByTestId(name).getByText(text);
+
+/**
+ * Types into one block. The click alone lands the caret at the element CENTRE,
+ * which is only past the last character while the text is short — `End` makes
+ * "append" true at any length.
+ * @param page - the page the editor is on
+ * @param name - the editor's harness name
+ * @param index - which paragraph to type into
+ * @param text - what to type
+ */
+const typeInto = async (page: Page, name: string, index: number, text: string): Promise<void> => {
+  const target = paragraphs(page, name).nth(index);
+
+  await target.click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(text);
+};
+
+/**
+ * Opens a page and mounts one editor into the room.
+ * @param page - the page to mount into
+ * @param doc - the room
+ * @param name - the editor's harness name
+ * @param seedsEmptyRoom - whether this editor opens the room (answers its own first sync)
+ */
+const open = async (page: Page, doc: string, name: string, seedsEmptyRoom: boolean): Promise<void> => {
+  await gotoCollabPage(page);
+  await mountCollabEditor(page, { doc,
+    name,
+    seedsEmptyRoom });
+};
+
+test.describe('collaboration between two editors', () => {
+  test('text typed on either side reaches the other', async ({ context }) => {
+    const doc = newDoc();
+    const pageA = await context.newPage();
+    const pageB = await context.newPage();
+
+    await open(pageA, doc, 'alpha', true);
+    await typeInto(pageA, 'alpha', 0, 'written by alpha');
+
+    await open(pageB, doc, 'beta', false);
+    await expect(textIn(pageB, 'beta', 'written by alpha')).toBeVisible();
+
+    await typeInto(pageB, 'beta', 0, ' and by beta');
+    await expect(textIn(pageA, 'alpha', 'written by alpha and by beta')).toBeVisible();
+
+    // Spelled out, not only compared side to side: two editors that both saved
+    // nothing would satisfy a bare `toEqual`.
+    const alphaSaved = await savedBlocks(pageA, 'alpha');
+
+    expect(alphaSaved.map((block) => block.text)).toEqual(['written by alpha and by beta']);
+    expect(await savedBlocks(pageB, 'beta')).toEqual(alphaSaved);
+  });
+
+  test('a client that joins later renders the document already in the room', async ({ context }) => {
+    const doc = newDoc();
+    const pageA = await context.newPage();
+    const pageB = await context.newPage();
+
+    await open(pageA, doc, 'alpha', true);
+    await seedDocument(pageA, 'alpha', [
+      { id: 'flat-one',
+        data: { text: 'first' } },
+      { id: 'flat-two',
+        type: 'header',
+        data: { text: 'second',
+          level: 2 } },
+      { id: 'flat-three',
+        data: { text: 'third' } },
+    ]);
+
+    const alphaTree = await savedBlocks(pageA, 'alpha');
+
+    await open(pageB, doc, 'beta', false);
+    await expect(textIn(pageB, 'beta', 'third')).toBeVisible();
+
+    const betaTree = await savedBlocks(pageB, 'beta');
+
+    // Order and level FIRST: the defect this retires is a block arriving at the
+    // wrong place in the batch, which a bare count would not see. The level
+    // rides along because a peer materialising the header at another level is
+    // the same class of bug and reads better here than in a whole-block diff.
+    const shape = (tree: SavedBlock[]): unknown[] =>
+      tree.map((block) => [block.id, block.type, block.parent, (block.data as { level?: number }).level]);
+
+    expect(shape(betaTree)).toEqual(shape(alphaTree));
+    expect(betaTree).toEqual(alphaTree);
+  });
+
+  test('a container keeps its children when a second client joins', async ({ context }) => {
+    const doc = newDoc();
+    const pageA = await context.newPage();
+    const pageB = await context.newPage();
+
+    await open(pageA, doc, 'alpha', true);
+    await seedDocument(pageA, 'alpha', [
+      { id: 'above',
+        data: { text: 'above the toggle' } },
+      { id: 'box',
+        type: 'toggle',
+        data: { text: 'the toggle' } },
+      { id: 'inside-one',
+        data: { text: 'inside one' },
+        parent: 'box' },
+      { id: 'inside-two',
+        data: { text: 'inside two' },
+        parent: 'box' },
+      { id: 'below',
+        data: { text: 'below the toggle' } },
+    ]);
+
+    const alphaTree = await savedBlocks(pageA, 'alpha');
+
+    await open(pageB, doc, 'beta', false);
+    await expect(textIn(pageB, 'beta', 'below the toggle')).toBeVisible();
+
+    const betaTree = await savedBlocks(pageB, 'beta');
+
+    // Parentage FIRST: a container that re-seeds a child on replay, or children
+    // that land at root level, is what this test exists for. A count alone
+    // passes while the children hang off the wrong block.
+    expect(betaTree.filter((block) => block.parent === 'box').map((block) => block.id))
+      .toEqual(['inside-one', 'inside-two']);
+    expect(betaTree.map((block) => block.id)).toEqual(alphaTree.map((block) => block.id));
+    expect(betaTree).toEqual(alphaTree);
+  });
+
+  test('a container edited by one client updates in the other', async ({ context }) => {
+    const doc = newDoc();
+    const pageA = await context.newPage();
+    const pageB = await context.newPage();
+
+    await open(pageA, doc, 'alpha', true);
+    await seedDocument(pageA, 'alpha', [
+      { id: 'box',
+        type: 'toggle',
+        data: { text: 'the toggle' } },
+      { id: 'inside-one',
+        data: { text: 'inside one' },
+        parent: 'box' },
+    ]);
+
+    await open(pageB, doc, 'beta', false);
+    await expect(textIn(pageB, 'beta', 'inside one')).toBeVisible();
+
+    // A child added on B must arrive on A INSIDE the container, not beside it.
+    await pageB.evaluate(() => {
+      window.__collabEditors?.beta.blocks.getById('box')?.insertChild(
+        { text: 'added by beta' },
+        'end',
+        'paragraph',
+        { id: 'inside-three' }
+      );
+    });
+
+    await expect(textIn(pageA, 'alpha', 'added by beta')).toBeVisible();
+
+    const alphaTree = await savedBlocks(pageA, 'alpha');
+
+    expect(alphaTree.filter((block) => block.parent === 'box').map((block) => block.id))
+      .toEqual(['inside-one', 'inside-three']);
+    expect(await savedBlocks(pageB, 'beta')).toEqual(alphaTree);
+  });
+
+  test('a reloaded client comes back to the document the room still holds', async ({ context }) => {
+    const doc = newDoc();
+    const pageA = await context.newPage();
+    const pageB = await context.newPage();
+
+    await open(pageA, doc, 'alpha', true);
+    await typeInto(pageA, 'alpha', 0, 'survives a reload');
+
+    // B holds the room open across A's reload, exactly as a second tab would.
+    await open(pageB, doc, 'beta', false);
+    await expect(textIn(pageB, 'beta', 'survives a reload')).toBeVisible();
+
+    const before = await savedBlocks(pageB, 'beta');
+
+    // A comes back with an empty document and NO right to seed one: everything
+    // it renders has to arrive from the room.
+    await open(pageA, doc, 'alpha', false);
+
+    await expect(textIn(pageA, 'alpha', 'survives a reload')).toBeVisible();
+    expect(await savedBlocks(pageA, 'alpha')).toEqual(before);
+  });
+
+  test('table cell blocks stay in their own cells for a client that joins', async ({ context }) => {
+    const doc = newDoc();
+    const pageA = await context.newPage();
+    const pageB = await context.newPage();
+
+    await open(pageA, doc, 'alpha', true);
+    await pageA.evaluate(() => {
+      window.__collabEditors?.alpha.blocks.insert('table', {}, undefined, undefined, false, false, 'grid');
+    });
+
+    const cellsA = pageA.getByTestId('alpha').getByRole('cell');
+
+    await expect(cellsA).toHaveCount(9);
+    await cellsA.nth(0).click();
+    await pageA.keyboard.type('one-one');
+    await cellsA.nth(5).click();
+    await pageA.keyboard.type('two-three');
+
+    await open(pageB, doc, 'beta', false);
+
+    const cellsB = pageB.getByTestId('beta').getByRole('cell');
+
+    await expect(cellsB).toHaveCount(9);
+
+    // Per-cell placement FIRST: every cell block collapsing into cell (0,0) is
+    // the documented failure this retires, and it leaves the block COUNT and
+    // the parentage intact — only which cell holds which text changes.
+    const placement = ['one-one', '', '', '', '', 'two-three', '', '', ''];
+
+    await expect(cellsB).toHaveText(placement);
+    await expect(cellsA).toHaveText(placement);
+  });
+
+  /**
+   * KNOWN DEFECT, not a flake — `test.fixme` so it documents the bug without
+   * reddening a release gate. Found by this harness.
+   *
+   * A callout seeds a default first child when it is created. The joining
+   * client materialises that SAME child (same id, so it is replayed, not
+   * re-created) but SAVES the container's children in a different order: the
+   * author's `save()` reports [seeded, 'inside one'] and the peer's reports
+   * ['inside one', seeded], and neither converges afterwards. Rendered text
+   * order looked the same in both, so what diverges is the saved document —
+   * a host persisting the peer's output would move the empty seeded paragraph
+   * to the end of the callout. The toggle above, which seeds no child, is
+   * identical on both sides, so this is about where a replayed container puts
+   * a child it already had, not about nesting in general.
+   *
+   * The divergence is entirely editor-side. Yjs is a CRDT and both clients
+   * apply the same updates, so the shared array cannot itself diverge — what
+   * differs is the order a peer's block store gives a replayed container's
+   * children when `save()` walks them.
+   */
+  test.fixme('a callout orders its children the same way on both clients', async ({ context }) => {
+    const doc = newDoc();
+    const pageA = await context.newPage();
+    const pageB = await context.newPage();
+
+    await open(pageA, doc, 'alpha', true);
+    await seedDocument(pageA, 'alpha', [
+      { id: 'box',
+        type: 'callout',
+        data: {} },
+      { id: 'inside-one',
+        data: { text: 'inside one' },
+        parent: 'box' },
+    ]);
+
+    const alphaTree = await savedBlocks(pageA, 'alpha');
+
+    await open(pageB, doc, 'beta', false);
+    await expect(textIn(pageB, 'beta', 'inside one')).toBeVisible();
+
+    expect((await savedBlocks(pageB, 'beta')).map((block) => block.id))
+      .toEqual(alphaTree.map((block) => block.id));
+  });
+
+  /**
+   * `api.blocks.insertMany` ADDS its batch to the document (`yjsSync: 'add'`).
+   * The default 'replace' hands `YjsManager.fromJSON` only the batch, and
+   * `fromJSON` replaces the whole document — while the in-memory store merely
+   * appends, so the author's own screen (and `save()`) still looked right while
+   * every other block was gone from the doc, from every peer and from the
+   * author's next reload.
+   */
+  test('a bulk insert keeps the blocks already in the document', async ({ context }) => {
+    const doc = newDoc();
+    const pageA = await context.newPage();
+    const pageB = await context.newPage();
+
+    await open(pageA, doc, 'alpha', true);
+    await typeInto(pageA, 'alpha', 0, 'keep me');
+
+    await open(pageB, doc, 'beta', false);
+    await expect(textIn(pageB, 'beta', 'keep me')).toBeVisible();
+
+    await pageA.evaluate(() => {
+      window.__collabEditors?.alpha.blocks.insertMany([
+        { id: 'bulk-one',
+          type: 'paragraph',
+          data: { text: 'bulk one' } },
+      ] as never);
+    });
+
+    await expect(textIn(pageB, 'beta', 'bulk one')).toBeVisible();
+    await expect(textIn(pageB, 'beta', 'keep me')).toBeVisible();
+
+    expect((await savedBlocks(pageB, 'beta')).map((block) => block.text))
+      .toEqual(['keep me', 'bulk one']);
+  });
+});
+

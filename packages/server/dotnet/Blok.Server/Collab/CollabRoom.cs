@@ -49,6 +49,13 @@ internal sealed class CollabMembership
   internal int MalformedAwarenessFrames { get; set; }
 
   /// <summary>
+  /// Distinct actors the ROOM's activity-suppression map holds — room state
+  /// reached through this handle, not this member's own. Read it under the
+  /// lane: every write to the map is lane-held, and this getter is not.
+  /// </summary>
+  internal int RoomActivityStampCount => room.ActivityStampCount;
+
+  /// <summary>
   /// Set once the room has queued ITS SyncStep2 to this member. A v2
   /// operation before that point is refused as not-synced. Room-owned,
   /// touched only under the lane.
@@ -114,6 +121,27 @@ internal sealed class CollabRoom : IDisposable
   /// room's member count, so a mass disconnect is still delivered whole.
   /// </summary>
   private const int ActivityQueueLimit = 256;
+
+  /// <summary>
+  /// Distinct actors <see cref="activityStamps"/> may hold before a recorded
+  /// activity sweeps the stamps <see cref="ActivityWindow"/> no longer
+  /// covers. Nothing else bounds that map: dropping the LEAVER'S OWN stamp is
+  /// ruled out (see <see cref="SweepActivityStampsLocked"/>), so a room that
+  /// never sits empty long enough for its eviction linger would keep one
+  /// entry per actor it has ever seen.
+  ///
+  /// It shares its value with <see cref="ActivityQueueLimit"/> above and
+  /// nothing else: that one counts records the HOST has not been told about
+  /// and decides which to throw away, this one counts actors and decides only
+  /// when to look for inert ones. Neither is
+  /// <see cref="CollabRoomOptions.MaxAwarenessClients"/> either, which counts
+  /// client-supplied awareness ids inside one frame and decides what to
+  /// REFUSE. Sized past any real room's concurrent membership, so the sweep
+  /// only ever gives up entries that are already inert.
+  ///
+  /// Internal because the tests that pin the bound drive the room up to it.
+  /// </summary>
+  internal const int ActivityStampLimit = 256;
 
   private static readonly byte[] QueryAwareness =
       SyncWire.Encode(new QueryAwarenessFrame());
@@ -300,6 +328,9 @@ internal sealed class CollabRoom : IDisposable
   /// hold the document off until the store has had time to recover.
   /// </summary>
   internal bool CommitUnavailable { get; private set; }
+
+  /// <summary>Distinct actors <see cref="activityStamps"/> holds; read by its bound tests.</summary>
+  internal int ActivityStampCount => activityStamps.Count;
 
   /// <summary>Null when the room has already closed — the caller should retry on a fresh room.</summary>
   internal Task<CollabJoinResult?> JoinAsync(
@@ -988,6 +1019,19 @@ internal sealed class CollabRoom : IDisposable
 
     var at = timeProvider.GetUtcNow();
 
+    // Ahead of every branch below, so the bound does not depend on which kind
+    // arrived or on the heartbeat being REPORTED: a suppressed one returns
+    // without stamping, and a room whose heartbeats have stopped altogether
+    // still sees the joins and leaves of whoever arrives after it. Sweeping
+    // before the suppression test rather than after cannot change its answer:
+    // the test silences an actor only while its stamp is YOUNGER than the
+    // window, and the sweep only drops stamps at or past it, so the two can
+    // never contend for the same entry.
+    if (activityStamps.Count > ActivityStampLimit)
+    {
+      SweepActivityStampsLocked(at);
+    }
+
     if (kind is CollabActivityKind.Active or CollabActivityKind.Edited)
     {
       if (activityStamps.TryGetValue(actor, out var reported) &&
@@ -1037,6 +1081,37 @@ internal sealed class CollabRoom : IDisposable
       log?.Invoke(
           $"collab: room \"{DocId}\" dropped an activity record ({lost.Kind}) " +
           $"for \"{lost.Actor}\"; the activity observer is behind");
+    }
+  }
+
+  /// <summary>
+  /// Drops every stamp <see cref="ActivityWindow"/> no longer covers. The
+  /// suppression test above is the map's ONLY reader and it admits anything
+  /// that old, so those entries can no longer change an outcome — the map
+  /// records who must stay quiet, not who was here. Call with the lane HELD.
+  ///
+  /// AGE is the only test allowed to drop a stamp. Dropping the LEAVER'S OWN
+  /// on its way out looks like the obvious alternative and is wrong: a
+  /// reconnect inside the window would be reported Active a second time.
+  ///
+  /// The map may still sit above the limit afterwards. Past this many actors
+  /// all active within ONE window there is nothing inert left to give up, and
+  /// a live stamp is never sacrificed for the count.
+  ///
+  /// One residue remains, and a timer is the only thing that would close it:
+  /// a room that records NO further activity of any kind — nobody joins,
+  /// leaves, edits or heartbeats again — holds what it has until it is
+  /// evicted. That costs a bounded amount of memory for as long as the room
+  /// stays loaded, which is not worth a wakeup per room.
+  /// </summary>
+  private void SweepActivityStampsLocked(DateTimeOffset at)
+  {
+    foreach (var (actor, reported) in activityStamps)
+    {
+      if (at - reported >= ActivityWindow)
+      {
+        activityStamps.Remove(actor);
+      }
     }
   }
 

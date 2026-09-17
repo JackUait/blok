@@ -5217,6 +5217,143 @@ public sealed class CollabRoomTests
     Assert.Empty(activity.Records);
   }
 
+  /// <summary>
+  /// The one test here that watches what the HOST is told rather than the map
+  /// behind it: a sweep that drops a stamp the window still covers
+  /// double-reports that actor the moment it heartbeats again. It is also the
+  /// only one that pins the window the sweep uses — the two tests below hold
+  /// every stamp at one instant apiece, so a shortened window leaves their
+  /// arithmetic intact and only this one goes red.
+  /// </summary>
+  [Fact]
+  public async Task AnActorInsideItsWindowIsStillSuppressedAfterASweep()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateActivityManager();
+
+    // Never leaves, so the room never empties and so never arms its eviction
+    // linger while the clock is driven past the activity window below.
+    await Join(manager, new FakeMember(actorId: "anchor"));
+
+    await HeartbeatDistinctActorsAsync(manager, "old", CollabRoom.ActivityStampLimit + 1);
+    time.Advance(TimeSpan.FromSeconds(56));
+
+    var subject = await Join(manager, new FakeMember(actorId: "subject"));
+    await subject.ReceiveAsync(
+        SyncWire.Encode(new ActivityFrame()),
+        CancellationToken.None);
+
+    // Well inside the subject's own window when the sweep below runs.
+    time.Advance(TimeSpan.FromSeconds(10));
+    await HeartbeatDistinctActorsAsync(manager, "new", CollabRoom.ActivityStampLimit + 1);
+    await subject.ReceiveAsync(
+        SyncWire.Encode(new ActivityFrame()),
+        CancellationToken.None);
+    await manager.SettleAsync();
+
+    Assert.Single(
+        activity.Records,
+        record => record.ActorId == "subject" && record.Kind == CollabActivityKind.Active);
+  }
+
+  /// <summary>
+  /// Nothing else bounds the map: a stamp is deliberately NOT dropped when its
+  /// actor leaves (a reconnect inside the window would be reported Active
+  /// twice), so a room that never sits empty long enough to be evicted would
+  /// otherwise hold one entry per actor it has ever seen.
+  /// </summary>
+  [Fact]
+  public async Task DistinctActorsAcrossTwoWindowsLeaveTheStampMapBounded()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateActivityManager();
+    var anchor = await Join(manager, new FakeMember(actorId: "anchor"));
+    var round = CollabRoom.ActivityStampLimit + 1;
+
+    await HeartbeatDistinctActorsAsync(manager, "first", round);
+    time.Advance(TimeSpan.FromSeconds(56));
+    await HeartbeatDistinctActorsAsync(manager, "second", round);
+
+    Assert.Equal(round, anchor.RoomActivityStampCount);
+  }
+
+  /// <summary>
+  /// The read side suppresses on "now - stamp is UNDER the window", so a stamp
+  /// exactly one window old already silences nothing and is pure memory. The
+  /// sweep's edge has to be the read's edge or the two disagree about which
+  /// entries still do work.
+  /// </summary>
+  [Fact]
+  public async Task AStampExactlyOneWindowOldIsSwept()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateActivityManager();
+    var anchor = await Join(manager, new FakeMember(actorId: "anchor"));
+    var edge = await Join(manager, new FakeMember(actorId: "edge"));
+
+    await edge.ReceiveAsync(
+        SyncWire.Encode(new ActivityFrame()),
+        CancellationToken.None);
+    await edge.LeaveAsync();
+    time.Advance(TimeSpan.FromSeconds(55));
+    await HeartbeatDistinctActorsAsync(manager, "fresh", CollabRoom.ActivityStampLimit + 1);
+
+    Assert.Equal(CollabRoom.ActivityStampLimit + 1, anchor.RoomActivityStampCount);
+  }
+
+  /// <summary>
+  /// A busy room that goes quiet still records the joins and leaves of whoever
+  /// arrives after it, and those are the last chance its inert stamps get: one
+  /// member who never heartbeats — a read-only viewer — holds the room off its
+  /// eviction linger for as long as it sits there, so "the room is dropped
+  /// eventually" is not a bound. Sweeping only where a heartbeat was REPORTED
+  /// leaves that room holding every stamp it had when the heartbeats stopped.
+  /// </summary>
+  [Fact]
+  public async Task AJoinAndLeaveAfterTheLimitStillSweepsTheInertStamps()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateActivityManager();
+    var anchor = await Join(manager, new FakeMember(actorId: "anchor"));
+
+    await HeartbeatDistinctActorsAsync(manager, "gone", CollabRoom.ActivityStampLimit + 1);
+    time.Advance(TimeSpan.FromSeconds(56));
+
+    // Never heartbeats: the only activity a quiet room still produces.
+    var latecomer = await Join(manager, new FakeMember(actorId: "latecomer"));
+    await latecomer.LeaveAsync();
+    await manager.SettleAsync();
+
+    Assert.Equal(0, anchor.RoomActivityStampCount);
+  }
+
+  /// <summary>
+  /// One Active report apiece from <paramref name="count"/> actors the room
+  /// has never seen, each gone again before the next arrives. Settled along
+  /// the way because the activity queue is bounded at 256 and sacrifices
+  /// heartbeats first — a backlog here would eat the records under test.
+  /// </summary>
+  private static async Task HeartbeatDistinctActorsAsync(
+      CollabRoomManager manager,
+      string prefix,
+      int count)
+  {
+    for (var index = 0; index < count; index++)
+    {
+      var membership = await Join(manager, new FakeMember(actorId: $"{prefix}-{index}"));
+
+      await membership.ReceiveAsync(
+          SyncWire.Encode(new ActivityFrame()),
+          CancellationToken.None);
+      await membership.LeaveAsync();
+
+      if (index % 16 == 15)
+      {
+        await manager.SettleAsync();
+      }
+    }
+  }
+
   [Fact]
   public async Task WithNoObserverAnActivityFrameChangesNothing()
   {

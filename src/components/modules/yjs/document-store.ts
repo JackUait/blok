@@ -1,13 +1,206 @@
+import { simpleDiffString } from 'lib0/diff';
 import { getUnixTime } from 'lib0/time';
 import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate, removeAwarenessStates } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 
-import { GRID_ORDER_KEY, GRID_ROWS_KEY, stripNul, stripNulDeep, type YBlockSerializer, type YjsOutputBlockData, stripNulIfString } from './serializer';
+import { GRID_ORDER_KEY, GRID_ROWS_KEY, isDiffableTextKey, stripNul, stripNulDeep, type YBlockSerializer, type YjsOutputBlockData, stripNulIfString } from './serializer';
 import { LOCAL_ORIGIN_TAGS, type AwarenessChange, type BlockPlacement, type LocalOriginTag, type UndoScopeType } from './types';
 // The narrow module, not the utils barrel: the collab fixture generator
 // bundles this file for node.
 import { logLabeled } from '../../utils/logger';
 import { equals } from '../../utils/object';
+
+/**
+ * How far the minimal diff searches before giving up. Myers costs O(N·D) in the
+ * edit distance: typing is D of about 1 and wrapping a range in tags is D of
+ * about 7, so the cap never bites a real edit, while a whole-string replacement
+ * — a paste over a selection, a tool normalising its own markup — has a D the
+ * size of the text and costs seconds at a few thousand characters. Past the cap
+ * the single-region answer is returned, which is what the write did before any
+ * of this existed.
+ */
+const MAX_DIFF_DISTANCE = 64;
+
+/** One edit turning the stored text into the saved text. */
+interface TextEditOp {
+  index: number;
+  remove: number;
+  insert: string;
+}
+
+/**
+ * Walk a Myers trace back into edits, oldest first.
+ * @param trace - V snapshots, one per search depth
+ * @param before - the stored text, split into code points
+ * @param after - the saved text, split into code points
+ * @param depth - the depth the search ended at
+ */
+const backtrackMyers = (
+  trace: Array<Map<number, number>>,
+  before: string[],
+  after: string[],
+  depth: number
+): TextEditOp[] => {
+  const ops: TextEditOp[] = [];
+  /* eslint-disable no-restricted-syntax -- the trace is walked backwards; both
+     coordinates move on every step, which is the shape of the algorithm. */
+  let x = before.length;
+  let y = after.length;
+
+  for (let step = depth; step > 0; step -= 1) {
+    const previous = trace[step];
+    const k = x - y;
+    const down = k === -step || (k !== step && (previous.get(k - 1) ?? 0) < (previous.get(k + 1) ?? 0));
+    const previousK = down ? k + 1 : k - 1;
+    const previousX = previous.get(previousK) ?? 0;
+    const previousY = previousX - previousK;
+
+    while (x > previousX && y > previousY) {
+      x -= 1;
+      y -= 1;
+    }
+
+    ops.push(down
+      ? { index: previousX,
+        remove: 0,
+        insert: after[previousY] }
+      : { index: previousX,
+        remove: 1,
+        insert: '' });
+
+    x = previousX;
+    y = previousY;
+  }
+  /* eslint-enable no-restricted-syntax */
+
+  ops.reverse();
+
+  // Fuse neighbours so a typed word is one insert, not one per character.
+  return ops.reduce<TextEditOp[]>((fused, op) => {
+    const last = fused[fused.length - 1];
+    const adjacent = last !== undefined &&
+      last.index + last.remove === op.index &&
+      (last.insert === '') === (op.insert === '');
+
+    if (adjacent) {
+      last.remove += op.remove;
+      last.insert += op.insert;
+
+      return fused;
+    }
+
+    fused.push({ ...op });
+
+    return fused;
+  }, []);
+};
+
+/**
+ * How far a Myers step can run along the diagonal: the two texts agree
+ * character for character from (x, y) until they do not.
+ * @param before - the stored text, split into code points
+ * @param after - the saved text, split into code points
+ * @param fromX - index into `before` to start at
+ * @param fromY - index into `after` to start at
+ */
+const slideDiagonal = (before: string[], after: string[], fromX: number, fromY: number): number => {
+  const reach = Math.min(before.length - fromX, after.length - fromY);
+  // eslint-disable-next-line no-restricted-syntax -- scan index, advanced in the loop below
+  let matched = 0;
+
+  while (matched < reach && before[fromX + matched] === after[fromY + matched]) {
+    matched += 1;
+  }
+
+  return fromX + matched;
+};
+
+/**
+ * One step of the search: extend every diagonal reachable at `depth`, recording
+ * how far each one got. True once a path has consumed both texts.
+ * @param before - the stored text, split into code points
+ * @param after - the saved text, split into code points
+ * @param v - furthest x reached per diagonal, updated in place
+ * @param depth - the edit distance being tried
+ */
+const reachesEnd = (before: string[], after: string[], v: Map<number, number>, depth: number): boolean => {
+  /* eslint-disable-next-line no-restricted-syntax -- walks the diagonals */
+  for (let k = -depth; k <= depth; k += 2) {
+    const down = k === -depth || (k !== depth && (v.get(k - 1) ?? 0) < (v.get(k + 1) ?? 0));
+    const start = down ? (v.get(k + 1) ?? 0) : (v.get(k - 1) ?? 0) + 1;
+    const x = slideDiagonal(before, after, start, start - k);
+
+    v.set(k, x);
+
+    if (x >= before.length && x - k >= after.length) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+/**
+ * Re-express edits counted in code points as the code-unit offsets `Y.Text`
+ * indexes by.
+ * @param ops - edits whose index and remove count code points
+ * @param beforePoints - the stored text, split into code points
+ */
+const toUnitOps = (ops: TextEditOp[], beforePoints: string[]): TextEditOp[] => {
+  // Pushes into the accumulator: spreading it instead made the prefix sum
+  // O(N squared), which is 2 SECONDS of blocked main thread for one keystroke
+  // in a 20k-character block — measured.
+  const unitAt = beforePoints.reduce<number[]>((offsets, point) => {
+    offsets.push(offsets[offsets.length - 1] + point.length);
+
+    return offsets;
+  }, [0]);
+
+  return ops.map((op) => ({
+    index: unitAt[op.index],
+    remove: unitAt[op.index + op.remove] - unitAt[op.index],
+    insert: op.insert,
+  }));
+};
+
+/**
+ * The smallest set of edits turning `before` into `after`.
+ *
+ * Minimal, not single-region, because these edits merge with a peer's. A
+ * one-region diff describes "wrap this phrase in a tag" as "delete the phrase,
+ * insert the tagged phrase" — so two peers wrapping OVERLAPPING phrases each
+ * delete what the other re-inserts, and the shared words land twice while the
+ * rest is dropped. Measured, and it is why `lib0`'s `simpleDiffString` is the
+ * fallback here rather than the answer.
+ * @param before - the stored text, split into code points
+ * @param after - the saved text, split into code points
+ */
+const diffText = (before: string, after: string): TextEditOp[] => {
+  // Code POINTS, not code units. An emoji is two units, and an edit boundary
+  // between them puts the halves in separate CRDT items — measured, that shows
+  // the peer (and the writer) a broken character. `lib0`'s own diff rolls back
+  // off a surrogate boundary for the same reason.
+  const beforePoints = [...before];
+  const afterPoints = [...after];
+  const limit = Math.min(beforePoints.length + afterPoints.length, MAX_DIFF_DISTANCE);
+  const v = new Map<number, number>([[1, 0]]);
+  const trace: Array<Map<number, number>> = [];
+
+  /* eslint-disable-next-line no-restricted-syntax -- counts the search depth */
+  for (let depth = 0; depth <= limit; depth += 1) {
+    trace.push(new Map(v));
+
+    if (reachesEnd(beforePoints, afterPoints, v, depth)) {
+      return toUnitOps(backtrackMyers(trace, beforePoints, afterPoints, depth), beforePoints);
+    }
+  }
+
+  const { index, remove, insert } = simpleDiffString(before, after);
+
+  return remove === 0 && insert === '' ? [] : [{ index,
+    remove,
+    insert }];
+};
 
 /**
  * Default transaction origin for updates applied through the binary seam
@@ -526,7 +719,7 @@ export class DocumentStore {
 
     this.transact(() => {
       yblock.set('type', stripNulIfString(type));
-      yblock.set('data', this.serializer.objectToYMap(this.serializer.normalizeBlockData(type, data)));
+      yblock.set('data', this.serializer.blockDataToYMap(this.serializer.normalizeBlockData(type, data)));
     }, 'local');
 
     return true;
@@ -930,6 +1123,46 @@ export class DocumentStore {
           // Through plainToYValue so a primitive-array leaf is NUL-scrubbed.
           ydata.set(dataKey, this.serializer.plainToYValue(value));
         }
+      }, 'local');
+
+      return true;
+    }
+
+    // Mergeable text over a live Y.Text: apply the whole saved string as a
+    // diff, so two peers typing in one block keep both bursts instead of the
+    // later write taking the paragraph. Runs BEFORE the generic guard below —
+    // `equals(Y.Text, string)` is a false negative exactly like the Y.Map and
+    // Y.Array cases above, and falling through would `set` a plain string over
+    // the Y.Text and silently end the merging.
+    //
+    // A plain string under the key is deliberately NOT upgraded here. Upgrading
+    // means `set`ting a fresh Y.Text over the key, and a whole-key set is
+    // last-writer-wins: a peer editing the same block loses its container with
+    // everything typed into it — measured. Only the single creation site
+    // (`blockDataToYMap`) mints one, so exactly one peer ever does. A document
+    // the server seeded carries a plain string and keeps today's behaviour
+    // until `YDocConverter.Seed` mints one too.
+    //
+    // NUL is stripped here because this is a write chokepoint of its own: the
+    // string never passes through `plainToYValue`.
+    if (isDiffableTextKey(dataKey) && typeof value === 'string' && currentValue instanceof Y.Text) {
+      const nextText = stripNul(value);
+
+      if (currentValue.toJSON() === nextText) {
+        return false;
+      }
+
+      this.transact(() => {
+        // Right to left, so an earlier edit's offsets stay valid.
+        diffText(currentValue.toJSON(), nextText).reverse().forEach((op) => {
+          if (op.remove > 0) {
+            currentValue.delete(op.index, op.remove);
+          }
+
+          if (op.insert.length > 0) {
+            currentValue.insert(op.index, op.insert);
+          }
+        });
       }, 'local');
 
       return true;

@@ -381,9 +381,9 @@ export class BlockObserver {
    * Returns null when the chain never reaches the blocks map, or when the
    * member directly under it is not a Y.Map (hostile shapes drop silently).
    *
-   * Any shared type is a legal STARTING node — a foreign client can nest a
-   * Y.Text under block data, and its delta events target the Y.Text itself;
-   * rejecting it here silently diverges the doc from the DOM. The
+   * Any shared type is a legal STARTING node. A block's mergeable text is a
+   * Y.Text, and its delta events target that Y.Text rather than the data map,
+   * so rejecting a non-map here would drop every keystroke a peer sends. The
    * member-under-blocks-must-be-a-Y.Map gate below is what keeps hostile
    * shapes out, not this check.
    */

@@ -117,7 +117,15 @@ const createHarness = (): Harness => {
 
     const data = current.get('data');
 
-    return data instanceof Y.Map ? data.get('text') : undefined;
+    if (!(data instanceof Y.Map)) {
+      return undefined;
+    }
+
+    const text = data.get('text');
+
+    // Rendered, not raw: `text` is a Y.Text so concurrent typing merges, and
+    // these tests are about WHEN a buffered write lands, not how it is stored.
+    return text instanceof Y.Text ? text.toJSON() : text;
   };
 
   return {

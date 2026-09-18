@@ -81,9 +81,9 @@ export const describeTextEdit = (before: string, after: string): TextEdit => {
 /**
  * Where an offset into `before` should sit in `after`.
  *
- * Best effort, and that is the honest ceiling here: text is stored as a plain
- * string (no Y.Text), so a remote update carries no CRDT positions to map
- * against — only the two strings. A common prefix/suffix diff names ONE changed
+ * Best effort, and that is the honest ceiling here: a remote update reaches
+ * this layer as the block's new TEXT, not as the CRDT operations that produced
+ * it, so there is nothing to map a position against — only the two strings. A common prefix/suffix diff names ONE changed
  * region, which is right for the one-peer-typing case and cannot represent an
  * edit that straddles the caret: the character the caret sat on no longer
  * exists, so it parks at the start of the changed region instead — unless the

@@ -7,6 +7,20 @@ import type { OutputBlockData } from '../../../../types/data-formats/output-data
 const NUL_CHAR = String.fromCharCode(0);
 
 /**
+ * Block data keys holding a long, user-typed string that two people edit at the
+ * same instant. Stored as a `Y.Text` so concurrent typing merges per character
+ * instead of the later write taking the whole field. Every other value stays an
+ * atomic leaf, where last-writer-wins is the behaviour you want.
+ *
+ * Top-level block data only — a nested `text` (a table cell's) is written
+ * through `assignYMapEntry` and stays a leaf.
+ */
+const DIFFABLE_TEXT_KEYS = new Set(['text']);
+
+/** Whether a block's top-level data key holds mergeable text. */
+export const isDiffableTextKey = (key: string): boolean => DIFFABLE_TEXT_KEYS.has(key);
+
+/**
  * Remove every NUL from a string. A NUL in ANY position — map key, string
  * value, array element — aborts the .NET sync server's yrs read, and the
  * abort kills the whole server process, so no write site may skip the strip.
@@ -154,7 +168,7 @@ export class YBlockSerializer {
     // Normalize empty paragraph data to { text: '' } for consistent undo/redo behavior
     const normalizedData = this.normalizeBlockData(blockData.type, blockData.data);
 
-    yblock.set('data', this.objectToYMap(normalizedData));
+    yblock.set('data', this.blockDataToYMap(normalizedData));
 
     if (blockData.tunes !== undefined) {
       yblock.set('tunes', this.objectToYMap(blockData.tunes));
@@ -261,6 +275,37 @@ export class YBlockSerializer {
     }
 
     return block;
+  }
+
+  /**
+   * A block's `data`, with mergeable text stored as a `Y.Text`.
+   *
+   * EAGER and at the single creation site, for the same reason `contentIds`
+   * is: a block's Y.Map is built by ONE peer, so minting the `Y.Text` here
+   * makes that peer its single creator and every other peer reaches the same
+   * item through the wire. Upgrading a plain string lazily instead lets two
+   * peers `set(key, freshText)` at once, and map-set is last-writer-wins — the
+   * loser's container is discarded with everything typed into it.
+   *
+   * Read-back is unchanged: `yValueToPlain` renders a shared type through
+   * `toJSON()`, and an unformatted `Y.Text`'s is the string it holds.
+   * @param data - the block's plain data object
+   */
+  public blockDataToYMap(data: Record<string, unknown>): Y.Map<unknown> {
+    const ymap = new Y.Map<unknown>();
+
+    for (const [key, value] of Object.entries(data)) {
+      const dataKey = stripNul(key);
+
+      ymap.set(
+        dataKey,
+        isDiffableTextKey(dataKey) && typeof value === 'string'
+          ? new Y.Text(stripNul(value))
+          : this.plainToYValue(value)
+      );
+    }
+
+    return ymap;
   }
 
   /**
@@ -461,9 +506,10 @@ export class YBlockSerializer {
       return this.yArrayToPlain(value, depth);
     }
 
-    // The v1 serializer writes no other shared type, but a foreign or
-    // future-format client can; falling through would leak a live shared
-    // object (or a subdocument) into OutputData.
+    // A block's mergeable text is a Y.Text and reads back through `toJSON()`
+    // as the string it holds, so OutputData is unchanged. A foreign or
+    // future-format client can nest other shared types; falling through would
+    // leak a live shared object (or a subdocument) into OutputData.
     if (value instanceof Y.Doc) {
       return null;
     }

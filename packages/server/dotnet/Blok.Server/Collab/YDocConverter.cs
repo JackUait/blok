@@ -1707,10 +1707,20 @@ internal static class YDocConverter
 
           return true;
 
-        // A shared type no Blok client writes — a foreign peer's Y.Text, say.
-        // The JS client renders each as its string form (`JSON.stringify`
-        // calls the type's own toJSON), so this does too rather than making
-        // the room permanently unreadable.
+        // A block's mergeable text: the JS client stores `data.text` as a
+        // Y.Text so two peers typing in one block keep both edits, and renders
+        // it as its string form (`JSON.stringify` calls the type's own
+        // toJSON). This does the same, so the export shape is unchanged. Any
+        // other shared type a foreign peer nests reads the same way rather
+        // than making the room permanently unreadable.
+        //
+        // NOTE: the WRITE side has no counterpart — `PlainToYValue` stores a
+        // bare string. So `Seed` mints a plain string (the client will not
+        // upgrade it: a whole-key set is last-writer-wins and would discard a
+        // peer's container mid-edit), and an `update` edit op REPLACES a live
+        // Y.Text, discarding whatever a client was typing into it at that
+        // moment. Minting a YText here is what unlocks merging for
+        // server-seeded documents.
         case YText text:
           plain = JsonValue.Create(text.ToString());
 

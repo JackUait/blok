@@ -74,7 +74,15 @@ describe('BlockYjsSync — local write-back while a peer update is being reconci
   const readText = (id: string): unknown => {
     const data = manager.getBlockById(id)?.get('data');
 
-    return data instanceof Y.Map ? data.get('text') : undefined;
+    if (!(data instanceof Y.Map)) {
+      return undefined;
+    }
+
+    const text = data.get('text');
+
+    // `text` is a Y.Text so two peers typing in one block merge; this reads it
+    // straight from the document on purpose, so render it here.
+    return text instanceof Y.Text ? text.toJSON() : text;
   };
 
   const typeIntoB = (text: string): void => {

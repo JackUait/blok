@@ -630,5 +630,55 @@ test.describe('collaboration between two editors', () => {
     expect((await savedBlocks(pageB, 'beta')).map((block) => block.text))
       .toEqual(['keep me', 'bulk one']);
   });
-});
 
+  /**
+   * Two people typing into ONE paragraph at the same instant. Their saves land
+   * in the same 400ms coalescing window (`modificationsObserverBatchTimeout`),
+   * which is the only interval in which their writes can collide — with a
+   * larger gap between them nothing was ever lost. Block text is stored as a
+   * Y.Text and each save is applied as a diff, so both bursts survive; written
+   * whole, the later save took the paragraph and the other person watched
+   * their own characters disappear.
+   */
+  test('two people typing in one paragraph keep both of their words', async ({ context }) => {
+    const doc = newDoc();
+    const pageA = await context.newPage();
+    const pageB = await context.newPage();
+
+    await open(pageA, doc, 'alpha', true);
+    await typeInto(pageA, 'alpha', 0, 'seed ');
+
+    await open(pageB, doc, 'beta', false);
+    await expect(textIn(pageB, 'beta', 'seed')).toBeVisible();
+
+    const burst = async (page: Page, name: string, char: string): Promise<void> => {
+      const target = paragraphs(page, name).nth(0);
+
+      await target.click();
+      await page.keyboard.press('End');
+      // Spread over ~300ms so the two bursts genuinely overlap inside one
+      // coalescing window rather than landing in consecutive ones.
+      await page.keyboard.type(char.repeat(10), { delay: 30 });
+    };
+
+    await Promise.all([burst(pageA, 'alpha', 'A'), burst(pageB, 'beta', 'B')]);
+
+    // Both peers converge, and neither burst is missing a character. Counted,
+    // not compared to a fixed string: the two bursts interleave in an order
+    // the test cannot pin, and only the counts are the property under test.
+    await expect
+      .poll(async () => {
+        const text = (await savedBlocks(pageA, 'alpha'))[0]?.text ?? '';
+
+        return { a: (text.match(/A/g) ?? []).length,
+          b: (text.match(/B/g) ?? []).length };
+      })
+      .toEqual({ a: 10,
+        b: 10 });
+
+    const alphaSaved = await savedBlocks(pageA, 'alpha');
+
+    await expect.poll(async () => (await savedBlocks(pageB, 'beta'))[0]?.text)
+      .toBe(alphaSaved[0]?.text);
+  });
+});

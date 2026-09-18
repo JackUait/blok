@@ -4,13 +4,16 @@ import { Dom } from '../../dom';
  * Where one client's caret sits, in the only coordinate system this document
  * format can express.
  *
- * Text is stored as plain strings in Y.Maps (no Y.Text), so there are no
- * relative positions to anchor against — a caret is a plain character offset,
- * and it goes stale if the block's text changes underneath it. That is
- * deliberate and bounded: presence is ephemeral awareness data, never part of
- * the document, and concurrent editing of the SAME block already resolves
- * last-write-wins on the whole string. A caret briefly landing a few characters
- * off is strictly less surprising than the text loss that case already has.
+ * A caret is a plain character offset, published as a number, so it goes stale
+ * if the block's text changes underneath it. That is deliberate and bounded:
+ * presence is ephemeral awareness data, never part of the document, and a caret
+ * briefly landing a few characters off is cheap to be wrong about.
+ *
+ * A block's text is a `Y.Text` wherever this client minted it, so relative
+ * positions exist there and would anchor a caret to the characters themselves.
+ * Switching to them is the unclaimed win this comment used to call impossible
+ * — with the caveat that a server-seeded block still holds a plain string, so
+ * the caret code would have to handle both.
  *
  * `inputIndex` indexes the block's own `inputs`, because one block can own
  * several editable fields (a table's cells, a caption beside a figure) and an

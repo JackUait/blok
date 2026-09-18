@@ -17,7 +17,14 @@ export interface CaretOwner {
   holder: HTMLElement;
 }
 
-/** Length of the text both strings start with. */
+/**
+ * Length of the text both strings start with.
+ *
+ * `Array.from` rather than a counter loop because the project forbids `let`.
+ * It costs one throwaway array per scan, which is why the remote-caret
+ * prediction in `presence-carets.ts` returns before reaching here whenever the
+ * text is unchanged — that is the case its pass hits ten times a second.
+ */
 const commonPrefixLength = (before: string, after: string): number => {
   const limit = Math.min(before.length, after.length);
   const firstDifference = Array.from({ length: limit }, (_unused, index) => index)
@@ -41,6 +48,36 @@ const commonSuffixLength = (before: string, after: string, prefix: number): numb
   return firstDifference === -1 ? limit : firstDifference;
 };
 
+/** What one edit did to a string, as a prefix/suffix diff can name it. */
+export interface TextEdit {
+  /** Length of the text both strings start with — nothing before it moved. */
+  prefix: number;
+  /** First offset in `before` whose characters survive unchanged at the end. */
+  end: number;
+  /** How much longer `after` is than `before`. */
+  delta: number;
+}
+
+/**
+ * Name the one region an edit changed.
+ *
+ * Shared by the two callers so neither scans the strings twice: the local
+ * caret's own adjustment below, and the remote-caret prediction in
+ * `presence-carets.ts`, which needs to know whether an offset STRADDLES the
+ * changed region rather than only where it lands.
+ * @param before - the text the offsets were read against
+ * @param after - the text now in the input
+ */
+export const describeTextEdit = (before: string, after: string): TextEdit => {
+  const prefix = commonPrefixLength(before, after);
+
+  return {
+    prefix,
+    end: before.length - commonSuffixLength(before, after, prefix),
+    delta: after.length - before.length,
+  };
+};
+
 /**
  * Where an offset into `before` should sit in `after`.
  *
@@ -61,8 +98,7 @@ const commonSuffixLength = (before: string, after: string, prefix: number): numb
  * @param offset - character offset into `before`
  */
 export const adjustCaretOffset = (before: string, after: string, offset: number): number => {
-  const prefix = commonPrefixLength(before, after);
-  const suffix = commonSuffixLength(before, after, prefix);
+  const { prefix, end, delta } = describeTextEdit(before, after);
 
   // The peer edited at or after the caret: the characters before it are
   // untouched, so the caret keeps its number.
@@ -72,14 +108,14 @@ export const adjustCaretOffset = (before: string, after: string, offset: number)
 
   // The peer edited entirely before the caret: every character it counts past
   // is still there, shifted by the length the edit added or removed.
-  if (offset >= before.length - suffix) {
-    return offset + (after.length - before.length);
+  if (offset >= end) {
+    return offset + delta;
   }
 
   // The edit straddles the caret. An equal-length replacement leaves the
   // number valid, so keep it; otherwise the character is gone and the start
   // of the changed region is the least surprising place left.
-  return after.length === before.length ? offset : prefix;
+  return delta === 0 ? offset : prefix;
 };
 
 /**

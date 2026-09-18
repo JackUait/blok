@@ -273,6 +273,9 @@ export class Collaboration extends Module {
 
   private awarenessUnhook: (() => void) | null = null;
 
+  /** Takes down the remote-edit feed the presence carets predict against. */
+  private presenceEditsUnhook: (() => void) | null = null;
+
   /**
    * The local copy plus the outbox. Present for every collaboration session:
    * without `offline` it runs in memory, which is where the queue contract
@@ -742,6 +745,41 @@ export class Collaboration extends Module {
     // through `collaboration.user` alone teaches the directory directly.
     this.Blok.UserDirectory.identify(settings.user?.name);
 
+    const presenceRenderer = createPresenceRenderer({
+      // The WRAPPER, not the redactor: the redactor is under the
+      // modifications observer, and this host is only watched for reflow.
+      host: this.Blok.UI.nodes.wrapper,
+      resolveHolder: (blockId) => this.Blok.BlockManager.getBlockById(blockId)?.holder ?? null,
+      resolveInputs: (blockId) => this.Blok.BlockManager.getBlockById(blockId)?.inputs ?? [],
+      isHidden: () => this.Blok.ReadOnly.isControlsHidden,
+      translate: (key) => this.Blok.I18n.t(key),
+      // The same test `publishUser` applies to this editor's own name, so
+      // the reader occupies a silhouette here exactly when their peers give
+      // them one.
+      isLocalAnonymous: () => (settings.user?.name ?? '').trim() === '',
+    });
+
+    /**
+     * Remote carets are drawn at a plain character offset, and the presence
+     * renderer carries that offset across LOCAL edits so it keeps pointing at
+     * the same word while the local user types. A peer's own edit must never
+     * be carried: their published offset already counts past it, and the two
+     * channels are not in step — carets publish on a 100ms throttle while
+     * block data is coalesced on the 400ms mutation window, so a peer's offset
+     * routinely describes text this editor receives up to 300ms later.
+     *
+     * TOLD, not inferred: the layer sees only DOM text, in which a peer's
+     * rewrite and the local user's typing look exactly alike. 'update' is the
+     * only event that rewrites an existing block's text (`BlockYjsSync` hands
+     * it to `setData`); a remote 'add' arrives with no caret baseline to
+     * spoil, and a 'move' changes no text.
+     */
+    this.presenceEditsUnhook = this.Blok.YjsManager.onBlocksChanged((event) => {
+      if (event.type === 'update' && event.origin === 'remote') {
+        presenceRenderer.remoteEdit(event.blockId);
+      }
+    });
+
     this.presence = createPresence({
       yjs: this.Blok.YjsManager,
       user: settings.user,
@@ -754,19 +792,7 @@ export class Collaboration extends Module {
           ? null
           : readCaretPosition(block.id, block.inputs, window.getSelection());
       },
-      renderer: createPresenceRenderer({
-        // The WRAPPER, not the redactor: the redactor is under the
-        // modifications observer, and this host is only watched for reflow.
-        host: this.Blok.UI.nodes.wrapper,
-        resolveHolder: (blockId) => this.Blok.BlockManager.getBlockById(blockId)?.holder ?? null,
-        resolveInputs: (blockId) => this.Blok.BlockManager.getBlockById(blockId)?.inputs ?? [],
-        isHidden: () => this.Blok.ReadOnly.isControlsHidden,
-        translate: (key) => this.Blok.I18n.t(key),
-        // The same test `publishUser` applies to this editor's own name, so
-        // the reader occupies a silhouette here exactly when their peers give
-        // them one.
-        isLocalAnonymous: () => (settings.user?.name ?? '').trim() === '',
-      }),
+      renderer: presenceRenderer,
       // Lazy: `this.provider` is not created until after `presence.start()`
       // below, so a captured reference here would close over `null` forever.
       onActivity: () => this.provider?.sendActivity() ?? false,
@@ -973,6 +999,8 @@ export class Collaboration extends Module {
     this.presence = null;
     this.awarenessUnhook?.();
     this.awarenessUnhook = null;
+    this.presenceEditsUnhook?.();
+    this.presenceEditsUnhook = null;
 
     // BEFORE the provider comes down: the coalescing write buffer may still
     // hold the last thing typed, and YjsManager.destroy — which flushes it —

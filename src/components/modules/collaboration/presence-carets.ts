@@ -1,3 +1,5 @@
+import { describeTextEdit } from '../blockManager/remote-edit-caret';
+
 import { measureLine, measureSelection, type CaretPosition, type LineBox } from './caret-position';
 import { PRESENCE_COLOR_PROPERTY } from './presence';
 
@@ -34,6 +36,12 @@ export interface CaretLayer {
    * moves a peer's caret with no awareness traffic to ride on.
    */
   reposition(): void;
+  /**
+   * Somebody else's edit to this block is on its way into the DOM. Carets in
+   * it stop being carried until it lands — see `carry`.
+   * @param blockId - the block whose text a peer is rewriting
+   */
+  remoteEdit(blockId: string): void;
   /** Undo everything this layer wrote. */
   clear(): void;
 }
@@ -78,6 +86,17 @@ const DEFAULT_GREET_FOR_MS = 3000;
  */
 const HOVER_REACH = 12;
 
+/**
+ * A peer's position after it has been carried across the local user's edits,
+ * plus the text it now counts into.
+ */
+interface CarriedCaret {
+  anchor: number;
+  head: number;
+  /** The input's text as of this pass — the baseline the next pass diffs from. */
+  text: string;
+}
+
 /** What one pass drew for one peer, so the next pass can undo it exactly. */
 interface Drawn {
   element: HTMLElement;
@@ -88,6 +107,13 @@ interface Drawn {
   holder: HTMLElement;
   /** The position this caret was last drawn at, as its comparison key. */
   key: string;
+  /** Their published position, carried along by every local edit since. */
+  carried: CarriedCaret | null;
+  /**
+   * The text this block held when a peer's edit to it was announced, while
+   * that edit has still not reached the DOM. Null when nothing is pending.
+   */
+  awaiting: string | null;
   idleTimer: ReturnType<typeof setTimeout> | null;
   /** Runs while the arrival greeting is still up. */
   greetTimer: ReturnType<typeof setTimeout> | null;
@@ -215,6 +241,8 @@ export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
       label: null,
       holder,
       key: '',
+      carried: null,
+      awaiting: null,
       idleTimer: null,
       greetTimer: null,
       hovered: false,
@@ -332,6 +360,70 @@ export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
     });
   };
 
+  /**
+   * Where a peer really is, once the local user has typed under them.
+   *
+   * A published offset counts into the text the PEER had. Local typing rewrites
+   * that text and puts nothing on the wire — the peer did not move, the
+   * characters under them did — so re-measuring the published number draws them
+   * as many columns off as the local user typed, until the peer's next publish
+   * arrives a round trip later.
+   *
+   * So the offset is carried forward one edit at a time, by the same
+   * prefix/suffix diff that keeps the LOCAL caret alive across a remote edit.
+   * Carried incrementally from the last pass, never re-derived from the
+   * original publish: a pass sees one edit and the diff names one changed
+   * region, while a diff spanning a whole typing burst at two different places
+   * would straddle the offset.
+   *
+   * Straddling is REFUSED rather than guessed. `adjustCaretOffset` parks a
+   * straddled offset at the start of the changed region, which is the least
+   * surprising answer for the local user's own caret — but for a remote one it
+   * is absorbing: an idle peer's caret jumps to column 0, every later insert
+   * before it takes the unchanged branch and keeps it there, and no publish
+   * comes to correct somebody who is not typing. The published number is stale
+   * by a few characters; column 0 is wrong by a paragraph.
+   *
+   * A null baseline means the peer's own number is the only thing to go on: a
+   * fresh publish, or an edit this editor did not author (see `remoteEdit`).
+   * @param baseline - the last pass's position and the text it counted into, or null
+   * @param caret - what the peer published
+   * @param text - the text in their input right now
+   */
+  const carry = (baseline: CarriedCaret | null, caret: CaretPosition, text: string): CarriedCaret => {
+    const published = { anchor: caret.anchor,
+      head: caret.head,
+      text };
+
+    if (baseline === null) {
+      return published;
+    }
+
+    // The common case by a wide margin — every peer in every block nobody is
+    // editing — and the diff below walks both strings end to end, on a pass
+    // that runs up to ten times a second.
+    if (baseline.text === text) {
+      return baseline;
+    }
+
+    const { prefix, end, delta } = describeTextEdit(baseline.text, text);
+    const shift = (offset: number): number | null => {
+      if (offset <= prefix) {
+        return offset;
+      }
+
+      return offset >= end ? offset + delta : null;
+    };
+    const anchor = shift(baseline.anchor);
+    const head = shift(baseline.head);
+
+    return anchor === null || head === null
+      ? published
+      : { anchor,
+        head,
+        text };
+  };
+
   const draw = (peers: CaretPeer[]): void => {
     const next = new Map<number, Drawn>();
 
@@ -361,7 +453,24 @@ export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
       // One holder measurement for the whole peer: the line and the shade are
       // placed against the same box, and each read forces a layout.
       const box = holder.getBoundingClientRect();
-      const spot = input === undefined ? null : locate(box, input, caret.head);
+      const key = positionKey(peer);
+      const text = input?.textContent ?? '';
+      // Cleared once the text differs from what it was when the peer's edit was
+      // announced — that difference IS the rewrite arriving. The pass that sees
+      // it arrive still refuses to carry, because that pass is precisely the
+      // one whose diff would be the peer's own typing.
+      const awaiting = entry.awaiting === text ? entry.awaiting : null;
+      // The key carries `inputIndex`, so a peer who moved to another field of
+      // the same block is a fresh publish here and never inherits a baseline
+      // whose text came from the field they left.
+      const baseline = entry.awaiting !== null || key !== entry.key ? null : entry.carried;
+      const carried = input === undefined ? null : carry(baseline, caret, text);
+      const shown = carried === null
+        ? caret
+        : { ...caret,
+          anchor: carried.anchor,
+          head: carried.head };
+      const spot = input === undefined ? null : locate(box, input, shown.head);
 
       if (input === undefined || spot === null) {
         // Nothing could be drawn, so nothing goes in the ledger — and an entry
@@ -375,11 +484,13 @@ export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
         return;
       }
 
+      entry.carried = carried;
+      entry.awaiting = awaiting;
       entry.element.style.left = `${spot.left}px`;
       entry.element.style.top = `${spot.top}px`;
       entry.element.style.height = `${spot.height}px`;
       entry.element.style.setProperty(PRESENCE_COLOR_PROPERTY, peer.color);
-      shade(entry, holder, box, input, caret, peer.color);
+      shade(entry, holder, box, input, shown, peer.color);
 
       if (entry.label !== null) {
         entry.label.style.left = `${spot.left}px`;
@@ -396,8 +507,6 @@ export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
       }
 
       applyFlag(entry);
-
-      const key = positionKey(peer);
 
       if (key !== entry.key) {
         entry.key = key;
@@ -439,6 +548,23 @@ export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
 
     reposition(): void {
       draw(state.peers);
+    },
+
+    remoteEdit(blockId: string): void {
+      state.peers.forEach((peer) => {
+        const caret = peer.caret;
+        const entry = drawn.get(peer.clientId);
+
+        if (caret === null || caret.blockId !== blockId || entry === undefined) {
+          return;
+        }
+
+        // The text as it is NOW, before the rewrite lands. A pass that finds it
+        // unchanged knows the edit is still in flight; the first pass that
+        // finds it different knows it has arrived, and starts a fresh baseline
+        // from the peer's published number.
+        entry.awaiting = resolveInputs(blockId)[caret.inputIndex]?.textContent ?? '';
+      });
     },
 
     clear(): void {

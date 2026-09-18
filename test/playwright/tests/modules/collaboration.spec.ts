@@ -1,6 +1,15 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
-import { gotoCollabPage, mountCollabEditor, savedBlocks, seedDocument, type SavedBlock } from '../helpers/collab';
+import {
+  gotoCollabPage,
+  holdCollabDocFrames,
+  mountCollabEditor,
+  pauseCollabInbound,
+  releaseCollabDocFrames,
+  savedBlocks,
+  seedDocument,
+  type SavedBlock,
+} from '../helpers/collab';
 
 /**
  * Two REAL Blok editors, each in its own page with its own DOM and its own
@@ -117,6 +126,49 @@ const putCaretAt = async (page: Page, name: string, offset: number): Promise<voi
     await page.keyboard.press('ArrowRight');
   }
 };
+
+
+/** What one editor drew for the only remote caret on its screen. */
+interface DrawnCaret {
+  /** The presence caret's own `left`, holder-relative, as the layer wrote it. */
+  drawnLeft: number;
+  /** Where `offset` characters into the live text actually sits, same origin. */
+  expectedLeft: number;
+  text: string;
+}
+
+/**
+ * Reads the remote caret drawn on one editor's first paragraph and, in the same
+ * pass, measures where `offset` characters into that paragraph's CURRENT text
+ * would be. Both numbers are holder-relative, so they are directly comparable
+ * and the caller asserts on the distance between them.
+ * @param page - the page the editor is on
+ * @param name - the editor's harness name
+ * @param offset - the offset the peer's caret is really at, in the live text
+ */
+const drawnRemoteCaret = (page: Page, name: string, offset: number): Promise<DrawnCaret | null> =>
+  page.evaluate(({ harness, at }) => {
+    const holder = document.querySelector(`[data-blok-testid="${harness}"] [data-blok-element]`);
+    const input = holder?.querySelector('[contenteditable="true"]') ?? null;
+    const caret = holder?.querySelector<HTMLElement>('[data-blok-presence-caret]') ?? null;
+    const textNode = input?.firstChild ?? null;
+
+    if (holder === null || input === null || caret === null || textNode === null) {
+      return null;
+    }
+
+    const range = document.createRange();
+
+    range.setStart(textNode, at);
+    range.collapse(true);
+
+    return {
+      drawnLeft: Math.round(parseFloat(caret.style.left)),
+      expectedLeft: Math.round(range.getBoundingClientRect().left - holder.getBoundingClientRect().left),
+      text: input.textContent ?? '',
+    };
+  }, { harness: name,
+    at: offset });
 
 test.describe('collaboration between two editors', () => {
   test('text typed on either side reaches the other', async ({ context }) => {
@@ -440,6 +492,119 @@ test.describe('collaboration between two editors', () => {
    * every other block was gone from the doc, from every peer and from the
    * author's next reload.
    */
+
+  /**
+   * The user's report: "when I type fast, the other user's caret drifts away
+   * and then comes back to its position with a delay".
+   *
+   * A peer publishes a plain character offset. Local typing in the same block
+   * reflows the line under it, and the re-measure that rides the local caret
+   * re-measures the SAME offset — which is now that many characters too far
+   * left. The correction costs a round trip, which is the lag on screen.
+   *
+   * Beta is cut off inbound before alpha types, so beta never learns of the
+   * edit and never republishes. That freezes the window the user sees as a
+   * flicker into a state the test can assert on without racing it.
+   */
+  test('a peer caret keeps its place while the local user types in front of it', async ({ context }) => {
+    const doc = newDoc();
+    const pageA = await context.newPage();
+    const pageB = await context.newPage();
+
+    await open(pageA, doc, 'alpha', true);
+    await typeInto(pageA, 'alpha', 0, 'hello world Title');
+
+    await open(pageB, doc, 'beta', false);
+    await expect(textIn(pageB, 'beta', 'hello world Title')).toBeVisible();
+
+    // Beta parks just before "Title" — 12 characters in. `putCaretAt` steps
+    // right one key at a time and each step publishes through the 100ms
+    // throttle, so the gate has to be the position itself: waiting for a caret
+    // to merely EXIST resolves on the first intermediate offset.
+    await putCaretAt(pageB, 'beta', 12);
+    await expect
+      .poll(async () => {
+        const parked = await drawnRemoteCaret(pageA, 'alpha', 12);
+
+        return parked === null ? null : parked.drawnLeft - parked.expectedLeft;
+      })
+      .toBeCloseTo(0, 0);
+
+    await pauseCollabInbound(pageB);
+
+    // Alpha types ten characters at the very start of the same paragraph.
+    await putCaretAt(pageA, 'alpha', 0);
+    await pageA.keyboard.type('asdasdasda');
+    await expect(textIn(pageA, 'alpha', 'asdasdasdahello world Title')).toBeVisible();
+
+    // Beta has not moved, so their caret is still before "Title" — now 22
+    // characters into alpha's text.
+    await expect
+      .poll(async () => {
+        const drawn = await drawnRemoteCaret(pageA, 'alpha', 22);
+
+        return drawn === null ? null : drawn.drawnLeft - drawn.expectedLeft;
+      })
+      .toBeCloseTo(0, 0);
+  });
+
+
+  /**
+   * The other half of the same problem, and the direction that made the first
+   * fix WORSE than no fix at all.
+   *
+   * The two channels do not run in step: carets publish on a 100ms throttle
+   * while block data is coalesced on the 400ms mutation window, so for most of
+   * every window a peer's published offset counts into text this editor has
+   * not received. When that text finally lands it is a change this editor did
+   * not author — and shifting the peer's offset by it counts their own typing
+   * a second time, on top of the shift their publish already included.
+   *
+   * Here the skew is made total: beta's document frames are held while its
+   * awareness keeps arriving, then released in one go.
+   */
+  test('a peer caret is not shifted by the peer\'s own edit arriving late', async ({ context }) => {
+    const doc = newDoc();
+    const pageA = await context.newPage();
+    const pageB = await context.newPage();
+
+    await open(pageA, doc, 'alpha', true);
+    await typeInto(pageA, 'alpha', 0, 'hello world Title');
+
+    await open(pageB, doc, 'beta', false);
+    await expect(textIn(pageB, 'beta', 'hello world Title')).toBeVisible();
+
+    await holdCollabDocFrames(pageA);
+
+    // Beta types two characters at the very start. Their caret reaches alpha
+    // immediately; their text is held back.
+    await putCaretAt(pageB, 'beta', 0);
+    await pageB.keyboard.type('XY');
+    await expect
+      .poll(async () => {
+        const drawn = await drawnRemoteCaret(pageA, 'alpha', 2);
+
+        return drawn === null ? null : drawn.drawnLeft - drawn.expectedLeft;
+      })
+      .toBeCloseTo(0, 0);
+
+    await releaseCollabDocFrames(pageA);
+    await expect(textIn(pageA, 'alpha', 'XYhello world Title')).toBeVisible();
+
+    // Alpha clicks its own block, which is what drives a re-measure pass.
+    await paragraphs(pageA, 'alpha').nth(0).click();
+
+    // Beta has not moved and has not republished: they are still two
+    // characters in, and those two characters are their own.
+    await expect
+      .poll(async () => {
+        const drawn = await drawnRemoteCaret(pageA, 'alpha', 2);
+
+        return drawn === null ? null : drawn.drawnLeft - drawn.expectedLeft;
+      })
+      .toBeCloseTo(0, 0);
+  });
+
   test('a bulk insert keeps the blocks already in the document', async ({ context }) => {
     const doc = newDoc();
     const pageA = await context.newPage();

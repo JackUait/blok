@@ -64,6 +64,12 @@ export interface PresenceRenderer {
    * with no awareness traffic to ride on.
    */
   reposition(): void;
+  /**
+   * A peer's edit to this block is on its way into the DOM. Their caret stops
+   * being carried across local edits until it lands.
+   * @param blockId - the block being rewritten from the wire
+   */
+  remoteEdit(blockId: string): void;
   /** Undo everything this renderer wrote. */
   clear(): void;
 }
@@ -280,6 +286,13 @@ export const createPresenceRenderer = (options: PresenceRendererOptions): Presen
       }
 
       carets.reposition();
+    },
+
+    // Not gated on `isHidden`: a chromeless editor has no carets drawn, so
+    // this is already a no-op there, and a gate would mean a runtime toggle
+    // back could un-hide a caret carrying a baseline from before the rewrite.
+    remoteEdit(blockId: string): void {
+      carets.remoteEdit(blockId);
     },
 
     clear,

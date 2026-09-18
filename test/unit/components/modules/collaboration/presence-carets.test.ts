@@ -838,3 +838,282 @@ describe('caret layer — the selection shade', () => {
     expect(harness.toolRootOf('block-1').innerHTML).toBe(before);
   });
 });
+
+/**
+ * A peer publishes a plain character offset into a plain string. When the LOCAL
+ * user types in the same block, that number silently stops meaning what the
+ * peer meant: the text under it grew, and re-measuring the same offset draws
+ * the caret that many characters too far left. Nothing on the wire announces a
+ * local edit, so the correction otherwise waits for the peer's next publish —
+ * a round trip, which is the lag a user sees as the caret sliding away and
+ * snapping back.
+ */
+describe('caret layer — local typing under a remote caret', () => {
+  const PER_CHARACTER = 10;
+
+  /**
+   * A caret that measures where a monospaced character would be: `left` is the
+   * range's own start offset times a fixed width, so a test can name a column
+   * and read one back.
+   * @param harness - the block whose holder is the measuring origin
+   */
+  const stubPerCharacterLayout = (harness: Harness): void => {
+    harness.stubRect(harness.holderOf('block-1'), { left: 0, top: 0, height: 40 });
+    vi.spyOn(Range.prototype, 'getBoundingClientRect')
+      .mockImplementation(function measured(this: Range): DOMRect {
+        return new DOMRect(this.startOffset * PER_CHARACTER, 0, 0, 18);
+      });
+  };
+
+  it('holds a peer caret over the same characters when text is inserted in front of it', () => {
+    const harness = setup();
+
+    stubPerCharacterLayout(harness);
+    harness.layer.render([peer(1, { caret: at('block-1', 6) })]);
+
+    // The local user types three characters at the very start of the block.
+    harness.inputOf('block-1').textContent = 'abchello world';
+    harness.layer.reposition();
+
+    // The peer never moved and never republished: they are still on the same
+    // word, which is now three characters further along.
+    expect(harness.caretsIn('block-1')[0]?.style.left).toBe('90px');
+  });
+
+  it('moves a peer caret back when text is deleted in front of it', () => {
+    const harness = setup();
+
+    stubPerCharacterLayout(harness);
+    harness.layer.render([peer(1, { caret: at('block-1', 6) })]);
+
+    harness.inputOf('block-1').textContent = 'llo world';
+    harness.layer.reposition();
+
+    expect(harness.caretsIn('block-1')[0]?.style.left).toBe('40px');
+  });
+
+  it('leaves a peer caret alone when the local user types behind it', () => {
+    const harness = setup();
+
+    stubPerCharacterLayout(harness);
+    harness.layer.render([peer(1, { caret: at('block-1', 6) })]);
+
+    harness.inputOf('block-1').textContent = 'hello world!!!';
+    harness.layer.reposition();
+
+    expect(harness.caretsIn('block-1')[0]?.style.left).toBe('60px');
+  });
+
+  it('drags the selection shade along with the caret it belongs to', () => {
+    const harness = setup();
+    const covered: string[] = [];
+
+    harness.stubRect(harness.holderOf('block-1'), { left: 0, top: 0, height: 40 });
+    vi.spyOn(Range.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 0, 18));
+    vi.spyOn(Range.prototype, 'getClientRects')
+      .mockImplementation(function measured(this: Range): DOMRectList {
+        covered.push(this.toString());
+
+        return toDOMRectList([new DOMRect(0, 0, 60, 18)]);
+      });
+
+    harness.layer.render([peer(1, { caret: spanning('block-1', 2, 7) })]);
+    covered.splice(0);
+
+    harness.inputOf('block-1').textContent = 'abchello world';
+    harness.layer.reposition();
+
+    // The shade and the line have to predict together, or a peer's highlight
+    // is left covering different characters than their own caret sits on.
+    expect(covered).toContain('llo w');
+  });
+
+  it('takes the peer at their word the moment they publish a new position', () => {
+    const harness = setup();
+
+    stubPerCharacterLayout(harness);
+    harness.layer.render([peer(1, { caret: at('block-1', 6) })]);
+
+    harness.inputOf('block-1').textContent = 'abchello world';
+    harness.layer.reposition();
+
+    // The peer has now seen the local edit and MOVED. Their number counts into
+    // the text that is here, so it is used raw: a carried offset that outlived
+    // the publish it was built from would draw them where they used to be.
+    harness.layer.render([peer(1, { caret: at('block-1', 2) })]);
+
+    expect(harness.caretsIn('block-1')[0]?.style.left).toBe('20px');
+  });
+
+  it('re-baselines on that publish, so the next local edit shifts from it', () => {
+    const harness = setup();
+
+    stubPerCharacterLayout(harness);
+    harness.layer.render([peer(1, { caret: at('block-1', 6) })]);
+
+    harness.inputOf('block-1').textContent = 'abchello world';
+    harness.layer.reposition();
+    harness.layer.render([peer(1, { caret: at('block-1', 2) })]);
+
+    // The baseline is the peer's LATEST publish and the text it was read
+    // against. A later local edit shifts that number, never the one this pass
+    // had already carried and thrown away.
+    harness.inputOf('block-1').textContent = 'XYabchello world';
+    harness.layer.reposition();
+
+    expect(harness.caretsIn('block-1')[0]?.style.left).toBe('40px');
+  });
+});
+
+/**
+ * The two channels run at different speeds, so a peer's published offset and
+ * the text it counts into do not arrive together.
+ *
+ * Carets publish on a 100ms throttle (`presence.ts`); block data is coalesced
+ * on the 400ms mutation window, leading + trailing (`yjs/write-buffer.ts`). For
+ * up to ~300ms of every window a peer's offset describes text this editor has
+ * not received. When that update finally lands it is a text change this editor
+ * did NOT author — and carrying a caret across it shifts the peer by their own
+ * typing, on top of the shift their own publish already included.
+ */
+describe('caret layer — a text change the local user did not make', () => {
+  const PER_CHARACTER = 10;
+
+  const stubPerCharacterLayout = (harness: Harness): void => {
+    harness.stubRect(harness.holderOf('block-1'), { left: 0, top: 0, height: 40 });
+    vi.spyOn(Range.prototype, 'getBoundingClientRect')
+      .mockImplementation(function measured(this: Range): DOMRect {
+        return new DOMRect(this.startOffset * PER_CHARACTER, 0, 0, 18);
+      });
+  };
+
+  it('does not carry a peer across their own buffered edit', () => {
+    const harness = setup();
+
+    stubPerCharacterLayout(harness);
+    harness.inputOf('block-1').textContent = 'hello';
+    // The peer typed `XY` at the start of their copy. Their caret rides the
+    // 100ms channel and is already past it; the text rides the 400ms one.
+    harness.layer.render([peer(1, { caret: at('block-1', 2) })]);
+
+    harness.layer.remoteEdit('block-1');
+    harness.inputOf('block-1').textContent = 'XYhello';
+    harness.layer.reposition();
+
+    // Their published number already counts past their own `XY`. Shifting it
+    // again by the same two characters counts their typing twice.
+    expect(harness.caretsIn('block-1')[0]?.style.left).toBe('20px');
+  });
+
+  it('still refuses to carry when a pass runs before the rewrite lands', () => {
+    const harness = setup();
+
+    stubPerCharacterLayout(harness);
+    harness.inputOf('block-1').textContent = 'hello';
+    harness.layer.render([peer(1, { caret: at('block-1', 2) })]);
+
+    // The doc update is announced before `setData` rewrites the DOM, and a
+    // pass rides an awareness change in between. Clearing the baseline at the
+    // announcement alone would let that pass build a new one from the OLD
+    // text, and the rewrite would then be carried after all.
+    harness.layer.remoteEdit('block-1');
+    harness.layer.reposition();
+    harness.inputOf('block-1').textContent = 'XYhello';
+    harness.layer.reposition();
+
+    expect(harness.caretsIn('block-1')[0]?.style.left).toBe('20px');
+  });
+
+  it('carries again once the remote rewrite has landed', () => {
+    const harness = setup();
+
+    stubPerCharacterLayout(harness);
+    harness.inputOf('block-1').textContent = 'hello';
+    harness.layer.render([peer(1, { caret: at('block-1', 2) })]);
+    harness.layer.remoteEdit('block-1');
+    harness.inputOf('block-1').textContent = 'XYhello';
+    harness.layer.reposition();
+
+    // The local user now types in front of them. A suspension that never
+    // lifted would leave this peer stranded on their published number for the
+    // rest of the session.
+    harness.inputOf('block-1').textContent = 'ZZXYhello';
+    harness.layer.reposition();
+
+    expect(harness.caretsIn('block-1')[0]?.style.left).toBe('40px');
+  });
+
+  it('leaves the carets in other blocks alone', () => {
+    const harness = setup();
+
+    harness.stubRect(harness.holderOf('block-2'), { left: 0, top: 0, height: 40 });
+    vi.spyOn(Range.prototype, 'getBoundingClientRect')
+      .mockImplementation(function measured(this: Range): DOMRect {
+        return new DOMRect(this.startOffset * PER_CHARACTER, 0, 0, 18);
+      });
+    harness.layer.render([peer(1, { caret: at('block-2', 6) })]);
+
+    harness.layer.remoteEdit('block-1');
+    harness.inputOf('block-2').textContent = 'abchello world';
+    harness.layer.reposition();
+
+    expect(harness.caretsIn('block-2')[0]?.style.left).toBe('90px');
+  });
+});
+
+/**
+ * A prefix/suffix diff names ONE changed region. Two regions between two passes
+ * needs nothing exotic — a third peer typing at one end of a paragraph while
+ * the local user types at the other — and the offset then sits between them,
+ * where no honest answer exists.
+ *
+ * A pass boundary is not an edit boundary: passes ride awareness renders and a
+ * throttled reposition (selectionchange, ResizeObserver, `loadingdone`), none
+ * of them synchronized to text changes.
+ */
+describe('caret layer — an edit it cannot read', () => {
+  const PER_CHARACTER = 10;
+
+  it('falls back to the published offset rather than parking a caret at the start', () => {
+    const harness = setup();
+
+    harness.stubRect(harness.holderOf('block-1'), { left: 0, top: 0, height: 40 });
+    vi.spyOn(Range.prototype, 'getBoundingClientRect')
+      .mockImplementation(function measured(this: Range): DOMRect {
+        return new DOMRect(this.startOffset * PER_CHARACTER, 0, 0, 18);
+      });
+    harness.inputOf('block-1').textContent = '0123456789';
+    harness.layer.render([peer(1, { caret: at('block-1', 3) })]);
+
+    // Two regions in one pass: `XX` at the start and `YY` before the last
+    // three characters. The peer's offset straddles them, and the straddle
+    // branch would park it at the start of the changed region — column 0, from
+    // which no later insert can move it and no publish will correct an idle
+    // peer.
+    harness.inputOf('block-1').textContent = 'XX0123456YY789';
+    harness.layer.reposition();
+
+    expect(harness.caretsIn('block-1')[0]?.style.left).toBe('30px');
+  });
+
+  it('keeps predicting after an edit it could not read', () => {
+    const harness = setup();
+
+    harness.stubRect(harness.holderOf('block-1'), { left: 0, top: 0, height: 40 });
+    vi.spyOn(Range.prototype, 'getBoundingClientRect')
+      .mockImplementation(function measured(this: Range): DOMRect {
+        return new DOMRect(this.startOffset * PER_CHARACTER, 0, 0, 18);
+      });
+    harness.inputOf('block-1').textContent = '0123456789';
+    harness.layer.render([peer(1, { caret: at('block-1', 3) })]);
+    harness.inputOf('block-1').textContent = 'XX0123456YY789';
+    harness.layer.reposition();
+
+    // Refusing once must not be absorbing: the next single-region edit is
+    // readable again, and it counts from the text the refusal left behind.
+    harness.inputOf('block-1').textContent = 'ZXX0123456YY789';
+    harness.layer.reposition();
+
+    expect(harness.caretsIn('block-1')[0]?.style.left).toBe('40px');
+  });
+});

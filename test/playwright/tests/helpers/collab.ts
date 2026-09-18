@@ -50,6 +50,12 @@ declare global {
     __blokRelaySocketFactory?: (options: { seedsEmptyRoom: boolean }) => unknown;
     /** Editors this harness mounted, by name. */
     __collabEditors?: Record<string, Blok>;
+    /** While true, this page's relay sockets drop everything the room sends them. */
+    __blokRelayPauseInbound?: boolean;
+    /** While true, document frames are held back while awareness keeps flowing. */
+    __blokRelayHoldDoc?: boolean;
+    /** The held document frames, in arrival order. */
+    __blokRelayHeldDoc?: Array<() => void>;
   }
 }
 
@@ -167,6 +173,23 @@ export const installCollabRelay = async (page: Page): Promise<void> => {
       /** Always a task later: a real socket never calls back inside `send`. */
       private deliver(bytes: Uint8Array): void {
         setTimeout(() => {
+          if (window.__blokRelayPauseInbound === true) {
+            return;
+          }
+
+          // Byte 0 is the y-protocols message type: 0 is sync, 1 is awareness.
+          // Holding only sync reproduces the skew production has by design —
+          // carets publish on a 100ms throttle, block data is coalesced on the
+          // 400ms mutation window — with none of its timing.
+          if (window.__blokRelayHoldDoc === true && bytes[0] === 0) {
+            const held = window.__blokRelayHeldDoc ?? [];
+
+            held.push(() => this.onmessage?.({ data: bytes }));
+            window.__blokRelayHeldDoc = held;
+
+            return;
+          }
+
           if (this.readyState === 1) {
             this.onmessage?.({ data: bytes });
           }
@@ -178,6 +201,47 @@ export const installCollabRelay = async (page: Page): Promise<void> => {
       (url: string) => new RelaySocket(url, seedsEmptyRoom);
   });
 };
+
+/**
+ * Cuts this page off from the room, inbound only: its editors keep publishing,
+ * and nothing the peers say reaches them again.
+ *
+ * Dropped, not queued — a test that pauses a page is testing what the OTHER
+ * page draws while this one is out of date, and a queue would deliver the
+ * backlog the moment anything else in the realm ran.
+ * @param page - the page to cut off
+ */
+export const pauseCollabInbound = (page: Page): Promise<void> =>
+  page.evaluate(() => {
+    window.__blokRelayPauseInbound = true;
+  });
+
+/**
+ * Holds back the document frames this page is sent, while awareness keeps
+ * arriving. A peer's caret then reaches this editor while the text it counts
+ * into does not — which is what the two publish cadences do in production.
+ * @param page - the page to hold frames for
+ */
+export const holdCollabDocFrames = (page: Page): Promise<void> =>
+  page.evaluate(() => {
+    window.__blokRelayHoldDoc = true;
+  });
+
+/**
+ * Delivers everything `holdCollabDocFrames` held, in arrival order. Yjs
+ * updates are incremental, so they are queued rather than dropped: a lost one
+ * never comes back without a full resync.
+ * @param page - the page to release frames to
+ */
+export const releaseCollabDocFrames = (page: Page): Promise<void> =>
+  page.evaluate(() => {
+    window.__blokRelayHoldDoc = false;
+
+    const held = window.__blokRelayHeldDoc ?? [];
+
+    window.__blokRelayHeldDoc = [];
+    held.forEach((deliver) => deliver());
+  });
 
 export interface MountOptions {
   /** Collaboration document id — one path segment, shared by every peer. */

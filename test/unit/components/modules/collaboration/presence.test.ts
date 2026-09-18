@@ -153,6 +153,10 @@ const fakeRenderer = (): PresenceRenderer & {
     reposition: () => {
       state.repositioned += 1;
     },
+    // Presence never calls it: the remote-edit feed is wired straight from the
+    // collaboration module to the renderer, and this seam has nothing to say
+    // about it.
+    remoteEdit: () => {},
     clear: () => {
       state.cleared += 1;
     },

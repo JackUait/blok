@@ -692,6 +692,59 @@ describe('presence renderer', () => {
       expect(harness.holderOf('block-2').querySelectorAll('[data-blok-presence-caret]')).toHaveLength(1);
     });
 
+    /**
+     * The whole path, from the raw awareness state to the pixel: a peer's
+     * published offset counts into the text they had, and local typing in the
+     * same block silently makes it point at an earlier character. Nothing
+     * announces a local edit on the wire, so `reposition()` is the only chance
+     * to correct it before the peer's next publish arrives a round trip later.
+     */
+    it('keeps a peer caret over the same characters while the local user types in front of it', () => {
+      const harness = setup();
+
+      vi.spyOn(Range.prototype, 'getBoundingClientRect')
+        .mockImplementation(function measured(this: Range): DOMRect {
+          return new DOMRect(this.startOffset * 10, 0, 0, 18);
+        });
+
+      harness.renderer.render([named(99, 'Grace', 'block-2')], 42);
+
+      const holder = harness.holderOf('block-2');
+
+      harness.toolRootOf('block-2').textContent = 'xyzhello';
+      harness.renderer.reposition();
+
+      expect(caret(holder)?.style.left).toBe('40px');
+    });
+
+    /**
+     * Caret awareness is published on a 100ms throttle and block data is
+     * coalesced on the 400ms mutation window, so a peer's offset routinely
+     * describes text this editor has not received yet. When it lands it is a
+     * text change this editor did not author, and carrying a caret across it
+     * would shift the peer by their own typing twice over.
+     */
+    it('does not carry a peer across a rewrite the local user did not make', () => {
+      const harness = setup();
+
+      vi.spyOn(Range.prototype, 'getBoundingClientRect')
+        .mockImplementation(function measured(this: Range): DOMRect {
+          return new DOMRect(this.startOffset * 10, 0, 0, 18);
+        });
+
+      harness.renderer.render([named(99, 'Grace', 'block-2')], 42);
+
+      const holder = harness.holderOf('block-2');
+
+      harness.renderer.remoteEdit('block-2');
+      harness.toolRootOf('block-2').textContent = 'xyzhello';
+      harness.renderer.reposition();
+
+      // `caretAt` publishes offset 1, and that number already counts into the
+      // text the peer is sending.
+      expect(caret(holder)?.style.left).toBe('10px');
+    });
+
     it('clear() takes every face and caret with it', () => {
       const harness = setup();
       const holder = harness.holderOf('block-2');

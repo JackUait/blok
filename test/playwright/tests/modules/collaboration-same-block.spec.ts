@@ -19,26 +19,25 @@ import {
  *
  * WHY EVERY TEST HERE HOLDS DOC FRAMES — read this before adding another.
  *
- * Typing the two bursts inside one `Promise.all` is NOT enough to make the
- * writes concurrent on this harness, and believing otherwise produces a green
- * that means nothing. The relay (helpers/collab.ts) is a BroadcastChannel with
- * two `setTimeout(0)` hops, so a peer's characters come back in well under a
- * frame. Measured, with both peers typing ten characters over ~300ms straight
- * at each other: by the moment alpha stopped typing it had already rendered
- * NINE of beta's ten characters, and beta had all ten of alpha's. Each side's
- * coalesced write was therefore computed against a document that already held
- * almost everything the peer had typed — barely a collision at all, and a
- * whole-value last-writer-wins store would have survived it nearly intact.
+ * The relay (helpers/collab.ts) is a BroadcastChannel with two `setTimeout(0)`
+ * hops, so a peer's characters come back in well under a frame. Measured, with
+ * both peers typing ten characters over ~300ms straight at each other: by the
+ * moment alpha stopped typing it had already rendered NINE of beta's ten. So
+ * two bursts inside one `Promise.all` overlap far less than they appear to.
  *
- * So the divergence is constructed instead of hoped for: `holdCollabDocFrames`
- * stops BOTH pages receiving document frames for the length of the bursts, the
- * two people type into the same block against documents that know nothing of
- * each other, and the frames are then released in one go. That is what a real
- * room with real latency does to two people in one paragraph, and it is the
- * only arrangement here in which the merge in `document-store.ts` is actually
- * load-bearing. Each test asserts the divergence really happened before it
- * asserts anything about the outcome — a test that cannot show the two
- * documents were apart is not testing a merge.
+ * That is NOT the same as saying such a test proves nothing, and an earlier
+ * draft of this comment said so wrongly. Emptying `DIFFABLE_TEXT_KEYS` at HEAD
+ * and re-running the `Promise.all`-shaped test in `collaboration.spec.ts` FAILS
+ * it — `b: 1` against an expected `b: 10`, nine characters gone. Even a sliver
+ * of divergence loses a burst under whole-value last-writer-wins, and that test
+ * catches it.
+ *
+ * Holding frames buys determinism, not sensitivity. `holdCollabDocFrames` stops
+ * BOTH pages receiving document frames for the length of the bursts, so the
+ * size of the divergence is set by the test instead of by how fast the machine
+ * happened to deliver a frame. Each test then asserts the divergence really
+ * happened before asserting anything about the outcome — without that guard a
+ * green cannot be told from two peers that quietly took turns.
  */
 
 const PARAGRAPH = '[data-blok-component="paragraph"]';

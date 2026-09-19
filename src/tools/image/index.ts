@@ -113,10 +113,13 @@ export class ImageTool implements BlockTool {
 
   public save(_block?: HTMLElement): ImageData {
     const out: ImageData = { url: this.data.url };
-    if (this.data.caption !== undefined) out.caption = this.data.caption;
+    // Collab keeps `caption`/`alt` as a Y.Text for character-level merging. A
+    // non-string here would fall through to a whole-key set that replaces that
+    // Y.Text for good, so an out-of-contract value is dropped, not coerced.
+    if (typeof this.data.caption === 'string') out.caption = this.data.caption;
     if (this.data.width !== undefined) out.width = this.data.width;
     if (this.data.alignment !== undefined) out.alignment = this.data.alignment;
-    if (this.data.alt !== undefined) out.alt = this.data.alt;
+    if (typeof this.data.alt === 'string') out.alt = this.data.alt;
     if (this.data.fileName !== undefined) out.fileName = this.data.fileName;
     if (this.data.size !== undefined) out.size = this.data.size;
     if (this.data.frame !== undefined) out.frame = this.data.frame;

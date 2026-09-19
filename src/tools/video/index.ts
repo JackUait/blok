@@ -77,7 +77,10 @@ export class VideoTool implements BlockTool {
 
   public save(_block?: HTMLElement): VideoData {
     const out: VideoData = { url: this.data.url };
-    if (this.data.caption !== undefined) out.caption = this.data.caption;
+    // Collab keeps `caption` as a Y.Text for character-level merging. A
+    // non-string here would fall through to a whole-key set that replaces that
+    // Y.Text for good, so an out-of-contract value is dropped, not coerced.
+    if (typeof this.data.caption === 'string') out.caption = this.data.caption;
     if (this.data.captionVisible !== undefined) out.captionVisible = this.data.captionVisible;
     if (this.data.width !== undefined) out.width = this.data.width;
     if (this.data.alignment !== undefined) out.alignment = this.data.alignment;

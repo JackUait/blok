@@ -82,10 +82,13 @@ export class AudioTool implements BlockTool {
 
   public save(_block?: HTMLElement): AudioData {
     const out: AudioData = { url: this.data.url };
-    if (this.data.caption !== undefined) out.caption = this.data.caption;
+    // Collab keeps `caption`/`title`/`artist` as a Y.Text for character-level merging. A
+    // non-string here would fall through to a whole-key set that replaces that
+    // Y.Text for good, so an out-of-contract value is dropped, not coerced.
+    if (typeof this.data.caption === 'string') out.caption = this.data.caption;
     if (this.data.captionVisible !== undefined) out.captionVisible = this.data.captionVisible;
-    if (this.data.title !== undefined) out.title = this.data.title;
-    if (this.data.artist !== undefined) out.artist = this.data.artist;
+    if (typeof this.data.title === 'string') out.title = this.data.title;
+    if (typeof this.data.artist === 'string') out.artist = this.data.artist;
     if (this.data.coverUrl !== undefined) out.coverUrl = this.data.coverUrl;
     if (this.data.loop) out.loop = true;
     if (this.data.width !== undefined) out.width = this.data.width;

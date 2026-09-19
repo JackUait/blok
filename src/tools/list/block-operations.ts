@@ -66,6 +66,13 @@ export const rerenderListItem = (context: RerenderContext): HTMLElement | null =
 }
 
 /**
+ * Collab keeps `text` as a Y.Text for character-level merging, and a non-string
+ * written to that key replaces the Y.Text for good. Out-of-contract data becomes
+ * an empty item rather than the literal text "null".
+ */
+const asText = (value: unknown): string => (typeof value === 'string' ? value : '');
+
+/**
  * Save the list item data.
  *
  * @param depth - the item's STRUCTURAL nesting depth (derived from the parentId
@@ -80,10 +87,12 @@ export const saveListItem = (
   getContentElement: () => HTMLElement | null,
   depth?: number
 ): ListItemData => {
-  if (!element) return data;
+  // Identity matters: an item with no element is not serialized at all, so the
+  // stored object comes back untouched unless its text is out of contract.
+  if (!element) return typeof data.text === 'string' ? data : { ...data, text: '' };
 
   const contentEl = getContentElement();
-  const text = contentEl ? stripFakeBackgroundElements(contentEl.innerHTML) : data.text;
+  const text = contentEl ? stripFakeBackgroundElements(contentEl.innerHTML) : asText(data.text);
 
   const result: ListItemData = {
     text,

@@ -74,7 +74,10 @@ export class FileTool implements BlockTool {
     if (this.data.fileName !== undefined) out.fileName = this.data.fileName;
     if (this.data.size !== undefined) out.size = this.data.size;
     if (this.data.mimeType !== undefined) out.mimeType = this.data.mimeType;
-    if (this.data.caption !== undefined && this.data.caption !== '') out.caption = this.data.caption;
+    // Collab keeps `caption` as a Y.Text for character-level merging. A
+    // non-string here would fall through to a whole-key set that replaces that
+    // Y.Text for good, so an out-of-contract value is dropped, not coerced.
+    if (typeof this.data.caption === 'string' && this.data.caption !== '') out.caption = this.data.caption;
     if (this.data.captionVisible !== undefined) out.captionVisible = this.data.captionVisible;
     return out;
   }

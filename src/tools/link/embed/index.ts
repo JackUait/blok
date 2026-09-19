@@ -277,7 +277,8 @@ export class Embed implements BlockTool {
       height: this.data.height ?? DEFAULT_HEIGHT,
       ...(this.data.widthPercent !== undefined ? { widthPercent: this.data.widthPercent } : {}),
       ...(this.data.alignment !== undefined ? { alignment: this.data.alignment } : {}),
-      ...(this.data.caption !== undefined ? { caption: this.data.caption } : {}),
+      // Collab keeps `caption` as a Y.Text; a non-string would replace it for good.
+      ...(typeof this.data.caption === 'string' ? { caption: this.data.caption } : {}),
       ...(this.data.captionVisible !== undefined ? { captionVisible: this.data.captionVisible } : {}),
     };
   }

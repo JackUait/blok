@@ -471,9 +471,26 @@ describe('BlockYjsSync — remote reconciliation through the binary seam (integr
       });
     };
 
+    /**
+     * The peer is synced up ONCE, at the seed, and then never again: every
+     * peer op below is made against a document that does not contain the local
+     * ops before it. Which order two concurrent inserts settle into is the
+     * CRDT's business (it turns on client ids, which are random), so the
+     * assertions after a concurrent step are the invariant itself plus the set
+     * of surviving blocks — an op silently dropped on either side is the
+     * defect, not which side ended up first.
+     */
+    const expectConvergedSet = (step: string, expectedIds: string[]): void => {
+      expect(memoryIds(), `in-memory order diverged from YjsManager.toJSON() after: ${step}`).toEqual(yjsIds());
+      expect([...memoryIds()].sort(), `a block was lost or duplicated after: ${step}`).toEqual([...expectedIds].sort());
+    };
+
     it('BlockManager.blocks order equals YjsManager.toJSON() order after every step', async () => {
       createHarness([toggle('t1', []), paragraph('p1'), paragraph('p2')]);
       expectOrderInvariant('seed', ['t1', 'p1', 'p2']);
+
+      // The only sync: from here the two sides write without seeing each other.
+      syncPeerUp();
 
       localAddParagraph('p3', 3);
       await flush();
@@ -483,32 +500,36 @@ describe('BlockYjsSync — remote reconciliation through the binary seam (integr
       await flush();
       expectOrderInvariant('local move of p2 to index 1', ['t1', 'p2', 'p1', 'p3']);
 
-      syncPeerUp();
+      // Concurrent: the peer has seen neither p3 nor the move.
       peer.addBlock(paragraph('r1'), 2);
+
+      expect(peer.toJSON().map((block) => block.id)).toEqual(['t1', 'p1', 'r1', 'p2']);
+
       applyPeerToLocal();
       await flush();
-      expectOrderInvariant('remote insert of r1 at index 2', ['t1', 'p2', 'r1', 'p1', 'p3']);
+      expectConvergedSet('remote insert of r1, made while apart', ['t1', 'p1', 'p2', 'p3', 'r1']);
 
       localReparent('p2', 't1', null);
       await flush();
-      expectOrderInvariant('local reparent of p2 under t1', ['t1', 'p2', 'r1', 'p1', 'p3']);
+      expectConvergedSet('local reparent of p2 under t1', ['t1', 'p1', 'p2', 'p3', 'r1']);
       expect(repository.getBlockById('p2')?.parentId).toBe('t1');
 
-      syncPeerUp();
-      peer.moveBlock('p3', 2);
+      // Concurrent again: the peer reorders a block it has had since the seed,
+      // knowing nothing of the reparent or of r1 having been delivered.
+      peer.moveBlock('p1', 0);
       applyPeerToLocal();
       await flush();
-      expectOrderInvariant('remote reorder of p3 to index 2', ['t1', 'p2', 'p3', 'r1', 'p1']);
+      expectConvergedSet('remote reorder of p1, made while apart', ['t1', 'p1', 'p2', 'p3', 'r1']);
 
       manager.undo();
       await flush();
-      expectOrderInvariant('undo of the local reparent', ['t1', 'p2', 'p3', 'r1', 'p1']);
+      expectConvergedSet('undo of the local reparent', ['t1', 'p1', 'p2', 'p3', 'r1']);
       expect(repository.getBlockById('p2')?.parentId).toBeNull();
       expect(repository.getBlockById('t1')?.contentIds).toEqual([]);
 
       manager.redo();
       await flush();
-      expectOrderInvariant('redo of the local reparent', ['t1', 'p2', 'p3', 'r1', 'p1']);
+      expectConvergedSet('redo of the local reparent', ['t1', 'p1', 'p2', 'p3', 'r1']);
       expect(repository.getBlockById('p2')?.parentId).toBe('t1');
       expect(repository.getBlockById('t1')?.contentIds).toEqual(['p2']);
     });

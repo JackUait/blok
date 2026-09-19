@@ -140,15 +140,23 @@ describe('readCaretPosition with nothing to name', () => {
 });
 
 describe('measureLine', () => {
-  it('measures an offset inside a mounted input', () => {
+  it('reports the box of the range at the published offset, not the input box', () => {
     const input = makeInput('hello');
 
-    // jsdom has no layout, so every rect is zero - what this pins is that the
-    // offset resolves to something measurable at all.
+    // jsdom has no layout: every real rect is zero, and an assertion against
+    // zeros cannot tell the caret's own box from the input's. Stubbing the
+    // range measurement is what makes the two distinguishable - `left` is the
+    // resolved offset's own column, so a fallback to the input box (0) or a
+    // resolve at the wrong offset reads back a different number.
+    vi.spyOn(Range.prototype, 'getBoundingClientRect')
+      .mockImplementation(function measured(this: Range): DOMRect {
+        return new DOMRect(this.startOffset * 10, 5, 0, 18);
+      });
+
     expect(measureLine(input, 2)).toEqual({
-      left: 0,
-      top: 0,
-      height: 0,
+      left: 20,
+      top: 5,
+      height: 18,
     });
   });
 });

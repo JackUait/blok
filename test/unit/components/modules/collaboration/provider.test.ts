@@ -57,13 +57,39 @@ class MockSocket {
   /** When set, everything this socket sends is delivered to the peer. */
   public peer: MockSocket | null = null;
 
+  /**
+   * While true the peer is not delivered to: sends pile up in `held` until
+   * `flush()`. This is what lets two providers write CONCURRENTLY — the relay
+   * is synchronous, so without it A's bytes land on B before B has written and
+   * the two sides never actually diverge.
+   */
+  public paused = false;
+
+  private readonly held: Uint8Array[] = [];
+
   public constructor(public readonly url: string, public readonly protocols: string[]) {}
 
   public send(data: ArrayBufferLike | ArrayBufferView): void {
     const bytes = data instanceof Uint8Array ? new Uint8Array(data) : new Uint8Array(data as ArrayBuffer);
 
     this.sent.push(bytes);
+
+    if (this.paused) {
+      this.held.push(bytes);
+
+      return;
+    }
+
     this.peer?.receive(bytes);
+  }
+
+  /** Reconnect: hand the peer everything written while apart, in order. */
+  public flush(): void {
+    this.paused = false;
+
+    const pending = this.held.splice(0);
+
+    pending.forEach((bytes) => this.peer?.receive(bytes));
   }
 
   public close(code?: number, reason?: string): void {
@@ -1049,14 +1075,32 @@ describe('createCollabProvider', () => {
       return { a, b, socketA, socketB };
     };
 
-    it('converges two real DocumentStores', () => {
-      const { a, b } = createRelay();
+    /**
+     * Both sides write while the relay is held, so each one applies an update
+     * built on a state that does not contain the other's block — the merge a
+     * sequential relay never asks for.
+     */
+    it('keeps both edits when two real DocumentStores wrote while apart', () => {
+      const { a, b, socketA, socketB } = createRelay();
+
+      socketA.paused = true;
+      socketB.paused = true;
 
       a.store.addBlock({ id: 'from-a', type: 'paragraph', data: { text: 'A' } });
       b.store.addBlock({ id: 'from-b', type: 'paragraph', data: { text: 'B' } });
 
-      expect(a.store.toJSON().map((block) => block.id).sort()).toEqual(['from-a', 'from-b']);
-      expect(b.store.toJSON().map((block) => block.id).sort()).toEqual(['from-a', 'from-b']);
+      // They really are apart: neither has seen the other's write yet.
+      expect(a.store.toJSON().map((block) => block.id)).toEqual(['from-a']);
+      expect(b.store.toJSON().map((block) => block.id)).toEqual(['from-b']);
+
+      socketA.flush();
+      socketB.flush();
+
+      // Content first: a peer whose block was dropped converges just as well
+      // as one whose block survived, so agreement alone proves nothing.
+      expect(a.store.toJSON().map((block) => block.data.text).sort()).toEqual(['A', 'B']);
+      expect(b.store.toJSON().map((block) => block.data.text).sort()).toEqual(['A', 'B']);
+      expect(b.store.toJSON()).toEqual(a.store.toJSON());
     });
 
     it('does not re-broadcast a remote update (echo suppression)', () => {

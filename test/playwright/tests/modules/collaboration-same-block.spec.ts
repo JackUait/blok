@@ -458,6 +458,20 @@ test.describe('two people writing in the same block', () => {
       .poll(async () => (await savedBlocks(pageB, 'beta')).map((block) => block.id))
       .toEqual((await savedBlocks(pageA, 'alpha')).map((block) => block.id));
 
-    expect(await savedBlocks(pageB, 'beta')).toEqual(await savedBlocks(pageA, 'alpha'));
+    const converged = await savedBlocks(pageA, 'alpha');
+
+    expect(await savedBlocks(pageB, 'beta')).toEqual(converged);
+
+    // The floor under the convergence: two peers agreeing on a document that
+    // lost the untouched block, or kept the typed-into block with the typing
+    // stripped out of it, agree just as neatly as two correct ones.
+    const keeper = converged.find((block) => block.id === 'keeper');
+
+    expect(keeper?.text).toBe('keeper');
+
+    // Which side wins is not the property; a surviving block that lost the
+    // characters typed into it is. Either the block is gone, or it still
+    // holds them — anything else lands in this list.
+    expect(converged.filter((block) => block.id === 'doomed' && block.text !== 'doomedXXXXXXXXXX')).toEqual([]);
   });
 });

@@ -847,6 +847,10 @@ describe('caret layer — the selection shade', () => {
  * local edit, so the correction otherwise waits for the peer's next publish —
  * a round trip, which is the lag a user sees as the caret sliding away and
  * snapping back.
+ *
+ * The local typing is the text in the input changing with no `remoteEdit` to
+ * announce it — which is exactly what a local keystroke looks like to this
+ * layer, and all it ever sees of one.
  */
 describe('caret layer — local typing under a remote caret', () => {
   const PER_CHARACTER = 10;
@@ -975,6 +979,11 @@ describe('caret layer — local typing under a remote caret', () => {
  * not received. When that update finally lands it is a text change this editor
  * did NOT author — and carrying a caret across it shifts the peer by their own
  * typing, on top of the shift their own publish already included.
+ *
+ * The throttles are the reason the situation exists, not something these tests
+ * run: the arrival is driven the way the collaboration module drives it, by
+ * `remoteEdit(blockId)` (see `collaboration/index.ts`) plus the rewritten text
+ * in the input. Nothing here waits on a timer.
  */
 describe('caret layer — a text change the local user did not make', () => {
   const PER_CHARACTER = 10;

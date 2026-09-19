@@ -180,6 +180,41 @@ const putCaret = (editable: HTMLElement, offset: number): Node => {
   return textNode;
 };
 
+/**
+ * A local edit the peer has not seen, left in both places a real keystroke
+ * leaves it: in the live text node (so the caret's own node survives, the way
+ * it does when a user types) and in the local document.
+ *
+ * The document half goes through `YjsManager.updateBlockData` — the call
+ * `BlockManager.flushBlockDataWrites` makes when the mutation write buffer
+ * closes its window. A local-origin write is filtered out of the sync, so it
+ * never re-renders the block, which is exactly what typing does.
+ * @param core - the booted editor
+ * @param blockId - the block being typed into
+ * @param editable - the element holding the text
+ * @param appended - the characters the local user types at the end
+ */
+const typeLocallyAtEnd = (
+  core: Core,
+  blockId: string,
+  editable: HTMLElement,
+  appended: string
+): void => {
+  const textNode = editable.firstChild;
+
+  if (textNode === null || textNode.nodeType !== Node.TEXT_NODE) {
+    throw new Error('the block rendered no text node to type into');
+  }
+
+  const typed = textNode as Text;
+
+  typed.insertData(typed.length, appended);
+
+  if (!core.moduleInstances.YjsManager.updateBlockData(blockId, 'text', typed.data)) {
+    throw new Error(`the local write for ${blockId} never reached the document`);
+  }
+};
+
 /** What the live selection looks like, in the terms this defect is about. */
 const readCaret = (holder: HTMLElement): Record<string, unknown> => {
   const live = document.getSelection();
@@ -228,13 +263,18 @@ describe('a remote edit to the block the caret sits in', () => {
 
     await waitFor(() => (holder.textContent ?? '').includes('hello world'), 'the synced text to render');
 
+    // The local user types first, and the peer never receives it: the update
+    // that lands below is built on 'hello world', not on what this editor
+    // holds. Both edits are after the caret, so the character it sits on is
+    // the same one before and after the merge.
+    typeLocallyAtEnd(core, 'b1', editable, ' now');
+
     putCaret(editable, 5);
 
     const before = readCaret(holder);
 
     expect(before.offset).toBe(5);
 
-    peer.applyRemoteUpdate(core.moduleInstances.YjsManager.encodeStateAsUpdate());
     peer.updateBlockData('b1', 'text', 'hello brave world');
     socket.deliver({ type: 'update', update: peer.encodeStateAsUpdate(core.moduleInstances.YjsManager.getStateVector()) });
     peer.destroy();
@@ -242,10 +282,15 @@ describe('a remote edit to the block the caret sits in', () => {
     await waitFor(() => (holder.textContent ?? '').includes('brave'), "the peer's text");
     await new Promise((resolve) => setTimeout(resolve, 50));
 
+    // Content before caret: a rewrite that threw the local typing away would
+    // keep the caret perfectly and still have lost what the user wrote.
+    expect(holder.textContent).toContain(' now');
+    expect(holder.textContent).toContain('brave');
+
     expect(readCaret(holder), `caret before the peer's edit: ${JSON.stringify(before)}`).toEqual({
       anchorInsideBlock: true,
       anchorNode: '#text',
-      anchorText: 'hello brave world',
+      anchorText: 'hello brave world now',
       anchorStillAttached: true,
       offset: 5,
       rangeCount: 1,
@@ -274,9 +319,11 @@ describe('a remote edit to the block the caret sits in', () => {
 
     await waitFor(() => (holder.textContent ?? '').includes('hello world'), 'the synced text to render');
 
+    // Same divergence as above: local typing the peer never saw.
+    typeLocallyAtEnd(core, 'h1', editable, ' now');
+
     putCaret(editable, 5);
 
-    peer.applyRemoteUpdate(core.moduleInstances.YjsManager.encodeStateAsUpdate());
     peer.updateBlockData('h1', 'text', 'hello brave world');
     socket.deliver({ type: 'update', update: peer.encodeStateAsUpdate(core.moduleInstances.YjsManager.getStateVector()) });
     peer.destroy();
@@ -284,10 +331,13 @@ describe('a remote edit to the block the caret sits in', () => {
     await waitFor(() => (holder.textContent ?? '').includes('brave'), "the peer's text");
     await new Promise((resolve) => setTimeout(resolve, 50));
 
+    expect(holder.textContent).toContain(' now');
+    expect(holder.textContent).toContain('brave');
+
     expect(readCaret(holder)).toEqual({
       anchorInsideBlock: true,
       anchorNode: '#text',
-      anchorText: 'hello brave world',
+      anchorText: 'hello brave world now',
       anchorStillAttached: true,
       offset: 5,
       rangeCount: 1,
@@ -308,7 +358,9 @@ describe('a remote edit to the block the caret sits in', () => {
     peer.applyRemoteUpdate(core.moduleInstances.YjsManager.encodeStateAsUpdate());
     // A peer touching a key OUTSIDE the block's data: the update event fires,
     // the data is byte-identical to what this block was rendered with, so
-    // there is nothing to rewrite and no caret to lose.
+    // there is nothing to rewrite and no caret to lose. No local edit is
+    // staged before it: this is the ONE case where the two documents agreeing
+    // is the premise, not something the test is hiding.
     peer.updateBlockMetadata('b1', Date.now(), 'someone-else');
     socket.deliver({ type: 'update', update: peer.encodeStateAsUpdate(core.moduleInstances.YjsManager.getStateVector()) });
     peer.destroy();

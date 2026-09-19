@@ -723,6 +723,11 @@ describe('presence renderer', () => {
      * describes text this editor has not received yet. When it lands it is a
      * text change this editor did not author, and carrying a caret across it
      * would shift the peer by their own typing twice over.
+     *
+     * The throttles are why this happens, not something this test runs: the
+     * arrival is driven through `remoteEdit(blockId)`, the same call
+     * `collaboration/index.ts` makes on a remote block change, with the
+     * rewritten text in the tool root.
      */
     it('does not carry a peer across a rewrite the local user did not make', () => {
       const harness = setup();

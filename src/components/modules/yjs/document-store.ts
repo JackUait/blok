@@ -330,28 +330,104 @@ export class DocumentStore {
    */
   public fromJSON(blocks: YjsOutputBlockData[]): void {
     this.ydoc.transact(() => {
-      this.yRootOrder.delete(0, this.yRootOrder.length);
+      const identified = blocks.filter(
+        (block): block is YjsOutputBlockData & { id: string } => typeof block.id === 'string'
+      );
+      // The map KEY is scrubbed too — a NUL here (not just in the yblock's
+      // id field) is what aborts the .NET server's yrs read.
+      const rendered = identified.map((block) => ({ block,
+        id: stripNul(block.id) }));
+      const keptIds = new Set(rendered.map(({ id }) => id));
 
       for (const key of Array.from(this.yBlocksMap.keys())) {
-        this.yBlocksMap.delete(key);
-      }
-
-      for (const block of blocks) {
-        if (typeof block.id !== 'string') {
-          continue;
+        if (!keptIds.has(key)) {
+          this.yBlocksMap.delete(key);
         }
-
-        // The map KEY is scrubbed too — a NUL here (not just in the yblock's
-        // id field) is what aborts the .NET server's yrs read.
-        this.yBlocksMap.set(stripNul(block.id), this.serializer.outputDataToYBlock(block));
       }
 
-      const topLevelIds = blocks.flatMap((block) =>
-        block.parent === undefined && typeof block.id === 'string' ? [stripNul(block.id)] : []
-      );
+      for (const { block, id } of rendered) {
+        const existing = this.yBlocksMap.get(id);
 
-      this.yRootOrder.push(topLevelIds);
+        // A block the document ALREADY holds is rewritten in place, never
+        // deleted and rebuilt. A rebuild puts a fresh Y.Map under the id, and
+        // everything a peer is typing at that moment lives inside the map being
+        // thrown away — so `editor.render()` over the same ids erased their
+        // edit every time, with no race to lose. In place, a carried-over text
+        // field is EDITED, so their characters keep their identity.
+        if (existing instanceof Y.Map) {
+          this.rewriteBlockInPlace(existing, id, block);
+        } else {
+          this.yBlocksMap.set(id, this.serializer.outputDataToYBlock(block));
+        }
+      }
+
+      const topLevelIds = rendered.flatMap(({ block, id }) => block.parent === undefined ? [id] : []);
+
+      // Spliced, not cleared and re-pushed: an id that stays keeps its item, so
+      // a peer's concurrent insert next to it lands where they put it.
+      this.assignKeySequence(this.yRootOrder, topLevelIds);
     }, 'load');
+  }
+
+  /**
+   * Rewrite an existing block's fields from rendered JSON, keeping the block's
+   * Y.Map (and every shared type inside it that survives the rewrite).
+   *
+   * Every field `outputDataToYBlock` writes is covered here, and a field the
+   * new JSON omits is REMOVED — rendering a document replaces it, so a tune or
+   * a parent link that is no longer in the data must not linger.
+   * @param yblock - the block's existing Y.Map
+   * @param id - the block's scrubbed id
+   * @param block - the rendered block data
+   */
+  private rewriteBlockInPlace(yblock: Y.Map<unknown>, id: string, block: YjsOutputBlockData): void {
+    yblock.set('id', id);
+    // Per key, and through the same path a turn-into takes.
+    this.replaceBlockContent(id, block.type, block.data);
+
+    const tunes = yblock.get('tunes');
+
+    if (block.tunes === undefined) {
+      yblock.delete('tunes');
+    } else if (tunes instanceof Y.Map) {
+      this.deepAssignYMap(tunes, block.tunes);
+    } else {
+      yblock.set('tunes', this.serializer.objectToYMap(block.tunes));
+    }
+
+    if (block.parent === undefined) {
+      yblock.delete('parentId');
+    } else {
+      yblock.set('parentId', stripNulIfString(block.parent));
+    }
+
+    const contentIds: unknown = yblock.get('contentIds');
+    const renderedContentIds = Array.from(
+      (block.content ?? []) as Iterable<unknown>
+    ).map(stripNulIfString) as string[];
+
+    if (contentIds instanceof Y.Array) {
+      this.assignKeySequence(contentIds as Y.Array<string>, renderedContentIds);
+    } else {
+      yblock.set('contentIds', Y.Array.from(renderedContentIds));
+    }
+
+    this.rewriteOptionalField(yblock, 'lastEditedAt', block.lastEditedAt);
+    this.rewriteOptionalField(yblock, 'lastEditedBy', stripNulIfString(block.lastEditedBy));
+  }
+
+  /**
+   * Set a block field, or remove it when the rendered data does not carry it.
+   * @param yblock - the block's Y.Map
+   * @param key - the field name
+   * @param value - the rendered value, or undefined to remove the field
+   */
+  private rewriteOptionalField(yblock: Y.Map<unknown>, key: string, value: unknown): void {
+    if (value === undefined) {
+      yblock.delete(key);
+    } else {
+      yblock.set(key, value);
+    }
   }
 
   /**
@@ -717,9 +793,38 @@ export class DocumentStore {
       return false;
     }
 
+    const normalized = this.serializer.normalizeBlockData(type, data);
+    const ydata = yblock.get('data');
+
     this.transact(() => {
       yblock.set('type', stripNulIfString(type));
-      yblock.set('data', this.serializer.blockDataToYMap(this.serializer.normalizeBlockData(type, data)));
+
+      // No readable data map to merge into (a peer wrote a non-map, or the
+      // block never carried one): build one, which is what this always did.
+      if (!(ydata instanceof Y.Map)) {
+        yblock.set('data', this.serializer.blockDataToYMap(normalized));
+
+        return;
+      }
+
+      // Per KEY, never a fresh map over the old one. A whole-key `set` on
+      // `data` is last-writer-wins, and the other person's edits live INSIDE
+      // the value it replaces — so converting a paragraph while someone typed
+      // in it discarded their Y.Text with everything in it. Writing per key
+      // routes a carried-over field through `updateBlockData`, which EDITS the
+      // live Y.Text, so both survive. The .NET `EditStep.ReplaceData` was given
+      // the same treatment in the same release; the two must stay alike.
+      //
+      // What this can and cannot preserve: a conversion carrying the same field
+      // (paragraph → header, list item → quote) keeps the peer's characters. A
+      // conversion to a different shape (paragraph → image) does not, and must
+      // not — the field is gone from the new tool's data, so the prune below
+      // removes it on both peers. Replace still replaces.
+      for (const [key, value] of Object.entries(normalized)) {
+        this.updateBlockData(id, key, value);
+      }
+
+      this.pruneBlockData(id, new Set(Object.keys(normalized)));
     }, 'local');
 
     return true;

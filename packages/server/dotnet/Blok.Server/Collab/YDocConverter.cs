@@ -96,6 +96,28 @@ internal static class YDocConverter
   /// </summary>
   private static readonly string[] DiffableTextKeys = ["text", "code", "caption", "title", "alt", "artist"];
 
+  /// <summary>
+  /// THE list of NESTED data keys whose value is stored as a <see cref="YArray"/>
+  /// even when empty or all-string, so two peers each inserting a block into ONE
+  /// table cell keep both ids instead of one whole-value write orphaning the
+  /// other's child block.
+  ///
+  /// LOCKSTEP: it must name exactly what <c>ORDERED_ID_ARRAY_KEYS</c> names in
+  /// src/components/modules/yjs/serializer.ts. Widening the set is one entry
+  /// there and one entry here — and nowhere else in this file.
+  ///
+  /// NESTED block data ONLY, exactly like the client: <c>BlockDataEntries</c>
+  /// (the TOP level) does not consult it, so a custom tool's top-level
+  /// <c>data.blocks</c> keeps the generic array rule.
+  ///
+  /// The generic array rule cannot cover it: <c>IsConvertibleArray</c> promotes
+  /// only non-empty ALL-OBJECT/ARRAY arrays, and a cell is born
+  /// <c>blocks: []</c> and then holds strings. Minting is EAGER for the same
+  /// reason <c>contentIds</c> is: a later promotion runs on two peers at once
+  /// and map-set is last-writer-wins, so the loser's ids are discarded.
+  /// </summary>
+  private static readonly string[] OrderedIdArrayKeys = ["blocks"];
+
   // nanoid's default alphabet; keys are random so two peers never collide.
   private const string RowKeyAlphabet =
       "useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict";
@@ -1140,10 +1162,29 @@ internal static class YDocConverter
 
       foreach (var (key, child) in value)
       {
-        entries.Add(Pair(NoNul(key, "a data key"), PlainToYValue(child, depth + 1)));
+        var mapKey = NoNul(key, "a data key");
+
+        entries.Add(Pair(
+            mapKey,
+            IsOrderedIdArrayKey(mapKey) && child is JsonArray idList
+              ? PlainToYArray(idList, depth + 1)
+              : PlainToYValue(child, depth + 1)));
       }
 
       return new YMap(entries);
+    }
+
+    /// <summary>
+    /// A plain array as a <see cref="YArray"/>, element-wise, WHATEVER the
+    /// elements are — empty and all-primitive included, unlike
+    /// <c>PlainToYValue</c>. Only the ordered-id-array rule uses it; mirrors
+    /// the client's <c>YBlockSerializer.plainToYArray</c>.
+    /// </summary>
+    private static YArray PlainToYArray(JsonArray array, int depth)
+    {
+      GuardDepth(depth, "a data value");
+
+      return new YArray(array.Select(element => PlainToYValue(element, depth + 1)));
     }
 
     /// <summary>
@@ -1301,6 +1342,12 @@ internal static class YDocConverter
   private static bool IsDiffableTextKey(string key)
   {
     return Array.IndexOf(DiffableTextKeys, key) >= 0;
+  }
+
+  /// <summary>Whether a NESTED data key holds an ordered id list.</summary>
+  private static bool IsOrderedIdArrayKey(string key)
+  {
+    return Array.IndexOf(OrderedIdArrayKeys, key) >= 0;
   }
 
   /// <summary>The value under a key, or null when the map has no live entry for it.</summary>

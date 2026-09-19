@@ -3,7 +3,7 @@ import { getUnixTime } from 'lib0/time';
 import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate, removeAwarenessStates } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 
-import { GRID_ORDER_KEY, GRID_ROWS_KEY, isDiffableTextKey, stripNul, stripNulDeep, type YBlockSerializer, type YjsOutputBlockData, stripNulIfString } from './serializer';
+import { GRID_ORDER_KEY, GRID_ROWS_KEY, isDiffableTextKey, isOrderedIdArrayKey, stripNul, stripNulDeep, type YBlockSerializer, type YjsOutputBlockData, stripNulIfString } from './serializer';
 import { LOCAL_ORIGIN_TAGS, type AwarenessChange, type BlockPlacement, type LocalOriginTag, type UndoScopeType } from './types';
 // The narrow module, not the utils barrel: the collab fixture generator
 // bundles this file for node.
@@ -1448,6 +1448,26 @@ export class DocumentStore {
       return;
     }
 
+    // An ordered id list is a Y.Array at ANY depth, even empty or all-string,
+    // so two peers inserting a block into ONE table cell keep both ids. Runs
+    // BEFORE the generic Y.Array branch, which would downshift an all-string
+    // value back to a plain leaf because it fails `isConvertibleArray`.
+    if (isOrderedIdArrayKey(mapKey) && Array.isArray(value)) {
+      if (existing instanceof Y.Array) {
+        this.deepAssignYArray(existing, value);
+      } else {
+        // A cell from a doc written before this rule (or by an older client)
+        // still holds a plain array. Promote it — unconditionally, so the
+        // migration happens on the first write rather than never. This single
+        // promotion IS last-writer-wins, exactly as the whole-value write it
+        // replaces was, so it costs no more than today; every write after it
+        // merges.
+        target.set(mapKey, this.serializer.plainToYArray(value));
+      }
+
+      return;
+    }
+
     if (Array.isArray(value) && existing instanceof Y.Array) {
       if (this.serializer.isConvertibleArray(value)) {
         this.deepAssignYArray(existing, value);
@@ -1487,8 +1507,9 @@ export class DocumentStore {
    * changed middles have equal length, otherwise replace the middle with ONE
    * splice. Y.Array item identity is what lets a concurrent row insert and a
    * cell edit both apply, so untouched elements must never be rewritten.
-   * `source` must satisfy `isConvertibleArray`; must run inside a transaction
-   * (the caller wraps it).
+   * `source` must satisfy `isConvertibleArray`, or be an ordered id list (whose
+   * elements are compared and replaced as plain leaves); must run inside a
+   * transaction (the caller wraps it).
    */
   private deepAssignYArray(target: Y.Array<unknown>, source: unknown[]): void {
     const targetLength = target.length;

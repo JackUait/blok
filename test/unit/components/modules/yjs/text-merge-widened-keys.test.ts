@@ -64,10 +64,10 @@ describe('widening: top-level user-typed strings merge per character', () => {
 });
 
 describe('widening: a table cell\'s block-id list', () => {
-  // RED on purpose: `blocks` is a primitive array, so it is an atomic leaf and
-  // one peer's inserted id is orphaned. Fixing it needs the ordered-id-array
-  // rule, which is a saved-format change the C# seed side must mirror.
-  it.fails('keeps both peers\' inserted block when each adds one to the same cell', () => {
+  // `blocks` used to be a primitive array, so it was an atomic leaf and one
+  // peer's inserted id was orphaned. The ordered-id-array rule mints it as a
+  // Y.Array at birth on both the client and the C# seed side.
+  it('keeps both peers\' inserted block when each adds one to the same cell', () => {
     const a = createStore();
     const b = createStore();
 

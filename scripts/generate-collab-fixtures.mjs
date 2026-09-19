@@ -127,6 +127,38 @@ const CASES = [
     ],
   },
   {
+    name: 'cell-block-ids',
+    description:
+      'a table cell\'s `blocks` id list is a Y.Array at every nesting depth, empty and all-string included, so concurrent inserts into one cell merge',
+    input: [
+      {
+        id: 'tb1',
+        type: 'table',
+        data: {
+          withHeadings: false,
+          // Populated, empty, and a merged-cell shape carrying a sibling key —
+          // all three must mint the Y.Array, and `mergedInto`/`colWidths` must
+          // NOT (they are not ordered id lists).
+          content: [
+            [{ blocks: ['p1', 'p2'] }, { blocks: [] }],
+            [{ blocks: ['p3'], mergedInto: null }, { blocks: [], mergedInto: { row: 1, col: 0 } }],
+          ],
+          colWidths: [120, 240],
+        },
+      },
+      // The same key OUTSIDE a grid: nested under a plain object, and at the
+      // block's TOP level, where the rule deliberately does NOT apply.
+      {
+        id: 'tb2',
+        type: 'widget',
+        data: { panel: { blocks: [] }, blocks: ['top1', 'top2'] },
+      },
+      { id: 'p1', type: 'paragraph', data: { text: 'one' }, parent: 'tb1' },
+      { id: 'p2', type: 'paragraph', data: { text: 'two' }, parent: 'tb1' },
+      { id: 'p3', type: 'paragraph', data: { text: 'three' }, parent: 'tb1' },
+    ],
+  },
+  {
     name: 'array-kinds',
     description: 'convertible arrays (all objects) become Y.Arrays; primitive, mixed and empty arrays stay atomic leaves',
     input: [

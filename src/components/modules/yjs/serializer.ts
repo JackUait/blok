@@ -21,6 +21,36 @@ const DIFFABLE_TEXT_KEYS = new Set(['text', 'code', 'caption', 'title', 'alt', '
 export const isDiffableTextKey = (key: string): boolean => DIFFABLE_TEXT_KEYS.has(key);
 
 /**
+ * NESTED data keys holding an ORDERED LIST OF IDS — today only a table cell's
+ * `blocks`. Stored as a `Y.Array` even when empty or all-string, so two peers
+ * each inserting a block into ONE cell keep both ids instead of one whole-value
+ * write orphaning the other's child block.
+ *
+ * The general array rule cannot cover it: `isConvertibleArray` promotes only
+ * non-empty ALL-OBJECT arrays, and a cell is born `blocks: []` and then holds
+ * strings, so it would never promote at all.
+ *
+ * EAGER, at the cell map's single creation site, for the same reason
+ * `contentIds` is minted eagerly on a childless block: a LAZY promotion runs on
+ * two peers at once and map-set is last-writer-wins, so the loser's array is
+ * discarded WITH the id inside it.
+ *
+ * NESTED only, by construction: `objectToYMap` and `assignYMapEntry` are the
+ * only readers, and a block's TOP-LEVEL data map is built by `blockDataToYMap`
+ * and written by `updateBlockData`, neither of which consults this set. A
+ * custom tool's top-level `data.blocks` therefore keeps the old behaviour.
+ *
+ * LOCKSTEP: `OrderedIdArrayKeys` in
+ * packages/server/dotnet/Blok.Server/Collab/YDocConverter.cs must name exactly
+ * the same keys, or a server-seeded cell is a plain array where a
+ * client-seeded one is a Y.Array.
+ */
+const ORDERED_ID_ARRAY_KEYS = new Set(['blocks']);
+
+/** Whether a NESTED data key holds an ordered id list. */
+export const isOrderedIdArrayKey = (key: string): boolean => ORDERED_ID_ARRAY_KEYS.has(key);
+
+/**
  * Remove every NUL from a string. A NUL in ANY position — map key, string
  * value, array element — aborts the .NET sync server's yrs read, and the
  * abort kills the whole server process, so no write site may skip the strip.
@@ -315,10 +345,28 @@ export class YBlockSerializer {
     const ymap = new Y.Map<unknown>();
 
     for (const [key, value] of Object.entries(obj)) {
-      ymap.set(stripNul(key), this.plainToYValue(value));
+      const mapKey = stripNul(key);
+
+      ymap.set(mapKey, isOrderedIdArrayKey(mapKey) && Array.isArray(value)
+        ? this.plainToYArray(value)
+        : this.plainToYValue(value));
     }
 
     return ymap;
+  }
+
+  /**
+   * A plain array as a Y.Array, element-wise, WHATEVER the elements are —
+   * empty and all-primitive included, unlike `plainToYValue`. Only the
+   * ordered-id-array rule uses it; everything else must keep the array rule's
+   * atomic-leaf behaviour.
+   */
+  public plainToYArray(value: unknown[]): Y.Array<unknown> {
+    const yarray = new Y.Array<unknown>();
+
+    yarray.push(value.map((element) => this.plainToYValue(element)));
+
+    return yarray;
   }
 
   /**
@@ -326,8 +374,9 @@ export class YBlockSerializer {
    * arrays converts to a Y.Array of recursively-converted elements, so
    * concurrent edits merge per element (table cells, schema properties).
    * Primitive arrays (any primitive/null element) and EMPTY arrays stay atomic
-   * plain leaves — `blocks: []` must stay plain when later populated with
-   * block-id strings, or two peers would race the representation itself.
+   * plain leaves. A NESTED `blocks` key is the one exception and never reaches
+   * this predicate: it is minted as a Y.Array at birth by the ordered-id-array
+   * rule, precisely so no later promotion can race the representation.
    * `DocumentStore.deepAssignYArray` diffs against the same predicate; the
    * write path and the load path must never disagree on it.
    * An array of ARRAYS is a grid and takes the keyed shape instead — see

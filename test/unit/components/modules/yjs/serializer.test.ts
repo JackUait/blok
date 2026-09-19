@@ -279,7 +279,7 @@ describe('YBlockSerializer', () => {
       expect((rows as Y.Array<unknown>).get(1) instanceof Y.Map).toBe(true);
     });
 
-    it('converts a table-shaped grid to keyed rows → Y.Array(cells) → Y.Map(cell fields) with plain blocks arrays', () => {
+    it('converts a table-shaped grid to keyed rows → Y.Array(cells) → Y.Map(cell fields) with Y.Array blocks lists', () => {
       const ydata = getData({
         content: [
           [{ blocks: ['p1'] }, { blocks: ['p2'] }],
@@ -306,11 +306,12 @@ describe('YBlockSerializer', () => {
 
       expect(cell0 instanceof Y.Map).toBe(true);
 
-      // cell.blocks is a primitive string array — stays a plain atomic leaf
+      // cell.blocks is an ORDERED ID LIST — a Y.Array even though its elements
+      // are strings, so two peers inserting into one cell keep both ids.
       const blocks = cell0.get('blocks');
 
-      expect(Array.isArray(blocks)).toBe(true);
-      expect(blocks).toEqual(['p1']);
+      expect(blocks instanceof Y.Array).toBe(true);
+      expect((blocks as Y.Array<unknown>).toArray()).toEqual(['p1']);
     });
 
     it('keeps primitive arrays atomic (plain arrays, not Y.Arrays)', () => {

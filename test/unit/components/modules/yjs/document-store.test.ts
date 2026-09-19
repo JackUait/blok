@@ -704,7 +704,7 @@ describe('DocumentStore', () => {
       return yblock.get('data') as Y.Map<unknown>;
     };
 
-    it('stores a table grid as keyed rows → Y.Array(cells) → Y.Map, with plain blocks arrays', () => {
+    it('stores a table grid as keyed rows → Y.Array(cells) → Y.Map, with Y.Array blocks lists', () => {
       store.fromJSON([{ id: 't1', type: 'table', data: { content: grid() } }]);
 
       const content = getDataMap('t1').get('content');
@@ -718,7 +718,7 @@ describe('DocumentStore', () => {
       const cellMap = row.get(0) as Y.Map<unknown>;
 
       expect(cellMap instanceof Y.Map).toBe(true);
-      expect(Array.isArray(cellMap.get('blocks'))).toBe(true);
+      expect(cellMap.get('blocks') instanceof Y.Array).toBe(true);
     });
 
     it('keeps colWidths a plain atomic array through load and write', () => {
@@ -732,21 +732,30 @@ describe('DocumentStore', () => {
       expect(store.toJSON()[0].data.colWidths).toEqual([110, 200, 150]);
     });
 
-    it('keeps a populated cell blocks array plain (representation-flip hole stays closed)', () => {
+    // The hole is that a populate-later flip from plain array to Y.Array runs on
+    // two peers at once and map-set discards the loser's ids. It is closed by
+    // minting the Y.Array at BIRTH: an empty cell already has the container, so
+    // populating it diffs into the SAME container and no flip ever happens.
+    it('mints an empty cell blocks Y.Array at birth and populates it in place (representation-flip hole stays closed)', () => {
       const initial = grid();
 
       initial[1][1] = { blocks: [] };
       store.fromJSON([{ id: 't1', type: 'table', data: { content: initial } }]);
+
+      const cellMap = (getRow(store, 't1', 1) as Y.Array<unknown>).get(1) as Y.Map<unknown>;
+      const bornEmpty = cellMap.get('blocks');
+
+      expect(bornEmpty instanceof Y.Array).toBe(true);
+      expect((bornEmpty as Y.Array<unknown>).toArray()).toEqual([]);
 
       const next = grid();
 
       next[1][1] = { blocks: ['p9'] };
       store.updateBlockData('t1', 'content', next);
 
-      const cellMap = (getRow(store, 't1', 1) as Y.Array<unknown>).get(1) as Y.Map<unknown>;
-
-      expect(Array.isArray(cellMap.get('blocks'))).toBe(true);
-      expect(cellMap.get('blocks')).toEqual(['p9']);
+      // Same container identity — the populate is an insert, not a replacement.
+      expect(cellMap.get('blocks')).toBe(bornEmpty);
+      expect((cellMap.get('blocks') as Y.Array<unknown>).toArray()).toEqual(['p9']);
     });
 
     it('upgrades an empty content array to a keyed grid on the first qualifying write', () => {
@@ -816,8 +825,9 @@ describe('DocumentStore', () => {
       store.fromJSON([{ id: 't1', type: 'table', data: { content: grid() } }]);
     });
 
-    it('editing one cell touches only that cell Y.Map', () => {
+    it('editing one cell touches only that cell\'s blocks Y.Array, as an insert', () => {
       const cell11 = (getRow(store, 't1', 1) as Y.Array<unknown>).get(1) as Y.Map<unknown>;
+      const blocks11 = cell11.get('blocks') as Y.Array<unknown>;
 
       observe();
 
@@ -831,10 +841,14 @@ describe('DocumentStore', () => {
       const events = batches[0];
 
       expect(events).toHaveLength(1);
-      // Same Y.Map identity — the edit lands INSIDE the existing cell map
-      expect(events[0].target).toBe(cell11);
+      // Same Y.Array identity — the edit lands INSIDE the existing ordered id
+      // list, one level FINER than the cell Y.Map it used to land on, which is
+      // what lets a peer's concurrent insert into the same cell survive.
+      expect(events[0].target).toBe(blocks11);
 
-      expect(events[0].keys).toEqual(['blocks']);
+      // A pure insert of the one new id: the untouched prefix is retained, so
+      // nothing a peer added is rewritten.
+      expect(events[0].delta).toEqual([{ retain: 1 }, { insert: ['extra'] }]);
     });
 
     it('inserting a row adds one row container and one key, touching no existing row', () => {

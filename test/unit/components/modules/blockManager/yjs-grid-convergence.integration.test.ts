@@ -92,7 +92,11 @@ describe('per-cell grid convergence — two editors, one table, via the binary s
     expect(merged[1][0].blocks).toEqual(['c10']);
   });
 
-  it('concurrent same-cell same-key edits: exactly one writer wins, identically on both docs', () => {
+  // Both ids name REAL child blocks in the tree. Under the old atomic-leaf
+  // representation this was a last-writer-wins race and the loser's child was
+  // orphaned — which is the defect the ordered-id-array rule exists to fix — so
+  // the law here is that BOTH survive, not that one wins.
+  it('concurrent same-cell edits: both writers\' block ids survive, identically on both docs', () => {
     const gridA = grid();
 
     gridA[0][0] = { blocks: ['A-wins'] };
@@ -110,10 +114,11 @@ describe('per-cell grid convergence — two editors, one table, via the binary s
     const cellA = readGrid(managerA)[0][0].blocks;
     const cellB = readGrid(managerB)[0][0].blocks;
 
-    // The winner is decided by clientID (random per doc) — never pin WHICH
-    // side wins, only that both docs agree on ONE of the two writes.
+    // Neither child block is orphaned. The ORDER the CRDT picks is decided by
+    // clientID (random per doc), so pin the membership, not the order — but
+    // both docs must agree on that order exactly.
     expect(cellA).toEqual(cellB);
-    expect([['A-wins'], ['B-wins']]).toContainEqual(cellA);
+    expect([...cellA].sort()).toEqual(['A-wins', 'B-wins']);
 
     // The untouched cells survive the conflict untouched.
     const merged = readGrid(managerA);

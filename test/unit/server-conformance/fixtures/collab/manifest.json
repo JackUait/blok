@@ -10,6 +10,10 @@
       "description": "arrays of arrays take the keyed __rows/__rowKeys shape; empty rows and [[],[]] stay grids; grids nest"
     },
     {
+      "name": "cell-block-ids",
+      "description": "a table cell's `blocks` id list is a Y.Array at every nesting depth, empty and all-string included, so concurrent inserts into one cell merge"
+    },
+    {
       "name": "array-kinds",
       "description": "convertible arrays (all objects) become Y.Arrays; primitive, mixed and empty arrays stay atomic leaves"
     },

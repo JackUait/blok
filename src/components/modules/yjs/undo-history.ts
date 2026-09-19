@@ -33,6 +33,13 @@ export class UndoHistory {
   private currentUndoManager: Y.UndoManager;
 
   /**
+   * The blocks map of the tracked scope, or null when the scope has none (the
+   * unit fixtures hand UndoHistory a bare array). The delete filter reads it to
+   * tell which block an item belongs to; kept in sync by `createUndoManager`.
+   */
+  private blocksScope: Y.Map<Y.Map<unknown>> | null = null;
+
+  /**
    * The live undo manager. Callers MUST read it through this getter rather
    * than caching it — `rebindScope` replaces the instance.
    */
@@ -173,9 +180,185 @@ export class UndoHistory {
    * @param scope - the shared types to track
    */
   private createUndoManager(scope: UndoScopeType[]): Y.UndoManager {
+    // The blocks map is the first Y.Map of the scope (see DocumentStore.undoScope).
+    this.blocksScope = scope.find((root): root is Y.Map<Y.Map<unknown>> => root instanceof Y.Map) ?? null;
+
     return new Y.UndoManager(scope, {
       captureTimeout: CAPTURE_TIMEOUT_MS,
       trackedOrigins: new Set(['local']),
+      deleteFilter: (item) => this.mayUndoDelete(item),
+    });
+  }
+
+  /**
+   * Whether undo/redo may delete this item.
+   *
+   * Yjs undoes an insert by deleting the items it created — and deleting the
+   * item that holds a block's Y.Map deletes EVERYTHING below it, including the
+   * sentence a peer typed into that block after the insert. Undo must unwind
+   * what the undoing person did, never what somebody else wrote, so an item is
+   * spared when removing it would take a peer's live content with it:
+   *
+   * - the item's own value still holds a peer's content (the block map, its
+   *   `data` map, the `Y.Text` a peer typed into);
+   * - it is a block id inside an order array naming such a block — that id has
+   *   no subtree of its own, and dropping it would leave the block unreachable,
+   *   which is the same loss by another route;
+   * - it is a structural key (`id`, `type`, `data`…) of such a block, whose
+   *   loss would leave a husk no tool can render.
+   *
+   * Everything else is deleted as before — including the undoing peer's own
+   * characters inside a block a peer also typed in, so undoing your own typing
+   * keeps working in a shared paragraph.
+   *
+   * Solo editing is untouched: every item then belongs to the local client, no
+   * block is ever peer-occupied, and the filter always says yes.
+   *
+   * When this spares every item of a stack item, yjs's own loop moves on to the
+   * next one — the same skip it already performs for an insertion a peer has
+   * deleted (see {@link entryByStackItem}). One press then unwinds the newest
+   * action that still CAN be unwound, which is preferable to destroying the
+   * peer's writing.
+   * @param item - the item yjs is about to delete while unwinding a stack item
+   */
+  private mayUndoDelete(item: Y.Item): boolean {
+    if (this.blocksScope === null) {
+      return true;
+    }
+
+    if (this.isOrderArray(item.parent)) {
+      const namesKeptBlock = item.content
+        .getContent()
+        .some((value) => typeof value === 'string' && this.blockHoldsPeerContent(value));
+
+      if (namesKeptBlock) {
+        return false;
+      }
+    }
+
+    const owner = this.blockOwningKey(item);
+
+    if (owner !== null && this.blockHoldsPeerContent(owner)) {
+      return false;
+    }
+
+    const value = (item.content as { type?: unknown }).type;
+
+    return !(value instanceof Y.AbstractType) || !this.holdsPeerItem(value, new Set());
+  }
+
+  /**
+   * The id of the block whose own Y.Map holds this item as a direct key — the
+   * block's entry in the blocks map counts as its own key. Null for anything
+   * deeper (a `data` key, a character in a text) or outside a block.
+   */
+  private blockOwningKey(item: Y.Item): string | null {
+    const blocks = this.blocksScope;
+    const { parent } = item;
+
+    if (parent === blocks) {
+      return item.parentSub;
+    }
+
+    const owner = parent instanceof Y.Map ? parent._item : null;
+
+    return owner !== null && owner.parent === blocks ? owner.parentSub : null;
+  }
+
+  /**
+   * Whether `parent` is one of the arrays that carry block ids: the root order,
+   * or a block's `contentIds`.
+   */
+  private isOrderArray(parent: Y.AbstractType<unknown> | Y.ID | null): boolean {
+    if (!(parent instanceof Y.Array)) {
+      return false;
+    }
+
+    const owner = parent._item;
+
+    return owner === null || owner.parentSub === 'contentIds';
+  }
+
+  /**
+   * Whether the block (or, through `contentIds`, one of its descendants) holds
+   * live content authored by a client other than this document's own.
+   * @param blockId - id of the block to inspect
+   * @param visited - ids already inspected, so a cyclic contentIds cannot loop
+   */
+  private blockHoldsPeerContent(blockId: string, visited = new Set<string>()): boolean {
+    const blocks = this.blocksScope;
+
+    if (blocks === null || visited.has(blockId)) {
+      return false;
+    }
+    visited.add(blockId);
+
+    const block = blocks.get(blockId);
+
+    return block instanceof Y.Map && this.holdsPeerItem(block, visited);
+  }
+
+  /**
+   * Every item a shared type holds: its sequence chain (array elements, text
+   * characters) plus its map entries, deleted ones included.
+   */
+  private itemsOf<T>(type: Y.AbstractType<T>): Y.Item[] {
+    const items: Y.Item[] = [];
+    const chain: Array<Y.Item | null> = [type._start];
+
+    while (chain.length > 0) {
+      const node = chain.pop() ?? null;
+
+      if (node !== null) {
+        items.push(node);
+        chain.push(node.right);
+      }
+    }
+
+    type._map.forEach((node) => items.push(node));
+
+    return items;
+  }
+
+  /**
+   * Walk one shared type's live items looking for a foreign author, following
+   * nested types and the child blocks a `contentIds` array names.
+   */
+  private holdsPeerItem<T>(type: Y.AbstractType<T>, visited: Set<string>): boolean {
+    const local = type.doc?.clientID;
+
+    if (local === undefined) {
+      return false;
+    }
+
+    // Child blocks live in the blocks map, not below this type: the ids in a
+    // `contentIds` array are the only link, so they are followed.
+    const namesChildBlocks = type instanceof Y.Array && type._item?.parentSub === 'contentIds';
+
+    return this.itemsOf(type).some((node) => {
+      // A deleted item's children are deleted with it, so nothing below it is
+      // live content worth protecting.
+      if (node.deleted) {
+        return false;
+      }
+
+      if (node.id.client !== local) {
+        return true;
+      }
+
+      const value = (node.content as { type?: unknown }).type;
+
+      if (value instanceof Y.AbstractType) {
+        return this.holdsPeerItem(value, visited);
+      }
+
+      if (namesChildBlocks) {
+        return node.content
+          .getContent()
+          .some((childId) => typeof childId === 'string' && this.blockHoldsPeerContent(childId, visited));
+      }
+
+      return false;
     });
   }
 

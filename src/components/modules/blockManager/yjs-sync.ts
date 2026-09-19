@@ -15,7 +15,7 @@ import { moveElementAfter, moveElementBefore } from '../../utils/html';
 import { equals } from '../../utils/object';
 import { sanitizeBlocks, stripUnsafeUrlsDeep } from '../../utils/sanitizer';
 import type { YjsManager } from '../yjs';
-import type { BlockChangeEvent } from '../yjs/types';
+import type { BlockChangeEvent, TransactionOrigin } from '../yjs/types';
 
 import type { BlockFactory } from './factory';
 import { captureCaretAcrossRewrite } from './remote-edit-caret';
@@ -489,7 +489,7 @@ export class BlockYjsSync {
    */
   private syncBlockFromYjs(event: BlockChangeEvent): void {
     if (event.type === 'update') {
-      this.handleYjsUpdate(event.blockId);
+      this.handleYjsUpdate(event.blockId, event.origin);
     } else if (event.type === 'move') {
       this.handleYjsMove(event.blockId);
     } else if (event.type === 'add') {
@@ -684,8 +684,11 @@ export class BlockYjsSync {
 
   /**
    * Handle block update from Yjs (undo/redo or a remote peer)
+   * @param blockId - the block the doc changed
+   * @param origin - who changed it, which decides whether the local caret is
+   * preserved across the rewrite
    */
-  private handleYjsUpdate(blockId: string): void {
+  private handleYjsUpdate(blockId: string, origin: TransactionOrigin): void {
     const block = this.repository.getBlockById(blockId);
     const yblock = this.dependencies.YjsManager.getBlockById(blockId);
 
@@ -819,7 +822,14 @@ export class BlockYjsSync {
     // The window stays open through setData and one RAF so the DOM mutation
     // observers cannot write back to Yjs and clear the redo stack.
     void this.withAtomicOperationAsync(async () => {
-      const restoreCaret = captureCaretAcrossRewrite(block, document.getSelection());
+      // Only for a PEER's edit. Undo and redo carry a caret of their own —
+      // `UndoHistory` restores the snapshot it captured, synchronously, while
+      // this runs after `setData`'s await and would therefore win. It would
+      // put the caret back where the text was BEFORE the redo, so redoing
+      // typed text left the caret at the end of the old text.
+      const restoreCaret = origin === 'remote'
+        ? captureCaretAcrossRewrite(block, document.getSelection())
+        : null;
       const success = await block.setData(data);
 
       if (success) {

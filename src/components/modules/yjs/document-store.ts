@@ -16,8 +16,13 @@ import { equals } from '../../utils/object';
  * about 7, so the cap never bites a real edit, while a whole-string replacement
  * — a paste over a selection, a tool normalising its own markup — has a D the
  * size of the text and costs seconds at a few thousand characters. Past the cap
- * the single-region answer is returned, which is what the write did before any
- * of this existed.
+ * `diffText` re-runs the same bounded search over WORDS, and only past that
+ * returns the single-region answer, which is what the write did before any of
+ * this existed.
+ *
+ * The number is not a free dial: measured on a 20k-character whole-string
+ * rewrite, a cap of 512 costs 25-70ms and 1024 costs 80-100ms, against under
+ * 2ms here. Widen the UNITS, not the cap.
  */
 const MAX_DIFF_DISTANCE = 64;
 
@@ -54,11 +59,6 @@ const backtrackMyers = (
     const previousK = down ? k + 1 : k - 1;
     const previousX = previous.get(previousK) ?? 0;
     const previousY = previousX - previousK;
-
-    while (x > previousX && y > previousY) {
-      x -= 1;
-      y -= 1;
-    }
 
     ops.push(down
       ? { index: previousX,
@@ -164,25 +164,13 @@ const toUnitOps = (ops: TextEditOp[], beforePoints: string[]): TextEditOp[] => {
 };
 
 /**
- * The smallest set of edits turning `before` into `after`.
- *
- * Minimal, not single-region, because these edits merge with a peer's. A
- * one-region diff describes "wrap this phrase in a tag" as "delete the phrase,
- * insert the tagged phrase" — so two peers wrapping OVERLAPPING phrases each
- * delete what the other re-inserts, and the shared words land twice while the
- * rest is dropped. Measured, and it is why `lib0`'s `simpleDiffString` is the
- * fallback here rather than the answer.
- * @param before - the stored text, split into code points
- * @param after - the saved text, split into code points
+ * Myers over a sequence, bounded by `MAX_DIFF_DISTANCE`. Null when the two
+ * sequences are further apart than the cap allows the search to look.
+ * @param before - the stored text, split into the units being diffed
+ * @param after - the saved text, split the same way
  */
-const diffText = (before: string, after: string): TextEditOp[] => {
-  // Code POINTS, not code units. An emoji is two units, and an edit boundary
-  // between them puts the halves in separate CRDT items — measured, that shows
-  // the peer (and the writer) a broken character. `lib0`'s own diff rolls back
-  // off a surrogate boundary for the same reason.
-  const beforePoints = [...before];
-  const afterPoints = [...after];
-  const limit = Math.min(beforePoints.length + afterPoints.length, MAX_DIFF_DISTANCE);
+const myersOps = (before: string[], after: string[]): TextEditOp[] | null => {
+  const limit = Math.min(before.length + after.length, MAX_DIFF_DISTANCE);
   const v = new Map<number, number>([[1, 0]]);
   const trace: Array<Map<number, number>> = [];
 
@@ -190,16 +178,81 @@ const diffText = (before: string, after: string): TextEditOp[] => {
   for (let depth = 0; depth <= limit; depth += 1) {
     trace.push(new Map(v));
 
-    if (reachesEnd(beforePoints, afterPoints, v, depth)) {
-      return toUnitOps(backtrackMyers(trace, beforePoints, afterPoints, depth), beforePoints);
+    if (reachesEnd(before, after, v, depth)) {
+      return toUnitOps(backtrackMyers(trace, before, after, depth), before);
     }
   }
 
+  return null;
+};
+
+/**
+ * Whitespace runs and non-whitespace runs, in order, concatenating back to
+ * `text`. A word is one element, so a bulk edit that rewrites words has an
+ * edit distance the size of the words it touched rather than the characters.
+ * @param text - the string to split
+ */
+const tokenize = (text: string): string[] => text.match(/\s+|\S+/gu) ?? [];
+
+/**
+ * The smallest set of edits turning `before` into `after`.
+ *
+ * Minimal, not single-region, because these edits merge with a peer's. A
+ * one-region diff describes "wrap this phrase in a tag" as "delete the phrase,
+ * insert the tagged phrase" — so two peers wrapping OVERLAPPING phrases each
+ * delete what the other re-inserts, and the shared words land twice while the
+ * rest is dropped. Measured, and it is why `lib0`'s `simpleDiffString` is the
+ * last resort here rather than the answer.
+ *
+ * Three steps, each narrower than the next is wide:
+ *
+ * 1. Myers over code POINTS, not code units. An emoji is two units, and an
+ *    edit boundary between them puts the halves in separate CRDT items —
+ *    measured, that shows the peer (and the writer) a broken character.
+ *    `lib0`'s own diff rolls back off a surrogate boundary for the same reason.
+ * 2. Myers over the WORDS of `simpleDiffString`'s region, once the character
+ *    distance passes the cap. What the single-region answer costs is not
+ *    characters — the length stays exact — it is POSITION: the one region
+ *    deletes every character a concurrent keystroke sat between, so Yjs has no
+ *    surviving neighbour to anchor it to and it surfaces at the edge of the
+ *    span. Measured with two peers: a two-ended edit of distance 65 moved the
+ *    other peer's character to index 0 of the block. A word-level pass
+ *    describes the same edit as a few narrow regions instead, and a keystroke
+ *    outside them keeps its neighbours.
+ *
+ *    The search runs over that region rather than the whole string for two
+ *    reasons. It can then never answer WIDER than step 3 does, which is what
+ *    keeps text with no word breaks at all (CJK) exactly where it was; and
+ *    lib0's prefix/suffix scan is a native character loop, where trimming the
+ *    same ends off code-point arrays here cost 2ms per call at 20k characters
+ *    — measured, and more than the whole diff is allowed to cost.
+ * 3. The single region, unchanged, when even the word distance passes the cap.
+ * @param before - the stored text
+ * @param after - the saved text
+ */
+const diffText = (before: string, after: string): TextEditOp[] => {
+  const charOps = myersOps([...before], [...after]);
+
+  if (charOps !== null) {
+    return charOps;
+  }
+
+  // Code units, and surrogate-safe: lib0 rolls its own ends back off a
+  // surrogate boundary, so the region never starts or ends inside a character.
   const { index, remove, insert } = simpleDiffString(before, after);
 
-  return remove === 0 && insert === '' ? [] : [{ index,
-    remove,
-    insert }];
+  if (remove === 0 && insert === '') {
+    return [];
+  }
+
+  const wordOps = myersOps(tokenize(before.slice(index, index + remove)), tokenize(insert));
+
+  return wordOps === null
+    ? [{ index,
+      remove,
+      insert }]
+    : wordOps.map((op) => ({ ...op,
+      index: op.index + index }));
 };
 
 /**

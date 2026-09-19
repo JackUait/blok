@@ -78,11 +78,11 @@ const bulkEdit = (left: number, right: number): string =>
 const TYPED = BASE.replace(' MID ', ' MID! ');
 
 /**
- * `MAX_DIFF_DISTANCE` caps the Myers search at an edit distance of 64. Past
- * it the write falls back to lib0's `simpleDiffString`, which answers with ONE
- * region — and the two regimes do NOT merge the same way. Nothing in the suite
- * reached the cap before this file: every text test used short strings, so the
- * fallback branch was dark.
+ * `MAX_DIFF_DISTANCE` caps the Myers search at an edit distance of 64. Past it
+ * the write re-runs the same bounded search over WORDS, and only past THAT
+ * falls back to lib0's `simpleDiffString` and its single region. Nothing in the
+ * suite reached the cap before this file: every text test used short strings,
+ * so both fallback branches were dark.
  */
 describe('DocumentStore — the text diff cap, on both sides of it', () => {
   describe('under and at the cap: the minimal diff merges precisely', () => {
@@ -113,8 +113,8 @@ describe('DocumentStore — the text diff cap, on both sides of it', () => {
     });
   });
 
-  describe('past the cap: the single-region fallback MOVES the peer\'s typing', () => {
-    it('relocates the character to the start of the paragraph at distance 65', () => {
+  describe('past the character cap: the word-level pass keeps the peer\'s typing', () => {
+    it('leaves the character after "MID" at distance 65', () => {
       const { a, b } = twoPeers(BASE);
 
       a.updateBlockData('b1', 'text', bulkEdit(32, 33));
@@ -122,18 +122,18 @@ describe('DocumentStore — the text diff cap, on both sides of it', () => {
 
       sync(a, b);
 
-      // ONE more unit of edit distance than the test above, and the character
-      // the user typed after "MID" is now at the very start of the block.
-      // Measured, and asserted as the real behaviour rather than the wanted
-      // one: the fallback deletes the whole paragraph in one op and re-inserts
-      // it, so the typed character has no surviving neighbour to sit next to.
-      expect(textOf(a)).not.toContain(' MID! ');
-      expect(textOf(a).startsWith('!')).toBe(true);
-      expect(textOf(a)).toBe(`!${bulkEdit(32, 33)}`);
+      // ONE more unit of edit distance than the test above, so the character
+      // pass gives up. This used to hand back the whole paragraph as a single
+      // replaced region, which deleted every neighbour the typed character had
+      // and surfaced it at index 0. The word pass describes the same edit as
+      // two narrow regions — neither covers "MID" — so the character stays.
+      expect(textOf(a)).toContain(' MID! ');
+      expect(textOf(a).startsWith('!')).toBe(false);
+      expect(textOf(a)).toBe(`${'L'.repeat(32)}${TYPED}${'R'.repeat(33)}`);
       expect(textOf(b)).toBe(textOf(a));
     });
 
-    it('still loses no character — the count is preserved, only the place is wrong', () => {
+    it('keeps it in place one unit further out too', () => {
       const { a, b } = twoPeers(BASE);
 
       a.updateBlockData('b1', 'text', bulkEdit(33, 33));
@@ -141,6 +141,7 @@ describe('DocumentStore — the text diff cap, on both sides of it', () => {
 
       sync(a, b);
 
+      expect(textOf(a)).toContain(' MID! ');
       expect(textOf(a)).toHaveLength(bulkEdit(33, 33).length + 1);
       expect(textOf(a).split('!')).toHaveLength(2);
       expect(textOf(b)).toBe(textOf(a));

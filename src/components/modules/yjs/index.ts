@@ -398,14 +398,16 @@ export class YjsManager extends Module {
    * carries. Full-save flushes only — see `DocumentStore.pruneBlockData`.
    * @param id - Block id
    * @param keep - keys the new data carries
+   * @param seen - keys the data had when that save was captured; a key added
+   *   after it (a peer's) is never deleted. See `DocumentStore.pruneBlockData`.
    * @returns true if any key was deleted
    */
-  public pruneBlockData(id: string, keep: ReadonlySet<string>): boolean {
+  public pruneBlockData(id: string, keep: ReadonlySet<string>, seen?: ReadonlySet<string>): boolean {
     // Same barrier as updateBlockData — see there. The flush body calls this
     // itself, where the buffer's dispatch guard makes the drain a no-op.
     this.flushPendingBlockWrites();
 
-    return this.documentStore.pruneBlockData(id, keep);
+    return this.documentStore.pruneBlockData(id, keep, seen);
   }
 
   /**

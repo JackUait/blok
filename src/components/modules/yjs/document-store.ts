@@ -1370,9 +1370,14 @@ export class DocumentStore {
    * @param id - Block id
    * @param keep - the keys the new data carries. Compared after NUL-scrubbing,
    *   because that is the form `updateBlockData` stored them in.
+   * @param seen - the keys the block's data ALREADY HAD when that save was
+   *   captured. A key missing from it appeared afterwards — a peer's write that
+   *   landed while the async `save()` was in flight — and is not this save's to
+   *   delete. Omit it only when the data is captured synchronously with the
+   *   prune (`replaceBlockContent`), where no such gap exists.
    * @returns true if any key was deleted
    */
-  public pruneBlockData(id: string, keep: ReadonlySet<string>): boolean {
+  public pruneBlockData(id: string, keep: ReadonlySet<string>, seen?: ReadonlySet<string>): boolean {
     const yblock = this.getBlockById(id);
 
     if (yblock === undefined) {
@@ -1386,7 +1391,9 @@ export class DocumentStore {
     }
 
     const kept = new Set(Array.from(keep, stripNul));
-    const stale = Array.from(ydata.keys()).filter((key) => !kept.has(key));
+    const known = seen === undefined ? undefined : new Set(Array.from(seen, stripNul));
+    const stale = Array.from(ydata.keys())
+      .filter((key) => !kept.has(key) && (known === undefined || known.has(key)));
 
     if (stale.length === 0) {
       return false;

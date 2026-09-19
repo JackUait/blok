@@ -4,6 +4,8 @@
  * @module BlockManager
  * @version 2.0.0
  */
+import { Map as YMap } from 'yjs';
+
 import type { BlockToolData, OutputBlockData, PasteEvent } from '../../../../types';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import type { BlockMutationEventMap, BlockMutationType } from '../../../../types/events/block';
@@ -2008,6 +2010,13 @@ export class BlockManager extends Module {
     // Classified BEFORE the await: the settling window is measured from the
     // mutation, not from whenever this tool's save() happens to resolve.
     const isMaterializing = this.yjsSync.isMaterializing(block);
+    // Snapshot the document's key set BEFORE the save: `save()` is async and
+    // the flush lands up to a coalescing window later, so a peer's key can
+    // appear in between. The prune may delete only keys this save actually saw.
+    // Read straight off the Y.Map — the plain-object reader is a buffer
+    // barrier, and draining the buffer here would kill coalescing.
+    const ydata = this.Blok.YjsManager.getBlockById(block.id)?.get('data');
+    const seenKeys = ydata instanceof YMap ? new Set<string>(ydata.keys()) : undefined;
     const savedData = await block.save();
 
     if (savedData === undefined) {
@@ -2017,7 +2026,7 @@ export class BlockManager extends Module {
     const savedKeys = Object.keys(savedData.data);
 
     this.Blok.YjsManager.enqueueBlockDataWrite(block.id, savedData.data, (entries) => {
-      return this.flushBlockDataWrites(block, entries, { isMaterializing, savedKeys });
+      return this.flushBlockDataWrites(block, entries, { isMaterializing, savedKeys, seenKeys });
     });
   }
 
@@ -2044,13 +2053,16 @@ export class BlockManager extends Module {
    *   coalesces by key, so a window that opened with a key the newest save no
    *   longer emits still carries it in `entries`; this set is the authority
    *   for both what to write and what to prune.
+   * @param options.seenKeys - the keys the document held when that save was
+   *   captured, or undefined when the block carried no data map yet. A key the
+   *   document gained afterwards is a peer's, so the prune spares it.
    * @returns whether any Yjs write actually happened — the buffer skips its
    *   capture-clock rewind for a flush that wrote nothing (see BlockWriteBuffer).
    */
   private flushBlockDataWrites(
     block: Block,
     entries: ReadonlyMap<string, unknown>,
-    options: { isMaterializing: boolean; savedKeys: readonly string[] }
+    options: { isMaterializing: boolean; savedKeys: readonly string[]; seenKeys?: ReadonlySet<string> }
   ): boolean {
     // Wrap data + metadata writes into a single Yjs transaction. Without this,
     // each updateBlockData / updateBlockMetadata call opens its own transaction
@@ -2127,8 +2139,11 @@ export class BlockManager extends Module {
     //     original depth" regression).
     // Untracked still writes to the document, so persistence is unchanged, and
     // `flushAll` is re-entrancy guarded so the nested flush here is a no-op.
+    //
+    // Only a key this save SAW is eligible: one that appeared after the capture
+    // came from a peer, and deleting it would take their write off both sides.
     this.Blok.YjsManager.transactWithoutCapture(() => {
-      this.Blok.YjsManager.pruneBlockData(block.id, keptKeys);
+      this.Blok.YjsManager.pruneBlockData(block.id, keptKeys, options.seenKeys);
     });
 
     // The write-back the settling window was waiting for has landed: close the

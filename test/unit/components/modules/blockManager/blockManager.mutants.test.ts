@@ -2350,7 +2350,7 @@ describe('BlockManager block-change to Yjs data flush', () => {
     flushOf(harness)(new Map([['text', 'y']]));
 
     expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('b', 'text', 'y');
-    expect(harness.yjs.pruneBlockData).toHaveBeenCalledWith('b', new Set(['text']));
+    expect(harness.yjs.pruneBlockData).toHaveBeenCalledWith('b', new Set(['text']), undefined);
     expect(harness.yjs.updateBlockMetadata).toHaveBeenCalledWith('b', expect.any(Number), null);
     expect(block.lastEditedAt).toEqual(expect.any(Number));
   });
@@ -2388,7 +2388,7 @@ describe('BlockManager block-change to Yjs data flush', () => {
 
     expect(harness.yjs.updateBlockData).toHaveBeenCalledTimes(1);
     expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('li', 'text', 'x');
-    expect(harness.yjs.pruneBlockData).toHaveBeenCalledWith('li', new Set(['text', 'depth']));
+    expect(harness.yjs.pruneBlockData).toHaveBeenCalledWith('li', new Set(['text', 'depth']), undefined);
   });
 
   it('keeps depth as source of truth for a root-level list item', async () => {
@@ -2743,7 +2743,9 @@ describe('BlockManager prepared boot — real sub-module closures', () => {
 
     expect(harness.mutations[0]?.type).toBe(BlockRemovedMutationType);
     expect(harness.mutations[0]?.index).toBe(0);
-    expect((insert).mock.calls[0]?.[0]).toEqual({ skipYjsSync: true, id: 'after-b1' });
+    // No id is imposed: a derived one is identical on every peer, and two
+    // peers repairing the same removal would then overwrite each other's block.
+    expect((insert).mock.calls[0]?.[0]).toEqual({ skipYjsSync: true, id: undefined });
     expect(harness.yjs.addBlock).toHaveBeenCalledWith({ id: 'repair', type: 'paragraph', data: {} });
 
     await harness.blockManager.destroy();

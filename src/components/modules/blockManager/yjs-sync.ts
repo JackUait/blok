@@ -1369,7 +1369,7 @@ export class BlockYjsSync {
       // Remove from DOM
       this.blocksStore.remove(index);
 
-      this.restoreDefaultBlockIfDocEmptied(blockId);
+      this.restoreDefaultBlockIfDocEmptied();
     }, { extendThroughRAF: true });
   }
 
@@ -1388,11 +1388,20 @@ export class BlockYjsSync {
    * the silent drop this fixes. It is also what keeps two peers from stacking
    * repairs on each other's.
    *
-   * The id is derived from the removed block so two peers reacting to the SAME
-   * removal write the SAME id: the Y.Map set converges last-writer-wins, and
-   * the doubled order entry is dropped by the doc's flat-order derivation
-   * (first occurrence only) — the race lands one paragraph, not one per peer.
-   * Uniqueness is free here: the doc is empty at this point.
+   * The id is the block factory's ordinary fresh one, NOT one derived from the
+   * removed block. A derived id is the same on every peer, and `addBlock` sets
+   * the whole Y.Map key: two peers repairing the SAME removal (any room with
+   * two receivers — the deleting peer never repairs, it filters its own local
+   * removal out) each build their own Y.Map, last-writer-wins discards one
+   * WHOLE map, and everything typed into the losing paragraph before the two
+   * repairs met is gone with no error anywhere. The window is one network
+   * round trip wide, and it is silent.
+   *
+   * The cost of a fresh id is that N receivers leave N empty paragraphs
+   * instead of one. That is a visible, editable document — the deterministic
+   * id bought one paragraph at the price of losing a peer's typing, and an
+   * extra empty paragraph is the cheaper of the two by far. No local check can
+   * collapse them: at the moment each peer repairs, its own doc IS still empty.
    *
    * The write is 'no-capture' because this is reactive infrastructure, not a
    * user edit — it must not become an undo step. It still broadcasts, which is
@@ -1402,14 +1411,11 @@ export class BlockYjsSync {
    * the in-memory block either. This fires on REMOTE removals too, so without
    * the gate a read-only collaborator watching a peer empty the document would
    * broadcast a repair the server drops, diverging from the room forever; a
-   * memory-only block would be just as invisible to the doc (see above) and
-   * would collide with the writable peer's identically-named repair when it
-   * arrives as a remote add. Empty is a legal read-only state — the writable
-   * peer's repair materialises here through the ordinary remote-add path.
-   *
-   * @param removedBlockId - id of the block whose removal emptied the document
+   * memory-only block would be just as invisible to the doc (see above).
+   * Empty is a legal read-only state — the writable peer's repair materialises
+   * here through the ordinary remote-add path.
    */
-  private restoreDefaultBlockIfDocEmptied(removedBlockId: string): void {
+  private restoreDefaultBlockIfDocEmptied(): void {
     if (this.dependencies.isReadOnly?.() === true) {
       return;
     }
@@ -1418,7 +1424,7 @@ export class BlockYjsSync {
       return;
     }
 
-    const restored = this.handlers.insertDefaultBlock(true, `after-${removedBlockId}`);
+    const restored = this.handlers.insertDefaultBlock(true);
 
     this.dependencies.YjsManager.transactWithoutCapture(() => {
       this.dependencies.YjsManager.addBlock({

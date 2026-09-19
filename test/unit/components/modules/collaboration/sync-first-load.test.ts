@@ -2088,7 +2088,7 @@ describe('collaboration — sync-first load', () => {
   });
 
   describe('empty document after the first sync', () => {
-    it('seeds exactly one default block, with an id both peers agree on', async () => {
+    it('seeds exactly one default block, with an id of its own', async () => {
       const first = await boot({ doc: 'shared' });
       const second = await boot({ doc: 'shared' });
 
@@ -2101,11 +2101,17 @@ describe('collaboration — sync-first load', () => {
       const firstId = first.core.moduleInstances.BlockManager.blocks[0].id;
       const secondId = second.core.moduleInstances.BlockManager.blocks[0].id;
 
-      expect(firstId).toBe(secondId);
+      // Ids used to be derived from the document id so both peers wrote the
+      // same one. They now differ on purpose: `addBlock` sets the WHOLE Y.Map
+      // key, so a shared id makes the two seeds collide and takes everything
+      // typed into the loser with it — see
+      // `seed-empty-document-collision.integration.test.ts`.
+      expect(firstId).not.toBe(secondId);
       expect(first.core.moduleInstances.YjsManager.toJSON().map((block) => block.id)).toEqual([firstId]);
+      expect(second.core.moduleInstances.YjsManager.toJSON().map((block) => block.id)).toEqual([secondId]);
     });
 
-    it('stays at ONE paragraph after the two peers exchange what they wrote', async () => {
+    it('leaves one paragraph PER racing peer after the two exchange what they wrote', async () => {
       const first = await boot({ doc: 'shared' });
       const second = await boot({ doc: 'shared' });
 
@@ -2119,19 +2125,21 @@ describe('collaboration — sync-first load', () => {
       const secondYjs = second.core.moduleInstances.YjsManager;
 
       // The mock transport does not relay, so play the server: hand each peer
-      // the other's state. Anything either of them authored on its own — a
-      // block core seeded behind the module's back — lands here as a second
-      // paragraph, and N peers would make N.
+      // the other's state. Two peers that BOTH reach the empty room before
+      // either seed is relayed leave two empty paragraphs — the accepted cost
+      // of never colliding on one key. Only this exact race pays it: a peer
+      // that joins after the seed has been relayed sees a non-empty document
+      // and seeds nothing (the test below it).
       first.socket().deliver({ type: 'update', update: secondYjs.encodeStateAsUpdate(firstYjs.getStateVector()) });
       second.socket().deliver({ type: 'update', update: firstYjs.encodeStateAsUpdate(secondYjs.getStateVector()) });
 
       await waitFor(() => collabAttr(first.core) === 'connected', 'first peer still connected');
 
-      expect(firstYjs.toJSON()).toHaveLength(1);
-      expect(secondYjs.toJSON()).toHaveLength(1);
-      expect(firstYjs.toJSON()[0].id).toBe(secondYjs.toJSON()[0].id);
-      expect(first.core.moduleInstances.BlockManager.blocks.length).toBe(1);
-      expect(second.core.moduleInstances.BlockManager.blocks.length).toBe(1);
+      expect(firstYjs.toJSON()).toHaveLength(2);
+      expect(secondYjs.toJSON()).toHaveLength(2);
+      expect(firstYjs.toJSON().map((block) => block.id)).toEqual(secondYjs.toJSON().map((block) => block.id));
+      expect(first.core.moduleInstances.BlockManager.blocks.length).toBe(2);
+      expect(second.core.moduleInstances.BlockManager.blocks.length).toBe(2);
     });
 
     it('keeps a room whose only block is the empty seed on screen for the peer that joins it', async () => {

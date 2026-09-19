@@ -1806,7 +1806,7 @@ describe('BlockYjsSync — mutation kills', () => {
 
       harness.emit({ blockId: 'last', type: 'remove', origin: 'remote' });
 
-      expect(harness.handlers.insertDefaultBlock).toHaveBeenCalledWith(true, 'after-last');
+      expect(harness.handlers.insertDefaultBlock).toHaveBeenCalledWith(true);
       expect(harness.doc.transactWithoutCapture).toHaveBeenCalled();
       expect(harness.doc.addBlock).toHaveBeenCalledWith({
         id: 'after-last',

@@ -75,38 +75,6 @@ const CACHE_ORIGIN = { source: 'blok-offline-cache' };
 /** Wrapper attribute a host (or an e2e test) reads the session state off. */
 const COLLAB_STATE_ATTR = 'data-blok-collab';
 
-/** The nanoid alphabet block ids already use, so a derived id looks like one. */
-const SEED_ID_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
-const SEED_ID_LENGTH = 10;
-
-const FNV_OFFSET_BASIS = 0x811c9dc5;
-const FNV_PRIME = 0x01000193;
-
-/**
- * FNV-1a over a string. Deterministic across peers and runtimes — which is the
- * only property that matters here.
- * @param input - the string to hash
- */
-const fnv1a = (input: string): number =>
-  Array.from(input).reduce(
-    (hash, character) => Math.imul(hash ^ character.charCodeAt(0), FNV_PRIME) >>> 0,
-    FNV_OFFSET_BASIS
-  );
-
-/**
- * The id of the one block a peer writes into a document that synced empty.
- *
- * Derived from the document id, so two peers that reach an empty document at
- * the same moment write the SAME id: the Y.Map set converges last-writer-wins
- * and the doubled order entry is dropped by the doc's first-occurrence-only
- * order derivation. The race lands one paragraph, not one per peer — the same
- * trick `restoreDefaultBlockIfDocEmptied` plays with the removed block's id.
- * @param doc - the collaboration document id
- */
-const seedBlockId = (doc: string): string =>
-  Array.from({ length: SEED_ID_LENGTH }, (_unused, slot) =>
-    SEED_ID_ALPHABET[fnv1a(`${slot}:${doc}`) % SEED_ID_ALPHABET.length]).join('');
-
 /**
  * Whether a connection ticket grants writes. Only an explicit `write: false`
  * denies: a ticket without the claim, or one we cannot read, leaves the editor
@@ -1379,8 +1347,21 @@ export class Collaboration extends Module {
    * `ReadOnly.isEnabled` is exactly that applied state.
    *
    * Idempotent, and deliberately so: it is re-run whenever the write grant
-   * changes, and the empty-document guard plus the derived id make a second run
-   * a no-op.
+   * changes, and the empty-document guard above makes a second run a no-op.
+   *
+   * The id is the block factory's ordinary fresh one. A derived id — one hashed
+   * from the document id, so every peer computes the same string — is what this
+   * used to write, and `addBlock` sets the WHOLE Y.Map key: two peers that reach
+   * the same empty room before either seed is relayed each build their own
+   * Y.Map under that one key, last-writer-wins discards one of them whole, and
+   * everything typed into the losing paragraph is gone with no error anywhere.
+   * The window is one relay wide and it is silent. `restoreDefaultBlockIfDocEmptied`
+   * carried the same defect and was fixed the same way.
+   *
+   * The cost is that N peers racing into an empty room leave N empty paragraphs
+   * instead of one. No local check can collapse them — at the moment each peer
+   * seeds, its own document IS still empty — and an extra empty paragraph is by
+   * far the cheaper of the two.
    */
   private seedEmptyDocument(): void {
     const settings = this.settings;
@@ -1401,7 +1382,7 @@ export class Collaboration extends Module {
       return;
     }
 
-    const block = this.Blok.BlockManager.insert({ id: seedBlockId(settings.doc), skipYjsSync: true });
+    const block = this.Blok.BlockManager.insert({ skipYjsSync: true });
 
     // 'no-capture': this is reactive infrastructure, not a user edit, so it
     // must not become an undo step. It still broadcasts — peers materialise it

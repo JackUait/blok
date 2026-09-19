@@ -2327,7 +2327,7 @@ describe('BlockYjsSync', () => {
 
         callback({ blockId: 'last', type: 'remove', origin: 'undo' });
 
-        expect(mockHandlers.insertDefaultBlock).toHaveBeenCalledWith(true, 'after-last');
+        expect(mockHandlers.insertDefaultBlock).toHaveBeenCalledWith(true);
       });
 
       it('does not author the repair block when the local client may not write', () => {
@@ -2389,7 +2389,7 @@ describe('BlockYjsSync', () => {
 
         callback({ blockId: 'only-block', type: 'remove', origin: 'remote' });
 
-        expect(mockHandlers.insertDefaultBlock).toHaveBeenCalledWith(true, 'after-only-block');
+        expect(mockHandlers.insertDefaultBlock).toHaveBeenCalledWith(true);
         expect(mockYjsManager.addBlock).toHaveBeenCalled();
       });
 

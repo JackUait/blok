@@ -162,10 +162,10 @@ export class Renderer extends Module {
        * an empty document would author its own paragraph, they would all
        * converge, and a room would end up with one paragraph per peer.
        *
-       * Collaboration seeds the first block itself, once, with an id derived
-       * from the document id so a race lands ONE paragraph — see
-       * `seedEmptyDocument`. Leaving the editor with no blocks here is what
-       * lets that run: its guard is the document still being empty.
+       * Collaboration seeds the first block itself, ONCE per session, behind
+       * a guard no view rebuild can re-open — see `seedEmptyDocument`. Leaving
+       * the editor with no blocks here is what lets that run: its guard is the
+       * document still being empty.
        */
       if (this.Blok.Collaboration?.isEnabled ?? false) {
         return 0;

@@ -898,20 +898,12 @@ internal static class YDocConverter
     }
 
     /// <summary>
-    /// Turns <paramref name="live"/> into <paramref name="next"/> with one
-    /// delete and one insert over the changed middle, so every character
-    /// outside it keeps its CRDT identity and a peer's concurrent edit there
-    /// survives.
+    /// Turns <paramref name="live"/> into <paramref name="next"/> with the
+    /// smallest set of edits, so every character outside them keeps its CRDT
+    /// identity and a peer's concurrent edit there survives.
     ///
-    /// The client's own diff (document-store.ts) is a Myers diff over code
-    /// points, which is minimal even when two peers edit OVERLAPPING regions.
-    /// This is the single-region diff the client falls back to. It is enough
-    /// for the defect this step exists for — a host's /edit push must not wipe
-    /// a typist — and it is NOT a character-level merge of two overlapping
-    /// rewrites. Widening it to Myers is a port of that function, not a tweak.
-    ///
-    /// Boundaries roll back off a surrogate pair: splitting one puts the halves
-    /// in separate items and shows both peers a broken character.
+    /// Applied back to front: every index counts from the text as it was
+    /// before this call, exactly as the client applies the same ops.
     /// </summary>
     private static void EditText(YTransaction transaction, YText live, string next)
     {
@@ -922,44 +914,21 @@ internal static class YDocConverter
         return;
       }
 
-      var shortest = Math.Min(before.Length, next.Length);
-      var prefix = 0;
+      var edits = TextDiff.Diff(before, next);
 
-      while (prefix < shortest && before[prefix] == next[prefix])
+      for (var index = edits.Count - 1; index >= 0; index--)
       {
-        prefix++;
-      }
+        var edit = edits[index];
 
-      if (prefix > 0 && char.IsHighSurrogate(before[prefix - 1]))
-      {
-        prefix--;
-      }
+        if (edit.Remove > 0)
+        {
+          live.Delete(transaction, edit.Index, edit.Remove);
+        }
 
-      var suffix = 0;
-
-      while (suffix < shortest - prefix &&
-             before[before.Length - 1 - suffix] == next[next.Length - 1 - suffix])
-      {
-        suffix++;
-      }
-
-      if (suffix > 0 && char.IsLowSurrogate(before[before.Length - suffix]))
-      {
-        suffix--;
-      }
-
-      var removed = before.Length - prefix - suffix;
-
-      if (removed > 0)
-      {
-        live.Delete(transaction, prefix, removed);
-      }
-
-      var inserted = next.Length - prefix - suffix;
-
-      if (inserted > 0)
-      {
-        live.Insert(transaction, prefix, next.Substring(prefix, inserted));
+        if (edit.Insert.Length > 0)
+        {
+          live.Insert(transaction, edit.Index, edit.Insert);
+        }
       }
     }
 

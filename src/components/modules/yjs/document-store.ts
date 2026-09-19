@@ -1168,6 +1168,21 @@ export class DocumentStore {
       return true;
     }
 
+    // Mergeable text under a key the block did not carry yet (an image gains a
+    // caption long after it was inserted): mint the Y.Text here, not a plain
+    // string, or the field never merges for the rest of the document's life.
+    // Safe where UPGRADING is not: `set` is last-writer-wins either way, but on
+    // an ABSENT key there is no accumulated text for the loser to lose — two
+    // peers first-typing a caption at the same instant lose one burst exactly as
+    // they do today with plain strings.
+    if (isDiffableTextKey(dataKey) && typeof value === 'string' && currentValue === undefined) {
+      this.transact(() => {
+        ydata.set(dataKey, new Y.Text(stripNul(value)));
+      }, 'local');
+
+      return true;
+    }
+
     // Skip if value hasn't changed - this prevents creating unnecessary undo entries
     // when block data is synced after mutations that don't actually change data
     // (e.g., marker updates in list items during undo/redo, or table content

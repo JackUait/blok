@@ -81,6 +81,21 @@ internal static class YDocConverter
   private const int RowKeyLength = 10;
   private const double MaxSafeInteger = 9007199254740992d;
 
+  /// <summary>
+  /// THE list of block-data keys whose value is stored as a <see cref="YText"/>
+  /// so two peers typing in one block merge per character instead of the later
+  /// write taking the whole field.
+  ///
+  /// LOCKSTEP: it must name exactly what <c>DIFFABLE_TEXT_KEYS</c> names in
+  /// src/components/modules/yjs/serializer.ts. Widening the set is one entry
+  /// there and one entry here — and nowhere else in this file.
+  ///
+  /// Top-level block data ONLY, exactly like the client: a nested <c>text</c>
+  /// (a table cell's) goes through the generic value walk and stays a leaf, and
+  /// so does a <c>text</c> under <c>tunes</c>.
+  /// </summary>
+  private static readonly string[] DiffableTextKeys = ["text", "code", "caption", "title", "alt", "artist"];
+
   // nanoid's default alphabet; keys are random so two peers never collide.
   private const string RowKeyAlphabet =
       "useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict";
@@ -666,7 +681,7 @@ internal static class YDocConverter
 
       return [EditStep.ReplaceData(
           op.Id,
-          InputWriter.DataMap(NormalizeBlockData(types.GetValueOrDefault(op.Id), op.Data)))];
+          InputWriter.BlockDataEntries(NormalizeBlockData(types.GetValueOrDefault(op.Id), op.Data)))];
     }
 
     /// <summary>
@@ -823,15 +838,129 @@ internal static class YDocConverter
           blockMap.Remove(transaction, id));
     }
 
-    internal static EditStep ReplaceData(string id, YMap data)
+    /// <summary>
+    /// Rewrites a block's data KEY BY KEY rather than setting a fresh map over
+    /// the old one. A whole-map set is last-writer-wins on the <c>data</c> key,
+    /// so it discarded the live <see cref="YText"/> a peer was typing into at
+    /// that moment together with everything typed. Per key, an existing YText
+    /// is EDITED into its new value, so the peer's characters keep their
+    /// identity and both bursts survive.
+    ///
+    /// Keys the new data does not carry are still removed, so "replace the
+    /// data" still means replace.
+    /// </summary>
+    internal static EditStep ReplaceData(
+        string id, IReadOnlyList<KeyValuePair<string, object?>> data)
     {
       return new EditStep((transaction, blockMap, _) =>
       {
-        if (Value(blockMap, id) is YMap block)
+        if (Value(blockMap, id) is not YMap block)
         {
-          block.Set(transaction, "data", data);
+          return;
+        }
+
+        if (Value(block, "data") is not YMap existing)
+        {
+          block.Set(transaction, "data", InputWriter.ToDataMap(data));
+
+          return;
+        }
+
+        var keep = new HashSet<string>(data.Select(entry => entry.Key), StringComparer.Ordinal);
+
+        foreach (var key in existing.Keys.ToArray())
+        {
+          if (!keep.Contains(key))
+          {
+            existing.Remove(transaction, key);
+          }
+        }
+
+        foreach (var (key, value) in data)
+        {
+          if (value is MergeableText text)
+          {
+            if (Value(existing, key) is YText live)
+            {
+              EditText(transaction, live, text.Value);
+            }
+            else
+            {
+              existing.Set(transaction, key, new YText(text.Value));
+            }
+
+            continue;
+          }
+
+          existing.Set(transaction, key, value);
         }
       });
+    }
+
+    /// <summary>
+    /// Turns <paramref name="live"/> into <paramref name="next"/> with one
+    /// delete and one insert over the changed middle, so every character
+    /// outside it keeps its CRDT identity and a peer's concurrent edit there
+    /// survives.
+    ///
+    /// The client's own diff (document-store.ts) is a Myers diff over code
+    /// points, which is minimal even when two peers edit OVERLAPPING regions.
+    /// This is the single-region diff the client falls back to. It is enough
+    /// for the defect this step exists for — a host's /edit push must not wipe
+    /// a typist — and it is NOT a character-level merge of two overlapping
+    /// rewrites. Widening it to Myers is a port of that function, not a tweak.
+    ///
+    /// Boundaries roll back off a surrogate pair: splitting one puts the halves
+    /// in separate items and shows both peers a broken character.
+    /// </summary>
+    private static void EditText(YTransaction transaction, YText live, string next)
+    {
+      var before = live.ToString();
+
+      if (string.Equals(before, next, StringComparison.Ordinal))
+      {
+        return;
+      }
+
+      var shortest = Math.Min(before.Length, next.Length);
+      var prefix = 0;
+
+      while (prefix < shortest && before[prefix] == next[prefix])
+      {
+        prefix++;
+      }
+
+      if (prefix > 0 && char.IsHighSurrogate(before[prefix - 1]))
+      {
+        prefix--;
+      }
+
+      var suffix = 0;
+
+      while (suffix < shortest - prefix &&
+             before[before.Length - 1 - suffix] == next[next.Length - 1 - suffix])
+      {
+        suffix++;
+      }
+
+      if (suffix > 0 && char.IsLowSurrogate(before[before.Length - suffix]))
+      {
+        suffix--;
+      }
+
+      var removed = before.Length - prefix - suffix;
+
+      if (removed > 0)
+      {
+        live.Delete(transaction, prefix, removed);
+      }
+
+      var inserted = next.Length - prefix - suffix;
+
+      if (inserted > 0)
+      {
+        live.Insert(transaction, prefix, next.Substring(prefix, inserted));
+      }
     }
 
     internal static EditStep InsertRootOrder(int at, string id)
@@ -919,10 +1048,43 @@ internal static class YDocConverter
   /// </summary>
   private static class InputWriter
   {
-    /// <summary>A block's <c>data</c> map on its own, for an edit that replaces it.</summary>
-    internal static YMap DataMap(JsonObject data)
+    /// <summary>
+    /// <c>blockDataToYMap</c> as ENTRIES: the generic value walk, except that a
+    /// STRING under a diffable key becomes mergeable text instead of an atomic
+    /// leaf. Entries, not a <see cref="YMap"/>, because an edit writes them
+    /// onto the block's EXISTING data map key by key so a live
+    /// <see cref="YText"/> survives, and a prelim map's entries cannot be read
+    /// back out of it. The mergeable value travels as a marker for the same
+    /// reason: a prelim YText will not hand its string back, and the update
+    /// path needs that string to diff against what is already in the doc.
+    /// </summary>
+    internal static List<KeyValuePair<string, object?>> BlockDataEntries(JsonObject data)
     {
-      return ObjectToYMap(data, BlockFieldDepth);
+      GuardDepth(BlockFieldDepth, "a data value");
+
+      var entries = new List<KeyValuePair<string, object?>>();
+
+      foreach (var (key, child) in data)
+      {
+        var dataKey = NoNul(key, "a data key");
+
+        entries.Add(Pair(
+            dataKey,
+            IsDiffableTextKey(dataKey) &&
+            child is JsonValue scalar &&
+            scalar.GetValueKind() == JsonValueKind.String
+              ? new MergeableText(NoNul(scalar.GetValue<string>(), "a string value"))
+              : PlainToYValue(child, BlockFieldDepth + 1)));
+      }
+
+      return entries;
+    }
+
+    /// <summary>Marker entries become the shared types they stand for.</summary>
+    internal static YMap ToDataMap(IReadOnlyList<KeyValuePair<string, object?>> entries)
+    {
+      return new YMap(entries.Select(entry =>
+          entry.Value is MergeableText text ? Pair(entry.Key, new YText(text.Value)) : entry));
     }
 
     internal static YMap Block(string id, JsonObject block)
@@ -940,9 +1102,8 @@ internal static class YDocConverter
         Pair("type", NoNul(type, $"block \"{id}\" type")),
         Pair(
             "data",
-            ObjectToYMap(
-                NormalizeBlockData(type, ObjectEntries(block["data"], $"block \"{id}\" data")),
-                BlockFieldDepth)),
+            ToDataMap(BlockDataEntries(
+                NormalizeBlockData(type, ObjectEntries(block["data"], $"block \"{id}\" data"))))),
       };
 
       if (block.TryGetPropertyValue("tunes", out var tunes))
@@ -1167,11 +1328,24 @@ internal static class YDocConverter
     }
   }
 
+  /// <summary>Whether a top-level block-data key holds mergeable text.</summary>
+  private static bool IsDiffableTextKey(string key)
+  {
+    return Array.IndexOf(DiffableTextKeys, key) >= 0;
+  }
+
   /// <summary>The value under a key, or null when the map has no live entry for it.</summary>
   private static object? Value(YMap map, string key)
   {
     return map.TryGet(key, out var value) ? value : null;
   }
+
+  /// <summary>
+  /// A block-data string bound for a <see cref="YText"/>, still as a string.
+  /// A prelim YText holds its text privately and reads back empty, and the
+  /// update path needs the string to diff against the doc.
+  /// </summary>
+  private sealed record MergeableText(string Value);
 
   /// <summary>
   /// One block's map entry as read while the export walks the doc.
@@ -1714,13 +1888,9 @@ internal static class YDocConverter
         // other shared type a foreign peer nests reads the same way rather
         // than making the room permanently unreadable.
         //
-        // NOTE: the WRITE side has no counterpart — `PlainToYValue` stores a
-        // bare string. So `Seed` mints a plain string (the client will not
-        // upgrade it: a whole-key set is last-writer-wins and would discard a
-        // peer's container mid-edit), and an `update` edit op REPLACES a live
-        // Y.Text, discarding whatever a client was typing into it at that
-        // moment. Minting a YText here is what unlocks merging for
-        // server-seeded documents.
+        // NOTE: the WRITE side mints one too, for the keys DiffableTextKeys
+        // names. Any OTHER Y.Text is a foreign peer's, and reads the same way
+        // rather than making the room permanently unreadable.
         case YText text:
           plain = JsonValue.Create(text.ToString());
 

@@ -15,7 +15,7 @@ const NUL_CHAR = String.fromCharCode(0);
  * Top-level block data only — a nested `text` (a table cell's) is written
  * through `assignYMapEntry` and stays a leaf.
  */
-const DIFFABLE_TEXT_KEYS = new Set(['text']);
+const DIFFABLE_TEXT_KEYS = new Set(['text', 'code', 'caption', 'title', 'alt', 'artist']);
 
 /** Whether a block's top-level data key holds mergeable text. */
 export const isDiffableTextKey = (key: string): boolean => DIFFABLE_TEXT_KEYS.has(key);

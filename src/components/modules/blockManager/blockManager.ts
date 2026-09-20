@@ -463,6 +463,13 @@ export class BlockManager extends Module {
           this.blockDidMutated(BlockRemovedMutationType, block, { index });
         },
         resyncBlockData: (block) => {
+          // A drag can begin after the mutation was recorded. The browser
+          // mutates contenteditable DOM across block boundaries mid-drag, and
+          // the replay must not be the path that lands it in the document.
+          if (this._isPointerDragActive) {
+            return;
+          }
+
           void this.syncBlockDataToYjs(block);
         },
         onBlockAdded: (block, index) => {
@@ -1848,12 +1855,14 @@ export class BlockManager extends Module {
     // cell boundaries during a drag, and we must not write that corrupted state to Yjs.
     const isEcho = this.yjsSync.isSyncingFromYjs && this.yjsSync.isReconciling(block);
 
-    if (mutationType === BlockChangedMutationType && !isEcho && !this._isPointerDragActive) {
-      void this.syncBlockDataToYjs(block);
-    } else if (mutationType === BlockChangedMutationType && isEcho) {
-      // Not necessarily an echo: the window is open across setData's await and
-      // one frame, so the user can type into it. Re-checked once it closes.
-      this.yjsSync.noteSuppressedMutation(block);
+    if (mutationType === BlockChangedMutationType && !this._isPointerDragActive) {
+      if (isEcho) {
+        // Not necessarily an echo: the window is open across setData's await
+        // and one frame, so the user can type into it. Re-checked on close.
+        this.yjsSync.noteSuppressedMutation(block);
+      } else {
+        void this.syncBlockDataToYjs(block);
+      }
     }
 
     return block;

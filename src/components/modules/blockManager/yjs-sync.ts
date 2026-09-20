@@ -210,28 +210,41 @@ export class BlockYjsSync {
   }
 
   /**
-   * Re-save a block whose mutation was dropped while it was reconciling, now
-   * that its window is closed. Skipped while an unscoped (structural) window
-   * is still open — that one suppresses every block, so the replay would run
-   * straight back into a closed gate.
-   * @param blockId - the block whose suppressed mutation is being replayed
+   * Re-save every block whose suppressed mutation has left ALL open windows.
+   *
+   * Driven by `isReconciling`, never by the id the closing window carried.
+   * The window is SUBTREE-scoped, so a container's window suppresses its
+   * children too; keying the replay on the window's own id left every nested
+   * block's keystroke stranded — which is most of Blok, since a table cell, a
+   * toggle child and a column child are all children of a container that
+   * reconciles as a whole.
+   *
+   * The same check covers an unscoped (structural) window, which suppresses
+   * every block: while one is open `isReconciling` is true for everything, so
+   * nothing is consumed and the record survives to be replayed when it closes.
    */
-  private replaySuppressedMutation(blockId: string): void {
-    const suppressed = this.suppressedMutations.delete(blockId);
+  private drainSuppressedMutations(): void {
+    const pending = new Set([...this.suppressedMutations, ...this.userTypedWhileReconciling]);
 
-    this.userTypedWhileReconciling.delete(blockId);
+    pending.forEach((blockId) => {
+      // Looked up fresh: a rematerialise replaces the instance that mutated,
+      // and saving the dead one would write a block the document no longer has.
+      const block = this.repository.getBlockById(blockId);
 
-    if (!suppressed || this.destroyed || this.unscopedSyncCount > 0) {
-      return;
-    }
+      if (block !== undefined && this.isReconciling(block)) {
+        return;
+      }
 
-    // Looked up fresh: a rematerialise replaces the instance that mutated, and
-    // saving the dead one would write a block the document no longer has.
-    const block = this.repository.getBlockById(blockId);
+      const suppressed = this.suppressedMutations.delete(blockId);
 
-    if (block !== undefined) {
-      this.handlers.resyncBlockData(block);
-    }
+      // Cleared together with the record, or a stale "the user typed here"
+      // flag would make this block's every later reconciler rewrite replay.
+      this.userTypedWhileReconciling.delete(blockId);
+
+      if (suppressed && block !== undefined && !this.destroyed) {
+        this.handlers.resyncBlockData(block);
+      }
+    });
   }
 
   private isInReconciledSubtree(block: Block | undefined, visited: Set<string>): boolean {
@@ -441,26 +454,21 @@ export class BlockYjsSync {
   private trackScope(blockId: string | undefined, delta: 1 | -1): void {
     if (blockId === undefined) {
       this.unscopedSyncCount += delta;
+    } else {
+      const count = (this.reconcilingBlocks.get(blockId) ?? 0) + delta;
 
-      // A structural window suppresses EVERY block, so nothing it swallowed is
-      // tied to a scope that will close later — drain the lot here.
-      if (this.unscopedSyncCount === 0) {
-        Array.from(this.suppressedMutations).forEach((id) => this.replaySuppressedMutation(id));
+      if (count > 0) {
+        this.reconcilingBlocks.set(blockId, count);
+      } else {
+        this.reconcilingBlocks.delete(blockId);
       }
-
-      return;
     }
 
-    const count = (this.reconcilingBlocks.get(blockId) ?? 0) + delta;
-
-    if (count > 0) {
-      this.reconcilingBlocks.set(blockId, count);
-
-      return;
+    // Any close can be the one that frees a block — including a container's,
+    // which is the only window a nested block's record ever sits under.
+    if (delta === -1) {
+      this.drainSuppressedMutations();
     }
-
-    this.reconcilingBlocks.delete(blockId);
-    this.replaySuppressedMutation(blockId);
   }
 
   /**

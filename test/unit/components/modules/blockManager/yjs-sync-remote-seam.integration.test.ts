@@ -197,6 +197,7 @@ describe('BlockYjsSync — remote reconciliation through the binary seam (integr
       replaceBlock: vi.fn(),
       onBlockRemoved: vi.fn(),
       onBlockAdded: vi.fn(),
+      resyncBlockData: vi.fn(),
     };
 
     yjsSync = new BlockYjsSync({ YjsManager: manager }, repository, factory, handlers, blocksStore);

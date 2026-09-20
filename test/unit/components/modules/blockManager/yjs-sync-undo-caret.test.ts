@@ -140,6 +140,7 @@ describe('BlockYjsSync — caret preservation is for a peer, not for undo/redo',
       replaceBlock: vi.fn(),
       onBlockRemoved: vi.fn(),
       onBlockAdded: vi.fn(),
+      resyncBlockData: vi.fn(),
     };
 
     const dependencies: BlockYjsSyncDependencies = { YjsManager: manager };

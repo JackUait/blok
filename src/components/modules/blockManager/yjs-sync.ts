@@ -88,6 +88,12 @@ export interface SyncHandlers {
   onBlockRemoved: (block: Block, index: number) => void;
   /** Called when a block is added during undo/redo (after insertion) */
   onBlockAdded: (block: Block, index: number) => void;
+  /**
+   * Write a block's current content back to the document, bypassing the echo
+   * gate. Used to replay a mutation that was suppressed as a reconciler echo
+   * but turned out to be the user's — see `noteSuppressedMutation`.
+   */
+  resyncBlockData: (block: Block) => void;
 }
 
 /**
@@ -133,6 +139,33 @@ export class BlockYjsSync {
   private readonly reconcilingBlocks = new Map<string, number>();
 
   /**
+   * Blocks that mutated while their reconcile window was open, so the
+   * write-back was dropped as the reconciler's own echo.
+   *
+   * The window covers `setData`'s await AND one animation frame, which is long
+   * enough for the user to type into — and that keystroke looks exactly like
+   * the echo. Dropping it lost the character for good: the next peer rewrite
+   * replaces the block's DOM from the document, which never received it.
+   *
+   * So the drop is deferred, not final: when the window closes, the block is
+   * saved once more. A real echo diffs to nothing and writes nothing, so this
+   * costs one save and adds no undo step; a keystroke reaches the document.
+   */
+  private readonly suppressedMutations = new Set<string>();
+
+  /**
+   * Blocks the user typed into while their reconcile window was open.
+   *
+   * `beforeinput` is the provenance the DOM alone does not carry: only the
+   * user produces one, so a mutation that follows it inside the window is a
+   * keystroke and not the reconciler's rewrite. Without it a replay cannot
+   * tell the two apart, and replaying the reconciler's own normalisation
+   * (a convert to toggle rewrites the block's content) lands a second undo
+   * step, so one CMD+Z no longer reverts the convert.
+   */
+  private readonly userTypedWhileReconciling = new Set<string>();
+
+  /**
    * Returns true if any Yjs sync operation is in progress
    */
   public get isSyncingFromYjs(): boolean {
@@ -152,6 +185,53 @@ export class BlockYjsSync {
     }
 
     return this.reconcilingBlocks.size > 0 && this.isInReconciledSubtree(block, new Set());
+  }
+
+  /**
+   * Record that `block` mutated while it was being reconciled, so the drop can
+   * be re-checked once the window closes. See `suppressedMutations`.
+   * @param block - the block whose mutation was dropped as an echo
+   */
+  public noteSuppressedMutation(block: Block): void {
+    if (this.userTypedWhileReconciling.has(block.id)) {
+      this.suppressedMutations.add(block.id);
+    }
+  }
+
+  /**
+   * Record that the user typed into `block`. Only meaningful while the block
+   * is reconciling — that is the window whose mutations are otherwise dropped.
+   * @param block - the block the input event targeted
+   */
+  public noteUserInput(block: Block): void {
+    if (this.isReconciling(block)) {
+      this.userTypedWhileReconciling.add(block.id);
+    }
+  }
+
+  /**
+   * Re-save a block whose mutation was dropped while it was reconciling, now
+   * that its window is closed. Skipped while an unscoped (structural) window
+   * is still open — that one suppresses every block, so the replay would run
+   * straight back into a closed gate.
+   * @param blockId - the block whose suppressed mutation is being replayed
+   */
+  private replaySuppressedMutation(blockId: string): void {
+    const suppressed = this.suppressedMutations.delete(blockId);
+
+    this.userTypedWhileReconciling.delete(blockId);
+
+    if (!suppressed || this.destroyed || this.unscopedSyncCount > 0) {
+      return;
+    }
+
+    // Looked up fresh: a rematerialise replaces the instance that mutated, and
+    // saving the dead one would write a block the document no longer has.
+    const block = this.repository.getBlockById(blockId);
+
+    if (block !== undefined) {
+      this.handlers.resyncBlockData(block);
+    }
   }
 
   private isInReconciledSubtree(block: Block | undefined, visited: Set<string>): boolean {
@@ -362,6 +442,12 @@ export class BlockYjsSync {
     if (blockId === undefined) {
       this.unscopedSyncCount += delta;
 
+      // A structural window suppresses EVERY block, so nothing it swallowed is
+      // tied to a scope that will close later — drain the lot here.
+      if (this.unscopedSyncCount === 0) {
+        Array.from(this.suppressedMutations).forEach((id) => this.replaySuppressedMutation(id));
+      }
+
       return;
     }
 
@@ -369,9 +455,12 @@ export class BlockYjsSync {
 
     if (count > 0) {
       this.reconcilingBlocks.set(blockId, count);
-    } else {
-      this.reconcilingBlocks.delete(blockId);
+
+      return;
     }
+
+    this.reconcilingBlocks.delete(blockId);
+    this.replaySuppressedMutation(blockId);
   }
 
   /**

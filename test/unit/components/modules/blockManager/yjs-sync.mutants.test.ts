@@ -294,6 +294,7 @@ const createHarness = (options: HarnessOptions): Harness => {
     replaceBlock: vi.fn(),
     onBlockRemoved: vi.fn(),
     onBlockAdded: vi.fn(),
+    resyncBlockData: vi.fn(),
   };
 
   const dependencies: BlockYjsSyncDependencies = {

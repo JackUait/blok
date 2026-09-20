@@ -226,6 +226,7 @@ const createMockSyncHandlers = (): SyncHandlers => ({
   replaceBlock: vi.fn(),
   onBlockRemoved: vi.fn(),
   onBlockAdded: vi.fn(),
+  resyncBlockData: vi.fn(),
 });
 
 describe('BlockYjsSync', () => {

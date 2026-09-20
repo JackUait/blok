@@ -119,6 +119,7 @@ describe('BlockYjsSync — edit metadata from the document', () => {
       replaceBlock: vi.fn(),
       onBlockRemoved: vi.fn(),
       onBlockAdded: vi.fn(),
+      resyncBlockData: vi.fn(),
     };
 
     const dependencies: BlockYjsSyncDependencies = { YjsManager: manager };

@@ -178,6 +178,7 @@ describe('hydration write-back is not an undo entry (integration)', () => {
       onBlockAdded: (block, index) => {
         priv.blockDidMutated(BlockAddedMutationType, block, { index });
       },
+      resyncBlockData: vi.fn(),
     };
 
     yjsSync = new BlockYjsSync({ YjsManager: manager }, repository, factory, handlers, blocksStore);

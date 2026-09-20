@@ -107,11 +107,17 @@ export class KeyboardController extends Controller {
     }
   };
 
-  private readonly redactorBeforeinputHandler = (): void => {
+  private readonly redactorBeforeinputHandler = (event: Event): void => {
     // force: a beforeinput is the start of a fresh user edit, so the
     // caret-before is the caret right now — discard any stale pending snapshot
     // left dangling by a previous operation's no-op follow-up write.
     this.Blok.YjsManager.markCaretBeforeChange(true);
+
+    // The one signal that says a DOM change is the USER's: a peer's rewrite
+    // never fires it. See `BlockYjsSync.noteUserInput`.
+    if (event.target instanceof Node) {
+      this.Blok.BlockManager.noteUserInput(event.target);
+    }
   };
 
   private readonly redactorKeydownHandler = (event: Event): void => {

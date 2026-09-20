@@ -165,6 +165,7 @@ describe('BlockYjsSync — remote reconcile fires host onChange (integration)', 
       onBlockAdded: (block, index) => {
         priv.blockDidMutated(BlockAddedMutationType, block, { index });
       },
+      resyncBlockData: vi.fn(),
     };
 
     yjsSync = new BlockYjsSync({ YjsManager: manager }, repository, factory, handlers, blocksStore);
@@ -275,7 +276,10 @@ describe('BlockYjsSync — remote reconcile fires host onChange (integration)', 
 
     const priv = blockManager as unknown as BlockManagerPrivate;
 
-    priv.yjsSync = { isSyncingFromYjs: true, isReconciling: (): boolean => true, isMaterializing: (): boolean => false };
+    priv.yjsSync = { isSyncingFromYjs: true,
+      isReconciling: (): boolean => true,
+      isMaterializing: (): boolean => false,
+      noteSuppressedMutation: (): void => {} };
 
     const heard: BlockMutationEvent[] = [];
 

@@ -462,6 +462,9 @@ export class BlockManager extends Module {
         onBlockRemoved: (block, index) => {
           this.blockDidMutated(BlockRemovedMutationType, block, { index });
         },
+        resyncBlockData: (block) => {
+          void this.syncBlockDataToYjs(block);
+        },
         onBlockAdded: (block, index) => {
           this.blockDidMutated(BlockAddedMutationType, block, { index });
         },
@@ -1398,6 +1401,20 @@ export class BlockManager extends Module {
   }
 
   /**
+   * Note that a user input event targeted `node`'s block, so a mutation that
+   * follows inside an open reconcile window is a keystroke rather than the
+   * reconciler's own rewrite. See `BlockYjsSync.noteUserInput`.
+   * @param node - the input event's target
+   */
+  public noteUserInput(node: Node): void {
+    const block = this.repository.getBlockByChildNode(node);
+
+    if (block !== undefined) {
+      this.yjsSync.noteUserInput(block);
+    }
+  }
+
+  /**
    * Move a block to a new index
    */
   public move(toIndex: number, fromIndex: number = this.currentBlockIndex, skipDOM = false, skipMovedHook = false): void {
@@ -1833,6 +1850,10 @@ export class BlockManager extends Module {
 
     if (mutationType === BlockChangedMutationType && !isEcho && !this._isPointerDragActive) {
       void this.syncBlockDataToYjs(block);
+    } else if (mutationType === BlockChangedMutationType && isEcho) {
+      // Not necessarily an echo: the window is open across setData's await and
+      // one frame, so the user can type into it. Re-checked once it closes.
+      this.yjsSync.noteSuppressedMutation(block);
     }
 
     return block;

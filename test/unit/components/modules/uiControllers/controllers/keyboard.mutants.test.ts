@@ -152,6 +152,7 @@ const createHarness = (options?: {
         return state.blocks;
       },
       insert: vi.fn(() => makeBlock('inserted-by-enter')),
+      noteUserInput: vi.fn(),
       unsetCurrentBlock: vi.fn(),
       deleteSelectedBlocksAndInsertReplacement: vi.fn(() => undefined),
       getBlock: vi.fn(() => undefined),

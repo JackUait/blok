@@ -36,6 +36,7 @@ const createBlokStub = (): BlokModules => {
       someFlipperButtonFocused: false,
     },
     BlockManager: {
+      noteUserInput: vi.fn(),
       isBlokEmpty: false,
       currentBlock: null,
       currentBlockIndex: -1,

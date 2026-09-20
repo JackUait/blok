@@ -133,6 +133,7 @@ describe('BlockYjsSync — remote data sanitization and root promotion', () => {
       replaceBlock: vi.fn(),
       onBlockRemoved: vi.fn(),
       onBlockAdded: vi.fn(),
+      resyncBlockData: vi.fn(),
     };
 
     const dependencies: BlockYjsSyncDependencies = { YjsManager: manager };

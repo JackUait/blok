@@ -106,6 +106,7 @@ describe('BlockYjsSync — concurrent empty-document repair (integration)', () =
       replaceBlock: vi.fn(),
       onBlockRemoved: vi.fn(),
       onBlockAdded: vi.fn(),
+      resyncBlockData: vi.fn(),
     };
 
     const yjsSync = new BlockYjsSync({ YjsManager: manager }, repository, factory, handlers, blocksStore);

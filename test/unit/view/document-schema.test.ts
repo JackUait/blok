@@ -159,7 +159,9 @@ const savedData: Record<string, Record<string, unknown>> = {
     activeViewId: 'v1',
   })).save(contentElement('')),
 
-  'database-row': new DatabaseRow(options({ properties: { p1: 'Ship it' }, position: 'a0' }))
+  // A row as the tool writes one today: a top-level `title` beside the
+  // properties mirror. A row saved before that key existed still omits it.
+  'database-row': new DatabaseRow(options({ properties: { p1: 'Ship it' }, position: 'a0', title: 'Ship it' }))
     .save(contentElement('')),
 
   divider: new Divider(options({})).save(),

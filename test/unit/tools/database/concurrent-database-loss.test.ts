@@ -1,9 +1,12 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import * as Y from 'yjs';
 
 import { DocumentStore } from '../../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../../src/components/modules/yjs/serializer';
 import { DatabaseModel } from '../../../../src/tools/database/database-model';
 import { DatabaseBackendSync } from '../../../../src/tools/database/database-backend-sync';
+import { DatabaseRowTool } from '../../../../src/tools/database-row';
+import type { DatabaseRowData } from '../../../../src/tools/database/types';
 import type { DatabaseAdapter, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
 
 const createStore = (): DocumentStore => new DocumentStore(new YBlockSerializer());
@@ -337,15 +340,64 @@ describe('database — a column deleted while the other person is still using it
   });
 });
 
+/** The stored Y value under a block's top-level data key, before any read-back. */
+const storedDataValue = (store: DocumentStore, id: string, key: string): unknown => {
+  const yblock = store.getBlockById(id);
+  const ydata = yblock?.get('data');
+
+  if (!(ydata instanceof Y.Map)) {
+    throw new Error(`block ${id} has no data map`);
+  }
+
+  return ydata.get(key);
+};
+
 describe('database-row — two peers editing one row', () => {
   let storeA: DocumentStore;
   let storeB: DocumentStore;
 
-  const rowBlock = (properties: Record<string, unknown>): { id: string; type: string; data: Record<string, unknown> } => ({
+  const TITLE_PROP = 'p-title';
+
+  /** A row as the tool writes it TODAY: a top-level `title` beside the mirror. */
+  const newRowBlock = (title: string): { id: string; type: string; data: Record<string, unknown> } => ({
     id: 'row1',
     type: 'database-row',
-    data: { position: 'a0', properties },
+    data: { position: 'a0', title, properties: { [TITLE_PROP]: title, 'p-status': 'o1' } },
   });
+
+  /** A row saved BEFORE the top-level key existed — no `title` anywhere. */
+  const legacyRowBlock = (title: string): { id: string; type: string; data: Record<string, unknown> } => ({
+    id: 'row1',
+    type: 'database-row',
+    data: { position: 'a0', properties: { [TITLE_PROP]: title, 'p-status': 'o1' } },
+  });
+
+  /** The real row tool, built from what the document currently holds. */
+  const rowToolFrom = (store: DocumentStore, id: string): DatabaseRowTool =>
+    new DatabaseRowTool({ data: dataOf(store, id) as unknown as DatabaseRowData } as never);
+
+  /** What flushBlockDataWrites does: one updateBlockData per key save() emits. */
+  const flushSave = (store: DocumentStore, id: string, tool: DatabaseRowTool): void => {
+    const saved = tool.save(document.createElement('div')) as unknown as Record<string, unknown>;
+
+    for (const [key, value] of Object.entries(saved)) {
+      store.updateBlockData(id, key, value);
+    }
+  };
+
+  /** One person typing a whole burst into the row title, through the real tool. */
+  const typeTitle = (store: DocumentStore, id: string, title: string): void => {
+    const tool = rowToolFrom(store, id);
+
+    tool.updateTitle({ title, titlePropertyId: TITLE_PROP });
+    flushSave(store, id, tool);
+  };
+
+  const titleOf = (store: DocumentStore, id: string): string =>
+    dataOf(store, id).title as string;
+
+  const mirrorOf = (store: DocumentStore, id: string): string =>
+    (dataOf(store, id).properties as Record<string, string>)[TITLE_PROP];
 
   beforeEach(() => {
     storeA = createStore();
@@ -353,44 +405,129 @@ describe('database-row — two peers editing one row', () => {
     pinClientId(storeA, 1);
     pinClientId(storeB, 2);
 
-    storeA.fromJSON([databaseBlock(), rowBlock({ 'p-title': 'Ship the release', 'p-status': 'o1' })]);
+    storeA.fromJSON([databaseBlock(), newRowBlock('Ship the release')]);
     storeB.applyRemoteUpdate(storeA.encodeStateAsUpdate());
   });
 
   /**
-   * RED ON PURPOSE, and a REAL defect — but the fix does not belong in the
-   * serializer.
+   * The row title merges because it lives in a TOP-LEVEL `title` key, which is
+   * already a `DIFFABLE_TEXT_KEYS` member and so stored as a `Y.Text`.
    *
-   * A row title is prose typed per keystroke (the card drawer calls
-   * `onTitleChange` on every `input`), stored nested at
-   * `data.properties[titlePropId]`, so it is an atomic leaf and a whole burst
-   * is lost. Merging it needs a TOP-LEVEL `title` key on the row block —
-   * already diffable, already minted eagerly at row birth, since a row is
-   * always created carrying its title property.
-   *
-   * What must NOT be done: promote nested strings under `properties`. The same
-   * map holds a select's option id, a date and a url, property ids are
+   * What must NOT be done instead: promote nested strings under `properties`.
+   * The same map holds a select's option id, a date and a url, property ids are
    * `nanoid()`, and per-character merging those invents a value neither peer
    * picked (measured: `o1` → `o2` and `o3` merges to `o23`, matching no option;
    * `2026-09-21` → Sep 22 and Oct 21 merges to `2026-10-22`). The only signal
    * separating them is the property type, which lives in the parent database
-   * block's concurrently-edited `data.schema` — see the comment on
-   * `DIFFABLE_TEXT_KEYS`.
+   * block's concurrently-edited `data.schema` — see `DIFFABLE_TEXT_KEYS`.
    */
-  it.fails('keeps both bursts when two people type into one row title', () => {
-    storeA.updateBlockData('row1', 'properties', { 'p-title': 'Ship the release today', 'p-status': 'o1' });
-    storeB.updateBlockData('row1', 'properties', { 'p-title': 'Ship the BBB release', 'p-status': 'o1' });
+  it('keeps both bursts when two people type into one row title', () => {
+    typeTitle(storeA, 'row1', 'Ship the release today');
+    typeTitle(storeB, 'row1', 'Ship the BBB release');
 
     sync(storeA, storeB);
 
-    const title = (dataOf(storeA, 'row1').properties as Record<string, string>)['p-title'];
+    expect(titleOf(storeA, 'row1')).toContain('BBB');
+    expect(titleOf(storeA, 'row1')).toContain('today');
+    expect(titleOf(storeB, 'row1')).toBe(titleOf(storeA, 'row1'));
+  });
 
-    expect(title).toContain('BBB');
-    expect(title).toContain('today');
+  it('converges the properties mirror on the merged title once the dust settles', () => {
+    typeTitle(storeA, 'row1', 'Ship the release today');
+    typeTitle(storeB, 'row1', 'Ship the BBB release');
+
+    sync(storeA, storeB);
+
+    const merged = titleOf(storeA, 'row1');
+
+    // The heal DatabaseTool.syncRowsFromBlocks performs on each peer: rewrite
+    // the mirror FROM the merged title. Pinned as the parent's behaviour by
+    // database.test.ts → 'rewrites a stale properties mirror'.
+    for (const store of [storeA, storeB]) {
+      const tool = rowToolFrom(store, 'row1');
+
+      tool.updateProperties({ [TITLE_PROP]: titleOf(store, 'row1') });
+      flushSave(store, 'row1', tool);
+    }
+
+    sync(storeA, storeB);
+
+    expect(mirrorOf(storeA, 'row1')).toBe(merged);
+    expect(mirrorOf(storeB, 'row1')).toBe(merged);
+    expect(mirrorOf(storeA, 'row1')).toContain('BBB');
+    expect(mirrorOf(storeA, 'row1')).toContain('today');
+    expect(titleOf(storeB, 'row1')).toBe(merged);
+  });
+
+  it('keeps writing the properties mirror a consumer reads', () => {
+    typeTitle(storeA, 'row1', 'Ship it');
+
+    expect(mirrorOf(storeA, 'row1')).toBe('Ship it');
+    expect((dataOf(storeA, 'row1').properties as Record<string, string>)['p-status']).toBe('o1');
+  });
+
+  it('reads the title of a row saved before the top-level key existed', () => {
+    storeA = createStore();
+    storeA.fromJSON([databaseBlock(), legacyRowBlock('Old row')]);
+
+    const tool = rowToolFrom(storeA, 'row1');
+
+    expect(tool.getProperties()[TITLE_PROP]).toBe('Old row');
+    expect(tool.getTitle()).toBeUndefined();
+  });
+
+  it('does not promote a row saved before the top-level key existed', () => {
+    storeA = createStore();
+    storeA.fromJSON([databaseBlock(), legacyRowBlock('Old row')]);
+
+    // Loading the row and saving it back — a block flush with no user edit.
+    const tool = rowToolFrom(storeA, 'row1');
+
+    flushSave(storeA, 'row1', tool);
+
+    expect(dataOf(storeA, 'row1')).not.toHaveProperty('title');
+    expect(storedDataValue(storeA, 'row1', 'title')).toBeUndefined();
+    expect(mirrorOf(storeA, 'row1')).toBe('Old row');
+  });
+
+  it('stores a brand-new row title as a Y.Text', () => {
+    expect(storedDataValue(storeA, 'row1', 'title')).toBeInstanceOf(Y.Text);
+    expect(storedDataValue(storeB, 'row1', 'title')).toBeInstanceOf(Y.Text);
+  });
+
+  it('mints a Y.Text the first time someone types into an old row title', () => {
+    storeA = createStore();
+    storeB = createStore();
+    pinClientId(storeA, 1);
+    pinClientId(storeB, 2);
+    storeA.fromJSON([databaseBlock(), legacyRowBlock('Old row')]);
+    storeB.applyRemoteUpdate(storeA.encodeStateAsUpdate());
+
+    typeTitle(storeA, 'row1', 'Old row edited');
+
+    expect(storedDataValue(storeA, 'row1', 'title')).toBeInstanceOf(Y.Text);
+
+    sync(storeA, storeB);
+
+    expect(storedDataValue(storeB, 'row1', 'title')).toBeInstanceOf(Y.Text);
+    expect(titleOf(storeB, 'row1')).toBe('Old row edited');
+  });
+
+  it('keeps merging a row that arrived from a peer and is then typed into', () => {
+    // storeB only ever saw row1 over the wire.
+    typeTitle(storeB, 'row1', 'Ship the release now');
+
+    expect(storedDataValue(storeB, 'row1', 'title')).toBeInstanceOf(Y.Text);
+
+    typeTitle(storeA, 'row1', 'Please ship the release');
+    sync(storeA, storeB);
+
+    expect(titleOf(storeA, 'row1')).toContain('now');
+    expect(titleOf(storeA, 'row1')).toContain('Please');
   });
 
   it('keeps a row value written while the other person moves the row', () => {
-    storeA.updateBlockData('row1', 'properties', { 'p-title': 'Ship the release', 'p-status': 'o2' });
+    storeA.updateBlockData('row1', 'properties', { [TITLE_PROP]: 'Ship the release', 'p-status': 'o2' });
     storeB.updateBlockData('row1', 'position', 'a5');
 
     sync(storeA, storeB);
@@ -400,7 +537,7 @@ describe('database-row — two peers editing one row', () => {
   });
 
   it('keeps a value written into a column the other person is deleting', () => {
-    storeB.updateBlockData('row1', 'properties', { 'p-title': 'Ship the release', 'p-status': 'o1', 'p-note': 'important' });
+    storeB.updateBlockData('row1', 'properties', { [TITLE_PROP]: 'Ship the release', 'p-status': 'o1', 'p-note': 'important' });
     storeA.updateBlockData('db1', 'schema', baseSchema().filter((p) => p.id !== 'p-status'));
 
     sync(storeA, storeB);

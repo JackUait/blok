@@ -900,7 +900,7 @@ describe('DatabaseTool', () => {
   });
 
   describe('drawer title edits update row block via call()', () => {
-    it('editing the title in the drawer calls block.call("updateProperties") on the row block', () => {
+    it('editing the title in the drawer calls block.call("updateTitle") on the row block', () => {
       const childBlocks = [
         createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Original title', 'prop-status': 'opt-todo' }, position: 'a0' }),
       ];
@@ -924,9 +924,111 @@ describe('DatabaseTool', () => {
       drawerTitle.value = 'Updated title';
       fireEvent.input(drawerTitle);
 
-      // The row block's call() should have been invoked with updateProperties
-      expect(childBlocks[0].call).toHaveBeenCalledWith('updateProperties', { 'prop-title': 'Updated title' });
+      // Goes through updateTitle so the row writes BOTH its top-level `title`
+      // (the key the CRDT merges per character) and the properties mirror.
+      expect(childBlocks[0].call).toHaveBeenCalledWith('updateTitle', {
+        title: 'Updated title',
+        titlePropertyId: 'prop-title',
+      });
       expect(childBlocks[0].dispatchChange).toHaveBeenCalled();
+
+      tool.destroy();
+    });
+  });
+
+  describe('row title lives in a top-level `title` key', () => {
+    /** A row block whose stored data carries whatever the document holds. */
+    const rowBlockWithData = (id: string, data: Record<string, unknown>): BlockAPI => ({
+      id,
+      name: 'database-row',
+      holder: document.createElement('div'),
+      preservedData: data as unknown as DatabaseRowData,
+      call: vi.fn(),
+      dispatchChange: vi.fn(),
+    } as unknown as BlockAPI);
+
+    it('gives a new row a top-level title at birth so the CRDT mints its Y.Text', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const element = tool.render();
+
+      tool.rendered();
+
+      const addButton = queryByData(element, 'data-blok-database-add-card')!;
+
+      addButton.click();
+
+      const api = (tool as unknown as { api: API }).api;
+      const insertCall = (api.blocks.insert as ReturnType<typeof vi.fn>).mock.calls[0];
+
+      expect(insertCall[1]).toHaveProperty('title', '');
+
+      tool.destroy();
+    });
+
+    it('rewrites a stale properties mirror from the merged title', () => {
+      // What a concurrent burst leaves behind: `title` merged both ways, the
+      // properties copy still holding one peer's whole write.
+      const child = rowBlockWithData('row-1', {
+        position: 'a0',
+        title: 'Ship the BBB release today',
+        properties: { 'prop-title': 'Ship the BBB release', 'prop-status': 'opt-todo' },
+      });
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: [child] }));
+
+      tool.render();
+      tool.rendered();
+
+      expect(child.call).toHaveBeenCalledWith('updateProperties', { 'prop-title': 'Ship the BBB release today' });
+      expect(child.dispatchChange).toHaveBeenCalled();
+
+      tool.destroy();
+    });
+
+    it('reads the merged title, not the stale mirror, when rendering a card', () => {
+      const child = rowBlockWithData('row-1', {
+        position: 'a0',
+        title: 'Ship the BBB release today',
+        properties: { 'prop-title': 'Ship the BBB release', 'prop-status': 'opt-todo' },
+      });
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: [child] }));
+      const element = tool.render();
+
+      tool.rendered();
+
+      expect(element.textContent).toContain('Ship the BBB release today');
+
+      tool.destroy();
+    });
+
+    it('never writes to a row saved before the top-level title key existed', () => {
+      const child = rowBlockWithData('row-1', {
+        position: 'a0',
+        properties: { 'prop-title': 'Old row', 'prop-status': 'opt-todo' },
+      });
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: [child] }));
+      const element = tool.render();
+
+      tool.rendered();
+
+      expect(child.call).not.toHaveBeenCalled();
+      expect(child.dispatchChange).not.toHaveBeenCalled();
+      expect(element.textContent).toContain('Old row');
+
+      tool.destroy();
+    });
+
+    it('leaves a row alone once its mirror already matches the merged title', () => {
+      const child = rowBlockWithData('row-1', {
+        position: 'a0',
+        title: 'Ship it',
+        properties: { 'prop-title': 'Ship it', 'prop-status': 'opt-todo' },
+      });
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: [child] }));
+
+      tool.render();
+      tool.rendered();
+
+      expect(child.call).not.toHaveBeenCalled();
 
       tool.destroy();
     });

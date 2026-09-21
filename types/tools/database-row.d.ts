@@ -42,6 +42,19 @@ export declare class DatabaseRow implements BlockTool {
   updateProperties(changes: Record<string, PropertyValue>): void;
 
   /**
+   * Write the row title to the top-level `title` key AND to the
+   * `properties[titlePropertyId]` mirror. The property id comes from the parent
+   * database's schema, so the caller passes it in.
+   */
+  updateTitle(param: { title: string; titlePropertyId: string }): void;
+
+  /**
+   * The row's top-level title, or undefined on a row saved before that key
+   * existed (its title is in `properties`).
+   */
+  getTitle(): string | undefined;
+
+  /**
    * Update the row's fractional-index position
    */
   updatePosition(param: { position: string }): void;

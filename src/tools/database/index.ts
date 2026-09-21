@@ -281,14 +281,56 @@ export class DatabaseTool implements BlockTool {
 
   private syncRowsFromBlocks(): void {
     const children = this.api.blocks.getChildren(this.block.id);
+    const titlePropId = this.titlePropertyId();
     const rows: DatabaseRow[] = children
       .filter((child) => child.name === 'database-row')
-      .map((child) => ({
-        id: child.id,
-        position: (child.preservedData as DatabaseRowData)?.position ?? '',
-        properties: (child.preservedData as DatabaseRowData)?.properties ?? {},
-      }));
+      .map((child) => {
+        const rowData = child.preservedData as DatabaseRowData | undefined;
+        const properties = { ...(rowData?.properties ?? {}) };
+        const mergedTitle = rowData?.title;
+
+        // A row born with a top-level `title` keeps the MERGED title there;
+        // `properties[titlePropId]` is a mirror a concurrent burst can leave
+        // stale, so read the merged value and heal the mirror from it. A row
+        // written before `title` existed has none, reads the mirror as before,
+        // and is never written to.
+        if (mergedTitle !== undefined && titlePropId !== '') {
+          if (properties[titlePropId] !== mergedTitle) {
+            properties[titlePropId] = mergedTitle;
+            child.call('updateProperties', { [titlePropId]: mergedTitle });
+            child.dispatchChange();
+          }
+        }
+
+        return {
+          id: child.id,
+          position: rowData?.position ?? '',
+          properties,
+        };
+      });
     this.model.setRows(rows);
+  }
+
+  /** Id of the schema's title column, or '' when the schema has none. */
+  private titlePropertyId(): string {
+    return this.model.getSchema().find((p) => p.type === 'title')?.id ?? '';
+  }
+
+  /**
+   * Write a row title through the row block. Goes to the row's top-level
+   * `title` (merged per character by the CRDT) AND to the published
+   * `properties[titlePropId]` mirror — see DatabaseRowTool.updateTitle.
+   */
+  private updateRowTitleBlock(rowId: string, titlePropId: string, title: string): void {
+    const children = this.api.blocks.getChildren(this.block.id);
+    const rowBlock = children.find((child) => child.id === rowId);
+
+    if (rowBlock !== undefined) {
+      rowBlock.call('updateTitle', { title, titlePropertyId: titlePropId });
+      rowBlock.dispatchChange();
+    }
+
+    this.syncRowsFromBlocks();
   }
 
   private deleteRowBlock(rowId: string): void {
@@ -559,9 +601,8 @@ export class DatabaseTool implements BlockTool {
       getRows: (optionId) => groups.get(optionId) ?? [],
       titlePropertyId: titlePropId,
       onTitleEdit: (rowId, newTitle) => {
-        const titleProp = this.model.getSchema().find((p) => p.type === 'title');
-        const titlePropId = titleProp?.id ?? '';
-        this.updateRowBlock(rowId, { [titlePropId]: newTitle });
+        const titlePropId = this.titlePropertyId();
+        this.updateRowTitleBlock(rowId, titlePropId, newTitle);
         this.sync.syncUpdateRow({ rowId, properties: { [titlePropId]: newTitle } });
       },
     });
@@ -749,7 +790,7 @@ export class DatabaseTool implements BlockTool {
 
     this.api.blocks.insert(
       'database-row',
-      { properties: rowData.properties, position: rowData.position },
+      { properties: rowData.properties, position: rowData.position, title: '' },
       {},
       blockIndex + 1,
       false,
@@ -786,7 +827,7 @@ export class DatabaseTool implements BlockTool {
 
     this.api.blocks.insert(
       'database-row',
-      { properties: rowData.properties, position: rowData.position },
+      { properties: rowData.properties, position: rowData.position, title: '' },
       {},
       blockIndex + 1,
       false,
@@ -917,7 +958,7 @@ export class DatabaseTool implements BlockTool {
         descriptionPropertyId: descriptionPropId,
         schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
         onTitleChange: (rowId, title) => {
-          this.updateRowBlock(rowId, { [titlePropId]: title });
+          this.updateRowTitleBlock(rowId, titlePropId, title);
           const currentView = this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-board]')
             ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-list]');
 

@@ -331,6 +331,10 @@ export const blokDocumentSchema = {
           additionalProperties: true,
         },
         position: { type: 'string', description: 'Fractional-index sort key.' },
+        title: {
+          type: 'string',
+          description: 'Row title, mirrored from the title column. Absent on rows written before this key existed.',
+        },
       },
     },
 

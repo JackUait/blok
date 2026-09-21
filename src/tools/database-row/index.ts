@@ -20,6 +20,13 @@ export class DatabaseRowTool implements BlockTool {
       properties: data.properties ?? {},
       position: data.position ?? 'a0',
     };
+
+    // Only carry `title` when the stored row already has one. A row written
+    // before this key existed must NOT gain it on load: inventing it here is a
+    // whole-key write of a value nobody typed, and it would race a peer.
+    if (typeof data.title === 'string') {
+      this._data.title = data.title;
+    }
   }
 
   public render(): HTMLDivElement {
@@ -31,10 +38,16 @@ export class DatabaseRowTool implements BlockTool {
   }
 
   public save(_block: HTMLElement): DatabaseRowData {
-    return {
+    const saved: DatabaseRowData = {
       properties: this._data.properties,
       position: this._data.position,
     };
+
+    if (this._data.title !== undefined) {
+      saved.title = this._data.title;
+    }
+
+    return saved;
   }
 
   public validate(data: DatabaseRowData): boolean {
@@ -43,6 +56,29 @@ export class DatabaseRowTool implements BlockTool {
 
   public updateProperties(changes: Record<string, PropertyValue>): void {
     Object.assign(this._data.properties, changes);
+  }
+
+  /**
+   * Write the row title to BOTH places it lives.
+   *
+   * `title` is top-level, so the CRDT stores it as a Y.Text and two people
+   * typing at once merge per character. `properties[titlePropertyId]` is the
+   * published copy consumers and the backend adapter read, so it keeps being
+   * written — it is a mirror of the merged value, not a second source.
+   *
+   * The row cannot work the property id out on its own: it lives in the PARENT
+   * database block's schema, so the parent passes it in.
+   */
+  public updateTitle(param: { title: string; titlePropertyId: string }): void {
+    this._data.title = param.title;
+
+    if (param.titlePropertyId !== '') {
+      this._data.properties[param.titlePropertyId] = param.title;
+    }
+  }
+
+  public getTitle(): string | undefined {
+    return this._data.title;
   }
 
   public updatePosition(param: { position: string }): void {

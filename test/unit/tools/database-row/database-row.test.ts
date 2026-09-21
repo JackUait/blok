@@ -90,6 +90,55 @@ describe('DatabaseRowTool', () => {
 
       expect(saved.properties).toEqual({});
     });
+
+    it('omits `title` entirely for a row saved before that key existed', () => {
+      const tool = new DatabaseRowTool(createRowOptions({ properties: { 'p-title': 'Old row' } }));
+
+      const saved = tool.save(tool.render());
+
+      expect(saved).not.toHaveProperty('title');
+      expect(saved.properties['p-title']).toBe('Old row');
+    });
+
+    it('emits `title` for a row that carries one', () => {
+      const tool = new DatabaseRowTool(createRowOptions({ properties: { 'p-title': 'Ship it' }, title: 'Ship it' }));
+
+      expect(tool.save(tool.render()).title).toBe('Ship it');
+    });
+  });
+
+  describe('updateTitle()', () => {
+    it('writes the top-level title AND the properties mirror', () => {
+      const tool = new DatabaseRowTool(createRowOptions({ properties: { 'p-title': '', 'p-status': 'o1' }, title: '' }));
+
+      tool.updateTitle({ title: 'Ship it', titlePropertyId: 'p-title' });
+
+      const saved = tool.save(tool.render());
+
+      expect(saved.title).toBe('Ship it');
+      expect(saved.properties['p-title']).toBe('Ship it');
+      expect(saved.properties['p-status']).toBe('o1');
+    });
+
+    it('starts carrying a title on a row that had none', () => {
+      const tool = new DatabaseRowTool(createRowOptions({ properties: { 'p-title': 'Old row' } }));
+
+      expect(tool.getTitle()).toBeUndefined();
+
+      tool.updateTitle({ title: 'Old row edited', titlePropertyId: 'p-title' });
+
+      expect(tool.getTitle()).toBe('Old row edited');
+      expect(tool.getProperties()['p-title']).toBe('Old row edited');
+    });
+
+    it('skips the mirror when the schema has no title column', () => {
+      const tool = new DatabaseRowTool(createRowOptions({ properties: { 'p-status': 'o1' }, title: '' }));
+
+      tool.updateTitle({ title: 'Ship it', titlePropertyId: '' });
+
+      expect(tool.getTitle()).toBe('Ship it');
+      expect(tool.getProperties()).toEqual({ 'p-status': 'o1' });
+    });
   });
 
   describe('validate()', () => {

@@ -41,6 +41,15 @@ export interface DatabaseRow {
 export interface DatabaseRowData extends BlockToolData {
   properties: Record<string, PropertyValue>;
   position: string;
+  /**
+   * The row title, mirrored from `properties[<title property id>]`.
+   *
+   * Top-level, so concurrent typing merges per character instead of one peer's
+   * whole burst winning. OPTIONAL and absent on rows written before it existed;
+   * those keep reading the title out of `properties`, and are never rewritten
+   * on load.
+   */
+  title?: string;
 }
 
 // ─── View config ───

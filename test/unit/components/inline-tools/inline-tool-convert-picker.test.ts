@@ -121,6 +121,9 @@ describe('Inline conversion picker', () => {
 
     expect(result?.getAttribute('data-blok-hidden')).not.toBe('true');
     result?.click();
+    // Two ticks: the conversion resolves inside runConvert, then the handler
+    // resumes and moves the caret.
+    await Promise.resolve();
     await Promise.resolve();
     expect(convert).toHaveBeenCalledWith('current', 'callout-custom', { tone: 'quiet' });
     expect(caret).toHaveBeenCalledWith(expect.objectContaining({ id: 'current' }), 'default', 0);

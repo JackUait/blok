@@ -104,6 +104,7 @@ type YjsStub = {
   pruneBlockData: Mock;
   updateBlockMetadata: Mock;
   enqueueBlockDataWrite: Mock;
+  beginPendingBlockDataWrite: Mock;
   isInMoveGroup: boolean;
   isDragMoveGroupActive: boolean;
 };
@@ -187,6 +188,9 @@ const createHarness = (options: HarnessOptions): Harness => {
     pruneBlockData: vi.fn(() => false),
     updateBlockMetadata: vi.fn(),
     enqueueBlockDataWrite: vi.fn(),
+    // The real in-flight token registration: BlockManager calls this around
+    // every data sync, so a mock without it would silently disable that path.
+    beginPendingBlockDataWrite: vi.fn(() => vi.fn()),
     isInMoveGroup: false,
     isDragMoveGroupActive: false,
     ...(options.yjs as Partial<YjsStub>),

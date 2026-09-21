@@ -269,6 +269,7 @@
   "blockSettings.blocksSelected": "{count} блок",
   "blockSettings.copyLinkSuccess": "Холбоосыг түр санах ой руу хуулав",
   "blockSettings.copyLinkError": "Блокийн холбоосыг хуулж чадсангүй",
+  "blockSettings.convertFailed": "Энэ блокийг өөрчилж чадсангүй. Дахин оролдоно уу.",
   "popover.actions": "Үйлдлүүд",
   "tools.link.keepTyping": "Холбоос нэмэхийн тулд бичсээр байгаарай",
   "tools.link.emailAddress": "Имэйл хаяг",

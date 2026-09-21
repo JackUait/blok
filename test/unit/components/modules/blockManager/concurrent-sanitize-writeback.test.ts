@@ -181,7 +181,7 @@ describe('a peer edit this client sanitizes — the stripped value is written ba
     yjs().applyRemoteUpdate(otherPeer().encodeStateAsUpdate(yjs().getStateVector()));
   };
 
-  it.fails('keeps the peer\'s <sup> in the document after this client sanitizes it away', async () => {
+  it('keeps the peer\'s <sup> in the document after this client sanitizes it away', async () => {
     pushPeerEdit(SUP_MARKUP);
     await settle();
 

@@ -26,6 +26,7 @@ import {
   IconTrash,
 } from '../../components/icons';
 import { renderUploadingState, type UploadingStateElement } from '../image/uploading-state';
+import { deliverToRebuiltBlock, releaseObjectUrl } from '../image/detached-upload';
 import { DEFAULT_CAPTION_PLACEHOLDER, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { tr } from './i18n';
@@ -249,12 +250,8 @@ export class AudioTool implements BlockTool {
     this.controlsHandle = null;
     this.waveformHandle?.destroy();
     this.waveformHandle = null;
-    if (this.data.url.startsWith('blob:')) {
-      URL.revokeObjectURL(this.data.url);
-    }
-    if (this.data.coverUrl?.startsWith('blob:')) {
-      URL.revokeObjectURL(this.data.coverUrl);
-    }
+    releaseObjectUrl(this.api, this.block.id, this.data.url);
+    releaseObjectUrl(this.api, this.block.id, this.data.coverUrl);
     this.coverPicker?.close();
     this.coverPicker = null;
   }
@@ -282,6 +279,18 @@ export class AudioTool implements BlockTool {
   }
 
   private applyResult(result: UploadResult, file?: File): void {
+    // `removed()` set this: the Block this tool rendered into was destroyed
+    // while the upload ran, so `dispatchChange` would reach nobody.
+    if (this.destroyed) {
+      const delta: Partial<AudioData> = { url: result.url };
+      const fileName = result.fileName ?? this.lastFileName;
+
+      if (fileName !== null && fileName !== undefined) delta.fileName = fileName;
+      if (file?.type) delta.mimeType = file.type;
+      deliverToRebuiltBlock(this.api, this.block, 'Audio', delta);
+
+      return;
+    }
     this.data = {
       ...this.data,
       url: result.url,

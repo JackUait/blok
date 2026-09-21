@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "Blokov: {count}",
   "blockSettings.copyLinkSuccess": "Odkaz bol skopírovaný do schránky",
   "blockSettings.copyLinkError": "Odkaz na blok sa nepodarilo skopírovať",
+  "blockSettings.convertFailed": "Tento blok sa nepodarilo zmeniť. Skúste to znova.",
   "popover.actions": "Akcie",
   "tools.link.keepTyping": "Pokračujte v písaní, aby ste pridali odkaz",
   "tools.link.emailAddress": "E-mailová adresa",

@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "არჩეულია {count} ბლოკი",
   "blockSettings.copyLinkSuccess": "ბმული დაკოპირდა ბუფერში",
   "blockSettings.copyLinkError": "ბლოკის ბმულის კოპირება ვერ მოხერხდა",
+  "blockSettings.convertFailed": "ამ ბლოკის შეცვლა ვერ მოხერხდა. სცადეთ ხელახლა.",
   "popover.actions": "მოქმედებები",
   "tools.link.keepTyping": "გააგრძელეთ აკრეფა ბმულის დასამატებლად",
   "tools.link.emailAddress": "ელფოსტის მისამართი",

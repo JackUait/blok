@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "{count} بلاڪ",
   "blockSettings.copyLinkSuccess": "لنڪ ڪلپ بورڊ تي ڪاپي ٿي ويو",
   "blockSettings.copyLinkError": "بلاڪ جو لنڪ ڪاپي نه ٿي سگهيو",
+  "blockSettings.convertFailed": "هي بلاڪ تبديل نه ٿي سگهيو. ٻيهر ڪوشش ڪريو.",
   "popover.actions": "عمل",
   "tools.link.keepTyping": "لنڪ شامل ڪرڻ لاءِ ٽائيپ ڪندا رهو",
   "tools.link.emailAddress": "اي ميل پتو",

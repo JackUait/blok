@@ -76,6 +76,18 @@ const CACHE_ORIGIN = { source: 'blok-offline-cache' };
 const COLLAB_STATE_ATTR = 'data-blok-collab';
 
 /**
+ * How long `destroy()` holds the wire, the cache and the outbox open for a
+ * `block.save()` that has not settled yet.
+ *
+ * YjsManager deliberately waits forever for the same save — a leaked `Y.Doc`
+ * costs nothing. This module cannot: what it keeps alive is a live WebSocket,
+ * an open IndexedDB handle and a `beforeunload` guard that would ask the user
+ * to confirm every later navigation in a single-page app, over an editor that
+ * is already gone. Past this point the edit is given up rather than the tab.
+ */
+const INFLIGHT_WRITE_GRACE_MS = 2000;
+
+/**
  * Whether a connection ticket grants writes. Only an explicit `write: false`
  * denies: a ticket without the claim, or one we cannot read, leaves the editor
  * editable — the server enforces the grant regardless, and refusing to let
@@ -303,6 +315,18 @@ export class Collaboration extends Module {
   private cacheSeeded = false;
 
   private flushOnPageHide: (() => void) | null = null;
+
+  /** True from the moment `destroy()` is entered, including while it waits. */
+  private teardownStarted = false;
+
+  /** True once the provider, the taps and the store are actually gone. */
+  private teardownFinished = false;
+
+  /** The {@link INFLIGHT_WRITE_GRACE_MS} bound on that wait. */
+  private teardownDeadline: number | null = null;
+
+  /** Drops the settled subscription if the deadline wins the race. */
+  private settledUnhook: (() => void) | null = null;
 
   /**
    * The last save state published, so an identical one emits nothing. Absent
@@ -693,6 +717,13 @@ export class Collaboration extends Module {
 
     // Whatever the cache setting: a dying tab has to land the write buffer on
     // the wire, and the cache is opt-in.
+    //
+    // Only the BUFFER. A `block.save()` still in flight is a pending promise,
+    // and nothing synchronous can make it resolve — so unlike `destroy()`,
+    // this path cannot wait for it, and deliberately does not try. (A bfcache
+    // freeze keeps the page running, so the deferred landing does happen
+    // there; that is luck, not a guarantee.) Closing the hole needs a
+    // synchronous save on the tool contract.
     this.flushOnPageHide = (): void => {
       this.Blok.YjsManager.flushPendingBlockWrites();
       // The document first, then the goodbye. Nothing else tells the room this
@@ -957,9 +988,11 @@ export class Collaboration extends Module {
    * and a live awareness to clear.
    */
   public destroy(): void {
-    if (this.settings === null) {
+    if (this.settings === null || this.teardownStarted) {
       return;
     }
+
+    this.teardownStarted = true;
 
     // Presence first: awareness prunes a vanished peer only after 30 seconds,
     // so the outlines and the gutter faces have to come down now, not then.
@@ -974,6 +1007,56 @@ export class Collaboration extends Module {
     // hold the last thing typed, and YjsManager.destroy — which flushes it —
     // runs AFTER this module, once nothing listens for the wire or the cache.
     this.Blok.YjsManager.flushPendingBlockWrites();
+
+    /**
+     * The barrier above cannot see a write whose `block.save()` is still
+     * running: `syncBlockDataToYjs` awaits the save BEFORE it enqueues
+     * anything, so the last keystroke before the tab closes is not in the
+     * buffer yet. `YjsManager.destroy` holds the document open for it — but
+     * the write it eventually lands only reaches a peer if the wire, the
+     * cache and the outbox are still here to carry it, and those are ours.
+     *
+     * The deadline is armed FIRST: `onPendingBlockWritesSettled` fires
+     * synchronously when nothing is in flight, so `finishTeardown` can run
+     * before the subscribe call returns, and it must find the timer to clear.
+     */
+    this.teardownDeadline = window.setTimeout(() => this.finishTeardown(), INFLIGHT_WRITE_GRACE_MS);
+
+    const unhook = this.Blok.YjsManager.onPendingBlockWritesSettled(() => this.finishTeardown());
+
+    if (this.teardownFinished) {
+      // Nothing was in flight: the callback already ran the whole teardown.
+      unhook();
+
+      return;
+    }
+
+    this.settledUnhook = unhook;
+  }
+
+  /**
+   * The rest of `destroy`, run once the last in-flight block save has landed
+   * in the document — or once {@link INFLIGHT_WRITE_GRACE_MS} gives up on it.
+   *
+   * Idempotent, because both of those can happen: the deadline fires the
+   * teardown and the save settles afterwards anyway.
+   */
+  private finishTeardown(): void {
+    if (this.teardownFinished) {
+      return;
+    }
+
+    this.teardownFinished = true;
+
+    if (this.teardownDeadline !== null) {
+      window.clearTimeout(this.teardownDeadline);
+      this.teardownDeadline = null;
+    }
+
+    // Matters only on the deadline path: without it a save that settles later
+    // would call back into a module whose provider and store are gone.
+    this.settledUnhook?.();
+    this.settledUnhook = null;
 
     this.provider?.destroy();
     this.provider = null;

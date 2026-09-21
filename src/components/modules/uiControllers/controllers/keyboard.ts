@@ -4,6 +4,7 @@ import { SelectionUtils as Selection } from '../../../selection/index';
 import { isIosDevice } from '../../../utils/browser';
 import { deliverOnSubmit } from '../../../utils/on-submit';
 import { getCaretOffset } from '../../../utils/caret/selection';
+import { runConvert } from '../../../utils/convert-refusal';
 import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../../utils/nested-container-caret';
 import { PopoverRegistry } from '../../../utils/popover/popover-registry';
 import { HEADER_TOOL_NAME, LIST_TOOL_NAME } from '../../blockEvents/constants';
@@ -388,11 +389,20 @@ export class KeyboardController extends Controller {
 
     YjsManager.stopCapturing();
 
-    const newBlock = await BlockManager.convert(block, targetToolName, dataOverrides);
-
-    Caret.setToBlock(newBlock, Caret.positions.DEFAULT, caretOffset);
+    // runConvert never rejects, so the closing stopCapturing() below always
+    // runs — a refusal used to skip it and leave the undo group open.
+    const newBlock = await runConvert(
+      this.Blok.API.methods,
+      () => BlockManager.convert(block, targetToolName, dataOverrides)
+    );
 
     YjsManager.stopCapturing();
+
+    if (newBlock === null) {
+      return;
+    }
+
+    Caret.setToBlock(newBlock, Caret.positions.DEFAULT, caretOffset);
   }
 
   /**
@@ -465,11 +475,18 @@ export class KeyboardController extends Controller {
 
     YjsManager.stopCapturing();
 
-    const newBlock = await BlockManager.convert(block, LIST_TOOL_NAME, { style });
-
-    Caret.setToBlock(newBlock, Caret.positions.DEFAULT, caretOffset);
+    const newBlock = await runConvert(
+      this.Blok.API.methods,
+      () => BlockManager.convert(block, LIST_TOOL_NAME, { style })
+    );
 
     YjsManager.stopCapturing();
+
+    if (newBlock === null) {
+      return;
+    }
+
+    Caret.setToBlock(newBlock, Caret.positions.DEFAULT, caretOffset);
   }
 
   /**

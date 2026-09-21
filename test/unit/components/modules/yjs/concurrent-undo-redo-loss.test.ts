@@ -101,7 +101,7 @@ describe('concurrent undo — the structured data of a block the undo spares', (
     vi.restoreAllMocks();
   });
 
-  it.fails('keeps the list items when the inserting peer undoes and the other peer restyled the list', () => {
+  it('keeps the list items when the inserting peer undoes and the other peer restyled the list', () => {
     storeA.addBlock({ id: 'l',
       type: 'list',
       data: { style: 'unordered',
@@ -120,7 +120,7 @@ describe('concurrent undo — the structured data of a block the undo spares', (
     expect(idsOf(storeB)).toContain('l');
   });
 
-  it.fails('keeps the table cell the other peer typed readable when the inserting peer undoes', () => {
+  it('keeps the table cell the other peer typed readable when the inserting peer undoes', () => {
     storeA.addBlock({ id: 't',
       type: 'table',
       data: { withHeadings: false,
@@ -167,7 +167,7 @@ describe('concurrent redo — the action the peer blocks', () => {
    * and throws it away, so the deletion can never be re-applied — not even
    * after the peer's content that blocked it is gone.
    */
-  it.fails('keeps the blocked action on the redo stack instead of discarding it', () => {
+  it('keeps the blocked action on the redo stack instead of discarding it', () => {
     storeA.removeBlock('b2');
 
     historyA.undo();
@@ -186,7 +186,7 @@ describe('concurrent redo — the action the peer blocks', () => {
    * refuses to half-apply such an entry — it would leave both the block and its
    * replacement in the document. Redo half-applies it happily.
    */
-  it.fails('does not leave both the removed block and its replacement after one redo', () => {
+  it('does not leave both the removed block and its replacement after one redo', () => {
     storeA.transact(() => {
       storeA.removeBlock('b2');
       storeA.addBlock(paragraph('q', 'replacement'));
@@ -224,7 +224,7 @@ describe('concurrent redo — replaying a move the peer has since made their own
    * (`groupWasDisplacedSince`). `redo` replays blind, yanking the block out
    * from under them.
    */
-  it.fails('does not put the block back where this editor wanted it after the peer moved it', () => {
+  it('does not put the block back where this editor wanted it after the peer moved it', () => {
     manager.fromJSON([paragraph('b1', 'one'), paragraph('b2', 'two'), paragraph('b3', 'three')]);
     peer.applyRemoteUpdate(manager.encodeStateAsUpdate());
 
@@ -264,7 +264,7 @@ describe('concurrent undo — a remote insert beside a block this editor moved',
    * before it ever reaches the yjs branch, every action taken before the move
    * is unreachable too, for the rest of the session.
    */
-  it.fails('still undoes the edits made before the move', () => {
+  it('still undoes the edits made before the move', () => {
     manager.fromJSON([paragraph('b1', 'one'), paragraph('b2', 'two'), paragraph('b3', 'three')]);
     peer.applyRemoteUpdate(manager.encodeStateAsUpdate());
 

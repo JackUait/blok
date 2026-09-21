@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "{count} บล็อก",
   "blockSettings.copyLinkSuccess": "คัดลอกลิงก์ไปยังคลิปบอร์ดแล้ว",
   "blockSettings.copyLinkError": "ไม่สามารถคัดลอกลิงก์บล็อกได้",
+  "blockSettings.convertFailed": "ไม่สามารถเปลี่ยนบล็อกนี้ได้ ลองอีกครั้ง",
   "popover.actions": "การดำเนินการ",
   "tools.link.keepTyping": "พิมพ์ต่อเพื่อเพิ่มลิงก์",
   "tools.link.emailAddress": "ที่อยู่อีเมล",

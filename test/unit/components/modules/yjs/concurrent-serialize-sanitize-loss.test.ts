@@ -57,7 +57,7 @@ type Column = { id: string; name: string };
  * leaves the peer that wrote it.
  */
 describe('a data value the serializer does not understand', () => {
-  it.fails('keeps a Date a peer stored in block data', () => {
+  it('keeps a Date a peer stored in block data', () => {
     const when = new Date('2026-09-21T10:00:00.000Z');
     const { a, b } = twoPeers([{ id: 'card', type: 'myCard', data: { when } }]);
 
@@ -65,7 +65,7 @@ describe('a data value the serializer does not understand', () => {
     expect(dataOf(a, 'card').when).not.toEqual({});
   });
 
-  it.fails('keeps a Map and a Set a peer stored in block data', () => {
+  it('keeps a Map and a Set a peer stored in block data', () => {
     const { b } = twoPeers([{
       id: 'card',
       type: 'myCard',
@@ -104,6 +104,17 @@ describe('the keyed identity wrapper is one-way', () => {
     expect(columns.find((column) => column.id === 'c1')?.name).toBe('Renamed');
   });
 
+  /**
+   * FLOOR, not a defect that is fixed. Promoting the plain array back to the
+   * wrapper on the first id-bearing write was tried and REVERTED: the
+   * promotion is `set(key, plainToYValue(value))`, last-writer-wins on the
+   * WHOLE array, and it fires on both peers from an ordinary save. Measured
+   * with it in place: a legacy id-less `schema`, A appends `Owner` and B
+   * appends `Due` concurrently → both peers converge on
+   * `[Name, Status, Owner]`; B's column is gone. Element-wise diffing keeps
+   * all four. Losing a whole column to recover a wrapper is a worse trade than
+   * the mis-applied rename below, so the plain array stays plain.
+   */
   it.fails('still applies a rename to the right column after a column was added without an id first', () => {
     const { a, b } = twoPeers(schema());
 

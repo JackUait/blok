@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "ប្លុក {count}",
   "blockSettings.copyLinkSuccess": "បានចម្លងតំណទៅក្ដារតម្បៀតខ្ទាស់",
   "blockSettings.copyLinkError": "មិនអាចចម្លងតំណប្លុកបានទេ",
+  "blockSettings.convertFailed": "មិនអាចផ្លាស់ប្ដូរប្លុកនេះបានទេ។ សូមព្យាយាមម្ដងទៀត។",
   "popover.actions": "សកម្មភាព",
   "tools.link.keepTyping": "បន្តវាយដើម្បីបន្ថែមតំណ",
   "tools.link.emailAddress": "អាសយដ្ឋានអ៊ីមែល",

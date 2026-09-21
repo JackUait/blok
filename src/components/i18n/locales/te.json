@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "{count} బ్లాక్‌లు",
   "blockSettings.copyLinkSuccess": "లింక్ క్లిప్‌బోర్డ్‌కు కాపీ చేయబడింది",
   "blockSettings.copyLinkError": "బ్లాక్ లింక్‌ను కాపీ చేయలేకపోయాము",
+  "blockSettings.convertFailed": "ఈ బ్లాక్‌ను మార్చలేకపోయాము. మళ్లీ ప్రయత్నించండి.",
   "popover.actions": "చర్యలు",
   "tools.link.keepTyping": "లింక్ జోడించడానికి టైప్ చేస్తూ ఉండండి",
   "tools.link.emailAddress": "ఇమెయిల్ చిరునామా",

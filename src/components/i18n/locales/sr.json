@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "Изабрани блокови: {count}",
   "blockSettings.copyLinkSuccess": "Веза је копирана у оставу",
   "blockSettings.copyLinkError": "Није могуће копирати везу ка блоку",
+  "blockSettings.convertFailed": "Није могуће променити овај блок. Покушајте поново.",
   "popover.actions": "Радње",
   "tools.link.keepTyping": "Наставите да куцате да бисте додали везу",
   "tools.link.emailAddress": "Имејл адреса",

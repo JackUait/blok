@@ -271,6 +271,7 @@
   "blockSettings.blocksSelected": "블록 {count}개",
   "blockSettings.copyLinkSuccess": "링크를 클립보드에 복사했습니다",
   "blockSettings.copyLinkError": "블록 링크를 복사할 수 없습니다",
+  "blockSettings.convertFailed": "이 블록을 변경할 수 없습니다. 다시 시도해 주세요.",
   "popover.actions": "작업",
   "tools.link.keepTyping": "계속 입력하여 링크를 추가하세요",
   "tools.link.emailAddress": "이메일 주소",

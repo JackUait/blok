@@ -4,6 +4,7 @@ import type { BlokModules } from '../../../types-internal/blok-modules';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import { modificationsObserverBatchTimeout } from '../../constants';
 import { Module } from '../../__module';
+import { logLabeled } from '../../utils';
 
 import { BlockObserver } from './block-observer';
 import { DocumentStore, type DataKeySnapshot } from './document-store';
@@ -11,6 +12,25 @@ import { YBlockSerializer, isBoundaryCharacter, type YjsOutputBlockData } from '
 import type { AwarenessChange, BlockChangeCallback, BlockPlacement, CaretSnapshot } from './types';
 import { UndoHistory } from './undo-history';
 import { BlockWriteBuffer, type BufferedBlockWriteFlush } from './write-buffer';
+
+/**
+ * Report failures from a teardown path that has no catchable caller.
+ *
+ * Both call sites run inside `void`-called async work (BlockManager's
+ * `syncBlockDataToYjs`), so a rethrow becomes an unhandled rejection at the
+ * worst possible moment — tab close or SPA teardown — which hosts see as an
+ * unattributed page error. Logging keeps the "nothing is swallowed" property
+ * while giving the failure a name.
+ * @param message - what failed, for the console label
+ * @param failures - collected errors; an empty list reports nothing
+ */
+const reportTeardownFailure = (message: string, failures: readonly unknown[]): void => {
+  if (failures.length === 0) {
+    return;
+  }
+
+  logLabeled(message, 'error', failures.length === 1 ? failures[0] : new AggregateError(failures, message));
+};
 
 /**
  * @class YjsManager
@@ -50,6 +70,35 @@ export class YjsManager extends Module {
    * `flushPendingBlockWrites`, which every structural chokepoint calls first.
    */
   private writeBuffer = new BlockWriteBuffer(modificationsObserverBatchTimeout);
+
+  /**
+   * One token per `block.save()` round-trip in flight between a DOM mutation
+   * and the `enqueueBlockDataWrite` it will produce. The flush barrier cannot
+   * see those writes — they have not been buffered yet — so `destroy()` waits
+   * for them instead of tearing the document down underneath them.
+   */
+  private readonly pendingBlockWrites = new Set<symbol>();
+
+  /**
+   * Destroy's OWN continuation, run once `pendingBlockWrites` falls back to
+   * zero. Separate from {@link pendingBlockWritesSettledListeners} because it
+   * destroys the document store and therefore must run LAST.
+   */
+  private pendingBlockWritesDrained: (() => void) | null = null;
+
+  /**
+   * One-shot public subscribers to "the last in-flight save has landed".
+   * Notified BEFORE `pendingBlockWritesDrained`, so a subscriber that takes
+   * the document down with it (the Collaboration provider, which clears
+   * awareness and unhooks the doc) still sees a live store.
+   */
+  private readonly pendingBlockWritesSettledListeners = new Set<() => void>();
+
+  /** True from the moment `destroy()` is entered, including while it waits. */
+  private isTearingDown = false;
+
+  /** True once the document store is actually gone. */
+  private isDocumentDestroyed = false;
 
   /**
    * Nesting depth of open move groups; only the outermost one opens and
@@ -461,8 +510,101 @@ export class YjsManager extends Module {
     data: Record<string, unknown>,
     flush: BufferedBlockWriteFlush
   ): void {
+    if (this.isDocumentDestroyed) {
+      return;
+    }
+
     this.undoHistory.markCaretBeforeChange();
     this.writeBuffer.enqueue(blockId, data, flush);
+
+    if (this.isTearingDown) {
+      // Teardown is waiting for exactly this write. Land it now: a coalescing
+      // window would arm a trailing timer against a document that is about to
+      // be destroyed, and the flush barriers have all already run.
+      this.writeBuffer.flushAll();
+    }
+  }
+
+  /**
+   * Mark one `block.save()` as in flight, from BEFORE the save starts until
+   * the write it produces has been enqueued. See {@link pendingBlockWrites}.
+   * @returns release callback, safe to call more than once
+   */
+  public beginPendingBlockDataWrite(): () => void {
+    const token = Symbol('pending block data write');
+
+    this.pendingBlockWrites.add(token);
+
+    return (): void => {
+      // A token is released once; a second call finds nothing to delete.
+      if (!this.pendingBlockWrites.delete(token) || this.pendingBlockWrites.size > 0) {
+        return;
+      }
+
+      this.notifyPendingBlockWritesSettled();
+    };
+  }
+
+  /**
+   * Run `callback` once the last in-flight block save has landed in the
+   * document. Fires synchronously and immediately when nothing is in flight.
+   *
+   * One-shot: a listener runs at most once and is dropped as it runs, so it
+   * cannot be woken again by the next burst of typing.
+   * @param callback - run when no block save is in flight any more
+   * @returns unsubscribe
+   */
+  public onPendingBlockWritesSettled(callback: () => void): () => void {
+    if (this.pendingBlockWrites.size === 0) {
+      callback();
+
+      return (): void => {};
+    }
+
+    this.pendingBlockWritesSettledListeners.add(callback);
+
+    return (): void => {
+      this.pendingBlockWritesSettledListeners.delete(callback);
+    };
+  }
+
+  /**
+   * Notify the settled listeners, then destroy's own continuation.
+   *
+   * Every listener runs even when one throws, and teardown still proceeds:
+   * the alternative is a document store kept alive forever by one bad
+   * subscriber. Nothing is swallowed — the failures are REPORTED once
+   * everything has run, not rethrown: this runs from the release callback in
+   * BlockManager's `void syncBlockDataToYjs(...)` `finally`, so a throw here
+   * has no catcher anywhere and would surface as an unhandled rejection at
+   * tab close.
+   */
+  private notifyPendingBlockWritesSettled(): void {
+    const listeners = Array.from(this.pendingBlockWritesSettledListeners);
+
+    this.pendingBlockWritesSettledListeners.clear();
+
+    const failures: unknown[] = [];
+
+    for (const listener of listeners) {
+      try {
+        listener();
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+
+    const drained = this.pendingBlockWritesDrained;
+
+    this.pendingBlockWritesDrained = null;
+
+    try {
+      drained?.();
+    } catch (error) {
+      failures.push(error);
+    }
+
+    reportTeardownFailure('Blok: tearing the collaborative document down failed', failures);
   }
 
   /**
@@ -874,9 +1016,37 @@ export class YjsManager extends Module {
    * Cleanup on destroy.
    */
   public destroy(): void {
+    if (this.isTearingDown) {
+      return;
+    }
+    this.isTearingDown = true;
+
     // Land buffered writes while the doc is still observable, and cancel
     // trailing timers so nothing fires against a destroyed doc.
     this.flushPendingBlockWrites();
+
+    if (this.pendingBlockWrites.size > 0) {
+      // A `block.save()` started before this call is still running, so the
+      // barrier above could not see the write it is about to produce — the
+      // last keystroke burst before the tab closes. Finish the teardown once
+      // that write has landed (enqueueBlockDataWrite flushes it immediately
+      // while `isTearingDown`). If such a save never settles the document
+      // store stays alive; that is the cost of not losing the edit.
+      this.pendingBlockWritesDrained = (): void => this.finalizeDestroy();
+
+      return;
+    }
+
+    this.finalizeDestroy();
+  }
+
+  /**
+   * Tear the document down for real. Split out of `destroy` so a write still
+   * in flight at destroy time can land first.
+   */
+  private finalizeDestroy(): void {
+    this.isDocumentDestroyed = true;
+    this.writeBuffer.destroy();
 
     this.blockObserver.destroy();
     this.undoHistory.destroy();

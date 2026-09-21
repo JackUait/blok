@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "{count} 个内容块",
   "blockSettings.copyLinkSuccess": "链接已复制到剪贴板",
   "blockSettings.copyLinkError": "无法复制块链接",
+  "blockSettings.convertFailed": "无法更改此块，请重试。",
   "popover.actions": "操作",
   "tools.link.keepTyping": "继续输入以添加链接",
   "tools.link.emailAddress": "电子邮件地址",

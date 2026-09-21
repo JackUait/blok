@@ -269,6 +269,7 @@
   "blockSettings.blocksSelected": "{count} ब्लक",
   "blockSettings.copyLinkSuccess": "लिङ्क क्लिपबोर्डमा कपी भयो",
   "blockSettings.copyLinkError": "ब्लकको लिङ्क कपी गर्न सकिएन",
+  "blockSettings.convertFailed": "यो ब्लक परिवर्तन गर्न सकिएन। फेरि प्रयास गर्नुहोस्।",
   "popover.actions": "कार्यहरू",
   "tools.link.keepTyping": "लिङ्क थप्न टाइप गरिरहनुहोस्",
   "tools.link.emailAddress": "इमेल ठेगाना",

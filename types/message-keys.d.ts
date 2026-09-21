@@ -54,6 +54,7 @@ export type BlokMessageKey =
   | 'blockSettings.blocksSelected'
   | 'blockSettings.clickAction'
   | 'blockSettings.clickToOpenMenu'
+  | 'blockSettings.convertFailed'
   | 'blockSettings.convertWithChildrenWarning'
   | 'blockSettings.copyLink'
   | 'blockSettings.copyLinkError'

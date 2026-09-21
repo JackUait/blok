@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "Blokova: {count}",
   "blockSettings.copyLinkSuccess": "Poveznica je kopirana u međuspremnik",
   "blockSettings.copyLinkError": "Nije moguće kopirati poveznicu na blok",
+  "blockSettings.convertFailed": "Nije moguće promijeniti ovaj blok. Pokušajte ponovno.",
   "popover.actions": "Radnje",
   "tools.link.keepTyping": "Nastavi tipkati za dodavanje poveznice",
   "tools.link.emailAddress": "E-adresa",

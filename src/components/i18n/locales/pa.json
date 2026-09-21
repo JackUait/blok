@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "{count} ਬਲਾਕ",
   "blockSettings.copyLinkSuccess": "ਲਿੰਕ ਕਲਿੱਪਬੋਰਡ 'ਤੇ ਕਾਪੀ ਹੋ ਗਿਆ",
   "blockSettings.copyLinkError": "ਬਲਾਕ ਦਾ ਲਿੰਕ ਕਾਪੀ ਨਹੀਂ ਕੀਤਾ ਜਾ ਸਕਿਆ",
+  "blockSettings.convertFailed": "ਇਹ ਬਲਾਕ ਬਦਲਿਆ ਨਹੀਂ ਜਾ ਸਕਿਆ। ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
   "popover.actions": "ਕਾਰਵਾਈਆਂ",
   "tools.link.keepTyping": "ਲਿੰਕ ਜੋੜਨ ਲਈ ਟਾਈਪ ਕਰਦੇ ਰਹੋ",
   "tools.link.emailAddress": "ਈਮੇਲ ਪਤਾ",

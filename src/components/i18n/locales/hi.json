@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "{count} ब्लॉक",
   "blockSettings.copyLinkSuccess": "लिंक क्लिपबोर्ड पर कॉपी हो गया",
   "blockSettings.copyLinkError": "ब्लॉक का लिंक कॉपी नहीं हो सका",
+  "blockSettings.convertFailed": "यह ब्लॉक बदला नहीं जा सका। फिर से कोशिश करें।",
   "popover.actions": "क्रियाएँ",
   "tools.link.keepTyping": "लिंक जोड़ने के लिए टाइप करते रहें",
   "tools.link.emailAddress": "ईमेल पता",

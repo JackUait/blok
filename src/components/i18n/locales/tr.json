@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "{count} blok seçildi",
   "blockSettings.copyLinkSuccess": "Bağlantı panoya kopyalandı",
   "blockSettings.copyLinkError": "Blok bağlantısı kopyalanamadı",
+  "blockSettings.convertFailed": "Bu blok değiştirilemedi. Tekrar deneyin.",
   "popover.actions": "Eylemler",
   "tools.link.keepTyping": "Bağlantı eklemek için yazmaya devam edin",
   "tools.link.emailAddress": "E-posta adresi",

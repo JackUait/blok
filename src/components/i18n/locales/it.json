@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "{count} blocchi",
   "blockSettings.copyLinkSuccess": "Link copiato negli appunti",
   "blockSettings.copyLinkError": "Impossibile copiare il link al blocco",
+  "blockSettings.convertFailed": "Impossibile modificare questo blocco. Riprova.",
   "popover.actions": "Azioni",
   "tools.link.keepTyping": "Continua a digitare per aggiungere un link",
   "tools.link.emailAddress": "Indirizzo e-mail",

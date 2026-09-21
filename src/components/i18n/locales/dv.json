@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "{count} ބްލޮކް",
   "blockSettings.copyLinkSuccess": "ލިންކް ކްލިޕްބޯޑަށް ކޮޕީކުރެވިއްޖެ",
   "blockSettings.copyLinkError": "ބްލޮކްގެ ލިންކް ކޮޕީކުރެވޭ ގޮތް ނުވި",
+  "blockSettings.convertFailed": "މި ބްލޮކް ބަދަލުކުރެވޭ ގޮތް ނުވި. އަލުން މަސައްކަތްކުރައްވާ.",
   "popover.actions": "ޢަމަލު",
   "tools.link.keepTyping": "ލިންކް އިތުރުކުރުމަށް ޓައިޕްކުރަމުން ގެންދޭ",
   "tools.link.emailAddress": "އީމެއިލް އެޑްރެސް",

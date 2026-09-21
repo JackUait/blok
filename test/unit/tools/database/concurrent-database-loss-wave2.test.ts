@@ -93,7 +93,7 @@ describe('database — a save in flight while a peer adds to the schema', () => 
     storeB.applyRemoteUpdate(storeA.encodeStateAsUpdate());
   });
 
-  it.fails('keeps a column a peer added while this save was in flight', () => {
+  it('keeps a column a peer added while this save was in flight', () => {
     // A starts a save: the snapshot is taken, then save() is awaited.
     const seen = snapshotOf(storeA, 'db1');
 
@@ -115,7 +115,7 @@ describe('database — a save in flight while a peer adds to the schema', () => 
     expect(schemaOf(storeA, 'db1').find((p) => p.id === 'p-title')?.name).toBe('Task');
   });
 
-  it.fails('keeps a board column a peer added while this save was in flight', () => {
+  it('keeps a board column a peer added while this save was in flight', () => {
     const seen = snapshotOf(storeA, 'db1');
 
     const withOption = baseSchema();
@@ -132,7 +132,7 @@ describe('database — a save in flight while a peer adds to the schema', () => 
     expect(optionsOf(storeA, 'db1', 'p-status').map((o) => o.id)).toContain('oB');
   });
 
-  it.fails('keeps a view a peer added while this save was in flight', () => {
+  it('keeps a view a peer added while this save was in flight', () => {
     const seen = snapshotOf(storeA, 'db1');
 
     storeB.updateBlockData('db1', 'views', [
@@ -149,7 +149,7 @@ describe('database — a save in flight while a peer adds to the schema', () => 
     expect(viewsOf(storeA, 'db1').map((v) => v.id)).toContain('vB');
   });
 
-  it.fails('keeps a row a peer added to a table while this save was in flight', () => {
+  it('keeps a row a peer added to a table while this save was in flight', () => {
     // The same walk for a grid (a table's rows), one shape further in.
     storeA.fromJSON([{ id: 't1', type: 'table', data: { content: [['a'], ['b']] } }]);
     storeB.applyRemoteUpdate(storeA.encodeStateAsUpdate());
@@ -202,7 +202,7 @@ describe('database — two peers filtering one view at the same moment', () => {
     storeB.applyRemoteUpdate(storeA.encodeStateAsUpdate());
   });
 
-  it.fails('keeps both filters when two people filter one view at the same moment', () => {
+  it('keeps both filters when two people filter one view at the same moment', () => {
     const withFilter = (value: string): DatabaseViewConfig[] => {
       const views = baseViews();
 
@@ -222,7 +222,7 @@ describe('database — two peers filtering one view at the same moment', () => {
     expect(values).toContain('o2');
   });
 
-  it.fails('keeps both sorts when two people sort one view at the same moment', () => {
+  it('keeps both sorts when two people sort one view at the same moment', () => {
     const withSort = (propertyId: string): DatabaseViewConfig[] => {
       const views = baseViews();
 

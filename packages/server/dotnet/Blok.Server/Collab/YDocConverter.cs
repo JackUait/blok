@@ -102,7 +102,7 @@ internal static class YDocConverter
   /// table cell keep both ids instead of one whole-value write orphaning the
   /// other's child block.
   ///
-  /// LOCKSTEP: it must name exactly what <c>ORDERED_ID_ARRAY_KEYS</c> names in
+  /// LOCKSTEP: it must name exactly what <c>EAGER_ARRAY_KEYS</c> names in
   /// src/components/modules/yjs/serializer.ts. Widening the set is one entry
   /// there and one entry here — and nowhere else in this file.
   ///
@@ -112,11 +112,12 @@ internal static class YDocConverter
   ///
   /// The generic array rule cannot cover it: <c>IsConvertibleArray</c> promotes
   /// only non-empty ALL-OBJECT/ARRAY arrays, and a cell is born
-  /// <c>blocks: []</c> and then holds strings. Minting is EAGER for the same
+  /// <c>blocks: []</c> and then holds strings — as a view is born
+  /// <c>filters: []</c> / <c>sorts: []</c>. Minting is EAGER for the same
   /// reason <c>contentIds</c> is: a later promotion runs on two peers at once
   /// and map-set is last-writer-wins, so the loser's ids are discarded.
   /// </summary>
-  private static readonly string[] OrderedIdArrayKeys = ["blocks"];
+  private static readonly string[] OrderedIdArrayKeys = ["blocks", "filters", "sorts"];
 
   // nanoid's default alphabet; keys are random so two peers never collide.
   private const string RowKeyAlphabet =
@@ -1119,7 +1120,14 @@ internal static class YDocConverter
       // so two peers each dropping a block into ONE table cell keep both ids.
       // Before the generic array branch, which would downshift an all-string
       // value back to a plain leaf for failing IsConvertibleArray.
-      if (nested && IsOrderedIdArrayKey(key) && value is JsonArray idList)
+      // A grid or an identity array is the WRAPPER's business: forcing one to
+      // a plain positionally-diffed array makes a reorder racing a field edit
+      // converge both peers on the same wrong value.
+      if (nested &&
+          IsOrderedIdArrayKey(key) &&
+          value is JsonArray idList &&
+          !InputWriter.IsGridArray(idList) &&
+          !InputWriter.IsIdentityArray(idList))
       {
         if (existing is YArray liveIds)
         {
@@ -1251,7 +1259,8 @@ internal static class YDocConverter
           (targetIndex, sourceIndex) =>
               SameAsLive(items[prefix + targetIndex], source[prefix + sourceIndex], depth + 1),
           (targetIndex, sourceIndex) =>
-              RowSimilarity(items[prefix + targetIndex], source[prefix + sourceIndex], depth + 1));
+              RowSimilarity(items[prefix + targetIndex], source[prefix + sourceIndex], depth + 1),
+          enforceOrder: true);
       var paired = assignment.Where(index => index >= 0).ToList();
       var reordered = paired.Where((index, rank) => rank > 0 && index <= paired[rank - 1]).Any();
 
@@ -1382,7 +1391,8 @@ internal static class YDocConverter
           (currentIndex, sourceIndex) =>
               SameAsLive(currentRows[currentIndex], source[sourceIndex], rowDepth),
           (currentIndex, sourceIndex) =>
-              RowSimilarity(currentRows[currentIndex], source[sourceIndex], rowDepth));
+              RowSimilarity(currentRows[currentIndex], source[sourceIndex], rowDepth),
+          enforceOrder: false);
       var paired = new HashSet<int>(assignment.Where(index => index >= 0));
       var nextKeys = new List<string>();
 
@@ -1472,7 +1482,13 @@ internal static class YDocConverter
     ///    shares none. Equal counts skip straight to 4 — equal-length middles
     ///    rewrite in place.
     /// 4. Positional remainder — extra source rows are genuinely new, extra
-    ///    doc rows genuinely deleted.
+    ///    doc rows genuinely deleted. Under <c>enforceOrder</c> — true for the
+    ///    array walk, false for the keyed grid — a rank pair is taken only
+    ///    when it keeps the pairing MONOTONIC: a
+    ///    crossing pair is exactly what makes a SPLICING caller read an
+    ///    add-and-remove as a reorder and rewrite the whole middle. A genuine
+    ///    reorder is paired entirely by pass 2, so this pass never sees its
+    ///    rows.
     ///
     /// Rows with identical content are interchangeable by definition, so pass
     /// 2 pairing an arbitrary one of them is not a defect.
@@ -1485,7 +1501,8 @@ internal static class YDocConverter
         int currentCount,
         int sourceCount,
         Func<int, int, bool> rowsEqual,
-        Func<int, int, int> similarity)
+        Func<int, int, int> similarity,
+        bool enforceOrder)
     {
       var assignment = Enumerable.Repeat(-1, sourceCount).ToArray();
       var taken = new HashSet<int>();
@@ -1557,12 +1574,46 @@ internal static class YDocConverter
         }
       }
 
+      // Whether pairing the two keeps the pairing MONOTONIC — every pair
+      // already made stays on the side of it that source order and doc order
+      // agree on. Reads `assignment` LIVE, so a pair taken here constrains
+      // the next. Only a caller that SPLICES on a crossing asks for this: for
+      // the keyed wrapper a crossing assignment is what the key order exists
+      // to express, and refusing it mints a fresh key and deletes the live
+      // row, which is the loss itself.
+      bool KeepsOrder(int sourceIndex, int currentIndex)
+      {
+        for (var index = 0; index < assignment.Length; index++)
+        {
+          if (assignment[index] < 0)
+          {
+            continue;
+          }
+
+          var ordered = index < sourceIndex
+              ? assignment[index] < currentIndex
+              : assignment[index] > currentIndex;
+
+          if (!ordered)
+          {
+            return false;
+          }
+        }
+
+        return true;
+      }
+
+      // Taken ONCE, so `rank` keeps its 1:1 meaning: a refused candidate's
+      // target is left unused rather than sliding to the next source.
       var finalTargets = restTargets.Where(index => !taken.Contains(index)).ToList();
       var rest = restSources.Where(index => assignment[index] < 0).ToList();
 
       for (var rank = 0; rank < rest.Count && rank < finalTargets.Count; rank++)
       {
-        Pair(rest[rank], finalTargets[rank]);
+        if (!enforceOrder || KeepsOrder(rest[rank], finalTargets[rank]))
+        {
+          Pair(rest[rank], finalTargets[rank]);
+        }
       }
 
       return assignment;
@@ -1602,18 +1653,36 @@ internal static class YDocConverter
     /// </summary>
     private static int RowSimilarity(object? current, JsonNode? source, int depth)
     {
-      if (current is not YArray live || source is not JsonArray cells)
+      static int Score(JsonNode? live, JsonNode? value)
       {
-        return 0;
+        if (live is JsonArray items && value is JsonArray cells)
+        {
+          var (prefix, suffix) = CommonEnds(
+              items.Count,
+              cells.Count,
+              (itemIndex, cellIndex) => JsonNode.DeepEquals(items[itemIndex], cells[cellIndex]));
+
+          return prefix + suffix;
+        }
+
+        // Two objects: how much of what they both carry still agrees. A grid
+        // ROW is always an array, so this branch only serves the element
+        // pairing in Array — where an element is a table CELL, not a row. It
+        // is the client's rowSimilarity, key for key; a score the two sides
+        // disagree on pairs different elements and one of them splices.
+        if (live is JsonObject fields && value is JsonObject values)
+        {
+          return fields
+              .Where(entry => values.ContainsKey(entry.Key))
+              .Sum(entry => Score(entry.Value, values[entry.Key]));
+        }
+
+        return JsonNode.DeepEquals(live, value) ? 1 : 0;
       }
 
-      var items = live.Enumerate().ToList();
-      var (prefix, suffix) = CommonEnds(
-          items.Count,
-          cells.Count,
-          (itemIndex, cellIndex) => SameAsLive(items[itemIndex], cells[cellIndex], depth + 1));
-
-      return prefix + suffix;
+      // Score the live side as the JSON the export would write, so a grid map
+      // and a cell map are compared in the shape the source carries.
+      return TryPlain(current, depth, out var plain) ? Score(plain, source) : 0;
     }
 
     /// <summary>
@@ -1998,7 +2067,10 @@ internal static class YDocConverter
 
         entries.Add(Pair(
             mapKey,
-            IsOrderedIdArrayKey(mapKey) && child is JsonArray idList
+            IsOrderedIdArrayKey(mapKey) &&
+                child is JsonArray idList &&
+                !IsGridArray(idList) &&
+                !IsIdentityArray(idList)
               ? PlainToYArray(idList, depth + 1)
               : PlainToYValue(child, depth + 1)));
       }

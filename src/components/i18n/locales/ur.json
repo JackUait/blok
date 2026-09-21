@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "{count} بلاکس",
   "blockSettings.copyLinkSuccess": "لنک کلپ بورڈ پر کاپی ہو گیا",
   "blockSettings.copyLinkError": "بلاک کا لنک کاپی نہیں ہو سکا",
+  "blockSettings.convertFailed": "یہ بلاک تبدیل نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
   "popover.actions": "کارروائیاں",
   "tools.link.keepTyping": "لنک شامل کرنے کے لیے ٹائپ کرتے رہیں",
   "tools.link.emailAddress": "ای میل پتہ",

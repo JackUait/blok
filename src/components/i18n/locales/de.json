@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "{count} Blöcke",
   "blockSettings.copyLinkSuccess": "Link in die Zwischenablage kopiert",
   "blockSettings.copyLinkError": "Link zum Block konnte nicht kopiert werden",
+  "blockSettings.convertFailed": "Dieser Block konnte nicht geändert werden. Bitte erneut versuchen.",
   "popover.actions": "Aktionen",
   "tools.link.keepTyping": "Tippen Sie weiter, um einen Link hinzuzufügen",
   "tools.link.emailAddress": "E-Mail-Adresse",

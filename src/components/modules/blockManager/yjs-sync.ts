@@ -206,8 +206,17 @@ export class BlockYjsSync {
    *
    * A window nobody applied data through carries no such baseline (a convert's
    * structural window is one), and those keep the old, conservative drop.
+   *
+   * The value is the data that was APPLIED — the document's record after this
+   * client's sanitizer ran, which is what the DOM is meant to end up holding.
+   * Not the document's own value: the two differ for anything the sanitizer
+   * strips (a peer's `sup` from a build that registers it) AND for anything it
+   * merely normalises (`a & b` comes back `a &amp; b`, which is every
+   * host-seeded block). Diffing the replay against the DOCUMENT would make
+   * both of those look like user edits and write this client's view back over
+   * the peer's content; diffing against what was applied tells them apart.
    */
-  private readonly rewrittenFromDocument = new Set<string>();
+  private readonly rewrittenFromDocument = new Map<string, BlockToolData>();
 
   /**
    * Returns true if any Yjs sync operation is in progress
@@ -257,9 +266,10 @@ export class BlockYjsSync {
    * DOM, so a write-back dropped inside that window has a baseline to be
    * diffed against on replay. Cleared when the block leaves every window.
    * @param blockId - id of the block being rewritten from the document
+   * @param appliedData - the sanitized record the block's DOM is being set to
    */
-  private markRewrittenFromDocument(blockId: string): void {
-    this.rewrittenFromDocument.add(blockId);
+  private markRewrittenFromDocument(blockId: string, appliedData: BlockToolData): void {
+    this.rewrittenFromDocument.set(blockId, appliedData);
   }
 
   /**
@@ -314,7 +324,7 @@ export class BlockYjsSync {
       ...this.suppressedMutations,
       ...this.deferredMutations,
       ...this.userTypedWhileReconciling,
-      ...this.rewrittenFromDocument,
+      ...this.rewrittenFromDocument.keys(),
     ]);
 
     pending.forEach((blockId) => {
@@ -328,6 +338,7 @@ export class BlockYjsSync {
 
       const suppressed = this.suppressedMutations.delete(blockId);
       const deferred = this.deferredMutations.delete(blockId);
+      const appliedFromDocument = this.rewrittenFromDocument.get(blockId);
 
       // The baseline belongs to the window that just closed; a later window
       // must arm itself.
@@ -338,12 +349,72 @@ export class BlockYjsSync {
       this.userTypedWhileReconciling.delete(blockId);
 
       if ((suppressed || deferred) && block !== undefined && !this.destroyed) {
+        // No user provenance, but a baseline to diff against: the block may be
+        // holding nothing but the reconciler's own rewrite, and writing that
+        // back would push this client's sanitized view over the peer's
+        // content. Let the applied value decide.
+        if (!suppressed && appliedFromDocument !== undefined) {
+          void this.replayUnlessItIsTheRewrite(block, appliedFromDocument);
+
+          return;
+        }
+
         // A record with no user provenance goes back untracked: it may still
         // be the editor's own late rewrite, and that must not become an undo
         // step of its own.
         this.handlers.resyncBlockData(block, { untracked: !suppressed });
       }
     });
+  }
+
+  /**
+   * Replay a dropped write-back, unless what the block holds is exactly what
+   * the reconciler put there.
+   *
+   * The baseline is the data that was applied, so this is the diff the replay
+   * always meant to take: identical means the DOM is still showing the
+   * reconciler's own rewrite and writing it back could only overwrite the
+   * document with this client's reading of it — the sanitize-write-back data
+   * loss. Different means content arrived that the rewrite did not put there
+   * (a paste, an inline tool), and dropping it would lose it for good.
+   *
+   * Failure mode: a user edit that really does land here is still written as a
+   * whole save, so a peer's markup this client strips is lost with it. That is
+   * the same trade every ordinary user edit on such a block makes — `save()`
+   * reads the DOM, and the DOM never had it — and it is bounded to the block
+   * the user actually edited.
+   *
+   * @param block - the block whose dropped write-back is being re-checked
+   * @param appliedFromDocument - the sanitized record the reconciler applied
+   */
+  private async replayUnlessItIsTheRewrite(block: Block, appliedFromDocument: BlockToolData): Promise<void> {
+    // The only caller voids this promise, so a tool whose `save()` throws has
+    // no catcher anywhere and surfaces as an unhandled rejection the host reads
+    // as an unattributed page error. Reported, not swallowed — the same
+    // treatment `syncBlockDataToYjs` gives the resync path it hands off to.
+    // `null` only ever comes from the catch — `save()` itself returns a record
+    // or `undefined`, and both mean "carry on".
+    const saved = await block.save().catch((error: unknown): null => {
+      logLabeled(`Blok: saving block «${block.id}» to replay its write-back failed`, 'error', error);
+
+      return null;
+    });
+
+    if (saved === null) {
+      return;
+    }
+
+    // A rematerialise can land while the save is in flight, and the instance
+    // that mutated is then no longer the document's.
+    if (this.destroyed || this.repository.getBlockById(block.id) !== block) {
+      return;
+    }
+
+    if (saved !== undefined && equals(saved.data, appliedFromDocument)) {
+      return;
+    }
+
+    this.handlers.resyncBlockData(block, { untracked: true });
   }
 
   private isInReconciledSubtree(block: Block | undefined, visited: Set<string>): boolean {
@@ -903,7 +974,12 @@ export class BlockYjsSync {
     }
 
     const yjsType = record.type;
-    const data = this.sanitizeToolData(yjsType, this.dependencies.YjsManager.yMapToObject(record.data));
+    const documentData = this.dependencies.YjsManager.yMapToObject(record.data);
+    // What the DOM is about to hold — the document's record AFTER this client's
+    // sanitizer. `markRewrittenFromDocument` is armed with this value, never
+    // with `documentData`, so a replayed write-back that merely echoes the
+    // rewrite diffs to nothing even when the sanitize was not a no-op.
+    const data = this.sanitizeToolData(yjsType, documentData);
     const tunes = record.tunes !== undefined
       ? stripUnsafeUrlsDeep(this.dependencies.YjsManager.yMapToObject(record.tunes))
       : {};
@@ -954,7 +1030,7 @@ export class BlockYjsSync {
         return;
       }
 
-      this.markRewrittenFromDocument(blockId);
+      this.markRewrittenFromDocument(blockId, data);
       this.withAtomicOperation(() => {
         this.rematerialize(block, { tool: yjsType, data, tunes, lastEditedAt, lastEditedBy });
       }, { extendThroughRAF: true, blockId });
@@ -965,7 +1041,7 @@ export class BlockYjsSync {
     // Tunes are instantiated during block construction, so a tune change
     // means a recreate.
     if (!equals(tunes, block.preservedTunes)) {
-      this.markRewrittenFromDocument(blockId);
+      this.markRewrittenFromDocument(blockId, data);
       this.withAtomicOperation(() => {
         this.rematerialize(block, { tool: block.name, data, tunes, lastEditedAt, lastEditedBy });
       }, { extendThroughRAF: true, blockId });
@@ -1023,7 +1099,7 @@ export class BlockYjsSync {
     // Update data in-place; if the tool can't take it, recreate the block.
     // The window stays open through setData and one RAF so the DOM mutation
     // observers cannot write back to Yjs and clear the redo stack.
-    this.markRewrittenFromDocument(blockId);
+    this.markRewrittenFromDocument(blockId, data);
     void this.withAtomicOperationAsync(async () => {
       // Only for a PEER's edit. Undo and redo carry a caret of their own —
       // `UndoHistory` restores the snapshot it captured, synchronously, while
@@ -1053,24 +1129,38 @@ export class BlockYjsSync {
    *
    * A remove of the block can land while an awaited setData is pending; there
    * is then no slot to replace into, so nothing is composed.
+   *
+   * `block` is only an ID CARRIER, never the thing replaced: two remote
+   * updates for one block in a single frame both reach `setData`'s await
+   * holding the same instance, and the first one's fallback here already
+   * swapped it out. Matching on instance identity dropped the second update,
+   * and the DOM then showed the older text until some later update for that
+   * block arrived — long enough for one keystroke to save the stale view back
+   * over the peer's newer characters.
    */
   private rematerialize(
     block: Block,
     record: { tool: string; data: BlockToolData; tunes: Record<string, unknown>; lastEditedAt: number | undefined; lastEditedBy: string | null }
   ): void {
-    const blockIndex = this.handlers.getBlockIndex(block);
+    const target = this.repository.getBlockById(block.id);
 
-    if (this.repository.getBlockById(block.id) !== block || blockIndex === -1) {
+    if (target === undefined) {
+      return;
+    }
+
+    const blockIndex = this.handlers.getBlockIndex(target);
+
+    if (blockIndex === -1) {
       return;
     }
 
     const newBlock = this.factory.composeBlock({
-      id: block.id,
+      id: target.id,
       tool: record.tool,
       data: record.data,
       tunes: record.tunes,
-      contentIds: block.contentIds.length > 0 ? [...block.contentIds] : undefined,
-      parentId: block.parentId ?? undefined,
+      contentIds: target.contentIds.length > 0 ? [...target.contentIds] : undefined,
+      parentId: target.parentId ?? undefined,
       bindEventsImmediately: true,
       origin: 'replay',
       lastEditedAt: record.lastEditedAt,
@@ -1081,7 +1171,7 @@ export class BlockYjsSync {
 
     // Children re-homed here were not there when the insert's rendered()
     // fired; a second call lets the container see them.
-    if (this.reconcileOrphanedChildren(block.id)) {
+    if (this.reconcileOrphanedChildren(target.id)) {
       newBlock.call(BlockToolAPI.RENDERED);
     }
   }

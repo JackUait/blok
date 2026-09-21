@@ -58,6 +58,7 @@ import { convertGifToWebm } from './gif-to-webm';
 import { downloadImage } from './download';
 import { resolveConvertedUploader } from './converted-uploader';
 import { tr } from './i18n';
+import { deliverToRebuiltBlock, releaseObjectUrl } from './detached-upload';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -92,6 +93,8 @@ export class ImageTool implements BlockTool {
   private retrying = false;
   private reloadAttempts = 0;
   private converting = false;
+  /** Set by `removed()`: this instance is no longer the document's block. */
+  private detached = false;
 
   constructor(options: BlockToolConstructorOptions<ImageData, ImageConfig>) {
     this.api = options.api;
@@ -360,6 +363,14 @@ export class ImageTool implements BlockTool {
   }
 
   private applyResult(result: UploadResult): void {
+    if (this.detached) {
+      const delta: Partial<ImageData> = { url: result.url };
+
+      if (result.fileName !== undefined) delta.fileName = result.fileName;
+      deliverToRebuiltBlock(this.api, this.block, 'Image', delta);
+
+      return;
+    }
     this.data = { ...this.data, url: result.url, fileName: result.fileName ?? this.data.fileName };
     this.state = 'RENDERED';
     this.errorMessage = null;
@@ -644,13 +655,12 @@ export class ImageTool implements BlockTool {
   }
 
   public removed(): void {
+    this.detached = true;
     this.detachResize();
     this.detachCrop();
     this.altPopoverDetach?.();
     this.altPopoverDetach = null;
-    if (this.data.url.startsWith('blob:')) {
-      URL.revokeObjectURL(this.data.url);
-    }
+    releaseObjectUrl(this.api, this.block.id, this.data.url);
   }
 
   private detachResize(): void {

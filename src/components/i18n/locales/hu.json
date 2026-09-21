@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "{count} blokk",
   "blockSettings.copyLinkSuccess": "Hivatkozás a vágólapra másolva",
   "blockSettings.copyLinkError": "A blokkra mutató hivatkozás másolása nem sikerült",
+  "blockSettings.convertFailed": "Ezt a blokkot nem sikerült módosítani. Próbálja újra.",
   "popover.actions": "Műveletek",
   "tools.link.keepTyping": "Folytassa a gépelést a hivatkozás hozzáadásához",
   "tools.link.emailAddress": "E-mail-cím",

@@ -10,6 +10,7 @@
 import type { API } from '../../../types';
 
 import { isCaretAtStartOfInput } from '../../components/utils/caret';
+import { runConvert } from '../../components/utils/convert-refusal';
 import { getInsertAfterLastDescendantIndex, splitContentAtRange } from '../toggle/toggle-keyboard';
 
 export interface HeaderToggleKeyboardContext {
@@ -126,5 +127,5 @@ export const handleHeaderToggleBackspace = async (
 
   event.preventDefault();
 
-  await api.blocks.convert(blockId, 'header', { text, level: currentLevel });
+  await runConvert(api, () => api.blocks.convert(blockId, 'header', { text, level: currentLevel }));
 };

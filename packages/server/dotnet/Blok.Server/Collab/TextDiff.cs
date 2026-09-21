@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace Blok.Server.Collab;
@@ -19,8 +20,8 @@ internal readonly record struct TextEdit(int Index, int Remove, string Insert);
 ///
 /// Three steps, each narrower than the next is wide:
 ///
-/// 1. Myers over ATOMS — a whole tag, a whole entity, otherwise a code point
-///    (see <see cref="Atomize"/>).
+/// 1. Myers over ATOMS — a whole tag, a whole entity, otherwise one
+///    USER-VISIBLE character (see <see cref="Atomize"/>).
 /// 2. Once the atom distance passes the cap, SPLIT both texts at runs of atoms
 ///    that occur exactly once on both sides — they can only be each other — and
 ///    answer each gap between two anchors on its own.
@@ -163,8 +164,94 @@ internal static partial class TextDiff
   }
 
   /// <summary>
+  /// The three Unicode <c>Indic_Conjunct_Break</c> sets GB9c is written in, as
+  /// pairs of inclusive code-point bounds, in order: the linkers (viramas),
+  /// the consonants they join, and the extenders that BREAK a conjunct rather
+  /// than keeping it (ZWNJ and the spacing marks).
+  ///
+  /// .NET's own grapheme tables do not implement GB9c, so without these the
+  /// host splits <c>क्र</c> where the browser keeps it whole and the two sides
+  /// answer different edits for the same keystroke. They were derived by
+  /// asking the client's own <c>Intl.Segmenter</c> which code points behave
+  /// this way (Unicode 16.0, ICU as shipped in Node 24) — the same way
+  /// text-diff.ts derives its tables — because the property is not exposed by
+  /// any .NET API.
+  ///
+  /// LOCKSTEP: an ICU upgrade that moves these sets moves the client's
+  /// character boundaries with it, and this file must follow in the same
+  /// change, or Indic text merges differently on the two sides. Pinned by
+  /// test/unit/server-conformance/server-concurrent-loss-wave2.test.ts, which
+  /// re-derives all three from the live segmenter and compares them to what is
+  /// written here.
+  /// </summary>
+  private static readonly int[] ConjunctLinkers =
+  [
+      0x094D, 0x094D, 0x09CD, 0x09CD, 0x0ACD, 0x0ACD, 0x0B4D, 0x0B4D,
+      0x0C4D, 0x0C4D, 0x0D4D, 0x0D4D
+  ];
+
+  /// <summary>InCB=Consonant, the characters a linker joins. See <see cref="ConjunctLinkers"/>.</summary>
+  private static readonly int[] ConjunctConsonants =
+  [
+      0x0915, 0x0939, 0x0958, 0x095F, 0x0978, 0x097F, 0x0995, 0x09A8,
+      0x09AA, 0x09B0, 0x09B2, 0x09B2, 0x09B6, 0x09B9, 0x09DC, 0x09DD,
+      0x09DF, 0x09DF, 0x09F0, 0x09F1, 0x0A95, 0x0AA8, 0x0AAA, 0x0AB0,
+      0x0AB2, 0x0AB3, 0x0AB5, 0x0AB9, 0x0AF9, 0x0AF9, 0x0B15, 0x0B28,
+      0x0B2A, 0x0B30, 0x0B32, 0x0B33, 0x0B35, 0x0B39, 0x0B5C, 0x0B5D,
+      0x0B5F, 0x0B5F, 0x0B71, 0x0B71, 0x0C15, 0x0C28, 0x0C2A, 0x0C39,
+      0x0C58, 0x0C5A, 0x0D15, 0x0D3A
+  ];
+
+  /// <summary>
+  /// Extenders that are NOT InCB=Extend, so one of them between a consonant
+  /// and its linker ends the conjunct. See <see cref="ConjunctLinkers"/>.
+  /// </summary>
+  private static readonly int[] ConjunctBreakers =
+  [
+      0x0903, 0x0903, 0x093B, 0x093B, 0x093E, 0x0940, 0x0949, 0x094C,
+      0x094E, 0x094F, 0x0982, 0x0983, 0x09BF, 0x09C0, 0x09C7, 0x09C8,
+      0x09CB, 0x09CC, 0x0A03, 0x0A03, 0x0A3E, 0x0A40, 0x0A83, 0x0A83,
+      0x0ABE, 0x0AC0, 0x0AC9, 0x0AC9, 0x0ACB, 0x0ACC, 0x0B02, 0x0B03,
+      0x0B40, 0x0B40, 0x0B47, 0x0B48, 0x0B4B, 0x0B4C, 0x0BBF, 0x0BBF,
+      0x0BC1, 0x0BC2, 0x0BC6, 0x0BC8, 0x0BCA, 0x0BCC, 0x0C01, 0x0C03,
+      0x0C41, 0x0C44, 0x0C82, 0x0C83, 0x0CBE, 0x0CBE, 0x0CC1, 0x0CC1,
+      0x0CC3, 0x0CC4, 0x0CF3, 0x0CF3, 0x0D02, 0x0D03, 0x0D3F, 0x0D40,
+      0x0D46, 0x0D48, 0x0D4A, 0x0D4C, 0x0D82, 0x0D83, 0x0DD0, 0x0DD1,
+      0x0DD8, 0x0DDE, 0x0DF2, 0x0DF3, 0x0E33, 0x0E33, 0x0EB3, 0x0EB3,
+      0x0F3E, 0x0F3F, 0x0F7F, 0x0F7F, 0x1031, 0x1031, 0x103B, 0x103C,
+      0x1056, 0x1057, 0x1084, 0x1084, 0x17B6, 0x17B6, 0x17BE, 0x17C5,
+      0x17C7, 0x17C8, 0x1923, 0x1926, 0x1929, 0x192B, 0x1930, 0x1931,
+      0x1933, 0x1938, 0x1A19, 0x1A1A, 0x1A55, 0x1A55, 0x1A57, 0x1A57,
+      0x1A6D, 0x1A72, 0x1B04, 0x1B04, 0x1B3E, 0x1B41, 0x1B82, 0x1B82,
+      0x1BA1, 0x1BA1, 0x1BA6, 0x1BA7, 0x1BE7, 0x1BE7, 0x1BEA, 0x1BEC,
+      0x1BEE, 0x1BEE, 0x1C24, 0x1C2B, 0x1C34, 0x1C35, 0x1CE1, 0x1CE1,
+      0x1CF7, 0x1CF7, 0x200C, 0x200C, 0xA823, 0xA824, 0xA827, 0xA827,
+      0xA880, 0xA881, 0xA8B4, 0xA8C3, 0xA952, 0xA952, 0xA983, 0xA983,
+      0xA9B4, 0xA9B5, 0xA9BA, 0xA9BB, 0xA9BE, 0xA9BF, 0xAA2F, 0xAA30,
+      0xAA33, 0xAA34, 0xAA4D, 0xAA4D, 0xAAEB, 0xAAEB, 0xAAEE, 0xAAEF,
+      0xAAF5, 0xAAF5, 0xABE3, 0xABE4, 0xABE6, 0xABE7, 0xABE9, 0xABEA,
+      0xABEC, 0xABEC, 0x11000, 0x11000, 0x11002, 0x11002, 0x11082, 0x11082,
+      0x110B0, 0x110B2, 0x110B7, 0x110B8, 0x1112C, 0x1112C, 0x11145, 0x11146,
+      0x11182, 0x11182, 0x111B3, 0x111B5, 0x111BF, 0x111BF, 0x111CE, 0x111CE,
+      0x1122C, 0x1122E, 0x11232, 0x11233, 0x112E0, 0x112E2, 0x11302, 0x11303,
+      0x1133F, 0x1133F, 0x11341, 0x11344, 0x11347, 0x11348, 0x1134B, 0x1134C,
+      0x11362, 0x11363, 0x113B9, 0x113BA, 0x113CA, 0x113CA, 0x113CC, 0x113CD,
+      0x11435, 0x11437, 0x11440, 0x11441, 0x11445, 0x11445, 0x114B1, 0x114B2,
+      0x114B9, 0x114B9, 0x114BB, 0x114BC, 0x114BE, 0x114BE, 0x114C1, 0x114C1,
+      0x115B0, 0x115B1, 0x115B8, 0x115BB, 0x115BE, 0x115BE, 0x11630, 0x11632,
+      0x1163B, 0x1163C, 0x1163E, 0x1163E, 0x116AC, 0x116AC, 0x116AE, 0x116AF,
+      0x1171E, 0x1171E, 0x11726, 0x11726, 0x1182C, 0x1182E, 0x11838, 0x11838,
+      0x11931, 0x11935, 0x11937, 0x11938, 0x11940, 0x11940, 0x11942, 0x11942,
+      0x119D1, 0x119D3, 0x119DC, 0x119DF, 0x119E4, 0x119E4, 0x11A39, 0x11A39,
+      0x11A57, 0x11A58, 0x11A97, 0x11A97, 0x11C2F, 0x11C2F, 0x11C3E, 0x11C3E,
+      0x11CA9, 0x11CA9, 0x11CB1, 0x11CB1, 0x11CB4, 0x11CB4, 0x11D8A, 0x11D8E,
+      0x11D93, 0x11D94, 0x11D96, 0x11D96, 0x11EF5, 0x11EF6, 0x11F03, 0x11F03,
+      0x11F34, 0x11F35, 0x11F3E, 0x11F3F, 0x1612A, 0x1612C, 0x16F51, 0x16F87
+  ];
+
+  /// <summary>
   /// The units the diff may put an edit boundary between: a COMPLETE tag, a
-  /// complete entity reference, otherwise one code point.
+  /// complete entity reference, otherwise one USER-VISIBLE character.
   ///
   /// This is what stops the merge treating markup as spellable text. A block's
   /// <c>text</c> is the tool's innerHTML — markup and content in one string
@@ -177,11 +264,22 @@ internal static partial class TextDiff
   /// Code points, never code units: an edit boundary inside a surrogate pair
   /// puts the halves in separate CRDT items and the engine replaces both with
   /// U+FFFD.
+  ///
+  /// And whole CHARACTERS, never bare code points: a letter plus its accent, a
+  /// thumb plus its skin tone, a ZWJ family, a two-indicator flag are each
+  /// several code points, and a boundary inside one hands a peer's edit the
+  /// rest of the cluster. The client reads the UAX #29 rules through
+  /// <c>Intl.Segmenter</c>; <see cref="StringInfo"/> reads the same ones, so
+  /// the two sides split a character alike. Its range tables are a V8
+  /// workaround, not part of the contract, and are deliberately NOT ported.
   /// </summary>
   internal static string[] Atomize(string text)
   {
-    // Nothing structured to protect: split code points in one pass.
-    if (!text.Contains('<') && !text.Contains('&'))
+    var interiors = ClusterInteriors(text);
+
+    // Nothing structured to protect and no character longer than a code point:
+    // split code points in one pass.
+    if (interiors.Count == 0 && !text.Contains('<') && !text.Contains('&'))
     {
       return CodePoints(text);
     }
@@ -193,6 +291,9 @@ internal static partial class TextDiff
     {
       var structured = StructuredEnd(text, index, text[index]);
 
+      // A tag or an entity is never part of a character, so it is never
+      // extended: a `>` and an accent typed after it are two atoms, and the
+      // accent stays editable.
       if (structured > index)
       {
         atoms.Add(text[index..structured]);
@@ -206,12 +307,140 @@ internal static partial class TextDiff
           char.IsLowSurrogate(text[index + 1])
         ? 2
         : 1;
+      var end = index + size;
 
-      atoms.Add(text.Substring(index, size));
-      index += size;
+      // Stop at a tag or an entity even when the character wants to swallow
+      // it. The Prepend characters — the Arabic number signs, U+0D4E, the
+      // Brahmic ones — cluster with whatever FOLLOWS, and `؀<b>bold` put the
+      // `<` inside the previous atom, so retagging landed an edit boundary
+      // between `<` and `b`. That is the boundary-inside-markup this file
+      // exists to stop. A bare `<` that starts no tag still clusters.
+      while (interiors.Contains(end) && StructuredEnd(text, end, text[end]) == end)
+      {
+        end++;
+      }
+
+      atoms.Add(text[index..end]);
+      index = end;
     }
 
     return atoms.ToArray();
+  }
+
+  /// <summary>
+  /// Code-unit offsets that fall INSIDE a user-visible character, so no atom
+  /// may begin there. Every offset of a character past its first is in the
+  /// set, so the scanner can walk to that character's end one unit at a time.
+  ///
+  /// <see cref="StringInfo"/> answers every UAX #29 rule but GB9c, so the
+  /// conjunct join is applied on top of it — see <see cref="JoinsConjunct"/>.
+  /// </summary>
+  private static HashSet<int> ClusterInteriors(string text)
+  {
+    var starts = new List<int>();
+    var characters = StringInfo.GetTextElementEnumerator(text);
+
+    while (characters.MoveNext())
+    {
+      starts.Add(characters.ElementIndex);
+    }
+
+    var inside = new HashSet<int>();
+    var clusterStart = 0;
+
+    for (var index = 0; index < starts.Count; index++)
+    {
+      var start = starts[index];
+      var end = index + 1 < starts.Count ? starts[index + 1] : text.Length;
+
+      // The boundary disappears, and the joined character keeps its original
+      // start so a second conjunct chains onto the same one.
+      if (index > 0 && JoinsConjunct(text, clusterStart, start))
+      {
+        inside.Add(start);
+      }
+      else
+      {
+        clusterStart = start;
+      }
+
+      for (var at = start + 1; at < end; at++)
+      {
+        inside.Add(at);
+      }
+    }
+
+    return inside;
+  }
+
+  /// <summary>
+  /// UAX #29 GB9c: a consonant, a linker and the consonant after it are ONE
+  /// character — <c>Consonant (Extend | Linker)* Linker (Extend | Linker)*
+  /// × Consonant</c>. Walks back from the boundary over the previous
+  /// character, which <see cref="StringInfo"/> has already closed, so every
+  /// code point in it past the first is an extender.
+  /// </summary>
+  private static bool JoinsConjunct(string text, int clusterStart, int boundary)
+  {
+    if (!InRanges(ConjunctConsonants, CodePointAt(text, boundary)))
+    {
+      return false;
+    }
+
+    var at = boundary;
+    var linked = false;
+
+    while (at > clusterStart)
+    {
+      var start = at - (at - 1 > clusterStart && char.IsLowSurrogate(text[at - 1]) &&
+          char.IsHighSurrogate(text[at - 2]) ? 2 : 1);
+      var code = CodePointAt(text, start);
+
+      if (InRanges(ConjunctLinkers, code))
+      {
+        linked = true;
+        at = start;
+
+        continue;
+      }
+
+      // Anything else inside the character is an extender, and it keeps the
+      // conjunct only when it is an InCB=Extend one.
+      if (start > clusterStart && !InRanges(ConjunctBreakers, code))
+      {
+        at = start;
+
+        continue;
+      }
+
+      return linked && InRanges(ConjunctConsonants, code);
+    }
+
+    return false;
+  }
+
+  /// <summary>Whether <paramref name="ranges"/> holds <paramref name="code"/>.</summary>
+  private static bool InRanges(int[] ranges, int code)
+  {
+    for (var at = 0; at < ranges.Length; at += 2)
+    {
+      if (code <= ranges[at + 1])
+      {
+        return code >= ranges[at];
+      }
+    }
+
+    return false;
+  }
+
+  /// <summary>The whole code point at <paramref name="index"/>.</summary>
+  private static int CodePointAt(string text, int index)
+  {
+    return char.IsHighSurrogate(text[index]) &&
+        index + 1 < text.Length &&
+        char.IsLowSurrogate(text[index + 1])
+      ? char.ConvertToUtf32(text[index], text[index + 1])
+      : text[index];
   }
 
   /// <summary>

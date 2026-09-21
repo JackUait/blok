@@ -271,6 +271,7 @@
   "blockSettings.blocksSelected": "已選取 {count} 個區塊",
   "blockSettings.copyLinkSuccess": "已將連結複製到剪貼簿",
   "blockSettings.copyLinkError": "無法複製區塊連結",
+  "blockSettings.convertFailed": "無法變更此區塊，請再試一次。",
   "popover.actions": "動作",
   "tools.link.keepTyping": "繼續輸入以新增連結",
   "tools.link.emailAddress": "電子郵件地址",

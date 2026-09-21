@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "{count} blokke",
   "blockSettings.copyLinkSuccess": "Link kopieret til udklipsholder",
   "blockSettings.copyLinkError": "Kunne ikke kopiere linket til blokken",
+  "blockSettings.convertFailed": "Kunne ikke ændre denne blok. Prøv igen.",
   "popover.actions": "Handlinger",
   "tools.link.keepTyping": "Fortsæt med at skrive for at tilføje et link",
   "tools.link.emailAddress": "E-mailadresse",

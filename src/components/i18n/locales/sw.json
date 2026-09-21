@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "Vizuizi {count}",
   "blockSettings.copyLinkSuccess": "Kiungo kimenakiliwa kwenye ubao wa kunakili",
   "blockSettings.copyLinkError": "Imeshindikana kunakili kiungo cha kizuizi",
+  "blockSettings.convertFailed": "Imeshindikana kubadilisha kizuizi hiki. Jaribu tena.",
   "popover.actions": "Vitendo",
   "tools.link.keepTyping": "Endelea kuandika ili kuongeza kiungo",
   "tools.link.emailAddress": "Anwani ya barua pepe",

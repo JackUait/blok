@@ -24,6 +24,7 @@ import { uploadErrorMessage } from '../../components/utils/upload-error-message'
 import { safeHttpHref } from './url';
 import { isPreviewable } from './preview';
 import { openFilePreview } from './preview-modal';
+import { deliverToRebuiltBlock } from '../image/detached-upload';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -50,6 +51,8 @@ export class FileTool implements BlockTool {
   private pendingImageConversion = false;
   /** When the pending upload is a video, the result converts to a Video block. */
   private pendingVideoConversion = false;
+  /** Set by `removed()`: this instance is no longer the document's block. */
+  private detached = false;
 
   constructor(options: BlockToolConstructorOptions<FileData, FileConfig>) {
     this.api = options.api;
@@ -194,6 +197,19 @@ export class FileTool implements BlockTool {
   }
 
   private applyResult(result: FileUploadResult): void {
+    if (this.detached) {
+      const delta: Partial<FileData> = { url: result.url };
+      const fileName = result.fileName ?? this.lastFileName;
+
+      if (fileName !== null && fileName !== undefined) delta.fileName = fileName;
+      if (result.size !== undefined) delta.size = result.size;
+      if (result.mimeType !== undefined) delta.mimeType = result.mimeType;
+      // The image/video auto-conversion is deliberately skipped: it would have
+      // to rebuild the live block from this instance's pre-peer-edit data.
+      deliverToRebuiltBlock(this.api, this.block, 'File', delta);
+
+      return;
+    }
     this.errorMessage = null;
     this.data = {
       ...this.data,
@@ -325,6 +341,7 @@ export class FileTool implements BlockTool {
   }
 
   public removed(): void {
+    this.detached = true;
     this.previewTeardown?.();
     this.previewTeardown = null;
   }

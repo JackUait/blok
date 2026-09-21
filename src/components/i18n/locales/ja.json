@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "{count}個のブロック",
   "blockSettings.copyLinkSuccess": "リンクをクリップボードにコピーしました",
   "blockSettings.copyLinkError": "ブロックのリンクをコピーできませんでした",
+  "blockSettings.convertFailed": "このブロックを変更できませんでした。もう一度お試しください。",
   "popover.actions": "アクション",
   "tools.link.keepTyping": "入力を続けてリンクを追加",
   "tools.link.emailAddress": "メールアドレス",

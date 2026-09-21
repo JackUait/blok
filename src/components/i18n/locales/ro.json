@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "Blocuri selectate: {count}",
   "blockSettings.copyLinkSuccess": "Link copiat în clipboard",
   "blockSettings.copyLinkError": "Nu s-a putut copia linkul către bloc",
+  "blockSettings.convertFailed": "Nu s-a putut modifica acest bloc. Încercați din nou.",
   "popover.actions": "Acțiuni",
   "tools.link.keepTyping": "Continuați să scrieți pentru a adăuga un link",
   "tools.link.emailAddress": "Adresă de e-mail",

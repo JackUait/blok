@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "{count} block",
   "blockSettings.copyLinkSuccess": "Länk kopierad till urklipp",
   "blockSettings.copyLinkError": "Det gick inte att kopiera länken till blocket",
+  "blockSettings.convertFailed": "Det gick inte att ändra det här blocket. Försök igen.",
   "popover.actions": "Åtgärder",
   "tools.link.keepTyping": "Fortsätt skriva för att lägga till en länk",
   "tools.link.emailAddress": "E-postadress",

@@ -271,6 +271,7 @@
   "blockSettings.blocksSelected": "{count} ಬ್ಲಾಕ್‌ಗಳು",
   "blockSettings.copyLinkSuccess": "ಲಿಂಕ್ ಕ್ಲಿಪ್‌ಬೋರ್ಡ್‌ಗೆ ನಕಲಾಗಿದೆ",
   "blockSettings.copyLinkError": "ಬ್ಲಾಕ್‌ಗೆ ಲಿಂಕ್ ನಕಲಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ",
+  "blockSettings.convertFailed": "ಈ ಬ್ಲಾಕ್ ಬದಲಾಯಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
   "popover.actions": "ಕ್ರಿಯೆಗಳು",
   "tools.link.keepTyping": "ಲಿಂಕ್ ಸೇರಿಸಲು ಟೈಪ್ ಮಾಡುತ್ತಿರಿ",
   "tools.link.emailAddress": "ಇಮೇಲ್ ವಿಳಾಸ",

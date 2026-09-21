@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "{count} blokker",
   "blockSettings.copyLinkSuccess": "Lenke kopiert til utklippstavlen",
   "blockSettings.copyLinkError": "Kunne ikke kopiere lenken til blokken",
+  "blockSettings.convertFailed": "Kunne ikke endre denne blokken. Prøv igjen.",
   "popover.actions": "Handlinger",
   "tools.link.keepTyping": "Fortsett å skrive for å legge til en lenke",
   "tools.link.emailAddress": "E-postadresse",

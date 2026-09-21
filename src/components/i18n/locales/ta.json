@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "தொகுதிகள்: {count}",
   "blockSettings.copyLinkSuccess": "இணைப்பு கிளிப்போர்டுக்கு நகலெடுக்கப்பட்டது",
   "blockSettings.copyLinkError": "தொகுதியின் இணைப்பை நகலெடுக்க முடியவில்லை",
+  "blockSettings.convertFailed": "இந்தத் தொகுதியை மாற்ற முடியவில்லை. மீண்டும் முயலவும்.",
   "popover.actions": "செயல்கள்",
   "tools.link.keepTyping": "இணைப்பைச் சேர்க்க தொடர்ந்து தட்டச்சு செய்யவும்",
   "tools.link.emailAddress": "மின்னஞ்சல் முகவரி",

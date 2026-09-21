@@ -84,7 +84,7 @@ const blockNamed = (blocks: YjsOutputBlockData[], id: string): YjsOutputBlockDat
 describe('array element similarity — lockstep with the C# converter', () => {
   const source = readFileSync(CONVERTER_PATH, 'utf8');
 
-  it.fails('scores two OBJECT elements by the keys they still agree on', () => {
+  it('scores two OBJECT elements by the keys they still agree on', () => {
     const body = csharpMethodBody(source, 'RowSimilarity');
 
     // The defect: the method answers 0 for anything that is not two arrays,
@@ -173,4 +173,115 @@ describe('client element pairing under concurrency (the contract the server must
 
     expect(content[0][2].blocks).toContain('p2');
   });
+});
+
+/**
+ * The server splits a user-visible character with `StringInfo`, which answers
+ * every UAX #29 rule EXCEPT GB9c — the Indic conjunct join, where a consonant,
+ * a linker (virama) and the consonant after it are ONE character. .NET exposes
+ * no `Indic_Conjunct_Break` property, so `TextDiff.cs` carries the three sets
+ * the rule is written in, derived from this engine's own `Intl.Segmenter`.
+ *
+ * An ICU upgrade that moves those sets moves the CLIENT's character boundaries
+ * with it, and a boundary the two sides disagree on makes them answer
+ * different ops for the same keystroke — which merge to different documents.
+ * So the sets are re-derived here from the live segmenter and compared to what
+ * the C# file commits: a drift fails loudly instead of silently re-diverging.
+ *
+ * Derived by asking the segmenter, never from a table: `C L X` is one
+ * character only when X is a consonant, `C X C` only when X is a linker, and
+ * `C X L C` stops being one when X is an extender that BREAKS a conjunct.
+ */
+describe('GB9c tables — lockstep with the client segmenter', () => {
+  const DIFF_PATH = resolve(process.cwd(), 'packages/server/dotnet/Blok.Server/Collab/TextDiff.cs');
+  const CONSONANT = 0x0915;
+  const LINKER = 0x094d;
+
+  /** Every code point, minus the surrogate range no string can carry alone here. */
+  const points = Array.from({ length: 0x110000 }, (_, code) => code)
+    .filter((code) => code < 0xd800 || code > 0xdfff);
+
+  /**
+   * How many characters each probe string splits into, in few segmenter calls:
+   * one call per string costs minutes over a million code points.
+   * @param probe - the code points to segment around each code point
+   */
+  const characterCounts = (probe: (code: number) => number[]): Map<number, number> => {
+    const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
+    const counts = new Map<number, number>();
+    const BATCH = 4000;
+
+    for (let from = 0; from < points.length; from += BATCH) {
+      const batch = points.slice(from, from + BATCH);
+      const parts = batch.map((code) => String.fromCodePoint(...probe(code)));
+      const starts: number[] = [];
+      // A space always ends a character, so the batch cannot join across parts.
+      const text = parts.reduce((joined, part) => {
+        starts.push(joined.length + 1);
+
+        return `${joined} ${part}`;
+      }, '') + ' ';
+      const bounds = [...segmenter.segment(text)].map((part) => part.index);
+      let at = 0;
+
+      batch.forEach((code, index) => {
+        const start = starts[index];
+        const end = start + parts[index].length;
+
+        while (bounds[at] < start) { at++; }
+
+        let found = 0;
+
+        while (at + found < bounds.length && bounds[at + found] < end) { found++; }
+
+        counts.set(code, found);
+      });
+    }
+
+    return counts;
+  };
+
+  /** Consecutive code points collapsed into pairs of inclusive bounds. */
+  const ranges = (codes: number[]): number[] =>
+    codes.reduce<number[][]>((packed, code) => {
+      const last = packed[packed.length - 1];
+
+      if (last !== undefined && code === last[1] + 1) {
+        last[1] = code;
+      } else {
+        packed.push([code, code]);
+      }
+
+      return packed;
+    }, []).flat();
+
+  /** The `int[]` a C# field is initialised with. */
+  const csharpRanges = (source: string, name: string): number[] => {
+    const found = new RegExp(`${name} =\\s*\\[([^\\]]*)\\]`).exec(source);
+
+    if (found === null) {
+      throw new Error(`no ${name} in TextDiff.cs`);
+    }
+
+    return found[1].split(',').map((part) => part.trim()).filter((part) => part.length > 0)
+      .map((part) => Number.parseInt(part, 16));
+  };
+
+  it('commits the sets this engine derives', () => {
+    const extenders = characterCounts((code) => [CONSONANT, code]);
+    const linkerLike = characterCounts((code) => [CONSONANT, code, CONSONANT]);
+    const consonantLike = characterCounts((code) => [CONSONANT, LINKER, code]);
+    const conjunct = characterCounts((code) => [CONSONANT, code, LINKER, CONSONANT]);
+    const source = readFileSync(DIFF_PATH, 'utf8');
+
+    const linkers = points.filter((code) => linkerLike.get(code) === 1);
+    const consonants = points
+      .filter((code) => extenders.get(code) !== 1 && consonantLike.get(code) === 1);
+    const breakers = points
+      .filter((code) => extenders.get(code) === 1 && conjunct.get(code) !== 1);
+
+    expect(csharpRanges(source, 'ConjunctLinkers')).toEqual(ranges(linkers));
+    expect(csharpRanges(source, 'ConjunctConsonants')).toEqual(ranges(consonants));
+    expect(csharpRanges(source, 'ConjunctBreakers')).toEqual(ranges(breakers));
+  }, 60_000);
 });

@@ -114,6 +114,13 @@ const createBlokStub = (): BlokModules => {
     DragManager: {
       isDragging: false,
     },
+    // The turn-into paths report a refused conversion through the public API.
+    API: {
+      methods: {
+        notifier: { show: vi.fn() },
+        i18n: { t: (key: string) => key },
+      },
+    },
   } as unknown as BlokModules;
 };
 

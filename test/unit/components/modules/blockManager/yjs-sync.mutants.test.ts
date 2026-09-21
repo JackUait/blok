@@ -944,7 +944,7 @@ describe('BlockYjsSync — mutation kills', () => {
       expect(harness.handlers.replaceBlock).not.toHaveBeenCalled();
     });
 
-    it('does not replace into a slot another block already took', async () => {
+    it('replaces whatever instance the store now holds for the id', async () => {
       const block = createBlock({ id: 'a', name: 'paragraph' });
       const harness = createHarness({ blocks: [block] });
       let settle: (accepted: boolean) => void = () => undefined;
@@ -961,8 +961,12 @@ describe('BlockYjsSync — mutation kills', () => {
       harness.emit({ blockId: 'a', type: 'update', origin: 'remote' });
       await flush();
 
-      // A remove + re-add lands while setData is still pending, so the id now
-      // names a different instance than the one being replaced.
+      // The id names a different instance by the time setData settles — which
+      // is what a second remote update in the same frame produces, its own
+      // fallback having already replaced the block this one is holding.
+      // Matching on instance identity here dropped that second update and left
+      // the DOM behind the document for good; see
+      // `remote-burst-one-frame-loss.test.ts`.
       harness.blocksStore.remove(0);
       harness.blocksStore.push(createBlock({ id: 'a' }));
       (harness.handlers.getBlockIndex as unknown as ReturnType<typeof vi.fn>).mockReturnValue(0);
@@ -970,8 +974,8 @@ describe('BlockYjsSync — mutation kills', () => {
       settle(false);
       await flush();
 
-      expect(spy).not.toHaveBeenCalled();
-      expect(harness.handlers.replaceBlock).not.toHaveBeenCalled();
+      expect(harness.handlers.replaceBlock).toHaveBeenCalledWith(0, expect.anything());
+      expect(spy).toHaveBeenCalledWith(expect.objectContaining({ id: 'a', data: { text: 'x' } }));
     });
 
     it('omits contentIds for a childless block instead of sending an empty list', async () => {

@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "{count} блока",
   "blockSettings.copyLinkSuccess": "Връзката е копирана в клипборда",
   "blockSettings.copyLinkError": "Връзката не можа да бъде копирана",
+  "blockSettings.convertFailed": "Блокът не можа да бъде променен. Опитайте отново.",
   "popover.actions": "Действия",
   "tools.link.keepTyping": "Продължете да пишете, за да добавите връзка",
   "tools.link.emailAddress": "Имейл адрес",

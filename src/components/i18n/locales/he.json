@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "{count} בלוקים",
   "blockSettings.copyLinkSuccess": "הקישור הועתק ללוח",
   "blockSettings.copyLinkError": "לא ניתן להעתיק קישור לבלוק",
+  "blockSettings.convertFailed": "לא ניתן לשנות את הבלוק הזה. נסו שוב.",
   "popover.actions": "פעולות",
   "tools.link.keepTyping": "המשך להקליד כדי להוסיף קישור",
   "tools.link.emailAddress": "כתובת אימייל",

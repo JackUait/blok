@@ -144,7 +144,7 @@ describe('teardown — a block.save() still in flight when the editor is destroy
     expect(harness.peerText()).toBe('hello world');
   });
 
-  it.fails('lands the last thing typed on the peer when the save resolves after destroy', async () => {
+  it('lands the last thing typed on the peer when the save resolves after destroy', async () => {
     const harness = createHarness();
 
     // The user types; BlockManager starts syncBlockDataToYjs and is sitting in
@@ -217,6 +217,23 @@ describe('read-only mutex — the keystroke whose MutationRecord was still queue
     expect(delivered.flat().length).toBeGreaterThan(0);
   });
 
+  /**
+   * UNFIXED ON PURPOSE. The jsdom-level mechanism is real: `disconnect()` drops
+   * the observer's queued records, so this test's character never arrives.
+   *
+   * But Chromium REFUTES it end to end — a mirror MutationObserver on
+   * `document` in the capture phase saw the peer receive the character in 6/6
+   * runs, because an earlier `input` listener's microtask checkpoint flushes
+   * the observer queue before any `disable()` caller runs.
+   *
+   * The `takeRecords()` drain that made this pass was reverted: it emitted
+   * `RedactorDomChanged` SYNCHRONOUSLY into every `disable()` caller, including
+   * `api/blocks.ts` `render()`, which disables and then immediately calls
+   * `discardPendingChanges()` — so drained records drove block saves for the
+   * document being replaced. Defense-in-depth for a refuted premise is not
+   * worth a new synchronous re-entrancy surface. `takeRecords` appears nowhere
+   * in `src/`.
+   */
   it.fails('still delivers the keystroke when read-only takes the DOM mutex in the same task', async () => {
     redactor.appendChild(document.createTextNode('typed'));
 
@@ -269,7 +286,7 @@ describe('write buffer — a flush that throws', () => {
     expect(written).toEqual([['text', 'a-trailing'], ['text', 'b-trailing']]);
   });
 
-  it.fails('lands every other block buffered when one block flush throws at the barrier', () => {
+  it('lands every other block buffered when one block flush throws at the barrier', () => {
     const buffer = new BlockWriteBuffer(400);
     const written: Array<[string, unknown]> = [];
 
@@ -299,5 +316,138 @@ describe('write buffer — a flush that throws', () => {
     // And b1's window is still open with a live trailing timer, so the barrier
     // did not even leave the buffer drained for the teardown that follows it.
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe('onPendingBlockWritesSettled — the signal a provider waits on before it dies', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('fires synchronously when no save is in flight', () => {
+    const harness = createHarness();
+    const calls: string[] = [];
+
+    harness.yjsManager.onPendingBlockWritesSettled(() => calls.push('settled'));
+
+    // Synchronously: a normal teardown must not gain a tick.
+    expect(calls).toEqual(['settled']);
+  });
+
+  it('fires every listener once the last in-flight save lands', () => {
+    const harness = createHarness();
+    const calls: string[] = [];
+
+    const releaseFirst = harness.yjsManager.beginPendingBlockDataWrite();
+    const releaseSecond = harness.yjsManager.beginPendingBlockDataWrite();
+
+    harness.yjsManager.onPendingBlockWritesSettled(() => calls.push('first'));
+    harness.yjsManager.onPendingBlockWritesSettled(() => calls.push('second'));
+
+    releaseFirst();
+    expect(calls).toEqual([]);
+
+    releaseSecond();
+    expect(calls).toEqual(['first', 'second']);
+  });
+
+  it('does not fire a listener that unsubscribed', () => {
+    const harness = createHarness();
+    const calls: string[] = [];
+
+    const release = harness.yjsManager.beginPendingBlockDataWrite();
+    const unsubscribe = harness.yjsManager.onPendingBlockWritesSettled(() => calls.push('gone'));
+
+    harness.yjsManager.onPendingBlockWritesSettled(() => calls.push('kept'));
+    unsubscribe();
+
+    release();
+
+    expect(calls).toEqual(['kept']);
+  });
+
+  it('runs the listener while the document is still live, before teardown finishes', () => {
+    const harness = createHarness();
+
+    const release = harness.yjsManager.beginPendingBlockDataWrite();
+
+    harness.yjsManager.onPendingBlockWritesSettled(() => {
+      // What a provider does on its way out: one last write that still has to
+      // reach the wire. It only lands if the store is alive and its update
+      // handlers are still attached.
+      harness.yjsManager.addBlock({ id: 'b2',
+        type: 'paragraph',
+        data: { text: 'last word' } });
+    });
+
+    harness.yjsManager.destroy();
+    release();
+
+    const landed = harness.peer.toJSON().find((block) => block.id === 'b2');
+
+    expect((landed?.data as Record<string, string> | undefined)?.text).toBe('last word');
+  });
+});
+
+describe('teardown failures surface instead of becoming unhandled rejections', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('reports both a failing flush and a failing settled listener, and rejects nothing', async () => {
+    const rejections: unknown[] = [];
+    const onRejection = (reason: unknown): void => {
+      rejections.push(reason);
+    };
+
+    process.on('unhandledRejection', onRejection);
+
+    const errors: unknown[] = [];
+    const consoleError = vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+      errors.push(args);
+    });
+
+    const harness = createHarness();
+    const { resolveSave } = harness.startMutation('hello world');
+
+    harness.yjsManager.onPendingBlockWritesSettled(() => {
+      throw new Error('listener boom');
+    });
+    harness.yjsManager.destroy();
+
+    vi.spyOn(harness.yjsManager, 'updateBlockData').mockImplementation(() => {
+      throw new Error('flush boom');
+    });
+
+    resolveSave();
+    await drainMicrotasks();
+    // A real macrotask turn: that is when Node decides a rejection is unhandled.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    process.off('unhandledRejection', onRejection);
+
+    // THE DEFECT: a tab closing while a save is in flight used to emit unhandled
+    // rejections, which a host reads as unattributed page errors.
+    expect(rejections).toEqual([]);
+
+    // And nothing was swallowed to get there: BOTH failures were reported.
+    // The listener failure must not replace the flush failure — it is raised
+    // from the `finally` that releases the in-flight token.
+    const reported = JSON.stringify(errors.map((entry) => String(entry)));
+
+    expect(reported).toContain('flush boom');
+    expect(reported).toContain('listener boom');
+
+    consoleError.mockRestore();
   });
 });

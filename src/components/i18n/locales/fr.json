@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "{count} blocs",
   "blockSettings.copyLinkSuccess": "Lien copié dans le presse-papiers",
   "blockSettings.copyLinkError": "Impossible de copier le lien du bloc",
+  "blockSettings.convertFailed": "Impossible de modifier ce bloc. Réessayez.",
   "popover.actions": "Actions",
   "tools.link.keepTyping": "Continuez à saisir pour ajouter un lien",
   "tools.link.emailAddress": "Adresse e-mail",

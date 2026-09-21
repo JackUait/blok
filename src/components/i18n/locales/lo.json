@@ -271,6 +271,7 @@
   "blockSettings.blocksSelected": "{count} ບລັອກ",
   "blockSettings.copyLinkSuccess": "ສຳເນົາລິ້ງໄປຄລິບບອດແລ້ວ",
   "blockSettings.copyLinkError": "ບໍ່ສາມາດສຳເນົາລິ້ງບລັອກໄດ້",
+  "blockSettings.convertFailed": "ບໍ່ສາມາດປ່ຽນບລັອກນີ້ໄດ້. ລອງໃໝ່ອີກຄັ້ງ.",
   "popover.actions": "ການກະທຳ",
   "tools.link.keepTyping": "ພິມຕໍ່ໄປເພື່ອເພີ່ມລິ້ງ",
   "tools.link.emailAddress": "ທີ່ຢູ່ອີເມລ",

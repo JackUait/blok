@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "{count} blokken",
   "blockSettings.copyLinkSuccess": "Link gekopieerd naar klembord",
   "blockSettings.copyLinkError": "Kon link naar blok niet kopiëren",
+  "blockSettings.convertFailed": "Kon dit blok niet wijzigen. Probeer het opnieuw.",
   "popover.actions": "Acties",
   "tools.link.keepTyping": "Blijf typen om een link toe te voegen",
   "tools.link.emailAddress": "E-mailadres",

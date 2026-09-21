@@ -124,6 +124,26 @@ const peerTypes = (id: string, at: number, insert: string): void => {
   text.insert(at, insert);
 };
 
+/**
+ * The peer types `count` characters at the end of `id`'s text, one per
+ * microtask, delivering each to the editor as it lands — the shape of a peer
+ * typing into the same block while a local API call is mid-flight.
+ * @param id - block the peer is typing into
+ * @param at - offset the first character goes to
+ * @param count - how many characters to type
+ */
+const peerBurst = async (id: string, at: number, count: number): Promise<void> => {
+  for (let index = 0; index < count; index++) {
+    peerTypes(id, at + index, String(index));
+    deliverPeerUpdate();
+    await Promise.resolve();
+  }
+};
+
+/** Resolve to 'landed' or 'refused' without letting a rejection escape. */
+const settle = async (call: Promise<unknown>): Promise<'landed' | 'refused'> =>
+  call.then(() => 'landed' as const, () => 'refused' as const);
+
 describe('the programmatic Blocks API racing a remote peer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -180,7 +200,7 @@ describe('the programmatic Blocks API racing a remote peer', () => {
   });
 
   describe('blocks.update() while the peer\'s keystroke is reconciling', () => {
-    it.fails('writes the caller\'s text into the document', async () => {
+    it('writes the caller\'s text into the document', async () => {
       const instance = await boot(twoParagraphs());
 
       peerTypes('one', 5, 'X');
@@ -235,7 +255,7 @@ describe('the programmatic Blocks API racing a remote peer', () => {
   });
 
   describe('blocks.convert() while the peer\'s keystroke is reconciling', () => {
-    it.fails('writes the new tool type into the document', async () => {
+    it('writes the new tool type into the document', async () => {
       const instance = await boot(twoParagraphs());
 
       peerTypes('one', 5, 'Z');
@@ -340,7 +360,93 @@ describe('the programmatic Blocks API racing a remote peer', () => {
       expect(ids).toContain('peerblock');
     });
 
-    it('keeps the peer\'s characters when a local update touches another block', async () => {
+    describe('a local API call must not write back a snapshot the peer has moved past', () => {
+    const paragraphAndPeer = (): OutputData => ({
+      blocks: [
+        { id: 'one', type: 'paragraph', data: { text: 'alpha' } },
+        { id: 'two', type: 'paragraph', data: { text: 'beta' } },
+      ],
+    });
+
+    /**
+     * `convert()` read the source across two awaits and `replace()` wrote that
+     * snapshot back key by key. Every character the peer typed after the read
+     * was diffed away, and BOTH peers converged on the truncated string — the
+     * worst class of loss, because nothing looks wrong afterwards.
+     *
+     * A conversion is allowed to refuse (the block stays a paragraph). It is
+     * never allowed to shorten the peer's text.
+     */
+    for (const count of [1, 2, 4, 6, 8]) {
+      it(`keeps every one of the peer's ${count} characters through a convert()`, async () => {
+        const instance = await boot(paragraphAndPeer());
+
+        const burst = peerBurst('one', 5, count);
+        const outcome = settle(instance.blocks.convert('one', 'header'));
+
+        await burst;
+        const landed = await outcome;
+
+        await frame();
+        syncBothWays();
+
+        const expected = `alpha${Array.from({ length: count }, (_, index) => index).join('')}`;
+
+        // The defect assertion first: nothing the peer typed may be missing.
+        expect(textOf('peer', 'one')).toBe(expected);
+        expect(textOf('local', 'one')).toBe(expected);
+
+        // A refusal must be visible to the caller, never a resolved promise
+        // over a conversion that did not happen.
+        expect(blockOf('peer', 'one')?.type).toBe(landed === 'landed' ? 'header' : 'paragraph');
+      });
+    }
+
+    /**
+     * `update()` with a patch that does not mention `text` recomposed the Block
+     * from a snapshot that still carried the PRE-keystroke text. Re-rendering
+     * it made the MutationObserver sync that stale string back to Yjs, so a
+     * cosmetic `level` change deleted the peer's typing.
+     */
+    for (const count of [1, 2, 3, 5, 6, 8]) {
+      it(`keeps the peer's ${count} characters when update() changes only 'level'`, async () => {
+        const instance = await boot({
+          blocks: [{ id: 'h', type: 'header', data: { text: 'title', level: 2 } }],
+        });
+
+        const burst = peerBurst('h', 5, count);
+        const outcome = settle(instance.blocks.update('h', { level: 3 }));
+
+        await burst;
+        await outcome;
+        await frame();
+        syncBothWays();
+
+        const expected = `title${Array.from({ length: count }, (_, index) => index).join('')}`;
+
+        // The defect assertion first.
+        expect(textOf('peer', 'h')).toBe(expected);
+        expect((blockOf('peer', 'h')?.data as { level?: unknown }).level).toBe(3);
+      });
+    }
+
+    it('still converts when the peer pauses between keystrokes', async () => {
+      const instance = await boot(paragraphAndPeer());
+
+      peerTypes('one', 5, 'Z');
+      deliverPeerUpdate();
+      await frame();
+
+      await instance.blocks.convert('one', 'header');
+      await frame();
+      syncBothWays();
+
+      expect(textOf('peer', 'one')).toBe('alphaZ');
+      expect(blockOf('peer', 'one')?.type).toBe('header');
+    });
+  });
+
+  it('keeps the peer\'s characters when a local update touches another block', async () => {
       const instance = await boot(twoParagraphs());
 
       peerTypes('one', 5, 'S');

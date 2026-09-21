@@ -269,6 +269,7 @@
   "blockSettings.blocksSelected": "Bloki: {count}",
   "blockSettings.copyLinkSuccess": "Saite nokopēta starpliktuvē",
   "blockSettings.copyLinkError": "Neizdevās nokopēt saiti uz bloku",
+  "blockSettings.convertFailed": "Neizdevās mainīt šo bloku. Mēģiniet vēlreiz.",
   "popover.actions": "Darbības",
   "tools.link.keepTyping": "Turpiniet rakstīt, lai pievienotu saiti",
   "tools.link.emailAddress": "E-pasta adrese",

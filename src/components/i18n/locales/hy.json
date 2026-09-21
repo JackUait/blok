@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "Ընտրված է {count} բլոկ",
   "blockSettings.copyLinkSuccess": "Հղումը պատճենված է սեղմատախտակին",
   "blockSettings.copyLinkError": "Հնարավոր չէ պատճենել բլոկի հղումը",
+  "blockSettings.convertFailed": "Հնարավոր չէ փոխել այս բլոկը։ Փորձեք կրկին։",
   "popover.actions": "Գործողություններ",
   "tools.link.keepTyping": "Շարունակեք մուտքագրել՝ հղում ավելացնելու համար",
   "tools.link.emailAddress": "Էլ. հասցե",

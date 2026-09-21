@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "{count} block",
   "blockSettings.copyLinkSuccess": "Nakopya ang link sa clipboard",
   "blockSettings.copyLinkError": "Hindi makopya ang link ng block",
+  "blockSettings.convertFailed": "Hindi mabago ang block na ito. Subukan ulit.",
   "popover.actions": "Mga aksyon",
   "tools.link.keepTyping": "Magpatuloy sa pag-type para magdagdag ng link",
   "tools.link.emailAddress": "Email address",

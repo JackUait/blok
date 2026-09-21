@@ -1,5 +1,6 @@
 import type {
   API,
+  BlockAPI,
   BlockTool,
   BlockToolConstructorOptions,
   BlockToolData,
@@ -9,6 +10,7 @@ import type {
   ToolboxConfig,
 } from '../../../../types';
 import { IconLink } from '../../../components/icons';
+import { deliverToRebuiltBlock } from '../../image/detached-upload';
 import { isHttpUrl, setSafeLinkHref } from '../registry';
 import {
   MetadataFetcher,
@@ -33,13 +35,17 @@ const URL_PATTERN = /https?:\/\/\S+/;
  */
 export class Bookmark implements BlockTool {
   private readonly api: API;
+  private readonly block: BlockAPI;
   private readonly fetcher: MetadataFetcher;
   private data: BookmarkData;
   private state: ToolState;
   private root: HTMLElement | null = null;
+  /** Set by `removed()`: this instance is no longer the document's block. */
+  private detached = false;
 
   constructor(options: BlockToolConstructorOptions<BookmarkData, BookmarkConfig>) {
     this.api = options.api;
+    this.block = options.block;
     this.fetcher = new MetadataFetcher(options.config ?? { endpoint: '' });
     this.data = { ...options.data, url: options.data?.url ?? '' };
     this.state = this.data.url ? 'RENDERED' : 'EMPTY';
@@ -116,6 +122,10 @@ export class Bookmark implements BlockTool {
    */
   public setReadOnly(_state: boolean): void {}
 
+  public removed(): void {
+    this.detached = true;
+  }
+
   private startFetch(url: string): void {
     this.data = { url };
     this.state = 'LOADING';
@@ -123,6 +133,15 @@ export class Bookmark implements BlockTool {
     void this.fetcher
       .fetch(url)
       .then((meta) => {
+        // Nothing here dispatches a change: the card reaches the document only
+        // through the Block's MutationObserver on `renderState`. A rebuilt
+        // block has none — `Block.destroy()` disconnected it — so the fetched
+        // preview has to be written through the blocks API instead.
+        if (this.detached) {
+          deliverToRebuiltBlock(this.api, this.block, 'Bookmark', { ...meta });
+
+          return;
+        }
         this.data = { ...meta };
         this.state = 'RENDERED';
         this.renderState();

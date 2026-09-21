@@ -271,6 +271,7 @@
   "blockSettings.blocksSelected": "{count} بلۆک",
   "blockSettings.copyLinkSuccess": "بەستەر لە کلیپبۆردا کۆپی کرا",
   "blockSettings.copyLinkError": "نەتوانرا بەستەری بلۆک کۆپی بکرێت",
+  "blockSettings.convertFailed": "نەتوانرا ئەم بلۆکە بگۆڕدرێت. دووبارە هەوڵ بدەوە.",
   "popover.actions": "کردارەکان",
   "tools.link.keepTyping": "بۆ زیادکردنی بەستەر بەردەوام بە لە نووسین",
   "tools.link.emailAddress": "ناونیشانی ئیمەیڵ",

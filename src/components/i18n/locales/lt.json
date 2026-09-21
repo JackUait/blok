@@ -271,6 +271,7 @@
   "blockSettings.blocksSelected": "Blokų: {count}",
   "blockSettings.copyLinkSuccess": "Nuoroda nukopijuota į iškarpinę",
   "blockSettings.copyLinkError": "Nepavyko nukopijuoti nuorodos į bloką",
+  "blockSettings.convertFailed": "Nepavyko pakeisti šio bloko. Bandykite dar kartą.",
   "popover.actions": "Veiksmai",
   "tools.link.keepTyping": "Rašykite toliau, kad pridėtumėte nuorodą",
   "tools.link.emailAddress": "El. pašto adresas",

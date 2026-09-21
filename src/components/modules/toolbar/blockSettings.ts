@@ -18,6 +18,7 @@ import { getCaretOffset } from '../../utils/caret/selection';
 import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../utils/nested-container-caret';
 import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../../utils/blocks';
 import { buildConvertMenuEntries, buildConvertMenuItems } from '../../utils/convert-menu';
+import { runConvert } from '../../utils/convert-refusal';
 import type { PopoverItemParams, Popover } from '../../utils/popover';
 import { PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
 import { css as popoverItemCls } from '../../utils/popover/components/popover-item';
@@ -525,12 +526,18 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         }
 
         // Child-bearing blocks outdent their children during conversion.
-        const newBlock = await this.convertBlock(
-          currentBlock,
-          selectedBlocks,
-          hasMultipleBlocksSelected,
-          tool,
-          entry.data
+        // runConvert never rejects: the popover invokes this handler inside a
+        // SYNCHRONOUS try/catch, so a rejection would escape unhandled and
+        // Toolbar.close() below would never run.
+        const newBlock = await runConvert(
+          this.Blok.API.methods,
+          () => this.convertBlock(
+            currentBlock,
+            selectedBlocks,
+            hasMultipleBlocksSelected,
+            tool,
+            entry.data
+          )
         );
 
         Toolbar.close();

@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "{count} ብሎኮች ተመርጠዋል",
   "blockSettings.copyLinkSuccess": "አገናኝ ወደ ቅንጥብ ሰሌዳ ተገልብጧል",
   "blockSettings.copyLinkError": "የብሎክ አገናኝ መቅዳት አልተቻለም",
+  "blockSettings.convertFailed": "ይህን ብሎክ መቀየር አልተቻለም። እንደገና ይሞክሩ።",
   "popover.actions": "እርምጃዎች",
   "tools.link.keepTyping": "አገናኝ ለመጨመር መተየብ ይቀጥሉ",
   "tools.link.emailAddress": "የኢሜይል አድራሻ",

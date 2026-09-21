@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "{count}টি ব্লক",
   "blockSettings.copyLinkSuccess": "লিঙ্ক ক্লিপবোর্ডে কপি হয়েছে",
   "blockSettings.copyLinkError": "ব্লকের লিঙ্ক কপি করা যায়নি",
+  "blockSettings.convertFailed": "এই ব্লকটি পরিবর্তন করা যায়নি। আবার চেষ্টা করুন।",
   "popover.actions": "কাজসমূহ",
   "tools.link.keepTyping": "লিঙ্ক যোগ করতে টাইপ করতে থাকুন",
   "tools.link.emailAddress": "ইমেইল ঠিকানা",

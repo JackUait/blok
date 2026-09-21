@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "{count} lohkoa",
   "blockSettings.copyLinkSuccess": "Linkki kopioitu leikepöydälle",
   "blockSettings.copyLinkError": "Lohkon linkkiä ei voitu kopioida",
+  "blockSettings.convertFailed": "Tätä lohkoa ei voitu muuttaa. Yritä uudelleen.",
   "popover.actions": "Toiminnot",
   "tools.link.keepTyping": "Jatka kirjoittamista lisätäksesi linkin",
   "tools.link.emailAddress": "Sähköpostiosoite",

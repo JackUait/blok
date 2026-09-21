@@ -81,7 +81,7 @@ describe('concurrent array element pairing', () => {
     peer.destroy();
   });
 
-  it.fails('keeps a peer edit when the local save drops two rows and adds one at the front', () => {
+  it('keeps a peer edit when the local save drops two rows and adds one at the front', () => {
     const base = rows(3);
 
     seed(base);
@@ -98,7 +98,7 @@ describe('concurrent array element pairing', () => {
     expect(store.toJSON().find(block => block.id === 'grid1')?.data.rows).toHaveLength(2);
   });
 
-  it.fails('keeps a peer edit when the local save drops two rows and adds one at the end', () => {
+  it('keeps a peer edit when the local save drops two rows and adds one at the end', () => {
     const base = rows(3);
 
     seed(base);
@@ -112,7 +112,7 @@ describe('concurrent array element pairing', () => {
     expect(textOf(peer, 'k2')).toBe('PEER TYPED THIS');
   });
 
-  it.fails('keeps a peer edit when the local save drops the last two of four rows and adds one', () => {
+  it('keeps a peer edit when the local save drops the last two of four rows and adds one', () => {
     const base = rows(4);
 
     seed(base);
@@ -126,7 +126,7 @@ describe('concurrent array element pairing', () => {
     expect(textOf(peer, 'k1')).toBe('PEER TYPED THIS');
   });
 
-  it.fails('keeps the Y container of a row that survives an add-and-remove save', () => {
+  it('keeps the Y container of a row that survives an add-and-remove save', () => {
     const base = rows(3);
 
     seed(base);
@@ -138,6 +138,41 @@ describe('concurrent array element pairing', () => {
     // The whole element is re-created, which is why the peer's nested write
     // above goes with it — this is not a mis-pairing, it is a splice.
     expect(yRows(store).toArray()).toContain(survivor);
+  });
+
+  /**
+   * The counter-case to all four above, and the reason pass 4 may not simply
+   * stand down when the leftover counts differ: here the rank pair is the
+   * RIGHT one. One element is edited in place and another appended, so the
+   * similarity pass scores the edited element 0 against its own doc container
+   * — their only shared key is the one that changed — and refuses it. Pairing
+   * it by rank crosses nothing, and it is what keeps the container the peer is
+   * writing into.
+   *
+   * Ported from the .NET converter's
+   * `AnUnequalArrayMiddleKeepsTheContainerThatSurvives`, the lockstep
+   * counterpart of this walk.
+   */
+  it('keeps a peer write on an element the local save edited in place while appending another', () => {
+    type Cell = { a: string; b?: string };
+
+    const base: Cell[] = [{ a: '1' }, { a: '2' }, { a: '3' }];
+
+    store.addBlock({ id: 'grid1',
+      type: 'table',
+      data: { rows: clone(base) } });
+    peer.applyRemoteUpdate(store.encodeStateAsUpdate(peer.getStateVector()));
+
+    peer.updateBlockData('grid1', 'rows', [{ a: '1' }, { a: '2' }, { a: '3',
+      b: 'peer' }]);
+    store.updateBlockData('grid1', 'rows', [{ a: '1' }, { a: '2' }, { a: '3x' }, { a: '4' }]);
+
+    exchange();
+
+    const cells = store.toJSON().find(block => block.id === 'grid1')?.data.rows as Cell[];
+
+    expect(cells.find(cell => cell.a === '3x')?.b).toBe('peer');
+    expect(cells.map(cell => cell.a)).toEqual(['1', '2', '3x', '4']);
   });
 
   // Control: the same write WITHOUT the deletions pairs cleanly and keeps the

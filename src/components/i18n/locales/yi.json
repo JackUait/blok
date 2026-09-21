@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "{count} בלאקן",
   "blockSettings.copyLinkSuccess": "לינק קאפירט צום קלעמברעט",
   "blockSettings.copyLinkError": "קען נישט קאפירן בלאק לינק",
+  "blockSettings.convertFailed": "מען קען נישט ענדערן דעם בלאק. פרובירט נאך אמאל.",
   "popover.actions": "אקציעס",
   "tools.link.keepTyping": "שרײַב ווײַטער צו לייגן אַ לינק",
   "tools.link.emailAddress": "אימעיל אדרעס",

@@ -229,6 +229,14 @@ const createBlockManager = (
       // Reports "nothing pruned" so these tests keep asserting only the writes.
       pruneBlockData: vi.fn(() => false),
       updateBlockMetadata: vi.fn(() => true),
+      // The real in-flight token registration: BlockManager calls this around
+      // every data sync, so a mock without it would silently disable that path.
+      beginPendingBlockDataWrite: vi.fn(() => vi.fn()),
+      onPendingBlockWritesSettled: vi.fn((callback: () => void) => {
+        callback();
+
+        return vi.fn();
+      }),
       // Immediate flush reproduces pre-coalescing write timing for these tests.
       enqueueBlockDataWrite: vi.fn(
         (id: string, data: Record<string, unknown>, flush: (entries: ReadonlyMap<string, unknown>) => void) => {
@@ -1612,6 +1620,7 @@ describe('BlockManager', () => {
           updateBlockData: vi.fn(() => true),
           pruneBlockData: vi.fn(() => false),
           updateBlockMetadata: vi.fn(() => true),
+          beginPendingBlockDataWrite: vi.fn(() => vi.fn()),
           // Immediate flush reproduces pre-coalescing write timing.
           enqueueBlockDataWrite: vi.fn(
             (id: string, data: Record<string, unknown>, flush: (entries: ReadonlyMap<string, unknown>) => void) => {
@@ -1734,6 +1743,7 @@ describe('BlockManager', () => {
           updateBlockData: updateBlockDataMock,
           pruneBlockData: vi.fn(() => false),
           updateBlockMetadata: updateBlockMetadataMock,
+          beginPendingBlockDataWrite: vi.fn(() => vi.fn()),
           // Immediate flush reproduces pre-coalescing write timing.
           enqueueBlockDataWrite: vi.fn(
             (id: string, data: Record<string, unknown>, flush: (entries: ReadonlyMap<string, unknown>) => void) => {

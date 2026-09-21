@@ -269,6 +269,7 @@
   "blockSettings.blocksSelected": "Блокови: {count}",
   "blockSettings.copyLinkSuccess": "Врската е копирана во таблата со исечоци",
   "blockSettings.copyLinkError": "Не може да се копира врската до блокот",
+  "blockSettings.convertFailed": "Не може да се промени овој блок. Обидете се повторно.",
   "popover.actions": "Дејства",
   "tools.link.keepTyping": "Продолжете да пишувате за да додадете врска",
   "tools.link.emailAddress": "Адреса на е-пошта",

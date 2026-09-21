@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "{count} blok",
   "blockSettings.copyLinkSuccess": "Tautan disalin ke papan klip",
   "blockSettings.copyLinkError": "Tidak dapat menyalin tautan blok",
+  "blockSettings.convertFailed": "Tidak dapat mengubah blok ini. Coba lagi.",
   "popover.actions": "Tindakan",
   "tools.link.keepTyping": "Terus ketik untuk menambah tautan",
   "tools.link.emailAddress": "Alamat email",

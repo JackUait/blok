@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "{count} khối",
   "blockSettings.copyLinkSuccess": "Đã sao chép liên kết vào bộ nhớ tạm",
   "blockSettings.copyLinkError": "Không thể sao chép liên kết đến khối",
+  "blockSettings.convertFailed": "Không thể thay đổi khối này. Vui lòng thử lại.",
   "popover.actions": "Thao tác",
   "tools.link.keepTyping": "Tiếp tục nhập để thêm liên kết",
   "tools.link.emailAddress": "Địa chỉ email",

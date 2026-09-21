@@ -1,5 +1,5 @@
 import type { InlineTool, API } from '../../../types';
-import type { Blocks, Selection, Tools, Caret, I18n } from '../../../types/api';
+import type { Blocks, Selection, Tools, Caret, I18n, Notifier } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
 import { SelectionUtils } from '../selection/index';
 import type { BlockToolAdapter } from '../tools/block';
@@ -7,6 +7,7 @@ import { capitalize, isMobileScreen } from '../utils';
 import { getCaretOffset } from '../utils/caret/selection';
 import { getConvertibleToolsForBlock } from '../utils/blocks';
 import { buildConvertMenuEntries, buildConvertMenuItems, type ConvertMenuI18n } from '../utils/convert-menu';
+import { runConvert } from '../utils/convert-refusal';
 import { translateToolTitle, translateToolName } from '../utils/tools';
 
 /**
@@ -49,6 +50,11 @@ export class ConvertInlineTool implements InlineTool {
   private readonly caretAPI: Caret;
 
   /**
+   * Notifier API, used to report a conversion the document refused
+   */
+  private readonly notifierAPI: Notifier;
+
+  /**
    * @param api - Blok API
    */
   constructor({ api }: { api: API }) {
@@ -57,6 +63,7 @@ export class ConvertInlineTool implements InlineTool {
     this.selectionAPI = api.selection;
     this.toolsAPI = api.tools;
     this.caretAPI = api.caret;
+    this.notifierAPI = api.notifier;
 
     // Create wrapper that provides has()/getEnglishTranslation() for tool utilities.
     // Public API's t() returns the key itself when translation doesn't exist.
@@ -108,7 +115,17 @@ export class ConvertInlineTool implements InlineTool {
           return;
         }
 
-        const newBlock = await this.blocksAPI.convert(currentBlock.id, entry.toolName, entry.data);
+        // The popover calls this handler synchronously and drops the promise,
+        // so a rejected convert would escape unhandled.
+        const newBlock = await runConvert(
+          { notifier: this.notifierAPI,
+            i18n: this.i18nAPI },
+          () => this.blocksAPI.convert(currentBlock.id, entry.toolName, entry.data)
+        );
+
+        if (newBlock === null) {
+          return;
+        }
 
         this.caretAPI.setToBlock(newBlock, 'default', caretOffset);
       }

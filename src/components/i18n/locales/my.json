@@ -269,6 +269,7 @@
   "blockSettings.blocksSelected": "ဘလောက် {count} ခု",
   "blockSettings.copyLinkSuccess": "လင့်ခ်ကို ကလစ်ဘုတ်သို့ ကူးယူပြီးပါပြီ",
   "blockSettings.copyLinkError": "ဘလောက်လင့်ခ်ကို ကူးယူ၍မရပါ",
+  "blockSettings.convertFailed": "ဤဘလောက်ကို ပြောင်းလဲ၍မရပါ။ ထပ်မံကြိုးစားပါ။",
   "popover.actions": "လုပ်ဆောင်ချက်များ",
   "tools.link.keepTyping": "လင့်ခ်ထည့်ရန် ဆက်လက်ရိုက်ပါ",
   "tools.link.emailAddress": "အီးမေးလ်လိပ်စာ",

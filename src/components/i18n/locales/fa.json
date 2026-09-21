@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "{count} بلوک",
   "blockSettings.copyLinkSuccess": "پیوند در کلیپ‌بورد کپی شد",
   "blockSettings.copyLinkError": "کپی پیوند بلوک ممکن نشد",
+  "blockSettings.convertFailed": "تغییر این بلوک ممکن نشد. دوباره تلاش کنید.",
   "popover.actions": "اقدامات",
   "tools.link.keepTyping": "برای افزودن پیوند تایپ را ادامه دهید",
   "tools.link.emailAddress": "نشانی ایمیل",

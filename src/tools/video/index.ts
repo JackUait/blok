@@ -30,6 +30,7 @@ import { renderUploadingState, type UploadingStateElement } from '../image/uploa
 import { DEFAULT_CAPTION_PLACEHOLDER, MIN_WIDTH_PX, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { tr } from './i18n';
+import { deliverToRebuiltBlock, releaseObjectUrl } from '../image/detached-upload';
 import { renderCaptionRow, renderVideo } from './ui';
 import { attachControls, type ControlsHandle } from './controls';
 import { Uploader, VideoUploadError, type UploadResult } from './uploader';
@@ -56,6 +57,8 @@ export class VideoTool implements BlockTool {
   private controlsHandle: ControlsHandle | null = null;
   // Ephemeral theater (cinema-width) state — presentation only, never saved.
   private theater = false;
+  /** Set by `removed()`: this instance is no longer the document's block. */
+  private detached = false;
 
   constructor(options: BlockToolConstructorOptions<VideoData, VideoConfig>) {
     this.api = options.api;
@@ -238,12 +241,11 @@ export class VideoTool implements BlockTool {
   }
 
   public removed(): void {
+    this.detached = true;
     this.detachResize();
     this.controlsHandle?.destroy();
     this.controlsHandle = null;
-    if (this.data.url.startsWith('blob:')) {
-      URL.revokeObjectURL(this.data.url);
-    }
+    releaseObjectUrl(this.api, this.block.id, this.data.url);
   }
 
   private startUpload(file: File): void {
@@ -269,6 +271,16 @@ export class VideoTool implements BlockTool {
   }
 
   private applyResult(result: UploadResult, mimeType?: string): void {
+    if (this.detached) {
+      const delta: Partial<VideoData> = { url: result.url };
+      const fileName = result.fileName ?? this.lastFileName;
+
+      if (fileName !== null && fileName !== undefined) delta.fileName = fileName;
+      if (mimeType) delta.mimeType = mimeType;
+      deliverToRebuiltBlock(this.api, this.block, 'Video', delta);
+
+      return;
+    }
     this.data = {
       ...this.data,
       url: result.url,

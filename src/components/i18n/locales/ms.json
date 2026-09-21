@@ -269,6 +269,7 @@
   "blockSettings.blocksSelected": "{count} blok",
   "blockSettings.copyLinkSuccess": "Pautan disalin ke papan keratan",
   "blockSettings.copyLinkError": "Tidak dapat menyalin pautan ke blok",
+  "blockSettings.convertFailed": "Tidak dapat menukar blok ini. Cuba lagi.",
   "popover.actions": "Tindakan",
   "tools.link.keepTyping": "Terus menaip untuk menambah pautan",
   "tools.link.emailAddress": "Alamat e-mel",

@@ -1489,7 +1489,7 @@ describe('TableModel splitCell', () => {
     expect(model.getMergeOrigin(0, 1)).toEqual([0, 0]);
   });
 
-  it('empties a covered cell that still holds blocks and styling', () => {
+  it('empties a covered cell of its styling and rescues the blocks it held', () => {
     const model = new TableModel(makeData({ content: [[
       { blocks: ['a'], colspan: 2 },
       { blocks: ['x'], mergedInto: [0, 0], color: '#abc', textColor: '#123', placement: 'middle-center' },
@@ -1497,8 +1497,8 @@ describe('TableModel splitCell', () => {
 
     model.splitCell(0, 0);
 
+    expect(model.findCellForBlock('x')).toEqual({ row: 0, col: 0 });
     expect(model.getCellBlocks(0, 1)).toEqual([]);
-    expect(model.findCellForBlock('x')).toBeNull();
     expect(model.getCellColor(0, 1)).toBeUndefined();
     expect(model.getCellTextColor(0, 1)).toBeUndefined();
     expect(model.getCellPlacement(0, 1)).toBeUndefined();
@@ -1774,7 +1774,7 @@ describe('TableModel canMergeCells boundaries', () => {
 });
 
 describe('TableModel mergeCells flattening', () => {
-  it('drops blocks sitting in a covered cell of a nested merge', () => {
+  it('keeps blocks sitting in a covered cell of a nested merge', () => {
     const model = new TableModel(makeData({ content: [
       [{ blocks: ['a'] }, { blocks: ['n1'], colspan: 2 }, { blocks: ['ghost1'], mergedInto: [0, 1] }],
       [{ blocks: ['n2'], rowspan: 2 }, { blocks: ['x'] }, { blocks: ['y'] }],
@@ -1783,9 +1783,9 @@ describe('TableModel mergeCells flattening', () => {
 
     model.mergeCells({ minRow: 0, maxRow: 2, minCol: 0, maxCol: 2 });
 
-    expect(model.findCellForBlock('ghost1')).toBeNull();
-    expect(model.findCellForBlock('ghost2')).toBeNull();
-    expect(model.getCellBlocks(0, 0)).toEqual(['a', 'n1', 'n2', 'x', 'y', 'z', 'w']);
+    expect(model.getCellBlocks(0, 0)).toEqual(['a', 'n1', 'ghost1', 'n2', 'ghost2', 'x', 'y', 'z', 'w']);
+    expect(model.findCellForBlock('ghost1')).toEqual({ row: 0, col: 0 });
+    expect(model.findCellForBlock('ghost2')).toEqual({ row: 0, col: 0 });
     expect(model.getCellSpan(0, 0)).toEqual({ colspan: 3, rowspan: 3 });
     expect(() => model.validateInvariants()).not.toThrow();
   });
@@ -1798,8 +1798,8 @@ describe('TableModel mergeCells flattening', () => {
 
     model.mergeCells({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
 
-    expect(model.findCellForBlock('ghost')).toBeNull();
-    expect(model.getCellBlocks(0, 0)).toEqual(['a']);
+    expect(model.getCellBlocks(0, 0)).toEqual(['a', 'ghost']);
+    expect(model.findCellForBlock('ghost')).toEqual({ row: 0, col: 0 });
     expect(model.getCellSpan(0, 0)).toEqual({ colspan: 2, rowspan: 1 });
   });
 
@@ -1812,8 +1812,8 @@ describe('TableModel mergeCells flattening', () => {
 
     model.mergeCells({ minRow: 0, maxRow: 2, minCol: 0, maxCol: 0 });
 
-    expect(model.findCellForBlock('ghost')).toBeNull();
-    expect(model.getCellBlocks(0, 0)).toEqual(['a', 'b']);
+    expect(model.getCellBlocks(0, 0)).toEqual(['a', 'ghost', 'b']);
+    expect(model.findCellForBlock('ghost')).toEqual({ row: 0, col: 0 });
     expect(model.getCellSpan(0, 0)).toEqual({ colspan: 1, rowspan: 3 });
   });
 });

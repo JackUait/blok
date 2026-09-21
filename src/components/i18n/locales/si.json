@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "{count} කොටස්",
   "blockSettings.copyLinkSuccess": "සබැඳිය පසුරු පුවරුවට පිටපත් කළා",
   "blockSettings.copyLinkError": "කොටසේ සබැඳිය පිටපත් කළ නොහැකි විය",
+  "blockSettings.convertFailed": "මෙම කොටස වෙනස් කළ නොහැකි විය. නැවත උත්සාහ කරන්න.",
   "popover.actions": "ක්‍රියා",
   "tools.link.keepTyping": "සබැඳියක් එක් කිරීමට ටයිප් කරගෙන සිටින්න",
   "tools.link.emailAddress": "ඊමේල් ලිපිනය",

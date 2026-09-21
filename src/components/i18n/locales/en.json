@@ -271,6 +271,7 @@
   "blockSettings.blocksSelected": "{count} blocks",
   "blockSettings.copyLinkSuccess": "Link copied to clipboard",
   "blockSettings.copyLinkError": "Could not copy link to block",
+  "blockSettings.convertFailed": "Could not change this block. Try again.",
   "popover.actions": "Actions",
   "tools.link.keepTyping": "Keep typing to add a link",
   "tools.link.emailAddress": "Email address",

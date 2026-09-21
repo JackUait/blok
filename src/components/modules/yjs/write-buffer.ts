@@ -45,6 +45,12 @@ export class BlockWriteBuffer {
   private isDispatching = false;
 
   /**
+   * Set by `destroy()`: the document is gone, so a late write is dropped
+   * instead of being applied to a destroyed doc nobody observes.
+   */
+  private isDestroyed = false;
+
+  /**
    * Called after a TRAILING dispatch that WROTE, with the typing time it
    * carries. A trailing flush lands up to `windowMs` after that typing —
    * without re-anchoring, the undo captureTimeout would measure the gap to
@@ -78,6 +84,10 @@ export class BlockWriteBuffer {
    * @param flush - callback that performs the actual Yjs writes
    */
   public enqueue(blockId: string, data: Record<string, unknown>, flush: BufferedBlockWriteFlush): void {
+    if (this.isDestroyed) {
+      return;
+    }
+
     const openWindow = this.windows.get(blockId);
 
     if (openWindow !== undefined) {
@@ -113,15 +123,48 @@ export class BlockWriteBuffer {
       return;
     }
 
+    const writeTimes: Array<number | null> = [];
+    const failures: unknown[] = [];
+
     // Windows are iterated in CREATION order, so the rewind target is the max,
     // not the last one closed. Snapshot the keys first: closeWindow deletes.
-    const writeTimes = Array.from(this.windows.keys())
-      .map((blockId) => this.closeWindow(blockId))
-      .filter((wroteAt): wroteAt is number => wroteAt !== null);
-
-    if (writeTimes.length > 0) {
-      this.trailingFlushListener?.(Math.max(...writeTimes));
+    // Every window gets its chance even when an earlier flush throws: this is
+    // the teardown barrier, so a window skipped here is a block's last edit
+    // lost, plus a trailing timer left to fire against a dead document.
+    for (const blockId of Array.from(this.windows.keys())) {
+      try {
+        writeTimes.push(this.closeWindow(blockId));
+      } catch (error) {
+        failures.push(error);
+      }
     }
+
+    const wroteAt = writeTimes.filter((time): time is number => time !== null);
+
+    if (wroteAt.length > 0) {
+      this.trailingFlushListener?.(Math.max(...wroteAt));
+    }
+
+    if (failures.length === 1) {
+      throw failures[0];
+    }
+
+    if (failures.length > 1) {
+      throw new AggregateError(failures, 'Buffered block writes failed to flush');
+    }
+  }
+
+  /**
+   * Teardown: cancel every trailing timer and reject later enqueues.
+   *
+   * Called by `YjsManager.destroy` AFTER its final `flushAll`, so a write that
+   * resolves once the document is gone neither lands on a destroyed doc nor
+   * arms a 400ms timer that outlives the editor.
+   */
+  public destroy(): void {
+    this.windows.forEach((openWindow) => clearTimeout(openWindow.timer));
+    this.windows.clear();
+    this.isDestroyed = true;
   }
 
   /**

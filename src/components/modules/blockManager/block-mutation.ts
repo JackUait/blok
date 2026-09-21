@@ -13,7 +13,7 @@ import { isEmpty, isObject, isString, log } from '../../utils';
 import { announce } from '../../utils/announcer';
 import { convertStringToBlockData, isBlockConvertable } from '../../utils/blocks';
 import { isChildToolAllowed } from '../../utils/child-tools';
-import { sanitizeBlocks, clean, composeSanitizerConfig } from '../../utils/sanitizer';
+import { sanitizeBlocks, clean, composeSanitizerConfig, stripUnsafeUrlsDeep } from '../../utils/sanitizer';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
 import { getBlockNestingDepth } from '../drag/utils/depthUtils';
@@ -23,6 +23,29 @@ import type { BlockRepository } from './repository';
 import type { BlockDidMutated, BlockOperationsDependencies, OperationsContext } from './operations-context';
 import type { BlocksStore } from './types';
 import type { BlockYjsSync } from './yjs-sync';
+
+/**
+ * The CHARACTERS a stored HTML string renders as, with entity spellings and
+ * tags removed.
+ *
+ * Parsed through a `<template>`, whose content lives in an inert document: an
+ * `<img src=x onerror=…>` in a peer's payload never loads here (the
+ * detached-innerHTML parse DOES fire it, which is why this is not a plain
+ * `div`).
+ * @param value - a stored HTML string
+ * @returns its text content, or the value itself when there is nothing to parse
+ */
+const textContentOf = (value: string): string => {
+  if (typeof document === 'undefined' || (!value.includes('<') && !value.includes('&'))) {
+    return value;
+  }
+
+  const template = document.createElement('template');
+
+  template.innerHTML = value;
+
+  return template.content.textContent ?? '';
+};
 
 /**
  * Handles in-place mutations of existing blocks: data/tune updates, tool
@@ -75,29 +98,34 @@ export class BlockMutation {
       return block;
     }
 
-    const existingData = await block.data;
+    /**
+     * Snapshot the document's own copy of the data BEFORE any await, so the
+     * keys a peer changes while we read can be told apart from the keys that
+     * were already there. See `composeWrite`.
+     */
+    const before = this.readDocumentData(block.id);
 
     /**
      * Layer 16: stale-source guard (regression: wrong-block-dropped family).
      *
-     * `await block.data` is async — during that await, `block` can be removed
+     * Reading the data is async — during that await, `block` can be removed
      * by a Yjs remote delete, undo/redo, or tool conversion. When that happens
-     * `getBlockIndex(block)` returns -1 and `blocksStore.replace(-1, newBlock)`
-     * throws `Incorrect index`, aborting the surrounding batch mid-flight and
-     * leaving the flat blocks array inconsistent with the DOM — exactly the
-     * stale-state condition that lets drag drop an unrelated block.
+     * `blocksStore.replace(-1, newBlock)` throws `Incorrect index`, aborting
+     * the surrounding batch mid-flight and leaving the flat blocks array
+     * inconsistent with the DOM — exactly the stale-state condition that lets
+     * drag drop an unrelated block.
      *
      * Abort cleanly: return the original block with no mutation or Yjs side
-     * effects. Revalidate AFTER the await, not before, so the guard covers
-     * the full async gap.
+     * effects. `readLive` revalidates AFTER the await, not before, so the guard
+     * covers the full async gap — and revalidates by ID, see `resolveLive`.
      */
-    const blockIndex = this.repository.getBlockIndex(block);
+    const source = await this.readLive(block);
 
-    if (blockIndex === -1) {
+    if (source === null) {
       return block;
     }
 
-    const mergedData = Object.assign({}, existingData, data ?? {});
+    const liveBlock = source.block;
 
     /**
      * Prefer the Tool's own in-place update over recomposing the Block.
@@ -118,41 +146,58 @@ export class BlockMutation {
      * `block.setData` — every Block has that method, and its innerHTML fallback
      * would silently swallow updates for tools that implement nothing.
      */
-    if (tunes === undefined && block.tool.supportsInPlaceSetData && await block.setData(mergedData)) {
+    // `composeWrite` is evaluated by the short-circuit, so it runs
+    // synchronously one statement before `setData` writes the Tool's DOM.
+    const appliedInPlace = tunes === undefined
+      && liveBlock.tool.supportsInPlaceSetData
+      && await liveBlock.setData(this.composeWrite(block.id, liveBlock.name, source.data, before, data));
+
+    if (appliedInPlace) {
       /**
        * `await block.setData` runs TOOL code, so it reopens the stale-source
-       * window the guard above closes: re-read the index and abort silently
+       * window the guard above closes: resolve again and abort silently only
        * when the block was removed while the Tool applied the data.
        */
-      const currentIndex = this.repository.getBlockIndex(block);
+      const applied = this.resolveLive(block);
 
-      if (currentIndex === -1) {
+      if (applied === null) {
         return block;
       }
 
-      this.blockDidMutated(BlockChangedMutationType, block, {
-        index: currentIndex,
+      this.blockDidMutated(BlockChangedMutationType, applied.block, {
+        index: applied.index,
       });
 
       this.syncDataToYjs(block.id, data);
 
+      return applied.block;
+    }
+
+    // `setData` above is awaited whenever the tool declares it, so the index
+    // must be resolved once more before it drives `blocksStore.replace`.
+    const target = this.resolveLive(block);
+
+    if (target === null) {
       return block;
     }
 
+    // Composed synchronously, immediately before the write — see `composeWrite`.
+    const mergedData = this.composeWrite(block.id, target.block.name, source.data, before, data);
+
     const newBlock = this.factory.composeBlock({
-      id: block.id,
-      tool: block.name,
+      id: target.block.id,
+      tool: target.block.name,
       data: mergedData,
-      tunes: tunes ?? block.preservedTunes,
-      parentId: block.parentId ?? undefined,
-      contentIds: block.contentIds.length > 0 ? [...block.contentIds] : undefined,
+      tunes: tunes ?? target.block.preservedTunes,
+      parentId: target.block.parentId ?? undefined,
+      contentIds: target.block.contentIds.length > 0 ? [...target.block.contentIds] : undefined,
       bindEventsImmediately: true,
     });
 
-    blocksStore.replace(blockIndex, newBlock);
+    blocksStore.replace(target.index, newBlock);
 
     this.blockDidMutated(BlockChangedMutationType, newBlock, {
-      index: blockIndex,
+      index: target.index,
     });
 
     this.syncDataToYjs(block.id, data);
@@ -165,6 +210,208 @@ export class BlockMutation {
     }
 
     return newBlock;
+  }
+
+  /**
+   * Read a block's data as the SHARED DOCUMENT currently holds it, without
+   * flushing anything. Synchronous, so a value read here cannot go stale
+   * before the caller's next synchronous statement: a peer's update reaches
+   * the document through `applyRemoteUpdate`, which can only run between
+   * tasks.
+   * @param blockId - id of the block to read
+   * @returns the block's data as a plain object, or undefined when the document has no such block
+   */
+  private readDocumentData(blockId: string): Record<string, unknown> | undefined {
+    const yblock = this.dependencies.YjsManager.getBlockById(blockId);
+    const yData = yblock?.get('data');
+
+    return yData === undefined || yData === null
+      ? undefined
+      : this.dependencies.YjsManager.yMapToObject(yData as Parameters<typeof this.dependencies.YjsManager.yMapToObject>[0]);
+  }
+
+  /**
+   * Keys of `blockId` whose value in the shared document CHANGED since
+   * `before` was snapshotted, with their current values.
+   *
+   * This sees EVERY write that reached the document, not only a peer's: this
+   * client's own write-buffer flush landing between the two snapshots shows up
+   * here exactly like a remote keystroke, because nothing in a Y.Map read says
+   * who wrote it. So drift means "the document moved", never "a peer typed" —
+   * whoever needs to tell those apart must compare CONTENT, as
+   * {@link readCarriesDocumentContent} does, not merely observe a change.
+   * @param blockId - id of the block to compare
+   * @param before - snapshot taken before the awaits (see `readDocumentData`)
+   * @returns the changed keys and their current values; empty when nothing drifted
+   */
+  private documentDrift(blockId: string, before: Record<string, unknown> | undefined): Record<string, unknown> {
+    const after = this.readDocumentData(blockId);
+
+    if (before === undefined || after === undefined) {
+      return {};
+    }
+
+    const drift: Record<string, unknown> = {};
+
+    for (const key of Object.keys(after)) {
+      if (JSON.stringify(after[key]) !== JSON.stringify(before[key])) {
+        drift[key] = after[key];
+      }
+    }
+
+    return drift;
+  }
+
+  /**
+   * Build the data an API call is about to WRITE, so it carries only what the
+   * caller asked to change.
+   *
+   * `snapshot` was read across an await, so every key in it may predate a
+   * peer's keystroke. Writing it back — into the Tool's DOM, which the
+   * MutationObserver then syncs key by key — is what DELETED the peer's
+   * characters: the minimal Y.Text diff turns a stale string into a deletion.
+   *
+   * So the keys the caller did NOT name are refreshed from the document right
+   * here, synchronously, one statement before the write. That closes the
+   * window rather than narrowing it: nothing can land between this read and
+   * the write, because a remote update only arrives between tasks. The
+   * caller's own keys always win — those are the ones it means to change.
+   *
+   * A key the document DROPPED counts as a refresh too. It is absent from the
+   * post-await read, so an overlay alone would write the snapshot's stale copy
+   * back and resurrect it — and `pruneBlockData`/`deepAssignYMap` really do
+   * delete keys. Dropping it here is what makes "closes the window" true for
+   * deletion as well as for mutation.
+   * @param blockId - id of the block being written
+   * @param tool - tool the composed data will be rendered with (drives sanitize)
+   * @param snapshot - the data as read across the await
+   * @param before - document snapshot taken before that await
+   * @param patch - the keys the caller asked to change
+   * @returns data safe to hand to `setData`/`composeBlock`
+   */
+  private composeWrite(
+    blockId: string,
+    tool: string,
+    snapshot: BlockToolData,
+    before: Record<string, unknown> | undefined,
+    patch?: Partial<BlockToolData>
+  ): BlockToolData {
+    const drift = this.documentDrift(blockId, before);
+    const composed = Object.assign({}, snapshot, this.sanitizeDocumentData(tool, drift), patch ?? {});
+    const dropped = new Set(
+      this.documentDeletions(blockId, before).filter((key) => patch === undefined || !(key in patch))
+    );
+
+    return Object.fromEntries(
+      Object.entries(composed).filter(([key]) => !dropped.has(key))
+    );
+  }
+
+  /**
+   * Keys `blockId` HAD in the shared document when `before` was snapshotted and
+   * no longer has.
+   *
+   * Separate from {@link documentDrift} because a removal has no value to
+   * overlay — the only way to honour it is to drop the key.
+   * @param blockId - id of the block to compare
+   * @param before - snapshot taken before the awaits (see `readDocumentData`)
+   * @returns the removed keys; empty when either snapshot is missing
+   */
+  private documentDeletions(blockId: string, before: Record<string, unknown> | undefined): string[] {
+    const after = this.readDocumentData(blockId);
+
+    if (before === undefined || after === undefined) {
+      return [];
+    }
+
+    return Object.keys(before).filter((key) => !(key in after));
+  }
+
+  /**
+   * Launder values read straight out of the shared document before they reach
+   * a Tool's render.
+   *
+   * Mirror of `BlockYjsSync.sanitizeToolData` / `Renderer.sanitizeToolData`:
+   * every other document->DOM path runs the tool's sanitize config plus the
+   * global one, then the URL-scheme pass. The document is peer-writable, so a
+   * raw value overlaid here would render a hostile peer's markup — the same
+   * payload the reconciler strips on every other path.
+   *
+   * Bare url-ish VALUES (`data.url = 'javascript:…'`) are deliberately not
+   * touched, exactly as on those paths: `stripUnsafeUrls` only rewrites
+   * `href`/`src` inside markup, and the tools that render a stored url guard
+   * the scheme themselves (`src/tools/file/url.ts`, `link/bookmark`,
+   * `image/download.ts`). Diverging here would make one write path strip data
+   * the document keeps everywhere else.
+   * @param tool - tool name the data will be rendered with
+   * @param data - values read from the shared document
+   * @returns the same keys, safe to render
+   */
+  private sanitizeDocumentData(tool: string, data: Record<string, unknown>): BlockToolData {
+    const toolSanitizeConfig = this.factory.getTool(tool)?.sanitizeConfig;
+
+    const [sanitized] = sanitizeBlocks(
+      [{ tool,
+        data }],
+      () => toolSanitizeConfig,
+      this.dependencies.config.sanitizer
+    );
+
+    return stripUnsafeUrlsDeep(sanitized.data, toolSanitizeConfig);
+  }
+
+  /**
+   * Resolve the Block instance for `block.id` that is CURRENTLY in the store,
+   * with its index.
+   *
+   * Every re-read after an `await` must go through here instead of
+   * `getBlockIndex(block)`. That lookup is by OBJECT IDENTITY, and the Yjs
+   * reconciler REPLACES a Block (same id, a brand-new instance) when it applies
+   * a peer's keystroke — so "the peer deleted this block" and "the peer typed a
+   * character" both read as -1, and the caller's `update()`/`convert()` was
+   * silently discarded. Only an id that is gone from the store is a removal.
+   * @param block - the possibly stale Block reference the caller passed in
+   * @returns the live Block and its index, or null when the id left the store
+   */
+  private resolveLive(block: Block): { block: Block; index: number } | null {
+    const live = this.repository.getBlockById(block.id) ?? block;
+    const index = this.repository.getBlockIndex(live);
+
+    return index === -1 ? null : { block: live,
+      index };
+  }
+
+  /**
+   * Read the data of the instance that is CURRENTLY in the store for
+   * `block.id`, together with that instance and its index.
+   *
+   * The read itself is the staleness window: when the reconciler swaps the
+   * Block while it resolves, the value read belongs to the PRE-swap instance
+   * and predates the peer's edit, so it is read again from the survivor. That
+   * second read reopens the same window, hence the final resolve.
+   * @param block - the possibly stale Block reference the caller passed in
+   * @returns the live Block, its index and its data, or null when the id left the store
+   */
+  private async readLive(block: Block): Promise<{ block: Block; index: number; data: BlockToolData } | null> {
+    const initialData = await block.data;
+    const first = this.resolveLive(block);
+
+    if (first === null) {
+      return null;
+    }
+
+    if (first.block === block) {
+      return { ...first,
+        data: initialData };
+    }
+
+    const refreshedData = await first.block.data;
+    const settled = this.resolveLive(block);
+
+    return settled === null
+      ? null
+      : { ...settled,
+        data: refreshedData };
   }
 
   /**
@@ -191,8 +438,6 @@ export class BlockMutation {
    * @param blocksStore - The blocks store to modify
    */
   public replace(block: Block, newTool: string, data: BlockToolData, blocksStore: BlocksStore): Block {
-    const blockIndex = this.repository.getBlockIndex(block);
-
     /**
      * Layer 16: stale-source guard (regression: wrong-block-dropped family).
      *
@@ -204,11 +449,15 @@ export class BlockMutation {
      *
      * Abort cleanly: return the original block with no Yjs or DOM side
      * effects. The caller (conversion dropdown, paste) already tolerates a
-     * no-op outcome for a destroyed source.
+     * no-op outcome for a destroyed source. Resolve by ID — see `resolveLive`.
      */
-    if (blockIndex === -1) {
+    const source = this.resolveLive(block);
+
+    if (source === null) {
       return block;
     }
+
+    const { block: liveBlock, index: blockIndex } = source;
 
     /**
      * Preserve the ORIGINAL block id across the replacement.
@@ -219,11 +468,11 @@ export class BlockMutation {
      * here silently broke every id-keyed reference the moment a block changed
      * type. Keeping the id keeps those anchors intact.
      */
-    const newBlockId = block.id;
+    const newBlockId = liveBlock.id;
 
     // Capture hierarchy before replacement
-    const oldParentId = block.parentId;
-    const oldContentIds = [...block.contentIds];
+    const oldParentId = liveBlock.parentId;
+    const oldContentIds = [...liveBlock.contentIds];
 
     /**
      * Mutate the block's TYPE and DATA in place on the SAME Yjs entry (one
@@ -269,7 +518,7 @@ export class BlockMutation {
     // Capture the old index first, then run setBlockParent, then move the new
     // id back into the captured slot and drop the (now-stale) old id.
     if (oldParentId !== null) {
-      this.ctx.transferParentLinkToNewBlock(block.id, newBlock, oldParentId);
+      this.ctx.transferParentLinkToNewBlock(liveBlock.id, newBlock, oldParentId);
     }
 
     /**
@@ -309,6 +558,116 @@ export class BlockMutation {
         this.hierarchy.setBlockParent(childBlock, newParentId);
       }
     }
+  }
+
+  /**
+   * Read a convert source (saved data + exported string) through the instance
+   * that is CURRENTLY in the document, and only return a read the document
+   * did not move under.
+   *
+   * Both reads are async. If a peer types during them, the exported string
+   * predates that keystroke — and `replace()` writes the converted data back
+   * key by key, where the minimal Y.Text diff DELETES the peer's characters.
+   * Re-reading from the survivor narrows that window but never closes it, so
+   * the read is instead VALIDATED: it is accepted only when the document's
+   * copy of the block is byte-identical before and after. A drifted read is
+   * retried against the fresh text, which is the conversion re-run on what the
+   * peer actually typed.
+   *
+   * Returns null when the budget runs out — a peer typing without pause must
+   * not spin here, and the caller must FAIL CLOSED rather than convert a stale
+   * snapshot.
+   * @param block - the source Block as last resolved
+   * @param attemptsLeft - how many more times a drifted read may be retried
+   * @returns the instance the data belongs to, its saved data, its exported string and the document snapshot the read was validated against; null when no read settled
+   */
+  private async readConvertSource(block: Block, origin: Record<string, unknown> | undefined, attemptsLeft: number): Promise<{
+    block: Block;
+    saved: Awaited<ReturnType<Block['save']>>;
+    exported: string;
+    snapshot: Record<string, unknown> | undefined;
+  } | null> {
+    const before = this.readDocumentData(block.id);
+    const saved = await block.save();
+    const exported = await block.exportDataAsString();
+    const live = this.repository.getBlockById(block.id) ?? block;
+    const after = this.readDocumentData(block.id);
+
+    /**
+     * Three staleness signals, and ALL must be clear:
+     *
+     * - the instance was SWAPPED — the reconciler replaced this Block while we
+     *   read, so what `save()` returned predates the peer's keystroke;
+     * - the DOCUMENT drifted DURING the read — something landed after `before`
+     *   was taken, and the read straddles it;
+     * - the read no longer CARRIES the document's content while the document
+     *   has moved since the operation began. A remote keystroke reaches the
+     *   shared document first and the DOM only when the reconciler gets to it,
+     *   so `save()` can be a character behind with no swap and no drift to show
+     *   for it — that is how `convert()` wrote back a truncated string and both
+     *   peers converged on it.
+     *
+     * The last check is gated on `origin`: when nothing has touched this block
+     * in the document since the operation began, the DOM is authoritative (a
+     * local edit not yet flushed legitimately leads the document, and must not
+     * be thrown away).
+     */
+    const documentMoved = !isEmpty(this.documentDrift(block.id, origin));
+    const readIsFresh = !documentMoved || this.readCarriesDocumentContent(saved?.data, after);
+
+    if (live === block && isEmpty(this.documentDrift(block.id, before)) && readIsFresh) {
+      return { block: live,
+        saved,
+        exported,
+        snapshot: after };
+    }
+
+    if (attemptsLeft <= 0) {
+      return null;
+    }
+
+    return this.readConvertSource(live, origin, attemptsLeft - 1);
+  }
+
+  /**
+   * Whether data read out of a Tool still carries the CONTENT the shared
+   * document holds for the keys they have in common. Keys the Tool did not
+   * save are ignored — a `save()` may legitimately omit defaults the document
+   * still carries.
+   *
+   * Strings are compared as TEXT, not as markup: `a & b` and `a &amp; b` are
+   * the same characters, and the DOM and the document legitimately disagree on
+   * that spelling for every host-seeded block (see the note on
+   * `rewrittenFromDocument` in yjs-sync.ts). Requiring byte equality made this
+   * gate fire on a spelling difference and refuse a convert nobody was racing.
+   * Everything that is not a string is compared whole.
+   *
+   * FAILURE MODE, deliberate: a peer edit that changes only MARKUP and no
+   * characters — bolding a word, retargeting a link — reads as agreement, so a
+   * convert may proceed and carry the pre-edit markup. That trades a
+   * markup-only revert for not refusing every convert on a collaborative
+   * document; character loss, which is silent and unrecoverable, still refuses.
+   * @param saved - data as the Tool's `save()` returned it
+   * @param document - the block's data as the shared document holds it
+   * @returns true when nothing they share has moved past the read
+   */
+  private readCarriesDocumentContent(saved: BlockToolData | undefined, document: Record<string, unknown> | undefined): boolean {
+    if (saved === undefined || document === undefined) {
+      return true;
+    }
+
+    return Object.keys(document).every((key) => {
+      if (!(key in saved)) {
+        return true;
+      }
+
+      const mine = saved[key];
+      const theirs = document[key];
+
+      return isString(mine) && isString(theirs)
+        ? textContentOf(mine) === textContentOf(theirs)
+        : JSON.stringify(mine) === JSON.stringify(theirs);
+    });
   }
 
   /**
@@ -586,11 +945,9 @@ export class BlockMutation {
      * Verify both blocks are still in the store before starting and also before
      * each mutation step so a remote delete during any of the awaits aborts
      * cleanly rather than propagating the stale reference into Yjs and the DOM.
+     * Verify by ID and work through the resolved instances — see `resolveLive`.
      */
-    if (
-      this.repository.getBlockIndex(targetBlock) === -1 ||
-      this.repository.getBlockIndex(blockToMerge) === -1
-    ) {
+    if (this.resolveLive(targetBlock) === null || this.resolveLive(blockToMerge) === null) {
       return;
     }
 
@@ -620,33 +977,45 @@ export class BlockMutation {
      * Syncs to Yjs atomically, then updates DOM without re-syncing
      */
     const completeMerge = async (mergeData: BlockToolData): Promise<void> => {
-      // Layer 17 re-check: post-await staleness window. Both blocks must still
-      // be in the store, otherwise abort before any Yjs/DOM mutation.
-      if (
-        this.repository.getBlockIndex(targetBlock) === -1 ||
-        this.repository.getBlockIndex(blockToMerge) === -1
-      ) {
+      // Layer 17 re-check: post-await staleness window. Both ids must still be
+      // in the store, otherwise abort before any Yjs/DOM mutation.
+      const started = this.resolveLive(targetBlock);
+
+      if (started === null || this.resolveLive(blockToMerge) === null) {
         return;
       }
 
-      // Get current target data to compute merged result for Yjs
-      const targetData = await targetBlock.data;
-      const mergedData = { ...targetData, ...mergeData };
+      // Snapshot the document's copy of the target before the await — the loop
+      // below writes every key of `mergedData` back into Yjs, so the same
+      // write-back-a-snapshot flaw `composeWrite` closes for `update()` applies
+      // here verbatim.
+      const beforeTarget = this.readDocumentData(targetBlock.id);
+
+      // Read the target through the live instance: a reconciled swap makes the
+      // original object's data predate the peer's edit, and it is written back
+      // key by key below.
+      const targetData = await started.block.data;
 
       // Layer 17 re-check after the second await.
-      if (
-        this.repository.getBlockIndex(targetBlock) === -1 ||
-        this.repository.getBlockIndex(blockToMerge) === -1
-      ) {
+      const target = this.resolveLive(targetBlock);
+      const merged = this.resolveLive(blockToMerge);
+
+      if (target === null || merged === null) {
         return;
       }
+
+      // Composed synchronously, immediately before the write — see `composeWrite`.
+      const mergedData = this.composeWrite(targetBlock.id, target.block.name, targetData, beforeTarget, mergeData);
+
+      const liveTarget = target.block;
+      const liveMerged = merged.block;
 
       // Sync to Yjs atomically: update target + remove source as single undo entry
       this.dependencies.YjsManager.transact(() => {
         for (const [key, value] of Object.entries(mergedData)) {
-          this.dependencies.YjsManager.updateBlockData(targetBlock.id, key, value);
+          this.dependencies.YjsManager.updateBlockData(liveTarget.id, key, value);
         }
-        this.dependencies.YjsManager.removeBlock(blockToMerge.id);
+        this.dependencies.YjsManager.removeBlock(liveMerged.id);
       });
 
       // DOM updates and index change (skip Yjs sync — already done above)
@@ -662,17 +1031,17 @@ export class BlockMutation {
          * surviving block. Reparenting first empties `blockToMerge.contentIds`, so
          * the subsequent promote step is a no-op.
          */
-        const childIdsToReparent = [...blockToMerge.contentIds];
+        const childIdsToReparent = [...liveMerged.contentIds];
 
         if (childIdsToReparent.length > 0) {
-          this.reparentChildren(childIdsToReparent, targetBlock.id);
+          this.reparentChildren(childIdsToReparent, liveTarget.id);
         }
 
-        void targetBlock.mergeWith(mergeData).then(() => {
-          return this.ctx.removeBlock(blockToMerge, true, true, blocksStore);
+        void liveTarget.mergeWith(mergeData).then(() => {
+          return this.ctx.removeBlock(liveMerged, true, true, blocksStore);
         });
 
-        this.ctx.currentBlockIndexValue = this.repository.getBlockIndex(targetBlock);
+        this.ctx.currentBlockIndexValue = this.repository.getBlockIndex(liveTarget);
       });
     };
 
@@ -729,9 +1098,29 @@ export class BlockMutation {
    */
   public async convert(blockToConvert: Block, targetToolName: string, blocksStore: BlocksStore, blockDataOverrides?: BlockToolData): Promise<Block> {
     /**
-     * At first, we get current Block data
+     * At first, we get current Block data — through the instance that is still
+     * in the document.
+     *
+     * `save()` and `exportDataAsString()` are async, and the Yjs reconciler
+     * REPLACES the Block object (same id, a new instance) while it applies a
+     * peer's edit. Data read from the pre-swap instance predates that edit, and
+     * `replace()` writes it back per key, where the minimal Y.Text diff DELETES
+     * the peer's characters. So re-read whenever the instance was swapped —
+     * bounded, because a peer typing without pause must not spin here.
      */
-    const savedBlock = await blockToConvert.save();
+    const read = await this.readConvertSource(blockToConvert, this.readDocumentData(blockToConvert.id), 3);
+
+    /**
+     * FAIL CLOSED. No read settled, so every candidate was already overwritten
+     * by a peer. Converting anyway would write the stale text back and delete
+     * the peer's characters — silent wrong convergence, the worst outcome.
+     * Reject so the caller knows the turn-into did not happen and can retry.
+     */
+    if (read === null) {
+      throw new Error(`Could not convert Block «${blockToConvert.id}»: it is being edited by someone else. Nothing was changed.`);
+    }
+
+    const { block: source, saved: savedBlock, exported: exportedData } = read;
 
     if (!savedBlock || savedBlock.data === undefined) {
       throw new Error('Could not convert Block. Failed to extract original Block data.');
@@ -745,11 +1134,6 @@ export class BlockMutation {
     if (!replacingTool) {
       throw new ToolNotFoundError(targetToolName, `Could not convert Block. Tool «${targetToolName}» not found.`);
     }
-
-    /**
-     * Using Conversion Config "export" we get a stringified version of the Block data
-     */
-    const exportedData = await blockToConvert.exportDataAsString();
 
     /**
      * Clean exported data with replacing sanitizer config.
@@ -839,6 +1223,23 @@ export class BlockMutation {
      * rendered()/first-save writes. The tool's real data persists because
      * `replace()` already wrote it into Yjs via its own transaction.
      */
+    /**
+     * Last gate, synchronously adjacent to the write below: `await
+     * readConvertSource(...)` resolves on a task boundary, and a peer's update
+     * can be applied on it. Everything between that resolution and here is
+     * synchronous, so this is the only remaining place a drift can hide.
+     *
+     * A drift alone is not enough to refuse — this client's own flush drifts
+     * the document too — so it must also have moved the CONTENT past what was
+     * read. Fail closed when it has, for the same reason as above.
+     */
+    if (
+      !isEmpty(this.documentDrift(source.id, read.snapshot))
+      && !this.readCarriesDocumentContent(savedBlock.data, this.readDocumentData(source.id))
+    ) {
+      throw new Error(`Could not convert Block «${source.id}»: it is being edited by someone else. Nothing was changed.`);
+    }
+
     this.dependencies.YjsManager.stopCapturing();
     const prevSuppress = this.ctx.suppressStopCapturing;
 
@@ -846,7 +1247,7 @@ export class BlockMutation {
 
     try {
       return this.yjsSync.withAtomicOperation(
-        () => this.ctx.replace(blockToConvert, replacingTool.name, newBlockData, blocksStore),
+        () => this.ctx.replace(source, replacingTool.name, newBlockData, blocksStore),
         { extendThroughRAF: true }
       );
     } finally {

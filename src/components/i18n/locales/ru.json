@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "Блоков: {count}",
   "blockSettings.copyLinkSuccess": "Ссылка скопирована в буфер обмена",
   "blockSettings.copyLinkError": "Не удалось скопировать ссылку на блок",
+  "blockSettings.convertFailed": "Не удалось изменить этот блок. Попробуйте ещё раз.",
   "popover.actions": "Действия",
   "tools.link.keepTyping": "Продолжайте вводить, чтобы добавить ссылку",
   "tools.link.emailAddress": "Адрес электронной почты",

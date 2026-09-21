@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "بلاکونه: {count}",
   "blockSettings.copyLinkSuccess": "لینک کلیپبورډ ته کاپي شو",
   "blockSettings.copyLinkError": "د بلاک لینک کاپي نه شو",
+  "blockSettings.convertFailed": "دا بلاک بدلېدلی نه شو. بیا هڅه وکړئ.",
   "popover.actions": "کړنې",
   "tools.link.keepTyping": "د لینک اضافه کولو لپاره ټایپ کولو ته دوام ورکړئ",
   "tools.link.emailAddress": "د برېښنالیک پته",

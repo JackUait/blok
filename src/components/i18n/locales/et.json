@@ -258,6 +258,7 @@
   "blockSettings.blocksSelected": "{count} plokki",
   "blockSettings.copyLinkSuccess": "Link kopeeritud lõikelauale",
   "blockSettings.copyLinkError": "Ploki linki ei saanud kopeerida",
+  "blockSettings.convertFailed": "Seda plokki ei saanud muuta. Proovige uuesti.",
   "popover.actions": "Toimingud",
   "tools.link.keepTyping": "Lingi lisamiseks jätka tippimist",
   "tools.link.emailAddress": "E-posti aadress",

@@ -4,21 +4,18 @@ import { DocumentStore } from '../../../../../src/components/modules/yjs/documen
 import { YBlockSerializer, type YjsOutputBlockData } from '../../../../../src/components/modules/yjs/serializer';
 
 /**
- * `atomize` (src/components/modules/yjs/text-diff.ts) splits a block's text
- * into a whole tag, a whole entity, otherwise ONE CODE POINT. A user-visible
- * character is often several code points — a letter plus a combining accent,
- * an emoji plus a skin-tone modifier, a ZWJ family, a two-letter flag — and
- * the code-point atom lets the diff put an edit boundary INSIDE one of those.
- *
- * The merge then hands a peer's edit a cluster's continuation code point: the
- * accent moves onto the other person's character, a skin-tone modifier is left
- * orphaned, a family emoji comes apart, and two people each fixing one letter
- * of a flag land on a THIRD country's flag.
+ * A user-visible character is often several code points — a letter plus a
+ * combining accent, an emoji plus a skin-tone modifier, a ZWJ family, a
+ * two-indicator flag. While `atomize` (src/components/modules/yjs/text-diff.ts)
+ * split text into ONE CODE POINT, the diff could put an edit boundary INSIDE
+ * one of those, and the merge then handed a peer's edit the rest of the
+ * cluster: the accent moved onto the other person's character, a skin-tone
+ * modifier was left on a letter, a family emoji came apart, and two people each
+ * fixing one indicator of a flag landed on a THIRD country's.
  *
  * Every case below is checked on two real Y.Text peers and asserted on the
- * converged text. Simulating a GRAPHEME atom instead — a whole-cluster replace
- * applied straight to the same two Y.Docs — produced the clean result in every
- * one of them, so the cluster damage is the atom unit, not a Yjs tie.
+ * converged text. They pass on the GRAPHEME atom and fail on the code-point
+ * one, so what these pin is the atom unit, not a Yjs tie.
  */
 const paragraph = (id: string, text: string): YjsOutputBlockData => ({
   id,
@@ -101,7 +98,7 @@ const RI_G = '\u{1F1EC}';
  * of all real pairs.
  */
 describe('a peer completing a character where the other peer types', () => {
-  it.fails('keeps the accent on the letter it was typed for', () => {
+  it('keeps the accent on the letter it was typed for', () => {
     const { a, b } = twoPeers('cafe tail', 2, 1);
 
     // A dead key, an autocorrect or a Mac press-and-hold finishes "cafe" into
@@ -118,7 +115,7 @@ describe('a peer completing a character where the other peer types', () => {
     expect(textOf(b)).toBe(textOf(a));
   });
 
-  it.fails('keeps a skin tone on the hand it was chosen for', () => {
+  it('keeps a skin tone on the hand it was chosen for', () => {
     const { a, b } = twoPeers(`a${THUMB}b`, 2, 1);
 
     // A picks a skin tone for the thumb already in the text — the picker
@@ -134,7 +131,7 @@ describe('a peer completing a character where the other peer types', () => {
     expect(textOf(b)).toBe(textOf(a));
   });
 
-  it.fails('does not let a typed character land inside a family emoji', () => {
+  it('does not let a typed character land inside a family emoji', () => {
     const { a, b } = twoPeers(`x ${MAN}${ZWJ}${WOMAN} y`, 2, 1);
 
     a.updateBlockData('b1', 'text', `x ${MAN}${ZWJ}${WOMAN}${ZWJ}${GIRL} y`);
@@ -155,7 +152,7 @@ describe('a peer completing a character where the other peer types', () => {
  * measured and produce the same damaged text, so they happen in every session.
  */
 describe('a peer editing a cluster the other peer removes', () => {
-  it.fails('does not strand a skin-tone modifier on the previous letter', () => {
+  it('does not strand a skin-tone modifier on the previous letter', () => {
     const { a, b } = twoPeers(`a${THUMB}${TONE_MEDIUM}b`, 1, 2);
 
     // A changes the tone — one code point replaced. B deletes the whole emoji.
@@ -164,13 +161,15 @@ describe('a peer editing a cluster the other peer removes', () => {
 
     sync(a, b);
 
-    // The thumb is gone but the new modifier is not, so the paragraph reads
-    // "a" wearing a colour swatch.
-    expect(textOf(a)).not.toContain(TONE_DARK);
+    // The thumb is gone but the new modifier is not, so it joins the "a" and
+    // the paragraph reads as a letter wearing a colour swatch. A modifier that
+    // KEPT its thumb is fine — one person edited the character the other
+    // deleted, and the whole character surviving is the answer.
+    expect(graphemesOf(textOf(a))).not.toContain(`a${TONE_DARK}`);
     expect(textOf(b)).toBe(textOf(a));
   });
 
-  it.fails('does not leave a joiner and a lone child behind when a family is deleted', () => {
+  it('does not leave a joiner and a lone child behind when a family is deleted', () => {
     const { a, b } = twoPeers(`x ${MAN}${ZWJ}${WOMAN}${ZWJ}${GIRL} y`, 1, 2);
 
     // A adds a boy to the family. B deletes the emoji.
@@ -185,7 +184,7 @@ describe('a peer editing a cluster the other peer removes', () => {
     expect(textOf(b)).toBe(textOf(a));
   });
 
-  it.fails('does not move an accent onto the letter before it', () => {
+  it('does not move an accent onto the letter before it', () => {
     const { a, b } = twoPeers(`cafe${ACUTE} x`, 1, 2);
 
     // A switches the accent. B deletes the accented letter.
@@ -199,7 +198,7 @@ describe('a peer editing a cluster the other peer removes', () => {
     expect(textOf(b)).toBe(textOf(a));
   });
 
-  it.fails('never produces a flag neither person typed', () => {
+  it('never produces a flag neither person typed', () => {
     const { a, b } = twoPeers(`go ${RI_U}${RI_S} home`, 1, 2);
 
     // Two people fixing the same flag: A makes it Ukraine, B makes it South
@@ -237,7 +236,7 @@ describe('cluster completion versus a typed character, swept', () => {
   /** Continuation code points: a grapheme carrying one is a cluster. */
   const CONTINUATION = /[‍\u{1F3FB}-\u{1F3FF}̀-ͯ\u{1F1E6}-\u{1F1FF}]/u;
 
-  it.fails('never shows a character neither peer typed', () => {
+  it('never shows a character neither peer typed', () => {
     const damaged: Array<Record<string, string>> = [];
 
     GROWN.forEach(([word, grown]) => {

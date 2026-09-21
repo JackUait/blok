@@ -110,7 +110,7 @@ const edit = (store: DocumentStore, operation: (model: TableModel) => void): voi
 };
 
 describe('a table merge concurrent with a peer filling one of the absorbed cells', () => {
-  it.fails('keeps the block the peer typed into a cell the merge absorbs', () => {
+  it('keeps the block the peer typed into a cell the merge absorbs', () => {
     const { a, b } = twoPeers(grid(2, 2));
 
     // A merges the whole 2x2: every absorbed cell's blocks move into (0,0).
@@ -130,7 +130,7 @@ describe('a table merge concurrent with a peer filling one of the absorbed cells
     expect(blockIds(b)).toEqual(blockIds(a));
   });
 
-  it.fails('keeps that block when the surviving merge is undone', () => {
+  it('keeps that block when the surviving merge is undone', () => {
     const { a, b } = twoPeers(grid(2, 2));
 
     edit(a, (model) => model.mergeCells({ minRow: 0,
@@ -149,6 +149,17 @@ describe('a table merge concurrent with a peer filling one of the absorbed cells
 });
 
 describe('a table merge concurrent with the peer deleting a row or column', () => {
+  /**
+   * UNFIXED. Measured: `mergeCells` relocates every absorbed cell's blocks into
+   * the origin cell, so all four ids sit in row 0's first cell when B deletes
+   * row 0 — the ids are simply not in the converged document any more, and no
+   * read-time repair can bring them back. Leaving the blocks in their own cells
+   * DOES survive (measured: the converged grid still holds r1c0 and r1c1), but
+   * then every merged cell's content lives in a cell the renderer skips, which
+   * is exactly what the first two tests in this file forbid. Fixing both at once
+   * needs cell identity in `TableData.content` — content addressed by a stable
+   * cell id instead of by its position in the rows array.
+   */
   it.fails('keeps the second row\'s content when the peer deletes only the FIRST row', () => {
     const { a, b } = twoPeers(grid(2, 2));
 
@@ -168,6 +179,7 @@ describe('a table merge concurrent with the peer deleting a row or column', () =
     expect(blockIds(b)).toEqual(blockIds(a));
   });
 
+  /** UNFIXED, same relocation cause as the row case above. */
   it.fails('keeps the second column\'s content when the peer deletes only the FIRST column', () => {
     const { a, b } = twoPeers(grid(1, 2));
 
@@ -185,6 +197,14 @@ describe('a table merge concurrent with the peer deleting a row or column', () =
 });
 
 describe('a column moved while the peer deletes a different column', () => {
+  /**
+   * UNFIXED. `Table.save()` writes the whole `content` array, so the store only
+   * ever sees the resulting grid — how `moveColumn` builds it cannot change the
+   * merge. A column is addressed by its index in every row array, and B's
+   * index-0 delete therefore lands on whatever A's move put at index 0. Only
+   * column identity fixes it: a `columnIds` order array plus cells keyed by
+   * column id, so a move rewrites the order and a delete removes a key.
+   */
   it.fails('deletes the column the peer asked for, and keeps the other two', () => {
     const { a, b } = twoPeers(grid(3, 3));
 
@@ -205,7 +225,7 @@ describe('a column moved while the peer deletes a different column', () => {
 });
 
 describe('two peers merging overlapping rectangles', () => {
-  it.fails('leaves no cell that is both a merge origin and covered by another merge', () => {
+  it('leaves no cell that is both a merge origin and covered by another merge', () => {
     const { a, b } = twoPeers(grid(3, 3));
 
     // The two rectangles share the cell at (1,1).

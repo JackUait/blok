@@ -6,6 +6,8 @@
 
 import type { API } from '../../../types';
 
+import { runConvert } from '../../components/utils/convert-refusal';
+
 import { setCaretToBlockContent, setCaretToBlockContentOffset, getCaretOffsetWithin } from './caret-manager';
 import { TOOL_NAME } from './constants';
 import {
@@ -164,7 +166,12 @@ const exitListOrOutdent = async (
   if (blockId === undefined) {
     return;
   }
-  const newBlock = await api.blocks.convert(blockId, 'paragraph', { text: '' });
+  const newBlock = await runConvert(api, () => api.blocks.convert(blockId, 'paragraph', { text: '' }));
+
+  if (newBlock === null) {
+    return;
+  }
+
   setCaretToBlockContent(api, newBlock, 'start');
 };
 
@@ -263,7 +270,11 @@ export const handleBackspace = async(
   }
 
   // Top-level item: convert to a plain PARAGRAPH in place, preserving content.
-  const newBlock = await api.blocks.convert(blockId, 'paragraph', { text: currentContent });
+  const newBlock = await runConvert(api, () => api.blocks.convert(blockId, 'paragraph', { text: currentContent }));
+
+  if (newBlock === null) {
+    return;
+  }
 
   setCaretToBlockContent(api, newBlock, 'start');
 };

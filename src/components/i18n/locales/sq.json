@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "{count} blloqe të zgjedhura",
   "blockSettings.copyLinkSuccess": "Lidhja u kopjua në kujtesë",
   "blockSettings.copyLinkError": "Lidhja e bllokut nuk mund të kopjohej",
+  "blockSettings.convertFailed": "Ky bllok nuk mund të ndryshohej. Provoni sërish.",
   "popover.actions": "Veprime",
   "tools.link.keepTyping": "Vazhdoni të shkruani për të shtuar një lidhje",
   "tools.link.emailAddress": "Adresa email",

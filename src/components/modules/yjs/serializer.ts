@@ -39,34 +39,44 @@ const DIFFABLE_TEXT_KEYS = new Set(['text', 'code', 'caption', 'title', 'alt', '
 export const isDiffableTextKey = (key: string): boolean => DIFFABLE_TEXT_KEYS.has(key);
 
 /**
- * NESTED data keys holding an ORDERED LIST OF IDS — today only a table cell's
- * `blocks`. Stored as a `Y.Array` even when empty or all-string, so two peers
- * each inserting a block into ONE cell keep both ids instead of one whole-value
- * write orphaning the other's child block.
+ * NESTED data keys holding a LIST THAT IS BORN EMPTY and then grows on two
+ * peers at once: a table cell's `blocks` (ordered child ids), and a database
+ * view's `filters` and `sorts`. Stored as a `Y.Array` from birth — empty, and
+ * whatever the elements turn out to be — so two peers each adding the FIRST
+ * element keep both instead of one whole-value write discarding the other's.
  *
- * The general array rule cannot cover it: `isConvertibleArray` promotes only
- * non-empty ALL-OBJECT arrays, and a cell is born `blocks: []` and then holds
- * strings, so it would never promote at all.
+ * The general array rule cannot cover them: `isConvertibleArray` promotes only
+ * non-empty arrays, so a list born `[]` is a plain leaf, and each peer's first
+ * element then `set`s a whole fresh `Y.Array` over the key — map-set is
+ * last-writer-wins and the loser's element goes with the map it was in.
+ * (A cell's `blocks` also holds strings, which the rule never promotes at all.)
  *
- * EAGER, at the cell map's single creation site, for the same reason
- * `contentIds` is minted eagerly on a childless block: a LAZY promotion runs on
- * two peers at once and map-set is last-writer-wins, so the loser's array is
- * discarded WITH the id inside it.
+ * EAGER, at the container's single creation site, for the same reason
+ * `contentIds` and `tunes` are minted eagerly on a bare block: a LAZY promotion
+ * runs on two peers at once and is the very race being closed.
  *
  * NESTED only, by construction: `objectToYMap` and `assignYMapEntry` are the
  * only readers, and a block's TOP-LEVEL data map is built by `blockDataToYMap`
  * and written by `updateBlockData`, neither of which consults this set. A
  * custom tool's top-level `data.blocks` therefore keeps the old behaviour.
  *
+ * OUTRANKED by the keyed wrapper: an array under one of these keys that is a
+ * grid or carries unique ids takes the wrapper instead (see `objectToYMap`).
+ * It is a container too, and it pairs by key rather than by position.
+ *
  * LOCKSTEP: `OrderedIdArrayKeys` in
  * packages/server/dotnet/Blok.Server/Collab/YDocConverter.cs must name exactly
- * the same keys, or a server-seeded cell is a plain array where a
- * client-seeded one is a Y.Array.
+ * the same keys AND defer to the wrapper the same way, or a server-seeded
+ * container is a plain array where a client-seeded one is a Y.Array.
  */
-const ORDERED_ID_ARRAY_KEYS = new Set(['blocks']);
+const EAGER_ARRAY_KEYS = new Set(['blocks', 'filters', 'sorts']);
 
-/** Whether a NESTED data key holds an ordered id list. */
-export const isOrderedIdArrayKey = (key: string): boolean => ORDERED_ID_ARRAY_KEYS.has(key);
+/**
+ * Whether a NESTED data key is always stored as a Y.Array, empty included.
+ * Named for the historical case (a cell's ordered child ids); the set now
+ * covers every nested list born empty — see `EAGER_ARRAY_KEYS`.
+ */
+export const isOrderedIdArrayKey = (key: string): boolean => EAGER_ARRAY_KEYS.has(key);
 
 /**
  * Remove every NUL from a string. A NUL in ANY position — map key, string
@@ -90,13 +100,125 @@ export const stripNulIfString = (value: unknown): unknown =>
   typeof value === 'string' ? stripNul(value) : value;
 
 /**
+ * How many times one value may be replaced by its own `toJSON` result before
+ * the write is refused. A `toJSON` returning its receiver, or two whose
+ * `toJSON`s return each other, or one minting a fresh `toJSON` object every
+ * call, would otherwise substitute forever — and identity bookkeeping catches
+ * only the first two. Any honest chain is one or two links long.
+ */
+const MAX_TO_JSON_SUBSTITUTIONS = 32;
+
+/**
+ * The JSON-shaped stand-in for an object Yjs cannot carry, or the value itself
+ * when it needs none.
+ *
+ * Everything below `plainToYValue`'s object branch — and lib0's own encoder —
+ * reads an object through `Object.entries`. A `Date`, a `Map`, a `Set` or a
+ * `RegExp` has no own enumerable entries, so it was stored as an EMPTY map:
+ * the value was destroyed before the update left the peer that wrote it, with
+ * no error and nothing in the document to show it had ever been there.
+ *
+ * Converted rather than rejected, because block data is JSON by contract and a
+ * lost value is worse than a degraded one. Only `Date` has a stand-in
+ * `JSON.stringify` would agree with (its own `toJSON`). For the rest this
+ * function INVENTS one — `JSON.stringify` renders a `Set`, a `Map` and a
+ * `RegExp` as `{}`, which is the very emptiness being avoided — so a `Set`
+ * becomes its elements, a `Map` its entries and a `RegExp` its literal text
+ * (`String(re)`: delimiters and flags, NOT the bare `source`).
+ *
+ * `toJSON` wins whenever an object has one, own enumerable fields included: a
+ * `class Money { cents; currency; toJSON() }` is stored as what its `toJSON`
+ * returns, because that is what the host's own `JSON.stringify` of the saved
+ * data would have produced and the doc must not disagree with it. Merge
+ * granularity follows the RESULT: a `toJSON` returning a plain object still
+ * gets a per-field `Y.Map` and a per-field merge, and only one returning a
+ * primitive makes the key a whole-value leaf.
+ *
+ * RE-ENTERED on its own result, not returned after one substitution. A
+ * `toJSON` may hand back another value Yjs cannot carry, and that result lands
+ * in the very `Object.entries` walk this function exists to prevent — as an
+ * empty map, the silent loss described above. It is the SAME slot, so no caller re-enters it;
+ * only this function does. It terminates on `MAX_TO_JSON_SUBSTITUTIONS` and
+ * refuses the write, which is what `JSON.stringify` does with a cycle too.
+ * `substitutions` counts that chain and is never passed by a caller.
+ * The Set/Map/RegExp results are terminal by construction — an array, a plain
+ * object or a string — and their CONTENTS re-enter through the callers'
+ * per-element recursion.
+ *
+ * Left ALONE: a Yjs shared type (it is stored as itself) and a class instance
+ * with NO `toJSON` — `Object.entries` reads its own fields correctly and
+ * deep-merges them per field.
+ *
+ * NOT rescued: binary. A typed array has no `toJSON`, so it reaches
+ * `plainToYValue`'s object branch and becomes a `Y.Map` of index → byte; a raw
+ * `ArrayBuffer` has no own entries at all and becomes an empty one. Both are
+ * exactly what the host's `JSON.stringify` of that data produces, and block
+ * data is JSON by contract, so neither is a loss this function must invent a
+ * shape for. lib0 can encode a `Uint8Array` natively but never gets the
+ * chance — the object branch claims it first.
+ *
+ * KNOWN LIMITATION, a `Map` with keys that are not strings: distinct
+ * stringified keys give the readable object shape, colliding ones give the
+ * entry PAIRS, which `plainToYValue` then reads as a grid and wraps. So adding
+ * a colliding key to a Map-valued field flips the stored shape through one
+ * last-writer-wins `set`. Left as is: such a Map has no JSON form at all
+ * (`JSON.stringify` gives `{}`), so the pairs are already a rescue past the
+ * contract, and making the shape stable would cost either the per-field merge
+ * every string-keyed Map gets or a bespoke envelope the C# converter would
+ * have to learn.
+ */
+export const toSerializableValue = (value: unknown, substitutions = 0): unknown => {
+  if (value === null || typeof value !== 'object' || Array.isArray(value) ||
+    value instanceof Y.AbstractType) {
+    return value;
+  }
+
+  if (typeof (value as { toJSON?: unknown }).toJSON === 'function') {
+    if (substitutions >= MAX_TO_JSON_SUBSTITUTIONS) {
+      throw new TypeError('Converting circular structure to a block value');
+    }
+
+    return toSerializableValue((value as { toJSON: () => unknown }).toJSON(), substitutions + 1);
+  }
+
+  if (value instanceof Set) {
+    return Array.from(value);
+  }
+
+  if (value instanceof Map) {
+    const entries = Array.from(value, ([key, entry]): [unknown, unknown] => [key, entry]);
+    const keys = entries.map(([key]) => String(key));
+
+    // Object keys are strings, so two object keys both stringify to
+    // "[object Object]" and an N-entry map would collapse to ONE — silent loss
+    // inside the function written to stop it. Keep the readable object shape
+    // only while the stringified keys stay distinct; otherwise store the
+    // entry PAIRS, which lose nothing.
+    return new Set(keys).size === keys.length
+      ? Object.fromEntries(entries.map(([, entry], index) => [keys[index], entry]))
+      : entries;
+  }
+
+  if (value instanceof RegExp) {
+    return String(value);
+  }
+
+  return value;
+};
+
+/**
  * Deep NUL scrub for a value stored as a plain LEAF — a string, or a
  * primitive/mixed array that is NOT promoted to a Y.Array, or a plain object
  * nested inside such an array. Recurses through arrays and objects, stripping
  * both keys and string values. Fast path: returns the SAME reference when the
  * subtree holds no NUL, so a clean write allocates nothing.
  */
-export const stripNulDeep = (value: unknown): unknown => {
+export const stripNulDeep = (input: unknown): unknown => {
+  // A leaf can still hold an exotic object inside it (`[1, new Date()]` is a
+  // mixed array, so it is stored as a leaf and never reaches `plainToYValue`
+  // again) — normalize here too or the entries walk below empties it.
+  const value = toSerializableValue(input);
+
   if (typeof value === 'string') {
     return stripNul(value);
   }
@@ -368,16 +490,26 @@ export class YBlockSerializer {
 
   /**
    * Convert plain object to Y.Map
+   *
+   * The eager-array rule runs only for an array the KEYED wrapper does not
+   * already claim. `plainToYValue` gives a grid or an id-bearing array a
+   * wrapper, which is a container too and pairs by key instead of by position
+   * — forcing a plain Y.Array on it because the key happens to be named
+   * `filters`/`sorts` would reintroduce "a reorder racing a field edit lands
+   * on whichever element took the index".
+   * LOCKSTEP: `InputWriter`'s ordered-id branch in
+   * packages/server/dotnet/Blok.Server/Collab/YDocConverter.cs must defer the
+   * same way.
    */
   public objectToYMap(obj: Record<string, unknown>): Y.Map<unknown> {
     const ymap = new Y.Map<unknown>();
 
     for (const [key, value] of Object.entries(obj)) {
       const mapKey = stripNul(key);
+      const eager = isOrderedIdArrayKey(mapKey) && Array.isArray(value) &&
+        !this.isGridArray(value) && !this.isIdentityArray(value);
 
-      ymap.set(mapKey, isOrderedIdArrayKey(mapKey) && Array.isArray(value)
-        ? this.plainToYArray(value)
-        : this.plainToYValue(value));
+      ymap.set(mapKey, eager ? this.plainToYArray(value) : this.plainToYValue(value));
     }
 
     return ymap;
@@ -536,7 +668,13 @@ export class YBlockSerializer {
    * a string cell or a primitive-array row (table cells) is stored verbatim,
    * so its NUL must be stripped here rather than in a Y.Map/Y.Array branch.
    */
-  public plainToYValue(value: unknown): unknown {
+  public plainToYValue(input: unknown): unknown {
+    // Not recursed here: `toSerializableValue` loops on its OWN slot until the
+    // value is one Yjs carries, and every branch below re-enters this method
+    // (or `stripNulDeep`) per element/field, so a nested exotic value is
+    // normalized on its own way through.
+    const value = toSerializableValue(input);
+
     if (this.isGridArray(value)) {
       return this.plainToGridMap(value);
     }

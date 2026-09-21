@@ -2038,6 +2038,38 @@ export class BlockManager extends Module {
    * flush per 400ms window. `flushBlockDataWrites` is the flush body.
    */
   private async syncBlockDataToYjs(block: Block, options?: { untracked?: boolean }): Promise<void> {
+    const { YjsManager } = this.Blok;
+    // Registered BEFORE the save starts: between here and the enqueue below
+    // this write is invisible to the flush barriers, so a destroy() landing in
+    // the gap would tear the document down and drop the last thing typed.
+    const releasePendingWrite = YjsManager.beginPendingBlockDataWrite();
+
+    // Every caller voids this promise (`void this.syncBlockDataToYjs(...)`, and
+    // `flushParentSyncs`' bare `Promise.all(...).then`), so a rejection here has
+    // no catcher anywhere and surfaces as an unhandled rejection — at teardown
+    // that lands on tab close / SPA unmount, where a host reads it as an
+    // unattributed page error. Nothing is swallowed: the failure is reported
+    // with a label instead. `releasePendingWrite` is INSIDE the try because it
+    // runs the settled listeners and destroy's own continuation, and a throw
+    // from a `finally` escapes the try it belongs to.
+    try {
+      try {
+        await this.saveAndEnqueueBlockDataWrite(block, options);
+      } finally {
+        releasePendingWrite();
+      }
+    } catch (error) {
+      logLabeled(`Blok: syncing block «${block.id}» to the collaborative document failed`, 'error', error);
+    }
+  }
+
+  /**
+   * `syncBlockDataToYjs`'s body: save the block and enqueue the resulting
+   * write. Split out so the in-flight registration above wraps every exit.
+   * @param block - block whose saved data goes to Yjs
+   * @param options - untracked marks a materializing (non-user) write
+   */
+  private async saveAndEnqueueBlockDataWrite(block: Block, options?: { untracked?: boolean }): Promise<void> {
     // Classified BEFORE the await: the settling window is measured from the
     // mutation, not from whenever this tool's save() happens to resolve.
     const isMaterializing = options?.untracked === true || this.yjsSync.isMaterializing(block);

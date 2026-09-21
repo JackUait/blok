@@ -2,7 +2,7 @@ import { getUnixTime } from 'lib0/time';
 import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate, removeAwarenessStates } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 
-import { GRID_ORDER_KEY, GRID_ROWS_KEY, isDiffableTextKey, isOrderedIdArrayKey, stripNul, type YBlockSerializer, type YjsOutputBlockData, stripNulIfString } from './serializer';
+import { GRID_ORDER_KEY, GRID_ROWS_KEY, isDiffableTextKey, isOrderedIdArrayKey, stripNul, toSerializableValue, type YBlockSerializer, type YjsOutputBlockData, stripNulIfString } from './serializer';
 import { diffText } from './text-diff';
 import { LOCAL_ORIGIN_TAGS, type AwarenessChange, type BlockPlacement, type LocalOriginTag, type UndoScopeType } from './types';
 // The narrow module, not the utils barrel: the collab fixture generator
@@ -1263,7 +1263,11 @@ export class DocumentStore {
    * @returns true if a Yjs write actually occurred (value changed), false if the
    *          equality guard short-circuited the write.
    */
-  public updateBlockData(id: string, key: string, value: unknown, seen?: DataKeySnapshot): boolean {
+  public updateBlockData(id: string, key: string, input: unknown, seen?: DataKeySnapshot): boolean {
+    // A Date/Map/Set has no own enumerable entries, so every branch below
+    // would read it as an EMPTY object — deep-merging one onto a live Y.Map
+    // deletes every key in it. Substituted here for the JSON shape.
+    const value = toSerializableValue(input);
     const yblock = this.getBlockById(id);
 
     if (yblock === undefined) {
@@ -1513,7 +1517,9 @@ export class DocumentStore {
   }
 
   /** Assign one key of a nested Y.Map, recursing into child Y.Maps/Y.Arrays. */
-  private assignYMapEntry(target: Y.Map<unknown>, key: string, value: unknown, seen?: DataKeySnapshot): void {
+  private assignYMapEntry(target: Y.Map<unknown>, key: string, input: unknown, seen?: DataKeySnapshot): void {
+    // Same substitution as `updateBlockData`, one level down.
+    const value = toSerializableValue(input);
     // Scrub the nested KEY here — deep-merge writes bypass objectToYMap, so this
     // is the single chokepoint that keeps a NUL out of a nested map key.
     const mapKey = stripNul(key);
@@ -1538,7 +1544,11 @@ export class DocumentStore {
     // so two peers inserting a block into ONE table cell keep both ids. Runs
     // BEFORE the generic Y.Array branch, which would downshift an all-string
     // value back to a plain leaf because it fails `isConvertibleArray`.
-    if (isOrderedIdArrayKey(mapKey) && Array.isArray(value)) {
+    // Defers to the KEYED wrapper, same as `objectToYMap`: a grid or an
+    // id-bearing array pairs by key, which is strictly better than by
+    // position, and the key's NAME must not take that away.
+    if (isOrderedIdArrayKey(mapKey) && Array.isArray(value) &&
+      !this.serializer.isGridArray(value) && !this.serializer.isIdentityArray(value)) {
       if (existing instanceof Y.Array) {
         this.deepAssignYArray(existing, value, seen);
       } else {
@@ -1631,7 +1641,7 @@ export class DocumentStore {
     // falls back to one, because Y.Array has no move.
     const targetSlice = Array.from({ length: targetMiddle }, (_, offset) => plainAt(prefix + offset));
     const sourceSlice = source.slice(prefix, prefix + sourceMiddle);
-    const assignment = this.pairGridRows(targetSlice, sourceSlice);
+    const assignment = this.pairGridRows(targetSlice, sourceSlice, true);
     const pairedTargets = assignment.filter((index): index is number => index !== null);
     const isOrdered = pairedTargets.every((index, rank) => rank === 0 || index > pairedTargets[rank - 1]);
 
@@ -1669,7 +1679,12 @@ export class DocumentStore {
   }
 
   /** Assign one Y.Array element in place, recursing into Y.Map/Y.Array elements. */
-  private assignYArrayElement(target: Y.Array<unknown>, index: number, value: unknown, seen?: DataKeySnapshot): void {
+  private assignYArrayElement(target: Y.Array<unknown>, index: number, input: unknown, seen?: DataKeySnapshot): void {
+    // The fifth chokepoint, same substitution as `updateBlockData` and
+    // `assignYMapEntry`: a `Date`/`Map`/`Set` ARRAY ELEMENT reaches
+    // `deepAssignYMap` below, whose `Object.entries` walk is empty for it and
+    // would delete every key of the live element Y.Map.
+    const value = toSerializableValue(input);
     const existing = target.get(index);
     const valueIsPlainObject = value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -1726,11 +1741,22 @@ export class DocumentStore {
     const order = target.get(GRID_ORDER_KEY) as Y.Array<string>;
     const currentKeys = this.serializer.gridRowKeys(target);
     const currentRows = currentKeys.map((key) => this.serializer.yValueToPlain(rows.get(key)));
-    const assignment = this.pairGridRows(currentRows, source);
+    // NOT order-preserving: a crossing pair is exactly what this wrapper
+    // exists to express. A grid records a move in the `__rowKeys` order array,
+    // so a row that crossed its neighbours keeps its container; rejecting the
+    // pair instead mints a fresh key and `rows.delete`s the old container —
+    // the delete+insert the wrapper was built to avoid.
+    const assignment = this.pairGridRows(currentRows, source, false);
     const paired = new Set(assignment.filter((index): index is number => index !== null));
+    const known = seen?.get(rows);
 
     currentKeys.forEach((key, index) => {
-      if (!paired.has(index)) {
+      // Same snapshot law as `deepAssignYMap`: a row container that did not
+      // exist when this save was captured is a peer's insert that raced it,
+      // and `source` omits it because it never saw it.
+      const deletable = seen === undefined || known?.has(key) === true;
+
+      if (deletable && !paired.has(index)) {
         rows.delete(key);
       }
     });
@@ -1774,9 +1800,12 @@ export class DocumentStore {
     // `isIdentityArray` guarantees a non-empty string id on every element.
     const nextKeys = source.map((element) => stripNul(String(element.id)));
     const kept = new Set(nextKeys);
+    const known = seen?.get(rows);
 
     Array.from(rows.keys())
-      .filter((key) => !kept.has(key))
+      // Same snapshot law as `deepAssignYMap`: an element the container gained
+      // after this save was captured belongs to the peer that added it.
+      .filter((key) => !kept.has(key) && (seen === undefined || known?.has(key) === true))
       .forEach((key) => rows.delete(key));
 
     source.forEach((element, index) => this.assignYMapEntry(rows, nextKeys[index], element, seen));
@@ -1797,15 +1826,23 @@ export class DocumentStore {
    *    still shares most of its cells with itself, a brand-new row shares
    *    none. Equal counts skip straight to 4: equal-length middles rewrite
    *    in place.
-   * 4. Positional remainder — extra source rows are genuinely new, extra doc
-   *    rows genuinely deleted.
+   * 4. Positional remainder, rank against rank. With `enforceOrder`, a pair is
+   *    taken only where it does not CROSS the pairs already made; without it,
+   *    rank pairs with rank unconditionally.
    *
    * Rows with identical content are interchangeable by definition, so pass 2
    * pairing an arbitrary one of them is not a defect.
+   * @param current - the doc's rows, in display order
+   * @param source - the saved rows, keyless
+   * @param enforceOrder - reject a pass-4 pair that crosses the pairs already
+   *   made. TRUE only for `deepAssignYArray`, whose caller falls back to a
+   *   splice the moment the pairing is not monotonic. FALSE for
+   *   `deepAssignYGrid`, which expresses a move through its order array and
+   *   NEEDS crossing pairs — a rejected one there costs the row its container.
    * @returns for each source row, the index into `current` it pairs with, or
    *          null when it is a new row.
    */
-  private pairGridRows(current: unknown[], source: unknown[]): (number | null)[] {
+  private pairGridRows(current: unknown[], source: unknown[], enforceOrder: boolean): (number | null)[] {
     const assignment: (number | null)[] = source.map(() => null);
     const takenTarget = new Set<number>();
     const range = (length: number): number[] => Array.from({ length }, (_, index) => index);
@@ -1856,12 +1893,33 @@ export class DocumentStore {
       });
     }
 
+    // Whether pairing `sourceIndex` with `targetIndex` keeps the pairing
+    // MONOTONIC — every pair already made stays on the side of it that source
+    // order and target order agree on.
+    const keepsOrder = (sourceIndex: number, targetIndex: number): boolean =>
+      assignment.every((target, index) => target === null ||
+        (index < sourceIndex ? target < targetIndex : target > targetIndex));
+
+    // Pass 4, positional remainder — rank against rank. Under `enforceOrder` a
+    // pair is taken ONLY if it does not CROSS the pairs already made. A
+    // crossing pair is exactly what flips `isOrdered` false in
+    // `deepAssignYArray` and drops control to the splice, which re-creates
+    // every element container in the middle: an add-and-remove, which moves
+    // nothing, then threw away whatever a peer had concurrently written inside
+    // a SURVIVING element.
+    //
+    // Crossing, not a similarity score, is the discriminator. A genuinely new
+    // element shares its KEYS with the element it would displace exactly as
+    // much as an edited one does, so no score separates an insert from an edit
+    // — but an insert's rank pair crosses the pairs around it and an edit's
+    // does not. Rejecting a candidate never crosses anything either, so the
+    // element simply stays an insert and its neighbours keep their containers.
     const finalTargets = restTargets.filter((index) => !takenTarget.has(index));
 
     restSources
       .filter((index) => assignment[index] === null)
       .forEach((sourceIndex, rank) => {
-        if (rank < finalTargets.length) {
+        if (rank < finalTargets.length && (!enforceOrder || keepsOrder(sourceIndex, finalTargets[rank]))) {
           pair(sourceIndex, finalTargets[rank]);
         }
       });

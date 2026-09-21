@@ -260,6 +260,7 @@
   "blockSettings.blocksSelected": "{count} blok seçildi",
   "blockSettings.copyLinkSuccess": "Keçid mübadilə buferinə kopyalandı",
   "blockSettings.copyLinkError": "Bloka keçid kopyalana bilmədi",
+  "blockSettings.convertFailed": "Bu blok dəyişdirilə bilmədi. Yenidən cəhd edin.",
   "popover.actions": "Əməliyyatlar",
   "tools.link.keepTyping": "Keçid əlavə etmək üçün yazmağa davam edin",
   "tools.link.emailAddress": "E-poçt ünvanı",

@@ -75,9 +75,14 @@ internal static partial class TextDiff
   /// JavaScript's <c>\s</c>, spelled out. .NET's differs at both ends — it
   /// counts U+0085 and does not count U+FEFF — and the two sides have to split
   /// words at exactly the same places.
+  ///
+  /// Escaped, not literal: raw U+2028/U+2029 in the source are end-of-line
+  /// markers to <c>dotnet format</c>. This is a character-CLASS body, so
+  /// <c>\t\n\v\f\r</c> stay two characters each — regex escapes, not the
+  /// control characters.
   /// </summary>
   private const string JsWhitespace =
-      @"\t\n\v\f\r    -     　﻿";
+      "\\t\\n\\v\\f\\r \u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF";
 
   /// <summary>
   /// The edits turning <paramref name="before"/> into <paramref name="after"/>,
@@ -173,21 +178,31 @@ internal static partial class TextDiff
   /// host splits <c>क्र</c> where the browser keeps it whole and the two sides
   /// answer different edits for the same keystroke. They were derived by
   /// asking the client's own <c>Intl.Segmenter</c> which code points behave
-  /// this way (Unicode 16.0, ICU as shipped in Node 24) — the same way
-  /// text-diff.ts derives its tables — because the property is not exposed by
-  /// any .NET API.
+  /// this way — the same way text-diff.ts derives its tables — because the
+  /// property is not exposed by any .NET API.
   ///
-  /// LOCKSTEP: an ICU upgrade that moves these sets moves the client's
-  /// character boundaries with it, and this file must follow in the same
+  /// TARGET: Unicode 17.0 (ICU 78, Node 26). The server cannot know which ICU
+  /// a given browser carries, and 17.0 only ADDED to all three sets — it took
+  /// nothing away — so the newest tables are a superset of every older one.
+  /// Committing the newest means the host never SPLITS a conjunct an older
+  /// browser keeps whole, which is the failure the tables exist to prevent;
+  /// the reverse, joining one an older browser splits, only widens an edit.
+  ///
+  /// LOCKSTEP: an ICU upgrade that ADDS to these sets moves a newer client's
+  /// character boundaries past this file, and it must follow in the same
   /// change, or Indic text merges differently on the two sides. Pinned by
   /// test/unit/server-conformance/server-concurrent-loss-wave2.test.ts, which
-  /// re-derives all three from the live segmenter and compares them to what is
-  /// written here.
+  /// re-derives all three from the live segmenter: it demands this file cover
+  /// everything that engine derives, and exact equality once the engine is on
+  /// the target version.
   /// </summary>
   private static readonly int[] ConjunctLinkers =
   [
       0x094D, 0x094D, 0x09CD, 0x09CD, 0x0ACD, 0x0ACD, 0x0B4D, 0x0B4D,
-      0x0C4D, 0x0C4D, 0x0D4D, 0x0D4D
+      0x0C4D, 0x0C4D, 0x0D4D, 0x0D4D, 0x1039, 0x1039, 0x17D2, 0x17D2,
+      0x1A60, 0x1A60, 0x1B44, 0x1B44, 0x1BAB, 0x1BAB, 0xA9C0, 0xA9C0,
+      0xAAF6, 0xAAF6, 0x10A3F, 0x10A3F, 0x11133, 0x11133, 0x113D0, 0x113D0,
+      0x1193E, 0x1193E, 0x11A47, 0x11A47, 0x11A99, 0x11A99, 0x11F42, 0x11F42
   ];
 
   /// <summary>InCB=Consonant, the characters a linker joins. See <see cref="ConjunctLinkers"/>.</summary>
@@ -199,7 +214,19 @@ internal static partial class TextDiff
       0x0AB2, 0x0AB3, 0x0AB5, 0x0AB9, 0x0AF9, 0x0AF9, 0x0B15, 0x0B28,
       0x0B2A, 0x0B30, 0x0B32, 0x0B33, 0x0B35, 0x0B39, 0x0B5C, 0x0B5D,
       0x0B5F, 0x0B5F, 0x0B71, 0x0B71, 0x0C15, 0x0C28, 0x0C2A, 0x0C39,
-      0x0C58, 0x0C5A, 0x0D15, 0x0D3A
+      0x0C58, 0x0C5A, 0x0D15, 0x0D3A, 0x1000, 0x102A, 0x103F, 0x103F,
+      0x1050, 0x1055, 0x105A, 0x105D, 0x1061, 0x1061, 0x1065, 0x1066,
+      0x106E, 0x1070, 0x1075, 0x1081, 0x108E, 0x108E, 0x1780, 0x17B3,
+      0x1A20, 0x1A54, 0x1B0B, 0x1B0C, 0x1B13, 0x1B33, 0x1B45, 0x1B4C,
+      0x1B83, 0x1BA0, 0x1BAE, 0x1BAF, 0x1BBB, 0x1BBD, 0xA989, 0xA98B,
+      0xA98F, 0xA9B2, 0xA9E0, 0xA9E4, 0xA9E7, 0xA9EF, 0xA9FA, 0xA9FE,
+      0xAA60, 0xAA6F, 0xAA71, 0xAA73, 0xAA7A, 0xAA7A, 0xAA7E, 0xAA7F,
+      0xAAE0, 0xAAEA, 0xABC0, 0xABDA, 0x10A00, 0x10A00, 0x10A10, 0x10A13,
+      0x10A15, 0x10A17, 0x10A19, 0x10A35, 0x11103, 0x11126, 0x11144, 0x11144,
+      0x11147, 0x11147, 0x11380, 0x11389, 0x1138B, 0x1138B, 0x1138E, 0x1138E,
+      0x11390, 0x113B5, 0x11900, 0x11906, 0x11909, 0x11909, 0x1190C, 0x11913,
+      0x11915, 0x11916, 0x11918, 0x1192F, 0x11A00, 0x11A00, 0x11A0B, 0x11A32,
+      0x11A50, 0x11A50, 0x11A5C, 0x11A83, 0x11F04, 0x11F10, 0x11F12, 0x11F33
   ];
 
   /// <summary>
@@ -243,10 +270,11 @@ internal static partial class TextDiff
       0x1171E, 0x1171E, 0x11726, 0x11726, 0x1182C, 0x1182E, 0x11838, 0x11838,
       0x11931, 0x11935, 0x11937, 0x11938, 0x11940, 0x11940, 0x11942, 0x11942,
       0x119D1, 0x119D3, 0x119DC, 0x119DF, 0x119E4, 0x119E4, 0x11A39, 0x11A39,
-      0x11A57, 0x11A58, 0x11A97, 0x11A97, 0x11C2F, 0x11C2F, 0x11C3E, 0x11C3E,
-      0x11CA9, 0x11CA9, 0x11CB1, 0x11CB1, 0x11CB4, 0x11CB4, 0x11D8A, 0x11D8E,
-      0x11D93, 0x11D94, 0x11D96, 0x11D96, 0x11EF5, 0x11EF6, 0x11F03, 0x11F03,
-      0x11F34, 0x11F35, 0x11F3E, 0x11F3F, 0x1612A, 0x1612C, 0x16F51, 0x16F87
+      0x11A57, 0x11A58, 0x11A97, 0x11A97, 0x11B61, 0x11B61, 0x11B65, 0x11B65,
+      0x11B67, 0x11B67, 0x11C2F, 0x11C2F, 0x11C3E, 0x11C3E, 0x11CA9, 0x11CA9,
+      0x11CB1, 0x11CB1, 0x11CB4, 0x11CB4, 0x11D8A, 0x11D8E, 0x11D93, 0x11D94,
+      0x11D96, 0x11D96, 0x11EF5, 0x11EF6, 0x11F03, 0x11F03, 0x11F34, 0x11F35,
+      0x11F3E, 0x11F3F, 0x1612A, 0x1612C, 0x16F51, 0x16F87
   ];
 
   /// <summary>

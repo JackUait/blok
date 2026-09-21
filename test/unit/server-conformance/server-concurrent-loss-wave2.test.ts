@@ -188,6 +188,12 @@ describe('client element pairing under concurrency (the contract the server must
  * So the sets are re-derived here from the live segmenter and compared to what
  * the C# file commits: a drift fails loudly instead of silently re-diverging.
  *
+ * The comparison is not plain equality, because this suite runs on whatever
+ * Node the runner has and the C# file is ONE table. Unicode 17.0 only added
+ * to all three sets, so the file targets the newest and must COVER whatever
+ * this engine derives; on an engine already at the target the two are equal.
+ * A future Unicode that adds a code point fails the coverage check here.
+ *
  * Derived by asking the segmenter, never from a table: `C L X` is one
  * character only when X is a consonant, `C X C` only when X is a linker, and
  * `C X L C` stops being one when X is an extender that BREAKS a conjunct.
@@ -196,6 +202,8 @@ describe('GB9c tables — lockstep with the client segmenter', () => {
   const DIFF_PATH = resolve(process.cwd(), 'packages/server/dotnet/Blok.Server/Collab/TextDiff.cs');
   const CONSONANT = 0x0915;
   const LINKER = 0x094d;
+  /** The Unicode version TextDiff.cs commits, as `process.versions.unicode` spells it. */
+  const TABLE_UNICODE = '17.0';
 
   /** Every code point, minus the surrogate range no string can carry alone here. */
   const points = Array.from({ length: 0x110000 }, (_, code) => code)
@@ -280,6 +288,36 @@ describe('GB9c tables — lockstep with the client segmenter', () => {
     const breakers = points
       .filter((code) => extenders.get(code) === 1 && conjunct.get(code) !== 1);
 
+    /** The code points a committed `int[]` of inclusive bounds holds. */
+    const covered = (name: string): Set<number> => {
+      const bounds = csharpRanges(source, name);
+      const held = new Set<number>();
+
+      for (let at = 0; at < bounds.length; at += 2) {
+        for (let code = bounds[at]; code <= bounds[at + 1]; code++) { held.add(code); }
+      }
+
+      return held;
+    };
+
+    const missing = (name: string, derived: number[]): number[] => {
+      const held = covered(name);
+
+      return derived.filter((code) => !held.has(code));
+    };
+
+    expect(missing('ConjunctLinkers', linkers), 'linkers TextDiff.cs does not cover').toEqual([]);
+    expect(
+      missing('ConjunctConsonants', consonants),
+      'consonants TextDiff.cs does not cover'
+    ).toEqual([]);
+    expect(missing('ConjunctBreakers', breakers), 'breakers TextDiff.cs does not cover').toEqual([]);
+
+    if (process.versions.unicode !== TABLE_UNICODE) {
+      return;
+    }
+
+    // On the target version nothing may be committed BEYOND what it derives.
     expect(csharpRanges(source, 'ConjunctLinkers')).toEqual(ranges(linkers));
     expect(csharpRanges(source, 'ConjunctConsonants')).toEqual(ranges(consonants));
     expect(csharpRanges(source, 'ConjunctBreakers')).toEqual(ranges(breakers));

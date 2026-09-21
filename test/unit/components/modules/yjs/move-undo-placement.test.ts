@@ -316,6 +316,41 @@ describe('placement-based move undo/redo', () => {
       expect(orderedIds()).toEqual(['p', 'c1', 'c2', 'x']);
       expect(manager.toJSON().find((block) => block.id === 'x')?.parent).toBe('p');
     });
+
+    it('redoes a two-block adoption group, not just its first entry', () => {
+      manager.fromJSON([
+        paragraph('hdr', 'Section'),
+        paragraph('p1', 'first'),
+        paragraph('p2', 'second'),
+      ]);
+
+      // Toggle-heading section adoption: each sibling's from-placement is read
+      // right before ITS OWN write, so p2's is the one left by p1's move.
+      manager.transactMoves(() => {
+        let afterId: string | null = null;
+
+        for (const id of ['p1', 'p2']) {
+          const from = placementOf(id);
+          const to: BlockPlacement = { parentId: 'hdr', afterId };
+
+          manager.applyBlockPlacement(id, to, { capture: false });
+          manager.recordParentChangeForPendingMove(id, from, to);
+          afterId = id;
+        }
+      });
+      expect(orderedIds()).toEqual(['hdr', 'p1', 'p2']);
+      expect(manager.toJSON().find((block) => block.id === 'p2')?.parent).toBe('hdr');
+
+      manager.undo();
+
+      expect(manager.toJSON().find((block) => block.id === 'p1')?.parent).toBeUndefined();
+      expect(manager.toJSON().find((block) => block.id === 'p2')?.parent).toBeUndefined();
+
+      manager.redo();
+
+      expect(manager.toJSON().find((block) => block.id === 'p1')?.parent).toBe('hdr');
+      expect(manager.toJSON().find((block) => block.id === 'p2')?.parent).toBe('hdr');
+    });
   });
 
   describe('replay event profile', () => {

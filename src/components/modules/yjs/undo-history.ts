@@ -8,6 +8,15 @@ import type { BlockPlacement, CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry
 
 type StackItem = Y.UndoManager['undoStack'][number];
 
+/**
+ * The state a move entry was last left in: where its block actually landed,
+ * and which blocks existed at that moment.
+ */
+interface ReplayAnchor {
+  placement: BlockPlacement | null;
+  known: Set<string>;
+}
+
 /** What the newest yjs undo entry would create and bring back, by block id. */
 interface PoppedEntryScan {
   born: Set<string>;
@@ -99,12 +108,12 @@ export class UndoHistory {
   private moveRedoStack: MoveHistoryEntry[] = [];
 
   /**
-   * The block ids that existed when each recorded move was last written or
-   * replayed, keyed by the entry itself so no shared type has to carry it.
-   * Read by {@link groupWasDisplacedSince}; written by
-   * {@link stampKnownBlocks}.
+   * Where each recorded move left its block, and which blocks existed, the
+   * last time the move was written or replayed. Keyed by the entry itself so
+   * no shared type has to carry it. Read by {@link groupWasDisplacedSince};
+   * written by {@link stampReplayAnchor}.
    */
-  private readonly blocksKnownAtMove = new WeakMap<SingleMoveEntry, Set<string>>();
+  private readonly replayAnchors = new WeakMap<SingleMoveEntry, ReplayAnchor>();
 
   /**
    * Temporary buffer for collecting moves during a grouped operation.
@@ -535,20 +544,29 @@ export class UndoHistory {
    * degradation laws (append to the parent, keep the orphan) own that case.
    *
    * Blocks that did not exist when the group was recorded are INVISIBLE to the
-   * comparison (see {@link blocksKnownAtMove}). A peer merely inserting a block
+   * comparison (see {@link replayAnchors}). A peer merely inserting a block
    * in front of the moved one changes which sibling it follows without moving
    * it; reading that as displacement refused a move-undo that was still this
    * editor's to reverse — and, because the refusal returns before the yjs
    * branch, wedged every earlier action behind it for the rest of the session.
+   *
+   * The anchor is where the block ACTUALLY landed ({@link stampReplayAnchor}),
+   * not the recorded `from`/`to`. Inside a group of two or more moves each
+   * entry's `from` is read just before its own write, so it describes the
+   * half-applied document, not the one the group's undo restores: adopting
+   * `p1` and `p2` under a heading records `p2` as following the heading,
+   * because `p1` had already left. Comparing the redo against that read the
+   * group's own undo as a peer move and refused every redo of it.
    * @param group - the move group about to be replayed
-   * @param expected - the recorded placement the block must still occupy:
-   *   `to` for an undo (where this editor put it), `from` for a redo (where
-   *   the undo put it back)
+   * @param expected - the recorded placement to fall back on when the block
+   *   was outside the document at the last stamp: `to` for an undo (where this
+   *   editor put it), `from` for a redo (where the undo put it back)
    */
   private groupWasDisplacedSince(group: MoveHistoryEntry, expected: 'from' | 'to'): boolean {
     return group.some((move) => {
-      const anchor = move[expected];
-      const placement = this.currentPlacement(move.blockId, this.blocksKnownAtMove.get(move) ?? null);
+      const stamped = this.replayAnchors.get(move);
+      const anchor = stamped?.placement ?? move[expected];
+      const placement = this.currentPlacement(move.blockId, stamped?.known ?? null);
 
       // Gone from the doc: nothing to reverse, and nothing to overrule.
       if (placement === null || !this.placementAnchorsExist(anchor)) {
@@ -560,19 +578,22 @@ export class UndoHistory {
   }
 
   /**
-   * Record which blocks exist right now for every entry of a move group, so a
-   * later displacement test can tell "the peer moved my block" from "the peer
-   * inserted one next to it".
+   * Record where every entry of a move group has just left its block, and
+   * which blocks exist around it, so a later displacement test can tell "the
+   * peer moved my block" from "the peer inserted one next to it".
    *
-   * Re-stamped on every replay as well as on the original recording: after an
-   * undo the group waits on the redo stack, and the blocks around it by then
-   * are the ones the redo's own check must read placement over.
+   * MUST run after the writes it describes — the original recording, an undo
+   * replay and a redo replay all call it once the document already carries
+   * their result.
    * @param group - the group whose entries to stamp
    */
-  private stampKnownBlocks(group: MoveHistoryEntry): void {
+  private stampReplayAnchor(group: MoveHistoryEntry): void {
     const known = new Set<string>(this.blocksScope === null ? [] : this.blocksScope.keys());
 
-    group.forEach((move) => this.blocksKnownAtMove.set(move, known));
+    group.forEach((move) => this.replayAnchors.set(move, {
+      placement: this.currentPlacement(move.blockId),
+      known,
+    }));
   }
 
   /**
@@ -970,7 +991,7 @@ export class UndoHistory {
 
       // The group now waits on the redo stack: its next displacement test reads
       // placement over the blocks that exist AFTER this replay.
-      this.stampKnownBlocks(lastMoveGroup);
+      this.stampReplayAnchor(lastMoveGroup);
 
       // Pop caret entry only after move succeeds
       const caretEntry = this.caretUndoStack.pop();
@@ -1080,7 +1101,7 @@ export class UndoHistory {
         this.placementCallback(move.blockId, move.to, 'move-redo');
       }
 
-      this.stampKnownBlocks(lastMoveGroup);
+      this.stampReplayAnchor(lastMoveGroup);
 
       // Pop caret entry only after move succeeds
       const caretEntry = this.caretRedoStack.pop();
@@ -1256,7 +1277,7 @@ export class UndoHistory {
   private recordMoveForUndo(entry: MoveHistoryEntry, skipCaretCapture = false): void {
     this.moveUndoStack.push(entry);
     this.moveRedoStack = [];
-    this.stampKnownBlocks(entry);
+    this.stampReplayAnchor(entry);
 
     // The yjs redo branch has to die with it. A move's own transaction uses the
     // UNTRACKED 'move' origin (the placement stacks own its history, and a

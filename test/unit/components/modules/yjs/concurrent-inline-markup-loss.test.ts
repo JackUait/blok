@@ -22,9 +22,9 @@ const sync = (a: DocumentStore, b: DocumentStore): void => {
 };
 
 const textOf = (store: DocumentStore, id: string): string => {
-  const block = store.toJSON().find((candidate) => candidate.id === id);
+  const text = store.toJSON().find((candidate) => candidate.id === id)?.data.text;
 
-  return ((block?.data ?? {}) as Record<string, unknown>).text as string;
+  return text as string;
 };
 
 /** What the reader actually sees, once the browser parses the merged markup. */
@@ -108,29 +108,41 @@ describe('concurrent inline markup — marking a word the other peer is fixing',
   const TAGS = ['b', 'i', 'u', 'mark', 'code'];
 
   /** Deterministic, so a failure names the same pairs every run. */
-  const nextRandom = (state: { value: number }, bound: number): number => {
-    state.value = (state.value * 1103515245 + 12345) & 0x7fffffff;
+  const createRandom = (seed: number): ((bound: number) => number) => {
+    let value = seed;
 
-    return state.value % bound;
+    return (bound: number): number => {
+      value = (value * 1103515245 + 12345) & 0x7fffffff;
+
+      return value % bound;
+    };
+  };
+
+  /** Delete, replace or insert one letter — the three ways a typo gets fixed. */
+  const fixLetter = (word: string, at: number, mode: number): string => {
+    if (mode === 0) {
+      return word.slice(0, at) + word.slice(at + 1);
+    }
+
+    if (mode === 1) {
+      return `${word.slice(0, at)}x${word.slice(at + 1)}`;
+    }
+
+    return `${word.slice(0, at)}q${word.slice(at)}`;
   };
 
   it('never damages the markup across 400 mark-versus-letter-fix pairs', () => {
-    const state = { value: 12345 };
+    const nextRandom = createRandom(12345);
     const damaged: string[] = [];
 
-    /* eslint-disable-next-line no-restricted-syntax -- sweep counter */
     for (let round = 0; round < 400; round += 1) {
-      const words = [0, 1, 2, 3].map(() => WORDS[nextRandom(state, WORDS.length)]);
-      const target = nextRandom(state, words.length);
-      const tag = TAGS[nextRandom(state, TAGS.length)];
+      const words = [0, 1, 2, 3].map(() => WORDS[nextRandom(WORDS.length)]);
+      const target = nextRandom(words.length);
+      const tag = TAGS[nextRandom(TAGS.length)];
       const word = words[target];
-      const at = nextRandom(state, word.length);
-      const mode = nextRandom(state, 3);
-      const fixed = mode === 0
-        ? word.slice(0, at) + word.slice(at + 1)
-        : mode === 1
-          ? `${word.slice(0, at)}x${word.slice(at + 1)}`
-          : `${word.slice(0, at)}q${word.slice(at)}`;
+      const at = nextRandom(word.length);
+      const mode = nextRandom(3);
+      const fixed = fixLetter(word, at, mode);
 
       const storeOne = createStore();
       const storeTwo = createStore();

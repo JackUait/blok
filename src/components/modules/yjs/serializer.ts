@@ -14,6 +14,24 @@ const NUL_CHAR = String.fromCharCode(0);
  *
  * Top-level block data only — a nested `text` (a table cell's) is written
  * through `assignYMapEntry` and stays a leaf.
+ *
+ * There is deliberately NO nested counterpart, unlike `ORDERED_ID_ARRAY_KEYS`.
+ * The one real nested case is a database row's title, in
+ * `data.properties[propertyId]` — but that same map holds a select's option id,
+ * a date and a url, and property ids are `nanoid()`, so no key-name rule can
+ * tell prose from them. Merging the others per character INVENTS a value
+ * neither peer picked (measured: option `o1` → `o2` and `o3` merges to `o23`,
+ * which matches no option and drops the card into a labelless orphan column;
+ * `2026-09-21` → Sep 22 and Oct 21 merges to `2026-10-22`). The only signal
+ * that separates them is the property TYPE, which lives in the PARENT database
+ * block's `data.schema` — concurrently edited state in another block. Two peers
+ * disagreeing about the schema for one instant would mint a `Y.Text` on one
+ * side and a leaf on the other for the SAME key, and `assignYMapEntry`'s
+ * plain-leaf branch then `set`s the string over the peer's `Y.Text` — silent,
+ * permanent loss of merging. A representation rule must be a race-free
+ * function of the key path alone, computable identically here and in
+ * `YDocConverter.cs`. A row title merging needs a top-level key on the row
+ * block, not a nested rule here.
  */
 const DIFFABLE_TEXT_KEYS = new Set(['text', 'code', 'caption', 'title', 'alt', 'artist']);
 
@@ -200,9 +218,19 @@ export class YBlockSerializer {
 
     yblock.set('data', this.blockDataToYMap(normalizedData));
 
-    if (blockData.tunes !== undefined) {
-      yblock.set('tunes', this.objectToYMap(blockData.tunes));
-    }
+    // EAGER, always — the same law as `contentIds` below and the `Y.Text` in
+    // `blockDataToYMap`: a container two peers can create must be minted by the
+    // ONE peer that creates the block. Created lazily on the first tune write
+    // instead, two peers each `set('tunes', freshMap)` on a tuneless block, and
+    // map-set is last-writer-wins — the loser's map was discarded WITH the tune
+    // inside it. With one shared map, two different tunes merge as two sets.
+    // Read-back still drops an empty map (`yBlockToOutputData`), so the public
+    // OutputData shape is unchanged.
+    // LOCKSTEP: `InputWriter.Block` in
+    // packages/server/dotnet/Blok.Server/Collab/YDocConverter.cs must write a
+    // `tunes` map on EVERY block too, or a server-seeded block still carries
+    // the lazy-birth race this eager mint exists to close.
+    yblock.set('tunes', this.objectToYMap(blockData.tunes ?? {}));
 
     if (blockData.parent !== undefined) {
       yblock.set('parentId', stripNulIfString(blockData.parent));
@@ -396,10 +424,52 @@ export class YBlockSerializer {
    * away a peer's concurrent edit inside it. Every element is keyed, empty
    * rows included, so deleting the last column (`[[], []]`) does not flip the
    * representation. Arrays of plain objects (database schema/views) are NOT
-   * grids and keep the element-wise Y.Array behaviour.
+   * grids and keep the element-wise Y.Array behaviour — they take the keyed
+   * shape through `isIdentityArray` instead, keyed by their own `id`.
    */
   public isGridArray(value: unknown): value is unknown[][] {
     return this.isConvertibleArray(value) && value.every((element) => Array.isArray(element));
+  }
+
+  /**
+   * The identity rule: an array whose elements are ALL plain objects carrying
+   * a unique non-empty string `id` (a database's `schema`, a select's
+   * `config.options`, a database's `views`) takes the SAME keyed wrapper a
+   * grid does, keyed by the element's own id instead of a minted key.
+   *
+   * Same reason as the grid rule, one shape further out: Y.Array has no move,
+   * so a positional diff writes a reorder as delete+insert. That recreates the
+   * element's Y.Map, and a peer's concurrent field edit — measured: a column
+   * RENAME — lands on whatever object ended up at that index instead. Both
+   * peers then converge on the same wrong label, so nobody can see it.
+   *
+   * Uniqueness is required: duplicate ids cannot address distinct containers,
+   * so such an array keeps the plain Y.Array behaviour rather than collapsing.
+   *
+   * Read-back is `gridMapToPlain` either way, so OutputData is unchanged and a
+   * document written before this rule (a plain Y.Array) still reads and diffs
+   * exactly as it did — there is no promotion, only a new birth shape.
+   *
+   * LOCKSTEP: `InputWriter.IsIdentityArray` / `PlainToIdentityMap` in
+   * packages/server/dotnet/Blok.Server/Collab/YDocConverter.cs must recognise
+   * exactly the same arrays. If one side stores a database `schema`/`views`
+   * list as this keyed wrapper and the other as a plain array, the same field
+   * is two different CRDT types and an edit to it is lost with no error.
+   */
+  public isIdentityArray(value: unknown): value is Record<string, unknown>[] {
+    if (!this.isConvertibleArray(value) || this.isGridArray(value)) {
+      return false;
+    }
+
+    // Compared AFTER the NUL scrub, because that is the form the key is stored
+    // in: two ids differing only by a NUL would address one container.
+    const keys = value.map((element) => {
+      const id = Array.isArray(element) ? undefined : (element as Record<string, unknown>).id;
+
+      return typeof id === 'string' ? stripNul(id) : '';
+    });
+
+    return keys.every((key) => key.length > 0) && new Set(keys).size === keys.length;
   }
 
   /**
@@ -471,6 +541,10 @@ export class YBlockSerializer {
       return this.plainToGridMap(value);
     }
 
+    if (this.isIdentityArray(value)) {
+      return this.plainToIdentityMap(value);
+    }
+
     if (this.isConvertibleArray(value)) {
       const yarray = new Y.Array<unknown>();
 
@@ -502,6 +576,28 @@ export class YBlockSerializer {
     gridMap.set(GRID_ORDER_KEY, order);
 
     return gridMap;
+  }
+
+  /**
+   * Build a keyed wrapper from id-bearing objects, keyed by each element's own
+   * id. Same container shape as a grid's, so `isGridMap`/`gridMapToPlain` read
+   * both back identically; only the key SOURCE differs — an id is already
+   * stable across peers, so there is nothing to mint.
+   */
+  public plainToIdentityMap(elements: Record<string, unknown>[]): Y.Map<unknown> {
+    const wrapper = new Y.Map<unknown>();
+    const rowMap = new Y.Map<unknown>();
+    const order = new Y.Array<string>();
+    // `isIdentityArray` guarantees a non-empty string id on every element.
+    const keys = elements.map((element) => stripNul(String(element.id)));
+
+    elements.forEach((element, index) => rowMap.set(keys[index], this.plainToYValue(element)));
+    order.push(keys);
+
+    wrapper.set(GRID_ROWS_KEY, rowMap);
+    wrapper.set(GRID_ORDER_KEY, order);
+
+    return wrapper;
   }
 
   /**

@@ -7,9 +7,10 @@ namespace Blok.Server.Tests.Collab;
 /// The diff behind <c>EditText</c>, at the level its boundaries live at.
 ///
 /// It is a port of the client's <c>diffText</c>
-/// (src/components/modules/yjs/document-store.ts); these tests pin the three
-/// things a port gets wrong: the search cap, the code-point to code-unit
-/// mapping, and the order the edits come back in.
+/// (src/components/modules/yjs/text-diff.ts); these tests pin the things a port
+/// gets wrong: the UNITS it may cut between, the search cap and the tier past
+/// it, the code-point to code-unit mapping, and the order the edits come back
+/// in.
 /// </summary>
 public sealed class TextDiffTests
 {
@@ -52,15 +53,18 @@ public sealed class TextDiffTests
     Assert.Equal([new TextEdit(3, 0, "x")], edits);
   }
 
-  /// <summary>An emoji swapped for another is one whole code point in and out.</summary>
+  /// <summary>
+  /// An emoji swapped for another is one whole code point out and one in, as
+  /// ONE replacement: the delete and the insert against its end are fused, so
+  /// the new character is anchored where the old one was rather than to the
+  /// right of its tombstone.
+  /// </summary>
   [Fact]
   public void SwappingAnEmojiMovesWholeCodePoints()
   {
     var edits = TextDiff.Diff("a\U0001F44Db", "a\U0001F44Eb");
 
-    Assert.Equal(
-        [new TextEdit(1, 2, string.Empty), new TextEdit(3, 0, "\U0001F44E")],
-        edits);
+    Assert.Equal([new TextEdit(1, 2, "\U0001F44E")], edits);
     Assert.Equal("a\U0001F44Eb", Apply("a\U0001F44Db", edits));
   }
 
@@ -117,19 +121,85 @@ public sealed class TextDiffTests
   }
 
   /// <summary>
-  /// Past the cap by words too, the single-region answer stands: one delete and
-  /// one insert over the changed middle.
+  /// Past the cap, the anchored split answers each gap on its own, so a rewrite
+  /// of sixty words is sixty narrow replacements rather than one block-wide
+  /// region. The one region is what moved a peer's concurrent keystroke to the
+  /// start of the block: it deletes every character that keystroke was anchored
+  /// between.
   /// </summary>
   [Fact]
-  public void PastBothCapsTheSingleRegionAnswerStands()
+  public void PastTheCapEachGapIsAnsweredOnItsOwn()
   {
     var before = string.Join(' ', Enumerable.Range(0, 60).Select(index => $"before{index}"));
     var after = string.Join(' ', Enumerable.Range(0, 60).Select(index => $"after{index}"));
 
     var edits = TextDiff.Diff(before, after);
 
-    Assert.Single(edits);
+    Assert.Equal(new TextEdit(0, 7, "after0"), edits[0]);
+    Assert.True(edits.Count > 50, $"a per-gap answer, not one region: {edits.Count} edits");
     Assert.Equal(after, Apply(before, edits));
+  }
+
+  /// <summary>
+  /// With NO anchor in common — a paste sharing nothing with what it replaces —
+  /// the single gap spans everything and the answer is the one region, exactly
+  /// what it was before the anchor tier existed.
+  /// </summary>
+  [Fact]
+  public void WithNoAnchorsTheSingleRegionAnswerStillStands()
+  {
+    var edits = TextDiff.Diff(new string('a', 200), new string('b', 200));
+
+    Assert.Equal([new TextEdit(0, 200, new string('b', 200))], edits);
+  }
+
+  /// <summary>
+  /// A COMPLETE TAG is one unit, so re-tagging a phrase never reuses a letter
+  /// of the phrase as part of the tag. Over code points Myers is free to spend
+  /// the word's own `b` on `&lt;b&gt;` — and the peer fixing that letter is
+  /// then editing the inside of the other peer's tag.
+  /// </summary>
+  [Fact]
+  public void ATagIsOneUnitAndNeverSharesACharacterWithContent()
+  {
+    Assert.Equal(
+        [new TextEdit(0, 0, "<b>"), new TextEdit(5, 0, "</b>")],
+        TextDiff.Diff("hello", "<b>hello</b>"));
+    Assert.Equal([new TextEdit(3, 1, "y")], TextDiff.Diff("<b>x</b>", "<b>y</b>"));
+  }
+
+  /// <summary>
+  /// An attribute value may carry a `&gt;` — serializing an element does not
+  /// escape one — so the scanner reads through quotes and the tag stays ONE
+  /// unit.
+  /// </summary>
+  [Fact]
+  public void AQuotedAngleBracketDoesNotEndATag()
+  {
+    Assert.Equal(
+        [new TextEdit(15, 1, "y")],
+        TextDiff.Diff("<a title=\"a>b\">x</a>", "<a title=\"a>b\">y</a>"));
+  }
+
+  /// <summary>
+  /// MALFORMED markup is text the user typed, and stays one atom per code
+  /// point: an unclosed tag, a bare `&lt;`, and a second `&lt;` before any
+  /// `&gt;`.
+  /// </summary>
+  [Fact]
+  public void MalformedMarkupStaysOrdinaryText()
+  {
+    Assert.Equal([new TextEdit(0, 2, "<b>")], TextDiff.Diff("<b", "<b>"));
+    Assert.Equal([new TextEdit(2, 1, ">")], TextDiff.Diff("a < b", "a > b"));
+    Assert.Equal([new TextEdit(0, 3, ">>>")], TextDiff.Diff("<<<", ">>>"));
+  }
+
+  /// <summary>An entity reference is one unit, so `&amp;` never half-becomes one.</summary>
+  [Fact]
+  public void AnEntityIsOneUnit()
+  {
+    Assert.Equal([new TextEdit(0, 1, "&amp;")], TextDiff.Diff("&", "&amp;"));
+    Assert.Equal([new TextEdit(0, 5, "&")], TextDiff.Diff("&amp;", "&"));
   }
 
   /// <summary>

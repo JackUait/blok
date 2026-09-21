@@ -1,259 +1,14 @@
-import { simpleDiffString } from 'lib0/diff';
 import { getUnixTime } from 'lib0/time';
 import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate, removeAwarenessStates } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 
-import { GRID_ORDER_KEY, GRID_ROWS_KEY, isDiffableTextKey, isOrderedIdArrayKey, stripNul, stripNulDeep, type YBlockSerializer, type YjsOutputBlockData, stripNulIfString } from './serializer';
+import { GRID_ORDER_KEY, GRID_ROWS_KEY, isDiffableTextKey, isOrderedIdArrayKey, stripNul, type YBlockSerializer, type YjsOutputBlockData, stripNulIfString } from './serializer';
+import { diffText } from './text-diff';
 import { LOCAL_ORIGIN_TAGS, type AwarenessChange, type BlockPlacement, type LocalOriginTag, type UndoScopeType } from './types';
 // The narrow module, not the utils barrel: the collab fixture generator
 // bundles this file for node.
 import { logLabeled } from '../../utils/logger';
 import { equals } from '../../utils/object';
-
-/**
- * How far the minimal diff searches before giving up. Myers costs O(N·D) in the
- * edit distance: typing is D of about 1 and wrapping a range in tags is D of
- * about 7, so the cap never bites a real edit, while a whole-string replacement
- * — a paste over a selection, a tool normalising its own markup — has a D the
- * size of the text and costs seconds at a few thousand characters. Past the cap
- * `diffText` re-runs the same bounded search over WORDS, and only past that
- * returns the single-region answer, which is what the write did before any of
- * this existed.
- *
- * The number is not a free dial: measured on a 20k-character whole-string
- * rewrite, a cap of 512 costs 25-70ms and 1024 costs 80-100ms, against under
- * 2ms here. Widen the UNITS, not the cap.
- */
-const MAX_DIFF_DISTANCE = 64;
-
-/** One edit turning the stored text into the saved text. */
-interface TextEditOp {
-  index: number;
-  remove: number;
-  insert: string;
-}
-
-/**
- * Walk a Myers trace back into edits, oldest first.
- * @param trace - V snapshots, one per search depth
- * @param before - the stored text, split into code points
- * @param after - the saved text, split into code points
- * @param depth - the depth the search ended at
- */
-const backtrackMyers = (
-  trace: Array<Map<number, number>>,
-  before: string[],
-  after: string[],
-  depth: number
-): TextEditOp[] => {
-  const ops: TextEditOp[] = [];
-  /* eslint-disable no-restricted-syntax -- the trace is walked backwards; both
-     coordinates move on every step, which is the shape of the algorithm. */
-  let x = before.length;
-  let y = after.length;
-
-  for (let step = depth; step > 0; step -= 1) {
-    const previous = trace[step];
-    const k = x - y;
-    const down = k === -step || (k !== step && (previous.get(k - 1) ?? 0) < (previous.get(k + 1) ?? 0));
-    const previousK = down ? k + 1 : k - 1;
-    const previousX = previous.get(previousK) ?? 0;
-    const previousY = previousX - previousK;
-
-    ops.push(down
-      ? { index: previousX,
-        remove: 0,
-        insert: after[previousY] }
-      : { index: previousX,
-        remove: 1,
-        insert: '' });
-
-    x = previousX;
-    y = previousY;
-  }
-  /* eslint-enable no-restricted-syntax */
-
-  ops.reverse();
-
-  // Fuse neighbours so a typed word is one insert, not one per character.
-  return ops.reduce<TextEditOp[]>((fused, op) => {
-    const last = fused[fused.length - 1];
-    const adjacent = last !== undefined &&
-      last.index + last.remove === op.index &&
-      (last.insert === '') === (op.insert === '');
-
-    if (adjacent) {
-      last.remove += op.remove;
-      last.insert += op.insert;
-
-      return fused;
-    }
-
-    fused.push({ ...op });
-
-    return fused;
-  }, []);
-};
-
-/**
- * How far a Myers step can run along the diagonal: the two texts agree
- * character for character from (x, y) until they do not.
- * @param before - the stored text, split into code points
- * @param after - the saved text, split into code points
- * @param fromX - index into `before` to start at
- * @param fromY - index into `after` to start at
- */
-const slideDiagonal = (before: string[], after: string[], fromX: number, fromY: number): number => {
-  const reach = Math.min(before.length - fromX, after.length - fromY);
-  // eslint-disable-next-line no-restricted-syntax -- scan index, advanced in the loop below
-  let matched = 0;
-
-  while (matched < reach && before[fromX + matched] === after[fromY + matched]) {
-    matched += 1;
-  }
-
-  return fromX + matched;
-};
-
-/**
- * One step of the search: extend every diagonal reachable at `depth`, recording
- * how far each one got. True once a path has consumed both texts.
- * @param before - the stored text, split into code points
- * @param after - the saved text, split into code points
- * @param v - furthest x reached per diagonal, updated in place
- * @param depth - the edit distance being tried
- */
-const reachesEnd = (before: string[], after: string[], v: Map<number, number>, depth: number): boolean => {
-  /* eslint-disable-next-line no-restricted-syntax -- walks the diagonals */
-  for (let k = -depth; k <= depth; k += 2) {
-    const down = k === -depth || (k !== depth && (v.get(k - 1) ?? 0) < (v.get(k + 1) ?? 0));
-    const start = down ? (v.get(k + 1) ?? 0) : (v.get(k - 1) ?? 0) + 1;
-    const x = slideDiagonal(before, after, start, start - k);
-
-    v.set(k, x);
-
-    if (x >= before.length && x - k >= after.length) {
-      return true;
-    }
-  }
-
-  return false;
-};
-
-/**
- * Re-express edits counted in code points as the code-unit offsets `Y.Text`
- * indexes by.
- * @param ops - edits whose index and remove count code points
- * @param beforePoints - the stored text, split into code points
- */
-const toUnitOps = (ops: TextEditOp[], beforePoints: string[]): TextEditOp[] => {
-  // Pushes into the accumulator: spreading it instead made the prefix sum
-  // O(N squared), which is 2 SECONDS of blocked main thread for one keystroke
-  // in a 20k-character block — measured.
-  const unitAt = beforePoints.reduce<number[]>((offsets, point) => {
-    offsets.push(offsets[offsets.length - 1] + point.length);
-
-    return offsets;
-  }, [0]);
-
-  return ops.map((op) => ({
-    index: unitAt[op.index],
-    remove: unitAt[op.index + op.remove] - unitAt[op.index],
-    insert: op.insert,
-  }));
-};
-
-/**
- * Myers over a sequence, bounded by `MAX_DIFF_DISTANCE`. Null when the two
- * sequences are further apart than the cap allows the search to look.
- * @param before - the stored text, split into the units being diffed
- * @param after - the saved text, split the same way
- */
-const myersOps = (before: string[], after: string[]): TextEditOp[] | null => {
-  const limit = Math.min(before.length + after.length, MAX_DIFF_DISTANCE);
-  const v = new Map<number, number>([[1, 0]]);
-  const trace: Array<Map<number, number>> = [];
-
-  /* eslint-disable-next-line no-restricted-syntax -- counts the search depth */
-  for (let depth = 0; depth <= limit; depth += 1) {
-    trace.push(new Map(v));
-
-    if (reachesEnd(before, after, v, depth)) {
-      return toUnitOps(backtrackMyers(trace, before, after, depth), before);
-    }
-  }
-
-  return null;
-};
-
-/**
- * Whitespace runs and non-whitespace runs, in order, concatenating back to
- * `text`. A word is one element, so a bulk edit that rewrites words has an
- * edit distance the size of the words it touched rather than the characters.
- * @param text - the string to split
- */
-const tokenize = (text: string): string[] => text.match(/\s+|\S+/gu) ?? [];
-
-/**
- * The smallest set of edits turning `before` into `after`.
- *
- * Minimal, not single-region, because these edits merge with a peer's. A
- * one-region diff describes "wrap this phrase in a tag" as "delete the phrase,
- * insert the tagged phrase" — so two peers wrapping OVERLAPPING phrases each
- * delete what the other re-inserts, and the shared words land twice while the
- * rest is dropped. Measured, and it is why `lib0`'s `simpleDiffString` is the
- * last resort here rather than the answer.
- *
- * Three steps, each narrower than the next is wide:
- *
- * 1. Myers over code POINTS, not code units. An emoji is two units, and an
- *    edit boundary between them puts the halves in separate CRDT items —
- *    measured, that shows the peer (and the writer) a broken character.
- *    `lib0`'s own diff rolls back off a surrogate boundary for the same reason.
- * 2. Myers over the WORDS of `simpleDiffString`'s region, once the character
- *    distance passes the cap. What the single-region answer costs is not
- *    characters — the length stays exact — it is POSITION: the one region
- *    deletes every character a concurrent keystroke sat between, so Yjs has no
- *    surviving neighbour to anchor it to and it surfaces at the edge of the
- *    span. Measured with two peers: a two-ended edit of distance 65 moved the
- *    other peer's character to index 0 of the block. A word-level pass
- *    describes the same edit as a few narrow regions instead, and a keystroke
- *    outside them keeps its neighbours.
- *
- *    The search runs over that region rather than the whole string for two
- *    reasons. It can then never answer WIDER than step 3 does, which is what
- *    keeps text with no word breaks at all (CJK) exactly where it was; and
- *    lib0's prefix/suffix scan is a native character loop, where trimming the
- *    same ends off code-point arrays here cost 2ms per call at 20k characters
- *    — measured, and more than the whole diff is allowed to cost.
- * 3. The single region, unchanged, when even the word distance passes the cap.
- * @param before - the stored text
- * @param after - the saved text
- */
-const diffText = (before: string, after: string): TextEditOp[] => {
-  const charOps = myersOps([...before], [...after]);
-
-  if (charOps !== null) {
-    return charOps;
-  }
-
-  // Code units, and surrogate-safe: lib0 rolls its own ends back off a
-  // surrogate boundary, so the region never starts or ends inside a character.
-  const { index, remove, insert } = simpleDiffString(before, after);
-
-  if (remove === 0 && insert === '') {
-    return [];
-  }
-
-  const wordOps = myersOps(tokenize(before.slice(index, index + remove)), tokenize(insert));
-
-  return wordOps === null
-    ? [{ index,
-      remove,
-      insert }]
-    : wordOps.map((op) => ({ ...op,
-      index: op.index + index }));
-};
 
 /**
  * Default transaction origin for updates applied through the binary seam
@@ -296,6 +51,51 @@ const commonEnds = (
 };
 
 /**
+ * What a block's nested containers held at the moment a save was captured.
+ *
+ * Keyed by the live `Y.Map` ITSELF, not by a path: a container's identity is
+ * what this store preserves across every merge, while an index or a grid row
+ * key moves under a concurrent insert. So the lookup answers exactly "did THIS
+ * container have that key when we looked", with no alignment to get wrong.
+ *
+ * A container absent from the snapshot was created after the capture, so every
+ * key in it is someone else's and none of them may be deleted.
+ */
+export type DataKeySnapshot = WeakMap<Y.Map<unknown>, ReadonlySet<string>>;
+
+/**
+ * Record the key set of every `Y.Map` reachable from a block's live `data`.
+ *
+ * Read straight off the shared types — no plain clone of the values — so the
+ * cost is one `keys()` per container and nothing proportional to the text in
+ * it. Deliberately NOT routed through `YjsManager.getBlockDataObject`: that
+ * reader drains the write buffer, which would end the 400ms coalescing of the
+ * very save this snapshot belongs to.
+ * @param value - the block's `data` Y.Map (anything else yields an empty snapshot)
+ * @returns the snapshot to hand back to `updateBlockData`
+ */
+export const captureDataKeySnapshot = (value: unknown): DataKeySnapshot => {
+  const snapshot: DataKeySnapshot = new WeakMap();
+  const visit = (node: unknown): void => {
+    if (node instanceof Y.Map) {
+      // A cycle is impossible in a Yjs tree, so `seen`-tracking is not needed.
+      snapshot.set(node, new Set(node.keys()));
+      node.forEach((child) => visit(child));
+
+      return;
+    }
+
+    if (node instanceof Y.Array) {
+      node.forEach((child) => visit(child));
+    }
+  };
+
+  visit(value);
+
+  return snapshot;
+};
+
+/**
  * DocumentStore manages the Yjs document and provides atomic block operations.
  *
  * Doc schema v2 — order as data:
@@ -307,6 +107,26 @@ const commonEnds = (
  * The flat document order is DERIVED (DFS from root through contentIds);
  * see `deriveOrderedIds` for the dedupe/orphan laws.
  */
+/**
+ * One block whose parent link and order-array membership disagreed after a
+ * merge: the parentId to end up with (null = root), and whether the block
+ * still has to be attached to that parent's order array.
+ */
+interface Rehoming {
+  id: string;
+  parentId: string | null;
+  attach: boolean;
+}
+
+/**
+ * The order arrays as they stood before a remote update: which ids were in
+ * SOME array, and how many copies of each id each array held.
+ */
+interface StructuralSnapshot {
+  placed: Set<string>;
+  counts: Map<Y.Array<string>, Map<string, number>>;
+}
+
 export class DocumentStore {
   /**
    * Yjs document instance.
@@ -439,13 +259,18 @@ export class DocumentStore {
     this.replaceBlockContent(id, block.type, block.data);
 
     const tunes = yblock.get('tunes');
+    // CLEARED, never deleted: `tunes` is minted eagerly by the one peer that
+    // creates the block (`outputDataToYBlock`) precisely so two peers cannot
+    // each `set` a fresh map over the key — map-set is last-writer-wins and the
+    // loser's tune goes with the discarded map. Deleting the key here put every
+    // rendered block back into that hazard. Read-back still drops an empty map,
+    // so a render that carries no tunes emits none.
+    const nextTunes = block.tunes ?? {};
 
-    if (block.tunes === undefined) {
-      yblock.delete('tunes');
-    } else if (tunes instanceof Y.Map) {
-      this.deepAssignYMap(tunes, block.tunes);
+    if (tunes instanceof Y.Map) {
+      this.deepAssignYMap(tunes, nextTunes);
     } else {
-      yblock.set('tunes', this.serializer.objectToYMap(block.tunes));
+      yblock.set('tunes', this.serializer.objectToYMap(nextTunes));
     }
 
     if (block.parent === undefined) {
@@ -1122,6 +947,222 @@ export class DocumentStore {
   }
 
   /**
+   * Whether the blocks map holds a TOMBSTONE for this id — an entry someone
+   * DELETED — as opposed to one this peer has simply never seen. Yjs keeps the
+   * deleted item in the map's internal key index and drops it from `keys()`,
+   * so that index is the ONLY place the two cases differ.
+   *
+   * The distinction is load-bearing: every repair below keys off it, and
+   * treating a not-yet-arrived peer's block as deleted would be a NEW loss
+   * path, worse than the dead id it would tidy away.
+   */
+  private isTombstonedBlock(id: string): boolean {
+    const item = this.yBlocksMap._map.get(id);
+
+    return item !== undefined && item.deleted;
+  }
+
+  /**
+   * What the order arrays held BEFORE a remote update is applied. The repair
+   * below is allowed to undo damage it watched happen, and nothing else: a
+   * document that ARRIVES malformed is read leniently, exactly as before, and
+   * is never rewritten. That is what keeps a foreign or older writer's
+   * document — and the table tool's cell blocks, which name the table as
+   * parent while deliberately living outside its `contentIds` — untouched.
+   */
+  private structuralSnapshot(): StructuralSnapshot {
+    const placed = new Set<string>();
+    const counts = new Map<Y.Array<string>, Map<string, number>>();
+
+    for (const order of this.orderArrays()) {
+      const perArray = new Map<string, number>();
+
+      for (const entryId of order.toArray().filter((entry) => typeof entry === 'string')) {
+        placed.add(entryId);
+        perArray.set(entryId, (perArray.get(entryId) ?? 0) + 1);
+      }
+
+      counts.set(order, perArray);
+    }
+
+    return { placed,
+      counts };
+  }
+
+  /**
+   * Repair the structural damage a merge leaves behind, in its OWN
+   * transaction carrying the remote origin:
+   * - writing inside the remote transaction itself advances this doc's own
+   *   clientID state on a transaction yjs flagged non-local, which makes yjs
+   *   regenerate the clientID ("another client seems to be using it");
+   * - a LOCAL origin would broadcast the repair, so two peers repairing the
+   *   same damage would each insert their own copy of the repair.
+   *
+   * Every decision is derived from converged content only (array order,
+   * tombstones, the pre-update snapshot, sorted ids), so every peer performs
+   * the same deletes and the same inserts and the repair converges without
+   * ever being exchanged.
+   *
+   * Nothing here ever removes a block from `blocksMap`; the only writes are
+   * order-array deletes/appends and clearing a `parentId` that names a
+   * deleted block.
+   * @param before - the order arrays as they stood before the update
+   * @param origin - the remote origin the triggering update carried
+   */
+  private reconcileStructure(before: StructuralSnapshot, origin: unknown): void {
+    const compaction = this.planOrderCompaction(before);
+    const rehoming = this.planRehoming(before);
+
+    // Nothing to do is the common case; an empty transaction would still make
+    // the observer dispatch a change.
+    if (compaction.length === 0 && rehoming.length === 0) {
+      return;
+    }
+
+    this.ydoc.transact(() => {
+      for (const { order, indices } of compaction) {
+        // Back to front, so the earlier indices stay valid.
+        for (const index of indices.slice().reverse()) {
+          order.delete(index, 1);
+        }
+      }
+
+      for (const { id, parentId, attach } of rehoming) {
+        const yblock = this.yBlocksMap.get(id);
+
+        if (!(yblock instanceof Y.Map)) {
+          continue;
+        }
+
+        if (parentId === null) {
+          yblock.delete('parentId');
+        }
+
+        const target = attach ? this.resolveTargetOrder(parentId ?? undefined) : null;
+
+        if (target !== null && !target.toArray().includes(id)) {
+          target.push([id]);
+        }
+      }
+    }, origin);
+  }
+
+  /**
+   * Entries to delete from each order array, per array, ascending.
+   *
+   * Two peers moving the same block each delete the item THEY saw and insert
+   * their own, so neither delete covers the other's insert and the id ends up
+   * in the array twice. The read side hides the duplicate, but the WRITE side
+   * measures against the raw array, so the corruption stays in the document
+   * and surfaces on the next insert. It has to leave the document.
+   *
+   * Dropped:
+   * - an id whose block is TOMBSTONED — it names nothing and never will
+   *   (a concurrent re-add clears the tombstone, so a resurrected block
+   *   keeps its slot). An id with NO map item is KEPT: that is a
+   *   not-yet-arrived peer's slot, and dropping it would be a new loss path.
+   * - a repeat BEYOND the number of copies this array already held. Array
+   *   order is converged, so "the first ones" name the same items on every
+   *   peer. Repeats that were already there when the update arrived are left
+   *   alone — see `structuralSnapshot`.
+   * @param before - the order arrays as they stood before the update
+   */
+  private planOrderCompaction(before: StructuralSnapshot): Array<{ order: Y.Array<string>; indices: number[] }> {
+    const plan: Array<{ order: Y.Array<string>; indices: number[] }> = [];
+
+    for (const order of this.orderArrays()) {
+      const known = before.counts.get(order);
+      const allowance = new Map(known ?? []);
+      const indices: number[] = [];
+
+      order.toArray().forEach((entryId, index) => {
+        if (typeof entryId !== 'string') {
+          return;
+        }
+
+        if (this.isTombstonedBlock(entryId)) {
+          indices.push(index);
+
+          return;
+        }
+
+        // An array this peer had not seen before the update arrived that way
+        // and is taken as given — only an array whose earlier contents we
+        // watched can tell a merge duplicate from one that was always there.
+        if (known === undefined) {
+          return;
+        }
+
+        const remaining = allowance.get(entryId) ?? 1;
+
+        if (remaining <= 0) {
+          indices.push(index);
+
+          return;
+        }
+
+        allowance.set(entryId, remaining - 1);
+      });
+
+      if (indices.length > 0) {
+        plan.push({ order, indices });
+      }
+    }
+
+    return plan;
+  }
+
+  /**
+   * Blocks the update knocked out of every order array, and what to do with
+   * each. Only a block that WAS placed before the update qualifies — a block
+   * that arrived unplaced is left where the reader's orphan handling puts it.
+   *
+   * - parent TOMBSTONED → cut the link (`parentId: null`) and put the block
+   *   back at root. A deleted parent is not a parent, and leaving the link
+   *   makes `resolveTargetOrder` answer null for every later drag, so
+   *   `moveBlock` removes the id and re-inserts it nowhere: the block keeps
+   *   its text and can never be moved again.
+   * - parent PRESENT → append to that parent's contentIds. The membership was
+   *   discarded by a last-writer-wins `set` on `contentIds`; the block's own
+   *   parentId is the surviving record of it.
+   * - parent NEVER SEEN → left alone. That is the orphan tolerance a
+   *   not-yet-arrived remote parent depends on.
+   *
+   * The parentId cut also applies to a block that is still placed — a link to
+   * a deleted block is dead either way — but nothing is appended for it.
+   *
+   * Sorted by id: appends must land in the same order on every peer, and
+   * Y.Map iteration order is not a cross-peer guarantee.
+   * @param before - the order arrays as they stood before the update
+   */
+  private planRehoming(before: StructuralSnapshot): Rehoming[] {
+    const placed = new Set(
+      this.orderArrays()
+        .flatMap((order) => order.toArray())
+        .filter((entryId) => typeof entryId === 'string' && !this.isTombstonedBlock(entryId))
+    );
+
+    return Array.from(this.yBlocksMap.keys()).sort().flatMap((id): Rehoming[] => {
+      const parentId = this.rawParentId(id);
+      const knockedOut = before.placed.has(id) && !placed.has(id);
+
+      if (parentId !== null && this.isTombstonedBlock(parentId)) {
+        return [{ id,
+          parentId: null,
+          attach: knockedOut }];
+      }
+
+      if (knockedOut && parentId !== null && this.yBlocksMap.has(parentId)) {
+        return [{ id,
+          parentId,
+          attach: true }];
+      }
+
+      return [];
+    });
+  }
+
+  /**
    * The order array a block belongs to per its parentId: the root order
    * when there is no parentId, the parent's contentIds (created if
    * missing) when the parent exists, and NONE when the parentId dangles.
@@ -1175,8 +1216,20 @@ export class DocumentStore {
     // Indexed once: an indexOf per order entry made one Enter in a flat 10k
     // document cost seconds.
     const flatIndexOf = new Map(flatIds.map((id, index) => [id, index]));
+    // A REPEAT of an id already counted is not another sibling. Counting it
+    // advances the slot past a block the caller asked to insert before, which
+    // is how a duplicate left by two concurrent drags put the next Enter one
+    // place too late. Repairs keep the doc clean going forward; this keeps a
+    // document that already arrived duplicated placing correctly.
+    const counted = new Set<string>();
 
     return order.toArray().reduce<number>((slot, entryId, position) => {
+      if (counted.has(entryId)) {
+        return slot;
+      }
+
+      counted.add(entryId);
+
       const flatIndex = flatIndexOf.get(entryId);
 
       return flatIndex !== undefined && flatIndex < desiredFlatIndex ? position + 1 : slot;
@@ -1201,10 +1254,16 @@ export class DocumentStore {
    * @param id - Block id
    * @param key - Data property key
    * @param value - New value
+   * @param seen - what the block's nested containers held when this value was
+   *   captured. A nested key missing from it appeared AFTER the capture — a
+   *   peer's write that landed while the async `save()` was in flight — so the
+   *   deep assign below may not delete it. This is `pruneBlockData`'s `seen`
+   *   one level DOWN, and it is omitted wherever the value is captured
+   *   synchronously with the write (`replaceBlockContent`, a tune, a patch).
    * @returns true if a Yjs write actually occurred (value changed), false if the
    *          equality guard short-circuited the write.
    */
-  public updateBlockData(id: string, key: string, value: unknown): boolean {
+  public updateBlockData(id: string, key: string, value: unknown, seen?: DataKeySnapshot): boolean {
     const yblock = this.getBlockById(id);
 
     if (yblock === undefined) {
@@ -1235,10 +1294,12 @@ export class DocumentStore {
 
       this.transact(() => {
         if (this.serializer.isGridArray(value)) {
-          this.deepAssignYGrid(currentValue, value);
+          this.deepAssignYGrid(currentValue, value, seen);
+        } else if (this.serializer.isIdentityArray(value)) {
+          this.deepAssignYIdentity(currentValue, value, seen);
         } else {
-          // No longer a grid (emptied, or rows turned into objects) — rebuild
-          // so the write path matches the load path.
+          // Neither shape any more (emptied, or the elements lost their ids) —
+          // rebuild so the write path matches the load path.
           ydata.set(dataKey, this.serializer.plainToYValue(value));
         }
       }, 'local');
@@ -1257,7 +1318,7 @@ export class DocumentStore {
       }
 
       this.transact(() => {
-        this.deepAssignYMap(currentValue, value as Record<string, unknown>);
+        this.deepAssignYMap(currentValue, value as Record<string, unknown>, seen);
       }, 'local');
 
       return true;
@@ -1274,7 +1335,7 @@ export class DocumentStore {
 
       this.transact(() => {
         if (this.serializer.isConvertibleArray(value)) {
-          this.deepAssignYArray(currentValue, value);
+          this.deepAssignYArray(currentValue, value, seen);
         } else {
           // Emptied or turned primitive — no longer qualifies for Y.Array;
           // downshift to a plain leaf so the write path matches the load path.
@@ -1313,12 +1374,18 @@ export class DocumentStore {
       this.transact(() => {
         // Right to left, so an earlier edit's offsets stay valid.
         diffText(currentValue.toJSON(), nextText).reverse().forEach((op) => {
-          if (op.remove > 0) {
-            currentValue.delete(op.index, op.remove);
-          }
-
+          // INSERT FIRST, then delete what it replaces. The other order anchors
+          // the new text to the right of the run it replaces — the characters
+          // it is anchored to are the ones being tombstoned — so a peer's
+          // concurrent keystroke inside that run surfaces in FRONT of the whole
+          // replacement. Measured on a paste over a paragraph: the block read
+          // "!Completely different…".
           if (op.insert.length > 0) {
             currentValue.insert(op.index, op.insert);
+          }
+
+          if (op.remove > 0) {
+            currentValue.delete(op.index + op.insert.length, op.remove);
           }
         });
       }, 'local');
@@ -1414,22 +1481,39 @@ export class DocumentStore {
    * deleting keys absent from `source`. Nested objects recurse into existing
    * child Y.Maps; new nested objects are serialized fresh. Must run inside a
    * transaction (the caller wraps it).
+   *
+   * With a `seen` snapshot, a key is deletable only if `target` already held it
+   * when the source was captured — a key that appeared since is a peer's write
+   * that raced this (asynchronous) save, and `source` omits it because it never
+   * saw it, not because anyone removed it. Without a snapshot every absent key
+   * is deleted, which is right for a source captured synchronously.
+   *
+   * LOCKSTEP: `DeepAssign.Map` in
+   * packages/server/dotnet/Blok.Server/Collab/YDocConverter.cs is the port of
+   * this walk (and of `deepAssignYArray`/`deepAssignYGrid`/`deepAssignYIdentity`
+   * beside it). Both sides must edit the live container IN PLACE, per key, at
+   * every depth: a whole-key set is last-writer-wins, so a peer's edit INSIDE
+   * the container goes with the container it replaces.
    */
-  private deepAssignYMap(target: Y.Map<unknown>, source: Record<string, unknown>): void {
+  private deepAssignYMap(target: Y.Map<unknown>, source: Record<string, unknown>, seen?: DataKeySnapshot): void {
+    const known = seen?.get(target);
+
     // Remove keys no longer present.
     for (const key of Array.from(target.keys())) {
-      if (!Object.prototype.hasOwnProperty.call(source, key)) {
+      const deletable = seen === undefined || known?.has(key) === true;
+
+      if (deletable && !Object.prototype.hasOwnProperty.call(source, key)) {
         target.delete(key);
       }
     }
 
     for (const [key, value] of Object.entries(source)) {
-      this.assignYMapEntry(target, key, value);
+      this.assignYMapEntry(target, key, value, seen);
     }
   }
 
   /** Assign one key of a nested Y.Map, recursing into child Y.Maps/Y.Arrays. */
-  private assignYMapEntry(target: Y.Map<unknown>, key: string, value: unknown): void {
+  private assignYMapEntry(target: Y.Map<unknown>, key: string, value: unknown, seen?: DataKeySnapshot): void {
     // Scrub the nested KEY here — deep-merge writes bypass objectToYMap, so this
     // is the single chokepoint that keeps a NUL out of a nested map key.
     const mapKey = stripNul(key);
@@ -1440,7 +1524,9 @@ export class DocumentStore {
     // below would tear its container keys apart.
     if (Array.isArray(value) && this.serializer.isGridMap(existing)) {
       if (this.serializer.isGridArray(value)) {
-        this.deepAssignYGrid(existing, value);
+        this.deepAssignYGrid(existing, value, seen);
+      } else if (this.serializer.isIdentityArray(value)) {
+        this.deepAssignYIdentity(existing, value, seen);
       } else if (!equals(this.serializer.gridMapToPlain(existing), value)) {
         target.set(mapKey, this.serializer.plainToYValue(value));
       }
@@ -1454,7 +1540,7 @@ export class DocumentStore {
     // value back to a plain leaf because it fails `isConvertibleArray`.
     if (isOrderedIdArrayKey(mapKey) && Array.isArray(value)) {
       if (existing instanceof Y.Array) {
-        this.deepAssignYArray(existing, value);
+        this.deepAssignYArray(existing, value, seen);
       } else {
         // A cell from a doc written before this rule (or by an older client)
         // still holds a plain array. Promote it — unconditionally, so the
@@ -1470,7 +1556,7 @@ export class DocumentStore {
 
     if (Array.isArray(value) && existing instanceof Y.Array) {
       if (this.serializer.isConvertibleArray(value)) {
-        this.deepAssignYArray(existing, value);
+        this.deepAssignYArray(existing, value, seen);
       } else if (!equals(this.serializer.yArrayToPlain(existing), value)) {
         // No longer qualifies for Y.Array — downshift to a plain leaf. Through
         // plainToYValue so a primitive-array leaf is NUL-scrubbed.
@@ -1493,7 +1579,7 @@ export class DocumentStore {
     }
 
     if (existing instanceof Y.Map) {
-      this.deepAssignYMap(existing, value as Record<string, unknown>);
+      this.deepAssignYMap(existing, value as Record<string, unknown>, seen);
 
       return;
     }
@@ -1511,7 +1597,7 @@ export class DocumentStore {
    * elements are compared and replaced as plain leaves); must run inside a
    * transaction (the caller wraps it).
    */
-  private deepAssignYArray(target: Y.Array<unknown>, source: unknown[]): void {
+  private deepAssignYArray(target: Y.Array<unknown>, source: unknown[], seen?: DataKeySnapshot): void {
     const targetLength = target.length;
     const sourceLength = source.length;
     const plainAt = (index: number): unknown => this.serializer.yValueToPlain(target.get(index));
@@ -1531,13 +1617,45 @@ export class DocumentStore {
     if (targetMiddle === sourceMiddle) {
       source
         .slice(prefix, prefix + sourceMiddle)
-        .forEach((value, offset) => this.assignYArrayElement(target, prefix + offset, value));
+        .forEach((value, offset) => this.assignYArrayElement(target, prefix + offset, value, seen));
 
       return;
     }
 
-    // Unequal-length middles: one splice, so a row insert/delete lands as a
-    // single Y.Array event instead of N element rewrites.
+    // Unequal-length middles. Pair them by content FIRST: an element that is
+    // still the same element must keep its Y container. A blanket
+    // delete+insert of the middle recreates every container in it, so a column
+    // inserted beside a cell a peer is concurrently editing threw that peer's
+    // cell write away. Only an order-preserving pairing (inserts and deletes,
+    // no move) can be expressed without a splice; a genuine reorder still
+    // falls back to one, because Y.Array has no move.
+    const targetSlice = Array.from({ length: targetMiddle }, (_, offset) => plainAt(prefix + offset));
+    const sourceSlice = source.slice(prefix, prefix + sourceMiddle);
+    const assignment = this.pairGridRows(targetSlice, sourceSlice);
+    const pairedTargets = assignment.filter((index): index is number => index !== null);
+    const isOrdered = pairedTargets.every((index, rank) => rank === 0 || index > pairedTargets[rank - 1]);
+
+    if (pairedTargets.length > 0 && isOrdered) {
+      const kept = new Set(pairedTargets);
+
+      // Backwards, so an earlier delete cannot shift a later offset.
+      Array.from({ length: targetMiddle }, (_, offset) => targetMiddle - 1 - offset)
+        .filter((offset) => !kept.has(offset))
+        .forEach((offset) => target.delete(prefix + offset, 1));
+
+      sourceSlice.forEach((element, offset) => {
+        if (assignment[offset] === null) {
+          target.insert(prefix + offset, [this.serializer.plainToYValue(element)]);
+        } else {
+          this.assignYArrayElement(target, prefix + offset, element, seen);
+        }
+      });
+
+      return;
+    }
+
+    // Nothing pairs, or the pairing is a reorder: one splice, so the change
+    // lands as a single Y.Array event instead of N element rewrites.
     if (targetMiddle > 0) {
       target.delete(prefix, targetMiddle);
     }
@@ -1551,24 +1669,32 @@ export class DocumentStore {
   }
 
   /** Assign one Y.Array element in place, recursing into Y.Map/Y.Array elements. */
-  private assignYArrayElement(target: Y.Array<unknown>, index: number, value: unknown): void {
+  private assignYArrayElement(target: Y.Array<unknown>, index: number, value: unknown, seen?: DataKeySnapshot): void {
     const existing = target.get(index);
     const valueIsPlainObject = value !== null && typeof value === 'object' && !Array.isArray(value);
 
-    if (Array.isArray(value) && this.serializer.isGridMap(existing) && this.serializer.isGridArray(value)) {
-      this.deepAssignYGrid(existing, value);
+    if (Array.isArray(value) && this.serializer.isGridMap(existing)) {
+      if (this.serializer.isGridArray(value)) {
+        this.deepAssignYGrid(existing, value, seen);
 
-      return;
+        return;
+      }
+
+      if (this.serializer.isIdentityArray(value)) {
+        this.deepAssignYIdentity(existing, value, seen);
+
+        return;
+      }
     }
 
     if (valueIsPlainObject && existing instanceof Y.Map) {
-      this.deepAssignYMap(existing, value as Record<string, unknown>);
+      this.deepAssignYMap(existing, value as Record<string, unknown>, seen);
 
       return;
     }
 
     if (Array.isArray(value) && existing instanceof Y.Array && this.serializer.isConvertibleArray(value)) {
-      this.deepAssignYArray(existing, value);
+      this.deepAssignYArray(existing, value, seen);
 
       return;
     }
@@ -1595,7 +1721,7 @@ export class DocumentStore {
    *
    * `source` must satisfy `isGridArray`; must run inside a transaction.
    */
-  private deepAssignYGrid(target: Y.Map<unknown>, source: unknown[]): void {
+  private deepAssignYGrid(target: Y.Map<unknown>, source: unknown[], seen?: DataKeySnapshot): void {
     const rows = target.get(GRID_ROWS_KEY) as Y.Map<unknown>;
     const order = target.get(GRID_ORDER_KEY) as Y.Array<string>;
     const currentKeys = this.serializer.gridRowKeys(target);
@@ -1622,10 +1748,38 @@ export class DocumentStore {
 
       const key = currentKeys[targetIndex];
 
-      this.assignYMapEntry(rows, key, row);
+      this.assignYMapEntry(rows, key, row, seen);
 
       return key;
     });
+
+    this.assignKeySequence(order, nextKeys);
+  }
+
+  /**
+   * Assign plain id-bearing objects onto an identity-keyed wrapper.
+   *
+   * Nothing has to be re-associated here — unlike a grid row, the element
+   * carries its own key — so a reorder is just a new order array and every
+   * element's Y.Map survives it. That is the whole point: diffed by POSITION,
+   * a reorder racing a field edit applied that edit to whichever element took
+   * the index, and both peers converged on the same wrong value.
+   *
+   * `source` must satisfy `isIdentityArray` (so every element has a unique
+   * string id); must run inside a transaction.
+   */
+  private deepAssignYIdentity(target: Y.Map<unknown>, source: Record<string, unknown>[], seen?: DataKeySnapshot): void {
+    const rows = target.get(GRID_ROWS_KEY) as Y.Map<unknown>;
+    const order = target.get(GRID_ORDER_KEY) as Y.Array<string>;
+    // `isIdentityArray` guarantees a non-empty string id on every element.
+    const nextKeys = source.map((element) => stripNul(String(element.id)));
+    const kept = new Set(nextKeys);
+
+    Array.from(rows.keys())
+      .filter((key) => !kept.has(key))
+      .forEach((key) => rows.delete(key));
+
+    source.forEach((element, index) => this.assignYMapEntry(rows, nextKeys[index], element, seen));
 
     this.assignKeySequence(order, nextKeys);
   }
@@ -1738,17 +1892,29 @@ export class DocumentStore {
    * hands a peer's concurrent edit to the wrong row.
    */
   private rowSimilarity(current: unknown, source: unknown): number {
-    if (!Array.isArray(current) || !Array.isArray(source)) {
-      return 0;
+    if (Array.isArray(current) && Array.isArray(source)) {
+      const { prefix, suffix } = commonEnds(
+        current.length,
+        source.length,
+        (currentIndex, sourceIndex) => equals(current[currentIndex], source[sourceIndex])
+      );
+
+      return prefix + suffix;
     }
 
-    const { prefix, suffix } = commonEnds(
-      current.length,
-      source.length,
-      (currentIndex, sourceIndex) => equals(current[currentIndex], source[sourceIndex])
-    );
+    const isRecord = (value: unknown): value is Record<string, unknown> =>
+      value !== null && typeof value === 'object' && !Array.isArray(value);
 
-    return prefix + suffix;
+    // Two objects: how much of what they both carry still agrees. A grid ROW is
+    // always an array, so this branch only serves the element pairing in
+    // `deepAssignYArray` — where an element is a table cell, not a row.
+    if (isRecord(current) && isRecord(source)) {
+      return Object.keys(current)
+        .filter((key) => Object.prototype.hasOwnProperty.call(source, key))
+        .reduce((score, key) => score + this.rowSimilarity(current[key], source[key]), 0);
+    }
+
+    return equals(current, source) ? 1 : 0;
   }
 
   /**
@@ -1799,10 +1965,15 @@ export class DocumentStore {
     this.transact(() => {
       const ytunes = this.getOrCreateTunesMap(yblock);
 
-      // Scrub the tune KEY, and deep-scrub the value (tunes may be strings or
-      // nested objects). Not routed through plainToYValue — a tune value must
-      // stay a plain object, not be promoted to a Y.Map.
-      ytunes.set(stripNul(tuneName), stripNulDeep(tuneData));
+      // Through the same per-key assign a nested data value takes: an OBJECT
+      // tune becomes a Y.Map, so two peers changing DIFFERENT fields of one
+      // tune (colour and background) keep both instead of the later write
+      // taking the whole tune. Stored as a plain leaf it was one value.
+      // The key is scrubbed by `assignYMapEntry` and the value by
+      // `plainToYValue`/`objectToYMap`, so the NUL chokepoint is unchanged;
+      // read-back of a Y.Map tune is `yMapToObject`, the same plain object,
+      // so `tunes` in OutputData is unchanged.
+      this.assignYMapEntry(ytunes, tuneName, tuneData);
     }, 'local');
   }
 
@@ -1946,7 +2117,13 @@ export class DocumentStore {
     // inside Y.applyUpdate, so a late add would echo the first message.
     this.rememberRemoteOrigin(effectiveOrigin);
 
+    const before = this.structuralSnapshot();
+
     Y.applyUpdate(this.ydoc, update, effectiveOrigin);
+
+    // Separate transaction, same origin — see `reconcileStructure` for why it
+    // can be neither inside the remote transaction nor a local one.
+    this.reconcileStructure(before, effectiveOrigin);
   }
 
   /**

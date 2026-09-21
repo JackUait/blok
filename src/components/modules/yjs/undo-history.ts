@@ -8,6 +8,12 @@ import type { BlockPlacement, CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry
 
 type StackItem = Y.UndoManager['undoStack'][number];
 
+/** What the newest yjs undo entry would create and bring back, by block id. */
+interface PoppedEntryScan {
+  born: Set<string>;
+  resurrected: Set<string>;
+}
+
 interface StackItemEvent {
   type: 'undo' | 'redo';
   stackItem: StackItem;
@@ -38,6 +44,20 @@ export class UndoHistory {
    * tell which block an item belongs to; kept in sync by `createUndoManager`.
    */
   private blocksScope: Y.Map<Y.Map<unknown>> | null = null;
+
+  /**
+   * The root order array of the tracked scope, or null when the scope has none.
+   * Read by {@link currentPlacement} to tell whether a recorded move is still
+   * the last word on where a block sits; kept in sync by `createUndoManager`.
+   */
+  private rootOrderScope: Y.Array<string> | null = null;
+
+  /**
+   * The blocks the yjs entry currently being undone brought into being, as
+   * collected by {@link scanTopUndoEntry}. Empty outside an in-flight
+   * undo, so redo and ordinary writes see no extra sparing.
+   */
+  private blocksBornInPoppedEntry = new Set<string>();
 
   /**
    * The live undo manager. Callers MUST read it through this getter rather
@@ -182,6 +202,7 @@ export class UndoHistory {
   private createUndoManager(scope: UndoScopeType[]): Y.UndoManager {
     // The blocks map is the first Y.Map of the scope (see DocumentStore.undoScope).
     this.blocksScope = scope.find((root): root is Y.Map<Y.Map<unknown>> => root instanceof Y.Map) ?? null;
+    this.rootOrderScope = scope.find((root): root is Y.Array<string> => root instanceof Y.Array) ?? null;
 
     return new Y.UndoManager(scope, {
       captureTimeout: CAPTURE_TIMEOUT_MS,
@@ -205,7 +226,9 @@ export class UndoHistory {
    *   no subtree of its own, and dropping it would leave the block unreachable,
    *   which is the same loss by another route;
    * - it is a structural key (`id`, `type`, `data`…) of such a block, whose
-   *   loss would leave a husk no tool can render.
+   *   loss would leave a husk no tool can render;
+   * - it is a `data` field of a block THIS VERY ENTRY created and the filter
+   *   is therefore sparing (see {@link isFieldOfBlockBornInPoppedEntry}).
    *
    * Everything else is deleted as before — including the undoing peer's own
    * characters inside a block a peer also typed in, so undoing your own typing
@@ -244,7 +267,302 @@ export class UndoHistory {
 
     const value = (item.content as { type?: unknown }).type;
 
-    return !(value instanceof Y.AbstractType) || !this.holdsPeerItem(value, new Set());
+    if (!(value instanceof Y.AbstractType)) {
+      return !this.isFieldOfBlockBornInPoppedEntry(item);
+    }
+
+    return !this.holdsPeerItem(value, new Set());
+  }
+
+  /**
+   * Whether this item is a plain `data` field of a block that this undo both
+   * created and is about to spare.
+   *
+   * Sparing the block and then stripping the fields underneath it is the same
+   * loss by another route: the image that keeps its caption and loses its
+   * `url`, the header that keeps the peer's words and loses its `level`. A
+   * field's parent is the `data` map, so {@link blockOwningKey} — which only
+   * sees a block's DIRECT keys — cannot recognise it, and a primitive is
+   * neither a peer-authored shared type, so the filter let it go.
+   *
+   * Narrow by construction: `blocksBornInPoppedEntry` holds only the blocks
+   * the popped entry itself put in the blocks map. A field written into a
+   * block that already existed — a turn-into's `level`, an alignment, a
+   * language switch — is not in it, so undoing your OWN change to a block a
+   * peer writes in still removes exactly that change.
+   * @param item - the item yjs is about to delete
+   */
+  private isFieldOfBlockBornInPoppedEntry(item: Y.Item): boolean {
+    if (this.blocksBornInPoppedEntry.size === 0) {
+      return false;
+    }
+
+    const owner = this.blockOwningNestedKey(item);
+
+    return owner !== null && this.blocksBornInPoppedEntry.has(owner) && this.blockHoldsPeerContent(owner);
+  }
+
+  /**
+   * The id of the block whose subtree holds this item as a map key BELOW the
+   * block's own Y.Map (`data.url`, a nested cell's key…). Null for a direct
+   * block key — that is {@link blockOwningKey}'s answer — and for anything
+   * that is not a map key at all (a character in a text, an array element).
+   */
+  private blockOwningNestedKey(item: Y.Item): string | null {
+    if (item.parentSub === null || !(item.parent instanceof Y.Map)) {
+      return null;
+    }
+
+    return this.blockOfOwningItem(item.parent._item, 0);
+  }
+
+  /**
+   * Walk the chain of owning items up to the blocks map and name the block it
+   * arrives at. `depth` counts the types crossed on the way, so a direct block
+   * key (depth 0) answers null — see {@link blockOwningNestedKey}.
+   * @param owner - the item holding the type the walk is currently inside
+   * @param depth - how many types have been crossed so far
+   */
+  private blockOfOwningItem(owner: Y.Item | null, depth: number): string | null {
+    if (owner === null || this.blocksScope === null) {
+      return null;
+    }
+
+    if (owner.parent === this.blocksScope) {
+      return depth > 0 ? owner.parentSub : null;
+    }
+
+    const next = owner.parent instanceof Y.AbstractType ? owner.parent._item : null;
+
+    return this.blockOfOwningItem(next, depth + 1);
+  }
+
+  /**
+   * The ids of the blocks the newest yjs undo entry BROUGHT INTO BEING — the
+   * entry holds the item that put each of them in the blocks map.
+   *
+   * This is the context `mayUndoDelete` cannot see on its own: it is handed
+   * one item at a time and has no way to tell a field written into a block
+   * that already existed (a turn-into's `level`, an alignment the person set)
+   * from a field that only exists because this very entry created the block
+   * around it. The first must go when the entry is unwound; the second is part
+   * of a block the filter is about to spare, so it has to stay.
+   *
+   * Read-only: the transaction exists because `iterateDeletedStructs` splits
+   * items to address them, and it writes nothing, so yjs emits no update.
+   */
+  private scanTopUndoEntry(): PoppedEntryScan {
+    const { undoStack } = this.undoManager;
+    const top = undoStack[undoStack.length - 1];
+    const blocks = this.blocksScope;
+    const scan: PoppedEntryScan = { born: new Set<string>(),
+      resurrected: new Set<string>() };
+
+    if (top === undefined || blocks === null || blocks.doc === null) {
+      return scan;
+    }
+
+    // A block's OWN entry in the blocks map is the only item that makes it
+    // exist, so an item with that parent names a block the entry created
+    // (insertions) or removed (deletions).
+    const collect = (into: Set<string>) => (struct: Y.AbstractStruct): void => {
+      if (struct instanceof Y.Item && struct.parent === blocks && struct.parentSub !== null) {
+        into.add(struct.parentSub);
+      }
+    };
+
+    blocks.doc.transact((transaction) => {
+      Y.iterateDeletedStructs(transaction, top.insertions, collect(scan.born));
+      Y.iterateDeletedStructs(transaction, top.deletions, collect(scan.resurrected));
+    });
+
+    return scan;
+  }
+
+  /**
+   * Whether unwinding this entry would BRING A BLOCK BACK while leaving the
+   * block that displaced it in place.
+   *
+   * An undo that only fails to remove things is survivable: the person sees
+   * less of their action undone than they asked for, and every block on screen
+   * is one that was already there. A replace gesture is one entry holding a
+   * delete AND an insert, and when the peer writes into the inserted block the
+   * insert half cannot be unwound — so the delete half alone resurrects the
+   * block the gesture removed and the document ends up holding TWO copies of
+   * the same idea, one of which nobody has seen since the gesture. That is
+   * content APPEARING, which no undo should ever produce.
+   *
+   * So the line is not "all or nothing". Two spared inserts may still partly
+   * apply (the block the peer never touched is still removed). Resurrection
+   * and sparing are what must not co-occur, and when they would, the entry is
+   * left alone — still on the stack, still undoable once the peer's content
+   * is gone.
+   * @param scan - the blocks the newest entry created and removed
+   */
+  private wouldResurrectBesideASparedBlock(scan: PoppedEntryScan): boolean {
+    if (scan.resurrected.size === 0) {
+      return false;
+    }
+
+    // A born block is spared for exactly one reason: a peer's content lives in
+    // it (see `mayUndoDelete` via `blockOwningKey`).
+    return [...scan.born].some((blockId) => this.blockHoldsPeerContent(blockId));
+  }
+
+  /**
+   * Put back the stack items this press POPPED WITHOUT APPLYING.
+   *
+   * `Y.UndoManager.popStackItem` pops until one item performs a change and
+   * DISCARDS every item it passed over — an action the person took is gone
+   * from the history for good, unwindable by nothing, even once the peer's
+   * content that blocked it has been deleted. The far-reaching press is only
+   * acceptable because what it reached past survives it.
+   *
+   * Only the ones BLOCKED BY SPARING come back. An item yjs skipped because a
+   * peer has since deleted everything it touched is a different thing: there
+   * is no longer anything in the document for it to unwind, so putting it back
+   * would leave a permanently inert entry that every later press must walk
+   * past — and the caret stacks one step out of phase with the yjs stack for
+   * the rest of the session. Those stay discarded, exactly as before.
+   *
+   * The skipped items are the newest ones, so they go back on top, in the
+   * order they were popped. Called BEFORE `settleReplayedEntries`, whose whole
+   * job is to shed the caret entries of items that left the stack: an item put
+   * back here keeps its caret entry, because it is still an action awaiting
+   * its undo.
+   * @param before - the undo stack as it was before the press
+   */
+  private restoreSkippedStackItems(before: readonly StackItem[]): void {
+    const { undoStack } = this.undoManager;
+    const live = new Set(undoStack);
+    const skipped = before.filter(
+      (item) => !live.has(item) && item !== this.poppedStackItem && this.wasBlockedBySparing(item)
+    );
+
+    undoStack.push(...skipped);
+  }
+
+  /**
+   * Whether this stack item performed nothing because THE FILTER held it back,
+   * rather than because there was nothing left to hold back.
+   *
+   * The two look identical from outside `popStackItem` — both simply perform
+   * no change — and they need opposite treatment, so they are told apart at
+   * the source: an entry is blocked when it still has a LIVE item that
+   * `mayUndoDelete` refuses. When every item it inserted is already deleted,
+   * the peer took the content away and the entry is spent.
+   * @param stackItem - an item this press popped without applying
+   */
+  private wasBlockedBySparing(stackItem: StackItem): boolean {
+    const doc = this.blocksScope?.doc ?? null;
+
+    if (doc === null) {
+      return false;
+    }
+
+    const candidates: Y.Item[] = [];
+
+    doc.transact((transaction) => {
+      Y.iterateDeletedStructs(transaction, stackItem.insertions, (struct) => {
+        // A redone item is addressed through its redo chain, which only yjs
+        // can follow; leave it out rather than guess wrong.
+        if (struct instanceof Y.Item && !struct.deleted && struct.redone === null) {
+          candidates.push(struct);
+        }
+      });
+    });
+
+    return candidates.some((item) => !this.mayUndoDelete(item));
+  }
+
+  /**
+   * Whether any block in a recorded move group has been moved AGAIN since the
+   * group was recorded.
+   *
+   * A move entry records where the block was (`from`) and where this editor
+   * put it (`to`). Replaying `from` is only "undo" while `to` is still true:
+   * once the peer has moved that block somewhere else, `to` is stale and
+   * replaying `from` does not reverse this editor's move — it overrules the
+   * peer's, yanking a block out from under them.
+   *
+   * Checked for the WHOLE group before anything is replayed, not per entry as
+   * the replay walks: a group's own replays shift the siblings of the entries
+   * still to come, which would read as displacement and half-apply the group.
+   *
+   * Only a `to` whose anchors are both still in the doc can say anything. When
+   * the recorded parent or sibling has since been DELETED, the block's
+   * placement differs for a reason that is not a move, and the existing
+   * degradation laws (append to the parent, keep the orphan) own that case.
+   * @param group - the move group about to be reversed
+   */
+  private groupWasDisplacedSince(group: MoveHistoryEntry): boolean {
+    return group.some((move) => {
+      const placement = this.currentPlacement(move.blockId);
+
+      // Gone from the doc: nothing to reverse, and nothing to overrule.
+      if (placement === null || !this.placementAnchorsExist(move.to)) {
+        return false;
+      }
+
+      return placement.parentId !== move.to.parentId || placement.afterId !== move.to.afterId;
+    });
+  }
+
+  /**
+   * Whether both anchors of a recorded placement are still in the doc. A null
+   * anchor is the root / the first slot, which always is.
+   */
+  private placementAnchorsExist(placement: BlockPlacement): boolean {
+    return [placement.parentId, placement.afterId].every(
+      (id) => id === null || this.blocksScope?.get(id) instanceof Y.Map
+    );
+  }
+
+  /**
+   * Where a block sits right now: its parent and the sibling it follows.
+   * Mirrors `DocumentStore.getPlacement` over the tracked scope, which is all
+   * UndoHistory holds.
+   */
+  private currentPlacement(blockId: string): BlockPlacement | null {
+    const block = this.blocksScope?.get(blockId);
+
+    if (!(block instanceof Y.Map)) {
+      return null;
+    }
+
+    const rawParentId = block.get('parentId');
+    const parentId = typeof rawParentId === 'string' ? rawParentId : null;
+
+    for (const order of this.orderArrays()) {
+      const ids = order.toArray();
+      const index = ids.indexOf(blockId);
+
+      if (index !== -1) {
+        return { parentId,
+          afterId: index > 0 ? ids[index - 1] : null };
+      }
+    }
+
+    return { parentId,
+      afterId: null };
+  }
+
+  /**
+   * Every order array in the tracked scope: the root order plus each block's
+   * `contentIds`.
+   */
+  private orderArrays(): Y.Array<string>[] {
+    const arrays: Y.Array<string>[] = this.rootOrderScope === null ? [] : [this.rootOrderScope];
+
+    this.blocksScope?.forEach((block) => {
+      const contentIds = block instanceof Y.Map ? block.get('contentIds') : null;
+
+      if (contentIds instanceof Y.Array) {
+        arrays.push(contentIds as Y.Array<string>);
+      }
+    });
+
+    return arrays;
   }
 
   /**
@@ -551,6 +869,17 @@ export class UndoHistory {
     // move is sandwiched between text edits (otherwise moves were always undone
     // first, regardless of when they happened).
     const lastWasMove = this.caretUndoStack[this.caretUndoStack.length - 1]?.kind === 'move';
+
+    if (lastWasMove) {
+      const pending = this.moveUndoStack[this.moveUndoStack.length - 1];
+
+      // A move the peer has since overruled is no longer ours to reverse —
+      // see `groupWasDisplacedSince`. Leave the group on the stack untouched.
+      if (pending !== undefined && pending.length > 0 && this.groupWasDisplacedSince(pending)) {
+        return;
+      }
+    }
+
     const lastMoveGroup = lastWasMove ? this.moveUndoStack.pop() : undefined;
 
     if (lastMoveGroup !== undefined && lastMoveGroup.length > 0) {
@@ -575,8 +904,23 @@ export class UndoHistory {
       return;
     }
 
-    // No move to undo, delegate to Yjs UndoManager
-    this.performYjsUndoRedo(() => this.undoManager.undo());
+    // No move to undo, delegate to Yjs UndoManager.
+    const scan = this.scanTopUndoEntry();
+
+    if (this.wouldResurrectBesideASparedBlock(scan)) {
+      return;
+    }
+
+    const stackBefore = [...this.undoManager.undoStack];
+
+    this.blocksBornInPoppedEntry = scan.born;
+    try {
+      this.performYjsUndoRedo(() => this.undoManager.undo());
+    } finally {
+      this.blocksBornInPoppedEntry = new Set();
+    }
+
+    this.restoreSkippedStackItems(stackBefore);
 
     const caretEntry = this.settleReplayedEntries(this.caretUndoStack, this.undoManager.undoStack);
 

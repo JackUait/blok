@@ -33,6 +33,7 @@ import { BlockRepository } from './repository';
 import { BlockShortcuts } from './shortcuts';
 import type { BlocksStore, BlockMutationEventDetailWithoutTarget, ComposeBlockOptions, InsertBlockOptions, InsertInsideParentOptions } from './types';
 import { BlockYjsSync } from './yjs-sync';
+import { captureDataKeySnapshot, type DataKeySnapshot } from '../yjs/document-store';
 
 type BlocksStoreProxy = BlocksStore & {
   [index: number]: Block | undefined;
@@ -462,7 +463,7 @@ export class BlockManager extends Module {
         onBlockRemoved: (block, index) => {
           this.blockDidMutated(BlockRemovedMutationType, block, { index });
         },
-        resyncBlockData: (block) => {
+        resyncBlockData: (block, options) => {
           // A drag can begin after the mutation was recorded. The browser
           // mutates contenteditable DOM across block boundaries mid-drag, and
           // the replay must not be the path that lands it in the document.
@@ -470,7 +471,7 @@ export class BlockManager extends Module {
             return;
           }
 
-          void this.syncBlockDataToYjs(block);
+          void this.syncBlockDataToYjs(block, options);
         },
         onBlockAdded: (block, index) => {
           this.blockDidMutated(BlockAddedMutationType, block, { index });
@@ -2036,27 +2037,42 @@ export class BlockManager extends Module {
    * flushes immediately (today's timing), follow-ups coalesce into one trailing
    * flush per 400ms window. `flushBlockDataWrites` is the flush body.
    */
-  private async syncBlockDataToYjs(block: Block): Promise<void> {
+  private async syncBlockDataToYjs(block: Block, options?: { untracked?: boolean }): Promise<void> {
     // Classified BEFORE the await: the settling window is measured from the
     // mutation, not from whenever this tool's save() happens to resolve.
-    const isMaterializing = this.yjsSync.isMaterializing(block);
+    const isMaterializing = options?.untracked === true || this.yjsSync.isMaterializing(block);
     // Snapshot the document's key set BEFORE the save: `save()` is async and
     // the flush lands up to a coalescing window later, so a peer's key can
     // appear in between. The prune may delete only keys this save actually saw.
     // Read straight off the Y.Map — the plain-object reader is a buffer
     // barrier, and draining the buffer here would kill coalescing.
+    // The same snapshot one level DOWN: every nested container's key set, so a
+    // cell colour or a row property a peer adds mid-flight is not deleted by
+    // this save's deep assign either. Key sets only — no clone of the values —
+    // so a big table costs one `keys()` per cell, not a deep copy of its text.
     const ydata = this.Blok.YjsManager.getBlockById(block.id)?.get('data');
     const seenKeys = ydata instanceof YMap ? new Set<string>(ydata.keys()) : undefined;
+    const seenNestedKeys = ydata instanceof YMap ? captureDataKeySnapshot(ydata) : undefined;
     const savedData = await block.save();
 
     if (savedData === undefined) {
       return;
     }
 
+    // Re-checked AFTER the await: `save()` may be asynchronous, and a peer's
+    // update can land and rewrite this block's DOM while it is in flight. The
+    // payload above was captured from the pre-rewrite DOM, so writing it now
+    // would diff the peer's characters away — and the reconciler has already
+    // replaced the DOM it came from, so replaying it later would too. The
+    // block's own mutation record is the fresh path back.
+    if (this.yjsSync.isSyncingFromYjs && this.yjsSync.isReconciling(block)) {
+      return;
+    }
+
     const savedKeys = Object.keys(savedData.data);
 
     this.Blok.YjsManager.enqueueBlockDataWrite(block.id, savedData.data, (entries) => {
-      return this.flushBlockDataWrites(block, entries, { isMaterializing, savedKeys, seenKeys });
+      return this.flushBlockDataWrites(block, entries, { isMaterializing, savedKeys, seenKeys, seenNestedKeys });
     });
   }
 
@@ -2086,13 +2102,21 @@ export class BlockManager extends Module {
    * @param options.seenKeys - the keys the document held when that save was
    *   captured, or undefined when the block carried no data map yet. A key the
    *   document gained afterwards is a peer's, so the prune spares it.
+   * @param options.seenNestedKeys - the same, per NESTED container: what each
+   *   `Y.Map` inside the block's data held at that moment. A nested key the
+   *   document gained afterwards is a peer's, so the deep assign spares it.
    * @returns whether any Yjs write actually happened — the buffer skips its
    *   capture-clock rewind for a flush that wrote nothing (see BlockWriteBuffer).
    */
   private flushBlockDataWrites(
     block: Block,
     entries: ReadonlyMap<string, unknown>,
-    options: { isMaterializing: boolean; savedKeys: readonly string[]; seenKeys?: ReadonlySet<string> }
+    options: {
+      isMaterializing: boolean;
+      savedKeys: readonly string[];
+      seenKeys?: ReadonlySet<string>;
+      seenNestedKeys?: DataKeySnapshot;
+    }
   ): boolean {
     // Wrap data + metadata writes into a single Yjs transaction. Without this,
     // each updateBlockData / updateBlockMetadata call opens its own transaction
@@ -2126,7 +2150,7 @@ export class BlockManager extends Module {
           continue;
         }
 
-        if (this.Blok.YjsManager.updateBlockData(block.id, key, value)) {
+        if (this.Blok.YjsManager.updateBlockData(block.id, key, value, options.seenNestedKeys)) {
           dataChangedRef.value = true;
         }
       }

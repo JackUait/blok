@@ -93,7 +93,7 @@ export interface SyncHandlers {
    * gate. Used to replay a mutation that was suppressed as a reconciler echo
    * but turned out to be the user's — see `noteSuppressedMutation`.
    */
-  resyncBlockData: (block: Block) => void;
+  resyncBlockData: (block: Block, options?: { untracked?: boolean }) => void;
 }
 
 /**
@@ -166,6 +166,50 @@ export class BlockYjsSync {
   private readonly userTypedWhileReconciling = new Set<string>();
 
   /**
+   * Blocks whose write-back was dropped inside a window that had already
+   * finished its own work — the RAF/await TAIL, where nothing is rewriting
+   * the DOM any more.
+   *
+   * Provenance the DOM does not carry cannot be had for these: a paste
+   * (`Paste.processDataTransfer` preventDefaults the clipboard event) and an
+   * inline tool (the mark engine rewrites nodes directly) fire no
+   * `beforeinput`, so `userTypedWhileReconciling` can never see them. What IS
+   * knowable is CAUSALITY: a mutation that arrives while no reconcile body is
+   * on the stack was not produced by one. It is replayed, but UNTRACKED — a
+   * true echo diffs to nothing and writes nothing, a tool's own late
+   * normalisation lands without becoming an undo step (which is what kept a
+   * convert to toggle at one CMD+Z), and a user edit reaches the document
+   * instead of being lost.
+   */
+  private readonly deferredMutations = new Set<string>();
+
+  /**
+   * How many reconcile BODIES are executing right now.
+   *
+   * `yjsSyncCount` stays up through the RAF extension, so it cannot tell
+   * "the reconciler is rewriting this block" from "the window is only still
+   * open in case a tool echoes late". This counter can: it drops the moment
+   * the operation's function returns (or its promise settles).
+   */
+  private activeOperationDepth = 0;
+
+  /**
+   * Blocks this reconciler has rewritten from the document during a window
+   * that is still open.
+   *
+   * The echo is, by definition, the DOM reflecting what the reconciler just
+   * wrote. For these blocks that baseline exists — the document itself — so a
+   * dropped write-back can be replayed and let the diff decide: identical to
+   * what was applied, it writes nothing; different, it is content the document
+   * does not have and losing it is the data loss. That covers the edit paths
+   * `beforeinput` provably cannot see (paste, inline tools), without guessing.
+   *
+   * A window nobody applied data through carries no such baseline (a convert's
+   * structural window is one), and those keep the old, conservative drop.
+   */
+  private readonly rewrittenFromDocument = new Set<string>();
+
+  /**
    * Returns true if any Yjs sync operation is in progress
    */
   public get isSyncingFromYjs(): boolean {
@@ -195,7 +239,49 @@ export class BlockYjsSync {
   public noteSuppressedMutation(block: Block): void {
     if (this.userTypedWhileReconciling.has(block.id)) {
       this.suppressedMutations.add(block.id);
+
+      return;
     }
+
+    // Recorded when nothing here could have produced this mutation (no
+    // reconcile body is running), or when a baseline to diff against exists
+    // because this block WAS rewritten from the document. Both replay
+    // untracked — see `deferredMutations` and `rewrittenFromDocument`.
+    if (this.activeOperationDepth === 0 || this.wasRewrittenFromDocument(block, new Set())) {
+      this.deferredMutations.add(block.id);
+    }
+  }
+
+  /**
+   * Record that the reconciler is applying the document's data to `block`'s
+   * DOM, so a write-back dropped inside that window has a baseline to be
+   * diffed against on replay. Cleared when the block leaves every window.
+   * @param blockId - id of the block being rewritten from the document
+   */
+  private markRewrittenFromDocument(blockId: string): void {
+    this.rewrittenFromDocument.add(blockId);
+  }
+
+  /**
+   * Whether `block` or one of its ancestors was rewritten from the document
+   * in a still-open window — a container's rewrite re-renders its children.
+   * @param block - the block whose mutation is being classified
+   * @param visited - ids already walked, guarding a cyclic parent chain
+   */
+  private wasRewrittenFromDocument(block: Block | undefined, visited: Set<string>): boolean {
+    if (block === undefined || visited.has(block.id)) {
+      return false;
+    }
+
+    if (this.rewrittenFromDocument.has(block.id)) {
+      return true;
+    }
+
+    visited.add(block.id);
+
+    const parent = block.parentId === null ? undefined : this.repository.getBlockById(block.parentId);
+
+    return this.wasRewrittenFromDocument(parent, visited);
   }
 
   /**
@@ -224,7 +310,12 @@ export class BlockYjsSync {
    * nothing is consumed and the record survives to be replayed when it closes.
    */
   private drainSuppressedMutations(): void {
-    const pending = new Set([...this.suppressedMutations, ...this.userTypedWhileReconciling]);
+    const pending = new Set([
+      ...this.suppressedMutations,
+      ...this.deferredMutations,
+      ...this.userTypedWhileReconciling,
+      ...this.rewrittenFromDocument,
+    ]);
 
     pending.forEach((blockId) => {
       // Looked up fresh: a rematerialise replaces the instance that mutated,
@@ -236,13 +327,21 @@ export class BlockYjsSync {
       }
 
       const suppressed = this.suppressedMutations.delete(blockId);
+      const deferred = this.deferredMutations.delete(blockId);
+
+      // The baseline belongs to the window that just closed; a later window
+      // must arm itself.
+      this.rewrittenFromDocument.delete(blockId);
 
       // Cleared together with the record, or a stale "the user typed here"
       // flag would make this block's every later reconciler rewrite replay.
       this.userTypedWhileReconciling.delete(blockId);
 
-      if (suppressed && block !== undefined && !this.destroyed) {
-        this.handlers.resyncBlockData(block);
+      if ((suppressed || deferred) && block !== undefined && !this.destroyed) {
+        // A record with no user provenance goes back untracked: it may still
+        // be the editor's own late rewrite, and that must not become an undo
+        // step of its own.
+        this.handlers.resyncBlockData(block, { untracked: !suppressed });
       }
     });
   }
@@ -435,6 +534,7 @@ export class BlockYjsSync {
    */
   private beginAtomicOperation(blockId?: string): () => void {
     this.yjsSyncCount++;
+    this.activeOperationDepth++;
     this.trackScope(blockId, 1);
     const operations = this.dependencies.operations;
 
@@ -478,6 +578,9 @@ export class BlockYjsSync {
    * @param extendThroughRAF - if true, defer cleanup until after next animation frame
    */
   private endAtomicOperation(cleanup: () => void, extendThroughRAF: boolean): void {
+    // The body is done here, whether or not the window stays open for a frame.
+    this.activeOperationDepth--;
+
     if (extendThroughRAF) {
       requestAnimationFrame(cleanup);
     } else {
@@ -504,7 +607,7 @@ export class BlockYjsSync {
 
       return result;
     } catch (error) {
-      cleanup();
+      this.endAtomicOperation(cleanup, false);
       throw error;
     }
   }
@@ -527,7 +630,7 @@ export class BlockYjsSync {
       await fn();
       this.endAtomicOperation(cleanup, options?.extendThroughRAF === true);
     } catch (error) {
-      cleanup();
+      this.endAtomicOperation(cleanup, false);
       throw error;
     }
   }
@@ -851,6 +954,7 @@ export class BlockYjsSync {
         return;
       }
 
+      this.markRewrittenFromDocument(blockId);
       this.withAtomicOperation(() => {
         this.rematerialize(block, { tool: yjsType, data, tunes, lastEditedAt, lastEditedBy });
       }, { extendThroughRAF: true, blockId });
@@ -861,6 +965,7 @@ export class BlockYjsSync {
     // Tunes are instantiated during block construction, so a tune change
     // means a recreate.
     if (!equals(tunes, block.preservedTunes)) {
+      this.markRewrittenFromDocument(blockId);
       this.withAtomicOperation(() => {
         this.rematerialize(block, { tool: block.name, data, tunes, lastEditedAt, lastEditedBy });
       }, { extendThroughRAF: true, blockId });
@@ -918,6 +1023,7 @@ export class BlockYjsSync {
     // Update data in-place; if the tool can't take it, recreate the block.
     // The window stays open through setData and one RAF so the DOM mutation
     // observers cannot write back to Yjs and clear the redo stack.
+    this.markRewrittenFromDocument(blockId);
     void this.withAtomicOperationAsync(async () => {
       // Only for a PEER's edit. Undo and redo carry a caret of their own —
       // `UndoHistory` restores the snapshot it captured, synchronously, while

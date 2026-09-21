@@ -28,6 +28,26 @@ import {
 import { removeRegistry, setRegistry } from './registry-map';
 
 /**
+ * The `collaboration` config each live editor was CONSTRUCTED with, keyed by the
+ * editor itself. Written in `build()` from the very object handed to
+ * `new BlokRuntime`, so a later `[config]` rebuild cannot change the answer —
+ * `collaboration` is mount-fixed, and a host that drops the key from `[config]`
+ * is still driving a live collaborative session.
+ *
+ * WeakMap → no leak when the editor is destroyed.
+ */
+const constructedCollaborations = new WeakMap<WeakKey, BlokAngularConfig['collaboration']>();
+
+/**
+ * The `collaboration` the given editor was constructed with.
+ * @param editor - a Blok instance built by `BlokContentDirective`
+ * @returns the mount-time collaboration config, `undefined` when there was none
+ */
+export function getConstructedCollaboration(editor: WeakKey): BlokAngularConfig['collaboration'] {
+  return constructedCollaborations.get(editor);
+}
+
+/**
  * Escape-hatch directive and lifecycle engine for Blok (mirrors React's
  * `useBlok` + `BlokContent`). Constructs a Blok instance into its own host
  * element and tears it down on destroy.
@@ -153,6 +173,10 @@ export class BlokContentDirective implements OnDestroy {
     );
 
     this.current = blok;
+    // Captured from `merged` — the exact object this editor was built from —
+    // rather than re-read later from `this.config`, which the host may have
+    // rebuilt by then. See `constructedCollaborations`.
+    constructedCollaborations.set(blok, merged.collaboration);
     setRegistry(blok, registry);
 
     void blok.isReady.then(() =>

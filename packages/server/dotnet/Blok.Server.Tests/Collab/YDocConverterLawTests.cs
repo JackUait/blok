@@ -193,8 +193,15 @@ public sealed class YDocConverterLawTests
     Assert.Null(BlockNamed(YDocConverter.Export(doc), "a")["content"]);
   }
 
+  /// <summary>
+  /// Tunes are minted EAGERLY, on every block, tunes in the JSON or not: a
+  /// container two peers can create must be created by the one peer that
+  /// creates the block, or two peers adding different tunes each mint a map
+  /// and the loser's tune goes with its container. Export still omits an empty
+  /// one, so the record's shape is unchanged.
+  /// </summary>
   [Fact]
-  public void SeedWritesTunesWheneverTheKeyIsPresentAndExportOmitsEmptyOnes()
+  public void SeedWritesTunesOnEveryBlockAndExportOmitsEmptyOnes()
   {
     var doc = new YDoc();
 
@@ -203,7 +210,7 @@ public sealed class YDocConverterLawTests
         """{ "id": "b", "type": "paragraph", "data": { "text": "b" } }"""));
 
     Assert.IsType<YMap>(Entry(BlockOf(doc, "a"), "tunes"));
-    Assert.False(BlockOf(doc, "b").TryGet("tunes", out _));
+    Assert.Equal(0, Assert.IsType<YMap>(Entry(BlockOf(doc, "b"), "tunes")).Count);
 
     var exported = YDocConverter.Export(doc);
 

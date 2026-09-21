@@ -50,6 +50,11 @@ export class DatabaseBackendSync {
   }
 
   async syncDeleteRow(params: Parameters<DatabaseAdapter['deleteRow']>[0]): Promise<void> {
+    // A delete supersedes anything still waiting for this row. Leaving the
+    // timer armed lets the pending update land after the delete, which an
+    // upserting backend turns back into a row the user deleted.
+    this.cancelRow(params.rowId);
+
     await this.safeCall((a) => a.deleteRow(params));
   }
 
@@ -60,7 +65,16 @@ export class DatabaseBackendSync {
   }
 
   async syncUpdateProperty(params: Parameters<DatabaseAdapter['updateProperty']>[0]): Promise<ReturnType<DatabaseAdapter['updateProperty']> extends Promise<infer R> ? R | undefined : never> {
-    return this.safeCall((a) => a.updateProperty(params));
+    // An immediate write must not be overtaken by an older debounced one.
+    // `changes` carries whole arrays (the full option list), so the pending
+    // snapshot is stale wherever the two overlap: drain it and let this call's
+    // fields win, instead of flushing it separately and losing what is newer.
+    const pending = this.cancelProperty(params.propertyId);
+    const merged = pending === undefined
+      ? params
+      : { ...pending, ...params, changes: { ...pending.changes, ...params.changes } };
+
+    return this.safeCall((a) => a.updateProperty(merged));
   }
 
   syncUpdatePropertyDebounced(params: Parameters<DatabaseAdapter['updateProperty']>[0]): void {
@@ -76,6 +90,8 @@ export class DatabaseBackendSync {
   }
 
   async syncDeleteProperty(params: Parameters<DatabaseAdapter['deleteProperty']>[0]): Promise<void> {
+    this.cancelProperty(params.propertyId);
+
     await this.safeCall((a) => a.deleteProperty(params));
   }
 
@@ -113,20 +129,36 @@ export class DatabaseBackendSync {
   }
 
   private flushRow(rowId: string): void {
+    const params = this.cancelRow(rowId);
+
+    if (params !== undefined) void this.safeCall((a) => a.updateRow(params));
+  }
+
+  private flushProperty(propertyId: string): void {
+    const params = this.cancelProperty(propertyId);
+
+    if (params !== undefined) void this.safeCall((a) => a.updateProperty(params));
+  }
+
+  /** Drops the row's pending write and returns it, sending nothing. */
+  private cancelRow(rowId: string): Parameters<DatabaseAdapter['updateRow']>[0] | undefined {
     const timer = this.pendingTimers.get(rowId);
     if (timer !== undefined) clearTimeout(timer);
     this.pendingTimers.delete(rowId);
     const params = this.pendingUpdates.get(rowId);
     this.pendingUpdates.delete(rowId);
-    if (params !== undefined) void this.safeCall((a) => a.updateRow(params));
+
+    return params;
   }
 
-  private flushProperty(propertyId: string): void {
+  /** Drops the property's pending write and returns it, sending nothing. */
+  private cancelProperty(propertyId: string): Parameters<DatabaseAdapter['updateProperty']>[0] | undefined {
     const timer = this.pendingPropertyTimers.get(propertyId);
     if (timer !== undefined) clearTimeout(timer);
     this.pendingPropertyTimers.delete(propertyId);
     const params = this.pendingPropertyUpdates.get(propertyId);
     this.pendingPropertyUpdates.delete(propertyId);
-    if (params !== undefined) void this.safeCall((a) => a.updateProperty(params));
+
+    return params;
   }
 }

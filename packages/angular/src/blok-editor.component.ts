@@ -15,8 +15,9 @@ import {
   type DoCheck,
 } from '@angular/core';
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
-import { BlokContentDirective } from './blok-content.directive';
+import { BlokContentDirective, getConstructedCollaboration } from './blok-content.directive';
 import { BLOK_DEFAULT_CONFIG } from './provide-blok';
+import { createEmittedEchoWindow } from '@bloklabs/core/adapters';
 import { deepEqual } from '@bloklabs/core/adapters';
 import { equalsOutputData } from '@bloklabs/core/adapters';
 import { normalizeReadOnlyConfig } from '@bloklabs/core/adapters';
@@ -245,6 +246,28 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValue
    * yet" — never an empty document.
    */
   private lastRenderedData?: OutputData | LooseOutputData | null;
+  /**
+   * Content of the render currently queued or in flight — distinct from
+   * `lastRenderedData`, which names the last SUCCESSFUL one. The data effect
+   * dedupes against both, so an echo arriving mid-render is suppressed without
+   * the baseline having to move before the render resolves (a failed render
+   * would then strand it on content the editor never showed, and the host's
+   * retry of that same content would be deduped away forever).
+   * `undefined` means "nothing in flight".
+   */
+  private pendingData?: OutputData | LooseOutputData | null;
+  /**
+   * Window of recently emitted `onSave` payloads. `lastRenderedData` remembers
+   * only the LAST one, but a host that persists on save and refetches can echo
+   * an EARLIER save back after a newer one already replaced the baseline (the
+   * user kept typing). That stale echo is still the editor's own output, and
+   * rendering it is a whole-document replace — it would drop every character
+   * typed between the two saves and hand the rewound document to the next save,
+   * making the loss permanent in the host's store. Every `[data]` path funnels
+   * through the `data$` signal (the template input AND `writeValue`), so the one
+   * check in the data effect covers `patchValue` / `setValue` / `reset` too.
+   */
+  private readonly emittedEcho = createEmittedEchoWindow();
 
   /** Last token set pushed through `tokens.set`, for deep-equal deduping. */
   private appliedTokens?: Record<string, string>;
@@ -256,19 +279,13 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValue
   private appliedInlineToolbar?: boolean | string[];
   private seededEditor: Blok | null = null;
   private renderChain: Promise<void> = Promise.resolve();
-  /** One collaboration warning per component instance (see the data effect). */
-  private collaborationWarned = false;
   /**
-   * The `collaboration` the live editor was CONSTRUCTED with. The key is
-   * mount-fixed, so dropping it from `[config]` (`collaboration: on ? {...} :
-   * undefined`) cannot turn a live session into a single-player editor —
-   * reading the current input instead would let that change fall through into
-   * render(), which refuses under collaboration and rejects with nothing
-   * surfaced anywhere.
+   * Editor the single collaboration warning has already been emitted for. Keyed
+   * by the editor, not a boolean, so the editor a `recreateKey` bump creates
+   * warns on its own first ignored `data` change instead of inheriting the
+   * previous editor's "already warned" flag and going silent.
    */
-  private constructedCollaboration: BlokAngularConfig['collaboration'];
-  /** Editor the capture above belongs to (recaptured on recreate). */
-  private collaborationCapturedFor: Blok | null = null;
+  private collaborationWarnedFor: Blok | null = null;
 
   /** Registered by `ControlValueAccessor.registerOnChange` (Angular forms). */
   private cvaOnChange?: (data: OutputData) => void;
@@ -287,6 +304,7 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValue
    */
   private readonly coreOnSave = (data: OutputData, api: API): void => {
     this.lastRenderedData = data;
+    this.emittedEcho.record(data);
 
     if (this.hasSaveConsumer()) {
       this.ngZone.run(() => {
@@ -615,22 +633,16 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValue
 
     return editor.render(data).then(() => {
       this.lastRenderedData = data;
+      // Out-of-band content: nothing the reactive effect queued describes the
+      // editor any more, and neither does anything it emitted earlier — a later
+      // `[data]` set back to one of those payloads must render, not be dismissed
+      // as an echo.
+      this.pendingData = undefined;
+      this.emittedEcho.clear();
     });
   }
 
   constructor() {
-    // Registered FIRST so the capture lands before the data effect below can
-    // read it. `collaboration` reaches the directive through `buildConfig()`,
-    // which is read once per build; this records what that build received.
-    effect(() => {
-      const editor = this.instance();
-
-      if (editor !== null && editor !== this.collaborationCapturedFor) {
-        this.collaborationCapturedFor = editor;
-        this.constructedCollaboration = this.escapeHatchConfig().collaboration;
-      }
-    });
-
     // Each effect reads `instance()` so it re-applies once the editor appears
     // (the Angular analog of React's `editor` effect-dependency).
     effect(() => {
@@ -786,6 +798,11 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValue
       if (this.seededEditor !== editor) {
         this.seededEditor = editor;
         this.lastRenderedData = data;
+        // A render still pending on a PRIOR editor is moot for this fresh one;
+        // clear it so its content cannot dedupe a needed render here.
+        this.pendingData = undefined;
+        // Payloads emitted by a PRIOR editor are likewise moot for this one.
+        this.emittedEcho.clear();
 
         return;
       }
@@ -802,28 +819,71 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValue
         return;
       }
 
+      // Same content already queued or in flight: re-rendering it would reset
+      // the caret for zero visual change.
+      if (this.pendingData !== undefined && equalsOutputData(data, this.pendingData)) {
+        return;
+      }
+
+      // Skip stale echoes: content the editor itself emitted via `onSave`
+      // recently, arriving back reshaped (fresh envelope, stripped ids) and/or
+      // late — after a newer save already replaced the baseline above. Checked
+      // WITHOUT touching `pendingData`, so an echo landing mid-render still
+      // leaves that render owning its own in-flight marker.
+      if (this.emittedEcho.matches(data)) {
+        return;
+      }
+
       // Under collaboration the document belongs to the sync service, and
       // render() refuses a wholesale replace — so don't attempt one. The input's
-      // premise ("this value IS the document") does not hold here. Decided
-      // against the MOUNTED config, never the current input: `collaboration` is
-      // mount-fixed, so a host that drops the key is still driving a
+      // premise ("this value IS the document") does not hold here. Read from
+      // what the DIRECTIVE built this very editor with, never from the current
+      // `[config]`: `collaboration` is mount-fixed, so a host that rebuilds the
+      // config without the key (a template literal recomputed by change
+      // detection, an async config signal landing) is still driving a live
       // collaboration session and deserves the warning rather than a silently
       // rejected render.
-      const collaboration = this.constructedCollaboration;
+      const collaboration = getConstructedCollaboration(editor);
 
       if (collaboration !== undefined) {
-        if (!this.collaborationWarned) {
-          this.collaborationWarned = true;
+        if (this.collaborationWarnedFor !== editor) {
+          this.collaborationWarnedFor = editor;
           console.warn(collaborationDataIgnoredMessage(collaboration.doc));
         }
 
         return;
       }
 
-      this.lastRenderedData = data;
+      // Genuinely external content takes over: earlier emitted payloads are
+      // moot, and keeping them could wrongly no-op a later deliberate revert to
+      // one of them.
+      this.emittedEcho.clear();
+
+      // Marked in flight, but the SUCCESS baseline does not move until the
+      // render actually lands — a failed render leaves the editor on its previous
+      // content, so claiming otherwise would dedupe away the host's retry.
+      this.pendingData = data;
       // `data` may be null (a controlled "clear to empty"); render() throws on
       // null, so normalize null → { blocks: [] } at the boundary.
-      this.renderChain = this.renderChain.catch(() => undefined).then(() => editor.render(toRenderableData(data)));
+      // The rejection handler OWNS a failed render: without it the rejection sits
+      // in `renderChain` with no handler until the next `data` change attaches
+      // one, which the runtime reports as an unhandled rejection. Swallowing it
+      // here also leaves the chain resolved, so the next queued render still runs.
+      this.renderChain = this.renderChain
+        .then(() => editor.render(toRenderableData(data)))
+        .then(
+          () => {
+            this.lastRenderedData = data;
+          },
+          () => undefined
+        )
+        .then(() => {
+          // Clear the in-flight marker unless a newer render has claimed it —
+          // that newer one owns the clear.
+          if (this.pendingData === data) {
+            this.pendingData = undefined;
+          }
+        });
     });
 
     // Emit `ready` once per editor, after `instance()` is populated so a consumer

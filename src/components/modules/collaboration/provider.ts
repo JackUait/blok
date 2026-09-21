@@ -205,6 +205,18 @@ interface ProviderState {
   ackTimer: ReturnType<typeof setTimeout> | null;
   /** One drain pass at a time; a pass is asynchronous. */
   draining: boolean;
+  /**
+   * A wake that arrived while a pass was already running, so the pass's read of
+   * the outbox may predate it. The pass re-runs when it finishes, but ONLY if
+   * it did not act on the head row itself — see `runDrain`.
+   */
+  redrainRequested: boolean;
+  /**
+   * Whether the pass now running reached the head row. Lives on the state
+   * rather than in the pass because the `finally` that replays a swallowed wake
+   * has to read it, and only one pass runs at a time.
+   */
+  drainActedOnHead: boolean;
   /** A server SyncStep1 we deferred because operations were still pending. */
   resyncOwed: boolean;
   /**
@@ -303,6 +315,8 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     inFlight: null,
     ackTimer: null,
     draining: false,
+    redrainRequested: false,
+    drainActedOnHead: false,
     resyncOwed: false,
     residual: 'none',
     lastActivitySentAt: null,
@@ -774,18 +788,77 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
   };
 
   /**
-   * One drain pass: re-read the oldest pending row and put it on the wire.
+   * The body of one drain pass: re-read the oldest pending row and put it on
+   * the wire.
    *
    * The row is re-read every time rather than held in a queue, because another
    * tab writes into the same store and may have added or deleted rows since the
    * last pass.
+   * @param generation - the connection the pass belongs to
+   * @returns whether the pass acted on the head row. A pass that read an empty
+   * outbox, or bailed because its connection went away, acted on nothing — and
+   * that is what decides whether a wake swallowed during it has to be replayed.
    */
-  const runDrain = async (): Promise<void> => {
+  const runDrainPass = async (generation: number): Promise<boolean> => {
     const outbox = options.outbox;
 
+    if (outbox === undefined) {
+      return false;
+    }
+
+    const row = await outbox.oldestPending();
+    const socket = state.socket;
+
+    // Everything below belongs to the connection that started the pass.
+    if (isStale(generation) || state.phase !== 'ready' || socket === null) {
+      return false;
+    }
+
+    if (row === null) {
+      requestResidualSync(socket);
+
+      return false;
+    }
+
+    // A row of a lineage this session no longer serves. It exists only after a
+    // quarantine that did not commit, and sending it is an unbounded loop: the
+    // server answers `lineage-mismatch`, that relineage quarantines the
+    // CURRENT lineage and moves nothing, reconnect, repeat — with no terminal
+    // state and nothing the user can see. A bare `return` is NOT the fix
+    // either: the row stays `oldestPending`'s answer and wedges the drain for
+    // the session. Its OWN lineage has to go.
+    if (row.lineage !== state.lineage) {
+      void quarantineTail(row.lineage, STALE_LINEAGE_REASON).then((moved) => {
+        // Only on a move that committed: re-waking after a failure would read
+        // the same row back and spin.
+        if (moved && !isStale(generation)) {
+          drain();
+        }
+      });
+
+      return true;
+    }
+
+    sendOperation(socket, row);
+
+    return true;
+  };
+
+  /**
+   * One drain pass, and the late delivery of any wake it swallowed.
+   */
+  const runDrain = async (): Promise<void> => {
+    if (state.draining) {
+      // The running pass read the outbox before this wake, so a row committed
+      // since is not in its answer. Replayed when that pass finishes rather
+      // than dropped.
+      state.redrainRequested = true;
+
+      return;
+    }
+
     if (
-      outbox === undefined ||
-      state.draining ||
+      options.outbox === undefined ||
       state.socket === null ||
       state.phase !== 'ready' ||
       state.protocol !== 'v2' ||
@@ -797,48 +870,33 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     }
 
     state.draining = true;
-
-    const generation = state.generation;
+    // A pass that throws acted on nothing, so this starts false: the `finally`
+    // reads it on every exit, including the one the catch takes.
+    state.drainActedOnHead = false;
 
     try {
-      const row = await outbox.oldestPending();
-      const socket = state.socket;
-
-      // Everything below belongs to the connection that started the pass.
-      if (isStale(generation) || state.phase !== 'ready' || socket === null) {
-        return;
-      }
-
-      if (row === null) {
-        requestResidualSync(socket);
-
-        return;
-      }
-
-      // A row of a lineage this session no longer serves. It exists only after a
-      // quarantine that did not commit, and sending it is an unbounded loop: the
-      // server answers `lineage-mismatch`, that relineage quarantines the
-      // CURRENT lineage and moves nothing, reconnect, repeat — with no terminal
-      // state and nothing the user can see. A bare `return` is NOT the fix
-      // either: the row stays `oldestPending`'s answer and wedges the drain for
-      // the session. Its OWN lineage has to go.
-      if (row.lineage !== state.lineage) {
-        void quarantineTail(row.lineage, STALE_LINEAGE_REASON).then((moved) => {
-          // Only on a move that committed: re-waking after a failure would read
-          // the same row back and spin.
-          if (moved && !isStale(generation)) {
-            drain();
-          }
-        });
-
-        return;
-      }
-
-      sendOperation(socket, row);
+      state.drainActedOnHead = await runDrainPass(state.generation);
     } catch (thrown) {
       logLabeled(`collaboration could not drain the outbox of ${docId}`, 'error', thrown);
     } finally {
       state.draining = false;
+
+      const swallowed = state.redrainRequested;
+
+      // Cleared either way: a pass that DID act on the head row consumed the
+      // wake — its acknowledgement, or its committed quarantine, re-reads the
+      // outbox and finds the newer row there. Replaying on top of that would
+      // read the same head back and act on it twice.
+      state.redrainRequested = false;
+
+      // The swallowed wake, delivered late. Without this a row committed while
+      // a pass was READING has no wake left at all: `onCommitted` does not fire
+      // for the tab that wrote it, no acknowledgement is coming for an
+      // operation never sent, and the residual round is spent once per
+      // connection.
+      if (swallowed && !state.drainActedOnHead) {
+        drain();
+      }
     }
   };
 

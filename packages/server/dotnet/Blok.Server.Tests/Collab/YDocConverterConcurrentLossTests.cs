@@ -152,9 +152,10 @@ public sealed class YDocConverterConcurrentLossTests
   }
 
   /// <summary>
-  /// A database block's property list: an array of objects, which both sides
-  /// store as a Y.Array so a rename of one property merges with a rename of
-  /// another. Two people rename DIFFERENT properties.
+  /// A database block's property list: an array of id-bearing objects, which
+  /// both sides store as an IDENTITY-keyed wrapper (keyed by each property's
+  /// own id) so a rename of one property merges with a rename of another. Two
+  /// people rename DIFFERENT properties.
   /// </summary>
   [Fact]
   public void ConcurrentRenamesOfDifferentDatabasePropertiesBothSurvive()
@@ -170,9 +171,10 @@ public sealed class YDocConverterConcurrentLossTests
 
     peer.Transact(transaction =>
     {
-      var properties = Assert.IsType<YArray>(Get(Data(peer, "db"), "properties"));
+      var properties = Assert.IsType<YMap>(Get(Data(peer, "db"), "properties"));
+      var rows = Assert.IsType<YMap>(Get(properties, "__rows"));
 
-      Assert.IsType<YMap>(properties.Get(1)).Set(transaction, "name", "State");
+      Assert.IsType<YMap>(Get(rows, "p2")).Set(transaction, "name", "State");
     });
 
     Apply(
@@ -237,6 +239,178 @@ public sealed class YDocConverterConcurrentLossTests
     Assert.Equal(
         "center",
         BlockNamed(YDocConverter.Export(doc), "p")["data"]?["align"]?.GetValue<string>());
+  }
+
+  /// <summary>
+  /// The other half of the contract the in-place write must not lose: an
+  /// update states the whole value of the key it names, so a NESTED key the
+  /// new data omits is removed, exactly as the client's deepAssignYMap
+  /// removes it. Deep-assigning must not turn "replace the data" into "merge
+  /// into the data".
+  /// </summary>
+  [Fact]
+  public void AnUpdateDropsANestedKeyTheNewDataOmits()
+  {
+    var doc = SeededDoc(
+        """
+        { "id": "cb", "type": "callout", "data": { "settings":
+            { "icon": "star", "colour": "blue" } } }
+        """);
+
+    Apply(doc, """{ "op": "update", "id": "cb", "data": { "settings": { "icon": "bolt" } } }""");
+
+    var settings = BlockNamed(YDocConverter.Export(doc), "cb")["data"]?["settings"];
+
+    Assert.Equal("bolt", settings?["icon"]?.GetValue<string>());
+    Assert.Null(settings?["colour"]);
+  }
+
+  /// <summary>
+  /// Row identity survives a row INSERT, not just an in-place cell edit: the
+  /// rows that were there keep their keys and their containers, so a peer
+  /// editing any of them during the round trip still lands in a live row.
+  /// </summary>
+  [Fact]
+  public void AddingATableRowKeepsTheExistingRowsKeys()
+  {
+    var doc = SeededDoc(Table);
+    var keysBefore = RowKeys(doc);
+
+    Apply(
+        doc,
+        """
+        { "op": "update", "id": "tb", "data": { "content": [
+            [ { "text": "a1", "blocks": ["p1"] }, { "text": "b1", "blocks": [] } ],
+            [ { "text": "a2", "blocks": [] }, { "text": "b2", "blocks": [] } ] ] } }
+        """);
+
+    var keysAfter = RowKeys(doc);
+
+    Assert.Equal(keysBefore, keysAfter.Take(1).ToArray());
+    Assert.Equal(2, keysAfter.Length);
+    Assert.Equal("a2", Content(YDocConverter.Export(doc))[1]?[0]?["text"]?.GetValue<string>());
+  }
+
+  /// <summary>
+  /// Rows are paired by CONTENT, so the pairing has to read a number the doc
+  /// holds (a double, written back as an integer) as equal to the same number
+  /// in the incoming JSON. If it did not, every numeric row would look brand
+  /// new and be re-minted — the loss this whole path exists to stop.
+  /// </summary>
+  [Fact]
+  public void NumericRowsPairWithTheRowsAlreadyInTheDocument()
+  {
+    var doc = SeededDoc(
+        """
+        { "id": "tb", "type": "table", "data": { "content": [
+            [ { "count": 1 }, { "count": 2 } ],
+            [ { "count": 3 }, { "count": 4.5 } ] ] } }
+        """);
+    var keysBefore = RowKeys(doc);
+
+    Apply(
+        doc,
+        """
+        { "op": "update", "id": "tb", "data": { "content": [
+            [ { "count": 1 }, { "count": 2 } ],
+            [ { "count": 3 }, { "count": 9.5 } ] ] } }
+        """);
+
+    Assert.Equal(keysBefore, RowKeys(doc));
+    Assert.Equal(9.5, Content(YDocConverter.Export(doc))[1]?[1]?["count"]?.GetValue<double>());
+  }
+
+  /// <summary>
+  /// A database's property list REORDERED while a peer renames one of the
+  /// properties. Keyed by each property's own id, a reorder is a new order
+  /// array and every property's container survives it; diffed by POSITION, the
+  /// rename landed on whichever property took that index and both peers
+  /// converged on the same wrong label.
+  ///
+  /// The expected result is the client's own, measured by running the same
+  /// scenario through DocumentStore.updateBlockData.
+  /// </summary>
+  [Fact]
+  public void ReorderingDatabasePropertiesKeepsAConcurrentRename()
+  {
+    var doc = SeededDoc(
+        """
+        { "id": "db", "type": "database", "data": { "properties": [
+            { "id": "p1", "name": "Name" },
+            { "id": "p2", "name": "Status" },
+            { "id": "p3", "name": "Owner" } ] } }
+        """);
+    var peer = Fork(doc);
+    var before = doc.EncodeStateVector();
+
+    peer.Transact(transaction =>
+    {
+      var rows = Assert.IsType<YMap>(
+          Get(Assert.IsType<YMap>(Get(Data(peer, "db"), "properties")), "__rows"));
+
+      Assert.IsType<YMap>(Get(rows, "p3")).Set(transaction, "name", "Assignee");
+    });
+
+    Apply(
+        doc,
+        """
+        { "op": "update", "id": "db", "data": { "properties": [
+            { "id": "p3", "name": "Owner" },
+            { "id": "p1", "name": "Name" },
+            { "id": "p2", "name": "Status" } ] } }
+        """);
+
+    doc.ApplyUpdate(peer.EncodeStateAsUpdate(before));
+
+    var properties = BlockNamed(YDocConverter.Export(doc), "db")["data"]?["properties"]?.AsArray();
+
+    Assert.Equal(
+        ["p3", "p1", "p2"],
+        properties?.Select(entry => entry?["id"]?.GetValue<string>() ?? "").ToArray() ?? []);
+    Assert.Equal("Assignee", properties?[0]?["name"]?.GetValue<string>());
+  }
+
+  /// <summary>
+  /// An element added to a plain array while a peer writes a field of an
+  /// element that STAYS. The changed middle is paired by content and assigned
+  /// in place; a blanket delete+insert of the middle recreates every container
+  /// in it and the peer's field goes with the old one.
+  ///
+  /// The expected result is the client's own, measured by running the same
+  /// scenario through DocumentStore.updateBlockData.
+  /// </summary>
+  [Fact]
+  public void AnUnequalArrayMiddleKeepsTheContainerThatSurvives()
+  {
+    var doc = SeededDoc(
+        """
+        { "id": "x", "type": "tool", "data": { "items": [
+            { "a": "1" }, { "a": "2" }, { "a": "3" } ] } }
+        """);
+    var peer = Fork(doc);
+    var before = doc.EncodeStateVector();
+
+    peer.Transact(transaction =>
+    {
+      var items = Assert.IsType<YArray>(Get(Data(peer, "x"), "items"));
+
+      Assert.IsType<YMap>(items.Get(2)).Set(transaction, "b", "peer");
+    });
+
+    Apply(
+        doc,
+        """
+        { "op": "update", "id": "x", "data": { "items": [
+            { "a": "1" }, { "a": "2" }, { "a": "3x" }, { "a": "4" } ] } }
+        """);
+
+    doc.ApplyUpdate(peer.EncodeStateAsUpdate(before));
+
+    var items = BlockNamed(YDocConverter.Export(doc), "x")["data"]?["items"]?.AsArray();
+
+    Assert.Equal("peer", items?[2]?["b"]?.GetValue<string>());
+    Assert.Equal("3x", items?[2]?["a"]?.GetValue<string>());
+    Assert.Equal(4, items?.Count);
   }
 
   private static YDoc SeededDoc(params string[] blockJson)

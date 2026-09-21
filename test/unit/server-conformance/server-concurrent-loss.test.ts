@@ -155,8 +155,11 @@ describe('client deep-assign under concurrency (the contract the server must mat
     const peer = fork(client);
     const before = client.getStateVector();
 
-    ((dataOf(peer, 'db').get('properties') as Y.Array<unknown>).get(1) as Y.Map<unknown>)
-      .set('name', 'State');
+    // Id-bearing objects are stored in a wrapper keyed by their own id
+    // (`isIdentityArray`), so the peer edits p2's own container.
+    const rows = (dataOf(peer, 'db').get('properties') as Y.Map<unknown>).get('__rows') as Y.Map<unknown>;
+
+    (rows.get('p2') as Y.Map<unknown>).set('name', 'State');
 
     client.updateBlockData('db', 'properties', [
       { id: 'p1', name: 'Title' },

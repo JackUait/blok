@@ -186,8 +186,11 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
   // surfaced anywhere.
   const constructedCollaborationRef = useRef(config.collaboration);
   const renderChainRef = useRef<Promise<void>>(Promise.resolve());
-  // One collaboration warning per hook instance (see the data effect).
-  const collaborationWarnedRef = useRef(false);
+  // Editor the single collaboration warning has already been emitted for (see
+  // the data effect). Keyed by the editor, not a boolean, so the editor a `deps`
+  // change creates warns on its own first ignored `data` change instead of
+  // inheriting the previous editor's "already warned" flag and going silent.
+  const collaborationWarnedForRef = useRef<Blok | null>(null);
   // The content of the render currently queued/in-flight (distinct from
   // `lastRenderedDataRef`, which tracks the last SUCCESSFULLY rendered content).
   // Used to dedupe a re-queue of the same in-flight content without advancing the
@@ -829,8 +832,8 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     const mountedCollaboration = constructedCollaborationRef.current;
 
     if (mountedCollaboration !== undefined) {
-      if (!collaborationWarnedRef.current) {
-        collaborationWarnedRef.current = true;
+      if (collaborationWarnedForRef.current !== editor) {
+        collaborationWarnedForRef.current = editor;
         console.warn(collaborationDataIgnoredMessage(mountedCollaboration.doc));
       }
 

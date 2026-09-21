@@ -1048,12 +1048,14 @@ describe('DocumentStore', () => {
 
       store.fromJSON([{ id: 'db1', type: 'database', data: { schema, views, activeViewId: 'v1' } }]);
 
-      // Schema and views convert per-element
+      // Schema and views are keyed by each element's own id, so a reorder
+      // never recreates an element's Y.Map (see `isIdentityArray`).
       const yblock = store.getBlockById('db1') as Y.Map<unknown>;
       const ydata = yblock.get('data') as Y.Map<unknown>;
+      const rows = (ydata.get('schema') as Y.Map<unknown>).get('__rows') as Y.Map<unknown>;
 
-      expect(ydata.get('schema') instanceof Y.Array).toBe(true);
-      expect((ydata.get('schema') as Y.Array<unknown>).get(0) instanceof Y.Map).toBe(true);
+      expect(Array.from(rows.keys())).toEqual(['p-title', 'p-status']);
+      expect(rows.get('p-title') instanceof Y.Map).toBe(true);
 
       const nextSchema = [
         ...schema,

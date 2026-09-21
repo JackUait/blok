@@ -6,7 +6,7 @@ import { modificationsObserverBatchTimeout } from '../../constants';
 import { Module } from '../../__module';
 
 import { BlockObserver } from './block-observer';
-import { DocumentStore } from './document-store';
+import { DocumentStore, type DataKeySnapshot } from './document-store';
 import { YBlockSerializer, isBoundaryCharacter, type YjsOutputBlockData } from './serializer';
 import type { AwarenessChange, BlockChangeCallback, BlockPlacement, CaretSnapshot } from './types';
 import { UndoHistory } from './undo-history';
@@ -380,8 +380,11 @@ export class YjsManager extends Module {
    * @param id - Block id
    * @param key - Data property key
    * @param value - New value
+   * @param seen - what the block's nested containers held when this value was
+   *   captured; a nested key that appeared after it (a peer's) is never
+   *   deleted. See `DocumentStore.updateBlockData`.
    */
-  public updateBlockData(id: string, key: string, value: unknown): boolean {
+  public updateBlockData(id: string, key: string, value: unknown, seen?: DataKeySnapshot): boolean {
     // Barrier: a fresh write (api.blocks.update, split, merge) must land AFTER
     // the buffered typing it supersedes. Without it the still-open window's
     // trailing flush lands 400ms later and REGRESSES the doc to the stale
@@ -390,7 +393,7 @@ export class YjsManager extends Module {
     this.flushPendingBlockWrites();
     this.undoHistory.markCaretBeforeChange();
 
-    return this.documentStore.updateBlockData(id, key, value);
+    return this.documentStore.updateBlockData(id, key, value, seen);
   }
 
   /**

@@ -701,9 +701,15 @@ internal static class YDocConverter
 
       RefuseUnlessBlockMap(op.Id, index);
 
-      return [EditStep.ReplaceData(
-          op.Id,
-          InputWriter.BlockDataEntries(NormalizeBlockData(types.GetValueOrDefault(op.Id), op.Data)))];
+      var entries = InputWriter.BlockDataEntries(
+          NormalizeBlockData(types.GetValueOrDefault(op.Id), op.Data));
+
+      // The values reach the doc as the plain JSON they came in as, so the
+      // guards the conversion carries have to be run over them HERE, while
+      // planning: a refusal must happen before the transaction opens.
+      InputWriter.Screen(entries);
+
+      return [EditStep.ReplaceData(op.Id, entries)];
     }
 
     /// <summary>
@@ -862,11 +868,15 @@ internal static class YDocConverter
 
     /// <summary>
     /// Rewrites a block's data KEY BY KEY rather than setting a fresh map over
-    /// the old one. A whole-map set is last-writer-wins on the <c>data</c> key,
-    /// so it discarded the live <see cref="YText"/> a peer was typing into at
-    /// that moment together with everything typed. Per key, an existing YText
-    /// is EDITED into its new value, so the peer's characters keep their
-    /// identity and both bursts survive.
+    /// the old one, and each key IN PLACE rather than setting a fresh
+    /// container over the old one. A whole-key set is last-writer-wins, so it
+    /// discarded the live container a peer was editing at that moment together
+    /// with everything in it — the text they were typing, the row they were in,
+    /// the id they had just put in a table cell. Per key, an existing
+    /// <see cref="YText"/> is EDITED into its new value and every other live
+    /// container is DEEP-ASSIGNED into (see <see cref="DeepAssign"/>), so the
+    /// peer's characters and containers keep their identity and both edits
+    /// survive.
     ///
     /// Keys the new data does not carry are still removed, so "replace the
     /// data" still means replace.
@@ -914,7 +924,11 @@ internal static class YDocConverter
             continue;
           }
 
-          existing.Set(transaction, key, value);
+          // TOP level: the ordered-id-array rule is a NESTED rule on both
+          // sides, so `nested` is false here — a custom tool's top-level
+          // `data.blocks` keeps the generic array rule.
+          DeepAssign.Entry(
+              transaction, existing, key, value as JsonNode, BlockFieldDepth + 1, nested: false);
         }
       });
     }
@@ -926,6 +940,13 @@ internal static class YDocConverter
     ///
     /// Applied back to front: every index counts from the text as it was
     /// before this call, exactly as the client applies the same ops.
+    ///
+    /// INSERT FIRST, then delete what it replaces. The other order anchors the
+    /// new text to the RIGHT of the run it replaces — the characters it is
+    /// anchored to are the ones being tombstoned — so a peer's concurrent
+    /// keystroke inside that run surfaces in FRONT of the whole replacement.
+    /// LOCKSTEP with the same order in DocumentStore.updateBlockData
+    /// (src/components/modules/yjs/document-store.ts).
     /// </summary>
     private static void EditText(YTransaction transaction, YText live, string next)
     {
@@ -942,14 +963,14 @@ internal static class YDocConverter
       {
         var edit = edits[index];
 
-        if (edit.Remove > 0)
-        {
-          live.Delete(transaction, edit.Index, edit.Remove);
-        }
-
         if (edit.Insert.Length > 0)
         {
           live.Insert(transaction, edit.Index, edit.Insert);
+        }
+
+        if (edit.Remove > 0)
+        {
+          live.Delete(transaction, edit.Index + edit.Insert.Length, edit.Remove);
         }
       }
     }
@@ -1032,6 +1053,770 @@ internal static class YDocConverter
   }
 
   /// <summary>
+  /// The /edit write path, IN PLACE: plain JSON assigned onto the shared
+  /// containers a block's data already holds, at every depth, instead of a
+  /// fresh container set over each key.
+  ///
+  /// LOCKSTEP with the client's <c>deepAssignYMap</c> / <c>deepAssignYArray</c>
+  /// / <c>deepAssignYGrid</c> / <c>pairGridRows</c> / <c>assignKeySequence</c>
+  /// in src/components/modules/yjs/document-store.ts, which is what a full
+  /// <c>save()</c> flush runs. The rules are the same and in the same order,
+  /// because the two sides write into ONE document: a container one side
+  /// replaces wholesale is a container the other side's concurrent edit was
+  /// inside, and a whole-key set is last-writer-wins, so that edit is
+  /// discarded with no error. Grid rows keep their KEYS for the same reason —
+  /// re-minting them moves every row in the table, not just the edited one.
+  ///
+  /// Only the containers matter. A LEAF has no identity to keep, so a leaf
+  /// that changed is simply written.
+  /// </summary>
+  private static class DeepAssign
+  {
+    /// <summary>
+    /// One key of a live map. <paramref name="depth"/> is the depth OF THE
+    /// VALUE, counted exactly as <c>InputWriter.PlainToYValue</c> counts it,
+    /// so a wholesale write here guards the same levels the planning walk
+    /// already guarded.
+    ///
+    /// <paramref name="nested"/> is false only for a block's TOP-LEVEL data
+    /// keys, where the ordered-id-array rule does not apply — same split as
+    /// the client's <c>updateBlockData</c> (top level) versus
+    /// <c>assignYMapEntry</c> (nested).
+    /// </summary>
+    internal static void Entry(
+        YTransaction transaction,
+        YMap target,
+        string key,
+        JsonNode? value,
+        int depth,
+        bool nested)
+    {
+      var existing = Value(target, key);
+
+      // The keyed grid FIRST: a grid wrapper IS a map, and the object branch
+      // below would tear its container keys apart.
+      if (value is JsonArray rows && existing is YMap grid && IsGridMap(grid))
+      {
+        if (InputWriter.IsGridArray(rows))
+        {
+          Grid(transaction, grid, rows, depth);
+        }
+        else if (InputWriter.IsIdentityArray(rows))
+        {
+          Identity(transaction, grid, rows, depth);
+        }
+        else if (!SameAsLive(grid, rows, depth))
+        {
+          // Neither shape any more (emptied, or the elements lost their ids) —
+          // rebuild, so the write path matches the read path.
+          target.Set(transaction, key, InputWriter.PlainToYValue(rows, depth));
+        }
+
+        return;
+      }
+
+      // An ordered id list is a YArray at ANY depth, even empty or all-string,
+      // so two peers each dropping a block into ONE table cell keep both ids.
+      // Before the generic array branch, which would downshift an all-string
+      // value back to a plain leaf for failing IsConvertibleArray.
+      if (nested && IsOrderedIdArrayKey(key) && value is JsonArray idList)
+      {
+        if (existing is YArray liveIds)
+        {
+          Array(transaction, liveIds, idList, depth);
+        }
+        else
+        {
+          // A cell written before this rule still holds a plain array.
+          // Promote it unconditionally, so the migration happens on the first
+          // write rather than never. THIS ONE write is last-writer-wins, as
+          // every write of this key was before; every write after it merges.
+          target.Set(transaction, key, InputWriter.PlainToYArray(idList, depth));
+        }
+
+        return;
+      }
+
+      if (value is JsonArray array && existing is YArray liveArray)
+      {
+        if (InputWriter.IsConvertibleArray(array))
+        {
+          Array(transaction, liveArray, array, depth);
+        }
+        else if (!SameAsLive(liveArray, array, depth))
+        {
+          target.Set(transaction, key, InputWriter.PlainToYValue(array, depth));
+        }
+
+        return;
+      }
+
+      if (value is JsonObject map)
+      {
+        if (existing is YMap liveMap)
+        {
+          Map(transaction, liveMap, map, depth);
+
+          return;
+        }
+
+        // Unconditional, even when the plain shapes match: what is there is
+        // not a YMap, and leaving it would keep the key un-mergeable forever.
+        target.Set(transaction, key, InputWriter.PlainToYValue(map, depth));
+
+        return;
+      }
+
+      if (!SameAsLive(existing, value, depth))
+      {
+        target.Set(transaction, key, InputWriter.PlainToYValue(value, depth));
+      }
+    }
+
+    /// <summary>
+    /// Assign a plain object onto a live map, key by key.
+    ///
+    /// Keys the object does not carry are REMOVED: an update states the whole
+    /// value of the key it names, so "replace the data" still means replace,
+    /// nested levels included. Only the keys the doc holds when this runs are
+    /// removed, so a key a peer adds concurrently arrives afterwards and
+    /// stays.
+    ///
+    /// Keys are written as they came in: the planning walk
+    /// (<c>InputWriter.Screen</c>) ran the NUL screen over every key of this
+    /// same JSON already, and refused the request if one carried a NUL.
+    /// </summary>
+    private static void Map(
+        YTransaction transaction, YMap target, JsonObject source, int depth)
+    {
+      foreach (var key in target.Keys.ToArray())
+      {
+        if (!source.ContainsKey(key))
+        {
+          target.Remove(transaction, key);
+        }
+      }
+
+      foreach (var (key, value) in source)
+      {
+        Entry(transaction, target, key, value, depth + 1, nested: true);
+      }
+    }
+
+    /// <summary>
+    /// Element-wise assign onto a live array with a TWO-ENDED diff: skip the
+    /// equal prefix and suffix, recurse per element when the changed middles
+    /// have equal length, otherwise replace the middle with ONE splice.
+    /// Array item identity is what lets a concurrent insert and an element
+    /// edit both apply, so an untouched element is never rewritten.
+    /// </summary>
+    private static void Array(
+        YTransaction transaction, YArray target, JsonArray source, int depth)
+    {
+      var items = target.Enumerate().ToList();
+      var sourceLength = source.Count;
+      var (prefix, suffix) = CommonEnds(
+          items.Count,
+          sourceLength,
+          (itemIndex, sourceIndex) =>
+              SameAsLive(items[itemIndex], source[sourceIndex], depth + 1));
+      var targetMiddle = items.Count - prefix - suffix;
+      var sourceMiddle = sourceLength - prefix - suffix;
+
+      if (targetMiddle == 0 && sourceMiddle == 0)
+      {
+        return;
+      }
+
+      if (targetMiddle == sourceMiddle)
+      {
+        for (var offset = 0; offset < sourceMiddle; offset++)
+        {
+          Element(transaction, target, prefix + offset, source[prefix + offset], depth + 1);
+        }
+
+        return;
+      }
+
+      // Unequal-length middles. Pair them by content FIRST: an element that is
+      // still the same element must keep its container. A blanket
+      // delete+insert of the middle recreates every container in it, so a
+      // column inserted beside a cell a peer is concurrently editing threw
+      // that peer's cell write away. Only an order-preserving pairing —
+      // inserts and deletes, no move — can be expressed without a splice; a
+      // genuine reorder still falls back to one, because a YArray has no move.
+      var assignment = PairRows(
+          targetMiddle,
+          sourceMiddle,
+          (targetIndex, sourceIndex) =>
+              SameAsLive(items[prefix + targetIndex], source[prefix + sourceIndex], depth + 1),
+          (targetIndex, sourceIndex) =>
+              RowSimilarity(items[prefix + targetIndex], source[prefix + sourceIndex], depth + 1));
+      var paired = assignment.Where(index => index >= 0).ToList();
+      var reordered = paired.Where((index, rank) => rank > 0 && index <= paired[rank - 1]).Any();
+
+      if (paired.Count > 0 && !reordered)
+      {
+        var kept = new HashSet<int>(paired);
+
+        // Backwards, so an earlier delete cannot shift a later offset.
+        for (var offset = targetMiddle - 1; offset >= 0; offset--)
+        {
+          if (!kept.Contains(offset))
+          {
+            target.Delete(transaction, prefix + offset, 1);
+          }
+        }
+
+        for (var offset = 0; offset < sourceMiddle; offset++)
+        {
+          if (assignment[offset] < 0)
+          {
+            target.Insert(
+                transaction,
+                prefix + offset,
+                [InputWriter.PlainToYValue(source[prefix + offset], depth + 1)]);
+
+            continue;
+          }
+
+          Element(transaction, target, prefix + offset, source[prefix + offset], depth + 1);
+        }
+
+        return;
+      }
+
+      // Nothing pairs, or the pairing is a reorder: one splice, so the change
+      // lands as a single array event instead of N element rewrites.
+      if (targetMiddle > 0)
+      {
+        target.Delete(transaction, prefix, targetMiddle);
+      }
+
+      if (sourceMiddle > 0)
+      {
+        target.Insert(
+            transaction,
+            prefix,
+            [.. Enumerable
+                .Range(prefix, sourceMiddle)
+                .Select(index => InputWriter.PlainToYValue(source[index], depth + 1))]);
+      }
+    }
+
+    /// <summary>One array element in place, recursing into live containers.</summary>
+    private static void Element(
+        YTransaction transaction, YArray target, int index, JsonNode? value, int depth)
+    {
+      var existing = target.Get(index);
+
+      if (value is JsonArray rows && existing is YMap grid && IsGridMap(grid))
+      {
+        if (InputWriter.IsGridArray(rows))
+        {
+          Grid(transaction, grid, rows, depth);
+
+          return;
+        }
+
+        if (InputWriter.IsIdentityArray(rows))
+        {
+          Identity(transaction, grid, rows, depth);
+
+          return;
+        }
+      }
+
+      if (value is JsonObject map && existing is YMap liveMap)
+      {
+        Map(transaction, liveMap, map, depth);
+
+        return;
+      }
+
+      if (value is JsonArray array &&
+          existing is YArray liveArray &&
+          InputWriter.IsConvertibleArray(array))
+      {
+        Array(transaction, liveArray, array, depth);
+
+        return;
+      }
+
+      // Equal-length middles can still hold individually equal elements
+      // between changed ones — those must not be rewritten.
+      if (SameAsLive(existing, value, depth))
+      {
+        return;
+      }
+
+      target.Delete(transaction, index, 1);
+      target.Insert(transaction, index, [InputWriter.PlainToYValue(value, depth)]);
+    }
+
+    /// <summary>
+    /// Assign plain rows onto a keyed grid wrapper.
+    ///
+    /// An /edit carries no row keys — it is the whole grid as plain arrays —
+    /// so the rows must be RE-ASSOCIATED with the keys already in the doc.
+    /// Once paired, a row is diffed in place and its container survives; only
+    /// the order array records that rows moved. That is the whole point: an
+    /// array has no move, so a positional diff expresses a reorder as
+    /// delete+insert and throws away whatever a peer concurrently typed into
+    /// the deleted row.
+    ///
+    /// The row wrapper costs two levels, the same two the write and read walks
+    /// spend on it.
+    /// </summary>
+    private static void Grid(
+        YTransaction transaction, YMap grid, JsonArray source, int depth)
+    {
+      var rows = (YMap)Value(grid, GridRowsKey)!;
+      var order = (YArray)Value(grid, GridOrderKey)!;
+      var currentKeys = GridRowKeys(grid, rows);
+      var currentRows = currentKeys.Select(key => Value(rows, key)).ToList();
+      var rowDepth = depth + 2;
+      var assignment = PairRows(
+          currentKeys.Count,
+          source.Count,
+          (currentIndex, sourceIndex) =>
+              SameAsLive(currentRows[currentIndex], source[sourceIndex], rowDepth),
+          (currentIndex, sourceIndex) =>
+              RowSimilarity(currentRows[currentIndex], source[sourceIndex], rowDepth));
+      var paired = new HashSet<int>(assignment.Where(index => index >= 0));
+      var nextKeys = new List<string>();
+
+      for (var index = 0; index < currentKeys.Count; index++)
+      {
+        if (!paired.Contains(index))
+        {
+          rows.Remove(transaction, currentKeys[index]);
+        }
+      }
+
+      for (var index = 0; index < source.Count; index++)
+      {
+        var pairedWith = assignment[index];
+
+        if (pairedWith < 0)
+        {
+          var minted = InputWriter.GenerateRowKey();
+
+          rows.Set(transaction, minted, InputWriter.PlainToYValue(source[index], rowDepth));
+          nextKeys.Add(minted);
+
+          continue;
+        }
+
+        var key = currentKeys[pairedWith];
+
+        // Through Entry, not Array: the row's live value may be anything, and
+        // the ordinary key rules decide what to do with it.
+        Entry(transaction, rows, key, source[index], rowDepth, nested: true);
+        nextKeys.Add(key);
+      }
+
+      KeySequence(transaction, order, nextKeys);
+    }
+
+    /// <summary>
+    /// Assign plain id-bearing objects onto an identity-keyed wrapper.
+    ///
+    /// Nothing has to be re-associated here — unlike a grid row, the element
+    /// carries its own key — so a reorder is just a new order array and every
+    /// element's map survives it. That is the whole point: diffed by POSITION,
+    /// a reorder racing a field edit applied that edit to whichever element
+    /// took the index, and both peers converged on the same wrong value.
+    ///
+    /// LOCKSTEP with <c>deepAssignYIdentity</c> in
+    /// src/components/modules/yjs/document-store.ts.
+    /// </summary>
+    private static void Identity(
+        YTransaction transaction, YMap target, JsonArray source, int depth)
+    {
+      var rows = (YMap)Value(target, GridRowsKey)!;
+      var order = (YArray)Value(target, GridOrderKey)!;
+      // IsIdentityArray guarantees a non-empty string id on every element. The
+      // id is used as the key as it came in: the planning walk screened this
+      // same JSON through PlainToIdentityMap, which refuses a NUL in it.
+      var nextKeys = source.Select(element => element!["id"]!.GetValue<string>()).ToList();
+      var kept = new HashSet<string>(nextKeys, StringComparer.Ordinal);
+
+      foreach (var key in rows.Keys.ToArray())
+      {
+        if (!kept.Contains(key))
+        {
+          rows.Remove(transaction, key);
+        }
+      }
+
+      for (var index = 0; index < source.Count; index++)
+      {
+        Entry(transaction, rows, nextKeys[index], source[index], depth + 2, nested: true);
+      }
+
+      KeySequence(transaction, order, nextKeys);
+    }
+
+    /// <summary>
+    /// Re-associate keyless plain rows with the doc's existing rows, in four
+    /// passes, each cheaper and more certain than the next:
+    ///
+    /// 1. Two-ended anchors — the equal prefix and suffix pair 1:1. Rows
+    ///    outside the edited span never enter the search.
+    /// 2. Exact content match across the middle — this is how a MOVED row is
+    ///    recognized as the same row rather than a delete plus an insert.
+    /// 3. Cell-level similarity, only when the leftover counts DIFFER (a row
+    ///    was added or removed in the same write that edited one): the edited
+    ///    row still shares most of its cells with itself, a brand-new row
+    ///    shares none. Equal counts skip straight to 4 — equal-length middles
+    ///    rewrite in place.
+    /// 4. Positional remainder — extra source rows are genuinely new, extra
+    ///    doc rows genuinely deleted.
+    ///
+    /// Rows with identical content are interchangeable by definition, so pass
+    /// 2 pairing an arbitrary one of them is not a defect.
+    /// </summary>
+    /// <returns>
+    /// For each source row, the index of the doc row it pairs with, or -1 when
+    /// it is a new row.
+    /// </returns>
+    private static int[] PairRows(
+        int currentCount,
+        int sourceCount,
+        Func<int, int, bool> rowsEqual,
+        Func<int, int, int> similarity)
+    {
+      var assignment = Enumerable.Repeat(-1, sourceCount).ToArray();
+      var taken = new HashSet<int>();
+
+      void Pair(int sourceIndex, int currentIndex)
+      {
+        assignment[sourceIndex] = currentIndex;
+        taken.Add(currentIndex);
+      }
+
+      var (prefix, suffix) = CommonEnds(currentCount, sourceCount, rowsEqual);
+
+      for (var index = 0; index < prefix; index++)
+      {
+        Pair(index, index);
+      }
+
+      for (var index = 0; index < suffix; index++)
+      {
+        Pair(sourceCount - 1 - index, currentCount - 1 - index);
+      }
+
+      var middleSources = Enumerable
+          .Range(0, sourceCount)
+          .Where(index => assignment[index] < 0)
+          .ToList();
+      var middleTargets = Enumerable
+          .Range(0, currentCount)
+          .Where(index => !taken.Contains(index))
+          .ToList();
+
+      foreach (var sourceIndex in middleSources)
+      {
+        var match = middleTargets
+            .Where(index => !taken.Contains(index) && rowsEqual(index, sourceIndex))
+            .Select(index => (int?)index)
+            .FirstOrDefault();
+
+        if (match is not null)
+        {
+          Pair(sourceIndex, match.Value);
+        }
+      }
+
+      var restSources = middleSources.Where(index => assignment[index] < 0).ToList();
+      var restTargets = middleTargets.Where(index => !taken.Contains(index)).ToList();
+
+      // Rank window: an unmatched row can only have shifted by the number of
+      // unmatched inserts/deletes around it, so scoring further afield finds
+      // nothing and would make the pass quadratic on a large grid. A row that
+      // moved further than that was already caught by the exact pass above.
+      var window = Math.Abs(restSources.Count - restTargets.Count) + 1;
+
+      if (restSources.Count != restTargets.Count)
+      {
+        for (var rank = 0; rank < restSources.Count; rank++)
+        {
+          var sourceIndex = restSources[rank];
+          var free = restTargets
+              .Where((index, targetRank) =>
+                  !taken.Contains(index) && Math.Abs(targetRank - rank) <= window)
+              .ToList();
+          var match = MostSimilar(free, sourceIndex, similarity);
+
+          if (match >= 0)
+          {
+            Pair(sourceIndex, match);
+          }
+        }
+      }
+
+      var finalTargets = restTargets.Where(index => !taken.Contains(index)).ToList();
+      var rest = restSources.Where(index => assignment[index] < 0).ToList();
+
+      for (var rank = 0; rank < rest.Count && rank < finalTargets.Count; rank++)
+      {
+        Pair(rest[rank], finalTargets[rank]);
+      }
+
+      return assignment;
+    }
+
+    /// <summary>
+    /// The candidate doc row sharing the most cells with the source row, or -1
+    /// when none shares any: a brand-new row has nothing in common with an
+    /// existing one.
+    /// </summary>
+    private static int MostSimilar(
+        IReadOnlyList<int> candidates, int sourceIndex, Func<int, int, int> similarity)
+    {
+      var best = -1;
+      var bestScore = 0;
+
+      foreach (var candidate in candidates)
+      {
+        var score = similarity(candidate, sourceIndex);
+
+        if (score > bestScore)
+        {
+          best = candidate;
+          bestScore = score;
+        }
+      }
+
+      return best;
+    }
+
+    /// <summary>
+    /// How much two rows look like the same row: the length of their common
+    /// cell prefix plus common suffix. Measured from BOTH ends, never per
+    /// position — a column inserted or deleted at the FRONT shifts every cell,
+    /// so a positional score reads such a row as sharing nothing with itself
+    /// and the pairing then hands a peer's concurrent edit to the wrong row.
+    /// </summary>
+    private static int RowSimilarity(object? current, JsonNode? source, int depth)
+    {
+      if (current is not YArray live || source is not JsonArray cells)
+      {
+        return 0;
+      }
+
+      var items = live.Enumerate().ToList();
+      var (prefix, suffix) = CommonEnds(
+          items.Count,
+          cells.Count,
+          (itemIndex, cellIndex) => SameAsLive(items[itemIndex], cells[cellIndex], depth + 1));
+
+      return prefix + suffix;
+    }
+
+    /// <summary>
+    /// Rewrite a grid's row-order array with one two-ended splice. The
+    /// elements are plain key STRINGS, so delete+insert here costs nothing —
+    /// no container is destroyed. Also self-heals: keys the read path
+    /// normalized away (duplicated by concurrent reorders, or stranded by a
+    /// concurrent delete) are absent from <paramref name="keys"/> and get
+    /// spliced out.
+    /// </summary>
+    private static void KeySequence(
+        YTransaction transaction, YArray order, List<string> keys)
+    {
+      var current = order.Enumerate().ToList();
+
+      bool Same(int currentIndex, int keyIndex)
+      {
+        return current[currentIndex] is string key &&
+            string.Equals(key, keys[keyIndex], StringComparison.Ordinal);
+      }
+
+      var (prefix, suffix) = CommonEnds(current.Count, keys.Count, Same);
+      var currentMiddle = current.Count - prefix - suffix;
+      var nextMiddle = keys.Count - prefix - suffix;
+
+      if (currentMiddle > 0)
+      {
+        order.Delete(transaction, prefix, currentMiddle);
+      }
+
+      if (nextMiddle > 0)
+      {
+        order.Insert(
+            transaction,
+            prefix,
+            [.. keys.Skip(prefix).Take(nextMiddle).Cast<object?>()]);
+      }
+    }
+
+    /// <summary>
+    /// Lengths of the equal prefix and equal suffix of two sequences, the
+    /// suffix measured only past the prefix so the two never overlap. Every
+    /// two-ended diff here shares this accounting.
+    /// </summary>
+    private static (int Prefix, int Suffix) CommonEnds(
+        int leftLength, int rightLength, Func<int, int, bool> isEqualAt)
+    {
+      var maxPrefix = Math.Min(leftLength, rightLength);
+      var prefix = 0;
+
+      while (prefix < maxPrefix && isEqualAt(prefix, prefix))
+      {
+        prefix++;
+      }
+
+      var maxSuffix = maxPrefix - prefix;
+      var suffix = 0;
+
+      while (suffix < maxSuffix &&
+          isEqualAt(leftLength - 1 - suffix, rightLength - 1 - suffix))
+      {
+        suffix++;
+      }
+
+      return (prefix, suffix);
+    }
+
+    /// <summary>
+    /// Whether the live value already IS the plain value.
+    ///
+    /// Comparison only. A shape this writer can produce reads exactly as
+    /// <see cref="Export"/> reads it; anything else — a foreign peer's XML
+    /// type, bytes, a bigint, a value nested past the depth cap — answers
+    /// "not the same", so the caller writes over it, which is what a
+    /// whole-key set did for EVERY value before this path existed. A
+    /// comparison that is wrong in that direction costs a redundant write; it
+    /// cannot drop an edit.
+    /// </summary>
+    private static bool SameAsLive(object? live, JsonNode? value, int depth)
+    {
+      return TryPlain(live, depth, out var plain) && JsonNode.DeepEquals(plain, value);
+    }
+
+    /// <summary>The live value as the JSON the export would write, or false.</summary>
+    private static bool TryPlain(object? live, int depth, out JsonNode? plain)
+    {
+      plain = null;
+
+      // Past the cap the export writes the lockstep null rather than the
+      // value, so there is nothing here to compare honestly: answer "not the
+      // same" and let the caller write.
+      if (depth > MaxValueDepth)
+      {
+        return false;
+      }
+
+      switch (live)
+      {
+        case null:
+          return true;
+
+        case YMap grid when IsGridMap(grid):
+          return TryPlainGrid(grid, depth, out plain);
+
+        case YMap map:
+          return TryPlainEntries(map.Keys.ToArray().Select(
+              key => new KeyValuePair<string, object?>(key, Value(map, key))),
+              depth + 1,
+              out plain);
+
+        case AnyObject any:
+          return TryPlainEntries(any, depth + 1, out plain);
+
+        case YArray array:
+          return TryPlainItems([.. array.Enumerate()], depth + 1, out plain);
+
+        case AnyArray items:
+          return TryPlainItems(items, depth + 1, out plain);
+
+        // A block's mergeable text renders as its string form, exactly as the
+        // export renders it.
+        case YText text:
+          plain = JsonValue.Create(text.ToString());
+
+          return true;
+
+        case string text:
+          plain = JsonValue.Create(text);
+
+          return true;
+
+        case bool flag:
+          plain = JsonValue.Create(flag);
+
+          return true;
+
+        case double number:
+          plain = NumberNode(number);
+
+          return true;
+
+        default:
+          return false;
+      }
+    }
+
+    private static bool TryPlainEntries(
+        IEnumerable<KeyValuePair<string, object?>> entries, int depth, out JsonNode? plain)
+    {
+      var result = new JsonObject();
+
+      plain = null;
+
+      foreach (var (key, child) in entries)
+      {
+        if (!TryPlain(child, depth, out var childPlain))
+        {
+          return false;
+        }
+
+        result[key] = childPlain;
+      }
+
+      plain = result;
+
+      return true;
+    }
+
+    private static bool TryPlainItems(
+        IReadOnlyList<object?> items, int depth, out JsonNode? plain)
+    {
+      var result = new JsonArray();
+
+      plain = null;
+
+      foreach (var item in items)
+      {
+        if (!TryPlain(item, depth, out var itemPlain))
+        {
+          return false;
+        }
+
+        result.Add(itemPlain);
+      }
+
+      plain = result;
+
+      return true;
+    }
+
+    private static bool TryPlainGrid(YMap grid, int depth, out JsonNode? plain)
+    {
+      var rows = (YMap)Value(grid, GridRowsKey)!;
+
+      // The keyed wrapper costs the same two levels the write side spends.
+      return TryPlainItems(
+          [.. GridRowKeys(grid, rows).Select(key => Value(rows, key))],
+          depth + 2,
+          out plain);
+    }
+  }
+
+  /// <summary>
   /// JSON → engine values, mirroring <c>YBlockSerializer.outputDataToYBlock</c>
   /// and <c>plainToYValue</c>. A shared value is a PRELIM type, seeded at
   /// construction and integrated when the item holding it is; a plain value is
@@ -1045,9 +1830,18 @@ internal static class YDocConverter
     /// leaf. Entries, not a <see cref="YMap"/>, because an edit writes them
     /// onto the block's EXISTING data map key by key so a live
     /// <see cref="YText"/> survives, and a prelim map's entries cannot be read
-    /// back out of it. The mergeable value travels as a marker for the same
-    /// reason: a prelim YText will not hand its string back, and the update
-    /// path needs that string to diff against what is already in the doc.
+    /// back out of it.
+    ///
+    /// Each value travels as the PLAIN JSON it came in as: an update
+    /// deep-assigns it into the shared containers the doc already holds (see
+    /// <see cref="DeepAssign"/>), and a prelim <see cref="YMap"/> /
+    /// <see cref="YArray"/> / <see cref="YText"/> hands nothing back to diff
+    /// against. Mergeable text travels as a marker so the update path can tell
+    /// "this string belongs in a YText" from an ordinary leaf.
+    ///
+    /// Only the KEYS are screened here. A caller that does not convert the
+    /// values for real (the update path) must run <see cref="Screen"/> over
+    /// them while planning.
     /// </summary>
     internal static List<KeyValuePair<string, object?>> BlockDataEntries(JsonObject data)
     {
@@ -1065,17 +1859,46 @@ internal static class YDocConverter
             child is JsonValue scalar &&
             scalar.GetValueKind() == JsonValueKind.String
               ? new MergeableText(NoNul(scalar.GetValue<string>(), "a string value"))
-              : PlainToYValue(child, BlockFieldDepth + 1)));
+              : child));
       }
 
       return entries;
     }
 
-    /// <summary>Marker entries become the shared types they stand for.</summary>
+    /// <summary>
+    /// Runs the NUL and depth guards over every key, string and container
+    /// level of the entries, and throws the result away.
+    ///
+    /// THE CONVERSION IS THE VALIDATOR — hand-writing a second walk would rot
+    /// against it — and a refusal has to happen while planning, before the
+    /// transaction opens. Only the UPDATE path needs this: the insert path
+    /// converts for real, at plan time, through <see cref="ToDataMap"/>.
+    /// </summary>
+    internal static void Screen(IReadOnlyList<KeyValuePair<string, object?>> entries)
+    {
+      foreach (var entry in entries)
+      {
+        PlainToYValue(entry.Value as JsonNode, BlockFieldDepth + 1);
+      }
+    }
+
+    /// <summary>Entries become the shared types they stand for.</summary>
     internal static YMap ToDataMap(IReadOnlyList<KeyValuePair<string, object?>> entries)
     {
       return new YMap(entries.Select(entry =>
-          entry.Value is MergeableText text ? Pair(entry.Key, new YText(text.Value)) : entry));
+          Pair(entry.Key, ToShared(entry.Value, BlockFieldDepth + 1))));
+    }
+
+    /// <summary>
+    /// One <see cref="BlockDataEntries"/> value as the shared type it stands
+    /// for: a marker mints the <see cref="YText"/>, anything else is plain
+    /// JSON and goes through the ordinary value walk.
+    /// </summary>
+    internal static object? ToShared(object? value, int depth)
+    {
+      return value is MergeableText text
+        ? new YText(text.Value)
+        : PlainToYValue(value as JsonNode, depth);
     }
 
     internal static YMap Block(string id, JsonObject block)
@@ -1097,12 +1920,21 @@ internal static class YDocConverter
                 NormalizeBlockData(type, ObjectEntries(block["data"], $"block \"{id}\" data"))))),
       };
 
-      if (block.TryGetPropertyValue("tunes", out var tunes))
-      {
-        entries.Add(Pair(
-            "tunes",
-            ObjectToYMap(ObjectEntries(tunes, $"block \"{id}\" tunes"), BlockFieldDepth)));
-      }
+      // EAGER, always — even with no tunes. Same law as `contentIds` below and
+      // the YText above: a container two peers can create must be minted by
+      // the ONE peer that creates the block. Created lazily on the first tune
+      // write instead, two peers each set a fresh map on a tuneless block, and
+      // map-set is last-writer-wins — the loser's map was discarded WITH the
+      // tune inside it. Read-back drops an empty map, so the exported shape is
+      // unchanged. LOCKSTEP with `outputDataToYBlock` in
+      // src/components/modules/yjs/serializer.ts.
+      entries.Add(Pair(
+          "tunes",
+          ObjectToYMap(
+              block.TryGetPropertyValue("tunes", out var tunes)
+                ? ObjectEntries(tunes, $"block \"{id}\" tunes")
+                : [],
+              BlockFieldDepth)));
 
       if (block.TryGetPropertyValue("parent", out var parent))
       {
@@ -1180,7 +2012,7 @@ internal static class YDocConverter
     /// <c>PlainToYValue</c>. Only the ordered-id-array rule uses it; mirrors
     /// the client's <c>YBlockSerializer.plainToYArray</c>.
     /// </summary>
-    private static YArray PlainToYArray(JsonArray array, int depth)
+    internal static YArray PlainToYArray(JsonArray array, int depth)
     {
       GuardDepth(depth, "a data value");
 
@@ -1191,15 +2023,25 @@ internal static class YDocConverter
     /// The grid rule, then the array rule, then nested maps; primitives and
     /// non-convertible arrays stay atomic leaves.
     /// </summary>
-    private static object? PlainToYValue(JsonNode? value, int depth)
+    internal static object? PlainToYValue(JsonNode? value, int depth)
     {
       if (value is JsonArray array && IsConvertibleArray(array))
       {
         GuardDepth(depth, "a data value");
 
-        return array.All(element => element is JsonArray)
-          ? PlainToGridMap(array, depth)
-          : new YArray(array.Select(element => PlainToYValue(element, depth + 1)));
+        if (IsGridArray(array))
+        {
+          return PlainToGridMap(array, depth);
+        }
+
+        // The identity rule, between the grid rule and the plain array rule,
+        // exactly as the client orders them.
+        if (IsIdentityArray(array))
+        {
+          return PlainToIdentityMap(array, depth);
+        }
+
+        return new YArray(array.Select(element => PlainToYValue(element, depth + 1)));
       }
 
       if (value is JsonObject map)
@@ -1222,6 +2064,38 @@ internal static class YDocConverter
         // The row wrapper adds a container level of its own (__rows), so a
         // grid costs two levels per row, matching the read-back walk.
         rowEntries.Add(Pair(key, PlainToYValue(row, depth + 2)));
+        order.Add(key);
+      }
+
+      return new YMap(
+      [
+        Pair(GridRowsKey, new YMap(rowEntries)),
+        Pair(GridOrderKey, new YArray(order)),
+      ]);
+    }
+
+    /// <summary>
+    /// A keyed wrapper from id-bearing objects, keyed by each element's own id.
+    /// The SAME container shape a grid uses, so <see cref="IsGridMap"/> and the
+    /// grid read path answer both identically; only the key SOURCE differs — an
+    /// id is already stable across peers, so there is nothing to mint.
+    ///
+    /// Mirrors <c>plainToIdentityMap</c> in
+    /// src/components/modules/yjs/serializer.ts.
+    /// </summary>
+    private static YMap PlainToIdentityMap(JsonArray elements, int depth)
+    {
+      var rowEntries = new List<KeyValuePair<string, object?>>();
+      var order = new List<object?>();
+
+      foreach (var element in elements)
+      {
+        // IsIdentityArray guarantees a non-empty string id on every element.
+        var key = NoNul(element!["id"]!.GetValue<string>(), "a data key");
+
+        // The wrapper adds a container level of its own, so an element costs
+        // two levels — the same two the grid spends and the read walk expects.
+        rowEntries.Add(Pair(key, PlainToYValue(element, depth + 2)));
         order.Add(key);
       }
 
@@ -1321,13 +2195,65 @@ internal static class YDocConverter
       return (double)value.GetValue<decimal>();
     }
 
-    private static bool IsConvertibleArray(JsonArray array)
+    internal static bool IsConvertibleArray(JsonArray array)
     {
       return array.Count > 0 &&
           array.All(element => element is JsonObject or JsonArray);
     }
 
-    private static string GenerateRowKey()
+    /// <summary>
+    /// The rows of a keyed grid: what <see cref="PlainToGridMap"/> is given.
+    /// </summary>
+    internal static bool IsGridArray(JsonArray array)
+    {
+      return IsConvertibleArray(array) && array.All(element => element is JsonArray);
+    }
+
+    /// <summary>
+    /// An array whose elements ALL carry a unique, non-empty string <c>id</c>
+    /// (a database's schema or views, a select's options) — and which is not a
+    /// grid. Such an array takes the keyed wrapper too, keyed by the id.
+    ///
+    /// Same reason as the grid rule, one shape further out: a YArray has no
+    /// move, so a positional diff writes a reorder as delete+insert, which
+    /// recreates the element's map and lands a peer's concurrent field edit on
+    /// whatever object took that index. Uniqueness is required — duplicate ids
+    /// cannot address distinct containers — so such an array keeps the plain
+    /// YArray behaviour instead.
+    ///
+    /// Mirrors <c>isIdentityArray</c> in
+    /// src/components/modules/yjs/serializer.ts.
+    /// </summary>
+    internal static bool IsIdentityArray(JsonArray array)
+    {
+      if (!IsConvertibleArray(array) || IsGridArray(array))
+      {
+        return false;
+      }
+
+      var ids = new HashSet<string>(StringComparer.Ordinal);
+
+      foreach (var element in array)
+      {
+        if (element is not JsonObject entry ||
+            entry["id"] is not JsonValue id ||
+            id.GetValueKind() != JsonValueKind.String)
+        {
+          return false;
+        }
+
+        var value = id.GetValue<string>();
+
+        if (value.Length == 0 || !ids.Add(value))
+        {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    internal static string GenerateRowKey()
     {
       return new string(RandomNumberGenerator.GetItems<char>(RowKeyAlphabet, RowKeyLength));
     }
@@ -1354,6 +2280,46 @@ internal static class YDocConverter
   private static object? Value(YMap map, string key)
   {
     return map.TryGet(key, out var value) ? value : null;
+  }
+
+  /// <summary>
+  /// Both container keys must be present with the right shape, so a
+  /// tool's plain object can never be mistaken for a grid.
+  /// </summary>
+  private static bool IsGridMap(YMap map)
+  {
+    return Value(map, GridRowsKey) is YMap && Value(map, GridOrderKey) is YArray;
+  }
+
+  /// <summary>
+  /// Row keys in display order, normalized: first occurrence wins, keys
+  /// with no row container are dropped, containers absent from the order
+  /// are appended sorted by key.
+  /// </summary>
+  private static List<string> GridRowKeys(YMap grid, YMap rows)
+  {
+    var seen = new HashSet<string>(StringComparer.Ordinal);
+    var keys = new List<string>();
+
+    foreach (var entry in ((YArray)Value(grid, GridOrderKey)!).Enumerate())
+    {
+      if (entry is not string key)
+      {
+        continue;
+      }
+
+      if (seen.Contains(key) || !rows.TryGet(key, out _))
+      {
+        continue;
+      }
+
+      seen.Add(key);
+      keys.Add(key);
+    }
+
+    keys.AddRange(rows.Keys.Where(key => !seen.Contains(key)).Order(StringComparer.Ordinal));
+
+    return keys;
   }
 
   /// <summary>
@@ -2026,15 +2992,6 @@ internal static class YDocConverter
       return (long)value;
     }
 
-    /// <summary>
-    /// Both container keys must be present with the right shape, so a
-    /// tool's plain object can never be mistaken for a grid.
-    /// </summary>
-    private static bool IsGridMap(YMap map)
-    {
-      return Value(map, GridRowsKey) is YMap && Value(map, GridOrderKey) is YArray;
-    }
-
     private JsonArray GridMapToPlain(YMap grid, int depth)
     {
       var rows = (YMap)Value(grid, GridRowsKey)!;
@@ -2053,35 +3010,5 @@ internal static class YDocConverter
       return result;
     }
 
-    /// <summary>
-    /// Row keys in display order, normalized: first occurrence wins, keys
-    /// with no row container are dropped, containers absent from the order
-    /// are appended sorted by key.
-    /// </summary>
-    private static List<string> GridRowKeys(YMap grid, YMap rows)
-    {
-      var seen = new HashSet<string>(StringComparer.Ordinal);
-      var keys = new List<string>();
-
-      foreach (var entry in ((YArray)Value(grid, GridOrderKey)!).Enumerate())
-      {
-        if (entry is not string key)
-        {
-          continue;
-        }
-
-        if (seen.Contains(key) || !rows.TryGet(key, out _))
-        {
-          continue;
-        }
-
-        seen.Add(key);
-        keys.Add(key);
-      }
-
-      keys.AddRange(rows.Keys.Where(key => !seen.Contains(key)).Order(StringComparer.Ordinal));
-
-      return keys;
-    }
   }
 }

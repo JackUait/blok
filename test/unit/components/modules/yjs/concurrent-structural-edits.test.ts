@@ -203,10 +203,13 @@ describe('DocumentStore — a structural edit concurrent with a peer\'s typing',
 
       expect(textOf(a, 'b1')).toContain('BBB');
       expect(textOf(a, 'b1')).toContain(pasted);
-      // The typed run survives, but at the START of the replaced range rather
+      // The typed run survives, but at the END of the replaced range rather
       // than where it was typed — the fallback deletes the whole range in one
-      // op, so there is no surviving neighbour to anchor it to.
-      expect(textOf(a, 'b1')).toBe(`${base.slice(0, 20)}BBB${pasted}${base.slice(24)}`);
+      // op, so there is no surviving neighbour to anchor it to, and the
+      // replacement is anchored to the range's LEFT edge. The other anchoring
+      // put the stray run in FRONT of everything pasted, which on a paste over
+      // a whole block made it the first character of the block.
+      expect(textOf(a, 'b1')).toBe(`${base.slice(0, 20)}${pasted}BBB${base.slice(24)}`);
       expect(textOf(b, 'b1')).toBe(textOf(a, 'b1'));
     });
   });

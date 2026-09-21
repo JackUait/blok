@@ -2349,7 +2349,7 @@ describe('BlockManager block-change to Yjs data flush', () => {
 
     flushOf(harness)(new Map([['text', 'y']]));
 
-    expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('b', 'text', 'y');
+    expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('b', 'text', 'y', undefined);
     expect(harness.yjs.pruneBlockData).toHaveBeenCalledWith('b', new Set(['text']), undefined);
     expect(harness.yjs.updateBlockMetadata).toHaveBeenCalledWith('b', expect.any(Number), null);
     expect(block.lastEditedAt).toEqual(expect.any(Number));
@@ -2387,7 +2387,7 @@ describe('BlockManager block-change to Yjs data flush', () => {
     flushOf(harness)(new Map<string, unknown>([['text', 'x'], ['depth', 2]]));
 
     expect(harness.yjs.updateBlockData).toHaveBeenCalledTimes(1);
-    expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('li', 'text', 'x');
+    expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('li', 'text', 'x', undefined);
     expect(harness.yjs.pruneBlockData).toHaveBeenCalledWith('li', new Set(['text', 'depth']), undefined);
   });
 
@@ -2400,7 +2400,7 @@ describe('BlockManager block-change to Yjs data flush', () => {
 
     flushOf(harness)(new Map<string, unknown>([['depth', 2]]));
 
-    expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('li', 'depth', 2);
+    expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('li', 'depth', 2, undefined);
   });
 
   it('still writes depth when the parent is a list but the block is not', async () => {
@@ -2413,7 +2413,7 @@ describe('BlockManager block-change to Yjs data flush', () => {
 
     flushOf(harness)(new Map<string, unknown>([['depth', 2]]));
 
-    expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('p', 'depth', 2);
+    expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('p', 'depth', 2, undefined);
   });
 
   it('keeps depth for a list item whose parent is not a list', async () => {
@@ -2426,7 +2426,7 @@ describe('BlockManager block-change to Yjs data flush', () => {
 
     flushOf(harness)(new Map<string, unknown>([['depth', 2]]));
 
-    expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('li', 'depth', 2);
+    expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('li', 'depth', 2, undefined);
   });
 
   it('survives a dangling list parent without throwing', async () => {
@@ -2437,7 +2437,7 @@ describe('BlockManager block-change to Yjs data flush', () => {
     await settle();
 
     expect(() => flushOf(harness)(new Map<string, unknown>([['depth', 2]]))).not.toThrow();
-    expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('li', 'depth', 2);
+    expect(harness.yjs.updateBlockData).toHaveBeenCalledWith('li', 'depth', 2, undefined);
   });
 });
 

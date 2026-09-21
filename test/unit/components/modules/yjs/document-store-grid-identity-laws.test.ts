@@ -11,6 +11,10 @@ type Row = Cell[];
 
 const createStore = (): DocumentStore => new DocumentStore(new YBlockSerializer());
 
+/** The keys of a keyed wrapper's row map, in insertion order. */
+const rowsOf = (stored: unknown): string[] =>
+  Array.from(((stored as Y.Map<unknown>).get('__rows') as Y.Map<unknown>).keys());
+
 /**
  * Exchange diffs computed against each peer's pre-exchange state vector.
  */
@@ -246,7 +250,7 @@ describe('DocumentStore grid identity laws — rows keep their Y container', () 
     expect(innerRow(1, 1)).toBe(before);
   });
 
-  it('an array of plain objects is not a grid: database schema keeps element-wise Y.Arrays', () => {
+  it('an array of plain objects is not a grid: a database schema is keyed by its own ids', () => {
     const schema = [
       { id: 'p-title', name: 'Name', type: 'title' },
       { id: 'p-status', name: 'Status', type: 'select' },
@@ -255,14 +259,39 @@ describe('DocumentStore grid identity laws — rows keep their Y container', () 
     storeA.fromJSON([{ id: 'DB', type: 'database', data: { schema } }]);
 
     const ydata = (storeA.getBlockById('DB') as Y.Map<unknown>).get('data') as Y.Map<unknown>;
+    const stored = ydata.get('schema');
 
-    expect(ydata.get('schema') instanceof Y.Array).toBe(true);
+    // Not a grid — its keys are the elements' OWN ids, not minted row keys.
+    expect(rowsOf(stored)).toEqual(['p-title', 'p-status']);
 
     const next = [...schema, { id: 'p-due', name: 'Due', type: 'date' }];
 
     storeA.updateBlockData('DB', 'schema', next);
 
+    // The public shape stays a plain array — the wrapper keys never leak.
     expect(storeA.toJSON()[0].data.schema).toEqual(next);
+    expect(JSON.stringify(storeA.toJSON()[0].data)).not.toContain('__rows');
+  });
+
+  it('a schema element keeps its Y.Map across a reorder, so a concurrent rename stays on it', () => {
+    const schema = [
+      { id: 'p-title', name: 'Name', type: 'title' },
+      { id: 'p-status', name: 'Status', type: 'select' },
+      { id: 'p-due', name: 'Due', type: 'date' },
+    ];
+
+    storeA.fromJSON([{ id: 'DB', type: 'database', data: { schema } }]);
+
+    const ydata = (storeA.getBlockById('DB') as Y.Map<unknown>).get('data') as Y.Map<unknown>;
+    const container = (stored: unknown, key: string): unknown =>
+      ((stored as Y.Map<unknown>).get('__rows') as Y.Map<unknown>).get(key);
+    const before = container(ydata.get('schema'), 'p-due');
+
+    storeA.updateBlockData('DB', 'schema', [schema[2], schema[0], schema[1]]);
+
+    expect(container(ydata.get('schema'), 'p-due')).toBe(before);
+    expect((storeA.toJSON()[0].data.schema as { id: string }[]).map((p) => p.id))
+      .toEqual(['p-due', 'p-title', 'p-status']);
   });
 
   it('a row reorder is a block UPDATE, never a move: the key array is not an order array', () => {

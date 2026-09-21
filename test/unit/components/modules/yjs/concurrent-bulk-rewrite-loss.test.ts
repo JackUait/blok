@@ -3,6 +3,7 @@ import * as Y from 'yjs';
 
 import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer, type YjsOutputBlockData } from '../../../../../src/components/modules/yjs/serializer';
+import type { SanitizerConfig } from '../../../../../types';
 import { clean } from '../../../../../src/components/utils/sanitizer';
 
 const createStore = (): DocumentStore => new DocumentStore(new YBlockSerializer());
@@ -138,6 +139,24 @@ const spanOf = (ops: RecordedOp[]): number => {
 };
 
 /**
+ * How much of the STORED text a save deleted, first deleted offset to last.
+ *
+ * A replacement now inserts before it deletes, so the new text and the run it
+ * replaces are disjoint in the delta and `spanOf` counts both — which says
+ * nothing about how much of the stored text the save gave up. This does.
+ * @param ops - the edits the save produced
+ */
+const deletedSpanOf = (ops: RecordedOp[]): number => {
+  const deletes = ops.filter((op) => op.remove > 0);
+
+  if (deletes.length === 0) {
+    return 0;
+  }
+
+  return Math.max(...deletes.map((op) => op.index + op.remove)) - Math.min(...deletes.map((op) => op.index));
+};
+
+/**
  * The toggle tool's `sanitize.text` allowlist, copied from
  * `src/tools/toggle/index.ts:442-459`. It has no `strong`, `s`, `u` or `span`,
  * so converting a formatted paragraph into a toggle strips those tags out of
@@ -163,7 +182,7 @@ const TOGGLE_TEXT_ALLOWLIST = {
  * @param text - the block's stored text
  * @param allowlist - the target tool's `sanitize` entry for the field
  */
-const convertedText = (text: string, allowlist: Record<string, unknown> = {}): string =>
+const convertedText = (text: string, allowlist: SanitizerConfig = {}): string =>
   clean(text, allowlist);
 
 /**
@@ -191,15 +210,16 @@ const PARAGRAPH = SENTENCE.repeat(6).slice(0, 520);
 /**
  * A save that rewrites a whole block's mergeable text in ONE write is
  * expressed as a diff against the stored string. Past `MAX_DIFF_DISTANCE`
- * (64, `src/components/modules/yjs/document-store.ts:27`) the character pass
- * gives up; past the word pass too, `diffText` returns the single region
- * (`document-store.ts:250-255`), which deletes every character between the
- * first and the last change. A peer's concurrent keystroke inside that span
- * has no surviving neighbour left, so Yjs surfaces it at the edge.
+ * (64, `src/components/modules/yjs/text-diff.ts`) the atom pass gives up and
+ * the texts are split at runs of atoms unique to both; a gap with no anchors
+ * around it falls all the way to its single region, which deletes every
+ * character between the first and the last change. A peer's concurrent
+ * keystroke inside that span has no surviving neighbour left, so Yjs surfaces
+ * it at the edge of it.
  *
- * The gestures below are the ones that really produce such a write. Each
- * failing test states the damage FIRST; the tier each gesture lands in is
- * measured separately at the bottom of the file, off the Y.Text itself.
+ * The gestures below are the ones that really produce such a write. Each test
+ * states the damage FIRST; the tier each gesture lands in is measured
+ * separately at the bottom of the file, off the Y.Text itself.
  */
 describe('bulk text rewrites versus a peer typing', () => {
   describe('turn-into a tool whose allowlist is narrower than the block\'s markup', () => {
@@ -411,12 +431,15 @@ describe('bulk text rewrites versus a peer typing', () => {
       });
     };
 
-    it('stripping 40 bold spans collapses to one region over the whole paragraph', () => {
+    it('stripping 40 bold spans answers one narrow delete per tag', () => {
       const before = boldParagraph(40);
       const ops = opsFor('paragraph', 'text', before, convertedText(before));
 
-      expect(ops).toHaveLength(2);
-      expect(spanOf(ops)).toBeGreaterThan(before.length - 10);
+      // A complete tag is ONE unit to the diff, so 40 spans are 80 deletes of
+      // 8 or 9 characters each — not the block-wide region this measured while
+      // the diff spelled tags out character by character.
+      expect(ops).toHaveLength(80);
+      expect(deletedSpanOf(ops)).toBeLessThan(before.length / 2);
     });
 
     it('stripping 20 bold spans still answers in narrow regions', () => {
@@ -426,12 +449,15 @@ describe('bulk text rewrites versus a peer typing', () => {
       expect(ops.length).toBeGreaterThan(2);
     });
 
-    it('stripping only FOUR bold spans in CJK already collapses to one region', () => {
+    it('stripping four bold spans in CJK is eight narrow deletes, word breaks or not', () => {
       const before = boldCjkParagraph(4);
       const ops = opsFor('paragraph', 'text', before, convertedText(before));
 
-      expect(ops).toHaveLength(2);
-      expect(spanOf(ops)).toBeGreaterThan(before.length - 10);
+      // The word pass cannot narrow this — there is not one word break in the
+      // paragraph — but tags are units, so the distance is 8 and the character
+      // pass answers it outright.
+      expect(ops).toHaveLength(8);
+      expect(deletedSpanOf(ops)).toBeLessThan(before.length / 2);
     });
 
     it('stripping four bold spans in Latin text stays on the character pass', () => {
@@ -445,7 +471,7 @@ describe('bulk text rewrites versus a peer typing', () => {
       const ops = opsFor('paragraph', 'text', PARAGRAPH, 'Completely different replacement prose. '.repeat(8));
 
       expect(ops).toHaveLength(2);
-      expect(spanOf(ops)).toBe(PARAGRAPH.length);
+      expect(deletedSpanOf(ops)).toBe(PARAGRAPH.length);
     });
 
     it('a paste over a code block replaces every character of it', () => {
@@ -453,7 +479,7 @@ describe('bulk text rewrites versus a peer typing', () => {
       const ops = opsFor('code', 'code', body, 'print("hello")\nprint("world")');
 
       expect(ops).toHaveLength(2);
-      expect(spanOf(ops)).toBe(body.length);
+      expect(deletedSpanOf(ops)).toBe(body.length);
     });
 
     it('replacing a run of emoji collapses to one region', () => {
@@ -461,7 +487,7 @@ describe('bulk text rewrites versus a peer typing', () => {
       const ops = opsFor('paragraph', 'text', before, '🙂'.repeat(160));
 
       expect(ops).toHaveLength(2);
-      expect(spanOf(ops)).toBe(before.length);
+      expect(deletedSpanOf(ops)).toBe(before.length);
     });
 
     it('stripping a markdown "# " prefix is one narrow op', () => {
@@ -491,7 +517,7 @@ describe('bulk text rewrites versus a peer typing', () => {
         `Replacement prose that is entirely different here. ${PARAGRAPH.slice(260)}`
       );
 
-      expect(spanOf(ops)).toBeLessThan(300);
+      expect(deletedSpanOf(ops)).toBeLessThan(300);
     });
   });
 });

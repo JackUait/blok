@@ -114,7 +114,8 @@ describe('DatabaseModel — mutation coverage', () => {
         id: expect.any(String),
         name: 'Priority',
         type: 'select',
-        position: 'a6',
+        // Appended keys carry a random peer suffix, so only the run is fixed.
+        position: expect.stringMatching(/^a6./u),
       });
     });
 
@@ -207,7 +208,7 @@ describe('DatabaseModel — mutation coverage', () => {
 
       expect(model.createRowData()).toStrictEqual({
         id: expect.any(String),
-        position: 'a6',
+        position: expect.stringMatching(/^a6./u),
         properties: {},
       });
     });
@@ -301,7 +302,7 @@ describe('DatabaseModel — mutation coverage', () => {
         id: expect.any(String),
         name: 'Table',
         type: 'table',
-        position: 'a3',
+        position: expect.stringMatching(/^a3./u),
         groupBy: undefined,
         sorts: [],
         filters: [],
@@ -374,10 +375,14 @@ describe('DatabaseModel — mutation coverage', () => {
       );
     });
 
-    it('rejects two equal keys', () => {
-      expect(() => DatabaseModel.positionBetween('a1', 'a1')).toThrowError(
-        new Error('DatabaseModel.positionBetween: keys out of order (a1 >= a1)')
-      );
+    // Equal neighbours are not a caller bug: documents written before appended
+    // keys carried a random suffix hold rows two peers minted at the same
+    // moment, and a throw there loses the drop instead of the ordering.
+    it('lands just after two equal keys instead of throwing', () => {
+      const between = DatabaseModel.positionBetween('a1', 'a1');
+
+      expect(between > 'a1').toBe(true);
+      expect(between < 'a2').toBe(true);
     });
 
     it('generates the first key when both neighbours are null', () => {

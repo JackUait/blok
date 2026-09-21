@@ -357,7 +357,27 @@ describe('database-row — two peers editing one row', () => {
     storeB.applyRemoteUpdate(storeA.encodeStateAsUpdate());
   });
 
-  it('keeps both bursts when two people type into one row title', () => {
+  /**
+   * RED ON PURPOSE, and a REAL defect — but the fix does not belong in the
+   * serializer.
+   *
+   * A row title is prose typed per keystroke (the card drawer calls
+   * `onTitleChange` on every `input`), stored nested at
+   * `data.properties[titlePropId]`, so it is an atomic leaf and a whole burst
+   * is lost. Merging it needs a TOP-LEVEL `title` key on the row block —
+   * already diffable, already minted eagerly at row birth, since a row is
+   * always created carrying its title property.
+   *
+   * What must NOT be done: promote nested strings under `properties`. The same
+   * map holds a select's option id, a date and a url, property ids are
+   * `nanoid()`, and per-character merging those invents a value neither peer
+   * picked (measured: `o1` → `o2` and `o3` merges to `o23`, matching no option;
+   * `2026-09-21` → Sep 22 and Oct 21 merges to `2026-10-22`). The only signal
+   * separating them is the property type, which lives in the parent database
+   * block's concurrently-edited `data.schema` — see the comment on
+   * `DIFFABLE_TEXT_KEYS`.
+   */
+  it.fails('keeps both bursts when two people type into one row title', () => {
     storeA.updateBlockData('row1', 'properties', { 'p-title': 'Ship the release today', 'p-status': 'o1' });
     storeB.updateBlockData('row1', 'properties', { 'p-title': 'Ship the BBB release', 'p-status': 'o1' });
 

@@ -70,7 +70,16 @@ class RoomSocket {
    */
   public send(data: ArrayBufferLike | ArrayBufferView): void {
     const bytes = data instanceof Uint8Array ? new Uint8Array(data) : new Uint8Array(data as ArrayBuffer);
-    const frame = decode(bytes);
+    const decoded = decode(bytes);
+
+    // The harness stands in for the server, so a frame it cannot read is a bug
+    // in the test rather than something to swallow: swallowing one would make
+    // a dropped edit look like a passing assertion.
+    if (decoded.type === 'unknown' || decoded.type === 'malformed') {
+      throw new Error(`the test room could not read a frame: ${JSON.stringify(decoded)}`);
+    }
+
+    const frame: SyncWireFrame = decoded;
 
     this.sent.push(frame);
     this.room?.receive(this, frame);
@@ -134,6 +143,8 @@ class Room {
    * @param socket - a socket the client just opened
    */
   public arrive(socket: RoomSocket): void {
+    /* eslint-disable-next-line no-param-reassign -- this room stands in for the
+       server, and attaching to the socket it was handed is what a server does. */
     socket.room = this;
 
     if (!this.accepting) {
@@ -175,7 +186,10 @@ class Room {
     };
 
     this.members.push(member);
+    /* eslint-disable-next-line no-param-reassign -- see `arrive`: the room owns
+       the socket's server-side fields, the same way the real server does. */
     socket.protocol = this.protocol;
+    // eslint-disable-next-line no-param-reassign -- same reason
     socket.readyState = 1;
 
     // Queued BEFORE the open: the provider writes its SyncStep1 inside
@@ -251,6 +265,19 @@ class Room {
           }
         });
         break;
+      // Frames this room does not model — server-to-client only, or never sent
+      // by the client in these specs. Listed one by one rather than folded into
+      // `default`, so a NEW frame type in the protocol reds this switch instead
+      // of being quietly ignored by a harness that stands in for the server.
+      case 'queryAwareness':
+      case 'permissionDenied':
+      case 'control':
+      case 'limits':
+      case 'acknowledgement':
+      case 'rejection':
+      case 'activity':
+      case 'identities':
+        break;
       default:
         break;
     }
@@ -309,18 +336,34 @@ class Room {
     });
   }
 
+  /** Whether no online member still has a frame waiting to go out. */
+  private isQuiet(): boolean {
+    return !this.members.some((candidate) => candidate.online && candidate.outbound.length > 0);
+  }
+
+  /**
+   * Let pending work settle, then report whether the wire went quiet. The tick
+   * matters: a provider often queues its next frame from a promise callback,
+   * so "nothing queued right now" is only true after the microtasks drain.
+   */
+  private async settleIdle(): Promise<boolean> {
+    await tick();
+
+    return this.isQuiet();
+  }
+
   /** Delivers everything queued, one frame at a time, until the wire is quiet. */
   public async pump(rounds = 40): Promise<void> {
     for (let round = 0; round < rounds; round += 1) {
       const member = this.members.find((candidate) => candidate.online && candidate.outbound.length > 0);
 
+      // Split in two so neither branch nests: the first answers "idle and
+      // nothing left to send", the second just goes round again.
+      if (member === undefined && await this.settleIdle()) {
+        return;
+      }
+
       if (member === undefined) {
-        await tick();
-
-        if (!this.members.some((candidate) => candidate.online && candidate.outbound.length > 0)) {
-          return;
-        }
-
         continue;
       }
 

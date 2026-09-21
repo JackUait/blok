@@ -12,7 +12,13 @@ import {
 import { Blok as BlokRuntime } from '@bloklabs/core';
 import { setContentBaseline, removeContentBaseline } from './content-baseline-map';
 import { setHolder, removeHolder } from './holder-map';
-import { deepEqual, equalsOutputData, normalizeReadOnlyConfig, toRenderableData } from '@bloklabs/core/adapters';
+import {
+  createEmittedEchoWindow,
+  deepEqual,
+  equalsOutputData,
+  normalizeReadOnlyConfig,
+  toRenderableData,
+} from '@bloklabs/core/adapters';
 import { BLOK_DEFAULT_CONFIG, mergeBlokDefaults } from './provide-blok';
 import {
   createBlockPortalRegistry,
@@ -137,9 +143,19 @@ export function useBlok(
     current: Blok | null;
     holder: HTMLDivElement | null;
     lastRenderedData: OutputData | LooseOutputData | null | undefined;
+    // Content of the render currently queued/in-flight — distinct from
+    // `lastRenderedData`, which is the last SUCCESSFULLY rendered content.
+    // Dedupes a re-queue of the same in-flight content without advancing the
+    // success baseline, so a failed render cannot strand the baseline on
+    // content the editor never showed.
+    pendingData: OutputData | LooseOutputData | null | undefined;
     seededEditor: Blok | null;
     renderChain: Promise<void>;
-    collaborationWarned: boolean;
+    // Editor the single collaboration warning has already been emitted for.
+    // Keyed by the editor, not a boolean, so the editor a `recreateKey` bump
+    // creates warns on its own first ignored `data` change instead of
+    // inheriting the previous editor's "already warned" flag and going silent.
+    collaborationWarnedFor: Blok | null;
     // The `collaboration` the live editor was CONSTRUCTED with. The key is
     // mount-fixed, so dropping it from the config (`collaboration: on ? {...} :
     // undefined`) cannot turn a live session into a single-player editor —
@@ -152,9 +168,10 @@ export function useBlok(
     current: null,
     holder: null,
     lastRenderedData: mergedConfig().data,
+    pendingData: undefined,
     seededEditor: null,
     renderChain: Promise.resolve(),
-    collaborationWarned: false,
+    collaborationWarnedFor: null,
     constructedCollaboration: undefined,
     appliedHandlerPresence: {
       onChange: false,
@@ -165,6 +182,15 @@ export function useBlok(
       onAfterRender: false,
     },
   };
+
+  // Window of recently emitted `onSave` payloads. `state.lastRenderedData`
+  // remembers only the LAST one, but a host that persists on save and refetches
+  // can echo an EARLIER save back after a newer one already replaced the
+  // baseline (the user kept typing). That stale echo is still the editor's own
+  // output, and rendering it is a whole-document replace — it would drop every
+  // character typed between the two saves and hand the rewound document to the
+  // next save, making the loss permanent in the host's store.
+  const emittedEcho = createEmittedEchoWindow();
 
   /**
    * Stable wrappers for the live callback config. Each forwards to the LATEST
@@ -180,6 +206,7 @@ export function useBlok(
       // notifying the consumer, so a controlled `update:data -> data` echo
       // content-equals it and never re-renders.
       state.lastRenderedData = args[0];
+      emittedEcho.record(args[0]);
       mergedConfig().onSave?.(...args);
     },
     // Forward the return value: it is the "handled" signal the core acts on.
@@ -280,6 +307,10 @@ export function useBlok(
     // content while the host's state says otherwise.
     setContentBaseline(blok, {
       markRendered: (content): void => {
+        // Out-of-band content: what the editor emitted before describes a
+        // document it no longer shows, so a later `data` set back to one of
+        // those payloads must render instead of being dismissed as an echo.
+        emittedEcho.clear();
         state.lastRenderedData = content;
       },
     });
@@ -539,19 +570,39 @@ export function useBlok(
       if (state.seededEditor !== ed) {
         state.seededEditor = ed;
         state.lastRenderedData = data;
+        // A render still pending on a PRIOR editor is moot for this fresh
+        // instance; clear it so its content can't dedupe a needed render here.
+        state.pendingData = undefined;
+        // Payloads emitted by a PRIOR editor are likewise moot for this one.
+        emittedEcho.clear();
 
         return;
       }
 
+      // Skipped when the editor already reflects this content (the last
+      // SUCCESSFUL render) OR a render of the same content is already
+      // queued/in-flight — re-rendering identical content would needlessly
+      // reset the caret.
+      //
       // Structural comparison (`equalsOutputData`, not a raw deep-equal): a host
       // that persists the editor's own document and hands back a stripped copy —
       // fresh `time`, dropped ids, no `lastEditedAt` stamp — is still echoing
-      // content the editor already shows, and re-rendering it would reset the
-      // caret for zero visual change. `undefined` means "nothing recorded yet",
-      // which is NOT an empty document, so it must never match.
+      // content the editor already shows. `undefined` means "nothing recorded
+      // yet", which is NOT an empty document, so it must never match.
       const baseline = state.lastRenderedData;
+      const inFlight = state.pendingData;
 
-      if (baseline !== undefined && equalsOutputData(data, baseline)) {
+      if (
+        (baseline !== undefined && equalsOutputData(data, baseline)) ||
+        (inFlight !== undefined && equalsOutputData(data, inFlight))
+      ) {
+        return;
+      }
+
+      // Skip stale echoes: content the editor itself emitted via `onSave`
+      // recently, arriving back reshaped (fresh envelope, stripped ids) and/or
+      // late — after a newer save already replaced the baseline above.
+      if (emittedEcho.matches(data)) {
         return;
       }
 
@@ -565,21 +616,48 @@ export function useBlok(
       const collaboration = state.constructedCollaboration;
 
       if (collaboration !== undefined) {
-        if (!state.collaborationWarned) {
-          state.collaborationWarned = true;
+        if (state.collaborationWarnedFor !== ed) {
+          state.collaborationWarnedFor = ed;
           console.warn(collaborationDataIgnoredMessage(collaboration.doc));
         }
 
         return;
       }
 
-      state.lastRenderedData = data;
+      // Genuinely external content takes over: earlier emitted payloads are
+      // moot, and keeping them could wrongly no-op a later deliberate revert to
+      // one of them.
+      emittedEcho.clear();
+
+      // Mark the content in-flight, but DON'T advance the success baseline until
+      // the render resolves. A failed render leaves the editor on its last
+      // successful content, so the baseline must keep pointing there — otherwise
+      // a run of failures would strand it on a never-rendered payload and
+      // wrongly dedupe a later retry.
+      state.pendingData = data;
       // `data` may be null (a controlled "clear to empty"); render() throws on
       // null, so normalize null → { blocks: [] } at the boundary. toRaw(null)
       // stays null, so the helper still sees it.
+      // The rejection handler OWNS a failed render: without it the rejection
+      // sits in `renderChain` unhandled until the next `data` change attaches a
+      // handler, which the runtime reports as an unhandled rejection. Because
+      // the chain can no longer reject, no leading catch is needed to keep the
+      // next queued render running.
       state.renderChain = state.renderChain
-        .catch(() => undefined)
-        .then(() => ed.render(toRenderableData(toRaw(data))));
+        .then(() => ed.render(toRenderableData(toRaw(data))))
+        .then(
+          () => {
+            state.lastRenderedData = data;
+          },
+          () => undefined
+        )
+        .then(() => {
+          // Clear the in-flight marker once settled, unless a newer render has
+          // since claimed it (then that newer render owns the clear).
+          if (state.pendingData === data) {
+            state.pendingData = undefined;
+          }
+        });
     },
     { immediate: true }
   );

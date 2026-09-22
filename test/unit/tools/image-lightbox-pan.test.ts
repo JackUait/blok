@@ -25,12 +25,17 @@ function stubRect(el: HTMLElement, rect: Partial<DOMRect>): void {
   el.getBoundingClientRect = () => full;
 }
 
-function openWithCapture(): () => void {
+// Default: the image overflows the screen by 800x600, so it can pan 400px / 300px each way.
+function openWithCapture(
+  imageRect: Partial<DOMRect> = { width: 1600, height: 1200 },
+  screenRect: Partial<DOMRect> = { width: 800, height: 600 }
+): () => void {
   const close = openLightbox({ url: 'https://example.com/pic.jpg', fileName: 'pic.jpg' });
   const d = dialog();
   d.setPointerCapture = (): void => undefined;
   d.releasePointerCapture = (): void => undefined;
-  stubRect(image(), { width: 800, height: 600 });
+  stubRect(image(), imageRect);
+  stubRect(d, screenRect);
   return close;
 }
 
@@ -79,13 +84,33 @@ describe('openLightbox drag-to-pan', () => {
     close();
   });
 
-  it('clamps pan to half the image rect on each axis', () => {
-    const close = openWithCapture(); // stubs rect to 800x600
+  it('springs back to the center on release when the image fits the screen', () => {
+    const close = openWithCapture({ width: 800, height: 600 }, { width: 1200, height: 900 });
+    const d = dialog();
+    d.dispatchEvent(pointer('pointerdown', 100, 100));
+    d.dispatchEvent(pointer('pointermove', 150, 140));
+    d.dispatchEvent(pointer('pointerup', 150, 140));
+    expect(image().style.transform).toBe('translate(0px, 0px) scale(1)');
+    close();
+  });
+
+  it('springs back on only the axis where the image fits the screen', () => {
+    const close = openWithCapture({ width: 1600, height: 600 }, { width: 800, height: 900 });
+    const d = dialog();
+    d.dispatchEvent(pointer('pointerdown', 100, 100));
+    d.dispatchEvent(pointer('pointermove', 150, 140));
+    d.dispatchEvent(pointer('pointerup', 150, 140));
+    expect(image().style.transform).toBe('translate(50px, 0px) scale(1)');
+    close();
+  });
+
+  it('clamps pan to how far the image overflows the screen', () => {
+    const close = openWithCapture();
     const d = dialog();
     d.dispatchEvent(pointer('pointerdown', 100, 100));
     d.dispatchEvent(pointer('pointermove', 100000, 100000));
     d.dispatchEvent(pointer('pointerup', 100000, 100000));
-    // maxX = 800/2 = 400, maxY = 600/2 = 300
+    // (1600 - 800) / 2 = 400, (1200 - 600) / 2 = 300
     expect(image().style.transform).toBe('translate(400px, 300px) scale(1)');
     close();
   });

@@ -332,7 +332,15 @@ export function openLightbox(opts: LightboxOptions): () => void {
 
   function panBounds(): { maxX: number; maxY: number; width: number; height: number } {
     const rect = displayState.el.getBoundingClientRect();
-    return { maxX: rect.width / 2, maxY: rect.height / 2, width: rect.width, height: rect.height };
+    // The dialog fills the screen. A pan may only reveal what overflows it, so an image
+    // that fits springs back to the center on release.
+    const screen = dialog.getBoundingClientRect();
+    return {
+      maxX: Math.max(0, (rect.width - screen.width) / 2),
+      maxY: Math.max(0, (rect.height - screen.height) / 2),
+      width: rect.width,
+      height: rect.height,
+    };
   }
 
   function clampPan(p: { x: number; y: number }): { x: number; y: number } {

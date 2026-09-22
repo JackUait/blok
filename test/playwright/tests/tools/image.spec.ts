@@ -134,6 +134,75 @@ test('lightbox toolbar hides filename, shows copy-url, has no backdrop-filter', 
   await expect(dialog).toHaveCount(0);
 });
 
+const openLightboxImage = async (page: Page): Promise<{ dialog: Locator; image: Locator }> => {
+  await createBlok(page, {
+    blocks: [
+      { type: 'image', data: { url: SAMPLE_IMAGE_URL, alt: 'pic' } },
+    ],
+  });
+
+  const imageEl = page.locator(IMAGE_BLOCK_SELECTOR).getByAltText('pic');
+
+  await expect(imageEl).toBeVisible();
+  await imageEl.click();
+
+  const dialog = page.getByRole('dialog');
+  const image = dialog.getByAltText('pic');
+
+  await expect(image).toBeVisible();
+
+  return { dialog, image };
+};
+
+const dragBy = async (page: Page, startX: number, startY: number, dx: number, dy: number): Promise<void> => {
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(startX + dx, startY + dy, { steps: 10 });
+  await page.mouse.up();
+};
+
+test('a dragged lightbox image springs back to the center when it fits the screen', async ({ page }) => {
+  const { image } = await openLightboxImage(page);
+  // Wait out the open animation so the start box is the resting one.
+  await expect(async () => {
+    expect(await image.evaluate((el) => el.getAnimations().length)).toBe(0);
+  }).toPass();
+  const before = await requireBoundingBox(image, 'lightbox image');
+
+  await dragBy(page, before.x + before.width / 2, before.y + before.height / 2, 150, 100);
+
+  await expect(async () => {
+    const after = await requireBoundingBox(image, 'lightbox image');
+
+    expect(Math.abs(after.x - before.x)).toBeLessThan(1);
+    expect(Math.abs(after.y - before.y)).toBeLessThan(1);
+  }).toPass();
+});
+
+test('a zoomed-in lightbox image stays where it was dragged', async ({ page }) => {
+  const { dialog, image } = await openLightboxImage(page);
+  const zoomIn = dialog.locator('[data-action="zoom-in"]');
+
+  while (await zoomIn.isEnabled()) {
+    await zoomIn.click();
+  }
+  await expect(async () => {
+    expect(await image.evaluate((el) => el.getAnimations().length)).toBe(0);
+  }).toPass();
+  const before = await requireBoundingBox(image, 'lightbox image');
+  const screen = await requireBoundingBox(dialog, 'lightbox dialog');
+
+  expect(before.width).toBeGreaterThan(screen.width);
+
+  await dragBy(page, screen.x + screen.width / 2, screen.y + screen.height / 2, 100, 0);
+
+  await expect(async () => {
+    const after = await requireBoundingBox(image, 'lightbox image');
+
+    expect(after.x - before.x).toBeGreaterThan(90);
+  }).toPass();
+});
+
 test('image controls only show when hovering image or caption, not surrounding whitespace', async ({ page }) => {
   await createBlok(page, {
     blocks: [

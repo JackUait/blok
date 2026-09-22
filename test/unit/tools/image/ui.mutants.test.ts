@@ -2008,7 +2008,9 @@ describe('openLightbox keyboard', () => {
 
 describe('openLightbox drag to pan', () => {
   function openForDrag(): HTMLElement {
-    planDisplayRect({ width: 800, height: 600 });
+    // The image overflows the screen by 800x600, so it can pan 400px / 300px each way.
+    planRect((el) => el.classList.contains('blok-image-lightbox'), { width: 800, height: 600 });
+    planDisplayRect({ width: 1600, height: 1200 });
     open({ url: 'https://x/a.png' });
 
     return dialogEl();
@@ -2121,7 +2123,7 @@ describe('openLightbox drag to pan', () => {
     dialog.dispatchEvent(pointer('pointerdown', 0, 0));
     dialog.dispatchEvent(pointer('pointermove', 1000, 0));
 
-    expect(displayEl().style.transform).toBe('translate(633.6283185840708px, 0px) scale(1)');
+    expect(displayEl().style.transform).toBe('translate(673.5751295336788px, 0px) scale(1)');
 
     dialog.dispatchEvent(pointer('pointerup', 1000, 0));
 
@@ -2218,7 +2220,8 @@ describe('openLightbox wheel zoom', () => {
 
   function openForWheel(): HTMLElement {
     planRect((el) => el.classList.contains('blok-image-lightbox'), { left: 0, top: 0, width: 1000, height: 800 });
-    planDisplayRect({ width: 800, height: 600 });
+    // Stubbed rects do not grow with the zoom, so the image must already overflow the screen to pan.
+    planDisplayRect({ width: 2000, height: 1600 });
     open({ url: 'https://x/a.png' });
 
     return dialogEl();
@@ -2586,7 +2589,8 @@ describe('wheel zoom ratio anchoring', () => {
 
   it('keeps the image pixel under the cursor fixed across consecutive ticks', () => {
     planRect((el) => el.classList.contains('blok-image-lightbox'), { left: 0, top: 0, width: 1000, height: 800 });
-    planDisplayRect({ width: 800, height: 600 });
+    // Stubbed rects do not grow with the zoom, so the image must already overflow the screen to pan.
+    planDisplayRect({ width: 2000, height: 1600 });
     open({ url: 'https://x/a.png' });
 
     const dialog = dialogEl();

@@ -131,8 +131,10 @@ describe('openLightbox wheel zoom', () => {
 });
 
 describe('openLightbox cursor-anchored wheel zoom', () => {
+  // The image overflows the screen by w x h, so it can pan w/2 and h/2 each way.
   function stubDialogRect(w: number, h: number): void {
     stubRect(dialog(), { left: 0, top: 0, right: w, bottom: h, width: w, height: h });
+    stubRect(image(), { width: w * 2, height: h * 2 });
   }
 
   it('keeps the pixel under the cursor stationary on zoom-in', () => {

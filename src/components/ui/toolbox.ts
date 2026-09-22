@@ -1437,6 +1437,19 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       ? activeEl
       : this.currentBlockForSearch.querySelector('[contenteditable="true"]:not([data-blok-mutation-free])');
 
+    /**
+     * An emptied editable keeps the browser's placeholder <br>. Inside the pill
+     * it breaks the line before "Type to search". The "/" path drops it on
+     * insert (Caret.insertContentAtCaretPosition); the + button inserts nothing.
+     */
+    const placeholderBreak = this.currentContentEditable?.childNodes.length === 1
+      ? this.currentContentEditable.firstChild
+      : null;
+
+    if (placeholderBreak instanceof HTMLBRElement) {
+      placeholderBreak.remove();
+    }
+
     if (this.currentContentEditable instanceof HTMLElement) {
       this.currentContentEditable.setAttribute(DATA_ATTR.slashSearch, this.i18nLabels.slashSearchPlaceholder);
       this.applyComboboxRoles(this.currentContentEditable);

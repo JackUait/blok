@@ -1286,6 +1286,23 @@ export class Caret extends Module {
     range.deleteContents();
     range.insertNode(fragment);
 
+    /**
+     * An emptied editable keeps the browser's placeholder <br>. Native typing
+     * replaces it; insertNode does not, and a kept <br> is a forced line break
+     * (the slash-search placeholder dropped onto a second line).
+     * A trailing <br> right after text never draws its own line, so only that one goes.
+     */
+    const trailingBreak = lastChild.nextSibling;
+
+    if (
+      trailingBreak instanceof HTMLBRElement &&
+      trailingBreak.nextSibling === null &&
+      lastChild.nodeName !== 'BR' &&
+      (lastChild.textContent ?? '').length > 0
+    ) {
+      trailingBreak.remove();
+    }
+
     /** Cross-browser caret insertion */
     const newRange = document.createRange();
 

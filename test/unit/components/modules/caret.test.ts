@@ -1209,6 +1209,57 @@ describe('Caret module', () => {
       expect(selection?.focusOffset).toBe(1);
     });
 
+    it('replaces the placeholder <br> of an emptied editable, like native typing', () => {
+      const { caret } = createCaret();
+      const container = createContentEditable('<br>');
+
+      document.body.appendChild(container);
+      setCollapsedSelection(container, 0);
+
+      caret.insertContentAtCaretPosition('/');
+
+      expect(container.querySelector('br')).toBeNull();
+      expect(container.innerHTML).toBe('/');
+      expect(window.getSelection()?.focusOffset).toBe(1);
+    });
+
+    it('replaces the placeholder <br> that follows a blank line but keeps the line break', () => {
+      const { caret } = createCaret();
+      const container = createContentEditable('a<br><br>');
+
+      document.body.appendChild(container);
+      setCollapsedSelection(container, 2);
+
+      caret.insertContentAtCaretPosition('/');
+
+      expect(container.innerHTML).toBe('a<br>/');
+    });
+
+    it('keeps a <br> that has content after it', () => {
+      const { caret } = createCaret();
+      const container = createContentEditable('a<br>b');
+      const lastText = container.lastChild as Text;
+
+      document.body.appendChild(container);
+      setCollapsedSelection(lastText, 0);
+
+      caret.insertContentAtCaretPosition('/');
+
+      expect(container.innerHTML).toBe('a<br>/b');
+    });
+
+    it('keeps the placeholder <br> when nothing is inserted', () => {
+      const { caret } = createCaret();
+      const container = createContentEditable('<br>');
+
+      document.body.appendChild(container);
+      setCollapsedSelection(container, 0);
+
+      caret.insertContentAtCaretPosition('');
+
+      expect(container.querySelector('br')).not.toBeNull();
+    });
+
     it('appends empty text node when fragment has no nodes', () => {
       const { caret } = createCaret();
       const container = createContentEditable('Hello');

@@ -208,6 +208,17 @@ const itemByName = (popover: PopoverDesktop, name: string): PopoverItemDefault =
   return found;
 };
 
+/** Lays the trigger item out at `left`; below-placement cards line up with it. */
+const placeTriggerAt = (popover: PopoverDesktop, name: string, left: number): void => {
+  const element = itemByName(popover, name).getElement();
+
+  if (!(element instanceof HTMLElement)) {
+    throw new Error(`Expected "${name}" to render an element`);
+  }
+
+  vi.spyOn(element, 'getBoundingClientRect').mockReturnValue(makeRect({ left, width: 40, right: left + 40 }));
+};
+
 /** Hover event whose composed path runs through the given element only. */
 const hoverOn = (element: Element, coords?: { clientX: number; clientY: number }): Event => {
   const event = new MouseEvent('mouseover', coords);
@@ -2580,6 +2591,7 @@ describe('PopoverDesktop — nested below placement', () => {
     vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(
       makeRect({ left: 280, top: 180, right: 660, bottom: 300, width: 380, height: 120 })
     );
+    placeTriggerAt(popover, 'link-field', 300);
 
     const nested = instance.showNestedPopoverForItem(itemByName(popover, 'link-field'));
 
@@ -2616,6 +2628,7 @@ describe('PopoverDesktop — nested below placement', () => {
     vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(
       makeRect({ left: 780, top: 180, right: 1160, bottom: 300, width: 380, height: 120 })
     );
+    placeTriggerAt(popover, 'link-field', 800);
 
     instance.showNestedPopoverForItem(itemByName(popover, 'link-field'));
 
@@ -3312,6 +3325,7 @@ describe('PopoverDesktop — nested below placement from the measured size', () 
     vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(
       makeRect({ left: 280, top: 180, right: 660, bottom: 300, width: 380, height: 120 })
     );
+    placeTriggerAt(popover, 'link-field', 300);
 
     const sizeSpy = vi.spyOn(PopoverDesktop.prototype, 'size', 'get')
       .mockReturnValue({ width: 800, height: 60 });
@@ -3563,6 +3577,7 @@ describe('PopoverDesktop — promoted cache lifecycle', () => {
     vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(
       makeRect({ left: 280, top: 180, right: 660, bottom: 300, width: 380, height: 120 })
     );
+    placeTriggerAt(popover, 'link-field', 300);
 
     const nested = instance.showNestedPopoverForItem(itemByName(popover, 'link-field'));
     const nestedContainer = asInternal(nested).nodes.popoverContainer;

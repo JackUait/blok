@@ -1148,8 +1148,15 @@ describe('PopoverDesktop', () => {
       const parentItem = instance.items.find(
         (item): item is PopoverItemDefault => item instanceof PopoverItemDefault && item.hasChildren
       );
+      const parentElement = parentItem?.getElement();
 
-      expect(parentItem).toBeDefined();
+      expect(parentElement).toBeInstanceOf(HTMLElement);
+
+      if (parentElement instanceof HTMLElement) {
+        vi.spyOn(parentElement, 'getBoundingClientRect').mockReturnValue(
+          createRect({ left: 300, top: 210, right: 340, bottom: 250, width: 40, height: 40 })
+        );
+      }
 
       if (parentItem) {
         instance.showNestedPopoverForItem(parentItem);
@@ -1162,11 +1169,57 @@ describe('PopoverDesktop', () => {
       expect(nested?.getElement().getAttribute('data-align')).toBe('start');
 
       // jsdom measures the nested popover as 0×0, so the placement resolves to
-      // the parent's left edge (300) and gap below its bottom (290 + 4), both
+      // the trigger's left edge (300) and gap below its bottom (290 + 4), both
       // converted into the parent-root coordinate space (280, 180).
       const nestedContainer = (nested as unknown as PopoverDesktopInternal).nodes.popoverContainer;
 
       expect(nestedContainer.style.left).toBe('20px');
+      expect(nestedContainer.style.top).toBe('114px');
+    });
+
+    it('lines a below-placement nested popover up with its trigger item, not the parent edge', () => {
+      const popover = createPopover({
+        items: [
+          {
+            title: 'Parent',
+            name: 'parent',
+            children: {
+              placement: 'below',
+              items: [ { title: 'Child', name: 'child', onActivate: vi.fn() } ],
+            },
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance.nodes.popoverContainer, 'getBoundingClientRect').mockReturnValue(
+        createRect({ left: 300, top: 200, right: 640, bottom: 290, width: 340, height: 90 })
+      );
+      vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(
+        createRect({ left: 280, top: 180, right: 660, bottom: 300, width: 380, height: 120 })
+      );
+
+      const parentItem = instance.items.find(
+        (item): item is PopoverItemDefault => item instanceof PopoverItemDefault && item.hasChildren
+      );
+      const parentElement = parentItem?.getElement();
+
+      expect(parentElement).toBeInstanceOf(HTMLElement);
+
+      if (parentItem === undefined || !(parentElement instanceof HTMLElement)) {
+        return;
+      }
+
+      vi.spyOn(parentElement, 'getBoundingClientRect').mockReturnValue(
+        createRect({ left: 520, top: 210, right: 560, bottom: 250, width: 40, height: 40 })
+      );
+
+      instance.showNestedPopoverForItem(parentItem);
+
+      const nestedContainer = (instance.nestedPopover as unknown as PopoverDesktopInternal).nodes.popoverContainer;
+
+      // Trigger left 520 in the parent-root space (280); top stays under the card.
+      expect(nestedContainer.style.left).toBe('240px');
       expect(nestedContainer.style.top).toBe('114px');
     });
 

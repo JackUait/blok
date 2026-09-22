@@ -247,7 +247,7 @@ describe('PopoverInline', () => {
       expect(convertEl).toHaveAttribute('aria-expanded', 'false');
     });
 
-    it('aligns the convert dropdown with the toolbar left edge', () => {
+    it('lines the convert dropdown up with the convert button', () => {
       const popover = createGridPopover();
       const instance = popover as unknown as PopoverInlineInternal;
 
@@ -274,13 +274,19 @@ describe('PopoverInline', () => {
           item instanceof PopoverItemDefault && item.name === 'convert-to'
       );
 
+      const convertElement = convertItem?.getElement();
+
+      if (convertElement instanceof HTMLElement) {
+        vi.spyOn(convertElement, 'getBoundingClientRect').mockReturnValue({ ...toolbarRect, left: 106, x: 106 });
+      }
+
       instance.showNestedItems(convertItem!);
 
       const nestedContainer = instance.nestedPopover
         ?.getElement()
         .querySelector<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`);
 
-      expect(nestedContainer?.style.left).toBe('0px');
+      expect(nestedContainer?.style.left).toBe('6px');
     });
 
     it('does not pin the container to the single-row toolbar height', () => {

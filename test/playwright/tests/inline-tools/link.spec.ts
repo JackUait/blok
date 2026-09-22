@@ -948,7 +948,7 @@ test.describe('inline tool link', () => {
       }, { toolbarSelector: INLINE_TOOLBAR_SELECTOR });
     };
 
-    test('opens the link field below the toolbar card with left edges aligned', async ({ page }) => {
+    test('opens the link field below the toolbar card, lined up with the link button', async ({ page }) => {
       await createBlokWithBlocks(page, [
         {
           type: 'paragraph',
@@ -963,11 +963,16 @@ test.describe('inline tool link', () => {
       await selectText(paragraph, 'link field');
       await ensureLinkInputOpen(page);
 
+      const buttonLeft = await page.locator(LINK_BUTTON_SELECTOR)
+        .evaluate((el) => el.getBoundingClientRect().left);
       const { side, toolbar, field } = await readPlacementGeometry(page);
 
+      // The button sits far from the toolbar's left edge, so the two
+      // placements are told apart.
+      expect(buttonLeft - toolbar.left).toBeGreaterThan(100);
       expect(side).toBe('bottom');
       expect(field.top).toBeGreaterThan(toolbar.bottom);
-      expect(Math.abs(field.left - toolbar.left)).toBeLessThanOrEqual(1);
+      expect(Math.abs(field.left - buttonLeft)).toBeLessThanOrEqual(1);
     });
 
     // Placement bugs cluster at viewport extremes (see the LAW sweep in

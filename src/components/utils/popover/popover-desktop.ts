@@ -1424,8 +1424,9 @@ export class PopoverDesktop extends PopoverAbstract {
     const parentRootRect = this.nodes.popover.getBoundingClientRect();
 
     // Items may opt out of the beside-placement and open under the parent
-    // popover instead (the inline toolbar's link field). Left edges aligned,
-    // flipping above only when the viewport leaves no room below.
+    // popover instead (the inline toolbar's submenus). The card sits under the
+    // parent but lines up with its trigger item, flipping above only when the
+    // viewport leaves no room below.
     if (triggerItem.childrenPlacement === 'below') {
       // The link field sizes its input to the typed content, so the card must
       // not stay frozen at the show()-time --width: the container follows its
@@ -1444,21 +1445,22 @@ export class PopoverDesktop extends PopoverAbstract {
         ? nestedContainer.offsetHeight
         : this.nestedPopover?.size.height ?? 0;
 
+      const anchorLeft = triggerItem.getElement()?.getBoundingClientRect().left ?? parentRect.left;
       const { left, top, side } = resolveNestedPopoverBelowPlacement({
-        parentRect,
+        parentRect: { left: anchorLeft, top: parentRect.top, bottom: parentRect.bottom },
         nestedWidth,
         nestedHeight,
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
       });
 
-      // A left below parentRect.left means the right-viewport clamp engaged.
+      // A left below anchorLeft means the right-viewport clamp engaged.
       // Express that clamp as a CSS right-pin instead of a measured left: the
       // browser then keeps the card's right edge exactly on the margin while
       // the content-driven width keeps changing, so a transiently stale width
       // measurement (Firefox settles intrinsic sizes across frames) can never
       // strand the card past the viewport edge.
-      if (left < parentRect.left) {
+      if (left < anchorLeft) {
         nestedContainer.style.left = 'auto';
         nestedContainer.style.right = `${parentRootRect.right - (window.innerWidth - NESTED_POPOVER_VIEWPORT_MARGIN)}px`;
       } else {

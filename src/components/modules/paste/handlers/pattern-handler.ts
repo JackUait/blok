@@ -3,6 +3,7 @@ import { isHttpUrl, isSamePageLink } from '../../../../tools/link/registry';
 import { PasteMenuController, type LinkPasteMenu } from '../../../../tools/link/paste-menu/controller';
 import type { PasteMenuActionType } from '../../../../tools/link/paste-menu/options';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
+import { applyResolvedLinkAttributes, resolveLinkAttributes } from '../../../utils/resolve-link-attributes';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
 import type { ToolRegistry } from '../tool-registry';
 import type { HandlerContext, PatternMatch } from '../types';
@@ -65,13 +66,18 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
       return false;
     }
 
-    // Notion-style menu: a URL paste always offers the view choice (Plain /
-    // Bookmark / Embed) instead of auto-claiming. Requires a collapsed caret; a
-    // selection keeps the native "hyperlink the selection" behavior.
-    if (isHttpUrl(data) && !this.hasSelection()) {
-      this.openLinkPasteMenu(data, context.canReplaceCurrentBlock);
+    // A URL pasted over selected text links that text. With a collapsed caret,
+    // the Notion-style menu offers the view choice (Plain / Bookmark / Embed).
+    if (isHttpUrl(data)) {
+      if (!this.hasSelection()) {
+        this.openLinkPasteMenu(data, context.canReplaceCurrentBlock);
 
-      return true;
+        return true;
+      }
+
+      if (this.linkSelection(data.trim())) {
+        return true;
+      }
     }
 
     const event = this.composePasteEvent('pattern', {
@@ -101,6 +107,43 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     const insertedBlock = await BlockManager.paste(match.tool, match.event, canReplace);
 
     Caret.setToBlock(insertedBlock, Caret.positions.END);
+  }
+
+  /**
+   * Wrap the selected text in a link to `url`. If the selection sits inside a
+   * link, that link is re-pointed instead, so links never nest.
+   * Returns false when the selection is not inside one editable field.
+   */
+  private linkSelection(url: string): boolean {
+    const selection = window.getSelection();
+    const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+    const container = range?.commonAncestorContainer;
+    const element = container instanceof Element ? container : container?.parentElement;
+    const editable = element?.closest('[contenteditable="true"]');
+
+    if (!range || !element || !editable) {
+      return false;
+    }
+
+    const linkConfig = this.config?.link ?? {};
+    const parentAnchor = element.closest('a');
+
+    if (parentAnchor && editable.contains(parentAnchor)) {
+      applyResolvedLinkAttributes(parentAnchor, resolveLinkAttributes(url, parentAnchor, linkConfig));
+
+      return true;
+    }
+
+    const anchor = document.createElement('a');
+
+    anchor.appendChild(range.extractContents());
+    anchor.querySelectorAll('a').forEach((inner) => inner.replaceWith(...Array.from(inner.childNodes)));
+    // Text goes in before resolving so the `link.transform` config sees it.
+    applyResolvedLinkAttributes(anchor, resolveLinkAttributes(url, anchor, linkConfig));
+    range.insertNode(anchor);
+    range.selectNode(anchor);
+
+    return true;
   }
 
   private hasSelection(): boolean {

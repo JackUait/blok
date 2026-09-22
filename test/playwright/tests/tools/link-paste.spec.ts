@@ -121,6 +121,30 @@ const moveEditorIntoNestedScrollHost = async (page: Page): Promise<void> => {
   }, { holderId: HOLDER_ID, hostId: NESTED_SCROLL_HOST_ID });
 };
 
+/** Select the first occurrence of `word` inside the first editable. */
+const selectWord = async (page: Page, word: string): Promise<void> => {
+  await firstEditable(page).evaluate((element: HTMLElement, target: string) => {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+
+    for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+      const start = node.textContent?.indexOf(target) ?? -1;
+
+      if (start >= 0) {
+        const range = document.createRange();
+
+        range.setStart(node, start);
+        range.setEnd(node, start + target.length);
+        window.getSelection()?.removeAllRanges();
+        window.getSelection()?.addRange(range);
+
+        return;
+      }
+    }
+
+    throw new Error(`"${target}" not found`);
+  }, word);
+};
+
 /** Pick a view from the paste menu that a URL paste always opens. */
 const pickMenu = async (page: Page, action: 'embed' | 'bookmark' | 'plain'): Promise<void> => {
   const item = page.locator(`[data-blok-item-name="paste-menu-${action}"]`);
@@ -540,5 +564,60 @@ test.describe('Link paste', () => {
     const link = page.getByRole('link', { name: 'https://example.com/article', exact: true });
 
     await expect(link).toHaveCount(1);
+  });
+
+  test('pasting a URL over selected text turns that text into a link', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [{ type: 'paragraph', data: { text: 'Read the docs today' } }],
+    });
+
+    const editable = firstEditable(page);
+
+    await editable.click();
+    await selectWord(page, 'docs');
+    await pasteText(editable, 'https://example.com/docs');
+
+    const link = page.getByRole('link', { name: 'docs', exact: true });
+
+    await expect(link).toHaveAttribute('href', 'https://example.com/docs');
+    await expect(editable).toHaveText('Read the docs today');
+    await expect(page.locator('[data-blok-item-name="paste-menu-bookmark"]')).toHaveCount(0);
+
+    const saved = await saveBlok(page);
+
+    expect(saved.blocks).toHaveLength(1);
+    expect((saved.blocks[0].data as { text: string }).text).toMatch(
+      /^Read the <a href="https:\/\/example\.com\/docs"[^>]*>docs<\/a> today$/
+    );
+  });
+
+  test('pasting a URL over part of an existing link points that link at the new URL', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [{ type: 'paragraph', data: { text: 'Read the <a href="https://old.example.com">docs page</a> today' } }],
+    });
+
+    const editable = firstEditable(page);
+
+    await editable.click();
+    await selectWord(page, 'docs');
+    await pasteText(editable, 'https://example.com/docs');
+
+    await expect(page.getByRole('link')).toHaveCount(1);
+    await expect(page.getByRole('link', { name: 'docs page', exact: true })).toHaveAttribute('href', 'https://example.com/docs');
+  });
+
+  test('pasting plain text over selected text still replaces it', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [{ type: 'paragraph', data: { text: 'Read the docs today' } }],
+    });
+
+    const editable = firstEditable(page);
+
+    await editable.click();
+    await selectWord(page, 'docs');
+    await pasteText(editable, 'guide');
+
+    await expect(editable).toHaveText('Read the guide today');
+    await expect(page.getByRole('link')).toHaveCount(0);
   });
 });

@@ -186,6 +186,8 @@ export const DATA_ATTR = {
   nestedLevel: 'data-blok-nested-level',
   /** Group label for promoted search results from nested children */
   promotedGroupLabel: 'data-blok-promoted-group-label',
+  /** A nested child shown in the host menu's search results. The convert-menu styles skip it, so the host keeps its own layout. */
+  promotedItem: 'data-blok-promoted-item',
   /** Group label for top-level matches in search results */
   topLevelGroupLabel: 'data-blok-top-level-group-label',
 

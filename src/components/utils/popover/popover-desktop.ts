@@ -1777,6 +1777,7 @@ export class PopoverDesktop extends PopoverAbstract {
       const el = item.getElement();
 
       if (el !== null) {
+        el.setAttribute(DATA_ATTR.promotedItem, '');
         this.nodes.items?.appendChild(el);
       }
     }
@@ -2077,7 +2078,7 @@ export class PopoverDesktop extends PopoverAbstract {
     this.flipper.deactivate();
     this.flipper.activate(flippableElements);
 
-    if (flippableElements.length > 0 && !this.nodes.items.querySelector('[data-blok-convert-item]')) {
+    if (flippableElements.length > 0 && !this.nodes.items.querySelector(`[data-blok-convert-item]:not([${DATA_ATTR.promotedItem}])`)) {
       this.flipper.focusItem(0, { skipNextTab: true });
     }
   };

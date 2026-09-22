@@ -193,7 +193,7 @@
 }
 
 /* Scope the denser chrome to block settings and conversion, not tool pickers. */
-:is([data-blok-testid='block-tunes-popover'] > [data-blok-popover-container], [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item])) {
+:is([data-blok-testid='block-tunes-popover'] > [data-blok-popover-container], [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]:not([data-blok-promoted-item]))) {
   padding-inline: var(--blok-space-2);
 
   @media (min-width: 651px) {
@@ -257,14 +257,15 @@
   }
 }
 
-/* The inline toolbar sets width on the element. */
-[data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-group]) {
+/* The inline toolbar sets width on the element. Search moves convert items into
+   the block menu; the promoted mark keeps that menu from taking this layout. */
+[data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-group]:not([data-blok-promoted-item])) {
   width: min(392px, calc(100vw - 16px)) !important;
   min-width: 0;
   max-height: min(520px, calc(100dvh - 16px));
 }
 
-[data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]) > [data-blok-testid='popover-search-field'] {
+[data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]:not([data-blok-promoted-item])) > [data-blok-testid='popover-search-field'] {
   display: flex;
   align-items: center;
   min-height: 47px;
@@ -353,7 +354,7 @@
 }
 
 @media (max-width: 650px) {
-  :is([data-blok-testid='block-tunes-popover'] > [data-blok-popover-container], [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]))
+  :is([data-blok-testid='block-tunes-popover'] > [data-blok-popover-container], [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]:not([data-blok-promoted-item])))
     > [data-blok-popover-items] > [data-blok-popover-item]:not([data-blok-hidden]) {
     min-height: 44px;
   }

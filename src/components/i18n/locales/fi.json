@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Sisäinen koodi",
   "toolNames.equation": "Yhtälö",
   "tools.equation.placeholder": "Syötä LaTeX-kaava…",
+  "tools.equation.done": "Valmis",
   "tools.supSub.superscript": "Yläindeksi",
   "tools.supSub.subscript": "Alaindeksi",
   "tools.code.placeholder": "Kirjoita koodia…",

@@ -249,6 +249,7 @@
   "toolNames.inlineCode": "行內程式碼",
   "toolNames.equation": "方程式",
   "tools.equation.placeholder": "輸入 LaTeX 方程式…",
+  "tools.equation.done": "完成",
   "tools.supSub.superscript": "上標",
   "tools.supSub.subscript": "下標",
   "tools.code.placeholder": "輸入程式碼…",

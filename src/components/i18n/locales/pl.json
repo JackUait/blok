@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Kod w tekście",
   "toolNames.equation": "Równanie",
   "tools.equation.placeholder": "Wpisz formułę LaTeX…",
+  "tools.equation.done": "Gotowe",
   "tools.supSub.superscript": "Indeks górny",
   "tools.supSub.subscript": "Indeks dolny",
   "tools.code.placeholder": "Napisz kod…",

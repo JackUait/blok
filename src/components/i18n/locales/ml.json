@@ -252,6 +252,7 @@
   "toolNames.inlineCode": "കോഡ്",
   "toolNames.equation": "സമവാക്യം",
   "tools.equation.placeholder": "LaTeX സൂത്രവാക്യം നൽകുക…",
+  "tools.equation.done": "പൂർത്തിയായി",
   "tools.supSub.superscript": "സൂപ്പർസ്ക്രിപ്റ്റ്",
   "tools.supSub.subscript": "സബ്സ്ക്രിപ്റ്റ്",
   "tools.code.placeholder": "കോഡ് എഴുതുക…",

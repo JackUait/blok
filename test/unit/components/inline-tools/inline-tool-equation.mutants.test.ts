@@ -39,11 +39,14 @@ const flush = async (): Promise<void> => {
   await Promise.resolve();
 };
 
+const dispatchChange = vi.fn();
+
 const build = (): Harness => {
   const close = vi.fn();
   const api = {
     i18n: { t: (key: string) => key },
     inlineToolbar: { close },
+    blocks: { getBlockByElement: vi.fn(() => ({ dispatchChange })) },
   };
   const tool = new EquationInlineTool({ api: api as never, config: undefined });
   const config = tool.render() as unknown as EquationMenu;
@@ -367,6 +370,9 @@ describe('EquationInlineTool mutants', () => {
   describe('applyEquation', () => {
     it('restores a saved selection before writing', async () => {
       const host = selectText('i^2');
+
+      window.getSelection()?.collapseToEnd();
+
       const { tool, children } = build();
 
       // Opening the popover is the only path that saves a range.
@@ -416,13 +422,13 @@ describe('the popover markup', () => {
     it('paints the wrapper, the input and the preview with the exact class list and markers', () => {
       const { wrapper, input, preview } = build();
 
-      expect(wrapper.className).toBe('flex flex-col gap-1 p-1');
+      expect(wrapper.className).toBe('flex items-center gap-1 p-1');
       expect(wrapper.getAttribute('data-blok-equation-tool')).toBe('');
       // `input.type` reads back as 'text' even when the IDL is set to '', so the
       // content attribute is the only witness that 'text' was actually written.
       expect(input.getAttribute('type')).toBe('text');
-      expect(input.className).toBe('w-[220px] m-0 px-2 py-1 text-sm leading-[22px] font-medium text-text-primary bg-item-hover-bg border border-link-input-border rounded-lg! outline-hidden box-border appearance-none font-[inherit] placeholder:text-gray-text');
-      expect(preview.className).toBe('min-h-[22px] px-2 text-sm text-text-primary');
+      expect(input.className).toBe('w-[240px] min-w-0 m-0 px-2.5 py-1.5 font-mono text-sm leading-[22px] text-text-primary bg-item-hover-bg border border-transparent rounded-[10px]! outline-hidden box-border appearance-none placeholder:text-gray-text transition-[background-color,border-color] duration-150 ease-out focus:bg-popover-bg focus:border-search-input-focus-border');
+      expect(preview.className).toBe('sr-only');
       expect(preview.getAttribute('data-blok-equation-preview')).toBe('');
     });
   });
@@ -545,6 +551,146 @@ describe('the popover markup', () => {
       } finally {
         vi.unstubAllGlobals();
       }
+    });
+  });
+
+  describe('the Notion-style editor', () => {
+    const type = async (harness: Harness, value: string): Promise<void> => {
+      Object.assign(harness.input, { value });
+      harness.input.dispatchEvent(new Event('input', { bubbles: true }));
+      await flush();
+    };
+
+    const doneButton = (harness: Harness): HTMLButtonElement => {
+      const button = harness.wrapper.querySelector<HTMLButtonElement>('[data-blok-testid="inline-equation-done"]');
+
+      if (button === null) {
+        throw new Error('the equation popover has no Done button');
+      }
+
+      return button;
+    };
+
+    it('shows a Done button with the return-key hint next to the input', () => {
+      const harness = build();
+      const button = doneButton(harness);
+
+      expect(button.type).toBe('button');
+      expect(button.textContent).toContain('tools.equation.done');
+      expect(button.querySelector('svg')).not.toBeNull();
+      expect(harness.input.nextElementSibling).toBe(button);
+    });
+
+    it('confirms the typed formula when Done is clicked', async () => {
+      const host = selectText('placeholder');
+
+      window.getSelection()?.collapseToEnd();
+
+      const harness = build();
+
+      harness.children.onOpen?.();
+      harness.input.value = 'y^2';
+      doneButton(harness).click();
+      await flush();
+
+      expect(host.querySelector('span[data-latex]')?.getAttribute('data-latex')).toBe('y^2');
+      expect(harness.close).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the caret where it is when Done is pressed', () => {
+      const harness = build();
+      const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+
+      doneButton(harness).dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('turns the selected text into an equation chip as soon as it opens', async () => {
+      const host = selectText('a+b');
+      const { children, input } = build();
+
+      children.onOpen?.();
+      await flush();
+
+      const chip = host.querySelector('span[data-latex]');
+
+      expect(chip?.getAttribute('data-latex')).toBe('a+b');
+      expect(chip?.innerHTML).toContain('rendered:a+b');
+      expect(chip?.hasAttribute('data-blok-equation-editing')).toBe(true);
+      expect(input.value).toBe('a+b');
+      expect(setFakeBackground).not.toHaveBeenCalled();
+    });
+
+    it('selects the formula so typing replaces it', () => {
+      findParentTag.mockReturnValue(equationSpan('z^2'));
+
+      const { children, input } = build();
+
+      children.onOpen?.();
+
+      expect(input.selectionStart).toBe(0);
+      expect(input.selectionEnd).toBe(3);
+    });
+
+    it('renders the typed formula live into the chip without storing it', async () => {
+      const chip = equationSpan('c^2');
+
+      findParentTag.mockReturnValue(chip);
+
+      const harness = build();
+
+      harness.children.onOpen?.();
+      await type(harness, 'c^3');
+
+      expect(chip.innerHTML).toContain('rendered:c^3');
+      expect(chip.getAttribute('data-latex')).toBe('c^2');
+      expect(chip.getAttribute('data-blok-mutation-free')).toBe('true');
+    });
+
+    it('stores the formula on the chip when confirmed', async () => {
+      const chip = equationSpan('d^2');
+
+      findParentTag.mockReturnValue(chip);
+
+      const harness = build();
+
+      harness.children.onOpen?.();
+      await type(harness, 'd^3');
+      doneButton(harness).click();
+      await flush();
+
+      expect(chip.getAttribute('data-latex')).toBe('d^3');
+      expect(chip.innerHTML).toContain('rendered:d^3');
+      expect(harness.close).toHaveBeenCalledTimes(1);
+      // The span is mutation-free, so the block observer never sees this edit.
+      expect(dispatchChange).toHaveBeenCalledTimes(1);
+
+      harness.children.onClose?.();
+      await flush();
+
+      expect(chip.innerHTML).toContain('rendered:d^3');
+      expect(chip.hasAttribute('data-blok-equation-editing')).toBe(false);
+    });
+
+    it('puts the chip back to its stored formula when closed without confirming', async () => {
+      const chip = equationSpan('e^2');
+
+      findParentTag.mockReturnValue(chip);
+
+      const harness = build();
+
+      harness.children.onOpen?.();
+      expect(chip.hasAttribute('data-blok-equation-editing')).toBe(true);
+
+      await type(harness, 'e^9');
+      harness.children.onClose?.();
+      await flush();
+
+      expect(chip.innerHTML).toContain('rendered:e^2');
+      expect(chip.getAttribute('data-latex')).toBe('e^2');
+      expect(chip.hasAttribute('data-blok-equation-editing')).toBe(false);
+      expect(dispatchChange).not.toHaveBeenCalled();
     });
   });
 

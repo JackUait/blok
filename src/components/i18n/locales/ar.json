@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "تعليمات برمجية مضمنة",
   "toolNames.equation": "معادلة",
   "tools.equation.placeholder": "أدخل صيغة LaTeX…",
+  "tools.equation.done": "تم",
   "tools.supSub.superscript": "مرتفع",
   "tools.supSub.subscript": "منخفض",
   "tools.code.placeholder": "اكتب تعليمات برمجية…",

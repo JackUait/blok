@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "کد",
   "toolNames.equation": "معادله",
   "tools.equation.placeholder": "یک فرمول LaTeX وارد کنید…",
+  "tools.equation.done": "انجام شد",
   "tools.supSub.superscript": "بالانویس",
   "tools.supSub.subscript": "پایین‌نویس",
   "tools.code.placeholder": "کد بنویسید…",

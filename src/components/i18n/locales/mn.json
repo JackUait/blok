@@ -252,6 +252,7 @@
   "toolNames.inlineCode": "Код",
   "toolNames.equation": "Томьёо",
   "tools.equation.placeholder": "LaTeX томьёо оруулна уу…",
+  "tools.equation.done": "Дууссан",
   "tools.supSub.superscript": "Дээд индекс",
   "tools.supSub.subscript": "Доод индекс",
   "tools.code.placeholder": "Код бичих…",

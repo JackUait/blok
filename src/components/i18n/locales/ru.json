@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Код",
   "toolNames.equation": "Формула",
   "tools.equation.placeholder": "Введите формулу LaTeX…",
+  "tools.equation.done": "Готово",
   "tools.supSub.superscript": "Надстрочный",
   "tools.supSub.subscript": "Подстрочный",
   "tools.code.placeholder": "Напишите код…",

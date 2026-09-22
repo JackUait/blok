@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "ইনলাইন কোড",
   "toolNames.equation": "সমীকরণ",
   "tools.equation.placeholder": "একটি LaTeX সূত্র লিখুন…",
+  "tools.equation.done": "সম্পন্ন",
   "tools.supSub.superscript": "সুপারস্ক্রিপ্ট",
   "tools.supSub.subscript": "সাবস্ক্রিপ্ট",
   "tools.code.placeholder": "কোড লিখুন…",

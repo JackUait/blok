@@ -54,6 +54,13 @@ export interface InlineToolConstructable extends BaseToolConstructable {
   allowCaretShortcut?: boolean;
 
   /**
+   * When true, clicking the tool's inline-toolbar button closes the toolbar and
+   * opens only the tool's menu (`render().children`), as its shortcut does,
+   * instead of a fly-out under the toolbar.
+   */
+  replacesToolbar?: boolean;
+
+  /**
    * When true, the tool's keyboard shortcut defers to the browser's native
    * handling at a collapsed caret instead of being intercepted — for format
    * tools with a native browser equivalent (Bold, Italic), so the browser

@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Koda",
   "toolNames.equation": "Enačba",
   "tools.equation.placeholder": "Vnesite formulo LaTeX…",
+  "tools.equation.done": "Končano",
   "tools.supSub.superscript": "Nadpisano",
   "tools.supSub.subscript": "Podpisano",
   "tools.code.placeholder": "Napišite kodo…",

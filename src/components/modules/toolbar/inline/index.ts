@@ -583,7 +583,25 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
    * Build popover items from tools map
    */
   private async buildPopoverItems(): Promise<PopoverItemParams[]> {
-    return this.popoverBuilder.build(this.tools);
+    const items = await this.popoverBuilder.build(this.tools);
+
+    return items.map((item) => {
+      const name = 'name' in item ? item.name : undefined;
+
+      if (name === undefined || !('children' in item) || !this.Blok.Tools.inlineTools.get(name)?.replacesToolbar) {
+        return item;
+      }
+
+      // Swap the fly-out for the same standalone menu the shortcut opens.
+      const { children: _children, ...button } = item;
+
+      return {
+        ...button,
+        onActivate: () => {
+          void this.openToolMenuDirect(name);
+        },
+      } as PopoverItemParams;
+    });
   }
 
   /**

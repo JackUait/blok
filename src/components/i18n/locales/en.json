@@ -249,6 +249,7 @@
   "toolNames.inlineCode": "Code",
   "toolNames.equation": "Equation",
   "tools.equation.placeholder": "Enter a LaTeX formula…",
+  "tools.equation.done": "Done",
   "tools.supSub.superscript": "Superscript",
   "tools.supSub.subscript": "Subscript",
   "tools.code.placeholder": "Write code…",

@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Infogad kod",
   "toolNames.equation": "Ekvation",
   "tools.equation.placeholder": "Ange en LaTeX-formel…",
+  "tools.equation.done": "Klar",
   "tools.supSub.superscript": "Upphöjt",
   "tools.supSub.subscript": "Nedsänkt",
   "tools.code.placeholder": "Skriv kod…",

@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Kod",
   "toolNames.equation": "Denklem",
   "tools.equation.placeholder": "LaTeX formülü girin…",
+  "tools.equation.done": "Tamam",
   "tools.supSub.superscript": "Üst simge",
   "tools.supSub.subscript": "Alt simge",
   "tools.code.placeholder": "Kod yazın…",

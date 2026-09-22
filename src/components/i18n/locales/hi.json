@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "इनलाइन कोड",
   "toolNames.equation": "समीकरण",
   "tools.equation.placeholder": "LaTeX फ़ॉर्मूला दर्ज करें…",
+  "tools.equation.done": "हो गया",
   "tools.supSub.superscript": "सुपरस्क्रिप्ट",
   "tools.supSub.subscript": "सबस्क्रिप्ट",
   "tools.code.placeholder": "कोड लिखें…",

@@ -580,8 +580,10 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // This budget counts AUTHORED bytes, so a comment costs against it even
     // though no bundle carries one.
     const REMOTE_SELECTION_SHADE_BYTES = 607;
+    // The highlight on the equation chip being edited adds 444 bytes in preflight.css.
+    const EQUATION_EDITING_CHIP_BYTES = 444;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
-      + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES;
+      + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

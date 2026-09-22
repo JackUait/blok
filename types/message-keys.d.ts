@@ -345,6 +345,7 @@ export type BlokMessageKey =
   | 'tools.embed.replace'
   | 'tools.embed.urlPlaceholder'
   | 'tools.embed.urlSubmit'
+  | 'tools.equation.done'
   | 'tools.equation.placeholder'
   | 'tools.file.cancelUpload'
   | 'tools.file.captionPlaceholder'

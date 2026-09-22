@@ -252,6 +252,7 @@
   "toolNames.inlineCode": "کۆد",
   "toolNames.equation": "هاوکێشە",
   "tools.equation.placeholder": "فۆرمولایەکی LaTeX بنووسە…",
+  "tools.equation.done": "تەواو",
   "tools.supSub.superscript": "نووسینی سەرەوە",
   "tools.supSub.subscript": "نووسینی خوارەوە",
   "tools.code.placeholder": "کۆد بنووسە…",

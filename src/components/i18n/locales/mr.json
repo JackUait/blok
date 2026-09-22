@@ -252,6 +252,7 @@
   "toolNames.inlineCode": "कोड",
   "toolNames.equation": "समीकरण",
   "tools.equation.placeholder": "LaTeX सूत्र लिहा…",
+  "tools.equation.done": "पूर्ण",
   "tools.supSub.superscript": "सुपरस्क्रिप्ट",
   "tools.supSub.subscript": "सबस्क्रिप्ट",
   "tools.code.placeholder": "कोड लिहा…",

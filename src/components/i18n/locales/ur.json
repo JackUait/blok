@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "کوڈ",
   "toolNames.equation": "مساوات",
   "tools.equation.placeholder": "LaTeX فارمولا درج کریں…",
+  "tools.equation.done": "مکمل",
   "tools.supSub.superscript": "سپر اسکرپٹ",
   "tools.supSub.subscript": "سب اسکرپٹ",
   "tools.code.placeholder": "کوڈ لکھیں…",

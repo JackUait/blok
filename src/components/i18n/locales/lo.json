@@ -252,6 +252,7 @@
   "toolNames.inlineCode": "ໂຄດ",
   "toolNames.equation": "ສົມຜົນ",
   "tools.equation.placeholder": "ປ້ອນສູດ LaTeX…",
+  "tools.equation.done": "ສຳເລັດ",
   "tools.supSub.superscript": "ຕົວຍົກ",
   "tools.supSub.subscript": "ຕົວຫ້ອຍ",
   "tools.code.placeholder": "ຂຽນໂຄດ…",

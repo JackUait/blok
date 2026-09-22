@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Msimbo",
   "toolNames.equation": "Mlinganyo",
   "tools.equation.placeholder": "Andika fomula ya LaTeX…",
+  "tools.equation.done": "Maliza",
   "tools.supSub.superscript": "Maandishi ya juu",
   "tools.supSub.subscript": "Maandishi ya chini",
   "tools.code.placeholder": "Andika msimbo…",

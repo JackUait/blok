@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "කේතය",
   "toolNames.equation": "සමීකරණය",
   "tools.equation.placeholder": "LaTeX සූත්‍රයක් ඇතුළත් කරන්න…",
+  "tools.equation.done": "අවසන්",
   "tools.supSub.superscript": "උඩු අකුරු",
   "tools.supSub.subscript": "යටි අකුරු",
   "tools.code.placeholder": "කේතය ලියන්න…",

@@ -3,10 +3,10 @@ import type {
   InlineToolConstructorOptions,
   SanitizerConfig
 } from '../../../types';
-import type { I18n, InlineToolbar } from '../../../types/api';
+import type { Blocks, I18n, InlineToolbar } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
 import { DATA_ATTR } from '../constants/data-attributes';
-import { IconEquation } from '../icons';
+import { IconEquation, IconReturn } from '../icons';
 import { SelectionUtils } from '../selection/index';
 import { PopoverItemType } from '../utils/popover';
 import { renderLatex } from '../../shared/katex';
@@ -17,6 +17,13 @@ import { renderLatex } from '../../shared/katex';
  * span's inner HTML holds the KaTeX-rendered markup for display.
  */
 const EQUATION_ATTR = 'data-latex';
+
+/**
+ * Marks the chip the popover is editing, so CSS can paint it as selected.
+ * Written on the mutation-free span itself, so it is not an edit, and the
+ * sanitizer drops it on save.
+ */
+const EDITING_ATTR = 'data-blok-equation-editing';
 
 /**
  * Equation Inline Tool
@@ -52,6 +59,11 @@ export class EquationInlineTool implements InlineTool {
    * wrapping tools (Link, Marker) leave this false and require a range.
    */
   public static allowCaretShortcut = true;
+
+  /**
+   * The toolbar button opens the equation menu on its own, like the shortcut.
+   */
+  public static replacesToolbar = true;
 
   /**
    * Sanitizer Rule — keep equation spans, preserving only the LaTeX source.
@@ -130,6 +142,11 @@ export class EquationInlineTool implements InlineTool {
   private inlineToolbar: InlineToolbar;
 
   /**
+   * Blocks API, to report an edit the block observer cannot see
+   */
+  private blocks: Blocks;
+
+  /**
    * SelectionUtils instance for saving/restoring selection
    */
   private selection: SelectionUtils;
@@ -144,11 +161,18 @@ export class EquationInlineTool implements InlineTool {
   };
 
   /**
+   * The chip being edited. It shows the typed formula live; its `data-latex`
+   * changes only on confirm, so closing without confirming reverts it.
+   */
+  private chip: HTMLElement | null = null;
+
+  /**
    * @param options - Inline tool constructor options with API
    */
   constructor({ api }: InlineToolConstructorOptions) {
     this.i18n = api.i18n;
     this.inlineToolbar = api.inlineToolbar;
+    this.blocks = api.blocks;
     this.selection = new SelectionUtils();
     this.nodes = this.createUi();
   }
@@ -195,11 +219,25 @@ export class EquationInlineTool implements InlineTool {
       return;
     }
 
+    const span = this.insertChip(selection, latex);
+
+    if (span !== null) {
+      await EquationInlineTool.renderInto(span, span.getAttribute(EQUATION_ATTR) ?? '');
+    }
+  }
+
+  /**
+   * Replace the selection with an unrendered equation span and put the caret
+   * after it. Synchronous, so onOpen can turn a selection into a chip at once.
+   * @param selection - current window selection, with at least one range
+   * @param latex - optional explicit LaTeX source; defaults to the selected text
+   */
+  private insertChip(selection: Selection, latex?: string): HTMLElement | null {
     const range = selection.getRangeAt(0);
     const source = (latex ?? range.toString()).trim();
 
     if (source === '') {
-      return;
+      return null;
     }
 
     const span = document.createElement('span');
@@ -221,16 +259,18 @@ export class EquationInlineTool implements InlineTool {
     after.collapse(true);
     selection.addRange(after);
 
-    await EquationInlineTool.renderInto(span, source);
+    return span;
   }
 
   /**
-   * Build the popover UI: a formula input with a live KaTeX preview below it.
+   * Build the popover UI: one row with a code-font formula input and a Done
+   * button. The rendered formula shows in the chip itself; the preview here is
+   * only read out to screen readers.
    */
   private createUi(): { wrapper: HTMLElement; input: HTMLInputElement; preview: HTMLElement } {
     const wrapper = document.createElement('div');
 
-    wrapper.className = 'flex flex-col gap-1 p-1';
+    wrapper.className = 'flex items-center gap-1 p-1';
     wrapper.setAttribute('data-blok-equation-tool', '');
 
     const input = document.createElement('input');
@@ -238,12 +278,23 @@ export class EquationInlineTool implements InlineTool {
     input.type = 'text';
     input.placeholder = this.i18n.t('tools.equation.placeholder');
     input.enterKeyHint = 'done';
-    input.className = 'w-[220px] m-0 px-2 py-1 text-sm leading-[22px] font-medium text-text-primary bg-item-hover-bg border border-link-input-border rounded-lg! outline-hidden box-border appearance-none font-[inherit] placeholder:text-gray-text';
+    input.className = 'w-[240px] min-w-0 m-0 px-2.5 py-1.5 font-mono text-sm leading-[22px] text-text-primary bg-item-hover-bg border border-transparent rounded-[10px]! outline-hidden box-border appearance-none placeholder:text-gray-text transition-[background-color,border-color] duration-150 ease-out focus:bg-popover-bg focus:border-search-input-focus-border';
     input.setAttribute('data-blok-testid', 'inline-equation-input');
+
+    const done = document.createElement('button');
+
+    done.type = 'button';
+    done.className = 'shrink-0 inline-flex items-center gap-1 h-9 pl-3 pr-2.5 rounded-[10px] border-0 text-sm font-medium text-popover-bg bg-text-primary can-hover:hover:opacity-85 focus-visible:opacity-85 outline-hidden cursor-pointer transition-opacity font-[inherit] [&_svg]:size-4 [&_svg]:opacity-60';
+    done.setAttribute('data-blok-testid', 'inline-equation-done');
+    done.innerHTML = IconReturn;
+    done.prepend(this.i18n.t('tools.equation.done'));
+    // Keep focus in the input so the popover and the saved caret survive the click.
+    done.addEventListener('mousedown', (event) => event.preventDefault());
+    done.addEventListener('click', () => this.confirm());
 
     const preview = document.createElement('div');
 
-    preview.className = 'min-h-[22px] px-2 text-sm text-text-primary';
+    preview.className = 'sr-only';
     preview.setAttribute('data-blok-equation-preview', '');
     // Announce the rendered formula and, crucially, KaTeX parse errors as the
     // user types, so screen-reader users learn the equation is malformed.
@@ -259,7 +310,7 @@ export class EquationInlineTool implements InlineTool {
       }
     });
 
-    wrapper.append(input, preview);
+    wrapper.append(input, done, preview);
 
     return { wrapper, input, preview };
   }
@@ -277,7 +328,18 @@ export class EquationInlineTool implements InlineTool {
       return;
     }
 
-    this.nodes.preview.innerHTML = await renderLatex(source, { displayMode: false });
+    const html = await renderLatex(source, { displayMode: false });
+
+    this.nodes.preview.innerHTML = html;
+
+    if (this.chip !== null) {
+      // A preview, not an edit: keep the block observer out of it.
+      this.chip.setAttribute(DATA_ATTR.mutationFree, 'true');
+      const template = document.createElement('template');
+
+      template.innerHTML = html;
+      this.chip.replaceChildren(template.content);
+    }
   }
 
   /**
@@ -287,6 +349,19 @@ export class EquationInlineTool implements InlineTool {
     const value = this.nodes.input.value.trim();
 
     if (value === '') {
+      this.inlineToolbar.close();
+
+      return;
+    }
+
+    const chip = this.chip;
+
+    if (chip !== null) {
+      this.chip = null;
+      chip.removeAttribute(EDITING_ATTR);
+      void EquationInlineTool.renderInto(chip, value);
+      // The chip is mutation-free, so the block observer skips this change.
+      this.blocks.getBlockByElement(chip)?.dispatchChange();
       this.inlineToolbar.close();
 
       return;
@@ -304,14 +379,38 @@ export class EquationInlineTool implements InlineTool {
    */
   private onOpen(): void {
     const existing = this.selection.findParentTag('SPAN');
-    const source = existing?.getAttribute(EQUATION_ATTR) ?? window.getSelection()?.toString() ?? '';
+    const stored = existing?.getAttribute(EQUATION_ATTR);
+
+    this.chip = stored !== null && stored !== undefined ? existing : this.chipFromSelection();
+
+    const source = this.chip?.getAttribute(EQUATION_ATTR) ?? '';
 
     this.nodes.input.value = source;
     void this.updatePreview(source);
 
-    this.selection.setFakeBackground();
-    this.selection.save();
+    if (this.chip !== null) {
+      this.chip.setAttribute(EDITING_ATTR, '');
+    } else {
+      // A bare caret: nothing to show yet, so keep it for the insert on confirm.
+      this.selection.setFakeBackground();
+      this.selection.save();
+    }
+
     this.focusInputWithRetry();
+  }
+
+  /**
+   * Turn the selected text into an equation chip, as Notion does when the
+   * equation menu opens, so the chip can show the formula while it is edited.
+   */
+  private chipFromSelection(): HTMLElement | null {
+    const selection = typeof window === 'undefined' ? null : window.getSelection();
+
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+      return null;
+    }
+
+    return this.insertChip(selection);
   }
 
   /**
@@ -327,6 +426,9 @@ export class EquationInlineTool implements InlineTool {
       return;
     }
 
+    // Select the formula so typing replaces it.
+    this.nodes.input.select();
+
     window.setTimeout(() => {
       if (document.activeElement !== this.nodes.input) {
         this.nodes.input.focus();
@@ -338,6 +440,15 @@ export class EquationInlineTool implements InlineTool {
    * Popover closed: clean up the fake-background selection highlight.
    */
   private onClose(): void {
+    const chip = this.chip;
+
+    this.chip = null;
+
+    if (chip !== null) {
+      chip.removeAttribute(EDITING_ATTR);
+      void EquationInlineTool.renderInto(chip, chip.getAttribute(EQUATION_ATTR) ?? '');
+    }
+
     this.selection.removeFakeBackground();
     this.selection.clearSaved();
     this.nodes.input.value = '';

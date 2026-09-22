@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "ڪوڊ",
   "toolNames.equation": "مساوات",
   "tools.equation.placeholder": "LaTeX فارمولا داخل ڪريو…",
+  "tools.equation.done": "مڪمل",
   "tools.supSub.superscript": "مٿيون لکت",
   "tools.supSub.subscript": "هيٺيون لکت",
   "tools.code.placeholder": "ڪوڊ لکو…",

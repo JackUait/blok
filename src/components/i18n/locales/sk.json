@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Kód",
   "toolNames.equation": "Rovnica",
   "tools.equation.placeholder": "Zadajte vzorec LaTeX…",
+  "tools.equation.done": "Hotovo",
   "tools.supSub.superscript": "Horný index",
   "tools.supSub.subscript": "Dolný index",
   "tools.code.placeholder": "Napíšte kód…",

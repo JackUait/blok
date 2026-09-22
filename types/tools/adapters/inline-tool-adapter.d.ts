@@ -24,6 +24,11 @@ interface InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, InlineTool>
   allowCaretShortcut: boolean;
 
   /**
+   * Whether the tool's toolbar button replaces the toolbar with the tool's menu.
+   */
+  replacesToolbar: boolean;
+
+  /**
    * Whether the tool's shortcut defers to native browser handling at a
    * collapsed caret (Bold, Italic).
    */

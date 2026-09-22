@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Code",
   "toolNames.equation": "Ekwasyon",
   "tools.equation.placeholder": "Maglagay ng LaTeX formula…",
+  "tools.equation.done": "Tapos",
   "tools.supSub.superscript": "Superscript",
   "tools.supSub.subscript": "Subscript",
   "tools.code.placeholder": "Sumulat ng code…",

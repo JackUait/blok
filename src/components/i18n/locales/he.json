@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "קוד",
   "toolNames.equation": "משוואה",
   "tools.equation.placeholder": "הזן נוסחת LaTeX…",
+  "tools.equation.done": "סיום",
   "tools.supSub.superscript": "כתב עילי",
   "tools.supSub.subscript": "כתב תחתי",
   "tools.code.placeholder": "כתוב קוד…",

@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "کوډ",
   "toolNames.equation": "معادله",
   "tools.equation.placeholder": "د LaTeX فورمول ولیکئ…",
+  "tools.equation.done": "بشپړ",
   "tools.supSub.superscript": "پورتنی لیک",
   "tools.supSub.subscript": "لاندینی لیک",
   "tools.code.placeholder": "کوډ ولیکئ…",

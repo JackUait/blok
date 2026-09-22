@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Kood",
   "toolNames.equation": "Valem",
   "tools.equation.placeholder": "Sisesta LaTeX-i valem…",
+  "tools.equation.done": "Valmis",
   "tools.supSub.superscript": "Ülaindeks",
   "tools.supSub.subscript": "Alaindeks",
   "tools.code.placeholder": "Kirjuta koodi…",

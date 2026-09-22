@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Kode",
   "toolNames.equation": "Persamaan",
   "tools.equation.placeholder": "Masukkan rumus LaTeX…",
+  "tools.equation.done": "Selesai",
   "tools.supSub.superscript": "Superskrip",
   "tools.supSub.subscript": "Subskrip",
   "tools.code.placeholder": "Tulis kode…",

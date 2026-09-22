@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "កូដ",
   "toolNames.equation": "សមីការ",
   "tools.equation.placeholder": "បញ្ចូលរូបមន្ត LaTeX…",
+  "tools.equation.done": "រួចរាល់",
   "tools.supSub.superscript": "អក្សរតូចលើ",
   "tools.supSub.subscript": "អក្សរតូចក្រោម",
   "tools.code.placeholder": "សរសេរកូដ…",

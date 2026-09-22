@@ -252,6 +252,7 @@
   "toolNames.inlineCode": "Kods",
   "toolNames.equation": "Vienādojums",
   "tools.equation.placeholder": "Ievadiet LaTeX formulu…",
+  "tools.equation.done": "Gatavs",
   "tools.supSub.superscript": "Augšraksts",
   "tools.supSub.subscript": "Apakšraksts",
   "tools.code.placeholder": "Rakstiet kodu…",

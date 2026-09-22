@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "โค้ด",
   "toolNames.equation": "สมการ",
   "tools.equation.placeholder": "ป้อนสูตร LaTeX…",
+  "tools.equation.done": "เสร็จสิ้น",
   "tools.supSub.superscript": "ตัวยก",
   "tools.supSub.subscript": "ตัวห้อย",
   "tools.code.placeholder": "เขียนโค้ด…",

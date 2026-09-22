@@ -252,6 +252,7 @@
   "toolNames.inlineCode": "Kod",
   "toolNames.equation": "Persamaan",
   "tools.equation.placeholder": "Masukkan formula LaTeX…",
+  "tools.equation.done": "Selesai",
   "tools.supSub.superscript": "Superskrip",
   "tools.supSub.subscript": "Subskrip",
   "tools.code.placeholder": "Tulis kod…",

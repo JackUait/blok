@@ -252,6 +252,7 @@
   "toolNames.inlineCode": "코드",
   "toolNames.equation": "수식",
   "tools.equation.placeholder": "LaTeX 수식을 입력하세요…",
+  "tools.equation.done": "완료",
   "tools.supSub.superscript": "위 첨자",
   "tools.supSub.subscript": "아래 첨자",
   "tools.code.placeholder": "코드를 입력하세요…",

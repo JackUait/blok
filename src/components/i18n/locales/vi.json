@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Mã",
   "toolNames.equation": "Phương trình",
   "tools.equation.placeholder": "Nhập công thức LaTeX…",
+  "tools.equation.done": "Xong",
   "tools.supSub.superscript": "Chỉ số trên",
   "tools.supSub.subscript": "Chỉ số dưới",
   "tools.code.placeholder": "Viết mã…",

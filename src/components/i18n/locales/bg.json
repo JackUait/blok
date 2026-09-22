@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Вграден код",
   "toolNames.equation": "Уравнение",
   "tools.equation.placeholder": "Въведете формула на LaTeX…",
+  "tools.equation.done": "Готово",
   "tools.supSub.superscript": "Горен индекс",
   "tools.supSub.subscript": "Долен индекс",
   "tools.code.placeholder": "Напишете код…",

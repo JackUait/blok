@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Ενσωματωμένος κώδικας",
   "toolNames.equation": "Εξίσωση",
   "tools.equation.placeholder": "Εισαγάγετε έναν τύπο LaTeX…",
+  "tools.equation.done": "Τέλος",
   "tools.supSub.superscript": "Εκθέτης",
   "tools.supSub.subscript": "Δείκτης",
   "tools.code.placeholder": "Γράψτε κώδικα…",

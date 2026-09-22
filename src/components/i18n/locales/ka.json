@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "კოდი",
   "toolNames.equation": "განტოლება",
   "tools.equation.placeholder": "შეიყვანეთ LaTeX ფორმულა…",
+  "tools.equation.done": "მზადაა",
   "tools.supSub.superscript": "ზედა ინდექსი",
   "tools.supSub.subscript": "ქვედა ინდექსი",
   "tools.code.placeholder": "დაწერეთ კოდი…",

@@ -82,6 +82,16 @@ export class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, IInlineT
   }
 
   /**
+   * Whether the tool's toolbar button closes the toolbar and opens only the
+   * tool's menu, as its shortcut does.
+   */
+  public get replacesToolbar(): boolean {
+    const constructable = this.constructable as InlineToolConstructable | undefined;
+
+    return constructable?.replacesToolbar ?? false;
+  }
+
+  /**
    * Whether, at a collapsed caret, the tool's keyboard shortcut should defer to
    * the browser's own native handling instead of being intercepted. True for
    * format tools with a native browser equivalent (Bold, Italic): the browser

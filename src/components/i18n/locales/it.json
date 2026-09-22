@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Codice in linea",
   "toolNames.equation": "Equazione",
   "tools.equation.placeholder": "Inserisci una formula LaTeX…",
+  "tools.equation.done": "Fine",
   "tools.supSub.superscript": "Apice",
   "tools.supSub.subscript": "Pedice",
   "tools.code.placeholder": "Scrivi codice…",

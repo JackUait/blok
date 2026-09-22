@@ -252,6 +252,7 @@
   "toolNames.inlineCode": "Kodas",
   "toolNames.equation": "Formulė",
   "tools.equation.placeholder": "Įveskite LaTeX formulę…",
+  "tools.equation.done": "Atlikta",
   "tools.supSub.superscript": "Viršutinis indeksas",
   "tools.supSub.subscript": "Apatinis indeksas",
   "tools.code.placeholder": "Rašykite kodą…",

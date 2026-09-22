@@ -252,6 +252,7 @@
   "toolNames.inlineCode": "ကုဒ်",
   "toolNames.equation": "ညီမျှခြင်း",
   "tools.equation.placeholder": "LaTeX ဖော်မြူလာ ထည့်ပါ…",
+  "tools.equation.done": "ပြီးပြီ",
   "tools.supSub.superscript": "အပေါ်စာလုံးငယ်",
   "tools.supSub.subscript": "အောက်စာလုံးငယ်",
   "tools.code.placeholder": "ကုဒ်ရေးပါ…",

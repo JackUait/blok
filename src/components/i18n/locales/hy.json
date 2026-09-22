@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Կոդ",
   "toolNames.equation": "Հավասարում",
   "tools.equation.placeholder": "Մուտքագրեք LaTeX բանաձև…",
+  "tools.equation.done": "Պատրաստ է",
   "tools.supSub.superscript": "Վերին ինդեքս",
   "tools.supSub.subscript": "Ստորին ինդեքս",
   "tools.code.placeholder": "Գրեք կոդ…",

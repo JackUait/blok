@@ -74,6 +74,28 @@ const countRenderedFormulas = async (page: Page): Promise<number> => {
   return page.evaluate(() => document.querySelectorAll('span[data-latex] math').length);
 };
 
+/**
+ * The single equation chip: its stored source, the source KaTeX is showing,
+ * and whether it is painted as being edited. Read in-page because the chip is
+ * KaTeX output with no role or test id.
+ * @param page - page under test
+ */
+const readChip = async (page: Page): Promise<{ latex: string | null; shown: string | null; highlighted: boolean } | null> => {
+  return page.evaluate(() => {
+    const chip = document.querySelector('span[data-latex]');
+
+    if (chip === null) {
+      return null;
+    }
+
+    return {
+      latex: chip.getAttribute('data-latex'),
+      shown: chip.querySelector('annotation')?.textContent ?? null,
+      highlighted: getComputedStyle(chip).backgroundColor !== 'rgba(0, 0, 0, 0)',
+    };
+  });
+};
+
 const selectAllInFirstEditable = async (page: Page): Promise<void> => {
   await page.evaluate((holder) => {
     const wrapper = document.getElementById(holder);
@@ -275,5 +297,76 @@ test.describe('Inline equation shortcut', () => {
 
     // The rendering is derived: it must not accumulate in the document.
     expect(savedText).toBe('<span data-latex="E=mc^2">E=mc^2</span>');
+  });
+  test('editing a selection shows the formula live in a highlighted chip and Done stores it', async ({ page }) => {
+    await createBlokWithEquation(page, [
+      { type: 'paragraph', data: { text: 'x^2' } },
+    ]);
+
+    await selectAllInFirstEditable(page);
+    await page.keyboard.press(`${MODIFIER_KEY}+Shift+KeyE`);
+
+    const input = page.getByTestId('inline-equation-input');
+
+    await expect(input).toBeFocused();
+    await expect.poll(() => readChip(page)).toMatchObject({ latex: 'x^2', highlighted: true });
+
+    await input.fill('y^3');
+    await expect.poll(() => readChip(page)).toMatchObject({ latex: 'x^2', shown: 'y^3' });
+
+    await page.getByTestId('inline-equation-done').click();
+
+    await expect(input).toBeHidden();
+    await expect.poll(() => readChip(page)).toEqual({ latex: 'y^3', shown: 'y^3', highlighted: false });
+
+    const savedText = await page.evaluate(async () => {
+      const data = await window.blokInstance?.save();
+      const block = data?.blocks?.[0] as { data?: { text?: string } } | undefined;
+
+      return block?.data?.text ?? '';
+    });
+
+    expect(savedText).toBe('<span data-latex="y^3">y^3</span>');
+  });
+
+  test('closing without Done puts the chip back to its stored formula', async ({ page }) => {
+    await createBlokWithEquation(page, [
+      { type: 'paragraph', data: { text: 'x^2' } },
+    ]);
+
+    await selectAllInFirstEditable(page);
+    await page.keyboard.press(`${MODIFIER_KEY}+Shift+KeyE`);
+
+    const input = page.getByTestId('inline-equation-input');
+
+    await input.fill('z^9');
+    await expect.poll(() => readChip(page)).toMatchObject({ shown: 'z^9' });
+
+    await page.keyboard.press('Escape');
+
+    await expect(input).toBeHidden();
+    await expect.poll(() => readChip(page)).toEqual({ latex: 'x^2', shown: 'x^2', highlighted: false });
+  });
+  test('clicking the toolbar equation button replaces the toolbar with the equation menu', async ({ page }) => {
+    await createBlokWithEquation(page, [
+      { type: 'paragraph', data: { text: 'x^2' } },
+    ]);
+
+    await selectAllInFirstEditable(page);
+
+    const equationButton = page.locator('[data-blok-item-name="equation"]');
+
+    await expect(equationButton).toBeVisible();
+    await equationButton.click();
+
+    const input = page.getByTestId('inline-equation-input');
+
+    await expect(input).toBeFocused();
+    await expect(page.locator('[data-blok-item-name="bold"]')).toHaveCount(0);
+
+    await page.getByTestId('inline-equation-done').click();
+
+    await expect(input).toBeHidden();
+    await expect.poll(() => readChip(page)).toEqual({ latex: 'x^2', shown: 'x^2', highlighted: false });
   });
 });

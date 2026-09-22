@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "కోడ్",
   "toolNames.equation": "సమీకరణం",
   "tools.equation.placeholder": "LaTeX సూత్రాన్ని నమోదు చేయండి…",
+  "tools.equation.done": "పూర్తయింది",
   "tools.supSub.superscript": "సూపర్‌స్క్రిప్ట్",
   "tools.supSub.subscript": "సబ్‌స్క్రిప్ట్",
   "tools.code.placeholder": "కోడ్ రాయండి…",

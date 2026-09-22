@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Kód",
   "toolNames.equation": "Képlet",
   "tools.equation.placeholder": "Írjon be egy LaTeX-képletet…",
+  "tools.equation.done": "Kész",
   "tools.supSub.superscript": "Felső index",
   "tools.supSub.subscript": "Alsó index",
   "tools.code.placeholder": "Írjon kódot…",

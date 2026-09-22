@@ -112,8 +112,18 @@
     background-color: var(--blok-inline-code-bg);
     color: var(--blok-inline-code-text);
     padding: var(--blok-space-0-5) var(--blok-space-1);
-    border-radius: 0.25em;
     font-size: 0.875em;
+  }
+
+  /* The equation chip the equation menu is editing. Same token as the text
+     selection, so the chip reads as the selection that turned into it. */
+  :where([data-blok-interface]) span[data-latex][data-blok-equation-editing] {
+    background-color: var(--blok-selection-inline);
+  }
+
+  :where([data-blok-interface], [data-blok-popover]) code:not(pre code),
+  :where([data-blok-interface]) span[data-latex][data-blok-equation-editing] {
+    border-radius: 0.25em;
   }
 
   /* Add the correct font size in all browsers. */

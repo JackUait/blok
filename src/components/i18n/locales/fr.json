@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Code en ligne",
   "toolNames.equation": "Équation",
   "tools.equation.placeholder": "Saisissez une formule LaTeX…",
+  "tools.equation.done": "Terminé",
   "tools.supSub.superscript": "Exposant",
   "tools.supSub.subscript": "Indice",
   "tools.code.placeholder": "Saisissez du code…",

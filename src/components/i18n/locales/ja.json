@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "インライン コード",
   "toolNames.equation": "数式",
   "tools.equation.placeholder": "LaTeX 数式を入力…",
+  "tools.equation.done": "完了",
   "tools.supSub.superscript": "上付き文字",
   "tools.supSub.subscript": "下付き文字",
   "tools.code.placeholder": "コードを入力…",

@@ -223,6 +223,16 @@ const EXEMPT_FOCUS_SELECTORS: FocusExemption[] = [
     reason: 'Text input: the link URL field in its invalid state.',
   },
   {
+    file: 'src/components/inline-tools/inline-tool-equation.ts',
+    match: 'focus:bg-popover-bg',
+    reason: 'Text input: the equation formula field.',
+  },
+  {
+    file: 'src/components/inline-tools/inline-tool-equation.ts',
+    match: 'focus:border-search-input-focus-border',
+    reason: 'Text input: the equation formula field.',
+  },
+  {
     file: 'src/components/utils/notifier/draw.ts',
     match: 'focus:border-white/20',
     reason: 'Text input: the notifier prompt field.',

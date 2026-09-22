@@ -252,6 +252,7 @@
   "toolNames.inlineCode": "Код",
   "toolNames.equation": "Равенка",
   "tools.equation.placeholder": "Внесете LaTeX формула…",
+  "tools.equation.done": "Готово",
   "tools.supSub.superscript": "Горен индекс",
   "tools.supSub.subscript": "Долен индекс",
   "tools.code.placeholder": "Напишете код…",

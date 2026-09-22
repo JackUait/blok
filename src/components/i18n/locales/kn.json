@@ -252,6 +252,7 @@
   "toolNames.inlineCode": "ಕೋಡ್",
   "toolNames.equation": "ಸಮೀಕರಣ",
   "tools.equation.placeholder": "LaTeX ಸೂತ್ರವನ್ನು ನಮೂದಿಸಿ…",
+  "tools.equation.done": "ಮುಗಿದಿದೆ",
   "tools.supSub.superscript": "ಸೂಪರ್‌ಸ್ಕ್ರಿಪ್ಟ್",
   "tools.supSub.subscript": "ಸಬ್‌ಸ್ಕ್ರಿಪ್ಟ್",
   "tools.code.placeholder": "ಕೋಡ್ ಬರೆಯಿರಿ…",

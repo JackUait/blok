@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Umetnuti kod",
   "toolNames.equation": "Jednačina",
   "tools.equation.placeholder": "Unesite LaTeX formulu…",
+  "tools.equation.done": "Gotovo",
   "tools.supSub.superscript": "Eksponent",
   "tools.supSub.subscript": "Indeks",
   "tools.code.placeholder": "Napišite kod…",

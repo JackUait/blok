@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "ઇનલાઇન કોડ",
   "toolNames.equation": "સમીકરણ",
   "tools.equation.placeholder": "LaTeX સૂત્ર દાખલ કરો…",
+  "tools.equation.done": "થઈ ગયું",
   "tools.supSub.superscript": "સુપરસ્ક્રિપ્ટ",
   "tools.supSub.subscript": "સબસ્ક્રિપ્ટ",
   "tools.code.placeholder": "કોડ લખો…",

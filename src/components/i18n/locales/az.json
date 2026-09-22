@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Kod",
   "toolNames.equation": "Tənlik",
   "tools.equation.placeholder": "LaTeX düsturu daxil edin…",
+  "tools.equation.done": "Hazır",
   "tools.supSub.superscript": "Yuxarı indeks",
   "tools.supSub.subscript": "Aşağı indeks",
   "tools.code.placeholder": "Kod yazın…",

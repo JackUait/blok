@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "መስመር ውስጥ ኮድ",
   "toolNames.equation": "እኩልታ",
   "tools.equation.placeholder": "የLaTeX ቀመር ያስገቡ…",
+  "tools.equation.done": "ጨርስ",
   "tools.supSub.superscript": "የላይ ጽሑፍ",
   "tools.supSub.subscript": "የታች ጽሑፍ",
   "tools.code.placeholder": "ኮድ ይጻፉ…",

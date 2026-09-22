@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Inline-kode",
   "toolNames.equation": "Ligning",
   "tools.equation.placeholder": "Indtast en LaTeX-formel…",
+  "tools.equation.done": "Færdig",
   "tools.supSub.superscript": "Hævet skrift",
   "tools.supSub.subscript": "Sænket skrift",
   "tools.code.placeholder": "Skriv kode…",

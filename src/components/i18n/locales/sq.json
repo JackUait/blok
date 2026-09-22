@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Kod",
   "toolNames.equation": "Ekuacion",
   "tools.equation.placeholder": "Shkruaj një formulë LaTeX…",
+  "tools.equation.done": "U krye",
   "tools.supSub.superscript": "Eksponent",
   "tools.supSub.subscript": "Indeks",
   "tools.code.placeholder": "Shkruaj kod…",

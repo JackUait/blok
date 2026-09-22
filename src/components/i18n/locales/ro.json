@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Cod",
   "toolNames.equation": "Ecuație",
   "tools.equation.placeholder": "Introduceți o formulă LaTeX…",
+  "tools.equation.done": "Gata",
   "tools.supSub.superscript": "Exponent",
   "tools.supSub.subscript": "Indice",
   "tools.code.placeholder": "Scrieți cod…",

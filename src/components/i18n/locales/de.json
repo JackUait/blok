@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "Inline-Code",
   "toolNames.equation": "Gleichung",
   "tools.equation.placeholder": "LaTeX-Formel eingeben…",
+  "tools.equation.done": "Fertig",
   "tools.supSub.superscript": "Hochgestellt",
   "tools.supSub.subscript": "Tiefgestellt",
   "tools.code.placeholder": "Code schreiben…",

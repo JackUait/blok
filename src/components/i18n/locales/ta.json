@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "வரிக்குள் குறியீடு",
   "toolNames.equation": "சமன்பாடு",
   "tools.equation.placeholder": "LaTeX சூத்திரத்தை உள்ளிடவும்…",
+  "tools.equation.done": "முடிந்தது",
   "tools.supSub.superscript": "மேலெழுத்து",
   "tools.supSub.subscript": "கீழெழுத்து",
   "tools.code.placeholder": "குறியீட்டை எழுதவும்…",

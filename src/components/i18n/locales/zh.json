@@ -241,6 +241,7 @@
   "toolNames.inlineCode": "行内代码",
   "toolNames.equation": "公式",
   "tools.equation.placeholder": "输入 LaTeX 公式…",
+  "tools.equation.done": "完成",
   "tools.supSub.superscript": "上标",
   "tools.supSub.subscript": "下标",
   "tools.code.placeholder": "编写代码…",

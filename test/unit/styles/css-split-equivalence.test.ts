@@ -582,8 +582,12 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const REMOTE_SELECTION_SHADE_BYTES = 607;
     // The highlight on the equation chip being edited adds 444 bytes in preflight.css.
     const EQUATION_EDITING_CHIP_BYTES = 444;
+    // Inline tool menu entrance, the toolbar hand-off fade and the chip's
+    // highlight fade add 2,271 bytes across popover-animation.css,
+    // keyframes.css and preflight.css.
+    const INLINE_MENU_MOTION_BYTES = 2_271;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
-      + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES;
+      + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

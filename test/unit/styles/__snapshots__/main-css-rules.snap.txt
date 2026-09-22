@@ -221,9 +221,31 @@
   animation: blok-link-reveal 140ms ease-out;
 }
 
+[data-blok-inline-direct-menu] > [data-blok-popover-container] {
+  --blok-direct-menu-origin-x: 0;
+  transform-origin: var(--blok-direct-menu-origin-x) top;
+  animation: blok-direct-menu-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+[data-blok-inline-direct-menu='toolbar'] > [data-blok-popover-container] {
+  animation-delay: 40ms;
+}
+
+[data-blok-inline-direct-menu] [data-blok-equation-done] {
+  animation: blok-direct-menu-part-in 260ms cubic-bezier(0.16, 1, 0.3, 1) 90ms both;
+}
+
+[data-blok-inline-toolbar-ghost] {
+  animation: blok-inline-toolbar-ghost-out 160ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
 [@media (prefers-reduced-motion: reduce)] [data-blok-popover-container], [data-blok-popover-item-icon-chevron-right] {
   transition: none;
   transform: none;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-inline-direct-menu] > [data-blok-popover-container], [data-blok-inline-direct-menu] [data-blok-equation-done], [data-blok-inline-toolbar-ghost] {
+  animation: none;
 }
 
 [@media (prefers-reduced-motion: reduce)] [data-link-suggestion]:not(.hidden), [data-blok-link-tool-error]:not([hidden]) {
@@ -1045,6 +1067,14 @@
   color: var(--blok-inline-code-text);
   padding: var(--blok-space-0-5) var(--blok-space-1);
   font-size: 0.875em;
+}
+
+[@layer base] :where([data-blok-interface]) span[data-latex] {
+  transition: background-color 160ms ease-out;
+}
+
+[@layer base > @media (prefers-reduced-motion: reduce)] :where([data-blok-interface]) span[data-latex] {
+  transition: none;
 }
 
 [@layer base] :where([data-blok-interface]) span[data-latex][data-blok-equation-editing] {

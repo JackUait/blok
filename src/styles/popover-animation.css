@@ -369,11 +369,42 @@
   animation: blok-link-reveal 140ms ease-out;
 }
 
+/* ─── Inline tool menu: entrance & hand-off from the toolbar ────────────── */
+
+/* The inline toolbar itself appears instantly (rule above); a tool's own menu
+   eases in. The attribute is set by InlineToolbar.applyDirectMenuLook, after
+   positioning, so the animation never plays at the wrong spot. Opened from
+   the toolbar, it waits a beat so the toolbar's fading copy
+   (toolbar-ghost.ts) leads and the two read as one motion. */
+[data-blok-inline-direct-menu] > [data-blok-popover-container] {
+  --blok-direct-menu-origin-x: 0;
+  transform-origin: var(--blok-direct-menu-origin-x) top;
+  animation: blok-direct-menu-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+[data-blok-inline-direct-menu='toolbar'] > [data-blok-popover-container] {
+  animation-delay: 40ms;
+}
+
+[data-blok-inline-direct-menu] [data-blok-equation-done] {
+  animation: blok-direct-menu-part-in 260ms cubic-bezier(0.16, 1, 0.3, 1) 90ms both;
+}
+
+[data-blok-inline-toolbar-ghost] {
+  animation: blok-inline-toolbar-ghost-out 160ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-blok-popover-container],
   [data-blok-popover-item-icon-chevron-right] {
     transition: none;
     transform: none;
+  }
+
+  [data-blok-inline-direct-menu] > [data-blok-popover-container],
+  [data-blok-inline-direct-menu] [data-blok-equation-done],
+  [data-blok-inline-toolbar-ghost] {
+    animation: none;
   }
 
   [data-link-suggestion]:not(.hidden),

@@ -409,4 +409,109 @@ test.describe('Inline equation shortcut', () => {
 
     expect(savedText).toBe('mass: <span data-latex="E=mc^3">E=mc^3</span> end');
   });
+  test.describe('motion', () => {
+    /**
+     * The direct menu's entrance: which animation its surface runs and where
+     * that animation grows from. Read in-page: animation state has no locator.
+     * @param page - page under test
+     */
+    const readMenuMotion = async (page: Page): Promise<{ animation: string; from: string | null; originX: string } | null> => {
+      return page.evaluate(() => {
+        const menu = document.querySelector('[data-blok-inline-direct-menu]');
+        const surface = menu?.querySelector('[data-blok-popover-container]');
+
+        if (!menu || !surface) {
+          return null;
+        }
+
+        return {
+          animation: getComputedStyle(surface).animationName,
+          from: menu.getAttribute('data-blok-inline-direct-menu'),
+          originX: getComputedStyle(surface).transformOrigin.split(' ')[0],
+        };
+      });
+    };
+
+    const countGhosts = async (page: Page): Promise<number> => {
+      return page.evaluate(() => document.querySelectorAll('[data-blok-inline-toolbar-ghost]').length);
+    };
+
+    test('the equation menu eases in when opened by its shortcut', async ({ page }) => {
+      await createBlokWithEquation(page, [
+        { type: 'paragraph', data: { text: 'x^2' } },
+      ]);
+
+      await selectAllInFirstEditable(page);
+      await page.keyboard.press(`${MODIFIER_KEY}+Shift+KeyE`);
+
+      await expect(page.getByTestId('inline-equation-input')).toBeFocused();
+      await expect.poll(() => readMenuMotion(page)).toMatchObject({ animation: 'blok-direct-menu-in', from: 'shortcut' });
+      expect(await countGhosts(page)).toBe(0);
+    });
+
+    test('switching from the toolbar fades the toolbar out and grows the menu from the button', async ({ page }) => {
+      await createBlokWithEquation(page, [
+        { type: 'paragraph', data: { text: 'x^2 and some more text' } },
+      ]);
+
+      await selectAllInFirstEditable(page);
+
+      const equationButton = page.locator('[data-blok-item-name="equation"]');
+
+      await expect(equationButton).toBeVisible();
+
+      // The ghost lives ~160ms, so record it the moment it is inserted.
+      await page.evaluate(() => {
+        const observer = new MutationObserver(() => {
+          const el = document.querySelector('[data-blok-inline-toolbar-ghost]');
+
+          if (el === null) {
+            return;
+          }
+
+          observer.disconnect();
+          document.body.dataset.ghost = JSON.stringify({
+            hidden: el.getAttribute('aria-hidden'),
+            inert: el.hasAttribute('inert'),
+            pointerEvents: getComputedStyle(el).pointerEvents,
+            animation: getComputedStyle(el).animationName,
+            // Stacks with the toolbar, or the next block paints over the fading copy.
+            zIndex: getComputedStyle(el).zIndex === getComputedStyle(document.querySelector('[data-blok-testid="inline-toolbar"]') ?? el).zIndex && getComputedStyle(el).zIndex !== 'auto',
+            leakedHooks: el.querySelectorAll('[data-blok-item-name], [data-blok-testid], [id], [role]').length,
+          });
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+      });
+      await equationButton.click();
+
+      await expect(page.getByTestId('inline-equation-input')).toBeFocused();
+
+      const ghost = await page.evaluate(() => JSON.parse(document.body.dataset.ghost ?? 'null') as unknown);
+
+      expect(ghost).toEqual({ hidden: 'true', inert: true, pointerEvents: 'none', animation: 'blok-inline-toolbar-ghost-out', zIndex: true, leakedHooks: 0 });
+
+      const motion = await readMenuMotion(page);
+
+      expect(motion).toMatchObject({ animation: 'blok-direct-menu-in', from: 'toolbar' });
+      // Grows from the clicked button, not from the menu's left edge.
+      expect(Number.parseFloat(motion?.originX ?? '0')).toBeGreaterThan(0);
+
+      await expect.poll(() => countGhosts(page)).toBe(0);
+    });
+
+    test('reduced motion opens the menu without animating and without a ghost', async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await createBlokWithEquation(page, [
+        { type: 'paragraph', data: { text: 'x^2' } },
+      ]);
+
+      await selectAllInFirstEditable(page);
+      await page.locator('[data-blok-item-name="equation"]').click();
+
+      await expect(page.getByTestId('inline-equation-input')).toBeFocused();
+      await expect.poll(() => readMenuMotion(page)).toMatchObject({ animation: 'none' });
+      expect(await countGhosts(page)).toBe(0);
+    });
+  });
 });

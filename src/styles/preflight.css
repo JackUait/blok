@@ -117,6 +117,16 @@
 
   /* The equation chip the equation menu is editing. Same token as the text
      selection, so the chip reads as the selection that turned into it. */
+  :where([data-blok-interface]) span[data-latex] {
+    transition: background-color 160ms ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :where([data-blok-interface]) span[data-latex] {
+      transition: none;
+    }
+  }
+
   :where([data-blok-interface]) span[data-latex][data-blok-equation-editing] {
     background-color: var(--blok-selection-inline);
   }

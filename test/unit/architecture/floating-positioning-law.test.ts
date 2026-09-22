@@ -115,6 +115,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'components/modules/drag/preview/DragPreview.ts': 'Fixed pointer-following preview; root coordinates refresh on every drag pointer update.',
   'components/modules/drag/utils/ColumnDropAnimation.ts': 'Ephemeral fixed drag preview animates to a viewport target rect and is then removed.',
   'components/modules/rectangleSelection.ts': 'Selection rectangle converts pointer coordinates into its measured local overlay container.',
+  'components/modules/toolbar/inline/toolbar-ghost.ts': 'Fading copy of the inline toolbar, placed once at the toolbar\'s measured spot beside its wrapper and removed within 400ms; it never tracks movement.',
   'components/modules/toolbar/index.ts': 'Editor-owned toolbar wrapper uses locally resolved offsets supplied by the toolbar positioner.',
   'components/modules/toolbar/positioning.ts': 'Toolbar geometry is converted into offsets local to the editor-owned wrapper.',
   'components/utils/link-hover-card.ts': 'Fixed top-layer hover card continuously tracks its live anchor and viewport bounds.',

@@ -116,3 +116,37 @@
   50%  { transform: translateX(3px); }
   100% { transform: translateX(0); }
 }
+
+/* An inline tool's own menu opening (Equation, Link, Marker) — call sites in
+   popover-animation.css. Transform-origin is set per open, at the clicked
+   toolbar button, so the menu grows out of it. */
+@keyframes blok-direct-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A control inside that menu settling in just after the surface. */
+@keyframes blok-direct-menu-part-in {
+  from {
+    opacity: 0;
+    transform: translateX(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The toolbar's fading copy, shrinking toward the button that was clicked. */
+@keyframes blok-inline-toolbar-ghost-out {
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}

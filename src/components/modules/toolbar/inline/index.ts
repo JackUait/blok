@@ -22,6 +22,7 @@ import { InlinePositioner } from './positioner';
 import { InlineSelectionValidator } from './selection-validator';
 import { InlineShortcutManager } from './shortcuts-manager';
 import { InlineToolsManager } from './tools-manager';
+import { mountToolbarGhost } from './toolbar-ghost';
 import type { InlineToolbarNodes } from './types';
 
 /**
@@ -142,6 +143,16 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     onOpen?: () => void;
     onClose?: () => void;
   } | null = null;
+
+  /**
+   * How the next direct menu is being opened, for its entrance animation:
+   * from the toolbar's button (it grows from `originX`, a viewport x) or from
+   * a shortcut or click elsewhere (it grows from its own corner).
+   */
+  private directMenuEntrance: { from: 'toolbar' | 'shortcut'; originX: number | null } = {
+    from: 'shortcut',
+    originX: null,
+  };
 
   /**
    * Helper instances
@@ -614,7 +625,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
       return {
         ...button,
         onActivate: () => {
-          void this.openToolMenuDirect(name);
+          void this.openToolMenuDirect(name, 'toolbar');
         },
       } as PopoverItemParams;
     });
@@ -771,7 +782,9 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
    * value); all other validity checks still apply.
    * @param toolName - inline tool whose menu should open
    */
-  private async openToolMenuDirect(toolName: string): Promise<void> {
+  private async openToolMenuDirect(toolName: string, from: 'toolbar' | 'shortcut' = 'shortcut'): Promise<void> {
+    this.directMenuEntrance = { from, originX: from === 'toolbar' ? this.leaveToolbarGhost(toolName) : null };
+
     // Tear down whatever is open (full toolbar or a previous menu) first.
     this.close();
     this.initialize();
@@ -877,6 +890,19 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
       // MathML stays hidden.
       container.style.height = '';
       container.className = twMerge(container.className, 'h-fit w-max flex-col p-1.5 max-h-none');
+
+      const { from, originX } = this.directMenuEntrance;
+
+      if (originX !== null) {
+        // Grow from the button that was clicked, kept inside the menu's box.
+        const box = container.getBoundingClientRect();
+        const x = Math.min(Math.max(originX - box.left, 0), box.width);
+
+        container.style.setProperty('--blok-direct-menu-origin-x', `${x}px`);
+      }
+
+      // Set last: the entrance animation starts the moment this matches.
+      popoverEl.setAttribute('data-blok-inline-direct-menu', from);
     }
 
     const items = popoverEl.querySelector<HTMLElement>(`[${DATA_ATTR.popoverItems}]`);
@@ -884,6 +910,27 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     if (items) {
       items.className = twMerge(items.className, 'block w-full pb-0');
     }
+  }
+
+  /**
+   * Leave a fading copy of the open toolbar behind as it is swapped for a
+   * tool's menu. Returns the clicked button's centre x (viewport), which the
+   * menu grows from, or null when there is no toolbar to hand off from.
+   * @param toolName - the tool whose button was clicked
+   */
+  private leaveToolbarGhost(toolName: string): number | null {
+    const root = this.popover?.getElement?.();
+
+    if (!root || !this.nodes.wrapper) {
+      return null;
+    }
+
+    const button = root.querySelector(`[${DATA_ATTR.itemName}="${toolName}"]`)?.getBoundingClientRect();
+    const originX = button === undefined ? null : button.left + button.width / 2;
+
+    mountToolbarGhost(root, this.nodes.wrapper, originX);
+
+    return originX;
   }
 
   /**

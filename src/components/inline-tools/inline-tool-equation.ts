@@ -287,6 +287,8 @@ export class EquationInlineTool implements InlineTool {
     done.type = 'button';
     done.className = 'shrink-0 inline-flex items-center gap-1 h-7 pl-2.5 pr-2 rounded-md border-0 text-[13px] font-medium text-popover-bg bg-text-primary can-hover:hover:opacity-85 focus-visible:opacity-85 outline-hidden cursor-pointer transition-opacity font-[inherit] [&_svg]:size-3.5 [&_svg]:opacity-60';
     done.setAttribute('data-blok-testid', 'inline-equation-done');
+    // Styling hook for the button's entrance, so CSS never keys off a test id.
+    done.setAttribute('data-blok-equation-done', '');
     done.innerHTML = IconReturn;
     done.prepend(this.i18n.t('tools.equation.done'));
     // Keep focus in the input so the popover and the saved caret survive the click.

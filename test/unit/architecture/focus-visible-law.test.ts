@@ -224,13 +224,13 @@ const EXEMPT_FOCUS_SELECTORS: FocusExemption[] = [
   },
   {
     file: 'src/components/inline-tools/inline-tool-equation.ts',
-    match: 'focus:bg-popover-bg',
-    reason: 'Text input: the equation formula field.',
+    match: 'focus-within:bg-popover-bg',
+    reason: 'Text input: the equation formula field (its box wraps the input).',
   },
   {
     file: 'src/components/inline-tools/inline-tool-equation.ts',
-    match: 'focus:border-search-input-focus-border',
-    reason: 'Text input: the equation formula field.',
+    match: 'focus-within:border-search-input-focus-border',
+    reason: 'Text input: the equation formula field (its box wraps the input).',
   },
   {
     file: 'src/components/utils/notifier/draw.ts',

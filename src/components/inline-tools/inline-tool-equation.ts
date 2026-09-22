@@ -270,7 +270,8 @@ export class EquationInlineTool implements InlineTool {
   private createUi(): { wrapper: HTMLElement; input: HTMLInputElement; preview: HTMLElement } {
     const wrapper = document.createElement('div');
 
-    wrapper.className = 'flex items-center gap-1 p-1';
+    // The wrapper is the field; Done sits inside it, inset 4px from the edge.
+    wrapper.className = 'relative flex items-center gap-2 w-[300px] h-9 pl-3 pr-[3px] rounded-[10px] border border-transparent bg-item-hover-bg transition-[background-color,border-color] duration-150 ease-out focus-within:bg-popover-bg focus-within:border-search-input-focus-border';
     wrapper.setAttribute('data-blok-equation-tool', '');
 
     const input = document.createElement('input');
@@ -278,13 +279,13 @@ export class EquationInlineTool implements InlineTool {
     input.type = 'text';
     input.placeholder = this.i18n.t('tools.equation.placeholder');
     input.enterKeyHint = 'done';
-    input.className = 'w-[240px] min-w-0 m-0 px-2.5 py-1.5 font-mono text-sm leading-[22px] text-text-primary bg-item-hover-bg border border-transparent rounded-[10px]! outline-hidden box-border appearance-none placeholder:text-gray-text transition-[background-color,border-color] duration-150 ease-out focus:bg-popover-bg focus:border-search-input-focus-border';
+    input.className = 'flex-1 min-w-0 m-0 p-0 font-mono text-sm leading-[22px] text-text-primary bg-transparent border-0 outline-hidden appearance-none placeholder:text-gray-text';
     input.setAttribute('data-blok-testid', 'inline-equation-input');
 
     const done = document.createElement('button');
 
     done.type = 'button';
-    done.className = 'shrink-0 inline-flex items-center gap-1 h-9 pl-3 pr-2.5 rounded-[10px] border-0 text-sm font-medium text-popover-bg bg-text-primary can-hover:hover:opacity-85 focus-visible:opacity-85 outline-hidden cursor-pointer transition-opacity font-[inherit] [&_svg]:size-4 [&_svg]:opacity-60';
+    done.className = 'shrink-0 inline-flex items-center gap-1 h-7 pl-2.5 pr-2 rounded-md border-0 text-[13px] font-medium text-popover-bg bg-text-primary can-hover:hover:opacity-85 focus-visible:opacity-85 outline-hidden cursor-pointer transition-opacity font-[inherit] [&_svg]:size-3.5 [&_svg]:opacity-60';
     done.setAttribute('data-blok-testid', 'inline-equation-done');
     done.innerHTML = IconReturn;
     done.prepend(this.i18n.t('tools.equation.done'));

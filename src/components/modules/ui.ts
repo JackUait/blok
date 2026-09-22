@@ -30,6 +30,7 @@ import { SelectionController } from './uiControllers/controllers/selection';
 import { createDocumentClickedHandler } from './uiControllers/handlers/click';
 import { createRedactorTouchHandler } from './uiControllers/handlers/touch';
 import { ToggleShortcuts } from '../../tools/toggle/toggle-shortcuts';
+import { EQUATION_SOURCE_ATTR } from '../../shared/equation-mark';
 
 /**
  * Classes that hide an empty, focused block's placeholder while the toolbox is open.
@@ -1331,6 +1332,14 @@ export class UI extends Module<UINodes> {
    */
   private redactorClicked(event: MouseEvent): void {
     const target = event.target as Element | null;
+    const chip = target?.closest?.(`span[${EQUATION_SOURCE_ATTR}]`);
+
+    if (chip instanceof HTMLElement && event.button === 0 && !this.Blok.ReadOnly.isEnabled && this.nodes.redactor.contains(chip)) {
+      void this.Blok.InlineToolbar.editEquation(chip);
+
+      return;
+    }
+
     const anchor = target?.closest?.('a');
 
     if (!(anchor instanceof HTMLAnchorElement) || !this.nodes.redactor.contains(anchor)) {

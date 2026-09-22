@@ -369,4 +369,44 @@ test.describe('Inline equation shortcut', () => {
     await expect(input).toBeHidden();
     await expect.poll(() => readChip(page)).toEqual({ latex: 'x^2', shown: 'x^2', highlighted: false });
   });
+  test('clicking an equation opens the equation menu for it, not the inline toolbar', async ({ page }) => {
+    await createBlokWithEquation(page, [
+      { type: 'paragraph', data: { text: 'mass: <span data-latex="E=mc^2">E=mc^2</span> end' } },
+    ]);
+
+    await expect.poll(() => countRenderedFormulas(page)).toBeGreaterThan(0);
+
+    const chipBox = await page.evaluate(() => {
+      const rect = document.querySelector('span[data-latex]')?.getBoundingClientRect();
+
+      return rect === undefined ? null : { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    });
+
+    if (chipBox === null) {
+      throw new Error('no equation chip');
+    }
+
+    await page.mouse.click(chipBox.x, chipBox.y);
+
+    const input = page.getByTestId('inline-equation-input');
+
+    await expect(input).toBeFocused();
+    await expect(input).toHaveValue('E=mc^2');
+    await expect(page.locator('[data-blok-item-name="bold"]')).toHaveCount(0);
+    await expect.poll(() => readChip(page)).toMatchObject({ latex: 'E=mc^2', highlighted: true });
+
+    await input.fill('E=mc^3');
+    await input.press('Enter');
+
+    await expect(input).toBeHidden();
+
+    const savedText = await page.evaluate(async () => {
+      const data = await window.blokInstance?.save();
+      const block = data?.blocks?.[0] as { data?: { text?: string } } | undefined;
+
+      return block?.data?.text ?? '';
+    });
+
+    expect(savedText).toBe('mass: <span data-latex="E=mc^3">E=mc^3</span> end');
+  });
 });

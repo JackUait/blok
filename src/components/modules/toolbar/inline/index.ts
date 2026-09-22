@@ -305,6 +305,22 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
   }
 
   /**
+   * Open the Equation tool's menu for an equation chip: select the chip so the
+   * tool edits it, then open the menu the way Cmd+Shift+E does.
+   * @param chip - the `span[data-latex]` that was clicked
+   */
+  public async editEquation(chip: HTMLElement): Promise<void> {
+    // Without the tool this would fall through to the plain inline toolbar.
+    if (!this.Blok.Tools.inlineTools.has('equation')) {
+      return;
+    }
+
+    new SelectionUtils().expandToTag(chip);
+
+    await this.activateToolByShortcut('equation');
+  }
+
+  /**
    * Closes the toolbar and remembers the selection it was closed for, so a
    * selectionchange still queued from the drag cannot bring it straight back.
    * The debounce is 180ms and the engines re-clamp a cross-host range on

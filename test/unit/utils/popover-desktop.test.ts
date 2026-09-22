@@ -2941,6 +2941,23 @@ describe('PopoverDesktop', () => {
       expect(instance.nodes.popoverContainer.className).not.toContain('pt-1.5');
     });
 
+    it('shows a decorative illustration in the "nothing found" state without repeating the query', () => {
+      const popover = createPopover({
+        searchable: true,
+        items: createDefaultItems(),
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      popover.show();
+
+      getMockSearchInput().emitSearch({ query: 'фывфыв', items: [] });
+
+      // The query is already visible in the search field right above.
+      expect(instance.nodes.nothingFoundMessage).not.toHaveTextContent('фывфыв');
+      expect(instance.nodes.nothingFoundMessage.textContent).toBe('Nothing found');
+      expect(instance.nodes.nothingFoundMessage.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    });
+
     it('removes bottom padding from the outer popover container (pb-0 stays on wrapper)', () => {
       const popover = createPopover();
       const instance = popover as unknown as PopoverDesktopInternal;

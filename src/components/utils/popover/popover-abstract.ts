@@ -2,6 +2,7 @@ import { DATA_ATTR } from '../../constants/data-attributes';
 import { EventsDispatcher } from '../events';
 import { Listeners } from '../listeners';
 import { syncPortalDirection } from '../portal-direction';
+import { prefersReducedMotion } from '../reduced-motion';
 import { isPromotedToTopLayer, promoteToTopLayer, removeFromTopLayer, supportsPopoverAPI } from '../top-layer';
 import { twMerge } from '../tw';
 
@@ -14,6 +15,13 @@ import { css, REEL_DISTORTION } from './popover.const';
 
 import type { PopoverEventMap, PopoverMessages, PopoverParams, PopoverNodes } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
+
+/**
+ * An empty list with a lens resting over it. Kept on one line: whitespace
+ * between tags would become text and leak into the message's textContent.
+ * The lens is filled with the popover background so it hides the rows under it.
+ */
+const NOTHING_FOUND_ART = '<svg width="64" height="48" viewBox="0 0 64 48" fill="none" aria-hidden="true" focusable="false" style="display:block;overflow:visible"><rect x="4.75" y="4.75" width="46.5" height="34.5" rx="8" fill="currentColor" fill-opacity="0.07" stroke="currentColor" stroke-opacity="0.22" stroke-width="1.5"/><g data-blok-nothing-found-row stroke="currentColor" stroke-opacity="0.35" stroke-width="3" stroke-linecap="round"><path d="M13 14.5h.01M19.5 14.5h22"/></g><g data-blok-nothing-found-row stroke="currentColor" stroke-opacity="0.35" stroke-width="3" stroke-linecap="round"><path d="M13 22h.01M19.5 22h16"/></g><g data-blok-nothing-found-row stroke="currentColor" stroke-opacity="0.35" stroke-width="3" stroke-linecap="round"><path d="M13 29.5h.01M19.5 29.5h10"/></g><g data-blok-nothing-found-lens style="transform-box:view-box;transform-origin:46px 33px"><circle cx="44" cy="31" r="8.25" fill="var(--blok-popover-bg)" stroke="currentColor" stroke-width="2"/><path d="M50 37l5.5 5.5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></g></svg>';
 
 /**
  * Class responsible for rendering popover and handling its behaviour.
@@ -744,10 +752,17 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    */
   protected toggleNothingFoundMessage(isDisplayed: boolean): void {
     if (isDisplayed) {
+      const wasHidden = !this.nodes.nothingFoundMessage.hasAttribute(DATA_ATTR.nothingFoundDisplayed);
+
       this.nodes.nothingFoundMessage.classList.remove('hidden');
       this.nodes.nothingFoundMessage.setAttribute(DATA_ATTR.nothingFoundDisplayed, 'true');
       this.nodes.items?.classList.remove('pb-1.5');
       this.nodes.popoverContainer?.classList.remove('px-1.5');
+
+      // Only on entry: replaying on every unmatched keystroke would flicker.
+      if (wasHidden) {
+        this.animateNothingFoundEntrance();
+      }
     } else {
       this.nodes.nothingFoundMessage.classList.add('hidden');
       this.nodes.nothingFoundMessage.removeAttribute(DATA_ATTR.nothingFoundDisplayed);
@@ -756,6 +771,49 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
         this.nodes.popoverContainer?.classList.add('px-1.5');
       }
     }
+  }
+
+  /**
+   * Rows fade in, the lens sweeps across them, then the label rises.
+   */
+  private animateNothingFoundEntrance(): void {
+    const message = this.nodes.nothingFoundMessage;
+
+    if (typeof message.animate !== 'function' || prefersReducedMotion()) {
+      return;
+    }
+
+    const settle = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
+
+    message.querySelectorAll('[data-blok-nothing-found-row]').forEach((row, index) => {
+      row.animate(
+        [
+          { opacity: 0, transform: 'translateX(-4px)' },
+          { opacity: 1, transform: 'translateX(0)' },
+        ],
+        { duration: 220, delay: 40 + index * 50, easing: settle, fill: 'backwards' }
+      );
+    });
+    // The lens sweeps across the empty rows, then comes to rest with a small tilt.
+    message.querySelector('[data-blok-nothing-found-lens]')?.animate(
+      [
+        { opacity: 0, transform: 'translate(-22px, -16px) rotate(-12deg)', offset: 0 },
+        { opacity: 1, transform: 'translate(-16px, -12px) rotate(-12deg)', offset: 0.2 },
+        { transform: 'translate(-4px, -6px) rotate(8deg)', offset: 0.55 },
+        { transform: 'translate(0, 0) rotate(-4deg)', offset: 0.8 },
+        { opacity: 1, transform: 'translate(0, 0) rotate(0deg)', offset: 1 },
+      ],
+      { duration: 760, delay: 60, easing: 'cubic-bezier(0.33, 1, 0.68, 1)', fill: 'backwards' }
+    );
+    message.querySelectorAll('[data-blok-nothing-found-text]').forEach((text, index) => {
+      text.animate(
+        [
+          { opacity: 0, transform: 'translateY(4px)' },
+          { opacity: 1, transform: 'translateY(0)' },
+        ],
+        { duration: 260, delay: 140 + index * 60, easing: settle, fill: 'backwards' }
+      );
+    });
   }
 
   /**
@@ -1043,11 +1101,23 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     // Create nothing found message
     const nothingFoundMessage = document.createElement('div');
     nothingFoundMessage.className = twMerge(
-      'cursor-default text-[13px] leading-5 font-normal whitespace-nowrap overflow-hidden text-ellipsis text-gray-text px-3 py-4 text-center',
+      'cursor-default px-4 pt-6 pb-5 text-center text-gray-text',
       'hidden'
     );
     nothingFoundMessage.setAttribute('data-blok-testid', 'popover-nothing-found');
-    nothingFoundMessage.textContent = this.messages.nothingFound ?? 'Nothing found';
+
+    const nothingFoundArt = document.createElement('div');
+
+    nothingFoundArt.className = 'mx-auto mb-3 w-16';
+    nothingFoundArt.innerHTML = NOTHING_FOUND_ART;
+
+    const nothingFoundLabel = document.createElement('div');
+
+    nothingFoundLabel.className = 'text-sm leading-5 font-medium text-text-primary';
+    nothingFoundLabel.setAttribute('data-blok-nothing-found-text', '');
+    nothingFoundLabel.textContent = this.messages.nothingFound ?? 'Nothing found';
+
+    nothingFoundMessage.append(nothingFoundArt, nothingFoundLabel);
 
     // Create items container
     const items = document.createElement('div');

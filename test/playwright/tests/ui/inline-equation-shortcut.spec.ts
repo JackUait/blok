@@ -447,6 +447,11 @@ test.describe('Inline equation shortcut', () => {
       await expect(page.getByTestId('inline-equation-input')).toBeFocused();
       await expect.poll(() => readMenuMotion(page)).toMatchObject({ animation: 'blok-direct-menu-in', from: 'shortcut' });
       expect(await countGhosts(page)).toBe(0);
+
+      // Done arrives with the field, never on its own after it.
+      const doneAnimation = await page.getByTestId('inline-equation-done').evaluate((el) => getComputedStyle(el).animationName);
+
+      expect(doneAnimation).toBe('none');
     });
 
     test('switching from the toolbar fades the toolbar out and grows the menu from the button', async ({ page }) => {

@@ -131,18 +131,6 @@
   }
 }
 
-/* A control inside that menu settling in just after the surface. */
-@keyframes blok-direct-menu-part-in {
-  from {
-    opacity: 0;
-    transform: translateX(-3px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
 /* The toolbar's fading copy, shrinking toward the button that was clicked. */
 @keyframes blok-inline-toolbar-ghost-out {
   to {

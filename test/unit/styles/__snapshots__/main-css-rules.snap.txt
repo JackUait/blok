@@ -231,10 +231,6 @@
   animation-delay: 40ms;
 }
 
-[data-blok-inline-direct-menu] [data-blok-equation-done] {
-  animation: blok-direct-menu-part-in 260ms cubic-bezier(0.16, 1, 0.3, 1) 90ms both;
-}
-
 [data-blok-inline-toolbar-ghost] {
   animation: blok-inline-toolbar-ghost-out 160ms cubic-bezier(0.4, 0, 1, 1) forwards;
 }
@@ -244,7 +240,7 @@
   transform: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-inline-direct-menu] > [data-blok-popover-container], [data-blok-inline-direct-menu] [data-blok-equation-done], [data-blok-inline-toolbar-ghost] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-inline-direct-menu] > [data-blok-popover-container], [data-blok-inline-toolbar-ghost] {
   animation: none;
 }
 

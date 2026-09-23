@@ -305,9 +305,7 @@ test.describe('CON table', () => {
 
   // Undo must restore the exact prior state; redo the exact post-gesture state.
   test('CON-3 undo of the first column resize restores the default widths', async ({ page }) => {
-    test.fail();
-    // Observed: colWidths after undo is still [430, 350] in save() and in the DOM, while the undo step is
-    // consumed. Undoing a SECOND resize works, so only the absent-key case fails.
+    // Undo replays the whole record, so a key the resize added is removed again.
     await createBlok(page, TABLE_DOC);
     await gap(page);
     await dragBy(page, page.locator('[data-blok-table-resize]').first(), 80, 0);
@@ -321,8 +319,6 @@ test.describe('CON table', () => {
 
   // Undo must restore the exact prior state; redo the exact post-gesture state.
   test('CON-4 undo of the first text size change restores compact text', async ({ page }) => {
-    test.fail();
-    // Observed: textSize after undo is still 'comfortable' (same absent-key shape as CON-3).
     await createBlok(page, TABLE_DOC);
     await gap(page);
     await cell(page, 0, 0).click();

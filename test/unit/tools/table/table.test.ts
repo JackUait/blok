@@ -4439,13 +4439,33 @@ describe('Table Tool', () => {
 
       expect(initialRows[0].hasAttribute('data-blok-table-heading')).toBe(true);
 
-      // Toggle heading off
-      table.setData({ withHeadings: false });
+      // setData receives the whole record, like an undo replay does
+      table.setData({ withHeadings: false, content: [['H1', 'H2'], ['D1', 'D2']] });
 
       const newWrapper = container.firstElementChild as HTMLElement;
       const newRows = newWrapper.querySelectorAll('[data-blok-table-row]');
 
       expect(newRows[0].hasAttribute('data-blok-table-heading')).toBe(false);
+    });
+
+    it('replaces the record: a key missing from the new data is dropped, not kept', () => {
+      const options = createTableOptions({
+        content: [['A', 'B']],
+        colWidths: [200, 300],
+        textSize: 'comfortable',
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      table.setData({ content: [['A', 'B']], withHeadings: false });
+
+      const saved = table.save(container.firstElementChild as HTMLElement);
+
+      expect(saved.colWidths).toBeUndefined();
+      expect(saved.textSize).toBeUndefined();
     });
 
     it('preserves saved data after setData', () => {

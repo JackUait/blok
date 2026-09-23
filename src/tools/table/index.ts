@@ -1066,13 +1066,10 @@ export class Table implements BlockTool {
     this.setDataGeneration++;
     const currentGeneration = this.setDataGeneration;
 
-    const normalized = normalizeTableData(
-      {
-        ...this.model.snapshot(),
-        ...newData,
-      },
-      this.config
-    );
+    // The new data is the whole record (an undo replay hands over the full
+    // doc record). Merging the old snapshot in would keep a key the replay
+    // removed, e.g. the colWidths of a first resize.
+    const normalized = normalizeTableData(newData as TableData, this.config);
 
     this.initialContent = normalized.content;
     this.model.replaceAll(normalized);

@@ -83,7 +83,7 @@ describe('saveToggleItem mutants', () => {
 });
 
 describe('setToggleItemData mutants', () => {
-  it('ignores a payload that carries no text', () => {
+  it('leaves the content element alone for a payload that carries no text', () => {
     const contentEl = contentElementWith('existing');
     const current: ToggleItemData = { text: 'existing', isOpen: false };
     const replayed: Partial<ToggleItemData> = { isOpen: true };
@@ -91,7 +91,7 @@ describe('setToggleItemData mutants', () => {
     const result = setToggleItemData(current, replayed as ToggleItemData, () => contentEl);
 
     expect(contentEl.innerHTML).toBe('existing');
-    expect(result).toEqual({ newData: { text: 'existing', isOpen: true }, inPlace: true });
+    expect(result).toEqual({ newData: { isOpen: true }, inPlace: true });
   });
 
   it('writes the new text into the content element', () => {

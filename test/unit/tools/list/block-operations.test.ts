@@ -555,8 +555,8 @@ describe('block-operations', () => {
       expect(adjustDepthTo).toHaveBeenCalledWith(0);
     });
 
-    it('merges all properties from newData', () => {
-      const currentData: ListItemData = { text: 'Old', style: 'unordered', checked: false };
+    it('takes all properties from newData', () => {
+      const currentData: ListItemData = { text: 'Old', style: 'unordered', checked: false, start: 5 };
       const newData: ListItemData = { text: 'New', style: 'unordered', checked: true, depth: 1, start: 5 };
 
       const result = setListItemData(
@@ -572,6 +572,40 @@ describe('block-operations', () => {
       );
 
       expect(result.newData).toEqual({ text: 'New', style: 'unordered', checked: true, depth: 1, start: 5 });
+    });
+
+    it('drops a key that newData no longer carries', () => {
+      const currentData: ListItemData = { text: 'Task', style: 'checklist', checked: true };
+
+      const result = setListItemData(
+        currentData,
+        { text: 'Task', style: 'checklist' },
+        mockElement,
+        () => mockContentElement,
+        {
+          adjustDepthTo: vi.fn(),
+          updateMarkerForDepth: vi.fn(),
+          updateCheckboxState: vi.fn(),
+        }
+      );
+
+      expect(result.newData).toEqual({ text: 'Task', style: 'checklist', depth: 0 });
+    });
+
+    it('asks for a re-render when the start number changes', () => {
+      const result = setListItemData(
+        { text: 'One', style: 'ordered', start: 5 },
+        { text: 'One', style: 'ordered' },
+        mockElement,
+        () => mockContentElement,
+        {
+          adjustDepthTo: vi.fn(),
+          updateMarkerForDepth: vi.fn(),
+          updateCheckboxState: vi.fn(),
+        }
+      );
+
+      expect(result.inPlace).toBe(false);
     });
 
     it('updates text content when text is a string', () => {

@@ -68,6 +68,11 @@ export interface HeaderData extends BlockToolData, BlockColorData {
 }
 
 /**
+ * Keys whose change setData cannot apply in place.
+ */
+const RENDER_SHAPING_KEYS = ['level', 'isToggleable', 'textColor', 'backgroundColor'] as const;
+
+/**
  * Level-specific overrides for customization
  */
 export interface HeaderLevelConfig {
@@ -670,7 +675,14 @@ export class Header implements BlockTool {
    * @returns true if the update was applied in-place
    */
   public setData(newData: HeaderData): boolean {
-    this._data = this.normalizeData(newData);
+    const next = this.normalizeData(newData);
+
+    // The tag, colours, arrow and child slot are built only by render().
+    if (RENDER_SHAPING_KEYS.some(key => next[key] !== this._data[key])) {
+      return false;
+    }
+
+    this._data = next;
 
     if (typeof newData.text === 'string') {
       this._element.innerHTML = newData.text;

@@ -192,10 +192,8 @@ test.describe('undo audit: setData apply sweep', () => {
 
   // --- Tool setData that does not apply every key. ---
 
-  // Undo must restore the exact prior state, DOM included. Saved data does drop isToggleable.
-  // Observed: locator [data-blok-toggle-arrow] Expected: 0 / Received: 1
+  // Undo must restore the exact prior state, DOM included.
   test('APL-9: undo of "heading -> toggle heading" leaves the toggle arrow on screen', async ({ page }) => {
-    test.fail();
     await createBlok(page, [anchor, { id: 'h', type: 'header', data: { text: 'Head', level: 2 } }]);
     await openTunesOn(page, 'h');
     await page.getByRole('menuitem', { name: 'Convert to' }).click();
@@ -208,10 +206,8 @@ test.describe('undo audit: setData apply sweep', () => {
     expect((await dataOf(page, 'h'))?.isToggleable).toBeUndefined();
   });
 
-  // Undo must restore the exact prior state, DOM included. Saved data does go back to isToggleable: true.
-  // Observed: locator [data-blok-toggle-arrow] Expected: 1 / Received: 0
+  // Undo must restore the exact prior state, DOM included.
   test('APL-10: undo of "toggle heading -> heading" brings the toggle back without its arrow', async ({ page }) => {
-    test.fail();
     await createBlok(page, [anchor, { id: 'h', type: 'header', data: { text: 'Head', level: 2, isToggleable: true, isOpen: true } }]);
     await expect(page.locator('[data-blok-id="h"] [data-blok-toggle-arrow]')).toHaveCount(1);
     await openTunesOn(page, 'h');
@@ -225,17 +221,22 @@ test.describe('undo audit: setData apply sweep', () => {
     expect((await dataOf(page, 'h'))?.isToggleable).toBe(true);
   });
 
-  // Undo must restore the exact prior state.
-  // Observed: Expected: undefined / Received: 5
+  // Undo must restore the exact prior state, and redo the new start on screen too.
   test('APL-11: undo of a blocks.update() list start number keeps the new start', async ({ page }) => {
-    test.fail();
     await createBlok(page, [anchor, { id: 'l', type: 'list', data: { text: 'One', style: 'ordered' } }]);
     await page.evaluate(async () => {
       await window.blokInstance?.blocks.update('l', { start: 5 });
     });
     await wait(page, CAPTURE_WINDOW);
+    const marker = page.locator('[data-blok-id="l"] [data-list-marker]');
+
+    await expect(marker).toHaveText('5.');
     await press(page, UNDO_SHORTCUT);
 
     expect((await dataOf(page, 'l'))?.start).toBeUndefined();
+    await expect(marker).toHaveText('1.');
+    await press(page, REDO_SHORTCUT);
+    expect((await dataOf(page, 'l'))?.start).toBe(5);
+    await expect(marker).toHaveText('5.');
   });
 });

@@ -11,6 +11,49 @@ export interface RecentLink {
   favicon?: string;
 }
 
+/**
+ * Characters page titles use to join a site name ("Docs | Blok"). Left over
+ * at either end when an unfurler drops one side, as in "- YouTube".
+ */
+const TITLE_SEPARATORS = new Set([' ', '-', '|', '·', '—', '–', ':', '•']);
+
+/**
+ * Trim separator debris from both ends. A loop, not a regex: a trailing
+ * `[…]+$` run is quadratic on long inputs.
+ * @param title - raw page title
+ */
+const cleanTitle = (title: string): string => {
+  const chars = Array.from(title.trim());
+  const start = chars.findIndex((char) => !TITLE_SEPARATORS.has(char));
+
+  if (start === -1) {
+    return '';
+  }
+
+  const end = chars.length - [...chars].reverse().findIndex((char) => !TITLE_SEPARATORS.has(char));
+
+  return chars.slice(start, end).join('');
+};
+
+/**
+ * Identity of a web link: `www.`, the scheme and a trailing slash do not
+ * make it a different page.
+ * @param url - stored href
+ */
+const linkKey = (url: string): string => {
+  try {
+    const parsed = new URL(url);
+
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return `${parsed.hostname.replace(/^www\./, '')}${parsed.pathname.replace(/\/$/, '')}${parsed.search}${parsed.hash}`;
+    }
+  } catch {
+    // Not a URL: compare it as written.
+  }
+
+  return url;
+};
+
 const toRecentLink = (value: unknown): RecentLink | null => {
   if (typeof value !== 'object' || value === null) {
     return null;
@@ -22,9 +65,11 @@ const toRecentLink = (value: unknown): RecentLink | null => {
     return null;
   }
 
+  const cleaned = typeof title === 'string' ? cleanTitle(title) : '';
+
   return {
     url,
-    ...(typeof title === 'string' ? { title } : {}),
+    ...(cleaned !== '' ? { title: cleaned } : {}),
     ...(typeof favicon === 'string' ? { favicon } : {}),
   };
 };
@@ -40,7 +85,9 @@ export function getRecentLinks(): RecentLink[] {
       return [];
     }
 
-    return parsed.map(toRecentLink).filter((entry): entry is RecentLink => entry !== null);
+    const entries = parsed.map(toRecentLink).filter((entry): entry is RecentLink => entry !== null);
+
+    return entries.filter((entry, index) => entries.findIndex((other) => linkKey(other.url) === linkKey(entry.url)) === index);
   } catch {
     return [];
   }
@@ -55,14 +102,16 @@ const write = (entries: RecentLink[]): void => {
 };
 
 /**
- * Move `url` to the top, keeping any title already known for it.
+ * Move `url` to the top, keeping any title already known for the same link.
+ * The newest spelling of the href wins.
  * @param url - the href that was just applied
  */
 export function recordRecentLink(url: string): void {
+  const key = linkKey(url);
   const entries = getRecentLinks();
-  const existing = entries.find((entry) => entry.url === url);
+  const existing = entries.find((entry) => linkKey(entry.url) === key);
 
-  write([existing ?? { url }, ...entries.filter((entry) => entry.url !== url)]);
+  write([{ ...existing, url }, ...entries.filter((entry) => linkKey(entry.url) !== key)]);
 }
 
 /**
@@ -78,7 +127,7 @@ export function updateRecentLinkMeta(url: string, meta: { title?: string; favico
     return;
   }
 
-  const title = meta.title?.trim();
+  const title = meta.title === undefined ? '' : cleanTitle(meta.title);
 
   write(entries.map((entry) => entry.url !== url ? entry : {
     ...entry,

@@ -69,11 +69,18 @@ interface HeadingTarget {
  * Rows cascade in with the suggestion row's keyframes. Each row sets its own
  * animation-delay; motion-safe drops the whole cascade for reduced motion.
  */
-const OPTION_ROW_CLASSES = 'flex items-center gap-2.5 w-full min-h-8 px-2 py-1 rounded-lg cursor-pointer can-hover:hover:bg-item-hover-bg aria-selected:bg-item-hover-bg transition-colors motion-safe:animate-[blok-link-reveal_160ms_ease-out_both]';
-const OPTION_TITLE_CLASSES = 'block text-sm leading-5 text-text-primary truncate';
-const OPTION_META_CLASSES = 'block text-xs leading-4 text-gray-text truncate';
+const OPTION_ROW_CLASSES = 'group flex items-center gap-2.5 w-full h-8 px-2 rounded-lg cursor-pointer can-hover:hover:bg-item-hover-bg aria-selected:bg-item-hover-bg transition-colors motion-safe:animate-[blok-link-reveal_160ms_ease-out_both]';
+// One line per row: the title truncates first, the site name keeps its room.
+const OPTION_TEXT_CLASSES = 'flex-1 min-w-0 flex items-baseline gap-2';
+const OPTION_TITLE_CLASSES = 'min-w-0 text-sm leading-5 text-text-primary truncate';
+const OPTION_META_CLASSES = 'shrink-0 max-w-[45%] text-xs leading-4 text-gray-text truncate';
 const OPTION_ICON_CLASSES = 'flex items-center justify-center size-5 shrink-0 text-gray-text [&_svg]:size-5';
-const SECTION_LABEL_CLASSES = 'px-2 pt-2 pb-1 text-xs leading-4 font-medium text-gray-text';
+const HEADING_ICON_CLASSES = 'flex items-center justify-center size-5 shrink-0 text-gray-text opacity-60 [&_svg]:size-4';
+// A section that follows a visible one gets extra room above its label.
+const SECTION_CLASSES = 'w-0 min-w-full [[data-link-group]:not([hidden])~&]:pt-1.5';
+const SECTION_LABEL_CLASSES = 'px-2 pt-1.5 pb-1 text-xs leading-4 font-medium text-gray-text';
+const HEADING_INDENT_STEP = 12;
+const HEADING_INDENT_MAX_STEPS = 2;
 const RECENT_TILE_CLASSES = 'flex items-center justify-center size-5 shrink-0 rounded-[5px] bg-item-hover-bg overflow-hidden text-[11px] font-semibold text-gray-text';
 
 /**
@@ -627,7 +634,7 @@ export class LinkInlineTool implements InlineTool {
 
     const divider = document.createElement('div');
 
-    divider.className = 'mt-1.5 mb-0.5 h-px bg-link-input-border';
+    divider.className = 'mt-1.5 mb-1 h-px bg-link-input-border';
 
     options.append(divider, ...[this.nodes.recent, this.nodes.headings, this.nodes.kinds].filter((node) => node !== null));
 
@@ -645,7 +652,8 @@ export class LinkInlineTool implements InlineTool {
     const section = document.createElement('div');
 
     // A long title must not widen the card.
-    section.className = 'w-0 min-w-full';
+    section.className = SECTION_CLASSES;
+    section.setAttribute('data-link-group', '');
     section.setAttribute(marker, '');
     section.setAttribute('role', 'group');
     section.hidden = true;
@@ -692,7 +700,7 @@ export class LinkInlineTool implements InlineTool {
 
     const textEl = document.createElement('span');
 
-    textEl.className = 'flex-1 min-w-0';
+    textEl.className = OPTION_TEXT_CLASSES;
 
     const titleEl = document.createElement('span');
 
@@ -710,7 +718,15 @@ export class LinkInlineTool implements InlineTool {
       textEl.append(metaEl);
     }
 
-    row.append(leading, textEl);
+    // Shown only while the row is the active option: Enter picks it.
+    const enterHint = document.createElement('span');
+
+    enterHint.className = `hidden group-aria-selected:flex ${ENTER_HINT_CLASSES}`;
+    enterHint.setAttribute('aria-hidden', 'true');
+    enterHint.setAttribute('data-link-option-enter-hint', '');
+    enterHint.innerHTML = IconReturn;
+
+    row.append(leading, textEl, enterHint);
     // Keep the saved selection and the field's focus while the row takes the click.
     row.addEventListener('mousedown', (event) => event.preventDefault());
     row.addEventListener('click', onPick);
@@ -718,10 +734,10 @@ export class LinkInlineTool implements InlineTool {
     return row;
   }
 
-  private createIcon(svg: string): HTMLElement {
+  private createIcon(svg: string, className = OPTION_ICON_CLASSES): HTMLElement {
     const icon = document.createElement('span');
 
-    icon.className = OPTION_ICON_CLASSES;
+    icon.className = className;
     icon.setAttribute('aria-hidden', 'true');
     icon.innerHTML = svg;
 
@@ -901,15 +917,21 @@ export class LinkInlineTool implements InlineTool {
       const row = this.createOptionRow(
         'heading',
         `${this.errorId}-heading-${index}`,
-        this.createIcon(HEADING_ICONS[heading.level] ?? IconHash),
+        this.createIcon(HEADING_ICONS[heading.level] ?? IconHash, HEADING_ICON_CLASSES),
         heading.text,
         '',
         () => this.applyLink(`#${heading.blockId}`)
       );
 
+      const steps = Math.min(heading.level - topLevel, HEADING_INDENT_MAX_STEPS);
+      const titleEl = row.querySelector<HTMLElement>('[data-link-heading-title]');
+
       row.style.animationDelay = `${index * 30}ms`;
-      // Indent by level, relative to the shallowest heading shown.
-      row.style.paddingInlineStart = `${8 + (heading.level - topLevel) * 16}px`;
+      // Only the text indents, relative to the shallowest heading shown, so
+      // the level glyphs stay in one column.
+      if (titleEl) {
+        titleEl.style.marginInlineStart = `${steps * HEADING_INDENT_STEP}px`;
+      }
       row.setAttribute('data-link-heading-level', String(heading.level));
 
       return row;

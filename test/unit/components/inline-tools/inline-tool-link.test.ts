@@ -1179,6 +1179,20 @@ describe('LinkInlineTool', () => {
       expect(itemWrapper.querySelector('[data-link-recent-label]')?.textContent).toBe('Recent');
     });
 
+    it('puts the site name on the title\'s line, after it', () => {
+      seed([{ url: 'https://github.com/jackuait/blok', title: 'Blok editor' }]);
+
+      const { itemWrapper } = openCreating();
+      const [row] = recentRows(itemWrapper);
+      const title = row.querySelector('[data-link-recent-title]');
+      const meta = row.querySelector('[data-link-recent-meta]');
+
+      expect(title?.nextElementSibling).toBe(meta);
+      expect(title?.parentElement?.className.split(' ')).toEqual(expect.arrayContaining(['flex', 'items-baseline']));
+      expect(title?.className.split(' ')).not.toContain('block');
+      expect(meta?.className.split(' ')).toContain('shrink-0');
+    });
+
     it('falls back to the site name and path when the title is unknown', () => {
       seed([{ url: 'https://www.example.com/docs/intro' }]);
 
@@ -1601,6 +1615,37 @@ describe('LinkInlineTool', () => {
       expect(input).toHaveAttribute('aria-controls', listboxes[0].id);
       expect(listboxes[0].contains(headingRows(itemWrapper)[0])).toBe(true);
       expect(listboxes[0].contains(itemWrapper.querySelector('[data-link-recent-row]'))).toBe(true);
+    });
+
+    it('keeps the level glyphs in one column and indents only the text, two steps at most', () => {
+      addHeading(1, 'Top', 'h-1');
+      addHeading(2, 'Second', 'h-2');
+      addHeading(4, 'Deep', 'h-4');
+
+      const { itemWrapper } = openCreating();
+      const rows = headingRows(itemWrapper);
+
+      expect(rows.map((row) => row.style.paddingInlineStart)).toEqual(['', '', '']);
+      expect(rows.map((row) => row.querySelector<HTMLElement>('[data-link-heading-title]')?.style.marginInlineStart))
+        .toEqual(['0px', '12px', '24px']);
+    });
+
+    it('marks only the highlighted row with an Enter hint', () => {
+      addHeading(2, 'Setup', 'h-setup');
+      addHeading(2, 'Usage', 'h-usage');
+
+      const { itemWrapper, input } = openCreating();
+      const hints = headingRows(itemWrapper).map((row) => row.querySelector<HTMLElement>('[data-link-option-enter-hint]'));
+
+      press(input, 'ArrowDown');
+
+      // The hint shows through the row's aria-selected state, so it is
+      // present on every row and only styled visible on the selected one.
+      expect(hints.every((hint) => hint?.getAttribute('aria-hidden') === 'true')).toBe(true);
+      expect(hints[0]?.className).toContain('group-aria-selected:flex');
+      expect(hints[0]?.className.split(' ')).toContain('hidden');
+      expect(headingRows(itemWrapper)[0]).toHaveAttribute('aria-selected', 'true');
+      expect(headingRows(itemWrapper)[0].className.split(' ')).toContain('group');
     });
 
     it('stays hidden while editing an existing link', () => {

@@ -78,6 +78,59 @@ describe('link history', () => {
     expect(getRecentLinks()).toEqual([{ url: 'https://a.com' }]);
   });
 
+  it('treats www, http(s) and a trailing slash as the same link, keeping what it knew', () => {
+    recordRecentLink('https://youtube.com');
+    updateRecentLinkMeta('https://youtube.com', { title: 'YouTube', favicon: 'https://youtube.com/favicon.ico' });
+    recordRecentLink('https://b.com');
+    recordRecentLink('http://www.youtube.com/');
+
+    expect(getRecentLinks()).toEqual([
+      { url: 'http://www.youtube.com/', title: 'YouTube', favicon: 'https://youtube.com/favicon.ico' },
+      { url: 'https://b.com' },
+    ]);
+  });
+
+  it('keeps links apart when only their path, query or hash differs', () => {
+    recordRecentLink('https://a.com/docs');
+    recordRecentLink('https://a.com/docs?tab=2');
+    recordRecentLink('https://a.com/docs#intro');
+
+    expect(getRecentLinks()).toHaveLength(3);
+  });
+
+  it('shows duplicates already in storage once, newest first', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([
+      { url: 'https://www.youtube.com/', title: 'YouTube' },
+      { url: 'https://youtube.com' },
+    ]));
+
+    expect(getRecentLinks()).toEqual([{ url: 'https://www.youtube.com/', title: 'YouTube' }]);
+  });
+
+  it.each([
+    ['- YouTube', 'YouTube'],
+    ['Docs | ', 'Docs'],
+    ['· Blok — ', 'Blok'],
+    ['Q&A: tips - part 2', 'Q&A: tips - part 2'],
+  ])('trims separator debris from the title %j', (raw, clean) => {
+    recordRecentLink('https://a.com');
+    updateRecentLinkMeta('https://a.com', { title: raw });
+
+    expect(getRecentLinks()[0].title).toBe(clean);
+  });
+
+  it('cleans a title stored before the cleanup existed, and drops one that is only separators', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([
+      { url: 'https://a.com', title: '- YouTube' },
+      { url: 'https://b.com', title: ' | ' },
+    ]));
+
+    expect(getRecentLinks()).toEqual([
+      { url: 'https://a.com', title: 'YouTube' },
+      { url: 'https://b.com' },
+    ]);
+  });
+
   it('reads corrupt storage as an empty history', () => {
     localStorage.setItem(STORAGE_KEY, '{not json');
 

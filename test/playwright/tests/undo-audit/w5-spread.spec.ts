@@ -293,26 +293,12 @@ const explain = (t: Trip): string => `gesture added ${t.steps} undo entries; sec
 
 // Known-failing probes, with the defect each one pins. Looked up as the first line of the test body.
 const PINS: Record<string, string> = {
-  'W5F-1': 'W5F-1: first undo of a heading split is a no-op when the heading was saved without level',
-  'W5F-2': 'W5F-2: first undo of a checklist split is a no-op when the item was saved without checked',
-  'W5F-3': 'W5F-3: first undo of a list split is a no-op when the item was saved without style',
   'W5F-11': 'W5F-11: first undo of Tab on a checklist item saved without checked is a no-op',
-  'W5F-20': 'W5F-20: first undo of a split in a quote made by "turn into" is a no-op',
-  'W5F-25': 'W5F-25: first undo of a split in a quote made by blocks.insert is a no-op',
   'W5F-40': 'W5F-40: undo of the first edit in a legacy toggle does nothing',
   'W5F-47': 'W5F-47: undo of the first edit in a legacy toggle does nothing',
   'W5F-48': 'W5F-48: undo reverts the load-time colour migration in a heading',
   'W5F-49': 'W5F-49: undo of blocks.update on a callout strands its child and save() throws',
   'W5F-49b': 'W5F-49b: undo of blocks.update on a callout strands its child and save() throws',
-  'W5F-60': 'W5F-60: colour swatch undo takes the stale caret of a no-op Backspace',
-  'W5F-61': 'W5F-61: block-menu convert undo takes the stale caret of a no-op Backspace',
-  'W5F-62': 'W5F-62: blocks.update undo takes the stale caret of a no-op Backspace',
-  'W5F-64': 'W5F-64: toggle arrow undo takes the stale caret of a no-op Backspace',
-  'W5F-65': 'W5F-65: paste undo takes the stale caret of a no-op Backspace',
-  'W5F-66': 'W5F-66: drag undo takes the stale caret of a no-op Backspace',
-  'W5F-70': 'W5F-70: a no-op Delete leaves a stale caret for the next API change',
-  'W5F-71': 'W5F-71: a no-op Tab leaves a stale caret for the next API change',
-  'W5F-72': 'W5F-72: a no-op Shift+Tab leaves a stale caret for the next API change',
 };
 
 const pin = (id: string): void => {
@@ -331,9 +317,8 @@ test.describe('W5F: spread of the wave-4 families', () => {
   });
 
   // ================= A1: partial data (host-seeded) + a structural gesture on that block =================
-  // Defect (W5F-1/2/3): the split adds 2 Yjs undo entries. The first undo only deletes a key write,
-  // the second reverts the split. The key log in the failure message shows the second tracked write
-  // adding the missing key (h.data.level / l.data.checked / l.data.style).
+  // W5F-1/2/3: the split's deferred save-back adds the missing key (h.data.level / l.data.checked /
+  // l.data.style). Only a gesture start closes an undo step, so that write joins the split's step.
   // W5F-11: Tab's nest goes on the MOVE stack; the only Yjs entry is the tracked `checked:add`, so the
   // first undo pops that write and leaves the item nested (same shape as the `depth` bug described at
   // blockManager.ts:2161-2170, for another key).
@@ -444,7 +429,7 @@ test.describe('W5F: spread of the wave-4 families', () => {
   });
 
   // ================= A2: a gesture creates the block with partial data; a later split hits A1 =================
-  // Defect (W5F-20, W5F-25): the user never saw host data. "Turn into quote" writes quote data from
+  // W5F-20, W5F-25 (one step since the gesture-start rule, see A1): the user never saw host data. "Turn into quote" writes quote data from
   // conversionConfig.import = 'text' (quote/index.ts:234-239), blocks.insert writes the data it is given,
   // so the quote has no size in the document until something saves it back. The next Enter-split hits A1.
   // Typing in the block first heals it (W5F-27 passes): the typing save-back writes size inside the typing step.
@@ -644,13 +629,8 @@ test.describe('W5F: spread of the wave-4 families', () => {
   });
 
   // ================= C: stale caret-before after a no-op structural key =================
-  // Defect: a no-op Backspace/Delete/Tab/Shift+Tab force-captures a caret-before snapshot
-  // (uiControllers/controllers/keyboard.ts:149) that nothing consumes. Every later write reached by mouse or
-  // API marks the caret NON-forced (yjs/index.ts:330-517 -> undo-history.ts:1507-1509 returns early), and
-  // the next stack item takes the stale snapshot as "before" (undo-history.ts:837). Clicking into another
-  // block does not clear it. Undo then puts the caret back where the no-op key was pressed.
-  // Every "b" control (same gesture, no prior no-op key) passes. Checkbox tick (W5F-63, caret back at b@3)
-  // and table row insert from the grip (W5F-67, caret at b@9) do not show it; why is not traced.
+  // A no-op Backspace/Delete/Tab/Shift+Tab takes a caret-before that nothing consumes. It must not
+  // become the caret-before of a later gesture or API call in another block.
   // No Enter probe: no spot was found where Enter is a no-op.
 
   const C_DOC = (): Blocks => [P('a', 'Alpha one'), P('m', 'Middle'), P('b', 'Bravo two'), P('c', 'Charlie')];

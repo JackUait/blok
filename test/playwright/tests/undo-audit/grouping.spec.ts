@@ -105,9 +105,7 @@ test.describe('undo audit: grouping and boundaries', () => {
 
   // GRP-1. Expected: a block merge is its own undo step, like Enter (see undo-redo.spec.ts
   // "typing IMMEDIATELY after Enter ... separate undo checkpoints").
-  // Observed: Expected ["paragraph:Helloxy","paragraph:World"], Received ["paragraph:Hello","paragraph:World"]
   test('GRP-1: Delete-forward merge right after typing is a separate undo step from the typing', async ({ page }) => {
-    test.fail();
     await create(page, [{ type: 'paragraph', data: { text: 'Hello' } }, { type: 'paragraph', data: { text: 'World' } }]);
     await input(page, 0).click();
     await page.keyboard.press('End');
@@ -125,9 +123,7 @@ test.describe('undo audit: grouping and boundaries', () => {
   });
 
   // GRP-1b. Same root cause as GRP-1, Backspace direction.
-  // Observed: Expected ["paragraph:Hello","paragraph:Worldxy"], Received ["paragraph:Hello","paragraph:World"]
   test('GRP-1b: Backspace merge right after typing is a separate undo step from the typing', async ({ page }) => {
-    test.fail();
     await create(page, [{ type: 'paragraph', data: { text: 'Hello' } }, { type: 'paragraph', data: { text: 'World' } }]);
     await input(page, 1).click();
     await page.keyboard.press('End');
@@ -147,9 +143,7 @@ test.describe('undo audit: grouping and boundaries', () => {
 
   // GRP-2. Expected: a paste is its own undo step (paste/handlers/base.ts promises
   // "one Cmd+Z removes the whole paste" for multi-block paste; native editors do the same).
-  // Observed: Expected ["paragraph:ab"], Received ["paragraph:"]
   test('GRP-2: inline plain-text paste right after typing is a separate undo step', async ({ page }) => {
-    test.fail();
     await create(page, [{ type: 'paragraph', data: { text: '' } }]);
     await input(page, 0).click();
 
@@ -166,9 +160,7 @@ test.describe('undo audit: grouping and boundaries', () => {
 
   // GRP-3. Expected: one undo reverts a markdown conversion and leaves the literal marker
   // (Notion parity; "# ", "- ", "1. ", "[] ", "\" ", "---" all do this in one step).
-  // Observed: Expected ["paragraph:&gt;&nbsp;"], Received ["toggle:"]
   test('GRP-3: one undo reverts the "> " toggle shortcut to the literal text', async ({ page }) => {
-    test.fail();
     await create(page, [{ type: 'paragraph', data: { text: '' } }]);
     await input(page, 0).click();
 
@@ -184,9 +176,7 @@ test.describe('undo audit: grouping and boundaries', () => {
 
   // GRP-4. Expected: typing over selected blocks is one gesture, so one undo restores them
   // (Delete over a selection is one step: undo-redo.spec.ts "multi-block delete requires single undo").
-  // Observed: Expected [First, Second, Third], Received ["paragraph:"]
   test('GRP-4: one undo after typing over a block selection restores the selected blocks', async ({ page }) => {
-    test.fail();
     await create(page, [
       { type: 'paragraph', data: { text: 'First' } },
       { type: 'paragraph', data: { text: 'Second' } },
@@ -212,9 +202,7 @@ test.describe('undo audit: grouping and boundaries', () => {
 
   // GRP-5. Expected: a committed IME composition is one undo step, and undo never restores
   // text the user never committed. Pausing over a candidate list for >500ms is normal.
-  // Observed: Expected ["paragraph:Hello"], Received ["paragraph:Helloにほ"]
   test('GRP-5: one undo removes a whole IME composition even when the user paused mid-composition', async ({ page }) => {
-    test.fail();
     await create(page, [{ type: 'paragraph', data: { text: 'Hello' } }]);
     await input(page, 0).click();
     await page.keyboard.press('End');

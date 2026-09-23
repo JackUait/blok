@@ -83,9 +83,7 @@ test.describe('undo audit: native inputs and keyboard owners', () => {
   });
 
   // Source: undo must revert the user's latest edit first (the caption typing).
-  // Observed: toHaveText Expected "", Received "cap"; paragraph "alphaX" became "alpha" and redo was lost.
   test('INP-2: Cmd+Z while typing an image caption undoes the caption, not an older edit elsewhere', async ({ page }) => {
-    test.fail();
     await mount(page, [P('p', 'alpha'), IMAGE()]);
     await typeAtEnd(page, 'alpha', 'X');
     await gap(page);

@@ -262,8 +262,6 @@ test.describe('undo audit — caret, scroll, selection', () => {
 
   // Expected source: undo puts the caret where the change was made (undo-redo.spec.ts "caret restoration").
   test('CAR-1: undo of a paste puts the caret where the paste started', async ({ page }) => {
-    // Observed: caret offset 10 (end of the removed paste) instead of 5.
-    test.fail();
     await createBlok(page, [{ id: 'a', type: 'paragraph', data: { text: 'Hello world' } }]);
     await placeCaret(page, 'a', 5);
     // Synthetic paste, as in undo-redo.spec.ts "paste operations"; a real Cmd+V is unverified (clipboard permission denied).
@@ -286,11 +284,8 @@ test.describe('undo audit — caret, scroll, selection', () => {
   });
 
   // Expected source: Notion scrolls to the undone change; Caret.set already scrolls the caret into view.
-  // Conflicts with undo-history.mutants.test.ts "is restored when undoing or redoing an edit threw the
-  // page across a viewport", which pins the scroll-back. A fix must narrow that guard first.
+  // The scroll-back guard in undo-history.ts still runs; the caret is revealed after it.
   test('CAR-2a: undo of an edit far above the viewport shows the caret', async ({ page }) => {
-    // Observed: caretTop -4259 (scrollY stays 4348); caret is off-screen.
-    test.fail();
     await createBlok(page, manyBlocks(120));
     await placeCaret(page, 'p0', 9);
     await page.keyboard.type('XX');
@@ -306,8 +301,6 @@ test.describe('undo audit — caret, scroll, selection', () => {
   });
 
   test('CAR-2b: undo of an edit far below the viewport shows the caret', async ({ page }) => {
-    // Observed: caret stays far below the viewport (scroll restored to 0).
-    test.fail();
     await createBlok(page, manyBlocks(120));
     await placeCaret(page, 'p119', 9);
     await page.keyboard.type('XX');
@@ -324,8 +317,6 @@ test.describe('undo audit — caret, scroll, selection', () => {
 
   // Expected source: undo must restore the exact prior state; a highlight next to a live caret is stale UI.
   test('CAR-3a: undo clears a whole-block selection', async ({ page }) => {
-    // Observed: block "b" stays [data-blok-selected] while the caret is in "a".
-    test.fail();
     await createBlok(page, [
       { id: 'a', type: 'paragraph', data: { text: 'Alpha' } },
       { id: 'b', type: 'paragraph', data: { text: 'Beta' } },
@@ -346,8 +337,6 @@ test.describe('undo audit — caret, scroll, selection', () => {
   });
 
   test('CAR-3b: Backspace after undo acts at the caret, not on a stale selected block', async ({ page }) => {
-    // Observed: saved ["a:Alph"] expected, got ["a:Alpha"] — Backspace deleted the whole block "b".
-    test.fail();
     await createBlok(page, [
       { id: 'a', type: 'paragraph', data: { text: 'Alpha' } },
       { id: 'b', type: 'paragraph', data: { text: 'Beta' } },
@@ -367,8 +356,6 @@ test.describe('undo audit — caret, scroll, selection', () => {
   });
 
   test('CAR-3c: typing after undo goes where the caret is, not into a stale selected block', async ({ page }) => {
-    // Observed: ["Alpha", "BetaQ"] — the caret shows in "a" but the key lands in "b".
-    test.fail();
     await createBlok(page, [
       { id: 'a', type: 'paragraph', data: { text: 'Alpha' } },
       { id: 'b', type: 'paragraph', data: { text: 'Beta' } },
@@ -388,8 +375,6 @@ test.describe('undo audit — caret, scroll, selection', () => {
 
   // Expected source: undo puts the caret where the change was made — here, the restored block.
   test('CAR-4: undo of a block delete from the settings menu puts the caret in the restored block', async ({ page }) => {
-    // Observed: caret lands in the next block "c" (offset 5), same via history.undo().
-    test.fail();
     await createBlok(page, [
       { id: 'a', type: 'paragraph', data: { text: 'First' } },
       { id: 'b', type: 'paragraph', data: { text: 'Second' } },
@@ -409,8 +394,6 @@ test.describe('undo audit — caret, scroll, selection', () => {
 
   // Expected source: undo-redo.spec.ts "undo after block split rejoins blocks (single undo)", caret at the split point.
   test('CAR-5: undo of Enter in the middle of a table cell puts the caret at the split point', async ({ page }) => {
-    // Observed: caret in the "Delta" cell at offset 5 instead of the "Gamma" cell at 3.
-    test.fail();
     await createBlok(page, [{ id: 't', type: 'table', data: { withHeadings: false, content: [['Alpha', 'Beta'], ['Gamma', 'Delta']] } }]);
     const cellBlockId = await cellBlockIdByText(page, 'Gamma');
 
@@ -424,8 +407,6 @@ test.describe('undo audit — caret, scroll, selection', () => {
   });
 
   test('CAR-6: one undo of Enter in the middle of a table cell rejoins the text', async ({ page }) => {
-    // Observed: cell reads "Gam" after one undo; "Gamma" only after a second undo.
-    test.fail();
     await createBlok(page, [{ id: 't', type: 'table', data: { withHeadings: false, content: [['Alpha', 'Beta'], ['Gamma', 'Delta']] } }]);
     const cellBlockId = await cellBlockIdByText(page, 'Gamma');
 
@@ -482,8 +463,6 @@ test.describe('undo audit — caret, scroll, selection', () => {
 
   // Expected source: the public blocks API must agree with the caret the undo just placed.
   test('CAR-8: getCurrentBlockIndex agrees with the caret right after history.undo()', async ({ page }) => {
-    // Observed: returns "c" (where the caret was before undo); heals to "a" only after ~180ms.
-    test.fail();
     await createBlok(page, [
       { id: 'a', type: 'paragraph', data: { text: 'Alpha' } },
       { id: 'b', type: 'paragraph', data: { text: 'Beta' } },

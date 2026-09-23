@@ -2525,7 +2525,27 @@ describe('TableCellBlocks', () => {
       cellBlocks.deleteBlocks(['b1', 'nonexistent', 'also-missing']);
 
       expect(mockDelete).toHaveBeenCalledTimes(1);
-      expect(mockDelete).toHaveBeenCalledWith(0);
+      expect(mockDelete).toHaveBeenCalledWith(0, true);
+    });
+
+    it('leaves the caret where it is when asked to', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const mockDelete = vi.fn();
+      const api = {
+        blocks: {
+          getBlockIndex: vi.fn((id: string) => (id === 'b1' ? 0 : undefined)),
+          delete: mockDelete,
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
+
+      cellBlocks.deleteBlocks(['b1'], false);
+
+      expect(mockDelete).toHaveBeenCalledWith(0, false);
     });
 
     it('should preserve scroll position when deleting blocks causes a scroll jump', async () => {

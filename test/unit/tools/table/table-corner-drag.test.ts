@@ -163,23 +163,34 @@ const installGeometry = (
 /**
  * A scroll container whose scrollLeft clamps the way a real one does, so the
  * auto-scroll cannot pretend to scroll further than the content allows.
+ *
+ * The clamp also applies when the content SHRINKS under a scrolled container:
+ * removing the last column then slides the grid right instead of moving its
+ * right edge, which is the geometry the corner drag has to survive.
  */
 const createScrollContainer = (visibleWidth: number, contentWidth: () => number): ScrollView => {
   const scroll = { left: 0 };
   const el = document.createElement('div');
+  const clamp = (value: number): number => Math.max(0, Math.min(value, contentWidth() - visibleWidth));
+  // A clamped offset stays clamped: growing the content again does not restore it.
+  const read = (): number => {
+    scroll.left = clamp(scroll.left);
+
+    return scroll.left;
+  };
 
   Object.defineProperty(el, 'clientWidth', { get: () => visibleWidth });
   Object.defineProperty(el, 'scrollWidth', { get: contentWidth });
   Object.defineProperty(el, 'scrollLeft', {
-    get: () => scroll.left,
+    get: read,
     set: (value: number) => {
-      scroll.left = Math.max(0, Math.min(value, contentWidth() - visibleWidth));
+      scroll.left = clamp(value);
     },
   });
 
   return { el,
     width: visibleWidth,
-    scrollLeft: () => scroll.left };
+    scrollLeft: read };
 };
 
 /**
@@ -1172,6 +1183,152 @@ describe('TableCornerDrag', () => {
       expect(options.onAddColumn.mock.calls.length).toBe(addedBeforeThePullBack);
 
       hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 200, clientY: 60, pointerId: 1 }));
+    });
+
+    it('stops growing as soon as the pointer pulls back, even outside the container', () => {
+      const options = createDefaultOptions(wrapper, grid);
+      const geo = overflowing();
+      const view = createScrollContainer(400, () => sum(geo.colWidths));
+
+      installGeometry(wrapper, grid, geo, view);
+      wireGeometryOps(options, grid, geo);
+
+      const frames = captureFrames();
+
+      cornerDrag = new TableCornerDrag(options);
+      cornerDrag.attachScrollContainer(view.el);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      startEdgeDrag(hitZone);
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 480, clientY: 60, pointerId: 1 }));
+      frames.run(20);
+
+      const grownBeforeThePullBack = options.onAddColumn.mock.calls.length;
+
+      // Heading back toward the table, still 40px past the container edge.
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 440, clientY: 60, pointerId: 1 }));
+      frames.run(60);
+
+      expect(options.onAddColumn.mock.calls.length).toBe(grownBeforeThePullBack);
+
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 440, clientY: 60, pointerId: 1 }));
+    });
+
+    it('keeps growing while a held pointer trembles past the edge', () => {
+      const options = createDefaultOptions(wrapper, grid);
+      const geo = overflowing();
+      const view = createScrollContainer(400, () => sum(geo.colWidths));
+
+      installGeometry(wrapper, grid, geo, view);
+      wireGeometryOps(options, grid, geo);
+
+      const frames = captureFrames();
+
+      cornerDrag = new TableCornerDrag(options);
+      cornerDrag.attachScrollContainer(view.el);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      startEdgeDrag(hitZone);
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 480, clientY: 60, pointerId: 1 }));
+
+      const beforeTheHold = options.onAddColumn.mock.calls.length;
+
+      // A hand holding still still wobbles a pixel or two.
+      for (let i = 0; i < 60; i++) {
+        hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: i % 2 === 0 ? 478 : 480, clientY: 60, pointerId: 1 }));
+        frames.run(1);
+      }
+
+      expect(options.onAddColumn.mock.calls.length).toBeGreaterThan(beforeTheHold);
+
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 480, clientY: 60, pointerId: 1 }));
+    });
+
+    it('a flick out past the edge and straight back removes nothing it did not add', () => {
+      const options = createDefaultOptions(wrapper, grid);
+      // 300px of columns in a 350px container: the corner starts visible.
+      const geo: Geometry = { left: 0,
+        top: 0,
+        colWidths: [100, 100, 100],
+        rowHeights: [30, 30] };
+      const view = createScrollContainer(350, () => sum(geo.colWidths));
+
+      installGeometry(wrapper, grid, geo, view);
+      wireGeometryOps(options, grid, geo, 100);
+      captureFrames();
+
+      cornerDrag = new TableCornerDrag(options);
+      cornerDrag.attachScrollContainer(view.el);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+      const move = (clientX: number): void => {
+        hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX, clientY: 60, pointerId: 1 }));
+      };
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, clientY: 60, pointerId: 1 }));
+      // Out to 340: one column, and the grid now overflows its container.
+      move(340);
+      expect(geo.colWidths).toHaveLength(4);
+
+      // Too fast for the auto-scroll to lay anything down, then back to 340.
+      move(600);
+      move(340);
+
+      expect(options.onRemoveLastColumn).not.toHaveBeenCalled();
+      expect(geo.colWidths).toHaveLength(4);
+
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 340, clientY: 60, pointerId: 1 }));
+    });
+
+    it('removes one column per column of pull-back once the table is scrolled to its end', () => {
+      const options = createDefaultOptions(wrapper, grid);
+      const geo = overflowing();
+      const view = createScrollContainer(400, () => sum(geo.colWidths));
+
+      installGeometry(wrapper, grid, geo, view);
+      // Wide new columns, so every step below is well inside one column.
+      wireGeometryOps(options, grid, geo, 180);
+
+      const frames = captureFrames();
+
+      cornerDrag = new TableCornerDrag(options);
+      cornerDrag.attachScrollContainer(view.el);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      startEdgeDrag(hitZone);
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 480, clientY: 60, pointerId: 1 }));
+      frames.run(80);
+
+      // Grown well past the container and scrolled to its end.
+      expect(geo.colWidths.length).toBeGreaterThanOrEqual(6);
+
+      /*
+       * Scrolled to its end, removing a column clamps the scroll: the grid slides
+       * right and its right edge stays on the container edge. The next pixel of
+       * pull-back must not read that as "the corner is still a column away".
+       */
+      const removedAt: number[] = [];
+
+      for (let pointerX = 470, seen = 0; pointerX >= 100; pointerX -= 10) {
+        hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: pointerX, clientY: 60, pointerId: 1 }));
+
+        const removed = options.onRemoveLastColumn.mock.calls.length;
+
+        expect(removed - seen).toBeLessThanOrEqual(1);
+
+        if (removed > seen) {
+          removedAt.push(pointerX);
+        }
+        seen = removed;
+      }
+
+      // One 180px column of travel per removal.
+      expect(removedAt.slice(1).map((x, i) => removedAt[i] - x)).toEqual([180, 180]);
+
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 60, pointerId: 1 }));
     });
   });
 

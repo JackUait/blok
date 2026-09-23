@@ -637,6 +637,194 @@ test.describe('Table Corner Drag Handle', () => {
     await page.mouse.up();
   });
 
+  test.describe('pulling back after the table overflowed', () => {
+    const NARROW_EDITOR = 720;
+    const COLUMN = 350;
+
+    /**
+     * A 350px single column in a 720px editor, dragged out until it overflows and
+     * the auto-scroll has scrolled it to its end.
+     */
+    const overflowByDragging = async (page: Page): Promise<{ y: number; edge: number; x: number }> => {
+      await createTableWithWidths(page, [[''], [''], [''], ['']], [COLUMN]);
+      await page.evaluate(width => {
+        const holder = document.getElementById('blok');
+
+        if (holder !== null) {
+          holder.style.maxWidth = `${width}px`;
+        }
+      }, NARROW_EDITOR);
+
+      const containerBox = assertBoundingBox(await page.locator('[data-blok-table-scroll]').boundingBox(), 'Scroll container');
+      const cornerBox = assertBoundingBox(await page.locator(CORNER_DRAG_SELECTOR).boundingBox(), 'Corner handle');
+      const edge = containerBox.x + containerBox.width;
+      const y = cornerBox.y + cornerBox.height / 2;
+      const x = edge + 150;
+
+      await page.mouse.move(cornerBox.x + cornerBox.width / 2, y);
+      await page.mouse.down();
+      await page.mouse.move(x, y, { steps: 30 });
+      await expect.poll(() => columnCount(page), { timeout: 5_000 }).toBeGreaterThanOrEqual(4);
+
+      return { y, edge, x };
+    };
+
+    const columnCount = (page: Page): Promise<number> =>
+      page.locator(ROW_SELECTOR).nth(0).locator(CELL_SELECTOR).count();
+
+    /** Let the auto-scroll run: it is driven by animation frames, not events. */
+    const waitFrames = (page: Page, frames: number): Promise<void> =>
+      page.evaluate(count => new Promise<void>(resolve => {
+        const tick = (left: number): void => {
+          if (left === 0) {
+            resolve();
+
+            return;
+          }
+          requestAnimationFrame(() => tick(left - 1));
+        };
+
+        tick(count);
+      }), frames);
+
+    test('a held pointer that trembles past the edge keeps growing the table', async ({ page }) => {
+      const { y, x } = await overflowByDragging(page);
+      const beforeTheHold = await columnCount(page);
+
+      for (let i = 0; i < 90; i++) {
+        await page.mouse.move(x + (i % 2 === 0 ? -1 : 1), y);
+        await waitFrames(page, 1);
+      }
+
+      expect(await columnCount(page)).toBeGreaterThan(beforeTheHold);
+
+      await page.mouse.up();
+    });
+
+    test('a flick out past the edge and straight back keeps the table as it was', async ({ page }) => {
+      await createTableWithWidths(page, [[''], [''], [''], ['']], [COLUMN]);
+      await page.evaluate(width => {
+        const holder = document.getElementById('blok');
+
+        if (holder !== null) {
+          holder.style.maxWidth = `${width}px`;
+        }
+      }, NARROW_EDITOR);
+
+      const containerBox = assertBoundingBox(await page.locator('[data-blok-table-scroll]').boundingBox(), 'Scroll container');
+      const cornerBox = assertBoundingBox(await page.locator(CORNER_DRAG_SELECTOR).boundingBox(), 'Corner handle');
+      const edge = containerBox.x + containerBox.width;
+      const y = cornerBox.y + cornerBox.height / 2;
+      const inside = edge - 60;
+
+      await page.mouse.move(cornerBox.x + cornerBox.width / 2, y);
+      await page.mouse.down();
+      await page.mouse.move(inside, y, { steps: 5 });
+
+      const beforeTheFlick = await columnCount(page);
+
+      expect(beforeTheFlick).toBe(2);
+
+      await page.mouse.move(edge + 150, y);
+      await page.mouse.move(inside, y);
+
+      expect(await columnCount(page)).toBe(beforeTheFlick);
+
+      await page.mouse.up();
+    });
+
+    test('heading back toward the table never adds columns', async ({ page }) => {
+      const { y, edge } = await overflowByDragging(page);
+
+      // Back toward the table, still outside the editor.
+      await page.mouse.move(edge + 40, y, { steps: 10 });
+
+      const afterPullBack = await columnCount(page);
+
+      await waitFrames(page, 60);
+
+      expect(await columnCount(page)).toBe(afterPullBack);
+
+      await page.mouse.up();
+    });
+
+    test('removes one column per column of pull-back, never a burst', async ({ page }) => {
+      const { y, x } = await overflowByDragging(page);
+      const grown = await columnCount(page);
+      const removedAt: number[] = [];
+
+      // Walk back in 5px steps and note the pointer position of every removal.
+      for (let pointerX = x, seen = grown; pointerX > x - 3 * COLUMN && removedAt.length < 2; pointerX -= 5) {
+        await page.mouse.move(pointerX, y);
+
+        const now = await columnCount(page);
+
+        expect(seen - now, `removed at most one column at x=${pointerX}`).toBeLessThanOrEqual(1);
+
+        if (now < seen) {
+          removedAt.push(pointerX);
+        }
+        seen = now;
+      }
+
+      expect(removedAt).toHaveLength(2);
+      // The second removal costs a whole column of travel, like the first.
+      expect(removedAt[0] - removedAt[1]).toBeGreaterThanOrEqual(COLUMN - 10);
+
+      await page.mouse.up();
+    });
+  });
+
+  test('Corner drag adds no paragraph below the table and leaves the caret alone', async ({ page }) => {
+    // The handle hangs below the grid, where a press used to count as a click
+    // on the empty space under the last block.
+    await createTable(page, [['', '', ''], ['', '', ''], ['', '', '']]);
+
+    const cornerBox = assertBoundingBox(await page.locator(CORNER_DRAG_SELECTOR).boundingBox(), 'Corner handle');
+    const startX = cornerBox.x + cornerBox.width / 2;
+    const y = cornerBox.y + cornerBox.height / 2;
+
+    await page.mouse.move(startX, y);
+    await page.mouse.down();
+    await page.mouse.move(startX - 5, y - 60, { steps: 10 });
+
+    expect(await page.locator(ROW_SELECTOR).count()).toBe(2);
+    expect(await page.evaluate(() => document.activeElement?.closest('[data-blok-table-cell]') ?? null)).toBeNull();
+
+    await page.mouse.up();
+
+    const saved = await page.evaluate(async () => (await window.blokInstance?.save())?.blocks ?? []);
+
+    expect(saved.filter(block => block.parent === undefined).map(block => block.type)).toEqual(['table']);
+  });
+
+  test('Corner drag inward does not leave the scroll area wider than the table', async ({ page }) => {
+    // Five 350px columns overflow the container; the stale column-resize handles
+    // must not hold its scroll width once a column is gone.
+    await createTableWithWidths(page, [['', '', '', '', ''], ['', '', '', '', '']], [350, 350, 350, 350, 350]);
+
+    const cornerBox = assertBoundingBox(await page.locator(CORNER_DRAG_SELECTOR).boundingBox(), 'Corner handle');
+    const startX = cornerBox.x + cornerBox.width / 2;
+    const y = cornerBox.y + cornerBox.height / 2;
+
+    await page.mouse.move(startX, y);
+    await page.mouse.down();
+    await page.mouse.move(startX - 400, y, { steps: 20 });
+
+    expect(await page.locator(ROW_SELECTOR).nth(0).locator(CELL_SELECTOR).count()).toBe(4);
+
+    const extent = await page.evaluate(() => {
+      const sc = document.querySelector('[data-blok-table-scroll]') as HTMLElement;
+      const grid = sc.querySelector('table') as HTMLElement;
+
+      return { scrollWidth: sc.scrollWidth, grid: grid.offsetWidth };
+    });
+
+    expect(extent.scrollWidth).toBeLessThanOrEqual(extent.grid + 1);
+
+    await page.mouse.up();
+  });
+
   test('Undo reverses corner click additions', async ({ page }) => {
     // 1. Create a 2x2 table
     await createTable(page, [['A', 'B'], ['C', 'D']]);

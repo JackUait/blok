@@ -2237,6 +2237,22 @@ describe('corner-drag wiring', () => {
     expect(harness.blockOf('b-0-2')).toBeUndefined();
   });
 
+  it('removes corner-drag rows and columns without moving the caret into a cell', () => {
+    const harness = createHarness({ rows: 3, cols: 3 });
+    const cellBlocks = harness.host.cellBlocks;
+
+    if (cellBlocks === null) {
+      throw new Error('harness has no cell blocks');
+    }
+
+    const deleteBlocks = vi.spyOn(cellBlocks, 'deleteBlocks');
+
+    cornerDragOptions().onRemoveLastRow();
+    cornerDragOptions().onRemoveLastColumn();
+
+    expect(deleteBlocks.mock.calls.map(call => call[1])).toEqual([false, false]);
+  });
+
   it('keeps the last remaining column', () => {
     const harness = createHarness({ cols: 1 });
 
@@ -2290,10 +2306,13 @@ describe('corner-drag wiring', () => {
   it('opens one undo group and parks every other affordance on drag start', () => {
     const harness = createHarness();
 
+    const resize = resizeMock();
+
     cornerDragOptions().onDragStart();
 
     expect(harness.api.blocks.beginTransaction).toHaveBeenCalledTimes(1);
-    expect(resizeMock().enabled).toBe(false);
+    // Torn down, not just disabled: a removed column's handle would hold the scroll width.
+    expect(resize.destroy).toHaveBeenCalledTimes(1);
     expect(rowColMock().hideAllGrips).toHaveBeenCalledTimes(1);
     expect(rowColMock().setGripsDisplay).toHaveBeenCalledWith(false);
     expect(addControlsMock().setDisplay).toHaveBeenCalledWith(false);

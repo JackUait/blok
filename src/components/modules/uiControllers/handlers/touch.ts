@@ -215,6 +215,16 @@ const isClickBelowLastBlockContent = (
   }
 
   const contentEl = blockHolder.querySelector('[data-blok-element-content]');
+
+  /**
+   * A press on something the block itself rendered is the block's own UI even
+   * when it is drawn past the content box — the table's corner resize handle
+   * hangs below the grid, and grabbing it appended an empty paragraph.
+   */
+  if (event.target instanceof Node && event.target !== contentEl && contentEl?.contains(event.target) === true) {
+    return false;
+  }
+
   const contentRect = contentEl?.getBoundingClientRect();
 
   return contentRect !== undefined && clientY > contentRect.bottom;

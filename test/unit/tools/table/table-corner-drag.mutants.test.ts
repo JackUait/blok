@@ -1463,7 +1463,7 @@ describe('TableCornerDrag — surviving-mutant coverage', () => {
       const { hitZone, view } = armedFixture(geo);
       const containerRight = geo.left + view.width;
 
-      down(hitZone, gridRight(geo), gridBottom(geo));
+      down(hitZone, containerRight, gridBottom(geo));
       move(hitZone, containerRight + 40, gridBottom(geo));
       move(hitZone, containerRight + 50, gridBottom(geo));
 
@@ -1476,7 +1476,7 @@ describe('TableCornerDrag — surviving-mutant coverage', () => {
       const { options, hitZone, view } = armedFixture(geo);
       const containerRight = geo.left + view.width;
 
-      down(hitZone, gridRight(geo), gridBottom(geo));
+      down(hitZone, containerRight, gridBottom(geo));
       move(hitZone, containerRight + 40, gridBottom(geo));
 
       expect(frames.requested()).toBe(1);
@@ -1494,7 +1494,7 @@ describe('TableCornerDrag — surviving-mutant coverage', () => {
       const { hitZone, view } = armedFixture(geo);
       const containerRight = geo.left + view.width;
 
-      down(hitZone, gridRight(geo), gridBottom(geo));
+      down(hitZone, containerRight, gridBottom(geo));
       move(hitZone, containerRight + 40, gridBottom(geo));
       up(hitZone, containerRight + 40, gridBottom(geo));
 
@@ -1507,7 +1507,7 @@ describe('TableCornerDrag — surviving-mutant coverage', () => {
       const { hitZone, view } = armedFixture(geo);
       const containerRight = geo.left + view.width;
 
-      down(hitZone, gridRight(geo), gridBottom(geo));
+      down(hitZone, containerRight, gridBottom(geo));
       move(hitZone, containerRight + 40, gridBottom(geo));
       cancel(hitZone);
 
@@ -1520,7 +1520,7 @@ describe('TableCornerDrag — surviving-mutant coverage', () => {
       const { hitZone, view } = armedFixture(geo);
       const containerRight = geo.left + view.width;
 
-      down(hitZone, gridRight(geo), gridBottom(geo));
+      down(hitZone, containerRight, gridBottom(geo));
       move(hitZone, containerRight + 40, gridBottom(geo));
       corner?.destroy();
       corner = null;
@@ -1545,7 +1545,7 @@ describe('TableCornerDrag — surviving-mutant coverage', () => {
       const { options, hitZone, view } = armedFixture(geo);
       const containerRight = geo.left + view.width;
 
-      down(hitZone, gridRight(geo), gridBottom(geo));
+      down(hitZone, containerRight, gridBottom(geo));
       move(hitZone, containerRight + 40, gridBottom(geo));
       up(hitZone, containerRight + 40, gridBottom(geo));
 
@@ -1561,7 +1561,7 @@ describe('TableCornerDrag — surviving-mutant coverage', () => {
       const { options, hitZone, view } = armedFixture(geo);
       const containerRight = geo.left + view.width;
 
-      down(hitZone, gridRight(geo), gridBottom(geo));
+      down(hitZone, containerRight, gridBottom(geo));
       move(hitZone, containerRight + 40, gridBottom(geo));
       options.canRemoveLastColumn.mockReturnValue(false);
       move(hitZone, containerRight - 40, gridBottom(geo));
@@ -2065,7 +2065,7 @@ describe('TableCornerDrag — surviving-mutant coverage', () => {
 
       expect(gridBottom(geo)).toBeGreaterThan(LOWER_BAND_EDGE);
 
-      down(hitZone, gridRight(geo), 150);
+      down(hitZone, containerRight, 150);
       move(hitZone, containerRight + 40, 150);
       frames.step(1000);
       frames.step(2000);
@@ -2082,7 +2082,7 @@ describe('TableCornerDrag — surviving-mutant coverage', () => {
 
       expect(gridBottom(geo)).toBeLessThan(VIEWPORT_BAND);
 
-      down(hitZone, gridRight(geo), 150);
+      down(hitZone, containerRight, 150);
       move(hitZone, containerRight + 40, 150);
       frames.step(1000);
       frames.step(2000);
@@ -2098,7 +2098,7 @@ describe('TableCornerDrag — surviving-mutant coverage', () => {
 
       // The move itself pulls the corner up; only the frame loop is under test.
       options.canRemoveLastRow.mockReturnValue(false);
-      down(hitZone, gridRight(geo), 30);
+      down(hitZone, containerRight, 30);
       move(hitZone, containerRight + 40, 10);
       options.canRemoveLastRow.mockReturnValue(true);
 
@@ -2133,7 +2133,7 @@ describe('TableCornerDrag — surviving-mutant coverage', () => {
       const containerRight = geo.left + view.width;
 
       options.canRemoveLastRow.mockReturnValue(false);
-      down(hitZone, gridRight(geo), 30);
+      down(hitZone, containerRight, 30);
       move(hitZone, containerRight + 40, 4);
       options.canRemoveLastRow.mockReturnValue(true);
 

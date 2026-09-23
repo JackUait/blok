@@ -296,7 +296,7 @@ export class TableSubsystems {
 
           const { blocksToDelete } = this.host.model.deleteRow(rowCount - 1);
 
-          this.host.cellBlocks?.deleteBlocks(blocksToDelete);
+          this.host.cellBlocks?.deleteBlocks(blocksToDelete, false);
           this.host.grid.deleteRow(gridEl, rowCount - 1);
 
           return true;
@@ -340,7 +340,7 @@ export class TableSubsystems {
           // so no additional syncColWidthsAfterDeleteColumn is needed.
           const { blocksToDelete } = this.host.model.deleteColumn(colCount - 1);
 
-          this.host.cellBlocks?.deleteBlocks(blocksToDelete);
+          this.host.cellBlocks?.deleteBlocks(blocksToDelete, false);
           this.host.grid.deleteColumn(gridEl, colCount - 1);
 
           const updatedWidths = this.host.model.colWidths;
@@ -432,7 +432,7 @@ export class TableSubsystems {
 
           const { blocksToDelete } = this.host.model.deleteRow(rowCount - 1);
 
-          this.host.cellBlocks?.deleteBlocks(blocksToDelete);
+          this.host.cellBlocks?.deleteBlocks(blocksToDelete, false);
           this.host.grid.deleteRow(gridEl, rowCount - 1);
         });
       },
@@ -446,7 +446,7 @@ export class TableSubsystems {
 
           const { blocksToDelete } = this.host.model.deleteColumn(colCount - 1);
 
-          this.host.cellBlocks?.deleteBlocks(blocksToDelete);
+          this.host.cellBlocks?.deleteBlocks(blocksToDelete, false);
           this.host.grid.deleteColumn(gridEl, colCount - 1);
 
           const updatedWidths = this.host.model.colWidths;
@@ -462,9 +462,14 @@ export class TableSubsystems {
         // the 500ms Yjs captureTimeout does not merge them.
         this.host.api.blocks.beginTransaction?.();
 
-        if (this.resize) {
-          this.resize.enabled = false;
-        }
+        /*
+         * Take the column-resize handles out of layout, not just disable them:
+         * they are absolutely positioned per column, so the handles of columns
+         * the drag removes would hold the scroll area at the old width.
+         * onDragEnd rebuilds them for the final columns.
+         */
+        this.resize?.destroy();
+        this.resize = null;
         this.rowColControls?.hideAllGrips();
         this.rowColControls?.setGripsDisplay(false);
         this.addControls?.setDisplay(false);

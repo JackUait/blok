@@ -1714,8 +1714,12 @@ export class TableCellBlocks {
    * `await` defers Caret.setToBlock() to microtasks that run AFTER this method returns,
    * causing unwanted page jumps via element.focus() and window.scrollBy().
    * We use Promise.all().then() to schedule the scroll restore after all those microtasks.
+   * @param blockIds - blocks to delete
+   * @param setCaret - false for gestures that reshape the table without the user
+   *   typing in it (the corner and +/- drags): the caret would otherwise land in
+   *   whichever cell became current, painting a focus box mid-drag.
    */
-  public deleteBlocks(blockIds: string[]): void {
+  public deleteBlocks(blockIds: string[], setCaret = true): void {
     const blockIndices = blockIds
       .map(id => this.api.blocks.getBlockIndex(id))
       .filter((index): index is number => index !== undefined)
@@ -1724,7 +1728,7 @@ export class TableCellBlocks {
     const savedScrollY = window.scrollY;
 
     const deletePromises = blockIndices.map(index => {
-      return this.api.blocks.delete(index);
+      return this.api.blocks.delete(index, setCaret);
     });
 
     void Promise.all(deletePromises).then(() => {

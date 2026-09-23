@@ -507,6 +507,54 @@ describe('Touch Handler', () => {
         expect(blok.Caret.setToTheLastBlock).not.toHaveBeenCalled();
       });
 
+      it('does NOT delegate to setToTheLastBlock when the press lands on a control the block draws below its content', () => {
+        const handler = createRedactorTouchHandler({
+          Blok: blok,
+          redactorElement,
+        });
+
+        const blockWrapper = document.createElement('div');
+
+        blockWrapper.setAttribute('data-blok-element', '');
+
+        const contentEl = document.createElement('div');
+
+        contentEl.setAttribute('data-blok-element-content', '');
+        blockWrapper.appendChild(contentEl);
+        redactorElement.appendChild(blockWrapper);
+
+        // e.g. the table's corner resize handle, which hangs below the grid.
+        const control = document.createElement('div');
+
+        contentEl.appendChild(control);
+
+        const mockBlock = {
+          holder: blockWrapper,
+        };
+
+        vi.mocked(blok.BlockManager.setCurrentBlockByChildNode).mockReturnValue(mockBlock as unknown as ReturnType<typeof blok.BlockManager.setCurrentBlockByChildNode>);
+
+        Object.defineProperty(blok.BlockManager, 'lastBlock', {
+          get: () => mockBlock,
+          configurable: true,
+        });
+
+        vi.spyOn(contentEl, 'getBoundingClientRect').mockReturnValue(
+          new DOMRect(0, 0, 200, 100)
+        );
+
+        const event = new MouseEvent('mousedown', {
+          bubbles: true,
+          clientY: 120,
+        });
+
+        Object.defineProperty(event, 'target', { value: control });
+
+        handler(event);
+
+        expect(blok.Caret.setToTheLastBlock).not.toHaveBeenCalled();
+      });
+
       it('does NOT delegate to setToTheLastBlock when click is on a non-last block', () => {
         const handler = createRedactorTouchHandler({
           Blok: blok,

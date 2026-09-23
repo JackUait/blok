@@ -59,6 +59,14 @@ const AUTO_SCROLL_GAIN_PER_SECOND = 8;
  */
 const AUTO_SCROLL_VIEWPORT_BAND = 24;
 
+/**
+ * How far past the container edge the pointer must pull back from its furthest
+ * point to pause the auto-scroll, and push out again to resume it. Absorbs hand
+ * tremor: a held pointer wobbles a pixel or two, and flipping the loop off on
+ * every wobble stopped the growth outright.
+ */
+const AUTO_SCROLL_RETREAT_SLACK = 4;
+
 /** Which way the page auto-scroll is running, if at all. */
 type VerticalAutoScroll = 'none' | 'down' | 'up';
 
@@ -66,14 +74,35 @@ interface DragState {
   startX: number;
   startY: number;
   /**
+   * The grid width the pointer asks for: the width at pointerdown plus every
+   * pixel of horizontal travel. Kept as a WIDTH, not a right edge, because the
+   * edge stops meaning anything once the grid overflows its scroll container:
+   * scrolled to the end, removing a column clamps the scroll and the edge stays
+   * put, so an edge-based walk sees "still a column away" on every pointermove.
+   */
+  targetWidth: number;
+  /**
    * Where the pointer landed inside the handle, as the distance to the grid's
-   * corner. Held for the whole gesture so the corner tracks the pointer from
+   * bottom edge. Held for the whole gesture so the corner tracks the pointer from
    * wherever it was grabbed instead of jumping under it.
    */
-  grabOffsetX: number;
   grabOffsetY: number;
   pointerId: number;
   didDrag: boolean;
+  /**
+   * The target width when the pointer last crossed the container edge outward.
+   * Travel past the edge never resizes the table on its own, so pulling back
+   * there can only pay back what the auto-scroll laid down, never go below this.
+   */
+  edgeTargetWidth: number;
+  /** Furthest the pointer has reached past the container edge, or null inside it. */
+  retreatPeak: number | null;
+  /**
+   * Leftmost point of a pull-back that began past the container edge, or null.
+   * While set, the auto-scroll does not grow the table: heading back toward it
+   * must never add columns.
+   */
+  retreatFloor: number | null;
   /** Last seen pointer position — the auto-scroll runs without new events. */
   pointerX: number;
   pointerY: number;
@@ -269,8 +298,11 @@ export class TableCornerDrag {
     this.dragState = {
       startX: e.clientX,
       startY: e.clientY,
-      grabOffsetX: gridRect.right - e.clientX,
+      targetWidth: gridRect.width,
+      edgeTargetWidth: gridRect.width,
       grabOffsetY: gridRect.bottom - e.clientY,
+      retreatPeak: null,
+      retreatFloor: null,
       pointerId: e.pointerId,
       didDrag: false,
       pointerX: e.clientX,
@@ -342,32 +374,101 @@ export class TableCornerDrag {
       this.onDragStart();
     }
 
+    const previousX = this.dragState.pointerX;
+
     this.dragState.pointerX = e.clientX;
     this.dragState.pointerY = e.clientY;
+    this.updateRetreat(e.clientX);
     this.updateVerticalArming();
+    this.dragState.targetWidth = this.nextTargetWidth(previousX, e.clientX);
 
-    /*
-     * Once the auto-scroll is armed it owns horizontal growth, so the pointer
-     * must stop driving it: each frame re-anchors the grab offset to the corner
-     * the scroll just parked at the container edge, which would otherwise make
-     * every further pixel of travel worth a whole column (measured: a 180px drag
-     * grew the table 1751px). Targeting the current edge leaves columns alone —
-     * neither the grow nor the shrink branch fires.
-     */
     const rect = this.gridEl.getBoundingClientRect();
-    const targetRight = this.shouldAutoScrollRight()
-      ? rect.right
-      : e.clientX + this.dragState.grabOffsetX;
     const targetBottom = this.verticalAutoScroll() === 'none'
       ? e.clientY + this.dragState.grabOffsetY
       : rect.bottom;
 
-    this.resizeToCorner(targetRight, targetBottom);
+    this.resizeToCorner(this.dragState.targetWidth, targetBottom);
 
     this.updateTooltip();
     // Rows/columns just committed changed the grid's extent; follow it.
     this.syncPosition();
     this.updateAutoScroll();
+  }
+
+  /**
+   * Pulling back toward the table while past the container edge pauses the
+   * auto-scroll; pushing out again resumes it. Both need the slack, measured from
+   * the furthest and nearest points reached. Back inside there is nothing to pause.
+   */
+  private updateRetreat(nextX: number): void {
+    const state = this.dragState;
+
+    if (state === null) {
+      return;
+    }
+
+    const edge = this.scrollContainer?.getBoundingClientRect().right ?? Infinity;
+
+    if (nextX <= edge) {
+      state.retreatPeak = null;
+      state.retreatFloor = null;
+
+      return;
+    }
+
+    if (state.retreatFloor === null) {
+      state.retreatPeak = Math.max(state.retreatPeak ?? nextX, nextX);
+
+      if (nextX < state.retreatPeak - AUTO_SCROLL_RETREAT_SLACK) {
+        state.retreatFloor = nextX;
+      }
+
+      return;
+    }
+
+    state.retreatFloor = Math.min(state.retreatFloor, nextX);
+
+    if (nextX > state.retreatFloor + AUTO_SCROLL_RETREAT_SLACK) {
+      state.retreatFloor = null;
+      state.retreatPeak = nextX;
+    }
+  }
+
+  /**
+   * Apply a horizontal move to the target width. Travel inside the container
+   * always counts. Travel past its edge counts outward only while the auto-scroll
+   * is not running — when it is, the meter already turns that overshoot into
+   * columns, and counting it twice makes every pixel worth a whole column.
+   * Inward travel past the edge
+   * can only pay back what was added out there, so a flick out and back leaves
+   * the table as it was.
+   */
+  private nextTargetWidth(previousX: number, nextX: number): number {
+    const state = this.dragState;
+
+    if (state === null) {
+      return 0;
+    }
+
+    if (this.scrollContainer === null) {
+      return state.targetWidth + nextX - previousX;
+    }
+
+    const edge = this.scrollContainer.getBoundingClientRect().right;
+    const outward = Math.max(nextX, edge) - Math.max(previousX, edge);
+    const inward = Math.min(nextX, edge) - Math.min(previousX, edge);
+
+    if (outward < 0) {
+      return Math.max(state.edgeTargetWidth, state.targetWidth + outward) + inward;
+    }
+
+    const atEdge = state.targetWidth + inward;
+
+    if (previousX <= edge && nextX > edge) {
+      state.edgeTargetWidth = atEdge;
+    }
+
+    return this.shouldAutoScrollRight() ? atEdge : atEdge + outward;
   }
 
   /**
@@ -409,7 +510,7 @@ export class TableCornerDrag {
   private shouldAutoScrollRight(): boolean {
     const sc = this.scrollContainer;
 
-    if (sc === null || this.dragState === null || !this.dragState.didDrag) {
+    if (sc === null || this.dragState === null || !this.dragState.didDrag || this.dragState.retreatFloor !== null) {
       return false;
     }
 
@@ -570,8 +671,10 @@ export class TableCornerDrag {
 
       if (step > 0 && state.pendingX >= step) {
         state.pendingX -= step;
-        // Any target past the edge appends exactly one column, then settles.
-        this.resizeToCorner(rect.right + 1, rect.bottom);
+        // Any target past the width appends exactly one column, then settles.
+        this.resizeToCorner(rect.width + 1, rect.bottom);
+        // The pointer asked for the column the meter just laid down.
+        state.targetWidth += this.gridEl.getBoundingClientRect().width - rect.width;
       }
     }
 
@@ -587,7 +690,7 @@ export class TableCornerDrag {
 
         const edge = this.gridEl.getBoundingClientRect();
 
-        this.resizeToCorner(edge.right, this.meteredBottom(edge, down, up));
+        this.resizeToCorner(edge.width, this.meteredBottom(edge, down, up));
       }
     }
 
@@ -616,16 +719,11 @@ export class TableCornerDrag {
     /*
      * Re-anchor to the corner's new on-screen position. Without this the pointer
      * would owe back every pixel the auto-scroll travelled before it could
-     * shrink anything — dragging away from the edge would do nothing.
+     * shrink anything — dragging away from the edge would do nothing. Columns need
+     * no re-anchor: they are measured as a width, which scrolling never moves.
      */
-    const parked = this.gridEl.getBoundingClientRect();
-
-    if (right) {
-      state.grabOffsetX = parked.right - state.pointerX;
-    }
-
     if (down || up) {
-      state.grabOffsetY = parked.bottom - state.pointerY;
+      state.grabOffsetY = this.gridEl.getBoundingClientRect().bottom - state.pointerY;
     }
 
     this.syncPosition();
@@ -635,16 +733,17 @@ export class TableCornerDrag {
   }
 
   /**
-   * Grow or shrink the grid until its bottom-right corner meets the dragged
-   * point — Notion's model. Every decision is made against the grid's live
-   * geometry rather than a step frozen at pointerdown, which is what keeps the
-   * corner glued to the pointer across columns and rows of unequal size.
+   * Grow or shrink the grid until it is as wide as the drag asks and its bottom
+   * edge meets the dragged point — Notion's model. Every decision is made against
+   * the grid's live geometry rather than a step frozen at pointerdown, which is
+   * what keeps the corner glued to the pointer across columns and rows of
+   * unequal size.
    *
-   * Adding stops as soon as the edge reaches the pointer, and removing only
-   * fires once the pointer has cleared the whole last column/row, so the two
+   * Adding stops as soon as the grid reaches the target, and removing only
+   * fires once the target has cleared the whole last column/row, so the two
    * directions can never fight over the same pixel.
    */
-  private resizeToCorner(targetRight: number, targetBottom: number): void {
+  private resizeToCorner(targetWidth: number, targetBottom: number): void {
     const cursor = { rect: this.gridEl.getBoundingClientRect(),
       steps: 0 };
 
@@ -653,10 +752,10 @@ export class TableCornerDrag {
       return;
     }
 
-    while (targetRight > cursor.rect.right && cursor.steps++ < MAX_STEPS_PER_MOVE) {
+    while (targetWidth > cursor.rect.width && cursor.steps++ < MAX_STEPS_PER_MOVE) {
       this.onAddColumn();
 
-      const grown = this.nextRect(cursor.rect, (next, prev) => next.right > prev.right);
+      const grown = this.nextRect(cursor.rect, (next, prev) => next.width > prev.width);
 
       if (grown === null) {
         break;
@@ -666,15 +765,15 @@ export class TableCornerDrag {
 
     // Measuring the last column costs a pass over every cell; only pay for it
     // while the corner is actually being dragged back into the grid.
-    while (targetRight < cursor.rect.right && cursor.steps++ < MAX_STEPS_PER_MOVE && this.canRemoveLastColumn()) {
+    while (targetWidth < cursor.rect.width && cursor.steps++ < MAX_STEPS_PER_MOVE && this.canRemoveLastColumn()) {
       const width = this.measureLastColumnWidth(cursor.rect.right);
 
-      if (width <= 0 || targetRight > cursor.rect.right - width) {
+      if (width <= 0 || targetWidth > cursor.rect.width - width) {
         break;
       }
       this.onRemoveLastColumn();
 
-      const shrunk = this.nextRect(cursor.rect, (next, prev) => next.right < prev.right);
+      const shrunk = this.nextRect(cursor.rect, (next, prev) => next.width < prev.width);
 
       if (shrunk === null) {
         break;

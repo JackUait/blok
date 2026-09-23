@@ -113,6 +113,24 @@ describe('Bookmark tool', () => {
     expect(root.getAttribute('data-blok-mutation-free')).toBe('true');
   });
 
+  it('fetches the preview again when a replay restores a bookmark that never got one', () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+    const tool = new Bookmark({ ...createOptions({ url: 'https://example.com/article' }), origin: 'replay' });
+    const root = tool.render();
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(root.querySelector('[data-blok-testid="bookmark-loading"]')).not.toBeNull();
+  });
+
+  it('does not fetch on load, so a saved link with no preview is not refetched on every open', () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+    const tool = new Bookmark({ ...createOptions({ url: 'https://example.com/article' }), origin: 'load' });
+
+    tool.render();
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it('saves the stored metadata', () => {
     const tool = new Bookmark(
       createOptions({

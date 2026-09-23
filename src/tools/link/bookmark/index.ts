@@ -42,6 +42,8 @@ export class Bookmark implements BlockTool {
   private root: HTMLElement | null = null;
   /** Set by `removed()`: this instance is no longer the document's block. */
   private detached = false;
+  /** A replayed block (redo, undo of a delete) whose preview never landed. */
+  private readonly refetchOnRender: boolean;
 
   constructor(options: BlockToolConstructorOptions<BookmarkData, BookmarkConfig>) {
     this.api = options.api;
@@ -49,6 +51,10 @@ export class Bookmark implements BlockTool {
     this.fetcher = new MetadataFetcher(options.config ?? { endpoint: '' });
     this.data = { ...options.data, url: options.data?.url ?? '' };
     this.state = this.data.url ? 'RENDERED' : 'EMPTY';
+    // Only a replay: the preview of a redone paste was dropped with the
+    // undone block. A load must not refetch a link that has no preview.
+    this.refetchOnRender = options.origin === 'replay' && !options.readOnly
+      && this.data.url !== '' && Object.keys(this.data).length === 1;
   }
 
   public static get toolbox(): ToolboxConfig {
@@ -97,6 +103,10 @@ export class Bookmark implements BlockTool {
     root.setAttribute('data-blok-mutation-free', 'true');
     this.root = root;
     this.renderState();
+
+    if (this.refetchOnRender) {
+      this.startFetch(this.data.url);
+    }
 
     return root;
   }

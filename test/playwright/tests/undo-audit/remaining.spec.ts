@@ -170,7 +170,6 @@ test.describe('undo audit: remaining surfaces', () => {
   // The preview lands while the block is undone, is dropped, and redo never fetches again.
   // Observed: card text Expected "Stubbed Title", Received "example.comhttps://example.com/article"; saved data has no title.
   test('UNP-3: undo then redo of a bookmark whose preview was still loading gets the preview', async ({ page }) => {
-    test.fail();
     await gotoTestPage(page);
     const release = await holdUnfurl(page);
 

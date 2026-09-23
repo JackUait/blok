@@ -2072,14 +2072,6 @@ export class BlockManager extends Module {
   }
 
   /**
-   * Sync block data to Yjs after DOM mutation.
-   *
-   * The save() + equality diff stay per-mutation, but the resulting writes go
-   * through YjsManager's coalescing buffer: the first write of an idle block
-   * flushes immediately (today's timing), follow-ups coalesce into one trailing
-   * flush per 400ms window. `flushBlockDataWrites` is the flush body.
-   */
-  /**
    * Normalise every block after a document render. Called by the Renderer
    * AFTER its DOM rewrites (mark colours, link config), so the document takes
    * what save() returns once those are applied.
@@ -2113,6 +2105,14 @@ export class BlockManager extends Module {
     void this.syncBlockDataToYjs(block, { untracked: true, normalize: options?.onlyMissingKeys === true ? 'missing' : 'all' });
   }
 
+  /**
+   * Sync block data to Yjs after DOM mutation.
+   *
+   * The save() + equality diff stay per-mutation, but the resulting writes go
+   * through YjsManager's coalescing buffer: the first write of an idle block
+   * flushes immediately (today's timing), follow-ups coalesce into one trailing
+   * flush per 400ms window. `flushBlockDataWrites` is the flush body.
+   */
   private async syncBlockDataToYjs(block: Block, options?: SyncBlockDataOptions): Promise<void> {
     const { YjsManager } = this.Blok;
     // Registered BEFORE the save starts: between here and the enqueue below
@@ -2143,7 +2143,7 @@ export class BlockManager extends Module {
    * `syncBlockDataToYjs`'s body: save the block and enqueue the resulting
    * write. Split out so the in-flight registration above wraps every exit.
    * @param block - block whose saved data goes to Yjs
-   * @param options - untracked marks a materializing (non-user) write
+   * @param options - see `SyncBlockDataOptions`
    */
   private async saveAndEnqueueBlockDataWrite(block: Block, options?: SyncBlockDataOptions): Promise<void> {
     // Classified BEFORE the await: the settling window is measured from the

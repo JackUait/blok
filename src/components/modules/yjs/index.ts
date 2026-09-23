@@ -813,7 +813,7 @@ export class YjsManager extends Module {
    * @param fn - work whose writes must not be undo steps
    */
   public withoutCapture(fn: () => void): void {
-    this.documentStore.withoutCapture(fn);
+    this.undoHistory.withoutCaretMark(() => this.documentStore.withoutCapture(fn));
   }
 
   /**
@@ -828,7 +828,7 @@ export class YjsManager extends Module {
     // buffered typing write drained inside this one would land untracked.
     this.flushPendingBlockWrites();
 
-    this.documentStore.transactWithoutCapture(fn);
+    this.undoHistory.withoutCaretMark(() => this.documentStore.transactWithoutCapture(fn));
   }
 
   // ========== Public API: Smart Grouping ==========

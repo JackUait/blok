@@ -442,6 +442,30 @@ describe('UndoHistory', () => {
       expect(history.captureCaretSnapshot()).not.toBeNull();
     });
 
+    it('does not keep a caret mark taken by an untracked write for the next undo entry', () => {
+      // The editor normalises a block while no block has the caret.
+      history.withoutCaretMark(() => {
+        history.markCaretBeforeChange();
+        ydoc.transact(() => {
+          yblocks.push([new Y.Map<unknown>()]);
+        }, 'no-capture');
+      });
+
+      (blok.BlockManager as unknown as { currentBlock: unknown }).currentBlock = {
+        id: 'b1',
+        currentInputIndex: 0,
+        currentInput: document.createElement('div'),
+      };
+      history.markCaretBeforeChange();
+      ydoc.transact(() => {
+        yblocks.push([new Y.Map<unknown>()]);
+      }, 'local');
+
+      const stack = (history as unknown as { caretUndoStack: CaretHistoryEntry[] }).caretUndoStack;
+
+      expect(stack[stack.length - 1]?.before?.blockId).toBe('b1');
+    });
+
     it('does not overwrite on subsequent markCaretBeforeChange calls', () => {
       const mockBlock = {
         id: 'b1',

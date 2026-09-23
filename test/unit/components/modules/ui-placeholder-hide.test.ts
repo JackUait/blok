@@ -39,6 +39,12 @@ describe('UI placeholder-hide-on-toolbox classes', () => {
     expect(inert).toBe(false);
   });
 
+  it('leaves the slash-search editable alone: its ::before paints the search pill', () => {
+    for (const cls of PLACEHOLDER_HIDE_ON_TOOLBOX_CLASSES) {
+      expect(cls).toContain(':not([data-blok-slash-search])');
+    }
+  });
+
   it('only hides the placeholder while the toolbox is open on a focused editable block', () => {
     for (const cls of PLACEHOLDER_HIDE_ON_TOOLBOX_CLASSES) {
       expect(cls).toContain('[data-blok-toolbox-opened=true]');

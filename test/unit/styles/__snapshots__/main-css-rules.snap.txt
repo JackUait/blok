@@ -2335,11 +2335,19 @@
 }
 
 [data-blok-slash-search], [data-blok-slash-search]:focus-visible {
-  display: inline-block;
+  --_blok-slash-search-pad: 2px;
+  position: relative;
+  isolation: isolate;
 }
 
-[data-blok-table-cell] [data-blok-slash-search], [data-blok-table-cell] [data-blok-slash-search]:focus-visible {
-
+[data-blok-slash-search][contenteditable]::before {
+  content: '' !important;
+  position: absolute;
+  inset-inline: 0;
+  width: auto;
+  height: calc(1lh + 2 * var(--_blok-slash-search-pad));
+  margin-top: calc(-1 * var(--_blok-slash-search-pad));
+  z-index: -1;
 }
 
 [data-blok-slash-search]::after {

@@ -41,9 +41,9 @@ test.describe('slash search placeholder', () => {
     // Attribute should be set with placeholder text
     await expect(paragraph).toHaveAttribute('data-blok-slash-search', /.+/);
 
-    // Should have search input styling (background color)
+    // The search pill is painted by ::before
     const bgColor = await paragraph.evaluate(
-      (el) => window.getComputedStyle(el).backgroundColor
+      (el) => window.getComputedStyle(el, '::before').backgroundColor
     );
     expect(bgColor).not.toBe('rgba(0, 0, 0, 0)');
 
@@ -132,6 +132,78 @@ test.describe('slash search placeholder', () => {
 
     expect(['flex', 'inline-flex', 'grid', 'inline-grid']).not.toContain(display);
   });
+
+  /**
+   * The pill must not move the text or resize the block: the "/" has to land
+   * where the empty editable's text line was, and the content below must stay
+   * put, or the page jumps as the search starts. Each tool keeps its spacing
+   * in a different place (editable padding, item wrapper, cell), so the pill
+   * may not restyle the editable's box at all.
+   */
+  const TARGET_ID = 'slash-target';
+  const BELOW_TEXT = 'Content below';
+  const LAYOUT_CASES = [
+    { name: 'paragraph', block: { type: 'paragraph', data: { text: '' } }, above: true, tokens: null },
+    { name: 'paragraph at the top of the document', block: { type: 'paragraph', data: { text: '' } }, above: false, tokens: null },
+    { name: 'paragraph with custom block padding tokens', block: { type: 'paragraph', data: { text: '' } }, above: true, tokens: { top: '12px', bottom: '3px' } },
+    { name: 'heading', block: { type: 'header', data: { text: '', level: 2 } }, above: true, tokens: null },
+    { name: 'list item', block: { type: 'list', data: { text: '', style: 'unordered' } }, above: true, tokens: null },
+    { name: 'toggle', block: { type: 'toggle', data: { text: '' } }, above: true, tokens: null },
+    { name: 'quote', block: { type: 'quote', data: { text: '' } }, above: true, tokens: null },
+    { name: 'table cell', block: { type: 'table', data: { withHeadings: false, content: [['', ''], ['', '']] } }, above: true, tokens: null },
+  ];
+
+  for (const layoutCase of LAYOUT_CASES) {
+    test(`should not move the text line or the content below when "/" is typed (${layoutCase.name})`, async ({ page }) => {
+      await page.evaluate(async ({ holder, block, above, tokens, targetId, belowText }) => {
+        const container = document.getElementById(holder);
+
+        if (tokens !== null) {
+          container?.style.setProperty('--blok-block-padding-top', tokens.top);
+          container?.style.setProperty('--blok-block-padding-bottom', tokens.bottom);
+        }
+
+        await window.blokInstance?.render({
+          blocks: [
+            ...(above ? [{ type: 'paragraph', data: { text: 'Content above' } }] : []),
+            { id: targetId, ...block },
+            { type: 'paragraph', data: { text: belowText } },
+          ],
+        });
+      }, { holder: HOLDER_ID, block: layoutCase.block, above: layoutCase.above, tokens: layoutCase.tokens, targetId: TARGET_ID, belowText: BELOW_TEXT });
+
+      const editable = page.locator(`[data-blok-id="${TARGET_ID}"] ${CONTENT_EDITABLE_SELECTOR}`).first();
+      const below = page.getByText(BELOW_TEXT);
+
+      await editable.click();
+
+      const measure = async (): Promise<{ textTop: number; textBottom: number; belowTop: number }> => {
+        const text = await editable.evaluate((el) => {
+          const styles = window.getComputedStyle(el);
+          const rect = el.getBoundingClientRect();
+
+          return {
+            textTop: rect.top + parseFloat(styles.borderTopWidth) + parseFloat(styles.paddingTop),
+            textBottom: rect.bottom - parseFloat(styles.borderBottomWidth) - parseFloat(styles.paddingBottom),
+          };
+        });
+        const belowTop = await below.evaluate((el) => el.getBoundingClientRect().top);
+
+        return { ...text, belowTop };
+      };
+
+      const before = await measure();
+
+      await page.keyboard.type('/');
+      await expect(editable).toHaveAttribute('data-blok-slash-search', /.+/);
+
+      const after = await measure();
+
+      expect(after.textTop).toBeCloseTo(before.textTop, 1);
+      expect(after.textBottom).toBeCloseTo(before.textBottom, 1);
+      expect(after.belowTop).toBeCloseTo(before.belowTop, 1);
+    });
+  }
 
   test('should keep "/" text visible (not transparent) in the search input', async ({ page }) => {
     const paragraph = page.locator(CONTENT_EDITABLE_SELECTOR);

@@ -3,30 +3,36 @@
  * When the user types "/" to open the toolbox, the contenteditable
  * transforms to look like a search input.
  *
- * The element is inline-level so that the ::after pseudo-element (placeholder
- * text) renders on the same line as the "/" character and any typed query —
- * not on a new line below it (which happens with the default block display).
+ * The pill must not change the editable's box: every tool keeps its spacing
+ * somewhere else (paragraph padding, list item wrapper, table cell), so any
+ * pill margin or vertical padding moves the text or resizes the block, and
+ * the page below jumps. The editable keeps its own display, margins and
+ * vertical padding; the pill is painted by ::before around the text line.
  *
- * It must be `inline-block`, NOT `inline-flex`: this element is the block's
- * contenteditable, and a flex container establishes no inline formatting
- * context. With no line box of its own, an EMPTY editable (the + button path
- * opens the search with no "/" typed) leaves the engine nothing to size the
- * caret from, so it falls back to the containing block's box — the caret was
- * painted 38px tall against a 28px pill, starting at the pill's left border
- * instead of inside its padding. As an inline-block the pill has its own line
- * box, so the caret always matches the input's own text line.
- * Vertical centering comes from that line box (the block's line-height), which
- * is what `align-items: center` was doing for the flex items.
+ * Keep the tool's own `display`. A flex container has no line box of its
+ * own, so an EMPTY editable (the + button opens the search with no "/")
+ * would size the caret from the whole block.
  */
 [data-blok-slash-search],
 [data-blok-slash-search]:focus-visible {
-  @apply bg-search-input-bg rounded-[6px] transition-colors duration-150 w-fit whitespace-nowrap px-2 py-[2px] mt-[9px];
-  display: inline-block;
+  @apply w-fit whitespace-nowrap px-2;
+  /* toolbox.ts reads this to anchor the popover at the painted pill. */
+  --_blok-slash-search-pad: 2px;
+  position: relative;
+  isolation: isolate;
 }
 
-[data-blok-table-cell] [data-blok-slash-search],
-[data-blok-table-cell] [data-blok-slash-search]:focus-visible {
-  @apply rounded-[6px];
+/* The pill itself. With no `top` it sits at its static position, which is
+   the first line's top, so it follows the text in every tool. */
+[data-blok-slash-search][contenteditable]::before {
+  content: '' !important;
+  @apply bg-search-input-bg rounded-[6px] pointer-events-none;
+  position: absolute;
+  inset-inline: 0;
+  width: auto;
+  height: calc(1lh + 2 * var(--_blok-slash-search-pad));
+  margin-top: calc(-1 * var(--_blok-slash-search-pad));
+  z-index: -1;
 }
 
 [data-blok-slash-search]::after {

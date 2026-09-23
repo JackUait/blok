@@ -44,9 +44,9 @@ vi.mock('../../../../src/tools/toggle/toggle-shortcuts', () => {
  * Placeholder-hide utility classes the wrapper must carry (exported contract).
  */
 const PLACEHOLDER_CLASS_A =
-  '[&[data-blok-toolbox-opened=true]_[contentEditable=true][data-blok-placeholder-active]:focus]:before:opacity-0!';
+  '[&[data-blok-toolbox-opened=true]_[contentEditable=true][data-blok-placeholder-active]:not([data-blok-slash-search]):focus]:before:opacity-0!';
 const PLACEHOLDER_CLASS_B =
-  '[&[data-blok-toolbox-opened=true]_[contentEditable=true][data-placeholder]:focus]:before:opacity-0!';
+  '[&[data-blok-toolbox-opened=true]_[contentEditable=true][data-placeholder]:not([data-blok-slash-search]):focus]:before:opacity-0!';
 
 const I18N_LABELS: Record<string, string> = {
   'tools.link.copyUrl': 'STUB_COPY_LABEL',

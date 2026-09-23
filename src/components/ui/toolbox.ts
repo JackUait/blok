@@ -75,6 +75,29 @@ type SectionedToolboxEntry = {
 };
 
 /**
+ * The slash-search pill is painted around the editable's text line (its
+ * content box grown by `--_blok-slash-search-pad`, see slash-search.css),
+ * while the editable keeps its own padding so the block does not resize.
+ * Without that property the element's own box is the pill.
+ * @param element - the element carrying the slash-search attribute
+ */
+const paintedPillRect = (element: HTMLElement): DOMRect => {
+  const rect = element.getBoundingClientRect();
+  const styles = window.getComputedStyle(element);
+  const pad = styles.getPropertyValue('--_blok-slash-search-pad').trim();
+
+  if (pad === '') {
+    return rect;
+  }
+
+  const px = (value: string): number => parseFloat(value) || 0;
+  const top = rect.top + px(styles.borderTopWidth) + px(styles.paddingTop) - px(pad);
+  const bottom = rect.bottom - px(styles.borderBottomWidth) - px(styles.paddingBottom) + px(pad);
+
+  return new DOMRect(rect.left, top, rect.width, bottom - top);
+};
+
+/**
  * Pick the DOMRect used to anchor the toolbox popover.
  * - Slash open with a slash-search pill present: use the pill's own rect so
  *   the popover sits below the pill's visual bottom — the same way plus-button
@@ -104,7 +127,7 @@ const resolveAnchorRect = (params: {
   const { caretRect, caretRectIsDegenerate, blockRect, contentElement, slashSearchElement } = params;
 
   if (slashSearchElement !== null) {
-    const pillRect = slashSearchElement.getBoundingClientRect();
+    const pillRect = paintedPillRect(slashSearchElement);
 
     if (pillRect.width > 0 || pillRect.height > 0) {
       /**

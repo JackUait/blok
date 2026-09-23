@@ -67,7 +67,12 @@ const createBlokWithBlocks = async (page: Page, blocks: OutputData['blocks']): P
   );
 };
 
-const getBeforeOpacity = async (locator: Locator): Promise<string> => {
+/**
+ * Whether ::before paints placeholder text. While the toolbox is open the
+ * editable's ::before is the empty search pill, so hidden means no text or
+ * zero opacity.
+ */
+const isBeforeTextVisible = async (locator: Locator): Promise<boolean> => {
   return await locator.evaluate((element) => {
     const view = element.ownerDocument.defaultView;
 
@@ -75,7 +80,11 @@ const getBeforeOpacity = async (locator: Locator): Promise<string> => {
       throw new Error('Element is not attached to a window');
     }
 
-    return view.getComputedStyle(element, '::before').getPropertyValue('opacity');
+    const before = view.getComputedStyle(element, '::before');
+    const content = before.getPropertyValue('content');
+    const hasText = content !== 'none' && content !== '""' && content !== "''" && content !== 'normal';
+
+    return hasText && before.getPropertyValue('opacity') !== '0';
   });
 };
 
@@ -107,12 +116,11 @@ test.describe('placeholder hidden behind + menu (BUG #18)', () => {
 
     await paragraph.click();
     // Placeholder is visible while focused and the toolbox is closed.
-    await expect.poll(async () => getBeforeOpacity(paragraph)).toBe('1');
+    await expect.poll(async () => isBeforeTextVisible(paragraph)).toBe(true);
 
     await openToolboxViaPlusButton(page, paragraph);
 
-    // While the toolbox is open the placeholder is hidden (opacity collapses to 0).
-    await expect.poll(async () => getBeforeOpacity(paragraph)).toBe('0');
+    await expect.poll(async () => isBeforeTextVisible(paragraph)).toBe(false);
   });
 
   test('hides the empty header placeholder while the toolbox is open', async ({ page }) => {
@@ -123,10 +131,10 @@ test.describe('placeholder hidden behind + menu (BUG #18)', () => {
     );
 
     await header.click();
-    await expect.poll(async () => getBeforeOpacity(header)).toBe('1');
+    await expect.poll(async () => isBeforeTextVisible(header)).toBe(true);
 
     await openToolboxViaPlusButton(page, header);
 
-    await expect.poll(async () => getBeforeOpacity(header)).toBe('0');
+    await expect.poll(async () => isBeforeTextVisible(header)).toBe(false);
   });
 });

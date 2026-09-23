@@ -42,10 +42,11 @@ import { EQUATION_SOURCE_ATTR } from '../../shared/equation-mark';
  *
  * Both attributes must be covered; the historical `[data-blok-placeholder]` selector
  * matched neither and was inert, leaving the placeholder visible behind the + menu.
+ * The slash-search editable is skipped: its ::before paints the search pill.
  */
 export const PLACEHOLDER_HIDE_ON_TOOLBOX_CLASSES: string[] = [
-  '[&[data-blok-toolbox-opened=true]_[contentEditable=true][data-blok-placeholder-active]:focus]:before:opacity-0!',
-  '[&[data-blok-toolbox-opened=true]_[contentEditable=true][data-placeholder]:focus]:before:opacity-0!',
+  '[&[data-blok-toolbox-opened=true]_[contentEditable=true][data-blok-placeholder-active]:not([data-blok-slash-search]):focus]:before:opacity-0!',
+  '[&[data-blok-toolbox-opened=true]_[contentEditable=true][data-placeholder]:not([data-blok-slash-search]):focus]:before:opacity-0!',
 ];
 
 /**

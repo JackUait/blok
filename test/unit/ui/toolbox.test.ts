@@ -675,6 +675,47 @@ describe('Toolbox', () => {
       expect(call?.bottom).toBe(pillRect.bottom - 2);
     });
 
+    it('anchors at the painted pill, not the editable\'s padding box, when the editable keeps its block padding', () => {
+      /**
+       * The pill is painted around the text line (the content box grown by
+       * --_blok-slash-search-pad); the editable keeps its own padding so the
+       * block does not change size. The anchor must follow the painted pill.
+       */
+      const editableRect = new DOMRect(50, 310, 130, 38);
+      const pillElement = document.createElement('div');
+
+      pillElement.setAttribute('data-blok-slash-search', 'Type to search');
+      pillElement.style.paddingTop = '7px';
+      pillElement.style.paddingBottom = '7px';
+      pillElement.style.setProperty('--_blok-slash-search-pad', '2px');
+      vi.spyOn(pillElement, 'getBoundingClientRect').mockReturnValue(editableRect);
+
+      const holder = document.createElement('div');
+
+      holder.appendChild(pillElement);
+
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue({
+        ...mocks.blockAPI,
+        holder,
+      });
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      const call = mockPopoverInstance.updatePosition.mock.calls[0]?.[0] as DOMRect | undefined;
+
+      expect(call?.top).toBe(editableRect.top + 7 - 2);
+      expect(call?.bottom).toBe(editableRect.bottom - 7 + 2 - 2);
+      expect(call?.left).toBe(editableRect.left);
+      expect(call?.width).toBe(editableRect.width);
+    });
+
     it('plus-search (withSlash=false) anchors at the same pill rect as slash-search so the gap is identical', () => {
       /**
        * Parity regression: plus-button and slash both apply the search pill

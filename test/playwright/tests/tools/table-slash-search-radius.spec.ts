@@ -86,8 +86,9 @@ test.describe('slash search radius inside table cell', () => {
 
     await expect(slashSearch).toHaveAttribute('data-blok-slash-search', /.+/);
 
+    // The pill is painted by ::before; the editable itself has no background.
     const radius = await slashSearch.evaluate(
-      (el) => window.getComputedStyle(el).borderTopLeftRadius
+      (el) => window.getComputedStyle(el, '::before').borderTopLeftRadius
     );
 
     expect(radius).toBe('6px');

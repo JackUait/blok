@@ -1,8 +1,7 @@
 /**
- * Static analysis of src/styles/main.css to guarantee that the slash search
- * input styling stays compact: 2px vertical padding and smaller-than-base
- * text so the transformed paragraph reads as a tight search pill rather than
- * a normal body-copy paragraph.
+ * Static analysis of src/styles/main.css for the slash search pill: a tight
+ * pill painted 2px around the text line, without touching the editable's own
+ * box, so the text and the block do not move when the search opens.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -19,11 +18,13 @@ const findRuleBody = (source: string, selector: string): string | null => {
 };
 
 describe('Slash search input styling (src/styles/main.css)', () => {
-  it('applies 2px vertical padding via py-[2px] on the slash search pill', () => {
-    const body = findRuleBody(css, '[data-blok-slash-search]:focus-visible');
+  it('paints the pill 2px above and below the text line', () => {
+    const base = findRuleBody(css, '[data-blok-slash-search]:focus-visible');
+    const pill = findRuleBody(css, '[data-blok-slash-search][contenteditable]::before');
 
-    expect(body).not.toBeNull();
-    expect(body).toMatch(/py-\[2px\]/);
+    expect(base).toMatch(/--_blok-slash-search-pad:\s*2px/);
+    expect(pill).toMatch(/height:\s*calc\(1lh \+ 2 \* var\(--_blok-slash-search-pad\)\)/);
+    expect(pill).toMatch(/margin-top:\s*calc\(-1 \* var\(--_blok-slash-search-pad\)\)/);
   });
 
   it('does NOT force a font-size on the pill so it inherits from the host block (paragraph, h1, h2, ...)', () => {
@@ -42,11 +43,14 @@ describe('Slash search input styling (src/styles/main.css)', () => {
     expect(body).not.toMatch(/font-size\s*:/);
   });
 
-  it('applies a non-zero margin-top so the pill sits below the block boundary', () => {
+  it('does not change the editable\'s vertical box, so the text and the block do not move', () => {
     const body = findRuleBody(css, '[data-blok-slash-search]:focus-visible');
 
     expect(body).not.toBeNull();
-    expect(body).toMatch(/mt-\d|mt-\[\d+px\]/);
+    expect(body).not.toMatch(/\b(?:m|my|mt|mb|p|py|pt|pb)-/);
+    expect(body).not.toMatch(/(?:^|[\s;])(?:margin|padding)(?:-top|-bottom|-block)?\s*:/);
+    expect(body).not.toMatch(/(?:^|[\s;])display\s*:/);
+    expect(body).not.toMatch(/(?:^|[\s;])vertical-align\s*:|\balign-/);
   });
 
   it('prevents the placeholder from wrapping onto a second line in large-font blocks (h1, h2)', () => {
@@ -64,7 +68,7 @@ describe('Slash search input styling (src/styles/main.css)', () => {
   });
 
   it('uses a smaller corner radius (<= 6px) so the pill feels like a tight search input', () => {
-    const body = findRuleBody(css, '[data-blok-slash-search]:focus-visible');
+    const body = findRuleBody(css, '[data-blok-slash-search][contenteditable]::before');
 
     expect(body).not.toBeNull();
     expect(body).not.toMatch(/rounded-\[10px\]/);

@@ -450,6 +450,26 @@ test.describe('undo audit W4: inline formatting', () => {
     expect(await shownHtml(page, 'p')).toBe('Hello worldX');
   });
 
+  test('W4I-15b: typing then bold are two undo steps in an editor mounted after another', async ({ page }) => {
+    // The first editor on a page binds the inline tools' document shortcut
+    // listener; every later editor registers its own listeners after it.
+    await mount(page, [P('first', 'First editor')]);
+    await page.evaluate(() => window.blokInstance?.destroy());
+    await mount(page, [P('p', 'Hello world')]);
+    await page.getByText('Hello world').click();
+    await page.keyboard.press('End');
+
+    await page.keyboard.type('X');
+    await select(page, 'Hello');
+    await page.keyboard.press(`${MOD}+b`);
+    await gap(page);
+    expect(await savedText(page, 'p')).toBe('<strong>Hello</strong> worldX');
+
+    await undo(page);
+    expect(await savedText(page, 'p')).toBe('Hello worldX');
+    expect(await shownHtml(page, 'p')).toBe('Hello worldX');
+  });
+
   test('W4I-16: bold across two blocks is one undo step and one redo step', async ({ page }) => {
     await mount(page, [P('a', 'Alpha one'), P('b', 'Beta two')]);
     await select(page, 'Alpha', 'Beta');

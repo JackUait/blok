@@ -3,6 +3,7 @@ import * as Y from 'yjs';
 import { getCaretOffset } from '../../../components/utils/caret/index';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 
+import { dropPeerPaddingOfRemovedColumn, isPaddingCell, namesOnlyPaddingCells } from './grid-padding';
 import { CAPTURE_TIMEOUT_MS, BOUNDARY_TIMEOUT_MS } from './serializer';
 import type { BlockPlacement, CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry, MoveReplayCallback, SingleMoveEntry, UndoScopeType } from './types';
 
@@ -67,6 +68,11 @@ export class UndoHistory {
    * undo or redo, so ordinary writes see no extra sparing.
    */
   private blocksBornInPoppedEntry = new Set<string>();
+
+  /**
+   * What the stack item being replayed inserted. Null outside a replay.
+   */
+  private poppedInsertions: StackItem['insertions'] | null = null;
 
   /**
    * Whether the in-flight replay spares the TEXT inside a block it spares, and
@@ -238,7 +244,15 @@ export class UndoHistory {
     return new Y.UndoManager(scope, {
       captureTimeout: CAPTURE_TIMEOUT_MS,
       trackedOrigins: new Set(['local']),
-      deleteFilter: (item) => this.mayUndoDelete(item),
+      deleteFilter: (item) => {
+        const mayDelete = this.mayUndoDelete(item);
+
+        if (mayDelete) {
+          dropPeerPaddingOfRemovedColumn(item, this.poppedInsertions);
+        }
+
+        return mayDelete;
+      },
     });
   }
 
@@ -755,7 +769,7 @@ export class UndoHistory {
       }
 
       if (node.id.client !== local) {
-        return true;
+        return !isPaddingCell((node.content as { type?: unknown }).type) && !namesOnlyPaddingCells(node);
       }
 
       const value = (node.content as { type?: unknown }).type;
@@ -1039,6 +1053,7 @@ export class UndoHistory {
     const stackBefore = [...stackOf()];
 
     this.blocksBornInPoppedEntry = scan.born;
+    this.poppedInsertions = stackOf().at(-1)?.insertions ?? null;
     this.sparesTextOfBornBlocks = direction === 'redo';
     try {
       this.performYjsUndoRedo(() => {
@@ -1050,6 +1065,7 @@ export class UndoHistory {
       });
     } finally {
       this.blocksBornInPoppedEntry = new Set();
+      this.poppedInsertions = null;
       this.sparesTextOfBornBlocks = false;
     }
 

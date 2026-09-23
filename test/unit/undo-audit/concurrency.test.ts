@@ -367,13 +367,9 @@ describe('concurrent undo — a table the peer restructured', () => {
     vi.restoreAllMocks();
   });
 
-  // COL-4. B's add-column pads A's new row with one cell B never typed in
-  // (here `blocks: []`; the real tool fills it with a fresh empty paragraph,
-  // unverified in a browser). That cell spares A's whole row, so undo of
-  // "add row" leaves an empty row. Undo must restore the exact prior state (plus
-  // B's column).
-  // Observed: expected [ Array(3) ] to deeply equal [ Array(2) ] — third row ['', '', '']
-  it.fails('removes the row this editor added when the peer only padded it with an empty column cell', () => {
+  // COL-4. B's add-column pads A's new row with an empty cell. Padding is not
+  // content, so undo of "add row" still removes the row.
+  it('removes the row this editor added when the peer only padded it with an empty column cell', () => {
     edit(storeA, (model) => {
       model.addRow(2);
       model.addBlockToCell(2, 0, 'a-new0');
@@ -393,10 +389,9 @@ describe('concurrent undo — a table the peer restructured', () => {
     expect(rawContent(storeA)).toEqual(rawContent(storeB));
   });
 
-  // COL-5. Mirror of COL-4: B's add-row pads A's new column with one cell B
-  // never typed in, so undo of "add column" leaves the column in every row.
-  // Observed: expected [ 3, 3, 3 ] to deeply equal [ 2, 2, 2 ]
-  it.fails('removes the column this editor added when the peer only padded it with an empty row cell', () => {
+  // COL-5. Mirror of COL-4: B's add-row pads A's new column with an empty
+  // cell. Undo of "add column" removes that padding with the column.
+  it('removes the column this editor added when the peer only padded it with an empty row cell', () => {
     edit(storeA, (model) => {
       model.addColumn(2);
       [0, 1].forEach((row) => model.addBlockToCell(row, 2, `a-col-r${row}`));
@@ -411,6 +406,70 @@ describe('concurrent undo — a table the peer restructured', () => {
     sync(storeA, storeB);
 
     expect(blocksGrid(storeA).map((row) => row.length)).toEqual([2, 2, 2]);
+    expect(rawContent(storeA)).toEqual(rawContent(storeB));
+  });
+
+  it('keeps the row this editor added when the peer put content in it', () => {
+    edit(storeA, (model) => {
+      model.addRow(2);
+      model.addBlockToCell(2, 0, 'a-new0');
+      model.addBlockToCell(2, 1, 'a-new1');
+    });
+    sync(storeA, storeB);
+    edit(storeB, (model) => {
+      model.addColumn(2);
+      [0, 1, 2].forEach((row) => model.addBlockToCell(row, 2, `b-col-r${row}`));
+    });
+    sync(storeA, storeB);
+
+    historyA.undo();
+    sync(storeA, storeB);
+
+    expect(blocksGrid(storeA).map((row) => row[2])).toEqual(['b-col-r0', 'b-col-r1', 'b-col-r2']);
+    expect(rawContent(storeA)).toEqual(rawContent(storeB));
+  });
+
+  it('keeps a padded column cell the peer put content in, and redo brings the column back', () => {
+    edit(storeA, (model) => {
+      model.addColumn(2);
+      [0, 1].forEach((row) => model.addBlockToCell(row, 2, `a-col-r${row}`));
+    });
+    sync(storeA, storeB);
+    edit(storeB, (model) => {
+      model.addRow(2);
+      model.addBlockToCell(2, 2, 'b-typed');
+    });
+    sync(storeA, storeB);
+
+    historyA.undo();
+    sync(storeA, storeB);
+
+    expect(blocksGrid(storeA)[2]).toContain('b-typed');
+
+    historyA.redo();
+    sync(storeA, storeB);
+
+    expect(blocksGrid(storeA).slice(0, 2).map((row) => row[2])).toEqual(['a-col-r0', 'a-col-r1']);
+    expect(rawContent(storeA)).toEqual(rawContent(storeB));
+  });
+
+  it('redo brings back the column whose padding the undo removed', () => {
+    edit(storeA, (model) => {
+      model.addColumn(2);
+      [0, 1].forEach((row) => model.addBlockToCell(row, 2, `a-col-r${row}`));
+    });
+    sync(storeA, storeB);
+    edit(storeB, (model) => {
+      model.addRow(2);
+    });
+    sync(storeA, storeB);
+
+    historyA.undo();
+    sync(storeA, storeB);
+    historyA.redo();
+    sync(storeA, storeB);
+
+    expect(blocksGrid(storeA)).toEqual([['r0c0', 'r0c1', 'a-col-r0'], ['r1c0', 'r1c1', 'a-col-r1'], ['', '', '']]);
     expect(rawContent(storeA)).toEqual(rawContent(storeB));
   });
 

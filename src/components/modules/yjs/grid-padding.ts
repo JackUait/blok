@@ -55,6 +55,7 @@ export const namesOnlyPaddingCells = (item: Y.Item): boolean => {
  * the same column key in the other rows. Runs inside the undo's transaction,
  * so the redo brings them back with the column.
  * @param item - the item the undo is about to delete
+ * @param poppedInsertions - what the replayed stack item inserted
  */
 export const dropPeerPaddingOfRemovedColumn = (item: Y.Item, poppedInsertions: DeleteSet | null): void => {
   const key = item.parentSub;

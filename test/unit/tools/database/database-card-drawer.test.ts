@@ -1227,7 +1227,7 @@ describe('DatabaseCardDrawer', () => {
 
       saves.forEach((value) => save.mockResolvedValueOnce(value));
       const nested = { isReady: Promise.resolve(), save, destroy: vi.fn() };
-      const mockBlokConstructor = vi.fn(function construct() {
+      const mockBlokConstructor = vi.fn(function construct(_cfg: NestedConfig) {
         return nested;
       });
 
@@ -1246,7 +1246,11 @@ describe('DatabaseCardDrawer', () => {
         expect(mockBlokConstructor.mock.calls.some(([cfg]) => cfg.holder === holder)).toBe(true);
       }, { timeout: 20000 });
 
-      const config = mockBlokConstructor.mock.calls.find(([cfg]) => cfg.holder === holder)![0] as NestedConfig;
+      const config = mockBlokConstructor.mock.calls.find(([cfg]) => cfg.holder === holder)?.[0];
+
+      if (config === undefined) {
+        throw new Error('nested editor was not constructed');
+      }
 
       vi.doUnmock('../../../../src/blok');
 

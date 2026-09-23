@@ -1296,7 +1296,7 @@ export class UndoHistory {
   /**
    * Close the open step for real.
    */
-  private splitStep(): void {
+  public splitStep(): void {
     // Flush BEFORE closing the group: a word-boundary checkpoint must carry
     // the buffered tail of the word it ends (100ms boundary vs 400ms trailing).
     this.flushPendingWritesHook();
@@ -1310,9 +1310,10 @@ export class UndoHistory {
    * before any handler moves the caret.
    * @param kind - 'typing' continues a typing run in the same input; any
    *   other gesture always closes the open step
+   * @returns whether the open step was closed
    */
-  public beginGesture(kind: 'typing' | 'discrete'): void {
-    this.startGesture(kind, false);
+  public beginGesture(kind: 'typing' | 'discrete'): boolean {
+    return this.startGesture(kind, false);
   }
 
   /**
@@ -1332,9 +1333,9 @@ export class UndoHistory {
    * @param keepPending - keep a caret-before that is still pending instead of
    *   taking the live caret
    */
-  private startGesture(kind: 'typing' | 'discrete', keepPending: boolean): void {
+  private startGesture(kind: 'typing' | 'discrete', keepPending: boolean): boolean {
     if (this.isPerformingUndoRedo) {
-      return;
+      return false;
     }
 
     this.gesturesDriveSteps = true;
@@ -1366,6 +1367,8 @@ export class UndoHistory {
       this.pendingCaretBefore = live;
       this.hasPendingCaret = true;
     }
+
+    return !continuesTyping;
   }
 
   /**

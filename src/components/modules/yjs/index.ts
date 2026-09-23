@@ -79,6 +79,9 @@ export class YjsManager extends Module {
    */
   private readonly pendingBlockWrites = new Set<symbol>();
 
+  /** In-flight saves each gesture start is waiting on; see {@link beginGesture}. */
+  private splitsAfterWrites: Array<Set<symbol>> = [];
+
   /**
    * Destroy's OWN continuation, run once `pendingBlockWrites` falls back to
    * zero. Separate from {@link pendingBlockWritesSettledListeners} because it
@@ -537,12 +540,37 @@ export class YjsManager extends Module {
 
     return (): void => {
       // A token is released once; a second call finds nothing to delete.
-      if (!this.pendingBlockWrites.delete(token) || this.pendingBlockWrites.size > 0) {
+      if (!this.pendingBlockWrites.delete(token)) {
+        return;
+      }
+
+      this.splitAfterLandedWrite(token);
+
+      if (this.pendingBlockWrites.size > 0) {
         return;
       }
 
       this.notifyPendingBlockWritesSettled();
     };
+  }
+
+  /**
+   * Close the step for each gesture that was waiting on `token`'s write as
+   * the last of its in-flight saves.
+   * @param token - the save that just landed
+   */
+  private splitAfterLandedWrite(token: symbol): void {
+    const waiting = this.splitsAfterWrites;
+
+    this.splitsAfterWrites = waiting.filter((tokens) => {
+      tokens.delete(token);
+
+      return tokens.size > 0;
+    });
+
+    if (this.splitsAfterWrites.length < waiting.length) {
+      this.undoHistory.splitStep();
+    }
   }
 
   /**
@@ -719,9 +747,18 @@ export class YjsManager extends Module {
     this.undoHistory.stopCapturing();
   }
 
-  /** See {@link UndoHistory.beginGesture}. */
+  /**
+   * See {@link UndoHistory.beginGesture}. A save still in flight belongs to
+   * the step this gesture just closed, but its write lands later; close the
+   * step again once it has landed, so the write does not join this gesture.
+   * @param kind - see {@link UndoHistory.beginGesture}
+   */
   public beginGesture(kind: 'typing' | 'discrete'): void {
-    this.undoHistory.beginGesture(kind);
+    const inFlight = new Set(this.pendingBlockWrites);
+
+    if (this.undoHistory.beginGesture(kind) && inFlight.size > 0) {
+      this.splitsAfterWrites.push(inFlight);
+    }
   }
 
   /** See {@link UndoHistory.beginApiCall}. */

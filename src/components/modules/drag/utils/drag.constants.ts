@@ -24,6 +24,13 @@ export const DRAG_CONFIG = {
   sideZoneMin: 48,
   /** Only trigger side-drop when the cursor is within this central fraction of the block's height */
   sideBandRatio: 0.6,
+  /**
+   * Horizontal distance (px) the pointer must travel from the drag start before
+   * a side-drop (new column) can fire. Hand wobble on a straight vertical drag
+   * stays under it. Keep it below 18px: that is the move from the handle to a
+   * root block's left content edge + 4px, the shortest deliberate left drop.
+   */
+  sideDropMinDisplacement: 12,
 } as const;
 
 /**

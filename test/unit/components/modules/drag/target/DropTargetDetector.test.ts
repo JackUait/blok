@@ -1303,6 +1303,82 @@ describe('DropTargetDetector', () => {
       document.body.removeChild(child.holder);
     });
 
+    /**
+     * Mounts `child`'s holder inside `parent`'s holder, the way nested blocks
+     * sit in a toggle's / callout's children container.
+     */
+    const nestHolder = (parent: Block, child: Block): void => {
+      const childContainer = document.createElement('div');
+
+      childContainer.setAttribute('data-blok-toggle-children', '');
+      childContainer.appendChild(child.holder);
+      parent.holder.appendChild(childContainer);
+    };
+
+    const bottomDropOn = (det: DropTargetDetector, target: Block, source: Block): ReturnType<DropTargetDetector['determineDropTarget']> => {
+      vi.spyOn(target.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 0, bottom: 100, left: 0, right: 200, width: 200, height: 100, x: 0, y: 0, toJSON: () => ({}),
+      });
+      document.body.appendChild(target.holder);
+
+      const result = det.determineDropTarget(target.holder, 100, 99, source);
+
+      target.holder.remove();
+
+      return result;
+    };
+
+    it('does not nest into a COLLAPSED toggle whose nested child toggle is open', () => {
+      const collapsed = createToggleTestBlock({ id: 'collapsed', toggleOpen: false, contentIds: ['inner'], name: 'toggle' });
+      const inner = createToggleTestBlock({ id: 'inner', toggleOpen: true, parentId: 'collapsed', name: 'toggle' });
+      const paragraph = createToggleTestBlock({ id: 'para' });
+
+      nestHolder(collapsed, inner);
+
+      const det = new DropTargetDetector(createToggleUIAdapter(), createToggleBlockManager([collapsed, inner, paragraph]));
+
+      det.setSourceBlocks([paragraph]);
+
+      const result = bottomDropOn(det, collapsed, paragraph);
+
+      expect(result?.parentId).toBeNull();
+      expect(result?.block).toBe(collapsed);
+      expect(result?.edge).toBe('bottom');
+    });
+
+    it('does not nest into a callout just because it holds an open toggle', () => {
+      const callout = createToggleTestBlock({ id: 'callout', contentIds: ['inner'], name: 'callout' });
+      const inner = createToggleTestBlock({ id: 'inner', toggleOpen: true, parentId: 'callout', name: 'toggle' });
+      const paragraph = createToggleTestBlock({ id: 'para' });
+
+      nestHolder(callout, inner);
+
+      const det = new DropTargetDetector(createToggleUIAdapter(), createToggleBlockManager([callout, inner, paragraph]));
+
+      det.setSourceBlocks([paragraph]);
+
+      const result = bottomDropOn(det, callout, paragraph);
+
+      expect(result?.parentId).toBeNull();
+    });
+
+    it('lets a nested toggle WITH children escape its parent via the parent bottom edge', () => {
+      const outer = createToggleTestBlock({ id: 'outer', toggleOpen: true, contentIds: ['inner'], name: 'toggle' });
+      const inner = createToggleTestBlock({ id: 'inner', toggleOpen: true, parentId: 'outer', contentIds: ['leaf'], name: 'toggle' });
+      const leaf = createToggleTestBlock({ id: 'leaf', parentId: 'inner' });
+
+      const det = new DropTargetDetector(createToggleUIAdapter(), createToggleBlockManager([outer, inner, leaf]));
+
+      // A dragged toggle carries its descendants.
+      det.setSourceBlocks([inner, leaf]);
+
+      const result = bottomDropOn(det, outer, inner);
+
+      expect(result?.parentId).toBeNull();
+      expect(result?.block).toBe(outer);
+      expect(result?.edge).toBe('bottom');
+    });
+
   });
 
   describe('horizontal (side) drop detection', () => {
@@ -2072,6 +2148,30 @@ describe('DropTargetDetector', () => {
       expect(result?.edge).toBe('left');
       expect(result?.parentId).toBe('col-0');
       expect(result?.block).toBe(children[0]);
+
+      document.body.removeChild(columnList.holder);
+    });
+
+    it('does not prepend a column when the drag went straight down the margin from where it started', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const { columnList, columns, children } = buildColumnListWithColumns(2);
+
+      const bm = createSideBlockManager([columnList, ...columns, ...children, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+      det.setDragOriginX(20);
+
+      document.body.appendChild(columnList.holder);
+      const inner = document.createElement('div');
+      columnList.holder.appendChild(inner);
+
+      const straight = det.determineDropTarget(inner, 24, 150, source);
+
+      expect(straight?.edge).not.toBe('left');
+
+      const sideways = det.determineDropTarget(inner, 100, 150, source);
+
+      expect(sideways?.edge).toBe('left');
 
       document.body.removeChild(columnList.holder);
     });

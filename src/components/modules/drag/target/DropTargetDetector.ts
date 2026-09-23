@@ -7,6 +7,7 @@ import { DATA_ATTR, createSelector } from '../../../constants';
 import { DRAG_CONFIG } from '../utils/drag.constants';
 import { getBlockNestingDepth, getListItemDepth } from '../utils/depthUtils';
 import { deepestLegalStructuralDepth } from '../utils/structuralParent';
+import { areSourceRootsChildrenOf, isOpenToggleBlock } from '../utils/toggleState';
 import { resolveTargetDepth, selectPointerDepth } from '../../../../tools/list/depth-validator';
 import { INDENT_PER_LEVEL } from '../../../../tools/list/constants';
 
@@ -97,6 +98,7 @@ export class DropTargetDetector {
   private ui: UIAdapter;
   private blockManager: BlockManagerAdapter;
   private sourceBlocks: Block[] = [];
+  private dragOriginX: number | null = null;
   private isColumnsEnabled: () => boolean;
 
   constructor(ui: UIAdapter, blockManager: BlockManagerAdapter, options: DropTargetDetectorOptions = {}) {
@@ -110,6 +112,14 @@ export class DropTargetDetector {
    */
   setSourceBlocks(blocks: Block[]): void {
     this.sourceBlocks = blocks;
+  }
+
+  /**
+   * Set the pointer X where the drag started (null when no drag is active).
+   * Side-drops need real sideways travel from this point.
+   */
+  setDragOriginX(x: number | null): void {
+    this.dragOriginX = x;
   }
 
   /**
@@ -375,6 +385,15 @@ export class DropTargetDetector {
 
     // Columns stack below this breakpoint — no side-by-side layout.
     if (window.innerWidth < 651) {
+      return null;
+    }
+
+    // The drag handle sits inside the left side zone, so without this a plain
+    // vertical drag from the handle would always make a column.
+    if (
+      this.dragOriginX !== null
+      && Math.abs(clientX - this.dragOriginX) < DRAG_CONFIG.sideDropMinDisplacement
+    ) {
       return null;
     }
 
@@ -1025,13 +1044,6 @@ export class DropTargetDetector {
   }
 
   /**
-   * Checks whether a block is an open toggle (has data-blok-toggle-open="true" inside it).
-   */
-  private isOpenToggle(block: Block): boolean {
-    return block.holder.querySelector('[data-blok-toggle-open="true"]') !== null;
-  }
-
-  /**
    * Calculates the indicator depth for a child being dropped inside a toggle.
    * Returns 0 so the drop indicator is full-width and visually consistent with
    * root-level indicators, regardless of toggle nesting depth.
@@ -1048,13 +1060,10 @@ export class DropTargetDetector {
     const { block: targetBlock, edge } = target;
 
     // Case 1: Bottom edge of an open toggle → "insert as first child"
-    if (edge === 'bottom' && this.isOpenToggle(targetBlock)) {
-      // If all source blocks are already children of this toggle, don't re-enter it.
-      // This allows blocks to be dragged OUT of a toggle by hovering over its bottom area.
-      const allSourcesAreChildren = this.sourceBlocks.length > 0 &&
-        this.sourceBlocks.every(b => b.parentId === targetBlock.id);
-
-      if (!allSourcesAreChildren) {
+    if (edge === 'bottom' && isOpenToggleBlock(targetBlock)) {
+      // Dragged roots that are already children of this toggle don't re-enter it,
+      // so they can be dragged OUT of a toggle by hovering over its bottom area.
+      if (!areSourceRootsChildrenOf(this.sourceBlocks, targetBlock.id)) {
         const toggleDepth = this.getToggleChildIndicatorDepth(targetBlock);
 
         return { ...target, parentId: targetBlock.id, depth: toggleDepth };
@@ -1065,7 +1074,7 @@ export class DropTargetDetector {
     if (targetBlock.parentId !== null) {
       const parentBlock = this.blockManager.getBlockById(targetBlock.parentId);
 
-      if (parentBlock !== undefined && this.isOpenToggle(parentBlock)) {
+      if (parentBlock !== undefined && isOpenToggleBlock(parentBlock)) {
         const childDepth = this.getToggleChildIndicatorDepth(parentBlock);
 
         return { ...target, parentId: parentBlock.id, depth: childDepth };

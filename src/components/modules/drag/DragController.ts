@@ -26,6 +26,12 @@ import { ListItemDescendants } from './utils/ListItemDescendants';
 import { getListItemDepth } from './utils/depthUtils';
 import { resolveStructuralParent } from './utils/structuralParent';
 import {
+  areSourceRootsChildrenOf,
+  isCollapsedToggleBlock,
+  isOpenToggleBlock,
+  isToggleBlock,
+} from './utils/toggleState';
+import {
   hasLogicalSourceAncestor,
   isMoveTargetValid,
   resolveMoveDestination,
@@ -283,6 +289,7 @@ export class DragController extends Module {
     // Update target detector with source blocks
     if (this.targetDetector) {
       this.targetDetector.setSourceBlocks(blocksToMove);
+      this.targetDetector.setDragOriginX(e.clientX);
     }
 
     // Bind handlers
@@ -932,7 +939,12 @@ export class DragController extends Module {
       ? this.targetDetector.calculateTargetDepth(targetBlock, edge, sourceBlock, clientX)
       : 0;
 
-    const result = this.operations.moveBlocks(sourceBlocks, targetBlock, edge);
+    // Resolve the parent BEFORE the move: moveBlocks can mount a source holder
+    // inside the target's DOM, and the target's toggle state is read from it.
+    const newParentId = this.resolveParentForDrop(targetBlock, edge, sourceBlocks, preMoveParentIds);
+    const moveAnchor = this.resolveMoveAnchor(targetBlock, edge, newParentId, sourceBlocks);
+
+    const result = this.operations.moveBlocks(sourceBlocks, moveAnchor, edge);
 
     // Layer 13: stale-drop abort guard.
     //
@@ -950,8 +962,6 @@ export class DragController extends Module {
       return;
     }
 
-    // Update parent-child relationships after move
-    const newParentId = this.resolveParentForDrop(targetBlock, edge, sourceBlocks, preMoveParentIds);
     const movedBlockIds = new Set(result.movedBlocks.map(b => b.id));
     const reparentedBlocks: Block[] = [];
     const affectedParentIds = new Set<string>();
@@ -1199,20 +1209,15 @@ export class DragController extends Module {
   ): string | null {
     // If dropping below a toggleable block, the block becomes a child of the toggle.
     // Detect via DOM attribute (covers both toggle list blocks AND toggle headings).
-    if (edge === 'bottom' && this.isToggleableBlock(targetBlock) && this.isOpenToggle(targetBlock)) {
-      // Don't re-enter the toggle if all source blocks are already its children.
-      // This allows a child to escape its own toggle parent by dragging to the bottom edge.
-      // Use pre-move snapshot when available; moveBlocks may have already rewritten parentId.
-      const allSourcesAreChildren = sourceBlocks.length > 0 &&
-        sourceBlocks.every((b) => {
-          const parentId = preMoveParentIds?.has(b.id) === true
-            ? preMoveParentIds.get(b.id)
-            : b.parentId;
+    if (edge === 'bottom' && isOpenToggleBlock(targetBlock)) {
+      // Dragged roots that are already its children don't re-enter the toggle,
+      // so a child can escape its own toggle by dragging to the bottom edge.
+      const parentIdOf = (block: Block): string | null =>
+        preMoveParentIds?.has(block.id) === true
+          ? preMoveParentIds.get(block.id) ?? null
+          : block.parentId;
 
-          return parentId === targetBlock.id;
-        });
-
-      if (!allSourcesAreChildren) {
+      if (!areSourceRootsChildrenOf(sourceBlocks, targetBlock.id, parentIdOf)) {
         return targetBlock.id;
       }
     }
@@ -1228,19 +1233,37 @@ export class DragController extends Module {
   }
 
   /**
-   * Checks whether a block is a toggleable block (toggle list or toggle heading)
-   * by looking for the data-blok-toggle-open DOM attribute on its holder.
+   * The block a vertical drop is inserted next to. A bottom-edge drop that lands
+   * BESIDE a toggle (not inside it) goes after the toggle's last descendant: the
+   * slot right after the toggle is its first-child slot, so a block placed there
+   * would sit between the toggle and its children in the flat order.
+   *
+   * @param targetBlock - the block the indicator was shown on
+   * @param edge - the drop edge
+   * @param newParentId - the parent the dropped blocks will get
+   * @param sourceBlocks - every dragged block
    */
-  private isToggleableBlock(block: Block): boolean {
-    return block.holder.querySelector('[data-blok-toggle-open]') !== null;
-  }
+  private resolveMoveAnchor(
+    targetBlock: Block,
+    edge: 'top' | 'bottom',
+    newParentId: string | null,
+    sourceBlocks: Block[]
+  ): Block {
+    if (edge !== 'bottom' || newParentId === targetBlock.id || !isToggleBlock(targetBlock)) {
+      return targetBlock;
+    }
 
-  /**
-   * Checks whether a toggleable block is currently open (expanded).
-   * Returns false for closed (collapsed) toggles.
-   */
-  private isOpenToggle(block: Block): boolean {
-    return block.holder.querySelector('[data-blok-toggle-open="true"]') !== null;
+    const blockManager = this.Blok.BlockManager;
+    const sourceIds = new Set(sourceBlocks.map(block => block.id));
+    const staying = this.getHierarchyDescendants(targetBlock).filter(
+      block => !sourceIds.has(block.id)
+        && !hasLogicalSourceAncestor(blockManager.blocks, sourceBlocks, block)
+    );
+
+    return staying.reduce(
+      (last, block) => blockManager.getBlockIndex(block) > blockManager.getBlockIndex(last) ? block : last,
+      targetBlock
+    );
   }
 
   /**
@@ -1257,10 +1280,7 @@ export class DragController extends Module {
     if (parentBlock === undefined) {
       return;
     }
-    const toggleEl = parentBlock.holder.querySelector('[data-blok-toggle-open]');
-    const isCollapsed = toggleEl?.getAttribute('data-blok-toggle-open') === 'false';
-
-    if (isCollapsed) {
+    if (isCollapsedToggleBlock(parentBlock)) {
       for (const block of blocks) {
         block.holder.classList.add('hidden');
       }
@@ -1281,7 +1301,13 @@ export class DragController extends Module {
     // inside it would leak writes out of the group. The returned plan holds
     // everything `applyDuplicates` needs to run its inserts + reparents
     // synchronously inside the bracket below.
-    const prep = await this.operations.prepareDuplicates(sourceBlocks, targetBlock, edge);
+    const moveAnchor = this.resolveMoveAnchor(
+      targetBlock,
+      edge,
+      this.resolveParentForDrop(targetBlock, edge, sourceBlocks),
+      sourceBlocks
+    );
+    const prep = await this.operations.prepareDuplicates(sourceBlocks, moveAnchor, edge);
 
     if (prep.aborted) {
       return;
@@ -1609,6 +1635,7 @@ export class DragController extends Module {
 
     if (this.targetDetector) {
       this.targetDetector.setSourceBlocks([]);
+      this.targetDetector.setDragOriginX(null);
     }
 
     if (wasCancelled || skipToolbarReopen) {

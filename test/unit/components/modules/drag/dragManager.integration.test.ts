@@ -2270,6 +2270,165 @@ describe("DragManager - Component Integration", () => {
         "toggle-1",
       );
     });
+
+    describe("toggle own-marker, source roots and escape placement", () => {
+      /** Puts a toggle marker on the block's own content, like the toggle tools do. */
+      const markToggle = (block: Block, open: boolean): void => {
+        const marker = document.createElement("div");
+
+        marker.setAttribute("data-blok-toggle-open", String(open));
+        block.holder.querySelector("[data-blok-element-content]")!.appendChild(marker);
+      };
+
+      /** Mounts child holders inside the parent's children container. */
+      const nestHolders = (parent: Block, children: Block[]): void => {
+        const container = document.createElement("div");
+
+        container.setAttribute("data-blok-toggle-children", "");
+        children.forEach((child) => container.appendChild(child.holder));
+        parent.holder.querySelector("[data-blok-element-content]")!.appendChild(container);
+      };
+
+      const setup = (allBlocks: Block[]): ReturnType<typeof createDragManager> => {
+        const setupResult = createDragManager({
+          BlockManager: createBlockManagerMock(allBlocks),
+        });
+
+        document.body.appendChild(setupResult.wrapper);
+        allBlocks.forEach((block) => {
+          if (block.holder.parentElement === null) {
+            setupResult.wrapper.appendChild(block.holder);
+          }
+        });
+
+        return setupResult;
+      };
+
+      const order = (modules: BlokModules): string[] =>
+        modules.BlockManager.blocks.map((block) => block.id);
+
+      it("does not swallow a block dropped below a COLLAPSED toggle that holds an open nested toggle", () => {
+        const collapsed = createBlockStub({ id: "collapsed", name: "toggle", contentIds: ["inner"] });
+        const inner = createBlockStub({ id: "inner", name: "toggle", parentId: "collapsed" });
+        const paragraph = createBlockStub({ id: "para" });
+
+        markToggle(collapsed, false);
+        markToggle(inner, true);
+        nestHolders(collapsed, [inner]);
+
+        const { dragManager, modules, wrapper } = setup([paragraph, collapsed, inner]);
+
+        performDragDrop(dragManager, wrapper, paragraph, collapsed, "bottom");
+
+        expect(modules.BlockManager.setBlockParent).not.toHaveBeenCalledWith(
+          expect.objectContaining({ id: "para" }),
+          "collapsed",
+        );
+        expect(paragraph.holder.classList.contains("hidden")).toBe(false);
+      });
+
+      it("does not hide a block dropped into a callout that holds a collapsed toggle", () => {
+        const callout = createBlockStub({ id: "callout", name: "callout", contentIds: ["inner", "sib"] });
+        const inner = createBlockStub({ id: "inner", name: "toggle", parentId: "callout" });
+        const sibling = createBlockStub({ id: "sib", parentId: "callout" });
+        const paragraph = createBlockStub({ id: "para" });
+
+        markToggle(inner, false);
+        nestHolders(callout, [inner, sibling]);
+
+        const { dragManager, modules, wrapper } = setup([paragraph, callout, inner, sibling]);
+
+        performDragDrop(dragManager, wrapper, paragraph, sibling, "bottom");
+
+        expect(paragraph.holder.classList.contains("hidden")).toBe(false);
+        expect(modules.BlockManager.setBlockParent).toHaveBeenCalledWith(
+          expect.objectContaining({ id: "para" }),
+          "callout",
+        );
+      });
+
+      it("lets a nested toggle WITH children escape to its parent's level via the parent's bottom edge", () => {
+        const a = createBlockStub({ id: "a" });
+        const outer = createBlockStub({ id: "outer", name: "toggle", contentIds: ["inner"] });
+        const inner = createBlockStub({ id: "inner", name: "toggle", parentId: "outer", contentIds: ["leaf"] });
+        const leaf = createBlockStub({ id: "leaf", parentId: "inner" });
+        const b = createBlockStub({ id: "b" });
+
+        markToggle(outer, true);
+        markToggle(inner, true);
+
+        const { dragManager, modules, wrapper } = setup([a, outer, inner, leaf, b]);
+
+        performDragDrop(dragManager, wrapper, inner, outer, "bottom");
+
+        expect(modules.BlockManager.setBlockParent).toHaveBeenCalledWith(
+          expect.objectContaining({ id: "inner" }),
+          null,
+        );
+        expect(modules.BlockManager.setBlockParent).not.toHaveBeenCalledWith(
+          expect.objectContaining({ id: "inner" }),
+          "outer",
+        );
+      });
+
+      it("lands an escaping child after the toggle's last descendant, not in the first-child slot", () => {
+        const a = createBlockStub({ id: "a" });
+        const outer = createBlockStub({ id: "outer", name: "toggle", contentIds: ["inner", "x"] });
+        const inner = createBlockStub({ id: "inner", name: "toggle", parentId: "outer", contentIds: ["leaf"] });
+        const leaf = createBlockStub({ id: "leaf", parentId: "inner" });
+        const x = createBlockStub({ id: "x", parentId: "outer" });
+        const b = createBlockStub({ id: "b" });
+
+        markToggle(outer, true);
+        markToggle(inner, true);
+
+        const { dragManager, modules, wrapper } = setup([a, outer, inner, leaf, x, b]);
+
+        performDragDrop(dragManager, wrapper, inner, outer, "bottom");
+
+        expect(order(modules)).toEqual(["a", "outer", "x", "inner", "leaf", "b"]);
+        expect(modules.BlockManager.setBlockParent).toHaveBeenCalledWith(
+          expect.objectContaining({ id: "inner" }),
+          null,
+        );
+      });
+
+      it("lands a block dropped below a collapsed toggle after its hidden children", () => {
+        const moved = createBlockStub({ id: "moved", name: "toggle", contentIds: ["m1"] });
+        const m1 = createBlockStub({ id: "m1", parentId: "moved" });
+        const collapsed = createBlockStub({ id: "collapsed", name: "toggle", contentIds: ["c1"] });
+        const c1 = createBlockStub({ id: "c1", parentId: "collapsed" });
+        const z = createBlockStub({ id: "z" });
+
+        markToggle(moved, true);
+        markToggle(collapsed, false);
+
+        const { dragManager, modules, wrapper } = setup([moved, m1, collapsed, c1, z]);
+
+        performDragDrop(dragManager, wrapper, moved, collapsed, "bottom");
+
+        expect(order(modules)).toEqual(["collapsed", "c1", "moved", "m1", "z"]);
+        expect(moved.holder.classList.contains("hidden")).toBe(false);
+      });
+
+      it("still enters an open toggle as its first child when the block comes from outside", () => {
+        const outer = createBlockStub({ id: "outer", name: "toggle", contentIds: ["x"] });
+        const x = createBlockStub({ id: "x", parentId: "outer" });
+        const paragraph = createBlockStub({ id: "para" });
+
+        markToggle(outer, true);
+
+        const { dragManager, modules, wrapper } = setup([outer, x, paragraph]);
+
+        performDragDrop(dragManager, wrapper, paragraph, outer, "bottom");
+
+        expect(order(modules)).toEqual(["outer", "para", "x"]);
+        expect(modules.BlockManager.setBlockParent).toHaveBeenCalledWith(
+          expect.objectContaining({ id: "para" }),
+          "outer",
+        );
+      });
+    });
   });
 
   describe("Duplicate parent-child relationship updates", () => {
@@ -2513,6 +2672,32 @@ describe("DragManager - Component Integration", () => {
       // setBlockParent should NOT be called since both blocks are at root level
       // and the duplicated block also goes to root level (parentId already null)
       expect(modules.BlockManager.setBlockParent).not.toHaveBeenCalled();
+    });
+
+    it("inserts an escaping duplicate after the toggle's last descendant", async () => {
+      const a = createDuplicableBlock({ id: "a" });
+      const outer = createDuplicableBlock({ id: "outer", name: "toggle", contentIds: ["inner", "x"] });
+      const inner = createDuplicableBlock({ id: "inner", parentId: "outer" });
+      const x = createDuplicableBlock({ id: "x", parentId: "outer" });
+      const b = createDuplicableBlock({ id: "b" });
+      const marker = document.createElement("div");
+
+      marker.setAttribute("data-blok-toggle-open", "true");
+      outer.holder.querySelector("[data-blok-element-content]")!.appendChild(marker);
+
+      const allBlocks = [a, outer, inner, x, b];
+      const { dragManager, modules, wrapper } = createDragManager({
+        BlockManager: createDuplicateBlockManagerMock(allBlocks),
+      });
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      await performAltDragDuplicate(dragManager, wrapper, inner, outer, "bottom");
+
+      expect(modules.BlockManager.blocks.map((block) => block.id)).toEqual(
+        ["a", "outer", "inner", "x", "duplicated-1", "b"],
+      );
     });
   });
 
@@ -3250,6 +3435,80 @@ describe("DragManager - Component Integration", () => {
       expect(() => dragManager.startActualDrag(1)).toThrow();
 
       expect(finishColumnDropAnimations).toHaveBeenCalled();
+    });
+  });
+
+  describe("column side-drop needs a sideways move", () => {
+    const rect = (left: number, top: number, width: number, height: number): DOMRect => ({
+      top,
+      bottom: top + height,
+      left,
+      right: left + width,
+      width,
+      height,
+      x: left,
+      y: top,
+      toJSON: () => ({}),
+    });
+
+    /**
+     * Drags `source` from (startX, 20) to (endX, target's vertical middle).
+     * The target's content box starts at x=40, so x=20 is the drag-handle
+     * gutter, inside the left side zone.
+     */
+    const dragTo = (startX: number, endX: number): { target: Block; modules: BlokModules } => {
+      const source = createBlockStub({ id: "source" });
+      const target = createBlockStub({ id: "target" });
+      const allBlocks = [source, target];
+      const { dragManager, modules, wrapper } = createDragManager({
+        BlockManager: {
+          blocks: allBlocks,
+          getBlockIndex: vi.fn((block: Block) => allBlocks.indexOf(block)),
+          getBlockByIndex: vi.fn((index: number) => allBlocks[index]),
+          getBlockById: vi.fn((id: string) => allBlocks.find((b) => b.id === id)),
+          move: vi.fn(),
+          insert: vi.fn(),
+          setBlockParent: vi.fn(),
+          setBlockIndent: vi.fn(),
+        } as unknown as BlokModules["BlockManager"],
+      });
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      (target.holder.getBoundingClientRect as Mock).mockReturnValue(rect(0, 100, 600, 50));
+      (target.holder.querySelector("[data-blok-element-content]")!.getBoundingClientRect as Mock)
+        .mockReturnValue(rect(40, 100, 400, 50));
+
+      const dragHandle = document.createElement("div");
+
+      dragManager.setupDragHandle(dragHandle, source);
+      dragHandle.dispatchEvent(createMouseEvent("mousedown", { clientX: startX, clientY: 20 }));
+      document.dispatchEvent(createMouseEvent("mousemove", { clientX: startX, clientY: 40 }));
+
+      vi.mocked(document.elementFromPoint).mockReturnValue(target.holder);
+      document.dispatchEvent(createMouseEvent("mousemove", { clientX: endX, clientY: 125 }));
+
+      return { target, modules };
+    };
+
+    it("a straight vertical drag from the handle reorders instead of making a column", () => {
+      const { target } = dragTo(20, 20);
+
+      expect(target.holder.getAttribute("data-drop-indicator")).not.toBe("left");
+      expect(target.holder.getAttribute("data-drop-indicator")).toBe("bottom");
+    });
+
+    it("a small sideways wobble still reorders", () => {
+      const { target } = dragTo(20, 28);
+
+      expect(target.holder.getAttribute("data-drop-indicator")).toBe("bottom");
+    });
+
+    it("a deliberate sideways move into the side zone still makes a column", () => {
+      const { target } = dragTo(20, 60);
+
+      expect(target.holder.getAttribute("data-drop-indicator")).toBe("left");
     });
   });
 });

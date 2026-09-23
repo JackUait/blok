@@ -781,6 +781,7 @@ describe('BlockManager.insertMany hierarchy reconciliation', () => {
       YjsManager: {
         fromJSON: vi.fn(),
         stopCapturing: vi.fn(),
+        transactWithoutCapture: (fn: () => void): void => fn(),
       },
     } as unknown as BlokModules;
 
@@ -911,6 +912,7 @@ describe('BlockManager yjs-sync wiring carries config.sanitizer', () => {
       Tools: { blockTools: tools },
       Caret: {},
       I18n: {},
+      ReadOnly: { isEnabled: false },
     } as unknown as BlokModules;
 
     blockManager.prepare();

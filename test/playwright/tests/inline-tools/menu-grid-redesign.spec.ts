@@ -67,28 +67,33 @@ for (const width of [1280, 390]) {
 
       await expect(headings).toHaveCount(6);
       await expect(toggles).toHaveCount(6);
-      // Family tabs show one strip at a time, three previews per row.
+      // Family tabs show one strip at a time, all six previews in one row.
       await expect(menu.locator('[data-blok-convert-group="toggle-heading"]:visible')).toHaveCount(0);
+      // Tiles rise in on open and on tab switch; measure where they settle.
+      const settle = (): Promise<void> => menu.evaluate(async element => {
+        await Promise.all(element.getAnimations({ subtree: true }).map(animation => animation.finished.catch(() => undefined)));
+      });
+
+      await settle();
       const rects = await headings.evaluateAll(elements => elements.map(element => {
         const rect = element.getBoundingClientRect();
 
         return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
       }));
 
-      rects.forEach((rect, index) => {
-        const row = rects[index < 3 ? 0 : 3];
-        const column = rects[index % 3];
-
-        expect(Math.abs(rect.y - row.y)).toBeLessThanOrEqual(1);
-        expect(Math.abs(rect.x - column.x)).toBeLessThanOrEqual(1);
+      rects.forEach(rect => {
+        expect(Math.abs(rect.y - rects[0].y)).toBeLessThanOrEqual(1);
         expect(rect.height).toBeGreaterThanOrEqual(40);
         expect(rect.x).toBeGreaterThanOrEqual(0);
         expect(rect.x + rect.width).toBeLessThanOrEqual(width);
       });
-      expect(rects[3].y).toBeGreaterThan(rects[0].y);
+      rects.slice(1).forEach((rect, index) => {
+        expect(rect.x).toBeGreaterThanOrEqual(rects[index].x + rects[index].width);
+      });
       await menu.getByRole('tab', { name: 'Toggle heading', exact: true }).click();
       await expect(menu.locator('[data-blok-convert-group="toggle-heading"]:visible')).toHaveCount(6);
       await expect(menu.locator('[data-blok-convert-group="heading"]:visible')).toHaveCount(0);
+      await settle();
       const toggleBounds = await toggles.first().boundingBox();
 
       // The other family takes over the same strip instead of stacking below it.

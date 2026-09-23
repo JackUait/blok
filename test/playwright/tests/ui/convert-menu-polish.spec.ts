@@ -70,7 +70,7 @@ for (const surface of ['settings', 'inline'] as const) {
     test.describe(`${surface}, ${theme}, ${width}px`, () => {
       test.use({ viewport: { width, height: 900 } });
 
-      test('family tabs show readable, flat 3-by-2 previews without converting the block', async ({ page }) => {
+      test('family tabs show readable, flat one-row previews without converting the block', async ({ page }) => {
         await page.evaluate(value => document.documentElement.setAttribute('data-blok-theme', value), theme);
         const before = await saveBlocks(page);
 
@@ -103,6 +103,21 @@ for (const surface of ['settings', 'inline'] as const) {
           await tab.click();
           await expect(tab).toHaveAttribute('aria-selected', 'true');
           await expect(otherTab).toHaveAttribute('aria-selected', 'false');
+          await expect.poll(() => tab.evaluate(element => {
+            const strip = element.parentElement;
+
+            if (strip === null) {
+              throw new Error('Tab strip is unavailable');
+            }
+
+            const thumb = getComputedStyle(strip, '::before');
+            const matrix = new DOMMatrixReadOnly(thumb.transform === 'none' ? undefined : thumb.transform);
+            const left = strip.getBoundingClientRect().left + parseFloat(thumb.left) + matrix.m41;
+            const tabBounds = element.getBoundingClientRect();
+
+            return Math.abs(left - tabBounds.left) <= 1 &&
+              Math.abs(parseFloat(thumb.width) - tabBounds.width) <= 1;
+          })).toBe(true);
           await expect(page.locator('[data-blok-convert-group][data-blok-convert-level]:visible')).toHaveCount(6);
           expect(await saveBlocks(page)).toEqual(before);
           await tab.hover();
@@ -116,7 +131,10 @@ for (const surface of ['settings', 'inline'] as const) {
             await expect(item).toBeVisible();
             await expect(item).toHaveAccessibleName(`${title} ${level}`);
             await expect(preview).toBeVisible();
-            expect(await preview.innerText()).toMatch(new RegExp(`^(?:Toggle )?[Hh]eading ${level}$`));
+            // The tile shows only the short label; the full title stays hidden.
+            await expect(preview.locator('[data-blok-convert-preview]')).toBeVisible();
+            await expect(preview.locator('[data-blok-convert-preview]')).toHaveText(`H${level}`);
+            await expect(preview.locator('[data-blok-convert-full-title]')).not.toBeVisible();
             await expect(page.locator(`[data-blok-convert-group="${inactiveGroup}"][data-blok-convert-level="${level}"]`))
               .not.toBeVisible();
           }
@@ -140,8 +158,16 @@ for (const surface of ['settings', 'inline'] as const) {
             range.selectNodeContents(preview);
             const text = range.getBoundingClientRect();
             const textStyle = getComputedStyle(preview);
+            const probe = document.createElement('span');
+
+            probe.style.cssText = 'display:inline-block;width:0;height:0';
+            preview.append(probe);
+            const baseline = probe.getBoundingClientRect().bottom;
+
+            probe.remove();
 
             return {
+              baseline,
               x: rect.x, y: rect.y, right: rect.right, bottom: rect.bottom,
               width: rect.width, height: rect.height,
               background: style.backgroundColor, shadow: style.boxShadow,
@@ -157,14 +183,13 @@ for (const surface of ['settings', 'inline'] as const) {
           }));
 
           expect(measurements).toHaveLength(6);
-          measurements.forEach((item, index) => {
-            const column = measurements[index % 3];
-            const row = measurements[index < 3 ? 0 : 3];
+          const first = measurements[0];
 
-            if (column === undefined || row === undefined) {
-              throw new Error('Heading preview grid is incomplete');
-            }
+          if (first === undefined) {
+            throw new Error('Heading preview row is empty');
+          }
 
+          measurements.forEach(item => {
             expect.soft(item.textFits).toBe(true);
             expect.soft(item.textOpacity).toBeGreaterThan(0);
             expect.soft(item.background).toBe('rgba(0, 0, 0, 0)');
@@ -174,16 +199,21 @@ for (const surface of ['settings', 'inline'] as const) {
             expect.soft(item.height).toBeGreaterThanOrEqual(width < 651 ? 44 : 40);
             expect.soft(item.x).toBeGreaterThanOrEqual(0);
             expect.soft(item.right).toBeLessThanOrEqual(width);
-            expect.soft(Math.abs(item.x - column.x)).toBeLessThanOrEqual(1);
-            expect.soft(Math.abs(item.y - row.y)).toBeLessThanOrEqual(1);
-
+            // One row whose labels share a baseline, so the size ramp reads at a glance.
+            expect.soft(Math.abs(item.y - first.y)).toBeLessThanOrEqual(1);
+            expect.soft(Math.abs(item.height - first.height)).toBeLessThanOrEqual(1);
+            expect.soft(Math.abs(item.baseline - first.baseline)).toBeLessThanOrEqual(1);
           });
-          for (const index of [1, 2, 4, 5]) {
-            expect.soft(measurements[index]?.x).toBeGreaterThanOrEqual(measurements[index - 1]?.right ?? Infinity);
-          }
-          for (const index of [3, 4, 5]) {
-            expect.soft(measurements[index]?.y).toBeGreaterThanOrEqual(measurements[index - 3]?.bottom ?? Infinity);
-          }
+          measurements.slice(1).forEach((item, index) => {
+            const previous = measurements[index];
+
+            if (previous === undefined) {
+              throw new Error('Heading preview row is incomplete');
+            }
+
+            expect.soft(item.x).toBeGreaterThanOrEqual(previous.right);
+            expect.soft(item.fontSize).toBeLessThanOrEqual(previous.fontSize);
+          });
           expect.soft(measurements[0]?.fontSize).toBeGreaterThan(measurements[5]?.fontSize ?? Infinity);
 
           for (const name of ['Bulleted list', 'Numbered list', 'To-do list', 'Toggle list', 'Quote', 'Callout', 'Code']) {

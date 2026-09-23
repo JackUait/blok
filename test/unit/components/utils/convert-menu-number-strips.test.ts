@@ -95,3 +95,43 @@ describe.each(['heading', 'toggle-heading'] as const)('%s number-strip metadata'
     expect(choice.dataset?.['blok-convert-level']).toBe(numeral);
   });
 });
+
+describe.each(['heading', 'toggle-heading'] as const)('%s tile preview', (group) => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const buildTitleEl = (data: ConvertMenuEntry['data']): HTMLElement | undefined => {
+    const choice = buildConvertMenuItems([{
+      group,
+      icon: '<svg></svg>',
+      title: 'Full title',
+      name: 'heading',
+      toolName: 'header',
+      data,
+    }], i18n, () => undefined)[1];
+
+    if (choice === undefined || (choice.type !== undefined && choice.type !== PopoverItemType.Default)) {
+      throw new Error('Missing native heading choice');
+    }
+
+    return choice.titleEl;
+  };
+
+  it.each([1, 2, 3, 4, 5, 6])('shows H%i in the tile and keeps the full title for search and names', (level) => {
+    const titleEl = buildTitleEl({ level });
+
+    expect(titleEl?.querySelector('[data-blok-convert-preview]')?.textContent).toBe(`H${level}`);
+    expect(titleEl?.querySelector('[data-blok-convert-preview]')?.getAttribute('aria-hidden')).toBe('true');
+    expect(titleEl?.querySelector('[data-blok-convert-full-title]')?.textContent).toBe('Full title');
+    expect(titleEl?.getAttribute('aria-label')).toBe('Full title');
+  });
+
+  it('keeps the plain title when the level is missing', () => {
+    expect(buildTitleEl(undefined)).toBeUndefined();
+  });
+});

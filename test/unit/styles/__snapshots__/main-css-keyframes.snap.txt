@@ -35,6 +35,10 @@
   100% { transform: scale(1) }
 }
 
+@keyframes blok-convert-tile-in {
+  from { opacity: 0; transform: translateY(4px) }
+}
+
 @keyframes blok-crop-modal-backdrop-in {
   from { opacity: 0 }
   to { opacity: 1 }

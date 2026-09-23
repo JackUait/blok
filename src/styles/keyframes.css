@@ -131,6 +131,14 @@
   }
 }
 
+/* Heading tiles rising in, one level after another, on open and on tab switch. */
+@keyframes blok-convert-tile-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
 /* The toolbar's fading copy, shrinking toward the button that was clicked. */
 @keyframes blok-inline-toolbar-ghost-out {
   to {

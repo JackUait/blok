@@ -101,10 +101,11 @@ export const buildConvertMenuEntries = (
   ];
 };
 
-const buildConvertMenuTitle = (entry: ConvertMenuEntry, i18n: ConvertMenuI18n): HTMLElement | undefined => {
+// Tiles show a short "H1" in the level's own size; search shows the full title.
+const buildConvertMenuTitle = (entry: ConvertMenuEntry): HTMLElement | undefined => {
   const level = entry.data?.level;
 
-  if (entry.group !== 'toggle-heading' || typeof level !== 'number' || !i18n.has(`tools.header.heading${level}`)) {
+  if (entry.group === undefined || typeof level !== 'number') {
     return undefined;
   }
 
@@ -115,7 +116,7 @@ const buildConvertMenuTitle = (entry: ConvertMenuEntry, i18n: ConvertMenuI18n): 
   titleEl.setAttribute('aria-label', entry.title);
   preview.setAttribute('data-blok-convert-preview', '');
   preview.setAttribute('aria-hidden', 'true');
-  preview.textContent = i18n.t(`tools.header.heading${level}`);
+  preview.textContent = `H${level}`;
   fullTitle.setAttribute('data-blok-convert-full-title', '');
   fullTitle.textContent = entry.title;
   titleEl.append(preview, fullTitle);
@@ -195,7 +196,7 @@ export const buildConvertMenuItems = (
     }
 
     const level = entry.data?.level;
-    const titleEl = buildConvertMenuTitle(entry, i18n);
+    const titleEl = buildConvertMenuTitle(entry);
 
     items.push({
       icon: entry.icon,

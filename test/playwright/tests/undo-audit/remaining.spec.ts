@@ -162,7 +162,7 @@ test.describe('undo audit: remaining surfaces', () => {
     await page.keyboard.press(UNDO);
     await gap(page);
     await expect(image).toHaveCount(1);
-    await expect(image.locator('img')).toHaveCount(0);
+    await expect(page.locator('[data-blok-tool="image"] img')).toHaveCount(0);
     await page.keyboard.press(UNDO);
     await gap(page);
     await expect(image).toHaveCount(0);
@@ -174,7 +174,7 @@ test.describe('undo audit: remaining surfaces', () => {
     await page.keyboard.press(REDO);
     await gap(page);
     expect(await url()).toBe(IMAGE_URL);
-    await expect(image.locator('img')).toHaveCount(1);
+    await expect(page.locator('[data-blok-tool="image"] img')).toHaveCount(1);
     await expect(image).toHaveAttribute('data-state', 'rendered');
   });
 

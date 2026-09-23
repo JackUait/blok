@@ -459,7 +459,11 @@ export class TableCornerDrag {
     const inward = Math.min(nextX, edge) - Math.min(previousX, edge);
 
     if (outward < 0) {
-      return Math.max(state.edgeTargetWidth, state.targetWidth + outward) + inward;
+      // A wobble inside the retreat slack pays back nothing: its outward half
+      // never counted, so counting this half would drain the target.
+      const payBack = nextX > edge && state.retreatFloor === null ? 0 : outward;
+
+      return Math.max(state.edgeTargetWidth, state.targetWidth + payBack) + inward;
     }
 
     const atEdge = state.targetWidth + inward;

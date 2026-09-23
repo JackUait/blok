@@ -1246,6 +1246,43 @@ describe('TableCornerDrag', () => {
       hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 480, clientY: 60, pointerId: 1 }));
     });
 
+    it('a trembling hold does not eat into the columns it grew', () => {
+      const options = createDefaultOptions(wrapper, grid);
+      const geo = overflowing();
+      const view = createScrollContainer(400, () => sum(geo.colWidths));
+
+      installGeometry(wrapper, grid, geo, view);
+      wireGeometryOps(options, grid, geo);
+
+      const frames = captureFrames();
+
+      cornerDrag = new TableCornerDrag(options);
+      cornerDrag.attachScrollContainer(view.el);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+      const move = (clientX: number): void => {
+        hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX, clientY: 60, pointerId: 1 }));
+      };
+
+      // Pressed where the handle sits, on the container edge.
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 400, clientY: 60, pointerId: 1 }));
+      move(480);
+
+      for (let i = 0; i < 60; i++) {
+        move(i % 2 === 0 ? 478 : 480);
+        frames.run(1);
+      }
+
+      expect(options.onAddColumn.mock.calls.length).toBeGreaterThanOrEqual(2);
+
+      // 80px back to the edge pays back one 60px column, not the wobble too.
+      move(400);
+
+      expect(options.onRemoveLastColumn).toHaveBeenCalledTimes(1);
+
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 400, clientY: 60, pointerId: 1 }));
+    });
+
     it('a flick out past the edge and straight back removes nothing it did not add', () => {
       const options = createDefaultOptions(wrapper, grid);
       // 300px of columns in a 350px container: the corner starts visible.

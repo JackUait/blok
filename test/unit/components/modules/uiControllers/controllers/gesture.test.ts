@@ -204,6 +204,27 @@ describe('GestureController', () => {
     });
   });
 
+  it('starts a gesture even when an earlier document listener swallows the event', () => {
+    // A page-level singleton (the inline tools' shortcut manager) binds its
+    // document listeners once, so a later editor's controller registers after it.
+    const swallow = (event: Event): void => event.stopImmediatePropagation();
+
+    controller.disable();
+    document.addEventListener('keydown', swallow, true);
+    document.addEventListener('beforeinput', swallow, true);
+    controller.enable();
+
+    try {
+      key({ key: 'b', metaKey: true });
+      input.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'formatBold' }));
+    } finally {
+      document.removeEventListener('keydown', swallow, true);
+      document.removeEventListener('beforeinput', swallow, true);
+    }
+
+    expect(yjs.beginGesture.mock.calls).toEqual([['discrete'], ['discrete']]);
+  });
+
   it('releases a hold when disabled mid-press', () => {
     input.dispatchEvent(new Event('pointerdown', { bubbles: true }));
     controller.disable();

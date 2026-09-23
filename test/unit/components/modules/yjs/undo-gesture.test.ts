@@ -266,6 +266,18 @@ describe('UndoHistory gestures', () => {
     expect(undoSteps()).toBe(1);
   });
 
+  it('keeps an API call during a held gesture in that gesture', async () => {
+    putCaret(blocks[0], 2);
+    history.beginGesture('discrete');
+    history.holdCapture();
+    write('x');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    history.beginApiCall();
+    write('y');
+
+    expect(undoSteps()).toBe(1);
+  });
+
   it('clears a pending caret-before after an undo', () => {
     putCaret(blocks[0], 2);
     history.beginGesture('discrete');

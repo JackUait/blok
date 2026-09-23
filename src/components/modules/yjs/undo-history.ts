@@ -1316,12 +1316,13 @@ export class UndoHistory {
   }
 
   /**
-   * A public API call that writes. Outside a gesture's task it is a gesture
-   * of its own (host code driving the editor). Inside one, it is part of
-   * that gesture: a tool calling the API from its key handler.
+   * A public API call that writes. Outside a gesture it is a gesture of its
+   * own (host code driving the editor). Inside one, it is part of that
+   * gesture: a tool calling the API from its key handler, or the block menu
+   * inserting the picked tool while its session holds the step.
    */
   public beginApiCall(): void {
-    if (!this.gestureTaskOpen) {
+    if (!this.gestureTaskOpen && this.captureHolds === 0) {
       this.startGesture('discrete', true);
     }
   }

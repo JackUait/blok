@@ -198,6 +198,60 @@ describe('DatabaseRowTool', () => {
     });
   });
 
+  describe('setData()', () => {
+    it('takes new data in place', () => {
+      const tool = new DatabaseRowTool(createRowOptions({ properties: { a: '1' }, position: 'a0', title: 'Old' }));
+      const properties = { a: '2' };
+
+      expect(tool.setData({ properties, position: 'a5', title: 'New' })).toBe(true);
+      tool.updateProperties({ a: '3' });
+
+      expect(tool.save(document.createElement('div'))).toEqual({ properties: { a: '3' }, position: 'a5', title: 'New' });
+      expect(properties).toEqual({ a: '2' });
+    });
+
+    it('drops the title when the new data has none', () => {
+      const tool = new DatabaseRowTool(createRowOptions({ properties: {}, position: 'a0', title: 'Old' }));
+
+      tool.setData({ properties: {}, position: 'a0' });
+
+      expect(tool.getTitle()).toBeUndefined();
+    });
+  });
+
+  describe('readData()', () => {
+    it('hands back the row as it is now, not as it was saved', () => {
+      const tool = new DatabaseRowTool(createRowOptions({ properties: { a: '1' }, position: 'a0' }));
+
+      tool.save(document.createElement('div'));
+      tool.updateProperties({ a: '2' });
+      tool.updatePosition({ position: 'a5' });
+      const receive = vi.fn();
+
+      tool.readData({ receive });
+
+      expect(receive).toHaveBeenCalledWith({ properties: { a: '2' }, position: 'a5' });
+    });
+
+    it('gives a copy, so a saved snapshot does not follow later edits', () => {
+      const tool = new DatabaseRowTool(createRowOptions({ properties: { a: '1' }, position: 'a0' }));
+      const saved = tool.save(document.createElement('div'));
+
+      tool.updateProperties({ a: '2' });
+
+      expect(saved.properties).toEqual({ a: '1' });
+    });
+
+    it('does not share the properties object it was created with', () => {
+      const properties = { a: '1' };
+      const tool = new DatabaseRowTool(createRowOptions({ properties, position: 'a0' }));
+
+      tool.updateProperties({ a: '2' });
+
+      expect(properties).toEqual({ a: '1' });
+    });
+  });
+
   describe('setReadOnly()', () => {
     it('setReadOnly method exists on prototype (enables fast-path in-place toggle)', () => {
       expect(typeof DatabaseRowTool.prototype.setReadOnly).toBe('function');

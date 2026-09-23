@@ -774,6 +774,8 @@ describe('DatabaseCardDrawer — mutation coverage', () => {
     });
 
     it('saves the previous card description before switching cards', async () => {
+      nested.savePayload = { blocks: [{ type: 'paragraph', data: { text: 'typed' } }] };
+
       const options = createOptions({ descriptionPropertyId: 'prop-desc' });
       const drawer = makeDrawer(options);
 

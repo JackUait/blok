@@ -1208,6 +1208,88 @@ describe('DatabaseCardDrawer', () => {
     });
   });
 
+  describe('page body writes', () => {
+    type NestedConfig = { holder: HTMLElement; onChange: () => Promise<void> };
+
+    const body = (time: number, blocks: Array<Record<string, unknown>>): Record<string, unknown> => ({
+      time,
+      version: '1',
+      blocks,
+    });
+
+    /** Opens a card over a fake nested editor whose save() returns `saves` in turn. */
+    const openWithNestedEditor = async (
+      row: DatabaseRow,
+      saves: Array<Record<string, unknown>>
+    ): Promise<{ drawer: DatabaseCardDrawer; options: CardDrawerOptions; config: NestedConfig }> => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      const save = vi.fn();
+
+      saves.forEach((value) => save.mockResolvedValueOnce(value));
+      const nested = { isReady: Promise.resolve(), save, destroy: vi.fn() };
+      const mockBlokConstructor = vi.fn(function construct() {
+        return nested;
+      });
+
+      vi.resetModules();
+      vi.doMock('../../../../src/blok', () => ({ Blok: mockBlokConstructor }));
+
+      const { DatabaseCardDrawer: DrawerWithMock } = await import('../../../../src/tools/database/database-card-drawer');
+      const options = createOptions({ descriptionPropertyId: 'prop-desc' });
+      const drawer = new DrawerWithMock(options);
+
+      drawer.open(row);
+
+      const holder = options.wrapper.querySelector('[data-blok-database-drawer-editor]');
+
+      await vi.waitFor(() => {
+        expect(mockBlokConstructor.mock.calls.some(([cfg]) => cfg.holder === holder)).toBe(true);
+      }, { timeout: 20000 });
+
+      const config = mockBlokConstructor.mock.calls.find(([cfg]) => cfg.holder === holder)![0] as NestedConfig;
+
+      vi.doUnmock('../../../../src/blok');
+
+      return { drawer, options, config };
+    };
+
+    const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+
+    it('writes nothing when a card with no page body is closed unedited', async () => {
+      const { drawer, options } = await openWithNestedEditor(makeRow(), [body(1, [])]);
+
+      drawer.close();
+      await flush();
+
+      expect(options.onDescriptionChange).not.toHaveBeenCalled();
+    });
+
+    it('writes nothing on close when only the save time moved since the last write', async () => {
+      const typed = { id: 'b1', type: 'paragraph', data: { text: 'body' } };
+      const { drawer, options, config } = await openWithNestedEditor(makeRow(), [
+        body(1, [{ ...typed, lastEditedAt: 100 }]),
+        body(2, [{ ...typed, lastEditedAt: 200 }]),
+      ]);
+
+      await config.onChange();
+      drawer.close();
+      await flush();
+
+      expect(options.onDescriptionChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('still writes a page body that changed', async () => {
+      const { drawer, options } = await openWithNestedEditor(makeRow(), [
+        body(1, [{ id: 'b1', type: 'paragraph', data: { text: 'new' } }]),
+      ]);
+
+      drawer.close();
+      await flush();
+
+      expect(options.onDescriptionChange).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('close animation', () => {
     it('sets drawer width to 0 on close for exit animation', () => {
       const options = createOptions();

@@ -485,9 +485,6 @@ test.describe('CON toggle / callout', () => {
 test.describe('CON database', () => {
   // Undo must restore the exact prior state; redo the exact post-gesture state.
   test('CON-9 undo of a card title edit updates the board', async ({ page }) => {
-    test.fail();
-    // Observed: save() is back to 'Card one' but the card still reads 'Renamed' (also via history.undo(),
-    // waited 2s). The board only re-projects rows from its own handlers, render and view switch.
     await createBlok(page, DB_DOC);
     await gap(page);
     const card = page.locator('[data-blok-database-card][data-row-id="row-1"]');
@@ -508,8 +505,6 @@ test.describe('CON database', () => {
 
   // Undo must restore the exact prior state; redo the exact post-gesture state.
   test('CON-10 redo of an added card shows the card on the board', async ({ page }) => {
-    test.fail();
-    // Observed: after undo + redo the row is back in save() but the board never shows its card.
     await createBlok(page, DB_DOC);
     await gap(page);
     await page.locator('[data-blok-database-add-card][data-option-id="opt-todo"]').click();
@@ -526,9 +521,6 @@ test.describe('CON database', () => {
 
   // Undo must restore the exact prior state; redo the exact post-gesture state.
   test('CON-11 undo of a card delete keeps redo, and redo removes the card again', async ({ page }) => {
-    test.fail();
-    // Observed: canRedo is false right after the undo (4 of 4 runs), so redo does nothing and row-1
-    // stays. One earlier run redid the delete but left the card on the board.
     await createBlok(page, DB_DOC);
     await gap(page);
     const card = page.locator('[data-blok-database-card][data-row-id="row-1"]');

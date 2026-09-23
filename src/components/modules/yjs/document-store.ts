@@ -2119,26 +2119,7 @@ export class DocumentStore {
    * @param origin - Transaction origin
    */
   public transact(fn: () => void, origin: LocalOriginTag): void {
-    this.ydoc.transact(fn, origin === 'local' && this.uncapturedDepth > 0 ? 'no-capture' : origin);
-  }
-
-  /**
-   * Depth of open `withoutCapture` scopes.
-   */
-  private uncapturedDepth = 0;
-
-  /**
-   * Run `fn` with every 'local' transaction it opens demoted to 'no-capture'.
-   * @param fn - synchronous work whose writes must not be undo steps
-   */
-  public withoutCapture(fn: () => void): void {
-    this.uncapturedDepth++;
-
-    try {
-      fn();
-    } finally {
-      this.uncapturedDepth--;
-    }
+    this.ydoc.transact(fn, origin);
   }
 
   /**

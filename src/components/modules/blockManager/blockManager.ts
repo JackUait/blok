@@ -672,9 +672,10 @@ export class BlockManager extends Module {
     try {
       this.yjsSync.withAtomicOperation(() => {
         // A load is not an edit: what tools write while rendering it (a
-        // callout seeding its body) must not become an undo step either.
+        // callout seeding its body) must not become an undo step either. Yjs
+        // keeps the outer origin, so every nested write here is untracked.
         if (isDocumentRender) {
-          this.Blok.YjsManager.withoutCapture(() => this.blocksStore.insertMany(blocks, index));
+          this.Blok.YjsManager.transactWithoutCapture(() => this.blocksStore.insertMany(blocks, index));
         } else {
           this.blocksStore.insertMany(blocks, index);
         }

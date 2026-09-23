@@ -79,7 +79,14 @@ const HEADING_ICON_CLASSES = 'flex items-center justify-center size-5 shrink-0 t
 // A section that follows a visible one gets extra room above its label.
 const SECTION_CLASSES = 'w-0 min-w-full [[data-link-group]:not([hidden])~&]:pt-1.5';
 const SECTION_LABEL_CLASSES = 'px-2 pt-1.5 pb-1 text-xs leading-4 font-medium text-gray-text';
-const RECENT_TILE_CLASSES = 'flex items-center justify-center size-5 shrink-0 rounded-[5px] bg-item-hover-bg overflow-hidden text-[11px] font-semibold text-gray-text';
+// Recent links are cards in a row of three: tile, then title, then site.
+const RECENT_LIST_CLASSES = 'grid grid-cols-3 gap-1';
+const RECENT_CARD_CLASSES = 'group relative flex flex-col items-start gap-2 min-w-0 p-2 rounded-xl cursor-pointer outline-1 outline-transparent can-hover:hover:bg-item-hover-bg can-hover:hover:-translate-y-px aria-selected:bg-item-hover-bg aria-selected:outline-search-input-focus-border transition-[background-color,outline-color,translate] duration-150 motion-safe:animate-[blok-link-reveal_160ms_ease-out_both]';
+const RECENT_TILE_CLASSES = 'flex items-center justify-center size-9 shrink-0 rounded-[10px] overflow-hidden shadow-[inset_0_0_0_1px_rgba(13,20,33,0.06)]';
+// Mixed toward the theme's text color, so one hue reads in light and dark.
+const RECENT_MONOGRAM_CLASSES = 'bg-[color-mix(in_oklch,hsl(var(--blok-link-tile-hue)_70%_55%)_18%,transparent)] text-[color:color-mix(in_oklch,hsl(var(--blok-link-tile-hue)_65%_45%)_55%,var(--blok-text-primary))] text-sm font-semibold';
+const RECENT_TITLE_CLASSES = 'block w-full text-[13px] leading-[18px] font-medium text-text-primary truncate';
+const RECENT_META_CLASSES = 'block w-full min-h-[14px] text-[11px] leading-[14px] text-gray-text truncate';
 
 /**
  * Link Tool
@@ -755,6 +762,7 @@ export class LinkInlineTool implements InlineTool {
     const label = this.i18n.has(RECENT_LABEL_KEY) ? this.i18n.t(RECENT_LABEL_KEY) : 'Recent';
     const { section, list } = this.createSection(`${this.errorId}-recent`, 'data-link-recent', label);
 
+    list.className = RECENT_LIST_CLASSES;
     this.nodes.recentList = list;
 
     return section;
@@ -825,10 +833,10 @@ export class LinkInlineTool implements InlineTool {
   }
 
   /**
-   * One recent link: favicon or letter tile, then the page title over the
-   * site name.
-   * Without a title the site name moves into the title slot and the path
-   * takes its place.
+   * One recent link as a card: favicon or letter tile, the page title, then
+   * the site name. A title that only names the site ("YouTube") gives its
+   * slot to the path, so two pages of one site stay apart. Without a title
+   * the site name takes the title slot and the path goes under it.
    * @param entry - the stored link
    * @param index - position in the list, drives the cascade delay
    */
@@ -842,26 +850,34 @@ export class LinkInlineTool implements InlineTool {
     })();
     const site = parsed?.hostname.replace(/^www\./, '') ?? entry.url;
     const path = parsed ? `${parsed.pathname}${parsed.search}`.replace(/^\/$/, '') : '';
-    const title = entry.title ?? site;
+    const squash = (value: string): string => value.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+    const brand = site.split('.').slice(0, -1).join('.') || site;
+    const namesOnlySite = entry.title !== undefined && squash(entry.title) === squash(brand);
+    const title = namesOnlySite && path !== '' ? path : entry.title ?? site;
     const meta = entry.title !== undefined ? site : path;
 
     const tile = document.createElement('span');
 
-    tile.className = RECENT_TILE_CLASSES;
+    tile.className = `${RECENT_TILE_CLASSES} bg-item-hover-bg`;
     tile.setAttribute('aria-hidden', 'true');
+    tile.setAttribute('data-link-recent-tile', '');
+    tile.style.setProperty('--blok-link-tile-hue', String(Array.from(site).reduce((hue, char) => (hue * 31 + (char.codePointAt(0) ?? 0)) % 360, 0)));
 
     const showMonogram = (): void => {
       const monogram = document.createElement('span');
 
       monogram.setAttribute('data-link-recent-monogram', '');
-      monogram.textContent = (Array.from(title)[0] ?? '').toUpperCase();
+      monogram.textContent = (Array.from(site)[0] ?? '').toUpperCase();
+      // Joined, not twMerge'd: twMerge takes text-[color:…] and text-sm for
+      // the same utility and drops the color.
+      tile.className = `${RECENT_TILE_CLASSES} ${RECENT_MONOGRAM_CLASSES}`;
       tile.replaceChildren(monogram);
     };
 
     if (entry.favicon !== undefined && isHttpUrl(entry.favicon)) {
       const img = document.createElement('img');
 
-      img.className = 'size-4';
+      img.className = 'size-5';
       img.alt = '';
       img.referrerPolicy = 'no-referrer';
       img.addEventListener('error', showMonogram, { once: true });
@@ -871,12 +887,48 @@ export class LinkInlineTool implements InlineTool {
       showMonogram();
     }
 
-    const row = this.createOptionRow('recent', `${this.errorId}-recent-${index}`, tile, title, meta, () => this.applyLink(entry.url));
+    // Not a <button>: every button in a popover HTML item becomes a Flipper
+    // stop, and Flipper would steal the arrow keys from the field.
+    const card = document.createElement('div');
 
-    row.title = entry.url;
-    row.style.animationDelay = `${index * 30}ms`;
+    card.id = `${this.errorId}-recent-${index}`;
+    card.className = RECENT_CARD_CLASSES;
+    card.title = entry.url;
+    card.style.animationDelay = `${index * 40}ms`;
+    card.setAttribute('role', 'option');
+    card.setAttribute('aria-selected', 'false');
+    card.setAttribute('data-link-recent-row', '');
 
-    return row;
+    const textEl = document.createElement('span');
+
+    textEl.className = 'block w-full min-w-0';
+
+    const titleEl = document.createElement('span');
+
+    titleEl.className = RECENT_TITLE_CLASSES;
+    titleEl.setAttribute('data-link-recent-title', '');
+    titleEl.textContent = title;
+
+    const metaEl = document.createElement('span');
+
+    metaEl.className = RECENT_META_CLASSES;
+    metaEl.setAttribute('data-link-recent-meta', '');
+    metaEl.textContent = meta;
+
+    const enterHint = document.createElement('span');
+
+    enterHint.className = `hidden group-aria-selected:flex absolute top-1.5 right-1.5 ${ENTER_HINT_CLASSES}`;
+    enterHint.setAttribute('aria-hidden', 'true');
+    enterHint.setAttribute('data-link-option-enter-hint', '');
+    enterHint.innerHTML = IconReturn;
+
+    textEl.append(titleEl, metaEl);
+    card.append(tile, textEl, enterHint);
+    // Keep the saved selection and the field's focus while the card takes the click.
+    card.addEventListener('mousedown', (event) => event.preventDefault());
+    card.addEventListener('click', () => this.applyLink(entry.url));
+
+    return card;
   }
 
   /**

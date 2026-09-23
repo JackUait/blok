@@ -1179,18 +1179,58 @@ describe('LinkInlineTool', () => {
       expect(itemWrapper.querySelector('[data-link-recent-label]')?.textContent).toBe('Recent');
     });
 
-    it('puts the site name on the title\'s line, after it', () => {
-      seed([{ url: 'https://github.com/jackuait/blok', title: 'Blok editor' }]);
+    it('lays the recent links out as cards: icon tile, then title, then site', () => {
+      seed([
+        { url: 'https://github.com/jackuait/blok', title: 'Blok editor' },
+        { url: 'https://www.figma.com/file/1', title: 'Design tokens' },
+      ]);
 
       const { itemWrapper } = openCreating();
-      const [row] = recentRows(itemWrapper);
-      const title = row.querySelector('[data-link-recent-title]');
-      const meta = row.querySelector('[data-link-recent-meta]');
+      const [card] = recentRows(itemWrapper);
+      const tile = card.firstElementChild;
+      const title = card.querySelector('[data-link-recent-title]');
+      const meta = card.querySelector('[data-link-recent-meta]');
 
-      expect(title?.nextElementSibling).toBe(meta);
-      expect(title?.parentElement?.className.split(' ')).toEqual(expect.arrayContaining(['flex', 'items-baseline']));
-      expect(title?.className.split(' ')).not.toContain('block');
-      expect(meta?.className.split(' ')).toContain('shrink-0');
+      expect(card.parentElement?.className.split(' ')).toEqual(expect.arrayContaining(['grid', 'grid-cols-3']));
+      expect(card.className.split(' ')).toContain('flex-col');
+      expect(tile?.hasAttribute('data-link-recent-tile')).toBe(true);
+      expect(title?.compareDocumentPosition(meta as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(card.querySelector('[data-link-option-enter-hint]')).not.toBeNull();
+    });
+
+    it('names a page by its path when its title only repeats the site name', () => {
+      seed([
+        { url: 'https://www.youtube.com/watch?v=abc', title: 'YouTube' },
+        { url: 'https://youtube.com', title: 'YouTube' },
+      ]);
+
+      const { itemWrapper } = openCreating();
+      const [video, home] = recentRows(itemWrapper);
+
+      expect(rowText(video, 'title')).toBe('/watch?v=abc');
+      expect(rowText(video, 'meta')).toBe('youtube.com');
+      expect(rowText(home, 'title')).toBe('YouTube');
+      expect(rowText(home, 'meta')).toBe('youtube.com');
+    });
+
+    it('tints a letter tile with a hue that follows the site', () => {
+      seed([
+        { url: 'https://alpha.dev/one', title: 'One' },
+        { url: 'https://alpha.dev/two', title: 'Two' },
+        { url: 'https://zeta.io', title: 'Zeta' },
+      ]);
+
+      const { itemWrapper } = openCreating();
+      const hues = recentRows(itemWrapper).map((card) =>
+        card.querySelector<HTMLElement>('[data-link-recent-tile]')?.style.getPropertyValue('--blok-link-tile-hue'));
+
+      // `text-[color-mix(…)]` is ambiguous to Tailwind (color or size?) and
+      // compiles to nothing; the `color:` hint is what makes it a color.
+      expect(recentRows(itemWrapper)[0].querySelector('[data-link-recent-tile]')?.className)
+        .toContain('text-[color:color-mix(');
+      expect(hues[0]).toMatch(/^\d+$/);
+      expect(hues[1]).toBe(hues[0]);
+      expect(hues[2]).not.toBe(hues[0]);
     });
 
     it('falls back to the site name and path when the title is unknown', () => {

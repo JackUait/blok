@@ -18,7 +18,7 @@ import type { YjsManager } from '../yjs';
 import type { BlockChangeEvent, TransactionOrigin } from '../yjs/types';
 
 import type { BlockFactory } from './factory';
-import { captureCaretAcrossRewrite } from './remote-edit-caret';
+import { adjustCaretOffset, captureCaretAcrossRewrite } from './remote-edit-caret';
 import type { BlockOperations } from './operations';
 import type { BlockRepository } from './repository';
 import type { BlocksStore } from './types';
@@ -768,7 +768,7 @@ export class BlockYjsSync {
     } else if (event.type === 'batch-add') {
       this.handleYjsBatchAdd(event.blockIds, event.origin);
     } else if (event.type === 'remove') {
-      this.handleYjsRemove(event.blockId);
+      this.handleYjsRemove(event.blockId, event.origin);
       this.batchHadRemove = true;
     }
 
@@ -1109,14 +1109,50 @@ export class BlockYjsSync {
       const restoreCaret = origin === 'remote'
         ? captureCaretAcrossRewrite(block, document.getSelection())
         : null;
+      const rebaseHistory = origin === 'remote' ? this.captureHistoryCaretsAcrossRewrite(block) : null;
       const success = await block.setData(data);
 
       if (success) {
         restoreCaret?.();
+        rebaseHistory?.();
       } else {
         this.rematerialize(block, { tool: block.name, data, tunes: block.preservedTunes, lastEditedAt, lastEditedBy });
       }
     }, { extendThroughRAF: true, blockId });
+  }
+
+  /**
+   * The caret offsets the undo history stored for `block` count characters of
+   * its text as it is now. Returns a callback that carries them across a
+   * peer's rewrite the way the live caret is carried, so an undo lands past
+   * the peer's text rather than inside it.
+   * @param block - the block about to be rewritten
+   */
+  private captureHistoryCaretsAcrossRewrite(block: Block): () => void {
+    // By element, not index, as in `captureCaretAcrossRewrite`.
+    const inputs = [...block.inputs];
+    const befores = inputs.map((input) => input.textContent ?? '');
+
+    return (): void => {
+      this.dependencies.YjsManager.rebaseCaretSnapshots(block.id, (snapshot) => {
+        const input = inputs[snapshot.inputIndex];
+        const inputIndex = input === undefined ? -1 : block.inputs.indexOf(input);
+
+        if (input === undefined || inputIndex === -1) {
+          return snapshot;
+        }
+
+        const before = befores[snapshot.inputIndex];
+        const after = input.textContent ?? '';
+
+        return {
+          ...snapshot,
+          inputIndex,
+          offset: adjustCaretOffset(before, after, snapshot.offset),
+          ...(snapshot.end === undefined ? {} : { end: adjustCaretOffset(before, after, snapshot.end) }),
+        };
+      });
+    };
   }
 
   /**
@@ -1573,12 +1609,18 @@ export class BlockYjsSync {
   /**
    * Handle block remove from Yjs (undo/redo - removing a previously added block)
    */
-  private handleYjsRemove(blockId: string): void {
+  private handleYjsRemove(blockId: string, origin: TransactionOrigin): void {
     const block = this.repository.getBlockById(blockId);
 
     if (block === undefined) {
       return;
     }
+
+    // A peer deleted the block holding our caret. Removing the holder moves
+    // the range without a selectionchange, so presence would keep publishing
+    // a caret in a block that no longer exists.
+    const selection = document.getSelection();
+    const loseCaret = origin === 'remote' && selection?.anchorNode != null && block.holder.contains(selection.anchorNode);
 
     const index = this.handlers.getBlockIndex(block);
 
@@ -1671,6 +1713,10 @@ export class BlockYjsSync {
 
       // Remove from DOM
       this.blocksStore.remove(index);
+
+      if (loseCaret) {
+        selection?.removeAllRanges();
+      }
 
       this.restoreDefaultBlockIfDocEmptied();
     }, { extendThroughRAF: true });

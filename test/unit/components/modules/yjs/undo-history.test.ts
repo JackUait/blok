@@ -18,6 +18,7 @@ const createMockBlok = (): BlokModules => {
     currentBlock: undefined,
     getBlockById: vi.fn(),
     getBlockByChildNode: vi.fn(),
+    setCurrentBlockByChildNode: vi.fn(),
     firstBlock: undefined,
   };
 
@@ -32,6 +33,8 @@ const createMockBlok = (): BlokModules => {
 
   return {
     BlockManager: blockManager as unknown as BlokModules['BlockManager'],
+    BlockSelection: { clearSelection: vi.fn() } as unknown as BlokModules['BlockSelection'],
+    InlineToolbar: { opened: false, close: vi.fn() } as unknown as BlokModules['InlineToolbar'],
     Caret: caret as unknown as BlokModules['Caret'],
   } as unknown as BlokModules;
 };
@@ -749,6 +752,20 @@ describe('UndoHistory', () => {
     });
   });
 
+  describe('rebaseCaretSnapshots', () => {
+    it('maps the snapshots of one block on both stacks and leaves other blocks alone', () => {
+      const stacks = history as unknown as { caretUndoStack: CaretHistoryEntry[]; caretRedoStack: CaretHistoryEntry[] };
+
+      stacks.caretUndoStack.push({ before: { blockId: 'p', inputIndex: 0, offset: 11 }, after: { blockId: 'q', inputIndex: 0, offset: 2 } });
+      stacks.caretRedoStack.push({ before: null, after: { blockId: 'p', inputIndex: 0, offset: 15 } });
+
+      history.rebaseCaretSnapshots('p', (snapshot) => ({ ...snapshot, offset: snapshot.offset + 4 }));
+
+      expect(stacks.caretUndoStack[0]).toEqual({ before: { blockId: 'p', inputIndex: 0, offset: 15 }, after: { blockId: 'q', inputIndex: 0, offset: 2 } });
+      expect(stacks.caretRedoStack[0].after).toEqual({ blockId: 'p', inputIndex: 0, offset: 19 });
+    });
+  });
+
   describe('caret restoration edge cases', () => {
     it('preserves focus (no document-top jump) when snapshot block no longer exists', () => {
       // Regression: when the snapshot's block can't be resolved, undo/redo must
@@ -863,6 +880,59 @@ describe('UndoHistory', () => {
       expect(blok.Caret.setToInput).toHaveBeenCalledWith(input, 'default', 5);
 
       // Clean up
+      input.remove();
+    });
+
+    it('clears a block selection and makes the restored block current', () => {
+      const input = document.createElement('div');
+
+      document.body.appendChild(input);
+      const block = { id: 'b1', inputs: [input], parentId: null };
+
+      (blok.BlockManager as unknown as { getBlockById: typeof vi.fn }).getBlockById = vi.fn().mockReturnValue(block);
+      (history as unknown as { caretUndoStack: CaretHistoryEntry[] }).caretUndoStack.push({
+        before: { blockId: 'b1', inputIndex: 0, offset: 1 },
+        after: null,
+      });
+
+      history.undo();
+
+      expect(blok.BlockSelection.clearSelection).toHaveBeenCalled();
+      expect(blok.BlockManager.setCurrentBlockByChildNode).toHaveBeenCalledWith(input);
+      input.remove();
+    });
+
+    it('re-selects a range the snapshot recorded', () => {
+      const input = document.createElement('div');
+
+      input.textContent = 'hello world';
+      document.body.appendChild(input);
+      const block = { id: 'b1', inputs: [input], parentId: null };
+
+      (blok.BlockManager as unknown as { getBlockById: typeof vi.fn }).getBlockById = vi.fn().mockReturnValue(block);
+      (history as unknown as { caretUndoStack: CaretHistoryEntry[] }).caretUndoStack.push({
+        before: { blockId: 'b1', inputIndex: 0, offset: 6, end: 11 },
+        after: null,
+      });
+
+      history.undo();
+
+      expect(window.getSelection()?.toString()).toBe('world');
+      input.remove();
+    });
+
+    it('records the other end of a range selected inside one input', () => {
+      const input = document.createElement('div');
+
+      input.textContent = 'hello world';
+      document.body.appendChild(input);
+      const block = { id: 'b1', inputs: [input], currentInputIndex: 0, currentInput: input };
+      const text = input.firstChild as Text;
+
+      (blok.BlockManager as unknown as { getBlockByChildNode: ReturnType<typeof vi.fn> }).getBlockByChildNode.mockReturnValue(block);
+      window.getSelection()?.setBaseAndExtent(text, 6, text, 11);
+
+      expect(history.captureCaretSnapshot()).toEqual({ blockId: 'b1', inputIndex: 0, offset: 6, end: 11 });
       input.remove();
     });
 

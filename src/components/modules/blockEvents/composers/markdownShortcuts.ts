@@ -248,7 +248,7 @@ export class MarkdownShortcuts extends BlockEventComposer {
     const checklistMatch = CHECKLIST_PATTERN.exec(textContent);
 
     if (checklistMatch) {
-      this.Blok.YjsManager.stopCapturing();
+      this.Blok.YjsManager.startSubStep();
 
       const isChecked = checklistMatch[1]?.toLowerCase() === 'x';
       const shortcutLength = checklistMatch[1] !== undefined ? 4 : 3;
@@ -272,7 +272,7 @@ export class MarkdownShortcuts extends BlockEventComposer {
     const unorderedMatch = UNORDERED_LIST_PATTERN.exec(textContent);
 
     if (unorderedMatch) {
-      this.Blok.YjsManager.stopCapturing();
+      this.Blok.YjsManager.startSubStep();
 
       const shortcutLength = 2;
       const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
@@ -300,7 +300,7 @@ export class MarkdownShortcuts extends BlockEventComposer {
       return false;
     }
 
-    this.Blok.YjsManager.stopCapturing();
+    this.Blok.YjsManager.startSubStep();
 
     const marker = listMatch[1];
     // Numeric markers ("5. ") start at their value; the alpha/roman aliases
@@ -382,7 +382,7 @@ export class MarkdownShortcuts extends BlockEventComposer {
       return false;
     }
 
-    this.Blok.YjsManager.stopCapturing();
+    this.Blok.YjsManager.startSubStep();
 
     const fullText = node.textContent ?? '';
     const matchStart = caretOffset - match.length;
@@ -507,7 +507,7 @@ export class MarkdownShortcuts extends BlockEventComposer {
       return false;
     }
 
-    this.Blok.YjsManager.stopCapturing();
+    this.Blok.YjsManager.startSubStep();
 
     // Delete the matched markdown span — which may cross several text nodes —
     // and insert the anchor in its place via the Range API, so the replacement
@@ -590,7 +590,7 @@ export class MarkdownShortcuts extends BlockEventComposer {
       return false;
     }
 
-    this.Blok.YjsManager.stopCapturing();
+    this.Blok.YjsManager.startSubStep();
 
     const remainingHtml = this.extractRemainingHtml(currentInput, match.shortcutLength);
     const caretOffset = this.getCaretOffset(currentInput) - match.shortcutLength;
@@ -656,7 +656,7 @@ export class MarkdownShortcuts extends BlockEventComposer {
       return false;
     }
 
-    this.Blok.YjsManager.stopCapturing();
+    this.Blok.YjsManager.startSubStep();
 
     const shortcutLength = 1 + level + 1; // ">" + hashes + " "
     const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
@@ -720,7 +720,7 @@ export class MarkdownShortcuts extends BlockEventComposer {
       return false;
     }
 
-    this.Blok.YjsManager.stopCapturing();
+    this.Blok.YjsManager.startSubStep();
 
     const shortcutLength = 2; // "> "
     const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
@@ -771,7 +771,7 @@ export class MarkdownShortcuts extends BlockEventComposer {
       return false;
     }
 
-    this.Blok.YjsManager.stopCapturing();
+    this.Blok.YjsManager.startSubStep();
 
     const newBlock = BlockManager.replace(currentBlock, DIVIDER_TOOL_NAME, {});
 
@@ -823,7 +823,7 @@ export class MarkdownShortcuts extends BlockEventComposer {
       return false;
     }
 
-    this.Blok.YjsManager.stopCapturing();
+    this.Blok.YjsManager.startSubStep();
 
     const shortcutLength = 2; // " " + space
     const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
@@ -874,7 +874,7 @@ export class MarkdownShortcuts extends BlockEventComposer {
       return false;
     }
 
-    this.Blok.YjsManager.stopCapturing();
+    this.Blok.YjsManager.startSubStep();
 
     // "```" alone removes 3 chars; "``` …" removes the backticks plus the space.
     const remainingText = match[1] ?? '';

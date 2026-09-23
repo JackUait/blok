@@ -719,6 +719,36 @@ export class YjsManager extends Module {
     this.undoHistory.stopCapturing();
   }
 
+  /** See {@link UndoHistory.beginGesture}. */
+  public beginGesture(kind: 'typing' | 'discrete'): void {
+    this.undoHistory.beginGesture(kind);
+  }
+
+  /** See {@link UndoHistory.beginApiCall}. */
+  public beginApiCall(): void {
+    this.undoHistory.beginApiCall();
+  }
+
+  /** See {@link UndoHistory.startSubStep}. */
+  public startSubStep(): void {
+    this.undoHistory.startSubStep();
+  }
+
+  /** See {@link UndoHistory.holdCapture}. */
+  public holdCapture(): void {
+    this.undoHistory.holdCapture();
+  }
+
+  /** See {@link UndoHistory.rebaseCaretSnapshots}. */
+  public rebaseCaretSnapshots(blockId: string, rebase: (snapshot: CaretSnapshot) => CaretSnapshot): void {
+    this.undoHistory.rebaseCaretSnapshots(blockId, rebase);
+  }
+
+  /** See {@link UndoHistory.releaseCapture}. */
+  public releaseCapture(): void {
+    this.undoHistory.releaseCapture();
+  }
+
   /**
    * Mark the caret position before a change starts.
    * Call this before any operation that might be undoable.

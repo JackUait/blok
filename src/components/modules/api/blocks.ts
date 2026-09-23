@@ -171,6 +171,7 @@ export class BlocksAPI extends Module {
    * @param {number} fromIndex - index to move from
    */
   public move(toIndex: number, fromIndex?: number): void {
+    this.Blok.YjsManager.beginApiCall();
     this.Blok.BlockManager.move(toIndex, fromIndex);
   }
 
@@ -186,6 +187,7 @@ export class BlocksAPI extends Module {
     blockIndex: number = this.Blok.BlockManager.currentBlockIndex,
     setCaret = true
   ): Promise<void> {
+    this.Blok.YjsManager.beginApiCall();
     const block = this.Blok.BlockManager.getBlockByIndex(blockIndex);
 
     if (block === undefined) {
@@ -442,6 +444,7 @@ export class BlocksAPI extends Module {
     tunes?: { [name: string]: BlockTuneData },
     origin: BlockOrigin = 'api'
   ): BlockAPIInterface => {
+    this.Blok.YjsManager.beginApiCall();
     const defaultTool = type ?? (this.config.defaultBlock);
     const tool = (() => {
       if (!defaultTool) {
@@ -522,6 +525,7 @@ export class BlocksAPI extends Module {
       throw new Error(`Block with id "${id}" not found`);
     }
 
+    this.Blok.YjsManager.beginApiCall();
     const updatedBlock = await BlockManager.update(block, data, tunes);
 
     return new BlockAPI(updatedBlock, this.Blok.API);
@@ -553,6 +557,7 @@ export class BlocksAPI extends Module {
     const targetBlockConvertable = targetBlockTool.conversionConfig?.import !== undefined;
 
     if (originalBlockConvertable && targetBlockConvertable) {
+      this.Blok.YjsManager.beginApiCall();
       const newBlock = await BlockManager.convert(blockToConvert, newType, dataOverrides);
 
       return new BlockAPI(newBlock, this.Blok.API);
@@ -583,6 +588,7 @@ export class BlocksAPI extends Module {
     index: number = this.Blok.BlockManager.blocks.length
   ): BlockAPIInterface[] => {
     this.validateIndex(index);
+    this.Blok.YjsManager.beginApiCall();
 
     // Backfill `parent` on children referenced by table cells so that
     // alternative load paths (any consumer of the public API) get the

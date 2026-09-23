@@ -222,6 +222,7 @@ type BlokStub = {
   Tools: { blockTools: Map<string, ToolStub> };
   YjsManager: {
     stopCapturing: Mock<() => void>;
+    beginApiCall: Mock<() => void>;
     transactWithoutCapture: Mock<(fn: () => void) => void>;
   };
   I18n: { t: Mock<(key: string) => string> };
@@ -255,6 +256,7 @@ const createBlokStub = (blockManager: BlockManagerMock, overrides: Partial<BlokS
   Tools: { blockTools: new Map<string, ToolStub>() },
   YjsManager: {
     stopCapturing: vi.fn(),
+    beginApiCall: vi.fn(),
     transactWithoutCapture: vi.fn(),
   },
   I18n: { t: vi.fn((key: string) => key) },

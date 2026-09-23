@@ -79,6 +79,7 @@ export class ImageTool implements BlockTool {
   private data: ImageData;
   private readOnly: boolean;
   private root: HTMLElement | null = null;
+  private captionEl: HTMLElement | null = null;
   private state: ToolState = 'EMPTY';
   private emptyStateEl: EmptyStateElement | null = null;
   private uploadingEl: UploadingStateElement | null = null;
@@ -106,6 +107,16 @@ export class ImageTool implements BlockTool {
     this.uploader = new Uploader(this.config, this.api.uploader);
   }
 
+  /**
+   * The caption as typed so far: `data.caption` only catches up on blur, and
+   * a save before that (an undo step) must carry the typing.
+   */
+  private liveCaption(): unknown {
+    const typed = this.captionEl?.textContent;
+
+    return typed !== undefined && typed !== (this.data.caption ?? '') ? typed : this.data.caption;
+  }
+
   public render(): HTMLElement {
     const root = document.createElement('div');
     root.setAttribute('data-blok-tool', 'image');
@@ -119,7 +130,8 @@ export class ImageTool implements BlockTool {
     // Collab keeps `caption`/`alt` as a Y.Text for character-level merging. A
     // non-string here would fall through to a whole-key set that replaces that
     // Y.Text for good, so an out-of-contract value is dropped, not coerced.
-    if (typeof this.data.caption === 'string') out.caption = this.data.caption;
+    const caption = this.liveCaption();
+    if (typeof caption === 'string') out.caption = caption;
     if (this.data.width !== undefined) out.width = this.data.width;
     if (this.data.alignment !== undefined) out.alignment = this.data.alignment;
     if (typeof this.data.alt === 'string') out.alt = this.data.alt;
@@ -844,6 +856,7 @@ export class ImageTool implements BlockTool {
       i18n: this.api.i18n,
     });
     const captionEl = captionRow.querySelector<HTMLElement>('.blok-image-caption');
+    this.captionEl = captionEl;
     captionEl?.addEventListener('blur', () => {
       const next = captionEl.textContent ?? '';
       if (next !== this.data.caption) {

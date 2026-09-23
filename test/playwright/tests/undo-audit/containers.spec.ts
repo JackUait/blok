@@ -499,9 +499,6 @@ test.describe('CON toggle / callout', () => {
 test.describe('CON database', () => {
   // Undo must restore the exact prior state; redo the exact post-gesture state.
   test('CON-9 undo of a card title edit updates the board', async ({ page }) => {
-    test.fail();
-    // Observed: save() is back to 'Card one' but the card still reads 'Renamed' (also via history.undo(),
-    // waited 2s). The board only re-projects rows from its own handlers, render and view switch.
     await createBlok(page, DB_DOC);
     await gap(page);
     const card = page.locator('[data-blok-database-card][data-row-id="row-1"]');

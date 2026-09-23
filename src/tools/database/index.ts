@@ -28,6 +28,13 @@ import {
   localizeDatabaseViews,
 } from './database-localization';
 
+/** Whether a 'block changed' payload is about a database row. */
+const isRowChange = (payload: unknown): boolean => {
+  const target = (payload as { event?: { detail?: { target?: { name?: unknown } } } } | undefined)?.event?.detail?.target;
+
+  return target?.name === 'database-row';
+};
+
 /**
  * DatabaseTool — a multi-view Kanban board block tool for Blok.
  *
@@ -59,6 +66,7 @@ export class DatabaseTool implements BlockTool {
   private cardDrawer: DatabaseCardDrawer | null = null;
   private keyboard: DatabaseKeyboard | null = null;
   private cardMenuPopover: PopoverDesktop | null = null;
+  private reprojectQueued = false;
 
   constructor({ data, config, api, block, readOnly }: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>) {
     this.api = api;
@@ -72,6 +80,7 @@ export class DatabaseTool implements BlockTool {
     this.activeViewId = (data as DatabaseData | undefined)?.activeViewId ?? (views.length > 0 ? views[0].id : '');
 
     this.activateView(this.activeViewId);
+    this.api.events.on('block changed', this.handleBlockChanged);
   }
 
   static get toolbox(): ToolboxConfig {
@@ -219,6 +228,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   destroy(): void {
+    this.api.events.off('block changed', this.handleBlockChanged);
     this.cardDrag?.destroy();
     this.columnDrag?.destroy();
     this.columnControls?.destroy();
@@ -285,7 +295,10 @@ export class DatabaseTool implements BlockTool {
     const rows: DatabaseRow[] = children
       .filter((child) => child.name === 'database-row')
       .map((child) => {
-        const rowData = child.preservedData as DatabaseRowData | undefined;
+        const live: DatabaseRowData[] = [];
+
+        child.call('readData', { receive: (data: DatabaseRowData) => live.push(data) });
+        const rowData = live[0] ?? child.preservedData as DatabaseRowData | undefined;
         const properties = { ...(rowData?.properties ?? {}) };
         const mergedTitle = rowData?.title;
 
@@ -309,6 +322,39 @@ export class DatabaseTool implements BlockTool {
         };
       });
     this.model.setRows(rows);
+  }
+
+  /**
+   * Redraw the board when a row changed under it: undo/redo, a peer, or a row
+   * added or removed by either. A microtask keeps the redraw inside the
+   * reconcile window; after it closes, this block's write-back would be a new
+   * undo step. The tool's own row writes re-sync the model before this runs,
+   * so they compare equal and redraw nothing.
+   */
+  private readonly handleBlockChanged = (payload: unknown): void => {
+    if (this.reprojectQueued || !isRowChange(payload)) {
+      return;
+    }
+
+    this.reprojectQueued = true;
+    queueMicrotask(() => {
+      this.reprojectQueued = false;
+      this.reprojectRows();
+    });
+  };
+
+  private reprojectRows(): void {
+    if (this.boardContainer === null) {
+      return;
+    }
+
+    const before = JSON.stringify(this.model.getOrderedRows());
+
+    this.syncRowsFromBlocks();
+
+    if (JSON.stringify(this.model.getOrderedRows()) !== before) {
+      this.rerenderView({ keepDrawer: true });
+    }
   }
 
   /** Id of the schema's title column, or '' when the schema has none. */
@@ -1249,7 +1295,7 @@ export class DatabaseTool implements BlockTool {
    *     boardWrapper  (div returned by createBoard / renderActiveBoard)
    *           boardArea  ([data-blok-database-board] — scrollable area with columns)
    */
-  private rerenderView(): void {
+  private rerenderView(options: { keepDrawer?: boolean } = {}): void {
     if (this.boardContainer === null) {
       return;
     }
@@ -1268,9 +1314,13 @@ export class DatabaseTool implements BlockTool {
     this.columnControls?.destroy();
     this.listRowDrag?.destroy();
     this.listRowDrag = null;
-    this.cardDrawer?.destroy();
-    this.cardDrawer = null;
     this.keyboard?.destroy();
+
+    // The drawer hangs off the outer wrapper, not the board, so it can stay.
+    if (options.keepDrawer !== true) {
+      this.cardDrawer?.destroy();
+      this.cardDrawer = null;
+    }
 
     this.syncRowsFromBlocks();
     const newBoardWrapper = this.renderActiveView();

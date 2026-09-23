@@ -476,6 +476,9 @@ export class BlockManager extends Module {
         onBlockAdded: (block, index) => {
           this.blockDidMutated(BlockAddedMutationType, block, { index });
         },
+        onBlockChanged: (block) => {
+          this.blockDidMutated(BlockChangedMutationType, block, { index: this.repository.getBlockIndex(block) });
+        },
       },
       this.blocksStore
     );

@@ -526,6 +526,75 @@ describe('BlockYjsSync', () => {
         expect(mockHandlers.replaceBlock).toHaveBeenCalledWith(1, newBlock);
       });
 
+      describe('announces a replayed data change', () => {
+        /** Wire `block` into a fresh sync whose doc record for it is `record`. */
+        const replayInto = (block: Block, record: { type: string; data: Record<string, unknown> }): void => {
+          const store = createBlocksStore([createMockBlock({ id: 'block-1' }), block]);
+
+          repository = new BlockRepository();
+          repository.initialize(store);
+          yjsSync = new BlockYjsSync(createMockDependencies(mockYjsManager), repository, factory, mockHandlers, store);
+          mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+            callback = cb as (event: BlockChangeEvent) => void;
+
+            return vi.fn();
+          });
+          yjsSync.subscribe();
+          mockGetBlockById(mockYjsManager).mockReturnValue(createMockYMap({
+            type: record.type,
+            data: createMockYMap(record.data),
+            tunes: createMockYMap({}),
+          }));
+        };
+
+        it('for a block that took the data in place', async () => {
+          const block = createMockBlock({ id: 'test-block', data: { text: 'old' }, tunes: {} });
+          const onBlockChanged = vi.fn();
+
+          mockHandlers.onBlockChanged = onBlockChanged;
+          replayInto(block, { type: 'paragraph', data: { text: 'new' } });
+
+          callback({ blockId: 'test-block', type: 'update', origin: 'undo' });
+          await new Promise(resolve => setTimeout(resolve, 0));
+
+          expect(onBlockChanged).toHaveBeenCalledWith(block);
+        });
+
+        it('for a block that had to be rebuilt', async () => {
+          const block = createMockBlock({ id: 'test-block', data: { content: [] }, tunes: {} });
+          const newBlock = createMockBlock({ id: 'test-block' });
+          const onBlockChanged = vi.fn();
+
+          (block as unknown as Record<string, unknown>).name = 'table';
+          (block.setData as ReturnType<typeof vi.fn>).mockReturnValue(Promise.resolve(false));
+          mockHandlers.onBlockChanged = onBlockChanged;
+          mockHandlers.getBlockIndex = vi.fn(() => 1);
+          vi.spyOn(factory, 'composeBlock').mockReturnValue(newBlock);
+          replayInto(block, { type: 'table', data: { content: [['a']] } });
+
+          callback({ blockId: 'test-block', type: 'update', origin: 'redo' });
+          await new Promise(resolve => setTimeout(resolve, 0));
+
+          expect(onBlockChanged).toHaveBeenCalledWith(newBlock);
+          expect(onBlockChanged).not.toHaveBeenCalledWith(block);
+        });
+
+        it('while the reconcile window is still open', async () => {
+          const block = createMockBlock({ id: 'test-block', data: { text: 'old' }, tunes: {} });
+          const reconciling: boolean[] = [];
+
+          mockHandlers.onBlockChanged = (changed: Block) => {
+            reconciling.push(yjsSync.isSyncingFromYjs && yjsSync.isReconciling(changed));
+          };
+          replayInto(block, { type: 'paragraph', data: { text: 'new' } });
+
+          callback({ blockId: 'test-block', type: 'update', origin: 'remote' });
+          await new Promise(resolve => setTimeout(resolve, 0));
+
+          expect(reconciling).toEqual([true]);
+        });
+      });
+
       /**
        * C3: every Block the Yjs reconciler rebuilds is a RE-MATERIALISATION —
        * an undo/redo replay or a remote peer's change — never a creation. It

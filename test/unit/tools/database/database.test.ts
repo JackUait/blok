@@ -3,6 +3,7 @@ import { fireEvent, queryAllByAttribute } from '@testing-library/dom';
 import type { API, BlockAPI, BlockToolConstructorOptions } from '../../../../types';
 import type { DatabaseData, DatabaseConfig, DatabaseRowData, DatabaseViewConfig } from '../../../../src/tools/database/types';
 import { DatabaseTool } from '../../../../src/tools/database';
+import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import type { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import type { DatabaseModel } from '../../../../src/tools/database/database-model';
 import type { CardDragResult, DatabaseCardDrag } from '../../../../src/tools/database/database-card-drag';
@@ -1010,7 +1011,7 @@ describe('DatabaseTool', () => {
 
       tool.rendered();
 
-      expect(child.call).not.toHaveBeenCalled();
+      expect(child.call).not.toHaveBeenCalledWith('updateProperties', expect.anything());
       expect(child.dispatchChange).not.toHaveBeenCalled();
       expect(element.textContent).toContain('Old row');
 
@@ -1028,7 +1029,165 @@ describe('DatabaseTool', () => {
       tool.render();
       tool.rendered();
 
-      expect(child.call).not.toHaveBeenCalled();
+      expect(child.call).not.toHaveBeenCalledWith('updateProperties', expect.anything());
+
+      tool.destroy();
+    });
+  });
+
+  describe('rows are read from the live row tool', () => {
+    /**
+     * A child backed by a real DatabaseRowTool. `preservedData` is what the
+     * editor last SAVED, and it only moves when `settle()` runs a save —
+     * the same lag a real row block has behind its tool.
+     */
+    const liveRowBlock = (id: string, data: DatabaseRowData): { block: BlockAPI; row: DatabaseRowTool; settle: () => void } => {
+      const row = new DatabaseRowTool({ data, config: {}, api: createMockAPI(), readOnly: false, block: { id } as never });
+      const saved = { data: row.save(document.createElement('div')) };
+      const block = {
+        id,
+        name: 'database-row',
+        holder: document.createElement('div'),
+        get preservedData() {
+          return saved.data;
+        },
+        call: vi.fn((method: string, params?: Record<string, unknown>) => {
+          const fn = (row as unknown as Record<string, unknown>)[method];
+
+          if (typeof fn === 'function') {
+            fn.call(row, params);
+          }
+        }),
+        dispatchChange: vi.fn(),
+      } as unknown as BlockAPI;
+
+      return {
+        block,
+        row,
+        settle: () => {
+          saved.data = row.save(document.createElement('div'));
+        },
+      };
+    };
+
+    const typeDrawerTitle = (element: HTMLElement, value: string): void => {
+      const input = queryByData(element, 'data-blok-database-drawer-title') as HTMLTextAreaElement;
+
+      input.value = value;
+      fireEvent.input(input);
+    };
+
+    it('keeps the second of two quick renames in the published title mirror', () => {
+      const { block, row, settle } = liveRowBlock('row-1', {
+        position: 'a0',
+        title: 'Card',
+        properties: { 'prop-title': 'Card', 'prop-status': 'opt-todo' },
+      });
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: [block] }));
+      const element = tool.render();
+
+      tool.rendered();
+      queryByData(element, 'data-row-id', 'row-1')!.click();
+
+      typeDrawerTitle(element, 'First');
+      settle();
+      typeDrawerTitle(element, 'Second');
+
+      expect(row.getProperties()['prop-title']).toBe('Second');
+      expect(row.getTitle()).toBe('Second');
+
+      tool.destroy();
+    });
+
+    /** The 'block changed' listener the tool registered. */
+    const blockChangedListener = (tool: DatabaseTool): ((payload: unknown) => void) => {
+      const api = (tool as unknown as { api: API }).api;
+      const call = (api.events.on as ReturnType<typeof vi.fn>).mock.calls.find(([name]) => name === 'block changed');
+
+      if (call === undefined) {
+        throw new Error('no block changed listener');
+      }
+
+      return call[1] as (payload: unknown) => void;
+    };
+
+    const rowChanged = (block: BlockAPI): unknown => ({ event: { type: 'block-changed', detail: { target: block } } });
+
+    const cardTitles = (element: HTMLElement): string[] =>
+      queryAllByData(element, 'data-blok-database-card-title').map((el) => el.textContent ?? '');
+
+    it('redraws the board when a row is changed under it by undo, redo or a peer', async () => {
+      const { block, row } = liveRowBlock('row-1', { position: 'a0', properties: { 'prop-title': 'Renamed', 'prop-status': 'opt-todo' } });
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: [block] }));
+      const element = tool.render();
+
+      tool.rendered();
+      row.setData({ position: 'a0', properties: { 'prop-title': 'Card one', 'prop-status': 'opt-todo' } });
+      blockChangedListener(tool)(rowChanged(block));
+      await Promise.resolve();
+
+      expect(cardTitles(element)).toEqual(['Card one']);
+
+      tool.destroy();
+    });
+
+    it('keeps an open card page open when the board redraws for a replayed change', async () => {
+      const { block, row } = liveRowBlock('row-1', { position: 'a0', properties: { 'prop-title': 'One', 'prop-status': 'opt-todo' } });
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: [block] }));
+      const element = tool.render();
+
+      tool.rendered();
+      queryByData(element, 'data-row-id', 'row-1')!.click();
+      row.setData({ position: 'a0', properties: { 'prop-title': 'One', 'prop-status': 'opt-done' } });
+      blockChangedListener(tool)(rowChanged(block));
+      await Promise.resolve();
+
+      expect(queryByData(element, 'data-blok-database-drawer')).not.toBeNull();
+      expect((tool as unknown as { cardDrawer: DatabaseCardDrawer | null }).cardDrawer?.isOpen).toBe(true);
+
+      tool.destroy();
+    });
+
+    it('does not redraw the board for its own row writes', async () => {
+      const { block } = liveRowBlock('row-1', { position: 'a0', properties: { 'prop-title': 'One', 'prop-status': 'opt-todo' } });
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: [block] }));
+      const element = tool.render();
+
+      tool.rendered();
+      const board = queryByData(element, 'data-blok-database-board');
+
+      (tool as unknown as { moveRowBlock: (rowId: string, position: string) => void }).moveRowBlock('row-1', 'a3');
+      blockChangedListener(tool)(rowChanged(block));
+      await Promise.resolve();
+
+      expect(queryByData(element, 'data-blok-database-board')).toBe(board);
+
+      tool.destroy();
+    });
+
+    it('stops listening for row changes when destroyed', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const listener = blockChangedListener(tool);
+      const api = (tool as unknown as { api: API }).api;
+
+      tool.render();
+      tool.destroy();
+
+      expect(api.events.off).toHaveBeenCalledWith('block changed', listener);
+    });
+
+    it('places a moved card by its new position before the row has saved', () => {
+      const first = liveRowBlock('row-1', { position: 'a0', properties: { 'prop-title': 'One', 'prop-status': 'opt-todo' } });
+      const second = liveRowBlock('row-2', { position: 'a1', properties: { 'prop-title': 'Two', 'prop-status': 'opt-todo' } });
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: [first.block, second.block] }));
+
+      tool.render();
+      tool.rendered();
+      (tool as unknown as { moveRowBlock: (rowId: string, position: string) => void }).moveRowBlock('row-1', 'a2');
+
+      const model = (tool as unknown as { model: DatabaseModel }).model;
+
+      expect(model.getOrderedRows().map((r) => r.id)).toEqual(['row-2', 'row-1']);
 
       tool.destroy();
     });

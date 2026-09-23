@@ -1,6 +1,22 @@
 import type { BlockTool, BlockToolConstructorOptions } from '../../../types/tools/block-tool';
 import type { DatabaseRowData, PropertyValue } from '../database/types';
 
+const toRowData = (data: DatabaseRowData): DatabaseRowData => {
+  const row: DatabaseRowData = {
+    properties: { ...data.properties },
+    position: data.position ?? 'a0',
+  };
+
+  // Only carry `title` when the stored row already has one. A row written
+  // before this key existed must NOT gain it on load: inventing it here is a
+  // whole-key write of a value nobody typed, and it would race a peer.
+  if (typeof data.title === 'string') {
+    row.title = data.title;
+  }
+
+  return row;
+};
+
 /**
  * DatabaseRowTool — lightweight block that stores a single database row.
  *
@@ -16,17 +32,7 @@ export class DatabaseRowTool implements BlockTool {
   private _data: DatabaseRowData;
 
   constructor({ data }: BlockToolConstructorOptions<DatabaseRowData>) {
-    this._data = {
-      properties: data.properties ?? {},
-      position: data.position ?? 'a0',
-    };
-
-    // Only carry `title` when the stored row already has one. A row written
-    // before this key existed must NOT gain it on load: inventing it here is a
-    // whole-key write of a value nobody typed, and it would race a peer.
-    if (typeof data.title === 'string') {
-      this._data.title = data.title;
-    }
+    this._data = toRowData(data);
   }
 
   public render(): HTMLDivElement {
@@ -38,8 +44,12 @@ export class DatabaseRowTool implements BlockTool {
   }
 
   public save(_block: HTMLElement): DatabaseRowData {
+    return this.snapshot();
+  }
+
+  private snapshot(): DatabaseRowData {
     const saved: DatabaseRowData = {
-      properties: this._data.properties,
+      properties: { ...this._data.properties },
       position: this._data.position,
     };
 
@@ -48,6 +58,16 @@ export class DatabaseRowTool implements BlockTool {
     }
 
     return saved;
+  }
+
+  /**
+   * Take undo/redo or a peer's data in place. The row has no DOM to rebuild,
+   * so recreating the block for it would only churn the parent's board.
+   */
+  public setData(data: DatabaseRowData): boolean {
+    this._data = toRowData(data);
+
+    return true;
   }
 
   public validate(data: DatabaseRowData): boolean {
@@ -91,6 +111,17 @@ export class DatabaseRowTool implements BlockTool {
 
   public getPosition(): string {
     return this._data.position;
+  }
+
+  /**
+   * Hand a copy of the row's current data to `param.receive`.
+   *
+   * The parent reads rows through `block.call`, which drops return values, so
+   * the copy goes to the callback it passes. The block's `preservedData` is
+   * no substitute: it is the last SAVED data and lags every write.
+   */
+  public readData(param: { receive: (data: DatabaseRowData) => void }): void {
+    param.receive(this.snapshot());
   }
 
   public static get isReadOnlySupported(): boolean {

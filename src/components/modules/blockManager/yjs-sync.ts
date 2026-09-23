@@ -89,6 +89,12 @@ export interface SyncHandlers {
   /** Called when a block is added during undo/redo (after insertion) */
   onBlockAdded: (block: Block, index: number) => void;
   /**
+   * Called, inside the reconcile window, when undo/redo or a peer changed a
+   * block's data. A tool with no editable DOM (a database row) makes no
+   * mutation of its own, so without this nothing tells its parent to redraw.
+   */
+  onBlockChanged?: (block: Block) => void;
+  /**
    * Write a block's current content back to the document, bypassing the echo
    * gate. Used to replay a mutation that was suppressed as a reconciler echo
    * but turned out to be the user's — see `noteSuppressedMutation`.
@@ -1113,6 +1119,7 @@ export class BlockYjsSync {
 
       if (success) {
         restoreCaret?.();
+        this.handlers.onBlockChanged?.(block);
       } else {
         this.rematerialize(block, { tool: block.name, data, tunes: block.preservedTunes, lastEditedAt, lastEditedBy });
       }
@@ -1168,6 +1175,7 @@ export class BlockYjsSync {
     });
 
     this.handlers.replaceBlock(blockIndex, newBlock);
+    this.handlers.onBlockChanged?.(newBlock);
 
     // Children re-homed here were not there when the insert's rendered()
     // fired; a second call lets the container see them.

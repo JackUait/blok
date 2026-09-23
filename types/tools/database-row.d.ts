@@ -32,6 +32,11 @@ export declare class DatabaseRow implements BlockTool {
   save(block: HTMLElement): DatabaseRowData;
 
   /**
+   * Replace the row's data in place (undo/redo, a peer's change)
+   */
+  setData(data: DatabaseRowData): boolean;
+
+  /**
    * Validate DatabaseRow block data
    */
   validate(data: DatabaseRowData): boolean;
@@ -68,6 +73,12 @@ export declare class DatabaseRow implements BlockTool {
    * Current fractional-index position
    */
   getPosition(): string;
+
+  /**
+   * Hand a copy of the row's current data to `param.receive`. Lets the parent
+   * read the live row through `block.call`, which returns nothing.
+   */
+  readData(param: { receive: (data: DatabaseRowData) => void }): void;
 
   /**
    * Toggle read-only mode

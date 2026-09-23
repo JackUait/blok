@@ -466,7 +466,8 @@ test.describe('GES database board', () => {
     await gap(page);
     const cardsAfter = await boardCards(page);
 
-    expect(cardsAfter).toEqual([[], ['row-1:Card one', 'row-2:Card two']]);
+    // Dropped below row-2, so row-1 gets a position after row-2's.
+    expect(cardsAfter).toEqual([[], ['row-2:Card two', 'row-1:Card one']]);
 
     await park(page);
     await undo(page);

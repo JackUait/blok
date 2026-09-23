@@ -204,7 +204,7 @@ describe('LinkHoverCard mutants', () => {
       harness.canEdit.mockReturnValue(false);
 
       const wrapper = shown(harness);
-      const edit = wrapper.querySelector<HTMLElement>('button:last-of-type');
+      const edit = wrapper.querySelector<HTMLElement>('[data-blok-testid="link-hover-card-edit"]');
 
       expect(edit?.hidden).toBe(true);
       expect(edit?.style.display).toBe('none');
@@ -213,7 +213,7 @@ describe('LinkHoverCard mutants', () => {
     it('keeps the edit affordance while editable', () => {
       const harness = build();
       const wrapper = shown(harness);
-      const edit = wrapper.querySelector<HTMLElement>('button:last-of-type');
+      const edit = wrapper.querySelector<HTMLElement>('[data-blok-testid="link-hover-card-edit"]');
 
       expect(edit?.hidden).toBe(false);
       expect(edit?.style.display).toBe('');
@@ -648,7 +648,7 @@ describe('LinkHoverCard mutants', () => {
   describe('chrome', () => {
     const ACTION_BUTTON_BASE = [
       'appearance-none border-0 bg-transparent m-0 p-0 box-border font-[inherit] cursor-pointer',
-      'inline-flex items-center justify-center h-5 rounded select-none',
+      'inline-flex items-center justify-center h-6 rounded-md select-none',
       'text-gray-text transition-colors',
       'can-hover:hover:bg-item-hover-bg can-hover:hover:text-text-primary',
     ].join(' ');
@@ -695,8 +695,8 @@ describe('LinkHoverCard mutants', () => {
       expect(wrapper.style.borderColor).toBe('var(--blok-popover-border, rgba(13, 20, 33, 0.12))');
       expect(wrapper.style.paddingTop).toBe('0.25rem');
       expect(wrapper.style.paddingBottom).toBe('0.25rem');
-      expect(wrapper.style.paddingLeft).toBe('0.625rem');
-      expect(wrapper.style.paddingRight).toBe('0.375rem');
+      expect(wrapper.style.paddingLeft).toBe('0.75rem');
+      expect(wrapper.style.paddingRight).toBe('0.25rem');
       expect(wrapper.getAttribute('data-blok-testid')).toBe('link-hover-card');
       expect(wrapper.getAttribute('data-blok-interface')).toBe('link-hover-card');
     });
@@ -717,10 +717,12 @@ describe('LinkHoverCard mutants', () => {
         'underline-offset-2 can-hover:hover:underline can-hover:hover:text-text-primary',
       ].join(' '));
       expect(copy?.type).toBe('button');
-      expect(copy?.className).toBe(`${ACTION_BUTTON_BASE} ml-2 w-5 [&>svg]:size-4`);
+      expect(copy?.parentElement?.className).toBe('flex items-center shrink-0 gap-0.5 ml-2');
+      expect(edit?.parentElement).toBe(copy?.parentElement);
+      expect(copy?.className).toBe(`${ACTION_BUTTON_BASE} w-7 [&>svg]:size-4`);
       expect(copy?.innerHTML).toBe(asDomHtml(IconCopy));
       expect(edit?.type).toBe('button');
-      expect(edit?.className).toBe(`${ACTION_BUTTON_BASE} ml-1 px-1`);
+      expect(edit?.className).toBe(`${ACTION_BUTTON_BASE} px-2`);
       expect(edit?.textContent).toBe('Edit');
     });
 

@@ -84,6 +84,38 @@ test.describe('link hover card', () => {
     await expect(card.getByTestId('link-hover-card-edit')).toBeVisible();
   });
 
+  test('keeps the url, copy and edit apart on a host page with its own .m-0 utility', async ({ page }) => {
+    // Hosts that ship unscoped Tailwind (the playground, the docs site) have a
+    // `.m-0 { margin: 0 }` as specific as Blok's scoped spacing and loaded later.
+    await page.addStyleTag({ content: '.m-0 { margin: 0; }' });
+    await createLinkParagraph(page);
+    await page.locator(PARAGRAPH_LINK_SELECTOR).hover();
+
+    const card = page.getByTestId('link-hover-card');
+
+    await expect(card).toHaveAttribute('data-state', 'open');
+
+    const gaps = await card.evaluate((element) => {
+      const rect = (testId: string): DOMRect => {
+        const node = element.querySelector(`[data-blok-testid="${testId}"]`);
+
+        if (!node) {
+          throw new Error(`${testId} is missing`);
+        }
+
+        return node.getBoundingClientRect();
+      };
+
+      return {
+        urlToCopy: rect('link-hover-card-copy').left - rect('link-hover-card-url').right,
+        copyToEdit: rect('link-hover-card-edit').left - rect('link-hover-card-copy').right,
+      };
+    });
+
+    expect(gaps.urlToCopy).toBeGreaterThanOrEqual(8);
+    expect(gaps.copyToEdit).toBeGreaterThanOrEqual(2);
+  });
+
   test('shows the hover card without the edit button in read-only mode', async ({ page }) => {
     await createLinkParagraph(page, { readOnly: true });
 

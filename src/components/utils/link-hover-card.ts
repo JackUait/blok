@@ -66,7 +66,7 @@ const ACTION_BUTTON_BASE = twJoin(
   // any host-page `button {}` padding inflates the hover target. Reset it, then
   // let each button add back only the padding it wants.
   'appearance-none border-0 bg-transparent m-0 p-0 box-border font-[inherit] cursor-pointer',
-  'inline-flex items-center justify-center h-5 rounded select-none',
+  'inline-flex items-center justify-center h-6 rounded-md select-none',
   'text-gray-text transition-colors',
   'can-hover:hover:bg-item-hover-bg can-hover:hover:text-text-primary'
 );
@@ -460,8 +460,8 @@ export class LinkHoverCard {
     wrapper.style.borderColor = 'var(--blok-popover-border, rgba(13, 20, 33, 0.12))';
     wrapper.style.paddingTop = '0.25rem';
     wrapper.style.paddingBottom = '0.25rem';
-    wrapper.style.paddingLeft = '0.625rem';
-    wrapper.style.paddingRight = '0.375rem';
+    wrapper.style.paddingLeft = '0.75rem';
+    wrapper.style.paddingRight = '0.25rem';
     wrapper.setAttribute('data-state', 'closed');
     wrapper.setAttribute('data-blok-testid', 'link-hover-card');
     wrapper.inert = true;
@@ -498,7 +498,7 @@ export class LinkHoverCard {
     const copyButton = document.createElement('button');
 
     copyButton.type = 'button';
-    copyButton.className = twJoin(ACTION_BUTTON_BASE, 'ml-2 w-5 [&>svg]:size-4');
+    copyButton.className = twJoin(ACTION_BUTTON_BASE, 'w-7 [&>svg]:size-4');
     copyButton.setAttribute('aria-label', this.labels.copy);
     copyButton.setAttribute('data-blok-testid', 'link-hover-card-copy');
     copyButton.innerHTML = IconCopy;
@@ -507,12 +507,20 @@ export class LinkHoverCard {
     const editButton = document.createElement('button');
 
     editButton.type = 'button';
-    editButton.className = twJoin(ACTION_BUTTON_BASE, 'ml-1 px-1');
+    editButton.className = twJoin(ACTION_BUTTON_BASE, 'px-2');
     editButton.setAttribute('data-blok-testid', 'link-hover-card-edit');
     editButton.textContent = this.labels.edit;
     editButton.addEventListener('click', this.handleEdit);
 
-    wrapper.append(globe, url, copyButton, editButton);
+    // The spacing lives on this span, not on the buttons: their `m-0` (against
+    // host `button {}` rules) ties with a host's own unscoped `.m-0` utility,
+    // and the host's loads later, so button margins silently drop to 0.
+    const actions = document.createElement('span');
+
+    actions.className = 'flex items-center shrink-0 gap-0.5 ml-2';
+    actions.append(copyButton, editButton);
+
+    wrapper.append(globe, url, actions);
 
     // Hoverable card: keep it open while the pointer is over it.
     wrapper.addEventListener('mouseenter', () => this.cancelHide());

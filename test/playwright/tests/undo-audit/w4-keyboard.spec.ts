@@ -327,12 +327,8 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
     expect((await plain(page)).dom).toEqual(['paragraph:# Hello']);
   });
 
-  // Known family 4 (slash "/", CAR-7), new instance: text typed after "/" while the slash menu is open
-  // does not reach Yjs, so the link conversion swallows "//x.io)" into its own undo step.
-  // Control: W4K-14 "[a](x.io)" passes; W4K-17c (menu closed before the next edit) passes.
-  // Observed: first undo leaves "[a](https:".
+  // Text typed after "/" while the slash menu is open reaches Yjs like any other typing (see CAR-7).
   test('W4K-17b: one undo of the link shortcut on an "https://" url leaves the whole literal text', async ({ page }) => {
-    test.fail(true, 'W4K-17b: undo of an https link shortcut loses the text typed after the slash');
     await create(page, [P('p', '')]);
     await caretAt(page, 'p', 0);
     await page.keyboard.type('[a](https://x.io)');

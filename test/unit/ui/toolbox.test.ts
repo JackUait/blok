@@ -805,36 +805,7 @@ describe('Toolbox', () => {
   });
 
   describe('close', () => {
-    it('re-arms mutation watching on the block that open() silenced', () => {
-      const toolbox = new Toolbox({
-        api: mocks.api,
-        tools: mocks.tools,
-        i18nLabels,
-        i18n: mockI18n,
-      });
-
-      toolbox.open();
-      expect(mocks.api.blocks.stopBlockMutationWatching).toHaveBeenCalledWith(0);
-
-      toolbox.close();
-
-      expect(mocks.api.blocks.startBlockMutationWatching).toHaveBeenCalledWith('test-block-id');
-    });
-
-    it('does not re-arm mutation watching when the toolbox was never opened', () => {
-      const toolbox = new Toolbox({
-        api: mocks.api,
-        tools: mocks.tools,
-        i18nLabels,
-        i18n: mockI18n,
-      });
-
-      toolbox.close();
-
-      expect(mocks.api.blocks.startBlockMutationWatching).not.toHaveBeenCalled();
-    });
-
-    it('re-arms mutation watching only once per open/close cycle', () => {
+    it('keeps watching the block for edits while open, so a typed "/" reaches the undo history', () => {
       const toolbox = new Toolbox({
         api: mocks.api,
         tools: mocks.tools,
@@ -844,9 +815,8 @@ describe('Toolbox', () => {
 
       toolbox.open();
       toolbox.close();
-      toolbox.close();
 
-      expect(mocks.api.blocks.startBlockMutationWatching).toHaveBeenCalledTimes(1);
+      expect(mocks.api.blocks.stopBlockMutationWatching).not.toHaveBeenCalled();
     });
 
     it('should close popover and set opened to false', () => {

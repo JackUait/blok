@@ -422,8 +422,6 @@ test.describe('undo audit — caret, scroll, selection', () => {
 
   // Expected source: undo must reverse the most recent edit first.
   test('CAR-7: undo with the slash menu open reverts the "/" before older edits', async ({ page }) => {
-    // Observed: ["Hello", "/"] — the older "XX" was undone and the "/" stayed; caret went to "a" offset 0.
-    test.fail();
     await createBlok(page, [
       { id: 'a', type: 'paragraph', data: { text: 'Hello' } },
       { id: 'b', type: 'paragraph', data: { text: '' } },
@@ -443,8 +441,6 @@ test.describe('undo audit — caret, scroll, selection', () => {
   });
 
   test('CAR-7b: redo after an undo with the slash menu open brings the edit back', async ({ page }) => {
-    // Observed: ["Hello", "/"] after redo, canRedo() false — the "/" landed as a new entry and cleared the redo stack.
-    test.fail();
     await createBlok(page, [
       { id: 'a', type: 'paragraph', data: { text: 'Hello' } },
       { id: 'b', type: 'paragraph', data: { text: '' } },
@@ -459,6 +455,24 @@ test.describe('undo audit — caret, scroll, selection', () => {
     await redo(page);
 
     expect(await texts(page)).toEqual(['HelloXX', '/']);
+  });
+
+  // The block stays watched while the slash menu is open, so its "/" reaches history. The pill that
+  // wraps "/query" is editor chrome and must never reach saved data or the document.
+  test('CAR-7c: saving with the slash menu open keeps the typed text without the slash pill', async ({ page }) => {
+    await createBlok(page, [{ id: 'a', type: 'paragraph', data: { text: 'Hello' } }]);
+    await placeCaret(page, 'a', 5);
+    await page.keyboard.type(' /he');
+    await wait(page, YJS_CAPTURE_TIMEOUT);
+    await expect(page.locator('[data-blok-slash-search]')).toHaveCount(1);
+
+    const stored = await page.evaluate(async () => {
+      const blok = window.blokInstance as unknown as { save: () => Promise<{ blocks: Array<{ data: { text: string } }> }>; module: { yjsManager: { toJSON: () => Array<{ data: { text: unknown } }> } } };
+
+      return { saved: (await blok.save()).blocks[0].data.text, doc: String(blok.module.yjsManager.toJSON()[0].data.text) };
+    });
+
+    expect(stored).toEqual({ saved: 'Hello&nbsp;/he', doc: 'Hello&nbsp;/he' });
   });
 
   // Expected source: the public blocks API must agree with the caret the undo just placed.

@@ -3,14 +3,14 @@
  */
 
 /**
- * Strips fake background wrapper elements from HTML content.
- * These elements are used by the inline toolbar for visual selection highlighting
- * and should not be persisted in saved data.
- * @param html - HTML content that may contain fake background elements
- * @returns HTML content with fake background wrappers removed but their content preserved
+ * Strips editor-only wrapper elements from HTML content: the inline toolbar's
+ * fake selection background and the slash menu's pill around "/query". The
+ * block stays watched while the slash menu is open, so its saves see the pill.
+ * @param html - HTML content that may contain those wrappers
+ * @returns HTML content with the wrappers removed but their content preserved
  */
 export const stripFakeBackgroundElements = (html: string): string => {
-  if (!html || !html.includes('data-blok-fake-background')) {
+  if (!html || (!html.includes('data-blok-fake-background') && !html.includes('data-blok-slash-search'))) {
     return html;
   }
 
@@ -18,7 +18,7 @@ export const stripFakeBackgroundElements = (html: string): string => {
 
   tempDiv.innerHTML = html;
 
-  const fakeBackgrounds = tempDiv.querySelectorAll('[data-blok-fake-background="true"]');
+  const fakeBackgrounds = tempDiv.querySelectorAll('[data-blok-fake-background="true"], span[data-blok-slash-search]');
 
   fakeBackgrounds.forEach((element) => {
     const parent = element.parentNode;

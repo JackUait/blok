@@ -23,6 +23,7 @@ import { DATA_ATTR } from '../../components/constants';
 import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconToggleH1, IconToggleH2, IconToggleH3, IconToggleH4, IconToggleH5, IconToggleH6 } from '../../components/icons';
 import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
+import { stripFakeBackgroundElements } from '../../components/utils/html';
 import { HEADER_BASE_CLASSES, HEADER_LEVEL_CLASSES } from '../../shared/tool-classes/header';
 import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
 import { applyBlockColor, buildBlockColorTunes, BLOCK_COLOR_SANITIZE, type BlockColorData } from '../../components/shared/block-color';
@@ -704,7 +705,7 @@ export class Header implements BlockTool {
    */
   public save(_toolsContent: HTMLElement): HeaderData {
     const data: HeaderData = {
-      text: this._element.innerHTML,
+      text: stripFakeBackgroundElements(this._element.innerHTML),
       level: this.currentLevel.number,
     };
 

@@ -991,8 +991,15 @@ export class TableCellBlocks {
       const strandedInPreviousRender = nestedContainer !== null
         && !this.gridElement.contains(nestedContainer)
         && block.parentId === this.tableBlockId;
+      // A synced child of ours that DOM adjacency dropped into another of our
+      // cells: the table data being applied is where it belongs. A duplicate
+      // here is broadcast, and each peer then mints its own.
+      const parkedBySync = this.api.blocks.isSyncingFromYjs
+        && nestedContainer !== null
+        && this.gridElement.contains(nestedContainer)
+        && block.parentId === this.tableBlockId;
 
-      if ((nestedContainer !== null && !strandedInPreviousRender) || hasDifferentOwner) {
+      if ((nestedContainer !== null && !strandedInPreviousRender && !parkedBySync) || hasDifferentOwner) {
         const duplicate = this.api.blocks.insert(
           block.name,
           block.preservedData,

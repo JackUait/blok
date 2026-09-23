@@ -3025,6 +3025,21 @@ describe('TableCellBlocks — transient store states and event types it must ign
     expect(result[0][0].blocks).not.toEqual(['settled']);
     expect(fixture.store.insertCalls[0]).toMatchObject({ tool: 'header', data: { text: 'mine' } });
   });
+
+  it('moves, not duplicates, a synced child that adjacency parked in another cell of this table', () => {
+    const fixture = setup({ rows: 1, cols: 2 });
+    const synced = fixture.store.add('synced', 'paragraph', { text: '' }, 'table-1');
+    const other = fixture.store.add('other', 'paragraph', { text: '' }, 'table-1');
+
+    fixture.grid.container(0, 1).append(other.holder, synced.holder);
+    fixture.store.isSyncingFromYjs = true;
+
+    const result = fixture.instance.initializeCells([[{ blocks: ['synced'] }, { blocks: ['other'] }]]);
+
+    expect(fixture.store.insertCalls).toHaveLength(0);
+    expect(synced.holder.parentElement).toBe(fixture.grid.container(0, 0));
+    expect(result[0][0].blocks).toEqual(['synced']);
+  });
 });
 
 describe('TableCellBlocks — the repair block must not be stolen by a stale removal', () => {

@@ -281,6 +281,13 @@ describe('LinkInlineTool', () => {
     expect(input.style.width).toBe('');
   });
 
+  it('tells the user the field takes a link and searches headings', () => {
+    const { tool } = createTool(undefined, { 'tools.link.addLink': defaultDictionary['tools.link.addLink'] });
+    const renderResult = tool.render() as unknown as LinkToolRenderResult;
+
+    expect(getInputFromWrapper(renderResult.children.items[0].element).placeholder).toBe('Paste a link or search headings');
+  });
+
   it('renders actions input and invokes enter handler when Enter key is pressed', () => {
     const { tool } = createTool();
     const enterSpy = vi.spyOn(tool as unknown as { enterPressed(event: KeyboardEvent): void }, 'enterPressed');

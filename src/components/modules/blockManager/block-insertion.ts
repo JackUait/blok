@@ -13,6 +13,7 @@ import { generateBlockId } from '../../utils';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import { resolveChildTool } from '../../utils/child-tools';
+import { subtreeEndIndex } from '../../utils/blocks-tree';
 import type { BlockFactory } from './factory';
 import type { BlockHierarchy } from './hierarchy';
 import type { BlockRepository } from './repository';
@@ -426,6 +427,23 @@ export class BlockInsertion {
   }
 
   /**
+   * The flat index for a new sibling of `block` asked for at `index`.
+   * The doc places a sibling after `block`'s whole subtree, so an index
+   * between `block` and its own children moves past them. Otherwise the
+   * editor order and save() differ from the doc until a redo or reload.
+   */
+  private siblingIndexAfter(block: Block, index: number): number {
+    const reader = {
+      getBlocksCount: (): number => this.repository.length,
+      getBlockByIndex: (i: number): Block | undefined => this.repository.getBlockByIndex(i),
+    };
+    const start = this.repository.getBlockIndex(block);
+    const end = subtreeEndIndex(reader, start);
+
+    return index > start && index <= end ? end + 1 : index;
+  }
+
+  /**
    * Split current Block
    * 1. Extract content from Caret position to the Block`s end
    * 2. Insert a new Block below current one with extracted content
@@ -443,7 +461,7 @@ export class BlockInsertion {
 
     // Generate new block ID upfront for the transaction
     const newBlockId = generateBlockId();
-    const insertIndex = this.ctx.rawCurrentBlockIndex + 1;
+    const insertIndex = this.siblingIndexAfter(currentBlock, this.ctx.rawCurrentBlockIndex + 1);
 
     // The new block must inherit ALL of the source block's tool data (e.g. a
     // header's `level`), not just its text. Creating it with only `{ text }`
@@ -494,6 +512,7 @@ export class BlockInsertion {
         id: newBlockId,
         tool: currentBlock.name,
         data: newBlockData,
+        index: insertIndex,
         needToFocus: false,
         skipYjsSync: true,
         // Only reachable from the Enter key handler.
@@ -550,6 +569,7 @@ export class BlockInsertion {
     }
 
     const newBlockId = generateBlockId();
+    const index = this.siblingIndexAfter(currentBlock, insertIndex);
 
     return this.yjsSync.withAtomicOperation(() => {
       // Atomic Yjs transaction: update original + add new (single undo entry)
@@ -562,7 +582,7 @@ export class BlockInsertion {
           type: newBlockType,
           data: newBlockData,
           parent: currentBlock.parentId ?? undefined,
-        }, insertIndex);
+        }, index);
       });
 
       // Update DOM for the current block (auto-sync is suppressed by yjsSyncCount).
@@ -579,7 +599,7 @@ export class BlockInsertion {
         id: newBlockId,
         tool: newBlockType,
         data: newBlockData,
-        index: insertIndex,
+        index,
         needToFocus: false,
         skipYjsSync: true,
       }, blocksStore);
@@ -587,7 +607,7 @@ export class BlockInsertion {
       // Update currentBlockIndex AFTER insert (and handleBlockMutation) completes.
       // This allows the table cell claiming logic to see the original block as
       // "current" during the mutation event, so it correctly claims the new block.
-      this.ctx.rawCurrentBlockIndex = insertIndex;
+      this.ctx.rawCurrentBlockIndex = index;
 
       // Inherit parentId from the split block so nested blocks stay nested
       if (currentBlock.parentId !== null) {

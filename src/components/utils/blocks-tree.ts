@@ -379,7 +379,7 @@ const childFlatIndices = (reader: IndexReader, parentId: string): number[] => {
 };
 
 /** Map of block id -> parentId, in flat order. */
-export const parentMap = (reader: IndexReader): Map<string, string | null> => {
+export const parentMap = (reader: BlocksReader): Map<string, string | null> => {
   const count = reader.getBlocksCount();
   const entries = Array.from({ length: count }, (_, i) => reader.getBlockByIndex(i))
     .filter((b): b is { id: string; name: string; parentId: string | null } => b !== undefined)
@@ -409,7 +409,7 @@ export const isDescendantOf = (
  * walks forward while blocks remain descendants of the block at `index`.
  * Returns `index` itself when the block has no descendants.
  */
-const subtreeEndIndex = (reader: IndexReader, index: number): number => {
+export const subtreeEndIndex = (reader: BlocksReader, index: number): number => {
   const root = reader.getBlockByIndex(index);
 
   if (root === undefined) {

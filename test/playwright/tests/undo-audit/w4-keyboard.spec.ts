@@ -588,7 +588,6 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
   // Key source: toggle/block-operations.ts:47; split data: toggle-keyboard.ts splitBlock(..., { text: afterContent }),
   // closing stopCapturing: api/blocks.ts:733 (microtask). Observed: first undo changes only the new toggle, the split stays.
   test('W4K-62: Enter in the middle of a toggle title is one undo step', async ({ page }) => {
-    test.fail(true, 'W4K-62: redo of a toggle title split saves the new toggle after the old toggle\'s child');
     await create(page, [toggle(['k1']), P('k1', 'kid', 't')]);
     await caretAt(page, 't', 3);
     const trip = await roundTrip(page, () => page.keyboard.press('Enter'));
@@ -672,6 +671,40 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
 
     expect(trip.undone, 'one undo restores the state before the gesture').toEqual(trip.before);
     expect(trip.redone, 'redo restores the state after the gesture').toEqual(trip.after);
+  });
+
+  // Same as W4K-62 for the other splits of a block that has a nested child.
+  test('W4K-62c: Enter in the middle of a paragraph with a nested child is one undo step', async ({ page }) => {
+    await create(page, [{ id: 'p', type: 'paragraph', data: { text: 'Parent' }, content: ['k1'] }, P('k1', 'kid', 'p')]);
+    await caretAt(page, 'p', 3);
+    const trip = await roundTrip(page, () => page.keyboard.press('Enter'));
+
+    expect(trip.redone, 'redo restores the state after the gesture').toEqual(trip.after);
+    expect(trip.undone, 'one undo restores the state before the gesture').toEqual(trip.before);
+  });
+
+  test('W4K-62d: Enter in the middle of a list item with a nested child is one undo step', async ({ page }) => {
+    await create(page, [
+      { ...L('l', 'Parent'), content: ['k1'] },
+      { ...L('k1', 'kid', 1), parent: 'l' },
+    ]);
+    await caretAt(page, 'l', 3);
+    const trip = await roundTrip(page, () => page.keyboard.press('Enter'));
+
+    expect(trip.redone, 'redo restores the state after the gesture').toEqual(trip.after);
+    expect(trip.undone, 'one undo restores the state before the gesture').toEqual(trip.before);
+  });
+
+  test('W4K-70b: Enter in the middle of a toggle heading with a child is one undo step', async ({ page }) => {
+    await create(page, [
+      { id: 'h', type: 'header', data: { text: 'Title', level: 2, isToggleable: true, isOpen: true }, content: ['k1'] },
+      P('k1', 'kid', 'h'),
+    ]);
+    await caretAt(page, 'h', 2);
+    const trip = await roundTrip(page, () => page.keyboard.press('Enter'));
+
+    expect(trip.redone, 'redo restores the state after the gesture').toEqual(trip.after);
+    expect(trip.undone, 'one undo restores the state before the gesture').toEqual(trip.before);
   });
 
   // ---------- code ----------

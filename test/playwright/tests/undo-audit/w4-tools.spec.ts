@@ -406,12 +406,9 @@ test.describe('W4T audio', () => {
     expect(await canUndo(page)).toBe(false);
   });
 
-  // Defect: after undo, save() says loop is off but the player still loops and shows the button pressed.
-  // Root cause: audio/controls.ts:344-345 lets the shared localStorage loop preference (written by the button
-  // at :379) override data.loop (audio/ui.ts:109) on every re-render, including the undo re-render.
-  // Controls W4T-17b (preference cleared) and W4T-17c (loop set from the settings menu) pass.
+  // The undo re-render takes loop from block data, not from the viewer's stored loop preference.
+  // Controls: W4T-17b (preference cleared) and W4T-17c (loop set from the settings menu).
   test('W4T-17: undo of the player loop button turns loop off on screen too', async ({ page }) => {
-    test.fail();
     await mount(page, [ANCHOR, AUD]);
     const loop = page.locator('[data-blok-id="a"] [data-role="audio-loop"]');
 

@@ -2,6 +2,7 @@
  * DragOperations - Handles move and duplicate operations for drag and drop
  */
 
+import type { BlockOrigin } from '../../../../../types';
 import { BlockToolAPI } from '../../../block';
 import type { Block } from '../../../block';
 import { resolveMoveDestination } from '../utils/moveDestination';
@@ -47,6 +48,7 @@ export interface BlockManagerAdapter {
     tunes: Record<string, unknown>;
     index: number;
     needToFocus: boolean;
+    origin?: BlockOrigin;
   }): Block;
   setBlockParent?(block: Block, parentId: string | null): void;
   getBlockById?(id: string): Block | undefined;
@@ -242,6 +244,9 @@ export class DragOperations {
     // leave the duplicate and the original mutating each other's `content`
     // until the next save cycle — a silent data-corruption class of bug in the
     // same family as the nested-container ejection regressions.
+    //
+    // A copy whose children are copied with it is inserted as 'paste' (it brings
+    // its own children), so a container like callout does not seed a body.
     const duplicatedBlocks = prep.validResults.map(({ saved, toolName }, index) =>
       this.blockManager.insert({
         tool: toolName,
@@ -249,6 +254,7 @@ export class DragOperations {
         tunes: structuredClone(saved.tunes),
         index: prep.baseInsertIndex + index,
         needToFocus: false,
+        origin: prep.sortedBlocks[index].contentIds.some(id => prep.sourceIds.has(id)) ? 'paste' : undefined,
       })
     );
 

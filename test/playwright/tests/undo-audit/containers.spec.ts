@@ -460,9 +460,6 @@ test.describe('CON toggle / callout', () => {
 
   // Undo must restore the exact prior state; redo the exact post-gesture state.
   test('CON-12 duplicating a callout copies exactly its children', async ({ page }) => {
-    test.fail();
-    // Observed: the copy has 3 children, ['kid one', 'kid two', ''] — an extra empty paragraph.
-    // Toggle duplicate copies exactly 2. (Duplicate path, not undo.)
     await createBlok(page, kidsDoc('callout'));
     await gap(page);
     await openTunesFor(page, 'box');

@@ -28,6 +28,12 @@ export interface AttachControlsOptions {
   /** Defaults to globalThis.localStorage; pass a custom object for tests. */
   storage?: AudioStorage;
   onLoopChange?(loop: boolean): void;
+  /**
+   * Whether the stored loop preference overrides the element's seed. Pass false
+   * when the block is rebuilt from its data (undo/redo): the data is the truth then.
+   * Defaults to true.
+   */
+  restoreLoop?: boolean;
   /** Editor i18n instance used to translate control labels. */
   i18n?: I18nInstance;
 }
@@ -69,6 +75,7 @@ export function attachControls({
   data,
   storage,
   onLoopChange,
+  restoreLoop = true,
   i18n,
 }: AttachControlsOptions): ControlsHandle {
   // `media` aliases the destructured param so property writes below are not
@@ -341,7 +348,7 @@ export function attachControls({
   // ----- loop -----
   // The shared stored preference wins over any seed on the element; restoring is
   // not a user toggle, so it does not notify onLoopChange (block data untouched).
-  const storedLoop = safeGet(LOOP_KEY);
+  const storedLoop = restoreLoop ? safeGet(LOOP_KEY) : null;
   if (storedLoop !== null) media.loop = storedLoop === 'true';
   const loopBtn = button('audio-loop', i18nLabel('loop', 'Loop'), IconPlayerLoop);
   loopBtn.setAttribute('aria-pressed', String(media.loop));

@@ -195,11 +195,12 @@ export class GestureController extends Controller {
   /**
    * Whether the gesture belongs to this editor: its target is inside the
    * editor, or the caret is (for the toolbar and menus mounted on the body).
+   * A target in a nested editor is that editor's, wherever the caret is.
    * @param event - the event that starts the gesture
    */
   private owns(event: Event): boolean {
-    if (this.isInsideWrapper(event.target)) {
-      return true;
+    if (event.target instanceof Node && this.wrapperElement?.contains(event.target) === true) {
+      return this.isInsideWrapper(event.target);
     }
 
     const anchor = window.getSelection()?.anchorNode ?? null;
@@ -208,9 +209,17 @@ export class GestureController extends Controller {
   }
 
   /**
+   * A node inside another editor nested in this one (a database card page)
+   * belongs to that editor: its gestures must not close this editor's step.
    * @param target - an event target or node
    */
   private isInsideWrapper(target: EventTarget | null): boolean {
-    return target instanceof Node && this.wrapperElement !== null && this.wrapperElement.contains(target);
+    if (!(target instanceof Node) || this.wrapperElement === null || !this.wrapperElement.contains(target)) {
+      return false;
+    }
+
+    const element = target instanceof Element ? target : target.parentElement;
+
+    return element?.closest(`[${DATA_ATTR.editor}]`) === this.wrapperElement;
   }
 }

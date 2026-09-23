@@ -27,6 +27,7 @@ describe('GestureController', () => {
     vi.clearAllMocks();
     selectedBlocks = false;
     wrapper = document.createElement('div');
+    wrapper.setAttribute('data-blok-editor', '');
     input = document.createElement('div');
     input.contentEditable = 'true';
     input.textContent = 'Hello';
@@ -159,6 +160,48 @@ describe('GestureController', () => {
 
     expect(yjs.beginGesture).not.toHaveBeenCalled();
     popover.remove();
+  });
+
+  describe('with another editor nested inside (a database card page)', () => {
+    let nestedInput: HTMLElement;
+
+    beforeEach(() => {
+      const nested = document.createElement('div');
+
+      nested.setAttribute('data-blok-editor', '');
+      nestedInput = document.createElement('div');
+      nestedInput.contentEditable = 'true';
+      nestedInput.textContent = 'body';
+      nested.appendChild(nestedInput);
+      wrapper.appendChild(nested);
+    });
+
+    it('leaves keys, typing and presses in the nested editor to that editor', () => {
+      nestedInput.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'a' }));
+      nestedInput.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'insertText' }));
+      nestedInput.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+
+      expect(yjs.beginGesture).not.toHaveBeenCalled();
+      expect(yjs.holdCapture).not.toHaveBeenCalled();
+    });
+
+    it('leaves a toolbar press to the nested editor while its caret is there', () => {
+      const text = nestedInput.firstChild;
+
+      if (text === null) {
+        throw new Error('empty input');
+      }
+      window.getSelection()?.collapse(text, 1);
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+
+      expect(yjs.beginGesture).not.toHaveBeenCalled();
+    });
+
+    it('still takes keys in its own blocks', () => {
+      key({ key: 'a' });
+
+      expect(yjs.beginGesture).toHaveBeenCalledWith('typing');
+    });
   });
 
   it('releases a hold when disabled mid-press', () => {

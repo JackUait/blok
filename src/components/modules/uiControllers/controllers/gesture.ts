@@ -18,9 +18,11 @@ const IGNORED_INPUT_TYPES = new Set(['insertCompositionText', 'historyUndo', 'hi
  * the only thing that closes an undo step and the moment its caret-before is
  * taken, before any handler moves the caret.
  *
- * Listens on the document in the capture phase: the inline toolbar and the
- * block menus are mounted outside the editor, and capture runs before every
- * handler that could write.
+ * Listens on the window in the capture phase: the inline toolbar and the
+ * block menus are mounted outside the editor, and window capture runs before
+ * every document listener, whatever its registration order. The inline tools'
+ * shortcut manager is a page-level singleton that swallows Cmd+B on the
+ * document, and it registers before every editor but the first.
  */
 export class GestureController extends Controller {
   private wrapperElement: HTMLElement | null = null;
@@ -112,16 +114,16 @@ export class GestureController extends Controller {
   public override enable(): void {
     const on = this.readOnlyMutableListeners.on;
 
-    on(document, 'keydown', this.keydownHandler, true);
-    on(document, 'beforeinput', this.beforeinputHandler, true);
-    on(document, 'pointerdown', this.pointerdownHandler, true);
-    on(document, 'paste', this.discreteHandler, true);
-    on(document, 'cut', this.discreteHandler, true);
-    on(document, 'drop', this.discreteHandler, true);
-    on(document, 'compositionstart', this.compositionstartHandler, true);
-    on(document, 'compositionend', this.compositionendHandler, true);
-    on(document, 'pointerup', this.pointerReleaseHandler, true);
-    on(document, 'pointercancel', this.pointerReleaseHandler, true);
+    on(window, 'keydown', this.keydownHandler, true);
+    on(window, 'beforeinput', this.beforeinputHandler, true);
+    on(window, 'pointerdown', this.pointerdownHandler, true);
+    on(window, 'paste', this.discreteHandler, true);
+    on(window, 'cut', this.discreteHandler, true);
+    on(window, 'drop', this.discreteHandler, true);
+    on(window, 'compositionstart', this.compositionstartHandler, true);
+    on(window, 'compositionend', this.compositionendHandler, true);
+    on(window, 'pointerup', this.pointerReleaseHandler, true);
+    on(window, 'pointercancel', this.pointerReleaseHandler, true);
     on(window, 'blur', this.pointerReleaseHandler);
     on(window, 'blur', this.compositionendHandler);
   }

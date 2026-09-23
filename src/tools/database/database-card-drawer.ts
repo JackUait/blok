@@ -26,6 +26,31 @@ export interface CardDrawerOptions {
 }
 
 /**
+ * Compare key of a page body. `time`, `version` and the per-block edit stamps
+ * change on every save, so they are left out: writing a body that differs
+ * only there is a new undo step for nothing.
+ */
+const bodyKey = (data: OutputData | undefined): string =>
+  JSON.stringify((data?.blocks ?? []).map(({ lastEditedAt: _at, lastEditedBy: _by, ...block }) => block));
+
+/**
+ * Returns a check that is true when a saved body differs from the last one
+ * written (starting from `initial`); that body then becomes the last written.
+ */
+const createBodyChangeCheck = (initial: OutputData | undefined): ((data: OutputData) => boolean) => {
+  const last = { key: bodyKey(initial) };
+
+  return (data) => {
+    const key = bodyKey(data);
+    const changed = key !== last.key;
+
+    last.key = key;
+
+    return changed;
+  };
+};
+
+/**
  * Side drawer that opens when a kanban card is clicked.
  * Sits beside the board as a flex sibling, taking layout space.
  * Contains a title input, status property, and a nested Blok editor for the card description.
@@ -47,6 +72,7 @@ export class DatabaseCardDrawer {
   private currentRowId: string | null = null;
   private currentRow: DatabaseRow | null = null;
   private blokInstance: BlokInstance | null = null;
+  private isBodyChanged: ((data: OutputData) => boolean) | null = null;
   private escapeHandler: ((e: KeyboardEvent) => void) | null = null;
   private outsideClickHandler: ((e: MouseEvent) => void) | null = null;
   private propertyTypePopover: DatabasePropertyTypePopover | null = null;
@@ -493,9 +519,10 @@ export class DatabaseCardDrawer {
       try {
         const instance = this.blokInstance;
         const rowId = this.currentRowId;
+        const isBodyChanged = this.isBodyChanged;
 
         instance.save().then((data) => {
-          if (rowId !== null) {
+          if (rowId !== null && isBodyChanged?.(data) === true) {
             this.onDescriptionChange(rowId, data);
           }
           instance.destroy();
@@ -506,6 +533,7 @@ export class DatabaseCardDrawer {
         // Blok may already be destroyed
       }
       this.blokInstance = null;
+      this.isBodyChanged = null;
     }
   }
 
@@ -525,6 +553,7 @@ export class DatabaseCardDrawer {
       const description = this.descriptionPropertyId !== undefined
         ? row.properties[this.descriptionPropertyId]
         : undefined;
+      const isBodyChanged = createBodyChangeCheck(description as OutputData | undefined);
       const blok = new Blok({
         ...this.toolsConfig,
         holder: editorHolder,
@@ -532,9 +561,9 @@ export class DatabaseCardDrawer {
         readOnly: this.readOnly,
         onChange: async () => {
           try {
-            const data = await this.blokInstance?.save();
+            const data = await instance.save();
 
-            if (data !== undefined) {
+            if (isBodyChanged(data)) {
               this.onDescriptionChange(rowId, data);
             }
           } catch {
@@ -543,7 +572,10 @@ export class DatabaseCardDrawer {
         },
       });
 
-      this.blokInstance = blok as unknown as BlokInstance;
+      const instance = blok as unknown as BlokInstance;
+
+      this.blokInstance = instance;
+      this.isBodyChanged = isBodyChanged;
     }).catch(() => {
       // Blok import may fail in unit tests (jsdom), drawer still works for title
     });

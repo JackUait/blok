@@ -168,13 +168,8 @@ const makeRedo = async (page: Page): Promise<void> => {
 };
 
 test.describe('W4D card page (drawer)', () => {
-  // Defect: closing the drawer always saves its page-body editor and writes the result
-  // ({ time, blocks: [] }) into the row, even when nothing was typed. That write is a new
-  // undo step, so it clears redo and puts a phantom step on the stack.
-  // Root cause: database-card-drawer.ts:497-499 (cleanupEditor saves unconditionally on close)
-  // -> database/index.ts:971-973 onDescriptionChange -> updateRowBlock dispatchChange (index.ts:346-353).
+  // Closing an unedited card page writes nothing, so it adds no undo step.
   test('W4D-1: opening and closing a card without edits keeps redo and leaves the row alone', async ({ page }) => {
-    test.fail(true, 'W4D-1: drawer close writes the page body into the row');
     await mount(page);
     await gap(page);
     const row1 = await rowData(page, 'row-1');
@@ -205,11 +200,8 @@ test.describe('W4D card page (drawer)', () => {
     expect(await rowData(page, 'row-1')).toEqual(row1);
   });
 
-  // Defect: the close-time save of the page body is its own undo step, so the first undo after
-  // typing in a card page and closing it only swaps the saved `time`; the text needs a second undo.
-  // Root cause: same as W4D-1 (database-card-drawer.ts:497-499).
+  // The close-time save of an unchanged page body is not its own undo step.
   test('W4D-2: one undo after typing in a card page and closing it removes the typed text', async ({ page }) => {
-    test.fail(true, 'W4D-2: close-time page save is an extra undo step');
     await mount(page);
     await gap(page);
     const row1 = await rowData(page, 'row-1');

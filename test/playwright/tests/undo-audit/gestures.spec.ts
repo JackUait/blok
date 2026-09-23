@@ -446,11 +446,8 @@ test.describe('GES table', () => {
 });
 
 test.describe('GES database board', () => {
-  // Redo must give back the post-gesture state on screen. Undo of the same drag does re-project.
-  // Observed: after redo save() has row-1 in opt-done, but the board still shows it under Todo:
-  // Expected [[], [row-1, row-2]], Received [[row-1], [row-2]]. Cause not proven; may differ from CON-9/CON-10.
+  // Redo must give back the post-gesture state on screen.
   test('GES-7: redo of dragging a card to another column moves the card on the board', async ({ page }) => {
-    test.fail();
     await createBlok(page, DB_BOARD);
     await gap(page);
     const s = await page.locator('[data-blok-database-card][data-row-id="row-1"]').boundingBox();

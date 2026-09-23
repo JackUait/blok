@@ -15,6 +15,9 @@ import { setFieldValidity } from '../utils/field-validity';
 import { applyResolvedLinkAttributes, resolveLinkAttributes } from '../utils/resolve-link-attributes';
 import { hasUnsafeScheme } from '../utils/sanitize-url';
 import { twMerge } from '../utils/tw';
+import { isHttpUrl } from '../../tools/link/registry';
+import { MetadataFetcher } from '../../tools/link/metadata-fetcher';
+import { getRecentLinks, recordRecentLink, updateRecentLinkMeta, type RecentLink } from './link-history';
 
 /**
  * Content-driven input width: the field rests at the narrow default and
@@ -43,6 +46,19 @@ const SUGGESTION_TYPE_TEXT = 'block text-[11px] leading-[14px] text-gray-text mt
  * Enter would actually insert the link.
  */
 const ENTER_HINT_CLASSES = 'items-center justify-center size-5 shrink-0 text-gray-text [&_svg]:size-3.5';
+
+/**
+ * Absent from the locale dictionaries on purpose: a new key resets the
+ * translation audit ledger. Kept in a const so the static i18n scan skips it.
+ */
+const RECENT_LABEL_KEY = 'tools.link.recent';
+
+/**
+ * Rows cascade in with the suggestion row's keyframes. Each row sets its own
+ * animation-delay; motion-safe drops the whole cascade for reduced motion.
+ */
+const RECENT_ROW_CLASSES = 'flex items-center gap-2.5 w-full px-1.5 py-1.5 rounded-[10px] cursor-pointer can-hover:hover:bg-item-hover-bg aria-selected:bg-item-hover-bg transition-colors motion-safe:animate-[blok-link-reveal_160ms_ease-out_both]';
+const RECENT_TILE_CLASSES = 'flex items-center justify-center size-6 shrink-0 rounded-md bg-item-hover-bg overflow-hidden text-[11px] font-semibold text-gray-text';
 
 /**
  * Link Tool
@@ -110,6 +126,8 @@ export class LinkInlineTool implements InlineTool {
     titleLabel: HTMLElement | null;
     inputWrapper: HTMLElement | null;
     suggestion: HTMLElement | null;
+    recent: HTMLElement | null;
+    recentList: HTMLElement | null;
     error: HTMLElement | null;
     errorMessage: HTMLElement | null;
     divider: HTMLElement | null;
@@ -118,6 +136,8 @@ export class LinkInlineTool implements InlineTool {
   } = {
       input: null,
       urlLabel: null,
+      recent: null,
+      recentList: null,
       titleInput: null,
       titleLabel: null,
       inputWrapper: null,
@@ -134,6 +154,12 @@ export class LinkInlineTool implements InlineTool {
    * mode the labeled Page/Title fields replace the create-mode suggestion chip.
    */
   private editing = false;
+
+  /**
+   * Recent row picked with the arrow keys, -1 for none. Focus never leaves
+   * the field: the popover's Flipper owns arrow keys on any other target.
+   */
+  private activeRecentIndex = -1;
 
   /**
    * Reused canvas for measuring the input's text width (see measureTextWidth).
@@ -198,6 +224,7 @@ export class LinkInlineTool implements InlineTool {
     this.nodes.urlLabel = this.createFieldLabel(this.i18n.t('tools.link.pageOrUrl'), 'inline-tool-url-label', false);
     this.nodes.input = this.createInput();
     this.nodes.suggestion = this.createSuggestion();
+    this.nodes.recent = this.createRecent();
     this.nodes.error = this.createError();
     this.nodes.titleLabel = this.createFieldLabel(this.i18n.t('tools.link.linkTitle'), 'inline-tool-title-label', true);
     this.nodes.titleInput = this.createTitleInput();
@@ -212,6 +239,7 @@ export class LinkInlineTool implements InlineTool {
       this.nodes.input,
       this.nodes.error,
       this.nodes.suggestion,
+      this.nodes.recent,
       this.nodes.titleLabel,
       this.nodes.titleInput,
       this.nodes.divider,
@@ -259,10 +287,17 @@ export class LinkInlineTool implements InlineTool {
     input.enterKeyHint = 'done';
     input.className = this.INPUT_BASE_CLASSES;
     input.setAttribute('data-blok-testid', 'inline-tool-input');
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-expanded', 'false');
+    input.setAttribute('aria-controls', `${this.errorId}-recent-list`);
     this.setBooleanStateAttribute(input, this.DATA_ATTRIBUTES.inputOpened, false);
     input.addEventListener('keydown', (event: KeyboardEvent) => {
       if (event.key === 'Enter') {
         this.enterPressed(event);
+      }
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        this.moveActiveRecent(event);
       }
     });
     input.addEventListener('paste', () => {
@@ -271,12 +306,14 @@ export class LinkInlineTool implements InlineTool {
         // linger next to the freshly revealed suggestion row.
         this.clearValidationError();
         this.updateSuggestion(input.value);
+        this.updateRecentVisibility();
         this.resizeInput();
       });
     });
     input.addEventListener('input', () => {
       this.clearValidationError();
       this.updateSuggestion(input.value);
+      this.updateRecentVisibility();
       this.resizeInput();
     });
 
@@ -603,6 +640,238 @@ export class LinkInlineTool implements InlineTool {
   }
 
   /**
+   * "Recent" list of the last links added, shown under the empty field.
+   */
+  private createRecent(): HTMLElement {
+    const section = document.createElement('div');
+    const labelId = `${this.errorId}-recent`;
+
+    // Same width rules as the suggestion wrapper: a long page title must not
+    // widen the card. No display class, so the `hidden` attribute works.
+    section.className = 'w-0 min-w-full';
+    section.setAttribute('data-link-recent', '');
+    section.hidden = true;
+
+    const divider = document.createElement('div');
+
+    divider.className = 'mt-1.5 mb-1 h-px bg-link-input-border';
+
+    const label = document.createElement('div');
+
+    label.id = labelId;
+    label.className = 'px-1.5 pt-1 pb-0.5 text-[11px] leading-[14px] font-medium text-gray-text';
+    label.setAttribute('data-link-recent-label', '');
+    label.textContent = this.i18n.has(RECENT_LABEL_KEY) ? this.i18n.t(RECENT_LABEL_KEY) : 'Recent';
+
+    const list = document.createElement('div');
+
+    list.id = `${labelId}-list`;
+    list.className = 'flex flex-col';
+    list.setAttribute('role', 'listbox');
+    list.setAttribute('aria-labelledby', labelId);
+    this.nodes.recentList = list;
+
+    section.append(divider, label, list);
+
+    return section;
+  }
+
+  /**
+   * Rebuild the rows from storage. Called on every open, so a link added in
+   * another editor on the page shows up too.
+   */
+  private renderRecent(): void {
+    if (!this.nodes.recentList) {
+      return;
+    }
+
+    this.nodes.recentList.replaceChildren(
+      ...getRecentLinks().map((entry, index) => this.createRecentRow(entry, index))
+    );
+    this.updateRecentVisibility();
+  }
+
+  /**
+   * One recent link: favicon or letter tile, then the page title over the
+   * site name, laid out like the suggestion row.
+   * Without a title the site name moves into the title slot and the path
+   * takes its place.
+   * @param entry - the stored link
+   * @param index - position in the list, drives the cascade delay
+   */
+  private createRecentRow(entry: RecentLink, index: number): HTMLElement {
+    const parsed = (() => {
+      try {
+        return new URL(entry.url);
+      } catch {
+        return null;
+      }
+    })();
+    const site = parsed?.hostname.replace(/^www\./, '') ?? entry.url;
+    const path = parsed ? `${parsed.pathname}${parsed.search}`.replace(/^\/$/, '') : '';
+    const title = entry.title ?? site;
+    const meta = entry.title !== undefined ? site : path;
+
+    // Not a <button>: every button in a popover HTML item becomes a Flipper
+    // stop, and Flipper would steal the arrow keys from the field.
+    const row = document.createElement('div');
+
+    row.id = `${this.errorId}-recent-${index}`;
+    row.className = RECENT_ROW_CLASSES;
+    row.title = entry.url;
+    row.setAttribute('role', 'option');
+    row.setAttribute('aria-selected', 'false');
+    row.style.animationDelay = `${index * 30}ms`;
+    row.setAttribute('data-link-recent-row', '');
+
+    const tile = document.createElement('span');
+
+    tile.className = RECENT_TILE_CLASSES;
+    tile.setAttribute('aria-hidden', 'true');
+
+    const showMonogram = (): void => {
+      const monogram = document.createElement('span');
+
+      monogram.setAttribute('data-link-recent-monogram', '');
+      monogram.textContent = (Array.from(title)[0] ?? '').toUpperCase();
+      tile.replaceChildren(monogram);
+    };
+
+    if (entry.favicon !== undefined && isHttpUrl(entry.favicon)) {
+      const img = document.createElement('img');
+
+      img.className = 'size-4';
+      img.alt = '';
+      img.referrerPolicy = 'no-referrer';
+      img.addEventListener('error', showMonogram, { once: true });
+      img.src = entry.favicon;
+      tile.append(img);
+    } else {
+      showMonogram();
+    }
+
+    const textEl = document.createElement('span');
+
+    textEl.className = 'flex-1 min-w-0';
+
+    const titleEl = document.createElement('span');
+
+    titleEl.className = `${SUGGESTION_URL_TEXT} text-text-primary`;
+    titleEl.setAttribute('data-link-recent-title', '');
+    titleEl.textContent = title;
+
+    const metaEl = document.createElement('span');
+
+    metaEl.className = `${SUGGESTION_TYPE_TEXT} truncate`;
+    metaEl.setAttribute('data-link-recent-meta', '');
+    metaEl.textContent = meta;
+
+    textEl.append(titleEl, metaEl);
+    row.append(tile, textEl);
+    // Keep the saved selection alive while the row takes the click.
+    row.addEventListener('mousedown', (event) => event.preventDefault());
+    row.addEventListener('click', () => this.applyRecent(entry.url));
+
+    return row;
+  }
+
+  /**
+   * @param url - the recent link to put on the selection
+   */
+  private applyRecent(url: string): void {
+    if (!this.nodes.input) {
+      return;
+    }
+    this.nodes.input.value = url;
+    this.confirmLink();
+  }
+
+  private getRecentRows(): HTMLElement[] {
+    return Array.from(this.nodes.recentList?.querySelectorAll<HTMLElement>('[data-link-recent-row]') ?? []);
+  }
+
+  /**
+   * ArrowDown/ArrowUp from the field. Up past the first row returns to the
+   * field itself.
+   * @param event - the arrow key press
+   */
+  private moveActiveRecent(event: KeyboardEvent): void {
+    const count = this.getRecentRows().length;
+
+    if (this.nodes.recent?.hidden !== false || count === 0) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const next = event.key === 'ArrowDown'
+      ? Math.min(this.activeRecentIndex + 1, count - 1)
+      : Math.max(this.activeRecentIndex - 1, -1);
+
+    this.setActiveRecent(next);
+  }
+
+  /**
+   * @param index - row to highlight, -1 for none
+   */
+  private setActiveRecent(index: number): void {
+    this.activeRecentIndex = index;
+
+    const rows = this.getRecentRows();
+
+    rows.forEach((row, i) => row.setAttribute('aria-selected', String(i === index)));
+
+    const active = rows[index];
+
+    if (active) {
+      this.nodes.input?.setAttribute('aria-activedescendant', active.id);
+      active.scrollIntoView?.({ block: 'nearest' });
+    } else {
+      this.nodes.input?.removeAttribute('aria-activedescendant');
+    }
+  }
+
+  /**
+   * The list belongs to an empty create-mode field. Once the user types, the
+   * suggestion row takes over.
+   */
+  private updateRecentVisibility(): void {
+    if (!this.nodes.recent) {
+      return;
+    }
+
+    const typed = (this.nodes.input?.value ?? '').trim() !== '';
+
+    this.nodes.recent.hidden = this.editing || typed || this.getRecentRows().length === 0;
+    this.nodes.input?.setAttribute('aria-expanded', String(!this.nodes.recent.hidden));
+    this.setActiveRecent(-1);
+  }
+
+  /**
+   * Add an applied web link to the history and, when an unfurl endpoint is
+   * set, look up its page title once.
+   * @param url - the href that was applied
+   */
+  private rememberLink(url: string): void {
+    if (!isHttpUrl(url)) {
+      return;
+    }
+
+    recordRecentLink(url);
+
+    const unfurl = this.linkConfig.unfurl;
+
+    if (unfurl === undefined || getRecentLinks()[0]?.title !== undefined) {
+      return;
+    }
+
+    new MetadataFetcher(unfurl)
+      .fetch(url)
+      .then((meta) => updateRecentLinkMeta(url, { title: meta.title, favicon: meta.favicon }))
+      .catch(() => undefined);
+  }
+
+  /**
    * Return true if the URL is complete enough to confirm as a link.
    *
    * Rules by category:
@@ -687,6 +956,7 @@ export class LinkInlineTool implements InlineTool {
     this.selection.removeFakeBackground();
     this.selection.restore();
     this.insertLink(preparedValue);
+    this.rememberLink(preparedValue);
     this.selection.collapseToEnd();
     this.inlineToolbar.close();
   }
@@ -732,6 +1002,7 @@ export class LinkInlineTool implements InlineTool {
     // Edit mode uses the labeled Page/Title fields, not the create-mode
     // suggestion chip — keep it hidden even though the URL is prefilled.
     this.updateSuggestion(this.nodes.input.value);
+    this.renderRecent();
     this.resizeInput();
 
     this.nodes.input.className = twMerge(this.INPUT_BASE_CLASSES, 'block');
@@ -883,6 +1154,11 @@ export class LinkInlineTool implements InlineTool {
     this.setEditAffordancesVisible(false);
     this.clearValidationError();
     this.nodes.suggestion?.classList.add('hidden');
+    if (this.nodes.recent) {
+      this.nodes.recent.hidden = true;
+    }
+    this.nodes.input.setAttribute('aria-expanded', 'false');
+    this.setActiveRecent(-1);
     this.updateButtonStateAttributes(false);
     this.unlinkAvailable = false;
     if (clearSavedSelection) {
@@ -939,6 +1215,15 @@ export class LinkInlineTool implements InlineTool {
     if (!this.nodes.input) {
       return;
     }
+    const activeRow = this.getRecentRows()[this.activeRecentIndex];
+
+    if (activeRow !== undefined && this.nodes.recent?.hidden === false) {
+      event.preventDefault();
+      activeRow.click();
+
+      return;
+    }
+
     const value = this.nodes.input.value || '';
 
     if (!value.trim()) {
@@ -971,6 +1256,7 @@ export class LinkInlineTool implements InlineTool {
     this.selection.restore();
 
     this.insertLink(preparedValue);
+    this.rememberLink(preparedValue);
 
     /**
      * Preventing events that will be able to happen

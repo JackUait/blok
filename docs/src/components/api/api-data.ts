@@ -616,7 +616,7 @@ const editor = new Blok(config);`,
         type: "string",
         default: "undefined",
         description:
-          "Base URL of a service speaking Blok's upload and unfurl contracts, such as `https://blok.myapp.com`, or a same-origin path like `/api/blok`. It is shorthand only.\n\nIt fills in `uploader` and the bookmark tool's `endpoint` when you have not set them yourself, and anything you set explicitly wins. That is what lets you take the service for link previews while uploading into your own S3, with no bridging code.\n\nIt does not configure document storage. Your documents stay yours. See `persistence`.",
+          "Base URL of a service speaking Blok's upload and unfurl contracts, such as `https://blok.myapp.com`, or a same-origin path like `/api/blok`. It is shorthand only.\n\nIt fills in `uploader`, the bookmark tool's `endpoint` and `link.unfurl` when you have not set them yourself, and anything you set explicitly wins. That is what lets you take the service for link previews while uploading into your own S3, with no bridging code.\n\nIt does not configure document storage. Your documents stay yours. See `persistence`.",
       },
       {
         option: "ticket",
@@ -655,10 +655,10 @@ const editor = new Blok(config);`,
       },
       {
         option: "link",
-        type: "{ target?: string; rel?: string; transformHref?: (href: string) => string; transform?: (context: LinkTransformContext) => LinkTransformResult | void }",
+        type: "{ target?: string; rel?: string; transformHref?: (href: string) => string; transform?: (context: LinkTransformContext) => LinkTransformResult | void; unfurl?: { endpoint: string; headers?: Record<string, string> | (() => Promise<Record<string, string>>) } }",
         default: "undefined",
         description:
-          "Controls the anchors Blok creates, instead of post-processing the rendered DOM. It applies on every path that produces an `<a>`: the Link inline tool, `blocks.render()` (anchors coming from stored block HTML) and paste.\n\n- `target` defaults to '_blank' and `rel` to 'nofollow'.\n- `transform` is the superset and supersedes `transformHref`, which is then ignored.\n  - It receives the href, text and element, and may return `href`, `target`, `rel` and extra `attributes`.\n  - Omitted fields fall back to the shorthand defaults, including the same-page `_self` rule.\n\nBoth must be idempotent: on the render and paste paths they re-run against already-transformed anchors on every render.",
+          "Controls the anchors Blok creates, instead of post-processing the rendered DOM. It applies on every path that produces an `<a>`: the Link inline tool, `blocks.render()` (anchors coming from stored block HTML) and paste.\n\n- `target` defaults to '_blank' and `rel` to 'nofollow'.\n- `transform` is the superset and supersedes `transformHref`, which is then ignored.\n  - It receives the href, text and element, and may return `href`, `target`, `rel` and extra `attributes`.\n  - Omitted fields fall back to the shorthand defaults, including the same-page `_self` rule.\n\nBoth must be idempotent: on the render and paste paths they re-run against already-transformed anchors on every render.\n\n`unfurl` feeds the Recent list in the Link field. That list shows the last 3 web links you added, by page title.\n\n- `unfurl` takes `{ endpoint, headers? }`, the same contract as the bookmark tool's `endpoint`.\n- Blok looks each title up once. `server` fills `unfurl` in for you.\n- Without it, a recent link shows its site name.\n- The list lives in the browser's localStorage under `blok-recent-links`.",
       },
       {
         option: "linkPaste",

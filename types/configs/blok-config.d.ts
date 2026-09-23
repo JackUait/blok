@@ -915,6 +915,23 @@ export interface BlokMountOptions {
      * @returns the attributes to set on the anchor, or nothing to keep defaults
      */
     transform?: (context: LinkTransformContext) => LinkTransformResult | void;
+
+    /**
+     * Where the link field looks up page titles for its "Recent" list. Same
+     * contract as the bookmark tool's `endpoint`: Blok sends
+     * `GET endpoint?url=<encoded>` and reads `meta.title` / `meta.favicon`.
+     *
+     * The `server` option fills this in. Without it, recent links show their
+     * site name instead of the page title.
+     */
+    unfurl?: {
+      endpoint: string;
+      /**
+       * Headers sent with the lookup. A function is called per request, so a
+       * short-lived access pass stays fresh.
+       */
+      headers?: Record<string, string> | (() => Promise<Record<string, string>>);
+    };
   };
 
   /**

@@ -96,7 +96,7 @@
 }
 
 /* Link-field suggestion row / inline error reveal — call sites in
-   popover-animation.css. Restarts only when the element toggles from
+   popover-animation.css, plus the recent rows in inline-tool-link.ts. Restarts only when the element toggles from
    display:none, so it fires on appear, not on every keystroke. */
 @keyframes blok-link-reveal {
   from {

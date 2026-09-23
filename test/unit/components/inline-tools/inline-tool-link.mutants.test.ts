@@ -139,7 +139,10 @@ const createHarness = (options: { link?: LinkConfig; translations?: Record<strin
       open: vi.fn(),
     },
     notifier: { show: vi.fn() },
-    i18n: { t: (phrase: string): string => dictionary[phrase] ?? phrase },
+    i18n: {
+      t: (phrase: string): string => dictionary[phrase] ?? phrase,
+      has: (phrase: string): boolean => phrase in dictionary,
+    },
     config: { link: options.link },
   } as unknown as API;
 
@@ -308,6 +311,7 @@ describe('LinkInlineTool — mutation coverage', () => {
     vi.clearAllMocks();
     document.body.innerHTML = EDITOR_HTML;
     window.getSelection()?.removeAllRanges();
+    localStorage.removeItem('blok-recent-links');
   });
 
   afterEach(() => {
@@ -1608,6 +1612,7 @@ describe('LinkInlineTool — a node handle taken away', () => {
     vi.clearAllMocks();
     document.body.innerHTML = EDITOR_HTML;
     window.getSelection()?.removeAllRanges();
+    localStorage.removeItem('blok-recent-links');
   });
 
   afterEach(() => {

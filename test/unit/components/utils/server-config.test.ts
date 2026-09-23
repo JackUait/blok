@@ -100,6 +100,21 @@ describe('expandServerConfig', () => {
     expect(toolConfig(result, 'bookmark')?.endpoint).toBe('https://blok.example.com/unfurl');
   });
 
+  it('points the link field\'s title lookup at the service', () => {
+    const result = expandServerConfig({ server: 'https://blok.example.com/' });
+
+    expect(result.link?.unfurl?.endpoint).toBe('https://blok.example.com/unfurl');
+  });
+
+  it('keeps an explicit link unfurl endpoint and the rest of the link config', () => {
+    const result = expandServerConfig({
+      server: 'https://blok.example.com',
+      link: { target: '_self', unfurl: { endpoint: '/mine' } },
+    });
+
+    expect(result.link).toEqual({ target: '_self', unfurl: { endpoint: '/mine' } });
+  });
+
   describe('with a ticket endpoint', () => {
     const PASS = `x.${btoa(JSON.stringify({ exp: 4102444800 })).replace(/=+$/, '')}.y`;
     let fetchMock: ReturnType<typeof vi.fn>;
@@ -141,6 +156,16 @@ describe('expandServerConfig', () => {
       expect(fetchMock.mock.calls.filter(([url]) => url === '/api/blok-ticket')).toHaveLength(1);
     });
 
+    it('gives the link title lookup the same pass as bookmarks', async () => {
+      const result = expandServerConfig({
+        server: 'https://blok.example.com',
+        ticket: '/api/blok-ticket',
+      });
+      const headers = result.link?.unfurl?.headers;
+
+      expect(headers).toBe(toolConfig(result, 'bookmark')?.headers);
+    });
+
     it('keeps headers the consumer set on the bookmark tool', () => {
       const result = expandServerConfig({
         server: 'https://blok.example.com',
@@ -165,5 +190,6 @@ describe('expandServerConfig', () => {
 
     expect(config.uploader).toBeUndefined();
     expect(config.tools).toBeUndefined();
+    expect(config.link).toBeUndefined();
   });
 });

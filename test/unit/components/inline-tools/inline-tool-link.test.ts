@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 import { IconLink } from '../../../../src/components/icons';
 
@@ -97,6 +97,7 @@ const getRemoveButton = (itemWrapper: HTMLElement): HTMLButtonElement => {
 };
 
 type LinkConfig = {
+  unfurl?: { endpoint: string };
   target?: string;
   rel?: string;
   transformHref?: (href: string) => string;
@@ -122,7 +123,10 @@ const createTool = (
   const toolbar = { close: vi.fn() };
   const inlineToolbar = { close: vi.fn() };
   const notifier = { show: vi.fn() };
-  const i18n = { t: vi.fn((phrase: string) => translations[phrase] ?? phrase) };
+  const i18n = {
+    t: vi.fn((phrase: string) => translations[phrase] ?? phrase),
+    has: vi.fn((phrase: string) => phrase in translations),
+  };
 
   const api = {
     toolbar,
@@ -178,6 +182,7 @@ describe('LinkInlineTool', () => {
     vi.restoreAllMocks();
     document.body.innerHTML = '';
     setDocumentCommand(vi.fn());
+    localStorage.removeItem('blok-recent-links');
   });
 
   it('exposes inline metadata and shortcut', () => {
@@ -1141,6 +1146,306 @@ describe('LinkInlineTool', () => {
       expect(titleInput.value).toBe('');
       expect(titleInput.classList.contains('hidden')).toBe(true);
       expect(removeButton.classList.contains('hidden')).toBe(true);
+    });
+  });
+
+  describe('recent links', () => {
+    type RecentTool = {
+      insertLink(link: string): void;
+      enterPressed(event: KeyboardEvent): void;
+    };
+
+    const openCreating = (
+      linkConfig?: LinkConfig
+    ): ToolSetup & { itemWrapper: HTMLElement; input: HTMLInputElement } => {
+      const setup = createTool(linkConfig);
+
+      vi.spyOn(setup.tool as unknown as RecentTool, 'insertLink').mockImplementation(() => undefined);
+
+      const renderResult = setup.tool.render() as unknown as LinkToolRenderResult;
+      const itemWrapper = renderResult.children.items[0].element;
+
+      document.body.appendChild(itemWrapper);
+      renderResult.children.onOpen();
+
+      return { ...setup, itemWrapper, input: getInputFromWrapper(itemWrapper) };
+    };
+
+    const seed = (entries: { url: string; title?: string; favicon?: string }[]): void => {
+      localStorage.setItem('blok-recent-links', JSON.stringify(entries));
+    };
+
+    const recentSection = (itemWrapper: HTMLElement): HTMLElement | null =>
+      itemWrapper.querySelector<HTMLElement>('[data-link-recent]');
+
+    const recentRows = (itemWrapper: HTMLElement): HTMLElement[] =>
+      Array.from(itemWrapper.querySelectorAll<HTMLElement>('[data-link-recent-row]'));
+
+    const rowText = (row: HTMLElement, part: 'title' | 'meta'): string =>
+      row.querySelector(`[data-link-recent-${part}]`)?.textContent ?? '';
+
+    const readStored = (): { url: string; title?: string }[] =>
+      JSON.parse(localStorage.getItem('blok-recent-links') ?? '[]') as { url: string; title?: string }[];
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('lists recent links by page title, newest first', () => {
+      seed([
+        { url: 'https://github.com/jackuait/blok', title: 'Blok editor' },
+        { url: 'https://www.figma.com/file/1', title: 'Design tokens' },
+      ]);
+
+      const { itemWrapper } = openCreating();
+      const rows = recentRows(itemWrapper);
+
+      expect(recentSection(itemWrapper)?.hidden).toBe(false);
+      expect(rows.map((row) => rowText(row, 'title'))).toEqual(['Blok editor', 'Design tokens']);
+      expect(rows.map((row) => rowText(row, 'meta'))).toEqual(['github.com', 'figma.com']);
+    });
+
+    it('labels the list "Recent"', () => {
+      seed([{ url: 'https://a.com', title: 'A' }]);
+
+      const { itemWrapper } = openCreating();
+
+      expect(itemWrapper.querySelector('[data-link-recent-label]')?.textContent).toBe('Recent');
+    });
+
+    it('falls back to the site name and path when the title is unknown', () => {
+      seed([{ url: 'https://www.example.com/docs/intro' }]);
+
+      const { itemWrapper } = openCreating();
+      const [row] = recentRows(itemWrapper);
+
+      expect(rowText(row, 'title')).toBe('example.com');
+      expect(rowText(row, 'meta')).toBe('/docs/intro');
+    });
+
+    it('stays hidden when there is no history', () => {
+      const { itemWrapper } = openCreating();
+
+      expect(recentSection(itemWrapper)?.hidden).toBe(true);
+    });
+
+    it('gives way to the suggestion row while typing and comes back when cleared', () => {
+      seed([{ url: 'https://a.com', title: 'A' }]);
+
+      const { itemWrapper, input } = openCreating();
+
+      input.value = 'https://b.com';
+      input.dispatchEvent(new Event('input'));
+
+      expect(recentSection(itemWrapper)?.hidden).toBe(true);
+      expect(getSuggestionChip(itemWrapper)?.classList.contains('hidden')).toBe(false);
+
+      input.value = '';
+      input.dispatchEvent(new Event('input'));
+
+      expect(recentSection(itemWrapper)?.hidden).toBe(false);
+    });
+
+    it('stays hidden while editing an existing link', () => {
+      seed([{ url: 'https://a.com', title: 'A' }]);
+
+      const setup = createTool();
+      const anchor = document.createElement('a');
+
+      anchor.setAttribute('href', 'https://b.com');
+      setup.selection.findParentTag.mockReturnValue(anchor);
+
+      const renderResult = setup.tool.render() as unknown as LinkToolRenderResult;
+
+      renderResult.children.onOpen();
+
+      expect(recentSection(renderResult.children.items[0].element)?.hidden).toBe(true);
+    });
+
+    it('applies a recent link when its row is clicked', () => {
+      seed([{ url: 'https://a.com/page', title: 'A' }]);
+
+      const { tool, itemWrapper, inlineToolbar } = openCreating();
+
+      recentRows(itemWrapper)[0].click();
+
+      expect((tool as unknown as RecentTool).insertLink).toHaveBeenCalledWith('https://a.com/page');
+      expect(inlineToolbar.close).toHaveBeenCalled();
+    });
+
+    it('records a confirmed web link at the top of the history', () => {
+      seed([{ url: 'https://a.com', title: 'A' }]);
+
+      const { tool, input } = openCreating();
+
+      input.value = 'example.com';
+      (tool as unknown as RecentTool).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
+
+      expect(readStored().map((entry) => entry.url)).toEqual(['http://example.com', 'https://a.com']);
+    });
+
+    it.each(['#results', 'mailto:hi@example.com', '/docs/intro'])('does not record %s, which has no page title', (value) => {
+      const { tool, input } = openCreating();
+
+      input.value = value;
+      (tool as unknown as RecentTool).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
+
+      expect(readStored()).toEqual([]);
+    });
+
+    it('looks up the page title through the unfurl endpoint and stores it', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: 1, meta: { title: 'Example Domain', favicon: 'https://example.com/favicon.ico' } }),
+      });
+
+      vi.stubGlobal('fetch', fetchMock);
+
+      const { tool, input } = openCreating({ unfurl: { endpoint: '/unfurl' } });
+
+      input.value = 'https://example.com';
+      (tool as unknown as RecentTool).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
+
+      await vi.waitFor(() => {
+        expect(readStored()[0]).toEqual({
+          url: 'https://example.com',
+          title: 'Example Domain',
+          favicon: 'https://example.com/favicon.ico',
+        });
+      });
+      expect(fetchMock).toHaveBeenCalledWith('/unfurl?url=https%3A%2F%2Fexample.com', { headers: undefined });
+    });
+
+    it('does not look the title up again for a link that already has one', () => {
+      const fetchMock = vi.fn();
+
+      vi.stubGlobal('fetch', fetchMock);
+      seed([{ url: 'https://example.com', title: 'Example Domain' }]);
+
+      const { itemWrapper } = openCreating({ unfurl: { endpoint: '/unfurl' } });
+
+      recentRows(itemWrapper)[0].click();
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('keeps the site-name fallback when the lookup fails', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+
+      const { tool, input } = openCreating({ unfurl: { endpoint: '/unfurl' } });
+
+      input.value = 'https://example.com';
+      (tool as unknown as RecentTool).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
+      await Promise.resolve();
+
+      expect(readStored()).toEqual([{ url: 'https://example.com' }]);
+    });
+
+    it('does not call fetch when no unfurl endpoint is configured', () => {
+      const fetchMock = vi.fn();
+
+      vi.stubGlobal('fetch', fetchMock);
+
+      const { tool, input } = openCreating();
+
+      input.value = 'https://example.com';
+      (tool as unknown as RecentTool).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('shows a web favicon and falls back to a letter tile for anything else', () => {
+      seed([
+        { url: 'https://a.com', title: 'Alpha', favicon: 'https://a.com/icon.png' },
+        { url: 'https://b.com', title: 'Beta', favicon: 'javascript:alert(1)' },
+      ]);
+
+      const { itemWrapper } = openCreating();
+      const [first, second] = recentRows(itemWrapper);
+
+      expect(first.querySelector('img')?.getAttribute('src')).toBe('https://a.com/icon.png');
+      expect(second.querySelector('img')).toBeNull();
+      expect(second.querySelector('[data-link-recent-monogram]')?.textContent).toBe('B');
+    });
+
+    it('walks the rows with the arrow keys while focus stays in the field', () => {
+      seed([
+        { url: 'https://a.com', title: 'A' },
+        { url: 'https://b.com', title: 'B' },
+      ]);
+
+      const { itemWrapper, input } = openCreating();
+      const rows = recentRows(itemWrapper);
+      const press = (key: string): KeyboardEvent => {
+        const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+
+        input.dispatchEvent(event);
+
+        return event;
+      };
+      const active = (): string | null => input.getAttribute('aria-activedescendant');
+
+      input.focus();
+      expect(press('ArrowDown').defaultPrevented).toBe(true);
+      expect(active()).toBe(rows[0].id);
+      expect(rows[0]).toHaveAttribute('aria-selected', 'true');
+      expect(input).toHaveFocus();
+
+      press('ArrowDown');
+      expect(active()).toBe(rows[1].id);
+      expect(rows[0]).toHaveAttribute('aria-selected', 'false');
+
+      press('ArrowDown');
+      expect(active()).toBe(rows[1].id);
+
+      press('ArrowUp');
+      press('ArrowUp');
+      expect(active()).toBeNull();
+    });
+
+    it('applies the highlighted row on Enter', () => {
+      seed([
+        { url: 'https://a.com', title: 'A' },
+        { url: 'https://b.com', title: 'B' },
+      ]);
+
+      const { tool, input } = openCreating();
+
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+      expect((tool as unknown as RecentTool).insertLink).toHaveBeenCalledWith('https://b.com');
+    });
+
+    it('exposes the list as the field\'s listbox and keeps rows out of the popover focus stops', () => {
+      seed([{ url: 'https://a.com', title: 'A' }]);
+
+      const { itemWrapper, input } = openCreating();
+      const listbox = itemWrapper.querySelector('[role="listbox"]');
+
+      expect(input).toHaveAttribute('role', 'combobox');
+      expect(input).toHaveAttribute('aria-controls', listbox?.id);
+      expect(input).toHaveAttribute('aria-expanded', 'true');
+      expect(recentRows(itemWrapper)[0]).toHaveAttribute('role', 'option');
+      expect(itemWrapper.querySelectorAll('[data-link-recent] button')).toHaveLength(0);
+
+      input.value = 'x';
+      input.dispatchEvent(new Event('input'));
+
+      expect(input).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('forgets the highlighted row once the user types', () => {
+      seed([{ url: 'https://a.com', title: 'A' }]);
+
+      const { input } = openCreating();
+
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      input.value = 'x';
+      input.dispatchEvent(new Event('input'));
+
+      expect(input.hasAttribute('aria-activedescendant')).toBe(false);
     });
   });
 

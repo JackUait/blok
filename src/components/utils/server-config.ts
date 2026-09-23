@@ -77,6 +77,13 @@ export function expandServerConfig(config: BlokConfig): BlokConfig {
     expanded.uploader = createFetchUploader({ baseUrl: base, headers });
   }
 
+  if (config.link?.unfurl === undefined) {
+    expanded.link = {
+      ...config.link,
+      unfurl: { endpoint: `${base}/unfurl`, ...(headers === undefined ? {} : { headers }) },
+    };
+  }
+
   const bookmark = config.tools?.bookmark;
   const bookmarkConfig = readToolConfig(bookmark);
   const missingEndpoint = bookmarkConfig?.endpoint === undefined;

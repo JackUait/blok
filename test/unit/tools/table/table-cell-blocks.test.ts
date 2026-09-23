@@ -1352,7 +1352,7 @@ describe('TableCellBlocks', () => {
       });
 
       const api = {
-        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1), setBlockParent: vi.fn(), transactWithoutCapture: vi.fn((fn: () => void) => fn()) },
+        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1), getBlockIndex: vi.fn(() => undefined), setBlockParent: vi.fn(), transactWithoutCapture: vi.fn((fn: () => void) => fn()) },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
 
@@ -1391,7 +1391,7 @@ describe('TableCellBlocks', () => {
       const transactWithoutCapture = vi.fn((fn: () => void) => fn());
 
       const api = {
-        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1), setBlockParent: vi.fn(), transactWithoutCapture },
+        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1), getBlockIndex: vi.fn(() => undefined), setBlockParent: vi.fn(), transactWithoutCapture },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
 
@@ -1893,7 +1893,7 @@ describe('TableCellBlocks', () => {
       });
 
       const api = {
-        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1), setBlockParent: vi.fn() },
+        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1), getBlockIndex: vi.fn(() => undefined), setBlockParent: vi.fn() },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
 
@@ -1944,7 +1944,7 @@ describe('TableCellBlocks', () => {
       });
 
       const api = {
-        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1), setBlockParent: vi.fn() },
+        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1), getBlockIndex: vi.fn(() => undefined), setBlockParent: vi.fn() },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
 
@@ -1996,7 +1996,7 @@ describe('TableCellBlocks', () => {
       });
 
       const api = {
-        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1), setBlockParent: vi.fn() },
+        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1), getBlockIndex: vi.fn(() => undefined), setBlockParent: vi.fn() },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
 
@@ -2041,7 +2041,7 @@ describe('TableCellBlocks', () => {
       });
 
       const api = {
-        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1), setBlockParent: vi.fn() },
+        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1), getBlockIndex: vi.fn(() => undefined), setBlockParent: vi.fn() },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
 
@@ -2195,6 +2195,7 @@ describe('TableCellBlocks', () => {
         blocks: {
           insert: mockInsert,
           getBlocksCount: vi.fn().mockReturnValue(1),
+          getBlockIndex: vi.fn(() => undefined),
           setBlockParent: setBlockParentMock,
         },
         events: { on: vi.fn(), off: vi.fn() },
@@ -2498,7 +2499,7 @@ describe('TableCellBlocks', () => {
       });
 
       const api = {
-        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1), setBlockParent: vi.fn() },
+        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1), getBlockIndex: vi.fn(() => undefined), setBlockParent: vi.fn() },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
 
@@ -3191,6 +3192,7 @@ describe('TableCellBlocks', () => {
             return undefined;
           }),
           getBlocksCount: vi.fn().mockReturnValue(1),
+          getBlockIndex: vi.fn(() => undefined),
           setBlockParent: vi.fn(),
         },
         events: { on: vi.fn(), off: vi.fn() },
@@ -3282,6 +3284,7 @@ describe('TableCellBlocks', () => {
             return undefined;
           }),
           getBlocksCount: vi.fn().mockReturnValue(1),
+          getBlockIndex: vi.fn(() => undefined),
           setBlockParent: vi.fn(),
         },
         events: { on: vi.fn(), off: vi.fn() },
@@ -3367,6 +3370,7 @@ describe('TableCellBlocks', () => {
             return undefined;
           }),
           getBlocksCount: vi.fn().mockReturnValue(1),
+          getBlockIndex: vi.fn(() => undefined),
           setBlockParent: vi.fn(),
         },
         events: { on: vi.fn(), off: vi.fn() },

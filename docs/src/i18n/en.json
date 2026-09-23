@@ -328,7 +328,7 @@
           },
           "render": {
             "note": "Replaces the whole document. Echoing the editor's own output back is a caret-preserving no-op, so you need no dedupe on your side. To add blocks without clearing, use `insert()` or `insertMany()`.",
-            "description": "Render passed JSON data as blocks, replacing the current document. It is echo-safe: when the incoming document is structurally equal to the current saved content (`time`/`version` are ignored), the call is a caret-preserving no-op. So the `data → render → onSave → setState → data` round-trip needs no dedupe on your side.\n\nIt accepts the loose wire shape (`LooseOutputData`). The editor deep-clones the data, so the passed object is never mutated or retained. You can pass frozen store state (Redux, Immer) directly."
+            "description": "Render passed JSON data as blocks, replacing the current document. It is echo-safe: when the incoming document is structurally equal to the current saved content (`time`/`version` are ignored), the call is a caret-preserving no-op. So the `data → render → onSave → setState → data` round-trip needs no dedupe on your side.\n\nIt accepts the loose wire shape (`LooseOutputData`). The editor deep-clones the data, so the passed object is never mutated or retained. You can pass frozen store state (Redux, Immer) directly.\n\nA render that replaces the document also clears undo history, so undo cannot bring the previous document back."
           },
           "renderFromHTML": {
             "note": "Useful for importing legacy HTML, but the result is only as good as the tools' paste handlers. When you control the source, JSON via `render()` keeps more fidelity."
@@ -590,10 +590,10 @@
       "methods": {
         "history": {
           "undo": {
-            "note": "Programmatic Ctrl/Cmd+Z. It does nothing when there is nothing to undo. Gate custom buttons on `canUndo()`."
+            "note": "Programmatic Ctrl/Cmd+Z. It does nothing when there is nothing to undo, or while the editor is read-only. Gate custom buttons on `canUndo()`."
           },
           "redo": {
-            "note": "Programmatic Ctrl/Cmd+Shift+Z. Gate custom UI on `canRedo()` so the button disables correctly."
+            "note": "Programmatic Ctrl/Cmd+Shift+Z. It does nothing while the editor is read-only. Gate custom UI on `canRedo()` so the button disables correctly."
           },
           "canUndo": {
             "note": "Use it to enable or disable a custom undo button. Pair it with `undo()`."
@@ -602,7 +602,7 @@
             "note": "Use it to enable or disable a custom redo button. Pair it with `redo()`."
           },
           "clear": {
-            "note": "Drops the entire undo stack. Call it after loading fresh content, so users cannot undo back into the previous document."
+            "note": "Drops the entire undo stack. `render()` already does this, so call it after loading content another way, such as `insertMany()`. Then users cannot undo back into the previous document."
           }
         }
       }

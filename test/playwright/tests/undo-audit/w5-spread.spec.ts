@@ -306,6 +306,7 @@ const PINS: Record<string, string> = {
   'W5F-60': 'W5F-60: colour swatch undo takes the stale caret of a no-op Backspace',
   'W5F-61': 'W5F-61: block-menu convert undo takes the stale caret of a no-op Backspace',
   'W5F-62': 'W5F-62: blocks.update undo takes the stale caret of a no-op Backspace',
+  'W5F-63': 'W5F-63: checkbox tick undo takes the stale caret of a no-op Backspace',
   'W5F-64': 'W5F-64: toggle arrow undo takes the stale caret of a no-op Backspace',
   'W5F-65': 'W5F-65: paste undo takes the stale caret of a no-op Backspace',
   'W5F-66': 'W5F-66: drag undo takes the stale caret of a no-op Backspace',
@@ -646,8 +647,8 @@ test.describe('W5F: spread of the wave-4 families', () => {
   // API marks the caret NON-forced (yjs/index.ts:330-517 -> undo-history.ts:1507-1509 returns early), and
   // the next stack item takes the stale snapshot as "before" (undo-history.ts:837). Clicking into another
   // block does not clear it. Undo then puts the caret back where the no-op key was pressed.
-  // Every "b" control (same gesture, no prior no-op key) passes. Checkbox tick (W5F-63, caret back at b@3)
-  // and table row insert from the grip (W5F-67, caret at b@9) do not show it; why is not traced.
+  // Every "b" control (same gesture, no prior no-op key) passes. Table row insert from the grip
+  // (W5F-67, caret at b@9) does not show it; why is not traced.
   // No Enter probe: no spot was found where Enter is a no-op.
 
   const C_DOC = (): Blocks => [P('a', 'Alpha one'), P('m', 'Middle'), P('b', 'Bravo two'), P('c', 'Charlie')];

@@ -176,6 +176,12 @@ export class Renderer extends Module {
       // "the author just made me".
       BlockManager.insert({ origin: 'load' });
 
+      // Every other render clears history in `fromJSON`; this branch never reaches it.
+      // After the insert: the insert itself is a tracked write.
+      if (options.skipYjsSync !== true) {
+        this.Blok.YjsManager.clear();
+      }
+
       return 1;
     }
 

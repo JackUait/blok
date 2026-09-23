@@ -141,11 +141,8 @@ test.beforeEach(async ({ page }) => {
 test.describe('undo audit: cross-browser', () => {
   // XBR-1. Source: multi-editor document-listener law, one press acts in one editor (ENT-1).
   // Only editor 2 has a board, so the add-card locator is unique.
-  // WebKit does not focus a <button> on click, so focus falls to <body> and the Cmd+Z
-  // reaches every editor on the page. Chromium and Firefox keep focus on the button.
-  // Observed (webkit): Expected ["paragraph:oneX"], Received ["paragraph:one"].
-  test('XBR-1: Cmd+Z after clicking a button in one editor leaves the other editor alone', async ({ page, browserName }) => {
-    test.fail(browserName === 'webkit', 'XBR-1: WebKit leaves focus on <body> after a button click, so undo hits every editor');
+  // WebKit does not focus a <button> on click, so focus falls to <body>. Only the editor used last acts.
+  test('XBR-1: Cmd+Z after clicking a button in one editor leaves the other editor alone', async ({ page }) => {
     await mountTwo(page, [P('a', 'one')], BOARD);
     await typeAtEnd(page, 'one', 'X');
     await wait(page, CAPTURE);

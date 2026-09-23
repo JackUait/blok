@@ -14,6 +14,7 @@ type YjsManagerCanRedoMock = ReturnType<typeof vi.fn<() => boolean>>;
 type YjsManagerClearMock = ReturnType<typeof vi.fn>;
 
 type BlokStub = {
+  ReadOnly: { isEnabled: boolean };
   YjsManager: {
     undo: YjsManagerUndoMock;
     redo: YjsManagerRedoMock;
@@ -32,6 +33,7 @@ const createHistoryApi = (): { historyApi: HistoryAPI; blok: BlokStub } => {
   const historyApi = new HistoryAPI(moduleConfig);
 
   const blok: BlokStub = {
+    ReadOnly: { isEnabled: false },
     YjsManager: {
       undo: vi.fn(),
       redo: vi.fn(),
@@ -56,6 +58,15 @@ describe('HistoryAPI', () => {
   });
 
   describe('methods', () => {
+    it('does not redo while the editor is read-only', () => {
+      const { historyApi, blok } = createHistoryApi();
+
+      blok.ReadOnly.isEnabled = true;
+      historyApi.methods.redo();
+
+      expect(blok.YjsManager.redo).not.toHaveBeenCalled();
+    });
+
     it('exposes an undo method that proxies to the class method', () => {
       const { historyApi, blok } = createHistoryApi();
 

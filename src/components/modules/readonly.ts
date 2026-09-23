@@ -171,6 +171,12 @@ export class ReadOnly extends Module {
 
     const oldState = this.readOnlyEnabled;
 
+    // Editable to editable changes nothing. The cascade would still wipe the
+    // live selection and re-bind listeners. true -> true still runs: it re-applies hideControls.
+    if (!state && !oldState && !isInitial) {
+      return this.readOnlyEnabled;
+    }
+
     // Before the cascade: BlockSelection.toggleReadOnly removes all ranges,
     // destroying the selection this reads.
     if (state && !oldState) {

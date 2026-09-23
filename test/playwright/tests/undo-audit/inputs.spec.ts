@@ -105,10 +105,8 @@ test.describe('undo audit: native inputs and keyboard owners', () => {
   });
 
   // Source: Notion parity (Cmd+Z right after ticking a to-do unticks it); undo must keep redo.
-  // Focus stays on the native checkbox; Blok skips input targets, so the browser runs its own undo.
-  // Observed: checked Expected false, Received true; paragraph "alphaX" became "alpha", canRedo false.
+  // Focus stays on the native checkbox, which has no text undo of its own, so Blok handles the key.
   test('INP-3: Cmd+Z after ticking a checklist item unticks it', async ({ page }) => {
-    test.fail();
     await mount(page, [P('p', 'alpha'), { id: 'l', type: 'list', data: { text: 'todo', style: 'checklist', checked: false } }]);
     await typeAtEnd(page, 'alpha', 'X');
     await gap(page);
@@ -124,12 +122,10 @@ test.describe('undo audit: native inputs and keyboard owners', () => {
   });
 
   // Source: undo must keep redo and must not touch a block through the browser's own undo stack.
-  // Focus sits on a swatch button inside a data-blok-keyboard-owner subtree; Blok stands down
-  // there (not the input skip of ENT-6), so the browser runs its own undo on the paragraph.
+  // Focus sits on a swatch button inside a data-blok-keyboard-owner subtree. Blok stands down on the
+  // key there, so the browser's historyUndo on the paragraph must be routed to Blok history.
   // The color itself is not asserted: CAP-1 already pins that a paragraph color undo keeps the color.
-  // Observed: text Expected "alphaX", Received "alpha"; canRedo false.
   test('INP-4: Cmd+Z with focus on a color swatch does not run the browser undo on the paragraph', async ({ page }) => {
-    test.fail();
     await mount(page, [P('p', 'alpha')]);
     await typeAtEnd(page, 'alpha', 'X');
     await gap(page);

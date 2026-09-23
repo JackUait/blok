@@ -44,6 +44,39 @@ const LIST_STYLE_BY_CODE: Record<string, string> = {
 };
 
 /**
+ * Input types that have no text undo of their own.
+ */
+const NON_TEXT_INPUT_TYPES = new Set(['checkbox', 'radio', 'button', 'submit', 'reset', 'image', 'range', 'color', 'file', 'hidden']);
+
+const isTextEntry = (target: EventTarget | null): boolean =>
+  target instanceof HTMLTextAreaElement
+  || (target instanceof HTMLInputElement && !NON_TEXT_INPUT_TYPES.has(target.type));
+
+/**
+ * The letter a shortcut means. On a non-Latin layout `key` is the local letter
+ * ("я"), so use the physical key. Only then: on Dvorak the physical Z key types
+ * ";", and Cmd+; must not undo.
+ */
+const shortcutLetter = (event: KeyboardEvent): string => {
+  const key = event.key ?? '';
+  const isNonAsciiChar = key.length === 1 && !/^[\x20-\x7e]$/.test(key);
+
+  if (!isNonAsciiChar || event.altKey) {
+    return key;
+  }
+
+  if (event.code === 'KeyZ') {
+    return 'z';
+  }
+
+  return event.code === 'KeyY' ? 'y' : key;
+};
+
+const isHistoryKey = (event: KeyboardEvent, letter: string): boolean =>
+  ((event.metaKey || event.ctrlKey) && letter.toLowerCase() === 'z')
+  || (event.ctrlKey && !event.shiftKey && letter.toLowerCase() === 'y');
+
+/**
  * KeyboardController handles all document-level keyboard events.
  *
  * Responsibilities:
@@ -52,6 +85,13 @@ const LIST_STYLE_BY_CODE: Record<string, string> = {
  * - Coordinate with BlockManager, BlockSelection, Caret, Toolbar
  */
 export class KeyboardController extends Controller {
+  /**
+   * Every editor listens for keydown on `document`, so a history key whose target
+   * is outside every editor reaches all of them. These pick the one that acts.
+   */
+  private static readonly enabled = new Set<KeyboardController>();
+  private static lastActive: KeyboardController | null = null;
+
   /**
    * Reference to the UI module's someToolbarOpened getter
    * This is passed in during construction to avoid circular dependencies
@@ -108,7 +148,17 @@ export class KeyboardController extends Controller {
     }
   };
 
+  private readonly markActiveHandler = (): void => {
+    KeyboardController.lastActive = this;
+  };
+
   private readonly redactorBeforeinputHandler = (event: Event): void => {
+    if (event instanceof InputEvent && (event.inputType === 'historyUndo' || event.inputType === 'historyRedo')) {
+      this.handleNativeHistory(event);
+
+      return;
+    }
+
     // force: a beforeinput is the start of a fresh user edit, so the
     // caret-before is the caret right now — discard any stale pending snapshot
     // left dangling by a previous operation's no-op follow-up write.
@@ -199,6 +249,13 @@ export class KeyboardController extends Controller {
      * they capture the same pre-change caret, so the duplicate is harmless.
      */
     this.readOnlyMutableListeners.on(this.redactorElement, 'keydown', this.redactorKeydownHandler, true);
+
+    KeyboardController.enabled.add(this);
+
+    if (this.wrapperElement) {
+      this.readOnlyMutableListeners.on(this.wrapperElement, 'pointerdown', this.markActiveHandler, true);
+      this.readOnlyMutableListeners.on(this.wrapperElement, 'focusin', this.markActiveHandler, true);
+    }
   }
 
   /**
@@ -206,6 +263,11 @@ export class KeyboardController extends Controller {
    */
   public override disable(): void {
     this.isDisabled = true;
+    KeyboardController.enabled.delete(this);
+
+    if (KeyboardController.lastActive === this) {
+      KeyboardController.lastActive = null;
+    }
     super.disable();
   }
 
@@ -224,7 +286,8 @@ export class KeyboardController extends Controller {
     }
 
     const target = event.target;
-    const key = event.key ?? '';
+    const key = shortcutLetter(event);
+    const historyKey = isHistoryKey(event, key);
 
     /**
      * A Tool can claim the whole keyboard for a subtree it renders by marking it
@@ -246,8 +309,9 @@ export class KeyboardController extends Controller {
      */
     if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
       const isInsidePopover = target.closest('[data-blok-popover]') !== null;
+      const isHistoryKeyOnControl = historyKey && !isTextEntry(target);
 
-      if (key !== 'Escape' || !isInsidePopover) {
+      if (!isHistoryKeyOnControl && (key !== 'Escape' || !isInsidePopover)) {
         return;
       }
     }
@@ -258,6 +322,10 @@ export class KeyboardController extends Controller {
       if (closestEditor !== null && closestEditor !== this.wrapperElement) {
         return;
       }
+    }
+
+    if (historyKey && !this.ownsHistoryKeyTarget(target)) {
+      return;
     }
 
     /**
@@ -916,6 +984,60 @@ export class KeyboardController extends Controller {
   }
 
   /**
+   * Whether this editor handles a history key whose target is not inside
+   * another editor. Focus on <body> goes to the editor used last.
+   * @param target - the keydown target
+   */
+  private ownsHistoryKeyTarget(target: EventTarget | null): boolean {
+    if (target instanceof Node && this.wrapperElement?.contains(target) === true) {
+      return true;
+    }
+
+    // A host page's own editable keeps its native undo. Attribute form because jsdom has no isContentEditable.
+    if (target instanceof Element && target.closest('[contenteditable]:not([contenteditable="false"])') !== null) {
+      return false;
+    }
+
+    if (KeyboardController.enabled.size < 2) {
+      return true;
+    }
+
+    return KeyboardController.lastActive === this;
+  }
+
+  /**
+   * The browser's own undo (Edit menu, or a key Blok stood down on) would
+   * rewind block DOM behind Blok's history. Run Blok's history instead.
+   * @param event - a historyUndo / historyRedo beforeinput
+   */
+  private handleNativeHistory(event: InputEvent): void {
+    const target = event.target;
+
+    // A tool's own text field keeps its native undo.
+    if (!(target instanceof Element) || isTextEntry(target) || isInsideKeyboardOwner(target)) {
+      return;
+    }
+
+    const closestEditor = target.closest('[data-blok-testid="blok-editor"]');
+
+    if (closestEditor !== null && closestEditor !== this.wrapperElement) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (this.Blok.DragManager.isDragging) {
+      return;
+    }
+
+    if (event.inputType === 'historyRedo') {
+      this.Blok.YjsManager.redo();
+    } else {
+      this.Blok.YjsManager.undo();
+    }
+  }
+
+  /**
    * Handle Cmd/Ctrl+Z (undo) and Cmd/Ctrl+Shift+Z (redo)
    * @param event - keyboard event
    */
@@ -957,7 +1079,8 @@ export class KeyboardController extends Controller {
     const now = Date.now();
     const action: 'undo' | 'redo' = event.shiftKey ? 'redo' : 'undo';
 
-    if (action === this.lastUndoRedoAction && now - this.lastUndoRedoTime < 50) {
+    // A held key's auto-repeats are real presses, not duplicates.
+    if (!event.repeat && action === this.lastUndoRedoAction && now - this.lastUndoRedoTime < 50) {
       event.preventDefault();
 
       return;
@@ -1003,7 +1126,7 @@ export class KeyboardController extends Controller {
 
     const now = Date.now();
 
-    if (this.lastUndoRedoAction === 'redo' && now - this.lastUndoRedoTime < 50) {
+    if (!event.repeat && this.lastUndoRedoAction === 'redo' && now - this.lastUndoRedoTime < 50) {
       event.preventDefault();
 
       return;

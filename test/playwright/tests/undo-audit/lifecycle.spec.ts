@@ -112,9 +112,7 @@ test.describe('undo audit: lifecycle and programmatic API', () => {
   });
 
   // Expected: render() replaces the document and clears history (it does for any non-empty document).
-  // Observed: Expected: false, Received: true — Cmd+Z then brings "Old doc" back.
   test('LIF-2: undo after render({ blocks: [] }) brings the previous document back', async ({ page }) => {
-    test.fail();
     await createBlok(page, [{ id: 'old', type: 'paragraph', data: { text: 'Old doc' } }]);
     await page.evaluate(async () => {
       await window.blokInstance?.render({ blocks: [] });
@@ -129,11 +127,8 @@ test.describe('undo audit: lifecycle and programmatic API', () => {
     await expect(page.getByText('Old doc')).toHaveCount(0);
   });
 
-  // Expected: read-only must not change the document (Cmd+Z already no-ops there). Docs are silent
-  // on the programmatic API in read-only, and blocks.update() shares the gap.
-  // Observed: Expected: ["Ax"], Received: ["A"].
-  test('LIF-3: history.undo() changes the document while read-only', async ({ page }) => {
-    test.fail();
+  // Read-only must not change the document: history.undo() is a no-op there, like Cmd+Z.
+  test('LIF-3: history.undo() does not change the document while read-only', async ({ page }) => {
     await createBlok(page, [{ id: 'a', type: 'paragraph', data: { text: 'A' } }]);
     await typeAtEndOfFirstBlock(page, 'x');
     await waitForDelay(page, CAPTURE_WINDOW);

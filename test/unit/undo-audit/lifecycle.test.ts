@@ -56,8 +56,7 @@ describe('undo audit: lifecycle', () => {
   });
 
   // LIF-2. Expected: render() replaces the document and clears history, as it does for a non-empty document.
-  // Observed: AssertionError: expected true to be false (canUndo after render({ blocks: [] })).
-  it.fails('LIF-2: render of an empty document leaves an undo entry that brings the old document back', async () => {
+  it('LIF-2: render of an empty document leaves an undo entry that brings the old document back', async () => {
     const blok = await createEditor([{ id: 'old', type: 'paragraph', data: { text: 'Old doc' } }]);
 
     await blok.render({ blocks: [] });

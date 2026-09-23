@@ -160,6 +160,7 @@ const INSTRUMENT = String.raw`function (watchId) {
   wrap(ym, 'updateBlockData', 'ym.updateBlockData');
   wrap(ym, 'stopCapturing', 'ym.stopCapturing');
   wrap(uh, 'stopCapturing', 'uh.stopCapturing');
+  wrap(uh, 'splitStep', 'uh.splitStep');
   wrap(uh, 'markBoundary', 'uh.markBoundary');
   wrap(uh, 'markCaretBeforeChange', 'uh.markBefore', (a) => ({ force: a[0], hadPending: uh.hasPendingCaret, pending: S(uh.pendingCaretBefore) }));
   wrap(uh, 'pushCaretAndRestore', 'uh.pushCaretAndRestore');
@@ -534,21 +535,14 @@ test.describe('W5R root causes', () => {
     });
   }
 
-  // W4K-16..19 root cause. The entry's "before" is NOT null: it equals the post-conversion caret.
-  // The handler's FIRST stopCapturing (markdownShortcuts.ts:385 / :510, emojiTrigger.ts:471) flushes the
-  // buffered typing (undo-history.ts:1251); that write merges into the typing item (stack-item-updated) and
-  // the listener calls resetPendingCaretState (undo-history.ts:890), so no caret-before is pending any more.
-  // The handler then rewrites the DOM, moves the caret and calls dispatchChange (markdownShortcuts.ts:440 /
-  // :542, emojiTrigger.ts:487). The conversion's write marks caret-before lazily at enqueue
-  // (yjs/index.ts:517), reading the ALREADY-MOVED caret, so before == after == post-conversion offset.
-  // Nothing captures the caret between the first stopCapturing and the DOM rewrite.
+  // W4K-16..19: the conversion is a sub-step (UndoHistory.startSubStep), which keeps the caret from
+  // before its flush as the step's caret-before, since the handler moves the caret before its write.
   for (const c of [
     { id: '4a', typed: '**b**', literal: '**b**' },
     { id: '4b', typed: '[a](x.io)', literal: '[a](x.io)' },
     { id: '4c', typed: ':smile', literal: ':smile:' },
   ]) {
     test(`W5R-${c.id}: the undo entry of "${c.literal}" remembers the caret from before the conversion`, async ({ page }) => {
-      test.fail(true, `W5R-${c.id}: caret-before captured after the handler moved the caret`);
       await mount(page, [{ id: 'p', type: 'paragraph', data: { text: '' } }], false);
       await instrument(page, 'p');
       await editable(page, 'p').click();
@@ -627,8 +621,9 @@ test.describe('W5R root causes', () => {
       const spaceWrite = typed.find(isL2Text);
       const boundaryAt = typed.findIndex((e) => e.k === 'uh.markBoundary');
       const nextWriteAt = typed.findIndex((e, i) => i > boundaryAt && isL2Text(e));
-      // The word-boundary checkpoint fired before "d" was written.
-      const checkpoint = boundaryAt >= 0 && typed.slice(boundaryAt, nextWriteAt).some((e) => e.k === 'uh.stopCapturing');
+      // The word-boundary checkpoint fired before "d" was written. It splits through `splitStep`, not the
+      // implicit `stopCapturing`, which only flushes once a gesture has started.
+      const checkpoint = boundaryAt >= 0 && typed.slice(boundaryAt, nextWriteAt).some((e) => e.k === 'uh.splitStep');
 
       dump(`5-${variant}`, { s1, steps, checkpoint, log });
       expect(spaceWrite?.origin, 'the typed space is written as a tracked local change').toBe('local');

@@ -166,8 +166,9 @@ test.describe('undo audit: cross-browser', () => {
   // and so does Enter inside the bold text (offset 1).
   // Observed: Expected ["abcd", "end"], Received ["ab", "cd", "end"].
   for (const html of ['<strong>ab</strong>cd', '<b>ab</b>cd']) {
+    // XBR-2. Source: undo-redo.spec.ts "undo after block split rejoins blocks (single undo)".
+    // The new block's first save-back normalises its text after the split; it joins the split's step.
     test(`XBR-2: one undo rejoins a paragraph split right after bold text (${html})`, async ({ page }) => {
-      test.fail();
       await create(page, [P('a', html), P('z', 'end')]);
       await wait(page, CAPTURE);
       await placeCaret(page, 'a', 2);

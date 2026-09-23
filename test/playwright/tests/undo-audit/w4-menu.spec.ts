@@ -340,13 +340,9 @@ test.describe('W4M defects', () => {
     expect(r.redone.data).toEqual(r.after.data);
   });
 
-  // Defect: redo of a turn-into puts the caret at offset 0; the gesture left it at offset 8.
-  // Undo puts it back at 8 correctly. Duplicate redo lands correctly (control below).
-  // Cause: blockSettings.ts:532 awaits runConvert and only then sets the caret (:550). The undo
-  // entry's "after" caret is refreshed once, in a microtask (undo-history.ts:910-933), which runs
-  // during that await — before the caret is placed.
+  // Redo of a turn-into puts the caret where the turn-into left it. The next gesture start
+  // records that caret as the step's caret-after.
   test('W4M-4: redo of "turn into quote" puts the caret back where the turn-into left it', async ({ page }) => {
-    test.fail();
     await createBlok(page, wrap(P('x', 'Plain text')));
     await gap(page);
     await editable(page, 'x').click();

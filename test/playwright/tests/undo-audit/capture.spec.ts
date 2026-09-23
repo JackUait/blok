@@ -228,10 +228,8 @@ test.describe('undo audit: capture', () => {
     await settle(page);
   };
 
-  // One undo must revert one gesture. The adopt direction (plain -> toggle heading) already uses transactMoves.
-  // Observed: h1 is back to a toggle heading but c1 has parent undefined (needs a second undo)
+  // One undo must revert one gesture: the release and the convert are one step.
   test('CAP-7: one undo of "toggle heading -> heading" leaves the children released', async ({ page }) => {
-    test.fail();
     await createBlok(page, toggleHeadingDoc);
     await wait(page, CAPTURE_WINDOW);
     const before = await treeOf(page);

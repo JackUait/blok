@@ -338,14 +338,8 @@ test.describe('undo audit: selection-driven edits', () => {
     expect(await saved(page)).toEqual(TOGGLE_SAVED);
   });
 
-  // Defect: redo of a multi-block paste puts the caret in the FIRST pasted block; the paste left it
-  // at the end of the LAST one. Root cause: the second block's addBlock merges into the entry via
-  // 'stack-item-updated', which captures `after` mid-transaction (undo-history.ts:887), before
-  // base.ts:257 moves the caret into that block; only 'stack-item-added' gets the post-settle
-  // refresh (scheduleAfterSnapshotRefresh, undo-history.ts:859).
-  // Observed: Expected "<last>@2", Received "<first>@2".
+  // Redo of a multi-block paste puts the caret at the end of the last pasted block.
   test('W4S-5: redo of a multi-block paste puts the caret where the paste left it', async ({ page }) => {
-    test.fail();
     await mount(page, [P('a', 'Alpha one'), P('d', 'Delta')]);
     await editable(page, 'd').click();
     await page.keyboard.press('End');

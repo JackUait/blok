@@ -257,10 +257,8 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
     expect(await plain(page)).toEqual({ dom: ['paragraph:# Hello'], saved: ['paragraph:# Hello'] });
   });
 
-  // Same caret defect as W4K-17..19 (emojiTrigger.ts:471-489 has the same stopCapturing / dispatchChange sandwich).
-  // Observed: caret p@2, right after where the emoji was, inside ":smile:".
+  // Undo of an emoji conversion puts the caret after the literal shortcode.
   test('W4K-16: one undo of an emoji picked with ":smile:" leaves the literal shortcode', async ({ page }) => {
-    test.fail(true, 'W4K-16: undo of an emoji puts the caret at the post-conversion offset');
     await create(page, [P('p', '')]);
     await caretAt(page, 'p', 0);
     await page.keyboard.type(':smile');
@@ -282,13 +280,9 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
     expect(await plain(page)).toEqual(converted);
   });
 
-  // Root cause: the gesture creates a block whose data lacks a key its tool's save() always emits
-  // (here: no isOpen). The block's first save-back writes that key after the gesture's closing
-  // stopCapturing, so it lands as its own invisible undo step and the first Cmd+Z does nothing.
-  // Key source: header/index.ts:711-714; shortcut data: markdownShortcuts.ts handleToggleHeaderShortcut replace().
-  // Same mechanism as GRP-3 ("> " toggle). Observed: first undo leaves the empty toggle heading.
+  // The new block's first save-back adds a key its data lacked (isOpen). It joins the
+  // shortcut's step, because only a gesture start closes a step.
   test('W4K-12: one undo of the ">## " toggle-heading shortcut leaves the literal text', async ({ page }) => {
-    test.fail(true, 'W4K-12: first undo of ">## " is a no-op');
     await create(page, [P('x', 'X'), P('p', '')]);
     await caretAt(page, 'p', 0);
     await page.keyboard.type('>## ');
@@ -300,19 +294,13 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
     expect(await plain(page)).toEqual({ dom: ['paragraph:X', 'paragraph:>## '], saved: ['paragraph:X', 'paragraph:>## '] });
   });
 
-  // Defect: after undoing an inline auto-format (bold, link, emoji) the text comes back but the caret lands
-  // at the offset it had AFTER the conversion (e.g. "**|b**"), so the next keystroke goes mid-marker.
-  // Block shortcuts restore it right (W4K-19b). The restored offset always equals the conversion's
-  // "after" snapshot, which is what undo-history.ts:1167-1169 falls back to when an entry has no
-  // "before". Traced in W5R-4 (w5-rootcause.spec.ts): the first stopCapturing flushes the typing, the
-  // handler rewrites the DOM and moves the caret, and the write reads caret-before lazily, after the move.
+  // Undo of an inline auto-format (bold, link) puts the caret after the literal text, not mid-marker.
   for (const c of [
     { id: 'W4K-17', prefix: '', typed: '**b**' },
     { id: 'W4K-18', prefix: 'Hi', typed: ' **b**' },
     { id: 'W4K-19', prefix: '', typed: '[a](x.io)' },
   ]) {
     test(`${c.id}: undo of the "${c.typed}" auto-format puts the caret after the literal text`, async ({ page }) => {
-      test.fail(true, `${c.id}: undo of an inline auto-format puts the caret at the post-conversion offset`);
       await create(page, [P('p', c.prefix)]);
       await caretAt(page, 'p', 'end');
       await gap(page);
@@ -533,13 +521,8 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
     });
   }
 
-  // Root cause: the gesture creates a block whose data lacks a key its tool's save() always emits
-  // (here: no size). The block's first save-back writes that key after the gesture's closing
-  // stopCapturing, so it lands as its own invisible undo step and the first Cmd+Z does nothing.
-  // Key source: quote/index.ts:133-137. Control W4K-46b (quote saved WITH size) passes.
-  // Observed: after one undo the quote is still split in two.
+  // Same as W4K-12 for a quote saved without size.
   test('W4K-46: Enter in the middle of a quote is one undo step', async ({ page }) => {
-    test.fail(true, 'W4K-46: first undo of a quote split is a no-op on a quote saved without size');
     await create(page, [{ id: 'q', type: 'quote', data: { text: 'Quoted' } }]);
     await caretAt(page, 'q', 3);
     const trip = await roundTrip(page, () => page.keyboard.press('Enter'));
@@ -676,13 +659,8 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
     expect(trip.redone, 'redo restores the state after the gesture').toEqual(trip.after);
   });
 
-  // Root cause: the gesture creates a block whose data lacks a key its tool's save() always emits
-  // (here: no isOpen). The block's first save-back writes that key after the gesture's closing
-  // stopCapturing, so it lands as its own invisible undo step and the first Cmd+Z does nothing.
-  // Key source: header/index.ts:711-714; split data: header-toggle-keyboard.ts:83-89 passes no isOpen.
-  // Observed: after one undo the toggle heading is still split in two.
+  // Same as W4K-12 for a toggle heading split.
   test('W4K-70: Enter in the middle of a toggle heading is one undo step', async ({ page }) => {
-    test.fail(true, 'W4K-70: first undo of a toggle heading split is a no-op');
     await create(page, [{ id: 'h', type: 'header', data: { text: 'Title', level: 2, isToggleable: true, isOpen: true } }, P('after', 'After')]);
     await caretAt(page, 'h', 2);
     const trip = await roundTrip(page, () => page.keyboard.press('Enter'));
@@ -691,9 +669,8 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
     expect(trip.redone, 'redo restores the state after the gesture').toEqual(trip.after);
   });
 
-  // Same root cause as W4K-62: the NEW toggle lacks isOpen, so typing in the old one first does not help.
+  // Same as W4K-12: the NEW toggle lacks isOpen.
   test('W4K-62b: Enter in the middle of a toggle title after typing in it is one undo step', async ({ page }) => {
-    test.fail(true, 'W4K-62b: first undo of a toggle title split is a no-op even after typing');
     await create(page, [{ id: 't', type: 'toggle', data: { text: 'Toggle', isOpen: true } }]);
     await caretAt(page, 't', 'end');
     await page.keyboard.type('X');

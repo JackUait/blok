@@ -175,13 +175,9 @@ test.describe('W4T spacer', () => {
     expect(await spacerHeight(page, 's')).toBe(`${String(dragged)}px`);
   });
 
-  // Defect: any drag that lasts > 500 ms is split into two undo steps (first undo lands on the halfway height).
-  // The pause makes it deterministic; a plain slow drag hits it too.
-  // Root cause: spacer/index.ts:460 writes the height on every pointermove (setHeight :214), and the grip's
-  // pointerdown (:439) opens no undo group, so Y.UndoManager captureTimeout (serializer.ts:306, undo-history.ts:239)
-  // closes the step during the pause. Image/video/embed resizers write once on pointerup (see W4T-5b, passes).
+  // A spacer drag that pauses longer than the capture window is still one undo step:
+  // a pointer press holds the step open until release.
   test('W4T-2: one undo reverts a spacer drag that paused halfway', async ({ page }) => {
-    test.fail();
     await mount(page, [ANCHOR, { id: 's', type: 'spacer', data: { height: 60 } }, P('p1', 'Below')]);
     await page.locator('[data-blok-id="s"]').hover();
     await dragBy(page, page.locator('[data-blok-id="s"] [data-blok-spacer-grip="bottom"]'), 0, 120, 900);
@@ -589,11 +585,8 @@ test.describe('W4T code', () => {
     test.info().annotations.push({ type: 'undo-steps', description: JSON.stringify(steps) });
   });
 
-  // Family 4 (missing undo boundary), new instance. Observed: one undo removes "ab" and the paste together.
-  // Root cause: paste into a plaintext-only code element is left to the browser (paste/index.ts:552, :614),
-  // so the Paste module's undo boundary never runs; the paste merges with typing inside captureTimeout.
+  // A paste left to the browser (plaintext code element) still starts its own gesture, so its own step.
   test('W4T-25: a paste into a code block right after typing is its own undo step', async ({ page }) => {
-    test.fail();
     await mount(page, [ANCHOR, P('src', 'PASTED'), { id: 'c', type: 'code', data: { code: '', language: 'plain text' } }]);
     const code = page.locator('[data-blok-id="c"] code[contenteditable]');
 

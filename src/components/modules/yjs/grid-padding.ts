@@ -27,7 +27,7 @@ export const isPaddingCell = (value: unknown): boolean =>
 /**
  * The keyed wrapper (grid or row) a `__rows` / `__rowKeys` type belongs to.
  */
-const wrapperOf = (type: Y.AbstractType<unknown>, key: string): Y.Map<unknown> | null => {
+const wrapperOf = (type: { _item: Y.Item | null }, key: string): Y.Map<unknown> | null => {
   const item = type._item;
 
   return item !== null && item.parentSub === key && item.parent instanceof Y.Map ? item.parent : null;

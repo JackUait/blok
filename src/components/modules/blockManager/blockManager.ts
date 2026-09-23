@@ -45,6 +45,8 @@ interface SyncBlockDataOptions {
   untracked?: boolean;
   /** A normalising write (see `normalizeBlockData`): unbuffered, whole or missing keys only. */
   normalize?: 'all' | 'missing';
+  /** Data the tool worked out itself: it joins the undo step that last wrote the block. */
+  derived?: boolean;
 }
 
 /**
@@ -1915,7 +1917,7 @@ export class BlockManager extends Module {
         // and one frame, so the user can type into it. Re-checked on close.
         this.yjsSync.noteSuppressedMutation(block);
       } else {
-        void this.syncBlockDataToYjs(block, block.isDerivedChange ? { untracked: true, normalize: 'all' } : undefined);
+        void this.syncBlockDataToYjs(block, block.isDerivedChange ? { untracked: true, normalize: 'all', derived: true } : undefined);
       }
     }
 
@@ -2204,7 +2206,7 @@ export class BlockManager extends Module {
     savedKeys.forEach((key) => emitted.add(key));
     this.emittedDataKeys.set(block, emitted);
 
-    const flushOptions = { isMaterializing, savedKeys, seenKeys, seenNestedKeys, onlyMissingKeys: options?.normalize === 'missing' };
+    const flushOptions = { isMaterializing, savedKeys, seenKeys, seenNestedKeys, onlyMissingKeys: options?.normalize === 'missing', derived: options?.derived === true };
 
     // Written now, not buffered: the buffer keeps only the newest flush
     // callback, so an untracked one would carry the user's buffered keystrokes
@@ -2249,6 +2251,8 @@ export class BlockManager extends Module {
    * @param options.seenNestedKeys - the same, per NESTED container: what each
    *   `Y.Map` inside the block's data held at that moment. A nested key the
    *   document gained afterwards is a peer's, so the deep assign spares it.
+   * @param options.onlyMissingKeys - see `normalizeBlockData`
+   * @param options.derived - see `SyncBlockDataOptions.derived`
    * @returns whether any Yjs write actually happened — the buffer skips its
    *   capture-clock rewind for a flush that wrote nothing (see BlockWriteBuffer).
    */
@@ -2261,6 +2265,7 @@ export class BlockManager extends Module {
       seenKeys?: ReadonlySet<string>;
       seenNestedKeys?: DataKeySnapshot;
       onlyMissingKeys?: boolean;
+      derived?: boolean;
     }
   ): boolean {
     // Wrap data + metadata writes into a single Yjs transaction. Without this,
@@ -2332,7 +2337,9 @@ export class BlockManager extends Module {
       this.Blok.YjsManager.updateBlockMetadata(block.id, block.lastEditedAt, block.lastEditedBy);
     };
 
-    if (options.isMaterializing) {
+    if (options.derived === true) {
+      this.Blok.YjsManager.transactIntoStepThatWrote(block.id, write);
+    } else if (options.isMaterializing) {
       this.Blok.YjsManager.transactWithoutCapture(write);
     } else {
       this.Blok.YjsManager.transact(write);

@@ -11,6 +11,20 @@ import type { BlockPlacement, CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry
 type StackItem = Y.UndoManager['undoStack'][number];
 
 /**
+ * Stop Yjs from freeing a deleted item, as Y.UndoManager does for the items
+ * its steps delete (yjs `keepItem`, which is not exported).
+ * @param item - a deleted item a step may bring back
+ */
+const keepWithParents = (item: Y.Item | null): void => {
+  if (item === null || item.keep) {
+    return;
+  }
+  // eslint-disable-next-line no-param-reassign -- the flag lives on the item
+  item.keep = true;
+  keepWithParents(item.parent instanceof Y.AbstractType ? item.parent._item : null);
+};
+
+/**
  * The state a move entry was last left in: where its block actually landed,
  * and which blocks existed at that moment.
  */
@@ -1557,6 +1571,67 @@ export class UndoHistory {
     }
 
     this.undoManager.lastChange = Date.now();
+  }
+
+  /**
+   * Run the untracked write `fn` as part of the newest undo step that wrote
+   * one of `data`'s current values, so undoing that step removes the write
+   * and redo brings it back. It stays out of the history (redo is kept, no
+   * new step). With no such step the write is just untracked.
+   *
+   * Only `fn`'s first transaction joins the step; call it outside any
+   * transaction and after the write buffer is flushed.
+   * @param data - the block's data map (anything else means no step)
+   * @param fn - the untracked write
+   */
+  public addToStepThatWrote(data: unknown, fn: () => void): void {
+    const step = data instanceof Y.Map ? this.newestStepThatWrote(data) : undefined;
+    const doc = this.undoManager.doc;
+
+    if (step === undefined || doc._transaction !== null) {
+      fn();
+
+      return;
+    }
+
+    const join = (transaction: Y.Transaction): void => {
+      doc.off('afterTransaction', join);
+
+      const insertions = Y.createDeleteSet();
+
+      transaction.afterState.forEach((end, client) => {
+        const start = transaction.beforeState.get(client) ?? 0;
+
+        if (end > start) {
+          insertions.clients.set(client, [{ clock: start, len: end - start }]);
+        }
+      });
+      // Yjs frees deleted content when the transaction ends; undo needs it back.
+      Y.iterateDeletedStructs(transaction, transaction.deleteSet, (struct) => {
+        if (struct instanceof Y.Item) {
+          keepWithParents(struct);
+        }
+      });
+      step.insertions = Y.mergeDeleteSets([step.insertions, insertions]);
+      step.deletions = Y.mergeDeleteSets([step.deletions, transaction.deleteSet]);
+    };
+
+    doc.on('afterTransaction', join);
+    try {
+      fn();
+    } finally {
+      doc.off('afterTransaction', join);
+    }
+  }
+
+  /**
+   * @param data - a block's data map
+   * @returns the newest undo step that inserted one of `data`'s current values
+   */
+  private newestStepThatWrote(data: Y.Map<unknown>): StackItem | undefined {
+    const current = [...data._map.values()].filter((item) => !item.deleted).map((item) => item.id);
+
+    return [...this.undoManager.undoStack].reverse().find((step) => current.some((id) => Y.isDeleted(step.insertions, id)));
   }
 
   /**

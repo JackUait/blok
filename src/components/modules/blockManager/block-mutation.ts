@@ -796,12 +796,13 @@ export class BlockMutation {
      * still strand the holder inside the foreign container (model says root, DOM
      * says column: the phantom-column divergence), so the whole reorder is refused.
      *
-     * Skipped while a Yjs move group is open (the drag path): DragController
-     * legitimately drags blocks across columns and assigns the parent itself.
+     * Skipped while a DRAG move group is open: DragController legitimately
+     * drags blocks across columns and assigns the parent itself. Keyboard
+     * moves also run inside a move group, and they must stay clamped.
      */
     if (
       movingBlock !== undefined
-      && !this.dependencies.YjsManager.isInMoveGroup
+      && !this.dependencies.YjsManager.isDragMoveGroupActive
       && destinationParentId !== movingBlock.parentId
     ) {
       const movingParent = movingBlock.parentId !== null
@@ -871,9 +872,8 @@ export class BlockMutation {
        * `fromParentId` on the in-flight move entry. Mutating `parentId` here
        * via `hierarchy.setBlockParent` (which bypasses the undo bookkeeping)
        * would clobber that baseline and leave undo unable to restore the
-       * original parent. The non-drag callers (keyboard moveUp/Down, public
-       * api) still get the auto-heal — `isInMoveGroup` is only true while
-       * DragController's `transactMoves` wrapper is open.
+       * original parent. Callers outside any move group (the public api)
+       * still get the auto-heal.
        */
       /**
        * SAME-parent nested reorder must ALSO re-run setBlockParent: the
@@ -1406,14 +1406,7 @@ export class BlockMutation {
     }
 
     // Slide the group up so each member lands at predStart..(predStart + size).
-    const size = group.end - group.start + 1;
-
-    Array.from({ length: size }).forEach((_, offset) => {
-      // skipAutoHeal: this is an in-container reorder (boundary-checked above), so
-      // the group's parentId is unchanged and the per-block heal would only corrupt
-      // a moved subtree's inner children.
-      this.move(predStart + offset, group.start + offset, false, blocksStore, false, true);
-    });
+    this.moveRunTo(this.blocksInRange(group.start, group.end), predStart, blocksStore);
 
     this.finishMove(group.anchor, selectedBlocks, 'a11y.movedUp');
   }
@@ -1443,14 +1436,43 @@ export class BlockMutation {
     // Lift the next sibling's whole subtree to just before the group, which
     // descends the group past it by one sibling position.
     const neighbourStart = group.end + 1;
-    const neighbourSize = this.subtreeEndIndex(neighbourStart) - neighbourStart + 1;
 
-    Array.from({ length: neighbourSize }).forEach((_, offset) => {
-      // skipAutoHeal: in-container reorder (boundary-checked above) — see moveCurrentBlockUp.
-      this.move(group.start + offset, neighbourStart + offset, false, blocksStore, false, true);
-    });
+    this.moveRunTo(this.blocksInRange(neighbourStart, this.subtreeEndIndex(neighbourStart)), group.start, blocksStore);
 
     this.finishMove(group.anchor, selectedBlocks, 'a11y.movedDown');
+  }
+
+  /**
+   * The blocks at flat indices `start..end`, both included.
+   */
+  private blocksInRange(start: number, end: number): Block[] {
+    return this.repository.blocks.slice(start, end + 1);
+  }
+
+  /**
+   * Place a run of blocks at `target`, `target + 1`, … as ONE undo step.
+   *
+   * Each block is found by identity at its LIVE index. `Blocks.move` carries
+   * every block whose holder sits inside the moved one (a toggle's children),
+   * so a stale index would move whatever block now sits there instead — into
+   * the container. A block that was carried to its slot already is skipped.
+   * @param run - the blocks to move, in their final order
+   * @param target - the flat index the first block lands at
+   * @param blocksStore - The blocks store to modify
+   */
+  private moveRunTo(run: Block[], target: number, blocksStore: BlocksStore): void {
+    this.dependencies.YjsManager.transactMoves(() => {
+      run.forEach((block, offset) => {
+        const index = this.repository.getBlockIndex(block);
+
+        if (index !== target + offset) {
+          // skipAutoHeal: an in-container reorder (boundary-checked by the
+          // caller), so the parentId is unchanged and the per-block heal would
+          // only corrupt a moved subtree's inner children.
+          this.move(target + offset, index, false, blocksStore, false, true);
+        }
+      });
+    });
   }
 
   /**

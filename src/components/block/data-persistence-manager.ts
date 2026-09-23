@@ -6,6 +6,7 @@ import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import type { SavedData } from '../../../types/data-formats';
 import { Dom as $ } from '../dom';
 import { isEmpty, log } from '../utils';
+import { equals } from '../utils/object';
 import { convertBlockDataToString } from '../utils/blocks';
 
 import type { InputManager } from './input-manager';
@@ -146,7 +147,12 @@ export class DataPersistenceManager {
     const hasTextProperty = typeof textValue === 'string';
     const isEmptyParagraphData = Object.keys(newData).length === 0 && this.name === 'paragraph';
 
-    if (isContentEditable && (hasTextProperty || isEmptyParagraphData)) {
+    // Only `text` can be written here; any other key needs a fresh render.
+    const { text: _newText, ...newRest } = newData;
+    const { text: _oldText, ...oldRest } = this.lastSavedDataInternal;
+    const onlyTextChanged = equals(newRest, oldRest);
+
+    if (isContentEditable && onlyTextChanged && (hasTextProperty || isEmptyParagraphData)) {
       const newText = hasTextProperty ? textValue : '';
 
       pluginsContent.innerHTML = newText;

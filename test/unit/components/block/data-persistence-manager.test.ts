@@ -272,6 +272,46 @@ describe('DataPersistenceManager', () => {
       expect(result).toBe(true);
     });
 
+    it('asks for a re-render when the data drops a key other than text', async () => {
+      mockRenderedElement.setAttribute('contenteditable', 'true');
+      mockRenderedElement.innerHTML = 'Colorful';
+      const manager = new DataPersistenceManager(
+        toolInstance,
+        getToolRenderedElement,
+        tunesManager,
+        'paragraph',
+        () => false,
+        inputManager,
+        callToolUpdated,
+        toggleEmptyMark,
+        { text: 'Colorful', textColor: 'red' },
+        initialTunesData
+      );
+
+      const result = await manager.setData({ text: 'Colorful' });
+
+      expect(result).toBe(false);
+      expect(manager.lastSavedData).toEqual({ text: 'Colorful', textColor: 'red' });
+    });
+
+    it('asks for a re-render when a key other than text changes value', async () => {
+      mockRenderedElement.setAttribute('contenteditable', 'true');
+      const manager = new DataPersistenceManager(
+        toolInstance,
+        getToolRenderedElement,
+        tunesManager,
+        'quote',
+        () => false,
+        inputManager,
+        callToolUpdated,
+        toggleEmptyMark,
+        { text: 'Quoted', size: 'large' },
+        initialTunesData
+      );
+
+      expect(await manager.setData({ text: 'Quoted', size: 'default' })).toBe(false);
+    });
+
     it('returns false when tool has no setData and element is not contenteditable', async () => {
       const result = await dataPersistenceManager.setData({ text: 'new text' });
 

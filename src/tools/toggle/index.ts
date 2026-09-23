@@ -194,15 +194,12 @@ export class ToggleItem implements BlockTool {
   public setData(newData: ToggleItemData): boolean {
     const result = setToggleItemData(
       this._data,
-      newData,
+      this.normalizeData(newData),
       this.getContentElement.bind(this)
     );
 
     this._data = result.newData;
-
-    if (typeof this._data.isOpen === 'boolean') {
-      this._isOpen = this._data.isOpen;
-    }
+    this._isOpen = this._data.isOpen ?? true;
 
     if (this._arrowElement && this._element) {
       updateArrowState(this._arrowElement, this._element, this._isOpen, {

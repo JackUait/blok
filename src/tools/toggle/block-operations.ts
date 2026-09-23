@@ -99,10 +99,7 @@ export const setToggleItemData = (
     return { newData: currentData, inPlace: false };
   }
 
-  const updatedData: ToggleItemData = {
-    ...currentData,
-    ...newData,
-  };
+  const updatedData: ToggleItemData = { ...newData };
 
   if (typeof newData.text === 'string') {
     contentEl.innerHTML = newData.text;

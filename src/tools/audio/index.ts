@@ -50,6 +50,8 @@ export class AudioTool implements BlockTool {
   private readonly uploader: Uploader;
   private data: AudioData;
   private readOnly: boolean;
+  /** Rebuilt by undo/redo or a remote update: block data outranks the viewer's stored loop preference. */
+  private readonly isReplay: boolean;
   private root: HTMLElement | null = null;
   private state: ToolState;
   private uploadingEl: UploadingStateElement | null = null;
@@ -71,6 +73,7 @@ export class AudioTool implements BlockTool {
     this.data = { ...options.data, url: options.data?.url ?? '' };
     this.state = this.data.url ? 'RENDERED' : 'EMPTY';
     this.uploader = new Uploader(this.config, this.api.uploader);
+    this.isReplay = options.origin === 'replay';
   }
 
   public render(): HTMLElement {
@@ -507,6 +510,7 @@ export class AudioTool implements BlockTool {
       figure,
       data: this.data,
       i18n: this.api.i18n,
+      restoreLoop: !this.isReplay,
       onLoopChange: (loop) => {
         this.data.loop = loop || undefined;
         this.block.dispatchChange();

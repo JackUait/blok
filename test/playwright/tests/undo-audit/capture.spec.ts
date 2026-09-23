@@ -109,9 +109,7 @@ test.describe('undo audit: capture', () => {
   };
 
   // Undo must restore the exact prior state. Same result through blokInstance.history.undo().
-  // Observed: Expected: undefined / Received: "red"
   test('CAP-1: undo of a paragraph text color leaves the color on', async ({ page }) => {
-    test.fail();
     await createBlok(page, [{ type: 'paragraph', data: { text: 'Before' } }, { type: 'paragraph', data: { text: 'Colorful' } }]);
     await wait(page, CAPTURE_WINDOW);
     await pickBlockColor(page, 'Colorful', 'block-color-swatch-textColor-red');
@@ -136,9 +134,7 @@ test.describe('undo audit: capture', () => {
   });
 
   // Undo must restore the exact prior state.
-  // Observed: Expected: "default" / Received: "large"
   test('CAP-3: undo of a quote size change keeps the new size', async ({ page }) => {
-    test.fail();
     await createBlok(page, [{ type: 'paragraph', data: { text: 'Before' } }, { type: 'quote', data: { text: 'Quoted', size: 'default' } }]);
     await wait(page, CAPTURE_WINDOW);
     await openTunes(page, 'Quoted');
@@ -150,10 +146,8 @@ test.describe('undo audit: capture', () => {
     expect((await blocksOf(page))[1].data.size).toBe('default');
   });
 
-  // Undo must restore the exact prior state, DOM included. Saved data does go back to level 2.
-  // Observed: Expected: "H2" / Received: "H3"
+  // Undo must restore the exact prior state, DOM included.
   test('CAP-4: undo of a heading level change leaves the old tag on screen', async ({ page }) => {
-    test.fail();
     await createBlok(page, [{ type: 'paragraph', data: { text: 'Before' } }, { type: 'header', data: { text: 'Heading', level: 2 } }]);
     await wait(page, CAPTURE_WINDOW);
     await openTunes(page, 'Heading');
@@ -167,10 +161,8 @@ test.describe('undo audit: capture', () => {
     expect((await blocksOf(page))[1].data.level).toBe(2);
   });
 
-  // Undo must restore the exact prior state, DOM included. Saved data does drop textColor.
-  // Observed: Expected: "rgb(0, 0, 0)" / Received: "rgb(212, 76, 71)"
+  // Undo must restore the exact prior state, DOM included.
   test('CAP-5: undo of a heading text color leaves the color on screen', async ({ page }) => {
-    test.fail();
     await createBlok(page, [{ type: 'paragraph', data: { text: 'Before' } }, { type: 'header', data: { text: 'Heading', level: 2 } }]);
     await wait(page, CAPTURE_WINDOW);
     const heading = page.getByRole('heading', { name: 'Heading' });
@@ -184,9 +176,7 @@ test.describe('undo audit: capture', () => {
   });
 
   // Undo must restore the exact prior state, and save() must keep working.
-  // Observed: save() throws "Saver: stranded block holder(s) detected ... its parent co is in the document but the block's holder is detached"
   test('CAP-6: undo of a callout color strands the callout child and breaks save()', async ({ page }) => {
-    test.fail();
     await createBlok(page, [
       { id: 'p0', type: 'paragraph', data: { text: 'Before' } },
       { id: 'co', type: 'callout', data: { emoji: '💡', textColor: null, backgroundColor: null }, content: ['k1'] },
@@ -243,9 +233,7 @@ test.describe('undo audit: capture', () => {
   });
 
   // Undo must restore the DOM tree, not only saved data.
-  // Observed: saved c1.parent is "h1" again, but c1's holder is not inside h1's holder (Received: null)
   test('CAP-8: after undoing "toggle heading -> heading" the child is not back inside the heading on screen', async ({ page }) => {
-    test.fail();
     await createBlok(page, toggleHeadingDoc);
     await wait(page, CAPTURE_WINDOW);
     const domParent = async (): Promise<string | null> => page.locator('[data-blok-id="c1"]').evaluate((el) => el.parentElement?.closest('[data-blok-id]')?.getAttribute('data-blok-id') ?? null);

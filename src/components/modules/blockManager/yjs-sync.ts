@@ -998,6 +998,7 @@ export class BlockYjsSync {
         this.withAtomicOperation(() => {
           this.handlers.setBlockParent(block, remoteParentId);
           this.reconcileParentChildOrderFromDoc(remoteParentId);
+          this.callStructuralMoved(block);
         });
         this.batchReparentedInto.add(remoteParentId);
         this.warnIfChildToolDenied(block, remoteParentId);
@@ -1011,6 +1012,7 @@ export class BlockYjsSync {
       // Idempotent where the callback DID run — block.parentId is already null.
       this.withAtomicOperation(() => {
         this.handlers.setBlockParent(block, null);
+        this.callStructuralMoved(block);
       });
       this.batchReparentedInto.add(null);
     }
@@ -1885,6 +1887,18 @@ export class BlockYjsSync {
 
   private indexBlockPositions(): Map<Block, number> {
     return new Map(this.repository.blocks.map((block, index) => [block, index]));
+  }
+
+  /**
+   * Fires the MOVED hook after a replayed parent change. hierarchy.reindentSubtree
+   * fires it only for descendants and leaves the root to its caller; a replay has
+   * no other caller, so a list item would keep its old depth glyph.
+   * @param block - the block whose parent the replay changed
+   */
+  private callStructuralMoved(block: Block): void {
+    const index = this.handlers.getBlockIndex(block);
+
+    block.call(BlockToolAPI.MOVED, { fromIndex: index, toIndex: index, structural: true });
   }
 
   /**

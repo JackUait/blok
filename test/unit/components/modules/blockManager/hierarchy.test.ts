@@ -519,6 +519,54 @@ describe('BlockHierarchy', () => {
       expect(newChild.holder.classList.contains('hidden')).toBe(false);
     });
 
+    it('shows a block again when it leaves a collapsed toggle for the root', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'toggle', parentId: null, contentIds: ['child'] },
+        { id: 'child', parentId: 'toggle', contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const toggle = requireBlock('toggle');
+      const marker = document.createElement('div');
+
+      marker.setAttribute('data-blok-toggle-open', 'false');
+      toggle.holder.appendChild(marker);
+
+      const child = requireBlock('child');
+
+      child.holder.classList.add('hidden');
+
+      hierarchy.setBlockParent(child, null);
+
+      expect(child.holder.classList.contains('hidden')).toBe(false);
+    });
+
+    it('does not hide a block moved into an open toggle that holds a collapsed toggle', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'outer', parentId: null, contentIds: ['inner'] },
+        { id: 'inner', parentId: 'outer', contentIds: [] },
+        { id: 'x', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const outer = requireBlock('outer');
+      const inner = requireBlock('inner');
+      const outerMarker = document.createElement('div');
+      const innerMarker = document.createElement('div');
+
+      outerMarker.setAttribute('data-blok-toggle-open', 'true');
+      innerMarker.setAttribute('data-blok-toggle-open', 'false');
+      outer.holder.appendChild(outerMarker);
+      inner.holder.appendChild(innerMarker);
+      outer.holder.appendChild(inner.holder);
+
+      const x = requireBlock('x');
+
+      hierarchy.setBlockParent(x, 'outer');
+
+      expect(x.holder.classList.contains('hidden')).toBe(false);
+    });
+
     /**
      * Fix 4: cycle guard.
      *

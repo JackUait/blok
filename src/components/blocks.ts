@@ -1,9 +1,10 @@
 import type { Block } from './block';
 import { BlockToolAPI } from './block';
+import { DATA_ATTR } from './constants';
 import { BlockRendered } from './events';
 import type { BlokEventMap } from './events';
 import type { EventsDispatcher } from './utils/events';
-import { moveElementBefore, moveElementToEnd } from './utils/html';
+import { moveElementAfter, moveElementBefore, moveElementToEnd } from './utils/html';
 
 
 /**
@@ -245,6 +246,7 @@ export class Blocks {
        */
       blockToReplace.call(BlockToolAPI.REMOVED);
       blockToReplace.destroy();
+      this.liftChildHolders(blockToReplace);
       blockToReplace.holder.replaceWith(block.holder);
 
       this.blocks.splice(insertIndex, 1, block);
@@ -376,11 +378,29 @@ export class Blocks {
     // toggler; skipping it leaves the orphan Block wired up and dragging it
     // on next mousedown instead of whatever the user intended.
     prevBlock.destroy();
+    this.liftChildHolders(prevBlock);
     prevBlock.holder.replaceWith(block.holder);
 
     this.blocks[index] = block;
 
     this.callRenderedHook(block);
+  }
+
+  /**
+   * Moves the direct child holders out of a holder that is about to be swapped
+   * out, placing them flat right after it. Without this they leave the document
+   * with the old holder, and the new holder's rendered() cannot claim them.
+   * @param prev - the block being replaced
+   */
+  private liftChildHolders(prev: Block): void {
+    const children = Array.from(prev.holder.querySelectorAll<HTMLElement>(`[${DATA_ATTR.id}]`))
+      .filter(holder => holder.parentElement?.closest(`[${DATA_ATTR.id}]`) === prev.holder);
+
+    children.reduce<HTMLElement>((anchor, holder) => {
+      moveElementAfter(holder, anchor);
+
+      return holder;
+    }, prev.holder);
   }
 
   /**

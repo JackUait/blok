@@ -136,17 +136,16 @@ export const setListItemData = (
   const oldStyle = currentData.style;
   const newStyle = newData.style;
 
-  // Style changes require full re-render (different DOM structure)
-  if (oldStyle !== newStyle) {
+  // Style and start shape the rendered DOM, so they need a full re-render
+  if (oldStyle !== newStyle || currentData.start !== newData.start) {
     return { newData: currentData, inPlace: false };
   }
 
-  // Update internal data
+  // newData is the whole record: a key missing from it was removed.
   // Handle depth explicitly: if depth is not in newData, it means 0 (default)
   const depthOrDefault = 'depth' in newData ? newData.depth : 0;
 
   const updatedData: ListItemData = {
-    ...currentData,
     ...newData,
     depth: depthOrDefault,
   };

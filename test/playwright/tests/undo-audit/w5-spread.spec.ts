@@ -302,8 +302,7 @@ const PINS: Record<string, string> = {
   'W5F-40': 'W5F-40: undo of the first edit in a legacy toggle does nothing',
   'W5F-47': 'W5F-47: undo of the first edit in a legacy toggle does nothing',
   'W5F-48': 'W5F-48: undo reverts the load-time colour migration in a heading',
-  'W5F-49': 'W5F-49: undo of blocks.update on a callout strands its child and save() throws',
-  'W5F-49b': 'W5F-49b: undo of blocks.update on a callout strands its child and save() throws',
+  'W5F-49': 'W5F-49: undo of blocks.update on a legacy callout loses its migrated background colour',
   'W5F-60': 'W5F-60: colour swatch undo takes the stale caret of a no-op Backspace',
   'W5F-61': 'W5F-61: block-menu convert undo takes the stale caret of a no-op Backspace',
   'W5F-62': 'W5F-62: blocks.update undo takes the stale caret of a no-op Backspace',
@@ -380,12 +379,9 @@ test.describe('W5F: spread of the wave-4 families', () => {
     });
   }
 
-  // Observed: after one undo of Enter in a callout child, save() throws "Block k1 is stranded".
-  // The callout was seeded without textColor/backgroundColor, so the Enter's deferred save-back writes them
-  // tracked (family A; key log in the message). The first undo deletes them, which replays callout data;
-  // the callout has no setData, so the replay strands its child (known CAP-6). Control: W4K-66 (full data) passes.
+  // The first undo may replay callout data (family A colour keys), which rebuilds the callout: its child must
+  // stay in the document. Control: W4K-66 (full data).
   test('W5F-10: undo of Enter in a child of a callout saved with only an emoji keeps the document saveable and unsplit', async ({ page }) => {
-    test.fail(true, 'W5F-10: undo of Enter in a callout saved without colours strands the child');
     await create(page, [{ id: 'box', type: 'callout', data: { emoji: '💡' }, content: ['k1'] }, P('k1', 'one', 'box')]);
     await gap(page);
     await caretAt(page, 'k1', 'end');
@@ -532,8 +528,9 @@ test.describe('W5F: spread of the wave-4 families', () => {
   // consumed, the typed letter stays, and the old title can never come back.
   // W5F-48 (known W4I-30b mechanism, other tool): renderer.ts:327 migrateMarkColors runs over every block,
   // so headings (and any tool with marks) lose the migrated colour on the first undo too.
-  // W5F-49/49b (known CAP-6, new trigger blocks.update): callout has no setData, so the undo replay of a
-  // callout data change leaves its child holder detached; save() then throws "stranded". Not a B defect.
+  // W5F-49: the legacy callout is stored as loaded ({variant, isEmojiVisible}); the update's save-back prunes
+  // those keys untracked, so the undo restores {emoji} alone and backgroundColor "blue" is lost (load
+  // normalisation, family B).
   // Works: string heading level, legacy arrow markup, equation hydrate, "<br>" paragraph, legacy list items,
   // legacy-string table cells (nothing on the undo stack after load).
 

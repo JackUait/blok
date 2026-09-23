@@ -201,6 +201,16 @@ describe('attachControls', () => {
     hb.destroy();
   });
 
+  it('keeps the loop from block data when the stored preference is not restored', () => {
+    const storage = memoryStorage();
+    storage.setItem('blok:audio:loop', 'true');
+    const media = makeMedia();
+    const h = attachControls({ media, figure: document.createElement('figure'), data: { url: 'u' }, storage, restoreLoop: false });
+    expect(media.loop).toBe(false);
+    expect(h.element.querySelector('[data-role="audio-loop"]')!.getAttribute('aria-pressed')).toBe('false');
+    h.destroy();
+  });
+
   it('stored loop=false overrides a media element seeded with loop on', () => {
     const storage = memoryStorage();
     storage.setItem('blok:audio:loop', 'false');

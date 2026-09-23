@@ -588,6 +588,24 @@ describe('DragOperations', () => {
       expect(setBlockParentMock).toHaveBeenCalledWith(dupChild2, dupToggle.id);
     });
 
+    it('inserts a copy whose children come with it as pasted, so it does not seed its own body', async () => {
+      const callout = createMockBlock('co', 'callout', { emoji: 'x' }, ['kid'], null);
+      const kid = createMockBlock('kid', 'paragraph', { text: 'Kid' }, [], 'co');
+      const lone = createMockBlock('lone', 'callout', { emoji: 'y' }, [], null);
+      const targetBlock = createMockBlock('target', 'paragraph', { text: 'Target' }, [], null);
+
+      mockBlockManager.getBlockIndex = vi.fn((block: Block) => [callout, kid, lone, targetBlock].indexOf(block));
+      mockBlockManager.insert = vi.fn((config: { tool: string; data: Record<string, unknown>; index: number }): Block =>
+        createMockBlock(`dup-${config.index}`, config.tool, config.data, [], null));
+      (mockBlockManager as unknown as { setBlockParent: ReturnType<typeof vi.fn> }).setBlockParent = vi.fn();
+
+      await operations.duplicateBlocks([callout, kid, lone], targetBlock, 'bottom');
+
+      const origins = vi.mocked(mockBlockManager.insert).mock.calls.map(([config]) => (config as { origin?: string }).origin);
+
+      expect(origins).toEqual(['paste', undefined, undefined]);
+    });
+
     it('should not call setBlockParent for blocks with no original parent in the duplicated set', async () => {
       // Duplicating two sibling root-level blocks — no internal hierarchy to restore
       const block1 = createMockBlock('block-1', 'paragraph', { text: '1' }, [], null);

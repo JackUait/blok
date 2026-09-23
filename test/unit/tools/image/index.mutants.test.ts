@@ -1987,6 +1987,17 @@ describe('ImageTool — caption', () => {
     expect(block.dispatchChange).not.toHaveBeenCalled();
   });
 
+  it('does not dispatch a change when a caption that was never set is left empty', () => {
+    const block = createMockBlock();
+    const tool = new ImageTool(createOptions({ url: 'u' }, {}, block));
+    const root = tool.render();
+
+    el<HTMLElement>(root, '.blok-image-caption').dispatchEvent(new Event('blur'));
+
+    expect(block.dispatchChange).not.toHaveBeenCalled();
+    expect(tool.save().caption).toBeUndefined();
+  });
+
   it('toggling the caption off flips the flag, the attribute and dispatches a change', () => {
     const block = createMockBlock();
     const tool = new ImageTool(createOptions({ url: 'u' }, {}, block));

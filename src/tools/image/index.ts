@@ -846,7 +846,8 @@ export class ImageTool implements BlockTool {
     const captionEl = captionRow.querySelector<HTMLElement>('.blok-image-caption');
     captionEl?.addEventListener('blur', () => {
       const next = captionEl.textContent ?? '';
-      if (next !== this.data.caption) {
+      // A caption never set reads '' here; that is not a change.
+      if (next !== (this.data.caption ?? '')) {
         this.data.caption = next;
         this.block.dispatchChange();
       }

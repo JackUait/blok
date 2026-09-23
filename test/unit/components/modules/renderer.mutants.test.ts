@@ -171,6 +171,7 @@ const createRenderer = (options: {
     BlockManager: {
       insert,
       insertMany,
+      normalizeRenderedBlocks: vi.fn(),
       composeBlock,
     },
     Tools: tools,

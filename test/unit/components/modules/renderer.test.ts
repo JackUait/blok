@@ -20,6 +20,7 @@ type RequestIdleCallbackFn = Window['requestIdleCallback'];
 interface MockBlockManager {
   insert: MockInstance<BlockManagerInsert>;
   insertMany: MockInstance<BlockManagerInsertMany>;
+  normalizeRenderedBlocks: MockInstance<RendererBlockManager['normalizeRenderedBlocks']>;
   composeBlock: MockInstance<BlockManagerComposeBlock>;
 }
 
@@ -65,6 +66,7 @@ const createRenderer = (
       });
     }),
     insertMany: vi.fn<BlockManagerInsertMany>(() => undefined),
+    normalizeRenderedBlocks: vi.fn<RendererBlockManager['normalizeRenderedBlocks']>(),
     composeBlock: vi.fn<BlockManagerComposeBlock>((composeOptions) => {
       const { id, tool } = composeOptions;
 
@@ -239,6 +241,10 @@ describe('Renderer module', () => {
       { skipYjsSync: false }
     );
     expect(blockManager.insert).not.toHaveBeenCalled();
+    // The document takes what the rendered blocks save, after the DOM rewrites.
+    expect(blockManager.normalizeRenderedBlocks).toHaveBeenCalledWith({ onlyMissingKeys: false });
+    expect(blockManager.normalizeRenderedBlocks.mock.invocationCallOrder[0])
+      .toBeGreaterThan(blockManager.insertMany.mock.invocationCallOrder[0]);
   });
 
   /**

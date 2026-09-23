@@ -1510,14 +1510,15 @@ describe('TableCellBlocks', () => {
 
       const model = createMockModel();
 
-      new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model });
 
       blockChangedCallback?.({
         event: { type: 'block-added', detail: { target: { id: 'remote-1', holder: remoteHolder }, index: 2 } },
       });
 
       expect(model.addBlockToCell).not.toHaveBeenCalled();
-      expect(gridElement.contains(remoteHolder)).toBe(false);
+      expect(setBlockParent).not.toHaveBeenCalled();
+      expect(cellBlocks.isAwaitingCell('remote-1')).toBe(true);
     });
 
     it('should NOT insert a block when cell already has blocks', async () => {
@@ -3192,7 +3193,6 @@ describe('TableCellBlocks', () => {
             return undefined;
           }),
           getBlocksCount: vi.fn().mockReturnValue(1),
-          getBlockIndex: vi.fn(() => undefined),
           setBlockParent: vi.fn(),
         },
         events: { on: vi.fn(), off: vi.fn() },
@@ -3284,7 +3284,6 @@ describe('TableCellBlocks', () => {
             return undefined;
           }),
           getBlocksCount: vi.fn().mockReturnValue(1),
-          getBlockIndex: vi.fn(() => undefined),
           setBlockParent: vi.fn(),
         },
         events: { on: vi.fn(), off: vi.fn() },
@@ -3370,7 +3369,6 @@ describe('TableCellBlocks', () => {
             return undefined;
           }),
           getBlocksCount: vi.fn().mockReturnValue(1),
-          getBlockIndex: vi.fn(() => undefined),
           setBlockParent: vi.fn(),
         },
         events: { on: vi.fn(), off: vi.fn() },

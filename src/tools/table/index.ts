@@ -964,7 +964,7 @@ export class Table implements BlockTool {
             ? Array.from(container.querySelectorAll<HTMLElement>('[data-blok-id]'))
               .map(el => el.getAttribute('data-blok-id') ?? '')
               .filter(id => {
-                if (!id) {
+                if (!id || this.cellBlocks?.isAwaitingCell(id) === true) {
                   return false;
                 }
                 const block = this.api.blocks.getById?.(id);
@@ -989,7 +989,8 @@ export class Table implements BlockTool {
           ? Array.from(container.querySelectorAll<HTMLElement>('[data-blok-id]'))
             .map(el => el.getAttribute('data-blok-id') ?? '')
             .filter(id => {
-              if (!id || filtered.includes(id) || this.model.findCellForBlock(id) !== null) {
+              if (!id || filtered.includes(id) || this.model.findCellForBlock(id) !== null
+                || this.cellBlocks?.isAwaitingCell(id) === true) {
                 return false;
               }
 

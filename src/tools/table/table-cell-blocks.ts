@@ -100,6 +100,12 @@ export class TableCellBlocks {
   /** When true, handleBlockMutation skips claiming so exitTableForward's new block stays outside the grid. */
   private isExitingTable = false;
 
+  /**
+   * Synced children of this table whose cell the table data has not named
+   * yet. save() must not harvest them into the cell they happen to sit in.
+   */
+  private readonly blocksAwaitingCell = new Set<string>();
+
   /** When true, ensureCellHasBlock is inserting its own repair block — skip claim heuristics for it. */
   private isRepairingCell = false;
 
@@ -622,26 +628,19 @@ export class TableCellBlocks {
       return count;
     }
 
-    let index = tableIndex + 1;
+    const offset = Array.from({ length: count - tableIndex - 1 }, (_, i) => tableIndex + 1 + i)
+      .findIndex(index => !this.isInTableSubtree(this.api.blocks.getBlockByIndex(index)?.parentId ?? null));
 
-    while (index < count && this.isInTableSubtree(this.api.blocks.getBlockByIndex(index))) {
-      index++;
-    }
-
-    return index;
+    return offset === -1 ? count : tableIndex + 1 + offset;
   }
 
-  private isInTableSubtree(block: BlockAPI | undefined): boolean {
-    let parentId = block?.parentId ?? null;
-
-    while (parentId !== null && parentId !== '') {
-      if (parentId === this.tableBlockId) {
-        return true;
-      }
-      parentId = this.api.blocks.getById(parentId)?.parentId ?? null;
+  private isInTableSubtree(parentId: string | null): boolean {
+    if (parentId === null || parentId === '') {
+      return false;
     }
 
-    return false;
+    return parentId === this.tableBlockId
+      || this.isInTableSubtree(this.api.blocks.getById(parentId)?.parentId ?? null);
   }
 
   /**
@@ -1006,6 +1005,7 @@ export class TableCellBlocks {
 
       container.appendChild(block.holder);
       this.api.blocks.setBlockParent(blockId, this.tableBlockId);
+      this.blocksAwaitingCell.delete(blockId);
       mountedIds.push(blockId);
     }
     return { mountedIds, replacements };
@@ -1110,6 +1110,13 @@ export class TableCellBlocks {
     }
 
     return null;
+  }
+
+  /**
+   * True for a synced child whose cell the table data has not named yet.
+   */
+  public isAwaitingCell(blockId: string): boolean {
+    return this.blocksAwaitingCell.has(blockId);
   }
 
   /**
@@ -1270,15 +1277,13 @@ export class TableCellBlocks {
       }
     }
 
-    // A replayed or remote block the model does not reference yet. Its cell
-    // comes with the table's own data write (setData mounts it then).
-    // Adjacency would guess the cell of its flat neighbour, and a save would
-    // then send that wrong cell to every peer. Park our child out of the grid.
+    // A replayed or remote child the model does not reference yet. Its cell
+    // comes with the table's own data write (setData mounts it then). Its
+    // holder sits next to its flat neighbour, so adjacency (and save()'s
+    // harvest) would claim the neighbour's cell and send it to every peer.
     if (this.api.blocks.isSyncingFromYjs) {
-      const owner = this.api.blocks.getById?.(detail.target.id)?.parentId;
-
-      if (owner === this.tableBlockId && this.gridElement.contains(detail.target.holder)) {
-        detail.target.holder.remove();
+      if (this.api.blocks.getById?.(detail.target.id)?.parentId === this.tableBlockId) {
+        this.blocksAwaitingCell.add(detail.target.id);
       }
 
       return;
@@ -1423,6 +1428,7 @@ export class TableCellBlocks {
    * Handle a block-removed event: update the model and schedule an empty-cell check.
    */
   private handleBlockRemoved(detail: { target: { id: string; holder: HTMLElement }; index?: number }): void {
+    this.blocksAwaitingCell.delete(detail.target.id);
     this.recordRemovedBlockCell(detail);
     const blockId = detail.target.id;
     const cellPos = this.model.findCellForBlock(blockId);

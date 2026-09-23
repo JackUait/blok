@@ -243,7 +243,6 @@ test.describe('undo audit: remaining surfaces', () => {
   // History holds two steps, but the first undo removes the card AND the link, and the second does nothing.
   // Observed: link count Expected 1, Received 0; the next undo changes nothing.
   test('UNP-6: one undo after picking Bookmark for a pasted link brings the link back', async ({ page }) => {
-    test.fail();
     await gotoTestPage(page);
     await page.route('**/__unfurl*', async (route) => {
       await route.fulfill({ json: { success: 1, link: 'https://example.com/article', meta: { title: 'Stubbed Title' } } });

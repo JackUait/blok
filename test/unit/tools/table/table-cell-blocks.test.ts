@@ -1416,6 +1416,54 @@ describe('TableCellBlocks', () => {
       expect(container.contains(mockBlockHolder)).toBe(true);
     });
 
+    it('inserts the cell block right after the table subtree, not at the end of the document', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      // Flat order: t1, its cell block c1, a nested child n1 of c1, then p-after.
+      const flat = [
+        { id: 't1', parentId: null },
+        { id: 'c1', parentId: 't1' },
+        { id: 'n1', parentId: 'c1' },
+        { id: 'p-after', parentId: null },
+      ];
+      const mockInsert = vi.fn().mockReturnValue({ id: 'new-p', holder: document.createElement('div') });
+
+      const api = {
+        blocks: {
+          insert: mockInsert,
+          getBlocksCount: vi.fn(() => flat.length),
+          getBlockIndex: vi.fn((id: string) => {
+            const index = flat.findIndex(block => block.id === id);
+
+            return index === -1 ? undefined : index;
+          }),
+          getBlockByIndex: vi.fn((index: number) => flat[index]),
+          getById: vi.fn((id: string) => flat.find(block => block.id === id) ?? null),
+          setBlockParent: vi.fn(),
+          transactWithoutCapture: vi.fn((fn: () => void) => fn()),
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
+
+      cellBlocks.ensureCellHasBlock(cell);
+
+      expect(mockInsert).toHaveBeenCalledWith('paragraph', { text: '' }, expect.anything(), 3, true);
+    });
+
     it('should NOT insert a block when cell already has blocks', async () => {
       const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 

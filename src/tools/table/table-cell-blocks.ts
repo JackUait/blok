@@ -609,20 +609,56 @@ export class TableCellBlocks {
    * - If referenced blocks are missing from BlockManager, a fallback paragraph is created.
    */
   /**
-   * Insert one parsed cell-content block at the end of the flat block list.
+   * Flat index right after the table's subtree. The doc orders blocks depth
+   * first, so a cell block placed anywhere else comes back somewhere else
+   * after undo/redo or on a peer. Callers must parent each block to the table
+   * before the next insert, or the next one lands in front of it.
+   */
+  private cellInsertIndex(): number {
+    const count = this.api.blocks.getBlocksCount();
+    const tableIndex = this.api.blocks.getBlockIndex(this.tableBlockId);
+
+    if (tableIndex === undefined) {
+      return count;
+    }
+
+    let index = tableIndex + 1;
+
+    while (index < count && this.isInTableSubtree(this.api.blocks.getBlockByIndex(index))) {
+      index++;
+    }
+
+    return index;
+  }
+
+  private isInTableSubtree(block: BlockAPI | undefined): boolean {
+    let parentId = block?.parentId ?? null;
+
+    while (parentId !== null && parentId !== '') {
+      if (parentId === this.tableBlockId) {
+        return true;
+      }
+      parentId = this.api.blocks.getById(parentId)?.parentId ?? null;
+    }
+
+    return false;
+  }
+
+  /**
+   * Insert one parsed cell-content block after the table's subtree.
    * Falls back to a paragraph when the insert's tool is not registered in
    * this editor (e.g. no list tool), so pasted cell content is never lost.
    */
   private insertCellContentBlock(insert: CellBlockInsert): ReturnType<API['blocks']['insert']> {
     if (insert.tool !== 'paragraph') {
       try {
-        return this.api.blocks.insert(insert.tool, insert.data, {}, this.api.blocks.getBlocksCount(), false);
+        return this.api.blocks.insert(insert.tool, insert.data, {}, this.cellInsertIndex(), false);
       } catch {
         // Tool unavailable — degrade to a paragraph carrying the item text.
       }
     }
 
-    return this.api.blocks.insert('paragraph', { text: insert.data.text }, {}, this.api.blocks.getBlocksCount(), false);
+    return this.api.blocks.insert('paragraph', { text: insert.data.text }, {}, this.cellInsertIndex(), false);
   }
 
   /**
@@ -638,7 +674,7 @@ export class TableCellBlocks {
         block.tool,
         block.data,
         {},
-        this.api.blocks.getBlocksCount(),
+        this.cellInsertIndex(),
         false,
         false,
         undefined,
@@ -648,7 +684,7 @@ export class TableCellBlocks {
       // Tool unavailable — degrade to a paragraph carrying whatever text it had.
       const text = typeof block.data.text === 'string' ? block.data.text : '';
 
-      return this.api.blocks.insert('paragraph', { text }, {}, this.api.blocks.getBlocksCount(), false);
+      return this.api.blocks.insert('paragraph', { text }, {}, this.cellInsertIndex(), false);
     }
   }
 
@@ -746,14 +782,16 @@ export class TableCellBlocks {
           // from that structured payload instead of re-parsing flattened HTML.
           const seedBlocks = isCellWithBlocks(cellContent) ? cellContent.blockData : undefined;
 
-          const inserted = seedBlocks !== undefined && seedBlocks.length > 0
-            ? seedBlocks.map(block => this.insertClipboardBlock(block))
-            : parseCellContentToBlocks(text).map(insert => this.insertCellContentBlock(insert));
-
-          for (const block of inserted) {
+          const mount = (block: ReturnType<API['blocks']['insert']>): void => {
             container.appendChild(block.holder);
             this.api.blocks.setBlockParent(block.id, this.tableBlockId);
             ids.push(block.id);
+          };
+
+          if (seedBlocks !== undefined && seedBlocks.length > 0) {
+            seedBlocks.forEach(block => mount(this.insertClipboardBlock(block)));
+          } else {
+            parseCellContentToBlocks(text).forEach(insert => mount(this.insertCellContentBlock(insert)));
           }
 
           normalizedRow.push({
@@ -811,7 +849,7 @@ export class TableCellBlocks {
             return;
           }
 
-          const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.api.blocks.getBlocksCount(), false);
+          const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.cellInsertIndex(), false);
 
           container.appendChild(block.holder);
           this.api.blocks.setBlockParent(block.id, this.tableBlockId);
@@ -955,7 +993,7 @@ export class TableCellBlocks {
           block.name,
           block.preservedData,
           {},
-          this.api.blocks.getBlocksCount(),
+          this.cellInsertIndex(),
           false
         );
 
@@ -1105,7 +1143,7 @@ export class TableCellBlocks {
     this.isRepairingCell = true;
 
     const fill = (): void => {
-      const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.api.blocks.getBlocksCount(), true);
+      const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.cellInsertIndex(), true);
 
       container.appendChild(block.holder);
       this.api.blocks.setBlockParent(block.id, this.tableBlockId);

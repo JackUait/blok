@@ -340,11 +340,14 @@ export class BlockInsertion {
           this.dependencies.YjsManager.removeBlock(replacedIdToRemove);
         }
 
+        // Children seeded in rendered() (table cells) reached the doc before
+        // this block, with no parent to hold their order. Carry it here.
         this.dependencies.YjsManager.addBlock({
           id: block.id,
           type: block.name,
           data: block.preservedData,
           parent: block.parentId ?? undefined,
+          content: block.contentIds.length > 0 ? [...block.contentIds] : undefined,
         }, targetIndex);
       });
     }

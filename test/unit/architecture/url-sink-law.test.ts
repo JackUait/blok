@@ -65,6 +65,8 @@ const EXEMPT_SINKS: Record<string, string> = {
     'HTMLVideoElement src — media elements do not execute javascript: URLs',
   'tools/video/controls.ts » src':
     'HTMLVideoElement src (seek-preview clone, copied from the rendered video) — media elements do not execute javascript: URLs',
+  'components/inline-tools/inline-tool-link.ts » entry.favicon':
+    'HTMLImageElement src (recent-link favicon), set only after an isHttpUrl() guard — <img> is not a script-execution sink',
   'components/modules/paste/handlers/pattern-handler.ts » url':
     'anchor href, but the URL reached this handler through the isHttpUrl() guard in onPaste',
   'components/modules/blockEvents/composers/markdownShortcuts.ts » url':

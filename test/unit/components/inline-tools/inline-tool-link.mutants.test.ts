@@ -44,10 +44,6 @@ type Harness = {
   inlineToolbarClose: Mock;
 };
 
-/**
- * "Paste a link" is 12 characters and "Link text" is 9 — the width assertions
- * below depend on those lengths through the stubbed text measurer.
- */
 const TRANSLATIONS: Record<string, string> = {
   'tools.link.addLink': 'Paste a link',
   'tools.link.linkText': 'Link text',
@@ -143,6 +139,7 @@ const createHarness = (options: { link?: LinkConfig; translations?: Record<strin
       t: (phrase: string): string => dictionary[phrase] ?? phrase,
       has: (phrase: string): boolean => phrase in dictionary,
     },
+    blocks: { getBlocksCount: () => 0, getBlockByIndex: () => undefined },
     config: { link: options.link },
   } as unknown as API;
 
@@ -250,37 +247,6 @@ const openOnExistingLink = (options?: { link?: LinkConfig }): Harness => {
   harness.menu.children.onOpen();
 
   return harness;
-};
-
-/**
- * Text measurement is unavailable in jsdom (no canvas 2d context), which makes
- * every content-driven width test a no-op unless the context is stubbed. Width
- * grows at 20px per character so each candidate string maps to a distinct
- * clamped width.
- */
-const stubTextMeasurement = (): { font: string } => {
-  const context = {
-    font: 'UNSET',
-    measureText: (text: string) => ({ width: text.length * 20 }),
-  };
-
-  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(
-    ((contextId: string) => (contextId === '2d' ? context : null)) as HTMLCanvasElement['getContext']
-  );
-
-  return context;
-};
-
-const stubComputedFont = (
-  target: Element,
-  font: Pick<CSSStyleDeclaration, 'fontWeight' | 'fontSize' | 'fontFamily'>
-): void => {
-  const real = window.getComputedStyle.bind(window);
-
-  vi.spyOn(window, 'getComputedStyle').mockImplementation(((element: Element, pseudo?: string | null) =>
-    element === target
-      ? font
-      : real(element, pseudo)) as typeof window.getComputedStyle);
 };
 
 /**
@@ -1083,16 +1049,14 @@ describe('LinkInlineTool — mutation coverage', () => {
       expect(harness.error.hidden).toBe(false);
     });
 
-    it('refreshes the error, the suggestion and the field width after a paste', () => {
+    it('refreshes the error and the suggestion after a paste', () => {
       vi.useFakeTimers();
-      stubTextMeasurement();
 
       const harness = openOnPlainText();
 
       typeUrl(harness, 'javascript:alert(1)');
       pressKey(harness.input, 'Enter');
       expect(harness.error.hidden).toBe(false);
-      expect(harness.input.style.width).toBe('320px');
 
       harness.input.value = 'a.co';
       harness.input.dispatchEvent(new Event('paste', { bubbles: true }));
@@ -1101,7 +1065,6 @@ describe('LinkInlineTool — mutation coverage', () => {
       expect(harness.error.hidden).toBe(true);
       expect(harness.suggestion.classList.contains('hidden')).toBe(false);
       expect(harness.suggestionUrl.textContent).toBe('a.co');
-      expect(harness.input.style.width).toBe('220px');
     });
   });
 
@@ -1192,98 +1155,6 @@ describe('LinkInlineTool — mutation coverage', () => {
     });
   });
 
-  describe('content-driven field width', () => {
-    const openWithFont = (font: { fontWeight: string; fontSize: string; fontFamily: string }): Harness => {
-      selectWithin(firstText(paragraph('para-one')), 0, 5);
-
-      const harness = createHarness();
-
-      stubComputedFont(harness.input, font);
-      harness.menu.children.onOpen();
-
-      return harness;
-    };
-
-    it('measures the typed value in the field own font', () => {
-      const context = stubTextMeasurement();
-      const harness = openWithFont({
-        fontWeight: '600',
-        fontSize: '14px',
-        fontFamily: 'Inter',
-      });
-
-      typeUrl(harness, 'abcdefghijklm');
-
-      expect(context.font).toBe('600 14px Inter');
-      // 13 characters at 20px plus 28px of input chrome.
-      expect(harness.input.style.width).toBe('288px');
-    });
-
-    it('leaves the canvas font alone when the computed font resolves to nothing', () => {
-      const context = stubTextMeasurement();
-      const harness = openWithFont({
-        fontWeight: '',
-        fontSize: '',
-        fontFamily: '',
-      });
-
-      typeUrl(harness, 'abcdefghijklm');
-
-      expect(context.font).toBe('UNSET');
-      expect(harness.input.style.width).toBe('288px');
-    });
-
-    it('falls back to the placeholder while the field is empty', () => {
-      stubTextMeasurement();
-
-      const harness = openOnPlainText();
-
-      // "Paste a link" is 12 characters: 240px of text plus 28px of chrome.
-      expect(harness.input.style.width).toBe('268px');
-    });
-
-    it('rests at the minimum width when there is nothing to measure', () => {
-      stubTextMeasurement();
-
-      const harness = openOnPlainText({ translations: { 'tools.link.addLink': '' } });
-
-      expect(harness.input.style.width).toBe('220px');
-    });
-
-    it('caps the width at the maximum', () => {
-      stubTextMeasurement();
-
-      const harness = openOnPlainText();
-
-      typeUrl(harness, 'abcdefghijklmnopqrst');
-
-      expect(harness.input.style.width).toBe('320px');
-    });
-
-    it('leaves the width to CSS when no 2d context is available', () => {
-      vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(
-        (() => null) as HTMLCanvasElement['getContext']
-      );
-
-      const harness = openOnPlainText();
-
-      expect(harness.input.style.width).toBe('');
-    });
-
-    it('hands the width back to CSS on a mobile screen', () => {
-      stubTextMeasurement();
-
-      const harness = openOnPlainText();
-
-      expect(harness.input.style.width).toBe('268px');
-
-      vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }));
-      typeUrl(harness, 'abcdefghijklm');
-
-      expect(harness.input.style.width).toBe('');
-    });
-  });
-
   describe('the popover chrome', () => {
     it('exposes the tool under the link name with no chevron', () => {
       const harness = createHarness();
@@ -1306,7 +1177,7 @@ describe('LinkInlineTool — mutation coverage', () => {
     it('pads the wrapper so the field focus ring is not clipped', () => {
       const harness = createHarness();
 
-      expect(harness.wrapper.className).toBe('px-1');
+      expect(harness.wrapper.className).toBe('px-1 w-80 mobile:w-auto');
     });
 
     it('gives the error region a collision-free id', () => {

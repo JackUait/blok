@@ -4,12 +4,12 @@ import type {
   SanitizerConfig
 } from '../../../types';
 import type { BlokConfig } from '../../../types/configs/blok-config';
-import type { Notifier, Toolbar, I18n, InlineToolbar } from '../../../types/api';
+import type { Blocks, Notifier, Toolbar, I18n, InlineToolbar } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
 import { DATA_ATTR, createSelector, INLINE_TOOLBAR_INTERFACE_VALUE } from '../constants';
-import { IconLink, IconGlobe, IconMail, IconHash, IconTrash, IconReturn, IconWarning } from '../icons';
+import { IconLink, IconGlobe, IconMail, IconHash, IconTrash, IconReturn, IconWarning, IconH1, IconH2, IconH3, IconH4, IconH5, IconH6 } from '../icons';
 import { SelectionUtils } from '../selection/index';
-import { isMobileScreen, log } from '../utils';
+import { log } from '../utils';
 import { PopoverItemType } from '../utils/popover';
 import { setFieldValidity } from '../utils/field-validity';
 import { applyResolvedLinkAttributes, resolveLinkAttributes } from '../utils/resolve-link-attributes';
@@ -18,16 +18,6 @@ import { twMerge } from '../utils/tw';
 import { isHttpUrl } from '../../tools/link/registry';
 import { MetadataFetcher } from '../../tools/link/metadata-fetcher';
 import { getRecentLinks, recordRecentLink, updateRecentLinkMeta, type RecentLink } from './link-history';
-
-/**
- * Content-driven input width: the field rests at the narrow default and
- * stretches with the typed link, capped at the old fixed width. The chrome
- * constant covers the input's own horizontal padding, borders and caret slack
- * on top of the measured text width.
- */
-const INPUT_MIN_WIDTH = 220;
-const INPUT_MAX_WIDTH = 320;
-const INPUT_CHROME_WIDTH = 28;
 
 const SUGGESTION_ROW_BASE = 'flex items-center gap-2.5 w-full mt-0.5 px-1.5 py-1.5 rounded-[10px] text-left appearance-none border-0 bg-transparent font-[inherit] outline-hidden';
 const SUGGESTION_ROW_VALID = `${SUGGESTION_ROW_BASE} cursor-pointer can-hover:hover:bg-item-hover-bg focus-visible:bg-item-hover-bg transition-colors`;
@@ -52,13 +42,39 @@ const ENTER_HINT_CLASSES = 'items-center justify-center size-5 shrink-0 text-gra
  * translation audit ledger. Kept in a const so the static i18n scan skips it.
  */
 const RECENT_LABEL_KEY = 'tools.link.recent';
+const HEADINGS_LABEL_KEY = 'tools.link.onThisPage';
+
+const HEADING_LIMIT = 6;
+const HEADING_ICONS: Record<number, string> = { 1: IconH1, 2: IconH2, 3: IconH3, 4: IconH4, 5: IconH5, 6: IconH6 };
+
+/**
+ * Link kinds offered when the field has nothing else to show. Picking one
+ * types its prefix into the field.
+ */
+const LINK_KINDS = [
+  { icon: IconGlobe, titleKey: 'tools.link.webLink', prefix: 'https://' },
+  { icon: IconMail, titleKey: 'tools.link.emailAddress', prefix: 'mailto:' },
+] as const;
+
+/**
+ * A heading in this document that a link can jump to.
+ */
+interface HeadingTarget {
+  blockId: string;
+  level: number;
+  text: string;
+}
 
 /**
  * Rows cascade in with the suggestion row's keyframes. Each row sets its own
  * animation-delay; motion-safe drops the whole cascade for reduced motion.
  */
-const RECENT_ROW_CLASSES = 'flex items-center gap-2.5 w-full px-1.5 py-1.5 rounded-[10px] cursor-pointer can-hover:hover:bg-item-hover-bg aria-selected:bg-item-hover-bg transition-colors motion-safe:animate-[blok-link-reveal_160ms_ease-out_both]';
-const RECENT_TILE_CLASSES = 'flex items-center justify-center size-6 shrink-0 rounded-md bg-item-hover-bg overflow-hidden text-[11px] font-semibold text-gray-text';
+const OPTION_ROW_CLASSES = 'flex items-center gap-2.5 w-full min-h-8 px-2 py-1 rounded-lg cursor-pointer can-hover:hover:bg-item-hover-bg aria-selected:bg-item-hover-bg transition-colors motion-safe:animate-[blok-link-reveal_160ms_ease-out_both]';
+const OPTION_TITLE_CLASSES = 'block text-sm leading-5 text-text-primary truncate';
+const OPTION_META_CLASSES = 'block text-xs leading-4 text-gray-text truncate';
+const OPTION_ICON_CLASSES = 'flex items-center justify-center size-5 shrink-0 text-gray-text [&_svg]:size-5';
+const SECTION_LABEL_CLASSES = 'px-2 pt-2 pb-1 text-xs leading-4 font-medium text-gray-text';
+const RECENT_TILE_CLASSES = 'flex items-center justify-center size-5 shrink-0 rounded-[5px] bg-item-hover-bg overflow-hidden text-[11px] font-semibold text-gray-text';
 
 /**
  * Link Tool
@@ -126,8 +142,12 @@ export class LinkInlineTool implements InlineTool {
     titleLabel: HTMLElement | null;
     inputWrapper: HTMLElement | null;
     suggestion: HTMLElement | null;
+    options: HTMLElement | null;
     recent: HTMLElement | null;
     recentList: HTMLElement | null;
+    headings: HTMLElement | null;
+    headingList: HTMLElement | null;
+    kinds: HTMLElement | null;
     error: HTMLElement | null;
     errorMessage: HTMLElement | null;
     divider: HTMLElement | null;
@@ -136,8 +156,12 @@ export class LinkInlineTool implements InlineTool {
   } = {
       input: null,
       urlLabel: null,
+      options: null,
       recent: null,
       recentList: null,
+      headings: null,
+      headingList: null,
+      kinds: null,
       titleInput: null,
       titleLabel: null,
       inputWrapper: null,
@@ -156,15 +180,15 @@ export class LinkInlineTool implements InlineTool {
   private editing = false;
 
   /**
-   * Recent row picked with the arrow keys, -1 for none. Focus never leaves
+   * Option row picked with the arrow keys, -1 for none. Focus never leaves
    * the field: the popover's Flipper owns arrow keys on any other target.
    */
-  private activeRecentIndex = -1;
+  private activeOptionIndex = -1;
 
   /**
-   * Reused canvas for measuring the input's text width (see measureTextWidth).
+   * Headings of this document, read on every open.
    */
-  private measureCanvas: HTMLCanvasElement | null = null;
+  private headingTargets: HeadingTarget[] = [];
 
   /**
    * Stable id linking the input to its inline error via aria-describedby.
@@ -207,6 +231,11 @@ export class LinkInlineTool implements InlineTool {
   private i18n: I18n;
 
   /**
+   * Blocks API, read for the document's headings
+   */
+  private blocks: Blocks;
+
+  /**
    * Global anchor-building config (target / rel / transformHref)
    */
   private linkConfig: NonNullable<BlokConfig['link']>;
@@ -219,12 +248,16 @@ export class LinkInlineTool implements InlineTool {
     this.inlineToolbar = api.inlineToolbar;
     this.notifier = api.notifier;
     this.i18n = api.i18n;
+    this.blocks = api.blocks;
     this.linkConfig = api.config.link ?? {};
     this.selection = new SelectionUtils();
     this.nodes.urlLabel = this.createFieldLabel(this.i18n.t('tools.link.pageOrUrl'), 'inline-tool-url-label', false);
     this.nodes.input = this.createInput();
     this.nodes.suggestion = this.createSuggestion();
     this.nodes.recent = this.createRecent();
+    this.nodes.headings = this.createHeadings();
+    this.nodes.kinds = this.createKinds();
+    this.nodes.options = this.createOptions();
     this.nodes.error = this.createError();
     this.nodes.titleLabel = this.createFieldLabel(this.i18n.t('tools.link.linkTitle'), 'inline-tool-title-label', true);
     this.nodes.titleInput = this.createTitleInput();
@@ -233,13 +266,14 @@ export class LinkInlineTool implements InlineTool {
     this.nodes.inputWrapper = document.createElement('div');
     // Horizontal padding keeps the URL input's 2px focus ring from being clipped
     // by the popover's overflow-y-auto items box, which sits flush to the wrapper.
-    this.nodes.inputWrapper.className = 'px-1';
+    // One card width for every state, so the lists never make it jump.
+    this.nodes.inputWrapper.className = 'px-1 w-80 mobile:w-auto';
     this.nodes.inputWrapper.append(
       this.nodes.urlLabel,
       this.nodes.input,
       this.nodes.error,
       this.nodes.suggestion,
-      this.nodes.recent,
+      this.nodes.options,
       this.nodes.titleLabel,
       this.nodes.titleInput,
       this.nodes.divider,
@@ -290,91 +324,31 @@ export class LinkInlineTool implements InlineTool {
     input.setAttribute('role', 'combobox');
     input.setAttribute('aria-autocomplete', 'list');
     input.setAttribute('aria-expanded', 'false');
-    input.setAttribute('aria-controls', `${this.errorId}-recent-list`);
+    input.setAttribute('aria-controls', `${this.errorId}-options`);
     this.setBooleanStateAttribute(input, this.DATA_ATTRIBUTES.inputOpened, false);
     input.addEventListener('keydown', (event: KeyboardEvent) => {
       if (event.key === 'Enter') {
         this.enterPressed(event);
       }
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-        this.moveActiveRecent(event);
+        this.moveActiveOption(event);
       }
     });
-    input.addEventListener('paste', () => {
-      requestAnimationFrame(() => {
-        // A paste replaces the rejected value, so the stale error must not
-        // linger next to the freshly revealed suggestion row.
-        this.clearValidationError();
-        this.updateSuggestion(input.value);
-        this.updateRecentVisibility();
-        this.resizeInput();
-      });
-    });
-    input.addEventListener('input', () => {
-      this.clearValidationError();
-      this.updateSuggestion(input.value);
-      this.updateRecentVisibility();
-      this.resizeInput();
-    });
+    // A paste replaces the rejected value, so the stale error must not
+    // linger next to the freshly revealed suggestion row.
+    input.addEventListener('paste', () => requestAnimationFrame(() => this.refreshForValue()));
+    input.addEventListener('input', () => this.refreshForValue());
 
     return input;
   }
 
   /**
-   * Measure how wide `text` renders in the URL input's own font. Returns null
-   * when measurement is unavailable (no canvas 2d context, e.g. jsdom) — the
-   * class-based fallback width applies then.
-   * @param text - the string to measure
+   * Bring the error, the suggestion row and the lists in line with the value.
    */
-  private measureTextWidth(text: string): number | null {
-    if (!this.nodes.input) {
-      return null;
-    }
-
-    this.measureCanvas ??= document.createElement('canvas');
-    const context = this.measureCanvas.getContext('2d');
-
-    if (!context) {
-      return null;
-    }
-
-    const style = window.getComputedStyle(this.nodes.input);
-    const font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`.trim();
-
-    if (font !== '') {
-      context.font = font;
-    }
-
-    return context.measureText(text).width;
-  }
-
-  /**
-   * Size the URL input to its content: rest at the narrow default and stretch
-   * with the typed link, capped at the old fixed width. Mobile keeps the
-   * fluid class-based width — the popover manages its own sizing there.
-   */
-  private resizeInput(): void {
-    const input = this.nodes.input;
-
-    if (!input) {
-      return;
-    }
-
-    if (isMobileScreen()) {
-      input.style.width = '';
-
-      return;
-    }
-
-    const measured = this.measureTextWidth(input.value || input.placeholder || '');
-
-    if (measured === null) {
-      return;
-    }
-
-    const width = Math.ceil(Math.min(Math.max(measured + INPUT_CHROME_WIDTH, INPUT_MIN_WIDTH), INPUT_MAX_WIDTH));
-
-    input.style.width = `${width}px`;
+  private refreshForValue(): void {
+    this.clearValidationError();
+    this.updateSuggestion(this.nodes.input?.value ?? '');
+    this.updateOptions();
   }
 
   /**
@@ -640,60 +614,199 @@ export class LinkInlineTool implements InlineTool {
   }
 
   /**
-   * "Recent" list of the last links added, shown under the empty field.
+   * The one listbox the field controls. Its sections are option groups, so
+   * the arrow keys walk from the recent links straight into the headings.
    */
-  private createRecent(): HTMLElement {
-    const section = document.createElement('div');
-    const labelId = `${this.errorId}-recent`;
+  private createOptions(): HTMLElement {
+    const options = document.createElement('div');
 
-    // Same width rules as the suggestion wrapper: a long page title must not
-    // widen the card. No display class, so the `hidden` attribute works.
-    section.className = 'w-0 min-w-full';
-    section.setAttribute('data-link-recent', '');
-    section.hidden = true;
+    options.id = `${this.errorId}-options`;
+    options.setAttribute('role', 'listbox');
+    options.setAttribute('data-link-options', '');
+    options.hidden = true;
 
     const divider = document.createElement('div');
 
-    divider.className = 'mt-1.5 mb-1 h-px bg-link-input-border';
+    divider.className = 'mt-1.5 mb-0.5 h-px bg-link-input-border';
 
-    const label = document.createElement('div');
+    options.append(divider, ...[this.nodes.recent, this.nodes.headings, this.nodes.kinds].filter((node) => node !== null));
 
-    label.id = labelId;
-    label.className = 'px-1.5 pt-1 pb-0.5 text-[11px] leading-[14px] font-medium text-gray-text';
-    label.setAttribute('data-link-recent-label', '');
-    label.textContent = this.i18n.has(RECENT_LABEL_KEY) ? this.i18n.t(RECENT_LABEL_KEY) : 'Recent';
+    return options;
+  }
+
+  /**
+   * A labelled option group. No display class on the root, so the `hidden`
+   * attribute works.
+   * @param id - label id, also the base of the list id
+   * @param marker - data attribute naming the section
+   * @param labelText - the section label, or null for none
+   */
+  private createSection(id: string, marker: string, labelText: string | null): { section: HTMLElement; list: HTMLElement } {
+    const section = document.createElement('div');
+
+    // A long title must not widen the card.
+    section.className = 'w-0 min-w-full';
+    section.setAttribute(marker, '');
+    section.setAttribute('role', 'group');
+    section.hidden = true;
+
+    if (labelText !== null) {
+      const label = document.createElement('div');
+
+      label.id = id;
+      label.className = SECTION_LABEL_CLASSES;
+      label.setAttribute(`${marker}-label`, '');
+      label.textContent = labelText;
+      section.setAttribute('aria-labelledby', id);
+      section.append(label);
+    }
 
     const list = document.createElement('div');
 
-    list.id = `${labelId}-list`;
+    list.id = `${id}-list`;
     list.className = 'flex flex-col';
-    list.setAttribute('role', 'listbox');
-    list.setAttribute('aria-labelledby', labelId);
-    this.nodes.recentList = list;
+    section.append(list);
 
-    section.append(divider, label, list);
+    return { section, list };
+  }
+
+  /**
+   * An option row. Not a <button>: every button in a popover HTML item
+   * becomes a Flipper stop, and Flipper would steal the arrow keys from the
+   * field.
+   * @param kind - names the row's data markers: data-link-<kind>-row/-title/-meta
+   * @param id - element id, used by aria-activedescendant
+   * @param leading - icon or tile in front of the text
+   * @param title - main line
+   * @param meta - second line, skipped when empty
+   * @param onPick - what a click or Enter does
+   */
+  private createOptionRow(kind: string, id: string, leading: HTMLElement, title: string, meta: string, onPick: () => void): HTMLElement {
+    const row = document.createElement('div');
+
+    row.id = id;
+    row.className = OPTION_ROW_CLASSES;
+    row.setAttribute('role', 'option');
+    row.setAttribute('aria-selected', 'false');
+    row.setAttribute(`data-link-${kind}-row`, '');
+
+    const textEl = document.createElement('span');
+
+    textEl.className = 'flex-1 min-w-0';
+
+    const titleEl = document.createElement('span');
+
+    titleEl.className = OPTION_TITLE_CLASSES;
+    titleEl.setAttribute(`data-link-${kind}-title`, '');
+    titleEl.textContent = title;
+    textEl.append(titleEl);
+
+    if (meta !== '') {
+      const metaEl = document.createElement('span');
+
+      metaEl.className = OPTION_META_CLASSES;
+      metaEl.setAttribute(`data-link-${kind}-meta`, '');
+      metaEl.textContent = meta;
+      textEl.append(metaEl);
+    }
+
+    row.append(leading, textEl);
+    // Keep the saved selection and the field's focus while the row takes the click.
+    row.addEventListener('mousedown', (event) => event.preventDefault());
+    row.addEventListener('click', onPick);
+
+    return row;
+  }
+
+  private createIcon(svg: string): HTMLElement {
+    const icon = document.createElement('span');
+
+    icon.className = OPTION_ICON_CLASSES;
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = svg;
+
+    return icon;
+  }
+
+  /**
+   * "Recent" list of the last links added, shown under the empty field.
+   */
+  private createRecent(): HTMLElement {
+    const label = this.i18n.has(RECENT_LABEL_KEY) ? this.i18n.t(RECENT_LABEL_KEY) : 'Recent';
+    const { section, list } = this.createSection(`${this.errorId}-recent`, 'data-link-recent', label);
+
+    this.nodes.recentList = list;
 
     return section;
   }
 
   /**
-   * Rebuild the rows from storage. Called on every open, so a link added in
-   * another editor on the page shows up too.
+   * "On this page": headings of this document a link can jump to.
    */
-  private renderRecent(): void {
-    if (!this.nodes.recentList) {
+  private createHeadings(): HTMLElement {
+    const label = this.i18n.has(HEADINGS_LABEL_KEY) ? this.i18n.t(HEADINGS_LABEL_KEY) : 'On this page';
+    const { section, list } = this.createSection(`${this.errorId}-headings`, 'data-link-headings', label);
+
+    this.nodes.headingList = list;
+
+    return section;
+  }
+
+  /**
+   * The kinds of link the field takes, for when there is nothing else to
+   * show. Built once: the rows never change.
+   */
+  private createKinds(): HTMLElement {
+    const { section, list } = this.createSection(`${this.errorId}-kinds`, 'data-link-kinds', null);
+
+    list.append(...LINK_KINDS.map((kind, index) => {
+      const row = this.createOptionRow(
+        'kind',
+        `${this.errorId}-kind-${index}`,
+        this.createIcon(kind.icon),
+        this.i18n.t(kind.titleKey),
+        `${kind.prefix}…`,
+        () => this.startWith(kind.prefix)
+      );
+
+      row.setAttribute('data-link-kind-prefix', kind.prefix);
+
+      return row;
+    }));
+
+    return section;
+  }
+
+  /**
+   * Type a link kind's prefix into the field and keep the caret there.
+   * @param prefix - e.g. "mailto:"
+   */
+  private startWith(prefix: string): void {
+    const input = this.nodes.input;
+
+    if (!input) {
       return;
     }
 
-    this.nodes.recentList.replaceChildren(
+    input.value = prefix;
+    input.focus();
+    input.setSelectionRange(prefix.length, prefix.length);
+    this.refreshForValue();
+  }
+
+  /**
+   * Rebuild the recent rows from storage. Called on every open, so a link
+   * added in another editor on the page shows up too.
+   */
+  private renderRecent(): void {
+    this.nodes.recentList?.replaceChildren(
       ...getRecentLinks().map((entry, index) => this.createRecentRow(entry, index))
     );
-    this.updateRecentVisibility();
   }
 
   /**
    * One recent link: favicon or letter tile, then the page title over the
-   * site name, laid out like the suggestion row.
+   * site name.
    * Without a title the site name moves into the title slot and the path
    * takes its place.
    * @param entry - the stored link
@@ -711,18 +824,6 @@ export class LinkInlineTool implements InlineTool {
     const path = parsed ? `${parsed.pathname}${parsed.search}`.replace(/^\/$/, '') : '';
     const title = entry.title ?? site;
     const meta = entry.title !== undefined ? site : path;
-
-    // Not a <button>: every button in a popover HTML item becomes a Flipper
-    // stop, and Flipper would steal the arrow keys from the field.
-    const row = document.createElement('div');
-
-    row.id = `${this.errorId}-recent-${index}`;
-    row.className = RECENT_ROW_CLASSES;
-    row.title = entry.url;
-    row.setAttribute('role', 'option');
-    row.setAttribute('aria-selected', 'false');
-    row.style.animationDelay = `${index * 30}ms`;
-    row.setAttribute('data-link-recent-row', '');
 
     const tile = document.createElement('span');
 
@@ -750,35 +851,112 @@ export class LinkInlineTool implements InlineTool {
       showMonogram();
     }
 
-    const textEl = document.createElement('span');
+    const row = this.createOptionRow('recent', `${this.errorId}-recent-${index}`, tile, title, meta, () => this.applyLink(entry.url));
 
-    textEl.className = 'flex-1 min-w-0';
-
-    const titleEl = document.createElement('span');
-
-    titleEl.className = `${SUGGESTION_URL_TEXT} text-text-primary`;
-    titleEl.setAttribute('data-link-recent-title', '');
-    titleEl.textContent = title;
-
-    const metaEl = document.createElement('span');
-
-    metaEl.className = `${SUGGESTION_TYPE_TEXT} truncate`;
-    metaEl.setAttribute('data-link-recent-meta', '');
-    metaEl.textContent = meta;
-
-    textEl.append(titleEl, metaEl);
-    row.append(tile, textEl);
-    // Keep the saved selection alive while the row takes the click.
-    row.addEventListener('mousedown', (event) => event.preventDefault());
-    row.addEventListener('click', () => this.applyRecent(entry.url));
+    row.title = entry.url;
+    row.style.animationDelay = `${index * 30}ms`;
 
     return row;
   }
 
   /**
-   * @param url - the recent link to put on the selection
+   * Read the document's headings. A heading counts for the block whose own
+   * holder is its nearest block holder, so a container never re-reports a
+   * child's heading.
    */
-  private applyRecent(url: string): void {
+  private readHeadings(): HeadingTarget[] {
+    const holderSelector = `[${DATA_ATTR.element}]`;
+
+    return Array.from({ length: this.blocks.getBlocksCount() }, (_, index) => this.blocks.getBlockByIndex(index))
+      .flatMap((block) => {
+        const heading = block?.holder.querySelector('h1, h2, h3, h4, h5, h6');
+        const text = heading?.textContent?.trim() ?? '';
+
+        return block !== undefined && heading && heading.closest(holderSelector) === block.holder && text !== ''
+          ? [{ blockId: block.id, level: Number(heading.tagName.slice(1)), text }]
+          : [];
+      });
+  }
+
+  /**
+   * Headings matching the field: all of them when it is empty or a bare "#",
+   * otherwise those whose text contains the value (without its "#").
+   * @param value - the trimmed field value
+   */
+  private matchHeadings(value: string): HeadingTarget[] {
+    const query = (value.startsWith('#') ? value.slice(1) : value).trim().toLowerCase();
+
+    return this.headingTargets
+      .filter((heading) => heading.text.toLowerCase().includes(query))
+      .slice(0, HEADING_LIMIT);
+  }
+
+  /**
+   * @param matches - headings to list
+   */
+  private renderHeadings(matches: HeadingTarget[]): void {
+    const topLevel = Math.min(...matches.map((heading) => heading.level));
+
+    this.nodes.headingList?.replaceChildren(...matches.map((heading, index) => {
+      const row = this.createOptionRow(
+        'heading',
+        `${this.errorId}-heading-${index}`,
+        this.createIcon(HEADING_ICONS[heading.level] ?? IconHash),
+        heading.text,
+        '',
+        () => this.applyLink(`#${heading.blockId}`)
+      );
+
+      row.style.animationDelay = `${index * 30}ms`;
+      // Indent by level, relative to the shallowest heading shown.
+      row.style.paddingInlineStart = `${8 + (heading.level - topLevel) * 16}px`;
+      row.setAttribute('data-link-heading-level', String(heading.level));
+
+      return row;
+    }));
+  }
+
+  /**
+   * Show the sections that fit the field's value. Empty field: recent links
+   * and headings, or the link kinds when there are neither. Typed value:
+   * the headings it matches.
+   */
+  private updateOptions(): void {
+    const { recent, headings, kinds, options, suggestion, input } = this.nodes;
+
+    if (!recent || !headings || !kinds || !options || !input) {
+      return;
+    }
+
+    const value = input.value.trim();
+    const matches = this.editing ? [] : this.matchHeadings(value);
+    const recentCount = this.nodes.recentList?.childElementCount ?? 0;
+    const incomplete = value !== '' && !this.isLinkComplete(value);
+
+    this.renderHeadings(matches);
+    recent.hidden = this.editing || value !== '' || recentCount === 0;
+    headings.hidden = matches.length === 0;
+    kinds.hidden = this.editing || value !== '' || !recent.hidden || !headings.hidden;
+    options.hidden = recent.hidden && headings.hidden && kinds.hidden;
+    input.setAttribute('aria-expanded', String(!options.hidden));
+
+    // A typed search picks its first heading (row 0: the other sections hide
+    // once there is a value), so Enter jumps to it. The suggestion row would
+    // then promise a different Enter, so it hides. A typed web link keeps
+    // Enter for itself.
+    const searching = matches.length > 0 && (value.startsWith('#') || incomplete);
+
+    if (searching) {
+      suggestion?.classList.add('hidden');
+    }
+
+    this.setActiveOption(searching ? 0 : -1);
+  }
+
+  /**
+   * @param url - the link to put on the selection
+   */
+  private applyLink(url: string): void {
     if (!this.nodes.input) {
       return;
     }
@@ -786,8 +964,15 @@ export class LinkInlineTool implements InlineTool {
     this.confirmLink();
   }
 
-  private getRecentRows(): HTMLElement[] {
-    return Array.from(this.nodes.recentList?.querySelectorAll<HTMLElement>('[data-link-recent-row]') ?? []);
+  /**
+   * Option rows of the visible sections, in order.
+   */
+  private getOptionRows(): HTMLElement[] {
+    const sections = [this.nodes.recent, this.nodes.headings, this.nodes.kinds];
+
+    return sections
+      .filter((section) => section !== null && !section.hidden)
+      .flatMap((section) => Array.from(section?.querySelectorAll<HTMLElement>('[role="option"]') ?? []));
   }
 
   /**
@@ -795,56 +980,41 @@ export class LinkInlineTool implements InlineTool {
    * field itself.
    * @param event - the arrow key press
    */
-  private moveActiveRecent(event: KeyboardEvent): void {
-    const count = this.getRecentRows().length;
+  private moveActiveOption(event: KeyboardEvent): void {
+    const count = this.getOptionRows().length;
 
-    if (this.nodes.recent?.hidden !== false || count === 0) {
+    if (count === 0) {
       return;
     }
 
     event.preventDefault();
 
     const next = event.key === 'ArrowDown'
-      ? Math.min(this.activeRecentIndex + 1, count - 1)
-      : Math.max(this.activeRecentIndex - 1, -1);
+      ? Math.min(this.activeOptionIndex + 1, count - 1)
+      : Math.max(this.activeOptionIndex - 1, -1);
 
-    this.setActiveRecent(next);
+    this.setActiveOption(next);
   }
 
   /**
    * @param index - row to highlight, -1 for none
    */
-  private setActiveRecent(index: number): void {
-    this.activeRecentIndex = index;
+  private setActiveOption(index: number): void {
+    this.activeOptionIndex = index;
 
-    const rows = this.getRecentRows();
+    const rows = this.getOptionRows();
 
-    rows.forEach((row, i) => row.setAttribute('aria-selected', String(i === index)));
+    this.nodes.options?.querySelectorAll('[role="option"]').forEach((row) => row.setAttribute('aria-selected', 'false'));
 
     const active = rows[index];
 
     if (active) {
+      active.setAttribute('aria-selected', 'true');
       this.nodes.input?.setAttribute('aria-activedescendant', active.id);
       active.scrollIntoView?.({ block: 'nearest' });
     } else {
       this.nodes.input?.removeAttribute('aria-activedescendant');
     }
-  }
-
-  /**
-   * The list belongs to an empty create-mode field. Once the user types, the
-   * suggestion row takes over.
-   */
-  private updateRecentVisibility(): void {
-    if (!this.nodes.recent) {
-      return;
-    }
-
-    const typed = (this.nodes.input?.value ?? '').trim() !== '';
-
-    this.nodes.recent.hidden = this.editing || typed || this.getRecentRows().length === 0;
-    this.nodes.input?.setAttribute('aria-expanded', String(!this.nodes.recent.hidden));
-    this.setActiveRecent(-1);
   }
 
   /**
@@ -1003,7 +1173,8 @@ export class LinkInlineTool implements InlineTool {
     // suggestion chip — keep it hidden even though the URL is prefilled.
     this.updateSuggestion(this.nodes.input.value);
     this.renderRecent();
-    this.resizeInput();
+    this.headingTargets = this.editing ? [] : this.readHeadings();
+    this.updateOptions();
 
     this.nodes.input.className = twMerge(this.INPUT_BASE_CLASSES, 'block');
     this.setBooleanStateAttribute(this.nodes.input, this.DATA_ATTRIBUTES.inputOpened, true);
@@ -1150,15 +1321,14 @@ export class LinkInlineTool implements InlineTool {
     this.nodes.input.className = this.INPUT_BASE_CLASSES;
     this.setBooleanStateAttribute(this.nodes.input, this.DATA_ATTRIBUTES.inputOpened, false);
     this.nodes.input.value = '';
-    this.nodes.input.style.width = '';
     this.setEditAffordancesVisible(false);
     this.clearValidationError();
     this.nodes.suggestion?.classList.add('hidden');
-    if (this.nodes.recent) {
-      this.nodes.recent.hidden = true;
-    }
+    this.headingTargets = [];
+    this.nodes.headingList?.replaceChildren();
+    [this.nodes.options, this.nodes.recent, this.nodes.headings, this.nodes.kinds].forEach((node) => node?.toggleAttribute('hidden', true));
     this.nodes.input.setAttribute('aria-expanded', 'false');
-    this.setActiveRecent(-1);
+    this.setActiveOption(-1);
     this.updateButtonStateAttributes(false);
     this.unlinkAvailable = false;
     if (clearSavedSelection) {
@@ -1215,9 +1385,9 @@ export class LinkInlineTool implements InlineTool {
     if (!this.nodes.input) {
       return;
     }
-    const activeRow = this.getRecentRows()[this.activeRecentIndex];
+    const activeRow = this.getOptionRows()[this.activeOptionIndex];
 
-    if (activeRow !== undefined && this.nodes.recent?.hidden === false) {
+    if (activeRow !== undefined) {
       event.preventDefault();
       activeRow.click();
 

@@ -116,6 +116,31 @@ const ENGLISH_LINK_TRANSLATIONS: Record<string, string> = {
   'tools.link.webLink': defaultDictionary['tools.link.webLink'],
 };
 
+type DocumentBlock = { id: string; name: string; holder: HTMLElement };
+
+/**
+ * Blocks the tool sees through `api.blocks`. Reset before every test.
+ */
+const documentBlocks: DocumentBlock[] = [];
+
+const addBlock = (id: string, content: HTMLElement, name = 'header'): HTMLElement => {
+  const holder = document.createElement('div');
+
+  holder.setAttribute('data-blok-element', '');
+  holder.append(content);
+  documentBlocks.push({ id, name, holder });
+
+  return holder;
+};
+
+const addHeading = (level: number, text: string, id = `heading-${documentBlocks.length}`): HTMLElement => {
+  const heading = document.createElement(`h${level}`);
+
+  heading.textContent = text;
+
+  return addBlock(id, heading);
+};
+
 const createTool = (
   linkConfig?: LinkConfig,
   translations: Record<string, string> = ENGLISH_LINK_TRANSLATIONS
@@ -133,6 +158,10 @@ const createTool = (
     inlineToolbar,
     notifier,
     i18n,
+    blocks: {
+      getBlocksCount: () => documentBlocks.length,
+      getBlockByIndex: (index: number) => documentBlocks[index],
+    },
     config: {
       link: linkConfig,
     },
@@ -183,6 +212,7 @@ describe('LinkInlineTool', () => {
     document.body.innerHTML = '';
     setDocumentCommand(vi.fn());
     localStorage.removeItem('blok-recent-links');
+    documentBlocks.length = 0;
   });
 
   it('exposes inline metadata and shortcut', () => {
@@ -236,90 +266,19 @@ describe('LinkInlineTool', () => {
     expect(input.className).not.toMatch(/(^|\s)w-\[200px\]/);
   });
 
-  describe('content-driven input width', () => {
-    type MeasurableTool = {
-      measureTextWidth(text: string): number | null;
-      openActions(needFocus?: boolean): void;
-      closeActions(clearSavedSelection?: boolean): void;
-    };
+  it('keeps one card width while the typed link and the lists change, and goes fluid on mobile', () => {
+    const { tool } = createTool();
+    const renderResult = tool.render() as unknown as LinkToolRenderResult;
+    const wrapper = renderResult.children.items[0].element;
+    const input = getInputFromWrapper(wrapper);
 
-    it('opens at the narrow default width instead of the old full width', () => {
-      const { tool } = createTool();
-      const renderResult = tool.render() as unknown as LinkToolRenderResult;
-      const input = getInputFromWrapper(renderResult.children.items[0].element);
+    renderResult.children.onOpen();
+    input.value = 'https://a-very-long-link.example.com/with/a/deep/path?and=query';
+    input.dispatchEvent(new Event('input'));
 
-      vi.spyOn(tool as unknown as MeasurableTool, 'measureTextWidth').mockReturnValue(60);
-
-      (tool as unknown as MeasurableTool).openActions();
-
-      expect(input.style.width).toBe('220px');
-    });
-
-    it('grows the input with the measured link text up to the 320px cap', () => {
-      const { tool } = createTool();
-      const renderResult = tool.render() as unknown as LinkToolRenderResult;
-      const input = getInputFromWrapper(renderResult.children.items[0].element);
-      const measureSpy = vi.spyOn(tool as unknown as MeasurableTool, 'measureTextWidth');
-
-      measureSpy.mockReturnValue(250);
-      input.value = 'https://a-medium-length-link.example.com';
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-
-      // 250px of text + 28px input chrome (padding, borders, caret slack).
-      expect(input.style.width).toBe('278px');
-
-      measureSpy.mockReturnValue(400);
-      input.value = 'https://a-very-long-link.example.com/with/a/deep/path?and=query';
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-
-      expect(input.style.width).toBe('320px');
-    });
-
-    it('leaves the class-based width untouched when text cannot be measured', () => {
-      const { tool } = createTool();
-      const renderResult = tool.render() as unknown as LinkToolRenderResult;
-      const input = getInputFromWrapper(renderResult.children.items[0].element);
-
-      vi.spyOn(tool as unknown as MeasurableTool, 'measureTextWidth').mockReturnValue(null);
-
-      (tool as unknown as MeasurableTool).openActions();
-
-      expect(input.style.width).toBe('');
-    });
-
-    it('clears the inline width when the popover closes', () => {
-      const { tool } = createTool();
-      const renderResult = tool.render() as unknown as LinkToolRenderResult;
-      const input = getInputFromWrapper(renderResult.children.items[0].element);
-
-      vi.spyOn(tool as unknown as MeasurableTool, 'measureTextWidth').mockReturnValue(300);
-      (tool as unknown as MeasurableTool).openActions();
-      expect(input.style.width).toBe('320px');
-
-      (tool as unknown as MeasurableTool).closeActions();
-
-      expect(input.style.width).toBe('');
-    });
-
-    it('keeps the fluid full-width behavior on mobile screens', () => {
-      const matchMediaStub = vi.fn().mockReturnValue({ matches: true });
-
-      vi.stubGlobal('matchMedia', matchMediaStub);
-
-      try {
-        const { tool } = createTool();
-        const renderResult = tool.render() as unknown as LinkToolRenderResult;
-        const input = getInputFromWrapper(renderResult.children.items[0].element);
-
-        vi.spyOn(tool as unknown as MeasurableTool, 'measureTextWidth').mockReturnValue(300);
-
-        (tool as unknown as MeasurableTool).openActions();
-
-        expect(input.style.width).toBe('');
-      } finally {
-        vi.unstubAllGlobals();
-      }
-    });
+    expect(wrapper.className).toMatch(/(^|\s)w-80(\s|$)/);
+    expect(wrapper.className).toMatch(/(^|\s)mobile:w-auto(\s|$)/);
+    expect(input.style.width).toBe('');
   });
 
   it('renders actions input and invokes enter handler when Enter key is pressed', () => {
@@ -1446,6 +1405,294 @@ describe('LinkInlineTool', () => {
       input.dispatchEvent(new Event('input'));
 
       expect(input.hasAttribute('aria-activedescendant')).toBe(false);
+    });
+  });
+
+  describe('headings on this page', () => {
+    type HeadingTool = {
+      insertLink(link: string): void;
+    };
+
+    const openCreating = (): ToolSetup & { itemWrapper: HTMLElement; input: HTMLInputElement } => {
+      const setup = createTool();
+
+      vi.spyOn(setup.tool as unknown as HeadingTool, 'insertLink').mockImplementation(() => undefined);
+
+      const renderResult = setup.tool.render() as unknown as LinkToolRenderResult;
+      const itemWrapper = renderResult.children.items[0].element;
+
+      document.body.appendChild(itemWrapper);
+      renderResult.children.onOpen();
+
+      return { ...setup, itemWrapper, input: getInputFromWrapper(itemWrapper) };
+    };
+
+    const headingSection = (itemWrapper: HTMLElement): HTMLElement | null =>
+      itemWrapper.querySelector<HTMLElement>('[data-link-headings]');
+
+    const headingRows = (itemWrapper: HTMLElement): HTMLElement[] =>
+      Array.from(itemWrapper.querySelectorAll<HTMLElement>('[data-link-heading-row]'));
+
+    const headingTitles = (itemWrapper: HTMLElement): string[] =>
+      headingRows(itemWrapper).map((row) => row.querySelector('[data-link-heading-title]')?.textContent ?? '');
+
+    const type = (field: HTMLInputElement, value: string): void => {
+      const input = field;
+
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+    };
+
+    const press = (input: HTMLInputElement, key: string): KeyboardEvent => {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+
+      input.dispatchEvent(event);
+
+      return event;
+    };
+
+    it('lists the document headings in order under "On this page"', () => {
+      addHeading(1, 'Intro', 'h-intro');
+      addBlock('p-1', document.createElement('p'), 'paragraph');
+      addHeading(2, 'Setup', 'h-setup');
+      addHeading(3, 'Install', 'h-install');
+
+      const { itemWrapper } = openCreating();
+
+      expect(headingSection(itemWrapper)?.hidden).toBe(false);
+      expect(itemWrapper.querySelector('[data-link-headings-label]')?.textContent).toBe('On this page');
+      expect(headingTitles(itemWrapper)).toEqual(['Intro', 'Setup', 'Install']);
+      expect(headingRows(itemWrapper).map((row) => row.getAttribute('data-link-heading-level'))).toEqual(['1', '2', '3']);
+    });
+
+    it('skips empty headings and reads a nested child\'s heading only once, from the child', () => {
+      addHeading(2, '   ', 'h-empty');
+
+      const child = addHeading(3, 'Inside toggle', 'h-child');
+      const toggleContent = document.createElement('div');
+
+      toggleContent.append(child);
+      addBlock('toggle', toggleContent, 'toggle');
+
+      const { itemWrapper } = openCreating();
+
+      expect(headingTitles(itemWrapper)).toEqual(['Inside toggle']);
+    });
+
+    it('stays hidden when the document has no headings', () => {
+      addBlock('p-1', document.createElement('p'), 'paragraph');
+
+      const { itemWrapper } = openCreating();
+
+      expect(headingSection(itemWrapper)?.hidden).toBe(true);
+    });
+
+    it('links the heading by its block id and keeps it out of the recent history', () => {
+      addHeading(2, 'Setup', 'h-setup');
+
+      const { tool, itemWrapper, inlineToolbar } = openCreating();
+
+      headingRows(itemWrapper)[0].click();
+
+      expect((tool as unknown as HeadingTool).insertLink).toHaveBeenCalledWith('#h-setup');
+      expect(inlineToolbar.close).toHaveBeenCalled();
+      expect(localStorage.getItem('blok-recent-links')).toBeNull();
+    });
+
+    it('filters the headings by the typed text and picks the first match on Enter', () => {
+      addHeading(2, 'Header Levels', 'h-levels');
+      addHeading(2, 'Inline Formatting', 'h-inline');
+      addHeading(3, 'Nested inline code', 'h-code');
+
+      const { tool, itemWrapper, input } = openCreating();
+
+      type(input, 'INLINE');
+
+      expect(headingTitles(itemWrapper)).toEqual(['Inline Formatting', 'Nested inline code']);
+      // The inert "keep typing" row would contradict the matches below it.
+      expect(getSuggestionChip(itemWrapper)?.classList.contains('hidden')).toBe(true);
+      expect(input.getAttribute('aria-activedescendant')).toBe(headingRows(itemWrapper)[0].id);
+
+      press(input, 'Enter');
+
+      expect((tool as unknown as HeadingTool).insertLink).toHaveBeenCalledWith('#h-inline');
+    });
+
+    it('brings the "keep typing" row back when no heading matches', () => {
+      addHeading(2, 'Setup', 'h-setup');
+
+      const { itemWrapper, input } = openCreating();
+
+      type(input, 'zzz');
+
+      expect(headingSection(itemWrapper)?.hidden).toBe(true);
+      expect(getSuggestionChip(itemWrapper)?.classList.contains('hidden')).toBe(false);
+      expect(input.hasAttribute('aria-activedescendant')).toBe(false);
+    });
+
+    it('lists every heading for a bare "#" and filters by the text after it', () => {
+      addHeading(2, 'Setup', 'h-setup');
+      addHeading(2, 'Usage', 'h-usage');
+
+      const { itemWrapper, input } = openCreating();
+
+      type(input, '#');
+      expect(headingTitles(itemWrapper)).toEqual(['Setup', 'Usage']);
+
+      type(input, '#us');
+      expect(headingTitles(itemWrapper)).toEqual(['Usage']);
+      // Enter picks the heading, so no row may offer to insert "#us" itself.
+      expect(getSuggestionChip(itemWrapper)?.classList.contains('hidden')).toBe(true);
+      expect(input.getAttribute('aria-activedescendant')).toBe(headingRows(itemWrapper)[0].id);
+
+      type(input, '#nothing-matches');
+      expect(getSuggestionChip(itemWrapper)?.classList.contains('hidden')).toBe(false);
+    });
+
+    it('does not steal Enter from a typed web link that happens to match a heading', () => {
+      addHeading(2, 'Notes on example.com', 'h-notes');
+
+      const { tool, input } = openCreating();
+
+      type(input, 'example.com');
+      press(input, 'Enter');
+
+      expect((tool as unknown as HeadingTool).insertLink).toHaveBeenCalledWith('http://example.com');
+    });
+
+    it('shows at most six headings at a time', () => {
+      for (let index = 0; index < 9; index++) {
+        addHeading(2, `Section ${index}`);
+      }
+
+      const { itemWrapper } = openCreating();
+
+      expect(headingRows(itemWrapper)).toHaveLength(6);
+    });
+
+    it('walks from the recent links into the headings with the arrow keys', () => {
+      localStorage.setItem('blok-recent-links', JSON.stringify([{ url: 'https://a.com', title: 'A' }]));
+      addHeading(2, 'Setup', 'h-setup');
+
+      const { itemWrapper, input } = openCreating();
+
+      press(input, 'ArrowDown');
+      press(input, 'ArrowDown');
+
+      expect(input.getAttribute('aria-activedescendant')).toBe(headingRows(itemWrapper)[0].id);
+      expect(headingRows(itemWrapper)[0]).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('keeps every section inside the one listbox the field controls', () => {
+      localStorage.setItem('blok-recent-links', JSON.stringify([{ url: 'https://a.com', title: 'A' }]));
+      addHeading(2, 'Setup', 'h-setup');
+
+      const { itemWrapper, input } = openCreating();
+      const listboxes = itemWrapper.querySelectorAll('[role="listbox"]');
+
+      expect(listboxes).toHaveLength(1);
+      expect(input).toHaveAttribute('aria-controls', listboxes[0].id);
+      expect(listboxes[0].contains(headingRows(itemWrapper)[0])).toBe(true);
+      expect(listboxes[0].contains(itemWrapper.querySelector('[data-link-recent-row]'))).toBe(true);
+    });
+
+    it('stays hidden while editing an existing link', () => {
+      addHeading(2, 'Setup', 'h-setup');
+
+      const setup = createTool();
+      const anchor = document.createElement('a');
+
+      anchor.setAttribute('href', 'https://b.com');
+      setup.selection.findParentTag.mockReturnValue(anchor);
+
+      const renderResult = setup.tool.render() as unknown as LinkToolRenderResult;
+
+      renderResult.children.onOpen();
+
+      expect(headingSection(renderResult.children.items[0].element)?.hidden).toBe(true);
+    });
+
+    it('reads the headings again on every open', () => {
+      addHeading(2, 'Setup', 'h-setup');
+
+      const setup = createTool();
+      const renderResult = setup.tool.render() as unknown as LinkToolRenderResult;
+      const itemWrapper = renderResult.children.items[0].element;
+
+      renderResult.children.onOpen();
+      renderResult.children.onClose();
+      addHeading(2, 'Usage', 'h-usage');
+      renderResult.children.onOpen();
+
+      expect(headingTitles(itemWrapper)).toEqual(['Setup', 'Usage']);
+    });
+  });
+
+  describe('empty state', () => {
+    const openCreating = (): { itemWrapper: HTMLElement; input: HTMLInputElement } => {
+      const setup = createTool();
+      const renderResult = setup.tool.render() as unknown as LinkToolRenderResult;
+      const itemWrapper = renderResult.children.items[0].element;
+
+      document.body.appendChild(itemWrapper);
+      renderResult.children.onOpen();
+
+      return { itemWrapper, input: getInputFromWrapper(itemWrapper) };
+    };
+
+    const kindSection = (itemWrapper: HTMLElement): HTMLElement | null =>
+      itemWrapper.querySelector<HTMLElement>('[data-link-kinds]');
+
+    const kindRows = (itemWrapper: HTMLElement): HTMLElement[] =>
+      Array.from(itemWrapper.querySelectorAll<HTMLElement>('[data-link-kind-row]'));
+
+    it('offers the kinds of link it can add when there is nothing else to show', () => {
+      const { itemWrapper, input } = openCreating();
+
+      expect(kindSection(itemWrapper)?.hidden).toBe(false);
+      expect(kindRows(itemWrapper).map((row) => row.querySelector('[data-link-kind-title]')?.textContent)).toEqual([
+        defaultDictionary['tools.link.webLink'],
+        defaultDictionary['tools.link.emailAddress'],
+      ]);
+      expect(kindRows(itemWrapper).map((row) => row.getAttribute('data-link-kind-prefix'))).toEqual(['https://', 'mailto:']);
+      expect(input).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    it('starts the link with the picked kind and keeps typing in the field', () => {
+      const { itemWrapper, input } = openCreating();
+
+      input.focus();
+      kindRows(itemWrapper)[1].click();
+
+      expect(input.value).toBe('mailto:');
+      expect(input).toHaveFocus();
+      expect(kindSection(itemWrapper)?.hidden).toBe(true);
+      expect(getSuggestionChip(itemWrapper)?.classList.contains('hidden')).toBe(false);
+    });
+
+    it('picks the highlighted kind on Enter', () => {
+      const { input } = openCreating();
+
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+      expect(input.value).toBe('https://');
+    });
+
+    it('gives way to recent links', () => {
+      localStorage.setItem('blok-recent-links', JSON.stringify([{ url: 'https://a.com', title: 'A' }]));
+
+      const { itemWrapper } = openCreating();
+
+      expect(kindSection(itemWrapper)?.hidden).toBe(true);
+    });
+
+    it('gives way to headings', () => {
+      addHeading(2, 'Setup');
+
+      const { itemWrapper } = openCreating();
+
+      expect(kindSection(itemWrapper)?.hidden).toBe(true);
     });
   });
 

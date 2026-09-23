@@ -25,6 +25,7 @@ import { isSamePageLink } from '../../tools/link/registry';
 
 // Controllers and handlers
 import { BlockHoverController } from './uiControllers/controllers/blockHover';
+import { GestureController } from './uiControllers/controllers/gesture';
 import { KeyboardController } from './uiControllers/controllers/keyboard';
 import { SelectionController } from './uiControllers/controllers/selection';
 import { createDocumentClickedHandler } from './uiControllers/handlers/click';
@@ -98,6 +99,7 @@ export class UI extends Module<UINodes> {
    * Controllers for UI state management
    */
   private keyboardController: KeyboardController | null = null;
+  private gestureController: GestureController | null = null;
   private selectionController: SelectionController | null = null;
   private blockHoverController: BlockHoverController | null = null;
   private toggleShortcuts: ToggleShortcuts | null = null;
@@ -277,6 +279,13 @@ export class UI extends Module<UINodes> {
     this.keyboardController.state = this.Blok;
     this.keyboardController.setRedactorElement(this.nodes.redactor);
     this.keyboardController.setWrapperElement(this.nodes.wrapper);
+
+    this.gestureController = new GestureController({
+      config: this.config,
+      eventsDispatcher: this.eventsDispatcher,
+    });
+    this.gestureController.state = this.Blok;
+    this.gestureController.setWrapperElement(this.nodes.wrapper);
 
     /**
      * Selection controller needs wrapper element for click detection
@@ -1158,6 +1167,9 @@ export class UI extends Module<UINodes> {
      * Enable keyboard controller for document keydown handling
      * Keyboard controller also handles beforeinput and caret capture
      */
+    // Before the keyboard controller: both listen on the document in the
+    // capture phase, and a gesture must start before an undo key replays.
+    this.gestureController?.enable();
     this.keyboardController?.enable();
 
     /**
@@ -1194,6 +1206,7 @@ export class UI extends Module<UINodes> {
      * Disable keyboard controller
      */
     this.keyboardController?.disable();
+    this.gestureController?.disable();
 
     /**
      * Disable block hover controller unless the caller opted to keep it alive.

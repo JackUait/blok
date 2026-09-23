@@ -286,14 +286,6 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   private restrictedToolNames: string[] = [];
 
   /**
-   * Id of the block whose mutation watching was stopped on open, so it can be
-   * re-armed on close. Leaving the block unwatched would permanently silence
-   * its didMutated events (nothing else re-arms them until re-render), which
-   * among other things freezes toolbar repositioning for that block.
-   */
-  private mutationWatchStoppedBlockId: string | null = null;
-
-  /**
    * Whether the toolbox was opened in slash-search mode (via "/" key or existing slash paragraph).
    * When false (opened via plus button), the input filter uses the full block text as the query
    * instead of requiring a leading "/" and does not close on missing slash.
@@ -490,18 +482,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       return;
     }
 
-    /**
-     * Stop mutation watching on the current block when toolbox opens.
-     * This prevents spurious block-changed events from DOM manipulations
-     * that may occur during toolbox interactions (focus changes, etc).
-     */
-    const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
-
-    this.api.blocks.stopBlockMutationWatching(currentBlockIndex);
-
-    const currentBlock = this.api.blocks.getBlockByIndex(currentBlockIndex);
-
-    this.mutationWatchStoppedBlockId = currentBlock?.id ?? null;
+    const currentBlock = this.api.blocks.getBlockByIndex(this.api.blocks.getCurrentBlockIndex());
 
     /**
      * Hide tools the insertion target does not permit: the Table tool's
@@ -593,7 +574,6 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       this.restrictedToolNames = [];
     }
 
-    this.restoreBlockMutationWatching();
     this.stopListeningToBlockInput();
     this.popover?.hide();
 
@@ -726,26 +706,10 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       this.restrictedToolNames = [];
     }
 
-    this.restoreBlockMutationWatching();
     this.stopListeningToBlockInput();
     this.opened = false;
     this.emit(ToolboxEvent.Closed);
   };
-
-  /**
-   * Re-arms mutation watching on the block that open() silenced. Without this
-   * the block would never emit didMutated again (nothing re-arms watching
-   * until the block is re-rendered), leaving every mutation-driven consumer —
-   * toolbar repositioning, change events — permanently blind to that block.
-   */
-  private restoreBlockMutationWatching(): void {
-    if (this.mutationWatchStoppedBlockId === null) {
-      return;
-    }
-
-    this.api.blocks.startBlockMutationWatching(this.mutationWatchStoppedBlockId);
-    this.mutationWatchStoppedBlockId = null;
-  }
 
   /**
    * Tool names the block about to be inserted may not use, given where it would

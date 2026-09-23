@@ -284,6 +284,7 @@ type BlokStub = {
   };
   YjsManager: {
     stopCapturing: ReturnType<typeof vi.fn>;
+    beginApiCall: ReturnType<typeof vi.fn>;
   };
   I18n: {
     t: ReturnType<typeof vi.fn>;
@@ -347,6 +348,7 @@ const createBlokStub = (
     },
     YjsManager: {
       stopCapturing: vi.fn(),
+      beginApiCall: vi.fn(),
     },
     I18n: {
       t: vi.fn((key: string) => key),

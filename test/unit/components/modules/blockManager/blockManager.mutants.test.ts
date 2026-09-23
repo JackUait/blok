@@ -2135,7 +2135,8 @@ describe('BlockManager.convert — toggle handling', () => {
     // of each subtree is reparented directly.
     expect(setIdOfFirst(harness)).toEqual(['para']);
     expect((harness.hierarchy.setBlockParent as Mock).mock.calls.every((call) => call[1] === 'converted')).toBe(true);
-    expect(harness.yjs.transactMoves).toHaveBeenCalledOnce();
+    // Tracked writes, not a move group: the adoption undoes together with the convert.
+    expect(harness.yjs.transactMoves).not.toHaveBeenCalled();
   });
 
   it('adopts grandchildren that ride under an adopted sibling', async () => {

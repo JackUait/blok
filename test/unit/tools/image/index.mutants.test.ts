@@ -1975,6 +1975,23 @@ describe('ImageTool — caption', () => {
     expect(block.dispatchChange).toHaveBeenCalledTimes(1);
   });
 
+  it('saves the caption being typed before it loses focus', () => {
+    const tool = new ImageTool(createOptions({ url: 'u', caption: 'Sun' }));
+    const caption = el<HTMLElement>(tool.render(), '.blok-image-caption');
+
+    caption.textContent = 'Sunset';
+
+    expect(tool.save().caption).toBe('Sunset');
+  });
+
+  it('adds no caption key while the empty caption is untouched', () => {
+    const tool = new ImageTool(createOptions({ url: 'u' }));
+
+    tool.render();
+
+    expect('caption' in tool.save()).toBe(false);
+  });
+
   it('does not dispatch a change when the caption is untouched', () => {
     const block = createMockBlock();
     const tool = new ImageTool(createOptions({ url: 'u', caption: 'Sunset' }, {}, block));

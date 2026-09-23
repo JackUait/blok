@@ -93,6 +93,8 @@ export interface CaretSnapshot {
   blockId: string;
   inputIndex: number;
   offset: number;
+  /** Offset of the selection's other end when it was a range inside the same input. */
+  end?: number;
 }
 
 /**

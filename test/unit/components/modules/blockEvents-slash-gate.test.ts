@@ -69,6 +69,7 @@ const createBlockEvents = (currentBlock: Block | undefined, overrides: {
     } as unknown as BlokModules['CrossBlockSelection'],
     YjsManager: {
       stopCapturing: vi.fn(),
+      startSubStep: vi.fn(),
       markBoundary: vi.fn(),
       clearBoundary: vi.fn(),
       checkAndHandleBoundary: vi.fn(),

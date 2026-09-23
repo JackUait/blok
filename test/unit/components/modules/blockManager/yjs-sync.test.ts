@@ -80,6 +80,7 @@ const createMockYjsManager = (): YjsManager => {
     updateBlockData: vi.fn(),
     updateBlockTune: vi.fn(),
     stopCapturing: vi.fn(),
+    rebaseCaretSnapshots: vi.fn(),
     transact: vi.fn((fn: () => void) => fn()),
     transactWithoutCapture: vi.fn((fn: () => void) => fn()),
     toJSON,

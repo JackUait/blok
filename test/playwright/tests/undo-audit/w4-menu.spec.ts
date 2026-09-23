@@ -285,15 +285,9 @@ const LIST_WITH_NESTED: SavedBlock[] = [
 ];
 
 test.describe('W4M defects', () => {
-  // Defect: turning a heading into a toggle heading adopts the following blocks as children, and that
-  // adoption is its own undo step. Undo 1 only releases "after" and leaves a toggle heading; undo 2
-  // un-toggles. Redo also needs two presses. With no block after the heading one undo is enough.
-  // Cause: blockManager.ts:1476 converts (Y.UndoManager entry, document-store.ts:677), then
-  // blockManager.ts:1487 -> 1562 runs the adoption in YjsManager.transactMoves, which pushes a
-  // SEPARATE entry on the move stack; undo-history.ts:965-977 pops one entry per press.
-  // CAP-7 is the opposite direction (release, not wrapped at all).
+  // Turning a heading into a toggle heading adopts the following blocks; the adoption and the
+  // convert are one undo step (tracked writes, not a move group). CAP-7 is the other direction.
   test('W4M-1: one undo of "heading -> toggle heading" restores the plain heading and its following block', async ({ page }) => {
-    test.fail();
     await createBlok(page, wrap({ id: 'x', type: 'header', data: { text: 'Title', level: 2 } }));
     const r = await roundTrip(page, () => convert(page, 'x', 'toggle-header-2', 'toggle-heading'));
 
@@ -302,15 +296,11 @@ test.describe('W4M defects', () => {
     expect(r.after.data.find(b => b.id === 'p-after')?.parent).toBe('x');
   });
 
-  // Defect: "+" on a block with text, then Table or Callout. One undo removes the table but leaves
-  // an empty paragraph; a second undo removes it. "+ then Heading" is one undo, even after a pause.
-  // Cause: block-insertion.ts:334 continueUndoEntryThatCreated only joins the plus button's empty
-  // paragraph when that paragraph's entry is still the NEWEST one (undo-history.ts:1237). A
-  // container tool seeds its children inside blocksStore.insert (block-insertion.ts:219), before
-  // that call, so a newer entry already sits on top and the join is skipped.
+  // "+" on a block with text, then Table or Callout: one undo removes the new block and the scaffold.
+  // The container seeds its children during the pick; the open block menu holds the step, so the
+  // scaffold entry is still the newest when the pick replaces it.
   for (const [n, tool] of [['2a', 'table'], ['2b', 'callout']]) {
     test(`W4M-${n} ${tool}: one undo of "+ then ${tool}" on a block with text leaves no empty paragraph`, async ({ page }) => {
-      test.fail();
       await createBlok(page, wrap(P('x', 'Plain text')));
       const r = await roundTrip(page, () => plusThen(page, 'x', tool));
 
@@ -339,13 +329,9 @@ test.describe('W4M defects', () => {
     expect(r.redone.data).toEqual(r.after.data);
   });
 
-  // Defect: redo of a turn-into puts the caret at offset 0; the gesture left it at offset 8.
-  // Undo puts it back at 8 correctly. Duplicate redo lands correctly (control below).
-  // Cause: blockSettings.ts:532 awaits runConvert and only then sets the caret (:550). The undo
-  // entry's "after" caret is refreshed once, in a microtask (undo-history.ts:910-933), which runs
-  // during that await — before the caret is placed.
+  // Redo of a turn-into puts the caret where the turn-into left it. The next gesture start
+  // records that caret as the step's caret-after.
   test('W4M-4: redo of "turn into quote" puts the caret back where the turn-into left it', async ({ page }) => {
-    test.fail();
     await createBlok(page, wrap(P('x', 'Plain text')));
     await gap(page);
     await editable(page, 'x').click();

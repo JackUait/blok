@@ -420,11 +420,10 @@ export class EmojiTrigger extends BlockEventComposer {
   /**
    * Replace the ":query" span at the caret with `native`, as one undo step,
    * mirroring MarkdownShortcuts.handleInlineMarkdown's sequence: resolve the
-   * span, call `YjsManager.stopCapturing()` BEFORE the DOM write so the
+   * span, call `YjsManager.startSubStep()` BEFORE the DOM write so the
    * replacement does not merge backward with the keystrokes that opened the
-   * menu, then again AFTER so a keystroke typed right afterward does not
-   * merge forward into it — Yjs's captureTimeout otherwise groups either
-   * side into the same undo entry (see UndoHistory.stopCapturing).
+   * menu. The sub-step also ends the typing run, so a keystroke typed right
+   * afterward starts a new step (see UndoHistory.startSubStep).
    * @param native - the exact character(s) to insert
    * @param swallowClosingColon - true for the closing-colon commit: the DOM
    * already holds a trailing ":" one before the caret (the browser inserted
@@ -468,7 +467,7 @@ export class EmojiTrigger extends BlockEventComposer {
       return;
     }
 
-    this.Blok.YjsManager.stopCapturing();
+    this.Blok.YjsManager.startSubStep();
 
     const before = fullText.slice(0, span.start);
     const after = fullText.slice(span.end);

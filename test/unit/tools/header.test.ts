@@ -370,6 +370,18 @@ describe('Header Tool - Custom Configurations', () => {
     });
   });
 
+  it('does not save the slash-menu pill', () => {
+    const header = new Header(createHeaderOptions({ text: 'Title ', level: 2 }));
+    const element = header.render();
+    const pill = document.createElement('span');
+
+    pill.setAttribute('data-blok-slash-search', 'Type to search');
+    pill.textContent = '/he';
+    element.appendChild(pill);
+
+    expect(header.save(element).text).toBe('Title /he');
+  });
+
   describe('read-only mode', () => {
     it('respects read-only mode with custom configuration', () => {
       const options: BlockToolConstructorOptions<HeaderData, HeaderConfig> = {

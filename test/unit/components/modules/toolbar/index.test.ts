@@ -1638,11 +1638,13 @@ describe('Plus button interactions', () => {
         API: { methods: unknown };
         Tools: { blockTools: Map<string, unknown> };
         I18n: { t: (key: string) => string };
+        YjsManager: { holdCapture: () => void; releaseCapture: () => void };
       };
 
       blok.API = { methods: {} };
       blok.Tools = { blockTools: new Map() };
       blok.I18n = { t: (key: string): string => key };
+      blok.YjsManager = { holdCapture: vi.fn(), releaseCapture: vi.fn() };
 
       (toolbar as unknown as { makeToolbox: () => Element }).makeToolbox();
 
@@ -1656,6 +1658,33 @@ describe('Plus button interactions', () => {
 
       toolboxInstance.emit('toolbox-closed');
       expect(plusButton.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('holds the undo step open while the toolbox is open', () => {
+      const blok = getBlok() as unknown as {
+        API: { methods: unknown };
+        Tools: { blockTools: Map<string, unknown> };
+        I18n: { t: (key: string) => string };
+        YjsManager: { holdCapture: Mock; releaseCapture: Mock };
+      };
+
+      blok.API = { methods: {} };
+      blok.Tools = { blockTools: new Map() };
+      blok.I18n = { t: (key: string): string => key };
+      blok.YjsManager = { holdCapture: vi.fn(), releaseCapture: vi.fn() };
+
+      (toolbar as unknown as { makeToolbox: () => Element }).makeToolbox();
+
+      const toolboxInstance = (toolbar as unknown as {
+        toolboxInstance: { emit: (event: string) => void };
+      }).toolboxInstance;
+
+      toolboxInstance.emit('toolbox-opened');
+      toolboxInstance.emit('toolbox-closed');
+      toolboxInstance.emit('toolbox-closed');
+
+      expect(blok.YjsManager.holdCapture).toHaveBeenCalledTimes(1);
+      expect(blok.YjsManager.releaseCapture).toHaveBeenCalledTimes(1);
     });
 
     it('toggles the settings toggler aria-expanded when block settings open and close', () => {

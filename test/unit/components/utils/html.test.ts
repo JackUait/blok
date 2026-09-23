@@ -17,6 +17,12 @@ describe('html', () => {
       expect(stripFakeBackgroundElements(html)).toBe(html);
     });
 
+    it('should unwrap the slash-menu pill, keeping the typed query', () => {
+      const html = 'Hello&nbsp;<span data-blok-slash-search="Type to search">/he</span>';
+
+      expect(stripFakeBackgroundElements(html)).toBe('Hello&nbsp;/he');
+    });
+
     it('should strip single fake background element', () => {
       const html = '<p>Hello <span data-blok-fake-background="true">world</span></p>';
       const expected = '<p>Hello world</p>';

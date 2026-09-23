@@ -175,13 +175,8 @@ test.beforeAll(() => {
 });
 
 test.describe('undo audit: selection-driven edits', () => {
-  // Defect: the deletion of the selected text and the pasted blocks are two undo steps.
-  // Root cause: paste/index.ts:603 deletes the selection first, then base.ts:268
-  // transactForTool -> blockManager.ts:965 beginToolTransaction calls stopCapturing(),
-  // which closes the group that holds the deletion.
-  // Observed: one undo leaves ["a:Alplie three"], canUndo still true.
+  // The deletion of the selected text and the pasted blocks are one gesture, so one undo step.
   test('W4S-1: one undo after pasting paragraphs over a cross-block text selection restores the original blocks', async ({ page }) => {
-    test.fail();
     await mount(page, THREE);
     await dragText(page, 'a', 3, 'c', 4);
     await paste(page, HTML_TWO);
@@ -195,11 +190,8 @@ test.describe('undo audit: selection-driven edits', () => {
     expect(await canUndo(page)).toBe(false);
   });
 
-  // Defect: same split for blocks copied from Blok (application/x-blok).
-  // Root cause: blok-data-handler.ts:313 transactForTool -> blockManager.ts:965 stopCapturing().
-  // Observed: one undo leaves ["a:Alplie three", "d:Delta four"].
+  // Same for blocks copied from Blok (application/x-blok).
   test('W4S-1b: one undo after pasting copied blocks over a cross-block text selection restores the original blocks', async ({ page }) => {
-    test.fail();
     await mount(page, [...THREE, P('d', 'Delta four')]);
     await editable(page, 'd').click();
     await page.keyboard.press(`${MOD}+a`);
@@ -269,17 +261,8 @@ test.describe('undo audit: selection-driven edits', () => {
     expect(await saved(page)).toEqual(pasted);
   });
 
-  // Defect: undo of a letter typed over a cross-block text selection puts the caret at the
-  // start of the block, not where the selection began (Backspace/Delete/Enter get it right).
-  // Root cause: replaceCrossBlockTextSelection calls clearTextSelection()
-  // (blockSelectionKeys.ts:589 -> removeAllRanges, crossBlockSelection.ts:201) before the first
-  // tracked write; the lazy markCaretBeforeChange() in YjsManager.removeBlock (yjs/index.ts:341)
-  // then reads no range and getCaretOffset returns 0 (utils/caret/selection.ts:69).
-  // Enter/Backspace/Delete escape because keyboard.ts:144 force-captures only the keys in
-  // KEYS_REQUIRING_CARET_CAPTURE (uiControllers/constants.ts:6); printable keys, cut and paste do not.
-  // Observed: Expected "a@3", Received "a@0".
+  // Undo of a letter typed over a cross-block text selection puts the caret where the selection began.
   test('W4S-3: undo of typing over a cross-block text selection puts the caret where the selection began', async ({ page }) => {
-    test.fail();
     await mount(page, THREE);
     await dragText(page, 'a', 3, 'c', 4);
     await page.keyboard.press('q');
@@ -292,9 +275,8 @@ test.describe('undo audit: selection-driven edits', () => {
     expect(await saved(page)).toEqual(THREE_SAVED);
   });
 
-  // Defect: same as W4S-3 for cut. Observed: Expected "a@3", Received "a@0".
+  // Same as W4S-3 for cut.
   test('W4S-3b: undo of cutting a cross-block text selection puts the caret where the selection began', async ({ page }) => {
-    test.fail();
     await mount(page, THREE);
     await dragText(page, 'a', 3, 'c', 4);
     await clip(page, 'cut');
@@ -307,9 +289,8 @@ test.describe('undo audit: selection-driven edits', () => {
     expect(await saved(page)).toEqual(THREE_SAVED);
   });
 
-  // Defect: same as W4S-3 for an inline paste. Observed: Expected "a@3", Received "a@0".
+  // Same as W4S-3 for an inline paste.
   test('W4S-3c: undo of pasting text over a cross-block text selection puts the caret where the selection began', async ({ page }) => {
-    test.fail();
     await mount(page, THREE);
     await dragText(page, 'a', 3, 'c', 4);
     await paste(page, { 'text/plain': 'ZZ' });
@@ -322,15 +303,8 @@ test.describe('undo audit: selection-driven edits', () => {
     expect(await saved(page)).toEqual(THREE_SAVED);
   });
 
-  // Defect: undo of a paste that replaced an empty block leaves no caret at all (focus on <body>).
-  // Root cause: block-insertion.ts:762 insert({ replace: true }) takes the empty block out of the
-  // DOM before the first tracked write; markCaretBeforeChange() then runs inside the transact at
-  // block-insertion.ts:830 and captureCaretSnapshot falls back to currentBlock
-  // (undo-history.ts:1461), which is already the NEW block. On undo that block is gone, so
-  // restoreCaretSnapshot returns early (undo-history.ts:1563) and nothing focuses "d".
-  // Observed: Expected "d@0", Received "off:BODY".
+  // Undo of a paste that replaced an empty block puts the caret back in that block.
   test('W4S-4: undo of pasting into an empty block puts the caret back in that block', async ({ page }) => {
-    test.fail();
     await mount(page, [P('a', 'Alpha one'), P('d', '')]);
     await editable(page, 'd').click();
     await gap(page);
@@ -344,10 +318,8 @@ test.describe('undo audit: selection-driven edits', () => {
     expect(await saved(page)).toEqual(['a:paragraph:Alpha one', 'd:paragraph:']);
   });
 
-  // Defect: same as W4S-4 for blocks copied from Blok (a toggle with a child).
-  // Observed: Expected "d@0", Received "off:BODY".
+  // Same as W4S-4 for blocks copied from Blok (a toggle with a child).
   test('W4S-4b: undo of pasting copied blocks into an empty block puts the caret back in that block', async ({ page }) => {
-    test.fail();
     await mount(page, TOGGLE_DOC());
     await editable(page, 't').click();
     await page.keyboard.press(`${MOD}+a`);
@@ -366,14 +338,8 @@ test.describe('undo audit: selection-driven edits', () => {
     expect(await saved(page)).toEqual(TOGGLE_SAVED);
   });
 
-  // Defect: redo of a multi-block paste puts the caret in the FIRST pasted block; the paste left it
-  // at the end of the LAST one. Root cause: the second block's addBlock merges into the entry via
-  // 'stack-item-updated', which captures `after` mid-transaction (undo-history.ts:887), before
-  // base.ts:257 moves the caret into that block; only 'stack-item-added' gets the post-settle
-  // refresh (scheduleAfterSnapshotRefresh, undo-history.ts:859).
-  // Observed: Expected "<last>@2", Received "<first>@2".
+  // Redo of a multi-block paste puts the caret at the end of the last pasted block.
   test('W4S-5: redo of a multi-block paste puts the caret where the paste left it', async ({ page }) => {
-    test.fail();
     await mount(page, [P('a', 'Alpha one'), P('d', 'Delta')]);
     await editable(page, 'd').click();
     await page.keyboard.press('End');

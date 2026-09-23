@@ -99,6 +99,7 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
     } as unknown as BlokModules['Tools'],
     YjsManager: {
       stopCapturing: vi.fn(),
+      startSubStep: vi.fn(),
       markBoundary: vi.fn(),
       clearBoundary: vi.fn(),
       checkAndHandleBoundary: vi.fn(),

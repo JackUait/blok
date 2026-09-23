@@ -412,12 +412,8 @@ test.describe('undo audit W4: inline formatting', () => {
     await expect(page.getByRole('link', { name: 'world' })).toHaveAttribute('href', 'https://new.example.com');
   });
 
-  // Family 4, new instance. Inline tools never call stopCapturing, so a format and typing inside the
-  // 500 ms captureTimeout merge. Observed: one undo removes the bold too ("Hello world").
-  // Root cause: inline-tool-bold.ts:167 / simple-mark-tool.ts:151 write the DOM with no undo boundary;
-  // serializer.ts:306 CAPTURE_TIMEOUT_MS merges.
+  // A format and the typing right after it are separate gestures, so separate steps.
   test('W4I-14: bold then typing right away are two undo steps', async ({ page }) => {
-    test.fail();
     await mount(page, [P('p', 'Hello world')]);
     await select(page, 'Hello');
     const started = Date.now();
@@ -435,9 +431,8 @@ test.describe('undo audit W4: inline formatting', () => {
     expect(await shownHtml(page, 'p')).toBe('<strong>Hello</strong> world');
   });
 
-  // Family 4, new instance (mirror of W4I-14). Observed: one undo also removes the typed "X".
+  // Mirror of W4I-14.
   test('W4I-15: typing then bold right away are two undo steps', async ({ page }) => {
-    test.fail();
     await mount(page, [P('p', 'Hello world')]);
     await page.getByText('Hello world').click();
     await page.keyboard.press('End');
@@ -474,11 +469,7 @@ test.describe('undo audit W4: inline formatting', () => {
     expect([await shownHtml(page, 'a'), await shownHtml(page, 'b')]).toEqual([formattedA, formattedB]);
   });
 
-  // Observed: after undo the selection is a collapsed caret (offset 6), so Cmd+B does nothing.
-  // Root cause: CaretSnapshot keeps one offset, no range (yjs/types.ts:92); restoreCaretSnapshot
-  // collapses it (undo-history.ts:1571).
   test('W4I-17: undo of bold leaves the formatted range selected so bold can be re-applied', async ({ page }) => {
-    test.fail();
     await mount(page, [P('p', 'Hello world')]);
     await select(page, 'world');
     await page.keyboard.press(`${MOD}+b`);
@@ -491,9 +482,8 @@ test.describe('undo audit W4: inline formatting', () => {
     expect(await savedText(page, 'p')).toBe('Hello <strong>world</strong>');
   });
 
-  // Same root cause as W4I-17, redo side. Observed: selection is empty after redo.
+  // Redo side of W4I-17.
   test('W4I-18: redo of bold leaves the formatted range selected', async ({ page }) => {
-    test.fail();
     await mount(page, [P('p', 'Hello world')]);
     await select(page, 'world');
     await page.keyboard.press(`${MOD}+b`);
@@ -692,12 +682,7 @@ test.describe('undo audit W4: inline formatting', () => {
     });
   }
 
-  // Observed: caret lands in block "a", where the earlier no-op Backspace was pressed.
-  // Root cause: a forced markCaretBeforeChange (keyboard.ts:149) with no resulting edit leaves the
-  // snapshot pending forever; a toolbar click never re-marks, so stack-item-added takes the stale
-  // snapshot as "before" (undo-history.ts:837, 1507-1513).
   test('W4I-29: undo of a toolbar bold puts the caret back in the formatted block', async ({ page }) => {
-    test.fail();
     await mount(page, [P('a', 'Alpha one'), P('b', 'Hello world')]);
     // A no-op Backspace at the start of the first block leaves a caret snapshot pending.
     await page.getByText('Alpha one').click();
@@ -895,10 +880,8 @@ test.describe('undo audit W4: inline formatting', () => {
     expect(await shownHtml(page, 'p')).toBe(both);
   });
 
-  // Same root cause as W4I-29, keyboard path: "b" is not in KEYS_REQUIRING_CARET_CAPTURE
-  // (uiControllers/constants.ts:6), so nothing re-marks the caret. Observed: caret lands in block "a".
+  // Keyboard path of W4I-29.
   test('W4I-29c: undo of a Cmd+B bold after a no-op Backspace puts the caret in the formatted block', async ({ page }) => {
-    test.fail();
     await mount(page, [P('a', 'Alpha one'), P('b', 'Hello world')]);
     await page.getByText('Alpha one').click();
     await page.keyboard.press('Home');

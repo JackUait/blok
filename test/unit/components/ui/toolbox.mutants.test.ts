@@ -825,16 +825,6 @@ describe('Toolbox — surviving-mutant coverage', () => {
       expect(api.startBlockMutationWatching).not.toHaveBeenCalled();
     });
 
-    it('re-arms mutation watching when the popover closes itself after an open', () => {
-      const { block } = createBlock({ id: 'watched-block' });
-      const { toolbox, api } = buildToolbox({ block });
-
-      toolbox.open();
-      popoverClosedHandler()();
-
-      expect(api.startBlockMutationWatching).toHaveBeenCalledWith('watched-block');
-    });
-
     it('resets the popover filter to the empty query on close', () => {
       const { block } = createBlock({ text: 'x' });
       const { toolbox } = buildToolbox({ block });

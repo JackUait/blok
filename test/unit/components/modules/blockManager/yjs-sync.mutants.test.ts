@@ -198,6 +198,7 @@ const createDocHarness = (): DocHarness => {
     removeBlock: vi.fn(),
     moveBlock: vi.fn(),
     stopCapturing: vi.fn(),
+    rebaseCaretSnapshots: vi.fn(),
     toJSON: vi.fn(() => []),
   } as unknown as YjsManager;
 

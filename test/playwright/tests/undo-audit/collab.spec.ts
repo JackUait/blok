@@ -181,11 +181,8 @@ test.describe('undo audit: collab in two real editors', () => {
     await expect(editable(pages.a, 'alpha', 'p')).toHaveText('Xhello');
   });
 
-  // COB-1. The caret restored by undo is the offset recorded before the peer
-  // typed in front of it. Undo must put the caret where the undone text was.
-  // Observed: Expected "BBB hello world!" Received "BBB hello w!orld"
+  // COB-1. The undo caret is carried across the peer's typing in front of it.
   test('COB-1: after undo the caret sits where the undone text was, past the peer\'s text', async ({ context }) => {
-    test.fail();
     const pages = await pair(context);
 
     await setup(pages, [{ id: 'p',
@@ -204,10 +201,8 @@ test.describe('undo audit: collab in two real editors', () => {
     await converged(pages);
   });
 
-  // COB-2. Same on the redo stack: the caret lands at the pre-peer offset.
-  // Observed: Expected "B hello world AAA!" Received "B hello world A!AA"
+  // COB-2. Same on the redo stack.
   test('COB-2: after redo the caret sits after the redone text, past the peer\'s text', async ({ context }) => {
-    test.fail();
     const pages = await pair(context);
 
     await setup(pages, [{ id: 'p',
@@ -231,11 +226,8 @@ test.describe('undo audit: collab in two real editors', () => {
   });
 
   // COB-3. Beta's caret was in a block alpha deleted; beta has no caret after
-  // that. Alpha's undo brings the block back and alpha draws beta's old caret
-  // in it again. Expected: no caret for a peer that has none.
-  // Observed: Expected 0 Received 1
+  // that, so alpha's undo must not draw it again.
   test('COB-3: undoing a delete does not bring back the peer caret that was in the block', async ({ context }) => {
-    test.fail();
     const pages = await pair(context);
 
     await setup(pages, [{ id: 'b1',

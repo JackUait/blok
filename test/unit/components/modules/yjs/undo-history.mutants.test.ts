@@ -103,6 +103,7 @@ const createHarness = (): Harness => {
     blocks,
     getBlockById,
     getBlockByChildNode,
+    setCurrentBlockByChildNode: vi.fn(),
     firstBlock: undefined,
   };
 
@@ -120,6 +121,7 @@ const createHarness = (): Harness => {
 
   const blok = {
     BlockManager: blockManager as unknown as BlokModules['BlockManager'],
+    BlockSelection: { clearSelection: vi.fn() } as unknown as BlokModules['BlockSelection'],
     Caret: caret as unknown as BlokModules['Caret'],
   } as unknown as BlokModules;
 
@@ -1222,7 +1224,7 @@ describe('UndoHistory — boundary checkpoints', () => {
   // The file-level afterEach restores real timers.
 
   it('checkpoints once the boundary timeout elapses', () => {
-    const stop = vi.spyOn(h.history, 'stopCapturing');
+    const stop = vi.spyOn(h.history.undoManager, 'stopCapturing');
 
     h.history.markBoundary();
     vi.advanceTimersByTime(BOUNDARY_TIMEOUT_MS);
@@ -1231,7 +1233,7 @@ describe('UndoHistory — boundary checkpoints', () => {
   });
 
   it('does not checkpoint a boundary that was cleared', () => {
-    const stop = vi.spyOn(h.history, 'stopCapturing');
+    const stop = vi.spyOn(h.history.undoManager, 'stopCapturing');
 
     h.history.markBoundary();
     h.history.clearBoundary();

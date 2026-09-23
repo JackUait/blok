@@ -1,6 +1,7 @@
 import * as Y from 'yjs';
 
 import { getCaretOffset } from '../../../components/utils/caret/index';
+import { resolveCaretRange } from '../collaboration/caret-position';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 
 import { dropPeerPaddingOfRemovedColumn, isPaddingCell, namesOnlyPaddingCells } from './grid-padding';
@@ -202,6 +203,34 @@ export class UndoHistory {
   private boundaryTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   /**
+   * Set by the first {@link beginGesture}. From then on only a gesture start
+   * (or the capture clock) closes a step, and {@link stopCapturing} only
+   * flushes. Before it, stopCapturing still splits: code that drives the
+   * editor with no user gesture keeps its old step boundaries.
+   */
+  private gesturesDriveSteps = false;
+
+  /** `blockId#inputIndex` of the open typing run; null when the open step is not typing. */
+  private typingInputKey: string | null = null;
+
+  /** True from a gesture start until the end of its task (microtasks included). */
+  private gestureTaskOpen = false;
+
+  /** Nesting depth of {@link holdCapture}. */
+  private captureHolds = 0;
+
+  /**
+   * The caret entry recorded since the last gesture start. The next gesture
+   * start sets its `after`: the caret is still where this gesture left it.
+   */
+  private openEntry: CaretHistoryEntry | null = null;
+
+  /** Set when an undo/redo placed a caret, for {@link restoreScrollIfJumped} to reveal. */
+  private caretJustRestored = false;
+
+  private readonly selectionChangeHandler = (): void => this.dropPendingCaretIfMoved();
+
+  /**
    * The ONE placement callback replaying a recorded move step (parent
    * restore + position) during move-undo/move-redo.
    *
@@ -232,6 +261,7 @@ export class UndoHistory {
 
     this.setupCaretTracking();
     this.setupDeletedPlacementTracking();
+    document.addEventListener('selectionchange', this.selectionChangeHandler);
 
     // Placement callback will be set by YjsManager
     this.placementCallback = () => {
@@ -864,6 +894,7 @@ export class UndoHistory {
 
         this.entryByStackItem.set(event.stackItem, entry);
         this.caretUndoStack.push(entry);
+        this.openEntry = entry;
         // Clear redo stack on new action (standard undo/redo behavior).
         // BOTH redo stacks, in lockstep: `redo()` reads the CARET stack to
         // decide whether the next redo is a move, so a move group left behind
@@ -908,6 +939,7 @@ export class UndoHistory {
 
         // Update the 'after' position of the most recent undo entry
         lastEntry.after = this.captureCaretSnapshot();
+        this.openEntry = lastEntry;
       }
 
       this.resetPendingCaretState();
@@ -1417,6 +1449,10 @@ export class UndoHistory {
     stack: CaretHistoryEntry[],
     position: 'before' | 'after'
   ): void {
+    // The pending snapshot of the undo key press must not outlive the replay.
+    this.resetPendingCaretState();
+    this.openEntry = null;
+
     if (entry === undefined) {
       return;
     }
@@ -1432,7 +1468,7 @@ export class UndoHistory {
       ? entry.before ?? entry.after
       : entry.after ?? entry.before;
 
-    this.restoreCaretSnapshot(snapshot);
+    this.caretJustRestored = this.restoreCaretSnapshot(snapshot);
   }
 
   /**
@@ -1506,15 +1542,170 @@ export class UndoHistory {
   }
 
   /**
-   * Stop capturing changes into current undo group.
-   * Call this to force next change into a new undo entry.
+   * The implicit step boundary many write paths call. Once gestures drive the
+   * steps it only flushes: a write a gesture causes (its deferred save-back,
+   * its second half) then stays in that gesture's step. Use
+   * {@link startSubStep} for a split the user must see.
    */
   public stopCapturing(): void {
+    if (this.gesturesDriveSteps) {
+      this.flushPendingWritesHook();
+
+      return;
+    }
+
+    this.splitStep();
+  }
+
+  /**
+   * Close the open step for real.
+   */
+  public splitStep(): void {
     // Flush BEFORE closing the group: a word-boundary checkpoint must carry
     // the buffered tail of the word it ends (100ms boundary vs 400ms trailing).
     this.flushPendingWritesHook();
 
     this.undoManager.stopCapturing();
+  }
+
+  /**
+   * A user gesture starts (a key, a pointer press, a paste, an API call).
+   * Only here does a step close, and here the step's caret-before is taken,
+   * before any handler moves the caret.
+   * @param kind - 'typing' continues a typing run in the same input; any
+   *   other gesture always closes the open step
+   * @returns whether the open step was closed
+   */
+  public beginGesture(kind: 'typing' | 'discrete'): boolean {
+    return this.startGesture(kind, false);
+  }
+
+  /**
+   * A public API call that writes. Outside a gesture it is a gesture of its
+   * own (host code driving the editor). Inside one, it is part of that
+   * gesture: a tool calling the API from its key handler, or the block menu
+   * inserting the picked tool while its session holds the step.
+   */
+  public beginApiCall(): void {
+    if (!this.gestureTaskOpen && this.captureHolds === 0) {
+      this.startGesture('discrete', true);
+    }
+  }
+
+  /**
+   * @param kind - see {@link beginGesture}
+   * @param keepPending - keep a caret-before that is still pending instead of
+   *   taking the live caret
+   */
+  private startGesture(kind: 'typing' | 'discrete', keepPending: boolean): boolean {
+    if (this.isPerformingUndoRedo) {
+      return false;
+    }
+
+    this.gesturesDriveSteps = true;
+
+    if (!this.gestureTaskOpen) {
+      this.gestureTaskOpen = true;
+      setTimeout(() => {
+        this.gestureTaskOpen = false;
+      }, 0);
+    }
+
+    const live = this.liveCaretSnapshot();
+
+    if (live !== null && this.openEntry !== null && this.openEntry === this.caretUndoStack.at(-1)) {
+      this.openEntry.after = live;
+    }
+    this.openEntry = null;
+
+    const liveKey = live === null ? null : `${live.blockId}#${live.inputIndex}`;
+    const continuesTyping = kind === 'typing' && liveKey !== null && liveKey === this.typingInputKey;
+
+    if (!continuesTyping) {
+      this.splitStep();
+    }
+    this.typingInputKey = kind === 'typing' ? liveKey : null;
+
+    // After the split: its flush can consume (and reset) the pending snapshot.
+    if (live !== null && !(keepPending && this.hasPendingCaret)) {
+      this.pendingCaretBefore = live;
+      this.hasPendingCaret = true;
+    }
+
+    return !continuesTyping;
+  }
+
+  /**
+   * A split inside one gesture, for a conversion the user undoes on its own
+   * (a markdown shortcut, an emoji). Its caret-before is the caret from before
+   * the flush: the handler moves the caret before its write marks one. It
+   * also ends the typing run, so the next keystroke starts a new step.
+   */
+  public startSubStep(): void {
+    const caret = this.captureCaretSnapshot();
+
+    this.splitStep();
+    this.typingInputKey = null;
+
+    if (!this.hasPendingCaret) {
+      this.pendingCaretBefore = caret;
+      this.hasPendingCaret = true;
+    }
+  }
+
+  /**
+   * Keep the open step open past the capture timeout, for a gesture the user
+   * can pause in the middle of (a pointer drag, an IME composition). Every
+   * hold must be released.
+   */
+  public holdCapture(): void {
+    this.captureHolds++;
+    this.undoManager.captureTimeout = Infinity;
+  }
+
+  /**
+   * Release one {@link holdCapture}.
+   */
+  public releaseCapture(): void {
+    this.captureHolds = Math.max(0, this.captureHolds - 1);
+
+    if (this.captureHolds === 0) {
+      this.undoManager.captureTimeout = CAPTURE_TIMEOUT_MS;
+    }
+  }
+
+  /**
+   * The caret snapshot, only when the live selection is in one of this
+   * editor's blocks. The `currentBlock` fallback of {@link captureCaretSnapshot}
+   * would invent an offset from a selection that lives elsewhere.
+   */
+  private liveCaretSnapshot(): CaretSnapshot | null {
+    const anchorNode = window.getSelection()?.anchorNode ?? null;
+
+    if (anchorNode === null || this.blok?.BlockManager?.getBlockByChildNode(anchorNode) === undefined) {
+      return null;
+    }
+
+    return this.captureCaretSnapshot();
+  }
+
+  /**
+   * A pending caret-before belongs to the caret it was taken from. Once the
+   * caret is in another block or input, a later write with no gesture of its
+   * own (an API call) must not inherit it.
+   */
+  private dropPendingCaretIfMoved(): void {
+    const pending = this.pendingCaretBefore;
+
+    if (!this.hasPendingCaret || pending === null) {
+      return;
+    }
+
+    const live = this.liveCaretSnapshot();
+
+    if (live !== null && (live.blockId !== pending.blockId || live.inputIndex !== pending.inputIndex)) {
+      this.resetPendingCaretState();
+    }
   }
 
   /**
@@ -1726,12 +1917,35 @@ export class UndoHistory {
     const input = selectedIndex !== -1 ? currentBlock.inputs[selectedIndex] : currentBlock.currentInput;
 
     const offset = input !== undefined ? getCaretOffset(input) : 0;
+    const end = input !== undefined ? UndoHistory.selectionEndIn(input) : null;
 
     return {
       blockId: currentBlock.id,
       inputIndex,
       offset,
+      ...(end === null ? {} : { end }),
     };
+  }
+
+  /**
+   * Text offset of the selection's end, when the selection is a range that
+   * starts and ends inside `input`
+   * @param input - the input the snapshot is taken in
+   */
+  private static selectionEndIn(input: HTMLElement): number | null {
+    const selection = window.getSelection();
+    const range = selection !== null && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+
+    if (range === null || range.collapsed || !input.contains(range.startContainer) || !input.contains(range.endContainer)) {
+      return null;
+    }
+
+    const preEnd = document.createRange();
+
+    preEnd.selectNodeContents(input);
+    preEnd.setEnd(range.endContainer, range.endOffset);
+
+    return preEnd.toString().length;
   }
 
   /**
@@ -1762,6 +1976,22 @@ export class UndoHistory {
   }
 
   /**
+   * Map every stored caret snapshot of one block, after a peer rewrote its text.
+   * @param blockId - the rewritten block
+   * @param rebase - maps a snapshot taken against the old text
+   */
+  public rebaseCaretSnapshots(blockId: string, rebase: (snapshot: CaretSnapshot) => CaretSnapshot): void {
+    const apply = (snapshot: CaretSnapshot | null): CaretSnapshot | null =>
+      snapshot !== null && snapshot.blockId === blockId ? rebase(snapshot) : snapshot;
+
+    for (const entry of [...this.caretUndoStack, ...this.caretRedoStack]) {
+      entry.before = apply(entry.before);
+      entry.after = apply(entry.after);
+    }
+    this.pendingCaretBefore = apply(this.pendingCaretBefore);
+  }
+
+  /**
    * Update the "after" position of the most recent caret undo entry.
    * This is used when the caret is moved asynchronously (e.g., via requestAnimationFrame)
    * after a Yjs transaction has already captured the initial "after" position.
@@ -1785,6 +2015,11 @@ export class UndoHistory {
     if (Math.abs(window.scrollY - savedScrollY) > window.innerHeight) {
       window.scrollTo(0, savedScrollY);
     }
+
+    if (this.caretJustRestored) {
+      this.caretJustRestored = false;
+      UndoHistory.revealCaret();
+    }
   }
 
   /**
@@ -1792,11 +2027,11 @@ export class UndoHistory {
    * Handles edge cases: null snapshot, deleted block, invalid input index,
    * and disconnected inputs (e.g., after table DOM rebuild during undo).
    */
-  private restoreCaretSnapshot(snapshot: CaretSnapshot | null): void {
+  private restoreCaretSnapshot(snapshot: CaretSnapshot | null): boolean {
     if (snapshot === null) {
       // No snapshot available — preserve whatever focus state exists after the
       // DOM update rather than actively destroying the selection.
-      return;
+      return false;
     }
 
     const { BlockManager, Caret } = this.blok;
@@ -1809,15 +2044,21 @@ export class UndoHistory {
     // user's place. Preserve whatever focus state exists after the DOM update
     // instead (same philosophy as the null-snapshot branch above).
     if (block === undefined) {
-      return;
+      return false;
     }
 
     // Get the specific input within the block
     const input = block.inputs[snapshot.inputIndex];
 
     if (input !== undefined && input.isConnected) {
+      // A block selection left from before would take the next key, and a
+      // stale current block the next edit.
+      this.blok.BlockSelection.clearSelection();
+      BlockManager.setCurrentBlockByChildNode(input);
       Caret.setToInput(input, Caret.positions.DEFAULT, snapshot.offset);
-      return;
+      this.selectRange(input, snapshot);
+
+      return true;
     }
 
     // Input is disconnected or doesn't exist (e.g., the block was removed from
@@ -1830,7 +2071,8 @@ export class UndoHistory {
 
       if (lastConnectedSibling !== undefined) {
         Caret.setToBlock(lastConnectedSibling, Caret.positions.END);
-        return;
+
+        return true;
       }
 
       // No connected siblings — try the parent block itself
@@ -1838,13 +2080,62 @@ export class UndoHistory {
 
       if (parentBlock !== undefined) {
         Caret.setToBlock(parentBlock, Caret.positions.START);
-        return;
+
+        return true;
       }
     }
 
     // Fall back to block start
     Caret.setToBlock(block, Caret.positions.START);
+
+    return true;
   }
+
+  /**
+   * Re-select a range the snapshot recorded (collapsed carets have no `end`)
+   * @param input - the restored input
+   * @param snapshot - the snapshot being restored
+   */
+  private selectRange(input: HTMLElement, snapshot: CaretSnapshot): void {
+    if (snapshot.end === undefined) {
+      return;
+    }
+
+    // An open inline toolbar still shows the marks from before the replay.
+    if (this.blok.InlineToolbar.opened) {
+      this.blok.InlineToolbar.close();
+    }
+
+    const start = resolveCaretRange(input, snapshot.offset);
+    const end = resolveCaretRange(input, snapshot.end);
+
+    if (start !== null && end !== null) {
+      window.getSelection()?.setBaseAndExtent(start.startContainer, start.startOffset, end.startContainer, end.startOffset);
+    }
+  }
+
+  /**
+   * Scroll just enough to show a restored caret. Runs after
+   * {@link restoreScrollIfJumped}, which can throw the page back past it.
+   * Same arithmetic as `Caret.set`.
+   */
+  private static revealCaret(): void {
+    const selection = window.getSelection();
+
+    if (selection === null || selection.rangeCount === 0) {
+      return;
+    }
+
+    const margin = 30;
+    const { top, bottom } = selection.getRangeAt(0).getBoundingClientRect();
+
+    if (top < 0) {
+      window.scrollBy(0, top - margin);
+    } else if (bottom > window.innerHeight) {
+      window.scrollBy(0, bottom - window.innerHeight + margin);
+    }
+  }
+
 
   /**
    * Check if there is a pending boundary waiting for timeout.
@@ -1871,7 +2162,7 @@ export class UndoHistory {
     // Set new timeout to create checkpoint if no more input
     this.boundaryTimeoutId = setTimeout(() => {
       if (this.pendingBoundary) {
-        this.stopCapturing();
+        this.splitStep();
         this.pendingBoundary = false;
       }
       this.boundaryTimeoutId = null;
@@ -1904,7 +2195,7 @@ export class UndoHistory {
     const elapsed = Date.now() - this.boundaryTimestamp;
 
     if (elapsed >= BOUNDARY_TIMEOUT_MS) {
-      this.stopCapturing();
+      this.splitStep();
       this.clearBoundary();
     }
   }
@@ -1924,6 +2215,10 @@ export class UndoHistory {
     this.isPerformingUndoRedo = false;
     this.replayStackItem = null;
     this.poppedStackItem = null;
+    this.openEntry = null;
+    this.typingInputKey = null;
+    this.captureHolds = 0;
+    this.undoManager.captureTimeout = CAPTURE_TIMEOUT_MS;
     // Clear smart grouping state
     this.clearBoundary();
     this.undoManager.clear();
@@ -1933,6 +2228,7 @@ export class UndoHistory {
    * Cleanup on destroy.
    */
   public destroy(): void {
+    document.removeEventListener('selectionchange', this.selectionChangeHandler);
     this.clear();
     this.undoManager.destroy();
   }

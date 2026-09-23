@@ -1464,6 +1464,62 @@ describe('TableCellBlocks', () => {
       expect(mockInsert).toHaveBeenCalledWith('paragraph', { text: '' }, expect.anything(), 3, true);
     });
 
+    it('does not guess a cell for a peer\'s block whose cell the table data has not named yet', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      let blockChangedCallback: ((data: unknown) => void) | undefined;
+      const setBlockParent = vi.fn();
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlocksCount: vi.fn(() => 3),
+          getBlockIndex: vi.fn(() => 0),
+          getBlockByIndex: vi.fn(),
+          getById: vi.fn(() => ({ id: 'remote-1', parentId: 't1' })),
+          getCurrentBlockIndex: vi.fn(() => -1),
+          setBlockParent,
+          isSyncingFromYjs: true,
+        },
+        events: {
+          on: vi.fn((eventName: string, cb: (data: unknown) => void) => {
+            if (eventName === 'block changed') {
+              blockChangedCallback = cb;
+            }
+          }),
+          off: vi.fn(),
+        },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      const neighbour = document.createElement('div');
+      neighbour.setAttribute('data-blok-id', 'local-1');
+      // The peer's block lands next to its flat neighbour, inside that cell.
+      const remoteHolder = document.createElement('div');
+      remoteHolder.setAttribute('data-blok-id', 'remote-1');
+      container.append(neighbour, remoteHolder);
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const model = createMockModel();
+
+      new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model });
+
+      blockChangedCallback?.({
+        event: { type: 'block-added', detail: { target: { id: 'remote-1', holder: remoteHolder }, index: 2 } },
+      });
+
+      expect(model.addBlockToCell).not.toHaveBeenCalled();
+      expect(gridElement.contains(remoteHolder)).toBe(false);
+    });
+
     it('should NOT insert a block when cell already has blocks', async () => {
       const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 

@@ -1270,6 +1270,20 @@ export class TableCellBlocks {
       }
     }
 
+    // A replayed or remote block the model does not reference yet. Its cell
+    // comes with the table's own data write (setData mounts it then).
+    // Adjacency would guess the cell of its flat neighbour, and a save would
+    // then send that wrong cell to every peer. Park our child out of the grid.
+    if (this.api.blocks.isSyncingFromYjs) {
+      const owner = this.api.blocks.getById?.(detail.target.id)?.parentId;
+
+      if (owner === this.tableBlockId && this.gridElement.contains(detail.target.holder)) {
+        detail.target.holder.remove();
+      }
+
+      return;
+    }
+
     const blockIndex = detail.index;
 
     if (blockIndex === undefined) {

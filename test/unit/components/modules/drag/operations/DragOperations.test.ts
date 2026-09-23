@@ -594,8 +594,9 @@ describe('DragOperations', () => {
       const lone = createMockBlock('lone', 'callout', { emoji: 'y' }, [], null);
       const targetBlock = createMockBlock('target', 'paragraph', { text: 'Target' }, [], null);
 
-      mockBlockManager.getBlockIndex = vi.fn((block) => [callout, kid, lone, targetBlock].indexOf(block));
-      mockBlockManager.insert = vi.fn((config): Block => createMockBlock(`dup-${config.index}`, config.tool, config.data, [], null));
+      mockBlockManager.getBlockIndex = vi.fn((block: Block) => [callout, kid, lone, targetBlock].indexOf(block));
+      mockBlockManager.insert = vi.fn((config: { tool: string; data: Record<string, unknown>; index: number }): Block =>
+        createMockBlock(`dup-${config.index}`, config.tool, config.data, [], null));
       (mockBlockManager as unknown as { setBlockParent: ReturnType<typeof vi.fn> }).setBlockParent = vi.fn();
 
       await operations.duplicateBlocks([callout, kid, lone], targetBlock, 'bottom');

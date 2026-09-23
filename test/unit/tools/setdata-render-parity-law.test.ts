@@ -54,7 +54,7 @@ interface Tool<T> {
   rendered?: () => void;
 }
 
-const build = <T extends object>(Ctor: new (options: never) => Tool<T>, data: T): { tool: Tool<T>; root: HTMLElement } => {
+const build = <T extends Record<string, unknown>>(Ctor: new (options: never) => Tool<T>, data: T): { tool: Tool<T>; root: HTMLElement } => {
   const tool = new Ctor({
     data,
     config: {},
@@ -86,7 +86,7 @@ const markup = (root: HTMLElement): string => {
   return copy.outerHTML.replace(/(id|aria-labelledby|aria-controls)="[^"]*"/g, '$1=""');
 };
 
-const expectSetDataMatchesRender = <T extends object>(Ctor: new (options: never) => Tool<T>, from: T, to: T): void => {
+const expectSetDataMatchesRender = <T extends Record<string, unknown>>(Ctor: new (options: never) => Tool<T>, from: T, to: T): void => {
   const { tool, root } = build(Ctor, from);
 
   if (!tool.setData(to)) {

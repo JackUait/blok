@@ -1289,18 +1289,6 @@ export class TableCellBlocks {
       }
     }
 
-    // A replayed or remote child the model does not reference yet. Its cell
-    // comes with the table's own data write (setData mounts it then). Its
-    // holder sits next to its flat neighbour, so adjacency (and save()'s
-    // harvest) would claim the neighbour's cell and send it to every peer.
-    if (this.api.blocks.isSyncingFromYjs) {
-      if (this.api.blocks.getById?.(detail.target.id)?.parentId === this.tableBlockId) {
-        this.blocksAwaitingCell.add(detail.target.id);
-      }
-
-      return;
-    }
-
     const blockIndex = detail.index;
 
     if (blockIndex === undefined) {
@@ -1323,6 +1311,18 @@ export class TableCellBlocks {
       this.claimBlockForCell(removedEntry.cell, detail.target.id);
       this.syncBlockToModel(removedEntry.cell, detail.target.id);
       this.cellsPendingCheck.delete(removedEntry.cell);
+
+      return;
+    }
+
+    // A replayed or remote child the model does not reference yet. Its cell
+    // comes with the table's own data write (setData mounts it then). Its
+    // holder sits next to its flat neighbour, so adjacency (and save()'s
+    // harvest) would claim the neighbour's cell and send it to every peer.
+    if (this.api.blocks.isSyncingFromYjs) {
+      if (this.api.blocks.getById?.(detail.target.id)?.parentId === this.tableBlockId) {
+        this.blocksAwaitingCell.add(detail.target.id);
+      }
 
       return;
     }

@@ -439,9 +439,6 @@ test.describe('CON columns', () => {
 test.describe('CON toggle / callout', () => {
   // Undo must restore the exact prior state; redo the exact post-gesture state.
   test('CON-8 undo of turning a toggle with children into text shows the children again', async ({ page }) => {
-    test.fail();
-    // Observed: after Turn into > Text, k1/k2 stay parented to 'box' but their holders are detached
-    // (save() throws 'stranded block holder(s)'); undo does not bring them back.
     await createBlok(page, kidsDoc('toggle'));
     await gap(page);
     await openTunesFor(page, 'box');
@@ -449,12 +446,16 @@ test.describe('CON toggle / callout', () => {
     await page.locator(`${NESTED_POPOVER} [data-blok-testid="popover-item"][data-blok-item-name="paragraph"]`).click();
     await page.keyboard.press('Escape');
     await gap(page);
+    const converted = await save(page);
 
     await undo(page);
 
     expect(await domTree(page), 'DOM tree after undo').toEqual([
       ['p-before', null], ['box', null], ['k1', 'box'], ['k2', 'box'], ['p-after', null],
     ]);
+
+    await redo(page);
+    expect(await save(page), 'redo brings back the converted document').toEqual(converted);
   });
 
   // Undo must restore the exact prior state; redo the exact post-gesture state.

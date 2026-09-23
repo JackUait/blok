@@ -184,9 +184,7 @@ test.describe('undo audit: capture', () => {
   });
 
   // Undo must restore the exact prior state, and save() must keep working.
-  // Observed: save() throws "Saver: stranded block holder(s) detected ... its parent co is in the document but the block's holder is detached"
   test('CAP-6: undo of a callout color strands the callout child and breaks save()', async ({ page }) => {
-    test.fail();
     await createBlok(page, [
       { id: 'p0', type: 'paragraph', data: { text: 'Before' } },
       { id: 'co', type: 'callout', data: { emoji: '💡', textColor: null, backgroundColor: null }, content: ['k1'] },

@@ -5,7 +5,7 @@ import type {
   BlockToolConstructorOptions,
 } from '../../../types';
 import { COLUMN_ATTR, rebuildColumnListResizers, unwrapColumnListIfCollapsed } from '../columns-shared';
-import { mountChildBlocks } from '../nested-blocks';
+import { mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { twMerge } from '../../components/utils/tw';
 import type { ColumnData } from './types';
@@ -109,7 +109,10 @@ export class Column implements BlockTool {
 
     if (children.length > 0) {
       this.populated = true;
-      mountChildBlocks(this.childContainer, children);
+      mountChildBlocks(
+        this.childContainer,
+        withSlotlessDescendants(children, id => this.api.blocks.getChildren(id))
+      );
 
       return;
     }

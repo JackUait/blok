@@ -7,6 +7,7 @@ import type { Block } from '../../block';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { logLabeled } from '../../utils';
 import { moveElementAfter, moveElementBefore, moveElementToEnd } from '../../utils/html';
+import { CHILD_SLOT_SELECTOR, SELF_PLACING_PARENTS, isSlotless } from '../../../tools/nested-blocks';
 
 import type { BlockRepository } from './repository';
 
@@ -26,6 +27,14 @@ import type { BlockRepository } from './repository';
  * Internal (`--_blok-` prefix): core owns it. The public knob is the step.
  */
 const DEPTH_MULTIPLIER_PROPERTY = '--_blok-block-depth';
+
+/**
+ * Indent multiplier INSIDE a child slot, where the step above is zeroed: the
+ * number of model ancestors between the block and the ancestor whose slot holds
+ * it (toggle > p > p gives the last p a 1). main.css multiplies it by a step
+ * captured on the editor root, outside every slot.
+ */
+const SLOT_DEPTH_PROPERTY = '--_blok-slot-depth';
 
 /**
  * BlockHierarchy manages hierarchical relationships between blocks
@@ -163,6 +172,80 @@ export class BlockHierarchy {
   }
 
   /**
+   * The slot a child of `parentId` lives in: the child slot of the nearest
+   * ancestor (from `parentId` up) that owns one. A slotless parent's children
+   * sit as flat siblings after it, in that same slot.
+   *
+   * Null means "no slot": the root working area, or a self-placing ancestor
+   * (table, database) that places its descendants itself. A DIRECT parent's own
+   * slot is always returned — for a table that is its first cell, and the
+   * anti-steal guard in {@link setBlockParent} is what keeps it honest.
+   * @param parentId - the (prospective) parent id
+   */
+  private findHomeSlot(parentId: string | null): Element | null {
+    const walk = (cursor: string | null, visited: Set<string>): Element | null => {
+      if (cursor === null || visited.has(cursor)) {
+        return null;
+      }
+      visited.add(cursor);
+
+      const ancestor = this.repository.getBlockById(cursor);
+
+      if (ancestor === undefined) {
+        return null;
+      }
+
+      const slot = ancestor.holder.querySelector(CHILD_SLOT_SELECTOR);
+
+      if (cursor === parentId && slot !== null) {
+        return slot;
+      }
+
+      if (SELF_PLACING_PARENTS.has(ancestor.name)) {
+        return null;
+      }
+
+      return slot ?? walk(ancestor.parentId, visited);
+    };
+
+    return walk(parentId, new Set<string>());
+  }
+
+  /**
+   * After a slotless block changed slot, brings along its descendants that
+   * were left behind in the old slot, placing them right after it in flat
+   * (depth-first) order. A descendant that owns a slot carries its own subtree.
+   * @param block - the block that moved
+   * @param oldSlot - the element that held `block` before the move
+   */
+  private carrySlotlessDescendants(block: Block, oldSlot: Element): void {
+    const visited = new Set<string>([block.id]);
+    const newSlot = block.holder.parentElement;
+
+    const place = (parent: Block, previous: HTMLElement): HTMLElement =>
+      parent.contentIds.reduce<HTMLElement>((prev, childId) => {
+        const child = visited.has(childId) ? undefined : this.repository.getBlockById(childId);
+
+        if (child === undefined) {
+          return prev;
+        }
+        visited.add(childId);
+
+        if (child.holder.parentElement === oldSlot) {
+          moveElementAfter(child.holder, prev);
+        }
+
+        if (child.holder.parentElement !== newSlot) {
+          return prev;
+        }
+
+        return isSlotless(child) ? place(child, child.holder) : child.holder;
+      }, previous);
+
+    place(block, block.holder);
+  }
+
+  /**
    * Sets the parent of a block, updating both the block's parentId and the parent's contentIds.
    * @param block - the block to reparent
    * @param newParentId - the new parent block id, or null for root level
@@ -250,6 +333,8 @@ export class BlockHierarchy {
     const sanitizedParentId = parentExists ? newParentId : null;
 
     const oldParentId = block.parentId;
+    const slotBefore = block.holder.parentElement;
+    const homeSlot = this.findHomeSlot(sanitizedParentId);
 
     // Remove from old parent's contentIds
     const oldParent = oldParentId !== null ? this.repository.getBlockById(oldParentId) : undefined;
@@ -269,12 +354,18 @@ export class BlockHierarchy {
     // DragController re-asserts the child's parent via setBlockParent(child, sameToggle)
     // to fix DOM placement. Yanking it to root here would strand the child outside
     // the toggle even though it still belongs to it (the toggle-child-rides-along bug).
-    const oldContainer =
+    //
+    // The old slot is the old parent's HOME slot, so a block nested under a
+    // slotless toggle child leaves too. It is skipped when the new home is that
+    // same slot (Tab under a sibling inside the toggle): the mount below only
+    // re-orders it there.
+    const oldHomeSlot =
       oldParent !== undefined && sanitizedParentId !== oldParentId
-        ? oldParent.holder.querySelector('[data-blok-toggle-children]')
+        ? this.findHomeSlot(oldParentId)
         : null;
+    const oldContainer = oldHomeSlot?.matches('[data-blok-toggle-children]') === true ? oldHomeSlot : null;
 
-    if (oldContainer && block.holder.parentElement === oldContainer) {
+    if (oldContainer && block.holder.parentElement === oldContainer && homeSlot !== oldContainer) {
       // Scan backwards in the flat array for the nearest block whose holder is at root
       // level (not inside any toggle-children container) — use it as the DOM anchor.
       const allBlocks = this.repository.blocks;
@@ -346,10 +437,11 @@ export class BlockHierarchy {
     // already (a no-op insertBefore that re-asserts flat order); we express that
     // by only skipping when the holder's nearest nested container is DIFFERENT
     // from the target container.
+    //
+    // A SLOTLESS parent's children share the slot of its nearest ancestor that
+    // owns one (see findHomeSlot), placed flat after it by the same rule.
     if (sanitizedParentId !== null && newParent !== undefined) {
-      const newContainer = newParent.holder.querySelector(
-        '[data-blok-toggle-children], [data-blok-nested-blocks]'
-      );
+      const newContainer = homeSlot;
       const currentNestedContainer = block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`);
 
       // A column→column move is a legitimate reparent driven by the drag system:
@@ -513,6 +605,10 @@ export class BlockHierarchy {
       }
     }
 
+    if (slotBefore !== null && block.holder.parentElement !== slotBefore && isSlotless(block)) {
+      this.carrySlotlessDescendants(block, slotBefore);
+    }
+
     // Update visual indentation for the block AND its whole subtree — a reparent
     // shifts every descendant's structural depth, so their margins move too.
     this.reindentSubtree(block);
@@ -595,6 +691,33 @@ export class BlockHierarchy {
   }
 
   /**
+   * Model ancestors between `block` and the nearest ancestor whose holder
+   * encloses it — 0 for a slot's direct child, and 0 when no ancestor encloses
+   * it (root-level nesting uses the depth multiplier instead).
+   * @param block - the block to measure
+   */
+  private getSlotDepth(block: Block): number {
+    const visited = new Set<string>([block.id]);
+
+    const walk = (parentId: string | null, between: number): number => {
+      if (parentId === null || visited.has(parentId)) {
+        return 0;
+      }
+      visited.add(parentId);
+
+      const ancestor = this.repository.getBlockById(parentId);
+
+      if (ancestor === undefined) {
+        return 0;
+      }
+
+      return ancestor.holder.contains(block.holder) ? between : walk(ancestor.parentId, between + 1);
+    };
+
+    return walk(block.parentId, 0);
+  }
+
+  /**
    * Updates the visual indentation of a block based on its depth in the hierarchy.
    *
    * Only the multiplier is written ({@link DEPTH_MULTIPLIER_PROPERTY}); main.css
@@ -607,6 +730,9 @@ export class BlockHierarchy {
    */
   public updateBlockIndentation(block: Block): void {
     const { holder } = block;
+
+    // Table cells, lists and column trees never take the slot indent.
+    holder.style.setProperty(SLOT_DEPTH_PROPERTY, '0');
 
     // Blocks inside table cells should not receive visual indentation.
     // The parent-child relationship is semantic (data tracking), not visual.
@@ -633,6 +759,7 @@ export class BlockHierarchy {
     // margin (the container indents them).
     if (holder.closest('[data-blok-toggle-children]')) {
       holder.style.setProperty(DEPTH_MULTIPLIER_PROPERTY, '0');
+      holder.style.setProperty(SLOT_DEPTH_PROPERTY, String(this.getSlotDepth(block)));
       holder.setAttribute('data-blok-depth', String(this.getBlockDepth(block)));
 
       return;
@@ -660,8 +787,12 @@ export class BlockHierarchy {
     }
 
     const depth = this.getBlockDepth(block);
+    const slotDepth = this.getSlotDepth(block);
 
-    holder.style.setProperty(DEPTH_MULTIPLIER_PROPERTY, depth.toString());
+    // Inside a plain slot the indent is split between the two terms, so a slot
+    // that opts the step back in still gets depth x step, not more.
+    holder.style.setProperty(SLOT_DEPTH_PROPERTY, String(slotDepth));
+    holder.style.setProperty(DEPTH_MULTIPLIER_PROPERTY, String(depth - slotDepth));
     holder.setAttribute('data-blok-depth', depth.toString());
   }
 }

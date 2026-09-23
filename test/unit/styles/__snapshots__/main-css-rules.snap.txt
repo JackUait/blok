@@ -2159,8 +2159,12 @@
   --blok-editor-gutter-end: 0px;
 }
 
+:where([data-blok-interface=blok]) {
+  --_blok-slot-indent-step: var(--blok-block-indent-step, 24px);
+}
+
 :where([data-blok-element]) {
-  margin-left: calc(var(--_blok-block-depth, 0) * var(--blok-block-indent-step, 24px));
+  margin-left: calc(var(--_blok-block-depth, 0) * var(--blok-block-indent-step, 24px) + var(--_blok-slot-depth, 0) * var(--_blok-slot-indent-step, 0px));
 }
 
 :where([data-blok-nested-blocks]) {

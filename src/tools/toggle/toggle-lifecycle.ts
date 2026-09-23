@@ -6,7 +6,7 @@
 
 import type { API } from '../../../types';
 
-import { mountChildBlocks } from '../nested-blocks';
+import { mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
 import { setupPlaceholder } from '../../components/utils/placeholder';
 
 import { hide as hideTooltip, show as showTooltip } from '../../components/utils/tooltip';
@@ -108,6 +108,7 @@ export const updateArrowState = (
 
 /**
  * Show or hide child block holders based on the toggle's open state.
+ * Covers descendants of slotless children too (see withSlotlessDescendants).
  * Children are hidden via the 'hidden' CSS class (display: none), not removed from the DOM.
  *
  * @param api - Blok API instance
@@ -123,7 +124,9 @@ export const updateChildrenVisibility = (
   childContainer?: HTMLElement | null,
   arrowElement?: HTMLElement | null
 ): void => {
-  const children = api.blocks.getChildren(blockId);
+  // A slotless child's own children live in this slot too, so they mount and
+  // hide with it.
+  const children = withSlotlessDescendants(api.blocks.getChildren(blockId), id => api.blocks.getChildren(id));
 
   // Before hiding, check if focus is inside the child container and move it to arrow
   if (!isOpen && childContainer && arrowElement && childContainer.contains(document.activeElement)) {

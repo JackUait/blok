@@ -331,8 +331,11 @@ describe('ToggleItem', () => {
 
       // getChildren should have been called during rendered() and setData()
       // Each call to updateChildrenVisibility + updateBodyPlaceholderVisibility = 2 calls per lifecycle
-      // rendered() = 2 calls, setData() = 2 calls = 4 total
-      expect(mockAPI.blocks.getChildren).toHaveBeenCalledTimes(4);
+      // rendered() = 2 calls, setData() = 2 calls = 4 total. Calls for the
+      // children's own ids (slotless descendants) are not counted.
+      const ownCalls = vi.mocked(mockAPI.blocks.getChildren).mock.calls.filter(([id]) => id === 'test-block-id');
+
+      expect(ownCalls).toHaveLength(4);
     });
   });
 

@@ -1850,4 +1850,242 @@ describe('BlockHierarchy', () => {
     });
   });
 
+  describe('setBlockParent() — a slotless parent inside a container', () => {
+    /**
+     * Builds `holder > [data-blok-toggle-children]` and returns the container.
+     */
+    const addSlot = (owner: Block): HTMLElement => {
+      const slot = document.createElement('div');
+
+      slot.setAttribute('data-blok-toggle-children', '');
+      slot.setAttribute('data-blok-nested-blocks', '');
+      owner.holder.appendChild(slot);
+
+      return slot;
+    };
+
+    it('keeps a block tabbed under a toggle child inside the toggle container, right after its new parent', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 't1', parentId: null, contentIds: ['c1', 'c2'] },
+        { id: 'c1', parentId: 't1', contentIds: [] },
+        { id: 'c2', parentId: 't1', contentIds: [] },
+        { id: 'after', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const t1 = requireBlock('t1');
+      const c1 = requireBlock('c1');
+      const c2 = requireBlock('c2');
+      const after = requireBlock('after');
+      const slot = addSlot(t1);
+
+      slot.append(c1.holder, c2.holder);
+      workingArea.append(t1.holder, after.holder);
+
+      hierarchy.setBlockParent(c2, 'c1');
+
+      expect(c2.holder.parentElement).toBe(slot);
+      expect(c1.holder.nextElementSibling).toBe(c2.holder);
+      expect(c1.contentIds).toEqual(['c2']);
+    });
+
+    it('places the grandchild before the next toggle child, by flat order', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 't1', parentId: null, contentIds: ['c1', 'c2', 'c3'] },
+        { id: 'c1', parentId: 't1', contentIds: [] },
+        { id: 'c2', parentId: 't1', contentIds: [] },
+        { id: 'c3', parentId: 't1', contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const t1 = requireBlock('t1');
+      const [c1, c2, c3] = ['c1', 'c2', 'c3'].map(requireBlock);
+      const slot = addSlot(t1);
+
+      slot.append(c1.holder, c2.holder, c3.holder);
+      workingArea.append(t1.holder);
+
+      hierarchy.setBlockParent(c2, 'c1');
+
+      expect(Array.from(slot.children)).toEqual([c1.holder, c2.holder, c3.holder]);
+    });
+
+    it('moves a slotless block\'s stranded children along with it (Shift+Tab adoption inside a callout)', () => {
+      // co (callout) > t1 (toggle) > [c1, c2, c3]. Shift+Tab on c2 first adopts
+      // c3 under c2, then outdents c2 into the callout.
+      repository = createRepositoryWithBlocks([
+        { id: 'co', parentId: null, contentIds: ['t1'] },
+        { id: 't1', parentId: 'co', contentIds: ['c1', 'c2', 'c3'] },
+        { id: 'c1', parentId: 't1', contentIds: [] },
+        { id: 'c2', parentId: 't1', contentIds: [] },
+        { id: 'c3', parentId: 't1', contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const [co, t1, c1, c2, c3] = ['co', 't1', 'c1', 'c2', 'c3'].map(requireBlock);
+      const calloutSlot = addSlot(co);
+      const toggleSlot = addSlot(t1);
+
+      toggleSlot.append(c1.holder, c2.holder, c3.holder);
+      calloutSlot.append(t1.holder);
+      workingArea.append(co.holder);
+
+      hierarchy.setBlockParent(c3, 'c2');
+      hierarchy.setBlockParent(c2, 'co');
+
+      expect(c3.holder.parentElement).toBe(calloutSlot);
+      expect(Array.from(calloutSlot.children)).toEqual([t1.holder, c2.holder, c3.holder]);
+      expect(Array.from(toggleSlot.children)).toEqual([c1.holder]);
+    });
+
+    it('carries an adopted sibling to root with its new parent (Shift+Tab in a root toggle)', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 't1', parentId: null, contentIds: ['c1', 'c2', 'c3'] },
+        { id: 'c1', parentId: 't1', contentIds: [] },
+        { id: 'c2', parentId: 't1', contentIds: [] },
+        { id: 'c3', parentId: 't1', contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const [t1, c1, c2, c3] = ['t1', 'c1', 'c2', 'c3'].map(requireBlock);
+      const toggleSlot = addSlot(t1);
+
+      toggleSlot.append(c1.holder, c2.holder, c3.holder);
+      workingArea.append(t1.holder);
+
+      hierarchy.setBlockParent(c3, 'c2');
+      hierarchy.setBlockParent(c2, null);
+
+      expect(c3.holder.parentElement).toBe(workingArea);
+      expect(c2.holder.nextElementSibling).toBe(c3.holder);
+      expect(c3.holder.style.getPropertyValue('--_blok-block-depth')).toBe('1');
+      expect(c3.holder.style.getPropertyValue('--_blok-slot-depth')).toBe('0');
+    });
+
+    it('leaves a table cell\'s nested block alone (the table places its own children)', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'table', parentId: null, contentIds: ['p'], name: 'table' },
+        { id: 'p', parentId: 'table', contentIds: [] },
+        { id: 'g', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const [table, p, g] = ['table', 'p', 'g'].map(requireBlock);
+      const cellOne = document.createElement('div');
+      const cellTwo = document.createElement('div');
+
+      cellOne.setAttribute('data-blok-nested-blocks', '');
+      cellTwo.setAttribute('data-blok-nested-blocks', '');
+      table.holder.append(cellOne, cellTwo);
+      cellTwo.append(p.holder, g.holder);
+      workingArea.append(table.holder);
+
+      hierarchy.setBlockParent(g, 'p');
+
+      expect(g.holder.parentElement).toBe(cellTwo);
+    });
+
+    it('indents a toggle grandchild one slot step, and a direct toggle child none', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 't1', parentId: null, contentIds: ['c1', 'c2'] },
+        { id: 'c1', parentId: 't1', contentIds: [] },
+        { id: 'c2', parentId: 't1', contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const [t1, c1, c2] = ['t1', 'c1', 'c2'].map(requireBlock);
+      const slot = addSlot(t1);
+
+      slot.append(c1.holder, c2.holder);
+      workingArea.append(t1.holder);
+
+      hierarchy.setBlockParent(c2, 'c1');
+
+      expect(c2.holder.style.getPropertyValue('--_blok-slot-depth')).toBe('1');
+      expect(c2.holder.style.getPropertyValue('--_blok-block-depth')).toBe('0');
+
+      hierarchy.updateBlockIndentation(c1);
+
+      expect(c1.holder.style.getPropertyValue('--_blok-slot-depth')).toBe('0');
+    });
+
+    it('indents a carried descendant by its distance to the new slot owner', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'co', parentId: null, contentIds: ['t1'] },
+        { id: 't1', parentId: 'co', contentIds: ['c1', 'c2', 'c3'] },
+        { id: 'c1', parentId: 't1', contentIds: [] },
+        { id: 'c2', parentId: 't1', contentIds: [] },
+        { id: 'c3', parentId: 't1', contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const [co, t1, c1, c2, c3] = ['co', 't1', 'c1', 'c2', 'c3'].map(requireBlock);
+      const calloutSlot = addSlot(co);
+      const toggleSlot = addSlot(t1);
+
+      toggleSlot.append(c1.holder, c2.holder, c3.holder);
+      calloutSlot.append(t1.holder);
+      workingArea.append(co.holder);
+
+      hierarchy.setBlockParent(c3, 'c2');
+      hierarchy.setBlockParent(c2, 'co');
+
+      expect(c3.holder.style.getPropertyValue('--_blok-slot-depth')).toBe('1');
+      expect(c2.holder.style.getPropertyValue('--_blok-slot-depth')).toBe('0');
+    });
+
+    it('splits the indent between both terms in a plain slot, so a slot that opts the step back in is not indented twice', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'box', parentId: null, contentIds: ['c1'], name: 'custom-box' },
+        { id: 'c1', parentId: 'box', contentIds: ['g'] },
+        { id: 'g', parentId: 'c1', contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const [box, c1, g] = ['box', 'c1', 'g'].map(requireBlock);
+      const slot = document.createElement('div');
+
+      slot.setAttribute('data-blok-nested-blocks', '');
+      box.holder.appendChild(slot);
+      slot.append(c1.holder, g.holder);
+      workingArea.append(box.holder);
+
+      hierarchy.updateBlockIndentation(g);
+
+      expect(g.holder.style.getPropertyValue('--_blok-block-depth')).toBe('1');
+      expect(g.holder.style.getPropertyValue('--_blok-slot-depth')).toBe('1');
+      expect(g.holder).toHaveAttribute('data-blok-depth', '2');
+    });
+
+    it('keeps the slot step at zero for list items and column trees', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 't1', parentId: null, contentIds: ['c1'] },
+        { id: 'c1', parentId: 't1', contentIds: ['li'] },
+        { id: 'li', parentId: 'c1', contentIds: [], name: 'list' },
+        { id: 'col', parentId: null, contentIds: ['p'], name: 'column' },
+        { id: 'p', parentId: 'col', contentIds: ['g'] },
+        { id: 'g', parentId: 'p', contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const [t1, c1, li, col, p, g] = ['t1', 'c1', 'li', 'col', 'p', 'g'].map(requireBlock);
+      const toggleSlot = addSlot(t1);
+      // A column's slot carries only the nested-blocks marker.
+      const columnSlot = document.createElement('div');
+
+      columnSlot.setAttribute('data-blok-nested-blocks', '');
+      col.holder.appendChild(columnSlot);
+
+      toggleSlot.append(c1.holder, li.holder);
+      columnSlot.append(p.holder, g.holder);
+      workingArea.append(t1.holder, col.holder);
+
+      hierarchy.updateBlockIndentation(li);
+      hierarchy.updateBlockIndentation(g);
+
+      expect(li.holder.style.getPropertyValue('--_blok-slot-depth')).toBe('0');
+      expect(g.holder.style.getPropertyValue('--_blok-slot-depth')).toBe('0');
+    });
+  });
+
 });

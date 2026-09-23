@@ -97,6 +97,56 @@ const restoreCaret = (snapshot: CaretSnapshot | null): void => {
 };
 
 /**
+ * Every child slot carries one of these — first-party containers and every
+ * adapter's `<BlockChildren>` alike. `BlockHierarchy` reads the same selector,
+ * so the two sides agree on which blocks own a slot.
+ */
+export const CHILD_SLOT_SELECTOR = '[data-blok-toggle-children], [data-blok-nested-blocks]';
+
+/**
+ * Parents that place their children themselves (per cell / per view). Their
+ * descendants must never be pulled into an enclosing slot.
+ */
+export const SELF_PLACING_PARENTS: ReadonlySet<string> = new Set(['table', 'database']);
+
+/**
+ * A slotless block renders its children as flat sibling holders right after
+ * itself, in whatever slot holds the block — the same as nesting at root.
+ * @param block - the block to test
+ */
+export const isSlotless = (block: { holder: HTMLElement; name?: string }): boolean =>
+  block.holder.querySelector(CHILD_SLOT_SELECTOR) === null &&
+  !SELF_PLACING_PARENTS.has(block.name ?? '');
+
+/**
+ * The blocks a container slot hosts: its children, each followed by the
+ * descendants of a slotless child (depth-first, flat order). A child that owns a
+ * slot keeps its own descendants.
+ * @param children - the container block's model children, in model order
+ * @param getChildren - model children of a block, by id
+ */
+export const withSlotlessDescendants = <T extends { holder: HTMLElement; id?: string; name?: string }>(
+  children: T[],
+  getChildren: (id: string) => T[],
+): T[] => {
+  // Keyed by holder: a malformed parent chain must not recurse forever.
+  const seen = new Set<HTMLElement>();
+
+  const expand = (list: T[]): T[] => list.flatMap((child) => {
+    if (seen.has(child.holder)) {
+      return [];
+    }
+    seen.add(child.holder);
+
+    const nested = child.id !== undefined && isSlotless(child) ? expand(getChildren(child.id)) : [];
+
+    return [child, ...nested];
+  });
+
+  return expand(children);
+};
+
+/**
  * Mount child block holders into a container, skipping children that are
  * already in place or claimed by another nested-blocks container.
  *

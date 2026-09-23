@@ -38,6 +38,31 @@ describe('Column tool', () => {
     expect(el).toHaveAttribute('data-blok-column');
   });
 
+  it('mounts the children of a slotless block inside the column, right after their parent', () => {
+    const p = { id: 'p', name: 'paragraph', holder: document.createElement('div') };
+    const g = { id: 'g', name: 'paragraph', holder: document.createElement('div') };
+    const tree: Record<string, typeof p[]> = { 'col-1': [p], p: [g] };
+    const root = document.createElement('div');
+
+    root.append(p.holder, g.holder);
+    const api = createMockAPI({
+      blocks: {
+        getChildren: vi.fn((id: string) => tree[id] ?? []),
+        getBlockIndex: vi.fn().mockReturnValue(0),
+        insertInsideParent: vi.fn(),
+      },
+    } as unknown as Partial<API>);
+    const column = new Column(createColumnOptions({}, api));
+    const el = column.render();
+
+    column.rendered();
+
+    const slot = el.querySelector('[data-blok-nested-blocks]');
+
+    expect(g.holder.parentElement).toBe(slot);
+    expect(p.holder.nextElementSibling).toBe(g.holder);
+  });
+
   it('grows the holder evenly by default so columns split space equally', () => {
     // The flex item is the block holder, not the rendered wrapper. flex-grow
     // must land on the holder or columns collapse to their content width. The

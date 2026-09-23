@@ -87,6 +87,27 @@ describe('CalloutTool', () => {
   });
 
   describe('rendered()', () => {
+    it('mounts the children of a slotless child inside the callout body, right after their parent', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const opts = createOptions();
+      const line = { id: 'line', name: 'paragraph', holder: document.createElement('div') };
+      const nested = { id: 'nested', name: 'paragraph', holder: document.createElement('div') };
+      const outside = document.createElement('div');
+      const tree: Record<string, typeof line[]> = { 'callout-block-id': [line], line: [nested] };
+
+      outside.append(line.holder, nested.holder);
+      (opts.api.blocks.getChildren as ReturnType<typeof vi.fn>).mockImplementation((id: string) => tree[id] ?? []);
+      const tool = new CalloutTool(opts);
+      const wrapper = tool.render();
+
+      tool.rendered();
+
+      const container = wrapper.querySelector('[data-blok-toggle-children]');
+
+      expect(nested.holder.parentElement).toBe(container);
+      expect(line.holder.nextElementSibling).toBe(nested.holder);
+    });
+
     it('creates an initial child block and appends its holder when no children exist', async () => {
       const { CalloutTool } = await import('../../../../src/tools/callout');
       const opts = createOptions();

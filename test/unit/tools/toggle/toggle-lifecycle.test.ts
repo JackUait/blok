@@ -22,6 +22,75 @@ describe('Toggle Lifecycle', () => {
       },
     } as unknown as API);
 
+    describe('descendants of a slotless child', () => {
+      type Node = { id: string; name: string; holder: HTMLElement };
+
+      const makeBlock = (id: string, withSlot = false): Node => {
+        const holder = document.createElement('div');
+
+        if (withSlot) {
+          const slot = document.createElement('div');
+
+          slot.setAttribute('data-blok-nested-blocks', '');
+          holder.appendChild(slot);
+        }
+
+        return { id, name: withSlot ? 'toggle' : 'paragraph', holder };
+      };
+
+      const createTreeApi = (tree: Record<string, Node[]>): API => ({
+        blocks: {
+          getChildren: vi.fn((id: string) => tree[id] ?? []),
+        },
+      } as unknown as API);
+
+      it('mounts a grandchild under a slotless child inside the container, right after its parent', () => {
+        const c1 = makeBlock('c1');
+        const g = makeBlock('g');
+        const c2 = makeBlock('c2');
+        const root = document.createElement('div');
+
+        root.append(c1.holder, g.holder, c2.holder);
+        const api = createTreeApi({ t1: [c1, c2], c1: [g] });
+        const childContainer = document.createElement('div');
+
+        updateChildrenVisibility(api, 't1', true, childContainer);
+
+        expect(g.holder.parentElement).toBe(childContainer);
+        expect(Array.from(childContainer.children)).toEqual([c1.holder, g.holder, c2.holder]);
+      });
+
+      it('hides the grandchild on collapse and shows it on expand', () => {
+        const c1 = makeBlock('c1');
+        const g = makeBlock('g');
+        const api = createTreeApi({ t1: [c1], c1: [g] });
+        const childContainer = document.createElement('div');
+
+        updateChildrenVisibility(api, 't1', false, childContainer);
+
+        expect(g.holder.classList.contains('hidden')).toBe(true);
+
+        updateChildrenVisibility(api, 't1', true, childContainer);
+
+        expect(g.holder.classList.contains('hidden')).toBe(false);
+      });
+
+      it('leaves a nested toggle\'s children in that toggle', () => {
+        const inner = makeBlock('inner', true);
+        const g = makeBlock('g');
+        const innerSlot = inner.holder.firstElementChild;
+
+        innerSlot?.appendChild(g.holder);
+        const api = createTreeApi({ t1: [inner], inner: [g] });
+        const childContainer = document.createElement('div');
+
+        updateChildrenVisibility(api, 't1', false, childContainer);
+
+        expect(g.holder.parentElement).toBe(innerSlot);
+        expect(g.holder.classList.contains('hidden')).toBe(false);
+      });
+    });
+
     it('moves child holders into childContainer when isOpen = true', () => {
       const child1 = createMockChild();
       const child2 = createMockChild();

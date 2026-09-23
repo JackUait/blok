@@ -201,7 +201,22 @@ describe('Host customization tokens (public --blok-* contract)', () => {
 
       expect(body).not.toBeNull();
       expect(body).toMatch(
-        /margin-left:\s*calc\(var\(--_blok-block-depth,\s*0\)\s*\*\s*var\(--blok-block-indent-step,\s*24px\)\)/
+        /margin-left:\s*calc\(var\(--_blok-block-depth,\s*0\)\s*\*\s*var\(--blok-block-indent-step,\s*24px\)/
+      );
+    });
+
+    it('adds a slot term so nesting inside a child slot still indents', () => {
+      // A block nested under a slotless block inside a slot (toggle > p > p)
+      // sits in the slot, where the step is zero. Its indent comes from the
+      // slot depth core writes, times the step captured on the editor root —
+      // outside every slot, so the public knob still rescales it.
+      const body = findRuleBody(css, ':where([data-blok-element])');
+
+      expect(body).toMatch(
+        /\+\s*var\(--_blok-slot-depth,\s*0\)\s*\*\s*var\(--_blok-slot-indent-step,\s*0px\)\)/
+      );
+      expect(findRuleBody(css, ':where([data-blok-interface=blok])')).toMatch(
+        /--_blok-slot-indent-step:\s*var\(--blok-block-indent-step,\s*24px\)/
       );
     });
 

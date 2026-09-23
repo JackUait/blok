@@ -477,8 +477,14 @@
  * --blok-block-indent-step is public: declare it on your own slot to opt
  * indentation back IN, or on any ancestor to rescale nesting.
  */
+/* Nesting inside a slot (toggle > p > p), where the step is 0: the step is
+ * captured here, outside every slot, so the public knob still scales it. */
+:where([data-blok-interface=blok]) {
+  --_blok-slot-indent-step: var(--blok-block-indent-step, 24px);
+}
+
 :where([data-blok-element]) {
-  margin-left: calc(var(--_blok-block-depth, 0) * var(--blok-block-indent-step, 24px));
+  margin-left: calc(var(--_blok-block-depth, 0) * var(--blok-block-indent-step, 24px) + var(--_blok-slot-depth, 0) * var(--_blok-slot-indent-step, 0px));
 }
 
 /* Every child slot — first-party containers (toggle, callout, header toggle,

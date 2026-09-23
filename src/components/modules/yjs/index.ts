@@ -885,7 +885,7 @@ export class YjsManager extends Module {
     // buffered typing write drained inside this one would land untracked.
     this.flushPendingBlockWrites();
 
-    this.documentStore.transactWithoutCapture(fn);
+    this.undoHistory.withoutCaretMark(() => this.documentStore.transactWithoutCapture(fn));
   }
 
   // ========== Public API: Smart Grouping ==========

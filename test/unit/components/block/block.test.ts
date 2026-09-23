@@ -318,6 +318,23 @@ describe('Block', () => {
     });
   });
 
+  describe('dispatchChange', () => {
+    it('reports a derived change as derived only while its listeners run', () => {
+      const { block } = createBlock();
+      const seen: boolean[] = [];
+
+      block.on('didMutated', (changed) => {
+        seen.push(changed.isDerivedChange);
+      });
+
+      block.dispatchChange({ derived: true });
+      block.dispatchChange();
+
+      expect(seen).toEqual([true, false]);
+      expect(block.isDerivedChange).toBe(false);
+    });
+  });
+
   describe('setData', () => {
     it('clears contenteditable content when called with empty object on paragraph block', async () => {
       const { block, renderElement } = createBlock({ data: { text: 'initial content' } });

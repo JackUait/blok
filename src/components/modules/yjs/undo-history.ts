@@ -1162,6 +1162,24 @@ export class UndoHistory {
   }
 
   /**
+   * Run `fn` without leaving a caret mark behind. Writes mark the caret lazily
+   * and only a new undo entry clears the mark, so a mark taken by an untracked
+   * write would become the caret-before of the user's next, unrelated edit.
+   * @param fn - untracked work
+   */
+  public withoutCaretMark(fn: () => void): void {
+    const pending = this.pendingCaretBefore;
+    const hasPending = this.hasPendingCaret;
+
+    try {
+      fn();
+    } finally {
+      this.pendingCaretBefore = pending;
+      this.hasPendingCaret = hasPending;
+    }
+  }
+
+  /**
    * Reset pending caret capture state.
    * Called after caret positions are recorded or when batching completes.
    */

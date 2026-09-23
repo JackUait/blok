@@ -146,8 +146,13 @@ export interface BlockAPI {
   /**
    * Allows to say Blok that an element was changed. Used to manually trigger Blok's 'onChange' callback
    * Can be useful for block changes invisible for blok core.
+   *
+   * Pass `{ derived: true }` when the change is data the tool worked out by
+   * itself (a measured image size, a decoded waveform, a fetched preview),
+   * not something the user did. It is saved, but it is not an undo step and
+   * it does not clear redo.
    */
-  dispatchChange(): void;
+  dispatchChange(options?: { derived?: boolean }): void;
 
   /**
    * Tool could specify several entries to be displayed at the Toolbox (for example, "Heading 1", "Heading 2", "Heading 3")

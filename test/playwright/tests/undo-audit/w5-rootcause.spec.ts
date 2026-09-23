@@ -328,15 +328,7 @@ test.beforeAll(() => {
 test.describe('W5R root causes', () => {
   test.describe.configure({ timeout: 60_000 });
 
-  // W4S-2 root cause. caretSplitFirstLine (paste/handlers/base.ts:111-114) edits block "a" in the DOM.
-  // blockDidMutated runs with no sync window open, so syncBlockDataToYjs(a) starts; the echo guard at
-  // blockManager.ts:1857 is NOT what drops it. While a.save() is in flight, BlockManager.paste opens two
-  // unscoped RAF-extended windows (block-insertion.ts:762 and :794). When the save resolves (it returns
-  // {text:'HelloX1'}), the re-check at blockManager.ts:2100 (isSyncingFromYjs && isReconciling, true because
-  // unscopedSyncCount = 2) returns WITHOUT enqueueing and WITHOUT noteSuppressedMutation, so the deferred
-  // replay (yjs-sync.ts:248-259, drained at :322) never learns about it. No ym.enqueue for "a" ever happens.
   test('W5R-1: the first-line merge of a mid-block multi-line paste reaches the Yjs doc', async ({ page }) => {
-    test.fail(true, 'W5R-1 (W4S-2): blockManager.ts:2100 drops the in-flight write-back of the caret split');
     await mount(page, [{ id: 'a', type: 'paragraph', data: { text: 'Hello world' } }]);
     await instrument(page, 'a');
     await caretAfterFifthChar(page, 'a');
@@ -356,12 +348,7 @@ test.describe('W5R root causes', () => {
     expect(afterPaste.saved[0]).toBe('a:HelloX1');
   });
 
-  // W4S-2 seen by a second client fed by this editor's Yjs updates. Observed: after the paste the peer shows
-  // "Hello world" + "X2 world" (the author shows "HelloX1" + "X2 world"); after the undo the peer shows
-  // "Hello world" and the author "HelloX1". A host persisting save() keeps "HelloX1" and loses " world";
-  // a host persisting the Yjs doc keeps "Hello world".
   test('W5R-1b: a second client sees the same text as the author after a mid-block multi-line paste', async ({ page }) => {
-    test.fail(true, 'W5R-1b (W4S-2): the caret-split write never reaches the doc, so peers diverge');
     await mount(page, [{ id: 'a', type: 'paragraph', data: { text: 'Hello world' } }]);
     await instrument(page, 'a');
     await run(page, PEER_SETUP);

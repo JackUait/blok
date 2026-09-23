@@ -13,11 +13,12 @@ const createMockAPI = (): API =>
 const createOptions = (
   data: Partial<BookmarkData> = {},
   config: BookmarkConfig = { endpoint: 'https://api.test/unfurl' },
-  readOnly = false
+  readOnly = false,
+  dispatchChange = vi.fn()
 ): BlockToolConstructorOptions<BookmarkData, BookmarkConfig> =>
   ({
     api: createMockAPI(),
-    block: {} as never,
+    block: { dispatchChange } as never,
     config,
     readOnly,
     data: data as BookmarkData,
@@ -95,6 +96,39 @@ describe('Bookmark tool', () => {
     expect(card).not.toBeNull();
     expect(card?.textContent).toContain('Hello Title');
     expect(card?.textContent).toContain('Hello Description');
+  });
+
+  it('reports a fetched preview as a derived change, not as a DOM edit', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      okResponse({ success: 1, link: 'https://example.com/article', meta: { title: 'Hello Title' } })
+    );
+    const dispatchChange = vi.fn();
+    const tool = new Bookmark(createOptions({}, undefined, false, dispatchChange));
+    const root = tool.render();
+
+    tool.onPaste(patternEvent('https://example.com/article'));
+    await flush();
+
+    expect(dispatchChange).toHaveBeenCalledWith({ derived: true });
+    expect(root.getAttribute('data-blok-mutation-free')).toBe('true');
+  });
+
+  it('fetches the preview again when a replay restores a bookmark that never got one', () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+    const tool = new Bookmark({ ...createOptions({ url: 'https://example.com/article' }), origin: 'replay' });
+    const root = tool.render();
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(root.querySelector('[data-blok-testid="bookmark-loading"]')).not.toBeNull();
+  });
+
+  it('does not fetch on load, so a saved link with no preview is not refetched on every open', () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+    const tool = new Bookmark({ ...createOptions({ url: 'https://example.com/article' }), origin: 'load' });
+
+    tool.render();
+
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('saves the stored metadata', () => {

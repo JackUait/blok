@@ -269,9 +269,15 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
           await this.insertForcedPatternBlock(type, url, true);
         } else {
           // Block has other content: drop the inline link and append the rich
-          // view as a NEW block, leaving the surrounding text untouched.
-          this.removeInlineLink(linkBlock, url);
-          await this.insertForcedPatternBlock(type, url, false);
+          // view as a NEW block, leaving the surrounding text untouched. One
+          // undo group, so one Cmd+Z brings the link back and drops the block.
+          await this.inOneUndoGroup(async () => {
+            this.removeInlineLink(linkBlock, url);
+            // Reported now: its DOM record would land inside the insert's
+            // structural window and be written as an untracked echo.
+            linkBlock?.dispatchChange();
+            await this.insertForcedPatternBlock(type, url, false);
+          });
         }
         break;
       case 'plain':

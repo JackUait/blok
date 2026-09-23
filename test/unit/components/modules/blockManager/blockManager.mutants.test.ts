@@ -74,6 +74,7 @@ const createBlockStub = (options: BlockStubOptions): Block => {
     selected: options.selected ?? false,
     firstInput: options.withInput === false ? undefined : input,
     name: options.name ?? 'paragraph',
+    tool: { sanitizeConfig: {} },
     parentId: options.parentId ?? null,
     contentIds: [...(options.contentIds ?? [])],
     preservedTunes: options.preservedTunes ?? {},

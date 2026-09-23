@@ -108,9 +108,7 @@ test.describe('undo audit: setData apply sweep', () => {
   // --- Key removal: save() omits the key and only the untracked pruneBlockData deletes it. ---
 
   // Undo must restore the exact prior state.
-  // Observed: Expected: true / Received: undefined (canUndo() is false right after the gesture)
   test('APL-1: undo of turning "Hide controls" off does not hide the controls again', async ({ page }) => {
-    test.fail();
     await createBlok(page, [anchor, { id: 'v', type: 'video', data: { url: VIDEO_URL, hideControls: true } }]);
     await openTunesOn(page, 'v');
     await tuneItem(page, 'video-hide-controls').click();
@@ -122,9 +120,7 @@ test.describe('undo audit: setData apply sweep', () => {
   });
 
   // One undo must revert the LAST gesture, not the one before it.
-  // Observed: Expected {loop: true, alignment: "left"} / Received {loop: undefined, alignment: undefined}
   test('APL-2: undo after turning video Loop off reverts the earlier alignment change instead', async ({ page }) => {
-    test.fail();
     await createBlok(page, [anchor, { id: 'v', type: 'video', data: { url: VIDEO_URL, loop: true } }]);
     await openTunesOn(page, 'v');
     await tuneItem(page, 'video-alignment').hover();
@@ -172,9 +168,7 @@ test.describe('undo audit: setData apply sweep', () => {
   });
 
   // Redo must re-apply what undo reverted. The language picker UI path works; blocks.update does not.
-  // Observed: Expected: "python" / Received: "plain text"
   test('APL-8: redo of a blocks.update() language change on a code block loaded without "language" does nothing', async ({ page }) => {
-    test.fail();
     await createBlok(page, [anchor, { id: 'c', type: 'code', data: { code: 'x = 1' } }]);
     await page.evaluate(async () => {
       await window.blokInstance?.blocks.update('c', { language: 'python' });

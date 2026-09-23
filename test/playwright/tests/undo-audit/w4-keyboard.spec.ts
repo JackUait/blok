@@ -588,7 +588,7 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
   // Key source: toggle/block-operations.ts:47; split data: toggle-keyboard.ts splitBlock(..., { text: afterContent }),
   // closing stopCapturing: api/blocks.ts:733 (microtask). Observed: first undo changes only the new toggle, the split stays.
   test('W4K-62: Enter in the middle of a toggle title is one undo step', async ({ page }) => {
-    test.fail(true, 'W4K-62: first undo of a toggle title split is a no-op');
+    test.fail(true, 'W4K-62: redo of a toggle title split saves the new toggle after the old toggle\'s child');
     await create(page, [toggle(['k1']), P('k1', 'kid', 't')]);
     await caretAt(page, 't', 3);
     const trip = await roundTrip(page, () => page.keyboard.press('Enter'));

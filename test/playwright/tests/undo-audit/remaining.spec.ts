@@ -144,9 +144,7 @@ test.describe('undo audit: remaining surfaces', () => {
   });
 
   // Source: undo must keep redo until the user makes a new edit; a finishing link preview is not one.
-  // Observed: canRedo Expected true, Received false.
   test('UNP-2: a bookmark preview that arrives after an unrelated undo keeps redo', async ({ page }) => {
-    test.fail();
     await gotoTestPage(page);
     const release = await holdUnfurl(page);
 
@@ -168,10 +166,7 @@ test.describe('undo audit: remaining surfaces', () => {
   });
 
   // Source: undo then redo must give the document the user would have had without them.
-  // The preview lands while the block is undone, is dropped, and redo never fetches again.
-  // Observed: card text Expected "Stubbed Title", Received "example.comhttps://example.com/article"; saved data has no title.
   test('UNP-3: undo then redo of a bookmark whose preview was still loading gets the preview', async ({ page }) => {
-    test.fail();
     await gotoTestPage(page);
     const release = await holdUnfurl(page);
 
@@ -193,11 +188,7 @@ test.describe('undo audit: remaining surfaces', () => {
   });
 
   // Source: undo must restore the exact prior state and keep redo.
-  // One Cmd+Z during the upload only swaps the block back to the empty picker (the image block stays);
-  // the upload then lands in it and redo is gone.
-  // Observed: hasImage Expected false, Received true.
   test('UNP-4: an image upload undone while pending does not land afterwards', async ({ page }) => {
-    test.fail();
     await mount(page, [P('p', 'alpha'), P('q', '')], 'image');
     await page.locator('[data-blok-id="q"] [contenteditable]').click();
     await page.keyboard.type('/image', { delay: 30 });
@@ -216,11 +207,8 @@ test.describe('undo audit: remaining surfaces', () => {
   });
 
   // Source: opening a document is not an edit; nothing may be undoable before the user acts (cf. RDO-1b, LIF-1).
-  // The player writes aspectRatio on loadedmetadata (video/index.ts) and that write is recorded.
   // The video request is held so metadata lands after load, as it does on a slow network.
-  // Observed: canUndo Expected false, Received true.
   test('UNP-5: a video without a saved aspect ratio adds an undo step when its metadata loads', async ({ page }) => {
-    test.fail();
     await gotoTestPage(page);
     const gate = { open: false };
 
@@ -240,10 +228,7 @@ test.describe('undo audit: remaining surfaces', () => {
   });
 
   // Source: undo must restore the exact prior state (before the pick, the pasted link was on screen).
-  // History holds two steps, but the first undo removes the card AND the link, and the second does nothing.
-  // Observed: link count Expected 1, Received 0; the next undo changes nothing.
   test('UNP-6: one undo after picking Bookmark for a pasted link brings the link back', async ({ page }) => {
-    test.fail();
     await gotoTestPage(page);
     await page.route('**/__unfurl*', async (route) => {
       await route.fulfill({ json: { success: 1, link: 'https://example.com/article', meta: { title: 'Stubbed Title' } } });

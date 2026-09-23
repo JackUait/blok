@@ -340,6 +340,11 @@ export class Renderer extends Module {
       applyLinkConfig(this.Blok.UI.nodes.redactor, this.config.link);
     }
 
+    // After the rewrites above, so the document takes the DOM they produced.
+    // A view rebuild renders a document this client did not author: add the
+    // missing keys only, never overwrite a peer's value with our sanitised one.
+    BlockManager.normalizeRenderedBlocks({ onlyMissingKeys: options.skipYjsSync === true });
+
     return blocks.length;
   }
 

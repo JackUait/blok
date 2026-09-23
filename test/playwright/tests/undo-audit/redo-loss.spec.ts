@@ -172,10 +172,7 @@ test.describe('undo audit: redo loss', () => {
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
-  // Observed: expect(canRedo).toBe(true) -> Received: false. canRedo is still
-  // true 350ms after the undo and false by 400ms.
   test('RDO-1a: undoing an image delete keeps redo available', async ({ page }) => {
-    test.fail(true, 'RDO-1: image natural-size write-back after an undo is tracked and clears redo');
     await createBlok(page, IMAGE_DOC);
     await wait(page, CAPTURE_GAP);
     const before = await save(page);
@@ -198,11 +195,7 @@ test.describe('undo audit: redo loss', () => {
     expect(await save(page)).toStrictEqual(deleted);
   });
 
-  // Observed: types after one undo are ['paragraph', 'image', 'paragraph'];
-  // four undos never remove it nor reach the 'Z'. Inserting with
-  // naturalWidth/naturalHeight preset makes one undo remove it.
   test('RDO-1b: undo after inserting an image removes it and reaches earlier edits', async ({ page }) => {
-    test.fail(true, 'RDO-1: undo loops on the image natural-size write-back');
     await createBlok(page, [P('a', 'A'), P('b', 'B')]);
     await wait(page, CAPTURE_GAP);
     await typeAtEnd(page, 'a', 'Z');
@@ -223,10 +216,7 @@ test.describe('undo audit: redo loss', () => {
     expect(textOf(await save(page), 'a')).toBe('A');
   });
 
-  // Observed: expect(canRedo).toBe(true) -> Received: false. canRedo is true
-  // after the first animation frame and false after the second.
   test('RDO-2a: undoing a database delete keeps redo available', async ({ page }) => {
-    test.fail(true, 'RDO-2: database title write-back after an undo is tracked and clears redo');
     await createBlok(page, DATABASE_DOC);
     await wait(page, CAPTURE_GAP);
     const before = await save(page);
@@ -249,10 +239,7 @@ test.describe('undo audit: redo loss', () => {
     expect(await save(page)).toStrictEqual(deleted);
   });
 
-  // Observed: Expected "A", Received "AZ". Each undo pops the database's
-  // write-back, which the re-render writes again.
   test('RDO-2b: after undoing a database delete, further undos reach earlier edits', async ({ page }) => {
-    test.fail(true, 'RDO-2: undo loops on the database title write-back');
     await createBlok(page, DATABASE_DOC);
     await wait(page, CAPTURE_GAP);
     await typeAtEnd(page, 'a', 'Z');

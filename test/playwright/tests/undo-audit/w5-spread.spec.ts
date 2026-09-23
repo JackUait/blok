@@ -293,10 +293,6 @@ const explain = (t: Trip): string => `gesture added ${t.steps} undo entries; sec
 
 // Known-failing probes, with the defect each one pins. Looked up as the first line of the test body.
 const PINS: Record<string, string> = {
-  'W5F-11': 'W5F-11: first undo of Tab on a checklist item saved without checked is a no-op',
-  'W5F-40': 'W5F-40: undo of the first edit in a legacy toggle does nothing',
-  'W5F-47': 'W5F-47: undo of the first edit in a legacy toggle does nothing',
-  'W5F-48': 'W5F-48: undo reverts the load-time colour migration in a heading',
   'W5F-49': 'W5F-49: undo of blocks.update on a legacy callout loses its migrated background colour',
 };
 

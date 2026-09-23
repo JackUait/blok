@@ -36,6 +36,7 @@ const createRenderer = (config: Renderer['config']): {
     BlockManager: {
       insert: vi.fn(),
       insertMany: vi.fn(),
+      normalizeRenderedBlocks: vi.fn(),
       composeBlock: vi.fn((options: ComposeBlockArgs) => {
         composed.push(options);
 

@@ -16,6 +16,9 @@ describe('PatternHandler — link paste menu gating', () => {
   const pasteMock = vi.fn();
   const insertMock = vi.fn();
   const insertAtCaretMock = vi.fn();
+  const linkBlockChangeMock = vi.fn();
+  const beginGroupMock = vi.fn();
+  const endGroupMock = vi.fn();
   let menuOpen: PasteMenuOpenParams | null = null;
 
   const makeLinkHolder = (): HTMLElement => {
@@ -34,8 +37,10 @@ describe('PatternHandler — link paste menu gating', () => {
       BlockManager: {
         paste: pasteMock.mockResolvedValue({ id: 'b1' }),
         insert: insertMock.mockReturnValue({ id: 'link1', holder: makeLinkHolder() }),
-        currentBlock: { holder: document.createElement('div') },
+        currentBlock: { holder: document.createElement('div'), dispatchChange: linkBlockChangeMock },
         setCurrentBlockByChildNode: vi.fn(),
+        beginToolTransaction: beginGroupMock,
+        endToolTransaction: endGroupMock,
       },
       Caret: {
         setToBlock: vi.fn(),
@@ -221,6 +226,21 @@ describe('PatternHandler — link paste menu gating', () => {
       expect(pasteMock.mock.calls[0][0]).toBe('bookmark');
       // canReplace === false → append a new block, never overwrite the text block.
       expect(pasteMock.mock.calls[0][2]).toBe(false);
+    });
+
+    it('records removing the inline link in the same undo group as the new block', async () => {
+      const handler = makeHandler({});
+
+      await handler.handle('https://example.com/article', nonEmptyContext);
+      menuOpen?.onSelect('bookmark');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // The removal is a DOM edit made next to a structural window, which
+      // would file it as an untracked echo; reporting it makes it the user's.
+      expect(linkBlockChangeMock).toHaveBeenCalledTimes(1);
+      expect(beginGroupMock.mock.invocationCallOrder[0]).toBeLessThan(linkBlockChangeMock.mock.invocationCallOrder[0]);
+      expect(linkBlockChangeMock.mock.invocationCallOrder[0]).toBeLessThan(pasteMock.mock.invocationCallOrder[0]);
+      expect(endGroupMock).toHaveBeenCalledTimes(1);
     });
   });
 });

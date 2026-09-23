@@ -67,9 +67,7 @@ test.beforeAll(() => {
 
 test.describe('undo audit: native inputs and keyboard owners', () => {
   // Source: undo must restore the exact prior state and keep redo.
-  // Observed: canRedo Expected true, Received false; saved image data gains caption: "".
   test('INP-1: clicking an empty image caption does not cost the redo of the next undo', async ({ page }) => {
-    test.fail();
     await mount(page, [P('p', 'alpha'), IMAGE()]);
     await typeAtEnd(page, 'alpha', 'X');
     await gap(page);

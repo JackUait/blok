@@ -423,7 +423,7 @@ export class ImageTool implements BlockTool {
     if (this.data.naturalWidth === w && this.data.naturalHeight === h) return;
     this.data.naturalWidth = w;
     this.data.naturalHeight = h;
-    this.block.dispatchChange();
+    this.block.dispatchChange({ derived: true });
   }
 
   private applyLoadingDimensions(figure: HTMLElement, imgEl: HTMLImageElement, width: number, height: number): void {
@@ -859,7 +859,8 @@ export class ImageTool implements BlockTool {
     this.captionEl = captionEl;
     captionEl?.addEventListener('blur', () => {
       const next = captionEl.textContent ?? '';
-      if (next !== this.data.caption) {
+      // A caption never set reads '' here; that is not a change.
+      if (next !== (this.data.caption ?? '')) {
         this.data.caption = next;
         this.block.dispatchChange();
       }

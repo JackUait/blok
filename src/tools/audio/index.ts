@@ -356,7 +356,7 @@ export class AudioTool implements BlockTool {
         if (stale()) return;
         if (dirty.value) {
           this.renderState();
-          this.block.dispatchChange();
+          this.block.dispatchChange({ derived: true });
         }
       })
       .catch(() => { /* leave player working without metadata */ });
@@ -369,7 +369,7 @@ export class AudioTool implements BlockTool {
           this.data.peaks = decoded.peaks;
           this.data.duration = decoded.duration;
           this.renderState();
-          this.block.dispatchChange();
+          this.block.dispatchChange({ derived: true });
         }
       })
       .catch(() => { /* leave player working without waveform */ });

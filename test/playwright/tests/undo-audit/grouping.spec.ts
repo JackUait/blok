@@ -158,7 +158,7 @@ test.describe('undo audit: grouping and boundaries', () => {
     expect(await saved(page)).toEqual(['paragraph:ab']);
   });
 
-  // GRP-3. Expected: one undo reverts a markdown conversion and leaves the literal marker
+  // One undo reverts a markdown conversion and leaves the literal marker
   // (Notion parity; "# ", "- ", "1. ", "[] ", "\" ", "---" all do this in one step).
   test('GRP-3: one undo reverts the "> " toggle shortcut to the literal text', async ({ page }) => {
     await create(page, [{ type: 'paragraph', data: { text: '' } }]);

@@ -272,7 +272,13 @@ const createColumnResizer = (
 
   // Double-click equalizes every column in the list, à la Notion.
   resizer.addEventListener('dblclick', () => {
+    // flex-grow alone never reaches the document, so undo could not bring the
+    // old width back. Write the even width explicitly as a tracked update.
+    const resized = api.blocks.getChildren(columnListId)
+      .filter(column => !['', '1'].includes(column.holder.style.flexGrow));
+
     resetColumnsToEvenWidth(api, columnListId);
+    resized.forEach(column => void api.blocks.update(column.id, { widthRatio: 1 }));
   });
 
   resizer.addEventListener('keydown', event => {

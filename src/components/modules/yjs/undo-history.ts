@@ -965,13 +965,17 @@ export class UndoHistory {
    * order). Tombstones of earlier moves and deletes are skipped.
    */
   private idLeftOf(item: Y.Item, stackItem: StackItem): string | null {
-    let left = item.left;
+    const { left } = item;
 
-    while (left !== null && left.deleted && !Y.isDeleted(stackItem.deletions, left.id)) {
-      left = left.left;
+    if (left === null) {
+      return null;
     }
 
-    const last: unknown = left?.content.getContent().at(-1);
+    if (left.deleted && !Y.isDeleted(stackItem.deletions, left.id)) {
+      return this.idLeftOf(left, stackItem);
+    }
+
+    const last: unknown = left.content.getContent().at(-1);
 
     return typeof last === 'string' ? last : null;
   }
@@ -984,6 +988,23 @@ export class UndoHistory {
     const block = owner?.parent instanceof Y.Map ? owner.parent._item : null;
 
     return block?.parentSub ?? null;
+  }
+
+  /**
+   * Re-place one restored block, see {@link putBackRestoredBlocks}.
+   */
+  private putBackRestoredBlock(id: string, target: BlockPlacement | undefined, direction: 'undo' | 'redo'): void {
+    const current = this.currentPlacement(id);
+
+    if (
+      target !== undefined
+      && current !== null
+      && current.parentId === target.parentId
+      && current.afterId !== target.afterId
+      && this.placementAnchorsExist(target)
+    ) {
+      this.placementCallback(id, target, direction === 'undo' ? 'move-undo' : 'move-redo');
+    }
   }
 
   /**
@@ -1028,18 +1049,8 @@ export class UndoHistory {
           return afterId === null || !pending.includes(afterId);
         });
         const [id] = pending.splice(Math.max(ready, 0), 1);
-        const target = recorded.get(id);
-        const current = this.currentPlacement(id);
 
-        if (
-          target !== undefined
-          && current !== null
-          && current.parentId === target.parentId
-          && current.afterId !== target.afterId
-          && this.placementAnchorsExist(target)
-        ) {
-          this.placementCallback(id, target, direction === 'undo' ? 'move-undo' : 'move-redo');
-        }
+        this.putBackRestoredBlock(id, recorded.get(id), direction);
       }
     } finally {
       doc.off('afterTransaction', collect);

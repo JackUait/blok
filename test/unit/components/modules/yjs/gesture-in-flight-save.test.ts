@@ -1,12 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { BlockManager } from '../../../../../src/components/modules/blockManager/blockManager';
-import { ModificationsObserver } from '../../../../../src/components/modules/modificationsObserver';
 import { YjsManager } from '../../../../../src/components/modules/yjs';
 import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
-import { BlockWriteBuffer } from '../../../../../src/components/modules/yjs/write-buffer';
-import { RedactorDomChanged } from '../../../../../src/components/events';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';

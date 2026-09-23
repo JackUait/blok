@@ -1,6 +1,6 @@
 import type { CellContent, CellPlacement, LegacyCellContent, TableData, TableTextSize } from './types';
 import { isCellWithBlocks } from './types';
-import { ensureTableIds, generateTableId } from './table-ids';
+import { alignRowsToColumns, ensureTableIds, generateTableId } from './table-ids';
 
 export interface SelectionRect {
   minRow: number;
@@ -1664,7 +1664,7 @@ export class TableModel {
 
     const seen = new Set<string>();
 
-    const grid = content.map(row =>
+    const cells = content.map(row =>
       (row ?? []).map(c => {
         const normalized = this.normalizeCell(c);
 
@@ -1683,6 +1683,9 @@ export class TableModel {
 
     // Concurrent col-insert + row-insert can merge into a ragged grid; pad
     // short rows to the widest row (cols and column ops derive from row 0).
+    // Rows carrying column ids are first laid out by id, so the gap lands
+    // under the column the row missed, not at its end.
+    const grid = alignRowsToColumns(cells);
     const maxCols = grid.reduce((max, row) => Math.max(max, row.length), 0);
 
     for (const row of grid) {

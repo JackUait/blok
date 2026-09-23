@@ -1,6 +1,6 @@
 # Stable table row and column ids — design
 
-Date: 2026-09-23. Status: approved by the user; implementation in progress.
+Date: 2026-09-23. Status: implemented (2f1306a3 and the follow-up that aligns ragged rows by column id).
 
 ## Goal
 
@@ -40,9 +40,13 @@ makes a column move plus a concurrent delete converge correctly.
 
 - `table-ids.ts` — `ensureTableIds(grid)`: fills missing ids, repairs
   duplicates (first occurrence wins), keeps every cell of a column/row on one
-  value. Pure; called by `normalizeTableData` (so the first render and the
-  model share ids) and by `TableModel.normalizeContent` (backstop for grids
-  built from the DOM or a paste).
+  value. `alignRowsToColumns(grid)`: lays each row out in the column order of
+  the widest row, by id, so a row that missed a concurrent column insert gets
+  its gap under that column instead of at its end. Both run in
+  `TableModel.normalizeContent` only. A table saved without ids therefore
+  mints once in the constructor and again when `rendered()` rebuilds from the
+  raw data; the second set is the one saved. Harmless, and not worth a second
+  call site.
 - `TableModel` — `addRow` mints a row id, `addColumn` mints a column id;
   delete/move carry ids with the cells; `snapshot` and `normalizeCell` keep
   both fields.

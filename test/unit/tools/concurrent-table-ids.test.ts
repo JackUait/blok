@@ -118,6 +118,28 @@ describe('a table with row and column ids under concurrent structure edits', () 
     expect(blocksGrid(b)).toEqual(blocksGrid(a));
   });
 
+  it('keeps every cell under its own column id when one peer adds a column and the other a row', () => {
+    const { a, b } = twoPeers(grid(1, 3));
+
+    edit(a, (model) => model.addColumn(1));
+    edit(b, (model) => {
+      model.addRow(1);
+      [0, 1, 2].forEach(column => model.addBlockToCell(1, column, `new-c${column}`));
+    });
+    sync(a, b);
+
+    const [top, added] = content(a);
+    const columnOf = (row: CellContent[], column: string): string | undefined =>
+      row.find(cell => cell.id === column)?.blocks.join('+');
+
+    // The added row never saw A's new column, so it arrives one cell short.
+    // Its three cells must stay under c0, c1, c2 — not slide one to the right.
+    expect(['c0', 'c1', 'c2'].map(column => columnOf(added, column))).toEqual(['new-c0', 'new-c1', 'new-c2']);
+    expect(['c0', 'c1', 'c2'].map(column => columnOf(top, column))).toEqual(['r0c0', 'r0c1', 'r0c2']);
+    expect(added.map(cell => cell.id)).toEqual(top.map(cell => cell.id));
+    expect(content(b)).toEqual(content(a));
+  });
+
   it('keeps both columns when two peers each add one', () => {
     const { a, b } = twoPeers(grid(1, 1));
 

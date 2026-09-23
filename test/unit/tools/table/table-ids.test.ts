@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ensureTableIds } from '../../../../src/tools/table/table-ids';
+import { alignRowsToColumns, ensureTableIds } from '../../../../src/tools/table/table-ids';
 import type { CellContent } from '../../../../src/tools/table/types';
 
 const columnIds = (grid: CellContent[][]): (string | undefined)[][] =>
@@ -79,5 +79,41 @@ describe('ensureTableIds', () => {
 
     expect(grid[0][0].id).toMatch(/^[A-Za-z0-9_-]+$/);
     expect(grid[0][0].rowId).toMatch(/^[A-Za-z0-9_-]+$/);
+  });
+});
+
+describe('alignRowsToColumns', () => {
+  const ids = (row: CellContent[]): (string | undefined)[] => row.map(cell => cell.id);
+
+  it('puts an empty cell where a row lacks a column, instead of at the end', () => {
+    const grid = alignRowsToColumns([
+      [{ blocks: ['a0'], id: 'c0' }, { blocks: ['aN'], id: 'cN' }, { blocks: ['a1'], id: 'c1' }],
+      [{ blocks: ['b0'], id: 'c0' }, { blocks: ['b1'], id: 'c1' }],
+    ]);
+
+    expect(grid[1]).toEqual([{ blocks: ['b0'], id: 'c0' }, { blocks: [], id: 'cN' }, { blocks: ['b1'], id: 'c1' }]);
+  });
+
+  it('reorders a row whose cells are in another column order', () => {
+    const grid = alignRowsToColumns([
+      [{ blocks: [], id: 'c0' }, { blocks: [], id: 'c1' }],
+      [{ blocks: ['x'], id: 'c1' }, { blocks: ['y'], id: 'c0' }],
+    ]);
+
+    expect(ids(grid[1])).toEqual(['c0', 'c1']);
+    expect(grid[1][0].blocks).toEqual(['y']);
+  });
+
+  it('leaves a row alone when it carries an id the widest row does not know', () => {
+    const row = [{ blocks: ['x'], id: 'other' }];
+    const grid = alignRowsToColumns([[{ blocks: [], id: 'c0' }, { blocks: [], id: 'c1' }], row]);
+
+    expect(grid[1]).toEqual(row);
+  });
+
+  it('leaves a grid without column ids alone', () => {
+    const input = [[{ blocks: ['a'] }], [{ blocks: ['b'] }, { blocks: ['c'] }]];
+
+    expect(alignRowsToColumns(input)).toEqual(input);
   });
 });

@@ -1539,6 +1539,55 @@ describe('LinkInlineTool', () => {
       expect((tool as unknown as HeadingTool).insertLink).toHaveBeenCalledWith('#h-inline');
     });
 
+    it('leaves the rows that still match in place while typing, so they do not replay their entrance', () => {
+      addHeading(2, 'Header Levels', 'h-levels');
+      addHeading(2, 'Heading one', 'h-one');
+      addHeading(2, 'Setup', 'h-setup');
+
+      const { itemWrapper, input } = openCreating();
+
+      type(input, 'h');
+
+      const [levels, one] = headingRows(itemWrapper);
+      const detached: Node[] = [];
+      const observer = new MutationObserver((records) => {
+        records.forEach((record) => detached.push(...Array.from(record.removedNodes)));
+      });
+
+      observer.observe(itemWrapper, { childList: true, subtree: true });
+
+      type(input, 'he');
+      type(input, 'hea');
+      type(input, 'head');
+      type(input, 'heade');
+      observer.takeRecords().forEach((record) => detached.push(...Array.from(record.removedNodes)));
+      observer.disconnect();
+
+      expect(detached).not.toContain(levels);
+      expect(detached).toContain(one);
+      expect(headingRows(itemWrapper)).toEqual([levels]);
+      expect(levels.id).toBe(input.getAttribute('aria-activedescendant'));
+    });
+
+    it('adds a row that starts matching again without disturbing its neighbours', () => {
+      addHeading(2, 'Alpha', 'h-alpha');
+      addHeading(2, 'Beta', 'h-beta');
+      addHeading(2, 'Alpine', 'h-alpine');
+
+      const { itemWrapper, input } = openCreating();
+
+      type(input, 'alp');
+
+      const [alpha, alpine] = headingRows(itemWrapper);
+
+      type(input, 'a');
+
+      expect(headingTitles(itemWrapper)).toEqual(['Alpha', 'Beta', 'Alpine']);
+      expect(headingRows(itemWrapper)[0]).toBe(alpha);
+      expect(headingRows(itemWrapper)[2]).toBe(alpine);
+      expect(new Set(headingRows(itemWrapper).map((row) => row.id)).size).toBe(3);
+    });
+
     it('brings the "keep typing" row back when no heading matches', () => {
       addHeading(2, 'Setup', 'h-setup');
 

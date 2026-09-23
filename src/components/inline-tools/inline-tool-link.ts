@@ -196,6 +196,12 @@ export class LinkInlineTool implements InlineTool {
   private headingTargets: HeadingTarget[] = [];
 
   /**
+   * Heading rows by block id, kept while the field is open so typing only
+   * adds and removes rows.
+   */
+  private headingRows = new Map<string, HTMLElement>();
+
+  /**
    * Stable id linking the input to its inline error via aria-describedby.
    */
   private readonly errorId = `blok-link-tool-error-${Math.random().toString(36).slice(2, 9)}`;
@@ -909,21 +915,50 @@ export class LinkInlineTool implements InlineTool {
    * @param matches - headings to list
    */
   private renderHeadings(matches: HeadingTarget[]): void {
-    this.nodes.headingList?.replaceChildren(...matches.map((heading, index) => {
+    const list = this.nodes.headingList;
+
+    if (!list) {
+      return;
+    }
+
+    // Only rows new to the list cascade in, staggered among themselves.
+    const fresh = matches.filter((heading) => !this.headingRows.has(heading.blockId));
+    const rows = matches.map((heading) => {
+      const cached = this.headingRows.get(heading.blockId);
+
+      if (cached) {
+        return cached;
+      }
+
       const row = this.createOptionRow(
         'heading',
-        `${this.errorId}-heading-${index}`,
+        '',
         this.createIcon(HEADING_ICONS[heading.level] ?? IconHash, HEADING_ICON_CLASSES),
         heading.text,
         '',
         () => this.applyLink(`#${heading.blockId}`)
       );
 
-      row.style.animationDelay = `${index * 30}ms`;
+      row.style.animationDelay = `${fresh.indexOf(heading) * 30}ms`;
       row.setAttribute('data-link-heading-level', String(heading.level));
+      this.headingRows.set(heading.blockId, row);
 
       return row;
-    }));
+    });
+
+    // Patch the list instead of rebuilding it: a row that leaves and re-enters
+    // the DOM replays its entrance animation, which flickers on every keystroke.
+    Array.from(list.children).forEach((child) => {
+      if (!rows.includes(child as HTMLElement)) {
+        child.remove();
+      }
+    });
+    rows.forEach((row, index) => {
+      if (list.children[index] !== row) {
+        list.insertBefore(row, list.children[index] ?? null);
+      }
+      row.setAttribute('id', `${this.errorId}-heading-${index}`);
+    });
   }
 
   /**
@@ -1184,6 +1219,8 @@ export class LinkInlineTool implements InlineTool {
     this.updateSuggestion(this.nodes.input.value);
     this.renderRecent();
     this.headingTargets = this.editing ? [] : this.readHeadings();
+    this.headingRows.clear();
+    this.nodes.headingList?.replaceChildren();
     this.updateOptions();
 
     this.nodes.input.className = twMerge(this.INPUT_BASE_CLASSES, 'block');
@@ -1335,6 +1372,7 @@ export class LinkInlineTool implements InlineTool {
     this.clearValidationError();
     this.nodes.suggestion?.classList.add('hidden');
     this.headingTargets = [];
+    this.headingRows.clear();
     this.nodes.headingList?.replaceChildren();
     [this.nodes.options, this.nodes.recent, this.nodes.headings, this.nodes.kinds].forEach((node) => node?.toggleAttribute('hidden', true));
     this.nodes.input.setAttribute('aria-expanded', 'false');

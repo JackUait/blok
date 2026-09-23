@@ -465,7 +465,7 @@ export class VideoTool implements BlockTool {
           if (ratio !== this.data.aspectRatio) {
             this.data.aspectRatio = ratio;
             media.style.aspectRatio = ratio;
-            this.block.dispatchChange();
+            this.block.dispatchChange({ derived: true });
           }
         }
       }, { once: true });

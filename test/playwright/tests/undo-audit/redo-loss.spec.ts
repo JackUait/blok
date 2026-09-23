@@ -225,7 +225,6 @@ test.describe('undo audit: redo loss', () => {
   // Observed: expect(canRedo).toBe(true) -> Received: false. canRedo is true
   // after the first animation frame and false after the second.
   test('RDO-2a: undoing a database delete keeps redo available', async ({ page }) => {
-    test.fail(true, 'RDO-2: database title write-back after an undo is tracked and clears redo');
     await createBlok(page, DATABASE_DOC);
     await wait(page, CAPTURE_GAP);
     const before = await save(page);
@@ -251,7 +250,6 @@ test.describe('undo audit: redo loss', () => {
   // Observed: Expected "A", Received "AZ". Each undo pops the database's
   // write-back, which the re-render writes again.
   test('RDO-2b: after undoing a database delete, further undos reach earlier edits', async ({ page }) => {
-    test.fail(true, 'RDO-2: undo loops on the database title write-back');
     await createBlok(page, DATABASE_DOC);
     await wait(page, CAPTURE_GAP);
     await typeAtEnd(page, 'a', 'Z');

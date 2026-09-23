@@ -335,7 +335,6 @@ test.describe('W5R root causes', () => {
   // unscopedSyncCount = 2) returns WITHOUT enqueueing and WITHOUT noteSuppressedMutation, so the deferred
   // replay (yjs-sync.ts:248-259, drained at :322) never learns about it. No ym.enqueue for "a" ever happens.
   test('W5R-1: the first-line merge of a mid-block multi-line paste reaches the Yjs doc', async ({ page }) => {
-    test.fail(true, 'W5R-1 (W4S-2): blockManager.ts:2100 drops the in-flight write-back of the caret split');
     await mount(page, [{ id: 'a', type: 'paragraph', data: { text: 'Hello world' } }]);
     await instrument(page, 'a');
     await caretAfterFifthChar(page, 'a');
@@ -360,7 +359,6 @@ test.describe('W5R root causes', () => {
   // "Hello world" and the author "HelloX1". A host persisting save() keeps "HelloX1" and loses " world";
   // a host persisting the Yjs doc keeps "Hello world".
   test('W5R-1b: a second client sees the same text as the author after a mid-block multi-line paste', async ({ page }) => {
-    test.fail(true, 'W5R-1b (W4S-2): the caret-split write never reaches the doc, so peers diverge');
     await mount(page, [{ id: 'a', type: 'paragraph', data: { text: 'Hello world' } }]);
     await instrument(page, 'a');
     await run(page, PEER_SETUP);

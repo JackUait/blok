@@ -196,81 +196,78 @@ export abstract class BasePasteHandler implements PasteHandler {
         !isContainerContext &&
         !firstSegmentIsEmpty;
 
-      const linesToInsert = await this.resolveLinesToInsert(data, canCaretSplit, firstSegmentIsEmpty);
+      // One undo group from the caret split to the last pasted block, held
+      // across every await: the split edits the current block before the first
+      // insert, and one Cmd+Z must revert both. Older test mocks may not
+      // expose the group API.
+      const holdsGroup = typeof BlockManager.beginToolTransaction === 'function';
 
-      const contextParentId = isInContainerTitle
-        ? (currentBlock?.id ?? null)
-        : (currentBlock?.parentId ?? null);
-      const insertedByIndex: Array<Awaited<ReturnType<BlokModules['BlockManager']['paste']>>> = [];
-
-      /**
-       * Group every pasted block's Yjs write into a single undo entry so
-       * that one Cmd+Z removes the whole paste. transactForTool sets
-       * operations.suppressStopCapturing = true before invoking the fn and
-       * restores it in a trailing microtask, which keeps the synchronous
-       * prefix of BlockManager.paste (where the currentBlockIndex setter
-       * would otherwise fire stopCapturing) inside the group.
-       *
-       * The fn is synchronous — transactForTool does not await — so the
-       * async work is kicked off inside the fn and its promise is awaited
-       * below. Between iterations we re-suppress directly on operations to
-       * keep the entire loop body inside the same undo group even after
-       * the initial close-boundary microtask has fired.
-       */
-      const operationsBridge = (BlockManager as unknown as { operations?: { suppressStopCapturing: boolean } }).operations;
-      const pasteChainRef: { current: Promise<void> } = { current: Promise.resolve() };
-
-      // Notion parity (M-17): pasting list-style continuation blocks into an
-      // EMPTY list item replaces it with the first inserted block. The global
-      // canReplaceCurrentBlock flag is false for a non-default (list) target,
-      // so allow the replace here when the produced blocks are list items.
-      const firstIsListOverride = this.readListOverride(linesToInsert[0]?.content) !== null;
-      const targetIsEmptyList = currentBlock?.name === 'list' && currentBlock.isEmpty;
-      const allowReplaceEmptyList = firstIsListOverride && targetIsEmptyList;
-
-      const runPasteLoop = (): void => {
-        pasteChainRef.current = (async (): Promise<void> => {
-          for (const [index, pasteData] of linesToInsert.entries()) {
-            // Re-assert suppression on every iteration — transactForTool's
-            // close-boundary microtask may have flipped suppressStopCapturing
-            // back to false before the next paste() runs its sync prefix.
-            if (operationsBridge !== undefined) {
-              operationsBridge.suppressStopCapturing = true;
-            }
-
-            const shouldReplace = index === 0 &&
-              (canReplaceCurrentBlock || allowReplaceEmptyList) &&
-              BlockManager.currentBlock?.isEmpty === true;
-            const pastedBlock = await BlockManager.paste(
-              pasteData.tool,
-              pasteData.event,
-              shouldReplace,
-              pasteData.toolData
-            );
-
-            // Stamp the inherited list style/depth/checked onto the freshly
-            // pasted list block. The list tool's onPaste only sets text + a
-            // default style from the plain-text content, so the override is
-            // applied here via BlockManager.update (carrier read from content).
-            const block = await this.applyListStyleOverride(pastedBlock, pasteData.content, operationsBridge);
-
-            Caret.setToBlock(block, Caret.positions.END);
-            insertedByIndex.push(block);
-
-            this.applyPastedBlockParent(block, pasteData, insertedByIndex, BlockManager, contextParentId);
-          }
-        })();
-      };
-
-      // Older test mocks may not expose transactForTool; fall through
-      // gracefully in that case so unrelated suites keep working.
-      if (typeof BlockManager.transactForTool === 'function') {
-        BlockManager.transactForTool(runPasteLoop);
-      } else {
-        runPasteLoop();
+      if (holdsGroup) {
+        BlockManager.beginToolTransaction();
       }
 
-      await pasteChainRef.current;
+      try {
+        const linesToInsert = await this.resolveLinesToInsert(data, canCaretSplit, firstSegmentIsEmpty);
+
+        const contextParentId = isInContainerTitle
+          ? (currentBlock?.id ?? null)
+          : (currentBlock?.parentId ?? null);
+        const insertedByIndex: Array<Awaited<ReturnType<BlokModules['BlockManager']['paste']>>> = [];
+
+        const operationsBridge = (BlockManager as unknown as { operations?: { suppressStopCapturing: boolean } }).operations;
+        const pasteChainRef: { current: Promise<void> } = { current: Promise.resolve() };
+
+        // Notion parity (M-17): pasting list-style continuation blocks into an
+        // EMPTY list item replaces it with the first inserted block. The global
+        // canReplaceCurrentBlock flag is false for a non-default (list) target,
+        // so allow the replace here when the produced blocks are list items.
+        const firstIsListOverride = this.readListOverride(linesToInsert[0]?.content) !== null;
+        const targetIsEmptyList = currentBlock?.name === 'list' && currentBlock.isEmpty;
+        const allowReplaceEmptyList = firstIsListOverride && targetIsEmptyList;
+
+        const runPasteLoop = (): void => {
+          pasteChainRef.current = (async (): Promise<void> => {
+            for (const [index, pasteData] of linesToInsert.entries()) {
+              // Re-assert suppression on every iteration — a nested tool
+              // transaction's close-boundary microtask may have flipped
+              // suppressStopCapturing back to false before the next paste()
+              // runs its sync prefix.
+              if (operationsBridge !== undefined) {
+                operationsBridge.suppressStopCapturing = true;
+              }
+
+              const shouldReplace = index === 0 &&
+                (canReplaceCurrentBlock || allowReplaceEmptyList) &&
+                BlockManager.currentBlock?.isEmpty === true;
+              const pastedBlock = await BlockManager.paste(
+                pasteData.tool,
+                pasteData.event,
+                shouldReplace,
+                pasteData.toolData
+              );
+
+              // Stamp the inherited list style/depth/checked onto the freshly
+              // pasted list block. The list tool's onPaste only sets text + a
+              // default style from the plain-text content, so the override is
+              // applied here via BlockManager.update (carrier read from content).
+              const block = await this.applyListStyleOverride(pastedBlock, pasteData.content, operationsBridge);
+
+              Caret.setToBlock(block, Caret.positions.END);
+              insertedByIndex.push(block);
+
+              this.applyPastedBlockParent(block, pasteData, insertedByIndex, BlockManager, contextParentId);
+            }
+          })();
+        };
+
+        runPasteLoop();
+
+        await pasteChainRef.current;
+      } finally {
+        if (holdsGroup) {
+          BlockManager.endToolTransaction();
+        }
+      }
 
       BlockManager.currentBlock && Caret.setToBlock(BlockManager.currentBlock, Caret.positions.END);
 

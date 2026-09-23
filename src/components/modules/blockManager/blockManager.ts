@@ -19,8 +19,9 @@ import { BlockToolAPI } from '../../block';
 import { BlockAPI } from '../../block/api';
 import { Blocks } from '../../blocks';
 import { DATA_ATTR } from '../../constants';
-import { BlockChanged } from '../../events';
+import { BlockChanged, BlockRendered } from '../../events';
 import { generateBlockId, logLabeled } from '../../utils';
+import { sanitizeBlocks } from '../../utils/sanitizer';
 import { assertHierarchy, validateHierarchy } from '../../utils/hierarchy-invariant';
 import { getBlockNestingDepth } from '../drag/utils/depthUtils';
 
@@ -38,6 +39,13 @@ import { captureDataKeySnapshot, type DataKeySnapshot } from '../yjs/document-st
 type BlocksStoreProxy = BlocksStore & {
   [index: number]: Block | undefined;
 };
+
+interface SyncBlockDataOptions {
+  /** The write is the editor's, not the user's: no undo step. */
+  untracked?: boolean;
+  /** A normalising write (see `normalizeBlockData`): unbuffered, whole or missing keys only. */
+  normalize?: 'all' | 'missing';
+}
 
 /**
  * Tool name of the standalone collapsible "toggle list" tool. Used by convert()
@@ -319,6 +327,15 @@ export class BlockManager extends Module {
   private toolTransactionStack: boolean[] = [];
 
   /**
+   * Every top-level data key each block's save() has emitted. Removing one of
+   * these is the user's edit; removing any other key is normalisation.
+   */
+  private readonly emittedDataKeys = new WeakMap<Block, Set<string>>();
+
+  /** True while `insertMany` renders a document; see `normalizeRenderedBlocks`. */
+  private isRenderingDocument = false;
+
+  /**
    * Operations handler for state changes
    */
   private operations!: BlockOperations;
@@ -348,6 +365,17 @@ export class BlockManager extends Module {
 
     // Initialize services
     this.initializeServices();
+
+    // A document render normalises its blocks itself, after its DOM rewrites
+    // (Renderer.insertRenderedBlocks). Every other block — created, pasted,
+    // replayed, remote — only gets the keys its document record lacks.
+    this.eventsDispatcher.on(BlockRendered, ({ blockId }) => {
+      const block = this.isRenderingDocument || this.Blok.ReadOnly.isEnabled ? undefined : this.getBlockById(blockId);
+
+      if (block !== undefined) {
+        this.normalizeBlockData(block, { onlyMissingKeys: true });
+      }
+    });
 
     /** Copy event */
     this.listeners.on(
@@ -637,9 +665,23 @@ export class BlockManager extends Module {
     // 1. operations.insert() from syncing duplicate blocks to Yjs
     // 2. scheduleParentSync from writing back data already in Yjs
     // Both would create 'local' origin transactions that pollute the undo stack.
-    this.yjsSync.withAtomicOperation(() => {
-      this.blocksStore.insertMany(blocks, index);
-    }, { extendThroughRAF: true });
+    const isDocumentRender = skipYjsSync || yjsSync === 'replace';
+
+    this.isRenderingDocument = isDocumentRender;
+
+    try {
+      this.yjsSync.withAtomicOperation(() => {
+        // A load is not an edit: what tools write while rendering it (a
+        // callout seeding its body) must not become an undo step either.
+        if (isDocumentRender) {
+          this.Blok.YjsManager.withoutCapture(() => this.blocksStore.insertMany(blocks, index));
+        } else {
+          this.blocksStore.insertMany(blocks, index);
+        }
+      }, { extendThroughRAF: true });
+    } finally {
+      this.isRenderingDocument = false;
+    }
 
     // Apply indentation for blocks with parentId (hierarchical structure).
     blocks.forEach(block => {
@@ -1862,7 +1904,7 @@ export class BlockManager extends Module {
         // and one frame, so the user can type into it. Re-checked on close.
         this.yjsSync.noteSuppressedMutation(block);
       } else {
-        void this.syncBlockDataToYjs(block);
+        void this.syncBlockDataToYjs(block, block.isDerivedChange ? { untracked: true, normalize: 'all' } : undefined);
       }
     }
 
@@ -2037,7 +2079,41 @@ export class BlockManager extends Module {
    * flushes immediately (today's timing), follow-ups coalesce into one trailing
    * flush per 400ms window. `flushBlockDataWrites` is the flush body.
    */
-  private async syncBlockDataToYjs(block: Block, options?: { untracked?: boolean }): Promise<void> {
+  /**
+   * Normalise every block after a document render. Called by the Renderer
+   * AFTER its DOM rewrites (mark colours, link config), so the document takes
+   * what save() returns once those are applied.
+   * @param options - see `normalizeBlockData`
+   * @param options.onlyMissingKeys - see `normalizeBlockData`
+   */
+  public normalizeRenderedBlocks(options?: { onlyMissingKeys?: boolean }): void {
+    if (this.Blok.ReadOnly.isEnabled) {
+      return;
+    }
+
+    this.blocks.forEach((block) => this.normalizeBlockData(block, options));
+  }
+
+  /**
+   * Bring the document to what the block's save() returns, as the editor's own
+   * write: not an undo step and not an edit (no lastEditedAt/By).
+   *
+   * The document is seeded with the caller's data as given, and save() often
+   * adds defaults or drops legacy keys. Left alone, the first later save-back
+   * writes that difference as a tracked change: the first Cmd+Z then undoes
+   * nothing visible, or undo deletes a key the tool re-adds and kills redo.
+   * @param block - a block that has just rendered
+   * @param options - how much to write
+   * @param options.onlyMissingKeys - add keys the document lacks and touch
+   *   nothing else. Use it for data this client did not author (a replay, a
+   *   remote block): save() is this client's sanitised view, and writing it
+   *   whole would strip a peer's markup.
+   */
+  public normalizeBlockData(block: Block, options?: { onlyMissingKeys?: boolean }): void {
+    void this.syncBlockDataToYjs(block, { untracked: true, normalize: options?.onlyMissingKeys === true ? 'missing' : 'all' });
+  }
+
+  private async syncBlockDataToYjs(block: Block, options?: SyncBlockDataOptions): Promise<void> {
     const { YjsManager } = this.Blok;
     // Registered BEFORE the save starts: between here and the enqueue below
     // this write is invisible to the flush barriers, so a destroy() landing in
@@ -2069,7 +2145,7 @@ export class BlockManager extends Module {
    * @param block - block whose saved data goes to Yjs
    * @param options - untracked marks a materializing (non-user) write
    */
-  private async saveAndEnqueueBlockDataWrite(block: Block, options?: { untracked?: boolean }): Promise<void> {
+  private async saveAndEnqueueBlockDataWrite(block: Block, options?: SyncBlockDataOptions): Promise<void> {
     // Classified BEFORE the await: the settling window is measured from the
     // mutation, not from whenever this tool's save() happens to resolve.
     const isMaterializing = options?.untracked === true || this.yjsSync.isMaterializing(block);
@@ -2096,15 +2172,40 @@ export class BlockManager extends Module {
     // payload above was captured from the pre-rewrite DOM, so writing it now
     // would diff the peer's characters away — and the reconciler has already
     // replaced the DOM it came from, so replaying it later would too. The
-    // block's own mutation record is the fresh path back.
-    if (this.yjsSync.isSyncingFromYjs && this.yjsSync.isReconciling(block)) {
+    // block's own mutation record is the fresh path back. Only a rewrite of
+    // THIS block counts: a paste's structural window opening mid-save must not
+    // drop the text it just split.
+    if (this.yjsSync.isSyncingFromYjs && this.yjsSync.isRewritingFromDocument(block)) {
       return;
     }
 
-    const savedKeys = Object.keys(savedData.data);
+    // Stored as the Saver outputs it: save() reads the DOM, which may hold
+    // derived markup (a rendered equation) the sanitizer reduces to its source.
+    // Storing the DOM form makes every later rewrite of it diff the text.
+    const [{ data }] = sanitizeBlocks(
+      [{ tool: block.name, data: savedData.data }],
+      () => block.tool.sanitizeConfig,
+      this.config.sanitizer
+    );
+    const savedKeys = Object.keys(data);
+    const emitted = this.emittedDataKeys.get(block) ?? new Set<string>();
 
-    this.Blok.YjsManager.enqueueBlockDataWrite(block.id, savedData.data, (entries) => {
-      return this.flushBlockDataWrites(block, entries, { isMaterializing, savedKeys, seenKeys, seenNestedKeys });
+    savedKeys.forEach((key) => emitted.add(key));
+    this.emittedDataKeys.set(block, emitted);
+
+    const flushOptions = { isMaterializing, savedKeys, seenKeys, seenNestedKeys, onlyMissingKeys: options?.normalize === 'missing' };
+
+    // Written now, not buffered: the buffer keeps only the newest flush
+    // callback, so an untracked one would carry the user's buffered keystrokes
+    // out of the undo stack. The write's own barrier drains those first.
+    if (options?.normalize !== undefined) {
+      this.flushBlockDataWrites(block, new Map(Object.entries(data)), flushOptions);
+
+      return;
+    }
+
+    this.Blok.YjsManager.enqueueBlockDataWrite(block.id, data, (entries) => {
+      return this.flushBlockDataWrites(block, entries, flushOptions);
     });
   }
 
@@ -2148,6 +2249,7 @@ export class BlockManager extends Module {
       savedKeys: readonly string[];
       seenKeys?: ReadonlySet<string>;
       seenNestedKeys?: DataKeySnapshot;
+      onlyMissingKeys?: boolean;
     }
   ): boolean {
     // Wrap data + metadata writes into a single Yjs transaction. Without this,
@@ -2176,9 +2278,16 @@ export class BlockManager extends Module {
     // depth bug approached from the other side.
     const keptKeys = new Set([...options.savedKeys, ...derivedKeys]);
 
+    const documentData = this.Blok.YjsManager.getBlockById(block.id)?.get('data');
+    const emitted = this.emittedDataKeys.get(block);
+
     const write = (): void => {
       for (const [key, value] of entries) {
         if (derivedKeys.has(key) || !keptKeys.has(key)) {
+          continue;
+        }
+
+        if (options.onlyMissingKeys === true && documentData instanceof YMap && documentData.has(key)) {
           continue;
         }
 
@@ -2187,7 +2296,18 @@ export class BlockManager extends Module {
         }
       }
 
-      if (!dataChangedRef.value) {
+      // A key this block's save() once emitted and now drops is the user
+      // clearing it (a colour reset, a hidden caption), so it joins the edit.
+      if (!options.isMaterializing && emitted !== undefined && options.seenKeys !== undefined) {
+        const seenEmitted = new Set([...options.seenKeys].filter((key) => emitted.has(key)));
+
+        if (this.Blok.YjsManager.pruneBlockData(block.id, keptKeys, seenEmitted)) {
+          dataChangedRef.value = true;
+        }
+      }
+
+      // The editor's own write is not an edit.
+      if (!dataChangedRef.value || options.isMaterializing) {
         return;
       }
 
@@ -2228,9 +2348,11 @@ export class BlockManager extends Module {
     //
     // Only a key this save SAW is eligible: one that appeared after the capture
     // came from a peer, and deleting it would take their write off both sides.
-    this.Blok.YjsManager.transactWithoutCapture(() => {
-      this.Blok.YjsManager.pruneBlockData(block.id, keptKeys, options.seenKeys);
-    });
+    if (options.onlyMissingKeys !== true) {
+      this.Blok.YjsManager.transactWithoutCapture(() => {
+        this.Blok.YjsManager.pruneBlockData(block.id, keptKeys, options.seenKeys);
+      });
+    }
 
     // The write-back the settling window was waiting for has landed: close the
     // window now rather than at its timeout, so a user edit that follows in the

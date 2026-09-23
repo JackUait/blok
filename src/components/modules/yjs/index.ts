@@ -807,6 +807,16 @@ export class YjsManager extends Module {
   }
 
   /**
+   * Run `fn` with every 'local' write inside it kept off the undo stack, for
+   * work that is not a user edit but reaches the document through ordinary
+   * write paths (tools rendering a document). Synchronous only.
+   * @param fn - work whose writes must not be undo steps
+   */
+  public withoutCapture(fn: () => void): void {
+    this.documentStore.withoutCapture(fn);
+  }
+
+  /**
    * Execute Yjs operations without adding them to the undo history.
    * Uses a non-tracked origin so the UndoManager ignores these changes.
    * Use this for auto-repair operations (e.g. ensuring empty cells have a block)

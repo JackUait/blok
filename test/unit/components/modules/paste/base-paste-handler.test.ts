@@ -4,7 +4,8 @@
  *
  * Multi-item paste must land in a SINGLE Yjs undo entry so that Cmd+Z
  * removes every block created by the paste in one step. The handler must:
- *   1. Wrap the multi-item loop in BlockManager.transactForTool
+ *   1. Hold one BlockManager tool transaction from the caret split to the
+ *      last pasted block
  *   2. Not call YjsManager.stopCapturing between iterations
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -45,7 +46,8 @@ const createBlok = (): {
   blok: BlokModules;
   pasteMock: ReturnType<typeof vi.fn>;
   setBlockParentMock: ReturnType<typeof vi.fn>;
-  transactForToolMock: ReturnType<typeof vi.fn>;
+  beginGroupMock: ReturnType<typeof vi.fn>;
+  endGroupMock: ReturnType<typeof vi.fn>;
   stopCapturingMock: ReturnType<typeof vi.fn>;
 } => {
   let blockCounter = 0;
@@ -60,7 +62,8 @@ const createBlok = (): {
     };
   });
   const setBlockParentMock = vi.fn();
-  const transactForToolMock = vi.fn((fn: () => void) => fn());
+  const beginGroupMock = vi.fn();
+  const endGroupMock = vi.fn();
   const stopCapturingMock = vi.fn();
 
   const blok = {
@@ -68,7 +71,8 @@ const createBlok = (): {
       currentBlock: null,
       paste: pasteMock,
       setBlockParent: setBlockParentMock,
-      transactForTool: transactForToolMock,
+      beginToolTransaction: beginGroupMock,
+      endToolTransaction: endGroupMock,
       setCurrentBlockByChildNode: vi.fn(),
     },
     Caret: {
@@ -81,7 +85,7 @@ const createBlok = (): {
     },
   } as unknown as BlokModules;
 
-  return { blok, pasteMock, setBlockParentMock, transactForToolMock, stopCapturingMock };
+  return { blok, pasteMock, setBlockParentMock, beginGroupMock, endGroupMock, stopCapturingMock };
 };
 
 const createInlinePasteItem = (tool: string, text: string): PasteData => {
@@ -107,7 +111,7 @@ describe('BasePasteHandler — multi-line plain-text paste into a non-empty bloc
   });
 
   it('merges the first line at the caret and carries the post-caret remainder onto the last line', async () => {
-    const { blok, pasteMock, transactForToolMock } = createBlok();
+    const { blok, pasteMock, beginGroupMock, endGroupMock } = createBlok();
 
     // A non-empty current block whose caret splits "ThisIs|Here": the
     // post-caret remainder is "Here".
@@ -160,8 +164,14 @@ describe('BasePasteHandler — multi-line plain-text paste into a non-empty bloc
     // The remainder rides with the LAST pasted segment.
     expect(data[2].content.textContent).toBe('ThirdHere');
 
-    // Still grouped into a single undo entry.
-    expect(transactForToolMock).toHaveBeenCalledTimes(1);
+    // One group, opened before the split edits the current block and closed
+    // after the last pasted block.
+    expect(beginGroupMock).toHaveBeenCalledTimes(1);
+    expect(beginGroupMock.mock.invocationCallOrder[0])
+      .toBeLessThan(blokModules.Caret.extractFragmentFromCaretPosition.mock.invocationCallOrder[0]);
+    expect(endGroupMock).toHaveBeenCalledTimes(1);
+    expect(endGroupMock.mock.invocationCallOrder[0])
+      .toBeGreaterThan(pasteMock.mock.invocationCallOrder[1]);
   });
 });
 
@@ -317,8 +327,8 @@ describe('BasePasteHandler — multi-item paste undo grouping', () => {
     vi.restoreAllMocks();
   });
 
-  it('wraps the multi-item paste loop in BlockManager.transactForTool so one Cmd+Z undoes the whole paste', async () => {  
-    const { blok, transactForToolMock, pasteMock } = createBlok();
+  it('holds one tool transaction around the multi-item paste loop so one Cmd+Z undoes the whole paste', async () => {
+    const { blok, beginGroupMock, endGroupMock, pasteMock } = createBlok();
     const handler = new TestHandler(blok, {} as ToolRegistry, {} as SanitizerConfigBuilder);
 
     const data: PasteData[] = [
@@ -329,7 +339,8 @@ describe('BasePasteHandler — multi-item paste undo grouping', () => {
 
     await handler.callInsertPasteData(data, false);
 
-    expect(transactForToolMock).toHaveBeenCalledTimes(1);
+    expect(beginGroupMock).toHaveBeenCalledTimes(1);
+    expect(endGroupMock).toHaveBeenCalledTimes(1);
     // All three pastes happened — the bug being fixed is about grouping,
     // not insertion, so the block count must stay correct.
     expect(pasteMock).toHaveBeenCalledTimes(3);
@@ -338,7 +349,7 @@ describe('BasePasteHandler — multi-item paste undo grouping', () => {
   it('does not call YjsManager.stopCapturing between pasted items', async () => {
     // The old implementation called YjsManager.stopCapturing() at the top of
     // every loop iteration to force separate undo entries. With the fix, the
-    // handler must leave grouping to transactForTool and never fire an
+    // handler must leave grouping to the tool transaction and never fire an
     // explicit stopCapturing itself.
     const { blok, stopCapturingMock } = createBlok();
     const handler = new TestHandler(blok, {} as ToolRegistry, {} as SanitizerConfigBuilder);
@@ -351,8 +362,7 @@ describe('BasePasteHandler — multi-item paste undo grouping', () => {
 
     await handler.callInsertPasteData(data, false);
 
-    // The mock transactForTool is `(fn) => fn()`, which does not emit any
-    // boundary stopCapturing calls. Any invocation recorded here therefore
+    // The mocked group API does not emit any boundary stopCapturing calls. Any invocation recorded here therefore
     // originated from the handler code itself — which the fix removes.
     expect(stopCapturingMock).not.toHaveBeenCalled();
   });

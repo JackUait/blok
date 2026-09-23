@@ -168,7 +168,6 @@ test.describe('undo audit: grouping and boundaries', () => {
   // (Notion parity; "# ", "- ", "1. ", "[] ", "\" ", "---" all do this in one step).
   // Observed: Expected ["paragraph:&gt;&nbsp;"], Received ["toggle:"]
   test('GRP-3: one undo reverts the "> " toggle shortcut to the literal text', async ({ page }) => {
-    test.fail();
     await create(page, [{ type: 'paragraph', data: { text: '' } }]);
     await input(page, 0).click();
 

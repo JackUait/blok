@@ -411,7 +411,7 @@ export class ImageTool implements BlockTool {
     if (this.data.naturalWidth === w && this.data.naturalHeight === h) return;
     this.data.naturalWidth = w;
     this.data.naturalHeight = h;
-    this.block.dispatchChange();
+    this.block.dispatchChange({ derived: true });
   }
 
   private applyLoadingDimensions(figure: HTMLElement, imgEl: HTMLImageElement, width: number, height: number): void {

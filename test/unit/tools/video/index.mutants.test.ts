@@ -840,6 +840,7 @@ describe('VideoTool — intrinsic aspect ratio', () => {
     expect(root.querySelector<HTMLElement>('[data-role="video-media"]')?.style.aspectRatio)
       .toBe('1920 / 1080');
     expect(block.dispatchChange).toHaveBeenCalledTimes(1);
+    expect(block.dispatchChange).toHaveBeenCalledWith({ derived: true });
   });
 
   it('ignores metadata that reports a zero width', () => {

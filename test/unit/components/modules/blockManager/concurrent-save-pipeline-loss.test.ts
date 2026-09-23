@@ -320,6 +320,29 @@ describe('concurrent save pipeline — what a peer edit makes the local pipeline
     expect(readText('B')).toContain('peer wrote this');
   });
 
+  it('keeps a save() still in flight when a local structural window opens meanwhile', async () => {
+    let releaseSave: (value: { data: { text: string } }) => void = () => undefined;
+
+    (blockA.save as ReturnType<typeof vi.fn>).mockReturnValue(
+      new Promise<{ data: { text: string } }>((resolve) => {
+        releaseSave = resolve;
+      })
+    );
+
+    (blockManager as unknown as BlockManagerPrivate)
+      .blockDidMutated(BlockChangedMutationType, blockA, { index: 0 });
+    await drainMicrotasks();
+
+    // A paste opens an unscoped window: it adds blocks, it rewrites none.
+    yjsSync.withAtomicOperation(() => undefined, { extendThroughRAF: true });
+
+    releaseSave({ data: { text: 'a typed' } });
+    await drainMicrotasks();
+    manager.flushPendingBlockWrites();
+
+    expect(readText('A')).toBe('a typed');
+  });
+
   it('refutation probe: a peer edit to a DIFFERENT key mid-coalescing-window', async () => {
     typeInto(blockA, 'a1');
     await drainMicrotasks();

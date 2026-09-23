@@ -329,6 +329,8 @@ describe('AudioTool', () => {
     await Promise.resolve();
     expect(tool.save().peaks).toEqual([0.1, 0.5, 1]);
     expect(tool.save().duration).toBe(8);
+    // A decoded waveform is not the user's edit.
+    expect(block.dispatchChange).toHaveBeenLastCalledWith({ derived: true });
   });
 
   describe('URL-insert enrichment (waveform + metadata from fetched bytes)', () => {

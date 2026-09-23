@@ -293,15 +293,6 @@ const explain = (t: Trip): string => `gesture added ${t.steps} undo entries; sec
 
 // Known-failing probes, with the defect each one pins. Looked up as the first line of the test body.
 const PINS: Record<string, string> = {
-  'W5F-1': 'W5F-1: first undo of a heading split is a no-op when the heading was saved without level',
-  'W5F-2': 'W5F-2: first undo of a checklist split is a no-op when the item was saved without checked',
-  'W5F-3': 'W5F-3: first undo of a list split is a no-op when the item was saved without style',
-  'W5F-11': 'W5F-11: first undo of Tab on a checklist item saved without checked is a no-op',
-  'W5F-20': 'W5F-20: first undo of a split in a quote made by "turn into" is a no-op',
-  'W5F-25': 'W5F-25: first undo of a split in a quote made by blocks.insert is a no-op',
-  'W5F-40': 'W5F-40: undo of the first edit in a legacy toggle does nothing',
-  'W5F-47': 'W5F-47: undo of the first edit in a legacy toggle does nothing',
-  'W5F-48': 'W5F-48: undo reverts the load-time colour migration in a heading',
   'W5F-49': 'W5F-49: undo of blocks.update on a callout strands its child and save() throws',
   'W5F-49b': 'W5F-49b: undo of blocks.update on a callout strands its child and save() throws',
   'W5F-60': 'W5F-60: colour swatch undo takes the stale caret of a no-op Backspace',

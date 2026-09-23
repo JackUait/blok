@@ -250,7 +250,6 @@ test.describe('undo audit: selection-driven edits', () => {
   // "lie three" is on screen twice.
   // Observed: Expected ["a:AlpX1", "<new>:X2lie three"], Received ["a:Alplie three", "<new>:X2lie three"].
   test('W4S-2b: undo all then redo all of a multi-line paste over a cross-block text selection returns to the pasted state', async ({ page }) => {
-    test.fail();
     await mount(page, THREE);
     await dragText(page, 'a', 3, 'c', 4);
     await paste(page, { 'text/plain': 'X1\nX2' });

@@ -92,6 +92,9 @@ export class Bookmark implements BlockTool {
     const root = document.createElement('div');
     root.className = 'my-1';
     root.setAttribute('data-blok-tool', 'bookmark');
+    // The card is never edited in place; what it shows reaches the document
+    // through dispatchChange, so its re-renders must not count as edits.
+    root.setAttribute('data-blok-mutation-free', 'true');
     this.root = root;
     this.renderState();
 
@@ -133,10 +136,8 @@ export class Bookmark implements BlockTool {
     void this.fetcher
       .fetch(url)
       .then((meta) => {
-        // Nothing here dispatches a change: the card reaches the document only
-        // through the Block's MutationObserver on `renderState`. A rebuilt
-        // block has none — `Block.destroy()` disconnected it — so the fetched
-        // preview has to be written through the blocks API instead.
+        // A rebuilt block's tool is a new instance, so the fetched preview has
+        // to be written through the blocks API instead.
         if (this.detached) {
           deliverToRebuiltBlock(this.api, this.block, 'Bookmark', { ...meta });
 
@@ -145,6 +146,8 @@ export class Bookmark implements BlockTool {
         this.data = { ...meta };
         this.state = 'RENDERED';
         this.renderState();
+        // The preview is not the user's edit: saved, but not an undo step.
+        this.block.dispatchChange({ derived: true });
       })
       .catch(() => {
         // Roughly a third of sites serve no preview data, so a failed fetch is

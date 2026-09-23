@@ -288,7 +288,6 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
   // Key source: header/index.ts:711-714; shortcut data: markdownShortcuts.ts handleToggleHeaderShortcut replace().
   // Same mechanism as GRP-3 ("> " toggle). Observed: first undo leaves the empty toggle heading.
   test('W4K-12: one undo of the ">## " toggle-heading shortcut leaves the literal text', async ({ page }) => {
-    test.fail(true, 'W4K-12: first undo of ">## " is a no-op');
     await create(page, [P('x', 'X'), P('p', '')]);
     await caretAt(page, 'p', 0);
     await page.keyboard.type('>## ');
@@ -539,7 +538,6 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
   // Key source: quote/index.ts:133-137. Control W4K-46b (quote saved WITH size) passes.
   // Observed: after one undo the quote is still split in two.
   test('W4K-46: Enter in the middle of a quote is one undo step', async ({ page }) => {
-    test.fail(true, 'W4K-46: first undo of a quote split is a no-op on a quote saved without size');
     await create(page, [{ id: 'q', type: 'quote', data: { text: 'Quoted' } }]);
     await caretAt(page, 'q', 3);
     const trip = await roundTrip(page, () => page.keyboard.press('Enter'));
@@ -613,7 +611,7 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
   // Key source: toggle/block-operations.ts:47; split data: toggle-keyboard.ts splitBlock(..., { text: afterContent }),
   // closing stopCapturing: api/blocks.ts:733 (microtask). Observed: first undo changes only the new toggle, the split stays.
   test('W4K-62: Enter in the middle of a toggle title is one undo step', async ({ page }) => {
-    test.fail(true, 'W4K-62: first undo of a toggle title split is a no-op');
+    test.fail(true, 'W4K-62: redo of a toggle title split saves the new toggle after the old toggle\'s child');
     await create(page, [toggle(['k1']), P('k1', 'kid', 't')]);
     await caretAt(page, 't', 3);
     const trip = await roundTrip(page, () => page.keyboard.press('Enter'));
@@ -682,7 +680,6 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
   // Key source: header/index.ts:711-714; split data: header-toggle-keyboard.ts:83-89 passes no isOpen.
   // Observed: after one undo the toggle heading is still split in two.
   test('W4K-70: Enter in the middle of a toggle heading is one undo step', async ({ page }) => {
-    test.fail(true, 'W4K-70: first undo of a toggle heading split is a no-op');
     await create(page, [{ id: 'h', type: 'header', data: { text: 'Title', level: 2, isToggleable: true, isOpen: true } }, P('after', 'After')]);
     await caretAt(page, 'h', 2);
     const trip = await roundTrip(page, () => page.keyboard.press('Enter'));
@@ -693,7 +690,6 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
 
   // Same root cause as W4K-62: the NEW toggle lacks isOpen, so typing in the old one first does not help.
   test('W4K-62b: Enter in the middle of a toggle title after typing in it is one undo step', async ({ page }) => {
-    test.fail(true, 'W4K-62b: first undo of a toggle title split is a no-op even after typing');
     await create(page, [{ id: 't', type: 'toggle', data: { text: 'Toggle', isOpen: true } }]);
     await caretAt(page, 't', 'end');
     await page.keyboard.type('X');

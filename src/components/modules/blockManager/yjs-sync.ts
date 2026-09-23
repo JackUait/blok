@@ -241,6 +241,17 @@ export class BlockYjsSync {
   }
 
   /**
+   * Whether the document is rewriting `block`'s content in a window still
+   * open. Narrower than `isReconciling`: an unscoped window only adds, moves
+   * or removes blocks, so it never makes a save of an existing block stale.
+   * @param block - the block whose save is about to be written
+   */
+  public isRewritingFromDocument(block: Block): boolean {
+    return (this.reconcilingBlocks.size > 0 && this.isInReconciledSubtree(block, new Set()))
+      || this.wasRewrittenFromDocument(block, new Set());
+  }
+
+  /**
    * Record that `block` mutated while it was being reconciled, so the drop can
    * be re-checked once the window closes. See `suppressedMutations`.
    * @param block - the block whose mutation was dropped as an echo

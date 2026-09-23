@@ -1,3 +1,4 @@
+import { DATA_ATTR } from '../../../constants';
 import { isCaretAtEndOfInput, isCaretAtStartOfInput } from '../../../utils/caret/boundaries';
 
 import { Controller } from './_base';
@@ -31,7 +32,7 @@ export class GestureController extends Controller {
   private composing = false;
 
   private readonly keydownHandler = (event: Event): void => {
-    if (!(event instanceof KeyboardEvent) || event.isComposing || !this.owns(event)) {
+    if (!(event instanceof KeyboardEvent) || event.isComposing || this.isToolboxOpen() || !this.owns(event)) {
       return;
     }
 
@@ -43,7 +44,7 @@ export class GestureController extends Controller {
   };
 
   private readonly beforeinputHandler = (event: Event): void => {
-    if (!(event instanceof InputEvent) || event.isComposing || IGNORED_INPUT_TYPES.has(event.inputType) || !this.owns(event)) {
+    if (!(event instanceof InputEvent) || event.isComposing || IGNORED_INPUT_TYPES.has(event.inputType) || this.isToolboxOpen() || !this.owns(event)) {
       return;
     }
 
@@ -57,7 +58,9 @@ export class GestureController extends Controller {
   };
 
   private readonly pointerdownHandler = (event: Event): void => {
-    if (!this.owns(event)) {
+    const insideToolbox = this.isToolboxOpen() && event.target instanceof Element && event.target.closest('[data-blok-popover]') !== null;
+
+    if (insideToolbox || !this.owns(event)) {
       return;
     }
 
@@ -179,6 +182,14 @@ export class GestureController extends Controller {
     const block = this.Blok.BlockManager.getBlockByChildNode(selection.anchorNode);
 
     return block?.inputs.find((input) => input.contains(selection.anchorNode)) ?? null;
+  }
+
+  /**
+   * While the block menu is open, its search typing and its pick continue the
+   * step that opened it (the "/" or the plus button).
+   */
+  private isToolboxOpen(): boolean {
+    return this.wrapperElement?.hasAttribute(DATA_ATTR.toolboxOpened) === true;
   }
 
   /**

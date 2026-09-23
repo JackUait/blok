@@ -293,7 +293,7 @@ test.describe('W4M defects', () => {
   // SEPARATE entry on the move stack; undo-history.ts:965-977 pops one entry per press.
   // CAP-7 is the opposite direction (release, not wrapped at all).
   test('W4M-1: one undo of "heading -> toggle heading" restores the plain heading and its following block', async ({ page }) => {
-    test.fail();
+    // PROBE-UNPIN test.fail();
     await createBlok(page, wrap({ id: 'x', type: 'header', data: { text: 'Title', level: 2 } }));
     const r = await roundTrip(page, () => convert(page, 'x', 'toggle-header-2', 'toggle-heading'));
 
@@ -310,7 +310,7 @@ test.describe('W4M defects', () => {
   // that call, so a newer entry already sits on top and the join is skipped.
   for (const [n, tool] of [['2a', 'table'], ['2b', 'callout']]) {
     test(`W4M-${n} ${tool}: one undo of "+ then ${tool}" on a block with text leaves no empty paragraph`, async ({ page }) => {
-      test.fail();
+      // PROBE-UNPIN test.fail();
       await createBlok(page, wrap(P('x', 'Plain text')));
       const r = await roundTrip(page, () => plusThen(page, 'x', tool));
 

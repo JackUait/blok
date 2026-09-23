@@ -145,6 +145,22 @@ describe('GestureController', () => {
     expect(yjs.beginGesture.mock.calls).toEqual([['discrete'], ['discrete'], ['discrete']]);
   });
 
+  it('lets typing and a pick inside the open block menu continue the step that opened it', () => {
+    const popover = document.createElement('div');
+    const item = document.createElement('div');
+
+    popover.setAttribute('data-blok-popover', '');
+    popover.appendChild(item);
+    document.body.appendChild(popover);
+    wrapper.setAttribute('data-blok-toolbox-opened', 'true');
+
+    key({ key: 'Enter' });
+    item.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+
+    expect(yjs.beginGesture).not.toHaveBeenCalled();
+    popover.remove();
+  });
+
   it('releases a hold when disabled mid-press', () => {
     input.dispatchEvent(new Event('pointerdown', { bubbles: true }));
     controller.disable();

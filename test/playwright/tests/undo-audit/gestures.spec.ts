@@ -402,7 +402,7 @@ test.describe('GES forward reparent outside transactMoves', () => {
   // undo 3 removes it. Same inside a column. Cause: plus-button.ts:339 calls setBlockParent outside
   // transactMoves, so blockManager.ts:1265 captures that placement write as its own undo entry.
   test('GES-5: one undo of "+ then Heading" on a toggle child removes the new block', async ({ page }) => {
-    test.fail();
+    // PROBE-UNPIN test.fail();
     await createBlok(page, kidsDoc('toggle'));
     const before = await domTree(page);
 

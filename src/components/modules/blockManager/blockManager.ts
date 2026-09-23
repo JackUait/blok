@@ -1544,24 +1544,11 @@ export class BlockManager extends Module {
       return;
     }
 
-    /**
-     * A bare setBlockParent loop splits across two history stacks (the move
-     * stack plus the parentId/contentIds writes on Y.UndoManager), so undoing
-     * the convert would leave the section nested under a PLAIN heading.
-     * transactMoves attaches the parent writes to one atomic move entry —
-     * same wrapper Tab-indent and drag-drop use.
-     */
-    const { YjsManager } = this.Blok;
-    const applyAdoption = (): void => {
-      for (const sibling of siblingsToAdopt) {
-        this.setBlockParent(sibling, toggleHeading.id);
-      }
-    };
-
-    if (typeof YjsManager?.transactMoves === 'function') {
-      YjsManager.transactMoves(applyAdoption);
-    } else {
-      applyAdoption();
+    // Not in a move group: that would put the adoption on the move stack, one
+    // undo apart from the convert. Plain reparents are tracked writes and join
+    // the convert's step, like the release in the other direction.
+    for (const sibling of siblingsToAdopt) {
+      this.setBlockParent(sibling, toggleHeading.id);
     }
   }
 

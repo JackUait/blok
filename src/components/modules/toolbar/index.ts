@@ -145,6 +145,9 @@ export class Toolbar extends Module<ToolbarNodes> {
    */
   private preToolboxBlock: Block | null = null;
 
+  /** Whether the open toolbox holds the undo step open (see the Opened handler). */
+  private holdsUndoStep = false;
+
   /**
    * A newly-inserted empty block created by the plus button click (not a reused block).
    * If the user dismisses the toolbox without selecting a tool, this block is removed.
@@ -1498,6 +1501,13 @@ export class Toolbar extends Module<ToolbarNodes> {
     });
 
     this.toolboxInstance.on(ToolboxEvent.Opened, () => {
+      // The menu session (a scaffold or "/query", then the pick) is one undo
+      // step however long the user takes to pick.
+      if (!this.holdsUndoStep) {
+        this.holdsUndoStep = true;
+        this.Blok.YjsManager.holdCapture();
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.Blok.UI.nodes.wrapper.classList.add(this.CSS.openedToolboxHolderModifier);
       this.Blok.UI.nodes.wrapper.setAttribute(DATA_ATTR.toolboxOpened, 'true');
@@ -1528,6 +1538,11 @@ export class Toolbar extends Module<ToolbarNodes> {
     });
 
     this.toolboxInstance.on(ToolboxEvent.Closed, () => {
+      if (this.holdsUndoStep) {
+        this.holdsUndoStep = false;
+        this.Blok.YjsManager.releaseCapture();
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.Blok.UI.nodes.wrapper.classList.remove(this.CSS.openedToolboxHolderModifier);
       this.Blok.UI.nodes.wrapper.removeAttribute(DATA_ATTR.toolboxOpened);

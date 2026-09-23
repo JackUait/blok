@@ -551,6 +551,8 @@ export class BlockEvents extends Module {
      * and '/' will be added in the search input by default — we need to prevent it and add '/' manually
      */
     event.preventDefault();
+    // The slash command is its own undo step: typing before it stays apart.
+    this.Blok.YjsManager.startSubStep();
     this.Blok.Caret.insertContentAtCaretPosition('/');
 
     /**

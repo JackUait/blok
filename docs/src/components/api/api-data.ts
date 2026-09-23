@@ -722,7 +722,7 @@ const editor = new Blok(config);`,
         name: "blocks.render(data)",
         returnType: "Promise<void>",
         description:
-          "Render passed JSON data as blocks, replacing the current document. It is echo-safe: when the incoming document is structurally equal to the current saved content (`time`/`version` are ignored), the call is a caret-preserving no-op. So the `data → render → onSave → setState → data` round-trip needs no dedupe on your side.\n\nIt accepts the loose wire shape (`LooseOutputData`). The editor deep-clones the data, so the passed object is never mutated or retained. You can pass frozen store state (Redux, Immer) directly.",
+          "Render passed JSON data as blocks, replacing the current document. It is echo-safe: when the incoming document is structurally equal to the current saved content (`time`/`version` are ignored), the call is a caret-preserving no-op. So the `data → render → onSave → setState → data` round-trip needs no dedupe on your side.\n\nIt accepts the loose wire shape (`LooseOutputData`). The editor deep-clones the data, so the passed object is never mutated or retained. You can pass frozen store state (Redux, Immer) directly.\n\nA render that replaces the document also clears undo history, so undo cannot bring the previous document back.",
         example: `const data = {
   blocks: [
     { id: '1', type: 'paragraph', data: { text: 'Hello World' } },
@@ -1672,7 +1672,7 @@ editor.emit('custom-event', { message: 'Hello', data: 123 });`,
       {
         name: "history.undo()",
         returnType: "void",
-        description: "Undo the last operation.",
+        description: "Undo the last operation. It does nothing while the editor is read-only, the same as Cmd+Z.",
         example: `// Undo last change
 editor.history.undo();
 
@@ -1684,7 +1684,7 @@ for (let i = 0; i < 3; i++) {
       {
         name: "history.redo()",
         returnType: "void",
-        description: "Redo the last undone operation.",
+        description: "Redo the last undone operation. It does nothing while the editor is read-only, the same as Cmd+Shift+Z.",
         example: `// Redo last undone change
 editor.history.redo();
 
@@ -1717,10 +1717,9 @@ for (let i = 0; i < 3; i++) {
         name: "history.clear()",
         returnType: "void",
         description: "Clear all history. Removes all undo/redo entries.",
-        example: `// Clear history when loading new content.
-// render() is async and records its own undo entries,
-// so await it before clearing.
-await editor.blocks.render(newData);
+        example: `// render() already clears history.
+// Clear it yourself after loading content another way.
+editor.blocks.insertMany(loadedBlocks);
 editor.history.clear();`,
       },
     ],

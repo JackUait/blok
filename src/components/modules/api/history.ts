@@ -26,16 +26,22 @@ export class HistoryAPI extends Module {
   }
 
   /**
-   * Undo the last operation
+   * Undo the last operation. Does nothing while read-only, like Cmd+Z.
    */
   public undo(): void {
+    if (this.Blok.ReadOnly.isEnabled) {
+      return;
+    }
     this.Blok.YjsManager.undo();
   }
 
   /**
-   * Redo the last undone operation
+   * Redo the last undone operation. Does nothing while read-only, like Cmd+Shift+Z.
    */
   public redo(): void {
+    if (this.Blok.ReadOnly.isEnabled) {
+      return;
+    }
     this.Blok.YjsManager.redo();
   }
 

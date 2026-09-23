@@ -217,15 +217,6 @@ test.describe('undo audit: selection-driven edits', () => {
     expect(await saved(page)).toEqual([...THREE_SAVED, 'd:paragraph:Delta four']);
   });
 
-  // Defect: a multi-line plain-text paste in the middle of a block loses the text after the caret
-  // for good. The first line is merged and the tail cut off in the DOM (base.ts:109-114,
-  // caretSplitFirstLine), and that edit of the current block never reaches the Yjs doc:
-  // undo removes only the new block, canUndo() is then false, and typing + undo later
-  // snaps the block back to "Hello world" (so the doc never held "HelloX1").
-  // Traced in W5R-1: the re-check after `await save()` (blockManager.ts:2100) returns while paste's
-  // unscoped windows (block-insertion.ts:762/794) are open, and never records the suppressed write,
-  // so the deferred replay has nothing to land.
-  // Observed: Expected ["a:paragraph:Hello world"], Received ["a:paragraph:HelloX1"].
   test('W4S-2: undo of a multi-line paste in the middle of a block brings the original text back', async ({ page }) => {
     await mount(page, [P('a', 'Hello world')]);
     await editable(page, 'a').click();
@@ -244,10 +235,6 @@ test.describe('undo audit: selection-driven edits', () => {
     expect(await dom(page)).toEqual(['a:Hello world']);
   });
 
-  // Defect: same root cause as W4S-2, seen from redo: redo cannot rebuild the pasted state,
-  // because the first-line merge was never recorded. After the last redo "X1" is gone and
-  // "lie three" is on screen twice.
-  // Observed: Expected ["a:AlpX1", "<new>:X2lie three"], Received ["a:Alplie three", "<new>:X2lie three"].
   test('W4S-2b: undo all then redo all of a multi-line paste over a cross-block text selection returns to the pasted state', async ({ page }) => {
     await mount(page, THREE);
     await dragText(page, 'a', 3, 'c', 4);

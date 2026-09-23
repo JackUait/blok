@@ -825,11 +825,6 @@ test.describe('undo audit W4: inline formatting', () => {
     expect(await page.evaluate(() => window.getSelection()?.anchorNode?.parentElement?.closest('[data-blok-id]')?.getAttribute('data-blok-id'))).toBe('b');
   });
 
-  // Observed: after undoing an unrelated edit in the block, the mark style turns from
-  // var(--blok-color-red-text) back to the raw rgb(212, 76, 71) that was loaded.
-  // Root cause: renderer.ts:326 seeds Yjs from the stored data (blockManager.ts:601 fromJSON), then
-  // renderer.ts:327 migrateMarkColors rewrites the DOM. The first edit diffs against the unmigrated
-  // seed, so its undo restores the unmigrated markup.
   test('W4I-30b: undo of an edit next to a loaded colour keeps the theme-aware colour', async ({ page }) => {
     await mount(page, [P('p', 'Hello <mark style="color: rgb(212, 76, 71); background-color: transparent;">world</mark> end')]);
     const markStyle = (): Promise<string> => page.getByTestId('blok').evaluate((root) => root.querySelector('mark')?.getAttribute('style') ?? '');
@@ -842,9 +837,6 @@ test.describe('undo audit W4: inline formatting', () => {
     expect(await markStyle()).toBe(loaded);
   });
 
-  // Observed: after undoing an unrelated bold, the link href is the raw "https://example.com/",
-  // no longer the proxied href the editor's link.transformHref gave it at load.
-  // Root cause: same as W4I-30b, renderer.ts:334 applyLinkConfig rewrites anchors after the Yjs seed.
   test('W4I-35: undo keeps the editor link config on loaded links', async ({ page }) => {
     await mount(page, [P('p', 'Hello <a href="https://example.com/">world</a> end')], true);
     const link = page.getByTestId('blok').getByRole('link', { name: 'world' });

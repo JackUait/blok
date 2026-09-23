@@ -282,11 +282,6 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
     expect(await plain(page)).toEqual(converted);
   });
 
-  // Root cause: the gesture creates a block whose data lacks a key its tool's save() always emits
-  // (here: no isOpen). The block's first save-back writes that key after the gesture's closing
-  // stopCapturing, so it lands as its own invisible undo step and the first Cmd+Z does nothing.
-  // Key source: header/index.ts:711-714; shortcut data: markdownShortcuts.ts handleToggleHeaderShortcut replace().
-  // Same mechanism as GRP-3 ("> " toggle). Observed: first undo leaves the empty toggle heading.
   test('W4K-12: one undo of the ">## " toggle-heading shortcut leaves the literal text', async ({ page }) => {
     await create(page, [P('x', 'X'), P('p', '')]);
     await caretAt(page, 'p', 0);
@@ -532,11 +527,6 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
     });
   }
 
-  // Root cause: the gesture creates a block whose data lacks a key its tool's save() always emits
-  // (here: no size). The block's first save-back writes that key after the gesture's closing
-  // stopCapturing, so it lands as its own invisible undo step and the first Cmd+Z does nothing.
-  // Key source: quote/index.ts:133-137. Control W4K-46b (quote saved WITH size) passes.
-  // Observed: after one undo the quote is still split in two.
   test('W4K-46: Enter in the middle of a quote is one undo step', async ({ page }) => {
     await create(page, [{ id: 'q', type: 'quote', data: { text: 'Quoted' } }]);
     await caretAt(page, 'q', 3);
@@ -674,11 +664,6 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
     expect(trip.redone, 'redo restores the state after the gesture').toEqual(trip.after);
   });
 
-  // Root cause: the gesture creates a block whose data lacks a key its tool's save() always emits
-  // (here: no isOpen). The block's first save-back writes that key after the gesture's closing
-  // stopCapturing, so it lands as its own invisible undo step and the first Cmd+Z does nothing.
-  // Key source: header/index.ts:711-714; split data: header-toggle-keyboard.ts:83-89 passes no isOpen.
-  // Observed: after one undo the toggle heading is still split in two.
   test('W4K-70: Enter in the middle of a toggle heading is one undo step', async ({ page }) => {
     await create(page, [{ id: 'h', type: 'header', data: { text: 'Title', level: 2, isToggleable: true, isOpen: true } }, P('after', 'After')]);
     await caretAt(page, 'h', 2);
@@ -688,7 +673,6 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
     expect(trip.redone, 'redo restores the state after the gesture').toEqual(trip.after);
   });
 
-  // Same root cause as W4K-62: the NEW toggle lacks isOpen, so typing in the old one first does not help.
   test('W4K-62b: Enter in the middle of a toggle title after typing in it is one undo step', async ({ page }) => {
     await create(page, [{ id: 't', type: 'toggle', data: { text: 'Toggle', isOpen: true } }]);
     await caretAt(page, 't', 'end');

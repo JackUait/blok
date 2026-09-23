@@ -462,8 +462,6 @@ test.describe('W4T audio', () => {
     expect((await dataOf(page, 'a'))?.alignment).toBe('right');
   });
 
-  // Family 3 (key removal not tracked), new instance, with data loss: hiding the caption also clears its text
-  // (audio/index.ts:589), save() then omits `caption`, and undo never brings it back.
   test('W4T-28: undo of hiding the audio caption brings the caption text back', async ({ page }) => {
     await mount(page, [ANCHOR, { ...AUD, data: { ...AUD.data, caption: 'Hello', captionVisible: true } }]);
     await openTunesOn(page, 'a');

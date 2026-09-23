@@ -479,8 +479,6 @@ test.describe('GES database board', () => {
 
 test.describe('GES inline', () => {
   // Redo must give back the exact post-gesture state. Undo is right.
-  // Observed (4 of 4, keyboard and history.redo()): the text after the equation is gone after redo,
-  // in save() and in the DOM: Received "mass: <span data-latex="E=mc^3">E=mc^3</span>" (no " end").
   test('GES-8: redo of an equation edit keeps the text after the equation', async ({ page }) => {
     await createEquationBlok(page, [
       P('p-before', 'before'),

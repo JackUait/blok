@@ -171,8 +171,6 @@ test.describe('undo audit: redo loss', () => {
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
-  // Observed: expect(canRedo).toBe(true) -> Received: false. canRedo is still
-  // true 350ms after the undo and false by 400ms.
   test('RDO-1a: undoing an image delete keeps redo available', async ({ page }) => {
     await createBlok(page, IMAGE_DOC);
     await wait(page, CAPTURE_GAP);
@@ -196,9 +194,6 @@ test.describe('undo audit: redo loss', () => {
     expect(await save(page)).toStrictEqual(deleted);
   });
 
-  // Observed: types after one undo are ['paragraph', 'image', 'paragraph'];
-  // four undos never remove it nor reach the 'Z'. Inserting with
-  // naturalWidth/naturalHeight preset makes one undo remove it.
   test('RDO-1b: undo after inserting an image removes it and reaches earlier edits', async ({ page }) => {
     await createBlok(page, [P('a', 'A'), P('b', 'B')]);
     await wait(page, CAPTURE_GAP);
@@ -220,8 +215,6 @@ test.describe('undo audit: redo loss', () => {
     expect(textOf(await save(page), 'a')).toBe('A');
   });
 
-  // Observed: expect(canRedo).toBe(true) -> Received: false. canRedo is true
-  // after the first animation frame and false after the second.
   test('RDO-2a: undoing a database delete keeps redo available', async ({ page }) => {
     await createBlok(page, DATABASE_DOC);
     await wait(page, CAPTURE_GAP);
@@ -245,8 +238,6 @@ test.describe('undo audit: redo loss', () => {
     expect(await save(page)).toStrictEqual(deleted);
   });
 
-  // Observed: Expected "A", Received "AZ". Each undo pops the database's
-  // write-back, which the re-render writes again.
   test('RDO-2b: after undoing a database delete, further undos reach earlier edits', async ({ page }) => {
     await createBlok(page, DATABASE_DOC);
     await wait(page, CAPTURE_GAP);

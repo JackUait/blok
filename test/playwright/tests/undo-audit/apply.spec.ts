@@ -108,7 +108,6 @@ test.describe('undo audit: setData apply sweep', () => {
   // --- Key removal: save() omits the key and only the untracked pruneBlockData deletes it. ---
 
   // Undo must restore the exact prior state.
-  // Observed: Expected: true / Received: undefined (canUndo() is false right after the gesture)
   test('APL-1: undo of turning "Hide controls" off does not hide the controls again', async ({ page }) => {
     await createBlok(page, [anchor, { id: 'v', type: 'video', data: { url: VIDEO_URL, hideControls: true } }]);
     await openTunesOn(page, 'v');
@@ -121,7 +120,6 @@ test.describe('undo audit: setData apply sweep', () => {
   });
 
   // One undo must revert the LAST gesture, not the one before it.
-  // Observed: Expected {loop: true, alignment: "left"} / Received {loop: undefined, alignment: undefined}
   test('APL-2: undo after turning video Loop off reverts the earlier alignment change instead', async ({ page }) => {
     await createBlok(page, [anchor, { id: 'v', type: 'video', data: { url: VIDEO_URL, loop: true } }]);
     await openTunesOn(page, 'v');
@@ -142,7 +140,6 @@ test.describe('undo audit: setData apply sweep', () => {
   //     and redo then changes nothing. ---
 
   // Undo must restore the exact prior state. Works when the data carries `checked: false`.
-  // Observed: Expected: false / Received: true
   test('APL-5: undo of the first check on a to-do loaded without "checked" leaves it checked', async ({ page }) => {
     await createBlok(page, [anchor, { id: 'l', type: 'list', data: { text: 'Task', style: 'checklist' } }]);
     const box = page.locator('[data-blok-id="l"]').getByRole('checkbox');
@@ -156,7 +153,6 @@ test.describe('undo audit: setData apply sweep', () => {
   });
 
   // Undo must restore the exact prior state. Works when the data carries `isOpen`.
-  // Observed: Expected: true / Received: false
   test('APL-6: undo of the first collapse on a toggle loaded without "isOpen" leaves it collapsed', async ({ page }) => {
     await createBlok(page, [
       anchor,
@@ -172,7 +168,6 @@ test.describe('undo audit: setData apply sweep', () => {
   });
 
   // Redo must re-apply what undo reverted. The language picker UI path works; blocks.update does not.
-  // Observed: Expected: "python" / Received: "plain text"
   test('APL-8: redo of a blocks.update() language change on a code block loaded without "language" does nothing', async ({ page }) => {
     await createBlok(page, [anchor, { id: 'c', type: 'code', data: { code: 'x = 1' } }]);
     await page.evaluate(async () => {

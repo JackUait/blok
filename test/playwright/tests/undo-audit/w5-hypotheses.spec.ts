@@ -614,10 +614,6 @@ const audioData = async (page: Page): Promise<Record<string, unknown> | undefine
 const peaksLanded = (page: Page): Promise<void> => expect.poll(async () => Array.isArray((await audioData(page))?.peaks)).toBe(true);
 
 test.describe('W5X audio enrichment', () => {
-  // Defect: one upload needs two undos when the waveform decodes after the capture window (long file).
-  // Root cause: enrich() writes peaks/duration from a promise and calls dispatchChange
-  // (audio/index.ts:362-370) as a plain local edit, so it is its own undo step. Family "late async
-  // writes", new instance. Observed: first undo only drops peaks/duration; url stays.
   test('W5X-12: one undo of an upload whose waveform decoded late returns the empty audio block', async ({ page }) => {
     await mount(page, AUDIO_DOC());
     await gateDecode(page);
@@ -648,8 +644,6 @@ test.describe('W5X audio enrichment', () => {
     expect(await canUndo(page)).toBe(false);
   });
 
-  // Defect: the late peaks write (audio/index.ts:369 dispatchChange) is a new local edit, so it clears
-  // the redo of an unrelated undo. Family "late async writes clear redo", new instance.
   test('W5X-13: a waveform that decodes after an unrelated undo keeps redo', async ({ page }) => {
     await mount(page, AUDIO_DOC());
     await gateDecode(page);

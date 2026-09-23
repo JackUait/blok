@@ -79,7 +79,6 @@ test.describe('undo audit: lifecycle and programmatic API', () => {
   });
 
   // Expected: a freshly loaded document has nothing to undo (a load is not an edit).
-  // Observed: Expected: false, Received: true — the load-time seed paragraph is an undo entry.
   test('LIF-1: loading a bodyless callout records its seeded body as an undo step', async ({ page }) => {
     await createBlok(page, BODYLESS_CALLOUT);
 
@@ -93,8 +92,6 @@ test.describe('undo audit: lifecycle and programmatic API', () => {
     expect((await saveBlok(page)).blocks.find((block) => block.id === 'c')?.content ?? []).toHaveLength(1);
   });
 
-  // Same root cause as LIF-1, reached through render() instead of the constructor.
-  // Observed: Expected: false, Received: true.
   test('LIF-1 (render path): render() of a bodyless callout records its seeded body as an undo step', async ({ page }) => {
     await createBlok(page, [{ id: 'old', type: 'paragraph', data: { text: 'Old' } }]);
     await page.evaluate(async (blocks) => {

@@ -1521,6 +1521,43 @@ describe('TableCellBlocks', () => {
       expect(cellBlocks.isAwaitingCell('remote-1')).toBe(true);
     });
 
+    it('keeps a synced cell\'s references instead of fabricating blocks that have not arrived yet', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const mockInsert = vi.fn();
+      const api = {
+        blocks: {
+          insert: mockInsert,
+          getBlocksCount: vi.fn(() => 1),
+          getBlockIndex: vi.fn(() => undefined),
+          getBlockByIndex: vi.fn(() => undefined),
+          getById: vi.fn(() => null),
+          setBlockParent: vi.fn(),
+          isSyncingFromYjs: true,
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
+
+      const result = cellBlocks.initializeCells([[{ blocks: ['not-here-yet'] }]]);
+
+      expect(mockInsert).not.toHaveBeenCalled();
+      expect(result[0][0].blocks).toEqual(['not-here-yet']);
+    });
+
     it('should NOT insert a block when cell already has blocks', async () => {
       const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 

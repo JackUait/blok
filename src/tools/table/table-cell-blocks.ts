@@ -771,6 +771,11 @@ export class TableCellBlocks {
             : baseIds;
 
           normalizedRow.push({ blocks: blockIds, ...cellColorProps, ...cellMetaProps });
+        } else if (referencedBlockIds !== null && this.api.blocks.isSyncingFromYjs) {
+          // The referenced blocks have not arrived yet (a peer's adds, or an
+          // undo that restores them later in the same replay). They are
+          // placed by id when they land; a fabricated stand-in would outlive them.
+          normalizedRow.push({ blocks: referencedBlockIds, ...cellColorProps, ...cellMetaProps });
         } else {
           const text = typeof cellContent === 'string'
             ? cellContent

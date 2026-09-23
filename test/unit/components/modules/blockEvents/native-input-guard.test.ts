@@ -219,6 +219,7 @@ const createHarness = (input: HTMLElement): Harness => {
       defaultTool: { name: 'paragraph' },
     } as unknown as BlokModules['Tools'],
     YjsManager: {
+      startSubStep: vi.fn(),
       stopCapturing: vi.fn(),
       markCaretBeforeChange: vi.fn(),
       updateLastCaretAfterPosition: vi.fn(),

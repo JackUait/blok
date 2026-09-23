@@ -71,6 +71,7 @@ const createBlokModules = (overrides: Partial<BlokModules> = {}): BlokModules =>
       ]),
     } as unknown as BlokModules['Tools'],
     YjsManager: {
+      startSubStep: vi.fn(),
       stopCapturing: vi.fn(),
     } as unknown as BlokModules['YjsManager'],
     Caret: {
@@ -272,6 +273,7 @@ describe('MarkdownShortcuts', () => {
         mockBlock.currentInput.textContent = '[] ';
       }
       const replace = vi.fn(() => mockBlock);
+      const startSubStep = vi.fn();
       const stopCapturing = vi.fn();
       const blok = createBlokModules({
         BlockManager: {
@@ -279,6 +281,7 @@ describe('MarkdownShortcuts', () => {
           replace,
         } as unknown as BlokModules['BlockManager'],
         YjsManager: {
+          startSubStep,
           stopCapturing,
         } as unknown as BlokModules['YjsManager'],
       });
@@ -296,7 +299,10 @@ describe('MarkdownShortcuts', () => {
           checked: false,
         })
       );
-      expect(stopCapturing).toHaveBeenCalledTimes(2);
+      expect(startSubStep).toHaveBeenCalledTimes(1);
+      expect(startSubStep.mock.invocationCallOrder[0]).toBeLessThan(replace.mock.invocationCallOrder[0]);
+      expect(stopCapturing).toHaveBeenCalledTimes(1);
+      expect(stopCapturing.mock.invocationCallOrder[0]).toBeGreaterThan(replace.mock.invocationCallOrder[0]);
     });
 
     it('converts [x] to checked checklist', () => {
@@ -1013,6 +1019,7 @@ describe('MarkdownShortcuts', () => {
         mockBlock.currentInput.textContent = '> ';
       }
       const replace = vi.fn(() => mockBlock);
+      const startSubStep = vi.fn();
       const stopCapturing = vi.fn();
       const blok = createBlokModules({
         BlockManager: {
@@ -1020,6 +1027,7 @@ describe('MarkdownShortcuts', () => {
           replace,
         } as unknown as BlokModules['BlockManager'],
         YjsManager: {
+          startSubStep,
           stopCapturing,
         } as unknown as BlokModules['YjsManager'],
       });
@@ -1036,7 +1044,10 @@ describe('MarkdownShortcuts', () => {
           text: '',
         })
       );
-      expect(stopCapturing).toHaveBeenCalledTimes(2);
+      expect(startSubStep).toHaveBeenCalledTimes(1);
+      expect(startSubStep.mock.invocationCallOrder[0]).toBeLessThan(replace.mock.invocationCallOrder[0]);
+      expect(stopCapturing).toHaveBeenCalledTimes(1);
+      expect(stopCapturing.mock.invocationCallOrder[0]).toBeGreaterThan(replace.mock.invocationCallOrder[0]);
     });
 
     it('preserves text content after toggle shortcut', () => {
@@ -1853,6 +1864,7 @@ describe('MarkdownShortcuts', () => {
       }
       const newDividerBlock = createBlock({ id: 'divider-block' });
       const replace = vi.fn(() => newDividerBlock);
+      const startSubStep = vi.fn();
       const stopCapturing = vi.fn();
       const getBlockIndex = vi.fn(() => 0);
       const insertDefaultBlockAtIndex = vi.fn(() => mockBlock);
@@ -1873,6 +1885,7 @@ describe('MarkdownShortcuts', () => {
           ]),
         } as unknown as BlokModules['Tools'],
         YjsManager: {
+          startSubStep,
           stopCapturing,
         } as unknown as BlokModules['YjsManager'],
         Caret: {
@@ -1887,7 +1900,10 @@ describe('MarkdownShortcuts', () => {
 
       expect(result).toBe(true);
       expect(replace).toHaveBeenCalledWith(mockBlock, 'divider', {});
-      expect(stopCapturing).toHaveBeenCalledTimes(2);
+      expect(startSubStep).toHaveBeenCalledTimes(1);
+      expect(startSubStep.mock.invocationCallOrder[0]).toBeLessThan(replace.mock.invocationCallOrder[0]);
+      expect(stopCapturing).toHaveBeenCalledTimes(1);
+      expect(stopCapturing.mock.invocationCallOrder[0]).toBeGreaterThan(replace.mock.invocationCallOrder[0]);
     });
 
     it('does not convert -- (only two hyphens)', () => {
@@ -2058,6 +2074,7 @@ describe('MarkdownShortcuts', () => {
         mockBlock.currentInput.textContent = '" ';
       }
       const replace = vi.fn(() => mockBlock);
+      const startSubStep = vi.fn();
       const stopCapturing = vi.fn();
       const blok = createBlokModules({
         BlockManager: {
@@ -2070,6 +2087,7 @@ describe('MarkdownShortcuts', () => {
           ]),
         } as unknown as BlokModules['Tools'],
         YjsManager: {
+          startSubStep,
           stopCapturing,
         } as unknown as BlokModules['YjsManager'],
       });
@@ -2086,7 +2104,10 @@ describe('MarkdownShortcuts', () => {
           text: '',
         })
       );
-      expect(stopCapturing).toHaveBeenCalledTimes(2);
+      expect(startSubStep).toHaveBeenCalledTimes(1);
+      expect(startSubStep.mock.invocationCallOrder[0]).toBeLessThan(replace.mock.invocationCallOrder[0]);
+      expect(stopCapturing).toHaveBeenCalledTimes(1);
+      expect(stopCapturing.mock.invocationCallOrder[0]).toBeGreaterThan(replace.mock.invocationCallOrder[0]);
     });
 
     it('preserves text content after quote shortcut', () => {
@@ -2153,6 +2174,7 @@ describe('MarkdownShortcuts', () => {
         mockBlock.currentInput.textContent = '``` ';
       }
       const replace = vi.fn(() => mockBlock);
+      const startSubStep = vi.fn();
       const stopCapturing = vi.fn();
       const blok = createBlokModules({
         BlockManager: {
@@ -2165,6 +2187,7 @@ describe('MarkdownShortcuts', () => {
           ]),
         } as unknown as BlokModules['Tools'],
         YjsManager: {
+          startSubStep,
           stopCapturing,
         } as unknown as BlokModules['YjsManager'],
       });
@@ -2181,7 +2204,10 @@ describe('MarkdownShortcuts', () => {
           code: '',
         })
       );
-      expect(stopCapturing).toHaveBeenCalledTimes(2);
+      expect(startSubStep).toHaveBeenCalledTimes(1);
+      expect(startSubStep.mock.invocationCallOrder[0]).toBeLessThan(replace.mock.invocationCallOrder[0]);
+      expect(stopCapturing).toHaveBeenCalledTimes(1);
+      expect(stopCapturing.mock.invocationCallOrder[0]).toBeGreaterThan(replace.mock.invocationCallOrder[0]);
     });
 
     it('returns false when code tool is not available', () => {

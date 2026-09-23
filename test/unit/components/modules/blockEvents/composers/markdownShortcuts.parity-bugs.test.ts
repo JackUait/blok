@@ -68,6 +68,7 @@ const createBlokModules = (currentBlock: Block, replace = vi.fn(() => currentBlo
       ]),
     } as unknown as BlokModules['Tools'],
     YjsManager: {
+      startSubStep: vi.fn(),
       stopCapturing: vi.fn(),
     } as unknown as BlokModules['YjsManager'],
     Caret: {

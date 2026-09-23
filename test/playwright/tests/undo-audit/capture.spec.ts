@@ -119,9 +119,7 @@ test.describe('undo audit: capture', () => {
   });
 
   // Undo must restore the exact prior state.
-  // Observed: Expected: "red" / Received: undefined
-  test('CAP-2: undo of a paragraph color reset does not bring the color back', async ({ page }) => {
-    test.fail();
+  test('CAP-2: undo of a paragraph color reset brings the color back', async ({ page }) => {
     await createBlok(page, [{ type: 'paragraph', data: { text: 'Before' } }, { type: 'paragraph', data: { text: 'Colorful', textColor: 'red' } }]);
     await wait(page, CAPTURE_WINDOW);
     await openTunes(page, 'Colorful');

@@ -569,15 +569,9 @@ isolatedTest.describe('framework adapters', () => {
     ensureBlokBundleBuilt();
   });
 
-  // Defect: undo shows count 0 in the block, but the host's onSave never fires,
-  // so a controlled host keeps (and persists) count 1.
-  // Root cause: yjs-sync.ts:1112 applies the replay with block.setData(data) and
-  // emits no BlockChanged. A host hears about a replay only when setData happens
-  // to leak a DOM change the observer sees. The React host is
-  // data-blok-mutation-free (createReactBlock.tsx:822), so nothing leaks. So is the
-  // Vue host (W4N-4c). A vanilla toggle does leak one (see the control below).
+  // A replay applied in place through setData must still reach the host's change callback.
+  // Adapter hosts are mutation-free, so no DOM change can carry it.
   isolatedTest('W4N-4: undo of a React block change reaches onSave', async ({ page }) => {
-    isolatedTest.fail(true, 'W4N-4 replay setData emits no change event');
     await openAdapter(page, 'react', 'onSave');
     await page.getByTestId('rc-inc').click();
     await gap(page, SAVE_SETTLE);
@@ -592,7 +586,6 @@ isolatedTest.describe('framework adapters', () => {
 
   // Same root cause as W4N-4, through the Angular adapter's (dataChange).
   isolatedTest('W4N-4b: undo of an Angular block change reaches (dataChange)', async ({ page }) => {
-    isolatedTest.fail(true, 'W4N-4b replay setData emits no change event');
     await page.goto(ANGULAR_URL);
     await expect(page.getByTestId('status')).toHaveText('ready');
     await page.getByTestId('counter-inc').click();
@@ -617,10 +610,8 @@ isolatedTest.describe('framework adapters', () => {
     expect(await lastEmitted(page, 'p1')).toEqual({ text: 'Hello from React' });
   });
 
-  // Same root cause as W4N-4. This passed only while every v-model echo re-ran the whole
-  // read-only cascade on an editable editor; readOnly.set(false) is now a no-op there.
+  // Same as W4N-4, through the Vue adapter's v-model.
   isolatedTest('W4N-4c: undo of a Vue block change reaches update:data', async ({ page }) => {
-    isolatedTest.fail(true, 'W4N-4c replay setData emits no change event');
     await openAdapter(page, 'vue', 'vmodel');
     await page.getByTestId('rc-inc').click();
     await gap(page, SAVE_SETTLE);

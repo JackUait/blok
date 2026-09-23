@@ -403,9 +403,6 @@ test.describe('CON columns', () => {
 
   // Undo must restore the exact prior state; redo the exact post-gesture state.
   test('CON-7 one undo of the unwrap after emptying a column restores the two-column layout', async ({ page }) => {
-    test.fail();
-    // Observed: undo 1 leaves an EMPTY column_list next to top-level p1a/p1b; it takes 4 undos
-    // (cl1, then c1, then c2, then p2) to get back to the original layout.
     await createBlok(page, COLUMNS_DOC);
     const before = await save(page);
 

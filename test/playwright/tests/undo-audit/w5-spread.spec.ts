@@ -293,7 +293,6 @@ const explain = (t: Trip): string => `gesture added ${t.steps} undo entries; sec
 
 // Known-failing probes, with the defect each one pins. Looked up as the first line of the test body.
 const PINS: Record<string, string> = {
-  'W5F-49': 'W5F-49: undo of blocks.update on a legacy callout loses its migrated background colour',
 };
 
 const pin = (id: string): void => {

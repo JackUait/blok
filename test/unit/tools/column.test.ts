@@ -318,6 +318,23 @@ describe('Column tool', () => {
     expect(insertInsideParent).not.toHaveBeenCalled();
   });
 
+  it('applies a new width in place and saves it', () => {
+    const options = createColumnOptions({ widthRatio: 1.5 }, createMockAPI(), false, 'load');
+    const { holder } = options.block as unknown as { holder: HTMLElement };
+    const column = new Column(options);
+
+    column.render();
+    column.rendered();
+
+    expect(column.setData({})).toBe(true);
+    expect(holder.style.flexGrow).toBe('1');
+    expect(column.save()).toEqual({});
+
+    column.setData({ widthRatio: 0.5 });
+
+    expect(column.save()).toEqual({ widthRatio: 0.5 });
+  });
+
   it('attempts to unwrap its parent column_list when removed', async () => {
     const getChildren = vi.fn()
       .mockReturnValueOnce([{ id: 'colA' }])  // column_list now has 1 column

@@ -275,6 +275,18 @@ export class Column implements BlockTool {
   }
 
   /**
+   * Apply new data in place. Without it an undo of a resize rebuilds the
+   * column, and the rebuild fires removed(), which dissolves the whole layout.
+   * @param newData - the column's new data
+   */
+  public setData(newData: ColumnData): boolean {
+    this._data = { ...newData };
+    this.block.holder.style.flexGrow = String(this._data.widthRatio ?? 1);
+
+    return true;
+  }
+
+  /**
    * A column is pure layout with no interactive chrome of its own (the resize
    * separators belong to the parent column_list), so the in-place read-only
    * toggle needs no DOM changes beyond muting the bottom-zone click. The method

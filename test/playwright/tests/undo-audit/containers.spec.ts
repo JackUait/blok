@@ -396,9 +396,6 @@ test.describe('CON table', () => {
 test.describe('CON columns', () => {
   // Undo must restore the exact prior state; redo the exact post-gesture state.
   test('CON-6 undo of a column resize keeps the column layout', async ({ page }) => {
-    test.fail();
-    // Observed: one undo deletes cl1, c1 and c2 and lifts p1a/p1b/p2 to the top level; canRedo is then
-    // false. Same with widthRatio already set, and via history.undo().
     await createBlok(page, COLUMNS_DOC);
     await gap(page);
     await dragBy(page, page.getByTestId('column-resizer').first(), 100, 0);

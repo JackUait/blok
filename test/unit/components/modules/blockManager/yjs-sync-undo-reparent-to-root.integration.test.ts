@@ -42,6 +42,7 @@ interface TestEditor {
     ) => { id: string };
     getBlockIndex: (id: string) => number | undefined;
     setBlockParent: (id: string, parentId: string | null) => void;
+    transact: (fn: () => void) => void;
   };
   history: { undo: () => void; redo: () => void };
 }
@@ -107,7 +108,7 @@ describe('yjs-sync — undo of a reparent back to root', () => {
     vi.restoreAllMocks();
   });
 
-  const createEditor = async (): Promise<TestEditor> => {
+  const createEditor = async (data: OutputData = buildArticleColumns()): Promise<TestEditor> => {
     const instance = new Blok({
       holder,
       tools: {
@@ -116,7 +117,7 @@ describe('yjs-sync — undo of a reparent back to root', () => {
         column_list: ColumnList,
         column: Column,
       },
-      data: buildArticleColumns(),
+      data,
     }) as unknown as TestEditor;
 
     editor = instance;
@@ -196,5 +197,33 @@ describe('yjs-sync — undo of a reparent back to root', () => {
     expect(
       saved.blocks.filter((block) => block.parent === 'c1').map((block) => block.id)
     ).toEqual(['h1', inserted.id, 'body1', 'author1']);
+  });
+
+  it('takes a root block out of the columns row when undo removes the column it was put in', async () => {
+    const instance = await createEditor({
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['p1'] },
+        { id: 'p1', type: 'paragraph', data: { text: 'left' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['p2'] },
+        { id: 'p2', type: 'paragraph', data: { text: 'right' }, parent: 'c2' },
+        { id: 'p-mid', type: 'paragraph', data: { text: 'moved' } },
+      ],
+    });
+
+    // What a side drop does: a new column beside c2, then the block moves in.
+    instance.blocks.transact(() => {
+      const column = instance.blocks.insert('column', { noSeed: true }, {}, instance.blocks.getBlockIndex('p2') ?? 0, false, false);
+
+      instance.blocks.setBlockParent(column.id, 'cl1');
+      instance.blocks.setBlockParent('p-mid', column.id);
+    });
+    await flush();
+
+    instance.history.undo();
+    await flush();
+
+    expect(docParentOf('p-mid')).toBeNull();
+    expect(holder?.querySelector('[data-blok-id="p-mid"]')?.closest('[data-blok-columns]')).toBeNull();
   });
 });

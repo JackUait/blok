@@ -522,7 +522,7 @@ describe('column resizer dblclick equalizes widths', () => {
     const columns = [left, right].map((holder, i) => ({ id: `c${i}`, holder, dispatchChange: vi.fn() }));
     const getChildren = vi.fn().mockReturnValue(columns);
     const i18n = { t: vi.fn().mockReturnValue('Resize columns') };
-    const api = { blocks: { getChildren }, i18n } as unknown as API;
+    const api = { blocks: { getChildren, update: vi.fn().mockResolvedValue(undefined) }, i18n } as unknown as API;
 
     buildColumnResizers(container, [left, right], false, api, 'cl-1');
 
@@ -537,6 +537,26 @@ describe('column resizer dblclick equalizes widths', () => {
     expect(getChildren).toHaveBeenCalledWith('cl-1');
     expect(left.style.flexGrow).toBe('1');
     expect(right.style.flexGrow).toBe('1');
+  });
+
+  it('writes the reset width to the document so undo can bring the old width back', () => {
+    const left = makeHolder('1.5');
+    const right = makeHolder('1');
+    const container = document.createElement('div');
+
+    container.append(left, right);
+
+    const columns = [left, right].map((holder, i) => ({ id: `c${i}`, holder, dispatchChange: vi.fn() }));
+    const update = vi.fn().mockResolvedValue(undefined);
+    const i18n = { t: vi.fn().mockReturnValue('Resize columns') };
+    const api = { blocks: { getChildren: vi.fn().mockReturnValue(columns), update }, i18n } as unknown as API;
+
+    buildColumnResizers(container, [left, right], false, api, 'cl-1');
+    container.querySelector(`[${COLUMN_RESIZER_ATTR}]`)?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+    // Only the column whose width changes gets a write.
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith('c0', { widthRatio: 1 });
   });
 });
 

@@ -152,6 +152,7 @@ const createMockDependencies = (): BlockOperationsDependencies => {
       removeBlock: vi.fn(),
       replaceBlockContent: vi.fn(() => true),
       moveBlock: vi.fn(),
+      transactMoves: vi.fn((fn: () => void) => fn()),
       updateBlockData: vi.fn(),
       updateBlockTune: vi.fn(),
       updateBlockIndent: vi.fn(),
@@ -476,6 +477,61 @@ describe('BlockOperations', () => {
       expect(repo.blocks.map((block) => block.id)).toEqual(['a', 'b', 'b1']);
       expect(b1.parentId).toBe('b');
       expect(b.contentIds).toEqual(['b1']);
+    });
+  });
+
+  describe('moveCurrentBlockUp/Down past a container whose children live in its holder', () => {
+    /** a toggle `t` whose child `tc` holder sits inside t's holder, as rendered */
+    const setup = (order: string[], currentIndex: number): {
+      repo: BlockRepository;
+      ops: BlockOperations;
+      store: BlocksStore;
+      blocks: Record<string, Block>;
+    } => {
+      const blocks: Record<string, Block> = {
+        p: createMockBlock({ id: 'p' }),
+        t: createMockBlock({ id: 't', name: 'toggle', contentIds: ['tc'] }),
+        tc: createMockBlock({ id: 'tc', parentId: 't' }),
+        b: createMockBlock({ id: 'b' }),
+      };
+      const store = createBlocksStore(order.map((id) => blocks[id]));
+
+      blocks.t.holder.appendChild(blocks.tc.holder);
+
+      const repo = new BlockRepository();
+
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, currentIndex);
+
+      ops.setYjsSync(yjsSync);
+
+      return { repo, ops, store, blocks };
+    };
+
+    it('moves a block down past the toggle without putting it inside the toggle', () => {
+      const { repo, ops, store, blocks } = setup(['p', 't', 'tc', 'b'], 0);
+
+      ops.moveCurrentBlockDown(store);
+
+      expect(blocks.t.holder.contains(blocks.p.holder)).toBe(false);
+      expect(repo.blocks.map((block) => block.id)).toEqual(['t', 'tc', 'p', 'b']);
+    });
+
+    it('moves the toggle up past a block without pulling that block inside it', () => {
+      const { repo, ops, store, blocks } = setup(['p', 't', 'tc', 'b'], 1);
+
+      ops.moveCurrentBlockUp(store);
+
+      expect(blocks.t.holder.contains(blocks.p.holder)).toBe(false);
+      expect(repo.blocks.map((block) => block.id)).toEqual(['t', 'tc', 'p', 'b']);
+    });
+
+    it('records the whole keyboard move as one move group', () => {
+      const { ops, store } = setup(['p', 't', 'tc', 'b'], 0);
+
+      ops.moveCurrentBlockDown(store);
+
+      expect(dependencies.YjsManager.transactMoves).toHaveBeenCalledTimes(1);
     });
   });
 

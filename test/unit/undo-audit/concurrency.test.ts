@@ -102,12 +102,9 @@ describe('concurrent undo — a refused entry must not block older ones', () => 
     vi.restoreAllMocks();
   });
 
-  // COL-1. Refusing the move is designed (groupWasDisplacedSince). But the
-  // refusal returns before the yjs branch, so the edit under it can never be
-  // undone. Expected: undo reaches past it, like "reaches past the actions it
-  // cannot unwind" in concurrent-undo-loss.test.ts.
-  // Observed: expected 'one edited' to be 'one'
-  it.fails('still undoes an older edit after the peer moved a block this editor moved', () => {
+  // COL-1. Refusing the move is designed (groupWasDisplacedSince); undo
+  // reaches past it and the refused move stays on the stack.
+  it('still undoes an older edit after the peer moved a block this editor moved', () => {
     manager.updateBlockData('b1', 'text', 'one edited');
     manager.stopCapturing();
     manager.moveBlock('b3', 0);
@@ -123,12 +120,11 @@ describe('concurrent undo — a refused entry must not block older ones', () => 
     expect(textOf(manager, 'b1')).toBe('one');
     expect(manager.orderedIds()).toEqual(['b1', 'b3', 'b2']);
     expect(manager.toJSON()).toEqual(peer.toJSON());
+    expect(manager.canUndo()).toBe(true);
   });
 
-  // COL-3. Same early return on the redo side: the edit redone after the
-  // refused move can never come back.
-  // Observed: expected 'one' to be 'one edited'
-  it.fails('still redoes a newer edit after the peer moved a block whose move was undone', () => {
+  // COL-3. Same on the redo side.
+  it('still redoes a newer edit after the peer moved a block whose move was undone', () => {
     manager.moveBlock('b3', 0);
     manager.stopCapturing();
     manager.updateBlockData('b1', 'text', 'one edited');
@@ -188,10 +184,8 @@ describe('concurrent undo — shared text and capture windows', () => {
   });
 
   // COL-2. Refusing a half-undoable replace is designed
-  // (wouldResurrectBesideASparedBlock). But replayTrackedEntry returns before
-  // popping, so every older entry is stuck behind it.
-  // Observed: expected 'First edit' to be 'First'
-  it.fails('still undoes an older edit after a replace the peer wrote into was refused', () => {
+  // (wouldResurrectBesideASparedBlock); undo reaches past it.
+  it('still undoes an older edit after a replace the peer wrote into was refused', () => {
     storeA.updateBlockData('b1', 'text', 'First edit');
     historyA.stopCapturing();
 

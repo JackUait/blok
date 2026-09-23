@@ -16,6 +16,7 @@ const HOLDER_ID = 'blok';
 const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
 const MOVE_DOWN_SHORTCUT = process.platform === 'darwin' ? 'Meta+Shift+ArrowDown' : 'Control+Shift+ArrowDown';
+const MOVE_UP_SHORTCUT = process.platform === 'darwin' ? 'Meta+Shift+ArrowUp' : 'Control+Shift+ArrowUp';
 // Yjs capture window is 500ms; wait past it so gestures stay separate undo steps.
 const CAPTURE_GAP = 700;
 // Longer than the 400ms write-buffer window, so deferred write-backs have landed.
@@ -271,11 +272,7 @@ test.describe('undo audit: redo loss', () => {
     expect(textOf(await save(page), 'a')).toBe('A');
   });
 
-  // Observed: inToggle true, saved order ['t', 'tc', 'a', 'b'] instead of
-  // ['a', 't', 'tc', 'b']; a following redo changes nothing. The forward move
-  // already lands `a` inside `t` on screen (parentId null, flat order t,a,tc).
   test('RDO-3: undo of Cmd+Shift+Down past an open toggle puts the block back', async ({ page }) => {
-    test.fail(true, 'RDO-3: undo of a keyboard move past an open toggle leaves the block inside it');
     await createBlok(page, [
       P('a', 'A'),
       { id: 't', type: 'toggle', data: { text: 'Tog', isOpen: true }, content: ['tc'] },
@@ -298,6 +295,39 @@ test.describe('undo audit: redo loss', () => {
     });
 
     expect({ inToggle, saved: (await save(page)).map((b) => b.id) }).toStrictEqual({
+      inToggle: false,
+      saved: before.map((b) => b.id),
+    });
+  });
+
+  test('RDO-3b: Cmd+Shift+Up on an open toggle and its undo keep the block above it out of the toggle', async ({ page }) => {
+    await createBlok(page, [
+      P('p', 'P'),
+      { id: 't', type: 'toggle', data: { text: 'Tog', isOpen: true }, content: ['tc'] },
+      { id: 'tc', type: 'paragraph', data: { text: 'inside' }, parent: 't' },
+      P('b', 'B'),
+    ]);
+    await wait(page, CAPTURE_GAP);
+    const before = await save(page);
+    const pInToggle = (): Promise<boolean> => page.evaluate(() => {
+      const holder = document.querySelector('[data-blok-id="p"]');
+
+      return holder?.parentElement?.closest('[data-blok-id="t"]') !== null;
+    });
+
+    await page.locator(editable('t')).first().click();
+    await page.keyboard.press(MOVE_UP_SHORTCUT);
+    await wait(page, SETTLE);
+
+    expect({ inToggle: await pInToggle(), saved: (await save(page)).map((b) => b.id) }).toStrictEqual({
+      inToggle: false,
+      saved: ['t', 'tc', 'p', 'b'],
+    });
+
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await wait(page, SETTLE);
+
+    expect({ inToggle: await pInToggle(), saved: (await save(page)).map((b) => b.id) }).toStrictEqual({
       inToggle: false,
       saved: before.map((b) => b.id),
     });

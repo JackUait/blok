@@ -116,6 +116,13 @@ export class UndoHistory {
   private readonly replayAnchors = new WeakMap<SingleMoveEntry, ReplayAnchor>();
 
   /**
+   * Where each block a stack item deleted sat when it was deleted, read from
+   * the order array before any later move could change the tombstone's
+   * neighbours. See {@link putBackRestoredBlocks}.
+   */
+  private readonly deletedPlacements = new WeakMap<StackItem, Map<string, BlockPlacement>>();
+
+  /**
    * Temporary buffer for collecting moves during a grouped operation.
    * When not null, moves are collected here instead of pushed to moveUndoStack.
    */
@@ -218,6 +225,7 @@ export class UndoHistory {
     this.currentUndoManager = this.createUndoManager(scope);
 
     this.setupCaretTracking();
+    this.setupDeletedPlacementTracking();
 
     // Placement callback will be set by YjsManager
     this.placementCallback = () => {
@@ -791,6 +799,7 @@ export class UndoHistory {
     this.currentUndoManager = this.createUndoManager(scope);
 
     this.setupCaretTracking();
+    this.setupDeletedPlacementTracking();
   }
 
   /**
@@ -892,6 +901,179 @@ export class UndoHistory {
   }
 
   /**
+   * Record, for every stack item, where the blocks it deleted sat. Runs for
+   * the items a replay creates too: a redo deletes blocks as well.
+   */
+  private setupDeletedPlacementTracking(): void {
+    const record = (event: StackItemEvent): void => this.recordDeletedPlacements(event.stackItem);
+
+    this.undoManager.on('stack-item-added', record);
+    this.undoManager.on('stack-item-updated', record);
+  }
+
+  /**
+   * Read each deleted block's parent and preceding sibling off its deleted
+   * order-array item. Must run right after the delete: later moves insert new
+   * items next to the tombstone and change what sits left of it.
+   * @param stackItem - the item that just recorded a delete
+   */
+  private recordDeletedPlacements(stackItem: StackItem): void {
+    const blocks = this.blocksScope;
+
+    if (blocks === null || blocks.doc === null) {
+      return;
+    }
+
+    const deletedBlocks = new Set<string>();
+    const orderItems: Y.Item[] = [];
+
+    blocks.doc.transact((transaction) => {
+      Y.iterateDeletedStructs(transaction, stackItem.deletions, (struct) => {
+        if (!(struct instanceof Y.Item)) {
+          return;
+        }
+        if (struct.parent === blocks && struct.parentSub !== null) {
+          deletedBlocks.add(struct.parentSub);
+        } else if (this.isOrderArray(struct.parent)) {
+          orderItems.push(struct);
+        }
+      });
+    });
+
+    const placements = this.deletedPlacements.get(stackItem) ?? new Map<string, BlockPlacement>();
+
+    for (const item of orderItems) {
+      const ids: unknown[] = item.content.getContent();
+      const parentId = this.parentOfOrderArray(item.parent);
+
+      ids.forEach((id, index) => {
+        if (typeof id === 'string' && deletedBlocks.has(id) && !placements.has(id)) {
+          const previous = ids[index - 1];
+
+          placements.set(id, { parentId,
+            afterId: typeof previous === 'string' ? previous : this.idLeftOf(item, stackItem) });
+        }
+      });
+    }
+
+    this.deletedPlacements.set(stackItem, placements);
+  }
+
+  /**
+   * The block id right before a deleted order item: the nearest live item, or
+   * one deleted by the same stack item (blocks deleted together keep their
+   * order). Tombstones of earlier moves and deletes are skipped.
+   */
+  private idLeftOf(item: Y.Item, stackItem: StackItem): string | null {
+    const { left } = item;
+
+    if (left === null) {
+      return null;
+    }
+
+    if (left.deleted && !Y.isDeleted(stackItem.deletions, left.id)) {
+      return this.idLeftOf(left, stackItem);
+    }
+
+    const last: unknown = left.content.getContent().at(-1);
+
+    return typeof last === 'string' ? last : null;
+  }
+
+  /**
+   * The block whose `contentIds` is this order array, or null for the root.
+   */
+  private parentOfOrderArray(order: Y.AbstractType<unknown> | Y.ID | null): string | null {
+    const owner = order instanceof Y.Array ? order._item : null;
+    const block = owner?.parent instanceof Y.Map ? owner.parent._item : null;
+
+    return block?.parentSub ?? null;
+  }
+
+  /**
+   * Re-place one restored block, see {@link putBackRestoredBlocks}.
+   */
+  private putBackRestoredBlock(id: string, target: BlockPlacement | undefined, direction: 'undo' | 'redo'): void {
+    const current = this.currentPlacement(id);
+
+    if (
+      target !== undefined
+      && current !== null
+      && current.parentId === target.parentId
+      && current.afterId !== target.afterId
+      && this.placementAnchorsExist(target)
+    ) {
+      this.placementCallback(id, target, direction === 'undo' ? 'move-undo' : 'move-redo');
+    }
+  }
+
+  /**
+   * Put each block the replay brought back where it sat when it was deleted.
+   *
+   * Yjs restores a deleted id after its CURRENT left neighbour. A move writes
+   * the moved id as a new item, and a move back to its old slot puts that new
+   * item left of the tombstone, so the restored block lands after the moved
+   * block instead of where it was. No insert index avoids this, so the block
+   * is placed again from the placement read at delete time.
+   *
+   * The correction's items are merged into the stack item the replay just
+   * created. Otherwise the opposite replay would delete the block but leave
+   * the corrected id in the order array, and peers would receive it.
+   *
+   * Anchor law: acts only when the observed placement differs and both
+   * recorded anchors still exist. Never changes the parent.
+   * @param direction - the replay that just ran
+   */
+  private putBackRestoredBlocks(direction: 'undo' | 'redo'): void {
+    const recorded = this.poppedStackItem === null ? undefined : this.deletedPlacements.get(this.poppedStackItem);
+    const replayItem = this.replayStackItem;
+    const doc = this.blocksScope?.doc ?? null;
+
+    if (recorded === undefined || replayItem === null || doc === null) {
+      return;
+    }
+
+    const pending = [...recorded.keys()];
+    const transactions: Y.Transaction[] = [];
+    const collect = (transaction: Y.Transaction): void => {
+      transactions.push(transaction);
+    };
+
+    doc.on('afterTransaction', collect);
+    try {
+      while (pending.length > 0) {
+        // Place a block before any block recorded right after it.
+        const ready = pending.findIndex((id) => {
+          const afterId = recorded.get(id)?.afterId ?? null;
+
+          return afterId === null || !pending.includes(afterId);
+        });
+        const [id] = pending.splice(Math.max(ready, 0), 1);
+
+        this.putBackRestoredBlock(id, recorded.get(id), direction);
+      }
+    } finally {
+      doc.off('afterTransaction', collect);
+    }
+
+    for (const transaction of transactions) {
+      const insertions = Y.createDeleteSet();
+
+      transaction.afterState.forEach((end, client) => {
+        const start = transaction.beforeState.get(client) ?? 0;
+
+        if (end > start) {
+          insertions.clients.set(client, [{ clock: start,
+            len: end - start }]);
+        }
+      });
+
+      replayItem.insertions = Y.mergeDeleteSets([replayItem.insertions, insertions]);
+      replayItem.deletions = Y.mergeDeleteSets([replayItem.deletions, transaction.deleteSet]);
+    }
+  }
+
+  /**
    * Re-capture the "after" snapshot of a freshly recorded undo entry once the
    * current synchronous gesture has settled focus.
    *
@@ -968,8 +1150,11 @@ export class UndoHistory {
       const pending = this.moveUndoStack[this.moveUndoStack.length - 1];
 
       // A move the peer has since overruled is no longer ours to reverse —
-      // see `groupWasDisplacedSince`. Leave the group on the stack untouched.
+      // see `groupWasDisplacedSince`. Leave the group on the stack and undo
+      // the next action under it.
       if (pending !== undefined && pending.length > 0 && this.groupWasDisplacedSince(pending, 'to')) {
+        this.reachPastRefusedMove(this.caretUndoStack, this.moveUndoStack, () => this.undo());
+
         return;
       }
     }
@@ -1033,7 +1218,7 @@ export class UndoHistory {
     const scan = this.scanTopEntry(stackOf());
 
     if (this.wouldResurrectBesideASparedBlock(scan)) {
-      return undefined;
+      return this.reachPastRefusedStackItem(direction);
     }
 
     const stackBefore = [...stackOf()];
@@ -1053,12 +1238,73 @@ export class UndoHistory {
       this.sparesTextOfBornBlocks = false;
     }
 
+    this.putBackRestoredBlocks(direction);
     this.restoreSkippedStackItems(stackBefore, stackOf());
 
     return this.settleReplayedEntries(
       direction === 'undo' ? this.caretUndoStack : this.caretRedoStack,
       stackOf()
     );
+  }
+
+  /**
+   * Replay the entry under a refused move group, then put the group back on
+   * top. The refusal is by design, but an entry that stays on top and is
+   * refused on every press would block every older action for good.
+   * @param carets - the caret stack whose top is the refused group's entry
+   * @param moves - the move stack whose top is the refused group
+   * @param replay - replays the next entry down
+   */
+  private reachPastRefusedMove(
+    carets: CaretHistoryEntry[],
+    moves: MoveHistoryEntry[],
+    replay: () => void
+  ): void {
+    const caret = carets.pop();
+    const group = moves.pop();
+
+    try {
+      replay();
+    } finally {
+      if (caret !== undefined) {
+        carets.push(caret);
+      }
+      if (group !== undefined) {
+        moves.push(group);
+      }
+    }
+  }
+
+  /**
+   * Same as {@link reachPastRefusedMove} for a refused yjs stack item. Its
+   * caret entry leaves the caret stack too, or `settleReplayedEntries` would
+   * shed it as the entry of an item that left the stack.
+   * @param direction - which stack the refused item is on top of
+   */
+  private reachPastRefusedStackItem(direction: 'undo' | 'redo'): CaretHistoryEntry | undefined {
+    const stack = direction === 'undo' ? this.undoManager.undoStack : this.undoManager.redoStack;
+    const carets = direction === 'undo' ? this.caretUndoStack : this.caretRedoStack;
+    const item = stack.pop();
+
+    if (item === undefined) {
+      return undefined;
+    }
+
+    const entry = this.entryByStackItem.get(item);
+    const index = entry === undefined ? -1 : carets.lastIndexOf(entry);
+
+    if (index !== -1) {
+      carets.splice(index, 1);
+    }
+
+    try {
+      return this.replayTrackedEntry(direction);
+    } finally {
+      stack.push(item);
+      if (entry !== undefined && index !== -1) {
+        carets.push(entry);
+      }
+    }
   }
 
   /**
@@ -1085,6 +1331,8 @@ export class UndoHistory {
       // there, and once the peer has moved it somewhere else replaying `to`
       // overrules them rather than repeating this editor's move.
       if (pending !== undefined && pending.length > 0 && this.groupWasDisplacedSince(pending, 'from')) {
+        this.reachPastRefusedMove(this.caretRedoStack, this.moveRedoStack, () => this.redo());
+
         return;
       }
     }
@@ -1383,14 +1631,18 @@ export class UndoHistory {
   }
 
   /**
-   * Attach a reparent to the in-flight move entry (or create a parent-only
-   * entry if the block hasn't been moved inside the group yet).
+   * Add a reparent to the in-flight move group as its own entry.
    *
    * Used by drag-reparent so that `undo` restores the parent relationship
    * atomically with the position. The caller (`BlockManager.setBlockParent`
    * when `YjsManager.isInMoveGroup` is true) is responsible for writing the
    * placement to Yjs through the no-capture flavor so the Y.UndoManager
    * does not also record the change.
+   *
+   * Never merged into an earlier entry of the same block: the group replays
+   * its entries in reverse, and each `from` is only true while every later
+   * entry is already undone. A merged entry jumps over the moves recorded
+   * between its two writes, so its replay reads anchors that are not there.
    * @param blockId - id of the reparented block
    * @param from - the block's doc placement BEFORE the reparent write
    * @param to - the placement the reparent wrote
@@ -1400,28 +1652,8 @@ export class UndoHistory {
     from: BlockPlacement,
     to: BlockPlacement
   ): void {
-    if (this.pendingMoveGroup === null) {
-      // Not inside a move group — nothing to attach to. Drop the hint.
-      return;
-    }
-
-    const existing = this.pendingMoveGroup.find(
-      entry => entry.blockId === blockId
-    );
-
-    if (existing !== undefined) {
-      // `from` is first-write-wins: the entry's existing `from` is the
-      // placement BEFORE the drag started (a mid-group flat move already
-      // displaced the block, so `from` here would be wrong). Only `to`
-      // advances to the most recent write.
-      existing.to = to;
-
-      return;
-    }
-
-    // No matching move entry yet (e.g. a same-slot reparent within a toggle
-    // body, where DragController calls setBlockParent without a prior move).
-    this.pendingMoveGroup.push({ blockId, from, to });
+    // Not inside a move group — nothing to attach to. Drop the hint.
+    this.pendingMoveGroup?.push({ blockId, from, to });
   }
 
   /**

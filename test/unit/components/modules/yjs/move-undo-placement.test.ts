@@ -282,7 +282,7 @@ describe('placement-based move undo/redo', () => {
       expect(manager.toJSON().find((block) => block.id === 'x')?.parent).toBeUndefined();
     });
 
-    it('keeps the pre-drag from-placement when a reparent follows a flat move (first write wins)', () => {
+    it('keeps the pre-drag from-placement when a reparent follows a flat move', () => {
       manager.fromJSON([
         paragraph('x', 'moved'),
         paragraph('p', 'parent', { content: ['c1', 'c2'] }),
@@ -292,7 +292,7 @@ describe('placement-based move undo/redo', () => {
       expect(orderedIds()).toEqual(['x', 'p', 'c1', 'c2']);
 
       // Drag flow: the flat move records the entry (with the true pre-drag
-      // from-placement), then the reparent merges into it.
+      // from-placement), then the reparent records its own entry.
       manager.transactMoves(() => {
         manager.moveBlock('x', 3);
 
@@ -306,8 +306,8 @@ describe('placement-based move undo/redo', () => {
 
       manager.undo();
 
-      // The entry's from side is the PRE-DRAG placement (root, first slot) —
-      // not the mid-drag one the reparent capture saw.
+      // Replaying both entries in reverse ends on the PRE-DRAG placement
+      // (root, first slot), not the mid-drag one the reparent capture saw.
       expect(orderedIds()).toEqual(['x', 'p', 'c1', 'c2']);
       expect(manager.toJSON().find((block) => block.id === 'x')?.parent).toBeUndefined();
 
@@ -315,6 +315,45 @@ describe('placement-based move undo/redo', () => {
 
       expect(orderedIds()).toEqual(['p', 'c1', 'c2', 'x']);
       expect(manager.toJSON().find((block) => block.id === 'x')?.parent).toBe('p');
+    });
+
+    it('undoes a two-block drag into a container back to the exact prior order', () => {
+      manager.fromJSON([
+        paragraph('a', 'before'),
+        paragraph('m1', 'first moved'),
+        paragraph('m2', 'second moved'),
+        paragraph('z', 'after'),
+        paragraph('box', 'container', { content: ['k1', 'k2'] }),
+        paragraph('k1', 'kid one', { parent: 'box' }),
+        paragraph('k2', 'kid two', { parent: 'box' }),
+      ]);
+      const before = orderedIds();
+
+      // Drag flow: flat moves first, then each block is reparented. The
+      // reparents come AFTER the other block's flat move.
+      manager.transactMoves(() => {
+        manager.moveBlock('m2', 4);
+        manager.moveBlock('m1', 4);
+
+        for (const [id, afterId] of [['m1', 'k1'], ['m2', 'm1']] as const) {
+          const from = placementOf(id);
+          const to: BlockPlacement = { parentId: 'box', afterId };
+
+          manager.applyBlockPlacement(id, to, { capture: false });
+          manager.recordParentChangeForPendingMove(id, from, to);
+        }
+      }, true);
+      const after = orderedIds();
+
+      expect(after).toEqual(['a', 'z', 'box', 'k1', 'm1', 'm2', 'k2']);
+
+      manager.undo();
+
+      expect(orderedIds()).toEqual(before);
+
+      manager.redo();
+
+      expect(orderedIds()).toEqual(after);
     });
 
     it('redoes a two-block adoption group, not just its first entry', () => {
@@ -350,6 +389,68 @@ describe('placement-based move undo/redo', () => {
 
       expect(manager.toJSON().find((block) => block.id === 'p1')?.parent).toBe('hdr');
       expect(manager.toJSON().find((block) => block.id === 'p2')?.parent).toBe('hdr');
+    });
+  });
+
+  describe('undo of a delete made before a move', () => {
+    const rawRootOrder = (): string[] => {
+      const reader = new DocumentStore(new YBlockSerializer());
+
+      reader.applyRemoteUpdate(manager.encodeStateAsUpdate());
+
+      return reader.rootOrder.toArray();
+    };
+
+    it('puts the block back where it was after its right neighbour moved away and back', () => {
+      manager.fromJSON([
+        paragraph('a', 'one'),
+        paragraph('b', 'two'),
+        paragraph('c', 'three'),
+      ]);
+
+      manager.removeBlock('b');
+      manager.stopCapturing();
+      manager.moveBlock('c', 0);
+      expect(orderedIds()).toEqual(['c', 'a']);
+
+      manager.undo();
+      manager.undo();
+
+      expect(orderedIds()).toEqual(['a', 'b', 'c']);
+      expect(rawRootOrder()).toEqual(['a', 'b', 'c']);
+
+      manager.redo();
+
+      // Peers get the raw order array: no id may be left behind in it.
+      expect(orderedIds()).toEqual(['a', 'c']);
+      expect(rawRootOrder()).toEqual(['a', 'c']);
+
+      manager.undo();
+
+      expect(orderedIds()).toEqual(['a', 'b', 'c']);
+      expect(rawRootOrder()).toEqual(['a', 'b', 'c']);
+    });
+
+    it('puts several blocks deleted together back in their order', () => {
+      manager.fromJSON([
+        paragraph('a', 'one'),
+        paragraph('b1', 'two'),
+        paragraph('b2', 'three'),
+        paragraph('c', 'four'),
+      ]);
+
+      manager.transact(() => {
+        manager.removeBlock('b1');
+        manager.removeBlock('b2');
+      });
+      manager.stopCapturing();
+      manager.moveBlock('c', 0);
+
+      manager.undo();
+      manager.undo();
+
+      expect(orderedIds()).toEqual(['a', 'b1', 'b2', 'c']);
+      expect(rawRootOrder()).toEqual(['a', 'b1', 'b2', 'c']);
     });
   });
 

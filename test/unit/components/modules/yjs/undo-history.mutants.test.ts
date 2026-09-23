@@ -753,11 +753,9 @@ describe('UndoHistory — mutation coverage', () => {
       expect(h.history.canUndo()).toBe(false);
     });
 
-    it('advances the destination of that block only, keeping its original origin', () => {
+    it('records its own entry after the flat move, so undo and redo replay every write in order', () => {
       const inner: BlockPlacement = { parentId: 'toggle', afterId: null };
 
-      // The reparented block is deliberately NOT the first entry in the group:
-      // matching on position instead of id would rewrite the wrong block.
       h.history.startMoveGroup();
       h.history.recordMove(rootMove('b9', 'b8', null), true);
       h.history.recordMove(rootMove('b1', null, 'b2'), true);
@@ -766,9 +764,9 @@ describe('UndoHistory — mutation coverage', () => {
 
       h.history.undo();
 
-      // `from` is first-write-wins: the mid-group placement is not where the
-      // drag started, so undo must still target the pre-drag slot.
+      // Reverse order: each `from` holds only once every later write is undone.
       expect(placementCalls(h)).toEqual([
+        ['b1', rootPlacement('b2'), 'move-undo'],
         ['b1', rootPlacement(null), 'move-undo'],
         ['b9', rootPlacement('b8'), 'move-undo'],
       ]);
@@ -778,6 +776,7 @@ describe('UndoHistory — mutation coverage', () => {
 
       expect(placementCalls(h)).toEqual([
         ['b9', rootPlacement(null), 'move-redo'],
+        ['b1', rootPlacement('b2'), 'move-redo'],
         ['b1', inner, 'move-redo'],
       ]);
     });

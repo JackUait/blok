@@ -174,7 +174,6 @@ test.describe('undo audit: redo loss', () => {
   // Observed: expect(canRedo).toBe(true) -> Received: false. canRedo is still
   // true 350ms after the undo and false by 400ms.
   test('RDO-1a: undoing an image delete keeps redo available', async ({ page }) => {
-    test.fail(true, 'RDO-1: image natural-size write-back after an undo is tracked and clears redo');
     await createBlok(page, IMAGE_DOC);
     await wait(page, CAPTURE_GAP);
     const before = await save(page);
@@ -201,7 +200,6 @@ test.describe('undo audit: redo loss', () => {
   // four undos never remove it nor reach the 'Z'. Inserting with
   // naturalWidth/naturalHeight preset makes one undo remove it.
   test('RDO-1b: undo after inserting an image removes it and reaches earlier edits', async ({ page }) => {
-    test.fail(true, 'RDO-1: undo loops on the image natural-size write-back');
     await createBlok(page, [P('a', 'A'), P('b', 'B')]);
     await wait(page, CAPTURE_GAP);
     await typeAtEnd(page, 'a', 'Z');

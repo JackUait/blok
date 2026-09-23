@@ -482,7 +482,6 @@ test.describe('GES inline', () => {
   // Observed (4 of 4, keyboard and history.redo()): the text after the equation is gone after redo,
   // in save() and in the DOM: Received "mass: <span data-latex="E=mc^3">E=mc^3</span>" (no " end").
   test('GES-8: redo of an equation edit keeps the text after the equation', async ({ page }) => {
-    test.fail();
     await createEquationBlok(page, [
       P('p-before', 'before'),
       P('p-eq', 'mass: <span data-latex="E=mc^2">E=mc^2</span> end'),

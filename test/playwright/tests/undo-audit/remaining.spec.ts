@@ -146,7 +146,6 @@ test.describe('undo audit: remaining surfaces', () => {
   // Source: undo must keep redo until the user makes a new edit; a finishing link preview is not one.
   // Observed: canRedo Expected true, Received false.
   test('UNP-2: a bookmark preview that arrives after an unrelated undo keeps redo', async ({ page }) => {
-    test.fail();
     await gotoTestPage(page);
     const release = await holdUnfurl(page);
 
@@ -197,7 +196,6 @@ test.describe('undo audit: remaining surfaces', () => {
   // the upload then lands in it and redo is gone.
   // Observed: hasImage Expected false, Received true.
   test('UNP-4: an image upload undone while pending does not land afterwards', async ({ page }) => {
-    test.fail();
     await mount(page, [P('p', 'alpha'), P('q', '')], 'image');
     await page.locator('[data-blok-id="q"] [contenteditable]').click();
     await page.keyboard.type('/image', { delay: 30 });
@@ -220,7 +218,6 @@ test.describe('undo audit: remaining surfaces', () => {
   // The video request is held so metadata lands after load, as it does on a slow network.
   // Observed: canUndo Expected false, Received true.
   test('UNP-5: a video without a saved aspect ratio adds an undo step when its metadata loads', async ({ page }) => {
-    test.fail();
     await gotoTestPage(page);
     const gate = { open: false };
 

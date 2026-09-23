@@ -619,7 +619,6 @@ test.describe('W5X audio enrichment', () => {
   // (audio/index.ts:362-370) as a plain local edit, so it is its own undo step. Family "late async
   // writes", new instance. Observed: first undo only drops peaks/duration; url stays.
   test('W5X-12: one undo of an upload whose waveform decoded late returns the empty audio block', async ({ page }) => {
-    test.fail(true, 'W5X-12 late peaks write is its own undo step (audio/index.ts:369)');
     await mount(page, AUDIO_DOC());
     await gateDecode(page);
     await gap(page);
@@ -652,7 +651,6 @@ test.describe('W5X audio enrichment', () => {
   // Defect: the late peaks write (audio/index.ts:369 dispatchChange) is a new local edit, so it clears
   // the redo of an unrelated undo. Family "late async writes clear redo", new instance.
   test('W5X-13: a waveform that decodes after an unrelated undo keeps redo', async ({ page }) => {
-    test.fail(true, 'W5X-13 late peaks write clears redo (audio/index.ts:369)');
     await mount(page, AUDIO_DOC());
     await gateDecode(page);
     await gap(page);

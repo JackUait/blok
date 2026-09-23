@@ -227,7 +227,6 @@ test.describe('undo audit: selection-driven edits', () => {
   // so the deferred replay has nothing to land.
   // Observed: Expected ["a:paragraph:Hello world"], Received ["a:paragraph:HelloX1"].
   test('W4S-2: undo of a multi-line paste in the middle of a block brings the original text back', async ({ page }) => {
-    test.fail();
     await mount(page, [P('a', 'Hello world')]);
     await editable(page, 'a').click();
     await page.keyboard.press('Home');

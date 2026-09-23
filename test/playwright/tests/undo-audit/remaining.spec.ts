@@ -144,28 +144,38 @@ test.describe('undo audit: remaining surfaces', () => {
 
   // Source: an upload's result belongs to the gesture that started it: undoing that gesture removes it, redo brings it back.
   test('UNP-1b: undo of inserting an image removes an upload that landed later, and redo brings the image back', async ({ page }) => {
+    const image = page.locator('[data-blok-tool="image"]');
+    const url = async (): Promise<unknown> => (await saved(page)).find((b) => b.type === 'image')?.data.url;
+
     await mount(page, [P('p', 'alpha'), P('q', '')], 'image');
     await page.locator('[data-blok-id="q"] [contenteditable]').click();
     await page.keyboard.type('/image', { delay: 30 });
     await page.locator('[data-blok-item-name="image"]').click();
     await gap(page);
-    await page.locator('[data-blok-tool="image"]').getByTestId('file-input').setInputFiles(IMAGE_FILE);
+    await image.getByTestId('file-input').setInputFiles(IMAGE_FILE);
     await gap(page);
     await page.evaluate(() => window.__resolveUpload?.());
     await expect.poll(() => hasImage(page)).toBe(true);
     await gap(page);
 
+    // Undo the pick, then the insert.
     await page.keyboard.press(UNDO);
     await gap(page);
-    await expect(page.locator('[data-blok-tool="image"]')).toHaveCount(0);
+    await expect(image).toHaveCount(1);
+    await expect(image.locator('img')).toHaveCount(0);
+    await page.keyboard.press(UNDO);
+    await gap(page);
+    await expect(image).toHaveCount(0);
     await expect(page.locator('[data-blok-id="q"]')).toBeVisible();
 
     await page.keyboard.press(REDO);
     await gap(page);
-    const image = (await saved(page)).find((b) => b.type === 'image');
-
-    expect(image?.data.url).toBe(IMAGE_URL);
-    await expect(page.locator('[data-blok-tool="image"] img')).toHaveCount(1);
+    await expect(image).toHaveCount(1);
+    await page.keyboard.press(REDO);
+    await gap(page);
+    expect(await url()).toBe(IMAGE_URL);
+    await expect(image.locator('img')).toHaveCount(1);
+    await expect(image).toHaveAttribute('data-state', 'rendered');
   });
 
   // Source: an upload's result belongs to the gesture that started it: undoing that gesture removes it, redo brings it back.
@@ -191,13 +201,15 @@ test.describe('undo audit: remaining surfaces', () => {
     await gap(page);
     await page.keyboard.press(UNDO);
     await gap(page);
-    expect((await saved(page)).find((b) => b.id === 'img')?.data.url).toBe('');
+    await expect(page.locator('[data-blok-tool="image"]')).toHaveAttribute('data-state', 'empty');
+    expect(await hasImage(page)).toBe(false);
     await expect(page.getByText('alpha', { exact: true })).toBeVisible();
 
     await page.keyboard.press(REDO);
     await gap(page);
     expect((await saved(page)).find((b) => b.id === 'img')?.data.url).toBe(IMAGE_URL);
     await expect(page.locator('[data-blok-tool="image"] img')).toHaveCount(1);
+    await expect(page.locator('[data-blok-tool="image"]')).toHaveAttribute('data-state', 'rendered');
     await page.keyboard.press(REDO);
     await gap(page);
     await expect(page.getByText('alphaY', { exact: true })).toBeVisible();

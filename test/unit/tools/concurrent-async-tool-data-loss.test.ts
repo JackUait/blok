@@ -137,8 +137,10 @@ class LiveDocument {
       getBlocksCount: (): number => this.mounted.length,
       getBlockByIndex: (index: number): unknown => {
         this.indexProbes += 1;
+        const entry = this.mounted[index];
 
-        return this.mounted[index];
+        // Like BlockAPI.save(): what the block holds now.
+        return entry === undefined ? undefined : { ...entry, save: async (): Promise<unknown> => ({ data: dataOf(this.store, entry.id) }) };
       },
       // Mirrors api/blocks.ts:125-135: a miss is a WARN, not a silent null.
       getById: (id: string): unknown => {
@@ -459,6 +461,72 @@ describe('async tool data racing a remote peer', () => {
 
       expect(live.store.toJSON().find((entry) => entry.id === 'img1')).toBeUndefined();
       // Never a silent no-op: the stranded file is reported.
+      expect(warn).toHaveBeenCalled();
+    });
+  });
+
+  describe('image file upload', () => {
+    const imageFile = (): File => new File([new Uint8Array([0, 1])], 'photo.png', { type: 'image/png' });
+    const mountImage = (live: LiveDocument, upload: { promise: Promise<{ url: string }> }): { block: Block; options: Parameters<typeof mountBlock>[1] } => {
+      const options = {
+        id: 'img1',
+        toolName: 'image',
+        data: { url: '' },
+        config: { uploader: { uploadByFile: () => upload.promise } },
+        live,
+      };
+
+      return { block: mountBlock(ImageTool as unknown as new (options: never) => Record<string, unknown>, options), options };
+    };
+
+    it('keeps an upload that resolves after a peer edit rebuilt the block', async () => {
+      const live = new LiveDocument(createStore());
+
+      live.store.fromJSON([{ id: 'img1', type: 'image', data: { url: '' } }]);
+      const upload = deferred<{ url: string }>();
+      const { block, options } = mountImage(live, upload);
+
+      block.call(BlockToolAPI.ON_PASTE, { type: 'file', detail: { file: imageFile() } });
+      await settle();
+      rematerialize(block, ImageTool as unknown as new (options: never) => Record<string, unknown>, {
+        ...options,
+        data: dataOf(live.store, 'img1'),
+      });
+
+      upload.resolve({ url: 'https://cdn.test/stored/photo.png' });
+      await settle();
+
+      expect(dataOf(live.store, 'img1').url).toBe('https://cdn.test/stored/photo.png');
+    });
+
+    it('does not land an upload whose pick was undone while it ran', async () => {
+      const live = new LiveDocument(createStore());
+
+      live.store.fromJSON([{ id: 'img1', type: 'image', data: { url: '' } }]);
+      const upload = deferred<{ url: string }>();
+      const { block, options } = mountImage(live, upload);
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      block.call(BlockToolAPI.ON_PASTE, { type: 'file', detail: { file: imageFile() } });
+      await settle();
+      expect(dataOf(live.store, 'img1').fileName).toBe('photo.png');
+      // Undo of the pick takes the file name back out and rebuilds the block.
+      live.store.transact(() => {
+        const data = live.store.getBlockById('img1')?.get('data');
+
+        if (data instanceof Y.Map) {
+          data.delete('fileName');
+        }
+      }, 'local');
+      rematerialize(block, ImageTool as unknown as new (options: never) => Record<string, unknown>, {
+        ...options,
+        data: dataOf(live.store, 'img1'),
+      });
+
+      upload.resolve({ url: 'https://cdn.test/stored/photo.png' });
+      await settle();
+
+      expect(dataOf(live.store, 'img1')).toEqual({ url: '' });
       expect(warn).toHaveBeenCalled();
     });
   });

@@ -8,6 +8,7 @@ import { DATA_ATTR } from '../../constants/data-attributes';
 import { logLabeled } from '../../utils';
 import { moveElementAfter, moveElementBefore, moveElementToEnd } from '../../utils/html';
 import { CHILD_SLOT_SELECTOR, SELF_PLACING_PARENTS, isSlotless } from '../../../tools/nested-blocks';
+import { isCollapsedToggleBlock } from '../drag/utils/toggleState';
 
 import type { BlockRepository } from './repository';
 
@@ -393,31 +394,25 @@ export class BlockHierarchy {
     // eslint-disable-next-line no-param-reassign
     block.parentId = sanitizedParentId;
 
-    // If the new parent's existing children are hidden (toggle is collapsed),
-    // hide this newly added child too so Tab navigation skips it.
+    // A child of a collapsed toggle is hidden, so Tab navigation skips it.
+    // Derived from the new parent every time: a block leaving a collapsed
+    // toggle (undo of Tab into it) must show again.
     //
     // Fix 5: a previously-empty collapsed container has no existing hidden
-    // children to infer state from. Fall back to reading the toggle/header
-    // tool's persistent open-state attribute (`data-blok-toggle-open="false"`)
-    // on any descendant of the parent holder.
-    if (sanitizedParentId !== null && newParent !== undefined) {
-      const existingChildren = newParent.contentIds
-        .filter(id => id !== block.id)
-        .map(id => this.repository.getBlockById(id))
-        .filter((b): b is NonNullable<typeof b> => b !== undefined);
+    // children to infer state from. Fall back to the parent's OWN open-state
+    // marker; a nested collapsed toggle's marker says nothing about it.
+    const existingChildren = (newParent?.contentIds ?? [])
+      .filter(id => id !== block.id)
+      .map(id => this.repository.getBlockById(id))
+      .filter((b): b is NonNullable<typeof b> => b !== undefined);
 
-      const parentIsCollapsedFromChildren = existingChildren.length > 0 &&
-        existingChildren.every(b => b.holder.classList.contains('hidden'));
+    const parentIsCollapsedFromChildren = existingChildren.length > 0 &&
+      existingChildren.every(b => b.holder.classList.contains('hidden'));
 
-      const parentIsCollapsedFromAttr =
-        newParent.holder.querySelector('[data-blok-toggle-open="false"]') !== null;
+    const parentIsCollapsed = newParent !== undefined &&
+      (parentIsCollapsedFromChildren || isCollapsedToggleBlock(newParent));
 
-      const parentIsCollapsed = parentIsCollapsedFromChildren || parentIsCollapsedFromAttr;
-
-      if (parentIsCollapsed) {
-        block.holder.classList.add('hidden');
-      }
-    }
+    block.holder.classList.toggle('hidden', parentIsCollapsed);
 
     // Move block holder into the new parent's direct child container, honouring
     // the flat-array order so the DOM order matches the logical order.

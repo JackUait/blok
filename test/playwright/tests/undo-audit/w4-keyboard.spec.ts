@@ -392,13 +392,9 @@ test.describe('undo audit wave 4: structural keyboard edits and markdown shortcu
     expect(trip.redone, 'redo restores the state after the gesture').toEqual(trip.after);
   });
 
-  // Defect: redo of a multi-selected Tab restores depth and data but draws the depth-0 bullet (•) on the
-  // nested items instead of ◦. Glyph comes from list/index.ts:405-426 updateMarkerForDepth (visual depth from
-  // marker-calculator.ts:202-241, read off the DOM). Single-item Tab (W4K-20) redoes correctly.
-  // Traced in W5R-3: multi-select Tab is a plain tracked parentId write, not a move entry, so its redo only
-  // calls setBlockParent and never list.moved(); setData is skipped because depth is not in saved data.
+  // Redo of a multi-selected Tab is a plain parentId replay (not a move entry); it must still redraw the
+  // nested glyph (◦). See W5R-3.
   test('W4K-22: Tab on two selected list items indents both in one undo step', async ({ page }) => {
-    test.fail(true, 'W4K-22: redo of a multi-selected Tab draws the wrong bullet glyph');
     await create(page, [L('a', 'A'), L('b', 'B'), L('c', 'C')]);
     await caretAt(page, 'b', 'end');
     await page.keyboard.down('Shift');

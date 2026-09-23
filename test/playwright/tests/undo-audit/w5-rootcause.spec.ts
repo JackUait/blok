@@ -481,20 +481,11 @@ test.describe('W5R root causes', () => {
     expect(after).toBe(baseline);
   });
 
-  // W4K-22 root cause. Multi-select Tab on list items goes through indentSelectedBlocksStructurally ->
-  // BlockManager.setBlockParent (blockSelectionKeys.ts:164, :224): a TRACKED parentId/contentIds write
-  // (origin 'local'), not a move group. Its redo is a Y.UndoManager replay handled by
-  // BlockYjsSync.handleYjsUpdate (yjs-sync.ts:962): the parentId branch only calls handlers.setBlockParent
-  // (:999), which never fires the tool's moved() hook, and the data compare at :1082 finds the doc data equal
-  // to preservedData ({text,style}; depth is a derived key and never written), so setData does not run
-  // either. Nothing recomputes the glyph; hierarchy still reindents the holder (d1).
-  // Undo only looks right by accident: preservedData still carries depth:1, so setData({text,style}) runs and
-  // resets depth and glyph to 0.
-  // Single-item Tab records a move entry: its redo runs the placement callback (origin 'move-redo') ->
-  // list.moved({structural:true}) -> updateMarkerForDepth(1) -> ◦. The apply order is not the difference.
+  // Multi-select Tab is a plain tracked parentId write; its redo is a parentId replay, which must fire the
+  // list's moved() hook itself. Single-item Tab records a move entry, whose redo runs moved() through the
+  // placement callback.
   for (const variant of ['multi', 'single'] as const) {
     test(`W5R-3 ${variant}: redo of Tab draws the nested bullet glyph`, async ({ page }) => {
-      test.fail(variant === 'multi', 'W5R-3 (W4K-22): the parentId replay never reaches list.moved or setData');
       const L = (id: string, text: string): OutputData['blocks'][number] => ({ id, type: 'list', data: { text, style: 'unordered', checked: false } });
 
       await mount(page, [L('a', 'A'), L('b', 'B'), L('c', 'C')], false);

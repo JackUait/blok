@@ -1130,6 +1130,8 @@ describe('BlockYjsSync', () => {
         expect(childBlock.parentId).toBe('callout-1');
         expect(parentBlock.contentIds).toContain('child-1');
         expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childBlock, 'callout-1');
+        // Nobody else fires MOVED for a replayed parent change (list glyphs depend on it).
+        expect(childBlock.call).toHaveBeenCalledWith('moved', { fromIndex: 1, toIndex: 1, structural: true });
 
         // Invariant must hold on the synthetic output derived from local state.
         const output = [
@@ -1236,6 +1238,7 @@ describe('BlockYjsSync', () => {
         expect(childBlock.parentId).toBeNull();
         expect(parentBlock.contentIds).not.toContain('child-1');
         expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childBlock, null);
+        expect(childBlock.call).toHaveBeenCalledWith('moved', { fromIndex: 1, toIndex: 1, structural: true });
 
         const output = [
           {

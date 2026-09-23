@@ -396,13 +396,10 @@ test.describe('GES keyboard move', () => {
 });
 
 test.describe('GES forward reparent outside transactMoves', () => {
-  // Undo must restore the exact prior state; the same gesture on a top-level block takes one undo
-  // (undo-redo.spec.ts "undo after inserting Header via toolbox removes the header").
-  // Observed: undo 1 leaves an empty paragraph in the toggle; undo 2 moves it to the ROOT after k2;
-  // undo 3 removes it. Same inside a column. Cause: plus-button.ts:339 calls setBlockParent outside
-  // transactMoves, so blockManager.ts:1265 captures that placement write as its own undo entry.
+  // Undo must restore the exact prior state. The plus button, its placement write and the
+  // pick are one gesture: the open block menu holds the step (undo-redo.spec.ts "undo after
+  // inserting Header via toolbox removes the header").
   test('GES-5: one undo of "+ then Heading" on a toggle child removes the new block', async ({ page }) => {
-    // PROBE-UNPIN test.fail();
     await createBlok(page, kidsDoc('toggle'));
     const before = await domTree(page);
 

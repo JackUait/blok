@@ -79,8 +79,6 @@ const HEADING_ICON_CLASSES = 'flex items-center justify-center size-5 shrink-0 t
 // A section that follows a visible one gets extra room above its label.
 const SECTION_CLASSES = 'w-0 min-w-full [[data-link-group]:not([hidden])~&]:pt-1.5';
 const SECTION_LABEL_CLASSES = 'px-2 pt-1.5 pb-1 text-xs leading-4 font-medium text-gray-text';
-const HEADING_INDENT_STEP = 12;
-const HEADING_INDENT_MAX_STEPS = 2;
 const RECENT_TILE_CLASSES = 'flex items-center justify-center size-5 shrink-0 rounded-[5px] bg-item-hover-bg overflow-hidden text-[11px] font-semibold text-gray-text';
 
 /**
@@ -911,8 +909,6 @@ export class LinkInlineTool implements InlineTool {
    * @param matches - headings to list
    */
   private renderHeadings(matches: HeadingTarget[]): void {
-    const topLevel = Math.min(...matches.map((heading) => heading.level));
-
     this.nodes.headingList?.replaceChildren(...matches.map((heading, index) => {
       const row = this.createOptionRow(
         'heading',
@@ -923,15 +919,7 @@ export class LinkInlineTool implements InlineTool {
         () => this.applyLink(`#${heading.blockId}`)
       );
 
-      const steps = Math.min(heading.level - topLevel, HEADING_INDENT_MAX_STEPS);
-      const titleEl = row.querySelector<HTMLElement>('[data-link-heading-title]');
-
       row.style.animationDelay = `${index * 30}ms`;
-      // Only the text indents, relative to the shallowest heading shown, so
-      // the level glyphs stay in one column.
-      if (titleEl) {
-        titleEl.style.marginInlineStart = `${steps * HEADING_INDENT_STEP}px`;
-      }
       row.setAttribute('data-link-heading-level', String(heading.level));
 
       return row;

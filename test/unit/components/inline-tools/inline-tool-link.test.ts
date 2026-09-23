@@ -1617,7 +1617,7 @@ describe('LinkInlineTool', () => {
       expect(listboxes[0].contains(itemWrapper.querySelector('[data-link-recent-row]'))).toBe(true);
     });
 
-    it('keeps the level glyphs in one column and indents only the text, two steps at most', () => {
+    it('lists every heading flat, whatever its level', () => {
       addHeading(1, 'Top', 'h-1');
       addHeading(2, 'Second', 'h-2');
       addHeading(4, 'Deep', 'h-4');
@@ -1627,7 +1627,7 @@ describe('LinkInlineTool', () => {
 
       expect(rows.map((row) => row.style.paddingInlineStart)).toEqual(['', '', '']);
       expect(rows.map((row) => row.querySelector<HTMLElement>('[data-link-heading-title]')?.style.marginInlineStart))
-        .toEqual(['0px', '12px', '24px']);
+        .toEqual(['', '', '']);
     });
 
     it('marks only the highlighted row with an Enter hint', () => {

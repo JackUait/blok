@@ -247,6 +247,7 @@ export class DragOperations {
     //
     // A copy whose children are copied with it is inserted as 'paste' (it brings
     // its own children), so a container like callout does not seed a body.
+    const copiedParentIds = new Set(prep.sortedBlocks.map(block => block.parentId));
     const duplicatedBlocks = prep.validResults.map(({ saved, toolName }, index) =>
       this.blockManager.insert({
         tool: toolName,
@@ -254,7 +255,7 @@ export class DragOperations {
         tunes: structuredClone(saved.tunes),
         index: prep.baseInsertIndex + index,
         needToFocus: false,
-        origin: prep.sortedBlocks[index].contentIds.some(id => prep.sourceIds.has(id)) ? 'paste' : undefined,
+        origin: copiedParentIds.has(prep.sortedBlocks[index].id) ? 'paste' : undefined,
       })
     );
 

@@ -1200,6 +1200,36 @@ export class BlockYjsSync {
   }
 
   /**
+   * {@link docOrderKnownToMemory} as an INSERT index into the memory array.
+   *
+   * The observer emits adds before removes, so memory can still hold a block
+   * the doc already removed (undo of a type-over drops the typed block while
+   * restoring the old ones). The memory array counts it, so the basis must
+   * too: each such id is kept just before the next memory block the doc
+   * still has.
+   * @param materializing - ids being created right now, so not yet in memory
+   */
+  private memoryIndexBasis(materializing: ReadonlySet<string>): string[] {
+    const basis = this.docOrderKnownToMemory(materializing);
+    const inBasis = new Set(basis);
+    const memoryIds = this.repository.blocks.map((block) => block.id);
+
+    memoryIds.forEach((id, index) => {
+      if (inBasis.has(id)) {
+        return;
+      }
+
+      const next = memoryIds.slice(index + 1).find((candidate) => inBasis.has(candidate));
+      const at = next === undefined ? basis.length : basis.indexOf(next);
+
+      basis.splice(at, 0, id);
+      inBasis.add(id);
+    });
+
+    return basis;
+  }
+
+  /**
    * Whether this client can materialise `toolName`, warning (once per add) when
    * it cannot. A peer may insert a tool this registry lacks; composing it throws
    * ToolNotFoundError, which the observer's subscriber guard swallows — silently
@@ -1314,8 +1344,8 @@ export class BlockYjsSync {
     const data = this.sanitizeToolData(toolName, this.dependencies.YjsManager.yMapToObject(record.data));
     const { parentId, lastEditedAt, lastEditedBy } = record;
 
-    // A MEMORY index — see docOrderKnownToMemory.
-    const targetIndex = this.docOrderKnownToMemory(new Set([blockId])).indexOf(blockId);
+    // A MEMORY index — see memoryIndexBasis.
+    const targetIndex = this.memoryIndexBasis(new Set([blockId])).indexOf(blockId);
 
     if (targetIndex === -1) {
       return;
@@ -1502,10 +1532,10 @@ export class BlockYjsSync {
       candidates.push({ blockId, toolName, data, parentId, lastEditedAt, lastEditedBy });
     }
 
-    // ONE basis snapshot for the whole batch (see docOrderKnownToMemory): pass 1
+    // ONE basis snapshot for the whole batch (see memoryIndexBasis): pass 1
     // inserts into the memory array as it goes, so a per-block recompute would
     // shift the indices of the blocks still to come.
-    const order = this.docOrderKnownToMemory(new Set(candidates.map((entry) => entry.blockId)));
+    const order = this.memoryIndexBasis(new Set(candidates.map((entry) => entry.blockId)));
     const toCreate = candidates
       .map((entry) => ({ ...entry, targetIndex: order.indexOf(entry.blockId) }))
       .filter((entry) => entry.targetIndex !== -1);

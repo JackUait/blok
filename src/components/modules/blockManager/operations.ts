@@ -38,6 +38,7 @@ export class BlockOperations implements OperationsContext {
   public readonly factory: BlockFactory;
   public readonly hierarchy: BlockHierarchy;
   private _yjsSync!: BlockYjsSync; // Set via setter after initialization
+  private _setBlockParent!: (block: Block, parentId: string | null) => void; // Set via setter after initialization
   public readonly blockDidMutated: BlockDidMutated;
 
   private readonly insertion: BlockInsertion;
@@ -89,6 +90,23 @@ export class BlockOperations implements OperationsContext {
    */
   public setYjsSync(yjsSync: BlockYjsSync): void {
     this._yjsSync = yjsSync;
+  }
+
+  /**
+   * Set the Yjs-writing reparent (BlockManager.setBlockParent), which this class cannot reach itself
+   * @param setBlockParent - reparents in memory, DOM and Yjs
+   */
+  public setBlockParentWriter(setBlockParent: (block: Block, parentId: string | null) => void): void {
+    this._setBlockParent = setBlockParent;
+  }
+
+  /**
+   * Reparent a block in memory, DOM and Yjs
+   * @param block - the block to reparent
+   * @param parentId - the new parent id, or null for root
+   */
+  public setBlockParent(block: Block, parentId: string | null): void {
+    this._setBlockParent(block, parentId);
   }
 
   /**

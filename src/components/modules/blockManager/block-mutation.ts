@@ -1010,17 +1010,8 @@ export class BlockMutation {
       const liveTarget = target.block;
       const liveMerged = merged.block;
 
-      // Sync to Yjs atomically: update target + remove source as single undo entry
-      this.dependencies.YjsManager.transact(() => {
-        for (const [key, value] of Object.entries(mergedData)) {
-          this.dependencies.YjsManager.updateBlockData(liveTarget.id, key, value);
-        }
-        this.dependencies.YjsManager.removeBlock(liveMerged.id);
-      });
-
-      // DOM updates and index change (skip Yjs sync — already done above)
-      // The entire operation is wrapped in withAtomicOperation to suppress stopCapturing
-      // when currentBlockIndexValue is set at the end
+      // withAtomicOperation suppresses stopCapturing when currentBlockIndexValue
+      // is set at the end.
       this.yjsSync.withAtomicOperation(() => {
         /**
          * Re-parent the merged block's nested children onto the survivor BEFORE
@@ -1033,10 +1024,27 @@ export class BlockMutation {
          */
         const childIdsToReparent = [...liveMerged.contentIds];
 
-        if (childIdsToReparent.length > 0) {
-          this.reparentChildren(childIdsToReparent, liveTarget.id);
-        }
+        // One Yjs transaction = one undo entry: target data, the children's new
+        // parent, and the source's removal. The reparent must write Yjs itself:
+        // removing the source drops only its own entry, so the doc would keep
+        // the children under it and redo would promote them to root.
+        this.dependencies.YjsManager.transact(() => {
+          for (const [key, value] of Object.entries(mergedData)) {
+            this.dependencies.YjsManager.updateBlockData(liveTarget.id, key, value);
+          }
 
+          for (const childId of childIdsToReparent) {
+            const childBlock = this.repository.getBlockById(childId);
+
+            if (childBlock !== undefined) {
+              this.ctx.setBlockParent(childBlock, liveTarget.id);
+            }
+          }
+
+          this.dependencies.YjsManager.removeBlock(liveMerged.id);
+        });
+
+        // DOM removal only: Yjs is done above.
         void liveTarget.mergeWith(mergeData).then(() => {
           return this.ctx.removeBlock(liveMerged, true, true, blocksStore);
         });

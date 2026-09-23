@@ -482,6 +482,7 @@ export class BlockManager extends Module {
 
     // Set yjsSync on operations to complete circular dependency
     this.operations.setYjsSync(this.yjsSync);
+    this.operations.setBlockParentWriter((block, parentId) => this.setBlockParent(block, parentId));
 
     // Initialize shortcuts
     this.shortcuts = new BlockShortcuts(
@@ -870,13 +871,14 @@ export class BlockManager extends Module {
           data: {},
         }, insertionIndex);
       }
-    });
 
-    // DOM cleanup - remove selected blocks (skip Yjs sync since we handled it above)
-    // Iterate in reverse order (highest index first) to avoid index shifting issues
-    for (const { block } of selectedBlockEntries) {
-      void this.removeBlock(block, false, true);
-    }
+      // DOM cleanup (Yjs already handled above), highest index first. Inside the
+      // transact because a removal can cascade to an emptied column that writes
+      // Yjs itself, and that write must join this undo entry.
+      for (const { block } of selectedBlockEntries) {
+        void this.removeBlock(block, false, true);
+      }
+    });
 
     // Insert replacement block (skip Yjs sync since we handled it above)
     if (newBlockId !== undefined) {

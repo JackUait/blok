@@ -211,17 +211,10 @@ test.describe('hidden and nested targets', () => {
     expect(await tree(page)).toContainEqual(['x', 't']);
   });
 
-  // Defect: after Backspace merges a toggle title into the block above, the
-  // toggle's children sit under that block. Undo then redo puts them at root.
-  // Root cause: block-mutation.ts:1037 re-homes the children with
-  // reparentChildren -> raw hierarchy.setBlockParent (block-mutation.ts:558),
-  // which writes no child parentId to Yjs (BlockManager.setBlockParent does, at
-  // blockManager.ts:1202-1250). It runs inside withAtomicOperation, which raises
-  // isSyncingFromYjs, so even the parent-data sync at blockManager.ts:416 is
-  // skipped. The transact at block-mutation.ts:1016-1021 records only the data
-  // update and the remove; redo replays the remove and promotes the kids to root.
+  // Backspace merges a toggle title into the block above; its children move
+  // under that block. The merge re-homes them through the Yjs-writing reparent,
+  // so redo puts them back under it, not at root.
   test('W4N-3: redo of merging a toggle title into the block above restores where its children went', async ({ page }) => {
-    test.fail(true, 'W4N-3 merge child reparent never reaches Yjs');
     await createBlok(page, toggleWithKids(true));
     await editable(page, 't').click();
     await page.keyboard.press('Home');
@@ -236,11 +229,9 @@ test.describe('hidden and nested targets', () => {
     expect(await save(page)).toEqual(merged);
   });
 
-  // Same root cause as W4N-3, seen without undo: right after the merge the Yjs
-  // document (what redo and collaborators read) still says the children belong
-  // to the removed toggle, while save() says they belong to the merged block.
+  // Right after the merge the Yjs document (what redo and collaborators read)
+  // agrees with save() on where the children went.
   test('W4N-3b: after merging a toggle title into the block above, the document agrees on where its children went', async ({ page }) => {
-    test.fail(true, 'W4N-3b merge child reparent never reaches Yjs');
     await createBlok(page, toggleWithKids(true));
     await editable(page, 't').click();
     await page.keyboard.press('Home');

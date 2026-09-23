@@ -791,19 +791,17 @@ const COLS_BEFORE = [
 
 /*
  * A mouse drag from a root paragraph into a column does not make a text selection: it becomes a
- * BLOCK selection of [a, p1, p2] (wave-4 note). Deleting a block selection that holds the last child
- * of a column goes through BlockManager.deleteSelectedBlocksAndInsertReplacement: it removes only the
- * SELECTED ids from Yjs in one transact (blockManager.ts:862-874), then calls removeBlock(block, false,
- * skipYjsSync = true) for the DOM (blockManager.ts:878). removeBlock then deletes the emptied column
- * too (block-removal.ts:185-193) and passes the SAME skipYjsSync=true down, so the column leaves the
- * editor but never leaves Yjs. The editor and the document disagree from that moment; undo restores
- * p1/p2 in Yjs with parent c1/c2, but the editor has no c1/c2 blocks, so they land at the root and the
- * two-column layout is gone for good (no undo step holds it).
+ * BLOCK selection of [a, p1, p2] (wave-4 note). Deleting it removes the last child of a column, so
+ * removeBlock also removes the emptied column. That cascade must reach Yjs even though the caller
+ * wrote the selected ids itself (block-removal.ts), or undo restores p1/p2 under columns the editor
+ * no longer has and they land at the root.
  */
 test.describe('W5X block selection that empties a column', () => {
   test('W5X-16: one undo of Backspace over a drag selection from a root paragraph into a column restores the columns', async ({ page }) => {
-    test.fail(true, 'W5X-16 emptied columns removed with skipYjsSync (block-removal.ts:192)');
     await mount(page, COLS_DOC());
+    // A column holder's first editable is its child's, so read the screen as loaded.
+    const domBefore = await dom(page);
+
     await gap(page);
     await dragAtoP1(page);
     await expect(page.locator('[data-blok-selected="true"]')).toHaveCount(3);
@@ -813,13 +811,12 @@ test.describe('W5X block selection that empties a column', () => {
 
     await pressUndo(page);
     expect(await lines(page), 'save() after one undo').toEqual(COLS_BEFORE);
-    expect(await dom(page), 'screen after one undo').toEqual(['a:Alpha one', 'cl1:', 'c1:', 'p1:Left one', 'c2:', 'p2:Right two', 'z:Zulu end']);
+    expect(await dom(page), 'screen after one undo').toEqual(domBefore);
     await pressRedo(page);
     expect(await lines(page), 'save() after redo').toEqual(after);
   });
 
   test('W5X-16b: after Backspace over a block selection that empties both columns, save() and the document agree', async ({ page }) => {
-    test.fail(true, 'W5X-16b emptied columns removed from the editor only (block-removal.ts:192)');
     await mount(page, COLS_DOC());
     await gap(page);
     await dragAtoP1(page);
@@ -830,10 +827,8 @@ test.describe('W5X block selection that empties a column', () => {
     expect(await saveIds(page), 'save() vs Yjs after the delete').toEqual(await yjsIds(page));
   });
 
-  // Typing over the same selection: the type-over step split is family 4 (known); the new part is
-  // that no number of undos brings the columns back, and the blocks come back in a different order.
+  // Typing over the same selection: undoing it all brings the columns back in document order.
   test('W5X-17: undoing all of typing over a drag selection into a column restores the columns', async ({ page }) => {
-    test.fail(true, 'W5X-17 emptied columns removed with skipYjsSync (block-removal.ts:192)');
     await mount(page, COLS_DOC());
     await gap(page);
     await dragAtoP1(page);
@@ -846,7 +841,6 @@ test.describe('W5X block selection that empties a column', () => {
   });
 
   test('W5X-19: one undo of Backspace over a drag selection from a column out to a root paragraph restores the columns', async ({ page }) => {
-    test.fail(true, 'W5X-19 emptied columns removed with skipYjsSync (block-removal.ts:192)');
     await mount(page, COLS_DOC());
     await gap(page);
     await dragBetweenCharacters(page, { editable: editable(page, 'p2'), offset: 3 }, { editable: editable(page, 'z'), offset: 2 });
@@ -860,7 +854,6 @@ test.describe('W5X block selection that empties a column', () => {
 
   // The smallest trigger: select the only block of one column and press Backspace.
   test('W5X-25: one undo of deleting the only block of a column by block selection restores that column', async ({ page }) => {
-    test.fail(true, 'W5X-25 emptied column removed with skipYjsSync (block-removal.ts:192)');
     await mount(page, [
       ...COLS_DOC().slice(0, 6),
       { id: 'c3', type: 'column', data: {}, parent: 'cl1', content: ['p3'] },

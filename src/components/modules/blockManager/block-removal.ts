@@ -111,6 +111,9 @@ export class BlockRemoval {
       // Splice the columns subtree's descendants out of the flat array + Yjs.
       // The wrapper's holder.remove() above already detached their DOM; this
       // removes their model entries so the Saver never re-emits them.
+      // `skipYjsSync` covers only the block the caller named: a caller that
+      // wrote Yjs itself does not know this cascade. The Yjs remove is a no-op
+      // for an id it already dropped.
       for (const descendant of descendants) {
         const descendantIndex = this.repository.getBlockIndex(descendant);
 
@@ -119,10 +122,7 @@ export class BlockRemoval {
         }
 
         blocksStore.remove(descendantIndex);
-
-        if (!skipYjsSync) {
-          this.dependencies.YjsManager.removeBlock(descendant.id);
-        }
+        this.dependencies.YjsManager.removeBlock(descendant.id);
       }
 
       /**
@@ -189,7 +189,8 @@ export class BlockRemoval {
         parentBlock.contentIds.length === 0 &&
         this.repository.getBlockIndex(parentBlock) >= 0
       ) {
-        void this.removeBlock(parentBlock, addLastBlock, skipYjsSync, blocksStore);
+        // Never inherit skipYjsSync: see the descendant splice above.
+        void this.removeBlock(parentBlock, addLastBlock, false, blocksStore);
       }
 
       this.ctx.assertHierarchyInvariantInDev('removeBlock');

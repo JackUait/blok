@@ -1270,6 +1270,47 @@ describe('BlockOperations', () => {
       expect(columnList.contentIds).not.toContain('c1');
     });
 
+    it('removes the emptied column from Yjs even when the caller skips Yjs for the named block', async () => {
+      const columnList = createMockBlock({ id: 'cl1', name: 'column_list', contentIds: ['c1', 'c2'] });
+      const column1 = createMockBlock({ id: 'c1', name: 'column', parentId: 'cl1', contentIds: ['p1'] });
+      const para1 = createMockBlock({ id: 'p1', name: 'paragraph', parentId: 'c1' });
+      const column2 = createMockBlock({ id: 'c2', name: 'column', parentId: 'cl1', contentIds: ['p2'] });
+      const para2 = createMockBlock({ id: 'p2', name: 'paragraph', parentId: 'c2' });
+
+      const store = createBlocksStore([columnList, column1, para1, column2, para2]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const hier = new BlockHierarchy(repo);
+      const ops = new BlockOperations(dependencies, repo, factory, hier, blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      await ops.removeBlock(para1, false, true, store);
+
+      expect(repo.getBlockById('c1')).toBeUndefined();
+      expect(dependencies.YjsManager.removeBlock).toHaveBeenCalledWith('c1');
+      expect(dependencies.YjsManager.removeBlock).not.toHaveBeenCalledWith('p1');
+    });
+
+    it('removes a columns wrapper\'s descendants from Yjs even when the caller skips Yjs for the wrapper', async () => {
+      const columnList = createMockBlock({ id: 'cl1', name: 'column_list', contentIds: ['c1'] });
+      const column1 = createMockBlock({ id: 'c1', name: 'column', parentId: 'cl1', contentIds: ['p1'] });
+      const para1 = createMockBlock({ id: 'p1', name: 'paragraph', parentId: 'c1' });
+      const tail = createMockBlock({ id: 'z', name: 'paragraph' });
+
+      const store = createBlocksStore([columnList, column1, para1, tail]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const hier = new BlockHierarchy(repo);
+      const ops = new BlockOperations(dependencies, repo, factory, hier, blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      await ops.removeBlock(columnList, false, true, store);
+
+      expect(dependencies.YjsManager.removeBlock).toHaveBeenCalledWith('c1');
+      expect(dependencies.YjsManager.removeBlock).toHaveBeenCalledWith('p1');
+      expect(dependencies.YjsManager.removeBlock).not.toHaveBeenCalledWith('cl1');
+    });
+
     it('keeps the parent column when a non-last child is removed', async () => {
       const columnList = createMockBlock({ id: 'cl1', name: 'column_list', contentIds: ['c1', 'c2'] });
       const column1 = createMockBlock({ id: 'c1', name: 'column', parentId: 'cl1', contentIds: ['p1', 'p1b'] });
@@ -2352,15 +2393,17 @@ describe('BlockOperations', () => {
       const testStore = createBlocksStore([survivor, merged, kid]);
       const testRepo = new BlockRepository();
       testRepo.initialize(testStore);
+      const testHierarchy = new BlockHierarchy(testRepo);
       const testOps = new BlockOperations(
         dependencies,
         testRepo,
         factory,
-        new BlockHierarchy(testRepo),
+        testHierarchy,
         blockDidMutatedSpy,
         1
       );
       testOps.setYjsSync(yjsSync);
+      testOps.setBlockParentWriter((block, parentId) => testHierarchy.setBlockParent(block, parentId));
 
       // Baseline: the constructed hierarchy is valid before we touch it.
       expect(validateHierarchy(projectRepositoryForInvariant(testRepo))).toEqual([]);
@@ -2373,6 +2416,41 @@ describe('BlockOperations', () => {
       expect(survivor.contentIds).toContain('kid');
       // No orphans, no dangling contentIds.
       expect(validateHierarchy(projectRepositoryForInvariant(testRepo))).toEqual([]);
+    });
+
+    it('re-homes the merged block\'s children through the Yjs-writing reparent, in the merge\'s transaction', async () => {
+      const survivor = createMockBlock({ id: 'survivor', name: 'paragraph', mergeable: true, data: { text: 'A' } });
+      (survivor.mergeWith as Mock).mockResolvedValue(undefined);
+      const merged = createMockBlock({ id: 'merged', name: 'paragraph', mergeable: true, contentIds: ['kid'], data: { text: 'B' } });
+      const kid = createMockBlock({ id: 'kid', name: 'paragraph', parentId: 'merged', data: { text: 'C' } });
+
+      const testStore = createBlocksStore([survivor, merged, kid]);
+      const testRepo = new BlockRepository();
+      testRepo.initialize(testStore);
+      const testHierarchy = new BlockHierarchy(testRepo);
+      const testOps = new BlockOperations(dependencies, testRepo, factory, testHierarchy, blockDidMutatedSpy, 1);
+      testOps.setYjsSync(yjsSync);
+
+      const state = { depth: 0 };
+      const reparents: Array<{ id: string; parentId: string | null; depth: number }> = [];
+
+      vi.mocked(dependencies.YjsManager.transact).mockImplementation((fn: () => void) => {
+        state.depth++;
+        try {
+          fn();
+        } finally {
+          state.depth--;
+        }
+      });
+      testOps.setBlockParentWriter((block, parentId) => {
+        reparents.push({ id: block.id, parentId, depth: state.depth });
+        testHierarchy.setBlockParent(block, parentId);
+      });
+
+      await testOps.mergeBlocks(survivor, merged, testStore);
+
+      expect(reparents).toEqual([{ id: 'kid', parentId: 'survivor', depth: 1 }]);
+      expect(dependencies.YjsManager.transact).toHaveBeenCalledTimes(1);
     });
 
     it('still merges blocks that share the same parentId (within-container merge)', async () => {

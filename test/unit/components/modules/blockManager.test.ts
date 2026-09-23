@@ -734,6 +734,55 @@ describe('BlockManager', () => {
     expect(removeSpy).not.toHaveBeenCalledWith(sibling, false, true);
   });
 
+  it('removes the selected blocks from the editor inside the Yjs transaction that removes them from the document', () => {
+    const blocks = [
+      createBlockStub({ id: 'first' }),
+      createBlockStub({ id: 'second' }),
+    ];
+
+    blocks[0].selected = true;
+
+    const state = { depth: 0 };
+    const yjsManagerMock = {
+      addBlock: vi.fn(),
+      removeBlock: vi.fn(),
+      stopCapturing: vi.fn(),
+      transact: vi.fn((fn: () => void) => {
+        state.depth++;
+        try {
+          fn();
+        } finally {
+          state.depth--;
+        }
+      }),
+      transactWithoutCapture: vi.fn((fn: () => void) => fn()),
+      onBlocksChanged: vi.fn(() => vi.fn()),
+      fromJSON: vi.fn(),
+    } as unknown as BlokModules['YjsManager'];
+
+    const { blockManager } = createBlockManager({
+      initialBlocks: blocks,
+      blokOverrides: { YjsManager: yjsManagerMock },
+    });
+
+    const depthAtRemove: number[] = [];
+
+    vi
+      .spyOn(blockManager as unknown as { removeBlock: BlockManager['removeBlock'] }, 'removeBlock')
+      .mockImplementation(() => {
+        depthAtRemove.push(state.depth);
+
+        return Promise.resolve();
+      });
+
+    blockManager.deleteSelectedBlocksAndInsertReplacement();
+
+    // A removal can cascade (an emptied column) and write Yjs itself; it must
+    // land in the same undo entry as the selected ids.
+    expect(depthAtRemove).toEqual([1]);
+    expect(yjsManagerMock.transact).toHaveBeenCalledTimes(1);
+  });
+
   it('splits the current block using caret fragment contents', () => {
     const fragment = document.createDocumentFragment();
 

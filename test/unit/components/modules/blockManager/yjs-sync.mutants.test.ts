@@ -1095,6 +1095,32 @@ describe('BlockYjsSync — mutation kills', () => {
       expect(harness.repository.blocks.map((block) => block.id)).toEqual(['a', 'new']);
     });
 
+    // The observer emits adds before removes: `q` is still in memory, already gone from the doc.
+    it('counts a block the doc already removed when it picks the memory index', () => {
+      const harness = createHarness({ blocks: [createBlock({ id: 'q' }), createBlock({ id: 'a' }), createBlock({ id: 'z' })] });
+
+      composeSpy(harness.factory, () => createBlock({ id: 'new' }));
+      harness.doc.put('new', { type: 'paragraph' });
+      harness.doc.setOrder(['a', 'new', 'z']);
+
+      harness.emit({ blockId: 'new', type: 'add', origin: 'undo' });
+
+      expect(harness.repository.blocks.map((block) => block.id)).toEqual(['q', 'a', 'new', 'z']);
+    });
+
+    it('counts a block the doc already removed when it places a batch', () => {
+      const harness = createHarness({ blocks: [createBlock({ id: 'q' }), createBlock({ id: 'a' }), createBlock({ id: 'z' })] });
+
+      composeSpy(harness.factory, (options) => createBlock({ id: options.id ?? 'composed' }));
+      harness.doc.put('one', { type: 'paragraph' });
+      harness.doc.put('two', { type: 'paragraph' });
+      harness.doc.setOrder(['a', 'one', 'two', 'z']);
+
+      harness.emit({ blockIds: ['one', 'two'], type: 'batch-add', origin: 'undo' });
+
+      expect(harness.repository.blocks.map((block) => block.id)).toEqual(['q', 'a', 'one', 'two', 'z']);
+    });
+
     it('composes the block as a replay with events bound immediately', () => {
       const harness = createHarness({ blocks: [createBlock({ id: 'a' })] });
       const spy = composeSpy(harness.factory);

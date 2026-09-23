@@ -35,6 +35,14 @@
   z-index: -1;
 }
 
+/* The "/query" pill inside a block with text. Must stay inline with no
+   margin, or the block grows taller. */
+span[data-blok-slash-search] {
+  @apply bg-search-input-bg rounded-[6px] whitespace-nowrap px-1 py-[2px] m-0;
+  display: inline;
+  vertical-align: baseline;
+}
+
 [data-blok-slash-search]::after {
   content: attr(data-blok-slash-search);
   @apply text-gray-text font-medium pointer-events-none;

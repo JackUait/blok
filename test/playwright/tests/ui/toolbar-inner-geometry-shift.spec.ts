@@ -95,9 +95,10 @@ test.describe('ui.toolbar-inner-geometry-shift', () => {
      * block never reports geometry changes again and the toolbar goes stale.
      */
     await page.keyboard.type('/');
-    await expect(middleParagraph).toHaveAttribute('data-blok-slash-search');
+    // The block has text, so the pill is a span around the "/".
+    await expect(middleParagraph.locator('[data-blok-slash-search]')).toHaveCount(1);
     await page.keyboard.press('Escape');
-    await expect(middleParagraph).not.toHaveAttribute('data-blok-slash-search');
+    await expect(middleParagraph.locator('[data-blok-slash-search]')).toHaveCount(0);
     await page.keyboard.press('Backspace');
 
     const baselineTop = await toolbar.evaluate((el) => parseFloat(el.style.top));

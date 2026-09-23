@@ -311,6 +311,14 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   private slashQuerySpan: { start: number; end: number } | null = null;
 
   /**
+   * Inline span around the typed "/query" when the block has other text.
+   * The pill and its placeholder must sit at the "/", not at the block's end,
+   * so they live on this span instead of the whole contentEditable.
+   * Null when the "/query" is the whole block (the contentEditable is the pill).
+   */
+  private slashPill: HTMLElement | null = null;
+
+  /**
    * Names of the block-color command items appended to the toolbox. Tracked so
    * they can be shown/hidden per-open depending on whether the current block
    * supports block-level color.
@@ -538,7 +546,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
      * popover gap is calculated from that rect and must not predate the class
      * application.
      */
-    this.startListeningToBlockInput();
+    this.startListeningToBlockInput(withSlash);
 
     if (this.popover instanceof PopoverDesktop) {
       const blockRect = currentBlock?.holder.getBoundingClientRect();
@@ -1248,6 +1256,9 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     const contentEditable = currentBlock.holder.querySelector<HTMLElement>('[contenteditable="true"]:not([data-blok-mutation-free])');
 
+    // The pill must not be stripped into an empty span or carried into converted data.
+    this.unwrapSlashPill();
+
     /**
      * The slash query span (slash→caret) the user typed before picking a tool.
      * In slash mode this is the only text that gets removed; everything around
@@ -1444,7 +1455,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * Starts listening to input events on the current block for inline slash search.
    * When the user types after "/", the toolbox filters based on the typed text.
    */
-  private startListeningToBlockInput(): void {
+  private startListeningToBlockInput(withSlash: boolean): void {
     const currentBlockIndex = this.api.blocks.getCurrentBlockIndex();
     const currentBlock = this.api.blocks.getBlockByIndex(currentBlockIndex);
 
@@ -1474,7 +1485,8 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     }
 
     if (this.currentContentEditable instanceof HTMLElement) {
-      this.currentContentEditable.setAttribute(DATA_ATTR.slashSearch, this.i18nLabels.slashSearchPlaceholder);
+      this.slashPill = withSlash ? this.wrapSlashBeforeCaret(this.currentContentEditable) : null;
+      (this.slashPill ?? this.currentContentEditable).setAttribute(DATA_ATTR.slashSearch, this.i18nLabels.slashSearchPlaceholder);
       this.applyComboboxRoles(this.currentContentEditable);
       this.setPopoverActiveDescendantHost(this.currentContentEditable);
     }
@@ -1538,6 +1550,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   private stopListeningToBlockInput(): void {
     if (this.currentBlockForSearch !== null) {
       this.listeners.off(this.currentBlockForSearch, 'input', this.handleBlockInput);
+      this.unwrapSlashPill();
       if (this.currentContentEditable instanceof HTMLElement) {
         this.currentContentEditable.removeAttribute(DATA_ATTR.slashSearch);
         this.removeComboboxRoles(this.currentContentEditable);
@@ -1612,8 +1625,10 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       ? text.slice(text.lastIndexOf('/', Math.max(0, caretOffset - 1)) + 1, caretOffset)
       : text;
 
-    if (this.currentContentEditable instanceof HTMLElement) {
-      this.currentContentEditable.setAttribute(
+    const pillHost = this.slashPill ?? this.currentContentEditable;
+
+    if (pillHost instanceof HTMLElement) {
+      pillHost.setAttribute(
         DATA_ATTR.slashSearch,
         query.length === 0 ? this.i18nLabels.slashSearchPlaceholder : ''
       );
@@ -1621,6 +1636,80 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     this.popover?.filterItems(query);
   };
+
+  /**
+   * Wraps the "/" right before the caret in a pill span, when the block holds
+   * other text too. Returns null when the "/" is the block's only text: then
+   * the contentEditable itself is the pill.
+   * @param host - the block's contentEditable
+   */
+  private wrapSlashBeforeCaret(host: HTMLElement): HTMLElement | null {
+    const selection = window.getSelection();
+    const range = selection !== null && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+
+    if (range === null || !range.collapsed || (host.textContent ?? '').trim() === '/') {
+      return null;
+    }
+
+    const { startContainer, startOffset } = range;
+
+    if (!(startContainer instanceof Text) || !host.contains(startContainer) || startContainer.data.charAt(startOffset - 1) !== '/') {
+      return null;
+    }
+
+    const pill = document.createElement('span');
+    const slashRange = document.createRange();
+
+    slashRange.setStart(startContainer, startOffset - 1);
+    slashRange.setEnd(startContainer, startOffset);
+    slashRange.surroundContents(pill);
+
+    // Park the caret INSIDE the pill so the typed query lands in it.
+    const caret = document.createRange();
+
+    caret.setStart(pill.firstChild ?? pill, pill.firstChild instanceof Text ? pill.firstChild.length : 0);
+    caret.collapse(true);
+    selection?.removeAllRanges();
+    selection?.addRange(caret);
+
+    return pill;
+  }
+
+  /**
+   * Removes the pill span and keeps its text in place. It must never reach
+   * saved data, so this runs before any save-bound edit of the block.
+   * Moving a node resets a caret inside it, so the caret is put back after.
+   */
+  private unwrapSlashPill(): void {
+    const pill = this.slashPill;
+
+    this.slashPill = null;
+
+    if (pill === null || pill.parentNode === null) {
+      return;
+    }
+
+    const parent = pill.parentNode;
+    const selection = window.getSelection();
+    const range = selection !== null && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+    const caret = range !== null && range.collapsed && pill.contains(range.startContainer) && range.startContainer !== pill
+      ? { node: range.startContainer, offset: range.startOffset }
+      : null;
+
+    while (pill.firstChild !== null) {
+      parent.insertBefore(pill.firstChild, pill);
+    }
+    pill.remove();
+
+    if (caret !== null && caret.node.isConnected) {
+      const restored = document.createRange();
+
+      restored.setStart(caret.node, caret.offset);
+      restored.collapse(true);
+      selection?.removeAllRanges();
+      selection?.addRange(restored);
+    }
+  }
 
   /**
    * Plain-text offset of the caret within the block being searched. Returns the

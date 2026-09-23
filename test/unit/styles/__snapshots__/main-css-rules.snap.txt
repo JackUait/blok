@@ -2350,6 +2350,11 @@
   z-index: -1;
 }
 
+span[data-blok-slash-search] {
+  display: inline;
+  vertical-align: baseline;
+}
+
 [data-blok-slash-search]::after {
   content: attr(data-blok-slash-search);
 }

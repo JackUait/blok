@@ -1827,5 +1827,56 @@ describe('BlockManager', () => {
 
       expect(blockManager.suppressStopCapturing).toBe(true);
     });
+
+    it('does not split the outer group when a nested transaction begins or ends', async () => {
+      const { blockManager } = createBlockManager();
+      const { YjsManager } = (blockManager as unknown as { Blok: BlokModules }).Blok;
+
+      blockManager.beginToolTransaction();
+      vi.mocked(YjsManager.stopCapturing).mockClear();
+
+      blockManager.transactForTool(() => undefined);
+      await new Promise((resolve) => {
+        setTimeout(resolve, 0);
+      });
+
+      expect(YjsManager.stopCapturing).not.toHaveBeenCalled();
+      expect(blockManager.suppressStopCapturing).toBe(true);
+
+      blockManager.endToolTransaction();
+      await new Promise((resolve) => {
+        setTimeout(resolve, 0);
+      });
+
+      expect(YjsManager.stopCapturing).toHaveBeenCalledTimes(1);
+      expect(blockManager.suppressStopCapturing).toBe(false);
+    });
+
+    it('closes the group only after in-flight block writes have landed', async () => {
+      const { blockManager } = createBlockManager();
+      const { YjsManager } = (blockManager as unknown as { Blok: BlokModules }).Blok;
+      const settledCallbacks: Array<() => void> = [];
+
+      vi.mocked(YjsManager.onPendingBlockWritesSettled).mockImplementation((callback: () => void) => {
+        settledCallbacks.push(callback);
+
+        return vi.fn();
+      });
+
+      blockManager.transactForTool(() => undefined);
+      vi.mocked(YjsManager.stopCapturing).mockClear();
+      await new Promise((resolve) => {
+        setTimeout(resolve, 0);
+      });
+
+      expect(YjsManager.stopCapturing).not.toHaveBeenCalled();
+      expect(blockManager.suppressStopCapturing).toBe(true);
+      expect(settledCallbacks).toHaveLength(1);
+
+      settledCallbacks[0]();
+
+      expect(YjsManager.stopCapturing).toHaveBeenCalledTimes(1);
+      expect(blockManager.suppressStopCapturing).toBe(false);
+    });
   });
 });

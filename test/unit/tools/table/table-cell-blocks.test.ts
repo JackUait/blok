@@ -1383,6 +1383,39 @@ describe('TableCellBlocks', () => {
       expect(container.contains(mockBlockHolder)).toBe(true);
     });
 
+    it('inserts a tracked block, outside transactWithoutCapture, when the fill is part of a gesture', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const mockBlockHolder = document.createElement('div');
+      const mockInsert = vi.fn().mockReturnValue({ id: 'gesture-p', holder: mockBlockHolder });
+      const transactWithoutCapture = vi.fn((fn: () => void) => fn());
+
+      const api = {
+        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1), setBlockParent: vi.fn(), transactWithoutCapture },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
+
+      cellBlocks.ensureCellHasBlock(cell, { track: true });
+
+      expect(transactWithoutCapture).not.toHaveBeenCalled();
+      expect(mockInsert).toHaveBeenCalledOnce();
+      expect(container.contains(mockBlockHolder)).toBe(true);
+    });
+
     it('should NOT insert a block when cell already has blocks', async () => {
       const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 

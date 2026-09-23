@@ -32,6 +32,11 @@ const createModuleConfig = (): ModuleConfig => ({
 const createBlokStub = () => ({
   YjsManager: {
     stopCapturing: vi.fn(),
+    onPendingBlockWritesSettled: vi.fn((callback: () => void) => {
+      callback();
+
+      return vi.fn();
+    }),
   },
 });
 

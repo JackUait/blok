@@ -451,14 +451,7 @@ test.describe('W4B structure', () => {
   });
 
   test('W4B-16: undo then redo of a corner drag that adds a column and a row', async ({ page }) => {
-    // Defect: redo does nothing. Same symptom as W4B-21; the throw below was traced (CDP) for W4B-21 only.
-    // Root cause: Table.setData (src/tools/table/index.ts:1106,1190) saves the visible grip index
-    // (the new last row/col, still hovered) and restores it on the SHRUNK grid; showRowGrip/showColGrip
-    // (table-row-col-controls.ts:654-661, 636-643) pass rowGrips[index] === undefined to
-    // applyVisibleClasses (:672) which throws. Block setData reports failure, yjs-sync rematerializes
-    // the table (yjs-sync.ts:1117), its rendered() runs removeGhostChildren (index.ts:747, 879-898),
-    // and those api.blocks.delete calls sit in a captured transact — a new local step that clears redo.
-    test.fail();
+    // The undo shrinks the grid under the hovered grip; restoring that grip must not break setData.
     await createBlok(page, DOC_2x2_PX());
     await roundTrip(page, async () => {
       await cell(page, 1, 1).hover();
@@ -551,14 +544,7 @@ test.describe('W4B structure', () => {
   });
 
   test('W4B-21: undo/redo of the add-row button below the table', async ({ page }) => {
-    // Defect: redo does nothing — canRedo() is already false right after the undo.
-    // Root cause: Table.setData (src/tools/table/index.ts:1106,1190) saves the visible grip index
-    // (the new last row/col, still hovered) and restores it on the SHRUNK grid; showRowGrip/showColGrip
-    // (table-row-col-controls.ts:654-661, 636-643) pass rowGrips[index] === undefined to
-    // applyVisibleClasses (:672) which throws. Block setData reports failure, yjs-sync rematerializes
-    // the table (yjs-sync.ts:1117), its rendered() runs removeGhostChildren (index.ts:747, 879-898),
-    // and those api.blocks.delete calls sit in a captured transact — a new local step that clears redo.
-    test.fail();
+    // The undo shrinks the grid under the hovered grip; restoring that grip must not break setData.
     await createBlok(page, DOC_3x3());
     await roundTrip(page, async () => {
       await cell(page, 2, 0).hover();
@@ -585,7 +571,6 @@ test.describe('W4B structure', () => {
   // Same root cause as W4B-16/21, reached the ordinary way: add a row under the last one from its
   // grip, then press Cmd+Z with the caret in the new row. Its grip is the visible one.
   test('W4B-22: redo after undoing Insert row below on the last row, with the caret in the new row', async ({ page }) => {
-    test.fail();
     await createBlok(page, DOC_3x3());
     await gap(page);
     await openRowGrip(page, 2);
@@ -637,15 +622,8 @@ test.describe('W4B structure', () => {
     await page.mouse.up();
   };
 
-  // Defect: a drag on the add-row button that adds two rows needs two undos (one per row).
-  // Root cause: onDragStart opens a group with beginTransaction (table-subsystems.ts:267-271), but each
-  // row is added through runTransactedStructuralOp (table-subsystems.ts:278, index.ts:198-209) →
-  // api.blocks.transact → BlockManager.transactForTool (blockManager.ts:943). Its nested
-  // endToolTransaction always calls YjsManager.stopCapturing() in a microtask (blockManager.ts:998/1002),
-  // even while the outer drag group is still open, so every row closes its own undo step.
-  // The corner drag's add callbacks use plain runStructuralOp and stay one step (W4B-16b).
+  // The drag is one undo step: a nested tool transaction must not close the drag's group.
   test('W4B-23: one undo of a drag on the add-row button removes both added rows', async ({ page }) => {
-    test.fail();
     await createBlok(page, DOC_3x3());
     const before = await doc(page);
 

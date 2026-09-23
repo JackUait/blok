@@ -1077,8 +1077,11 @@ export class TableCellBlocks {
   /**
    * Ensure a cell has at least one block.
    * If the blocks container is empty, insert an empty paragraph.
+   * @param options.track - true when the fill is part of a user gesture (add
+   *   row/column): the new block joins the gesture's undo step. Otherwise it
+   *   is an invisible repair, kept out of undo.
    */
-  public ensureCellHasBlock(cell: HTMLElement): void {
+  public ensureCellHasBlock(cell: HTMLElement, options: { track?: boolean } = {}): void {
     const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
 
     if (!container) {
@@ -1101,15 +1104,21 @@ export class TableCellBlocks {
     // cell recorded a removal at a coincidentally-equal flat index.
     this.isRepairingCell = true;
 
-    try {
-      this.api.blocks.transactWithoutCapture?.(() => {
-        const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.api.blocks.getBlocksCount(), true);
+    const fill = (): void => {
+      const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.api.blocks.getBlocksCount(), true);
 
-        container.appendChild(block.holder);
-        this.api.blocks.setBlockParent(block.id, this.tableBlockId);
-        this.syncBlockToModel(cell, block.id);
-        this.stripPlaceholders(container);
-      });
+      container.appendChild(block.holder);
+      this.api.blocks.setBlockParent(block.id, this.tableBlockId);
+      this.syncBlockToModel(cell, block.id);
+      this.stripPlaceholders(container);
+    };
+
+    try {
+      if (options.track === true) {
+        fill();
+      } else {
+        this.api.blocks.transactWithoutCapture?.(fill);
+      }
     } finally {
       this.isRepairingCell = false;
     }

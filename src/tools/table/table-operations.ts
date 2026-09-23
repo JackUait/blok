@@ -324,7 +324,7 @@ export const populateNewCells = (gridEl: HTMLElement, cellBlocks: TableCellBlock
   const cells = gridEl.querySelectorAll(`[${CELL_ATTR}]`);
 
   cells.forEach(cell => {
-    cellBlocks?.ensureCellHasBlock(cell as HTMLElement);
+    cellBlocks?.ensureCellHasBlock(cell as HTMLElement, { track: true });
   });
 };
 

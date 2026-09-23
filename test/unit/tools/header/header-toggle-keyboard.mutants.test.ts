@@ -14,7 +14,7 @@ interface BlockRef {
 
 interface ApiMocks {
   api: API;
-  splitBlock: Mock<(...args: unknown[]) => void>;
+  splitBlock: Mock<(...args: unknown[]) => { id: string }>;
   insert: Mock<(...args: unknown[]) => BlockRef>;
   insertInsideParent: Mock<(...args: unknown[]) => BlockRef>;
   setToBlock: Mock<(...args: unknown[]) => void>;
@@ -30,7 +30,7 @@ interface ApiMocks {
  * `?? -> &&` mutant on that line becomes unobservable.
  */
 const createApiMocks = (blockIndex = 3, currentIndex = 9): ApiMocks => {
-  const splitBlock: Mock<(...args: unknown[]) => void> = vi.fn();
+  const splitBlock: Mock<(...args: unknown[]) => { id: string }> = vi.fn().mockReturnValue({ id: 'split-block-id' });
   const insert: Mock<(...args: unknown[]) => BlockRef> = vi.fn(() => ({ id: 'inserted-paragraph' }));
   const insertInsideParent: Mock<(...args: unknown[]) => BlockRef> = vi.fn(() => ({ id: 'inserted-child' }));
   const setToBlock: Mock<(...args: unknown[]) => void> = vi.fn();
@@ -207,7 +207,7 @@ describe('Header toggle keyboard — mutant coverage', () => {
       expect(parts.syncContentFromDOM.mock.calls).toStrictEqual([[]]);
       expect(mocks.insert.mock.calls).toStrictEqual([]);
       expect(mocks.insertInsideParent.mock.calls).toStrictEqual([]);
-      expect(mocks.setToBlock.mock.calls).toStrictEqual([]);
+      expect(mocks.setToBlock.mock.calls).toStrictEqual([['split-block-id', 'start']]);
     });
 
     it('splits instead of adding a child when an open heading has text after the caret', async () => {
@@ -239,7 +239,7 @@ describe('Header toggle keyboard — mutant coverage', () => {
         4,
       ]]);
       expect(errors).toStrictEqual([]);
-      expect(mocks.setToBlock.mock.calls).toStrictEqual([]);
+      expect(mocks.setToBlock.mock.calls).toStrictEqual([['split-block-id', 'start']]);
     });
 
     it('stops before reading the DOM when the block id is undefined', async () => {

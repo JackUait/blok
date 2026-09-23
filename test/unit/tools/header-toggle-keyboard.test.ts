@@ -12,7 +12,7 @@ const createMockContext = (overrides: Partial<HeaderToggleKeyboardContext> = {})
   return {
     api: {
       blocks: {
-        splitBlock: vi.fn(),
+        splitBlock: vi.fn().mockReturnValue({ id: 'split-block-id' }),
         getBlockIndex: vi.fn().mockReturnValue(0),
         getCurrentBlockIndex: vi.fn().mockReturnValue(0),
         insertInsideParent: vi.fn().mockReturnValue({ id: 'new-block-id' }),
@@ -74,7 +74,7 @@ describe('Header Toggle Keyboard Handlers', () => {
         isOpen: true,
         api: {
           blocks: {
-            splitBlock: vi.fn(),
+            splitBlock: vi.fn().mockReturnValue({ id: 'split-block-id' }),
             getBlockIndex: mockGetBlockIndex,
             getCurrentBlockIndex: vi.fn().mockReturnValue(3),
             insertInsideParent: mockInsertInsideParent,
@@ -137,7 +137,7 @@ describe('Header Toggle Keyboard Handlers', () => {
         isOpen: true,
         api: {
           blocks: {
-            splitBlock: vi.fn(),
+            splitBlock: vi.fn().mockReturnValue({ id: 'split-block-id' }),
             getBlockIndex: mockGetBlockIndex,
             getCurrentBlockIndex: vi.fn().mockReturnValue(3),
             insertInsideParent: mockInsertInsideParent,
@@ -172,7 +172,7 @@ describe('Header Toggle Keyboard Handlers', () => {
 
       const mockSetToBlock = vi.fn();
       const mockInsert = vi.fn().mockReturnValue({ id: 'new-para-id' });
-      const mockSplitBlock = vi.fn();
+      const mockSplitBlock = vi.fn().mockReturnValue({ id: 'split-block-id' });
       const mockInsertInsideParent = vi.fn();
 
       const contentElement = document.createElement('div');
@@ -219,7 +219,7 @@ describe('Header Toggle Keyboard Handlers', () => {
     it('collapsed toggle heading + Enter mid-text still splits (keeps existing path)', async () => {
       const { handleHeaderToggleEnter } = await import('../../../src/tools/header/header-toggle-keyboard');
 
-      const mockSplitBlock = vi.fn();
+      const mockSplitBlock = vi.fn().mockReturnValue({ id: 'split-block-id' });
       const mockInsert = vi.fn();
 
       const contentElement = document.createElement('div');
@@ -260,6 +260,53 @@ describe('Header Toggle Keyboard Handlers', () => {
       contentElement.remove();
     });
 
+    it('moves the caret to the start of the new heading after a mid-text split', async () => {
+      const { handleHeaderToggleEnter } = await import('../../../src/tools/header/header-toggle-keyboard');
+
+      const contentElement = document.createElement('div');
+      contentElement.setAttribute('contenteditable', 'true');
+      contentElement.textContent = 'HeadRest';
+      document.body.appendChild(contentElement);
+
+      const mockSetToBlock = vi.fn();
+      const mockSplitBlock = vi.fn().mockReturnValue({ id: 'split-block-id' });
+
+      const context = createMockContext({
+        getContentElement: () => contentElement,
+        isOpen: true,
+        api: {
+          blocks: {
+            splitBlock: mockSplitBlock,
+            getBlockIndex: vi.fn().mockReturnValue(0),
+            getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+            insertInsideParent: vi.fn(),
+            getChildren: vi.fn().mockReturnValue([]),
+          },
+          caret: { setToBlock: mockSetToBlock },
+        } as unknown as API,
+      });
+
+      const range = document.createRange();
+      range.setStart(contentElement.childNodes[0], 4);
+      range.collapse(true);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      await handleHeaderToggleEnter(context);
+
+      expect(mockSetToBlock).toHaveBeenCalledWith('split-block-id', 'start');
+      expect(mockSplitBlock).toHaveBeenCalledWith(
+        'test-block-id',
+        { text: 'Head', level: 2, isToggleable: true },
+        'header',
+        { text: 'Rest', level: 2, isToggleable: true },
+        1
+      );
+
+      contentElement.remove();
+    });
+
     it('inserts at currentBlockIndex + 1 when toggle heading has no children', async () => {
       const { handleHeaderToggleEnter } = await import('../../../src/tools/header/header-toggle-keyboard');
 
@@ -276,7 +323,7 @@ describe('Header Toggle Keyboard Handlers', () => {
         isOpen: true,
         api: {
           blocks: {
-            splitBlock: vi.fn(),
+            splitBlock: vi.fn().mockReturnValue({ id: 'split-block-id' }),
             getBlockIndex: vi.fn().mockReturnValue(3),
             getCurrentBlockIndex: vi.fn().mockReturnValue(3),
             insertInsideParent: mockInsertInsideParent,

@@ -70,7 +70,7 @@ export const handleToggleEnter = async (context: ToggleKeyboardContext): Promise
     return;
   }
 
-  api.blocks.splitBlock(
+  const newBlock = api.blocks.splitBlock(
     blockId,
     { text: beforeContent },
     TOOL_NAME,
@@ -79,6 +79,10 @@ export const handleToggleEnter = async (context: ToggleKeyboardContext): Promise
   );
 
   data.text = beforeContent;
+
+  // splitBlock rewrites this title's HTML and does not focus the new block,
+  // so without this the caret falls to the start of the old title.
+  api.caret.setToBlock(newBlock.id, 'start');
 };
 
 /**

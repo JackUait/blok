@@ -81,13 +81,16 @@ export const handleHeaderToggleEnter = async (
   }
 
   // Split into two toggle headings at the same level
-  api.blocks.splitBlock(
+  const newBlock = api.blocks.splitBlock(
     blockId,
     { text: beforeContent, level: currentLevel, isToggleable: true },
     'header',
     { text: afterContent, level: currentLevel, isToggleable: true },
     currentBlockIndex + 1
   );
+
+  // splitBlock does not focus the new block; see toggle-keyboard.ts.
+  api.caret.setToBlock(newBlock.id, 'start');
 };
 
 /**

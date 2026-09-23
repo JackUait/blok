@@ -22,7 +22,7 @@ const createMockContext = (overrides: Partial<ToggleKeyboardContext> = {}): Togg
   return {
     api: {
       blocks: {
-        splitBlock: vi.fn(),
+        splitBlock: vi.fn().mockReturnValue({ id: 'split-block-id' }),
         convert: vi.fn().mockResolvedValue({ holder: document.createElement('div') }),
         getBlockIndex: vi.fn().mockReturnValue(0),
         getCurrentBlockIndex: vi.fn().mockReturnValue(0),
@@ -105,7 +105,7 @@ describe('Toggle Keyboard Handlers', () => {
         isOpen: true,
         api: {
           blocks: {
-            splitBlock: vi.fn(),
+            splitBlock: vi.fn().mockReturnValue({ id: 'split-block-id' }),
             convert: vi.fn().mockResolvedValue({ holder: document.createElement('div') }),
             getBlockIndex: vi.fn().mockReturnValue(0),
             getCurrentBlockIndex: vi.fn().mockReturnValue(0),
@@ -166,7 +166,7 @@ describe('Toggle Keyboard Handlers', () => {
         isOpen: true,
         api: {
           blocks: {
-            splitBlock: vi.fn(),
+            splitBlock: vi.fn().mockReturnValue({ id: 'split-block-id' }),
             convert: vi.fn().mockResolvedValue({ holder: document.createElement('div') }),
             getBlockIndex: mockGetBlockIndex,
             getCurrentBlockIndex: vi.fn().mockReturnValue(5),
@@ -231,7 +231,7 @@ describe('Toggle Keyboard Handlers', () => {
         isOpen: true,
         api: {
           blocks: {
-            splitBlock: vi.fn(),
+            splitBlock: vi.fn().mockReturnValue({ id: 'split-block-id' }),
             convert: vi.fn().mockResolvedValue({ holder: document.createElement('div') }),
             getBlockIndex: mockGetBlockIndex,
             getCurrentBlockIndex: vi.fn().mockReturnValue(5),
@@ -255,6 +255,84 @@ describe('Toggle Keyboard Handlers', () => {
       // Should insert AFTER the deepest last descendant (grandchild-2 at index 9)
       expect(mockInsertInsideParent).toHaveBeenCalledWith('test-block-id', 10);
       expect(mockSetToBlock).toHaveBeenCalledWith('new-block-id', 'start');
+
+      contentElement.remove();
+    });
+  });
+
+  describe('handleToggleEnter caret after split', () => {
+    const selectAt = (node: Node, offset: number): void => {
+      const range = document.createRange();
+      range.setStart(node, offset);
+      range.collapse(true);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    };
+
+    const splitContext = (contentElement: HTMLElement, isOpen: boolean): ToggleKeyboardContext => createMockContext({
+      getContentElement: () => contentElement,
+      isOpen,
+      api: {
+        blocks: {
+          splitBlock: vi.fn().mockReturnValue({ id: 'split-block-id' }),
+          getBlockIndex: vi.fn().mockReturnValue(0),
+          getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+          insertInsideParent: vi.fn(),
+          getChildren: vi.fn().mockReturnValue([]),
+        },
+        caret: { setToBlock: vi.fn() },
+      } as unknown as API,
+    });
+
+    it('moves the caret to the start of the new toggle after a mid-title split', async () => {
+      const { handleToggleEnter } = await import('../../../../src/tools/toggle/toggle-keyboard');
+
+      const contentElement = document.createElement('div');
+      contentElement.setAttribute('contenteditable', 'true');
+      contentElement.textContent = 'TitleRest';
+      document.body.appendChild(contentElement);
+
+      const context = splitContext(contentElement, true);
+
+      selectAt(contentElement.childNodes[0], 5);
+
+      await handleToggleEnter(context);
+
+      expect(context.api.caret.setToBlock).toHaveBeenCalledWith('split-block-id', 'start');
+      expect(context.api.blocks.splitBlock).toHaveBeenCalledWith(
+        'test-block-id',
+        { text: 'Title' },
+        'toggle',
+        { text: 'Rest' },
+        1
+      );
+
+      contentElement.remove();
+    });
+
+    it('moves the caret into the new empty sibling after Enter at the end of a collapsed toggle', async () => {
+      const { handleToggleEnter } = await import('../../../../src/tools/toggle/toggle-keyboard');
+
+      const contentElement = document.createElement('div');
+      contentElement.setAttribute('contenteditable', 'true');
+      contentElement.textContent = 'Title';
+      document.body.appendChild(contentElement);
+
+      const context = splitContext(contentElement, false);
+
+      selectAt(contentElement.childNodes[0], 5);
+
+      await handleToggleEnter(context);
+
+      expect(context.api.caret.setToBlock).toHaveBeenCalledWith('split-block-id', 'start');
+      expect(context.api.blocks.splitBlock).toHaveBeenCalledWith(
+        'test-block-id',
+        { text: 'Title' },
+        'toggle',
+        { text: '' },
+        1
+      );
 
       contentElement.remove();
     });

@@ -38,14 +38,14 @@ interface BlockRef {
 
 interface ApiHarness {
   api: API;
-  splitBlock: Mock<(id: string, before: { text: string }, tool: string, after: { text: string }, index: number) => void>;
+  splitBlock: Mock<(id: string, before: { text: string }, tool: string, after: { text: string }, index: number) => { id: string }>;
   convert: Mock<(id: string, tool: string, data: { text: string }) => Promise<void>>;
   insertInsideParent: Mock<(parentId: string, index: number) => BlockRef>;
   setToBlock: Mock<(id: string, position: string) => void>;
 }
 
 const createApi = (options: { blockIndex?: number; currentBlockIndex?: number } = {}): ApiHarness => {
-  const splitBlock = vi.fn<(id: string, before: { text: string }, tool: string, after: { text: string }, index: number) => void>();
+  const splitBlock = vi.fn<(id: string, before: { text: string }, tool: string, after: { text: string }, index: number) => { id: string }>().mockReturnValue({ id: 'split-block-id' });
   const convert = vi.fn<(id: string, tool: string, data: { text: string }) => Promise<void>>(async () => undefined);
   const insertInsideParent = vi.fn<(parentId: string, index: number) => BlockRef>(() => ({ id: 'new-block' }));
   const setToBlock = vi.fn<(id: string, position: string) => void>();

@@ -15,6 +15,7 @@ import { getCellPosition } from './table-operations';
 import type { TableModel } from './table-model';
 import type { ClipboardBlockData, LegacyCellContent, CellContent } from './types';
 import { isCellWithBlocks } from './types';
+import { pickTableIds } from './table-ids';
 
 export const CELL_BLOCKS_ATTR = 'data-blok-table-cell-blocks';
 
@@ -679,7 +680,7 @@ export class TableCellBlocks {
         // merged table flattens the merge out of the model while the DOM still
         // carries the colspan/rowspan, desyncing the two.
         if (isCellWithBlocks(cellContent) && cellContent.mergedInto !== undefined) {
-          normalizedRow.push({ blocks: [], mergedInto: [...cellContent.mergedInto] });
+          normalizedRow.push({ blocks: [], mergedInto: [...cellContent.mergedInto], ...pickTableIds(cellContent) });
 
           return;
         }
@@ -707,9 +708,10 @@ export class TableCellBlocks {
         // Span + placement metadata the model round-trips but initializeCells
         // would otherwise drop on the rendered() rebuild (merge-origin colspan/
         // rowspan, vertical/horizontal placement).
-        const cellMetaProps: Pick<CellContent, 'colspan' | 'rowspan' | 'placement'> = {};
+        const cellMetaProps: Pick<CellContent, 'colspan' | 'rowspan' | 'placement' | 'id' | 'rowId'> = {};
 
         if (isCellWithBlocks(cellContent)) {
+          Object.assign(cellMetaProps, pickTableIds(cellContent));
           if (cellContent.color !== undefined) {
             cellColorProps.color = cellContent.color;
           }

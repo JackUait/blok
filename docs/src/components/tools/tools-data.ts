@@ -304,6 +304,8 @@ const editor = new Blok({
 // Each cell:
 interface CellContent {
   blocks: string[];    // IDs of child blocks in this cell
+  id?: string;         // Column id, the same on every cell of the column; minted on load when missing
+  rowId?: string;      // Row id, the same on every cell of the row; minted on load when missing
   color?: string;      // Cell background colour
   textColor?: string;  // Cell text colour
   placement?: CellPlacement; // 9-way vertical+horizontal alignment (e.g. 'top-left', 'middle-center')

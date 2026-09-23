@@ -45,6 +45,19 @@ const b = (id: string): { blocks: string[] } => {
 /** Shorthand for an empty cell (no blocks) */
 const empty = { blocks: [] };
 
+/** Snapshot content without the minted `id`/`rowId` keys, which are random. */
+const contentWithoutIds = (model: TableModel): unknown[][] => {
+  return model.snapshot().content.map(row => row.map(cell => {
+    if (typeof cell !== 'object' || cell === null) {
+      return cell;
+    }
+
+    const { id: _id, rowId: _rowId, ...rest } = cell as Record<string, unknown>;
+
+    return rest;
+  }));
+};
+
 describe('TableGrid', () => {
   describe('createGrid', () => {
     it('creates a grid with specified rows and columns', () => {
@@ -209,7 +222,7 @@ describe('TableGrid', () => {
       grid.deleteRow(element, 1);
       model.deleteRow(1);
 
-      expect(model.snapshot().content).toEqual([[b('A'), b('B')], [b('E'), b('F')]]);
+      expect(contentWithoutIds(model)).toEqual([[b('A'), b('B')], [b('E'), b('F')]]);
     });
   });
 
@@ -237,7 +250,7 @@ describe('TableGrid', () => {
       grid.addColumn(element, 1);
       model.addColumn(1);
 
-      expect(model.snapshot().content).toEqual([[b('A'), empty, b('B')], [b('C'), empty, b('D')]]);
+      expect(contentWithoutIds(model)).toEqual([[b('A'), empty, b('B')], [b('C'), empty, b('D')]]);
     });
 
     it('keeps existing <col> widths unchanged and adds new <col> with default width in px mode', () => {
@@ -380,7 +393,7 @@ describe('TableGrid', () => {
       grid.deleteColumn(element, 1);
       model.deleteColumn(1);
 
-      expect(model.snapshot().content).toEqual([[b('A'), b('C')], [b('D'), b('F')]]);
+      expect(contentWithoutIds(model)).toEqual([[b('A'), b('C')], [b('D'), b('F')]]);
     });
 
     it('preserves remaining <col> widths in px mode', () => {
@@ -454,7 +467,7 @@ describe('TableGrid', () => {
       grid.moveRow(element, 0, 2);
       model.moveRow(0, 2);
 
-      expect(model.snapshot().content).toEqual([[b('C'), b('D')], [b('E'), b('F')], [b('A'), b('B')]]);
+      expect(contentWithoutIds(model)).toEqual([[b('C'), b('D')], [b('E'), b('F')], [b('A'), b('B')]]);
     });
 
     it('moves a row from last to first', () => {
@@ -470,7 +483,7 @@ describe('TableGrid', () => {
       grid.moveRow(element, 2, 0);
       model.moveRow(2, 0);
 
-      expect(model.snapshot().content).toEqual([[b('E'), b('F')], [b('A'), b('B')], [b('C'), b('D')]]);
+      expect(contentWithoutIds(model)).toEqual([[b('E'), b('F')], [b('A'), b('B')], [b('C'), b('D')]]);
     });
 
     it('does nothing when fromIndex equals toIndex', () => {
@@ -486,7 +499,7 @@ describe('TableGrid', () => {
       grid.moveRow(element, 1, 1);
       model.moveRow(1, 1);
 
-      expect(model.snapshot().content).toEqual([[b('A'), b('B')], [b('C'), b('D')], [b('E'), b('F')]]);
+      expect(contentWithoutIds(model)).toEqual([[b('A'), b('B')], [b('C'), b('D')], [b('E'), b('F')]]);
     });
 
     it('moves adjacent rows correctly (swap down)', () => {
@@ -502,7 +515,7 @@ describe('TableGrid', () => {
       grid.moveRow(element, 0, 1);
       model.moveRow(0, 1);
 
-      expect(model.snapshot().content).toEqual([[b('C'), b('D')], [b('A'), b('B')], [b('E'), b('F')]]);
+      expect(contentWithoutIds(model)).toEqual([[b('C'), b('D')], [b('A'), b('B')], [b('E'), b('F')]]);
     });
 
     it('moves adjacent rows correctly (swap up)', () => {
@@ -518,7 +531,7 @@ describe('TableGrid', () => {
       grid.moveRow(element, 2, 1);
       model.moveRow(2, 1);
 
-      expect(model.snapshot().content).toEqual([[b('A'), b('B')], [b('E'), b('F')], [b('C'), b('D')]]);
+      expect(contentWithoutIds(model)).toEqual([[b('A'), b('B')], [b('E'), b('F')], [b('C'), b('D')]]);
     });
   });
 
@@ -536,7 +549,7 @@ describe('TableGrid', () => {
       grid.moveColumn(element, 0, 2);
       model.moveColumn(0, 2);
 
-      expect(model.snapshot().content).toEqual([[b('B'), b('C'), b('A')], [b('E'), b('F'), b('D')]]);
+      expect(contentWithoutIds(model)).toEqual([[b('B'), b('C'), b('A')], [b('E'), b('F'), b('D')]]);
     });
 
     it('moves a column from last to first', () => {
@@ -552,7 +565,7 @@ describe('TableGrid', () => {
       grid.moveColumn(element, 2, 0);
       model.moveColumn(2, 0);
 
-      expect(model.snapshot().content).toEqual([[b('C'), b('A'), b('B')], [b('F'), b('D'), b('E')]]);
+      expect(contentWithoutIds(model)).toEqual([[b('C'), b('A'), b('B')], [b('F'), b('D'), b('E')]]);
     });
 
     it('does nothing when fromIndex equals toIndex', () => {
@@ -568,7 +581,7 @@ describe('TableGrid', () => {
       grid.moveColumn(element, 1, 1);
       model.moveColumn(1, 1);
 
-      expect(model.snapshot().content).toEqual([[b('A'), b('B'), b('C')], [b('D'), b('E'), b('F')]]);
+      expect(contentWithoutIds(model)).toEqual([[b('A'), b('B'), b('C')], [b('D'), b('E'), b('F')]]);
     });
 
     it('moves adjacent columns correctly (swap right)', () => {
@@ -584,7 +597,7 @@ describe('TableGrid', () => {
       grid.moveColumn(element, 0, 1);
       model.moveColumn(0, 1);
 
-      expect(model.snapshot().content).toEqual([[b('B'), b('A'), b('C')], [b('E'), b('D'), b('F')]]);
+      expect(contentWithoutIds(model)).toEqual([[b('B'), b('A'), b('C')], [b('E'), b('D'), b('F')]]);
     });
 
     it('preserves cell widths when moving columns', () => {

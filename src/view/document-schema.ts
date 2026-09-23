@@ -171,6 +171,8 @@ export const blokDocumentSchema = {
                   additionalProperties: false,
                   properties: {
                     blocks: { type: 'array', items: { type: 'string' }, description: 'Ids of the blocks rendered in this cell, in order.' },
+                    id: { type: 'string', description: 'Column id. Every cell of one column carries the same value.' },
+                    rowId: { type: 'string', description: 'Row id. Every cell of one row carries the same value.' },
                     text: { type: 'string', description: 'Inline HTML mirror of the cell, kept for import/export paths.' },
                     color: { type: 'string', description: 'Cell background color preset name.' },
                     textColor: { type: 'string' },

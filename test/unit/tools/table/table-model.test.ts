@@ -6,6 +6,18 @@ import type { CellContent, TableData } from '../../../../src/tools/table/types';
 
 const cell = (...blocks: string[]): CellContent => ({ blocks });
 
+// Cells carry minted column/row ids; tests not about ids compare without them.
+const withoutIds = (raw: unknown): Omit<CellContent, 'id' | 'rowId'> => {
+  const rest = { ...(raw as CellContent) };
+
+  delete rest.id;
+  delete rest.rowId;
+
+  return rest;
+};
+
+const rowWithoutIds = (row: unknown[]): Array<Omit<CellContent, 'id' | 'rowId'>> => row.map(withoutIds);
+
 const makeData = (overrides: Partial<TableData> = {}): TableData => ({
   withHeadings: false,
   withHeadingColumn: false,
@@ -100,10 +112,10 @@ describe('TableModel', () => {
       const snap = model.snapshot();
 
       // Legacy strings become { blocks: [] }
-      expect(snap.content[0][0]).toEqual({ blocks: [] });
-      expect(snap.content[0][1]).toEqual({ blocks: [] });
-      expect(snap.content[1][0]).toEqual({ blocks: ['b1'] });
-      expect(snap.content[1][1]).toEqual({ blocks: [] });
+      expect(withoutIds(snap.content[0][0])).toEqual({ blocks: [] });
+      expect(withoutIds(snap.content[0][1])).toEqual({ blocks: [] });
+      expect(withoutIds(snap.content[1][0])).toEqual({ blocks: ['b1'] });
+      expect(withoutIds(snap.content[1][1])).toEqual({ blocks: [] });
     });
 
     it('handles partial data with only some fields', () => {
@@ -1102,7 +1114,7 @@ describe('TableModel', () => {
 
       const snap = model.snapshot();
 
-      expect(snap.content[0][0]).toEqual({ blocks: [] });
+      expect(withoutIds(snap.content[0][0])).toEqual({ blocks: [] });
     });
 
     it('rebuilds blockCellMap correctly after replaceAll', () => {
@@ -1319,10 +1331,11 @@ describe('TableModel', () => {
 
     it('setCellColor is no-op for out-of-bounds', () => {
       const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+      const before = model.snapshot();
 
       model.setCellColor(5, 5, '#f1f1ef');
 
-      expect(model.snapshot().content[0][0]).toEqual({ blocks: [] });
+      expect(model.snapshot()).toEqual(before);
     });
 
     it('getCellColor returns color for a cell', () => {
@@ -1550,10 +1563,11 @@ describe('TableModel', () => {
 
     it('setCellTextColor is no-op for out-of-bounds', () => {
       const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+      const before = model.snapshot();
 
       model.setCellTextColor(5, 5, '#787774');
 
-      expect(model.snapshot().content[0][0]).toEqual({ blocks: [] });
+      expect(model.snapshot()).toEqual(before);
     });
 
     it('getCellTextColor returns text color for a cell', () => {
@@ -2049,8 +2063,9 @@ describe('TableModel', () => {
 
     it('setCellPlacement is no-op for out-of-bounds', () => {
       const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+      const before = model.snapshot();
       model.setCellPlacement(5, 5, 'bottom-right');
-      expect(model.snapshot().content[0][0]).toEqual({ blocks: [] });
+      expect(model.snapshot()).toEqual(before);
     });
 
     it('getCellPlacement returns placement for a cell', () => {
@@ -2137,8 +2152,8 @@ describe('TableModel', () => {
 
       const snap = model.snapshot();
 
-      expect(snap.content[0]).toEqual([cell('a'), { blocks: [] }, { blocks: [] }]);
-      expect(snap.content[1]).toEqual([cell('b'), cell('c'), cell('d')]);
+      expect(rowWithoutIds(snap.content[0])).toEqual([cell('a'), { blocks: [] }, { blocks: [] }]);
+      expect(rowWithoutIds(snap.content[1])).toEqual([cell('b'), cell('c'), cell('d')]);
     });
 
     it('pads short later rows to the widest row', () => {
@@ -2152,8 +2167,8 @@ describe('TableModel', () => {
 
       const snap = model.snapshot();
 
-      expect(snap.content[1]).toEqual([cell('d'), { blocks: [] }, { blocks: [] }]);
-      expect(snap.content[2]).toEqual([{ blocks: [] }, { blocks: [] }, { blocks: [] }]);
+      expect(rowWithoutIds(snap.content[1])).toEqual([cell('d'), { blocks: [] }, { blocks: [] }]);
+      expect(rowWithoutIds(snap.content[2])).toEqual([{ blocks: [] }, { blocks: [] }, { blocks: [] }]);
       assertBlockCellMapConsistency(model);
     });
 
@@ -2171,7 +2186,7 @@ describe('TableModel', () => {
 
       expect(model.rows).toBe(2);
       expect(model.cols).toBe(2);
-      expect(model.snapshot().content[1]).toEqual([cell('c'), { blocks: [] }]);
+      expect(rowWithoutIds(model.snapshot().content[1])).toEqual([cell('c'), { blocks: [] }]);
     });
 
     it('leaves a rectangular grid untouched', () => {
@@ -2181,7 +2196,7 @@ describe('TableModel', () => {
       ];
       const model = new TableModel(makeData({ content }));
 
-      expect(model.snapshot().content).toEqual(content);
+      expect(model.snapshot().content.map(rowWithoutIds)).toEqual(content);
     });
   });
 });

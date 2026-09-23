@@ -1,5 +1,6 @@
 import type { CellContent, CellPlacement, LegacyCellContent, TableData, TableTextSize } from './types';
 import { isCellWithBlocks } from './types';
+import { ensureTableIds, generateTableId } from './table-ids';
 
 export interface SelectionRect {
   minRow: number;
@@ -135,6 +136,14 @@ export class TableModel {
       content: this.contentGrid.map(row =>
         row.map(c => {
           const cell: CellContent = { blocks: [...c.blocks] };
+
+          if (c.id !== undefined) {
+            cell.id = c.id;
+          }
+
+          if (c.rowId !== undefined) {
+            cell.rowId = c.rowId;
+          }
 
           if (c.color !== undefined) {
             cell.color = c.color;
@@ -383,7 +392,12 @@ export class TableModel {
       : Math.min(Math.max(0, index), this.contentGrid.length);
 
     const colCount = this.cols;
-    const newRow: CellContent[] = Array.from({ length: colCount }, () => ({ blocks: [] }));
+    const rowId = generateTableId();
+    const newRow: CellContent[] = Array.from({ length: colCount }, (_, col) => ({
+      blocks: [],
+      id: this.contentGrid[0]?.[col]?.id,
+      rowId,
+    }));
 
     this.contentGrid.splice(clampedIndex, 0, newRow);
     this.shiftMergedIntoRows(clampedIndex, 1);
@@ -460,9 +474,10 @@ export class TableModel {
       : Math.min(Math.max(0, index), this.cols);
 
     const cellsToPopulate: Array<{ row: number; col: number }> = [];
+    const columnId = generateTableId();
 
     this.contentGrid.forEach((row, r) => {
-      row.splice(clampedIndex, 0, { blocks: [] });
+      row.splice(clampedIndex, 0, { blocks: [], id: columnId, rowId: row[0]?.rowId });
       cellsToPopulate.push({ row: r, col: clampedIndex });
     });
 
@@ -1678,7 +1693,7 @@ export class TableModel {
 
     this.repairMergeStructure(grid);
 
-    return grid;
+    return ensureTableIds(grid);
   }
 
   /**
@@ -1803,6 +1818,14 @@ export class TableModel {
   private normalizeCell(cell: LegacyCellContent): CellContent {
     if (isCellWithBlocks(cell)) {
       const normalized: CellContent = { blocks: [...cell.blocks] };
+
+      if (typeof cell.id === 'string') {
+        normalized.id = cell.id;
+      }
+
+      if (typeof cell.rowId === 'string') {
+        normalized.rowId = cell.rowId;
+      }
 
       if (cell.color !== undefined && isValidCssColor(cell.color)) {
         normalized.color = cell.color;

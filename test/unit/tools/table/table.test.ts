@@ -9,6 +9,17 @@ import { isCellWithBlocks } from '../../../../src/tools/table/types';
 import type { RowColAction } from '../../../../src/tools/table/table-row-col-controls';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 
+/** Drop the minted column/row ids so a test that is not about ids can compare the rest exactly. */
+const withoutIds = (cell: unknown): unknown => {
+  if (typeof cell !== 'object' || cell === null) {
+    return cell;
+  }
+
+  const { id: _id, rowId: _rowId, ...rest } = cell as Record<string, unknown>;
+
+  return rest;
+};
+
 /**
  * Simulate pointer entering a cell (mouseover).
  * Wraps dispatchEvent in a semantic helper to express user intent.
@@ -474,7 +485,7 @@ describe('Table Tool', () => {
       // Model is initialized from data in constructor; save returns model snapshot
       const saved = table.save(element);
 
-      expect(saved.content[0][0]).toEqual({ blocks: ['list-1', 'list-2', 'list-3'] });
+      expect(withoutIds(saved.content[0][0])).toEqual({ blocks: ['list-1', 'list-2', 'list-3'] });
     });
 
     it('should produce empty blocks array when all block IDs in a cell are foreign', () => {
@@ -2099,8 +2110,8 @@ describe('Table Tool', () => {
 
       // Verify delete was called with the indices (sorted descending to avoid index shift)
       expect(mockDelete).toHaveBeenCalledTimes(2);
-      expect(mockDelete).toHaveBeenNthCalledWith(1, 1);
-      expect(mockDelete).toHaveBeenNthCalledWith(2, 0);
+      expect(mockDelete).toHaveBeenNthCalledWith(1, 1, true);
+      expect(mockDelete).toHaveBeenNthCalledWith(2, 0, true);
 
       document.body.removeChild(element);
     });
@@ -2161,8 +2172,8 @@ describe('Table Tool', () => {
       // Verify delete was called with the indices (sorted descending to avoid index shift)
       // Index 2 should be deleted before index 0
       expect(mockDelete).toHaveBeenCalledTimes(2);
-      expect(mockDelete).toHaveBeenNthCalledWith(1, 2);
-      expect(mockDelete).toHaveBeenNthCalledWith(2, 0);
+      expect(mockDelete).toHaveBeenNthCalledWith(1, 2, true);
+      expect(mockDelete).toHaveBeenNthCalledWith(2, 0, true);
 
       document.body.removeChild(element);
     });
@@ -3173,10 +3184,10 @@ describe('Table Tool', () => {
       });
 
       // Verify specific block IDs are preserved
-      expect(saved.content[0][0]).toEqual({ blocks: [blockId1] });
-      expect(saved.content[0][1]).toEqual({ blocks: [blockId2] });
-      expect(saved.content[1][0]).toEqual({ blocks: [blockId3] });
-      expect(saved.content[1][1]).toEqual({ blocks: [blockId4] });
+      expect(withoutIds(saved.content[0][0])).toEqual({ blocks: [blockId1] });
+      expect(withoutIds(saved.content[0][1])).toEqual({ blocks: [blockId2] });
+      expect(withoutIds(saved.content[1][0])).toEqual({ blocks: [blockId3] });
+      expect(withoutIds(saved.content[1][1])).toEqual({ blocks: [blockId4] });
 
       document.body.removeChild(element);
     });

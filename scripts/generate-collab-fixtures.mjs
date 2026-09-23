@@ -127,6 +127,25 @@ const CASES = [
     ],
   },
   {
+    name: 'table-row-ids',
+    description:
+      'a grid row whose cells all carry one `rowId` is keyed by it; a row whose cells disagree, or an empty row, gets a minted key',
+    input: [
+      {
+        id: 'tr1',
+        type: 'table',
+        data: {
+          withHeadings: false,
+          content: [
+            [{ blocks: [], id: 'c0', rowId: 'r0' }, { blocks: [], id: 'c1', rowId: 'r0' }],
+            [{ blocks: [], id: 'c0', rowId: 'r1' }, { blocks: [], id: 'c1', rowId: 'rX' }],
+            [],
+          ],
+        },
+      },
+    ],
+  },
+  {
     name: 'cell-block-ids',
     description:
       'a table cell\'s `blocks` id list is a Y.Array at every nesting depth, empty and all-string included, so concurrent inserts into one cell merge',

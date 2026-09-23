@@ -15,6 +15,14 @@ export type CellPlacement =
  */
 export type CellContent = {
   blocks: string[];
+  /**
+   * Column id. Every cell of one column carries the same value. Named `id` on
+   * purpose: a row whose cells carry unique ids is stored keyed by id in Yjs
+   * (`isIdentityArray`), so a column move and a peer's delete stop racing.
+   */
+  id?: string;
+  /** Row id. Every cell of one row carries the same value. */
+  rowId?: string;
   color?: string;
   textColor?: string;
   text?: string;

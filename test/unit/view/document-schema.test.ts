@@ -277,6 +277,15 @@ describe('blokDocumentSchema', () => {
       }
     });
 
+    it('table: every key a saved cell carries is declared in the cell schema', () => {
+      const cellBranches = (defs.table.properties?.content as { items: { items: { anyOf: (JsonSchema & { type: string })[] } } })
+        .items.items.anyOf;
+      const cellDef = cellBranches.find(branch => branch.type === 'object');
+      const [[cell]] = (savedData.table as { content: Record<string, unknown>[][] }).content;
+
+      Object.keys(cell).forEach(key => expect(Object.keys(cellDef?.properties ?? {})).toContain(key));
+    });
+
     it.each(Object.keys(defaultBlockTools))('%s: every required field is actually saved', (name) => {
       (defs[name].required ?? []).forEach(key => expect(savedData[name]).toHaveProperty(key));
     });

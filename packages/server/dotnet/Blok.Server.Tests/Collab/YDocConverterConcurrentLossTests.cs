@@ -413,6 +413,48 @@ public sealed class YDocConverterConcurrentLossTests
     Assert.Equal(4, items?.Count);
   }
 
+  private const string TableWithRowIds =
+      """
+      { "id": "tb", "type": "table", "data": { "content": [
+          [ { "blocks": ["p1"], "id": "c0", "rowId": "r0" } ],
+          [ { "blocks": ["p2"], "id": "c0", "rowId": "r1" } ] ] } }
+      """;
+
+  /// <summary>
+  /// A table row whose cells all carry one `rowId` is stored under that id,
+  /// as the client does (gridRowId in serializer.ts), so both sides pair a
+  /// saved row with its live container by id.
+  /// </summary>
+  [Fact]
+  public void ASeededTableRowIsKeyedByItsRowId()
+  {
+    var doc = SeededDoc(TableWithRowIds);
+
+    Assert.Equal(["r0", "r1"], RowKeys(doc));
+  }
+
+  /// <summary>
+  /// One /edit both changes row r0 and inserts a row above it. Paired by
+  /// content alone, the edited row matches nothing and the new row takes r0's
+  /// container, so a peer's concurrent edit to r0 lands in the new row.
+  /// </summary>
+  [Fact]
+  public void AnEditThatChangesARowAndInsertsOneAboveItKeepsThatRowsContainer()
+  {
+    var doc = SeededDoc(TableWithRowIds);
+
+    Apply(
+        doc,
+        """
+        { "op": "update", "id": "tb", "data": { "content": [
+            [ { "blocks": [], "id": "c0", "rowId": "rN" } ],
+            [ { "blocks": ["p1", "p3"], "id": "c0", "rowId": "r0" } ],
+            [ { "blocks": ["p2"], "id": "c0", "rowId": "r1" } ] ] } }
+        """);
+
+    Assert.Equal(["rN", "r0", "r1"], RowKeys(doc));
+  }
+
   private static YDoc SeededDoc(params string[] blockJson)
   {
     var doc = new YDoc(1);

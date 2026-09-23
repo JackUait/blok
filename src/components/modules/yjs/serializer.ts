@@ -624,6 +624,46 @@ export class YBlockSerializer {
   }
 
   /**
+   * The id a grid row names itself by: the `rowId` every one of its cells
+   * carries (a table row). Undefined when the row is empty, a cell lacks it, or
+   * the cells disagree — such a row gets a minted key and is paired by content.
+   *
+   * LOCKSTEP: `InputWriter.GridRowId` in
+   * packages/server/dotnet/Blok.Server/Collab/YDocConverter.cs.
+   */
+  public gridRowId(row: unknown): string | undefined {
+    if (!Array.isArray(row) || row.length === 0) {
+      return undefined;
+    }
+
+    const ids = row.map((cell: unknown) =>
+      cell !== null && typeof cell === 'object' && !Array.isArray(cell)
+        ? (cell as Record<string, unknown>).rowId
+        : undefined);
+    const [first] = ids;
+
+    if (typeof first !== 'string' || !ids.every((id) => id === first)) {
+      return undefined;
+    }
+
+    const key = stripNul(first);
+
+    return key.length > 0 ? key : undefined;
+  }
+
+  /**
+   * The key a new grid row is stored under: its own row id when it has one no
+   * other row holds, else a minted key.
+   * @param row - the plain row
+   * @param taken - keys already in use in this grid
+   */
+  public newGridRowKey(row: unknown, taken: Set<string>): string {
+    const id = this.gridRowId(row);
+
+    return id !== undefined && !taken.has(id) ? id : this.generateRowKey();
+  }
+
+  /**
    * The row keys of a grid wrapper in display order, normalized: first
    * occurrence wins (concurrent reorders can duplicate a key) and keys with no
    * row container are dropped (a reorder racing a delete can strand one).
@@ -705,7 +745,14 @@ export class YBlockSerializer {
     const gridMap = new Y.Map<unknown>();
     const rowMap = new Y.Map<unknown>();
     const order = new Y.Array<string>();
-    const keys = rows.map(() => this.generateRowKey());
+    const taken = new Set<string>();
+    const keys = rows.map((row) => {
+      const key = this.newGridRowKey(row, taken);
+
+      taken.add(key);
+
+      return key;
+    });
 
     rows.forEach((row, index) => rowMap.set(keys[index], this.plainToYValue(row)));
     order.push(keys);

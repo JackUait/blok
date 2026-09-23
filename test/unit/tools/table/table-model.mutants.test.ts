@@ -1,11 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { TableModel } from '../../../../src/tools/table/table-model';
 import { isCellWithBlocks } from '../../../../src/tools/table/types';
-import type { CellContent, TableData } from '../../../../src/tools/table/types';
+import type { CellContent, LegacyCellContent, TableData } from '../../../../src/tools/table/types';
 
 // ─── Helpers ───────────────────────────────────────────────────────
 
 const cell = (...blocks: string[]): CellContent => ({ blocks });
+
+// snapshot() mints random column/row ids; drop only those two keys so
+// the rest of each cell can still be compared exactly.
+const stripIds = (content: LegacyCellContent[][]): unknown[][] =>
+  content.map(row => row.map(c => isCellWithBlocks(c)
+    ? Object.fromEntries(Object.entries(c).filter(([key]) => key !== 'id' && key !== 'rowId'))
+    : c));
 
 const makeData = (overrides: Partial<TableData> = {}): TableData => ({
   withHeadings: false,
@@ -360,13 +367,15 @@ describe('TableModel metadata surface', () => {
 describe('TableModel snapshot', () => {
   it('omits every optional cell key the cell does not carry', () => {
     const model = new TableModel(makeData({ content: [[{ blocks: ['a'] }]] }));
+    const { content, ...rest } = model.snapshot();
 
-    expect(model.snapshot()).toStrictEqual({
+    expect(rest).toStrictEqual({
       withHeadings: false,
       withHeadingColumn: false,
       stretched: false,
-      content: [[{ blocks: ['a'] }]],
     });
+    expect(Object.keys(content[0][0])).toStrictEqual(['blocks', 'id', 'rowId']);
+    expect(stripIds(content)).toStrictEqual([[{ blocks: ['a'] }]]);
   });
 
   it('carries spans, merge references, styling and column metadata through', () => {
@@ -380,14 +389,16 @@ describe('TableModel snapshot', () => {
       ]],
     }));
 
-    expect(model.snapshot()).toStrictEqual({
+    const { content, ...rest } = model.snapshot();
+
+    expect(stripIds(content)).toStrictEqual([[
+      { blocks: ['a'], color: '#abc', textColor: '#123', placement: 'middle-center', colspan: 2, rowspan: 3 },
+      { blocks: [], mergedInto: [0, 0] },
+    ]]);
+    expect(rest).toStrictEqual({
       withHeadings: false,
       withHeadingColumn: false,
       stretched: false,
-      content: [[
-        { blocks: ['a'], color: '#abc', textColor: '#123', placement: 'middle-center', colspan: 2, rowspan: 3 },
-        { blocks: [], mergedInto: [0, 0] },
-      ]],
       colWidths: [11, 22],
       initialColWidth: 33,
       textSize: 'comfortable',
@@ -1951,9 +1962,9 @@ describe('TableModel snapshot key shape', () => {
     // an explicit null in some serializers, so the key must be absent.
     const [[first, second]] = model.snapshot().content;
 
-    expect(Object.keys(first)).toStrictEqual(['blocks']);
-    expect(Object.keys(second)).toStrictEqual(['blocks']);
-    expect(model.snapshot().content).toStrictEqual([[{ blocks: ['a'] }, { blocks: ['b'] }]]);
+    expect(Object.keys(first)).toStrictEqual(['blocks', 'id', 'rowId']);
+    expect(Object.keys(second)).toStrictEqual(['blocks', 'id', 'rowId']);
+    expect(stripIds(model.snapshot().content)).toStrictEqual([[{ blocks: ['a'] }, { blocks: ['b'] }]]);
   });
 });
 
@@ -1999,7 +2010,7 @@ describe('TableModel merging next to other merges', () => {
     expect(model.getCellSpan(1, 0)).toStrictEqual({ colspan: 2, rowspan: 1 });
     expect(model.getCellSpan(0, 2)).toStrictEqual({ colspan: 1, rowspan: 2 });
     expect(result.blocksToRelocate).toStrictEqual(['b']);
-    expect(model.snapshot().content).toStrictEqual([
+    expect(stripIds(model.snapshot().content)).toStrictEqual([
       [{ blocks: ['a', 'b'], colspan: 2 }, { blocks: [], mergedInto: [0, 0] }, { blocks: ['c'], rowspan: 2 }],
       [{ blocks: ['d'], colspan: 2 }, { blocks: [], mergedInto: [1, 0] }, { blocks: [], mergedInto: [0, 2] }],
       [{ blocks: ['g'] }, { blocks: ['h'] }, { blocks: ['i'] }],
@@ -2112,7 +2123,7 @@ describe('TableModel moving a row that carries a horizontal merge', () => {
 
     model.moveRow(0, 2);
 
-    expect(model.snapshot().content).toStrictEqual([
+    expect(stripIds(model.snapshot().content)).toStrictEqual([
       [{ blocks: ['c'] }, { blocks: ['d'] }],
       [{ blocks: ['e'] }, { blocks: ['f'] }],
       [{ blocks: ['a'], colspan: 2 }, { blocks: [], mergedInto: [2, 0] }],
@@ -2159,7 +2170,7 @@ describe('TableModel deleting a column whose colspan overruns the grid', () => {
     ] }));
 
     expect(model.deleteColumn(1)).toStrictEqual({ type: 'delete-column', index: 1, blocksToDelete: ['b'] });
-    expect(model.snapshot().content).toStrictEqual([[{ blocks: ['a'] }]]);
+    expect(stripIds(model.snapshot().content)).toStrictEqual([[{ blocks: ['a'] }]]);
   });
 });
 
@@ -2175,9 +2186,11 @@ describe('TableModel refusing impossible moves', () => {
 
   it.each([[5, 0], [0, 5], [1, 1]])('leaves the grid untouched for moveRow(%i, %i)', (from, to) => {
     const model = threeByTwo();
+    const before = model.snapshot().content;
 
     expect(model.moveRow(from, to)).toStrictEqual({ type: 'move-row', index: from, toIndex: to });
-    expect(model.snapshot().content).toStrictEqual([
+    expect(model.snapshot().content).toStrictEqual(before);
+    expect(stripIds(before)).toStrictEqual([
       [{ blocks: ['a'] }, { blocks: ['b'] }],
       [{ blocks: ['c'] }, { blocks: ['d'] }],
       [{ blocks: ['e'] }, { blocks: ['f'] }],
@@ -2186,10 +2199,12 @@ describe('TableModel refusing impossible moves', () => {
 
   it.each([[3, 0], [0, 3], [1, 1]])('leaves the grid and widths untouched for moveColumn(%i, %i)', (from, to) => {
     const model = threeByTwo();
+    const before = model.snapshot().content;
 
     expect(model.moveColumn(from, to)).toStrictEqual({ type: 'move-column', index: from, toIndex: to });
     expect(model.colWidths).toStrictEqual([10, 20]);
-    expect(model.snapshot().content).toStrictEqual([
+    expect(model.snapshot().content).toStrictEqual(before);
+    expect(stripIds(before)).toStrictEqual([
       [{ blocks: ['a'] }, { blocks: ['b'] }],
       [{ blocks: ['c'] }, { blocks: ['d'] }],
       [{ blocks: ['e'] }, { blocks: ['f'] }],
@@ -2206,7 +2221,7 @@ describe('TableModel deleting the top row of a 2x2 merge', () => {
     ] }));
 
     expect(model.deleteRow(0)).toStrictEqual({ type: 'delete-row', index: 0, blocksToDelete: ['c'] });
-    expect(model.snapshot().content).toStrictEqual([
+    expect(stripIds(model.snapshot().content)).toStrictEqual([
       [{ blocks: ['a'], colspan: 2 }, { blocks: [], mergedInto: [0, 0] }, { blocks: ['f'] }],
       [{ blocks: ['g'] }, { blocks: ['h'] }, { blocks: ['i'] }],
     ]);
@@ -2223,7 +2238,7 @@ describe('TableModel deleting the covered row of a vertical merge', () => {
     ] }));
 
     expect(model.deleteRow(1)).toStrictEqual({ type: 'delete-row', index: 1, blocksToDelete: ['d'] });
-    expect(model.snapshot().content).toStrictEqual([
+    expect(stripIds(model.snapshot().content)).toStrictEqual([
       [{ blocks: ['a'] }, { blocks: ['b'] }],
       [{ blocks: ['e'] }, { blocks: ['f'] }],
     ]);
@@ -2240,7 +2255,7 @@ describe('TableModel deleting the left column of a 2x2 merge', () => {
     ] }));
 
     expect(model.deleteColumn(0)).toStrictEqual({ type: 'delete-column', index: 0, blocksToDelete: ['g'] });
-    expect(model.snapshot().content).toStrictEqual([
+    expect(stripIds(model.snapshot().content)).toStrictEqual([
       [{ blocks: ['a'], rowspan: 2 }, { blocks: ['c'] }],
       [{ blocks: [], mergedInto: [0, 0] }, { blocks: ['f'] }],
       [{ blocks: ['h'] }, { blocks: ['i'] }],
@@ -2257,7 +2272,7 @@ describe('TableModel deleting the covered column of a horizontal merge', () => {
     ] }));
 
     expect(model.deleteColumn(1)).toStrictEqual({ type: 'delete-column', index: 1, blocksToDelete: ['e'] });
-    expect(model.snapshot().content).toStrictEqual([
+    expect(stripIds(model.snapshot().content)).toStrictEqual([
       [{ blocks: ['a'] }, { blocks: ['c'] }],
       [{ blocks: ['d'] }, { blocks: ['f'] }],
     ]);
@@ -2274,7 +2289,7 @@ describe('TableModel inserting inside a merge', () => {
 
     model.addRow(1);
 
-    expect(model.snapshot().content).toStrictEqual([
+    expect(stripIds(model.snapshot().content)).toStrictEqual([
       [{ blocks: ['a'], rowspan: 3 }, { blocks: ['b'] }],
       [{ blocks: [], mergedInto: [0, 0] }, { blocks: [] }],
       [{ blocks: [], mergedInto: [0, 0] }, { blocks: ['d'] }],
@@ -2290,7 +2305,7 @@ describe('TableModel inserting inside a merge', () => {
 
     model.addColumn(1);
 
-    expect(model.snapshot().content).toStrictEqual([
+    expect(stripIds(model.snapshot().content)).toStrictEqual([
       [{ blocks: ['a'], colspan: 3 }, { blocks: [], mergedInto: [0, 0] }, { blocks: [], mergedInto: [0, 0] }],
       [{ blocks: ['c'] }, { blocks: [] }, { blocks: ['d'] }],
     ]);
@@ -2319,7 +2334,7 @@ describe('TableModel moving a row past a rowspan', () => {
 
     model.moveRow(3, 1);
 
-    expect(model.snapshot().content).toStrictEqual([
+    expect(stripIds(model.snapshot().content)).toStrictEqual([
       [{ blocks: ['a'] }, { blocks: ['b'] }],
       [{ blocks: ['g'] }, { blocks: ['h'] }],
       [{ blocks: ['c'], rowspan: 2 }, { blocks: ['d'] }],
@@ -2335,6 +2350,6 @@ describe('TableModel normalizing a cell with a nonsense span', () => {
 
     expect(model.getCellSpan(0, 0)).toStrictEqual({ colspan: 1, rowspan: 1 });
     expect(model.hasMerges()).toBe(false);
-    expect(model.snapshot().content).toStrictEqual([[{ blocks: ['a'] }]]);
+    expect(stripIds(model.snapshot().content)).toStrictEqual([[{ blocks: ['a'] }]]);
   });
 });

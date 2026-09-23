@@ -689,6 +689,40 @@ describe('table cell block order (WYSIWYG save-order regression)', () => {
       return cell.blocks;
     };
 
+    it('keeps the saved row and column ids through render and save', () => {
+      const { api } = createRegistryApi(['m1', 'm2']);
+      const table = new Table(createOptions(api, [[
+        { blocks: ['m1'], id: 'col-a', rowId: 'row-a' },
+        { blocks: ['m2'], id: 'col-b', rowId: 'row-a' },
+      ]]));
+      const element = table.render();
+
+      mountRoot.appendChild(element);
+      table.rendered();
+
+      const [first, second] = table.save(element).content[0] as CellContent[];
+
+      expect([first.id, second.id, first.rowId, second.rowId]).toEqual(['col-a', 'col-b', 'row-a', 'row-a']);
+    });
+
+    it('mints ids once for a table saved without them, so the next save repeats them', () => {
+      const { api } = createRegistryApi(['m1']);
+      const table = new Table(createOptions(api, [[{ blocks: ['m1'] }]]));
+      const element = table.render();
+
+      mountRoot.appendChild(element);
+      table.rendered();
+
+      const firstSave = table.save(element).content[0][0] as CellContent;
+
+      table.rendered();
+
+      const secondSave = table.save(element).content[0][0] as CellContent;
+
+      expect(firstSave.id).toEqual(expect.any(String));
+      expect([secondSave.id, secondSave.rowId]).toEqual([firstSave.id, firstSave.rowId]);
+    });
+
     it('saves the visible DOM order even when a rogue path reordered holders without syncing the model', () => {
       const { api, blocks } = createRegistryApi(['m1', 'm2']);
       const table = new Table(createOptions(api, [[{ blocks: ['m1', 'm2'] }]]));

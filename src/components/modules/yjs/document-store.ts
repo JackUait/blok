@@ -1746,7 +1746,7 @@ export class DocumentStore {
     // so a row that crossed its neighbours keeps its container; rejecting the
     // pair instead mints a fresh key and `rows.delete`s the old container —
     // the delete+insert the wrapper was built to avoid.
-    const assignment = this.pairGridRows(currentRows, source, false);
+    const assignment = this.pairGridRowsById(currentKeys, currentRows, source);
     const paired = new Set(assignment.filter((index): index is number => index !== null));
     const known = seen?.get(rows);
 
@@ -1761,12 +1761,14 @@ export class DocumentStore {
       }
     });
 
+    const taken = new Set(rows.keys());
     const nextKeys = source.map((row, index) => {
       const targetIndex = assignment[index];
 
       if (targetIndex === null) {
-        const key = this.serializer.generateRowKey();
+        const key = this.serializer.newGridRowKey(row, taken);
 
+        taken.add(key);
         rows.set(key, this.serializer.plainToYValue(row));
 
         return key;
@@ -1780,6 +1782,44 @@ export class DocumentStore {
     });
 
     this.assignKeySequence(order, nextKeys);
+  }
+
+  /**
+   * Pair saved rows with the doc's rows: first by row id (a row whose key IS
+   * the id it carries), then by content for the rest. Content alone misreads a
+   * save that both edits a row and inserts one beside it — the new row takes
+   * the edited row's container, and a peer's concurrent edit lands in it.
+   * @returns for each source row, the index into `currentKeys`, or null when new
+   */
+  private pairGridRowsById(currentKeys: string[], currentRows: unknown[], source: unknown[]): (number | null)[] {
+    const indexByKey = new Map(currentKeys.map((key, index) => [key, index]));
+    const claimed = new Set<number>();
+    const assignment = source.map((row): number | null => {
+      const id = this.serializer.gridRowId(row);
+      const index = id === undefined ? undefined : indexByKey.get(id);
+
+      if (index === undefined || claimed.has(index)) {
+        return null;
+      }
+
+      claimed.add(index);
+
+      return index;
+    });
+
+    const restSources = source.map((_, index) => index).filter((index) => assignment[index] === null);
+    const restTargets = currentKeys.map((_, index) => index).filter((index) => !claimed.has(index));
+    const rest = this.pairGridRows(
+      restTargets.map((index) => currentRows[index]),
+      restSources.map((index) => source[index]),
+      false
+    );
+
+    rest.forEach((target, rank) => {
+      assignment[restSources[rank]] = target === null ? null : restTargets[target];
+    });
+
+    return assignment;
   }
 
   /**

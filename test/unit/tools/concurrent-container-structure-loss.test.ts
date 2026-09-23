@@ -43,12 +43,17 @@ const pinClientId = (store: DocumentStore, clientId: number): void => {
   doc.clientID = clientId;
 };
 
-/** A grid of `rows` x `cols` cells, each holding one child block id `r<r>c<c>`. */
+/**
+ * A grid of `rows` x `cols` cells, each holding one child block id `r<r>c<c>`
+ * and the row/column ids every current editor gives a table at birth. Without
+ * them each peer mints its own ids on first edit, which measures an old
+ * document instead.
+ */
 const grid = (rows: number, cols: number): TableData => ({
   withHeadings: false,
   withHeadingColumn: false,
   content: Array.from({ length: rows }, (_, r) =>
-    Array.from({ length: cols }, (_, c) => ({ blocks: [`r${r}c${c}`] }))),
+    Array.from({ length: cols }, (_, c) => ({ blocks: [`r${r}c${c}`], id: `c${c}`, rowId: `r${r}` }))),
 });
 
 const twoPeers = (data: TableData): { a: DocumentStore; b: DocumentStore } => {
@@ -198,14 +203,12 @@ describe('a table merge concurrent with the peer deleting a row or column', () =
 
 describe('a column moved while the peer deletes a different column', () => {
   /**
-   * UNFIXED. `Table.save()` writes the whole `content` array, so the store only
-   * ever sees the resulting grid — how `moveColumn` builds it cannot change the
-   * merge. A column is addressed by its index in every row array, and B's
-   * index-0 delete therefore lands on whatever A's move put at index 0. Only
-   * column identity fixes it: a `columnIds` order array plus cells keyed by
-   * column id, so a move rewrites the order and a delete removes a key.
+   * Every cell carries its column id, so a row is stored keyed by column id
+   * (`isIdentityArray`): a move rewrites the order and a delete removes a key.
+   * A table saved before ids existed keeps its positional rows (there is no
+   * promotion) and still races this way.
    */
-  it.fails('deletes the column the peer asked for, and keeps the other two', () => {
+  it('deletes the column the peer asked for, and keeps the other two', () => {
     const { a, b } = twoPeers(grid(3, 3));
 
     // A drags the first column to the end: [c1, c2, c0].

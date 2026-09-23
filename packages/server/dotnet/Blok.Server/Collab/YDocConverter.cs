@@ -1385,14 +1385,7 @@ internal static class YDocConverter
       var currentKeys = GridRowKeys(grid, rows);
       var currentRows = currentKeys.Select(key => Value(rows, key)).ToList();
       var rowDepth = depth + 2;
-      var assignment = PairRows(
-          currentKeys.Count,
-          source.Count,
-          (currentIndex, sourceIndex) =>
-              SameAsLive(currentRows[currentIndex], source[sourceIndex], rowDepth),
-          (currentIndex, sourceIndex) =>
-              RowSimilarity(currentRows[currentIndex], source[sourceIndex], rowDepth),
-          enforceOrder: false);
+      var assignment = PairRowsById(currentKeys, currentRows, source, rowDepth);
       var paired = new HashSet<int>(assignment.Where(index => index >= 0));
       var nextKeys = new List<string>();
 
@@ -1404,13 +1397,18 @@ internal static class YDocConverter
         }
       }
 
+      // After the removals, as on the client: a freed key may be reused.
+      var taken = new HashSet<string>(rows.Keys, StringComparer.Ordinal);
+
       for (var index = 0; index < source.Count; index++)
       {
         var pairedWith = assignment[index];
 
         if (pairedWith < 0)
         {
-          var minted = InputWriter.GenerateRowKey();
+          var minted = InputWriter.NewGridRowKey(source[index], taken);
+
+          taken.Add(minted);
 
           rows.Set(transaction, minted, InputWriter.PlainToYValue(source[index], rowDepth));
           nextKeys.Add(minted);
@@ -1497,6 +1495,54 @@ internal static class YDocConverter
     /// For each source row, the index of the doc row it pairs with, or -1 when
     /// it is a new row.
     /// </returns>
+    /// <summary>
+    /// Pair saved rows with the doc's rows: first by row id (a row whose key IS
+    /// the id it carries), then by content for the rest. Mirrors
+    /// <c>pairGridRowsById</c> in src/components/modules/yjs/document-store.ts.
+    /// </summary>
+    private static int[] PairRowsById(
+        List<string> currentKeys, List<object?> currentRows, JsonArray source, int rowDepth)
+    {
+      var indexByKey = new Dictionary<string, int>(StringComparer.Ordinal);
+
+      for (var index = 0; index < currentKeys.Count; index++)
+      {
+        indexByKey.TryAdd(currentKeys[index], index);
+      }
+
+      var claimed = new HashSet<int>();
+      var assignment = new int[source.Count];
+
+      for (var index = 0; index < source.Count; index++)
+      {
+        var id = InputWriter.GridRowId(source[index]);
+
+        assignment[index] = id is not null &&
+            indexByKey.TryGetValue(id, out var target) &&
+            claimed.Add(target)
+            ? target
+            : -1;
+      }
+
+      var restSources = Enumerable.Range(0, source.Count).Where(index => assignment[index] < 0).ToList();
+      var restTargets = Enumerable.Range(0, currentKeys.Count).Where(index => !claimed.Contains(index)).ToList();
+      var rest = PairRows(
+          restTargets.Count,
+          restSources.Count,
+          (currentIndex, sourceIndex) =>
+              SameAsLive(currentRows[restTargets[currentIndex]], source[restSources[sourceIndex]], rowDepth),
+          (currentIndex, sourceIndex) =>
+              RowSimilarity(currentRows[restTargets[currentIndex]], source[restSources[sourceIndex]], rowDepth),
+          enforceOrder: false);
+
+      for (var rank = 0; rank < rest.Length; rank++)
+      {
+        assignment[restSources[rank]] = rest[rank] < 0 ? -1 : restTargets[rest[rank]];
+      }
+
+      return assignment;
+    }
+
     private static int[] PairRows(
         int currentCount,
         int sourceCount,
@@ -2128,10 +2174,13 @@ internal static class YDocConverter
     {
       var rowEntries = new List<KeyValuePair<string, object?>>();
       var order = new List<object?>();
+      var taken = new HashSet<string>(StringComparer.Ordinal);
 
       foreach (var row in rows)
       {
-        var key = GenerateRowKey();
+        var key = NewGridRowKey(row, taken);
+
+        taken.Add(key);
 
         // The row wrapper adds a container level of its own (__rows), so a
         // grid costs two levels per row, matching the read-back walk.
@@ -2328,6 +2377,57 @@ internal static class YDocConverter
     internal static string GenerateRowKey()
     {
       return new string(RandomNumberGenerator.GetItems<char>(RowKeyAlphabet, RowKeyLength));
+    }
+
+    /// <summary>
+    /// The id a grid row names itself by: the `rowId` every one of its cells
+    /// carries (a table row). Null when the row is empty, a cell lacks it, or
+    /// the cells disagree — such a row gets a minted key and is paired by
+    /// content. Mirrors <c>gridRowId</c> in
+    /// src/components/modules/yjs/serializer.ts.
+    /// </summary>
+    internal static string? GridRowId(JsonNode? row)
+    {
+      if (row is not JsonArray cells || cells.Count == 0)
+      {
+        return null;
+      }
+
+      string? first = null;
+
+      foreach (var cell in cells)
+      {
+        if (cell is not JsonObject entry ||
+            entry["rowId"] is not JsonValue id ||
+            id.GetValueKind() != JsonValueKind.String)
+        {
+          return null;
+        }
+
+        var value = id.GetValue<string>();
+
+        if (first is null)
+        {
+          first = value;
+        }
+        else if (!string.Equals(first, value, StringComparison.Ordinal))
+        {
+          return null;
+        }
+      }
+
+      return string.IsNullOrEmpty(first) ? null : first;
+    }
+
+    /// <summary>
+    /// The key a new grid row is stored under: its own row id when no other
+    /// row holds it, else a minted key. Mirrors <c>newGridRowKey</c>.
+    /// </summary>
+    internal static string NewGridRowKey(JsonNode? row, HashSet<string> taken)
+    {
+      var id = GridRowId(row);
+
+      return id is not null && !taken.Contains(id) ? id : GenerateRowKey();
     }
 
     private static KeyValuePair<string, object?> Pair(string key, object? value)

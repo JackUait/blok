@@ -9,6 +9,10 @@ import { ToolboxConfig } from './tool-settings';
  */
 export interface CellContent {
   blocks: string[];
+  /** Column id. Every cell of one column carries the same value. Minted on load when missing. */
+  id?: string;
+  /** Row id. Every cell of one row carries the same value. Minted on load when missing. */
+  rowId?: string;
 }
 
 /**

@@ -293,10 +293,7 @@ test.beforeEach(async ({ page }) => {
 
 test.describe('GES pointer drag', () => {
   // Undo must restore the exact prior state; redo the exact post-gesture state.
-  // Observed: after one undo the DOM order is p-after, p-mid, p-mid2 (both blocks land AFTER p-after).
-  // Redo then interleaves them: k1, p-mid, k2, p-mid2. Same with a callout, and via history.undo().
   test('GES-1: undo of a multi-block drag into a toggle puts the blocks back where they were', async ({ page }) => {
-    test.fail();
     await createBlok(page, kidsDoc('toggle'));
     const before = await domTree(page);
 
@@ -313,10 +310,7 @@ test.describe('GES pointer drag', () => {
   });
 
   // Undo must restore the exact prior state, and the DOM must match save().
-  // Observed: save() is right after undo, but p-mid's holder stays inside cl1 in the DOM:
-  // Expected ["p-mid", null], Received ["p-mid", "cl1"].
   test('GES-2: undo of dragging a block beside a column child (third column) takes it out of the column list', async ({ page }) => {
-    test.fail();
     await createBlok(page, COLUMNS_DOC);
     const before = await domTree(page);
 
@@ -373,10 +367,7 @@ test.describe('GES pointer drag', () => {
 
 test.describe('GES keyboard move', () => {
   // Undo must restore the exact prior state. A flat list and a column list both pass.
-  // Observed: the move itself is right (a lands after L2) and canUndo() is true, but undo changes
-  // nothing: save() order stays x, xc, a, b. Same via history.undo().
   test('GES-4: undo of Cmd+Shift+Down past a list item with a nested item moves the block back', async ({ page }) => {
-    test.fail();
     await createBlok(page, [
       P('a', 'A'),
       { id: 'x', type: 'list', data: { text: 'L1', style: 'unordered' }, content: ['xc'] },

@@ -640,12 +640,7 @@ test.describe('W4T stub and columns', () => {
     expect((await saved(page)).map((b) => b.id)).toEqual(['p0', 'st', 'p1']);
   });
 
-  // Defect: the double-click width reset is not in history at all (canUndo() is false right after it).
-  // Root cause: columns-shared.ts:334-338 sets flex-grow on the column holders (outside any observed subtree)
-  // and never calls persistColumnWidths like drag and keyboard resize do. If it did, family 3 would still drop it:
-  // Column.save() omits a ratio of 1 (column/index.ts:265).
   test('W4T-27: undo of a column width reset (double-click) keeps the columns and restores the ratio', async ({ page }) => {
-    test.fail();
     await mount(page, [
       ANCHOR,
       { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },

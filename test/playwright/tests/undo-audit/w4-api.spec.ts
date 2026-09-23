@@ -179,13 +179,9 @@ test.describe('undo audit W4A: public API, events, history engine', () => {
     expect(await screenTexts(page)).toEqual(['alpha', 'one', 'two', 'three']);
   });
 
-  // Defect: undo of a block delete puts the block back at the wrong index when a move ran (and was undone) after the delete.
-  // Root cause: a move rewrites the order array as remove + re-insert of the id (document-store.ts:810-818 applyPlacement,
-  // document-store.ts:755 moveBlock), so the id's neighbours become new Yjs items. The delete's undo is a plain Yjs
-  // resurrection (undo-history.ts:1047 undoManager.undo) anchored to the ORIGINAL neighbour items, and Yjs integrates it
-  // after the re-inserted id. Reproduced with bare Yjs: [a,b,c] -> delete b -> move c -> move c back -> undo = [a,c,b].
-  test('W4A-1: undo of a delete made before a keyboard move puts the block back where it was', async ({ page, browserName }) => {
-    test.fail(browserName === 'chromium', 'W4A-1: resurrected id lands after the re-inserted neighbour');
+  // A move re-inserts the moved id as a new Yjs item, so a plain Yjs resurrection of b lands after it.
+  // UndoHistory re-places b from where it sat when it was deleted.
+  test('W4A-1: undo of a delete made before a keyboard move puts the block back where it was', async ({ page }) => {
     await mount(page, [P('a', 'alpha'), P('b', 'beta'), P('c', 'gamma')]);
     await page.evaluate(() => window.blokInstance?.blocks.delete(1, false));
     await gap(page);
@@ -202,8 +198,7 @@ test.describe('undo audit W4A: public API, events, history engine', () => {
   });
 
   // Same defect and root cause as W4A-1, through blocks.move() and history.undo().
-  test('W4A-1b: undo of blocks.delete made before blocks.move puts the block back where it was', async ({ page, browserName }) => {
-    test.fail(browserName === 'chromium', 'W4A-1b: resurrected id lands after the re-inserted neighbour');
+  test('W4A-1b: undo of blocks.delete made before blocks.move puts the block back where it was', async ({ page }) => {
     await mount(page, [P('a', 'alpha'), P('b', 'beta'), P('c', 'gamma')]);
     await page.evaluate(() => window.blokInstance?.blocks.delete(1, false));
     await gap(page);

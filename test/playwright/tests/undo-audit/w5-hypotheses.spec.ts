@@ -485,27 +485,21 @@ const deleteMoveUndo = async (
 };
 
 test.describe('W5X delete then move (W4A-1 via user gestures)', () => {
-  // Same defect and root cause as W4A-1 (document-store.ts:810-818 applyPlacement re-inserts the moved id;
-  // the delete's undo resurrects b anchored to the ORIGINAL neighbour items), reached by user gestures only.
-  // Observed for every delete gesture and for either neighbour moving: ["alpha", "gamma", ""].
+  // Same guarded behaviour as W4A-1, reached by user gestures only.
   test('W5X-5: Backspace on an empty block, Cmd+Shift+Up on the next one, two undos put the block back', async ({ page }) => {
-    test.fail(true, 'W5X-5 resurrected id lands after the re-inserted neighbour (W4A-1)');
     expect(await deleteMoveUndo(page, deleteByBackspace, moveCUpByKeyboard, ['gamma', 'alpha']), 'after redo of the delete').toEqual(['alpha', 'gamma']);
   });
 
   test('W5X-6: block-menu Delete, drag the next block above, two undos put the block back', async ({ page }) => {
-    test.fail(true, 'W5X-6 resurrected id lands after the re-inserted neighbour (W4A-1)');
     expect(await deleteMoveUndo(page, deleteByMenu, p => dragBlock(p, 'c', 'a'), ['gamma', 'alpha']), 'after redo of the delete').toEqual(['alpha', 'gamma']);
   });
 
   test('W5X-7: block-selection Delete, Cmd+Shift+Up on the next one, two undos put the block back', async ({ page }) => {
-    test.fail(true, 'W5X-7 resurrected id lands after the re-inserted neighbour (W4A-1)');
     expect(await deleteMoveUndo(page, deleteBySelection, moveCUpByKeyboard, ['gamma', 'alpha']), 'after redo of the delete').toEqual(['alpha', 'gamma']);
   });
 
-  // The PREVIOUS neighbour moves instead.
+  // Cmd+Shift+Down on alpha lifts gamma above it, so gamma (b's NEXT neighbour) is what moves here too.
   test('W5X-8: Backspace on an empty block, Cmd+Shift+Down on the previous one, two undos put the block back', async ({ page }) => {
-    test.fail(true, 'W5X-8 resurrected id lands after the re-inserted neighbour (W4A-1)');
     expect(await deleteMoveUndo(page, deleteByBackspace, async (p) => {
       await editable(p, 'a').click();
       await p.keyboard.press(MOVE_DOWN);

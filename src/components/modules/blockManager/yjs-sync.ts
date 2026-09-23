@@ -9,6 +9,7 @@ import type { BlockToolData, SanitizerConfig } from '../../../../types';
 import { BlockToolAPI } from '../../block';
 import type { Block } from '../../block';
 import { modificationsObserverBatchTimeout } from '../../constants';
+import { DATA_ATTR } from '../../constants/data-attributes';
 import { logLabeled } from '../../utils';
 import { isChildToolAllowed } from '../../utils/child-tools';
 import { moveElementAfter, moveElementBefore } from '../../utils/html';
@@ -1002,7 +1003,11 @@ export class BlockYjsSync {
         this.batchReparentedInto.add(remoteParentId);
         this.warnIfChildToolDenied(block, remoteParentId);
       }
-    } else if (block.parentId !== null) {
+    } else if (block.parentId !== null || block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`) !== null) {
+      // A root block whose holder still sits in a container slot takes this
+      // branch too: a removed column promotes its children in memory but lifts
+      // their holders only one level, into the columns row.
+      //
       // A non-root → root move DELETES the parentId key (the serializer never
       // writes null for root), so the branch above cannot see it. Every replay
       // origin lands here: only DRAG moves restore the parent through

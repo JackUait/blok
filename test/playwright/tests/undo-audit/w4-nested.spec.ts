@@ -593,8 +593,8 @@ isolatedTest.describe('framework adapters', () => {
   // Root cause: yjs-sync.ts:1112 applies the replay with block.setData(data) and
   // emits no BlockChanged. A host hears about a replay only when setData happens
   // to leak a DOM change the observer sees. The React host is
-  // data-blok-mutation-free (createReactBlock.tsx:822), so nothing leaks. Vanilla
-  // toggle and Vue blocks do leak one (see the controls below).
+  // data-blok-mutation-free (createReactBlock.tsx:822), so nothing leaks. So is the
+  // Vue host (W4N-4c). A vanilla toggle does leak one (see the control below).
   isolatedTest('W4N-4: undo of a React block change reaches onSave', async ({ page }) => {
     isolatedTest.fail(true, 'W4N-4 replay setData emits no change event');
     await openAdapter(page, 'react', 'onSave');
@@ -636,7 +636,10 @@ isolatedTest.describe('framework adapters', () => {
     expect(await lastEmitted(page, 'p1')).toEqual({ text: 'Hello from React' });
   });
 
-  isolatedTest('control: undo of a Vue block change reaches update:data', async ({ page }) => {
+  // Same root cause as W4N-4. This passed only while every v-model echo re-ran the whole
+  // read-only cascade on an editable editor; readOnly.set(false) is now a no-op there.
+  isolatedTest('W4N-4c: undo of a Vue block change reaches update:data', async ({ page }) => {
+    isolatedTest.fail(true, 'W4N-4c replay setData emits no change event');
     await openAdapter(page, 'vue', 'vmodel');
     await page.getByTestId('rc-inc').click();
     await gap(page, SAVE_SETTLE);
@@ -684,7 +687,7 @@ isolatedTest.describe('framework adapters', () => {
     expect(await read()).toEqual({ text: 'Tog', isOpen: true });
   });
 
-  // Vue v-model is left out: its redo misplaces text (W4N-5).
+  // Vue v-model is covered by W4N-5.
   for (const [kind, mode] of [['react', 'none'], ['react', 'onSave'], ['react', 'onChange'], ['vue', 'none']] as const) {
     isolatedTest(`works: ${kind} ${mode}: typing undo/redo with the host echoing data back`, async ({ page }) => {
       await openAdapter(page, kind, mode);
@@ -756,13 +759,9 @@ isolatedTest.describe('framework adapters', () => {
     await gap(page, 300);
   };
 
-  // Defect: with v-model (update:data -> data) the letter lands at the START of
-  // the paragraph: "xHello from Vue ". Traced in W5R-2 (w5-rootcause.spec.ts):
-  // this is a TYPING defect, not a redo one — every echo re-runs useBlok's
-  // watchers, which call readOnly.set(false); readonly.ts runs BlockSelection's
-  // toggle (removeAllRanges) before its no-op check, so the caret is lost.
+  // Every v-model echo calls readOnly.set(false) on an editable editor. That must be a no-op,
+  // or the caret is lost and the letter lands at the start of the paragraph.
   isolatedTest('W4N-5: redo in a Vue v-model editor puts the letter back where it was typed', async ({ page }) => {
-    isolatedTest.fail(true, 'W4N-5 v-model redo relocates the insert to index 0');
     await spaceThenLetterUndoRedo(page, 'vmodel');
 
     expect(await docText(page, 'p1')).toBe('Hello from Vue x');

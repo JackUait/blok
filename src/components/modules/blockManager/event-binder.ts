@@ -81,6 +81,12 @@ export class BlockEventBinder {
   private readonly dispatchedEvents = new WeakSet<Event>();
 
   /**
+   * Blocks already subscribed to didMutated. `disableBindings` clears only DOM
+   * listeners, so every re-bind would add one more write-back per mutation.
+   */
+  private readonly mutationSubscribed = new WeakSet<Block>();
+
+  /**
    * @param dependencies - Required dependencies
    */
   constructor(dependencies: BlockEventBinderDependencies) {
@@ -126,6 +132,11 @@ export class BlockEventBinder {
         }
       }
     });
+
+    if (this.mutationSubscribed.has(block)) {
+      return;
+    }
+    this.mutationSubscribed.add(block);
 
     block.on('didMutated', (affectedBlock: Block) => {
       return onBlockMutated(BlockChangedMutationType, affectedBlock, {

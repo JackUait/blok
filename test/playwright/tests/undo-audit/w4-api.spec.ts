@@ -420,11 +420,8 @@ test.describe('undo audit W4A: public API, events, history engine', () => {
     expect(await texts(page)).toEqual(['alpha']);
   });
 
-  // Defect: holding Cmd+Z drops every other key repeat when the OS repeats faster than 50 ms, so 5 repeats undo 3 steps.
-  // Root cause: keyboard.ts:960 dedupes a same-action keydown within 50 ms to catch duplicate events of ONE press,
-  // but never checks event.repeat, so real key repeats (event.repeat === true) are swallowed too.
-  test('W4A-2: holding Cmd+Z undoes one step per key repeat', async ({ page, browserName }) => {
-    test.fail(browserName === 'chromium', 'W4A-2: repeats under 50 ms apart are deduped');
+  // Key repeats are real presses: the 50 ms dedupe must not swallow them, however fast the OS repeats.
+  test('W4A-2: holding Cmd+Z undoes one step per key repeat', async ({ page }) => {
     await mount(page, [P('a', 'a0')]);
     await fiveSteps(page);
     await holdUndo(page, 5, 30);

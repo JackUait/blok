@@ -108,6 +108,19 @@ describe('readOnly.set with options', () => {
     expect(booted.moduleInstances.ReadOnly.isControlsHidden).toBe(false);
   });
 
+  it('set(false) on an editable editor runs no module toggle, so the caret survives', async () => {
+    const booted = await boot();
+    const readOnlyApi = booted.moduleInstances.API.methods.readOnly;
+    const selectionToggle = vi.spyOn(booted.moduleInstances.BlockSelection, 'toggleReadOnly');
+    const bindingsToggle = vi.spyOn(booted.moduleInstances.BlockManager, 'toggleReadOnly');
+
+    await readOnlyApi.set(false);
+
+    expect(selectionToggle).not.toHaveBeenCalled();
+    expect(bindingsToggle).not.toHaveBeenCalled();
+    expect(booted.moduleInstances.ReadOnly.isEnabled).toBe(false);
+  });
+
   it('plain boolean call keeps working unchanged (backward compatibility)', async () => {
     const booted = await boot();
     const readOnlyApi = booted.moduleInstances.API.methods.readOnly;

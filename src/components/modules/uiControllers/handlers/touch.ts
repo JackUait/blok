@@ -46,6 +46,13 @@ export const createRedactorTouchHandler = (
      */
     const clickedNode = getClickedNode(initialTarget, event, deps.redactorElement);
 
+    // A press inside a nested editor mounted in this redactor is that editor's.
+    const editorSelector = '[data-blok-testid="blok-editor"]';
+
+    if (clickedNode.closest(editorSelector) !== deps.redactorElement.closest(editorSelector)) {
+      return;
+    }
+
     /**
      * Select clicked Block as Current
      */

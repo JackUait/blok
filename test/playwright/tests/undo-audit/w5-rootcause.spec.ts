@@ -383,15 +383,8 @@ test.describe('W5R root causes', () => {
     expect(local[0]).toBe('a:HelloX1');
   });
 
-  // W4N-5 root cause. NOT a redo defect: the doc already reads "xHello from Vue&nbsp;" BEFORE the undo; the
-  // letter was typed at offset 0. Every update:data re-render re-runs each useBlok watcher whose source list
-  // holds the `editor` shallowRef (Vue forceTrigger for shallow sources, vendor/vue.mjs:2015/2078), so
-  // packages/vue/src/useBlok.ts:338-350 calls ed.readOnly.set(false) on an already-editable editor. Core runs
-  // the module cascade BEFORE its no-op check (readonly.ts:188-198 vs :203); BlockSelection.toggleReadOnly
-  // (blockSelection.ts:302-305) calls removeAllRanges. Trace: update:data -> api.readOnly.set [false] ->
-  // sel.removeAllRanges from toggleReadOnly -> caret "none" -> next key lands at p1@0.
+  // A Vue v-model echo calls readOnly.set(false) on an already-editable editor. That is a no-op and keeps the caret.
   isolatedTest('W5R-2: a Vue v-model echo keeps the caret where the user is typing', async ({ page }) => {
-    isolatedTest.fail(true, 'W5R-2 (W4N-5): v-model echo -> readOnly.set(false) -> removeAllRanges');
     isolatedTest.setTimeout(60_000);
     await openVue(page, 'vmodel');
     await instrument(page, 'p1');
@@ -435,7 +428,6 @@ test.describe('W5R root causes', () => {
 
   // Core half of W5R-2, no framework: a no-op readOnly.set(false) kills a live caret.
   test('W5R-2b: readOnly.set(false) on an editable editor keeps the caret', async ({ page }) => {
-    test.fail(true, 'W5R-2b: readonly.ts:188-198 runs the toggleReadOnly cascade before the no-op check at :203');
     await mount(page, [{ id: 'p', type: 'paragraph', data: { text: 'Hello' } }], false);
     await editable(page, 'p').click();
     await page.keyboard.press('End');
@@ -450,12 +442,8 @@ test.describe('W5R root causes', () => {
     expect(saved).toEqual(['p:Hellox']);
   });
 
-  // Same cascade, second effect: BlockManager.toggleReadOnly(false) (blockManager.ts:520-522) ->
-  // eventBinder.enableBindings re-runs bindBlockEvents, whose block.on('didMutated', ...) (event-binder.ts:130)
-  // is never removed by listeners.clearAll(). Each no-op set(false) adds one more full save per keystroke.
-  // Observed: 1 syncBlockDataToYjs per key before, 4 after three set(false) calls.
+  // Each block subscribes to didMutated once, so extra set(false) calls add no write-back per keystroke.
   test('W5R-2c: repeated readOnly.set(false) does not multiply the write-back per keystroke', async ({ page }) => {
-    test.fail(true, 'W5R-2c: event-binder.ts:130 didMutated subscription accumulates on every enableBindings');
     await mount(page, [{ id: 'p', type: 'paragraph', data: { text: 'Hello' } }], false);
     await instrument(page, 'p');
     const syncsForOneKey = async (): Promise<number> => {

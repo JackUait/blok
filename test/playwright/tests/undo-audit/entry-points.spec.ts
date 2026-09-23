@@ -82,9 +82,7 @@ const canRedo = (page: Page): Promise<boolean | undefined> => page.evaluate(() =
 
 test.describe('undo audit — entry points', () => {
   // Source: multi-editor document-listener law — one press acts in one editor.
-  // Observed: both editors were undone by one press.
   test('ENT-1: Cmd+Z with focus on <body> undoes at most one of two editors', async ({ page }) => {
-    test.fail();
     await mount(page, [
       { key: 'b1', holder: 'ed1', blocks: [{ type: 'paragraph', data: { text: 'one' } }] },
       { key: 'b2', holder: 'ed2', blocks: [{ type: 'paragraph', data: { text: 'two' } }] },
@@ -107,9 +105,7 @@ test.describe('undo audit — entry points', () => {
   });
 
   // Source: a key press in the host page's own field is not Blok's.
-  // Observed: Expected ["alphaX"], Received ["alpha"]; host kept "hostQ" (its undo was swallowed).
   test('ENT-2: Cmd+Z in a host contenteditable outside the editor leaves Blok alone', async ({ page }) => {
-    test.fail();
     await mount(page, [{ key: 'blokInstance', holder: 'blok', blocks: [{ type: 'paragraph', data: { text: 'alpha' } }] }]);
     await typeAtEnd(page, 'alpha', 'X');
     await gap(page);
@@ -133,10 +129,8 @@ test.describe('undo audit — entry points', () => {
 
   // Source: undo must restore the exact prior state and keep redo.
   // Edit > Undo is simulated with a CDP key event carrying the native "undo" command (mac only).
-  // Observed: canRedo Expected true, Received false; the next Cmd+Z re-adds "XYZ".
   test('ENT-3: native undo (Edit menu, historyUndo) goes through Blok history', async ({ page }) => {
     test.skip(process.platform !== 'darwin', 'CDP editing commands exist only on mac');
-    test.fail();
     await mount(page, [{ key: 'blokInstance', holder: 'blok', blocks: [{ type: 'paragraph', data: { text: 'alpha' } }] }]);
     await typeAtEnd(page, 'alpha', 'XYZ');
     await gap(page);
@@ -151,9 +145,7 @@ test.describe('undo audit — entry points', () => {
 
   // Source: handleTurnInto already matches event.code so it works on any layout.
   // Assumption (not measured on a real layout): a Cyrillic layout sends key "я", code "KeyZ".
-  // Observed: Expected ["alpha"], Received ["alphaXYZ"].
   test('ENT-4: Cmd/Ctrl+Z on a non-Latin layout runs Blok undo', async ({ page }) => {
-    test.fail();
     await mount(page, [{ key: 'blokInstance', holder: 'blok', blocks: [{ type: 'paragraph', data: { text: 'alpha' } }] }]);
     await typeAtEnd(page, 'alpha', 'XYZ');
     await gap(page);
@@ -164,9 +156,7 @@ test.describe('undo audit — entry points', () => {
   });
 
   // Source: the audit spec — undo does nothing in read-only (the keyboard path already stands down).
-  // Observed: Expected ["alphaX"], Received ["alpha"].
   test('ENT-5: history.undo() does not change a read-only editor', async ({ page }) => {
-    test.fail();
     await mount(page, [{ key: 'blokInstance', holder: 'blok', blocks: [{ type: 'paragraph', data: { text: 'alpha' } }] }]);
     await typeAtEnd(page, 'alpha', 'X');
     await gap(page);
@@ -182,9 +172,7 @@ test.describe('undo audit — entry points', () => {
   // Source: undo must restore the exact prior state and keep redo.
   // Focus sits in the block settings search input; Blok skips inputs, the browser
   // runs its own historyUndo on the paragraph behind it.
-  // Observed: canRedo Expected true, Received false; the next Cmd+Z re-adds "XYZ".
   test('ENT-6: Cmd+Z with block settings open does not run the browser undo on the block', async ({ page }) => {
-    test.fail();
     await mount(page, [{ key: 'blokInstance', holder: 'blok', blocks: [{ type: 'paragraph', data: { text: 'alpha' } }] }]);
     await typeAtEnd(page, 'alpha', 'XYZ');
     await gap(page);

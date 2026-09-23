@@ -1666,6 +1666,62 @@ describe('KeyboardController — mutation coverage', () => {
 
       expect(harness.blok.YjsManager.redo).toHaveBeenCalledTimes(2);
     });
+
+    it('undoes once per key repeat while Ctrl+Z is held', () => {
+      const harness = enabledHarness();
+
+      harness.press(harness.outside, { key: 'z', ctrlKey: true });
+      harness.press(harness.outside, { key: 'z', ctrlKey: true, repeat: true });
+      harness.press(harness.outside, { key: 'z', ctrlKey: true, repeat: true });
+
+      expect(harness.blok.YjsManager.undo).toHaveBeenCalledTimes(3);
+    });
+
+    it('redoes once per key repeat while Ctrl+Y is held', () => {
+      const harness = enabledHarness();
+
+      harness.press(harness.outside, { key: 'y', code: 'KeyY', ctrlKey: true });
+      harness.press(harness.outside, { key: 'y', code: 'KeyY', ctrlKey: true, repeat: true });
+
+      expect(harness.blok.YjsManager.redo).toHaveBeenCalledTimes(2);
+    });
+
+    it('undoes on a checkbox inside the editor, which has no text undo of its own', () => {
+      const harness = enabledHarness();
+      const checkbox = document.createElement('input');
+
+      checkbox.type = 'checkbox';
+      harness.redactor.appendChild(checkbox);
+      harness.press(checkbox, { key: 'z', ctrlKey: true });
+
+      expect(harness.blok.YjsManager.undo).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves Ctrl+Z in a text input to the input', () => {
+      const harness = enabledHarness();
+      const input = document.createElement('input');
+
+      harness.redactor.appendChild(input);
+      harness.press(input, { key: 'z', ctrlKey: true });
+
+      expect(harness.blok.YjsManager.undo).not.toHaveBeenCalled();
+    });
+
+    it('does not undo on Dvorak, where the physical Z key types ";"', () => {
+      const harness = enabledHarness();
+
+      harness.press(harness.outside, { key: ';', code: 'KeyZ', ctrlKey: true });
+
+      expect(harness.blok.YjsManager.undo).not.toHaveBeenCalled();
+    });
+
+    it('redoes on Ctrl+Y on a non-Latin layout', () => {
+      const harness = enabledHarness();
+
+      harness.press(harness.outside, { key: 'н', code: 'KeyY', ctrlKey: true });
+
+      expect(harness.blok.YjsManager.redo).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('default key handling', () => {

@@ -229,14 +229,9 @@ test.describe('W4D card page (drawer)', () => {
     expect(await rowData(page, 'row-1')).toEqual(row1);
   });
 
-  // Defect: a mousedown in the card page's nested editor reaches the OUTER editor's capture-phase
-  // redactor listener. It cannot map the nested holder to one of its own blocks, so it treats the
-  // press as "outside any block" and calls Caret.setToTheLastBlock(), which appends an empty
-  // paragraph to the outer document (a real undo step) when the last block is not empty.
-  // Root cause: uiControllers/handlers/touch.ts:52-58 (setCurrentBlockByChildNode -> undefined ->
-  // setToTheLastBlock) -> caret.ts:497-498 insertAtEnd; listener bound in ui.ts:1076 (capture on redactor).
+  // A press in the card page's nested editor belongs to that editor. The outer editor's redactor
+  // mousedown handler must not treat it as a press below its own blocks.
   test('W4D-3: clicking into a card page body adds no block to the outer document', async ({ page }) => {
-    test.fail(true, 'W4D-3: outer editor appends a paragraph for a press in the nested page editor');
     await mount(page);
     await gap(page);
     const before = await ids(page);
@@ -254,7 +249,6 @@ test.describe('W4D card page (drawer)', () => {
   // Same press, sent as a bare mousedown (no click): the stray block still appears, so it is the
   // mousedown path (touch.ts), not the bottom-zone click path (ui.ts:1225).
   test('W4D-3b: a bare mousedown in a card page body adds no block to the outer document', async ({ page }) => {
-    test.fail(true, 'W4D-3: outer editor appends a paragraph for a press in the nested page editor');
     await mount(page);
     await gap(page);
     const before = await ids(page);

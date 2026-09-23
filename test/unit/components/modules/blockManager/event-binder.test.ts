@@ -170,6 +170,19 @@ describe('BlockEventBinder', () => {
       );
     });
 
+    it('subscribes to didMutated once per block across read-only round trips', () => {
+      const block = createMockBlock();
+
+      binder.bindBlockEvents(block);
+      binder.disableBindings();
+      binder.enableBindings([block]);
+      binder.enableBindings([block]);
+
+      const subscriptions = (block.on as ReturnType<typeof vi.fn>).mock.calls.filter((c) => c[0] === 'didMutated');
+
+      expect(subscriptions).toHaveLength(1);
+    });
+
     it('delegates to BlockEvents.keydown when keydown event fires', () => {
       const block = createMockBlock();
       binder.bindBlockEvents(block);

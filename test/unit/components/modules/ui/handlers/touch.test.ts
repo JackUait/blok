@@ -161,6 +161,30 @@ describe('Touch Handler', () => {
   });
 
   describe('createRedactorTouchHandler', () => {
+    it('ignores a press inside a nested editor mounted in the redactor', () => {
+      const wrapper = document.createElement('div');
+
+      wrapper.setAttribute('data-blok-testid', 'blok-editor');
+      document.body.appendChild(wrapper);
+      wrapper.appendChild(redactorElement);
+
+      const nestedEditor = document.createElement('div');
+      const nestedBlock = document.createElement('div');
+
+      nestedEditor.setAttribute('data-blok-testid', 'blok-editor');
+      nestedEditor.appendChild(nestedBlock);
+      redactorElement.appendChild(nestedEditor);
+
+      const handler = createRedactorTouchHandler({ Blok: blok, redactorElement });
+      const event = new MouseEvent('mousedown', { bubbles: true });
+
+      Object.defineProperty(event, 'target', { value: nestedBlock });
+      handler(event);
+
+      expect(blok.Caret.setToTheLastBlock).not.toHaveBeenCalled();
+      expect(blok.BlockManager.setCurrentBlockByChildNode).not.toHaveBeenCalled();
+    });
+
     describe('same-trigger press (clicking the item that opened the popover does nothing)', () => {
       afterEach(() => {
         PopoverRegistry.resetForTests();

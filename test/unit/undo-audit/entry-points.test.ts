@@ -82,9 +82,7 @@ describe('undo audit — entry points', () => {
     vi.restoreAllMocks();
   });
 
-  // ENT-1. Observed: both editors' undo ran (A: 1 call, B: 1 call).
-  // Expected per the multi-editor document-listener law: one press = one editor.
-  it.fails('ENT-1: one Ctrl+Z with focus on <body> undoes at most one of two editors', () => {
+  it('ENT-1: one Ctrl+Z with focus on <body> undoes at most one of two editors', () => {
     const a = mountEditor();
     const b = mountEditor();
 
@@ -93,13 +91,37 @@ describe('undo audit — entry points', () => {
     expect(a.undo.mock.calls.length + b.undo.mock.calls.length).toBeLessThanOrEqual(1);
   });
 
-  // ENT-2. Observed: undo called once and the event was preventDefault-ed.
-  // Expected: a keystroke in the host page's own editable field is not Blok's.
-  it.fails('ENT-2: Ctrl+Z in a host contenteditable outside the editor leaves Blok alone', () => {
+  it('Ctrl+Z with focus on <body> undoes the editor that was used last', () => {
+    const a = mountEditor();
+    const b = mountEditor();
+
+    b.redactor.dispatchEvent(new Event('focusin', { bubbles: true }));
+    pressUndo(document.body);
+
+    expect(a.undo).not.toHaveBeenCalled();
+    expect(b.undo).toHaveBeenCalledTimes(1);
+  });
+
+  it('a historyUndo beforeinput in a text input inside the editor stays native', () => {
+    const editor = mountEditor();
+    const input = document.createElement('input');
+
+    editor.redactor.appendChild(input);
+
+    const event = new InputEvent('beforeinput', { inputType: 'historyUndo', bubbles: true, cancelable: true });
+
+    input.dispatchEvent(event);
+
+    expect(editor.undo).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('ENT-2: Ctrl+Z in a host contenteditable outside the editor leaves Blok alone', () => {
     const editor = mountEditor();
     const host = document.createElement('div');
 
-    host.contentEditable = 'true';
+    // jsdom does not reflect the contentEditable property to the attribute.
+    host.setAttribute('contenteditable', 'true');
     document.body.appendChild(host);
 
     const event = pressUndo(host);
@@ -108,9 +130,7 @@ describe('undo audit — entry points', () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
-  // ENT-4. Observed: undo not called — handleZ matches event.key, not event.code.
-  // Expected: layout-independent match, as handleTurnInto already does via event.code.
-  it.fails('ENT-4: Ctrl+Z on a non-Latin layout (key "я", code KeyZ) runs Blok undo', () => {
+  it('ENT-4: Ctrl+Z on a non-Latin layout (key "я", code KeyZ) runs Blok undo', () => {
     const editor = mountEditor();
 
     pressUndo(editor.redactor, { key: 'я', code: 'KeyZ', ctrlKey: true });
@@ -118,9 +138,7 @@ describe('undo audit — entry points', () => {
     expect(editor.undo).toHaveBeenCalledTimes(1);
   });
 
-  // ENT-3. Observed: undo not called, beforeinput not prevented, so the browser's
-  // native contenteditable undo runs instead.
-  it.fails('ENT-3: a historyUndo beforeinput (Edit menu) is routed to Blok undo', () => {
+  it('ENT-3: a historyUndo beforeinput (Edit menu) is routed to Blok undo', () => {
     const editor = mountEditor();
     const event = new InputEvent('beforeinput', { inputType: 'historyUndo', bubbles: true, cancelable: true });
 
@@ -130,9 +148,7 @@ describe('undo audit — entry points', () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
-  // ENT-5. Observed: YjsManager.undo called while read-only is on.
-  // Expected: undo does nothing in read-only (the keyboard path already stands down).
-  it.fails('ENT-5: history.undo() does nothing while the editor is read-only', () => {
+  it('ENT-5: history.undo() does nothing while the editor is read-only', () => {
     const moduleConfig: ModuleConfig = { config: {}, eventsDispatcher: new EventsDispatcher<BlokEventMap>() };
     const api = new HistoryAPI(moduleConfig);
     const undo = vi.fn();

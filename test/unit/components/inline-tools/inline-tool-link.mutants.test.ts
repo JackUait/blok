@@ -1191,7 +1191,7 @@ describe('LinkInlineTool — mutation coverage', () => {
       const urlClasses = harness.urlLabel.className.split(' ');
       const titleClasses = harness.titleLabel.className.split(' ');
 
-      expect(urlClasses).toContain('px-2.5');
+      expect(urlClasses).toContain('px-0.5');
       expect(titleClasses.filter((token) => !urlClasses.includes(token))).toStrictEqual(['mt-3.5']);
       expect(urlClasses.filter((token) => !titleClasses.includes(token))).toStrictEqual([]);
     });

@@ -383,8 +383,8 @@ export class LinkInlineTool implements InlineTool {
     const label = document.createElement('div');
 
     label.className = twMerge(
-      // px-2.5 keeps the caption on the same optical column as the input text.
-      'hidden px-2.5 mb-1.5 text-xs font-normal tracking-[0.01em] text-gray-text',
+      // px-0.5 lines the caption up with the input's edge, not its text.
+      'hidden px-0.5 mb-1.5 text-xs font-normal tracking-[0.01em] text-gray-text',
       topGap ? 'mt-3.5' : ''
     );
     label.textContent = text;

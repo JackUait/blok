@@ -143,10 +143,8 @@ test.describe('undo audit: setData apply sweep', () => {
   //     The tool keeps or re-derives a value, a post-undo 'no-capture' flush writes it back,
   //     and redo then changes nothing. ---
 
-  // Undo must restore the exact prior state. Works when the data carries `checked: false`.
-  // Observed: Expected: false / Received: true
+  // Undo must restore the exact prior state, also when the data lacks `checked`.
   test('APL-5: undo of the first check on a to-do loaded without "checked" leaves it checked', async ({ page }) => {
-    test.fail();
     await createBlok(page, [anchor, { id: 'l', type: 'list', data: { text: 'Task', style: 'checklist' } }]);
     const box = page.locator('[data-blok-id="l"]').getByRole('checkbox');
 
@@ -158,10 +156,8 @@ test.describe('undo audit: setData apply sweep', () => {
     await expect(box).not.toBeChecked();
   });
 
-  // Undo must restore the exact prior state. Works when the data carries `isOpen`.
-  // Observed: Expected: true / Received: false
+  // Undo must restore the exact prior state, also when the data lacks `isOpen`.
   test('APL-6: undo of the first collapse on a toggle loaded without "isOpen" leaves it collapsed', async ({ page }) => {
-    test.fail();
     await createBlok(page, [
       anchor,
       { id: 't', type: 'toggle', data: { text: 'Tog' }, content: ['tc'] },

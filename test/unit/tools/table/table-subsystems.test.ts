@@ -33,6 +33,7 @@ const createMockAPI = (): API => ({
     setPointerDragActive: vi.fn(),
     insert: vi.fn(),
     getBlocksCount: () => 0,
+    getBlockIndex: () => undefined,
     setBlockParent: vi.fn(),
     beginTransaction: vi.fn(),
     endTransaction: vi.fn(),

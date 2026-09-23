@@ -263,16 +263,11 @@ test.describe('undo audit: collab in two real editors', () => {
     expect((await converged(pages)).map((row) => row.id)).toEqual(['b1', 'b2', 'b3']);
   });
 
-  // COB-4. Not undo: with a live peer, one add-row / add-column click mints
-  // extra cell blocks, cell (0,0) gains a stray empty block, and the two
-  // editors order it differently, so they never converge. Solo, alone in the
-  // room, with the peer paused, or with the peer's frames delivered together:
-  // correct. This blocks COL-4/5 in the browser.
-  // Observed (row and col), varies per run: { alpha: 8, beta: 8 } (also 10, 12);
-  // in some runs a mint storm: { alpha: 595, beta: 'unresponsive' }.
+  // COB-4. Not undo: the peer gets the new cell blocks before the table data
+  // that names their cells. It must wait for that data, not guess a cell from
+  // DOM adjacency or mint copies, or the two editors never converge.
   for (const what of ['row', 'col'] as const) {
     test(`COB-4: one add-${what} click with a live peer adds one cell block per new cell`, async ({ context }) => {
-      test.fail();
       const pages = await pair(context);
       // Node-side timers and a bounded DOM count: in some runs a page stops
       // answering, and an unbounded read would time the test out instead.

@@ -269,9 +269,7 @@ test.beforeEach(async ({ page }) => {
 test.describe('CON table', () => {
   // Undo must restore the exact prior state; redo the exact post-gesture state.
   test('CON-1 undo of a row delete brings the row back with its cell content', async ({ page }) => {
-    test.fail();
-    // Observed: row 2 after one undo is ['', ''] — fresh empty cell blocks; c10/c11 come back only on a
-    // SECOND undo, into cell [0][1] ("B1A2B2"), and the empties stay. Same via history.undo().
+    // One undo restores the row with its own cell blocks: the delete and the table write are one step.
     await createBlok(page, TABLE_DOC);
     const before = await save(page);
 
@@ -289,8 +287,7 @@ test.describe('CON table', () => {
 
   // Undo must restore the exact prior state; redo the exact post-gesture state.
   test('CON-2 undo of a column delete brings the column back with its cell content', async ({ page }) => {
-    test.fail();
-    // Observed: column A after one undo is ['', '', ''] — fresh empty cell blocks, not c00/c10/c20.
+    // One undo restores the column with its own cell blocks.
     await createBlok(page, TABLE_DOC);
     const before = await save(page);
 
@@ -308,9 +305,7 @@ test.describe('CON table', () => {
 
   // Undo must restore the exact prior state; redo the exact post-gesture state.
   test('CON-3 undo of the first column resize restores the default widths', async ({ page }) => {
-    test.fail();
-    // Observed: colWidths after undo is still [430, 350] in save() and in the DOM, while the undo step is
-    // consumed. Undoing a SECOND resize works, so only the absent-key case fails.
+    // Undo replays the whole record, so a key the resize added is removed again.
     await createBlok(page, TABLE_DOC);
     await gap(page);
     await dragBy(page, page.locator('[data-blok-table-resize]').first(), 80, 0);
@@ -324,8 +319,6 @@ test.describe('CON table', () => {
 
   // Undo must restore the exact prior state; redo the exact post-gesture state.
   test('CON-4 undo of the first text size change restores compact text', async ({ page }) => {
-    test.fail();
-    // Observed: textSize after undo is still 'comfortable' (same absent-key shape as CON-3).
     await createBlok(page, TABLE_DOC);
     await gap(page);
     await cell(page, 0, 0).click();
@@ -343,9 +336,7 @@ test.describe('CON table', () => {
 
   // Undo must restore the exact prior state; redo the exact post-gesture state.
   test('CON-5 undo of a row insert leaves no phantom cell blocks in the editor', async ({ page }) => {
-    test.fail();
-    // Observed: the new row's two paragraphs stay alive in BlockManager with parentId 'tbl' after undo —
-    // not in the DOM, not in save(). Same for the add-row button.
+    // The new row's cell blocks are part of the gesture's undo step, so undo removes them.
     await createBlok(page, TABLE_DOC);
     const liveBefore = await liveBlocks(page);
 

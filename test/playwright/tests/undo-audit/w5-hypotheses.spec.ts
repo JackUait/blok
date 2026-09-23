@@ -244,15 +244,8 @@ const undoWithCaretIn = async (page: Page, row: number, col: number, gesture: ()
 };
 
 test.describe('W5X table columns', () => {
-  // Defect: redo is dead after undoing "Insert column right" on the last column while the caret
-  // sits in the new column. Same chain A as W4B-21/22, through the COLUMN grip:
-  // Table.setData saves the visible grip indices (src/tools/table/index.ts:1106) and restores them on the
-  // shrunk grid (index.ts:1190 → table-row-col-controls.ts:280-289 restoreVisibleGrips) → showColGrip
-  // (table-row-col-controls.ts:636-643) passes colGrips[3] === undefined to applyVisibleClasses (:672),
-  // which throws — logged as "Tool table setData failed: Cannot read properties of undefined (reading
-  // 'hasAttribute')" — then yjs-sync rebuilds the table and the rebuild's writes clear redo.
+  // The undo removes the column under the visible grip; restoring that grip must not break setData.
   test('W5X-1: redo after undoing Insert column right on the last column, caret in the new column', async ({ page }) => {
-    test.fail(true, 'W5X-1 showColGrip on a removed last column throws in Table.setData');
     const errors = captureErrors(page);
 
     await mount(page, DOC_3x3());
@@ -275,7 +268,6 @@ test.describe('W5X table columns', () => {
   });
 
   test('W5X-2: redo after undoing the add-column button, caret in the new column', async ({ page }) => {
-    test.fail(true, 'W5X-2 showColGrip on a removed last column throws in Table.setData');
     const errors = captureErrors(page);
 
     await mount(page, DOC_3x3());
@@ -286,7 +278,6 @@ test.describe('W5X table columns', () => {
   });
 
   test('W5X-3: redo after undoing Duplicate on the last column, caret in the copy', async ({ page }) => {
-    test.fail(true, 'W5X-3 showColGrip on a removed last column throws in Table.setData');
     const errors = captureErrors(page);
 
     await mount(page, DOC_3x3());
@@ -333,11 +324,8 @@ test.describe('W5X table columns', () => {
     await page.mouse.up();
   };
 
-  // Chain B mirror of W4B-23: onDragAddCol (table-subsystems.ts:302) wraps each column in
-  // runTransactedStructuralOp → transactForTool, whose nested endToolTransaction stopCapturing()
-  // (blockManager.ts:998/1002) closes the drag's open group after every column.
+  // The drag is one undo step: a nested tool transaction must not close the drag's group.
   test('W5X-4: one undo of a drag on the add-column button removes every added column', async ({ page }) => {
-    test.fail(true, 'W5X-4 nested transactForTool stopCapturing splits the drag group');
     await mount(page, DOC_3x3());
     const before = await tdoc(page);
 

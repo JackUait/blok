@@ -141,18 +141,21 @@ const colWidthsOf = (gridEl: HTMLElement): string[] => {
 interface CellBlocksStub {
   calls: Element[][];
   getBlockIdsFromCells: (cells: NodeListOf<Element> | Element[]) => string[];
-  ensureCellHasBlock: (cell: HTMLElement) => void;
+  ensureCellHasBlock: (cell: HTMLElement, options?: { track?: boolean }) => void;
   touched: HTMLElement[];
+  trackFlags: boolean[];
 }
 
 /** Fresh per test: `restoreAllMocks` in afterEach would reset a shared spy. */
 const makeCellBlocksStub = (): CellBlocksStub => {
   const calls: Element[][] = [];
   const touched: HTMLElement[] = [];
+  const trackFlags: boolean[] = [];
 
   return {
     calls,
     touched,
+    trackFlags,
     getBlockIdsFromCells: (cells: NodeListOf<Element> | Element[]): string[] => {
       const list = Array.from(cells);
 
@@ -160,8 +163,9 @@ const makeCellBlocksStub = (): CellBlocksStub => {
 
       return list.map(cell => cell.getAttribute('data-test-block-id') ?? '');
     },
-    ensureCellHasBlock: (cell: HTMLElement): void => {
+    ensureCellHasBlock: (cell: HTMLElement, options?: { track?: boolean }): void => {
       touched.push(cell);
+      trackFlags.push(options?.track === true);
     },
   };
 };
@@ -649,6 +653,14 @@ describe('table-operations — surviving-mutant coverage', () => {
 
       expect(stub.touched).toHaveLength(4);
       expect(stub.touched).toContain(cellAtCoord(gridEl, 1, 1));
+    });
+
+    it('fills new cells as part of the gesture, so undo removes them', () => {
+      const stub = makeCellBlocksStub();
+
+      populateNewCells(buildDomGrid(1, 2), asCellBlocks(stub));
+
+      expect(stub.trackFlags).toEqual([true, true]);
     });
 
     it('does nothing when there is no cell-blocks helper', () => {

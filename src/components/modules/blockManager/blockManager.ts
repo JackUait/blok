@@ -311,12 +311,16 @@ export class BlockManager extends Module {
   private pendingParentSyncPromise: Promise<void> | null = null;
 
   /**
-   * Saved `suppressStopCapturing` values, one per open tool transaction.
-   * A stack rather than a single field so a synchronous `transactForTool`
-   * nested inside an open gesture group restores the outer group instead of
-   * closing it.
+   * Tool transactions opened and not yet closed. A close lands asynchronously,
+   * so closes may finish out of order: only the one that brings this to zero
+   * closes the undo group. Nested begins and ends never split it.
    */
-  private toolTransactionStack: boolean[] = [];
+  private toolTransactionDepth = 0;
+
+  /**
+   * `suppressStopCapturing` as it was before the outermost tool transaction.
+   */
+  private suppressBeforeToolTransaction = false;
 
   /**
    * Operations handler for state changes
@@ -964,9 +968,12 @@ export class BlockManager extends Module {
    * Every call MUST be paired with `endToolTransaction()`.
    */
   public beginToolTransaction(): void {
-    this.Blok.YjsManager.stopCapturing();
+    if (this.toolTransactionDepth === 0) {
+      this.Blok.YjsManager.stopCapturing();
+      this.suppressBeforeToolTransaction = this.operations.suppressStopCapturing;
+    }
 
-    this.toolTransactionStack.push(this.operations.suppressStopCapturing);
+    this.toolTransactionDepth++;
     this.operations.suppressStopCapturing = true;
   }
 
@@ -974,8 +981,6 @@ export class BlockManager extends Module {
    * Close the undo group opened by `beginToolTransaction()`.
    */
   public endToolTransaction(): void {
-    const prevSuppress = this.toolTransactionStack.pop() ?? false;
-
     // Closing boundary uses two nested queueMicrotask calls to ensure correct ordering.
     //
     // Microtask ordering after the operation returns:
@@ -993,16 +998,29 @@ export class BlockManager extends Module {
     //
     // This ensures the parent sync's updateBlockData fires inside the same undo group
     // as the structural operation (deletes + empty cell inserts + table data update).
+    // Then wait for block saves still in flight (the table's own content
+    // write comes from a mutation-driven save): the group must hold them too.
+    const close = (): void => {
+      // An end without a begin must not drive the count below zero.
+      this.toolTransactionDepth = Math.max(0, this.toolTransactionDepth - 1);
+
+      if (this.toolTransactionDepth > 0) {
+        return;
+      }
+
+      this.Blok.YjsManager.stopCapturing();
+      this.operations.suppressStopCapturing = this.suppressBeforeToolTransaction;
+    };
+    const closeWhenWritesSettle = (): void => {
+      this.Blok.YjsManager.onPendingBlockWritesSettled(close);
+    };
+
     queueMicrotask(() => {
       queueMicrotask(() => {
         if (this.pendingParentSyncPromise !== null) {
-          void this.pendingParentSyncPromise.then(() => {
-            this.Blok.YjsManager.stopCapturing();
-            this.operations.suppressStopCapturing = prevSuppress;
-          });
+          void this.pendingParentSyncPromise.then(closeWhenWritesSettle);
         } else {
-          this.Blok.YjsManager.stopCapturing();
-          this.operations.suppressStopCapturing = prevSuppress;
+          closeWhenWritesSettle();
         }
       });
     });

@@ -278,15 +278,20 @@ export class TableRowColControls {
    * Programmatically restore grip visibility (e.g. after a DOM rebuild during undo).
    */
   public restoreVisibleGrips(col: number, row: number): void {
+    // The indices were read before the rebuild. An undo can remove the row or
+    // column they point at, so an index past the end shows nothing.
+    const colIndex = col < this.colGrips.length ? col : -1;
+    const rowIndex = row < this.rowGrips.length ? row : -1;
+
     // Set isInsideTable BEFORE showing grips so applyVisibleClasses()
     // skips the CSS opacity transition (no flash).
-    this.isInsideTable = col >= 0 || row >= 0;
+    this.isInsideTable = colIndex >= 0 || rowIndex >= 0;
 
-    if (col >= 0) {
-      this.showColGrip(col);
+    if (colIndex >= 0) {
+      this.showColGrip(colIndex);
     }
-    if (row >= 0) {
-      this.showRowGrip(row);
+    if (rowIndex >= 0) {
+      this.showRowGrip(rowIndex);
     }
   }
 

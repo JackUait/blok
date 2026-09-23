@@ -244,6 +244,19 @@ describe('TableRowColControls — geometry and grip state', () => {
       expect(controls.getVisibleGripIndices()).toBeNull();
     });
 
+    it('ignores indices past the end of a grid an undo just shrank', () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls(baseOptions(grid, 2, 2));
+
+      expect(() => controls?.restoreVisibleGrips(2, 0)).not.toThrow();
+      expect(controls.getVisibleGripIndices()).toStrictEqual({ col: -1, row: 0 });
+
+      controls.hideAllGrips();
+
+      expect(() => controls?.restoreVisibleGrips(0, 2)).not.toThrow();
+      expect(controls.getVisibleGripIndices()).toStrictEqual({ col: 0, row: -1 });
+    });
+
     it('reports a column-only restore with the row index left at -1', () => {
       grid = createGrid(2, 2);
       controls = new TableRowColControls(baseOptions(grid, 2, 2));

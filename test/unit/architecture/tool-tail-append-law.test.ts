@@ -34,15 +34,8 @@ const TOOLS_ROOT = join(__dirname, '../../../src/tools');
  * Keys are paths relative to src/tools/.
  */
 const EXEMPTIONS: Record<string, string> = {
-  'table/table-cell-blocks.ts':
-    'Cell-block creation: every insert(…, getBlocksCount(), …) here is followed ' +
-    'SYNCHRONOUSLY, in the same statement block, by ' +
-    'api.blocks.setBlockParent(block.id, this.tableBlockId), which reparents the ' +
-    'block into the table and moves its holder into the cell before control ' +
-    'returns to any other code. The tail index is only a parking slot. Any NEW ' +
-    'insert in this file must keep that pairing (asserted below).',
   'table/table-subsystems.ts':
-    'Row/column duplication path: same pairing — the inserted paragraph is ' +
+    'Row/column duplication path: the inserted paragraph is ' +
     'immediately claimed by setBlockParent(…, tableBlockId) in the same block, ' +
     'so it is never observable as a root-level sibling (asserted below).',
 };

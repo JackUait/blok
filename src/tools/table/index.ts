@@ -964,7 +964,7 @@ export class Table implements BlockTool {
             ? Array.from(container.querySelectorAll<HTMLElement>('[data-blok-id]'))
               .map(el => el.getAttribute('data-blok-id') ?? '')
               .filter(id => {
-                if (!id) {
+                if (!id || this.cellBlocks?.isAwaitingCell(id) === true) {
                   return false;
                 }
                 const block = this.api.blocks.getById?.(id);
@@ -989,7 +989,8 @@ export class Table implements BlockTool {
           ? Array.from(container.querySelectorAll<HTMLElement>('[data-blok-id]'))
             .map(el => el.getAttribute('data-blok-id') ?? '')
             .filter(id => {
-              if (!id || filtered.includes(id) || this.model.findCellForBlock(id) !== null) {
+              if (!id || filtered.includes(id) || this.model.findCellForBlock(id) !== null
+                || this.cellBlocks?.isAwaitingCell(id) === true) {
                 return false;
               }
 
@@ -1066,13 +1067,10 @@ export class Table implements BlockTool {
     this.setDataGeneration++;
     const currentGeneration = this.setDataGeneration;
 
-    const normalized = normalizeTableData(
-      {
-        ...this.model.snapshot(),
-        ...newData,
-      },
-      this.config
-    );
+    // The new data is the whole record (an undo replay hands over the full
+    // doc record). Merging the old snapshot in would keep a key the replay
+    // removed, e.g. the colWidths of a first resize.
+    const normalized = normalizeTableData(newData as TableData, this.config);
 
     this.initialContent = normalized.content;
     this.model.replaceAll(normalized);

@@ -327,7 +327,6 @@ test.describe('W4M defects', () => {
   // Hypothesis (the Yjs doc was not read): the seeded cells reach the doc before the table,
   // at block-insertion.ts:300, while the table's own addBlock runs later, at :343.
   test('W4M-3: redo of "+ then Table" keeps the cell blocks in their order', async ({ page }) => {
-    test.fail();
     await createBlok(page, wrap(P('x', '')));
     const r = await roundTrip(page, async () => {
       await editable(page, 'x').click();

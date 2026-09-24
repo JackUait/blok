@@ -2,6 +2,7 @@ import type { BlockPosition } from '../../../../types/api';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import type { Block } from '../../block';
 import { isChildToolAllowed } from '../../utils/child-tools';
+import { subtreeEnd } from '../../utils/tree-order';
 
 /**
  * Thrown by `blocks.insertAt` / `blocks.moveTo` when the requested place does
@@ -73,14 +74,10 @@ export const isUnder = (tree: BlockTree, block: Block, ancestorId: string): bool
 /**
  * The flat index right after the last block of `block`'s subtree.
  * @param tree - the blocks
- * @param block - the subtree root
+ * @param block - the subtree root, in `tree.blocks`
  */
-const subtreeEnd = (tree: BlockTree, block: Block): number => {
-  const start = tree.blocks.indexOf(block);
-  const firstOutside = tree.blocks.slice(start + 1).findIndex(candidate => !isUnder(tree, candidate, block.id));
-
-  return firstOutside === -1 ? tree.blocks.length : start + 1 + firstOutside;
-};
+const subtreeEndOf = (tree: BlockTree, block: Block): number =>
+  subtreeEnd({ blocks: tree.blocks, getById: id => tree.getBlockById(id) }, tree.blocks.indexOf(block));
 
 /**
  * The last child of `parentId` (null = a root block) in flat order before
@@ -124,7 +121,7 @@ export const resolvePlacement = (
 
     return 'before' in position
       ? { parentId: ref.parentId, afterId: lastChildBefore(tree, ref.parentId, refIndex), index: refIndex }
-      : { parentId: ref.parentId, afterId: ref.id, index: subtreeEnd(tree, ref) };
+      : { parentId: ref.parentId, afterId: ref.id, index: subtreeEndOf(tree, ref) };
   }
 
   if (parentId === undefined || parentId === null) {
@@ -139,7 +136,7 @@ export const resolvePlacement = (
     return { parentId, afterId: null, index: tree.blocks.indexOf(parent) + 1 };
   }
 
-  const end = subtreeEnd(tree, parent);
+  const end = subtreeEndOf(tree, parent);
 
   return { parentId, afterId: lastChildBefore(tree, parentId, end), index: end };
 };

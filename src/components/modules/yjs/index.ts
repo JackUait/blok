@@ -81,7 +81,7 @@ export class YjsManager extends Module {
   private readonly pendingBlockWrites = new Set<symbol>();
 
   /** In-flight saves each gesture start is waiting on; see {@link beginGesture}. */
-  private splitsAfterWrites: Array<{ tokens: Set<symbol>; closed: ClosedStep | null }> = [];
+  private splitsAfterWrites: Array<{ tokens: Set<symbol>; closed: ClosedStep | null; landedInOpenStep?: boolean }> = [];
 
   /** The token behind each release callback {@link beginPendingBlockDataWrite} handed out. */
   private readonly tokenByRelease = new WeakMap<() => void, symbol>();
@@ -603,6 +603,8 @@ export class YjsManager extends Module {
       // Landed where it belongs: the gesture's step must stay open.
       waiting.tokens.delete(token);
       this.splitsAfterWrites = this.splitsAfterWrites.filter((entry) => entry.tokens.size > 0);
+    } else {
+      waiting.landedInOpenStep = true;
     }
 
     return landed;
@@ -614,15 +616,20 @@ export class YjsManager extends Module {
    * @param token - the save that just landed
    */
   private splitAfterLandedWrite(token: symbol): void {
-    const waiting = this.splitsAfterWrites;
-
-    this.splitsAfterWrites = waiting.filter(({ tokens }) => {
+    const landed = this.splitsAfterWrites.filter(({ tokens }) => {
       tokens.delete(token);
 
-      return tokens.size > 0;
+      return tokens.size === 0;
     });
 
-    if (this.splitsAfterWrites.length < waiting.length) {
+    this.splitsAfterWrites = this.splitsAfterWrites.filter(({ tokens }) => tokens.size > 0);
+
+    // A gesture that already wrote keeps its step open: its late saves landed
+    // in the closed step (see `landWriteOfClosedStep`), or wrote nothing.
+    const mustSplit = landed.some(({ closed, landedInOpenStep }) =>
+      landedInOpenStep === true || closed === null || !this.undoHistory.gestureWroteSince(closed));
+
+    if (mustSplit) {
       this.undoHistory.splitStep();
     }
   }

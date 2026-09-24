@@ -40,7 +40,7 @@ interface Harness {
   /** What the peer's copy of b1 says. */
   peerText: () => string;
   /** Start one DOM-mutation-driven sync whose `save()` resolves only when you say so. */
-  startMutation: (text: string) => { resolveSave: () => void };
+  startMutation: (text: string | null) => { resolveSave: () => void };
 }
 
 /**
@@ -86,10 +86,10 @@ const createHarness = (): Harness => {
     save: vi.fn(),
   };
 
-  const startMutation = (text: string): { resolveSave: () => void } => {
+  const startMutation = (text: string | null): { resolveSave: () => void } => {
     let release = (): void => {};
-    const pending = new Promise<{ data: { text: string } }>((resolve) => {
-      release = (): void => resolve({ data: { text } });
+    const pending = new Promise<{ data: { text: string } } | undefined>((resolve) => {
+      release = (): void => resolve(text === null ? undefined : { data: { text } });
     });
 
     blockStub.save.mockReturnValue(pending);
@@ -170,6 +170,27 @@ describe('a gesture that starts while an earlier save is still in flight', () =>
     harness.yjsManager.undo();
 
     expect(harness.yjsManager.toJSON()[0]?.data).toEqual({ text: 'hello' });
+  });
+
+  it('keeps the gesture one step when the save it waited on writes nothing', async () => {
+    const harness = createHarness();
+
+    harness.yjsManager.stopCapturing();
+
+    const steps = undoSteps(harness);
+    const typing = harness.startMutation(null);
+
+    harness.yjsManager.beginGesture('discrete');
+    harness.yjsManager.addBlock({ id: 'b2',
+      type: 'paragraph',
+      data: { text: '' } });
+    typing.resolveSave();
+    await drainMicrotasks();
+    // The gesture's own deferred write.
+    harness.yjsManager.updateBlockData('b2', 'text', 'x');
+    vi.runAllTimers();
+
+    expect(undoSteps(harness) - steps).toBe(1);
   });
 
   it('adds the late write to the typing step it belongs to', async () => {

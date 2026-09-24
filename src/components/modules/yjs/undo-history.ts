@@ -588,7 +588,8 @@ export class UndoHistory {
    * is no longer anything in the document for it to unwind, so putting it back
    * would leave a permanently inert entry that every later press must walk
    * past — and the caret stacks one step out of phase with the yjs stack for
-   * the rest of the session. Those stay discarded, exactly as before.
+   * the rest of the session. Those stay discarded, except under a refused
+   * item (see {@link reachPastRefusedStackItem}), where every one comes back.
    *
    * The skipped items are the newest ones, so they go back on top, in the
    * order they were popped. Called BEFORE `settleReplayedEntries`, whose whole
@@ -1835,6 +1836,8 @@ export class UndoHistory {
   private closeStepForGesture(): void {
     const { undoManager } = this;
     const lengthBefore = undoManager.undoStack.length;
+    // yjs stamps `lastChange` with the Date.now lib0 saved at import. Fake
+    // timers swap only the global one, so there the two clocks can differ.
     const wasOpen = undoManager.lastChange !== 0 && Date.now() - undoManager.lastChange < undoManager.captureTimeout;
 
     this.splitStep();
@@ -1873,11 +1876,7 @@ export class UndoHistory {
    * @returns false when the caller must land the write as usual
    */
   public landLateWrite(closed: ClosedStep, tracked: () => void, untracked: () => void): boolean {
-    const stack = this.undoManager.undoStack;
-    const intact = stack.length >= closed.undoLength && (closed.top === null || stack[closed.undoLength - 1] === closed.top);
-    const gestureWrote = stack.length > closed.undoLength || this.caretUndoStack.length > closed.caretLength;
-
-    if (!intact || !gestureWrote) {
+    if (!this.gestureWroteSince(closed)) {
       return false;
     }
 
@@ -1888,6 +1887,18 @@ export class UndoHistory {
     }
 
     return true;
+  }
+
+  /**
+   * Whether the gesture that closed `closed` has written its own step, with
+   * the history under it untouched since.
+   * @param closed - from {@link closedStep}
+   */
+  public gestureWroteSince(closed: ClosedStep): boolean {
+    const stack = this.undoManager.undoStack;
+    const intact = stack.length >= closed.undoLength && (closed.top === null || stack[closed.undoLength - 1] === closed.top);
+
+    return intact && (stack.length > closed.undoLength || this.caretUndoStack.length > closed.caretLength);
   }
 
   /**

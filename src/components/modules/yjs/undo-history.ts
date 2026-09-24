@@ -53,7 +53,7 @@ interface StackItemEvent {
   type: 'undo' | 'redo';
   stackItem: StackItem;
   /** Every type the transaction changed, and each of their ancestors. */
-  changedParentTypes: Map<Y.AbstractType<Y.YEvent<never>>, Y.YEvent<never>[]>;
+  changedParentTypes: ReadonlyMap<object, unknown>;
 }
 
 /**
@@ -1022,7 +1022,7 @@ export class UndoHistory {
     const record = (event: StackItemEvent): void => {
       // A block delete always writes an order array. Typing never does, so
       // a keystroke costs no scan and no extra transaction.
-      if ([...event.changedParentTypes.keys()].some((type) => this.isOrderArray(type))) {
+      if ([...event.changedParentTypes.keys()].some((type) => type instanceof Y.AbstractType && this.isOrderArray(type))) {
         this.recordDeletedPlacements(event.stackItem);
       }
     };

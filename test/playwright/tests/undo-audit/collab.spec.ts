@@ -2,7 +2,9 @@ import { expect, test, type BrowserContext, type Locator, type Page } from '@pla
 
 import {
   gotoCollabPage,
+  holdCollabDocFrames,
   mountCollabEditor,
+  releaseCollabDocFrames,
   savedBlocks,
   seedDocument,
   type SeedBlock,
@@ -288,4 +290,91 @@ test.describe('undo audit: collab in two real editors', () => {
         distinct: 6 });
     });
   }
+
+  // S-3. A cell whose block is gone gets one stand-in paragraph. With a live
+  // peer, both editors must end with the same single stand-in, not one each.
+  const cellOf = async (page: Page, name: string, row: number, col: number): Promise<string> => {
+    const table = (await saved(page, name)).find((r) => r.type === 'table');
+    const content = (table?.data as { content: Array<Array<{ blocks: string[] }>> }).content;
+
+    return content[row][col].blocks[0];
+  };
+  const deleteBlock = (page: Page, name: string, id: string): Promise<void> =>
+    page.evaluate(async ({ editorName, blockId }) => {
+      const editor = window.__collabEditors?.[editorName];
+
+      await editor?.blocks.delete(editor.blocks.getBlockIndex(blockId), false);
+    }, { editorName: name,
+      blockId: id });
+  const blocksPerCell = (page: Page, name: string): Promise<number[]> =>
+    page.getByTestId(name).locator('[data-blok-table-cell-blocks]')
+      .evaluateAll((cells) => cells.map((cell) => cell.querySelectorAll('[data-blok-id]').length));
+  const perCell = async (pages: Pair): Promise<{ alpha: number[]; beta: number[] }> =>
+    ({ alpha: await blocksPerCell(pages.a, 'alpha'),
+      beta: await blocksPerCell(pages.b, 'beta') });
+  const oneEach = (cells: number): { alpha: number[]; beta: number[] } =>
+    ({ alpha: Array<number>(cells).fill(1),
+      beta: Array<number>(cells).fill(1) });
+  /** How many blocks the converged doc parents to the table, and how many its cells name. */
+  const tableChildren = async (pages: Pair): Promise<{ children: number; named: number }> => {
+    const rows = await converged(pages);
+    const table = rows.find((row) => row.type === 'table');
+    const named = (table?.data as { content: Array<Array<{ blocks: string[] }>> }).content.flat().flatMap((cell) => cell.blocks);
+
+    return { children: rows.filter((row) => row.parent === 'T').length,
+      named: named.length };
+  };
+
+  test('S-3: a cell block the author deletes leaves one stand-in on both editors', async ({ context }) => {
+    const pages = await pair(context);
+
+    await setup(pages, TABLE);
+    await deleteBlock(pages.a, 'alpha', await cellOf(pages.a, 'alpha', 0, 0));
+    await wait(pages.a, 1500);
+
+    await expect.poll(() => perCell(pages), { timeout: 5000 }).toEqual(oneEach(4));
+    expect(await tableChildren(pages)).toEqual({ children: 4,
+      named: 4 });
+  });
+
+  test('S-3: both editors deleting the same cell block at once end with one stand-in', async ({ context }) => {
+    const pages = await pair(context);
+
+    await setup(pages, TABLE);
+    const id = await cellOf(pages.a, 'alpha', 0, 0);
+
+    await holdCollabDocFrames(pages.a);
+    await holdCollabDocFrames(pages.b);
+    await deleteBlock(pages.a, 'alpha', id);
+    await deleteBlock(pages.b, 'beta', id);
+    await wait(pages.a, 300);
+    await releaseCollabDocFrames(pages.a);
+    await releaseCollabDocFrames(pages.b);
+    await wait(pages.a, 1500);
+
+    await expect.poll(() => perCell(pages), { timeout: 5000 }).toEqual(oneEach(4));
+    expect(await tableChildren(pages)).toEqual({ children: 4,
+      named: 4 });
+  });
+
+  test('S-3: a cell block deleted while the peer adds a column leaves one stand-in per cell', async ({ context }) => {
+    const pages = await pair(context);
+
+    await setup(pages, TABLE);
+    const id = await cellOf(pages.a, 'alpha', 0, 0);
+
+    await holdCollabDocFrames(pages.a);
+    await holdCollabDocFrames(pages.b);
+    await deleteBlock(pages.a, 'alpha', id);
+    // Beta's column write still names the deleted block in its cell.
+    await clickAdd(pages.b, 'beta', 'col');
+    await wait(pages.a, 300);
+    await releaseCollabDocFrames(pages.a);
+    await releaseCollabDocFrames(pages.b);
+    await wait(pages.a, 1500);
+
+    await expect.poll(() => perCell(pages), { timeout: 5000 }).toEqual(oneEach(6));
+    expect(await tableChildren(pages)).toEqual({ children: 6,
+      named: 6 });
+  });
 });

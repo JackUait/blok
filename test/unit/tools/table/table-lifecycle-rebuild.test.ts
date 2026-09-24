@@ -591,6 +591,140 @@ describe('Table lifecycle rebuild', () => {
     });
   });
 
+  describe('setData() from a peer naming an empty cell', () => {
+    /**
+     * The peer that emptied the cell fills it and sends that block. A stand-in
+     * minted here goes to the shared doc too, so the cell ends with two.
+     */
+    it('does not mint a stand-in for the cell', () => {
+      const options = createTableOptions(
+        { content: [['A']] },
+        {},
+        { blocks: { isSyncingFromYjs: false, isApplyingRemoteChange: false, getById: vi.fn(() => undefined) } }
+      );
+      const blocksApi = options.api.blocks as unknown as { isSyncingFromYjs: boolean; isApplyingRemoteChange: boolean };
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+      vi.mocked(options.api.blocks.insert).mockClear();
+
+      blocksApi.isSyncingFromYjs = true;
+      blocksApi.isApplyingRemoteChange = true;
+      table.setData({ withHeadings: false, withHeadingColumn: false, content: [[{ blocks: [] }]] });
+      blocksApi.isSyncingFromYjs = false;
+      blocksApi.isApplyingRemoteChange = false;
+
+      expect(options.api.blocks.insert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('two peers refilling the same emptied cell', () => {
+    const nextFrame = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+
+    /**
+     * Both peers delete a cell's block at once and each refills the cell. A
+     * cell's `blocks` is a Y.Array, so the merge keeps both stand-ins. Only
+     * the one with the lowest id may stay, or the cell shows two paragraphs.
+     * @param repairId - id this editor gives its own stand-in
+     * @param peerId - id of the peer's stand-in
+     * @param typedInto - the user types into the stand-in before the first
+     *   merge and empties it before a second one
+     */
+    const refillThenMerge = async (repairId: string, peerId: string, typedInto = false): Promise<ReturnType<typeof vi.fn>> => {
+      const options = createTableOptions(
+        { content: [[{ blocks: ['old'] }]] },
+        {},
+        { blocks: { isSyncingFromYjs: false, isApplyingRemoteChange: false } }
+      );
+      const blocksApi = options.api.blocks as unknown as {
+        isSyncingFromYjs: boolean;
+        isApplyingRemoteChange: boolean;
+        getById: ReturnType<typeof vi.fn>;
+        getBlockIndex: ReturnType<typeof vi.fn>;
+        getBlockByIndex: ReturnType<typeof vi.fn>;
+      };
+      const holders = new Map<string, HTMLElement>();
+      const holderOf = (id: string): HTMLElement => {
+        const holder = holders.get(id) ?? document.createElement('div');
+
+        holder.setAttribute('data-blok-id', id);
+        holders.set(id, holder);
+
+        return holder;
+      };
+      const blockOf = (id: string): { id: string; name: string; holder: HTMLElement; parentId: string; isEmpty: boolean; preservedData: Record<string, unknown> } =>
+        ({ id, name: 'paragraph', holder: holderOf(id), parentId: 'table-lifecycle-test', isEmpty: !typed.has(id), preservedData: {} });
+      const typed = new Set<string>();
+      const ids = ['old', repairId, peerId];
+
+      blocksApi.getById = vi.fn((id: string) => (ids.includes(id) ? blockOf(id) : undefined));
+      blocksApi.getBlockIndex.mockImplementation((id: string) => (ids.includes(id) ? ids.indexOf(id) + 1 : undefined));
+      blocksApi.getBlockByIndex = vi.fn((index: number) => (ids[index - 1] === undefined ? undefined : blockOf(ids[index - 1])));
+      vi.mocked(options.api.blocks.insert).mockImplementation(() => blockOf(repairId) as never);
+
+      const table = new Table({ ...options,
+        block: { id: 'table-lifecycle-test',
+          dispatchChange: vi.fn() } as never });
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      // The local delete: the block leaves the cell, and the table refills it.
+      holderOf('old').remove();
+      ids.splice(0, 1);
+      vi.mocked(options.api.events.on).mock.calls
+        .filter(([name]) => name === 'block changed')
+        .forEach(([, handler]) => (handler as (payload: unknown) => void)({
+          event: { type: 'block-removed', detail: { target: { id: 'old', holder: holderOf('old') }, index: 1 } },
+        }));
+      await Promise.resolve();
+      vi.mocked(options.api.blocks.delete).mockClear();
+
+      // The peer's write lands: the merged cell names both stand-ins.
+      const merge = async (): Promise<void> => {
+        blocksApi.isSyncingFromYjs = true;
+        blocksApi.isApplyingRemoteChange = true;
+        table.setData({ withHeadings: false, withHeadingColumn: false, content: [[{ blocks: [repairId, peerId] }]] });
+        blocksApi.isApplyingRemoteChange = false;
+        await Promise.resolve();
+        blocksApi.isSyncingFromYjs = false;
+        await nextFrame();
+        await nextFrame();
+      };
+
+      if (typedInto) {
+        typed.add(repairId);
+        await merge();
+        typed.delete(repairId);
+      }
+      await merge();
+
+      return vi.mocked(options.api.blocks.delete);
+    };
+
+    it('drops this editor\'s stand-in when the peer\'s has the lower id', async () => {
+      const deleted = await refillThenMerge('zzz-repair', 'aaa-peer');
+
+      expect(deleted).toHaveBeenCalledWith(1, false);
+      expect(deleted).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps a stand-in the user once typed into, even after it is emptied', async () => {
+      const deleted = await refillThenMerge('zzz-repair', 'aaa-peer', true);
+
+      expect(deleted).not.toHaveBeenCalled();
+    });
+
+    it('keeps this editor\'s stand-in when it has the lower id', async () => {
+      const deleted = await refillThenMerge('aaa-repair', 'zzz-peer');
+
+      expect(deleted).not.toHaveBeenCalled();
+    });
+  });
+
   describe('rendered() during Yjs sync naming a block that never arrives', () => {
     const nextFrame = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => resolve()));
 

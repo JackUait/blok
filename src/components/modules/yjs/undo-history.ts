@@ -52,6 +52,8 @@ export interface ClosedStep {
 interface StackItemEvent {
   type: 'undo' | 'redo';
   stackItem: StackItem;
+  /** Every type the transaction changed, and each of their ancestors. */
+  changedParentTypes: Map<Y.AbstractType<Y.YEvent<never>>, Y.YEvent<never>[]>;
 }
 
 /**
@@ -1017,7 +1019,13 @@ export class UndoHistory {
    * the items a replay creates too: a redo deletes blocks as well.
    */
   private setupDeletedPlacementTracking(): void {
-    const record = (event: StackItemEvent): void => this.recordDeletedPlacements(event.stackItem);
+    const record = (event: StackItemEvent): void => {
+      // A block delete always writes an order array. Typing never does, so
+      // a keystroke costs no scan and no extra transaction.
+      if ([...event.changedParentTypes.keys()].some((type) => this.isOrderArray(type))) {
+        this.recordDeletedPlacements(event.stackItem);
+      }
+    };
 
     this.undoManager.on('stack-item-added', record);
     this.undoManager.on('stack-item-updated', record);

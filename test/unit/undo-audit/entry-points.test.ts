@@ -102,6 +102,29 @@ describe('undo audit — entry points', () => {
     expect(b.undo).toHaveBeenCalledTimes(1);
   });
 
+  it('Ctrl+Z with focus on <body> undoes the only editor left when the used one goes read-only', () => {
+    const a = mountEditor();
+    const b = mountEditor();
+
+    a.redactor.dispatchEvent(new Event('focusin', { bubbles: true }));
+    a.controller.disable();
+    pressUndo(document.body);
+
+    expect(b.undo).toHaveBeenCalledTimes(1);
+  });
+
+  // Decided: with two or more editors and none used yet, no editor guesses.
+  // Every choice could undo an editor the user never touched.
+  it('Ctrl+Z with focus on <body> undoes nothing while no editor has been used', () => {
+    const a = mountEditor();
+    const b = mountEditor();
+
+    pressUndo(document.body);
+
+    expect(a.undo).not.toHaveBeenCalled();
+    expect(b.undo).not.toHaveBeenCalled();
+  });
+
   it('a historyUndo beforeinput in a text input inside the editor stays native', () => {
     const editor = mountEditor();
     const input = document.createElement('input');

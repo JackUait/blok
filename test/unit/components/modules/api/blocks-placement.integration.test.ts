@@ -33,6 +33,7 @@ interface TestEditor {
     };
     yjsManager: { stopCapturing: () => void; toJSON: () => OutputBlockData[]; addBlock: (...args: unknown[]) => unknown; addBlockAt: (...args: unknown[]) => unknown };
     paste: { processText: (data: string, isHTML?: boolean) => Promise<void> };
+    caret: { extractFragmentFromCaretPosition: () => DocumentFragment | void };
   };
 }
 
@@ -867,6 +868,97 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       await nextFrames(3);
 
       expect(await saved(instance)).toEqual(['a^-', 't^-', 'c1^t', 'n^t', 'c2^t', 'b^-']);
+    }, 30_000);
+  });
+
+  describe('split', () => {
+    /** The new block's id replaced by `n`. */
+    const named = (entries: string[], newId: string): string[] =>
+      entries.map(entry => entry.replace(newId, 'n'));
+
+    const newIdOf = (instance: TestEditor, before: string[]): string =>
+      instance.module.blockManager.blocks.find(block => !before.includes(block.id))?.id ?? '?';
+
+    it.each([
+      {
+        name: 'a root toggle with children',
+        blocks: [T('t', ['c1']), P('c1', 't'), P('z')],
+        target: 't',
+        tool: 'toggle',
+        expected: ['t^-', 'c1^t', 'n^-', 'z^-'],
+      },
+      {
+        name: 'a root paragraph with children',
+        blocks: [P('x', undefined, ['x1']), P('x1', 'x'), P('y')],
+        target: 'x',
+        tool: 'paragraph',
+        expected: ['x^-', 'x1^x', 'n^-', 'y^-'],
+      },
+      {
+        name: 'a nested paragraph with children',
+        blocks: [T('t', ['c1', 'c2']), P('c1', 't', ['c1a']), P('c1a', 'c1'), P('c2', 't'), P('z')],
+        target: 'c1',
+        tool: 'paragraph',
+        expected: ['t^-', 'c1^t', 'c1a^c1', 'n^t', 'c2^t', 'z^-'],
+      },
+    ])('puts the tail of $name after its subtree, as its next sibling', async ({ blocks, target, tool, expected }) => {
+      const instance = await boot(blocks);
+      const before = instance.module.blockManager.blocks.map(block => block.id);
+      const index = instance.blocks.getBlockIndex(target) ?? -1;
+
+      instance.blocks.splitBlock(target, { text: target }, tool, { text: 'n' }, index + 1);
+
+      const newId = newIdOf(instance, before);
+
+      expect(named(await saved(instance), newId)).toEqual(expected);
+      expect(named(flat(instance), newId)).toEqual(expected);
+      expect(named(shared(instance), newId)).toEqual(expected);
+      expect(named(dom(), newId)).toEqual(domFor(expected).map(entry => entry.replace(/<x$/, '<-').replace(/<c1$/, '<t')));
+    }, 30_000);
+
+    it('writes the split tail to the shared doc as the next sibling', async () => {
+      const instance = await boot();
+      const addBlock = vi.spyOn(instance.module.yjsManager, 'addBlock');
+      const addBlockAt = vi.spyOn(instance.module.yjsManager, 'addBlockAt');
+
+      instance.blocks.splitBlock('c1', { text: 'c' }, 'paragraph', { text: '1' }, 3);
+
+      expect(addBlock).not.toHaveBeenCalled();
+      expect(addBlockAt).toHaveBeenCalledWith(expect.objectContaining({ type: 'paragraph' }), { parentId: 't', afterId: 'c1' });
+    }, 30_000);
+
+    it('is one undo step and redoes for a block with children', async () => {
+      const instance = await boot([T('t', ['c1']), P('c1', 't'), P('z')]);
+
+      instance.blocks.splitBlock('t', { text: 't' }, 'toggle', { text: 'n' }, 1);
+      await undoOnce(instance);
+
+      expect(await saved(instance)).toEqual(['t^-', 'c1^t', 'z^-']);
+
+      instance.history.redo();
+      await nextFrames(3);
+
+      expect((await saved(instance)).filter(entry => !['t^-', 'c1^t', 'z^-'].includes(entry))).toHaveLength(1);
+      expect((await saved(instance)).slice(0, 2)).toEqual(['t^-', 'c1^t']);
+    }, 30_000);
+
+    it('splits a root paragraph with children on Enter (BlockManager.split) after its subtree', async () => {
+      const instance = await boot([P('x', undefined, ['x1']), P('x1', 'x'), P('y')]);
+      const before = instance.module.blockManager.blocks.map(block => block.id);
+      const tail = document.createDocumentFragment();
+
+      tail.append('tail');
+      vi.spyOn(instance.module.caret, 'extractFragmentFromCaretPosition').mockReturnValue(tail);
+      instance.module.blockManager.currentBlockIndex = 0;
+
+      instance.module.blockManager.split();
+
+      const newId = newIdOf(instance, before);
+      const expected = ['x^-', 'x1^x', 'n^-', 'y^-'];
+
+      expect(named(await saved(instance), newId)).toEqual(expected);
+      expect(named(shared(instance), newId)).toEqual(expected);
+      expect(named(dom(), newId)).toEqual(['x<-', 'x1<-', 'n<-', 'y<-']);
     }, 30_000);
   });
 });

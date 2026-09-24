@@ -222,6 +222,7 @@ const createBlockManager = (
     } as unknown as BlokModules['Tools'],
     YjsManager: {
       addBlock: vi.fn(),
+      addBlockAt: vi.fn(),
       removeBlock: vi.fn(),
       moveBlock: vi.fn(),
       applyBlockPlacement: vi.fn(),
@@ -1025,6 +1026,7 @@ describe('BlockManager', () => {
 
     const yjsManagerMock = {
       addBlock: vi.fn(),
+      addBlockAt: vi.fn(),
       removeBlock: vi.fn(),
       moveBlock: vi.fn(),
       updateBlockData: vi.fn(),
@@ -1070,13 +1072,13 @@ describe('BlockManager', () => {
     // Should update original block data in Yjs
     expect(yjsManagerMock.updateBlockData).toHaveBeenCalledWith('original', 'text', 'Hello');
 
-    // Should add new block to Yjs
-    expect(yjsManagerMock.addBlock).toHaveBeenCalledWith(
+    // Should add new block to Yjs, right after the original
+    expect(yjsManagerMock.addBlockAt).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'list',
         data: { text: ' World', style: 'unordered' },
       }),
-      1
+      { parentId: null, afterId: 'original' }
     );
 
     // composeBlock should be called to create the new block
@@ -1106,6 +1108,7 @@ describe('BlockManager', () => {
 
     const yjsManagerMock = {
       addBlock: vi.fn(),
+      addBlockAt: vi.fn(),
       removeBlock: vi.fn(),
       moveBlock: vi.fn(),
       updateBlockData: vi.fn(() => true),
@@ -1153,6 +1156,7 @@ describe('BlockManager', () => {
     // original block, no phantom block added, no Yjs writes.
     expect(yjsManagerMock.updateBlockData).not.toHaveBeenCalled();
     expect(yjsManagerMock.addBlock).not.toHaveBeenCalled();
+    expect(yjsManagerMock.addBlockAt).not.toHaveBeenCalled();
     expect(blockManager.blocks.length).toBe(blockCountBefore);
 
     const contentElAfter = originalBlock.holder.querySelector('[contenteditable="true"]');

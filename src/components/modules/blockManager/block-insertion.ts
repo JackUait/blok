@@ -643,6 +643,7 @@ export class BlockInsertion {
 
     // Generate new block ID upfront for the transaction
     const newBlockId = generateBlockId();
+    const placement = this.splitTailPlacement(currentBlock);
     const insertIndex = this.siblingIndexAfter(currentBlock, this.ctx.rawCurrentBlockIndex + 1);
 
     // The new block must inherit ALL of the source block's tool data (e.g. a
@@ -681,12 +682,7 @@ export class BlockInsertion {
       // Atomic Yjs transaction: update original + add new (single undo entry)
       this.dependencies.YjsManager.transact(() => {
         this.dependencies.YjsManager.updateBlockData(currentBlock.id, 'text', truncatedText);
-        this.dependencies.YjsManager.addBlock({
-          id: newBlockId,
-          type: currentBlock.name,
-          data: newBlockData,
-          parent: currentBlock.parentId ?? undefined,
-        }, insertIndex);
+        this.addSplitTailToYjs({ id: newBlockId, type: currentBlock.name, data: newBlockData }, currentBlock, placement, insertIndex);
       });
 
       // Insert DOM block (skip Yjs sync - already done above)
@@ -694,13 +690,11 @@ export class BlockInsertion {
         id: newBlockId,
         tool: currentBlock.name,
         data: newBlockData,
-        index: insertIndex,
         needToFocus: false,
         skipYjsSync: true,
-        // A root block's new sibling can follow its children: mount it at root, not in their slot.
-        forceTopLevel: currentBlock.parentId === null,
         // Only reachable from the Enter key handler.
         origin: 'user',
+        ...(placement !== undefined ? { placement } : { index: insertIndex }),
       }, blocksStore);
 
       // Update the current block AFTER insert (and handleBlockMutation) completes.
@@ -709,7 +703,7 @@ export class BlockInsertion {
       this.ctx.setCurrentBlockRaw(newBlock);
 
       // Inherit parentId from the split block so nested blocks stay nested
-      if (currentBlock.parentId !== null) {
+      if (placement === undefined && currentBlock.parentId !== null) {
         this.hierarchy.setBlockParent(newBlock, currentBlock.parentId);
       }
 
@@ -753,6 +747,11 @@ export class BlockInsertion {
     }
 
     const newBlockId = generateBlockId();
+    // Every caller passes the slot right after the block; any other index
+    // keeps the index path.
+    const placement = insertIndex === this.repository.getBlockIndex(currentBlock) + 1
+      ? this.splitTailPlacement(currentBlock)
+      : undefined;
     const index = this.siblingIndexAfter(currentBlock, insertIndex);
 
     return this.yjsSync.withAtomicOperation(() => {
@@ -761,12 +760,7 @@ export class BlockInsertion {
         for (const [key, value] of Object.entries(currentBlockData)) {
           this.dependencies.YjsManager.updateBlockData(currentBlockId, key, value);
         }
-        this.dependencies.YjsManager.addBlock({
-          id: newBlockId,
-          type: newBlockType,
-          data: newBlockData,
-          parent: currentBlock.parentId ?? undefined,
-        }, index);
+        this.addSplitTailToYjs({ id: newBlockId, type: newBlockType, data: newBlockData }, currentBlock, placement, index);
       });
 
       // Update DOM for the current block (auto-sync is suppressed by yjsSyncCount).
@@ -783,12 +777,14 @@ export class BlockInsertion {
         id: newBlockId,
         tool: newBlockType,
         data: newBlockData,
-        index,
         needToFocus: false,
         skipYjsSync: true,
-        // See splitBlock: a root block's new sibling is mounted at root.
-        forceTopLevel: currentBlock.parentId === null,
-        eventParentId: currentBlock.parentId,
+        ...(placement !== undefined ? { placement } : {
+          index,
+          // A root block's new sibling can follow its children: mount it at root, not in their slot.
+          forceTopLevel: currentBlock.parentId === null,
+          eventParentId: currentBlock.parentId,
+        }),
       }, blocksStore);
 
       // Update the current block AFTER insert (and handleBlockMutation) completes.
@@ -797,7 +793,7 @@ export class BlockInsertion {
       this.ctx.setCurrentBlockRaw(newBlock);
 
       // Inherit parentId from the split block so nested blocks stay nested
-      if (currentBlock.parentId !== null) {
+      if (placement === undefined && currentBlock.parentId !== null) {
         this.hierarchy.setBlockParent(newBlock, currentBlock.parentId);
       }
 
@@ -805,6 +801,45 @@ export class BlockInsertion {
 
       return newBlock;
     });
+  }
+
+  /**
+   * Where a split's tail goes: right after the split block's whole subtree,
+   * as its next sibling. Undefined under a table or database, whose cells
+   * claim the tail through the index path.
+   * @param current - the block being split
+   */
+  private splitTailPlacement(current: Block): TreePlacement | undefined {
+    const parent = current.parentId === null ? undefined : this.repository.getBlockById(current.parentId);
+
+    if (parent !== undefined && this.isSelfPlacedParent(parent)) {
+      return undefined;
+    }
+
+    return { parentId: parent?.id ?? null, afterId: current.id };
+  }
+
+  /**
+   * Adds a split's tail to Yjs: at `placement`, or at the flat index when
+   * there is none.
+   * @param blockData - the tail's id, type and data
+   * @param current - the block being split
+   * @param placement - from {@link splitTailPlacement}
+   * @param insertIndex - the flat index for the index path
+   */
+  private addSplitTailToYjs(
+    blockData: { id: string; type: string; data: BlockToolData },
+    current: Block,
+    placement: TreePlacement | undefined,
+    insertIndex: number
+  ): void {
+    if (placement !== undefined) {
+      this.dependencies.YjsManager.addBlockAt(blockData, placement);
+
+      return;
+    }
+
+    this.dependencies.YjsManager.addBlock({ ...blockData, parent: current.parentId ?? undefined }, insertIndex);
   }
 
   /**

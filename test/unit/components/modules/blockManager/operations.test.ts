@@ -2774,7 +2774,7 @@ describe('BlockOperations', () => {
       expect(operations.currentBlockIndexValue).toBe(2);
     });
 
-    it('includes parent field in YjsManager.addBlock call when splitting a nested block', () => {
+    it('writes the tail to Yjs as the split block\'s next sibling under its parent', () => {
       // Setup parent-child relationship: block-2 is a child of block-1
       const childBlock = repository.getBlockById('block-2');
       if (!childBlock) {
@@ -2788,16 +2788,14 @@ describe('BlockOperations', () => {
       (dependencies.Caret.extractFragmentFromCaretPosition as ReturnType<typeof vi.fn>).mockReturnValue(fragment);
 
       operations.currentBlockIndexValue = 1; // block-2
-      operations.split(blocksStore);
+      const newBlock = operations.split(blocksStore);
 
-      // YjsManager.addBlock must be called with parent: 'block-1' so the child's
-      // own YMap entry records the parentId — required for correct redo behaviour.
-      const addBlockCalls = (dependencies.YjsManager.addBlock as ReturnType<typeof vi.fn>).mock.calls;
-      const splitAddCall = addBlockCalls.find(
-        (call: unknown[]) => (call[0] as { parent?: string })?.parent === 'block-1'
+      // The parentId must reach the tail's own YMap entry, or redo loses it.
+      expect(dependencies.YjsManager.addBlock).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.addBlockAt).toHaveBeenCalledWith(
+        expect.objectContaining({ id: newBlock.id }),
+        { parentId: 'block-1', afterId: 'block-2' }
       );
-
-      expect(splitAddCall).toBeDefined();
     });
 
     it('creates the new block with the source block\'s FULL data, not just text', () => {
@@ -2820,7 +2818,7 @@ describe('BlockOperations', () => {
       operations.currentBlockIndexValue = 0;
       operations.split(blocksStore);
 
-      const addBlockCalls = (dependencies.YjsManager.addBlock as ReturnType<typeof vi.fn>).mock.calls;
+      const addBlockCalls = (dependencies.YjsManager.addBlockAt as ReturnType<typeof vi.fn>).mock.calls;
       const newBlockArg = addBlockCalls
         .map((call: unknown[]) => call[0] as { data?: Record<string, unknown> })
         .find(arg => arg?.data !== undefined && 'level' in (arg.data ?? {}));
@@ -2973,7 +2971,7 @@ describe('BlockOperations', () => {
       expect(parentBlock.contentIds).toContain(newBlock.id);
     });
 
-    it('includes parent field in YjsManager.addBlock call when splitting a nested block', () => {
+    it('writes the tail to Yjs as the split block\'s next sibling under its parent', () => {
       // Setup parent-child relationship: block-2 is a child of block-1
       const childBlock = repository.getBlockById('block-2');
       if (!childBlock) {
@@ -2983,7 +2981,7 @@ describe('BlockOperations', () => {
       hierarchy.setBlockParent(childBlock, 'block-1');
 
       operations.currentBlockIndexValue = 1; // block-2
-      operations.splitBlockWithData(
+      const newBlock = operations.splitBlockWithData(
         'block-2',
         { text: 'Remaining' },
         'paragraph',
@@ -2992,15 +2990,28 @@ describe('BlockOperations', () => {
         blocksStore
       );
 
-      // YjsManager.addBlock must be called with parent: 'block-1' so the child's
-      // own YMap entry records the parentId — required for correct redo behaviour.
-      const addBlockCalls = (dependencies.YjsManager.addBlock as ReturnType<typeof vi.fn>).mock.calls;
-      const splitAddCall = addBlockCalls.find(
-        (call: unknown[]) => (call[0] as { type?: string })?.type === 'paragraph' &&
-          (call[0] as { parent?: string })?.parent === 'block-1'
+      // The parentId must reach the tail's own YMap entry, or redo loses it.
+      expect(dependencies.YjsManager.addBlock).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.addBlockAt).toHaveBeenCalledWith(
+        expect.objectContaining({ id: newBlock.id, type: 'paragraph' }),
+        { parentId: 'block-1', afterId: 'block-2' }
+      );
+    });
+
+    it('keeps the index path for an index other than the slot right after the block', () => {
+      operations.currentBlockIndexValue = 0;
+      const newBlock = operations.splitBlockWithData(
+        'block-1',
+        { text: 'Remaining' },
+        'paragraph',
+        { text: 'Extracted' },
+        3,
+        blocksStore
       );
 
-      expect(splitAddCall).toBeDefined();
+      expect(repository.getBlockIndex(newBlock)).toBe(3);
+      expect(dependencies.YjsManager.addBlockAt).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.addBlock).toHaveBeenCalledWith(expect.objectContaining({ id: newBlock.id }), 3);
     });
   });
 

@@ -23,7 +23,10 @@ const flush = async (): Promise<void> => {
   }
 };
 
-/** A later task: host code that runs outside the earlier call's gesture. */
+/**
+ * A later task. An API call's gesture lasts until the end of its task, so a
+ * microtask flush alone would keep both calls in one step.
+ */
 const nextTask = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
 const savedTexts = async (instance: TestEditor): Promise<unknown[]> =>

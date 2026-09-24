@@ -401,11 +401,13 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       expect(flat(instance)).toEqual([...INITIAL, 'w^-']);
     }, 30_000);
 
-    // BlockManager.move refuses a header whose pre-removal neighbour is a cell block.
-    it.fails('moves a header to right after a table', async () => {
+    // BlockManager.move refuses a header whose pre-removal neighbour is a cell
+    // block, even for the slot right after the table. moveTo throws on it.
+    it.fails('blocks.move puts a header right after a table', async () => {
       const instance = await boot([H('h'), P('a'), table('tbl'), P('z')]);
+      const beforeZ = (instance.blocks.getBlockIndex('z') ?? 0) - 1;
 
-      instance.blocks.moveTo('h', { position: { after: 'tbl' } });
+      instance.blocks.move(beforeZ, 0);
 
       expect(roots(instance)).toEqual(['a', 'tbl', 'h', 'z']);
     }, 30_000);
@@ -476,6 +478,18 @@ describe('blocks.insertAt / blocks.moveTo', () => {
         { id: 'a', parentId: 't', oldParentId: null, previousSiblingId: 'c1' },
       ]);
 
+    }, 30_000);
+
+    it('reports the placement of a same-parent moveTo', async () => {
+      const instance = await boot();
+      const seen = events(instance);
+
+      instance.blocks.moveTo('c2', { position: { before: 'c1' } });
+
+      const last = seen.filter(event => event.type === 'block-moved').at(-1);
+
+      expect(last?.detail.target.id).toBe('c2');
+      expect(pickMoved({ ...last?.detail })).toEqual({ parentId: 't', oldParentId: 't', previousSiblingId: null });
     }, 30_000);
 
     it('reports the placement of a plain blocks.move', async () => {

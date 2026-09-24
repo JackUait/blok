@@ -1043,9 +1043,10 @@ export class BlockMutation {
       this.blockDidMutated(BlockMovedMutationType, movedBlock, {
         fromIndex,
         toIndex: resolvedIndex,
-        // In a caller's move group the caller sets the parent later, so the
-        // placement is not known yet. A healing move opens its own group.
-        ...((reparents || !this.dependencies.YjsManager.isInMoveGroup) && {
+        // In a caller's move group the caller may set another parent later,
+        // so a slot under a different parent is not reported. A healing move
+        // opens its own group.
+        ...((reparents || !this.dependencies.YjsManager.isInMoveGroup || destinationParentId === movedBlock.parentId) && {
           parentId: reparents ? destinationParentId : movedBlock.parentId,
           oldParentId: movedBlock.parentId,
         }),

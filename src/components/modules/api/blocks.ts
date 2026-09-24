@@ -562,7 +562,8 @@ export class BlocksAPI extends Module {
     const toIndex = from < placement.index ? placement.index - 1 : placement.index;
 
     // move() silently refuses a restricted tool whose slot neighbour is a
-    // table cell block, even for the slot right after a table.
+    // table cell block, even for the slot right after a table. Drop this when
+    // the pin "blocks.move puts a header right after a table" passes.
     if (movesFlat && isRestrictedInTableCell(block.name) && isInsideTableCell(BlockManager.getBlockByIndex(toIndex))) {
       throw new BlockPlacementError(`cannot move "${block.name}" to a slot next to a table cell block`);
     }

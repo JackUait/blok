@@ -1,5 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { BlockFactory } from '../../../../../src/components/modules/blockManager/factory';
+import { BlockEventBinder } from '../../../../../src/components/modules/blockManager/event-binder';
 import type { BlockFactoryDependencies } from '../../../../../src/components/modules/blockManager/factory';
 import { API } from '../../../../../src/components/modules/api';
 import { BlockToolAdapter } from '../../../../../src/components/tools/block';
@@ -628,6 +629,45 @@ describe('BlockFactory', () => {
       const tool = factory.getTool('unknown-tool');
 
       expect(tool).toBeUndefined();
+    });
+  });
+
+  describe('a change made before the idle bind', () => {
+    const createWiredFactory = (): { factory: BlockFactory; onBlockMutated: ReturnType<typeof vi.fn>; listenersOn: ReturnType<typeof vi.fn> } => {
+      const onBlockMutated = vi.fn();
+      const listenersOn = vi.fn();
+      const binder = new BlockEventBinder({
+        blockEvents: { keydown: vi.fn(), keyup: vi.fn(), input: vi.fn(), handleCommandX: vi.fn() } as never,
+        listeners: { on: listenersOn, clearAll: vi.fn() },
+        eventsDispatcher: dependencies.eventsDispatcher,
+        getBlockIndex: () => 0,
+        onBlockMutated,
+      });
+
+      return {
+        factory: new BlockFactory(dependencies, (block) => binder.bindBlockEvents(block), (block) => binder.bindBlockChanges(block)),
+        onBlockMutated,
+        listenersOn,
+      };
+    };
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('reaches the block manager even if the idle callback has not run', () => {
+      // The idle callback never runs: under load a browser can starve it.
+      vi.spyOn(window, 'requestIdleCallback').mockImplementation(() => 1);
+      const { factory: wired, onBlockMutated, listenersOn } = createWiredFactory();
+
+      const block = wired.composeBlock({ tool: 'paragraph', bindEventsImmediately: false });
+
+      block.dispatchChange();
+
+      expect(onBlockMutated).toHaveBeenCalledTimes(1);
+      expect(onBlockMutated.mock.calls[0][1]).toBe(block);
+      // DOM listeners stay deferred: binding them per block is the load cost.
+      expect(listenersOn).not.toHaveBeenCalled();
     });
   });
 

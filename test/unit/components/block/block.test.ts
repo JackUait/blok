@@ -910,7 +910,9 @@ describe('Block', () => {
       expect(onMutationSpy).toHaveBeenCalledWith(block);
     });
 
-    it('defers mutation watcher binding when flag is false', async () => {
+    it('reports a tool DOM mutation made before the idle callback when flag is false', () => {
+      // The idle callback never runs: under load a browser can starve it.
+      requestIdleCallbackMock.mockImplementationOnce(() => 1);
       const eventBus = new EventsDispatcher<BlokEventMap>();
       const onMutationSpy = vi.fn();
 
@@ -963,18 +965,8 @@ describe('Block', () => {
         }],
       });
 
-      // With bindMutationWatchersImmediately=false, mutation may not be detected immediately
-      // The mutation handler is bound via requestIdleCallback, so we need to wait
-      await new Promise(resolve => {
-        requestIdleCallback(() => {
-          resolve(undefined);
-        });
-      });
-
-      // After requestIdleCallback fires, the mutation handler should be bound
-      // But the specific mutation we triggered may have already been processed
-      // The key is that the handler was eventually set up
-      expect(block).toBeDefined();
+      expect(onMutationSpy).toHaveBeenCalledWith(block);
+      expect(requestIdleCallbackMock).toHaveBeenCalled();
     });
   });
 

@@ -14,6 +14,15 @@ export type { InsertInsideParentOptions };
 /**
  * Block creation options
  */
+/**
+ * Where derived data comes from: the keys of a block's data it was worked out
+ * from. See `api.blocks.transactWithoutCapture`.
+ */
+export interface DerivedSource {
+  blockId: string;
+  from: readonly string[];
+}
+
 export interface ComposeBlockOptions {
   /** Tool name from config */
   tool: string;

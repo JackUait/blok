@@ -21,7 +21,7 @@ import type { BlockFactory } from './factory';
 import type { BlockHierarchy } from './hierarchy';
 import type { BlockRepository } from './repository';
 import type { BlockDidMutated, BlockOperationsDependencies, OperationsContext } from './operations-context';
-import type { BlocksStore } from './types';
+import type { BlocksStore, DerivedSource } from './types';
 import type { BlockYjsSync } from './yjs-sync';
 
 /**
@@ -92,8 +92,10 @@ export class BlockMutation {
    * @param blocksStore - The blocks store to modify
    * @param data - New data
    * @param tunes - New tune data
+   * @param derivedFrom - where the data was worked out from: the write joins
+   *   the undo step that wrote that instead of adding one
    */
-  public async update(block: Block, blocksStore: BlocksStore, data?: Partial<BlockToolData>, tunes?: { [name: string]: BlockTuneData }): Promise<Block> {
+  public async update(block: Block, blocksStore: BlocksStore, data?: Partial<BlockToolData>, tunes?: { [name: string]: BlockTuneData }, derivedFrom?: DerivedSource): Promise<Block> {
     if (!data && !tunes) {
       return block;
     }
@@ -168,7 +170,7 @@ export class BlockMutation {
         index: applied.index,
       });
 
-      this.syncDataToYjs(block.id, data);
+      this.syncDataToYjs(block.id, data, derivedFrom);
 
       return applied.block;
     }
@@ -200,7 +202,7 @@ export class BlockMutation {
       index: target.index,
     });
 
-    this.syncDataToYjs(block.id, data);
+    this.syncDataToYjs(block.id, data, derivedFrom);
 
     // Sync changed tunes to Yjs (`!= null` — callers may pass a literal null)
     if (tunes != null) {
@@ -419,15 +421,26 @@ export class BlockMutation {
    * paths (in-place and recompose) so they stay in step.
    * @param blockId - id of the updated block
    * @param data - the patch the caller passed (`!= null` — callers may pass a literal null)
+   * @param derivedFrom - see `update`
    */
-  private syncDataToYjs(blockId: string, data?: Partial<BlockToolData>): void {
+  private syncDataToYjs(blockId: string, data?: Partial<BlockToolData>, derivedFrom?: DerivedSource): void {
     if (data == null) {
       return;
     }
 
-    for (const [key, value] of Object.entries(data)) {
-      this.dependencies.YjsManager.updateBlockData(blockId, key, value);
+    const write = (): void => {
+      for (const [key, value] of Object.entries(data)) {
+        this.dependencies.YjsManager.updateBlockData(blockId, key, value);
+      }
+    };
+
+    if (derivedFrom === undefined) {
+      write();
+
+      return;
     }
+    // One transaction: only the first one joins the step.
+    this.dependencies.YjsManager.transactIntoStepThatWrote(derivedFrom.blockId, write, derivedFrom.from);
   }
 
   /**

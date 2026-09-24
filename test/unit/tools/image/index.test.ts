@@ -1759,6 +1759,47 @@ describe('ImageTool — GIF auto-conversion', () => {
     );
   });
 
+  it('saves the picked GIF\'s file name as an edit before converting it', () => {
+    mockConvert.mockReturnValue(new Promise(() => undefined));
+    const block = createMockBlock();
+    const api = createMockApi();
+    (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => 2, insert: vi.fn() };
+    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }), getBlockTools: () => [{ name: 'video' }] };
+    const tool = new ImageTool({ ...createOptions({}, {}, block), api });
+    tool.render();
+
+    pasteGif(tool);
+
+    expect(tool.save().fileName).toBe('cat.gif');
+    expect(block.dispatchChange).toHaveBeenCalledWith();
+  });
+
+  it('swaps to the video as data derived from the pick, not as a new edit', async () => {
+    mockConvert.mockResolvedValue(new Blob([new Uint8Array([1])], { type: 'video/webm' }));
+    const scope = { open: false, options: undefined as unknown };
+    const insertedInScope: boolean[] = [];
+    const api = createMockApi();
+    (api as unknown as { blocks: unknown }).blocks = {
+      getBlockIndex: () => 2,
+      insert: vi.fn(() => insertedInScope.push(scope.open)),
+      transactWithoutCapture: (fn: () => void, options?: unknown) => {
+        scope.open = true;
+        scope.options = options;
+        fn();
+        scope.open = false;
+      },
+    };
+    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }), getBlockTools: () => [{ name: 'video' }] };
+    const tool = new ImageTool({ ...createOptions(), api });
+    tool.render();
+
+    pasteGif(tool);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(insertedInScope).toEqual([true]);
+    expect(scope.options).toEqual({ derivedFrom: 'b1', from: ['fileName'] });
+  });
+
   it('falls back to a normal image upload when conversion returns null', async () => {
     mockConvert.mockResolvedValue(null);
     const insert = vi.fn();
@@ -1965,7 +2006,7 @@ describe('ImageTool — an upload belongs to the pick that started it', () => {
     upload.resolve('https://cdn/p.png');
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(block.dispatchChange).toHaveBeenLastCalledWith({ derived: true });
+    expect(block.dispatchChange).toHaveBeenLastCalledWith({ derived: true, from: ['fileName'] });
     expect(tool.save().url).toBe('https://cdn/p.png');
   });
 

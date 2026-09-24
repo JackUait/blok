@@ -24,7 +24,7 @@ import { uploadErrorMessage } from '../../components/utils/upload-error-message'
 import { safeHttpHref } from './url';
 import { isPreviewable } from './preview';
 import { openFilePreview } from './preview-modal';
-import { deliverToRebuiltBlock } from '../image/detached-upload';
+import { deliverToRebuiltBlock, writeDerived } from '../image/detached-upload';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -53,8 +53,8 @@ export class FileTool implements BlockTool {
   private pendingVideoConversion = false;
   /** Set by `removed()`: this instance is no longer the document's block. */
   private detached = false;
-  /** The file being uploaded; cleared when the user cancels or replaces it. */
-  private uploadingFile: File | null = null;
+  /** The file or link being uploaded; cleared when the user cancels or replaces it. */
+  private uploading: File | string | null = null;
 
   constructor(options: BlockToolConstructorOptions<FileData, FileConfig>) {
     this.api = options.api;
@@ -176,7 +176,7 @@ export class FileTool implements BlockTool {
 
   private startUpload(file: File): void {
     this.lastFileName = file.name;
-    this.uploadingFile = file;
+    this.uploading = file;
     this.pendingImageConversion = file.type.startsWith('image/') || IMAGE_EXTENSION_RE.test(file.name);
     this.pendingVideoConversion = file.type.startsWith('video/') || VIDEO_EXTENSION_RE.test(file.name);
     this.state = 'LOADING';
@@ -194,26 +194,37 @@ export class FileTool implements BlockTool {
 
   private startUrl(url: string): void {
     this.lastFileName = null;
+    this.uploading = url;
     this.pendingImageConversion = IMAGE_EXTENSION_RE.test(url);
     this.pendingVideoConversion = VIDEO_EXTENSION_RE.test(url);
     this.state = 'LOADING';
     this.renderState();
+    // Entering the link is the edit, so what the upload produces can join its undo step.
+    this.data = { ...this.data, url };
+    this.block.dispatchChange();
     void this.uploader
       .handleUrl(url, { onProgress: (p) => this.uploadingEl?.setProgress(p) })
-      .then((result) => this.applyResult(result))
+      .then((result) => this.applyUrlUpload(result, url))
       .catch((err) => this.applyError(err));
   }
 
-  private applyResult(result: FileUploadResult): void {
+  /**
+   * A finished upload of a link the user entered. It lands only while the
+   * block still shows that link, and as derived data: the edit was the link.
+   * @param result - what the uploader returned
+   * @param url - the link, still `uploading` unless cancelled or replaced
+   */
+  private applyUrlUpload(result: FileUploadResult, url: string): void {
     if (this.detached) {
       // The image/video auto-conversion is deliberately skipped: it would have
       // to rebuild the live block from this instance's pre-peer-edit data.
-      deliverToRebuiltBlock(this.api, this.block, 'File', this.resultDelta(result));
+      deliverToRebuiltBlock(this.api, this.block, 'File', this.resultDelta(result), { url }, ['url']);
 
       return;
     }
-    if (this.showResult(result)) {
-      this.block.dispatchChange();
+    if (this.uploading !== url || this.data.url !== url) return;
+    if (this.showResult(result, ['url'])) {
+      this.block.dispatchChange({ derived: true, from: ['url'] });
     }
   }
 
@@ -221,18 +232,18 @@ export class FileTool implements BlockTool {
    * A finished file upload. It lands only while the block still shows the
    * pick that started it, and as derived data: the edit was the pick.
    * @param result - what the uploader returned
-   * @param file - the picked file, still `uploadingFile` unless cancelled or replaced
+   * @param file - the picked file, still `uploading` unless cancelled or replaced
    * @param fromUrl - `data.url` when the job started
    */
   private applyUpload(result: FileUploadResult, file: File, fromUrl: string): void {
     if (this.detached) {
-      deliverToRebuiltBlock(this.api, this.block, 'File', this.resultDelta(result), { url: fromUrl, fileName: file.name });
+      deliverToRebuiltBlock(this.api, this.block, 'File', this.resultDelta(result), { url: fromUrl, fileName: file.name }, ['fileName']);
 
       return;
     }
-    if (this.uploadingFile !== file || this.data.url !== fromUrl) return;
-    if (this.showResult(result)) {
-      this.block.dispatchChange({ derived: true });
+    if (this.uploading !== file || this.data.url !== fromUrl) return;
+    if (this.showResult(result, ['fileName'])) {
+      this.block.dispatchChange({ derived: true, from: ['fileName'] });
     }
   }
 
@@ -249,9 +260,10 @@ export class FileTool implements BlockTool {
 
   /**
    * @param result - what the uploader returned
+   * @param from - the keys the user's pick or link wrote: a conversion joins that edit's undo step
    * @returns false when the block was converted to an image or a video instead
    */
-  private showResult(result: FileUploadResult): boolean {
+  private showResult(result: FileUploadResult, from: readonly string[]): boolean {
     this.errorMessage = null;
     this.data = {
       ...this.data,
@@ -260,10 +272,10 @@ export class FileTool implements BlockTool {
       size: result.size ?? this.data.size,
       mimeType: result.mimeType ?? this.data.mimeType,
     };
-    if (this.pendingVideoConversion && this.convertToVideo()) {
+    if (this.pendingVideoConversion && this.convertToVideo(from)) {
       return false;
     }
-    if (this.pendingImageConversion && this.convertToImage()) {
+    if (this.pendingImageConversion && this.convertToImage(from)) {
       return false;
     }
     this.state = 'RENDERED';
@@ -277,8 +289,9 @@ export class FileTool implements BlockTool {
    * File and Image declare no conversionConfig, so we replace in place rather
    * than going through api.blocks.convert. Returns false (keep the file card)
    * when the block can no longer be located.
+   * @param from - see `showResult`
    */
-  private convertToImage(): boolean {
+  private convertToImage(from: readonly string[]): boolean {
     const index = this.api.blocks.getBlockIndex(this.block.id);
     if (index === undefined) {
       return false;
@@ -287,7 +300,9 @@ export class FileTool implements BlockTool {
     if (this.data.fileName !== undefined) imageData.fileName = this.data.fileName;
     if ((this.data.caption ?? '') !== '') imageData.caption = this.data.caption;
     if (this.data.captionVisible !== undefined) imageData.captionVisible = this.data.captionVisible;
-    this.api.blocks.insert('image', imageData, {}, index, false, true);
+    writeDerived(this.api, this.block.id, from, () => {
+      this.api.blocks.insert('image', imageData, {}, index, false, true);
+    });
     return true;
   }
 
@@ -296,8 +311,9 @@ export class FileTool implements BlockTool {
    * Mirrors {@link convertToImage}: File and Video declare no conversionConfig,
    * so we replace in place. Returns false (keep the file card) when the block
    * can no longer be located.
+   * @param from - see `showResult`
    */
-  private convertToVideo(): boolean {
+  private convertToVideo(from: readonly string[]): boolean {
     const index = this.api.blocks.getBlockIndex(this.block.id);
     if (index === undefined) {
       return false;
@@ -307,7 +323,9 @@ export class FileTool implements BlockTool {
     if (this.data.mimeType !== undefined) videoData.mimeType = this.data.mimeType;
     if ((this.data.caption ?? '') !== '') videoData.caption = this.data.caption;
     if (this.data.captionVisible !== undefined) videoData.captionVisible = this.data.captionVisible;
-    this.api.blocks.insert('video', videoData, {}, index, false, true);
+    writeDerived(this.api, this.block.id, from, () => {
+      this.api.blocks.insert('video', videoData, {}, index, false, true);
+    });
     return true;
   }
 
@@ -323,7 +341,7 @@ export class FileTool implements BlockTool {
   }
 
   private transitionToEmpty(): void {
-    this.uploadingFile = null;
+    this.uploading = null;
     this.data = { ...this.data, url: '' };
     this.state = 'EMPTY';
     this.renderState();

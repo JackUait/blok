@@ -838,7 +838,7 @@ describe('VideoTool — an upload belongs to the pick that started it', () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(tool.save().url).toBe('https://cdn/clip.mp4');
-    expect(block.dispatchChange).toHaveBeenLastCalledWith({ derived: true });
+    expect(block.dispatchChange).toHaveBeenLastCalledWith({ derived: true, from: ['fileName'] });
   });
 
   it('drops an upload that finishes after it was cancelled', async () => {

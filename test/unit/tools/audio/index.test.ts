@@ -310,7 +310,7 @@ describe('AudioTool', () => {
     await Promise.resolve();
     expect(tool.save().peaks).toBeUndefined();
     // Once for the pick and once for the upload, not again for null peaks.
-    expect(vi.mocked(block.dispatchChange).mock.calls).toEqual([[], [{ derived: true }]]);
+    expect(vi.mocked(block.dispatchChange).mock.calls).toEqual([[], [{ derived: true, from: ['fileName'] }]]);
   });
 
   it('I3: decoded peaks and duration are cached in data and round-trip through save()', async () => {
@@ -329,7 +329,7 @@ describe('AudioTool', () => {
     expect(tool.save().peaks).toEqual([0.1, 0.5, 1]);
     expect(tool.save().duration).toBe(8);
     // A decoded waveform is not the user's edit.
-    expect(block.dispatchChange).toHaveBeenLastCalledWith({ derived: true });
+    expect(block.dispatchChange).toHaveBeenLastCalledWith({ derived: true, from: ['url'] });
   });
 
   describe('URL-insert enrichment (waveform + metadata from fetched bytes)', () => {
@@ -384,7 +384,8 @@ describe('AudioTool', () => {
       expect(tool.save().peaks).toBeUndefined();
       expect(root.querySelector('[data-role="audio-media"]')).not.toBeNull();
       expect(root.querySelector('[data-role="audio-error"]')).toBeNull();
-      expect((block.dispatchChange as ReturnType<typeof vi.fn>).mock.calls.length).toBe(1);
+      // The link is the edit; the upload lands as derived data.
+      expect(vi.mocked(block.dispatchChange).mock.calls).toEqual([[], [{ derived: true, from: ['url'] }]]);
     });
 
     it('discards a stale fetch result when the audio was replaced meanwhile', async () => {

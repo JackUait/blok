@@ -1534,7 +1534,7 @@ describe('BlocksAPI', () => {
       const result = await blocksApi.update('to-update', newData);
 
       expect(blockManager.getBlockById).toHaveBeenCalledWith('to-update');
-      expect(blockManager.update).toHaveBeenCalledWith(block, newData, undefined);
+      expect(blockManager.update).toHaveBeenCalledWith(block, newData, undefined, undefined);
       expect(blockAPIConstructorSpy).toHaveBeenCalled();
       expect(result).toEqual({ wrappedBlock: expect.objectContaining({ id: 'to-update' }) as unknown });
     });

@@ -188,7 +188,7 @@ const BlockAPIConstructor = function BlockAPI(
      * Allows to say Blok that Block was changed. Used to manually trigger Blok's 'onChange' callback
      * Can be useful for block changes invisible for blok core.
      */
-    dispatchChange(options?: { derived?: boolean }): void {
+    dispatchChange(options?: { derived?: boolean; from?: readonly string[] }): void {
       block.dispatchChange(options);
     },
 

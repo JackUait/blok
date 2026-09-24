@@ -1,6 +1,7 @@
 import type { BlockOrigin, BlockToolData, LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData, ToolConfig } from '../../../../types';
 import type { BlockAPI as BlockAPIInterface, Blocks, InsertInsideParentOptions } from '../../../../types/api';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
+import type { DerivedSource } from '../blockManager/types';
 import { blocksToMarkdown } from '../../../markdown/blocks-to-markdown';
 import type { MarkdownImportConfig } from '../../../markdown/types';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
@@ -25,6 +26,9 @@ import { logLabeled } from './../../utils';
  * provides with methods working with Block
  */
 export class BlocksAPI extends Module {
+  /** Where the open `transactWithoutCapture` scope's data comes from, if it has a source. */
+  private derivedFrom: DerivedSource | null = null;
+
   /**
    * Available methods
    * @returns {Blocks}
@@ -64,7 +68,7 @@ export class BlocksAPI extends Module {
       splitBlock: this.splitBlock,
       insertInsideParent: this.insertInsideParent,
       transact: (fn: () => void): void => this.transact(fn),
-      transactWithoutCapture: (fn: () => void): void => this.transactWithoutCapture(fn),
+      transactWithoutCapture: (fn: () => void, options?: { derivedFrom?: string; from?: readonly string[] }): void => this.transactWithoutCapture(fn, options),
       beginTransaction: (): void => this.beginTransaction(),
       endTransaction: (): void => this.endTransaction(),
       setPointerDragActive: (active: boolean): void => this.setPointerDragActive(active),
@@ -525,8 +529,13 @@ export class BlocksAPI extends Module {
       throw new Error(`Block with id "${id}" not found`);
     }
 
-    this.Blok.YjsManager.beginApiCall();
-    const updatedBlock = await BlockManager.update(block, data, tunes);
+    // Read before the first await: `fn` of a derived scope returns before update writes.
+    const derivedFrom = this.derivedFrom ?? undefined;
+
+    if (derivedFrom === undefined) {
+      this.Blok.YjsManager.beginApiCall();
+    }
+    const updatedBlock = await BlockManager.update(block, data, tunes, derivedFrom);
 
     return new BlockAPI(updatedBlock, this.Blok.API);
   };
@@ -773,8 +782,24 @@ export class BlocksAPI extends Module {
    * Execute a function without adding any block operations to the undo history.
    * Useful for auto-repair operations that should never appear in undo history.
    */
-  private transactWithoutCapture(fn: () => void): void {
-    this.Blok.YjsManager.transactWithoutCapture(fn);
+  private transactWithoutCapture(fn: () => void, options?: { derivedFrom?: string; from?: readonly string[] }): void {
+    const blockId = options?.derivedFrom;
+
+    if (blockId === undefined) {
+      this.Blok.YjsManager.transactWithoutCapture(fn);
+
+      return;
+    }
+
+    const outer = this.derivedFrom;
+    const source = { blockId, from: options?.from ?? [] };
+
+    this.derivedFrom = source;
+    try {
+      this.Blok.YjsManager.transactIntoStepThatWrote(blockId, fn, source.from);
+    } finally {
+      this.derivedFrom = outer;
+    }
   }
 
   /**

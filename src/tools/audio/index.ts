@@ -278,26 +278,38 @@ export class AudioTool implements BlockTool {
   }
 
   private startUrl(url: string): void {
+    const source = { kind: 'url', url } as const;
+
     this.lastFileName = null;
-    this.lastSource = { kind: 'url', url };
+    this.lastSource = source;
     this.state = 'LOADING';
     this.renderState();
+    // Entering the link is the edit, so what the upload produces can join its undo step.
+    this.data = { ...this.data, url };
+    this.block.dispatchChange();
     void this.uploader
       .handleUrl(url, { onProgress: (p) => this.uploadingEl?.setProgress(p) })
-      .then((result) => this.applyResult(result))
+      .then((result) => this.applyUrlUpload(result, source))
       .catch((err) => this.applyError(err));
   }
 
-  private applyResult(result: UploadResult): void {
+  /**
+   * A finished upload of a link the user entered. It lands only while the
+   * block still shows that link, and as derived data: the edit was the link.
+   * @param result - what the uploader returned
+   * @param source - the job, still `lastSource` unless cancelled or replaced
+   */
+  private applyUrlUpload(result: UploadResult, source: { kind: 'url'; url: string }): void {
     // `removed()` set this: the Block this tool rendered into was destroyed
     // while the upload ran, so `dispatchChange` would reach nobody.
     if (this.destroyed) {
-      deliverToRebuiltBlock(this.api, this.block, 'Audio', this.resultDelta(result));
+      deliverToRebuiltBlock(this.api, this.block, 'Audio', this.resultDelta(result), { url: source.url }, ['url']);
 
       return;
     }
+    if (this.lastSource !== source || this.data.url !== source.url) return;
     this.showResult(result);
-    this.block.dispatchChange();
+    this.block.dispatchChange({ derived: true, from: ['url'] });
     // Enrichment needs the bytes, so a URL insert fetches them (CORS may
     // block it; the player then keeps the plain scrubber).
     void this.fetchForEnrichment(result.url);
@@ -314,13 +326,13 @@ export class AudioTool implements BlockTool {
     const { file } = source;
 
     if (this.destroyed) {
-      deliverToRebuiltBlock(this.api, this.block, 'Audio', this.resultDelta(result, file), { url: fromUrl, fileName: file.name });
+      deliverToRebuiltBlock(this.api, this.block, 'Audio', this.resultDelta(result, file), { url: fromUrl, fileName: file.name }, ['fileName']);
 
       return;
     }
     if (this.lastSource !== source || this.data.url !== fromUrl) return;
     this.showResult(result, file);
-    this.block.dispatchChange({ derived: true });
+    this.block.dispatchChange({ derived: true, from: ['fileName'] });
     this.enrich(file, result.url);
   }
 
@@ -387,7 +399,7 @@ export class AudioTool implements BlockTool {
         if (stale()) return;
         if (dirty.value) {
           this.renderState();
-          this.block.dispatchChange({ derived: true });
+          this.block.dispatchChange({ derived: true, from: ['url'] });
         }
       })
       .catch(() => { /* leave player working without metadata */ });
@@ -400,7 +412,7 @@ export class AudioTool implements BlockTool {
           this.data.peaks = decoded.peaks;
           this.data.duration = decoded.duration;
           this.renderState();
-          this.block.dispatchChange({ derived: true });
+          this.block.dispatchChange({ derived: true, from: ['url'] });
         }
       })
       .catch(() => { /* leave player working without waveform */ });

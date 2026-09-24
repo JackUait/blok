@@ -267,13 +267,18 @@ export class VideoTool implements BlockTool {
   }
 
   private startUrl(url: string): void {
+    const source = { kind: 'url', url } as const;
+
     this.lastFileName = null;
-    this.lastSource = { kind: 'url', url };
+    this.lastSource = source;
     this.state = 'LOADING';
     this.renderState();
+    // Entering the link is the edit, so what the upload produces can join its undo step.
+    this.data = { ...this.data, url };
+    this.block.dispatchChange();
     void this.uploader
       .handleUrl(url, { onProgress: (p) => this.uploadingEl?.setProgress(p) })
-      .then((result) => this.applyResult(result))
+      .then((result) => this.applyUrlUpload(result, source))
       .catch((err) => this.applyError(err));
   }
 
@@ -288,6 +293,23 @@ export class VideoTool implements BlockTool {
   }
 
   /**
+   * A finished upload of a link the user entered. It lands only while the
+   * block still shows that link, and as derived data: the edit was the link.
+   * @param result - what the uploader returned
+   * @param source - the job, still `lastSource` unless cancelled or replaced
+   */
+  private applyUrlUpload(result: UploadResult, source: { kind: 'url'; url: string }): void {
+    if (this.detached) {
+      deliverToRebuiltBlock(this.api, this.block, 'Video', this.resultDelta(result), { url: source.url }, ['url']);
+
+      return;
+    }
+    if (this.lastSource !== source || this.data.url !== source.url) return;
+    this.showResult(result);
+    this.block.dispatchChange({ derived: true, from: ['url'] });
+  }
+
+  /**
    * A finished file upload. It lands only while the block still shows the
    * pick that started it, and as derived data: the edit was the pick.
    * @param result - what the uploader returned
@@ -298,13 +320,13 @@ export class VideoTool implements BlockTool {
     const mimeType = source.file.type;
 
     if (this.detached) {
-      deliverToRebuiltBlock(this.api, this.block, 'Video', this.resultDelta(result, mimeType), { url: fromUrl, fileName: source.file.name });
+      deliverToRebuiltBlock(this.api, this.block, 'Video', this.resultDelta(result, mimeType), { url: fromUrl, fileName: source.file.name }, ['fileName']);
 
       return;
     }
     if (this.lastSource !== source || this.data.url !== fromUrl) return;
     this.showResult(result, mimeType);
-    this.block.dispatchChange({ derived: true });
+    this.block.dispatchChange({ derived: true, from: ['fileName'] });
   }
 
   private resultDelta(result: UploadResult, mimeType?: string): Partial<VideoData> {
@@ -501,7 +523,7 @@ export class VideoTool implements BlockTool {
           if (ratio !== this.data.aspectRatio) {
             this.data.aspectRatio = ratio;
             media.style.aspectRatio = ratio;
-            this.block.dispatchChange({ derived: true });
+            this.block.dispatchChange({ derived: true, from: ['url'] });
           }
         }
       }, { once: true });

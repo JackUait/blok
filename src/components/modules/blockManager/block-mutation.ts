@@ -1043,8 +1043,12 @@ export class BlockMutation {
       this.blockDidMutated(BlockMovedMutationType, movedBlock, {
         fromIndex,
         toIndex: resolvedIndex,
-        parentId: reparents ? destinationParentId : movedBlock.parentId,
-        oldParentId: movedBlock.parentId,
+        // In a caller's move group the caller sets the parent later, so the
+        // placement is not known yet. A healing move opens its own group.
+        ...((reparents || !this.dependencies.YjsManager.isInMoveGroup) && {
+          parentId: reparents ? destinationParentId : movedBlock.parentId,
+          oldParentId: movedBlock.parentId,
+        }),
       });
 
       // Sync to Yjs using the actual resolved index

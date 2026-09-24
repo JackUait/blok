@@ -11,7 +11,10 @@ import type { Block } from '../../../../../src/components/block';
 import { BlockChanged } from '../../../../../src/components/events/BlockChanged';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import { ToggleItem } from '../../../../../src/tools/toggle';
-import type { API, BlockMutationEvent, BlockPosition, OutputBlockData, OutputData } from '../../../../../types';
+import { Header } from '../../../../../src/tools/header';
+import { Table } from '../../../../../src/tools/table/index';
+import type { API, BlockMutationEvent, OutputBlockData, OutputData } from '../../../../../types';
+import type { BlockPosition } from '../../../../../types/api';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -101,10 +104,27 @@ const doc = (): OutputBlockData[] => [
 
 const INITIAL = ['a^-', 't^-', 'c1^t', 'c2^t', 'b^-'];
 
+const table = (id: string): OutputBlockData => ({
+  id,
+  type: 'table',
+  data: {
+    withHeadings: false,
+    content: [
+      [{ blocks: [], text: 'a1' }, { blocks: [], text: 'a2' }],
+    ],
+  },
+});
+
+const H = (id: string): OutputBlockData => ({ id, type: 'header', data: { text: id, level: 2 } });
+
+/** Root-level ids, in flat order. */
+const roots = (instance: TestEditor): string[] =>
+  instance.module.blockManager.blocks.filter(block => block.parentId === null).map(block => block.id);
+
 const boot = async (blocks: OutputBlockData[] = doc()): Promise<TestEditor> => {
   const instance = new Blok({
     holder,
-    tools: { paragraph: Paragraph, toggle: ToggleItem, only: ParagraphsOnly, owner: Owner },
+    tools: { paragraph: Paragraph, toggle: ToggleItem, header: Header, table: Table, only: ParagraphsOnly, owner: Owner },
     data: { blocks },
   }) as unknown as TestEditor;
 
@@ -249,6 +269,20 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       expect(flat(instance)).toEqual(INITIAL);
     }, 30_000);
 
+    it.each([
+      { name: 'the root end of a document ending in a table', position: 'end' as const },
+      { name: 'right after a table', position: { after: 'tbl' } },
+    ])('keeps a header a header at $name', async ({ position }) => {
+      const instance = await boot([P('a'), table('tbl')]);
+
+      const block = instance.blocks.insertAt('header', { text: 'h', level: 2 }, { id: 'h', position });
+
+      expect(block.name).toBe('header');
+      expect(block.parentId).toBeNull();
+      expect(roots(instance)).toEqual(['a', 'tbl', 'h']);
+      await expect(instance.save()).resolves.toBeDefined();
+    }, 30_000);
+
     it('reports parentId and previousSiblingId on block-added', async () => {
       const instance = await boot();
       const seen = events(instance);
@@ -365,16 +399,62 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       expect(flat(instance)).toEqual([...INITIAL, 'w^-']);
     }, 30_000);
 
+    // BlockManager.move refuses a header whose pre-removal neighbour is a cell block.
+    it.fails('moves a header to right after a table', async () => {
+      const instance = await boot([H('h'), P('a'), table('tbl'), P('z')]);
+
+      instance.blocks.moveTo('h', { position: { after: 'tbl' } });
+
+      expect(roots(instance)).toEqual(['a', 'tbl', 'h', 'z']);
+    }, 30_000);
+
+    it('throws instead of silently not moving a header to right after a table', async () => {
+      const instance = await boot([H('h'), P('a'), table('tbl'), P('z')]);
+
+      expect(() => instance.blocks.moveTo('h', { position: { after: 'tbl' } })).toThrow(/next to a table cell block/);
+      expect(roots(instance)).toEqual(['h', 'a', 'tbl', 'z']);
+      await expect(instance.save()).resolves.toBeDefined();
+    }, 30_000);
+
+    it('moves a paragraph to right after a table', async () => {
+      const instance = await boot([P('p'), P('a'), table('tbl'), P('z')]);
+
+      instance.blocks.moveTo('p', { position: { after: 'tbl' } });
+
+      expect(roots(instance)).toEqual(['a', 'tbl', 'p', 'z']);
+      await expect(instance.save()).resolves.toBeDefined();
+    }, 30_000);
+
     it('reports parentId, oldParentId and previousSiblingId on block-moved', async () => {
       const instance = await boot();
       const seen = events(instance);
 
       instance.blocks.moveTo('a', { position: { after: 'c1' } });
 
+      const moved = seen.filter(event => event.type === 'block-moved');
+
+      // No event may report a placement the block does not have yet.
+      expect(moved.map(event => ({ id: event.detail.target.id, ...pickMoved({ ...event.detail }) }))).toEqual([
+        ...moved.slice(0, -1).map(event => ({ id: event.detail.target.id, parentId: undefined, oldParentId: undefined, previousSiblingId: undefined })),
+        { id: 'a', parentId: 't', oldParentId: null, previousSiblingId: 'c1' },
+      ]);
+
+    }, 30_000);
+
+    it('reports the placement of a plain blocks.move', async () => {
+      const instance = await boot();
+      const seen = events(instance);
+
+      instance.blocks.move(2, 3);
+
       const last = seen.filter(event => event.type === 'block-moved').at(-1);
 
-      expect(last?.detail.target.id).toBe('a');
-      expect(last === undefined ? undefined : pickMoved({ ...last.detail })).toEqual({ parentId: 't', oldParentId: null, previousSiblingId: 'c1' });
+      expect(last?.detail.target.id).toBe('c2');
+      expect(pickMoved({ ...last?.detail })).toEqual({ parentId: 't', oldParentId: 't', previousSiblingId: null });
+
+      instance.blocks.move(3, 0);
+
+      expect(pickMoved({ ...seen.filter(event => event.type === 'block-moved').at(-1)?.detail })).toEqual({ parentId: 't', oldParentId: null, previousSiblingId: 'c1' });
     }, 30_000);
   });
 });

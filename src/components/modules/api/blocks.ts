@@ -511,6 +511,13 @@ export class BlocksAPI extends Module {
       return this.insertInsideParent(placement.parentId, placement.index, data, type, { id, tunes, focus });
     }
 
+    // forceTopLevel skips the "after a table" check, so a restricted tool right
+    // after a table would be demoted as if it were in a cell. The inferring
+    // insert knows it left the table, and at a root slot it infers the root.
+    if (placement.index > 0 && isInsideTableCell(BlockManager.getBlockByIndex(placement.index - 1))) {
+      return this.insert(type, data, {}, placement.index, focus, false, id, tunes);
+    }
+
     if (!BlockManager.suppressStopCapturing) {
       this.Blok.YjsManager.stopCapturing();
     }
@@ -550,13 +557,21 @@ export class BlocksAPI extends Module {
     const descendants = BlockManager.blocks.filter(candidate => isUnder(this.tree, candidate, block.id));
     const from = BlockManager.getBlockIndex(block);
     const end = from + descendants.length;
+    // A slot inside or right after its own subtree needs no flat move.
+    const movesFlat = placement.index <= from || placement.index > end + 1;
+    const toIndex = from < placement.index ? placement.index - 1 : placement.index;
+
+    // move() silently refuses a restricted tool whose slot neighbour is a
+    // table cell block, even for the slot right after a table.
+    if (movesFlat && isRestrictedInTableCell(block.name) && isInsideTableCell(BlockManager.getBlockByIndex(toIndex))) {
+      throw new BlockPlacementError(`cannot move "${block.name}" to a slot next to a table cell block`);
+    }
 
     // A move group skips move()'s parent heal and clamps, so the whole
     // relocation plus the reparent below is one undo entry.
     YjsManager.transactMoves(() => {
-      // A slot inside or right after its own subtree needs no flat move.
-      if (placement.index <= from || placement.index > end + 1) {
-        BlockManager.move(from < placement.index ? placement.index - 1 : placement.index, from);
+      if (movesFlat) {
+        BlockManager.move(toIndex, from);
 
         // Blocks.move carries only children nested in the moved holder, so
         // place each descendant after the previous member, by live index.

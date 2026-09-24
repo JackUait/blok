@@ -1887,7 +1887,8 @@ export class BlockManager extends Module {
   /**
    * Where an added or moved block sits, for its event: parent and previous
    * sibling. A dispatch site passes `parentId` when the block's own field is
-   * not updated yet.
+   * not updated yet. A move without `parentId` gets no placement: its caller
+   * sets the parent later.
    * @param mutationType - the event type
    * @param block - the added or moved block
    * @param detailData - the site's own detail fields
@@ -1902,6 +1903,11 @@ export class BlockManager extends Module {
     }
 
     const given = detailData.parentId;
+
+    if (mutationType === BlockMovedMutationType && given === undefined) {
+      return {};
+    }
+
     const parentId = typeof given === 'string' || given === null ? given : block.parentId;
     // Unit harnesses dispatch on a BlockManager that was never prepared.
     const blocks = (this.repository as BlockRepository | undefined)?.blocks ?? [];
@@ -1913,9 +1919,7 @@ export class BlockManager extends Module {
       : blocks.slice(0, index).reverse().find(candidate => candidate.id === parentId || candidate.parentId === parentId);
     const previousSiblingId = previous === undefined || previous.id === parentId ? null : previous.id;
 
-    return mutationType === BlockMovedMutationType
-      ? { parentId, oldParentId: parentId, previousSiblingId }
-      : { parentId, previousSiblingId };
+    return { parentId, previousSiblingId };
   }
 
   /**

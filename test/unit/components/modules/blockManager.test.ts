@@ -225,6 +225,7 @@ const createBlockManager = (
       addBlockAt: vi.fn(),
       removeBlock: vi.fn(),
       moveBlock: vi.fn(),
+      moveBlockTo: vi.fn(),
       applyBlockPlacement: vi.fn(),
       replaceBlockContent: vi.fn(() => true),
       updateBlockData: vi.fn(() => true),

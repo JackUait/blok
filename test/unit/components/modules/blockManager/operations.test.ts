@@ -154,6 +154,7 @@ const createMockDependencies = (): BlockOperationsDependencies => {
       removeBlock: vi.fn(),
       replaceBlockContent: vi.fn(() => true),
       moveBlock: vi.fn(),
+      moveBlockTo: vi.fn(),
       updateBlockData: vi.fn(),
       updateBlockTune: vi.fn(),
       updateBlockIndent: vi.fn(),
@@ -387,7 +388,7 @@ describe('BlockOperations', () => {
       const store = createBlocksStore([above, parent, follower]);
       const repo = new BlockRepository();
       repo.initialize(store);
-      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 1);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo, undefined, undefined, store), blockDidMutatedSpy, 1);
       ops.setYjsSync(yjsSync);
 
       ops.moveCurrentBlockUp(store);
@@ -404,7 +405,7 @@ describe('BlockOperations', () => {
       const store = createBlocksStore([parent, follower, below]);
       const repo = new BlockRepository();
       repo.initialize(store);
-      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 0);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo, undefined, undefined, store), blockDidMutatedSpy, 0);
       ops.setYjsSync(yjsSync);
 
       ops.moveCurrentBlockDown(store);
@@ -425,7 +426,7 @@ describe('BlockOperations', () => {
       const store = createBlocksStore([a, b, b1]);
       const repo = new BlockRepository();
       repo.initialize(store);
-      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 0);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo, undefined, undefined, store), blockDidMutatedSpy, 0);
       ops.setYjsSync(yjsSync);
 
       ops.moveCurrentBlockDown(store);
@@ -444,7 +445,7 @@ describe('BlockOperations', () => {
       const store = createBlocksStore([b, b1, a]);
       const repo = new BlockRepository();
       repo.initialize(store);
-      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 2);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo, undefined, undefined, store), blockDidMutatedSpy, 2);
       ops.setYjsSync(yjsSync);
 
       ops.moveCurrentBlockUp(store);
@@ -463,7 +464,7 @@ describe('BlockOperations', () => {
       const store = createBlocksStore([a, b, b1]);
       const repo = new BlockRepository();
       repo.initialize(store);
-      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 0);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo, undefined, undefined, store), blockDidMutatedSpy, 0);
       ops.setYjsSync(yjsSync);
 
       ops.moveCurrentBlockDown(store);
@@ -481,7 +482,7 @@ describe('BlockOperations', () => {
       const store = createBlocksStore([b, b1, a]);
       const repo = new BlockRepository();
       repo.initialize(store);
-      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 2);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo, undefined, undefined, store), blockDidMutatedSpy, 2);
       ops.setYjsSync(yjsSync);
 
       ops.moveCurrentBlockUp(store);
@@ -513,7 +514,7 @@ describe('BlockOperations', () => {
       const repo = new BlockRepository();
 
       repo.initialize(store);
-      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, currentIndex);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo, undefined, undefined, store), blockDidMutatedSpy, currentIndex);
 
       ops.setYjsSync(yjsSync);
 
@@ -557,14 +558,14 @@ describe('BlockOperations', () => {
       const store = createBlocksStore([callout, c1, c2, after]);
       const repo = new BlockRepository();
       repo.initialize(store);
-      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 2);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo, undefined, undefined, store), blockDidMutatedSpy, 2);
       ops.setYjsSync(yjsSync);
 
       ops.moveCurrentBlockDown(store);
 
       expect(repo.blocks.map((block) => block.id)).toEqual(['callout', 'c1', 'c2', 'after']);
       expect(c2.parentId).toBe('callout');
-      expect(dependencies.YjsManager.moveBlock).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.moveBlockTo).not.toHaveBeenCalled();
       expect(dependencies.I18n.t).toHaveBeenCalledWith('a11y.atBottom');
     });
 
@@ -576,14 +577,14 @@ describe('BlockOperations', () => {
       const store = createBlocksStore([toggle, c1, c2]);
       const repo = new BlockRepository();
       repo.initialize(store);
-      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 1);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo, undefined, undefined, store), blockDidMutatedSpy, 1);
       ops.setYjsSync(yjsSync);
 
       ops.moveCurrentBlockUp(store);
 
       expect(repo.blocks.map((block) => block.id)).toEqual(['toggle', 'c1', 'c2']);
       expect(c1.parentId).toBe('toggle');
-      expect(dependencies.YjsManager.moveBlock).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.moveBlockTo).not.toHaveBeenCalled();
       expect(dependencies.I18n.t).toHaveBeenCalledWith('a11y.atTop');
     });
 
@@ -595,7 +596,7 @@ describe('BlockOperations', () => {
       const store = createBlocksStore([toggle, c1, c2]);
       const repo = new BlockRepository();
       repo.initialize(store);
-      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 1);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo, undefined, undefined, store), blockDidMutatedSpy, 1);
       ops.setYjsSync(yjsSync);
 
       ops.moveCurrentBlockDown(store);
@@ -613,7 +614,7 @@ describe('BlockOperations', () => {
       const store = createBlocksStore([toggle, c1, after]);
       const repo = new BlockRepository();
       repo.initialize(store);
-      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 0);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo, undefined, undefined, store), blockDidMutatedSpy, 0);
       ops.setYjsSync(yjsSync);
 
       ops.moveCurrentBlockDown(store);
@@ -632,7 +633,7 @@ describe('BlockOperations', () => {
       const store = createBlocksStore([x, a, b, y]);
       const repo = new BlockRepository();
       repo.initialize(store);
-      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 1);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo, undefined, undefined, store), blockDidMutatedSpy, 1);
       ops.setYjsSync(yjsSync);
 
       ops.moveCurrentBlockDown(store, [a, b]);
@@ -649,7 +650,7 @@ describe('BlockOperations', () => {
       const store = createBlocksStore([x, a, b, y]);
       const repo = new BlockRepository();
       repo.initialize(store);
-      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 1);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo, undefined, undefined, store), blockDidMutatedSpy, 1);
       ops.setYjsSync(yjsSync);
 
       ops.moveCurrentBlockUp(store, [a, b]);
@@ -2606,7 +2607,7 @@ describe('BlockOperations', () => {
       operations.currentBlockIndexValue = 0;
       operations.move(1, 0, false, blocksStore);
 
-      expect(dependencies.YjsManager.moveBlock).toHaveBeenCalled();
+      expect(dependencies.YjsManager.moveBlockTo).toHaveBeenCalled();
       expect(repository.blocks[0].id).toBe('block-2');
     });
 
@@ -2644,7 +2645,7 @@ describe('BlockOperations', () => {
       const testStore = createBlocksStore([containerA, childA, containerB, childB]);
       const testRepo = new BlockRepository();
       testRepo.initialize(testStore);
-      const testHierarchy = new BlockHierarchy(testRepo);
+      const testHierarchy = new BlockHierarchy(testRepo, undefined, undefined, testStore);
       const testOps = new BlockOperations(
         dependencies,
         testRepo,
@@ -2679,7 +2680,7 @@ describe('BlockOperations', () => {
       const testStore = createBlocksStore([container, child1, child2]);
       const testRepo = new BlockRepository();
       testRepo.initialize(testStore);
-      const testHierarchy = new BlockHierarchy(testRepo);
+      const testHierarchy = new BlockHierarchy(testRepo, undefined, undefined, testStore);
       const testOps = new BlockOperations(
         dependencies,
         testRepo,
@@ -3727,7 +3728,7 @@ describe('BlockOperations', () => {
 
       operations.moveCurrentBlockUp(blocksStore);
 
-      expect(dependencies.YjsManager.moveBlock).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.moveBlockTo).not.toHaveBeenCalled();
       expect(dependencies.I18n.t).toHaveBeenCalledWith('a11y.atTop');
     });
 
@@ -3736,7 +3737,7 @@ describe('BlockOperations', () => {
 
       operations.moveCurrentBlockUp(blocksStore);
 
-      expect(dependencies.YjsManager.moveBlock).toHaveBeenCalled();
+      expect(dependencies.YjsManager.moveBlockTo).toHaveBeenCalled();
       expect(dependencies.I18n.t).toHaveBeenCalledWith('a11y.movedUp', expect.any(Object));
     });
 
@@ -3756,7 +3757,7 @@ describe('BlockOperations', () => {
 
       operations.moveCurrentBlockDown(blocksStore);
 
-      expect(dependencies.YjsManager.moveBlock).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.moveBlockTo).not.toHaveBeenCalled();
       expect(dependencies.I18n.t).toHaveBeenCalledWith('a11y.atBottom');
     });
 
@@ -3765,7 +3766,7 @@ describe('BlockOperations', () => {
 
       operations.moveCurrentBlockDown(blocksStore);
 
-      expect(dependencies.YjsManager.moveBlock).toHaveBeenCalled();
+      expect(dependencies.YjsManager.moveBlockTo).toHaveBeenCalled();
       expect(dependencies.I18n.t).toHaveBeenCalledWith('a11y.movedDown', expect.any(Object));
     });
 

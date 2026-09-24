@@ -25,9 +25,9 @@ const paragraphs = (...texts: string[]): Blocks =>
 const createEditor = async (
   page: Page,
   blocks: Blocks,
-  options: { holder?: string; instanceKey?: 'blokInstance' | 'blokInstance2'; config?: Record<string, unknown>; width?: string } = {}
+  options: { holder?: string; globalName?: 'blokInstance' | 'blokInstance2'; config?: Record<string, unknown>; width?: string } = {}
 ): Promise<void> => {
-  const { holder = 'blok', instanceKey = 'blokInstance', config = {}, width } = options;
+  const { holder = 'blok', globalName = 'blokInstance', config = {}, width } = options;
 
   await page.evaluate(({ holderId, holderWidth }) => {
     document.getElementById(holderId)?.remove();
@@ -48,7 +48,7 @@ const createEditor = async (
       window[key] = blok;
       await blok.isReady;
     },
-    { holderId: holder, key: instanceKey, data: blocks, extra: config }
+    { holderId: holder, key: globalName, data: blocks, extra: config }
   );
 };
 
@@ -588,7 +588,7 @@ test.describe('find in page', () => {
       await createEditor(page, paragraphs('first editor'), { holder: 'blok' });
       await createEditor(page, [{ id: 'find-second', type: 'paragraph', data: { text: 'second editor' } }], {
         holder: 'blok2',
-        instanceKey: 'blokInstance2',
+        globalName: 'blokInstance2',
       });
       await focusParagraph(page, 'second editor');
 

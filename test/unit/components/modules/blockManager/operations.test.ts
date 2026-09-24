@@ -2018,7 +2018,7 @@ describe('BlockOperations', () => {
       const testRepo = new BlockRepository();
 
       testRepo.initialize(testStore);
-      const testHierarchy = new BlockHierarchy(testRepo);
+      const testHierarchy = new BlockHierarchy(testRepo, undefined, undefined, testStore);
       const testOps = new BlockOperations(
         dependencies,
         testRepo,

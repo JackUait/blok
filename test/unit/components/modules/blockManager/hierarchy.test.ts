@@ -32,6 +32,8 @@ const createMockBlock = (options: {
 /**
  * Create a BlocksStore with mock blocks and initialize repository
  */
+const storeOf = new WeakMap<BlockRepository, Blocks>();
+
 const createRepositoryWithBlocks = (
   blockConfigs: Array<{ id: string; parentId?: string | null; contentIds?: string[]; name?: string }>
 ): BlockRepository => {
@@ -46,8 +48,31 @@ const createRepositoryWithBlocks = (
   const repository = new BlockRepository();
   // Cast to BlocksStore since Blocks has array-like access but missing the index signature in type definition
   repository.initialize(blocksStore as BlocksStore);
+  storeOf.set(repository, blocksStore);
 
   return repository;
+};
+
+/**
+ * A hierarchy that mounts holders through the repository's store.
+ * @param repository - a repository from createRepositoryWithBlocks
+ * @param onParentChanged - optional parent-change callback
+ * @param getIsSyncingFromYjs - optional Yjs replay flag
+ * @param workingArea - the root the store mounts into, when the test builds its own
+ */
+const hierarchyOf = (
+  repository: BlockRepository,
+  onParentChanged?: (parentId: string) => void,
+  getIsSyncingFromYjs?: () => boolean,
+  workingArea?: HTMLElement
+): BlockHierarchy => {
+  const store = storeOf.get(repository);
+
+  if (store !== undefined && workingArea !== undefined) {
+    store.workingArea = workingArea;
+  }
+
+  return new BlockHierarchy(repository, onParentChanged, getIsSyncingFromYjs, store);
 };
 
 /**
@@ -130,7 +155,7 @@ describe('BlockHierarchy', () => {
         { id: 'grandchild-1', parentId: 'child-1' },
         { id: 'root-2', parentId: null },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
     });
 
     it('returns 0 for root-level blocks', () => {
@@ -190,7 +215,7 @@ describe('BlockHierarchy', () => {
         { id: 'A', parentId: 'B', contentIds: [] },
         { id: 'B', parentId: 'A', contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const a = requireBlock('A');
       const depth = hierarchy.getBlockDepth(a);
@@ -207,7 +232,7 @@ describe('BlockHierarchy', () => {
         { id: 'level-4', parentId: 'level-3' },
         { id: 'level-5', parentId: 'level-4' },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const level5Block = requireBlock('level-5');
 
@@ -222,7 +247,7 @@ describe('BlockHierarchy', () => {
         { id: 'parent-2', parentId: null, contentIds: [] },
         { id: 'child', parentId: 'parent-1', contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
     });
 
     it('updates block parentId', () => {
@@ -328,7 +353,7 @@ describe('BlockHierarchy', () => {
     it('coerces dangling parent id silently while syncing from Yjs', async () => {
       const loggerModule = await import('../../../../../src/components/utils');
       const warnSpy = vi.spyOn(loggerModule, 'logLabeled').mockImplementation(() => undefined);
-      const syncingHierarchy = new BlockHierarchy(repository, undefined, () => true);
+      const syncingHierarchy = hierarchyOf(repository, undefined, () => true);
       const block = requireBlock('child');
       const oldParent = requireBlock('parent-1');
 
@@ -392,7 +417,7 @@ describe('BlockHierarchy', () => {
     it('calls onParentChanged callback when parent is set', () => {
       const onParentChanged = vi.fn();
 
-      hierarchy = new BlockHierarchy(repository, onParentChanged);
+      hierarchy = hierarchyOf(repository, onParentChanged);
 
       const block = requireBlock('child');
 
@@ -405,7 +430,7 @@ describe('BlockHierarchy', () => {
     it('does not call onParentChanged when parent is null', () => {
       const onParentChanged = vi.fn();
 
-      hierarchy = new BlockHierarchy(repository, onParentChanged);
+      hierarchy = hierarchyOf(repository, onParentChanged);
 
       const block = requireBlock('child');
 
@@ -422,7 +447,7 @@ describe('BlockHierarchy', () => {
         { id: 'new-child', parentId: null, contentIds: [] },
         { id: 'after-toggle', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       // Mark the existing child as hidden (toggle is collapsed)
       const existingChild = requireBlock('existing-child');
@@ -443,7 +468,7 @@ describe('BlockHierarchy', () => {
         { id: 'existing-child', parentId: 'toggle', contentIds: [] },
         { id: 'new-child', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       // Existing child is visible (toggle is expanded)
       // new-child's holder has no 'hidden' class to start with
@@ -461,7 +486,7 @@ describe('BlockHierarchy', () => {
         { id: 'toggle', parentId: null, contentIds: [] },
         { id: 'new-child', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const newChild = requireBlock('new-child');
 
@@ -486,7 +511,7 @@ describe('BlockHierarchy', () => {
         { id: 'toggle', parentId: null, contentIds: [] },
         { id: 'new-child', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const toggle = requireBlock('toggle');
       const inner = document.createElement('div');
@@ -506,7 +531,7 @@ describe('BlockHierarchy', () => {
         { id: 'inner', parentId: 'outer', contentIds: [] },
         { id: 'new-child', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const outer = requireBlock('outer');
       const inner = requireBlock('inner');
@@ -536,7 +561,7 @@ describe('BlockHierarchy', () => {
         { id: 'inner', parentId: 'callout', contentIds: [] },
         { id: 'new-child', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const callout = requireBlock('callout');
       const inner = requireBlock('inner');
@@ -562,7 +587,7 @@ describe('BlockHierarchy', () => {
         { id: 'toggle', parentId: null, contentIds: [] },
         { id: 'new-child', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const toggle = requireBlock('toggle');
       const inner = document.createElement('div');
@@ -636,7 +661,7 @@ describe('BlockHierarchy', () => {
         { id: 'A', parentId: null, contentIds: ['B'] },
         { id: 'B', parentId: 'A', contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const a = requireBlock('A');
 
@@ -649,7 +674,7 @@ describe('BlockHierarchy', () => {
         { id: 'B', parentId: 'A', contentIds: ['C'] },
         { id: 'C', parentId: 'B', contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const a = requireBlock('A');
 
@@ -661,7 +686,7 @@ describe('BlockHierarchy', () => {
         { id: 'A', parentId: null, contentIds: [] },
         { id: 'B', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const a = requireBlock('A');
 
@@ -672,7 +697,7 @@ describe('BlockHierarchy', () => {
     it('calls onParentChanged for each setBlockParent call', () => {
       const onParentChanged = vi.fn();
 
-      hierarchy = new BlockHierarchy(repository, onParentChanged);
+      hierarchy = hierarchyOf(repository, onParentChanged);
 
       const block = requireBlock('child');
 
@@ -702,7 +727,7 @@ describe('BlockHierarchy', () => {
     it('aborts cleanly when called on a block that is not in the repository (stale ref)', () => {
       const onParentChanged = vi.fn();
 
-      hierarchy = new BlockHierarchy(repository, onParentChanged);
+      hierarchy = hierarchyOf(repository, onParentChanged);
 
       // Build a stale block that was never added to the repository, giving
       // it a parentId so the would-be mutation path is observable.
@@ -738,7 +763,7 @@ describe('BlockHierarchy', () => {
         { id: 'live-1', parentId: null },
         { id: 'live-2', parentId: null },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const toggle = requireBlock('toggle');
       const toggleChildren = document.createElement('div');
@@ -783,7 +808,7 @@ describe('BlockHierarchy', () => {
         { id: 'B', parentId: 'A', name: 'list', contentIds: ['C'] },
         { id: 'C', parentId: 'B', name: 'list', contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const a = requireBlock('A');
       const b = requireBlock('B');
@@ -806,7 +831,7 @@ describe('BlockHierarchy', () => {
         { id: 'toggle', parentId: null, name: 'list', contentIds: ['para'] },
         { id: 'para', parentId: 'toggle', name: 'paragraph', contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const toggle = requireBlock('toggle');
       const para = requireBlock('para');
@@ -824,7 +849,7 @@ describe('BlockHierarchy', () => {
         { id: 'child', parentId: 'root' },
         { id: 'grandchild', parentId: 'child' },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
     });
 
     // The margin itself is `calc(--_blok-block-depth * --blok-block-indent-step)`
@@ -866,7 +891,7 @@ describe('BlockHierarchy', () => {
         { id: 'l3', parentId: 'l2' },
         { id: 'l4', parentId: 'l3' },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const l4Block = requireBlock('l4');
       hierarchy.updateBlockIndentation(l4Block);
@@ -951,7 +976,7 @@ describe('BlockHierarchy', () => {
         { id: 'col', parentId: 'list', contentIds: ['para'] },
         { id: 'para', parentId: 'col' },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       (requireBlock('list') as unknown as { name: string }).name = 'column_list';
       (requireBlock('col') as unknown as { name: string }).name = 'column';
@@ -996,7 +1021,7 @@ describe('BlockHierarchy', () => {
         { id: 'child', parentId: 'root' },
         { id: 'grandchild', parentId: 'child' },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
     });
 
     it('never writes an inline margin, so a host container tool can decline the indent from plain CSS', () => {
@@ -1078,7 +1103,7 @@ describe('BlockHierarchy', () => {
         { id: 'toggle-parent', parentId: null, contentIds: [] },
         { id: 'new-child', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const toggleParent = requireBlock('toggle-parent');
       const newChild = requireBlock('new-child');
@@ -1103,7 +1128,6 @@ describe('BlockHierarchy', () => {
         { id: 'old-toggle', parentId: null, contentIds: ['child-in-toggle'] },
         { id: 'child-in-toggle', parentId: 'old-toggle', contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
 
       const oldToggle = requireBlock('old-toggle');
       const child = requireBlock('child-in-toggle');
@@ -1116,9 +1140,8 @@ describe('BlockHierarchy', () => {
       oldToggle.holder.appendChild(toggleContainer);
       toggleContainer.appendChild(child.holder);
 
-      const sibling = document.createElement('div');
       editorWrapper.appendChild(oldToggle.holder);
-      editorWrapper.appendChild(sibling);
+      hierarchy = hierarchyOf(repository, undefined, undefined, editorWrapper);
 
       hierarchy.setBlockParent(child, null);
 
@@ -1138,7 +1161,6 @@ describe('BlockHierarchy', () => {
         { id: 'G', parentId: null, contentIds: [] },
         { id: 'child', parentId: 'toggle', contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
 
       const toggle = requireBlock('toggle');
       const childD = requireBlock('childD');
@@ -1154,6 +1176,7 @@ describe('BlockHierarchy', () => {
       toggleContainer.appendChild(child.holder);
       editorWrapper.appendChild(toggle.holder);
       editorWrapper.appendChild(G.holder);
+      hierarchy = hierarchyOf(repository, undefined, undefined, editorWrapper);
 
       hierarchy.setBlockParent(child, null);
 
@@ -1172,7 +1195,7 @@ describe('BlockHierarchy', () => {
         { id: 'a', parentId: null, contentIds: [] },
         { id: 'c2', parentId: 'toggle', contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const toggle = requireBlock('toggle');
       const c1 = requireBlock('c1');
@@ -1205,7 +1228,7 @@ describe('BlockHierarchy', () => {
         { id: 'claimed-block', parentId: 'table-parent', contentIds: [] },
         { id: 'toggle-parent', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const claimedBlock = requireBlock('claimed-block');
       const toggleParent = requireBlock('toggle-parent');
@@ -1246,7 +1269,7 @@ describe('BlockHierarchy', () => {
         { id: 'child', parentId: 'old-parent', contentIds: [] },
         { id: 'new-parent', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const child = requireBlock('child');
       const newParent = requireBlock('new-parent');
@@ -1290,7 +1313,7 @@ describe('BlockHierarchy', () => {
         { id: 'cell-a', parentId: 'table', contentIds: [] },
         { id: 'cell-b', parentId: 'table', contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const cellA = requireBlock('cell-a');
       const cellB = requireBlock('cell-b');
@@ -1328,7 +1351,7 @@ describe('BlockHierarchy', () => {
         { id: 'column', parentId: null, contentIds: [] },
         { id: 'new-child', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const column = requireBlock('column');
       const newChild = requireBlock('new-child');
@@ -1358,7 +1381,7 @@ describe('BlockHierarchy', () => {
         { id: 'a', parentId: null, contentIds: [] },
         { id: 'c2', parentId: 'column', contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const column = requireBlock('column');
       const c1 = requireBlock('c1');
@@ -1395,7 +1418,7 @@ describe('BlockHierarchy', () => {
         { id: 'moving', parentId: 'col-a', contentIds: [] },
         { id: 'col-b', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const colA = requireBlock('col-a');
       const colB = requireBlock('col-b');
@@ -1436,7 +1459,6 @@ describe('BlockHierarchy', () => {
         { id: 'col', parentId: null, contentIds: [] },
         { id: 'after', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
 
       const before = requireBlock('before');
       const col = requireBlock('col');
@@ -1457,6 +1479,7 @@ describe('BlockHierarchy', () => {
       workingArea.appendChild(col.holder);
       workingArea.appendChild(after.holder);
 
+      hierarchy = hierarchyOf(repository, undefined, undefined, workingArea);
       hierarchy.setBlockParent(moving, null);
 
       // The holder left the column and now sits at workingArea root, right after
@@ -1480,7 +1503,6 @@ describe('BlockHierarchy', () => {
         { id: 'col', parentId: 'cl', contentIds: ['cp'], name: 'column' },
         { id: 'cp', parentId: 'col', contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
 
       const cl = requireBlock('cl');
       const col = requireBlock('col');
@@ -1509,6 +1531,7 @@ describe('BlockHierarchy', () => {
       // STRAND: mover's holder mounted directly in the columns row (the bug state).
       row.appendChild(mover.holder);
 
+      hierarchy = hierarchyOf(repository, undefined, undefined, workingArea);
       hierarchy.setBlockParent(mover, null);
 
       // Relocated OUT of the row entirely, to workingArea root after the list.
@@ -1518,25 +1541,24 @@ describe('BlockHierarchy', () => {
       expect(cl.holder.nextElementSibling).toBe(mover.holder);
     });
 
-    it('does NOT move block.holder when the new parent has no [data-blok-toggle-children] container', () => {
+    it('puts the holder right after a new parent that has no child slot', () => {
       repository = createRepositoryWithBlocks([
         { id: 'plain-parent', parentId: null, contentIds: [] },
         { id: 'child', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const plainParent = requireBlock('plain-parent');
       const child = requireBlock('child');
 
-      // No toggle container — plain-parent.holder has no special child
+      // No child slot: a slotless parent's children sit flat right after it.
       const externalWrapper = document.createElement('div');
       externalWrapper.appendChild(child.holder);
 
       hierarchy.setBlockParent(child, 'plain-parent');
 
-      // child.holder should remain in the external wrapper, not pulled into parent.holder
-      expect(externalWrapper.contains(child.holder)).toBe(true);
       expect(plainParent.holder.contains(child.holder)).toBe(false);
+      expect(plainParent.holder.nextElementSibling).toBe(child.holder);
     });
 
     /**
@@ -1562,7 +1584,7 @@ describe('BlockHierarchy', () => {
         { id: 'new', parentId: null, contentIds: [] },
         { id: 'c2', parentId: 'cl', contentIds: ['c2p1'] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const cl = requireBlock('cl');
       const c1 = requireBlock('c1');
@@ -1635,7 +1657,7 @@ describe('BlockHierarchy', () => {
         { id: 'toggle', parentId: 'c1', contentIds: ['tc'] },
         { id: 'tc', parentId: 'toggle', contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const cl = requireBlock('cl');
       const c1 = requireBlock('c1');
@@ -1712,7 +1734,7 @@ describe('BlockHierarchy', () => {
         { id: 'callout', parentId: 'outer', contentIds: [] },
         { id: 'stranded', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const outer = requireBlock('outer');
       const callout = requireBlock('callout');
@@ -1755,7 +1777,7 @@ describe('BlockHierarchy', () => {
         { id: 'claimed', parentId: null, contentIds: [] },
         { id: 'target', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const owner = requireBlock('owner');
       const claimed = requireBlock('claimed');
@@ -1792,7 +1814,7 @@ describe('BlockHierarchy', () => {
         { id: 'mover', parentId: null, contentIds: [] },
         { id: 'inner', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const mover = requireBlock('mover');
       const inner = requireBlock('inner');
@@ -1835,7 +1857,7 @@ describe('BlockHierarchy', () => {
         { id: 'grandchild', parentId: 'first-child', contentIds: [] },
         { id: 'appended', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const container = requireBlock('container');
       const firstChild = requireBlock('first-child');
@@ -1898,7 +1920,7 @@ describe('BlockHierarchy', () => {
       firstChild.holder.appendChild(firstChildSlot);
       firstChildSlot.appendChild(grandchild.holder);
 
-      const chainHierarchy = new BlockHierarchy(chainRepository);
+      const chainHierarchy = new BlockHierarchy(chainRepository, undefined, undefined, blocksStore);
       const appended = createMockBlock({ id: 'appended', parentId: null });
 
       // Index 3 is what resolveInsertIndex(container, 'end') yields: past the
@@ -1982,7 +2004,7 @@ describe('BlockHierarchy', () => {
         { id: 'c2', parentId: 't1', contentIds: [] },
         { id: 'after', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const t1 = requireBlock('t1');
       const c1 = requireBlock('c1');
@@ -2007,7 +2029,7 @@ describe('BlockHierarchy', () => {
         { id: 'c2', parentId: 't1', contentIds: [] },
         { id: 'c3', parentId: 't1', contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const t1 = requireBlock('t1');
       const [c1, c2, c3] = ['c1', 'c2', 'c3'].map(requireBlock);
@@ -2031,7 +2053,7 @@ describe('BlockHierarchy', () => {
         { id: 'c2', parentId: 't1', contentIds: [] },
         { id: 'c3', parentId: 't1', contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const [co, t1, c1, c2, c3] = ['co', 't1', 'c1', 'c2', 'c3'].map(requireBlock);
       const calloutSlot = addSlot(co);
@@ -2056,7 +2078,7 @@ describe('BlockHierarchy', () => {
         { id: 'c2', parentId: 't1', contentIds: [] },
         { id: 'c3', parentId: 't1', contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository, undefined, undefined, workingArea);
 
       const [t1, c1, c2, c3] = ['t1', 'c1', 'c2', 'c3'].map(requireBlock);
       const toggleSlot = addSlot(t1);
@@ -2079,7 +2101,7 @@ describe('BlockHierarchy', () => {
         { id: 'p', parentId: 'table', contentIds: [] },
         { id: 'g', parentId: null, contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const [table, p, g] = ['table', 'p', 'g'].map(requireBlock);
       const cellOne = document.createElement('div');
@@ -2102,7 +2124,7 @@ describe('BlockHierarchy', () => {
         { id: 'c1', parentId: 't1', contentIds: [] },
         { id: 'c2', parentId: 't1', contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const [t1, c1, c2] = ['t1', 'c1', 'c2'].map(requireBlock);
       const slot = addSlot(t1);
@@ -2128,7 +2150,7 @@ describe('BlockHierarchy', () => {
         { id: 'c2', parentId: 't1', contentIds: [] },
         { id: 'c3', parentId: 't1', contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const [co, t1, c1, c2, c3] = ['co', 't1', 'c1', 'c2', 'c3'].map(requireBlock);
       const calloutSlot = addSlot(co);
@@ -2151,7 +2173,7 @@ describe('BlockHierarchy', () => {
         { id: 'c1', parentId: 'box', contentIds: ['g'] },
         { id: 'g', parentId: 'c1', contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const [box, c1, g] = ['box', 'c1', 'g'].map(requireBlock);
       const slot = document.createElement('div');
@@ -2177,7 +2199,7 @@ describe('BlockHierarchy', () => {
         { id: 'p', parentId: 'col', contentIds: ['g'] },
         { id: 'g', parentId: 'p', contentIds: [] },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const [t1, c1, li, col, p, g] = ['t1', 'c1', 'li', 'col', 'p', 'g'].map(requireBlock);
       const toggleSlot = addSlot(t1);
@@ -2237,7 +2259,7 @@ describe('BlockHierarchy', () => {
         { id: 'c', parentId: 't' },
         { id: 'r', parentId: null },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository, undefined, undefined, workingArea);
 
       const [t, a, b, c, r] = ['t', 'a', 'b', 'c', 'r'].map(requireBlock);
       const slot = addToggleSlot(t);
@@ -2264,7 +2286,7 @@ describe('BlockHierarchy', () => {
         { id: 'b', parentId: 't' },
         { id: 'r', parentId: null },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       hierarchy.setBlockParent(requireBlock('a'), null);
 
@@ -2281,7 +2303,7 @@ describe('BlockHierarchy', () => {
         { id: 'y', parentId: 'p' },
         { id: 'q', parentId: 'g' },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       hierarchy.setBlockParent(requireBlock('x'), 'g');
 
@@ -2299,7 +2321,7 @@ describe('BlockHierarchy', () => {
         { id: 'c1a', parentId: 'c1' },
         { id: 'r', parentId: null },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       hierarchy.setBlockParent(requireBlock('x'), 't');
 
@@ -2315,7 +2337,7 @@ describe('BlockHierarchy', () => {
         { id: 'b', parentId: null },
         { id: 'r', parentId: null },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       hierarchy.setBlockParent(requireBlock('b'), 'a');
 
@@ -2330,7 +2352,7 @@ describe('BlockHierarchy', () => {
         { id: 'c2', parentId: 't' },
         { id: 'r', parentId: null },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const [t, c1, c2, r] = ['t', 'c1', 'c2', 'r'].map(requireBlock);
 
@@ -2348,7 +2370,7 @@ describe('BlockHierarchy', () => {
         { id: 'c2', parentId: 't' },
         { id: 'r', parentId: null },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const [t, c1, c2, r] = ['t', 'c1', 'c2', 'r'].map(requireBlock);
 
@@ -2366,7 +2388,7 @@ describe('BlockHierarchy', () => {
         { id: 'c2', parentId: 't' },
         { id: 'r', parentId: null },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository, undefined, undefined, workingArea);
 
       const [t, c1, c2, r] = ['t', 'c1', 'c2', 'r'].map(requireBlock);
       const slot = addToggleSlot(t);
@@ -2388,7 +2410,7 @@ describe('BlockHierarchy', () => {
         { id: 'c1', parentId: 't' },
         { id: 'x', parentId: null },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const [t, c1, x] = ['t', 'c1', 'x'].map(requireBlock);
       const slot = addToggleSlot(t);
@@ -2412,7 +2434,7 @@ describe('BlockHierarchy', () => {
         { id: 'r', parentId: null },
         { id: 'p', parentId: null },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const [table, c1, r, p] = ['table', 'c1', 'r', 'p'].map(requireBlock);
       const cellOne = addCell(table);
@@ -2437,7 +2459,7 @@ describe('BlockHierarchy', () => {
         { id: 'c3', parentId: 't' },
         { id: 'z', parentId: null },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const [t, c1, c2, c3, z] = ['t', 'c1', 'c2', 'c3', 'z'].map(requireBlock);
 
@@ -2455,7 +2477,7 @@ describe('BlockHierarchy', () => {
         { id: 'c2', parentId: 't' },
         { id: 'c3', parentId: 't' },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const [t, c1, c2, c3] = ['t', 'c1', 'c2', 'c3'].map(requireBlock);
 
@@ -2473,7 +2495,7 @@ describe('BlockHierarchy', () => {
         { id: 'c2', parentId: 't' },
         { id: 'x', parentId: null },
       ]);
-      hierarchy = new BlockHierarchy(repository, undefined, () => true);
+      hierarchy = hierarchyOf(repository, undefined, () => true);
 
       const t = requireBlock('t');
 
@@ -2490,7 +2512,7 @@ describe('BlockHierarchy', () => {
         { id: 'c2', parentId: 't' },
         { id: 'x', parentId: 't' },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       hierarchy.setBlockParent(requireBlock('x'), 't');
 
@@ -2505,7 +2527,7 @@ describe('BlockHierarchy', () => {
         { id: 'c2', parentId: 'table' },
         { id: 'r', parentId: null },
       ]);
-      hierarchy = new BlockHierarchy(repository);
+      hierarchy = hierarchyOf(repository);
 
       const [table, c1, c2, r] = ['table', 'c1', 'c2', 'r'].map(requireBlock);
       const cellOne = addCell(table);

@@ -60,12 +60,6 @@ vi.mock('../../../../../src/components/utils/html', async (importOriginal) => {
  * getBlockById lookup that proved it also defines newParent. Swapping their
  * `&&` for `||`, or dropping either operand, keeps both guards identical.
  *
- * childSlotForFlatOrder: `flatIndexById.get(block.id) ?? -1` never falls back —
- * setBlockParent's entry guard proves the block is in `repository.blocks`, the
- * exact array the map is built from. And `siblingIndex < flatIndex` can never
- * be `<=`: distinct ids get distinct last-occurrence indices, and the block's
- * own id is excluded by the `contentIds.includes(block.id)` guard above.
- *
  * `newParentId !== null && wouldFormCycle(...)` forced true just calls
  * wouldFormCycle with a null target, which returns false on its first step.
  *

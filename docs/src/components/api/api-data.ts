@@ -909,6 +909,31 @@ editor.blocks.insertInsideParent(
 );`,
       },
       {
+        name: "blocks.insertAt(type?, data?, options?)",
+        returnType: "BlockAPI",
+        description:
+          "Inserts a new block at a place named by its parent and its siblings, not by a flat index. It is ONE undo entry.\n\n- `position` is `'start'`, `'end'` (the default), `{ before: id }` or `{ after: id }`.\n  - `{ after: id }` lands after that sibling's whole subtree, not among its children.\n- `parentId` names the parent; `null` is the root.\n  - When you omit it, `before`/`after` use the sibling's parent, and `'start'`/`'end'` use the root.\n- `replace: id` puts the new block in that block's place. It keeps the parent and adopts the children. It cannot be combined with `parentId` or `position`.\n- `focus` defaults to `false`, so a programmatic insert does not move the current block.\n- A tool the parent does not allow is demoted, as with `insertInsideParent`.\n\nIt throws, and changes nothing, when the parent, the sibling or the replaced block is not found, or when the sibling is not a child of `parentId`.",
+        example: `// Last child of a toggle
+editor.blocks.insertAt('paragraph', { text: 'Inside' }, { parentId: toggleId });
+
+// Right after a block's whole subtree, at the block's own level
+editor.blocks.insertAt('header', { text: 'Next', level: 2 }, { position: { after: blockId } });
+
+// First block of the document
+editor.blocks.insertAt('paragraph', { text: 'Top' }, { parentId: null, position: 'start' });`,
+      },
+      {
+        name: "blocks.moveTo(id, target)",
+        returnType: "void",
+        description:
+          "Moves a block, with its whole subtree, to a place named by its parent and its siblings. It is ONE undo entry, even when the parent changes.\n\n- `position` works as in `insertAt`. `{ after: id }` lands after that sibling's whole subtree.\n- `parentId` names the new parent; `null` is the root. When you omit it, `before`/`after` use the sibling's parent, and `'start'`/`'end'` use the root.\n\nIt throws, and changes nothing, when:\n\n- a block is not found, or the sibling is not a child of `parentId`;\n- the target is the block itself or inside its own subtree;\n- the new parent does not accept the block (`ownsChildren`, `childTools`, or a table cell for a restricted tool).",
+        example: `// Into a toggle, as its first child
+editor.blocks.moveTo(blockId, { parentId: toggleId, position: 'start' });
+
+// Out of a container, right after it
+editor.blocks.moveTo(childId, { position: { after: containerId } });`,
+      },
+      {
         name: "blocks.getBlocksCount()",
         returnType: "number",
         description: "Get the total number of blocks in the editor.",

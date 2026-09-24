@@ -652,7 +652,7 @@ describe('Table lifecycle rebuild', () => {
 
         return holder;
       };
-      const blockOf = (id: string): { id: string; name: string; holder: HTMLElement; parentId: string; isEmpty: boolean; preservedData: object } =>
+      const blockOf = (id: string): { id: string; name: string; holder: HTMLElement; parentId: string; isEmpty: boolean; preservedData: Record<string, unknown> } =>
         ({ id, name: 'paragraph', holder: holderOf(id), parentId: 'table-lifecycle-test', isEmpty: true, preservedData: {} });
       const ids = ['old', repairId, peerId];
 

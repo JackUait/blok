@@ -591,6 +591,35 @@ describe('Table lifecycle rebuild', () => {
     });
   });
 
+  describe('setData() from a peer naming an empty cell', () => {
+    /**
+     * The peer that emptied the cell fills it and sends that block. A stand-in
+     * minted here goes to the shared doc too, so the cell ends with two.
+     */
+    it('does not mint a stand-in for the cell', () => {
+      const options = createTableOptions(
+        { content: [['A']] },
+        {},
+        { blocks: { isSyncingFromYjs: false, isApplyingRemoteChange: false, getById: vi.fn(() => undefined) } }
+      );
+      const blocksApi = options.api.blocks as unknown as { isSyncingFromYjs: boolean; isApplyingRemoteChange: boolean };
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+      vi.mocked(options.api.blocks.insert).mockClear();
+
+      blocksApi.isSyncingFromYjs = true;
+      blocksApi.isApplyingRemoteChange = true;
+      table.setData({ withHeadings: false, withHeadingColumn: false, content: [[{ blocks: [] }]] });
+      blocksApi.isSyncingFromYjs = false;
+      blocksApi.isApplyingRemoteChange = false;
+
+      expect(options.api.blocks.insert).not.toHaveBeenCalled();
+    });
+  });
+
   describe('rendered() during Yjs sync naming a block that never arrives', () => {
     const nextFrame = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => resolve()));
 

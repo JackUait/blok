@@ -309,18 +309,20 @@ test.describe('undo audit: collab in two real editors', () => {
   const blocksPerCell = (page: Page, name: string): Promise<number[]> =>
     page.getByTestId(name).locator('[data-blok-table-cell-blocks]')
       .evaluateAll((cells) => cells.map((cell) => cell.querySelectorAll('[data-blok-id]').length));
-  const expectOneBlockPerCell = async (pages: Pair, cells = 4): Promise<void> => {
-    await expect.poll(async () => ({ alpha: await blocksPerCell(pages.a, 'alpha'),
-      beta: await blocksPerCell(pages.b, 'beta') }), { timeout: 5000 })
-      .toEqual({ alpha: Array(cells).fill(1),
-        beta: Array(cells).fill(1) });
+  const perCell = async (pages: Pair): Promise<{ alpha: number[]; beta: number[] }> =>
+    ({ alpha: await blocksPerCell(pages.a, 'alpha'),
+      beta: await blocksPerCell(pages.b, 'beta') });
+  const oneEach = (cells: number): { alpha: number[]; beta: number[] } =>
+    ({ alpha: Array<number>(cells).fill(1),
+      beta: Array<number>(cells).fill(1) });
+  /** How many blocks the converged doc parents to the table, and how many its cells name. */
+  const tableChildren = async (pages: Pair): Promise<{ children: number; named: number }> => {
     const rows = await converged(pages);
     const table = rows.find((row) => row.type === 'table');
     const named = (table?.data as { content: Array<Array<{ blocks: string[] }>> }).content.flat().flatMap((cell) => cell.blocks);
 
-    expect({ children: rows.filter((row) => row.parent === 'T').length,
-      named: named.length }).toEqual({ children: cells,
-      named: cells });
+    return { children: rows.filter((row) => row.parent === 'T').length,
+      named: named.length };
   };
 
   test('S-3: a cell block the author deletes leaves one stand-in on both editors', async ({ context }) => {
@@ -330,7 +332,9 @@ test.describe('undo audit: collab in two real editors', () => {
     await deleteBlock(pages.a, 'alpha', await cellOf(pages.a, 'alpha', 0, 0));
     await wait(pages.a, 1500);
 
-    await expectOneBlockPerCell(pages);
+    await expect.poll(() => perCell(pages), { timeout: 5000 }).toEqual(oneEach(4));
+    expect(await tableChildren(pages)).toEqual({ children: 4,
+      named: 4 });
   });
 
   test('S-3: both editors deleting the same cell block at once end with one stand-in', async ({ context }) => {
@@ -348,7 +352,9 @@ test.describe('undo audit: collab in two real editors', () => {
     await releaseCollabDocFrames(pages.b);
     await wait(pages.a, 1500);
 
-    await expectOneBlockPerCell(pages);
+    await expect.poll(() => perCell(pages), { timeout: 5000 }).toEqual(oneEach(4));
+    expect(await tableChildren(pages)).toEqual({ children: 4,
+      named: 4 });
   });
 
   test('S-3: a cell block deleted while the peer adds a column leaves one stand-in per cell', async ({ context }) => {
@@ -367,6 +373,8 @@ test.describe('undo audit: collab in two real editors', () => {
     await releaseCollabDocFrames(pages.b);
     await wait(pages.a, 1500);
 
-    await expectOneBlockPerCell(pages, 6);
+    await expect.poll(() => perCell(pages), { timeout: 5000 }).toEqual(oneEach(6));
+    expect(await tableChildren(pages)).toEqual({ children: 6,
+      named: 6 });
   });
 });

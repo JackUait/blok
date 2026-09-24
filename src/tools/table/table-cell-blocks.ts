@@ -791,6 +791,11 @@ export class TableCellBlocks {
           // undo that restores them later in the same replay). They are
           // placed by id when they land; a fabricated stand-in would outlive them.
           normalizedRow.push({ blocks: referencedBlockIds, ...cellColorProps, ...cellMetaProps });
+        } else if (this.api.blocks.isApplyingRemoteChange && isCellWithBlocks(cellContent)) {
+          // A peer's empty cell: that peer fills it and sends the block. A
+          // stand-in minted here reaches the shared doc too, so the cell
+          // would end with one block per peer.
+          normalizedRow.push({ blocks: [], ...cellColorProps, ...cellMetaProps });
         } else {
           const text = typeof cellContent === 'string'
             ? cellContent

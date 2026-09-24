@@ -343,23 +343,22 @@
 
 [data-blok-find-map] {
   position: relative;
-  height: 14px;
+  height: 16px;
   margin: var(--blok-space-1-5) var(--blok-space-2-5) 0;
   cursor: pointer;
 }
 
 /*
-  The track runs past the box by half the active mark and its ring, so a
-  mark at 0% or 100% still sits on the track. The 14px box is the hit area.
+  A hairline baseline. It runs past the box by half the active mark and its
+  ring, so a mark at 0% or 100% still sits on it. The 16px box is the hit area.
 */
 [data-blok-find-map]::before {
   content: '';
   position: absolute;
   inset-inline: -4px;
   top: 50%;
-  height: 4px;
-  border-radius: var(--blok-radius-pill);
-  background: var(--blok-icon-bg);
+  height: 1px;
+  background: var(--blok-find-track);
   transform: translateY(-50%);
 }
 
@@ -368,7 +367,7 @@
   position: absolute;
   top: 50%;
   width: 2px;
-  height: 8px;
+  height: 10px;
   border-radius: var(--blok-radius-pill);
   background: var(--blok-find-tick);
   transform: translate(-50%, -50%);
@@ -379,15 +378,15 @@
 }
 
 [data-blok-find-tick]:hover {
-  height: 12px;
+  height: 14px;
   background: var(--blok-text-secondary);
 }
 
-/* The ring is the bar's own colour: it cuts the mark out of the track and its neighbours. */
+/* The ring is the bar's own colour: it cuts the mark out of the baseline and its neighbours. */
 [data-blok-find-tick][data-blok-find-active] {
   z-index: 1;
-  width: 4px;
-  height: 14px;
+  width: 3px;
+  height: 16px;
   background: var(--blok-find-tick-active);
   box-shadow: 0 0 0 2px var(--blok-popover-bg);
 }

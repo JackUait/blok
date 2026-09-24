@@ -1620,8 +1620,9 @@
   --blok-find-match-bg: rgba(255, 212, 0, 0.32);
   --blok-find-match-active-bg: rgba(255, 138, 0, 0.5);
   --blok-find-lens-ring: rgba(255, 128, 0, 0.72);
+  --blok-find-track: #e9e9e7;
   --blok-find-tick: #c9c8c5;
-  --blok-find-tick-active: #f08a00;
+  --blok-find-tick-active: #191919;
   --blok-find-empty-bg: rgba(235, 87, 87, 0.07);
   --blok-find-empty-border: rgba(235, 87, 87, 0.55);
   --blok-find-bar-width: 432px;
@@ -1777,8 +1778,9 @@
   --blok-find-match-bg: rgba(255, 212, 0, 0.2);
   --blok-find-match-active-bg: rgba(255, 146, 38, 0.5);
   --blok-find-lens-ring: rgba(255, 163, 68, 0.8);
+  --blok-find-track: #3a3a3a;
   --blok-find-tick: #5e5e5e;
-  --blok-find-tick-active: #ffa344;
+  --blok-find-tick-active: #f0efed;
   --blok-find-empty-bg: rgba(251, 93, 93, 0.12);
   --blok-find-empty-border: rgba(251, 93, 93, 0.6);
 }
@@ -1929,8 +1931,9 @@
   --blok-find-match-bg: rgba(255, 212, 0, 0.2);
   --blok-find-match-active-bg: rgba(255, 146, 38, 0.5);
   --blok-find-lens-ring: rgba(255, 163, 68, 0.8);
+  --blok-find-track: #3a3a3a;
   --blok-find-tick: #5e5e5e;
-  --blok-find-tick-active: #ffa344;
+  --blok-find-tick-active: #f0efed;
   --blok-find-empty-bg: rgba(251, 93, 93, 0.12);
   --blok-find-empty-border: rgba(251, 93, 93, 0.6);
 }
@@ -9286,7 +9289,7 @@ span[data-blok-slash-search] {
 
 [data-blok-find-map] {
   position: relative;
-  height: 14px;
+  height: 16px;
   margin: var(--blok-space-1-5) var(--blok-space-2-5) 0;
   cursor: pointer;
 }
@@ -9296,9 +9299,8 @@ span[data-blok-slash-search] {
   position: absolute;
   inset-inline: -4px;
   top: 50%;
-  height: 4px;
-  border-radius: var(--blok-radius-pill);
-  background: var(--blok-icon-bg);
+  height: 1px;
+  background: var(--blok-find-track);
   transform: translateY(-50%);
 }
 
@@ -9306,7 +9308,7 @@ span[data-blok-slash-search] {
   position: absolute;
   top: 50%;
   width: 2px;
-  height: 8px;
+  height: 10px;
   border-radius: var(--blok-radius-pill);
   background: var(--blok-find-tick);
   transform: translate(-50%, -50%);
@@ -9314,14 +9316,14 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-find-tick]:hover {
-  height: 12px;
+  height: 14px;
   background: var(--blok-text-secondary);
 }
 
 [data-blok-find-tick][data-blok-find-active] {
   z-index: 1;
-  width: 4px;
-  height: 14px;
+  width: 3px;
+  height: 16px;
   background: var(--blok-find-tick-active);
   box-shadow: 0 0 0 2px var(--blok-popover-bg);
 }

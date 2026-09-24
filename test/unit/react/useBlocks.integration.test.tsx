@@ -1033,10 +1033,29 @@ describe('useBlocks — real BlockHierarchy integration', () => {
     expect(flat).toEqual(['A', 'col', 'c1', 'c2']);
   });
 
-  it('move ADOPTS the parent of the slot it lands in (parent-adoption side effect)', () => {
-    // [X, col(column), c] — X is a root block. Moving X to sit after the column
-    // child c lands it among the column's children, so X ADOPTS `col` as its
-    // parent. This is core's flat-position auto-heal, asserted via parentId.
+  it('move ADOPTS the parent of the ref (sibling-of-ref)', () => {
+    const harness = createRealEditorHarness([
+      { id: 'X' },
+      { id: 'tog', name: 'toggle' },
+      { id: 'c', parentId: 'tog' },
+    ]);
+
+    workingArea = harness.workingArea;
+
+    const { result } = renderHook(() => useBlocks(harness.editor));
+
+    act(() => {
+      result.current.move('X', { after: 'c' });
+    });
+
+    expect(result.current.getById('X')?.parentId).toBe('tog');
+    expect(result.current.getChildren('tog').map((n) => n.id)).toEqual(['c', 'X']);
+  });
+
+  it.each([
+    { name: 'a column child out to root', id: 'c', target: { after: 'X' } },
+    { name: 'a root block into a column', id: 'X', target: { after: 'c' } },
+  ])('move of $name is a graceful no-op, like nest/unnest', ({ id, target }) => {
     const harness = createRealEditorHarness([
       { id: 'X' },
       { id: 'col', name: 'column' },
@@ -1047,14 +1066,13 @@ describe('useBlocks — real BlockHierarchy integration', () => {
 
     const { result } = renderHook(() => useBlocks(harness.editor));
 
-    expect(result.current.getById('X')?.parentId).toBeNull();
-
     act(() => {
-      result.current.move('X', { after: 'c' });
+      result.current.move(id, target);
     });
 
-    expect(result.current.getById('X')?.parentId).toBe('col');
-    expect(result.current.getChildren('col').map((n) => n.id)).toContain('X');
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['X', 'col']);
+    expect(result.current.getById('c')?.parentId).toBe('col');
+    expect(result.current.getById('X')?.parentId).toBeNull();
   });
 
   it('move of a parent carries its indent descendants and keeps the subtree contiguous', () => {

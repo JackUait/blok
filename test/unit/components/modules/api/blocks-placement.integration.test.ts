@@ -106,6 +106,17 @@ const doc = (): OutputBlockData[] => [
 
 const INITIAL = ['a^-', 't^-', 'c1^t', 'c2^t', 'b^-'];
 
+/** The name of the error `run` throws, or 'no throw'. */
+const thrownName = (run: () => void): string => {
+  try {
+    run();
+  } catch (error) {
+    return error instanceof Error ? error.name : 'not an Error';
+  }
+
+  return 'no throw';
+};
+
 const table = (id: string): OutputBlockData => ({
   id,
   type: 'table',
@@ -429,7 +440,32 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       await expect(instance.save()).resolves.toBeDefined();
     }, 30_000);
 
-    it('moves a block into a column and back out', async () => {
+    const columns = (): OutputBlockData[] => [
+      { id: 'cl', type: 'column_list', data: {}, content: ['k1', 'k2'] },
+      { id: 'k1', type: 'column', data: {}, parent: 'cl', content: ['x1'] },
+      P('x1', 'k1'),
+      { id: 'k2', type: 'column', data: {}, parent: 'cl', content: ['y1'] },
+      P('y1', 'k2'),
+      P('r'),
+    ];
+    const COLUMNS = ['cl^-', 'k1^cl', 'x1^k1', 'k2^cl', 'y1^k2', 'r^-'];
+
+    // Column membership belongs to the drag UI, as with blocks.move.
+    it.each([
+      { name: 'a root block into a column', id: 'r', target: { parentId: 'k2', position: 'start' as const } },
+      { name: 'the last child out of a column', id: 'x1', target: { position: { after: 'cl' } } },
+      { name: 'a column out of its column_list', id: 'k1', target: { parentId: null, position: 'end' as const } },
+      { name: 'a child from one column to another', id: 'x1', target: { parentId: 'k2', position: 'end' as const } },
+    ])('throws and changes nothing when moving $name', async ({ id, target }) => {
+      const instance = await boot(columns());
+
+      expect(thrownName(() => instance.blocks.moveTo(id, target))).toBe('BlockPlacementError');
+      await nextFrames(2);
+      expect(flat(instance)).toEqual(COLUMNS);
+      await expect(instance.save()).resolves.toBeDefined();
+    }, 30_000);
+
+    it('reorders inside a column', async () => {
       const instance = await boot([
         { id: 'cl', type: 'column_list', data: {}, content: ['k1', 'k2'] },
         { id: 'k1', type: 'column', data: {}, parent: 'cl', content: ['x1', 'x2'] },
@@ -440,16 +476,35 @@ describe('blocks.insertAt / blocks.moveTo', () => {
         P('r'),
       ]);
 
-      instance.blocks.moveTo('r', { parentId: 'k2', position: 'start' });
-      await nextFrames(2);
+      expect(flat(instance)).toEqual(['cl^-', 'k1^cl', 'x1^k1', 'x2^k1', 'k2^cl', 'y1^k2', 'r^-']);
 
-      expect(flat(instance)).toEqual(['cl^-', 'k1^cl', 'x1^k1', 'x2^k1', 'k2^cl', 'r^k2', 'y1^k2']);
+      instance.blocks.moveTo('x2', { position: { before: 'x1' } });
+
+      expect(flat(instance)).toEqual(['cl^-', 'k1^cl', 'x2^k1', 'x1^k1', 'k2^cl', 'y1^k2', 'r^-']);
       await expect(instance.save()).resolves.toBeDefined();
+    }, 30_000);
 
-      instance.blocks.moveTo('x1', { position: { after: 'cl' } });
-      await nextFrames(2);
+    it.each([
+      { name: 'to the root', target: { parentId: null, position: 'end' as const } },
+      { name: 'into a toggle outside the table', target: { parentId: 't', position: 'end' as const } },
+    ])('throws and changes nothing when moving a table cell block $name', async ({ target }) => {
+      const instance = await boot([...doc(), table('tbl')]);
+      const before = flat(instance);
+      const cellBlock = instance.module.blockManager.blocks.find(block => block.parentId === 'tbl');
 
-      expect(flat(instance)).toEqual(['cl^-', 'k1^cl', 'x2^k1', 'k2^cl', 'r^k2', 'y1^k2', 'x1^-']);
+      expect(cellBlock).toBeDefined();
+      expect(thrownName(() => instance.blocks.moveTo(cellBlock?.id ?? '', target))).toBe('BlockPlacementError');
+      expect(flat(instance)).toEqual(before);
+      await expect(instance.save()).resolves.toBeDefined();
+    }, 30_000);
+
+    it('throws and changes nothing when moving a root block into a table cell', async () => {
+      const instance = await boot([...doc(), table('tbl')]);
+      const before = flat(instance);
+      const cellBlock = instance.module.blockManager.blocks.find(block => block.parentId === 'tbl');
+
+      expect(thrownName(() => instance.blocks.moveTo('a', { position: { before: cellBlock?.id ?? '' } }))).toBe('BlockPlacementError');
+      expect(flat(instance)).toEqual(before);
       await expect(instance.save()).resolves.toBeDefined();
     }, 30_000);
 

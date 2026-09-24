@@ -253,8 +253,8 @@ export interface Blocks {
    * @param target - new parent and position
    * @throws Error when a block is not found, the sibling is not a child of
    *   `parentId`, the target is the block itself or inside its subtree, or the
-   *   new parent does not accept the block (`ownsChildren`, `childTools`,
-   *   table cells)
+   *   move would leave or enter a container that owns its children, a column
+   *   or a table cell, or the new parent refuses the tool (`childTools`)
    */
   moveTo(id: string, target: MoveToTarget): void;
 

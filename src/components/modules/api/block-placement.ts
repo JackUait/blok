@@ -123,11 +123,23 @@ export const resolvePlacement = (
   };
 };
 
+const isColumnPart = (block: Block | undefined): boolean =>
+  block?.name === 'column' || block?.name === 'column_list';
+
+/**
+ * The table cell a block sits in, or null.
+ * @param block - the block
+ * @param asParent - true when `block` is a prospective parent: its children sit in its own cell too
+ */
+const cellOf = (block: Block, asParent = false): Element | null =>
+  (asParent ? block.holder : block.holder.parentElement)?.closest('[data-blok-table-cell-blocks]') ?? null;
+
 /**
  * Throws when `block` may not move under `parentId`. A move group skips the
- * refusals of `BlockManager.move`, so they are checked here. A `column` is an
- * ordinary container here: the name makes the slot explicit, unlike a flat
- * index.
+ * refusals of `BlockManager.move`, so they are checked here, for leaving the
+ * old parent as well as for entering the new one: owning containers (tables,
+ * column lists), column membership (drag UI only) and table cells (their
+ * blocks are listed in the table's data).
  * @param tree - the blocks
  * @param block - the block being moved
  * @param parentId - its new parent
@@ -143,8 +155,22 @@ export const assertCanMoveUnder = (tree: BlockTree, block: Block, parentId: stri
     return;
   }
 
+  const oldParent = block.parentId === null ? undefined : tree.getBlockById(block.parentId);
+
   if (parent?.tool.ownsChildren === true) {
     throw new BlockPlacementError(`${nameOf(parentId)} owns its children`);
+  }
+
+  if (oldParent?.tool.ownsChildren === true) {
+    throw new BlockPlacementError(`"${oldParent.id}" owns its children; "${block.id}" cannot leave it`);
+  }
+
+  if (isColumnPart(oldParent) || isColumnPart(parent)) {
+    throw new BlockPlacementError(`cannot move "${block.id}" into or out of a column`);
+  }
+
+  if (cellOf(block) !== (parent === undefined ? null : cellOf(parent, true))) {
+    throw new BlockPlacementError(`cannot move "${block.id}" into or out of a table cell`);
   }
 
   if (!isChildToolAllowed(parent, block.name)) {

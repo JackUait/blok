@@ -104,8 +104,12 @@ export const fakePlacement = (deps: FakePlacementDeps): {
       throw new BlockPlacementError(`cannot move "${id}" inside its own subtree`);
     }
 
-    if (placement.parentId !== block.parentId && parent?.name === 'column_list') {
-      throw new BlockPlacementError(`"${placement.parentId}" owns its children`);
+    const oldParent = block.parentId === null ? undefined : current.getBlockById(block.parentId);
+    const isColumnPart = (candidate: Block | undefined): boolean =>
+      candidate?.name === 'column' || candidate?.name === 'column_list';
+
+    if (placement.parentId !== block.parentId && (isColumnPart(oldParent) || isColumnPart(parent))) {
+      throw new BlockPlacementError(`cannot move "${id}" into or out of a column`);
     }
 
     const descendants = current.blocks.filter(candidate => isUnder(current, candidate, id)).map(candidate => candidate.id);

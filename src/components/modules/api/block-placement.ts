@@ -89,7 +89,7 @@ const subtreeEnd = (tree: BlockTree, block: Block): number => {
  * @param parentId - the parent
  * @param end - where to stop looking (exclusive)
  */
-const lastChildBefore = (tree: BlockTree, parentId: string | null, end: number): string | null =>
+export const lastChildBefore = (tree: BlockTree, parentId: string | null, end: number): string | null =>
   tree.blocks.slice(0, end).filter(candidate => candidate.parentId === parentId).pop()?.id ?? null;
 
 /**

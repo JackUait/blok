@@ -18,6 +18,7 @@ import { SELF_PLACING_PARENTS } from '../../../tools/nested-blocks';
 import { findOwn } from '../../utils/own-element';
 import { canAdoptChild, releasesChildrenOnTurnInto } from '../../utils/turn-into-children';
 import { flatIndexForPlacement, type TreePlacement } from '../../utils/tree-order';
+import { lastChildBefore } from '../api/block-placement';
 import type { BlockFactory } from './factory';
 import { hideUnderCollapsedParent, isSelfPlacedParent } from './new-block-placement';
 import type { BlockHierarchy } from './hierarchy';
@@ -465,9 +466,7 @@ export class BlockInsertion {
     const index = flatIndexForPlacement({ blocks: this.repository.blocks, getById: this.getBlock }, placement);
     const parent = placement.parentId === null ? undefined : this.repository.getBlockById(placement.parentId);
     const defaultTool = this.dependencies.config.defaultBlock ?? 'paragraph';
-    const resolvedToolName = parent !== undefined && isInsideTableCell(parent) && isRestrictedInTableCell(name)
-      ? defaultTool
-      : resolveChildTool(parent, name, defaultTool);
+    const resolvedToolName = resolveChildTool(parent, name, defaultTool);
 
     const block = this.factory.composeBlock({
       tool: resolvedToolName,
@@ -1044,7 +1043,7 @@ export class BlockInsertion {
     // inside that child's subtree lands after the subtree.
     const placement: TreePlacement = {
       parentId,
-      afterId: this.repository.blocks.slice(0, insertIndex).filter(candidate => candidate.parentId === parentId).pop()?.id ?? null,
+      afterId: lastChildBefore({ blocks: this.repository.blocks, getBlockById: this.getBlock }, parentId, insertIndex),
     };
 
     // extendThroughRAF keeps isSyncingFromYjs=true through RAF, so the

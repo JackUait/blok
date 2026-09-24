@@ -12,6 +12,7 @@ import { BlockChanged } from '../../../../../src/components/events/BlockChanged'
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import { ToggleItem } from '../../../../../src/tools/toggle';
 import { Header } from '../../../../../src/tools/header';
+import { ListItem } from '../../../../../src/tools/list';
 import { Table } from '../../../../../src/tools/table/index';
 import { ColumnList } from '../../../../../src/tools/column-list';
 import { Column } from '../../../../../src/tools/column';
@@ -144,7 +145,7 @@ const roots = (instance: TestEditor): string[] =>
 const boot = async (blocks: OutputBlockData[] = doc()): Promise<TestEditor> => {
   const instance = new Blok({
     holder,
-    tools: { paragraph: Paragraph, toggle: ToggleItem, header: Header, table: Table, column_list: ColumnList, column: Column, only: ParagraphsOnly, owner: Owner },
+    tools: { paragraph: Paragraph, toggle: ToggleItem, header: Header, list: ListItem, table: Table, column_list: ColumnList, column: Column, only: ParagraphsOnly, owner: Owner },
     data: { blocks },
   }) as unknown as TestEditor;
 
@@ -914,6 +915,29 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       expect(named(flat(instance), newId)).toEqual(expected);
       expect(named(shared(instance), newId)).toEqual(expected);
       expect(named(dom(), newId)).toEqual(domFor(expected).map(entry => entry.replace(/<x$/, '<-').replace(/<c1$/, '<t')));
+    }, 30_000);
+
+    it('puts the tail of a Tab-nested list item after its own nested items', async () => {
+      const L = (id: string, depth: number, parent?: string, content?: string[]): OutputBlockData => ({
+        id,
+        type: 'list',
+        data: { text: id, style: 'unordered', depth },
+        ...(parent !== undefined ? { parent } : {}),
+        ...(content !== undefined ? { content } : {}),
+      });
+      const instance = await boot([L('l', 0, undefined, ['m']), L('m', 1, 'l', ['m1']), L('m1', 2, 'm'), L('z', 0)]);
+      const before = instance.module.blockManager.blocks.map(block => block.id);
+      const index = instance.blocks.getBlockIndex('m') ?? -1;
+
+      instance.blocks.splitBlock('m', { text: 'm' }, 'list', { text: 'tail', style: 'unordered', depth: 1 }, index + 1);
+
+      const newId = newIdOf(instance, before);
+      const expected = ['l^-', 'm^l', 'm1^m', 'n^l', 'z^-'];
+
+      expect(named(dom(), newId).map(entry => entry.split('<')[0])).toEqual(['l', 'm', 'm1', 'n', 'z']);
+      expect(named(flat(instance), newId)).toEqual(expected);
+      expect(named(await saved(instance), newId)).toEqual(expected);
+      expect(named(shared(instance), newId)).toEqual(expected);
     }, 30_000);
 
     it('writes the split tail to the shared doc as the next sibling', async () => {

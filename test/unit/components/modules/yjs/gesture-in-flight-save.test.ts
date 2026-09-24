@@ -142,4 +142,67 @@ describe('a gesture that starts while an earlier save is still in flight', () =>
     expect(harness.peerText()).toBe('<b>hello</b> X');
     expect(undoSteps(harness) - steps).toBe(2);
   });
+
+  it('keeps the late write out of a gesture that already wrote', async () => {
+    const harness = createHarness();
+
+    // b1's creation is not the typing's step.
+    harness.yjsManager.stopCapturing();
+    const steps = undoSteps(harness);
+    const typing = harness.startMutation('hello X');
+
+    // Enter: a gesture that writes at once, before the typing's save lands.
+    harness.yjsManager.beginGesture('discrete');
+    harness.yjsManager.addBlock({ id: 'b2',
+      type: 'paragraph',
+      data: { text: '' } });
+    typing.resolveSave();
+    await drainMicrotasks();
+    vi.runAllTimers();
+
+    expect(undoSteps(harness) - steps).toBe(2);
+
+    harness.yjsManager.undo();
+
+    expect(harness.yjsManager.toJSON().map((block) => block.id)).toEqual(['b1']);
+    expect(harness.yjsManager.toJSON()[0]?.data).toEqual({ text: 'hello X' });
+
+    harness.yjsManager.undo();
+
+    expect(harness.yjsManager.toJSON()[0]?.data).toEqual({ text: 'hello' });
+  });
+
+  it('adds the late write to the typing step it belongs to', async () => {
+    const harness = createHarness();
+    // The typing run starts its own step.
+    harness.yjsManager.beginGesture('typing');
+
+    const steps = undoSteps(harness);
+    const first = harness.startMutation('hello X');
+
+    first.resolveSave();
+    await drainMicrotasks();
+
+    const typing = harness.startMutation('hello XY');
+
+    harness.yjsManager.beginGesture('discrete');
+    harness.yjsManager.addBlock({ id: 'b2',
+      type: 'paragraph',
+      data: { text: '' } });
+    typing.resolveSave();
+    await drainMicrotasks();
+    vi.runAllTimers();
+
+    expect(undoSteps(harness) - steps).toBe(2);
+
+    harness.yjsManager.undo();
+
+    expect(harness.yjsManager.toJSON().map((block) => block.id)).toEqual(['b1']);
+    expect(harness.yjsManager.toJSON()[0]?.data).toEqual({ text: 'hello XY' });
+
+    harness.yjsManager.undo();
+
+    expect(harness.yjsManager.toJSON()[0]?.data).toEqual({ text: 'hello' });
+    expect(harness.yjsManager.canUndo()).toBe(true);
+  });
 });

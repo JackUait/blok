@@ -967,18 +967,11 @@ export class DatabaseTool implements BlockTool {
     }
 
     const rowData = this.model.createRowData(properties);
-    const blockIndex = this.api.blocks.getBlockIndex(this.block.id) ?? 0;
-
-    this.api.blocks.insert(
+    this.api.blocks.insertAt(
       'database-row',
       { properties: rowData.properties, position: rowData.position, title: '' },
-      {},
-      blockIndex + 1,
-      false,
-      false,
-      rowData.id,
+      { parentId: this.block.id, position: 'end', id: rowData.id },
     );
-    this.api.blocks.setBlockParent(rowData.id, this.block.id);
     this.syncRowsFromBlocks();
     this.view.appendRow(viewEl, rowData);
 
@@ -1004,18 +997,11 @@ export class DatabaseTool implements BlockTool {
       [groupByPropId]: optionId,
     });
 
-    const blockIndex = this.api.blocks.getBlockIndex(this.block.id) ?? 0;
-
-    this.api.blocks.insert(
+    this.api.blocks.insertAt(
       'database-row',
       { properties: rowData.properties, position: rowData.position, title: '' },
-      {},
-      blockIndex + 1,
-      false,
-      false,
-      rowData.id,
+      { parentId: this.block.id, position: 'end', id: rowData.id },
     );
-    this.api.blocks.setBlockParent(rowData.id, this.block.id);
     this.syncRowsFromBlocks();
 
     const columnEl = boardEl.querySelector(`[data-option-id="${optionId}"][data-blok-database-column]`);

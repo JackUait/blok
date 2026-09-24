@@ -2138,8 +2138,7 @@ exports[`column and database placement — characterization > adds a database ro
     ],
   },
   "events": [
-    "block-added n1 parentId=null previousSiblingId=db index=4",
-    "block-moved n1 parentId=db previousSiblingId=r2 fromIndex=4 toIndex=4 oldParentId=null",
+    "block-added n1 parentId=db previousSiblingId=r2 index=4",
     "block-changed db index=1",
   ],
   "undoSteps": 1,
@@ -2966,8 +2965,7 @@ exports[`column and database placement — characterization > adds a database ro
     ],
   },
   "events": [
-    "block-added n1 parentId=null previousSiblingId=db index=4",
-    "block-moved n1 parentId=db previousSiblingId=r2 fromIndex=4 toIndex=4 oldParentId=null",
+    "block-added n1 parentId=db previousSiblingId=r2 index=4",
     "block-changed db index=1",
   ],
   "undoSteps": 1,

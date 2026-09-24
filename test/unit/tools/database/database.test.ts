@@ -120,6 +120,7 @@ const createMockAPI = (childBlocks: BlockAPI[] = []): API => ({
     getBlocksCount: vi.fn().mockReturnValue(1),
     getChildren: vi.fn().mockReturnValue(childBlocks),
     insert: vi.fn().mockReturnValue({ id: 'new-row-id' }),
+    insertAt: vi.fn().mockReturnValue({ id: 'new-row-id' }),
     delete: vi.fn(),
     setBlockParent: vi.fn(),
     getBlockIndex: vi.fn().mockReturnValue(0),
@@ -524,7 +525,7 @@ describe('DatabaseTool', () => {
   });
 
   describe('add row via click', () => {
-    it('clicking add-card button calls api.blocks.insert with database-row type', () => {
+    it('clicking add-card button calls api.blocks.insertAt with database-row type', () => {
       const options = createDatabaseOptions();
       const tool = new DatabaseTool(options);
       const element = tool.render();
@@ -535,13 +536,13 @@ describe('DatabaseTool', () => {
 
       addCardBtn.click();
 
-      expect(options.api.blocks.insert).toHaveBeenCalledTimes(1);
-      const insertCall = (options.api.blocks.insert as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(options.api.blocks.insertAt).toHaveBeenCalledTimes(1);
+      const insertCall = (options.api.blocks.insertAt as ReturnType<typeof vi.fn>).mock.calls[0];
 
       expect(insertCall[0]).toBe('database-row');
     });
 
-    it('clicking add-card calls setBlockParent to parent row to database block', () => {
+    it('clicking add-card adds the row as the database block\'s last child', () => {
       const options = createDatabaseOptions();
       const tool = new DatabaseTool(options);
       const element = tool.render();
@@ -550,11 +551,10 @@ describe('DatabaseTool', () => {
 
       addCardBtn.click();
 
-      expect(options.api.blocks.setBlockParent).toHaveBeenCalledTimes(1);
-      const parentCall = (options.api.blocks.setBlockParent as ReturnType<typeof vi.fn>).mock.calls[0];
+      const insertCall = (options.api.blocks.insertAt as ReturnType<typeof vi.fn>).mock.calls[0];
 
-      // Second arg should be the database block id
-      expect(parentCall[1]).toBe('test-block-id');
+      expect(insertCall[2]).toMatchObject({ parentId: 'test-block-id', position: 'end' });
+      expect(options.api.blocks.setBlockParent).not.toHaveBeenCalled();
     });
 
     it('new row data has empty title property', () => {
@@ -566,7 +566,7 @@ describe('DatabaseTool', () => {
 
       addCardBtn.click();
 
-      const insertCall = (options.api.blocks.insert as ReturnType<typeof vi.fn>).mock.calls[0];
+      const insertCall = (options.api.blocks.insertAt as ReturnType<typeof vi.fn>).mock.calls[0];
       const insertedData = insertCall[1] as DatabaseRowData;
 
       expect(insertedData.properties['prop-title']).toBe('');
@@ -741,6 +741,7 @@ describe('DatabaseTool', () => {
           getBlocksCount: vi.fn().mockReturnValue(1),
           getChildren: vi.fn().mockReturnValue([]),
           insert: vi.fn(),
+          insertAt: vi.fn(),
           delete: vi.fn(),
           setBlockParent: vi.fn(),
           getBlockIndex: vi.fn().mockReturnValue(0),
@@ -959,7 +960,7 @@ describe('DatabaseTool', () => {
       addButton.click();
 
       const api = (tool as unknown as { api: API }).api;
-      const insertCall = (api.blocks.insert as ReturnType<typeof vi.fn>).mock.calls[0];
+      const insertCall = (api.blocks.insertAt as ReturnType<typeof vi.fn>).mock.calls[0];
 
       expect(insertCall[1]).toHaveProperty('title', '');
 
@@ -1515,17 +1516,18 @@ describe('DatabaseTool', () => {
       expect(model.getOrderedRows()).toHaveLength(2);
     });
 
-    it('clicking add-row button calls api.blocks.insert with database-row', () => {
+    it('clicking add-row button calls api.blocks.insertAt with database-row', () => {
       const options = createDatabaseOptions(makeListData(), {}, { childBlocks: makeListChildBlocks() });
       const tool = new DatabaseTool(options);
       const element = tool.render();
       tool.rendered();
       const addBtn = queryByData(element, 'data-blok-database-add-row')!;
       addBtn.click();
-      expect(options.api.blocks.insert).toHaveBeenCalledTimes(1);
-      const insertCall = (options.api.blocks.insert as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(options.api.blocks.insertAt).toHaveBeenCalledTimes(1);
+      const insertCall = (options.api.blocks.insertAt as ReturnType<typeof vi.fn>).mock.calls[0];
 
       expect(insertCall[0]).toBe('database-row');
+      expect(insertCall[2]).toMatchObject({ parentId: 'test-block-id', position: 'end' });
     });
 
     it('clicking delete-row button calls api.blocks.delete', () => {
@@ -1908,7 +1910,7 @@ describe('DatabaseTool', () => {
   });
 
   describe('ID persistence to backend', () => {
-    it('passes client-generated row ID to api.blocks.insert', () => {
+    it('passes client-generated row ID to api.blocks.insertAt', () => {
       const mockAdapter = {
         loadDatabase: vi.fn().mockResolvedValue({ schema: [], views: [] }),
         createRow: vi.fn().mockResolvedValue({ id: 'r1', position: 'a0', properties: {} }),
@@ -1927,10 +1929,9 @@ describe('DatabaseTool', () => {
 
       addCardBtn.click();
 
-      // Verify api.blocks.insert was called with a generated ID (7th arg)
-      expect(options.api.blocks.insert).toHaveBeenCalledTimes(1);
-      const insertCall = (options.api.blocks.insert as ReturnType<typeof vi.fn>).mock.calls[0];
-      const rowId = insertCall[6] as string;
+      expect(options.api.blocks.insertAt).toHaveBeenCalledTimes(1);
+      const insertCall = (options.api.blocks.insertAt as ReturnType<typeof vi.fn>).mock.calls[0];
+      const rowId = (insertCall[2] as { id: string }).id;
 
       expect(rowId).toBeDefined();
       expect(typeof rowId).toBe('string');

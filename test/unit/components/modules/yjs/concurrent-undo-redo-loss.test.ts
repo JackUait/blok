@@ -163,7 +163,7 @@ describe('concurrent redo — the action the peer blocks', () => {
 
   /**
    * The undo side already treats a blocked action as still-pending and puts it
-   * back (`restoreSkippedStackItems`). The redo side pops it, performs nothing
+   * back (`keepIfWaiting`). The redo side pops it, performs nothing
    * and throws it away, so the deletion can never be re-applied — not even
    * after the peer's content that blocked it is gone.
    */
@@ -176,9 +176,13 @@ describe('concurrent redo — the action the peer blocks', () => {
     storeB.updateBlockData('b2', 'text', 'two, by B');
     sync(storeA, storeB);
 
+    const [removal] = historyA.undoManager.redoStack;
+
     historyA.redo();
 
-    expect(historyA.canRedo()).toBe(true);
+    expect(historyA.undoManager.redoStack).toEqual([removal]);
+    // It cannot apply while B's text is in b2, so no press would do anything.
+    expect(historyA.canRedo()).toBe(false);
   });
 
   /**

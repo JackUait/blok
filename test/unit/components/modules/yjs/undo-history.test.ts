@@ -244,7 +244,7 @@ describe('UndoHistory', () => {
      * a change. The caret stacks must shed exactly the entries whose items
      * left the yjs stack, or every later press is one step out of phase.
      */
-    it('sheds every caret entry whose stack item yjs skipped after a peer deleted the edited block', () => {
+    it('sheds the caret entry of a step a peer made spent, and keeps undo in order', () => {
       const seedBlock = (id: string): Y.Map<unknown> => {
         const block = new Y.Map<unknown>();
 
@@ -318,18 +318,20 @@ describe('UndoHistory', () => {
         yblocks.delete(order().indexOf('B'), 1);
       }, 'remote');
 
-      // Press 1: yjs pops E2 (no-op) AND E1 in the same call.
-      history.undo();
-
-      expect(getText('A')).toBe('a0');
-      expect(label(undoEntries())).toEqual(['move:C']);
-      expect(label(redoEntries())).toEqual(['edit:A']);
-      expect(caret.setToBlock).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'A' }), expect.anything());
-
-      // Press 2: the move.
+      // Press 1: E2 is spent and leaves the history; the move under it is
+      // next, so undo stays reverse-chronological.
       history.undo();
 
       expect(order()).toEqual(['A', 'C']);
+      expect(getText('A')).toBe('a1');
+      expect(label(undoEntries())).toEqual(['edit:A']);
+      expect(label(redoEntries())).toEqual(['move:C']);
+
+      // Press 2: E1.
+      history.undo();
+
+      expect(getText('A')).toBe('a0');
+      expect(caret.setToBlock).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'A' }), expect.anything());
       expect(history.canUndo()).toBe(false);
       expect(undoEntries()).toHaveLength(0);
 
@@ -340,14 +342,15 @@ describe('UndoHistory', () => {
       expect(caret.setToBlock).not.toHaveBeenCalled();
       expect(undoEntries()).toHaveLength(0);
 
-      // Redo walks back forward in the same order: the move, then E1.
-      history.redo();
-      expect(order()).toEqual(['C', 'A']);
-
+      // Redo walks back forward in the same order: E1, then the move.
       history.redo();
       expect(getText('A')).toBe('a1');
       expect(caret.setToBlock).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'A' }), expect.anything());
-      expect(label(undoEntries())).toEqual(['move:C', 'edit:A']);
+      expect(order()).toEqual(['A', 'C']);
+
+      history.redo();
+      expect(order()).toEqual(['C', 'A']);
+      expect(label(undoEntries())).toEqual(['edit:A', 'move:C']);
       expect(history.canRedo()).toBe(false);
     });
 

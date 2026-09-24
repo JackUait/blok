@@ -103,7 +103,7 @@ describe('concurrent undo — a refused entry must not block older ones', () => 
   });
 
   // COL-1. Refusing the move is designed (groupWasDisplacedSince); undo
-  // reaches past it and the refused move stays on the stack.
+  // reaches past it and the refused move stays on the stack, waiting.
   it('still undoes an older edit after the peer moved a block this editor moved', () => {
     manager.updateBlockData('b1', 'text', 'one edited');
     manager.stopCapturing();
@@ -120,7 +120,17 @@ describe('concurrent undo — a refused entry must not block older ones', () => 
     expect(textOf(manager, 'b1')).toBe('one');
     expect(manager.orderedIds()).toEqual(['b1', 'b3', 'b2']);
     expect(manager.toJSON()).toEqual(peer.toJSON());
+    // Nothing under the refused move can apply, so no press would do anything.
+    expect(manager.canUndo()).toBe(false);
+
+    // Once the peer puts b3 back where the move left it, the move undoes.
+    peer.moveBlock('b3', 0);
+    sync(manager, peer);
     expect(manager.canUndo()).toBe(true);
+    manager.undo();
+    sync(manager, peer);
+    expect(manager.orderedIds()).toEqual(['b1', 'b2', 'b3']);
+    expect(manager.toJSON()).toEqual(peer.toJSON());
   });
 
   // COL-3. Same on the redo side.

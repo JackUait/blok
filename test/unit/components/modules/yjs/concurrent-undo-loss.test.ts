@@ -412,12 +412,16 @@ describe('concurrent undo — the skipped action', () => {
     storeB.updateBlockData('x2', 'text', 'B in x2');
     sync(storeA, storeB);
 
+    const [, x1, x2] = historyA.undoManager.undoStack;
+
     historyA.undo();
 
     // Nothing was consumed: both blocked inserts are still there to unwind.
-    expect(historyA.canUndo()).toBe(true);
+    expect(historyA.undoManager.undoStack).toEqual([x1, x2]);
     expect(idsOf(storeA)).toEqual(['b1', 'x1', 'x2']);
     expect(textOf(storeA, 'b1')).toBe('First');
+    // Neither can apply while B's text is in it, so no press would do anything.
+    expect(historyA.canUndo()).toBe(false);
   });
 });
 
@@ -526,9 +530,11 @@ describe('concurrent undo — what happens to the action that could not be unwou
     storeB.updateBlockData('x1', 'text', 'B in x1');
     sync(storeA, storeB);
 
+    const [, x1] = historyA.undoManager.undoStack;
+
     historyA.undo();
 
-    expect(historyA.canUndo()).toBe(true);
+    expect(historyA.undoManager.undoStack).toEqual([x1]);
   });
 });
 

@@ -669,6 +669,7 @@ export class BlocksAPI extends Module {
    * @param parentId - id of the new parent block, or null for root level
    */
   private setBlockParent(blockId: string, parentId: string | null): void {
+    this.Blok.YjsManager.beginApiCall();
     const block = this.Blok.BlockManager.getBlockById(blockId);
 
     if (block === undefined) {

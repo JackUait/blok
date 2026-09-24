@@ -1,5 +1,6 @@
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { InlineToolEventManager } from '../../../../../../src/components/inline-tools/services/inline-tool-event-manager';
 import { InlineToolbar } from '../../../../../../src/components/modules/toolbar/inline/index';
 import type { BlokModules } from '../../../../../../src/types-internal/blok-modules';
 
@@ -384,5 +385,38 @@ describe('InlineToolbar inline tool instance destroy lifecycle', () => {
 
     expect(onActivate).toHaveBeenCalledTimes(1);
     expect(destroyFn).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('InlineToolbar and the inline tools\' document listeners', () => {
+  const makeToolbar = (): InlineToolbar => new InlineToolbar({
+    config: {},
+    eventsDispatcher: { on: vi.fn(), off: vi.fn() } as unknown as InlineToolbar['eventsDispatcher'],
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    InlineToolEventManager.reset();
+  });
+
+  afterEach(() => {
+    InlineToolEventManager.reset();
+    vi.restoreAllMocks();
+  });
+
+  it('keeps them while an editor is alive and removes them when the last one is destroyed', () => {
+    const first = makeToolbar();
+    const second = makeToolbar();
+    const onSelectionChange = vi.fn();
+
+    InlineToolEventManager.getInstance().register('probe', { onSelectionChange });
+
+    first.destroy();
+    document.dispatchEvent(new Event('selectionchange'));
+    expect(onSelectionChange).toHaveBeenCalledTimes(1);
+
+    second.destroy();
+    document.dispatchEvent(new Event('selectionchange'));
+    expect(onSelectionChange).toHaveBeenCalledTimes(1);
   });
 });

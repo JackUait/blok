@@ -44,10 +44,16 @@ export interface InlineToolEventHandler {
 }
 
 /**
- * Singleton manager for inline tool document-level events
+ * Singleton manager for inline tool document-level events.
+ *
+ * Its document listeners live as long as the editors that use it: each editor
+ * acquires it on creation and releases it on destroy, and the last release
+ * removes the listeners and the handlers. The next editor starts a fresh one.
  */
 export class InlineToolEventManager {
   private static instance: InlineToolEventManager | null = null;
+  /** The editors using the manager. A set, so a second release is harmless. */
+  private static readonly owners = new Set<unknown>();
   private readonly handlers = new Map<string, InlineToolEventHandler>();
   private listenersRegistered = false;
 
@@ -67,7 +73,25 @@ export class InlineToolEventManager {
   }
 
   /**
-   * Reset the singleton instance (for testing)
+   * An editor starts using the manager.
+   * @param owner - the editor's handle, passed again to {@link release}
+   */
+  public static acquire(owner: unknown): void {
+    InlineToolEventManager.owners.add(owner);
+  }
+
+  /**
+   * An editor stops using the manager. The last one removes its listeners.
+   * @param owner - the handle given to {@link acquire}
+   */
+  public static release(owner: unknown): void {
+    if (InlineToolEventManager.owners.delete(owner) && InlineToolEventManager.owners.size === 0) {
+      InlineToolEventManager.reset();
+    }
+  }
+
+  /**
+   * Drop the instance: its listeners and handlers go with it.
    */
   public static reset(): void {
     if (InlineToolEventManager.instance) {
@@ -75,6 +99,7 @@ export class InlineToolEventManager {
       InlineToolEventManager.instance.handlers.clear();
     }
     InlineToolEventManager.instance = null;
+    InlineToolEventManager.owners.clear();
   }
 
   /**

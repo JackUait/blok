@@ -34,6 +34,24 @@ describe('InlineToolEventManager', () => {
     });
   });
 
+  describe('acquire/release', () => {
+    it('keeps listening when an editor is released twice while another still uses it', () => {
+      const first = {};
+      const second = {};
+      const onSelectionChange = vi.fn();
+
+      InlineToolEventManager.acquire(first);
+      InlineToolEventManager.acquire(second);
+      InlineToolEventManager.getInstance().register('test-tool', { onSelectionChange });
+      InlineToolEventManager.release(first);
+      InlineToolEventManager.release(first);
+
+      document.dispatchEvent(new Event('selectionchange'));
+
+      expect(onSelectionChange).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('register/unregister', () => {
     it('registers a handler', () => {
       const manager = InlineToolEventManager.getInstance();

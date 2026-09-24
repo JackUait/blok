@@ -226,6 +226,13 @@ export class BlockYjsSync {
   private readonly rewrittenFromDocument = new Map<string, BlockToolData>();
 
   /**
+   * Blocks whose change the host was already told about in a window still
+   * open. A rewrite reaches `blockDidMutated` twice: through the DOM echo and
+   * through `onBlockChanged`, in either order. See `claimChangeAnnouncement`.
+   */
+  private readonly announcedChanges = new Set<string>();
+
+  /**
    * Returns true if any Yjs sync operation is in progress
    */
   public get isSyncingFromYjs(): boolean {
@@ -256,6 +263,27 @@ export class BlockYjsSync {
   public isRewritingFromDocument(block: Block): boolean {
     return (this.reconcilingBlocks.size > 0 && this.isInReconciledSubtree(block, new Set()))
       || this.wasRewrittenFromDocument(block, new Set());
+  }
+
+  /**
+   * Whether a change of `block` should be announced to the host now. Inside a
+   * reconcile window only the first announcement per block goes out, so one
+   * undo or one remote update is one onChange. A keystroke in the window is
+   * the user's own change and always goes out.
+   * @param block - the block that changed
+   */
+  public claimChangeAnnouncement(block: Block): boolean {
+    if (!this.isReconciling(block) || this.userTypedWhileReconciling.has(block.id)) {
+      return true;
+    }
+
+    if (this.announcedChanges.has(block.id)) {
+      return false;
+    }
+
+    this.announcedChanges.add(block.id);
+
+    return true;
   }
 
   /**
@@ -338,6 +366,14 @@ export class BlockYjsSync {
    * nothing is consumed and the record survives to be replayed when it closes.
    */
   private drainSuppressedMutations(): void {
+    this.announcedChanges.forEach((blockId) => {
+      const block = this.repository.getBlockById(blockId);
+
+      if (block === undefined || !this.isReconciling(block)) {
+        this.announcedChanges.delete(blockId);
+      }
+    });
+
     const pending = new Set([
       ...this.suppressedMutations,
       ...this.deferredMutations,

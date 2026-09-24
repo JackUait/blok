@@ -279,6 +279,8 @@ describe('BlockYjsSync — remote reconcile fires host onChange (integration)', 
     priv.yjsSync = { isSyncingFromYjs: true,
       isReconciling: (): boolean => true,
       isMaterializing: (): boolean => false,
+      // The first announcement in a window; later ones are deduped.
+      claimChangeAnnouncement: (): boolean => true,
       noteSuppressedMutation: (): void => {} };
 
     const heard: BlockMutationEvent[] = [];

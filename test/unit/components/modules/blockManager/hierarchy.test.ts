@@ -2418,6 +2418,23 @@ describe('BlockHierarchy', () => {
       expect(flatIds()).toStrictEqual(['t', 'c3', 'c1', 'c2']);
     });
 
+    it('keeps a parent\'s listed order while replaying from Yjs, even when the flat order differs', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 't', parentId: null, contentIds: ['c2', 'c1'] },
+        { id: 'c1', parentId: 't' },
+        { id: 'c2', parentId: 't' },
+        { id: 'x', parentId: null },
+      ]);
+      hierarchy = new BlockHierarchy(repository, undefined, () => true);
+
+      const t = requireBlock('t');
+
+      hierarchy.setBlockParent(requireBlock('x'), 't');
+
+      expect(t.contentIds.filter(id => id !== 'x')).toStrictEqual(['c2', 'c1']);
+      expect(t.contentIds).toContain('x');
+    });
+
     it('lists a parent\'s unlisted earlier children before the block, in flat order', () => {
       repository = createRepositoryWithBlocks([
         { id: 't', parentId: null, contentIds: ['c1'] },

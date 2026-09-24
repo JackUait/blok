@@ -184,7 +184,7 @@ export class BlockHierarchy {
   private placementForParent(block: Block, parentId: string | null): TreePlacement {
     const blocks = this.repository.blocks;
     const index = blocks.indexOf(block);
-    const inSubtree = (candidate: Block): boolean => candidate === block || this.isUnder(candidate, block.id);
+    const subtree = new Set(blocks.filter(candidate => candidate === block || this.isUnder(candidate, block.id)));
 
     if (parentId !== null && parentId !== block.parentId) {
       const predecessor = blocks[index - 1] as Block | undefined;
@@ -192,14 +192,14 @@ export class BlockHierarchy {
         && (predecessor.id === parentId || this.isUnder(predecessor, parentId));
 
       if (!followsParentRun) {
-        const lastChild = blocks.filter(candidate => candidate.parentId === parentId && !inSubtree(candidate)).pop();
+        const lastChild = blocks.filter(candidate => candidate.parentId === parentId && !subtree.has(candidate)).pop();
 
         return { parentId, afterId: lastChild?.id ?? null };
       }
     }
 
     const leftAncestor = parentId === block.parentId ? undefined : this.ancestorWithParent(block, parentId);
-    const next = blocks[index + blocks.filter(inSubtree).length] as Block | undefined;
+    const next = blocks[index + subtree.size] as Block | undefined;
 
     if (leftAncestor !== undefined && next !== undefined && this.isUnder(next, leftAncestor.id)) {
       return { parentId, afterId: leftAncestor.id };
@@ -217,12 +217,17 @@ export class BlockHierarchy {
    * flat order; the others keep their places. Callers still move the flat
    * array first and then re-assert each child (placeRun), so the slot
    * placeBlock picks after `afterId` must follow the flat order.
+   *
+   * Temporary: it derives contentIds from flat order, the opposite of the
+   * target. Delete it once placeRun, moveTo and drag stop moving the flat
+   * array before re-asserting (wave-2 step 3). Skipped during a Yjs replay,
+   * where contentIds carry the doc's order.
    * @param parentId - the parent, or null for the root (nothing to do)
    */
   private sortListedChildrenByFlatOrder(parentId: string | null): void {
     const parent = parentId === null ? undefined : this.repository.getBlockById(parentId);
 
-    if (parent === undefined) {
+    if (parent === undefined || this.getIsSyncingFromYjs?.() === true) {
       return;
     }
 

@@ -133,10 +133,7 @@ describe('a callout saved in the legacy shape', () => {
     expect(await saved(instance)).toBe(loaded);
   }, 30_000);
 
-  // Known defect, not in update(): blockManager.ts flushBlockDataWrites writes
-  // the normalised keys tracked and prunes the legacy keys untracked, so undo
-  // leaves `{ emoji }` and the note colour is gone.
-  it.fails('is unchanged after Enter in its child and undo', async () => {
+  it('is unchanged after Enter in its child and undo', async () => {
     const instance = await boot();
     const loaded = await saved(instance);
     const editable = editableOf('k');
@@ -172,10 +169,7 @@ describe('a callout saved in the legacy shape', () => {
     expect(await saved(instance)).toBe(loaded);
   }, 30_000);
 
-  // Known defect, not in update(): blockManager.ts flushBlockDataWrites writes
-  // the normalised keys tracked and prunes the legacy keys untracked, so undo
-  // leaves `{ emoji }` and the note colour is gone.
-  it.fails('is unchanged after a colour change and undo', async () => {
+  it('is unchanged after a colour change and undo', async () => {
     const instance = await boot();
     const loaded = await saved(instance);
     const colour = blockById(instance, 'box').getTunes().toolTunes

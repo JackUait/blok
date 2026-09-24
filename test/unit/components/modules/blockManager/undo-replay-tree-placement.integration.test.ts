@@ -194,8 +194,6 @@ describe('undo and redo keep rebuilt blocks in their parent run', () => {
       window.getSelection()?.removeAllRanges();
       window.getSelection()?.addRange(range);
       editable.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
-      // Keeps the later save-back its own undo step.
-      instance.module.yjsManager.stopCapturing();
     });
     await settle(300);
     await settleFrame();
@@ -205,16 +203,11 @@ describe('undo and redo keep rebuilt blocks in their parent run', () => {
     expect(entered).toHaveLength(3);
     await expect(instance.save()).resolves.toBeDefined();
 
-    // Undo the save-back, then the Enter; redo both.
-    await step(instance, () => instance.history.undo());
-    await expect(instance.save()).resolves.toBeDefined();
-    expect(flat(instance)).toEqual(entered);
+    // The save-back joins the Enter's step, so one undo and one redo cover both.
     await step(instance, () => instance.history.undo());
     await expect(instance.save()).resolves.toBeDefined();
     expect(flat(instance)).toEqual(initial);
 
-    await step(instance, () => instance.history.redo());
-    await expect(instance.save()).resolves.toBeDefined();
     await step(instance, () => instance.history.redo());
     await expect(instance.save()).resolves.toBeDefined();
     expect(flat(instance)).toEqual(entered);

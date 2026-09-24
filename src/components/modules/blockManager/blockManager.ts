@@ -413,7 +413,8 @@ export class BlockManager extends Module {
           this.scheduleParentSync(parentId);
         }
       },
-      () => Boolean(this.yjsSync?.isSyncingFromYjs)
+      () => Boolean(this.yjsSync?.isSyncingFromYjs),
+      this.blocksStore
     );
 
     // Initialize operations first (before yjsSync) to allow circular dependency resolution

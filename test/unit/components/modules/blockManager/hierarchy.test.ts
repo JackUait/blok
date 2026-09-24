@@ -1428,13 +1428,14 @@ describe('BlockHierarchy', () => {
       // must be relocated to workingArea root after the column_list holder.
       repository = createRepositoryWithBlocks([
         { id: 'cl', parentId: null, contentIds: ['col'], name: 'column_list' },
-        { id: 'mover', parentId: null, contentIds: [] },
         { id: 'col', parentId: 'cl', contentIds: ['cp'], name: 'column' },
         { id: 'cp', parentId: 'col', contentIds: [] },
+        { id: 'mover', parentId: null, contentIds: [] },
       ]);
       hierarchy = new BlockHierarchy(repository);
 
       const cl = requireBlock('cl');
+      const col = requireBlock('col');
       const cp = requireBlock('cp');
       const mover = requireBlock('mover');
 
@@ -1451,7 +1452,8 @@ describe('BlockHierarchy', () => {
       columnContainer.setAttribute('data-blok-nested-blocks', '');
       wrapper.appendChild(columnContainer);
       columnContainer.appendChild(cp.holder);
-      row.appendChild(wrapper);
+      col.holder.appendChild(wrapper);
+      row.appendChild(col.holder);
       cl.holder.appendChild(row);
 
       workingArea.appendChild(cl.holder);
@@ -2376,6 +2378,40 @@ describe('BlockHierarchy', () => {
       expect(flatIds()).toStrictEqual(['table', 'c1', 'p', 'r']);
       expect(table.contentIds).toStrictEqual(['c1', 'p']);
       expect(p.holder.parentElement).toBe(cellTwo);
+    });
+
+    it('re-asserting every child after a flat reorder, last first, makes contentIds follow the flat order', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 't', parentId: null, contentIds: ['c1', 'c2', 'c3'] },
+        { id: 'c1', parentId: 't' },
+        { id: 'c2', parentId: 't' },
+        { id: 'c3', parentId: 't' },
+        { id: 'z', parentId: null },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const [t, c1, c2, c3, z] = ['t', 'c1', 'c2', 'c3', 'z'].map(requireBlock);
+
+      repository.reorderBlocks([t, c2, c1, c3, z]);
+      [c3, c1, c2].forEach(child => hierarchy.setBlockParent(child, 't'));
+
+      expect(t.contentIds).toStrictEqual(['c2', 'c1', 'c3']);
+      expect(flatIds()).toStrictEqual(['t', 'c2', 'c1', 'c3', 'z']);
+    });
+
+    it('lists a parent\'s unlisted earlier children before the block, in flat order', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 't', parentId: null, contentIds: ['c1'] },
+        { id: 'c1', parentId: 't' },
+        { id: 'c2', parentId: 't' },
+        { id: 'x', parentId: 't' },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      hierarchy.setBlockParent(requireBlock('x'), 't');
+
+      expect(requireBlock('t').contentIds).toStrictEqual(['c1', 'c2', 'x']);
+      expect(flatIds()).toStrictEqual(['t', 'c1', 'c2', 'x']);
     });
 
     it('re-asserting a table cell block\'s parent changes nothing', () => {

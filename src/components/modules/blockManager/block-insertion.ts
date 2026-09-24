@@ -113,6 +113,7 @@ export class BlockInsertion {
       forceTopLevel = false,
       origin = 'api',
       inferParent = false,
+      eventParentId,
     } = options;
 
     const current = this.ctx.rawCurrentBlockIndex >= 0
@@ -350,6 +351,7 @@ export class BlockInsertion {
      */
     this.blockDidMutated(BlockAddedMutationType, block, {
       index: targetIndex,
+      ...(eventParentId !== undefined && { parentId: eventParentId }),
     });
 
     /**
@@ -916,6 +918,7 @@ export class BlockInsertion {
         index: insertIndex,
         needToFocus: focus,
         skipYjsSync: true,
+        eventParentId: parentId,
         ...(tunes !== undefined && { tunes }),
       }, blocksStore);
 

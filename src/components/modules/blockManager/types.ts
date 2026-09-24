@@ -78,6 +78,11 @@ export interface InsertBlockOptions {
    */
   inferParent?: boolean;
   /**
+   * The parent the caller assigns right after the insert. Only reported in the
+   * block-added event, which fires before that assignment.
+   */
+  eventParentId?: string | null;
+  /**
    * Why this Block is being created — see {@link ComposeBlockOptions.origin}.
    * Defaults to `'api'`.
    */

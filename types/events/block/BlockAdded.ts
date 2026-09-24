@@ -13,6 +13,16 @@ interface BlockAddedEventDetail extends BlockMutationEventDetail {
    * Index of added block
    */
   index: number;
+
+  /**
+   * Id of the new block's parent, `null` at the root
+   */
+  parentId?: string | null;
+
+  /**
+   * Id of the sibling right before the new block, `null` when it is first
+   */
+  previousSiblingId?: string | null;
 }
 
 /**

@@ -1043,6 +1043,8 @@ export class BlockMutation {
       this.blockDidMutated(BlockMovedMutationType, movedBlock, {
         fromIndex,
         toIndex: resolvedIndex,
+        parentId: reparents ? destinationParentId : movedBlock.parentId,
+        oldParentId: movedBlock.parentId,
       });
 
       // Sync to Yjs using the actual resolved index

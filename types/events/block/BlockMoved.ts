@@ -18,6 +18,21 @@ interface BlockMovedEventDetail extends BlockMutationEventDetail {
    * New block position
    */
   toIndex: number;
+
+  /**
+   * Id of the block's parent after the move, `null` at the root
+   */
+  parentId?: string | null;
+
+  /**
+   * Id of the block's parent before the move, `null` at the root
+   */
+  oldParentId?: string | null;
+
+  /**
+   * Id of the sibling right before the block after the move, `null` when it is first
+   */
+  previousSiblingId?: string | null;
 }
 
 /**

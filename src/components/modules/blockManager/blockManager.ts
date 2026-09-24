@@ -1186,6 +1186,8 @@ export class BlockManager extends Module {
       this.blockDidMutated(BlockMovedMutationType, block, {
         fromIndex: index,
         toIndex: index,
+        parentId: actualNewParentId,
+        oldParentId,
       });
 
       // A reparent IS a move in the tree, so fire the tool's MOVED lifecycle hook
@@ -1826,6 +1828,7 @@ export class BlockManager extends Module {
   ): Block {
     const eventDetail = {
       target: new BlockAPI(block, this.Blok.API),
+      ...this.placementDetail(mutationType, block, detailData),
       ...detailData,
     };
 
@@ -1879,6 +1882,40 @@ export class BlockManager extends Module {
     }
 
     return block;
+  }
+
+  /**
+   * Where an added or moved block sits, for its event: parent and previous
+   * sibling. A dispatch site passes `parentId` when the block's own field is
+   * not updated yet.
+   * @param mutationType - the event type
+   * @param block - the added or moved block
+   * @param detailData - the site's own detail fields
+   */
+  private placementDetail(
+    mutationType: BlockMutationType,
+    block: Block,
+    detailData: Record<string, unknown>
+  ): { parentId?: string | null; previousSiblingId?: string | null; oldParentId?: string | null } {
+    if (mutationType !== BlockAddedMutationType && mutationType !== BlockMovedMutationType) {
+      return {};
+    }
+
+    const given = detailData.parentId;
+    const parentId = typeof given === 'string' || given === null ? given : block.parentId;
+    // Unit harnesses dispatch on a BlockManager that was never prepared.
+    const blocks = (this.repository as BlockRepository | undefined)?.blocks ?? [];
+    // In depth-first order the nearest earlier block with the same parent is
+    // the previous sibling, unless the parent itself comes first.
+    const index = blocks.indexOf(block);
+    const previous = index <= 0
+      ? undefined
+      : blocks.slice(0, index).reverse().find(candidate => candidate.id === parentId || candidate.parentId === parentId);
+    const previousSiblingId = previous === undefined || previous.id === parentId ? null : previous.id;
+
+    return mutationType === BlockMovedMutationType
+      ? { parentId, oldParentId: parentId, previousSiblingId }
+      : { parentId, previousSiblingId };
   }
 
   /**

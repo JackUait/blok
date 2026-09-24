@@ -766,7 +766,7 @@ describe('blocks.insertAt / blocks.moveTo', () => {
 
       const added = seen.filter(event => event.type === 'block-added').at(-1);
 
-      expect({ index: added?.detail.index, ...pick({ ...added?.detail }) }).toEqual({ index: 3, parentId: 't', previousSiblingId: 'c1' });
+      expect({ index: indexOf(added), ...pick({ ...added?.detail }) }).toEqual({ index: 3, parentId: 't', previousSiblingId: 'c1' });
     }, 30_000);
 
     it('writes the placement to the shared doc, not a flat index', async () => {
@@ -830,7 +830,7 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       const expected = ['t^-', 'c1^t', 'c1a^c1', 'n^t', 'c2^t'];
       const added = seen.filter(event => event.type === 'block-added').at(-1);
 
-      expect({ index: added?.detail.index, ...pick({ ...added?.detail }) }).toEqual({ index: 3, parentId: 't', previousSiblingId: 'c1' });
+      expect({ index: indexOf(added), ...pick({ ...added?.detail }) }).toEqual({ index: 3, parentId: 't', previousSiblingId: 'c1' });
       expect(flat(instance)).toEqual(expected);
       expect(await saved(instance)).toEqual(expected);
       expect(shared(instance)).toEqual(expected);
@@ -1015,6 +1015,10 @@ describe('blocks.insertAt / blocks.moveTo', () => {
     }, 30_000);
   });
 });
+
+/** The `index` of a block-added event. */
+const indexOf = (event: BlockMutationEvent | undefined): unknown =>
+  event !== undefined && 'index' in event.detail ? event.detail.index : undefined;
 
 /** The placement fields of a block-added detail. */
 const pick = (detail: Record<string, unknown>): { parentId?: unknown; previousSiblingId?: unknown } => {

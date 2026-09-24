@@ -3283,6 +3283,46 @@ test.describe('yjs undo/redo', () => {
       // Verify depth is back to 1
       savedData = await saveBlok(page);
       expectDepth(savedData.blocks[1], 1);
+      expect(await page.evaluate(() => window.blokInstance?.history.canUndo())).toBe(false);
+    });
+
+    test('one undo puts a Shift+Tab outdented item back under its parent', async ({ page }) => {
+      // Saved nested list items carry `depth` next to their parent, so every
+      // reloaded nested list starts like this.
+      await resetBlok(page);
+      await page.evaluate(async ({ holder }) => {
+        const blok = new window.Blok({
+          holder,
+          data: {
+            blocks: [
+              { id: 'list-0', type: 'list', data: { text: 'First item', style: 'unordered' }, content: ['list-1'] },
+              { id: 'list-1', type: 'list', data: { text: 'Nested item', style: 'unordered', depth: 1 }, parent: 'list-0' },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, { holder: HOLDER_ID });
+
+      const readState = (): Promise<{ parent: string | null; canUndo: boolean }> => page.evaluate(() => ({
+        parent: window.blokInstance?.blocks.getById('list-1')?.parentId ?? null,
+        canUndo: window.blokInstance?.history.canUndo() ?? false,
+      }));
+
+      await page.locator('[data-blok-id="list-1"] [contenteditable="true"]').click();
+      await page.keyboard.press('Shift+Tab');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      expect((await readState()).parent).toBeNull();
+
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+
+      expect(await readState()).toEqual({ parent: 'list-0', canUndo: false });
+      const savedData = await saveBlok(page);
+
+      expectDepth(savedData.blocks.find((block) => block.id === 'list-1'), 1);
     });
 
     test('multiple indentation changes can be undone sequentially', async ({ page }) => {

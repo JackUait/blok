@@ -2201,11 +2201,6 @@ export class BlockManager extends Module {
       this.config.sanitizer
     );
     const savedKeys = Object.keys(data);
-    const emitted = this.emittedDataKeys.get(block) ?? new Set<string>();
-
-    savedKeys.forEach((key) => emitted.add(key));
-    this.emittedDataKeys.set(block, emitted);
-
     const flushOptions = { isMaterializing, savedKeys, seenKeys, seenNestedKeys, onlyMissingKeys: options?.normalize === 'missing', derived: options?.derived === true };
 
     // Written now, not buffered: the buffer keeps only the newest flush
@@ -2295,7 +2290,13 @@ export class BlockManager extends Module {
     const keptKeys = new Set([...options.savedKeys, ...derivedKeys]);
 
     const documentData = this.Blok.YjsManager.getBlockById(block.id)?.get('data');
-    const emitted = this.emittedDataKeys.get(block);
+    const emitted = this.emittedDataKeys.get(block) ?? new Set<string>();
+
+    // A derived key was never the user's value, so dropping it later is not
+    // the user's edit either.
+    options.savedKeys.forEach((key) => emitted.add(key));
+    derivedKeys.forEach((key) => emitted.delete(key));
+    this.emittedDataKeys.set(block, emitted);
 
     const write = (): void => {
       for (const [key, value] of entries) {
@@ -2314,7 +2315,7 @@ export class BlockManager extends Module {
 
       // A key this block's save() once emitted and now drops is the user
       // clearing it (a colour reset, a hidden caption), so it joins the edit.
-      if (!options.isMaterializing && emitted !== undefined && options.seenKeys !== undefined) {
+      if (!options.isMaterializing && options.seenKeys !== undefined) {
         const seenEmitted = new Set([...options.seenKeys].filter((key) => emitted.has(key)));
 
         if (this.Blok.YjsManager.pruneBlockData(block.id, keptKeys, seenEmitted)) {

@@ -2438,15 +2438,16 @@ describe('Blocks', () => {
       expect(domIds(workingArea)).toEqual(['b', 'c', 'a']);
     });
 
-    it('looks past the block\'s own subtree for the next holder', () => {
+    it('places a subtree in order when mounted last block first', () => {
       const { blocks, byId } = arranged(
         [{ id: 'x' }, { id: 'p' }, { id: 'q', parentId: 'p' }, { id: 'y' }],
         ['p', 'q', 'x', 'y']
       );
 
+      blocks.mount(byId('q'), 2, null);
       blocks.mount(byId('p'), 1, null);
 
-      expect(domIds(workingArea)).toEqual(['q', 'x', 'p', 'y']);
+      expect(domIds(workingArea)).toEqual(['x', 'p', 'q', 'y']);
     });
 
     it('mounts into the given slot, ignoring later blocks elsewhere', () => {

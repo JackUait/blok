@@ -318,6 +318,12 @@ export class BlockManager extends Module {
   private parentsSyncScheduled = new Set<string>();
 
   /**
+   * Scheduled parents with at least one change made outside
+   * `transactWithoutCapture`. The rest sync untracked.
+   */
+  private readonly trackedParentSyncs = new Set<string>();
+
+  /**
    * Tracks the in-flight promise from flushParentSyncs so that transactForTool
    * can chain stopCapturing after all parent data has been written to Yjs.
    */
@@ -2082,6 +2088,11 @@ export class BlockManager extends Module {
       queueMicrotask(() => this.flushParentSyncs());
     }
     this.parentsSyncScheduled.add(parentId);
+
+    // The flush runs after an untracked scope has closed, so it is told here.
+    if (!this.Blok.YjsManager.isTransactingWithoutCapture) {
+      this.trackedParentSyncs.add(parentId);
+    }
   }
 
   /**
@@ -2095,10 +2106,13 @@ export class BlockManager extends Module {
       const parent = this.repository.getBlockById(parentId);
 
       if (parent !== undefined) {
-        promises.push(this.syncBlockDataToYjs(parent));
+        promises.push(this.trackedParentSyncs.has(parentId)
+          ? this.syncBlockDataToYjs(parent)
+          : this.syncBlockDataToYjs(parent, { untracked: true, normalize: 'all' }));
       }
     }
     this.parentsSyncScheduled.clear();
+    this.trackedParentSyncs.clear();
 
     if (promises.length > 0) {
       this.pendingParentSyncPromise = Promise.all(promises).then(() => {

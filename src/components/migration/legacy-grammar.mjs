@@ -223,6 +223,43 @@ function detectTable(block) {
   return rows.some((row) => Array.isArray(row) && row.some((cell) => typeof cell === 'string'));
 }
 
+/** A cell's `blockData` seeds (`{ tool, data, tunes? }`), or [] when it has none. */
+function getCellSeeds(cell) {
+  return isCellWithBlockRefs(cell) && Array.isArray(cell.blockData) ? cell.blockData : [];
+}
+
+/** The 1:1 grammar entry claiming a cell seed, or undefined. */
+function matchSeedRule(seed, grammar) {
+  if (!isPlainObject(seed) || typeof seed.tool !== 'string') {
+    return undefined;
+  }
+
+  const block = { type: seed.tool, data: seed.data };
+
+  return grammar.find((entry) => entry.cardinality === '1:1' && entry.detect(block));
+}
+
+/**
+ * Migrate a cell seed with its 1:1 grammar entry. The table makes a block from
+ * each seed as given, so a legacy seed would reach its tool unmigrated.
+ */
+function migrateCellSeed(seed, grammar, ctx) {
+  const entry = matchSeedRule(seed, grammar);
+
+  if (entry === undefined) {
+    return seed;
+  }
+
+  const block = { type: seed.tool, data: seed.data };
+  const { blocks } = normalizeExpansion(entry.expand(block, ctx, { siblings: [block], index: 0 }), 0);
+
+  if (blocks.length !== 1) {
+    return seed;
+  }
+
+  return { ...seed, tool: blocks[0].type, data: blocks[0].data };
+}
+
 function detectRaw(block) {
   return block.type === 'raw' && hasDefinedField(block.data, 'html');
 }
@@ -537,6 +574,7 @@ function expandTableEntry(block, ctx) {
   const rawData = block.data || {};
   const { content: _content, withHeadings, withHeadingColumn, stretched, ...restData } = rawData;
   const rows = getTableContentRows(rawData) || [];
+  const grammar = resolveGrammar(ctx.rules);
   const childBlocks = [];
 
   const newContent = rows.map((row) => {
@@ -546,7 +584,11 @@ function expandTableEntry(block, ctx) {
 
     return row.map((cell) => {
       if (isCellWithBlockRefs(cell)) {
-        return cell;
+        const seeds = getCellSeeds(cell);
+
+        return seeds.length === 0
+          ? cell
+          : { ...cell, blockData: seeds.map((seed) => migrateCellSeed(seed, grammar, ctx)) };
       }
 
       const text = typeof cell === 'string' ? cell : '';

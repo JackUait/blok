@@ -533,6 +533,33 @@ describe('Table lifecycle rebuild', () => {
     });
   });
 
+  describe('rendered() during Yjs sync naming a block that never arrives', () => {
+    const nextFrame = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+
+    // A document render runs inside the sync window too, so a load with a
+    // dangling cell reference takes this path.
+    it('gives the cell an editable block once the sync has settled', async () => {
+      const options = createTableOptions(
+        { content: [[{ blocks: ['never-arrives'] }]] },
+        {},
+        { blocks: { isSyncingFromYjs: true, getById: vi.fn(() => undefined) } }
+      );
+      const blocksApi = options.api.blocks as { isSyncingFromYjs: boolean };
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+      blocksApi.isSyncingFromYjs = false;
+      await nextFrame();
+      await nextFrame();
+
+      const cellBlocks = container.querySelector('[data-blok-table-cell-blocks]');
+
+      expect(cellBlocks?.querySelectorAll('[data-blok-id]').length).toBe(1);
+    });
+  });
+
   describe('setData() with empty content during Yjs sync', () => {
     it('does not fabricate new blocks when undo reverts table content to empty', () => {
       // Regression: previously, this path called populateNewCells to insert

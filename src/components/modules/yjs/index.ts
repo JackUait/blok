@@ -872,12 +872,13 @@ export class YjsManager extends Module {
 
   /**
    * See {@link UndoHistory.beginApiCall}. Not a host call when a tool makes
-   * it while the editor applies the document (a peer's change, an undo) or
-   * inside an untracked repair: starting a step there would split the
-   * user's open one.
+   * it while a peer's change is applied or inside an untracked repair:
+   * starting a step there would split the user's open one. Not
+   * `isSyncingFromYjs`: a local insert holds that up for a frame, and a
+   * host call in that frame must still start its own step.
    */
   public beginApiCall(): void {
-    if (this.Blok.BlockManager.isSyncingFromYjs || this.documentStore.isTransactingWithoutCapture) {
+    if (this.Blok.BlockManager.isApplyingRemoteChange || this.documentStore.isTransactingWithoutCapture) {
       return;
     }
     this.undoHistory.beginApiCall();

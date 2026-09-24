@@ -21,11 +21,13 @@ import { describe, expect, it } from 'vitest';
  * Two halves, one law:
  *
  * 1. TOOLS DECLARE. A tool that CLAIMS AN EXISTING BLOCK as its own child —
- *    `setBlockParent(someBlock, this.<my>BlockId)` — is running a managed child
- *    registry, and must declare `static get ownsChildren(): boolean`. Note the
- *    fingerprint is claiming, not creating: `insertInsideParent(this.blockId, …)`
- *    (toggle, callout, column, header) means "grow my free content stack" and is
- *    NOT tool ownership.
+ *    `setBlockParent(someBlock, this.<my>BlockId)` — or creates a child of a
+ *    NAMED tool under itself — `insertAt(COLUMN_TOOL, …, { parentId:
+ *    this.<my>BlockId })` — is running a managed child registry, and must
+ *    declare `static get ownsChildren(): boolean`. Creating a default block
+ *    (`insertInsideParent(this.blockId, …)`, `insertAt(undefined, …)` in toggle,
+ *    callout, column, header) means "grow my free content stack" and is NOT
+ *    tool ownership.
  *
  * 2. CORE ENFORCES IN ONE PLACE. Tab-indent has two gestures — single-block
  *    (keyboardNavigation) and multi-select (blockSelectionKeys). Both must
@@ -62,6 +64,9 @@ const EXEMPTIONS: Record<string, string> = {};
  * of a managed child registry (a table's cell blocks, a column_list's columns).
  */
 const CLAIMS_EXISTING_CHILD = /setBlockParent\(\s*[^,)]+,\s*this\.[A-Za-z]*[Bb]lockId\b/;
+
+/** The same registry, filled by creating named-tool children in place. */
+const CREATES_TYPED_CHILD = /insertAt\(\s*(?!undefined\b)[^,)]+,[^;]*?parentId:\s*this\.[A-Za-z]*[Bb]lockId\b/;
 
 const OWNS_CHILDREN_DECLARATION = /static\s+get\s+ownsChildren\s*\(\s*\)\s*:\s*boolean\s*\{[^}]*return\s+true/;
 
@@ -133,7 +138,9 @@ describe('ARCHITECTURE LAW: tool-owned children are never an indent target', () 
         continue;
       }
 
-      if (!CLAIMS_EXISTING_CHILD.test(stripComments(readFileSync(file, 'utf8')))) {
+      const source = stripComments(readFileSync(file, 'utf8'));
+
+      if (!CLAIMS_EXISTING_CHILD.test(source) && !CREATES_TYPED_CHILD.test(source)) {
         continue;
       }
 

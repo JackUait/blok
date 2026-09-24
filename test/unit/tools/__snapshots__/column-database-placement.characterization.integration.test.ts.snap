@@ -40,7 +40,9 @@ exports[`column and database placement — characterization > adds a column on t
         "content": [
           "z",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n1",
         "parent": "cl",
         "type": "column",
@@ -263,7 +265,9 @@ exports[`column and database placement — characterization > adds a column on t
         "content": [
           "z",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n1",
         "parent": "cl",
         "type": "column",
@@ -726,7 +730,9 @@ exports[`column and database placement — characterization > adds a column on t
         "content": [
           "z",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n1",
         "parent": "cl",
         "type": "column",
@@ -949,7 +955,9 @@ exports[`column and database placement — characterization > adds a column on t
         "content": [
           "z",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n1",
         "parent": "cl",
         "type": "column",
@@ -1304,10 +1312,8 @@ exports[`column and database placement — characterization > adds a column on t
     ],
   },
   "events": [
-    "block-added n1 parentId=c1 previousSiblingId=t1 index=5",
-    "block-moved n1 parentId=cl previousSiblingId=c1 fromIndex=5 toIndex=5 oldParentId=c1",
+    "block-added n1 parentId=cl previousSiblingId=c1 index=5",
     "block-moved z parentId=n1 previousSiblingId=null fromIndex=6 toIndex=6 oldParentId=null",
-    "block-changed c1 index=2",
     "block-changed t1 index=3",
   ],
   "undoSteps": 1,
@@ -3669,7 +3675,9 @@ exports[`column and database placement — characterization > seeds a three-colu
         "content": [
           "n3",
         ],
-        "data": {},
+        "data": {
+          "noFocus": false,
+        },
         "id": "n2",
         "parent": "n1",
         "type": "column",
@@ -3687,7 +3695,9 @@ exports[`column and database placement — characterization > seeds a three-colu
         "content": [
           "n5",
         ],
-        "data": {},
+        "data": {
+          "noFocus": true,
+        },
         "id": "n4",
         "parent": "n1",
         "type": "column",
@@ -3890,7 +3900,9 @@ exports[`column and database placement — characterization > seeds a three-colu
         "content": [
           "n3",
         ],
-        "data": {},
+        "data": {
+          "noFocus": false,
+        },
         "id": "n2",
         "parent": "n1",
         "type": "column",
@@ -3908,7 +3920,9 @@ exports[`column and database placement — characterization > seeds a three-colu
         "content": [
           "n5",
         ],
-        "data": {},
+        "data": {
+          "noFocus": true,
+        },
         "id": "n4",
         "parent": "n1",
         "type": "column",
@@ -4132,17 +4146,12 @@ exports[`column and database placement — characterization > seeds a three-colu
   },
   "events": [
     "block-added n3 parentId=n2 previousSiblingId=null index=3",
-    "block-added n2 parentId=null previousSiblingId=n1 index=2",
-    "block-moved n2 parentId=n1 previousSiblingId=null fromIndex=2 toIndex=2 oldParentId=null",
+    "block-added n2 parentId=n1 previousSiblingId=null index=2",
     "block-added n5 parentId=n4 previousSiblingId=null index=5",
-    "block-added n4 parentId=n2 previousSiblingId=n3 index=4",
-    "block-moved n4 parentId=n1 previousSiblingId=n2 fromIndex=4 toIndex=4 oldParentId=n2",
+    "block-added n4 parentId=n1 previousSiblingId=n2 index=4",
     "block-added n7 parentId=n6 previousSiblingId=null index=7",
-    "block-added n6 parentId=n4 previousSiblingId=n5 index=6",
-    "block-moved n6 parentId=n1 previousSiblingId=n4 fromIndex=6 toIndex=6 oldParentId=n4",
+    "block-added n6 parentId=n1 previousSiblingId=n4 index=6",
     "block-added n1 parentId=null previousSiblingId=a index=1",
-    "block-changed n2 index=2",
-    "block-changed n4 index=4",
   ],
   "undoSteps": 1,
 }
@@ -4189,7 +4198,9 @@ exports[`column and database placement — characterization > side-drop left of 
           "n2",
           "n3",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n1",
         "parent": undefined,
         "type": "column_list",
@@ -4198,7 +4209,9 @@ exports[`column and database placement — characterization > side-drop left of 
         "content": [
           "s",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n2",
         "parent": "n1",
         "type": "column",
@@ -4216,7 +4229,9 @@ exports[`column and database placement — characterization > side-drop left of 
         "content": [
           "target",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n3",
         "parent": "n1",
         "type": "column",
@@ -4388,7 +4403,9 @@ exports[`column and database placement — characterization > side-drop left of 
           "n2",
           "n3",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n1",
         "parent": undefined,
         "type": "column_list",
@@ -4397,7 +4414,9 @@ exports[`column and database placement — characterization > side-drop left of 
         "content": [
           "s",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n2",
         "parent": "n1",
         "type": "column",
@@ -4415,7 +4434,9 @@ exports[`column and database placement — characterization > side-drop left of 
         "content": [
           "target",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n3",
         "parent": "n1",
         "type": "column",
@@ -4681,10 +4702,8 @@ exports[`column and database placement — characterization > side-drop left of 
   },
   "events": [
     "block-added n1 parentId=null previousSiblingId=t index=2",
-    "block-added n2 parentId=null previousSiblingId=n1 index=3",
-    "block-added n3 parentId=null previousSiblingId=n2 index=4",
-    "block-moved n2 parentId=n1 previousSiblingId=null fromIndex=3 toIndex=3 oldParentId=null",
-    "block-moved n3 parentId=n1 previousSiblingId=n2 fromIndex=4 toIndex=4 oldParentId=null",
+    "block-added n2 parentId=n1 previousSiblingId=null index=3",
+    "block-added n3 parentId=n1 previousSiblingId=n2 index=4",
     "block-moved target parentId=n3 previousSiblingId=null fromIndex=5 toIndex=5 oldParentId=null",
     "block-moved s parentId=n2 previousSiblingId=null fromIndex=4 toIndex=4 oldParentId=null",
     "block-changed t index=0",
@@ -4734,7 +4753,9 @@ exports[`column and database placement — characterization > side-drop right of
           "n2",
           "n3",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n1",
         "parent": undefined,
         "type": "column_list",
@@ -4743,7 +4764,9 @@ exports[`column and database placement — characterization > side-drop right of
         "content": [
           "target",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n2",
         "parent": "n1",
         "type": "column",
@@ -4761,7 +4784,9 @@ exports[`column and database placement — characterization > side-drop right of
         "content": [
           "s",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n3",
         "parent": "n1",
         "type": "column",
@@ -4933,7 +4958,9 @@ exports[`column and database placement — characterization > side-drop right of
           "n2",
           "n3",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n1",
         "parent": undefined,
         "type": "column_list",
@@ -4942,7 +4969,9 @@ exports[`column and database placement — characterization > side-drop right of
         "content": [
           "target",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n2",
         "parent": "n1",
         "type": "column",
@@ -4960,7 +4989,9 @@ exports[`column and database placement — characterization > side-drop right of
         "content": [
           "s",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n3",
         "parent": "n1",
         "type": "column",
@@ -5226,10 +5257,8 @@ exports[`column and database placement — characterization > side-drop right of
   },
   "events": [
     "block-added n1 parentId=null previousSiblingId=t index=2",
-    "block-added n2 parentId=null previousSiblingId=n1 index=3",
-    "block-added n3 parentId=null previousSiblingId=n2 index=4",
-    "block-moved n2 parentId=n1 previousSiblingId=null fromIndex=3 toIndex=3 oldParentId=null",
-    "block-moved n3 parentId=n1 previousSiblingId=n2 fromIndex=4 toIndex=4 oldParentId=null",
+    "block-added n2 parentId=n1 previousSiblingId=null index=3",
+    "block-added n3 parentId=n1 previousSiblingId=n2 index=4",
     "block-moved target parentId=n2 previousSiblingId=null fromIndex=4 toIndex=4 oldParentId=null",
     "block-moved s parentId=n3 previousSiblingId=null fromIndex=6 toIndex=6 oldParentId=null",
     "block-changed t index=0",
@@ -5257,7 +5286,9 @@ exports[`column and database placement — characterization > wraps a selection 
           "n2",
           "n3",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n1",
         "parent": undefined,
         "type": "column_list",
@@ -5266,7 +5297,9 @@ exports[`column and database placement — characterization > wraps a selection 
         "content": [
           "t",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n2",
         "parent": "n1",
         "type": "column",
@@ -5296,7 +5329,9 @@ exports[`column and database placement — characterization > wraps a selection 
         "content": [
           "p",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n3",
         "parent": "n1",
         "type": "column",
@@ -5434,7 +5469,9 @@ exports[`column and database placement — characterization > wraps a selection 
           "n2",
           "n3",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n1",
         "parent": undefined,
         "type": "column_list",
@@ -5443,7 +5480,9 @@ exports[`column and database placement — characterization > wraps a selection 
         "content": [
           "t",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n2",
         "parent": "n1",
         "type": "column",
@@ -5473,7 +5512,9 @@ exports[`column and database placement — characterization > wraps a selection 
         "content": [
           "p",
         ],
-        "data": {},
+        "data": {
+          "noSeed": true,
+        },
         "id": "n3",
         "parent": "n1",
         "type": "column",
@@ -5705,10 +5746,8 @@ exports[`column and database placement — characterization > wraps a selection 
   },
   "events": [
     "block-added n1 parentId=null previousSiblingId=null index=0",
-    "block-added n2 parentId=null previousSiblingId=n1 index=1",
-    "block-added n3 parentId=null previousSiblingId=n2 index=2",
-    "block-moved n2 parentId=n1 previousSiblingId=null fromIndex=1 toIndex=1 oldParentId=null",
-    "block-moved n3 parentId=n1 previousSiblingId=n2 fromIndex=2 toIndex=2 oldParentId=null",
+    "block-added n2 parentId=n1 previousSiblingId=null index=1",
+    "block-added n3 parentId=n1 previousSiblingId=n2 index=2",
     "block-moved t parentId=n2 previousSiblingId=null fromIndex=2 toIndex=2 oldParentId=null",
     "block-moved p parentId=n3 previousSiblingId=null fromIndex=5 toIndex=5 oldParentId=null",
     "block-changed t index=2",

@@ -11,7 +11,6 @@ import {
   COLUMN_RESIZER_ATTR,
   COLUMN_TOOL,
   buildColumnResizers,
-  subtreeEndIndex,
 } from '../columns-shared';
 import { mountChildBlocks } from '../nested-blocks';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -200,18 +199,8 @@ export class ColumnList implements BlockTool {
     const columns = Array.from({ length: count }).map((_, i) => {
       // Each column seeds and focuses its paragraph inside this insert, so the
       // LAST one would win the caret: tag every column but the first noFocus.
-      // The seeded paragraph also shifts the flat array, so each column goes
-      // after the list's whole subtree, not at a precomputed index.
-      const column = this.api.blocks.insert(
-        COLUMN_TOOL,
-        { noFocus: i !== 0 },
-        {},
-        subtreeEndIndex(this.api, this.blockId) + 1,
-        false,
-        false
-      );
+      const column = this.api.blocks.insertAt(COLUMN_TOOL, { noFocus: i !== 0 }, { parentId: this.blockId, position: 'end' });
 
-      this.api.blocks.setBlockParent(column.id, this.blockId);
       container.appendChild(column.holder);
 
       return column;

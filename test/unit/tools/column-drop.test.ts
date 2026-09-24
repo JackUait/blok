@@ -29,20 +29,36 @@ interface FakeBlockNode {
   holder?: HTMLElement;
 }
 
+interface CreatedBlock {
+  type: string;
+  data: unknown;
+  id: string;
+  holder: HTMLElement;
+  /** Where insertAt was asked to put it; undefined for an index insert. */
+  placement?: { parentId?: string | null; position?: unknown };
+}
+
 /**
  * Build a fake blocks API recording the calls the helpers issue. `nodes`
  * seeds getById/getBlockIndex; inserts hand back synthetic ids (prefixed by the
  * tool name) so the helpers can chain setBlockParent onto the created blocks.
+ * `created` lists every block made, by either insert method, in order.
  */
 const createMockAPI = (nodes: FakeBlockNode[]) => {
   const byId = new Map(nodes.map(n => [n.id, n]));
+  const created: CreatedBlock[] = [];
 
-  let insertCounter = 0;
-  const insert = vi.fn().mockImplementation((type: string) => {
-    insertCounter += 1;
+  const create = (type: string, data: unknown, placement?: CreatedBlock['placement']): CreatedBlock => {
+    const block = { type, data, id: `${type}-new-${created.length + 1}`, holder: document.createElement('div'), placement };
 
-    return { id: `${type}-new-${insertCounter}`, holder: document.createElement('div') };
-  });
+    created.push(block);
+
+    return block;
+  };
+  const insert = vi.fn().mockImplementation((type: string, data: unknown) => create(type, data));
+  const insertAt = vi.fn().mockImplementation((type: string, data: unknown, options: { parentId?: string | null; position?: unknown }) =>
+    create(type, data, { parentId: options.parentId, position: options.position })
+  );
 
   const setBlockParent = vi.fn();
   const move = vi.fn();
@@ -70,6 +86,7 @@ const createMockAPI = (nodes: FakeBlockNode[]) => {
   const api = {
     blocks: {
       insert,
+      insertAt,
       setBlockParent,
       move,
       transact,
@@ -81,13 +98,13 @@ const createMockAPI = (nodes: FakeBlockNode[]) => {
     },
   } as unknown as API;
 
-  return { api, insert, setBlockParent, move, transact, getById, getBlockIndex, getChildren, childrenByParent };
+  return { api, created, setBlockParent, move, transact, getById, getBlockIndex, getChildren, childrenByParent };
 };
 
 describe('wrapInNewColumnList', () => {
   const side = (s: ColumnDropSide): ColumnDropSide => s;
 
-  it('side right: inserts a column_list at the target index, creates 2 noSeed columns under it, target into first column, sources into second', () => {
+  it('side right: puts a column_list where the target was, with 2 noSeed columns, target into the first column, sources into the second', () => {
     const mock = createMockAPI([
       { id: 'target', parentId: null, index: 4 },
       { id: 'src', parentId: null, index: 9 },
@@ -98,29 +115,17 @@ describe('wrapInNewColumnList', () => {
     // transact wraps the work and its fn actually runs
     expect(mock.transact).toHaveBeenCalledTimes(1);
 
-    // 3 typed inserts: the list, then two columns (insertInsideParent only ever
-    // creates the default paragraph, so columns must be typed inserts)
-    expect(mock.insert).toHaveBeenCalledTimes(3);
+    const [list, firstColumn, secondColumn] = mock.created;
+    const listId = list.id;
+    const firstColumnId = firstColumn.id;
+    const secondColumnId = secondColumn.id;
 
-    // column_list inserted at the target's flat index
-    expect(mock.insert.mock.calls[0][0]).toBe(COLUMN_LIST_TOOL);
-    expect(mock.insert.mock.calls[0][1]).toEqual({ noSeed: true });
-    expect(mock.insert.mock.calls[0][3]).toBe(4);
-
-    // two columns, typed + noSeed, just after the list
-    expect(mock.insert.mock.calls[1][0]).toBe(COLUMN_TOOL);
-    expect(mock.insert.mock.calls[1][1]).toEqual({ noSeed: true });
-    expect(mock.insert.mock.calls[1][3]).toBe(5);
-    expect(mock.insert.mock.calls[2][0]).toBe(COLUMN_TOOL);
-    expect(mock.insert.mock.calls[2][3]).toBe(6);
-
-    const listId = mock.insert.mock.results[0].value.id;
-    const firstColumnId = mock.insert.mock.results[1].value.id;
-    const secondColumnId = mock.insert.mock.results[2].value.id;
-
-    // both columns reparented under the list
-    expect(mock.setBlockParent).toHaveBeenCalledWith(firstColumnId, listId);
-    expect(mock.setBlockParent).toHaveBeenCalledWith(secondColumnId, listId);
+    // The list takes the target's place at the root; two noSeed columns go under it, in order.
+    expect(mock.created.map(({ type, data, placement }) => ({ type, data, placement }))).toEqual([
+      { type: COLUMN_LIST_TOOL, data: { noSeed: true }, placement: { parentId: null, position: { before: 'target' } } },
+      { type: COLUMN_TOOL, data: { noSeed: true }, placement: { parentId: listId, position: 'end' } },
+      { type: COLUMN_TOOL, data: { noSeed: true }, placement: { parentId: listId, position: 'end' } },
+    ]);
 
     // right: [target column, sources column] -> target into FIRST column
     expect(mock.setBlockParent).toHaveBeenCalledWith('target', firstColumnId);
@@ -137,8 +142,8 @@ describe('wrapInNewColumnList', () => {
 
     wrapInNewColumnList(mock.api, 'target', ['src'], side('left'));
 
-    const firstColumnId = mock.insert.mock.results[1].value.id;
-    const secondColumnId = mock.insert.mock.results[2].value.id;
+    const firstColumnId = mock.created[1].id;
+    const secondColumnId = mock.created[2].id;
 
     // left: [sources column, target column] -> sources into FIRST column
     expect(mock.setBlockParent).toHaveBeenCalledWith('src', firstColumnId);
@@ -155,7 +160,7 @@ describe('wrapInNewColumnList', () => {
     wrapInNewColumnList(mock.api, 'target', ['s1', 's2'], side('right'));
 
     // right: sources column is the SECOND column
-    const sourcesColumnId = mock.insert.mock.results[2].value.id;
+    const sourcesColumnId = mock.created[2].id;
 
     const sourceReparents = mock.setBlockParent.mock.calls.filter(
       call => call[0] === 's1' || call[0] === 's2'
@@ -175,7 +180,7 @@ describe('wrapInNewColumnList', () => {
     const result = wrapInNewColumnList(mock.api, 'target', ['target'], side('right'));
 
     expect(result).toBeNull();
-    expect(mock.insert).not.toHaveBeenCalled();
+    expect(mock.created).toEqual([]);
     expect(mock.transact).not.toHaveBeenCalled();
   });
 
@@ -188,7 +193,7 @@ describe('wrapInNewColumnList', () => {
     const result = wrapInNewColumnList(mock.api, 'target', ['src'], side('right'));
 
     expect(result).toBeNull();
-    expect(mock.insert).not.toHaveBeenCalled();
+    expect(mock.created).toEqual([]);
   });
 
   it('returns null when the target is stale (getBlockIndex undefined)', () => {
@@ -199,7 +204,7 @@ describe('wrapInNewColumnList', () => {
     const result = wrapInNewColumnList(mock.api, 'target', ['src'], side('right'));
 
     expect(result).toBeNull();
-    expect(mock.insert).not.toHaveBeenCalled();
+    expect(mock.created).toEqual([]);
   });
 
   it('returns null for empty sources', () => {
@@ -210,14 +215,14 @@ describe('wrapInNewColumnList', () => {
     const result = wrapInNewColumnList(mock.api, 'target', [], side('right'));
 
     expect(result).toBeNull();
-    expect(mock.insert).not.toHaveBeenCalled();
+    expect(mock.created).toEqual([]);
   });
 });
 
 describe('addColumnToList', () => {
   const side = (s: ColumnDropSide): ColumnDropSide => s;
 
-  it('side right: inserts one typed noSeed column after the neighbor, reparents it under the list, and moves sources in order', () => {
+  it('side right: adds one noSeed column to the list after the neighbor and moves sources into it in order', () => {
     const mock = createMockAPI([
       { id: 'cl', parentId: null, index: 2 },
       { id: 'neighbor', parentId: 'cl', index: 3 },
@@ -229,16 +234,12 @@ describe('addColumnToList', () => {
 
     expect(mock.transact).toHaveBeenCalledTimes(1);
 
-    // one typed column inserted, noSeed, after the neighbor's flat index
-    expect(mock.insert).toHaveBeenCalledTimes(1);
-    expect(mock.insert.mock.calls[0][0]).toBe(COLUMN_TOOL);
-    expect(mock.insert.mock.calls[0][1]).toEqual({ noSeed: true });
-    expect(mock.insert.mock.calls[0][3]).toBe(4); // neighborIndex + 1
+    // one noSeed column, in the list right after the neighbor
+    expect(mock.created.map(({ type, data, placement }) => ({ type, data, placement }))).toEqual([
+      { type: COLUMN_TOOL, data: { noSeed: true }, placement: { parentId: 'cl', position: { after: 'neighbor' } } },
+    ]);
 
-    const newColumnId = mock.insert.mock.results[0].value.id;
-
-    // reparented under the column_list
-    expect(mock.setBlockParent).toHaveBeenCalledWith(newColumnId, 'cl');
+    const newColumnId = mock.created[0].id;
 
     const reparents = mock.setBlockParent.mock.calls.filter(
       call => call[0] === 's1' || call[0] === 's2'
@@ -261,21 +262,7 @@ describe('addColumnToList', () => {
 
     addColumnToList(mock.api, 'neighbor', ['s1'], side('left'));
 
-    // left inserts AT the neighbor's index (before it)
-    expect(mock.insert.mock.calls[0][3]).toBe(5);
-
-    const rightMock = createMockAPI([
-      { id: 'cl', parentId: null, index: 2 },
-      { id: 'neighbor', parentId: 'cl', index: 5 },
-      { id: 's1', parentId: null, index: 9 },
-    ]);
-
-    addColumnToList(rightMock.api, 'neighbor', ['s1'], side('right'));
-
-    // right inserts after the neighbor, so its index is strictly greater
-    const leftIndex = Number(mock.insert.mock.calls[0][3]);
-    const rightIndex = Number(rightMock.insert.mock.calls[0][3]);
-    expect(leftIndex).toBeLessThan(rightIndex);
+    expect(mock.created[0].placement).toEqual({ parentId: 'cl', position: { before: 'neighbor' } });
   });
 
   it('re-splits the row evenly: every column holder flex-grow reset to 1 after a column is added', () => {
@@ -314,7 +301,7 @@ describe('addColumnToList', () => {
     const result = addColumnToList(mock.api, 'neighbor', ['s1'], side('right'));
 
     expect(result).toBeNull();
-    expect(mock.insert).not.toHaveBeenCalled();
+    expect(mock.created).toEqual([]);
   });
 
   it('returns null for empty sources', () => {
@@ -326,7 +313,7 @@ describe('addColumnToList', () => {
     const result = addColumnToList(mock.api, 'neighbor', [], side('right'));
 
     expect(result).toBeNull();
-    expect(mock.insert).not.toHaveBeenCalled();
+    expect(mock.created).toEqual([]);
   });
 });
 
@@ -341,13 +328,13 @@ describe('wrapBlocksInColumns', () => {
     const result = wrapBlocksInColumns(mock.api, ['a', 'b', 'c']);
 
     expect(mock.transact).toHaveBeenCalledTimes(1);
-    // 1 list + 3 columns
-    expect(mock.insert).toHaveBeenCalledTimes(4);
-    expect(mock.insert.mock.calls[0][0]).toBe(COLUMN_LIST_TOOL);
-    expect(mock.insert.mock.calls[0][3]).toBe(2); // list at first block's index
-    expect(mock.insert.mock.calls[1][0]).toBe(COLUMN_TOOL);
-    expect(mock.insert.mock.calls[2][0]).toBe(COLUMN_TOOL);
-    expect(mock.insert.mock.calls[3][0]).toBe(COLUMN_TOOL);
+    // the list takes the first block's place, then one column per block, in order
+    expect(mock.created.map(({ type, placement }) => ({ type, placement }))).toEqual([
+      { type: COLUMN_LIST_TOOL, placement: { parentId: null, position: { before: 'a' } } },
+      { type: COLUMN_TOOL, placement: { parentId: 'column_list-new-1', position: 'end' } },
+      { type: COLUMN_TOOL, placement: { parentId: 'column_list-new-1', position: 'end' } },
+      { type: COLUMN_TOOL, placement: { parentId: 'column_list-new-1', position: 'end' } },
+    ]);
 
     // each block reparented into its own created column, in selection order
     expect(mock.setBlockParent).toHaveBeenCalledWith('a', 'column-new-2');
@@ -361,7 +348,7 @@ describe('wrapBlocksInColumns', () => {
     const mock = createMockAPI([{ id: 'a', parentId: null, index: 0 }]);
 
     expect(wrapBlocksInColumns(mock.api, ['a'])).toBeNull();
-    expect(mock.insert).not.toHaveBeenCalled();
+    expect(mock.created).toEqual([]);
   });
 
   it('aborts when fewer than 2 top-level blocks remain after ignoring nested ones', () => {
@@ -371,14 +358,14 @@ describe('wrapBlocksInColumns', () => {
     ]);
 
     expect(wrapBlocksInColumns(mock.api, ['a', 'b'])).toBeNull();
-    expect(mock.insert).not.toHaveBeenCalled();
+    expect(mock.created).toEqual([]);
   });
 
   it('aborts when any block id is stale', () => {
     const mock = createMockAPI([{ id: 'a', parentId: null, index: 0 }]);
 
     expect(wrapBlocksInColumns(mock.api, ['a', 'ghost'])).toBeNull();
-    expect(mock.insert).not.toHaveBeenCalled();
+    expect(mock.created).toEqual([]);
   });
 
   it('wraps a selected column_list as one nested column, ignoring its descendant columns present in the selection', () => {
@@ -396,10 +383,9 @@ describe('wrapBlocksInColumns', () => {
     const result = wrapBlocksInColumns(mock.api, ['cl', 'colA', 'colB', 'p']);
 
     expect(result).toBe('column_list-new-1');
-    // 1 new list + 2 columns (one per top-level block), NOT one per selected id
-    expect(mock.insert).toHaveBeenCalledTimes(3);
-    expect(mock.insert.mock.calls[0][0]).toBe(COLUMN_LIST_TOOL);
-    expect(mock.insert.mock.calls[0][3]).toBe(2); // list at the column_list's index
+    // 1 new list at the column_list's place + 2 columns (one per top-level block), NOT one per selected id
+    expect(mock.created.map(({ type }) => type)).toEqual([COLUMN_LIST_TOOL, COLUMN_TOOL, COLUMN_TOOL]);
+    expect(mock.created[0].placement).toEqual({ parentId: null, position: { before: 'cl' } });
 
     // column_list nests as a single column; the paragraph gets its own
     expect(mock.setBlockParent).toHaveBeenCalledWith('cl', 'column-new-2');
@@ -432,7 +418,7 @@ describe('wrapBlocksInColumns', () => {
     const result = wrapBlocksInColumns(mock.api, ['clX', 'xA', 'clY', 'yA']);
 
     expect(result).toBe('column_list-new-1');
-    expect(mock.insert).toHaveBeenCalledTimes(3); // list + 2 columns
+    expect(mock.created).toHaveLength(3); // list + 2 columns
     expect(mock.setBlockParent).toHaveBeenCalledWith('clX', 'column-new-2');
     expect(mock.setBlockParent).toHaveBeenCalledWith('clY', 'column-new-3');
 
@@ -460,8 +446,8 @@ describe('drop animation wiring', () => {
 
       wrapInNewColumnList(mock.api, 'target', ['src'], 'right');
 
-      const firstColumnHolder = mock.insert.mock.results[1].value.holder;
-      const secondColumnHolder = mock.insert.mock.results[2].value.holder;
+      const firstColumnHolder = mock.created[1].holder;
+      const secondColumnHolder = mock.created[2].holder;
 
       expect(animateColumnWidths).toHaveBeenCalledWith({
         holders: [firstColumnHolder, secondColumnHolder],
@@ -479,8 +465,8 @@ describe('drop animation wiring', () => {
 
       wrapInNewColumnList(mock.api, 'target', ['src'], 'left');
 
-      const firstColumnHolder = mock.insert.mock.results[1].value.holder;
-      const secondColumnHolder = mock.insert.mock.results[2].value.holder;
+      const firstColumnHolder = mock.created[1].holder;
+      const secondColumnHolder = mock.created[2].holder;
 
       expect(animateColumnWidths).toHaveBeenCalledWith({
         holders: [firstColumnHolder, secondColumnHolder],

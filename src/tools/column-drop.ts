@@ -28,24 +28,6 @@ const runTransacted = (api: API, fn: () => void): void => {
 };
 
 /**
- * The flat index right after the last descendant of `blockId`. A new sibling
- * inserted any earlier would split the block from its children.
- */
-const indexAfterSubtree = (api: API, blockId: string, blockIndex: number): number => {
-  const isUnder = (id: string | null | undefined, seen: Set<string>): boolean => {
-    if (id === null || id === undefined || seen.has(id)) {
-      return false;
-    }
-
-    return id === blockId || isUnder(api.blocks.getById(id)?.parentId, seen.add(id));
-  };
-  const after = Array.from({ length: api.blocks.getBlocksCount() - blockIndex - 1 }, (_, i) => blockIndex + 1 + i);
-  const firstOutside = after.find(index => !isUnder(api.blocks.getBlockByIndex(index)?.parentId, new Set()));
-
-  return firstOutside ?? api.blocks.getBlocksCount();
-};
-
-/**
  * Wrap a top-level `targetId` block and the dragged `sourceIds` into a brand
  * new `column_list` with two columns: one holds the target, the other holds
  * the sources stacked in document order.
@@ -71,9 +53,7 @@ export const wrapInNewColumnList = (
     return null;
   }
 
-  const targetIndex = api.blocks.getBlockIndex(targetId);
-
-  if (targetIndex === undefined) {
+  if (api.blocks.getBlockIndex(targetId) === undefined) {
     return null;
   }
 
@@ -107,18 +87,13 @@ export const wrapInNewColumnList = (
 
   runTransacted(api, () => {
     // The column_list opts out of its default auto-seed; we fill it with
-    // explicit columns below. Columns are typed blocks, so they are created
-    // with `insert(COLUMN_TOOL, ...)` + setBlockParent (insertInsideParent only
-    // ever creates the default paragraph block).
-    const list = api.blocks.insert(COLUMN_LIST_TOOL, { noSeed: true }, {}, targetIndex, false, false);
+    // explicit columns below.
+    const list = api.blocks.insertAt(COLUMN_LIST_TOOL, { noSeed: true }, { parentId: null, position: { before: targetId } });
 
     created.listId = list.id;
 
-    const firstColumn = api.blocks.insert(COLUMN_TOOL, { noSeed: true }, {}, targetIndex + 1, false, false);
-    const secondColumn = api.blocks.insert(COLUMN_TOOL, { noSeed: true }, {}, targetIndex + 2, false, false);
-
-    api.blocks.setBlockParent(firstColumn.id, list.id);
-    api.blocks.setBlockParent(secondColumn.id, list.id);
+    const firstColumn = api.blocks.insertAt(COLUMN_TOOL, { noSeed: true }, { parentId: list.id, position: 'end' });
+    const secondColumn = api.blocks.insertAt(COLUMN_TOOL, { noSeed: true }, { parentId: list.id, position: 'end' });
 
     const targetColumn = side === 'left' ? secondColumn : firstColumn;
     const sourcesColumn = side === 'left' ? firstColumn : secondColumn;
@@ -181,26 +156,16 @@ export const wrapBlocksInColumns = (
     return null;
   }
 
-  const baseIndex = api.blocks.getBlockIndex(topLevelIds[0]);
-
-  if (baseIndex === undefined) {
-    return null;
-  }
-
   const created: { listId: string | null } = { listId: null };
 
   runTransacted(api, () => {
-    const list = api.blocks.insert(COLUMN_LIST_TOOL, { noSeed: true }, {}, baseIndex, false, false);
+    const list = api.blocks.insertAt(COLUMN_LIST_TOOL, { noSeed: true }, { parentId: null, position: { before: topLevelIds[0] } });
 
     created.listId = list.id;
 
-    const columns = topLevelIds.map((_, i) =>
-      api.blocks.insert(COLUMN_TOOL, { noSeed: true }, {}, baseIndex + 1 + i, false, false)
+    const columns = topLevelIds.map(() =>
+      api.blocks.insertAt(COLUMN_TOOL, { noSeed: true }, { parentId: list.id, position: 'end' })
     );
-
-    for (const column of columns) {
-      api.blocks.setBlockParent(column.id, list.id);
-    }
 
     topLevelIds.forEach((blockId, i) => {
       api.blocks.setBlockParent(blockId, columns[i].id);
@@ -235,9 +200,7 @@ export const addColumnToList = (
     return null;
   }
 
-  const neighborIndex = api.blocks.getBlockIndex(neighborColumnId);
-
-  if (neighborIndex === undefined) {
+  if (api.blocks.getBlockIndex(neighborColumnId) === undefined) {
     return null;
   }
 
@@ -254,8 +217,6 @@ export const addColumnToList = (
     return null;
   }
 
-  const insertIndex = side === 'left' ? neighborIndex : indexAfterSubtree(api, neighborColumnId, neighborIndex);
-
   // FLIP capture: the columns' pre-drop widths seed the row's start state, and
   // the tops of the blocks below the list drive their glide after the mutation.
   const listHolder = api.blocks.getById(columnListId)?.holder;
@@ -270,15 +231,12 @@ export const addColumnToList = (
   const created: { columnId: string | null } = { columnId: null };
 
   runTransacted(api, () => {
-    // A column is a typed block, so it is created with insert(COLUMN_TOOL) +
-    // setBlockParent. Columns are ordered among the list's children by relative
-    // flat index, so neighborIndex (left) / neighborIndex+1 (right) places the
-    // new column on the correct side after the nested re-sort.
-    const column = api.blocks.insert(COLUMN_TOOL, { noSeed: true }, {}, insertIndex, false, false);
+    const column = api.blocks.insertAt(COLUMN_TOOL, { noSeed: true }, {
+      parentId: columnListId,
+      position: side === 'left' ? { before: neighborColumnId } : { after: neighborColumnId },
+    });
 
     created.columnId = column.id;
-
-    api.blocks.setBlockParent(column.id, columnListId);
 
     for (const sourceId of sourceIds) {
       api.blocks.setBlockParent(sourceId, column.id);

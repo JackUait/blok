@@ -62,7 +62,7 @@ describe('ColumnList tool', () => {
       blocks: {
         getChildren: vi.fn().mockReturnValue([]),
         getBlockIndex: vi.fn().mockReturnValue(5),
-        insert,
+        insertAt: insert,
         setBlockParent,
       },
       caret: { setToBlock: vi.fn() },
@@ -72,12 +72,13 @@ describe('ColumnList tool', () => {
     list.render();
     list.rendered();
 
-    // Three column blocks inserted, each of type 'column'
-    expect(insert).toHaveBeenCalledTimes(3);
-    expect(insert.mock.calls[0][0]).toBe('column');
-    // Each reparented under the column_list
-    expect(setBlockParent).toHaveBeenCalledTimes(3);
-    expect(setBlockParent).toHaveBeenCalledWith('col-1', 'cl-1');
+    // Three columns appended under the column_list, in order
+    expect(insert.mock.calls.map((call): unknown[] => [call[0], call[2]])).toEqual([
+      ['column', { parentId: 'cl-1', position: 'end' }],
+      ['column', { parentId: 'cl-1', position: 'end' }],
+      ['column', { parentId: 'cl-1', position: 'end' }],
+    ]);
+    expect(setBlockParent).not.toHaveBeenCalled();
   });
 
   it('defaults to 2 columns when columnCount is absent', () => {
@@ -86,7 +87,7 @@ describe('ColumnList tool', () => {
       blocks: {
         getChildren: vi.fn().mockReturnValue([]),
         getBlockIndex: vi.fn().mockReturnValue(0),
-        insert,
+        insertAt: insert,
         setBlockParent: vi.fn(),
       },
       caret: { setToBlock: vi.fn() },
@@ -112,7 +113,7 @@ describe('ColumnList tool', () => {
       blocks: {
         getChildren: vi.fn().mockReturnValue([{ id: 'c1', name: 'column', holder: document.createElement('div') }]),
         getBlockIndex: vi.fn().mockReturnValue(0),
-        insert,
+        insertAt: insert,
         setBlockParent: vi.fn(),
       },
     } as unknown as Partial<API>);
@@ -135,7 +136,7 @@ describe('ColumnList tool', () => {
       blocks: {
         getChildren: vi.fn().mockReturnValue([]),
         getBlockIndex: vi.fn().mockReturnValue(0),
-        insert,
+        insertAt: insert,
         setBlockParent: vi.fn(),
       },
       caret: { setToBlock: vi.fn() },
@@ -395,7 +396,7 @@ describe('ColumnList tool', () => {
           getBlockIndex: vi.fn().mockReturnValue(0),
           // Deliberately settled: the guard must not depend on this flag.
           isSyncingFromYjs: false,
-          insert,
+          insertAt: insert,
           setBlockParent: vi.fn(),
         },
         caret: { setToBlock: vi.fn() },

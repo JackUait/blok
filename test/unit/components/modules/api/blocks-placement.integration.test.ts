@@ -291,6 +291,10 @@ describe('blocks.insertAt / blocks.moveTo', () => {
 
       expect(instance.module.blockManager.blocks[instance.module.blockManager.currentBlockIndex].id).toBe('a');
 
+      instance.blocks.insertAt('paragraph', { text: 'm' }, { id: 'm', parentId: 't', position: 'start' });
+
+      expect(instance.module.blockManager.blocks[instance.module.blockManager.currentBlockIndex].id).toBe('a');
+
       instance.blocks.insertAt('paragraph', { text: 'f' }, { id: 'f', parentId: 't', focus: true });
 
       expect(instance.module.blockManager.blocks[instance.module.blockManager.currentBlockIndex].id).toBe('f');

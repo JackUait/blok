@@ -1,7 +1,8 @@
 import type { BlockOrigin, BlockToolData, LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData, ToolConfig } from '../../../../types';
-import type { BlockAPI as BlockAPIInterface, Blocks, InsertAtOptions, InsertInsideParentOptions, MoveToTarget } from '../../../../types/api';
+import type { BlockAPI as BlockAPIInterface, Blocks, InsertAtOptions, MoveToTarget } from '../../../../types/api';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import type { DerivedSource } from '../blockManager/types';
+import type { InsertInsideParentWithCurrentOptions } from '../blockManager/block-insertion';
 import { blocksToMarkdown } from '../../../markdown/blocks-to-markdown';
 import type { MarkdownImportConfig } from '../../../markdown/types';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
@@ -521,7 +522,7 @@ export class BlocksAPI extends Module {
     // insertInsideParent turns the index back into `afterId`; it also keeps
     // the index path for table and database parents.
     if (placement.parentId !== null) {
-      return this.insertInsideParent(placement.parentId, placement.index, data, type, { id, tunes, focus });
+      return this.insertInsideParent(placement.parentId, placement.index, data, type, { id, tunes, focus, keepCurrent: !focus });
     }
 
     if (!BlockManager.suppressStopCapturing) {
@@ -758,7 +759,7 @@ export class BlocksAPI extends Module {
     insertIndex: number,
     childData?: BlockToolData,
     toolName?: string,
-    options?: InsertInsideParentOptions
+    options?: InsertInsideParentWithCurrentOptions
   ): BlockAPIInterface => {
     // Force new undo group so this insertion is separate from previous typing,
     // UNLESS an enclosing atomic operation (e.g. tool conversion) has asked the

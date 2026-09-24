@@ -28,6 +28,15 @@ import type { InsertBlockOptions, InsertInsideParentOptions, BlocksStore } from 
 import type { BlockYjsSync } from './yjs-sync';
 
 /**
+ * Internal widening of the public options. The released `insertInsideParent`
+ * always makes the child current; `blocks.insertAt` does so only on `focus`.
+ */
+export interface InsertInsideParentWithCurrentOptions extends InsertInsideParentOptions {
+  /** Leave the current block alone. */
+  keepCurrent?: boolean;
+}
+
+/**
  * Handles block creation: plain inserts, default-block inserts, child inserts,
  * splits and paste. Reads/writes shared state via the OperationsContext.
  */
@@ -1028,7 +1037,7 @@ export class BlockInsertion {
     blocksStore: BlocksStore,
     childData?: BlockToolData,
     toolName?: string,
-    options: InsertInsideParentOptions = {}
+    options: InsertInsideParentWithCurrentOptions = {}
   ): Block {
     const parentBlock = this.repository.getBlockById(parentId);
 
@@ -1036,7 +1045,7 @@ export class BlockInsertion {
       throw new Error(`Parent block with id "${parentId}" not found`);
     }
 
-    const { id: requestedId, tunes, focus = false } = options;
+    const { id: requestedId, tunes, focus = false, keepCurrent = false } = options;
     const insertIndex = this.clampIntoSubtree(parentBlock, requestedIndex);
     const newBlockId = requestedId ?? generateBlockId();
     const defaultBlockTool = this.dependencies.config.defaultBlock ?? 'paragraph';
@@ -1109,7 +1118,9 @@ export class BlockInsertion {
       }, blocksStore);
 
       // Update the current block AFTER insert so blockDidMutated sees original as current
-      this.ctx.setCurrentBlockRaw(newBlock);
+      if (!keepCurrent) {
+        this.ctx.setCurrentBlockRaw(newBlock);
+      }
 
       if (selfPlaced) {
         this.hierarchy.setBlockParent(newBlock, parentId);

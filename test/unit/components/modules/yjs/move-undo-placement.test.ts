@@ -413,6 +413,20 @@ describe('placement-based move undo/redo', () => {
       expect(manager.toJSON().find((block) => block.id === 'outer')?.parent).toBeUndefined();
     });
 
+    it('a moveBlockTo anchored after the block itself records nothing', () => {
+      manager.fromJSON([
+        paragraph('b1', 'one'),
+        paragraph('b2', 'two'),
+      ]);
+
+      manager.moveBlockTo('b1', { parentId: null, afterId: 'b1' });
+
+      // A recorded entry would redo to "after b1" — a missing anchor that
+      // appends b1 at the end.
+      expect(manager.canUndo()).toBe(false);
+      expect(orderedIds()).toEqual(['b1', 'b2']);
+    });
+
     it('moveBlockTo calls inside one move group undo together', () => {
       manager.fromJSON([
         paragraph('b1', 'one'),

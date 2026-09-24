@@ -645,4 +645,50 @@ test.describe('W4T stub and columns', () => {
     expect((await saved(page)).map((b) => b.id)).toEqual(['p0', 'cl1', 'c1', 'pa', 'c2', 'pb']);
     expect((await dataOf(page, 'c1'))?.widthRatio).toBe(1.5);
   });
+
+  test('W4T-27b: one undo of a width reset over three columns restores every width, and one redo resets them again', async ({ page }) => {
+    await mount(page, [
+      ANCHOR,
+      { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2', 'c3'] },
+      { id: 'c1', type: 'column', data: { widthRatio: 1.5 }, parent: 'cl1', content: ['pa'] },
+      { id: 'pa', type: 'paragraph', data: { text: 'Left' }, parent: 'c1' },
+      { id: 'c2', type: 'column', data: { widthRatio: 0.5 }, parent: 'cl1', content: ['pb'] },
+      { id: 'pb', type: 'paragraph', data: { text: 'Middle' }, parent: 'c2' },
+      { id: 'c3', type: 'column', data: { widthRatio: 0.8 }, parent: 'cl1', content: ['pc'] },
+      { id: 'pc', type: 'paragraph', data: { text: 'Right' }, parent: 'c3' },
+    ]);
+    const ratios = async (): Promise<unknown[]> =>
+      Promise.all(['c1', 'c2', 'c3'].map(async (id) => (await dataOf(page, id))?.widthRatio));
+
+    await page.getByTestId('column-resizer').first().dblclick();
+    await gap(page);
+    expect(await ratios()).toEqual([undefined, undefined, undefined]);
+
+    await press(page, UNDO);
+    expect(await ratios()).toEqual([1.5, 0.5, 0.8]);
+
+    await press(page, REDO);
+    expect(await ratios()).toEqual([undefined, undefined, undefined]);
+  });
+
+  test('W4T-27c: a width reset leaves the shared document holding what save() returns', async ({ page }) => {
+    await mount(page, [
+      ANCHOR,
+      { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+      { id: 'c1', type: 'column', data: { widthRatio: 1.5 }, parent: 'cl1', content: ['pa'] },
+      { id: 'pa', type: 'paragraph', data: { text: 'Left' }, parent: 'c1' },
+      { id: 'c2', type: 'column', data: { widthRatio: 0.5 }, parent: 'cl1', content: ['pb'] },
+      { id: 'pb', type: 'paragraph', data: { text: 'Right' }, parent: 'c2' },
+    ]);
+    const docData = (id: string): Promise<unknown> => page.evaluate((blockId) =>
+      (window.blokInstance as unknown as {
+        module: { yjsManager: { toJSON: () => Array<{ id: string; data?: unknown }> } };
+      }).module.yjsManager.toJSON().find((b) => b.id === blockId)?.data, id);
+
+    await page.getByTestId('column-resizer').first().dblclick();
+    await gap(page);
+
+    expect(await docData('c1')).toEqual(await dataOf(page, 'c1'));
+    expect(await docData('c2')).toEqual(await dataOf(page, 'c2'));
+  });
 });

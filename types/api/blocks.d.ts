@@ -162,6 +162,11 @@ export interface Blocks {
 
   /**
    * Moves a block to a new index
+   *
+   * A move the document does not allow (into another table cell, into a
+   * table from outside, inside the block's own subtree) changes nothing and
+   * only logs a warning. `moveTo` throws a `BlockPlacementError` for the same
+   * moves.
    * @param {number} toIndex - index where the block is moved to
    * @param {number} fromIndex - block to move
    */

@@ -11,6 +11,7 @@ import type {
 import type { MoveEvent } from '../../../types/tools/hook-events';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { setupPlaceholder } from '../../components/utils/placeholder';
+import { INDEX_MOVE_NEIGHBOURS, type IndexMoveNeighbours } from '../../components/utils/index-move-neighbours';
 
 import {
   rerenderListItem,
@@ -43,6 +44,9 @@ import { isPasteEventHTMLElement, detectStyleFromPastedContent, extractPastedCon
 import { getListSanitizeConfig, getListPasteConfig, getListConversionConfig } from './static-configs';
 import { STYLE_CONFIGS, getToolboxConfig } from './style-config';
 import type { ListItemStyle, ListItemConfig, StyleConfig, ListItemData } from './types';
+
+/** A moved() event that may carry the neighbours of an index move core no longer makes. */
+type IndexMoveEvent = MoveEvent & { [INDEX_MOVE_NEIGHBOURS]?: IndexMoveNeighbours };
 
 export class ListItem implements BlockTool {
   private api: API;
@@ -234,7 +238,7 @@ export class ListItem implements BlockTool {
     this.updateMarkersAfterPositionChange();
   }
 
-  public moved(event: MoveEvent): void {
+  public moved(event: IndexMoveEvent): void {
     // A horizontal drag-to-indent supplies the pointer-resolved drop depth. It is
     // authoritative — the drop must land at the depth the indicator previewed, not
     // the neighbour auto-resolution — so honor it directly (still clamped to the
@@ -268,7 +272,7 @@ export class ListItem implements BlockTool {
       this.updateMarkerForDepth(derivedDepth, this._data.style);
       this.wasStructurallyNested = structuralDepth !== null;
     } else {
-      this.validateAndAdjustDepthAfterMove(event.toIndex, event.isGroupMove);
+      this.validateAndAdjustDepthAfterMove(event.toIndex, event.isGroupMove, undefined, event[INDEX_MOVE_NEIGHBOURS]);
     }
 
     this.updateMarkersAfterPositionChange();
@@ -339,13 +343,19 @@ export class ListItem implements BlockTool {
     this.updateSiblingListMarkers();
   }
 
-  private validateAndAdjustDepthAfterMove(newIndex: number, skipDepthPromotion?: boolean, pointerDepth?: number): void {
+  private validateAndAdjustDepthAfterMove(
+    newIndex: number,
+    skipDepthPromotion?: boolean,
+    pointerDepth?: number,
+    neighbours?: IndexMoveNeighbours
+  ): void {
     const currentDepth = this.getDepth();
     const targetDepth = this.depthValidator.getTargetDepthForMove({
       blockIndex: newIndex,
       currentDepth,
       skipDepthPromotion,
       pointerDepth,
+      neighbours,
     });
 
     if (currentDepth !== targetDepth) {

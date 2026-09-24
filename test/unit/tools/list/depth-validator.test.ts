@@ -151,6 +151,19 @@ describe('ListDepthValidator', () => {
   });
 
   describe('getTargetDepthForMove', () => {
+    it('reads the given neighbours instead of the blocks around the index', () => {
+      // The array shows a deeper item next; the neighbours say a paragraph follows.
+      const blocks = [createMockBlock({ name: 'paragraph' }), createMockBlock(), createMockBlock({ depth: 1 })];
+      const validator = new ListDepthValidator(createMockBlocksAPI(blocks));
+
+      expect(validator.getTargetDepthForMove({ blockIndex: 1, currentDepth: 0 })).toBe(1);
+      expect(validator.getTargetDepthForMove({
+        blockIndex: 1,
+        currentDepth: 0,
+        neighbours: { previous: blocks[0], next: createMockBlock({ name: 'paragraph' }) },
+      })).toBe(0);
+    });
+
     it('caps depth to 1 for first position (first-in-group max is 1)', () => {
       const blocksAPI = createMockBlocksAPI([]);
       const validator = new ListDepthValidator(blocksAPI);

@@ -824,6 +824,87 @@ describe('blocks.insertAt / blocks.moveTo', () => {
     }, 30_000);
   });
 
+  describe('list depth after a keyboard move', () => {
+    it('keeps a list parent at its depth when it moves down past a paragraph with its nested item', async () => {
+      const instance = await boot([
+        P('a'),
+        { id: 'x', type: 'list', data: { text: 'x', style: 'unordered' }, content: ['xc'] },
+        { id: 'xc', type: 'list', data: { text: 'xc', style: 'unordered', depth: 1 }, parent: 'x' },
+        P('b'),
+      ]);
+
+      instance.module.blockManager.currentBlockIndex = 0;
+      instance.module.blockManager.moveCurrentBlockDown();
+
+      const depths = (await instance.save()).blocks.map(block => [block.id, block.data.depth ?? 0]);
+
+      expect(depths).toEqual([['x', 0], ['xc', 1], ['a', 0], ['b', 0]]);
+    }, 30_000);
+  });
+
+  describe('a listener that edits the document while a move is announced', () => {
+    const toggleDoc = (): OutputBlockData[] => [T('t', ['c1', 'c2']), P('c1', 't'), P('c2', 't'), P('p1'), P('p2')];
+    /** The same tree under a paragraph, whose children sit flat after it. */
+    const slotlessDoc = (): OutputBlockData[] => [P('t', undefined, ['c1', 'c2']), P('c1', 't'), P('c2', 't'), P('p1'), P('p2')];
+    const moves: Array<{ name: string; run: (instance: TestEditor) => void }> = [
+      { name: 'blocks.move', run: instance => instance.blocks.move(4, 0) },
+      {
+        name: 'a keyboard move',
+        run: (instance) => {
+          const blockManager = instance.module.blockManager;
+
+          blockManager.currentBlockIndex = 0;
+          blockManager.moveCurrentBlockDown();
+        },
+      },
+      { name: 'blocks.moveTo', run: instance => instance.blocks.moveTo('t', { position: { after: 'p2' } }) },
+    ];
+
+    /** Runs `edit` once, inside the first block-moved listener call. */
+    const onFirstMove = (instance: TestEditor, edit: () => void): void => {
+      const dispatcher = (instance.module.blockManager as unknown as { eventsDispatcher: Dispatcher }).eventsDispatcher;
+      const state = { done: false };
+
+      dispatcher.on(BlockChanged, ({ event }) => {
+        if (event.type !== 'block-moved' || state.done) {
+          return;
+        }
+        state.done = true;
+        edit();
+      });
+    };
+
+    const domIds = (): string[] =>
+      Array.from(holder?.querySelectorAll('[data-blok-id]') ?? []).map(element => element.getAttribute('data-blok-id') ?? '?');
+
+    it.each(moves.flatMap(move => [
+      { doc: 'a toggle', blocks: toggleDoc, ...move },
+      { doc: 'a paragraph with children', blocks: slotlessDoc, ...move },
+    ]))('keeps a move made by the listener during $name of $doc', async ({ blocks, run }) => {
+      const instance = await boot(blocks());
+
+      onFirstMove(instance, () => instance.blocks.move(0, instance.blocks.getBlockIndex('p2') ?? -1));
+      run(instance);
+      await nextFrames(2);
+
+      expect(instance.module.blockManager.blocks.map(block => block.id)).toEqual(domIds());
+    }, 30_000);
+
+    it.each(moves.flatMap(move => [
+      { doc: 'a toggle', blocks: toggleDoc, ...move },
+      { doc: 'a paragraph with children', blocks: slotlessDoc, ...move },
+    ]))('keeps a block the listener inserts during $name of $doc', async ({ blocks, run }) => {
+      const instance = await boot(blocks());
+
+      onFirstMove(instance, () => instance.blocks.insert('paragraph', { text: 'n' }, {}, 1, false, false, 'n'));
+      run(instance);
+      await nextFrames(2);
+
+      expect(instance.module.blockManager.blocks.map(block => block.id)).toEqual(domIds());
+      expect(instance.module.blockManager.blocks.map(block => block.id)).toContain('n');
+    }, 30_000);
+  });
+
   /** `id^parent` entries as `id<container` DOM entries: toggle children sit in its slot. */
   const domFor = (expected: string[]): string[] => expected.map(entry => entry.replace('^', '<'));
 

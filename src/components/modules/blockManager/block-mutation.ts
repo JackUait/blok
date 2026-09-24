@@ -19,6 +19,7 @@ import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table
 import { SELF_PLACING_PARENTS } from '../../../tools/nested-blocks';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
 import type { TreePlacement } from '../../utils/tree-order';
+import { INDEX_MOVE_NEIGHBOURS, type IndexMoveNeighbours } from '../../utils/index-move-neighbours';
 import { getBlockNestingDepth } from '../drag/utils/depthUtils';
 import type { BlockFactory } from './factory';
 import type { BlockHierarchy } from './hierarchy';
@@ -1111,13 +1112,11 @@ export class BlockMutation {
           const { block: member, slotParentId } = report;
           const parentId = member === block ? oldParentId : member.parentId;
 
-          this.announceAsIndexMove(order, () => {
-            this.fireMoveHooks(report, atRoot.has(member), blocksStore);
-            this.blockDidMutated(BlockMovedMutationType, member, {
-              fromIndex: report.fromIndex,
-              toIndex: report.resolvedIndex,
-              ...(slotParentId === parentId && { parentId, oldParentId: parentId }),
-            });
+          this.fireMoveHooks(report, order, atRoot.has(member), blocksStore);
+          this.blockDidMutated(BlockMovedMutationType, member, {
+            fromIndex: report.fromIndex,
+            toIndex: report.resolvedIndex,
+            ...(slotParentId === parentId && { parentId, oldParentId: parentId }),
           });
           this.ctx.currentBlockIndexValue = this.repository.getBlockIndex(member);
         });
@@ -1198,29 +1197,27 @@ export class BlockMutation {
       // Re-indented below only where it can change, as setBlockParent did.
       this.hierarchy.placeBlock(block, placement, { dom: !options.skipDOM, reindent: false });
 
-      this.announceAsIndexMove(order, () => {
-        if (!options.skipMovedHook) {
-          this.fireMoveHooks(report, rendered, blocksStore);
-        } else if (rendered) {
-          blocksStore.callRenderedHook(block);
-        }
+      if (!options.skipMovedHook) {
+        this.fireMoveHooks(report, order, rendered, blocksStore);
+      } else if (rendered) {
+        blocksStore.callRenderedHook(block);
+      }
 
-        // What re-asserting the unchanged parent used to do.
-        if (!options.skipDOM && !reparents && !this.dependencies.YjsManager.isInMoveGroup && parentId !== null) {
-          this.hierarchy.reindentSubtree(block);
-          this.hierarchy.syncVisibilityWithParent(block, parentId);
-        }
+      // What re-asserting the unchanged parent used to do.
+      if (!options.skipDOM && !reparents && !this.dependencies.YjsManager.isInMoveGroup && parentId !== null) {
+        this.hierarchy.reindentSubtree(block);
+        this.hierarchy.syncVisibilityWithParent(block, parentId);
+      }
 
-        this.blockDidMutated(BlockMovedMutationType, block, {
-          fromIndex: report.fromIndex,
-          toIndex: report.resolvedIndex,
-          // In a move group the placement is reported only when the flat slot
-          // names the block's own parent.
-          ...((reparents || !this.dependencies.YjsManager.isInMoveGroup || report.slotParentId === oldParentId) && {
-            parentId: reparents ? parentId : oldParentId,
-            oldParentId,
-          }),
-        });
+      this.blockDidMutated(BlockMovedMutationType, block, {
+        fromIndex: report.fromIndex,
+        toIndex: report.resolvedIndex,
+        // In a move group the placement is reported only when the flat slot
+        // names the block's own parent.
+        ...((reparents || !this.dependencies.YjsManager.isInMoveGroup || report.slotParentId === oldParentId) && {
+          parentId: reparents ? parentId : oldParentId,
+          oldParentId,
+        }),
       });
 
       this.ctx.currentBlockIndexValue = this.repository.getBlockIndex(block);
@@ -1239,44 +1236,29 @@ export class BlockMutation {
   }
 
   /**
-   * Runs `announce` while the array reads as `order`, the array the index
-   * moves this replaces left at that point, then puts the placed array back.
-   * Hooks and listeners that read flat neighbours (the list's depth rules)
-   * see what they always saw, not a subtree that already came along.
-   * Remove when no moved() hook reads flat neighbours (list nesting, phase 2).
-   * @param order - the array as the index move left it
-   * @param announce - fires the hooks and events
-   */
-  private announceAsIndexMove(order: readonly Block[], announce: () => void): void {
-    const placed = [...this.repository.blocks];
-    const members = new Set(placed);
-
-    this.repository.reorderBlocks([...order]);
-    try {
-      announce();
-    } finally {
-      const now = this.repository.blocks;
-
-      // A hook that added or removed a block keeps its array.
-      if (now.length === placed.length && now.every(block => members.has(block))) {
-        this.repository.reorderBlocks(placed);
-      }
-    }
-  }
-
-  /**
    * The hooks `Blocks.move` fired: rendered() when it moved a root holder,
-   * then moved().
+   * then moved(). moved() also gets the flat neighbours the index move left
+   * the block between (see INDEX_MOVE_NEIGHBOURS).
    * @param report - the move
+   * @param order - the array as the index move left it
    * @param atRoot - whether the holder sat in the working area before the move
    * @param blocksStore - The blocks store
    */
-  private fireMoveHooks(report: IndexMoveReport, atRoot: boolean, blocksStore: BlocksStore): void {
+  private fireMoveHooks(report: IndexMoveReport, order: readonly Block[], atRoot: boolean, blocksStore: BlocksStore): void {
     if (atRoot) {
       blocksStore.callRenderedHook(report.block);
     }
 
-    report.block.call(BlockToolAPI.MOVED, { fromIndex: report.fromIndex, toIndex: report.toIndex });
+    const neighbours: IndexMoveNeighbours = {
+      previous: report.toIndex > 0 ? order[report.toIndex - 1] : undefined,
+      next: order[report.toIndex + 1],
+    };
+
+    report.block.call(BlockToolAPI.MOVED, {
+      fromIndex: report.fromIndex,
+      toIndex: report.toIndex,
+      [INDEX_MOVE_NEIGHBOURS]: neighbours,
+    });
   }
 
   /**

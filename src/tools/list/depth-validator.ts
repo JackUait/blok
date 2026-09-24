@@ -7,6 +7,7 @@
 
 import { TOOL_NAME, INDENT_PER_LEVEL } from './constants';
 import type { BlocksAPI } from './marker-calculator';
+import type { IndexMoveNeighbours } from '../../components/utils/index-move-neighbours';
 
 /**
  * Depth validation options
@@ -29,6 +30,11 @@ export interface DepthValidationOptions {
    * "indicator == drop" invariant. Undefined for keyboard/programmatic moves.
    */
   pointerDepth?: number;
+  /**
+   * The neighbours to read instead of the blocks at `blockIndex` ± 1, when
+   * the array no longer shows them (core's moved() event carries them).
+   */
+  neighbours?: IndexMoveNeighbours;
 }
 
 /**
@@ -206,19 +212,20 @@ export class ListDepthValidator {
    * @returns The target depth for the dropped item
    */
   getTargetDepthForMove(options: DepthValidationOptions): number {
-    const { blockIndex, currentDepth, skipDepthPromotion, pointerDepth } = options;
+    const { blockIndex, currentDepth, skipDepthPromotion, pointerDepth, neighbours } = options;
 
     // Read the neighbour context from the DOM, then defer the actual decision to
     // the shared resolveTargetDepth — the SAME function the drag indicator uses,
     // so the preview can never diverge from this (the applied) result.
-    const previousBlock = blockIndex > 0 ? this.blocks.getBlockByIndex(blockIndex - 1) : undefined;
+    const previousInArray = blockIndex > 0 ? this.blocks.getBlockByIndex(blockIndex - 1) : undefined;
+    const previousBlock = neighbours !== undefined ? neighbours.previous : previousInArray;
     const previousIsListItem = !!previousBlock && previousBlock.name === TOOL_NAME;
     const previousDepth = previousIsListItem ? this.getBlockDepth(previousBlock) : 0;
     // Any predecessor (list OR other block) counts for cursor-driven nesting, so a
     // pointer-resolved drop can nest under a preceding paragraph, not only a list.
     const previousExists = previousBlock !== undefined;
 
-    const nextBlock = this.blocks.getBlockByIndex(blockIndex + 1);
+    const nextBlock = neighbours !== undefined ? neighbours.next : this.blocks.getBlockByIndex(blockIndex + 1);
     const nextIsListItem = !!nextBlock && nextBlock.name === TOOL_NAME;
     const nextDepth = nextIsListItem ? this.getBlockDepth(nextBlock) : 0;
 

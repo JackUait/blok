@@ -425,6 +425,7 @@ export class BlocksAPI extends Module {
       tool: block.type,
       data: block.data,
       parentId: block.parent ?? null,
+      ...(block.content !== undefined ? { contentIds: block.content } : {}),
       indent: depthOf(block.id),
     })));
   }

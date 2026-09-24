@@ -87,6 +87,21 @@ describe('BlocksAPI.exportMarkdown', () => {
     expect(await blocksApi.exportMarkdown()).toBe('root\n\nnested')
   })
 
+  it('orders a container\'s children by its saved content, not by array order', async () => {
+    const blocksApi = createBlocksApi({
+      blocks: [
+        { id: 'tog', type: 'toggle', data: { text: 'Group' }, content: ['second', 'first'] },
+        { id: 'first', type: 'paragraph', data: { text: 'listed last' }, parent: 'tog' },
+        { id: 'second', type: 'paragraph', data: { text: 'listed first' }, parent: 'tog' },
+      ],
+    })
+
+    const markdown = await blocksApi.exportMarkdown()
+
+    expect(markdown.indexOf('listed first')).toBeGreaterThan(-1)
+    expect(markdown.indexOf('listed first')).toBeLessThan(markdown.indexOf('listed last'))
+  })
+
   it('returns an empty string when there is nothing to save', async () => {
     const blocksApi = createBlocksApi(undefined)
 

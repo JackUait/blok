@@ -2148,4 +2148,258 @@ describe('BlockHierarchy', () => {
     });
   });
 
+  describe('setBlockParent() — where the block lands in the model', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    const flatIds = (): string[] => repository.blocks.map(block => block.id);
+
+    const addToggleSlot = (owner: Block): HTMLElement => {
+      const slot = document.createElement('div');
+
+      slot.setAttribute('data-blok-toggle-children', '');
+      slot.setAttribute('data-blok-nested-blocks', '');
+      owner.holder.appendChild(slot);
+
+      return slot;
+    };
+
+    const addCell = (table: Block): HTMLElement => {
+      const cell = document.createElement('div');
+
+      cell.setAttribute('data-blok-nested-blocks', '');
+      table.holder.appendChild(cell);
+
+      return cell;
+    };
+
+    it('Shift+Tab of the middle of three children: the last joins it, then it lands at root after the toggle', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 't', parentId: null, contentIds: ['a', 'b', 'c'] },
+        { id: 'a', parentId: 't' },
+        { id: 'b', parentId: 't' },
+        { id: 'c', parentId: 't' },
+        { id: 'r', parentId: null },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const [t, a, b, c, r] = ['t', 'a', 'b', 'c', 'r'].map(requireBlock);
+      const slot = addToggleSlot(t);
+
+      slot.append(a.holder, b.holder, c.holder);
+      workingArea.append(t.holder, r.holder);
+
+      hierarchy.setBlockParent(c, 'b');
+      hierarchy.setBlockParent(b, null);
+
+      expect(flatIds()).toStrictEqual(['t', 'a', 'b', 'c', 'r']);
+      expect(t.contentIds).toStrictEqual(['a']);
+      expect(b.contentIds).toStrictEqual(['c']);
+      expect([b.parentId, c.parentId]).toStrictEqual([null, 'b']);
+      expect([...workingArea.children]).toStrictEqual([t.holder, b.holder, c.holder, r.holder]);
+      expect([...slot.children]).toStrictEqual([a.holder]);
+    });
+
+    it('leaving for root moves the block and its subtree past the siblings it leaves behind', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 't', parentId: null, contentIds: ['a', 'b'] },
+        { id: 'a', parentId: 't', contentIds: ['a1'] },
+        { id: 'a1', parentId: 'a' },
+        { id: 'b', parentId: 't' },
+        { id: 'r', parentId: null },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      hierarchy.setBlockParent(requireBlock('a'), null);
+
+      expect(flatIds()).toStrictEqual(['t', 'b', 'a', 'a1', 'r']);
+      expect(requireBlock('t').contentIds).toStrictEqual(['b']);
+      expect(requireBlock('a').contentIds).toStrictEqual(['a1']);
+    });
+
+    it('leaving for a grandparent lands right after the parent\'s subtree', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'g', parentId: null, contentIds: ['p', 'q'] },
+        { id: 'p', parentId: 'g', contentIds: ['x', 'y'] },
+        { id: 'x', parentId: 'p' },
+        { id: 'y', parentId: 'p' },
+        { id: 'q', parentId: 'g' },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      hierarchy.setBlockParent(requireBlock('x'), 'g');
+
+      expect(flatIds()).toStrictEqual(['g', 'p', 'y', 'x', 'q']);
+      expect(requireBlock('g').contentIds).toStrictEqual(['p', 'x', 'q']);
+      expect(requireBlock('p').contentIds).toStrictEqual(['y']);
+    });
+
+    it('joining a parent from before it moves the subtree to the end of that parent\'s subtree', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'x', parentId: null, contentIds: ['x1'] },
+        { id: 'x1', parentId: 'x' },
+        { id: 't', parentId: null, contentIds: ['c1'] },
+        { id: 'c1', parentId: 't', contentIds: ['c1a'] },
+        { id: 'c1a', parentId: 'c1' },
+        { id: 'r', parentId: null },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      hierarchy.setBlockParent(requireBlock('x'), 't');
+
+      expect(flatIds()).toStrictEqual(['t', 'c1', 'c1a', 'x', 'x1', 'r']);
+      expect(requireBlock('t').contentIds).toStrictEqual(['c1', 'x']);
+      expect(requireBlock('x').parentId).toBe('t');
+    });
+
+    it('Tab nests a block as the last child of the sibling above without moving it', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'a', parentId: null, contentIds: ['a1'] },
+        { id: 'a1', parentId: 'a' },
+        { id: 'b', parentId: null },
+        { id: 'r', parentId: null },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      hierarchy.setBlockParent(requireBlock('b'), 'a');
+
+      expect(flatIds()).toStrictEqual(['a', 'a1', 'b', 'r']);
+      expect(requireBlock('a').contentIds).toStrictEqual(['a1', 'b']);
+    });
+
+    it('a block the caller already moved into a parent\'s subtree keeps that spot', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 't', parentId: null, contentIds: ['c1', 'c2'] },
+        { id: 'c1', parentId: 't' },
+        { id: 'c2', parentId: 't' },
+        { id: 'r', parentId: null },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const [t, c1, c2, r] = ['t', 'c1', 'c2', 'r'].map(requireBlock);
+
+      repository.reorderBlocks([t, c1, r, c2]);
+      hierarchy.setBlockParent(r, 't');
+
+      expect(flatIds()).toStrictEqual(['t', 'c1', 'r', 'c2']);
+      expect(t.contentIds).toStrictEqual(['c1', 'r', 'c2']);
+    });
+
+    it('a child the caller already moved past its parent\'s subtree keeps that spot when it leaves', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 't', parentId: null, contentIds: ['c1', 'c2'] },
+        { id: 'c1', parentId: 't' },
+        { id: 'c2', parentId: 't' },
+        { id: 'r', parentId: null },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const [t, c1, c2, r] = ['t', 'c1', 'c2', 'r'].map(requireBlock);
+
+      repository.reorderBlocks([t, c2, r, c1]);
+      hierarchy.setBlockParent(c1, null);
+
+      expect(flatIds()).toStrictEqual(['t', 'c2', 'r', 'c1']);
+      expect(t.contentIds).toStrictEqual(['c2']);
+    });
+
+    it('a toggle child moved to flat index 0 stays first when it leaves the toggle', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 't', parentId: null, contentIds: ['c1', 'c2'] },
+        { id: 'c1', parentId: 't' },
+        { id: 'c2', parentId: 't' },
+        { id: 'r', parentId: null },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const [t, c1, c2, r] = ['t', 'c1', 'c2', 'r'].map(requireBlock);
+      const slot = addToggleSlot(t);
+
+      slot.append(c1.holder, c2.holder);
+      workingArea.append(t.holder, r.holder);
+
+      repository.reorderBlocks([c2, t, c1, r]);
+      hierarchy.setBlockParent(c2, null);
+
+      expect(flatIds()).toStrictEqual(['c2', 't', 'c1', 'r']);
+      expect(t.contentIds).toStrictEqual(['c1']);
+      expect([...workingArea.children]).toStrictEqual([c2.holder, t.holder, r.holder]);
+    });
+
+    it('a block joining a collapsed toggle lands last, in its slot, hidden', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 't', parentId: null, contentIds: ['c1'] },
+        { id: 'c1', parentId: 't' },
+        { id: 'x', parentId: null },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const [t, c1, x] = ['t', 'c1', 'x'].map(requireBlock);
+      const slot = addToggleSlot(t);
+
+      c1.holder.classList.add('hidden');
+      slot.append(c1.holder);
+      workingArea.append(t.holder, x.holder);
+
+      hierarchy.setBlockParent(x, 't');
+
+      expect(flatIds()).toStrictEqual(['t', 'c1', 'x']);
+      expect(t.contentIds).toStrictEqual(['c1', 'x']);
+      expect([...slot.children]).toStrictEqual([c1.holder, x.holder]);
+      expect(x.holder.classList.contains('hidden')).toBe(true);
+    });
+
+    it('a cell block created at the document end joins the table\'s subtree and stays in its cell', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'table', parentId: null, contentIds: ['c1'], name: 'table' },
+        { id: 'c1', parentId: 'table' },
+        { id: 'r', parentId: null },
+        { id: 'p', parentId: null },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const [table, c1, r, p] = ['table', 'c1', 'r', 'p'].map(requireBlock);
+      const cellOne = addCell(table);
+      const cellTwo = addCell(table);
+
+      cellOne.append(c1.holder);
+      cellTwo.append(p.holder);
+      workingArea.append(table.holder, r.holder);
+
+      hierarchy.setBlockParent(p, 'table');
+
+      expect(flatIds()).toStrictEqual(['table', 'c1', 'p', 'r']);
+      expect(table.contentIds).toStrictEqual(['c1', 'p']);
+      expect(p.holder.parentElement).toBe(cellTwo);
+    });
+
+    it('re-asserting a table cell block\'s parent changes nothing', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'table', parentId: null, contentIds: ['c1', 'c2'], name: 'table' },
+        { id: 'c1', parentId: 'table' },
+        { id: 'c2', parentId: 'table' },
+        { id: 'r', parentId: null },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const [table, c1, c2, r] = ['table', 'c1', 'c2', 'r'].map(requireBlock);
+      const cellOne = addCell(table);
+      const cellTwo = addCell(table);
+
+      cellOne.append(c1.holder);
+      cellTwo.append(c2.holder);
+      workingArea.append(table.holder, r.holder);
+
+      hierarchy.setBlockParent(c2, 'table');
+
+      expect(flatIds()).toStrictEqual(['table', 'c1', 'c2', 'r']);
+      expect(table.contentIds).toStrictEqual(['c1', 'c2']);
+      expect(c2.holder.parentElement).toBe(cellTwo);
+    });
+  });
 });

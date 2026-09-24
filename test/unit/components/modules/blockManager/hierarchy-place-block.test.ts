@@ -11,9 +11,9 @@ import { Blocks } from '../../../../../src/components/blocks';
 import { BlockHierarchy } from '../../../../../src/components/modules/blockManager/hierarchy';
 import { BlockRepository } from '../../../../../src/components/modules/blockManager/repository';
 import type { BlocksStore } from '../../../../../src/components/modules/blockManager/types';
-import { dfsOrder, placementImpliedByFlat } from '../../../../../src/components/utils/tree-order';
+import { placementImpliedByFlat } from '../../../../../src/components/utils/tree-order';
 import type { TreePlacement } from '../../../../../src/components/utils/tree-order';
-import { validateFlatOrder, validateHomeSlots } from '../../../../../src/components/utils/hierarchy-invariant';
+import { validateFlatOrder, validateHomeSlots, validateTreeOrder } from '../../../../../src/components/utils/hierarchy-invariant';
 
 type Kind = 'paragraph' | 'toggle' | 'callout' | 'table';
 
@@ -162,7 +162,12 @@ const expectConsistent = (h: Harness, workingArea: HTMLElement, context: string)
 
   expect(validateFlatOrder(blocks).map(v => v.message), context).toEqual([]);
   expect(validateHomeSlots(blocks, workingArea).map(v => v.message), context).toEqual([]);
-  expect(dfsOrder(h.store).map(block => block.id), context).toEqual(h.ids());
+  expect(validateTreeOrder(blocks).map(v => v.message), context).toEqual([]);
+
+  // Independent of core's walk: roots in flat order, children by contentIds.
+  const walk = (block: Block): string[] => [block.id, ...block.contentIds.flatMap(id => walk(h.get(id)))];
+
+  expect(blocks.filter(block => block.parentId === null).flatMap(walk), context).toEqual(h.ids());
   expect(h.store.idIndexViolations(), context).toEqual([]);
 
   blocks.forEach(parent => {
@@ -179,6 +184,10 @@ const expectConsistent = (h: Harness, workingArea: HTMLElement, context: string)
       const slot = home ?? workingArea;
 
       slots.set(slot, [...(slots.get(slot) ?? []), block.id]);
+    } else {
+      const table = block.parentId === null ? undefined : byId.get(block.parentId);
+
+      expect(table?.holder.contains(block.holder), `${context}: ${block.id} stays in its table`).toBe(true);
     }
   });
 
@@ -462,8 +471,10 @@ describe('BlockHierarchy.placeBlock', () => {
       { id: 'b' },
     ];
 
-    const expectRefused = (place: (h: Harness) => void, message: RegExp): void => {
+    const expectRefused = (place: (h: Harness) => void, message: RegExp, corrupt?: (h: Harness) => void): void => {
       const h = build(workingArea, specs);
+
+      corrupt?.(h);
       const before = {
         ids: h.ids(),
         contentIds: h.store.blocks.map(block => [...block.contentIds]),
@@ -481,6 +492,14 @@ describe('BlockHierarchy.placeBlock', () => {
     it('refuses a cycle', () => {
       expectRefused(h => h.hierarchy.placeBlock(h.get('t'), { parentId: 'a1', afterId: null }), /cycle/);
       expectRefused(h => h.hierarchy.placeBlock(h.get('a'), { parentId: 'a', afterId: null }), /cycle/);
+    });
+
+    it('refuses a home slot inside the moved block\'s own holder', () => {
+      expectRefused(
+        h => h.hierarchy.placeBlock(h.get('b'), { parentId: 't', afterId: null }),
+        /inside its own holder/,
+        h => h.get('b').holder.appendChild(h.get('t').holder)
+      );
     });
 
     it('refuses a sibling that is not a child of the parent', () => {
@@ -510,20 +529,24 @@ describe('BlockHierarchy.placeBlock', () => {
     const SEEDS = 120;
     const MOVES_PER_SEED = 6;
 
-    /** Paragraphs, toggles and callouts nested up to three levels, in depth-first order. */
+    /**
+     * Paragraphs, toggles, callouts and tables nested up to three levels, in
+     * depth-first order. A table holds only childless paragraphs, as its cells do.
+     */
     const randomSpecs = (random: () => number): Spec[] => {
       const specs: Spec[] = [];
       let counter = 0;
-      const kinds: Kind[] = ['paragraph', 'paragraph', 'toggle', 'callout'];
+      const kinds: Kind[] = ['paragraph', 'paragraph', 'toggle', 'callout', 'table'];
 
-      const make = (parentId: string | null, depth: number): void => {
-        const spec: Spec = { id: `b${counter++}`, kind: kinds[Math.floor(random() * kinds.length)], parentId };
+      const make = (parentId: string | null, depth: number, inTable = false): void => {
+        const kind = inTable ? 'paragraph' : kinds[Math.floor(random() * kinds.length)];
+        const spec: Spec = { id: `b${counter++}`, kind, parentId };
 
         specs.push(spec);
-        const childCount = depth >= 3 ? 0 : Math.floor(random() * 3);
+        const childCount = depth >= 3 || inTable ? 0 : Math.floor(random() * 3) + (kind === 'table' ? 1 : 0);
 
         for (let i = 0; i < childCount; i++) {
-          make(spec.id, depth + 1);
+          make(spec.id, depth + 1, kind === 'table');
         }
       };
 
@@ -548,7 +571,11 @@ describe('BlockHierarchy.placeBlock', () => {
           const block = blocks[Math.floor(random() * blocks.length)];
           const isInSubtree = (candidate: Block): boolean =>
             candidate === block || (candidate.parentId !== null && isInSubtree(h.get(candidate.parentId)));
-          const parents = [null, ...blocks.filter(candidate => !isInSubtree(candidate))];
+          // Placing into a table is the table's job (it picks the cell): the
+          // caller hands the holder over, so random moves never target one.
+          const isTableOrCell = (candidate: Block): boolean =>
+            candidate.name === 'table' || (candidate.parentId !== null && h.get(candidate.parentId).name === 'table');
+          const parents = [null, ...blocks.filter(candidate => !isInSubtree(candidate) && !isTableOrCell(candidate))];
           const parent = parents[Math.floor(random() * parents.length)];
           const parentId = parent === null ? null : parent.id;
           const siblings = blocks.filter(candidate => candidate.parentId === parentId && candidate !== block);

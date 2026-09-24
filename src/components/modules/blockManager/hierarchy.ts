@@ -754,14 +754,18 @@ export class BlockHierarchy {
   /**
    * Moves `block` and its whole subtree to `placement`: under `parentId`,
    * right after sibling `afterId` (null = first child). Updates both parents'
-   * contentIds, the block's parentId, the flat array and the holders. A holder
-   * a table/database places stays where it is.
+   * contentIds, the block's parentId, the flat array and the holders.
    *
    * Throws, changing nothing, on a cycle, an unknown parent or sibling, a
-   * sibling of another parent, or a block the store does not hold.
+   * sibling of another parent, a block the store does not hold, or a home slot
+   * inside the moved subtree's own holders.
    *
-   * Memory only: no Yjs write, no parent-change callback, no hidden-class
-   * upkeep. Callers own those.
+   * Left to the caller:
+   * - childTools / ownsChildren: not checked here.
+   * - Under a table/database the holder stays where it is; the caller hands
+   *   it to the tool, which picks the cell or view.
+   * - Hiding a block that joins a collapsed toggle.
+   * - Yjs writes and the parent-change callback.
    * @param block - the block to move
    * @param placement - where it goes
    */
@@ -794,6 +798,12 @@ export class BlockHierarchy {
     const getBlock = (id: string): Block | undefined => this.repository.getBlockById(id);
     const tree = { blocks: rest, getById: getBlock };
     const target = flatIndexForPlacement(tree, placement);
+    const newHome = resolveHomeSlot(parentId, getBlock);
+
+    // Corrupted DOM: mounting would throw mid-move, after the model writes.
+    if (newHome.kind === 'slot' && moving.some(member => member.holder.contains(newHome.slot))) {
+      throw new Error(`BlockHierarchy.placeBlock: placing ${block.id} under ${String(parentId)} would mount it inside its own holder`);
+    }
 
     const oldParent = block.parentId === null ? undefined : this.repository.getBlockById(block.parentId);
 

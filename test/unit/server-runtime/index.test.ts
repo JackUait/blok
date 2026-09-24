@@ -131,6 +131,22 @@ describe('server runtime boundary', () => {
     expect(html).toBe('<details open><summary>Parent</summary><p>Child</p></details>');
   });
 
+  it('orders children by the parent content, then unlisted ones', async () => {
+    const html = await invoke(
+      'blocksToHtml',
+      JSON.stringify({
+        blocks: [
+          { id: 't', type: 'toggle', data: { text: 'Parent', isOpen: true }, content: ['b', 'a'] },
+          { id: 'a', type: 'paragraph', parent: 't', data: { text: 'A' } },
+          { id: 'c', type: 'paragraph', parent: 't', data: { text: 'C' } },
+          { id: 'b', type: 'paragraph', parent: 't', data: { text: 'B' } },
+        ],
+      })
+    );
+
+    expect(html).toBe('<details open><summary>Parent</summary><p>B</p><p>A</p><p>C</p></details>');
+  });
+
   /**
    * `content[]` is the canonical containment form, and the boundary used to
    * read only `parent` — so a document that declares containment one way lost

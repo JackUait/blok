@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
 
-import { blocksToMarkdown, blocksToPlainText } from '../../../src/view';
+import { blocksToHtml, blocksToMarkdown, blocksToPlainText, outlineFromOutputData } from '../../../src/view';
 import { buildDocumentModel } from '../../../src/view/document-model';
 
 /**
@@ -124,5 +124,56 @@ describe('legacy embed URL', () => {
     };
 
     expect(blocksToMarkdown(withUrl)).toBe('[https://current.example](https://current.example)');
+  });
+});
+
+/**
+ * Child order follows the parent's `content` (Notion rule), then children it
+ * does not list in array order — the same rule the editor applies on load.
+ */
+describe('child order follows the parent `content`', () => {
+  const doc = {
+    blocks: [
+      { id: 'r1', type: 'paragraph', data: { text: 'root one' } },
+      { id: 't', type: 'toggle', data: { text: 'Parent' }, content: ['c2', 'c2', 'c1', 'x', 'other'] },
+      { id: 'c1', type: 'header', data: { text: 'First in array', level: 2 }, parent: 't' },
+      { id: 'c3', type: 'header', data: { text: 'Unlisted', level: 2 }, parent: 't' },
+      { id: 'c2', type: 'header', data: { text: 'First in content', level: 2 }, parent: 't' },
+      { id: 'r2', type: 'callout', data: {} },
+      { id: 'other', type: 'paragraph', data: { text: 'belongs elsewhere' }, parent: 'r2' },
+    ],
+  };
+
+  it('orders a parent children by `content`, then unlisted ones, once each', () => {
+    const model = buildDocumentModel(doc);
+
+    expect(model.childrenOf('t').map((block) => block.id)).toEqual(['c2', 'c1', 'c3']);
+    expect(model.childrenOf('r2').map((block) => block.id)).toEqual(['other']);
+    expect(model.topLevel.map((block) => block.id)).toEqual(['r1', 't', 'r2']);
+  });
+
+  it('renders HTML in that order', () => {
+    const html = blocksToHtml(doc);
+
+    expect(html.indexOf('First in content')).toBeLessThan(html.indexOf('First in array'));
+    expect(html.indexOf('First in array')).toBeLessThan(html.indexOf('Unlisted'));
+  });
+
+  it('renders plain text in that order', () => {
+    const text = blocksToPlainText(doc);
+
+    expect(text.indexOf('First in content')).toBeLessThan(text.indexOf('First in array'));
+    expect(text.indexOf('First in array')).toBeLessThan(text.indexOf('Unlisted'));
+  });
+
+  it('renders Markdown in that order', () => {
+    const markdown = blocksToMarkdown(doc);
+
+    expect(markdown.indexOf('First in content')).toBeLessThan(markdown.indexOf('First in array'));
+    expect(markdown.indexOf('First in array')).toBeLessThan(markdown.indexOf('Unlisted'));
+  });
+
+  it('lists outline headings in that order', () => {
+    expect(outlineFromOutputData(doc).map((entry) => entry.id)).toEqual(['c2', 'c1', 'c3']);
   });
 });

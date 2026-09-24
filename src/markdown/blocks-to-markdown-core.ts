@@ -14,6 +14,7 @@
  */
 
 import type { BlockToolData } from '../../types';
+import { orderByContent } from '../shared/content-order';
 
 export interface SerializableBlock {
   /**
@@ -24,6 +25,11 @@ export interface SerializableBlock {
   id?: string;
   /** Id of the structural parent, used to resolve a block's descendants. */
   parentId?: string | null;
+  /**
+   * Child ids in order. Children are serialized in this order, then any child
+   * not listed here in array order; without it, array order alone.
+   */
+  contentIds?: string[];
   tool: string;
   data: BlockToolData;
   /**
@@ -949,6 +955,14 @@ const buildContext = (
 
       siblings.push(block);
       childrenOf.set(parentId, siblings);
+    }
+  }
+
+  for (const [parentId, siblings] of childrenOf) {
+    const contentIds = byId.get(parentId)?.contentIds;
+
+    if (contentIds !== undefined) {
+      childrenOf.set(parentId, orderByContent(siblings, contentIds));
     }
   }
 

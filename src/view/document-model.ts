@@ -8,6 +8,7 @@
  * PURITY CONTRACT: no DOM access, no editor-module imports.
  */
 import type { LooseOutputData, OutputData } from '../../types';
+import { orderByContent } from '../shared/content-order';
 
 /**
  * A block after defensive normalization: guaranteed string `type` and object
@@ -423,6 +424,22 @@ export const buildDocumentModel = (input: OutputData | LooseOutputData | null | 
 
     siblings.push(block);
     children.set(resolvedParentId, siblings);
+  }
+
+  const contentOf = new Map<string, string[]>();
+
+  for (const { parentId, childIds } of contentClaims) {
+    if (!contentOf.has(parentId)) {
+      contentOf.set(parentId, childIds);
+    }
+  }
+
+  for (const [parentId, siblings] of children) {
+    const content = contentOf.get(parentId);
+
+    if (content !== undefined) {
+      children.set(parentId, orderByContent(siblings, content));
+    }
   }
 
   return {

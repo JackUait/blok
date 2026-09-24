@@ -537,3 +537,24 @@ describe('blocksToMarkdown: ordered list start', () => {
     ])).toBe('2. a\n- b\n1. c');
   });
 });
+
+/**
+ * A container renders its children in its `contentIds` order (Notion rule),
+ * then the children it does not list, in array order.
+ */
+describe('blocksToMarkdown: child order', () => {
+  it('orders a container children by `contentIds`, then unlisted ones, once each', () => {
+    const blocks: SerializableBlock[] = [
+      { id: 't', tool: 'toggle', data: { text: 'Parent' }, contentIds: ['c2', 'c2', 'c1', 'missing'] },
+      { id: 'c1', tool: 'paragraph', data: { text: 'First in array' }, parentId: 't', indent: 1 },
+      { id: 'c3', tool: 'paragraph', data: { text: 'Unlisted' }, parentId: 't', indent: 1 },
+      { id: 'c2', tool: 'paragraph', data: { text: 'First in content' }, parentId: 't', indent: 1 },
+    ];
+
+    const markdown = blocksToMarkdown(blocks);
+
+    expect(markdown.indexOf('First in content')).toBeLessThan(markdown.indexOf('First in array'));
+    expect(markdown.indexOf('First in array')).toBeLessThan(markdown.indexOf('Unlisted'));
+    expect(markdown.split('First in content')).toHaveLength(2);
+  });
+});

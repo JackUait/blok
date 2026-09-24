@@ -9305,16 +9305,18 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-find-map] {
+  --blok-find-map-overhang: 4px;
   position: relative;
+  grid-column: 2 / -1;
   height: 16px;
-  margin: var(--blok-space-1-5) var(--blok-space-2-5) 0;
+  margin: var(--blok-space-1-5) var(--blok-find-map-overhang) 0;
   cursor: pointer;
 }
 
 [data-blok-find-map]::before {
   content: '';
   position: absolute;
-  inset-inline: -4px;
+  inset-inline: calc(-1 * var(--blok-find-map-overhang));
   top: 50%;
   height: 1px;
   background: var(--blok-find-track);

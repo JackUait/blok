@@ -222,6 +222,30 @@ test.describe('find in page', () => {
       expect(replaceAll.right).toBeCloseTo(close.right, 0);
       expect(map.top).toBeGreaterThanOrEqual(replaceField.bottom);
     });
+
+    test('the match map line spans from the find field to the close button', async ({ page }) => {
+      await createEditor(page, paragraphs('foo one', 'foo two'));
+      await focusParagraph(page, 'foo one');
+      await openFind(page, 'foo');
+      await expect(page.getByTestId('find-map')).toBeVisible();
+
+      const geometry = await page.getByTestId('find-map').evaluate((map) => {
+        const box = map.getBoundingClientRect();
+        const line = getComputedStyle(map, '::before');
+        const field = document.querySelector('[data-blok-testid="find-field"]')?.getBoundingClientRect();
+        const close = document.querySelector('[data-blok-testid="find-close"]')?.getBoundingClientRect();
+
+        return {
+          lineLeft: box.left + parseFloat(line.left),
+          lineRight: box.right - parseFloat(line.right),
+          fieldLeft: field?.left ?? Number.NaN,
+          closeRight: close?.right ?? Number.NaN,
+        };
+      });
+
+      expect(geometry.lineLeft).toBeCloseTo(geometry.fieldLeft, 0);
+      expect(geometry.lineRight).toBeCloseTo(geometry.closeRight, 0);
+    });
   });
 
   test.describe('results', () => {

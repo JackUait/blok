@@ -10,7 +10,7 @@ import { moveElementAfter, moveElementBefore, moveElementToEnd } from '../../uti
 import { isSlotless } from '../../../tools/nested-blocks';
 import { homeSlotElement, resolveHomeSlot } from '../../utils/home-slot';
 import { findOwn } from '../../utils/own-element';
-import { flatIndexForPlacement } from '../../utils/block-tree';
+import { childrenInTreeOrder, flatIndexForPlacement } from '../../utils/block-tree';
 import type { TreePlacement } from '../../utils/block-tree';
 import type { Blocks } from '../../blocks';
 
@@ -791,10 +791,9 @@ export class BlockHierarchy {
     const moving = blocks.filter(candidate => candidate === block || this.isUnder(candidate, block.id));
     const movingSet = new Set(moving);
     const rest = blocks.filter(candidate => !movingSet.has(candidate));
-    const target = flatIndexForPlacement(
-      { blocks: rest, getById: id => this.repository.getBlockById(id) },
-      placement
-    );
+    const getBlock = (id: string): Block | undefined => this.repository.getBlockById(id);
+    const tree = { blocks: rest, getById: getBlock };
+    const target = flatIndexForPlacement(tree, placement);
 
     const oldParent = block.parentId === null ? undefined : this.repository.getBlockById(block.parentId);
 
@@ -805,9 +804,13 @@ export class BlockHierarchy {
     const newParent = parentId === null ? undefined : this.repository.getBlockById(parentId);
 
     if (newParent !== undefined) {
-      const siblings = newParent.contentIds.filter(id => id !== block.id);
-      // A stale list may miss afterId; the block then goes last.
-      const slot = afterId === null ? 0 : (siblings.indexOf(afterId) + 1 || siblings.length);
+      // A stale list that misses afterId is first completed in tree order,
+      // or the block would land before afterId in tree order.
+      const listed = afterId === null || newParent.contentIds.includes(afterId)
+        ? newParent.contentIds
+        : childrenInTreeOrder(tree, newParent).map(child => child.id);
+      const siblings = listed.filter(id => id !== block.id);
+      const slot = afterId === null ? 0 : siblings.indexOf(afterId) + 1;
 
       newParent.contentIds = [...siblings.slice(0, slot), block.id, ...siblings.slice(slot)];
     }
@@ -820,8 +823,6 @@ export class BlockHierarchy {
 
     // Last block first: each mount anchors on holders after it, which must
     // already be in place.
-    const getBlock = (id: string): Block | undefined => this.repository.getBlockById(id);
-
     [...moving].reverse().forEach(member => {
       const home = resolveHomeSlot(member.parentId, getBlock);
 

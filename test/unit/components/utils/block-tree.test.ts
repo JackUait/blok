@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  childrenInTreeOrder,
   dfsOrder,
   flatIndexForPlacement,
   placementImpliedByFlat,
@@ -246,6 +247,21 @@ describe('block-tree', () => {
       ]);
 
       expect(ids(dfsOrder(view))).toEqual(['a', 'p', 'q']);
+    });
+  });
+
+  describe('childrenInTreeOrder', () => {
+    it('lists contentIds first, then unlisted children in flat order, skipping bad entries', () => {
+      const view = tree([
+        { id: 'a', contentIds: ['d', 'ghost', 'd', 'x'] },
+        { id: 'b', parentId: 'a' },
+        { id: 'c', parentId: 'a' },
+        { id: 'd', parentId: 'a' },
+        { id: 'x' },
+      ]);
+
+      expect(ids(childrenInTreeOrder(view, at(view, 'a')))).toEqual(['d', 'b', 'c']);
+      expect(childrenInTreeOrder(view, at(view, 'x'))).toEqual([]);
     });
   });
 

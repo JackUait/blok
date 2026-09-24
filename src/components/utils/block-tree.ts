@@ -106,6 +106,29 @@ export const flatIndexForPlacement = (tree: BlockTreeView, placement: TreePlacem
 };
 
 /**
+ * `children` (the parent's children, in flat order) in tree order: those the
+ * parent's contentIds list, in that order, then the rest.
+ * @param tree - the blocks
+ * @param parent - the parent
+ * @param children - its children in flat order
+ */
+const orderChildren = <T extends TreeBlock>(tree: BlockTreeView<T>, parent: TreeBlock, children: T[]): T[] => {
+  const listed = [...new Set(parent.contentIds)]
+    .map(id => tree.getById(id))
+    .filter((child): child is T => child !== undefined && children.includes(child));
+
+  return [...listed, ...children.filter(child => !listed.includes(child))];
+};
+
+/**
+ * A parent's children in tree order, by the rule {@link dfsOrder} follows.
+ * @param tree - the blocks
+ * @param parent - the parent
+ */
+export const childrenInTreeOrder = <T extends TreeBlock>(tree: BlockTreeView<T>, parent: TreeBlock): T[] =>
+  orderChildren(tree, parent, tree.blocks.filter(block => block.parentId === parent.id));
+
+/**
  * The tree's depth-first order. Roots keep array order. A parent's children
  * are the blocks whose parentId names it: first those its contentIds list, in
  * that order, then the unlisted ones in flat order. A contentIds entry that
@@ -140,12 +163,7 @@ export const dfsOrder = <T extends TreeBlock>(tree: BlockTreeView<T>): T[] => {
     visited.add(block);
     order.push(block);
 
-    const children = childrenInFlatOrder.get(block.id) ?? [];
-    const listed = block.contentIds
-      .map(id => tree.getById(id))
-      .filter((child): child is T => child !== undefined && children.includes(child));
-
-    [...listed, ...children.filter(child => !listed.includes(child))].forEach(walk);
+    orderChildren(tree, block, childrenInFlatOrder.get(block.id) ?? []).forEach(walk);
   };
 
   tree.blocks.filter(block => parentOf(block) === null).forEach(walk);

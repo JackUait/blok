@@ -278,6 +278,21 @@ describe('BlockHierarchy.placeBlock', () => {
       expectConsistent(h, workingArea, 'subtree across');
     });
 
+    it('lists a stale parent\'s unlisted children before placing after one of them', () => {
+      const h = build(workingArea, [
+        { id: 't', kind: 'toggle' },
+        { id: 'a', parentId: 't' },
+        { id: 'b', parentId: 't' },
+        { id: 'x' },
+      ]);
+
+      h.get('t').contentIds = ['a'];
+      h.hierarchy.placeBlock(h.get('x'), { parentId: 't', afterId: 'b' });
+
+      expect(h.get('t').contentIds).toEqual(['a', 'b', 'x']);
+      expectConsistent(h, workingArea, 'stale contentIds');
+    });
+
     it('re-indents the moved subtree', () => {
       const h = build(workingArea, [
         { id: 'p' },

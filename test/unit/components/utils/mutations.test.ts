@@ -44,6 +44,52 @@ describe('isMutationBelongsToElement', () => {
     expect(isMutationBelongsToElement(mutation, element)).toBe(false);
   });
 
+  it.each([
+    'data-blok-slash-search',
+    'role',
+    'aria-expanded',
+    'aria-autocomplete',
+    'aria-haspopup',
+    'aria-label',
+    'aria-controls',
+    'aria-activedescendant',
+  ])('ignores the toolbox combobox attribute %s on editable text', (attributeName) => {
+    const element = document.createElement('div');
+    const pill = document.createElement('span');
+
+    element.setAttribute('contenteditable', 'true');
+    element.appendChild(pill);
+
+    expect(isMutationBelongsToElement(createMutation({ type: 'attributes', attributeName, target: element }), element)).toBe(false);
+    expect(isMutationBelongsToElement(createMutation({ type: 'attributes', attributeName, target: pill }), element)).toBe(false);
+  });
+
+  it('keeps combobox-named attribute changes outside editable text', () => {
+    const element = document.createElement('div');
+    const button = document.createElement('button');
+
+    element.appendChild(button);
+
+    const mutation = createMutation({
+      type: 'attributes',
+      attributeName: 'aria-expanded',
+      target: button,
+    });
+
+    expect(isMutationBelongsToElement(mutation, element)).toBe(true);
+  });
+
+  it('keeps text changes in editable text', () => {
+    const element = document.createElement('div');
+    const text = document.createTextNode('/');
+
+    element.setAttribute('contenteditable', 'true');
+    element.appendChild(text);
+
+    expect(isMutationBelongsToElement(createMutation({ type: 'characterData', target: text }), element)).toBe(true);
+    expect(isMutationBelongsToElement(createMutation({ type: 'childList', target: element, addedNodes: toNodeList([ text ]) }), element)).toBe(true);
+  });
+
   it('returns true when mutation affects the element or its descendants', () => {
     const element = document.createElement('div');
     const child = document.createElement('span');

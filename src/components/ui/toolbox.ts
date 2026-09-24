@@ -1462,6 +1462,8 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * the open Toolbox listbox. The contentEditable keeps DOM focus in both slash
    * and plus-button modes, so aria-activedescendant on it lets screen readers
    * track the highlighted option while the caret stays in the editor.
+   * Block watching skips these writes by name (utils/mutations.ts); a new one
+   * must be added there too, or opening the menu reports a block change.
    * @param host - the block's contentEditable element
    */
   private applyComboboxRoles(host: HTMLElement): void {

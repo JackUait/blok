@@ -1,3 +1,29 @@
+import { DATA_ATTR } from '../constants/data-attributes';
+
+/**
+ * UI attributes the open toolbox writes on the block's editable text (see
+ * Toolbox.applyComboboxRoles). They never reach saved data, so they are not a
+ * block change. Keep in sync with what the toolbox writes.
+ */
+const TOOLBOX_COMBOBOX_ATTRIBUTES = new Set([
+  DATA_ATTR.slashSearch,
+  'role',
+  'aria-expanded',
+  'aria-autocomplete',
+  'aria-haspopup',
+  'aria-label',
+  'aria-controls',
+  'aria-activedescendant',
+]);
+
+const isToolboxComboboxWrite = ({ type, attributeName, target }: MutationRecord): boolean => {
+  return type === 'attributes'
+    && attributeName !== null
+    && TOOLBOX_COMBOBOX_ATTRIBUTES.has(attributeName)
+    && target instanceof Element
+    && target.closest('[contenteditable="true"]') !== null;
+};
+
 /**
  * Check if passed mutation belongs to a passed element
  * @param mutationRecord - mutation to check
@@ -10,6 +36,10 @@ export const isMutationBelongsToElement = (mutationRecord: MutationRecord, eleme
    * Skip own technical mutations, for example, data-blok-empty or data-blok-toggle-open attribute changes
    */
   if (mutationRecord.type === 'attributes' && (mutationRecord.attributeName === 'data-blok-empty' || mutationRecord.attributeName === 'data-blok-toggle-open')) {
+    return false;
+  }
+
+  if (isToolboxComboboxWrite(mutationRecord)) {
     return false;
   }
 

@@ -802,6 +802,28 @@ describe('blocks.insertAt / blocks.moveTo', () => {
     }, 30_000);
   });
 
+  describe('blocks.move', () => {
+    it('lands a child moved out of its parent at the index it was given', async () => {
+      const instance = await boot([P('q'), P('p', undefined, ['a', 'b']), P('a', 'p'), P('b', 'p', ['b1']), P('b1', 'b')]);
+
+      instance.blocks.move(1, 3);
+
+      expect(flat(instance)).toEqual(['q^-', 'b^-', 'b1^b', 'p^-', 'a^p']);
+      await expect(instance.save()).resolves.toBeDefined();
+    }, 30_000);
+
+    it('adds no undo step when the block stays where it is', async () => {
+      const instance = await boot([P('a'), P('b'), P('c')]);
+
+      instance.blocks.move(2, 0);
+      instance.module.yjsManager.stopCapturing();
+      instance.blocks.move(1, 1);
+      await undoOnce(instance);
+
+      expect(roots(instance)).toEqual(['a', 'b', 'c']);
+    }, 30_000);
+  });
+
   /** `id^parent` entries as `id<container` DOM entries: toggle children sit in its slot. */
   const domFor = (expected: string[]): string[] => expected.map(entry => entry.replace('^', '<'));
 

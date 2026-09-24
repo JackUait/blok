@@ -24,7 +24,7 @@ interface TestEditor {
   history: { undo: () => void; redo: () => void };
   module: {
     blockManager: { blocks: Block[]; getBlockById: (id: string) => Block | undefined };
-    yjsManager: { stopCapturing: () => void };
+    yjsManager: { stopCapturing: () => void; toJSON: () => OutputBlockData[] };
     dragManager: { duplicateBlocksInPlace: (block: Block) => Promise<Block[]> };
     paste: { processText: (data: string, isHTML?: boolean) => Promise<void> };
   };
@@ -430,6 +430,93 @@ describe('column paths keep the tree placement', () => {
       expect(instance.blocks.getChildren('c1').length).toBeGreaterThanOrEqual(3);
       expect(instance.blocks.getChildren('c2').map(child => child.id)).toEqual(['right']);
       await undoRedo(instance);
+    }, 30_000);
+  });
+
+  describe('the shared doc holds what save() returns', () => {
+    const dataById = (blocks: OutputBlockData[]): Record<string, unknown> =>
+      Object.fromEntries(blocks.map(block => [block.id ?? '?', block.data]));
+
+    const docMatchesSave = async (run: (api: API) => unknown): Promise<void> => {
+      const instance = await boot([P('r'), P('s')]);
+
+      // Past the load's own sync window, which holds parent syncs back.
+      await nextFrames(2);
+      run(instance as unknown as API);
+
+      // The doc catches up through async saves.
+      await vi.waitFor(async () => {
+        const saved = await instance.save();
+
+        expect(dataById(instance.module.yjsManager.toJSON())).toEqual(dataById(saved.blocks));
+      }, { timeout: 3000 });
+    };
+
+    it('after a side-drop wrap', async () => {
+      await docMatchesSave(api => wrapInNewColumnList(api, 'r', ['s'], 'right'));
+    }, 30_000);
+
+    it('after wrapping a selection', async () => {
+      await docMatchesSave(api => wrapBlocksInColumns(api, ['r', 's']));
+    }, 30_000);
+
+    // Known gap: the seeded columns keep their noFocus hint in the doc (the
+    // column_list used to keep columnCount instead). Saved JSON is clean.
+    it.fails('after seeding a column preset', async () => {
+      await docMatchesSave(api => api.blocks.insert('column_list', { columnCount: 3 }, undefined, 2, true, false, 'cl', undefined, 'user'));
+    }, 30_000);
+  });
+
+  describe('a column emptied by a column drop removes itself', () => {
+    const soleChildColumns = (): OutputBlockData[] => [
+      { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+      { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['a'] },
+      P('a', 'c1'),
+      { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['b'] },
+      P('b', 'c2'),
+      P('r'),
+    ];
+
+    // DragController.reseedEmptiedColumns re-fires rendered() on each emptied
+    // source column right after the drop, in the same task.
+    const reseed = (instance: TestEditor): void => {
+      instance.module.blockManager.getBlockById('c1')?.call('rendered');
+    };
+
+    const quiet = async (): Promise<void> => {
+      await settle();
+      await nextFrames(3);
+      await settle();
+    };
+
+    it('when its sole block becomes a new column of the same list', async () => {
+      const instance = await boot(soleChildColumns());
+
+      // Past the load's own sync window, where a column never deletes itself.
+      await nextFrames(2);
+
+      const created = addColumnToList(instance as unknown as API, 'c2', ['a'], 'right');
+      reseed(instance);
+
+      await expect.poll(() => instance.blocks.getById('c1'), { timeout: 3000 }).toBeNull();
+      await quiet();
+
+      expect(columnsOf(instance, 'cl1')).toEqual(['c2', created]);
+      await expect(instance.save()).resolves.toBeDefined();
+    }, 30_000);
+
+    it('when its sole block is wrapped beside a root block', async () => {
+      const instance = await boot(soleChildColumns());
+
+      // Past the load's own sync window, where a column never deletes itself.
+      await nextFrames(2);
+
+      wrapInNewColumnList(instance as unknown as API, 'r', ['a'], 'right');
+      reseed(instance);
+
+      await expect.poll(() => instance.blocks.getById('c1'), { timeout: 3000 }).toBeNull();
+      await quiet();
+      await expect(instance.save()).resolves.toBeDefined();
     }, 30_000);
   });
 });

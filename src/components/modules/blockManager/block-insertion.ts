@@ -1111,10 +1111,12 @@ export class BlockInsertion {
       afterId: lastChildBefore({ blocks: this.repository.blocks, getBlockById: this.getBlock }, parentId, insertIndex),
     };
 
-    // extendThroughRAF keeps isSyncingFromYjs=true through RAF, so the
-    // MutationObserver writes that mounting into a toggle's children container
-    // triggers stay out of Yjs (they would split the undo entry).
-    return this.yjsSync.withAtomicOperation(() => {
+    // A table/database parent mounts the child itself (setBlockParent below),
+    // and the MutationObserver writes that triggers must stay out of Yjs through
+    // the next frame, or they split the undo entry. A placed child needs no such
+    // window, and keeping it open would make the caller's next API calls look
+    // like a Yjs replay to every isSyncingFromYjs gate.
+    const inserted = this.yjsSync.withAtomicOperation(() => {
       // Atomic Yjs transaction: add new block with parent (single undo entry)
       this.dependencies.YjsManager.transact(() => {
         const blockData = { id: newBlockId, type: resolvedTool, data: resolvedChildData };
@@ -1149,7 +1151,15 @@ export class BlockInsertion {
       this.ctx.assertHierarchyInvariantInDev('insertInsideParent');
 
       return newBlock;
-    }, { extendThroughRAF: true });
+    }, { extendThroughRAF: selfPlaced });
+
+    // The parent data sync a setBlockParent outside a sync window schedules.
+    // It drops creation-only keys (noSeed) the parent's save() no longer emits.
+    if (!selfPlaced) {
+      this.hierarchy.announceChildPlaced(parentId);
+    }
+
+    return inserted;
   }
 
   /**

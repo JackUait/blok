@@ -772,12 +772,12 @@ export class BlocksAPI extends Module {
 
     const newBlock = this.Blok.BlockManager.insertInsideParent(parentId, insertIndex, childData, toolName, options);
 
-    // NOTE: Do NOT call stopCapturing in a trailing microtask. The operations layer
-    // uses extendThroughRAF on its atomic wrapper to keep isSyncingFromYjs true
-    // through the next RAF, suppressing any stray mutation-observer-driven Yjs
-    // writes from deferred DOM callbacks. A trailing stopCapturing would force
-    // those late writes into a SEPARATE undo group, splitting the insertion
-    // across two CMD+Z pops.
+    // NOTE: Do NOT call stopCapturing in a trailing microtask. Late
+    // mutation-observer writes from deferred DOM callbacks belong to this
+    // insertion (under a table/database the operations layer also keeps
+    // isSyncingFromYjs up through the next RAF). A trailing stopCapturing would
+    // force them into a SEPARATE undo group, splitting the insertion across two
+    // CMD+Z pops.
 
     return new BlockAPI(newBlock, this.Blok.API);
   };

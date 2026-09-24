@@ -40,9 +40,7 @@ exports[`column and database placement — characterization > adds a column on t
         "content": [
           "z",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n1",
         "parent": "cl",
         "type": "column",
@@ -265,9 +263,7 @@ exports[`column and database placement — characterization > adds a column on t
         "content": [
           "z",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n1",
         "parent": "cl",
         "type": "column",
@@ -730,9 +726,7 @@ exports[`column and database placement — characterization > adds a column on t
         "content": [
           "z",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n1",
         "parent": "cl",
         "type": "column",
@@ -955,9 +949,7 @@ exports[`column and database placement — characterization > adds a column on t
         "content": [
           "z",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n1",
         "parent": "cl",
         "type": "column",
@@ -3664,9 +3656,7 @@ exports[`column and database placement — characterization > seeds a three-colu
           "n4",
           "n6",
         ],
-        "data": {
-          "columnCount": 3,
-        },
+        "data": {},
         "id": "n1",
         "parent": undefined,
         "type": "column_list",
@@ -3889,9 +3879,7 @@ exports[`column and database placement — characterization > seeds a three-colu
           "n4",
           "n6",
         ],
-        "data": {
-          "columnCount": 3,
-        },
+        "data": {},
         "id": "n1",
         "parent": undefined,
         "type": "column_list",
@@ -4198,9 +4186,7 @@ exports[`column and database placement — characterization > side-drop left of 
           "n2",
           "n3",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n1",
         "parent": undefined,
         "type": "column_list",
@@ -4209,9 +4195,7 @@ exports[`column and database placement — characterization > side-drop left of 
         "content": [
           "s",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n2",
         "parent": "n1",
         "type": "column",
@@ -4229,9 +4213,7 @@ exports[`column and database placement — characterization > side-drop left of 
         "content": [
           "target",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n3",
         "parent": "n1",
         "type": "column",
@@ -4403,9 +4385,7 @@ exports[`column and database placement — characterization > side-drop left of 
           "n2",
           "n3",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n1",
         "parent": undefined,
         "type": "column_list",
@@ -4414,9 +4394,7 @@ exports[`column and database placement — characterization > side-drop left of 
         "content": [
           "s",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n2",
         "parent": "n1",
         "type": "column",
@@ -4434,9 +4412,7 @@ exports[`column and database placement — characterization > side-drop left of 
         "content": [
           "target",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n3",
         "parent": "n1",
         "type": "column",
@@ -4753,9 +4729,7 @@ exports[`column and database placement — characterization > side-drop right of
           "n2",
           "n3",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n1",
         "parent": undefined,
         "type": "column_list",
@@ -4764,9 +4738,7 @@ exports[`column and database placement — characterization > side-drop right of
         "content": [
           "target",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n2",
         "parent": "n1",
         "type": "column",
@@ -4784,9 +4756,7 @@ exports[`column and database placement — characterization > side-drop right of
         "content": [
           "s",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n3",
         "parent": "n1",
         "type": "column",
@@ -4958,9 +4928,7 @@ exports[`column and database placement — characterization > side-drop right of
           "n2",
           "n3",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n1",
         "parent": undefined,
         "type": "column_list",
@@ -4969,9 +4937,7 @@ exports[`column and database placement — characterization > side-drop right of
         "content": [
           "target",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n2",
         "parent": "n1",
         "type": "column",
@@ -4989,9 +4955,7 @@ exports[`column and database placement — characterization > side-drop right of
         "content": [
           "s",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n3",
         "parent": "n1",
         "type": "column",
@@ -5286,9 +5250,7 @@ exports[`column and database placement — characterization > wraps a selection 
           "n2",
           "n3",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n1",
         "parent": undefined,
         "type": "column_list",
@@ -5297,9 +5259,7 @@ exports[`column and database placement — characterization > wraps a selection 
         "content": [
           "t",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n2",
         "parent": "n1",
         "type": "column",
@@ -5329,9 +5289,7 @@ exports[`column and database placement — characterization > wraps a selection 
         "content": [
           "p",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n3",
         "parent": "n1",
         "type": "column",
@@ -5469,9 +5427,7 @@ exports[`column and database placement — characterization > wraps a selection 
           "n2",
           "n3",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n1",
         "parent": undefined,
         "type": "column_list",
@@ -5480,9 +5436,7 @@ exports[`column and database placement — characterization > wraps a selection 
         "content": [
           "t",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n2",
         "parent": "n1",
         "type": "column",
@@ -5512,9 +5466,7 @@ exports[`column and database placement — characterization > wraps a selection 
         "content": [
           "p",
         ],
-        "data": {
-          "noSeed": true,
-        },
+        "data": {},
         "id": "n3",
         "parent": "n1",
         "type": "column",

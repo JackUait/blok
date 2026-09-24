@@ -418,6 +418,30 @@ describe('which data writes are undo steps', () => {
     expect(readData('p')).toEqual({ text: 'ab' });
   });
 
+  it('removes in the joined step a key derived data drops, so a step it takes back leaves no undo step', async () => {
+    const { yjsManager, mutate, derive, readData } = createHarness([
+      { id: 'p', name: 'paragraph', data: { text: 'a' } },
+      { id: 'img', name: 'image', data: { url: '' } },
+    ]);
+
+    yjsManager.clear();
+    await mutate('p', { text: 'ab' });
+    yjsManager.stopCapturing();
+    await mutate('img', { url: '', fileName: 'shot.png' });
+    await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout);
+    await drainMicrotasks();
+
+    await derive('img', { url: '' }, ['fileName']);
+
+    expect(readData('img')).toEqual({ url: '' });
+    yjsManager.undo();
+    expect(readData('p')).toEqual({ text: 'a' });
+    expect(yjsManager.canUndo()).toBe(false);
+    yjsManager.redo();
+    expect(readData('p')).toEqual({ text: 'ab' });
+    expect(readData('img')).toEqual({ url: '' });
+  });
+
   it('keeps a keystroke still in the write buffer an undo step', async () => {
     const { yjsManager, mutate, normalize, readData } = createHarness([
       { id: 'p2', name: 'paragraph', data: { text: 'a' } },

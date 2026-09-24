@@ -2367,7 +2367,9 @@ export class BlockManager extends Module {
 
       // A key this block's save() once emitted and now drops is the user
       // clearing it (a colour reset, a hidden caption), so it joins the edit.
-      if (!options.isMaterializing && options.seenKeys !== undefined) {
+      // Derived data drops it inside the step it joins: a failed upload taking
+      // back the pick must net that step to nothing (see UndoHistory.changesNothing).
+      if ((!options.isMaterializing || options.derivedFrom !== undefined) && options.seenKeys !== undefined) {
         const seenEmitted = new Set([...options.seenKeys].filter((key) => emitted.has(key)));
 
         if (this.Blok.YjsManager.pruneBlockData(block.id, keptKeys, seenEmitted)) {

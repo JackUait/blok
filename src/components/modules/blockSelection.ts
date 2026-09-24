@@ -202,7 +202,14 @@ export class BlockSelection extends Module {
       return undefined;
     }
 
-    return this.Blok.BlockManager.blocks.includes(this.navigationFocus) ? this.navigationFocus : undefined;
+    const { BlockManager } = this.Blok;
+
+    if (!BlockManager.blocks.includes(this.navigationFocus)) {
+      // A peer convert swaps in a new Block object with the same id; follow it.
+      this.navigationFocus = BlockManager.getBlockById(this.navigationFocus.id);
+    }
+
+    return this.navigationFocus;
   }
 
   /**

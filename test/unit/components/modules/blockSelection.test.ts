@@ -1710,6 +1710,23 @@ describe('BlockSelection', () => {
         expect(first.holder).not.toHaveAttribute('data-blok-navigation-focused');
       });
 
+      it('follows the focused block when a peer convert swaps its Block object', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blocks.forEach((block, index) => Object.assign(block, { id: `b${index}` }));
+        blockManager.currentBlockIndex = 1;
+        blockSelection.enableNavigationMode();
+
+        const converted = createBlockStub({ id: 'b1' });
+
+        blocks.splice(1, 1, converted);
+
+        expect(blockSelection.navigationFocusedBlock).toBe(converted);
+        expect(blockSelection.navigateNext()).toBe(true);
+        expect(blockSelection.navigationFocusedBlock).toBe(blocks[2]);
+      });
+
       it('edits the focused block, not its old index, after a block is inserted above it', () => {
         const { blockSelection, blocks, modules } = createBlockSelection();
         const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number; currentBlock: Block | undefined };

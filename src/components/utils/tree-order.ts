@@ -183,15 +183,19 @@ export const dfsOrder = <T extends TreeBlock>(tree: BlockTreeView<T>): T[] => {
  * nearest earlier block in the array with the same parent (null if none).
  * @param tree - the blocks
  * @param block - a block the array holds
+ * @param parentId - read the spot under this parent instead (one the lookup knows, or null)
  */
-export const placementImpliedByFlat = (tree: BlockTreeView, block: TreeBlock): TreePlacement => {
+export const placementImpliedByFlat = (
+  tree: BlockTreeView,
+  block: TreeBlock,
+  parentId: string | null = effectiveParentId(tree, block)
+): TreePlacement => {
   const index = tree.blocks.indexOf(block);
 
   if (index === -1) {
     throw new Error(`block "${block.id}" is not in the block array`);
   }
 
-  const parentId = effectiveParentId(tree, block);
   const previous = tree.blocks.slice(0, index).filter(candidate => effectiveParentId(tree, candidate) === parentId).pop();
 
   return { parentId, afterId: previous?.id ?? null };

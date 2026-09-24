@@ -327,6 +327,38 @@ describe('BlockHierarchy.placeBlock', () => {
     });
   });
 
+  describe('with dom: false', () => {
+    it('writes the model only, even without a blocks store', () => {
+      const h = build(workingArea, [
+        { id: 't', kind: 'toggle' },
+        { id: 'a', parentId: 't' },
+        { id: 'x' },
+        { id: 'y', parentId: 'x' },
+      ], false);
+      const html = workingArea.innerHTML;
+
+      h.hierarchy.placeBlock(h.get('x'), { parentId: 't', afterId: 'a' }, { dom: false });
+
+      expect(h.ids()).toEqual(['t', 'a', 'x', 'y']);
+      expect(h.get('t').contentIds).toEqual(['a', 'x']);
+      expect(h.get('x').parentId).toBe('t');
+      expect(workingArea.innerHTML).toBe(html);
+    });
+
+    it('does not refuse a home slot inside the moved holder, since it mounts nothing', () => {
+      const h = build(workingArea, [
+        { id: 't', kind: 'toggle' },
+        { id: 'b' },
+      ]);
+
+      h.get('b').holder.appendChild(h.get('t').holder);
+      h.hierarchy.placeBlock(h.get('b'), { parentId: 't', afterId: null }, { dom: false });
+
+      expect(h.get('b').parentId).toBe('t');
+      expect(h.ids()).toEqual(['t', 'b']);
+    });
+  });
+
   describe('home slots', () => {
     it('puts a child of a slotless paragraph in the paragraph\'s own slot, after its earlier children', () => {
       const h = build(workingArea, [

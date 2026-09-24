@@ -291,6 +291,12 @@ describe('tree-order', () => {
       expect(placementImpliedByFlat(dangling, at(dangling, 'b'))).toEqual({ parentId: null, afterId: 'a' });
     });
 
+    it('reads the spot under a parent the block is about to join', () => {
+      expect(placementImpliedByFlat(view, at(view, 'e'), 'a')).toEqual({ parentId: 'a', afterId: 'd' });
+      expect(placementImpliedByFlat(view, at(view, 'c'), null)).toEqual({ parentId: null, afterId: 'a' });
+      expect(placementImpliedByFlat(view, at(view, 'd'), 'b')).toEqual({ parentId: 'b', afterId: 'c' });
+    });
+
     it('throws for a block the array does not hold', () => {
       expect(() => placementImpliedByFlat(view, { id: 'z', parentId: null, contentIds: [] })).toThrow(/"z"/);
     });

@@ -27,6 +27,7 @@ interface TestEditor {
   module: {
     blockManager: { blocks: Block[]; currentBlockIndex: number };
     yjsManager: { stopCapturing: () => void };
+    paste: { processText: (data: string, isHTML?: boolean) => Promise<void> };
   };
 }
 
@@ -294,6 +295,61 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       expect(block.parentId).toBeNull();
       expect(roots(instance)).toEqual(['a', 'tbl', 'h']);
       await expect(instance.save()).resolves.toBeDefined();
+    }, 30_000);
+
+    /** Every block-added that names a placement names the block's final one. */
+    const placementsAreTrue = (instance: TestEditor, seen: BlockMutationEvent[]): Array<{ id: string; said: unknown; is: unknown }> =>
+      seen
+        .filter(event => event.type === 'block-added' && 'parentId' in event.detail)
+        .map(event => ({
+          id: event.detail.target.id,
+          said: pick({ ...event.detail }),
+          is: pickActual(instance, event.detail.target.id),
+        }))
+        .filter(entry => JSON.stringify(entry.said) !== JSON.stringify(entry.is));
+
+    it('reports the real parent for a split (Enter) inside a toggle', async () => {
+      const instance = await boot();
+      const seen = events(instance);
+
+      instance.blocks.splitBlock('c1', { text: 'c' }, 'paragraph', { text: '1' }, 3);
+
+      const added = seen.filter(event => event.type === 'block-added').at(-1);
+
+      expect(pick({ ...added?.detail })).toEqual({ parentId: 't', previousSiblingId: 'c1' });
+      expect(placementsAreTrue(instance, seen)).toEqual([]);
+    }, 30_000);
+
+    it('reports the real parent for an index insert that infers its parent', async () => {
+      const instance = await boot();
+      const seen = events(instance);
+
+      instance.blocks.insert('paragraph', { text: 'n' }, {}, 3);
+
+      expect(pick({ ...seen.filter(event => event.type === 'block-added').at(-1)?.detail })).toEqual({ parentId: 't', previousSiblingId: 'c1' });
+      expect(placementsAreTrue(instance, seen)).toEqual([]);
+    }, 30_000);
+
+    it('reports the real parent for insertMany', async () => {
+      const instance = await boot();
+      const seen = events(instance);
+
+      instance.blocks.insertMany([{ id: 'm', type: 'paragraph', data: { text: 'm' } }]);
+
+      expect(pick({ ...seen.filter(event => event.type === 'block-added').at(-1)?.detail })).toEqual({ parentId: null, previousSiblingId: 'b' });
+      expect(placementsAreTrue(instance, seen)).toEqual([]);
+    }, 30_000);
+
+    it('never reports a wrong parent for a paste into a toggle child', async () => {
+      const instance = await boot();
+      const seen = events(instance);
+
+      instance.module.blockManager.currentBlockIndex = 2;
+      await instance.module.paste.processText('<p>one</p><p>two</p>', true);
+      await nextFrames(2);
+
+      expect(seen.some(event => event.type === 'block-added')).toBe(true);
+      expect(placementsAreTrue(instance, seen)).toEqual([]);
     }, 30_000);
 
     it('reports parentId and previousSiblingId on block-added', async () => {
@@ -568,6 +624,17 @@ describe('blocks.insertAt / blocks.moveTo', () => {
 /** The placement fields of a block-added detail. */
 const pick = (detail: Record<string, unknown>): { parentId?: unknown; previousSiblingId?: unknown } => {
   return { parentId: detail.parentId, previousSiblingId: detail.previousSiblingId };
+};
+
+/** A block's actual parent and previous sibling, as block-added reports them. */
+const pickActual = (instance: TestEditor, id: string): { parentId: unknown; previousSiblingId: unknown } => {
+  const blocks = instance.module.blockManager.blocks;
+  const block = blocks.find(candidate => candidate.id === id);
+  const parentId = block?.parentId ?? null;
+  const siblings = blocks.filter(candidate => candidate.parentId === parentId).map(candidate => candidate.id);
+  const at = siblings.indexOf(id);
+
+  return { parentId, previousSiblingId: at > 0 ? siblings[at - 1] : null };
 };
 
 /** The placement fields of a block-moved detail. */

@@ -351,7 +351,10 @@ export class BlockInsertion {
      */
     this.blockDidMutated(BlockAddedMutationType, block, {
       index: targetIndex,
+      // Placement only when it is final here: an inferring insert has set it,
+      // other callers name it, the rest (paste, replay) set it later.
       ...(eventParentId !== undefined && { parentId: eventParentId }),
+      ...(eventParentId === undefined && inferParent && { parentId: block.parentId }),
     });
 
     /**
@@ -661,6 +664,7 @@ export class BlockInsertion {
         index: insertIndex,
         needToFocus: false,
         skipYjsSync: true,
+        eventParentId: currentBlock.parentId,
       }, blocksStore);
 
       // Update currentBlockIndex AFTER insert (and handleBlockMutation) completes.

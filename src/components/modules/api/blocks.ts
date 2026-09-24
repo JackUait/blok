@@ -530,6 +530,7 @@ export class BlocksAPI extends Module {
       needToFocus: focus,
       tunes,
       forceTopLevel: true,
+      eventParentId: null,
     });
 
     return new BlockAPI(block, this.Blok.API);

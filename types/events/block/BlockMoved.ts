@@ -20,7 +20,8 @@ interface BlockMovedEventDetail extends BlockMutationEventDetail {
   toIndex: number;
 
   /**
-   * Id of the block's parent after the move, `null` at the root
+   * Id of the block's parent after the move, `null` at the root. Absent when
+   * the parent is not final at the time of the event (a step of a larger move)
    */
   parentId?: string | null;
 

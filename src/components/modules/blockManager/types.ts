@@ -78,8 +78,9 @@ export interface InsertBlockOptions {
    */
   inferParent?: boolean;
   /**
-   * The parent the caller assigns right after the insert. Only reported in the
-   * block-added event, which fires before that assignment.
+   * The block's final parent, which the caller may assign right after the
+   * insert. Only reported in the block-added event; without it (and without
+   * `inferParent`) the event carries no placement.
    */
   eventParentId?: string | null;
   /**

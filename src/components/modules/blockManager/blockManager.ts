@@ -651,6 +651,7 @@ export class BlockManager extends Module {
     if (notify && blocks.length > 0) {
       this.blockDidMutated(BlockAddedMutationType, blocks[0], {
         index,
+        parentId: blocks[0].parentId,
       });
     }
   }
@@ -1886,9 +1887,9 @@ export class BlockManager extends Module {
 
   /**
    * Where an added or moved block sits, for its event: parent and previous
-   * sibling. A dispatch site passes `parentId` when the block's own field is
-   * not updated yet. A move without `parentId` gets no placement: its caller
-   * sets the parent later.
+   * sibling. Only a dispatch site that knows the final parent passes
+   * `parentId`; without it the event gets no placement, since the caller may
+   * still set the parent.
    * @param mutationType - the event type
    * @param block - the added or moved block
    * @param detailData - the site's own detail fields
@@ -1904,11 +1905,11 @@ export class BlockManager extends Module {
 
     const given = detailData.parentId;
 
-    if (mutationType === BlockMovedMutationType && given === undefined) {
+    if (given !== null && typeof given !== 'string') {
       return {};
     }
 
-    const parentId = typeof given === 'string' || given === null ? given : block.parentId;
+    const parentId = given;
     // Unit harnesses dispatch on a BlockManager that was never prepared.
     const blocks = (this.repository as BlockRepository | undefined)?.blocks ?? [];
     // In depth-first order the nearest earlier block with the same parent is

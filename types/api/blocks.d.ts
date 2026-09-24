@@ -51,8 +51,9 @@ export interface InsertAtOptions {
   /** Make the new block the current block. Defaults to `false`. */
   focus?: boolean;
   /**
-   * Id of a block to replace. The new block takes its slot and parent, and
-   * adopts its children. Cannot be combined with `parentId` or `position`.
+   * Id of a block to replace. The new block takes its slot and parent; the
+   * old block's children follow the turn-into rules. Cannot be combined with
+   * `parentId` or `position`.
    */
   replace?: string;
 }

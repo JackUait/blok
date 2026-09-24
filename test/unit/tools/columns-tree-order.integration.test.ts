@@ -269,6 +269,33 @@ describe('column paths keep the tree placement', () => {
     }, 30_000);
   });
 
+  describe('deleting a container in a column', () => {
+    // Known bug: the promoted children go to the root but keep their flat
+    // position between the column_list and its next column. With two columns
+    // the list unwraps and hides it; with three the save rejects the tree.
+    it.fails('keeps the tree walk when the list has three columns', async () => {
+      const instance = await boot([
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2', 'c3'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['tog'] },
+        T('tog', ['x1', 'x2'], 'c1'),
+        P('x1', 'tog'),
+        P('x2', 'tog'),
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['p2'] },
+        P('p2', 'c2'),
+        { id: 'c3', type: 'column', data: {}, parent: 'cl1', content: ['p3'] },
+        P('p3', 'c3'),
+      ]);
+
+      await nextFrames(3);
+
+      await instance.blocks.delete(instance.blocks.getBlockIndex('tog'));
+      await nextFrames(5);
+      await settle();
+
+      await expect(instance.save()).resolves.toBeDefined();
+    }, 30_000);
+  });
+
   describe('other column paths', () => {
     const undo = async (instance: TestEditor): Promise<void> => {
       await settle();

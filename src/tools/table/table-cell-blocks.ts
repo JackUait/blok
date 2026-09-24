@@ -899,7 +899,7 @@ export class TableCellBlocks {
    */
   /**
    * After a sync replay has settled, give an editable block to every cell
-   * whose referenced blocks never arrived (a peer's content write that won
+   * whose referenced blocks have not arrived (a peer's content write that won
    * over a delete). Only then: during the replay they may still land.
    */
   public fillCellsWithUnresolvedBlocks(): void {
@@ -919,7 +919,8 @@ export class TableCellBlocks {
         return;
       }
 
-      this.model.setCellBlocks(pos.row, pos.col, []);
+      // The dangling ids stay in the model: save() drops ids with no block,
+      // and a block that still lands late is routed back to this cell by them.
       this.ensureCellHasBlock(cell);
     });
   }

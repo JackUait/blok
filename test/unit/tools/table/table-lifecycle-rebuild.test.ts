@@ -442,6 +442,49 @@ describe('Table lifecycle rebuild', () => {
       expect(cellBlocks?.querySelectorAll('[data-blok-id]').length).toBe(1);
       expect(table.save(container.firstElementChild as HTMLElement).content[0][0]).not.toEqual({ blocks: ['never-arrives'] });
     });
+
+    it('still routes a block that lands after the fill to the cell that names it', async () => {
+      const options = createTableOptions(
+        { content: [['A']] },
+        {},
+        { blocks: { isSyncingFromYjs: true, getById: vi.fn(() => undefined) } }
+      );
+      const blocksApi = options.api.blocks as unknown as { isSyncingFromYjs: boolean; getById: ReturnType<typeof vi.fn> };
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      table.setData({ withHeadings: false, withHeadingColumn: false, content: [[{ blocks: ['late'] }]] });
+      await Promise.resolve();
+      blocksApi.isSyncingFromYjs = false;
+      await nextFrame();
+      await nextFrame();
+
+      const late = document.createElement('div');
+
+      late.setAttribute('data-blok-id', 'late');
+      document.body.appendChild(late);
+      const lateBlock = { id: 'late', name: 'paragraph', holder: late, parentId: 'table-lifecycle-test', preservedData: {} };
+
+      blocksApi.getById.mockImplementation((id: string) => (id === 'late' ? lateBlock : undefined));
+      vi.mocked(options.api.blocks.getBlockIndex).mockImplementation((id: string) => (id === 'late' ? 2 : undefined));
+      vi.mocked(options.api.blocks).getBlockByIndex = vi.fn((index: number) => (index === 2 ? lateBlock : undefined)) as never;
+      blocksApi.isSyncingFromYjs = true;
+      vi.mocked(options.api.events.on).mock.calls
+        .filter(([name]) => name === 'block changed')
+        .forEach(([, handler]) => (handler as (payload: unknown) => void)({
+          event: { type: 'block-added', detail: { target: { id: 'late', holder: late }, index: 2 } },
+        }));
+      blocksApi.isSyncingFromYjs = false;
+
+      const cellBlocks = container.querySelector('[data-blok-table-cell-blocks]');
+
+      expect(cellBlocks?.contains(late)).toBe(true);
+
+      late.remove();
+    });
   });
 
   describe('a synced child whose cell the table data never names', () => {
@@ -454,7 +497,7 @@ describe('Table lifecycle rebuild', () => {
      * Releasing it would need a point where guessing its cell cannot race the
      * peer's write (see COB-4), so this pins the loss instead.
      */
-    it.fails('saves the held child with the next local table write after the replay', () => {
+    it.fails('saves the held child in a save() after the replay', () => {
       const options = createTableOptions(
         { content: [['A', 'B']] },
         {},

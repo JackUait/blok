@@ -631,6 +631,56 @@ export class DocumentStore {
   }
 
   /**
+   * Add a new block at a placement: under `placement.parentId` (null = root),
+   * right after `placement.afterId` (null = first; not found = append).
+   *
+   * The placement's parent WINS over `blockData.parent`: the derived order
+   * only counts an entry whose parentId agrees with the array holding it, so
+   * a disagreeing parentId would drop the block into the orphan tail.
+   * Same refusals as `applyPlacement`: a dangling parent or a cyclic one
+   * leaves the block in no order array (a cyclic parentId is not written).
+   * @param blockData - Block data to add
+   * @param placement - Target parent and preceding sibling
+   * @returns The created Y.Map
+   */
+  public addBlockAt(blockData: YjsOutputBlockData, placement: BlockPlacement): Y.Map<unknown> {
+    const unparented = { ...blockData };
+
+    delete unparented.parent;
+
+    const yblock = this.serializer.outputDataToYBlock(unparented);
+    const id = typeof blockData.id === 'string' ? stripNul(blockData.id) : blockData.id;
+
+    if (typeof id !== 'string') {
+      return yblock;
+    }
+
+    const parentId = typeof placement.parentId === 'string' ? stripNul(placement.parentId) : null;
+
+    this.transact(() => {
+      this.yBlocksMap.set(id, yblock);
+
+      // Checked after the map write, so re-adding an existing id is measured
+      // against the entry this call just wrote.
+      if (parentId !== null && this.wouldFormCycle(id, parentId)) {
+        return;
+      }
+
+      if (parentId !== null) {
+        yblock.set('parentId', parentId);
+      }
+
+      const target = this.resolveTargetOrder(parentId ?? undefined);
+
+      if (target !== null) {
+        target.insert(this.placementSlot(target, placement.afterId), [id]);
+      }
+    }, 'local');
+
+    return yblock;
+  }
+
+  /**
    * Remove a block by id: delete its map entry and remove the id string
    * from the root order and every contentIds array containing it.
    * @param id - Block id to remove
@@ -754,6 +804,40 @@ export class DocumentStore {
 
       target.insert(this.orderSlotForFlatIndex(target, flatIds, desired), [id]);
     }, 'move');
+  }
+
+  /**
+   * Move a block to a placement under the untracked 'move' origin, like
+   * `moveBlock`: the move stacks own its history. Unlike `moveBlock` it may
+   * change the parent; the parentId write rides the same untracked
+   * transaction, so the caller's move entry must carry both sides.
+   * A placement the block already holds (or one after itself) writes
+   * nothing, as `moveBlock` does for an unchanged index. Otherwise the
+   * semantics and refusals are `applyPlacement`'s.
+   * @param id - Block id to move
+   * @param placement - Target parent and preceding sibling
+   */
+  public moveBlockTo(id: string, placement: BlockPlacement): void {
+    const current = this.getPlacement(id);
+
+    if (current === null || placement.afterId === id) {
+      return;
+    }
+
+    const parentId = typeof placement.parentId === 'string' ? stripNul(placement.parentId) : null;
+
+    if (current.parentId === parentId && current.afterId === placement.afterId && this.isInOrderArray(id)) {
+      return;
+    }
+
+    this.applyPlacement(id, placement, 'move');
+  }
+
+  /**
+   * Whether any order array lists the id.
+   */
+  private isInOrderArray(id: string): boolean {
+    return this.orderArrays().some((order) => order.toArray().includes(id));
   }
 
   /**

@@ -5,7 +5,7 @@
  */
 import type { Block } from '../../block';
 import { logLabeled } from '../../utils';
-import { CHILD_SLOT_SELECTOR } from '../../../tools/nested-blocks';
+import { CHILD_SLOT_SELECTOR, SELF_PLACING_PARENTS } from '../../../tools/nested-blocks';
 import { homeSlotElement, resolveHomeSlot } from '../../utils/home-slot';
 import { findOwn } from '../../utils/own-element';
 import { childrenInTreeOrder, flatIndexForPlacement, placementImpliedByFlat } from '../../utils/tree-order';
@@ -463,6 +463,18 @@ export class BlockHierarchy {
       this.reindentSubtree(block);
     }
 
+    // Public API contract: a block given a table from outside its cells goes
+    // into the first cell, where the table adopts it into its grid. Left at
+    // root, save() rejects it as a child no cell references.
+    const firstSlot = newParent !== undefined && SELF_PLACING_PARENTS.has(newParent.name) && !newParent.holder.contains(block.holder)
+      ? this.findHomeSlot(newParent.id)
+      : null;
+
+    if (withDom && firstSlot !== null && this.blocksStore !== undefined) {
+      this.blocksStore.mount(block, this.repository.getBlockIndex(block), firstSlot);
+      this.updateBlockIndentation(block);
+    }
+
     // If the new parent's existing children are hidden (toggle is collapsed),
     // hide this newly added child too so Tab navigation skips it.
     //
@@ -520,7 +532,8 @@ export class BlockHierarchy {
    * Left to the caller:
    * - childTools / ownsChildren: not checked here.
    * - Under a table/database the holder stays where it is; the caller hands
-   *   it to the tool, which picks the cell or view.
+   *   it to the tool, which picks the cell or view (setBlockParent mounts a
+   *   holder from outside the table into its first cell).
    * - Hiding a block that joins a collapsed toggle.
    * - Yjs writes and the parent-change callback.
    *

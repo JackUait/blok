@@ -68,8 +68,9 @@ export const resolveHomeSlot = (
 /**
  * The home slot element BlockHierarchy mounts into, or null for root and for
  * blocks a table/database places. A DIRECT table/database parent still returns
- * its first slot (its first cell): the anti-steal guard in setBlockParent is
- * what keeps each cell's blocks where the table put them.
+ * its first slot (its first cell). placeBlock never mounts under a table; only
+ * setBlockParent uses this slot, for a holder that is in none of the table's
+ * cells, and its anti-steal guard keeps each cell's blocks where they are.
  * @param parentId - the (prospective) parent id
  * @param getBlock - block lookup by id
  */

@@ -322,7 +322,7 @@ describe('BlockHierarchy.setBlockParent — holders in the DOM', () => {
     expect(holderIds(workingArea)).toEqual(['a', 'c', 'b']);
   });
 
-  it('leaves the holder of a block that joins a table for the table to place', () => {
+  it('puts a block that joins a table from outside it in the table\'s first cell', () => {
     const h = build(workingArea, [
       { id: 'table', kind: 'table' },
       { id: 'a', parentId: 'table' },
@@ -333,8 +333,8 @@ describe('BlockHierarchy.setBlockParent — holders in the DOM', () => {
     h.hierarchy.setBlockParent(h.get('x'), 'table');
 
     expect(h.get('x').parentId).toBe('table');
-    expect(holderIds(firstCell)).toEqual(['a']);
-    expect(holderIds(workingArea)).toEqual(['table', 'x']);
+    expect(holderIds(firstCell)).toEqual(['a', 'x']);
+    expect(holderIds(workingArea)).toEqual(['table']);
   });
 
   it('moves a block that leaves a table cell for the root out of the cell', () => {

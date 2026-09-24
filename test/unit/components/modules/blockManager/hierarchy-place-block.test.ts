@@ -11,8 +11,8 @@ import { Blocks } from '../../../../../src/components/blocks';
 import { BlockHierarchy } from '../../../../../src/components/modules/blockManager/hierarchy';
 import { BlockRepository } from '../../../../../src/components/modules/blockManager/repository';
 import type { BlocksStore } from '../../../../../src/components/modules/blockManager/types';
-import { dfsOrder, placementImpliedByFlat } from '../../../../../src/components/utils/block-tree';
-import type { TreePlacement } from '../../../../../src/components/utils/block-tree';
+import { dfsOrder, placementImpliedByFlat } from '../../../../../src/components/utils/tree-order';
+import type { TreePlacement } from '../../../../../src/components/utils/tree-order';
 import { validateFlatOrder, validateHomeSlots } from '../../../../../src/components/utils/hierarchy-invariant';
 
 type Kind = 'paragraph' | 'toggle' | 'callout' | 'table';

@@ -7,7 +7,7 @@
 export interface TreeBlock {
   id: string;
   parentId: string | null;
-  contentIds: string[];
+  contentIds: readonly string[];
 }
 
 /** The flat array plus an id lookup (the Blocks store fits). */
@@ -113,11 +113,14 @@ export const flatIndexForPlacement = (tree: BlockTreeView, placement: TreePlacem
  * @param children - its children in flat order
  */
 const orderChildren = <T extends TreeBlock>(tree: BlockTreeView<T>, parent: TreeBlock, children: T[]): T[] => {
-  const listed = [...new Set(parent.contentIds)]
-    .map(id => tree.getById(id))
-    .filter((child): child is T => child !== undefined && children.includes(child));
+  const isChild = new Set(children);
+  const listed = new Set(
+    parent.contentIds
+      .map(id => tree.getById(id))
+      .filter((child): child is T => child !== undefined && isChild.has(child))
+  );
 
-  return [...listed, ...children.filter(child => !listed.includes(child))];
+  return [...listed, ...children.filter(child => !listed.has(child))];
 };
 
 /**
@@ -149,8 +152,12 @@ export const dfsOrder = <T extends TreeBlock>(tree: BlockTreeView<T>): T[] => {
   tree.blocks.forEach(block => {
     const parentId = parentOf(block);
 
-    if (parentId !== null) {
-      childrenInFlatOrder.set(parentId, [...(childrenInFlatOrder.get(parentId) ?? []), block]);
+    const siblings = parentId === null ? undefined : childrenInFlatOrder.get(parentId);
+
+    if (siblings !== undefined) {
+      siblings.push(block);
+    } else if (parentId !== null) {
+      childrenInFlatOrder.set(parentId, [ block ]);
     }
   });
 

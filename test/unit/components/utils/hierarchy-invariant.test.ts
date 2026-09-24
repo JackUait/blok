@@ -533,9 +533,18 @@ describe('hierarchy-invariant', () => {
       ])).toEqual([]);
     });
 
-    it('reports a parent cycle instead of looping', () => {
+    it('accepts blocks caught in a parent cycle last, in flat order', () => {
+      expect(validateTreeOrder([
+        block('r', null),
+        block('a', 'b', ['b']),
+        block('b', 'a', ['a']),
+      ])).toEqual([]);
+    });
+
+    it('flags a block caught in a parent cycle placed before a reachable block', () => {
       expect(validateTreeOrder([
         block('a', 'b', ['b']),
+        block('r', null),
         block('b', 'a', ['a']),
       ])).toHaveLength(1);
     });

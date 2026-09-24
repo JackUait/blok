@@ -6,8 +6,8 @@ import {
   flatIndexForPlacement,
   placementImpliedByFlat,
   subtreeEnd
-} from '../../../../src/components/utils/block-tree';
-import type { BlockTreeView, TreeBlock } from '../../../../src/components/utils/block-tree';
+} from '../../../../src/components/utils/tree-order';
+import type { BlockTreeView, TreeBlock } from '../../../../src/components/utils/tree-order';
 
 interface Spec {
   id: string;
@@ -78,7 +78,7 @@ const descendantCount = (view: BlockTreeView, block: TreeBlock): number =>
   view.blocks.filter(candidate => candidate.parentId === block.id)
     .reduce((sum, child) => sum + 1 + descendantCount(view, child), 0);
 
-describe('block-tree', () => {
+describe('tree-order', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -339,7 +339,7 @@ describe('block-tree', () => {
         const view = randomTree(random);
 
         view.blocks.forEach(block => {
-          block.contentIds.sort(() => random() - 0.5);
+          block.contentIds = [...block.contentIds].sort(() => random() - 0.5);
         });
 
         const expected: string[] = [];

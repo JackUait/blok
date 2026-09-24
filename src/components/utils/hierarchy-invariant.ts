@@ -3,6 +3,7 @@ import type { BlockId } from '../../../types/data-formats/block-id';
 import { CHILD_SLOT_SELECTOR, SELF_PLACING_PARENTS } from '../../tools/nested-blocks';
 
 import { resolveHomeSlot } from './home-slot';
+import { dfsOrder } from './tree-order';
 
 /**
  * Hierarchy invariant validator.
@@ -399,43 +400,23 @@ export interface TreeOrderViolation {
 }
 
 /**
- * Detect a flat block array that is not the depth-first walk of the tree when
- * sibling order comes from each parent's `contentIds`: roots in flat order,
- * then listed children in `contentIds` order, then unlisted children (their
- * parentId names the parent, its contentIds omits them) in flat order.
- *
- * Membership comes from `parentId`: a contentIds entry that is dangling or
- * whose block names another parent is skipped. A dangling parentId counts as
- * root. Report-only for now: nothing gates on it.
+ * Detect a flat block array that is not the tree's depth-first walk as
+ * {@link dfsOrder} defines it: roots in flat order, children by `contentIds`
+ * then unlisted ones in flat order, a dangling parentId as root, blocks a
+ * parent cycle cuts off last in flat order.
+ * Report-only for now: nothing gates on it.
  * @param blocks - the flat block array
  */
 export const validateTreeOrder = (blocks: TreeOrderInput[]): TreeOrderViolation[] => {
-  const byId = new Map(blocks.map(b => [b.id, b]));
-  const effectiveParent = (b: TreeOrderInput): string | null =>
-    b.parentId !== null && byId.has(b.parentId) ? b.parentId : null;
-  const childrenOf = (parent: TreeOrderInput): TreeOrderInput[] => {
-    const listed = parent.contentIds.flatMap(id => {
-      const child = byId.get(id);
+  const byId = new Map<string, TreeOrderInput>();
 
-      return child !== undefined && effectiveParent(child) === parent.id ? [ child ] : [];
-    });
-    const listedIds = new Set(listed.map(b => b.id));
-    const unlisted = blocks.filter(b => effectiveParent(b) === parent.id && !listedIds.has(b.id));
-
-    return [...listed, ...unlisted];
-  };
-  const expected: string[] = [];
-  const visited = new Set<string>();
-  const walk = (b: TreeOrderInput): void => {
-    if (visited.has(b.id)) {
-      return;
+  blocks.forEach(b => {
+    if (!byId.has(b.id)) {
+      byId.set(b.id, b);
     }
-    visited.add(b.id);
-    expected.push(b.id);
-    childrenOf(b).forEach(walk);
-  };
+  });
 
-  blocks.filter(b => effectiveParent(b) === null).forEach(walk);
+  const expected = dfsOrder({ blocks, getById: id => byId.get(id) }).map(b => b.id);
 
   const length = Math.max(expected.length, blocks.length);
   const index = Array.from({ length }, (_, i) => i).find(i => expected[i] !== blocks[i]?.id);

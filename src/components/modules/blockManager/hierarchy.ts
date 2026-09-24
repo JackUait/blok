@@ -10,8 +10,8 @@ import { moveElementAfter, moveElementBefore, moveElementToEnd } from '../../uti
 import { isSlotless } from '../../../tools/nested-blocks';
 import { homeSlotElement, resolveHomeSlot } from '../../utils/home-slot';
 import { findOwn } from '../../utils/own-element';
-import { childrenInTreeOrder, flatIndexForPlacement } from '../../utils/block-tree';
-import type { TreePlacement } from '../../utils/block-tree';
+import { childrenInTreeOrder, flatIndexForPlacement } from '../../utils/tree-order';
+import type { TreePlacement } from '../../utils/tree-order';
 import type { Blocks } from '../../blocks';
 
 import type { BlockRepository } from './repository';

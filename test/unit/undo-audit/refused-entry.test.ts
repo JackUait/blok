@@ -311,3 +311,173 @@ describe('a move the peer overruled', () => {
     expect(manager.orderedIds()).toEqual(['b1', 'b2', 'b3']);
   });
 });
+
+describe('yjs never walks over an entry Blok has not checked', () => {
+  let storeA: DocumentStore;
+  let storeB: DocumentStore;
+  let historyA: UndoHistory;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    storeA = createStore(1);
+    storeB = createStore(2);
+    storeA.fromJSON([paragraph('b1', 'First'), paragraph('b2', 'Second'), paragraph('b4', 'Fourth')]);
+    storeB.applyRemoteUpdate(storeA.encodeStateAsUpdate());
+    historyA = new UndoHistory(storeA.undoScope, createMockBlok());
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** S0 edits b1, R replaces b2 by b3 and B writes in b3. */
+  const refusedReplaceOverAnEdit = (): void => {
+    storeA.updateBlockData('b1', 'text', 'First edit'); // S0
+    historyA.stopCapturing();
+    storeA.removeBlock('b2'); // R
+    storeA.addBlock({ id: 'b3', type: 'quote', data: { text: '' } });
+    historyA.stopCapturing();
+  };
+
+  it('undo does not half-apply a refused replace under a spent step', () => {
+    refusedReplaceOverAnEdit();
+    storeA.updateBlockData('b4', 'text', 'Fourth edit'); // S2
+    historyA.stopCapturing();
+    sync(storeA, storeB);
+    storeB.updateBlockData('b3', 'text', 'Quoted by B');
+    storeB.removeBlock('b4');
+    sync(storeA, storeB);
+
+    historyA.undo();
+    sync(storeA, storeB);
+
+    expect(idsOf(storeA)).toEqual(['b1', 'b3']);
+    expect(textOf(storeA, 'b1')).toBe('First');
+    expect(storeA.toJSON()).toEqual(storeB.toJSON());
+  });
+
+  it('undo does not half-apply a refused replace under a step the peer blocks', () => {
+    refusedReplaceOverAnEdit();
+    storeA.addBlock(paragraph('b5', '')); // S2
+    historyA.stopCapturing();
+    sync(storeA, storeB);
+    storeB.updateBlockData('b3', 'text', 'Quoted by B');
+    storeB.updateBlockData('b5', 'text', 'Fifth by B');
+    sync(storeA, storeB);
+
+    historyA.undo();
+    sync(storeA, storeB);
+
+    expect(idsOf(storeA)).toEqual(['b1', 'b4', 'b3', 'b5']);
+    expect(textOf(storeA, 'b1')).toBe('First');
+    expect(storeA.toJSON()).toEqual(storeB.toJSON());
+  });
+
+  it('redo does not redo a later step before one the peer blocks', () => {
+    storeA.removeBlock('b4'); // X
+    historyA.stopCapturing();
+    storeA.updateBlockData('b1', 'text', 'First edit'); // Y
+    historyA.stopCapturing();
+    historyA.undo();
+    historyA.undo();
+    sync(storeA, storeB);
+    expect(idsOf(storeA)).toEqual(['b1', 'b2', 'b4']);
+
+    storeB.updateBlockData('b4', 'text', 'Fourth by B');
+    sync(storeA, storeB);
+
+    const redoStack = [...historyA.undoManager.redoStack];
+
+    historyA.redo();
+    sync(storeA, storeB);
+
+    expect(textOf(storeA, 'b1')).toBe('First');
+    expect(historyA.undoManager.redoStack).toEqual(redoStack);
+    expect(historyA.canRedo()).toBe(false);
+    expect(storeA.toJSON()).toEqual(storeB.toJSON());
+  });
+
+  it('redo steps past a step a peer made spent', () => {
+    storeA.updateBlockData('b4', 'text', 'Fourth edit'); // X
+    historyA.stopCapturing();
+    storeA.updateBlockData('b1', 'text', 'First edit'); // Y
+    historyA.stopCapturing();
+    historyA.undo();
+    historyA.undo();
+    sync(storeA, storeB);
+
+    storeB.removeBlock('b4');
+    sync(storeA, storeB);
+
+    expect(historyA.canRedo()).toBe(true);
+    historyA.redo();
+    sync(storeA, storeB);
+
+    expect(textOf(storeA, 'b1')).toBe('First edit');
+    expect(historyA.undoManager.redoStack).toHaveLength(0);
+    expect(storeA.toJSON()).toEqual(storeB.toJSON());
+  });
+
+  it('redo does not half-apply a refused replace under a spent step', () => {
+    storeA.updateBlockData('b4', 'text', 'Fourth edit'); // X
+    historyA.stopCapturing();
+    storeA.removeBlock('b2'); // R: replace b2 by b3
+    storeA.addBlock({ id: 'b3', type: 'quote', data: { text: '' } });
+    historyA.stopCapturing();
+    historyA.undo();
+    historyA.undo();
+    sync(storeA, storeB);
+    expect(idsOf(storeA)).toEqual(['b1', 'b2', 'b4']);
+
+    storeB.updateBlockData('b2', 'text', 'Second by B');
+    storeB.removeBlock('b4');
+    sync(storeA, storeB);
+
+    // The spent X is on top, the refused R under it.
+    const [r] = historyA.undoManager.redoStack;
+
+    historyA.redo();
+    sync(storeA, storeB);
+
+    expect(idsOf(storeA)).toEqual(['b1', 'b2']);
+    expect(historyA.undoManager.redoStack).toEqual([r]);
+    expect(historyA.canRedo()).toBe(false);
+    expect(storeA.toJSON()).toEqual(storeB.toJSON());
+  });
+});
+
+describe('a move the peer overruled over nothing that applies', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('canUndo is false', () => {
+    const manager = new YjsManager({ config: {},
+      eventsDispatcher: { on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn() } as unknown as YjsManager['eventsDispatcher'] });
+    const peer = createStore(2);
+
+    manager.fromJSON([paragraph('b1', 'one'), paragraph('b2', 'two'), paragraph('b3', 'three')]);
+    peer.applyRemoteUpdate(manager.encodeStateAsUpdate());
+
+    manager.updateBlockData('b1', 'text', 'one edited'); // S0
+    manager.stopCapturing();
+    manager.moveBlock('b3', 0); // M
+    manager.stopCapturing();
+    sync(manager, peer);
+    peer.moveBlock('b3', 2);
+    peer.removeBlock('b1');
+    sync(manager, peer);
+
+    expect(manager.canUndo()).toBe(false);
+    manager.undo();
+    sync(manager, peer);
+    expect(manager.canUndo()).toBe(false);
+    expect(manager.toJSON()).toEqual(peer.toJSON());
+  });
+});

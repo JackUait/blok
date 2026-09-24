@@ -2,13 +2,15 @@
  * Seeded random trees x random moves through the keyboard move, the public
  * blocks.move and the public blocks.setBlockParent. After every move the flat array must stay a depth-first order
  * of the tree with every holder mounted under its parent and no block lost;
- * undoing every move must give back the starting tree exactly.
+ * undoing every move must give back the starting tree exactly. The same runs
+ * also check that the flat array is the contentIds tree walk.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Blok } from '../../../../../src/blok';
 import type { Block } from '../../../../../src/components/block';
 import { isCollapsedToggleBlock } from '../../../../../src/components/modules/drag/utils/toggleState';
+import { validateTreeOrder } from '../../../../../src/components/utils/hierarchy-invariant';
 import { Callout, Toggle } from '../../../../../src/tools';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import type { OutputBlockData } from '../../../../../types';
@@ -228,19 +230,28 @@ const randomMove = (editor: Runtime, random: () => number, withApi: boolean, rep
  * @param seed - generator seed
  * @param withApi - also draw public blocks.move calls
  * @param reparent - draw only public blocks.setBlockParent calls
+ * @param treeOrderLog - gets the seed's first contentIds tree-order drift
  * @returns what went wrong, or null
  */
-const runSeed = async (seed: number, withApi: boolean, reparent = false): Promise<string | null> => {
+const runSeed = async (seed: number, withApi: boolean, reparent: boolean, treeOrderLog: string[]): Promise<string | null> => {
   const random = rng(seed);
   const editor = await boot(randomDoc(random));
   const initial = snapshot(editor);
   const steps: string[] = [];
+  const logTreeOrder = (when: string): void => {
+    const [drift] = validateTreeOrder(editor.module.blockManager.blocks);
+
+    if (drift !== undefined && !treeOrderLog.some(entry => entry.startsWith(`seed ${seed} `))) {
+      treeOrderLog.push(`seed ${seed} ${when} [${steps.join(', ')}]: ${drift.message}`);
+    }
+  };
 
   // One move, then the tree check; the problem text, or null.
   const step = async (): Promise<string | null> => {
     steps.push(randomMove(editor, random, withApi, reparent));
     await settle();
     editor.module.yjsManager.stopCapturing();
+    logTreeOrder('after');
 
     const problems = treeViolations(editor);
 
@@ -273,6 +284,7 @@ const runSeed = async (seed: number, withApi: boolean, reparent = false): Promis
       await settle();
     }
 
+    logTreeOrder('undo of');
     const undone = snapshot(editor);
     const problems = treeViolations(editor);
 
@@ -296,29 +308,60 @@ describe('random moves keep tree order and undo exactly', () => {
     vi.restoreAllMocks();
   });
 
-  const runSeeds = async (withApi: boolean, reparent = false): Promise<string[]> => {
-    const failures: string[] = [];
+  // One run per mode feeds both the tree check and the tree-order report.
+  const runs = new Map<string, Promise<{ failures: string[]; treeOrder: string[] }>>();
 
-    for (let seed = 1; seed <= SEEDS; seed++) {
-      const failure = await runSeed(seed, withApi, reparent);
+  const runSeeds = (withApi: boolean, reparent = false): Promise<{ failures: string[]; treeOrder: string[] }> => {
+    const key = `${String(withApi)}-${String(reparent)}`;
+    const cached = runs.get(key);
 
-      if (failure !== null) {
-        failures.push(failure);
-      }
+    if (cached !== undefined) {
+      return cached;
     }
 
-    return failures;
+    const run = (async (): Promise<{ failures: string[]; treeOrder: string[] }> => {
+      const failures: string[] = [];
+      const treeOrder: string[] = [];
+
+      for (let seed = 1; seed <= SEEDS; seed++) {
+        const failure = await runSeed(seed, withApi, reparent, treeOrder);
+
+        if (failure !== null) {
+          failures.push(failure);
+        }
+      }
+
+      return { failures, treeOrder };
+    })();
+
+    runs.set(key, run);
+
+    return run;
   };
 
   it(`keyboard moves: ${SEEDS} seeds x ${MOVES_PER_SEED} moves`, async () => {
-    expect(await runSeeds(false)).toStrictEqual([]);
+    expect((await runSeeds(false)).failures).toStrictEqual([]);
   }, 120_000);
 
   it(`keyboard and blocks.move: ${SEEDS} seeds x ${MOVES_PER_SEED} moves`, async () => {
-    expect(await runSeeds(true)).toStrictEqual([]);
+    expect((await runSeeds(true)).failures).toStrictEqual([]);
   }, 120_000);
 
   it(`blocks.setBlockParent, in and out: ${SEEDS} seeds x ${MOVES_PER_SEED} moves`, async () => {
-    expect(await runSeeds(false, true)).toStrictEqual([]);
+    expect((await runSeeds(false, true)).failures).toStrictEqual([]);
   }, 120_000);
+
+  describe('flat order is the contentIds tree walk', () => {
+    it('keyboard moves', async () => {
+      expect((await runSeeds(false)).treeOrder).toStrictEqual([]);
+    }, 120_000);
+
+    it('keyboard and blocks.move', async () => {
+      expect((await runSeeds(true)).treeOrder).toStrictEqual([]);
+    }, 120_000);
+
+    it('blocks.setBlockParent, in and out', async () => {
+      expect((await runSeeds(false, true)).treeOrder).toStrictEqual([]);
+    }, 120_000);
+  });
 });

@@ -140,11 +140,19 @@ describe('setData(B) equals render(B)', () => {
     ['text', { text: 'One', style: 'unordered' }, { text: 'Two', style: 'unordered' }],
     ['start removed', { text: 'One', style: 'ordered', start: 5 }, { text: 'One', style: 'ordered' }],
     ['start added', { text: 'One', style: 'ordered' }, { text: 'One', style: 'ordered', start: 5 }],
+    ['text, stored start 1', { text: 'a', style: 'ordered', start: 1 }, { text: 'ab', style: 'ordered', start: 1 }],
     ['unchecked', { text: 'Task', style: 'checklist', checked: true }, { text: 'Task', style: 'checklist', checked: false }],
     ['style', { text: 'One', style: 'unordered' }, { text: 'One', style: 'ordered' }],
   ];
 
   it.each(listCases)('list: %s', (_name, from, to) => {
     expectSetDataMatchesRender(ListTool, from, to);
+  });
+
+  it('list: a text edit on an item stored with start 1 stays in place', () => {
+    const stored: ListItemData = { text: 'a', style: 'ordered', start: 1 };
+    const { tool } = build(ListTool, stored);
+
+    expect(tool.setData({ ...stored, text: 'ab' })).toBe(true);
   });
 });

@@ -608,6 +608,32 @@ describe('block-operations', () => {
       expect(result.inPlace).toBe(false);
     });
 
+    it('updates in place when only one side spells out the default start of 1', () => {
+      const ops = {
+        adjustDepthTo: vi.fn(),
+        updateMarkerForDepth: vi.fn(),
+        updateCheckboxState: vi.fn(),
+      };
+
+      const fromNormalized = setListItemData(
+        { text: 'a', style: 'ordered' },
+        { text: 'ab', style: 'ordered', start: 1 },
+        mockElement,
+        () => mockContentElement,
+        ops
+      );
+      const fromRaw = setListItemData(
+        { text: 'a', style: 'ordered', start: 1 },
+        { text: 'ab', style: 'ordered' },
+        mockElement,
+        () => mockContentElement,
+        ops
+      );
+
+      expect(fromNormalized.inPlace).toBe(true);
+      expect(fromRaw.inPlace).toBe(true);
+    });
+
     it('updates text content when text is a string', () => {
       const currentData: ListItemData = { text: 'Old', style: 'unordered', checked: false };
       const newData: ListItemData = { text: 'New text', style: 'unordered', checked: false };

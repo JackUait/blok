@@ -25,6 +25,23 @@ const keepWithParents = (item: Y.Item | null): void => {
 };
 
 /**
+ * @param item - a Y item
+ * @returns whether it is a block's edit metadata (see DocumentStore.updateBlockMetadata)
+ */
+const isEditMetadata = (item: Y.Item): boolean =>
+  (item.parentSub === 'lastEditedAt' || item.parentSub === 'lastEditedBy')
+  && item.parent instanceof Y.Map && item.parent.get('data') instanceof Y.Map;
+
+/**
+ * @param a - a map entry
+ * @param b - another map entry
+ * @returns whether both hold the same plain value; a nested type never counts
+ */
+const sameValue = (a: Y.Item, b: Y.Item): boolean =>
+  a.content instanceof Y.ContentAny && b.content instanceof Y.ContentAny
+  && JSON.stringify(a.content.getContent()) === JSON.stringify(b.content.getContent());
+
+/**
  * The state a move entry was last left in: where its block actually landed,
  * and which blocks existed at that moment.
  */
@@ -1745,6 +1762,88 @@ export class UndoHistory {
       fn();
     } finally {
       doc.off('afterTransaction', join);
+    }
+    if (this.changesNothing(step)) {
+      this.dropStep(step);
+    }
+  }
+
+  /**
+   * @param step - an undo step
+   * @returns whether undoing it would change nothing but edit metadata: every
+   *   value it wrote is gone again or equals the value it replaced (a failed
+   *   upload putting back the link it was started from)
+   */
+  private changesNothing(step: StackItem): boolean {
+    const inserted = this.itemsIn(step.insertions);
+    const live = inserted.filter((item) => !item.deleted && !isEditMetadata(item));
+
+    // Text, list or block content: checked first, it keeps a large step cheap.
+    if (live.some((item) => item.parentSub === null)) {
+      return false;
+    }
+
+    const written = new Set(inserted);
+    const replaced = this.itemsIn(step.deletions).filter((item) => !written.has(item) && !isEditMetadata(item));
+    const sameEntry = (a: Y.Item, b: Y.Item): boolean => a.parent === b.parent && a.parentSub === b.parentSub;
+
+    return live.every((item) => replaced.some((old) => sameEntry(old, item) && sameValue(old, item)))
+      && replaced.every((old) => live.some((item) => sameEntry(old, item)));
+  }
+
+  /**
+   * @param set - insertions or deletions of a step
+   * @returns the items it covers
+   */
+  private itemsIn(set: StackItem['insertions']): Y.Item[] {
+    const { store } = this.undoManager.doc;
+    const items: Y.Item[] = [];
+
+    set.clients.forEach((ranges, client) => {
+      const structs = store.clients.get(client) ?? [];
+
+      ranges.forEach(({ clock, len }) => {
+        if (structs.length === 0) {
+          return;
+        }
+        const range = structs.slice(Y.findIndexSS(structs, clock), Y.findIndexSS(structs, clock + len - 1) + 1);
+
+        range.forEach((struct) => {
+          if (struct instanceof Y.Item) {
+            items.push(struct);
+          }
+        });
+      });
+    });
+
+    return items;
+  }
+
+  /**
+   * Take a step off the undo stack with its caret entry. Redo is untouched.
+   * @param step - a step on the undo stack
+   */
+  private dropStep(step: StackItem): void {
+    const { undoStack } = this.undoManager;
+    const index = undoStack.indexOf(step);
+
+    if (index === -1) {
+      return;
+    }
+    undoStack.splice(index, 1);
+    // Nothing may merge into the step below: it closed before this one opened.
+    if (index === undoStack.length) {
+      this.undoManager.stopCapturing();
+    }
+
+    const entry = this.entryByStackItem.get(step);
+
+    if (entry === undefined) {
+      return;
+    }
+    this.caretUndoStack = this.caretUndoStack.filter((candidate) => candidate !== entry);
+    if (this.openEntry === entry) {
+      this.openEntry = null;
     }
   }
 

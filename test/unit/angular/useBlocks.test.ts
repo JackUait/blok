@@ -82,6 +82,16 @@ describe('injectBlocks (Angular) — React/Vue parity surface', () => {
     expect(api.getById('x')).toBeNull();
   });
 
+  it('transactWithoutCapture passes derived-data options to core', () => {
+    const { editor } = makeFakeEditor([{ id: 'a', name: 'paragraph', parentId: null }]);
+    const api = run(() => injectBlocks(signal<Blok | null>(editor)));
+    const options = { derivedFrom: 'a', from: ['url'] };
+
+    api.transactWithoutCapture(vi.fn(), options);
+
+    expect(editor.blocks.transactWithoutCapture).toHaveBeenCalledWith(expect.any(Function), options);
+  });
+
   it('remove is subtree-aware: deletes the block AND its descendants', () => {
     const { editor } = makeFakeEditor([
       { id: 'p', name: 'toggle', parentId: null },

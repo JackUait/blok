@@ -791,7 +791,7 @@ describe("API_SECTIONS", () => {
         "update(id, data?, tunes?)",
         "convert(id, newType, dataOverrides?, options?)",
         "transact(fn)",
-        "transactWithoutCapture(fn)",
+        "transactWithoutCapture(fn, options?)",
         "splitBlock(currentBlockId, currentBlockData, newBlockType, newBlockData, insertIndex)",
         "insertInsideParent(parentId, insertIndex, childData?)",
         "insertOutputData(blocks, options?)",

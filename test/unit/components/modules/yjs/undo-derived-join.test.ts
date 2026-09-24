@@ -107,4 +107,48 @@ describe('UndoHistory.addToStepThatWrote', () => {
     history.undo();
     expect(data.get('url')).toBe('');
   });
+  it('drops the step when the joined write puts every value it wrote back', () => {
+    edit(() => data.set('text', 'a'));
+    edit(() => data.set('url', 'https://example.com/a.png'));
+    const block = yblocks.get(0);
+
+    history.addToStepThatWrote(data, () => ydoc.transact(() => {
+      data.set('url', '');
+      block.set('lastEditedAt', 2);
+    }, 'no-capture'), ['url']);
+
+    expect(data.get('url')).toBe('');
+    history.undo();
+    expect(data.get('text')).toBeUndefined();
+    expect(data.get('url')).toBe('');
+    history.redo();
+    expect(data.get('text')).toBe('a');
+    expect(history.canRedo()).toBe(false);
+  });
+
+  it('keeps redo when it drops the step', () => {
+    edit(() => data.set('url', 'https://example.com/a.png'));
+    edit(() => data.set('text', 'a'));
+    history.undo();
+
+    land('url', '', ['url']);
+
+    expect(history.canRedo()).toBe(true);
+    history.redo();
+    expect(data.get('text')).toBe('a');
+    expect(data.get('url')).toBe('');
+  });
+
+  it('keeps the step when the joined write leaves a change in it', () => {
+    edit(() => {
+      data.set('url', 'https://example.com/a.png');
+      data.set('text', 'a');
+    });
+    land('url', '', ['url']);
+
+    history.undo();
+
+    expect(data.get('text')).toBeUndefined();
+    expect(data.get('url')).toBe('');
+  });
 });

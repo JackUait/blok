@@ -383,8 +383,12 @@ export interface UseBlocksApi {
    * Run `fn` as one atomic operation NOT captured in the undo history — for
    * silent auto-repair a user's undo should never step through. Mutations inside
    * still emit reactively. Pre-ready it just runs `fn`.
+   *
+   * With `options`, the operations are data worked out from the `from` keys of
+   * block `derivedFrom` (a finished upload, for example): they join the undo
+   * entry that wrote those values, as in core.
    */
-  transactWithoutCapture(fn: () => void): void;
+  transactWithoutCapture(fn: () => void, options?: { derivedFrom?: string; from?: readonly string[] }): void;
   /** The current block count. Reactive (re-reads on 'block changed'). Pre-ready: 0. */
   getBlocksCount(): number;
   /** The flat index of the block holding the caret, or -1 when none. Pre-ready: -1. */

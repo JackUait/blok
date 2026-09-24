@@ -24,7 +24,7 @@ import { uploadErrorMessage } from '../../components/utils/upload-error-message'
 import { safeHttpHref } from './url';
 import { isPreviewable } from './preview';
 import { openFilePreview } from './preview-modal';
-import { deliverToRebuiltBlock, writeDerived } from '../image/detached-upload';
+import { deliverToRebuiltBlock, putBackOnRebuiltBlock, writeDerived } from '../image/detached-upload';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -193,6 +193,8 @@ export class FileTool implements BlockTool {
   }
 
   private startUrl(url: string): void {
+    const before = this.data.url;
+
     this.lastFileName = null;
     this.uploading = url;
     this.pendingImageConversion = IMAGE_EXTENSION_RE.test(url);
@@ -205,7 +207,26 @@ export class FileTool implements BlockTool {
     void this.uploader
       .handleUrl(url, { onProgress: (p) => this.uploadingEl?.setProgress(p) })
       .then((result) => this.applyUrlUpload(result, url))
-      .catch((err) => this.applyError(err));
+      .catch((err) => this.applyUrlError(err, url, before));
+  }
+
+  /**
+   * A failed upload of a link the user entered. The link is put back to
+   * `before` as derived data, so its edit nets to nothing and leaves no undo step.
+   * @param err - why the upload failed
+   * @param url - the link, still `uploading` unless cancelled or replaced
+   * @param before - `data.url` before the link was entered
+   */
+  private applyUrlError(err: unknown, url: string, before: string): void {
+    if (this.detached) {
+      putBackOnRebuiltBlock(this.api, this.block, { url: before }, { url }, ['url']);
+
+      return;
+    }
+    this.applyError(err);
+    if (this.uploading !== url || this.data.url !== url) return;
+    this.data = { ...this.data, url: before };
+    this.block.dispatchChange({ derived: true, from: ['url'] });
   }
 
   /**

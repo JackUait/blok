@@ -4241,10 +4241,10 @@ blocks.move(nodeId, { toIndex: 0 });`,
 });`,
       },
       {
-        name: "transactWithoutCapture(fn)",
+        name: "transactWithoutCapture(fn, options?)",
         returnType: "void",
         description:
-          "Like transact, but the operation is NOT captured in undo history. Use it for silent auto-repair or normalization that CMD+Z should never step through.",
+          "Like transact, but the operation is NOT captured in undo history. Use it for silent auto-repair or normalization that CMD+Z should never step through.\n\nPass `{ derivedFrom: blockId, from: ['url'] }` when the operations are data worked out from those keys of a block, as with core's `blocks.transactWithoutCapture`. They join the undo step that wrote those values.",
         example: `blocks.transactWithoutCapture(() => {
   blocks.update(nodeId, { text: normalized });
 });`,

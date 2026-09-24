@@ -67,6 +67,13 @@ type AssertExact<A, B> = AssertEqual<A, B> extends true
   ? AssertEqual<keyof A, keyof B>
   : never;
 
+/**
+ * Compile error unless A and B are the same type. Mutual assignability is blind
+ * to a method gaining an optional parameter; this is not.
+ */
+type AssertIdentical<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : never;
+
 const _useBlokConfig: AssertEqual<PublishedUseBlokConfig, SourceUseBlokConfig> = true;
 const _contentProps: AssertEqual<PublishedBlokContentProps, SourceBlokContentProps> = true;
 const _editorProps: AssertEqual<PublishedBlokEditorProps, SourceBlokEditorProps> = true;
@@ -82,7 +89,7 @@ const _insertPosition: AssertEqual<PublishedInsertPosition, SourceInsertPosition
 const _insertSpec: AssertExact<PublishedInsertSpec, SourceInsertSpec> = true;
 const _treeInsertSpec: AssertExact<PublishedTreeInsertSpec, SourceTreeInsertSpec> = true;
 const _moveTarget: AssertEqual<PublishedMoveTarget, SourceMoveTarget> = true;
-const _useBlocksApi: AssertExact<PublishedUseBlocksApi, SourceUseBlocksApi> = true;
+const _useBlocksApi: AssertIdentical<PublishedUseBlocksApi, SourceUseBlocksApi> = true;
 
 // Block-authoring surface (createReactBlock + portal host) — published
 // declarations must not drift from the source of truth.

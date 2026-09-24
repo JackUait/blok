@@ -58,7 +58,7 @@ import { convertGifToWebm } from './gif-to-webm';
 import { downloadImage } from './download';
 import { resolveConvertedUploader } from './converted-uploader';
 import { tr } from './i18n';
-import { deliverToRebuiltBlock, releaseObjectUrl, writeDerived } from './detached-upload';
+import { deliverToRebuiltBlock, putBackOnRebuiltBlock, releaseObjectUrl, writeDerived } from './detached-upload';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -313,19 +313,32 @@ export class ImageTool implements BlockTool {
   }
 
   private startUrl(url: string): void {
-    // Entering the link is the edit, so what the upload produces can join its undo step.
-    this.data = { ...this.data, url };
-    this.block.dispatchChange();
+    const before = this.writeEnteredUrl(url);
+
     if (this.shouldConvertGifUrl(url)) {
       void this.convertGifUrlToVideoBlock(url).then((handled) => {
-        if (!handled) this.loadImageUrl(url);
+        if (!handled) this.loadImageUrl(url, before);
       });
       return;
     }
-    this.loadImageUrl(url);
+    this.loadImageUrl(url, before);
   }
 
-  private loadImageUrl(url: string): void {
+  /**
+   * Entering the link is the edit, so what the upload produces can join its undo step.
+   * @param url - the link
+   * @returns `data.url` before it
+   */
+  private writeEnteredUrl(url: string): string {
+    const before = this.data.url;
+
+    this.data = { ...this.data, url };
+    this.block.dispatchChange();
+
+    return before;
+  }
+
+  private loadImageUrl(url: string, before: string): void {
     const source = { kind: 'url', url } as const;
 
     this.lastFileName = null;
@@ -334,14 +347,37 @@ export class ImageTool implements BlockTool {
     this.errorMessage = null;
     this.brokenImage = false;
     this.renderState();
-    this.uploadUrl(source);
+    this.uploadUrl(source, before);
   }
 
-  private uploadUrl(source: { kind: 'url'; url: string }): void {
+  /**
+   * @param source - the job
+   * @param before - `data.url` before the link was entered
+   */
+  private uploadUrl(source: { kind: 'url'; url: string }, before: string): void {
     void this.uploader
       .handleUrl(source.url, { onProgress: this.reportProgress })
       .then((result) => this.applyUrlUpload(result, source))
-      .catch((err) => this.applyError(err));
+      .catch((err) => this.applyUrlError(err, source, before));
+  }
+
+  /**
+   * A failed upload of a link the user entered. The link is put back to
+   * `before` as derived data, so its edit nets to nothing and leaves no undo step.
+   * @param err - why the upload failed
+   * @param source - the job, still `lastSource` unless cancelled or replaced
+   * @param before - `data.url` before the link was entered
+   */
+  private applyUrlError(err: unknown, source: { kind: 'url'; url: string }, before: string): void {
+    if (this.detached) {
+      putBackOnRebuiltBlock(this.api, this.block, { url: before }, { url: source.url }, ['url']);
+
+      return;
+    }
+    this.applyError(err);
+    if (this.lastSource !== source || this.data.url !== source.url) return;
+    this.data = { ...this.data, url: before };
+    this.block.dispatchChange({ derived: true, from: ['url'] });
   }
 
   private shouldConvertGifUrl(url: string): boolean {
@@ -395,7 +431,8 @@ export class ImageTool implements BlockTool {
       this.uploadFile(source);
       return;
     }
-    this.uploadUrl(source);
+    // A failed link was put back, so the retry enters it again.
+    this.uploadUrl(source, this.writeEnteredUrl(source.url));
   }
 
   private applyResult(result: UploadResult): void {

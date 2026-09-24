@@ -1189,9 +1189,9 @@ export const createBlocksApiForEditor = (
       .catch(() => undefined);
   };
 
-  const transactWithoutCapture = (fn: () => void): void => {
+  const transactWithoutCapture = (fn: () => void, options?: { derivedFrom?: string; from?: readonly string[] }): void => {
     if (editor.blocks.transactWithoutCapture !== undefined) {
-      editor.blocks.transactWithoutCapture(fn);
+      editor.blocks.transactWithoutCapture(fn, options);
     } else {
       fn();
     }

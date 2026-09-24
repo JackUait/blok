@@ -15,6 +15,7 @@ declare global {
   interface Window {
     blokInstance?: Blok;
     __resolveUpload?: () => void;
+    __rejectUpload?: () => void;
     defaultBlockTools: Record<string, { class: unknown }>;
   }
 }
@@ -59,8 +60,9 @@ const mount = async (page: Page, blocks: OutputData['blocks'], slow: Slow = 'non
           class: window.defaultBlockTools[name].class,
           config: {
             uploader: {
-              uploadByUrl: () => new Promise((res) => {
+              uploadByUrl: () => new Promise((res, rej) => {
                 window.__resolveUpload = () => res({ url: stored });
+                window.__rejectUpload = () => rej(new Error('404'));
               }),
             },
           },
@@ -165,6 +167,18 @@ const enterUrl = async (page: Page, tool: string, url: string): Promise<void> =>
 const resolveUpload = async (page: Page): Promise<void> => {
   await page.waitForFunction(() => typeof window.__resolveUpload === 'function');
   await page.evaluate(() => window.__resolveUpload?.());
+};
+
+const rejectUpload = async (page: Page): Promise<void> => {
+  await page.waitForFunction(() => typeof window.__rejectUpload === 'function');
+  await page.evaluate(() => window.__rejectUpload?.());
+};
+
+const MEDIA_ERRORS: Record<string, string> = {
+  image: '[data-role="error-state"]',
+  audio: '[data-role="audio-error"]',
+  video: '[data-role="video-error"]',
+  file: '[data-role="file-error"]',
 };
 
 const dataOf = async (page: Page, id: string): Promise<Record<string, unknown> | undefined> =>
@@ -420,6 +434,53 @@ test.describe('undo audit: remaining surfaces', () => {
       await page.keyboard.press(REDO);
       await gap(page);
       await expect(page.getByText('alphaY', { exact: true })).toBeVisible();
+    });
+    // Source: a link that fails to upload was never saved (base 328fb87c): the block keeps its error, and the failed
+    // link leaves no undo step, so one undo takes back the edit made before it.
+    test(`UNP-7c (${tool}): a failed upload by URL saves nothing and adds no undo step`, async ({ page }) => {
+      await mount(page, [P('p', 'alpha'), { id: 'm', type: tool, data: { url: '' } }], 'url');
+      await typeAtEnd(page, 'alpha', 'Y');
+      await gap(page);
+      await enterUrl(page, tool, 'https://example.com/source');
+      await gap(page);
+      await rejectUpload(page);
+      await expect(media(page, tool).locator(MEDIA_ERRORS[tool])).toHaveCount(1);
+      // A media block with no link fails validate(), so save() leaves it out.
+      await expect.poll(() => dataOf(page, 'm')).toBeUndefined();
+      await gap(page);
+
+      await page.keyboard.press(UNDO);
+      await gap(page);
+      await expect(page.getByText('alpha', { exact: true })).toBeVisible();
+      expect(await dataOf(page, 'm')).toBeUndefined();
+      await expect(media(page, tool)).toHaveCount(1);
+      await page.keyboard.press(REDO);
+      await gap(page);
+      await expect(page.getByText('alphaY', { exact: true })).toBeVisible();
+      expect(await dataOf(page, 'm')).toBeUndefined();
+      await expect(media(page, tool)).toHaveCount(1);
+      expect(await canRedo(page)).toBe(false);
+    });
+
+    // Source: undo must keep redo until the user makes a new edit; a failing upload is not one.
+    test(`UNP-7d (${tool}): an upload by URL that fails after an unrelated undo keeps redo`, async ({ page }) => {
+      await mount(page, [P('p', 'alpha'), { id: 'm', type: tool, data: { url: '' } }], 'url');
+      await enterUrl(page, tool, 'https://example.com/source');
+      await gap(page);
+      await typeAtEnd(page, 'alpha', 'Y');
+      await gap(page);
+      await page.keyboard.press(UNDO);
+      await gap(page);
+      await rejectUpload(page);
+      await expect.poll(() => dataOf(page, 'm')).toBeUndefined();
+      await gap(page);
+
+      expect(await canRedo(page)).toBe(true);
+      await page.keyboard.press(REDO);
+      await gap(page);
+      await expect(page.getByText('alphaY', { exact: true })).toBeVisible();
+      expect(await dataOf(page, 'm')).toBeUndefined();
+      await expect(media(page, tool)).toHaveCount(1);
     });
   }
 

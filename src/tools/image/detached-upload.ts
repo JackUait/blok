@@ -165,6 +165,52 @@ export const deliverToRebuiltBlock = (
 };
 
 /**
+ * A failed upload's counterpart of {@link deliverToRebuiltBlock}: put `data`
+ * (the values the upload's edit replaced) back on the block that now carries
+ * `block.id`, while it still holds `startedFrom`. Nothing was uploaded, so a
+ * block that is gone or changed needs no write and no warning.
+ * @param api - the tool's editor API
+ * @param block - the block API this tool was constructed with
+ * @param data - the values to put back
+ * @param startedFrom - values the edit wrote
+ * @param from - keys of the block's data the edit wrote
+ */
+export const putBackOnRebuiltBlock = (
+  api: API,
+  block: BlockAPI,
+  data: Partial<BlockToolData>,
+  startedFrom: Partial<BlockToolData>,
+  from: readonly string[]
+): void => {
+  const warn = (error: unknown): void => logLabeled(`${block.name}: could not clear a failed upload`, 'warn', error);
+
+  try {
+    const live = findLiveBlock(api, block.id);
+
+    if (live === null || live.name !== block.name) {
+      return;
+    }
+    void stillHolds(live, startedFrom)
+      .then((holds) => {
+        if (!holds) {
+          return;
+        }
+
+        const written: { update?: Promise<unknown> } = {};
+
+        writeDerived(api, block.id, from, () => {
+          written.update = api.blocks.update(block.id, data);
+        });
+
+        return written.update;
+      })
+      .catch(warn);
+  } catch (error) {
+    warn(error);
+  }
+};
+
+/**
  * Free a `blob:` url the destroyed instance was rendering — but only once it is
  * clear the block is really gone.
  *

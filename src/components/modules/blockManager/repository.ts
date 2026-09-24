@@ -10,8 +10,8 @@ import { Dom as $ } from '../../dom';
 import type { BlocksStore } from './types';
 
 /**
- * BlockRepository provides read-only access to blocks
- * All methods are queries without side effects
+ * BlockRepository provides read access to blocks.
+ * Every method except reorderBlocks is a query without side effects.
  */
 export class BlockRepository {
   /**
@@ -119,7 +119,25 @@ export class BlockRepository {
    * @returns {Block | undefined}
    */
   public getBlockById(id: string): Block | undefined {
-    return this.blocksStore.array.find((block) => block.id === id);
+    return this.blocksStore.getById(id);
+  }
+
+  /**
+   * Puts the same blocks in a new flat order, in place. Goes through the
+   * store so its id index stays in sync.
+   * @param order - every block of the store, in the new order
+   */
+  public reorderBlocks(order: Block[]): void {
+    this.blocksStore.reorder(order);
+  }
+
+  /**
+   * Mismatches between the store's array and its id index. Empty when they
+   * agree.
+   * @returns {string[]} one message per mismatch
+   */
+  public idIndexViolations(): string[] {
+    return this.blocksStore.idIndexViolations();
   }
 
   /**

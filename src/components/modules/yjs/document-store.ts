@@ -631,6 +631,55 @@ export class DocumentStore {
   }
 
   /**
+   * Add a new block at a placement: under `placement.parentId` (null = root),
+   * right after `placement.afterId` (null = first; not found = append).
+   *
+   * The placement's parent WINS over `blockData.parent`: the derived order
+   * only counts an entry whose parentId agrees with the array holding it, so
+   * a disagreeing parentId would drop the block into the orphan tail.
+   * Same refusals as `applyPlacement`: a dangling parent or a cyclic one
+   * leaves the block in no order array (a cyclic parentId is not written).
+   * @param blockData - Block data to add
+   * @param placement - Target parent and preceding sibling
+   * @returns The created Y.Map
+   */
+  public addBlockAt(blockData: YjsOutputBlockData, placement: BlockPlacement): Y.Map<unknown> {
+    const unparented = { ...blockData };
+
+    delete unparented.parent;
+
+    const yblock = this.serializer.outputDataToYBlock(unparented);
+    const id = typeof blockData.id === 'string' ? stripNul(blockData.id) : blockData.id;
+
+    if (typeof id !== 'string') {
+      return yblock;
+    }
+
+    const parentId = typeof placement.parentId === 'string' ? stripNul(placement.parentId) : null;
+    const wouldCycle = parentId !== null && this.wouldFormCycle(id, parentId);
+
+    this.transact(() => {
+      this.yBlocksMap.set(id, yblock);
+
+      if (wouldCycle) {
+        return;
+      }
+
+      if (parentId !== null) {
+        yblock.set('parentId', parentId);
+      }
+
+      const target = this.resolveTargetOrder(parentId ?? undefined);
+
+      if (target !== null) {
+        target.insert(this.placementSlot(target, placement.afterId), [id]);
+      }
+    }, 'local');
+
+    return yblock;
+  }
+
+  /**
    * Remove a block by id: delete its map entry and remove the id string
    * from the root order and every contentIds array containing it.
    * @param id - Block id to remove
@@ -757,6 +806,51 @@ export class DocumentStore {
   }
 
   /**
+   * Move a block to a placement under the untracked 'move' origin, like
+   * `moveBlock`: the move stacks own its history. Unlike `moveBlock` it may
+   * change the parent; the parentId write rides the same untracked
+   * transaction, so the caller's move entry must carry both sides.
+   * A no-op (see `isNoOpMove`) writes nothing, as `moveBlock` does for an
+   * unchanged index. Otherwise the semantics and refusals are
+   * `applyPlacement`'s.
+   * @param id - Block id to move
+   * @param placement - Target parent and preceding sibling
+   */
+  public moveBlockTo(id: string, placement: BlockPlacement): void {
+    if (this.getBlockById(id) === undefined || this.isNoOpMove(id, placement)) {
+      return;
+    }
+
+    this.applyPlacement(id, placement, 'move');
+  }
+
+  /**
+   * Whether moving the block to this placement would change nothing: it
+   * already holds it, the placement anchors after the block itself, or the
+   * parent would close a cycle (refused, see `applyPlacement`).
+   * @param id - Block id
+   * @param placement - Target parent and preceding sibling
+   */
+  public isNoOpMove(id: string, placement: BlockPlacement): boolean {
+    if (placement.afterId === id) {
+      return true;
+    }
+
+    const current = this.getPlacement(id);
+    const parentId = typeof placement.parentId === 'string' ? stripNul(placement.parentId) : null;
+
+    if (parentId !== null && this.wouldFormCycle(id, parentId)) {
+      return true;
+    }
+
+    // An unlisted block reports { parent, null } too; it still needs placing.
+    return current !== null &&
+      current.parentId === parentId &&
+      current.afterId === placement.afterId &&
+      this.orderArrays().some((order) => order.toArray().includes(id));
+  }
+
+  /**
    * Place a block: one transaction owning the parentId key AND order-array
    * membership. Root placement DELETES the parentId key (root = absent
    * key, never a null value). The id is removed from every order array
@@ -767,8 +861,7 @@ export class DocumentStore {
    * A placement that would parent the block under its own descendant is
    * REFUSED — non-throwing counterpart of `BlockHierarchy.setBlockParent`'s
    * cycle guard, which this path can be driven past by move replay. Refusing
-   * means: the cyclic parentId is never written, and the id is left in no
-   * order array (the same orphan tolerance a dangling parent gets), so LOCAL
+   * means writing NOTHING: the block keeps its parent and slot, so LOCAL
    * code cannot put a cycle in the doc. Concurrent peers still can — that is
    * what `hierarchyView`'s read-side cycle break exists for.
    * @param id - Block id to place
@@ -789,7 +882,10 @@ export class DocumentStore {
     const parentId = typeof placement.parentId === 'string'
       ? stripNul(placement.parentId)
       : placement.parentId;
-    const wouldCycle = parentId !== null && this.wouldFormCycle(id, parentId);
+
+    if (parentId !== null && this.wouldFormCycle(id, parentId)) {
+      return;
+    }
 
     this.transact(() => {
       // Idempotent parentId write: an agreeing value writes nothing, so the
@@ -797,19 +893,15 @@ export class DocumentStore {
       // 'move'. Move replay relies on this — a spurious parentId item would
       // emit an 'update' whose undo/redo-origin handling re-runs setData on
       // the block mid-replay. (delete on an absent key is already a no-op.)
-      // A refused placement leaves parentId alone — writing it is the thing
-      // being refused.
-      if (!wouldCycle) {
-        if (parentId === null) {
-          yblock.delete('parentId');
-        } else if (yblock.get('parentId') !== parentId) {
-          yblock.set('parentId', parentId);
-        }
+      if (parentId === null) {
+        yblock.delete('parentId');
+      } else if (yblock.get('parentId') !== parentId) {
+        yblock.set('parentId', parentId);
       }
 
       this.removeFromOrderArrays(id);
 
-      const target = wouldCycle ? null : this.resolveTargetOrder(parentId ?? undefined);
+      const target = this.resolveTargetOrder(parentId ?? undefined);
 
       if (target === null) {
         return;
@@ -967,8 +1059,8 @@ export class DocumentStore {
    * below is allowed to undo damage it watched happen, and nothing else: a
    * document that ARRIVES malformed is read leniently, exactly as before, and
    * is never rewritten. That is what keeps a foreign or older writer's
-   * document — and the table tool's cell blocks, which name the table as
-   * parent while deliberately living outside its `contentIds` — untouched.
+   * document — say, a child that names a parent but is missing from its
+   * `contentIds` — untouched.
    */
   private structuralSnapshot(): StructuralSnapshot {
     const placed = new Set<string>();

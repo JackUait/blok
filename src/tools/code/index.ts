@@ -16,6 +16,7 @@ import type { CodeDOMRefs } from './dom-builder';
 import { handleCodeKeydown } from './code-keyboard';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PLAINTEXT } from '../../components/utils/sanitizer';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { onHover as tooltipOnHover } from '../../components/utils/tooltip';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
@@ -131,6 +132,7 @@ export class CodeTool implements BlockTool {
 
       previewEl.className = PREVIEW_AREA_STYLES;
       previewEl.setAttribute('data-blok-testid', 'code-preview');
+      previewEl.setAttribute(DATA_ATTR.chrome, '');
       dom.wrapper.appendChild(previewEl);
       dom.preElement.hidden = true;
       dom.gutterElement.hidden = true;

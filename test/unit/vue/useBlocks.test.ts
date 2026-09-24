@@ -5,6 +5,7 @@ import { mount, flushPromises } from '@vue/test-utils';
 import { useBlocks } from '../../../packages/vue/src/useBlocks';
 import type { UseBlocksApi } from '../../../packages/vue/src/blocks-snapshot';
 import type { Blok } from '../../../types';
+import { fakePlacement } from '../helpers/fake-placement';
 
 /**
  * A record in the fake editor's in-memory FLAT block list. The shape mirrors
@@ -21,6 +22,8 @@ interface FakeEditor {
     insertInsideParent: ReturnType<typeof vi.fn>;
     insert: ReturnType<typeof vi.fn>;
     setBlockParent: ReturnType<typeof vi.fn>;
+    insertAt: ReturnType<typeof vi.fn>;
+    moveTo: ReturnType<typeof vi.fn>;
     move: ReturnType<typeof vi.fn>;
     delete: ReturnType<typeof vi.fn>;
     transact: ReturnType<typeof vi.fn>;
@@ -62,6 +65,16 @@ const makeFakeEditor = (initial: FakeRecord[]): FakeEditor => {
   const move = vi.fn();
   const del = vi.fn();
   const transact = vi.fn((fn: () => void) => fn());
+  const placement = fakePlacement({
+    blocks: () => flat,
+    insert: (type, data, index) => insert(type, data, {}, index),
+    moveFlat: (toIndex, fromIndex) => {
+      flat.splice(toIndex, 0, ...flat.splice(fromIndex, 1));
+    },
+    setParent: (blockId, parentId) => setBlockParent(blockId, parentId),
+  });
+  const insertAt = vi.fn(placement.insertAt);
+  const moveTo = vi.fn(placement.moveTo);
 
   const blocks = {
     getBlocksCount: (): number => flat.length,
@@ -80,6 +93,8 @@ const makeFakeEditor = (initial: FakeRecord[]): FakeEditor => {
     insert,
     insertInsideParent,
     setBlockParent,
+    insertAt,
+    moveTo,
     move,
     delete: del,
     transact,
@@ -104,7 +119,7 @@ const makeFakeEditor = (initial: FakeRecord[]): FakeEditor => {
     emitChanged: (): void => {
       listeners.get('block changed')?.forEach((h) => h());
     },
-    spies: { insertInsideParent, insert, setBlockParent, move, delete: del, transact },
+    spies: { insertInsideParent, insert, setBlockParent, insertAt, moveTo, move, delete: del, transact },
   };
 };
 
@@ -182,11 +197,15 @@ describe('useBlocks (Vue)', () => {
 
     const node = api.insert({ type: 'database-row', data: { rows: 1 }, parentId: 'p', position: 'end' });
 
-    // p(0) a(1) → append past subtree → flat index 2. Use `insert` (not
-    // insertInsideParent, which would silently force the default block type),
-    // then reparent so the requested `type` ('database-row') is honored.
-    expect(spies.insert).toHaveBeenCalledWith('database-row', { rows: 1 }, {}, 2, false, false, undefined, undefined);
-    expect(spies.setBlockParent).toHaveBeenCalledWith(node?.id, 'p');
+    expect(spies.insertAt).toHaveBeenCalledWith('database-row', { rows: 1 }, {
+      parentId: 'p',
+      position: 'end',
+      id: undefined,
+      tunes: undefined,
+      focus: false,
+    });
+    expect(node?.parentId).toBe('p');
+    expect(api.getChildren('p').map((n) => n.id)).toEqual(['a', node?.id]);
     expect(spies.transact).toHaveBeenCalled();
   });
 
@@ -198,10 +217,10 @@ describe('useBlocks (Vue)', () => {
     const result = api.insert({ parentId: 'does-not-exist' });
 
     expect(result).toBeNull();
-    expect(spies.insert).not.toHaveBeenCalled();
+    expect(spies.insertAt).not.toHaveBeenCalled();
   });
 
-  it('nest and unnest delegate to setBlockParent', () => {
+  it('nest and unnest delegate to moveTo', () => {
     const { editor, spies } = makeFakeEditor([
       { id: 'p', name: 'toggle', parentId: null },
       { id: 'x', name: 'paragraph', parentId: null },
@@ -210,10 +229,12 @@ describe('useBlocks (Vue)', () => {
     const { api } = mountUseBlocks(editorRef);
 
     api.nest('x', 'p');
-    expect(spies.setBlockParent).toHaveBeenCalledWith('x', 'p');
+    expect(spies.moveTo).toHaveBeenCalledWith('x', { parentId: 'p', position: 'end' });
+    expect(api.getById('x')?.parentId).toBe('p');
 
     api.unnest('x');
-    expect(spies.setBlockParent).toHaveBeenCalledWith('x', null);
+    expect(spies.moveTo).toHaveBeenLastCalledWith('x', { parentId: null, position: { after: 'p' } });
+    expect(api.getById('x')?.parentId).toBeNull();
   });
 
   it('remove resolves the id to a flat index and delegates to delete', () => {

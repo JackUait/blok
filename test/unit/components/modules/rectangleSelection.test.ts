@@ -57,6 +57,14 @@ interface RectangleSelectionTestSetup {
   blockManager: BlockManagerModuleMock;
 }
 
+/**
+ * Flat indexes of the lasso's stacked blocks.
+ * @param stack - the stacked blocks
+ * @param blocks - the editor's flat block list
+ */
+const stackIndices = (stack: BlockType[], blocks: BlockType[]): number[] =>
+  stack.map((block) => blocks.indexOf(block));
+
 const createRectangleSelection = (overrides: PartialModules = {}): RectangleSelectionTestSetup => {
   const rectangleSelection = new RectangleSelection({
     config: {},
@@ -345,14 +353,14 @@ describe('RectangleSelection', () => {
     });
 
     const internal = rectangleSelection as unknown as {
-      stackOfSelected: number[];
+      stackOfSelected: BlockType[];
       isRectSelectionActivated: boolean;
       mousedown: boolean;
       startX: number;
       startY: number;
     };
 
-    internal.stackOfSelected.push(1, 2);
+    internal.stackOfSelected.push({ id: 'b1' } as unknown as BlockType, { id: 'b2' } as unknown as BlockType);
     internal.isRectSelectionActivated = true;
 
     blockSelection.allBlocksSelected = true;
@@ -778,17 +786,18 @@ describe('RectangleSelection', () => {
       blockManager,
     } = createRectangleSelection();
 
-    const selectedBlockState = { selected: false } as unknown as BlockType & { selected: boolean };
+    const firstBlock = { id: 'b0', selected: false } as unknown as BlockType & { selected: boolean };
+    const secondBlock = { id: 'b1', selected: false } as unknown as BlockType & { selected: boolean };
 
-    blockManager.getBlockByIndex.mockReturnValue(selectedBlockState);
+    blockManager.blocks.push(firstBlock, secondBlock);
 
     const internal = rectangleSelection as unknown as {
-      stackOfSelected: number[];
+      stackOfSelected: BlockType[];
       rectCrossesBlocks: boolean;
       inverseSelection: () => void;
     };
 
-    internal.stackOfSelected.push(0, 1);
+    internal.stackOfSelected.push(firstBlock, secondBlock);
     internal.rectCrossesBlocks = true;
 
     internal.inverseSelection();
@@ -798,7 +807,7 @@ describe('RectangleSelection', () => {
     expect(blockSelection.unSelectBlockByIndex).not.toHaveBeenCalled();
 
     blockSelection.selectBlockByIndex.mockClear();
-    selectedBlockState.selected = true;
+    firstBlock.selected = true;
     internal.rectCrossesBlocks = false;
 
     internal.inverseSelection();
@@ -808,30 +817,104 @@ describe('RectangleSelection', () => {
     expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalled();
   });
 
-  it('adds blocks to selection stack via addBlockInSelection', () => {
+  it('unselects a lassoed block that a peer converted mid-drag once the lasso leaves it', () => {
     const {
       rectangleSelection,
       blockSelection,
+      blockManager,
     } = createRectangleSelection();
+
+    const holderAt = (top: number): HTMLDivElement => {
+      const holder = document.createElement('div');
+
+      holder.getBoundingClientRect = vi.fn(() => ({
+        top, bottom: top + 50, left: 0, right: 800, width: 800, height: 50,
+        x: 0, y: top, toJSON: () => ({}),
+      }));
+
+      return holder;
+    };
+
+    blockManager.blocks.push(
+      { id: 'b0', holder: holderAt(0), parentId: null } as unknown as BlockType,
+      { id: 'b1', holder: holderAt(50), parentId: null } as unknown as BlockType
+    );
 
     const internal = rectangleSelection as unknown as {
       rectCrossesBlocks: boolean;
-      stackOfSelected: number[];
-      addBlockInSelection: (index: number) => void;
+      trySelectNextBlock: () => void;
+      startY: number;
+      mouseY: number;
     };
 
     internal.rectCrossesBlocks = true;
-    internal.addBlockInSelection(2);
+    internal.startY = 25;
+    internal.mouseY = 75;
+    internal.trySelectNextBlock();
 
-    expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(2);
-    expect(internal.stackOfSelected).toEqual([ 2 ]);
+    // The peer converts b1: same id, new Block object in the same slot.
+    blockManager.blocks.splice(1, 1, { id: 'b1', holder: holderAt(50), parentId: null } as unknown as BlockType);
+    blockSelection.unSelectBlockByIndex.mockClear();
 
-    blockSelection.selectBlockByIndex.mockClear();
-    internal.rectCrossesBlocks = false;
-    internal.addBlockInSelection(3);
+    internal.mouseY = 25;
+    internal.trySelectNextBlock();
+
+    expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(1);
+  });
+
+  it('does not lasso a block a peer deleted mid-drag when the peer re-adds its id', () => {
+    const {
+      rectangleSelection,
+      blockSelection,
+      blockManager,
+    } = createRectangleSelection();
+
+    const deleted = { id: 'b0', selected: false } as unknown as BlockType;
+    const kept = { id: 'b1', selected: false } as unknown as BlockType;
+
+    blockManager.blocks.push(kept);
+
+    const internal = rectangleSelection as unknown as {
+      stackOfSelected: BlockType[];
+      rectCrossesBlocks: boolean;
+      inverseSelection: () => void;
+    };
+
+    internal.stackOfSelected.push(deleted, kept);
+    rectangleSelection.forgetRemovedBlock(deleted);
+    blockManager.blocks.unshift({ id: 'b0', selected: false } as unknown as BlockType);
+    internal.rectCrossesBlocks = true;
+
+    internal.inverseSelection();
 
     expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalled();
-    expect(internal.stackOfSelected).toEqual([2, 3]);
+  });
+
+  it('leaves the selection alone when the first stacked block was removed mid-drag', () => {
+    const {
+      rectangleSelection,
+      blockSelection,
+      blockManager,
+    } = createRectangleSelection();
+
+    const removed = { id: 'b0', selected: false } as unknown as BlockType;
+    const kept = { id: 'b1', selected: false } as unknown as BlockType;
+
+    blockManager.blocks.push(kept);
+
+    const internal = rectangleSelection as unknown as {
+      stackOfSelected: BlockType[];
+      rectCrossesBlocks: boolean;
+      inverseSelection: () => void;
+    };
+
+    internal.stackOfSelected.push(removed, kept);
+    internal.rectCrossesBlocks = true;
+
+    internal.inverseSelection();
+
+    expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalled();
+    expect(blockSelection.unSelectBlockByIndex).not.toHaveBeenCalled();
   });
 
   it('updates rectangle size based on cursor position', () => {
@@ -1088,7 +1171,7 @@ describe('RectangleSelection', () => {
     }
 
     const internal = rectangleSelection as unknown as {
-      stackOfSelected: number[];
+      stackOfSelected: BlockType[];
       rectCrossesBlocks: boolean;
       anchorBlockIndex: number | null;
       trySelectNextBlock: (index: number) => void;
@@ -1110,7 +1193,7 @@ describe('RectangleSelection', () => {
     internal.mouseY = 225;  // block 4 center (200-250)
     internal.trySelectNextBlock(4);
 
-    expect(internal.stackOfSelected).toEqual([0, 1, 2, 3, 4]);
+    expect(stackIndices(internal.stackOfSelected, blockManager.blocks)).toEqual([0, 1, 2, 3, 4]);
     expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(2);
     expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(3);
     expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(4);
@@ -1135,7 +1218,7 @@ describe('RectangleSelection', () => {
     }
 
     const internal = rectangleSelection as unknown as {
-      stackOfSelected: number[];
+      stackOfSelected: BlockType[];
       rectCrossesBlocks: boolean;
       anchorBlockIndex: number | null;
       trySelectNextBlock: (index: number) => void;
@@ -1162,9 +1245,57 @@ describe('RectangleSelection', () => {
     internal.mouseY = 75;  // block 1 center
     internal.trySelectNextBlock(1);
 
-    expect(internal.stackOfSelected).toEqual([0, 1]);
+    expect(stackIndices(internal.stackOfSelected, blockManager.blocks)).toEqual([0, 1]);
     expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(3);
     expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(2);
+  });
+
+  it('unselects the right block when a block is inserted above the selection mid-drag', () => {
+    const {
+      rectangleSelection,
+      blockSelection,
+      blockManager,
+    } = createRectangleSelection();
+
+    for (let i = 0; i < 3; i++) {
+      const holder = document.createElement('div');
+
+      holder.getBoundingClientRect = vi.fn(() => ({
+        top: i * 50, bottom: (i + 1) * 50, left: 0, right: 800, width: 800, height: 50,
+        x: 0, y: i * 50, toJSON: () => ({}),
+      }));
+      blockManager.blocks.push({ id: `b${i}`, holder, parentId: null } as unknown as BlockType);
+    }
+
+    const internal = rectangleSelection as unknown as {
+      rectCrossesBlocks: boolean;
+      trySelectNextBlock: () => void;
+      startY: number;
+      mouseY: number;
+    };
+
+    internal.rectCrossesBlocks = true;
+    internal.startY = 25;
+    internal.mouseY = 75;
+    internal.trySelectNextBlock();
+
+    // A remote peer inserts an off-screen block at the top between two mousemoves.
+    const insertedHolder = document.createElement('div');
+
+    insertedHolder.getBoundingClientRect = vi.fn(() => ({
+      top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}),
+    }));
+    blockManager.blocks.unshift({ id: 'inserted', holder: insertedHolder, parentId: null } as unknown as BlockType);
+    blockSelection.selectBlockByIndex.mockClear();
+    blockSelection.unSelectBlockByIndex.mockClear();
+
+    // The lasso shrinks back to b0 (now at index 1): b1 (now at index 2) leaves it.
+    internal.mouseY = 25;
+    internal.trySelectNextBlock();
+
+    expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(2);
+    expect(blockSelection.unSelectBlockByIndex).not.toHaveBeenCalledWith(0);
+    expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalled();
   });
 
   it('attaches mousedown listener to document.body instead of container', () => {
@@ -1298,12 +1429,14 @@ describe('RectangleSelection', () => {
     });
 
     const internal = rectangleSelection as unknown as {
-      stackOfSelected: number[];
+      stackOfSelected: BlockType[];
       mousedown: boolean;
     };
 
     // Pre-populate selection stack
-    internal.stackOfSelected = [0, 1];
+    const stacked = [{ id: 'b0' }, { id: 'b1' }] as unknown as BlockType[];
+
+    internal.stackOfSelected = [...stacked];
     blockSelection.allBlocksSelected = true;
 
     const startTarget = document.createElement('div');
@@ -1314,7 +1447,7 @@ describe('RectangleSelection', () => {
     rectangleSelection.startSelection(120, 240, true);
 
     // stackOfSelected should NOT be cleared
-    expect(internal.stackOfSelected).toEqual([0, 1]);
+    expect(internal.stackOfSelected).toEqual(stacked);
     // allBlocksSelected should NOT be reset
     expect(blockSelection.allBlocksSelected).toBe(true);
     expect(internal.mousedown).toBe(true);
@@ -1349,12 +1482,14 @@ describe('RectangleSelection', () => {
     });
 
     const internal = rectangleSelection as unknown as {
-      stackOfSelected: number[];
+      stackOfSelected: BlockType[];
       mousedown: boolean;
     };
 
     // Pre-populate selection stack
-    internal.stackOfSelected = [0, 1];
+    const stacked = [{ id: 'b0' }, { id: 'b1' }] as unknown as BlockType[];
+
+    internal.stackOfSelected = [...stacked];
     blockSelection.allBlocksSelected = true;
 
     const startTarget = document.createElement('div');
@@ -1843,7 +1978,7 @@ describe('RectangleSelection', () => {
           rectCrossesBlocks: boolean;
           anchorBlockIndex: number | null;
           trySelectNextBlock: (index: number) => void;
-          stackOfSelected: number[];
+          stackOfSelected: BlockType[];
           startY: number;
           mouseY: number;
         };
@@ -1892,7 +2027,7 @@ describe('RectangleSelection', () => {
           rectCrossesBlocks: boolean;
           anchorBlockIndex: number | null;
           trySelectNextBlock: (index: number) => void;
-          stackOfSelected: number[];
+          stackOfSelected: BlockType[];
           startY: number;
           mouseY: number;
         };
@@ -1906,7 +2041,7 @@ describe('RectangleSelection', () => {
         internal.mouseY = 190;
         internal.trySelectNextBlock(1);
 
-        expect(internal.stackOfSelected).toEqual([0, 1]);
+        expect(stackIndices(internal.stackOfSelected, blockManager.blocks)).toEqual([0, 1]);
         expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(0);
         expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(1);
         expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(2);
@@ -1941,7 +2076,7 @@ describe('RectangleSelection', () => {
         const internal = rectangleSelection as unknown as {
           rectCrossesBlocks: boolean;
           trySelectNextBlock: () => void;
-          stackOfSelected: number[];
+          stackOfSelected: BlockType[];
           startY: number;
           mouseY: number;
         };
@@ -1954,7 +2089,7 @@ describe('RectangleSelection', () => {
         internal.mouseY = 115;
         internal.trySelectNextBlock();
 
-        expect(internal.stackOfSelected).toEqual([2]);
+        expect(stackIndices(internal.stackOfSelected, blockManager.blocks)).toEqual([2]);
         expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(0);
         expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(1);
       });
@@ -1975,7 +2110,7 @@ describe('RectangleSelection', () => {
         const internal = rectangleSelection as unknown as {
           rectCrossesBlocks: boolean;
           trySelectNextBlock: (index: number) => void;
-          stackOfSelected: number[];
+          stackOfSelected: BlockType[];
           startY: number;
           mouseY: number;
         };
@@ -1989,7 +2124,7 @@ describe('RectangleSelection', () => {
         internal.mouseY = 140;
         internal.trySelectNextBlock(2);
 
-        expect(internal.stackOfSelected).toEqual([0]);
+        expect(stackIndices(internal.stackOfSelected, blockManager.blocks)).toEqual([0]);
         expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(0);
         expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(1);
         expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(2);
@@ -2014,7 +2149,7 @@ describe('RectangleSelection', () => {
           rectCrossesBlocks: boolean;
           anchorBlockIndex: number | null;
           trySelectNextBlock: (index: number) => void;
-          stackOfSelected: number[];
+          stackOfSelected: BlockType[];
           startY: number;
           mouseY: number;
         };
@@ -2063,7 +2198,7 @@ describe('RectangleSelection', () => {
           rectCrossesBlocks: boolean;
           anchorBlockIndex: number | null;
           trySelectNextBlock: (index: number) => void;
-          stackOfSelected: number[];
+          stackOfSelected: BlockType[];
           startY: number;
           mouseY: number;
         };
@@ -2358,7 +2493,7 @@ describe('RectangleSelection', () => {
           rectCrossesBlocks: boolean;
           anchorBlockIndex: number | null;
           trySelectNextBlock: (index: number) => void;
-          stackOfSelected: number[];
+          stackOfSelected: BlockType[];
           startY: number;
           mouseY: number;
         };
@@ -2491,7 +2626,7 @@ describe('RectangleSelection', () => {
           rectCrossesBlocks: boolean;
           anchorBlockIndex: number | null;
           trySelectNextBlock: (index: number) => void;
-          stackOfSelected: number[];
+          stackOfSelected: BlockType[];
           startX: number;
           mouseX: number;
           startY: number;
@@ -2798,7 +2933,7 @@ describe('RectangleSelection', () => {
       populateBlocksWithPositions(blockManager, 5);
 
       const internal = rectangleSelection as unknown as {
-        stackOfSelected: number[];
+        stackOfSelected: BlockType[];
         rectCrossesBlocks: boolean;
         anchorBlockIndex: number | null;
         trySelectNextBlock: (index: number) => void;
@@ -2830,7 +2965,7 @@ describe('RectangleSelection', () => {
 
       expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(3);
       expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(4);
-      expect(internal.stackOfSelected).toEqual([0, 1, 2]);
+      expect(stackIndices(internal.stackOfSelected, blockManager.blocks)).toEqual([0, 1, 2]);
     });
 
     it('should deselect blocks when selection shrinks upward then back', () => {
@@ -2843,7 +2978,7 @@ describe('RectangleSelection', () => {
       populateBlocksWithPositions(blockManager, 6);
 
       const internal = rectangleSelection as unknown as {
-        stackOfSelected: number[];
+        stackOfSelected: BlockType[];
         rectCrossesBlocks: boolean;
         anchorBlockIndex: number | null;
         trySelectNextBlock: (index: number) => void;
@@ -2875,7 +3010,7 @@ describe('RectangleSelection', () => {
 
       expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(1);
       expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(2);
-      expect(internal.stackOfSelected).toEqual([3, 4, 5]);
+      expect(stackIndices(internal.stackOfSelected, blockManager.blocks)).toEqual([3, 4, 5]);
     });
 
     it('should handle zigzag (down then up then down) correctly', () => {
@@ -2887,7 +3022,7 @@ describe('RectangleSelection', () => {
       populateBlocksWithPositions(blockManager, 6);
 
       const internal = rectangleSelection as unknown as {
-        stackOfSelected: number[];
+        stackOfSelected: BlockType[];
         rectCrossesBlocks: boolean;
         anchorBlockIndex: number | null;
         trySelectNextBlock: (index: number) => void;
@@ -2918,7 +3053,7 @@ describe('RectangleSelection', () => {
       internal.mouseY = 275;
       internal.trySelectNextBlock(5);
 
-      expect(internal.stackOfSelected).toEqual([0, 1, 2, 3, 4, 5]);
+      expect(stackIndices(internal.stackOfSelected, blockManager.blocks)).toEqual([0, 1, 2, 3, 4, 5]);
     });
 
     it('should correctly handle complete reversal past anchor', () => {
@@ -2931,7 +3066,7 @@ describe('RectangleSelection', () => {
       populateBlocksWithPositions(blockManager, 6);
 
       const internal = rectangleSelection as unknown as {
-        stackOfSelected: number[];
+        stackOfSelected: BlockType[];
         rectCrossesBlocks: boolean;
         anchorBlockIndex: number | null;
         trySelectNextBlock: (index: number) => void;
@@ -2958,7 +3093,7 @@ describe('RectangleSelection', () => {
       internal.trySelectNextBlock(1);
 
       // Anchor stays at 3, selection flips direction
-      expect(internal.stackOfSelected).toEqual([1, 2, 3]);
+      expect(stackIndices(internal.stackOfSelected, blockManager.blocks)).toEqual([1, 2, 3]);
       expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(4);
       expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(5);
       expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(1);
@@ -2975,7 +3110,7 @@ describe('RectangleSelection', () => {
       populateBlocksWithPositions(blockManager, 4);
 
       const internal = rectangleSelection as unknown as {
-        stackOfSelected: number[];
+        stackOfSelected: BlockType[];
         rectCrossesBlocks: boolean;
         anchorBlockIndex: number | null;
         trySelectNextBlock: (index: number) => void;
@@ -2990,7 +3125,7 @@ describe('RectangleSelection', () => {
       internal.mouseY = 175;
       internal.trySelectNextBlock(3);
 
-      expect(internal.stackOfSelected).toEqual([3]);
+      expect(stackIndices(internal.stackOfSelected, blockManager.blocks)).toEqual([3]);
       expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(3);
     });
   });
@@ -3147,7 +3282,7 @@ describe('RectangleSelection', () => {
     }
 
     const internal = rectangleSelection as unknown as {
-      stackOfSelected: number[];
+      stackOfSelected: BlockType[];
       rectCrossesBlocks: boolean;
       anchorBlockIndex: number | null;
       trySelectNextBlock: (index: number) => void;
@@ -3163,7 +3298,7 @@ describe('RectangleSelection', () => {
     internal.trySelectNextBlock(0);
     internal.mouseY = 125;  // block 2 center (100+25)
     internal.trySelectNextBlock(2);
-    expect(internal.stackOfSelected).toEqual([0, 1, 2]);
+    expect(stackIndices(internal.stackOfSelected, blockManager.blocks)).toEqual([0, 1, 2]);
 
     // Simulate mouseup (endSelection) — resets startY/mouseY to 0
     rectangleSelection.endSelection();
@@ -3191,7 +3326,7 @@ describe('RectangleSelection', () => {
     internal.trySelectNextBlock(5);
 
     // Blocks 4-5 should be selected in the current drag
-    expect(internal.stackOfSelected).toEqual([4, 5]);
+    expect(stackIndices(internal.stackOfSelected, blockManager.blocks)).toEqual([4, 5]);
     expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(4);
     expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(5);
 

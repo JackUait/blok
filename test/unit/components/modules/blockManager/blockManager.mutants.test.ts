@@ -322,6 +322,7 @@ const createHarness = (options: HarnessOptions): Harness => {
     privateFields.operations = {
       suppressStopCapturing: false,
       currentBlockIndexValue: 0,
+      endUndoStepIfCurrentIndexChanged: vi.fn(),
       currentBlock: 'currentBlock' in options ? options.currentBlock : undefined,
       removeBlock: operationsRemoveBlock,
       insert: operationsInsert,
@@ -704,6 +705,7 @@ describe('BlockManager.duplicateCurrentBlock', () => {
     (blockManager as unknown as Record<string, unknown>).operations = {
       suppressStopCapturing: false,
       currentBlockIndexValue: 0,
+      endUndoStepIfCurrentIndexChanged: vi.fn(),
       currentBlock: options.currentBlock,
     };
 
@@ -947,7 +949,8 @@ describe('BlockManager.setCurrentBlockByChildNode', () => {
     };
     (blockManager as unknown as Record<string, unknown>).operations = {
       suppressStopCapturing: false,
-      currentBlockIndexValue: 0,
+      currentBlockIndexValue: -1,
+      endUndoStepIfCurrentIndexChanged: vi.fn(),
     };
 
     blockManager.state = {
@@ -2508,6 +2511,8 @@ describe('BlockManager prepared boot — real sub-module closures', () => {
       Caret: {},
       I18n: {},
       ReadOnly: { isEnabled: readOnly },
+      BlockSelection: { forgetRemovedBlock: vi.fn() },
+      RectangleSelection: { forgetRemovedBlock: vi.fn() },
       ...extra,
     };
   };
@@ -2542,14 +2547,17 @@ describe('BlockManager prepared boot — real sub-module closures', () => {
   const stubOperationsAfterBoot = (harness: Harness): Mock => {
     const insert = vi.fn(() => createBlockStub({ id: 'repair', name: 'paragraph' }));
 
-    privateOf(harness).operations = { insert };
+    privateOf(harness).operations = { insert, forgetCurrentBlock: vi.fn() };
 
     return insert;
   };
 
-  /** The REAL post-prepare blocks array (Blocks instance behind the proxy). */
-  const rawArrayOf = (harness: Harness): Block[] =>
-    (privateOf(harness)._blocks as { array: Block[] }).array;
+  /** Appends to the REAL post-prepare store, with no DOM or lifecycle work. */
+  const seedStore = (harness: Harness, ...blocks: Block[]): void => {
+    const store = privateOf(harness)._blocks as Blocks;
+
+    blocks.forEach((block) => store.addToArray(store.length, block));
+  };
 
   const blokOf = (harness: Harness): { BlockEvents: Record<string, Mock> } =>
     (harness.blockManager as unknown as { Blok: { BlockEvents: Record<string, Mock> } }).Blok;
@@ -2596,7 +2604,7 @@ describe('BlockManager prepared boot — real sub-module closures', () => {
       }),
     } as unknown as Block;
 
-    rawArrayOf(harness).push(bindable);
+    seedStore(harness, bindable);
     binderOf(harness).bindBlockEvents(bindable);
 
     expect(didMutatedCallbacks).toHaveLength(1);
@@ -2696,7 +2704,7 @@ describe('BlockManager prepared boot — real sub-module closures', () => {
     const child = createBlockStub({ id: 'child', parentId: null });
     const harness = buildBooted();
 
-    rawArrayOf(harness).push(parent, child);
+    seedStore(harness, parent, child);
     harness.blockManager.setBlockParent(child, 'parent');
     await settle();
 
@@ -2711,7 +2719,7 @@ describe('BlockManager prepared boot — real sub-module closures', () => {
     const child = createBlockStub({ id: 'child', parentId: null });
     const harness = buildBooted();
 
-    rawArrayOf(harness).push(parent, child);
+    seedStore(harness, parent, child);
     await harness.blockManager.withViewRebuild(async () => {
       harness.blockManager.setBlockParent(child, 'parent');
     });
@@ -2728,7 +2736,7 @@ describe('BlockManager prepared boot — real sub-module closures', () => {
     const child = createBlockStub({ id: 'child', parentId: null });
     const harness = buildBooted({ blocks: [child] });
 
-    rawArrayOf(harness).push(child);
+    seedStore(harness, child);
 
     await harness.blockManager.withViewRebuild(async () => {
       expect(() => harness.blockManager.setBlockParent(child, 'ghost')).not.toThrow();
@@ -2755,11 +2763,33 @@ describe('BlockManager prepared boot — real sub-module closures', () => {
     await harness.blockManager.destroy();
   });
 
+  it('tells both selection modules to forget a block a replayed removal deletes', async () => {
+    const block = createBlockStub({ id: 'b1' });
+    const harness = buildBooted();
+    const selectionModules = harness.blockManager as unknown as {
+      Blok: {
+        BlockSelection: { forgetRemovedBlock: Mock };
+        RectangleSelection: { forgetRemovedBlock: Mock };
+      };
+    };
+
+    seedStore(harness, block);
+    stubOperationsAfterBoot(harness);
+
+    invokePrivate(realYjsSyncOf(harness), 'handleYjsRemove', 'b1');
+    await settle();
+
+    expect(selectionModules.Blok.BlockSelection.forgetRemovedBlock).toHaveBeenCalledWith(block);
+    expect(selectionModules.Blok.RectangleSelection.forgetRemovedBlock).toHaveBeenCalledWith(block);
+
+    await harness.blockManager.destroy();
+  });
+
   it('repairs an emptied document with one default block after a replayed removal', async () => {
     const block = createBlockStub({ id: 'b1' });
     const harness = buildBooted();
 
-    rawArrayOf(harness).push(block);
+    seedStore(harness, block);
     const insert = stubOperationsAfterBoot(harness);
 
     invokePrivate(realYjsSyncOf(harness), 'handleYjsRemove', 'b1');
@@ -2779,7 +2809,7 @@ describe('BlockManager prepared boot — real sub-module closures', () => {
     const block = createBlockStub({ id: 'b1' });
     const harness = buildBooted();
 
-    rawArrayOf(harness).push(block);
+    seedStore(harness, block);
     const newBlock = createBlockStub({ id: 'b1' });
     const composeSpy = vi.spyOn(
       privateOf(harness).factory as { composeBlock: (o: unknown) => Block },

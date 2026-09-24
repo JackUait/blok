@@ -3,6 +3,7 @@ import type { BlockId } from '../../../types/data-formats/block-id';
 import { CHILD_SLOT_SELECTOR, SELF_PLACING_PARENTS } from '../../tools/nested-blocks';
 
 import { resolveHomeSlot } from './home-slot';
+import { dfsOrder } from './tree-order';
 
 /**
  * Hierarchy invariant validator.
@@ -382,6 +383,57 @@ export const validateFlatOrder = (blocks: LiveBlockInput[]): FlatOrderViolation[
     actual: blocks[index]?.id,
     message:
       `Flat block order is not depth-first at index ${index}: expected ${String(expected[index])}, found ${String(blocks[index]?.id)} ` +
+      `(flat ${around(blocks.map(b => b.id))} vs tree ${around(expected)})`,
+  }];
+};
+
+export interface TreeOrderInput extends LiveBlockInput {
+  contentIds: readonly string[];
+}
+
+export interface TreeOrderViolation {
+  kind: 'flat-order-not-tree-order';
+  index: number;
+  expected: string | undefined;
+  actual: string | undefined;
+  message: string;
+}
+
+/**
+ * Detect a flat block array that is not the tree's depth-first walk as
+ * {@link dfsOrder} defines it: roots in flat order, children by `contentIds`
+ * then unlisted ones in flat order, a dangling parentId as root, blocks a
+ * parent cycle cuts off last in flat order.
+ * Report-only for now: nothing gates on it.
+ * @param blocks - the flat block array
+ */
+export const validateTreeOrder = (blocks: TreeOrderInput[]): TreeOrderViolation[] => {
+  const byId = new Map<string, TreeOrderInput>();
+
+  blocks.forEach(b => {
+    if (!byId.has(b.id)) {
+      byId.set(b.id, b);
+    }
+  });
+
+  const expected = dfsOrder({ blocks, getById: id => byId.get(id) }).map(b => b.id);
+
+  const length = Math.max(expected.length, blocks.length);
+  const index = Array.from({ length }, (_, i) => i).find(i => expected[i] !== blocks[i]?.id);
+
+  if (index === undefined) {
+    return [];
+  }
+
+  const around = (list: Array<string | undefined>): string => list.slice(Math.max(0, index - 2), index + 3).map(String).join(',');
+
+  return [{
+    kind: 'flat-order-not-tree-order',
+    index,
+    expected: expected[index],
+    actual: blocks[index]?.id,
+    message:
+      `Flat block order is not the contentIds tree walk at index ${index}: expected ${String(expected[index])}, found ${String(blocks[index]?.id)} ` +
       `(flat ${around(blocks.map(b => b.id))} vs tree ${around(expected)})`,
   }];
 };

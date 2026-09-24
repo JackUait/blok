@@ -19,6 +19,14 @@ export class Blocks {
   public blocks: Block[];
 
   /**
+   * Id → blocks with that id. Every write to `blocks` that adds or drops a
+   * block must update it; `idIndexViolations` finds drift.
+   * A list, not one block: the store can hold two blocks with one id, and
+   * `getById` must then return the first in array order.
+   */
+  private byId = new Map<string, Block[]>();
+
+  /**
    * Blok`s area where to add Block`s HTML
    */
   public workingArea: HTMLElement;
@@ -130,6 +138,7 @@ export class Blocks {
    */
   public push(block: Block): void {
     this.blocks.push(block);
+    this.track(block);
     this.insertToDOM(block);
   }
 
@@ -248,12 +257,15 @@ export class Blocks {
       blockToReplace.holder.replaceWith(block.holder);
 
       this.blocks.splice(insertIndex, 1, block);
+      this.untrack(blockToReplace);
+      this.track(block);
       this.callRenderedHook(block);
 
       return;
     }
 
     this.blocks.splice(insertIndex, 0, block);
+    this.track(block);
 
     /**
      * When appendToWorkingArea is true, always append to the working area
@@ -379,6 +391,8 @@ export class Blocks {
     prevBlock.holder.replaceWith(block.holder);
 
     this.blocks[index] = block;
+    this.untrack(prevBlock);
+    this.track(block);
 
     this.callRenderedHook(block);
   }
@@ -408,6 +422,7 @@ export class Blocks {
 
     if (!this.length) {
       this.blocks.push(...blocks);
+      blocks.forEach((block) => this.track(block));
       this.workingArea.appendChild(fragment);
 
       blocks.forEach((block) => this.callRenderedHook(block));
@@ -435,6 +450,7 @@ export class Blocks {
      * Insert blocks to the array at the specified index
      */
     this.blocks.splice(index, 0, ...blocks);
+    blocks.forEach((block) => this.track(block));
 
     /**
      * Call Rendered event for each block
@@ -475,6 +491,7 @@ export class Blocks {
     blockToRemove.holder.remove();
 
     this.blocks.splice(removeIndex, 1);
+    this.untrack(blockToRemove);
   }
 
   /**
@@ -492,6 +509,7 @@ export class Blocks {
 
     this.workingArea.innerHTML = '';
     this.blocks.length = 0;
+    this.byId.clear();
   }
 
   /**
@@ -559,6 +577,120 @@ export class Blocks {
     const insertIndex = index > this.length ? this.length : index;
 
     this.blocks.splice(insertIndex, 0, block);
+    this.track(block);
+  }
+
+  /**
+   * Returns the block with the passed id; with duplicate ids, the first one
+   * in array order.
+   * @param id - block id
+   */
+  public getById(id: string): Block | undefined {
+    const matches = this.byId.get(id);
+
+    if (matches === undefined) {
+      return undefined;
+    }
+
+    return matches.length === 1
+      ? matches[0]
+      : this.blocks.find((block) => block.id === id);
+  }
+
+  /**
+   * Replaces the array's order with `order`, which must hold the same blocks.
+   * Edits the array in place: callers keep a live reference to it.
+   * DOM is not touched.
+   * @param order - the same blocks in their new order
+   */
+  public reorder(order: Block[]): void {
+    this.blocks.splice(0, this.blocks.length, ...order);
+  }
+
+  /**
+   * Moves `block`'s holder into `slot` (null = the working area): before the
+   * first holder in that slot whose block comes later in the array, else at
+   * the slot's end. Later holders must already be in place, so a caller
+   * moving a subtree mounts it last block first.
+   * DOM only: the array is untouched and no lifecycle hook runs.
+   * @param block - the block, already at `index` in the array
+   * @param index - its index in the array
+   * @param slot - the element its holder belongs in, or null for the working area
+   */
+  public mount(block: Block, index: number, slot: Element | null): void {
+    if (this.blocks[index] !== block) {
+      throw new Error(`Blocks.mount: block "${block.id}" is not at index ${index}`);
+    }
+
+    const target = slot ?? this.workingArea;
+    const next = this.blocks.slice(index + 1).find((later) => later.holder.parentElement === target);
+
+    if (next !== undefined) {
+      moveElementBefore(block.holder, next.holder);
+    } else {
+      moveElementToEnd(target, block.holder);
+    }
+  }
+
+  /**
+   * Lists every mismatch between the array and the id index. Empty when they
+   * agree.
+   */
+  public idIndexViolations(): string[] {
+    const violations: string[] = [];
+    const indexed = new Map<Block, number>();
+
+    this.byId.forEach((matches, id) => {
+      matches.forEach((block) => {
+        if (block.id !== id) {
+          violations.push(`block ${block.id} is indexed under id ${id}`);
+        }
+        indexed.set(block, (indexed.get(block) ?? 0) + 1);
+      });
+    });
+
+    const inArray = new Map<Block, number>();
+
+    this.blocks.forEach((block) => inArray.set(block, (inArray.get(block) ?? 0) + 1));
+
+    inArray.forEach((count, block) => {
+      if (indexed.get(block) !== count) {
+        violations.push(`block ${block.id} is in the array ${count} time(s) but indexed ${indexed.get(block) ?? 0} time(s)`);
+      }
+    });
+
+    indexed.forEach((count, block) => {
+      if (!inArray.has(block)) {
+        violations.push(`block ${block.id} is indexed ${count} time(s) but not in the array`);
+      }
+    });
+
+    return violations;
+  }
+
+  private track(block: Block): void {
+    const matches = this.byId.get(block.id);
+
+    if (matches === undefined) {
+      this.byId.set(block.id, [ block ]);
+    } else {
+      matches.push(block);
+    }
+  }
+
+  private untrack(block: Block): void {
+    const matches = this.byId.get(block.id);
+    const at = matches?.indexOf(block) ?? -1;
+
+    if (matches === undefined || at === -1) {
+      return;
+    }
+
+    matches.splice(at, 1);
+
+    if (matches.length === 0) {
+      this.byId.delete(block.id);
+    }
   }
 
   /**

@@ -23,9 +23,10 @@ interface TestEditor {
 let editor: TestEditor | undefined;
 let holder: HTMLDivElement | undefined;
 
-const createEditor = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
+const createEditor = async (blocks: OutputBlockData[], readOnly = false): Promise<TestEditor> => {
   const instance = new Blok({
     holder,
+    readOnly,
     tools: {
       paragraph: Paragraph,
       list: ListItem,
@@ -42,6 +43,15 @@ const createEditor = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
 };
 
 const isEmpty = (instance: TestEditor, id: string): boolean | undefined => instance.blocks.getById(id)?.isEmpty;
+
+// The preview renders after isReady, so read it only once it has landed.
+const waitForPreview = async (instance: TestEditor, id: string): Promise<void> => {
+  await vi.waitFor(() => {
+    const preview = instance.blocks.getById(id)?.holder.querySelector('[data-blok-testid="code-preview"]');
+
+    expect(preview?.childNodes.length).toBeGreaterThan(0);
+  }, { timeout: 20_000, interval: 20 });
+};
 
 const ownText = (instance: TestEditor, id: string): string | undefined => {
   const block = instance.blocks.getById(id);
@@ -96,6 +106,28 @@ describe('Block.isEmpty ignores tool chrome', () => {
 
     expect(isEmpty(instance, 'K')).toBe(true);
     expect(isEmpty(instance, 'M')).toBe(true);
+  }, 30_000);
+
+  it('an empty mermaid block still reads empty once its preview has rendered', async () => {
+    const instance = await createEditor([
+      { id: 'M', type: 'code', data: { code: '', language: 'mermaid' } },
+    ]);
+
+    await waitForPreview(instance, 'M');
+
+    expect(isEmpty(instance, 'M')).toBe(true);
+    expect(ownText(instance, 'M')).toBe('');
+  }, 30_000);
+
+  it('an empty mermaid block still reads empty once its read-only preview has rendered', async () => {
+    const instance = await createEditor([
+      { id: 'M', type: 'code', data: { code: '', language: 'mermaid' } },
+    ], true);
+
+    await waitForPreview(instance, 'M');
+
+    expect(isEmpty(instance, 'M')).toBe(true);
+    expect(ownText(instance, 'M')).toBe('');
   }, 30_000);
 
   it('a code block with code is not empty', async () => {

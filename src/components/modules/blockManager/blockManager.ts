@@ -65,7 +65,7 @@ export class BlockManager extends Module {
    * @returns {number}
    */
   public get currentBlockIndex(): number {
-    return this._currentBlockIndex;
+    return this.operations ? this.operations.currentBlockIndexValue : this._currentBlockIndex;
   }
 
   /**
@@ -75,6 +75,8 @@ export class BlockManager extends Module {
   public set currentBlockIndex(newIndex: number) {
     if (this.operations) {
       this.operations.currentBlockIndexValue = newIndex;
+
+      return;
     }
     this._currentBlockIndex = newIndex;
   }
@@ -270,8 +272,8 @@ export class BlockManager extends Module {
   }
 
   /**
-   * Index of current working block
-   * @type {number}
+   * Current block index before `operations` exists; after that, operations
+   * owns the current block.
    */
   private _currentBlockIndex = -1;
 
@@ -514,6 +516,9 @@ export class BlockManager extends Module {
           this.blocksStore.replace(index, newBlock);
         },
         onBlockRemoved: (block, index) => {
+          this.operations.forgetCurrentBlock(block);
+          this.Blok.BlockSelection.forgetRemovedBlock(block);
+          this.Blok.RectangleSelection.forgetRemovedBlock(block);
           this.blockDidMutated(BlockRemovedMutationType, block, { index });
         },
         resyncBlockData: (block, options) => {
@@ -614,10 +619,7 @@ export class BlockManager extends Module {
    * @returns {Block}
    */
   public insert(options: InsertBlockOptions = {}): Block {
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    const result = this.operations.insert(options, this.blocksStore);
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    return result;
+    return this.operations.insert(options, this.blocksStore);
   }
 
   /**
@@ -731,6 +733,7 @@ export class BlockManager extends Module {
     if (notify && blocks.length > 0) {
       this.blockDidMutated(BlockAddedMutationType, blocks[0], {
         index,
+        parentId: blocks[0].parentId,
       });
     }
   }
@@ -814,10 +817,7 @@ export class BlockManager extends Module {
     skipYjsSync = false,
     forceTopLevel = false
   ): Block {
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    const result = this.operations.insertDefaultBlockAtIndex(index, needToFocus, skipYjsSync, this.blocksStore, forceTopLevel);
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    return result;
+    return this.operations.insertDefaultBlockAtIndex(index, needToFocus, skipYjsSync, this.blocksStore, forceTopLevel);
   }
 
   /**
@@ -845,10 +845,7 @@ export class BlockManager extends Module {
    * @param skipYjsSync - if true, skip syncing to Yjs (caller handles sync separately)
    */
   public removeBlock(block: Block, addLastBlock = true, skipYjsSync = false): Promise<void> {
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    const result = this.operations.removeBlock(block, addLastBlock, skipYjsSync, this.blocksStore);
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    return result;
+    return this.operations.removeBlock(block, addLastBlock, skipYjsSync, this.blocksStore);
   }
 
   /**
@@ -1005,10 +1002,7 @@ export class BlockManager extends Module {
    * Split current Block
    */
   public split(): Block {
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    const result = this.operations.split(this.blocksStore);
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    return result;
+    return this.operations.split(this.blocksStore);
   }
 
   /**
@@ -1123,10 +1117,7 @@ export class BlockManager extends Module {
     toolName?: string,
     options?: InsertInsideParentOptions
   ): Block {
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    const result = this.operations.insertInsideParent(parentId, insertIndex, this.blocksStore, childData, toolName, options);
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    return result;
+    return this.operations.insertInsideParent(parentId, insertIndex, this.blocksStore, childData, toolName, options);
   }
 
   /**
@@ -1255,13 +1246,10 @@ export class BlockManager extends Module {
     const oldParentId = block.parentId;
     // setBlockParent can move the block in the flat array, which shifts the
     // index of the current block.
-    const current = this.currentBlock;
+    const prevCurrentIndex = this.currentBlockIndex;
 
     this.hierarchy.setBlockParent(block, newParentId);
-
-    if (current !== undefined && this.blocks[this.currentBlockIndex] !== current) {
-      this.currentBlockIndex = this.getBlockIndex(current);
-    }
+    this.operations.endUndoStepIfCurrentIndexChanged(prevCurrentIndex);
 
     // Notify 'block changed' listeners that the tree structure changed, so
     // consumers like the React `useBlocks` hook re-render on a programmatic
@@ -1291,6 +1279,8 @@ export class BlockManager extends Module {
       this.blockDidMutated(BlockMovedMutationType, block, {
         fromIndex: index,
         toIndex: index,
+        parentId: actualNewParentId,
+        oldParentId,
       });
 
       // A reparent IS a move in the tree, so fire the tool's MOVED lifecycle hook
@@ -1533,9 +1523,7 @@ export class BlockManager extends Module {
    * Move a block to a new index
    */
   public move(toIndex: number, fromIndex: number = this.currentBlockIndex, skipDOM = false, skipMovedHook = false): void {
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
     this.operations.move(toIndex, fromIndex, skipDOM, this.blocksStore, skipMovedHook);
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
   }
 
   /**
@@ -1800,9 +1788,7 @@ export class BlockManager extends Module {
 
     const selectedBlocks = this.selectedBlocksForMove();
 
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
     this.operations.moveCurrentBlockUp(this.blocksStore, selectedBlocks);
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
 
     this.reselectAfterMove(selectedBlocks);
   }
@@ -1818,9 +1804,7 @@ export class BlockManager extends Module {
 
     const selectedBlocks = this.selectedBlocksForMove();
 
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
     this.operations.moveCurrentBlockDown(this.blocksStore, selectedBlocks);
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
 
     this.reselectAfterMove(selectedBlocks);
   }
@@ -1957,6 +1941,7 @@ export class BlockManager extends Module {
   ): void {
     const eventDetail = {
       target: new BlockAPI(block, this.Blok.API),
+      ...this.placementDetail(mutationType, block, detailData),
       ...detailData,
     };
 
@@ -1992,6 +1977,44 @@ export class BlockManager extends Module {
     this.eventsDispatcher.emit(BlockChanged, {
       event: event as BlockMutationEventMap[Type],
     });
+  }
+
+  /**
+   * Where an added or moved block sits, for its event: parent and previous
+   * sibling. Only a dispatch site that knows the final parent passes
+   * `parentId`; without it the event gets no placement, since the caller may
+   * still set the parent.
+   * @param mutationType - the event type
+   * @param block - the added or moved block
+   * @param detailData - the site's own detail fields
+   */
+  private placementDetail(
+    mutationType: BlockMutationType,
+    block: Block,
+    detailData: Record<string, unknown>
+  ): { parentId?: string | null; previousSiblingId?: string | null; oldParentId?: string | null } {
+    if (mutationType !== BlockAddedMutationType && mutationType !== BlockMovedMutationType) {
+      return {};
+    }
+
+    const given = detailData.parentId;
+
+    if (given !== null && typeof given !== 'string') {
+      return {};
+    }
+
+    const parentId = given;
+    // Unit harnesses dispatch on a BlockManager that was never prepared.
+    const blocks = (this.repository as BlockRepository | undefined)?.blocks ?? [];
+    // In depth-first order the nearest earlier block with the same parent is
+    // the previous sibling, unless the parent itself comes first.
+    const index = blocks.indexOf(block);
+    const previous = index <= 0
+      ? undefined
+      : blocks.slice(0, index).reverse().find(candidate => candidate.id === parentId || candidate.parentId === parentId);
+    const previousSiblingId = previous === undefined || previous.id === parentId ? null : previous.id;
+
+    return { parentId, previousSiblingId };
   }
 
   /**

@@ -157,6 +157,7 @@ const createHarness = (options: {
     },
     getBlockByIndex,
     getBlockById,
+    idIndexViolations: (): string[] => [],
   } as unknown as BlockRepository;
 
   const setBlockParent = vi.fn();
@@ -269,10 +270,9 @@ describe('BlockOperations — coordinator state and delegation', () => {
 
     it('returns the block at the current index', () => {
       const blocks = [createBlock('a'), createBlock('b')];
-      const { operations, getBlockByIndex } = createHarness({ blocks, currentBlockIndex: 1 });
+      const { operations } = createHarness({ blocks, currentBlockIndex: 1 });
 
       expect(operations.currentBlock).toBe(blocks[1]);
-      expect(getBlockByIndex).toHaveBeenCalledWith(1);
     });
   });
 

@@ -89,6 +89,12 @@ export interface InsertBlockOptions {
    */
   inferParent?: boolean;
   /**
+   * The block's final parent, which the caller may assign right after the
+   * insert. Only reported in the block-added event; without it (and without
+   * `inferParent`) the event carries no placement.
+   */
+  eventParentId?: string | null;
+  /**
    * Why this Block is being created — see {@link ComposeBlockOptions.origin}.
    * Defaults to `'api'`.
    */

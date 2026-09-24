@@ -346,6 +346,19 @@ export class YjsManager extends Module {
   }
 
   /**
+   * Add a new block at a placement (see `DocumentStore.addBlockAt`).
+   * @param blockData - Block data to add
+   * @param placement - Target parent (null = root) and preceding sibling (null = first)
+   * @returns The created Y.Map
+   */
+  public addBlockAt(blockData: YjsOutputBlockData, placement: BlockPlacement): Y.Map<unknown> {
+    this.flushPendingBlockWrites();
+    this.undoHistory.markCaretBeforeChange();
+
+    return this.documentStore.addBlockAt(blockData, placement);
+  }
+
+  /**
    * Remove a block by id.
    * @param id - Block id to remove
    */
@@ -396,6 +409,35 @@ export class YjsManager extends Module {
     this.documentStore.moveBlock(id, toIndex);
 
     const to = this.documentStore.getPlacement(id) ?? from;
+
+    this.undoHistory.recordMove({ blockId: id, from, to }, this.isInMoveGroup);
+  }
+
+  /**
+   * Move a block to a placement. Records `{from, to}` for move-undo/redo,
+   * so a parent change undoes with the position in one step.
+   * @param id - Block id to move
+   * @param placement - Target parent (null = root) and preceding sibling (null = first)
+   */
+  public moveBlockTo(id: string, placement: BlockPlacement): void {
+    this.flushPendingBlockWrites();
+
+    // Read BEFORE the mutation: it is what undo restores.
+    const from = this.documentStore.getPlacement(id);
+
+    // A no-op (refused cycle included) records nothing: no empty undo step,
+    // and no caret mark left pending for the NEXT change to take as its own.
+    if (from === null || this.documentStore.isNoOpMove(id, placement)) {
+      return;
+    }
+
+    this.undoHistory.markCaretBeforeChange();
+
+    this.documentStore.moveBlockTo(id, placement);
+
+    // Where it LANDED, not what was asked: a missing anchor appends, and a
+    // redo replaying that anchor would append again past later blocks.
+    const to = this.documentStore.getPlacement(id) ?? placement;
 
     this.undoHistory.recordMove({ blockId: id, from, to }, this.isInMoveGroup);
   }

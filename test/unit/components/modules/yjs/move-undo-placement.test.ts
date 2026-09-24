@@ -475,6 +475,173 @@ describe('placement-based move undo/redo', () => {
     });
   });
 
+  describe('placement API (moveBlockTo / addBlockAt)', () => {
+    it('undo and redo of a moveBlockTo survive a remote insert that shifted flat indices', () => {
+      manager.fromJSON([
+        paragraph('b1', 'one'),
+        paragraph('b2', 'two'),
+        paragraph('b3', 'three'),
+        paragraph('b4', 'four'),
+      ]);
+      syncPeerFromManager();
+
+      manager.moveBlockTo('b4', { parentId: null, afterId: 'b1' });
+      expect(orderedIds()).toEqual(['b1', 'b4', 'b2', 'b3']);
+
+      peer.addBlock(paragraph('r1', 'remote one'), 0);
+      applyPeerChangesToManager();
+
+      manager.undo();
+      expect(orderedIds()).toEqual(['r1', 'b1', 'b2', 'b3', 'b4']);
+
+      manager.redo();
+      expect(orderedIds()).toEqual(['r1', 'b1', 'b4', 'b2', 'b3']);
+    });
+
+    it('one undo reverses a cross-parent moveBlockTo: parent and slot together', () => {
+      manager.fromJSON([
+        paragraph('p', 'parent', { content: ['c1', 'c2'] }),
+        paragraph('c1', 'child one', { parent: 'p' }),
+        paragraph('c2', 'child two', { parent: 'p' }),
+        paragraph('x', 'moved'),
+      ]);
+
+      manager.moveBlockTo('x', { parentId: 'p', afterId: 'c1' });
+      expect(orderedIds()).toEqual(['p', 'c1', 'x', 'c2']);
+      expect(manager.toJSON().find((block) => block.id === 'x')?.parent).toBe('p');
+
+      manager.undo();
+      expect(orderedIds()).toEqual(['p', 'c1', 'c2', 'x']);
+      expect(manager.toJSON().find((block) => block.id === 'x')?.parent).toBeUndefined();
+      expect(manager.canUndo()).toBe(false);
+
+      manager.redo();
+      expect(orderedIds()).toEqual(['p', 'c1', 'x', 'c2']);
+      expect(manager.toJSON().find((block) => block.id === 'x')?.parent).toBe('p');
+    });
+
+    it('undo restores a block whose moveBlockTo was refused as a cycle', () => {
+      manager.fromJSON([
+        paragraph('outer', 'outer', { content: ['inner'] }),
+        paragraph('inner', 'inner', { parent: 'outer' }),
+        paragraph('tail', 'tail'),
+      ]);
+
+      manager.moveBlockTo('outer', { parentId: 'inner', afterId: null });
+
+      expect(orderedIds()).toEqual(['outer', 'inner', 'tail']);
+      expect(manager.toJSON().find((block) => block.id === 'outer')?.parent).toBeUndefined();
+      expect(manager.canUndo()).toBe(false);
+    });
+
+    it('an undo whose recorded parent became a descendant leaves the block in place', () => {
+      manager.fromJSON([
+        paragraph('p', 'parent', { content: ['x'] }),
+        paragraph('x', 'moved', { parent: 'p' }),
+        paragraph('t', 'tail'),
+        paragraph('u', 'last'),
+      ]);
+      syncPeerFromManager();
+
+      manager.moveBlockTo('x', { parentId: null, afterId: 't' });
+      expect(orderedIds()).toEqual(['p', 't', 'x', 'u']);
+
+      // The peer nests p under x without moving x, so the undo still runs
+      // and restoring x under p would close a cycle.
+      peer.applyRemoteUpdate(manager.encodeStateAsUpdate(peer.getStateVector()));
+      peer.applyPlacement('p', { parentId: 'x', afterId: null }, 'local');
+      applyPeerChangesToManager();
+      expect(orderedIds()).toEqual(['t', 'x', 'p', 'u']);
+
+      manager.undo();
+
+      expect(orderedIds()).toEqual(['t', 'x', 'p', 'u']);
+      expect(manager.toJSON().find((block) => block.id === 'x')?.parent).toBeUndefined();
+    });
+
+    it('redo lands where the move actually landed, not on a missing anchor', () => {
+      manager.fromJSON([
+        paragraph('a', 'a'),
+        paragraph('b', 'b'),
+        paragraph('c', 'c'),
+      ]);
+      syncPeerFromManager();
+
+      // A missing anchor appends: a lands after c.
+      manager.moveBlockTo('a', { parentId: null, afterId: 'gone' });
+      expect(orderedIds()).toEqual(['b', 'c', 'a']);
+
+      manager.undo();
+      expect(orderedIds()).toEqual(['a', 'b', 'c']);
+
+      peer.addBlock(paragraph('r', 'remote'));
+      applyPeerChangesToManager();
+
+      manager.redo();
+
+      // Same as the index API: a goes back after c, not after r.
+      expect(orderedIds()).toEqual(['b', 'c', 'a', 'r']);
+    });
+
+    it('a moveBlockTo anchored after the block itself records nothing', () => {
+      manager.fromJSON([
+        paragraph('b1', 'one'),
+        paragraph('b2', 'two'),
+      ]);
+
+      manager.moveBlockTo('b1', { parentId: null, afterId: 'b1' });
+
+      expect(manager.canUndo()).toBe(false);
+      expect(orderedIds()).toEqual(['b1', 'b2']);
+    });
+
+    it('a moveBlockTo to the placement the block already holds records nothing', () => {
+      manager.fromJSON([
+        paragraph('b1', 'one'),
+        paragraph('b2', 'two'),
+      ]);
+
+      manager.moveBlockTo('b2', { parentId: null, afterId: 'b1' });
+
+      expect(manager.canUndo()).toBe(false);
+    });
+
+    it('moveBlockTo calls inside one move group undo together', () => {
+      manager.fromJSON([
+        paragraph('b1', 'one'),
+        paragraph('b2', 'two'),
+        paragraph('b3', 'three'),
+      ]);
+
+      manager.transactMoves(() => {
+        manager.moveBlockTo('b3', { parentId: null, afterId: null });
+        manager.moveBlockTo('b2', { parentId: null, afterId: 'b3' });
+      });
+      expect(orderedIds()).toEqual(['b3', 'b2', 'b1']);
+
+      manager.undo();
+      expect(orderedIds()).toEqual(['b1', 'b2', 'b3']);
+    });
+
+    it('addBlockAt is one undo step that removes the block, and redo puts it back in place', () => {
+      manager.fromJSON([
+        paragraph('p', 'parent', { content: ['c1'] }),
+        paragraph('c1', 'child one', { parent: 'p' }),
+        paragraph('r', 'root'),
+      ]);
+
+      manager.addBlockAt(paragraph('x', 'added'), { parentId: 'p', afterId: null });
+      expect(orderedIds()).toEqual(['p', 'x', 'c1', 'r']);
+
+      manager.undo();
+      expect(orderedIds()).toEqual(['p', 'c1', 'r']);
+
+      manager.redo();
+      expect(orderedIds()).toEqual(['p', 'x', 'c1', 'r']);
+      expect(manager.toJSON().find((block) => block.id === 'x')?.parent).toBe('p');
+    });
+  });
+
   describe('replay event profile', () => {
     let store: DocumentStore;
     let observer: BlockObserver;
@@ -524,6 +691,33 @@ describe('placement-based move undo/redo', () => {
       store.applyPlacement('b1', { parentId: null, afterId: 'b2' }, 'move-redo');
 
       expect(events).toEqual([{ type: 'move', blockId: 'b1', origin: 'redo' }]);
+    });
+
+    it('a same-parent moveBlockTo emits ONLY a local move', () => {
+      store.fromJSON([
+        paragraph('b1', 'one'),
+        paragraph('b2', 'two'),
+      ]);
+
+      events.length = 0;
+      store.moveBlockTo('b1', { parentId: null, afterId: 'b2' });
+
+      expect(events).toEqual([{ type: 'move', blockId: 'b1', origin: 'local' }]);
+    });
+
+    it('a cross-parent moveBlockTo emits a local move AND a local update (the parentId write)', () => {
+      store.fromJSON([
+        paragraph('p', 'parent'),
+        paragraph('x', 'moved'),
+      ]);
+
+      events.length = 0;
+      store.moveBlockTo('x', { parentId: 'p', afterId: null });
+
+      expect(events).toEqual([
+        { type: 'move', blockId: 'x', origin: 'local' },
+        { type: 'update', blockId: 'x', origin: 'local' },
+      ]);
     });
   });
 });

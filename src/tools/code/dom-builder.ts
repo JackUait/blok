@@ -89,6 +89,8 @@ function buildViewModeElements(
 
   previewElement.className = PREVIEW_AREA_STYLES;
   previewElement.setAttribute('data-blok-testid', 'code-preview');
+  // Rendered from the code, not typed: an empty block's error text must not make it non-empty.
+  previewElement.setAttribute(DATA_ATTR.chrome, '');
 
   // Split container — wraps code body + preview
   const splitContainer = document.createElement('div');

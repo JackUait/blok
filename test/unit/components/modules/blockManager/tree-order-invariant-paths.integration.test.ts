@@ -3,11 +3,13 @@
  * order, or a holder outside its home slot. The save gate
  * (`Saver.assertTreePlacement`) throws under NODE_ENV=test, so `save()`
  * resolving is the placement check; the flat ids pin where the block went.
+ * After every test the flat array must also be the contentIds tree walk.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Blok } from '../../../../../src/blok';
 import type { Block } from '../../../../../src/components/block';
+import { validateTreeOrder } from '../../../../../src/components/utils/hierarchy-invariant';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import { Header } from '../../../../../src/tools/header';
 import { ToggleItem } from '../../../../../src/tools/toggle';
@@ -24,9 +26,15 @@ interface TestEditor {
   destroy: () => void;
   blocks: API['blocks'];
   caret: API['caret'];
-  history: { undo: () => void };
+  history: { undo: () => void; redo: () => void };
   module: {
-    blockManager: { blocks: Block[]; replace: (block: Block, tool: string, data: Record<string, unknown>) => Block };
+    blockManager: {
+      blocks: Block[];
+      currentBlockIndex: number;
+      replace: (block: Block, tool: string, data: Record<string, unknown>) => Block;
+      moveCurrentBlockUp: () => void;
+      moveCurrentBlockDown: () => void;
+    };
     blockSelection: { selectBlock: (block: Block) => void };
     blockEvents: { keydown: (event: KeyboardEvent) => void };
     dragManager: { duplicateBlocksInPlace: (block: Block) => Promise<Block[]> };
@@ -123,6 +131,9 @@ describe('tree order on public paths', () => {
   });
 
   afterEach(() => {
+    const blocks = editor?.module.blockManager.blocks ?? [];
+
+    expect(validateTreeOrder(blocks).map(drift => drift.message)).toEqual([]);
     editor?.destroy();
     holder?.remove();
     editor = undefined;
@@ -515,6 +526,107 @@ describe('tree order on public paths', () => {
 
       await expect(instance.save()).resolves.toBeDefined();
       expect(flat(instance)).toEqual(['t^-', 'c1^t', 'new^t', 'z^-', 'y^-']);
+    }, 30_000);
+  });
+  describe('a same-parent reorder keeps the public contentIds in step with getChildren', () => {
+    const publicOrder = (instance: TestEditor, parentId: string): { contentIds: string[]; children: string[] } => ({
+      contentIds: [...(instance.blocks.getById(parentId)?.contentIds ?? [])],
+      children: instance.blocks.getChildren(parentId).map(child => child.id),
+    });
+    const threeChildren = (): OutputBlockData[] => [T('t', ['c1', 'c2', 'c3']), P('c1', 't'), P('c2', 't'), P('c3', 't'), P('z')];
+
+    it('keyboard move up of the last child', async () => {
+      const instance = await boot(threeChildren());
+
+      instance.module.blockManager.currentBlockIndex = 3;
+      instance.module.blockManager.moveCurrentBlockUp();
+
+      expect(publicOrder(instance, 't')).toEqual({ contentIds: ['c1', 'c3', 'c2'], children: ['c1', 'c3', 'c2'] });
+      await expect(instance.save()).resolves.toBeDefined();
+    }, 30_000);
+
+    it('keyboard move down of the first child', async () => {
+      const instance = await boot(threeChildren());
+
+      instance.module.blockManager.currentBlockIndex = 1;
+      instance.module.blockManager.moveCurrentBlockDown();
+
+      expect(publicOrder(instance, 't')).toEqual({ contentIds: ['c2', 'c1', 'c3'], children: ['c2', 'c1', 'c3'] });
+      await expect(instance.save()).resolves.toBeDefined();
+    }, 30_000);
+
+    it('blocks.move of the last child to the first child index', async () => {
+      const instance = await boot(threeChildren());
+
+      instance.blocks.move(1, 3);
+
+      expect(publicOrder(instance, 't')).toEqual({ contentIds: ['c3', 'c1', 'c2'], children: ['c3', 'c1', 'c2'] });
+      await expect(instance.save()).resolves.toBeDefined();
+    }, 30_000);
+
+    it('blocks.moveTo the start of the same parent', async () => {
+      const instance = await boot(threeChildren());
+
+      instance.blocks.moveTo('c3', { parentId: 't', position: 'start' });
+
+      expect(publicOrder(instance, 't')).toEqual({ contentIds: ['c3', 'c1', 'c2'], children: ['c3', 'c1', 'c2'] });
+      await expect(instance.save()).resolves.toBeDefined();
+    }, 30_000);
+
+    it('undo and redo of a keyboard move up', async () => {
+      const instance = await boot(threeChildren());
+
+      instance.module.blockManager.currentBlockIndex = 3;
+      instance.module.blockManager.moveCurrentBlockUp();
+      instance.module.yjsManager.stopCapturing();
+      instance.history.undo();
+      await settle();
+
+      expect(publicOrder(instance, 't')).toEqual({ contentIds: ['c1', 'c2', 'c3'], children: ['c1', 'c2', 'c3'] });
+
+      instance.history.redo();
+      await settle();
+
+      expect(publicOrder(instance, 't')).toEqual({ contentIds: ['c1', 'c3', 'c2'], children: ['c1', 'c3', 'c2'] });
+      await expect(instance.save()).resolves.toBeDefined();
+    }, 30_000);
+
+    it('keyboard move up of two selected children', async () => {
+      const instance = await boot(threeChildren());
+      const [, , c2, c3] = instance.module.blockManager.blocks;
+
+      instance.module.blockSelection.selectBlock(c2);
+      instance.module.blockSelection.selectBlock(c3);
+      instance.module.blockManager.currentBlockIndex = 2;
+      instance.module.blockManager.moveCurrentBlockUp();
+
+      expect(publicOrder(instance, 't')).toEqual({ contentIds: ['c2', 'c3', 'c1'], children: ['c2', 'c3', 'c1'] });
+      await expect(instance.save()).resolves.toBeDefined();
+    }, 30_000);
+
+    it('keyboard move up of a callout child that has its own children', async () => {
+      const instance = await boot([
+        { id: 'k', type: 'callout', data: { emoji: '' }, content: ['k1', 'k2'] },
+        P('k1', 'k'),
+        T('k2', ['g'], 'k'),
+        P('g', 'k2'),
+        P('z'),
+      ]);
+
+      instance.module.blockManager.currentBlockIndex = 2;
+      instance.module.blockManager.moveCurrentBlockUp();
+
+      expect(publicOrder(instance, 'k')).toEqual({ contentIds: ['k2', 'k1'], children: ['k2', 'k1'] });
+      await expect(instance.save()).resolves.toBeDefined();
+    }, 30_000);
+
+    it('blocks.moveTo after a sibling in the same parent', async () => {
+      const instance = await boot(threeChildren());
+
+      instance.blocks.moveTo('c1', { position: { after: 'c2' } });
+
+      expect(publicOrder(instance, 't')).toEqual({ contentIds: ['c2', 'c1', 'c3'], children: ['c2', 'c1', 'c3'] });
+      await expect(instance.save()).resolves.toBeDefined();
     }, 30_000);
   });
 });

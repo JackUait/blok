@@ -3,6 +3,7 @@ import { afterEach, describe, it, expect } from 'vitest';
 import {
   assertHierarchy,
   validateFlatOrder,
+  validateTreeOrder,
   validateHierarchy,
   validateHolderAttachment,
   validateHomeSlots
@@ -446,6 +447,110 @@ describe('hierarchy-invariant', () => {
 
     it('reports nothing for an empty list', () => {
       expect(validateFlatOrder([])).toEqual([]);
+    });
+  });
+  describe('validateTreeOrder', () => {
+    const block = (id: string, parentId: string | null, contentIds: string[] = [], name = 'paragraph'): {
+      id: string;
+      name: string;
+      parentId: string | null;
+      contentIds: string[];
+    } => ({ id, name, parentId, contentIds });
+
+    it('accepts a flat order that walks roots in array order and children by contentIds', () => {
+      expect(validateTreeOrder([
+        block('a', null),
+        block('t', null, ['c2', 'c1'], 'toggle'),
+        block('c2', 't', ['g'], 'toggle'),
+        block('g', 'c2'),
+        block('c1', 't'),
+        block('b', null),
+      ])).toEqual([]);
+    });
+
+    it('flags siblings whose flat order differs from contentIds', () => {
+      const violations = validateTreeOrder([
+        block('t', null, ['c2', 'c1'], 'toggle'),
+        block('c1', 't'),
+        block('c2', 't'),
+      ]);
+
+      expect(violations).toHaveLength(1);
+      expect(violations[0].kind).toBe('flat-order-not-tree-order');
+      expect(violations[0].index).toBe(1);
+      expect(violations[0].expected).toBe('c2');
+      expect(violations[0].actual).toBe('c1');
+      expect(violations[0].message).toMatch(/contentIds/);
+    });
+
+    it('accepts children missing from contentIds after the listed ones, in flat order', () => {
+      expect(validateTreeOrder([
+        block('t', null, ['c2'], 'toggle'),
+        block('c2', 't'),
+        block('u1', 't'),
+        block('u2', 't'),
+      ])).toEqual([]);
+    });
+
+    it('flags an unlisted child placed before a listed one', () => {
+      expect(validateTreeOrder([
+        block('t', null, ['c2'], 'toggle'),
+        block('u1', 't'),
+        block('c2', 't'),
+      ])).toHaveLength(1);
+    });
+
+    it('ignores a contentIds entry whose block names another parent', () => {
+      expect(validateTreeOrder([
+        block('t', null, ['x', 'c1'], 'toggle'),
+        block('c1', 't'),
+        block('s', null, ['x'], 'toggle'),
+        block('x', 's'),
+      ])).toEqual([]);
+    });
+
+    it('ignores dangling and duplicate contentIds entries', () => {
+      expect(validateTreeOrder([
+        block('t', null, ['ghost', 'c1', 'c1', 'c2'], 'toggle'),
+        block('c1', 't'),
+        block('c2', 't'),
+      ])).toEqual([]);
+    });
+
+    it('flags a root block wedged inside a container subtree', () => {
+      expect(validateTreeOrder([
+        block('t', null, ['c1', 'c2'], 'toggle'),
+        block('c1', 't'),
+        block('r', null),
+        block('c2', 't'),
+      ])).toHaveLength(1);
+    });
+
+    it('treats a dangling parentId as root', () => {
+      expect(validateTreeOrder([
+        block('a', null),
+        block('orphan', 'ghost'),
+      ])).toEqual([]);
+    });
+
+    it('accepts blocks caught in a parent cycle last, in flat order', () => {
+      expect(validateTreeOrder([
+        block('r', null),
+        block('a', 'b', ['b']),
+        block('b', 'a', ['a']),
+      ])).toEqual([]);
+    });
+
+    it('flags a block caught in a parent cycle placed before a reachable block', () => {
+      expect(validateTreeOrder([
+        block('a', 'b', ['b']),
+        block('r', null),
+        block('b', 'a', ['a']),
+      ])).toHaveLength(1);
+    });
+
+    it('reports nothing for an empty list', () => {
+      expect(validateTreeOrder([])).toEqual([]);
     });
   });
 });

@@ -120,6 +120,7 @@ describe('BlockRepository', () => {
   let workingArea: HTMLElement;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     repository = new BlockRepository();
     workingArea = document.createElement('div');
     document.body.appendChild(workingArea);
@@ -127,6 +128,7 @@ describe('BlockRepository', () => {
 
   afterEach(() => {
     workingArea.remove();
+    vi.restoreAllMocks();
   });
 
   describe('initialization', () => {
@@ -333,6 +335,47 @@ describe('BlockRepository', () => {
       const block = repository.getBlockById('unknown-id');
 
       expect(block).toBeUndefined();
+    });
+
+    it('reads the store id index, not the array', () => {
+      const store = createBlocksStore(0);
+      const indexed = createMockBlock({ id: 'indexed' });
+      const lookup = vi.spyOn(store, 'getById').mockReturnValue(indexed);
+
+      repository.initialize(store);
+
+      expect(repository.getBlockById('indexed')).toBe(indexed);
+      expect(lookup).toHaveBeenCalledWith('indexed');
+    });
+  });
+
+  describe('reorderBlocks', () => {
+    it('reorders the live array and keeps id lookup', () => {
+      const store = createBlocksStore(3);
+
+      repository.initialize(store);
+
+      const live = repository.blocks;
+      const [first, second, third] = live;
+
+      repository.reorderBlocks([third, first, second]);
+
+      expect(repository.blocks).toBe(live);
+      expect(live.map((block) => block.id)).toEqual(['block-2', 'block-0', 'block-1']);
+      expect(repository.getBlockById('block-0')).toBe(first);
+    });
+  });
+
+  describe('idIndexViolations', () => {
+    it('reports a block written to the array behind the store', () => {
+      const store = createBlocksStore(1);
+
+      repository.initialize(store);
+      store.array.push(createMockBlock({ id: 'sneaked' }));
+
+      expect(repository.idIndexViolations()).toEqual([
+        'block sneaked is in the array 1 time(s) but indexed 0 time(s)',
+      ]);
     });
   });
 

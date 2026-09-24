@@ -114,18 +114,18 @@ export class BlockInsertion {
       forceTopLevel = false,
       origin = 'api',
       inferParent = false,
+      eventParentId,
     } = options;
 
-    const current = this.ctx.rawCurrentBlockIndex >= 0
-      ? this.repository.getBlockByIndex(this.ctx.rawCurrentBlockIndex)
-      : undefined;
+    const prevIndex = this.ctx.rawCurrentBlockIndex;
+    const current = this.ctx.currentBlock;
     // "After the current block" is after its whole run when it is a table or
     // database: current + 1 is its first cell's slot.
     const afterCurrentRun = index === undefined && !replace && current !== undefined && this.isOutermostSelfPlacing(current)
       ? current
       : undefined;
     const requestedIndex = index
-      ?? (afterCurrentRun !== undefined ? this.subtreeEnd(afterCurrentRun) : this.ctx.rawCurrentBlockIndex + (replace ? 0 : 1));
+      ?? (afterCurrentRun !== undefined ? this.subtreeEnd(afterCurrentRun) : prevIndex + (replace ? 0 : 1));
     const slot = inferParent && !replace && !forceTopLevel && !appendToWorkingArea
       ? this.inferredSlot(requestedIndex)
       : undefined;
@@ -333,17 +333,12 @@ export class BlockInsertion {
     }
 
     /**
-     * Update the raw currentBlockIndex BEFORE firing the mutation event so
-     * that listeners (e.g. TableCellBlocks.handleBlockMutation) see the
-     * index of the newly inserted block. We bypass the setter to avoid
-     * triggering stopCapturing prematurely — that happens after Yjs sync.
+     * Point at the new block BEFORE firing the mutation event so listeners
+     * (e.g. TableCellBlocks.handleBlockMutation) see it as current. The raw
+     * setter defers stopCapturing until after Yjs sync.
      */
-    const prevIndex = this.ctx.rawCurrentBlockIndex;
-
-    if (needToFocus) {
-      this.ctx.rawCurrentBlockIndex = targetIndex;
-    } else if (targetIndex <= this.ctx.rawCurrentBlockIndex) {
-      this.ctx.rawCurrentBlockIndex++;
+    if (needToFocus || (blockToReplace !== undefined && blockToReplace === current)) {
+      this.ctx.setCurrentBlockRaw(block);
     }
 
     /**
@@ -351,6 +346,10 @@ export class BlockInsertion {
      */
     this.blockDidMutated(BlockAddedMutationType, block, {
       index: targetIndex,
+      // Placement only when it is final here: an inferring insert has set it,
+      // other callers name it, the rest (paste, replay) set it later.
+      ...(eventParentId !== undefined && { parentId: eventParentId }),
+      ...(eventParentId === undefined && inferParent && { parentId: block.parentId }),
     });
 
     /**
@@ -434,9 +433,7 @@ export class BlockInsertion {
      * Trigger stopCapturing for the index change now that Yjs sync is done.
      * This preserves undo group boundaries at the original timing.
      */
-    if (this.ctx.rawCurrentBlockIndex !== prevIndex && !this.ctx.suppressStopCapturing) {
-      this.dependencies.YjsManager?.stopCapturing();
-    }
+    this.ctx.endUndoStepIfCurrentIndexChanged(prevIndex);
 
     this.ctx.assertHierarchyInvariantInDev('insert');
 
@@ -598,10 +595,10 @@ export class BlockInsertion {
         origin: 'user',
       }, blocksStore);
 
-      // Update currentBlockIndex AFTER insert (and handleBlockMutation) completes.
+      // Update the current block AFTER insert (and handleBlockMutation) completes.
       // This allows the table cell claiming logic to see the original block as
       // "current" during the mutation event, so it correctly claims the new block.
-      this.ctx.rawCurrentBlockIndex = insertIndex;
+      this.ctx.setCurrentBlockRaw(newBlock);
 
       // Inherit parentId from the split block so nested blocks stay nested
       if (currentBlock.parentId !== null) {
@@ -683,12 +680,13 @@ export class BlockInsertion {
         skipYjsSync: true,
         // See splitBlock: a root block's new sibling is mounted at root.
         forceTopLevel: currentBlock.parentId === null,
+        eventParentId: currentBlock.parentId,
       }, blocksStore);
 
-      // Update currentBlockIndex AFTER insert (and handleBlockMutation) completes.
+      // Update the current block AFTER insert (and handleBlockMutation) completes.
       // This allows the table cell claiming logic to see the original block as
       // "current" during the mutation event, so it correctly claims the new block.
-      this.ctx.rawCurrentBlockIndex = index;
+      this.ctx.setCurrentBlockRaw(newBlock);
 
       // Inherit parentId from the split block so nested blocks stay nested
       if (currentBlock.parentId !== null) {
@@ -940,11 +938,12 @@ export class BlockInsertion {
         index: insertIndex,
         needToFocus: focus,
         skipYjsSync: true,
+        eventParentId: parentId,
         ...(tunes !== undefined && { tunes }),
       }, blocksStore);
 
-      // Update currentBlockIndex AFTER insert so blockDidMutated sees original as current
-      this.ctx.rawCurrentBlockIndex = insertIndex;
+      // Update the current block AFTER insert so blockDidMutated sees original as current
+      this.ctx.setCurrentBlockRaw(newBlock);
 
       // Set parent relationship (updates parentId, contentIds, and DOM placement).
       // Moving the block into the toggle's children container triggers a MutationObserver
@@ -1025,8 +1024,8 @@ export class BlockInsertion {
       }, blocksStore);
     }, { extendThroughRAF: true });
 
-    // Update currentBlockIndex AFTER insert (and handleBlockMutation) completes.
-    this.ctx.rawCurrentBlockIndex = this.repository.getBlockIndex(block);
+    // Update the current block AFTER insert (and handleBlockMutation) completes.
+    this.ctx.setCurrentBlockRaw(block);
 
     // Wait for the block to be fully rendered before calling onPaste,
     // because onPaste may change the tool's root element and needs

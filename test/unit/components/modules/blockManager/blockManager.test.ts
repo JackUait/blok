@@ -271,6 +271,7 @@ describe('BlockManager.moveCurrentBlockUp/Down (drag guard)', () => {
     (blockManager as unknown as Record<string, unknown>).operations = {
       suppressStopCapturing: false,
       currentBlockIndexValue: 0,
+      endUndoStepIfCurrentIndexChanged: vi.fn(),
       moveCurrentBlockUp: moveUpSpy,
       moveCurrentBlockDown: moveDownSpy,
     };
@@ -349,6 +350,7 @@ describe('BlockManager.moveCurrentBlockUp/Down (block selection)', () => {
     (blockManager as unknown as Record<string, unknown>).operations = {
       suppressStopCapturing: false,
       currentBlockIndexValue: 0,
+      endUndoStepIfCurrentIndexChanged: vi.fn(),
       moveCurrentBlockUp: moveUpSpy,
       moveCurrentBlockDown: moveDownSpy,
     };
@@ -536,7 +538,7 @@ describe('BlockManager.setBlockParent applyPlacement delegation', () => {
     };
 
     priv._blocks = blocksStore;
-    priv.operations = { suppressStopCapturing: false };
+    priv.operations = { suppressStopCapturing: false, endUndoStepIfCurrentIndexChanged: vi.fn() };
 
     const readContentIds = (id: string): string[] => {
       const contentIds = store.getBlockById(id)?.get('contentIds');

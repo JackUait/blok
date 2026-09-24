@@ -63,6 +63,10 @@ const CORE_TO_REACT: Record<keyof Blocks, Classification> = {
   setBlockParent: { kind: 'renamed', reactNames: ['nest', 'unnest'] },
   getBlocksCount: { kind: 'exposed' },
   insert: { kind: 'exposed' },
+  // React's insert already takes { parentId, position } and delegates here.
+  insertAt: { kind: 'renamed', reactNames: ['insert'] },
+  // React's move/nest/unnest are the sibling-relative moves; they delegate here.
+  moveTo: { kind: 'renamed', reactNames: ['move', 'nest', 'unnest'] },
   insertMany: { kind: 'exposed' },
   composeBlockData: { kind: 'exposed' },
   update: { kind: 'exposed' },

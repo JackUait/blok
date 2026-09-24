@@ -1,5 +1,5 @@
 import type { BlockOrigin, BlockToolData, LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData, ToolConfig } from '../../../../types';
-import type { BlockAPI as BlockAPIInterface, Blocks, InsertInsideParentOptions } from '../../../../types/api';
+import type { BlockAPI as BlockAPIInterface, Blocks, InsertAtOptions, InsertInsideParentOptions, MoveToTarget } from '../../../../types/api';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import type { DerivedSource } from '../blockManager/types';
 import { blocksToMarkdown } from '../../../markdown/blocks-to-markdown';
@@ -17,6 +17,7 @@ import { normalizeTableChildParents } from '../../utils/data-model-transform';
 import { equalsOutputData, normalizeOutputBlocks } from '../../../shared/output-data';
 import { resolveHashTarget } from '../../utils/hash-target';
 import { highlightBlockArrival } from '../../utils/highlight-block-arrival';
+import { assertCanMoveUnder, BlockPlacementError, findBlock, isUnder, resolvePlacement, type BlockTree } from './block-placement';
 
 import { logLabeled } from './../../utils';
 
@@ -61,6 +62,8 @@ export class BlocksAPI extends Module {
       getBlockByElement: (element: HTMLElement) => this.getBlockByElement(element),
       getChildren: (parentId: string): BlockAPIInterface[] => this.getChildren(parentId),
       insert: this.insert,
+      insertAt: this.insertAt,
+      moveTo: (id: string, target: MoveToTarget): void => this.moveTo(id, target),
       insertMany: this.insertMany,
       update: this.update,
       composeBlockData: this.composeBlockData,
@@ -491,6 +494,145 @@ export class BlocksAPI extends Module {
 
     return new BlockAPI(insertedBlock, this.Blok.API);
   };
+
+  /**
+   * Insert a new block at a parent + sibling-relative position.
+   * @param type - tool name; defaults to `config.defaultBlock`
+   * @param data - tool data
+   * @param options - parent, position, id, tunes, focus, replace
+   */
+  public insertAt = (type?: string, data?: BlockToolData, options: InsertAtOptions = {}): BlockAPIInterface => {
+    const { BlockManager } = this.Blok;
+    const { parentId, position, id, tunes, focus = false, replace } = options;
+
+    if (replace !== undefined) {
+      if (parentId !== undefined || position !== undefined) {
+        throw new BlockPlacementError('replace cannot be combined with parentId or position');
+      }
+
+      const target = findBlock(this.tree, replace);
+
+      return this.insert(type, data, {}, BlockManager.getBlockIndex(target), focus, true, id, tunes);
+    }
+
+    const placement = resolvePlacement(this.tree, parentId, position ?? 'end');
+
+    if (placement.parentId !== null) {
+      return this.insertInsideParent(placement.parentId, placement.index, data, type, { id, tunes, focus });
+    }
+
+    // forceTopLevel skips the "after a table" check, so a restricted tool right
+    // after a table would be demoted as if it were in a cell. The inferring
+    // insert knows it left the table, and at a root slot it infers the root.
+    if (placement.index > 0 && isInsideTableCell(BlockManager.getBlockByIndex(placement.index - 1))) {
+      return this.insert(type, data, {}, placement.index, focus, false, id, tunes);
+    }
+
+    if (!BlockManager.suppressStopCapturing) {
+      this.Blok.YjsManager.stopCapturing();
+    }
+
+    const block = BlockManager.insert({
+      id,
+      tool: type,
+      data,
+      index: placement.index,
+      needToFocus: focus,
+      tunes,
+      forceTopLevel: true,
+      eventParentId: null,
+    });
+
+    return new BlockAPI(block, this.Blok.API);
+  };
+
+  /**
+   * Move a block and its subtree to a parent + sibling-relative position, as
+   * one undo step.
+   * @param id - id of the block to move
+   * @param target - new parent and position
+   */
+  public moveTo(id: string, target: MoveToTarget): void {
+    const { BlockManager, YjsManager } = this.Blok;
+    const block = findBlock(this.tree, id);
+    const { position } = target;
+
+    const refId = ((): string | undefined => {
+      if (typeof position !== 'object') {
+        return undefined;
+      }
+
+      return 'before' in position ? position.before : position.after;
+    })();
+
+    if (refId === id) {
+      throw new BlockPlacementError(`cannot place "${id}" relative to itself`);
+    }
+
+    const placement = resolvePlacement(this.tree, target.parentId, position);
+
+    assertCanMoveUnder(this.tree, block, placement.parentId, refId);
+
+    const descendants = BlockManager.blocks.filter(candidate => isUnder(this.tree, candidate, block.id));
+    const from = BlockManager.getBlockIndex(block);
+    const end = from + descendants.length;
+    // A slot inside or right after its own subtree needs no flat move.
+    const movesFlat = placement.index <= from || placement.index > end + 1;
+    const toIndex = from < placement.index ? placement.index - 1 : placement.index;
+
+    // move() silently refuses a restricted tool whose slot neighbour is a
+    // table cell block, even for the slot right after a table. Drop this when
+    // the pin "blocks.move puts a header right after a table" passes.
+    if (movesFlat && isRestrictedInTableCell(block.name) && isInsideTableCell(BlockManager.getBlockByIndex(toIndex))) {
+      throw new BlockPlacementError(`cannot move "${block.name}" to a slot next to a table cell block`);
+    }
+
+    // A move group skips move()'s parent heal and clamps, so the whole
+    // relocation plus the reparent below is one undo entry.
+    YjsManager.transactMoves(() => {
+      if (movesFlat) {
+        BlockManager.move(toIndex, from);
+
+        // Blocks.move carries only children nested in the moved holder, so
+        // place each descendant after the previous member, by live index.
+        descendants.forEach((member, k) => {
+          const anchor = BlockManager.getBlockIndex(k === 0 ? block : descendants[k - 1]);
+          const memberFrom = BlockManager.getBlockIndex(member);
+
+          if (memberFrom !== anchor + 1) {
+            BlockManager.move(memberFrom < anchor ? anchor : anchor + 1, memberFrom);
+          }
+        });
+      }
+
+      if (placement.parentId !== block.parentId) {
+        BlockManager.setBlockParent(block, placement.parentId);
+
+        return;
+      }
+
+      // A move group leaves nested holders in place: re-mount the children,
+      // last first, so each one's next sibling is already placed.
+      if (placement.parentId !== null) {
+        BlockManager.blocks
+          .filter(candidate => candidate.parentId === placement.parentId)
+          .reverse()
+          .forEach(child => BlockManager.setBlockParent(child, placement.parentId));
+      }
+    });
+  }
+
+  /**
+   * The block tree the placement helpers read.
+   */
+  private get tree(): BlockTree {
+    const { BlockManager } = this.Blok;
+
+    return {
+      blocks: BlockManager.blocks,
+      getBlockById: (blockId: string) => BlockManager.getBlockById(blockId),
+    };
+  }
 
   /**
    * Creates data of an empty block with a passed type.

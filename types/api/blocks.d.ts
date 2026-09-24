@@ -1,6 +1,6 @@
 import {LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData} from '../data-formats/output-data';
 import {BlockOrigin, BlockToolData, ToolConfig} from '../tools';
-import {BlockAPI} from './block';
+import {BlockAPI, BlockChildPosition} from './block';
 import {BlockTuneData} from '../block-tunes/block-tune-data';
 import {MarkdownImportConfig} from '../data-formats/markdown-import-config';
 
@@ -24,6 +24,62 @@ export interface InsertInsideParentOptions {
    * caret itself use the caret API, or `BlockAPI.insertChild`'s `caret` option.
    */
   focus?: boolean;
+}
+
+/**
+ * Where a block goes among its siblings: first, last, or next to a sibling.
+ * `{ after: id }` means after that sibling's whole subtree.
+ */
+export type BlockPosition = BlockChildPosition;
+
+/**
+ * Thrown by {@link Blocks.insertAt} and {@link Blocks.moveTo} when the
+ * requested place does not exist or does not accept the block. Nothing has
+ * changed when it is thrown.
+ */
+export declare class BlockPlacementError extends Error {
+  constructor(message: string);
+  name: 'BlockPlacementError';
+}
+
+/**
+ * Options for {@link Blocks.insertAt}.
+ */
+export interface InsertAtOptions {
+  /**
+   * The parent of the new block. `null` is the root.
+   * When omitted: the parent of the `before`/`after` sibling, or the root for
+   * `'start'`/`'end'`.
+   */
+  parentId?: string | null;
+  /** Where among the parent's children. Defaults to `'end'`. */
+  position?: BlockPosition;
+  /** Explicit id for the new block (generated when omitted). */
+  id?: string;
+  /** Block tune data to apply at creation, keyed by tune name. */
+  tunes?: { [name: string]: BlockTuneData };
+  /** Make the new block the current block. Defaults to `false`. */
+  focus?: boolean;
+  /**
+   * Id of a block to replace. The new block takes its slot and parent; the
+   * old block's children follow the turn-into rules. Cannot be combined with
+   * `parentId` or `position`.
+   */
+  replace?: string;
+}
+
+/**
+ * Target for {@link Blocks.moveTo}.
+ */
+export interface MoveToTarget {
+  /**
+   * The new parent. `null` is the root.
+   * When omitted: the parent of the `before`/`after` sibling, or the root for
+   * `'start'`/`'end'`.
+   */
+  parentId?: string | null;
+  /** Where among the parent's children. */
+  position: BlockPosition;
 }
 
 /**
@@ -190,6 +246,37 @@ export interface Blocks {
     tunes?: { [name: string]: BlockTuneData },
     origin?: BlockOrigin,
   ): BlockAPI;
+
+  /**
+   * Insert a new block at a place in the tree, named by its parent and its
+   * siblings instead of a flat index. One undo step.
+   *
+   * A tool the parent does not allow (`childTools`, table cells) is demoted,
+   * as with `insertInsideParent`.
+   *
+   * @param type - tool name; defaults to `config.defaultBlock`
+   * @param data - tool data
+   * @param options - parent, position, id, tunes, focus, replace
+   * @returns the new block
+   * @throws {BlockPlacementError} when the parent, the sibling or the replaced
+   *   block is not found, or the sibling is not a child of `parentId`
+   */
+  insertAt(type?: string, data?: BlockToolData, options?: InsertAtOptions): BlockAPI;
+
+  /**
+   * Move a block, with its whole subtree, to a place in the tree named by its
+   * parent and its siblings. One undo step.
+   *
+   * @param id - id of the block to move
+   * @param target - new parent and position
+   * @throws {BlockPlacementError} when a block is not found, the sibling is
+   *   not a child of `parentId`, the target is the block itself or inside its
+   *   subtree, the move would leave, enter or cross a container that owns its
+   *   children, a column or a table cell, the new parent refuses the tool
+   *   (`childTools`), or a tool restricted in table cells would land next to
+   *   a table cell block (for now this includes the slot right after a table)
+   */
+  moveTo(id: string, target: MoveToTarget): void;
 
   /**
    * Inserts several Blocks to specified index

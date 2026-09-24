@@ -10,6 +10,9 @@ import { moveElementAfter, moveElementBefore, moveElementToEnd } from '../../uti
 import { isSlotless } from '../../../tools/nested-blocks';
 import { homeSlotElement, resolveHomeSlot } from '../../utils/home-slot';
 import { findOwn } from '../../utils/own-element';
+import { childrenInTreeOrder, flatIndexForPlacement } from '../../utils/tree-order';
+import type { TreePlacement } from '../../utils/tree-order';
+import type { Blocks } from '../../blocks';
 
 import type { BlockRepository } from './repository';
 
@@ -45,6 +48,7 @@ export class BlockHierarchy {
   private readonly repository: BlockRepository;
   private readonly onParentChanged?: (parentId: string) => void;
   private readonly getIsSyncingFromYjs?: () => boolean;
+  private readonly blocksStore?: Pick<Blocks, 'mount'>;
 
   /**
    * @param repository - BlockRepository for looking up blocks by id
@@ -54,15 +58,18 @@ export class BlockHierarchy {
    *   parent id guard skips the throw and always coerces + logs — remote
    *   peers can legitimately deliver a transiently-dangling parent id during
    *   conflict resolution, batched undo replay, or initial sync ordering.
+   * @param blocksStore - the store behind `repository`; {@link placeBlock} mounts holders through it
    */
   constructor(
     repository: BlockRepository,
     onParentChanged?: (parentId: string) => void,
-    getIsSyncingFromYjs?: () => boolean
+    getIsSyncingFromYjs?: () => boolean,
+    blocksStore?: Pick<Blocks, 'mount'>
   ) {
     this.repository = repository;
     this.onParentChanged = onParentChanged;
     this.getIsSyncingFromYjs = getIsSyncingFromYjs;
+    this.blocksStore = blocksStore;
   }
 
   /**
@@ -226,7 +233,7 @@ export class BlockHierarchy {
     const insertAt = lastInRun === -1 ? rest.length : parentIndex + 1 + lastInRun;
 
     rest.splice(insertAt, 0, ...subtree);
-    blocks.splice(0, blocks.length, ...rest);
+    this.repository.reorderBlocks(rest);
   }
 
   /**
@@ -282,7 +289,7 @@ export class BlockHierarchy {
     const insertAt = endOfRun === -1 ? rest.length : ancestorIndex + 1 + endOfRun;
 
     rest.splice(insertAt, 0, ...subtree);
-    blocks.splice(0, blocks.length, ...rest);
+    this.repository.reorderBlocks(rest);
   }
 
   /**
@@ -780,6 +787,99 @@ export class BlockHierarchy {
     } else {
       rootArea.appendChild(block.holder);
     }
+  }
+
+  /**
+   * Moves `block` and its whole subtree to `placement`: under `parentId`,
+   * right after sibling `afterId` (null = first child). Updates both parents'
+   * contentIds, the block's parentId, the flat array and the holders.
+   *
+   * Throws, changing nothing, on a cycle, an unknown parent or sibling, a
+   * sibling of another parent, a block the store does not hold, or a home slot
+   * inside the moved subtree's own holders.
+   *
+   * Left to the caller:
+   * - childTools / ownsChildren: not checked here.
+   * - Under a table/database the holder stays where it is; the caller hands
+   *   it to the tool, which picks the cell or view.
+   * - Hiding a block that joins a collapsed toggle.
+   * - Yjs writes and the parent-change callback.
+   * @param block - the block to move
+   * @param placement - where it goes
+   */
+  public placeBlock(block: Block, placement: TreePlacement): void {
+    const store = this.blocksStore;
+
+    if (store === undefined) {
+      throw new Error('BlockHierarchy.placeBlock: no blocks store to mount holders into');
+    }
+
+    const blocks = this.repository.blocks;
+    const { parentId, afterId } = placement;
+
+    if (!blocks.includes(block)) {
+      throw new Error(`BlockHierarchy.placeBlock: block "${block.id}" is not in the store`);
+    }
+
+    if (parentId !== null && this.wouldFormCycle(block.id, parentId)) {
+      throw new Error(`BlockHierarchy.placeBlock: placing ${block.id} under ${parentId} would form a cycle`);
+    }
+
+    if (afterId === block.id) {
+      throw new Error(`BlockHierarchy.placeBlock: block "${block.id}" cannot follow itself`);
+    }
+
+    // By parentId, not by flat contiguity: the flat run may already be broken.
+    const moving = blocks.filter(candidate => candidate === block || this.isUnder(candidate, block.id));
+    const movingSet = new Set(moving);
+    const rest = blocks.filter(candidate => !movingSet.has(candidate));
+    const getBlock = (id: string): Block | undefined => this.repository.getBlockById(id);
+    const tree = { blocks: rest, getById: getBlock };
+    const target = flatIndexForPlacement(tree, placement);
+    const newHome = resolveHomeSlot(parentId, getBlock);
+
+    // Corrupted DOM: mounting would throw mid-move, after the model writes.
+    if (newHome.kind === 'slot' && moving.some(member => member.holder.contains(newHome.slot))) {
+      throw new Error(`BlockHierarchy.placeBlock: placing ${block.id} under ${String(parentId)} would mount it inside its own holder`);
+    }
+
+    const oldParent = block.parentId === null ? undefined : this.repository.getBlockById(block.parentId);
+
+    if (oldParent !== undefined) {
+      oldParent.contentIds = oldParent.contentIds.filter(id => id !== block.id);
+    }
+
+    const newParent = parentId === null ? undefined : this.repository.getBlockById(parentId);
+
+    if (newParent !== undefined) {
+      // A stale list that misses afterId is first completed in tree order,
+      // or the block would land before afterId in tree order.
+      const listed = afterId === null || newParent.contentIds.includes(afterId)
+        ? newParent.contentIds
+        : childrenInTreeOrder(tree, newParent).map(child => child.id);
+      const siblings = listed.filter(id => id !== block.id);
+      const slot = afterId === null ? 0 : siblings.indexOf(afterId) + 1;
+
+      newParent.contentIds = [...siblings.slice(0, slot), block.id, ...siblings.slice(slot)];
+    }
+
+    // eslint-disable-next-line no-param-reassign
+    block.parentId = parentId;
+
+    rest.splice(target, 0, ...moving);
+    this.repository.reorderBlocks(rest);
+
+    // Last block first: each mount anchors on holders after it, which must
+    // already be in place.
+    [...moving].reverse().forEach(member => {
+      const home = resolveHomeSlot(member.parentId, getBlock);
+
+      if (home.kind === 'slot' || home.kind === 'root') {
+        store.mount(member, this.repository.getBlockIndex(member), home.kind === 'slot' ? home.slot : null);
+      }
+    });
+
+    this.reindentSubtree(block);
   }
 
   /**

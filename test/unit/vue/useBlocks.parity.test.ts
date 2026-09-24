@@ -5,6 +5,7 @@ import { mount } from '@vue/test-utils';
 import { useBlocks } from '../../../packages/vue/src/useBlocks';
 import type { UseBlocksApi } from '../../../packages/vue/src/blocks-snapshot';
 import type { Blok } from '../../../types';
+import { fakePlacement } from '../helpers/fake-placement';
 
 /**
  * Every method the SHARED UseBlocksApi core exposes — the React surface. The Vue
@@ -112,8 +113,19 @@ const makeFakeEditor = (initial: FakeRecord[]): FakeEditor => {
     return Promise.resolve();
   });
 
+  const placement = fakePlacement({
+    blocks: () => flat,
+    insert: (type, data, index, id) => insert(type, data, {}, index, false, false, id),
+    moveFlat: (toIndex, fromIndex) => {
+      flat.splice(toIndex, 0, ...flat.splice(fromIndex, 1));
+    },
+    setParent: (blockId, parentId) => setBlockParent(blockId, parentId),
+  });
+
   const spies = {
     insert,
+    insertAt: vi.fn(placement.insertAt),
+    moveTo: vi.fn(placement.moveTo),
     insertMany,
     insertInsideParent,
     setBlockParent,
@@ -205,7 +217,7 @@ describe('useBlocks (Vue) — React parity surface', () => {
 
     const created = api.insertMany([{ type: 'paragraph' }, { type: 'header' }]);
 
-    expect(spies.insert).toHaveBeenCalledTimes(2);
+    expect(spies.insertAt).toHaveBeenCalledTimes(2);
     expect(created).toHaveLength(2);
   });
 

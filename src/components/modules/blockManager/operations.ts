@@ -1,7 +1,7 @@
 /**
  * @class BlockOperations
  * @classdesc Coordinator for state-changing operations on blocks. Owns the
- * shared mutable state (currentBlockIndex, suppressStopCapturing), the block
+ * shared mutable state (current block, suppressStopCapturing), the block
  * navigation accessors and a few cross-cutting helpers, and delegates the
  * actual work to focused worker classes:
  *   - BlockInsertion — insert / split / paste
@@ -46,9 +46,15 @@ export class BlockOperations implements OperationsContext {
   private readonly mutation: BlockMutation;
 
   /**
-   * Current block index state (managed externally, passed in for operations)
+   * Current block. Its index is derived on read, so inserts, removes and moves
+   * elsewhere (including remote ones) never leave it pointing at another block.
    */
-  private currentBlockIndex: number;
+  private current: Block | undefined;
+
+  /**
+   * Last derived index of `current`; checked first to skip the indexOf scan.
+   */
+  private currentIndexHint = -1;
 
   /**
    * Flag to suppress stopCapturing during atomic operations (like split)
@@ -77,7 +83,7 @@ export class BlockOperations implements OperationsContext {
     this.factory = factory;
     this.hierarchy = hierarchy;
     this.blockDidMutated = blockDidMutated;
-    this.currentBlockIndex = initialCurrentBlockIndex;
+    this.current = this.blockAt(initialCurrentBlockIndex);
 
     this.insertion = new BlockInsertion(this);
     this.removal = new BlockRemoval(this);
@@ -118,40 +124,106 @@ export class BlockOperations implements OperationsContext {
    * Raw current block index access — no stopCapturing side effect.
    */
   public get rawCurrentBlockIndex(): number {
-    return this.currentBlockIndex;
-  }
-
-  public set rawCurrentBlockIndex(newIndex: number) {
-    this.currentBlockIndex = newIndex;
+    return this.resolveCurrentIndex();
   }
 
   /**
-   * Get current block index
+   * Get current block index (-1 when there is no current block)
    */
   public get currentBlockIndexValue(): number {
-    return this.currentBlockIndex;
+    return this.resolveCurrentIndex();
   }
 
   /**
    * Set current block index (with stopCapturing side effect)
    */
   public set currentBlockIndexValue(newIndex: number) {
-    if (this.currentBlockIndex !== newIndex && !this.suppressStopCapturing) {
+    const previousIndex = this.resolveCurrentIndex();
+
+    this.current = this.blockAt(newIndex);
+    this.currentIndexHint = newIndex;
+    this.endUndoStepIfCurrentIndexChanged(previousIndex);
+  }
+
+  /**
+   * Point the current block at a block, with no stopCapturing side effect.
+   * @param block - new current block, or undefined for none
+   */
+  public setCurrentBlockRaw(block: Block | undefined): void {
+    this.current = block;
+  }
+
+  /**
+   * Drop the current block if it is `block`. A remote delete calls this so a
+   * later block with the same id is not taken for a replacement of it.
+   * @param block - the block being deleted
+   */
+  public forgetCurrentBlock(block: Block): void {
+    // By id: a remote convert may have swapped the Block object since.
+    if (this.current?.id === block.id) {
+      this.current = undefined;
+    }
+  }
+
+  /**
+   * Ends the open undo step when the current block's index differs from
+   * `previousIndex`. Undo grouping has always keyed on that index, so an
+   * insert or remove that shifts the current block still splits the step.
+   * @param previousIndex - current block index before the change
+   */
+  public endUndoStepIfCurrentIndexChanged(previousIndex: number): void {
+    if (this.resolveCurrentIndex() !== previousIndex && !this.suppressStopCapturing) {
       this.dependencies.YjsManager?.stopCapturing();
     }
-    this.currentBlockIndex = newIndex;
   }
 
   /**
    * Get current block
-   * Returns undefined when no block is selected (currentBlockIndex === -1)
+   * Returns undefined when no block is selected
    */
   public get currentBlock(): Block | undefined {
-    if (this.currentBlockIndex === -1) {
-      return undefined;
+    return this.resolveCurrentIndex() === -1 ? undefined : this.current;
+  }
+
+  /**
+   * Block at a flat index; undefined for a negative or out-of-range index.
+   * @param index - flat index
+   */
+  private blockAt(index: number): Block | undefined {
+    return index < 0 ? undefined : this.repository.blocks[index];
+  }
+
+  /**
+   * Flat index of the current block, or -1 when it is unset or gone.
+   */
+  private resolveCurrentIndex(): number {
+    const current = this.current;
+
+    if (current === undefined) {
+      return -1;
     }
 
-    return this.repository.getBlockByIndex(this.currentBlockIndex);
+    const blocks = this.repository.blocks;
+
+    if (blocks[this.currentIndexHint] === current) {
+      return this.currentIndexHint;
+    }
+
+    const index = blocks.indexOf(current);
+    // Replace paths swap in a new Block object with the same id; follow it.
+    const found = index >= 0 ? current : this.repository.getBlockById(current.id);
+
+    if (found === undefined) {
+      // Forget a deleted block, so a peer re-adding its id does not revive it.
+      this.current = undefined;
+
+      return -1;
+    }
+
+    this.current = found;
+    this.currentIndexHint = found === current ? index : blocks.indexOf(found);
+
+    return this.currentIndexHint;
   }
 
   /**
@@ -159,17 +231,19 @@ export class BlockOperations implements OperationsContext {
    * Returns null when no block is selected or already at the last block
    */
   public get nextBlock(): Block | null {
-    if (this.currentBlockIndex === -1) {
+    const currentIndex = this.resolveCurrentIndex();
+
+    if (currentIndex === -1) {
       return null;
     }
 
-    const isLastBlock = this.currentBlockIndex === (this.repository.length - 1);
+    const isLastBlock = currentIndex === (this.repository.length - 1);
 
     if (isLastBlock) {
       return null;
     }
 
-    const nextBlock = this.repository.getBlockByIndex(this.currentBlockIndex + 1);
+    const nextBlock = this.repository.getBlockByIndex(currentIndex + 1);
 
     return nextBlock ?? null;
   }
@@ -179,17 +253,19 @@ export class BlockOperations implements OperationsContext {
    * Returns null when no block is selected or already at the first block
    */
   public get previousBlock(): Block | null {
-    if (this.currentBlockIndex === -1) {
+    const currentIndex = this.resolveCurrentIndex();
+
+    if (currentIndex === -1) {
       return null;
     }
 
-    const isFirstBlock = this.currentBlockIndex === 0;
+    const isFirstBlock = currentIndex === 0;
 
     if (isFirstBlock) {
       return null;
     }
 
-    const previousBlock = this.repository.getBlockByIndex(this.currentBlockIndex - 1);
+    const previousBlock = this.repository.getBlockByIndex(currentIndex - 1);
 
     return previousBlock ?? null;
   }
@@ -199,12 +275,14 @@ export class BlockOperations implements OperationsContext {
    * Returns null when no visible block is found after the current one
    */
   public get nextVisibleBlock(): Block | null {
-    if (this.currentBlockIndex === -1) {
+    const currentIndex = this.resolveCurrentIndex();
+
+    if (currentIndex === -1) {
       return null;
     }
 
     return this.repository.blocks
-      .slice(this.currentBlockIndex + 1)
+      .slice(currentIndex + 1)
       .find(block => !block.holder.classList.contains('hidden')) ?? null;
   }
 
@@ -213,12 +291,14 @@ export class BlockOperations implements OperationsContext {
    * Returns null when no visible block is found before the current one
    */
   public get previousVisibleBlock(): Block | null {
-    if (this.currentBlockIndex === -1) {
+    const currentIndex = this.resolveCurrentIndex();
+
+    if (currentIndex === -1) {
       return null;
     }
 
     return this.repository.blocks
-      .slice(0, this.currentBlockIndex)
+      .slice(0, currentIndex)
       .reverse()
       .find(block => !block.holder.classList.contains('hidden')) ?? null;
   }
@@ -478,7 +558,8 @@ export class BlockOperations implements OperationsContext {
    * only on the irreversible drift kinds: bidirectional divergence
    * (`child-not-in-parent-content`, `content-parent-mismatch`) and duplicate
    * content ids (`content-duplicate`) — the patterns the callout/table/toggle
-   * ejection bug family exhibits.
+   * ejection bug family exhibits. Also reports drift between the store's
+   * array and its id index.
    * @param context - label of the operation that just ran (for error messages)
    */
   public assertHierarchyInvariantInDev(context: string): void {
@@ -498,11 +579,14 @@ export class BlockOperations implements OperationsContext {
       ...(Array.isArray(b.contentIds) && b.contentIds.length > 0 ? { content: [...b.contentIds] } : {}),
     }));
 
-    const violations = validateHierarchy(blocks).filter(v =>
-      v.kind === 'child-not-in-parent-content' ||
-      v.kind === 'content-parent-mismatch' ||
-      v.kind === 'content-duplicate'
-    );
+    const violations = [
+      ...this.repository.idIndexViolations(),
+      ...validateHierarchy(blocks).filter(v =>
+        v.kind === 'child-not-in-parent-content' ||
+        v.kind === 'content-parent-mismatch' ||
+        v.kind === 'content-duplicate'
+      ).map(v => v.message),
+    ];
 
     /**
      * NOTE: the stranded-holder check (validateHolderAttachment) deliberately
@@ -517,7 +601,7 @@ export class BlockOperations implements OperationsContext {
       return;
     }
 
-    const summary = violations.map(v => `  - ${v.message}`).join('\n');
+    const summary = violations.map(message => `  - ${message}`).join('\n');
 
     throw new Error(`Hierarchy invariant violated at BlockOperations.${context}:\n${summary}`);
   }

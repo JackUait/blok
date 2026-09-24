@@ -1690,6 +1690,77 @@ describe('BlockSelection', () => {
       });
     });
 
+    describe('focus survives blocks inserted above it', () => {
+      it('keeps the focused block when a block is inserted above it', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+        const [first, focused, last] = blocks;
+
+        blockManager.currentBlockIndex = 1;
+        blockSelection.enableNavigationMode();
+
+        // A remote peer (or the API) inserts a block at the top.
+        blocks.unshift(createBlockStub({ id: 'inserted' }));
+
+        expect(blockSelection.navigationFocusedBlock).toBe(focused);
+        expect(blockSelection.navigateNext()).toBe(true);
+        expect(blockSelection.navigationFocusedBlock).toBe(last);
+        expect(blockSelection.navigatePrevious()).toBe(true);
+        expect(blockSelection.navigationFocusedBlock).toBe(focused);
+        expect(first.holder).not.toHaveAttribute('data-blok-navigation-focused');
+      });
+
+      it('follows the focused block when a peer convert swaps its Block object', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blocks.forEach((block, index) => Object.assign(block, { id: `b${index}` }));
+        blockManager.currentBlockIndex = 1;
+        blockSelection.enableNavigationMode();
+
+        const converted = createBlockStub({ id: 'b1' });
+
+        blocks.splice(1, 1, converted);
+
+        expect(blockSelection.navigationFocusedBlock).toBe(converted);
+        expect(blockSelection.navigateNext()).toBe(true);
+        expect(blockSelection.navigationFocusedBlock).toBe(blocks[2]);
+      });
+
+      it('does not refocus a block a peer deleted when the peer re-adds its id', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blocks.forEach((block, index) => Object.assign(block, { id: `b${index}` }));
+        blockManager.currentBlockIndex = 1;
+        blockSelection.enableNavigationMode();
+
+        const [deleted] = blocks.splice(1, 1);
+
+        blockSelection.forgetRemovedBlock(deleted);
+        blocks.splice(1, 0, createBlockStub({ id: 'b1' }));
+
+        expect(blockSelection.navigationFocusedBlock).toBeUndefined();
+      });
+
+      it('edits the focused block, not its old index, after a block is inserted above it', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number; currentBlock: Block | undefined };
+        const caret = modules.Caret as unknown as { setToBlock: ReturnType<typeof vi.fn>; positions: { END: string } };
+        const focused = blocks[1];
+
+        caret.positions = { END: 'end' };
+        blockManager.currentBlockIndex = 1;
+        blockSelection.enableNavigationMode();
+
+        blocks.unshift(createBlockStub({ id: 'inserted' }));
+        blockSelection.disableNavigationMode(true);
+
+        expect(caret.setToBlock).toHaveBeenCalledWith(focused, 'end');
+        expect(blockManager.currentBlock).toBe(focused);
+      });
+    });
+
     describe('real block selection (Notion parity)', () => {
       it('enableNavigationMode marks the focused block as a REAL selection', () => {
         const { blockSelection, blocks, modules } = createBlockSelection();

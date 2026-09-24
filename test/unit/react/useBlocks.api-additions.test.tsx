@@ -13,6 +13,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useBlocks } from '../../../packages/react/src/useBlocks';
 import type { BlockNode } from '../../../packages/react/src/blocks-snapshot';
 import type { Blok } from '../../../types';
+import { fakePlacement } from '../helpers/fake-placement';
 
 interface Row {
   id: string;
@@ -61,14 +62,21 @@ const makeFakeEditor = (rows: Row[]) => {
 
         return found;
       },
-      insert: vi.fn((type?: string, _data?: unknown, _cfg?: unknown, index?: number) => {
+      insert: vi.fn((type?: string, _data?: unknown, _cfg?: unknown, index?: number, _focus?: boolean, _replace?: boolean, _id?: string) => {
         const id = `new-${list.length}`;
         const row = { id, name: type ?? 'paragraph', parentId: null, preservedData: {}, preservedTunes: {} };
         const at = index ?? list.length;
         list.splice(at, 0, row);
         return { id, name: row.name, parentId: row.parentId };
       }),
-      setBlockParent: vi.fn(),
+      setBlockParent: vi.fn((id: string, parentId: string | null) => {
+        const row = list.find((b) => b.id === id);
+
+        if (row !== undefined) {
+          row.parentId = parentId;
+        }
+      }),
+      insertAt: vi.fn(),
       transact: vi.fn((fn: () => void) => fn()),
       renderFromHTML,
       on: undefined,
@@ -77,6 +85,15 @@ const makeFakeEditor = (rows: Row[]) => {
     on: (_name: string, cb: () => void) => listeners.add(cb),
     off: (_name: string, cb: () => void) => listeners.delete(cb),
   };
+  editor.blocks.insertAt.mockImplementation(fakePlacement({
+    blocks: () => list,
+    insert: (type, data, index, id, replace) => editor.blocks.insert(type, data, {}, index, false, replace, id),
+    moveFlat: (toIndex, fromIndex) => {
+      list.splice(toIndex, 0, ...list.splice(fromIndex, 1));
+    },
+    setParent: (id, parentId) => editor.blocks.setBlockParent(id, parentId),
+  }).insertAt);
+
   return {
     editor: editor as unknown as Blok,
     renderFromHTML,
@@ -140,8 +157,7 @@ describe('useBlocks — block-data reader (duplicate is composable)', () => {
   it('round-trips read -> insert carrying TUNES, not just data (faithful duplicate)', () => {
     // The headline "duplicate a block without the ref" capability must preserve
     // BOTH data and tunes. getBlockData returns tunes; re-inserting with
-    // `tunes: content.tunes` must forward them to core's insert (8th positional
-    // arg). A duplicate that drops tunes silently loses alignment/color/etc.
+    // `tunes: content.tunes` must forward them to core's insertAt. A duplicate that drops tunes silently loses alignment/color/etc.
     const { editor } = makeFakeEditor([
       { id: 'src', name: 'header', preservedData: { text: 'Dup me' }, preservedTunes: { align: { dir: 'left' } } },
     ]);
@@ -159,16 +175,10 @@ describe('useBlocks — block-data reader (duplicate is composable)', () => {
       });
     });
 
-    // core.insert(type, data, config, index, needToFocus, replace, id, tunes)
-    expect(editor.blocks.insert).toHaveBeenCalledWith(
+    expect(editor.blocks.insertAt).toHaveBeenCalledWith(
       'header',
       { text: 'Dup me' },
-      {},
-      expect.any(Number),
-      false,
-      false,
-      undefined,
-      { align: { dir: 'left' } }
+      expect.objectContaining({ position: { after: 'src' }, tunes: { align: { dir: 'left' } } })
     );
   });
 });

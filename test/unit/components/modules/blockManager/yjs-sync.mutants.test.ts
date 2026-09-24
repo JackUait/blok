@@ -1097,6 +1097,27 @@ describe('BlockYjsSync — mutation kills', () => {
       expect(harness.repository.blocks.map((block) => block.id)).toEqual(['a', 'new']);
     });
 
+    it('mounts a root block that a replay adds after a nested block at root, not in its slot', () => {
+      const toggle = createBlock({ id: 't', name: 'toggle', contentIds: ['k'] });
+      const kid = createBlock({ id: 'k', parentId: 't' });
+      const harness = createHarness({ blocks: [toggle, kid] });
+      const slot = document.createElement('div');
+
+      toggle.holder.appendChild(slot);
+      slot.appendChild(kid.holder);
+
+      const created = createBlock({ id: 'new' });
+
+      composeSpy(harness.factory, () => created);
+      harness.doc.put('new', { type: 'paragraph' });
+      harness.doc.setOrder(['t', 'k', 'new']);
+
+      harness.emit({ blockId: 'new', type: 'add', origin: 'redo' });
+
+      expect(created.holder.parentElement).toBe(harness.workingArea);
+      expect(harness.repository.blocks.map((block) => block.id)).toEqual(['t', 'k', 'new']);
+    });
+
     // The observer emits adds before removes: `q` is still in memory, already gone from the doc.
     it('counts a block the doc already removed when it picks the memory index', () => {
       const harness = createHarness({ blocks: [createBlock({ id: 'q' }), createBlock({ id: 'a' }), createBlock({ id: 'z' })] });

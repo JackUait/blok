@@ -1610,7 +1610,8 @@ export class BlockYjsSync {
         lastEditedBy,
       });
 
-      this.blocksStore.insert(targetIndex, block);
+      // A root block after a nested one would land in that block's slot (see activateBlock).
+      this.blocksStore.insert(targetIndex, block, false, false, parentId === undefined);
 
       // The tool's own normalisation of what the document handed us lands
       // after this window closes — see `settlingBlocks`.

@@ -1181,7 +1181,7 @@ test.describe('Table cell copy/paste', () => {
     });
 
     await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
-    await expect(page.locator(`${TABLE_SELECTOR} [data-blok-tool="image"]`)).toHaveCount(1);
+    await expect(page.locator(`${TABLE_SELECTOR} [data-blok-tool="image"] img`)).toHaveAttribute('src', imageUrl);
 
     // Select the merged origin plus the C1/C2 column (3 REAL cells over a 2x3 region).
     await selectCells(page, 0, 0, 1, 0);
@@ -1215,7 +1215,7 @@ test.describe('Table cell copy/paste', () => {
     await expect(pastedOrigin).toHaveAttribute('rowspan', '2');
 
     // …carrying the image block (it used to paste as an empty cell).
-    await expect(pastedOrigin.locator('[data-blok-tool="image"]')).toHaveCount(1);
+    await expect(pastedOrigin.locator('[data-blok-tool="image"] img')).toHaveAttribute('src', imageUrl);
     await expect(page.locator(`${TABLE_SELECTOR} [data-blok-tool="image"]`)).toHaveCount(2);
   });
 });

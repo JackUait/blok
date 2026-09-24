@@ -1189,6 +1189,42 @@ describe('data-model-transform', () => {
     });
   });
 
+  describe('expandToHierarchical - legacy blocks seeded in table cells', () => {
+    const GIF = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+    const seededImage = (blocks: OutputBlockData[]): Record<string, unknown> | undefined => {
+      const table = blocks.find(b => b.type === 'table');
+      const content = table?.data.content as Array<Array<{ blockData?: Array<{ tool: string; data: Record<string, unknown> }> }>>;
+
+      return content[0][0].blockData?.[0]?.data;
+    };
+
+    it('migrates an @editorjs/image seed next to string cells', () => {
+      const blocks: OutputBlockData[] = [{
+        id: 't1',
+        type: 'table',
+        data: {
+          content: [[{ blocks: [], blockData: [{ tool: 'image', data: { file: { url: GIF }, caption: 'cat' } }] }, 'B1']],
+        },
+      }];
+
+      expect(seededImage(expandToHierarchical(blocks))).toEqual({ url: GIF, caption: 'cat' });
+    });
+
+    it('detects and migrates a table whose only legacy content is a seeded image', () => {
+      const blocks: OutputBlockData[] = [{
+        id: 't1',
+        type: 'table',
+        data: {
+          content: [[{ blocks: [], blockData: [{ tool: 'image', data: { file: { url: GIF } } }] }]],
+        },
+      }];
+
+      expect(analyzeDataFormat(blocks).format).toBe('legacy');
+      expect(seededImage(expandToHierarchical(blocks))).toEqual({ url: GIF });
+    });
+  });
+
   describe('collapseToLegacy - table blocks (self-managing container)', () => {
     it('preserves a table subtree when no flat container blocks are present', () => {
       // A Blok-native table stores its cells as child blocks referenced by id

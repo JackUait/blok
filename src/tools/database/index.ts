@@ -379,6 +379,16 @@ export class DatabaseTool implements BlockTool {
 
     const after = this.model.getOrderedRows();
     const retitled = this.retitledRows(before, after);
+    const openRowId = this.cardDrawer?.openRowId ?? null;
+
+    if (openRowId !== null) {
+      const openBefore = before.find((row) => row.id === openRowId);
+      const openAfter = this.model.getRow(openRowId);
+
+      if (JSON.stringify(openBefore) !== JSON.stringify(openAfter)) {
+        this.cardDrawer?.syncOpenRow(openAfter);
+      }
+    }
 
     if (retitled === null) {
       this.redrawWhenIdle();

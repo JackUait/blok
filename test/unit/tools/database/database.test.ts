@@ -1148,6 +1148,63 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
 
+    describe('an open card page when its row changes under it', () => {
+      const drawerTitle = (element: HTMLElement): HTMLTextAreaElement | null =>
+        queryByData(element, 'data-blok-database-drawer-title') as HTMLTextAreaElement | null;
+
+      it('shows the row title that undo or a peer wrote', async () => {
+        const { block, row } = liveRowBlock('row-1', { position: 'a0', properties: { 'prop-title': 'One', 'prop-status': 'opt-todo' } });
+        const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: [block] }));
+        const element = tool.render();
+
+        tool.rendered();
+        queryByData(element, 'data-row-id', 'row-1')?.click();
+        row.setData({ position: 'a0', properties: { 'prop-title': 'One (undone)', 'prop-status': 'opt-todo' } });
+        blockChangedListener(tool)(rowChanged(block));
+        await Promise.resolve();
+
+        expect(drawerTitle(element)?.value).toBe('One (undone)');
+
+        tool.destroy();
+      });
+
+      it('shows the row status that undo or a peer wrote', async () => {
+        const { block, row } = liveRowBlock('row-1', { position: 'a0', properties: { 'prop-title': 'One', 'prop-status': 'opt-todo' } });
+        const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: [block] }));
+        const element = tool.render();
+
+        tool.rendered();
+        queryByData(element, 'data-row-id', 'row-1')?.click();
+        row.setData({ position: 'a0', properties: { 'prop-title': 'One', 'prop-status': 'opt-done' } });
+        blockChangedListener(tool)(rowChanged(block));
+        await Promise.resolve();
+
+        const props = queryByData(element, 'data-blok-database-drawer-props');
+
+        expect(props?.textContent).toContain('Done');
+
+        tool.destroy();
+      });
+
+      it('closes when its row is removed', async () => {
+        const one = liveRowBlock('row-1', { position: 'a0', properties: { 'prop-title': 'One', 'prop-status': 'opt-todo' } });
+        const two = liveRowBlock('row-2', { position: 'a1', properties: { 'prop-title': 'Two', 'prop-status': 'opt-todo' } });
+        const options = createDatabaseOptions({}, {}, { childBlocks: [one.block, two.block] });
+        const tool = new DatabaseTool(options);
+        const element = tool.render();
+
+        tool.rendered();
+        queryByData(element, 'data-row-id', 'row-1')?.click();
+        vi.mocked(options.api.blocks.getChildren).mockReturnValue([two.block]);
+        blockChangedListener(tool)(rowChanged(one.block));
+        await Promise.resolve();
+
+        expect((tool as unknown as { cardDrawer: DatabaseCardDrawer | null }).cardDrawer?.isOpen).not.toBe(true);
+
+        tool.destroy();
+      });
+    });
+
     it('does not redraw the board for its own row writes', async () => {
       const { block } = liveRowBlock('row-1', { position: 'a0', properties: { 'prop-title': 'One', 'prop-status': 'opt-todo' } });
       const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: [block] }));

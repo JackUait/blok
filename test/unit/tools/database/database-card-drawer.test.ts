@@ -1292,6 +1292,20 @@ describe('DatabaseCardDrawer', () => {
 
       expect(options.onDescriptionChange).toHaveBeenCalledTimes(1);
     });
+
+    it('drops the old page body instead of writing it back when undo or a peer changed it', async () => {
+      const before = body(1, [{ id: 'b1', type: 'paragraph', data: { text: 'before' } }]);
+      const after = body(2, [{ id: 'b1', type: 'paragraph', data: { text: 'after' } }]);
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-desc': before } });
+      const { drawer, options } = await openWithNestedEditor(row, [before]);
+
+      drawer.syncOpenRow({ ...row, properties: { ...row.properties, 'prop-desc': after } });
+      await flush();
+
+      expect(options.onDescriptionChange).not.toHaveBeenCalled();
+
+      drawer.destroy();
+    });
   });
 
   describe('close animation', () => {

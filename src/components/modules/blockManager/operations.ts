@@ -477,7 +477,8 @@ export class BlockOperations implements OperationsContext {
    * only on the irreversible drift kinds: bidirectional divergence
    * (`child-not-in-parent-content`, `content-parent-mismatch`) and duplicate
    * content ids (`content-duplicate`) — the patterns the callout/table/toggle
-   * ejection bug family exhibits.
+   * ejection bug family exhibits. Also reports drift between the store's
+   * array and its id index.
    * @param context - label of the operation that just ran (for error messages)
    */
   public assertHierarchyInvariantInDev(context: string): void {
@@ -497,11 +498,14 @@ export class BlockOperations implements OperationsContext {
       ...(Array.isArray(b.contentIds) && b.contentIds.length > 0 ? { content: [...b.contentIds] } : {}),
     }));
 
-    const violations = validateHierarchy(blocks).filter(v =>
-      v.kind === 'child-not-in-parent-content' ||
-      v.kind === 'content-parent-mismatch' ||
-      v.kind === 'content-duplicate'
-    );
+    const violations = [
+      ...this.repository.idIndexViolations(),
+      ...validateHierarchy(blocks).filter(v =>
+        v.kind === 'child-not-in-parent-content' ||
+        v.kind === 'content-parent-mismatch' ||
+        v.kind === 'content-duplicate'
+      ).map(v => v.message),
+    ];
 
     /**
      * NOTE: the stranded-holder check (validateHolderAttachment) deliberately
@@ -516,7 +520,7 @@ export class BlockOperations implements OperationsContext {
       return;
     }
 
-    const summary = violations.map(v => `  - ${v.message}`).join('\n');
+    const summary = violations.map(message => `  - ${message}`).join('\n');
 
     throw new Error(`Hierarchy invariant violated at BlockOperations.${context}:\n${summary}`);
   }

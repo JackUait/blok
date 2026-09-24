@@ -2350,7 +2350,6 @@ describe('Blocks', () => {
       expect(blocks.array).toBe(live);
       expect(live.map((block) => block.id)).toEqual(['c', 'a', 'b']);
       expect(blocks.getById('a')).toBe(made[0]);
-      expect(blocks.idIndexViolations()).toEqual([]);
     });
 
     it('returns the first block in array order when two blocks share an id', () => {

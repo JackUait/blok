@@ -365,6 +365,16 @@ describe('BlockOperations', () => {
     vi.restoreAllMocks();
   });
 
+  describe('assertHierarchyInvariantInDev id index', () => {
+    it('reports a store whose id index drifted from its array', () => {
+      blocksStore.array.push(createMockBlock({ id: 'sneaked', name: 'paragraph' }));
+
+      expect(() => {
+        operations.assertHierarchyInvariantInDev('insert');
+      }).toThrow(/BlockOperations\.insert:\n {2}- block sneaked is in the array 1 time\(s\) but indexed 0 time\(s\)/);
+    });
+  });
+
   describe('moveCurrentBlockUp/Down flat-indent group cohesion', () => {
     it('carries a flat-indented follower when moving the parent up (Notion Tab nesting)', () => {
       const above = createMockBlock({ id: 'above' });

@@ -890,7 +890,7 @@ export class BlockYjsSync {
       return;
     }
 
-    const violations: string[] = [];
+    const violations = this.repository.idIndexViolations().map(message => `  - ${message}`);
 
     for (const siblings of this.groupByParent().values()) {
       violations.push(...this.collectDomOrderViolations(siblings));

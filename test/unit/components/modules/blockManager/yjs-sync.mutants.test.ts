@@ -571,6 +571,17 @@ describe('BlockYjsSync — mutation kills', () => {
       );
     });
 
+    it('reports a store whose id index drifted from its array', () => {
+      const harness = createHarness({ blocks: [createBlock({ id: 'a' })] });
+
+      harness.repository.blocks.push(createBlock({ id: 'sneaked' }));
+      harness.emit({ blockId: 'ghost', type: 'update', origin: 'remote' });
+
+      expect(() => harness.runScheduled()).toThrow(
+        /after yjs-sync reconcile:\n {2}- block sneaked is in the array 1 time\(s\) but indexed 0 time\(s\)/
+      );
+    });
+
     it('reports root parentage as "root"', () => {
       const harness = twoDrifted();
 

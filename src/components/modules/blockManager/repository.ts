@@ -132,6 +132,15 @@ export class BlockRepository {
   }
 
   /**
+   * Mismatches between the store's array and its id index. Empty when they
+   * agree.
+   * @returns {string[]} one message per mismatch
+   */
+  public idIndexViolations(): string[] {
+    return this.blocksStore.idIndexViolations();
+  }
+
+  /**
    * Get Block instance by html element
    * @param element - html element to get Block by
    * @returns {Block | undefined}

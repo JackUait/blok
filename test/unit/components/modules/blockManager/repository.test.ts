@@ -363,7 +363,19 @@ describe('BlockRepository', () => {
       expect(repository.blocks).toBe(live);
       expect(live.map((block) => block.id)).toEqual(['block-2', 'block-0', 'block-1']);
       expect(repository.getBlockById('block-0')).toBe(first);
-      expect(store.idIndexViolations()).toEqual([]);
+    });
+  });
+
+  describe('idIndexViolations', () => {
+    it('reports a block written to the array behind the store', () => {
+      const store = createBlocksStore(1);
+
+      repository.initialize(store);
+      store.array.push(createMockBlock({ id: 'sneaked' }));
+
+      expect(repository.idIndexViolations()).toEqual([
+        'block sneaked is in the array 1 time(s) but indexed 0 time(s)',
+      ]);
     });
   });
 

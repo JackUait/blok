@@ -605,7 +605,6 @@ export class Blocks {
    */
   public reorder(order: Block[]): void {
     this.blocks.splice(0, this.blocks.length, ...order);
-    this.rebuildIdIndex();
   }
 
   /**
@@ -667,11 +666,6 @@ export class Blocks {
     if (matches.length === 0) {
       this.byId.delete(block.id);
     }
-  }
-
-  private rebuildIdIndex(): void {
-    this.byId.clear();
-    this.blocks.forEach((block) => this.track(block));
   }
 
   /**

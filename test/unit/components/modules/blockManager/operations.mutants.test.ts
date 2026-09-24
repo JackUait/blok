@@ -157,6 +157,7 @@ const createHarness = (options: {
     },
     getBlockByIndex,
     getBlockById,
+    idIndexViolations: (): string[] => [],
   } as unknown as BlockRepository;
 
   const setBlockParent = vi.fn();

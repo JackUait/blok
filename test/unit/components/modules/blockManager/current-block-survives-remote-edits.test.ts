@@ -179,6 +179,20 @@ describe('the current block while a remote peer edits the document', () => {
     expect(instance.blocks.getCurrentBlockIndex()).toBe(-1);
   });
 
+  it('does not revive a converted-then-deleted block when the peer re-adds its id', async () => {
+    const instance = await bootOnTwo();
+
+    requirePeer().replaceBlockContent('two', 'header', { text: 'beta', level: 2 });
+    await deliverPeerUpdate();
+    requirePeer().removeBlock('two');
+    await deliverPeerUpdate();
+    requirePeer().addBlock({ id: 'two', type: 'paragraph', data: { text: 'back' } }, 1);
+    await deliverPeerUpdate();
+
+    expect(instance.blocks.getBlockByIndex(1)?.id).toBe('two');
+    expect(instance.blocks.getCurrentBlockIndex()).toBe(-1);
+  });
+
   it('stays on the same block when the peer types into it', async () => {
     const instance = await bootOnTwo();
     const data = requirePeer().blocksMap.get('two')?.get('data');

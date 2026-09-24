@@ -159,7 +159,8 @@ export class BlockOperations implements OperationsContext {
    * @param block - the block being deleted
    */
   public forgetCurrentBlock(block: Block): void {
-    if (this.current === block) {
+    // By id: a remote convert may have swapped the Block object since.
+    if (this.current?.id === block.id) {
       this.current = undefined;
     }
   }

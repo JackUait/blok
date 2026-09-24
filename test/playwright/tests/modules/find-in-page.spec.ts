@@ -203,6 +203,28 @@ test.describe('find in page', () => {
       await expect(page.getByTestId('find-counter')).toHaveText('1 of 3');
     });
 
+    test('with the bar open, Mod+F on a new selection searches for it from there', async ({ page }) => {
+      await createEditor(page, paragraphs('foo one', 'bar two', 'foo bar three'));
+      await focusParagraph(page, 'foo one');
+      await openFind(page, 'foo');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+
+      await page.locator('[data-blok-id="find-p2"] [contenteditable="true"]').evaluate((element) => {
+        const text = element.firstChild;
+
+        if (text === null) {
+          return;
+        }
+        (element as HTMLElement).focus();
+        window.getSelection()?.setBaseAndExtent(text, 4, text, 7);
+      });
+      await page.keyboard.press(FIND_KEY);
+
+      await expect(page.getByTestId('find-input')).toHaveValue('bar');
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 2');
+      expect((await readHighlights(page)).activeBlockId).toBe('find-p2');
+    });
+
     test('the counter says "No results" when nothing matches', async ({ page }) => {
       await createEditor(page, paragraphs('foo one'));
       await focusParagraph(page, 'foo one');

@@ -126,10 +126,13 @@ export class Find extends Module {
     const wasOpen = bar.isOpen;
     const prefill = this.selectedTextForPrefill();
 
-    if (!wasOpen) {
+    if (!wasOpen || prefill !== null) {
       const caret = this.caretRange();
 
       this.anchor = caret === null ? null : pointOf(caret, this.Blok.UI.nodes.redactor);
+    }
+
+    if (!wasOpen) {
       this.returnFocus = this.focusToReturn();
       this.startObserving();
     }

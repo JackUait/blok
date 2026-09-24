@@ -299,6 +299,11 @@ export class FindBar {
     }
 
     if (this.opened) {
+      if (init.query !== undefined) {
+        this.input.value = init.query;
+        this.callbacks.onQueryChange(init.query);
+      }
+
       this.focusQuery();
 
       return;

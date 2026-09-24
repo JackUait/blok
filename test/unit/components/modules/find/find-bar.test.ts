@@ -148,6 +148,20 @@ describe('FindBar', () => {
       expect(findInput().selectionEnd).toBe(3);
     });
 
+    it('when already open, takes a new query, reports it, and selects it', () => {
+      bar.open({ readOnly: false });
+      type(findInput(), 'old');
+      vi.clearAllMocks();
+
+      bar.open({ query: 'new', readOnly: false });
+
+      expect(findInput().value).toBe('new');
+      expect(callbacks.onQueryChange).toHaveBeenCalledWith('new');
+      expect(findInput()).toHaveFocus();
+      expect(findInput().selectionStart).toBe(0);
+      expect(findInput().selectionEnd).toBe('new'.length);
+    });
+
     it('reports the kept query again when reopened', () => {
       bar.open({ query: 'kept', readOnly: false });
       bar.close();

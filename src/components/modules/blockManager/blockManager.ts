@@ -373,10 +373,12 @@ export class BlockManager extends Module {
     this.initializeServices();
 
     // A document render normalises its blocks itself, after its DOM rewrites
-    // (Renderer.insertRenderedBlocks). Every other block — created, pasted,
-    // replayed, remote — only gets the keys its document record lacks.
+    // (Renderer.insertRenderedBlocks). A block created, pasted or replayed here
+    // only gets the keys its document record lacks. A peer's block is left to
+    // its author (see `BlockYjsSync.isMaterializingFromPeer`).
     this.eventsDispatcher.on(BlockRendered, ({ blockId }) => {
-      const block = this.isRenderingDocument || this.Blok.ReadOnly.isEnabled ? undefined : this.getBlockById(blockId);
+      const skip = this.isRenderingDocument || this.Blok.ReadOnly.isEnabled || this.yjsSync.isMaterializingFromPeer;
+      const block = skip ? undefined : this.getBlockById(blockId);
 
       if (block !== undefined) {
         this.normalizeBlockData(block, { onlyMissingKeys: true });

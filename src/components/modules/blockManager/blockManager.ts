@@ -95,8 +95,8 @@ export class BlockManager extends Module {
   /**
    * Returns last Block of the DOCUMENT (last top-level block).
    *
-   * Nested-block children (table cells, column children, toggle children) live
-   * at the tail of the same flat store and are skipped — see
+   * Nested-block children (table cells, column children, toggle children) sit
+   * in the same flat store, right after their parent, and are skipped — see
    * BlockRepository.lastBlock.
    * @returns {Block}
    */

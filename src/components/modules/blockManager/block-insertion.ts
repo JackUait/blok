@@ -638,9 +638,9 @@ export class BlockInsertion {
   /**
    * Always inserts at the end of the DOCUMENT.
    *
-   * `forceTopLevel` is mandatory here: nested-block tools keep their children at
-   * the TAIL of the flat store, so the raw predecessor of the append slot is a
-   * column child / table cell paragraph. Without it, insert()'s
+   * `forceTopLevel` is mandatory here: nested-block tools keep their children
+   * right after them in the flat store, so when the document ends in one, the
+   * raw predecessor of the append slot is a column child / table cell paragraph. Without it, insert()'s
    * column-inheritance rescue adopts the appended block INTO the last column,
    * and the store places its holder inside that container — i.e. "add a block
    * below the document" would write inside the columns instead.

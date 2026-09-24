@@ -8,7 +8,7 @@ import { DATA_ATTR } from '../../constants/data-attributes';
 import { logLabeled } from '../../utils';
 import { moveElementAfter, moveElementBefore, moveElementToEnd } from '../../utils/html';
 import { isSlotless } from '../../../tools/nested-blocks';
-import { homeSlotElement } from '../../utils/home-slot';
+import { homeSlotElement, resolveHomeSlot } from '../../utils/home-slot';
 import { findOwn } from '../../utils/own-element';
 
 import type { BlockRepository } from './repository';
@@ -730,6 +730,16 @@ export class BlockHierarchy {
       }
     }
 
+    // The mount above never runs for a root home, so a holder left inside a
+    // replaced block's detached subtree (a rebuilt slotless root parent) would
+    // stay there. Bring it back at its flat position.
+    if (
+      !block.holder.isConnected
+      && resolveHomeSlot(sanitizedParentId, id => this.repository.getBlockById(id)).kind === 'root'
+    ) {
+      this.mountAtRoot(block);
+    }
+
     if (slotBefore !== null && block.holder.parentElement !== slotBefore && isSlotless(block)) {
       this.carrySlotlessDescendants(block, slotBefore);
     }
@@ -741,6 +751,34 @@ export class BlockHierarchy {
     // Notify listener so parent data can be synced (e.g. to Yjs)
     if (sanitizedParentId !== null && this.onParentChanged !== undefined) {
       this.onParentChanged(sanitizedParentId);
+    }
+  }
+
+  /**
+   * Put `block`'s holder in the root area at its flat position: after the
+   * nearest earlier root holder, else before the nearest later one. The root
+   * area is found through a connected root block; with none, nothing moves.
+   * @param block - the block to mount
+   */
+  private mountAtRoot(block: Block): void {
+    const blocks = this.repository.blocks;
+    const rootArea = blocks.find(candidate => candidate.parentId === null && candidate.holder.isConnected)?.holder.parentElement;
+
+    if (rootArea === null || rootArea === undefined) {
+      return;
+    }
+
+    const index = blocks.indexOf(block);
+    const isAtRoot = (candidate: Block): boolean => candidate.holder.parentElement === rootArea;
+    const preceding = blocks.slice(0, index).reverse().find(isAtRoot);
+    const following = blocks.slice(index + 1).find(isAtRoot);
+
+    if (preceding !== undefined) {
+      moveElementAfter(block.holder, preceding.holder);
+    } else if (following !== undefined) {
+      moveElementBefore(block.holder, following.holder);
+    } else {
+      rootArea.appendChild(block.holder);
     }
   }
 

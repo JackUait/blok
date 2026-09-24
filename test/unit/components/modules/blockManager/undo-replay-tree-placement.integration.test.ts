@@ -224,6 +224,19 @@ describe('undo and redo keep rebuilt blocks in their parent run', () => {
     await expect(instance.save()).resolves.toBeDefined();
   }, 30_000);
 
+  it('redo of turning a toggle with children into text keeps the children on screen', async () => {
+    const instance = await boot([P('before'), TOGGLE('box', ['k1', 'k2']), P('k1', 'box'), P('k2', 'box'), P('after')]);
+
+    await step(instance, () => instance.blocks.convert('box', 'paragraph'));
+    const converted = flat(instance);
+
+    await step(instance, () => instance.history.undo());
+    await step(instance, () => instance.history.redo());
+
+    await expect(instance.save()).resolves.toBeDefined();
+    expect(flat(instance)).toEqual(converted);
+  }, 30_000);
+
   it('deleting a nested toggle writes its lifted children to the doc', async () => {
     const instance = await boot([
       TOGGLE('a', ['b']),

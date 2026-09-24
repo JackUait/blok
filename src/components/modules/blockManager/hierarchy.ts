@@ -49,6 +49,7 @@ export class BlockHierarchy {
   private readonly onParentChanged?: (parentId: string) => void;
   private readonly getIsSyncingFromYjs?: () => boolean;
   private readonly blocksStore?: Pick<Blocks, 'mount'>;
+  private readonly getIsApplyingFromYjs?: () => boolean;
 
   /**
    * @param repository - BlockRepository for looking up blocks by id
@@ -59,17 +60,22 @@ export class BlockHierarchy {
    *   peers can legitimately deliver a transiently-dangling parent id during
    *   conflict resolution, batched undo replay, or initial sync ordering.
    * @param blocksStore - the store behind `repository`; {@link placeBlock} mounts holders through it
+   * @param getIsApplyingFromYjs - optional getter: true only while a sync
+   *   operation's body runs, not in the RAF tail after it. Defaults to
+   *   `getIsSyncingFromYjs`.
    */
   constructor(
     repository: BlockRepository,
     onParentChanged?: (parentId: string) => void,
     getIsSyncingFromYjs?: () => boolean,
-    blocksStore?: Pick<Blocks, 'mount'>
+    blocksStore?: Pick<Blocks, 'mount'>,
+    getIsApplyingFromYjs?: () => boolean
   ) {
     this.repository = repository;
     this.onParentChanged = onParentChanged;
     this.getIsSyncingFromYjs = getIsSyncingFromYjs;
     this.blocksStore = blocksStore;
+    this.getIsApplyingFromYjs = getIsApplyingFromYjs ?? getIsSyncingFromYjs;
   }
 
   /**
@@ -221,13 +227,15 @@ export class BlockHierarchy {
    * Temporary: it derives contentIds from flat order, the opposite of the
    * target. Delete it once placeRun, moveTo and drag stop moving the flat
    * array before re-asserting (wave-2 step 3). Skipped during a Yjs replay,
-   * where contentIds carry the doc's order.
+   * where contentIds carry the doc's order. Not skipped in the RAF tail of a
+   * sync window: nothing replays there, and a local move made in it (the
+   * first render leaves one open) would keep a stale order.
    * @param parentId - the parent, or null for the root (nothing to do)
    */
   private sortListedChildrenByFlatOrder(parentId: string | null): void {
     const parent = parentId === null ? undefined : this.repository.getBlockById(parentId);
 
-    if (parent === undefined || this.getIsSyncingFromYjs?.() === true) {
+    if (parent === undefined || this.getIsApplyingFromYjs?.() === true) {
       return;
     }
 

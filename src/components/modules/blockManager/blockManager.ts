@@ -473,7 +473,8 @@ export class BlockManager extends Module {
         }
       },
       () => Boolean(this.yjsSync?.isSyncingFromYjs),
-      this.blocksStore
+      this.blocksStore,
+      () => Boolean(this.yjsSync?.isRunningOperationBody)
     );
 
     // Initialize operations first (before yjsSync) to allow circular dependency resolution

@@ -258,6 +258,15 @@ export class BlockYjsSync {
   }
 
   /**
+   * Whether an atomic operation's body is running now. False in the RAF tail
+   * that `extendThroughRAF` keeps open after the body, where
+   * `isSyncingFromYjs` is still true.
+   */
+  public get isRunningOperationBody(): boolean {
+    return this.activeOperationDepth > 0;
+  }
+
+  /**
    * Whether a mutation of `block` right now is the reconciler's own echo:
    * a structural batch is open, or the block or one of its ancestors is
    * being updated from the doc. Gates the write-back in

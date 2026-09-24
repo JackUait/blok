@@ -477,22 +477,46 @@ const rawOrder = (store: DocumentStore): Record<string, string[]> => {
   return arrays;
 };
 
-const SEEDS = Array.from({ length: 40 }, (_, i) => i + 1);
+const SEEDS = Array.from({ length: 100 }, (_, i) => i + 1);
+
+const siblingsOf = (json: TreeBlock[], block: TreeBlock): TreeBlock[] =>
+  json.filter((other) => (other.parent ?? null) === (block.parent ?? null) && other.id !== block.id);
+
+/**
+ * A random tree plus a block that has a sibling to move past, picked nested
+ * three times in four when the tree has one. Without the bias most picks
+ * are root blocks and the nested path goes nearly untested.
+ */
+const treeWithMover = (rand: () => number): { json: TreeBlock[]; mover: TreeBlock } => {
+  const json = randomTree(rand, 4 + Math.floor(rand() * 10));
+  const movers = json.filter((block) => siblingsOf(json, block).length > 0);
+  const nested = movers.filter((block) => block.parent !== undefined);
+
+  if (movers.length === 0) {
+    return treeWithMover(rand);
+  }
+
+  return { json,
+    mover: pick(rand, nested.length > 0 && rand() < 0.75 ? nested : movers) };
+};
 
 describe('DocumentStore order laws — placement API equivalence', () => {
   it.each(SEEDS)('seed %i: moveBlockTo(placement implied by moveBlock) builds the same doc', (seed) => {
     const rand = seededRandom(seed);
-    const json = randomTree(rand, 3 + Math.floor(rand() * 10));
+    const { json, mover } = treeWithMover(rand);
     const [byIndex, byPlacement] = twinStores(json);
-    const id = pick(rand, json).id;
-    const toIndex = Math.floor(rand() * (json.length + 1));
+    const before = byIndex.orderedIds();
 
-    byIndex.moveBlock(id, toIndex);
+    // A sibling's current flat index always moves the block past it.
+    const toIndex = before.indexOf(pick(rand, siblingsOf(json, mover)).id);
 
-    const implied = byIndex.getPlacement(id);
+    byIndex.moveBlock(mover.id, toIndex);
+    expect(byIndex.orderedIds()).not.toEqual(before);
+
+    const implied = byIndex.getPlacement(mover.id);
 
     expect(implied).not.toBeNull();
-    byPlacement.moveBlockTo(id, implied ?? { parentId: null, afterId: null });
+    byPlacement.moveBlockTo(mover.id, implied ?? { parentId: null, afterId: null });
 
     expect(rawOrder(byPlacement)).toEqual(rawOrder(byIndex));
     expect(byPlacement.toJSON()).toEqual(byIndex.toJSON());
@@ -500,17 +524,18 @@ describe('DocumentStore order laws — placement API equivalence', () => {
 
   it.each(SEEDS)('seed %i: moveBlock(index where moveBlockTo landed) builds the same doc', (seed) => {
     const rand = seededRandom(seed);
-    const json = randomTree(rand, 3 + Math.floor(rand() * 10));
+    const { json, mover } = treeWithMover(rand);
     const [byIndex, byPlacement] = twinStores(json);
-    const block = pick(rand, json);
-    const parentId = block.parent ?? null;
-    const siblings = json
-      .filter((other) => (other.parent ?? null) === parentId && other.id !== block.id)
-      .map((other) => other.id);
-    const afterId = rand() < 0.2 ? null : pick(rand, [null, ...siblings]);
+    const before = byPlacement.orderedIds();
+    const parentId = mover.parent ?? null;
+    const current = byPlacement.getPlacement(mover.id)?.afterId ?? null;
+    const afterId = pick(rand, [null, ...siblingsOf(json, mover).map((other) => other.id)]
+      .filter((candidate) => candidate !== current));
 
-    byPlacement.moveBlockTo(block.id, { parentId, afterId });
-    byIndex.moveBlock(block.id, byPlacement.orderedIds().indexOf(block.id));
+    byPlacement.moveBlockTo(mover.id, { parentId, afterId });
+    expect(byPlacement.orderedIds()).not.toEqual(before);
+
+    byIndex.moveBlock(mover.id, byPlacement.orderedIds().indexOf(mover.id));
 
     expect(rawOrder(byIndex)).toEqual(rawOrder(byPlacement));
     expect(byIndex.toJSON()).toEqual(byPlacement.toJSON());
@@ -520,7 +545,7 @@ describe('DocumentStore order laws — placement API equivalence', () => {
     const rand = seededRandom(seed);
     const json = randomTree(rand, 3 + Math.floor(rand() * 10));
     const [byIndex, byPlacement] = twinStores(json);
-    const parent = rand() < 0.3 ? undefined : pick(rand, json).id;
+    const parent = rand() < 0.25 ? undefined : pick(rand, json).id;
     const index = Math.floor(rand() * (json.length + 2));
 
     byIndex.addBlock({ ...paragraph('added', 'added'), ...(parent === undefined ? {} : { parent }) }, index);
@@ -538,7 +563,7 @@ describe('DocumentStore order laws — placement API equivalence', () => {
     const rand = seededRandom(seed);
     const json = randomTree(rand, 3 + Math.floor(rand() * 10));
     const [byIndex, byPlacement] = twinStores(json);
-    const parentId = rand() < 0.3 ? null : pick(rand, json).id;
+    const parentId = rand() < 0.25 ? null : pick(rand, json).id;
     const siblings = json.filter((other) => (other.parent ?? null) === parentId).map((other) => other.id);
     const afterId = pick(rand, [null, ...siblings]);
 

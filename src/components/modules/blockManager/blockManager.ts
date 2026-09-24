@@ -2159,7 +2159,7 @@ export class BlockManager extends Module {
     // from a `finally` escapes the try it belongs to.
     try {
       try {
-        await this.saveAndEnqueueBlockDataWrite(block, options);
+        await this.saveAndEnqueueBlockDataWrite(block, options, releasePendingWrite);
       } finally {
         releasePendingWrite();
       }
@@ -2173,8 +2173,9 @@ export class BlockManager extends Module {
    * write. Split out so the in-flight registration above wraps every exit.
    * @param block - block whose saved data goes to Yjs
    * @param options - see `SyncBlockDataOptions`
+   * @param pending - this save's in-flight release callback
    */
-  private async saveAndEnqueueBlockDataWrite(block: Block, options?: SyncBlockDataOptions): Promise<void> {
+  private async saveAndEnqueueBlockDataWrite(block: Block, options?: SyncBlockDataOptions, pending?: () => void): Promise<void> {
     // Classified BEFORE the await: the settling window is measured from the
     // mutation, not from whenever this tool's save() happens to resolve.
     const isMaterializing = options?.untracked === true || this.yjsSync.isMaterializing(block);
@@ -2235,7 +2236,7 @@ export class BlockManager extends Module {
 
     this.Blok.YjsManager.enqueueBlockDataWrite(block.id, data, (entries) => {
       return this.flushBlockDataWrites(block, entries, flushOptions);
-    });
+    }, pending);
   }
 
   /**

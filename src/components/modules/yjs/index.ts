@@ -11,6 +11,7 @@ import { DocumentStore, type DataKeySnapshot } from './document-store';
 import { YBlockSerializer, isBoundaryCharacter, type YjsOutputBlockData } from './serializer';
 import type { AwarenessChange, BlockChangeCallback, BlockPlacement, CaretSnapshot } from './types';
 import { UndoHistory } from './undo-history';
+import type { ClosedStep } from './undo-history';
 import { BlockWriteBuffer, type BufferedBlockWriteFlush } from './write-buffer';
 
 /**
@@ -80,7 +81,10 @@ export class YjsManager extends Module {
   private readonly pendingBlockWrites = new Set<symbol>();
 
   /** In-flight saves each gesture start is waiting on; see {@link beginGesture}. */
-  private splitsAfterWrites: Array<Set<symbol>> = [];
+  private splitsAfterWrites: Array<{ tokens: Set<symbol>; closed: ClosedStep | null; landedInOpenStep?: boolean }> = [];
+
+  /** The token behind each release callback {@link beginPendingBlockDataWrite} handed out. */
+  private readonly tokenByRelease = new WeakMap<() => void, symbol>();
 
   /**
    * Destroy's OWN continuation, run once `pendingBlockWrites` falls back to
@@ -507,13 +511,19 @@ export class YjsManager extends Module {
    * @param blockId - block whose data is being written
    * @param data - saved data entries from block.save()
    * @param flush - callback performing the actual Yjs writes for this block
+   * @param pending - the release callback of the save this write comes from
    */
   public enqueueBlockDataWrite(
     blockId: string,
     data: Record<string, unknown>,
-    flush: BufferedBlockWriteFlush
+    flush: BufferedBlockWriteFlush,
+    pending?: () => void
   ): void {
     if (this.isDocumentDestroyed) {
+      return;
+    }
+
+    if (pending !== undefined && this.landWriteOfClosedStep(pending, data, flush)) {
       return;
     }
 
@@ -538,7 +548,7 @@ export class YjsManager extends Module {
 
     this.pendingBlockWrites.add(token);
 
-    return (): void => {
+    const release = (): void => {
       // A token is released once; a second call finds nothing to delete.
       if (!this.pendingBlockWrites.delete(token)) {
         return;
@@ -552,6 +562,52 @@ export class YjsManager extends Module {
 
       this.notifyPendingBlockWritesSettled();
     };
+
+    this.tokenByRelease.set(release, token);
+
+    return release;
+  }
+
+  /**
+   * Land a save that was in flight when a gesture started, in the step that
+   * gesture closed, once the gesture has written. Unbuffered: the buffer
+   * coalesces by block and would merge it with the gesture's own write.
+   * @param pending - the save's release callback
+   * @param data - the saved data
+   * @param flush - the write
+   * @returns false when the write must go through the buffer as usual
+   */
+  private landWriteOfClosedStep(pending: () => void, data: Record<string, unknown>, flush: BufferedBlockWriteFlush): boolean {
+    const token = this.tokenByRelease.get(pending);
+    const waiting = token === undefined ? undefined : this.splitsAfterWrites.find((entry) => entry.tokens.has(token));
+
+    if (token === undefined || waiting === undefined || waiting.closed === null) {
+      return false;
+    }
+
+    // The gesture's buffered writes are its own; land them in its step first.
+    this.flushPendingBlockWrites();
+
+    const entries = new Map(Object.entries(data));
+    const landed = this.undoHistory.landLateWrite(
+      waiting.closed,
+      () => {
+        flush(entries);
+      },
+      () => this.documentStore.transactWithoutCapture(() => {
+        flush(entries);
+      })
+    );
+
+    if (landed) {
+      // Landed where it belongs: the gesture's step must stay open.
+      waiting.tokens.delete(token);
+      this.splitsAfterWrites = this.splitsAfterWrites.filter((entry) => entry.tokens.size > 0);
+    } else {
+      waiting.landedInOpenStep = true;
+    }
+
+    return landed;
   }
 
   /**
@@ -560,15 +616,20 @@ export class YjsManager extends Module {
    * @param token - the save that just landed
    */
   private splitAfterLandedWrite(token: symbol): void {
-    const waiting = this.splitsAfterWrites;
-
-    this.splitsAfterWrites = waiting.filter((tokens) => {
+    const landed = this.splitsAfterWrites.filter(({ tokens }) => {
       tokens.delete(token);
 
-      return tokens.size > 0;
+      return tokens.size === 0;
     });
 
-    if (this.splitsAfterWrites.length < waiting.length) {
+    this.splitsAfterWrites = this.splitsAfterWrites.filter(({ tokens }) => tokens.size > 0);
+
+    // A gesture that already wrote keeps its step open: its late saves landed
+    // in the closed step (see `landWriteOfClosedStep`), or wrote nothing.
+    const mustSplit = landed.some(({ closed, landedInOpenStep }) =>
+      landedInOpenStep === true || closed === null || !this.undoHistory.gestureWroteSince(closed));
+
+    if (mustSplit) {
       this.undoHistory.splitStep();
     }
   }
@@ -757,7 +818,8 @@ export class YjsManager extends Module {
     const inFlight = new Set(this.pendingBlockWrites);
 
     if (this.undoHistory.beginGesture(kind) && inFlight.size > 0) {
-      this.splitsAfterWrites.push(inFlight);
+      this.splitsAfterWrites.push({ tokens: inFlight,
+        closed: this.undoHistory.closedStep });
     }
   }
 

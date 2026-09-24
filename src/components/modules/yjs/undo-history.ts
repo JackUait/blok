@@ -39,10 +39,48 @@ interface PoppedEntryScan {
   resurrected: Set<string>;
 }
 
+/** The step a gesture start closed, and where it ends on both stacks. */
+export interface ClosedStep {
+  /** The closed step when a write could still have joined it, else null. */
+  open: StackItem | null;
+  /** The undo stack's top right after the split. */
+  top: StackItem | null;
+  undoLength: number;
+  caretLength: number;
+}
+
 interface StackItemEvent {
   type: 'undo' | 'redo';
   stackItem: StackItem;
+  /** Every type the transaction changed, and each of their ancestors. */
+  changedParentTypes: ReadonlyMap<unknown, unknown>;
 }
+
+/**
+ * What a finished transaction inserted and deleted, as a stack item holds it.
+ * Keeps the deleted content: yjs frees it when the transaction ends, and undo
+ * needs it back.
+ * @param transaction - the finished transaction
+ */
+const writtenBy = (transaction: Y.Transaction): Pick<StackItem, 'insertions' | 'deletions'> => {
+  const insertions = Y.createDeleteSet();
+
+  transaction.afterState.forEach((end, client) => {
+    const start = transaction.beforeState.get(client) ?? 0;
+
+    if (end > start) {
+      insertions.clients.set(client, [{ clock: start, len: end - start }]);
+    }
+  });
+  Y.iterateDeletedStructs(transaction, transaction.deleteSet, (struct) => {
+    if (struct instanceof Y.Item) {
+      keepWithParents(struct);
+    }
+  });
+
+  return { insertions,
+    deletions: transaction.deleteSet };
+};
 
 /**
  * UndoHistory manages all undo/redo state.
@@ -193,6 +231,12 @@ export class UndoHistory {
   private poppedStackItem: StackItem | null = null;
 
   /**
+   * Depth of {@link reachPastRefusedStackItem}. While above zero a yjs replay
+   * sees one stack item only, and puts it back when it applies nothing.
+   */
+  private reachingPastRefusedItem = 0;
+
+  /**
    * Flag to skip caret stack updates during explicit undo/redo operations.
    * When true, the stack-item-added listener won't modify caret stacks.
    */
@@ -232,6 +276,12 @@ export class UndoHistory {
 
   /** Nesting depth of {@link holdCapture}. */
   private captureHolds = 0;
+
+  /** Where the step the last gesture start closed ends; see {@link landLateWrite}. */
+  private lastClosedStep: ClosedStep | null = null;
+
+  /** The step {@link insertStepUnder} made for a closed step that was not open. */
+  private readonly stepUnderGesture = new WeakMap<ClosedStep, StackItem>();
 
   /**
    * Nesting depth of {@link addToStepThatWrote}. While above 0 nothing may
@@ -300,7 +350,7 @@ export class UndoHistory {
     this.rootOrderScope = scope.find((root): root is Y.Array<string> => root instanceof Y.Array) ?? null;
 
     return new Y.UndoManager(scope, {
-      captureTimeout: CAPTURE_TIMEOUT_MS,
+      captureTimeout: this.captureHolds > 0 ? Infinity : CAPTURE_TIMEOUT_MS,
       trackedOrigins: new Set(['local']),
       deleteFilter: (item) => {
         const mayDelete = this.mayUndoDelete(item);
@@ -544,7 +594,8 @@ export class UndoHistory {
    * is no longer anything in the document for it to unwind, so putting it back
    * would leave a permanently inert entry that every later press must walk
    * past — and the caret stacks one step out of phase with the yjs stack for
-   * the rest of the session. Those stay discarded, exactly as before.
+   * the rest of the session. Those stay discarded, except under a refused
+   * item (see {@link reachPastRefusedStackItem}), where every one comes back.
    *
    * The skipped items are the newest ones, so they go back on top, in the
    * order they were popped. Called BEFORE `settleReplayedEntries`, whose whole
@@ -556,8 +607,12 @@ export class UndoHistory {
    */
   private restoreSkippedStackItems(before: readonly StackItem[], stack: StackItem[]): void {
     const live = new Set(stack);
+    // Under a refused item, an item that applies nothing is most likely
+    // shadowed by it (its text lives in a block the refused item deleted), not
+    // spent. It comes back to life once the refused item is undone.
+    const keepAll = this.reachingPastRefusedItem > 0;
     const skipped = before.filter(
-      (item) => !live.has(item) && item !== this.poppedStackItem && this.wasBlockedBySparing(item)
+      (item) => !live.has(item) && item !== this.poppedStackItem && (keepAll || this.wasBlockedBySparing(item))
     );
 
     stack.push(...skipped);
@@ -971,7 +1026,13 @@ export class UndoHistory {
    * the items a replay creates too: a redo deletes blocks as well.
    */
   private setupDeletedPlacementTracking(): void {
-    const record = (event: StackItemEvent): void => this.recordDeletedPlacements(event.stackItem);
+    const record = (event: StackItemEvent): void => {
+      // A block delete always writes an order array. Typing never does, so
+      // a keystroke costs no scan and no extra transaction.
+      if ([...event.changedParentTypes.keys()].some((type) => type instanceof Y.AbstractType && this.isOrderArray(type))) {
+        this.recordDeletedPlacements(event.stackItem);
+      }
+    };
 
     this.undoManager.on('stack-item-added', record);
     this.undoManager.on('stack-item-updated', record);
@@ -1230,6 +1291,14 @@ export class UndoHistory {
     // first, regardless of when they happened).
     const lastWasMove = this.caretUndoStack[this.caretUndoStack.length - 1]?.kind === 'move';
 
+    // Through `undo()` again, so the entry under the refused one is replayed
+    // by whichever timeline it belongs to (a move group or a yjs item).
+    if (!lastWasMove && this.topStackItemIsRefused('undo')) {
+      this.reachPastRefusedStackItem();
+
+      return;
+    }
+
     if (lastWasMove) {
       const pending = this.moveUndoStack[this.moveUndoStack.length - 1];
 
@@ -1288,10 +1357,13 @@ export class UndoHistory {
    * than on `undo()`, where a redo path — and any future third caller — could
    * silently miss it:
    *
-   * - the resurrection scan, so a replace gesture is never half-applied;
    * - `blocksBornInPoppedEntry`, so a spared block keeps its own fields;
    * - `restoreSkippedStackItems`, so an action the filter held back stays on
    *   the stack instead of being thrown away.
+   *
+   * The resurrection scan (so a replace is never half-applied) runs in
+   * `undo()`/`redo()` before this, because a refused undo replays the entry
+   * under it through `undo()`.
    * @param direction - which stack to pop from
    * @returns the caret entry to carry to the opposite stack, or undefined when
    *   nothing was replayed
@@ -1300,12 +1372,10 @@ export class UndoHistory {
     const stackOf = (): StackItem[] =>
       direction === 'undo' ? this.undoManager.undoStack : this.undoManager.redoStack;
     const scan = this.scanTopEntry(stackOf());
-
-    if (this.wouldResurrectBesideASparedBlock(scan)) {
-      return this.reachPastRefusedStackItem(direction);
-    }
-
     const stackBefore = [...stackOf()];
+    // yjs pops until one item applies and drops every item it passed. Under a
+    // refused item that walk would undo an older step and lose the one between.
+    const hidden = this.reachingPastRefusedItem > 0 ? stackOf().splice(0, stackOf().length - 1) : [];
 
     this.blocksBornInPoppedEntry = scan.born;
     this.poppedInsertions = stackOf().at(-1)?.insertions ?? null;
@@ -1319,12 +1389,14 @@ export class UndoHistory {
         }
       });
     } finally {
+      stackOf().unshift(...hidden);
       this.blocksBornInPoppedEntry = new Set();
       this.poppedInsertions = null;
       this.sparesTextOfBornBlocks = false;
     }
 
     this.putBackRestoredBlocks(direction);
+    // Before `settleReplayedEntries`: an item put back keeps its caret entry.
     this.restoreSkippedStackItems(stackBefore, stackOf());
 
     return this.settleReplayedEntries(
@@ -1362,18 +1434,37 @@ export class UndoHistory {
   }
 
   /**
-   * Same as {@link reachPastRefusedMove} for a refused yjs stack item. Its
-   * caret entry leaves the caret stack too, or `settleReplayedEntries` would
-   * shed it as the entry of an item that left the stack.
-   * @param direction - which stack the refused item is on top of
+   * Whether the top yjs item of this direction's stack must be refused: see
+   * {@link wouldResurrectBesideASparedBlock}.
+   * @param direction - which stack to read
    */
-  private reachPastRefusedStackItem(direction: 'undo' | 'redo'): CaretHistoryEntry | undefined {
+  private topStackItemIsRefused(direction: 'undo' | 'redo'): boolean {
     const stack = direction === 'undo' ? this.undoManager.undoStack : this.undoManager.redoStack;
-    const carets = direction === 'undo' ? this.caretUndoStack : this.caretRedoStack;
+
+    return this.wouldResurrectBesideASparedBlock(this.scanTopEntry(stack));
+  }
+
+  /**
+   * Undo the ONE entry under a refused yjs item, then put the item back on
+   * top. Undo only: see `redo()`.
+   *
+   * Invariants, so no press loses or reorders history:
+   * - the refused item and its caret entry come back exactly where they were;
+   * - the replay below sees one yjs item only (see `replayTrackedEntry`), so
+   *   it can never reach an older step;
+   * - that item, when it applies nothing, goes back too (see
+   *   `restoreSkippedStackItems`) and the press does nothing.
+   *
+   * Its caret entry leaves the caret stack too, or `settleReplayedEntries`
+   * would shed it as the entry of an item that left the stack.
+   */
+  private reachPastRefusedStackItem(): void {
+    const stack = this.undoManager.undoStack;
+    const carets = this.caretUndoStack;
     const item = stack.pop();
 
     if (item === undefined) {
-      return undefined;
+      return;
     }
 
     const entry = this.entryByStackItem.get(item);
@@ -1383,9 +1474,11 @@ export class UndoHistory {
       carets.splice(index, 1);
     }
 
+    this.reachingPastRefusedItem++;
     try {
-      return this.replayTrackedEntry(direction);
+      this.undo();
     } finally {
+      this.reachingPastRefusedItem--;
       stack.push(item);
       if (entry !== undefined && index !== -1) {
         carets.push(entry);
@@ -1409,6 +1502,13 @@ export class UndoHistory {
     // redo is a move or a Yjs edit, so they replay in the same chronological order
     // they were undone.
     const nextIsMove = this.caretRedoStack[this.caretRedoStack.length - 1]?.kind === 'move';
+
+    // Never reach past on redo: every item under the top is LATER and may
+    // depend on it (typing in the block the refused replace creates). The
+    // refused item and everything after it wait on the stack.
+    if (!nextIsMove && this.topStackItemIsRefused('redo')) {
+      return;
+    }
 
     if (nextIsMove) {
       const pending = this.moveRedoStack[this.moveRedoStack.length - 1];
@@ -1744,7 +1844,7 @@ export class UndoHistory {
     const continuesTyping = kind === 'typing' && liveKey !== null && liveKey === this.typingInputKey;
 
     if (!continuesTyping) {
-      this.splitStep();
+      this.closeStepForGesture();
     }
     this.typingInputKey = kind === 'typing' ? liveKey : null;
 
@@ -1755,6 +1855,160 @@ export class UndoHistory {
     }
 
     return !continuesTyping;
+  }
+
+  /**
+   * Split, and remember where the closed step ends. The step counts as open
+   * when yjs would still have merged a write into it, or when the split's own
+   * flush just created it.
+   */
+  private closeStepForGesture(): void {
+    const { undoManager } = this;
+    const lengthBefore = undoManager.undoStack.length;
+    // yjs stamps `lastChange` with the Date.now lib0 saved at import. Fake
+    // timers swap only the global one, so there the two clocks can differ.
+    const wasOpen = undoManager.lastChange !== 0 && Date.now() - undoManager.lastChange < undoManager.captureTimeout;
+
+    this.splitStep();
+
+    const stack = undoManager.undoStack;
+    const top = stack.at(-1) ?? null;
+
+    this.lastClosedStep = {
+      open: wasOpen || stack.length > lengthBefore ? top : null,
+      top,
+      undoLength: stack.length,
+      caretLength: this.caretUndoStack.length,
+    };
+  }
+
+  /**
+   * The step the last gesture start closed. Read it right after
+   * {@link beginGesture} returns true.
+   */
+  public get closedStep(): ClosedStep | null {
+    return this.lastClosedStep;
+  }
+
+  /**
+   * Land a write that belongs to the step `closed` ended (a save that was in
+   * flight when the gesture started) without joining the gesture's step.
+   *
+   * - The gesture has not written yet: `tracked` lands as usual. The caller
+   *   closes the step after it.
+   * - The closed step was open: `untracked` joins it.
+   * - It was not: `tracked` becomes a step of its own, under the gesture's.
+   * - History moved under the gesture (an undo): the write is not landed.
+   * @param closed - from {@link closedStep}
+   * @param tracked - the write
+   * @param untracked - the same write, run without capture
+   * @returns false when the caller must land the write as usual
+   */
+  public landLateWrite(closed: ClosedStep, tracked: () => void, untracked: () => void): boolean {
+    if (!this.gestureWroteSince(closed)) {
+      return false;
+    }
+
+    if (closed.open !== null || this.stepUnderGesture.has(closed)) {
+      this.addToClosedStep(closed, untracked);
+    } else {
+      this.insertStepUnder(closed, tracked);
+    }
+
+    return true;
+  }
+
+  /**
+   * Whether the gesture that closed `closed` has written its own step, with
+   * the history under it untouched since.
+   * @param closed - from {@link closedStep}
+   */
+  public gestureWroteSince(closed: ClosedStep): boolean {
+    const stack = this.undoManager.undoStack;
+    const intact = stack.length >= closed.undoLength && (closed.top === null || stack[closed.undoLength - 1] === closed.top);
+
+    return intact && (stack.length > closed.undoLength || this.caretUndoStack.length > closed.caretLength);
+  }
+
+  /**
+   * Run the tracked write `fn` as a step of its own at `closed`'s end, under
+   * the steps written since. The step on top stays open.
+   * @param closed - where the step goes
+   * @param fn - the tracked write
+   */
+  private insertStepUnder(closed: ClosedStep, fn: () => void): void {
+    const { undoManager } = this;
+    const stack = undoManager.undoStack;
+    const lastChange = undoManager.lastChange;
+    const openEntry = this.openEntry;
+    const gestureEntry = this.caretUndoStack[closed.caretLength];
+    const lengthBefore = stack.length;
+
+    undoManager.stopCapturing();
+    this.withoutCaretMark(fn);
+    undoManager.lastChange = lastChange;
+    this.openEntry = openEntry;
+
+    if (stack.length === lengthBefore) {
+      return;
+    }
+
+    const item = stack.pop();
+
+    if (item === undefined) {
+      return;
+    }
+
+    stack.splice(closed.undoLength, 0, item);
+    // More late writes of the same typing join it.
+    this.stepUnderGesture.set(closed, item);
+
+    const entry = this.entryByStackItem.get(item);
+
+    if (entry === undefined) {
+      return;
+    }
+
+    this.caretUndoStack.splice(this.caretUndoStack.lastIndexOf(entry), 1);
+    this.caretUndoStack.splice(closed.caretLength, 0, entry);
+    // The caret the gesture started from is where this write's typing ended.
+    entry.before = gestureEntry?.before ?? entry.before;
+    entry.after = gestureEntry?.before ?? entry.after;
+  }
+
+  /**
+   * Run the untracked write `fn` as part of the step `closed` ended.
+   *
+   * Only `fn`'s first transaction joins the step; call it outside any
+   * transaction and after the write buffer is flushed.
+   * @param closed - the closed step
+   * @param fn - the untracked write
+   */
+  private addToClosedStep(closed: ClosedStep, fn: () => void): void {
+    const step = this.stepUnderGesture.get(closed) ?? closed.open;
+    const doc = this.undoManager.doc;
+
+    if (step === null || doc._transaction !== null) {
+      fn();
+
+      return;
+    }
+
+    const join = (transaction: Y.Transaction): void => {
+      doc.off('afterTransaction', join);
+
+      const written = writtenBy(transaction);
+
+      step.insertions = Y.mergeDeleteSets([step.insertions, written.insertions]);
+      step.deletions = Y.mergeDeleteSets([step.deletions, written.deletions]);
+    };
+
+    doc.on('afterTransaction', join);
+    try {
+      fn();
+    } finally {
+      doc.off('afterTransaction', join);
+    }
   }
 
   /**
@@ -2339,8 +2593,7 @@ export class UndoHistory {
     this.poppedStackItem = null;
     this.openEntry = null;
     this.typingInputKey = null;
-    this.captureHolds = 0;
-    this.undoManager.captureTimeout = CAPTURE_TIMEOUT_MS;
+    // Holds are left alone: each holder still owns its release.
     // Clear smart grouping state
     this.clearBoundary();
     this.undoManager.clear();

@@ -129,6 +129,23 @@ describe('GestureController', () => {
     expect(yjs.releaseCapture).toHaveBeenCalledTimes(1);
   });
 
+  it('does not hold the step for a right-button press, which may never get its pointerup', () => {
+    input.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true,
+      button: 2 }));
+
+    expect(yjs.beginGesture).toHaveBeenCalledWith('discrete');
+    expect(yjs.holdCapture).not.toHaveBeenCalled();
+  });
+
+  it('releases the hold when a context menu opens (Ctrl+click on macOS)', () => {
+    input.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true,
+      button: 0,
+      ctrlKey: true }));
+    input.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+
+    expect(yjs.releaseCapture).toHaveBeenCalledTimes(1);
+  });
+
   it('holds the step through an IME composition', () => {
     input.dispatchEvent(new Event('compositionstart', { bubbles: true }));
     input.dispatchEvent(new Event('compositionend', { bubbles: true }));

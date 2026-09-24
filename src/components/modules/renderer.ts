@@ -343,12 +343,12 @@ export class Renderer extends Module {
 
     // After the rewrites above, so the document takes the DOM they produced.
     // A view rebuild adds the missing keys only, never overwriting a value
-    // with our sanitised one. A rebuild from the shared document writes
-    // nothing: its blocks belong to their authors, and a receiver's default
+    // with our sanitised one. A rebuild from the shared document only records
+    // the keys: its blocks belong to their authors, and a receiver's default
     // races the author's own choice of that key.
-    if (!rendersSharedDocument) {
-      BlockManager.normalizeRenderedBlocks({ onlyMissingKeys: options.skipYjsSync === true });
-    }
+    BlockManager.normalizeRenderedBlocks(rendersSharedDocument
+      ? { recordOnly: true }
+      : { onlyMissingKeys: options.skipYjsSync === true });
 
     return blocks.length;
   }

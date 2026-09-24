@@ -125,7 +125,7 @@ interface RendererHarness {
   composeBlock: Mock<ComposeBlock>;
   insert: Mock<InsertBlock>;
   insertMany: Mock<InsertMany>;
-  normalizeRenderedBlocks: Mock<(options?: { onlyMissingKeys?: boolean }) => void>;
+  normalizeRenderedBlocks: Mock<(options?: { onlyMissingKeys?: boolean; recordOnly?: boolean }) => void>;
   tools: MockTools;
   redactor: HTMLElement;
   emit: Mock<(...args: unknown[]) => void>;
@@ -147,7 +147,7 @@ const createRenderer = (options: {
   );
   const insert = vi.fn<InsertBlock>(() => createComposedBlock('inserted', 'paragraph'));
   const insertMany = vi.fn<InsertMany>(() => undefined);
-  const normalizeRenderedBlocks = vi.fn<(options?: { onlyMissingKeys?: boolean }) => void>();
+  const normalizeRenderedBlocks = vi.fn<(options?: { onlyMissingKeys?: boolean; recordOnly?: boolean }) => void>();
   const emit = vi.fn<(...args: unknown[]) => void>();
 
   const tools: MockTools = {
@@ -652,7 +652,7 @@ describe('Renderer mutation coverage', () => {
 
       await renderer.render(callerBlocks(), { skipYjsSync: true });
 
-      expect(normalizeRenderedBlocks).not.toHaveBeenCalled();
+      expect(normalizeRenderedBlocks).toHaveBeenCalledWith({ recordOnly: true });
     });
 
     it('adds missing keys on a view rebuild when collaboration is off', async () => {

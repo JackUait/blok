@@ -27,6 +27,7 @@ type ReadOnlyMocks = {
     getBlockById: MockInstance<(id: string) => { inputs: HTMLElement[] } | undefined>;
     toggleReadOnly: MockInstance<(state: boolean) => void>;
     withViewRebuild: MockInstance<(rebuild: () => Promise<void>) => Promise<void>>;
+    normalizeBlocksRenderedReadOnly: MockInstance<() => void>;
   };
   renderer: {
     render: MockInstance<(blocks: unknown[]) => Promise<void>>;
@@ -87,6 +88,7 @@ const createReadOnly = (options?: CreateReadOnlyOptions): CreateReadOnlyResult =
     clear: vi.fn<() => Promise<void>>(async () => undefined),
     getBlockById: vi.fn<(id: string) => { inputs: HTMLElement[] } | undefined>(() => undefined),
     toggleReadOnly: vi.fn<(state: boolean) => void>((_state) => undefined),
+    normalizeBlocksRenderedReadOnly: vi.fn<() => void>(() => undefined),
     // rebuilds the view without touching the document — runs its callback as-is
     withViewRebuild: vi.fn<(rebuild: () => Promise<void>) => Promise<void>>(async (rebuild) => {
       await rebuild();
@@ -631,6 +633,24 @@ describe('ReadOnly module', () => {
 
       expect(mocks.saver.save).not.toHaveBeenCalled();
       expect(mocks.caret.setToInput).toHaveBeenCalledWith(input, 'default', 4);
+    });
+
+    // Nothing re-renders on this path, so nothing else normalises the blocks
+    // that rendered while read-only.
+    it('normalises the blocks when leaving read-only in place', async () => {
+      const { readOnly, mocks } = createReadOnly({
+        config: { readOnly: true },
+        blockTools: [
+          ['paragraph', { isReadOnlySupported: true, supportsInPlaceReadOnly: true }],
+        ],
+      });
+
+      await readOnly.prepare();
+      expect(mocks.blockManager.normalizeBlocksRenderedReadOnly).not.toHaveBeenCalled();
+
+      await readOnly.toggle(false);
+
+      expect(mocks.blockManager.normalizeBlocksRenderedReadOnly).toHaveBeenCalledTimes(1);
     });
 
     it('does not restore while the editor stays read-only', async () => {

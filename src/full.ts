@@ -42,6 +42,7 @@ export {
   BlockRemovedMutationType,
   BlockMovedMutationType,
   BlockChangedMutationType,
+  BlockPlacementError,
 } from './blok';
 
 // Re-export all tools

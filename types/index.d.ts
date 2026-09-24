@@ -183,6 +183,10 @@ export {
   Tokens,
   Handlers,
   LiveHandlers,
+  BlockPlacementError,
+  BlockPosition,
+  InsertAtOptions,
+  MoveToTarget,
 } from './api';
 export {
   BlockMutationType,

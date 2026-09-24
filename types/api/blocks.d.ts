@@ -33,6 +33,16 @@ export interface InsertInsideParentOptions {
 export type BlockPosition = BlockChildPosition;
 
 /**
+ * Thrown by {@link Blocks.insertAt} and {@link Blocks.moveTo} when the
+ * requested place does not exist or does not accept the block. Nothing has
+ * changed when it is thrown.
+ */
+export declare class BlockPlacementError extends Error {
+  constructor(message: string);
+  name: 'BlockPlacementError';
+}
+
+/**
  * Options for {@link Blocks.insertAt}.
  */
 export interface InsertAtOptions {
@@ -240,8 +250,8 @@ export interface Blocks {
    * @param data - tool data
    * @param options - parent, position, id, tunes, focus, replace
    * @returns the new block
-   * @throws Error when the parent, the sibling or the replaced block is not
-   *   found, or the sibling is not a child of `parentId`
+   * @throws {BlockPlacementError} when the parent, the sibling or the replaced
+   *   block is not found, or the sibling is not a child of `parentId`
    */
   insertAt(type?: string, data?: BlockToolData, options?: InsertAtOptions): BlockAPI;
 
@@ -251,10 +261,11 @@ export interface Blocks {
    *
    * @param id - id of the block to move
    * @param target - new parent and position
-   * @throws Error when a block is not found, the sibling is not a child of
-   *   `parentId`, the target is the block itself or inside its subtree, or the
-   *   move would leave or enter a container that owns its children, a column
-   *   or a table cell, or the new parent refuses the tool (`childTools`)
+   * @throws {BlockPlacementError} when a block is not found, the sibling is
+   *   not a child of `parentId`, the target is the block itself or inside its
+   *   subtree, the move would leave or enter a container that owns its
+   *   children, a column or a table cell, or the new parent refuses the tool
+   *   (`childTools`)
    */
   moveTo(id: string, target: MoveToTarget): void;
 

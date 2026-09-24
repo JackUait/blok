@@ -788,6 +788,12 @@ export { BlockMovedMutationType } from '../types/events/block/BlockMoved';
 export { BlockChangedMutationType } from '../types/events/block/BlockChanged';
 
 /**
+ * Thrown by `blocks.insertAt` / `blocks.moveTo` for a place that does not
+ * exist or refuses the block. `types/api/blocks.d.ts` declares it by hand.
+ */
+export { BlockPlacementError } from './components/modules/api/block-placement';
+
+/**
  * Structural comparison and emptiness predicates for saved documents, the
  * loose-wire normalizers, the shared empty-document constant, and the
  * `onSave`-echo window. Semver-guaranteed so consumers never hand-write deep

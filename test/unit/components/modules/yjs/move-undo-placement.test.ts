@@ -353,6 +353,102 @@ describe('placement-based move undo/redo', () => {
     });
   });
 
+  describe('placement API (moveBlockTo / addBlockAt)', () => {
+    it('undo and redo of a moveBlockTo survive a remote insert that shifted flat indices', () => {
+      manager.fromJSON([
+        paragraph('b1', 'one'),
+        paragraph('b2', 'two'),
+        paragraph('b3', 'three'),
+        paragraph('b4', 'four'),
+      ]);
+      syncPeerFromManager();
+
+      manager.moveBlockTo('b4', { parentId: null, afterId: 'b1' });
+      expect(orderedIds()).toEqual(['b1', 'b4', 'b2', 'b3']);
+
+      peer.addBlock(paragraph('r1', 'remote one'), 0);
+      applyPeerChangesToManager();
+
+      manager.undo();
+      expect(orderedIds()).toEqual(['r1', 'b1', 'b2', 'b3', 'b4']);
+
+      manager.redo();
+      expect(orderedIds()).toEqual(['r1', 'b1', 'b4', 'b2', 'b3']);
+    });
+
+    it('one undo reverses a cross-parent moveBlockTo: parent and slot together', () => {
+      manager.fromJSON([
+        paragraph('p', 'parent', { content: ['c1', 'c2'] }),
+        paragraph('c1', 'child one', { parent: 'p' }),
+        paragraph('c2', 'child two', { parent: 'p' }),
+        paragraph('x', 'moved'),
+      ]);
+
+      manager.moveBlockTo('x', { parentId: 'p', afterId: 'c1' });
+      expect(orderedIds()).toEqual(['p', 'c1', 'x', 'c2']);
+      expect(manager.toJSON().find((block) => block.id === 'x')?.parent).toBe('p');
+
+      manager.undo();
+      expect(orderedIds()).toEqual(['p', 'c1', 'c2', 'x']);
+      expect(manager.toJSON().find((block) => block.id === 'x')?.parent).toBeUndefined();
+      expect(manager.canUndo()).toBe(false);
+
+      manager.redo();
+      expect(orderedIds()).toEqual(['p', 'c1', 'x', 'c2']);
+      expect(manager.toJSON().find((block) => block.id === 'x')?.parent).toBe('p');
+    });
+
+    it('undo restores a block whose moveBlockTo was refused as a cycle', () => {
+      manager.fromJSON([
+        paragraph('outer', 'outer', { content: ['inner'] }),
+        paragraph('inner', 'inner', { parent: 'outer' }),
+        paragraph('tail', 'tail'),
+      ]);
+
+      manager.moveBlockTo('outer', { parentId: 'inner', afterId: null });
+      expect(manager.toJSON().find((block) => block.id === 'outer')?.parent).toBeUndefined();
+
+      manager.undo();
+      expect(orderedIds()).toEqual(['outer', 'inner', 'tail']);
+      expect(manager.toJSON().find((block) => block.id === 'outer')?.parent).toBeUndefined();
+    });
+
+    it('moveBlockTo calls inside one move group undo together', () => {
+      manager.fromJSON([
+        paragraph('b1', 'one'),
+        paragraph('b2', 'two'),
+        paragraph('b3', 'three'),
+      ]);
+
+      manager.transactMoves(() => {
+        manager.moveBlockTo('b3', { parentId: null, afterId: null });
+        manager.moveBlockTo('b2', { parentId: null, afterId: 'b3' });
+      });
+      expect(orderedIds()).toEqual(['b3', 'b2', 'b1']);
+
+      manager.undo();
+      expect(orderedIds()).toEqual(['b1', 'b2', 'b3']);
+    });
+
+    it('addBlockAt is one undo step that removes the block, and redo puts it back in place', () => {
+      manager.fromJSON([
+        paragraph('p', 'parent', { content: ['c1'] }),
+        paragraph('c1', 'child one', { parent: 'p' }),
+        paragraph('r', 'root'),
+      ]);
+
+      manager.addBlockAt(paragraph('x', 'added'), { parentId: 'p', afterId: null });
+      expect(orderedIds()).toEqual(['p', 'x', 'c1', 'r']);
+
+      manager.undo();
+      expect(orderedIds()).toEqual(['p', 'c1', 'r']);
+
+      manager.redo();
+      expect(orderedIds()).toEqual(['p', 'x', 'c1', 'r']);
+      expect(manager.toJSON().find((block) => block.id === 'x')?.parent).toBe('p');
+    });
+  });
+
   describe('replay event profile', () => {
     let store: DocumentStore;
     let observer: BlockObserver;
@@ -402,6 +498,33 @@ describe('placement-based move undo/redo', () => {
       store.applyPlacement('b1', { parentId: null, afterId: 'b2' }, 'move-redo');
 
       expect(events).toEqual([{ type: 'move', blockId: 'b1', origin: 'redo' }]);
+    });
+
+    it('a same-parent moveBlockTo emits ONLY a local move', () => {
+      store.fromJSON([
+        paragraph('b1', 'one'),
+        paragraph('b2', 'two'),
+      ]);
+
+      events.length = 0;
+      store.moveBlockTo('b1', { parentId: null, afterId: 'b2' });
+
+      expect(events).toEqual([{ type: 'move', blockId: 'b1', origin: 'local' }]);
+    });
+
+    it('a cross-parent moveBlockTo emits a local move AND a local update (the parentId write)', () => {
+      store.fromJSON([
+        paragraph('p', 'parent'),
+        paragraph('x', 'moved'),
+      ]);
+
+      events.length = 0;
+      store.moveBlockTo('x', { parentId: 'p', afterId: null });
+
+      expect(events).toEqual([
+        { type: 'move', blockId: 'x', origin: 'local' },
+        { type: 'update', blockId: 'x', origin: 'local' },
+      ]);
     });
   });
 });

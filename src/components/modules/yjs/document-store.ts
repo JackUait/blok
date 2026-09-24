@@ -656,13 +656,12 @@ export class DocumentStore {
     }
 
     const parentId = typeof placement.parentId === 'string' ? stripNul(placement.parentId) : null;
+    const wouldCycle = parentId !== null && this.wouldFormCycle(id, parentId);
 
     this.transact(() => {
       this.yBlocksMap.set(id, yblock);
 
-      // Checked after the map write, so re-adding an existing id is measured
-      // against the entry this call just wrote.
-      if (parentId !== null && this.wouldFormCycle(id, parentId)) {
+      if (wouldCycle) {
         return;
       }
 
@@ -811,22 +810,14 @@ export class DocumentStore {
    * `moveBlock`: the move stacks own its history. Unlike `moveBlock` it may
    * change the parent; the parentId write rides the same untracked
    * transaction, so the caller's move entry must carry both sides.
-   * A placement the block already holds (or one after itself) writes
-   * nothing, as `moveBlock` does for an unchanged index. Otherwise the
-   * semantics and refusals are `applyPlacement`'s.
+   * A no-op (see `isNoOpMove`) writes nothing, as `moveBlock` does for an
+   * unchanged index. Otherwise the semantics and refusals are
+   * `applyPlacement`'s.
    * @param id - Block id to move
    * @param placement - Target parent and preceding sibling
    */
   public moveBlockTo(id: string, placement: BlockPlacement): void {
-    const current = this.getPlacement(id);
-
-    if (current === null || placement.afterId === id) {
-      return;
-    }
-
-    const parentId = typeof placement.parentId === 'string' ? stripNul(placement.parentId) : null;
-
-    if (current.parentId === parentId && current.afterId === placement.afterId && this.isInOrderArray(id)) {
+    if (this.getBlockById(id) === undefined || this.isNoOpMove(id, placement)) {
       return;
     }
 
@@ -834,10 +825,24 @@ export class DocumentStore {
   }
 
   /**
-   * Whether any order array lists the id.
+   * Whether moving the block to this placement would change nothing: it
+   * already holds it, or the placement anchors after the block itself.
+   * @param id - Block id
+   * @param placement - Target parent and preceding sibling
    */
-  private isInOrderArray(id: string): boolean {
-    return this.orderArrays().some((order) => order.toArray().includes(id));
+  public isNoOpMove(id: string, placement: BlockPlacement): boolean {
+    if (placement.afterId === id) {
+      return true;
+    }
+
+    const current = this.getPlacement(id);
+    const parentId = typeof placement.parentId === 'string' ? stripNul(placement.parentId) : null;
+
+    // An unlisted block reports { parent, null } too; it still needs placing.
+    return current !== null &&
+      current.parentId === parentId &&
+      current.afterId === placement.afterId &&
+      this.orderArrays().some((order) => order.toArray().includes(id));
   }
 
   /**

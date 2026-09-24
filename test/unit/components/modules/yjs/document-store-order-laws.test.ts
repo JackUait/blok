@@ -664,6 +664,18 @@ describe('DocumentStore order laws — moveBlockTo', () => {
     expect(store.rootOrder.toArray()).toEqual(['P', 'r1', 'r2']);
   });
 
+  it('re-lists a block that no order array holds, even at its reported placement', () => {
+    store.transact(() => {
+      store.rootOrder.delete(0, 1);
+    }, 'local');
+    expect(store.rootOrder.toArray()).toEqual(['r1', 'r2']);
+
+    // getPlacement reports an unlisted root block as { null, null }.
+    store.moveBlockTo('P', { parentId: null, afterId: null });
+
+    expect(store.rootOrder.toArray()).toEqual(['P', 'r1', 'r2']);
+  });
+
   it('refuses to parent a block under its own descendant', () => {
     store.moveBlockTo('P', { parentId: 'p1', afterId: null });
 

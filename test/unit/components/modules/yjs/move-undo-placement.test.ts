@@ -427,6 +427,17 @@ describe('placement-based move undo/redo', () => {
       expect(orderedIds()).toEqual(['b1', 'b2']);
     });
 
+    it('a moveBlockTo to the placement the block already holds records nothing', () => {
+      manager.fromJSON([
+        paragraph('b1', 'one'),
+        paragraph('b2', 'two'),
+      ]);
+
+      manager.moveBlockTo('b2', { parentId: null, afterId: 'b1' });
+
+      expect(manager.canUndo()).toBe(false);
+    });
+
     it('moveBlockTo calls inside one move group undo together', () => {
       manager.fromJSON([
         paragraph('b1', 'one'),

@@ -412,8 +412,10 @@ export class YjsManager extends Module {
     // Read BEFORE the mutation: it is what undo restores.
     const from = this.documentStore.getPlacement(id);
 
-    // A self anchor is a no-op; recorded, its redo would append the block.
-    if (from === null || placement.afterId === id) {
+    // A no-op records nothing: a recorded self anchor would redo as a
+    // missing anchor and append, and a caret mark left pending would be
+    // taken as the NEXT change's before-caret.
+    if (from === null || this.documentStore.isNoOpMove(id, placement)) {
       return;
     }
 

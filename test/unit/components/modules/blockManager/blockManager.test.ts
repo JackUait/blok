@@ -532,6 +532,7 @@ describe('BlockManager.setBlockParent applyPlacement delegation', () => {
     priv.repository = repository;
     priv.yjsSync = {
       isSyncingFromYjs: false,
+      placeFromDocument: (): boolean => false,
       withAtomicOperation: (fn: () => void): void => {
         fn();
       },

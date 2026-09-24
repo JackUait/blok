@@ -30,7 +30,7 @@ import { renderUploadingState, type UploadingStateElement } from '../image/uploa
 import { DEFAULT_CAPTION_PLACEHOLDER, MIN_WIDTH_PX, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { tr } from './i18n';
-import { deliverToRebuiltBlock, releaseObjectUrl } from '../image/detached-upload';
+import { deliverToRebuiltBlock, putBackOnRebuiltBlock, releaseObjectUrl } from '../image/detached-upload';
 import { renderCaptionRow, renderVideo } from './ui';
 import { attachControls, type ControlsHandle } from './controls';
 import { Uploader, VideoUploadError, type UploadResult } from './uploader';
@@ -268,6 +268,7 @@ export class VideoTool implements BlockTool {
 
   private startUrl(url: string): void {
     const source = { kind: 'url', url } as const;
+    const before = this.data.url;
 
     this.lastFileName = null;
     this.lastSource = source;
@@ -279,7 +280,26 @@ export class VideoTool implements BlockTool {
     void this.uploader
       .handleUrl(url, { onProgress: (p) => this.uploadingEl?.setProgress(p) })
       .then((result) => this.applyUrlUpload(result, source))
-      .catch((err) => this.applyError(err));
+      .catch((err) => this.applyUrlError(err, source, before));
+  }
+
+  /**
+   * A failed upload of a link the user entered. The link is put back to
+   * `before` as derived data, so its edit nets to nothing and leaves no undo step.
+   * @param err - why the upload failed
+   * @param source - the job, still `lastSource` unless cancelled or replaced
+   * @param before - `data.url` before the link was entered
+   */
+  private applyUrlError(err: unknown, source: { kind: 'url'; url: string }, before: string): void {
+    if (this.detached) {
+      putBackOnRebuiltBlock(this.api, this.block, { url: before }, { url: source.url }, ['url']);
+
+      return;
+    }
+    this.applyError(err);
+    if (this.lastSource !== source || this.data.url !== source.url) return;
+    this.data = { ...this.data, url: before };
+    this.block.dispatchChange({ derived: true, from: ['url'] });
   }
 
   private applyResult(result: UploadResult): void {

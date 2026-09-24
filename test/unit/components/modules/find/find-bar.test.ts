@@ -208,6 +208,22 @@ describe('FindBar', () => {
     });
   });
 
+  describe('replace toggle', () => {
+    it('shows no tooltip, and keeps its label for screen readers', () => {
+      bar.destroy();
+      destroyTooltip();
+      bar = create();
+      const toggle = byTestId<HTMLButtonElement>(bar.element, 'find-replace-toggle');
+
+      toggle.focus();
+      toggle.dispatchEvent(new MouseEvent('mouseenter'));
+      toggle.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+
+      expect(document.getElementById('blok-tooltip')?.textContent ?? '').not.toContain('find.toggleReplace');
+      expect(toggle.getAttribute('aria-label')).toBe('find.toggleReplace');
+    });
+  });
+
   describe('close', () => {
     it('is immediately closed and non-interactive', () => {
       bar.open({ readOnly: false });

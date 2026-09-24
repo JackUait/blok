@@ -261,7 +261,6 @@ export class FindBar {
     this.bar.append(row, this.replaceRow, this.map);
     this.element.append(this.bar);
 
-    this.bindTooltip(this.replaceToggle, 'find.toggleReplace');
     this.bindTooltip(this.matchCaseButton, 'find.matchCase', shortcuts.matchCase);
     this.bindTooltip(this.wholeWordButton, 'find.wholeWord', shortcuts.wholeWord);
     this.bindTooltip(this.previousButton, 'find.previous', shortcuts.previous);

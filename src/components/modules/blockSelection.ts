@@ -63,9 +63,10 @@ export class BlockSelection extends Module {
   private _navigationModeEnabled = false;
 
   /**
-   * Index of the currently focused block in navigation mode
+   * The focused block in navigation mode. Stored as the block, not its index,
+   * so a block inserted above it does not move focus.
    */
-  private navigationFocusIndex = -1;
+  private navigationFocus: Block | undefined;
 
   /**
    * Pending timeout for the throttled navigation-mode position announcement.
@@ -197,11 +198,11 @@ export class BlockSelection extends Module {
    * @returns {Block | undefined}
    */
   public get navigationFocusedBlock(): Block | undefined {
-    if (!this._navigationModeEnabled || this.navigationFocusIndex < 0) {
+    if (!this._navigationModeEnabled || this.navigationFocus === undefined) {
       return undefined;
     }
 
-    return this.Blok.BlockManager.getBlockByIndex(this.navigationFocusIndex);
+    return this.Blok.BlockManager.blocks.includes(this.navigationFocus) ? this.navigationFocus : undefined;
   }
 
   /**
@@ -941,11 +942,11 @@ export class BlockSelection extends Module {
     if (focusForEditing && focusedBlock) {
       const { Caret, BlockManager } = this.Blok;
 
-      BlockManager.currentBlockIndex = this.navigationFocusIndex;
+      BlockManager.currentBlock = focusedBlock;
       Caret.setToBlock(focusedBlock, Caret.positions.END);
     }
 
-    this.navigationFocusIndex = -1;
+    this.navigationFocus = undefined;
   }
 
   /**
@@ -958,7 +959,7 @@ export class BlockSelection extends Module {
     }
 
     const { BlockManager } = this.Blok;
-    const nextIndex = this.navigationFocusIndex + 1;
+    const nextIndex = this.navigationFocusIndexNow() + 1;
 
     if (nextIndex >= BlockManager.blocks.length) {
       return false;
@@ -978,7 +979,7 @@ export class BlockSelection extends Module {
       return false;
     }
 
-    const prevIndex = this.navigationFocusIndex - 1;
+    const prevIndex = this.navigationFocusIndexNow() - 1;
 
     if (prevIndex < 0) {
       return false;
@@ -987,6 +988,15 @@ export class BlockSelection extends Module {
     this.setNavigationFocus(prevIndex);
 
     return true;
+  }
+
+  /**
+   * Current flat index of the navigation focus, or -1 when there is none.
+   */
+  private navigationFocusIndexNow(): number {
+    const focused = this.navigationFocusedBlock;
+
+    return focused === undefined ? -1 : this.Blok.BlockManager.blocks.indexOf(focused);
   }
 
   /**
@@ -1041,7 +1051,7 @@ export class BlockSelection extends Module {
      * Update focus index, mark the new block, and select it for real so
      * anyBlockSelected becomes true (gates deletion/copy/extension).
      */
-    this.navigationFocusIndex = index;
+    this.navigationFocus = block;
     BlockManager.currentBlockIndex = index;
     block.holder.setAttribute('data-blok-navigation-focused', 'true');
     /**
@@ -1133,7 +1143,7 @@ export class BlockSelection extends Module {
          */
         if (
           !this._navigationModeEnabled
-          || this.navigationFocusIndex !== pendingIndex
+          || this.navigationFocusIndexNow() !== pendingIndex
           || this.lastAnnouncedNavigationIndex === pendingIndex
           || this.Blok.BlockManager.getBlockByIndex(pendingIndex) !== block
         ) {

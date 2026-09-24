@@ -1690,6 +1690,44 @@ describe('BlockSelection', () => {
       });
     });
 
+    describe('focus survives blocks inserted above it', () => {
+      it('keeps the focused block when a block is inserted above it', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+        const [first, focused, last] = blocks;
+
+        blockManager.currentBlockIndex = 1;
+        blockSelection.enableNavigationMode();
+
+        // A remote peer (or the API) inserts a block at the top.
+        blocks.unshift(createBlockStub({ id: 'inserted' }));
+
+        expect(blockSelection.navigationFocusedBlock).toBe(focused);
+        expect(blockSelection.navigateNext()).toBe(true);
+        expect(blockSelection.navigationFocusedBlock).toBe(last);
+        expect(blockSelection.navigatePrevious()).toBe(true);
+        expect(blockSelection.navigationFocusedBlock).toBe(focused);
+        expect(first.holder).not.toHaveAttribute('data-blok-navigation-focused');
+      });
+
+      it('edits the focused block, not its old index, after a block is inserted above it', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number; currentBlock: Block | undefined };
+        const caret = modules.Caret as unknown as { setToBlock: ReturnType<typeof vi.fn>; positions: { END: string } };
+        const focused = blocks[1];
+
+        caret.positions = { END: 'end' };
+        blockManager.currentBlockIndex = 1;
+        blockSelection.enableNavigationMode();
+
+        blocks.unshift(createBlockStub({ id: 'inserted' }));
+        blockSelection.disableNavigationMode(true);
+
+        expect(caret.setToBlock).toHaveBeenCalledWith(focused, 'end');
+        expect(blockManager.currentBlock).toBe(focused);
+      });
+    });
+
     describe('real block selection (Notion parity)', () => {
       it('enableNavigationMode marks the focused block as a REAL selection', () => {
         const { blockSelection, blocks, modules } = createBlockSelection();

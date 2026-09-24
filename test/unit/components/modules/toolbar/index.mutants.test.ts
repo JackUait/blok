@@ -403,6 +403,7 @@ interface BlokStub {
   I18n: { t: Mock };
   API: { methods: Record<string, unknown> };
   Tools: { blockTools: Map<string, unknown> };
+  YjsManager: { holdCapture: Mock; releaseCapture: Mock };
 }
 
 interface MutableListenersStub {
@@ -477,6 +478,7 @@ const createToolbar = (options: CreateToolbarOptions = {}): Harness => {
     I18n: { t: vi.fn((key: string) => `t:${key}`) },
     API: { methods: {} },
     Tools: { blockTools: new Map() },
+    YjsManager: { holdCapture: vi.fn(), releaseCapture: vi.fn() },
   };
 
   (toolbar as unknown as { state: unknown }).state = blok;
@@ -1692,6 +1694,23 @@ describe('Toolbar toolbox events', () => {
     expect(h.blok.UI.nodes.wrapper.getAttribute('data-blok-toolbox-opened')).toBe('true');
     expect(h.intern.nodes.plusButton?.getAttribute('aria-expanded')).toBe('true');
     expect(tb.setCalloutBackground).toHaveBeenCalledWith(null);
+    expect(h.blok.YjsManager.holdCapture).toHaveBeenCalledTimes(1);
+    expect(h.blok.YjsManager.releaseCapture).not.toHaveBeenCalled();
+  });
+
+  it('holds the undo step once per menu session, however often open and close fire', async () => {
+    const h = createToolbar({ bareNodes: true });
+    const tb = await drawAndGetToolbox(h);
+
+    tb.emit('toolbox-opened');
+    tb.emit('toolbox-opened');
+
+    expect(h.blok.YjsManager.holdCapture).toHaveBeenCalledTimes(1);
+
+    tb.emit('toolbox-closed');
+    tb.emit('toolbox-closed');
+
+    expect(h.blok.YjsManager.releaseCapture).toHaveBeenCalledTimes(1);
   });
 
   it('toolbox opened repositions while a block is hovered', async () => {
@@ -1740,6 +1759,7 @@ describe('Toolbar toolbox events', () => {
     expect(h.blok.UI.nodes.wrapper.hasAttribute('data-blok-toolbox-opened')).toBe(false);
     expect(h.intern.nodes.plusButton?.getAttribute('aria-expanded')).toBe('false');
     expect(h.positioner.repositionToolbar).toHaveBeenCalledTimes(2);
+    expect(h.blok.YjsManager.releaseCapture).toHaveBeenCalledTimes(1);
   });
 
   it('toolbox closed tolerates a missing plus button node', async () => {

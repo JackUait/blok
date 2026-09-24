@@ -40,6 +40,7 @@ const createLiveBlocksApi = (): {
   setBlockParent: ReturnType<typeof vi.fn>;
   insertInsideParent: ReturnType<typeof vi.fn>;
   move: ReturnType<typeof vi.fn>;
+  beginApiCall: ReturnType<typeof vi.fn>;
 } => {
   /**
    * p
@@ -88,10 +89,11 @@ const createLiveBlocksApi = (): {
   };
 
   const blocksApi = new BlocksAPI(moduleConfig);
+  const beginApiCall = vi.fn();
 
   blocksApi.state = {
     BlockManager: blockManager,
-    YjsManager: { stopCapturing: vi.fn() },
+    YjsManager: { stopCapturing: vi.fn(), beginApiCall },
     /**
      * The API module is a thin facade over the very same BlocksAPI instance,
      * mirroring `API.methods.blocks = this.Blok.BlocksAPI.methods`.
@@ -109,6 +111,7 @@ const createLiveBlocksApi = (): {
     setBlockParent,
     insertInsideParent,
     move,
+    beginApiCall,
   };
 };
 
@@ -159,11 +162,14 @@ describe('handed-out BlockAPI is live', () => {
   });
 
   it('moveChild() on a handed-out BlockAPI reaches core move', () => {
-    const { blocksApi, move } = createLiveBlocksApi();
+    const { blocksApi, move, beginApiCall } = createLiveBlocksApi();
 
     blocksApi.getById('p')?.moveChild('b', -1);
 
     // 'b' (flat 3) moves before 'a' (flat 1).
     expect(move).toHaveBeenCalledWith(1, 3);
+    // The API call starts its own undo step before it writes.
+    expect(beginApiCall).toHaveBeenCalledTimes(1);
+    expect(beginApiCall.mock.invocationCallOrder[0]).toBeLessThan(move.mock.invocationCallOrder[0]);
   });
 });

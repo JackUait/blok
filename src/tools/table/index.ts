@@ -749,6 +749,12 @@ export class Table implements BlockTool {
       this.removeGhostChildren();
     }, true);
 
+    // A document render runs inside the sync window too, so a dangling
+    // reference is kept like a replay's and must be filled the same way.
+    if (this.api.blocks.isSyncingFromYjs) {
+      this.fillUnresolvedCellsAfterSync(this.setDataGeneration, SYNC_SETTLE_MAX_FRAMES);
+    }
+
     if (this.model.initialColWidth === undefined) {
       const widths = this.model.colWidths ?? readPixelWidths(gridEl);
 

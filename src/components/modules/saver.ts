@@ -15,12 +15,13 @@ import { getBlokVersion, isEmpty, isObject, log, logLabeled } from '../utils';
 import { collapseToLegacy, shouldCollapseToLegacy } from '../utils/data-model-transform';
 import {
   resolveRuntimeEnv,
-  validateFlatOrder,
   validateHierarchy,
   validateHolderAttachment,
-  validateHomeSlots
+  validateHomeSlots,
+  validateTreeOrder
 } from '../utils/hierarchy-invariant';
 import { sanitizeBlocks } from '../utils/sanitizer';
+import { dfsOrder } from '../utils/tree-order';
 import { normalizeInlineImages } from './normalizeInlineImages';
 
 type SaverValidatedData = ValidatedData & {
@@ -268,19 +269,24 @@ export class Saver extends Module {
     }
 
     /**
-     * Derive each parent's content[] from the live blocks array.
-     *
-     * `block.contentIds` is a mutable array kept in sync by hierarchy.setBlockParent,
-     * but it can drift out of sync with `block.parentId` — e.g. when hierarchical data
-     * is loaded with `parent` fields on children but no `content` on the parent,
-     * insertMany does not reconcile the two. Downstream consumers
-     * (notably collapseToLegacy's processRootCalloutItem) read `content[]` as the
-     * source of truth for nesting, and any child missing from that array gets ejected
-     * from its parent. Deriving content[] at save time from `parentId` makes the
-     * invariant `child.parentId ⇒ parent.content.includes(child)` always hold.
+     * Each parent's content[] in tree order: its contentIds first, then any
+     * child whose parentId names it but contentIds omits, in flat order.
+     * collapseToLegacy reads content[] as the nesting source, so a child
+     * missing from it would be ejected from its parent.
+     * The output array follows the same walk; it equals the flat array
+     * whenever the tree-order gate above passes.
      */
+    const blockById = new Map<string, Block>();
+
+    blocks.forEach(block => {
+      if (!blockById.has(block.id)) {
+        blockById.set(block.id, block);
+      }
+    });
+
+    const treeOrdered = dfsOrder({ blocks, getById: id => blockById.get(id) });
     const childrenByParent = new Map<string, string[]>();
-    for (const block of blocks) {
+    for (const block of treeOrdered) {
       const parentId = effectiveParentId.get(block.id) ?? null;
 
       if (parentId === null) {
@@ -303,7 +309,7 @@ export class Saver extends Module {
        * {@link enforceDomOrderInvariant} for semantics — throws in dev/test,
        * repairs the output to DOM order in production.
        */
-      const orderedBlocks = this.enforceDomOrderInvariant(blocks, effectiveParentId, childrenByParent);
+      const orderedBlocks = this.enforceDomOrderInvariant(treeOrdered, effectiveParentId, childrenByParent);
 
       const chainData: Array<Promise<SaverValidatedData>> = orderedBlocks.map((block: Block) => {
         return this.getSavedData(
@@ -377,7 +383,7 @@ export class Saver extends Module {
    * column title moved to the very bottom of the column after saving").
    *
    * The saver derives each parent's content[] and the output array order from
-   * the FLAT blocks array, while the editor displays holders in DOM order. Any
+   * the model (contentIds), while the editor displays holders in DOM order. Any
    * code path that moves a holder in the DOM without moving the block in the
    * flat array (or vice versa) makes the saved document differ from what the
    * user sees — silent content reordering. The plus-button's raw DOM hoist was
@@ -385,13 +391,13 @@ export class Saver extends Module {
    *
    * For every parent whose children's holders are all connected and mounted
    * inside the parent's own holder (and whose tool does not own its child DOM
-   * order — see {@link DOM_ORDER_EXEMPT_PARENTS}), the children's flat order
+   * order — see {@link DOM_ORDER_EXEMPT_PARENTS}), the children's model order
    * must match their DOM document order. On divergence:
    *   - test/dev: THROW so the offending mutation path is fixed before it ships.
    *   - production: repair the OUTPUT to the DOM order — what the user actually
    *     saw — and log an error. The live model is left untouched (save() is a
    *     read path).
-   * @param blocks - live flat blocks snapshot
+   * @param blocks - live blocks in tree order
    * @param effectiveParentId - per-block parent id used for output
    * @param childrenByParent - derived children map; repaired in place in production
    * @returns the block array to serialize (repaired copy in production, input otherwise)
@@ -788,8 +794,7 @@ export class Saver extends Module {
   /**
    * Saves and validates
    * @param block - block to save
-   * @param derivedContentIds - content ids computed from live children's parentId
-   *        (source of truth, see doSave for rationale)
+   * @param derivedContentIds - the block's children in tree order (see doSave)
    * @param effectiveParentId - parentId to emit in output; a dangling parent is
    *        passed as null so the orphan ships at root WITHOUT mutating the block
    */
@@ -874,8 +879,8 @@ export class Saver extends Module {
    * reasoning as {@link assertNoStrandedHolders}:
    * - every connected holder sits directly in its home slot, so a nested
    *   block renders inside its container and hides when it collapses;
-   * - the flat array is a depth-first walk of the tree, so save order and
-   *   ArrowUp/Down follow the tree.
+   * - the flat array is the tree's depth-first walk (children in contentIds
+   *   order), so save order and ArrowUp/Down follow the tree.
    * @param blocks - the live blocks about to be saved
    */
   private assertTreePlacement(blocks: Block[]): void {
@@ -883,12 +888,13 @@ export class Saver extends Module {
       id: b.id,
       name: b.name,
       parentId: b.parentId,
+      contentIds: b.contentIds,
       holder: b.holder instanceof Element ? b.holder : undefined,
     }));
     const rootArea: unknown = this.Blok.UI?.nodes?.redactor;
     const violations = [
       ...validateHomeSlots(input, rootArea instanceof Element ? rootArea : null),
-      ...validateFlatOrder(input),
+      ...validateTreeOrder(input),
     ];
 
     if (violations.length === 0) {

@@ -707,29 +707,53 @@ describe('Saver module', () => {
     expect(calloutOut?.content).toEqual(['hdr1', 'p-pasted']);
   });
 
-  it('derives content[] in blocks-array order even when contentIds is reversed', async () => {
-    vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+  describe('when contentIds order differs from the flat order', () => {
+    const reversedCallout = (): Block[] => {
+      const callout = createBlockMock({
+        id: 'cal1',
+        tool: 'callout',
+        data: { emoji: '💡', textColor: null, backgroundColor: null },
+        contentIds: ['p3', 'p2', 'p1'],
+      });
+      const p1 = createBlockMock({ id: 'p1', tool: 'paragraph', data: { text: 'one' },   parentId: 'cal1' });
+      const p2 = createBlockMock({ id: 'p2', tool: 'paragraph', data: { text: 'two' },   parentId: 'cal1' });
+      const p3 = createBlockMock({ id: 'p3', tool: 'paragraph', data: { text: 'three' }, parentId: 'cal1' });
 
-    const callout = createBlockMock({
-      id: 'cal1',
-      tool: 'callout',
-      data: { emoji: '💡', textColor: null, backgroundColor: null },
-      // Stale AND reversed — must be overridden by blocks-array order
-      contentIds: ['p3', 'p2', 'p1'],
+      return [callout.block, p1.block, p2.block, p3.block];
+    };
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
     });
 
-    const p1 = createBlockMock({ id: 'p1', tool: 'paragraph', data: { text: 'one' },   parentId: 'cal1' });
-    const p2 = createBlockMock({ id: 'p2', tool: 'paragraph', data: { text: 'two' },   parentId: 'cal1' });
-    const p3 = createBlockMock({ id: 'p3', tool: 'paragraph', data: { text: 'three' }, parentId: 'cal1' });
+    it('rejects the save in test env', async () => {
+      vi.stubEnv('NODE_ENV', 'test');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
 
-    const { saver } = createSaver({
-      blocks: [callout.block, p1.block, p2.block, p3.block],
-      toolSanitizeConfigs: { callout: {}, paragraph: {} },
+      const { saver } = createSaver({
+        blocks: reversedCallout(),
+        toolSanitizeConfigs: { callout: {}, paragraph: {} },
+      });
+
+      await expect(saver.save()).rejects.toThrow(/not the contentIds tree walk/);
     });
 
-    const result = await saver.save();
+    it('saves children in contentIds order in production and logs the violation', async () => {
+      vi.stubEnv('NODE_ENV', 'production');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+      const logLabeledSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
 
-    expect(result?.blocks.find(b => b.id === 'cal1')?.content).toEqual(['p1', 'p2', 'p3']);
+      const { saver } = createSaver({
+        blocks: reversedCallout(),
+        toolSanitizeConfigs: { callout: {}, paragraph: {} },
+      });
+
+      const result = await saver.save();
+
+      expect(result?.blocks.find(b => b.id === 'cal1')?.content).toEqual(['p3', 'p2', 'p1']);
+      expect(result?.blocks.map(b => b.id)).toEqual(['cal1', 'p3', 'p2', 'p1']);
+      expect(logLabeledSpy).toHaveBeenCalledWith(expect.stringMatching(/not the contentIds tree walk/), 'error');
+    });
   });
 
   it('drops dead ids from contentIds when children do not exist in blocks array', async () => {

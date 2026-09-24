@@ -600,7 +600,7 @@ describe('Saver — mutation coverage', () => {
     });
   });
 
-  describe('flat order gate', () => {
+  describe('tree order gate', () => {
     /** a, out > (c1, c2), b — with `in` wedged between out and its children when `escaped`. */
     const flatTree = (escaped: boolean): Block[] => {
       const a = createBlockMock({ id: 'a', tool: 'paragraph', data: { text: 'a' } }).block;
@@ -619,7 +619,7 @@ describe('Saver — mutation coverage', () => {
       silenceLogs();
       const { saver } = createSaver({ blocks: flatTree(true) });
 
-      await expect(saver.save()).rejects.toThrow(/not depth-first at index 2: expected c1, found in/);
+      await expect(saver.save()).rejects.toThrow(/not the contentIds tree walk at index 2: expected c1, found in/);
     });
 
     it('only logs in production so the user still gets a save', async () => {
@@ -633,7 +633,7 @@ describe('Saver — mutation coverage', () => {
       const result = await saver.save();
 
       expect(result?.blocks).toHaveLength(6);
-      expect(logLabeledSpy).toHaveBeenCalledWith(expect.stringMatching(/not depth-first/), 'error');
+      expect(logLabeledSpy).toHaveBeenCalledWith(expect.stringMatching(/not the contentIds tree walk/), 'error');
     });
 
     it('saves a depth-first flat order', async () => {

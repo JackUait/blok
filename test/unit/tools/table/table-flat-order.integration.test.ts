@@ -2,7 +2,7 @@
  * A table's cell blocks must sit in the flat block array right after the
  * table, before the table's next sibling (depth-first order). The save gate
  * (`Saver.assertTreePlacement`) throws under NODE_ENV=test, so these tests
- * check the order with `validateFlatOrder` first, then that `save()` resolves.
+ * check the order with `validateTreeOrder` first, then that `save()` resolves.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -13,7 +13,7 @@ import { Header } from '../../../../src/tools/header';
 import { ToggleItem } from '../../../../src/tools/toggle';
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
-import { validateFlatOrder } from '../../../../src/components/utils/hierarchy-invariant';
+import { validateTreeOrder } from '../../../../src/components/utils/hierarchy-invariant';
 import type { API, OutputBlockData } from '../../../../types';
 
 interface TestEditor {
@@ -52,7 +52,7 @@ const boot = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
   return instance;
 };
 
-const liveBlocks = (instance: TestEditor): Array<{ id: string; name: string; parentId: string | null }> =>
+const liveBlocks = (instance: TestEditor): Array<{ id: string; name: string; parentId: string | null; contentIds: readonly string[] }> =>
   Array.from({ length: instance.blocks.getBlocksCount() }, (_, index) => {
     const block = instance.blocks.getBlockByIndex(index);
 
@@ -60,11 +60,11 @@ const liveBlocks = (instance: TestEditor): Array<{ id: string; name: string; par
       throw new Error(`no block at ${index}`);
     }
 
-    return { id: block.id, name: block.name, parentId: block.parentId };
+    return { id: block.id, name: block.name, parentId: block.parentId, contentIds: block.contentIds };
   });
 
 const expectDepthFirst = async (instance: TestEditor): Promise<void> => {
-  expect(validateFlatOrder(liveBlocks(instance)).map(v => v.message)).toEqual([]);
+  expect(validateTreeOrder(liveBlocks(instance)).map(v => v.message)).toEqual([]);
   await expect(instance.save()).resolves.toBeDefined();
 };
 

@@ -376,12 +376,7 @@ export class BlockInsertion {
           this.dependencies.YjsManager.removeBlock(replacedIdToRemove);
         }
 
-        this.dependencies.YjsManager.addBlock({
-          id: block.id,
-          type: block.name,
-          data: block.preservedData,
-          parent: block.parentId ?? undefined,
-        }, targetIndex);
+        this.addToDocumentWhereTreeHasIt({ id: block.id, type: block.name, data: block.preservedData }, block, targetIndex);
 
         // The doc still points the children at the removed id.
         if (rehomesChildren && replacedIdToRemove !== undefined) {
@@ -553,6 +548,38 @@ export class BlockInsertion {
     this.ctx.assertHierarchyInvariantInDev('insert');
 
     return block;
+  }
+
+  /**
+   * Adds a block that memory already holds to the doc, at its place in the
+   * tree: under its parent, after the nearest earlier sibling the doc has
+   * (null = first). A root block's siblings are the root blocks in flat order.
+   * Under a table/database the flat index is kept: the table's cell blocks
+   * are placed by the table, not by contentIds order.
+   * @param blockData - the block's id, type and data
+   * @param block - the block, already in memory with its final parent
+   * @param index - its flat index, for the table/database path
+   */
+  private addToDocumentWhereTreeHasIt(
+    blockData: { id: string; type: string; data: BlockToolData },
+    block: Block,
+    index: number
+  ): void {
+    const parent = block.parentId === null ? undefined : this.getBlock(block.parentId);
+
+    if (parent !== undefined && isSelfPlacedParent(parent, this.getBlock)) {
+      this.dependencies.YjsManager.addBlock({ ...blockData, parent: parent.id }, index);
+
+      return;
+    }
+
+    const siblings = parent?.contentIds
+      ?? this.repository.blocks.filter(candidate => candidate.parentId === null).map(candidate => candidate.id);
+    const position = siblings.indexOf(block.id);
+    const before = position === -1 ? siblings : siblings.slice(0, position);
+    const afterId = [...before].reverse().find(id => id !== block.id && this.dependencies.YjsManager.getBlockById(id) !== undefined);
+
+    this.dependencies.YjsManager.addBlockAt(blockData, { parentId: block.parentId, afterId: afterId ?? null });
   }
 
   /**
@@ -1288,12 +1315,7 @@ export class BlockInsertion {
           this.dependencies.YjsManager.removeBlock(replacedIdToRemove);
         }
 
-        this.dependencies.YjsManager.addBlock({
-          id: block.id,
-          type: block.name,
-          data: savedData.data,
-          parent: block.parentId ?? undefined,
-        }, this.repository.getBlockIndex(block));
+        this.addToDocumentWhereTreeHasIt({ id: block.id, type: block.name, data: savedData.data }, block, this.repository.getBlockIndex(block));
       });
     }
 

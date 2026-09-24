@@ -752,7 +752,7 @@ describe('BlockOperations', () => {
       const newBlock = operations.insert({}, blocksStore);
 
       expect(newBlock).toBeDefined();
-      expect(dependencies.YjsManager.addBlock).toHaveBeenCalled();
+      expect(dependencies.YjsManager.addBlockAt).toHaveBeenCalled();
     });
 
     it('inserts a block with specified tool', () => {
@@ -1031,7 +1031,7 @@ describe('BlockOperations', () => {
       const block = operations.insertDefaultBlockAtIndex(1, false, false, blocksStore);
 
       expect(block).toBeDefined();
-      expect(dependencies.YjsManager.addBlock).toHaveBeenCalled();
+      expect(dependencies.YjsManager.addBlockAt).toHaveBeenCalled();
     });
 
     it('throws error when default tool is not defined', () => {
@@ -3421,7 +3421,7 @@ describe('BlockOperations', () => {
 
       const result = await operations.paste('paragraph', pasteEvent, false, blocksStore);
 
-      expect(dependencies.YjsManager.addBlock).toHaveBeenCalled();
+      expect(dependencies.YjsManager.addBlockAt).toHaveBeenCalled();
       expect(result).toBeDefined();
     });
 

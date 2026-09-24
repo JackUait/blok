@@ -19,6 +19,7 @@ import { findOwn } from '../../utils/own-element';
 import { canAdoptChild, releasesChildrenOnTurnInto } from '../../utils/turn-into-children';
 import { flatIndexForPlacement, type TreePlacement } from '../../utils/tree-order';
 import type { BlockFactory } from './factory';
+import { hideUnderCollapsedParent, isSelfPlacedParent } from './new-block-placement';
 import type { BlockHierarchy } from './hierarchy';
 import type { BlockRepository } from './repository';
 import type { BlockDidMutated, BlockOperationsDependencies, OperationsContext } from './operations-context';
@@ -62,6 +63,8 @@ export class BlockInsertion {
   private get blockDidMutated(): BlockDidMutated {
     return this.ctx.blockDidMutated;
   }
+
+  private readonly getBlock = (id: string): Block | undefined => this.repository.getBlockById(id);
 
   /**
    * Re-home each child onto a new parent via `setBlockParent` so DOM reparenting
@@ -459,7 +462,7 @@ export class BlockInsertion {
 
     const prevIndex = this.ctx.rawCurrentBlockIndex;
     // Throws on an unknown parent or sibling, before anything changes.
-    const index = flatIndexForPlacement({ blocks: this.repository.blocks, getById: blockId => this.repository.getBlockById(blockId) }, placement);
+    const index = flatIndexForPlacement({ blocks: this.repository.blocks, getById: this.getBlock }, placement);
     const parent = placement.parentId === null ? undefined : this.repository.getBlockById(placement.parentId);
     const defaultTool = this.dependencies.config.defaultBlock ?? 'paragraph';
     const resolvedToolName = parent !== undefined && isInsideTableCell(parent) && isRestrictedInTableCell(name)
@@ -478,7 +481,7 @@ export class BlockInsertion {
     // Appended at the root end, then mounted in its home slot by placeBlock.
     blocksStore.insert(index, block, false, true);
     this.hierarchy.placeBlock(block, placement);
-    this.hideUnderCollapsedParent(block);
+    hideUnderCollapsedParent(block, this.getBlock);
 
     if (needToFocus) {
       this.ctx.setCurrentBlockRaw(block);
@@ -522,30 +525,6 @@ export class BlockInsertion {
         });
       }
     });
-  }
-
-  /**
-   * Hides a new block whose parent is collapsed, as setBlockParent does:
-   * placeBlock leaves visibility to the caller.
-   * @param block - the new block, already placed
-   */
-  private hideUnderCollapsedParent(block: Block): void {
-    const parent = block.parentId === null ? undefined : this.repository.getBlockById(block.parentId);
-
-    if (parent === undefined) {
-      return;
-    }
-
-    const siblings = parent.contentIds
-      .filter(childId => childId !== block.id)
-      .map(childId => this.repository.getBlockById(childId))
-      .filter((sibling): sibling is Block => sibling !== undefined);
-    const collapsed = findOwn(parent.holder, '[data-blok-toggle-open="false"]') !== null
-      || (siblings.length > 0 && siblings.every(sibling => sibling.holder.classList.contains('hidden')));
-
-    if (collapsed) {
-      block.holder.classList.add('hidden');
-    }
   }
 
   /**
@@ -812,7 +791,7 @@ export class BlockInsertion {
   private splitTailPlacement(current: Block): TreePlacement | undefined {
     const parent = current.parentId === null ? undefined : this.repository.getBlockById(current.parentId);
 
-    if (parent !== undefined && this.isSelfPlacedParent(parent)) {
+    if (parent !== undefined && isSelfPlacedParent(parent, this.getBlock)) {
       return undefined;
     }
 
@@ -1027,7 +1006,7 @@ export class BlockInsertion {
     const newBlockId = requestedId ?? generateBlockId();
     const defaultBlockTool = this.dependencies.config.defaultBlock ?? 'paragraph';
     // Tables and databases place their children in their own cells/views.
-    const selfPlaced = this.isSelfPlacedParent(parentBlock);
+    const selfPlaced = isSelfPlacedParent(parentBlock, this.getBlock);
     /**
      * Resolve the tool name ONCE, BEFORE the Yjs write, so the CRDT and the
      * DOM get the same type. On the index path `ctx.insert()` also demotes by
@@ -1105,21 +1084,6 @@ export class BlockInsertion {
 
       return newBlock;
     }, { extendThroughRAF: true });
-  }
-
-  /**
-   * Whether `block` is a table/database or sits under one: its children are
-   * placed by the tool, so inserts under it keep the flat-index path.
-   * @param block - the prospective parent
-   */
-  private isSelfPlacedParent(block: Block): boolean {
-    const walk = (cursor: Block | undefined, seen: Set<string>): boolean =>
-      cursor !== undefined && !seen.has(cursor.id) && (
-        SELF_PLACING_PARENTS.has(cursor.name)
-        || walk(cursor.parentId === null ? undefined : this.repository.getBlockById(cursor.parentId), seen.add(cursor.id))
-      );
-
-    return walk(block, new Set<string>());
   }
 
   /**

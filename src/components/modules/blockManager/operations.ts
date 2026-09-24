@@ -18,6 +18,7 @@ import { BlockMutation } from './block-mutation';
 import { BlockRemoval } from './block-removal';
 import type { BlockFactory } from './factory';
 import type { BlockHierarchy } from './hierarchy';
+import { hideUnderCollapsedParent, isSelfPlacedParent } from './new-block-placement';
 import type {
   BlockDidMutated,
   BlockOperationsDependencies,
@@ -502,9 +503,10 @@ export class BlockOperations implements OperationsContext {
   }
 
   /**
-   * Attach `newBlock` to the old parent in place of the old block id,
-   * routing through `setBlockParent` so the DOM reparent/hide side effects
-   * run, then restoring the original position in the parent's contentIds[].
+   * Attach `newBlock` to the old parent in the old block's slot: right after
+   * the sibling the old block followed, hidden if the parent is collapsed.
+   * Tables and databases, and an old block the parent does not list, go
+   * through `setBlockParent` instead.
    *
    * Shared by BlockInsertion (insert/paste) and BlockMutation (replace).
    * @param oldBlockId - The id of the block being replaced
@@ -525,17 +527,32 @@ export class BlockOperations implements OperationsContext {
     }
 
     const oldPositionInParent = parentBlock.contentIds.indexOf(oldBlockId);
+    const getBlock = (id: string): Block | undefined => this.repository.getBlockById(id);
 
-    this.hierarchy.setBlockParent(newBlock, oldParentId);
+    if (oldPositionInParent < 0 || isSelfPlacedParent(parentBlock, getBlock)) {
+      this.hierarchy.setBlockParent(newBlock, oldParentId);
 
-    if (oldPositionInParent < 0) {
+      if (oldPositionInParent < 0) {
+        return;
+      }
+
+      const withoutStale = parentBlock.contentIds.filter(id => id !== oldBlockId && id !== newBlock.id);
+
+      withoutStale.splice(oldPositionInParent, 0, newBlock.id);
+      parentBlock.contentIds = withoutStale;
+
       return;
     }
 
-    const withoutStale = parentBlock.contentIds.filter(id => id !== oldBlockId && id !== newBlock.id);
+    // Skips ids that no longer name a child: placeBlock needs a real sibling.
+    const afterId = parentBlock.contentIds
+      .slice(0, oldPositionInParent)
+      .reverse()
+      .find(id => id !== newBlock.id && getBlock(id)?.parentId === oldParentId) ?? null;
 
-    withoutStale.splice(oldPositionInParent, 0, newBlock.id);
-    parentBlock.contentIds = withoutStale;
+    parentBlock.contentIds = parentBlock.contentIds.filter(id => id !== oldBlockId);
+    this.hierarchy.placeBlock(newBlock, { parentId: oldParentId, afterId });
+    hideUnderCollapsedParent(newBlock, getBlock);
   }
 
   /**

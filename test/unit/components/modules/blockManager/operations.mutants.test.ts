@@ -129,6 +129,7 @@ interface Harness {
   blocks: Block[];
   getBlockByIndex: ReturnType<typeof vi.fn>;
   setBlockParent: ReturnType<typeof vi.fn>;
+  placeBlock: ReturnType<typeof vi.fn>;
   stopCapturing: ReturnType<typeof vi.fn>;
   blocksStore: BlocksStore;
 }
@@ -161,7 +162,8 @@ const createHarness = (options: {
   } as unknown as BlockRepository;
 
   const setBlockParent = vi.fn();
-  const hierarchy = { setBlockParent } as unknown as BlockHierarchy;
+  const placeBlock = vi.fn();
+  const hierarchy = { setBlockParent, placeBlock } as unknown as BlockHierarchy;
   const stopCapturing = vi.fn();
   const yjsManager = options.withYjsManager === false
     ? undefined
@@ -181,6 +183,7 @@ const createHarness = (options: {
     blocks,
     getBlockByIndex,
     setBlockParent,
+    placeBlock,
     stopCapturing,
     blocksStore: { marker: 'blocks-store' } as unknown as BlocksStore,
   };
@@ -470,24 +473,53 @@ describe('BlockOperations — coordinator state and delegation', () => {
       expect(parent.contentIds).toStrictEqual(['x', 'y']);
     });
 
-    it('restores the replacement at the head position the old block held', () => {
+    it('places the replacement first when the old block was the head', () => {
       const parent = createBlock('parent', { contentIds: ['old', 'x'] });
       const newBlock = createBlock('new');
-      const { operations } = createHarness({ blocks: [parent, newBlock] });
+      const x = createBlock('x', { parentId: 'parent' });
+      const { operations, placeBlock, setBlockParent } = createHarness({ blocks: [parent, newBlock, x] });
 
       operations.transferParentLinkToNewBlock('old', newBlock, 'parent');
 
-      expect(parent.contentIds).toStrictEqual(['new', 'x']);
+      expect(placeBlock).toHaveBeenCalledWith(newBlock, { parentId: 'parent', afterId: null });
+      expect(parent.contentIds).toStrictEqual(['x']);
+      expect(setBlockParent).not.toHaveBeenCalled();
     });
 
-    it('restores the replacement at an interior position the old block held', () => {
-      const parent = createBlock('parent', { contentIds: ['x', 'old', 'y'] });
+    it('places the replacement after the nearest earlier sibling that is still a child', () => {
+      const parent = createBlock('parent', { contentIds: ['x', 'gone', 'old', 'y'] });
       const newBlock = createBlock('new');
-      const { operations } = createHarness({ blocks: [parent, newBlock] });
+      const x = createBlock('x', { parentId: 'parent' });
+      const y = createBlock('y', { parentId: 'parent' });
+      const { operations, placeBlock } = createHarness({ blocks: [parent, x, newBlock, y] });
 
       operations.transferParentLinkToNewBlock('old', newBlock, 'parent');
 
+      expect(placeBlock).toHaveBeenCalledWith(newBlock, { parentId: 'parent', afterId: 'x' });
+      expect(parent.contentIds).toStrictEqual(['x', 'gone', 'y']);
+    });
+
+    it('keeps setBlockParent and the old slot for a table parent', () => {
+      const parent = createBlock('parent', { name: 'table', contentIds: ['x', 'old', 'y'] });
+      const newBlock = createBlock('new');
+      const { operations, placeBlock, setBlockParent } = createHarness({ blocks: [parent, newBlock] });
+
+      operations.transferParentLinkToNewBlock('old', newBlock, 'parent');
+
+      expect(placeBlock).not.toHaveBeenCalled();
+      expect(setBlockParent).toHaveBeenCalledWith(newBlock, 'parent');
       expect(parent.contentIds).toStrictEqual(['x', 'new', 'y']);
+    });
+
+    it('hides the replacement under a collapsed parent', () => {
+      const parent = createBlock('parent', { contentIds: ['old', 'x'] });
+      const newBlock = createBlock('new', { parentId: 'parent' });
+      const x = createBlock('x', { parentId: 'parent', hidden: true });
+      const { operations } = createHarness({ blocks: [parent, newBlock, x] });
+
+      operations.transferParentLinkToNewBlock('old', newBlock, 'parent');
+
+      expect(newBlock.holder.classList.contains('hidden')).toBe(true);
     });
   });
 

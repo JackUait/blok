@@ -1867,7 +1867,7 @@ describe('BlockOperations', () => {
       const testStore = createBlocksStore([outerToggle, innerToggle, grandchild]);
       const testRepo = new BlockRepository();
       testRepo.initialize(testStore);
-      const testHierarchy = new BlockHierarchy(testRepo);
+      const testHierarchy = new BlockHierarchy(testRepo, undefined, undefined, testStore);
       const testOps = new BlockOperations(
         dependencies,
         testRepo,
@@ -1995,17 +1995,16 @@ describe('BlockOperations', () => {
      * Angle 2 (callout paste-ejection family, gap after Layer 18).
      *
      * `replace()` used to mutate `newBlock.parentId` and `parentBlock.contentIds`
-     * directly instead of routing through `BlockHierarchy.setBlockParent()`. The
-     * invariant still held, but the DOM side effects owned by `setBlockParent`
-     * (reparenting the block's holder into the parent's toggle-children
-     * container, hiding it when the parent is collapsed) were skipped. Result:
+     * directly. The invariant still held, but the DOM side effects (mounting
+     * the block's holder into the parent's toggle-children container, hiding
+     * it when the parent is collapsed) were skipped. Result:
      * a block replaced inside a callout/toggle would render at the wrong DOM
      * position (sibling of the callout, not child of it) until the next full
      * render pass.
      *
      * These tests lock the DOM behaviour and the invariant together.
      */
-    it('routes the replaced child through setBlockParent so its holder is reparented into the container', () => {
+    it('mounts the replaced child\'s holder into the container', () => {
       const container = createMockBlock({ id: 'callout-1', name: 'callout', contentIds: ['child-1'] });
       const childContainer = document.createElement('div');
 
@@ -2105,7 +2104,7 @@ describe('BlockOperations', () => {
       const testRepo = new BlockRepository();
 
       testRepo.initialize(testStore);
-      const testHierarchy = new BlockHierarchy(testRepo);
+      const testHierarchy = new BlockHierarchy(testRepo, undefined, undefined, testStore);
       const testOps = new BlockOperations(
         dependencies,
         testRepo,
@@ -3654,6 +3653,29 @@ describe('BlockOperations', () => {
       // replaced by the new block's id at the same position.
       expect(parentBlock?.contentIds).toContain(newBlock.id);
       expect(parentBlock?.contentIds).not.toContain('block-2');
+    });
+
+    it('transferParentLinkToNewBlock places the new block right after the replaced block\'s previous sibling', () => {
+      const first = repository.getBlockById('block-2');
+      const second = repository.getBlockById('block-3');
+
+      if (first === undefined || second === undefined) {
+        throw new Error('Test setup failed: block-2 or block-3 not found');
+      }
+      hierarchy.setBlockParent(first, 'block-1');
+      hierarchy.setBlockParent(second, 'block-1');
+
+      const replacement = createMockBlock({ id: 'replacement' });
+      const placeBlock = vi.spyOn(hierarchy, 'placeBlock');
+      const setBlockParent = vi.spyOn(hierarchy, 'setBlockParent');
+
+      blocksStore.insert(2, replacement, true);
+      operations.transferParentLinkToNewBlock('block-3', replacement, 'block-1');
+
+      expect(setBlockParent).not.toHaveBeenCalled();
+      expect(placeBlock).toHaveBeenCalledWith(replacement, { parentId: 'block-1', afterId: 'block-2' });
+      expect(repository.getBlockById('block-1')?.contentIds).toEqual(['block-2', 'replacement']);
+      expect(repository.blocks.map(block => block.id)).toEqual(['block-1', 'block-2', 'replacement']);
     });
 
     it('paste() into container title inherits container id as parent (title-vs-child defense)', async () => {

@@ -961,6 +961,59 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       expect(named(dom(), newId)).toEqual(['x<-', 'x1<-', 'n<-', 'y<-']);
     }, 30_000);
   });
+
+  describe('a replacement takes the replaced child\'s place', () => {
+    it.each([
+      { name: 'the first child', target: 'c1', expected: ['a^-', 't^-', 'n^t', 'c2^t', 'b^-'] },
+      { name: 'the last child', target: 'c2', expected: ['a^-', 't^-', 'c1^t', 'n^t', 'b^-'] },
+    ])('insertAt replace of $name', async ({ target, expected }) => {
+      const instance = await boot();
+
+      instance.blocks.insertAt('header', { text: 'n', level: 2 }, { id: 'n', replace: target });
+
+      expect(flat(instance)).toEqual(expected);
+      expect(contentOf(instance, 't')).toEqual(expected.filter(entry => entry.endsWith('^t')).map(entry => entry.split('^')[0]));
+      expect(dom()).toEqual(domFor(expected));
+      expect(await saved(instance)).toEqual(expected);
+      expect(shared(instance)).toEqual(expected);
+    }, 30_000);
+
+    it('convert keeps the child in its slot', async () => {
+      const instance = await boot();
+
+      await instance.blocks.convert('c1', 'header');
+      await nextFrames(2);
+
+      const converted = instance.module.blockManager.blocks[2];
+      const expected = ['a^-', 't^-', 'c1^t', 'c2^t', 'b^-'];
+
+      expect(converted.name).toBe('header');
+      expect(flat(instance)).toEqual(expected);
+      expect(contentOf(instance, 't')).toEqual(['c1', 'c2']);
+      expect(dom()).toEqual(domFor(expected));
+      expect(await saved(instance)).toEqual(expected);
+      expect(shared(instance)).toEqual(expected);
+    }, 30_000);
+
+    it('stays hidden in a collapsed toggle', async () => {
+      const instance = await boot([P('a'), { ...T('t', ['c1', 'c2']), data: { text: 't', isOpen: false } }, P('c1', 't'), P('c2', 't')]);
+
+      const block = instance.blocks.insertAt('header', { text: 'n', level: 2 }, { id: 'n', replace: 'c1' });
+
+      expect(block.holder.classList.contains('hidden')).toBe(true);
+      expect(await saved(instance)).toEqual(['a^-', 't^-', 'n^t', 'c2^t']);
+    }, 30_000);
+
+    it('is one undo step', async () => {
+      const instance = await boot();
+
+      instance.blocks.insertAt('header', { text: 'n', level: 2 }, { id: 'n', replace: 'c1' });
+      await undoOnce(instance);
+
+      expect(await saved(instance)).toEqual(INITIAL);
+      expect(shared(instance)).toEqual(INITIAL);
+    }, 30_000);
+  });
 });
 
 /** The placement fields of a block-added detail. */

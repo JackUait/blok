@@ -1,5 +1,5 @@
 /**
- * Soft glowing outline around the active find match.
+ * Thin ring around the active find match's fill.
  *
  * One box per line rect rather than one union box: a match that wraps a line
  * break spans two short rects at opposite edges, and their union would cover
@@ -15,14 +15,12 @@ export interface LensRect {
 
 const LENS = 'data-blok-find-lens';
 const BOX = 'data-blok-find-lens-box';
-const PING = 'data-blok-find-lens-ping';
-const INSTANT = 'data-blok-find-lens-instant';
+const ARRIVE = 'data-blok-find-lens-arrive';
 
 export class FindLens {
   private readonly container: HTMLElement;
   private root: HTMLElement | null = null;
   private boxes: HTMLElement[] = [];
-  private instantFrame: number | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -36,12 +34,6 @@ export class FindLens {
     }
 
     const root = this.ensureRoot();
-    const wasHidden = root.hidden;
-
-    // Coming back from hidden: place at once, or it would glide in from the old match.
-    if (wasHidden) {
-      this.setInstant(root);
-    }
 
     root.hidden = false;
 
@@ -57,10 +49,10 @@ export class FindLens {
       box.style.height = `${rect.height}px`;
 
       if (options.pulse === true) {
-        // Remove, reflow, re-add: restarts the ping when it is already playing.
-        box.removeAttribute(PING);
+        // Remove, reflow, re-add: restarts the arrival when it is already playing.
+        box.removeAttribute(ARRIVE);
         void box.offsetWidth;
-        box.setAttribute(PING, '');
+        box.setAttribute(ARRIVE, '');
       }
     });
   }
@@ -72,11 +64,6 @@ export class FindLens {
   }
 
   public destroy(): void {
-    if (this.instantFrame !== null) {
-      cancelAnimationFrame(this.instantFrame);
-      this.instantFrame = null;
-    }
-
     this.root?.remove();
     this.root = null;
     this.boxes = [];
@@ -105,26 +92,10 @@ export class FindLens {
 
     box.setAttribute(BOX, '');
     box.setAttribute('data-blok-testid', 'find-lens-box');
-    box.addEventListener('animationend', () => box.removeAttribute(PING));
+    box.addEventListener('animationend', () => box.removeAttribute(ARRIVE));
     root.appendChild(box);
     this.boxes.push(box);
 
     return box;
-  }
-
-  private setInstant(root: HTMLElement): void {
-    root.setAttribute(INSTANT, '');
-
-    if (this.instantFrame !== null) {
-      cancelAnimationFrame(this.instantFrame);
-    }
-
-    // Two frames: the first paints the new spot with transitions off.
-    this.instantFrame = requestAnimationFrame(() => {
-      this.instantFrame = requestAnimationFrame(() => {
-        this.instantFrame = null;
-        root.removeAttribute(INSTANT);
-      });
-    });
   }
 }

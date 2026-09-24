@@ -254,6 +254,47 @@ test.describe('find in page', () => {
       expect((await readHighlights(page)).activeBlockId).toBe('find-p0');
     });
 
+    test('the ring lands on the new match at once and hugs its fill', async ({ page }) => {
+      await createEditor(page, paragraphs('foo one', 'a long line before foo two', 'foo three'));
+      await focusParagraph(page, 'foo one');
+      await openFind(page, 'foo');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 3');
+
+      await page.keyboard.press('Enter');
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 3');
+
+      // A ring that glides would sit over unrelated text while the fill has already moved.
+      const travelling = await page.getByTestId('find-lens-box').evaluate((box) =>
+        box.getAnimations().filter((animation) => animation instanceof CSSTransition).length
+      );
+
+      expect(travelling).toBe(0);
+
+      const offset = await page.getByTestId('find-lens-box').evaluate(async (box) => {
+        await Promise.all(box.getAnimations().map((animation) => animation.finished));
+
+        const active = CSS.highlights.get('blok-find-match-active');
+        const [range] = active === undefined ? [] : [...active];
+
+        if (!(range instanceof Range)) {
+          return null;
+        }
+
+        const ring = box.getBoundingClientRect();
+        const fill = range.getBoundingClientRect();
+
+        return Math.max(
+          Math.abs(ring.left - fill.left),
+          Math.abs(ring.top - fill.top),
+          Math.abs(ring.right - fill.right),
+          Math.abs(ring.bottom - fill.bottom)
+        );
+      });
+
+      expect(offset).not.toBeNull();
+      expect(offset).toBeLessThan(0.5);
+    });
+
     test('Enter wraps from the last match to the first', async ({ page }) => {
       await createEditor(page, paragraphs('foo one', 'foo two'));
       await focusParagraph(page, 'foo one');

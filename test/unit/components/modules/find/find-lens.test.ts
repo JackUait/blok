@@ -63,7 +63,7 @@ describe('FindLens', () => {
     expect(root?.style.pointerEvents).toBe('none');
   });
 
-  it('reuses its boxes when it moves, so the move can glide', () => {
+  it('reuses its boxes when it moves', () => {
     const lens = new FindLens(container);
 
     lens.moveTo([rect(0, 0, 10, 10)]);
@@ -85,21 +85,21 @@ describe('FindLens', () => {
     expect(boxesIn(container)).toHaveLength(1);
   });
 
-  it('plays the ping only when asked, and clears it when the ping ends', () => {
+  it('plays the arrival only when asked, and clears it when it ends', () => {
     const lens = new FindLens(container);
 
     lens.moveTo([rect(0, 0, 10, 10)]);
     const [box] = boxesIn(container);
 
-    expect(box.hasAttribute('data-blok-find-lens-ping')).toBe(false);
+    expect(box.hasAttribute('data-blok-find-lens-arrive')).toBe(false);
 
     lens.moveTo([rect(0, 0, 10, 10)], { pulse: true });
 
-    expect(box.hasAttribute('data-blok-find-lens-ping')).toBe(true);
+    expect(box.hasAttribute('data-blok-find-lens-arrive')).toBe(true);
 
     box.dispatchEvent(new Event('animationend'));
 
-    expect(box.hasAttribute('data-blok-find-lens-ping')).toBe(false);
+    expect(box.hasAttribute('data-blok-find-lens-arrive')).toBe(false);
   });
 
   it('hides without forgetting its boxes, and shows again on the next move', () => {
@@ -113,26 +113,6 @@ describe('FindLens', () => {
     lens.moveTo([rect(5, 5, 10, 10)]);
 
     expect(lensIn(container)?.hidden).toBe(false);
-  });
-
-  it('does not glide in from where it was hidden', () => {
-    const lens = new FindLens(container);
-
-    lens.moveTo([rect(0, 0, 10, 10)]);
-    lens.hide();
-    lens.moveTo([rect(500, 5, 10, 10)]);
-
-    expect(lensIn(container)?.hasAttribute('data-blok-find-lens-instant')).toBe(true);
-  });
-
-  it('glides between two visible matches', async () => {
-    const lens = new FindLens(container);
-
-    lens.moveTo([rect(0, 0, 10, 10)]);
-    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-    lens.moveTo([rect(500, 5, 10, 10)]);
-
-    expect(lensIn(container)?.hasAttribute('data-blok-find-lens-instant')).toBe(false);
   });
 
   it('hides when moved to no rects', () => {

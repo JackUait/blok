@@ -533,6 +533,51 @@ describe('Table lifecycle rebuild', () => {
     });
   });
 
+  describe('a synced child that gets its parent after it lands', () => {
+    /**
+     * A peer's add can reach us before its parent write: the block is added
+     * with no parent, its holder sits in a cell by flat adjacency, and only
+     * then is it parented to the table. save() must still leave it out until
+     * the table data names its cell, or we send that cell to every peer and
+     * the block ends up named in two cells (COB-4).
+     */
+    it('is left out of save() until the table data names its cell', () => {
+      const options = createTableOptions(
+        { content: [['A', 'B']] },
+        {},
+        { blocks: { isSyncingFromYjs: false, getById: vi.fn(() => undefined) } }
+      );
+      const blocksApi = options.api.blocks as unknown as { isSyncingFromYjs: boolean; getById: ReturnType<typeof vi.fn> };
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      const blockChanged = vi.mocked(options.api.events.on).mock.calls
+        .filter(([name]) => name === 'block changed')
+        .map(([, handler]) => handler as (payload: unknown) => void);
+      const cellContainer = element.querySelector('[data-blok-table-cell-blocks]') as HTMLElement;
+      const early = document.createElement('div');
+      const peerBlock = { id: 'peer-cell-block', parentId: null as string | null };
+
+      early.setAttribute('data-blok-id', 'peer-cell-block');
+      cellContainer.appendChild(early);
+      blocksApi.getById.mockImplementation((id: string) => (id === 'peer-cell-block' ? peerBlock : undefined));
+
+      blocksApi.isSyncingFromYjs = true;
+      blockChanged.forEach((handler) => handler({
+        event: { type: 'block-added', detail: { target: { id: 'peer-cell-block', holder: early }, index: 1 } },
+      }));
+      peerBlock.parentId = 'table-lifecycle-test';
+      blocksApi.isSyncingFromYjs = false;
+
+      const saved = table.save(element);
+
+      expect(saved.content.flat().flatMap((cell) => (typeof cell === 'string' ? [] : cell.blocks))).not.toContain('peer-cell-block');
+    });
+  });
+
   describe('rendered() during Yjs sync naming a block that never arrives', () => {
     const nextFrame = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => resolve()));
 

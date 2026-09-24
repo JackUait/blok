@@ -278,7 +278,14 @@ test.describe('undo audit: collab in two real editors', () => {
       expect({ alpha: await cellBlocks(pages.a, 'alpha'),
         beta: await cellBlocks(pages.b, 'beta') }).toEqual({ alpha: 6,
         beta: 6 });
-      await converged(pages);
+      const table = (await converged(pages)).find((row) => row.type === 'table');
+      const content = (table?.data as { content: Array<Array<{ blocks: string[] }>> }).content;
+      const named = content.flat().flatMap((cell) => cell.blocks);
+
+      // A block named in two cells still renders six wrappers.
+      expect({ named: named.length,
+        distinct: new Set(named).size }).toEqual({ named: 6,
+        distinct: 6 });
     });
   }
 });

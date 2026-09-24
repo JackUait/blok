@@ -71,12 +71,13 @@ const stillHolds = async (live: BlockAPI, startedFrom: Partial<BlockToolData> | 
  * host can still reach it. Nothing is resurrected — re-inserting a media block
  * the peer deliberately removed or converted would fight their edit, and every
  * peer running the same upload would insert its own copy.
- * @param api - the tool's editor API
- * @param block - the block API this tool was constructed with
- * @param label - tool name used in the log line
+ *
  * A third case gets no write either: with `startedFrom`, a block that no
  * longer holds those values (the pick that started the upload was undone, or
  * the block got another file) keeps what it has.
+ * @param api - the tool's editor API
+ * @param block - the block API this tool was constructed with
+ * @param label - tool name used in the log line
  * @param data - only the fields the upload produced
  * @param startedFrom - values the block held when the upload started
  */

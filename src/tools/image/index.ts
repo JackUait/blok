@@ -223,7 +223,6 @@ export class ImageTool implements BlockTool {
     this.uploadImageFile(file);
   }
 
-  /** Existing upload body, extracted verbatim. */
   private uploadImageFile(file: File): void {
     const source = { kind: 'file', file } as const;
 

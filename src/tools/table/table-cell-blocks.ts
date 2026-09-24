@@ -48,6 +48,11 @@ interface TableCellBlocksOptions {
    * nothing else announces. See {@link TableCellBlocks.signalCellReferenceDropped}.
    */
   onCellReferenceDropped?: () => void;
+  /**
+   * Ids of the stand-ins this editor put in emptied cells. Owned by the table,
+   * not by this object: a setData rebuild replaces this object.
+   */
+  repairIds?: Set<string>;
 }
 
 /**
@@ -112,6 +117,8 @@ export class TableCellBlocks {
   /** Ids the running initializeCells pass has mounted, so a second reference to one is not a park. */
   private readonly mountedThisPass = new Set<string>();
 
+  private readonly repairIds: Set<string>;
+
   constructor(options: TableCellBlocksOptions) {
     this.api = options.api;
     this.gridElement = options.gridElement;
@@ -120,6 +127,7 @@ export class TableCellBlocks {
     this.onNavigateToCell = options.onNavigateToCell;
     this.isStructuralOpActive = options.isStructuralOpActive ?? (() => false);
     this.onCellReferenceDropped = options.onCellReferenceDropped;
+    this.repairIds = options.repairIds ?? new Set();
 
     this.api.events.on('block changed', this.handleBlockMutation);
     this.gridElement.addEventListener('click', this.handleCellBlankSpaceClick);
@@ -930,6 +938,43 @@ export class TableCellBlocks {
     });
   }
 
+  /**
+   * After a sync has settled, remove this editor's stand-in from a cell that
+   * also names a lower-id block. Two peers that refill the same emptied cell
+   * each add a stand-in, and a cell's `blocks` merge keeps both. Every peer
+   * sees the same ids, so the lowest one stays and the others go. A stand-in
+   * the user typed into is content and stays.
+   */
+  public yieldRepairsToPeers(): void {
+    if (this.repairIds.size === 0) {
+      return;
+    }
+
+    const losers: string[] = [];
+
+    this.gridElement.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`).forEach(cell => {
+      const pos = this.getCellPosition(cell);
+      const ids = pos ? this.model.getCellBlocks(pos.row, pos.col) : [];
+
+      ids.forEach(id => {
+        if (!this.repairIds.has(id) || this.api.blocks.getById?.(id)?.isEmpty !== true) {
+          return;
+        }
+
+        if (ids.some(other => other < id && this.api.blocks.getById?.(other) != null)) {
+          losers.push(id);
+        }
+      });
+    });
+
+    if (losers.length === 0) {
+      return;
+    }
+
+    losers.forEach(id => this.repairIds.delete(id));
+    this.api.blocks.transactWithoutCapture?.(() => this.deleteBlocks(losers, false));
+  }
+
   public reclaimReferencedBlocks(): void {
     const snapshot = this.model.snapshot();
 
@@ -1216,6 +1261,9 @@ export class TableCellBlocks {
     const fill = (): void => {
       const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.indexAfterTableSubtree(), true);
 
+      if (options.track !== true) {
+        this.repairIds.add(block.id);
+      }
       container.appendChild(block.holder);
       this.api.blocks.setBlockParent(block.id, this.tableBlockId);
       this.syncBlockToModel(cell, block.id);

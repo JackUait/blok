@@ -109,6 +109,9 @@ export class Table implements BlockTool {
    */
   private setDataGeneration = 0;
 
+  /** See `TableCellBlocksOptions.repairIds`. */
+  private readonly repairIds = new Set<string>();
+
   /**
    * Depth counter for structural operations (add/delete/move row/col).
    * When > 0, TableCellBlocks defers handleBlockMutation events to prevent
@@ -1238,6 +1241,7 @@ export class Table implements BlockTool {
       }
 
       this.cellBlocks?.fillCellsWithUnresolvedBlocks();
+      this.cellBlocks?.yieldRepairsToPeers();
     });
   }
 
@@ -1406,6 +1410,7 @@ export class Table implements BlockTool {
       model: this.model,
       isStructuralOpActive: () => this.structuralOpDepth > 0,
       onCellReferenceDropped: () => this.block?.dispatchChange(),
+      repairIds: this.repairIds,
     });
   }
 

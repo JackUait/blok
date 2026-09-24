@@ -654,6 +654,9 @@ export class RectangleSelection extends Module {
     }
 
     const indexes = this.blockIndexes();
+
+    this.followConvertedStackBlocks(indexes);
+
     const firstBlockInStack = this.stackOfSelected[0];
 
     if (!indexes.has(firstBlockInStack)) {
@@ -807,6 +810,17 @@ export class RectangleSelection extends Module {
   }
 
   /**
+   * Swap each stacked block a peer convert replaced (same id, new Block
+   * object) for its replacement. Removed blocks stay, so callers can see them.
+   * @param indexes - flat index of every block
+   */
+  private followConvertedStackBlocks(indexes: Map<Block, number>): void {
+    this.stackOfSelected = this.stackOfSelected.map((block) =>
+      indexes.has(block) ? block : this.Blok.BlockManager.getBlockById(block.id) ?? block
+    );
+  }
+
+  /**
    * Current flat indexes of the stacked blocks, skipping any removed since.
    * @param indexes - flat index of every block
    */
@@ -870,7 +884,11 @@ export class RectangleSelection extends Module {
 
     const expectedIndices = this.dropRepresentedUnits(crossedIndices, minY, maxY);
 
-    const previousStack = new Set(this.stackIndices(this.blockIndexes()));
+    const indexes = this.blockIndexes();
+
+    this.followConvertedStackBlocks(indexes);
+
+    const previousStack = new Set(this.stackIndices(indexes));
 
     // Deselect blocks no longer in range
     for (const prevIndex of previousStack) {

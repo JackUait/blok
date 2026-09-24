@@ -817,6 +817,51 @@ describe('RectangleSelection', () => {
     expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalled();
   });
 
+  it('unselects a lassoed block that a peer converted mid-drag once the lasso leaves it', () => {
+    const {
+      rectangleSelection,
+      blockSelection,
+      blockManager,
+    } = createRectangleSelection();
+
+    const holderAt = (top: number): HTMLDivElement => {
+      const holder = document.createElement('div');
+
+      holder.getBoundingClientRect = vi.fn(() => ({
+        top, bottom: top + 50, left: 0, right: 800, width: 800, height: 50,
+        x: 0, y: top, toJSON: () => ({}),
+      }));
+
+      return holder;
+    };
+
+    blockManager.blocks.push(
+      { id: 'b0', holder: holderAt(0), parentId: null } as unknown as BlockType,
+      { id: 'b1', holder: holderAt(50), parentId: null } as unknown as BlockType
+    );
+
+    const internal = rectangleSelection as unknown as {
+      rectCrossesBlocks: boolean;
+      trySelectNextBlock: () => void;
+      startY: number;
+      mouseY: number;
+    };
+
+    internal.rectCrossesBlocks = true;
+    internal.startY = 25;
+    internal.mouseY = 75;
+    internal.trySelectNextBlock();
+
+    // The peer converts b1: same id, new Block object in the same slot.
+    blockManager.blocks.splice(1, 1, { id: 'b1', holder: holderAt(50), parentId: null } as unknown as BlockType);
+    blockSelection.unSelectBlockByIndex.mockClear();
+
+    internal.mouseY = 25;
+    internal.trySelectNextBlock();
+
+    expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(1);
+  });
+
   it('leaves the selection alone when the first stacked block was removed mid-drag', () => {
     const {
       rectangleSelection,

@@ -86,6 +86,12 @@ export class YjsManager extends Module {
   /** The token behind each release callback {@link beginPendingBlockDataWrite} handed out. */
   private readonly tokenByRelease = new WeakMap<() => void, symbol>();
 
+  /** The block each in-flight save belongs to, when its caller named one. */
+  private readonly blockByPendingWrite = new Map<symbol, string>();
+
+  /** Work waiting on in-flight saves; see {@link runAfterSavesOf}. */
+  private afterSaves: Array<{ tokens: Set<symbol>; run: () => void }> = [];
+
   /**
    * Destroy's OWN continuation, run once `pendingBlockWrites` falls back to
    * zero. Separate from {@link pendingBlockWritesSettledListeners} because it
@@ -543,18 +549,23 @@ export class YjsManager extends Module {
    * the write it produces has been enqueued. See {@link pendingBlockWrites}.
    * @returns release callback, safe to call more than once
    */
-  public beginPendingBlockDataWrite(): () => void {
+  public beginPendingBlockDataWrite(blockId?: string): () => void {
     const token = Symbol('pending block data write');
 
     this.pendingBlockWrites.add(token);
+    if (blockId !== undefined) {
+      this.blockByPendingWrite.set(token, blockId);
+    }
 
     const release = (): void => {
       // A token is released once; a second call finds nothing to delete.
       if (!this.pendingBlockWrites.delete(token)) {
         return;
       }
+      this.blockByPendingWrite.delete(token);
 
       this.splitAfterLandedWrite(token);
+      this.runWorkAfterSave(token);
 
       if (this.pendingBlockWrites.size > 0) {
         return;
@@ -566,6 +577,42 @@ export class YjsManager extends Module {
     this.tokenByRelease.set(release, token);
 
     return release;
+  }
+
+  /**
+   * Run `run` once every save of `blockId` in flight now has been handed to
+   * the write buffer; at once when there is none.
+   * @param blockId - the block whose saves to wait for
+   * @param run - the work
+   */
+  public runAfterSavesOf(blockId: string, run: () => void): void {
+    const tokens = new Set([...this.blockByPendingWrite].filter(([, id]) => id === blockId).map(([token]) => token));
+
+    if (tokens.size === 0) {
+      run();
+
+      return;
+    }
+    this.afterSaves.push({ tokens, run });
+  }
+
+  /**
+   * @param token - a save that was just handed to the write buffer
+   */
+  private runWorkAfterSave(token: symbol): void {
+    const ready = this.afterSaves.filter((entry) => entry.tokens.delete(token) && entry.tokens.size === 0);
+
+    if (ready.length === 0) {
+      return;
+    }
+    this.afterSaves = this.afterSaves.filter((entry) => entry.tokens.size > 0);
+    ready.forEach(({ run }) => {
+      try {
+        run();
+      } catch (error) {
+        logLabeled('Blok: work waiting on a block save failed', 'error', error);
+      }
+    });
   }
 
   /**

@@ -29,7 +29,8 @@ const findLiveBlock = (api: API, blockId: string): BlockAPI | null => {
 /**
  * Run `fn`'s block writes as data worked out from `from` keys of block
  * `blockId`: they join the undo step that wrote those values, add no step and
- * keep redo. See `api.blocks.transactWithoutCapture`.
+ * keep redo. `fn` may run later, once the block's in-flight saves have landed.
+ * See `api.blocks.transactWithoutCapture`.
  * @param api - the tool's editor API
  * @param blockId - the block the data comes from
  * @param from - keys of its data the writes were worked out from
@@ -148,13 +149,12 @@ export const deliverToRebuiltBlock = (
           return;
         }
 
-        const written: { update?: Promise<unknown> } = {};
+        const warn = (error: unknown): void => logLabeled(`${label}: could not store the finished upload`, 'warn', error);
 
+        // Caught here: the write may run after this returns (see writeDerived).
         writeDerived(api, block.id, from, () => {
-          written.update = api.blocks.update(block.id, data);
+          api.blocks.update(block.id, data).catch(warn);
         });
-
-        return written.update;
       })
       .catch((error: unknown) => {
         logLabeled(`${label}: could not store the finished upload`, 'warn', error);
@@ -196,13 +196,10 @@ export const putBackOnRebuiltBlock = (
           return;
         }
 
-        const written: { update?: Promise<unknown> } = {};
-
+        // Caught here: the write may run after this returns (see writeDerived).
         writeDerived(api, block.id, from, () => {
-          written.update = api.blocks.update(block.id, data);
+          api.blocks.update(block.id, data).catch(warn);
         });
-
-        return written.update;
       })
       .catch(warn);
   } catch (error) {

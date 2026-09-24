@@ -1610,8 +1610,12 @@ export class BlockYjsSync {
         lastEditedBy,
       });
 
-      // A root block after a nested one would land in that block's slot (see activateBlock).
-      this.blocksStore.insert(targetIndex, block, false, false, parentId === undefined);
+      // An undo/redo root block after a nested one would land in that block's
+      // slot (see activateBlock). Not a peer's: its parent write may still
+      // come, and the table holds such a block by where its holder lands.
+      const mountAtRoot = parentId === undefined && replaySourceOf(origin) === 'history';
+
+      this.blocksStore.insert(targetIndex, block, false, false, mountAtRoot);
 
       // The tool's own normalisation of what the document handed us lands
       // after this window closes — see `settlingBlocks`.

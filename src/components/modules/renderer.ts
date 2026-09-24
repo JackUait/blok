@@ -129,6 +129,7 @@ export class Renderer extends Module {
     const { Tools, BlockManager } = this.Blok;
 
     const inputBlocks = this.resolveRenderSource(blocksData, options);
+    const rendersSharedDocument = inputBlocks !== blocksData;
 
     // Give consumers a chance to transform the blocks array before anything is
     // rendered — e.g. to run app-specific legacy-data migrations inside Blok.
@@ -341,9 +342,13 @@ export class Renderer extends Module {
     }
 
     // After the rewrites above, so the document takes the DOM they produced.
-    // A view rebuild renders a document this client did not author: add the
-    // missing keys only, never overwrite a peer's value with our sanitised one.
-    BlockManager.normalizeRenderedBlocks({ onlyMissingKeys: options.skipYjsSync === true });
+    // A view rebuild adds the missing keys only, never overwriting a value
+    // with our sanitised one. A rebuild from the shared document only records
+    // the keys: its blocks belong to their authors, and a receiver's default
+    // races the author's own choice of that key.
+    BlockManager.normalizeRenderedBlocks(rendersSharedDocument
+      ? { recordOnly: true }
+      : { onlyMissingKeys: options.skipYjsSync === true });
 
     return blocks.length;
   }

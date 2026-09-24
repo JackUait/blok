@@ -239,6 +239,16 @@ export class BlockYjsSync {
   private readonly rewrittenFromDocument = new Map<string, BlockToolData>();
 
   /**
+   * Blocks whose change the host was already told about in a window still
+   * open. A rewrite reaches `blockDidMutated` twice: through the DOM echo and
+   * through `onBlockChanged`, in either order. See `claimChangeAnnouncement`.
+   */
+  private readonly announcedChanges = new Set<string>();
+
+  /** How many peer changes are materialising blocks right now. */
+  private peerMaterializeDepth = 0;
+
+  /**
    * Returns true if any Yjs sync operation is in progress
    */
   public get isSyncingFromYjs(): boolean {
@@ -269,6 +279,58 @@ export class BlockYjsSync {
   public isRewritingFromDocument(block: Block): boolean {
     return (this.reconcilingBlocks.size > 0 && this.isInReconciledSubtree(block, new Set()))
       || this.wasRewrittenFromDocument(block, new Set());
+  }
+
+  /**
+   * Whether the blocks rendering right now come from a peer's change. Only
+   * the client that authored a block may normalise it into the shared
+   * document: a receiver's write of a default races the author's own choice
+   * of that key, and Y.Map picks the winner by client id.
+   */
+  public get isMaterializingFromPeer(): boolean {
+    return this.peerMaterializeDepth > 0;
+  }
+
+  /**
+   * Run `fn` marked as a peer's materialisation when `origin` is remote.
+   * @param origin - who made the change
+   * @param fn - the work that renders blocks
+   */
+  private asPeerChange(origin: TransactionOrigin | undefined, fn: () => void): void {
+    if (origin !== 'remote') {
+      fn();
+
+      return;
+    }
+
+    this.peerMaterializeDepth++;
+
+    try {
+      fn();
+    } finally {
+      this.peerMaterializeDepth--;
+    }
+  }
+
+  /**
+   * Whether a change of `block` should be announced to the host now. Inside a
+   * reconcile window only the first announcement per block goes out, so one
+   * undo or one remote update is one onChange. A keystroke in the window is
+   * the user's own change and always goes out.
+   * @param block - the block that changed
+   */
+  public claimChangeAnnouncement(block: Block): boolean {
+    if (!this.isReconciling(block) || this.userTypedWhileReconciling.has(block.id)) {
+      return true;
+    }
+
+    if (this.announcedChanges.has(block.id)) {
+      return false;
+    }
+
+    this.announcedChanges.add(block.id);
+
+    return true;
   }
 
   /**
@@ -351,6 +413,14 @@ export class BlockYjsSync {
    * nothing is consumed and the record survives to be replayed when it closes.
    */
   private drainSuppressedMutations(): void {
+    this.announcedChanges.forEach((blockId) => {
+      const block = this.repository.getBlockById(blockId);
+
+      if (block === undefined || !this.isReconciling(block)) {
+        this.announcedChanges.delete(blockId);
+      }
+    });
+
     const pending = new Set([
       ...this.suppressedMutations,
       ...this.deferredMutations,
@@ -790,18 +860,20 @@ export class BlockYjsSync {
    * @param event - the block change event from YjsManager
    */
   private syncBlockFromYjs(event: BlockChangeEvent): void {
-    if (event.type === 'update') {
-      this.handleYjsUpdate(event.blockId, event.origin);
-    } else if (event.type === 'move') {
-      this.handleYjsMove(event.blockId);
-    } else if (event.type === 'add') {
-      this.handleYjsAdd(event.blockId, event.origin);
-    } else if (event.type === 'batch-add') {
-      this.handleYjsBatchAdd(event.blockIds, event.origin);
-    } else if (event.type === 'remove') {
-      this.handleYjsRemove(event.blockId, event.origin);
-      this.batchHadRemove = true;
-    }
+    this.asPeerChange(event.origin, () => {
+      if (event.type === 'update') {
+        this.handleYjsUpdate(event.blockId, event.origin);
+      } else if (event.type === 'move') {
+        this.handleYjsMove(event.blockId);
+      } else if (event.type === 'add') {
+        this.handleYjsAdd(event.blockId, event.origin);
+      } else if (event.type === 'batch-add') {
+        this.handleYjsBatchAdd(event.blockIds, event.origin);
+      } else if (event.type === 'remove') {
+        this.handleYjsRemove(event.blockId, event.origin);
+        this.batchHadRemove = true;
+      }
+    });
 
     this.scheduleHolderReconcile();
   }
@@ -1154,13 +1226,16 @@ export class BlockYjsSync {
         rebaseHistory?.();
         this.handlers.onBlockChanged?.(block);
       } else {
-        this.rematerialize(block, {
-          tool: block.name,
-          data,
-          tunes: block.preservedTunes,
-          lastEditedAt,
-          lastEditedBy,
-          replaySource: replaySourceOf(origin),
+        // After an await, so outside `syncBlockFromYjs`'s mark.
+        this.asPeerChange(origin, () => {
+          this.rematerialize(block, {
+            tool: block.name,
+            data,
+            tunes: block.preservedTunes,
+            lastEditedAt,
+            lastEditedBy,
+            replaySource: replaySourceOf(origin),
+          });
         });
       }
     }, { extendThroughRAF: true, blockId });

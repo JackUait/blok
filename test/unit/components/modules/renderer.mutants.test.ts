@@ -125,6 +125,7 @@ interface RendererHarness {
   composeBlock: Mock<ComposeBlock>;
   insert: Mock<InsertBlock>;
   insertMany: Mock<InsertMany>;
+  normalizeRenderedBlocks: Mock<(options?: { onlyMissingKeys?: boolean; recordOnly?: boolean }) => void>;
   tools: MockTools;
   redactor: HTMLElement;
   emit: Mock<(...args: unknown[]) => void>;
@@ -146,6 +147,7 @@ const createRenderer = (options: {
   );
   const insert = vi.fn<InsertBlock>(() => createComposedBlock('inserted', 'paragraph'));
   const insertMany = vi.fn<InsertMany>(() => undefined);
+  const normalizeRenderedBlocks = vi.fn<(options?: { onlyMissingKeys?: boolean; recordOnly?: boolean }) => void>();
   const emit = vi.fn<(...args: unknown[]) => void>();
 
   const tools: MockTools = {
@@ -171,7 +173,7 @@ const createRenderer = (options: {
     BlockManager: {
       insert,
       insertMany,
-      normalizeRenderedBlocks: vi.fn(),
+      normalizeRenderedBlocks,
       composeBlock,
     },
     Tools: tools,
@@ -198,6 +200,7 @@ const createRenderer = (options: {
     composeBlock,
     insert,
     insertMany,
+    normalizeRenderedBlocks,
     tools,
     redactor,
     emit,
@@ -637,6 +640,31 @@ describe('Renderer mutation coverage', () => {
       await renderer.render(callerBlocks(), { skipYjsSync: true });
 
       expect(firstComposeArgs(composeBlock).id).toBe('document');
+    });
+
+    it('writes no defaults into the shared document it rebuilds from', async () => {
+      const { renderer, normalizeRenderedBlocks, tools } = createRenderer({
+        collaboration: { isEnabled: true },
+        yjsBlocks: yjsBlocks(),
+      });
+
+      tools.available.set('paragraph', {});
+
+      await renderer.render(callerBlocks(), { skipYjsSync: true });
+
+      expect(normalizeRenderedBlocks).toHaveBeenCalledWith({ recordOnly: true });
+    });
+
+    it('adds missing keys on a view rebuild when collaboration is off', async () => {
+      const { renderer, normalizeRenderedBlocks, tools } = createRenderer({
+        yjsBlocks: yjsBlocks(),
+      });
+
+      tools.available.set('paragraph', {});
+
+      await renderer.render(callerBlocks(), { skipYjsSync: true });
+
+      expect(normalizeRenderedBlocks).toHaveBeenCalledWith({ onlyMissingKeys: true });
     });
 
     it('keeps the caller blocks when collaboration is off', async () => {

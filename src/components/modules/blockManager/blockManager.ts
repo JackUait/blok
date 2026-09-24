@@ -43,8 +43,11 @@ type BlocksStoreProxy = BlocksStore & {
 interface SyncBlockDataOptions {
   /** The write is the editor's, not the user's: no undo step. */
   untracked?: boolean;
-  /** A normalising write (see `normalizeBlockData`): unbuffered, whole or missing keys only. */
-  normalize?: 'all' | 'missing';
+  /**
+   * A normalising write (see `normalizeBlockData`): unbuffered, whole or
+   * missing keys only. 'record' writes nothing and only records the keys.
+   */
+  normalize?: 'all' | 'missing' | 'record';
   /** Data the tool worked out itself from these keys: it joins the undo step that wrote their values. */
   derivedFrom?: readonly string[];
 }
@@ -379,13 +382,15 @@ export class BlockManager extends Module {
     this.initializeServices();
 
     // A document render normalises its blocks itself, after its DOM rewrites
-    // (Renderer.insertRenderedBlocks). Every other block — created, pasted,
-    // replayed, remote — only gets the keys its document record lacks.
+    // (Renderer.insertRenderedBlocks). A block created, pasted or replayed here
+    // only gets the keys its document record lacks. A peer's block is left to
+    // its author (see `BlockYjsSync.isMaterializingFromPeer`).
     this.eventsDispatcher.on(BlockRendered, ({ blockId }) => {
-      const block = this.isRenderingDocument || this.Blok.ReadOnly.isEnabled ? undefined : this.getBlockById(blockId);
+      const skip = this.isRenderingDocument || this.Blok.ReadOnly.isEnabled;
+      const block = skip ? undefined : this.getBlockById(blockId);
 
       if (block !== undefined) {
-        this.normalizeBlockData(block, { onlyMissingKeys: true });
+        this.normalizeBlockData(block, this.yjsSync.isMaterializingFromPeer ? { recordOnly: true } : { onlyMissingKeys: true });
       }
     });
 
@@ -1917,16 +1922,18 @@ export class BlockManager extends Module {
       });
     }
 
-    this.eventsDispatcher.emit(BlockChanged, {
-      event: event as BlockMutationEventMap[Type],
-    });
+    const isEcho = this.yjsSync.isSyncingFromYjs && this.yjsSync.isReconciling(block);
+
+    if (mutationType !== BlockChangedMutationType || !isEcho || this.yjsSync.claimChangeAnnouncement(block)) {
+      this.eventsDispatcher.emit(BlockChanged, {
+        event: event as BlockMutationEventMap[Type],
+      });
+    }
 
     // Sync content changes to Yjs for undo/redo support
     // Skip the reconciler's own echo (undo/redo/remote) to avoid corrupting the undo stack.
     // Also skip if a pointer drag is active — the browser can mutate contenteditable DOM across
     // cell boundaries during a drag, and we must not write that corrupted state to Yjs.
-    const isEcho = this.yjsSync.isSyncingFromYjs && this.yjsSync.isReconciling(block);
-
     if (mutationType === BlockChangedMutationType && !this._isPointerDragActive) {
       if (isEcho) {
         // Not necessarily an echo: the window is open across setData's await
@@ -2106,13 +2113,27 @@ export class BlockManager extends Module {
    * what save() returns once those are applied.
    * @param options - see `normalizeBlockData`
    * @param options.onlyMissingKeys - see `normalizeBlockData`
+   * @param options.recordOnly - see `normalizeBlockData`
    */
-  public normalizeRenderedBlocks(options?: { onlyMissingKeys?: boolean }): void {
+  public normalizeRenderedBlocks(options?: { onlyMissingKeys?: boolean; recordOnly?: boolean }): void {
     if (this.Blok.ReadOnly.isEnabled) {
       return;
     }
 
     this.blocks.forEach((block) => this.normalizeBlockData(block, options));
+  }
+
+  /**
+   * Normalise the blocks that rendered while read-only, now that the editor
+   * left read-only without re-rendering them. Under collaboration they came
+   * from the shared document, so only their keys are recorded.
+   */
+  public normalizeBlocksRenderedReadOnly(): void {
+    const recordOnly = this.Blok.Collaboration?.isEnabled ?? false;
+
+    this.blocks
+      .filter((block) => !this.emittedDataKeys.has(block))
+      .forEach((block) => this.normalizeBlockData(block, { recordOnly }));
   }
 
   /**
@@ -2129,8 +2150,18 @@ export class BlockManager extends Module {
    *   nothing else. Use it for data this client did not author (a replay, a
    *   remote block): save() is this client's sanitised view, and writing it
    *   whole would strip a peer's markup.
+   * @param options.recordOnly - write nothing, only record the keys save()
+   *   emits. Use it for a block another client authored: a receiver's
+   *   default races the author's own choice of that key. The record keeps
+   *   the user's later removal of a key an undo step.
    */
-  public normalizeBlockData(block: Block, options?: { onlyMissingKeys?: boolean }): void {
+  public normalizeBlockData(block: Block, options?: { onlyMissingKeys?: boolean; recordOnly?: boolean }): void {
+    if (options?.recordOnly === true) {
+      void this.syncBlockDataToYjs(block, { untracked: true, normalize: 'record' });
+
+      return;
+    }
+
     void this.syncBlockDataToYjs(block, { untracked: true, normalize: options?.onlyMissingKeys === true ? 'missing' : 'all' });
   }
 
@@ -2218,10 +2249,15 @@ export class BlockManager extends Module {
       this.config.sanitizer
     );
     const savedKeys = Object.keys(data);
-    const emitted = this.emittedDataKeys.get(block) ?? new Set<string>();
 
-    savedKeys.forEach((key) => emitted.add(key));
-    this.emittedDataKeys.set(block, emitted);
+    if (options?.normalize === 'record') {
+      this.recordEmittedKeys(block, savedKeys);
+      // Stands in for the write-back the settling window waits for (see
+      // `flushBlockDataWrites`), so the user's next edit is an undo step.
+      this.yjsSync.settleMaterialization(block.id);
+
+      return;
+    }
 
     const flushOptions = { isMaterializing, savedKeys, seenKeys, seenNestedKeys, onlyMissingKeys: options?.normalize === 'missing', derivedFrom: options?.derivedFrom };
 
@@ -2304,7 +2340,7 @@ export class BlockManager extends Module {
     // (authored/drag-nested via data.depth with no LIST parent) keep depth as
     // their source of truth and are left untouched. Evaluated at FLUSH so a
     // Tab-nesting that happened mid-window uses the block's current parent.
-    const derivedKeys = this.isStructurallyNestedListItem(block) ? new Set(['depth']) : new Set<string>();
+    const derivedKeys = this.derivedDataKeys(block);
 
     // The prune must spare what the write loop deliberately skips, not merely
     // what save() omitted: deleting a derived key from the document is the same
@@ -2312,7 +2348,7 @@ export class BlockManager extends Module {
     const keptKeys = new Set([...options.savedKeys, ...derivedKeys]);
 
     const documentData = this.Blok.YjsManager.getBlockById(block.id)?.get('data');
-    const emitted = this.emittedDataKeys.get(block);
+    const emitted = this.recordEmittedKeys(block, options.savedKeys);
 
     const write = (): void => {
       for (const [key, value] of entries) {
@@ -2331,7 +2367,7 @@ export class BlockManager extends Module {
 
       // A key this block's save() once emitted and now drops is the user
       // clearing it (a colour reset, a hidden caption), so it joins the edit.
-      if (!options.isMaterializing && emitted !== undefined && options.seenKeys !== undefined) {
+      if (!options.isMaterializing && options.seenKeys !== undefined) {
         const seenEmitted = new Set([...options.seenKeys].filter((key) => emitted.has(key)));
 
         if (this.Blok.YjsManager.pruneBlockData(block.id, keptKeys, seenEmitted)) {
@@ -2397,6 +2433,33 @@ export class BlockManager extends Module {
     }
 
     return dataChangedRef.value;
+  }
+
+  /**
+   * Add the keys a save() of `block` emitted to its record. A derived key
+   * (see `flushBlockDataWrites`) was never the user's value, so dropping it
+   * later is not the user's edit either.
+   * @param block - the saved block
+   * @param savedKeys - top-level keys of that save
+   * @returns the block's record
+   */
+  private recordEmittedKeys(block: Block, savedKeys: readonly string[]): Set<string> {
+    const emitted = this.emittedDataKeys.get(block) ?? new Set<string>();
+
+    savedKeys.forEach((key) => emitted.add(key));
+    this.derivedDataKeys(block).forEach((key) => emitted.delete(key));
+    this.emittedDataKeys.set(block, emitted);
+
+    return emitted;
+  }
+
+  /**
+   * Keys save() reports that the block derives from the tree, not from its
+   * own data. See `flushBlockDataWrites`.
+   * @param block - the saved block
+   */
+  private derivedDataKeys(block: Block): Set<string> {
+    return this.isStructurallyNestedListItem(block) ? new Set(['depth']) : new Set<string>();
   }
 
   /**

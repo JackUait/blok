@@ -237,6 +237,7 @@ export class ReadOnly extends Module {
       }
 
       if (!state) {
+        this.Blok.BlockManager.normalizeBlocksRenderedReadOnly();
         this.restoreCaretAfterReadOnly();
       }
 

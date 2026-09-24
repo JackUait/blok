@@ -365,6 +365,21 @@ export class BlockHierarchy {
   }
 
   /**
+   * Whether moving `block` under `parentId` may mount its holder, by the
+   * rules {@link setBlockParent} uses; when not, place it with `dom: false`.
+   * @param block - the block being moved
+   * @param parentId - its new parent (null = root)
+   */
+  public mayMountHolder(block: Block, parentId: string | null): boolean {
+    const oldParent = block.parentId !== null ? this.repository.getBlockById(block.parentId) : undefined;
+    const oldHomeSlot = oldParent !== undefined && parentId !== block.parentId ? this.findHomeSlot(block.parentId) : null;
+    const newParent = parentId !== null ? this.repository.getBlockById(parentId) : undefined;
+
+    return this.blocksStore !== undefined
+      && (newParent === undefined || this.mayMountUnder(block, newParent, oldHomeSlot));
+  }
+
+  /**
    * Sets the parent of a block, updating both the block's parentId and the parent's contentIds.
    * @param block - the block to reparent
    * @param newParentId - the new parent block id, or null for root level
@@ -452,17 +467,10 @@ export class BlockHierarchy {
     const sanitizedParentId = parentExists ? newParentId : null;
 
     const oldParentId = block.parentId;
-    const oldParent = oldParentId !== null ? this.repository.getBlockById(oldParentId) : undefined;
-
     const placement = this.placementForParent(block, sanitizedParentId);
 
-    const oldHomeSlot =
-      oldParent !== undefined && sanitizedParentId !== oldParentId
-        ? this.findHomeSlot(oldParentId)
-        : null;
     const newParent = sanitizedParentId !== null ? this.repository.getBlockById(sanitizedParentId) : undefined;
-    const withDom = this.blocksStore !== undefined
-      && (newParent === undefined || this.mayMountUnder(block, newParent, oldHomeSlot));
+    const withDom = this.mayMountHolder(block, sanitizedParentId);
 
     // Tables and databases too: they order children by their own model, but
     // the flat array must still list those children inside their run.

@@ -516,8 +516,12 @@ export class BlockManager extends Module {
         },
         placeBlock: (block, placement) => {
           const oldParentId = block.parentId;
+          const withDom = this.hierarchy.mayMountHolder(block, placement.parentId);
 
-          this.hierarchy.placeBlock(block, placement);
+          this.hierarchy.placeBlock(block, placement, { dom: withDom });
+          if (!withDom) {
+            this.hierarchy.reindentSubtree(block);
+          }
           this.hierarchy.syncVisibilityWithParent(block, oldParentId);
           this.hierarchy.announceChildPlaced(placement.parentId);
         },

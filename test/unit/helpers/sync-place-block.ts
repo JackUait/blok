@@ -5,7 +5,7 @@ import type { BlockRepository } from '../../../src/components/modules/blockManag
 import type { TreePlacement } from '../../../src/components/utils/tree-order';
 
 /**
- * The `placeBlock` sync handler as BlockManager wires it, over a real
+ * The `placeBlock` sync handler as BlockManager wires it (minus the parent-change callback), over a real
  * BlockHierarchy, for harnesses that build BlockYjsSync by hand.
  * @param repository - the harness repository
  * @param blocksStore - the store behind it
@@ -19,7 +19,12 @@ export const placeBlockWithHierarchy = (
   return (block, placement) => {
     const oldParentId = block.parentId;
 
-    hierarchy.placeBlock(block, placement);
+    const withDom = hierarchy.mayMountHolder(block, placement.parentId);
+
+    hierarchy.placeBlock(block, placement, { dom: withDom });
+    if (!withDom) {
+      hierarchy.reindentSubtree(block);
+    }
     hierarchy.syncVisibilityWithParent(block, oldParentId);
   };
 };

@@ -9,7 +9,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Blok } from '../../../../../src/blok';
 import type { Block } from '../../../../../src/components/block';
 import { Callout, Header, Toggle } from '../../../../../src/tools';
+import { mountChildBlocks, withSlotlessDescendants } from '../../../../../src/tools/nested-blocks';
 import { Paragraph } from '../../../../../src/tools/paragraph';
+import type { API, BlockAPI, BlockToolConstructorOptions } from '../../../../../types';
 import type { OutputBlockData } from '../../../../../types';
 
 interface Runtime {
@@ -59,6 +61,47 @@ const settleThroughFrame = async (): Promise<void> => {
   await settle();
 };
 
+/**
+ * A block with two child slots, as an adapter block rendering two
+ * <BlockChildren> does: `data.right` lists the direct children shown in slot
+ * 2, the rest go to slot 1; slotless descendants follow their ancestor.
+ */
+class TwoSlots {
+  private readonly api: API;
+  private readonly block: BlockAPI;
+  private readonly right: string[];
+  private readonly element = document.createElement('div');
+  private readonly slots = [document.createElement('div'), document.createElement('div')];
+
+  constructor({ api, block, data }: BlockToolConstructorOptions<{ right?: string[] }>) {
+    this.api = api;
+    this.block = block;
+    this.right = data.right ?? [];
+    this.slots.forEach((slot, index) => {
+      slot.setAttribute('data-blok-nested-blocks', '');
+      slot.setAttribute('data-slot', String(index + 1));
+    });
+    this.element.append(...this.slots);
+  }
+
+  public render(): HTMLElement {
+    return this.element;
+  }
+
+  public rendered(): void {
+    const children = this.api.blocks.getChildren(this.block.id);
+    const withDescendants = (list: BlockAPI[]): BlockAPI[] =>
+      withSlotlessDescendants(list, (id: string) => this.api.blocks.getChildren(id));
+
+    mountChildBlocks(this.slots[1], withDescendants(children.filter(child => this.right.includes(child.id))));
+    mountChildBlocks(this.slots[0], withDescendants(children.filter(child => !this.right.includes(child.id))));
+  }
+
+  public save(): { right: string[] } {
+    return { right: this.right };
+  }
+}
+
 const holders: HTMLElement[] = [];
 const editors: Runtime[] = [];
 
@@ -70,7 +113,7 @@ const boot = async (blocks: OutputBlockData[]): Promise<Runtime> => {
 
   const editor = new Blok({
     holder,
-    tools: { paragraph: Paragraph, toggle: Toggle, callout: Callout, header: Header },
+    tools: { paragraph: Paragraph, toggle: Toggle, callout: Callout, header: Header, two: TwoSlots },
     data: { blocks },
   }) as unknown as Runtime;
 
@@ -337,5 +380,68 @@ describe('undo and redo replay a move group by the document tree', () => {
     push(author, peer);
     await settleThroughFrame();
     await expectConverged(author, peer);
+  }, 60_000);
+});
+
+describe('a replay keeps a child in the slot of a two-slot parent that holds it', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    editors.splice(0).forEach(editor => editor.destroy());
+    holders.splice(0).forEach(holder => holder.remove());
+    vi.restoreAllMocks();
+  });
+
+  const DOC: OutputBlockData[] = [
+    { id: 'two', type: 'two', data: { right: ['p', 'x'] }, content: ['q', 'p', 'x'] },
+    P('q', 'two'), P('p', 'two'), P('x', 'two'), P('z'),
+  ];
+
+  const slotOf = (editor: Runtime, id: string): string =>
+    byId(editor, id).holder.parentElement?.dataset.slot ?? 'none';
+
+  /** Tab-shaped reparent: x under its slotless sibling p, one move group. */
+  const nestXUnderP = (editor: Runtime): void => {
+    editor.module.yjsManager.transactMoves(() => {
+      editor.module.blockManager.setBlockParent(byId(editor, 'x'), 'p');
+    });
+  };
+
+  it('a joining peer mounts the children where the parent put them', async () => {
+    const { peer } = await pair(DOC);
+
+    expect(['q', 'p', 'x'].map(id => slotOf(peer, id))).toStrictEqual(['1', '2', '2']);
+  }, 60_000);
+
+  it('a peer receiving the reparent keeps the block in slot 2', async () => {
+    const { author, peer } = await pair(DOC);
+
+    nestXUnderP(author);
+    await settleThroughFrame();
+    push(author, peer);
+    await settleThroughFrame();
+
+    expect(byId(peer, 'x').parentId).toBe('p');
+    expect(slotOf(peer, 'x')).toBe('2');
+  }, 60_000);
+
+  it('the author\'s undo and redo keep the block in slot 2', async () => {
+    const author = await boot(DOC);
+
+    nestXUnderP(author);
+    await settleThroughFrame();
+    author.module.yjsManager.stopCapturing();
+
+    author.history.undo();
+    await settleThroughFrame();
+    expect(byId(author, 'x').parentId).toBe('two');
+    expect(slotOf(author, 'x'), 'undo').toBe('2');
+
+    author.history.redo();
+    await settleThroughFrame();
+    expect(byId(author, 'x').parentId).toBe('p');
+    expect(slotOf(author, 'x'), 'redo').toBe('2');
   }, 60_000);
 });

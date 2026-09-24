@@ -1471,11 +1471,11 @@ export class Collaboration extends Module {
     // must not become an undo step. It still broadcasts — peers materialise it
     // through their ordinary remote-add path.
     yjs.transactWithoutCapture(() => {
-      yjs.addBlock({
+      yjs.addBlockAt({
         id: block.id,
         type: block.name,
         data: block.preservedData,
-      });
+      }, { parentId: null, afterId: null });
     });
   }
 

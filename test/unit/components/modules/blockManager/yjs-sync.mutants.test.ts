@@ -116,7 +116,7 @@ interface DocHarness {
   drop: (id: string) => void;
   setOrder: (ids: string[]) => void;
   getBlockById: ReturnType<typeof vi.fn>;
-  addBlock: ReturnType<typeof vi.fn>;
+  addBlockAt: ReturnType<typeof vi.fn>;
   transactWithoutCapture: ReturnType<typeof vi.fn>;
   orderedIds: ReturnType<typeof vi.fn>;
   destroy: () => void;
@@ -183,13 +183,13 @@ const createDocHarness = (): DocHarness => {
   };
 
   const getBlockById = vi.fn((id: string): YMap<unknown> | undefined => blocksMap.get(id));
-  const addBlock = vi.fn();
+  const addBlockAt = vi.fn();
   const transactWithoutCapture = vi.fn((fn: () => void) => fn());
   const orderedIds = vi.fn((): string[] => [...order]);
 
   const manager = {
     getBlockById,
-    addBlock,
+    addBlockAt,
     transactWithoutCapture,
     orderedIds,
     onBlocksChanged: vi.fn(() => vi.fn()),
@@ -213,7 +213,7 @@ const createDocHarness = (): DocHarness => {
       order = [...ids];
     },
     getBlockById,
-    addBlock,
+    addBlockAt,
     transactWithoutCapture,
     orderedIds,
     destroy: (): void => doc.destroy(),
@@ -1875,11 +1875,11 @@ describe('BlockYjsSync — mutation kills', () => {
 
       expect(harness.handlers.insertDefaultBlock).toHaveBeenCalledWith(true);
       expect(harness.doc.transactWithoutCapture).toHaveBeenCalled();
-      expect(harness.doc.addBlock).toHaveBeenCalledWith({
+      expect(harness.doc.addBlockAt).toHaveBeenCalledWith({
         id: 'after-last',
         type: 'paragraph',
         data: { text: '' },
-      });
+      }, { parentId: null, afterId: null });
     });
 
     it('does not repair while the doc still names blocks memory cannot hold', () => {
@@ -1893,7 +1893,7 @@ describe('BlockYjsSync — mutation kills', () => {
       harness.emit({ blockId: 'last', type: 'remove', origin: 'remote' });
 
       expect(harness.handlers.insertDefaultBlock).not.toHaveBeenCalled();
-      expect(harness.doc.addBlock).not.toHaveBeenCalled();
+      expect(harness.doc.addBlockAt).not.toHaveBeenCalled();
     });
 
     it('does not repair while memory still holds a block', () => {
@@ -1906,7 +1906,7 @@ describe('BlockYjsSync — mutation kills', () => {
       harness.emit({ blockId: 'gone', type: 'remove', origin: 'remote' });
 
       expect(harness.handlers.insertDefaultBlock).not.toHaveBeenCalled();
-      expect(harness.doc.addBlock).not.toHaveBeenCalled();
+      expect(harness.doc.addBlockAt).not.toHaveBeenCalled();
     });
   });
 

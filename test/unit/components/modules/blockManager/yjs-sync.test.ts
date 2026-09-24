@@ -75,6 +75,7 @@ const createMockYjsManager = (): YjsManager => {
 
   return {
     addBlock: vi.fn(),
+    addBlockAt: vi.fn(),
     removeBlock: vi.fn(),
     moveBlock: vi.fn(),
     updateBlockData: vi.fn(),
@@ -2521,7 +2522,7 @@ describe('BlockYjsSync', () => {
         callback({ blockId: 'only-block', type: 'remove', origin: 'remote' });
 
         expect(mockHandlers.insertDefaultBlock).not.toHaveBeenCalled();
-        expect(mockYjsManager.addBlock).not.toHaveBeenCalled();
+        expect(mockYjsManager.addBlockAt).not.toHaveBeenCalled();
         expect(mockYjsManager.transactWithoutCapture).not.toHaveBeenCalled();
       });
 
@@ -2549,7 +2550,7 @@ describe('BlockYjsSync', () => {
         callback({ blockId: 'only-block', type: 'remove', origin: 'remote' });
 
         expect(mockHandlers.insertDefaultBlock).toHaveBeenCalledWith(true);
-        expect(mockYjsManager.addBlock).toHaveBeenCalled();
+        expect(mockYjsManager.addBlockAt).toHaveBeenCalled();
       });
 
       it('keeps Yjs sync state active while removing a block', () => {

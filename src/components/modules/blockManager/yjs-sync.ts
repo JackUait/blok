@@ -2186,11 +2186,11 @@ export class BlockYjsSync {
     const restored = this.handlers.insertDefaultBlock(true);
 
     this.dependencies.YjsManager.transactWithoutCapture(() => {
-      this.dependencies.YjsManager.addBlock({
+      this.dependencies.YjsManager.addBlockAt({
         id: restored.id,
         type: restored.name,
         data: restored.preservedData,
-      });
+      }, { parentId: null, afterId: null });
     });
   }
 

@@ -2380,4 +2380,102 @@ describe('Blocks', () => {
       expect(blocks.idIndexViolations()).not.toEqual([]);
     });
   });
+
+  describe('mount', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    /**
+     * Blocks in the array in the given order, holders in the working area in
+     * `domOrder` (defaults to the array order).
+     */
+    const arranged = (
+      specs: Array<{ id: string; parentId?: string }>,
+      domOrder?: string[]
+    ): { blocks: Blocks; byId: (id: string) => Block } => {
+      const blocks = createBlocks();
+      const made = specs.map((spec) => createMockBlock(spec.id, 'paragraph', spec.parentId ?? null));
+
+      made.forEach((block) => blocks.push(block));
+      const byId = (id: string): Block => {
+        const found = made.find((block) => block.id === id);
+
+        if (found === undefined) {
+          throw new Error(`no block ${id}`);
+        }
+
+        return found;
+      };
+
+      (domOrder ?? []).forEach((id) => workingArea.appendChild(byId(id).holder));
+
+      return { blocks, byId };
+    };
+
+    const domIds = (parent: Element): Array<string | null> =>
+      Array.from(parent.children).map((child) => child.getAttribute('data-blok-id'));
+
+    it('puts the holder before the next later block in the slot', () => {
+      const { blocks, byId } = arranged([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
+
+      blocks.reorder([byId('c'), byId('a'), byId('b')]);
+      blocks.mount(byId('c'), 0, null);
+
+      expect(domIds(workingArea)).toEqual(['c', 'a', 'b']);
+    });
+
+    it('appends the holder when no later block sits in the slot', () => {
+      const { blocks, byId } = arranged([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
+
+      blocks.reorder([byId('b'), byId('c'), byId('a')]);
+      blocks.mount(byId('a'), 2, null);
+
+      expect(domIds(workingArea)).toEqual(['b', 'c', 'a']);
+    });
+
+    it('looks past the block\'s own subtree for the next holder', () => {
+      const { blocks, byId } = arranged(
+        [{ id: 'x' }, { id: 'p' }, { id: 'q', parentId: 'p' }, { id: 'y' }],
+        ['p', 'q', 'x', 'y']
+      );
+
+      blocks.mount(byId('p'), 1, null);
+
+      expect(domIds(workingArea)).toEqual(['q', 'x', 'p', 'y']);
+    });
+
+    it('mounts into the given slot, ignoring later blocks elsewhere', () => {
+      const { blocks, byId } = arranged([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
+      const slot = document.createElement('div');
+
+      byId('a').holder.appendChild(slot);
+      blocks.mount(byId('b'), 1, slot);
+
+      expect(byId('b').holder.parentElement).toBe(slot);
+      expect(domIds(workingArea)).toEqual(['a', 'c']);
+    });
+
+    it('is a move: no rendered hook, array untouched', () => {
+      const { blocks, byId } = arranged([{ id: 'a' }, { id: 'b' }]);
+
+      blocks.reorder([byId('b'), byId('a')]);
+      vi.mocked(byId('b').call).mockClear();
+      blocks.mount(byId('b'), 0, null);
+
+      expect(byId('b').call).not.toHaveBeenCalled();
+      expect(blocks.array.map((block) => block.id)).toEqual(['b', 'a']);
+      expect(blocks.idIndexViolations()).toEqual([]);
+    });
+
+    it('throws when the block is not at the given index', () => {
+      const { blocks, byId } = arranged([{ id: 'a' }, { id: 'b' }]);
+
+      expect(() => blocks.mount(byId('a'), 1, null)).toThrow(/"a"/);
+    });
+  });
 });

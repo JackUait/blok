@@ -4,6 +4,7 @@ import { BlockRendered } from './events';
 import type { BlokEventMap } from './events';
 import type { EventsDispatcher } from './utils/events';
 import { moveElementBefore, moveElementToEnd } from './utils/html';
+import { subtreeEnd } from './utils/block-tree';
 
 
 /**
@@ -605,6 +606,32 @@ export class Blocks {
    */
   public reorder(order: Block[]): void {
     this.blocks.splice(0, this.blocks.length, ...order);
+  }
+
+  /**
+   * Moves `block`'s holder into `slot` (null = the working area): before the
+   * first holder in that slot that belongs to a block after `block`'s subtree
+   * in the array, else at the slot's end. Holders of the block's own subtree
+   * may still sit at their old place, so the scan skips them; a caller moving
+   * a whole subtree mounts it last block first.
+   * DOM only: the array is untouched and no lifecycle hook runs.
+   * @param block - the block, already at `index` in the array
+   * @param index - its index in the array
+   * @param slot - the element its holder belongs in, or null for the working area
+   */
+  public mount(block: Block, index: number, slot: Element | null): void {
+    if (this.blocks[index] !== block) {
+      throw new Error(`Blocks.mount: block "${block.id}" is not at index ${index}`);
+    }
+
+    const target = slot ?? this.workingArea;
+    const next = this.blocks.slice(subtreeEnd(this, index)).find((later) => later.holder.parentElement === target);
+
+    if (next !== undefined) {
+      moveElementBefore(block.holder, next.holder);
+    } else {
+      moveElementToEnd(target, block.holder);
+    }
   }
 
   /**

@@ -63,7 +63,7 @@ interface Harness {
   /** The block's `data` straight off the Y.Map (toJSON on the manager is a flush barrier). */
   readData: (blockId: string) => Record<string, unknown> | undefined;
   /** A tool reporting derived data (a measured size) whose save() yields exactly `data`. */
-  derive: (blockId: string, data: Record<string, unknown>) => Promise<void>;
+  derive: (blockId: string, data: Record<string, unknown>, from?: readonly string[]) => Promise<void>;
   /** The editor normalising `blockId` to a save() that yields exactly `data`. */
   normalize: (blockId: string, data: Record<string, unknown>, options?: { onlyMissingKeys?: boolean }) => Promise<void>;
 }

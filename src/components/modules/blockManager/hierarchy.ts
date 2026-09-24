@@ -471,8 +471,17 @@ export class BlockHierarchy {
       : null;
 
     if (withDom && firstSlot !== null && this.blocksStore !== undefined) {
-      this.blocksStore.mount(block, this.repository.getBlockIndex(block), firstSlot);
-      this.updateBlockIndentation(block);
+      const store = this.blocksStore;
+      // A slotless block's children sit flat after it, so they come along.
+      const subtree = this.repository.blocks.filter(candidate => candidate === block || this.isUnder(candidate, block.id));
+      const carried = subtree.filter(member =>
+        !subtree.some(other => other !== member && other.holder.contains(member.holder)));
+
+      // Last first: each mount anchors on the holders after it.
+      [...carried].reverse().forEach(member => {
+        store.mount(member, this.repository.getBlockIndex(member), firstSlot);
+      });
+      carried.forEach(member => this.updateBlockIndentation(member));
     }
 
     // If the new parent's existing children are hidden (toggle is collapsed),

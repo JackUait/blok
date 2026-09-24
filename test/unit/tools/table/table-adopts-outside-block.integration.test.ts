@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Blok from '../../../../src/blok';
 import { Table } from '../../../../src/tools/table/index';
 import { Paragraph } from '../../../../src/tools/paragraph';
+import { ToggleItem } from '../../../../src/tools/toggle';
 import type { API, OutputBlockData, OutputData } from '../../../../types';
 
 interface TestEditor {
@@ -25,10 +26,10 @@ const settle = (): Promise<void> => new Promise(resolve => {
 
 const P = (id: string, parent?: string): OutputBlockData => ({ id, type: 'paragraph', data: { text: id }, ...(parent === undefined ? {} : { parent }) });
 
-const boot = async (): Promise<TestEditor> => {
+const boot = async (extra: OutputBlockData[] = [P('after')]): Promise<TestEditor> => {
   const instance = new Blok({
     holder,
-    tools: { paragraph: Paragraph, table: Table },
+    tools: { paragraph: Paragraph, table: Table, toggle: ToggleItem },
     data: {
       blocks: [
         {
@@ -41,7 +42,7 @@ const boot = async (): Promise<TestEditor> => {
         P('c2', 'tbl'),
         P('c3', 'tbl'),
         P('c4', 'tbl'),
-        P('after'),
+        ...extra,
       ],
     },
   }) as unknown as TestEditor;
@@ -92,6 +93,26 @@ describe('a block the API parents to a table from outside it', () => {
 
     expect(cellOf('after')).toBe('0,0');
     expect(await gridIds(instance)).toContain('after');
+  });
+
+  it('setBlockParent carries a paragraph\'s children into the first cell after it', async () => {
+    const instance = await boot([
+      { ...P('after'), content: ['kid', 'tog'] },
+      P('kid', 'after'),
+      { id: 'tog', type: 'toggle', data: { text: 'tog' }, parent: 'after', content: ['inner'] },
+      P('inner', 'tog'),
+    ]);
+
+    instance.blocks.setBlockParent('after', 'tbl');
+    await settle();
+
+    const cell = holder?.querySelector('[data-blok-id="after"]')?.parentElement;
+    const order = Array.from(cell?.children ?? []).map(child => child.getAttribute('data-blok-id'));
+
+    expect([cellOf('after'), cellOf('kid'), cellOf('tog')]).toEqual(['0,0', '0,0', '0,0']);
+    expect(order).toEqual(['c1', 'after', 'kid', 'tog']);
+    expect(holder?.querySelector('[data-blok-id="inner"]')?.parentElement?.closest('[data-blok-id]')?.getAttribute('data-blok-id')).toBe('tog');
+    await expect(instance.save()).resolves.toBeDefined();
   });
 
   it('insertInsideParent puts the new block in the first cell and the saved grid lists it', async () => {

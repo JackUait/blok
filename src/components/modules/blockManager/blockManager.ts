@@ -52,7 +52,7 @@ export class BlockManager extends Module {
    * @returns {number}
    */
   public get currentBlockIndex(): number {
-    return this._currentBlockIndex;
+    return this.operations ? this.operations.currentBlockIndexValue : this._currentBlockIndex;
   }
 
   /**
@@ -62,6 +62,8 @@ export class BlockManager extends Module {
   public set currentBlockIndex(newIndex: number) {
     if (this.operations) {
       this.operations.currentBlockIndexValue = newIndex;
+
+      return;
     }
     this._currentBlockIndex = newIndex;
   }
@@ -250,8 +252,8 @@ export class BlockManager extends Module {
   }
 
   /**
-   * Index of current working block
-   * @type {number}
+   * Current block index before `operations` exists; after that, operations
+   * owns the current block.
    */
   private _currentBlockIndex = -1;
 
@@ -455,6 +457,7 @@ export class BlockManager extends Module {
           this.blocksStore.replace(index, newBlock);
         },
         onBlockRemoved: (block, index) => {
+          this.operations.forgetCurrentBlock(block);
           this.blockDidMutated(BlockRemovedMutationType, block, { index });
         },
         resyncBlockData: (block, options) => {
@@ -549,10 +552,7 @@ export class BlockManager extends Module {
    * @returns {Block}
    */
   public insert(options: InsertBlockOptions = {}): Block {
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    const result = this.operations.insert(options, this.blocksStore);
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    return result;
+    return this.operations.insert(options, this.blocksStore);
   }
 
   /**
@@ -734,10 +734,7 @@ export class BlockManager extends Module {
     skipYjsSync = false,
     forceTopLevel = false
   ): Block {
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    const result = this.operations.insertDefaultBlockAtIndex(index, needToFocus, skipYjsSync, this.blocksStore, forceTopLevel);
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    return result;
+    return this.operations.insertDefaultBlockAtIndex(index, needToFocus, skipYjsSync, this.blocksStore, forceTopLevel);
   }
 
   /**
@@ -765,10 +762,7 @@ export class BlockManager extends Module {
    * @param skipYjsSync - if true, skip syncing to Yjs (caller handles sync separately)
    */
   public removeBlock(block: Block, addLastBlock = true, skipYjsSync = false): Promise<void> {
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    const result = this.operations.removeBlock(block, addLastBlock, skipYjsSync, this.blocksStore);
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    return result;
+    return this.operations.removeBlock(block, addLastBlock, skipYjsSync, this.blocksStore);
   }
 
   /**
@@ -924,10 +918,7 @@ export class BlockManager extends Module {
    * Split current Block
    */
   public split(): Block {
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    const result = this.operations.split(this.blocksStore);
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    return result;
+    return this.operations.split(this.blocksStore);
   }
 
   /**
@@ -1019,10 +1010,7 @@ export class BlockManager extends Module {
     toolName?: string,
     options?: InsertInsideParentOptions
   ): Block {
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    const result = this.operations.insertInsideParent(parentId, insertIndex, this.blocksStore, childData, toolName, options);
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    return result;
+    return this.operations.insertInsideParent(parentId, insertIndex, this.blocksStore, childData, toolName, options);
   }
 
   /**
@@ -1151,13 +1139,10 @@ export class BlockManager extends Module {
     const oldParentId = block.parentId;
     // setBlockParent can move the block in the flat array, which shifts the
     // index of the current block.
-    const current = this.currentBlock;
+    const prevCurrentIndex = this.currentBlockIndex;
 
     this.hierarchy.setBlockParent(block, newParentId);
-
-    if (current !== undefined && this.blocks[this.currentBlockIndex] !== current) {
-      this.currentBlockIndex = this.getBlockIndex(current);
-    }
+    this.operations.endUndoStepIfCurrentIndexChanged(prevCurrentIndex);
 
     // Notify 'block changed' listeners that the tree structure changed, so
     // consumers like the React `useBlocks` hook re-render on a programmatic
@@ -1431,9 +1416,7 @@ export class BlockManager extends Module {
    * Move a block to a new index
    */
   public move(toIndex: number, fromIndex: number = this.currentBlockIndex, skipDOM = false, skipMovedHook = false): void {
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
     this.operations.move(toIndex, fromIndex, skipDOM, this.blocksStore, skipMovedHook);
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
   }
 
   /**
@@ -1711,9 +1694,7 @@ export class BlockManager extends Module {
 
     const selectedBlocks = this.selectedBlocksForMove();
 
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
     this.operations.moveCurrentBlockUp(this.blocksStore, selectedBlocks);
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
 
     this.reselectAfterMove(selectedBlocks);
   }
@@ -1729,9 +1710,7 @@ export class BlockManager extends Module {
 
     const selectedBlocks = this.selectedBlocksForMove();
 
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
     this.operations.moveCurrentBlockDown(this.blocksStore, selectedBlocks);
-    this._currentBlockIndex = this.operations.currentBlockIndexValue;
 
     this.reselectAfterMove(selectedBlocks);
   }

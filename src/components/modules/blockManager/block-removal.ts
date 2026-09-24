@@ -57,6 +57,8 @@ export class BlockRemoval {
         throw new Error('Can\'t find a Block to remove');
       }
 
+      const prevCurrentIndex = this.ctx.rawCurrentBlockIndex;
+
       // Clean up parent's contentIds before removing the block. Capture the
       // block's slot in the parent FIRST so promoted grandchildren can take its
       // exact place (preserving document order among the parent's children).
@@ -159,9 +161,12 @@ export class BlockRemoval {
 
       const noBlocksLeft = this.repository.length === 0;
 
-      // Update currentBlockIndex based on what was removed
-      if (this.ctx.rawCurrentBlockIndex >= index) {
-        this.ctx.currentBlockIndexValue--;
+      // A removed current block hands over to the block before it.
+      if (prevCurrentIndex >= index) {
+        if (this.ctx.currentBlock === undefined) {
+          this.ctx.setCurrentBlockRaw(index > 0 ? this.repository.getBlockByIndex(index - 1) : undefined);
+        }
+        this.ctx.endUndoStepIfCurrentIndexChanged(prevCurrentIndex);
       }
 
       /**

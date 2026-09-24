@@ -310,6 +310,7 @@ const createHarness = (options: HarnessOptions): Harness => {
     privateFields.operations = {
       suppressStopCapturing: false,
       currentBlockIndexValue: 0,
+      endUndoStepIfCurrentIndexChanged: vi.fn(),
       currentBlock: 'currentBlock' in options ? options.currentBlock : undefined,
       removeBlock: operationsRemoveBlock,
       insert: operationsInsert,
@@ -692,6 +693,7 @@ describe('BlockManager.duplicateCurrentBlock', () => {
     (blockManager as unknown as Record<string, unknown>).operations = {
       suppressStopCapturing: false,
       currentBlockIndexValue: 0,
+      endUndoStepIfCurrentIndexChanged: vi.fn(),
       currentBlock: options.currentBlock,
     };
 
@@ -935,7 +937,8 @@ describe('BlockManager.setCurrentBlockByChildNode', () => {
     };
     (blockManager as unknown as Record<string, unknown>).operations = {
       suppressStopCapturing: false,
-      currentBlockIndexValue: 0,
+      currentBlockIndexValue: -1,
+      endUndoStepIfCurrentIndexChanged: vi.fn(),
     };
 
     blockManager.state = {
@@ -2529,7 +2532,7 @@ describe('BlockManager prepared boot — real sub-module closures', () => {
   const stubOperationsAfterBoot = (harness: Harness): Mock => {
     const insert = vi.fn(() => createBlockStub({ id: 'repair', name: 'paragraph' }));
 
-    privateOf(harness).operations = { insert };
+    privateOf(harness).operations = { insert, forgetCurrentBlock: vi.fn() };
 
     return insert;
   };

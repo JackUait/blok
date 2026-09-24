@@ -2,7 +2,7 @@
  * Shared contract between the BlockOperations coordinator and its focused
  * worker classes (BlockInsertion, BlockRemoval, BlockMutation).
  *
- * BlockOperations owns the mutable shared state (currentBlockIndex,
+ * BlockOperations owns the mutable shared state (current block,
  * suppressStopCapturing), the navigation accessors and a few cross-cutting
  * helpers. The workers receive it as an `OperationsContext` so they can read
  * and mutate that shared state without each re-implementing it.
@@ -68,17 +68,19 @@ export interface OperationsContext {
    */
   readonly parentWriter: (block: Block, parentId: string | null) => void;
 
-  /**
-   * Raw current block index access — no stopCapturing side effect.
-   * Used where the original code wrote `this.currentBlockIndex` directly to
-   * defer stopCapturing until after Yjs sync.
-   */
-  rawCurrentBlockIndex: number;
+  /** Current block index, read with no stopCapturing side effect. */
+  readonly rawCurrentBlockIndex: number;
 
   /**
    * Current block index with stopCapturing side effect on change.
    */
   currentBlockIndexValue: number;
+
+  /** Point the current block at a block, with no stopCapturing side effect. */
+  setCurrentBlockRaw(block: Block | undefined): void;
+
+  /** Ends the open undo step when the current block's index moved off `previousIndex`. */
+  endUndoStepIfCurrentIndexChanged(previousIndex: number): void;
 
   /**
    * Flag to suppress stopCapturing during atomic operations (like split).

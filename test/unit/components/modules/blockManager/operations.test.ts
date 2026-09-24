@@ -3622,4 +3622,115 @@ describe('BlockOperations', () => {
       operations.suppressStopCapturing = false;
     });
   });
+
+  describe('current block follows the block, not a stored index', () => {
+    const idsOf = (repo: BlockRepository): string[] => repo.blocks.map(block => block.id);
+
+    it('keeps the current block when a remote insert lands above it', () => {
+      // yjs-sync applies a remote insert straight to the store, with no index bump.
+      operations.currentBlockIndexValue = 1;
+
+      blocksStore.insert(0, createMockBlock({ id: 'remote' }));
+
+      expect(operations.currentBlock?.id).toBe('block-2');
+      expect(operations.currentBlockIndexValue).toBe(2);
+    });
+
+    it('keeps the current block when a remote remove happens above it', () => {
+      operations.currentBlockIndexValue = 2;
+
+      blocksStore.remove(0);
+
+      expect(operations.currentBlock?.id).toBe('block-3');
+      expect(operations.currentBlockIndexValue).toBe(1);
+    });
+
+    it('keeps the current block when a remote move carries a block over it', () => {
+      operations.currentBlockIndexValue = 1;
+
+      blocksStore.move(2, 0);
+
+      expect(idsOf(repository)).toEqual(['block-2', 'block-3', 'block-1']);
+      expect(operations.currentBlock?.id).toBe('block-2');
+      expect(operations.currentBlockIndexValue).toBe(0);
+    });
+
+    it('keeps the current block when an unfocused insert replaces a block above it', () => {
+      operations.currentBlockIndexValue = 1;
+
+      operations.insert({ id: 'swap', tool: 'paragraph', index: 0, replace: true, needToFocus: false }, blocksStore);
+
+      expect(idsOf(repository)).toEqual(['swap', 'block-2', 'block-3']);
+      expect(operations.currentBlock?.id).toBe('block-2');
+      expect(operations.currentBlockIndexValue).toBe(1);
+    });
+
+    it('moves to the replacing block when an unfocused insert replaces the current block', () => {
+      operations.currentBlockIndexValue = 1;
+
+      operations.insert({ id: 'swap', tool: 'paragraph', index: 1, replace: true, needToFocus: false }, blocksStore);
+
+      expect(operations.currentBlock?.id).toBe('swap');
+      expect(operations.currentBlockIndexValue).toBe(1);
+    });
+
+    it('keeps the current block when a columns layout above it is removed', async () => {
+      const child = createMockBlock({ id: 'child', parentId: 'col' });
+      const column = createMockBlock({ id: 'col', name: 'column', parentId: 'list', contentIds: ['child'] });
+      const list = createMockBlock({ id: 'list', name: 'column_list', contentIds: ['col'] });
+      const after = createMockBlock({ id: 'after' });
+      const store = createBlocksStore([list, column, child, after]);
+      const repo = new BlockRepository();
+
+      repo.initialize(store);
+
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 3);
+
+      ops.setYjsSync(yjsSync);
+
+      await ops.removeBlock(list, false, false, store);
+
+      expect(idsOf(repo)).toEqual(['after']);
+      expect(ops.currentBlock?.id).toBe('after');
+      expect(ops.currentBlockIndexValue).toBe(0);
+    });
+
+    it('moves to the previous block when the current block is removed', async () => {
+      operations.currentBlockIndexValue = 1;
+
+      const current = operations.currentBlock;
+
+      if (current === undefined) {
+        throw new Error('Test setup failed: no current block');
+      }
+
+      await operations.removeBlock(current, false, false, blocksStore);
+
+      expect(operations.currentBlock?.id).toBe('block-1');
+      expect(operations.currentBlockIndexValue).toBe(0);
+    });
+
+    it('moves to the new first block when the current first block is removed', async () => {
+      const current = operations.currentBlock;
+
+      if (current === undefined) {
+        throw new Error('Test setup failed: no current block');
+      }
+
+      await operations.removeBlock(current, false, false, blocksStore);
+
+      expect(operations.currentBlock?.id).toBe('block-2');
+      expect(operations.currentBlockIndexValue).toBe(0);
+    });
+
+    it('still ends an undo step when a focused-away insert shifts the current block', () => {
+      operations.currentBlockIndexValue = 1;
+      vi.mocked(dependencies.YjsManager.stopCapturing).mockClear();
+
+      operations.insert({ id: 'above', tool: 'paragraph', index: 0, needToFocus: false }, blocksStore);
+
+      expect(operations.currentBlock?.id).toBe('block-2');
+      expect(dependencies.YjsManager.stopCapturing).toHaveBeenCalled();
+    });
+  });
 });

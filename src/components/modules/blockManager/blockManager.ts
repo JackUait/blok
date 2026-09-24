@@ -458,6 +458,8 @@ export class BlockManager extends Module {
         },
         onBlockRemoved: (block, index) => {
           this.operations.forgetCurrentBlock(block);
+          this.Blok.BlockSelection.forgetRemovedBlock(block);
+          this.Blok.RectangleSelection.forgetRemovedBlock(block);
           this.blockDidMutated(BlockRemovedMutationType, block, { index });
         },
         resyncBlockData: (block, options) => {

@@ -109,6 +109,12 @@ export class RectangleSelection extends Module {
   private stackOfSelected: Block[] = [];
 
   /**
+   * Stacked blocks a peer deleted mid-drag. They stay in the stack but are
+   * never swapped for a later block with the same id.
+   */
+  private deletedStackBlocks = new WeakSet<Block>();
+
+  /**
    * Does the rectangle intersect blocks
    */
   private rectCrossesBlocks = false;
@@ -816,8 +822,23 @@ export class RectangleSelection extends Module {
    */
   private followConvertedStackBlocks(indexes: Map<Block, number>): void {
     this.stackOfSelected = this.stackOfSelected.map((block) =>
-      indexes.has(block) ? block : this.Blok.BlockManager.getBlockById(block.id) ?? block
+      indexes.has(block) || this.deletedStackBlocks.has(block)
+        ? block
+        : this.Blok.BlockManager.getBlockById(block.id) ?? block
     );
+  }
+
+  /**
+   * Stop following a lassoed block a remote peer deleted, matched by id, so
+   * a later block with the same id is not taken for a convert of it.
+   * @param block - the block being deleted
+   */
+  public forgetRemovedBlock(block: Block): void {
+    for (const stacked of this.stackOfSelected) {
+      if (stacked.id === block.id) {
+        this.deletedStackBlocks.add(stacked);
+      }
+    }
   }
 
   /**

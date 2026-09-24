@@ -2498,6 +2498,8 @@ describe('BlockManager prepared boot — real sub-module closures', () => {
       Caret: {},
       I18n: {},
       ReadOnly: { isEnabled: readOnly },
+      BlockSelection: { forgetRemovedBlock: vi.fn() },
+      RectangleSelection: { forgetRemovedBlock: vi.fn() },
       ...extra,
     };
   };
@@ -2744,6 +2746,28 @@ describe('BlockManager prepared boot — real sub-module closures', () => {
 
     expect(insert).not.toHaveBeenCalled();
     expect(harness.yjs.addBlock).not.toHaveBeenCalled();
+
+    await harness.blockManager.destroy();
+  });
+
+  it('tells both selection modules to forget a block a replayed removal deletes', async () => {
+    const block = createBlockStub({ id: 'b1' });
+    const harness = buildBooted();
+    const selectionModules = harness.blockManager as unknown as {
+      Blok: {
+        BlockSelection: { forgetRemovedBlock: Mock };
+        RectangleSelection: { forgetRemovedBlock: Mock };
+      };
+    };
+
+    seedStore(harness, block);
+    stubOperationsAfterBoot(harness);
+
+    invokePrivate(realYjsSyncOf(harness), 'handleYjsRemove', 'b1');
+    await settle();
+
+    expect(selectionModules.Blok.BlockSelection.forgetRemovedBlock).toHaveBeenCalledWith(block);
+    expect(selectionModules.Blok.RectangleSelection.forgetRemovedBlock).toHaveBeenCalledWith(block);
 
     await harness.blockManager.destroy();
   });

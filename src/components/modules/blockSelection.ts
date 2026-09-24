@@ -213,6 +213,17 @@ export class BlockSelection extends Module {
   }
 
   /**
+   * Drop navigation focus from a block a remote peer deleted, matched by id,
+   * so a later block with the same id is not taken for a convert of it.
+   * @param block - the block being deleted
+   */
+  public forgetRemovedBlock(block: Block): void {
+    if (this.navigationFocus?.id === block.id) {
+      this.navigationFocus = undefined;
+    }
+  }
+
+  /**
    * Flag used to define block selection
    * First CMD+A defines it as true and then second CMD+A selects all Blocks
    * @type {boolean}

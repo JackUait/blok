@@ -1727,6 +1727,22 @@ describe('BlockSelection', () => {
         expect(blockSelection.navigationFocusedBlock).toBe(blocks[2]);
       });
 
+      it('does not refocus a block a peer deleted when the peer re-adds its id', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blocks.forEach((block, index) => Object.assign(block, { id: `b${index}` }));
+        blockManager.currentBlockIndex = 1;
+        blockSelection.enableNavigationMode();
+
+        const [deleted] = blocks.splice(1, 1);
+
+        blockSelection.forgetRemovedBlock(deleted);
+        blocks.splice(1, 0, createBlockStub({ id: 'b1' }));
+
+        expect(blockSelection.navigationFocusedBlock).toBeUndefined();
+      });
+
       it('edits the focused block, not its old index, after a block is inserted above it', () => {
         const { blockSelection, blocks, modules } = createBlockSelection();
         const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number; currentBlock: Block | undefined };

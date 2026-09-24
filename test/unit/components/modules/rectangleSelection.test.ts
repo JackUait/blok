@@ -862,6 +862,34 @@ describe('RectangleSelection', () => {
     expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(1);
   });
 
+  it('does not lasso a block a peer deleted mid-drag when the peer re-adds its id', () => {
+    const {
+      rectangleSelection,
+      blockSelection,
+      blockManager,
+    } = createRectangleSelection();
+
+    const deleted = { id: 'b0', selected: false } as unknown as BlockType;
+    const kept = { id: 'b1', selected: false } as unknown as BlockType;
+
+    blockManager.blocks.push(kept);
+
+    const internal = rectangleSelection as unknown as {
+      stackOfSelected: BlockType[];
+      rectCrossesBlocks: boolean;
+      inverseSelection: () => void;
+    };
+
+    internal.stackOfSelected.push(deleted, kept);
+    rectangleSelection.forgetRemovedBlock(deleted);
+    blockManager.blocks.unshift({ id: 'b0', selected: false } as unknown as BlockType);
+    internal.rectCrossesBlocks = true;
+
+    internal.inverseSelection();
+
+    expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalled();
+  });
+
   it('leaves the selection alone when the first stacked block was removed mid-drag', () => {
     const {
       rectangleSelection,

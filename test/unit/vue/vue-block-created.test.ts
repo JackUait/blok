@@ -45,7 +45,7 @@ const makeContainerApi = (children: BlockAPI[]): BlockAPI =>
 /** A fake editor api with a spying events bus. */
 const makeApi = (): API =>
   ({
-    blocks: { isPointerDragActive: false },
+    blocks: { isPointerDragActive: false, getChildren: () => [] },
     events: { emit: vi.fn(), on: vi.fn(), off: vi.fn() },
   } as unknown as API);
 

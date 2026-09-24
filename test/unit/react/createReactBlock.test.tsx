@@ -30,9 +30,12 @@ const makeBlockApi = (id = 'blk-1'): BlockAPI & { dispatchChange: ReturnType<typ
   } as unknown as BlockAPI & { dispatchChange: ReturnType<typeof vi.fn> });
 
 /** A fake editor `api` exposing the pointer-drag flag the commit path reads. */
-const makeApi = (pointerDragActive = false): API =>
+const makeApi = (pointerDragActive = false, childrenById: Record<string, BlockAPI[]> = {}): API =>
   ({
-    blocks: { isPointerDragActive: pointerDragActive },
+    blocks: {
+      isPointerDragActive: pointerDragActive,
+      getChildren: (id: string) => childrenById[id] ?? [],
+    },
   } as unknown as API);
 
 /** Mount the shared portal host so registered tools actually render. */
@@ -1149,6 +1152,44 @@ describe('BlockChildren — per-child decoration', () => {
     // introduce a per-child element.
     expect(children[0].holder.parentElement).toBe(slot);
     expect(children[1].holder.parentElement).toBe(slot);
+
+    unmount();
+  });
+
+  it('mounts a slotless child\'s descendants in the slot, right after it', () => {
+    const { registry, unmount } = mountHost();
+    const children = [makeChild('a'), makeChild('b')];
+    const grandchild = makeChild('a1');
+
+    // Where core leaves it on a reload: at the editor root.
+    document.body.appendChild(grandchild.holder);
+
+    const Tool = createReactBlock<CounterData>({
+      type: 'container',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: ({ BlockChildren }: ReactBlockRenderProps<CounterData>) => (
+        <BlockChildren childAttributes={(_child, index) => ({ 'data-step-index': String(index) })} />
+      ),
+    });
+
+    const tool = new Tool({
+      data: {},
+      block: makeContainerApi(children),
+      api: makeApi(false, { a: [grandchild] }),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+
+    const host = renderTool(tool);
+
+    document.body.appendChild(host);
+
+    const slot = host.querySelector('[data-blok-nested-blocks]');
+
+    expect(grandchild.holder.parentElement).toBe(slot);
+    expect(Array.from(slot?.children ?? []).map(el => el.getAttribute('data-blok-id'))).toStrictEqual(['a', 'a1', 'b']);
+    // Decoration stays per direct child: a grandchild is not a step.
+    expect(grandchild.holder.hasAttribute('data-step-index')).toBe(false);
 
     unmount();
   });

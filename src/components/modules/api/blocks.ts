@@ -504,6 +504,7 @@ export class BlocksAPI extends Module {
    * @param options - parent, position, id, tunes, focus, replace
    */
   public insertAt = (type?: string, data?: BlockToolData, options: InsertAtOptions = {}): BlockAPIInterface => {
+    this.Blok.YjsManager.beginApiCall();
     const { BlockManager } = this.Blok;
     const { parentId, position, id, tunes, focus = false, replace } = options;
 

@@ -312,6 +312,24 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       expect(await saved(instance)).toEqual(INITIAL);
     }, 30_000);
 
+    it.each([
+      { name: 'into a toggle', options: { id: 'n', parentId: 't', position: { after: 'c1' } } },
+      { name: 'at the root', options: { id: 'n', position: { after: 't' } } },
+    ])('is its own undo step after an earlier edit: $name', async ({ options }) => {
+      const instance = await boot();
+
+      await instance.blocks.update('a', { text: 'edited' });
+      await settle();
+      instance.blocks.insertAt('paragraph', { text: 'n' }, options);
+      instance.history.undo();
+      await nextFrames(3);
+
+      const output = await instance.save();
+
+      expect(output.blocks.map(block => block.id)).toEqual(['a', 't', 'c1', 'c2', 'b']);
+      expect(output.blocks[0].data.text).toBe('edited');
+    }, 30_000);
+
     it('replace takes the replaced block\'s slot and parent', async () => {
       const instance = await boot();
 

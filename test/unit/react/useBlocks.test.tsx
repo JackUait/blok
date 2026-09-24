@@ -21,7 +21,7 @@ const makeFakeEditor = (
         return idx === -1 ? undefined : idx;
       },
       getById: (id: string) => list.find((b) => b.id === id) ?? null,
-      insert: vi.fn((type?: string, data?: unknown, _cfg?: unknown, index?: number) => {
+      insert: vi.fn((type?: string, data?: unknown, _cfg?: unknown, index?: number, _focus?: boolean, _replace?: boolean, _id?: string) => {
         const id = `new-${list.length}`;
         const row = { id, name: type ?? 'paragraph', parentId: null };
         const at = index ?? list.length;

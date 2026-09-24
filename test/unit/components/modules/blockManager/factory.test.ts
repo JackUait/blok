@@ -53,6 +53,8 @@ const createMockAPIMethods = (): APIInterface => ({
     getChildren: vi.fn(() => []),
     getBlocksCount: vi.fn(() => 0),
     insert: vi.fn(),
+    insertAt: vi.fn(),
+    moveTo: vi.fn(),
     insertMany: vi.fn(() => []),
     composeBlockData: vi.fn().mockResolvedValue({}),
     update: vi.fn().mockResolvedValue(createMockBlockAPI()),

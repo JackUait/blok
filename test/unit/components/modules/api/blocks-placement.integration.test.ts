@@ -846,6 +846,78 @@ describe('blocks.insertAt / blocks.moveTo', () => {
     }, 30_000);
   });
 
+  describe('blocks.insert by index next to columns', () => {
+    const columns = (): OutputBlockData[] => [
+      { id: 'cl', type: 'column_list', data: {}, content: ['k1', 'k2'] },
+      { id: 'k1', type: 'column', data: {}, parent: 'cl', content: ['x'] },
+      P('x', 'k1'),
+      { id: 'k2', type: 'column', data: {}, parent: 'cl', content: ['y'] },
+      P('y', 'k2'),
+    ];
+
+    it.each([
+      { name: 'index 0 lands before the column list', index: 0, expected: ['n^-', 'cl^-', 'k1^cl', 'x^k1', 'k2^cl', 'y^k2'] },
+      { name: 'the column list\'s first child slot lands at the top of the first column', index: 1, expected: ['cl^-', 'k1^cl', 'n^k1', 'x^k1', 'k2^cl', 'y^k2'] },
+      { name: 'the first column\'s first child slot', index: 2, expected: ['cl^-', 'k1^cl', 'n^k1', 'x^k1', 'k2^cl', 'y^k2'] },
+    ])('$name', async ({ index, expected }) => {
+      const instance = await boot(columns());
+
+      instance.blocks.insert('paragraph', { text: 'n' }, {}, index, false, false, 'n');
+
+      expect(flat(instance)).toEqual(expected);
+      expect(dom()).toEqual(domFor(expected));
+      expect(await saved(instance)).toEqual(expected);
+      expect(shared(instance)).toEqual(expected);
+    }, 30_000);
+
+    it('makes a column inserted at the column list\'s first child slot its first column', async () => {
+      const instance = await boot(columns());
+
+      instance.blocks.insert('column', {}, {}, 1, false, false, 'n');
+
+      const expected = ['cl^-', 'n^cl', 'k1^cl', 'x^k1', 'k2^cl', 'y^k2'];
+
+      expect(flat(instance).filter(entry => !entry.endsWith('^n'))).toEqual(expected);
+      expect(contentOf(instance, 'cl')).toEqual(['n', 'k1', 'k2']);
+    }, 30_000);
+
+    it('lands in an empty column at the end of its slot', async () => {
+      const instance = await boot([
+        { id: 'cl', type: 'column_list', data: {}, content: ['k1', 'k2'] },
+        { id: 'k1', type: 'column', data: {}, parent: 'cl' },
+        { id: 'k2', type: 'column', data: {}, parent: 'cl', content: ['y'] },
+        P('y', 'k2'),
+      ]);
+
+      instance.blocks.insert('paragraph', { text: 'n' }, {}, 2, false, false, 'n');
+
+      const expected = ['cl^-', 'k1^cl', 'n^k1', 'k2^cl', 'y^k2'];
+
+      expect(flat(instance)).toEqual(expected);
+      expect(await saved(instance)).toEqual(expected);
+      expect(shared(instance)).toEqual(expected);
+    }, 30_000);
+
+    it('lands in the first column of a column list inside a collapsed toggle', async () => {
+      const instance = await boot([
+        { ...T('t', ['cl']), data: { text: 't', isOpen: false } },
+        { id: 'cl', type: 'column_list', data: {}, parent: 't', content: ['k1'] },
+        { id: 'k1', type: 'column', data: {}, parent: 'cl', content: ['x'] },
+        P('x', 'k1'),
+        P('z'),
+      ]);
+
+      // Index 2 is the column list's first child slot.
+      instance.blocks.insert('header', { text: 'n', level: 2 }, {}, 2, false, false, 'n');
+
+      const expected = ['t^-', 'cl^t', 'k1^cl', 'n^k1', 'x^k1', 'z^-'];
+
+      expect(flat(instance)).toEqual(expected);
+      expect(await saved(instance)).toEqual(expected);
+      expect(shared(instance)).toEqual(expected);
+    }, 30_000);
+  });
+
   describe('list depth after a keyboard move', () => {
     it('keeps a list parent at its depth when it moves down past a paragraph with its nested item', async () => {
       const instance = await boot([

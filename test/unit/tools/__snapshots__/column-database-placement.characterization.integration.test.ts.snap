@@ -648,8 +648,7 @@ exports[`column and database placement — characterization > adds a column on t
     ],
   },
   "events": [
-    "block-added n1 parentId=null previousSiblingId=cl index=2",
-    "block-moved n1 parentId=cl previousSiblingId=null fromIndex=2 toIndex=2 oldParentId=null",
+    "block-added n1 parentId=cl previousSiblingId=null index=2",
     "block-moved z parentId=n1 previousSiblingId=null fromIndex=3 toIndex=3 oldParentId=null",
     "block-changed t1 index=5",
   ],

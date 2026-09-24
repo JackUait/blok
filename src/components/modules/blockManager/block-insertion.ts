@@ -145,7 +145,7 @@ export class BlockInsertion {
     const requestedIndex = index
       ?? (afterCurrentRun !== undefined ? this.subtreeEnd(afterCurrentRun) : prevIndex + (replace ? 0 : 1));
     const slot = inferParent && !replace && !forceTopLevel && !appendToWorkingArea
-      ? this.inferredSlot(requestedIndex)
+      ? this.inferredSlot(requestedIndex, tool ?? this.dependencies.config.defaultBlock)
       : undefined;
     const targetIndex = slot?.index ?? requestedIndex;
     const impliedParent = slot?.parent;
@@ -293,7 +293,8 @@ export class BlockInsertion {
     }
 
     if (!replace && !forceTopLevel && block.parentId === null && impliedParent === undefined) {
-      const predecessor = exited ?? this.repository.getBlockByIndex(targetIndex - 1);
+      // Unguarded, index 0 would read getBlockByIndex(-1): the LAST block.
+      const predecessor = exited ?? (targetIndex > 0 ? this.repository.getBlockByIndex(targetIndex - 1) : undefined);
       const predecessorParent = predecessor?.parentId !== null && predecessor?.parentId !== undefined
         ? this.repository.getBlockById(predecessor.parentId)
         : undefined;
@@ -879,10 +880,14 @@ export class BlockInsertion {
    *   a container means (header-toggle-keyboard's collapsed-heading Enter
    *   relies on it).
    * - A column predecessor keeps its column, the rule unflagged inserts use.
-   * - A container that owns its children (column_list) is skipped.
+   * - A container that owns its children (column_list) is skipped. When every
+   *   level owns its children, the block goes into the owner's child on the
+   *   slot's side, or joins the owner when it is that child's kind (a column
+   *   inserted at a column_list's first slot).
    * @param index - the flat index the block is inserted at
+   * @param toolName - the tool the block is created with
    */
-  private parentImpliedByIndex(index: number): Block | null | undefined {
+  private parentImpliedByIndex(index: number, toolName: string | undefined): Block | null | undefined {
     const blocks = this.repository.blocks;
     const at = Math.min(index, blocks.length);
     // Past the end of a table/database run, the block follows that container.
@@ -918,7 +923,21 @@ export class BlockInsertion {
         .filter(candidate => candidate !== null || shallowest === null)
         .reverse();
 
-    return candidates.find(candidate => candidate === null || !candidate.tool.ownsChildren);
+    const chosen = candidates.find(candidate => candidate === null || !candidate.tool.ownsChildren);
+    const owner = candidates.at(-1);
+
+    if (chosen !== undefined || owner === undefined || owner === null) {
+      return chosen;
+    }
+
+    // Left at the owner's level the block would split the owner's run.
+    const child = owner === previous ? next : collectAncestors(previous, []).find(block => block.parentId === owner.id);
+
+    if (child === undefined || child.tool.ownsChildren) {
+      return undefined;
+    }
+
+    return child.name === toolName ? owner : child;
   }
 
   /**
@@ -960,8 +979,9 @@ export class BlockInsertion {
    * container's subtree instead, which is also where the holder used to be
    * drawn (the toolbox inserts at the current index + 1 from a toggle title).
    * @param index - the flat index the caller asked for
+   * @param toolName - the tool the block is created with
    */
-  private inferredSlot(index: number): { index: number; parent: Block | null | undefined; exited: Block | undefined } {
+  private inferredSlot(index: number, toolName: string | undefined): { index: number; parent: Block | null | undefined; exited: Block | undefined } {
     const blocks = this.repository.blocks;
     const at = Math.min(index, blocks.length);
     const previous = at > 0 ? blocks[at - 1] : undefined;
@@ -973,7 +993,7 @@ export class BlockInsertion {
 
     return {
       index: slotIndex,
-      parent: this.parentImpliedByIndex(slotIndex),
+      parent: this.parentImpliedByIndex(slotIndex, toolName),
       exited: this.selfPlacingClosedAt(Math.min(slotIndex, blocks.length)),
     };
   }

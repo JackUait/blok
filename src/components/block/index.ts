@@ -392,13 +392,13 @@ export class Block extends EventsDispatcher<BlockEvents> {
       tunesData
     );
 
-    // Bind block mutation watchers and input events
-    // - Skip entirely when block is in read-only mode (no mutations to track, no input events)
-    // - Immediately if bindMutationWatchersImmediately is true (for user-created blocks)
-    // - Deferred via requestIdleCallback otherwise (for initial load optimization)
+    // Read-only blocks watch nothing. The mutation watcher starts at once: a
+    // tool mutation before it is lost, and subscribing is one array push.
+    // Input listeners query the DOM, so on load they wait for idle.
     if (!readOnly) {
+      this.mutationHandler.watch();
+
       const bindEvents = (): void => {
-        this.mutationHandler.watch();
         this.inputManager.addInputEvents();
         this.toggleInputsEmptyMark();
       };

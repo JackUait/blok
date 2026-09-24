@@ -98,7 +98,7 @@ export class BlockEventBinder {
    * @param block - Block to bind events to
    */
   public bindBlockEvents(block: Block): void {
-    const { blockEvents, listeners, onBlockMutated, getBlockIndex, shouldHandleEvent } = this.dependencies;
+    const { blockEvents, listeners, shouldHandleEvent } = this.dependencies;
 
     listeners.on(block.holder, 'keydown', (event: Event) => {
       if (event instanceof KeyboardEvent) {
@@ -132,6 +132,17 @@ export class BlockEventBinder {
         }
       }
     });
+
+    this.bindBlockChanges(block);
+  }
+
+  /**
+   * Subscribe to the block's changes. Cheap, so it must run as soon as the
+   * block exists: a change emitted before this is lost for good.
+   * @param block - Block to listen to
+   */
+  public bindBlockChanges(block: Block): void {
+    const { onBlockMutated, getBlockIndex } = this.dependencies;
 
     if (this.mutationSubscribed.has(block)) {
       return;

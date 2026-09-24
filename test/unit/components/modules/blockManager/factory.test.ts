@@ -651,13 +651,15 @@ describe('BlockFactory', () => {
       };
     };
 
+    const originalRequestIdleCallback = window.requestIdleCallback;
+
     afterEach(() => {
-      vi.restoreAllMocks();
+      window.requestIdleCallback = originalRequestIdleCallback;
     });
 
     it('reaches the block manager even if the idle callback has not run', () => {
       // The idle callback never runs: under load a browser can starve it.
-      vi.spyOn(window, 'requestIdleCallback').mockImplementation(() => 1);
+      window.requestIdleCallback = vi.fn(() => 1);
       const { factory: wired, onBlockMutated, listenersOn } = createWiredFactory();
 
       const block = wired.composeBlock({ tool: 'paragraph', bindEventsImmediately: false });

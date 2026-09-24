@@ -453,7 +453,8 @@ export class BlockManager extends Module {
         moduleInstances: this.Blok,
         migrations: this.config.migrations,
       },
-      this.bindBlockEvents.bind(this)
+      this.bindBlockEvents.bind(this),
+      (block) => this.eventBinder.bindBlockChanges(block)
     );
 
     // Initialize hierarchy with callback to sync parent data to Yjs.

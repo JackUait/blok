@@ -42,6 +42,7 @@ export interface BlockFactoryDependencies {
 export class BlockFactory {
   private readonly dependencies: BlockFactoryDependencies;
   private readonly bindBlockEvents: (block: Block) => void;
+  private readonly bindBlockChanges: ((block: Block) => void) | undefined;
 
   /**
    * Get the current read-only state from ReadOnly module
@@ -53,10 +54,16 @@ export class BlockFactory {
   /**
    * @param dependencies - Required dependencies
    * @param bindBlockEvents - Function to bind events to a block
+   * @param bindBlockChanges - Function to subscribe to a block's changes; runs at once
    */
-  constructor(dependencies: BlockFactoryDependencies, bindBlockEvents: (block: Block) => void) {
+  constructor(
+    dependencies: BlockFactoryDependencies,
+    bindBlockEvents: (block: Block) => void,
+    bindBlockChanges?: (block: Block) => void
+  ) {
     this.dependencies = dependencies;
     this.bindBlockEvents = bindBlockEvents;
+    this.bindBlockChanges = bindBlockChanges;
   }
 
   /**
@@ -123,6 +130,10 @@ export class BlockFactory {
     if (this.readOnlyState) {
       return block;
     }
+
+    // Only the DOM listeners wait for idle (one scan of the listener list per
+    // block). A change the tool dispatches meanwhile would be lost.
+    this.bindBlockChanges?.(block);
 
     if (bindEventsImmediately) {
       this.bindBlockEvents(block);

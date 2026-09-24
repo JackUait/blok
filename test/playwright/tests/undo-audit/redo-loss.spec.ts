@@ -216,6 +216,47 @@ test.describe('undo audit: redo loss', () => {
     expect(textOf(await save(page), 'a')).toBe('A');
   });
 
+  test('RDO-1c: an image that loads before the idle bind still writes its size to the document, and adds no undo step', async ({ page }) => {
+    // Hold every idle callback, as a busy page would, until the image has loaded.
+    await page.evaluate(({ holder, blokBlocks }) => {
+      const held: IdleRequestCallback[] = [];
+      const w = window as unknown as { heldIdle: IdleRequestCallback[]; realIdle: typeof window.requestIdleCallback };
+
+      w.heldIdle = held;
+      w.realIdle = window.requestIdleCallback;
+      window.requestIdleCallback = (callback: IdleRequestCallback): number => held.push(callback);
+
+      const container = document.createElement('div');
+
+      container.id = holder;
+      document.body.appendChild(container);
+      window.blokInstance = new window.Blok({ holder, data: { blocks: blokBlocks } });
+    }, { holder: HOLDER_ID, blokBlocks: IMAGE_DOC });
+
+    await expect.poll(() => page.evaluate(() => {
+      const img = document.querySelector<HTMLImageElement>('[data-blok-id="t"] img');
+
+      return img !== null && img.complete && img.naturalWidth > 0;
+    })).toBe(true);
+    await wait(page, 100);
+
+    await page.evaluate(async () => {
+      const w = window as unknown as { heldIdle: IdleRequestCallback[]; realIdle: typeof window.requestIdleCallback };
+
+      window.requestIdleCallback = w.realIdle;
+      w.heldIdle.splice(0).forEach((callback) => callback({ didTimeout: true, timeRemaining: () => 0 }));
+      await window.blokInstance?.isReady;
+    });
+    await wait(page, SETTLE);
+
+    const stored = await page.evaluate(() => (window.blokInstance as unknown as {
+      module: { yjsManager: { getBlockDataObject: (id: string) => Record<string, unknown> | undefined } };
+    }).module.yjsManager.getBlockDataObject('t'));
+
+    expect(stored?.naturalWidth, 'natural width in the document').toBeGreaterThan(0);
+    expect(await page.evaluate(() => window.blokInstance?.history.canUndo()), 'canUndo right after load').toBe(false);
+  });
+
   test('RDO-2a: undoing a database delete keeps redo available', async ({ page }) => {
     await createBlok(page, DATABASE_DOC);
     await wait(page, CAPTURE_GAP);

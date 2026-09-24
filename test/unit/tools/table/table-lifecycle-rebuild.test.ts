@@ -629,8 +629,10 @@ describe('Table lifecycle rebuild', () => {
      * the one with the lowest id may stay, or the cell shows two paragraphs.
      * @param repairId - id this editor gives its own stand-in
      * @param peerId - id of the peer's stand-in
+     * @param typedInto - the user types into the stand-in before the first
+     *   merge and empties it before a second one
      */
-    const refillThenMerge = async (repairId: string, peerId: string): Promise<ReturnType<typeof vi.fn>> => {
+    const refillThenMerge = async (repairId: string, peerId: string, typedInto = false): Promise<ReturnType<typeof vi.fn>> => {
       const options = createTableOptions(
         { content: [[{ blocks: ['old'] }]] },
         {},
@@ -653,7 +655,8 @@ describe('Table lifecycle rebuild', () => {
         return holder;
       };
       const blockOf = (id: string): { id: string; name: string; holder: HTMLElement; parentId: string; isEmpty: boolean; preservedData: Record<string, unknown> } =>
-        ({ id, name: 'paragraph', holder: holderOf(id), parentId: 'table-lifecycle-test', isEmpty: true, preservedData: {} });
+        ({ id, name: 'paragraph', holder: holderOf(id), parentId: 'table-lifecycle-test', isEmpty: !typed.has(id), preservedData: {} });
+      const typed = new Set<string>();
       const ids = ['old', repairId, peerId];
 
       blocksApi.getById = vi.fn((id: string) => (ids.includes(id) ? blockOf(id) : undefined));
@@ -681,14 +684,23 @@ describe('Table lifecycle rebuild', () => {
       vi.mocked(options.api.blocks.delete).mockClear();
 
       // The peer's write lands: the merged cell names both stand-ins.
-      blocksApi.isSyncingFromYjs = true;
-      blocksApi.isApplyingRemoteChange = true;
-      table.setData({ withHeadings: false, withHeadingColumn: false, content: [[{ blocks: [repairId, peerId] }]] });
-      blocksApi.isApplyingRemoteChange = false;
-      await Promise.resolve();
-      blocksApi.isSyncingFromYjs = false;
-      await nextFrame();
-      await nextFrame();
+      const merge = async (): Promise<void> => {
+        blocksApi.isSyncingFromYjs = true;
+        blocksApi.isApplyingRemoteChange = true;
+        table.setData({ withHeadings: false, withHeadingColumn: false, content: [[{ blocks: [repairId, peerId] }]] });
+        blocksApi.isApplyingRemoteChange = false;
+        await Promise.resolve();
+        blocksApi.isSyncingFromYjs = false;
+        await nextFrame();
+        await nextFrame();
+      };
+
+      if (typedInto) {
+        typed.add(repairId);
+        await merge();
+        typed.delete(repairId);
+      }
+      await merge();
 
       return vi.mocked(options.api.blocks.delete);
     };
@@ -698,6 +710,12 @@ describe('Table lifecycle rebuild', () => {
 
       expect(deleted).toHaveBeenCalledWith(1, false);
       expect(deleted).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps a stand-in the user once typed into, even after it is emptied', async () => {
+      const deleted = await refillThenMerge('zzz-repair', 'aaa-peer', true);
+
+      expect(deleted).not.toHaveBeenCalled();
     });
 
     it('keeps this editor\'s stand-in when it has the lower id', async () => {

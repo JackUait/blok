@@ -957,7 +957,14 @@ export class TableCellBlocks {
       const ids = pos ? this.model.getCellBlocks(pos.row, pos.col) : [];
 
       ids.forEach(id => {
-        if (!this.repairIds.has(id) || this.api.blocks.getById?.(id)?.isEmpty !== true) {
+        if (!this.repairIds.has(id)) {
+          return;
+        }
+
+        // Once typed into, it is the user's block even if emptied again.
+        if (this.api.blocks.getById?.(id)?.isEmpty !== true) {
+          this.repairIds.delete(id);
+
           return;
         }
 

@@ -187,4 +187,60 @@ describe('a block that arrived from a peer', () => {
     peer.destroy();
     holder.remove();
   });
+
+  // Recording the keys must still close the block's settling window, or the
+  // user's first edit right after the block arrives is not an undo step.
+  it('keeps an edit made right after the block arrived undoable', async () => {
+    let captured: YjsManager | undefined;
+    const originalFromJSON = YjsManager.prototype.fromJSON;
+
+    vi.spyOn(YjsManager.prototype, 'fromJSON').mockImplementation(function (this: YjsManager, blocks: Parameters<YjsManager['fromJSON']>[0]) {
+      captured = this;
+
+      return originalFromJSON.call(this, blocks);
+    });
+    const holder = document.createElement('div');
+
+    document.body.appendChild(holder);
+    const editor = new Blok({
+      holder,
+      tools: { paragraph: Paragraph, flag: FlagTool },
+      data: { blocks: [{ id: 'p', type: 'paragraph', data: { text: 'hello' } }] },
+    }) as unknown as TestEditor;
+
+    await editor.isReady;
+    await settle();
+
+    if (captured === undefined) {
+      throw new Error('YjsManager was not captured');
+    }
+    const receiver = captured;
+    const peer = new DocumentStore(new YBlockSerializer());
+
+    peer.applyRemoteUpdate(receiver.encodeStateAsUpdate(peer.getStateVector()));
+    peer.transact(() => {
+      peer.addBlock({ id: 'f', type: 'flag', data: { text: 'Flagged', flag: true } });
+    }, 'local');
+    receiver.applyRemoteUpdate(peer.encodeStateAsUpdate(receiver.getStateVector()));
+    await drain();
+    await frame();
+    await frame();
+    await drain();
+
+    holder.querySelector('[data-flag]')?.removeAttribute('data-flag');
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await drain();
+    expect(flagData(receiver)).toEqual({ text: 'Flagged' });
+
+    editor.history.undo();
+    await settle();
+
+    expect(flagData(receiver)).toEqual({ text: 'Flagged', flag: true });
+
+    editor.destroy();
+    await frame();
+    await drain();
+    peer.destroy();
+    holder.remove();
+  });
 });

@@ -2235,6 +2235,9 @@ export class BlockManager extends Module {
 
     if (options?.normalize === 'record') {
       this.recordEmittedKeys(block, savedKeys);
+      // Stands in for the write-back the settling window waits for (see
+      // `flushBlockDataWrites`), so the user's next edit is an undo step.
+      this.yjsSync.settleMaterialization(block.id);
 
       return;
     }

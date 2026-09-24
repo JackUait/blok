@@ -897,6 +897,33 @@ export class TableCellBlocks {
    * — without it the restored block would float at the top level as an orphan
    * (regression: table-undo-redo-orphans, multi-cell undo restoration).
    */
+  /**
+   * After a sync replay has settled, give an editable block to every cell
+   * whose referenced blocks never arrived (a peer's content write that won
+   * over a delete). Only then: during the replay they may still land.
+   */
+  public fillCellsWithUnresolvedBlocks(): void {
+    this.gridElement.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`).forEach(cell => {
+      const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+      const pos = this.getCellPosition(cell);
+
+      if (!container || !pos || container.querySelector('[data-blok-id]') !== null) {
+        return;
+      }
+
+      const ids = this.model.getCellBlocks(pos.row, pos.col);
+
+      // A cell the replay left empty on purpose (undo to an empty table) is
+      // not ours to fill: its blocks may still be restored by later ops.
+      if (ids.length === 0 || ids.some(id => this.api.blocks.getById?.(id) != null)) {
+        return;
+      }
+
+      this.model.setCellBlocks(pos.row, pos.col, []);
+      this.ensureCellHasBlock(cell);
+    });
+  }
+
   public reclaimReferencedBlocks(): void {
     const snapshot = this.model.snapshot();
 

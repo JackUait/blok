@@ -415,6 +415,35 @@ describe('Table lifecycle rebuild', () => {
     });
   });
 
+  describe('setData() during Yjs sync naming a block that never arrives', () => {
+    const nextFrame = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+
+    it('gives the cell an editable block once the replay has settled', async () => {
+      const options = createTableOptions(
+        { content: [['A']] },
+        {},
+        { blocks: { isSyncingFromYjs: true, getById: vi.fn(() => undefined) } }
+      );
+      const blocksApi = options.api.blocks as { isSyncingFromYjs: boolean };
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      table.setData({ withHeadings: false, withHeadingColumn: false, content: [[{ blocks: ['never-arrives'] }]] });
+      await Promise.resolve();
+      blocksApi.isSyncingFromYjs = false;
+      await nextFrame();
+      await nextFrame();
+
+      const cellBlocks = container.querySelector('[data-blok-table-cell-blocks]');
+
+      expect(cellBlocks?.querySelectorAll('[data-blok-id]').length).toBe(1);
+      expect(table.save(container.firstElementChild as HTMLElement).content[0][0]).not.toEqual({ blocks: ['never-arrives'] });
+    });
+  });
+
   describe('setData() with empty content during Yjs sync', () => {
     it('does not fabricate new blocks when undo reverts table content to empty', () => {
       // Regression: previously, this path called populateNewCells to insert

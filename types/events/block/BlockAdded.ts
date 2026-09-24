@@ -16,8 +16,7 @@ interface BlockAddedEventDetail extends BlockMutationEventDetail {
 
   /**
    * Id of the new block's parent, `null` at the root. Absent when the parent
-   * is not final at the time of the event (paste, undo/redo, remote changes);
-   * a later block-moved then carries it
+   * is not final at the time of the event (paste, undo/redo, remote changes)
    */
   parentId?: string | null;
 

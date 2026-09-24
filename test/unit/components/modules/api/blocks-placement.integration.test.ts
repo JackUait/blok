@@ -13,6 +13,8 @@ import { Paragraph } from '../../../../../src/tools/paragraph';
 import { ToggleItem } from '../../../../../src/tools/toggle';
 import { Header } from '../../../../../src/tools/header';
 import { Table } from '../../../../../src/tools/table/index';
+import { ColumnList } from '../../../../../src/tools/column-list';
+import { Column } from '../../../../../src/tools/column';
 import type { API, BlockMutationEvent, OutputBlockData, OutputData } from '../../../../../types';
 import type { BlockPosition } from '../../../../../types/api';
 
@@ -124,7 +126,7 @@ const roots = (instance: TestEditor): string[] =>
 const boot = async (blocks: OutputBlockData[] = doc()): Promise<TestEditor> => {
   const instance = new Blok({
     holder,
-    tools: { paragraph: Paragraph, toggle: ToggleItem, header: Header, table: Table, only: ParagraphsOnly, owner: Owner },
+    tools: { paragraph: Paragraph, toggle: ToggleItem, header: Header, table: Table, column_list: ColumnList, column: Column, only: ParagraphsOnly, owner: Owner },
     data: { blocks },
   }) as unknown as TestEditor;
 
@@ -423,6 +425,41 @@ describe('blocks.insertAt / blocks.moveTo', () => {
 
       expect(roots(instance)).toEqual(['a', 'tbl', 'p', 'z']);
       await expect(instance.save()).resolves.toBeDefined();
+    }, 30_000);
+
+    it('moves a block into a column and back out', async () => {
+      const instance = await boot([
+        { id: 'cl', type: 'column_list', data: {}, content: ['k1', 'k2'] },
+        { id: 'k1', type: 'column', data: {}, parent: 'cl', content: ['x1', 'x2'] },
+        P('x1', 'k1'),
+        P('x2', 'k1'),
+        { id: 'k2', type: 'column', data: {}, parent: 'cl', content: ['y1'] },
+        P('y1', 'k2'),
+        P('r'),
+      ]);
+
+      instance.blocks.moveTo('r', { parentId: 'k2', position: 'start' });
+      await nextFrames(2);
+
+      expect(flat(instance)).toEqual(['cl^-', 'k1^cl', 'x1^k1', 'x2^k1', 'k2^cl', 'r^k2', 'y1^k2']);
+      await expect(instance.save()).resolves.toBeDefined();
+
+      instance.blocks.moveTo('x1', { position: { after: 'cl' } });
+      await nextFrames(2);
+
+      expect(flat(instance)).toEqual(['cl^-', 'k1^cl', 'x2^k1', 'k2^cl', 'r^k2', 'y1^k2', 'x1^-']);
+      await expect(instance.save()).resolves.toBeDefined();
+    }, 30_000);
+
+    it('throws when moving a block straight into a column_list', async () => {
+      const instance = await boot([
+        { id: 'cl', type: 'column_list', data: {}, content: ['k1'] },
+        { id: 'k1', type: 'column', data: {}, parent: 'cl', content: ['x1'] },
+        P('x1', 'k1'),
+        P('r'),
+      ]);
+
+      expect(() => instance.blocks.moveTo('r', { parentId: 'cl', position: 'end' })).toThrow(/owns its children/);
     }, 30_000);
 
     it('reports parentId, oldParentId and previousSiblingId on block-moved', async () => {

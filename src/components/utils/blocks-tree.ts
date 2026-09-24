@@ -1,4 +1,5 @@
 import type { BlockToolData } from '../../../types/tools';
+import type { BlockPosition } from '../../../types/api/blocks';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import type { OutputBlockData, OutputData } from '../../../types/data-formats/output-data';
 import type { MarkdownImportConfig } from '../../markdown/types';
@@ -30,7 +31,7 @@ export interface BlockNode {
 }
 
 /** Where to place a block among its siblings. */
-export type InsertPosition = 'start' | 'end' | { before: string } | { after: string };
+export type InsertPosition = BlockPosition;
 
 export interface InsertSpec {
   type?: string;
@@ -99,13 +100,11 @@ export interface TreeInsertSpec {
 /**
  * Where to move an existing block.
  *
- * `before`/`after` are POSITION targets, not parent assignments: the block is
- * relocated to that flat slot and — because Blok keeps the flat array as the
- * canonical document order — ADOPTS the parent of wherever it lands. Moving a
- * nested block to `{ after: someRootBlock }` therefore unnests it to root, and
- * moving a root block in among a container's children nests it. Use
- * `nest`/`unnest` when you want to change the parent without choosing a sibling
- * slot. `toIndex` is an absolute flat index (clamped into range).
+ * `before`/`after` make the block a sibling of the ref: it takes the ref's
+ * parent. Moving a nested block to `{ after: someRootBlock }` therefore unnests
+ * it to root, and moving a root block next to a container's child nests it.
+ * Use `nest`/`unnest` when you want to change the parent without choosing a
+ * sibling slot. `toIndex` is an absolute flat index (clamped into range).
  */
 export type MoveTarget = { before: string } | { after: string } | { toIndex: number };
 

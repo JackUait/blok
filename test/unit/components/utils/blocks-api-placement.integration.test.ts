@@ -191,19 +191,7 @@ describe('useBlocks engine: sibling-relative placement on a real editor', () => 
       { name: 'a leaf reordered at root', id: 'b', target: { before: 't' } },
     ];
 
-    // Moves that need a reparent land as a move entry plus a separate placement entry.
-    it.fails.each(undoCases.slice(0, 3))('is one undo step: $name', async ({ id, target }) => {
-      const { instance, api } = await boot();
-
-      api.move(id, target);
-      instance.module.yjsManager.stopCapturing();
-      instance.history.undo();
-      await nextFrames(3);
-
-      expect(await saved(instance)).toEqual(INITIAL);
-    }, 30_000);
-
-    it.each(undoCases.slice(3))('is one undo step: $name', async ({ id, target }) => {
+    it.each(undoCases)('is one undo step: $name', async ({ id, target }) => {
       const { instance, api } = await boot();
 
       api.move(id, target);

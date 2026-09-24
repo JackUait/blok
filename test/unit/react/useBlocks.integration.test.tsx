@@ -27,6 +27,7 @@ import { BlockRepository } from '../../../src/components/modules/blockManager/re
 import { BlockHierarchy } from '../../../src/components/modules/blockManager/hierarchy';
 import type { BlocksStore } from '../../../src/components/modules/blockManager/types';
 import type { Block } from '../../../src/components/block';
+import { fakePlacement } from '../helpers/fake-placement';
 
 // ─── Block stub ──────────────────────────────────────────────────────────────
 
@@ -402,6 +403,14 @@ const createRealEditorHarness = (
 
     transact: (fn: () => void): void => fn(),
   };
+
+  Object.assign(editorBlocks, fakePlacement({
+    blocks: () => blocksStore.array,
+    insert: (type, data, index, id, replace) => editorBlocks.insert(type, data, {}, index, false, replace, id),
+    moveFlat: (toIndex, fromIndex) => blocksStore.move(toIndex, fromIndex),
+    setParent: (id, parentId) => editorBlocks.setBlockParent(id, parentId),
+    notify,
+  }));
 
   const editor = {
     blocks: editorBlocks,

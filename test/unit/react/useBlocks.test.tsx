@@ -4,6 +4,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useBlocks } from '../../../packages/react/src/useBlocks';
 import { ToolNotFoundError } from '../../../src/components/errors/tool-not-found';
 import type { Blok } from '../../../types';
+import { fakePlacement } from '../helpers/fake-placement';
 
 /** A controllable fake editor exposing only what useBlocks consumes. */
 const makeFakeEditor = (
@@ -27,7 +28,15 @@ const makeFakeEditor = (
         list.splice(at, 0, row);
         return { id, name: row.name, parentId: row.parentId };
       }),
-      setBlockParent: vi.fn(),
+      setBlockParent: vi.fn((id: string, parentId: string | null) => {
+        const row = list.find((b) => b.id === id);
+
+        if (row !== undefined) {
+          row.parentId = parentId;
+        }
+      }),
+      insertAt: vi.fn(),
+      moveTo: vi.fn(),
       delete: vi.fn(),
       // Faithful to Blok's Blocks.move(): toIndex is POST-removal index space
       // (splice out fromIndex, then re-insert at toIndex). Actually mutating the
@@ -99,6 +108,18 @@ const makeFakeEditor = (
     on: (_name: string, cb: (payload?: unknown) => void) => listeners.add(cb),
     off: (_name: string, cb: (payload?: unknown) => void) => listeners.delete(cb),
   };
+  const placement = fakePlacement({
+    blocks: () => list,
+    insert: (type, data, index, id, replace) => editor.blocks.insert(type, data, {}, index, false, replace, id),
+    moveFlat: (toIndex, fromIndex) => {
+      list.splice(toIndex, 0, ...list.splice(fromIndex, 1));
+    },
+    setParent: (id, parentId) => editor.blocks.setBlockParent(id, parentId),
+  });
+
+  editor.blocks.insertAt.mockImplementation(placement.insertAt);
+  editor.blocks.moveTo.mockImplementation(placement.moveTo);
+
   return {
     editor: editor as unknown as Blok,
     /** Live count of 'block changed' subscribers — asserts subscribe/cleanup. */
@@ -122,6 +143,17 @@ const makeFakeEditor = (
     },
   };
 };
+
+/** The options the hook passes to core's insertAt for a plain insert. */
+const at = (
+  parentId: string | null,
+  position: unknown,
+  extra: Record<string, unknown> = {}
+): Record<string, unknown> => ({ parentId, position, id: undefined, tunes: undefined, focus: false, ...extra });
+
+/** The options the hook passes to core's insertAt for a replace. */
+const replacing = (ref: string, extra: Record<string, unknown> = {}): Record<string, unknown> =>
+  ({ replace: ref, id: undefined, tunes: undefined, focus: false, ...extra });
 
 describe('useBlocks reads', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -294,18 +326,20 @@ describe('useBlocks mutators (delegation)', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
 
-  it('nest delegates to setBlockParent(id, parentId)', () => {
+  it('nest delegates to moveTo(id, { parentId, position: end })', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'p', name: 'toggle' }]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => result.current.nest('a', 'p'));
-    expect(editor.blocks.setBlockParent).toHaveBeenCalledWith('a', 'p');
+    expect(editor.blocks.moveTo).toHaveBeenCalledWith('a', { parentId: 'p', position: 'end' });
+    expect(result.current.getById('a')?.parentId).toBe('p');
   });
 
-  it('unnest delegates to setBlockParent(id, null)', () => {
-    const { editor } = makeFakeEditor([{ id: 'a', parentId: 'p' }]);
+  it('unnest delegates to moveTo, right after its top-level ancestor', () => {
+    const { editor } = makeFakeEditor([{ id: 'p', name: 'toggle' }, { id: 'q', parentId: 'p' }, { id: 'a', parentId: 'q' }]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => result.current.unnest('a'));
-    expect(editor.blocks.setBlockParent).toHaveBeenCalledWith('a', null);
+    expect(editor.blocks.moveTo).toHaveBeenCalledWith('a', { parentId: null, position: { after: 'p' } });
+    expect(result.current.getById('a')?.parentId).toBeNull();
   });
 
   it('unnest is a no-op for a block already at root (no setBlockParent, move, or transact)', () => {
@@ -315,7 +349,7 @@ describe('useBlocks mutators (delegation)', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }]); // a is root (parentId null)
     const { result } = renderHook(() => useBlocks(editor));
     act(() => result.current.unnest('a'));
-    expect(editor.blocks.setBlockParent).not.toHaveBeenCalled();
+    expect(editor.blocks.moveTo).not.toHaveBeenCalled();
     expect(editor.blocks.move).not.toHaveBeenCalled();
     expect(editor.blocks.transact).not.toHaveBeenCalled();
   });
@@ -352,18 +386,20 @@ describe('useBlocks mutators (delegation)', () => {
     expect(getBlockIndexSpy).not.toHaveBeenCalledWith('ghost');
   });
 
-  it('groups a nest in a single transact (one undo step)', () => {
+  // core's moveTo is one undo step on its own.
+  it('a nest is ONE core moveTo call', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'p', name: 'toggle' }]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => result.current.nest('a', 'p'));
-    expect(editor.blocks.transact).toHaveBeenCalledTimes(1);
+    expect(editor.blocks.moveTo).toHaveBeenCalledTimes(1);
+    expect(editor.blocks.setBlockParent).toHaveBeenCalledTimes(1);
   });
 
-  it('groups an unnest in a single transact (one undo step)', () => {
-    const { editor } = makeFakeEditor([{ id: 'a', parentId: 'p' }, { id: 'p', name: 'toggle' }]);
+  it('an unnest is ONE core moveTo call', () => {
+    const { editor } = makeFakeEditor([{ id: 'p', name: 'toggle' }, { id: 'a', parentId: 'p' }]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => result.current.unnest('a'));
-    expect(editor.blocks.transact).toHaveBeenCalledTimes(1);
+    expect(editor.blocks.moveTo).toHaveBeenCalledTimes(1);
   });
 
   it('remove resolves the flat index then delegates to delete without stealing the caret', () => {
@@ -517,22 +553,31 @@ describe('useBlocks insert', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
 
-  it('root insert at end calls editor.blocks.insert with flat index = count', () => {
+  it('root insert at end delegates to insertAt at the root end', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
     const { result } = renderHook(() => useBlocks(editor));
     let created: ReturnType<typeof result.current.insert> = null;
     act(() => { created = result.current.insert({ type: 'header', data: { text: 'hi' } }); });
-    // needToFocus=false: programmatic creation must not steal the caret.
-    // Trailing args: replace=false, id=undefined, tunes=undefined.
-    expect(editor.blocks.insert).toHaveBeenCalledWith('header', { text: 'hi' }, {}, 2, false, false, undefined, undefined);
+    // focus=false: programmatic creation must not steal the caret.
+    expect(editor.blocks.insertAt).toHaveBeenCalledWith('header', { text: 'hi' }, at(null, 'end'));
     expect(created).toMatchObject({ type: 'header' });
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['a', 'b', 'new-2']);
   });
 
-  it('root insert before a sibling uses that sibling flat index', () => {
+  it('root insert before a sibling lands right before it', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => { result.current.insert({ type: 'paragraph', position: { before: 'b' } }); });
-    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 1, false, false, undefined, undefined);
+    expect(editor.blocks.insertAt).toHaveBeenCalledWith('paragraph', {}, at(null, { before: 'b' }));
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['a', 'new-2', 'b']);
+  });
+
+  it('a before/after ref under another parent falls back to the end of parentId', () => {
+    const { editor } = makeFakeEditor([{ id: 'p', name: 'toggle' }, { id: 'c1', parentId: 'p' }, { id: 'b' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => { result.current.insert({ type: 'paragraph', position: { after: 'c1' } }); });
+    expect(editor.blocks.insertAt).toHaveBeenCalledWith('paragraph', {}, at(null, 'end'));
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['p', 'b', 'new-3']);
   });
 
   it('insert with a missing before/after ref is a no-op (returns null), not an end-append', () => {
@@ -547,7 +592,7 @@ describe('useBlocks insert', () => {
     act(() => { created = result.current.insert({ type: 'paragraph', position: { after: 'ghost' } }); });
 
     expect(created).toBeNull();
-    expect(editor.blocks.insert).not.toHaveBeenCalled();
+    expect(editor.blocks.insertAt).not.toHaveBeenCalled();
   });
 
   it('root insert at end does not redundantly call setBlockParent', () => {
@@ -567,8 +612,9 @@ describe('useBlocks insert', () => {
     ]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => { result.current.insert({ type: 'paragraph', position: { after: 'p' } }); });
-    // 'after p' lands past p's child c1 → flat index 2 (before 'tail').
-    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 2, false, false, undefined, undefined);
+    // 'after p' lands past p's child c1, before 'tail'.
+    expect(editor.blocks.insertAt).toHaveBeenCalledWith('paragraph', {}, at(null, { after: 'p' }));
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['p', 'new-3', 'tail']);
   });
 
   it('parented insert at start lands at the parent first-child slot', () => {
@@ -578,9 +624,8 @@ describe('useBlocks insert', () => {
     ]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => { result.current.insert({ type: 'paragraph', parentId: 'p', position: 'start' }); });
-    // start under non-empty p → before its first child c1 (flat index 1).
-    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 1, false, false, undefined, undefined);
-    expect(editor.blocks.setBlockParent).toHaveBeenCalledWith('new-2', 'p');
+    expect(editor.blocks.insertAt).toHaveBeenCalledWith('paragraph', {}, at('p', 'start'));
+    expect(result.current.getChildren('p').map((n) => n.id)).toEqual(['new-2', 'c1']);
   });
 
   it('parented insert before a child resolves to that child slot', () => {
@@ -591,7 +636,8 @@ describe('useBlocks insert', () => {
     ]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => { result.current.insert({ type: 'paragraph', parentId: 'p', position: { before: 'c2' } }); });
-    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 2, false, false, undefined, undefined);
+    expect(editor.blocks.insertAt).toHaveBeenCalledWith('paragraph', {}, at('p', { before: 'c2' }));
+    expect(result.current.getChildren('p').map((n) => n.id)).toEqual(['c1', 'new-3', 'c2']);
   });
 
   it('parented insert after a child clears that child subtree', () => {
@@ -603,23 +649,24 @@ describe('useBlocks insert', () => {
     ]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => { result.current.insert({ type: 'paragraph', parentId: 'p', position: { after: 'c1' } }); });
-    // after sibling c1 must skip its descendant g → flat index 3 (before c2).
-    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 3, false, false, undefined, undefined);
+    // after sibling c1 skips its descendant g, before c2.
+    expect(editor.blocks.insertAt).toHaveBeenCalledWith('paragraph', {}, at('p', { after: 'c1' }));
+    expect(result.current.getChildren('p').map((n) => n.id)).toEqual(['c1', 'new-4', 'c2']);
+    expect(editor.blocks.getBlockIndex('new-4')).toBe(3);
   });
 
   it('focuses the new block only when spec.focus is true', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => { result.current.insert({ type: 'paragraph', focus: true }); });
-    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 1, true, false, undefined, undefined);
+    expect(editor.blocks.insertAt).toHaveBeenCalledWith('paragraph', {}, at(null, 'end', { focus: true }));
   });
 
   it('forwards replace to core so a block can be replaced ("turn into") in place', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => { result.current.insert({ type: 'header', position: { before: 'b' }, replace: true }); });
-    // replace=true (6th arg); flat index of 'b' = 1.
-    expect(editor.blocks.insert).toHaveBeenCalledWith('header', {}, {}, 1, false, true, undefined, undefined);
+    expect(editor.blocks.insertAt).toHaveBeenCalledWith('header', {}, replacing('b'));
   });
 
   it('replace of a NESTED block targets that block own flat index, not root end', () => {
@@ -629,9 +676,9 @@ describe('useBlocks insert', () => {
     ]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => { result.current.insert({ type: 'header', position: { before: 'child' }, replace: true }); });
-    // 'child' is nested under p at flat index 1. The documented turn-into pattern
-    // must overwrite IT (index 1), not fall back to root end (index 2).
-    expect(editor.blocks.insert).toHaveBeenCalledWith('header', {}, {}, 1, false, true, undefined, undefined);
+    // The documented turn-into pattern overwrites the nested block itself.
+    expect(editor.blocks.insertAt).toHaveBeenCalledWith('header', {}, replacing('child'));
+    expect(editor.blocks.insert).toHaveBeenCalledWith('header', {}, {}, 1, false, true, undefined);
   });
 
   it('replace of a NESTED block keeps the replacement under the same parent', () => {
@@ -641,9 +688,8 @@ describe('useBlocks insert', () => {
     ]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => { result.current.insert({ type: 'header', position: { before: 'child' }, replace: true }); });
-    // A replace is a positional type-swap that PRESERVES the parent link: the new
-    // block (fake insert returns parentId null) is re-parented back under 'p'.
-    expect(editor.blocks.setBlockParent).toHaveBeenCalledWith('new-2', 'p');
+    // A replace is a positional type-swap that PRESERVES the parent link.
+    expect(result.current.getById('new-2')?.parentId).toBe('p');
   });
 
   it('replace of a ROOT block must not adopt the caller parentId', () => {
@@ -659,7 +705,8 @@ describe('useBlocks insert', () => {
     // replace is a positional type-swap that PRESERVES the overwritten block's
     // own parent, so the caller's parentId 'p' is irrelevant — the replacement
     // must stay at root and NOT be nested under 'p'.
-    expect(editor.blocks.setBlockParent).not.toHaveBeenCalled();
+    expect(editor.blocks.insertAt).toHaveBeenCalledWith('header', {}, replacing('root'));
+    expect(result.current.getById('new-2')?.parentId).toBeNull();
   });
 
   it('replace ignores a non-resolving parentId instead of bailing to null', () => {
@@ -672,9 +719,8 @@ describe('useBlocks insert', () => {
       result.current.insert({ type: 'header', parentId: 'ghost', position: { before: 'child' }, replace: true });
     });
     // Under replace the target's OWN parent governs, so parentId is irrelevant —
-    // a stale parentId must NOT short-circuit to null; the replace still runs at
-    // the target's slot (index 1).
-    expect(editor.blocks.insert).toHaveBeenCalledWith('header', {}, {}, 1, false, true, undefined, undefined);
+    // a stale parentId must NOT short-circuit to null; the replace still runs.
+    expect(editor.blocks.insertAt).toHaveBeenCalledWith('header', {}, replacing('child'));
   });
 
   it('replace runs even when an explicit id already exists (replace is not insert-if-absent)', () => {
@@ -682,15 +728,15 @@ describe('useBlocks insert', () => {
     const { result } = renderHook(() => useBlocks(editor));
     act(() => { result.current.insert({ type: 'header', id: 'a', position: { before: 'a' }, replace: true }); });
     // id 'a' exists, but replace is an explicit overwrite — the insert-if-absent
-    // short-circuit must NOT swallow it. Resolves to 'a' own slot (0) with id 'a'.
-    expect(editor.blocks.insert).toHaveBeenCalledWith('header', {}, {}, 0, false, true, 'a', undefined);
+    // short-circuit must NOT swallow it.
+    expect(editor.blocks.insertAt).toHaveBeenCalledWith('header', {}, replacing('a', { id: 'a' }));
   });
 
   it('forwards an explicit id to core', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => { result.current.insert({ type: 'paragraph', id: 'fixed-id' }); });
-    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 1, false, false, 'fixed-id', undefined);
+    expect(editor.blocks.insertAt).toHaveBeenCalledWith('paragraph', {}, at(null, 'end', { id: 'fixed-id' }));
   });
 
   it('forwards tunes to core so tune state can be set at creation', () => {
@@ -698,7 +744,7 @@ describe('useBlocks insert', () => {
     const { result } = renderHook(() => useBlocks(editor));
     const tunes = { align: 'center' };
     act(() => { result.current.insert({ type: 'paragraph', tunes }); });
-    expect(editor.blocks.insert).toHaveBeenCalledWith('paragraph', {}, {}, 1, false, false, undefined, tunes);
+    expect(editor.blocks.insertAt).toHaveBeenCalledWith('paragraph', {}, at(null, 'end', { tunes }));
   });
 
   it('is idempotent when an explicit id already exists (insert-if-absent)', () => {
@@ -801,20 +847,24 @@ describe('useBlocks insert', () => {
     expect(editor.blocks.transact).toHaveBeenCalledTimes(1);
   });
 
-  it('parented insert wraps insert + setBlockParent in a single transact', () => {
+  it('a parented insert is one insertAt call inside one transact', () => {
     const { editor } = makeFakeEditor([{ id: 'p', name: 'toggle' }]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => { result.current.insert({ type: 'paragraph', parentId: 'p' }); });
     expect(editor.blocks.transact).toHaveBeenCalledTimes(1);
-    expect(editor.blocks.insert).toHaveBeenCalledTimes(1);
-    expect(editor.blocks.setBlockParent).toHaveBeenCalledWith('new-1', 'p');
+    expect(editor.blocks.insertAt).toHaveBeenCalledTimes(1);
+    expect(result.current.getChildren('p').map((n) => n.id)).toEqual(['new-1']);
   });
 
-  it('returns null when editor.blocks.insert yields no block', () => {
+  it('returns null when core refuses the place', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }]);
-    (editor.blocks.insert as ReturnType<typeof vi.fn>).mockReturnValueOnce(undefined);
+    const refusal = Object.assign(new Error('refused'), { name: 'BlockPlacementError' });
+
+    (editor.blocks.insertAt as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+      throw refusal;
+    });
     const { result } = renderHook(() => useBlocks(editor));
-    let created: ReturnType<typeof result.current.insert> = null;
+    let created: ReturnType<typeof result.current.insert> = { id: 'sentinel' } as never;
     act(() => { created = result.current.insert({}); });
     expect(created).toBeNull();
   });
@@ -896,11 +946,12 @@ describe('useBlocks move', () => {
     expect(editor.blocks.move).toHaveBeenCalledWith(2, 0);
   });
 
-  it('move after a sibling resolves to sibling index + 1', () => {
+  it('move after a sibling delegates to moveTo and lands right after it', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => result.current.move('c', { after: 'a' }));
-    expect(editor.blocks.move).toHaveBeenCalledWith(1, 2);
+    expect(editor.blocks.moveTo).toHaveBeenCalledWith('c', { position: { after: 'a' } });
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['a', 'c', 'b']);
   });
 
   it('move is a no-op when the moved id is unknown', () => {
@@ -910,20 +961,18 @@ describe('useBlocks move', () => {
     expect(editor.blocks.move).not.toHaveBeenCalled();
   });
 
-  it('move after a later sibling (forward) compensates for the post-removal shift', () => {
+  it('move after a later sibling (forward) lands right after it', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => result.current.move('a', { after: 'b' }));
-    // resolveMoveIndex({after:'b'}) = 2; forward move from 0 → decremented to 1.
-    expect(editor.blocks.move).toHaveBeenCalledWith(1, 0);
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['b', 'a', 'c']);
   });
 
-  it('move before a later sibling (forward) compensates for the post-removal shift', () => {
+  it('move before a later sibling (forward) lands right before it', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => result.current.move('a', { before: 'c' }));
-    // resolveMoveIndex({before:'c'}) = 2; forward move from 0 → decremented to 1.
-    expect(editor.blocks.move).toHaveBeenCalledWith(1, 0);
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['b', 'a', 'c']);
   });
 
   it('move of a block that has descendants relocates the WHOLE subtree (not just the root)', () => {
@@ -939,11 +988,9 @@ describe('useBlocks move', () => {
     ]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => result.current.move('A', { after: 'B' }));
-    // Subtree relocation issues more than one core move (root + each descendant).
-    expect((editor.blocks.move as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(1);
-    // A1's parent is re-asserted to A after the relocation.
-    expect(editor.blocks.setBlockParent).toHaveBeenCalledWith('A1', 'A');
+    expect(editor.blocks.moveTo).toHaveBeenCalledTimes(1);
     // Final flat order: A's subtree sits contiguously after B.
+    expect(result.current.getBlockIndex('A1')).toBe(2);
     expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['B', 'A']);
     expect(result.current.getChildren('A').map((n) => n.id)).toEqual(['A1']);
   });
@@ -959,14 +1006,15 @@ describe('useBlocks move', () => {
     ]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => result.current.move('A', { after: 'A1' }));
-    expect(editor.blocks.move).not.toHaveBeenCalled();
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['A', 'B']);
+    expect(result.current.getChildren('A').map((n) => n.id)).toEqual(['A1']);
   });
 
   it('move is a no-op when the relative target is the moved block itself', () => {
     const { editor } = makeFakeEditor([{ id: 'A' }, { id: 'B' }]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => result.current.move('A', { before: 'A' }));
-    expect(editor.blocks.move).not.toHaveBeenCalled();
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['A', 'B']);
   });
 
   it('move is a no-op when a relative before/after ref does not exist', () => {
@@ -976,7 +1024,7 @@ describe('useBlocks move', () => {
     const { result } = renderHook(() => useBlocks(editor));
     act(() => result.current.move('a', { after: 'ghost' }));
     act(() => result.current.move('a', { before: 'nope' }));
-    expect(editor.blocks.move).not.toHaveBeenCalled();
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['a', 'b']);
   });
 
   it('move is a no-op when the moved id is unknown, probed WITHOUT getBlockIndex', () => {
@@ -1036,9 +1084,7 @@ describe('useBlocks move', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
     const { result } = renderHook(() => useBlocks(editor));
     act(() => result.current.move('a', { after: 'c' }));
-    // resolveMoveIndex({after:'c'}) = 3 (= length); decremented to 2 so Blok's
-    // toIndex<length guard doesn't silently drop the move.
-    expect(editor.blocks.move).toHaveBeenCalledWith(2, 0);
+    expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['b', 'c', 'a']);
   });
 });
 
@@ -1221,10 +1267,10 @@ describe('useBlocks insertMany', () => {
     });
     expect(created).toHaveLength(2);
     expect(editor.blocks.transact).toHaveBeenCalledTimes(1);
-    // 1st spec: plain root append at end (index 2), replace=false.
-    expect(editor.blocks.insert).toHaveBeenNthCalledWith(1, 'paragraph', {}, {}, 2, false, false, undefined, undefined);
-    // 2nd spec: replace 'b' in place at its own flat index 1, replace=true.
-    expect(editor.blocks.insert).toHaveBeenNthCalledWith(2, 'header', {}, {}, 1, false, true, undefined, undefined);
+    // 1st spec: plain root append at end.
+    expect(editor.blocks.insertAt).toHaveBeenNthCalledWith(1, 'paragraph', {}, at(null, 'end'));
+    // 2nd spec: replace 'b' in place.
+    expect(editor.blocks.insertAt).toHaveBeenNthCalledWith(2, 'header', {}, replacing('b'));
   });
 
   it('a focus:true spec in the batch focuses only that block, not its batch siblings', () => {
@@ -1238,10 +1284,8 @@ describe('useBlocks insertMany', () => {
         { type: 'paragraph', focus: true },
       ]);
     });
-    // 1st spec: needToFocus=false (5th arg).
-    expect(editor.blocks.insert).toHaveBeenNthCalledWith(1, 'paragraph', {}, {}, 1, false, false, undefined, undefined);
-    // 2nd spec: needToFocus=true.
-    expect(editor.blocks.insert).toHaveBeenNthCalledWith(2, 'paragraph', {}, {}, 2, true, false, undefined, undefined);
+    expect(editor.blocks.insertAt).toHaveBeenNthCalledWith(1, 'paragraph', {}, at(null, 'end'));
+    expect(editor.blocks.insertAt).toHaveBeenNthCalledWith(2, 'paragraph', {}, at(null, 'end', { focus: true }));
   });
 
   it('inserts every spec even when core exposes no transact (fallback runs the batch directly)', () => {
@@ -1426,13 +1470,13 @@ describe('useBlocks transact fallback (editor.blocks.transact undefined)', () =>
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
-  it('a single insert still runs (delegates to core.insert) without a transact', () => {
+  it('a single insert still runs (delegates to core.insertAt) without a transact', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }]);
     (editor.blocks as unknown as { transact?: (fn: () => void) => void }).transact = undefined;
     const { result } = renderHook(() => useBlocks(editor));
     let created: ReturnType<typeof result.current.insert> = null;
     act(() => { created = result.current.insert({ type: 'paragraph' }); });
-    expect(editor.blocks.insert).toHaveBeenCalledTimes(1);
+    expect(editor.blocks.insertAt).toHaveBeenCalledTimes(1);
     expect(created).toMatchObject({ type: 'paragraph' });
   });
 });

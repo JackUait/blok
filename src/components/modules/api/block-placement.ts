@@ -124,8 +124,10 @@ export const resolvePlacement = (
 };
 
 /**
- * Throws when `block` may not move under `parentId`. Mirrors the refusals of
- * `BlockManager.move`, which a move group skips.
+ * Throws when `block` may not move under `parentId`. A move group skips the
+ * refusals of `BlockManager.move`, so they are checked here. A `column` is an
+ * ordinary container here: the name makes the slot explicit, unlike a flat
+ * index.
  * @param tree - the blocks
  * @param block - the block being moved
  * @param parentId - its new parent
@@ -141,16 +143,8 @@ export const assertCanMoveUnder = (tree: BlockTree, block: Block, parentId: stri
     return;
   }
 
-  const oldParent = block.parentId === null ? undefined : tree.getBlockById(block.parentId);
-  const isColumnPart = (candidate: Block | undefined): boolean =>
-    candidate?.name === 'column' || candidate?.name === 'column_list';
-
   if (parent?.tool.ownsChildren === true) {
     throw new BlockPlacementError(`${nameOf(parentId)} owns its children`);
-  }
-
-  if (isColumnPart(oldParent) || isColumnPart(parent)) {
-    throw new BlockPlacementError(`cannot move "${block.id}" into or out of a column`);
   }
 
   if (!isChildToolAllowed(parent, block.name)) {

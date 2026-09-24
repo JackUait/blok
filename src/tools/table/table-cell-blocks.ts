@@ -1366,8 +1366,16 @@ export class TableCellBlocks {
     // comes with the table's own data write (setData mounts it then). Its
     // holder sits next to its flat neighbour, so adjacency (and save()'s
     // harvest) would claim the neighbour's cell and send it to every peer.
+    // A peer's add can land before its parent write, so its block with no
+    // parent yet is held too. Not our own: a local split in the sync window
+    // adds one the same way, and save() is what puts it in its cell.
     if (this.api.blocks.isSyncingFromYjs) {
-      if (this.api.blocks.getById?.(detail.target.id)?.parentId === this.tableBlockId) {
+      const parentId = this.api.blocks.getById?.(detail.target.id)?.parentId ?? null;
+      const peerBlockAwaitingParent = this.api.blocks.isApplyingRemoteChange
+        && (parentId === null || parentId === '')
+        && this.gridElement.contains(detail.target.holder);
+
+      if (parentId === this.tableBlockId || peerBlockAwaitingParent) {
         this.blocksAwaitingCell.add(detail.target.id);
       }
 

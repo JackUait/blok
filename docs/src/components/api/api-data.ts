@@ -1270,6 +1270,12 @@ editor.blocks.setPointerDragActive(false);`,
         description:
           "A readonly getter. It is true while a pointer drag interaction is active. Framework adapters read it to defer a programmatic `dispatchChange` in the middle of a drag, because core silently drops such a change. They re-dispatch it once the drag ends.",
       },
+      {
+        name: "isApplyingRemoteChange",
+        type: "boolean",
+        description:
+          "A readonly getter. It is true while the editor applies a change another client made. A peer's new block can arrive before the write that gives it a parent. A container tool reads this to tell such a block from one this client adds in its own sync window.",
+      },
     ],
   },
   {

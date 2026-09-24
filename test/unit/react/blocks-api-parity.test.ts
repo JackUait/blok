@@ -35,6 +35,10 @@ const CORE_TO_REACT: Record<keyof Blocks, Classification> = {
     kind: 'internal',
     reason: 'read-side of the pointer-drag suppression flag; consumed by adapter commit-debounce, not app code',
   },
+  isApplyingRemoteChange: {
+    kind: 'internal',
+    reason: 'tells a container tool a peer\'s block from its own during a sync window; not app code',
+  },
   clear: { kind: 'exposed' },
   render: { kind: 'exposed' },
   renderFromHTML: { kind: 'exposed' },

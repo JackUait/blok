@@ -45,6 +45,14 @@ export interface Blocks {
   readonly isPointerDragActive: boolean;
 
   /**
+   * Returns true while the editor applies a change another client made.
+   * A peer's new block can arrive before the write that gives it a parent,
+   * so a container can read this to tell such a block from one this client
+   * is adding inside a sync window of its own.
+   */
+  readonly isApplyingRemoteChange: boolean;
+
+  /**
    * Remove all blocks from Blok zone
    */
   clear(): Promise<void>;

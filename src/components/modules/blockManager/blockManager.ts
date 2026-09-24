@@ -242,6 +242,13 @@ export class BlockManager extends Module {
   }
 
   /**
+   * Whether the editor is applying a change another client made.
+   */
+  public get isApplyingRemoteChange(): boolean {
+    return this.yjsSync.isMaterializingFromPeer;
+  }
+
+  /**
    * When true, suppresses DOM-mutation-triggered Yjs syncs.
    * Set by the table tool's cell-selection handler during a pointer drag
    * to prevent cross-cell browser DOM mutations from corrupting Yjs state.

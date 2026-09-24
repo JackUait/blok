@@ -10,8 +10,8 @@ import { Dom as $ } from '../../dom';
 import type { BlocksStore } from './types';
 
 /**
- * BlockRepository provides read-only access to blocks
- * All methods are queries without side effects
+ * BlockRepository provides read access to blocks.
+ * Every method except reorderBlocks is a query without side effects.
  */
 export class BlockRepository {
   /**
@@ -123,8 +123,8 @@ export class BlockRepository {
   }
 
   /**
-   * Puts the same blocks in a new flat order, in place. The one write here:
-   * it goes through the store so the store's id index stays in sync.
+   * Puts the same blocks in a new flat order, in place. Goes through the
+   * store so its id index stays in sync.
    * @param order - every block of the store, in the new order
    */
   public reorderBlocks(order: Block[]): void {

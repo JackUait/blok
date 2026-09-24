@@ -275,6 +275,71 @@ describe('BlockHierarchy.setBlockParent — holders in the DOM', () => {
     expect(holderIds(firstCell)).toEqual(['a']);
   });
 
+  it('keeps each child of a two-slot parent in its own slot when the parent moves', () => {
+    const h = build(workingArea, [
+      { id: 't', kind: 'toggle' },
+      { id: 'two', kind: 'table' },
+      { id: 'a', parentId: 'two' },
+      { id: 'b', parentId: 'two' },
+    ]);
+    const two = h.get('two');
+    const [firstSlot, secondSlot] = h.cellsOf('two');
+
+    // An adapter block with two child slots: not a table, so no tool places them.
+    Object.assign(two, { name: 'two-slots' });
+    secondSlot.appendChild(h.get('b').holder);
+    h.hierarchy.setBlockParent(two, 't');
+
+    expect(holderIds(firstSlot)).toEqual(['a']);
+    expect(holderIds(secondSlot)).toEqual(['b']);
+    expect(holderIds(h.slotOf('t'))).toEqual(['two']);
+  });
+
+  it('puts a root holder back in flat order when its root parent link is re-asserted', () => {
+    const h = build(workingArea, [
+      { id: 'a' },
+      { id: 'b' },
+      { id: 'c' },
+    ]);
+
+    reorder(h, ['a', 'c', 'b']);
+    h.hierarchy.setBlockParent(h.get('b'), null);
+
+    expect(holderIds(workingArea)).toEqual(['a', 'c', 'b']);
+  });
+
+  it('moves a block that leaves a table cell for the root out of the cell', () => {
+    const h = build(workingArea, [
+      { id: 'table', kind: 'table' },
+      { id: 'a', parentId: 'table' },
+      { id: 'b', parentId: 'table' },
+      { id: 'after' },
+    ]);
+    const [, secondCell] = h.cellsOf('table');
+
+    secondCell.appendChild(h.get('b').holder);
+    reorder(h, ['table', 'a', 'after', 'b']);
+    h.hierarchy.setBlockParent(h.get('b'), null);
+
+    expect(holderIds(secondCell)).toEqual([]);
+    expect(holderIds(workingArea)).toEqual(['table', 'after', 'b']);
+  });
+
+  it('leaves the holders alone when the new parent sits inside a moved child\'s holder', () => {
+    const h = build(workingArea, [
+      { id: 'para' },
+      { id: 'kid', parentId: 'para' },
+      { id: 't', kind: 'toggle' },
+    ]);
+
+    // Corrupted DOM: the toggle's holder sits inside the slotless child's holder.
+    h.get('kid').holder.appendChild(h.get('t').holder);
+
+    expect(() => h.hierarchy.setBlockParent(h.get('para'), 't')).not.toThrow();
+    expect(h.get('para').parentId).toBe('t');
+    expect(holderIds(workingArea)).toEqual(['para', 'kid']);
+  });
+
   it('fires the moved hook once for each nested list item and not for the moved block', () => {
     const h = build(workingArea, [
       { id: 't', kind: 'toggle' },

@@ -6,8 +6,6 @@
 import type { Block } from '../../block';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { logLabeled } from '../../utils';
-import { moveElementAfter, moveElementBefore, moveElementToEnd } from '../../utils/html';
-import { isSlotless } from '../../../tools/nested-blocks';
 import { homeSlotElement, resolveHomeSlot } from '../../utils/home-slot';
 import { findOwn } from '../../utils/own-element';
 import { childrenInTreeOrder, flatIndexForPlacement, placementImpliedByFlat } from '../../utils/tree-order';
@@ -279,37 +277,79 @@ export class BlockHierarchy {
   }
 
   /**
-   * After a slotless block changed slot, brings along its descendants that
-   * were left behind in the old slot, placing them right after it in flat
-   * (depth-first) order. A descendant that owns a slot carries its own subtree.
-   * @param block - the block that moved
-   * @param oldSlot - the element that held `block` before the move
+   * Whether {@link setBlockParent} may move `block`'s holder into the home
+   * slot of `newParent`. No when another container still claims the holder,
+   * or when the home slot sits inside the holder.
+   *
+   * The home slot is a querySelector, so a parent with one slot per child
+   * position (a table, whose every cell is a nested-blocks slot, or an adapter
+   * block rendering two <BlockChildren>) always resolves to slot ONE. This veto
+   * is what keeps the other slots' children where they are.
+   * @param block - the block being reparented
+   * @param newParent - its new parent
+   * @param oldHomeSlot - the slot the block is leaving (null when the parent is unchanged)
    */
-  private carrySlotlessDescendants(block: Block, oldSlot: Element): void {
-    const visited = new Set<string>([block.id]);
-    const newSlot = block.holder.parentElement;
+  private mayMountUnder(block: Block, newParent: Block, oldHomeSlot: Element | null): boolean {
+    const newContainer = this.findHomeSlot(newParent.id);
+    const currentNestedContainer = block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`);
 
-    const place = (parent: Block, previous: HTMLElement): HTMLElement =>
-      parent.contentIds.reduce<HTMLElement>((prev, childId) => {
-        const child = visited.has(childId) ? undefined : this.repository.getBlockById(childId);
+    if (newContainer === null) {
+      return true;
+    }
 
-        if (child === undefined) {
-          return prev;
-        }
-        visited.add(childId);
+    // Corrupted DOM: mounting would insert the new parent into its own child.
+    const subtree = this.repository.blocks.filter(candidate => candidate === block || this.isUnder(candidate, block.id));
 
-        if (child.holder.parentElement === oldSlot) {
-          moveElementAfter(child.holder, prev);
-        }
+    if (subtree.some(member => member.holder.contains(newContainer))) {
+      return false;
+    }
 
-        if (child.holder.parentElement !== newSlot) {
-          return prev;
-        }
+    // A column→column move is a legitimate reparent driven by the drag system.
+    // A column's child container is identifiable because its PARENT is the
+    // [data-blok-column] wrapper (a toggle nested inside a column does not match).
+    const isColumnContainer = (container: Element | null): boolean =>
+      container?.parentElement?.matches('[data-blok-column]') === true;
+    // The column_list's own child container is the columns row. A `column`
+    // block always belongs to a columns row, so mounting one into a row is
+    // never a steal (drag-beside "add a column": the new column's holder first
+    // lands inside a SIBLING column's container).
+    const isColumnsRow = (container: Element | null): boolean =>
+      container?.matches('[data-blok-columns]') === true;
+    // A container that ENCLOSES the destination never legitimately claims a
+    // block bound for it. Blocks.insert anchors a new holder 'beforebegin' its
+    // flat successor, so Enter at the end of a nested container's last child
+    // drops the new holder one level OUT; setBlockParent must repair it.
+    const strandedInAncestorContainer =
+      currentNestedContainer !== null &&
+      currentNestedContainer !== newContainer &&
+      currentNestedContainer.contains(newContainer);
+    // The mirror strand: appending at the end of a container whose last child
+    // has children anchors the holder 'afterend' that grandchild, inside the
+    // SIBLING's own slot. Only DISJOINT containers (sibling table cells,
+    // sibling toggles) keep the veto.
+    const strandedInDescendantContainer =
+      currentNestedContainer !== null &&
+      currentNestedContainer !== newContainer &&
+      newContainer.contains(currentNestedContainer);
+    // A DISCONNECTED container never claims a block: replace() swaps out a
+    // container block and its children's holders leave with the removed
+    // subtree. The exception is a container inside the new parent itself,
+    // which must hold while an adapter boots the editor on a detached holder
+    // (else every table cell's block is pulled into cell (0,0)). This relies
+    // on container tools SWAPPING their child slot rather than appending a
+    // new one beside the old.
+    const claimedByOtherContainer =
+      currentNestedContainer !== null &&
+      (currentNestedContainer.isConnected || newParent.holder.contains(currentNestedContainer)) &&
+      currentNestedContainer !== newContainer &&
+      !(isColumnContainer(currentNestedContainer) && isColumnContainer(newContainer)) &&
+      !isColumnsRow(newContainer) &&
+      !strandedInAncestorContainer &&
+      !strandedInDescendantContainer &&
+      // The slot the block is leaving is not a claim on it.
+      currentNestedContainer !== oldHomeSlot;
 
-        return isSlotless(child) ? place(child, child.holder) : child.holder;
-      }, previous);
-
-    place(block, block.holder);
+    return !claimedByOtherContainer;
   }
 
   /**
@@ -406,59 +446,22 @@ export class BlockHierarchy {
 
     this.sortListedChildrenByFlatOrder(sanitizedParentId);
 
-    // Model only (contentIds, parentId, flat order). Tables and databases too:
-    // they order children by their own model, but the flat array must still
-    // list those children inside their run. The holders move below.
-    this.placeBlock(block, placement, { dom: false });
-
-    const slotBefore = block.holder.parentElement;
-    const homeSlot = this.findHomeSlot(sanitizedParentId);
-
-    // If old parent had a toggle child container and this block was in it, move it to the
-    // position indicated by the flat array. moveBlocks() updates the flat array before
-    // setBlockParent() is called, so getBlockIndex() reflects the intended drop position.
-    //
-    // Guard: only relocate the holder OUT of the toggle when the block is actually
-    // LEAVING its toggle parent (new parent differs from the old one). When the
-    // parent is unchanged the block is merely following its own relocated parent —
-    // e.g. a toggle dragged between columns carries its child along, and
-    // DragController re-asserts the child's parent via setBlockParent(child, sameToggle)
-    // to fix DOM placement. Yanking it to root here would strand the child outside
-    // the toggle even though it still belongs to it (the toggle-child-rides-along bug).
-    //
-    // The old slot is the old parent's HOME slot, so a block nested under a
-    // slotless toggle child leaves too. It is skipped when the new home is that
-    // same slot (Tab under a sibling inside the toggle): the mount below only
-    // re-orders it there.
     const oldHomeSlot =
       oldParent !== undefined && sanitizedParentId !== oldParentId
         ? this.findHomeSlot(oldParentId)
         : null;
-    const oldContainer = oldHomeSlot?.matches('[data-blok-toggle-children]') === true ? oldHomeSlot : null;
-
-    if (oldContainer && block.holder.parentElement === oldContainer && homeSlot !== oldContainer) {
-      // Scan backwards in the flat array for the nearest block whose holder is at root
-      // level (not inside any toggle-children container) — use it as the DOM anchor.
-      const allBlocks = this.repository.blocks;
-      const blockIndex = allBlocks.indexOf(block);
-      const isOutsideToggles = (b: Block): boolean => b.holder.closest('[data-blok-toggle-children]') === null;
-      const anchor = allBlocks.slice(0, blockIndex).reverse().find(isOutsideToggles);
-      // At flat index 0 nothing precedes it; the old parent's holder may itself
-      // sit in a slot, so anchor before the next root block instead.
-      const followingRoot = anchor === undefined
-        ? allBlocks.slice(blockIndex + 1).find(isOutsideToggles)
-        : undefined;
-
-      if (anchor) {
-        moveElementAfter(block.holder, anchor.holder);
-      } else if (followingRoot !== undefined) {
-        moveElementBefore(block.holder, followingRoot.holder);
-      } else if (oldParent !== undefined) {
-        moveElementAfter(block.holder, oldParent.holder);
-      }
-    }
-
     const newParent = sanitizedParentId !== null ? this.repository.getBlockById(sanitizedParentId) : undefined;
+    const withDom = this.blocksStore !== undefined
+      && (newParent === undefined || this.mayMountUnder(block, newParent, oldHomeSlot));
+
+    // Tables and databases too: they order children by their own model, but
+    // the flat array must still list those children inside their run.
+    // placeBlock leaves their holders where they are.
+    this.placeBlock(block, placement, { dom: withDom });
+
+    if (!withDom) {
+      this.reindentSubtree(block);
+    }
 
     // If the new parent's existing children are hidden (toggle is collapsed),
     // hide this newly added child too so Tab navigation skips it.
@@ -499,202 +502,6 @@ export class BlockHierarchy {
       block.holder.classList.remove('hidden');
     }
 
-    // Move block holder into the new parent's direct child container, honouring
-    // the flat-array order so the DOM order matches the logical order.
-    //
-    // The target container may be a toggle/callout container ([data-blok-toggle-children])
-    // or a generic nested-blocks container ([data-blok-nested-blocks], used by
-    // columns and column_list). querySelector returns the FIRST match in
-    // document order: because a parent's own child container is a direct child of
-    // its wrapper, it always precedes any grandchild container (which lives INSIDE
-    // it, deeper in document order). So this resolves to the parent's own direct
-    // container, never a deeper one belonging to a nested block.
-    //
-    // Skip guard: keep the original behaviour of refusing to move a holder that
-    // is already claimed by SOME nested-blocks container (e.g. a table cell) —
-    // moving it would steal it from that container. The one loosening Track C
-    // needs is to still mount when the target is the holder's CURRENT container
-    // already (a no-op insertBefore that re-asserts flat order); we express that
-    // by only skipping when the holder's nearest nested container is DIFFERENT
-    // from the target container.
-    //
-    // A SLOTLESS parent's children share the slot of its nearest ancestor that
-    // owns one (see findHomeSlot), placed flat after it by the same rule.
-    if (sanitizedParentId !== null && newParent !== undefined) {
-      const newContainer = homeSlot;
-      const currentNestedContainer = block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`);
-
-      // A column→column move is a legitimate reparent driven by the drag system:
-      // the holder must follow the model into the destination column. The
-      // anti-stealing guard targets corrupted multi-references across tool
-      // containers (table cell / toggle / callout / header), never the columns
-      // flex layout. A column's child container is identifiable because its
-      // PARENT is the [data-blok-column] wrapper — that precisely separates the
-      // two cases (a toggle nested inside a column would not match).
-      const isColumnContainer = (container: Element | null): boolean =>
-        container?.parentElement?.matches('[data-blok-column]') === true;
-      // The column_list's own child container is the columns row. A `column`
-      // block always belongs to a columns row, so mounting one into a row is a
-      // legitimate structural reparent — never a steal. This is the case the
-      // drag-beside "add a column" path hits: api.blocks.insert anchors the new
-      // column's holder next to a SIBLING column's child block (the new column's
-      // flat index falls inside that sibling's child range), so the holder lands
-      // inside that sibling column's container. Without this allowance the guard
-      // below refuses to move it out, stranding the new column nested INSIDE its
-      // sibling instead of placing it beside it in the row.
-      const isColumnsRow = (container: Element | null): boolean =>
-        container?.matches('[data-blok-columns]') === true;
-      // A container that ENCLOSES the destination never legitimately claims a
-      // block bound for it — that is model/DOM divergence by definition. This
-      // is the ancestor strand: Blocks.insert anchors a new holder
-      // 'beforebegin' its flat successor whenever the successor's container
-      // encloses the predecessor's, so pressing Enter at the end of a nested
-      // container's child (a callout inside a column, a toggle inside a
-      // callout, any adapter container) drops the new holder one level OUT, in
-      // the enclosing container. Every insert path then repairs the link via
-      // setBlockParent — and without this allowance the guard below vetoed the
-      // repair, leaving the block permanently outside the parent the model (and
-      // the save output) claims it lives in.
-      //
-      // Subsumes the Enter/split-in-column strand: the [data-blok-columns] row
-      // always encloses the column wrapper that holds a column's own container.
-      const strandedInAncestorContainer =
-        currentNestedContainer !== null &&
-        newContainer !== null &&
-        currentNestedContainer !== newContainer &&
-        currentNestedContainer.contains(newContainer);
-      // The mirror strand: a container INSIDE the destination is just as
-      // impossible a claim. Appending a child at the end of a container
-      // resolves to the flat index past the parent's last DESCENDANT, so when
-      // the parent's last child has children of its own the new block's flat
-      // predecessor is that grandchild — and Blocks.insert anchors the holder
-      // 'afterend' it, i.e. inside the SIBLING's own slot, one level too deep.
-      // Vetoing the repair here left every appended sibling permanently nested
-      // inside its predecessor (public insertChild(data, 'end') and the
-      // adapters' useBlocks().insert({ parentId, position: 'end' }) alike).
-      //
-      // Only DISJOINT containers keep the anti-stealing veto — sibling table
-      // cells and sibling toggles, the corrupted multi-reference case the guard
-      // was written for. Neither encloses the other, so neither is loosened.
-      const strandedInDescendantContainer =
-        currentNestedContainer !== null &&
-        newContainer !== null &&
-        currentNestedContainer !== newContainer &&
-        newContainer.contains(currentNestedContainer);
-      // A DISCONNECTED container can never legitimately claim a block. When
-      // replace() swaps out a container block (e.g. toggle heading → toggle
-      // heading of another level), the children holders leave the document
-      // inside the removed subtree; their nearest nested container still
-      // resolves to that dead subtree's container. Treating that as a claim
-      // stranded the children in detached DOM — visible content lost while the
-      // model still said they were nested (the toggle-heading level-convert
-      // data-loss bug). Only a container that is actually in the document can
-      // veto the mount — EXCEPT one that belongs to the destination parent
-      // itself, which is a legitimate claimant whether or not the editor has
-      // been attached yet. A dead subtree from a replaced block is never a
-      // descendant of the NEW parent, so it still loses its claim.
-      //
-      // That exception is what makes MULTI-SLOT parents survive boot. Because
-      // `newContainer` above is a querySelector, a parent holding one slot per
-      // child position — a table, whose every cell carries the nested-blocks
-      // attribute, or an adapter block rendering two <BlockChildren> — always
-      // resolves to slot ONE. This veto is the only thing standing between that
-      // and "every child moved into the first slot", and it has to hold while
-      // the subtree is still detached: React/Vue/Angular hosts construct the
-      // editor on a holder they attach only after render, and inside that window
-      // Table.rendered() placed each cell's block and the setBlockParent that
-      // immediately follows — a no-op parent-wise, old === new — yanked it right
-      // back out into cell (0,0). Same shape as the table's own guard, which
-      // asks `!this.gridElement.contains(...)` rather than `isConnected`.
-      //
-      // The second arm only ever decides anything while `newParent.holder` is
-      // itself disconnected: `isConnected` is true for everything whose root is
-      // the document, so on an attached editor a descendant of the holder has
-      // already satisfied arm one. Every live path — drag, Yjs replay, paste,
-      // indent, the blocks API — is bit-identical to before.
-      //
-      // It relies on container tools SWAPPING their child slot rather than
-      // appending a new one beside the old: `blocks.ts` replaces a converted
-      // block with `holder.replaceWith(...)` and the header tool with
-      // `replaceChild(...)`, so a replaced block's dead slot leaves the holder
-      // and cannot be a descendant of the new parent. A tool that appended
-      // first and removed second would put a dead slot inside the new parent
-      // and re-open the data loss this `isConnected` gate was added for.
-      const claimedByOtherContainer =
-        currentNestedContainer !== null &&
-        (currentNestedContainer.isConnected || newParent.holder.contains(currentNestedContainer)) &&
-        currentNestedContainer !== newContainer &&
-        !(isColumnContainer(currentNestedContainer) && isColumnContainer(newContainer)) &&
-        !isColumnsRow(newContainer) &&
-        !strandedInAncestorContainer &&
-        !strandedInDescendantContainer &&
-        // The slot the block is leaving is not a claim on it.
-        currentNestedContainer !== oldHomeSlot;
-
-      // Circular-DOM guard (same one the table carries): if corrupted DOM puts
-      // the declared parent's holder INSIDE this block's holder, mounting would
-      // insert an ancestor into its own descendant and insertBefore throws a
-      // HierarchyRequestError, taking the whole insert/drag pipeline down. The
-      // ancestor allowance above is a new way to reach that state, so refuse
-      // the move instead.
-      const wouldNestInsideItself = newContainer !== null && block.holder.contains(newContainer);
-
-      if (newContainer && !claimedByOtherContainer && !wouldNestInsideItself) {
-        const allBlocks = this.repository.blocks;
-        const blockIdx = allBlocks.indexOf(block);
-        const nextSiblingHolder = allBlocks.slice(blockIdx + 1).find(
-          b => b.holder.parentElement === newContainer
-        )?.holder ?? null;
-
-        nextSiblingHolder !== null
-          ? moveElementBefore(block.holder, nextSiblingHolder)
-          : moveElementToEnd(newContainer, block.holder);
-      }
-    }
-
-    // Escaping a column for ROOT. The positional blocksStore.move() skips the
-    // DOM move while the holder is nested (it follows its parent container by
-    // default — correct for table cells), and the mount-into-container branch
-    // above only runs for a non-null parent — so a block dragged OUT of a
-    // column to root would otherwise stay stranded in the column's container
-    // while the model says root (a model-vs-DOM divergence). Relocate the
-    // holder to the workingArea at its flat-array position. Toggle/callout/
-    // header escapes are handled by the [data-blok-toggle-children] block near
-    // the top of this method; table cells manage their own DOM and block
-    // cross-cell drops upstream — so this is scoped to columns only.
-    //
-    // Match BOTH the column wrapper ([data-blok-column]) AND the columns row
-    // ([data-blok-columns]) itself: a "drop below the columns" targets the
-    // column_list block with a bottom edge, which moves the block to the slot
-    // right after the list — a flat index that lands its holder directly in the
-    // columns row (a sibling of the columns), not inside any column wrapper.
-    // Without the row match, that holder strands in the row, rendering as a
-    // phantom extra column and shifting every real column's index.
-    if (
-      sanitizedParentId === null &&
-      block.holder.closest('[data-blok-column], [data-blok-columns]') !== null
-    ) {
-      const allBlocks = this.repository.blocks;
-      const blockIndex = allBlocks.indexOf(block);
-      const isAtRoot = (b: Block): boolean => b.holder.closest(`[${DATA_ATTR.nestedBlocks}]`) === null;
-      const precedingRoot = allBlocks.slice(0, blockIndex).reverse().find(isAtRoot);
-      const followingRoot = allBlocks.slice(blockIndex + 1).find(isAtRoot);
-
-      if (precedingRoot !== undefined) {
-        moveElementAfter(block.holder, precedingRoot.holder);
-      } else if (followingRoot !== undefined) {
-        moveElementBefore(block.holder, followingRoot.holder);
-      }
-    }
-
-    if (slotBefore !== null && block.holder.parentElement !== slotBefore && isSlotless(block)) {
-      this.carrySlotlessDescendants(block, slotBefore);
-    }
-
-    // Update visual indentation for the block AND its whole subtree — a reparent
-    // shifts every descendant's structural depth, so their margins move too.
-    this.reindentSubtree(block);
-
     // Notify listener so parent data can be synced (e.g. to Yjs)
     if (sanitizedParentId !== null && this.onParentChanged !== undefined) {
       this.onParentChanged(sanitizedParentId);
@@ -717,8 +524,12 @@ export class BlockHierarchy {
    * - Hiding a block that joins a collapsed toggle.
    * - Yjs writes and the parent-change callback.
    *
+   * A holder inside another moved holder rides along and is not mounted: a
+   * parent with several slots (a table, an adapter block) keeps each child in
+   * its own slot.
+   *
    * `dom: false` writes the model only: no mount, no re-indent, no store
-   * needed. setBlockParent uses it while it still moves holders itself.
+   * needed. setBlockParent uses it when another container claims the holder.
    * @param block - the block to move
    * @param placement - where it goes
    * @param options - what to write besides the model
@@ -795,8 +606,9 @@ export class BlockHierarchy {
     // already be in place.
     [...moving].reverse().forEach(member => {
       const home = resolveHomeSlot(member.parentId, getBlock);
+      const ridesAlong = moving.some(other => other !== member && other.holder.contains(member.holder));
 
-      if (home.kind === 'slot' || home.kind === 'root') {
+      if (!ridesAlong && (home.kind === 'slot' || home.kind === 'root')) {
         store.mount(member, this.repository.getBlockIndex(member), home.kind === 'slot' ? home.slot : null);
       }
     });

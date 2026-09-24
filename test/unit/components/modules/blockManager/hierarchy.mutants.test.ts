@@ -5,25 +5,7 @@ import { Blocks } from '../../../../../src/components/blocks';
 import { BlockHierarchy } from '../../../../../src/components/modules/blockManager/hierarchy';
 import { BlockRepository } from '../../../../../src/components/modules/blockManager/repository';
 import type { BlocksStore } from '../../../../../src/components/modules/blockManager/types';
-import type * as HtmlUtils from '../../../../../src/components/utils/html';
-import { moveElementAfter } from '../../../../../src/components/utils/html';
 import { isInstrumented } from '../../../helpers/instrumented';
-
-/**
- * The DOM-move helpers keep their real behaviour; only `moveElementAfter` is
- * wrapped so a test can assert that a reparent performed NO extractive move.
- * That intermediate detach is invisible in the final DOM — the mount branch at
- * the end of setBlockParent puts the holder back — so it is the only way to
- * pin "re-asserting the same parent does not yank the child out".
- */
-vi.mock('../../../../../src/components/utils/html', async (importOriginal) => {
-  const actual = await importOriginal<typeof HtmlUtils>();
-
-  return {
-    ...actual,
-    moveElementAfter: vi.fn(actual.moveElementAfter),
-  };
-});
 
 /*
  * Mutants of hierarchy.ts that no test can kill, and why. Each is a real
@@ -46,10 +28,6 @@ vi.mock('../../../../../src/components/utils/html', async (importOriginal) => {
  *     `sanitizedParentId !== null ? getBlockById(...)`, which both yield
  *     `undefined` either way.
  *
- * `Node.contains(null)` is false per DOM, so forcing `newContainer !== null`
- * true in strandedInAncestorContainer / wouldNestInsideItself leaves both
- * flags false.
- *
  * strandedInAncestorContainer and strandedInDescendantContainer are read ONLY
  * by claimedByOtherContainer, which already requires
  * `currentNestedContainer !== newContainer`. Forcing that same comparison true
@@ -66,10 +44,6 @@ vi.mock('../../../../../src/components/utils/html', async (importOriginal) => {
  * `getBlockDepth`'s `block.id !== undefined` seed guard forced true is a no-op
  * for a real block, and even for an id-less one both variants return the same
  * depth (one bails on `visited.has(undefined)`, the other on a missed lookup).
- *
- * The `else if (oldParent !== undefined)` anchor fallback forced true is
- * unreachable-as-a-difference: that branch runs only when `oldContainer` is
- * truthy, which already required `oldParent !== undefined`.
  *
  * isColumnContainer's SECOND `?.` (`container?.parentElement.matches`) needs an
  * element with no parentElement. Its two call sites pass either a container the
@@ -94,6 +68,7 @@ interface Fixture {
 }
 
 const workingAreas: HTMLElement[] = [];
+const storeOf = new WeakMap<BlockRepository, Blocks>();
 
 /**
  * Builds a minimal Block stand-in with the hierarchy surface the module reads.
@@ -139,12 +114,20 @@ const createFixture = (configs: FixtureBlockConfig[]): Fixture => {
   const repository = new BlockRepository();
 
   repository.initialize(store as BlocksStore);
+  storeOf.set(repository, store);
 
   return {
     repository,
     workingArea,
   };
 };
+
+/**
+ * @param repository - a fixture's repository
+ * @returns a hierarchy that mounts holders through the fixture's store
+ */
+const hierarchyOf = (repository: BlockRepository): BlockHierarchy =>
+  new BlockHierarchy(repository, undefined, undefined, storeOf.get(repository));
 
 /**
  * @param repository - repository to look the block up in
@@ -206,7 +189,7 @@ describe('BlockHierarchy — mutation coverage', () => {
   describe('getBlockDepth', () => {
     it('seeds the visited set with the block itself, so a self-parent stays depth 0', () => {
       const { repository } = createFixture([{ id: 'self', parentId: 'self' }]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
 
       expect(hierarchy.getBlockDepth(requireBlock(repository, 'self'))).toBe(0);
     });
@@ -217,7 +200,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'a', parentId: 'b' },
         { id: 'b', parentId: 'a' },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       let depth = -1;
 
       expect(() => {
@@ -235,7 +218,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'a', parentId: 'b' },
         { id: 'b', parentId: 'a' },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
 
       expect(() => hierarchy.setBlockParent(requireBlock(repository, 'mover'), 'target')).toThrow(
         /refusing to form cycle/
@@ -246,7 +229,7 @@ describe('BlockHierarchy — mutation coverage', () => {
   describe('setBlockParent — dangling parent guard', () => {
     it('names both the dangling parent and the block in the message', () => {
       const { repository } = createFixture([{ id: 'child', parentId: null }]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
 
       expect(() => hierarchy.setBlockParent(requireBlock(repository, 'child'), 'ghost-parent')).toThrow(
         /dangling parent id "ghost-parent" for block "child"/
@@ -255,7 +238,7 @@ describe('BlockHierarchy — mutation coverage', () => {
 
     it('throws in development too, not only under NODE_ENV=test', async () => {
       const { repository } = createFixture([{ id: 'child', parentId: null }]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const utils = await import('../../../../../src/components/utils');
 
       vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
@@ -275,7 +258,7 @@ describe('BlockHierarchy — mutation coverage', () => {
 
     it('coerces instead of throwing when there is no process global at all', async () => {
       const { repository } = createFixture([{ id: 'child', parentId: null }]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const utils = await import('../../../../../src/components/utils');
       const logSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
       const child = requireBlock(repository, 'child');
@@ -300,7 +283,7 @@ describe('BlockHierarchy — mutation coverage', () => {
 
     it.skipIf(isInstrumented())('coerces instead of throwing when the process global carries no env', async () => {
       const { repository } = createFixture([{ id: 'child', parentId: null }]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const utils = await import('../../../../../src/components/utils');
       const logSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
       const child = requireBlock(repository, 'child');
@@ -329,7 +312,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'other', parentId: null },
         { id: 'mover', parentId: null },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
 
       hierarchy.setBlockParent(requireBlock(repository, 'mover'), 'parent');
 
@@ -343,7 +326,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'mover', parentId: null },
         { id: 'c2', parentId: 'parent' },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
 
       hierarchy.setBlockParent(requireBlock(repository, 'mover'), 'parent');
 
@@ -359,7 +342,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'collapsed', parentId: 'toggle' },
         { id: 'mover', parentId: null },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const mover = requireBlock(repository, 'mover');
 
       requireBlock(repository, 'collapsed').holder.classList.add('hidden');
@@ -381,7 +364,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'toggle', parentId: null, contentIds: ['child'] },
         { id: 'child', parentId: 'toggle' },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const toggle = requireBlock(repository, 'toggle');
       const child = requireBlock(repository, 'child');
       const container = createContainer('data-blok-toggle-children');
@@ -391,19 +374,18 @@ describe('BlockHierarchy — mutation coverage', () => {
 
       hierarchy.setBlockParent(child, 'toggle');
 
-      expect(vi.mocked(moveElementAfter)).not.toHaveBeenCalled();
       expect(child.holder.parentElement).toBe(container);
       expect(toggle.contentIds).toStrictEqual(['child']);
       expect(Array.from(workingArea.children)).toStrictEqual([toggle.holder]);
     });
 
-    it('leaves the holder in place when it is not inside the old toggle container', () => {
+    it('puts a holder that is not inside the old toggle container at its flat place at the root', () => {
       const { repository, workingArea } = createFixture([
         { id: 'toggle', parentId: null, contentIds: ['child'] },
         { id: 'x', parentId: null },
         { id: 'child', parentId: 'toggle' },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const toggle = requireBlock(repository, 'toggle');
       const x = requireBlock(repository, 'x');
       const child = requireBlock(repository, 'child');
@@ -413,8 +395,8 @@ describe('BlockHierarchy — mutation coverage', () => {
 
       hierarchy.setBlockParent(child, null);
 
-      expect(Array.from(workingArea.children)).toStrictEqual([toggle.holder, child.holder, x.holder]);
-      expect(vi.mocked(moveElementAfter)).not.toHaveBeenCalled();
+      expect(repository.blocks).toStrictEqual([toggle, x, child]);
+      expect(Array.from(workingArea.children)).toStrictEqual([toggle.holder, x.holder, child.holder]);
       expect(toggle.contentIds).toStrictEqual([]);
     });
 
@@ -425,7 +407,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'child', parentId: 'toggle' },
         { id: 'tail', parentId: null },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const toggle = requireBlock(repository, 'toggle');
       const childD = requireBlock(repository, 'childD');
       const child = requireBlock(repository, 'child');
@@ -451,7 +433,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'child', parentId: 'toggle' },
         { id: 'toggle', parentId: null, contentIds: ['child'] },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const toggle = requireBlock(repository, 'toggle');
       const child = requireBlock(repository, 'child');
       const container = createContainer('data-blok-toggle-children');
@@ -470,7 +452,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'outer', parentId: null, contentIds: ['inner'] },
         { id: 'inner', parentId: 'outer', contentIds: ['grandchild'] },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const outer = requireBlock(repository, 'outer');
       const inner = requireBlock(repository, 'inner');
       const grandchild = requireBlock(repository, 'grandchild');
@@ -496,7 +478,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'moving', parentId: 'col-a' },
         { id: 'col-b', parentId: null, name: 'column' },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const moving = requireBlock(repository, 'moving');
       const containerA = buildColumn(requireBlock(repository, 'col-a'));
       const containerB = buildColumn(requireBlock(repository, 'col-b'));
@@ -517,7 +499,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'new-col', parentId: null, name: 'column' },
         { id: 'toggle', parentId: null },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const newCol = requireBlock(repository, 'new-col');
       const row = createContainer('data-blok-columns');
       const foreign = createContainer('data-blok-nested-blocks');
@@ -540,7 +522,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'moving', parentId: null },
         { id: 'toggle', parentId: null },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const moving = requireBlock(repository, 'moving');
       const container = buildColumn(requireBlock(repository, 'col'));
       const toggleContainer = createContainer('data-blok-toggle-children');
@@ -555,20 +537,25 @@ describe('BlockHierarchy — mutation coverage', () => {
       expect(requireBlock(repository, 'toggle').contentIds).toStrictEqual(['moving']);
     });
 
-    it('handles a destination parent that has no child container at all', () => {
-      const { repository } = createFixture([
+    it('puts the child of a slotless root parent at the root, right after it', () => {
+      const { repository, workingArea } = createFixture([
         { id: 'col', parentId: null, name: 'column', contentIds: ['moving'] },
         { id: 'moving', parentId: 'col' },
         { id: 'plain', parentId: null },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const moving = requireBlock(repository, 'moving');
       const container = buildColumn(requireBlock(repository, 'col'));
 
       container.appendChild(moving.holder);
 
       expect(() => hierarchy.setBlockParent(moving, 'plain')).not.toThrow();
-      expect(moving.holder.parentElement).toBe(container);
+      expect(Array.from(container.children)).toStrictEqual([]);
+      expect(Array.from(workingArea.children)).toStrictEqual([
+        requireBlock(repository, 'col').holder,
+        requireBlock(repository, 'plain').holder,
+        moving.holder,
+      ]);
       expect(requireBlock(repository, 'plain').contentIds).toStrictEqual(['moving']);
     });
 
@@ -578,7 +565,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'first', parentId: 'toggle' },
         { id: 'second', parentId: 'toggle' },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const toggle = requireBlock(repository, 'toggle');
       const first = requireBlock(repository, 'first');
       const second = requireBlock(repository, 'second');
@@ -602,7 +589,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'toggle', parentId: null },
         { id: 'mover', parentId: null },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const mover = requireBlock(repository, 'mover');
       const container = createContainer('data-blok-toggle-children');
 
@@ -614,13 +601,13 @@ describe('BlockHierarchy — mutation coverage', () => {
   });
 
   describe('setBlockParent — escaping a columns layout for root', () => {
-    it('leaves the DOM alone for a root-to-root reparent outside any columns layout', () => {
+    it('puts a root holder back in flat order on a root-to-root reparent', () => {
       const { repository, workingArea } = createFixture([
         { id: 'a', parentId: null },
         { id: 'b', parentId: null },
         { id: 'c', parentId: null },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const a = requireBlock(repository, 'a');
       const b = requireBlock(repository, 'b');
       const c = requireBlock(repository, 'c');
@@ -629,7 +616,7 @@ describe('BlockHierarchy — mutation coverage', () => {
 
       hierarchy.setBlockParent(b, null);
 
-      expect(Array.from(workingArea.children)).toStrictEqual([a.holder, c.holder, b.holder]);
+      expect(Array.from(workingArea.children)).toStrictEqual([a.holder, b.holder, c.holder]);
     });
 
     it('anchors the escapee on the nearest preceding holder that is outside every nested container', () => {
@@ -640,7 +627,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'inner', parentId: 'col' },
         { id: 'escapee', parentId: 'col' },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const top = requireBlock(repository, 'top');
       const list = requireBlock(repository, 'list');
       const col = requireBlock(repository, 'col');
@@ -671,7 +658,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'r1', parentId: null },
         { id: 'r2', parentId: null },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const escapee = requireBlock(repository, 'escapee');
       const r1 = requireBlock(repository, 'r1');
       const r2 = requireBlock(repository, 'r2');
@@ -689,9 +676,9 @@ describe('BlockHierarchy — mutation coverage', () => {
       ]);
     });
 
-    it('leaves a lone escapee where it is when the document has no root sibling', () => {
+    it('moves a lone escapee to the root when the document has no root sibling', () => {
       const { repository, workingArea } = createFixture([{ id: 'escapee', parentId: null }]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const escapee = requireBlock(repository, 'escapee');
       const row = createContainer('data-blok-columns');
 
@@ -699,7 +686,8 @@ describe('BlockHierarchy — mutation coverage', () => {
       row.appendChild(escapee.holder);
 
       expect(() => hierarchy.setBlockParent(escapee, null)).not.toThrow();
-      expect(Array.from(row.children)).toStrictEqual([escapee.holder]);
+      expect(Array.from(row.children)).toStrictEqual([]);
+      expect(Array.from(workingArea.children)).toStrictEqual([row, escapee.holder]);
     });
   });
 
@@ -709,7 +697,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'a', parentId: null, contentIds: ['b'] },
         { id: 'b', parentId: 'a', contentIds: ['a'] },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const a = requireBlock(repository, 'a');
       const b = requireBlock(repository, 'b');
 
@@ -720,7 +708,7 @@ describe('BlockHierarchy — mutation coverage', () => {
 
     it('skips a contentIds entry with no block behind it', () => {
       const { repository } = createFixture([{ id: 'parent', parentId: null, contentIds: ['ghost'] }]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
 
       expect(() => hierarchy.setBlockParent(requireBlock(repository, 'parent'), null)).not.toThrow();
     });
@@ -730,7 +718,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'parent', parentId: null, contentIds: ['li'] },
         { id: 'li', parentId: 'parent', name: 'list' },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const li = requireBlock(repository, 'li');
 
       hierarchy.setBlockParent(requireBlock(repository, 'parent'), null);
@@ -748,7 +736,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'a', parentId: 'b' },
         { id: 'b', parentId: 'a' },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const a = requireBlock(repository, 'a');
 
       expect(() => hierarchy.updateBlockIndentation(a)).not.toThrow();
@@ -761,7 +749,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'c', parentId: 'p' },
         { id: 'p', parentId: 'ghost' },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const c = requireBlock(repository, 'c');
 
       expect(() => hierarchy.updateBlockIndentation(c)).not.toThrow();
@@ -774,7 +762,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'col', parentId: null, name: 'column', contentIds: ['c'] },
         { id: 'c', parentId: 'col' },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const c = requireBlock(repository, 'c');
 
       hierarchy.updateBlockIndentation(c);
@@ -788,7 +776,7 @@ describe('BlockHierarchy — mutation coverage', () => {
         { id: 'list', parentId: null, name: 'column_list', contentIds: ['c'] },
         { id: 'c', parentId: 'list' },
       ]);
-      const hierarchy = new BlockHierarchy(repository);
+      const hierarchy = hierarchyOf(repository);
       const c = requireBlock(repository, 'c');
 
       hierarchy.updateBlockIndentation(c);

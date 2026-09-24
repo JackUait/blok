@@ -444,6 +444,52 @@ describe('Table lifecycle rebuild', () => {
     });
   });
 
+  describe('a synced child whose cell the table data never names', () => {
+    /**
+     * A peer's cell block arrives before the table data that names its cell,
+     * so the table holds it out of save(). If that data write never lands (it
+     * lost last-writer-wins to a concurrent local content write), nothing
+     * releases the hold: the block stays visible but every later save of the
+     * table leaves it out, and a reload unparents it from the table.
+     * Releasing it would need a point where guessing its cell cannot race the
+     * peer's write (see COB-4), so this pins the loss instead.
+     */
+    it.fails('saves the held child with the next local table write after the replay', () => {
+      const options = createTableOptions(
+        { content: [['A', 'B']] },
+        {},
+        { blocks: { isSyncingFromYjs: false, getById: vi.fn(() => undefined) } }
+      );
+      const blocksApi = options.api.blocks as unknown as { isSyncingFromYjs: boolean; getById: ReturnType<typeof vi.fn> };
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      const blockChanged = vi.mocked(options.api.events.on).mock.calls
+        .filter(([name]) => name === 'block changed')
+        .map(([, handler]) => handler as (payload: unknown) => void);
+      const cellContainer = element.querySelector('[data-blok-table-cell-blocks]') as HTMLElement;
+      const held = document.createElement('div');
+
+      held.setAttribute('data-blok-id', 'peer-cell-block');
+      cellContainer.appendChild(held);
+      blocksApi.getById.mockImplementation((id: string) =>
+        id === 'peer-cell-block' ? { id, parentId: 'table-lifecycle-test' } : undefined);
+
+      blocksApi.isSyncingFromYjs = true;
+      blockChanged.forEach((handler) => handler({
+        event: { type: 'block-added', detail: { target: { id: 'peer-cell-block', holder: held }, index: 1 } },
+      }));
+      blocksApi.isSyncingFromYjs = false;
+
+      const saved = table.save(element);
+
+      expect(saved.content.flat().flatMap((cell) => (typeof cell === 'string' ? [] : cell.blocks))).toContain('peer-cell-block');
+    });
+  });
+
   describe('setData() with empty content during Yjs sync', () => {
     it('does not fabricate new blocks when undo reverts table content to empty', () => {
       // Regression: previously, this path called populateNewCells to insert

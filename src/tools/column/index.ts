@@ -4,7 +4,7 @@ import type {
   BlockTool,
   BlockToolConstructorOptions,
 } from '../../../types';
-import { COLUMN_ATTR, rebuildColumnListResizers, subtreeEndIndex, unwrapColumnListIfCollapsed } from '../columns-shared';
+import { COLUMN_ATTR, rebuildColumnListResizers, unwrapColumnListIfCollapsed } from '../columns-shared';
 import { mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { twMerge } from '../../components/utils/tw';
@@ -192,7 +192,7 @@ export class Column implements BlockTool {
       return;
     }
 
-    const paragraph = this.api.blocks.insertInsideParent(this.blockId, subtreeEndIndex(this.api, this.blockId) + 1);
+    const paragraph = this.api.blocks.insertAt(undefined, undefined, { parentId: this.blockId, position: 'end' });
 
     this.childContainer.appendChild(paragraph.holder);
     this.api.caret.setToBlock(paragraph.id, 'start');
@@ -226,13 +226,11 @@ export class Column implements BlockTool {
    * asynchronous last column never steals it (see {@link ColumnData}).
    */
   private seedParagraph(): void {
-    const blockIndex = this.api.blocks.getBlockIndex(this.blockId);
-
-    if (blockIndex === undefined || this.childContainer === null) {
+    if (this.api.blocks.getBlockIndex(this.blockId) === undefined || this.childContainer === null) {
       return;
     }
 
-    const paragraph = this.api.blocks.insertInsideParent(this.blockId, blockIndex + 1);
+    const paragraph = this.api.blocks.insertAt(undefined, undefined, { parentId: this.blockId, position: 'start' });
 
     this.childContainer.appendChild(paragraph.holder);
 

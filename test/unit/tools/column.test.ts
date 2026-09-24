@@ -8,7 +8,7 @@ const createMockAPI = (overrides: Partial<API> = {}): API => ({
   blocks: {
     getChildren: vi.fn().mockReturnValue([]),
     getBlockIndex: vi.fn().mockReturnValue(0),
-    insertInsideParent: vi.fn(),
+    insertAt: vi.fn(),
   },
   caret: { setToBlock: vi.fn() },
   ...overrides,
@@ -49,7 +49,7 @@ describe('Column tool', () => {
       blocks: {
         getChildren: vi.fn((id: string) => tree[id] ?? []),
         getBlockIndex: vi.fn().mockReturnValue(0),
-        insertInsideParent: vi.fn(),
+        insertAt: vi.fn(),
       },
     } as unknown as Partial<API>);
     const column = new Column(createColumnOptions({}, api));
@@ -71,7 +71,7 @@ describe('Column tool', () => {
       blocks: {
         getChildren: vi.fn().mockReturnValue([{ id: 'p', holder: document.createElement('div') }]),
         getBlockIndex: vi.fn().mockReturnValue(0),
-        insertInsideParent: vi.fn(),
+        insertAt: vi.fn(),
       },
     } as unknown as Partial<API>);
     const options = createColumnOptions({}, api);
@@ -86,7 +86,7 @@ describe('Column tool', () => {
       blocks: {
         getChildren: vi.fn().mockReturnValue([{ id: 'p', holder: document.createElement('div') }]),
         getBlockIndex: vi.fn().mockReturnValue(0),
-        insertInsideParent: vi.fn(),
+        insertAt: vi.fn(),
       },
     } as unknown as Partial<API>);
     const options = createColumnOptions({ widthRatio: 2 }, api);
@@ -107,7 +107,7 @@ describe('Column tool', () => {
       blocks: {
         getChildren: vi.fn().mockReturnValue([{ id: 'p', holder: document.createElement('div') }]),
         getBlockIndex: vi.fn().mockReturnValue(0),
-        insertInsideParent: vi.fn(),
+        insertAt: vi.fn(),
       },
     } as unknown as Partial<API>);
     const options = createColumnOptions({}, api);
@@ -136,7 +136,7 @@ describe('Column tool', () => {
       blocks: {
         getChildren: vi.fn().mockReturnValue([{ id: 'p', holder: document.createElement('div') }]),
         getBlockIndex: vi.fn().mockReturnValue(0),
-        insertInsideParent: vi.fn(),
+        insertAt: vi.fn(),
       },
     } as unknown as Partial<API>);
     const options = createColumnOptions({}, api);
@@ -155,7 +155,7 @@ describe('Column tool', () => {
       blocks: {
         getChildren: vi.fn().mockReturnValue([{ id: 'p', holder: document.createElement('div') }]),
         getBlockIndex: vi.fn().mockReturnValue(0),
-        insertInsideParent: vi.fn(),
+        insertAt: vi.fn(),
       },
     } as unknown as Partial<API>);
     const options = createColumnOptions({}, api);
@@ -171,13 +171,13 @@ describe('Column tool', () => {
   });
 
   it('seeds an empty paragraph child when it has no children', () => {
-    const insertInsideParent = vi.fn().mockReturnValue({ id: 'p-1', holder: document.createElement('div') });
+    const insertAt = vi.fn().mockReturnValue({ id: 'p-1', holder: document.createElement('div') });
     const setToBlock = vi.fn();
     const api = createMockAPI({
       blocks: {
         getChildren: vi.fn().mockReturnValue([]),
         getBlockIndex: vi.fn().mockReturnValue(3),
-        insertInsideParent,
+        insertAt,
       },
       caret: { setToBlock },
     } as unknown as Partial<API>);
@@ -186,18 +186,18 @@ describe('Column tool', () => {
     column.render();
     column.rendered();
 
-    expect(insertInsideParent).toHaveBeenCalledWith('col-1', 4);
+    expect(insertAt).toHaveBeenCalledWith(undefined, undefined, { parentId: 'col-1', position: 'start' });
     expect(setToBlock).toHaveBeenCalledWith('p-1', 'start');
   });
 
   it('seeds the paragraph but does NOT claim the caret when data.noFocus is true', () => {
-    const insertInsideParent = vi.fn().mockReturnValue({ id: 'p-1', holder: document.createElement('div') });
+    const insertAt = vi.fn().mockReturnValue({ id: 'p-1', holder: document.createElement('div') });
     const setToBlock = vi.fn();
     const api = createMockAPI({
       blocks: {
         getChildren: vi.fn().mockReturnValue([]),
         getBlockIndex: vi.fn().mockReturnValue(3),
-        insertInsideParent,
+        insertAt,
       },
       caret: { setToBlock },
     } as unknown as Partial<API>);
@@ -207,19 +207,19 @@ describe('Column tool', () => {
     column.rendered();
 
     // The paragraph is still seeded so the column is never empty...
-    expect(insertInsideParent).toHaveBeenCalledWith('col-1', 4);
+    expect(insertAt).toHaveBeenCalledWith(undefined, undefined, { parentId: 'col-1', position: 'start' });
     // ...but the caret is NOT moved here: a non-first seeded column must not win
     // the focus race over the first column.
     expect(setToBlock).not.toHaveBeenCalled();
   });
 
   it('does NOT seed a paragraph when data.noSeed is true', () => {
-    const insertInsideParent = vi.fn();
+    const insertAt = vi.fn();
     const api = createMockAPI({
       blocks: {
         getChildren: vi.fn().mockReturnValue([]),
         getBlockIndex: vi.fn().mockReturnValue(3),
-        insertInsideParent,
+        insertAt,
       },
       caret: { setToBlock: vi.fn() },
     } as unknown as Partial<API>);
@@ -228,7 +228,7 @@ describe('Column tool', () => {
     column.render();
     column.rendered();
 
-    expect(insertInsideParent).not.toHaveBeenCalled();
+    expect(insertAt).not.toHaveBeenCalled();
   });
 
   it('deletes itself when emptied after being populated (a block dragged out leaves it childless)', async () => {
@@ -236,7 +236,7 @@ describe('Column tool', () => {
     // block — e.g. the user drags its sole block out, which re-fires rendered()
     // with no children — it must NOT linger as an empty box. It removes itself so
     // the layout collapses cleanly instead of leaving a dead, uninteractable column.
-    const insertInsideParent = vi.fn();
+    const insertAt = vi.fn();
     const deleteBlock = vi.fn().mockResolvedValue(undefined);
     const getChildren = vi.fn()
       .mockReturnValueOnce([{ id: 'child', holder: document.createElement('div') }]) // first render: populated
@@ -245,7 +245,7 @@ describe('Column tool', () => {
       blocks: {
         getChildren,
         getBlockIndex: vi.fn().mockReturnValue(7),
-        insertInsideParent,
+        insertAt,
         delete: deleteBlock,
       },
       caret: { setToBlock: vi.fn() },
@@ -264,20 +264,20 @@ describe('Column tool', () => {
 
     // It deletes by its CURRENT flat index, and never re-seeds a paragraph.
     expect(deleteBlock).toHaveBeenCalledWith(7);
-    expect(insertInsideParent).not.toHaveBeenCalled();
+    expect(insertAt).not.toHaveBeenCalled();
   });
 
   it('does NOT delete itself on its first render when never populated — it seeds instead', async () => {
     // Preset columns are created empty and rely on the first render to seed a
     // paragraph. An empty FIRST render is a fresh column, not an emptied one, so
     // it must seed, not self-destruct.
-    const insertInsideParent = vi.fn().mockReturnValue({ id: 'p-1', holder: document.createElement('div') });
+    const insertAt = vi.fn().mockReturnValue({ id: 'p-1', holder: document.createElement('div') });
     const deleteBlock = vi.fn().mockResolvedValue(undefined);
     const api = createMockAPI({
       blocks: {
         getChildren: vi.fn().mockReturnValue([]),
         getBlockIndex: vi.fn().mockReturnValue(3),
-        insertInsideParent,
+        insertAt,
         delete: deleteBlock,
       },
       caret: { setToBlock: vi.fn() },
@@ -288,7 +288,7 @@ describe('Column tool', () => {
     column.rendered();
     await new Promise(resolve => setTimeout(resolve, 0));
 
-    expect(insertInsideParent).toHaveBeenCalledWith('col-1', 4);
+    expect(insertAt).toHaveBeenCalledWith(undefined, undefined, { parentId: 'col-1', position: 'start' });
     expect(deleteBlock).not.toHaveBeenCalled();
   });
 
@@ -300,13 +300,13 @@ describe('Column tool', () => {
   });
 
   it('does NOT seed when it already has children', () => {
-    const insertInsideParent = vi.fn();
+    const insertAt = vi.fn();
     const existingChild = { id: 'p-existing', holder: document.createElement('div') };
     const api = createMockAPI({
       blocks: {
         getChildren: vi.fn().mockReturnValue([existingChild]),
         getBlockIndex: vi.fn().mockReturnValue(3),
-        insertInsideParent,
+        insertAt,
       },
       caret: { setToBlock: vi.fn() },
     } as unknown as Partial<API>);
@@ -315,7 +315,7 @@ describe('Column tool', () => {
     column.render();
     column.rendered();
 
-    expect(insertInsideParent).not.toHaveBeenCalled();
+    expect(insertAt).not.toHaveBeenCalled();
   });
 
   it('applies a new width in place and saves it', () => {
@@ -350,7 +350,7 @@ describe('Column tool', () => {
         getById: vi.fn().mockReturnValue({ parentId: null }),
         setBlockParent,
         delete: remove,
-        insertInsideParent: vi.fn(),
+        insertAt: vi.fn(),
       },
       caret: { setToBlock: vi.fn() },
     } as unknown as Partial<API>);
@@ -382,8 +382,8 @@ describe('Column tool', () => {
       tree: { [parentId: string]: { id: string; name?: string; isEmpty?: boolean }[] },
       indexes: { [blockId: string]: number },
       inserted: { id: string; holder: HTMLElement } = { id: 'new-p', holder: document.createElement('div') }
-    ): { api: API; insertInsideParent: ReturnType<typeof vi.fn>; setToBlock: ReturnType<typeof vi.fn> } => {
-      const insertInsideParent = vi.fn().mockReturnValue(inserted);
+    ): { api: API; insertAt: ReturnType<typeof vi.fn>; setToBlock: ReturnType<typeof vi.fn> } => {
+      const insertAt = vi.fn().mockReturnValue(inserted);
       const setToBlock = vi.fn();
       const holders: { [blockId: string]: HTMLElement } = {};
       const api = createMockAPI({
@@ -393,13 +393,13 @@ describe('Column tool', () => {
             holder: holders[child.id] ?? (holders[child.id] = document.createElement('div')),
           }))),
           getBlockIndex: vi.fn((blockId: string) => indexes[blockId]),
-          insertInsideParent,
+          insertAt,
         },
         caret: { setToBlock },
       } as unknown as Partial<API>);
 
       return { api,
-        insertInsideParent,
+        insertAt,
         setToBlock };
     };
 
@@ -418,7 +418,7 @@ describe('Column tool', () => {
     };
 
     it('appends a paragraph at the end of the column and focuses it', () => {
-      const { api, insertInsideParent, setToBlock } = createTreeAPI(
+      const { api, insertAt, setToBlock } = createTreeAPI(
         { 'col-1': [{ id: 'p-1',
           name: 'paragraph',
           isEmpty: false }] },
@@ -429,36 +429,13 @@ describe('Column tool', () => {
 
       options.block.holder.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-      // Inserted right after the column's last descendant, at the end of the column.
-      expect(insertInsideParent).toHaveBeenCalledWith('col-1', 5);
+      // The new paragraph becomes the column's last child.
+      expect(insertAt).toHaveBeenCalledWith(undefined, undefined, { parentId: 'col-1', position: 'end' });
       expect(setToBlock).toHaveBeenCalledWith('new-p', 'start');
     });
 
-    it('inserts after the last descendant when the trailing child is itself a container', () => {
-      // A toggle at the bottom of the column owns the flat slots after it; the
-      // new paragraph must land after the toggle's whole subtree, not inside it.
-      const { api, insertInsideParent } = createTreeAPI(
-        {
-          'col-1': [{ id: 'toggle-1',
-            name: 'toggle',
-            isEmpty: false }],
-          'toggle-1': [{ id: 'nested-1',
-            name: 'paragraph',
-            isEmpty: false }],
-        },
-        { 'col-1': 3,
-          'toggle-1': 4,
-          'nested-1': 5 }
-      );
-      const { options } = mountColumn(api);
-
-      options.block.holder.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-
-      expect(insertInsideParent).toHaveBeenCalledWith('col-1', 6);
-    });
-
     it('focuses the trailing empty paragraph instead of stacking another one', () => {
-      const { api, insertInsideParent, setToBlock } = createTreeAPI(
+      const { api, insertAt, setToBlock } = createTreeAPI(
         { 'col-1': [{ id: 'p-1',
           name: 'paragraph',
           isEmpty: true }] },
@@ -469,12 +446,12 @@ describe('Column tool', () => {
 
       options.block.holder.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-      expect(insertInsideParent).not.toHaveBeenCalled();
+      expect(insertAt).not.toHaveBeenCalled();
       expect(setToBlock).toHaveBeenCalledWith('p-1', 'end');
     });
 
     it('ignores clicks that land on a child block', () => {
-      const { api, insertInsideParent } = createTreeAPI(
+      const { api, insertAt } = createTreeAPI(
         { 'col-1': [{ id: 'p-1',
           name: 'paragraph',
           isEmpty: false }] },
@@ -486,11 +463,11 @@ describe('Column tool', () => {
 
       childBlock?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-      expect(insertInsideParent).not.toHaveBeenCalled();
+      expect(insertAt).not.toHaveBeenCalled();
     });
 
     it('ignores clicks in read-only mode', () => {
-      const { api, insertInsideParent } = createTreeAPI(
+      const { api, insertAt } = createTreeAPI(
         { 'col-1': [{ id: 'p-1',
           name: 'paragraph',
           isEmpty: false }] },
@@ -501,13 +478,13 @@ describe('Column tool', () => {
 
       options.block.holder.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-      expect(insertInsideParent).not.toHaveBeenCalled();
+      expect(insertAt).not.toHaveBeenCalled();
     });
 
     it('ignores the click that ends a text drag-selection', () => {
       // Releasing a selection drag in the dead space fires a click on the holder;
       // creating a block there would blow away the selection the user just made.
-      const { api, insertInsideParent } = createTreeAPI(
+      const { api, insertAt } = createTreeAPI(
         { 'col-1': [{ id: 'p-1',
           name: 'paragraph',
           isEmpty: false }] },
@@ -520,7 +497,7 @@ describe('Column tool', () => {
 
       options.block.holder.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-      expect(insertInsideParent).not.toHaveBeenCalled();
+      expect(insertAt).not.toHaveBeenCalled();
     });
   });
 
@@ -543,21 +520,21 @@ describe('Column tool', () => {
    * fabricates the pasted-columns trailing ghost.
    */
   describe('seeds only for a genuine creation (origin)', () => {
-    const seedProbe = (): { insertInsideParent: ReturnType<typeof vi.fn>; api: API } => {
-      const insertInsideParent = vi.fn().mockReturnValue({ id: 'p', holder: document.createElement('div') });
+    const seedProbe = (): { insertAt: ReturnType<typeof vi.fn>; api: API } => {
+      const insertAt = vi.fn().mockReturnValue({ id: 'p', holder: document.createElement('div') });
       const api = createMockAPI({
         blocks: {
           getChildren: vi.fn().mockReturnValue([]),
           getBlockIndex: vi.fn().mockReturnValue(3),
           // Deliberately settled: the guard must not depend on this flag.
           isSyncingFromYjs: false,
-          insertInsideParent,
+          insertAt,
         },
         caret: { setToBlock: vi.fn() },
       } as unknown as Partial<API>);
 
       return {
-        insertInsideParent,
+        insertAt,
         api,
       };
     };
@@ -565,26 +542,26 @@ describe('Column tool', () => {
     it.each(['load', 'replay', 'paste', 'probe'] as const)(
       'does NOT seed a paragraph when re-materialised with origin «%s»',
       (origin) => {
-        const { insertInsideParent, api } = seedProbe();
+        const { insertAt, api } = seedProbe();
         const column = new Column(createColumnOptions({}, api, false, origin));
 
         column.render();
         column.rendered();
 
-        expect(insertInsideParent).not.toHaveBeenCalled();
+        expect(insertAt).not.toHaveBeenCalled();
       }
     );
 
     it.each(['user', 'api', 'convert'] as const)(
       'seeds a paragraph when created with origin «%s»',
       (origin) => {
-        const { insertInsideParent, api } = seedProbe();
+        const { insertAt, api } = seedProbe();
         const column = new Column(createColumnOptions({}, api, false, origin));
 
         column.render();
         column.rendered();
 
-        expect(insertInsideParent).toHaveBeenCalledTimes(1);
+        expect(insertAt).toHaveBeenCalledTimes(1);
       }
     );
 
@@ -603,7 +580,7 @@ describe('Column tool', () => {
           getChildren,
           getBlockIndex: vi.fn().mockReturnValue(7),
           isSyncingFromYjs: true,
-          insertInsideParent: vi.fn(),
+          insertAt: vi.fn(),
           delete: deleteBlock,
         },
         caret: { setToBlock: vi.fn() },

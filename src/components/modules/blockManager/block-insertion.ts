@@ -143,6 +143,22 @@ export class BlockInsertion {
     // The block follows a table/database, so it must not join that container's last cell.
     const exited = afterCurrentRun ?? slot?.exited;
 
+    // An index that implies a parent is a placement. A table or database
+    // places its children itself, so inserts under one keep the index path.
+    if (slot !== undefined && impliedParent !== undefined && (impliedParent === null || !isSelfPlacedParent(impliedParent, this.getBlock))) {
+      const parentId = impliedParent?.id ?? null;
+      const afterId = this.repository.blocks.slice(0, targetIndex).filter(candidate => candidate.parentId === parentId).pop()?.id ?? null;
+      const block = this.insertAtPlacement({
+        ...options,
+        index: undefined,
+        tool: this.toolForIndexInsert(tool, targetIndex, false, impliedParent, exited, forceTopLevel),
+      }, { parentId, afterId }, blocksStore, parentId !== null);
+
+      this.hierarchy.announceChildPlaced(parentId);
+
+      return block;
+    }
+
     /**
      * If we're replacing a block, stop watching for mutations immediately to prevent
      * spurious block-changed events from DOM manipulations (like focus restoration)
@@ -152,70 +168,7 @@ export class BlockInsertion {
       this.repository.getBlockByIndex(targetIndex)?.unwatchBlockMutations();
     }
 
-    const resolvedToolName = (() => {
-      const name = tool ?? this.dependencies.config.defaultBlock;
-
-      if (name === undefined) {
-        throw new Error('Could not insert Block. Tool name is not specified.');
-      }
-
-      // Demote restricted tools to paragraph when inserting inside a table cell.
-      // For replace: check the block being replaced (new block takes its DOM position).
-      // For insert: check the predecessor block (new block is placed after it in the DOM).
-      // Using the block AT targetIndex for non-replace inserts is wrong because that
-      // block may be a child paragraph inside a table cell that gets displaced, while
-      // the new block actually lands at the top level.
-      //
-      // The predecessor lookup MUST be bounds-checked: `getBlockByIndex(-1)` is the
-      // repository's legacy "give me the LAST block" shorthand, not "no block". An
-      // insert at index 0 has no predecessor, so an unguarded `targetIndex - 1` asked
-      // about the last block in the document — and when the document ended with a
-      // table, that block is a cell child, so every restricted tool (header, table,
-      // column_list) inserted at the TOP of the document was silently demoted to a
-      // paragraph. That is how a table side-dropped beside a top block produced a
-      // paragraph instead of a column_list.
-      const predecessorBlock = targetIndex > 0
-        ? this.repository.getBlockByIndex(targetIndex - 1)
-        : undefined;
-
-      const neighborBlock = replace
-        ? this.repository.getBlockByIndex(targetIndex)
-        : (predecessorBlock ?? this.repository.getBlockByIndex(targetIndex));
-
-      if (exited === undefined && neighborBlock !== undefined && isInsideTableCell(neighborBlock) && isRestrictedInTableCell(name)) {
-        return this.dependencies.config.defaultBlock ?? 'paragraph';
-      }
-
-      // A root result falls through: callers such as useBlocks' insert at a
-      // container's end nest the block right after, and still need the demotion.
-      if (impliedParent !== undefined && impliedParent !== null) {
-        return resolveChildTool(impliedParent, name, this.dependencies.config.defaultBlock ?? 'paragraph');
-      }
-
-      /**
-       * Generic per-container child restrictions (`static childTools`) — the
-       * table rule above is the hard-wired special case of this.
-       *
-       * The container is derived from the SAME neighbour: the new block joins
-       * its parent (for a replace, it takes the replaced block's place; for an
-       * insert, it lands beside the predecessor and inherits its container).
-       * `forceTopLevel` is the explicit "this belongs at root" signal, so it
-       * opts out — that is what keeps Enter-at-the-end-of-a-top-level-block from
-       * being read as "append to whatever container ends above me".
-       *
-       * A disallowed tool is demoted, never refused: this path runs for the
-       * Enter key and the toolbox, which must always produce a block.
-       */
-      if (!forceTopLevel && neighborBlock !== undefined && neighborBlock.parentId !== null) {
-        return resolveChildTool(
-          this.repository.getBlockById(neighborBlock.parentId),
-          name,
-          this.dependencies.config.defaultBlock ?? 'paragraph'
-        );
-      }
-
-      return name;
-    })();
+    const resolvedToolName = this.toolForIndexInsert(tool, targetIndex, replace, impliedParent, exited, forceTopLevel);
 
     // Bind events immediately for user-created blocks so mutations are tracked right away
     const block = this.factory.composeBlock({
@@ -441,14 +394,97 @@ export class BlockInsertion {
   }
 
   /**
+   * The tool an index insert creates: `tool` (or the default block), demoted
+   * when the place it lands in does not take it.
+   * @param tool - the requested tool name
+   * @param targetIndex - the flat index the block is inserted at
+   * @param replace - whether it replaces the block at `targetIndex`
+   * @param impliedParent - the parent the index implies (undefined = not inferred)
+   * @param exited - the table/database the block follows, if any
+   * @param forceTopLevel - whether the caller put the block at the root
+   */
+  private toolForIndexInsert(
+    tool: string | undefined,
+    targetIndex: number,
+    replace: boolean,
+    impliedParent: Block | null | undefined,
+    exited: Block | undefined,
+    forceTopLevel: boolean
+  ): string {
+    const name = tool ?? this.dependencies.config.defaultBlock;
+
+    if (name === undefined) {
+      throw new Error('Could not insert Block. Tool name is not specified.');
+    }
+
+    // Demote restricted tools to paragraph when inserting inside a table cell.
+    // For replace: check the block being replaced (new block takes its DOM position).
+    // For insert: check the predecessor block (new block is placed after it in the DOM).
+    // Using the block AT targetIndex for non-replace inserts is wrong because that
+    // block may be a child paragraph inside a table cell that gets displaced, while
+    // the new block actually lands at the top level.
+    //
+    // The predecessor lookup MUST be bounds-checked: `getBlockByIndex(-1)` is the
+    // repository's legacy "give me the LAST block" shorthand, not "no block". An
+    // insert at index 0 has no predecessor, so an unguarded `targetIndex - 1` asked
+    // about the last block in the document — and when the document ended with a
+    // table, that block is a cell child, so every restricted tool (header, table,
+    // column_list) inserted at the TOP of the document was silently demoted to a
+    // paragraph. That is how a table side-dropped beside a top block produced a
+    // paragraph instead of a column_list.
+    const predecessorBlock = targetIndex > 0
+      ? this.repository.getBlockByIndex(targetIndex - 1)
+      : undefined;
+
+    const neighborBlock = replace
+      ? this.repository.getBlockByIndex(targetIndex)
+      : (predecessorBlock ?? this.repository.getBlockByIndex(targetIndex));
+
+    if (exited === undefined && neighborBlock !== undefined && isInsideTableCell(neighborBlock) && isRestrictedInTableCell(name)) {
+      return this.dependencies.config.defaultBlock ?? 'paragraph';
+    }
+
+    // A root result falls through: callers such as useBlocks' insert at a
+    // container's end nest the block right after, and still need the demotion.
+    if (impliedParent !== undefined && impliedParent !== null) {
+      return resolveChildTool(impliedParent, name, this.dependencies.config.defaultBlock ?? 'paragraph');
+    }
+
+    /**
+     * Generic per-container child restrictions (`static childTools`) — the
+     * table rule above is the hard-wired special case of this.
+     *
+     * The container is derived from the SAME neighbour: the new block joins
+     * its parent (for a replace, it takes the replaced block's place; for an
+     * insert, it lands beside the predecessor and inherits its container).
+     * `forceTopLevel` is the explicit "this belongs at root" signal, so it
+     * opts out — that is what keeps Enter-at-the-end-of-a-top-level-block from
+     * being read as "append to whatever container ends above me".
+     *
+     * A disallowed tool is demoted, never refused: this path runs for the
+     * Enter key and the toolbox, which must always produce a block.
+     */
+    if (!forceTopLevel && neighborBlock !== undefined && neighborBlock.parentId !== null) {
+      return resolveChildTool(
+        this.repository.getBlockById(neighborBlock.parentId),
+        name,
+        this.dependencies.config.defaultBlock ?? 'paragraph'
+      );
+    }
+
+    return name;
+  }
+
+  /**
    * {@link insert} for a caller that names the block's place in the tree:
    * the model, the holder, the event and the shared doc all take `placement`
    * as given, nothing is inferred from flat neighbours.
    * @param options - insert options; `index` and `replace` are refused
    * @param placement - parent + previous sibling
    * @param blocksStore - The blocks store to modify
+   * @param reindent - whether to re-indent the placed block (an index insert at the root never did)
    */
-  private insertAtPlacement(options: InsertBlockOptions, placement: TreePlacement, blocksStore: BlocksStore): Block {
+  private insertAtPlacement(options: InsertBlockOptions, placement: TreePlacement, blocksStore: BlocksStore, reindent = true): Block {
     const { id, tool, data, tunes, needToFocus = true, skipYjsSync = false, origin = 'api' } = options;
 
     if (options.index !== undefined || options.replace === true) {
@@ -479,7 +515,7 @@ export class BlockInsertion {
 
     // Appended at the root end, then mounted in its home slot by placeBlock.
     blocksStore.insert(index, block, false, true);
-    this.hierarchy.placeBlock(block, placement);
+    this.hierarchy.placeBlock(block, placement, { reindent });
     hideUnderCollapsedParent(block, this.getBlock);
 
     if (needToFocus) {

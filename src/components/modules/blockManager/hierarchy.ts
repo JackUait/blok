@@ -532,6 +532,21 @@ export class BlockHierarchy {
       carried.forEach(member => this.updateBlockIndentation(member));
     }
 
+    this.syncVisibilityWithParent(block, oldParentId);
+    this.announceChildPlaced(sanitizedParentId);
+  }
+
+  /**
+   * Hides a block that joined a collapsed parent, and shows one that left a
+   * collapsed parent for a parent that does not hide it. Call after the block
+   * has its new parent.
+   * @param block - the block, already placed
+   * @param oldParentId - its parent before the move
+   */
+  public syncVisibilityWithParent(block: Block, oldParentId: string | null): void {
+    const newParentId = block.parentId;
+    const newParent = newParentId !== null ? this.repository.getBlockById(newParentId) : undefined;
+
     // If the new parent's existing children are hidden (toggle is collapsed),
     // hide this newly added child too so Tab navigation skips it.
     //
@@ -539,7 +554,7 @@ export class BlockHierarchy {
     // children to infer state from. Fall back to reading the toggle/header
     // tool's persistent open-state attribute (`data-blok-toggle-open="false"`)
     // on the parent's OWN marker, never a nested toggle's.
-    if (sanitizedParentId !== null && newParent !== undefined) {
+    if (newParent !== undefined) {
       const existingChildren = newParent.contentIds
         .filter(id => id !== block.id)
         .map(id => this.repository.getBlockById(id))
@@ -567,13 +582,19 @@ export class BlockHierarchy {
         id !== block.id && this.repository.getBlockById(id)?.holder.classList.contains('hidden') === true)
     );
 
-    if (oldParentId !== sanitizedParentId && !hiddenByNewParent) {
+    if (oldParentId !== newParentId && !hiddenByNewParent) {
       block.holder.classList.remove('hidden');
     }
+  }
 
-    // Notify listener so parent data can be synced (e.g. to Yjs)
-    if (sanitizedParentId !== null && this.onParentChanged !== undefined) {
-      this.onParentChanged(sanitizedParentId);
+  /**
+   * Runs the parent-change callback (the doc sync of the parent's data) for a
+   * parent that {@link placeBlock} gave a child.
+   * @param parentId - the parent, or null for the root (nothing to do)
+   */
+  public announceChildPlaced(parentId: string | null): void {
+    if (parentId !== null && this.onParentChanged !== undefined) {
+      this.onParentChanged(parentId);
     }
   }
 
@@ -601,13 +622,15 @@ export class BlockHierarchy {
    *
    * `dom: false` writes the model only: no mount, no re-indent, no store
    * needed. setBlockParent uses it when another container claims the holder
-   * or it has no store.
+   * or it has no store. `reindent: false` mounts without re-indenting, for a
+   * caller that keeps the parent and runs {@link reindentSubtree} itself.
    * @param block - the block to move
    * @param placement - where it goes
    * @param options - what to write besides the model
    * @param options.dom - whether to mount holders and re-indent (default true)
+   * @param options.reindent - whether to re-indent after mounting (default true)
    */
-  public placeBlock(block: Block, placement: TreePlacement, options: { dom?: boolean } = {}): void {
+  public placeBlock(block: Block, placement: TreePlacement, options: { dom?: boolean; reindent?: boolean } = {}): void {
     const withDom = options.dom !== false;
     const store = this.blocksStore;
 
@@ -697,7 +720,9 @@ export class BlockHierarchy {
       }
     });
 
-    this.reindentSubtree(block);
+    if (options.reindent !== false) {
+      this.reindentSubtree(block);
+    }
   }
 
   /**
@@ -707,7 +732,7 @@ export class BlockHierarchy {
    * that moved. Cycle-safe via a visited set.
    * @param block - the subtree root to re-indent
    */
-  private reindentSubtree(block: Block, visited: Set<string> = new Set<string>(), isRoot = true): void {
+  public reindentSubtree(block: Block, visited: Set<string> = new Set<string>(), isRoot = true): void {
     if (visited.has(block.id)) {
       return;
     }

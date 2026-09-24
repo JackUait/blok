@@ -32,6 +32,7 @@ interface TestEditor {
       insert: (options: { id?: string; tool?: string; data?: Record<string, unknown>; placement?: { parentId: string | null; afterId: string | null } }) => Block;
       split: () => Block;
       moveCurrentBlockUp: () => void;
+      moveCurrentBlockDown: () => void;
     };
     yjsManager: { stopCapturing: () => void; toJSON: () => OutputBlockData[]; addBlock: (...args: unknown[]) => unknown; addBlockAt: (...args: unknown[]) => unknown };
     paste: { processText: (data: string, isHTML?: boolean) => Promise<void> };
@@ -699,6 +700,21 @@ describe('blocks.insertAt / blocks.moveTo', () => {
     }, 30_000);
 
     it.each([
+      { name: 'up from the top', id: 'q1', move: 'moveCurrentBlockUp' as const },
+      { name: 'down from the bottom', id: 'p2', move: 'moveCurrentBlockDown' as const },
+    ])('keyboard move $name of a cell stays in its cell', async ({ id, move }) => {
+      const instance = await boot(blockCells());
+      const blockManager = instance.module.blockManager;
+      const before = { flat: flat(instance), cells: cellsOf(), saved: await savedCells(instance) };
+
+      blockManager.currentBlockIndex = blockManager.blocks.findIndex(block => block.id === id);
+      blockManager[move]();
+      await nextFrames(2);
+
+      expect({ flat: flat(instance), cells: cellsOf(), saved: await savedCells(instance) }).toEqual(before);
+    }, 30_000);
+
+    it.each([
       { name: 'the start of the table', target: { parentId: 'tbl', position: 'start' as const } },
       { name: 'the end of the table', target: { parentId: 'tbl', position: 'end' as const } },
     ])('throws when a cell block moves to $name, which names no cell', async ({ target }) => {
@@ -709,17 +725,15 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       expect(flat(instance)).toEqual(before);
     }, 30_000);
 
-    // blocks.move reorders the flat array across cells while the DOM and the
-    // table data keep the block in its old cell.
-    it.fails('blocks.move keeps flat order and cells in step across two cells', async () => {
+    // A block cannot change cells by index, as moveTo refuses it; move() never throws.
+    it('blocks.move to another cell changes nothing', async () => {
       const instance = await boot(blockCells());
+      const before = { flat: flat(instance), cells: cellsOf(), saved: await savedCells(instance) };
 
       instance.blocks.move(3, 1);
       await nextFrames(3);
 
-      const cellOrder = cellsOf().map(entry => entry.split('@')[0]);
-
-      expect(flat(instance).slice(1).map(entry => entry.split('^')[0])).toEqual(cellOrder);
+      expect({ flat: flat(instance), cells: cellsOf(), saved: await savedCells(instance) }).toEqual(before);
     }, 30_000);
 
     it('throws and changes nothing when moving a root block into a table cell', async () => {

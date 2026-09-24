@@ -52,9 +52,9 @@ export class Blocks {
   /**
    * Invokes the tool's `rendered()` lifecycle hook and broadcasts the
    * `block:rendered` event for the freshly rendered block.
-   * @param block - block that has just been inserted into the DOM
+   * @param block - block that has just been inserted into the DOM, or moved at the root
    */
-  private callRenderedHook(block: Block): void {
+  public callRenderedHook(block: Block): void {
     block.call(BlockToolAPI.RENDERED);
     this.eventsDispatcher?.emit(BlockRendered, { blockId: block.id });
   }

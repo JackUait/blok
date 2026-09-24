@@ -25,6 +25,7 @@ import { sanitizeBlocks } from '../../utils/sanitizer';
 import { assertHierarchy, validateHierarchy } from '../../utils/hierarchy-invariant';
 import { findOwn } from '../../utils/own-element';
 import { releasesChildrenOnTurnInto } from '../../utils/turn-into-children';
+import type { TreePlacement } from '../../utils/tree-order';
 import { getBlockNestingDepth } from '../drag/utils/depthUtils';
 
 // Imported modules
@@ -1526,6 +1527,16 @@ export class BlockManager extends Module {
    */
   public move(toIndex: number, fromIndex: number = this.currentBlockIndex, skipDOM = false, skipMovedHook = false): void {
     this.operations.move(toIndex, fromIndex, skipDOM, this.blocksStore, skipMovedHook);
+  }
+
+  /**
+   * Move a block and its subtree to a placement, as one undo step. The
+   * caller checks that the parent accepts it.
+   * @param block - the block to move
+   * @param placement - its new parent and previous sibling
+   */
+  public moveTo(block: Block, placement: TreePlacement): void {
+    this.operations.moveTo(block, placement, this.blocksStore);
   }
 
   /**

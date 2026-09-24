@@ -13,6 +13,7 @@ import type { BlockToolData, PasteEvent, OutputBlockData } from '../../../../typ
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import type { Block } from '../../block';
 import { resolveRuntimeEnv, validateHierarchy } from '../../utils/hierarchy-invariant';
+import type { TreePlacement } from '../../utils/tree-order';
 import { BlockInsertion } from './block-insertion';
 import { BlockMutation } from './block-mutation';
 import { BlockRemoval } from './block-removal';
@@ -455,6 +456,16 @@ export class BlockOperations implements OperationsContext {
    */
   public move(toIndex: number, fromIndex: number, skipDOM: boolean, blocksStore: BlocksStore, skipMovedHook = false): void {
     this.mutation.move(toIndex, fromIndex, skipDOM, blocksStore, skipMovedHook);
+  }
+
+  /**
+   * Move a block and its subtree to a placement, as one undo step
+   * @param block - the block to move
+   * @param placement - its new parent and previous sibling
+   * @param blocksStore - The blocks store to modify
+   */
+  public moveTo(block: Block, placement: TreePlacement, blocksStore: BlocksStore): void {
+    this.mutation.moveTo(block, placement, blocksStore);
   }
 
   /**

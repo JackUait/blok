@@ -546,7 +546,7 @@ export class BlocksAPI extends Module {
    * @param target - new parent and position
    */
   public moveTo(id: string, target: MoveToTarget): void {
-    const { BlockManager, YjsManager } = this.Blok;
+    const { BlockManager } = this.Blok;
     const block = findBlock(this.tree, id);
     const { position } = target;
 
@@ -580,39 +580,7 @@ export class BlocksAPI extends Module {
       throw new BlockPlacementError(`cannot move "${block.name}" to a slot next to a table cell block`);
     }
 
-    // A move group skips move()'s parent heal and clamps, so the whole
-    // relocation plus the reparent below is one undo entry.
-    YjsManager.transactMoves(() => {
-      if (movesFlat) {
-        BlockManager.move(toIndex, from);
-
-        // Blocks.move carries only children nested in the moved holder, so
-        // place each descendant after the previous member, by live index.
-        descendants.forEach((member, k) => {
-          const anchor = BlockManager.getBlockIndex(k === 0 ? block : descendants[k - 1]);
-          const memberFrom = BlockManager.getBlockIndex(member);
-
-          if (memberFrom !== anchor + 1) {
-            BlockManager.move(memberFrom < anchor ? anchor : anchor + 1, memberFrom);
-          }
-        });
-      }
-
-      if (placement.parentId !== block.parentId) {
-        BlockManager.setBlockParent(block, placement.parentId);
-
-        return;
-      }
-
-      // A move group leaves nested holders in place: re-mount the children,
-      // last first, so each one's next sibling is already placed.
-      if (placement.parentId !== null) {
-        BlockManager.blocks
-          .filter(candidate => candidate.parentId === placement.parentId)
-          .reverse()
-          .forEach(child => BlockManager.setBlockParent(child, placement.parentId));
-      }
-    });
+    BlockManager.moveTo(block, { parentId: placement.parentId, afterId: placement.afterId });
   }
 
   /**

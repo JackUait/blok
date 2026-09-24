@@ -111,6 +111,42 @@ describe('media tools: a failed upload of a picked file', () => {
       expect(updates).toStrictEqual([{ data: { fileName: undefined }, inScope: true }]);
       expect(scope.options).toEqual({ derivedFrom: 'm1', from: ['fileName'] });
     });
+
+    // The scope waits for the block's in-flight saves, so the update can start after the helper returned.
+    it('leaves no unhandled rejection when the put-back runs late and the block is gone by then', async () => {
+      const unhandled: unknown[] = [];
+      const onUnhandled = (reason: unknown): void => {
+        unhandled.push(reason);
+      };
+      const deferred: Array<() => void> = [];
+      const live = { id: 'm1', name, save: async () => ({ data: { url: '', fileName: file.name } }) };
+      const api = createApi({
+        getBlocksCount: () => 1,
+        getBlockByIndex: () => live,
+        update: () => Promise.reject(new Error('Block with id "m1" not found')),
+        transactWithoutCapture: (fn: () => void) => {
+          deferred.push(fn);
+        },
+      });
+      const tool = make({ data: { url: '' }, config: { uploader: { uploadByFile } }, api, block: createBlock(name), readOnly: false });
+      const root = tool.render() as HTMLElement;
+
+      process.on('unhandledRejection', onUnhandled);
+      try {
+        pick(root, file);
+        tool.removed();
+        await flush();
+        await flush();
+        deferred.forEach((fn) => fn());
+        await flush();
+        await flush();
+      } finally {
+        process.off('unhandledRejection', onUnhandled);
+      }
+
+      expect(deferred).toHaveLength(1);
+      expect(unhandled).toEqual([]);
+    });
   });
 
   it('image: retry after a failed pick picks the file again, so the upload joins that edit', async () => {

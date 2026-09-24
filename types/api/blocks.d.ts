@@ -301,7 +301,8 @@ export interface Blocks {
    * the `from` keys of that block (a finished upload, for example). They still
    * add no undo entry and keep redo, but they join the entry that wrote those
    * values: undoing it takes them back and redo brings them back. An `update()`
-   * started inside `fn` counts too, although it finishes later.
+   * started inside `fn` counts too, although it finishes later. While a save of
+   * that block is still in flight, `fn` runs once it lands, after this returns.
    *
    * @param fn - The function containing block operations to execute without undo capture
    * @param options - (optional) `derivedFrom`: id of the block the operations are worked out from;

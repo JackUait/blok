@@ -1241,7 +1241,7 @@ editor.blocks.endTransaction();`,
         name: "blocks.transactWithoutCapture(fn)",
         returnType: "void",
         description:
-          "Run block operations without recording anything in the undo history. Use it for auto-repair and normalization (e.g. ensuring an empty cell always has a block) that Cmd+Z should never step through.\n\nPass `{ derivedFrom: blockId, from: ['url'] }` when the operations are data worked out from those keys of a block, such as a finished upload that replaces the block. They still add no undo step and keep redo, but they join the step that wrote those values: undoing it takes them back, and redo brings them back. An `update()` started inside `fn` counts too, although it finishes later.",
+          "Run block operations without recording anything in the undo history. Use it for auto-repair and normalization (e.g. ensuring an empty cell always has a block) that Cmd+Z should never step through.\n\nPass `{ derivedFrom: blockId, from: ['url'] }` when the operations are data worked out from those keys of a block, such as a finished upload that replaces the block. They still add no undo step and keep redo, but they join the step that wrote those values: undoing it takes them back, and redo brings them back. An `update()` started inside `fn` counts too, although it finishes later. While a save of that block is still in flight, `fn` runs once it lands, after the call returns.",
         example: `editor.blocks.transactWithoutCapture(() => {
   editor.blocks.insert('paragraph', {}, undefined, 0);
 });

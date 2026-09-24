@@ -4,6 +4,7 @@
  * @module BlockHierarchy
  */
 import type { Block } from '../../block';
+import { DATA_ATTR } from '../../constants/data-attributes';
 import { logLabeled } from '../../utils';
 import { CHILD_SLOT_SELECTOR, SELF_PLACING_PARENTS } from '../../../tools/nested-blocks';
 import { homeSlotElement, resolveHomeSlot } from '../../utils/home-slot';
@@ -172,6 +173,39 @@ export class BlockHierarchy {
   }
 
   /**
+   * The table cell (or other slot of a table/database) that holds `block`'s
+   * holder directly, when that slot belongs to the block's nearest
+   * table/database ancestor. The cell is the home slot of a block already in
+   * it, so a reorder inside the cell can mount there without ever changing
+   * cells. Undefined when the holder is anywhere else.
+   * @param block - a block under a table/database
+   */
+  private ownSelfPlacingSlot(block: Block): Element | undefined {
+    const slot = block.holder.parentElement;
+
+    if (slot === null || !slot.matches(CHILD_SLOT_SELECTOR)) {
+      return undefined;
+    }
+
+    const walk = (cursor: string | null, visited: Set<string>): Block | undefined => {
+      if (cursor === null || visited.has(cursor)) {
+        return undefined;
+      }
+
+      const ancestor = this.repository.getBlockById(cursor);
+
+      if (ancestor === undefined || SELF_PLACING_PARENTS.has(ancestor.name)) {
+        return ancestor;
+      }
+
+      return walk(ancestor.parentId, visited.add(cursor));
+    };
+    const owner = walk(block.parentId, new Set<string>());
+
+    return owner !== undefined && slot.closest(`[${DATA_ATTR.element}]`) === owner.holder ? slot : undefined;
+  }
+
+  /**
    * Where {@link setBlockParent} puts `block` under `parentId`:
    * - joining a parent from outside its subtree: last, after the parent's
    *   whole subtree;
@@ -292,7 +326,8 @@ export class BlockHierarchy {
    * The home slot is a querySelector, so a parent with one slot per child
    * position (a table, whose every cell is a nested-blocks slot, or an adapter
    * block rendering two <BlockChildren>) always resolves to slot ONE. This veto
-   * is what keeps the other slots' children where they are.
+   * is what keeps the other slots' children where they are (a table's
+   * children in their own cell are let through: placeBlock mounts them there).
    * @param block - the block being reparented
    * @param newParent - its new parent
    * @param oldHomeSlot - the slot the block is leaving (null when the parent is unchanged)
@@ -310,6 +345,11 @@ export class BlockHierarchy {
 
     if (subtree.some(member => member.holder.contains(newContainer))) {
       return false;
+    }
+
+    // placeBlock keeps a block in the table cell that already holds it.
+    if (SELF_PLACING_PARENTS.has(newParent.name) && this.ownSelfPlacingSlot(block)?.closest(`[${DATA_ATTR.element}]`) === newParent.holder) {
+      return true;
     }
 
     // A column→column move is a legitimate reparent driven by the drag system.
@@ -548,9 +588,10 @@ export class BlockHierarchy {
    *
    * Left to the caller:
    * - childTools / ownsChildren: not checked here.
-   * - Under a table/database the holder stays where it is; the caller hands
-   *   it to the tool, which picks the cell or view (setBlockParent mounts a
-   *   holder from outside the table into its first cell).
+   * - Under a table/database a holder already in one of its cells is only
+   *   reordered inside that cell; any other holder stays where it is, and the
+   *   tool picks the cell or view (setBlockParent mounts a holder from outside
+   *   the table into its first cell).
    * - Hiding a block that joins a collapsed toggle.
    * - Yjs writes and the parent-change callback.
    *
@@ -639,8 +680,20 @@ export class BlockHierarchy {
       const home = resolveHomeSlot(member.parentId, getBlock);
       const ridesAlong = moving.some(other => other !== member && other.holder.contains(member.holder));
 
-      if (!ridesAlong && (home.kind === 'slot' || home.kind === 'root')) {
+      if (ridesAlong) {
+        return;
+      }
+
+      if (home.kind === 'slot' || home.kind === 'root') {
         store.mount(member, this.repository.getBlockIndex(member), home.kind === 'slot' ? home.slot : null);
+
+        return;
+      }
+
+      const cell = home.kind === 'self-placing' ? this.ownSelfPlacingSlot(member) : undefined;
+
+      if (cell !== undefined) {
+        store.mount(member, this.repository.getBlockIndex(member), cell);
       }
     });
 

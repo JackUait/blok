@@ -31,6 +31,7 @@ interface TestEditor {
       currentBlockIndex: number;
       insert: (options: { id?: string; tool?: string; data?: Record<string, unknown>; placement?: { parentId: string | null; afterId: string | null } }) => Block;
       split: () => Block;
+      moveCurrentBlockUp: () => void;
     };
     yjsManager: { stopCapturing: () => void; toJSON: () => OutputBlockData[]; addBlock: (...args: unknown[]) => unknown; addBlockAt: (...args: unknown[]) => unknown };
     paste: { processText: (data: string, isHTML?: boolean) => Promise<void> };
@@ -642,6 +643,59 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       expect(flat(instance)).toEqual(['tbl^-', 'p2^tbl', 'p1^tbl', 'q1^tbl']);
       expect(cellsOf()).toEqual(['p2@0', 'p1@0', 'q1@1']);
       expect(await savedCells(instance)).toMatchObject([[{ blocks: ['p2', 'p1'] }, { blocks: ['q1'] }]]);
+    }, 30_000);
+
+    /** blockCells() with a second block, q2, in the second cell. */
+    const twoPerCell = (): OutputBlockData[] => [
+      {
+        id: 'tbl',
+        type: 'table',
+        data: { withHeadings: false, content: [[{ blocks: ['p1', 'p2'] }, { blocks: ['q1', 'q2'] }]] },
+        content: ['p1', 'p2', 'q1', 'q2'],
+      },
+      P('p1', 'tbl'),
+      P('p2', 'tbl'),
+      P('q1', 'tbl'),
+      P('q2', 'tbl'),
+    ];
+
+    it('reorders blocks inside a table cell that is not the first', async () => {
+      const instance = await boot(twoPerCell());
+
+      instance.blocks.moveTo('q2', { position: { before: 'q1' } });
+      await nextFrames(2);
+
+      expect(cellsOf()).toEqual(['p1@0', 'p2@0', 'q2@1', 'q1@1']);
+      expect(flat(instance)).toEqual(['tbl^-', 'p1^tbl', 'p2^tbl', 'q2^tbl', 'q1^tbl']);
+      expect(await savedCells(instance)).toMatchObject([[{ blocks: ['p1', 'p2'] }, { blocks: ['q2', 'q1'] }]]);
+    }, 30_000);
+
+    it.each([
+      { name: 'the first cell', from: 2, to: 1, cells: ['p2@0', 'p1@0', 'q1@1', 'q2@1'] },
+      { name: 'the second cell', from: 4, to: 3, cells: ['p1@0', 'p2@0', 'q2@1', 'q1@1'] },
+    ])('blocks.move reorders blocks inside $name', async ({ from, to, cells }) => {
+      const instance = await boot(twoPerCell());
+
+      instance.blocks.move(to, from);
+      await nextFrames(2);
+
+      expect(cellsOf()).toEqual(cells);
+      expect(flat(instance).slice(1).map(entry => entry.split('^')[0])).toEqual(cells.map(entry => entry.split('@')[0]));
+    }, 30_000);
+
+    it.each([
+      { name: 'the first cell', id: 'p2', cells: ['p2@0', 'p1@0', 'q1@1', 'q2@1'] },
+      { name: 'the second cell', id: 'q2', cells: ['p1@0', 'p2@0', 'q2@1', 'q1@1'] },
+    ])('keyboard move up reorders blocks inside $name', async ({ id, cells }) => {
+      const instance = await boot(twoPerCell());
+      const blockManager = instance.module.blockManager;
+
+      blockManager.currentBlockIndex = blockManager.blocks.findIndex(block => block.id === id);
+      blockManager.moveCurrentBlockUp();
+      await nextFrames(2);
+
+      expect(cellsOf()).toEqual(cells);
+      expect(flat(instance).slice(1).map(entry => entry.split('^')[0])).toEqual(cells.map(entry => entry.split('@')[0]));
     }, 30_000);
 
     it.each([

@@ -437,7 +437,7 @@ describe('BlockHierarchy.placeBlock', () => {
       expect(cell !== null && holderIds(cell)).toEqual(['c1']);
     });
 
-    it('leaves a table child\'s holder in its cell when it is reordered', () => {
+    it('reorders a table child\'s holder inside its cell', () => {
       const h = build(workingArea, [
         { id: 'tbl', kind: 'table' },
         { id: 'c1', parentId: 'tbl' },
@@ -448,7 +448,23 @@ describe('BlockHierarchy.placeBlock', () => {
       h.hierarchy.placeBlock(h.get('c1'), { parentId: 'tbl', afterId: 'c2' });
 
       expect(h.ids()).toEqual(['tbl', 'c2', 'c1']);
-      expect(cell !== null && holderIds(cell)).toEqual(['c1', 'c2']);
+      expect(cell !== null && holderIds(cell)).toEqual(['c2', 'c1']);
+    });
+
+    it('never moves a table child\'s holder to another cell', () => {
+      const h = build(workingArea, [
+        { id: 'tbl', kind: 'table' },
+        { id: 'c1', parentId: 'tbl' },
+        { id: 'c2', parentId: 'tbl' },
+      ]);
+      const [firstCell, secondCell] = Array.from(h.get('tbl').holder.querySelectorAll('[data-blok-table-cell-blocks]'));
+
+      secondCell.appendChild(h.get('c2').holder);
+      h.hierarchy.placeBlock(h.get('c1'), { parentId: 'tbl', afterId: 'c2' });
+
+      expect(h.ids()).toEqual(['tbl', 'c2', 'c1']);
+      expect(holderIds(firstCell)).toEqual(['c1']);
+      expect(holderIds(secondCell)).toEqual(['c2']);
     });
 
     it('leaves the DOM alone for a child of a slotless block inside a table', () => {

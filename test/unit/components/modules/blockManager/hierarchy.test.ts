@@ -2399,6 +2399,24 @@ describe('BlockHierarchy', () => {
       expect(flatIds()).toStrictEqual(['t', 'c2', 'c1', 'c3', 'z']);
     });
 
+    it('re-asserting one child after a flat reorder puts its listed siblings in flat order too', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 't', parentId: null, contentIds: ['c1', 'c2', 'c3'] },
+        { id: 'c1', parentId: 't' },
+        { id: 'c2', parentId: 't' },
+        { id: 'c3', parentId: 't' },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const [t, c1, c2, c3] = ['t', 'c1', 'c2', 'c3'].map(requireBlock);
+
+      repository.reorderBlocks([t, c3, c1, c2]);
+      hierarchy.setBlockParent(c1, 't');
+
+      expect(t.contentIds).toStrictEqual(['c3', 'c1', 'c2']);
+      expect(flatIds()).toStrictEqual(['t', 'c3', 'c1', 'c2']);
+    });
+
     it('lists a parent\'s unlisted earlier children before the block, in flat order', () => {
       repository = createRepositoryWithBlocks([
         { id: 't', parentId: null, contentIds: ['c1'] },

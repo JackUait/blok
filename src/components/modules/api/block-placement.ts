@@ -24,9 +24,13 @@ export interface BlockTree {
   getBlockById(id: string): Block | undefined;
 }
 
-/** A resolved place: the parent, and the flat index the block goes to before any removal. */
+/**
+ * A resolved place: the parent, the sibling the block follows (null = first),
+ * and the flat index the block goes to before any removal.
+ */
 export interface ResolvedPlacement {
   parentId: string | null;
+  afterId: string | null;
   index: number;
 }
 
@@ -79,7 +83,18 @@ const subtreeEnd = (tree: BlockTree, block: Block): number => {
 };
 
 /**
- * Turns a parent + sibling-relative position into a parent + flat index.
+ * The last child of `parentId` (null = a root block) in flat order before
+ * flat index `end`, or null.
+ * @param tree - the blocks
+ * @param parentId - the parent
+ * @param end - where to stop looking (exclusive)
+ */
+const lastChildBefore = (tree: BlockTree, parentId: string | null, end: number): string | null =>
+  tree.blocks.slice(0, end).filter(candidate => candidate.parentId === parentId).pop()?.id ?? null;
+
+/**
+ * Turns a parent + sibling-relative position into a parent, the sibling the
+ * block follows and a flat index.
  *
  * `parentId` omitted means the sibling's parent for `before`/`after`, and the
  * root for `'start'`/`'end'`. `{ after }` lands after the sibling's whole
@@ -105,22 +120,28 @@ export const resolvePlacement = (
       throw new BlockPlacementError(`block "${refId}" is not a child of ${nameOf(parentId)}`);
     }
 
-    return {
-      parentId: ref.parentId,
-      index: 'before' in position ? tree.blocks.indexOf(ref) : subtreeEnd(tree, ref),
-    };
+    const refIndex = tree.blocks.indexOf(ref);
+
+    return 'before' in position
+      ? { parentId: ref.parentId, afterId: lastChildBefore(tree, ref.parentId, refIndex), index: refIndex }
+      : { parentId: ref.parentId, afterId: ref.id, index: subtreeEnd(tree, ref) };
   }
 
   if (parentId === undefined || parentId === null) {
-    return { parentId: null, index: position === 'start' ? 0 : tree.blocks.length };
+    return position === 'start'
+      ? { parentId: null, afterId: null, index: 0 }
+      : { parentId: null, afterId: lastChildBefore(tree, null, tree.blocks.length), index: tree.blocks.length };
   }
 
   const parent = findBlock(tree, parentId, 'parent block');
 
-  return {
-    parentId,
-    index: position === 'start' ? tree.blocks.indexOf(parent) + 1 : subtreeEnd(tree, parent),
-  };
+  if (position === 'start') {
+    return { parentId, afterId: null, index: tree.blocks.indexOf(parent) + 1 };
+  }
+
+  const end = subtreeEnd(tree, parent);
+
+  return { parentId, afterId: lastChildBefore(tree, parentId, end), index: end };
 };
 
 const isColumnPart = (block: Block | undefined): boolean =>

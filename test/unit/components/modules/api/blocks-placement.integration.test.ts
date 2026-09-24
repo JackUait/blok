@@ -29,6 +29,7 @@ interface TestEditor {
       blocks: Block[];
       currentBlockIndex: number;
       insert: (options: { id?: string; tool?: string; data?: Record<string, unknown>; placement?: { parentId: string | null; afterId: string | null } }) => Block;
+      split: () => Block;
     };
     yjsManager: { stopCapturing: () => void; toJSON: () => OutputBlockData[]; addBlock: (...args: unknown[]) => unknown; addBlockAt: (...args: unknown[]) => unknown };
     paste: { processText: (data: string, isHTML?: boolean) => Promise<void> };
@@ -240,7 +241,36 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       expect(block.id).toBe('n');
       expect(flat(instance)).toEqual(expected);
       expect(contentOf(instance, 't')).toEqual(expected.filter(entry => entry.endsWith('^t')).map(entry => entry.split('^')[0]));
+      expect(dom()).toEqual(domFor(expected));
       expect(await saved(instance)).toEqual(expected);
+      expect(shared(instance)).toEqual(expected);
+    }, 30_000);
+
+    it.each([
+      { name: 'the root start', options: { position: 'start' as const }, placement: { parentId: null, afterId: null } },
+      { name: 'the root end', options: {}, placement: { parentId: null, afterId: 'b' } },
+      { name: 'after the toggle', options: { position: { after: 't' } }, placement: { parentId: null, afterId: 't' } },
+      { name: 'before the toggle', options: { position: { before: 't' } }, placement: { parentId: null, afterId: 'a' } },
+      { name: 'before the first child', options: { position: { before: 'c1' } }, placement: { parentId: 't', afterId: null } },
+      { name: 'the toggle end', options: { parentId: 't', position: 'end' as const }, placement: { parentId: 't', afterId: 'c2' } },
+    ])('writes the placement to the shared doc at $name', async ({ options, placement }) => {
+      const instance = await boot();
+      const addBlock = vi.spyOn(instance.module.yjsManager, 'addBlock');
+      const addBlockAt = vi.spyOn(instance.module.yjsManager, 'addBlockAt');
+
+      instance.blocks.insertAt('paragraph', { text: 'n' }, { id: 'n', ...options });
+
+      expect(addBlock).not.toHaveBeenCalled();
+      expect(addBlockAt).toHaveBeenCalledWith(expect.objectContaining({ id: 'n' }), placement);
+    }, 30_000);
+
+    it('hides a block inserted into a collapsed toggle', async () => {
+      const instance = await boot([P('a'), { ...T('t', ['c1']), data: { text: 't', isOpen: false } }, P('c1', 't')]);
+
+      const block = instance.blocks.insertAt('paragraph', { text: 'n' }, { id: 'n', parentId: 't', position: 'end' });
+
+      expect(block.holder.classList.contains('hidden')).toBe(true);
+      expect(await saved(instance)).toEqual(['a^-', 't^-', 'c1^t', 'n^t']);
     }, 30_000);
 
     it('uses the default tool when type is omitted', async () => {

@@ -517,15 +517,10 @@ export class BlocksAPI extends Module {
 
     const placement = resolvePlacement(this.tree, parentId, position ?? 'end');
 
+    // insertInsideParent turns the index back into `afterId`; it also keeps
+    // the index path for table and database parents.
     if (placement.parentId !== null) {
       return this.insertInsideParent(placement.parentId, placement.index, data, type, { id, tunes, focus });
-    }
-
-    // forceTopLevel skips the "after a table" check, so a restricted tool right
-    // after a table would be demoted as if it were in a cell. The inferring
-    // insert knows it left the table, and at a root slot it infers the root.
-    if (placement.index > 0 && isInsideTableCell(BlockManager.getBlockByIndex(placement.index - 1))) {
-      return this.insert(type, data, {}, placement.index, focus, false, id, tunes);
     }
 
     if (!BlockManager.suppressStopCapturing) {
@@ -536,11 +531,9 @@ export class BlocksAPI extends Module {
       id,
       tool: type,
       data,
-      index: placement.index,
       needToFocus: focus,
       tunes,
-      forceTopLevel: true,
-      eventParentId: null,
+      placement: { parentId: null, afterId: placement.afterId },
     });
 
     return new BlockAPI(block, this.Blok.API);

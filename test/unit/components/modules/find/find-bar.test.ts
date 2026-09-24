@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FindBar } from '../../../../../src/components/modules/find/find-bar';
 import type { FindBarCallbacks } from '../../../../../src/components/modules/find/find-bar';
 import { DATA_ATTR } from '../../../../../src/components/constants/data-attributes';
+import { destroy as destroyTooltip } from '../../../../../src/components/utils/tooltip';
 
 const t = (key: string, vars?: Record<string, string | number>): string =>
   vars === undefined ? key : `${key}${JSON.stringify(vars)}`;
@@ -181,6 +182,29 @@ describe('FindBar', () => {
 
       expect(byTestId(bar.element, 'find-replace-row').hidden).toBe(false);
       expect(button(bar.element, 'find.toggleReplace').getAttribute('aria-expanded')).toBe('true');
+    });
+  });
+
+  describe('close button tooltip', () => {
+    // The tooltip is a singleton; afterEach empties <body> and detaches it. The bar binds on construction.
+    const closeTooltipText = (isMac: boolean): string => {
+      bar.destroy();
+      destroyTooltip();
+      bar = create(isMac);
+      byTestId<HTMLButtonElement>(bar.element, 'find-close').focus();
+
+      return document.getElementById('blok-tooltip')?.textContent ?? '';
+    };
+
+    it('names the key as Esc on macOS', () => {
+      const text = closeTooltipText(true);
+
+      expect(text).toContain('Esc');
+      expect(text).not.toContain('⎋');
+    });
+
+    it('names the key as Esc elsewhere', () => {
+      expect(closeTooltipText(false)).toContain('Esc');
     });
   });
 

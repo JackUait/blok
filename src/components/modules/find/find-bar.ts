@@ -80,7 +80,7 @@ interface Shortcuts {
 }
 
 const shortcutsFor = (isMac: boolean): Shortcuts => isMac
-  ? { next: '⏎', previous: '⇧⏎', close: '⎋', matchCase: '⌥C', wholeWord: '⌥W', replace: '⏎', replaceAll: '⌘⏎' }
+  ? { next: '⏎', previous: '⇧⏎', close: 'Esc', matchCase: '⌥C', wholeWord: '⌥W', replace: '⏎', replaceAll: '⌘⏎' }
   : { next: 'Enter', previous: 'Shift+Enter', close: 'Esc', matchCase: 'Alt+C', wholeWord: 'Alt+W', replace: 'Enter', replaceAll: 'Ctrl+Enter' };
 
 const build = <K extends keyof HTMLElementTagNameMap>(

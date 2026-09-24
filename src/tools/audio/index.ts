@@ -50,7 +50,7 @@ export class AudioTool implements BlockTool {
   private readonly uploader: Uploader;
   private data: AudioData;
   private readOnly: boolean;
-  /** Rebuilt by undo/redo or a remote update: block data outranks the viewer's stored loop preference. */
+  /** Rebuilt by this client's undo/redo: block data outranks the viewer's stored loop preference. */
   private readonly isReplay: boolean;
   private root: HTMLElement | null = null;
   private state: ToolState;
@@ -73,7 +73,8 @@ export class AudioTool implements BlockTool {
     this.data = { ...options.data, url: options.data?.url ?? '' };
     this.state = this.data.url ? 'RENDERED' : 'EMPTY';
     this.uploader = new Uploader(this.config, this.api.uploader);
-    this.isReplay = options.origin === 'replay';
+    // A peer's change is not this viewer's undo, so their preference stays.
+    this.isReplay = options.origin === 'replay' && options.replaySource !== 'remote';
   }
 
   public render(): HTMLElement {

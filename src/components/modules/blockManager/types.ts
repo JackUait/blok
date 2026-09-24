@@ -50,6 +50,8 @@ export interface ComposeBlockOptions {
    * user gesture.
    */
   origin?: BlockOrigin;
+  /** With a replay origin: this client's undo/redo or a peer's change. */
+  replaySource?: 'history' | 'remote';
 }
 
 /**

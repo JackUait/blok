@@ -109,6 +109,9 @@ export class TableCellBlocks {
   /** When true, ensureCellHasBlock is inserting its own repair block — skip claim heuristics for it. */
   private isRepairingCell = false;
 
+  /** Ids the running initializeCells pass has mounted, so a second reference to one is not a park. */
+  private readonly mountedThisPass = new Set<string>();
+
   constructor(options: TableCellBlocksOptions) {
     this.api = options.api;
     this.gridElement = options.gridElement;
@@ -690,6 +693,18 @@ export class TableCellBlocks {
   public initializeCells(
     content: LegacyCellContent[][]
   ): CellContent[][] {
+    this.mountedThisPass.clear();
+
+    try {
+      return this.initializeCellsPass(content);
+    } finally {
+      this.mountedThisPass.clear();
+    }
+  }
+
+  private initializeCellsPass(
+    content: LegacyCellContent[][]
+  ): CellContent[][] {
     const rowElements = this.gridElement.querySelectorAll(`[${ROW_ATTR}]`);
     const normalizedContent: CellContent[][] = [];
     // Every (row, col) the model-driven loop below describes. The completeness
@@ -882,6 +897,34 @@ export class TableCellBlocks {
    * — without it the restored block would float at the top level as an orphan
    * (regression: table-undo-redo-orphans, multi-cell undo restoration).
    */
+  /**
+   * After a sync replay has settled, give an editable block to every cell
+   * whose referenced blocks have not arrived (a peer's content write that won
+   * over a delete). Only then: during the replay they may still land.
+   */
+  public fillCellsWithUnresolvedBlocks(): void {
+    this.gridElement.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`).forEach(cell => {
+      const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+      const pos = this.getCellPosition(cell);
+
+      if (!container || !pos || container.querySelector('[data-blok-id]') !== null) {
+        return;
+      }
+
+      const ids = this.model.getCellBlocks(pos.row, pos.col);
+
+      // A cell the replay left empty on purpose (undo to an empty table) is
+      // not ours to fill: its blocks may still be restored by later ops.
+      if (ids.length === 0 || ids.some(id => this.api.blocks.getById?.(id) != null)) {
+        return;
+      }
+
+      // The dangling ids stay in the model: save() drops ids with no block,
+      // and a block that still lands late is routed back to this cell by them.
+      this.ensureCellHasBlock(cell);
+    });
+  }
+
   public reclaimReferencedBlocks(): void {
     const snapshot = this.model.snapshot();
 
@@ -994,10 +1037,13 @@ export class TableCellBlocks {
       // A synced child of ours that DOM adjacency dropped into another of our
       // cells: the table data being applied is where it belongs. A duplicate
       // here is broadcast, and each peer then mints its own.
+      // Not when this pass mounted it into an earlier cell: the content names
+      // it twice, and moving it would leave that cell with no block.
       const parkedBySync = this.api.blocks.isSyncingFromYjs
         && nestedContainer !== null
         && this.gridElement.contains(nestedContainer)
-        && block.parentId === this.tableBlockId;
+        && block.parentId === this.tableBlockId
+        && !this.mountedThisPass.has(blockId);
 
       if ((nestedContainer !== null && !strandedInPreviousRender && !parkedBySync) || hasDifferentOwner) {
         const duplicate = this.api.blocks.insert(
@@ -1018,6 +1064,7 @@ export class TableCellBlocks {
       container.appendChild(block.holder);
       this.api.blocks.setBlockParent(blockId, this.tableBlockId);
       this.blocksAwaitingCell.delete(blockId);
+      this.mountedThisPass.add(blockId);
       mountedIds.push(blockId);
     }
     return { mountedIds, replacements };

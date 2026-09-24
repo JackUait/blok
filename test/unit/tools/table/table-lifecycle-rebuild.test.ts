@@ -415,6 +415,124 @@ describe('Table lifecycle rebuild', () => {
     });
   });
 
+  describe('setData() during Yjs sync naming a block that never arrives', () => {
+    const nextFrame = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+
+    it('gives the cell an editable block once the replay has settled', async () => {
+      const options = createTableOptions(
+        { content: [['A']] },
+        {},
+        { blocks: { isSyncingFromYjs: true, getById: vi.fn(() => undefined) } }
+      );
+      const blocksApi = options.api.blocks as { isSyncingFromYjs: boolean };
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      table.setData({ withHeadings: false, withHeadingColumn: false, content: [[{ blocks: ['never-arrives'] }]] });
+      await Promise.resolve();
+      blocksApi.isSyncingFromYjs = false;
+      await nextFrame();
+      await nextFrame();
+
+      const cellBlocks = container.querySelector('[data-blok-table-cell-blocks]');
+
+      expect(cellBlocks?.querySelectorAll('[data-blok-id]').length).toBe(1);
+      expect(table.save(container.firstElementChild as HTMLElement).content[0][0]).not.toEqual({ blocks: ['never-arrives'] });
+    });
+
+    it('still routes a block that lands after the fill to the cell that names it', async () => {
+      const options = createTableOptions(
+        { content: [['A']] },
+        {},
+        { blocks: { isSyncingFromYjs: true, getById: vi.fn(() => undefined) } }
+      );
+      const blocksApi = options.api.blocks as unknown as { isSyncingFromYjs: boolean; getById: ReturnType<typeof vi.fn> };
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      table.setData({ withHeadings: false, withHeadingColumn: false, content: [[{ blocks: ['late'] }]] });
+      await Promise.resolve();
+      blocksApi.isSyncingFromYjs = false;
+      await nextFrame();
+      await nextFrame();
+
+      const late = document.createElement('div');
+
+      late.setAttribute('data-blok-id', 'late');
+      document.body.appendChild(late);
+      const lateBlock = { id: 'late', name: 'paragraph', holder: late, parentId: 'table-lifecycle-test', preservedData: {} };
+
+      blocksApi.getById.mockImplementation((id: string) => (id === 'late' ? lateBlock : undefined));
+      vi.mocked(options.api.blocks.getBlockIndex).mockImplementation((id: string) => (id === 'late' ? 2 : undefined));
+      vi.mocked(options.api.blocks).getBlockByIndex = vi.fn((index: number) => (index === 2 ? lateBlock : undefined)) as never;
+      blocksApi.isSyncingFromYjs = true;
+      vi.mocked(options.api.events.on).mock.calls
+        .filter(([name]) => name === 'block changed')
+        .forEach(([, handler]) => (handler as (payload: unknown) => void)({
+          event: { type: 'block-added', detail: { target: { id: 'late', holder: late }, index: 2 } },
+        }));
+      blocksApi.isSyncingFromYjs = false;
+
+      const cellBlocks = container.querySelector('[data-blok-table-cell-blocks]');
+
+      expect(cellBlocks?.contains(late)).toBe(true);
+
+      late.remove();
+    });
+  });
+
+  describe('a synced child whose cell the table data never names', () => {
+    /**
+     * A peer's cell block arrives before the table data that names its cell,
+     * so the table holds it out of save(). If that data write never lands (it
+     * lost last-writer-wins to a concurrent local content write), nothing
+     * releases the hold: the block stays visible but every later save of the
+     * table leaves it out, and a reload unparents it from the table.
+     * Releasing it would need a point where guessing its cell cannot race the
+     * peer's write (see COB-4), so this pins the loss instead.
+     */
+    it.fails('saves the held child in a save() after the replay', () => {
+      const options = createTableOptions(
+        { content: [['A', 'B']] },
+        {},
+        { blocks: { isSyncingFromYjs: false, getById: vi.fn(() => undefined) } }
+      );
+      const blocksApi = options.api.blocks as unknown as { isSyncingFromYjs: boolean; getById: ReturnType<typeof vi.fn> };
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      const blockChanged = vi.mocked(options.api.events.on).mock.calls
+        .filter(([name]) => name === 'block changed')
+        .map(([, handler]) => handler as (payload: unknown) => void);
+      const cellContainer = element.querySelector('[data-blok-table-cell-blocks]') as HTMLElement;
+      const held = document.createElement('div');
+
+      held.setAttribute('data-blok-id', 'peer-cell-block');
+      cellContainer.appendChild(held);
+      blocksApi.getById.mockImplementation((id: string) =>
+        id === 'peer-cell-block' ? { id, parentId: 'table-lifecycle-test' } : undefined);
+
+      blocksApi.isSyncingFromYjs = true;
+      blockChanged.forEach((handler) => handler({
+        event: { type: 'block-added', detail: { target: { id: 'peer-cell-block', holder: held }, index: 1 } },
+      }));
+      blocksApi.isSyncingFromYjs = false;
+
+      const saved = table.save(element);
+
+      expect(saved.content.flat().flatMap((cell) => (typeof cell === 'string' ? [] : cell.blocks))).toContain('peer-cell-block');
+    });
+  });
+
   describe('setData() with empty content during Yjs sync', () => {
     it('does not fabricate new blocks when undo reverts table content to empty', () => {
       // Regression: previously, this path called populateNewCells to insert

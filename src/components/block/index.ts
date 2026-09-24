@@ -101,6 +101,9 @@ interface BlockConstructorOptions {
    * off-tree probe (never seed). Defaults to `'api'`, never `'user'`.
    */
   origin?: BlockOrigin;
+
+  /** With a replay origin: this client's undo/redo or a peer's change. */
+  replaySource?: 'history' | 'remote';
 }
 
 /**
@@ -301,6 +304,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
     lastEditedAt,
     lastEditedBy,
     origin = 'api',
+    replaySource,
   }: BlockConstructorOptions, eventBus?: EventsDispatcher<BlokEventMap>) {
     super();
 
@@ -327,7 +331,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
 
     this.readOnly = readOnly;
     this.tool = tool;
-    this.toolInstance = tool.create(data, this.blockAPI, readOnly, origin);
+    this.toolInstance = tool.create(data, this.blockAPI, readOnly, origin, replaySource);
     this.tunes = tool.tunes;
 
     // Initialize tunes manager (needed by ToolRenderer)

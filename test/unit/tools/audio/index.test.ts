@@ -684,6 +684,30 @@ describe('AudioTool', () => {
   });
 });
 
+describe('AudioTool — the viewer\'s loop preference on a rebuild', () => {
+  const renderedLoop = (options: BlockToolConstructorOptions<AudioData, AudioConfig>): boolean => {
+    const root = new AudioTool(options).render();
+
+    return root.querySelector('audio')?.loop ?? false;
+  };
+
+  beforeEach(() => {
+    localStorage.setItem('blok:audio:loop', 'true');
+  });
+
+  afterEach(() => {
+    localStorage.removeItem('blok:audio:loop');
+  });
+
+  it('keeps the stored preference when a peer\'s change rebuilt the block', () => {
+    expect(renderedLoop({ ...opts({ url: 'https://cdn/a.mp3' }), origin: 'replay', replaySource: 'remote' })).toBe(true);
+  });
+
+  it('takes the loop from block data when this client\'s undo or redo rebuilt the block', () => {
+    expect(renderedLoop({ ...opts({ url: 'https://cdn/a.mp3' }), origin: 'replay', replaySource: 'history' })).toBe(false);
+  });
+});
+
 describe('AudioTool — Download is scheme-gated (stored XSS)', () => {
   /**
    * Records the href of every anchor that is actually clicked, so a

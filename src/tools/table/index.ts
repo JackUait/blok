@@ -58,6 +58,8 @@ import { isCellWithBlocks } from './types';
 
 const DEFAULT_ROWS = 3;
 const DEFAULT_COLS = 3;
+/** Frames to wait for a sync replay to close before filling cells it left without a block. */
+const SYNC_SETTLE_MAX_FRAMES = 5;
 
 const WRAPPER_CLASSES = [
   'my-2',
@@ -1206,8 +1208,31 @@ export class Table implements BlockTool {
           return;
         }
         this.cellBlocks?.reclaimReferencedBlocks();
+        this.fillUnresolvedCellsAfterSync(currentGeneration, SYNC_SETTLE_MAX_FRAMES);
       });
     }
+  }
+
+  /**
+   * Wait for the sync window to close (it stays open through a frame), then
+   * fill cells whose referenced blocks never arrived.
+   */
+  private fillUnresolvedCellsAfterSync(generation: number, framesLeft: number): void {
+    requestAnimationFrame(() => {
+      if (generation !== this.setDataGeneration || this.readOnly) {
+        return;
+      }
+
+      if (this.api.blocks.isSyncingFromYjs) {
+        if (framesLeft > 1) {
+          this.fillUnresolvedCellsAfterSync(generation, framesLeft - 1);
+        }
+
+        return;
+      }
+
+      this.cellBlocks?.fillCellsWithUnresolvedBlocks();
+    });
   }
 
   /**

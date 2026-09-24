@@ -655,6 +655,60 @@ describe('BlockYjsSync', () => {
         );
       });
 
+      it.each([
+        ['undo', 'history'],
+        ['redo', 'history'],
+        ['remote', 'remote'],
+      ] as const)('tells a block rebuilt for %s who it is rebuilt for (%s)', async (origin, replaySource) => {
+        const block = createMockBlock({
+          id: 'test-block',
+          data: { content: [] },
+          tunes: {},
+        });
+
+        (block as unknown as Record<string, unknown>).name = 'table';
+        (block.setData as ReturnType<typeof vi.fn>).mockReturnValue(Promise.resolve(false));
+
+        const newBlocksStore = createBlocksStore([block]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(createMockYMap({
+          type: 'table',
+          data: createMockYMap({ content: [['a']] }),
+          tunes: createMockYMap({}),
+        }));
+
+        const composeBlockSpy = vi.spyOn(factory, 'composeBlock')
+          .mockReturnValue(createMockBlock({ id: 'test-block' }));
+
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+
+        callback({ blockId: 'test-block', type: 'update', origin });
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(composeBlockSpy).toHaveBeenCalledWith(
+          expect.objectContaining({ origin: 'replay', replaySource })
+        );
+      });
+
       it('does not recreate block when setData returns true', async () => {
         const block = createMockBlock({
           id: 'test-block',
@@ -1777,6 +1831,41 @@ describe('BlockYjsSync', () => {
             bindEventsImmediately: true,
           })
         );
+      });
+
+      it.each([
+        ['undo', 'history'],
+        ['remote', 'remote'],
+      ] as const)('tells a block added by %s who it is rebuilt for (%s)', (origin, replaySource) => {
+        mockGetBlockById(mockYjsManager).mockReturnValue(createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: 'Hello' }),
+        }));
+        mockToJSON(mockYjsManager).mockReturnValue([{ id: 'new-block', type: 'paragraph' }]);
+
+        const composeBlockSpy = vi.spyOn(factory, 'composeBlock').mockReturnValue(createMockBlock({ id: 'new-block' }));
+
+        callback({ blockId: 'new-block', type: 'add', origin });
+
+        expect(composeBlockSpy).toHaveBeenCalledWith(expect.objectContaining({ origin: 'replay', replaySource }));
+      });
+
+      it.each([
+        ['undo', 'history'],
+        ['remote', 'remote'],
+      ] as const)('tells blocks batch-added by %s who they are rebuilt for (%s)', (origin, replaySource) => {
+        mockGetBlockById(mockYjsManager).mockReturnValue(createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: '' }),
+        }));
+        mockToJSON(mockYjsManager).mockReturnValue([{ id: 'new-a' }, { id: 'new-b' }]);
+
+        const composeBlockSpy = vi.spyOn(factory, 'composeBlock')
+          .mockImplementation((options) => createMockBlock({ id: options.id }));
+
+        callback({ blockIds: ['new-a', 'new-b'], type: 'batch-add', origin });
+
+        expect(composeBlockSpy).toHaveBeenCalledWith(expect.objectContaining({ origin: 'replay', replaySource }));
       });
 
       it('calls onBlockAdded handler after inserting block', () => {

@@ -136,8 +136,9 @@ export const setListItemData = (
   const oldStyle = currentData.style;
   const newStyle = newData.style;
 
-  // Style and start shape the rendered DOM, so they need a full re-render
-  if (oldStyle !== newStyle || currentData.start !== newData.start) {
+  // Style and start shape the rendered DOM, so they need a full re-render.
+  // currentData is normalized (start 1 dropped) while newData may be the raw record.
+  if (oldStyle !== newStyle || (currentData.start ?? 1) !== (newData.start ?? 1)) {
     return { newData: currentData, inPlace: false };
   }
 

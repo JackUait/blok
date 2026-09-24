@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import type { CardDrawerOptions } from '../../../../src/tools/database/database-card-drawer';
 import type { DatabaseRow, SelectOption, PropertyDefinition } from '../../../../src/tools/database/types';
-import type { I18n } from '../../../../types';
+import type { I18n, OutputData } from '../../../../types';
 import type { ToolsConfig } from '../../../../types/api/tools';
 
 const makeRow = (overrides: Partial<DatabaseRow> = {}): DatabaseRow => ({
@@ -1291,6 +1291,20 @@ describe('DatabaseCardDrawer', () => {
       await flush();
 
       expect(options.onDescriptionChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('drops the old page body instead of writing it back when undo or a peer changed it', async () => {
+      const before: OutputData = { time: 1, version: '1', blocks: [{ id: 'b1', type: 'paragraph', data: { text: 'before' } }] };
+      const after: OutputData = { time: 2, version: '1', blocks: [{ id: 'b1', type: 'paragraph', data: { text: 'after' } }] };
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-desc': before } });
+      const { drawer, options } = await openWithNestedEditor(row, [{ ...before }]);
+
+      drawer.syncOpenRow({ ...row, properties: { ...row.properties, 'prop-desc': after } });
+      await flush();
+
+      expect(options.onDescriptionChange).not.toHaveBeenCalled();
+
+      drawer.destroy();
     });
   });
 

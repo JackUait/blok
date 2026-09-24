@@ -1521,6 +1521,51 @@ describe('TableCellBlocks', () => {
       expect(cellBlocks.isAwaitingCell('remote-1')).toBe(true);
     });
 
+    it('gives each cell a block when synced content names one block in two cells', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const shared = document.createElement('div');
+      shared.setAttribute('data-blok-id', 'x');
+      const copy = document.createElement('div');
+      copy.setAttribute('data-blok-id', 'x-copy');
+      const api = {
+        blocks: {
+          insert: vi.fn(() => ({ id: 'x-copy', holder: copy })),
+          getBlocksCount: vi.fn(() => 2),
+          getBlockIndex: vi.fn((id: string) => (id === 'x' ? 1 : undefined)),
+          getBlockByIndex: vi.fn(() => ({ id: 'x', name: 'paragraph', holder: shared, parentId: 't1', preservedData: { text: 'x' } })),
+          getById: vi.fn(() => null),
+          setBlockParent: vi.fn(),
+          isSyncingFromYjs: true,
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const containers = [0, 1].map((col) => {
+        const cell = document.createElement('div');
+        cell.setAttribute('data-blok-table-cell', '');
+        cell.setAttribute('data-blok-table-cell-col', String(col));
+        const container = document.createElement('div');
+        container.setAttribute(CELL_BLOCKS_ATTR, '');
+        container.setAttribute('data-blok-nested-blocks', '');
+        cell.appendChild(container);
+        row.appendChild(cell);
+
+        return container;
+      });
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
+
+      const result = cellBlocks.initializeCells([[{ blocks: ['x'] }, { blocks: ['x'] }]]);
+
+      expect(containers.map((c) => c.querySelectorAll('[data-blok-id]').length)).toEqual([1, 1]);
+      expect(result[0].map((cell) => cell.blocks)).toEqual([['x'], ['x-copy']]);
+    });
+
     it('keeps a synced cell\'s references instead of fabricating blocks that have not arrived yet', async () => {
       const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 

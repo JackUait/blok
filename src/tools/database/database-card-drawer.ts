@@ -345,6 +345,58 @@ export class DatabaseCardDrawer {
     this.currentRow = null;
   }
 
+  /** Id of the row the drawer shows, or null when closed. */
+  get openRowId(): string | null {
+    return this.drawer === null ? null : this.currentRowId;
+  }
+
+  /**
+   * Show the open row's data after undo, redo or a peer changed it, or close
+   * when the row is gone. A stale title or body would be written back over
+   * the change on the next keystroke.
+   */
+  syncOpenRow(row: DatabaseRow | undefined): void {
+    if (this.drawer === null) {
+      return;
+    }
+
+    if (row === undefined) {
+      this.close();
+
+      return;
+    }
+
+    this.currentRow = row;
+
+    const titleInput = this.drawer.querySelector<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
+    const title = (row.properties[this.titlePropertyId] as string | undefined) ?? '';
+
+    if (titleInput !== null && titleInput.value !== title) {
+      const { selectionStart, selectionEnd } = titleInput;
+
+      titleInput.value = title;
+      titleInput.setSelectionRange(Math.min(selectionStart, title.length), Math.min(selectionEnd, title.length));
+      this.autoResizeTitle(titleInput);
+    }
+
+    this.refreshSchema(this.schema);
+
+    const description = this.descriptionPropertyId !== undefined
+      ? row.properties[this.descriptionPropertyId] as OutputData | undefined
+      : undefined;
+    const editorHolder = this.drawer.querySelector<HTMLElement>('[data-blok-database-drawer-editor]');
+
+    // Discard, not save: saving the old editor would write the stale body
+    // back over the change.
+    if (editorHolder !== null && this.isBodyChanged?.(description ?? { blocks: [] }) === true) {
+      this.blokInstance?.destroy();
+      this.blokInstance = null;
+      this.isBodyChanged = null;
+      editorHolder.innerHTML = '';
+      this.initNestedEditor(editorHolder, row);
+    }
+  }
+
   /**
    * Updates the schema and, if the drawer is currently open, rebuilds the
    * properties section in-place using the current row's data.
@@ -550,8 +602,10 @@ export class DatabaseCardDrawer {
   private initNestedEditor(editorHolder: HTMLElement, row: DatabaseRow): void {
     import('../../blok').then(({ Blok }) => {
       const rowId = row.id;
+      // The row may have changed while the editor loaded.
+      const latest = this.currentRow?.id === rowId ? this.currentRow : row;
       const description = this.descriptionPropertyId !== undefined
-        ? row.properties[this.descriptionPropertyId]
+        ? latest.properties[this.descriptionPropertyId]
         : undefined;
       const isBodyChanged = createBodyChangeCheck(description as OutputData | undefined);
       const blok = new Blok({

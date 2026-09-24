@@ -82,6 +82,11 @@ export class DatabaseColumnDrag {
     this.ghostOffsetX = 0;
   }
 
+  /** True while a drag has passed the threshold and not yet dropped. */
+  public get active(): boolean {
+    return this.isDragging;
+  }
+
   public destroy(): void {
     this.cleanup();
   }

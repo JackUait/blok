@@ -1106,7 +1106,9 @@ export class UndoHistory {
   /**
    * The block id right before a deleted order item: the nearest live item, or
    * one deleted by the same stack item (blocks deleted together keep their
-   * order). Tombstones of earlier moves and deletes are skipped.
+   * order). Tombstones of earlier moves and deletes are skipped, and so are
+   * items the same stack item inserted (a child lifted into the deleted
+   * block's place): undo removes them again, so they cannot be an anchor.
    */
   private idLeftOf(item: Y.Item, stackItem: StackItem): string | null {
     const { left } = item;
@@ -1115,7 +1117,9 @@ export class UndoHistory {
       return null;
     }
 
-    if (left.deleted && !Y.isDeleted(stackItem.deletions, left.id)) {
+    const insertedHere = Y.isDeleted(stackItem.insertions, left.id);
+
+    if (insertedHere || (left.deleted && !Y.isDeleted(stackItem.deletions, left.id))) {
       return this.idLeftOf(left, stackItem);
     }
 

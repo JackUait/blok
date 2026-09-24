@@ -452,6 +452,27 @@ describe('placement-based move undo/redo', () => {
       expect(orderedIds()).toEqual(['a', 'b1', 'b2', 'c']);
       expect(rawRootOrder()).toEqual(['a', 'b1', 'b2', 'c']);
     });
+
+    // Deleting a container lifts its child into its place in the same step.
+    it('does not anchor a deleted block on a child the same delete lifted', () => {
+      manager.fromJSON([
+        paragraph('box', 'box', { content: ['kid'] }),
+        paragraph('kid', 'kid', { parent: 'box' }),
+        paragraph('c', 'after'),
+      ]);
+
+      manager.transact(() => {
+        manager.applyBlockPlacement('kid', { parentId: null, afterId: null });
+        manager.removeBlock('box');
+      });
+      manager.stopCapturing();
+      expect(orderedIds()).toEqual(['kid', 'c']);
+
+      manager.undo();
+
+      expect(orderedIds()).toEqual(['box', 'kid', 'c']);
+      expect(rawRootOrder()).toEqual(['box', 'c']);
+    });
   });
 
   describe('replay event profile', () => {

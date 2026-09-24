@@ -178,6 +178,7 @@ const createRenderer = (options: {
     Collaboration: options.collaboration,
     YjsManager: {
       toJSON: (): OutputBlockData[] => options.yjsBlocks ?? [],
+      clear: vi.fn(),
     },
     API: {
       methods: {},

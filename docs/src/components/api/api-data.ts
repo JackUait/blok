@@ -881,7 +881,7 @@ children.forEach(child => {
         name: "blocks.setBlockParent(blockId, parentId)",
         returnType: "void",
         description:
-          "Reparents a block. It updates the block's `parentId` and the parent's `contentIds` through core's single reparent chokepoint.\n\n- Pass `null` to move the block back to the root level.\n- An unknown `blockId` does nothing and logs a warning.\n- A `parentId` that would make the block a descendant of itself throws.",
+          "Reparents a block. It updates the block's `parentId` and the parent's `contentIds` through core's single reparent chokepoint.\n\n- Pass `null` to move the block back to the root level.\n- An unknown `blockId` does nothing and logs a warning.\n- A `parentId` that would make the block a descendant of itself throws.\n\nThe block's place in the document order follows its new parent.\n\n- If the block already sits inside the parent's subtree, it does not move. That means it comes right after the parent, or right after one of the parent's descendants.\n- Otherwise the block moves to the end of the parent's subtree. Its own children move with it.\n- A table or a database places its own children, so a block that joins one does not move.\n- A block that leaves for the root or for one of its ancestors moves, with its children, to just after the subtree it left, unless it already sits there. To move several siblings out of a container and keep their order, move the last one first.",
         example: `// Move a block into a container block
 editor.blocks.setBlockParent('child-block-id', 'parent-block-id');
 
@@ -892,7 +892,7 @@ editor.blocks.setBlockParent('child-block-id', null);`,
         name: "blocks.insertInsideParent(parentId, insertIndex, childData?, toolName?)",
         returnType: "BlockAPI",
         description:
-          "Inserts a block as a child of `parentId` atomically. The creation and the parent assignment are grouped into ONE undo entry, so a single Cmd+Z removes it completely. That is better than `insert()` followed by a reparent, which is two entries.\n\n- `insertIndex` is the FLAT document index where the child should appear.\n- `toolName` picks the child's block tool and defaults to `config.defaultBlock`.\n  - A tool that is restricted inside table cells is demoted to the default block when the new child would land inside one.\n  - An unregistered name throws before anything is written.\n- `childData` defaults to `{ text: '' }` for the default block.\n  - For any other `toolName` it defaults to `{}`, which lets the tool apply its own defaults.",
+          "Inserts a block as a child of `parentId` atomically. The creation and the parent assignment are grouped into ONE undo entry, so a single Cmd+Z removes it completely. That is better than `insert()` followed by a reparent, which is two entries.\n\n- `insertIndex` is the FLAT document index where the child should appear. It is clamped into the parent's subtree.\n  - An index at or before the parent becomes the slot right after the parent.\n  - An index past the end of the subtree becomes the end of the subtree.\n- `toolName` picks the child's block tool and defaults to `config.defaultBlock`.\n  - A tool that is restricted inside table cells is demoted to the default block when the new child would land inside one.\n  - An unregistered name throws before anything is written.\n- `childData` defaults to `{ text: '' }` for the default block.\n  - For any other `toolName` it defaults to `{}`, which lets the tool apply its own defaults.",
         example: `const parentIndex = editor.blocks.getBlockIndex('parent-block-id') ?? 0;
 const child = editor.blocks.insertInsideParent(
   'parent-block-id',
@@ -961,7 +961,8 @@ const block = editor.blocks.insert('column_list', undefined, undefined, index, u
             type: "number",
             required: false,
             default: "current block index + 1",
-            description: "Position to insert the block at.",
+            description:
+              "Position to insert the block at.\n\nThe new block also takes the parent that this position implies. That holds when `index` is left out, too.\n\n- Right after a container that has children, it becomes the container's first child.\n- Anywhere else, it gets the same parent as the block that follows it. So between two children of a toggle, it becomes a child of that toggle.\n- At the start or the end of the document, it is a root block.\n- Right after a collapsed toggle that has children, it goes after those hidden children instead. The rules above then pick its parent there, and its final index can be larger than `index`.\n- Right after a block inside a `column`, it joins that column.\n\nA column row never takes the block this way. Right after a table or a database, or a block inside one, no parent is inferred. The block is a root block, unless it comes right after a block in a column. With `replace: true`, no parent is inferred.\n\nThe parent's `childTools` rules apply. A tool the parent does not allow is swapped for one it allows.",
           },
           {
             name: "needToFocus",
@@ -3411,7 +3412,7 @@ const { url } = await this.api.uploader.uploadByFile(file, {
     badge: "Data",
     title: "OutputData",
     description:
-      "The data structure returned by the save() method. Input positions also accept the loose wire variants `LooseOutputData` / `LooseOutputBlockData`. Those positions are the `data` config option, `render()`, `blocks.render()`, and `blocks.insertMany()`.\n\nIn the loose variants a block's `data`, `id`, `parent`, `content`, and `time` may be `null`.\n\n- A `null` `data` becomes `{}`.\n- A `null` or empty `id` gets a generated one.\n- A `null` `parent` and a `null` or empty `content` are treated as absent, so the block is root-level and childless.\n\nSaved output is always the strict shape.",
+      "The data structure returned by the save() method. Input positions also accept the loose wire variants `LooseOutputData` / `LooseOutputBlockData`. Those positions are the `data` config option, `render()`, `blocks.render()`, and `blocks.insertMany()`.\n\nIn the loose variants a block's `data`, `id`, `parent`, `content`, and `time` may be `null`.\n\n- A `null` `data` becomes `{}`.\n- A `null` or empty `id` gets a generated one.\n- A `null` `parent` and a `null` or empty `content` are treated as absent, so the block is root-level and childless.\n\nSaved output is always the strict shape.\n\nWhen a document loads, Blok puts the `blocks` array in depth-first order: each block comes right before its whole subtree. That happens for the `data` config option, `render()` and `blocks.render()`. `blocks.insertMany()` keeps the order it is given.\n\n- Root blocks keep their input order. A block whose `parent` is not in the document counts as a root block.\n- A parent's children follow it in the order its `content` lists.\n- Children that `content` does not list come after those, in input order. They are also added to the end of `content`, except in a table or a database.\n\nSo if stored data is not in that order, `save()` returns the blocks in a different order than they came in. A document with duplicate ids is loaded as it is.",
     example: `// Save editor content
 const data = await editor.save();
 
@@ -4253,7 +4254,7 @@ blocks.move(nodeId, { toIndex: 0 });`,
         name: "insertInsideParent(parentId, insertIndex, childData?)",
         returnType: "BlockNode | null",
         description:
-          "Insert a single child under a parent at a flat index, atomically: creation AND parent assignment in ONE undo step. Prefer it over insert() + nest(), which takes two steps.",
+          "Insert a single child under a parent at a flat index, atomically: creation AND parent assignment in ONE undo step. Prefer it over insert() + nest(), which takes two steps.\n\nThe index is clamped into the parent's subtree. The child never lands before its parent or past the end of the parent's subtree.",
         example: `const child = blocks.insertInsideParent(toggleId, 3);`,
       },
       {

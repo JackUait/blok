@@ -20,10 +20,11 @@ declare global {
   }
 }
 
-type Slow = 'image' | 'url' | 'file' | 'none';
+type Slow = 'image' | 'url' | 'file' | 'pick' | 'none';
 
 // A slow uploader waits until the test calls window.__resolveUpload().
 // 'image': image uploads by file. 'url': image/audio/video/file uploads by URL. 'file': file uploads by file.
+// 'pick': image/audio/video/file uploads by file, which only fail (window.__rejectUpload()).
 const MEDIA_URLS: Record<string, string> = {
   image: IMAGE_URL,
   audio: 'http://localhost:4444/public/samples/soundhelix-song-1.mp3',
@@ -80,6 +81,20 @@ const mount = async (page: Page, blocks: OutputData['blocks'], slow: Slow = 'non
           },
         },
       };
+    }
+    if (slowTool === 'pick') {
+      Object.keys(urls).forEach((name) => {
+        tools[name] = {
+          class: window.defaultBlockTools[name].class,
+          config: {
+            uploader: {
+              uploadByFile: () => new Promise((_res, rej) => {
+                window.__rejectUpload = () => rej(new Error('500'));
+              }),
+            },
+          },
+        };
+      });
     }
     const blok = new window.Blok({ holder: 'blok', tools, data: { blocks: list } });
 
@@ -174,6 +189,13 @@ const rejectUpload = async (page: Page): Promise<void> => {
   await page.evaluate(() => window.__rejectUpload?.());
 };
 
+const PICKED_FILES: Record<string, string> = {
+  image: IMAGE_FILE,
+  audio: join(process.cwd(), 'test/playwright/fixtures/audio/sample.mp3'),
+  video: join(process.cwd(), 'public/samples/big-buck-bunny.mp4'),
+  file: join(process.cwd(), 'public/samples/release-notes.txt'),
+};
+
 const MEDIA_ERRORS: Record<string, string> = {
   image: '[data-role="error-state"]',
   audio: '[data-role="audio-error"]',
@@ -183,6 +205,15 @@ const MEDIA_ERRORS: Record<string, string> = {
 
 const dataOf = async (page: Page, id: string): Promise<Record<string, unknown> | undefined> =>
   (await saved(page)).find((b) => b.id === id)?.data;
+
+// The block's own save(): editor save() leaves out a media block with no link.
+const blockData = (page: Page, id: string): Promise<Record<string, unknown> | undefined> =>
+  page.evaluate(async (blockId) => {
+    const block = window.blokInstance?.blocks.getById(blockId);
+    const out = await block?.save();
+
+    return out ? out.data : undefined;
+  }, id);
 
 const hasImage = async (page: Page): Promise<boolean> => (await saved(page)).some((b) => b.type === 'image');
 
@@ -481,6 +512,56 @@ test.describe('undo audit: remaining surfaces', () => {
       await expect(page.getByText('alphaY', { exact: true })).toBeVisible();
       expect(await dataOf(page, 'm')).toBeUndefined();
       await expect(media(page, tool)).toHaveCount(1);
+    });
+
+    // Source: a picked file that fails to upload was never saved (base 328fb87c): the block keeps its error, and the
+    // failed pick leaves no undo step, so one undo takes back the edit made before it.
+    test(`UNP-11 (${tool}): a picked file that fails to upload saves nothing and adds no undo step`, async ({ page }) => {
+      await mount(page, [P('p', 'alpha'), { id: 'm', type: tool, data: { url: '' } }], 'pick');
+      await typeAtEnd(page, 'alpha', 'Y');
+      await gap(page);
+      await media(page, tool).getByTestId('file-input').setInputFiles(PICKED_FILES[tool]);
+      await gap(page);
+      await rejectUpload(page);
+      await expect(media(page, tool).locator(MEDIA_ERRORS[tool])).toHaveCount(1);
+      await expect.poll(async () => (await blockData(page, 'm'))?.fileName).toBeUndefined();
+      await gap(page);
+
+      await page.keyboard.press(UNDO);
+      await gap(page);
+      await expect(page.getByText('alpha', { exact: true })).toBeVisible();
+      expect((await blockData(page, 'm'))?.fileName).toBeUndefined();
+      await expect(media(page, tool)).toHaveCount(1);
+      await page.keyboard.press(REDO);
+      await gap(page);
+      await expect(page.getByText('alphaY', { exact: true })).toBeVisible();
+      expect((await blockData(page, 'm'))?.fileName).toBeUndefined();
+      expect(await canRedo(page)).toBe(false);
+    });
+
+    // Source: as UNP-11. Undo and redo of the pick rebuild the block, so the failure reaches a new instance of the tool.
+    test(`UNP-11b (${tool}): a picked file that fails to upload on a rebuilt block saves nothing and adds no undo step`, async ({ page }) => {
+      await mount(page, [P('p', 'alpha'), { id: 'm', type: tool, data: { url: '' } }], 'pick');
+      await typeAtEnd(page, 'alpha', 'Y');
+      await gap(page);
+      await media(page, tool).getByTestId('file-input').setInputFiles(PICKED_FILES[tool]);
+      await gap(page);
+      await page.keyboard.press(UNDO);
+      await gap(page);
+      await page.keyboard.press(REDO);
+      await gap(page);
+      await rejectUpload(page);
+      await expect.poll(async () => (await blockData(page, 'm'))?.fileName).toBeUndefined();
+      await gap(page);
+
+      await page.keyboard.press(UNDO);
+      await gap(page);
+      await expect(page.getByText('alpha', { exact: true })).toBeVisible();
+      await page.keyboard.press(REDO);
+      await gap(page);
+      await expect(page.getByText('alphaY', { exact: true })).toBeVisible();
+      expect((await blockData(page, 'm'))?.fileName).toBeUndefined();
+      expect(await canRedo(page)).toBe(false);
     });
   }
 

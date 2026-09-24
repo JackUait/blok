@@ -182,6 +182,8 @@ export class FileTool implements BlockTool {
     this.state = 'LOADING';
     this.renderState();
     // Choosing the file is the edit, so the upload's result can join its undo step.
+    const before = this.data.fileName;
+
     this.data = { ...this.data, fileName: file.name };
     this.block.dispatchChange();
     const fromUrl = this.data.url;
@@ -189,7 +191,26 @@ export class FileTool implements BlockTool {
     void this.uploader
       .handleFile(file, { onProgress: (p) => this.uploadingEl?.setProgress(p) })
       .then((result) => this.applyUpload(result, file, fromUrl))
-      .catch((err) => this.applyError(err));
+      .catch((err) => this.applyPickError(err, file, before));
+  }
+
+  /**
+   * A failed upload of a file the user picked. The file name is put back to
+   * `before` as derived data, so the pick nets to nothing and leaves no undo step.
+   * @param err - why the upload failed
+   * @param file - the picked file, still `uploading` unless cancelled or replaced
+   * @param before - `data.fileName` before the file was picked
+   */
+  private applyPickError(err: unknown, file: File, before: string | undefined): void {
+    if (this.detached) {
+      putBackOnRebuiltBlock(this.api, this.block, { fileName: before }, { fileName: file.name }, ['fileName']);
+
+      return;
+    }
+    this.applyError(err);
+    if (this.uploading !== file || this.data.fileName !== file.name) return;
+    this.data = { ...this.data, fileName: before };
+    this.block.dispatchChange({ derived: true, from: ['fileName'] });
   }
 
   private startUrl(url: string): void {

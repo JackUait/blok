@@ -214,19 +214,32 @@ export class ImageTool implements BlockTool {
   };
 
   private startUpload(file: File): void {
-    // Choosing the file is the edit, so what the upload produces can join its undo step.
-    this.data = { ...this.data, fileName: file.name };
-    this.block.dispatchChange();
+    const before = this.writePickedFile(file);
+
     if (this.shouldConvertGif(file.type)) {
       void this.convertGifToVideoBlock(file).then((handled) => {
-        if (!handled) this.uploadImageFile(file);
+        if (!handled) this.uploadImageFile(file, before);
       });
       return;
     }
-    this.uploadImageFile(file);
+    this.uploadImageFile(file, before);
   }
 
-  private uploadImageFile(file: File): void {
+  /**
+   * Choosing the file is the edit, so what the upload produces can join its undo step.
+   * @param file - the picked file
+   * @returns `data.fileName` before it
+   */
+  private writePickedFile(file: File): string | undefined {
+    const before = this.data.fileName;
+
+    this.data = { ...this.data, fileName: file.name };
+    this.block.dispatchChange();
+
+    return before;
+  }
+
+  private uploadImageFile(file: File, before: string | undefined): void {
     const source = { kind: 'file', file } as const;
 
     this.converting = false;
@@ -236,16 +249,39 @@ export class ImageTool implements BlockTool {
     this.errorMessage = null;
     this.brokenImage = false;
     this.renderState();
-    this.uploadFile(source);
+    this.uploadFile(source, before);
   }
 
-  private uploadFile(source: { kind: 'file'; file: File }): void {
+  /**
+   * @param source - the job
+   * @param before - `data.fileName` before the file was picked
+   */
+  private uploadFile(source: { kind: 'file'; file: File }, before: string | undefined): void {
     const fromUrl = this.data.url;
 
     void this.uploader
       .handleFile(source.file, { onProgress: this.reportProgress })
       .then((result) => this.applyUpload(result, source, fromUrl))
-      .catch((err) => this.applyError(err));
+      .catch((err) => this.applyPickError(err, source, before));
+  }
+
+  /**
+   * A failed upload of a file the user picked. The file name is put back to
+   * `before` as derived data, so the pick nets to nothing and leaves no undo step.
+   * @param err - why the upload failed
+   * @param source - the job, still `lastSource` unless cancelled or replaced
+   * @param before - `data.fileName` before the file was picked
+   */
+  private applyPickError(err: unknown, source: { kind: 'file'; file: File }, before: string | undefined): void {
+    if (this.detached) {
+      putBackOnRebuiltBlock(this.api, this.block, { fileName: before }, { fileName: source.file.name }, ['fileName']);
+
+      return;
+    }
+    this.applyError(err);
+    if (this.lastSource !== source || this.data.fileName !== source.file.name) return;
+    this.data = { ...this.data, fileName: before };
+    this.block.dispatchChange({ derived: true, from: ['fileName'] });
   }
 
   private shouldConvertGif(mimeType: string): boolean {
@@ -427,11 +463,11 @@ export class ImageTool implements BlockTool {
       '[data-role="error-state"] [data-action="retry"]'
     );
     if (retryBtn) retryBtn.disabled = true;
+    // A failed pick or link was put back, so the retry makes that edit again.
     if (source.kind === 'file') {
-      this.uploadFile(source);
+      this.uploadFile(source, this.writePickedFile(source.file));
       return;
     }
-    // A failed link was put back, so the retry enters it again.
     this.uploadUrl(source, this.writeEnteredUrl(source.url));
   }
 

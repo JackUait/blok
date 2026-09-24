@@ -103,9 +103,10 @@ export class RectangleSelection extends Module {
   private mouseY = 0;
 
   /**
-   * Selected blocks
+   * Blocks the lasso selected, in document order. Kept as blocks, not
+   * indexes, so a block inserted mid-drag does not shift them.
    */
-  private stackOfSelected: number[] = [];
+  private stackOfSelected: Block[] = [];
 
   /**
    * Does the rectangle intersect blocks
@@ -652,23 +653,25 @@ export class RectangleSelection extends Module {
       return;
     }
 
-    const firstBlockInStack = this.Blok.BlockManager.getBlockByIndex(this.stackOfSelected[0]);
+    const indexes = this.blockIndexes();
+    const firstBlockInStack = this.stackOfSelected[0];
 
-    if (!firstBlockInStack) {
+    if (!indexes.has(firstBlockInStack)) {
       return;
     }
 
     const isSelectedMode = firstBlockInStack.selected;
+    const stackIndices = this.stackIndices(indexes);
 
     if (this.rectCrossesBlocks && !isSelectedMode) {
-      for (const it of this.stackOfSelected) {
-        this.Blok.BlockSelection.selectBlockByIndex(it);
+      for (const index of stackIndices) {
+        this.Blok.BlockSelection.selectBlockByIndex(index);
       }
     }
 
     if (!this.rectCrossesBlocks && isSelectedMode) {
-      for (const it of this.stackOfSelected) {
-        this.Blok.BlockSelection.unSelectBlockByIndex(it);
+      for (const index of stackIndices) {
+        this.Blok.BlockSelection.unSelectBlockByIndex(index);
       }
     }
   }
@@ -793,14 +796,24 @@ export class RectangleSelection extends Module {
   }
 
   /**
-   * Select block with index index
-   * @param index - index of block in redactor
+   * Flat index of every block, for lookups within one pointer event.
    */
-  private addBlockInSelection(index: number): void {
-    if (this.rectCrossesBlocks) {
-      this.Blok.BlockSelection.selectBlockByIndex(index);
-    }
-    this.stackOfSelected.push(index);
+  private blockIndexes(): Map<Block, number> {
+    const indexes = new Map<Block, number>();
+
+    this.Blok.BlockManager.blocks.forEach((block, index) => indexes.set(block, index));
+
+    return indexes;
+  }
+
+  /**
+   * Current flat indexes of the stacked blocks, skipping any removed since.
+   * @param indexes - flat index of every block
+   */
+  private stackIndices(indexes: Map<Block, number>): number[] {
+    return this.stackOfSelected
+      .map((block) => indexes.get(block))
+      .filter((index): index is number => index !== undefined);
   }
 
   /**
@@ -857,7 +870,7 @@ export class RectangleSelection extends Module {
 
     const expectedIndices = this.dropRepresentedUnits(crossedIndices, minY, maxY);
 
-    const previousStack = new Set(this.stackOfSelected);
+    const previousStack = new Set(this.stackIndices(this.blockIndexes()));
 
     // Deselect blocks no longer in range
     for (const prevIndex of previousStack) {
@@ -873,8 +886,10 @@ export class RectangleSelection extends Module {
       }
     }
 
-    // Replace stack with the visually selected indices
-    this.stackOfSelected = Array.from(expectedIndices).sort((a, b) => a - b);
+    // Replace stack with the visually selected blocks
+    this.stackOfSelected = Array.from(expectedIndices)
+      .sort((a, b) => a - b)
+      .map((index) => blocks[index]);
   }
 
   /**

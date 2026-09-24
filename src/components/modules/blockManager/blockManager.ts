@@ -1918,7 +1918,6 @@ export class BlockManager extends Module {
     // Skip the reconciler's own echo (undo/redo/remote) to avoid corrupting the undo stack.
     // Also skip if a pointer drag is active — the browser can mutate contenteditable DOM across
     // cell boundaries during a drag, and we must not write that corrupted state to Yjs.
-
     if (mutationType === BlockChangedMutationType && !this._isPointerDragActive) {
       if (isEcho) {
         // Not necessarily an echo: the window is open across setData's await

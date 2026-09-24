@@ -577,7 +577,7 @@ export class BlockInsertion {
       ?? this.repository.blocks.filter(candidate => candidate.parentId === null).map(candidate => candidate.id);
     const position = siblings.indexOf(block.id);
     const before = position === -1 ? siblings : siblings.slice(0, position);
-    const afterId = [...before].reverse().find(id => id !== block.id && this.dependencies.YjsManager.getBlockById(id) !== undefined);
+    const afterId = [...before].reverse().find(id => this.dependencies.YjsManager.getBlockById(id) !== undefined);
 
     this.dependencies.YjsManager.addBlockAt(blockData, { parentId: block.parentId, afterId: afterId ?? null });
   }
@@ -640,7 +640,8 @@ export class BlockInsertion {
    *
    * `forceTopLevel` is mandatory here: nested-block tools keep their children
    * right after them in the flat store, so when the document ends in one, the
-   * raw predecessor of the append slot is a column child / table cell paragraph. Without it, insert()'s
+   * raw predecessor of the append slot is a column child / table cell
+   * paragraph. Without it, insert()'s
    * column-inheritance rescue adopts the appended block INTO the last column,
    * and the store places its holder inside that container — i.e. "add a block
    * below the document" would write inside the columns instead.

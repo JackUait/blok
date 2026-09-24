@@ -592,6 +592,8 @@ export class BlockInsertion {
         index: insertIndex,
         needToFocus: false,
         skipYjsSync: true,
+        // A root block's new sibling can follow its children: mount it at root, not in their slot.
+        forceTopLevel: currentBlock.parentId === null,
         // Only reachable from the Enter key handler.
         origin: 'user',
       }, blocksStore);
@@ -679,6 +681,8 @@ export class BlockInsertion {
         index,
         needToFocus: false,
         skipYjsSync: true,
+        // See splitBlock: a root block's new sibling is mounted at root.
+        forceTopLevel: currentBlock.parentId === null,
       }, blocksStore);
 
       // Update currentBlockIndex AFTER insert (and handleBlockMutation) completes.

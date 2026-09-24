@@ -336,11 +336,11 @@ describe('tree-order', () => {
     it('dfsOrder follows shuffled contentIds', () => {
       for (let seed = 1; seed <= SEEDS; seed++) {
         const random = rng(seed);
-        const view = randomTree(random);
-
-        view.blocks.forEach(block => {
-          block.contentIds = [...block.contentIds].sort(() => random() - 0.5);
-        });
+        const view = tree(randomTree(random).blocks.map(block => ({
+          id: block.id,
+          parentId: block.parentId,
+          contentIds: [...block.contentIds].sort(() => random() - 0.5),
+        })));
 
         const expected: string[] = [];
         const walk = (block: TreeBlock): void => {

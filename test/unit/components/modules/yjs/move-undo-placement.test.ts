@@ -406,11 +406,59 @@ describe('placement-based move undo/redo', () => {
       ]);
 
       manager.moveBlockTo('outer', { parentId: 'inner', afterId: null });
-      expect(manager.toJSON().find((block) => block.id === 'outer')?.parent).toBeUndefined();
 
-      manager.undo();
       expect(orderedIds()).toEqual(['outer', 'inner', 'tail']);
       expect(manager.toJSON().find((block) => block.id === 'outer')?.parent).toBeUndefined();
+      expect(manager.canUndo()).toBe(false);
+    });
+
+    it('an undo whose recorded parent became a descendant leaves the block in place', () => {
+      manager.fromJSON([
+        paragraph('p', 'parent', { content: ['x'] }),
+        paragraph('x', 'moved', { parent: 'p' }),
+        paragraph('t', 'tail'),
+        paragraph('u', 'last'),
+      ]);
+      syncPeerFromManager();
+
+      manager.moveBlockTo('x', { parentId: null, afterId: 't' });
+      expect(orderedIds()).toEqual(['p', 't', 'x', 'u']);
+
+      // The peer nests p under x without moving x, so the undo still runs
+      // and restoring x under p would close a cycle.
+      peer.applyRemoteUpdate(manager.encodeStateAsUpdate(peer.getStateVector()));
+      peer.applyPlacement('p', { parentId: 'x', afterId: null }, 'local');
+      applyPeerChangesToManager();
+      expect(orderedIds()).toEqual(['t', 'x', 'p', 'u']);
+
+      manager.undo();
+
+      expect(orderedIds()).toEqual(['t', 'x', 'p', 'u']);
+      expect(manager.toJSON().find((block) => block.id === 'x')?.parent).toBeUndefined();
+    });
+
+    it('redo lands where the move actually landed, not on a missing anchor', () => {
+      manager.fromJSON([
+        paragraph('a', 'a'),
+        paragraph('b', 'b'),
+        paragraph('c', 'c'),
+      ]);
+      syncPeerFromManager();
+
+      // A missing anchor appends: a lands after c.
+      manager.moveBlockTo('a', { parentId: null, afterId: 'gone' });
+      expect(orderedIds()).toEqual(['b', 'c', 'a']);
+
+      manager.undo();
+      expect(orderedIds()).toEqual(['a', 'b', 'c']);
+
+      peer.addBlock(paragraph('r', 'remote'));
+      applyPeerChangesToManager();
+
+      manager.redo();
+
+      // Same as the index API: a goes back after c, not after r.
+      expect(orderedIds()).toEqual(['b', 'c', 'a', 'r']);
     });
 
     it('a moveBlockTo anchored after the block itself records nothing', () => {
@@ -421,8 +469,6 @@ describe('placement-based move undo/redo', () => {
 
       manager.moveBlockTo('b1', { parentId: null, afterId: 'b1' });
 
-      // A recorded entry would redo to "after b1" — a missing anchor that
-      // appends b1 at the end.
       expect(manager.canUndo()).toBe(false);
       expect(orderedIds()).toEqual(['b1', 'b2']);
     });

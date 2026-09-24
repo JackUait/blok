@@ -826,7 +826,8 @@ export class DocumentStore {
 
   /**
    * Whether moving the block to this placement would change nothing: it
-   * already holds it, or the placement anchors after the block itself.
+   * already holds it, the placement anchors after the block itself, or the
+   * parent would close a cycle (refused, see `applyPlacement`).
    * @param id - Block id
    * @param placement - Target parent and preceding sibling
    */
@@ -837,6 +838,10 @@ export class DocumentStore {
 
     const current = this.getPlacement(id);
     const parentId = typeof placement.parentId === 'string' ? stripNul(placement.parentId) : null;
+
+    if (parentId !== null && this.wouldFormCycle(id, parentId)) {
+      return true;
+    }
 
     // An unlisted block reports { parent, null } too; it still needs placing.
     return current !== null &&
@@ -856,8 +861,7 @@ export class DocumentStore {
    * A placement that would parent the block under its own descendant is
    * REFUSED — non-throwing counterpart of `BlockHierarchy.setBlockParent`'s
    * cycle guard, which this path can be driven past by move replay. Refusing
-   * means: the cyclic parentId is never written, and the id is left in no
-   * order array (the same orphan tolerance a dangling parent gets), so LOCAL
+   * means writing NOTHING: the block keeps its parent and slot, so LOCAL
    * code cannot put a cycle in the doc. Concurrent peers still can — that is
    * what `hierarchyView`'s read-side cycle break exists for.
    * @param id - Block id to place
@@ -878,7 +882,10 @@ export class DocumentStore {
     const parentId = typeof placement.parentId === 'string'
       ? stripNul(placement.parentId)
       : placement.parentId;
-    const wouldCycle = parentId !== null && this.wouldFormCycle(id, parentId);
+
+    if (parentId !== null && this.wouldFormCycle(id, parentId)) {
+      return;
+    }
 
     this.transact(() => {
       // Idempotent parentId write: an agreeing value writes nothing, so the
@@ -886,19 +893,15 @@ export class DocumentStore {
       // 'move'. Move replay relies on this — a spurious parentId item would
       // emit an 'update' whose undo/redo-origin handling re-runs setData on
       // the block mid-replay. (delete on an absent key is already a no-op.)
-      // A refused placement leaves parentId alone — writing it is the thing
-      // being refused.
-      if (!wouldCycle) {
-        if (parentId === null) {
-          yblock.delete('parentId');
-        } else if (yblock.get('parentId') !== parentId) {
-          yblock.set('parentId', parentId);
-        }
+      if (parentId === null) {
+        yblock.delete('parentId');
+      } else if (yblock.get('parentId') !== parentId) {
+        yblock.set('parentId', parentId);
       }
 
       this.removeFromOrderArrays(id);
 
-      const target = wouldCycle ? null : this.resolveTargetOrder(parentId ?? undefined);
+      const target = this.resolveTargetOrder(parentId ?? undefined);
 
       if (target === null) {
         return;

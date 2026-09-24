@@ -378,12 +378,14 @@ describe('DocumentStore order laws — concurrent hierarchy conflicts', () => {
       { id: 'leaf', type: 'paragraph', data: { text: 'leaf' }, parent: 'inner' },
     ]);
 
+    const vector = store.getStateVector();
+
     store.applyPlacement('outer', { parentId: 'leaf', afterId: null }, 'local');
 
-    // The cyclic parentId is never written, and the refused block is left in
-    // no order array (orphan tolerance) rather than silently staying put.
+    // Refused before any write: the block stays where it was.
+    expect(store.getStateVector()).toEqual(vector);
     expect(store.getBlockById('outer')?.has('parentId')).toBe(false);
-    expect(store.rootOrder.toArray()).not.toContain('outer');
+    expect(store.rootOrder.toArray()).toEqual(['outer']);
     expect((store.getBlockById('leaf')?.get('contentIds') as { toArray(): string[] }).toArray())
       .toEqual([]);
     expect(store.toJSON().map((block) => block.id)).toEqual(['outer', 'inner', 'leaf']);
@@ -397,6 +399,7 @@ describe('DocumentStore order laws — concurrent hierarchy conflicts', () => {
     store.applyPlacement('solo', { parentId: 'solo', afterId: null }, 'local');
 
     expect(store.getBlockById('solo')?.has('parentId')).toBe(false);
+    expect(store.rootOrder.toArray()).toEqual(['solo']);
     expect(store.toJSON().map((block) => block.id)).toEqual(['solo']);
   });
 });
@@ -676,9 +679,15 @@ describe('DocumentStore order laws — moveBlockTo', () => {
     expect(store.rootOrder.toArray()).toEqual(['P', 'r1', 'r2']);
   });
 
-  it('refuses to parent a block under its own descendant', () => {
+  it('refuses to parent a block under its own descendant, writing nothing', () => {
+    const vector = store.getStateVector();
+
+    expect(store.isNoOpMove('P', { parentId: 'p1', afterId: null })).toBe(true);
+
     store.moveBlockTo('P', { parentId: 'p1', afterId: null });
 
+    expect(store.getStateVector()).toEqual(vector);
+    expect(store.rootOrder.toArray()).toEqual(['P', 'r1', 'r2']);
     expect(store.getBlockById('P')?.has('parentId')).toBe(false);
     expect((store.getBlockById('p1')?.get('contentIds') as Y.Array<string>).toArray()).toEqual([]);
   });

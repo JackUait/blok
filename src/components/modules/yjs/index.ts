@@ -401,8 +401,8 @@ export class YjsManager extends Module {
   }
 
   /**
-   * Move a block to a placement. Records `{from, to: placement}` for
-   * move-undo/redo, so a parent change undoes with the position in one step.
+   * Move a block to a placement. Records `{from, to}` for move-undo/redo,
+   * so a parent change undoes with the position in one step.
    * @param id - Block id to move
    * @param placement - Target parent (null = root) and preceding sibling (null = first)
    */
@@ -412,9 +412,8 @@ export class YjsManager extends Module {
     // Read BEFORE the mutation: it is what undo restores.
     const from = this.documentStore.getPlacement(id);
 
-    // A no-op records nothing: a recorded self anchor would redo as a
-    // missing anchor and append, and a caret mark left pending would be
-    // taken as the NEXT change's before-caret.
+    // A no-op (refused cycle included) records nothing: no empty undo step,
+    // and no caret mark left pending for the NEXT change to take as its own.
     if (from === null || this.documentStore.isNoOpMove(id, placement)) {
       return;
     }
@@ -423,7 +422,11 @@ export class YjsManager extends Module {
 
     this.documentStore.moveBlockTo(id, placement);
 
-    this.undoHistory.recordMove({ blockId: id, from, to: placement }, this.isInMoveGroup);
+    // Where it LANDED, not what was asked: a missing anchor appends, and a
+    // redo replaying that anchor would append again past later blocks.
+    const to = this.documentStore.getPlacement(id) ?? placement;
+
+    this.undoHistory.recordMove({ blockId: id, from, to }, this.isInMoveGroup);
   }
 
   /**

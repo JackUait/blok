@@ -1919,3 +1919,98 @@ describe('ImageTool — GIF auto-conversion', () => {
     expect(label?.textContent).toBe('tools.image.converting');
   });
 });
+
+describe('ImageTool — an upload belongs to the pick that started it', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  const pasteFile = (tool: ImageTool, name = 'p.png'): void => {
+    const file = new File([new Uint8Array(10)], name, { type: 'image/png' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+  };
+
+  const heldUpload = (): { uploadByFile: () => Promise<{ url: string }>; resolve: (url: string) => void } => {
+    const gate: { resolve: (url: string) => void } = { resolve: () => undefined };
+
+    return {
+      uploadByFile: () => new Promise((r) => {
+        gate.resolve = (url) => r({ url });
+      }),
+      resolve: (url) => gate.resolve(url),
+    };
+  };
+
+  it('saves the picked file name as an edit when the pick starts the upload', () => {
+    const block = createMockBlock();
+    const { uploadByFile } = heldUpload();
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByFile } }, block));
+    tool.render();
+
+    pasteFile(tool);
+
+    expect(tool.save().fileName).toBe('p.png');
+    expect(block.dispatchChange).toHaveBeenCalledWith();
+  });
+
+  it('reports the finished upload as derived, not as a new edit', async () => {
+    const block = createMockBlock();
+    const upload = heldUpload();
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByFile: upload.uploadByFile } }, block));
+    tool.render();
+    pasteFile(tool);
+    await Promise.resolve();
+
+    upload.resolve('https://cdn/p.png');
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(block.dispatchChange).toHaveBeenLastCalledWith({ derived: true });
+    expect(tool.save().url).toBe('https://cdn/p.png');
+  });
+
+  it('drops an upload that finishes after the block got another image', async () => {
+    const block = createMockBlock();
+    const upload = heldUpload();
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByFile: upload.uploadByFile } }, block));
+    tool.render();
+    pasteFile(tool);
+    await Promise.resolve();
+    const event = new CustomEvent('paste', { detail: { key: 'image', data: 'https://x/other.png' } }) as PatternPasteEvent;
+    Object.defineProperty(event, 'type', { value: 'pattern' });
+    tool.onPaste(event);
+
+    upload.resolve('https://cdn/p.png');
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(tool.save().url).toBe('https://x/other.png');
+  });
+
+  it('drops an upload that finishes after it was cancelled', async () => {
+    const block = createMockBlock();
+    const upload = heldUpload();
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByFile: upload.uploadByFile } }, block));
+    const root = tool.render();
+    pasteFile(tool);
+    await Promise.resolve();
+    root.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
+
+    upload.resolve('https://cdn/p.png');
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(tool.save().url).toBe('');
+    expect(root.getAttribute('data-state')).toBe('empty');
+  });
+
+  it('keeps a pasted image link a tracked edit', () => {
+    const block = createMockBlock();
+    const tool = new ImageTool(createOptions({}, {}, block));
+    tool.render();
+    const event = new CustomEvent('paste', { detail: { key: 'image', data: 'https://x/y.png' } }) as PatternPasteEvent;
+    Object.defineProperty(event, 'type', { value: 'pattern' });
+
+    tool.onPaste(event);
+
+    expect(block.dispatchChange).toHaveBeenLastCalledWith();
+  });
+});

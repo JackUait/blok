@@ -887,6 +887,8 @@ describe('AudioTool — upload failures', () => {
 describe('AudioTool — enrichment from the audio bytes', () => {
   const upload = async (fixture: Fixture): Promise<void> => {
     fixture.tool.onPaste(filePaste(audioFile()));
+    // Count only what the upload and the enrichment report, not the pick.
+    fixture.dispatchChange.mockClear();
     await flush();
   };
 

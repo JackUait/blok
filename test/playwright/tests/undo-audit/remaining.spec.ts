@@ -125,7 +125,6 @@ test.describe('undo audit: remaining surfaces', () => {
   // Source: undo must keep redo until the user makes a new edit; a finishing upload is not one.
   // Observed: canRedo Expected true, Received false; redo never brings "alphaY" back.
   test('UNP-1: an image upload that finishes after an unrelated undo keeps redo', async ({ page }) => {
-    test.fail();
     await mount(page, [P('p', 'alpha'), { id: 'img', type: 'image', data: { url: '' } }], 'image');
     await page.locator('[data-blok-tool="image"]').getByTestId('file-input').setInputFiles(IMAGE_FILE);
     await gap(page);
@@ -138,6 +137,79 @@ test.describe('undo audit: remaining surfaces', () => {
     await gap(page);
 
     expect(await canRedo(page)).toBe(true);
+    await page.keyboard.press(REDO);
+    await gap(page);
+    await expect(page.getByText('alphaY', { exact: true })).toBeVisible();
+  });
+
+  // Source: an upload's result belongs to the gesture that started it: undoing that gesture removes it, redo brings it back.
+  test('UNP-1b: undo of inserting an image removes an upload that landed later, and redo brings the image back', async ({ page }) => {
+    const image = page.locator('[data-blok-tool="image"]');
+    const url = async (): Promise<unknown> => (await saved(page)).find((b) => b.type === 'image')?.data.url;
+
+    await mount(page, [P('p', 'alpha'), P('q', '')], 'image');
+    await page.locator('[data-blok-id="q"] [contenteditable]').click();
+    await page.keyboard.type('/image', { delay: 30 });
+    await page.locator('[data-blok-item-name="image"]').click();
+    await gap(page);
+    await image.getByTestId('file-input').setInputFiles(IMAGE_FILE);
+    await gap(page);
+    await page.evaluate(() => window.__resolveUpload?.());
+    await expect.poll(() => hasImage(page)).toBe(true);
+    await gap(page);
+
+    // Undo the pick, then the insert.
+    await page.keyboard.press(UNDO);
+    await gap(page);
+    await expect(image).toHaveCount(1);
+    await expect(page.locator('[data-blok-tool="image"] img')).toHaveCount(0);
+    await page.keyboard.press(UNDO);
+    await gap(page);
+    await expect(image).toHaveCount(0);
+    await expect(page.locator('[data-blok-id="q"]')).toBeVisible();
+
+    await page.keyboard.press(REDO);
+    await gap(page);
+    await expect(image).toHaveCount(1);
+    await page.keyboard.press(REDO);
+    await gap(page);
+    expect(await url()).toBe(IMAGE_URL);
+    await expect(page.locator('[data-blok-tool="image"] img')).toHaveCount(1);
+    await expect(image).toHaveAttribute('data-state', 'rendered');
+  });
+
+  // Source: an upload's result belongs to the gesture that started it: undoing that gesture removes it, redo brings it back.
+  test('UNP-1c: undo of picking a file for an empty image returns it to empty after the upload landed, and redo brings it back', async ({ page }) => {
+    await mount(page, [P('p', 'alpha'), { id: 'img', type: 'image', data: { url: '' } }], 'image');
+    const chooser = page.waitForEvent('filechooser');
+
+    await page.locator('[data-blok-tool="image"] [data-action="choose-file"]').click();
+    await (await chooser).setFiles(IMAGE_FILE);
+    await gap(page);
+    await typeAtEnd(page, 'alpha', 'Y');
+    await gap(page);
+    await page.keyboard.press(UNDO);
+    await gap(page);
+    await page.evaluate(() => window.__resolveUpload?.());
+    await expect.poll(async () => (await saved(page)).find((b) => b.id === 'img')?.data.url).toBe(IMAGE_URL);
+    await gap(page);
+    await page.keyboard.press(REDO);
+    await gap(page);
+    await expect(page.getByText('alphaY', { exact: true })).toBeVisible();
+
+    await page.keyboard.press(UNDO);
+    await gap(page);
+    await page.keyboard.press(UNDO);
+    await gap(page);
+    await expect(page.locator('[data-blok-tool="image"]')).toHaveAttribute('data-state', 'empty');
+    expect(await hasImage(page)).toBe(false);
+    await expect(page.getByText('alpha', { exact: true })).toBeVisible();
+
+    await page.keyboard.press(REDO);
+    await gap(page);
+    expect((await saved(page)).find((b) => b.id === 'img')?.data.url).toBe(IMAGE_URL);
+    await expect(page.locator('[data-blok-tool="image"] img')).toHaveCount(1);
+    await expect(page.locator('[data-blok-tool="image"]')).toHaveAttribute('data-state', 'rendered');
     await page.keyboard.press(REDO);
     await gap(page);
     await expect(page.getByText('alphaY', { exact: true })).toBeVisible();

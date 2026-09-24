@@ -888,6 +888,24 @@ export class YjsManager extends Module {
     this.undoHistory.withoutCaretMark(() => this.documentStore.transactWithoutCapture(fn));
   }
 
+  /**
+   * An untracked write of data a tool worked out itself (a finished upload),
+   * added to the undo step that last wrote the block. See
+   * {@link UndoHistory.addToStepThatWrote}.
+   * @param blockId - the block `fn` writes to
+   * @param fn - the write
+   */
+  public transactIntoStepThatWrote(blockId: string, fn: () => void): void {
+    // Before the step lookup: the flush may itself open a step.
+    this.flushPendingBlockWrites();
+
+    const data = this.documentStore.getBlockById(blockId)?.get('data');
+
+    this.undoHistory.withoutCaretMark(() => {
+      this.undoHistory.addToStepThatWrote(data, () => this.documentStore.transactWithoutCapture(fn));
+    });
+  }
+
   // ========== Public API: Smart Grouping ==========
 
   /**

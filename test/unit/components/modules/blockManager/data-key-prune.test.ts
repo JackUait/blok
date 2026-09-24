@@ -383,6 +383,37 @@ describe('which data writes are undo steps', () => {
     expect(yjsManager.canUndo()).toBe(false);
   });
 
+  it('adds derived data to the step that last wrote the block, so that step undoes and redoes it', async () => {
+    const { yjsManager, mutate, derive, readData } = createHarness([
+      { id: 'img', name: 'image', data: { url: '' } },
+      { id: 'p', name: 'paragraph', data: { text: 'a' } },
+    ]);
+
+    yjsManager.clear();
+    await mutate('img', { url: '', fileName: 'shot.png' });
+    yjsManager.stopCapturing();
+    await mutate('p', { text: 'ab' });
+    yjsManager.stopCapturing();
+    yjsManager.undo();
+
+    await derive('img', { url: 'shot-url', fileName: 'shot.png' });
+
+    expect(readData('img')).toEqual({ url: 'shot-url', fileName: 'shot.png' });
+    expect(yjsManager.canRedo()).toBe(true);
+
+    yjsManager.redo();
+    expect(readData('p')).toEqual({ text: 'ab' });
+    yjsManager.undo();
+    yjsManager.undo();
+    expect(readData('img')).toEqual({ url: '' });
+    expect(readData('p')).toEqual({ text: 'a' });
+
+    yjsManager.redo();
+    expect(readData('img')).toEqual({ url: 'shot-url', fileName: 'shot.png' });
+    yjsManager.redo();
+    expect(readData('p')).toEqual({ text: 'ab' });
+  });
+
   it('keeps a keystroke still in the write buffer an undo step', async () => {
     const { yjsManager, mutate, normalize, readData } = createHarness([
       { id: 'p2', name: 'paragraph', data: { text: 'a' } },

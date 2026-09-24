@@ -27,6 +27,22 @@ const findLiveBlock = (api: API, blockId: string): BlockAPI | null => {
 };
 
 /**
+ * @param live - the block now carrying the upload's block id
+ * @param startedFrom - values it must still hold; none means no check
+ * @returns whether every value in `startedFrom` is still in the block's data
+ */
+const stillHolds = async (live: BlockAPI, startedFrom: Partial<BlockToolData> | undefined): Promise<boolean> => {
+  if (startedFrom === undefined) {
+    return true;
+  }
+
+  const saved = await live.save();
+  const current: Partial<BlockToolData> = saved?.data ?? {};
+
+  return Object.entries(startedFrom).every(([key, value]) => current[key] === value);
+};
+
+/**
  * Hand a finished upload to whatever block now carries `block.id`.
  *
  * A media block can be REBUILT under an in-flight upload. None of the media
@@ -55,16 +71,22 @@ const findLiveBlock = (api: API, blockId: string): BlockAPI | null => {
  * host can still reach it. Nothing is resurrected — re-inserting a media block
  * the peer deliberately removed or converted would fight their edit, and every
  * peer running the same upload would insert its own copy.
+ *
+ * A third case gets no write either: with `startedFrom`, a block that no
+ * longer holds those values (the pick that started the upload was undone, or
+ * the block got another file) keeps what it has.
  * @param api - the tool's editor API
  * @param block - the block API this tool was constructed with
  * @param label - tool name used in the log line
  * @param data - only the fields the upload produced
+ * @param startedFrom - values the block held when the upload started
  */
 export const deliverToRebuiltBlock = (
   api: API,
   block: BlockAPI,
   label: string,
-  data: Partial<BlockToolData>
+  data: Partial<BlockToolData>,
+  startedFrom?: Partial<BlockToolData>
 ): void => {
   try {
     const live = findLiveBlock(api, block.id);
@@ -89,9 +111,23 @@ export const deliverToRebuiltBlock = (
       return;
     }
 
-    void api.blocks.update(block.id, data).catch((error: unknown) => {
-      logLabeled(`${label}: could not store the finished upload`, 'warn', error);
-    });
+    void stillHolds(live, startedFrom)
+      .then((holds) => {
+        if (!holds) {
+          logLabeled(
+            `${label}: the edit that started the upload was undone or replaced, so the uploaded file is not referenced by the document`,
+            'warn',
+            data
+          );
+
+          return;
+        }
+
+        return api.blocks.update(block.id, data);
+      })
+      .catch((error: unknown) => {
+        logLabeled(`${label}: could not store the finished upload`, 'warn', error);
+      });
   } catch (error) {
     logLabeled(`${label}: could not store the finished upload`, 'warn', error);
   }

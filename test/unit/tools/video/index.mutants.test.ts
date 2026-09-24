@@ -652,7 +652,8 @@ describe('VideoTool — upload lifecycle', () => {
     expect(tool.save().fileName).toBe('hosted.mp4');
     expect(tool.save().mimeType).toBe('video/mp4');
     expect(root.getAttribute('data-state')).toBe('rendered');
-    expect(block.dispatchChange).toHaveBeenCalledTimes(1);
+    // The pick is the edit; the upload lands as derived data.
+    expect(vi.mocked(block.dispatchChange).mock.calls).toEqual([[], [{ derived: true }]]);
   });
 
   it('falls back to the picked filename when the host returns none', async () => {

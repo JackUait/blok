@@ -501,3 +501,61 @@ describe('FileTool — preview', () => {
     expect(document.querySelector('[role="dialog"]')).toBeNull();
   });
 });
+
+describe('FileTool — an upload belongs to the pick that started it', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  const heldUpload = (): { uploadByFile: () => Promise<{ url: string }>; resolve: (url: string) => void } => {
+    const gate: { resolve: (url: string) => void } = { resolve: () => undefined };
+
+    return {
+      uploadByFile: () => new Promise((r) => {
+        gate.resolve = (url) => r({ url });
+      }),
+      resolve: (url) => gate.resolve(url),
+    };
+  };
+  const pdf = (): File => new File([new Uint8Array(10)], 'a.pdf', { type: 'application/pdf' });
+
+  it('saves the picked file name as an edit when the pick starts the upload', () => {
+    const block = createMockBlock();
+    const { uploadByFile } = heldUpload();
+    const tool = new FileTool(createOptions({}, { uploader: { uploadByFile } }, block));
+    tool.render();
+
+    tool.onPaste(filePasteEvent(pdf()));
+
+    expect(tool.save().fileName).toBe('a.pdf');
+    expect(block.dispatchChange).toHaveBeenCalledWith();
+  });
+
+  it('reports the finished upload as derived, not as a new edit', async () => {
+    const block = createMockBlock();
+    const upload = heldUpload();
+    const tool = new FileTool(createOptions({}, { uploader: { uploadByFile: upload.uploadByFile } }, block));
+    tool.render();
+    tool.onPaste(filePasteEvent(pdf()));
+    await Promise.resolve();
+
+    upload.resolve('https://cdn/a.pdf');
+    await flush();
+
+    expect(tool.save().url).toBe('https://cdn/a.pdf');
+    expect(block.dispatchChange).toHaveBeenLastCalledWith({ derived: true });
+  });
+
+  it('drops an upload that finishes after it was cancelled', async () => {
+    const upload = heldUpload();
+    const tool = new FileTool(createOptions({}, { uploader: { uploadByFile: upload.uploadByFile } }));
+    const root = tool.render();
+    tool.onPaste(filePasteEvent(pdf()));
+    await Promise.resolve();
+    root.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
+
+    upload.resolve('https://cdn/a.pdf');
+    await flush();
+
+    expect(tool.save().url).toBe('');
+  });
+});

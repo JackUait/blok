@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { BlockManager } from '../../../../../src/components/modules/blockManager/blockManager';
 import type { Block } from '../../../../../src/components/block';
+import type { TreePlacement } from '../../../../../src/components/utils/tree-order';
 import { Blocks } from '../../../../../src/components/blocks';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
@@ -532,7 +533,7 @@ describe('BlockManager.deleteSelectedBlocksAndInsertReplacement', () => {
     const result = harness.blockManager.deleteSelectedBlocksAndInsertReplacement();
 
     expect(result).toBeUndefined();
-    expect(harness.yjs.addBlock).not.toHaveBeenCalled();
+    expect(harness.yjs.addBlockAt).not.toHaveBeenCalled();
     expect(harness.operationsInsert).not.toHaveBeenCalled();
   });
 
@@ -542,7 +543,7 @@ describe('BlockManager.deleteSelectedBlocksAndInsertReplacement', () => {
     const result = harness.blockManager.deleteSelectedBlocksAndInsertReplacement(true);
 
     expect(result).toBeDefined();
-    expect(harness.yjs.addBlock).toHaveBeenCalledOnce();
+    expect(harness.yjs.addBlockAt).toHaveBeenCalledOnce();
   });
 
   it('inserts a replacement at the first deleted position when the whole document goes', () => {
@@ -556,9 +557,9 @@ describe('BlockManager.deleteSelectedBlocksAndInsertReplacement', () => {
 
     harness.blockManager.deleteSelectedBlocksAndInsertReplacement();
 
-    expect(harness.yjs.addBlock).toHaveBeenCalledWith(
+    expect(harness.yjs.addBlockAt).toHaveBeenCalledWith(
       { id: expect.any(String), type: 'paragraph', data: {} },
-      0
+      { parentId: null, afterId: null }
     );
   });
 
@@ -567,7 +568,7 @@ describe('BlockManager.deleteSelectedBlocksAndInsertReplacement', () => {
 
     harness.blockManager.deleteSelectedBlocksAndInsertReplacement(true);
 
-    expect(harness.yjs.addBlock).toHaveBeenCalledWith(expect.anything(), 1);
+    expect(harness.yjs.addBlockAt).toHaveBeenCalledWith(expect.anything(), { parentId: null, afterId: 'keep-0' });
   });
 
   it('renders the replacement with the very id it wrote to the document, focused, without a second sync', () => {
@@ -575,13 +576,13 @@ describe('BlockManager.deleteSelectedBlocksAndInsertReplacement', () => {
 
     harness.blockManager.deleteSelectedBlocksAndInsertReplacement();
 
-    const [addedData, addedIndex] = harness.yjs.addBlock.mock.calls[0] as [{ id: string }, number];
+    const [addedData, addedPlacement] = harness.yjs.addBlockAt.mock.calls[0] as [{ id: string }, TreePlacement];
 
     expect(harness.operationsInsert).toHaveBeenCalledWith(
       {
         id: addedData.id,
         tool: 'paragraph',
-        index: addedIndex,
+        placement: addedPlacement,
         needToFocus: true,
         skipYjsSync: true,
       },
@@ -834,12 +835,12 @@ describe('BlockManager.clear', () => {
 
     await harness.blockManager.clear(true);
 
-    expect(harness.yjs.addBlock).toHaveBeenCalledWith(
+    expect(harness.yjs.addBlockAt).toHaveBeenCalledWith(
       { id: expect.any(String), type: 'paragraph', data: {} },
-      0
+      { parentId: null, afterId: null }
     );
 
-    const [addedData] = harness.yjs.addBlock.mock.calls[0] as [{ id: string }];
+    const [addedData] = harness.yjs.addBlockAt.mock.calls[0] as [{ id: string }];
 
     expect(harness.operationsInsert).toHaveBeenCalledWith(
       { id: addedData.id, skipYjsSync: true },

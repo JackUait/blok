@@ -643,7 +643,7 @@ describe('BlockManager', () => {
     // Should insert replacement block
     expect(insertSpy).toHaveBeenCalledWith(expect.objectContaining({
       tool: 'paragraph',
-      index: 0,
+      placement: { parentId: null, afterId: null },
       needToFocus: true,
       skipYjsSync: true,
     }));
@@ -706,7 +706,7 @@ describe('BlockManager', () => {
     // The typed char gets one clean block at the seam (index of the first selected block).
     expect(insertSpy).toHaveBeenCalledWith(expect.objectContaining({
       tool: 'paragraph',
-      index: 0,
+      placement: { parentId: null, afterId: null },
       needToFocus: true,
       skipYjsSync: true,
     }));

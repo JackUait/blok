@@ -981,7 +981,15 @@ export class BlockManager extends Module {
     const shouldInsertReplacement = allBlocksDeleted || forceReplacement;
 
     // Get insertion index (minimum index among selected blocks)
-    const insertionIndex = selectedBlockEntries[selectedBlockEntries.length - 1].index;
+    const firstSelected = selectedBlockEntries[selectedBlockEntries.length - 1];
+    const insertionIndex = firstSelected.index;
+    // The replacement goes to the root, after the root blocks before the
+    // selection. A table/database cell keeps the index insert: the table
+    // claims the new block into the cell.
+    const selectionParent = firstSelected.block.parentId === null ? undefined : this.getBlockById(firstSelected.block.parentId);
+    const placement: TreePlacement | undefined = selectionParent !== undefined && isSelfPlacedParent(selectionParent, (id) => this.getBlockById(id))
+      ? undefined
+      : { parentId: null, afterId: lastChildBefore({ blocks: this.blocks, getBlockById: (id) => this.getBlockById(id) }, null, insertionIndex) };
     const blockIds = selectedBlockEntries.map(({ block }) => block.id);
 
     const defaultToolName = this.config.defaultBlock;
@@ -999,12 +1007,10 @@ export class BlockManager extends Module {
         this.Blok.YjsManager.removeBlock(id);
       }
 
-      if (newBlockId !== undefined) {
-        this.Blok.YjsManager.addBlock({
-          id: newBlockId,
-          type: defaultToolName,
-          data: {},
-        }, insertionIndex);
+      if (newBlockId !== undefined && placement !== undefined) {
+        this.Blok.YjsManager.addBlockAt({ id: newBlockId, type: defaultToolName, data: {} }, placement);
+      } else if (newBlockId !== undefined) {
+        this.Blok.YjsManager.addBlock({ id: newBlockId, type: defaultToolName, data: {} }, insertionIndex);
       }
 
       // DOM cleanup (Yjs already handled above), highest index first. Inside the
@@ -1020,7 +1026,7 @@ export class BlockManager extends Module {
       return this.insert({
         id: newBlockId,
         tool: defaultToolName,
-        index: insertionIndex,
+        ...(placement !== undefined ? { placement } : { index: insertionIndex }),
         needToFocus: true,
         skipYjsSync: true,
       });
@@ -1803,11 +1809,11 @@ export class BlockManager extends Module {
 
       // Include default block in transaction so undo removes it along with restoring original blocks
       if (needToAddDefaultBlock && defaultBlockId !== undefined && defaultToolName !== undefined) {
-        this.Blok.YjsManager.addBlock({
+        this.Blok.YjsManager.addBlockAt({
           id: defaultBlockId,
           type: defaultToolName,
           data: {},
-        }, 0);
+        }, { parentId: null, afterId: null });
       }
     });
 

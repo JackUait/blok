@@ -2097,6 +2097,7 @@ describe('add-controls wiring', () => {
   it('scrolls to the new columns when the drag added some', () => {
     const harness = createHarness({ colWidths: [40, 60] });
 
+    addControlsOptions().onDragStart();
     addControlsOptions().onDragAddCol();
     setScrollLeft(harness, 0);
     addControlsOptions().onDragEnd();
@@ -2322,6 +2323,7 @@ describe('corner-drag wiring', () => {
   it('restores every affordance and closes the undo group on drag end', () => {
     const harness = createHarness();
 
+    cornerDragOptions().onDragStart();
     captured.resize.length = 0;
     cornerDragOptions().onDragEnd();
 
@@ -3475,9 +3477,10 @@ describe('wiring that must survive missing collaborators', () => {
     expect(harness.api.blocks.beginTransaction).toHaveBeenCalledTimes(1);
   });
 
-  it('closes the undo group on a drag end that follows a teardown', () => {
+  it('closes the undo group once when a teardown cuts a drag short', () => {
     const harness = createHarness();
 
+    cornerDragOptions().onDragStart();
     harness.subsystems.teardown();
 
     expect(() => cornerDragOptions().onDragEnd()).not.toThrow();

@@ -41,6 +41,13 @@ const sameValue = (a: Y.Item, b: Y.Item): boolean =>
   a.content instanceof Y.ContentAny && b.content instanceof Y.ContentAny
   && JSON.stringify(a.content.getContent()) === JSON.stringify(b.content.getContent());
 
+/** One entry taken off the top of the undo stacks: its caret entry and its yjs item or move group. */
+interface CaretStackTop {
+  entry: CaretHistoryEntry | undefined;
+  item?: StackItem;
+  group?: MoveHistoryEntry;
+}
+
 /**
  * The state a move entry was last left in: where its block actually landed,
  * and which blocks existed at that moment.
@@ -254,6 +261,22 @@ export class UndoHistory {
   private reachingPastRefusedItem = 0;
 
   /**
+   * For an entry a press reached past other entries to replay: the entries it
+   * reached past. They stayed on the stack it left, so when it comes back to
+   * that stack it goes under them (see {@link putBackUnderReachedPast}).
+   */
+  private readonly reachedPast = new WeakMap<CaretHistoryEntry, Set<CaretHistoryEntry>>();
+
+  /**
+   * Set when a press walked the whole undo stack and nothing could apply.
+   * Any doc change clears it: the peer's content that blocked the stack may be gone.
+   */
+  private nothingUndoable = false;
+
+  /** Stops the doc listener that clears {@link nothingUndoable}. */
+  private stopDocWatch: (() => void) | null = null;
+
+  /**
    * Flag to skip caret stack updates during explicit undo/redo operations.
    * When true, the stack-item-added listener won't modify caret stacks.
    */
@@ -365,6 +388,7 @@ export class UndoHistory {
     // The blocks map is the first Y.Map of the scope (see DocumentStore.undoScope).
     this.blocksScope = scope.find((root): root is Y.Map<Y.Map<unknown>> => root instanceof Y.Map) ?? null;
     this.rootOrderScope = scope.find((root): root is Y.Array<string> => root instanceof Y.Array) ?? null;
+    this.watchDoc(this.blocksScope?.doc ?? null);
 
     return new Y.UndoManager(scope, {
       captureTimeout: this.captureHolds > 0 ? Infinity : CAPTURE_TIMEOUT_MS,
@@ -379,6 +403,29 @@ export class UndoHistory {
         return mayDelete;
       },
     });
+  }
+
+  /**
+   * Clear {@link nothingUndoable} on every change to `doc`.
+   * @param doc - the doc the undo scope lives in
+   */
+  private watchDoc(doc: Y.Doc | null): void {
+    this.stopDocWatch?.();
+    this.stopDocWatch = null;
+
+    if (doc === null) {
+      return;
+    }
+
+    // A read-only transact (see `scanTopEntry`) changes nothing and must not clear it.
+    const clear = (transaction: Y.Transaction): void => {
+      if (transaction.changed.size > 0 || transaction.deleteSet.clients.size > 0) {
+        this.nothingUndoable = false;
+      }
+    };
+
+    doc.on('afterTransaction', clear);
+    this.stopDocWatch = () => doc.off('afterTransaction', clear);
   }
 
   /**
@@ -1356,6 +1403,7 @@ export class UndoHistory {
       const caretEntry = this.caretUndoStack.pop();
 
       this.pushCaretAndRestore(caretEntry, this.caretRedoStack, 'before');
+      this.putBackUnderReachedPast(caretEntry, this.caretRedoStack, this.undoManager.redoStack, this.moveRedoStack);
       this.restoreScrollIfJumped(savedScrollY);
 
       return;
@@ -1365,6 +1413,7 @@ export class UndoHistory {
     const caretEntry = this.replayTrackedEntry('undo');
 
     this.pushCaretAndRestore(caretEntry, this.caretRedoStack, 'before');
+    this.putBackUnderReachedPast(caretEntry, this.caretRedoStack, this.undoManager.redoStack, this.moveRedoStack);
     this.restoreScrollIfJumped(savedScrollY);
   }
 
@@ -1441,6 +1490,8 @@ export class UndoHistory {
   ): void {
     const caret = carets.pop();
     const group = moves.pop();
+    const opposite = carets === this.caretUndoStack ? this.caretRedoStack : this.caretUndoStack;
+    const carriedBefore = opposite.at(-1);
 
     try {
       replay();
@@ -1451,6 +1502,12 @@ export class UndoHistory {
       if (group !== undefined) {
         moves.push(group);
       }
+    }
+
+    const carried = opposite.at(-1);
+
+    if (carried !== undefined && carried !== carriedBefore) {
+      this.noteReachedPast(carried, [{ entry: caret }]);
     }
   }
 
@@ -1466,26 +1523,99 @@ export class UndoHistory {
   }
 
   /**
-   * Undo the ONE entry under a refused yjs item, then put the item back on
-   * top. Undo only: see `redo()`.
+   * Undo the newest entry under a refused yjs item that can apply, then put
+   * back everything it stepped past. Undo only: see `redo()`.
    *
-   * Invariants, so no press loses or reorders history:
-   * - the refused item and its caret entry come back exactly where they were;
-   * - the replay below sees one yjs item only (see `replayTrackedEntry`), so
-   *   it can never reach an older step;
-   * - that item, when it applies nothing, goes back too (see
-   *   `restoreSkippedStackItems`) and the press does nothing.
+   * Invariants, so no press loses, reorders or re-applies history, and none
+   * is stuck:
+   * - each replay below sees one yjs item only (see `replayTrackedEntry`), so
+   *   yjs cannot walk to an older step and drop the ones between;
+   * - an entry that applies nothing (most often shadowed: its text lives in a
+   *   block the refused item deleted) is set aside, and the next one is tried;
+   * - the refused item and every entry set aside go back in their order, with
+   *   their caret entries, whether or not something applied;
+   * - when nothing applies, `canUndo()` says so until the doc changes.
    *
-   * Its caret entry leaves the caret stack too, or `settleReplayedEntries`
-   * would shed it as the entry of an item that left the stack.
+   * A set-aside entry's caret entry leaves the caret stack right away: the
+   * next try reads the top caret entry to pick the timeline, and
+   * `settleReplayedEntries` would shed the entry of an item off the stack.
    */
   private reachPastRefusedStackItem(): void {
-    const stack = this.undoManager.undoStack;
+    const setAside: CaretStackTop[] = [this.takeUndoTop()];
+    const carriedBefore = this.caretRedoStack.at(-1);
+
+    this.reachingPastRefusedItem++;
+    const applied = ((): boolean => {
+      try {
+        return this.undoFirstThatApplies(setAside);
+      } finally {
+        this.reachingPastRefusedItem--;
+        [...setAside].reverse().forEach((top) => this.putUndoTopBack(top));
+      }
+    })();
+
+    const carried = this.caretRedoStack.at(-1);
+
+    if (applied && carried !== undefined && carried !== carriedBefore) {
+      this.noteReachedPast(carried, setAside);
+    }
+    if (!applied && this.reachingPastRefusedItem === 0) {
+      this.nothingUndoable = true;
+    }
+  }
+
+  /**
+   * Undo the newest entry that applies, setting aside each one that does not.
+   * @param setAside - collects the entries set aside, newest first
+   * @returns whether an entry applied
+   */
+  private undoFirstThatApplies(setAside: CaretStackTop[]): boolean {
+    while (this.undoManager.undoStack.length > 0 || this.moveUndoStack.length > 0) {
+      const items = this.undoManager.undoStack.length;
+      const moves = this.moveUndoStack.length;
+
+      // A refused item never applies: set it aside here rather than start
+      // another reach-past under this one.
+      const refused = this.caretUndoStack.at(-1)?.kind !== 'move' && this.topStackItemIsRefused('undo');
+
+      if (!refused) {
+        this.undo();
+      }
+
+      // Applied: the entry left its stack. Nothing: it is back on top.
+      if (this.undoManager.undoStack.length < items || this.moveUndoStack.length < moves) {
+        return true;
+      }
+
+      const top = this.takeUndoTop();
+
+      setAside.push(top);
+
+      // Stacks out of step with the caret stack: nothing left to take.
+      if (top.entry === undefined && top.item === undefined && top.group === undefined) {
+        return false;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Take the newest undo entry off its stack and its caret entry off the
+   * caret stack, whichever timeline it belongs to.
+   */
+  private takeUndoTop(): CaretStackTop {
     const carets = this.caretUndoStack;
-    const item = stack.pop();
+
+    if (carets.at(-1)?.kind === 'move') {
+      return { entry: carets.pop(),
+        group: this.moveUndoStack.pop() };
+    }
+
+    const item = this.undoManager.undoStack.pop();
 
     if (item === undefined) {
-      return;
+      return { entry: carets.pop() };
     }
 
     const entry = this.entryByStackItem.get(item);
@@ -1495,16 +1625,96 @@ export class UndoHistory {
       carets.splice(index, 1);
     }
 
-    this.reachingPastRefusedItem++;
-    try {
-      this.undo();
-    } finally {
-      this.reachingPastRefusedItem--;
-      stack.push(item);
-      if (entry !== undefined && index !== -1) {
-        carets.push(entry);
-      }
+    return { entry: index === -1 ? undefined : entry,
+      item };
+  }
+
+  /**
+   * Undo {@link takeUndoTop}.
+   * @param top - what it took
+   */
+  private putUndoTopBack(top: CaretStackTop): void {
+    if (top.item !== undefined) {
+      this.undoManager.undoStack.push(top.item);
     }
+    if (top.group !== undefined) {
+      this.moveUndoStack.push(top.group);
+    }
+    if (top.entry !== undefined) {
+      this.caretUndoStack.push(top.entry);
+    }
+  }
+
+  /**
+   * Remember that `entry` was replayed from under `tops`.
+   * @param entry - the caret entry the replay carried to the other stack
+   * @param tops - what stayed on the stack it left, above it
+   */
+  private noteReachedPast(entry: CaretHistoryEntry, tops: readonly CaretStackTop[]): void {
+    const above = this.reachedPast.get(entry) ?? new Set<CaretHistoryEntry>();
+
+    tops.forEach((top) => {
+      if (top.entry !== undefined) {
+        above.add(top.entry);
+      }
+    });
+    this.reachedPast.set(entry, above);
+  }
+
+  /**
+   * An entry replayed from under other entries is newer on the stack it
+   * returns to than it should be: the replay pushed it on top. Put it, and
+   * its yjs item or move group, under the lowest entry it reached past that
+   * is still there, so the stack is in its original order again.
+   * @param entry - the caret entry just pushed on `carets`
+   * @param carets - the caret stack it returned to
+   * @param items - the yjs stack of the same direction
+   * @param moves - the move stack of the same direction
+   */
+  private putBackUnderReachedPast(
+    entry: CaretHistoryEntry | undefined,
+    carets: CaretHistoryEntry[],
+    items: StackItem[],
+    moves: MoveHistoryEntry[]
+  ): void {
+    const above = entry === undefined ? undefined : this.reachedPast.get(entry);
+
+    if (entry === undefined || above === undefined) {
+      return;
+    }
+    this.reachedPast.delete(entry);
+
+    const at = carets.findIndex((candidate) => above.has(candidate));
+    const group = entry.kind === 'move' ? moves.at(-1) : undefined;
+    const item = entry.kind === 'move' ? undefined : items.at(-1);
+    // Only a stack whose top is this entry's own replay can be reordered.
+    const ownsTop = group !== undefined || (item !== undefined && this.entryByStackItem.get(item) === entry);
+
+    if (at === -1 || carets.at(-1) !== entry || !ownsTop) {
+      return;
+    }
+
+    const below = carets.slice(0, at);
+
+    carets.pop();
+    carets.splice(at, 0, entry);
+
+    if (group !== undefined) {
+      moves.pop();
+      moves.splice(below.filter((candidate) => candidate.kind === 'move').length, 0, group);
+    }
+    if (item === undefined) {
+      return;
+    }
+
+    const itemAt = items.findIndex((candidate) => {
+      const candidateEntry = this.entryByStackItem.get(candidate);
+
+      return candidateEntry !== undefined && above.has(candidateEntry);
+    });
+    items.pop();
+    // Reached past moves only: count the yjs entries under it instead.
+    items.splice(itemAt !== -1 ? itemAt : below.filter((candidate) => candidate.kind !== 'move').length, 0, item);
   }
 
   /**
@@ -1562,6 +1772,7 @@ export class UndoHistory {
       const caretEntry = this.caretRedoStack.pop();
 
       this.pushCaretAndRestore(caretEntry, this.caretUndoStack, 'after');
+      this.putBackUnderReachedPast(caretEntry, this.caretUndoStack, this.undoManager.undoStack, this.moveUndoStack);
       this.restoreScrollIfJumped(savedScrollY);
 
       return;
@@ -1571,6 +1782,7 @@ export class UndoHistory {
     const caretEntry = this.replayTrackedEntry('redo');
 
     this.pushCaretAndRestore(caretEntry, this.caretUndoStack, 'after');
+    this.putBackUnderReachedPast(caretEntry, this.caretUndoStack, this.undoManager.undoStack, this.moveUndoStack);
     this.restoreScrollIfJumped(savedScrollY);
   }
 
@@ -2191,13 +2403,111 @@ export class UndoHistory {
    * Check if undo is available.
    */
   public canUndo(): boolean {
+    if (this.nothingUndoable) {
+      return false;
+    }
+
+    // An undo reaches past a refused top, so it can only do something if an
+    // entry under it can apply.
+    if (this.caretUndoStack.at(-1)?.kind !== 'move' && this.topStackItemIsRefused('undo')) {
+      return this.somethingUnderRefusedTopCanUndo();
+    }
+
     return this.moveUndoStack.length > 0 || this.undoManager.canUndo();
+  }
+
+  /**
+   * Whether {@link reachPastRefusedStackItem} would find an entry that
+   * applies: a move group the peer has not overruled, or a yjs item that is
+   * not refused itself and would change the doc.
+   */
+  private somethingUnderRefusedTopCanUndo(): boolean {
+    if (this.moveUndoStack.some((group) => group.length > 0 && !this.groupWasDisplacedSince(group, 'to'))) {
+      return true;
+    }
+
+    return this.undoManager.undoStack.slice(0, -1).some(
+      (item) => !this.wouldResurrectBesideASparedBlock(this.scanTopEntry([item])) && this.undoWouldApply(item)
+    );
+  }
+
+  /**
+   * Whether undoing `stackItem` would change the doc, read without changing
+   * it. Mirrors `popStackItem` and `redoItem` of yjs 13.6: an item it
+   * inserted that is live and the filter lets go, or an item it deleted that
+   * yjs can bring back (its parent is live or comes back too, and no other
+   * client wrote the same map key since). Where yjs follows a redo chain this
+   * answers yes, so a mismatch errs toward "can undo"; the press then
+   * measures the truth (see {@link nothingUndoable}).
+   * @param stackItem - an undo stack item
+   */
+  private undoWouldApply(stackItem: StackItem): boolean {
+    const doc = this.blocksScope?.doc ?? null;
+
+    if (doc === null) {
+      return true;
+    }
+
+    const { scope, undoStack, redoStack } = this.undoManager;
+    const inScope = (item: Y.Item): boolean =>
+      scope.some((type) => (type as unknown) === doc || Y.isParentOf(type as Y.AbstractType<unknown>, item));
+    const deletedByStacks = (id: Y.ID): boolean =>
+      [...undoStack, ...redoStack].some((other) => Y.isDeleted(other.deletions, id));
+    // yjs gives up on a map key another client wrote after this item, unless
+    // that write is one undo/redo would remove anyway.
+    const keyIsFree = (item: Y.Item): boolean => {
+      const right = item.right;
+
+      if (right === null || right.redone !== null) {
+        return true;
+      }
+
+      return (Y.isDeleted(stackItem.insertions, right.id) || deletedByStacks(right.id)) && keyIsFree(right);
+    };
+    const born = this.blocksBornInPoppedEntry;
+    const spares = this.sparesTextOfBornBlocks;
+    const deletable: Y.Item[] = [];
+    const toRedo = new Set<Y.Item>();
+    const canBringBack = (item: Y.Item): boolean => {
+      const parentItem = item.parent instanceof Y.AbstractType ? item.parent._item : null;
+      const parentStaysDeleted = parentItem !== null && parentItem.deleted && parentItem.redone === null &&
+        (!toRedo.has(parentItem) || !canBringBack(parentItem));
+
+      return item.redone !== null || (!parentStaysDeleted && (item.parentSub === null || keyIsFree(item)));
+    };
+
+    this.blocksBornInPoppedEntry = this.scanTopEntry([stackItem]).born;
+    this.sparesTextOfBornBlocks = false;
+    try {
+      doc.transact((transaction) => {
+        Y.iterateDeletedStructs(transaction, stackItem.insertions, (struct) => {
+          if (struct instanceof Y.Item && (struct.redone !== null || (!struct.deleted && inScope(struct) && this.mayUndoDelete(struct)))) {
+            deletable.push(struct);
+          }
+        });
+        Y.iterateDeletedStructs(transaction, stackItem.deletions, (struct) => {
+          if (struct instanceof Y.Item && inScope(struct) && !Y.isDeleted(stackItem.insertions, struct.id)) {
+            toRedo.add(struct);
+          }
+        });
+      });
+    } finally {
+      this.blocksBornInPoppedEntry = born;
+      this.sparesTextOfBornBlocks = spares;
+    }
+
+    return deletable.length > 0 || [...toRedo].some(canBringBack);
   }
 
   /**
    * Check if redo is available.
    */
   public canRedo(): boolean {
+    // Redo does nothing on a refused yjs top: it never reaches past it.
+    if (this.caretRedoStack.at(-1)?.kind !== 'move' && this.topStackItemIsRefused('redo')) {
+      return false;
+    }
+
     return this.moveRedoStack.length > 0 || this.undoManager.canRedo();
   }
 
@@ -2696,6 +3006,7 @@ export class UndoHistory {
     this.poppedStackItem = null;
     this.openEntry = null;
     this.typingInputKey = null;
+    this.nothingUndoable = false;
     // Holds are left alone: each holder still owns its release.
     // Clear smart grouping state
     this.clearBoundary();
@@ -2707,6 +3018,8 @@ export class UndoHistory {
    */
   public destroy(): void {
     document.removeEventListener('selectionchange', this.selectionChangeHandler);
+    this.stopDocWatch?.();
+    this.stopDocWatch = null;
     this.clear();
     this.undoManager.destroy();
   }

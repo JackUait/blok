@@ -88,6 +88,10 @@ describe('a derived write started while the edit it comes from is still saving',
     const { yjs, api, pick, dataOf } = createHarness();
     const { resolveSave } = pick('pic.png');
 
+    if (api.methods.transactWithoutCapture === undefined) {
+      throw new Error('blocks.transactWithoutCapture is missing');
+    }
+
     api.methods.transactWithoutCapture(() => {
       yjs.addBlock({ id: 'img', type: 'image', data: { url: 'https://cdn/pic.png' } });
     }, { derivedFrom: 'f', from: ['fileName'] });
@@ -107,6 +111,10 @@ describe('a derived write started while the edit it comes from is still saving',
 
   it('runs at once when nothing of that block is saving', () => {
     const { yjs, api, dataOf } = createHarness();
+
+    if (api.methods.transactWithoutCapture === undefined) {
+      throw new Error('blocks.transactWithoutCapture is missing');
+    }
 
     api.methods.transactWithoutCapture(() => {
       yjs.addBlock({ id: 'img', type: 'image', data: { url: 'https://cdn/pic.png' } });

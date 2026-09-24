@@ -331,6 +331,12 @@ export class BlockManager extends Module {
   private suppressBeforeToolTransaction = false;
 
   /**
+   * Whether the open tool transaction holds the undo capture. An end with no
+   * begin must not release a hold someone else took (a pointer drag's).
+   */
+  private toolTransactionHoldsCapture = false;
+
+  /**
    * Every top-level data key each block's save() has emitted. Removing one of
    * these is the user's edit; removing any other key is normalisation.
    */
@@ -1016,6 +1022,10 @@ export class BlockManager extends Module {
   public beginToolTransaction(): void {
     if (this.toolTransactionDepth === 0) {
       this.Blok.YjsManager.stopCapturing();
+      // An API call inside the group would otherwise start a gesture of its
+      // own and split the group in two.
+      this.Blok.YjsManager.holdCapture();
+      this.toolTransactionHoldsCapture = true;
       this.suppressBeforeToolTransaction = this.operations.suppressStopCapturing;
     }
 
@@ -1055,6 +1065,11 @@ export class BlockManager extends Module {
       }
 
       this.Blok.YjsManager.stopCapturing();
+
+      if (this.toolTransactionHoldsCapture) {
+        this.toolTransactionHoldsCapture = false;
+        this.Blok.YjsManager.releaseCapture();
+      }
       this.operations.suppressStopCapturing = this.suppressBeforeToolTransaction;
     };
     const closeWhenWritesSettle = (): void => {

@@ -749,6 +749,7 @@ export class BlocksAPI extends Module {
    * into a single undo entry.
    */
   private transact(fn: () => void): void {
+    this.Blok.YjsManager.beginApiCall();
     this.Blok.BlockManager.transactForTool(fn);
   }
 
@@ -759,6 +760,7 @@ export class BlocksAPI extends Module {
    * Must be paired with endTransaction().
    */
   private beginTransaction(): void {
+    this.Blok.YjsManager.beginApiCall();
     this.Blok.BlockManager.beginToolTransaction();
   }
 

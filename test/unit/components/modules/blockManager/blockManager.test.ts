@@ -32,6 +32,8 @@ const createModuleConfig = (): ModuleConfig => ({
 const createBlokStub = () => ({
   YjsManager: {
     stopCapturing: vi.fn(),
+    holdCapture: vi.fn(),
+    releaseCapture: vi.fn(),
     onPendingBlockWritesSettled: vi.fn((callback: () => void) => {
       callback();
 
@@ -48,6 +50,8 @@ const createBlokStub = () => ({
 const createBlockManager = (): {
   blockManager: BlockManager;
   stopCapturing: ReturnType<typeof vi.fn>;
+  holdCapture: ReturnType<typeof vi.fn>;
+  releaseCapture: ReturnType<typeof vi.fn>;
 } => {
   const blockManager = new BlockManager(createModuleConfig());
   const blokStub = createBlokStub();
@@ -63,6 +67,8 @@ const createBlockManager = (): {
   return {
     blockManager,
     stopCapturing: blokStub.YjsManager.stopCapturing,
+    holdCapture: blokStub.YjsManager.holdCapture,
+    releaseCapture: blokStub.YjsManager.releaseCapture,
   };
 };
 
@@ -96,6 +102,33 @@ describe('BlockManager.transactForTool', () => {
 
     // After both microtask flushes: the deferred boundary stopCapturing should have fired
     expect(stopCapturing).toHaveBeenCalledTimes(2);
+  });
+
+  it('holds the undo capture from begin until the group closes', async () => {
+    const { blockManager, holdCapture, releaseCapture } = createBlockManager();
+
+    blockManager.transactForTool(() => {
+      expect(holdCapture).toHaveBeenCalledTimes(1);
+    });
+
+    expect(releaseCapture).not.toHaveBeenCalled();
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(holdCapture).toHaveBeenCalledTimes(1);
+    expect(releaseCapture).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not release a hold it never took when an end has no begin', async () => {
+    const { blockManager, releaseCapture } = createBlockManager();
+
+    blockManager.endToolTransaction();
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(releaseCapture).not.toHaveBeenCalled();
   });
 });
 

@@ -1350,10 +1350,13 @@ export class UndoHistory {
    * than on `undo()`, where a redo path — and any future third caller — could
    * silently miss it:
    *
-   * - the resurrection scan, so a replace gesture is never half-applied;
    * - `blocksBornInPoppedEntry`, so a spared block keeps its own fields;
    * - `restoreSkippedStackItems`, so an action the filter held back stays on
    *   the stack instead of being thrown away.
+   *
+   * The resurrection scan (so a replace is never half-applied) runs in
+   * `undo()`/`redo()` before this, because a refused undo replays the entry
+   * under it through `undo()`.
    * @param direction - which stack to pop from
    * @returns the caret entry to carry to the opposite stack, or undefined when
    *   nothing was replayed

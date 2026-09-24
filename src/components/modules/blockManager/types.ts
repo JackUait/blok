@@ -97,9 +97,11 @@ export interface InsertBlockOptions {
   eventParentId?: string | null;
   /**
    * Where the block goes: under `parentId`, right after sibling `afterId`
-   * (null = first). Replaces `index` and every parent inference; a tool the
-   * parent refuses is demoted. Under a table/database the holder stays where
-   * the store put it: the tool must place it.
+   * (null = first). Replaces `index` and every parent inference
+   * (`inferParent`, `forceTopLevel`, `appendToWorkingArea` and `eventParentId`
+   * are ignored); `index` or `replace` with it throws. A tool the parent
+   * refuses is demoted. Under a table/database the holder stays where the
+   * store put it: the tool must place it.
    */
   placement?: TreePlacement;
   /**

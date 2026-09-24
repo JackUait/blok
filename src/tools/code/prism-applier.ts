@@ -225,6 +225,8 @@ export function ensurePrismStyles(): void {
 function getCaretOffset(el: HTMLElement): number {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) return -1;
+  // A caret elsewhere (another block, a host input) is not ours to move.
+  if (!el.contains(sel.getRangeAt(0).endContainer)) return -1;
   const range = sel.getRangeAt(0).cloneRange();
   range.selectNodeContents(el);
   range.setEnd(sel.getRangeAt(0).endContainer, sel.getRangeAt(0).endOffset);

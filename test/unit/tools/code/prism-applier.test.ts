@@ -81,6 +81,28 @@ describe('prism-applier', () => {
       const newSel = window.getSelection()!;
       expect(newSel.rangeCount).toBeGreaterThan(0);
     });
+
+    it('leaves a caret that is outside the code block where it is', () => {
+      const elsewhere = document.createElement('p');
+
+      elsewhere.textContent = 'typing here';
+      // Before the code block: a range from the code back to here collapses to offset 0.
+      document.body.insertBefore(elsewhere, codeEl);
+      codeEl.textContent = 'const x = 1;';
+
+      const selection = window.getSelection();
+
+      if (selection === null || !(elsewhere.firstChild instanceof Text)) {
+        throw new Error('setup failed');
+      }
+      selection.collapse(elsewhere.firstChild, 4);
+
+      applyPrismHighlight(codeEl, '<span class="token keyword">const</span> x = 1;');
+
+      expect(selection.anchorNode).toBe(elsewhere.firstChild);
+      expect(selection.anchorOffset).toBe(4);
+      elsewhere.remove();
+    });
   });
 
   describe('lang class scoping', () => {

@@ -963,7 +963,7 @@ describe('ImageTool — caching the intrinsic size', () => {
     expect(tool.save()).toStrictEqual({ url: 'u', naturalWidth: 300, naturalHeight: 200 });
     expect(block.dispatchChange).toHaveBeenCalledTimes(1);
     // A measured size is not the user's edit.
-    expect(block.dispatchChange).toHaveBeenCalledWith({ derived: true });
+    expect(block.dispatchChange).toHaveBeenCalledWith({ derived: true, from: ['url'] });
   });
 
   it('does not re-dispatch a change when the same size loads again', () => {

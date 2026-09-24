@@ -24,7 +24,7 @@ import type {
   OperationsContext,
 } from './operations-context';
 import type { BlockRepository } from './repository';
-import type { InsertBlockOptions, InsertInsideParentOptions, BlocksStore } from './types';
+import type { InsertBlockOptions, InsertInsideParentOptions, BlocksStore, DerivedSource } from './types';
 import type { BlockYjsSync } from './yjs-sync';
 
 export type { BlockOperationsDependencies, BlockDidMutated } from './operations-context';
@@ -349,9 +349,10 @@ export class BlockOperations implements OperationsContext {
    * @param blocksStore - The blocks store to modify
    * @param data - New data
    * @param tunes - New tune data
+   * @param derivedFrom - see `BlockMutation.update`
    */
-  public update(block: Block, blocksStore: BlocksStore, data?: Partial<BlockToolData>, tunes?: { [name: string]: BlockTuneData }): Promise<Block> {
-    return this.mutation.update(block, blocksStore, data, tunes);
+  public update(block: Block, blocksStore: BlocksStore, data?: Partial<BlockToolData>, tunes?: { [name: string]: BlockTuneData }, derivedFrom?: DerivedSource): Promise<Block> {
+    return this.mutation.update(block, blocksStore, data, tunes, derivedFrom);
   }
 
   /**

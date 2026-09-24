@@ -597,19 +597,25 @@ export class Block extends EventsDispatcher<BlockEvents> {
    */
   public isDerivedChange = false;
 
+  /** While `isDerivedChange`: the data keys the change was worked out from. */
+  public derivedFrom: readonly string[] = [];
+
   /**
    * Allows to say Blok that Block was changed. Used to manually trigger Blok's 'onChange' callback
    * Can be useful for block changes invisible for blok core.
    * @param options - change options
    * @param options.derived - the tool worked the data out itself; it is not an undo step
+   * @param options.from - with `derived`: the data keys it was worked out from
    */
-  public dispatchChange(options?: { derived?: boolean }): void {
+  public dispatchChange(options?: { derived?: boolean; from?: readonly string[] }): void {
     this.isDerivedChange = options?.derived === true;
+    this.derivedFrom = this.isDerivedChange ? options?.from ?? [] : [];
 
     try {
       this.didMutated();
     } finally {
       this.isDerivedChange = false;
+      this.derivedFrom = [];
     }
   }
 

@@ -542,7 +542,7 @@ describe('FileTool — an upload belongs to the pick that started it', () => {
     await flush();
 
     expect(tool.save().url).toBe('https://cdn/a.pdf');
-    expect(block.dispatchChange).toHaveBeenLastCalledWith({ derived: true });
+    expect(block.dispatchChange).toHaveBeenLastCalledWith({ derived: true, from: ['fileName'] });
   });
 
   it('drops an upload that finishes after it was cancelled', async () => {

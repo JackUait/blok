@@ -970,7 +970,8 @@ describe('async tool data racing a remote peer', () => {
 
       // The defect: `{url, fileName}` merged into paragraph data, recomposing
       // the block under the author's caret for keys `Paragraph.save()` drops.
-      expect(dataOf(live.store, 'img1').url).toBe('');
+      // The pasted link itself was written when the paste started the upload.
+      expect(dataOf(live.store, 'img1').url).toBe('https://cdn.test/photo.png');
       expect(dataOf(live.store, 'img1').fileName).toBeUndefined();
 
       // Not a silent drop: the file is named so it can still be reached.

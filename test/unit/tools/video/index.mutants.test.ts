@@ -653,7 +653,7 @@ describe('VideoTool — upload lifecycle', () => {
     expect(tool.save().mimeType).toBe('video/mp4');
     expect(root.getAttribute('data-state')).toBe('rendered');
     // The pick is the edit; the upload lands as derived data.
-    expect(vi.mocked(block.dispatchChange).mock.calls).toEqual([[], [{ derived: true }]]);
+    expect(vi.mocked(block.dispatchChange).mock.calls).toEqual([[], [{ derived: true, from: ['fileName'] }]]);
   });
 
   it('falls back to the picked filename when the host returns none', async () => {
@@ -841,7 +841,7 @@ describe('VideoTool — intrinsic aspect ratio', () => {
     expect(root.querySelector<HTMLElement>('[data-role="video-media"]')?.style.aspectRatio)
       .toBe('1920 / 1080');
     expect(block.dispatchChange).toHaveBeenCalledTimes(1);
-    expect(block.dispatchChange).toHaveBeenCalledWith({ derived: true });
+    expect(block.dispatchChange).toHaveBeenCalledWith({ derived: true, from: ['url'] });
   });
 
   it('ignores metadata that reports a zero width', () => {

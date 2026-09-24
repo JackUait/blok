@@ -4,6 +4,7 @@ import type { ModuleConfig } from '../../../../types-internal/module-config';
 import { Module } from '../../../__module';
 import { DATA_ATTR, INLINE_TOOLBAR_INTERFACE_VALUE } from '../../../constants';
 import { Dom as $ } from '../../../dom';
+import { InlineToolEventManager } from '../../../inline-tools/services/inline-tool-event-manager';
 import { SelectionUtils } from '../../../selection/index';
 import type { InlineToolAdapter } from '../../../tools/inline';
 import { isMobileScreen } from '../../../utils';
@@ -225,6 +226,8 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
         void this.tryToShow();
       }
     }, true);
+
+    InlineToolEventManager.acquire(this);
 
     // Schedule initialization
     this.lifecycleManager.schedule();
@@ -469,6 +472,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
 
     this.shortcutManager.destroy();
     this.removeAllNodes();
+    InlineToolEventManager.release(this);
   }
 
   /**

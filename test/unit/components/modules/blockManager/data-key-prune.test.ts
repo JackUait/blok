@@ -43,6 +43,7 @@ interface BlockStub {
   tool: { name: string };
   save: ReturnType<typeof vi.fn>;
   isDerivedChange: boolean;
+  derivedFrom: readonly string[];
   lastEditedAt?: number;
   lastEditedBy?: string | null;
 }
@@ -62,7 +63,7 @@ interface Harness {
   /** The block's `data` straight off the Y.Map (toJSON on the manager is a flush barrier). */
   readData: (blockId: string) => Record<string, unknown> | undefined;
   /** A tool reporting derived data (a measured size) whose save() yields exactly `data`. */
-  derive: (blockId: string, data: Record<string, unknown>) => Promise<void>;
+  derive: (blockId: string, data: Record<string, unknown>, from?: readonly string[]) => Promise<void>;
   /** The editor normalising `blockId` to a save() that yields exactly `data`. */
   normalize: (blockId: string, data: Record<string, unknown>, options?: { onlyMissingKeys?: boolean }) => Promise<void>;
 }
@@ -90,6 +91,7 @@ const createStubBlock = (seed: SeedBlock): BlockStub => {
     tool: { name: seed.name, sanitizeConfig: seed.sanitizeConfig },
     save: vi.fn(),
     isDerivedChange: false,
+    derivedFrom: [],
     setData: vi.fn(() => Promise.resolve(true)),
     call: vi.fn(),
     destroy: vi.fn(),
@@ -160,7 +162,7 @@ const createHarness = (seed: SeedBlock[]): Harness => {
 
       return data instanceof Y.Map ? data.toJSON() : undefined;
     },
-    derive: async (blockId: string, data: Record<string, unknown>): Promise<void> => {
+    derive: async (blockId: string, data: Record<string, unknown>, from: readonly string[] = []): Promise<void> => {
       const stub = stubs.get(blockId);
 
       if (stub === undefined) {
@@ -169,8 +171,10 @@ const createHarness = (seed: SeedBlock[]): Harness => {
 
       stub.save.mockResolvedValue({ data });
       stub.isDerivedChange = true;
+      stub.derivedFrom = from;
       priv.blockDidMutated(BlockChangedMutationType, stub, { index: 0 });
       stub.isDerivedChange = false;
+      stub.derivedFrom = [];
 
       await drainMicrotasks();
     },
@@ -383,7 +387,7 @@ describe('which data writes are undo steps', () => {
     expect(yjsManager.canUndo()).toBe(false);
   });
 
-  it('adds derived data to the step that last wrote the block, so that step undoes and redoes it', async () => {
+  it('adds derived data to the step that wrote the values it came from, so that step undoes and redoes it', async () => {
     const { yjsManager, mutate, derive, readData } = createHarness([
       { id: 'img', name: 'image', data: { url: '' } },
       { id: 'p', name: 'paragraph', data: { text: 'a' } },
@@ -396,7 +400,7 @@ describe('which data writes are undo steps', () => {
     yjsManager.stopCapturing();
     yjsManager.undo();
 
-    await derive('img', { url: 'shot-url', fileName: 'shot.png' });
+    await derive('img', { url: 'shot-url', fileName: 'shot.png' }, ['fileName']);
 
     expect(readData('img')).toEqual({ url: 'shot-url', fileName: 'shot.png' });
     expect(yjsManager.canRedo()).toBe(true);

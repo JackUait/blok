@@ -19,14 +19,21 @@ declare global {
   }
 }
 
-type Slow = 'image' | 'none';
+type Slow = 'image' | 'url' | 'file' | 'none';
 
-// With slow = 'image' the image uploader waits until the test calls window.__resolveUpload().
+// A slow uploader waits until the test calls window.__resolveUpload().
+// 'image': image uploads by file. 'url': image/audio/video/file uploads by URL. 'file': file uploads by file.
+const MEDIA_URLS: Record<string, string> = {
+  image: IMAGE_URL,
+  audio: 'http://localhost:4444/public/samples/soundhelix-song-1.mp3',
+  video: VIDEO_URL,
+  file: 'http://localhost:4444/public/samples/release-notes.txt',
+};
 
 const mount = async (page: Page, blocks: OutputData['blocks'], slow: Slow = 'none'): Promise<void> => {
   await gotoTestPage(page);
   await page.waitForFunction(() => typeof window.Blok === 'function');
-  await page.evaluate(async ({ list, slowTool, url }) => {
+  await page.evaluate(async ({ list, slowTool, url, urls }) => {
     document.getElementById('blok')?.remove();
     const d = document.createElement('div');
 
@@ -46,11 +53,37 @@ const mount = async (page: Page, blocks: OutputData['blocks'], slow: Slow = 'non
         },
       };
     }
+    if (slowTool === 'url') {
+      Object.entries(urls).forEach(([name, stored]) => {
+        tools[name] = {
+          class: window.defaultBlockTools[name].class,
+          config: {
+            uploader: {
+              uploadByUrl: () => new Promise((res) => {
+                window.__resolveUpload = () => res({ url: stored });
+              }),
+            },
+          },
+        };
+      });
+    }
+    if (slowTool === 'file') {
+      tools.file = {
+        class: window.defaultBlockTools.file.class,
+        config: {
+          uploader: {
+            uploadByFile: (f: File) => new Promise((res) => {
+              window.__resolveUpload = () => res({ url, fileName: f.name, mimeType: f.type });
+            }),
+          },
+        },
+      };
+    }
     const blok = new window.Blok({ holder: 'blok', tools, data: { blocks: list } });
 
     window.blokInstance = blok;
     await blok.isReady;
-  }, { list: blocks, slowTool: slow, url: IMAGE_URL });
+  }, { list: blocks, slowTool: slow, url: IMAGE_URL, urls: MEDIA_URLS });
 };
 
 const saved = (page: Page): Promise<OutputData['blocks']> =>
@@ -118,6 +151,24 @@ const pasteBookmark = async (page: Page, blockId: string): Promise<void> => {
   await page.locator('[data-blok-item-name="paste-menu-bookmark"]').click();
   await expect(page.getByTestId('bookmark-loading')).toBeVisible();
 };
+
+const media = (page: Page, tool: string): Locator => page.locator(`[data-blok-tool="${tool}"]`);
+
+const enterUrl = async (page: Page, tool: string, url: string): Promise<void> => {
+  const block = media(page, tool);
+
+  await block.locator('[data-tab="embed"]').click();
+  await block.getByRole('textbox').fill(url);
+  await block.locator('[data-action="submit-url"]').click();
+};
+
+const resolveUpload = async (page: Page): Promise<void> => {
+  await page.waitForFunction(() => typeof window.__resolveUpload === 'function');
+  await page.evaluate(() => window.__resolveUpload?.());
+};
+
+const dataOf = async (page: Page, id: string): Promise<Record<string, unknown> | undefined> =>
+  (await saved(page)).find((b) => b.id === id)?.data;
 
 const hasImage = async (page: Page): Promise<boolean> => (await saved(page)).some((b) => b.type === 'image');
 
@@ -321,6 +372,121 @@ test.describe('undo audit: remaining surfaces', () => {
 
     await expect(target.getByRole('link', { name: 'https://example.com/article' })).toHaveCount(1, { timeout: 2000 });
     await expect(page.getByTestId('bookmark-card')).toHaveCount(0);
+  });
+
+  for (const tool of ['image', 'audio', 'video', 'file']) {
+    // Source: undo must keep redo until the user makes a new edit; a finishing upload is not one.
+    test(`UNP-7 (${tool}): an upload by URL that finishes after an unrelated undo keeps redo`, async ({ page }) => {
+      await mount(page, [P('p', 'alpha'), { id: 'm', type: tool, data: { url: '' } }], 'url');
+      await enterUrl(page, tool, 'https://example.com/source');
+      await gap(page);
+      await typeAtEnd(page, 'alpha', 'Y');
+      await gap(page);
+      await page.keyboard.press(UNDO);
+      await gap(page);
+      await resolveUpload(page);
+      await expect.poll(async () => (await dataOf(page, 'm'))?.url).toBe(MEDIA_URLS[tool]);
+      await gap(page);
+
+      expect(await canRedo(page)).toBe(true);
+      await page.keyboard.press(REDO);
+      await gap(page);
+      await expect(page.getByText('alphaY', { exact: true })).toBeVisible();
+    });
+
+    // Source: an upload's result belongs to the gesture that started it: undoing that gesture removes it, redo brings it back.
+    test(`UNP-7b (${tool}): undo of entering a URL returns the block to empty after the upload landed, and redo brings it back`, async ({ page }) => {
+      await mount(page, [P('p', 'alpha'), { id: 'm', type: tool, data: { url: '' } }], 'url');
+      await enterUrl(page, tool, 'https://example.com/source');
+      await gap(page);
+      await typeAtEnd(page, 'alpha', 'Y');
+      await gap(page);
+      await resolveUpload(page);
+      await expect.poll(async () => (await dataOf(page, 'm'))?.url).toBe(MEDIA_URLS[tool]);
+      await gap(page);
+
+      await page.keyboard.press(UNDO);
+      await gap(page);
+      await expect(page.getByText('alpha', { exact: true })).toBeVisible();
+      await page.keyboard.press(UNDO);
+      await gap(page);
+      await expect(media(page, tool).locator('[data-action="choose-file"]')).toHaveCount(1);
+      expect((await dataOf(page, 'm'))?.url ?? '').toBe('');
+
+      await page.keyboard.press(REDO);
+      await gap(page);
+      expect((await dataOf(page, 'm'))?.url).toBe(MEDIA_URLS[tool]);
+      await expect(media(page, tool).locator('[data-action="choose-file"]')).toHaveCount(0);
+      await page.keyboard.press(REDO);
+      await gap(page);
+      await expect(page.getByText('alphaY', { exact: true })).toBeVisible();
+    });
+  }
+
+  // UNP-8 (a GIF swapped for a video) is pinned in test/unit/tools/image/index.test.ts: the GIF to WebM
+  // conversion never succeeds in Chromium, where VideoFrame.timestamp is read-only.
+
+  // Source: undo must keep redo until the user makes a new edit; a file turning into an image is not one.
+  test('UNP-9: a file upload that becomes an image after an unrelated undo keeps redo', async ({ page }) => {
+    await mount(page, [P('p', 'alpha'), { id: 'f', type: 'file', data: { url: '' } }], 'file');
+    await media(page, 'file').getByTestId('file-input').setInputFiles(IMAGE_FILE);
+    await gap(page);
+    await typeAtEnd(page, 'alpha', 'Y');
+    await gap(page);
+    await page.keyboard.press(UNDO);
+    await gap(page);
+    await resolveUpload(page);
+    await expect(media(page, 'image')).toHaveCount(1);
+    await gap(page);
+
+    expect(await canRedo(page)).toBe(true);
+    await page.keyboard.press(REDO);
+    await gap(page);
+    await expect(page.getByText('alphaY', { exact: true })).toBeVisible();
+  });
+
+  // Source: an upload's result belongs to the gesture that started it: undoing that gesture removes it, redo brings it back.
+  test('UNP-9b: undo of picking an image for a file block gives back the empty file block, and redo the image', async ({ page }) => {
+    await mount(page, [P('p', 'alpha'), { id: 'f', type: 'file', data: { url: '' } }], 'file');
+    await media(page, 'file').getByTestId('file-input').setInputFiles(IMAGE_FILE);
+    await gap(page);
+    await resolveUpload(page);
+    await expect(media(page, 'image')).toHaveCount(1);
+    await gap(page);
+
+    await page.keyboard.press(UNDO);
+    await gap(page);
+    await expect(media(page, 'image')).toHaveCount(0);
+    await expect(media(page, 'file').locator('[data-action="choose-file"]')).toHaveCount(1);
+
+    await page.keyboard.press(REDO);
+    await gap(page);
+    await expect(media(page, 'image')).toHaveCount(1);
+    expect((await saved(page)).find((b) => b.type === 'image')?.data.url).toBe(IMAGE_URL);
+  });
+
+  // Source: undo must keep redo until the user makes a new edit. Undo and redo of the pick rebuild the
+  // block, so the upload lands on a new instance of the tool.
+  test('UNP-10: an upload that lands on a rebuilt image block keeps redo', async ({ page }) => {
+    await mount(page, [P('p', 'alpha'), { id: 'img', type: 'image', data: { url: '' } }], 'image');
+    await media(page, 'image').getByTestId('file-input').setInputFiles(IMAGE_FILE);
+    await gap(page);
+    await typeAtEnd(page, 'alpha', 'Y');
+    await gap(page);
+    await page.keyboard.press(UNDO);
+    await gap(page);
+    await page.keyboard.press(UNDO);
+    await gap(page);
+    await page.keyboard.press(REDO);
+    await gap(page);
+    await resolveUpload(page);
+    await expect.poll(async () => (await dataOf(page, 'img'))?.url).toBe(IMAGE_URL);
+    await gap(page);
+
+    expect(await canRedo(page)).toBe(true);
+    await page.keyboard.press(REDO);
+    await gap(page);
+    await expect(page.getByText('alphaY', { exact: true })).toBeVisible();
   });
 
   test('spacer: grip keyboard resize undo and redo', async ({ page }) => {

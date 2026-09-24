@@ -149,15 +149,15 @@ export class Bookmark implements BlockTool {
         // A rebuilt block's tool is a new instance, so the fetched preview has
         // to be written through the blocks API instead.
         if (this.detached) {
-          deliverToRebuiltBlock(this.api, this.block, 'Bookmark', { ...meta });
+          deliverToRebuiltBlock(this.api, this.block, 'Bookmark', { ...meta }, undefined, ['url']);
 
           return;
         }
         this.data = { ...meta };
         this.state = 'RENDERED';
         this.renderState();
-        // The preview is not the user's edit: saved, but not an undo step.
-        this.block.dispatchChange({ derived: true });
+        // The preview is not the user's edit: it joins the step that wrote the link.
+        this.block.dispatchChange({ derived: true, from: ['url'] });
       })
       .catch(() => {
         // Roughly a third of sites serve no preview data, so a failed fetch is

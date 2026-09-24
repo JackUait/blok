@@ -151,8 +151,13 @@ export interface BlockAPI {
    * itself (a measured image size, a decoded waveform, a fetched preview),
    * not something the user did. It is saved, but it is not an undo step and
    * it does not clear redo.
+   *
+   * Add `from` with the data keys it was worked out from (`['url']` for a
+   * size measured from the image at `url`). The change then joins the undo
+   * step that wrote those values: undoing that step takes it back and redo
+   * brings it back. Without `from` it stays out of the history entirely.
    */
-  dispatchChange(options?: { derived?: boolean }): void;
+  dispatchChange(options?: { derived?: boolean; from?: readonly string[] }): void;
 
   /**
    * Tool could specify several entries to be displayed at the Toolbox (for example, "Heading 1", "Heading 2", "Heading 3")

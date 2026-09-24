@@ -109,7 +109,7 @@ describe('Bookmark tool', () => {
     tool.onPaste(patternEvent('https://example.com/article'));
     await flush();
 
-    expect(dispatchChange).toHaveBeenCalledWith({ derived: true });
+    expect(dispatchChange).toHaveBeenCalledWith({ derived: true, from: ['url'] });
     expect(root.getAttribute('data-blok-mutation-free')).toBe('true');
   });
 

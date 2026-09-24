@@ -241,7 +241,7 @@ describe('FileTool mutants', () => {
 
       expect(root.querySelector('[data-role="file-card"]')).not.toBeNull();
       // The pick is the edit; the upload lands as derived data.
-      expect(dispatchChange.mock.calls).toEqual([[], [{ derived: true }]]);
+      expect(dispatchChange.mock.calls).toEqual([[], [{ derived: true, from: ['fileName'] }]]);
       expect(tool.save()).toStrictEqual({
         url: 'https://cdn.test/report.pdf',
         fileName: 'report.pdf',
@@ -369,7 +369,7 @@ describe('FileTool mutants', () => {
 
       expect(insert).not.toHaveBeenCalled();
       // The pick is the edit; the upload lands as derived data.
-      expect(dispatchChange.mock.calls).toEqual([[], [{ derived: true }]]);
+      expect(dispatchChange.mock.calls).toEqual([[], [{ derived: true, from: ['fileName'] }]]);
     });
 
     it('keeps the file card when the block can no longer be found', async () => {
@@ -387,7 +387,7 @@ describe('FileTool mutants', () => {
       expect(insert).not.toHaveBeenCalled();
       expect(root.querySelector('[data-role="file-card"]')).not.toBeNull();
       // The pick is the edit; the upload lands as derived data.
-      expect(dispatchChange.mock.calls).toEqual([[], [{ derived: true }]]);
+      expect(dispatchChange.mock.calls).toEqual([[], [{ derived: true, from: ['fileName'] }]]);
     });
 
     it('carries the caption across to the image block', async () => {
@@ -732,7 +732,8 @@ describe('FileTool mutants', () => {
       expect(uploader.handleUrl).toHaveBeenCalledTimes(1);
       expect(uploader.handleUrl.mock.calls[0]?.[0]).toBe('https://cdn.test/a.pdf');
       await flush();
-      expect(dispatchChange).toHaveBeenCalledTimes(1);
+      // The link is the edit; the upload lands as derived data.
+      expect(dispatchChange.mock.calls).toEqual([[], [{ derived: true, from: ['url'] }]]);
     });
 
     it('forwards url upload progress to the uploading bar', () => {
@@ -1055,7 +1056,7 @@ describe('FileTool mutants', () => {
       expect(insert).not.toHaveBeenCalled();
       expect(root.querySelector('[data-role="file-card"]')).not.toBeNull();
       // The pick is the edit; the upload lands as derived data.
-      expect(dispatchChange.mock.calls).toEqual([[], [{ derived: true }]]);
+      expect(dispatchChange.mock.calls).toEqual([[], [{ derived: true, from: ['fileName'] }]]);
     });
   });
 });

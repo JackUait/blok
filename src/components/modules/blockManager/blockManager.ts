@@ -32,7 +32,7 @@ import { BlockHierarchy } from './hierarchy';
 import { BlockOperations } from './operations';
 import { BlockRepository } from './repository';
 import { BlockShortcuts } from './shortcuts';
-import type { BlocksStore, BlockMutationEventDetailWithoutTarget, ComposeBlockOptions, InsertBlockOptions, InsertInsideParentOptions } from './types';
+import type { BlocksStore, BlockMutationEventDetailWithoutTarget, ComposeBlockOptions, DerivedSource, InsertBlockOptions, InsertInsideParentOptions } from './types';
 import { BlockYjsSync } from './yjs-sync';
 import { captureDataKeySnapshot, type DataKeySnapshot } from '../yjs/document-store';
 
@@ -45,8 +45,8 @@ interface SyncBlockDataOptions {
   untracked?: boolean;
   /** A normalising write (see `normalizeBlockData`): unbuffered, whole or missing keys only. */
   normalize?: 'all' | 'missing';
-  /** Data the tool worked out itself: it joins the undo step that last wrote the block. */
-  derived?: boolean;
+  /** Data the tool worked out itself from these keys: it joins the undo step that wrote their values. */
+  derivedFrom?: readonly string[];
 }
 
 /**
@@ -753,9 +753,10 @@ export class BlockManager extends Module {
    * @param block - block to update
    * @param data - (optional) new data
    * @param tunes - (optional) tune data
+   * @param derivedFrom - (optional) where the data was worked out from: see `api.blocks.transactWithoutCapture`
    */
-  public async update(block: Block, data?: Partial<BlockToolData>, tunes?: { [name: string]: BlockTuneData }): Promise<Block> {
-    return this.operations.update(block, this.blocksStore, data, tunes);
+  public async update(block: Block, data?: Partial<BlockToolData>, tunes?: { [name: string]: BlockTuneData }, derivedFrom?: DerivedSource): Promise<Block> {
+    return this.operations.update(block, this.blocksStore, data, tunes, derivedFrom);
   }
 
   /**
@@ -1932,7 +1933,7 @@ export class BlockManager extends Module {
         // and one frame, so the user can type into it. Re-checked on close.
         this.yjsSync.noteSuppressedMutation(block);
       } else {
-        void this.syncBlockDataToYjs(block, block.isDerivedChange ? { untracked: true, normalize: 'all', derived: true } : undefined);
+        void this.syncBlockDataToYjs(block, block.isDerivedChange ? { untracked: true, normalize: 'all', derivedFrom: block.derivedFrom } : undefined);
       }
     }
 
@@ -2221,7 +2222,7 @@ export class BlockManager extends Module {
     savedKeys.forEach((key) => emitted.add(key));
     this.emittedDataKeys.set(block, emitted);
 
-    const flushOptions = { isMaterializing, savedKeys, seenKeys, seenNestedKeys, onlyMissingKeys: options?.normalize === 'missing', derived: options?.derived === true };
+    const flushOptions = { isMaterializing, savedKeys, seenKeys, seenNestedKeys, onlyMissingKeys: options?.normalize === 'missing', derivedFrom: options?.derivedFrom };
 
     // Written now, not buffered: the buffer keeps only the newest flush
     // callback, so an untracked one would carry the user's buffered keystrokes
@@ -2267,7 +2268,7 @@ export class BlockManager extends Module {
    *   `Y.Map` inside the block's data held at that moment. A nested key the
    *   document gained afterwards is a peer's, so the deep assign spares it.
    * @param options.onlyMissingKeys - see `normalizeBlockData`
-   * @param options.derived - see `SyncBlockDataOptions.derived`
+   * @param options.derivedFrom - see `SyncBlockDataOptions.derivedFrom`
    * @returns whether any Yjs write actually happened — the buffer skips its
    *   capture-clock rewind for a flush that wrote nothing (see BlockWriteBuffer).
    */
@@ -2280,7 +2281,7 @@ export class BlockManager extends Module {
       seenKeys?: ReadonlySet<string>;
       seenNestedKeys?: DataKeySnapshot;
       onlyMissingKeys?: boolean;
-      derived?: boolean;
+      derivedFrom?: readonly string[];
     }
   ): boolean {
     // Wrap data + metadata writes into a single Yjs transaction. Without this,
@@ -2352,8 +2353,8 @@ export class BlockManager extends Module {
       this.Blok.YjsManager.updateBlockMetadata(block.id, block.lastEditedAt, block.lastEditedBy);
     };
 
-    if (options.derived === true) {
-      this.Blok.YjsManager.transactIntoStepThatWrote(block.id, write);
+    if (options.derivedFrom !== undefined) {
+      this.Blok.YjsManager.transactIntoStepThatWrote(block.id, write, options.derivedFrom);
     } else if (options.isMaterializing) {
       this.Blok.YjsManager.transactWithoutCapture(write);
     } else {

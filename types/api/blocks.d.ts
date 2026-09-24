@@ -297,9 +297,17 @@ export interface Blocks {
    * Use this for auto-repair operations (e.g. ensuring empty cells always have a block)
    * that should never appear as undoable entries in the history.
    *
+   * With `derivedFrom`, the operations are data worked out from the values of
+   * the `from` keys of that block (a finished upload, for example). They still
+   * add no undo entry and keep redo, but they join the entry that wrote those
+   * values: undoing it takes them back and redo brings them back. An `update()`
+   * started inside `fn` counts too, although it finishes later.
+   *
    * @param fn - The function containing block operations to execute without undo capture
+   * @param options - (optional) `derivedFrom`: id of the block the operations are worked out from;
+   *   `from`: the keys of its data they are worked out from
    */
-  transactWithoutCapture?(fn: () => void): void;
+  transactWithoutCapture?(fn: () => void, options?: { derivedFrom?: string; from?: readonly string[] }): void;
 
   /**
    * Open an undo group that stays open across async boundaries.

@@ -58,7 +58,7 @@ import { convertGifToWebm } from './gif-to-webm';
 import { downloadImage } from './download';
 import { resolveConvertedUploader } from './converted-uploader';
 import { tr } from './i18n';
-import { deliverToRebuiltBlock, releaseObjectUrl } from './detached-upload';
+import { deliverToRebuiltBlock, releaseObjectUrl, writeDerived } from './detached-upload';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -214,6 +214,9 @@ export class ImageTool implements BlockTool {
   };
 
   private startUpload(file: File): void {
+    // Choosing the file is the edit, so what the upload produces can join its undo step.
+    this.data = { ...this.data, fileName: file.name };
+    this.block.dispatchChange();
     if (this.shouldConvertGif(file.type)) {
       void this.convertGifToVideoBlock(file).then((handled) => {
         if (!handled) this.uploadImageFile(file);
@@ -233,9 +236,6 @@ export class ImageTool implements BlockTool {
     this.errorMessage = null;
     this.brokenImage = false;
     this.renderState();
-    // Choosing the file is the edit, so the upload's result can join its undo step.
-    this.data = { ...this.data, fileName: file.name };
-    this.block.dispatchChange();
     this.uploadFile(source);
   }
 
@@ -278,7 +278,7 @@ export class ImageTool implements BlockTool {
       const url = await this.uploadConverted(webm);
       if (url === null) { this.converting = false; return false; }
       this.converting = false;
-      return this.swapToVideoBlock(url, webm.name);
+      return this.swapToVideoBlock(url, webm.name, ['fileName']);
     } catch {
       this.converting = false;
       return false;
@@ -294,18 +294,28 @@ export class ImageTool implements BlockTool {
     return URL.createObjectURL(file);
   }
 
-  private swapToVideoBlock(url: string, fileName: string): boolean {
+  /**
+   * @param url - the uploaded WebM
+   * @param fileName - its file name
+   * @param from - the keys the user's pick or link wrote: the swap joins that edit's undo step
+   */
+  private swapToVideoBlock(url: string, fileName: string, from: readonly string[]): boolean {
     const index = this.api.blocks.getBlockIndex(this.block.id);
     if (index === undefined) return false;
-    this.api.blocks.insert(
-      'video',
-      { url, autoplay: true, loop: true, mimeType: 'video/webm', fileName },
-      {}, index, false, true,
-    );
+    writeDerived(this.api, this.block.id, from, () => {
+      this.api.blocks.insert(
+        'video',
+        { url, autoplay: true, loop: true, mimeType: 'video/webm', fileName },
+        {}, index, false, true,
+      );
+    });
     return true;
   }
 
   private startUrl(url: string): void {
+    // Entering the link is the edit, so what the upload produces can join its undo step.
+    this.data = { ...this.data, url };
+    this.block.dispatchChange();
     if (this.shouldConvertGifUrl(url)) {
       void this.convertGifUrlToVideoBlock(url).then((handled) => {
         if (!handled) this.loadImageUrl(url);
@@ -315,17 +325,22 @@ export class ImageTool implements BlockTool {
     this.loadImageUrl(url);
   }
 
-  /** Existing startUrl body, extracted verbatim. */
   private loadImageUrl(url: string): void {
+    const source = { kind: 'url', url } as const;
+
     this.lastFileName = null;
-    this.lastSource = { kind: 'url', url };
+    this.lastSource = source;
     this.state = 'LOADING';
     this.errorMessage = null;
     this.brokenImage = false;
     this.renderState();
+    this.uploadUrl(source);
+  }
+
+  private uploadUrl(source: { kind: 'url'; url: string }): void {
     void this.uploader
-      .handleUrl(url, { onProgress: this.reportProgress })
-      .then((result) => this.applyResult(result))
+      .handleUrl(source.url, { onProgress: this.reportProgress })
+      .then((result) => this.applyUrlUpload(result, source))
       .catch((err) => this.applyError(err));
   }
 
@@ -347,7 +362,7 @@ export class ImageTool implements BlockTool {
       const uploadedUrl = await this.uploadConverted(webm);
       if (uploadedUrl === null) { this.converting = false; return false; }
       this.converting = false;
-      return this.swapToVideoBlock(uploadedUrl, webm.name);
+      return this.swapToVideoBlock(uploadedUrl, webm.name, ['url']);
     } catch {
       this.converting = false;
       return false;
@@ -380,10 +395,7 @@ export class ImageTool implements BlockTool {
       this.uploadFile(source);
       return;
     }
-    void this.uploader
-      .handleUrl(source.url, { onProgress: this.reportProgress })
-      .then((result) => this.applyResult(result))
-      .catch((err) => this.applyError(err));
+    this.uploadUrl(source);
   }
 
   private applyResult(result: UploadResult): void {
@@ -405,13 +417,30 @@ export class ImageTool implements BlockTool {
    */
   private applyUpload(result: UploadResult, source: { kind: 'file'; file: File }, fromUrl: string): void {
     if (this.detached) {
-      deliverToRebuiltBlock(this.api, this.block, 'Image', this.resultDelta(result), { url: fromUrl, fileName: source.file.name });
+      deliverToRebuiltBlock(this.api, this.block, 'Image', this.resultDelta(result), { url: fromUrl, fileName: source.file.name }, ['fileName']);
 
       return;
     }
     if (this.lastSource !== source || this.data.url !== fromUrl) return;
     this.showResult(result);
-    this.block.dispatchChange({ derived: true });
+    this.block.dispatchChange({ derived: true, from: ['fileName'] });
+  }
+
+  /**
+   * A finished upload of a link the user entered. Like {@link applyUpload},
+   * but the edit was the link.
+   * @param result - what the uploader returned
+   * @param source - the job, still `lastSource` unless cancelled or replaced
+   */
+  private applyUrlUpload(result: UploadResult, source: { kind: 'url'; url: string }): void {
+    if (this.detached) {
+      deliverToRebuiltBlock(this.api, this.block, 'Image', this.resultDelta(result), { url: source.url }, ['url']);
+
+      return;
+    }
+    if (this.lastSource !== source || this.data.url !== source.url) return;
+    this.showResult(result);
+    this.block.dispatchChange({ derived: true, from: ['url'] });
   }
 
   private resultDelta(result: UploadResult): Partial<ImageData> {
@@ -462,7 +491,7 @@ export class ImageTool implements BlockTool {
     if (this.data.naturalWidth === w && this.data.naturalHeight === h) return;
     this.data.naturalWidth = w;
     this.data.naturalHeight = h;
-    this.block.dispatchChange({ derived: true });
+    this.block.dispatchChange({ derived: true, from: ['url'] });
   }
 
   private applyLoadingDimensions(figure: HTMLElement, imgEl: HTMLImageElement, width: number, height: number): void {

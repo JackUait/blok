@@ -27,6 +27,26 @@ const findLiveBlock = (api: API, blockId: string): BlockAPI | null => {
 };
 
 /**
+ * Run `fn`'s block writes as data worked out from `from` keys of block
+ * `blockId`: they join the undo step that wrote those values, add no step and
+ * keep redo. See `api.blocks.transactWithoutCapture`.
+ * @param api - the tool's editor API
+ * @param blockId - the block the data comes from
+ * @param from - keys of its data the writes were worked out from
+ * @param fn - the writes
+ */
+export const writeDerived = (api: API, blockId: string, from: readonly string[], fn: () => void): void => {
+  const scope = api.blocks.transactWithoutCapture;
+
+  if (scope === undefined) {
+    fn();
+
+    return;
+  }
+  scope(fn, { derivedFrom: blockId, from });
+};
+
+/**
  * @param live - the block now carrying the upload's block id
  * @param startedFrom - values it must still hold; none means no check
  * @returns whether every value in `startedFrom` is still in the block's data
@@ -75,18 +95,23 @@ const stillHolds = async (live: BlockAPI, startedFrom: Partial<BlockToolData> | 
  * A third case gets no write either: with `startedFrom`, a block that no
  * longer holds those values (the pick that started the upload was undone, or
  * the block got another file) keeps what it has.
+ *
+ * The write is derived data (see {@link writeDerived}): it joins the undo step
+ * that wrote the block's `from` values, never adds one, and keeps redo.
  * @param api - the tool's editor API
  * @param block - the block API this tool was constructed with
  * @param label - tool name used in the log line
  * @param data - only the fields the upload produced
  * @param startedFrom - values the block held when the upload started
+ * @param from - keys of the block's data the upload was worked out from
  */
 export const deliverToRebuiltBlock = (
   api: API,
   block: BlockAPI,
   label: string,
   data: Partial<BlockToolData>,
-  startedFrom?: Partial<BlockToolData>
+  startedFrom?: Partial<BlockToolData>,
+  from: readonly string[] = []
 ): void => {
   try {
     const live = findLiveBlock(api, block.id);
@@ -123,7 +148,13 @@ export const deliverToRebuiltBlock = (
           return;
         }
 
-        return api.blocks.update(block.id, data);
+        const written: { update?: Promise<unknown> } = {};
+
+        writeDerived(api, block.id, from, () => {
+          written.update = api.blocks.update(block.id, data);
+        });
+
+        return written.update;
       })
       .catch((error: unknown) => {
         logLabeled(`${label}: could not store the finished upload`, 'warn', error);

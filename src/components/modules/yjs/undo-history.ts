@@ -234,6 +234,12 @@ export class UndoHistory {
   private captureHolds = 0;
 
   /**
+   * Nesting depth of {@link addToStepThatWrote}. While above 0 nothing may
+   * open a step or reopen the newest one: a derived write leaves the stack as it was.
+   */
+  private joiningDepth = 0;
+
+  /**
    * The caret entry recorded since the last gesture start. The next gesture
    * start sets its `after`: the caret is still where this gesture left it.
    */
@@ -1562,7 +1568,7 @@ export class UndoHistory {
     const { undoStack } = this.undoManager;
     const newestEntry = undoStack[undoStack.length - 1];
 
-    if (creationId === null || newestEntry === undefined) {
+    if (creationId === null || newestEntry === undefined || this.joiningDepth > 0) {
       return;
     }
 
@@ -1574,18 +1580,34 @@ export class UndoHistory {
   }
 
   /**
-   * Run the untracked write `fn` as part of the newest undo step that wrote
-   * one of `data`'s current values, so undoing that step removes the write
-   * and redo brings it back. It stays out of the history (redo is kept, no
-   * new step). With no such step the write is just untracked.
+   * Run the untracked write `fn` as part of the undo step that wrote the
+   * current value of one of `from`'s keys in `data` (the edit the write was
+   * worked out from), so undoing that step removes the write and redo brings
+   * it back. It stays out of the history (redo is kept, no new step). When no
+   * step on the undo stack wrote those values (none named, or that edit was
+   * undone), the write is just untracked.
    *
    * Only `fn`'s first transaction joins the step; call it outside any
    * transaction and after the write buffer is flushed.
    * @param data - the block's data map (anything else means no step)
    * @param fn - the untracked write
+   * @param from - the keys of `data` the write was worked out from
    */
-  public addToStepThatWrote(data: unknown, fn: () => void): void {
-    const step = data instanceof Y.Map ? this.newestStepThatWrote(data) : undefined;
+  public addToStepThatWrote(data: unknown, fn: () => void, from: readonly string[] = []): void {
+    this.joiningDepth += 1;
+    try {
+      this.joinStepThatWrote(data instanceof Y.Map ? this.stepThatWrote(data, from) : undefined, fn);
+    } finally {
+      this.joiningDepth -= 1;
+    }
+  }
+
+  /**
+   * See {@link addToStepThatWrote}.
+   * @param step - the step to join, if any
+   * @param fn - the untracked write
+   */
+  private joinStepThatWrote(step: StackItem | undefined, fn: () => void): void {
     const doc = this.undoManager.doc;
 
     if (step === undefined || doc._transaction !== null) {
@@ -1612,8 +1634,10 @@ export class UndoHistory {
           keepWithParents(struct);
         }
       });
+      /* eslint-disable no-param-reassign -- the write joins the step in place */
       step.insertions = Y.mergeDeleteSets([step.insertions, insertions]);
       step.deletions = Y.mergeDeleteSets([step.deletions, transaction.deleteSet]);
+      /* eslint-enable no-param-reassign */
     };
 
     doc.on('afterTransaction', join);
@@ -1626,10 +1650,15 @@ export class UndoHistory {
 
   /**
    * @param data - a block's data map
-   * @returns the newest undo step that inserted one of `data`'s current values
+   * @param keys - keys of `data`
+   * @returns the undo step that inserted the current value of one of `keys`
    */
-  private newestStepThatWrote(data: Y.Map<unknown>): StackItem | undefined {
-    const current = [...data._map.values()].filter((item) => !item.deleted).map((item) => item.id);
+  private stepThatWrote(data: Y.Map<unknown>, keys: readonly string[]): StackItem | undefined {
+    const current = keys.flatMap((key) => {
+      const item = data._map.get(key);
+
+      return item === undefined || item.deleted ? [] : [item.id];
+    });
 
     return [...this.undoManager.undoStack].reverse().find((step) => current.some((id) => Y.isDeleted(step.insertions, id)));
   }
@@ -1680,7 +1709,7 @@ export class UndoHistory {
    * inserting the picked tool while its session holds the step.
    */
   public beginApiCall(): void {
-    if (!this.gestureTaskOpen && this.captureHolds === 0) {
+    if (!this.gestureTaskOpen && this.captureHolds === 0 && this.joiningDepth === 0) {
       this.startGesture('discrete', true);
     }
   }

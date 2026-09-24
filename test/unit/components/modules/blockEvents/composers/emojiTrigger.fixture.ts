@@ -44,7 +44,7 @@ export const createBlokModules = (block: Block): BlokModules => ({
     currentBlock: block,
     setCurrentBlockByChildNode: vi.fn(),
   } as unknown as BlokModules['BlockManager'],
-  YjsManager: { stopCapturing: vi.fn() } as unknown as BlokModules['YjsManager'],
+  YjsManager: { startSubStep: vi.fn(), stopCapturing: vi.fn() } as unknown as BlokModules['YjsManager'],
   I18n: {
     t: (key: string): string => key,
     getLocale: (): string => 'en',

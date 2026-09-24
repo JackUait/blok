@@ -169,17 +169,11 @@ describe('EmojiTrigger — insertion', () => {
   });
 
   /**
-   * Deviates from the task brief's literal `toHaveBeenCalledTimes(1)`: reading
-   * UndoHistory.stopCapturing (src/components/modules/yjs/undo-history.ts)
-   * shows it only forces the immediately NEXT change into a fresh undo entry.
-   * A single call before the write isolates the emoji insert from the
-   * keystrokes that opened the menu, but NOT from whatever the user types
-   * right after committing — that merges forward into the same entry unless
-   * stopCapturing runs again after the write too. markdownShortcuts.ts's
-   * handleInlineMarkdown calls it on both sides for exactly this reason; this
-   * test asserts both boundaries by snapshotting the text at each call.
+   * The sub-step before the write keeps the emoji apart from the keystrokes
+   * that opened the menu. The stop after it keeps the next keystroke out of
+   * the emoji's step. The text seen at each call shows which side it is on.
    */
-  it('stops Yjs capturing before AND after the DOM write, isolating the emoji on both sides', async () => {
+  it('starts an undo sub-step before the DOM write and stops capturing after it', async () => {
     const block = createBlock(':fi');
 
     document.body.appendChild(block.holder);
@@ -187,16 +181,22 @@ describe('EmojiTrigger — insertion', () => {
 
     const modules = createBlokModules(block);
     const trigger = new EmojiTrigger(modules);
-    const textAtEachCall: Array<string | null> = [];
+    const calls: Array<[string, string | null]> = [];
 
+    vi.mocked(modules.YjsManager.startSubStep).mockImplementation(() => {
+      calls.push(['startSubStep', block.currentInput?.textContent ?? null]);
+    });
     vi.mocked(modules.YjsManager.stopCapturing).mockImplementation(() => {
-      textAtEachCall.push(block.currentInput?.textContent ?? null);
+      calls.push(['stopCapturing', block.currentInput?.textContent ?? null]);
     });
 
     await trigger.handleInput({ inputType: 'insertText', data: 'i', isComposing: false } as InputEvent);
     trigger.commit(FIRE);
 
-    expect(textAtEachCall).toEqual([':fi', '🔥']);
+    expect(calls).toEqual([
+      ['startSubStep', ':fi'],
+      ['stopCapturing', '🔥'],
+    ]);
   });
 
   it('closes the menu after committing', async () => {

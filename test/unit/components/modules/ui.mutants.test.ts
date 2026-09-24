@@ -551,7 +551,11 @@ describe('UI module — mutants', () => {
       expect(typeof clickHandler).toBe('function');
 
       // Touch handler: a press outside any block falls back to the last block.
-      expect(() => touchHandler(new MouseEvent('mousedown', { bubbles: true }))).not.toThrow();
+      // A real press always has a target: the handler checks which editor owns it.
+      const outsideBlocks = document.createElement('div');
+
+      (ui as unknown as { nodes: UI['nodes'] }).nodes.redactor.appendChild(outsideBlocks);
+      expect(() => touchHandler(trustedMouseDown(outsideBlocks))).not.toThrow();
       expect(blok.Caret.setToTheLastBlock).toHaveBeenCalledTimes(1);
 
       // Click handler: trusted mousedown outside the editor clears the current block.

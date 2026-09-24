@@ -36,6 +36,7 @@ interface RendererTestContext {
   blockManager: MockBlockManager;
   tools: MockTools;
   emit: ReturnType<typeof vi.fn>;
+  clearHistory: ReturnType<typeof vi.fn>;
   redactor: HTMLElement;
   wrapper: HTMLElement;
 }
@@ -109,9 +110,14 @@ const createRenderer = (
   const wrapper = document.createElement('div');
   const apiMethods = { marker: 'api-methods' };
 
+  const clearHistory = vi.fn();
+
   const blokState = {
     BlockManager: blockManager,
     Tools: tools,
+    YjsManager: {
+      clear: clearHistory,
+    },
     API: {
       methods: apiMethods,
     },
@@ -130,6 +136,7 @@ const createRenderer = (
     blockManager,
     tools,
     emit,
+    clearHistory,
     redactor,
     wrapper,
   };
@@ -193,6 +200,24 @@ describe('Renderer module', () => {
 
     expect(result).toBeDefined();
     expect(result?.tool).toBe('default');
+  });
+
+  it('clears undo history after inserting the default block of an empty document', async () => {
+    const { renderer, blockManager, clearHistory } = createRenderer();
+
+    await renderer.render([]);
+
+    expect(clearHistory).toHaveBeenCalledTimes(1);
+    expect(clearHistory.mock.invocationCallOrder[0]).toBeGreaterThan(blockManager.insert.mock.invocationCallOrder[0]);
+  });
+
+  it('keeps undo history when an empty document renders with skipYjsSync', async () => {
+    const { renderer, blockManager, clearHistory } = createRenderer();
+
+    await renderer.render([], { skipYjsSync: true });
+
+    expect(blockManager.insert).toHaveBeenCalledTimes(1);
+    expect(clearHistory).not.toHaveBeenCalled();
   });
 
   it('composes and inserts blocks when tools are available', async () => {

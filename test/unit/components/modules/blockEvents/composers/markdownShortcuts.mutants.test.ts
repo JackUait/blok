@@ -203,6 +203,7 @@ const setup = (options: SetupOptions = {}) => {
   const replace = vi.fn<(target: Block, tool: string, data: Record<string, unknown>) => Block>(() => newBlock);
   const insertDefaultBlockAtIndex = vi.fn<(index: number) => Block>(() => newBlock);
   const getBlockIndex = vi.fn<(target: Block) => number>(() => blockIndex);
+  const startSubStep = vi.fn();
   const stopCapturing = vi.fn();
   const setToBlock = vi.fn<(target: Block, position?: string, offset?: number) => void>();
 
@@ -219,6 +220,7 @@ const setup = (options: SetupOptions = {}) => {
       blockTools: new Map<string, ToolEntry>(registered),
     },
     YjsManager: {
+      startSubStep,
       stopCapturing,
     },
     Caret: {
@@ -243,6 +245,7 @@ const setup = (options: SetupOptions = {}) => {
     replace,
     insertDefaultBlockAtIndex,
     getBlockIndex,
+    startSubStep,
     stopCapturing,
     setToBlock,
     dispatchChange,
@@ -259,6 +262,25 @@ const replacedData = (replace: ReturnType<typeof setup>['replace']): Record<stri
   }
 
   return call[2];
+};
+
+/**
+ * The conversion is its own undo step: one sub-step starts before `write`
+ * and one capture stop follows it, so typing after it starts a new step.
+ */
+const expectOwnUndoStep = (
+  startSubStep: ReturnType<typeof vi.fn>,
+  stopCapturing: ReturnType<typeof vi.fn>,
+  write: ReturnType<typeof vi.fn>
+): void => {
+  expect(startSubStep).toHaveBeenCalledTimes(1);
+  expect(stopCapturing).toHaveBeenCalledTimes(1);
+  expect(write).toHaveBeenCalled();
+
+  const writeOrder = write.mock.invocationCallOrder[0];
+
+  expect(startSubStep.mock.invocationCallOrder[0]).toBeLessThan(writeOrder);
+  expect(stopCapturing.mock.invocationCallOrder[0]).toBeGreaterThan(writeOrder);
 };
 
 describe('MarkdownShortcuts — mutation coverage', () => {
@@ -456,27 +478,27 @@ describe('MarkdownShortcuts — mutation coverage', () => {
       expect(call[2]).toBeUndefined();
     });
 
-    it('brackets the checklist conversion with two undo-capture stops', () => {
-      const { run, stopCapturing, setToBlock } = setup({ html: '[] task' });
+    it('makes the checklist conversion its own undo sub-step', () => {
+      const { run, startSubStep, stopCapturing, setToBlock, replace } = setup({ html: '[] task' });
 
       expect(run(' ')).toBe(true);
-      expect(stopCapturing).toHaveBeenCalledTimes(2);
+      expectOwnUndoStep(startSubStep, stopCapturing, replace);
       expect(setToBlock).toHaveBeenCalledTimes(1);
     });
 
-    it('brackets the bullet conversion with two undo-capture stops', () => {
-      const { run, stopCapturing, setToBlock } = setup({ html: '- item' });
+    it('makes the bullet conversion its own undo sub-step', () => {
+      const { run, startSubStep, stopCapturing, setToBlock, replace } = setup({ html: '- item' });
 
       expect(run(' ')).toBe(true);
-      expect(stopCapturing).toHaveBeenCalledTimes(2);
+      expectOwnUndoStep(startSubStep, stopCapturing, replace);
       expect(setToBlock).toHaveBeenCalledTimes(1);
     });
 
-    it('brackets the numbered conversion with two undo-capture stops', () => {
-      const { run, stopCapturing, setToBlock } = setup({ html: '1. item' });
+    it('makes the numbered conversion its own undo sub-step', () => {
+      const { run, startSubStep, stopCapturing, setToBlock, replace } = setup({ html: '1. item' });
 
       expect(run(' ')).toBe(true);
-      expect(stopCapturing).toHaveBeenCalledTimes(2);
+      expectOwnUndoStep(startSubStep, stopCapturing, replace);
       expect(setToBlock).toHaveBeenCalledTimes(1);
     });
   });
@@ -501,11 +523,11 @@ describe('MarkdownShortcuts — mutation coverage', () => {
       expect(call[2]).toBe(3);
     });
 
-    it('brackets the header conversion with two undo-capture stops', () => {
-      const { run, stopCapturing, setToBlock } = setup({ html: '### text' });
+    it('makes the header conversion its own undo sub-step', () => {
+      const { run, startSubStep, stopCapturing, setToBlock, replace } = setup({ html: '### text' });
 
       expect(run(' ')).toBe(true);
-      expect(stopCapturing).toHaveBeenCalledTimes(2);
+      expectOwnUndoStep(startSubStep, stopCapturing, replace);
       expect(setToBlock).toHaveBeenCalledTimes(1);
     });
 
@@ -527,10 +549,11 @@ describe('MarkdownShortcuts — mutation coverage', () => {
     });
 
     it('does nothing when the line holds no header marker at all', () => {
-      const { run, replace, stopCapturing } = setup({ html: 'plain sentence' });
+      const { run, replace, startSubStep, stopCapturing } = setup({ html: 'plain sentence' });
 
       expect(run(' ')).toBe(false);
       expect(replace).not.toHaveBeenCalled();
+      expect(startSubStep).not.toHaveBeenCalled();
       expect(stopCapturing).not.toHaveBeenCalled();
     });
   });
@@ -671,11 +694,11 @@ describe('MarkdownShortcuts — mutation coverage', () => {
       expect(setToBlock).not.toHaveBeenCalled();
     });
 
-    it('brackets the toggle-header conversion with two undo-capture stops', () => {
-      const { run, stopCapturing, replace } = setup({ html: '>### text' });
+    it('makes the toggle-header conversion its own undo sub-step', () => {
+      const { run, startSubStep, stopCapturing, replace } = setup({ html: '>### text' });
 
       expect(run(' ')).toBe(true);
-      expect(stopCapturing).toHaveBeenCalledTimes(2);
+      expectOwnUndoStep(startSubStep, stopCapturing, replace);
       expect(replacedData(replace)).toStrictEqual({
         text: 'text',
         level: 3,
@@ -699,11 +722,11 @@ describe('MarkdownShortcuts — mutation coverage', () => {
       expect(setToBlock).toHaveBeenCalledWith(expect.anything(), 'default', 3);
     });
 
-    it('brackets the toggle conversion with two undo-capture stops', () => {
-      const { run, stopCapturing, setToBlock } = setup({ html: '> text' });
+    it('makes the toggle conversion its own undo sub-step', () => {
+      const { run, startSubStep, stopCapturing, setToBlock, replace } = setup({ html: '> text' });
 
       expect(run(' ')).toBe(true);
-      expect(stopCapturing).toHaveBeenCalledTimes(2);
+      expectOwnUndoStep(startSubStep, stopCapturing, replace);
       expect(setToBlock).toHaveBeenCalledTimes(1);
     });
   });
@@ -730,11 +753,11 @@ describe('MarkdownShortcuts — mutation coverage', () => {
       expect(setToBlock).toHaveBeenCalledWith(expect.anything(), 'default', 3);
     });
 
-    it('brackets the quote conversion with two undo-capture stops', () => {
-      const { run, stopCapturing, setToBlock } = setup({ html: '" text' });
+    it('makes the quote conversion its own undo sub-step', () => {
+      const { run, startSubStep, stopCapturing, setToBlock, replace } = setup({ html: '" text' });
 
       expect(run(' ')).toBe(true);
-      expect(stopCapturing).toHaveBeenCalledTimes(2);
+      expectOwnUndoStep(startSubStep, stopCapturing, replace);
       expect(setToBlock).toHaveBeenCalledTimes(1);
     });
   });
@@ -769,11 +792,11 @@ describe('MarkdownShortcuts — mutation coverage', () => {
       expect(replacedData(replace)).toStrictEqual({ code: 'foo' });
     });
 
-    it('brackets the code conversion with two undo-capture stops and parks the caret at the start', () => {
-      const { run, stopCapturing, setToBlock, newBlock } = setup({ html: '``` foo' });
+    it('makes the code conversion its own undo sub-step and parks the caret at the start', () => {
+      const { run, startSubStep, stopCapturing, setToBlock, newBlock, replace } = setup({ html: '``` foo' });
 
       expect(run(' ')).toBe(true);
-      expect(stopCapturing).toHaveBeenCalledTimes(2);
+      expectOwnUndoStep(startSubStep, stopCapturing, replace);
 
       const call = setToBlock.mock.calls[0];
 
@@ -795,11 +818,11 @@ describe('MarkdownShortcuts — mutation coverage', () => {
       expect(setToBlock).toHaveBeenCalledWith(newBlock, 'start');
     });
 
-    it('brackets the divider conversion with two undo-capture stops', () => {
-      const { run, stopCapturing } = setup({ html: '---' });
+    it('makes the divider conversion its own undo sub-step', () => {
+      const { run, startSubStep, stopCapturing, replace } = setup({ html: '---' });
 
       expect(run('-')).toBe(true);
-      expect(stopCapturing).toHaveBeenCalledTimes(2);
+      expectOwnUndoStep(startSubStep, stopCapturing, replace);
     });
   });
 
@@ -909,11 +932,11 @@ describe('MarkdownShortcuts — mutation coverage', () => {
     });
 
     it('flushes the direct DOM edit to the block exactly once', () => {
-      const { run, dispatchChange, stopCapturing } = setup({ html: '**bold**' });
+      const { run, startSubStep, dispatchChange, stopCapturing } = setup({ html: '**bold**' });
 
       expect(run('*')).toBe(true);
       expect(dispatchChange).toHaveBeenCalledTimes(1);
-      expect(stopCapturing).toHaveBeenCalledTimes(2);
+      expectOwnUndoStep(startSubStep, stopCapturing, dispatchChange);
     });
 
     it('leaves the caret directly after the new span when nothing follows it', () => {
@@ -1177,11 +1200,11 @@ describe('MarkdownShortcuts — mutation coverage', () => {
     });
 
     it('flushes the direct DOM edit to the block exactly once', () => {
-      const { run, dispatchChange, stopCapturing } = setup({ html: '[x](y)' });
+      const { run, startSubStep, dispatchChange, stopCapturing } = setup({ html: '[x](y)' });
 
       expect(run(')')).toBe(true);
       expect(dispatchChange).toHaveBeenCalledTimes(1);
-      expect(stopCapturing).toHaveBeenCalledTimes(2);
+      expectOwnUndoStep(startSubStep, stopCapturing, dispatchChange);
     });
   });
 });

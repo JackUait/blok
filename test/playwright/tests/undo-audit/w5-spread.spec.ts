@@ -602,6 +602,14 @@ test.describe('W5F: spread of the wave-4 families', () => {
     expect(await page.evaluate(() => window.blokInstance?.history.canUndo()), 'canUndo right after load').toBe(false);
   });
 
+  test('W5F-50b: loading a table whose cell names a missing block fills the cell and leaves nothing to undo', async ({ page }) => {
+    await create(page, [P('a', 'Alpha'), { id: 'tbl', type: 'table', data: { withHeadings: false, content: [[{ blocks: ['gone'] }, { blocks: ['b1'] }]] } }, P('b1', 'B1', 'tbl'), P('z', 'Zed')]);
+    await gap(page);
+    await expect(page.locator('[data-blok-table-cell-row="0"][data-blok-table-cell-col="0"] [contenteditable="true"]')).toHaveCount(1);
+    expect(await stack(page), 'undo stack right after load').toBe(0);
+    expect(await page.evaluate(() => window.blokInstance?.history.canUndo()), 'canUndo right after load').toBe(false);
+  });
+
   test('W5F-51: after typing in a legacy-string table cell, one undo reverts only the typing', async ({ page }) => {
     await create(page, [P('a', 'Alpha'), { id: 'tbl', type: 'table', data: { withHeadings: false, content: [['A1', 'B1'], ['A2', 'B2']] } }, P('z', 'Zed')]);
     await gap(page);

@@ -544,8 +544,9 @@ describe('Table lifecycle rebuild', () => {
         {},
         { blocks: { isSyncingFromYjs: true, getById: vi.fn(() => undefined) } }
       );
+      const dispatchChange = vi.fn();
       const blocksApi = options.api.blocks as { isSyncingFromYjs: boolean };
-      const table = new Table(options);
+      const table = new Table({ ...options, block: { id: 'table-lifecycle-test', dispatchChange } as never });
       const element = table.render();
 
       container.appendChild(element);
@@ -557,6 +558,8 @@ describe('Table lifecycle rebuild', () => {
       const cellBlocks = container.querySelector('[data-blok-table-cell-blocks]');
 
       expect(cellBlocks?.querySelectorAll('[data-blok-id]').length).toBe(1);
+      // A repair, not an edit: the table's new data must not become an undo step.
+      expect(dispatchChange).toHaveBeenCalledWith({ derived: true });
     });
   });
 

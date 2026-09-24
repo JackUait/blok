@@ -1448,7 +1448,8 @@ export class UndoHistory {
     const caretEntry = this.replayTrackedEntry('undo', setAside.flatMap((top) => top.item ?? []));
 
     // No item: the caret entries left have none either. The replay shed them
-    // and carries the newest, whose caret the press still restores.
+    // and carries the newest, whose caret the press still restores. Counted
+    // as applied so the press does not mark the history as stuck.
     if (this.poppedStackItem !== null || item === undefined) {
       this.pushCaretAndRestore(caretEntry, this.caretRedoStack, 'before');
       this.putBackUnderReachedPast(caretEntry, this.caretRedoStack, this.undoManager.redoStack, this.moveRedoStack);
@@ -1782,7 +1783,7 @@ export class UndoHistory {
     // A spent item left the history and nothing later can depend on it: try
     // the next. One that is waiting stays on top and, like a refused one,
     // holds every later step back.
-    if (item !== undefined && !this.undoManager.redoStack.includes(item)) {
+    if (!this.undoManager.redoStack.includes(item)) {
       this.redo();
     }
   }

@@ -417,6 +417,33 @@ describe('yjs never walks over an entry Blok has not checked', () => {
     expect(historyA.undoManager.redoStack).toHaveLength(0);
     expect(storeA.toJSON()).toEqual(storeB.toJSON());
   });
+
+  it('redo does not half-apply a refused replace under a spent step', () => {
+    storeA.updateBlockData('b4', 'text', 'Fourth edit'); // X
+    historyA.stopCapturing();
+    storeA.removeBlock('b2'); // R: replace b2 by b3
+    storeA.addBlock({ id: 'b3', type: 'quote', data: { text: '' } });
+    historyA.stopCapturing();
+    historyA.undo();
+    historyA.undo();
+    sync(storeA, storeB);
+    expect(idsOf(storeA)).toEqual(['b1', 'b2', 'b4']);
+
+    storeB.updateBlockData('b2', 'text', 'Second by B');
+    storeB.removeBlock('b4');
+    sync(storeA, storeB);
+
+    // The spent X is on top, the refused R under it.
+    const [r] = historyA.undoManager.redoStack;
+
+    historyA.redo();
+    sync(storeA, storeB);
+
+    expect(idsOf(storeA)).toEqual(['b1', 'b2']);
+    expect(historyA.undoManager.redoStack).toEqual([r]);
+    expect(historyA.canRedo()).toBe(false);
+    expect(storeA.toJSON()).toEqual(storeB.toJSON());
+  });
 });
 
 describe('a move the peer overruled over nothing that applies', () => {

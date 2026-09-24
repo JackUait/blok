@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "کهکشان ناشناس",
   "presence.anonymous.saucer": "بشقاب پرنده ناشناس",
   "presence.anonymous.asteroid": "سیارک ناشناس",
-  "presence.anonymous.unknown": "ناشناس"
+  "presence.anonymous.unknown": "ناشناس",
+  "find.placeholder": "جستجو در صفحه",
+  "find.count": "{current} از {total}",
+  "find.noResults": "نتیجه‌ای یافت نشد",
+  "find.previous": "مورد قبلی",
+  "find.next": "مورد بعدی",
+  "find.close": "بستن",
+  "find.toggleReplace": "نمایش/پنهان کردن جایگزینی",
+  "find.replacePlaceholder": "جایگزینی با",
+  "find.replace": "جایگزینی",
+  "find.replaceAll": "جایگزینی همه",
+  "find.matchCase": "تطبیق بزرگی و کوچکی حروف",
+  "find.wholeWord": "تطبیق کل کلمه"
 }

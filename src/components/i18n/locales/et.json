@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Anonüümne galaktika",
   "presence.anonymous.saucer": "Anonüümne UFO",
   "presence.anonymous.asteroid": "Anonüümne asteroid",
-  "presence.anonymous.unknown": "Anonüümne"
+  "presence.anonymous.unknown": "Anonüümne",
+  "find.placeholder": "Otsi lehelt",
+  "find.count": "{current}/{total}",
+  "find.noResults": "Midagi ei leitud",
+  "find.previous": "Eelmine vaste",
+  "find.next": "Järgmine vaste",
+  "find.close": "Sulge",
+  "find.toggleReplace": "Näita/peida asendamine",
+  "find.replacePlaceholder": "Asendustekst",
+  "find.replace": "Asenda",
+  "find.replaceAll": "Asenda kõik",
+  "find.matchCase": "Tõstutundlik",
+  "find.wholeWord": "Ainult terved sõnad"
 }

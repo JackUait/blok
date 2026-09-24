@@ -838,6 +838,16 @@ export interface BlokMountOptions {
   inlineEmoji?: boolean;
 
   /**
+   * Find in page: Cmd/Ctrl+F opens Blok's own find bar instead of the browser's.
+   * It searches collapsed toggles too and, when the editor is editable, can
+   * replace matches (Cmd+Option+F on macOS, Ctrl+H elsewhere). Set `false` to
+   * leave Cmd/Ctrl+F to the browser.
+   *
+   * @default true
+   */
+  find?: boolean;
+
+  /**
    * Blok's log level (how many logs you want to see)
    */
   logLevel?: LogLevels;

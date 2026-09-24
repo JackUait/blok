@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "ނަން ނޭނގޭ ގެލެކްސީ",
   "presence.anonymous.saucer": "ނަން ނޭނގޭ ޔޫއެފްއޯ",
   "presence.anonymous.asteroid": "ނަން ނޭނގޭ އެސްޓަރޮއިޑް",
-  "presence.anonymous.unknown": "ނަން ނޭނގޭ"
+  "presence.anonymous.unknown": "ނަން ނޭނގޭ",
+  "find.placeholder": "ޞަފްޙާގައި ހޯދާ",
+  "find.count": "{current}/{total}",
+  "find.noResults": "އެއްވެސް އެއްޗެއް ނުފެނުނު",
+  "find.previous": "ކުރީގެ ދިމާވުން",
+  "find.next": "ދެން އޮތް ދިމާވުން",
+  "find.close": "ބަންދު",
+  "find.toggleReplace": "ބަދަލުކުރުން ދައްކާ/ފޮރުވާ",
+  "find.replacePlaceholder": "މިއާ ބަދަލުކުރޭ",
+  "find.replace": "ބަދަލުކުރޭ",
+  "find.replaceAll": "ހުރިހާ ބަދަލުކުރޭ",
+  "find.matchCase": "ބޮޑު ކުޑަ އަކުރު ދިމާކުރޭ",
+  "find.wholeWord": "ފުރިހަމަ ބަސް ދިމާކުރޭ"
 }

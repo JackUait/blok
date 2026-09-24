@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Нэргүй галактик",
   "presence.anonymous.saucer": "Нэргүй нисдэг таваг",
   "presence.anonymous.asteroid": "Нэргүй астероид",
-  "presence.anonymous.unknown": "Нэргүй"
+  "presence.anonymous.unknown": "Нэргүй",
+  "find.placeholder": "Хуудаснаас хайх",
+  "find.count": "{current}/{total}",
+  "find.noResults": "Юу ч олдсонгүй",
+  "find.previous": "Өмнөх тохирол",
+  "find.next": "Дараагийн тохирол",
+  "find.close": "Хаах",
+  "find.toggleReplace": "Солихыг харуулах/нуух",
+  "find.replacePlaceholder": "Үүгээр солих",
+  "find.replace": "Солих",
+  "find.replaceAll": "Бүгдийг солих",
+  "find.matchCase": "Том жижиг үсгийг ялгах",
+  "find.wholeWord": "Зөвхөн бүтэн үг"
 }

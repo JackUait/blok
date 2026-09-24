@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "אַנאָנימע גאַלאַקסיע",
   "presence.anonymous.saucer": "אַנאָנימער פֿליִענדיקער טעלער",
   "presence.anonymous.asteroid": "אַנאָנימער אַסטערויד",
-  "presence.anonymous.unknown": "אַנאָנים"
+  "presence.anonymous.unknown": "אַנאָנים",
+  "find.placeholder": "זוכן אויפֿן בלאַט",
+  "find.count": "{current}/{total}",
+  "find.noResults": "גארנישט געפֿונען",
+  "find.previous": "פֿריִערדיקער טרעף",
+  "find.next": "נעקסטער טרעף",
+  "find.close": "פארמאכן",
+  "find.toggleReplace": "ווײַזן/באַהאַלטן טוישן",
+  "find.replacePlaceholder": "טויש מיט",
+  "find.replace": "טויש",
+  "find.replaceAll": "טויש אַלץ",
+  "find.matchCase": "אונטערשיידן גרויסע און קליינע אותיות",
+  "find.wholeWord": "נאָר גאַנצע ווערטער"
 }

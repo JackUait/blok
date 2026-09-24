@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "અનામી આકાશગંગા",
   "presence.anonymous.saucer": "અનામી ઉડતી રકાબી",
   "presence.anonymous.asteroid": "અનામી લઘુગ્રહ",
-  "presence.anonymous.unknown": "અનામી"
+  "presence.anonymous.unknown": "અનામી",
+  "find.placeholder": "પૃષ્ઠમાં શોધો",
+  "find.count": "{total}માંથી {current}",
+  "find.noResults": "કંઈ મળ્યું નથી",
+  "find.previous": "પાછલો મેળ",
+  "find.next": "આગલો મેળ",
+  "find.close": "બંધ કરો",
+  "find.toggleReplace": "બદલવાનું બતાવો/છુપાવો",
+  "find.replacePlaceholder": "આનાથી બદલો",
+  "find.replace": "બદલો",
+  "find.replaceAll": "બધું બદલો",
+  "find.matchCase": "અક્ષરનું કદ મેળવો",
+  "find.wholeWord": "આખો શબ્દ મેળવો"
 }

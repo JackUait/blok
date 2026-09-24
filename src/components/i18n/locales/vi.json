@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Thiên hà ẩn danh",
   "presence.anonymous.saucer": "Đĩa bay ẩn danh",
   "presence.anonymous.asteroid": "Tiểu hành tinh ẩn danh",
-  "presence.anonymous.unknown": "Ẩn danh"
+  "presence.anonymous.unknown": "Ẩn danh",
+  "find.placeholder": "Tìm trong trang",
+  "find.count": "{current}/{total}",
+  "find.noResults": "Không tìm thấy",
+  "find.previous": "Kết quả trước",
+  "find.next": "Kết quả tiếp theo",
+  "find.close": "Đóng",
+  "find.toggleReplace": "Hiện/ẩn thay thế",
+  "find.replacePlaceholder": "Thay thế bằng",
+  "find.replace": "Thay thế",
+  "find.replaceAll": "Thay thế tất cả",
+  "find.matchCase": "Khớp chữ hoa/thường",
+  "find.wholeWord": "Khớp toàn bộ từ"
 }

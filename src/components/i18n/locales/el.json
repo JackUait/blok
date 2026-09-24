@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Ανώνυμος γαλαξίας",
   "presence.anonymous.saucer": "Ανώνυμο ΑΤΙΑ",
   "presence.anonymous.asteroid": "Ανώνυμος αστεροειδής",
-  "presence.anonymous.unknown": "Ανώνυμος"
+  "presence.anonymous.unknown": "Ανώνυμος",
+  "find.placeholder": "Εύρεση στη σελίδα",
+  "find.count": "{current} από {total}",
+  "find.noResults": "Δεν βρέθηκαν αποτελέσματα",
+  "find.previous": "Προηγούμενο αποτέλεσμα",
+  "find.next": "Επόμενο αποτέλεσμα",
+  "find.close": "Κλείσιμο",
+  "find.toggleReplace": "Εμφάνιση/απόκρυψη αντικατάστασης",
+  "find.replacePlaceholder": "Αντικατάσταση με",
+  "find.replace": "Αντικατάσταση",
+  "find.replaceAll": "Αντικατάσταση όλων",
+  "find.matchCase": "Διάκριση πεζών-κεφαλαίων",
+  "find.wholeWord": "Μόνο ολόκληρες λέξεις"
 }

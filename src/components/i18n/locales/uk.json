@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Анонімна галактика",
   "presence.anonymous.saucer": "Анонімне НЛО",
   "presence.anonymous.asteroid": "Анонімний астероїд",
-  "presence.anonymous.unknown": "Анонім"
+  "presence.anonymous.unknown": "Анонім",
+  "find.placeholder": "Знайти на сторінці",
+  "find.count": "{current} з {total}",
+  "find.noResults": "Нічого не знайдено",
+  "find.previous": "Попередній збіг",
+  "find.next": "Наступний збіг",
+  "find.close": "Закрити",
+  "find.toggleReplace": "Показати або сховати заміну",
+  "find.replacePlaceholder": "Замінити на",
+  "find.replace": "Замінити",
+  "find.replaceAll": "Замінити все",
+  "find.matchCase": "Враховувати регістр",
+  "find.wholeWord": "Слово цілком"
 }

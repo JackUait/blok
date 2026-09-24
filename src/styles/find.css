@@ -1,0 +1,460 @@
+/* ─── Find in page (Cmd/Ctrl+F) ───────────────────────────────────────── */
+
+/*
+  Match fills. The core module registers these two highlight names; renaming
+  either here silently stops painting matches. Unlayered like
+  ::highlight(blok-cross-block-selection) in main.css.
+*/
+[data-blok-interface] ::highlight(blok-find-match) {
+  background-color: var(--blok-find-match-bg);
+}
+
+[data-blok-interface] ::highlight(blok-find-match-active) {
+  background-color: var(--blok-find-match-active-bg);
+}
+
+/*
+  The dock is zero-height and sticky, so it rides whatever element scrolls the
+  editor without pushing content down. Hidden elements here get
+  `display: none !important` from preflight; the discrete `display`
+  transition still keeps them painted until the exit animation ends.
+*/
+[data-blok-find] {
+  position: sticky;
+  top: var(--blok-space-2);
+  z-index: var(--blok-z-find);
+  height: 0;
+  overflow: visible;
+  transition: display var(--blok-duration-base) allow-discrete;
+}
+
+[data-blok-find-bar] {
+  position: absolute;
+  top: 0;
+  inset-inline-end: var(--blok-space-2);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: min(var(--blok-find-bar-width), calc(100% - 16px));
+  padding: var(--blok-space-1-5);
+  border-radius: var(--blok-radius-lg);
+  background: var(--blok-popover-bg);
+  color: var(--blok-text-primary);
+  box-shadow: var(--blok-popover-box-shadow);
+  font-family: var(--blok-font-family, var(--blok-font-sans));
+  font-size: var(--blok-font-size-ui-label);
+  line-height: var(--blok-line-height-body);
+  transform-origin: top right;
+  transition:
+    opacity var(--blok-duration-popover-enter) var(--blok-ease-popover),
+    transform var(--blok-duration-popover-enter) var(--blok-ease-popover);
+}
+
+[data-blok-find-bar]:dir(rtl) {
+  transform-origin: top left;
+}
+
+[data-blok-find][hidden] [data-blok-find-bar] {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+  transition:
+    opacity var(--blok-duration-base) var(--blok-ease-exit),
+    transform var(--blok-duration-base) var(--blok-ease-exit);
+}
+
+@starting-style {
+  [data-blok-find]:not([hidden]) [data-blok-find-bar] {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+}
+
+[data-blok-find-bar] :where(button, input) {
+  appearance: none;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+[data-blok-find-row] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-0-5);
+  min-width: 0;
+}
+
+/* ─── Field ─── */
+
+[data-blok-find-field] {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  min-width: 0;
+  height: var(--blok-find-control-size);
+  margin-inline-end: var(--blok-space-1);
+  padding-inline: var(--blok-space-2) var(--blok-space-1-5);
+  border: 1px solid transparent;
+  border-radius: var(--blok-radius-md-plus);
+  background: var(--blok-icon-bg);
+  transition:
+    background-color var(--blok-duration-standard) var(--blok-ease-standard),
+    border-color var(--blok-duration-standard) var(--blok-ease-standard);
+}
+
+/* Text fields show focus however it arrived; inputs always match :focus-visible. */
+[data-blok-find-field]:has(> input:focus-visible) {
+  border-color: var(--blok-search-input-focus-border);
+  background: var(--blok-popover-bg);
+}
+
+[data-blok-find-field][data-blok-find-empty] {
+  border-color: var(--blok-find-empty-border);
+  background: var(--blok-find-empty-bg);
+}
+
+[data-blok-find-field][data-blok-find-shake] {
+  animation: blok-find-shake 360ms var(--blok-ease-bounce);
+}
+
+[data-blok-find-icon] {
+  display: flex;
+  flex: none;
+  margin-inline-end: var(--blok-space-1-25);
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-find-icon] svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-blok-find-field] input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  outline: none;
+  color: var(--blok-text-primary);
+}
+
+[data-blok-find-field] input::placeholder {
+  color: var(--blok-text-secondary);
+  opacity: 1;
+}
+
+[data-blok-find-field] input::-webkit-search-cancel-button,
+[data-blok-find-field] input::-webkit-search-decoration {
+  appearance: none;
+}
+
+[data-blok-find-counter] {
+  flex: none;
+  padding-inline-start: var(--blok-space-1-5);
+  color: var(--blok-text-secondary);
+  font-size: var(--blok-font-size-ui-compact);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+[data-blok-find-counter]:empty {
+  display: none;
+}
+
+[data-blok-find-empty] [data-blok-find-counter] {
+  color: var(--blok-item-destructive-text);
+}
+
+[data-blok-find-counter][data-blok-find-bump] {
+  animation: blok-find-count 180ms var(--blok-ease-popover);
+}
+
+/* ─── Buttons ─── */
+
+[data-blok-find-icon-button] {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: var(--blok-find-control-size);
+  height: var(--blok-find-control-size);
+  padding: 0;
+  border-radius: var(--blok-radius-md);
+  color: var(--blok-text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--blok-duration-base) var(--blok-ease-standard),
+    color var(--blok-duration-base) var(--blok-ease-standard),
+    transform var(--blok-duration-base) var(--blok-ease-standard);
+}
+
+[data-blok-find-icon-button] svg {
+  width: 18px;
+  height: 18px;
+  transition: transform var(--blok-duration-slow) var(--blok-ease-popover);
+}
+
+[data-blok-find-icon-button]:hover:not(:disabled) {
+  background: var(--blok-item-hover-bg);
+  color: var(--blok-text-primary);
+}
+
+[data-blok-find-icon-button]:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+[data-blok-find-icon-button]:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+[data-blok-find-previous] svg {
+  transform: rotate(180deg);
+}
+
+[data-blok-find-open] [data-blok-find-replace-toggle] svg {
+  transform: rotate(90deg);
+}
+
+[data-blok-find-replace-toggle] {
+  width: 20px;
+}
+
+[data-blok-find-toggle] > span {
+  font-size: var(--blok-font-size-ui-compact);
+  font-weight: var(--blok-font-weight-semibold);
+  letter-spacing: -0.01em;
+}
+
+/* Whole word: a bracket under "ab", the classic word-boundary glyph. */
+[data-blok-find-toggle='find-whole-word'] > span {
+  position: relative;
+  padding-inline: var(--blok-space-0-5);
+}
+
+[data-blok-find-toggle='find-whole-word'] > span::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: -2px;
+  height: 3px;
+  border: 1.25px solid currentColor;
+  border-top: 0;
+  border-radius: 0 0 var(--blok-space-0-25) var(--blok-space-0-25);
+}
+
+[data-blok-find-toggle][aria-pressed='true'],
+[data-blok-find-toggle][aria-pressed='true']:hover {
+  background: var(--blok-popover-icon-active-bg);
+  color: var(--blok-icon-active-text);
+}
+
+[data-blok-find-bar] button:focus-visible {
+  outline: 2px solid var(--blok-text-secondary);
+  outline-offset: -2px;
+}
+
+[data-blok-find-divider] {
+  flex: none;
+  width: 1px;
+  height: 16px;
+  margin-inline: var(--blok-space-1);
+  background: var(--blok-border-secondary);
+}
+
+/* ─── Match map ─── */
+
+[data-blok-find-map] {
+  position: relative;
+  height: 10px;
+  margin: var(--blok-space-1) var(--blok-space-2) 0;
+  cursor: pointer;
+}
+
+/* The visible track is a hairline; the 10px box is the hit area. */
+[data-blok-find-map]::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  height: 2px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-icon-bg);
+  transform: translateY(-50%);
+}
+
+[data-blok-find-tick] {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 6px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-find-tick);
+  transform: translate(-50%, -50%);
+  transition:
+    height var(--blok-duration-slow) var(--blok-ease-popover),
+    background-color var(--blok-duration-slow) var(--blok-ease-popover),
+    box-shadow var(--blok-duration-slow) var(--blok-ease-popover);
+}
+
+[data-blok-find-tick]:hover {
+  height: 10px;
+  background: var(--blok-text-secondary);
+}
+
+[data-blok-find-tick][data-blok-find-active] {
+  z-index: 1;
+  width: 3px;
+  height: 10px;
+  background: var(--blok-find-tick-active);
+  box-shadow: 0 0 0 3px var(--blok-find-lens-glow);
+}
+
+/* ─── Replace row ─── */
+
+/* 0fr → 1fr grid rows animate an auto height; the inner row clips while it grows. */
+[data-blok-find-replace-row] {
+  display: grid;
+  grid-template-rows: 1fr;
+  margin-top: var(--blok-space-1);
+  opacity: 1;
+  transition:
+    grid-template-rows var(--blok-duration-slow) var(--blok-ease-popover),
+    margin-top var(--blok-duration-slow) var(--blok-ease-popover),
+    opacity var(--blok-duration-slow) var(--blok-ease-popover),
+    display var(--blok-duration-slow) allow-discrete;
+}
+
+[data-blok-find-replace-row][hidden] {
+  grid-template-rows: 0fr;
+  margin-top: 0;
+  opacity: 0;
+}
+
+@starting-style {
+  [data-blok-find-replace-row]:not([hidden]) {
+    grid-template-rows: 0fr;
+    margin-top: 0;
+    opacity: 0;
+  }
+}
+
+[data-blok-find-replace-row] > [data-blok-find-row] {
+  min-height: 0;
+  overflow: hidden;
+  /* Lines the replace field up under the find field, past the chevron. */
+  padding-inline-start: calc(var(--blok-space-5) + var(--blok-space-0-5));
+}
+
+[data-blok-find-text-button] {
+  flex: none;
+  height: var(--blok-find-control-size);
+  padding-inline: var(--blok-space-2-5);
+  border-radius: var(--blok-radius-md);
+  background: var(--blok-icon-bg);
+  color: var(--blok-text-primary);
+  font-size: var(--blok-font-size-ui-compact);
+  font-weight: var(--blok-font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--blok-duration-base) var(--blok-ease-standard),
+    transform var(--blok-duration-base) var(--blok-ease-standard);
+}
+
+[data-blok-find-text-button]:hover:not(:disabled) {
+  background: var(--blok-item-hover-bg);
+}
+
+[data-blok-find-text-button]:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+[data-blok-find-text-button]:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ─── Active match lens ─── */
+
+[data-blok-find-lens] {
+  position: absolute;
+  inset: 0;
+  z-index: var(--blok-z-relative);
+  overflow: visible;
+}
+
+/* Drawn from the container's top-left; JS supplies translate, width and height. */
+[data-blok-find-lens-box] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: content-box;
+  margin: calc(var(--blok-space-0-5) * -1) 0 0 calc(var(--blok-space-0-75) * -1);
+  padding: var(--blok-space-0-5) var(--blok-space-0-75);
+  border-radius: var(--blok-radius-sm);
+  box-shadow:
+    0 0 0 1.5px var(--blok-find-lens-ring),
+    0 0 12px 2px var(--blok-find-lens-glow);
+  transition:
+    transform 220ms cubic-bezier(0.34, 1.3, 0.64, 1),
+    width 220ms cubic-bezier(0.34, 1.3, 0.64, 1),
+    height 220ms cubic-bezier(0.34, 1.3, 0.64, 1);
+  will-change: transform;
+}
+
+[data-blok-find-lens-instant] [data-blok-find-lens-box] {
+  transition: none;
+}
+
+[data-blok-find-lens-box][data-blok-find-lens-ping]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 2px var(--blok-find-lens-ring);
+  animation: blok-find-ping 520ms var(--blok-ease-exit-out) forwards;
+}
+
+@keyframes blok-find-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(1px); }
+}
+
+@keyframes blok-find-count {
+  from { opacity: 0.4; transform: translateY(2px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes blok-find-ping {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(1.35, 1.8); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-find],
+  [data-blok-find-bar],
+  [data-blok-find][hidden] [data-blok-find-bar],
+  [data-blok-find-icon-button],
+  [data-blok-find-icon-button] svg,
+  [data-blok-find-tick],
+  [data-blok-find-replace-row],
+  [data-blok-find-text-button],
+  [data-blok-find-lens-box] {
+    transition: none;
+  }
+
+  [data-blok-find-field][data-blok-find-shake],
+  [data-blok-find-counter][data-blok-find-bump],
+  [data-blok-find-lens-box][data-blok-find-lens-ping]::after {
+    animation: none;
+  }
+
+  [data-blok-find-lens-box][data-blok-find-lens-ping]::after {
+    display: none;
+  }
+}

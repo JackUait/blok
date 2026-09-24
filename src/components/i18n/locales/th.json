@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "กาแล็กซีนิรนาม",
   "presence.anonymous.saucer": "จานบินนิรนาม",
   "presence.anonymous.asteroid": "ดาวเคราะห์น้อยนิรนาม",
-  "presence.anonymous.unknown": "นิรนาม"
+  "presence.anonymous.unknown": "นิรนาม",
+  "find.placeholder": "ค้นหาในหน้า",
+  "find.count": "{current}/{total}",
+  "find.noResults": "ไม่พบผลลัพธ์",
+  "find.previous": "รายการที่ตรงก่อนหน้า",
+  "find.next": "รายการที่ตรงถัดไป",
+  "find.close": "ปิด",
+  "find.toggleReplace": "แสดง/ซ่อนการแทนที่",
+  "find.replacePlaceholder": "แทนที่ด้วย",
+  "find.replace": "แทนที่",
+  "find.replaceAll": "แทนที่ทั้งหมด",
+  "find.matchCase": "ตรงตามตัวพิมพ์เล็ก-ใหญ่",
+  "find.wholeWord": "ตรงทั้งคำ"
 }

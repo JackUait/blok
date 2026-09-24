@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "নামহীন ছায়াপথ",
   "presence.anonymous.saucer": "নামহীন উড়ন্ত চাকতি",
   "presence.anonymous.asteroid": "নামহীন গ্রহাণু",
-  "presence.anonymous.unknown": "নামহীন"
+  "presence.anonymous.unknown": "নামহীন",
+  "find.placeholder": "পৃষ্ঠায় খুঁজুন",
+  "find.count": "{total}টির মধ্যে {current}",
+  "find.noResults": "কিছু পাওয়া যায়নি",
+  "find.previous": "আগের মিল",
+  "find.next": "পরের মিল",
+  "find.close": "বন্ধ",
+  "find.toggleReplace": "প্রতিস্থাপন দেখান/লুকান",
+  "find.replacePlaceholder": "যা দিয়ে প্রতিস্থাপন",
+  "find.replace": "প্রতিস্থাপন",
+  "find.replaceAll": "সব প্রতিস্থাপন",
+  "find.matchCase": "বড়/ছোট হাতের অক্ষর মেলান",
+  "find.wholeWord": "সম্পূর্ণ শব্দ মেলান"
 }

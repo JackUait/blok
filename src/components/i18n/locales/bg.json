@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Анонимна галактика",
   "presence.anonymous.saucer": "Анонимно НЛО",
   "presence.anonymous.asteroid": "Анонимен астероид",
-  "presence.anonymous.unknown": "Анонимен"
+  "presence.anonymous.unknown": "Анонимен",
+  "find.placeholder": "Търсене в страницата",
+  "find.count": "{current} от {total}",
+  "find.noResults": "Нищо не е намерено",
+  "find.previous": "Предишно съвпадение",
+  "find.next": "Следващо съвпадение",
+  "find.close": "Затвори",
+  "find.toggleReplace": "Показване/скриване на замяната",
+  "find.replacePlaceholder": "Замяна с",
+  "find.replace": "Замени",
+  "find.replaceAll": "Замени всички",
+  "find.matchCase": "Съвпадение на регистъра",
+  "find.wholeWord": "Само цели думи"
 }

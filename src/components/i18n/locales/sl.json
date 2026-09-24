@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Anonimna galaksija",
   "presence.anonymous.saucer": "Anonimni NLP",
   "presence.anonymous.asteroid": "Anonimni asteroid",
-  "presence.anonymous.unknown": "Anonimnež"
+  "presence.anonymous.unknown": "Anonimnež",
+  "find.placeholder": "Najdi na strani",
+  "find.count": "{current} od {total}",
+  "find.noResults": "Ni zadetkov",
+  "find.previous": "Prejšnji zadetek",
+  "find.next": "Naslednji zadetek",
+  "find.close": "Zapri",
+  "find.toggleReplace": "Prikaži/skrij zamenjavo",
+  "find.replacePlaceholder": "Zamenjaj z",
+  "find.replace": "Zamenjaj",
+  "find.replaceAll": "Zamenjaj vse",
+  "find.matchCase": "Razlikuj velike in male črke",
+  "find.wholeWord": "Samo cele besede"
 }

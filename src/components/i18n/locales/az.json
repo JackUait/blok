@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Anonim qalaktika",
   "presence.anonymous.saucer": "Anonim UFO",
   "presence.anonymous.asteroid": "Anonim asteroid",
-  "presence.anonymous.unknown": "Anonim"
+  "presence.anonymous.unknown": "Anonim",
+  "find.placeholder": "Səhifədə axtar",
+  "find.count": "{current}/{total}",
+  "find.noResults": "Heç nə tapılmadı",
+  "find.previous": "Əvvəlki uyğunluq",
+  "find.next": "Növbəti uyğunluq",
+  "find.close": "Bağla",
+  "find.toggleReplace": "Dəyişdirməni aç/bağla",
+  "find.replacePlaceholder": "Bununla dəyişdir",
+  "find.replace": "Dəyişdir",
+  "find.replaceAll": "Hamısını dəyişdir",
+  "find.matchCase": "Böyük-kiçik hərfə uyğun",
+  "find.wholeWord": "Yalnız bütöv söz"
 }

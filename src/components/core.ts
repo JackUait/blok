@@ -413,6 +413,7 @@ export class Core {
       'CrossBlockSelection',
       'ReadOnly',
       'ThemeManager',
+      'Find',
     ];
 
     await modulesToPrepare.reduce(

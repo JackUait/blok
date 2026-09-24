@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "ანონიმური გალაქტიკა",
   "presence.anonymous.saucer": "ანონიმური მფრინავი თეფში",
   "presence.anonymous.asteroid": "ანონიმური ასტეროიდი",
-  "presence.anonymous.unknown": "ანონიმი"
+  "presence.anonymous.unknown": "ანონიმი",
+  "find.placeholder": "ძიება გვერდზე",
+  "find.count": "{current}/{total}",
+  "find.noResults": "ვერაფერი მოიძებნა",
+  "find.previous": "წინა დამთხვევა",
+  "find.next": "შემდეგი დამთხვევა",
+  "find.close": "დახურვა",
+  "find.toggleReplace": "ჩანაცვლების ჩვენება/დამალვა",
+  "find.replacePlaceholder": "ჩანაცვლება შემდეგით",
+  "find.replace": "ჩანაცვლება",
+  "find.replaceAll": "ყველას ჩანაცვლება",
+  "find.matchCase": "რეგისტრის გათვალისწინება",
+  "find.wholeWord": "მხოლოდ მთლიანი სიტყვა"
 }

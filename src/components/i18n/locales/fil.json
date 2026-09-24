@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Di-kilalang galaxy",
   "presence.anonymous.saucer": "Di-kilalang flying saucer",
   "presence.anonymous.asteroid": "Di-kilalang asteroid",
-  "presence.anonymous.unknown": "Di-kilala"
+  "presence.anonymous.unknown": "Di-kilala",
+  "find.placeholder": "Hanapin sa pahina",
+  "find.count": "{current} sa {total}",
+  "find.noResults": "Walang nahanap",
+  "find.previous": "Nakaraang tugma",
+  "find.next": "Susunod na tugma",
+  "find.close": "Isara",
+  "find.toggleReplace": "Ipakita/itago ang pagpapalit",
+  "find.replacePlaceholder": "Palitan ng",
+  "find.replace": "Palitan",
+  "find.replaceAll": "Palitan lahat",
+  "find.matchCase": "Itugma ang laki ng titik",
+  "find.wholeWord": "Itugma ang buong salita"
 }

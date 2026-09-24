@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "ກາລັກຊີນິລະນາມ",
   "presence.anonymous.saucer": "ຈານບິນນິລະນາມ",
   "presence.anonymous.asteroid": "ດາວເຄາະນ້ອຍນິລະນາມ",
-  "presence.anonymous.unknown": "ນິລະນາມ"
+  "presence.anonymous.unknown": "ນິລະນາມ",
+  "find.placeholder": "ຊອກຫາໃນໜ້າ",
+  "find.count": "{current}/{total}",
+  "find.noResults": "ບໍ່ພົບຫຍັງ",
+  "find.previous": "ຜົນທີ່ກົງກັນກ່ອນໜ້າ",
+  "find.next": "ຜົນທີ່ກົງກັນຕໍ່ໄປ",
+  "find.close": "ປິດ",
+  "find.toggleReplace": "ສະແດງ/ເຊື່ອງການປ່ຽນແທນ",
+  "find.replacePlaceholder": "ປ່ຽນແທນດ້ວຍ",
+  "find.replace": "ປ່ຽນແທນ",
+  "find.replaceAll": "ປ່ຽນແທນທັງໝົດ",
+  "find.matchCase": "ກົງກັບຕົວພິມໃຫຍ່-ນ້ອຍ",
+  "find.wholeWord": "ກົງກັບຄຳທັງໝົດ"
 }

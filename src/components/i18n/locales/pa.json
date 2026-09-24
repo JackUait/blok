@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "ਗੁਮਨਾਮ ਆਕਾਸ਼ਗੰਗਾ",
   "presence.anonymous.saucer": "ਗੁਮਨਾਮ ਉੱਡਣ ਤਸ਼ਤਰੀ",
   "presence.anonymous.asteroid": "ਗੁਮਨਾਮ ਛੋਟਾ ਗ੍ਰਹਿ",
-  "presence.anonymous.unknown": "ਗੁਮਨਾਮ"
+  "presence.anonymous.unknown": "ਗੁਮਨਾਮ",
+  "find.placeholder": "ਪੰਨੇ ਵਿੱਚ ਲੱਭੋ",
+  "find.count": "{total} ਵਿੱਚੋਂ {current}",
+  "find.noResults": "ਕੁਝ ਨਹੀਂ ਮਿਲਿਆ",
+  "find.previous": "ਪਿਛਲਾ ਮੇਲ",
+  "find.next": "ਅਗਲਾ ਮੇਲ",
+  "find.close": "ਬੰਦ ਕਰੋ",
+  "find.toggleReplace": "ਬਦਲਣਾ ਦਿਖਾਓ/ਲੁਕਾਓ",
+  "find.replacePlaceholder": "ਇਸ ਨਾਲ ਬਦਲੋ",
+  "find.replace": "ਬਦਲੋ",
+  "find.replaceAll": "ਸਭ ਬਦਲੋ",
+  "find.matchCase": "ਅੱਖਰਾਂ ਦਾ ਕੇਸ ਮਿਲਾਓ",
+  "find.wholeWord": "ਪੂਰਾ ਸ਼ਬਦ ਮਿਲਾਓ"
 }

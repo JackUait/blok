@@ -39,6 +39,7 @@ export const USE_BLOK_CONFIG_KEYS = [
   'onAfterRender',
   'inlineToolbar',
   'inlineEmoji',
+  'find',
   'tunes',
   'style',
   'theme',

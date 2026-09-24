@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "匿名星系",
   "presence.anonymous.saucer": "匿名飞碟",
   "presence.anonymous.asteroid": "匿名小行星",
-  "presence.anonymous.unknown": "匿名"
+  "presence.anonymous.unknown": "匿名",
+  "find.placeholder": "在页面中查找",
+  "find.count": "{current}/{total}",
+  "find.noResults": "未找到结果",
+  "find.previous": "上一个匹配项",
+  "find.next": "下一个匹配项",
+  "find.close": "关闭",
+  "find.toggleReplace": "显示/隐藏替换",
+  "find.replacePlaceholder": "替换为",
+  "find.replace": "替换",
+  "find.replaceAll": "全部替换",
+  "find.matchCase": "区分大小写",
+  "find.wholeWord": "全字匹配"
 }

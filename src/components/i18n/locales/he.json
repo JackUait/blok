@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "גלקסיה אנונימית",
   "presence.anonymous.saucer": "עב״ם אנונימי",
   "presence.anonymous.asteroid": "אסטרואיד אנונימי",
-  "presence.anonymous.unknown": "אנונימי"
+  "presence.anonymous.unknown": "אנונימי",
+  "find.placeholder": "חיפוש בדף",
+  "find.count": "{current} מתוך {total}",
+  "find.noResults": "לא נמצאו תוצאות",
+  "find.previous": "ההתאמה הקודמת",
+  "find.next": "ההתאמה הבאה",
+  "find.close": "סגור",
+  "find.toggleReplace": "הצגה/הסתרה של החלפה",
+  "find.replacePlaceholder": "החלף ב",
+  "find.replace": "החלף",
+  "find.replaceAll": "החלף הכול",
+  "find.matchCase": "התאמת רישיות",
+  "find.wholeWord": "מילה שלמה בלבד"
 }

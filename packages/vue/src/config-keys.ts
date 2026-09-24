@@ -35,6 +35,7 @@ export const BLOK_EDITOR_CONFIG_KEYS = [
   'linkPaste',
   'inlineToolbar',
   'inlineEmoji',
+  'find',
   'tunes',
   'style',
   'theme',

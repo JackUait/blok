@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Anonim galaksi",
   "presence.anonymous.saucer": "Anonim UFO",
   "presence.anonymous.asteroid": "Anonim asteroit",
-  "presence.anonymous.unknown": "Anonim"
+  "presence.anonymous.unknown": "Anonim",
+  "find.placeholder": "Sayfada bul",
+  "find.count": "{current}/{total}",
+  "find.noResults": "Sonuç bulunamadı",
+  "find.previous": "Önceki eşleşme",
+  "find.next": "Sonraki eşleşme",
+  "find.close": "Kapat",
+  "find.toggleReplace": "Değiştirmeyi göster/gizle",
+  "find.replacePlaceholder": "Şununla değiştir",
+  "find.replace": "Değiştir",
+  "find.replaceAll": "Tümünü değiştir",
+  "find.matchCase": "Büyük/küçük harf duyarlı",
+  "find.wholeWord": "Yalnızca tam sözcük"
 }

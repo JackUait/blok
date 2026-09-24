@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Anonym galax",
   "presence.anonymous.saucer": "Anonymt ufo",
   "presence.anonymous.asteroid": "Anonym asteroid",
-  "presence.anonymous.unknown": "Anonym"
+  "presence.anonymous.unknown": "Anonym",
+  "find.placeholder": "Sök på sidan",
+  "find.count": "{current} av {total}",
+  "find.noResults": "Inget hittades",
+  "find.previous": "Föregående träff",
+  "find.next": "Nästa träff",
+  "find.close": "Stäng",
+  "find.toggleReplace": "Visa/dölj ersätt",
+  "find.replacePlaceholder": "Ersätt med",
+  "find.replace": "Ersätt",
+  "find.replaceAll": "Ersätt alla",
+  "find.matchCase": "Matcha gemener/versaler",
+  "find.wholeWord": "Endast hela ord"
 }

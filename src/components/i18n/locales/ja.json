@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "匿名の銀河",
   "presence.anonymous.saucer": "匿名のUFO",
   "presence.anonymous.asteroid": "匿名の小惑星",
-  "presence.anonymous.unknown": "匿名"
+  "presence.anonymous.unknown": "匿名",
+  "find.placeholder": "ページ内を検索",
+  "find.count": "{current}/{total}",
+  "find.noResults": "見つかりません",
+  "find.previous": "前の一致",
+  "find.next": "次の一致",
+  "find.close": "閉じる",
+  "find.toggleReplace": "置換の表示切り替え",
+  "find.replacePlaceholder": "置換後の文字列",
+  "find.replace": "置換",
+  "find.replaceAll": "すべて置換",
+  "find.matchCase": "大文字と小文字を区別",
+  "find.wholeWord": "単語単位で検索"
 }

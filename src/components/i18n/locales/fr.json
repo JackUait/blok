@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Galaxie anonyme",
   "presence.anonymous.saucer": "Ovni anonyme",
   "presence.anonymous.asteroid": "Astéroïde anonyme",
-  "presence.anonymous.unknown": "Anonyme"
+  "presence.anonymous.unknown": "Anonyme",
+  "find.placeholder": "Rechercher dans la page",
+  "find.count": "{current} sur {total}",
+  "find.noResults": "Aucun résultat",
+  "find.previous": "Résultat précédent",
+  "find.next": "Résultat suivant",
+  "find.close": "Fermer",
+  "find.toggleReplace": "Afficher/masquer le remplacement",
+  "find.replacePlaceholder": "Remplacer par",
+  "find.replace": "Remplacer",
+  "find.replaceAll": "Tout remplacer",
+  "find.matchCase": "Respecter la casse",
+  "find.wholeWord": "Mot entier uniquement"
 }

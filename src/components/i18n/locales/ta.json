@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "அநாமதேய பால்வெளி",
   "presence.anonymous.saucer": "அநாமதேய பறக்கும் தட்டு",
   "presence.anonymous.asteroid": "அநாமதேய சிறுகோள்",
-  "presence.anonymous.unknown": "அநாமதேயர்"
+  "presence.anonymous.unknown": "அநாமதேயர்",
+  "find.placeholder": "பக்கத்தில் தேடு",
+  "find.count": "{current}/{total}",
+  "find.noResults": "எதுவும் கிடைக்கவில்லை",
+  "find.previous": "முந்தைய பொருத்தம்",
+  "find.next": "அடுத்த பொருத்தம்",
+  "find.close": "மூடு",
+  "find.toggleReplace": "மாற்றுதலைக் காட்டு/மறை",
+  "find.replacePlaceholder": "இதனுடன் மாற்று",
+  "find.replace": "மாற்று",
+  "find.replaceAll": "அனைத்தையும் மாற்று",
+  "find.matchCase": "எழுத்து வடிவத்தைப் பொருத்து",
+  "find.wholeWord": "முழுச் சொல்லைப் பொருத்து"
 }

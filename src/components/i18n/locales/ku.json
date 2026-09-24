@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "گەلاکسیی نەناسراو",
   "presence.anonymous.saucer": "بەشقابی فڕیوی نەناسراو",
   "presence.anonymous.asteroid": "ئەستێرۆکی نەناسراو",
-  "presence.anonymous.unknown": "نەناسراو"
+  "presence.anonymous.unknown": "نەناسراو",
+  "find.placeholder": "لە پەڕەدا بگەڕێ",
+  "find.count": "{current}/{total}",
+  "find.noResults": "هیچ نەدۆزرایەوە",
+  "find.previous": "هاوتای پێشوو",
+  "find.next": "هاوتای دواتر",
+  "find.close": "داخستن",
+  "find.toggleReplace": "پیشاندان/شاردنەوەی گۆڕین",
+  "find.replacePlaceholder": "گۆڕین بە",
+  "find.replace": "گۆڕین",
+  "find.replaceAll": "گۆڕینی هەموو",
+  "find.matchCase": "جیاکردنەوەی پیتی گەورە و بچووک",
+  "find.wholeWord": "تەنها وشەی تەواو"
 }

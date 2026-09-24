@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "مجرّة مجهولة",
   "presence.anonymous.saucer": "طبق طائر مجهول",
   "presence.anonymous.asteroid": "كويكب مجهول",
-  "presence.anonymous.unknown": "مجهول"
+  "presence.anonymous.unknown": "مجهول",
+  "find.placeholder": "البحث في الصفحة",
+  "find.count": "{current} من {total}",
+  "find.noResults": "لا توجد نتائج",
+  "find.previous": "التطابق السابق",
+  "find.next": "التطابق التالي",
+  "find.close": "إغلاق",
+  "find.toggleReplace": "إظهار/إخفاء الاستبدال",
+  "find.replacePlaceholder": "استبدال بـ",
+  "find.replace": "استبدال",
+  "find.replaceAll": "استبدال الكل",
+  "find.matchCase": "مطابقة حالة الأحرف",
+  "find.wholeWord": "مطابقة الكلمة بأكملها"
 }

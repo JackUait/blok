@@ -594,11 +594,16 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // The slot indent term for blocks nested under a slotless block inside a
     // toggle/callout slot adds 325 bytes in main.css.
     const SLOT_INDENT_BYTES = 325;
+    // Find in page: find.css (bar, match map, replace row, lens, reduced
+    // motion) plus its palette tokens in colors.css add 13,649 bytes;
+    // retain 200 bytes of headroom.
+    const FIND_IN_PAGE_BYTES = 13_849;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
       + CONVERT_MENU_RAMP_BYTES
-      + SLOT_INDENT_BYTES;
+      + SLOT_INDENT_BYTES
+      + FIND_IN_PAGE_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

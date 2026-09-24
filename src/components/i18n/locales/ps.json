@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "ناشناخته کهکشان",
   "presence.anonymous.saucer": "ناشناخته الوتونکی بشقاب",
   "presence.anonymous.asteroid": "ناشناخته سیارک",
-  "presence.anonymous.unknown": "ناشناخته"
+  "presence.anonymous.unknown": "ناشناخته",
+  "find.placeholder": "په پاڼه کې ومومئ",
+  "find.count": "{current}/{total}",
+  "find.noResults": "هېڅ شی ونه موندل شو",
+  "find.previous": "پخوانۍ پایله",
+  "find.next": "بله پایله",
+  "find.close": "وتړئ",
+  "find.toggleReplace": "بدلول ښکاره/پټ کړئ",
+  "find.replacePlaceholder": "په دې بدل کړئ",
+  "find.replace": "بدل یې کړئ",
+  "find.replaceAll": "ټول بدل کړئ",
+  "find.matchCase": "د لویو او کوچنیو تورو توپیر",
+  "find.wholeWord": "یوازې بشپړ ټکي"
 }

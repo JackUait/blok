@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Galaksi awanama",
   "presence.anonymous.saucer": "Piring terbang awanama",
   "presence.anonymous.asteroid": "Asteroid awanama",
-  "presence.anonymous.unknown": "Awanama"
+  "presence.anonymous.unknown": "Awanama",
+  "find.placeholder": "Cari dalam halaman",
+  "find.count": "{current} daripada {total}",
+  "find.noResults": "Tiada hasil",
+  "find.previous": "Padanan sebelumnya",
+  "find.next": "Padanan seterusnya",
+  "find.close": "Tutup",
+  "find.toggleReplace": "Tunjuk/sembunyi ganti",
+  "find.replacePlaceholder": "Ganti dengan",
+  "find.replace": "Ganti",
+  "find.replaceAll": "Ganti semua",
+  "find.matchCase": "Padankan huruf besar/kecil",
+  "find.wholeWord": "Padankan seluruh perkataan"
 }

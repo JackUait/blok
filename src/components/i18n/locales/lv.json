@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Anonīma galaktika",
   "presence.anonymous.saucer": "Anonīms NLO",
   "presence.anonymous.asteroid": "Anonīms asteroīds",
-  "presence.anonymous.unknown": "Anonīms"
+  "presence.anonymous.unknown": "Anonīms",
+  "find.placeholder": "Meklēt lapā",
+  "find.count": "{current} no {total}",
+  "find.noResults": "Nekas nav atrasts",
+  "find.previous": "Iepriekšējā atbilstība",
+  "find.next": "Nākamā atbilstība",
+  "find.close": "Aizvērt",
+  "find.toggleReplace": "Rādīt/slēpt aizstāšanu",
+  "find.replacePlaceholder": "Aizstāt ar",
+  "find.replace": "Aizstāt",
+  "find.replaceAll": "Aizstāt visu",
+  "find.matchCase": "Reģistrjutīgs",
+  "find.wholeWord": "Tikai veseli vārdi"
 }

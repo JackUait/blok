@@ -27,6 +27,7 @@ import { BlockSelection } from './blockSelection';
 import { Caret } from './caret';
 import { CrossBlockSelection } from './crossBlockSelection';
 import { DragController as DragManager } from './drag/DragController';
+import { Find } from './find';
 import { I18n } from './i18n';
 import { ModificationsObserver } from './modificationsObserver';
 import { Paste } from './paste';
@@ -86,6 +87,7 @@ export const Modules = {
   Caret,
   CrossBlockSelection,
   DragManager,
+  Find,
   ModificationsObserver,
   Paste,
   ReadOnly,

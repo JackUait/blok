@@ -489,6 +489,20 @@
   --blok-video-scrim-mid: rgba(0, 0, 0, 0.2);
   --blok-video-shadow-hover: 0 8px 24px -8px rgba(0, 0, 0, 0.18);
   --blok-video-focus-ring: color-mix(in srgb, var(--blok-video-accent) 30%, transparent);
+
+  /* Find in page. The two match colours are ::highlight() fills, so they sit
+     UNDER the text: keep them translucent or glyphs lose contrast. */
+  --blok-find-match-bg: rgba(255, 212, 0, 0.32);
+  --blok-find-match-active-bg: rgba(255, 138, 0, 0.5);
+  --blok-find-lens-ring: rgba(255, 128, 0, 0.72);
+  --blok-find-lens-glow: rgba(255, 138, 0, 0.22);
+  --blok-find-tick: rgba(55, 53, 47, 0.26);
+  --blok-find-tick-active: #f08a00;
+  --blok-find-empty-bg: rgba(235, 87, 87, 0.07);
+  --blok-find-empty-border: rgba(235, 87, 87, 0.55);
+  --blok-find-bar-width: 432px;
+  --blok-find-control-size: 28px;
+  --blok-z-find: 25;
 }
 
 /* ─── Dark theme — system preference ────────────────── */
@@ -665,6 +679,15 @@
     --blok-database-column-pill-text: rgba(255, 255, 255, 0.9);
     --blok-database-card-actions-icon: rgba(255, 255, 255, 0.75);
     --blok-database-card-actions-divider: rgba(255, 255, 255, 0.4);
+
+    --blok-find-match-bg: rgba(255, 212, 0, 0.2);
+    --blok-find-match-active-bg: rgba(255, 146, 38, 0.5);
+    --blok-find-lens-ring: rgba(255, 163, 68, 0.8);
+    --blok-find-lens-glow: rgba(255, 163, 68, 0.26);
+    --blok-find-tick: rgba(255, 255, 255, 0.26);
+    --blok-find-tick-active: #ffa344;
+    --blok-find-empty-bg: rgba(251, 93, 93, 0.12);
+    --blok-find-empty-border: rgba(251, 93, 93, 0.6);
   }
 }
 
@@ -841,6 +864,15 @@
   --blok-database-column-pill-text: rgba(255, 255, 255, 0.9);
   --blok-database-card-actions-icon: rgba(255, 255, 255, 0.75);
   --blok-database-card-actions-divider: rgba(255, 255, 255, 0.4);
+
+  --blok-find-match-bg: rgba(255, 212, 0, 0.2);
+  --blok-find-match-active-bg: rgba(255, 146, 38, 0.5);
+  --blok-find-lens-ring: rgba(255, 163, 68, 0.8);
+  --blok-find-lens-glow: rgba(255, 163, 68, 0.26);
+  --blok-find-tick: rgba(255, 255, 255, 0.26);
+  --blok-find-tick-active: #ffa344;
+  --blok-find-empty-bg: rgba(251, 93, 93, 0.12);
+  --blok-find-empty-border: rgba(251, 93, 93, 0.6);
 }
 
 /* ─── Native selection opt-out ──────────────────────── */

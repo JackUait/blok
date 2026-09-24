@@ -177,7 +177,8 @@ export class RectangleSelection extends Module {
 
     const elemWhereSelectionStart = document.elementFromPoint(pageX - scrollLeft, pointerY);
 
-    if (!elemWhereSelectionStart) {
+    // The find bar floats over the content: pressing its buttons is not a drag.
+    if (!elemWhereSelectionStart || elemWhereSelectionStart.closest('[data-blok-find]') !== null) {
       return;
     }
 

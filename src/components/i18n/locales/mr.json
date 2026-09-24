@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "अनामिक आकाशगंगा",
   "presence.anonymous.saucer": "अनामिक उडती तबकडी",
   "presence.anonymous.asteroid": "अनामिक लघुग्रह",
-  "presence.anonymous.unknown": "अनामिक"
+  "presence.anonymous.unknown": "अनामिक",
+  "find.placeholder": "पृष्ठात शोधा",
+  "find.count": "{total} पैकी {current}",
+  "find.noResults": "काहीही सापडले नाही",
+  "find.previous": "मागील जुळणी",
+  "find.next": "पुढील जुळणी",
+  "find.close": "बंद करा",
+  "find.toggleReplace": "बदला दाखवा/लपवा",
+  "find.replacePlaceholder": "यासह बदला",
+  "find.replace": "बदला",
+  "find.replaceAll": "सर्व बदला",
+  "find.matchCase": "अक्षरांचा केस जुळवा",
+  "find.wholeWord": "संपूर्ण शब्द जुळवा"
 }

@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Anonymous Galaxy",
   "presence.anonymous.saucer": "Anonymous UFO",
   "presence.anonymous.asteroid": "Anonymous Asteroid",
-  "presence.anonymous.unknown": "Anonymous"
+  "presence.anonymous.unknown": "Anonymous",
+  "find.placeholder": "Find in page",
+  "find.count": "{current} of {total}",
+  "find.noResults": "No results",
+  "find.previous": "Previous match",
+  "find.next": "Next match",
+  "find.close": "Close",
+  "find.toggleReplace": "Toggle replace",
+  "find.replacePlaceholder": "Replace with",
+  "find.replace": "Replace",
+  "find.replaceAll": "Replace all",
+  "find.matchCase": "Match case",
+  "find.wholeWord": "Match whole word"
 }

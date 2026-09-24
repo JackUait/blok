@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Galaktikë anonime",
   "presence.anonymous.saucer": "UFO anonim",
   "presence.anonymous.asteroid": "Asteroid anonim",
-  "presence.anonymous.unknown": "Anonim"
+  "presence.anonymous.unknown": "Anonim",
+  "find.placeholder": "Gjej në faqe",
+  "find.count": "{current} nga {total}",
+  "find.noResults": "Nuk u gjet asgjë",
+  "find.previous": "Përputhja e mëparshme",
+  "find.next": "Përputhja tjetër",
+  "find.close": "Mbyll",
+  "find.toggleReplace": "Shfaq/fshih zëvendësimin",
+  "find.replacePlaceholder": "Zëvendëso me",
+  "find.replace": "Zëvendëso",
+  "find.replaceAll": "Zëvendësoji të gjitha",
+  "find.matchCase": "Dallo shkronjat e mëdha/të vogla",
+  "find.wholeWord": "Vetëm fjalë të plota"
 }

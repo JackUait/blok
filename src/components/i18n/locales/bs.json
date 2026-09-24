@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Anonimna galaksija",
   "presence.anonymous.saucer": "Anonimni NLO",
   "presence.anonymous.asteroid": "Anonimni asteroid",
-  "presence.anonymous.unknown": "Anonimac"
+  "presence.anonymous.unknown": "Anonimac",
+  "find.placeholder": "Pronađi na stranici",
+  "find.count": "{current} od {total}",
+  "find.noResults": "Ništa nije pronađeno",
+  "find.previous": "Prethodno podudaranje",
+  "find.next": "Sljedeće podudaranje",
+  "find.close": "Zatvori",
+  "find.toggleReplace": "Prikaži/sakrij zamjenu",
+  "find.replacePlaceholder": "Zamijeni sa",
+  "find.replace": "Zamijeni",
+  "find.replaceAll": "Zamijeni sve",
+  "find.matchCase": "Razlikuj velika i mala slova",
+  "find.wholeWord": "Samo cijele riječi"
 }

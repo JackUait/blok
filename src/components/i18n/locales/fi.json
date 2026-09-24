@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Nimetön galaksi",
   "presence.anonymous.saucer": "Nimetön ufo",
   "presence.anonymous.asteroid": "Nimetön asteroidi",
-  "presence.anonymous.unknown": "Nimetön"
+  "presence.anonymous.unknown": "Nimetön",
+  "find.placeholder": "Etsi sivulta",
+  "find.count": "{current}/{total}",
+  "find.noResults": "Ei tuloksia",
+  "find.previous": "Edellinen osuma",
+  "find.next": "Seuraava osuma",
+  "find.close": "Sulje",
+  "find.toggleReplace": "Näytä/piilota korvaus",
+  "find.replacePlaceholder": "Korvaa tekstillä",
+  "find.replace": "Korvaa",
+  "find.replaceAll": "Korvaa kaikki",
+  "find.matchCase": "Sama kirjainkoko",
+  "find.wholeWord": "Vain kokonaiset sanat"
 }

@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "അജ്ഞാത ഗാലക്സി",
   "presence.anonymous.saucer": "അജ്ഞാത പറക്കുംതളിക",
   "presence.anonymous.asteroid": "അജ്ഞാത ഛിന്നഗ്രഹം",
-  "presence.anonymous.unknown": "അജ്ഞാതൻ"
+  "presence.anonymous.unknown": "അജ്ഞാതൻ",
+  "find.placeholder": "പേജിൽ കണ്ടെത്തുക",
+  "find.count": "{current}/{total}",
+  "find.noResults": "ഒന്നും കണ്ടെത്തിയില്ല",
+  "find.previous": "മുമ്പത്തെ പൊരുത്തം",
+  "find.next": "അടുത്ത പൊരുത്തം",
+  "find.close": "അടയ്ക്കുക",
+  "find.toggleReplace": "മാറ്റിസ്ഥാപിക്കൽ കാണിക്കുക/മറയ്ക്കുക",
+  "find.replacePlaceholder": "ഇതുപയോഗിച്ച് മാറ്റുക",
+  "find.replace": "മാറ്റുക",
+  "find.replaceAll": "എല്ലാം മാറ്റുക",
+  "find.matchCase": "അക്ഷരവലുപ്പം പൊരുത്തപ്പെടുത്തുക",
+  "find.wholeWord": "മുഴുവൻ വാക്ക് പൊരുത്തപ്പെടുത്തുക"
 }

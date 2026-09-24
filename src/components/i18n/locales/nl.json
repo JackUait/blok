@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Anoniem sterrenstelsel",
   "presence.anonymous.saucer": "Anonieme ufo",
   "presence.anonymous.asteroid": "Anonieme asteroïde",
-  "presence.anonymous.unknown": "Anoniem"
+  "presence.anonymous.unknown": "Anoniem",
+  "find.placeholder": "Zoeken op pagina",
+  "find.count": "{current} van {total}",
+  "find.noResults": "Niets gevonden",
+  "find.previous": "Vorige overeenkomst",
+  "find.next": "Volgende overeenkomst",
+  "find.close": "Sluiten",
+  "find.toggleReplace": "Vervangen tonen/verbergen",
+  "find.replacePlaceholder": "Vervangen door",
+  "find.replace": "Vervangen",
+  "find.replaceAll": "Alles vervangen",
+  "find.matchCase": "Hoofdlettergevoelig",
+  "find.wholeWord": "Alleen hele woorden"
 }

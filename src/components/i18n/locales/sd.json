@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "گمنام ڪهڪشان",
   "presence.anonymous.saucer": "گمنام اڏامندڙ ٿالهي",
   "presence.anonymous.asteroid": "گمنام سيارچو",
-  "presence.anonymous.unknown": "گمنام"
+  "presence.anonymous.unknown": "گمنام",
+  "find.placeholder": "صفحي ۾ ڳوليو",
+  "find.count": "{current}/{total}",
+  "find.noResults": "ڪجھ نه مليو",
+  "find.previous": "پوئين ميلاپ",
+  "find.next": "ايندڙ ميلاپ",
+  "find.close": "بند ڪريو",
+  "find.toggleReplace": "مٽائڻ ڏيکاريو/لڪايو",
+  "find.replacePlaceholder": "هن سان مٽايو",
+  "find.replace": "مٽايو",
+  "find.replaceAll": "سڀ مٽايو",
+  "find.matchCase": "وڏن ننڍن اکرن جو فرق",
+  "find.wholeWord": "رڳو پورا لفظ"
 }

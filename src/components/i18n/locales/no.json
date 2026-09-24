@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Anonym galakse",
   "presence.anonymous.saucer": "Anonymt ufo",
   "presence.anonymous.asteroid": "Anonym asteroide",
-  "presence.anonymous.unknown": "Anonym"
+  "presence.anonymous.unknown": "Anonym",
+  "find.placeholder": "Finn på siden",
+  "find.count": "{current} av {total}",
+  "find.noResults": "Ingen treff",
+  "find.previous": "Forrige treff",
+  "find.next": "Neste treff",
+  "find.close": "Lukk",
+  "find.toggleReplace": "Vis/skjul erstatt",
+  "find.replacePlaceholder": "Erstatt med",
+  "find.replace": "Erstatt",
+  "find.replaceAll": "Erstatt alle",
+  "find.matchCase": "Skill mellom store og små bokstaver",
+  "find.wholeWord": "Bare hele ord"
 }

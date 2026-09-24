@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Анонимна галаксија",
   "presence.anonymous.saucer": "Анонимни НЛО",
   "presence.anonymous.asteroid": "Анонимни астероид",
-  "presence.anonymous.unknown": "Анонимац"
+  "presence.anonymous.unknown": "Анонимац",
+  "find.placeholder": "Пронађи на страници",
+  "find.count": "{current} од {total}",
+  "find.noResults": "Ништа није пронађено",
+  "find.previous": "Претходно подударање",
+  "find.next": "Следеће подударање",
+  "find.close": "Затвори",
+  "find.toggleReplace": "Прикажи/сакриј замену",
+  "find.replacePlaceholder": "Замени са",
+  "find.replace": "Замени",
+  "find.replaceAll": "Замени све",
+  "find.matchCase": "Разликуј велика и мала слова",
+  "find.wholeWord": "Само целе речи"
 }

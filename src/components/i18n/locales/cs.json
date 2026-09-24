@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Anonymní galaxie",
   "presence.anonymous.saucer": "Anonymní UFO",
   "presence.anonymous.asteroid": "Anonymní asteroid",
-  "presence.anonymous.unknown": "Anonym"
+  "presence.anonymous.unknown": "Anonym",
+  "find.placeholder": "Najít na stránce",
+  "find.count": "{current} z {total}",
+  "find.noResults": "Nic nenalezeno",
+  "find.previous": "Předchozí shoda",
+  "find.next": "Další shoda",
+  "find.close": "Zavřít",
+  "find.toggleReplace": "Zobrazit/skrýt nahrazení",
+  "find.replacePlaceholder": "Nahradit čím",
+  "find.replace": "Nahradit",
+  "find.replaceAll": "Nahradit vše",
+  "find.matchCase": "Rozlišovat velká a malá písmena",
+  "find.wholeWord": "Pouze celá slova"
 }

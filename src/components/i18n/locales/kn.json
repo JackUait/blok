@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "ಅನಾಮಧೇಯ ನಕ್ಷತ್ರಪುಂಜ",
   "presence.anonymous.saucer": "ಅನಾಮಧೇಯ ಹಾರುವ ತಟ್ಟೆ",
   "presence.anonymous.asteroid": "ಅನಾಮಧೇಯ ಕ್ಷುದ್ರಗ್ರಹ",
-  "presence.anonymous.unknown": "ಅನಾಮಧೇಯ"
+  "presence.anonymous.unknown": "ಅನಾಮಧೇಯ",
+  "find.placeholder": "ಪುಟದಲ್ಲಿ ಹುಡುಕಿ",
+  "find.count": "{current}/{total}",
+  "find.noResults": "ಏನೂ ಕಂಡುಬಂದಿಲ್ಲ",
+  "find.previous": "ಹಿಂದಿನ ಹೊಂದಾಣಿಕೆ",
+  "find.next": "ಮುಂದಿನ ಹೊಂದಾಣಿಕೆ",
+  "find.close": "ಮುಚ್ಚಿ",
+  "find.toggleReplace": "ಬದಲಾಯಿಸುವಿಕೆ ತೋರಿಸಿ/ಮರೆಮಾಡಿ",
+  "find.replacePlaceholder": "ಇದರೊಂದಿಗೆ ಬದಲಾಯಿಸಿ",
+  "find.replace": "ಬದಲಾಯಿಸಿ",
+  "find.replaceAll": "ಎಲ್ಲವನ್ನೂ ಬದಲಾಯಿಸಿ",
+  "find.matchCase": "ಅಕ್ಷರದ ಕೇಸ್ ಹೊಂದಿಸಿ",
+  "find.wholeWord": "ಪೂರ್ಣ ಪದ ಹೊಂದಿಸಿ"
 }

@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "အမည်မသိ နဂါးငွေ့တန်း",
   "presence.anonymous.saucer": "အမည်မသိ ပျံသန်းသောပန်းကန်ပြား",
   "presence.anonymous.asteroid": "အမည်မသိ ဂြိုဟ်သေး",
-  "presence.anonymous.unknown": "အမည်မသိ"
+  "presence.anonymous.unknown": "အမည်မသိ",
+  "find.placeholder": "စာမျက်နှာတွင် ရှာရန်",
+  "find.count": "{current}/{total}",
+  "find.noResults": "ဘာမှမတွေ့ပါ",
+  "find.previous": "ယခင် ကိုက်ညီမှု",
+  "find.next": "နောက် ကိုက်ညီမှု",
+  "find.close": "ပိတ်",
+  "find.toggleReplace": "အစားထိုးခြင်း ပြ/ဖျောက်",
+  "find.replacePlaceholder": "အစားထိုးမည့်စာ",
+  "find.replace": "အစားထိုးရန်",
+  "find.replaceAll": "အားလုံး အစားထိုးရန်",
+  "find.matchCase": "စာလုံးအကြီးအသေး ကိုက်ညီရန်",
+  "find.wholeWord": "စကားလုံးအပြည့် ကိုက်ညီရန်"
 }

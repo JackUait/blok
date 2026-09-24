@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "అనామక పాలపుంత",
   "presence.anonymous.saucer": "అనామక ఎగిరే పళ్ళెం",
   "presence.anonymous.asteroid": "అనామక గ్రహశకలం",
-  "presence.anonymous.unknown": "అనామకుడు"
+  "presence.anonymous.unknown": "అనామకుడు",
+  "find.placeholder": "పేజీలో కనుగొనండి",
+  "find.count": "{current}/{total}",
+  "find.noResults": "ఏమీ కనుగొనబడలేదు",
+  "find.previous": "మునుపటి సరిపోలిక",
+  "find.next": "తదుపరి సరిపోలిక",
+  "find.close": "మూసివేయి",
+  "find.toggleReplace": "భర్తీని చూపు/దాచు",
+  "find.replacePlaceholder": "దీనితో భర్తీ చేయి",
+  "find.replace": "భర్తీ చేయి",
+  "find.replaceAll": "అన్నీ భర్తీ చేయి",
+  "find.matchCase": "అక్షర కేస్‌ను సరిపోల్చు",
+  "find.wholeWord": "పూర్తి పదాన్ని సరిపోల్చు"
 }

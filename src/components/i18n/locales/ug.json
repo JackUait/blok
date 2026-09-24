@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "نامسىز گالاكتىكا",
   "presence.anonymous.saucer": "نامسىز ئۇچار تەخسە",
   "presence.anonymous.asteroid": "نامسىز ئاستېرويىد",
-  "presence.anonymous.unknown": "نامسىز"
+  "presence.anonymous.unknown": "نامسىز",
+  "find.placeholder": "بەتتىن ئىزدەش",
+  "find.count": "{current}/{total}",
+  "find.noResults": "ھېچنېمە تېپىلمىدى",
+  "find.previous": "ئالدىنقى ماس كەلگەن",
+  "find.next": "كېيىنكى ماس كەلگەن",
+  "find.close": "تاقاش",
+  "find.toggleReplace": "ئالماشتۇرۇشنى كۆرسىتىش/يوشۇرۇش",
+  "find.replacePlaceholder": "مۇنىڭغا ئالماشتۇرۇش",
+  "find.replace": "ئالماشتۇرۇش",
+  "find.replaceAll": "ھەممىنى ئالماشتۇرۇش",
+  "find.matchCase": "چوڭ-كىچىك ھەرپنى پەرقلەندۈرۈش",
+  "find.wholeWord": "پەقەت پۈتۈن سۆز"
 }

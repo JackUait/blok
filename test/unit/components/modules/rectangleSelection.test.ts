@@ -413,6 +413,53 @@ describe('RectangleSelection', () => {
     elementFromPointSpy.mockRestore();
   });
 
+  it.each([
+    { where: 'the find bar', inFindBar: true, startsSelection: false },
+    { where: 'empty editor space', inFindBar: false, startsSelection: true },
+  ])('a press on $where starts a rectangle selection: $startsSelection', ({ inFindBar, startsSelection }) => {
+    const {
+      rectangleSelection,
+      blokWrapper,
+      modules,
+    } = createRectangleSelection();
+
+    rectangleSelection.prepare();
+
+    if (modules.UI) {
+      modules.UI.nodes.redactor = blokWrapper;
+    }
+
+    vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      bottom: 1000,
+      left: 0,
+      right: 800,
+      width: 800,
+      height: 1000,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    const pressed = document.createElement('button');
+    const container = document.createElement('div');
+
+    if (inFindBar) {
+      container.setAttribute('data-blok-find', '');
+    }
+    container.appendChild(pressed);
+    blokWrapper.appendChild(container);
+
+    const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(pressed);
+    const internal = rectangleSelection as unknown as { mousedown: boolean };
+
+    rectangleSelection.startSelection(20, 25);
+
+    expect(internal.mousedown).toBe(startsSelection);
+
+    elementFromPointSpy.mockRestore();
+  });
+
   it('ignores selection attempts on block content or selectors to avoid', () => {
     const {
       rectangleSelection,

@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Galaksi anonim",
   "presence.anonymous.saucer": "Piring terbang anonim",
   "presence.anonymous.asteroid": "Asteroid anonim",
-  "presence.anonymous.unknown": "Anonim"
+  "presence.anonymous.unknown": "Anonim",
+  "find.placeholder": "Cari di halaman",
+  "find.count": "{current} dari {total}",
+  "find.noResults": "Tidak ditemukan",
+  "find.previous": "Kecocokan sebelumnya",
+  "find.next": "Kecocokan berikutnya",
+  "find.close": "Tutup",
+  "find.toggleReplace": "Tampilkan/sembunyikan ganti",
+  "find.replacePlaceholder": "Ganti dengan",
+  "find.replace": "Ganti",
+  "find.replaceAll": "Ganti semua",
+  "find.matchCase": "Cocokkan huruf besar/kecil",
+  "find.wholeWord": "Cocokkan seluruh kata"
 }

@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Galaxie anonimă",
   "presence.anonymous.saucer": "OZN anonim",
   "presence.anonymous.asteroid": "Asteroid anonim",
-  "presence.anonymous.unknown": "Anonim"
+  "presence.anonymous.unknown": "Anonim",
+  "find.placeholder": "Caută în pagină",
+  "find.count": "{current} din {total}",
+  "find.noResults": "Niciun rezultat",
+  "find.previous": "Potrivirea anterioară",
+  "find.next": "Potrivirea următoare",
+  "find.close": "Închide",
+  "find.toggleReplace": "Afișează/ascunde înlocuirea",
+  "find.replacePlaceholder": "Înlocuiește cu",
+  "find.replace": "Înlocuiește",
+  "find.replaceAll": "Înlocuiește tot",
+  "find.matchCase": "Potrivire majuscule/minuscule",
+  "find.wholeWord": "Doar cuvinte întregi"
 }

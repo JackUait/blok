@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Anoniminė galaktika",
   "presence.anonymous.saucer": "Anoniminis NSO",
   "presence.anonymous.asteroid": "Anoniminis asteroidas",
-  "presence.anonymous.unknown": "Anonimas"
+  "presence.anonymous.unknown": "Anonimas",
+  "find.placeholder": "Rasti puslapyje",
+  "find.count": "{current} iš {total}",
+  "find.noResults": "Nieko nerasta",
+  "find.previous": "Ankstesnis atitikmuo",
+  "find.next": "Kitas atitikmuo",
+  "find.close": "Uždaryti",
+  "find.toggleReplace": "Rodyti/slėpti keitimą",
+  "find.replacePlaceholder": "Pakeisti į",
+  "find.replace": "Pakeisti",
+  "find.replaceAll": "Pakeisti visus",
+  "find.matchCase": "Skirti didžiąsias ir mažąsias raides",
+  "find.wholeWord": "Tik visi žodžiai"
 }

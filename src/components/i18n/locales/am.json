@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "ስም አልባ ጋላክሲ",
   "presence.anonymous.saucer": "ስም አልባ በራሪ ሳህን",
   "presence.anonymous.asteroid": "ስም አልባ አስትሮይድ",
-  "presence.anonymous.unknown": "ስም አልባ"
+  "presence.anonymous.unknown": "ስም አልባ",
+  "find.placeholder": "በገጹ ውስጥ ፈልግ",
+  "find.count": "{current}/{total}",
+  "find.noResults": "ምንም አልተገኘም",
+  "find.previous": "ቀዳሚ ተዛማጅ",
+  "find.next": "ቀጣይ ተዛማጅ",
+  "find.close": "ዝጋ",
+  "find.toggleReplace": "መተኪያን አሳይ/ደብቅ",
+  "find.replacePlaceholder": "በዚህ ተካ",
+  "find.replace": "ተካ",
+  "find.replaceAll": "ሁሉንም ተካ",
+  "find.matchCase": "የፊደል መጠን አዛምድ",
+  "find.wholeWord": "ሙሉ ቃል አዛምድ"
 }

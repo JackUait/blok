@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Անանուն գալակտիկա",
   "presence.anonymous.saucer": "Անանուն թռչող ափսե",
   "presence.anonymous.asteroid": "Անանուն աստերոիդ",
-  "presence.anonymous.unknown": "Անանուն"
+  "presence.anonymous.unknown": "Անանուն",
+  "find.placeholder": "Գտնել էջում",
+  "find.count": "{current}/{total}",
+  "find.noResults": "Ոչինչ չի գտնվել",
+  "find.previous": "Նախորդ համընկնում",
+  "find.next": "Հաջորդ համընկնում",
+  "find.close": "Փակել",
+  "find.toggleReplace": "Ցույց տալ/թաքցնել փոխարինումը",
+  "find.replacePlaceholder": "Փոխարինել հետևյալով",
+  "find.replace": "Փոխարինել",
+  "find.replaceAll": "Փոխարինել բոլորը",
+  "find.matchCase": "Հաշվի առնել մեծատառերը",
+  "find.wholeWord": "Միայն ամբողջական բառեր"
 }

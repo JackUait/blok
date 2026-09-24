@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "अज्ञात आकाशगंगा",
   "presence.anonymous.saucer": "अज्ञात उड्ने तश्तरी",
   "presence.anonymous.asteroid": "अज्ञात क्षुद्रग्रह",
-  "presence.anonymous.unknown": "अज्ञात"
+  "presence.anonymous.unknown": "अज्ञात",
+  "find.placeholder": "पृष्ठमा खोज्नुहोस्",
+  "find.count": "{total} मध्ये {current}",
+  "find.noResults": "केही फेला परेन",
+  "find.previous": "अघिल्लो मिलान",
+  "find.next": "अर्को मिलान",
+  "find.close": "बन्द गर्नुहोस्",
+  "find.toggleReplace": "बदल्ने विकल्प देखाउनुहोस्/लुकाउनुहोस्",
+  "find.replacePlaceholder": "यसले बदल्नुहोस्",
+  "find.replace": "बदल्नुहोस्",
+  "find.replaceAll": "सबै बदल्नुहोस्",
+  "find.matchCase": "अक्षरको केस मिलाउनुहोस्",
+  "find.wholeWord": "पूरा शब्द मिलाउनुहोस्"
 }

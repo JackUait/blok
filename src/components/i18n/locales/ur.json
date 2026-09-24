@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "گمنام کہکشاں",
   "presence.anonymous.saucer": "گمنام اڑن طشتری",
   "presence.anonymous.asteroid": "گمنام سیارچہ",
-  "presence.anonymous.unknown": "گمنام"
+  "presence.anonymous.unknown": "گمنام",
+  "find.placeholder": "صفحے میں تلاش کریں",
+  "find.count": "{total} میں سے {current}",
+  "find.noResults": "کچھ نہیں ملا",
+  "find.previous": "پچھلا مماثل",
+  "find.next": "اگلا مماثل",
+  "find.close": "بند کریں",
+  "find.toggleReplace": "تبدیلی دکھائیں/چھپائیں",
+  "find.replacePlaceholder": "اس سے تبدیل کریں",
+  "find.replace": "تبدیل کریں",
+  "find.replaceAll": "سب تبدیل کریں",
+  "find.matchCase": "حروف کا کیس ملائیں",
+  "find.wholeWord": "پورا لفظ ملائیں"
 }

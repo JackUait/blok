@@ -580,5 +580,17 @@
   "presence.anonymous.galaxy": "Névtelen galaxis",
   "presence.anonymous.saucer": "Névtelen ufó",
   "presence.anonymous.asteroid": "Névtelen aszteroida",
-  "presence.anonymous.unknown": "Névtelen"
+  "presence.anonymous.unknown": "Névtelen",
+  "find.placeholder": "Keresés az oldalon",
+  "find.count": "{current}/{total}",
+  "find.noResults": "Nincs találat",
+  "find.previous": "Előző találat",
+  "find.next": "Következő találat",
+  "find.close": "Bezárás",
+  "find.toggleReplace": "Csere megjelenítése/elrejtése",
+  "find.replacePlaceholder": "Csere erre",
+  "find.replace": "Csere",
+  "find.replaceAll": "Összes cseréje",
+  "find.matchCase": "Kis- és nagybetűk megkülönböztetése",
+  "find.wholeWord": "Csak teljes szavak"
 }

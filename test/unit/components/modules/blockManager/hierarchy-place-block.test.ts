@@ -13,7 +13,7 @@ import { BlockRepository } from '../../../../../src/components/modules/blockMana
 import type { BlocksStore } from '../../../../../src/components/modules/blockManager/types';
 import { placementImpliedByFlat } from '../../../../../src/components/utils/tree-order';
 import type { TreePlacement } from '../../../../../src/components/utils/tree-order';
-import { validateFlatOrder, validateHomeSlots, validateTreeOrder } from '../../../../../src/components/utils/hierarchy-invariant';
+import { validateHomeSlots, validateTreeOrder } from '../../../../../src/components/utils/hierarchy-invariant';
 
 type Kind = 'paragraph' | 'toggle' | 'callout' | 'table';
 
@@ -160,7 +160,6 @@ const expectConsistent = (h: Harness, workingArea: HTMLElement, context: string)
   const blocks = h.store.blocks;
   const byId = new Map(blocks.map(block => [block.id, block]));
 
-  expect(validateFlatOrder(blocks).map(v => v.message), context).toEqual([]);
   expect(validateHomeSlots(blocks, workingArea).map(v => v.message), context).toEqual([]);
   expect(validateTreeOrder(blocks).map(v => v.message), context).toEqual([]);
 

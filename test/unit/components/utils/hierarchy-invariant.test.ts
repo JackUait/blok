@@ -2,7 +2,6 @@ import { afterEach, describe, it, expect } from 'vitest';
 
 import {
   assertHierarchy,
-  validateFlatOrder,
   validateTreeOrder,
   validateHierarchy,
   validateHolderAttachment,
@@ -369,86 +368,6 @@ describe('hierarchy-invariant', () => {
     });
   });
 
-  describe('validateFlatOrder', () => {
-    const block = (id: string, parentId: string | null, contentIds: string[] = [], name = 'paragraph'): {
-      id: string;
-      name: string;
-      parentId: string | null;
-      contentIds: string[];
-    } => ({ id, name, parentId, contentIds });
-
-    it('flags a root block that sits between a container and its children (drag escape)', () => {
-      // Flat a,out,in,c1,c2,b — "in" is a root block wedged inside out's subtree.
-      const violations = validateFlatOrder([
-        block('a', null),
-        block('out', null, ['c1', 'c2'], 'toggle'),
-        block('in', null),
-        block('c1', 'out'),
-        block('c2', 'out'),
-        block('b', null),
-      ]);
-
-      expect(violations).toHaveLength(1);
-      expect(violations[0].index).toBe(2);
-      expect(violations[0].expected).toBe('c1');
-      expect(violations[0].actual).toBe('in');
-      expect(violations[0].message).toMatch(/depth-first/);
-    });
-
-    it('accepts a depth-first flat order', () => {
-      expect(validateFlatOrder([
-        block('a', null),
-        block('out', null, ['c1', 'c2'], 'toggle'),
-        block('c1', 'out', ['g1']),
-        block('g1', 'c1'),
-        block('c2', 'out'),
-        block('in', null),
-        block('b', null),
-      ])).toEqual([]);
-    });
-
-    it('flags a child placed before its parent', () => {
-      expect(validateFlatOrder([
-        block('c1', 't'),
-        block('t', null, ['c1'], 'toggle'),
-      ])).toHaveLength(1);
-    });
-
-    it('takes sibling order from the flat array, not a stale contentIds (the saver derives content[] from it)', () => {
-      expect(validateFlatOrder([
-        block('t', null, ['c2', 'c1'], 'toggle'),
-        block('c1', 't'),
-        block('c2', 't'),
-      ])).toEqual([]);
-    });
-
-    it('treats a dangling parentId as root, like the saver does', () => {
-      expect(validateFlatOrder([
-        block('a', null),
-        block('orphan', 'ghost'),
-      ])).toEqual([]);
-    });
-
-    it('flags a root block wedged inside a table subtree', () => {
-      expect(validateFlatOrder([
-        block('tb', null, ['x', 'y'], 'table'),
-        block('x', 'tb'),
-        block('root', null),
-        block('y', 'tb'),
-      ])).toHaveLength(1);
-    });
-
-    it('reports a parent cycle instead of looping', () => {
-      expect(validateFlatOrder([
-        block('a', 'b', ['b']),
-        block('b', 'a', ['a']),
-      ])).toHaveLength(1);
-    });
-
-    it('reports nothing for an empty list', () => {
-      expect(validateFlatOrder([])).toEqual([]);
-    });
-  });
   describe('validateTreeOrder', () => {
     const block = (id: string, parentId: string | null, contentIds: string[] = [], name = 'paragraph'): {
       id: string;

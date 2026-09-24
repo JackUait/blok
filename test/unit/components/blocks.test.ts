@@ -1446,68 +1446,6 @@ describe('Blocks', () => {
     });
   });
 
-  describe('insertAfter', () => {
-    it('should insert block after target block', () => {
-      const blocks = createBlocks();
-      const block1 = createMockBlock('block-1');
-      const block2 = createMockBlock('block-2');
-      const block3 = createMockBlock('block-3');
-
-      blocks.push(block1);
-      blocks.push(block2);
-
-      blocks.insertAfter(block1, block3);
-
-      expect(blocks.blocks[0]).toBe(block1);
-      expect(blocks.blocks[1]).toBe(block3);
-      expect(blocks.blocks[2]).toBe(block2);
-    });
-
-    it('should insert at end when target is last block', () => {
-      const blocks = createBlocks();
-      const block1 = createMockBlock('block-1');
-      const block2 = createMockBlock('block-2');
-
-      blocks.push(block1);
-
-      blocks.insertAfter(block1, block2);
-
-      expect(blocks.blocks[0]).toBe(block1);
-      expect(blocks.blocks[1]).toBe(block2);
-    });
-
-    describe('stale target guard (regression: wrong-block-dropped family)', () => {
-      /**
-       * Layer 14: defensive guard for Blocks.insertAfter.
-       *
-       * Without the guard, passing a stale targetBlock (not in `this.blocks`
-       * anymore) makes `indexOf` return `-1`, then `insert(index + 1, …)` =
-       * `insert(0, …)` which silently teleports the new block to the TOP of
-       * the document. The symptom is identical to wrong-block-dropped: the
-       * user expected the new block to land next to a specific target, and
-       * it lands somewhere completely unrelated. insertAfter currently has
-       * no live callers, but codifying the guard now stops any future caller
-       * from reintroducing the bug class.
-       */
-      it('should be a no-op when targetBlock is not in the array', () => {
-        const blocks = createBlocks();
-        const block1 = createMockBlock('block-1');
-        const block2 = createMockBlock('block-2');
-        const staleBlock = createMockBlock('stale');
-        const newBlock = createMockBlock('new-block');
-
-        blocks.push(block1);
-        blocks.push(block2);
-
-        blocks.insertAfter(staleBlock, newBlock);
-
-        expect(blocks.length).toBe(2);
-        expect(blocks.blocks[0]).toBe(block1);
-        expect(blocks.blocks[1]).toBe(block2);
-      });
-    });
-  });
-
   describe('get', () => {
     it('should return block at specified index', () => {
       const blocks = createBlocks();
@@ -2319,16 +2257,13 @@ describe('Blocks', () => {
       expect(blocks.idIndexViolations()).toEqual([]);
     });
 
-    it('indexes blocks added by addToArray and insertAfter', () => {
-      const { blocks, made } = filled('a');
+    it('indexes blocks added by addToArray', () => {
+      const { blocks } = filled('a');
       const staged = createMockBlock('b');
-      const after = createMockBlock('c');
 
       blocks.addToArray(1, staged);
-      blocks.insertAfter(made[0], after);
 
       expect(blocks.getById('b')).toBe(staged);
-      expect(blocks.getById('c')).toBe(after);
       expect(blocks.idIndexViolations()).toEqual([]);
     });
 

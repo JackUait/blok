@@ -513,31 +513,6 @@ export class Blocks {
   }
 
   /**
-   * Insert Block after passed target
-   * @todo decide if this method is necessary
-   * @param {Block} targetBlock — target after which Block should be inserted
-   * @param {Block} newBlock — Block to insert
-   */
-  public insertAfter(targetBlock: Block, newBlock: Block): void {
-    const index = this.blocks.indexOf(targetBlock);
-
-    /**
-     * Layer 14: stale target guard (regression: wrong-block-dropped family).
-     *
-     * Without this guard, a stale `targetBlock` makes `indexOf` return `-1`,
-     * then `insert(0, newBlock)` teleports the new block to the TOP of the
-     * document — the same symptom as wrong-block-dropped. insertAfter has
-     * no live callers today, but codifying the guard now prevents a future
-     * consumer from reintroducing the bug class through this entry point.
-     */
-    if (index === -1) {
-      return;
-    }
-
-    this.insert(index + 1, newBlock);
-  }
-
-  /**
    * Get Block by index
    * @param {number} index — Block index
    * @returns {Block}

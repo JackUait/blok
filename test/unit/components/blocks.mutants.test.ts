@@ -703,36 +703,6 @@ describe('Blocks (mutation coverage)', () => {
     });
   });
 
-  describe('insertAfter', () => {
-    it('ignores a target that is not part of the array', () => {
-      const blocks = new Blocks(workingArea);
-      const a = makeBlock('a');
-      const fresh = makeBlock('fresh');
-
-      blocks.push(a);
-
-      blocks.insertAfter(makeBlock('stranger'), fresh);
-
-      expect(arrayOrder(blocks)).toEqual(['a']);
-      expect(fresh.holder.parentElement).toBeNull();
-    });
-
-    it('inserts a new block after the target', () => {
-      const blocks = new Blocks(workingArea);
-      const a = makeBlock('a');
-      const b = makeBlock('b');
-      const fresh = makeBlock('fresh');
-
-      blocks.push(a);
-      blocks.push(b);
-
-      blocks.insertAfter(a, fresh);
-
-      expect(arrayOrder(blocks)).toEqual(['a', 'fresh', 'b']);
-      expect(domOrder(workingArea)).toEqual(['a', 'fresh', 'b']);
-    });
-  });
-
   describe('removeAll', () => {
     it('clears the array and the working area', () => {
       const blocks = new Blocks(workingArea);

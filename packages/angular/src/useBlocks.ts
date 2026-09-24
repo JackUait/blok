@@ -170,7 +170,7 @@ export function injectBlocks(
     update: (id, data, tunes) => bound().update(id, data, tunes),
     convert: (id, newType, dataOverrides, options) => bound().convert(id, newType, dataOverrides, options),
     transact: (fn) => bound().transact(fn),
-    transactWithoutCapture: (fn) => bound().transactWithoutCapture(fn),
+    transactWithoutCapture: (fn, options) => bound().transactWithoutCapture(fn, options),
     getBlocksCount: () => bound().getBlocksCount(),
     getCurrentBlockIndex: () => bound().getCurrentBlockIndex(),
     getBlockByIndex: (index) => bound().getBlockByIndex(index),

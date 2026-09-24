@@ -9,6 +9,8 @@
 import type { UseBlokConfig as PublishedConfig, BlokContentProps as PublishedContentProps } from '../../../packages/vue/types/index';
 import type { UseBlokConfig as InternalConfig } from '../../../packages/vue/src/types';
 import type { BlokContentProps as InternalContentProps } from '../../../packages/vue/src/types';
+import type { UseBlocksApi as PublishedBlocksApi } from '../../../packages/vue/types/index';
+import type { UseBlocksApi as InternalBlocksApi } from '../../../packages/vue/src/blocks-snapshot';
 
 type Equal<A, B> =
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
@@ -16,6 +18,7 @@ type Expect<T extends true> = T;
 
 type _ConfigMatches = Expect<Equal<PublishedConfig, InternalConfig>>;
 type _ContentPropsMatch = Expect<Equal<PublishedContentProps, InternalContentProps>>;
+type _BlocksApiMatches = Expect<Equal<PublishedBlocksApi, InternalBlocksApi>>;
 
 // Every published export name must exist in the runtime entry (and vice-versa for
 // the value/function exports — type-only exports are excluded by construction).
@@ -42,4 +45,4 @@ type PublishedValueExports = Exclude<
 >;
 type _ExportsCovered = Expect<Equal<PublishedValueExports, keyof typeof Source>>;
 
-export type { _ConfigMatches, _ContentPropsMatch, _ExportsCovered };
+export type { _ConfigMatches, _ContentPropsMatch, _BlocksApiMatches, _ExportsCovered };

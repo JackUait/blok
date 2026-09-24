@@ -268,6 +268,16 @@ describe('useBlocks (Vue) — React parity surface', () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
+  it('transactWithoutCapture passes derived-data options to core', () => {
+    const { editor, spies } = makeFakeEditor([{ id: 'a', name: 'paragraph', parentId: null }]);
+    const { api } = mountUseBlocks(ref<Blok | null>(editor));
+    const options = { derivedFrom: 'a', from: ['url'] };
+
+    api.transactWithoutCapture(vi.fn(), options);
+
+    expect(spies.transactWithoutCapture).toHaveBeenCalledWith(expect.any(Function), options);
+  });
+
   it('remove is subtree-aware: deletes the block AND its descendants deepest-first', () => {
     const fake = makeFakeEditor([
       { id: 'p', name: 'toggle', parentId: null },

@@ -1507,6 +1507,15 @@ describe('useBlocks additional read/creation APIs', () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
+  it('transactWithoutCapture passes derived-data options to core', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    const options = { derivedFrom: 'a', from: ['url'] };
+
+    act(() => result.current.transactWithoutCapture(vi.fn(), options));
+    expect(editor.blocks.transactWithoutCapture).toHaveBeenCalledWith(expect.any(Function), options);
+  });
+
   it('splitBlock delegates and returns the new node', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }]);
     const { result } = renderHook(() => useBlocks(editor));

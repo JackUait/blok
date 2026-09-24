@@ -226,8 +226,12 @@ export interface UseBlocksApi {
    * the React-surface counterpart of core's `transactWithoutCapture`. Use for
    * silent auto-repair/normalization that a user's CMD+Z should never step
    * through. Mutations inside still emit reactively. Pre-ready it just runs `fn`.
+   *
+   * With `options`, the operations are data worked out from the `from` keys of
+   * block `derivedFrom` (a finished upload, for example): they join the undo
+   * entry that wrote those values, as in core.
    */
-  transactWithoutCapture(fn: () => void): void;
+  transactWithoutCapture(fn: () => void, options?: { derivedFrom?: string; from?: readonly string[] }): void;
   /**
    * The current block count. Reactive (re-reads on 'block changed'). Pre-ready: 0.
    */

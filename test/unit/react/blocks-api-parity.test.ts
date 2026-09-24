@@ -102,6 +102,36 @@ const CORE_TO_REACT: Record<keyof Blocks, Classification> = {
   },
 };
 
+// Members the hook passes straight through: their parameters must stay core's,
+// so a new core option (transactWithoutCapture's `derivedFrom`) reaches the hook.
+// Compile-time only: an entry is `never` (and `true` fails tsc) while they differ.
+type Params<T> = T extends (...args: infer A) => unknown ? A : never;
+type SameParameters<K extends keyof Blocks & keyof UseBlocksApi> =
+  (<T>() => T extends Params<NonNullable<Blocks[K]>> ? 1 : 2) extends <T>() => T extends Params<UseBlocksApi[K]> ? 1 : 2
+    ? true
+    : never;
+type PassThrough =
+  | 'clear' | 'renderFromHTML' | 'exportMarkdown' | 'getBlockByIndex' | 'getById' | 'getCurrentBlockIndex'
+  | 'getBlockIndex' | 'getBlockByElement' | 'getBlocksCount' | 'composeBlockData' | 'update' | 'splitBlock'
+  | 'transact' | 'transactWithoutCapture';
+
+export const SAME_PARAMETERS: { [K in PassThrough]: SameParameters<K> } = {
+  clear: true,
+  renderFromHTML: true,
+  exportMarkdown: true,
+  getBlockByIndex: true,
+  getById: true,
+  getCurrentBlockIndex: true,
+  getBlockIndex: true,
+  getBlockByElement: true,
+  getBlocksCount: true,
+  composeBlockData: true,
+  update: true,
+  splitBlock: true,
+  transact: true,
+  transactWithoutCapture: true,
+};
+
 describe('React block-API parity with core Blocks contract', () => {
   // Witness the LIVE (editor-ready) surface, NOT the pre-ready EMPTY_API. Reading
   // `useBlocks(null)` would only prove EMPTY_API has a key — a method present in

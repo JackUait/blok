@@ -161,7 +161,7 @@ export function useBlocks(
     update: (id, data, tunes) => bound.value.update(id, data, tunes),
     convert: (id, newType, dataOverrides, options) => bound.value.convert(id, newType, dataOverrides, options),
     transact: (fn) => bound.value.transact(fn),
-    transactWithoutCapture: (fn) => bound.value.transactWithoutCapture(fn),
+    transactWithoutCapture: (fn, options) => bound.value.transactWithoutCapture(fn, options),
     getBlocksCount: () => bound.value.getBlocksCount(),
     getCurrentBlockIndex: () => bound.value.getCurrentBlockIndex(),
     getBlockByIndex: (index) => bound.value.getBlockByIndex(index),

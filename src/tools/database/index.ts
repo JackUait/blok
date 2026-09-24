@@ -28,12 +28,18 @@ import {
   localizeDatabaseViews,
 } from './database-localization';
 
-/** Whether a 'block changed' payload is about a database row. */
-const isRowChange = (payload: unknown): boolean => {
-  const target = (payload as { event?: { detail?: { target?: { name?: unknown } } } } | undefined)?.event?.detail?.target;
+interface ChangedBlock {
+  id?: unknown;
+  name?: unknown;
+  parentId?: unknown;
+}
 
-  return target?.name === 'database-row';
-};
+/** The block a 'block changed' payload is about, if the payload carries one. */
+const changedBlock = (payload: unknown): ChangedBlock | undefined =>
+  (payload as { event?: { detail?: { target?: ChangedBlock } } } | undefined)?.event?.detail?.target;
+
+/** Events that can end an inline edit or a drag. */
+const INTERACTION_END_EVENTS = ['focusout', 'pointerup', 'pointercancel', 'keyup'] as const;
 
 /**
  * DatabaseTool — a multi-view Kanban board block tool for Blok.
@@ -67,6 +73,8 @@ export class DatabaseTool implements BlockTool {
   private keyboard: DatabaseKeyboard | null = null;
   private cardMenuPopover: PopoverDesktop | null = null;
   private reprojectQueued = false;
+  /** Set while a full redraw waits for an inline edit or drag to end. */
+  private redrawWhenIdleRetry: (() => void) | null = null;
 
   constructor({ data, config, api, block, readOnly }: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>) {
     this.api = api;
@@ -229,6 +237,7 @@ export class DatabaseTool implements BlockTool {
 
   destroy(): void {
     this.api.events.off('block changed', this.handleBlockChanged);
+    this.stopWaitingForIdle();
     this.cardDrag?.destroy();
     this.columnDrag?.destroy();
     this.columnControls?.destroy();
@@ -332,7 +341,7 @@ export class DatabaseTool implements BlockTool {
    * so they compare equal and redraw nothing.
    */
   private readonly handleBlockChanged = (payload: unknown): void => {
-    if (this.reprojectQueued || !isRowChange(payload)) {
+    if (this.reprojectQueued || !this.isOwnRowChange(changedBlock(payload))) {
       return;
     }
 
@@ -343,18 +352,134 @@ export class DatabaseTool implements BlockTool {
     });
   };
 
+  /**
+   * A row of this database, or one it showed until now (moved out or removed).
+   * An unreadable parent counts as ours: the compare after it drops no-ops.
+   */
+  private isOwnRowChange(target: ChangedBlock | undefined): boolean {
+    if (target?.name !== 'database-row') {
+      return false;
+    }
+
+    if (typeof target.parentId !== 'string' || target.parentId === this.block.id) {
+      return true;
+    }
+
+    return typeof target.id === 'string' && this.model.getRow(target.id) !== undefined;
+  }
+
   private reprojectRows(): void {
     if (this.boardContainer === null) {
       return;
     }
 
-    const before = JSON.stringify(this.model.getOrderedRows());
+    const before = this.model.getOrderedRows();
 
     this.syncRowsFromBlocks();
 
-    if (JSON.stringify(this.model.getOrderedRows()) !== before) {
-      this.rerenderView({ keepDrawer: true });
+    const after = this.model.getOrderedRows();
+    const retitled = this.retitledRows(before, after);
+
+    if (retitled === null) {
+      this.redrawWhenIdle();
+
+      return;
     }
+
+    const currentView = this.boardContainer.querySelector<HTMLElement>('[data-blok-database-board]')
+      ?? this.boardContainer.querySelector<HTMLElement>('[data-blok-database-list]');
+    const titlePropId = this.titlePropertyId();
+
+    if (currentView === null) {
+      return;
+    }
+
+    for (const row of retitled) {
+      this.view.updateRowTitle(currentView, row.id, (row.properties[titlePropId] as string | undefined) ?? '');
+    }
+  }
+
+  /**
+   * Rows whose title is the only thing that changed, or null when anything
+   * else changed (rows added, removed, moved or regrouped).
+   */
+  private retitledRows(before: DatabaseRow[], after: DatabaseRow[]): DatabaseRow[] | null {
+    if (before.length !== after.length) {
+      return null;
+    }
+
+    const titlePropId = this.titlePropertyId();
+    const withoutTitle = (row: DatabaseRow): string => {
+      const { [titlePropId]: _title, ...rest } = row.properties;
+
+      return JSON.stringify({ ...row, properties: rest });
+    };
+    const retitled: DatabaseRow[] = [];
+
+    for (const [index, row] of after.entries()) {
+      const old = before[index];
+
+      if (withoutTitle(old) !== withoutTitle(row)) {
+        return null;
+      }
+
+      if (old.properties[titlePropId] !== row.properties[titlePropId]) {
+        retitled.push(row);
+      }
+    }
+
+    return retitled;
+  }
+
+  /** True while an inline rename in the board or a drag is in progress. */
+  private isInteracting(): boolean {
+    const focused = document.activeElement;
+
+    if (focused instanceof HTMLInputElement && this.boardContainer?.contains(focused) === true) {
+      return true;
+    }
+
+    return this.cardDrag?.active === true || this.columnDrag?.active === true || this.listRowDrag?.active === true;
+  }
+
+  /**
+   * Redraw the board now, or once the inline edit or drag ends. A redraw
+   * replaces the board and would throw away the open input or the drag.
+   */
+  private redrawWhenIdle(): void {
+    if (!this.isInteracting()) {
+      this.rerenderView({ keepDrawer: true });
+
+      return;
+    }
+
+    if (this.redrawWhenIdleRetry !== null) {
+      return;
+    }
+
+    // A timeout, not a microtask: the edit commits and the drop lands in
+    // listeners that may run after this one.
+    const retry = (): void => {
+      setTimeout(() => {
+        if (this.redrawWhenIdleRetry === retry && !this.isInteracting()) {
+          this.rerenderView({ keepDrawer: true });
+        }
+      }, 0);
+    };
+
+    this.redrawWhenIdleRetry = retry;
+    INTERACTION_END_EVENTS.forEach((type) => document.addEventListener(type, retry, true));
+  }
+
+  private stopWaitingForIdle(): void {
+    const retry = this.redrawWhenIdleRetry;
+
+    if (retry === null) {
+      return;
+    }
+
+    this.redrawWhenIdleRetry = null;
+    INTERACTION_END_EVENTS.forEach((type) => document.removeEventListener(type, retry, true));
   }
 
   /** Id of the schema's title column, or '' when the schema has none. */
@@ -1299,6 +1424,8 @@ export class DatabaseTool implements BlockTool {
     if (this.boardContainer === null) {
       return;
     }
+
+    this.stopWaitingForIdle();
 
     // The old board wrapper is the first/only direct child of boardContainer
     const oldBoardWrapper = this.boardContainer.querySelector<HTMLElement>('[data-blok-database-board]')

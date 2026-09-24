@@ -1165,6 +1165,118 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
 
+    describe('a row change under an open inline edit or drag', () => {
+      const twoRows = (): { one: ReturnType<typeof liveRowBlock>; two: ReturnType<typeof liveRowBlock>; tool: DatabaseTool; element: HTMLElement } => {
+        const one = liveRowBlock('row-1', { position: 'a0', properties: { 'prop-title': 'One', 'prop-status': 'opt-todo' } });
+        const two = liveRowBlock('row-2', { position: 'a1', properties: { 'prop-title': 'Two', 'prop-status': 'opt-todo' } });
+        const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks: [one.block, two.block] }));
+        const element = tool.render();
+
+        document.body.appendChild(element);
+        tool.rendered();
+
+        return { one, two, tool, element };
+      };
+
+      const openCardTitleEdit = (element: HTMLElement, rowId: string): HTMLInputElement => {
+        queryAllByData(element, 'data-row-id', rowId).find((el) => el.hasAttribute('data-blok-database-edit-card'))?.click();
+
+        return queryByData(element, 'data-blok-database-card-title-input') as HTMLInputElement;
+      };
+
+      afterEach(() => {
+        document.body.innerHTML = '';
+      });
+
+      it('keeps a half-typed card title when a peer renames another card', async () => {
+        const { two, tool, element } = twoRows();
+        const input = openCardTitleEdit(element, 'row-1');
+
+        input.value = 'One half typed';
+        two.row.setData({ position: 'a1', properties: { 'prop-title': 'Two (peer)', 'prop-status': 'opt-todo' } });
+        blockChangedListener(tool)(rowChanged(two.block));
+        await Promise.resolve();
+
+        expect(element.contains(input)).toBe(true);
+        expect(input.value).toBe('One half typed');
+        expect(cardTitles(element)).toEqual(['Two (peer)']);
+
+        tool.destroy();
+      });
+
+      it('updates a renamed card in place without rebuilding the board', async () => {
+        const { two, tool, element } = twoRows();
+        const board = queryByData(element, 'data-blok-database-board');
+
+        two.row.setData({ position: 'a1', properties: { 'prop-title': 'Two (peer)', 'prop-status': 'opt-todo' } });
+        blockChangedListener(tool)(rowChanged(two.block));
+        await Promise.resolve();
+
+        expect(queryByData(element, 'data-blok-database-board')).toBe(board);
+        expect(cardTitles(element)).toEqual(['One', 'Two (peer)']);
+
+        tool.destroy();
+      });
+
+      it('moves a card to its new column only after the open card title edit ends', async () => {
+        const { two, tool, element } = twoRows();
+        const input = openCardTitleEdit(element, 'row-1');
+
+        input.value = 'One edited';
+        two.row.setData({ position: 'a1', properties: { 'prop-title': 'Two', 'prop-status': 'opt-done' } });
+        blockChangedListener(tool)(rowChanged(two.block));
+        await Promise.resolve();
+
+        expect(element.contains(input)).toBe(true);
+
+        fireEvent.keyDown(input, { key: 'Enter' });
+        fireEvent.keyUp(queryByData(element, 'data-blok-database-card-title', /.*/) ?? document.body, { key: 'Enter' });
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        const doneColumn = queryAllByData(element, 'data-option-id', 'opt-done').find((el) => el.hasAttribute('data-blok-database-column')) as HTMLElement;
+
+        expect(queryAllByData(doneColumn, 'data-blok-database-card-title').map((el) => el.textContent)).toEqual(['Two']);
+
+        tool.destroy();
+      });
+
+      it('keeps a card drag going when a peer changes another card', async () => {
+        const { two, tool, element } = twoRows();
+        const cardDrag = (tool as unknown as { cardDrag: DatabaseCardDrag }).cardDrag;
+        const dragging = (): HTMLElement | null => queryByData(element, 'data-blok-database-dragging');
+
+        cardDrag.beginTracking('row-1', 0, 0);
+        document.dispatchEvent(new MouseEvent('pointermove', { clientX: 50, clientY: 50 }));
+
+        const draggedBoard = dragging();
+
+        expect(draggedBoard).not.toBeNull();
+
+        two.row.setData({ position: 'a1', properties: { 'prop-title': 'Two', 'prop-status': 'opt-done' } });
+        blockChangedListener(tool)(rowChanged(two.block));
+        await Promise.resolve();
+
+        expect(dragging()).toBe(draggedBoard);
+
+        tool.destroy();
+      });
+
+      it('ignores a row change in another database', async () => {
+        const { tool } = twoRows();
+        const api = (tool as unknown as { api: API }).api;
+        const foreign = liveRowBlock('row-x', { position: 'a0', properties: { 'prop-title': 'X', 'prop-status': 'opt-todo' } });
+
+        Object.defineProperty(foreign.block, 'parentId', { value: 'other-database' });
+        vi.mocked(api.blocks.getChildren).mockClear();
+        blockChangedListener(tool)(rowChanged(foreign.block));
+        await Promise.resolve();
+
+        expect(api.blocks.getChildren).not.toHaveBeenCalled();
+
+        tool.destroy();
+      });
+    });
+
     it('stops listening for row changes when destroyed', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const listener = blockChangedListener(tool);

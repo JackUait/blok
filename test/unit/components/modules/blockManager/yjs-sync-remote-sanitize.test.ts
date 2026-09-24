@@ -49,6 +49,7 @@ const createMockBlock = (options: {
     holder,
     parentId: options.parentId ?? null,
     contentIds: options.contentIds ?? [],
+    inputs: [],
     preservedTunes: {},
     setData: mockSetData as Block['setData'],
     call: vi.fn(),

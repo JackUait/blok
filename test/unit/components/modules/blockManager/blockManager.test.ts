@@ -932,8 +932,15 @@ describe('BlockManager yjs-sync wiring carries config.sanitizer', () => {
       holder,
       parentId: null,
       contentIds: [],
+      inputs: [],
       preservedTunes: {},
       setData: setData as unknown as Block['setData'],
+      // The block shows what it was last set with, as a real block's DOM does.
+      save: vi.fn(() => Promise.resolve({
+        id: 'block-1',
+        tool: 'paragraph',
+        data: (setData.mock.calls.at(-1) as unknown[] | undefined)?.[0] ?? {},
+      })),
       call: vi.fn(),
       destroy: vi.fn(),
       name: 'paragraph',

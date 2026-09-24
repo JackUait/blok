@@ -84,7 +84,7 @@ const expectExactReasonedClassification = (
 const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
   'components/modules/blockEvents/composers/emojiTrigger.ts': 'Mount owner for the inline ":" menu, which is the tracked emoji-picker root surface.',
   'components/modules/drag/DragController.ts': 'Pointer-following drag preview; coordinates refresh on every pointer move.',
-  'components/modules/find/index.ts': 'Find bar is fixed to the window like the browser\'s own, promoted to the top layer while open; its only JS coordinates are the user\'s drag spot, clamped to the window.',
+  'components/modules/find/index.ts': 'Find bar is fixed to the window at the host-configured placement and promoted to the top layer while open; find.css places it, no JS coordinates.',
   'components/utils/announcer.ts': 'Visually hidden ARIA live region with no element anchor or collision boundary.',
   'components/utils/caret/boundaries.ts': 'Synchronous hidden text-measurement node removed before control returns.',
   'components/utils/link-hover-card.ts': 'Tracked fixed root surface registered in ROOT_SURFACE_CONTRACTS.',
@@ -115,7 +115,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'components/modules/collaboration/presence-carets.ts': 'Remote carets convert a measured Range rect into offsets local to the block holder they are appended to; nothing is written against the root.',
   'components/modules/drag/preview/DragPreview.ts': 'Fixed pointer-following preview; root coordinates refresh on every drag pointer update.',
   'components/modules/drag/utils/ColumnDropAnimation.ts': 'Ephemeral fixed drag preview animates to a viewport target rect and is then removed.',
-  'components/modules/find/find-bar.ts': 'Match-map ticks sit at a percentage of their own track; the bar\'s own left/top are the user\'s drag spot, clamped to the window by find-position.ts and re-applied on resize.',
+  'components/modules/find/find-bar.ts': 'Match-map ticks sit at a percentage of their own track; the bar itself is placed by find.css from the host config.',
   'components/modules/rectangleSelection.ts': 'Selection rectangle converts pointer coordinates into its measured local overlay container.',
   'components/modules/toolbar/inline/toolbar-ghost.ts': 'Fading copy of the inline toolbar, placed once at the toolbar\'s measured spot beside its wrapper and removed within 400ms; it never tracks movement.',
   'components/modules/toolbar/index.ts': 'Editor-owned toolbar wrapper uses locally resolved offsets supplied by the toolbar positioner.',
@@ -142,6 +142,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
 const DYNAMIC_STYLE_ACCESS_CLASSIFICATIONS: Record<string, string> = {
   'components/marks/mark-engine.ts': 'Writes/strips the style properties a MarkSpec declares while applying, splitting and sanitizing marks.',
   'components/modules/blockManager/hierarchy.ts': 'Writes the block-depth multiplier custom property; the indent itself is resolved by the stylesheet, never as a coordinate.',
+  'components/modules/find/find-bar.ts': 'Writes the host-configured --blok-find-offset-x/y custom properties, finite numbers only; which window edge they measure from is decided by find.css.',
   'components/modules/collaboration/presence-avatars.ts': 'Writes one presence colour custom property per gutter face, validated hex-only; where the strip sits is decided entirely by presence.css.',
   'components/modules/collaboration/presence-carets.ts': 'Writes one presence colour custom property per caret, validated hex-only; the caret line is shaped entirely by presence.css.',
   'components/utils/color-migration.ts': 'Writes a validated CSS custom-property name during legacy color migration.',

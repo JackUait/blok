@@ -592,6 +592,5 @@
   "find.replace": "置換",
   "find.replaceAll": "すべて置換",
   "find.matchCase": "大文字と小文字を区別",
-  "find.wholeWord": "単語単位で検索",
-  "find.move": "検索バーを移動"
+  "find.wholeWord": "単語単位で検索"
 }

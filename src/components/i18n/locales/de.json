@@ -592,6 +592,5 @@
   "find.replace": "Ersetzen",
   "find.replaceAll": "Alle ersetzen",
   "find.matchCase": "Groß-/Kleinschreibung beachten",
-  "find.wholeWord": "Nur ganzes Wort",
-  "find.move": "Suchleiste verschieben"
+  "find.wholeWord": "Nur ganzes Wort"
 }

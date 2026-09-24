@@ -592,6 +592,5 @@
   "find.replace": "Csere",
   "find.replaceAll": "Összes cseréje",
   "find.matchCase": "Kis- és nagybetűk megkülönböztetése",
-  "find.wholeWord": "Csak teljes szavak",
-  "find.move": "Keresősáv áthelyezése"
+  "find.wholeWord": "Csak teljes szavak"
 }

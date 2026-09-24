@@ -592,6 +592,5 @@
   "find.replace": "替换",
   "find.replaceAll": "全部替换",
   "find.matchCase": "区分大小写",
-  "find.wholeWord": "全字匹配",
-  "find.move": "移动查找栏"
+  "find.wholeWord": "全字匹配"
 }

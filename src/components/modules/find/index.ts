@@ -353,9 +353,13 @@ export class Find extends Module {
     const { wrapper } = this.Blok.UI.nodes;
     const { I18n } = this.Blok;
 
+    const hostConfig = typeof this.config.find === 'object' ? this.config.find : {};
+
     this.bar = new FindBar({
       t: (key, vars) => I18n.t(key, vars),
       isMac: getUserOS().mac,
+      placement: hostConfig.placement,
+      offset: hostConfig.offset,
       callbacks: {
         onQueryChange: () => this.scheduleSearch(QUERY_DEBOUNCE_MS, { reveal: true }, true),
         onOptionsChange: () => this.search({ reveal: true }),

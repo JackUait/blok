@@ -592,6 +592,5 @@
   "find.replace": "Vervangen",
   "find.replaceAll": "Alles vervangen",
   "find.matchCase": "Hoofdlettergevoelig",
-  "find.wholeWord": "Alleen hele woorden",
-  "find.move": "Zoekbalk verplaatsen"
+  "find.wholeWord": "Alleen hele woorden"
 }

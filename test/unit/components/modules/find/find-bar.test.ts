@@ -72,8 +72,6 @@ describe('FindBar', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // The bar reads its parked spot when it is built.
-    localStorage.clear();
     callbacks = makeCallbacks();
     bar = create();
   });
@@ -414,115 +412,52 @@ describe('FindBar', () => {
     });
   });
 
-  describe('position', () => {
-    const grip = (): HTMLButtonElement => button(bar.element, 'find.move');
-    /**
-     * Layout box as the browser reports it. The visual box is deliberately
-     * smaller: the entrance animation scales the bar, and a position worked
-     * out from a scaled box lands a few pixels off.
-     */
-    const layOut = (target: FindBar): void => {
-      const style = target.element.style;
-
-      Object.defineProperties(target.element, {
-        offsetLeft: { configurable: true, get: () => parseFloat(style.left || '792') },
-        offsetTop: { configurable: true, get: () => parseFloat(style.top || '12') },
-        offsetWidth: { configurable: true, get: () => 400 },
-        offsetHeight: { configurable: true, get: () => 50 },
-      });
-      vi.spyOn(target.element, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 0, y: 0, width: 388, height: 48 }));
-    };
-    const pointer = (target: HTMLElement, type: string, x: number, y: number): void => {
-      target.dispatchEvent(new MouseEvent(type, { bubbles: true, clientX: x, clientY: y, button: 0 }));
-    };
-
-    beforeEach(() => {
-      vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1200);
-      vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(800);
-      layOut(bar);
+  describe('placement', () => {
+    const placed = (init: Partial<ConstructorParameters<typeof FindBar>[0]>): FindBar => {
+      bar.destroy();
+      bar = new FindBar({ t, callbacks, isMac: true, ...init });
+      document.body.appendChild(bar.element);
       bar.open({ readOnly: false });
-    });
+
+      return bar;
+    };
 
     it('rises into the top layer, above everything on the page', () => {
+      bar.open({ readOnly: false });
+
       expect(bar.element.getAttribute('data-blok-top-layer')).toBe('true');
     });
 
-    it('starts where the browser puts its own find bar, until moved', () => {
-      expect(bar.element.style.left).toBe('');
-      expect(bar.element.hasAttribute('data-blok-find-moved')).toBe(false);
-    });
-
-    it('follows a drag on its grip and remembers where it was dropped', () => {
-      pointer(grip(), 'pointerdown', 800, 20);
-      pointer(grip(), 'pointermove', 500, 320);
-      pointer(grip(), 'pointerup', 500, 320);
-
-      expect(bar.element.style.left).toBe('492px');
-      expect(bar.element.style.top).toBe('312px');
-      expect(bar.element.hasAttribute('data-blok-find-moved')).toBe(true);
-      expect(localStorage.getItem('blok:find-bar-position')).not.toBeNull();
-    });
-
-    it('can be dragged by its empty background but not by a button', () => {
-      pointer(button(bar.element, 'find.next'), 'pointerdown', 800, 20);
-      pointer(button(bar.element, 'find.next'), 'pointermove', 500, 320);
-
-      expect(bar.element.style.left).toBe('');
-
-      const row = bar.element.querySelector('[data-blok-find-row]');
-
-      if (!(row instanceof HTMLElement)) {
-        throw new Error('row missing');
-      }
-      pointer(row, 'pointerdown', 800, 20);
-      pointer(row, 'pointermove', 700, 20);
-      pointer(row, 'pointerup', 700, 20);
-
-      expect(bar.element.style.left).toBe('692px');
-    });
-
-    it('never leaves the window', () => {
-      pointer(grip(), 'pointerdown', 800, 20);
-      pointer(grip(), 'pointermove', -900, 5000);
-      pointer(grip(), 'pointerup', -900, 5000);
-
-      expect(bar.element.style.left).toBe('8px');
-      expect(bar.element.style.top).toBe(`${800 - 50 - 8}px`);
-    });
-
-    it('moves with the arrow keys on its grip, further with Shift', () => {
-      press(grip(), { key: 'ArrowLeft' });
-      expect(bar.element.style.left).toBe('776px');
-
-      press(grip(), { key: 'ArrowDown', shiftKey: true });
-      expect(bar.element.style.top).toBe('76px');
-    });
-
-    it('goes back to the default spot on Home or a double-click on the grip', () => {
-      press(grip(), { key: 'ArrowLeft' });
-      press(grip(), { key: 'Home' });
-
-      expect(bar.element.style.left).toBe('');
-      expect(localStorage.getItem('blok:find-bar-position')).toBeNull();
-
-      press(grip(), { key: 'ArrowLeft' });
-      grip().dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-
-      expect(bar.element.style.left).toBe('');
-    });
-
-    it('opens where it was left last time', () => {
-      pointer(grip(), 'pointerdown', 800, 20);
-      pointer(grip(), 'pointermove', 500, 320);
-      pointer(grip(), 'pointerup', 500, 320);
-      bar.destroy();
-
-      bar = create();
-      layOut(bar);
+    it('sits where browsers put their own find bar unless told otherwise', () => {
       bar.open({ readOnly: false });
 
-      expect(bar.element.style.left).toBe('492px');
-      expect(bar.element.style.top).toBe('312px');
+      expect(bar.element.getAttribute('data-blok-find-placement')).toBe('top-end');
+      expect(bar.element.style.getPropertyValue('--blok-find-offset-x')).toBe('');
+    });
+
+    it('takes the placement and offset the host configured', () => {
+      const configured = placed({ placement: 'bottom-start', offset: { x: 24, y: 80 } });
+
+      expect(configured.element.getAttribute('data-blok-find-placement')).toBe('bottom-start');
+      expect(configured.element.style.getPropertyValue('--blok-find-offset-x')).toBe('24px');
+      expect(configured.element.style.getPropertyValue('--blok-find-offset-y')).toBe('80px');
+    });
+
+    it('falls back to the default spot for a placement it does not know', () => {
+      const configured = placed({ placement: 'middle' as unknown as 'top-end', offset: { x: Number.NaN } });
+
+      expect(configured.element.getAttribute('data-blok-find-placement')).toBe('top-end');
+      expect(configured.element.style.getPropertyValue('--blok-find-offset-x')).toBe('');
+    });
+
+    it('cannot be moved by the people using the editor', () => {
+      bar.open({ readOnly: false });
+      bar.element.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 800, clientY: 20 }));
+      bar.element.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 300, clientY: 400 }));
+
+      expect(bar.element.style.left).toBe('');
+      expect(bar.element.style.top).toBe('');
+      expect(bar.element.querySelector('[data-blok-testid="find-grip"]')).toBeNull();
     });
   });
 

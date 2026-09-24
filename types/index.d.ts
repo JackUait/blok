@@ -94,6 +94,8 @@ export {
   BlokMountOptions,
   BlokState,
   ReadOnlyModeConfig,
+  FindConfig,
+  FindPlacement,
   SanitizerConfig,
   SanitizerRule,
   ToolSanitizerConfig,

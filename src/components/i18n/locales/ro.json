@@ -592,6 +592,5 @@
   "find.replace": "Înlocuiește",
   "find.replaceAll": "Înlocuiește tot",
   "find.matchCase": "Potrivire majuscule/minuscule",
-  "find.wholeWord": "Doar cuvinte întregi",
-  "find.move": "Mută bara de căutare"
+  "find.wholeWord": "Doar cuvinte întregi"
 }

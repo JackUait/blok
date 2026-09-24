@@ -592,6 +592,5 @@
   "find.replace": "แทนที่",
   "find.replaceAll": "แทนที่ทั้งหมด",
   "find.matchCase": "ตรงตามตัวพิมพ์เล็ก-ใหญ่",
-  "find.wholeWord": "ตรงทั้งคำ",
-  "find.move": "ย้ายแถบค้นหา"
+  "find.wholeWord": "ตรงทั้งคำ"
 }

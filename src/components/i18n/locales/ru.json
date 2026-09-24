@@ -592,6 +592,5 @@
   "find.replace": "Заменить",
   "find.replaceAll": "Заменить все",
   "find.matchCase": "Учитывать регистр",
-  "find.wholeWord": "Слово целиком",
-  "find.move": "Переместить панель поиска"
+  "find.wholeWord": "Слово целиком"
 }

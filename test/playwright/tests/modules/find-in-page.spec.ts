@@ -126,8 +126,6 @@ test.describe('find in page', () => {
 
   test.beforeEach(async ({ page }) => {
     await gotoTestPage(page);
-    // The parked bar position is per viewer and would leak between tests.
-    await page.evaluate(() => localStorage.removeItem('blok:find-bar-position'));
   });
 
   test.describe('opening', () => {
@@ -623,7 +621,6 @@ test.describe('find in page', () => {
       });
 
     test('opens at the top-right of the window, where browsers put their find bar', async ({ page }) => {
-      await page.evaluate(() => localStorage.removeItem('blok:find-bar-position'));
       await createEditor(page, paragraphs('hello there'), { width: '380px' });
       await focusParagraph(page, 'hello there');
       await page.keyboard.press(FIND_KEY);
@@ -663,67 +660,36 @@ test.describe('find in page', () => {
       expect(onTop).toBe(true);
     });
 
-    test('can be dragged by its grip and a new editor opens it there again', async ({ page }) => {
-      // Scrolled, so a position measured against the document instead of the window would show.
-      await page.addStyleTag({ content: 'body { min-height: 3000px; }' });
-      await createEditor(page, paragraphs('hello there'));
-      await page.evaluate(() => window.scrollTo({ top: 400, behavior: 'instant' }));
-      await focusParagraph(page, 'hello there');
-      await page.keyboard.press(FIND_KEY);
-
-      const grip = page.getByTestId('find-grip');
-
-      // The entrance animation scales the bar from its corner; grab it once it is still.
-      await page.getByTestId('find-bar').evaluate((bar) =>
-        Promise.all(bar.getAnimations({ subtree: true }).map((animation) => animation.finished))
-      );
-      const start = await grip.boundingBox();
-
-      if (start === null) {
-        throw new Error('grip not laid out');
-      }
-      await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
-      await page.mouse.down();
-      await page.mouse.move(start.x - 300, start.y + 250, { steps: 8 });
-      await page.mouse.up();
-
-      const moved = await barBox(page);
-      const visual = await page.getByTestId('find-bar').boundingBox();
-
-      expect(moved?.top).toBeGreaterThan(200);
-      expect(Math.abs((visual?.y ?? 0) - (moved?.top ?? 0))).toBeLessThan(2);
-
-      await page.keyboard.press('Escape');
-      // A fresh editor builds a fresh bar, which reads the parked spot from storage.
-      await page.evaluate(async () => {
-        await window.blokInstance?.destroy?.();
+    test('sits where the host placed it, and people cannot drag it away', async ({ page }) => {
+      await createEditor(page, paragraphs('hello there'), {
+        config: { find: { placement: 'bottom-start', offset: { x: 40, y: 30 } } },
       });
-      await expect(page.getByTestId('find-dock')).toHaveCount(0);
-      await createEditor(page, paragraphs('hello there'));
       await focusParagraph(page, 'hello there');
       await page.keyboard.press(FIND_KEY);
       await expect(page.getByTestId('find-bar')).toBeVisible();
 
-      const reopened = await barBox(page);
+      const placed = await barBox(page);
+      const viewportHeight = await page.evaluate(() => document.documentElement.clientHeight);
+      const bottom = await page.evaluate(() => {
+        const dock = document.querySelector<HTMLElement>('[data-blok-find]');
 
-      expect(Math.abs((reopened?.top ?? 0) - (moved?.top ?? 0))).toBeLessThan(2);
-      expect(Math.abs((reopened?.left ?? 0) - (moved?.left ?? 0))).toBeLessThan(2);
+        return dock === null ? 0 : dock.offsetTop + dock.offsetHeight;
+      });
 
-      await page.evaluate(() => localStorage.removeItem('blok:find-bar-position'));
-    });
+      expect(placed?.left).toBe(40);
+      expect(viewportHeight - bottom).toBe(30);
 
-    test('a double-click on the grip puts it back', async ({ page }) => {
-      await createEditor(page, paragraphs('hello there'));
-      await focusParagraph(page, 'hello there');
-      await page.keyboard.press(FIND_KEY);
-      await page.getByTestId('find-grip').focus();
-      await page.keyboard.press('Shift+ArrowDown');
-      await page.keyboard.press('Shift+ArrowDown');
-      await page.getByTestId('find-grip').dblclick();
+      const bar = await page.getByTestId('find-bar').boundingBox();
 
-      const box = await barBox(page);
+      if (bar === null) {
+        throw new Error('bar not laid out');
+      }
+      await page.mouse.move(bar.x + 4, bar.y + 4);
+      await page.mouse.down();
+      await page.mouse.move(bar.x + 300, bar.y - 300, { steps: 6 });
+      await page.mouse.up();
 
-      expect(box?.top).toBeLessThan(40);
+      expect(await barBox(page)).toEqual(placed);
     });
   });
 

@@ -592,6 +592,5 @@
   "find.replace": "Замінити",
   "find.replaceAll": "Замінити все",
   "find.matchCase": "Враховувати регістр",
-  "find.wholeWord": "Слово цілком",
-  "find.move": "Перемістити панель пошуку"
+  "find.wholeWord": "Слово цілком"
 }

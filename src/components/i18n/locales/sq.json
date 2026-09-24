@@ -592,6 +592,5 @@
   "find.replace": "Zëvendëso",
   "find.replaceAll": "Zëvendësoji të gjitha",
   "find.matchCase": "Dallo shkronjat e mëdha/të vogla",
-  "find.wholeWord": "Vetëm fjalë të plota",
-  "find.move": "Lëviz shiritin e kërkimit"
+  "find.wholeWord": "Vetëm fjalë të plota"
 }

@@ -73,7 +73,6 @@ export type BlokMessageKey =
   | 'find.close'
   | 'find.count'
   | 'find.matchCase'
-  | 'find.move'
   | 'find.next'
   | 'find.noResults'
   | 'find.placeholder'

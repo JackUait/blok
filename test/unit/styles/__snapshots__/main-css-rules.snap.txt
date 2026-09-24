@@ -1626,6 +1626,8 @@
   --blok-find-empty-bg: rgba(235, 87, 87, 0.07);
   --blok-find-empty-border: rgba(235, 87, 87, 0.55);
   --blok-find-bar-width: 432px;
+  --blok-find-offset-x: 16px;
+  --blok-find-offset-y: 12px;
   --blok-find-control-size: 28px;
   --blok-z-find: 25;
 }
@@ -9013,10 +9015,7 @@ span[data-blok-slash-search] {
 
 [data-blok-find], [data-blok-find][data-blok-top-layer][popover] {
   position: fixed;
-  top: var(--blok-space-3);
-  inset-inline-end: var(--blok-space-4);
-  inset-inline-start: auto;
-  bottom: auto;
+  inset: auto;
   z-index: 2147483000;
   margin: 0;
   padding: 0;
@@ -9026,8 +9025,25 @@ span[data-blok-slash-search] {
   transition: display var(--blok-duration-base) allow-discrete, overlay var(--blok-duration-base) allow-discrete;
 }
 
-[data-blok-find][data-blok-find-moved], [data-blok-find][data-blok-find-moved][data-blok-top-layer][popover] {
-  inset-inline-end: auto;
+[data-blok-find][data-blok-find-placement^="top"], [data-blok-find][data-blok-top-layer][popover][data-blok-find-placement^="top"] {
+  top: var(--blok-find-offset-y);
+}
+
+[data-blok-find][data-blok-find-placement^="bottom"], [data-blok-find][data-blok-top-layer][popover][data-blok-find-placement^="bottom"] {
+  bottom: var(--blok-find-offset-y);
+}
+
+[data-blok-find][data-blok-find-placement$="-end"], [data-blok-find][data-blok-top-layer][popover][data-blok-find-placement$="-end"] {
+  inset-inline-end: var(--blok-find-offset-x);
+}
+
+[data-blok-find][data-blok-find-placement$="-start"], [data-blok-find][data-blok-top-layer][popover][data-blok-find-placement$="-start"] {
+  inset-inline-start: var(--blok-find-offset-x);
+}
+
+[data-blok-find][data-blok-find-placement$="-center"], [data-blok-find][data-blok-top-layer][popover][data-blok-find-placement$="-center"] {
+  left: 50%;
+  translate: -50% 0;
 }
 
 [data-blok-find-bar] {
@@ -9048,25 +9064,8 @@ span[data-blok-slash-search] {
   transition: opacity var(--blok-duration-popover-enter) var(--blok-ease-popover), transform var(--blok-duration-popover-enter) var(--blok-ease-popover);
 }
 
-[data-blok-find-bar] {
-  cursor: grab;
-}
-
-[data-blok-find-bar]:active:not(:has(button:active, input:active)) {
-  cursor: grabbing;
-}
-
-[data-blok-find-bar] [data-blok-find-grip] {
-  width: 16px;
-  margin-inline-end: -2px;
-  color: var(--blok-text-secondary);
-  opacity: 0.55;
-  cursor: grab;
-  touch-action: none;
-}
-
-[data-blok-find-bar] [data-blok-find-grip]:hover, [data-blok-find-bar] [data-blok-find-grip]:focus-visible {
-  opacity: 1;
+[data-blok-find][data-blok-find-placement^="bottom"] [data-blok-find-bar] {
+  transform-origin: bottom right;
 }
 
 [data-blok-find-bar]:dir(rtl) {

@@ -225,6 +225,34 @@ export interface ReadOnlyModeConfig {
 }
 
 /**
+ * Where the find bar sits in the window. `start` and `end` follow the
+ * editor's text direction: `top-end` is the top-right corner in a
+ * left-to-right editor and the top-left corner in a right-to-left one.
+ */
+export type FindPlacement = 'top-start' | 'top-center' | 'top-end' | 'bottom-start' | 'bottom-center' | 'bottom-end';
+
+/**
+ * Object form of the `find` option. Passing this object enables find.
+ */
+export interface FindConfig {
+  /**
+   * Where the find bar sits in the window. It is fixed there: it does not
+   * scroll with the page, and people using the editor cannot move it.
+   * @default 'top-end' (where browsers put their own find bar)
+   */
+  placement?: FindPlacement;
+
+  /**
+   * Distance in pixels from the window edges the placement names: `x` from
+   * the side edge, `y` from the top or bottom edge. Use it to clear your own
+   * fixed UI, for example `{ y: 64 }` under a 64px app header. `x` is ignored
+   * for the centered placements.
+   * @default { x: 16, y: 12 }
+   */
+  offset?: { x?: number; y?: number };
+}
+
+/**
  * LIVE editor state (the reactive contract).
  *
  * Every field declared here is mutable at runtime through a documented public
@@ -841,11 +869,12 @@ export interface BlokMountOptions {
    * Find in page: Cmd/Ctrl+F opens Blok's own find bar instead of the browser's.
    * It searches collapsed toggles too and, when the editor is editable, can
    * replace matches (Cmd+Option+F on macOS, Ctrl+H elsewhere). Set `false` to
-   * leave Cmd/Ctrl+F to the browser.
+   * leave Cmd/Ctrl+F to the browser. Pass {@link FindConfig} to choose where
+   * the bar sits.
    *
    * @default true
    */
-  find?: boolean;
+  find?: boolean | FindConfig;
 
   /**
    * Blok's log level (how many logs you want to see)

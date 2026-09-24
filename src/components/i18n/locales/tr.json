@@ -592,6 +592,5 @@
   "find.replace": "Değiştir",
   "find.replaceAll": "Tümünü değiştir",
   "find.matchCase": "Büyük/küçük harf duyarlı",
-  "find.wholeWord": "Yalnızca tam sözcük",
-  "find.move": "Arama çubuğunu taşı"
+  "find.wholeWord": "Yalnızca tam sözcük"
 }

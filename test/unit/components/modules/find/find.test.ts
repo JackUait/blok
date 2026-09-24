@@ -230,6 +230,14 @@ describe('Find module', () => {
     expect(press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true }).defaultPrevented).toBe(false);
   });
 
+  it('turns on with the object form of the config and puts the bar where the host asked', () => {
+    const { redactor } = editor([{ id: 'a', text: 'hello' }], { find: { placement: 'bottom-center', offset: { y: 40 } } });
+
+    expect(press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(openBar().getAttribute('data-blok-find-placement')).toBe('bottom-center');
+    expect(openBar().style.getPropertyValue('--blok-find-offset-y')).toBe('40px');
+  });
+
   it('leaves Cmd+F to a host input outside the editor', () => {
     editor([{ id: 'a', text: 'hello' }]);
     const hostInput = document.createElement('input');

@@ -592,6 +592,5 @@
   "find.replace": "استبدال",
   "find.replaceAll": "استبدال الكل",
   "find.matchCase": "مطابقة حالة الأحرف",
-  "find.wholeWord": "مطابقة الكلمة بأكملها",
-  "find.move": "نقل شريط البحث"
+  "find.wholeWord": "مطابقة الكلمة بأكملها"
 }

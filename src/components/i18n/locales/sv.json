@@ -592,6 +592,5 @@
   "find.replace": "Ersätt",
   "find.replaceAll": "Ersätt alla",
   "find.matchCase": "Matcha gemener/versaler",
-  "find.wholeWord": "Endast hela ord",
-  "find.move": "Flytta sökfältet"
+  "find.wholeWord": "Endast hela ord"
 }

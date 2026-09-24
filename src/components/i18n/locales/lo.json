@@ -592,6 +592,5 @@
   "find.replace": "ປ່ຽນແທນ",
   "find.replaceAll": "ປ່ຽນແທນທັງໝົດ",
   "find.matchCase": "ກົງກັບຕົວພິມໃຫຍ່-ນ້ອຍ",
-  "find.wholeWord": "ກົງກັບຄຳທັງໝົດ",
-  "find.move": "ຍ້າຍແຖບຊອກຫາ"
+  "find.wholeWord": "ກົງກັບຄຳທັງໝົດ"
 }

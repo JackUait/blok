@@ -592,6 +592,5 @@
   "find.replace": "Reemplazar",
   "find.replaceAll": "Reemplazar todo",
   "find.matchCase": "Coincidir mayúsculas y minúsculas",
-  "find.wholeWord": "Solo palabras completas",
-  "find.move": "Mover barra de búsqueda"
+  "find.wholeWord": "Solo palabras completas"
 }

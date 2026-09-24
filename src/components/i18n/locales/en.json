@@ -592,6 +592,5 @@
   "find.replace": "Replace",
   "find.replaceAll": "Replace all",
   "find.matchCase": "Match case",
-  "find.wholeWord": "Match whole word",
-  "find.move": "Move find bar"
+  "find.wholeWord": "Match whole word"
 }

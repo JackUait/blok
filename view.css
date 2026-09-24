@@ -818,6 +818,8 @@
   --blok-find-empty-bg: rgba(235, 87, 87, 0.07);
   --blok-find-empty-border: rgba(235, 87, 87, 0.55);
   --blok-find-bar-width: 432px;
+  --blok-find-offset-x: 16px;
+  --blok-find-offset-y: 12px;
   --blok-find-control-size: 28px;
   --blok-z-find: 25;
 }

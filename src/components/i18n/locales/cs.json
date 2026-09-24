@@ -592,6 +592,5 @@
   "find.replace": "Nahradit",
   "find.replaceAll": "Nahradit vše",
   "find.matchCase": "Rozlišovat velká a malá písmena",
-  "find.wholeWord": "Pouze celá slova",
-  "find.move": "Přesunout panel hledání"
+  "find.wholeWord": "Pouze celá slova"
 }

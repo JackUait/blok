@@ -304,7 +304,10 @@ describe('CrossBlockSelection — mutation coverage', () => {
 
     const repository = new BlockRepository();
 
-    repository.initialize({ array: blocks } as unknown as BlocksStore);
+    repository.initialize({
+      array: blocks,
+      getById: (id: string) => blocks.find((candidate) => candidate.id === id),
+    } as unknown as BlocksStore);
 
     blockManagerState = { currentBlock: p[0] };
     uiState = { someToolbarOpened: false };

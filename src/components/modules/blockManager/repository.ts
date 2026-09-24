@@ -119,7 +119,16 @@ export class BlockRepository {
    * @returns {Block | undefined}
    */
   public getBlockById(id: string): Block | undefined {
-    return this.blocksStore.array.find((block) => block.id === id);
+    return this.blocksStore.getById(id);
+  }
+
+  /**
+   * Puts the same blocks in a new flat order, in place. The one write here:
+   * it goes through the store so the store's id index stays in sync.
+   * @param order - every block of the store, in the new order
+   */
+  public reorderBlocks(order: Block[]): void {
+    this.blocksStore.reorder(order);
   }
 
   /**

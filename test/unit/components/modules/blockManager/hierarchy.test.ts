@@ -2148,4 +2148,47 @@ describe('BlockHierarchy', () => {
     });
   });
 
+
+  describe('flat reorders go through the store id index', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    const storeWith = (configs: Array<{ id: string; parentId?: string | null }>): Blocks => {
+      const store = new Blocks(workingArea);
+
+      configs.forEach((config) => store.push(createMockBlock(config)));
+      repository = new BlockRepository();
+      repository.initialize(store as BlocksStore);
+      hierarchy = new BlockHierarchy(repository);
+
+      return store;
+    };
+
+    it('reorders through the store when a block joins a parent further down', () => {
+      const store = storeWith([{ id: 'p' }, { id: 'a' }, { id: 'b' }]);
+      const reorder = vi.spyOn(store, 'reorder');
+
+      hierarchy.setBlockParent(requireBlock('a'), 'b');
+
+      expect(reorder).toHaveBeenCalledTimes(1);
+      expect(store.array.map((block) => block.id)).toEqual(['p', 'b', 'a']);
+      expect(store.idIndexViolations()).toEqual([]);
+    });
+
+    it('reorders through the store when a block leaves a parent that keeps other children', () => {
+      const store = storeWith([{ id: 'p' }, { id: 'c1', parentId: 'p' }, { id: 'c2', parentId: 'p' }]);
+      const reorder = vi.spyOn(store, 'reorder');
+
+      hierarchy.setBlockParent(requireBlock('c1'), null);
+
+      expect(reorder).toHaveBeenCalledTimes(1);
+      expect(store.array.map((block) => block.id)).toEqual(['p', 'c2', 'c1']);
+      expect(store.idIndexViolations()).toEqual([]);
+    });
+  });
 });

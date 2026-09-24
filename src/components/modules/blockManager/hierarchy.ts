@@ -226,7 +226,7 @@ export class BlockHierarchy {
     const insertAt = lastInRun === -1 ? rest.length : parentIndex + 1 + lastInRun;
 
     rest.splice(insertAt, 0, ...subtree);
-    blocks.splice(0, blocks.length, ...rest);
+    this.repository.reorderBlocks(rest);
   }
 
   /**
@@ -282,7 +282,7 @@ export class BlockHierarchy {
     const insertAt = endOfRun === -1 ? rest.length : ancestorIndex + 1 + endOfRun;
 
     rest.splice(insertAt, 0, ...subtree);
-    blocks.splice(0, blocks.length, ...rest);
+    this.repository.reorderBlocks(rest);
   }
 
   /**

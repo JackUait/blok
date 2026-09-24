@@ -2534,9 +2534,12 @@ describe('BlockManager prepared boot — real sub-module closures', () => {
     return insert;
   };
 
-  /** The REAL post-prepare blocks array (Blocks instance behind the proxy). */
-  const rawArrayOf = (harness: Harness): Block[] =>
-    (privateOf(harness)._blocks as { array: Block[] }).array;
+  /** Appends to the REAL post-prepare store, with no DOM or lifecycle work. */
+  const seedStore = (harness: Harness, ...blocks: Block[]): void => {
+    const store = privateOf(harness)._blocks as Blocks;
+
+    blocks.forEach((block) => store.addToArray(store.length, block));
+  };
 
   const blokOf = (harness: Harness): { BlockEvents: Record<string, Mock> } =>
     (harness.blockManager as unknown as { Blok: { BlockEvents: Record<string, Mock> } }).Blok;
@@ -2583,7 +2586,7 @@ describe('BlockManager prepared boot — real sub-module closures', () => {
       }),
     } as unknown as Block;
 
-    rawArrayOf(harness).push(bindable);
+    seedStore(harness, bindable);
     binderOf(harness).bindBlockEvents(bindable);
 
     expect(didMutatedCallbacks).toHaveLength(1);
@@ -2683,7 +2686,7 @@ describe('BlockManager prepared boot — real sub-module closures', () => {
     const child = createBlockStub({ id: 'child', parentId: null });
     const harness = buildBooted();
 
-    rawArrayOf(harness).push(parent, child);
+    seedStore(harness, parent, child);
     harness.blockManager.setBlockParent(child, 'parent');
     await settle();
 
@@ -2698,7 +2701,7 @@ describe('BlockManager prepared boot — real sub-module closures', () => {
     const child = createBlockStub({ id: 'child', parentId: null });
     const harness = buildBooted();
 
-    rawArrayOf(harness).push(parent, child);
+    seedStore(harness, parent, child);
     await harness.blockManager.withViewRebuild(async () => {
       harness.blockManager.setBlockParent(child, 'parent');
     });
@@ -2715,7 +2718,7 @@ describe('BlockManager prepared boot — real sub-module closures', () => {
     const child = createBlockStub({ id: 'child', parentId: null });
     const harness = buildBooted({ blocks: [child] });
 
-    rawArrayOf(harness).push(child);
+    seedStore(harness, child);
 
     await harness.blockManager.withViewRebuild(async () => {
       expect(() => harness.blockManager.setBlockParent(child, 'ghost')).not.toThrow();
@@ -2746,7 +2749,7 @@ describe('BlockManager prepared boot — real sub-module closures', () => {
     const block = createBlockStub({ id: 'b1' });
     const harness = buildBooted();
 
-    rawArrayOf(harness).push(block);
+    seedStore(harness, block);
     const insert = stubOperationsAfterBoot(harness);
 
     invokePrivate(realYjsSyncOf(harness), 'handleYjsRemove', 'b1');
@@ -2766,7 +2769,7 @@ describe('BlockManager prepared boot — real sub-module closures', () => {
     const block = createBlockStub({ id: 'b1' });
     const harness = buildBooted();
 
-    rawArrayOf(harness).push(block);
+    seedStore(harness, block);
     const newBlock = createBlockStub({ id: 'b1' });
     const composeSpy = vi.spyOn(
       privateOf(harness).factory as { composeBlock: (o: unknown) => Block },

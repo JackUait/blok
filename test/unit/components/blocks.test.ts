@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Blocks } from '../../../src/components/blocks';
 import type { Block } from '../../../src/components/block';
 import { BlockToolAPI } from '../../../src/components/block';
@@ -2223,5 +2223,162 @@ describe('Blocks', () => {
       expect(children.indexOf(block1.holder)).toBeLessThan(children.indexOf(block2.holder));
     });
   });
-});
 
+  describe('id index', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    const filled = (...ids: string[]): { blocks: Blocks; made: Block[] } => {
+      const blocks = createBlocks();
+      const made = ids.map((id) => createMockBlock(id));
+
+      made.forEach((block) => blocks.push(block));
+
+      return { blocks, made };
+    };
+
+    it('finds pushed blocks by id', () => {
+      const { blocks, made } = filled('a', 'b');
+
+      expect(blocks.getById('a')).toBe(made[0]);
+      expect(blocks.getById('b')).toBe(made[1]);
+      expect(blocks.getById('missing')).toBeUndefined();
+      expect(blocks.idIndexViolations()).toEqual([]);
+    });
+
+    it('indexes a block added by insert, and forgets the one insert replaces', () => {
+      const { blocks, made } = filled('a', 'b');
+      const inserted = createMockBlock('c');
+      const replacement = createMockBlock('d');
+
+      blocks.insert(1, inserted);
+      blocks.insert(0, replacement, true);
+
+      expect(blocks.getById('c')).toBe(inserted);
+      expect(blocks.getById('d')).toBe(replacement);
+      expect(blocks.getById('a')).toBeUndefined();
+      expect(blocks.getById('b')).toBe(made[1]);
+      expect(blocks.idIndexViolations()).toEqual([]);
+    });
+
+    it('indexes a block set through the proxy', () => {
+      const { blocks } = filled('a');
+      const proxied = new Proxy(blocks, { set: Blocks.set, get: Blocks.get }) as Blocks & { [index: number]: Block };
+      const added = createMockBlock('b');
+
+      proxied[1] = added;
+
+      expect(proxied.getById('b')).toBe(added);
+      expect(proxied.idIndexViolations()).toEqual([]);
+    });
+
+    it('swaps the index entry on replace', () => {
+      const { blocks } = filled('a', 'b');
+      const replacement = createMockBlock('c');
+
+      blocks.replace(0, replacement);
+
+      expect(blocks.getById('a')).toBeUndefined();
+      expect(blocks.getById('c')).toBe(replacement);
+      expect(blocks.idIndexViolations()).toEqual([]);
+    });
+
+    it('indexes every block of insertMany, into an empty store and a filled one', () => {
+      const blocks = createBlocks();
+      const first = [createMockBlock('a'), createMockBlock('b')];
+      const second = [createMockBlock('c'), createMockBlock('d')];
+
+      blocks.insertMany(first, 0);
+      blocks.insertMany(second, 1);
+
+      expect(blocks.getById('a')).toBe(first[0]);
+      expect(blocks.getById('b')).toBe(first[1]);
+      expect(blocks.getById('c')).toBe(second[0]);
+      expect(blocks.getById('d')).toBe(second[1]);
+      expect(blocks.idIndexViolations()).toEqual([]);
+    });
+
+    it('forgets removed blocks, one by one and all at once', () => {
+      const { blocks, made } = filled('a', 'b', 'c');
+
+      blocks.remove(1);
+
+      expect(blocks.getById('b')).toBeUndefined();
+      expect(blocks.getById('c')).toBe(made[2]);
+      expect(blocks.idIndexViolations()).toEqual([]);
+
+      blocks.removeAll();
+
+      expect(blocks.getById('a')).toBeUndefined();
+      expect(blocks.getById('c')).toBeUndefined();
+      expect(blocks.idIndexViolations()).toEqual([]);
+    });
+
+    it('indexes blocks added by addToArray and insertAfter', () => {
+      const { blocks, made } = filled('a');
+      const staged = createMockBlock('b');
+      const after = createMockBlock('c');
+
+      blocks.addToArray(1, staged);
+      blocks.insertAfter(made[0], after);
+
+      expect(blocks.getById('b')).toBe(staged);
+      expect(blocks.getById('c')).toBe(after);
+      expect(blocks.idIndexViolations()).toEqual([]);
+    });
+
+    it('keeps the index after move', () => {
+      const { blocks, made } = filled('a', 'b', 'c');
+
+      blocks.move(0, 2);
+
+      expect(blocks.getById('c')).toBe(made[2]);
+      expect(blocks.idIndexViolations()).toEqual([]);
+    });
+
+    it('reorders the live array in place and keeps the index', () => {
+      const { blocks, made } = filled('a', 'b', 'c');
+      const live = blocks.array;
+
+      blocks.reorder([made[2], made[0], made[1]]);
+
+      expect(blocks.array).toBe(live);
+      expect(live.map((block) => block.id)).toEqual(['c', 'a', 'b']);
+      expect(blocks.getById('a')).toBe(made[0]);
+      expect(blocks.idIndexViolations()).toEqual([]);
+    });
+
+    it('returns the first block in array order when two blocks share an id', () => {
+      const blocks = createBlocks();
+      const first = createMockBlock('twin');
+      const second = createMockBlock('twin');
+
+      blocks.push(first);
+      blocks.push(second);
+
+      expect(blocks.getById('twin')).toBe(first);
+
+      blocks.move(0, 1);
+
+      expect(blocks.getById('twin')).toBe(second);
+
+      blocks.remove(0);
+
+      expect(blocks.getById('twin')).toBe(first);
+      expect(blocks.idIndexViolations()).toEqual([]);
+    });
+
+    it('reports a block written to the array behind the index', () => {
+      const { blocks } = filled('a');
+
+      blocks.blocks.push(createMockBlock('b'));
+
+      expect(blocks.idIndexViolations()).not.toEqual([]);
+    });
+  });
+});

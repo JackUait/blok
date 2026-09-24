@@ -143,12 +143,23 @@ const cellOf = (block: Block, asParent = false): Element | null =>
  * @param tree - the blocks
  * @param block - the block being moved
  * @param parentId - its new parent
+ * @param refId - the `before`/`after` sibling, if any
  */
-export const assertCanMoveUnder = (tree: BlockTree, block: Block, parentId: string | null): void => {
+export const assertCanMoveUnder = (tree: BlockTree, block: Block, parentId: string | null, refId?: string): void => {
   const parent = parentId === null ? undefined : findBlock(tree, parentId, 'parent block');
 
   if (parent !== undefined && (parent === block || isUnder(tree, parent, block.id))) {
     throw new BlockPlacementError(`cannot move "${block.id}" inside its own subtree`);
+  }
+
+  // Before the same-parent return: the cells of one table share the table as
+  // parent. A table parent with no sibling names no cell at all.
+  const ref = refId === undefined ? undefined : tree.getBlockById(refId);
+  const parentCell = parent === undefined ? null : cellOf(parent, true);
+  const targetCell = ref === undefined ? parentCell : cellOf(ref);
+
+  if (cellOf(block) !== targetCell) {
+    throw new BlockPlacementError(`cannot move "${block.id}" into, out of or between table cells`);
   }
 
   if (parentId === block.parentId) {
@@ -167,10 +178,6 @@ export const assertCanMoveUnder = (tree: BlockTree, block: Block, parentId: stri
 
   if (isColumnPart(oldParent) || isColumnPart(parent)) {
     throw new BlockPlacementError(`cannot move "${block.id}" into or out of a column`);
-  }
-
-  if (cellOf(block) !== (parent === undefined ? null : cellOf(parent, true))) {
-    throw new BlockPlacementError(`cannot move "${block.id}" into or out of a table cell`);
   }
 
   if (!isChildToolAllowed(parent, block.name)) {

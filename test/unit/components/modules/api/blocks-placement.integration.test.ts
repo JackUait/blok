@@ -554,6 +554,74 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       await expect(instance.save()).resolves.toBeDefined();
     }, 30_000);
 
+    /** A table whose first cell holds p1, p2 and whose second cell holds q1. */
+    const blockCells = (): OutputBlockData[] => [
+      {
+        id: 'tbl',
+        type: 'table',
+        data: { withHeadings: false, content: [[{ blocks: ['p1', 'p2'] }, { blocks: ['q1'] }]] },
+        content: ['p1', 'p2', 'q1'],
+      },
+      P('p1', 'tbl'),
+      P('p2', 'tbl'),
+      P('q1', 'tbl'),
+    ];
+
+    /** Which cell each block's holder sits in, as `id@cellIndex`. */
+    const cellsOf = (): string[] =>
+      Array.from(holder?.querySelectorAll('[data-blok-table-cell-blocks]') ?? []).flatMap((cell, cellIndex) =>
+        Array.from(cell.querySelectorAll('[data-blok-id]')).map(el => `${el.getAttribute('data-blok-id') ?? '?'}@${cellIndex}`)
+      );
+
+    const savedCells = async (instance: TestEditor): Promise<unknown> =>
+      (await instance.save()).blocks.find(block => block.id === 'tbl')?.data.content;
+
+    it('throws and changes nothing when moving a block to another cell of the same table', async () => {
+      const instance = await boot(blockCells());
+      const before = { flat: flat(instance), cells: cellsOf(), saved: await savedCells(instance) };
+
+      expect(before.cells).toEqual(['p1@0', 'p2@0', 'q1@1']);
+      expect(thrownName(() => instance.blocks.moveTo('p1', { position: { after: 'q1' } }))).toBe('BlockPlacementError');
+      await nextFrames(2);
+
+      expect({ flat: flat(instance), cells: cellsOf(), saved: await savedCells(instance) }).toEqual(before);
+    }, 30_000);
+
+    it('reorders blocks inside one table cell', async () => {
+      const instance = await boot(blockCells());
+
+      instance.blocks.moveTo('p2', { position: { before: 'p1' } });
+      await nextFrames(2);
+
+      expect(flat(instance)).toEqual(['tbl^-', 'p2^tbl', 'p1^tbl', 'q1^tbl']);
+      expect(cellsOf()).toEqual(['p2@0', 'p1@0', 'q1@1']);
+      expect(await savedCells(instance)).toMatchObject([[{ blocks: ['p2', 'p1'] }, { blocks: ['q1'] }]]);
+    }, 30_000);
+
+    it.each([
+      { name: 'the start of the table', target: { parentId: 'tbl', position: 'start' as const } },
+      { name: 'the end of the table', target: { parentId: 'tbl', position: 'end' as const } },
+    ])('throws when a cell block moves to $name, which names no cell', async ({ target }) => {
+      const instance = await boot(blockCells());
+      const before = flat(instance);
+
+      expect(thrownName(() => instance.blocks.moveTo('q1', target))).toBe('BlockPlacementError');
+      expect(flat(instance)).toEqual(before);
+    }, 30_000);
+
+    // blocks.move reorders the flat array across cells while the DOM and the
+    // table data keep the block in its old cell.
+    it.fails('blocks.move keeps flat order and cells in step across two cells', async () => {
+      const instance = await boot(blockCells());
+
+      instance.blocks.move(3, 1);
+      await nextFrames(3);
+
+      const cellOrder = cellsOf().map(entry => entry.split('@')[0]);
+
+      expect(flat(instance).slice(1).map(entry => entry.split('^')[0])).toEqual(cellOrder);
+    }, 30_000);
+
     it('throws and changes nothing when moving a root block into a table cell', async () => {
       const instance = await boot([...doc(), table('tbl')]);
       const before = flat(instance);

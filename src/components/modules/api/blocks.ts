@@ -547,13 +547,21 @@ export class BlocksAPI extends Module {
     const block = findBlock(this.tree, id);
     const { position } = target;
 
-    if (typeof position === 'object' && ('before' in position ? position.before : position.after) === id) {
+    const refId = ((): string | undefined => {
+      if (typeof position !== 'object') {
+        return undefined;
+      }
+
+      return 'before' in position ? position.before : position.after;
+    })();
+
+    if (refId === id) {
       throw new BlockPlacementError(`cannot place "${id}" relative to itself`);
     }
 
     const placement = resolvePlacement(this.tree, target.parentId, position);
 
-    assertCanMoveUnder(this.tree, block, placement.parentId);
+    assertCanMoveUnder(this.tree, block, placement.parentId, refId);
 
     const descendants = BlockManager.blocks.filter(candidate => isUnder(this.tree, candidate, block.id));
     const from = BlockManager.getBlockIndex(block);

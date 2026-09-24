@@ -18,7 +18,7 @@ import { sanitizeBlocks, clean, composeSanitizerConfig, stripUnsafeUrlsDeep } fr
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import { SELF_PLACING_PARENTS } from '../../../tools/nested-blocks';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
-import type { TreePlacement } from '../../utils/tree-order';
+import { placementImpliedByFlat, type TreePlacement } from '../../utils/tree-order';
 import { INDEX_MOVE_NEIGHBOURS, type IndexMoveNeighbours } from '../../utils/index-move-neighbours';
 import { getBlockNestingDepth } from '../drag/utils/depthUtils';
 import type { BlockFactory } from './factory';
@@ -1382,7 +1382,13 @@ export class BlockMutation {
         toIndex: resolvedIndex,
         ...(slotParentId === block.parentId && { parentId: block.parentId, oldParentId: block.parentId }),
       });
-      this.dependencies.YjsManager.moveBlock(block.id, resolvedIndex);
+      // The block keeps its old parent until the caller reparents it, so its
+      // doc spot is the one the flat order implies under that parent.
+      this.dependencies.YjsManager.moveBlockTo(block.id, placementImpliedByFlat(
+        { blocks: this.repository.blocks, getById: (id) => this.repository.getBlockById(id) },
+        block,
+        block.parentId
+      ));
       this.ctx.assertHierarchyInvariantInDev('move');
     } finally {
       this.ctx.suppressStopCapturing = false;

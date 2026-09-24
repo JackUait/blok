@@ -243,6 +243,30 @@ describe('local writers place blocks in the doc where the editor tree has them',
     await expectEverywhere(author, peer, ['a^-[]', 't^-[z,x,y]', 'z^t[]', 'x^t[]', 'y^t[]', 'b^-[]']);
   }, 60_000);
 
+  it('a drag of a root block into the middle of a toggle', async () => {
+    const { author, peer } = await pair([P('a'), T('t', ['x', 'y']), P('x', 't'), P('y', 't'), P('b')]);
+
+    author.module.yjsManager.transactMoves(() => {
+      author.module.blockManager.move(3, 5);
+      author.module.blockManager.setBlockParent(byId(author, 'b'), 't');
+    }, true);
+    await settleThroughFrame();
+
+    await expectEverywhere(author, peer, await saved(author));
+  }, 60_000);
+
+  it('a drag of a toggle child out to the root', async () => {
+    const { author, peer } = await pair([P('a'), T('t', ['x', 'y']), P('x', 't'), P('y', 't'), P('b')]);
+
+    author.module.yjsManager.transactMoves(() => {
+      author.module.blockManager.move(0, 2);
+      author.module.blockManager.setBlockParent(byId(author, 'x'), null);
+    }, true);
+    await settleThroughFrame();
+
+    await expectEverywhere(author, peer, ['x^-[]', 'a^-[]', 't^-[y]', 'y^t[]', 'b^-[]']);
+  }, 60_000);
+
   describe('index insert in a column list', () => {
     const columns = (): OutputBlockData[] => [
       { id: 'cl', type: 'column_list', data: {}, content: ['ka', 'kb'] },

@@ -151,6 +151,7 @@ export class Find extends Module {
 
   /**
    * Close the find bar and select the current match, so typing replaces it.
+   * When the reader already went back to the text, their caret stays put.
    */
   public close(): void {
     if (this.bar === null || !this.bar.isOpen) {
@@ -158,6 +159,7 @@ export class Find extends Module {
     }
 
     const current = this.ranges[this.active];
+    const isInText = this.Blok.UI.nodes.redactor.contains(document.activeElement);
 
     this.bar.close();
     this.stopObserving();
@@ -166,6 +168,10 @@ export class Find extends Module {
     const back = this.returnFocus;
 
     this.returnFocus = null;
+
+    if (isInText) {
+      return;
+    }
 
     if (current !== undefined && !current.collapsed) {
       editableHostOf(current)?.focus({ preventScroll: true });

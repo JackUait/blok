@@ -232,6 +232,7 @@ const createHarness = (options?: {
         return state.isDragging;
       },
     },
+    Find: { isOpen: false, close: vi.fn() },
     Saver: {
       save: vi.fn(() => Promise.resolve({ blocks: [] } as unknown as OutputData)),
     },

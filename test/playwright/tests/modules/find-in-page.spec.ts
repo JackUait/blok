@@ -408,6 +408,60 @@ test.describe('find in page', () => {
       await expect(page.getByTestId('find-bar')).toBeHidden();
     });
 
+    test('Escape closes the bar after clicking back into the text, and keeps the caret there', async ({ page }) => {
+      await createEditor(page, paragraphs('foo one', 'foo two'));
+      await focusParagraph(page, 'foo one');
+      await openFind(page, 'foo');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+
+      await page.getByText('foo two', { exact: true }).click();
+      await page.keyboard.press('Escape');
+
+      await expect(page.getByTestId('find-bar')).toBeHidden();
+      // One Escape closes one layer: it must not also enter navigation mode.
+      await expect(page.getByText('foo two', { exact: true })).toBeFocused();
+    });
+
+    test('Escape closes the bar when nothing has focus', async ({ page }) => {
+      await createEditor(page, paragraphs('foo one'));
+      await focusParagraph(page, 'foo one');
+      await openFind(page, 'foo');
+      await page.evaluate(() => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      });
+      await expect.poll(() => page.evaluate(() => document.activeElement === document.body)).toBe(true);
+
+      await page.keyboard.press('Escape');
+
+      await expect(page.getByTestId('find-bar')).toBeHidden();
+    });
+
+    test('Escape in the text closes the formatting toolbar first, then the bar', async ({ page }) => {
+      await createEditor(page, paragraphs('foo one'));
+      await focusParagraph(page, 'foo one');
+      await openFind(page, 'foo');
+      await page.getByText('foo one', { exact: true }).evaluate((element) => {
+        const text = element.firstChild;
+
+        if (text !== null) {
+          (element as HTMLElement).focus();
+          window.getSelection()?.setBaseAndExtent(text, 4, text, 7);
+        }
+      });
+      await expect(page.getByTestId('inline-toolbar')).toBeVisible();
+
+      await page.keyboard.press('Escape');
+
+      await expect(page.getByTestId('inline-toolbar')).toBeHidden();
+      await expect(page.getByTestId('find-bar')).toBeVisible();
+
+      await page.keyboard.press('Escape');
+
+      await expect(page.getByTestId('find-bar')).toBeHidden();
+    });
+
     test('the close button closes the bar', async ({ page }) => {
       await createEditor(page, paragraphs('alpha'));
       await focusParagraph(page, 'alpha');

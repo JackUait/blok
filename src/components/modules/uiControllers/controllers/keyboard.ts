@@ -876,6 +876,19 @@ export class KeyboardController extends Controller {
     }
 
     /**
+     * The find bar is its own layer, closed from the text or from <body> too.
+     * It sits after the menus and toolbars above (they are nearer the caret)
+     * and before navigation mode, which would blur the caret.
+     */
+    if (this.Blok.Find.isOpen) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.Blok.Find.close();
+
+      return;
+    }
+
+    /**
      * A cross-block TEXT selection becomes a selection of the same BLOCKS
      * (Notion parity) rather than falling through to navigation mode, which
      * would blur the caret and drop the selection entirely. This sits after the

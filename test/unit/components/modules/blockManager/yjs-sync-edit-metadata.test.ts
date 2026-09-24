@@ -6,6 +6,7 @@ import { BlockYjsSync, type SyncHandlers, type BlockYjsSyncDependencies } from '
 import { BlockRepository } from '../../../../../src/components/modules/blockManager/repository';
 import { BlockFactory } from '../../../../../src/components/modules/blockManager/factory';
 import { Blocks } from '../../../../../src/components/blocks';
+import { placeBlockWithHierarchy } from '../../../helpers/sync-place-block';
 import { ToolsCollection } from '../../../../../src/components/tools/collection';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { Block } from '../../../../../src/components/block';
@@ -117,6 +118,7 @@ describe('BlockYjsSync — edit metadata from the document', () => {
 
         target.parentId = parentId;
       }),
+      placeBlock: vi.fn(placeBlockWithHierarchy(repository, blocksStore)),
       replaceBlock: vi.fn(),
       onBlockRemoved: vi.fn(),
       onBlockAdded: vi.fn(),

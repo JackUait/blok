@@ -5,6 +5,7 @@ import { BlockYjsSync, type SyncHandlers } from '../../../../../src/components/m
 import { BlockRepository } from '../../../../../src/components/modules/blockManager/repository';
 import type { BlocksStore } from '../../../../../src/components/modules/blockManager/types';
 import { Blocks } from '../../../../../src/components/blocks';
+import { placeBlockWithHierarchy } from '../../../helpers/sync-place-block';
 import type { Block } from '../../../../../src/components/block';
 import type { BlockFactory } from '../../../../../src/components/modules/blockManager/factory';
 import type { YjsManager } from '../../../../../src/components/modules/yjs';
@@ -251,6 +252,7 @@ describe('BlockYjsSync — redo of a mid-column insert keeps child order (integr
       getBlockIndex: (block: Block): number => repository.getBlockIndex(block),
       insertDefaultBlock: vi.fn(),
       setBlockParent: setBlockParentLikeHierarchy,
+      placeBlock: vi.fn(placeBlockWithHierarchy(repository, blocksStore)),
       replaceBlock: vi.fn(),
       onBlockRemoved: vi.fn(),
       onBlockAdded: vi.fn(),

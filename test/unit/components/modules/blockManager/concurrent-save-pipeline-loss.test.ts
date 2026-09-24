@@ -184,6 +184,7 @@ describe('concurrent save pipeline — what a peer edit makes the local pipeline
       getBlockIndex: (block: Block): number => repository.getBlockIndex(block),
       insertDefaultBlock: vi.fn(() => createStubBlock('default', '')),
       setBlockParent: vi.fn(),
+      placeBlock: vi.fn(),
       replaceBlock: vi.fn(),
       onBlockRemoved: vi.fn(),
       onBlockAdded: vi.fn(),

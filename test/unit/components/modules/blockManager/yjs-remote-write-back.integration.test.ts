@@ -153,6 +153,7 @@ describe('BlockYjsSync — local write-back while a peer update is being reconci
       getBlockIndex: (block: Block): number => repository.getBlockIndex(block),
       insertDefaultBlock: vi.fn(() => createStubBlock('default', '')),
       setBlockParent: vi.fn(),
+      placeBlock: vi.fn(),
       replaceBlock: vi.fn(),
       onBlockRemoved: vi.fn(),
       onBlockAdded: vi.fn(),

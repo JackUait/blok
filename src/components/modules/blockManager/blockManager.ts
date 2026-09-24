@@ -514,6 +514,13 @@ export class BlockManager extends Module {
         setBlockParent: (block, parentId) => {
           this.hierarchy.setBlockParent(block, parentId);
         },
+        placeBlock: (block, placement) => {
+          const oldParentId = block.parentId;
+
+          this.hierarchy.placeBlock(block, placement);
+          this.hierarchy.syncVisibilityWithParent(block, oldParentId);
+          this.hierarchy.announceChildPlaced(placement.parentId);
+        },
         replaceBlock: (index, newBlock) => {
           this.blocksStore.replace(index, newBlock);
         },
@@ -1427,7 +1434,10 @@ export class BlockManager extends Module {
     // entry being replayed here could never be redone. Same window the
     // block-removal replay uses (yjs-sync removeBlockForUndoRedo).
     this.yjsSync.withAtomicOperation(() => {
-      this.hierarchy.setBlockParent(block, newParentId);
+      // The replay wrote the doc placement already.
+      if (!this.yjsSync.placeFromDocument(block, newParentId)) {
+        this.hierarchy.setBlockParent(block, newParentId);
+      }
 
       // Fire the tool's MOVED lifecycle hook, mirroring the public
       // setBlockParent path (~1053). The public path recomputes nesting-dependent

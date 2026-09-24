@@ -171,6 +171,7 @@ describe('hydration write-back is not an undo entry (integration)', () => {
       getBlockIndex: (block: Block): number => repository.getBlockIndex(block),
       insertDefaultBlock: vi.fn(() => createStubBlock('default')),
       setBlockParent: vi.fn(),
+      placeBlock: vi.fn(),
       replaceBlock: vi.fn(),
       onBlockRemoved: (block, index) => {
         priv.blockDidMutated(BlockRemovedMutationType, block, { index });

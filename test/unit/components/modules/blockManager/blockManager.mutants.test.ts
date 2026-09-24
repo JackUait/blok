@@ -312,6 +312,7 @@ const createHarness = (options: HarnessOptions): Harness => {
     isReconciling: (): boolean => false,
     isMaterializing: (): boolean => false,
     settleMaterialization: vi.fn(),
+    placeFromDocument: vi.fn((): boolean => false),
     withAtomicOperation: vi.fn((fn: () => void): void => fn()),
     withAtomicOperationAsync: vi.fn((fn: () => Promise<void>): Promise<void> => fn()),
     subscribe: vi.fn(),
@@ -1987,6 +1988,17 @@ describe('BlockManager.indentation, history replay, teardown and binding', () =>
 
     expect(harness.hierarchy.setBlockParent).toHaveBeenCalledWith(block, null);
     expect(block.call).toHaveBeenCalledOnce();
+    expect(block.call).toHaveBeenCalledWith(expect.anything(), { fromIndex: 0, toIndex: 0, structural: true });
+  });
+
+  it('replays a move by the document placement when the sync can place it', () => {
+    const block = createBlockStub({ id: 'moved', parentId: 'p1' });
+    const harness = createHarness({ blocks: [block], yjsSync: { placeFromDocument: vi.fn((): boolean => true) } });
+
+    harness.blockManager.reparentFromHistoryReplay(block, null);
+
+    expect(harness.yjsSync.placeFromDocument).toHaveBeenCalledWith(block, null);
+    expect(harness.hierarchy.setBlockParent).not.toHaveBeenCalled();
     expect(block.call).toHaveBeenCalledWith(expect.anything(), { fromIndex: 0, toIndex: 0, structural: true });
   });
 

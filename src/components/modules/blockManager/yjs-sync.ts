@@ -15,10 +15,12 @@ import { isChildToolAllowed } from '../../utils/child-tools';
 import { moveElementAfter, moveElementBefore } from '../../utils/html';
 import { equals } from '../../utils/object';
 import { sanitizeBlocks, stripUnsafeUrlsDeep } from '../../utils/sanitizer';
+import { dfsOrder, flatIndexForPlacement, type TreePlacement } from '../../utils/tree-order';
 import type { YjsManager } from '../yjs';
 import type { BlockChangeEvent, TransactionOrigin } from '../yjs/types';
 
 import type { BlockFactory } from './factory';
+import { isSelfPlacedParent } from './new-block-placement';
 import { adjustCaretOffset, captureCaretAcrossRewrite } from './remote-edit-caret';
 import type { BlockOperations } from './operations';
 import type { BlockRepository } from './repository';
@@ -83,6 +85,11 @@ export interface SyncHandlers {
   insertDefaultBlock: (skipYjsSync: boolean, id?: string) => Block;
   /** Called to set the parent of a block, updating contentIds and DOM placement */
   setBlockParent: (block: Block, parentId: string | null) => void;
+  /**
+   * Move a block and its subtree to a tree placement (model, holders,
+   * visibility), without writing the document.
+   */
+  placeBlock: (block: Block, placement: TreePlacement) => void;
   /** Called to replace a block at a specific index with a new block instance */
   replaceBlock: (index: number, newBlock: Block) => void;
   /** Called when a block is removed during undo/redo (before DOM removal) */
@@ -255,15 +262,6 @@ export class BlockYjsSync {
    */
   public get isSyncingFromYjs(): boolean {
     return this.yjsSyncCount > 0;
-  }
-
-  /**
-   * Whether an atomic operation's body is running now. False in the RAF tail
-   * that `extendThroughRAF` keeps open after the body, where
-   * `isSyncingFromYjs` is still true.
-   */
-  public get isRunningOperationBody(): boolean {
-    return this.activeOperationDepth > 0;
   }
 
   /**
@@ -1121,7 +1119,7 @@ export class BlockYjsSync {
 
       if (remoteParentId !== block.parentId) {
         this.withAtomicOperation(() => {
-          this.handlers.setBlockParent(block, remoteParentId);
+          this.placeOrReparent(block, this.docPlacementInMemory(blockId, remoteParentId), remoteParentId);
           this.reconcileParentChildOrderFromDoc(remoteParentId);
           this.callStructuralMoved(block);
         });
@@ -1140,7 +1138,11 @@ export class BlockYjsSync {
       // (blocks API, Tab nesting, toolbox insert) has no placement record.
       // Idempotent where the callback DID run — block.parentId is already null.
       this.withAtomicOperation(() => {
-        this.handlers.setBlockParent(block, null);
+        // Only a block that really leaves a parent follows the doc's root
+        // order; one already at root keeps its flat place and is re-seated.
+        const placement = block.parentId === null ? undefined : this.docPlacementInMemory(blockId, null);
+
+        this.placeOrReparent(block, placement, null);
         this.callStructuralMoved(block);
       });
       this.batchReparentedInto.add(null);
@@ -1425,6 +1427,111 @@ export class BlockYjsSync {
   }
 
   /**
+   * The doc's placement of `blockId`, told in memory's terms: the doc parent,
+   * after the nearest earlier doc sibling that memory already holds under
+   * that parent (walking back past siblings memory has not placed yet: a redo
+   * adds a column before the move that fills its left neighbour).
+   *
+   * Undefined when the table/database model decides instead (the block, its
+   * memory parent or its doc parent is or sits under one), when memory lacks
+   * the doc parent, or when the doc does not list the block.
+   * @param blockId - the block to place
+   * @param docParentId - its doc parent (null = root)
+   * @param order - the doc order known to memory, including `blockId`; a
+   *   batch computes it once
+   */
+  private docPlacementInMemory(
+    blockId: string,
+    docParentId: string | null,
+    order: string[] = this.docOrderKnownToMemory(new Set([blockId]))
+  ): TreePlacement | undefined {
+    const getBlock = (id: string): Block | undefined => this.repository.getBlockById(id);
+    const parent = docParentId === null ? undefined : getBlock(docParentId);
+    const block = getBlock(blockId);
+    const oldParent = block?.parentId == null ? undefined : getBlock(block.parentId);
+    const slot = order.indexOf(blockId);
+
+    if (
+      slot === -1
+      || (docParentId !== null && parent === undefined)
+      || (parent !== undefined && isSelfPlacedParent(parent, getBlock))
+      || (oldParent !== undefined && isSelfPlacedParent(oldParent, getBlock))
+      || (block !== undefined && isSelfPlacedParent(block, getBlock))
+    ) {
+      return undefined;
+    }
+
+    const isUnderBlock = (candidate: Block): boolean => {
+      const walk = (cursor: string | null, seen: Set<string>): boolean =>
+        cursor !== null && !seen.has(cursor)
+        && (cursor === blockId || walk(getBlock(cursor)?.parentId ?? null, seen.add(cursor)));
+
+      return walk(candidate.parentId, new Set<string>());
+    };
+    const isDocSibling = (id: string): boolean => {
+      const sibling = getBlock(id);
+      const raw = sibling?.parentId === docParentId
+        ? this.dependencies.YjsManager.getBlockById(id)?.get('parentId')
+        : undefined;
+
+      return sibling !== undefined
+        && sibling.parentId === docParentId
+        && (typeof raw === 'string' ? raw : null) === docParentId
+        && !isUnderBlock(sibling);
+    };
+    const earlier = order.slice(0, slot).reverse();
+    const parentAt = docParentId === null ? -1 : earlier.indexOf(docParentId);
+    const afterId = (parentAt === -1 ? earlier : earlier.slice(0, parentAt)).find(isDocSibling);
+
+    return { parentId: docParentId, afterId: afterId ?? null };
+  }
+
+  /**
+   * The flat index `placement` means for a block not yet in the array.
+   * @param placement - from docPlacementInMemory
+   */
+  private flatIndexFor(placement: TreePlacement): number {
+    return flatIndexForPlacement(
+      { blocks: this.repository.blocks, getById: (id) => this.repository.getBlockById(id) },
+      placement
+    );
+  }
+
+  /**
+   * Place by the doc placement when there is one, else set the parent the
+   * old way (tables and databases pick the slot themselves).
+   * @param block - the block
+   * @param placement - from docPlacementInMemory
+   * @param parentId - the doc parent
+   */
+  private placeOrReparent(block: Block, placement: TreePlacement | undefined, parentId: string | null): void {
+    if (placement !== undefined) {
+      this.handlers.placeBlock(block, placement);
+    } else {
+      this.handlers.setBlockParent(block, parentId);
+    }
+  }
+
+  /**
+   * Put `block` where the doc has it now, by placement. For the parent half
+   * of a move-undo/redo, which has already written the doc.
+   * @param block - the block to place
+   * @param parentId - the parent the replay restores
+   * @returns false when the doc placement does not apply (see docPlacementInMemory)
+   */
+  public placeFromDocument(block: Block, parentId: string | null): boolean {
+    const placement = this.docPlacementInMemory(block.id, parentId);
+
+    if (placement === undefined) {
+      return false;
+    }
+
+    this.handlers.placeBlock(block, placement);
+
+    return true;
+  }
+
+  /**
    * Where a block the doc is adding goes in the flat array: right after its
    * doc predecessor's place in memory, never at the doc's raw index. Memory
    * and doc can disagree about where OTHER blocks sit (a delete lifts the
@@ -1608,8 +1715,10 @@ export class BlockYjsSync {
     const data = this.sanitizeToolData(toolName, this.dependencies.YjsManager.yMapToObject(record.data));
     const { parentId, lastEditedAt, lastEditedBy } = record;
 
-    // A MEMORY index — see memoryIndexFromDocNeighbour.
-    const targetIndex = this.memoryIndexFromDocNeighbour(blockId, parentId, this.docOrderKnownToMemory(new Set([blockId])));
+    const placement = this.docPlacementInMemory(blockId, parentId ?? null);
+    const targetIndex = placement !== undefined
+      ? this.flatIndexFor(placement)
+      : this.memoryIndexFromDocNeighbour(blockId, parentId, this.docOrderKnownToMemory(new Set([blockId])));
 
     if (targetIndex === -1) {
       return;
@@ -1652,7 +1761,7 @@ export class BlockYjsSync {
       // Set parent relationship if needed — this moves the block into the toggle's
       // DOM child container, updates parent's contentIds, and applies indentation.
       if (parentId !== undefined) {
-        this.handlers.setBlockParent(block, parentId);
+        this.placeOrReparent(block, placement, parentId);
         this.reconcileParentChildOrderFromDoc(parentId);
         this.warnIfChildToolDenied(block, parentId);
       }
@@ -1828,12 +1937,15 @@ export class BlockYjsSync {
 
     this.withAtomicOperation(() => {
       // Pass 1 — create blocks and add to array (no DOM, no RENDERED)
-      const created: Array<{ block: Block; targetIndex: number; parentId: string | undefined }> = [];
+      const created: Array<{ block: Block; targetIndex: number; parentId: string | undefined; placement: TreePlacement | undefined }> = [];
 
       for (const entry of toCreate) {
         // Against the live array: earlier entries of this batch are in it and
         // may be this entry's doc neighbour.
-        const targetIndex = this.memoryIndexFromDocNeighbour(entry.blockId, entry.parentId, order);
+        const placement = this.docPlacementInMemory(entry.blockId, entry.parentId ?? null, order);
+        const targetIndex = placement !== undefined
+          ? this.flatIndexFor(placement)
+          : this.memoryIndexFromDocNeighbour(entry.blockId, entry.parentId, order);
         const block = this.factory.composeBlock({
           id: entry.blockId,
           tool: entry.toolName,
@@ -1855,18 +1967,18 @@ export class BlockYjsSync {
           this.markMaterializing(entry.blockId);
         }
 
-        created.push({ block, targetIndex, parentId: entry.parentId });
+        created.push({ block, targetIndex, parentId: entry.parentId, placement });
       }
 
       // Pass 2 — activate blocks (DOM insert + RENDERED), then emit events
-      for (const { block, targetIndex, parentId } of created) {
+      for (const { block, targetIndex, parentId, placement } of created) {
         this.blocksStore.activateBlock(block);
         this.handlers.onBlockAdded(block, targetIndex);
 
         // Set parent relationship if needed — this moves the block into the toggle's
         // DOM child container, updates parent's contentIds, and applies indentation.
         if (parentId !== undefined) {
-          this.handlers.setBlockParent(block, parentId);
+          this.placeOrReparent(block, placement, parentId);
           this.reconcileParentChildOrderFromDoc(parentId);
           this.warnIfChildToolDenied(block, parentId);
         }
@@ -2094,20 +2206,10 @@ export class BlockYjsSync {
    * Handle block move from Yjs (undo/redo - repositioning a moved block)
    * Uses microtask scheduling to batch multiple move events into a single sync
    *
-   * The reconcile that follows the flat resync is what keeps a move REPLAY
-   * from inverting a container's children. `replayMovePlacement` writes the
-   * doc, then reparents in memory through `BlockHierarchy.setBlockParent`,
-   * which derives the child's slot from the block's flat-array position — and
-   * at that instant the flat array is still the PRE-replay one, because the
-   * repair below is what fixes it and it is a microtask away. So the slot is
-   * computed against stale neighbours and `contentIds` lands in the opposite
-   * order to the doc; nothing healed it, since a replay's second transaction
-   * is a PURE 'move' (parentId already agrees by design) and only
-   * `handleYjsUpdate`'s reparent branch mirrored sibling order back.
-   *
-   * Runs AFTER `syncBlockOrderFromYjs` on purpose: the doc is authoritative
-   * for both, and the flat array must already agree before the invariant
-   * check downstream compares them.
+   * Each moved block's doc parent first takes the doc's sibling order in
+   * `contentIds`, then the flat array is re-derived from the tree. A replay's
+   * second transaction is a PURE 'move' (parentId already agrees by design),
+   * so nothing else mirrors that order back.
    * @param blockId - the block the move event named
    */
   private handleYjsMove(blockId: string): void {
@@ -2132,43 +2234,54 @@ export class BlockYjsSync {
         return;
       }
 
-      this.syncBlockOrderFromYjs();
-
       const movedIntoParents = new Set(movedIds.map((movedId) => {
         const rawParentId = this.dependencies.YjsManager.getBlockById(movedId)?.get('parentId');
 
         return typeof rawParentId === 'string' ? rawParentId : null;
       }));
 
+      // The flat order is derived from contentIds, so they take the doc's
+      // sibling order first.
+      this.withAtomicOperation(() => {
+        movedIntoParents.forEach((parentId) => this.reconcileParentChildOrderFromDoc(parentId));
+      });
+
+      const reordered = this.syncBlockOrderFromYjs();
+
       // Holder moves must not echo back to Yjs as fresh local writes, which
       // would pollute the undo/redo stacks — same window the batch reconcile
       // uses.
       this.withAtomicOperation(() => {
-        movedIntoParents.forEach((parentId) => {
-          this.reconcileParentChildOrderFromDoc(parentId);
-          // The stale-flat-array reparent misplaced the HOLDER too, and the
-          // flat resync above does not move nested holders. Re-assert the
-          // parent's sibling order against the (now correct) array, exactly
-          // as the batch reconcile does for a captured reparent.
-          this.reconcileHolderOrderForParent(parentId);
-        });
+        // The flat resync does not move nested holders. Re-assert the
+        // parent's sibling order against the (now correct) array, exactly
+        // as the batch reconcile does for a captured reparent.
+        new Set([...movedIntoParents, ...reordered]).forEach((parentId) => this.reconcileHolderOrderForParent(parentId));
       });
     });
   }
 
   /**
-   * Re-syncs the entire block order from Yjs to handle multiple simultaneous moves correctly
+   * Re-syncs the flat order to the tree after a batch of moves: roots in doc
+   * order, each parent's children in contentIds order (see dfsOrder). Blocks
+   * the doc does not list go after the ones it does, in flat order.
+   * @returns the parents (null = root) whose children changed order
    */
-  private syncBlockOrderFromYjs(): void {
-    const blockById = new Map(this.repository.blocks.map((block) => [block.id, block]));
-
+  private syncBlockOrderFromYjs(): Set<string | null> {
     // Doc order filtered to memory (see docOrderKnownToMemory): enumerating the
     // raw doc order would make every doc-only id shift the indices of
     // everything after it, so a move replay reorders blocks nobody touched (an
     // undo in one column rearranged the OTHER column's blocks).
-    const orderedBlocks = this.docOrderKnownToMemory()
-      .map((id) => blockById.get(id))
-      .filter((block): block is Block => block !== undefined);
+    const docRank = new Map(this.docOrderKnownToMemory().map((id, rank) => [id, rank]));
+    const unlisted = Number.MAX_SAFE_INTEGER;
+    const inDocOrder = [...this.repository.blocks]
+      .sort((a, b) => (docRank.get(a.id) ?? unlisted) - (docRank.get(b.id) ?? unlisted));
+    const orderedBlocks = dfsOrder({ blocks: inDocOrder, getById: (id) => this.repository.getBlockById(id) });
+    const childOrder = (): Map<string | null, string> => this.repository.blocks.reduce((order, block) => {
+      const parentId = block.parentId ?? null;
+
+      return order.set(parentId, `${order.get(parentId) ?? ''} ${block.id}`);
+    }, new Map<string | null, string>());
+    const before = childOrder();
 
     // Asking the store for each block's index is a scan per block, quadratic
     // per resync. Index once, and again only after a move: `Blocks.move`
@@ -2185,6 +2298,10 @@ export class BlockYjsSync {
 
       return this.indexBlockPositions();
     }, this.indexBlockPositions());
+
+    const after = childOrder();
+
+    return new Set([...after.keys()].filter(parentId => after.get(parentId) !== before.get(parentId)));
   }
 
   private indexBlockPositions(): Map<Block, number> {

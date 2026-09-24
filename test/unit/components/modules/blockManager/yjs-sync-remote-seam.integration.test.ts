@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import * as utils from '../../../../../src/components/utils';
 import { Blocks } from '../../../../../src/components/blocks';
+import { placeBlockWithHierarchy } from '../../../helpers/sync-place-block';
 import { ToolNotFoundError } from '../../../../../src/components/errors/tool-not-found';
 import type { Block } from '../../../../../src/components/block';
 import { BlockYjsSync, type SyncHandlers } from '../../../../../src/components/modules/blockManager/yjs-sync';
@@ -194,6 +195,7 @@ describe('BlockYjsSync — remote reconciliation through the binary seam (integr
       setBlockParent: vi.fn((block: Block, parentId: string | null) => {
         inMemoryReparent(block, parentId);
       }),
+      placeBlock: vi.fn(placeBlockWithHierarchy(repository, blocksStore)),
       replaceBlock: vi.fn(),
       onBlockRemoved: vi.fn(),
       onBlockAdded: vi.fn(),

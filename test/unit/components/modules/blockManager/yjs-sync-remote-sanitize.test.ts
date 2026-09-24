@@ -6,6 +6,7 @@ import { BlockYjsSync, type SyncHandlers, type BlockYjsSyncDependencies } from '
 import { BlockRepository } from '../../../../../src/components/modules/blockManager/repository';
 import { BlockFactory } from '../../../../../src/components/modules/blockManager/factory';
 import { Blocks } from '../../../../../src/components/blocks';
+import { placeBlockWithHierarchy } from '../../../helpers/sync-place-block';
 import { ToolsCollection } from '../../../../../src/components/tools/collection';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { Block } from '../../../../../src/components/block';
@@ -131,6 +132,7 @@ describe('BlockYjsSync — remote data sanitization and root promotion', () => {
 
         target.parentId = parentId;
       }),
+      placeBlock: vi.fn(placeBlockWithHierarchy(repository, blocksStore)),
       replaceBlock: vi.fn(),
       onBlockRemoved: vi.fn(),
       onBlockAdded: vi.fn(),
@@ -428,7 +430,7 @@ describe('BlockYjsSync — remote data sanitization and root promotion', () => {
 
       await flush();
 
-      expect(handlers.setBlockParent).toHaveBeenCalledWith(child, null);
+      expect(handlers.placeBlock).toHaveBeenCalledWith(child, { parentId: null, afterId: 'parent-1' });
       expect(child.parentId).toBeNull();
     });
 
@@ -460,7 +462,7 @@ describe('BlockYjsSync — remote data sanitization and root promotion', () => {
 
       await flush();
 
-      expect(handlers.setBlockParent).toHaveBeenCalledWith(child, null);
+      expect(handlers.placeBlock).toHaveBeenCalledWith(child, { parentId: null, afterId: 'parent-1' });
     });
 
     it('stays a no-op when the placement callback already restored the parent', async () => {

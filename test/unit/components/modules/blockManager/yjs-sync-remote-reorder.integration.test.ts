@@ -112,6 +112,7 @@ describe('BlockYjsSync — remote contentIds-only reorder (integration)', () => 
       getBlockIndex: (block: Block): number => repository.getBlockIndex(block),
       insertDefaultBlock: vi.fn(),
       setBlockParent: vi.fn(),
+      placeBlock: vi.fn(),
       replaceBlock: vi.fn(),
       onBlockRemoved: vi.fn(),
       onBlockAdded: vi.fn(),

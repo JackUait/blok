@@ -158,6 +158,7 @@ describe('BlockYjsSync — remote reconcile fires host onChange (integration)', 
         return block;
       }),
       setBlockParent: vi.fn(),
+      placeBlock: vi.fn(),
       replaceBlock: vi.fn(),
       onBlockRemoved: (block, index) => {
         priv.blockDidMutated(BlockRemovedMutationType, block, { index });

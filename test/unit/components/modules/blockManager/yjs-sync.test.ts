@@ -224,6 +224,7 @@ const createMockSyncHandlers = (): SyncHandlers => ({
   getBlockIndex: vi.fn(() => 0),
   insertDefaultBlock: vi.fn(() => createMockBlock()),
   setBlockParent: vi.fn(),
+  placeBlock: vi.fn(),
   replaceBlock: vi.fn(),
   onBlockRemoved: vi.fn(),
   onBlockAdded: vi.fn(),
@@ -2016,9 +2017,8 @@ describe('BlockYjsSync', () => {
 
         callback({ blockId: 'child-block', type: 'add', origin: 'redo' });
 
-        // setBlockParent must be called to move the block into the toggle container
-        // and update parent's contentIds
-        expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childBlock, 'toggle-id');
+        // The block must be placed in the toggle container and its contentIds.
+        expect(mockHandlers.placeBlock).toHaveBeenCalledWith(childBlock, { parentId: 'toggle-id', afterId: null });
 
       });
 
@@ -2405,16 +2405,12 @@ describe('BlockYjsSync', () => {
           { id: 'child-2', type: 'paragraph', parentId: 'toggle-1' },
         ]);
 
-        mockHandlers.setBlockParent = vi.fn();
-
         callback({ blockIds: ['toggle-1', 'child-2'], type: 'batch-add', origin: 'redo' });
 
-        // setBlockParent must be called for the child block with parentId
-        expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childBlock2, 'toggle-1');
-
-
-        // setBlockParent should NOT be called for the toggle block (no parentId)
-        expect(mockHandlers.setBlockParent).not.toHaveBeenCalledWith(toggleBlock, expect.anything());
+        expect(mockHandlers.placeBlock).toHaveBeenCalledWith(childBlock2, { parentId: 'toggle-1', afterId: null });
+        // The toggle has no parent to be placed under.
+        expect(mockHandlers.placeBlock).not.toHaveBeenCalledWith(toggleBlock, expect.anything());
+        expect(mockHandlers.setBlockParent).not.toHaveBeenCalled();
       });
     });
 
@@ -3090,7 +3086,7 @@ describe('BlockYjsSync', () => {
       const kid = repository.getBlockById('kid');
 
       expect(kid).toBeDefined();
-      expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(kid, 'box');
+      expect(mockHandlers.placeBlock).toHaveBeenCalledWith(kid, { parentId: 'box', afterId: null });
       expect(warn).toHaveBeenCalledTimes(1);
       expect(warn.mock.calls[0][0]).toContain('kid');
       expect(warn.mock.calls[0][0]).toContain('box');

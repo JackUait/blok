@@ -4,6 +4,7 @@ import { Array as YArray, Doc as YDoc, Map as YMap } from 'yjs';
 import type { Block } from '../../../../../src/components/block';
 import { BlockToolAPI } from '../../../../../src/components/block';
 import { Blocks } from '../../../../../src/components/blocks';
+import { placeBlockWithHierarchy } from '../../../helpers/sync-place-block';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { API } from '../../../../../src/components/modules/api';
 import { BlockFactory } from '../../../../../src/components/modules/blockManager/factory';
@@ -293,6 +294,7 @@ const createHarness = (options: HarnessOptions): Harness => {
 
       target.parentId = parentId;
     }),
+    placeBlock: vi.fn(placeBlockWithHierarchy(repository, blocksStore)),
     replaceBlock: vi.fn(),
     onBlockRemoved: vi.fn(),
     onBlockAdded: vi.fn(),
@@ -1602,7 +1604,7 @@ describe('BlockYjsSync — mutation kills', () => {
 
       harness.emit({ blockIds: ['one'], type: 'batch-add', origin: 'redo' });
 
-      expect(harness.handlers.setBlockParent).toHaveBeenCalledWith(created, 'p');
+      expect(harness.handlers.placeBlock).toHaveBeenCalledWith(created, { parentId: 'p', afterId: null });
       expect(parent.contentIds).toStrictEqual(['one', 'old']);
     });
 

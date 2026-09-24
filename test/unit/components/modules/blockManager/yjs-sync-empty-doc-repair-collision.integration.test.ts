@@ -103,6 +103,7 @@ describe('BlockYjsSync — concurrent empty-document repair (integration)', () =
         return block;
       }),
       setBlockParent: vi.fn(),
+      placeBlock: vi.fn(),
       replaceBlock: vi.fn(),
       onBlockRemoved: vi.fn(),
       onBlockAdded: vi.fn(),

@@ -53,7 +53,7 @@ interface StackItemEvent {
   type: 'undo' | 'redo';
   stackItem: StackItem;
   /** Every type the transaction changed, and each of their ancestors. */
-  changedParentTypes: ReadonlyMap<object, unknown>;
+  changedParentTypes: ReadonlyMap<unknown, unknown>;
 }
 
 /**

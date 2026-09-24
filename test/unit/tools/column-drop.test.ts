@@ -55,6 +55,12 @@ const createMockAPI = (nodes: FakeBlockNode[]) => {
   });
 
   const getBlockIndex = vi.fn().mockImplementation((id: string) => byId.get(id)?.index);
+  const getBlocksCount = vi.fn().mockImplementation(() => Math.max(0, ...nodes.map(n => n.index + 1)));
+  const getBlockByIndex = vi.fn().mockImplementation((index: number) => {
+    const node = nodes.find(n => n.index === index);
+
+    return node ? { id: node.id, parentId: node.parentId } : undefined;
+  });
 
   const childrenByParent = new Map<string, Array<{ id: string; holder: HTMLElement }>>();
   const getChildren = vi.fn().mockImplementation(
@@ -69,6 +75,8 @@ const createMockAPI = (nodes: FakeBlockNode[]) => {
       transact,
       getById,
       getBlockIndex,
+      getBlocksCount,
+      getBlockByIndex,
       getChildren,
     },
   } as unknown as API;

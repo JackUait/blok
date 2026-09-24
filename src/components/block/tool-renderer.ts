@@ -39,6 +39,11 @@ export class ToolRenderer {
   private readyResolver: (() => void) | null = null;
 
   /**
+   * Set once the block is destroyed (removed or replaced)
+   */
+  private destroyed = false;
+
+  /**
    * @param toolInstance - The tool class instance
    * @param name - Block tool name
    * @param id - Block id
@@ -133,6 +138,15 @@ export class ToolRenderer {
   }
 
   /**
+   * Stop a queued rendered() from running. A replacement keeps the block id,
+   * so a dead container's rendered() would pull the new block's children
+   * into its own detached slot.
+   */
+  public destroy(): void {
+    this.destroyed = true;
+  }
+
+  /**
    * Refreshes the reference to the tool's root element by inspecting the block content.
    * Call this after operations (like onPaste) that might cause the tool to replace its element.
    * @param holder - The block holder element
@@ -203,6 +217,9 @@ export class ToolRenderer {
 
       requestAnimationFrame(() => {
         try {
+          if (this.destroyed) {
+            return;
+          }
           rendered.call(toolInstance);
         } catch (e) {
           log(`${name}: rendered() threw: ${e instanceof Error ? e.message : String(e)}`, 'warn');

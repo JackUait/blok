@@ -174,7 +174,7 @@ test.describe('undo audit: capture', () => {
   });
 
   // Undo must restore the exact prior state, and save() must keep working.
-  test('CAP-6: undo of a callout color strands the callout child and breaks save()', async ({ page }) => {
+  test('CAP-6: undo of a callout color keeps the callout child and save() working', async ({ page }) => {
     await createBlok(page, [
       { id: 'p0', type: 'paragraph', data: { text: 'Before' } },
       { id: 'co', type: 'callout', data: { emoji: '💡', textColor: null, backgroundColor: null }, content: ['k1'] },
@@ -216,8 +216,8 @@ test.describe('undo audit: capture', () => {
     await settle(page);
   };
 
-  // One undo must revert one gesture: the release and the convert are one step.
-  test('CAP-7: one undo of "toggle heading -> heading" leaves the children released', async ({ page }) => {
+  // One undo must revert one gesture, children included.
+  test('CAP-7: one undo of "toggle heading -> heading" puts the children back', async ({ page }) => {
     await createBlok(page, toggleHeadingDoc);
     await wait(page, CAPTURE_WINDOW);
     const before = await treeOf(page);

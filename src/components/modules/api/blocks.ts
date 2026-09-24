@@ -486,6 +486,7 @@ export class BlocksAPI extends Module {
       replace,
       tunes,
       origin,
+      inferParent: true,
     });
 
     return new BlockAPI(insertedBlock, this.Blok.API);

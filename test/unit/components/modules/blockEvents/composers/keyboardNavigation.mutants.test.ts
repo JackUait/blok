@@ -2375,3 +2375,62 @@ describe('KeyboardNavigation — container child lifecycle', () => {
     expect(harness.toolbarClose).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('KeyboardNavigation — a container reads its OWN toggle marker, not a nested child\'s', () => {
+  // A container's slot holds its children's holders, so a nested toggle's marker sits inside it.
+  const SLOT_WITH_NESTED_OPEN_TOGGLE =
+    '<div data-blok-nested-blocks><div data-blok-element><div data-blok-toggle-open="true"></div></div></div>';
+
+  it('Backspace at the start of a callout\'s first child keeps it inside when a sibling is a toggle', () => {
+    vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+    const callout = createBlock({
+      id: 'callout',
+      name: 'callout',
+      contentIds: ['first', 'nested-toggle'],
+      markerHtml: SLOT_WITH_NESTED_OPEN_TOGGLE,
+    });
+    const first = createBlock({ id: 'first', parentId: 'callout' });
+    const harness = createHarness({ currentBlock: first, registry: [callout, first] });
+
+    harness.nav.handleBackspace(createKeyboardEvent({ key: 'Backspace', keyCode: keyCodes.BACKSPACE }));
+
+    expect(harness.setBlockParent).not.toHaveBeenCalled();
+  });
+
+  it('Enter on the empty last line of a callout holding a toggle exits the callout', () => {
+    vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
+    vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+    const callout = createBlock({
+      id: 'callout',
+      name: 'callout',
+      parentId: 'outer',
+      contentIds: ['nested-toggle', 'empty'],
+      markerHtml: SLOT_WITH_NESTED_OPEN_TOGGLE,
+    });
+    const empty = createBlock({ id: 'empty', parentId: 'callout', isEmpty: true });
+    const harness = createHarness({ currentBlock: empty, registry: [callout, empty] });
+
+    harness.nav.handleEnter(createKeyboardEvent({ key: 'Enter', keyCode: keyCodes.ENTER }));
+
+    expect(harness.insertDefaultBlockAtIndex).not.toHaveBeenCalled();
+    expect(harness.setBlockParent.mock.calls[0][0]).toBe(empty);
+    expect(harness.setBlockParent.mock.calls[0][1]).toBe('outer');
+  });
+
+  it('Enter at the end of a container\'s own input does not nest the new line because a child toggle is open', () => {
+    vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
+    vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+    const container = createBlock({
+      id: 'container',
+      name: 'titled-container',
+      contentIds: ['nested-toggle'],
+      markerHtml: SLOT_WITH_NESTED_OPEN_TOGGLE,
+    });
+    const harness = createHarness({ currentBlock: container });
+
+    harness.nav.handleEnter(createKeyboardEvent({ key: 'Enter', keyCode: keyCodes.ENTER }));
+
+    expect(harness.setBlockParent).not.toHaveBeenCalled();
+    expect(harness.insertDefaultBlockAtIndex.mock.calls[0][3]).toBe(true);
+  });
+});

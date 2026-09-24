@@ -66,10 +66,10 @@ describe('Toggle Keyboard Handlers', () => {
         getContentElement: () => contentElement,
       });
 
-      // Set up a selection at position 0 so splitBlock can split content
+      // Caret mid-text, so the title is split
       const range = document.createRange();
-      range.setStart(contentElement.childNodes[0], 0);
-      range.setEnd(contentElement.childNodes[0], 0);
+      range.setStart(contentElement.childNodes[0], 2);
+      range.setEnd(contentElement.childNodes[0], 2);
       const selection = window.getSelection();
       selection?.removeAllRanges();
       selection?.addRange(range);
@@ -80,11 +80,41 @@ describe('Toggle Keyboard Handlers', () => {
       expect(context.api.blocks.splitBlock).toHaveBeenCalledOnce();
       expect(context.api.blocks.splitBlock).toHaveBeenCalledWith(
         'test-block-id',
-        { text: '' },
+        { text: 'he' },
         'toggle',
-        { text: 'hello' },
+        { text: 'llo' },
         1
       );
+
+      contentElement.remove();
+    });
+
+    it('adds an empty block above instead of splitting when the caret is at the start of the title', async () => {
+      const { handleToggleEnter } = await import('../../../../src/tools/toggle/toggle-keyboard');
+
+      const contentElement = document.createElement('div');
+      contentElement.setAttribute('contenteditable', 'true');
+      contentElement.textContent = 'hello';
+      document.body.appendChild(contentElement);
+
+      const insert = vi.fn().mockReturnValue({ id: 'above' });
+      const context = createMockContext({
+        getContentElement: () => contentElement,
+      });
+
+      Object.assign(context.api.blocks, { insert, getBlockIndex: vi.fn().mockReturnValue(3) });
+
+      const range = document.createRange();
+      range.setStart(contentElement.childNodes[0], 0);
+      range.collapse(true);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+
+      await handleToggleEnter(context);
+
+      expect(context.api.blocks.splitBlock).not.toHaveBeenCalled();
+      expect(insert).toHaveBeenCalledWith(undefined, undefined, undefined, 3, false);
+      expect(context.api.caret.setToBlock).not.toHaveBeenCalled();
 
       contentElement.remove();
     });

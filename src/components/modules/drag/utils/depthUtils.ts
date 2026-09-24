@@ -1,3 +1,5 @@
+import { findOwn } from '../../../utils/own-element';
+
 /**
  * Shared utility for getting list item depth from a block's DOM
  * @param block - Block to check
@@ -13,8 +15,9 @@ export const getListItemDepth = (block: { holder: HTMLElement }): number | null 
     return isNaN(parsed) ? null : parsed;
   }
 
-  // Fallback: check if any child element has the attribute (for other block types)
-  const listWrapper = block.holder.querySelector('[data-list-depth]');
+  // The list sets the attribute on its tool root, not the holder. Only the
+  // block's own marker counts: a toggle holding a list item is not a list item.
+  const listWrapper = findOwn(block.holder, '[data-list-depth]');
 
   if (!listWrapper) {
     return null;

@@ -2146,9 +2146,15 @@ describe('TableCellBlocks — leaving the table around root and parent ids', () 
     fixture.instance.handleKeyDown(keyEvent('Tab'), { row: 0, col: 0 });
 
     const later = fixture.store.add('later');
+    // A block added in a cell sits inside the table's run, right after the
+    // cell block; the exit block is after the whole run.
+    const ids = fixture.store.blocks.map(block => block.id).filter(id => id !== 'later');
+
+    ids.splice(ids.indexOf('cell-block') + 1, 0, 'later');
+    orderBlocks(fixture.store, ids);
 
     fixture.grid.element.appendChild(later.holder);
-    fixture.store.eventHandler()(blockAddedEvent('later', later.holder, fixture.store.blocks.length - 1));
+    fixture.store.eventHandler()(blockAddedEvent('later', later.holder, ids.indexOf('later')));
 
     expect(later.holder.parentElement).toBe(fixture.grid.container(0, 0));
   });

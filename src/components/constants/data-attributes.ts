@@ -323,6 +323,16 @@ export const DATA_ATTR = {
   mutationFree: 'data-blok-mutation-free',
 
   // ============================================
+  // Tool Chrome
+  // ============================================
+
+  /** Tool UI inside a block that is not the user's content (a list marker, a
+   *  checkbox, a code block's language button and line numbers). `Block.isEmpty`
+   *  and the block's copied HTML skip it. Never put it on an element that holds
+   *  child blocks or the user's text: that content would be skipped too. */
+  chrome: 'data-blok-chrome',
+
+  // ============================================
   // Keyboard Ownership
   // ============================================
 

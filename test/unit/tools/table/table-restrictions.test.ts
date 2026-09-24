@@ -264,6 +264,39 @@ describe('table-restrictions', () => {
       );
     });
 
+    it('carries only the block\'s own text, not a nested child block\'s or the toggle placeholder', () => {
+      const holder = document.createElement('div');
+
+      holder.setAttribute('data-blok-element', '');
+      holder.innerHTML = '<div>Title</div>'
+        + '<div data-blok-toggle-body-placeholder="" data-blok-chrome="">Empty toggle.</div>'
+        + '<div data-blok-toggle-children=""><div data-blok-element="">Child text</div></div>';
+
+      const block = {
+        id: 'block-own',
+        holder,
+      } as Block;
+
+      const mockAPI = {
+        blocks: {
+          getBlockIndex: vi.fn().mockReturnValue(0),
+          insert: vi.fn().mockReturnValue({ id: 'new-block' }),
+        },
+      } as unknown as API;
+
+      convertToParagraph(block, mockAPI);
+
+      expect(mockAPI.blocks.insert).toHaveBeenCalledWith(
+        'paragraph',
+        { text: 'Title' },
+        {},
+        0,
+        false,
+        true,
+        'block-own'
+      );
+    });
+
     it('throws error if block index not found', () => {
       const holder = document.createElement('div');
       const block = {

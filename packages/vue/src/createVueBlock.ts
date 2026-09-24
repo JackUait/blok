@@ -31,6 +31,7 @@ import {
   DATA_ATTR,
   deepEqual,
   mountChildBlocks,
+  withSlotlessDescendants,
 } from '@bloklabs/core/adapters';
 import { fillDefaults, type PropSchema } from '@bloklabs/core/adapters';
 
@@ -483,7 +484,9 @@ export function createVueBlock<Data = BlockToolData>(
 
             const children = blockApi.getChildren();
 
-            mountChildBlocks(slot.value, children);
+            // A slotless child's own children live in this slot too. Decoration
+            // and the mounted event stay per DIRECT child.
+            mountChildBlocks(slot.value, withSlotlessDescendants(children, id => api.blocks.getChildren(id)));
             applyChildDecoration(ledger, children, {
               childAttributes: props.childAttributes,
               childContentAttributes: props.childContentAttributes,

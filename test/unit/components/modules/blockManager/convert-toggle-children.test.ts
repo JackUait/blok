@@ -90,7 +90,7 @@ describe('BlockManager.convert — toggle children handling (Notion parity M-5)'
     // Children must NOT be released to the document root.
     expect(setBlockParentSpy).not.toHaveBeenCalled();
     // The generic convert path (which re-nests children) still runs.
-    expect(convertSpy).toHaveBeenCalledWith(source, 'paragraph', expect.anything(), undefined);
+    expect(convertSpy).toHaveBeenCalledWith(source, 'paragraph', expect.anything(), undefined, undefined);
   });
 
   it('keeps children nested when converting a TOGGLE LIST to a heading', async () => {
@@ -109,13 +109,50 @@ describe('BlockManager.convert — toggle children handling (Notion parity M-5)'
     expect(setBlockParentSpy).not.toHaveBeenCalled();
   });
 
-  it('still RELEASES children when converting a TOGGLE HEADING to a paragraph', async () => {
-    const source = createToggleSource('header');
+  it('still RELEASES children when converting a TOGGLE HEADING to a paragraph, to the heading\'s own level', async () => {
+    const source = Object.assign(createToggleSource('header'), { parentId: 'box' });
+
+    // The release runs inside the convert, so it shares its undo entry.
+    convertSpy.mockImplementation(async (...args: unknown[]) => {
+      const beforeReplace = args[4];
+
+      if (typeof beforeReplace === 'function') {
+        beforeReplace();
+      }
+
+      return { id: 'new', name: 'paragraph' };
+    });
 
     await blockManager.convert(source, 'paragraph');
 
-    expect(setBlockParentSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 'c1' }), null);
-    expect(setBlockParentSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 'c2' }), null);
+    expect(setBlockParentSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 'c1' }), 'box');
+    expect(setBlockParentSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 'c2' }), 'box');
+  });
+
+  it('does not release children of a container that only HOLDS a toggle child', async () => {
+    const holder = document.createElement('div');
+    const slot = document.createElement('div');
+    const nestedHolder = document.createElement('div');
+    const nestedMarker = document.createElement('div');
+
+    holder.setAttribute('data-blok-element', '');
+    slot.setAttribute('data-blok-nested-blocks', '');
+    nestedHolder.setAttribute('data-blok-element', '');
+    nestedMarker.setAttribute('data-blok-toggle-open', 'true');
+    nestedHolder.appendChild(nestedMarker);
+    slot.appendChild(nestedHolder);
+    holder.appendChild(slot);
+
+    const source = {
+      id: 'src',
+      name: 'custom-container',
+      holder,
+      contentIds: ['c1', 'c2'],
+    } as unknown as Block;
+
+    await blockManager.convert(source, 'paragraph');
+
+    expect(setBlockParentSpy).not.toHaveBeenCalled();
   });
 
   it('does not release children when converting a TOGGLE HEADING into a TOGGLE HEADING', async () => {

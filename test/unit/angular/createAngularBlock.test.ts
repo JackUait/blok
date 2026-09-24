@@ -44,8 +44,10 @@ class CounterViewComponent {
 const makeBlockApi = (id = 'blk-1'): BlockAPI =>
   ({ id, contentIds: [], getChildren: () => [], dispatchChange: vi.fn() } as unknown as BlockAPI);
 
-const makeApi = (dragActive = false): API =>
-  ({ blocks: { isPointerDragActive: dragActive } } as unknown as API);
+const makeApi = (dragActive = false, childrenById: Record<string, BlockAPI[]> = {}): API =>
+  ({
+    blocks: { isPointerDragActive: dragActive, getChildren: (id: string) => childrenById[id] ?? [] },
+  } as unknown as API);
 
 const makeRegistry = (): BlockPortalRegistry & {
   register: ReturnType<typeof vi.fn>;
@@ -506,7 +508,8 @@ describe('createAngularBlock — editor api and per-child decoration', () => {
     } as unknown as BlockAPI);
 
   const renderWithChildren = (
-    children: BlockAPI[]
+    children: BlockAPI[],
+    childrenById: Record<string, BlockAPI[]> = {}
   ): {
     ctx: AngularBlockRenderContext<CounterData>;
     tool: { setData(d: BlockToolData): Promise<boolean> };
@@ -521,7 +524,7 @@ describe('createAngularBlock — editor api and per-child decoration', () => {
     const tool = new Tool({
       data: { count: 0 } as BlockToolData,
       block: makeContainerApi(children),
-      api: makeApi(),
+      api: makeApi(false, childrenById),
       readOnly: false,
       config: { [REGISTRY_CONFIG_KEY]: registry },
     } as BlockToolConstructorOptions);
@@ -575,6 +578,23 @@ describe('createAngularBlock — editor api and per-child decoration', () => {
     // Anti-wrapper guard: holders must remain DIRECT children of the slot.
     expect(children[0].holder.parentElement).toBe(slot);
     expect(children[1].holder.parentElement).toBe(slot);
+  });
+
+  it('mounts a slotless child\'s descendants in the slot, right after it', () => {
+    const children = [makeChild('a'), makeChild('b')];
+    const grandchild = makeChild('a1');
+
+    // Where core leaves it on a reload: at the editor root.
+    document.body.appendChild(grandchild.holder);
+
+    const { ctx, slot } = renderWithChildren(children, { a: [grandchild] });
+
+    ctx.mountChildren(slot, (_child, index) => ({ 'data-step-index': String(index) }));
+
+    expect(grandchild.holder.parentElement).toBe(slot);
+    expect(Array.from(slot.children).map(el => el.getAttribute('data-blok-id'))).toStrictEqual(['a', 'a1', 'b']);
+    // Decoration stays per direct child: a grandchild is not a step.
+    expect(grandchild.holder.hasAttribute('data-step-index')).toBe(false);
   });
 
   it('stamps per-child attributes on the content wrapper too', () => {

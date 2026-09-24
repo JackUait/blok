@@ -452,7 +452,7 @@ describe('BlockHierarchy — mutation coverage', () => {
       expect(Array.from(container.children)).toStrictEqual([childD.holder]);
     });
 
-    it('falls back to the old parent holder when nothing precedes the extracted child', () => {
+    it('anchors before the next root block when nothing precedes the extracted child', () => {
       const { repository, workingArea } = createFixture([
         { id: 'child', parentId: 'toggle' },
         { id: 'toggle', parentId: null, contentIds: ['child'] },
@@ -466,8 +466,32 @@ describe('BlockHierarchy — mutation coverage', () => {
       container.appendChild(child.holder);
 
       expect(() => hierarchy.setBlockParent(child, null)).not.toThrow();
-      expect(Array.from(workingArea.children)).toStrictEqual([toggle.holder, child.holder]);
+      expect(Array.from(workingArea.children)).toStrictEqual([child.holder, toggle.holder]);
       expect(Array.from(container.children)).toStrictEqual([]);
+    });
+
+    it('does not land a grandchild moved to index 0 in its grandparent slot', () => {
+      const { repository, workingArea } = createFixture([
+        { id: 'grandchild', parentId: 'inner' },
+        { id: 'outer', parentId: null, contentIds: ['inner'] },
+        { id: 'inner', parentId: 'outer', contentIds: ['grandchild'] },
+      ]);
+      const hierarchy = new BlockHierarchy(repository);
+      const outer = requireBlock(repository, 'outer');
+      const inner = requireBlock(repository, 'inner');
+      const grandchild = requireBlock(repository, 'grandchild');
+      const outerSlot = createContainer('data-blok-toggle-children');
+      const innerSlot = createContainer('data-blok-toggle-children');
+
+      outer.holder.appendChild(outerSlot);
+      outerSlot.appendChild(inner.holder);
+      inner.holder.appendChild(innerSlot);
+      innerSlot.appendChild(grandchild.holder);
+
+      hierarchy.setBlockParent(grandchild, null);
+
+      expect(grandchild.holder.parentElement).toBe(workingArea);
+      expect(Array.from(workingArea.children)).toStrictEqual([grandchild.holder, outer.holder]);
     });
   });
 
@@ -516,9 +540,10 @@ describe('BlockHierarchy — mutation coverage', () => {
     });
 
     it('refuses to steal a holder out of a column container into a foreign toggle', () => {
+      // The column holds the holder but not the model child: a corrupted claim.
       const { repository } = createFixture([
-        { id: 'col', parentId: null, name: 'column', contentIds: ['moving'] },
-        { id: 'moving', parentId: 'col' },
+        { id: 'col', parentId: null, name: 'column', contentIds: [] },
+        { id: 'moving', parentId: null },
         { id: 'toggle', parentId: null },
       ]);
       const hierarchy = new BlockHierarchy(repository);

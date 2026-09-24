@@ -152,13 +152,13 @@ const createMockDependencies = (): BlockOperationsDependencies => {
       removeBlock: vi.fn(),
       replaceBlockContent: vi.fn(() => true),
       moveBlock: vi.fn(),
-      transactMoves: vi.fn((fn: () => void) => fn()),
       updateBlockData: vi.fn(),
       updateBlockTune: vi.fn(),
       updateBlockIndent: vi.fn(),
       stopCapturing: vi.fn(),
       continueUndoEntryThatCreated: vi.fn(),
       transact: vi.fn((fn: () => void) => fn()),
+      transactMoves: vi.fn((fn: () => void) => fn()),
       toJSON: vi.fn(() => []),
       getBlockById: vi.fn(() => undefined),
       getBlockDataObject: vi.fn(() => undefined),
@@ -2459,7 +2459,7 @@ describe('BlockOperations', () => {
         1
       );
       testOps.setYjsSync(yjsSync);
-      testOps.setBlockParentWriter((block, parentId) => testHierarchy.setBlockParent(block, parentId));
+      testOps.setParentWriter((block, parentId) => testHierarchy.setBlockParent(block, parentId));
 
       // Baseline: the constructed hierarchy is valid before we touch it.
       expect(validateHierarchy(projectRepositoryForInvariant(testRepo))).toEqual([]);
@@ -2498,7 +2498,7 @@ describe('BlockOperations', () => {
           state.depth--;
         }
       });
-      testOps.setBlockParentWriter((block, parentId) => {
+      testOps.setParentWriter((block, parentId) => {
         reparents.push({ id: block.id, parentId, depth: state.depth });
         testHierarchy.setBlockParent(block, parentId);
       });
@@ -3236,10 +3236,15 @@ describe('BlockOperations', () => {
       // the CRDT while the DOM composes a paragraph, and the divergence would
       // only surface after a reload or a remote sync.
       const neighbour = repository.getBlockByIndex(1);
+      const parent = repository.getBlockById('block-1');
 
-      if (neighbour === undefined) {
-        throw new Error('Test setup failed: block-2 not found');
+      if (neighbour === undefined || parent === undefined) {
+        throw new Error('Test setup failed: block-1 or block-2 not found');
       }
+
+      // block-2 is block-1's last child, so index 2 is inside block-1's subtree.
+      neighbour.parentId = 'block-1';
+      parent.contentIds = ['block-2'];
 
       const cell = document.createElement('div');
 

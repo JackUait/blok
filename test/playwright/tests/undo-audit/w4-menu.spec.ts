@@ -309,13 +309,6 @@ test.describe('W4M defects', () => {
     });
   }
 
-  // Defect: redo of "+ then Table" brings the cell blocks back sorted by id, not in their order.
-  // The table's saved `content` list and the flat block order differ from before the undo.
-  // The DOM and the table's cell grid (data.content) are the same; only this order changes.
-  // Cause: document-store.ts:1175-1177 finds no order list when the parent is not in the doc
-  // yet, so :624 writes the child id nowhere, and :513-527 later appends it sorted by id.
-  // Hypothesis (the Yjs doc was not read): the seeded cells reach the doc before the table,
-  // at block-insertion.ts:300, while the table's own addBlock runs later, at :343.
   test('W4M-3: redo of "+ then Table" keeps the cell blocks in their order', async ({ page }) => {
     await createBlok(page, wrap(P('x', '')));
     const r = await roundTrip(page, async () => {

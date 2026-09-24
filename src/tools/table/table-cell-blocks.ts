@@ -460,18 +460,47 @@ export class TableCellBlocks {
    * Insert a new default block as the table's next sibling, in the table's own
    * container. A parented table (column, toggle, callout…) uses
    * insertInsideParent so the parent link and the insert form a single atomic
-   * operation; a root-level table uses a plain insert positioned right after
-   * the table block.
+   * operation; a root-level table uses a plain insert. Both land after the
+   * table's cell blocks, not between the table and them.
    */
   private insertBlockAfterTable(tableBlock: BlockAPI): BlockAPI {
-    const tableIndex = this.api.blocks.getBlockIndex(this.tableBlockId);
-    const insertIndex = (tableIndex ?? 0) + 1;
+    const insertIndex = this.indexAfterTableSubtree();
 
     if (tableBlock.parentId !== null && tableBlock.parentId !== '') {
       return this.api.blocks.insertInsideParent(tableBlock.parentId, insertIndex);
     }
 
     return this.api.blocks.insert(undefined, {}, {}, insertIndex, true);
+  }
+
+  /**
+   * The flat index right after this table's last descendant. Cell blocks and
+   * the table's next sibling are inserted here: the saver requires the flat
+   * array to list a block's descendants right after it (depth-first), and
+   * core never moves a table's children for it (tables are self-placing).
+   */
+  public indexAfterTableSubtree(): number {
+    const count = this.api.blocks.getBlocksCount();
+    const tableIndex = this.api.blocks.getBlockIndex(this.tableBlockId);
+
+    if (tableIndex === undefined) {
+      return count;
+    }
+
+    const inside = new Set<string>([this.tableBlockId]);
+    const firstOutside = Array.from({ length: count - tableIndex - 1 }, (_, i) => tableIndex + 1 + i)
+      .find(index => {
+        const block = this.api.blocks.getBlockByIndex(index);
+
+        if (block?.parentId == null || !inside.has(block.parentId)) {
+          return true;
+        }
+        inside.add(block.id);
+
+        return false;
+      });
+
+    return firstOutside ?? count;
   }
 
   /**
@@ -618,35 +647,6 @@ export class TableCellBlocks {
    * - If referenced blocks are missing from BlockManager, a fallback paragraph is created.
    */
   /**
-   * Flat index right after the table's subtree. The doc orders blocks depth
-   * first, so a cell block placed anywhere else comes back somewhere else
-   * after undo/redo or on a peer. Callers must parent each block to the table
-   * before the next insert, or the next one lands in front of it.
-   */
-  private cellInsertIndex(): number {
-    const count = this.api.blocks.getBlocksCount();
-    const tableIndex = this.api.blocks.getBlockIndex(this.tableBlockId);
-
-    if (tableIndex === undefined) {
-      return count;
-    }
-
-    const offset = Array.from({ length: count - tableIndex - 1 }, (_, i) => tableIndex + 1 + i)
-      .findIndex(index => !this.isInTableSubtree(this.api.blocks.getBlockByIndex(index)?.parentId ?? null));
-
-    return offset === -1 ? count : tableIndex + 1 + offset;
-  }
-
-  private isInTableSubtree(parentId: string | null): boolean {
-    if (parentId === null || parentId === '') {
-      return false;
-    }
-
-    return parentId === this.tableBlockId
-      || this.isInTableSubtree(this.api.blocks.getById(parentId)?.parentId ?? null);
-  }
-
-  /**
    * Insert one parsed cell-content block after the table's subtree.
    * Falls back to a paragraph when the insert's tool is not registered in
    * this editor (e.g. no list tool), so pasted cell content is never lost.
@@ -654,13 +654,13 @@ export class TableCellBlocks {
   private insertCellContentBlock(insert: CellBlockInsert): ReturnType<API['blocks']['insert']> {
     if (insert.tool !== 'paragraph') {
       try {
-        return this.api.blocks.insert(insert.tool, insert.data, {}, this.cellInsertIndex(), false);
+        return this.api.blocks.insert(insert.tool, insert.data, {}, this.indexAfterTableSubtree(), false);
       } catch {
         // Tool unavailable — degrade to a paragraph carrying the item text.
       }
     }
 
-    return this.api.blocks.insert('paragraph', { text: insert.data.text }, {}, this.cellInsertIndex(), false);
+    return this.api.blocks.insert('paragraph', { text: insert.data.text }, {}, this.indexAfterTableSubtree(), false);
   }
 
   /**
@@ -676,7 +676,7 @@ export class TableCellBlocks {
         block.tool,
         block.data,
         {},
-        this.cellInsertIndex(),
+        this.indexAfterTableSubtree(),
         false,
         false,
         undefined,
@@ -686,7 +686,7 @@ export class TableCellBlocks {
       // Tool unavailable — degrade to a paragraph carrying whatever text it had.
       const text = typeof block.data.text === 'string' ? block.data.text : '';
 
-      return this.api.blocks.insert('paragraph', { text }, {}, this.cellInsertIndex(), false);
+      return this.api.blocks.insert('paragraph', { text }, {}, this.indexAfterTableSubtree(), false);
     }
   }
 
@@ -868,7 +868,7 @@ export class TableCellBlocks {
             return;
           }
 
-          const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.cellInsertIndex(), false);
+          const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.indexAfterTableSubtree(), false);
 
           container.appendChild(block.holder);
           this.api.blocks.setBlockParent(block.id, this.tableBlockId);
@@ -1050,7 +1050,7 @@ export class TableCellBlocks {
           block.name,
           block.preservedData,
           {},
-          this.cellInsertIndex(),
+          this.indexAfterTableSubtree(),
           false
         );
 
@@ -1209,7 +1209,7 @@ export class TableCellBlocks {
     this.isRepairingCell = true;
 
     const fill = (): void => {
-      const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.cellInsertIndex(), true);
+      const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.indexAfterTableSubtree(), true);
 
       container.appendChild(block.holder);
       this.api.blocks.setBlockParent(block.id, this.tableBlockId);

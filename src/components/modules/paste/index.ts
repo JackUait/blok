@@ -3,6 +3,7 @@ import { Module } from '../../__module';
 import { Dom as dom$ } from '../../dom';
 import { composeSanitizerConfig, clean } from '../../utils/sanitizer';
 import { normalizeInlineMarkupHtml } from '../../utils/inline-normalization';
+import { findOwn } from '../../utils/own-element';
 
 import { SAFE_STRUCTURAL_TAGS } from './constants';
 import { preprocessGoogleDocsHtml } from './google-docs-preprocessor';
@@ -476,7 +477,7 @@ export class Paste extends Module {
       ? this.countAncestorBlocks(blockHolder)
       : 0;
 
-    const listWrapper = blockHolder.querySelector('[data-list-depth]');
+    const listWrapper = findOwn(blockHolder, '[data-list-depth]');
     const listDepthRaw = listWrapper?.getAttribute('data-list-depth') ?? '0';
     const listDepth = Number.parseInt(listDepthRaw, 10);
     const listContribution = Number.isNaN(listDepth) ? 0 : listDepth;

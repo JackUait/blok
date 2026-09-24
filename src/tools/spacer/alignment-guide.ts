@@ -1,5 +1,6 @@
 import { COLUMN_ATTR, COLUMNS_ATTR } from '../columns-shared';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { ownClone } from '../../components/utils/own-element';
 
 /**
  * How close (px) the dragged edge must get to a sibling block's edge for the
@@ -47,8 +48,9 @@ const isEmptyTextBlock = (holder: HTMLElement): boolean => {
     return false;
   }
 
+  // Own text only: a toggle heading's body placeholder and child blocks are not its text.
   // Browsers park a <br> inside an empty contenteditable; textContent ignores it.
-  return (holder.textContent ?? '').trim() === '';
+  return (ownClone(holder).textContent ?? '').trim() === '';
 };
 
 /**

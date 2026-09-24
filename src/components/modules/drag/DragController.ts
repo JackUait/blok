@@ -25,11 +25,11 @@ import { findScrollableAncestor } from './utils/findScrollableAncestor';
 import { ListItemDescendants } from './utils/ListItemDescendants';
 import { getListItemDepth } from './utils/depthUtils';
 import { resolveStructuralParent } from './utils/structuralParent';
+import { findOwn } from '../../utils/own-element';
 import {
   areSourceRootsChildrenOf,
   isCollapsedToggleBlock,
   isOpenToggleBlock,
-  isToggleBlock,
 } from './utils/toggleState';
 import {
   hasLogicalSourceAncestor,
@@ -483,10 +483,20 @@ export class DragController extends Module {
     // marks an insertion BETWEEN them rather than at one column's edge.
     this.centerSideIndicatorInGutter(dropTarget.block, dropTarget.edge);
 
-    // Announce drop position change to screen readers
+    // Announce drop position change to screen readers. A bottom drop beside a
+    // toggle lands after its last descendant, so announce against that block.
     if (this.a11y) {
+      const announceTarget = verticalEdge === null
+        ? dropTarget.block
+        : this.resolveMoveAnchor(
+          dropTarget.block,
+          verticalEdge,
+          this.resolveParentForDrop(dropTarget.block, verticalEdge, sourceBlocks),
+          sourceBlocks
+        );
+
       this.a11y.announceDropPosition(
-        dropTarget.block,
+        announceTarget,
         dropTarget.edge,
         sourceBlocks,
         isDuplicate
@@ -542,7 +552,9 @@ export class DragController extends Module {
    * @param predictedDepth - The depth the dropped item will land at
    */
   private applyListItemTextOffsets(block: Block, holderRect: DOMRect, predictedDepth: number): void {
-    const container = block.holder.querySelector(
+    // Own markers only: a toggle or callout holding a list item is not a list item.
+    const container = findOwn(
+      block.holder,
       `[data-blok-testid="${LIST_TEST_IDS.contentContainer}"], [data-blok-testid="${LIST_TEST_IDS.checklistContent}"]`
     );
 
@@ -553,7 +565,7 @@ export class DragController extends Module {
     // The blue line starts at the very beginning of the list item — the marker
     // (bullet/number/checkbox) — which is the left edge of the listitem element.
     // It falls back to the text container if the listitem wrapper is missing.
-    const item = block.holder.querySelector('[role="listitem"]');
+    const item = findOwn(block.holder, '[role="listitem"]');
     const startRect = item instanceof HTMLElement
       ? item.getBoundingClientRect()
       : container.getBoundingClientRect();
@@ -1233,10 +1245,11 @@ export class DragController extends Module {
   }
 
   /**
-   * The block a vertical drop is inserted next to. A bottom-edge drop that lands
-   * BESIDE a toggle (not inside it) goes after the toggle's last descendant: the
-   * slot right after the toggle is its first-child slot, so a block placed there
-   * would sit between the toggle and its children in the flat order.
+   * The block a vertical drop is inserted next to. A bottom-edge drop that does
+   * not enter the target goes after the last descendant of the target's ancestor
+   * it becomes a sibling of: the slot right after a block with children is its
+   * first-child slot, so a block placed there would split that subtree in the
+   * flat order (toggles, callouts, column layouts, nested lines alike).
    *
    * @param targetBlock - the block the indicator was shown on
    * @param edge - the drop edge
@@ -1249,13 +1262,34 @@ export class DragController extends Module {
     newParentId: string | null,
     sourceBlocks: Block[]
   ): Block {
-    if (edge !== 'bottom' || newParentId === targetBlock.id || !isToggleBlock(targetBlock)) {
+    if (edge !== 'bottom' || newParentId === targetBlock.id) {
       return targetBlock;
     }
 
     const blockManager = this.Blok.BlockManager;
+    // The dropped block becomes a sibling of the target's ancestor that shares
+    // its new parent, so it must follow that ancestor's whole subtree.
+    const climb = (block: Block, visited: Set<string>): Block | undefined => {
+      if (block.parentId === newParentId) {
+        return block;
+      }
+      if (block.parentId === null || visited.has(block.id)) {
+        return undefined;
+      }
+      visited.add(block.id);
+
+      const parent = blockManager.getBlockById(block.parentId);
+
+      return parent === undefined ? undefined : climb(parent, visited);
+    };
+    const sibling = climb(targetBlock, new Set<string>());
+
+    if (sibling === undefined || !(sibling.contentIds?.length > 0)) {
+      return targetBlock;
+    }
+
     const sourceIds = new Set(sourceBlocks.map(block => block.id));
-    const staying = this.getHierarchyDescendants(targetBlock).filter(
+    const staying = this.getHierarchyDescendants(sibling).filter(
       block => !sourceIds.has(block.id)
         && !hasLogicalSourceAncestor(blockManager.blocks, sourceBlocks, block)
     );
@@ -1343,11 +1377,13 @@ export class DragController extends Module {
         return;
       }
 
-      // Set parent relationships for duplicated blocks
+      // Only the copied ROOTS take the drop parent. applyDuplicates already
+      // put each copied descendant under its copied parent.
       const dropParentId = this.resolveParentForDrop(targetBlock, edge, sourceBlocks);
+      const copyIds = new Set(resultRef.current.duplicatedBlocks.map(dupBlock => dupBlock.id));
 
       for (const dupBlock of resultRef.current.duplicatedBlocks) {
-        if (dupBlock.parentId === dropParentId) {
+        if (dupBlock.parentId === dropParentId || (dupBlock.parentId !== null && copyIds.has(dupBlock.parentId))) {
           continue;
         }
         this.Blok.BlockManager.setBlockParent(dupBlock, dropParentId);

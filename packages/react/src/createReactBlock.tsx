@@ -10,6 +10,7 @@ import {
   fillDefaults,
   mountChildBlocks,
   type PropSchema,
+  withSlotlessDescendants,
 } from '@bloklabs/core/adapters';
 import {
   BLOK_PORTAL_REGISTRY_CONFIG_KEY,
@@ -758,7 +759,9 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
 
           const children = blockApi.getChildren();
 
-          mountChildBlocks(slotRef.current, children);
+          // A slotless child's own children live in this slot too. Decoration and
+          // the mounted event stay per DIRECT child.
+          mountChildBlocks(slotRef.current, withSlotlessDescendants(children, id => api.blocks.getChildren(id)));
           applyChildDecoration(ledgerRef.current, children, { childAttributes,
             childContentAttributes });
           emitChildrenMounted(api, blockApi.id, children);

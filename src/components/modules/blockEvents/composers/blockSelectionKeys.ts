@@ -260,7 +260,8 @@ export class BlockSelectionKeys extends BlockEventComposer {
       BlockManager.setBlockParent(sibling, last.id);
     }
 
-    for (const block of blocks) {
+    // Last block first: each one leaving goes to the end of the parent's run.
+    for (const block of [...blocks].reverse()) {
       if (block.parentId === originalParentId) {
         BlockManager.setBlockParent(block, grandparentId);
       }
@@ -321,7 +322,8 @@ export class BlockSelectionKeys extends BlockEventComposer {
       moves.push({ block, grandparentId: parent.parentId });
     }
 
-    for (const { block, grandparentId } of moves) {
+    // Last item first: each one leaving goes to the end of its parent's run.
+    for (const { block, grandparentId } of moves.reverse()) {
       BlockManager.setBlockParent(block, grandparentId);
     }
   }

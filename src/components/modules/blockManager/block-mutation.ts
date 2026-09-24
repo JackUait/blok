@@ -13,6 +13,7 @@ import { isEmpty, isObject, isString, log } from '../../utils';
 import { announce } from '../../utils/announcer';
 import { convertStringToBlockData, isBlockConvertable } from '../../utils/blocks';
 import { isChildToolAllowed } from '../../utils/child-tools';
+import { canAdoptChild, releasesChildrenOnTurnInto } from '../../utils/turn-into-children';
 import { sanitizeBlocks, clean, composeSanitizerConfig, stripUnsafeUrlsDeep } from '../../utils/sanitizer';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
@@ -150,9 +151,10 @@ export class BlockMutation {
      */
     // `composeWrite` is evaluated by the short-circuit, so it runs
     // synchronously one statement before `setData` writes the Tool's DOM.
-    const appliedInPlace = tunes === undefined
-      && liveBlock.tool.supportsInPlaceSetData
-      && await liveBlock.setData(this.composeWrite(block.id, liveBlock.name, source.data, before, data));
+    const inPlaceData = tunes === undefined && liveBlock.tool.supportsInPlaceSetData
+      ? this.composeWrite(block.id, liveBlock.name, source.data, before, data)
+      : undefined;
+    const appliedInPlace = inPlaceData !== undefined && await liveBlock.setData(inPlaceData);
 
     if (appliedInPlace) {
       /**
@@ -170,6 +172,7 @@ export class BlockMutation {
         index: applied.index,
       });
 
+      this.writeNormalization(block.id, inPlaceData, before, data);
       this.syncDataToYjs(block.id, data, derivedFrom);
 
       return applied.block;
@@ -196,12 +199,38 @@ export class BlockMutation {
       bindEventsImmediately: true,
     });
 
+    const oldHolder = target.block.holder;
+
     blocksStore.replace(target.index, newBlock);
+
+    // The swap takes the child slot with the old holder: re-seat every
+    // descendant left in it, depth-first, so each finds its new home slot.
+    const reseat = (parentId: string, visited: Set<string>): void => {
+      if (visited.has(parentId)) {
+        return;
+      }
+      visited.add(parentId);
+
+      for (const childId of this.repository.getBlockById(parentId)?.contentIds ?? []) {
+        const child = this.repository.getBlockById(childId);
+
+        if (child === undefined) {
+          continue;
+        }
+        if (oldHolder.contains(child.holder)) {
+          this.hierarchy.setBlockParent(child, parentId);
+        }
+        reseat(childId, visited);
+      }
+    };
+
+    reseat(newBlock.id, new Set<string>());
 
     this.blockDidMutated(BlockChangedMutationType, newBlock, {
       index: target.index,
     });
 
+    this.writeNormalization(block.id, mergedData, before, data);
     this.syncDataToYjs(block.id, data, derivedFrom);
 
     // Sync changed tunes to Yjs (`!= null` — callers may pass a literal null)
@@ -417,6 +446,51 @@ export class BlockMutation {
   }
 
   /**
+   * Write the keys the caller did NOT name, as the tool now holds them, to the
+   * shared document, untracked. They differ only where the tool normalised the
+   * document's data (a legacy shape). The block's next full-save flush would
+   * add them tracked and prune the legacy keys untracked, so undo took the
+   * patch back to a document that had lost the legacy keys it was derived from.
+   * @param blockId - id of the updated block
+   * @param composed - the data the block was given (see `composeWrite`)
+   * @param before - document snapshot taken before the awaits; a key missing
+   *   from it is a peer's and is never pruned
+   * @param patch - the keys the caller asked to change; written tracked
+   */
+  private writeNormalization(
+    blockId: string,
+    composed: BlockToolData,
+    before: Record<string, unknown> | undefined,
+    patch?: Partial<BlockToolData>
+  ): void {
+    const current = this.readDocumentData(blockId);
+
+    if (before === undefined || current === undefined) {
+      return;
+    }
+
+    // A key the document moved since `before` is someone's edit (a peer's
+    // keystroke can land while setData is awaited); `composed` is stale there.
+    const settled = (key: string): boolean => (patch == null || !(key in patch))
+      && JSON.stringify(current[key]) === JSON.stringify(before[key]);
+    const changed = Object.entries(composed).filter(([key, value]) => settled(key)
+      && JSON.stringify(value) !== JSON.stringify(current[key]));
+    const keep = new Set([...Object.keys(composed), ...Object.keys(patch ?? {})]);
+    const stale = Object.keys(current).filter(key => !keep.has(key) && key in before && settled(key));
+
+    if (changed.length === 0 && stale.length === 0) {
+      return;
+    }
+
+    this.dependencies.YjsManager.transactWithoutCapture(() => {
+      for (const [key, value] of changed) {
+        this.dependencies.YjsManager.updateBlockData(blockId, key, value);
+      }
+      this.dependencies.YjsManager.pruneBlockData(blockId, keep, new Set(stale));
+    });
+  }
+
+  /**
    * Sync the caller's data patch to Yjs, key by key. Shared by both update
    * paths (in-place and recompose) so they stay in step.
    * @param blockId - id of the updated block
@@ -483,6 +557,20 @@ export class BlockMutation {
      */
     const newBlockId = liveBlock.id;
 
+    // Same rule as Turn into, applied the same way: release before the swap
+    // (the rule reads the old holder's toggle marker) and before the type
+    // write, so undo takes both back in one step.
+    // Last child first: each one leaving goes to the end of the old block's run.
+    const released = releasesChildrenOnTurnInto(liveBlock, newTool, data)
+      ? [...liveBlock.contentIds].reverse().map(childId => this.repository.getBlockById(childId))
+      : [];
+
+    released.forEach((child) => {
+      if (child !== undefined) {
+        this.ctx.parentWriter(child, liveBlock.parentId);
+      }
+    });
+
     // Capture hierarchy before replacement
     const oldParentId = liveBlock.parentId;
     const oldContentIds = [...liveBlock.contentIds];
@@ -545,7 +633,22 @@ export class BlockMutation {
      * `newBlock.contentIds` while preserving children created by the replacement
      * tool's synchronous render lifecycle.
      */
-    this.reparentChildren(oldContentIds, newBlock.id);
+    // The insert above kept only the children the new block may hold;
+    // re-nesting the rest here would undo that.
+    this.reparentChildren(oldContentIds.filter((childId) => {
+      const child = this.repository.getBlockById(childId);
+
+      return child !== undefined && canAdoptChild(newBlock, child);
+    }), newBlock.id);
+
+    // The insert skipped the document, which still nests a refused child here.
+    for (const childId of oldContentIds) {
+      const child = this.repository.getBlockById(childId);
+
+      if (child !== undefined && child.parentId !== newBlock.id) {
+        this.ctx.parentWriter(child, child.parentId);
+      }
+    }
 
     this.ctx.assertHierarchyInvariantInDev('replace');
 
@@ -778,7 +881,24 @@ export class BlockMutation {
      * after move(); the auto-heal below makes that a no-op (idempotent),
      * and rescues every other caller (keyboard moveUp/Down, public api).
      */
-    const destinationParentId = neighborBlock !== undefined ? neighborBlock.parentId : null;
+    const destinationParentId = this.resolveMoveDestinationParent(toIndex, fromIndex, neighborBlock);
+
+    // Snapshot: the body below opens its own move group for a reparent.
+    const inCallerMoveGroup = this.dependencies.YjsManager.isInMoveGroup;
+
+    // A slot inside the block's own subtree: Blocks.move would carry the
+    // subtree straight back, and the heal would make the block its own parent.
+    // A move group's caller assigns parents itself, so the heal never runs there.
+    if (
+      movingBlock !== undefined
+      && !skipAutoHeal
+      && !inCallerMoveGroup
+      && this.isSelfOrDescendant(destinationParentId, movingBlock.id)
+    ) {
+      log(`Warning during 'move' call: a block cannot move inside its own subtree.`, 'warn');
+
+      return;
+    }
 
     /**
      * Structural-boundary clamp (keyboard / public-api move only).
@@ -809,13 +929,12 @@ export class BlockMutation {
      * still strand the holder inside the foreign container (model says root, DOM
      * says column: the phantom-column divergence), so the whole reorder is refused.
      *
-     * Skipped while a DRAG move group is open: DragController legitimately
-     * drags blocks across columns and assigns the parent itself. Keyboard
-     * moves also run inside a move group, and they must stay clamped.
+     * Skipped while a Yjs move group is open (the drag path): DragController
+     * legitimately drags blocks across columns and assigns the parent itself.
      */
     if (
       movingBlock !== undefined
-      && !this.dependencies.YjsManager.isDragMoveGroupActive
+      && !inCallerMoveGroup
       && destinationParentId !== movingBlock.parentId
     ) {
       const movingParent = movingBlock.parentId !== null
@@ -847,6 +966,45 @@ export class BlockMutation {
       }
     }
 
+    // A reparent must land in the shared document inside the same move group as
+    // the reorder, or undo restores the position and leaves the old parent.
+    const reparents = !skipAutoHeal
+      && !inCallerMoveGroup
+      && movingBlock !== undefined
+      && movingBlock.parentId !== destinationParentId;
+
+    if (reparents) {
+      this.dependencies.YjsManager.transactMoves(() => {
+        this.applyMove(toIndex, fromIndex, skipDOM, blocksStore, skipMovedHook, movingBlock, destinationParentId, true);
+      });
+
+      return;
+    }
+
+    this.applyMove(toIndex, fromIndex, skipDOM, blocksStore, skipMovedHook, movingBlock, destinationParentId, false);
+  }
+
+  /**
+   * The flat reorder, the parent heal and the Yjs sync of one `move()` call.
+   * @param toIndex - Index where to move Block
+   * @param fromIndex - Index of Block to move
+   * @param skipDOM - If true, do not manipulate DOM
+   * @param blocksStore - The blocks store to modify
+   * @param skipMovedHook - If true, do not fire the moved() lifecycle hook
+   * @param movingBlock - the block at `fromIndex` before the move
+   * @param destinationParentId - the parent the slot implies
+   * @param reparents - true when the block takes `destinationParentId` as its new parent
+   */
+  private applyMove(
+    toIndex: number,
+    fromIndex: number,
+    skipDOM: boolean,
+    blocksStore: BlocksStore,
+    skipMovedHook: boolean,
+    movingBlock: Block | undefined,
+    destinationParentId: string | null,
+    reparents: boolean
+  ): void {
     // Suppress stopCapturing to keep DOM + Yjs move as single undo entry
     this.ctx.suppressStopCapturing = true;
     try {
@@ -871,24 +1029,6 @@ export class BlockMutation {
       }
 
       /**
-       * Cross-container auto-heal — see the comment above destinationParentId.
-       *
-       * Routes through `setBlockParent`, which is the canonical chokepoint
-       * that updates BOTH the moved block's `parentId` AND the source/dest
-       * container `contentIds` arrays. Idempotent when the parent already
-       * matches, so DragController's existing post-move setBlockParent call
-       * remains a safe no-op.
-       *
-       * Skip inside a Yjs move group (drag path): DragController.handleDropImpl
-       * calls the undo-aware `BlockManager.setBlockParent` after `move()` and
-       * relies on reading the pre-move `parentId` to record the correct
-       * `fromParentId` on the in-flight move entry. Mutating `parentId` here
-       * via `hierarchy.setBlockParent` (which bypasses the undo bookkeeping)
-       * would clobber that baseline and leave undo unable to restore the
-       * original parent. Callers outside any move group (the public api)
-       * still get the auto-heal.
-       */
-      /**
        * SAME-parent nested reorder must ALSO re-run setBlockParent: the
        * positional `blocksStore.move()` deliberately skips the DOM for nested
        * holders (correct for table cells, which manage their own cell DOM),
@@ -900,16 +1040,13 @@ export class BlockMutation {
        * `setBlockParent` re-mounts the holder at its flat-array position (the
        * same trick DragController uses for in-toggle reorders); for table
        * cells the anti-stealing container guard makes it a DOM no-op, so cell
-       * children remain untouched.
+       * children remain untouched. Inside a move group the caller re-mounts
+       * (drag, keyboard `placeRun`).
        */
       const isSameParentNestedReorder =
         movedBlock.parentId === destinationParentId && destinationParentId !== null;
 
-      if (
-        !skipAutoHeal
-        && (movedBlock.parentId !== destinationParentId || isSameParentNestedReorder)
-        && !this.dependencies.YjsManager.isInMoveGroup
-      ) {
+      if (isSameParentNestedReorder && !this.dependencies.YjsManager.isInMoveGroup) {
         this.hierarchy.setBlockParent(movedBlock, destinationParentId);
       }
 
@@ -924,10 +1061,54 @@ export class BlockMutation {
       // Sync to Yjs using the actual resolved index
       this.dependencies.YjsManager.moveBlock(movedBlock.id, resolvedIndex);
 
+      // Cross-container heal. It runs after moveBlock so the parent write
+      // attaches to the move entry moveBlock just recorded.
+      if (reparents) {
+        this.ctx.parentWriter(movedBlock, destinationParentId);
+      }
+
       this.ctx.assertHierarchyInvariantInDev('move');
     } finally {
       this.ctx.suppressStopCapturing = false;
     }
+  }
+
+  /**
+   * The parent a block takes when `move()` puts it at `toIndex`: the parent of
+   * the pre-move block at that index. A forward move lands AFTER that block, so
+   * when the block that ends up next is its first child, the slot is inside it.
+   * @param toIndex - Index where to move Block
+   * @param fromIndex - Index of Block to move
+   * @param neighborBlock - the pre-move block at `toIndex`
+   */
+  private resolveMoveDestinationParent(toIndex: number, fromIndex: number, neighborBlock: Block | undefined): string | null {
+    if (neighborBlock === undefined) {
+      return null;
+    }
+
+    const next = toIndex > fromIndex ? this.repository.getBlockByIndex(toIndex + 1) : undefined;
+
+    return next?.parentId === neighborBlock.id ? neighborBlock.id : neighborBlock.parentId;
+  }
+
+  /**
+   * Whether `candidateId` is `ancestorId` or sits under it.
+   * @param candidateId - block id to test (null = root)
+   * @param ancestorId - the subtree root
+   */
+  private isSelfOrDescendant(candidateId: string | null, ancestorId: string): boolean {
+    const visited = new Set<string>();
+    const walk = { id: candidateId };
+
+    while (walk.id !== null && !visited.has(walk.id)) {
+      if (walk.id === ancestorId) {
+        return true;
+      }
+      visited.add(walk.id);
+      walk.id = this.repository.getBlockById(walk.id)?.parentId ?? null;
+    }
+
+    return false;
   }
 
   /**
@@ -1050,7 +1231,7 @@ export class BlockMutation {
             const childBlock = this.repository.getBlockById(childId);
 
             if (childBlock !== undefined) {
-              this.ctx.setBlockParent(childBlock, liveTarget.id);
+              this.ctx.parentWriter(childBlock, liveTarget.id);
             }
           }
 
@@ -1116,8 +1297,15 @@ export class BlockMutation {
    * @param targetToolName - Name of the Tool to convert to
    * @param blocksStore - The blocks store to modify
    * @param blockDataOverrides - Optional new Block data overrides
+   * @param beforeReplace - runs inside the convert's undo entry, right before the swap
    */
-  public async convert(blockToConvert: Block, targetToolName: string, blocksStore: BlocksStore, blockDataOverrides?: BlockToolData): Promise<Block> {
+  public async convert(
+    blockToConvert: Block,
+    targetToolName: string,
+    blocksStore: BlocksStore,
+    blockDataOverrides?: BlockToolData,
+    beforeReplace?: () => void
+  ): Promise<Block> {
     /**
      * At first, we get current Block data — through the instance that is still
      * in the document.
@@ -1267,6 +1455,8 @@ export class BlockMutation {
     this.ctx.suppressStopCapturing = true;
 
     try {
+      beforeReplace?.();
+
       return this.yjsSync.withAtomicOperation(
         () => this.ctx.replace(source, replacingTool.name, newBlockData, blocksStore),
         { extendThroughRAF: true }
@@ -1427,7 +1617,7 @@ export class BlockMutation {
     }
 
     // Slide the group up so each member lands at predStart..(predStart + size).
-    this.moveRunTo(this.blocksInRange(group.start, group.end), predStart, blocksStore);
+    this.placeRun(this.blocksBetween(group.start, group.end), predStart, group.containerParentId, blocksStore);
 
     this.finishMove(group.anchor, selectedBlocks, 'a11y.movedUp');
   }
@@ -1458,42 +1648,64 @@ export class BlockMutation {
     // descends the group past it by one sibling position.
     const neighbourStart = group.end + 1;
 
-    this.moveRunTo(this.blocksInRange(neighbourStart, this.subtreeEndIndex(neighbourStart)), group.start, blocksStore);
+    this.placeRun(
+      this.blocksBetween(neighbourStart, this.subtreeEndIndex(neighbourStart)),
+      group.start,
+      group.containerParentId,
+      blocksStore
+    );
 
     this.finishMove(group.anchor, selectedBlocks, 'a11y.movedDown');
   }
 
   /**
-   * The blocks at flat indices `start..end`, both included.
+   * Blocks at flat indices `start..end`, inclusive.
+   * @param start - first index
+   * @param end - last index
    */
-  private blocksInRange(start: number, end: number): Block[] {
-    return this.repository.blocks.slice(start, end + 1);
+  private blocksBetween(start: number, end: number): Block[] {
+    return Array.from({ length: end - start + 1 }, (_, offset) => this.repository.getBlockByIndex(start + offset))
+      .filter((block): block is Block => block !== undefined);
   }
 
   /**
-   * Place a run of blocks at `target`, `target + 1`, … as ONE undo step.
+   * Moves a contiguous run so it starts at `firstIndex`, as ONE undo step, and
+   * re-mounts the container's children in the new order.
    *
-   * Each block is found by identity at its LIVE index. `Blocks.move` carries
-   * every block whose holder sits inside the moved one (a toggle's children),
-   * so a stale index would move whatever block now sits there instead — into
-   * the container. A block that was carried to its slot already is skipped.
-   * @param run - the blocks to move, in their final order
-   * @param target - the flat index the first block lands at
+   * Members are moved by identity, not by index: `Blocks.move` carries the
+   * blocks nested in a moved holder along with it, so a toggle's children are
+   * already in place after the toggle moves. An index loop would move the wrong
+   * block into the toggle's first-child slot.
+   * @param run - the blocks to move, in flat order
+   * @param firstIndex - where the first block must land
+   * @param containerParentId - the run's shared parent (null = root)
    * @param blocksStore - The blocks store to modify
    */
-  private moveRunTo(run: Block[], target: number, blocksStore: BlocksStore): void {
+  private placeRun(run: Block[], firstIndex: number, containerParentId: string | null, blocksStore: BlocksStore): void {
     this.dependencies.YjsManager.transactMoves(() => {
       run.forEach((block, offset) => {
-        const index = this.repository.getBlockIndex(block);
+        const fromIndex = this.repository.getBlockIndex(block);
 
-        if (index !== target + offset) {
-          // skipAutoHeal: an in-container reorder (boundary-checked by the
-          // caller), so the parentId is unchanged and the per-block heal would
-          // only corrupt a moved subtree's inner children.
-          this.move(target + offset, index, false, blocksStore, false, true);
+        if (fromIndex !== firstIndex + offset) {
+          // skipAutoHeal: an in-container reorder keeps every parentId; the
+          // per-block heal would re-parent a subtree's inner child to the
+          // unrelated block it passes.
+          this.move(firstIndex + offset, fromIndex, false, blocksStore, false, true);
         }
       });
     });
+
+    if (containerParentId === null) {
+      return;
+    }
+
+    // Blocks.move leaves nested holders where they are, so re-assert the
+    // unchanged parent: setBlockParent mounts each holder before its next flat
+    // sibling. Last child first, so that sibling is already in place.
+    this.repository.blocks
+      .filter(block => block.parentId === containerParentId)
+      .reverse()
+      .forEach(block => this.hierarchy.setBlockParent(block, containerParentId));
   }
 
   /**

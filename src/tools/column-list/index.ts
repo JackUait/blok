@@ -11,6 +11,7 @@ import {
   COLUMN_RESIZER_ATTR,
   COLUMN_TOOL,
   buildColumnResizers,
+  subtreeEndIndex,
 } from '../columns-shared';
 import { mountChildBlocks } from '../nested-blocks';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -170,9 +171,10 @@ export class ColumnList implements BlockTool {
 
       // Re-read: the tree has settled, so anything that is STILL a non-column
       // child of this list is genuine corruption, not a transient.
-      this.api.blocks
-        .getChildren(this.blockId)
+      // Last rogue first: each one leaving goes to the end of the list's run.
+      this.api.blocks.getChildren(this.blockId)
         .filter(child => child.name !== COLUMN_TOOL)
+        .reverse()
         .forEach(child => this.api.blocks.setBlockParent(child.id, null));
     };
 
@@ -187,9 +189,8 @@ export class ColumnList implements BlockTool {
     }
 
     const count = this._data.columnCount ?? 2;
-    const baseIndex = this.api.blocks.getBlockIndex(this.blockId);
 
-    if (baseIndex === undefined) {
+    if (this.api.blocks.getBlockIndex(this.blockId) === undefined) {
       return;
     }
 
@@ -197,15 +198,15 @@ export class ColumnList implements BlockTool {
     this._data = { ...this._data, columnCount: undefined };
 
     const columns = Array.from({ length: count }).map((_, i) => {
-      // Columns render asynchronously, so each column's rendered() hook seeds
-      // and focuses its paragraph after this loop returns — the LAST one would
-      // win the focus race. Tag every column except the first with noFocus so
-      // only the first column claims the caret, deterministically.
+      // Each column seeds and focuses its paragraph inside this insert, so the
+      // LAST one would win the caret: tag every column but the first noFocus.
+      // The seeded paragraph also shifts the flat array, so each column goes
+      // after the list's whole subtree, not at a precomputed index.
       const column = this.api.blocks.insert(
         COLUMN_TOOL,
         { noFocus: i !== 0 },
         {},
-        baseIndex + 1 + i,
+        subtreeEndIndex(this.api, this.blockId) + 1,
         false,
         false
       );

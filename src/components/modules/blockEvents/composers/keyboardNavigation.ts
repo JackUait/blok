@@ -9,6 +9,7 @@ import { findNbspAfterEmptyInline, focus, isCaretAtEndOfInput, isCaretAtStartOfI
 import { EDITABLE_INPUT_SELECTOR, HEADER_TOOL_NAME, LIST_TOOL_NAME, QUOTE_TOOL_NAME } from '../constants';
 import { deliverOnSubmit } from '../../../utils/on-submit';
 import { keyCodeFromEvent } from '../utils/keyboard';
+import { findOwn } from '../../../utils/own-element';
 
 import { BlockEventComposer } from './__base';
 import { getIndentTarget, getFollowingSiblings } from './structural-siblings';
@@ -449,7 +450,7 @@ export class KeyboardNavigation extends BlockEventComposer {
 
     const parent = this.Blok.BlockManager.getBlockById(block.parentId);
 
-    return parent !== undefined && parent.holder.querySelector('[data-blok-toggle-open]') !== null;
+    return parent !== undefined && findOwn(parent.holder, '[data-blok-toggle-open]') !== null;
   }
 
   /**
@@ -543,7 +544,7 @@ export class KeyboardNavigation extends BlockEventComposer {
      * plain h2 that merely has Tab-nested children. The toggle TOOL itself
      * declares `keepsChildrenOnEnter` and is handled above.
      */
-    if (parentBlock.holder.querySelector('[data-blok-toggle-open]') !== null) {
+    if (findOwn(parentBlock.holder, '[data-blok-toggle-open]') !== null) {
       return null;
     }
 
@@ -707,7 +708,7 @@ export class KeyboardNavigation extends BlockEventComposer {
        * forceTopLevel is safe to pass only when the current block is top-level
        * AND is not an open toggle (which intentionally nests the new block as its child).
        */
-      const toggleWrapper = currentBlock.holder.querySelector('[data-blok-toggle-open]');
+      const toggleWrapper = findOwn(currentBlock.holder, '[data-blok-toggle-open]');
       const isToggleOpen = toggleWrapper?.getAttribute('data-blok-toggle-open') === 'true';
       const forceTopLevelCase2 = isCurrentTopLevel && !isToggleOpen;
 

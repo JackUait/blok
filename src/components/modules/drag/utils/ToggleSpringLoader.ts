@@ -1,13 +1,10 @@
 import type { Block } from '../../../block';
+import { isCollapsedToggleBlock } from './toggleState';
 
 const SPRING_LOAD_DELAY_MS = 500;
 const SPRING_LOADING_ATTR = 'data-blok-spring-loading';
 const SPRING_LOADED_ATTR = 'data-blok-spring-loaded';
 const SPRING_LOADED_DURATION_MS = 700;
-
-function isClosedToggle(block: Block): boolean {
-  return block.holder.querySelector('[data-blok-toggle-open="false"]') !== null;
-}
 
 /**
  * Manages the spring-loading hover timer for collapsed toggle blocks during drag.
@@ -28,7 +25,7 @@ export class ToggleSpringLoader {
 
     this.clearTimer();
 
-    if (block === null || !isClosedToggle(block)) {
+    if (block === null || !isCollapsedToggleBlock(block)) {
       this.currentBlock = null;
       return;
     }

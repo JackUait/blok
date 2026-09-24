@@ -28,6 +28,24 @@ const runTransacted = (api: API, fn: () => void): void => {
 };
 
 /**
+ * The flat index right after the last descendant of `blockId`. A new sibling
+ * inserted any earlier would split the block from its children.
+ */
+const indexAfterSubtree = (api: API, blockId: string, blockIndex: number): number => {
+  const isUnder = (id: string | null | undefined, seen: Set<string>): boolean => {
+    if (id === null || id === undefined || seen.has(id)) {
+      return false;
+    }
+
+    return id === blockId || isUnder(api.blocks.getById(id)?.parentId, seen.add(id));
+  };
+  const after = Array.from({ length: api.blocks.getBlocksCount() - blockIndex - 1 }, (_, i) => blockIndex + 1 + i);
+  const firstOutside = after.find(index => !isUnder(api.blocks.getBlockByIndex(index)?.parentId, new Set()));
+
+  return firstOutside ?? api.blocks.getBlocksCount();
+};
+
+/**
  * Wrap a top-level `targetId` block and the dragged `sourceIds` into a brand
  * new `column_list` with two columns: one holds the target, the other holds
  * the sources stacked in document order.
@@ -236,7 +254,7 @@ export const addColumnToList = (
     return null;
   }
 
-  const insertIndex = side === 'left' ? neighborIndex : neighborIndex + 1;
+  const insertIndex = side === 'left' ? neighborIndex : indexAfterSubtree(api, neighborColumnId, neighborIndex);
 
   // FLIP capture: the columns' pre-drop widths seed the row's start state, and
   // the tops of the blocks below the list drive their glide after the mutation.

@@ -2018,7 +2018,8 @@ describe('Toolbox — surviving-mutant coverage', () => {
       await toolbox.toolButtonActivated('testTool');
 
       expect(api.insert).toHaveBeenCalled();
-      expect(api.setBlockParent).toHaveBeenCalledWith('inserted-block', 'parent-1');
+      // The replace keeps the parent by itself.
+      expect(api.setBlockParent).not.toHaveBeenCalled();
     });
 
     it('leaves out a tool that withdraws its toolbox config while the menu is being built', () => {

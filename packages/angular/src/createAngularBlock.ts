@@ -18,7 +18,7 @@ import {
 } from '@bloklabs/core/adapters';
 import { deepEqual } from '@bloklabs/core/adapters';
 import { fillDefaults, type PropSchema } from '@bloklabs/core/adapters';
-import { mountChildBlocks } from '@bloklabs/core/adapters';
+import { mountChildBlocks, withSlotlessDescendants } from '@bloklabs/core/adapters';
 
 import type { AngularBlockRenderContext, ChildAttributesFn } from './block-context';
 import { BLOK_PORTAL_REGISTRY_CONFIG_KEY, type BlockPortalRegistry } from './block-portal-registry';
@@ -482,7 +482,9 @@ export function createAngularBlock<Data = BlockToolData>(
 
       const children = this.blockApi.getChildren();
 
-      mountChildBlocks(this.childHost, children);
+      // A slotless child's own children live in this slot too. Decoration and
+      // the mounted event stay per DIRECT child.
+      mountChildBlocks(this.childHost, withSlotlessDescendants(children, id => this.api.blocks.getChildren(id)));
       applyChildDecoration(this.childLedger, children, {
         childAttributes: this.childAttributes,
         childContentAttributes: this.childContentAttributes,

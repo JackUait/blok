@@ -83,6 +83,12 @@ export interface InsertBlockOptions {
    */
   forceTopLevel?: boolean;
   /**
+   * When true, a new block with no parent takes the parent its flat index
+   * implies, so the flat array stays depth-first. Set by the public
+   * `blocks.insert`; internal callers assign parents themselves.
+   */
+  inferParent?: boolean;
+  /**
    * Why this Block is being created — see {@link ComposeBlockOptions.origin}.
    * Defaults to `'api'`.
    */

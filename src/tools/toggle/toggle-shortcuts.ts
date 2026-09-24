@@ -11,6 +11,7 @@
 import type { API, BlockAPI } from '../../../types';
 
 import { Shortcuts } from '../../components/utils/shortcuts';
+import { findOwn } from '../../components/utils/own-element';
 
 import { TOGGLE_ATTR, TOOL_NAME } from './constants';
 
@@ -148,7 +149,7 @@ export class ToggleShortcuts {
       return;
     }
 
-    const toggleWrapper = targetBlock.holder.querySelector(`[${TOGGLE_ATTR.toggleOpen}]`);
+    const toggleWrapper = findOwn(targetBlock.holder, `[${TOGGLE_ATTR.toggleOpen}]`);
 
     if (toggleWrapper === null) {
       return;
@@ -263,7 +264,7 @@ export class ToggleShortcuts {
   }
 
   private extractToggleBlockInfo(child: BlockAPI): { call: (method: string) => void; isOpen: boolean } | null {
-    const toggleWrapper = child.holder.querySelector(`[${TOGGLE_ATTR.toggleOpen}]`);
+    const toggleWrapper = findOwn(child.holder, `[${TOGGLE_ATTR.toggleOpen}]`);
 
     if (toggleWrapper === null) {
       return null;
@@ -288,7 +289,7 @@ export class ToggleShortcuts {
         continue;
       }
 
-      const toggleWrapper = block.holder.querySelector(`[${TOGGLE_ATTR.toggleOpen}]`);
+      const toggleWrapper = findOwn(block.holder, `[${TOGGLE_ATTR.toggleOpen}]`);
 
       if (toggleWrapper === null) {
         continue;

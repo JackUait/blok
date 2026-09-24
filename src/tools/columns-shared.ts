@@ -48,6 +48,21 @@ const resolvePairMinWidth = (holders: HTMLElement[]): number =>
   }, COLUMN_MIN_WIDTH);
 
 /**
+ * Highest flat index taken by a block's subtree. A block placed at
+ * `subtreeEndIndex + 1` comes right after the block and all its descendants,
+ * which keeps the flat array depth-first.
+ * @param api - the editor API
+ * @param blockId - root of the subtree
+ */
+export const subtreeEndIndex = (api: API, blockId: string): number => {
+  const index = api.blocks.getBlockIndex(blockId) ?? -1;
+
+  return api.blocks
+    .getChildren(blockId)
+    .reduce((max, child) => Math.max(max, subtreeEndIndex(api, child.id)), index);
+};
+
+/**
  * Redistribute the flex-grow of two adjacent columns as their shared separator
  * is dragged by `delta` px. The pair's total grow is preserved so columns
  * outside the pair keep their width; widths are clamped to `minWidth` so
@@ -414,7 +429,8 @@ export const unwrapColumnListIfCollapsed = async (
   const [survivingColumn] = columns;
   const survivingBlocks = api.blocks.getChildren(survivingColumn.id);
 
-  for (const child of survivingBlocks) {
+  // Last child first: each one leaving goes to the end of the list's run.
+  for (const child of [...survivingBlocks].reverse()) {
     api.blocks.setBlockParent(child.id, enclosingParentId);
   }
 

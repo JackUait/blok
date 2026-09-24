@@ -1488,7 +1488,7 @@ describe('Toolbox', () => {
       expect(mocks.api.blocks.insert).not.toHaveBeenCalled();
     });
 
-    it('should wrap parent-clear, insert, and parent-restore in a single transaction for child blocks', async () => {
+    it('replaces a child block in one transaction without detaching it from its parent', async () => {
       const parentId = 'parent-toggle-id';
       const newBlockAPI = {
         id: 'new-block-id',
@@ -1525,10 +1525,10 @@ describe('Toolbox', () => {
 
       expect(transactFn).toBeTypeOf('function');
 
-      // Verify the operations were called: clear parent, insert, restore parent
-      expect(mocks.api.blocks.setBlockParent).toHaveBeenCalledWith('child-block-id', null);
-      expect(mocks.api.blocks.insert).toHaveBeenCalled();
-      expect(mocks.api.blocks.setBlockParent).toHaveBeenCalledWith('new-block-id', parentId);
+      // A replace keeps the parent and children itself. Detaching first left the
+      // replaced block's children at the root, out of tree order.
+      expect(mocks.api.blocks.setBlockParent).not.toHaveBeenCalled();
+      expect(vi.mocked(mocks.api.blocks.insert).mock.calls[0]?.[5]).toBe(true);
     });
 
     it('should not use transaction when block has no parent', async () => {

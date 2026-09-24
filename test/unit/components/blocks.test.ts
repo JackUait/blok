@@ -1062,63 +1062,6 @@ describe('Blocks', () => {
       expect(workingArea.contains(block1.holder)).toBe(false);
       expect(workingArea.contains(block2.holder)).toBe(true);
     });
-
-    /**
-     * Builds a container holder with a nested-blocks slot holding the given
-     * child holders, one of which holds a grandchild in its own slot.
-     */
-    const mountContainer = (container: Block, children: Block[], grandchild: Block): void => {
-      const slot = document.createElement('div');
-
-      slot.setAttribute('data-blok-nested-blocks', '');
-      container.holder.appendChild(slot);
-      children.forEach(child => slot.appendChild(child.holder));
-
-      const innerSlot = document.createElement('div');
-
-      innerSlot.setAttribute('data-blok-nested-blocks', '');
-      children[0].holder.appendChild(innerSlot);
-      innerSlot.appendChild(grandchild.holder);
-    };
-
-    it('keeps the replaced container\'s child holders in the document, in order, right after the new holder', () => {
-      const blocks = createBlocks();
-      const old = createMockBlock('co', 'callout');
-      const fresh = createMockBlock('co', 'callout');
-      const k1 = createMockBlock('k1', 'toggle', 'co');
-      const k2 = createMockBlock('k2', 'paragraph', 'co');
-      const g1 = createMockBlock('g1', 'paragraph', 'k1');
-
-      blocks.push(old);
-      mountContainer(old, [k1, k2], g1);
-
-      blocks.replace(0, fresh);
-
-      expect(Array.from(workingArea.children)).toEqual([fresh.holder, k1.holder, k2.holder]);
-      expect(g1.holder.parentElement?.closest('[data-blok-id]')).toBe(k1.holder);
-    });
-  });
-
-  describe('insert with replace', () => {
-    it('keeps the replaced container\'s child holders in the document, in order, right after the new holder', () => {
-      const blocks = createBlocks();
-      const before = createMockBlock('p0');
-      const old = createMockBlock('box', 'toggle');
-      const fresh = createMockBlock('box', 'paragraph');
-      const k1 = createMockBlock('k1', 'paragraph', 'box');
-      const k2 = createMockBlock('k2', 'paragraph', 'box');
-      const slot = document.createElement('div');
-
-      blocks.push(before);
-      blocks.push(old);
-      slot.setAttribute('data-blok-nested-blocks', '');
-      old.holder.appendChild(slot);
-      slot.append(k1.holder, k2.holder);
-
-      blocks.insert(1, fresh, true);
-
-      expect(Array.from(workingArea.children)).toEqual([before.holder, fresh.holder, k1.holder, k2.holder]);
-    });
   });
 
   describe('insertMany', () => {

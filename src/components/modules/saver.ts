@@ -13,7 +13,13 @@ import type { Block } from '../block';
 import { BlockChanged, SaveFailed } from '../events';
 import { getBlokVersion, isEmpty, isObject, log, logLabeled } from '../utils';
 import { collapseToLegacy, shouldCollapseToLegacy } from '../utils/data-model-transform';
-import { resolveRuntimeEnv, validateHierarchy, validateHolderAttachment } from '../utils/hierarchy-invariant';
+import {
+  resolveRuntimeEnv,
+  validateFlatOrder,
+  validateHierarchy,
+  validateHolderAttachment,
+  validateHomeSlots
+} from '../utils/hierarchy-invariant';
 import { sanitizeBlocks } from '../utils/sanitizer';
 import { normalizeInlineImages } from './normalizeInlineImages';
 
@@ -211,6 +217,7 @@ export class Saver extends Module {
     const blocks = BlockManager.blocks;
 
     this.assertNoStrandedHolders(blocks);
+    this.assertTreePlacement(blocks);
 
     /**
      * If there is only one block and it is empty and it's the default tool, return empty blocks array.
@@ -856,9 +863,50 @@ export class Saver extends Module {
       return;
     }
 
-    const message =
+    Saver.reportInvariant(
       `Saver: stranded block holder(s) detected — the save would emit content the user cannot see:\n${
-        violations.map(v => `  - ${v.message}`).join('\n')}`;
+        violations.map(v => `  - ${v.message}`).join('\n')}`
+    );
+  }
+
+  /**
+   * Tree placement gate (dev/test throw, prod log-only), same chokepoint and
+   * reasoning as {@link assertNoStrandedHolders}:
+   * - every connected holder sits directly in its home slot, so a nested
+   *   block renders inside its container and hides when it collapses;
+   * - the flat array is a depth-first walk of the tree, so save order and
+   *   ArrowUp/Down follow the tree.
+   * @param blocks - the live blocks about to be saved
+   */
+  private assertTreePlacement(blocks: Block[]): void {
+    const input = blocks.map(b => ({
+      id: b.id,
+      name: b.name,
+      parentId: b.parentId,
+      holder: b.holder instanceof Element ? b.holder : undefined,
+    }));
+    const rootArea: unknown = this.Blok.UI?.nodes?.redactor;
+    const violations = [
+      ...validateHomeSlots(input, rootArea instanceof Element ? rootArea : null),
+      ...validateFlatOrder(input),
+    ];
+
+    if (violations.length === 0) {
+      return;
+    }
+
+    Saver.reportInvariant(
+      `Saver: block tree placement is broken — what the user sees would not match the saved tree:\n${
+        violations.map(v => `  - ${v.message}`).join('\n')}`
+    );
+  }
+
+  /**
+   * Throws in test/development so the offending path gets fixed; only logs in
+   * production so the user still gets a save.
+   * @param message - the violation report
+   */
+  private static reportInvariant(message: string): void {
     const env = resolveRuntimeEnv();
 
     if (env === 'test' || env === 'development') {
@@ -879,8 +927,10 @@ export class Saver extends Module {
 
     allExtractedData.forEach(({ id, tool, data, tunes, isValid, parentId, contentIds, lastEditedAt, lastEditedBy }) => {
       const hasParent = parentId !== undefined && parentId !== null;
+      const hasContent = contentIds !== undefined && contentIds.length > 0;
 
-      if (!isValid && !hasParent) {
+      // Dropping a block with children would leave them pointing at a missing parent.
+      if (!isValid && !hasParent && !hasContent) {
         log(`Block «${tool}» skipped because saved data is invalid`);
 
         return;
@@ -906,7 +956,6 @@ export class Saver extends Module {
       }
 
       const isTunesEmpty = tunes === undefined || isEmpty(tunes);
-      const hasContent = contentIds !== undefined && contentIds.length > 0;
       const hasLastEdited = lastEditedAt !== undefined;
       const hasLastEditedBy = lastEditedBy !== undefined && lastEditedBy !== null;
 

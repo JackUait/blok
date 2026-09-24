@@ -1,5 +1,8 @@
 import type { OutputBlockData } from '@/types';
 import type { BlockId } from '../../../types/data-formats/block-id';
+import { CHILD_SLOT_SELECTOR, SELF_PLACING_PARENTS } from '../../tools/nested-blocks';
+
+import { resolveHomeSlot } from './home-slot';
 
 /**
  * Hierarchy invariant validator.
@@ -206,6 +209,181 @@ export const validateHolderAttachment = (blocks: HolderAttachmentInput[]): Holde
       blockId: b.id,
       message: `Block ${String(b.id)} is stranded: its parent ${String(b.parentId)} is in the document but the block's holder is detached`,
     }));
+};
+
+/**
+ * A live block, as the placement and flat-order checks read it. Fields are
+ * optional because saver unit fixtures pass partial stubs.
+ */
+export interface LiveBlockInput {
+  id: string;
+  name: string;
+  parentId: string | null;
+  holder?: Element;
+}
+
+export interface HomeSlotViolation {
+  kind: 'holder-outside-home-slot';
+  blockId: string;
+  message: string;
+}
+
+/**
+ * Detect holders mounted outside their HOME SLOT: the child slot of the
+ * nearest ancestor that owns one (see {@link resolveHomeSlot}), or the editor
+ * root when no ancestor does. A holder elsewhere renders outside its container
+ * and escapes its collapse.
+ *
+ * Skipped, because nothing can be judged there:
+ * - a holder that is not in the document (the stranded check owns that);
+ * - a home slot, or the root area, that is not in the document (detached
+ *   editor, not-yet-mounted parent);
+ * - blocks a table/database places itself (per cell / per view);
+ * - an ancestor without a holder (partial stubs).
+ *
+ * An adapter slot that has not committed yet reads as slotless, so its
+ * children are expected where core parks them meanwhile: no special case.
+ * @param blocks - the live blocks
+ * @param rootArea - the editor working area; null when unknown, then a root
+ *   block is only flagged when it sits directly in a child slot
+ */
+export const validateHomeSlots = (blocks: LiveBlockInput[], rootArea: Element | null): HomeSlotViolation[] => {
+  const byId = new Map(blocks.map(b => [b.id, b]));
+  const getBlock = (id: string): { holder: Element | undefined; name: string; parentId: string | null } | undefined => {
+    const block = byId.get(id);
+
+    return block === undefined ? undefined : { holder: block.holder, name: block.name, parentId: block.parentId };
+  };
+  // Siblings share a home; each resolve walks ancestors with a querySelector per hop.
+  const homeByParent = new Map<string | null, ReturnType<typeof resolveHomeSlot>>();
+
+  return blocks.flatMap((block): HomeSlotViolation[] => {
+    const holder = block.holder;
+
+    if (holder === undefined || !holder.isConnected) {
+      return [];
+    }
+
+    const parent = block.parentId !== null ? byId.get(block.parentId) : undefined;
+
+    if (parent !== undefined && SELF_PLACING_PARENTS.has(parent.name)) {
+      return [];
+    }
+
+    // A column_list never mounts a non-column child and evicts it to root on
+    // the next settled frame (ColumnList.scheduleRogueEviction); a save before
+    // that frame is a known transient, not a lost block.
+    if (parent?.name === 'column_list' && block.name !== 'column') {
+      return [];
+    }
+
+    const home = homeByParent.get(block.parentId) ?? resolveHomeSlot(block.parentId, getBlock);
+
+    homeByParent.set(block.parentId, home);
+    const actual = holder.parentElement;
+
+    const misplaced = ((): boolean => {
+      if (home.kind === 'slot') {
+        return home.slot.isConnected && actual !== home.slot;
+      }
+
+      if (home.kind !== 'root') {
+        return false;
+      }
+
+      if (rootArea !== null) {
+        return rootArea.isConnected && actual !== rootArea;
+      }
+
+      return actual?.matches(CHILD_SLOT_SELECTOR) === true;
+    })();
+
+    if (!misplaced) {
+      return [];
+    }
+
+    const where = home.kind === 'slot' ? 'the child slot of its nearest slot-owning ancestor' : 'the editor root';
+
+    return [{
+      kind: 'holder-outside-home-slot' as const,
+      blockId: block.id,
+      message: `Block ${block.id} (parent ${String(block.parentId)}) is outside its home slot: its holder belongs directly in ${where}`,
+    }];
+  });
+};
+
+export interface FlatOrderViolation {
+  kind: 'flat-order-not-depth-first';
+  index: number;
+  expected: string | undefined;
+  actual: string | undefined;
+  message: string;
+}
+
+/**
+ * Detect a flat block array that is not a depth-first walk of the tree: each
+ * block must be followed right away by all its descendants. Save order,
+ * keyboard navigation and flat-index DOM anchoring all assume it.
+ *
+ * Sibling order is the flat order, not `contentIds`: the saver derives
+ * `content[]` from the flat array and tolerates a stale `contentIds`
+ * (saver.test.ts pins that). A dangling parentId counts as root, as in the
+ * saver output.
+ * @param blocks - the flat block array
+ */
+export const validateFlatOrder = (blocks: LiveBlockInput[]): FlatOrderViolation[] => {
+  const ids = new Set(blocks.map(b => b.id));
+  const effectiveParent = (b: LiveBlockInput): string | null =>
+    b.parentId !== null && ids.has(b.parentId) ? b.parentId : null;
+  const childrenInFlatOrder = new Map<string, string[]>();
+
+  for (const b of blocks) {
+    const parentId = effectiveParent(b);
+
+    if (parentId !== null) {
+      childrenInFlatOrder.set(parentId, [...(childrenInFlatOrder.get(parentId) ?? []), b.id]);
+    }
+  }
+
+  const byId = new Map(blocks.map(b => [b.id, b]));
+  const expected: string[] = [];
+  const visited = new Set<string>();
+  const walk = (b: LiveBlockInput): void => {
+    if (visited.has(b.id)) {
+      return;
+    }
+    visited.add(b.id);
+    expected.push(b.id);
+
+    for (const childId of childrenInFlatOrder.get(b.id) ?? []) {
+      const child = byId.get(childId);
+
+      if (child !== undefined) {
+        walk(child);
+      }
+    }
+  };
+
+  blocks.filter(b => effectiveParent(b) === null).forEach(walk);
+
+  const length = Math.max(expected.length, blocks.length);
+  const index = Array.from({ length }, (_, i) => i).find(i => expected[i] !== blocks[i]?.id);
+
+  if (index === undefined) {
+    return [];
+  }
+
+  const around = (list: Array<string | undefined>): string => list.slice(Math.max(0, index - 2), index + 3).map(String).join(',');
+
+  return [{
+    kind: 'flat-order-not-depth-first',
+    index,
+    expected: expected[index],
+    actual: blocks[index]?.id,
+    message:
+      `Flat block order is not depth-first at index ${index}: expected ${String(expected[index])}, found ${String(blocks[index]?.id)} ` +
+      `(flat ${around(blocks.map(b => b.id))} vs tree ${around(expected)})`,
+  }];
 };
 
 export const assertHierarchy = (blocks: OutputBlockData[], context: string): void => {

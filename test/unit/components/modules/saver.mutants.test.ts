@@ -517,6 +517,138 @@ describe('Saver — mutation coverage', () => {
     });
   });
 
+  describe('home slot gate', () => {
+    /**
+     * toggle > p1 > p2, where p1 owns no slot: p2 belongs in the toggle's
+     * slot. `p2Placement` decides whether it is there or loose in the page.
+     */
+    const homeSlotTree = (p2Placement: 'toggle-slot' | 'page-root', containerTool = 'toggle'): Block[] => {
+      const toggleHolder = document.createElement('div');
+      const slot = document.createElement('div');
+
+      slot.setAttribute('data-blok-toggle-children', '');
+      toggleHolder.appendChild(slot);
+      document.body.appendChild(toggleHolder);
+
+      const p1Holder = document.createElement('div');
+      const p2Holder = document.createElement('div');
+
+      slot.appendChild(p1Holder);
+      (p2Placement === 'toggle-slot' ? slot : document.body).appendChild(p2Holder);
+
+      return [
+        createBlockMock({ id: 'toggle', tool: containerTool, data: { text: 'T' }, contentIds: ['p1'], holder: toggleHolder }).block,
+        createBlockMock({ id: 'p1', tool: 'paragraph', data: { text: 'one' }, parentId: 'toggle', contentIds: ['p2'], holder: p1Holder }).block,
+        createBlockMock({ id: 'p2', tool: 'paragraph', data: { text: 'two' }, parentId: 'p1', holder: p2Holder }).block,
+      ];
+    };
+
+    it('rejects the save in the test environment and names the misplaced block', async () => {
+      vi.stubEnv('NODE_ENV', 'test');
+      passthroughSanitizer();
+      silenceLogs();
+      const { saver } = createSaver({ blocks: homeSlotTree('page-root') });
+
+      await expect(saver.save()).rejects.toThrow(/Block p2 .*outside its home slot/);
+    });
+
+    it('rejects the save in the development environment', async () => {
+      vi.stubEnv('NODE_ENV', 'development');
+      passthroughSanitizer();
+      silenceLogs();
+      const { saver } = createSaver({ blocks: homeSlotTree('page-root') });
+
+      await expect(saver.save()).rejects.toThrow(/home slot/);
+    });
+
+    it('only logs in production so the user still gets a save', async () => {
+      vi.stubEnv('NODE_ENV', 'production');
+      passthroughSanitizer();
+      const logLabeledSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      vi.spyOn(utils, 'log').mockImplementation(() => undefined);
+
+      const { saver } = createSaver({ blocks: homeSlotTree('page-root') });
+      const result = await saver.save();
+
+      expect(result?.blocks).toHaveLength(3);
+      expect(logLabeledSpy).toHaveBeenCalledWith(expect.stringMatching(/home slot/), 'error');
+    });
+
+    it('saves a tree whose holders all sit in their home slots', async () => {
+      vi.stubEnv('NODE_ENV', 'test');
+      passthroughSanitizer();
+      silenceLogs();
+      const { saver } = createSaver({ blocks: homeSlotTree('toggle-slot') });
+
+      const result = await saver.save();
+
+      expect(saver.getLastSaveError()).toBeUndefined();
+      expect(result?.blocks).toHaveLength(3);
+    });
+
+    it('exempts blocks a table places itself', async () => {
+      vi.stubEnv('NODE_ENV', 'test');
+      passthroughSanitizer();
+      silenceLogs();
+      const { saver } = createSaver({ blocks: homeSlotTree('page-root', 'table') });
+
+      const result = await saver.save();
+
+      expect(saver.getLastSaveError()).toBeUndefined();
+      expect(result?.blocks).toHaveLength(3);
+    });
+  });
+
+  describe('flat order gate', () => {
+    /** a, out > (c1, c2), b — with `in` wedged between out and its children when `escaped`. */
+    const flatTree = (escaped: boolean): Block[] => {
+      const a = createBlockMock({ id: 'a', tool: 'paragraph', data: { text: 'a' } }).block;
+      const out = createBlockMock({ id: 'out', tool: 'toggle', data: { text: 'out' }, contentIds: ['c1', 'c2'] }).block;
+      const inner = createBlockMock({ id: 'in', tool: 'paragraph', data: { text: 'in' } }).block;
+      const c1 = createBlockMock({ id: 'c1', tool: 'paragraph', data: { text: 'c1' }, parentId: 'out' }).block;
+      const c2 = createBlockMock({ id: 'c2', tool: 'paragraph', data: { text: 'c2' }, parentId: 'out' }).block;
+      const b = createBlockMock({ id: 'b', tool: 'paragraph', data: { text: 'b' } }).block;
+
+      return escaped ? [a, out, inner, c1, c2, b] : [a, out, c1, c2, inner, b];
+    };
+
+    it('rejects the save in the test environment when a root block splits a container from its children', async () => {
+      vi.stubEnv('NODE_ENV', 'test');
+      passthroughSanitizer();
+      silenceLogs();
+      const { saver } = createSaver({ blocks: flatTree(true) });
+
+      await expect(saver.save()).rejects.toThrow(/not depth-first at index 2: expected c1, found in/);
+    });
+
+    it('only logs in production so the user still gets a save', async () => {
+      vi.stubEnv('NODE_ENV', 'production');
+      passthroughSanitizer();
+      const logLabeledSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      vi.spyOn(utils, 'log').mockImplementation(() => undefined);
+
+      const { saver } = createSaver({ blocks: flatTree(true) });
+      const result = await saver.save();
+
+      expect(result?.blocks).toHaveLength(6);
+      expect(logLabeledSpy).toHaveBeenCalledWith(expect.stringMatching(/not depth-first/), 'error');
+    });
+
+    it('saves a depth-first flat order', async () => {
+      vi.stubEnv('NODE_ENV', 'test');
+      passthroughSanitizer();
+      silenceLogs();
+      const { saver } = createSaver({ blocks: flatTree(false) });
+
+      const result = await saver.save();
+
+      expect(saver.getLastSaveError()).toBeUndefined();
+      expect(result?.blocks.map(block => block.id)).toEqual(['a', 'out', 'c1', 'c2', 'in', 'b']);
+    });
+  });
+
   describe('WYSIWYG order guard', () => {
     /**
      * A container whose two children are mounted in the reverse of their flat
@@ -1530,10 +1662,10 @@ describe('Saver — mutation coverage', () => {
       passthroughSanitizer();
       silenceLogs();
 
-      // Two invalid root parents are dropped by makeOutput, orphaning both of
-      // their valid children — the drift validateHierarchy reports.
+      // Two root parents whose save yields nothing are dropped by makeOutput,
+      // orphaning both of their valid children — the drift validateHierarchy reports.
       const blocks = ['ghost-x', 'ghost-y'].flatMap((parentId, index) => [
-        createBlockMock({ id: parentId, tool: 'paragraph', data: { text: '' }, isValid: false }).block,
+        createBlockMock({ id: parentId, tool: 'paragraph', saveResolvesUndefined: true }).block,
         createBlockMock({
           id: `orphan-${index}`,
           tool: 'paragraph',
@@ -1723,7 +1855,7 @@ describe('Saver — mutation coverage', () => {
 
     /** A valid block whose invalid root parent is dropped from the output. */
     const driftedHierarchy = (): Block[] => [
-      createBlockMock({ id: 'ghost-x', tool: 'paragraph', data: { text: 'Invalid root body' }, isValid: false }).block,
+      createBlockMock({ id: 'ghost-x', tool: 'paragraph', saveResolvesUndefined: true }).block,
       createBlockMock({ id: 'orphan-0', tool: 'paragraph', data: { text: 'Ejected body' }, parentId: 'ghost-x' }).block,
     ];
 

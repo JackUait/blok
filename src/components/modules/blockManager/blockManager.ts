@@ -23,6 +23,8 @@ import { BlockChanged, BlockRendered } from '../../events';
 import { generateBlockId, logLabeled } from '../../utils';
 import { sanitizeBlocks } from '../../utils/sanitizer';
 import { assertHierarchy, validateHierarchy } from '../../utils/hierarchy-invariant';
+import { findOwn } from '../../utils/own-element';
+import { releasesChildrenOnTurnInto } from '../../utils/turn-into-children';
 import { getBlockNestingDepth } from '../drag/utils/depthUtils';
 
 // Imported modules
@@ -51,14 +53,6 @@ interface SyncBlockDataOptions {
   /** Data the tool worked out itself from these keys: it joins the undo step that wrote their values. */
   derivedFrom?: readonly string[];
 }
-
-/**
- * Tool name of the standalone collapsible "toggle list" tool. Used by convert()
- * to distinguish a toggle LIST source (children stay nested on convert, M-5)
- * from a toggle HEADING source (children released, like the header tune switch).
- * Kept as a local literal to avoid a core → tool import dependency.
- */
-const TOGGLE_TOOL_NAME = 'toggle';
 
 /**
  * @typedef {BlockManager} BlockManager
@@ -544,7 +538,7 @@ export class BlockManager extends Module {
 
     // Set yjsSync on operations to complete circular dependency
     this.operations.setYjsSync(this.yjsSync);
-    this.operations.setBlockParentWriter((block, parentId) => this.setBlockParent(block, parentId));
+    this.operations.setParentWriter((block, parentId) => this.setBlockParent(block, parentId));
 
     // Initialize shortcuts
     this.shortcuts = new BlockShortcuts(
@@ -1256,8 +1250,15 @@ export class BlockManager extends Module {
     // Capture the old parent id BEFORE hierarchy.setBlockParent mutates it —
     // the BlockMoved emission guard below compares against it.
     const oldParentId = block.parentId;
+    // setBlockParent can move the block in the flat array, which shifts the
+    // index of the current block.
+    const current = this.currentBlock;
 
     this.hierarchy.setBlockParent(block, newParentId);
+
+    if (current !== undefined && this.blocks[this.currentBlockIndex] !== current) {
+      this.currentBlockIndex = this.getBlockIndex(current);
+    }
 
     // Notify 'block changed' listeners that the tree structure changed, so
     // consumers like the React `useBlocks` hook re-render on a programmatic
@@ -1564,19 +1565,22 @@ export class BlockManager extends Module {
      * toggle-list source must fall through to the generic convert() → replace()
      * path, which re-nests children (block-mutation.replace → reparentChildren).
      *
-     * Both sources render the same `data-blok-toggle-open` marker, so the
-     * heading-only release is gated additionally on the source NOT being the
-     * toggle-list tool. (callout/column render no toggle marker at all.)
+     * The rule lives in `releasesChildrenOnTurnInto`, shared with the slash-menu
+     * replace. Children go to the heading's own parent (a callout keeps them),
+     * inside the convert's undo entry.
      */
-    const sourceIsToggle = block.holder.querySelector('[data-blok-toggle-open]') !== null;
-    const sourceIsToggleList = block.name === TOGGLE_TOOL_NAME;
+    const sourceIsToggle = findOwn(block.holder, '[data-blok-toggle-open]') !== null;
     const targetIsToggleHeader = targetToolName === 'header' && blockDataOverrides?.isToggleable === true;
 
-    if (sourceIsToggle && !sourceIsToggleList && !targetIsToggleHeader) {
-      this.releaseChildrenToRoot(block);
-    }
+    const releasesChildren = releasesChildrenOnTurnInto(block, targetToolName, blockDataOverrides);
 
-    const newBlock = await this.operations.convert(block, targetToolName, this.blocksStore, blockDataOverrides);
+    const newBlock = await this.operations.convert(
+      block,
+      targetToolName,
+      this.blocksStore,
+      blockDataOverrides,
+      releasesChildren ? () => this.releaseChildrenToOwnLevel(block) : undefined
+    );
 
     /**
      * Notion parity, the ON direction: turning a NON-toggle block into a toggle
@@ -1656,9 +1660,10 @@ export class BlockManager extends Module {
   }
 
   /**
-   * Read a header block's level from its rendered <hN> tag. The block's own
-   * heading element always precedes any child header's in document order, so
-   * the first match is the block's own. Returns null for non-header blocks.
+   * Read a header block's level from its OWN rendered heading. The level
+   * attribute comes first: a `levelOverrides` tag may render a non-<hN>
+   * element, and a raw query would then read a nested child heading's level.
+   * Returns null for non-header blocks.
    * @param block - block whose heading level to read
    */
   private resolveHeadingLevel(block: Block): number | null {
@@ -1666,23 +1671,29 @@ export class BlockManager extends Module {
       return null;
     }
 
-    const heading = block.holder.querySelector('h1, h2, h3, h4, h5, h6');
+    const levelAttr = findOwn(block.holder, `[${DATA_ATTR.headingLevel}]`)?.getAttribute(DATA_ATTR.headingLevel);
+
+    if (levelAttr !== undefined && levelAttr !== null) {
+      return Number(levelAttr);
+    }
+
+    const heading = findOwn(block.holder, 'h1, h2, h3, h4, h5, h6');
 
     return heading !== null ? Number(heading.tagName.charAt(1)) : null;
   }
 
   /**
-   * Release every child of `block` to the document root (parentId = null) via the
-   * Yjs-correct `setBlockParent`, as following siblings. Snapshot the ids first
-   * since `setBlockParent` mutates the parent's contentIds while iterating.
+   * Move every child of `block` up to `block`'s own parent, right after it, in
+   * order. Inside a callout or column they stay in it. Last child first: each
+   * one leaving goes to the end of the container's run.
    * @param block - the (toggle) container whose children are released
    */
-  private releaseChildrenToRoot(block: Block): void {
-    for (const childId of [...block.contentIds]) {
+  private releaseChildrenToOwnLevel(block: Block): void {
+    for (const childId of [...block.contentIds].reverse()) {
       const child = this.getBlockById(childId);
 
       if (child !== undefined) {
-        this.setBlockParent(child, null);
+        this.setBlockParent(child, block.parentId);
       }
     }
   }

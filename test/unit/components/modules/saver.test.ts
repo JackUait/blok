@@ -970,16 +970,15 @@ describe('Saver module', () => {
     // The dangling-parentId handling promotes any orphan to root in OUTPUT, so
     // a parent referencing a non-existent id can never reach the gate. To still
     // exercise the NODE_ENV gate, induce a STRUCTURAL drift the repair does not
-    // cover: an invalid parent with no parentId of its own is dropped from
-    // output by makeOutput (invalid + no parent → skipped), orphaning its valid
-    // child whose `parent` now points at a block missing from the output —
-    // exactly the child-parent-missing violation validateHierarchy catches.
+    // cover: a stub parent with malformed data is dropped from output by
+    // makeOutput, orphaning its valid child whose `parent` now points at a
+    // block missing from the output — exactly the child-parent-missing
+    // violation validateHierarchy catches.
     const driftingBlocks = (): Block[] => {
       const droppedParent = createBlockMock({
         id: 'ghost-parent',
-        tool: 'paragraph',
+        tool: 'stub',
         data: { text: '' },
-        isValid: false, // invalid + no parentId → skipped by makeOutput
       });
 
       const child = createBlockMock({

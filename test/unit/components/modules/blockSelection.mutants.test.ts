@@ -1367,6 +1367,21 @@ describe('BlockSelection — surviving mutants', () => {
       expect(block.selected).toBe(true);
     });
 
+    it('promotes a toggle whose title is fully selected, ignoring its placeholder and nested children', () => {
+      const block = createBlockStub({ text: '' });
+      const { pressCmdA } = createSetup({ blocks: [ block ] });
+
+      block.pluginsContent.innerHTML =
+        '<div>abc</div>' +
+        '<div data-blok-toggle-body-placeholder data-blok-chrome>Empty toggle. Click to add a block, or drag blocks here.</div>' +
+        '<div data-blok-toggle-children><div data-blok-element><div>kid</div></div></div>';
+      stubNativeSelection('abc');
+
+      pressCmdA(block.holder);
+
+      expect(block.selected).toBe(true);
+    });
+
     it('ignores leading and trailing whitespace when comparing', () => {
       const block = createBlockStub({ text: 'a b' });
       const { pressCmdA } = createSetup({ blocks: [ block ] });

@@ -489,6 +489,30 @@ describe('Header Tool - Custom Configurations', () => {
         expect(tooltipShow).toHaveBeenCalledWith(arrow, arrow.getAttribute('aria-label'), expect.anything());
       });
 
+      it('re-adds its OWN missing arrow even when a nested toggle child has one', () => {
+        const header = new Header(createHeaderOptions({ text: 'Toggle Heading', level: 2, isToggleable: true }));
+        const element = header.render();
+        const ownArrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`);
+        const headerRow = ownArrow?.parentElement;
+        const slot = element.querySelector(`[${TOGGLE_ATTR.toggleChildren}]`);
+        const nestedHolder = document.createElement('div');
+        const nestedArrow = document.createElement('span');
+
+        if (!(ownArrow instanceof HTMLElement) || !headerRow || !slot) {
+          throw new Error('toggle heading not rendered');
+        }
+
+        nestedArrow.setAttribute(TOGGLE_ATTR.toggleArrow, '');
+        nestedHolder.setAttribute('data-blok-element', '');
+        nestedHolder.appendChild(nestedArrow);
+        slot.appendChild(nestedHolder);
+        ownArrow.remove();
+
+        header.data = { text: 'Toggle Heading', level: 2, isToggleable: true };
+
+        expect(headerRow.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`)).not.toBeNull();
+      });
+
       it('does NOT render a toggle arrow when isToggleable is false', () => {
         const options = createHeaderOptions({ text: 'Normal Heading', level: 2, isToggleable: false });
         const header = new Header(options);

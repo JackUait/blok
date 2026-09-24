@@ -1,16 +1,10 @@
 import type { Block } from '../../../block';
-import { DATA_ATTR, createSelector } from '../../../constants';
+import { findOwn } from '../../../utils/own-element';
 
 const TOGGLE_OPEN_ATTR = 'data-blok-toggle-open';
 
-/**
- * The block's OWN toggle marker. A plain `holder.querySelector` also matches
- * the marker of a toggle nested inside this block's children, so a callout or
- * a collapsed toggle would read as "open" through its child.
- */
 const findOwnToggleMarker = (block: Block): Element | null =>
-  Array.from(block.holder.querySelectorAll(`[${TOGGLE_OPEN_ATTR}]`))
-    .find(marker => marker.closest(createSelector(DATA_ATTR.element)) === block.holder) ?? null;
+  findOwn(block.holder, `[${TOGGLE_OPEN_ATTR}]`);
 
 /**
  * Whether the block itself is a toggle (toggle list or toggle heading).

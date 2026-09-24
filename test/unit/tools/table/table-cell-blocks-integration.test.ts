@@ -35,8 +35,8 @@ const createMockAPI = (): API => ({
     }),
     getChildren: vi.fn().mockReturnValue([]),
     getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+    getBlockIndex: vi.fn(),
     getBlocksCount: vi.fn().mockReturnValue(1),
-    getBlockIndex: vi.fn(() => undefined),
     setBlockParent: vi.fn(),
   },
   events: {

@@ -38,7 +38,7 @@ export class BlockOperations implements OperationsContext {
   public readonly factory: BlockFactory;
   public readonly hierarchy: BlockHierarchy;
   private _yjsSync!: BlockYjsSync; // Set via setter after initialization
-  private _setBlockParent!: (block: Block, parentId: string | null) => void; // Set via setter after initialization
+  private _parentWriter?: (block: Block, parentId: string | null) => void;
   public readonly blockDidMutated: BlockDidMutated;
 
   private readonly insertion: BlockInsertion;
@@ -93,27 +93,25 @@ export class BlockOperations implements OperationsContext {
   }
 
   /**
-   * Set the Yjs-writing reparent (BlockManager.setBlockParent), which this class cannot reach itself
-   * @param setBlockParent - reparents in memory, DOM and Yjs
-   */
-  public setBlockParentWriter(setBlockParent: (block: Block, parentId: string | null) => void): void {
-    this._setBlockParent = setBlockParent;
-  }
-
-  /**
-   * Reparent a block in memory, DOM and Yjs
-   * @param block - the block to reparent
-   * @param parentId - the new parent id, or null for root
-   */
-  public setBlockParent(block: Block, parentId: string | null): void {
-    this._setBlockParent(block, parentId);
-  }
-
-  /**
    * YjsSync instance (set after initialization)
    */
   public get yjsSync(): BlockYjsSync {
     return this._yjsSync;
+  }
+
+  /**
+   * Set the document-aware reparent (BlockManager.setBlockParent).
+   * @param writer - reparent that also writes the shared document
+   */
+  public setParentWriter(writer: (block: Block, parentId: string | null) => void): void {
+    this._parentWriter = writer;
+  }
+
+  /**
+   * Document-aware reparent; memory-only until BlockManager sets one.
+   */
+  public get parentWriter(): (block: Block, parentId: string | null) => void {
+    return this._parentWriter ?? ((block, parentId) => this.hierarchy.setBlockParent(block, parentId));
   }
 
   /**
@@ -395,8 +393,14 @@ export class BlockOperations implements OperationsContext {
    * @param blocksStore - The blocks store to modify
    * @param blockDataOverrides - Optional new Block data overrides
    */
-  public convert(blockToConvert: Block, targetToolName: string, blocksStore: BlocksStore, blockDataOverrides?: BlockToolData): Promise<Block> {
-    return this.mutation.convert(blockToConvert, targetToolName, blocksStore, blockDataOverrides);
+  public convert(
+    blockToConvert: Block,
+    targetToolName: string,
+    blocksStore: BlocksStore,
+    blockDataOverrides?: BlockToolData,
+    beforeReplace?: () => void
+  ): Promise<Block> {
+    return this.mutation.convert(blockToConvert, targetToolName, blocksStore, blockDataOverrides, beforeReplace);
   }
 
   /**

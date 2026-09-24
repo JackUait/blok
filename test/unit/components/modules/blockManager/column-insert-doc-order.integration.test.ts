@@ -125,28 +125,18 @@ describe('mid-column insert — the DOC records the visible position', () => {
   };
 
   /**
-   * The toolbox's three calls for "slash menu on an empty child block":
-   * detach the placeholder to root, insert the chosen tool at its flat index
-   * (replacing it), then re-attach the new block to the original parent.
+   * The toolbox's call for "slash menu on an empty child block": insert the
+   * chosen tool over the placeholder. The replace keeps the parent.
    */
-  const insertOverSlot = (instance: TestEditor): string => {
-    const slotIndex = instance.blocks.getBlockIndex('slot');
-
-    instance.blocks.setBlockParent('slot', null);
-
-    const inserted = instance.blocks.insert(
+  const insertOverSlot = (instance: TestEditor): string =>
+    instance.blocks.insert(
       'header',
       { text: 'Inserted', level: 3 },
       undefined,
-      slotIndex,
+      instance.blocks.getBlockIndex('slot'),
       undefined,
       true
-    );
-
-    instance.blocks.setBlockParent(inserted.id, 'c1');
-
-    return inserted.id;
-  };
+    ).id;
 
   it('writes the inserted block as the SECOND child of the column, not the last', async () => {
     const instance = await createEditor();

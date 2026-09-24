@@ -7,6 +7,7 @@
 import type { API } from '../../../types';
 
 import { mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
+import { textWithoutChrome } from '../../components/utils/own-element';
 import { setupPlaceholder } from '../../components/utils/placeholder';
 
 import { hide as hideTooltip, show as showTooltip } from '../../components/utils/tooltip';
@@ -42,7 +43,8 @@ export const updateToggleEmptyState = (
     return;
   }
 
-  const text = childContainer?.textContent ?? '';
+  // A nested toggle's arrow and body placeholder are chrome, not content.
+  const text = childContainer === null ? '' : textWithoutChrome(childContainer);
   const isEmpty = text.trim() === '';
 
   wrapper.setAttribute(TOGGLE_ATTR.toggleEmpty, String(isEmpty));

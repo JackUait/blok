@@ -1311,15 +1311,11 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       : undefined;
 
     /**
-     * When replacing a child block (e.g. inside a toggle), the parent-clear,
-     * insert, and parent-restore must be a single undo entry. Wrap them in
-     * a transaction so undo/redo treats the conversion atomically.
+     * Inside a container the insert and the reparent must be one undo entry.
+     * A replace keeps the replaced block's parent and children by itself;
+     * detaching it to the root first would leave its children out of place.
      */
     const performInsert = (): BlockAPI => {
-      if (shouldReplaceBlock && currentBlockParentId !== null) {
-        this.api.blocks.setBlockParent(currentBlock.id, null);
-      }
-
       const inserted = this.api.blocks.insert(
         toolName,
         blockData,
@@ -1335,7 +1331,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
         'user'
       );
 
-      if (currentBlockParentId !== null) {
+      if (!shouldReplaceBlock && currentBlockParentId !== null) {
         this.api.blocks.setBlockParent(inserted.id, currentBlockParentId);
       }
 

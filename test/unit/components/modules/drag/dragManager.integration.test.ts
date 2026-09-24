@@ -2393,6 +2393,76 @@ describe("DragManager - Component Integration", () => {
         );
       });
 
+      it("announces the position an escaping child really lands at", () => {
+        const a = createBlockStub({ id: "a" });
+        const outer = createBlockStub({ id: "outer", name: "toggle", contentIds: ["inner", "x"] });
+        const inner = createBlockStub({ id: "inner", name: "toggle", parentId: "outer", contentIds: ["leaf"] });
+        const leaf = createBlockStub({ id: "leaf", parentId: "inner" });
+        const x = createBlockStub({ id: "x", parentId: "outer" });
+        const b = createBlockStub({ id: "b" });
+
+        markToggle(outer, true);
+        markToggle(inner, true);
+
+        const { dragManager, modules } = setup([a, outer, inner, leaf, x, b]);
+        const dragHandle = document.createElement("div");
+
+        dragManager.setupDragHandle(dragHandle, inner);
+        dragHandle.dispatchEvent(createMouseEvent("mousedown", { clientX: 100, clientY: 100 }));
+        document.dispatchEvent(createMouseEvent("mousemove", { clientX: 110, clientY: 100 }));
+        vi.mocked(document.elementFromPoint).mockReturnValue(outer.holder);
+        (outer.holder.getBoundingClientRect as Mock).mockReturnValue({
+          top: 100, bottom: 150, left: 0, right: 100, width: 100, height: 50, x: 0, y: 100, toJSON: () => ({}),
+        });
+        document.dispatchEvent(createMouseEvent("mousemove", { clientX: 50, clientY: 140 }));
+        vi.advanceTimersByTime(300);
+
+        // Lands as a, outer, x, inner, leaf, b: position 4 of 6.
+        expect(modules.I18n.t).toHaveBeenLastCalledWith("a11y.dropPosition", { position: 4, total: 6 });
+
+        document.dispatchEvent(createMouseEvent("mouseup"));
+        expect(order(modules)).toEqual(["a", "outer", "x", "inner", "leaf", "b"]);
+      });
+
+      it("keeps a toggle's drop line full width when the toggle holds a list item", () => {
+        const toggle = createBlockStub({ id: "t", name: "toggle", contentIds: ["l"] });
+        const item = createBlockStub({ id: "l", name: "list", parentId: "t" });
+        const paragraph = createBlockStub({ id: "para" });
+        const listItem = document.createElement("div");
+        const text = document.createElement("div");
+
+        item.holder.setAttribute("data-blok-id", "l");
+        listItem.setAttribute("role", "listitem");
+        text.setAttribute("data-blok-testid", "list-content-container");
+        listItem.getBoundingClientRect = vi.fn(() => ({
+          top: 110, bottom: 130, left: 40, right: 100, width: 60, height: 20, x: 40, y: 110, toJSON: () => ({}),
+        }));
+        listItem.appendChild(text);
+        item.holder.querySelector("[data-blok-element-content]")!.appendChild(listItem);
+        markToggle(toggle, true);
+        nestHolders(toggle, [item]);
+
+        const { dragManager } = setup([paragraph, toggle, item]);
+        const dragHandle = document.createElement("div");
+
+        dragManager.setupDragHandle(dragHandle, paragraph);
+        dragHandle.dispatchEvent(createMouseEvent("mousedown", { clientX: 100, clientY: 100 }));
+        document.dispatchEvent(createMouseEvent("mousemove", { clientX: 110, clientY: 100 }));
+        vi.mocked(document.elementFromPoint).mockReturnValue(toggle.holder);
+        (toggle.holder.getBoundingClientRect as Mock).mockReturnValue({
+          top: 100, bottom: 150, left: 0, right: 100, width: 100, height: 50, x: 0, y: 100, toJSON: () => ({}),
+        });
+        document.dispatchEvent(createMouseEvent("mousemove", { clientX: 50, clientY: 105 }));
+
+        expect(toggle.holder.getAttribute("data-drop-indicator")).toBe("top");
+        expect({
+          left: toggle.holder.style.getPropertyValue("--drop-indicator-side-left"),
+          lead: toggle.holder.hasAttribute("data-drop-indicator-lead"),
+        }).toStrictEqual({ left: "0px", lead: false });
+
+        document.dispatchEvent(createMouseEvent("mouseup"));
+      });
+
       it("lands a block dropped below a collapsed toggle after its hidden children", () => {
         const moved = createBlockStub({ id: "moved", name: "toggle", contentIds: ["m1"] });
         const m1 = createBlockStub({ id: "m1", parentId: "moved" });
@@ -2409,6 +2479,21 @@ describe("DragManager - Component Integration", () => {
 
         expect(order(modules)).toEqual(["collapsed", "c1", "moved", "m1", "z"]);
         expect(moved.holder.classList.contains("hidden")).toBe(false);
+      });
+
+      it("lands a block dropped below a column layout after the layout's last descendant", () => {
+        const top = createBlockStub({ id: "top" });
+        const list = createBlockStub({ id: "cl", name: "column_list", contentIds: ["col1", "col2"] });
+        const col1 = createBlockStub({ id: "col1", name: "column", parentId: "cl", contentIds: ["a1"] });
+        const a1 = createBlockStub({ id: "a1", parentId: "col1" });
+        const col2 = createBlockStub({ id: "col2", name: "column", parentId: "cl", contentIds: ["b1"] });
+        const b1 = createBlockStub({ id: "b1", parentId: "col2" });
+
+        const { dragManager, modules, wrapper } = setup([top, list, col1, a1, col2, b1]);
+
+        performDragDrop(dragManager, wrapper, top, list, "bottom");
+
+        expect(order(modules)).toEqual(["cl", "col1", "a1", "col2", "b1", "top"]);
       });
 
       it("still enters an open toggle as its first child when the block comes from outside", () => {
@@ -2672,6 +2757,36 @@ describe("DragManager - Component Integration", () => {
       // setBlockParent should NOT be called since both blocks are at root level
       // and the duplicated block also goes to root level (parentId already null)
       expect(modules.BlockManager.setBlockParent).not.toHaveBeenCalled();
+    });
+
+    it("keeps a duplicated toggle's child inside the duplicated toggle", async () => {
+      const toggle = createDuplicableBlock({ id: "t", name: "toggle", contentIds: ["tc"] });
+      const child = createDuplicableBlock({ id: "tc", parentId: "t" });
+      const below = createDuplicableBlock({ id: "b" });
+      const allBlocks = [toggle, child, below];
+      const blockManagerMock = createDuplicateBlockManagerMock(allBlocks);
+
+      vi.mocked(blockManagerMock.setBlockParent).mockImplementation((block: Block, parentId: string | null) => {
+        Object.assign(block, { parentId });
+      });
+
+      const { dragManager, wrapper } = createDragManager({
+        BlockManager: blockManagerMock,
+      });
+
+      document.body.appendChild(wrapper);
+      wrapper.appendChild(toggle.holder);
+      toggle.holder.appendChild(child.holder);
+      wrapper.appendChild(below.holder);
+
+      await performAltDragDuplicate(dragManager, wrapper, toggle, below, "bottom");
+
+      const copies = blockManagerMock.blocks.filter(block => block.id.startsWith("duplicated-"));
+
+      expect(copies.map(block => [block.id, block.parentId])).toStrictEqual([
+        ["duplicated-1", null],
+        ["duplicated-2", "duplicated-1"],
+      ]);
     });
 
     it("inserts an escaping duplicate after the toggle's last descendant", async () => {

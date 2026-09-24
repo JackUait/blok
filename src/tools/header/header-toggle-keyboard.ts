@@ -11,7 +11,7 @@ import type { API } from '../../../types';
 
 import { isCaretAtStartOfInput } from '../../components/utils/caret';
 import { runConvert } from '../../components/utils/convert-refusal';
-import { getInsertAfterLastDescendantIndex, splitContentAtRange } from '../toggle/toggle-keyboard';
+import { getInsertAfterLastDescendantIndex, insertEmptyBlockAboveOnEnterAtStart, splitContentAtRange } from '../toggle/toggle-keyboard';
 
 export interface HeaderToggleKeyboardContext {
   api: API;
@@ -30,6 +30,7 @@ export interface HeaderToggleKeyboardContext {
  * - Open + caret at end → create a child paragraph inside the toggle.
  * - Collapsed + caret at end → insert a plain paragraph sibling below the
  *   collapsed block (matches Notion; not a toggle split, not a hidden child).
+ * - Caret at the start of a title with text → empty block above, caret stays.
  * - Otherwise (caret mid-text) → split into two toggle headings at the same
  *   level.
  */
@@ -55,6 +56,10 @@ export const handleHeaderToggleEnter = async (
   const { beforeContent, afterContent } = splitContentAtRange(contentEl, range);
 
   const currentBlockIndex = api.blocks.getBlockIndex(blockId) ?? api.blocks.getCurrentBlockIndex();
+
+  if (insertEmptyBlockAboveOnEnterAtStart(api, currentBlockIndex, beforeContent, afterContent)) {
+    return;
+  }
 
   if (isOpen && afterContent === '') {
     // Caret at end of an open toggle heading → insert child paragraph.

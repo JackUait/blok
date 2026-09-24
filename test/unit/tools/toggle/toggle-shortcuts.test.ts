@@ -386,6 +386,56 @@ describe('ToggleShortcuts', () => {
       wrapper.remove();
     });
 
+    it('does not treat a container that only HOLDS a toggle as a toggle', async () => {
+      const { ToggleShortcuts } = await import('../../../../src/tools/toggle/toggle-shortcuts');
+
+      const nested = createMockToggleBlock('t1', false);
+      const calloutHolder = document.createElement('div');
+      const slot = document.createElement('div');
+
+      calloutHolder.setAttribute('data-blok-element', '');
+      nested.holder.setAttribute('data-blok-element', '');
+      slot.appendChild(nested.holder);
+      calloutHolder.appendChild(slot);
+
+      const callout = {
+        id: 'c1',
+        name: 'callout',
+        holder: calloutHolder,
+        call: vi.fn(),
+      } as unknown as BlockAPI;
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlocksCount = vi.fn().mockReturnValue(2);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockByIndex = vi.fn()
+        .mockImplementation((index: number) => [callout, nested][index]);
+
+      const wrapper = document.createElement('div');
+      document.body.appendChild(wrapper);
+
+      const shortcuts = new ToggleShortcuts(mockAPI, wrapper);
+      shortcuts.register();
+
+      const child = document.createElement('div');
+      wrapper.appendChild(child);
+
+      const event = new KeyboardEvent('keydown', {
+        code: 'KeyT',
+        key: 'T',
+        metaKey: true,
+        altKey: true,
+      });
+      Object.defineProperty(event, 'target', { value: child, writable: false });
+
+      document.dispatchEvent(event);
+
+      expect(callout.call).not.toHaveBeenCalled();
+      expect(nested.call).toHaveBeenCalledWith('expand');
+
+      shortcuts.unregister();
+      wrapper.remove();
+    });
+
     it('collapses all toggles when all toggles are expanded', async () => {
       const { ToggleShortcuts } = await import('../../../../src/tools/toggle/toggle-shortcuts');
 

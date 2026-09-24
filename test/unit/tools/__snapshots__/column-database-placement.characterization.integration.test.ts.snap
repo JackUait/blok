@@ -1,0 +1,5718 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`column and database placement — characterization > adds a column on the left of a column whose child has children 1`] = `
+{
+  "after": {
+    "contentIds": [
+      "a:[]",
+      "cl:[n1,c1,c2]",
+      "n1:[z]",
+      "z:[]",
+      "c1:[t1]",
+      "t1:[t1c]",
+      "t1c:[]",
+      "c2:[q]",
+      "q:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n1",
+          "c1",
+          "c2",
+        ],
+        "data": {},
+        "id": "cl",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "z",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": "n1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "t1",
+        ],
+        "data": {},
+        "id": "c1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": [
+          "t1c",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t1",
+        },
+        "id": "t1",
+        "parent": "c1",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "t1c",
+        },
+        "id": "t1c",
+        "parent": "t1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "q",
+        ],
+        "data": {},
+        "id": "c2",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": "c2",
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "a^-",
+      "cl^-",
+      "n1^cl",
+      "z^n1",
+      "c1^cl",
+      "t1^c1",
+      "t1c^t1",
+      "c2^cl",
+      "q^c2",
+    ],
+    "holderOrder": [
+      "a",
+      "cl",
+      "n1",
+      "z",
+      "c1",
+      "t1",
+      "t1c",
+      "c2",
+      "q",
+    ],
+    "mountedIn": [
+      "a@-",
+      "cl@-",
+      "n1@cl",
+      "z@n1",
+      "c1@cl",
+      "t1@c1",
+      "t1c@t1",
+      "c2@cl",
+      "q@c2",
+    ],
+    "saved": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n1",
+          "c1",
+          "c2",
+        ],
+        "data": {},
+        "id": "cl",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "z",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": "n1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "t1",
+        ],
+        "data": {},
+        "id": "c1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": [
+          "t1c",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t1",
+        },
+        "id": "t1",
+        "parent": "c1",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "t1c",
+        },
+        "id": "t1c",
+        "parent": "t1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "q",
+        ],
+        "data": {},
+        "id": "c2",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": "c2",
+        "type": "paragraph",
+      },
+    ],
+  },
+  "afterRedo": {
+    "contentIds": [
+      "a:[]",
+      "cl:[n1,c1,c2]",
+      "n1:[z]",
+      "z:[]",
+      "c1:[t1]",
+      "t1:[t1c]",
+      "t1c:[]",
+      "c2:[q]",
+      "q:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n1",
+          "c1",
+          "c2",
+        ],
+        "data": {},
+        "id": "cl",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "z",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": "n1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "t1",
+        ],
+        "data": {},
+        "id": "c1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": [
+          "t1c",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t1",
+        },
+        "id": "t1",
+        "parent": "c1",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "t1c",
+        },
+        "id": "t1c",
+        "parent": "t1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "q",
+        ],
+        "data": {},
+        "id": "c2",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": "c2",
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "a^-",
+      "cl^-",
+      "n1^cl",
+      "z^n1",
+      "c1^cl",
+      "t1^c1",
+      "t1c^t1",
+      "c2^cl",
+      "q^c2",
+    ],
+    "holderOrder": [
+      "a",
+      "cl",
+      "n1",
+      "z",
+      "c1",
+      "t1",
+      "t1c",
+      "c2",
+      "q",
+    ],
+    "mountedIn": [
+      "a@-",
+      "cl@-",
+      "n1@cl",
+      "z@n1",
+      "c1@cl",
+      "t1@c1",
+      "t1c@t1",
+      "c2@cl",
+      "q@c2",
+    ],
+    "saved": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n1",
+          "c1",
+          "c2",
+        ],
+        "data": {},
+        "id": "cl",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "z",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": "n1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "t1",
+        ],
+        "data": {},
+        "id": "c1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": [
+          "t1c",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t1",
+        },
+        "id": "t1",
+        "parent": "c1",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "t1c",
+        },
+        "id": "t1c",
+        "parent": "t1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "q",
+        ],
+        "data": {},
+        "id": "c2",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": "c2",
+        "type": "paragraph",
+      },
+    ],
+  },
+  "afterUndo": {
+    "contentIds": [
+      "a:[]",
+      "cl:[c1,c2]",
+      "c1:[t1]",
+      "t1:[t1c]",
+      "t1c:[]",
+      "c2:[q]",
+      "q:[]",
+      "z:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "c1",
+          "c2",
+        ],
+        "data": {},
+        "id": "cl",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "t1",
+        ],
+        "data": {},
+        "id": "c1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": [
+          "t1c",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t1",
+        },
+        "id": "t1",
+        "parent": "c1",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "t1c",
+        },
+        "id": "t1c",
+        "parent": "t1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "q",
+        ],
+        "data": {},
+        "id": "c2",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": "c2",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "a^-",
+      "cl^-",
+      "c1^cl",
+      "t1^c1",
+      "t1c^t1",
+      "c2^cl",
+      "q^c2",
+      "z^-",
+    ],
+    "holderOrder": [
+      "a",
+      "cl",
+      "c1",
+      "t1",
+      "t1c",
+      "c2",
+      "q",
+      "z",
+    ],
+    "mountedIn": [
+      "a@-",
+      "cl@-",
+      "c1@cl",
+      "t1@c1",
+      "t1c@t1",
+      "c2@cl",
+      "q@c2",
+      "z@-",
+    ],
+    "saved": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "c1",
+          "c2",
+        ],
+        "data": {},
+        "id": "cl",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "t1",
+        ],
+        "data": {},
+        "id": "c1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": [
+          "t1c",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t1",
+        },
+        "id": "t1",
+        "parent": "c1",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "t1c",
+        },
+        "id": "t1c",
+        "parent": "t1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "q",
+        ],
+        "data": {},
+        "id": "c2",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": "c2",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "events": [
+    "block-added n1 parentId=null previousSiblingId=cl index=2",
+    "block-moved n1 parentId=cl previousSiblingId=null fromIndex=2 toIndex=2 oldParentId=null",
+    "block-moved z parentId=n1 previousSiblingId=null fromIndex=3 toIndex=3 oldParentId=null",
+    "block-changed t1 index=5",
+  ],
+  "undoSteps": 1,
+}
+`;
+
+exports[`column and database placement — characterization > adds a column on the right of a column whose child has children 1`] = `
+{
+  "after": {
+    "contentIds": [
+      "a:[]",
+      "cl:[c1,n1,c2]",
+      "c1:[t1]",
+      "t1:[t1c]",
+      "t1c:[]",
+      "n1:[z]",
+      "z:[]",
+      "c2:[q]",
+      "q:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "c1",
+          "n1",
+          "c2",
+        ],
+        "data": {},
+        "id": "cl",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "t1",
+        ],
+        "data": {},
+        "id": "c1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": [
+          "t1c",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t1",
+        },
+        "id": "t1",
+        "parent": "c1",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "t1c",
+        },
+        "id": "t1c",
+        "parent": "t1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "z",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": "n1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "q",
+        ],
+        "data": {},
+        "id": "c2",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": "c2",
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "a^-",
+      "cl^-",
+      "c1^cl",
+      "t1^c1",
+      "t1c^t1",
+      "n1^cl",
+      "z^n1",
+      "c2^cl",
+      "q^c2",
+    ],
+    "holderOrder": [
+      "a",
+      "cl",
+      "c1",
+      "t1",
+      "t1c",
+      "n1",
+      "z",
+      "c2",
+      "q",
+    ],
+    "mountedIn": [
+      "a@-",
+      "cl@-",
+      "c1@cl",
+      "t1@c1",
+      "t1c@t1",
+      "n1@cl",
+      "z@n1",
+      "c2@cl",
+      "q@c2",
+    ],
+    "saved": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "c1",
+          "n1",
+          "c2",
+        ],
+        "data": {},
+        "id": "cl",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "t1",
+        ],
+        "data": {},
+        "id": "c1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": [
+          "t1c",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t1",
+        },
+        "id": "t1",
+        "parent": "c1",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "t1c",
+        },
+        "id": "t1c",
+        "parent": "t1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "z",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": "n1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "q",
+        ],
+        "data": {},
+        "id": "c2",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": "c2",
+        "type": "paragraph",
+      },
+    ],
+  },
+  "afterRedo": {
+    "contentIds": [
+      "a:[]",
+      "cl:[c1,n1,c2]",
+      "c1:[t1]",
+      "t1:[t1c]",
+      "t1c:[]",
+      "n1:[z]",
+      "z:[]",
+      "c2:[q]",
+      "q:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "c1",
+          "n1",
+          "c2",
+        ],
+        "data": {},
+        "id": "cl",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "t1",
+        ],
+        "data": {},
+        "id": "c1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": [
+          "t1c",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t1",
+        },
+        "id": "t1",
+        "parent": "c1",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "t1c",
+        },
+        "id": "t1c",
+        "parent": "t1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "z",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": "n1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "q",
+        ],
+        "data": {},
+        "id": "c2",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": "c2",
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "a^-",
+      "cl^-",
+      "c1^cl",
+      "t1^c1",
+      "t1c^t1",
+      "n1^cl",
+      "z^n1",
+      "c2^cl",
+      "q^c2",
+    ],
+    "holderOrder": [
+      "a",
+      "cl",
+      "c1",
+      "t1",
+      "t1c",
+      "n1",
+      "z",
+      "c2",
+      "q",
+    ],
+    "mountedIn": [
+      "a@-",
+      "cl@-",
+      "c1@cl",
+      "t1@c1",
+      "t1c@t1",
+      "n1@cl",
+      "z@n1",
+      "c2@cl",
+      "q@c2",
+    ],
+    "saved": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "c1",
+          "n1",
+          "c2",
+        ],
+        "data": {},
+        "id": "cl",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "t1",
+        ],
+        "data": {},
+        "id": "c1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": [
+          "t1c",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t1",
+        },
+        "id": "t1",
+        "parent": "c1",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "t1c",
+        },
+        "id": "t1c",
+        "parent": "t1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "z",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": "n1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "q",
+        ],
+        "data": {},
+        "id": "c2",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": "c2",
+        "type": "paragraph",
+      },
+    ],
+  },
+  "afterUndo": {
+    "contentIds": [
+      "a:[]",
+      "cl:[c1,c2]",
+      "c1:[t1]",
+      "t1:[t1c]",
+      "t1c:[]",
+      "c2:[q]",
+      "q:[]",
+      "z:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "c1",
+          "c2",
+        ],
+        "data": {},
+        "id": "cl",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "t1",
+        ],
+        "data": {},
+        "id": "c1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": [
+          "t1c",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t1",
+        },
+        "id": "t1",
+        "parent": "c1",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "t1c",
+        },
+        "id": "t1c",
+        "parent": "t1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "q",
+        ],
+        "data": {},
+        "id": "c2",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": "c2",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "a^-",
+      "cl^-",
+      "c1^cl",
+      "t1^c1",
+      "t1c^t1",
+      "c2^cl",
+      "q^c2",
+      "z^-",
+    ],
+    "holderOrder": [
+      "a",
+      "cl",
+      "c1",
+      "t1",
+      "t1c",
+      "c2",
+      "q",
+      "z",
+    ],
+    "mountedIn": [
+      "a@-",
+      "cl@-",
+      "c1@cl",
+      "t1@c1",
+      "t1c@t1",
+      "c2@cl",
+      "q@c2",
+      "z@-",
+    ],
+    "saved": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "c1",
+          "c2",
+        ],
+        "data": {},
+        "id": "cl",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "t1",
+        ],
+        "data": {},
+        "id": "c1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": [
+          "t1c",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t1",
+        },
+        "id": "t1",
+        "parent": "c1",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "t1c",
+        },
+        "id": "t1c",
+        "parent": "t1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "q",
+        ],
+        "data": {},
+        "id": "c2",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": "c2",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "events": [
+    "block-added n1 parentId=c1 previousSiblingId=t1 index=5",
+    "block-moved n1 parentId=cl previousSiblingId=c1 fromIndex=5 toIndex=5 oldParentId=c1",
+    "block-moved z parentId=n1 previousSiblingId=null fromIndex=6 toIndex=6 oldParentId=null",
+    "block-changed c1 index=2",
+    "block-changed t1 index=3",
+  ],
+  "undoSteps": 1,
+}
+`;
+
+exports[`column and database placement — characterization > adds a database row from a board column 1`] = `
+{
+  "after": {
+    "contentIds": [
+      "a:[]",
+      "db:[r1,r2,n1]",
+      "r1:[]",
+      "r2:[]",
+      "n1:[]",
+      "z:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "r1",
+          "r2",
+          "n1",
+        ],
+        "data": {
+          "activeViewId": "v-board",
+          "schema": [
+            {
+              "id": "p-title",
+              "name": "Name",
+              "position": "a0",
+              "type": "title",
+            },
+            {
+              "config": {
+                "options": [
+                  {
+                    "id": "o1",
+                    "label": "Todo",
+                    "position": "a0",
+                  },
+                  {
+                    "id": "o2",
+                    "label": "Done",
+                    "position": "a1",
+                  },
+                ],
+              },
+              "id": "p-status",
+              "name": "Status",
+              "position": "a1",
+              "type": "select",
+            },
+          ],
+          "title": "Tasks",
+          "views": [
+            {
+              "filters": [],
+              "groupBy": "p-status",
+              "id": "v-board",
+              "name": "Board",
+              "position": "a0",
+              "sorts": [],
+              "type": "board",
+              "visibleProperties": [],
+            },
+            {
+              "filters": [],
+              "id": "v-list",
+              "name": "List",
+              "position": "a1",
+              "sorts": [],
+              "type": "list",
+              "visibleProperties": [],
+            },
+          ],
+        },
+        "id": "db",
+        "parent": undefined,
+        "type": "database",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a0",
+          "properties": {
+            "p-status": "o1",
+            "p-title": "one",
+          },
+          "title": "one",
+        },
+        "id": "r1",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a1",
+          "properties": {
+            "p-status": "o2",
+            "p-title": "two",
+          },
+          "title": "two",
+        },
+        "id": "r2",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a25555",
+          "properties": {
+            "p-status": "o2",
+            "p-title": "",
+          },
+          "title": "",
+        },
+        "id": "n1",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "a^-",
+      "db^-",
+      "r1^db",
+      "r2^db",
+      "n1^db",
+      "z^-",
+    ],
+    "holderOrder": [
+      "a",
+      "db",
+      "r1",
+      "r2",
+      "n1",
+      "z",
+    ],
+    "mountedIn": [
+      "a@-",
+      "db@-",
+      "r1@-",
+      "r2@-",
+      "n1@-",
+      "z@-",
+    ],
+    "saved": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "r1",
+          "r2",
+          "n1",
+        ],
+        "data": {
+          "activeViewId": "v-board",
+          "schema": [
+            {
+              "id": "p-title",
+              "name": "Name",
+              "position": "a0",
+              "type": "title",
+            },
+            {
+              "config": {
+                "options": [
+                  {
+                    "id": "o1",
+                    "label": "Todo",
+                    "position": "a0",
+                  },
+                  {
+                    "id": "o2",
+                    "label": "Done",
+                    "position": "a1",
+                  },
+                ],
+              },
+              "id": "p-status",
+              "name": "Status",
+              "position": "a1",
+              "type": "select",
+            },
+          ],
+          "title": "Tasks",
+          "views": [
+            {
+              "filters": [],
+              "groupBy": "p-status",
+              "id": "v-board",
+              "name": "Board",
+              "position": "a0",
+              "sorts": [],
+              "type": "board",
+              "visibleProperties": [],
+            },
+            {
+              "filters": [],
+              "id": "v-list",
+              "name": "List",
+              "position": "a1",
+              "sorts": [],
+              "type": "list",
+              "visibleProperties": [],
+            },
+          ],
+        },
+        "id": "db",
+        "parent": undefined,
+        "type": "database",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a0",
+          "properties": {
+            "p-status": "o1",
+            "p-title": "one",
+          },
+          "title": "one",
+        },
+        "id": "r1",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a1",
+          "properties": {
+            "p-status": "o2",
+            "p-title": "two",
+          },
+          "title": "two",
+        },
+        "id": "r2",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a25555",
+          "properties": {
+            "p-status": "o2",
+            "p-title": "",
+          },
+          "title": "",
+        },
+        "id": "n1",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "afterRedo": {
+    "contentIds": [
+      "a:[]",
+      "db:[r1,r2,n1]",
+      "r1:[]",
+      "r2:[]",
+      "n1:[]",
+      "z:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "r1",
+          "r2",
+          "n1",
+        ],
+        "data": {
+          "activeViewId": "v-board",
+          "schema": [
+            {
+              "id": "p-title",
+              "name": "Name",
+              "position": "a0",
+              "type": "title",
+            },
+            {
+              "config": {
+                "options": [
+                  {
+                    "id": "o1",
+                    "label": "Todo",
+                    "position": "a0",
+                  },
+                  {
+                    "id": "o2",
+                    "label": "Done",
+                    "position": "a1",
+                  },
+                ],
+              },
+              "id": "p-status",
+              "name": "Status",
+              "position": "a1",
+              "type": "select",
+            },
+          ],
+          "title": "Tasks",
+          "views": [
+            {
+              "filters": [],
+              "groupBy": "p-status",
+              "id": "v-board",
+              "name": "Board",
+              "position": "a0",
+              "sorts": [],
+              "type": "board",
+              "visibleProperties": [],
+            },
+            {
+              "filters": [],
+              "id": "v-list",
+              "name": "List",
+              "position": "a1",
+              "sorts": [],
+              "type": "list",
+              "visibleProperties": [],
+            },
+          ],
+        },
+        "id": "db",
+        "parent": undefined,
+        "type": "database",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a0",
+          "properties": {
+            "p-status": "o1",
+            "p-title": "one",
+          },
+          "title": "one",
+        },
+        "id": "r1",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a1",
+          "properties": {
+            "p-status": "o2",
+            "p-title": "two",
+          },
+          "title": "two",
+        },
+        "id": "r2",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a25555",
+          "properties": {
+            "p-status": "o2",
+            "p-title": "",
+          },
+          "title": "",
+        },
+        "id": "n1",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "a^-",
+      "db^-",
+      "r1^db",
+      "r2^db",
+      "n1^db",
+      "z^-",
+    ],
+    "holderOrder": [
+      "a",
+      "db",
+      "r1",
+      "r2",
+      "n1",
+      "z",
+    ],
+    "mountedIn": [
+      "a@-",
+      "db@-",
+      "r1@-",
+      "r2@-",
+      "n1@-",
+      "z@-",
+    ],
+    "saved": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "r1",
+          "r2",
+          "n1",
+        ],
+        "data": {
+          "activeViewId": "v-board",
+          "schema": [
+            {
+              "id": "p-title",
+              "name": "Name",
+              "position": "a0",
+              "type": "title",
+            },
+            {
+              "config": {
+                "options": [
+                  {
+                    "id": "o1",
+                    "label": "Todo",
+                    "position": "a0",
+                  },
+                  {
+                    "id": "o2",
+                    "label": "Done",
+                    "position": "a1",
+                  },
+                ],
+              },
+              "id": "p-status",
+              "name": "Status",
+              "position": "a1",
+              "type": "select",
+            },
+          ],
+          "title": "Tasks",
+          "views": [
+            {
+              "filters": [],
+              "groupBy": "p-status",
+              "id": "v-board",
+              "name": "Board",
+              "position": "a0",
+              "sorts": [],
+              "type": "board",
+              "visibleProperties": [],
+            },
+            {
+              "filters": [],
+              "id": "v-list",
+              "name": "List",
+              "position": "a1",
+              "sorts": [],
+              "type": "list",
+              "visibleProperties": [],
+            },
+          ],
+        },
+        "id": "db",
+        "parent": undefined,
+        "type": "database",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a0",
+          "properties": {
+            "p-status": "o1",
+            "p-title": "one",
+          },
+          "title": "one",
+        },
+        "id": "r1",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a1",
+          "properties": {
+            "p-status": "o2",
+            "p-title": "two",
+          },
+          "title": "two",
+        },
+        "id": "r2",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a25555",
+          "properties": {
+            "p-status": "o2",
+            "p-title": "",
+          },
+          "title": "",
+        },
+        "id": "n1",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "afterUndo": {
+    "contentIds": [
+      "a:[]",
+      "db:[r1,r2]",
+      "r1:[]",
+      "r2:[]",
+      "z:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "r1",
+          "r2",
+        ],
+        "data": {
+          "activeViewId": "v-board",
+          "schema": [
+            {
+              "id": "p-title",
+              "name": "Name",
+              "position": "a0",
+              "type": "title",
+            },
+            {
+              "config": {
+                "options": [
+                  {
+                    "id": "o1",
+                    "label": "Todo",
+                    "position": "a0",
+                  },
+                  {
+                    "id": "o2",
+                    "label": "Done",
+                    "position": "a1",
+                  },
+                ],
+              },
+              "id": "p-status",
+              "name": "Status",
+              "position": "a1",
+              "type": "select",
+            },
+          ],
+          "title": "Tasks",
+          "views": [
+            {
+              "filters": [],
+              "groupBy": "p-status",
+              "id": "v-board",
+              "name": "Board",
+              "position": "a0",
+              "sorts": [],
+              "type": "board",
+              "visibleProperties": [],
+            },
+            {
+              "filters": [],
+              "id": "v-list",
+              "name": "List",
+              "position": "a1",
+              "sorts": [],
+              "type": "list",
+              "visibleProperties": [],
+            },
+          ],
+        },
+        "id": "db",
+        "parent": undefined,
+        "type": "database",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a0",
+          "properties": {
+            "p-status": "o1",
+            "p-title": "one",
+          },
+          "title": "one",
+        },
+        "id": "r1",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a1",
+          "properties": {
+            "p-status": "o2",
+            "p-title": "two",
+          },
+          "title": "two",
+        },
+        "id": "r2",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "a^-",
+      "db^-",
+      "r1^db",
+      "r2^db",
+      "z^-",
+    ],
+    "holderOrder": [
+      "a",
+      "db",
+      "r1",
+      "r2",
+      "z",
+    ],
+    "mountedIn": [
+      "a@-",
+      "db@-",
+      "r1@-",
+      "r2@-",
+      "z@-",
+    ],
+    "saved": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "r1",
+          "r2",
+        ],
+        "data": {
+          "activeViewId": "v-board",
+          "schema": [
+            {
+              "id": "p-title",
+              "name": "Name",
+              "position": "a0",
+              "type": "title",
+            },
+            {
+              "config": {
+                "options": [
+                  {
+                    "id": "o1",
+                    "label": "Todo",
+                    "position": "a0",
+                  },
+                  {
+                    "id": "o2",
+                    "label": "Done",
+                    "position": "a1",
+                  },
+                ],
+              },
+              "id": "p-status",
+              "name": "Status",
+              "position": "a1",
+              "type": "select",
+            },
+          ],
+          "title": "Tasks",
+          "views": [
+            {
+              "filters": [],
+              "groupBy": "p-status",
+              "id": "v-board",
+              "name": "Board",
+              "position": "a0",
+              "sorts": [],
+              "type": "board",
+              "visibleProperties": [],
+            },
+            {
+              "filters": [],
+              "id": "v-list",
+              "name": "List",
+              "position": "a1",
+              "sorts": [],
+              "type": "list",
+              "visibleProperties": [],
+            },
+          ],
+        },
+        "id": "db",
+        "parent": undefined,
+        "type": "database",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a0",
+          "properties": {
+            "p-status": "o1",
+            "p-title": "one",
+          },
+          "title": "one",
+        },
+        "id": "r1",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a1",
+          "properties": {
+            "p-status": "o2",
+            "p-title": "two",
+          },
+          "title": "two",
+        },
+        "id": "r2",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "events": [
+    "block-added n1 parentId=null previousSiblingId=db index=4",
+    "block-moved n1 parentId=db previousSiblingId=r2 fromIndex=4 toIndex=4 oldParentId=null",
+    "block-changed db index=1",
+  ],
+  "undoSteps": 1,
+}
+`;
+
+exports[`column and database placement — characterization > adds a database row from the list view 1`] = `
+{
+  "after": {
+    "contentIds": [
+      "a:[]",
+      "db:[r1,r2,n1]",
+      "r1:[]",
+      "r2:[]",
+      "n1:[]",
+      "z:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "r1",
+          "r2",
+          "n1",
+        ],
+        "data": {
+          "activeViewId": "v-list",
+          "schema": [
+            {
+              "id": "p-title",
+              "name": "Name",
+              "position": "a0",
+              "type": "title",
+            },
+            {
+              "config": {
+                "options": [
+                  {
+                    "id": "o1",
+                    "label": "Todo",
+                    "position": "a0",
+                  },
+                  {
+                    "id": "o2",
+                    "label": "Done",
+                    "position": "a1",
+                  },
+                ],
+              },
+              "id": "p-status",
+              "name": "Status",
+              "position": "a1",
+              "type": "select",
+            },
+          ],
+          "title": "Tasks",
+          "views": [
+            {
+              "filters": [],
+              "groupBy": "p-status",
+              "id": "v-board",
+              "name": "Board",
+              "position": "a0",
+              "sorts": [],
+              "type": "board",
+              "visibleProperties": [],
+            },
+            {
+              "filters": [],
+              "id": "v-list",
+              "name": "List",
+              "position": "a1",
+              "sorts": [],
+              "type": "list",
+              "visibleProperties": [],
+            },
+          ],
+        },
+        "id": "db",
+        "parent": undefined,
+        "type": "database",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a0",
+          "properties": {
+            "p-status": "o1",
+            "p-title": "one",
+          },
+          "title": "one",
+        },
+        "id": "r1",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a1",
+          "properties": {
+            "p-status": "o2",
+            "p-title": "two",
+          },
+          "title": "two",
+        },
+        "id": "r2",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a25555",
+          "properties": {
+            "p-title": "",
+          },
+          "title": "",
+        },
+        "id": "n1",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "a^-",
+      "db^-",
+      "r1^db",
+      "r2^db",
+      "n1^db",
+      "z^-",
+    ],
+    "holderOrder": [
+      "a",
+      "db",
+      "r1",
+      "r2",
+      "n1",
+      "z",
+    ],
+    "mountedIn": [
+      "a@-",
+      "db@-",
+      "r1@-",
+      "r2@-",
+      "n1@-",
+      "z@-",
+    ],
+    "saved": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "r1",
+          "r2",
+          "n1",
+        ],
+        "data": {
+          "activeViewId": "v-list",
+          "schema": [
+            {
+              "id": "p-title",
+              "name": "Name",
+              "position": "a0",
+              "type": "title",
+            },
+            {
+              "config": {
+                "options": [
+                  {
+                    "id": "o1",
+                    "label": "Todo",
+                    "position": "a0",
+                  },
+                  {
+                    "id": "o2",
+                    "label": "Done",
+                    "position": "a1",
+                  },
+                ],
+              },
+              "id": "p-status",
+              "name": "Status",
+              "position": "a1",
+              "type": "select",
+            },
+          ],
+          "title": "Tasks",
+          "views": [
+            {
+              "filters": [],
+              "groupBy": "p-status",
+              "id": "v-board",
+              "name": "Board",
+              "position": "a0",
+              "sorts": [],
+              "type": "board",
+              "visibleProperties": [],
+            },
+            {
+              "filters": [],
+              "id": "v-list",
+              "name": "List",
+              "position": "a1",
+              "sorts": [],
+              "type": "list",
+              "visibleProperties": [],
+            },
+          ],
+        },
+        "id": "db",
+        "parent": undefined,
+        "type": "database",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a0",
+          "properties": {
+            "p-status": "o1",
+            "p-title": "one",
+          },
+          "title": "one",
+        },
+        "id": "r1",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a1",
+          "properties": {
+            "p-status": "o2",
+            "p-title": "two",
+          },
+          "title": "two",
+        },
+        "id": "r2",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a25555",
+          "properties": {
+            "p-title": "",
+          },
+          "title": "",
+        },
+        "id": "n1",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "afterRedo": {
+    "contentIds": [
+      "a:[]",
+      "db:[r1,r2,n1]",
+      "r1:[]",
+      "r2:[]",
+      "n1:[]",
+      "z:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "r1",
+          "r2",
+          "n1",
+        ],
+        "data": {
+          "activeViewId": "v-list",
+          "schema": [
+            {
+              "id": "p-title",
+              "name": "Name",
+              "position": "a0",
+              "type": "title",
+            },
+            {
+              "config": {
+                "options": [
+                  {
+                    "id": "o1",
+                    "label": "Todo",
+                    "position": "a0",
+                  },
+                  {
+                    "id": "o2",
+                    "label": "Done",
+                    "position": "a1",
+                  },
+                ],
+              },
+              "id": "p-status",
+              "name": "Status",
+              "position": "a1",
+              "type": "select",
+            },
+          ],
+          "title": "Tasks",
+          "views": [
+            {
+              "filters": [],
+              "groupBy": "p-status",
+              "id": "v-board",
+              "name": "Board",
+              "position": "a0",
+              "sorts": [],
+              "type": "board",
+              "visibleProperties": [],
+            },
+            {
+              "filters": [],
+              "id": "v-list",
+              "name": "List",
+              "position": "a1",
+              "sorts": [],
+              "type": "list",
+              "visibleProperties": [],
+            },
+          ],
+        },
+        "id": "db",
+        "parent": undefined,
+        "type": "database",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a0",
+          "properties": {
+            "p-status": "o1",
+            "p-title": "one",
+          },
+          "title": "one",
+        },
+        "id": "r1",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a1",
+          "properties": {
+            "p-status": "o2",
+            "p-title": "two",
+          },
+          "title": "two",
+        },
+        "id": "r2",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a25555",
+          "properties": {
+            "p-title": "",
+          },
+          "title": "",
+        },
+        "id": "n1",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "a^-",
+      "db^-",
+      "r1^db",
+      "r2^db",
+      "n1^db",
+      "z^-",
+    ],
+    "holderOrder": [
+      "a",
+      "db",
+      "r1",
+      "r2",
+      "n1",
+      "z",
+    ],
+    "mountedIn": [
+      "a@-",
+      "db@-",
+      "r1@-",
+      "r2@-",
+      "n1@-",
+      "z@-",
+    ],
+    "saved": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "r1",
+          "r2",
+          "n1",
+        ],
+        "data": {
+          "activeViewId": "v-list",
+          "schema": [
+            {
+              "id": "p-title",
+              "name": "Name",
+              "position": "a0",
+              "type": "title",
+            },
+            {
+              "config": {
+                "options": [
+                  {
+                    "id": "o1",
+                    "label": "Todo",
+                    "position": "a0",
+                  },
+                  {
+                    "id": "o2",
+                    "label": "Done",
+                    "position": "a1",
+                  },
+                ],
+              },
+              "id": "p-status",
+              "name": "Status",
+              "position": "a1",
+              "type": "select",
+            },
+          ],
+          "title": "Tasks",
+          "views": [
+            {
+              "filters": [],
+              "groupBy": "p-status",
+              "id": "v-board",
+              "name": "Board",
+              "position": "a0",
+              "sorts": [],
+              "type": "board",
+              "visibleProperties": [],
+            },
+            {
+              "filters": [],
+              "id": "v-list",
+              "name": "List",
+              "position": "a1",
+              "sorts": [],
+              "type": "list",
+              "visibleProperties": [],
+            },
+          ],
+        },
+        "id": "db",
+        "parent": undefined,
+        "type": "database",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a0",
+          "properties": {
+            "p-status": "o1",
+            "p-title": "one",
+          },
+          "title": "one",
+        },
+        "id": "r1",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a1",
+          "properties": {
+            "p-status": "o2",
+            "p-title": "two",
+          },
+          "title": "two",
+        },
+        "id": "r2",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a25555",
+          "properties": {
+            "p-title": "",
+          },
+          "title": "",
+        },
+        "id": "n1",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "afterUndo": {
+    "contentIds": [
+      "a:[]",
+      "db:[r1,r2]",
+      "r1:[]",
+      "r2:[]",
+      "z:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "r1",
+          "r2",
+        ],
+        "data": {
+          "activeViewId": "v-list",
+          "schema": [
+            {
+              "id": "p-title",
+              "name": "Name",
+              "position": "a0",
+              "type": "title",
+            },
+            {
+              "config": {
+                "options": [
+                  {
+                    "id": "o1",
+                    "label": "Todo",
+                    "position": "a0",
+                  },
+                  {
+                    "id": "o2",
+                    "label": "Done",
+                    "position": "a1",
+                  },
+                ],
+              },
+              "id": "p-status",
+              "name": "Status",
+              "position": "a1",
+              "type": "select",
+            },
+          ],
+          "title": "Tasks",
+          "views": [
+            {
+              "filters": [],
+              "groupBy": "p-status",
+              "id": "v-board",
+              "name": "Board",
+              "position": "a0",
+              "sorts": [],
+              "type": "board",
+              "visibleProperties": [],
+            },
+            {
+              "filters": [],
+              "id": "v-list",
+              "name": "List",
+              "position": "a1",
+              "sorts": [],
+              "type": "list",
+              "visibleProperties": [],
+            },
+          ],
+        },
+        "id": "db",
+        "parent": undefined,
+        "type": "database",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a0",
+          "properties": {
+            "p-status": "o1",
+            "p-title": "one",
+          },
+          "title": "one",
+        },
+        "id": "r1",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a1",
+          "properties": {
+            "p-status": "o2",
+            "p-title": "two",
+          },
+          "title": "two",
+        },
+        "id": "r2",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "a^-",
+      "db^-",
+      "r1^db",
+      "r2^db",
+      "z^-",
+    ],
+    "holderOrder": [
+      "a",
+      "db",
+      "r1",
+      "r2",
+      "z",
+    ],
+    "mountedIn": [
+      "a@-",
+      "db@-",
+      "r1@-",
+      "r2@-",
+      "z@-",
+    ],
+    "saved": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "r1",
+          "r2",
+        ],
+        "data": {
+          "activeViewId": "v-list",
+          "schema": [
+            {
+              "id": "p-title",
+              "name": "Name",
+              "position": "a0",
+              "type": "title",
+            },
+            {
+              "config": {
+                "options": [
+                  {
+                    "id": "o1",
+                    "label": "Todo",
+                    "position": "a0",
+                  },
+                  {
+                    "id": "o2",
+                    "label": "Done",
+                    "position": "a1",
+                  },
+                ],
+              },
+              "id": "p-status",
+              "name": "Status",
+              "position": "a1",
+              "type": "select",
+            },
+          ],
+          "title": "Tasks",
+          "views": [
+            {
+              "filters": [],
+              "groupBy": "p-status",
+              "id": "v-board",
+              "name": "Board",
+              "position": "a0",
+              "sorts": [],
+              "type": "board",
+              "visibleProperties": [],
+            },
+            {
+              "filters": [],
+              "id": "v-list",
+              "name": "List",
+              "position": "a1",
+              "sorts": [],
+              "type": "list",
+              "visibleProperties": [],
+            },
+          ],
+        },
+        "id": "db",
+        "parent": undefined,
+        "type": "database",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a0",
+          "properties": {
+            "p-status": "o1",
+            "p-title": "one",
+          },
+          "title": "one",
+        },
+        "id": "r1",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "position": "a1",
+          "properties": {
+            "p-status": "o2",
+            "p-title": "two",
+          },
+          "title": "two",
+        },
+        "id": "r2",
+        "parent": "db",
+        "type": "database-row",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "events": [
+    "block-added n1 parentId=null previousSiblingId=db index=4",
+    "block-moved n1 parentId=db previousSiblingId=r2 fromIndex=4 toIndex=4 oldParentId=null",
+    "block-changed db index=1",
+  ],
+  "undoSteps": 1,
+}
+`;
+
+exports[`column and database placement — characterization > appends a paragraph when the dead space under a column is clicked 1`] = `
+{
+  "after": {
+    "contentIds": [
+      "a:[]",
+      "cl:[c1,c2]",
+      "c1:[t1,n1]",
+      "t1:[t1c]",
+      "t1c:[]",
+      "n1:[]",
+      "c2:[q]",
+      "q:[]",
+      "z:[]",
+    ],
+    "current": 5,
+    "doc": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "c1",
+          "c2",
+        ],
+        "data": {},
+        "id": "cl",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "t1",
+          "n1",
+        ],
+        "data": {},
+        "id": "c1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": [
+          "t1c",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t1",
+        },
+        "id": "t1",
+        "parent": "c1",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "t1c",
+        },
+        "id": "t1c",
+        "parent": "t1",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "",
+        },
+        "id": "n1",
+        "parent": "c1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "q",
+        ],
+        "data": {},
+        "id": "c2",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": "c2",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "a^-",
+      "cl^-",
+      "c1^cl",
+      "t1^c1",
+      "t1c^t1",
+      "n1^c1",
+      "c2^cl",
+      "q^c2",
+      "z^-",
+    ],
+    "holderOrder": [
+      "a",
+      "cl",
+      "c1",
+      "t1",
+      "t1c",
+      "n1",
+      "c2",
+      "q",
+      "z",
+    ],
+    "mountedIn": [
+      "a@-",
+      "cl@-",
+      "c1@cl",
+      "t1@c1",
+      "t1c@t1",
+      "n1@c1",
+      "c2@cl",
+      "q@c2",
+      "z@-",
+    ],
+    "saved": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "c1",
+          "c2",
+        ],
+        "data": {},
+        "id": "cl",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "t1",
+          "n1",
+        ],
+        "data": {},
+        "id": "c1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": [
+          "t1c",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t1",
+        },
+        "id": "t1",
+        "parent": "c1",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "t1c",
+        },
+        "id": "t1c",
+        "parent": "t1",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "",
+        },
+        "id": "n1",
+        "parent": "c1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "q",
+        ],
+        "data": {},
+        "id": "c2",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": "c2",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "afterRedo": {
+    "contentIds": [
+      "a:[]",
+      "cl:[c1,c2]",
+      "c1:[t1,n1]",
+      "t1:[t1c]",
+      "t1c:[]",
+      "n1:[]",
+      "c2:[q]",
+      "q:[]",
+      "z:[]",
+    ],
+    "current": 2,
+    "doc": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "c1",
+          "c2",
+        ],
+        "data": {},
+        "id": "cl",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "t1",
+          "n1",
+        ],
+        "data": {},
+        "id": "c1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": [
+          "t1c",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t1",
+        },
+        "id": "t1",
+        "parent": "c1",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "t1c",
+        },
+        "id": "t1c",
+        "parent": "t1",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "",
+        },
+        "id": "n1",
+        "parent": "c1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "q",
+        ],
+        "data": {},
+        "id": "c2",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": "c2",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "a^-",
+      "cl^-",
+      "c1^cl",
+      "t1^c1",
+      "t1c^t1",
+      "n1^c1",
+      "c2^cl",
+      "q^c2",
+      "z^-",
+    ],
+    "holderOrder": [
+      "a",
+      "cl",
+      "c1",
+      "t1",
+      "t1c",
+      "n1",
+      "c2",
+      "q",
+      "z",
+    ],
+    "mountedIn": [
+      "a@-",
+      "cl@-",
+      "c1@cl",
+      "t1@c1",
+      "t1c@t1",
+      "n1@c1",
+      "c2@cl",
+      "q@c2",
+      "z@-",
+    ],
+    "saved": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "c1",
+          "c2",
+        ],
+        "data": {},
+        "id": "cl",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "t1",
+          "n1",
+        ],
+        "data": {},
+        "id": "c1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": [
+          "t1c",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t1",
+        },
+        "id": "t1",
+        "parent": "c1",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "t1c",
+        },
+        "id": "t1c",
+        "parent": "t1",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "",
+        },
+        "id": "n1",
+        "parent": "c1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "q",
+        ],
+        "data": {},
+        "id": "c2",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": "c2",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "afterUndo": {
+    "contentIds": [
+      "a:[]",
+      "cl:[c1,c2]",
+      "c1:[t1]",
+      "t1:[t1c]",
+      "t1c:[]",
+      "c2:[q]",
+      "q:[]",
+      "z:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "c1",
+          "c2",
+        ],
+        "data": {},
+        "id": "cl",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "t1",
+        ],
+        "data": {},
+        "id": "c1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": [
+          "t1c",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t1",
+        },
+        "id": "t1",
+        "parent": "c1",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "t1c",
+        },
+        "id": "t1c",
+        "parent": "t1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "q",
+        ],
+        "data": {},
+        "id": "c2",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": "c2",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "a^-",
+      "cl^-",
+      "c1^cl",
+      "t1^c1",
+      "t1c^t1",
+      "c2^cl",
+      "q^c2",
+      "z^-",
+    ],
+    "holderOrder": [
+      "a",
+      "cl",
+      "c1",
+      "t1",
+      "t1c",
+      "c2",
+      "q",
+      "z",
+    ],
+    "mountedIn": [
+      "a@-",
+      "cl@-",
+      "c1@cl",
+      "t1@c1",
+      "t1c@t1",
+      "c2@cl",
+      "q@c2",
+      "z@-",
+    ],
+    "saved": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "c1",
+          "c2",
+        ],
+        "data": {},
+        "id": "cl",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "t1",
+        ],
+        "data": {},
+        "id": "c1",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": [
+          "t1c",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t1",
+        },
+        "id": "t1",
+        "parent": "c1",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "t1c",
+        },
+        "id": "t1c",
+        "parent": "t1",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "q",
+        ],
+        "data": {},
+        "id": "c2",
+        "parent": "cl",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": "c2",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "events": [
+    "block-added n1 parentId=c1 previousSiblingId=t1 index=5",
+    "block-changed t1 index=3",
+  ],
+  "undoSteps": 1,
+}
+`;
+
+exports[`column and database placement — characterization > seeds a three-column preset, one paragraph per column 1`] = `
+{
+  "after": {
+    "contentIds": [
+      "a:[]",
+      "n1:[n2,n4,n6]",
+      "n2:[n3]",
+      "n3:[]",
+      "n4:[n5]",
+      "n5:[]",
+      "n6:[n7]",
+      "n7:[]",
+      "b:[]",
+    ],
+    "current": 1,
+    "doc": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n2",
+          "n4",
+          "n6",
+        ],
+        "data": {
+          "columnCount": 3,
+        },
+        "id": "n1",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "n3",
+        ],
+        "data": {},
+        "id": "n2",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "",
+        },
+        "id": "n3",
+        "parent": "n2",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n5",
+        ],
+        "data": {},
+        "id": "n4",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "",
+        },
+        "id": "n5",
+        "parent": "n4",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n7",
+        ],
+        "data": {
+          "noFocus": true,
+        },
+        "id": "n6",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "",
+        },
+        "id": "n7",
+        "parent": "n6",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "b",
+        },
+        "id": "b",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "a^-",
+      "n1^-",
+      "n2^n1",
+      "n3^n2",
+      "n4^n1",
+      "n5^n4",
+      "n6^n1",
+      "n7^n6",
+      "b^-",
+    ],
+    "holderOrder": [
+      "a",
+      "n1",
+      "n2",
+      "n3",
+      "n4",
+      "n5",
+      "n6",
+      "n7",
+      "b",
+    ],
+    "mountedIn": [
+      "a@-",
+      "n1@-",
+      "n2@n1",
+      "n3@n2",
+      "n4@n1",
+      "n5@n4",
+      "n6@n1",
+      "n7@n6",
+      "b@-",
+    ],
+    "saved": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n2",
+          "n4",
+          "n6",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "n3",
+        ],
+        "data": {},
+        "id": "n2",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "",
+        },
+        "id": "n3",
+        "parent": "n2",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n5",
+        ],
+        "data": {},
+        "id": "n4",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "",
+        },
+        "id": "n5",
+        "parent": "n4",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n7",
+        ],
+        "data": {},
+        "id": "n6",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "",
+        },
+        "id": "n7",
+        "parent": "n6",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "b",
+        },
+        "id": "b",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "afterRedo": {
+    "contentIds": [
+      "a:[]",
+      "n1:[n2,n4,n6]",
+      "n2:[n3]",
+      "n3:[]",
+      "n4:[n5]",
+      "n5:[]",
+      "n6:[n7]",
+      "n7:[]",
+      "b:[]",
+    ],
+    "current": 1,
+    "doc": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n2",
+          "n4",
+          "n6",
+        ],
+        "data": {
+          "columnCount": 3,
+        },
+        "id": "n1",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "n3",
+        ],
+        "data": {},
+        "id": "n2",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "",
+        },
+        "id": "n3",
+        "parent": "n2",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n5",
+        ],
+        "data": {},
+        "id": "n4",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "",
+        },
+        "id": "n5",
+        "parent": "n4",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n7",
+        ],
+        "data": {
+          "noFocus": true,
+        },
+        "id": "n6",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "",
+        },
+        "id": "n7",
+        "parent": "n6",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "b",
+        },
+        "id": "b",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "a^-",
+      "n1^-",
+      "n2^n1",
+      "n3^n2",
+      "n4^n1",
+      "n5^n4",
+      "n6^n1",
+      "n7^n6",
+      "b^-",
+    ],
+    "holderOrder": [
+      "a",
+      "n1",
+      "n2",
+      "n3",
+      "n4",
+      "n5",
+      "n6",
+      "n7",
+      "b",
+    ],
+    "mountedIn": [
+      "a@-",
+      "n1@-",
+      "n2@n1",
+      "n3@n2",
+      "n4@n1",
+      "n5@n4",
+      "n6@n1",
+      "n7@n6",
+      "b@-",
+    ],
+    "saved": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n2",
+          "n4",
+          "n6",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "n3",
+        ],
+        "data": {},
+        "id": "n2",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "",
+        },
+        "id": "n3",
+        "parent": "n2",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n5",
+        ],
+        "data": {},
+        "id": "n4",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "",
+        },
+        "id": "n5",
+        "parent": "n4",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n7",
+        ],
+        "data": {},
+        "id": "n6",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "",
+        },
+        "id": "n7",
+        "parent": "n6",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "b",
+        },
+        "id": "b",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "afterUndo": {
+    "contentIds": [
+      "a:[]",
+      "b:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "b",
+        },
+        "id": "b",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "a^-",
+      "b^-",
+    ],
+    "holderOrder": [
+      "a",
+      "b",
+    ],
+    "mountedIn": [
+      "a@-",
+      "b@-",
+    ],
+    "saved": [
+      {
+        "content": undefined,
+        "data": {
+          "text": "a",
+        },
+        "id": "a",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "b",
+        },
+        "id": "b",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "events": [
+    "block-added n3 parentId=n2 previousSiblingId=null index=3",
+    "block-added n2 parentId=null previousSiblingId=n1 index=2",
+    "block-added n5 parentId=n4 previousSiblingId=null index=5",
+    "block-added n4 parentId=n2 previousSiblingId=n3 index=4",
+    "block-added n7 parentId=n6 previousSiblingId=null index=7",
+    "block-added n6 parentId=n4 previousSiblingId=n5 index=6",
+    "block-added n1 parentId=null previousSiblingId=a index=1",
+    "block-changed n2 index=2",
+    "block-changed n4 index=4",
+  ],
+  "undoSteps": 1,
+}
+`;
+
+exports[`column and database placement — characterization > side-drop left of a root block that follows a nested child 1`] = `
+{
+  "after": {
+    "contentIds": [
+      "t:[tc]",
+      "tc:[]",
+      "n1:[n2,n3]",
+      "n2:[s]",
+      "s:[]",
+      "n3:[target]",
+      "target:[]",
+      "z:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": [
+          "tc",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t",
+        },
+        "id": "t",
+        "parent": undefined,
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "tc",
+        },
+        "id": "tc",
+        "parent": "t",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n2",
+          "n3",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "s",
+        ],
+        "data": {},
+        "id": "n2",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "s",
+        },
+        "id": "s",
+        "parent": "n2",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "target",
+        ],
+        "data": {},
+        "id": "n3",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "target",
+        },
+        "id": "target",
+        "parent": "n3",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "t^-",
+      "tc^t",
+      "n1^-",
+      "n2^n1",
+      "s^n2",
+      "n3^n1",
+      "target^n3",
+      "z^-",
+    ],
+    "holderOrder": [
+      "t",
+      "tc",
+      "n1",
+      "n2",
+      "s",
+      "n3",
+      "target",
+      "z",
+    ],
+    "mountedIn": [
+      "t@-",
+      "tc@t",
+      "n1@-",
+      "n2@n1",
+      "s@n2",
+      "n3@n1",
+      "target@n3",
+      "z@-",
+    ],
+    "saved": [
+      {
+        "content": [
+          "tc",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t",
+        },
+        "id": "t",
+        "parent": undefined,
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "tc",
+        },
+        "id": "tc",
+        "parent": "t",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n2",
+          "n3",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "s",
+        ],
+        "data": {},
+        "id": "n2",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "s",
+        },
+        "id": "s",
+        "parent": "n2",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "target",
+        ],
+        "data": {},
+        "id": "n3",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "target",
+        },
+        "id": "target",
+        "parent": "n3",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "afterRedo": {
+    "contentIds": [
+      "t:[tc]",
+      "tc:[]",
+      "n1:[n2,n3]",
+      "n2:[s]",
+      "s:[]",
+      "n3:[target]",
+      "target:[]",
+      "z:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": [
+          "tc",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t",
+        },
+        "id": "t",
+        "parent": undefined,
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "tc",
+        },
+        "id": "tc",
+        "parent": "t",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n2",
+          "n3",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "s",
+        ],
+        "data": {},
+        "id": "n2",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "s",
+        },
+        "id": "s",
+        "parent": "n2",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "target",
+        ],
+        "data": {},
+        "id": "n3",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "target",
+        },
+        "id": "target",
+        "parent": "n3",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "t^-",
+      "tc^t",
+      "n1^-",
+      "n2^n1",
+      "s^n2",
+      "n3^n1",
+      "target^n3",
+      "z^-",
+    ],
+    "holderOrder": [
+      "t",
+      "tc",
+      "n1",
+      "n2",
+      "s",
+      "n3",
+      "target",
+      "z",
+    ],
+    "mountedIn": [
+      "t@-",
+      "tc@t",
+      "n1@-",
+      "n2@n1",
+      "s@n2",
+      "n3@n1",
+      "target@n3",
+      "z@-",
+    ],
+    "saved": [
+      {
+        "content": [
+          "tc",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t",
+        },
+        "id": "t",
+        "parent": undefined,
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "tc",
+        },
+        "id": "tc",
+        "parent": "t",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n2",
+          "n3",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "s",
+        ],
+        "data": {},
+        "id": "n2",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "s",
+        },
+        "id": "s",
+        "parent": "n2",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "target",
+        ],
+        "data": {},
+        "id": "n3",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "target",
+        },
+        "id": "target",
+        "parent": "n3",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "afterUndo": {
+    "contentIds": [
+      "t:[tc]",
+      "tc:[]",
+      "target:[]",
+      "s:[]",
+      "z:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": [
+          "tc",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t",
+        },
+        "id": "t",
+        "parent": undefined,
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "tc",
+        },
+        "id": "tc",
+        "parent": "t",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "target",
+        },
+        "id": "target",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "s",
+        },
+        "id": "s",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "t^-",
+      "tc^t",
+      "target^-",
+      "s^-",
+      "z^-",
+    ],
+    "holderOrder": [
+      "t",
+      "tc",
+      "target",
+      "s",
+      "z",
+    ],
+    "mountedIn": [
+      "t@-",
+      "tc@t",
+      "target@-",
+      "s@-",
+      "z@-",
+    ],
+    "saved": [
+      {
+        "content": [
+          "tc",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t",
+        },
+        "id": "t",
+        "parent": undefined,
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "tc",
+        },
+        "id": "tc",
+        "parent": "t",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "target",
+        },
+        "id": "target",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "s",
+        },
+        "id": "s",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "events": [
+    "block-added n1 parentId=null previousSiblingId=t index=2",
+    "block-added n2 parentId=null previousSiblingId=n1 index=3",
+    "block-added n3 parentId=null previousSiblingId=n2 index=4",
+    "block-moved n2 parentId=n1 previousSiblingId=null fromIndex=3 toIndex=3 oldParentId=null",
+    "block-moved n3 parentId=n1 previousSiblingId=n2 fromIndex=4 toIndex=4 oldParentId=null",
+    "block-moved target parentId=n3 previousSiblingId=null fromIndex=5 toIndex=5 oldParentId=null",
+    "block-moved s parentId=n2 previousSiblingId=null fromIndex=4 toIndex=4 oldParentId=null",
+    "block-changed t index=0",
+  ],
+  "undoSteps": 1,
+}
+`;
+
+exports[`column and database placement — characterization > side-drop right of a root block that follows a nested child 1`] = `
+{
+  "after": {
+    "contentIds": [
+      "t:[tc]",
+      "tc:[]",
+      "n1:[n2,n3]",
+      "n2:[target]",
+      "target:[]",
+      "n3:[s]",
+      "s:[]",
+      "z:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": [
+          "tc",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t",
+        },
+        "id": "t",
+        "parent": undefined,
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "tc",
+        },
+        "id": "tc",
+        "parent": "t",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n2",
+          "n3",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "target",
+        ],
+        "data": {},
+        "id": "n2",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "target",
+        },
+        "id": "target",
+        "parent": "n2",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "s",
+        ],
+        "data": {},
+        "id": "n3",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "s",
+        },
+        "id": "s",
+        "parent": "n3",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "t^-",
+      "tc^t",
+      "n1^-",
+      "n2^n1",
+      "target^n2",
+      "n3^n1",
+      "s^n3",
+      "z^-",
+    ],
+    "holderOrder": [
+      "t",
+      "tc",
+      "n1",
+      "n2",
+      "target",
+      "n3",
+      "s",
+      "z",
+    ],
+    "mountedIn": [
+      "t@-",
+      "tc@t",
+      "n1@-",
+      "n2@n1",
+      "target@n2",
+      "n3@n1",
+      "s@n3",
+      "z@-",
+    ],
+    "saved": [
+      {
+        "content": [
+          "tc",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t",
+        },
+        "id": "t",
+        "parent": undefined,
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "tc",
+        },
+        "id": "tc",
+        "parent": "t",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n2",
+          "n3",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "target",
+        ],
+        "data": {},
+        "id": "n2",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "target",
+        },
+        "id": "target",
+        "parent": "n2",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "s",
+        ],
+        "data": {},
+        "id": "n3",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "s",
+        },
+        "id": "s",
+        "parent": "n3",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "afterRedo": {
+    "contentIds": [
+      "t:[tc]",
+      "tc:[]",
+      "n1:[n2,n3]",
+      "n2:[target]",
+      "target:[]",
+      "n3:[s]",
+      "s:[]",
+      "z:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": [
+          "tc",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t",
+        },
+        "id": "t",
+        "parent": undefined,
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "tc",
+        },
+        "id": "tc",
+        "parent": "t",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n2",
+          "n3",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "target",
+        ],
+        "data": {},
+        "id": "n2",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "target",
+        },
+        "id": "target",
+        "parent": "n2",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "s",
+        ],
+        "data": {},
+        "id": "n3",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "s",
+        },
+        "id": "s",
+        "parent": "n3",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "t^-",
+      "tc^t",
+      "n1^-",
+      "n2^n1",
+      "target^n2",
+      "n3^n1",
+      "s^n3",
+      "z^-",
+    ],
+    "holderOrder": [
+      "t",
+      "tc",
+      "n1",
+      "n2",
+      "target",
+      "n3",
+      "s",
+      "z",
+    ],
+    "mountedIn": [
+      "t@-",
+      "tc@t",
+      "n1@-",
+      "n2@n1",
+      "target@n2",
+      "n3@n1",
+      "s@n3",
+      "z@-",
+    ],
+    "saved": [
+      {
+        "content": [
+          "tc",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t",
+        },
+        "id": "t",
+        "parent": undefined,
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "tc",
+        },
+        "id": "tc",
+        "parent": "t",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "n2",
+          "n3",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "target",
+        ],
+        "data": {},
+        "id": "n2",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "target",
+        },
+        "id": "target",
+        "parent": "n2",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "s",
+        ],
+        "data": {},
+        "id": "n3",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "s",
+        },
+        "id": "s",
+        "parent": "n3",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "afterUndo": {
+    "contentIds": [
+      "t:[tc]",
+      "tc:[]",
+      "target:[]",
+      "s:[]",
+      "z:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": [
+          "tc",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t",
+        },
+        "id": "t",
+        "parent": undefined,
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "tc",
+        },
+        "id": "tc",
+        "parent": "t",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "target",
+        },
+        "id": "target",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "s",
+        },
+        "id": "s",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "t^-",
+      "tc^t",
+      "target^-",
+      "s^-",
+      "z^-",
+    ],
+    "holderOrder": [
+      "t",
+      "tc",
+      "target",
+      "s",
+      "z",
+    ],
+    "mountedIn": [
+      "t@-",
+      "tc@t",
+      "target@-",
+      "s@-",
+      "z@-",
+    ],
+    "saved": [
+      {
+        "content": [
+          "tc",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t",
+        },
+        "id": "t",
+        "parent": undefined,
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "tc",
+        },
+        "id": "tc",
+        "parent": "t",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "target",
+        },
+        "id": "target",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "s",
+        },
+        "id": "s",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "z",
+        },
+        "id": "z",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "events": [
+    "block-added n1 parentId=null previousSiblingId=t index=2",
+    "block-added n2 parentId=null previousSiblingId=n1 index=3",
+    "block-added n3 parentId=null previousSiblingId=n2 index=4",
+    "block-moved n2 parentId=n1 previousSiblingId=null fromIndex=3 toIndex=3 oldParentId=null",
+    "block-moved n3 parentId=n1 previousSiblingId=n2 fromIndex=4 toIndex=4 oldParentId=null",
+    "block-moved target parentId=n2 previousSiblingId=null fromIndex=4 toIndex=4 oldParentId=null",
+    "block-moved s parentId=n3 previousSiblingId=null fromIndex=6 toIndex=6 oldParentId=null",
+    "block-changed t index=0",
+  ],
+  "undoSteps": 1,
+}
+`;
+
+exports[`column and database placement — characterization > wraps a selection with a toggle and its child into columns 1`] = `
+{
+  "after": {
+    "contentIds": [
+      "n1:[n2,n3]",
+      "n2:[t]",
+      "t:[tc]",
+      "tc:[]",
+      "n3:[p]",
+      "p:[]",
+      "q:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": [
+          "n2",
+          "n3",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "t",
+        ],
+        "data": {},
+        "id": "n2",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": [
+          "tc",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t",
+        },
+        "id": "t",
+        "parent": "n2",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "tc",
+        },
+        "id": "tc",
+        "parent": "t",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "p",
+        ],
+        "data": {},
+        "id": "n3",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "p",
+        },
+        "id": "p",
+        "parent": "n3",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "n1^-",
+      "n2^n1",
+      "t^n2",
+      "tc^t",
+      "n3^n1",
+      "p^n3",
+      "q^-",
+    ],
+    "holderOrder": [
+      "n1",
+      "n2",
+      "t",
+      "tc",
+      "n3",
+      "p",
+      "q",
+    ],
+    "mountedIn": [
+      "n1@-",
+      "n2@n1",
+      "t@n2",
+      "tc@t",
+      "n3@n1",
+      "p@n3",
+      "q@-",
+    ],
+    "saved": [
+      {
+        "content": [
+          "n2",
+          "n3",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "t",
+        ],
+        "data": {},
+        "id": "n2",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": [
+          "tc",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t",
+        },
+        "id": "t",
+        "parent": "n2",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "tc",
+        },
+        "id": "tc",
+        "parent": "t",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "p",
+        ],
+        "data": {},
+        "id": "n3",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "p",
+        },
+        "id": "p",
+        "parent": "n3",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "afterRedo": {
+    "contentIds": [
+      "n1:[n2,n3]",
+      "n2:[t]",
+      "t:[tc]",
+      "tc:[]",
+      "n3:[p]",
+      "p:[]",
+      "q:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": [
+          "n2",
+          "n3",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "t",
+        ],
+        "data": {},
+        "id": "n2",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": [
+          "tc",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t",
+        },
+        "id": "t",
+        "parent": "n2",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "tc",
+        },
+        "id": "tc",
+        "parent": "t",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "p",
+        ],
+        "data": {},
+        "id": "n3",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "p",
+        },
+        "id": "p",
+        "parent": "n3",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "n1^-",
+      "n2^n1",
+      "t^n2",
+      "tc^t",
+      "n3^n1",
+      "p^n3",
+      "q^-",
+    ],
+    "holderOrder": [
+      "n1",
+      "n2",
+      "t",
+      "tc",
+      "n3",
+      "p",
+      "q",
+    ],
+    "mountedIn": [
+      "n1@-",
+      "n2@n1",
+      "t@n2",
+      "tc@t",
+      "n3@n1",
+      "p@n3",
+      "q@-",
+    ],
+    "saved": [
+      {
+        "content": [
+          "n2",
+          "n3",
+        ],
+        "data": {},
+        "id": "n1",
+        "parent": undefined,
+        "type": "column_list",
+      },
+      {
+        "content": [
+          "t",
+        ],
+        "data": {},
+        "id": "n2",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": [
+          "tc",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t",
+        },
+        "id": "t",
+        "parent": "n2",
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "tc",
+        },
+        "id": "tc",
+        "parent": "t",
+        "type": "paragraph",
+      },
+      {
+        "content": [
+          "p",
+        ],
+        "data": {},
+        "id": "n3",
+        "parent": "n1",
+        "type": "column",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "p",
+        },
+        "id": "p",
+        "parent": "n3",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "afterUndo": {
+    "contentIds": [
+      "t:[tc]",
+      "tc:[]",
+      "p:[]",
+      "q:[]",
+    ],
+    "current": -1,
+    "doc": [
+      {
+        "content": [
+          "tc",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t",
+        },
+        "id": "t",
+        "parent": undefined,
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "tc",
+        },
+        "id": "tc",
+        "parent": "t",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "p",
+        },
+        "id": "p",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+    "flat": [
+      "t^-",
+      "tc^t",
+      "p^-",
+      "q^-",
+    ],
+    "holderOrder": [
+      "t",
+      "tc",
+      "p",
+      "q",
+    ],
+    "mountedIn": [
+      "t@-",
+      "tc@t",
+      "p@-",
+      "q@-",
+    ],
+    "saved": [
+      {
+        "content": [
+          "tc",
+        ],
+        "data": {
+          "isOpen": true,
+          "text": "t",
+        },
+        "id": "t",
+        "parent": undefined,
+        "type": "toggle",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "tc",
+        },
+        "id": "tc",
+        "parent": "t",
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "p",
+        },
+        "id": "p",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+      {
+        "content": undefined,
+        "data": {
+          "text": "q",
+        },
+        "id": "q",
+        "parent": undefined,
+        "type": "paragraph",
+      },
+    ],
+  },
+  "events": [
+    "block-added n1 parentId=null previousSiblingId=null index=0",
+    "block-added n2 parentId=null previousSiblingId=n1 index=1",
+    "block-added n3 parentId=null previousSiblingId=n2 index=2",
+    "block-moved n2 parentId=n1 previousSiblingId=null fromIndex=1 toIndex=1 oldParentId=null",
+    "block-moved n3 parentId=n1 previousSiblingId=n2 fromIndex=2 toIndex=2 oldParentId=null",
+    "block-moved t parentId=n2 previousSiblingId=null fromIndex=2 toIndex=2 oldParentId=null",
+    "block-moved p parentId=n3 previousSiblingId=null fromIndex=5 toIndex=5 oldParentId=null",
+    "block-changed t index=2",
+  ],
+  "undoSteps": 1,
+}
+`;

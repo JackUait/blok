@@ -1715,10 +1715,11 @@ export class BlockYjsSync {
     const data = this.sanitizeToolData(toolName, this.dependencies.YjsManager.yMapToObject(record.data));
     const { parentId, lastEditedAt, lastEditedBy } = record;
 
-    const placement = this.docPlacementInMemory(blockId, parentId ?? null);
+    const order = this.docOrderKnownToMemory(new Set([blockId]));
+    const placement = this.docPlacementInMemory(blockId, parentId ?? null, order);
     const targetIndex = placement !== undefined
       ? this.flatIndexFor(placement)
-      : this.memoryIndexFromDocNeighbour(blockId, parentId, this.docOrderKnownToMemory(new Set([blockId])));
+      : this.memoryIndexFromDocNeighbour(blockId, parentId, order);
 
     if (targetIndex === -1) {
       return;

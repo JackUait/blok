@@ -118,6 +118,19 @@ export interface SyncHandlers {
  */
 const isMaterializingOrigin = (origin?: BlockChangeEvent['origin']): boolean => origin === 'remote';
 
+/**
+ * Who a replayed block is rebuilt for, handed to the tool as `replaySource`:
+ * this client's own undo/redo, or a peer's change.
+ * @param origin - origin of the block change event
+ */
+const replaySourceOf = (origin?: BlockChangeEvent['origin']): 'history' | 'remote' | undefined => {
+  if (origin === 'remote') {
+    return 'remote';
+  }
+
+  return origin === 'undo' || origin === 'redo' ? 'history' : undefined;
+};
+
 export class BlockYjsSync {
   private readonly dependencies: BlockYjsSyncDependencies;
   private readonly repository: BlockRepository;
@@ -1056,7 +1069,7 @@ export class BlockYjsSync {
 
       this.markRewrittenFromDocument(blockId, data);
       this.withAtomicOperation(() => {
-        this.rematerialize(block, { tool: yjsType, data, tunes, lastEditedAt, lastEditedBy });
+        this.rematerialize(block, { tool: yjsType, data, tunes, lastEditedAt, lastEditedBy, replaySource: replaySourceOf(origin) });
       }, { extendThroughRAF: true, blockId });
 
       return;
@@ -1067,7 +1080,7 @@ export class BlockYjsSync {
     if (!equals(tunes, block.preservedTunes)) {
       this.markRewrittenFromDocument(blockId, data);
       this.withAtomicOperation(() => {
-        this.rematerialize(block, { tool: block.name, data, tunes, lastEditedAt, lastEditedBy });
+        this.rematerialize(block, { tool: block.name, data, tunes, lastEditedAt, lastEditedBy, replaySource: replaySourceOf(origin) });
       }, { extendThroughRAF: true, blockId });
 
       return;
@@ -1141,7 +1154,14 @@ export class BlockYjsSync {
         rebaseHistory?.();
         this.handlers.onBlockChanged?.(block);
       } else {
-        this.rematerialize(block, { tool: block.name, data, tunes: block.preservedTunes, lastEditedAt, lastEditedBy });
+        this.rematerialize(block, {
+          tool: block.name,
+          data,
+          tunes: block.preservedTunes,
+          lastEditedAt,
+          lastEditedBy,
+          replaySource: replaySourceOf(origin),
+        });
       }
     }, { extendThroughRAF: true, blockId });
   }
@@ -1201,7 +1221,14 @@ export class BlockYjsSync {
    */
   private rematerialize(
     block: Block,
-    record: { tool: string; data: BlockToolData; tunes: Record<string, unknown>; lastEditedAt: number | undefined; lastEditedBy: string | null }
+    record: {
+      tool: string;
+      data: BlockToolData;
+      tunes: Record<string, unknown>;
+      lastEditedAt: number | undefined;
+      lastEditedBy: string | null;
+      replaySource: 'history' | 'remote' | undefined;
+    }
   ): void {
     const target = this.repository.getBlockById(block.id);
 
@@ -1224,6 +1251,7 @@ export class BlockYjsSync {
       parentId: target.parentId ?? undefined,
       bindEventsImmediately: true,
       origin: 'replay',
+      replaySource: record.replaySource,
       lastEditedAt: record.lastEditedAt,
       lastEditedBy: record.lastEditedBy,
     });
@@ -1425,6 +1453,7 @@ export class BlockYjsSync {
         parentId,
         bindEventsImmediately: true,
         origin: 'replay',
+        replaySource: replaySourceOf(origin),
         lastEditedAt,
         lastEditedBy,
       });
@@ -1630,6 +1659,7 @@ export class BlockYjsSync {
           parentId: entry.parentId,
           bindEventsImmediately: true,
           origin: 'replay',
+          replaySource: replaySourceOf(origin),
           lastEditedAt: entry.lastEditedAt,
           lastEditedBy: entry.lastEditedBy,
         });

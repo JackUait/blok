@@ -186,6 +186,14 @@ export interface BlockToolConstructorOptions<D extends object = any, C extends o
    * gesture.
    */
   readonly origin?: BlockOrigin;
+
+  /**
+   * Set only with `origin: 'replay'`: who rebuilt the block. `'history'` is
+   * this client's own undo or redo; `'remote'` is a peer's change arriving.
+   * A side effect that only the acting client should run (a network fetch,
+   * a derived write) belongs to `'history'`.
+   */
+  readonly replaySource?: 'history' | 'remote';
 }
 
 export interface BlockToolConstructable extends BaseToolConstructable {

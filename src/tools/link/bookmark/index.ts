@@ -51,9 +51,10 @@ export class Bookmark implements BlockTool {
     this.fetcher = new MetadataFetcher(options.config ?? { endpoint: '' });
     this.data = { ...options.data, url: options.data?.url ?? '' };
     this.state = this.data.url ? 'RENDERED' : 'EMPTY';
-    // Only a replay: the preview of a redone paste was dropped with the
-    // undone block. A load must not refetch a link that has no preview.
-    this.refetchOnRender = options.origin === 'replay' && !options.readOnly
+    // Only this client's undo/redo: the preview of a redone paste was dropped
+    // with the undone block. A load must not refetch a link that has no
+    // preview, and a peer's change must not make every client fetch.
+    this.refetchOnRender = options.origin === 'replay' && options.replaySource !== 'remote' && !options.readOnly
       && this.data.url !== '' && Object.keys(this.data).length === 1;
   }
 

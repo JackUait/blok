@@ -122,6 +122,19 @@ describe('Bookmark tool', () => {
     expect(root.querySelector('[data-blok-testid="bookmark-loading"]')).not.toBeNull();
   });
 
+  it('does not fetch when a peer\'s change rebuilt the bookmark: only the client that redid it fetches', () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+    const tool = new Bookmark({
+      ...createOptions({ url: 'https://example.com/article' }),
+      origin: 'replay',
+      replaySource: 'remote',
+    });
+
+    tool.render();
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it('does not fetch on load, so a saved link with no preview is not refetched on every open', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
     const tool = new Bookmark({ ...createOptions({ url: 'https://example.com/article' }), origin: 'load' });

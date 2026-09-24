@@ -76,6 +76,7 @@ export class BlockFactory {
       lastEditedAt,
       lastEditedBy,
       origin = 'api',
+      replaySource,
     } = options;
 
     const tool = this.dependencies.tools.get(name);
@@ -116,6 +117,7 @@ export class BlockFactory {
       lastEditedAt,
       lastEditedBy,
       origin,
+      replaySource,
     }, this.dependencies.eventsDispatcher);
 
     if (this.readOnlyState) {

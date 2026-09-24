@@ -59,13 +59,21 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
    * @param origin - why this instance is being constructed (creation vs restore).
    *   Defaults to `'api'` so a construction path that has not been updated can
    *   never be mistaken for a user gesture.
+   * @param replaySource - with a replay origin: this client's undo/redo or a peer's change
    */
-  public create(data: BlockToolData, block: BlockAPI, readOnly: boolean, origin: BlockOrigin = 'api'): IBlockTool {
+  public create(
+    data: BlockToolData,
+    block: BlockAPI,
+    readOnly: boolean,
+    origin: BlockOrigin = 'api',
+    replaySource?: 'history' | 'remote'
+  ): IBlockTool {
     return new this.constructable({
       data,
       block,
       readOnly,
       origin,
+      ...(replaySource !== undefined ? { replaySource } : {}),
       api: this.api,
       config: this.settings,
     }) as IBlockTool;

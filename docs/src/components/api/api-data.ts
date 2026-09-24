@@ -3277,6 +3277,18 @@ class CardTool {
 }`,
       },
       {
+        name: "BlockToolConstructorOptions.replaySource",
+        returnType: "'history' | 'remote' | undefined",
+        description:
+          "Who rebuilt the block, set only when `origin` is `'replay'`.\n\n- `'history'`: this client's own undo or redo.\n- `'remote'`: a peer's change arrived over collaboration.\n\nEvery client rebuilds the block for a peer's change. So a side effect that only the acting client should run, such as a network fetch or a derived write, belongs to `'history'`. It is `undefined` for every other origin.",
+        example: `class Bookmark {
+  constructor({ data, origin, replaySource }) {
+    // Only the client that redid the paste fetches the preview again.
+    this.refetch = origin === 'replay' && replaySource !== 'remote' && data.title === undefined;
+  }
+}`,
+      },
+      {
         name: "BlockToolConstructable.keepsChildrenOnEnter",
         returnType: "boolean",
         description:

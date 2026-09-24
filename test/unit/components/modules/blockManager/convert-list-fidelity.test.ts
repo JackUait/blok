@@ -166,7 +166,7 @@ const createMockBlockFactory = (): BlockFactory => {
     eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
     tools: mockTools,
     moduleInstances: { ReadOnly: { isEnabled: false } } as never,
-  }, vi.fn());
+  }, vi.fn(), vi.fn());
 };
 
 const createMockYjsSync = (): BlockYjsSync => ({

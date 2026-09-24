@@ -131,7 +131,7 @@ describe('BlockYjsSync — caret preservation is for a peer, not for undo/redo',
       moduleInstances: {
         ReadOnly: { isEnabled: false },
       } as never,
-    }, vi.fn());
+    }, vi.fn(), vi.fn());
 
     const handlers: SyncHandlers = {
       getBlockIndex: vi.fn((block: Block) => repository.getBlockIndex(block)),

@@ -107,7 +107,7 @@ describe('BlockYjsSync — edit metadata from the document', () => {
       moduleInstances: {
         ReadOnly: { isEnabled: false },
       } as never,
-    }, vi.fn());
+    }, vi.fn(), vi.fn());
 
     handlers = {
       getBlockIndex: vi.fn((block: Block) => repository.getBlockIndex(block)),

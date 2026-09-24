@@ -233,6 +233,7 @@ const createFactory = (tools: Record<string, Partial<BlockToolAdapter>>): BlockF
       tools: collection,
       moduleInstances: { ReadOnly: { isEnabled: false } } as never,
     },
+    vi.fn(),
     vi.fn()
   );
 };

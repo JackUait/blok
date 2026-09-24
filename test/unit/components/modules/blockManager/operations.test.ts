@@ -288,7 +288,7 @@ const createMockBlockFactory = (): BlockFactory => {
     moduleInstances: {
       ReadOnly: { isEnabled: false },
     } as never,
-  }, bindBlockEvents);
+  }, bindBlockEvents, vi.fn());
 };
 
 /**

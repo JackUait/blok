@@ -28,7 +28,13 @@ class RepairingBox {
 
   public rendered(): void {
     requestAnimationFrame(() => {
-      this.api.blocks.transactWithoutCapture(() => {
+      const blocks = this.api.blocks;
+
+      if (blocks.transactWithoutCapture === undefined) {
+        throw new Error('blocks.transactWithoutCapture is missing');
+      }
+
+      blocks.transactWithoutCapture(() => {
         const child = this.api.blocks.insert('paragraph', { text: '' }, {}, this.api.blocks.getBlocksCount(), false);
 
         this.api.blocks.setBlockParent(child.id, this.block.id);

@@ -336,7 +336,7 @@ describe('BlockFactory', () => {
     // Create a mock function compatible with the expected type
     const mockFn = vi.fn((_block: Block) => {});
     bindBlockEventsFn = mockFn;
-    factory = new BlockFactory(dependencies, bindBlockEventsFn);
+    factory = new BlockFactory(dependencies, bindBlockEventsFn, vi.fn());
   });
 
   /**
@@ -450,7 +450,7 @@ describe('BlockFactory', () => {
     it('does not bind events in read-only mode', () => {
       const readOnlyDependencies = createMockDependencies();
       (readOnlyDependencies.moduleInstances as { ReadOnly: { isEnabled: boolean } }).ReadOnly.isEnabled = true;
-      const readOnlyFactory = new BlockFactory(readOnlyDependencies, bindBlockEventsFn);
+      const readOnlyFactory = new BlockFactory(readOnlyDependencies, bindBlockEventsFn, vi.fn());
 
       const block = readOnlyFactory.composeBlock({
         tool: 'paragraph',
@@ -542,7 +542,7 @@ describe('BlockFactory', () => {
       migratingDependencies.migrations = {
         paragraph: (data) => ({ ...data, host: true }),
       };
-      const migratingFactory = new BlockFactory(migratingDependencies, bindBlockEventsFn);
+      const migratingFactory = new BlockFactory(migratingDependencies, bindBlockEventsFn, vi.fn());
 
       const adapter = migratingFactory.getTool('paragraph');
 
@@ -563,7 +563,7 @@ describe('BlockFactory', () => {
       migratingDependencies.migrations = {
         paragraph: (data) => ({ ...data, order: [...((data as { order?: string[] }).order ?? []), 'config'] }),
       };
-      const migratingFactory = new BlockFactory(migratingDependencies, bindBlockEventsFn);
+      const migratingFactory = new BlockFactory(migratingDependencies, bindBlockEventsFn, vi.fn());
 
       const adapter = migratingFactory.getTool('paragraph');
 
@@ -587,7 +587,7 @@ describe('BlockFactory', () => {
       migratingDependencies.migrations = {
         paragraph: () => { throw new Error('bad migration'); },
       };
-      const migratingFactory = new BlockFactory(migratingDependencies, bindBlockEventsFn);
+      const migratingFactory = new BlockFactory(migratingDependencies, bindBlockEventsFn, vi.fn());
 
       const adapter = migratingFactory.getTool('paragraph');
 

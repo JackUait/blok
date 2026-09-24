@@ -468,6 +468,16 @@ describe('hierarchy-invariant', () => {
       ])).toEqual([]);
     });
 
+    it('flags two blocks that share an id', () => {
+      const violations = validateTreeOrder([
+        block('a', null),
+        block('b', null),
+        block('a', null),
+      ]);
+
+      expect(violations.map(v => v.kind)).toContain('duplicate-block-id');
+    });
+
     it('flags siblings whose flat order differs from contentIds', () => {
       const violations = validateTreeOrder([
         block('t', null, ['c2', 'c1'], 'toggle'),

@@ -392,7 +392,7 @@ export interface TreeOrderInput extends LiveBlockInput {
 }
 
 export interface TreeOrderViolation {
-  kind: 'flat-order-not-tree-order';
+  kind: 'flat-order-not-tree-order' | 'duplicate-block-id';
   index: number;
   expected: string | undefined;
   actual: string | undefined;
@@ -409,12 +409,26 @@ export interface TreeOrderViolation {
  */
 export const validateTreeOrder = (blocks: TreeOrderInput[]): TreeOrderViolation[] => {
   const byId = new Map<string, TreeOrderInput>();
+  const duplicates: TreeOrderViolation[] = [];
 
-  blocks.forEach(b => {
+  blocks.forEach((b, index) => {
     if (!byId.has(b.id)) {
       byId.set(b.id, b);
+
+      return;
     }
+    duplicates.push({
+      kind: 'duplicate-block-id',
+      index,
+      expected: undefined,
+      actual: b.id,
+      message: `Block id ${b.id} appears more than once in the flat block array (again at index ${index})`,
+    });
   });
+
+  if (duplicates.length > 0) {
+    return duplicates;
+  }
 
   const expected = dfsOrder({ blocks, getById: id => byId.get(id) }).map(b => b.id);
 

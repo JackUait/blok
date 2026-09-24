@@ -133,6 +133,15 @@
   to { opacity: 1; transform: none }
 }
 
+@keyframes blok-find-roll-in {
+  from { color: transparent; transform: translateY(calc(1em * var(--blok-find-roll-shift, 1))) }
+}
+
+@keyframes blok-find-roll-out {
+  from { color: var(--blok-text-secondary) }
+  to { color: transparent }
+}
+
 @keyframes blok-find-shake {
   0%, 100% { transform: translateX(0) }
   20% { transform: translateX(-4px) }

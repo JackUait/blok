@@ -194,9 +194,13 @@
   appearance: none;
 }
 
+/* A window the rolling digits pass through, soft at the top and bottom. */
 [data-blok-find-counter] {
   flex: none;
+  padding-block: var(--blok-space-1);
   padding-inline-start: var(--blok-space-1-5);
+  overflow: clip;
+  mask-image: linear-gradient(transparent, black var(--blok-space-1-5), black calc(100% - var(--blok-space-1-5)), transparent);
   color: var(--blok-text-secondary);
   font-size: var(--blok-font-size-ui-compact);
   font-variant-numeric: tabular-nums;
@@ -213,6 +217,34 @@
 
 [data-blok-find-counter][data-blok-find-bump] {
   animation: blok-find-count 180ms var(--blok-ease-popover);
+}
+
+/*
+  Only the digits that changed roll. The span slides in and carries the old
+  digits along, which sit one step behind it, so both travel the same curve.
+  They fade by colour, not opacity: the span's opacity would hide them too.
+  The empty alt text keeps the old digits out of what the counter announces.
+*/
+[data-blok-find-roll] {
+  /* A small overshoot, so the digit settles like a counter wheel. */
+  --blok-find-roll-ease: cubic-bezier(0.34, 1.35, 0.64, 1);
+
+  position: relative;
+  display: inline-block;
+  animation: blok-find-roll-in 420ms var(--blok-find-roll-ease) both;
+}
+
+[data-blok-find-roll]::before {
+  content: attr(data-blok-find-roll-from) / '';
+  position: absolute;
+  inset-inline-end: 0;
+  top: 0;
+  transform: translateY(calc(-1em * var(--blok-find-roll-shift, 1)));
+  animation: blok-find-roll-out 420ms var(--blok-find-roll-ease) both;
+}
+
+[data-blok-find-roll='down'] {
+  --blok-find-roll-shift: -1;
 }
 
 /* ─── Buttons ─── */
@@ -466,6 +498,19 @@
   to { opacity: 1; transform: none; }
 }
 
+/* The shift is -1 when rolling down, so digits travel the other way. */
+@keyframes blok-find-roll-in {
+  from {
+    color: transparent;
+    transform: translateY(calc(1em * var(--blok-find-roll-shift, 1)));
+  }
+}
+
+@keyframes blok-find-roll-out {
+  from { color: var(--blok-text-secondary); }
+  to { color: transparent; }
+}
+
 @keyframes blok-find-arrive {
   from {
     opacity: 0;
@@ -487,7 +532,12 @@
 
   [data-blok-find-field][data-blok-find-shake],
   [data-blok-find-counter][data-blok-find-bump],
+  [data-blok-find-roll],
   [data-blok-find-lens-box][data-blok-find-lens-arrive] {
     animation: none;
+  }
+
+  [data-blok-find-roll]::before {
+    content: none;
   }
 }

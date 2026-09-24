@@ -400,6 +400,56 @@ describe('FindBar', () => {
     });
   });
 
+  describe('counter roll', () => {
+    const interpolate = (key: string, vars?: Record<string, string | number>): string =>
+      key === 'find.count' && vars !== undefined ? `${vars.current} of ${vars.total}` : key;
+    const positions = Array.from({ length: 20 }, (_, index) => index / 20);
+    const counter = (): HTMLElement => byTestId(bar.element, 'find-counter');
+    const roll = (): HTMLElement | null => counter().querySelector('[data-blok-find-roll]');
+
+    beforeEach(() => {
+      bar.destroy();
+      bar = new FindBar({ t: interpolate, callbacks, isMac: true });
+      document.body.appendChild(bar.element);
+      bar.open({ readOnly: false });
+      type(findInput(), 'a');
+      bar.setResults({ current: 15, total: 20, positions });
+    });
+
+    it('rolls only the digits that changed, up when the number grows', () => {
+      bar.setResults({ current: 18, total: 20, positions });
+
+      expect(roll()?.textContent).toBe('9');
+      expect(roll()?.getAttribute('data-blok-find-roll')).toBe('up');
+      expect(roll()?.getAttribute('data-blok-find-roll-from')).toBe('6');
+      expect(counter().textContent).toBe('19 of 20');
+    });
+
+    it('rolls down when the number shrinks', () => {
+      bar.setResults({ current: 13, total: 20, positions });
+
+      expect(roll()?.textContent).toBe('4');
+      expect(roll()?.getAttribute('data-blok-find-roll')).toBe('down');
+      expect(roll()?.getAttribute('data-blok-find-roll-from')).toBe('6');
+      expect(counter().textContent).toBe('14 of 20');
+    });
+
+    it('rolls the whole number when its length changes', () => {
+      bar.setResults({ current: 8, total: 20, positions });
+
+      expect(roll()?.textContent).toBe('9');
+      expect(roll()?.getAttribute('data-blok-find-roll-from')).toBe('16');
+      expect(counter().textContent).toBe('9 of 20');
+    });
+
+    it('does not roll when the total changes', () => {
+      bar.setResults({ current: 16, total: 21, positions: [...positions, 1] });
+
+      expect(roll()).toBeNull();
+      expect(counter().textContent).toBe('17 of 21');
+    });
+  });
+
   describe('no-results state', () => {
     const field = (): HTMLElement => byTestId(bar.element, 'find-field');
 

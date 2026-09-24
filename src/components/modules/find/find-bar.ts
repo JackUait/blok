@@ -57,12 +57,17 @@ const ATTR = {
   empty: 'data-blok-find-empty',
   shake: 'data-blok-find-shake',
   bump: 'data-blok-find-bump',
+  roll: 'data-blok-find-roll',
+  rollFrom: 'data-blok-find-roll-from',
   open: 'data-blok-find-open',
   readOnly: 'data-blok-find-read-only',
   placement: 'data-blok-find-placement',
 } as const;
 
 const TICK_INDEX = 'data-blok-find-index';
+
+/** Stands in for the current number, to find where a locale puts it. */
+const CURRENT_MARK = '\uE000';
 
 const PLACEMENTS: readonly FindPlacement[] = ['top-start', 'top-center', 'top-end', 'bottom-start', 'bottom-center', 'bottom-end'];
 
@@ -139,6 +144,8 @@ export class FindBar {
   private matchCase = false;
   private wholeWord = false;
   private total = 0;
+  /** The count the counter shows now, -1 when it shows none. */
+  private shown = { current: -1, total: 0 };
   private noResults = false;
 
   private readonly listeners: Array<() => void> = [];
@@ -494,13 +501,15 @@ export class FindBar {
     const noResults = hasQuery && this.total === 0;
     const text = this.counterText(current, noResults);
 
-    if (this.counter.textContent !== text) {
+    if (this.counter.textContent !== text && !this.rollCounter(current, text)) {
       this.counter.textContent = text;
 
       if (text !== '') {
         replay(this.counter, ATTR.bump);
       }
     }
+
+    this.shown = { current: this.total > 0 ? current : -1, total: this.total };
 
     this.field.toggleAttribute(ATTR.empty, noResults);
 
@@ -547,6 +556,43 @@ export class FindBar {
     }
 
     return noResults ? this.t('find.noResults') : '';
+  }
+
+  /**
+   * Roll the digits of the current number that changed, when only it changed.
+   * The old digits live in an attribute that CSS paints, so the counter's
+   * text and what it announces stay the new count.
+   * @param current - zero-based index of the new current match
+   * @param text - the full new counter text
+   * @returns false when the count cannot roll and needs a plain redraw
+   */
+  private rollCounter(current: number, text: string): boolean {
+    if (this.shown.current < 0 || current < 0 || this.shown.total !== this.total) {
+      return false;
+    }
+
+    const marked = this.t('find.count', { current: CURRENT_MARK, total: this.total });
+    const [before, after] = marked.split(CURRENT_MARK);
+    const next = String(current + 1);
+    const previous = String(this.shown.current + 1);
+
+    // A locale that formats the number itself cannot be split this way.
+    if (next === previous || after === undefined || before + next + after !== text) {
+      return false;
+    }
+
+    const kept = next.length === previous.length
+      ? [...next].findIndex((digit, index) => digit !== previous[index])
+      : 0;
+    const roll = build('span', {
+      [ATTR.roll]: current > this.shown.current ? 'up' : 'down',
+      [ATTR.rollFrom]: previous.slice(kept),
+    });
+
+    roll.textContent = next.slice(kept);
+    this.counter.replaceChildren(before + next.slice(0, kept), roll, after);
+
+    return true;
   }
 
   private renderMap(current: number): void {

@@ -9157,7 +9157,10 @@ span[data-blok-slash-search] {
 
 [data-blok-find-counter] {
   flex: none;
+  padding-block: var(--blok-space-1);
   padding-inline-start: var(--blok-space-1-5);
+  overflow: clip;
+  mask-image: linear-gradient(transparent, black var(--blok-space-1-5), black calc(100% - var(--blok-space-1-5)), transparent);
   color: var(--blok-text-secondary);
   font-size: var(--blok-font-size-ui-compact);
   font-variant-numeric: tabular-nums;
@@ -9174,6 +9177,26 @@ span[data-blok-slash-search] {
 
 [data-blok-find-counter][data-blok-find-bump] {
   animation: blok-find-count 180ms var(--blok-ease-popover);
+}
+
+[data-blok-find-roll] {
+  --blok-find-roll-ease: cubic-bezier(0.34, 1.35, 0.64, 1);
+  position: relative;
+  display: inline-block;
+  animation: blok-find-roll-in 420ms var(--blok-find-roll-ease) both;
+}
+
+[data-blok-find-roll]::before {
+  content: attr(data-blok-find-roll-from) / '';
+  position: absolute;
+  inset-inline-end: 0;
+  top: 0;
+  transform: translateY(calc(-1em * var(--blok-find-roll-shift, 1)));
+  animation: blok-find-roll-out 420ms var(--blok-find-roll-ease) both;
+}
+
+[data-blok-find-roll='down'] {
+  --blok-find-roll-shift: -1;
 }
 
 [data-blok-find-icon-button] {
@@ -9379,8 +9402,12 @@ span[data-blok-slash-search] {
   transition: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-find-field][data-blok-find-shake], [data-blok-find-counter][data-blok-find-bump], [data-blok-find-lens-box][data-blok-find-lens-arrive] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-find-field][data-blok-find-shake], [data-blok-find-counter][data-blok-find-bump], [data-blok-find-roll], [data-blok-find-lens-box][data-blok-find-lens-arrive] {
   animation: none;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-find-roll]::before {
+  content: none;
 }
 
 [data-blok-tool="callout"] [data-blok-tool="paragraph"] {

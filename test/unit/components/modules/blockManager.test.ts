@@ -246,6 +246,8 @@ const createBlockManager = (
       updateBlockTune: vi.fn(),
       updateBlockIndent: vi.fn(),
       stopCapturing: vi.fn(),
+      holdCapture: vi.fn(),
+      releaseCapture: vi.fn(),
       continueUndoEntryThatCreated: vi.fn(),
       transact: vi.fn((fn: () => void) => fn()),
       transactWithoutCapture: vi.fn((fn: () => void) => fn()),

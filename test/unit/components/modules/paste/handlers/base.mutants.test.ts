@@ -117,8 +117,8 @@ const createMockBlock = (overrides: Partial<MockBlock> = {}): MockBlock => {
 
 interface HarnessConfig {
   currentBlock?: MockBlock;
-  /** Drop transactForTool from the mock to exercise the legacy fallback. */
-  withTransactForTool?: boolean;
+  /** Drop the undo group API from the mock to exercise the legacy fallback. */
+  withToolTransaction?: boolean;
   /** Drop update() to exercise the "no list restamp available" path. */
   withUpdate?: boolean;
   /** Drop the undo-suppression bridge entirely. */
@@ -136,7 +136,10 @@ const createHarness = (config: HarnessConfig = {}): {
   pastedBlocks: MockBlock[];
   updatedBlocks: MockBlock[];
   operations: { suppressStopCapturing: boolean } | undefined;
-  transactForTool: ReturnType<typeof vi.fn>;
+  beginToolTransaction: ReturnType<typeof vi.fn>;
+  endToolTransaction: ReturnType<typeof vi.fn>;
+  /** Paste calls made so far each time the undo group opened or closed. */
+  groupEvents: string[];
   setCurrentBlockByChildNode: ReturnType<typeof vi.fn>;
   insertContentAtCaretPosition: ReturnType<typeof vi.fn>;
   extractFragmentFromCaretPosition: ReturnType<typeof vi.fn>;
@@ -167,7 +170,7 @@ const createHarness = (config: HarnessConfig = {}): {
       suppressed: operations?.suppressStopCapturing,
     });
 
-    // transactForTool's close-boundary microtask flips this back; modelling it
+    // endToolTransaction's close-boundary microtask flips this back; modelling it
     // is what makes a later `true` proof that suppression was re-asserted.
     if (operations !== undefined) {
       operations.suppressStopCapturing = false;
@@ -206,8 +209,12 @@ const createHarness = (config: HarnessConfig = {}): {
     setToBlockCalls.push({ block, position });
   });
 
-  const transactForTool = vi.fn((fn: () => void): void => {
-    fn();
+  const groupEvents: string[] = [];
+  const beginToolTransaction = vi.fn((): void => {
+    groupEvents.push(`begin after ${pasteCalls.length} pastes`);
+  });
+  const endToolTransaction = vi.fn((): void => {
+    groupEvents.push(`end after ${pasteCalls.length} pastes`);
   });
 
   const setCurrentBlockByChildNode = vi.fn();
@@ -221,8 +228,9 @@ const createHarness = (config: HarnessConfig = {}): {
     setCurrentBlockByChildNode,
   };
 
-  if (config.withTransactForTool !== false) {
-    blockManager.transactForTool = transactForTool;
+  if (config.withToolTransaction !== false) {
+    blockManager.beginToolTransaction = beginToolTransaction;
+    blockManager.endToolTransaction = endToolTransaction;
   }
 
   if (config.withUpdate !== false) {
@@ -252,7 +260,9 @@ const createHarness = (config: HarnessConfig = {}): {
     pastedBlocks,
     updatedBlocks,
     operations,
-    transactForTool,
+    beginToolTransaction,
+    endToolTransaction,
+    groupEvents,
     setCurrentBlockByChildNode,
     insertContentAtCaretPosition,
     extractFragmentFromCaretPosition,
@@ -506,23 +516,23 @@ describe('BasePasteHandler — insertPasteData dispatch', () => {
 
   it('does nothing at all for an empty paste', async () => {
     const currentBlock = createMockBlock();
-    const { handler, pasteCalls, insertContentAtCaretPosition, transactForTool } = createHarness({ currentBlock });
+    const { handler, pasteCalls, insertContentAtCaretPosition, beginToolTransaction } = createHarness({ currentBlock });
 
     await handler.callInsertPasteData([], false);
 
     expect(pasteCalls).toHaveLength(0);
     expect(insertContentAtCaretPosition).not.toHaveBeenCalled();
-    expect(transactForTool).not.toHaveBeenCalled();
+    expect(beginToolTransaction).not.toHaveBeenCalled();
   });
 
   it('routes ONE inline item to the caret, never through the multi-block loop', async () => {
     const currentBlock = createMockBlock({ name: 'paragraph' });
-    const { handler, pasteCalls, insertContentAtCaretPosition, transactForTool } = createHarness({ currentBlock });
+    const { handler, pasteCalls, insertContentAtCaretPosition, beginToolTransaction } = createHarness({ currentBlock });
 
     await handler.callInsertPasteData([createItem('paragraph', htmlContent('<b>one</b>'), false)], false);
 
     expect(pasteCalls).toHaveLength(0);
-    expect(transactForTool).not.toHaveBeenCalled();
+    expect(beginToolTransaction).not.toHaveBeenCalled();
     expect(insertContentAtCaretPosition).toHaveBeenCalledTimes(1);
   });
 
@@ -551,7 +561,7 @@ describe('BasePasteHandler — insertPasteData dispatch', () => {
 
   it('inserts every item of a multi-item paste as its own block', async () => {
     const currentBlock = createMockBlock();
-    const { handler, pasteCalls, transactForTool } = createHarness({ currentBlock });
+    const { handler, pasteCalls, groupEvents } = createHarness({ currentBlock });
 
     await handler.callInsertPasteData(
       [blockItem('paragraph', 'A'), blockItem('paragraph', 'B'), blockItem('paragraph', 'C')],
@@ -559,7 +569,8 @@ describe('BasePasteHandler — insertPasteData dispatch', () => {
     );
 
     expect(pasteCalls.map((call) => call.tool)).toEqual(['paragraph', 'paragraph', 'paragraph']);
-    expect(transactForTool).toHaveBeenCalledTimes(1);
+    // One undo group held around all three inserts.
+    expect(groupEvents).toEqual(['begin after 0 pastes', 'end after 3 pastes']);
   });
 
   it('forwards each item toolData to BlockManager.paste', async () => {
@@ -596,9 +607,9 @@ describe('BasePasteHandler — insertPasteData dispatch', () => {
     expect(setToBlockCalls[1].block).toBe(pastedBlocks[1]);
   });
 
-  it('still inserts every block when BlockManager has no transactForTool', async () => {
+  it('still inserts every block when BlockManager has no undo group API', async () => {
     const currentBlock = createMockBlock();
-    const { handler, pasteCalls } = createHarness({ currentBlock, withTransactForTool: false });
+    const { handler, pasteCalls } = createHarness({ currentBlock, withToolTransaction: false });
 
     await handler.callInsertPasteData([blockItem('paragraph', 'A'), blockItem('paragraph', 'B')], false);
 

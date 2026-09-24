@@ -95,6 +95,8 @@ type YjsStub = {
   removeBlock: Mock;
   addBlock: Mock;
   stopCapturing: Mock;
+  holdCapture: Mock;
+  releaseCapture: Mock;
   fromJSON: Mock;
   onBlocksChanged: Mock;
   getBlockById: Mock;
@@ -179,6 +181,8 @@ const createHarness = (options: HarnessOptions): Harness => {
     removeBlock: vi.fn(),
     addBlock: vi.fn(),
     stopCapturing: vi.fn(),
+    holdCapture: vi.fn(),
+    releaseCapture: vi.fn(),
     fromJSON: vi.fn(),
     onBlocksChanged: vi.fn(() => () => undefined),
     // A minimal Yjs record: without it setBlockParent exits before the doc write.

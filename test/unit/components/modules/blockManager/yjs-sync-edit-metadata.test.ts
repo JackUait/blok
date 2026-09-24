@@ -39,6 +39,7 @@ const createMockBlock = (options: {
     holder,
     parentId: null,
     contentIds: [],
+    inputs: [],
     preservedTunes: {},
     lastEditedAt: options.lastEditedAt,
     lastEditedBy: options.lastEditedBy ?? null,

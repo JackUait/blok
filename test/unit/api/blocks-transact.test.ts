@@ -81,7 +81,7 @@ type BlokStub = {
   Renderer: { render: ReturnType<typeof vi.fn> };
   Paste: { processText: ReturnType<typeof vi.fn> };
   Tools: { blockTools: Map<string, unknown> };
-  YjsManager: { stopCapturing: ReturnType<typeof vi.fn> };
+  YjsManager: { stopCapturing: ReturnType<typeof vi.fn>; beginApiCall: ReturnType<typeof vi.fn> };
   API: Record<string, unknown>;
 };
 
@@ -94,7 +94,7 @@ const createBlokStub = (blockManager: BlockManagerMock): BlokStub => ({
   Renderer: { render: vi.fn() },
   Paste: { processText: vi.fn() },
   Tools: { blockTools: new Map() },
-  YjsManager: { stopCapturing: vi.fn() },
+  YjsManager: { stopCapturing: vi.fn(), beginApiCall: vi.fn() },
   API: {},
 });
 

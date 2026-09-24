@@ -1241,7 +1241,7 @@ editor.blocks.endTransaction();`,
         name: "blocks.transactWithoutCapture(fn)",
         returnType: "void",
         description:
-          "Run block operations without recording anything in the undo history. Use it for auto-repair and normalization (e.g. ensuring an empty cell always has a block) that Cmd+Z should never step through.",
+          "Run block operations without recording anything in the undo history. Use it for auto-repair and normalization (e.g. ensuring an empty cell always has a block) that Cmd+Z should never step through.\n\nPass `{ derivedFrom: blockId, from: ['url'] }` when the operations are data worked out from those keys of a block, such as a finished upload that replaces the block. They still add no undo step and keep redo, but they join the step that wrote those values: undoing it takes them back, and redo brings them back. An `update()` started inside `fn` counts too, although it finishes later.",
         example: `editor.blocks.transactWithoutCapture(() => {
   editor.blocks.insert('paragraph', {}, undefined, 0);
 });
@@ -1310,7 +1310,7 @@ block.call('showNotification', { message: 'Hello' });`,
       {
         name: "block.dispatchChange()",
         returnType: "void",
-        description: "Manually trigger the onChange callback for this block.",
+        description: "Manually trigger the onChange callback for this block.\n\nPass `{ derived: true }` when the change is data the tool worked out itself (a measured size, a fetched preview), not a user edit. It is saved but adds no undo step and keeps redo. Add `from` with the data keys it came from (`{ derived: true, from: ['url'] }`): it then joins the undo step that wrote those values.",
         example: `const block = editor.blocks.getById('block-123');
 // Trigger change after invisible modification
 block.dispatchChange();`,

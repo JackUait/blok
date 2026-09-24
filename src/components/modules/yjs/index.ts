@@ -935,6 +935,11 @@ export class YjsManager extends Module {
     this.documentStore.transact(fn, 'local');
   }
 
+  /** True inside a {@link transactWithoutCapture} scope. */
+  public get isTransactingWithoutCapture(): boolean {
+    return this.documentStore.isTransactingWithoutCapture;
+  }
+
   /**
    * Execute Yjs operations without adding them to the undo history.
    * Uses a non-tracked origin so the UndoManager ignores these changes.

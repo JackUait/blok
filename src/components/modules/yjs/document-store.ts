@@ -2133,6 +2133,11 @@ export class DocumentStore {
     this.ydoc.transact(fn, 'no-capture');
   }
 
+  /** True inside a {@link transactWithoutCapture} scope. */
+  public get isTransactingWithoutCapture(): boolean {
+    return this.ydoc._transaction?.origin === 'no-capture';
+  }
+
   /**
    * Get existing tunes Y.Map or create a new one.
    * @param yblock - The block Y.Map

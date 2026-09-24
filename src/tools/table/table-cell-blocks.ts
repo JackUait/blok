@@ -901,29 +901,28 @@ export class TableCellBlocks {
    * After a sync replay has settled, give an editable block to every cell
    * whose referenced blocks have not arrived (a peer's content write that won
    * over a delete). Only then: during the replay they may still land.
-   * @returns true when a cell was filled
    */
-  public fillCellsWithUnresolvedBlocks(): boolean {
-    const unresolved = Array.from(this.gridElement.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`)).filter(cell => {
+  public fillCellsWithUnresolvedBlocks(): void {
+    this.gridElement.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`).forEach(cell => {
       const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
       const pos = this.getCellPosition(cell);
 
       if (!container || !pos || container.querySelector('[data-blok-id]') !== null) {
-        return false;
+        return;
       }
 
       const ids = this.model.getCellBlocks(pos.row, pos.col);
 
       // A cell the replay left empty on purpose (undo to an empty table) is
       // not ours to fill: its blocks may still be restored by later ops.
-      return ids.length > 0 && !ids.some(id => this.api.blocks.getById?.(id) != null);
+      if (ids.length === 0 || ids.some(id => this.api.blocks.getById?.(id) != null)) {
+        return;
+      }
+
+      // The dangling ids stay in the model: save() drops ids with no block,
+      // and a block that still lands late is routed back to this cell by them.
+      this.ensureCellHasBlock(cell);
     });
-
-    // The dangling ids stay in the model: save() drops ids with no block,
-    // and a block that still lands late is routed back to this cell by them.
-    unresolved.forEach(cell => this.ensureCellHasBlock(cell));
-
-    return unresolved.length > 0;
   }
 
   public reclaimReferencedBlocks(): void {

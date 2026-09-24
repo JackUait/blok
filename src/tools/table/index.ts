@@ -1237,11 +1237,7 @@ export class Table implements BlockTool {
         return;
       }
 
-      // A repair, not an edit: written now and untracked, so the table's
-      // later mutation save-back finds nothing left to record as an undo step.
-      if (this.cellBlocks?.fillCellsWithUnresolvedBlocks() === true) {
-        this.block?.dispatchChange({ derived: true });
-      }
+      this.cellBlocks?.fillCellsWithUnresolvedBlocks();
     });
   }
 

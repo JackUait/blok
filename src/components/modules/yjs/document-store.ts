@@ -1286,6 +1286,19 @@ export class DocumentStore {
     const dataKey = stripNul(key);
     const currentValue: unknown = ydata.get(dataKey);
 
+    // Stored, `undefined` is a live entry that no JSON output carries, and an
+    // undo step cannot see it put back an absent key.
+    if (value === undefined) {
+      if (!ydata.has(dataKey)) {
+        return false;
+      }
+      this.transact(() => {
+        ydata.delete(dataKey);
+      }, 'local');
+
+      return true;
+    }
+
     const valueIsPlainObject = value !== null && typeof value === 'object' && !Array.isArray(value);
 
     // Plain array meeting a keyed grid wrapper: pair rows by identity and diff

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import * as Y from 'yjs';
 import { YjsManager } from '../../../../src/components/modules/yjs';
 import type { BlokConfig } from '../../../../types';
 
@@ -210,6 +211,19 @@ describe('YjsManager', () => {
       const result = manager.toJSON();
 
       expect(result[0].data.level).toBe(2);
+    });
+
+    it('removes the key when the value is undefined, like JSON does', () => {
+      manager.fromJSON([
+        { id: 'block1', type: 'image', data: { url: '', fileName: 'a.png' } },
+      ]);
+
+      expect(manager.updateBlockData('block1', 'fileName', undefined)).toBe(true);
+
+      const data = manager.getBlockById('block1')?.get('data');
+
+      expect(data instanceof Y.Map && data.has('fileName')).toBe(false);
+      expect(manager.updateBlockData('block1', 'fileName', undefined)).toBe(false);
     });
 
     it('should do nothing if block not found', () => {

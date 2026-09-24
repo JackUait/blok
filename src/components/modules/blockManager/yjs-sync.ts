@@ -95,6 +95,8 @@ export interface SyncHandlers {
    * mutation of its own, so without this nothing tells its parent to redraw.
    */
   onBlockChanged?: (block: Block) => void;
+  /** Tell the host a block changed, without writing it to the document. */
+  announceBlockChanged?: (block: Block) => void;
   /**
    * Write a block's current content back to the document, bypassing the echo
    * gate. Used to replay a mutation that was suppressed as a reconciler echo
@@ -317,11 +319,21 @@ export class BlockYjsSync {
    * reconcile window only the first announcement per block goes out, so one
    * undo or one remote update is one onChange. A keystroke in the window is
    * the user's own change and always goes out.
+   *
+   * A block rewritten from the document is announced by the reconciler
+   * alone. Its DOM mutations stay silent here, because a paste or a tool's
+   * change looks just like the echo; the replay on close announces the ones
+   * that differ from what was applied.
    * @param block - the block that changed
+   * @param source - 'replay' when the reconciler reports the change it applied
    */
-  public claimChangeAnnouncement(block: Block): boolean {
+  public claimChangeAnnouncement(block: Block, source: 'mutation' | 'replay'): boolean {
     if (!this.isReconciling(block) || this.userTypedWhileReconciling.has(block.id)) {
       return true;
+    }
+
+    if (source === 'mutation' && this.rewrittenFromDocument.has(block.id)) {
+      return false;
     }
 
     if (this.announcedChanges.has(block.id)) {
@@ -516,6 +528,7 @@ export class BlockYjsSync {
     }
 
     this.handlers.resyncBlockData(block, { untracked: true });
+    this.handlers.announceBlockChanged?.(block);
   }
 
   private isInReconciledSubtree(block: Block | undefined, visited: Set<string>): boolean {

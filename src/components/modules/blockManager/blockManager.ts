@@ -530,7 +530,10 @@ export class BlockManager extends Module {
           this.blockDidMutated(BlockAddedMutationType, block, { index });
         },
         onBlockChanged: (block) => {
-          this.blockDidMutated(BlockChangedMutationType, block, { index: this.repository.getBlockIndex(block) });
+          this.blockDidMutated(BlockChangedMutationType, block, { index: this.repository.getBlockIndex(block) }, 'replay');
+        },
+        announceBlockChanged: (block) => {
+          this.emitBlockMutation(BlockChangedMutationType, block, { index: this.repository.getBlockIndex(block) });
         },
       },
       this.blocksStore
@@ -1907,12 +1910,51 @@ export class BlockManager extends Module {
 
   /**
    * Block mutation callback
+   * @param mutationType - what happened to the block
+   * @param block - the block
+   * @param detailData - event details
+   * @param source - 'replay' when the reconciler reports a change it applied
    */
   private blockDidMutated<Type extends BlockMutationType>(
     mutationType: Type,
     block: Block,
-    detailData: BlockMutationEventDetailWithoutTarget<Type>
+    detailData: BlockMutationEventDetailWithoutTarget<Type>,
+    source: 'mutation' | 'replay' = 'mutation'
   ): Block {
+    const isEcho = this.yjsSync.isSyncingFromYjs && this.yjsSync.isReconciling(block);
+
+    if (mutationType !== BlockChangedMutationType || !isEcho || this.yjsSync.claimChangeAnnouncement(block, source)) {
+      this.emitBlockMutation(mutationType, block, detailData);
+    }
+
+    // Sync content changes to Yjs for undo/redo support
+    // Skip the reconciler's own echo (undo/redo/remote) to avoid corrupting the undo stack.
+    // Also skip if a pointer drag is active — the browser can mutate contenteditable DOM across
+    // cell boundaries during a drag, and we must not write that corrupted state to Yjs.
+    if (mutationType === BlockChangedMutationType && !this._isPointerDragActive) {
+      if (isEcho) {
+        // Not necessarily an echo: the window is open across setData's await
+        // and one frame, so the user can type into it. Re-checked on close.
+        this.yjsSync.noteSuppressedMutation(block);
+      } else {
+        void this.syncBlockDataToYjs(block, block.isDerivedChange ? { untracked: true, normalize: 'all', derivedFrom: block.derivedFrom } : undefined);
+      }
+    }
+
+    return block;
+  }
+
+  /**
+   * Tell the host (onChange) about a block mutation.
+   * @param mutationType - what happened to the block
+   * @param block - the block
+   * @param detailData - event details
+   */
+  private emitBlockMutation<Type extends BlockMutationType>(
+    mutationType: Type,
+    block: Block,
+    detailData: BlockMutationEventDetailWithoutTarget<Type>
+  ): void {
     const eventDetail = {
       target: new BlockAPI(block, this.Blok.API),
       ...detailData,
@@ -1947,29 +1989,9 @@ export class BlockManager extends Module {
       });
     }
 
-    const isEcho = this.yjsSync.isSyncingFromYjs && this.yjsSync.isReconciling(block);
-
-    if (mutationType !== BlockChangedMutationType || !isEcho || this.yjsSync.claimChangeAnnouncement(block)) {
-      this.eventsDispatcher.emit(BlockChanged, {
-        event: event as BlockMutationEventMap[Type],
-      });
-    }
-
-    // Sync content changes to Yjs for undo/redo support
-    // Skip the reconciler's own echo (undo/redo/remote) to avoid corrupting the undo stack.
-    // Also skip if a pointer drag is active — the browser can mutate contenteditable DOM across
-    // cell boundaries during a drag, and we must not write that corrupted state to Yjs.
-    if (mutationType === BlockChangedMutationType && !this._isPointerDragActive) {
-      if (isEcho) {
-        // Not necessarily an echo: the window is open across setData's await
-        // and one frame, so the user can type into it. Re-checked on close.
-        this.yjsSync.noteSuppressedMutation(block);
-      } else {
-        void this.syncBlockDataToYjs(block, block.isDerivedChange ? { untracked: true, normalize: 'all', derivedFrom: block.derivedFrom } : undefined);
-      }
-    }
-
-    return block;
+    this.eventsDispatcher.emit(BlockChanged, {
+      event: event as BlockMutationEventMap[Type],
+    });
   }
 
   /**

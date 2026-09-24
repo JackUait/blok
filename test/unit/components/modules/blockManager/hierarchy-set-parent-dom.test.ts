@@ -206,6 +206,20 @@ describe('BlockHierarchy.setBlockParent — holders in the DOM', () => {
     expect(holderIds(h.slotOf('col'))).toEqual(['p']);
   });
 
+  it('moves a block from a toggle inside a callout into a toggle outside it', () => {
+    const h = build(workingArea, [
+      { id: 'co', kind: 'callout' },
+      { id: 'inner', kind: 'toggle', parentId: 'co' },
+      { id: 'c', parentId: 'inner' },
+      { id: 'outer', kind: 'toggle' },
+    ]);
+
+    h.hierarchy.setBlockParent(h.get('c'), 'outer');
+
+    expect(holderIds(h.slotOf('outer'))).toEqual(['c']);
+    expect(holderIds(h.slotOf('inner'))).toEqual([]);
+  });
+
   it('hides a block that joins a collapsed toggle', () => {
     const h = build(workingArea, [
       { id: 't', kind: 'toggle' },

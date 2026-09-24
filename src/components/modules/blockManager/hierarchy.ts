@@ -4,8 +4,8 @@
  * @module BlockHierarchy
  */
 import type { Block } from '../../block';
-import { DATA_ATTR } from '../../constants/data-attributes';
 import { logLabeled } from '../../utils';
+import { CHILD_SLOT_SELECTOR } from '../../../tools/nested-blocks';
 import { homeSlotElement, resolveHomeSlot } from '../../utils/home-slot';
 import { findOwn } from '../../utils/own-element';
 import { childrenInTreeOrder, flatIndexForPlacement, placementImpliedByFlat } from '../../utils/tree-order';
@@ -291,7 +291,7 @@ export class BlockHierarchy {
    */
   private mayMountUnder(block: Block, newParent: Block, oldHomeSlot: Element | null): boolean {
     const newContainer = this.findHomeSlot(newParent.id);
-    const currentNestedContainer = block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`);
+    const currentNestedContainer = block.holder.closest(CHILD_SLOT_SELECTOR);
 
     if (newContainer === null) {
       return true;
@@ -529,7 +529,8 @@ export class BlockHierarchy {
    * its own slot.
    *
    * `dom: false` writes the model only: no mount, no re-indent, no store
-   * needed. setBlockParent uses it when another container claims the holder.
+   * needed. setBlockParent uses it when another container claims the holder
+   * or it has no store.
    * @param block - the block to move
    * @param placement - where it goes
    * @param options - what to write besides the model

@@ -385,6 +385,21 @@ describe('Toggle Lifecycle', () => {
       expect(wrapper.getAttribute(TOGGLE_ATTR.toggleEmpty)).toBe('false');
     });
 
+    it('sets data-blok-toggle-empty="true" when the only child is an empty toggle (its arrow and placeholder are not content)', () => {
+      const wrapper = document.createElement('div');
+      const childContainer = document.createElement('div');
+      const emptyToggle = document.createElement('div');
+
+      emptyToggle.innerHTML = `<span ${TOGGLE_ATTR.toggleArrow}="" data-blok-chrome="">\n<svg>\n  <path></path>\n</svg>\n</span>`
+        + '<div contenteditable="true"></div>'
+        + `<div ${TOGGLE_ATTR.toggleBodyPlaceholder}="" data-blok-chrome="">Empty toggle. Click to add a block.</div>`;
+      childContainer.appendChild(emptyToggle);
+
+      updateToggleEmptyState(wrapper, childContainer);
+
+      expect(wrapper.getAttribute(TOGGLE_ATTR.toggleEmpty)).toBe('true');
+    });
+
     it('is a no-op when wrapper is null', () => {
       const childContainer = document.createElement('div');
 

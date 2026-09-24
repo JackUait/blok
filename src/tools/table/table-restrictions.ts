@@ -1,5 +1,6 @@
 import type { API } from '../../../types';
 import type { Block } from '../../components/block';
+import { ownClone } from '../../components/utils/own-element';
 
 /**
  * Default block tools that are always restricted from being inserted into table cells.
@@ -110,7 +111,7 @@ export const isRestrictedInTableCell = (toolName: string): boolean => {
  * @throws Error if block index cannot be found
  */
 export const convertToParagraph = (block: Block, api: API): Block => {
-  const text = block.holder.textContent || '';
+  const text = ownClone(block.holder).textContent || '';
   const blockIndex = api.blocks.getBlockIndex(block.id);
 
   if (blockIndex === undefined) {

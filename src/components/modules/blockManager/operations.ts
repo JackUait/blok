@@ -38,6 +38,7 @@ export class BlockOperations implements OperationsContext {
   public readonly factory: BlockFactory;
   public readonly hierarchy: BlockHierarchy;
   private _yjsSync!: BlockYjsSync; // Set via setter after initialization
+  private _parentWriter?: (block: Block, parentId: string | null) => void;
   public readonly blockDidMutated: BlockDidMutated;
 
   private readonly insertion: BlockInsertion;
@@ -96,6 +97,21 @@ export class BlockOperations implements OperationsContext {
    */
   public get yjsSync(): BlockYjsSync {
     return this._yjsSync;
+  }
+
+  /**
+   * Set the document-aware reparent (BlockManager.setBlockParent).
+   * @param writer - reparent that also writes the shared document
+   */
+  public setParentWriter(writer: (block: Block, parentId: string | null) => void): void {
+    this._parentWriter = writer;
+  }
+
+  /**
+   * Document-aware reparent; memory-only until BlockManager sets one.
+   */
+  public get parentWriter(): (block: Block, parentId: string | null) => void {
+    return this._parentWriter ?? ((block, parentId) => this.hierarchy.setBlockParent(block, parentId));
   }
 
   /**
@@ -376,8 +392,14 @@ export class BlockOperations implements OperationsContext {
    * @param blocksStore - The blocks store to modify
    * @param blockDataOverrides - Optional new Block data overrides
    */
-  public convert(blockToConvert: Block, targetToolName: string, blocksStore: BlocksStore, blockDataOverrides?: BlockToolData): Promise<Block> {
-    return this.mutation.convert(blockToConvert, targetToolName, blocksStore, blockDataOverrides);
+  public convert(
+    blockToConvert: Block,
+    targetToolName: string,
+    blocksStore: BlocksStore,
+    blockDataOverrides?: BlockToolData,
+    beforeReplace?: () => void
+  ): Promise<Block> {
+    return this.mutation.convert(blockToConvert, targetToolName, blocksStore, blockDataOverrides, beforeReplace);
   }
 
   /**

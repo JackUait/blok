@@ -643,6 +643,112 @@ describe('BlockSelection', () => {
       expect(html).toContain('d');
     });
 
+    describe('text/html of a container and its nested children', () => {
+      const htmlOf = (setData: ReturnType<typeof vi.fn>): string =>
+        (setData.mock.calls.find(([format]) => format === 'text/html')?.[1] as string | undefined) ?? '';
+      const count = (html: string, text: string): number => html.split(text).length - 1;
+
+      /** Real holders nest a child's holder inside the container's slot. */
+      const nestToggle = (toggle: Block, child: Block): void => {
+        const toggleHolder = toggle.holder;
+        const childHolder = child.holder;
+
+        toggleHolder.setAttribute('data-blok-element', '');
+        childHolder.setAttribute('data-blok-element', '');
+        toggleHolder.innerHTML =
+          '<div>TOGTITLE</div>' +
+          '<div data-blok-toggle-body-placeholder data-blok-chrome>Empty toggle. Click to add a block, or drag blocks here.</div>' +
+          '<div data-blok-toggle-children></div>';
+        childHolder.innerHTML = '<div>KIDTEXT</div>';
+        toggleHolder.querySelector('[data-blok-toggle-children]')?.appendChild(childHolder);
+        Object.assign(toggle, { id: 'toggle', name: 'toggle', contentIds: ['kid'] });
+        Object.assign(child, { id: 'kid', parentId: 'toggle' });
+      };
+
+      it('writes a selected toggle\'s child once, without the empty-toggle placeholder', async () => {
+        const { blockSelection, blocks } = createBlockSelection();
+        const clipboardData = { setData: vi.fn() };
+        const [toggle, child] = blocks;
+
+        nestToggle(toggle, child);
+        toggle.selected = true;
+        child.selected = true;
+
+        await blockSelection.copySelectedBlocks({ preventDefault: vi.fn(), clipboardData } as unknown as ClipboardEvent);
+
+        const html = htmlOf(clipboardData.setData);
+
+        expect(count(html, 'KIDTEXT')).toBe(1);
+        expect(html).not.toContain('Empty toggle');
+        expect(html.indexOf('TOGTITLE')).toBeGreaterThan(-1);
+        expect(html.indexOf('TOGTITLE')).toBeLessThan(html.indexOf('KIDTEXT'));
+        // Title and child stay separate paragraphs, not one run-on line.
+        expect(html).not.toContain('TOGTITLEKIDTEXT');
+      });
+
+      it('writes a selected callout\'s emoji and its child once each', async () => {
+        const { blockSelection, blocks } = createBlockSelection();
+        const clipboardData = { setData: vi.fn() };
+        const [callout, child] = blocks;
+        const calloutHolder = callout.holder;
+        const childHolder = child.holder;
+
+        calloutHolder.setAttribute('data-blok-element', '');
+        childHolder.setAttribute('data-blok-element', '');
+        calloutHolder.innerHTML = '<div><button>💡</button><div data-blok-nested-blocks></div></div>';
+        childHolder.innerHTML = '<div>INCALLOUT</div>';
+        calloutHolder.querySelector('[data-blok-nested-blocks]')?.appendChild(childHolder);
+        Object.assign(callout, { id: 'callout', name: 'callout', contentIds: ['kid'] });
+        Object.assign(child, { id: 'kid', parentId: 'callout' });
+        callout.selected = true;
+        child.selected = true;
+
+        await blockSelection.copySelectedBlocks({ preventDefault: vi.fn(), clipboardData } as unknown as ClipboardEvent);
+
+        const html = htmlOf(clipboardData.setData);
+
+        expect(count(html, 'INCALLOUT')).toBe(1);
+        expect(count(html, '💡')).toBe(1);
+      });
+
+      it('still writes an unselected child of a selected collapsed toggle', async () => {
+        const { blockSelection, blocks } = createBlockSelection();
+        const clipboardData = { setData: vi.fn() };
+        const [toggle, child] = blocks;
+
+        nestToggle(toggle, child);
+        toggle.selected = true;
+
+        await blockSelection.copySelectedBlocks({ preventDefault: vi.fn(), clipboardData } as unknown as ClipboardEvent);
+
+        expect(count(htmlOf(clipboardData.setData), 'KIDTEXT')).toBe(1);
+      });
+
+      it('keeps table cell blocks inside the table grid and does not repeat them after it', async () => {
+        const { blockSelection, blocks } = createBlockSelection();
+        const clipboardData = { setData: vi.fn() };
+        const [table, cellBlock] = blocks;
+
+        table.holder.setAttribute('data-blok-element', '');
+        cellBlock.holder.setAttribute('data-blok-element', '');
+        table.holder.innerHTML =
+          '<table><tbody><tr><td><div data-blok-table-cell-blocks data-blok-nested-blocks></div></td></tr></tbody></table>';
+        cellBlock.holder.innerHTML = '<div>CELLTEXT</div>';
+        table.holder.querySelector('[data-blok-table-cell-blocks]')?.appendChild(cellBlock.holder);
+        Object.assign(table, { id: 'table', name: 'table', contentIds: ['cell'] });
+        Object.assign(cellBlock, { id: 'cell', parentId: 'table' });
+        table.selected = true;
+        cellBlock.selected = true;
+
+        await blockSelection.copySelectedBlocks({ preventDefault: vi.fn(), clipboardData } as unknown as ClipboardEvent);
+
+        const html = htmlOf(clipboardData.setData);
+
+        expect(count(html, 'CELLTEXT')).toBe(1);
+        expect(html).toMatch(/<td>[^<]*CELLTEXT/);
+      });
+    });
+
     it('copySelectedBlocksAsMarkdown writes Markdown to the clipboard (Notion Cmd+Shift+C)', async () => {
       const { blockSelection, blocks } = createBlockSelection();
       const writeText = vi.fn().mockResolvedValue(undefined);
@@ -1019,9 +1125,12 @@ describe('BlockSelection', () => {
 
     it('promotes straight to block selection on the first press when the text is already fully selected', () => {
       const { blockSelection, blocks } = createBlockSelection();
+      const pluginsContent = document.createElement('div');
+
+      pluginsContent.textContent = 'Sample text';
       Object.defineProperty(blocks[0], 'pluginsContent', {
         configurable: true,
-        get: () => ({ textContent: 'Sample text' }),
+        get: () => pluginsContent,
       });
       const selectBlockSpy = vi.spyOn(blockSelection, 'selectBlock');
       const getSpy = vi.spyOn(SelectionUtils, 'get').mockReturnValue({

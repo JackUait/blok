@@ -439,9 +439,6 @@ test.describe('CON columns', () => {
 test.describe('CON toggle / callout', () => {
   // Undo must restore the exact prior state; redo the exact post-gesture state.
   test('CON-8 undo of turning a toggle with children into text shows the children again', async ({ page }) => {
-    test.fail();
-    // Observed: after Turn into > Text, k1/k2 stay parented to 'box' but their holders are detached
-    // (save() throws 'stranded block holder(s)'); undo does not bring them back.
     await createBlok(page, kidsDoc('toggle'));
     await gap(page);
     await openTunesFor(page, 'box');
@@ -459,9 +456,6 @@ test.describe('CON toggle / callout', () => {
 
   // Undo must restore the exact prior state; redo the exact post-gesture state.
   test('CON-12 duplicating a callout copies exactly its children', async ({ page }) => {
-    test.fail();
-    // Observed: the copy has 3 children, ['kid one', 'kid two', ''] — an extra empty paragraph.
-    // Toggle duplicate copies exactly 2. (Duplicate path, not undo.)
     await createBlok(page, kidsDoc('callout'));
     await gap(page);
     await openTunesFor(page, 'box');

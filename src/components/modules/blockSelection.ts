@@ -7,6 +7,7 @@
 import type { SanitizerConfig } from '../../../types/configs';
 import { Module } from '../__module';
 import type { Block } from '../block';
+import { DATA_ATTR } from '../constants';
 import { Dom as $ } from '../dom';
 import { blocksToMarkdown } from '../../markdown/blocks-to-markdown';
 import type { CrossBlockSubRange, CrossBlockTextSelection } from '../selection/cross-block-range';
@@ -17,6 +18,7 @@ import { prefersReducedMotion } from '../utils/reduced-motion';
 import { announce } from '../utils/announcer';
 import { Shortcuts } from '../utils/shortcuts';
 import { translateToolName, translateToolTitle } from '../utils/tools';
+import { ownClone } from '../utils/own-element';
 import { TOOL_NAME as LIST_TOOL_NAME } from '../../tools/list/constants';
 import { buildSemanticListHtml, type SemanticListItem } from '../../tools/list/dom-builder';
 import type { ListItemStyle } from '../../tools/list/types';
@@ -37,6 +39,9 @@ type ClipboardSegment =
  * of flooding assistive technology.
  */
 const NAVIGATION_ANNOUNCE_THROTTLE_MS = 300;
+
+const BLOCK_HOLDER_SELECTOR = `[${DATA_ATTR.element}]`;
+const TABLE_CELL_BLOCKS_SELECTOR = '[data-blok-table-cell-blocks]';
 
 /**
  *
@@ -425,7 +430,8 @@ export class BlockSelection extends Module {
      * (e.g. when a collapsed toggle is copied — its hidden children must travel with it
      * so paste can restore the full toggle with its children).
      */
-    const savedData = this.serializeBlocksForClipboard(this.selectedBlocks);
+    const copiedBlocks = this.collectBlocksForClipboard(this.selectedBlocks);
+    const savedData = this.serializeBlocksForClipboard(copiedBlocks);
 
     /**
      * List blocks render as non-semantic `<div role="listitem">` with a marker
@@ -435,7 +441,7 @@ export class BlockSelection extends Module {
      * SEMANTIC `<ul>`/`<ol>` instead, grouping consecutive selected list blocks into
      * a single nested list per depth. Non-list blocks keep the sanitize path.
      */
-    const segments = this.groupBlocksForClipboard(this.selectedBlocks);
+    const segments = this.groupBlocksForClipboard(this.withoutTableCellBlocks(copiedBlocks));
 
     segments.forEach((segment) => {
       if (segment.type === 'list') {
@@ -596,7 +602,7 @@ export class BlockSelection extends Module {
       return;
     }
 
-    const savedData = this.serializeBlocksForClipboard(blocks);
+    const savedData = this.serializeBlocksForClipboard(this.collectBlocksForClipboard(blocks));
     const markdown = blocksToMarkdown(savedData);
 
     const { clipboard } = navigator;
@@ -651,7 +657,7 @@ export class BlockSelection extends Module {
    * @param fakeClipboard - the container receiving the sanitized content
    */
   private appendNonListBlock(block: Block, fakeClipboard: HTMLElement): void {
-    const cleanHTML = clean(block.holder.innerHTML, this.sanitizerConfig);
+    const cleanHTML = clean(ownClone(block.holder).innerHTML, this.sanitizerConfig);
     const wrapper = $.make('div');
 
     wrapper.innerHTML = cleanHTML;
@@ -693,14 +699,30 @@ export class BlockSelection extends Module {
   }
 
   /**
-   * Serialize Blocks (and any nested children not explicitly in the list) into the
-   * plain shape used for clipboard payloads. Children of selected blocks are
-   * included even when not explicitly selected (e.g. a collapsed toggle's hidden
-   * children must travel with it so paste can restore the full subtree).
-   * @param blocks - the blocks to serialize
+   * Serialize Blocks into the plain shape used for clipboard payloads.
+   * @param blocks - the blocks from {@link collectBlocksForClipboard}
    * @returns serialized block data in document order
    */
   private serializeBlocksForClipboard(blocks: Block[]): Array<{ id: string; tool: string; data: Record<string, unknown>; tunes: Record<string, unknown>; parentId: string | null; contentIds: string[]; indent: number }> {
+    return blocks.map((block) => ({
+      id: block.id,
+      tool: block.name,
+      data: block.preservedData,
+      tunes: block.preservedTunes,
+      parentId: block.parentId,
+      contentIds: block.contentIds,
+      indent: this.Blok.BlockManager.getBlockDepth(block),
+    }));
+  }
+
+  /**
+   * The blocks a copy carries: the given blocks and all their descendants, once
+   * each, parents first. A collapsed toggle's hidden children must travel with
+   * it so paste can restore the whole subtree. Every clipboard flavor is built
+   * from this one list.
+   * @param blocks - the blocks to copy, in document order
+   */
+  private collectBlocksForClipboard(blocks: Block[]): Block[] {
     const collected: Block[] = [];
     const seen = new Set<string>();
 
@@ -724,15 +746,22 @@ export class BlockSelection extends Module {
       collect(block);
     }
 
-    return collected.map((block) => ({
-      id: block.id,
-      tool: block.name,
-      data: block.preservedData,
-      tunes: block.preservedTunes,
-      parentId: block.parentId,
-      contentIds: block.contentIds,
-      indent: this.Blok.BlockManager.getBlockDepth(block),
-    }));
+    return collected;
+  }
+
+  /**
+   * Drop blocks that sit in a table cell of another copied block: the table's
+   * own grid markup already carries them.
+   * @param blocks - the copied blocks
+   */
+  private withoutTableCellBlocks(blocks: Block[]): Block[] {
+    const holders = new Set<Element>(blocks.map((block) => block.holder));
+
+    return blocks.filter((block) => {
+      const table = block.holder.closest(TABLE_CELL_BLOCKS_SELECTOR)?.closest(BLOCK_HOLDER_SELECTOR);
+
+      return table == null || !holders.has(table);
+    });
   }
 
   /**
@@ -1319,7 +1348,7 @@ export class BlockSelection extends Module {
 
     const normalize = (value: string): string => value.replace(/\s+/g, ' ').trim();
     const selectedText = normalize(selection.toString());
-    const blockText = normalize(block.pluginsContent.textContent ?? '');
+    const blockText = normalize(ownClone(block.pluginsContent).textContent ?? '');
 
     return blockText.length > 0 && selectedText === blockText;
   }

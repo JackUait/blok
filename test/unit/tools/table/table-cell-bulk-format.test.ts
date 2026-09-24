@@ -162,6 +162,7 @@ const createHarness = (): Harness => {
     },
     ensureCellHasBlock: vi.fn(),
     focusClearedCell: vi.fn(),
+    indexAfterTableSubtree: (): number => blocks.size,
   } as unknown as TableCellBlocks;
 
   const transactSpy = vi.fn();

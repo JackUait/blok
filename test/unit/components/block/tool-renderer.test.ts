@@ -331,6 +331,23 @@ describe('ToolRenderer', () => {
   });
 
   describe('rendered lifecycle method', () => {
+    it('skips rendered() for a block destroyed before its frame, and still resolves ready', async () => {
+      const rendered = vi.fn();
+      const tool = {
+        render: vi.fn(() => mockRenderedElement),
+        save: vi.fn(() => ({ text: 'content' })),
+        rendered,
+      } as unknown as BlockTool;
+      const renderer = new ToolRenderer(tool, 'toggle', 'test-block-id', tunesManager, {});
+
+      renderer.compose();
+      renderer.destroy();
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
+      expect(rendered).not.toHaveBeenCalled();
+      await expect(renderer.ready).resolves.toBeUndefined();
+    });
+
     it('calls rendered() with correct this context for sync render', async () => {
       const renderedSpy = vi.fn(function(this: { testProperty: string }) {
         // This will throw if 'this' is undefined or doesn't have the expected property

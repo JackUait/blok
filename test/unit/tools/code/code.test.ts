@@ -1056,6 +1056,34 @@ describe('CodeTool', () => {
       tool.removed();
     });
 
+    it('Shift+Enter moves the caret into the block it creates below', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const options = createOptions({ code: 'hello' });
+      const setToBlock = vi.fn();
+      const api = options.api as unknown as {
+        blocks: { insert: ReturnType<typeof vi.fn> };
+        caret: { setToBlock: ReturnType<typeof vi.fn> };
+      };
+
+      api.blocks.insert.mockReturnValue({ id: 'below' });
+      api.caret = { setToBlock };
+
+      const tool = new CodeTool(options);
+      const el = tool.render();
+
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      simulateKeydown(codeEl, 'Enter', { shiftKey: true });
+
+      expect(setToBlock).toHaveBeenCalledWith('below', 'start');
+      expect(api.blocks.insert).toHaveBeenCalledWith(undefined, undefined, undefined, 1);
+
+      el.remove();
+      tool.removed();
+    });
+
     it('does not append BR when Enter is pressed in the middle of text', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'helloworld' }));

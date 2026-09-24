@@ -500,6 +500,63 @@ describe('BlockHierarchy', () => {
       expect(newChild.holder.classList.contains('hidden')).toBe(true);
     });
 
+    it('does not hide a new child of an OPEN toggle that holds a COLLAPSED nested toggle', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'outer', parentId: null, contentIds: ['inner'] },
+        { id: 'inner', parentId: 'outer', contentIds: [] },
+        { id: 'new-child', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const outer = requireBlock('outer');
+      const inner = requireBlock('inner');
+      const outerRoot = document.createElement('div');
+      const outerSlot = document.createElement('div');
+      const innerRoot = document.createElement('div');
+
+      outerRoot.setAttribute('data-blok-toggle-open', 'true');
+      outerSlot.setAttribute('data-blok-toggle-children', '');
+      innerRoot.setAttribute('data-blok-toggle-open', 'false');
+      inner.holder.appendChild(innerRoot);
+      outerSlot.appendChild(inner.holder);
+      outerRoot.appendChild(outerSlot);
+      outer.holder.appendChild(outerRoot);
+      workingArea.appendChild(outer.holder);
+
+      const newChild = requireBlock('new-child');
+
+      hierarchy.setBlockParent(newChild, 'outer');
+
+      expect(newChild.holder.classList.contains('hidden')).toBe(false);
+    });
+
+    it('does not hide a new child of a callout that holds a COLLAPSED toggle', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'callout', parentId: null, contentIds: ['inner'], name: 'callout' },
+        { id: 'inner', parentId: 'callout', contentIds: [] },
+        { id: 'new-child', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const callout = requireBlock('callout');
+      const inner = requireBlock('inner');
+      const calloutSlot = document.createElement('div');
+      const innerRoot = document.createElement('div');
+
+      calloutSlot.setAttribute('data-blok-toggle-children', '');
+      innerRoot.setAttribute('data-blok-toggle-open', 'false');
+      inner.holder.appendChild(innerRoot);
+      calloutSlot.appendChild(inner.holder);
+      callout.holder.appendChild(calloutSlot);
+      workingArea.appendChild(callout.holder);
+
+      const newChild = requireBlock('new-child');
+
+      hierarchy.setBlockParent(newChild, 'callout');
+
+      expect(newChild.holder.classList.contains('hidden')).toBe(false);
+    });
+
     it('Fix 5: does not hide new child when parent has zero children AND is expanded (data-blok-toggle-open="true")', () => {
       repository = createRepositoryWithBlocks([
         { id: 'toggle', parentId: null, contentIds: [] },
@@ -1640,8 +1697,11 @@ describe('BlockHierarchy', () => {
      */
     it('still refuses to steal a holder claimed by a SIBLING nested container', () => {
       repository = createRepositoryWithBlocks([
-        { id: 'owner', parentId: null, contentIds: ['claimed'] },
-        { id: 'claimed', parentId: 'owner', contentIds: [] },
+        // The model does not give 'claimed' to 'owner': its holder sitting in
+        // owner's slot is the corrupted claim. A holder leaving its own model
+        // parent's slot is a real move and is not vetoed.
+        { id: 'owner', parentId: null, contentIds: [] },
+        { id: 'claimed', parentId: null, contentIds: [] },
         { id: 'target', parentId: null, contentIds: [] },
       ]);
       hierarchy = new BlockHierarchy(repository);

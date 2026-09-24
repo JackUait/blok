@@ -141,12 +141,7 @@ test.describe('hidden and nested targets', () => {
   // Several tests chain 6+ undo/redo steps with capture gaps; 15s is too tight under load.
   test.describe.configure({ timeout: 45_000 });
 
-  // Defect: undo takes the block out of the collapsed toggle in the data, but it
-  // stays invisible at root, and the next keystrokes go nowhere.
-  // Root cause: hierarchy.ts:327 adds the `hidden` class when a block enters a
-  // collapsed parent; the leave branch (hierarchy.ts:251-289) never removes it.
   test('W4N-1: undo of Tab into a collapsed toggle shows the block again', async ({ page }) => {
-    test.fail(true, 'W4N-1 hidden class survives leaving a collapsed toggle');
     await createBlok(page, toggleWithKids(false));
     await typeAtEnd(page, 'after', '');
     await page.keyboard.press('Tab');
@@ -157,9 +152,7 @@ test.describe('hidden and nested targets', () => {
     expect(await tree(page)).toContainEqual(['after', null]);
   });
 
-  // Same root cause as W4N-1, through a toggle heading.
   test('W4N-1b: undo of Tab into a collapsed toggle heading shows the block again', async ({ page }) => {
-    test.fail(true, 'W4N-1b hidden class survives leaving a collapsed toggle heading');
     await createBlok(page, [
       P('top', 'Top'),
       { id: 'h', type: 'header', data: { text: 'Head', level: 2, isToggleable: true, isOpen: false }, content: ['c'] },
@@ -187,13 +180,7 @@ test.describe('hidden and nested targets', () => {
     expect(await tree(page)).toContainEqual(['after', null]);
   });
 
-  // Defect: the restored block is in save() but invisible inside an OPEN toggle.
-  // Root cause: hierarchy.ts:321-322 decides "parent is collapsed" with
-  // newParent.holder.querySelector('[data-blok-toggle-open="false"]'), which also
-  // matches a collapsed toggle NESTED inside the open parent, then hides the block
-  // at hierarchy.ts:327.
   test('W4N-2: undo of deleting a block from an open toggle that holds a collapsed toggle shows it again', async ({ page }) => {
-    test.fail(true, 'W4N-2 descendant collapsed toggle marks the open parent as collapsed');
     await createBlok(page, outerWithInner(false));
     await selectAndDelete(page, 'x');
     await undo(page);

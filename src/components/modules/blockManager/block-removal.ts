@@ -7,6 +7,7 @@
 import { BlockRemovedMutationType } from '../../../../types/events/block/BlockRemoved';
 import type { Block } from '../../block';
 import { moveElementBefore } from '../../utils/html';
+import { SELF_PLACING_PARENTS, withSlotlessDescendants } from '../../../tools/nested-blocks';
 import type { BlockRepository } from './repository';
 import type { BlockDidMutated, BlockOperationsDependencies, OperationsContext } from './operations-context';
 import type { BlocksStore } from './types';
@@ -90,6 +91,7 @@ export class BlockRemoval {
        */
       const isColumnsWrapper = block.name === 'column' || block.name === 'column_list';
       const descendants = isColumnsWrapper ? this.collectDescendants(block) : [];
+      const promotedIds: string[] = [];
 
       if (isColumnsWrapper) {
         // Detach every block in the subtree first so a nested column /
@@ -103,7 +105,7 @@ export class BlockRemoval {
         // Promote children ONE level — to the removed block's own parent (the
         // grandparent), not unconditionally to root. When the removed block was
         // itself at root (no parent) this falls back to promoting to root.
-        this.promoteChildrenToParent(block, block.contentIds, parentBlock, indexInParent);
+        promotedIds.push(...this.promoteChildrenToParent(block, block.contentIds, parentBlock, indexInParent));
       }
 
       blocksStore.remove(index);
@@ -136,7 +138,23 @@ export class BlockRemoval {
        * Sync to Yjs data layer (unless caller is handling sync separately)
        */
       if (!skipYjsSync) {
-        this.dependencies.YjsManager.removeBlock(block.id);
+        // One transaction, so undo restores the parent and its children's
+        // links together; without the writes the doc keeps naming the removed
+        // parent and every later doc-index write lands off.
+        this.dependencies.YjsManager.transact(() => {
+          // A table/database's children die with it (its teardown removes
+          // them): re-homing them would pull them out of the dying cells.
+          const liftedIds = SELF_PLACING_PARENTS.has(block.name) ? [] : promotedIds;
+
+          for (const id of liftedIds) {
+            const child = this.repository.getBlockById(id);
+
+            if (child !== undefined) {
+              this.ctx.parentWriter(child, child.parentId);
+            }
+          }
+          this.dependencies.YjsManager.removeBlock(block.id);
+        });
       }
 
       const noBlocksLeft = this.repository.length === 0;
@@ -233,6 +251,16 @@ export class BlockRemoval {
   }
 
   /**
+   * @param id - block id
+   * @returns the block's live children, in model order
+   */
+  private childBlocksOf(id: string): Block[] {
+    return (this.repository.getBlockById(id)?.contentIds ?? [])
+      .map(childId => this.repository.getBlockById(childId))
+      .filter((child): child is Block => child !== undefined);
+  }
+
+  /**
    * Promote the given child blocks ONE level — to the removed container's own
    * parent (the grandparent) — and unhide their holders. Used when a non-columns
    * container (toggle/callout/header) is removed so its body survives, reparented
@@ -274,7 +302,7 @@ export class BlockRemoval {
     childIds: string[],
     parentBlock: Block | undefined,
     indexInParent: number
-  ): void {
+  ): string[] {
     const containerInDom = container.holder.parentElement !== null;
     // A pure-layout `column`/`column_list` grandparent is treated like "no
     // parent": promote children to root instead of reparenting them INTO the
@@ -284,6 +312,7 @@ export class BlockRemoval {
     const grandIsColumn = parentBlock?.name === 'column' || parentBlock?.name === 'column_list';
     const grandParentId = (parentBlock !== undefined && !grandIsColumn) ? parentBlock.id : null;
     const promotedChildIds: string[] = [];
+    const children: Block[] = [];
 
     for (const childId of childIds) {
       const childBlock = this.repository.getBlockById(childId);
@@ -295,9 +324,15 @@ export class BlockRemoval {
       childBlock.parentId = grandParentId;
       childBlock.holder.classList.remove('hidden');
       promotedChildIds.push(childId);
+      children.push(childBlock);
+    }
 
-      if (containerInDom && childBlock.holder.parentElement?.matches('[data-blok-toggle-children]') === true) {
-        moveElementBefore(childBlock.holder, container.holder);
+    // A slotless child's descendants share its slot, so they leave with it.
+    const lifted = withSlotlessDescendants(children, id => this.childBlocksOf(id));
+
+    for (const liftedBlock of lifted) {
+      if (containerInDom && liftedBlock.holder.parentElement?.matches('[data-blok-toggle-children]') === true) {
+        moveElementBefore(liftedBlock.holder, container.holder);
       }
     }
 
@@ -306,5 +341,7 @@ export class BlockRemoval {
     if (parentBlock !== undefined && !grandIsColumn && indexInParent >= 0 && promotedChildIds.length > 0) {
       parentBlock.contentIds.splice(indexInParent, 0, ...promotedChildIds);
     }
+
+    return promotedChildIds;
   }
 }

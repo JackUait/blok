@@ -11,7 +11,7 @@ import type {
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import type { BlockTuneRenderContext } from '../../../types/block-tunes/block-tune';
 import type { SavedData } from '../../../types/data-formats';
-import { Dom as $, toggleEmptyMark } from '../dom';
+import { toggleEmptyMark } from '../dom';
 import type { BlokEventMap } from '../events';
 import type { API as ApiModules } from '../modules/api';
 import type { DragController } from '../modules/drag/DragController';
@@ -21,6 +21,7 @@ import type { BlockTuneAdapter } from '../tools/tune';
 import { generateBlockId, isFunction, log } from '../utils';
 import { isSameBlockData } from '../utils/blocks';
 import { EventsDispatcher } from '../utils/events';
+import { hasContentMatching, isContentEmpty } from '../utils/own-element';
 
 import { BlockAPI } from './api';
 import { DataPersistenceManager } from './data-persistence-manager';
@@ -30,6 +31,9 @@ import { SelectionManager } from './selection-manager';
 import { StyleManager } from './style-manager';
 import { ToolRenderer } from './tool-renderer';
 import { TunesManager } from './tunes-manager';
+
+/** Tags that hold media content. */
+const MEDIA_SELECTOR = ['img', 'iframe', 'video', 'audio', 'source', 'input', 'textarea', 'twitterwidget'].join(',');
 
 /**
  * Interface describes Block class constructor argument
@@ -653,6 +657,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
     this.destroyCallbacks.clear();
     callbacks.forEach((cb) => cb());
 
+    this.toolRenderer.destroy();
     this.mutationHandler.destroy();
     this.inputManager.destroy();
 
@@ -869,6 +874,11 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @returns {boolean}
    */
   public get isEmpty(): boolean {
+    // Callers replace or remove an empty block, and replace strands a block's children.
+    if (this.contentIds.length > 0) {
+      return false;
+    }
+
     /**
      * No `ignoreChars`: `$.isNodeEmpty` strips EVERY occurrence of the ignored
      * substring before measuring, so tolerating '/' made any slash-only block
@@ -878,8 +888,9 @@ export class Block extends EventsDispatcher<BlockEvents> {
      * longer needs it: Toolbox decides in-place replacement from
      * `blockHasOnlySlashQuery`/`slashQuerySpan`, not from `isEmpty`.
      */
-    const emptyText = $.isEmpty(this.pluginsContent);
-    const emptyMedia = !this.hasMedia;
+    const emptyText = isContentEmpty(this.pluginsContent);
+    // Not `hasMedia`: a checklist's checkbox is an <input> but is chrome, not content.
+    const emptyMedia = !hasContentMatching(this.holder, MEDIA_SELECTOR);
 
     return emptyText && emptyMedia;
   }
@@ -889,22 +900,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @returns {boolean}
    */
   public get hasMedia(): boolean {
-    /**
-     * This tags represents media-content
-     * @type {string[]}
-     */
-    const mediaTags = [
-      'img',
-      'iframe',
-      'video',
-      'audio',
-      'source',
-      'input',
-      'textarea',
-      'twitterwidget',
-    ];
-
-    return !!this.holder.querySelector(mediaTags.join(','));
+    return !!this.holder.querySelector(MEDIA_SELECTOR);
   }
 
   /**

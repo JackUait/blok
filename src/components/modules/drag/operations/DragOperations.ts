@@ -4,6 +4,7 @@
 
 import { BlockToolAPI } from '../../../block';
 import type { Block } from '../../../block';
+import type { BlockOrigin } from '../../../../../types';
 import { resolveMoveDestination } from '../utils/moveDestination';
 import type { MoveDestination } from '../utils/moveDestination';
 
@@ -47,6 +48,7 @@ export interface BlockManagerAdapter {
     tunes: Record<string, unknown>;
     index: number;
     needToFocus: boolean;
+    origin?: BlockOrigin;
   }): Block;
   setBlockParent?(block: Block, parentId: string | null): void;
   getBlockById?(id: string): Block | undefined;
@@ -249,6 +251,8 @@ export class DragOperations {
         tunes: structuredClone(saved.tunes),
         index: prep.baseInsertIndex + index,
         needToFocus: false,
+        // A copy brings its own children, so a container must not seed.
+        origin: 'paste',
       })
     );
 

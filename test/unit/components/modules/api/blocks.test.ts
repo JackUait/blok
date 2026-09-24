@@ -1283,6 +1283,7 @@ describe('BlocksAPI', () => {
         needToFocus: true,
         replace: false,
         origin: 'api',
+        inferParent: true,
       });
       expect(blockAPIConstructorSpy).toHaveBeenCalled();
       expect(result).toEqual({ wrappedBlock: expect.objectContaining({ id: 'custom' }) as unknown });
@@ -1703,6 +1704,7 @@ describe('BlocksAPI', () => {
         needToFocus: undefined,
         replace: undefined,
         origin: 'api',
+        inferParent: true,
       });
 
       cellBlocks.remove();
@@ -1744,6 +1746,7 @@ describe('BlocksAPI', () => {
         needToFocus: undefined,
         replace: undefined,
         origin: 'api',
+        inferParent: true,
       });
 
       cellBlocks.remove();
@@ -1781,6 +1784,7 @@ describe('BlocksAPI', () => {
         needToFocus: undefined,
         replace: undefined,
         origin: 'api',
+        inferParent: true,
       });
 
       holder.remove();

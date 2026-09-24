@@ -271,11 +271,7 @@ test.describe('undo audit: redo loss', () => {
     expect(textOf(await save(page), 'a')).toBe('A');
   });
 
-  // Observed: inToggle true, saved order ['t', 'tc', 'a', 'b'] instead of
-  // ['a', 't', 'tc', 'b']; a following redo changes nothing. The forward move
-  // already lands `a` inside `t` on screen (parentId null, flat order t,a,tc).
   test('RDO-3: undo of Cmd+Shift+Down past an open toggle puts the block back', async ({ page }) => {
-    test.fail(true, 'RDO-3: undo of a keyboard move past an open toggle leaves the block inside it');
     await createBlok(page, [
       P('a', 'A'),
       { id: 't', type: 'toggle', data: { text: 'Tog', isOpen: true }, content: ['tc'] },

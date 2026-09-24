@@ -184,9 +184,7 @@ test.describe('undo audit: capture', () => {
   });
 
   // Undo must restore the exact prior state, and save() must keep working.
-  // Observed: save() throws "Saver: stranded block holder(s) detected ... its parent co is in the document but the block's holder is detached"
-  test('CAP-6: undo of a callout color strands the callout child and breaks save()', async ({ page }) => {
-    test.fail();
+  test('CAP-6: undo of a callout color keeps the callout child and save() working', async ({ page }) => {
     await createBlok(page, [
       { id: 'p0', type: 'paragraph', data: { text: 'Before' } },
       { id: 'co', type: 'callout', data: { emoji: '💡', textColor: null, backgroundColor: null }, content: ['k1'] },
@@ -228,10 +226,8 @@ test.describe('undo audit: capture', () => {
     await settle(page);
   };
 
-  // One undo must revert one gesture. The adopt direction (plain -> toggle heading) already uses transactMoves.
-  // Observed: h1 is back to a toggle heading but c1 has parent undefined (needs a second undo)
-  test('CAP-7: one undo of "toggle heading -> heading" leaves the children released', async ({ page }) => {
-    test.fail();
+  // One undo must revert one gesture, children included.
+  test('CAP-7: one undo of "toggle heading -> heading" puts the children back', async ({ page }) => {
     await createBlok(page, toggleHeadingDoc);
     await wait(page, CAPTURE_WINDOW);
     const before = await treeOf(page);

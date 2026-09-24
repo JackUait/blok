@@ -124,6 +124,7 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   // Header
   const header = document.createElement('div');
   header.className = HEADER_STYLES;
+  header.setAttribute(DATA_ATTR.chrome, '');
 
   // Language button (opens language picker) — includes text + chevron icon
   const languageButton = document.createElement('button');
@@ -193,6 +194,7 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   const gutterElement = document.createElement('div');
   gutterElement.className = GUTTER_STYLES;
   gutterElement.setAttribute('aria-hidden', 'true');
+  gutterElement.setAttribute(DATA_ATTR.chrome, '');
   gutterElement.setAttribute('data-blok-testid', 'code-gutter');
 
   const lineCount = code ? code.split('\n').length : 1;

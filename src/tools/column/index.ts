@@ -4,7 +4,7 @@ import type {
   BlockTool,
   BlockToolConstructorOptions,
 } from '../../../types';
-import { COLUMN_ATTR, rebuildColumnListResizers, unwrapColumnListIfCollapsed } from '../columns-shared';
+import { COLUMN_ATTR, rebuildColumnListResizers, subtreeEndIndex, unwrapColumnListIfCollapsed } from '../columns-shared';
 import { mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { twMerge } from '../../components/utils/tw';
@@ -192,26 +192,11 @@ export class Column implements BlockTool {
       return;
     }
 
-    const paragraph = this.api.blocks.insertInsideParent(this.blockId, this.subtreeEndIndex(this.blockId) + 1);
+    const paragraph = this.api.blocks.insertInsideParent(this.blockId, subtreeEndIndex(this.api, this.blockId) + 1);
 
     this.childContainer.appendChild(paragraph.holder);
     this.api.caret.setToBlock(paragraph.id, 'start');
   };
-
-  /**
-   * Highest flat-array index occupied by a block's subtree. insertInsideParent
-   * appends to the parent's contentIds but places the block at the given FLAT
-   * index, so appending to a column whose last child is itself a container (a
-   * toggle, a callout) must clear that container's descendants too.
-   * @param blockId - root of the subtree to measure
-   */
-  private subtreeEndIndex(blockId: string): number {
-    const index = this.api.blocks.getBlockIndex(blockId) ?? -1;
-
-    return this.api.blocks
-      .getChildren(blockId)
-      .reduce((max, child) => Math.max(max, this.subtreeEndIndex(child.id)), index);
-  }
 
   /**
    * Remove this now-childless column from its column_list. Deferred to a

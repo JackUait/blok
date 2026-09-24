@@ -49,6 +49,22 @@ describe('ToggleSpringLoader', () => {
     expect(block.holder.hasAttribute('data-blok-spring-loading')).toBe(false);
   });
 
+  it('does not spring-load an open toggle that holds a collapsed nested toggle', () => {
+    const outer = makeBlock(true, true);
+    const nested = makeBlock(true, false);
+    const slot = document.createElement('div');
+
+    outer.holder.setAttribute('data-blok-element', '');
+    nested.holder.setAttribute('data-blok-element', '');
+    slot.appendChild(nested.holder);
+    outer.holder.firstElementChild?.appendChild(slot);
+
+    springLoader.update(outer);
+    vi.advanceTimersByTime(500);
+
+    expect(outer.call).not.toHaveBeenCalled();
+  });
+
   it('does not start timer for open toggle', () => {
     const block = makeBlock(true, true);
     springLoader.update(block);

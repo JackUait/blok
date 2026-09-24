@@ -238,6 +238,7 @@ export const buildStandardContent = (context: DOMBuilderContext): HTMLElement =>
   const marker = createMarker(data.style, markerDepth ?? depth);
   marker.setAttribute('data-list-marker', 'true');
   marker.setAttribute('data-blok-mutation-free', 'true');
+  marker.setAttribute(DATA_ATTR.chrome, '');
   item.appendChild(marker);
 
   // Create content container
@@ -286,6 +287,7 @@ export const buildChecklistContent = (context: DOMBuilderContext): HTMLElement =
   checkbox.type = 'checkbox';
   checkbox.className = CHECKBOX_STYLES;
   checkbox.disabled = readOnly;
+  checkbox.setAttribute(DATA_ATTR.chrome, '');
 
   const content = document.createElement('div');
   content.className = twMerge(

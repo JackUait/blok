@@ -2062,9 +2062,16 @@ describe('BlockManager.convert — toggle handling', () => {
     const source = createBlockStub({ id: 'src', name: 'header', contentIds: ['c1', 'ghost'], holderHtml: toggleMarker });
     const child = createBlockStub({ id: 'c1', parentId: 'src' });
     const converted = createBlockStub({ id: 'converted' });
+    // The release runs inside convert's own undo entry, through beforeReplace.
     const harness = createHarness({
       blocks: [source, child],
-      operations: { convert: vi.fn(async () => converted) },
+      operations: {
+        convert: vi.fn(async (_block: unknown, _tool: unknown, _store: unknown, _overrides: unknown, beforeReplace?: () => void) => {
+          beforeReplace?.();
+
+          return converted;
+        }),
+      },
     });
 
     await harness.blockManager.convert(source, 'paragraph');

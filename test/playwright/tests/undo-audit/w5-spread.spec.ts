@@ -302,8 +302,6 @@ const PINS: Record<string, string> = {
   'W5F-40': 'W5F-40: undo of the first edit in a legacy toggle does nothing',
   'W5F-47': 'W5F-47: undo of the first edit in a legacy toggle does nothing',
   'W5F-48': 'W5F-48: undo reverts the load-time colour migration in a heading',
-  'W5F-49': 'W5F-49: undo of blocks.update on a callout strands its child and save() throws',
-  'W5F-49b': 'W5F-49b: undo of blocks.update on a callout strands its child and save() throws',
   'W5F-60': 'W5F-60: colour swatch undo takes the stale caret of a no-op Backspace',
   'W5F-61': 'W5F-61: block-menu convert undo takes the stale caret of a no-op Backspace',
   'W5F-62': 'W5F-62: blocks.update undo takes the stale caret of a no-op Backspace',
@@ -380,12 +378,7 @@ test.describe('W5F: spread of the wave-4 families', () => {
     });
   }
 
-  // Observed: after one undo of Enter in a callout child, save() throws "Block k1 is stranded".
-  // The callout was seeded without textColor/backgroundColor, so the Enter's deferred save-back writes them
-  // tracked (family A; key log in the message). The first undo deletes them, which replays callout data;
-  // the callout has no setData, so the replay strands its child (known CAP-6). Control: W4K-66 (full data) passes.
   test('W5F-10: undo of Enter in a child of a callout saved with only an emoji keeps the document saveable and unsplit', async ({ page }) => {
-    test.fail(true, 'W5F-10: undo of Enter in a callout saved without colours strands the child');
     await create(page, [{ id: 'box', type: 'callout', data: { emoji: '💡' }, content: ['k1'] }, P('k1', 'one', 'box')]);
     await gap(page);
     await caretAt(page, 'k1', 'end');

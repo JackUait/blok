@@ -7,7 +7,9 @@ import type { Block } from '../../block';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { logLabeled } from '../../utils';
 import { moveElementAfter, moveElementBefore, moveElementToEnd } from '../../utils/html';
-import { CHILD_SLOT_SELECTOR, SELF_PLACING_PARENTS, isSlotless } from '../../../tools/nested-blocks';
+import { isSlotless } from '../../../tools/nested-blocks';
+import { homeSlotElement } from '../../utils/home-slot';
+import { findOwn } from '../../utils/own-element';
 
 import type { BlockRepository } from './repository';
 
@@ -172,6 +174,118 @@ export class BlockHierarchy {
   }
 
   /**
+   * Whether `candidate` sits somewhere under `ancestorId` in the block tree.
+   * @param candidate - the block to test
+   * @param ancestorId - the prospective ancestor
+   */
+  private isUnder(candidate: Block, ancestorId: string): boolean {
+    const walk = (cursor: string | null, visited: Set<string>): boolean => {
+      if (cursor === null || visited.has(cursor)) {
+        return false;
+      }
+
+      return cursor === ancestorId
+        || walk(this.repository.getBlockById(cursor)?.parentId ?? null, visited.add(cursor));
+    };
+
+    return walk(candidate.parentId, new Set<string>());
+  }
+
+  /**
+   * Keeps the flat array depth-first for a block that is about to join
+   * `parent`: when its flat predecessor is neither `parent` nor inside it, the
+   * block and its subtree move to the end of `parent`'s subtree. A caller that
+   * already placed the block (drag, Tab, insert-then-reparent) hits the early
+   * return.
+   *
+   * Flat array only: the doc takes the position from the placement
+   * `BlockManager.setBlockParent` writes afterwards (parent + preceding
+   * sibling), and the mount below re-seats the holder. `repository.blocks` is
+   * the store's live array, so it is edited in place.
+   * @param block - the block being reparented
+   * @param parent - its new parent
+   */
+  private moveIntoParentRun(block: Block, parent: Block): void {
+    const blocks = this.repository.blocks;
+    const predecessor = blocks[blocks.indexOf(block) - 1] as Block | undefined;
+
+    if (predecessor !== undefined && (predecessor === parent || this.isUnder(predecessor, parent.id))) {
+      return;
+    }
+
+    const subtree = blocks.filter(candidate => candidate === block || this.isUnder(candidate, block.id));
+    const moving = new Set(subtree);
+    const rest = blocks.filter(candidate => !moving.has(candidate));
+    const parentIndex = rest.indexOf(parent);
+
+    if (parentIndex === -1) {
+      return;
+    }
+
+    const lastInRun = rest.slice(parentIndex + 1).findIndex(candidate => !this.isUnder(candidate, parent.id));
+    const insertAt = lastInRun === -1 ? rest.length : parentIndex + 1 + lastInRun;
+
+    rest.splice(insertAt, 0, ...subtree);
+    blocks.splice(0, blocks.length, ...rest);
+  }
+
+  /**
+   * Keeps the flat array depth-first for a block that is about to leave for
+   * the root or for one of its own ancestors. A is the old ancestor whose
+   * parent is the new parent. While a block that stays under A follows the
+   * block's subtree, the block and its subtree move to the end of A's subtree.
+   * Otherwise it is a no-op, so a caller that placed the block first (drag,
+   * Shift+Tab) keeps its spot.
+   *
+   * The move is to the END, so a caller that sends several siblings out of the
+   * same container must go last to first to keep their order. Each step is
+   * then a no-op.
+   *
+   * Flat array only, like {@link moveIntoParentRun}: the placement
+   * `BlockManager.setBlockParent` writes afterwards reads the new position.
+   * @param block - the block being reparented (parentId not yet updated)
+   * @param newParentId - its new parent, or null for the root
+   */
+  private moveOutOfParentRun(block: Block, newParentId: string | null): void {
+    const findAncestorBelowTarget = (cursor: Block | undefined, visited: Set<string>): Block | undefined => {
+      if (cursor === undefined || visited.has(cursor.id)) {
+        return undefined;
+      }
+
+      return cursor.parentId === newParentId
+        ? cursor
+        : findAncestorBelowTarget(
+          cursor.parentId === null ? undefined : this.repository.getBlockById(cursor.parentId),
+          visited.add(cursor.id)
+        );
+    };
+    const ancestor = block.parentId === null
+      ? undefined
+      : findAncestorBelowTarget(this.repository.getBlockById(block.parentId), new Set<string>());
+
+    if (ancestor === undefined) {
+      return;
+    }
+
+    const blocks = this.repository.blocks;
+    const subtree = blocks.filter(candidate => candidate === block || this.isUnder(candidate, block.id));
+    const next = blocks[blocks.indexOf(block) + subtree.length] as Block | undefined;
+
+    if (next === undefined || !this.isUnder(next, ancestor.id)) {
+      return;
+    }
+
+    const moving = new Set(subtree);
+    const rest = blocks.filter(candidate => !moving.has(candidate));
+    const ancestorIndex = rest.indexOf(ancestor);
+    const endOfRun = rest.slice(ancestorIndex + 1).findIndex(candidate => !this.isUnder(candidate, ancestor.id));
+    const insertAt = endOfRun === -1 ? rest.length : ancestorIndex + 1 + endOfRun;
+
+    rest.splice(insertAt, 0, ...subtree);
+    blocks.splice(0, blocks.length, ...rest);
+  }
+
+  /**
    * The slot a child of `parentId` lives in: the child slot of the nearest
    * ancestor (from `parentId` up) that owns one. A slotless parent's children
    * sit as flat siblings after it, in that same slot.
@@ -183,32 +297,7 @@ export class BlockHierarchy {
    * @param parentId - the (prospective) parent id
    */
   private findHomeSlot(parentId: string | null): Element | null {
-    const walk = (cursor: string | null, visited: Set<string>): Element | null => {
-      if (cursor === null || visited.has(cursor)) {
-        return null;
-      }
-      visited.add(cursor);
-
-      const ancestor = this.repository.getBlockById(cursor);
-
-      if (ancestor === undefined) {
-        return null;
-      }
-
-      const slot = ancestor.holder.querySelector(CHILD_SLOT_SELECTOR);
-
-      if (cursor === parentId && slot !== null) {
-        return slot;
-      }
-
-      if (SELF_PLACING_PARENTS.has(ancestor.name)) {
-        return null;
-      }
-
-      return slot ?? walk(ancestor.parentId, visited);
-    };
-
-    return walk(parentId, new Set<string>());
+    return homeSlotElement(parentId, id => this.repository.getBlockById(id));
   }
 
   /**
@@ -333,6 +422,21 @@ export class BlockHierarchy {
     const sanitizedParentId = parentExists ? newParentId : null;
 
     const oldParentId = block.parentId;
+    const joiningParent = sanitizedParentId !== null && sanitizedParentId !== oldParentId
+      ? this.repository.getBlockById(sanitizedParentId)
+      : undefined;
+
+    // Tables and databases too: they order children by their own model, but
+    // the flat array must still list those children inside their run.
+    if (joiningParent !== undefined) {
+      this.moveIntoParentRun(block, joiningParent);
+    }
+
+    // Also after a join: a move to an ancestor passes the join check above.
+    if (sanitizedParentId !== oldParentId) {
+      this.moveOutOfParentRun(block, sanitizedParentId);
+    }
+
     const slotBefore = block.holder.parentElement;
     const homeSlot = this.findHomeSlot(sanitizedParentId);
 
@@ -370,12 +474,18 @@ export class BlockHierarchy {
       // level (not inside any toggle-children container) — use it as the DOM anchor.
       const allBlocks = this.repository.blocks;
       const blockIndex = allBlocks.indexOf(block);
-      const anchor = allBlocks.slice(0, blockIndex).reverse().find(
-        b => b.holder.closest('[data-blok-toggle-children]') === null
-      );
+      const isOutsideToggles = (b: Block): boolean => b.holder.closest('[data-blok-toggle-children]') === null;
+      const anchor = allBlocks.slice(0, blockIndex).reverse().find(isOutsideToggles);
+      // At flat index 0 nothing precedes it; the old parent's holder may itself
+      // sit in a slot, so anchor before the next root block instead.
+      const followingRoot = anchor === undefined
+        ? allBlocks.slice(blockIndex + 1).find(isOutsideToggles)
+        : undefined;
 
       if (anchor) {
         moveElementAfter(block.holder, anchor.holder);
+      } else if (followingRoot !== undefined) {
+        moveElementBefore(block.holder, followingRoot.holder);
       } else if (oldParent !== undefined) {
         moveElementAfter(block.holder, oldParent.holder);
       }
@@ -399,7 +509,7 @@ export class BlockHierarchy {
     // Fix 5: a previously-empty collapsed container has no existing hidden
     // children to infer state from. Fall back to reading the toggle/header
     // tool's persistent open-state attribute (`data-blok-toggle-open="false"`)
-    // on any descendant of the parent holder.
+    // on the parent's OWN marker, never a nested toggle's.
     if (sanitizedParentId !== null && newParent !== undefined) {
       const existingChildren = newParent.contentIds
         .filter(id => id !== block.id)
@@ -410,13 +520,26 @@ export class BlockHierarchy {
         existingChildren.every(b => b.holder.classList.contains('hidden'));
 
       const parentIsCollapsedFromAttr =
-        newParent.holder.querySelector('[data-blok-toggle-open="false"]') !== null;
+        findOwn(newParent.holder, '[data-blok-toggle-open="false"]') !== null;
 
       const parentIsCollapsed = parentIsCollapsedFromChildren || parentIsCollapsedFromAttr;
 
       if (parentIsCollapsed) {
         block.holder.classList.add('hidden');
       }
+    }
+
+    // A block leaving a collapsed toggle keeps its `hidden` flag unless the
+    // new parent hides it too.
+    const hiddenByNewParent = newParent !== undefined && (
+      newParent.holder.classList.contains('hidden')
+      || findOwn(newParent.holder, '[data-blok-toggle-open="false"]') !== null
+      || newParent.contentIds.some(id =>
+        id !== block.id && this.repository.getBlockById(id)?.holder.classList.contains('hidden') === true)
+    );
+
+    if (oldParentId !== sanitizedParentId && !hiddenByNewParent) {
+      block.holder.classList.remove('hidden');
     }
 
     // Move block holder into the new parent's direct child container, honouring
@@ -547,7 +670,9 @@ export class BlockHierarchy {
         !(isColumnContainer(currentNestedContainer) && isColumnContainer(newContainer)) &&
         !isColumnsRow(newContainer) &&
         !strandedInAncestorContainer &&
-        !strandedInDescendantContainer;
+        !strandedInDescendantContainer &&
+        // The slot the block is leaving is not a claim on it.
+        currentNestedContainer !== oldHomeSlot;
 
       // Circular-DOM guard (same one the table carries): if corrupted DOM puts
       // the declared parent's holder INSIDE this block's holder, mounting would

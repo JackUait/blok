@@ -62,6 +62,11 @@ export interface OperationsContext {
   readonly yjsSync: BlockYjsSync;
   /** Callback for block mutations */
   readonly blockDidMutated: BlockDidMutated;
+  /**
+   * Reparent that also writes the parent to the shared document (and into an
+   * open move group). `hierarchy.setBlockParent` changes memory only.
+   */
+  readonly parentWriter: (block: Block, parentId: string | null) => void;
 
   /**
    * Raw current block index access — no stopCapturing side effect.

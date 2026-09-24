@@ -150,6 +150,7 @@ export const buildArrow = (
   const arrow = document.createElement('span');
   arrow.className = ARROW_STYLES;
   arrow.setAttribute(TOGGLE_ATTR.toggleArrow, '');
+  arrow.setAttribute(DATA_ATTR.chrome, '');
   arrow.setAttribute(DATA_ATTR.mutationFree, 'true');
   arrow.setAttribute('role', 'button');
   arrow.setAttribute('tabindex', '0');
@@ -212,6 +213,7 @@ const buildBodyPlaceholder = (onClick: (() => void) | null, text: string): HTMLE
   const placeholder = document.createElement('div');
   placeholder.className = BODY_PLACEHOLDER_STYLES;
   placeholder.setAttribute(TOGGLE_ATTR.toggleBodyPlaceholder, '');
+  placeholder.setAttribute(DATA_ATTR.chrome, '');
   // Class changes on the body placeholder (show/hide) must not trigger didMutated →
   // syncBlockDataToYjs, which would create a spurious Yjs undo entry when a child
   // block is inserted via Enter. The placeholder holds no user-editable content.

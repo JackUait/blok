@@ -509,6 +509,7 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
     },
     ensureCellHasBlock,
     focusClearedCell,
+    indexAfterTableSubtree: (): number => order.length,
   } as unknown as TableCellBlocks;
 
   const transactions: string[] = [];

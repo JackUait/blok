@@ -129,6 +129,29 @@ describe('BlockManager.convert — toggle heading adopts its section (Notion par
     expect(setBlockParentSpy.mock.calls).toEqual([[p1, 'new']]);
   });
 
+  it('reads a sibling heading\'s OWN level, not the level of a heading nested inside it', async () => {
+    const source = makeHeader('src', 2);
+    const sub = makeBlock('sub', 'header');
+    const ownHeading = document.createElement('div');
+    const slot = document.createElement('div');
+    const nested = makeHeader('nested', 1, 'sub');
+
+    // A levelOverrides tag renders the level on a non-<hN> element.
+    ownHeading.setAttribute('data-blok-heading-level', '3');
+    sub.holder.setAttribute('data-blok-element', '');
+    nested.holder.setAttribute('data-blok-element', '');
+    slot.setAttribute('data-blok-toggle-children', '');
+    slot.appendChild(nested.holder);
+    sub.holder.append(ownHeading, slot);
+    sub.contentIds = ['nested'];
+
+    arrangeConvert(source, makeHeader('new', 2), [source, sub, nested]);
+
+    await blockManager.convert(source, 'header', { level: 2, isToggleable: true });
+
+    expect(setBlockParentSpy.mock.calls).toEqual([[sub, 'new']]);
+  });
+
   it('adopts LOWER-rank headings; their container children ride along untouched', async () => {
     const source = makeHeader('src', 1);
     const sub = makeHeader('sub', 3);

@@ -55,6 +55,10 @@ export const handleToggleEnter = async (context: ToggleKeyboardContext): Promise
 
   const currentBlockIndex = api.blocks.getBlockIndex(blockId) ?? api.blocks.getCurrentBlockIndex();
 
+  if (insertEmptyBlockAboveOnEnterAtStart(api, currentBlockIndex, beforeContent, afterContent)) {
+    return;
+  }
+
   /**
    * When toggle is open and caret is at the end (no content after caret),
    * create a child paragraph inside the toggle rather than a sibling toggle.
@@ -83,6 +87,31 @@ export const handleToggleEnter = async (context: ToggleKeyboardContext): Promise
   // splitBlock rewrites this title's HTML and does not focus the new block,
   // so without this the caret falls to the start of the old title.
   api.caret.setToBlock(newBlock.id, 'start');
+};
+
+/**
+ * Enter at the start of a title that has text adds an empty block above the
+ * toggle, at its level, and leaves the caret in the title (Notion). A split
+ * here would put the new block between the toggle and its children.
+ * @param api - Blok API
+ * @param toggleIndex - flat index of the toggle
+ * @param beforeContent - title HTML before the caret
+ * @param afterContent - title HTML after the caret
+ * @returns true when it handled the key
+ */
+export const insertEmptyBlockAboveOnEnterAtStart = (
+  api: Pick<API, 'blocks'>,
+  toggleIndex: number,
+  beforeContent: string,
+  afterContent: string
+): boolean => {
+  if (beforeContent !== '' || afterContent === '') {
+    return false;
+  }
+
+  api.blocks.insert(undefined, undefined, undefined, toggleIndex, false);
+
+  return true;
 };
 
 /**

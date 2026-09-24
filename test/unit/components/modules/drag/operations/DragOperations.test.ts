@@ -680,6 +680,7 @@ describe('DragOperations', () => {
         tunes: {},
         index: 4,
         needToFocus: false,
+        origin: 'paste',
       });
       expect(mockBlockManager.insert).toHaveBeenCalledWith({
         tool: 'paragraph',
@@ -687,6 +688,7 @@ describe('DragOperations', () => {
         tunes: {},
         index: 5,
         needToFocus: false,
+        origin: 'paste',
       });
       expect(result.duplicatedBlocks).toEqual([newBlock1, newBlock2]);
       expect(result.targetIndex).toBe(4);

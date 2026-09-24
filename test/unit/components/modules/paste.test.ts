@@ -644,6 +644,35 @@ describe('Paste module', () => {
       expect(blockHolder.getAttribute('data-drop-indicator')).toBe('top');
     });
 
+    it('indents the file-drop indicator by the container\'s own depth, not a nested list\'s', async () => {
+      const { paste, mocks } = createPaste();
+
+      await paste.prepare();
+      paste.toggleReadOnly(false);
+
+      const container = document.createElement('div');
+
+      container.setAttribute('data-blok-element', '');
+      container.innerHTML =
+        '<div data-blok-testid="own-part"></div>' +
+        '<div data-blok-nested-blocks><div data-blok-element><div data-list-depth="2"></div></div></div>';
+      Object.defineProperty(container, 'getBoundingClientRect', {
+        value: () => ({ top: 0, bottom: 100, height: 100, left: 0, right: 100, width: 100, x: 0, y: 0, toJSON: () => ({}) }),
+      });
+      mocks.holder.appendChild(container);
+
+      const ownPart = container.querySelector('[data-blok-testid="own-part"]');
+      const dataTransfer = new MockDataTransfer({}, { length: 0 } as FileList, ['Files']);
+      const event = new Event('dragover', { bubbles: true, cancelable: true });
+
+      Object.defineProperty(event, 'dataTransfer', { value: dataTransfer });
+      Object.defineProperty(event, 'clientX', { value: 50 });
+      Object.defineProperty(event, 'clientY', { value: 20 });
+      ownPart?.dispatchEvent(event);
+
+      expect(container.style.getPropertyValue('--drop-indicator-depth')).toBe('0');
+    });
+
     it('clears data-drop-indicator after drop', async () => {
       const { paste, mocks } = createPaste();
 

@@ -1815,7 +1815,7 @@ export class TableSubsystems {
         blockData.tool,
         blockData.data,
         {},
-        this.host.api.blocks.getBlocksCount(),
+        this.host.cellBlocks?.indexAfterTableSubtree() ?? this.host.api.blocks.getBlocksCount(),
         false,
         false,
         undefined,

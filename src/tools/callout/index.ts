@@ -17,6 +17,7 @@ import type { CalloutData, CalloutConfig } from './types';
 import { buildCalloutDOM, calloutEmojiButtonLabel, type CalloutDOMRefs } from './dom-builder';
 import { saveCallout } from './block-operations';
 import { handleCalloutFirstChildBackspace } from './callout-keyboard';
+import { DATA_ATTR } from '../../components/constants';
 import { mountChildBlocks, withSlotlessDescendants } from '../nested-blocks';
 import { createColorPicker, type ColorPickerHandle } from '../../components/shared/color-picker';
 import { colorVarName } from '../../components/shared/color-presets';
@@ -32,6 +33,8 @@ import {
   EMOJI_JUMP_IN_ANIMATION,
   EMOJI_GHOST_STYLES,
 } from './constants';
+
+const BLOCK_HOLDER_SELECTOR = `[${DATA_ATTR.element}]`;
 
 /**
  * Resolve emoji from legacy callout data fields
@@ -489,10 +492,15 @@ export class CalloutTool implements BlockTool {
 
     const firstChild = children[0];
 
-    // Only handle when the event target is inside the first child block
+    // Only handle when the caret is in the first child's own input, not in a block nested in it
     const target = e.target as HTMLElement;
 
-    if (!firstChild.holder.contains(target)) {
+    if (target.closest(BLOCK_HOLDER_SELECTOR) !== firstChild.holder) {
+      return;
+    }
+
+    // The child already handled this Backspace (a toggle turns itself into text); acting too would race it.
+    if (e.defaultPrevented) {
       return;
     }
 
@@ -502,7 +510,7 @@ export class CalloutTool implements BlockTool {
       selection.rangeCount > 0 &&
       selection.getRangeAt(0).startOffset === 0 &&
       selection.getRangeAt(0).collapsed;
-    const isEmpty = firstChild.holder.textContent === '';
+    const isEmpty = firstChild.isEmpty;
 
     if (!isEmpty || !isAtStart) {
       return;

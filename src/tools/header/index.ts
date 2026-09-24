@@ -21,6 +21,7 @@ import type { MenuConfig } from '../../../types/tools/menu-config';
 import { PopoverItemType } from '../../../types/utils/popover/popover-item-type';
 import { DATA_ATTR } from '../../components/constants';
 import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconToggleH1, IconToggleH2, IconToggleH3, IconToggleH4, IconToggleH5, IconToggleH6 } from '../../components/icons';
+import { findOwn } from '../../components/utils/own-element';
 import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
 import { HEADER_BASE_CLASSES, HEADER_LEVEL_CLASSES } from '../../shared/tool-classes/header';
@@ -845,7 +846,7 @@ export class Header implements BlockTool {
          * prepend the arrow to the wrapper (not to the heading).
          */
         this.createToggleWrapper();
-      } else if (!this._wrapper.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`)) {
+      } else if (!findOwn(this._wrapper, `[${TOGGLE_ATTR.toggleArrow}]`)) {
         /**
          * Wrapper exists but arrow was removed (e.g. after innerHTML reset) — re-add it.
          */
@@ -1044,6 +1045,7 @@ export class Header implements BlockTool {
     // pl-8 (32px) matches the heading's left padding so body aligns with the title text start.
     bodyPlaceholder.className = twMerge(BODY_PLACEHOLDER_STYLES, 'pl-8');
     bodyPlaceholder.setAttribute(TOGGLE_ATTR.toggleBodyPlaceholder, '');
+    bodyPlaceholder.setAttribute(DATA_ATTR.chrome, '');
     // Class changes on the body placeholder (show/hide) must not trigger didMutated →
     // syncBlockDataToYjs, which would create a spurious Yjs undo entry when a child
     // block is inserted via Enter. The placeholder holds no user-editable content.

@@ -13,6 +13,9 @@ import { generateBlockId } from '../../utils';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import { resolveChildTool } from '../../utils/child-tools';
+import { SELF_PLACING_PARENTS } from '../../../tools/nested-blocks';
+import { findOwn } from '../../utils/own-element';
+import { canAdoptChild, releasesChildrenOnTurnInto } from '../../utils/turn-into-children';
 import type { BlockFactory } from './factory';
 import type { BlockHierarchy } from './hierarchy';
 import type { BlockRepository } from './repository';
@@ -66,12 +69,26 @@ export class BlockInsertion {
    * @param childIds - ids of the children to reparent
    * @param newParentId - the block to reparent them onto
    */
-  private reparentChildrenTo(childIds: string[], newParentId: string): void {
+  private reparentChildrenTo(childIds: string[], newParentId: string | null): void {
     for (const childId of childIds) {
       const childBlock = this.repository.getBlockById(childId);
 
       if (childBlock !== undefined) {
         this.hierarchy.setBlockParent(childBlock, newParentId);
+      }
+    }
+  }
+
+  /**
+   * Writes each block's in-memory parent and position to the shared document.
+   * @param childIds - ids of the blocks to write
+   */
+  private writeChildPlacements(childIds: string[]): void {
+    for (const childId of childIds) {
+      const childBlock = this.repository.getBlockById(childId);
+
+      if (childBlock !== undefined) {
+        this.ctx.parentWriter(childBlock, childBlock.parentId);
       }
     }
   }
@@ -95,9 +112,26 @@ export class BlockInsertion {
       appendToWorkingArea = false,
       forceTopLevel = false,
       origin = 'api',
+      inferParent = false,
     } = options;
 
-    const targetIndex = index ?? this.ctx.rawCurrentBlockIndex + (replace ? 0 : 1);
+    const current = this.ctx.rawCurrentBlockIndex >= 0
+      ? this.repository.getBlockByIndex(this.ctx.rawCurrentBlockIndex)
+      : undefined;
+    // "After the current block" is after its whole run when it is a table or
+    // database: current + 1 is its first cell's slot.
+    const afterCurrentRun = index === undefined && !replace && current !== undefined && this.isOutermostSelfPlacing(current)
+      ? current
+      : undefined;
+    const requestedIndex = index
+      ?? (afterCurrentRun !== undefined ? this.subtreeEnd(afterCurrentRun) : this.ctx.rawCurrentBlockIndex + (replace ? 0 : 1));
+    const slot = inferParent && !replace && !forceTopLevel && !appendToWorkingArea
+      ? this.inferredSlot(requestedIndex)
+      : undefined;
+    const targetIndex = slot?.index ?? requestedIndex;
+    const impliedParent = slot?.parent;
+    // The block follows a table/database, so it must not join that container's last cell.
+    const exited = afterCurrentRun ?? slot?.exited;
 
     /**
      * If we're replacing a block, stop watching for mutations immediately to prevent
@@ -138,8 +172,14 @@ export class BlockInsertion {
         ? this.repository.getBlockByIndex(targetIndex)
         : (predecessorBlock ?? this.repository.getBlockByIndex(targetIndex));
 
-      if (neighborBlock !== undefined && isInsideTableCell(neighborBlock) && isRestrictedInTableCell(name)) {
+      if (exited === undefined && neighborBlock !== undefined && isInsideTableCell(neighborBlock) && isRestrictedInTableCell(name)) {
         return this.dependencies.config.defaultBlock ?? 'paragraph';
+      }
+
+      // A root result falls through: callers such as useBlocks' insert at a
+      // container's end nest the block right after, and still need the demotion.
+      if (impliedParent !== undefined && impliedParent !== null) {
+        return resolveChildTool(impliedParent, name, this.dependencies.config.defaultBlock ?? 'paragraph');
       }
 
       /**
@@ -216,7 +256,24 @@ export class BlockInsertion {
       });
     }
 
-    blocksStore.insert(targetIndex, block, replace, appendToWorkingArea, forceTopLevel);
+    // A root block after a nested one would otherwise be mounted after it, in its slot.
+    const mountAtRoot = impliedParent === null && this.repository.getBlockByIndex(targetIndex - 1)?.parentId !== null;
+
+    // The swap below takes the old holder out of the document with the child
+    // holders inside it, and setBlockParent never re-mounts a holder whose new
+    // home is the root. Lift the children to the old block's level first, while
+    // the old block still exists; they are re-nested after the swap.
+    const rehomesChildren = blockToReplace !== undefined
+      && replacedContentIds.length > 0
+      && !SELF_PLACING_PARENTS.has(blockToReplace.name);
+    const releasesChildren = rehomesChildren && releasesChildrenOnTurnInto(blockToReplace, resolvedToolName, data);
+
+    // Last child first: each one leaving goes to the end of the old block's run.
+    if (rehomesChildren) {
+      this.reparentChildrenTo([...replacedContentIds].reverse(), replacedParentId);
+    }
+
+    blocksStore.insert(targetIndex, block, replace, appendToWorkingArea, forceTopLevel || mountAtRoot || exited !== undefined);
 
     /**
      * Transfer the parent link to the new block BEFORE Yjs sync so
@@ -230,16 +287,19 @@ export class BlockInsertion {
     }
 
     /**
-     * Re-home the replaced container's children onto the new block. Routed
-     * through `setBlockParent` (not a bare parentId write) so DOM reparenting
-     * and collapsed-state propagation run atomically per child — the same
-     * primitive block-mutation.replace() uses. Guarded on the new block having
-     * no children of its own so an explicit replace-with-a-prebuilt-container
-     * (which carries its own contentIds) is not overwritten; the common
-     * turn-into case composes an empty block, so it adopts the old children.
+     * Nest the replaced block's children under the new block, after any
+     * children it made for itself. A child it may not hold stays where the
+     * release above put it: right after it, at its level.
      */
-    if (replace && replacedContentIds.length > 0 && block.contentIds.length === 0) {
-      this.reparentChildrenTo(replacedContentIds, block.id);
+    if (rehomesChildren && !releasesChildren) {
+      this.reparentChildrenTo(
+        replacedContentIds.filter(childId => {
+          const child = this.repository.getBlockById(childId);
+
+          return child !== undefined && canAdoptChild(block, child);
+        }),
+        block.id
+      );
     }
 
     /**
@@ -256,8 +316,12 @@ export class BlockInsertion {
      * not a column) — are untouched and never see a transient wrong-parent
      * state. `forceTopLevel` callers opt out entirely.
      */
-    if (!replace && !forceTopLevel && block.parentId === null) {
-      const predecessor = this.repository.getBlockByIndex(targetIndex - 1);
+    if (impliedParent !== undefined && impliedParent !== null) {
+      this.hierarchy.setBlockParent(block, impliedParent.id);
+    }
+
+    if (!replace && !forceTopLevel && block.parentId === null && impliedParent === undefined) {
+      const predecessor = exited ?? this.repository.getBlockByIndex(targetIndex - 1);
       const predecessorParent = predecessor?.parentId !== null && predecessor?.parentId !== undefined
         ? this.repository.getBlockById(predecessor.parentId)
         : undefined;
@@ -346,6 +410,22 @@ export class BlockInsertion {
           data: block.preservedData,
           parent: block.parentId ?? undefined,
         }, targetIndex);
+
+        // The doc still points the children at the removed id.
+        if (rehomesChildren && replacedIdToRemove !== undefined) {
+          this.writeChildPlacements(replacedContentIds);
+        }
+
+        // A tool's rendered() (callout's first line) adds its child before
+        // this block exists in the doc, so that child got no order slot.
+        block.contentIds.forEach((childId, position) => {
+          if (!replacedContentIds.includes(childId)) {
+            this.dependencies.YjsManager.applyBlockPlacement(childId, {
+              parentId: block.id,
+              afterId: position > 0 ? block.contentIds[position - 1] : null,
+            });
+          }
+        });
       });
     }
 
@@ -598,6 +678,153 @@ export class BlockInsertion {
   }
 
   /**
+   * The parent a new block inserted at flat `index` must take so the flat
+   * array stays depth-first. Undefined means "keep the old placement": no
+   * predecessor, a table/database on the way, or no container that may hold it.
+   *
+   * - The block right after the slot is the predecessor's child: the new block
+   *   must be a child of the predecessor too.
+   * - Otherwise every level from the predecessor's parent up to the next
+   *   block's parent (root at the document end) is valid; the SHALLOWEST one
+   *   wins. That is where the block was already drawn when the next block is
+   *   shallower, and at the document end it is what a caller appending after
+   *   a container means (header-toggle-keyboard's collapsed-heading Enter
+   *   relies on it).
+   * - A column predecessor keeps its column, the rule unflagged inserts use.
+   * - A container that owns its children (column_list) is skipped.
+   * @param index - the flat index the block is inserted at
+   */
+  private parentImpliedByIndex(index: number): Block | null | undefined {
+    const blocks = this.repository.blocks;
+    const at = Math.min(index, blocks.length);
+    // Past the end of a table/database run, the block follows that container.
+    const closed = this.selfPlacingClosedAt(at);
+    const previous = closed ?? (at > 0 ? blocks[at - 1] : undefined);
+
+    if (previous === undefined) {
+      return undefined;
+    }
+
+    const next = blocks[at] as Block | undefined;
+    const parentOf = (block: Block): Block | null =>
+      block.parentId === null ? null : this.repository.getBlockById(block.parentId) ?? null;
+    const previousParent = parentOf(previous);
+    const nextIsChildOfPrevious = next !== undefined && next.parentId === previous.id;
+
+    if (!nextIsChildOfPrevious && previousParent?.name === 'column') {
+      return previousParent;
+    }
+
+    const collectAncestors = (cursor: Block | null, found: Block[]): Block[] =>
+      cursor === null || found.includes(cursor) ? found : collectAncestors(parentOf(cursor), [...found, cursor]);
+    const ancestors = collectAncestors(previousParent, []);
+
+    if ([...(closed === undefined ? [previous] : []), ...ancestors].some(block => SELF_PLACING_PARENTS.has(block.name))) {
+      return undefined;
+    }
+
+    const shallowest = next === undefined ? null : parentOf(next);
+    const candidates: Array<Block | null> = nextIsChildOfPrevious
+      ? [previous]
+      : [...ancestors.slice(0, shallowest === null ? ancestors.length : ancestors.indexOf(shallowest) + 1), null]
+        .filter(candidate => candidate !== null || shallowest === null)
+        .reverse();
+
+    return candidates.find(candidate => candidate === null || !candidate.tool.ownsChildren);
+  }
+
+  /**
+   * A flat index at which a new child of `parent` keeps the array depth-first:
+   * right after the parent at the earliest, right after its last descendant
+   * at the latest. Anything outside that range would put the child before its
+   * parent or split another block's subtree.
+   * @param parent - the parent the child joins
+   * @param index - the index the caller asked for
+   */
+  private clampIntoSubtree(parent: Block, index: number): number {
+    return Math.min(Math.max(index, this.repository.blocks.indexOf(parent) + 1), this.subtreeEnd(parent));
+  }
+
+  /**
+   * The flat index right after the last descendant of `parent`.
+   * @param parent - the subtree root
+   */
+  private subtreeEnd(parent: Block): number {
+    const blocks = this.repository.blocks;
+    const parentIndex = blocks.indexOf(parent);
+    const isUnderParent = (cursor: string | null, seen: Set<string>): boolean => {
+      if (cursor === null || seen.has(cursor)) {
+        return false;
+      }
+
+      return cursor === parent.id || isUnderParent(this.repository.getBlockById(cursor)?.parentId ?? null, seen.add(cursor));
+    };
+    const firstOutside = blocks.slice(parentIndex + 1)
+      .findIndex(candidate => !isUnderParent(candidate.parentId, new Set()));
+
+    return firstOutside === -1 ? blocks.length : parentIndex + 1 + firstOutside;
+  }
+
+  /**
+   * Where an inferred-parent insert lands, and under which parent. The slot
+   * right after a COLLAPSED container is its first-child slot, where the new
+   * block would be hidden the moment it is created; it goes after the
+   * container's subtree instead, which is also where the holder used to be
+   * drawn (the toolbox inserts at the current index + 1 from a toggle title).
+   * @param index - the flat index the caller asked for
+   */
+  private inferredSlot(index: number): { index: number; parent: Block | null | undefined; exited: Block | undefined } {
+    const blocks = this.repository.blocks;
+    const at = Math.min(index, blocks.length);
+    const previous = at > 0 ? blocks[at - 1] : undefined;
+    const opensChildren = previous !== undefined && (blocks[at] as Block | undefined)?.parentId === previous.id;
+    const skipsChildren = opensChildren && (
+      findOwn(previous.holder, '[data-blok-toggle-open="false"]') !== null || this.isOutermostSelfPlacing(previous)
+    );
+    const slotIndex = skipsChildren ? this.subtreeEnd(previous) : index;
+
+    return {
+      index: slotIndex,
+      parent: this.parentImpliedByIndex(slotIndex),
+      exited: this.selfPlacingClosedAt(Math.min(slotIndex, blocks.length)),
+    };
+  }
+
+  /**
+   * Whether `block` is a table/database with no table/database above it. Only
+   * then is "after its run" a place outside every self-placing container.
+   * @param block - the block to test
+   */
+  private isOutermostSelfPlacing(block: Block): boolean {
+    const hasSelfPlacingAncestor = (cursor: string | null, seen: Set<string>): boolean => {
+      const ancestor = cursor === null || seen.has(cursor) ? undefined : this.repository.getBlockById(cursor);
+
+      return ancestor !== undefined
+        && (SELF_PLACING_PARENTS.has(ancestor.name) || hasSelfPlacingAncestor(ancestor.parentId, seen.add(cursor ?? '')));
+    };
+
+    return SELF_PLACING_PARENTS.has(block.name) && !hasSelfPlacingAncestor(block.parentId, new Set());
+  }
+
+  /**
+   * The outermost table/database whose run ends at flat index `at` and holds
+   * the block before it. A block inserted at `at` follows that container: its
+   * cells place their children themselves, so the flat predecessor (the last
+   * cell's last block) says nothing about where the new block belongs.
+   * @param at - the flat index the block is inserted at
+   */
+  private selfPlacingClosedAt(at: number): Block | undefined {
+    const blocks = this.repository.blocks;
+    const previous = at > 0 ? blocks[at - 1] : undefined;
+    const chain = (cursor: Block | undefined, found: Block[]): Block[] =>
+      cursor === undefined || found.includes(cursor)
+        ? found
+        : chain(cursor.parentId === null ? undefined : this.repository.getBlockById(cursor.parentId), [...found, cursor]);
+
+    return chain(previous, []).find(block => this.isOutermostSelfPlacing(block) && this.subtreeEnd(block) === at);
+  }
+
+  /**
    * Insert a new block as a child of the given parent, atomically.
    *
    * Wraps the Yjs addBlock call and DOM insert inside a single
@@ -609,7 +836,8 @@ export class BlockInsertion {
    * undo steps.
    *
    * @param parentId - id of the parent block
-   * @param insertIndex - flat block index where the new block should appear
+   * @param requestedIndex - flat block index where the new block should appear;
+   *   clamped into the parent's subtree (see {@link clampIntoSubtree})
    * @param blocksStore - The blocks store to modify
    * @param childData - optional data for the new child block
    * @param toolName - optional tool to create; defaults to `config.defaultBlock`
@@ -617,7 +845,7 @@ export class BlockInsertion {
    */
   public insertInsideParent(
     parentId: string,
-    insertIndex: number,
+    requestedIndex: number,
     blocksStore: BlocksStore,
     childData?: BlockToolData,
     toolName?: string,
@@ -630,6 +858,7 @@ export class BlockInsertion {
     }
 
     const { id: requestedId, tunes, focus = false } = options;
+    const insertIndex = this.clampIntoSubtree(parentBlock, requestedIndex);
     const newBlockId = requestedId ?? generateBlockId();
     const defaultBlockTool = this.dependencies.config.defaultBlock ?? 'paragraph';
     /**

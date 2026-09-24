@@ -18,7 +18,85 @@ import { migrateBlocks } from '../migration/block-migrations';
 import { applyLinkConfig } from '../utils/apply-link-config';
 import { DATA_ATTR } from '../constants';
 import { BlocksRendered } from '../events';
+import { SELF_PLACING_PARENTS } from '../../tools/nested-blocks';
 
+/**
+ * Reorders stored blocks into a depth-first walk of their tree: roots in input
+ * order, each followed by its children — first those its `content` lists, in
+ * that order, then the rest in input order. Keyboard navigation, flat-index
+ * DOM anchoring and the save gate all assume this order; stored data from a
+ * host may not follow it.
+ *
+ * A child missing from its parent's `content` is appended to a copy of that
+ * list, so the document the editor builds from these blocks (which orders
+ * children by `content`) agrees with the flat order. Tables and databases are
+ * left alone: they keep children outside `content`. A parent that is not in
+ * the input counts as root, as in the saver. Duplicate ids leave the input
+ * untouched: the renderer renames them later, so an id would be ambiguous here.
+ * @param blocks - stored blocks, already expanded to the flat model
+ */
+const toDepthFirstOrder = (blocks: OutputBlockData[]): OutputBlockData[] => {
+  const ids = blocks.flatMap(block => typeof block.id === 'string' ? [block.id] : []);
+  const idSet = new Set(ids);
+
+  if (idSet.size !== ids.length) {
+    return blocks;
+  }
+
+  const parentIdOf = (block: OutputBlockData): string | null =>
+    typeof block.parent === 'string' && block.parent !== block.id && idSet.has(block.parent) ? block.parent : null;
+  const childrenOf = new Map<string, OutputBlockData[]>();
+
+  for (const block of blocks) {
+    const parentId = parentIdOf(block);
+
+    if (parentId !== null) {
+      childrenOf.set(parentId, [...(childrenOf.get(parentId) ?? []), block]);
+    }
+  }
+
+  const unlisted = new Map<OutputBlockData, string[]>();
+  const ordered: OutputBlockData[] = [];
+  const visited = new Set<OutputBlockData>();
+
+  const visit = (root: OutputBlockData): void => {
+    const stack = [root];
+
+    while (stack.length > 0) {
+      const block = stack.pop();
+
+      if (block === undefined || visited.has(block)) {
+        continue;
+      }
+      visited.add(block);
+      ordered.push(block);
+
+      const children = typeof block.id === 'string' ? childrenOf.get(block.id) ?? [] : [];
+      const listed = (block.content ?? []).flatMap(id => children.filter(child => child.id === id));
+      const rest = children.filter(child => !listed.includes(child));
+
+      if (rest.length > 0 && !SELF_PLACING_PARENTS.has(block.type)) {
+        unlisted.set(block, rest.flatMap(child => typeof child.id === 'string' ? [child.id] : []));
+      }
+
+      stack.push(...[...listed, ...rest].reverse());
+    }
+  };
+
+  blocks.filter(block => parentIdOf(block) === null).forEach(visit);
+  // Blocks caught in a parent cycle are reachable from no root.
+  blocks.forEach(visit);
+
+  if (unlisted.size === 0 && ordered.every((block, index) => block === blocks[index])) {
+    return blocks;
+  }
+
+  return ordered.map(block => {
+    const extra = unlisted.get(block);
+
+    return extra === undefined ? block : { ...block, content: [...(block.content ?? []), ...extra] };
+  });
+};
 /**
  * Map of legacy EditorJS tool names to their Blok equivalents.
  * Used during rendering to transparently migrate old article data.
@@ -199,7 +277,7 @@ export class Renderer extends Module {
     // those parent references so downstream code that gates on parentId
     // (read-only cell mounter, saver filter, hierarchy queries) correctly
     // recognizes the children as belonging to their table.
-    const processedBlocks = normalizeTableChildParents(reclaimedBlocks);
+    const processedBlocks = toDepthFirstOrder(normalizeTableChildParents(reclaimedBlocks));
 
     // Note: Yjs data layer is loaded via BlockManager.insertMany() with the correct block IDs
 

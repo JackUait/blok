@@ -224,6 +224,7 @@ const createBlockManager = (
       addBlock: vi.fn(),
       removeBlock: vi.fn(),
       moveBlock: vi.fn(),
+      applyBlockPlacement: vi.fn(),
       replaceBlockContent: vi.fn(() => true),
       updateBlockData: vi.fn(() => true),
       // Reports "nothing pruned" so these tests keep asserting only the writes.
@@ -1283,14 +1284,11 @@ describe('BlockManager', () => {
       expect(result.contentIds).toContain('child-1');
     });
 
-    it('insert({ replace: true }) with a prebuilt container keeps ITS OWN children (guard)', () => {
-      // The re-home is guarded on the new block having no children of its own
-      // (block-insertion.ts: `block.contentIds.length === 0`). When the caller
-      // replaces with a PREBUILT container that already carries its own
-      // contentIds, those must be preserved — the replaced block's children must
-      // NOT be force-adopted over them. (The common turn-into composes an empty
-      // block, so it still adopts; this guards the explicit prebuilt-container
-      // case, which the re-home test above does not exercise.)
+    it('insert({ replace: true }) with a prebuilt container keeps its own children', () => {
+      // A container that arrives with children (prebuilt, or seeded by its own
+      // render) keeps them and also takes the replaced block's children, as on
+      // "Turn into". Order is not checked: the stub's own child is not in the
+      // flat array.
       const blockToReplace = createBlockStub({ id: 'toggle-parent' });
       const replacedChild = createBlockStub({ id: 'child-1' });
 
@@ -1303,7 +1301,6 @@ describe('BlockManager', () => {
 
       blockManager.currentBlockIndex = 0;
 
-      // The replacement arrives WITH its own child already attached.
       const newBlock = createBlockStub({ id: 'new-block' });
 
       newBlock.contentIds = ['own-child'];
@@ -1316,10 +1313,8 @@ describe('BlockManager', () => {
         replace: true,
       });
 
-      // The guard skips re-homing: the prebuilt container keeps its own child and
-      // does NOT swallow the replaced block's child.
-      expect(result.contentIds).toEqual(['own-child']);
-      expect(replacedChild.parentId).not.toBe('new-block');
+      expect([...result.contentIds].sort()).toEqual(['child-1', 'own-child']);
+      expect(replacedChild.parentId).toBe('new-block');
     });
 
     it('update() preserves parentId and contentIds on the recreated block', async () => {

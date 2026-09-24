@@ -368,6 +368,13 @@ export const createBlocksApiForEditor = (
     return 'moved';
   };
 
+  // setBlockParent moves a block whose flat predecessor is outside its new
+  // parent's subtree, so siblings must be re-parented in flat order: a later
+  // sibling handled first would be moved ahead of an earlier one.
+  const inFlatOrder = <T extends { id: string }>(members: T[]): T[] =>
+    [...members].sort((a, b) =>
+      (editor.blocks.getBlockIndex(a.id) ?? Infinity) - (editor.blocks.getBlockIndex(b.id) ?? Infinity));
+
   // Reparent `id` (root → newParentId, descendants → their original parent).
   // Re-asserting after relocateSubtree heals move()'s auto-reparent (which sets
   // a moved block's parentId to its new neighbour) and never relocates the flat
@@ -377,7 +384,7 @@ export const createBlocksApiForEditor = (
     rootId: string,
     newParentId: string | null
   ): void => {
-    for (const m of members) {
+    for (const m of inFlatOrder(members)) {
       editor.blocks.setBlockParent(m.id, m.id === rootId ? newParentId : m.parentId);
     }
   };
@@ -390,7 +397,7 @@ export const createBlocksApiForEditor = (
     members: Array<{ id: string; parentId: string | null }>,
     rootId: string
   ): void => {
-    members
+    inFlatOrder(members)
       .filter((m) => m.id !== rootId)
       .forEach((m) => editor.blocks.setBlockParent(m.id, m.parentId));
   };

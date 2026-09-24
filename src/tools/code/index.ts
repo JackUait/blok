@@ -863,7 +863,11 @@ export class CodeTool implements BlockTool {
   private exitBlock(): void {
     const currentIndex = this.api.blocks.getCurrentBlockIndex();
 
-    this.api.blocks.insert(undefined, undefined, undefined, currentIndex + 1);
+    const newBlock = this.api.blocks.insert(undefined, undefined, undefined, currentIndex + 1);
+
+    // insert() does not move the caret: without this the next keystrokes land
+    // back in the code.
+    this.api.caret.setToBlock(newBlock.id, 'start');
   }
 
   public removed(): void {

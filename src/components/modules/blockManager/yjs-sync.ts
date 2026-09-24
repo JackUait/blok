@@ -1167,13 +1167,51 @@ export class BlockYjsSync {
       lastEditedBy: record.lastEditedBy,
     });
 
+    const oldHolder = target.holder;
+
     this.handlers.replaceBlock(blockIndex, newBlock);
+    this.remountDescendantsLeftIn(oldHolder, target.id);
 
     // Children re-homed here were not there when the insert's rendered()
     // fired; a second call lets the container see them.
     if (this.reconcileOrphanedChildren(target.id)) {
       newBlock.call(BlockToolAPI.RENDERED);
     }
+  }
+
+  /**
+   * Re-seat every descendant whose holder was left inside a replaced block's
+   * old holder. The swap takes the child slot with it, and the children keep
+   * the same parentId, so `reconcileOrphanedChildren` does not see them.
+   * Depth-first, so a slotless child's own children follow it.
+   * @param oldHolder - the replaced block's holder, now out of the DOM
+   * @param blockId - the rebuilt block
+   */
+  private remountDescendantsLeftIn(oldHolder: HTMLElement, blockId: string): void {
+    const visit = (parentId: string, visited: Set<string>): void => {
+      const parent = this.repository.getBlockById(parentId);
+
+      if (parent === undefined || visited.has(parentId)) {
+        return;
+      }
+      visited.add(parentId);
+
+      for (const childId of [...parent.contentIds]) {
+        const child = this.repository.getBlockById(childId);
+
+        if (child === undefined) {
+          continue;
+        }
+
+        if (oldHolder.contains(child.holder)) {
+          this.handlers.setBlockParent(child, parentId);
+        }
+
+        visit(childId, visited);
+      }
+    };
+
+    visit(blockId, new Set<string>());
   }
 
   /**
@@ -1197,6 +1235,75 @@ export class BlockYjsSync {
 
     return this.dependencies.YjsManager.orderedIds()
       .filter((id) => inMemory.has(id) || materializing?.has(id) === true);
+  }
+
+  /**
+   * Where a block the doc is adding goes in the flat array: right after its
+   * doc predecessor's place in memory, never at the doc's raw index. Memory
+   * and doc can disagree about where OTHER blocks sit (a delete lifts the
+   * children in memory while the doc still names the removed parent, so they
+   * sort to the doc's end), and every such block before the raw index shifts
+   * the insert out of its parent's run.
+   *
+   * The predecessor is the parent (first child), or the block's previous
+   * sibling or a descendant of it; the insert goes after that sibling's whole
+   * run in memory. When memory and doc agree this is the raw index.
+   * @param blockId - the block being added
+   * @param parentId - its doc parent
+   * @param order - the doc order known to memory, including `blockId`
+   * @returns a flat index, or -1 when the doc does not list the block
+   */
+  private memoryIndexFromDocNeighbour(blockId: string, parentId: string | undefined, order: string[]): number {
+    const docIndex = order.indexOf(blockId);
+
+    if (docIndex <= 0) {
+      return docIndex;
+    }
+
+    const blocks = this.repository.blocks;
+    const predecessor = this.repository.getBlockById(order[docIndex - 1]);
+
+    if (predecessor === undefined) {
+      return docIndex;
+    }
+
+    const ancestry = (block: Block | undefined, chain: Block[] = []): Block[] => {
+      if (block === undefined || chain.includes(block)) {
+        return chain;
+      }
+
+      return ancestry(block.parentId === null ? undefined : this.repository.getBlockById(block.parentId), [...chain, block]);
+    };
+    const afterRunOf = (sibling: Block): number => {
+      const start = blocks.indexOf(sibling);
+
+      if (start === -1) {
+        return docIndex;
+      }
+
+      const runLength = blocks.slice(start + 1)
+        .findIndex(block => !ancestry(block).slice(1).includes(sibling));
+
+      return runLength === -1 ? blocks.length : start + 1 + runLength;
+    };
+
+    // Walk back past doc predecessors memory has not put in the parent yet: a
+    // redo adds a column before the move that fills its left neighbour.
+    for (const id of order.slice(0, docIndex).reverse()) {
+      const candidate = this.repository.getBlockById(id);
+
+      if (candidate !== undefined && candidate.id === parentId) {
+        return blocks.indexOf(candidate) + 1;
+      }
+
+      const sibling = ancestry(candidate).find(block => block.parentId === (parentId ?? null));
+
+      if (sibling !== undefined) {
+        return afterRunOf(sibling);
+      }
+    }
+
+    return afterRunOf(predecessor);
   }
 
   /**
@@ -1314,8 +1421,8 @@ export class BlockYjsSync {
     const data = this.sanitizeToolData(toolName, this.dependencies.YjsManager.yMapToObject(record.data));
     const { parentId, lastEditedAt, lastEditedBy } = record;
 
-    // A MEMORY index — see docOrderKnownToMemory.
-    const targetIndex = this.docOrderKnownToMemory(new Set([blockId])).indexOf(blockId);
+    // A MEMORY index — see memoryIndexFromDocNeighbour.
+    const targetIndex = this.memoryIndexFromDocNeighbour(blockId, parentId, this.docOrderKnownToMemory(new Set([blockId])));
 
     if (targetIndex === -1) {
       return;
@@ -1507,8 +1614,8 @@ export class BlockYjsSync {
     // shift the indices of the blocks still to come.
     const order = this.docOrderKnownToMemory(new Set(candidates.map((entry) => entry.blockId)));
     const toCreate = candidates
-      .map((entry) => ({ ...entry, targetIndex: order.indexOf(entry.blockId) }))
-      .filter((entry) => entry.targetIndex !== -1);
+      .map((entry) => ({ ...entry, docIndex: order.indexOf(entry.blockId) }))
+      .filter((entry) => entry.docIndex !== -1);
 
     if (toCreate.length === 0) {
       return;
@@ -1524,13 +1631,16 @@ export class BlockYjsSync {
     // container" and duplicates it (table cells minted fresh ids on redo).
     // Flat doc order is DFS parent-before-child, so sorting by targetIndex
     // restores both invariants.
-    toCreate.sort((a, b) => a.targetIndex - b.targetIndex);
+    toCreate.sort((a, b) => a.docIndex - b.docIndex);
 
     this.withAtomicOperation(() => {
       // Pass 1 — create blocks and add to array (no DOM, no RENDERED)
       const created: Array<{ block: Block; targetIndex: number; parentId: string | undefined }> = [];
 
       for (const entry of toCreate) {
+        // Against the live array: earlier entries of this batch are in it and
+        // may be this entry's doc neighbour.
+        const targetIndex = this.memoryIndexFromDocNeighbour(entry.blockId, entry.parentId, order);
         const block = this.factory.composeBlock({
           id: entry.blockId,
           tool: entry.toolName,
@@ -1542,7 +1652,7 @@ export class BlockYjsSync {
           lastEditedBy: entry.lastEditedBy,
         });
 
-        this.blocksStore.addToArray(entry.targetIndex, block);
+        this.blocksStore.addToArray(targetIndex, block);
 
         // Same as the single add: the tool normalises after this window — see
         // `settlingBlocks`. Marked in pass 1 so a container's rendered() hook
@@ -1551,7 +1661,7 @@ export class BlockYjsSync {
           this.markMaterializing(entry.blockId);
         }
 
-        created.push({ block, targetIndex: entry.targetIndex, parentId: entry.parentId });
+        created.push({ block, targetIndex, parentId: entry.parentId });
       }
 
       // Pass 2 — activate blocks (DOM insert + RENDERED), then emit events
@@ -1599,21 +1709,32 @@ export class BlockYjsSync {
 
       // Clean up parent's contentIds so the parent block reports
       // no children after undo removes a child block.
-      if (block.parentId !== null) {
-        const parentBlock = this.repository.getBlockById(block.parentId);
+      const parentBlock = block.parentId !== null ? this.repository.getBlockById(block.parentId) : undefined;
+      const indexInParent = parentBlock?.contentIds.indexOf(block.id) ?? -1;
 
-        if (parentBlock !== undefined) {
-          parentBlock.contentIds = parentBlock.contentIds.filter(id => id !== block.id);
-        }
+      if (parentBlock !== undefined) {
+        parentBlock.contentIds = parentBlock.contentIds.filter(id => id !== block.id);
       }
 
-      // Promote children to root level before removing the parent block.
-      // This matches removeBlock() in operations.ts — without this,
+      // Children move up ONE level, into the removed block's slot in its
+      // parent, as the local delete does (block-removal
+      // promoteChildrenToParent); otherwise a redo or a peer puts them at root.
+      // A column parent is layout only, so they go to root there.
+      const grandParent = parentBlock !== undefined && parentBlock.name !== 'column' && parentBlock.name !== 'column_list'
+        ? parentBlock
+        : undefined;
+      const promoted = block.contentIds.filter(childId => this.repository.getBlockById(childId) !== undefined);
+
+      if (grandParent !== undefined && indexInParent >= 0) {
+        grandParent.contentIds.splice(indexInParent, 0, ...promoted.filter(id => !grandParent.contentIds.includes(id)));
+      }
+
+      // Promote children before removing the parent block. Without this,
       // children whose DOM is inside the parent's container are destroyed
       // along with the parent, and children in the blocks array become
       // orphaned with a stale parentId pointing to a deleted block.
       //
-      // Beyond the model promotion (parentId = null), the child's DOM holder
+      // Beyond the model promotion, the child's DOM holder
       // must be LIFTED out of the parent's subtree before blocksStore.remove()
       // calls parent.holder.remove() — that destroys EVERY descendant holder,
       // including children that survive at root (e.g. when undo tears down a
@@ -1637,7 +1758,7 @@ export class BlockYjsSync {
           continue;
         }
 
-        childBlock.parentId = null;
+        childBlock.parentId = grandParent?.id ?? null;
         childBlock.holder.classList.remove('hidden');
 
         if (parentHolderInDom && this.isLiftableFromRemovedSubtree(childBlock.holder) && block.holder.contains(childBlock.holder)) {
@@ -1650,7 +1771,7 @@ export class BlockYjsSync {
       // lands AFTER its children's (child-first). By then the children's own
       // removes lifted THEIR survivors only one level — into THIS subtree —
       // and no model link ties those survivors to this block anymore (their
-      // parentId is already promoted to null, and this block's contentIds
+      // parentId is already promoted past it, and this block's contentIds
       // names only the removed children). Lift every surviving stray holder
       // still inside this subtree, outermost only (a nested survivor rides
       // along inside its surviving container), same immediate-container guard.
@@ -1671,6 +1792,15 @@ export class BlockYjsSync {
 
       // Remove from DOM
       this.blocksStore.remove(index);
+
+      // A column's children go to root, but the lift above left them in the
+      // surviving columns row. Re-seat them in the root area.
+      if (parentBlock !== undefined && grandParent === undefined) {
+        promoted
+          .map(childId => this.repository.getBlockById(childId))
+          .filter((child): child is Block => child !== undefined && child.parentId === null)
+          .forEach(child => this.handlers.setBlockParent(child, null));
+      }
 
       this.restoreDefaultBlockIfDocEmptied();
     }, { extendThroughRAF: true });

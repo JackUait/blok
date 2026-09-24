@@ -128,10 +128,10 @@ describe('yjs-sync — undo of a reparent back to root', () => {
 
   it('sends the block back to root in memory, not just in the doc', async () => {
     const instance = await createEditor();
-    const slotIndex = instance.blocks.getBlockIndex('slot');
-
+    // A move to the root also moves the block in the flat array.
     instance.blocks.setBlockParent('slot', null);
 
+    const slotIndex = instance.blocks.getBlockIndex('slot');
     const inserted = instance.blocks.insert(
       'header',
       { text: 'Inserted', level: 3 },
@@ -167,10 +167,10 @@ describe('yjs-sync — undo of a reparent back to root', () => {
 
   it('redoes the reparent back into the column', async () => {
     const instance = await createEditor();
-    const slotIndex = instance.blocks.getBlockIndex('slot');
-
+    // A move to the root also moves the block in the flat array.
     instance.blocks.setBlockParent('slot', null);
 
+    const slotIndex = instance.blocks.getBlockIndex('slot');
     const inserted = instance.blocks.insert(
       'header',
       { text: 'Inserted', level: 3 },
@@ -189,12 +189,12 @@ describe('yjs-sync — undo of a reparent back to root', () => {
     instance.history.redo();
     await flush();
 
-    expect(docChildrenOf('c1')).toEqual(['h1', inserted.id, 'body1', 'author1']);
+    expect(docChildrenOf('c1')).toEqual(['h1', 'body1', 'author1', inserted.id]);
 
     const saved = await instance.save();
 
     expect(
       saved.blocks.filter((block) => block.parent === 'c1').map((block) => block.id)
-    ).toEqual(['h1', inserted.id, 'body1', 'author1']);
+    ).toEqual(['h1', 'body1', 'author1', inserted.id]);
   });
 });

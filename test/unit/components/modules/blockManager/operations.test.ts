@@ -158,6 +158,7 @@ const createMockDependencies = (): BlockOperationsDependencies => {
       stopCapturing: vi.fn(),
       continueUndoEntryThatCreated: vi.fn(),
       transact: vi.fn((fn: () => void) => fn()),
+      transactMoves: vi.fn((fn: () => void) => fn()),
       toJSON: vi.fn(() => []),
       getBlockById: vi.fn(() => undefined),
       getBlockDataObject: vi.fn(() => undefined),
@@ -3102,10 +3103,15 @@ describe('BlockOperations', () => {
       // the CRDT while the DOM composes a paragraph, and the divergence would
       // only surface after a reload or a remote sync.
       const neighbour = repository.getBlockByIndex(1);
+      const parent = repository.getBlockById('block-1');
 
-      if (neighbour === undefined) {
-        throw new Error('Test setup failed: block-2 not found');
+      if (neighbour === undefined || parent === undefined) {
+        throw new Error('Test setup failed: block-1 or block-2 not found');
       }
+
+      // block-2 is block-1's last child, so index 2 is inside block-1's subtree.
+      neighbour.parentId = 'block-1';
+      parent.contentIds = ['block-2'];
 
       const cell = document.createElement('div');
 

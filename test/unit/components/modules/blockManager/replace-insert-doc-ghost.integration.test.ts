@@ -182,17 +182,18 @@ describe('replace-insert — the DOC drops the replaced slot', () => {
     ).id;
 
   /**
-   * The toolbox's parented shape (`Toolbox.insertNewBlock`): detach the slot to
-   * root, replace it, re-attach the new block — all inside one tool transaction.
+   * Detach the slot to root, replace it, re-attach the new block — all inside
+   * one tool transaction. The toolbox no longer detaches first, but a host can
+   * still call the API this way.
    */
   const replaceColumnSlot = (instance: TestEditor): string => {
     let insertedId = '';
 
     instance.blocks.transact(() => {
-      const slotIndex = instance.blocks.getBlockIndex('slot');
-
+      // A move to the root also moves the block in the flat array.
       instance.blocks.setBlockParent('slot', null);
 
+      const slotIndex = instance.blocks.getBlockIndex('slot');
       const inserted = instance.blocks.insert(
         'header',
         { text: 'Inserted', level: 3 },

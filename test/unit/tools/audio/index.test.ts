@@ -309,9 +309,8 @@ describe('AudioTool', () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(tool.save().peaks).toBeUndefined();
-    // dispatchChange called exactly once (from applyResult), not again for null peaks
-    const dispatchCalls = (block.dispatchChange as ReturnType<typeof vi.fn>).mock.calls.length;
-    expect(dispatchCalls).toBe(1);
+    // Once for the pick and once for the upload, not again for null peaks.
+    expect(vi.mocked(block.dispatchChange).mock.calls).toEqual([[], [{ derived: true }]]);
   });
 
   it('I3: decoded peaks and duration are cached in data and round-trip through save()', async () => {
@@ -738,5 +737,62 @@ describe('AudioTool — Download is scheme-gated (stored XSS)', () => {
     (downloadItem(tool)?.onActivate as (() => void) | undefined)?.();
 
     expect(hrefs).toEqual(['https://cdn/track.mp3']);
+  });
+});
+
+describe('AudioTool — an upload belongs to the pick that started it', () => {
+  const pasteTrack = (tool: AudioTool): void => {
+    tool.onPaste({ type: 'file', detail: { file: new File(['x'], 'song.mp3', { type: 'audio/mpeg' }) } } as never);
+  };
+
+  const holdUpload = (): ((url: string) => void) => {
+    const gate: { resolve: (url: string) => void } = { resolve: () => undefined };
+
+    uploaderInstances[0].handleFile.mockReturnValueOnce(new Promise((r) => {
+      gate.resolve = (url) => r({ url });
+    }));
+
+    return (url) => gate.resolve(url);
+  };
+
+  it('saves the picked file name as an edit when the pick starts the upload', () => {
+    const block = createMockBlock();
+    const tool = new AudioTool(opts({ url: '' }, {}, block));
+    tool.render();
+    holdUpload();
+
+    pasteTrack(tool);
+
+    expect(tool.save().fileName).toBe('song.mp3');
+    expect(block.dispatchChange).toHaveBeenCalledWith();
+  });
+
+  it('reports the finished upload as derived, not as a new edit', async () => {
+    const block = createMockBlock();
+    const tool = new AudioTool(opts({ url: '' }, {}, block));
+    tool.render();
+    const resolve = holdUpload();
+    pasteTrack(tool);
+    vi.mocked(block.dispatchChange).mockClear();
+
+    resolve('https://cdn/song.mp3');
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(tool.save().url).toBe('https://cdn/song.mp3');
+    expect(block.dispatchChange).toHaveBeenCalled();
+    expect(vi.mocked(block.dispatchChange).mock.calls.every(([options]) => options?.derived === true)).toBe(true);
+  });
+
+  it('drops an upload that finishes after it was cancelled', async () => {
+    const tool = new AudioTool(opts({ url: '' }));
+    const root = tool.render();
+    const resolve = holdUpload();
+    pasteTrack(tool);
+    root.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
+
+    resolve('https://cdn/song.mp3');
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(tool.save().url).toBe('');
   });
 });

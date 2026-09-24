@@ -240,7 +240,8 @@ describe('FileTool mutants', () => {
       await flush();
 
       expect(root.querySelector('[data-role="file-card"]')).not.toBeNull();
-      expect(dispatchChange).toHaveBeenCalledTimes(1);
+      // The pick is the edit; the upload lands as derived data.
+      expect(dispatchChange.mock.calls).toEqual([[], [{ derived: true }]]);
       expect(tool.save()).toStrictEqual({
         url: 'https://cdn.test/report.pdf',
         fileName: 'report.pdf',
@@ -326,7 +327,8 @@ describe('FileTool mutants', () => {
         false,
         true,
       );
-      expect(dispatchChange).not.toHaveBeenCalled();
+      // Only the pick: the converted block reports nothing more.
+      expect(dispatchChange.mock.calls).toEqual([[]]);
     });
 
     it('replaces itself with a video block for an uploaded video', async () => {
@@ -366,7 +368,8 @@ describe('FileTool mutants', () => {
       await uploadNamed(tool, 'report.pdf', 'application/pdf', 'https://cdn.test/report.pdf');
 
       expect(insert).not.toHaveBeenCalled();
-      expect(dispatchChange).toHaveBeenCalledTimes(1);
+      // The pick is the edit; the upload lands as derived data.
+      expect(dispatchChange.mock.calls).toEqual([[], [{ derived: true }]]);
     });
 
     it('keeps the file card when the block can no longer be found', async () => {
@@ -383,7 +386,8 @@ describe('FileTool mutants', () => {
 
       expect(insert).not.toHaveBeenCalled();
       expect(root.querySelector('[data-role="file-card"]')).not.toBeNull();
-      expect(dispatchChange).toHaveBeenCalledTimes(1);
+      // The pick is the edit; the upload lands as derived data.
+      expect(dispatchChange.mock.calls).toEqual([[], [{ derived: true }]]);
     });
 
     it('carries the caption across to the image block', async () => {
@@ -1050,7 +1054,8 @@ describe('FileTool mutants', () => {
 
       expect(insert).not.toHaveBeenCalled();
       expect(root.querySelector('[data-role="file-card"]')).not.toBeNull();
-      expect(dispatchChange).toHaveBeenCalledTimes(1);
+      // The pick is the edit; the upload lands as derived data.
+      expect(dispatchChange.mock.calls).toEqual([[], [{ derived: true }]]);
     });
   });
 });

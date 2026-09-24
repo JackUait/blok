@@ -792,3 +792,78 @@ describe('VideoTool — Download is scheme-gated (stored XSS)', () => {
     expect(hrefs).toEqual(['https://x/y.mp4']);
   });
 });
+
+describe('VideoTool — an upload belongs to the pick that started it', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  const pasteClip = (tool: VideoTool): void => {
+    const event = new CustomEvent('paste', { detail: { file: new File([new Uint8Array(4)], 'clip.mp4', { type: 'video/mp4' }) } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+  };
+
+  const heldUpload = (): { uploadByFile: () => Promise<{ url: string }>; resolve: (url: string) => void } => {
+    const gate: { resolve: (url: string) => void } = { resolve: () => undefined };
+
+    return {
+      uploadByFile: () => new Promise((r) => {
+        gate.resolve = (url) => r({ url });
+      }),
+      resolve: (url) => gate.resolve(url),
+    };
+  };
+
+  it('saves the picked file name as an edit when the pick starts the upload', () => {
+    const block = createMockBlock();
+    const { uploadByFile } = heldUpload();
+    const tool = new VideoTool(createOptions({}, { uploader: { uploadByFile } }, block));
+    tool.render();
+
+    pasteClip(tool);
+
+    expect(tool.save().fileName).toBe('clip.mp4');
+    expect(block.dispatchChange).toHaveBeenCalledWith();
+  });
+
+  it('reports the finished upload as derived, not as a new edit', async () => {
+    const block = createMockBlock();
+    const upload = heldUpload();
+    const tool = new VideoTool(createOptions({}, { uploader: { uploadByFile: upload.uploadByFile } }, block));
+    tool.render();
+    pasteClip(tool);
+    await Promise.resolve();
+
+    upload.resolve('https://cdn/clip.mp4');
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(tool.save().url).toBe('https://cdn/clip.mp4');
+    expect(block.dispatchChange).toHaveBeenLastCalledWith({ derived: true });
+  });
+
+  it('drops an upload that finishes after it was cancelled', async () => {
+    const upload = heldUpload();
+    const tool = new VideoTool(createOptions({}, { uploader: { uploadByFile: upload.uploadByFile } }));
+    const root = tool.render();
+    pasteClip(tool);
+    await Promise.resolve();
+    root.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.click();
+
+    upload.resolve('https://cdn/clip.mp4');
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(tool.save().url).toBe('');
+  });
+
+  it('keeps a pasted video link a tracked edit', () => {
+    const block = createMockBlock();
+    const tool = new VideoTool(createOptions({}, {}, block));
+    tool.render();
+    const event = new CustomEvent('paste', { detail: { key: 'video', data: 'https://x/y.mp4' } }) as PatternPasteEvent;
+    Object.defineProperty(event, 'type', { value: 'pattern' });
+
+    tool.onPaste(event);
+
+    expect(block.dispatchChange).toHaveBeenLastCalledWith();
+  });
+});

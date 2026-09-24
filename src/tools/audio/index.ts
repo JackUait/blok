@@ -260,13 +260,20 @@ export class AudioTool implements BlockTool {
   }
 
   private startUpload(file: File): void {
+    const source = { kind: 'file', file } as const;
+
     this.lastFileName = file.name;
-    this.lastSource = { kind: 'file', file };
+    this.lastSource = source;
     this.state = 'LOADING';
     this.renderState();
+    // Choosing the file is the edit, so the upload's result can join its undo step.
+    this.data = { ...this.data, fileName: file.name };
+    this.block.dispatchChange();
+    const fromUrl = this.data.url;
+
     void this.uploader
       .handleFile(file, { onProgress: (p) => this.uploadingEl?.setProgress(p) })
-      .then((result) => this.applyResult(result, file))
+      .then((result) => this.applyUpload(result, source, fromUrl))
       .catch((err) => this.applyError(err));
   }
 
@@ -281,19 +288,53 @@ export class AudioTool implements BlockTool {
       .catch((err) => this.applyError(err));
   }
 
-  private applyResult(result: UploadResult, file?: File): void {
+  private applyResult(result: UploadResult): void {
     // `removed()` set this: the Block this tool rendered into was destroyed
     // while the upload ran, so `dispatchChange` would reach nobody.
     if (this.destroyed) {
-      const delta: Partial<AudioData> = { url: result.url };
-      const fileName = result.fileName ?? this.lastFileName;
-
-      if (fileName !== null && fileName !== undefined) delta.fileName = fileName;
-      if (file?.type) delta.mimeType = file.type;
-      deliverToRebuiltBlock(this.api, this.block, 'Audio', delta);
+      deliverToRebuiltBlock(this.api, this.block, 'Audio', this.resultDelta(result));
 
       return;
     }
+    this.showResult(result);
+    this.block.dispatchChange();
+    // Enrichment needs the bytes, so a URL insert fetches them (CORS may
+    // block it; the player then keeps the plain scrubber).
+    void this.fetchForEnrichment(result.url);
+  }
+
+  /**
+   * A finished file upload. It lands only while the block still shows the
+   * pick that started it, and as derived data: the edit was the pick.
+   * @param result - what the uploader returned
+   * @param source - the job, still `lastSource` unless cancelled or replaced
+   * @param fromUrl - `data.url` when the job started
+   */
+  private applyUpload(result: UploadResult, source: { kind: 'file'; file: File }, fromUrl: string): void {
+    const { file } = source;
+
+    if (this.destroyed) {
+      deliverToRebuiltBlock(this.api, this.block, 'Audio', this.resultDelta(result, file), { url: fromUrl, fileName: file.name });
+
+      return;
+    }
+    if (this.lastSource !== source || this.data.url !== fromUrl) return;
+    this.showResult(result, file);
+    this.block.dispatchChange({ derived: true });
+    this.enrich(file, result.url);
+  }
+
+  private resultDelta(result: UploadResult, file?: File): Partial<AudioData> {
+    const delta: Partial<AudioData> = { url: result.url };
+    const fileName = result.fileName ?? this.lastFileName;
+
+    if (fileName !== null && fileName !== undefined) delta.fileName = fileName;
+    if (file?.type) delta.mimeType = file.type;
+
+    return delta;
+  }
+
+  private showResult(result: UploadResult, file?: File): void {
     this.data = {
       ...this.data,
       url: result.url,
@@ -303,16 +344,6 @@ export class AudioTool implements BlockTool {
     this.errorMessage = null;
     this.state = 'RENDERED';
     this.renderState();
-    this.block.dispatchChange();
-
-    // Asynchronous enrichment needs the raw bytes: an upload has them in
-    // hand; a URL insert fetches them (subject to CORS — hosts that block
-    // the fetch just keep the plain scrubber).
-    if (file) {
-      this.enrich(file, result.url);
-    } else {
-      void this.fetchForEnrichment(result.url);
-    }
   }
 
   private async fetchForEnrichment(url: string): Promise<void> {

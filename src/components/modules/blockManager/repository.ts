@@ -58,9 +58,9 @@ export class BlockRepository {
    * Blocks that live at the document root (no parent container).
    *
    * The flat store is NOT the document: nested-block tools (table, columns,
-   * toggle, callout) keep their children in the same array, appended at its
-   * TAIL. Anything that means "the document's blocks" must read this, never
-   * the raw array.
+   * toggle, callout) keep their children in the same array, right after the
+   * parent (depth-first). Anything that means "the document's blocks" must
+   * read this, never the raw array.
    * @returns {Block[]} top-level blocks in document order
    */
   public get topLevelBlocks(): Block[] {

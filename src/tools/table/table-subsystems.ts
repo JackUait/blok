@@ -135,6 +135,8 @@ export class TableSubsystems {
   private scrollHaze: TableScrollHaze | null = null;
   private gridPasteCleanup: (() => void) | null = null;
   private pendingHighlight: PendingHighlight | null = null;
+  /** Whether a drag's undo transaction is open (see {@link closeDragTransaction}). */
+  private dragTransactionOpen = false;
 
   constructor(host: TableHost) {
     this.host = host;
@@ -166,6 +168,8 @@ export class TableSubsystems {
    * subsystem initialization order.
    */
   public initAll(gridEl: HTMLElement): void {
+    // The controls below are rebuilt, and a drag in the old ones never ends.
+    this.closeDragTransaction();
     this.initResize(gridEl);
     this.initAddControls(gridEl);
     this.initCornerDrag(gridEl);
@@ -190,6 +194,7 @@ export class TableSubsystems {
    * during destroy(). Does NOT tear down cellBlocks — Table owns that.
    */
   public teardown(): void {
+    this.closeDragTransaction();
     this.resize?.destroy();
     this.resize = null;
     this.addControls?.destroy();
@@ -204,6 +209,30 @@ export class TableSubsystems {
     this.scrollHaze = null;
     this.gridPasteCleanup?.();
     this.gridPasteCleanup = null;
+  }
+
+  /**
+   * Open the undo transaction of a pointer drag, so the drag is one undo step.
+   */
+  private openDragTransaction(): void {
+    if (this.dragTransactionOpen) {
+      return;
+    }
+    this.dragTransactionOpen = true;
+    this.host.api.blocks.beginTransaction?.();
+  }
+
+  /**
+   * Close the drag's undo transaction. It holds the editor's undo capture
+   * open, so a drag cut short (the table is torn down or rebuilt mid-drag,
+   * with no pointerup to come) must close it too.
+   */
+  private closeDragTransaction(): void {
+    if (!this.dragTransactionOpen) {
+      return;
+    }
+    this.dragTransactionOpen = false;
+    this.host.api.blocks.endTransaction?.();
   }
 
   private initAddControls(gridEl: HTMLElement): void {
@@ -267,7 +296,7 @@ export class TableSubsystems {
       onDragStart: () => {
         // Same reason as the corner drag: without an open group each added row
         // or column becomes its own undo entry.
-        this.host.api.blocks.beginTransaction?.();
+        this.openDragTransaction();
 
         if (this.resize) {
           this.resize.enabled = false;
@@ -366,7 +395,7 @@ export class TableSubsystems {
 
         this.addControls?.syncRowButtonWidth();
         dragState.addedCols = 0;
-        this.host.api.blocks.endTransaction?.();
+        this.closeDragTransaction();
       },
     });
 
@@ -460,7 +489,7 @@ export class TableSubsystems {
         // One gesture, one undo entry. Without this each added row is its own
         // stack item: block operations call stopCapturing() per operation and
         // the 500ms Yjs captureTimeout does not merge them.
-        this.host.api.blocks.beginTransaction?.();
+        this.openDragTransaction();
 
         /*
          * Take the column-resize handles out of layout, not just disable them:
@@ -480,7 +509,7 @@ export class TableSubsystems {
         this.addControls?.setDisplay(true);
         this.addControls?.syncRowButtonWidth();
         this.cornerDrag?.syncPosition();
-        this.host.api.blocks.endTransaction?.();
+        this.closeDragTransaction();
       },
       getTableSize: () => {
         return { rows: this.host.model.rows, cols: this.host.model.cols };

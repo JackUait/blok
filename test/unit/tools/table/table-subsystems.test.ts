@@ -197,4 +197,97 @@ describe('TableSubsystems', () => {
       expect(host.api.blocks.endTransaction).toHaveBeenCalledTimes(1);
     });
   });
+
+  /**
+   * A drag's transaction holds the undo capture open. When the table goes
+   * away mid-drag (a peer removes it, a re-render, the editor is destroyed),
+   * no pointerup ever comes, so the owner must close it.
+   */
+  describe('a drag that never ends', () => {
+    const startCornerDrag = (host: TableHost): void => {
+      const hitZone = host.element?.querySelector('[data-blok-table-corner-drag]');
+
+      if (!(hitZone instanceof HTMLElement)) {
+        throw new Error('corner drag hit zone not rendered');
+      }
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true,
+        clientX: 0,
+        clientY: 0,
+        pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { bubbles: true,
+        clientX: 0,
+        clientY: 40,
+        pointerId: 1 }));
+    };
+
+    const startAddRowDrag = (host: TableHost): void => {
+      const button = host.element?.querySelector('[data-blok-table-add-row]');
+
+      if (!(button instanceof HTMLElement)) {
+        throw new Error('add-row button not rendered');
+      }
+
+      button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true,
+        clientX: 0,
+        clientY: 0,
+        pointerId: 1 }));
+      // Past the drag threshold, short of one row (30px fallback).
+      button.dispatchEvent(new PointerEvent('pointermove', { bubbles: true,
+        clientX: 0,
+        clientY: 10,
+        pointerId: 1 }));
+    };
+
+    beforeEach(() => {
+      HTMLElement.prototype.setPointerCapture = vi.fn();
+      HTMLElement.prototype.releasePointerCapture = vi.fn();
+    });
+
+    it('closes the corner drag transaction on teardown', () => {
+      const { subsystems, gridEl, host } = createSubsystems();
+
+      subsystems.initAll(gridEl);
+      startCornerDrag(host);
+      expect(host.api.blocks.beginTransaction).toHaveBeenCalledTimes(1);
+
+      subsystems.teardown();
+
+      expect(host.api.blocks.endTransaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('closes the corner drag transaction when the controls are rebuilt', () => {
+      const { subsystems, gridEl, host } = createSubsystems();
+
+      subsystems.initAll(gridEl);
+      startCornerDrag(host);
+
+      subsystems.initAll(gridEl);
+
+      expect(host.api.blocks.endTransaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('closes the add-row drag transaction on teardown', () => {
+      const { subsystems, gridEl, host } = createSubsystems();
+
+      subsystems.initAll(gridEl);
+      startAddRowDrag(host);
+      expect(host.api.blocks.beginTransaction).toHaveBeenCalledTimes(1);
+
+      subsystems.teardown();
+
+      expect(host.api.blocks.endTransaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('closes a transaction once, not again on a later teardown', () => {
+      const { subsystems, gridEl, host } = createSubsystems();
+
+      subsystems.initAll(gridEl);
+      startCornerDrag(host);
+      subsystems.teardown();
+      subsystems.teardown();
+
+      expect(host.api.blocks.endTransaction).toHaveBeenCalledTimes(1);
+    });
+  });
 });

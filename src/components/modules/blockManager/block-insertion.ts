@@ -17,6 +17,7 @@ import { subtreeEndIndex } from '../../utils/blocks-tree';
 import { SELF_PLACING_PARENTS } from '../../../tools/nested-blocks';
 import { findOwn } from '../../utils/own-element';
 import { canAdoptChild, releasesChildrenOnTurnInto } from '../../utils/turn-into-children';
+import { flatIndexForPlacement, type TreePlacement } from '../../utils/tree-order';
 import type { BlockFactory } from './factory';
 import type { BlockHierarchy } from './hierarchy';
 import type { BlockRepository } from './repository';
@@ -101,6 +102,10 @@ export class BlockInsertion {
    * @returns The inserted block
    */
   public insert(options: InsertBlockOptions = {}, blocksStore: BlocksStore): Block {
+    if (options.placement !== undefined) {
+      return this.insertAtPlacement(options, options.placement, blocksStore);
+    }
+
     const {
       id = undefined,
       tool,
@@ -416,16 +421,7 @@ export class BlockInsertion {
           this.writeChildPlacements(replacedContentIds);
         }
 
-        // A tool's rendered() (callout's first line) adds its child before
-        // this block exists in the doc, so that child got no order slot.
-        block.contentIds.forEach((childId, position) => {
-          if (!replacedContentIds.includes(childId)) {
-            this.dependencies.YjsManager.applyBlockPlacement(childId, {
-              parentId: block.id,
-              afterId: position > 0 ? block.contentIds[position - 1] : null,
-            });
-          }
-        });
+        this.writeRenderedChildPlacements(block, replacedContentIds);
       });
     }
 
@@ -438,6 +434,118 @@ export class BlockInsertion {
     this.ctx.assertHierarchyInvariantInDev('insert');
 
     return block;
+  }
+
+  /**
+   * {@link insert} for a caller that names the block's place in the tree:
+   * the model, the holder, the event and the shared doc all take `placement`
+   * as given, nothing is inferred from flat neighbours.
+   * @param options - insert options; `index` and `replace` are refused
+   * @param placement - parent + previous sibling
+   * @param blocksStore - The blocks store to modify
+   */
+  private insertAtPlacement(options: InsertBlockOptions, placement: TreePlacement, blocksStore: BlocksStore): Block {
+    const { id, tool, data, tunes, needToFocus = true, skipYjsSync = false, origin = 'api' } = options;
+
+    if (options.index !== undefined || options.replace === true) {
+      throw new Error('Could not insert Block. A placement cannot be combined with an index or a replace.');
+    }
+
+    const name = tool ?? this.dependencies.config.defaultBlock;
+
+    if (name === undefined) {
+      throw new Error('Could not insert Block. Tool name is not specified.');
+    }
+
+    const prevIndex = this.ctx.rawCurrentBlockIndex;
+    // Throws on an unknown parent or sibling, before anything changes.
+    const index = flatIndexForPlacement({ blocks: this.repository.blocks, getById: blockId => this.repository.getBlockById(blockId) }, placement);
+    const parent = placement.parentId === null ? undefined : this.repository.getBlockById(placement.parentId);
+    const defaultTool = this.dependencies.config.defaultBlock ?? 'paragraph';
+    const resolvedToolName = parent !== undefined && isInsideTableCell(parent) && isRestrictedInTableCell(name)
+      ? defaultTool
+      : resolveChildTool(parent, name, defaultTool);
+
+    const block = this.factory.composeBlock({
+      tool: resolvedToolName,
+      bindEventsImmediately: true,
+      origin,
+      ...(id !== undefined && { id }),
+      ...(data !== undefined && { data }),
+      ...(tunes !== undefined && { tunes }),
+    });
+
+    // Appended at the root end, then mounted in its home slot by placeBlock.
+    blocksStore.insert(index, block, false, true);
+    this.hierarchy.placeBlock(block, placement);
+    this.hideUnderCollapsedParent(block);
+
+    if (needToFocus) {
+      this.ctx.setCurrentBlockRaw(block);
+    }
+
+    this.blockDidMutated(BlockAddedMutationType, block, {
+      index: this.repository.getBlockIndex(block),
+      parentId: placement.parentId,
+    });
+
+    // Same gate as insert(): a Yjs replay still adds a block the doc lacks.
+    if (!skipYjsSync && (!this.yjsSync.isSyncingFromYjs || this.dependencies.YjsManager.getBlockById(block.id) === undefined)) {
+      this.dependencies.YjsManager.transact(() => {
+        this.dependencies.YjsManager.addBlockAt({
+          id: block.id,
+          type: block.name,
+          data: block.preservedData,
+        }, placement);
+        this.writeRenderedChildPlacements(block);
+      });
+    }
+
+    this.ctx.endUndoStepIfCurrentIndexChanged(prevIndex);
+    this.ctx.assertHierarchyInvariantInDev('insert');
+
+    return block;
+  }
+
+  /**
+   * Writes the doc placement of each child a tool's rendered() added before
+   * `block` existed in the doc (callout's first line): those got no order slot.
+   * @param block - the new block
+   * @param skipIds - children the doc already places
+   */
+  private writeRenderedChildPlacements(block: Block, skipIds: string[] = []): void {
+    block.contentIds.forEach((childId, position) => {
+      if (!skipIds.includes(childId)) {
+        this.dependencies.YjsManager.applyBlockPlacement(childId, {
+          parentId: block.id,
+          afterId: position > 0 ? block.contentIds[position - 1] : null,
+        });
+      }
+    });
+  }
+
+  /**
+   * Hides a new block whose parent is collapsed, as setBlockParent does:
+   * placeBlock leaves visibility to the caller.
+   * @param block - the new block, already placed
+   */
+  private hideUnderCollapsedParent(block: Block): void {
+    const parent = block.parentId === null ? undefined : this.repository.getBlockById(block.parentId);
+
+    if (parent === undefined) {
+      return;
+    }
+
+    const siblings = parent.contentIds
+      .filter(childId => childId !== block.id)
+      .map(childId => this.repository.getBlockById(childId))
+      .filter((sibling): sibling is Block => sibling !== undefined);
+    const collapsed = findOwn(parent.holder, '[data-blok-toggle-open="false"]') !== null
+      || (siblings.length > 0 && siblings.every(sibling => sibling.holder.classList.contains('hidden')));
+
+    if (collapsed) {
+      block.holder.classList.add('hidden');
+    }
   }
 
   /**
@@ -883,16 +991,15 @@ export class BlockInsertion {
     const insertIndex = this.clampIntoSubtree(parentBlock, requestedIndex);
     const newBlockId = requestedId ?? generateBlockId();
     const defaultBlockTool = this.dependencies.config.defaultBlock ?? 'paragraph';
+    // Tables and databases place their children in their own cells/views.
+    const selfPlaced = this.isSelfPlacedParent(parentBlock);
     /**
-     * Resolve the tool name ONCE, BEFORE the Yjs write. `ctx.insert()` runs its
-     * own table-cell demotion against the block the new one lands after;
-     * deferring to it would let the CRDT record `type: 'header'` while the DOM
-     * composes a paragraph — a divergence that only surfaces after a reload or
-     * a remote sync. So the check here has to cover BOTH anchors: the parent
-     * (semantic containment) and that same insert-slot neighbour.
+     * Resolve the tool name ONCE, BEFORE the Yjs write, so the CRDT and the
+     * DOM get the same type. On the index path `ctx.insert()` also demotes by
+     * the block the new one lands after, so that neighbour is checked too.
      */
     const requestedTool = toolName ?? defaultBlockTool;
-    const slotNeighbour = this.repository.getBlockByIndex(insertIndex > 0 ? insertIndex - 1 : 0);
+    const slotNeighbour = selfPlaced ? this.repository.getBlockByIndex(insertIndex > 0 ? insertIndex - 1 : 0) : undefined;
     const landsInsideTableCell = isInsideTableCell(parentBlock) || isInsideTableCell(slotNeighbour);
     /**
      * The parent is EXPLICIT here, so the generic per-container child
@@ -919,15 +1026,26 @@ export class BlockInsertion {
       throw new ToolNotFoundError(resolvedTool, `Could not insert child Block. Tool «${resolvedTool}» not found.`);
     }
 
+    // The child the new block follows: the last one before the slot. A slot
+    // inside that child's subtree lands after the subtree.
+    const placement: TreePlacement = {
+      parentId,
+      afterId: this.repository.blocks.slice(0, insertIndex).filter(candidate => candidate.parentId === parentId).pop()?.id ?? null,
+    };
+
+    // extendThroughRAF keeps isSyncingFromYjs=true through RAF, so the
+    // MutationObserver writes that mounting into a toggle's children container
+    // triggers stay out of Yjs (they would split the undo entry).
     return this.yjsSync.withAtomicOperation(() => {
       // Atomic Yjs transaction: add new block with parent (single undo entry)
       this.dependencies.YjsManager.transact(() => {
-        this.dependencies.YjsManager.addBlock({
-          id: newBlockId,
-          type: resolvedTool,
-          data: resolvedChildData,
-          parent: parentId,
-        }, insertIndex);
+        const blockData = { id: newBlockId, type: resolvedTool, data: resolvedChildData };
+
+        if (selfPlaced) {
+          this.dependencies.YjsManager.addBlock({ ...blockData, parent: parentId }, insertIndex);
+        } else {
+          this.dependencies.YjsManager.addBlockAt(blockData, placement);
+        }
       });
 
       // Insert DOM block (skip Yjs sync — already done above)
@@ -935,27 +1053,38 @@ export class BlockInsertion {
         id: newBlockId,
         tool: resolvedTool,
         data: resolvedChildData,
-        index: insertIndex,
         needToFocus: focus,
         skipYjsSync: true,
-        eventParentId: parentId,
+        ...(selfPlaced ? { index: insertIndex, eventParentId: parentId } : { placement }),
         ...(tunes !== undefined && { tunes }),
       }, blocksStore);
 
       // Update the current block AFTER insert so blockDidMutated sees original as current
       this.ctx.setCurrentBlockRaw(newBlock);
 
-      // Set parent relationship (updates parentId, contentIds, and DOM placement).
-      // Moving the block into the toggle's children container triggers a MutationObserver
-      // on the toggle holder. extendThroughRAF keeps isSyncingFromYjs=true through RAF so
-      // that MutationObserver-triggered blockDidMutated calls are suppressed (they would
-      // otherwise create a second Yjs undo entry for the toggle data update, splitting undo).
-      this.hierarchy.setBlockParent(newBlock, parentId);
+      if (selfPlaced) {
+        this.hierarchy.setBlockParent(newBlock, parentId);
+      }
 
       this.ctx.assertHierarchyInvariantInDev('insertInsideParent');
 
       return newBlock;
     }, { extendThroughRAF: true });
+  }
+
+  /**
+   * Whether `block` is a table/database or sits under one: its children are
+   * placed by the tool, so inserts under it keep the flat-index path.
+   * @param block - the prospective parent
+   */
+  private isSelfPlacedParent(block: Block): boolean {
+    const walk = (cursor: Block | undefined, seen: Set<string>): boolean =>
+      cursor !== undefined && !seen.has(cursor.id) && (
+        SELF_PLACING_PARENTS.has(cursor.name)
+        || walk(cursor.parentId === null ? undefined : this.repository.getBlockById(cursor.parentId), seen.add(cursor.id))
+      );
+
+    return walk(block, new Set<string>());
   }
 
   /**

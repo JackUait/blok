@@ -25,8 +25,12 @@ interface TestEditor {
   blocks: API['blocks'];
   history: { undo: () => void; redo: () => void };
   module: {
-    blockManager: { blocks: Block[]; currentBlockIndex: number };
-    yjsManager: { stopCapturing: () => void };
+    blockManager: {
+      blocks: Block[];
+      currentBlockIndex: number;
+      insert: (options: { id?: string; tool?: string; data?: Record<string, unknown>; placement?: { parentId: string | null; afterId: string | null } }) => Block;
+    };
+    yjsManager: { stopCapturing: () => void; toJSON: () => OutputBlockData[]; addBlock: (...args: unknown[]) => unknown; addBlockAt: (...args: unknown[]) => unknown };
     paste: { processText: (data: string, isHTML?: boolean) => Promise<void> };
   };
 }
@@ -161,6 +165,16 @@ const saved = async (instance: TestEditor): Promise<string[]> => {
 
   return output.blocks.map(block => `${block.id ?? '?'}^${block.parent ?? '-'}`);
 };
+
+/** Each holder in document order, as `id<id of the block whose holder contains it`. */
+const dom = (): string[] =>
+  Array.from(holder?.querySelectorAll('[data-blok-id]') ?? []).map(element =>
+    `${element.getAttribute('data-blok-id') ?? '?'}<${element.parentElement?.closest('[data-blok-id]')?.getAttribute('data-blok-id') ?? '-'}`
+  );
+
+/** The shared document, as `id^parent`. */
+const shared = (instance: TestEditor): string[] =>
+  instance.module.yjsManager.toJSON().map(block => `${block.id ?? '?'}^${block.parent ?? '-'}`);
 
 const contentOf = (instance: TestEditor, id: string): string[] =>
   instance.module.blockManager.blocks.find(block => block.id === id)?.contentIds ?? [];
@@ -685,6 +699,144 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       instance.blocks.move(3, 0);
 
       expect(pickMoved({ ...seen.filter(event => event.type === 'block-moved').at(-1)?.detail })).toEqual({ parentId: 't', oldParentId: null, previousSiblingId: 'c1' });
+    }, 30_000);
+  });
+
+  /** `id^parent` entries as `id<container` DOM entries: toggle children sit in its slot. */
+  const domFor = (expected: string[]): string[] => expected.map(entry => entry.replace('^', '<'));
+
+  describe('BlockManager.insert with a placement', () => {
+    const cases: Array<{ name: string; placement: { parentId: string | null; afterId: string | null }; expected: string[] }> = [
+      { name: 'the root start', placement: { parentId: null, afterId: null }, expected: ['n^-', ...INITIAL] },
+      { name: 'after the toggle, past its subtree', placement: { parentId: null, afterId: 't' }, expected: ['a^-', 't^-', 'c1^t', 'c2^t', 'n^-', 'b^-'] },
+      { name: 'the first child of the toggle', placement: { parentId: 't', afterId: null }, expected: ['a^-', 't^-', 'n^t', 'c1^t', 'c2^t', 'b^-'] },
+      { name: 'between two children', placement: { parentId: 't', afterId: 'c1' }, expected: ['a^-', 't^-', 'c1^t', 'n^t', 'c2^t', 'b^-'] },
+    ];
+
+    it.each(cases)('puts the block at $name in memory, DOM, save and the shared doc', async ({ placement, expected }) => {
+      const instance = await boot();
+
+      instance.module.blockManager.currentBlockIndex = 0;
+      const block = instance.module.blockManager.insert({ id: 'n', tool: 'paragraph', data: { text: 'n' }, placement });
+
+      expect(flat(instance)).toEqual(expected);
+      expect(block.parentId).toBe(placement.parentId);
+      expect(contentOf(instance, 't')).toEqual(expected.filter(entry => entry.endsWith('^t')).map(entry => entry.split('^')[0]));
+      expect(dom()).toEqual(domFor(expected));
+      expect(await saved(instance)).toEqual(expected);
+      expect(shared(instance)).toEqual(expected);
+    }, 30_000);
+
+    it('reports the placement and the final index on block-added', async () => {
+      const instance = await boot();
+      const seen = events(instance);
+
+      instance.module.blockManager.insert({ id: 'n', tool: 'paragraph', placement: { parentId: 't', afterId: 'c1' } });
+
+      const added = seen.filter(event => event.type === 'block-added').at(-1);
+
+      expect({ index: added?.detail.index, ...pick({ ...added?.detail }) }).toEqual({ index: 3, parentId: 't', previousSiblingId: 'c1' });
+    }, 30_000);
+
+    it('writes the placement to the shared doc, not a flat index', async () => {
+      const instance = await boot();
+      const addBlock = vi.spyOn(instance.module.yjsManager, 'addBlock');
+      const addBlockAt = vi.spyOn(instance.module.yjsManager, 'addBlockAt');
+
+      instance.module.blockManager.insert({ id: 'n', tool: 'paragraph', placement: { parentId: 't', afterId: 'c1' } });
+
+      expect(addBlock).not.toHaveBeenCalled();
+      expect(addBlockAt).toHaveBeenCalledWith(expect.objectContaining({ id: 'n' }), { parentId: 't', afterId: 'c1' });
+    }, 30_000);
+
+    it('demotes a tool the parent does not allow', async () => {
+      const instance = await boot([...doc(), { id: 'o', type: 'only', data: {} }]);
+
+      const block = instance.module.blockManager.insert({ id: 'n', tool: 'header', placement: { parentId: 'o', afterId: null } });
+
+      expect(block.name).toBe('paragraph');
+      expect(block.parentId).toBe('o');
+    }, 30_000);
+
+    it('is one undo step', async () => {
+      const instance = await boot();
+
+      instance.module.blockManager.insert({ id: 'n', tool: 'paragraph', placement: { parentId: 't', afterId: 'c1' } });
+      await undoOnce(instance);
+
+      expect(await saved(instance)).toEqual(INITIAL);
+      expect(shared(instance)).toEqual(INITIAL);
+    }, 30_000);
+  });
+
+  describe('insertInsideParent', () => {
+    // Flat indexes into INITIAL: 2 = the toggle's first child slot, 3 = between c1 and c2, 4 = after c2.
+    const cases = [
+      { name: 'the start', index: 2, expected: ['a^-', 't^-', 'n^t', 'c1^t', 'c2^t', 'b^-'] },
+      { name: 'the middle', index: 3, expected: ['a^-', 't^-', 'c1^t', 'n^t', 'c2^t', 'b^-'] },
+      { name: 'the end', index: 4, expected: ['a^-', 't^-', 'c1^t', 'c2^t', 'n^t', 'b^-'] },
+    ];
+
+    it.each(cases)('puts the child at $name in memory, DOM, save and the shared doc', async ({ index, expected }) => {
+      const instance = await boot();
+
+      instance.blocks.insertInsideParent('t', index, { text: 'n' }, 'paragraph', { id: 'n' });
+
+      expect(flat(instance)).toEqual(expected);
+      expect(contentOf(instance, 't')).toEqual(expected.filter(entry => entry.endsWith('^t')).map(entry => entry.split('^')[0]));
+      expect(dom()).toEqual(domFor(expected));
+      expect(await saved(instance)).toEqual(expected);
+      expect(shared(instance)).toEqual(expected);
+    }, 30_000);
+
+    it('lands after the whole subtree of the child it would split, and says so', async () => {
+      const instance = await boot([T('t', ['c1', 'c2']), P('c1', 't', ['c1a']), P('c1a', 'c1'), P('c2', 't')]);
+      const seen = events(instance);
+
+      // Index 2 is between c1 and its own child c1a.
+      instance.blocks.insertInsideParent('t', 2, { text: 'n' }, 'paragraph', { id: 'n' });
+
+      const expected = ['t^-', 'c1^t', 'c1a^c1', 'n^t', 'c2^t'];
+      const added = seen.filter(event => event.type === 'block-added').at(-1);
+
+      expect({ index: added?.detail.index, ...pick({ ...added?.detail }) }).toEqual({ index: 3, parentId: 't', previousSiblingId: 'c1' });
+      expect(flat(instance)).toEqual(expected);
+      expect(await saved(instance)).toEqual(expected);
+      expect(shared(instance)).toEqual(expected);
+    }, 30_000);
+
+    it('writes the placement to the shared doc, not a flat index', async () => {
+      const instance = await boot();
+      const addBlock = vi.spyOn(instance.module.yjsManager, 'addBlock');
+      const addBlockAt = vi.spyOn(instance.module.yjsManager, 'addBlockAt');
+
+      instance.blocks.insertInsideParent('t', 3, { text: 'n' }, 'paragraph', { id: 'n' });
+
+      expect(addBlock).not.toHaveBeenCalled();
+      expect(addBlockAt).toHaveBeenCalledWith(expect.objectContaining({ id: 'n' }), { parentId: 't', afterId: 'c1' });
+    }, 30_000);
+
+    it('hides a child added to a collapsed toggle', async () => {
+      const instance = await boot([P('a'), { ...T('t', ['c1']), data: { text: 't', isOpen: false } }, P('c1', 't')]);
+
+      const block = instance.blocks.insertInsideParent('t', 3, { text: 'n' }, 'paragraph', { id: 'n' });
+
+      expect(block.holder.classList.contains('hidden')).toBe(true);
+      expect(await saved(instance)).toEqual(['a^-', 't^-', 'c1^t', 'n^t']);
+    }, 30_000);
+
+    it('is one undo step and redoes', async () => {
+      const instance = await boot();
+
+      instance.blocks.insertInsideParent('t', 3, { text: 'n' }, 'paragraph', { id: 'n' });
+      await undoOnce(instance);
+
+      expect(await saved(instance)).toEqual(INITIAL);
+
+      instance.history.redo();
+      await nextFrames(3);
+
+      expect(await saved(instance)).toEqual(['a^-', 't^-', 'c1^t', 'n^t', 'c2^t', 'b^-']);
     }, 30_000);
   });
 });

@@ -8,6 +8,7 @@ import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-dat
 import type { BlockMutationType, BlockMutationEventMap } from '../../../../types/events/block';
 import type { Block } from '../../block';
 import type { Blocks } from '../../blocks';
+import type { TreePlacement } from '../../utils/tree-order';
 
 export type { InsertInsideParentOptions };
 
@@ -94,6 +95,13 @@ export interface InsertBlockOptions {
    * `inferParent`) the event carries no placement.
    */
   eventParentId?: string | null;
+  /**
+   * Where the block goes: under `parentId`, right after sibling `afterId`
+   * (null = first). Replaces `index` and every parent inference; a tool the
+   * parent refuses is demoted. Under a table/database the holder stays where
+   * the store put it: the tool must place it.
+   */
+  placement?: TreePlacement;
   /**
    * Why this Block is being created — see {@link ComposeBlockOptions.origin}.
    * Defaults to `'api'`.

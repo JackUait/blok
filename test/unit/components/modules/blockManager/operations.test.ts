@@ -149,6 +149,8 @@ const createMockDependencies = (): BlockOperationsDependencies => {
     },
     YjsManager: {
       addBlock: vi.fn(),
+      addBlockAt: vi.fn(),
+      applyBlockPlacement: vi.fn(),
       removeBlock: vi.fn(),
       replaceBlockContent: vi.fn(() => true),
       moveBlock: vi.fn(),
@@ -337,7 +339,7 @@ describe('BlockOperations', () => {
     factory = createMockBlockFactory();
 
     // Setup hierarchy
-    hierarchy = new BlockHierarchy(repository);
+    hierarchy = new BlockHierarchy(repository, undefined, undefined, blocksStore);
 
     // Setup YjsSync
     yjsSync = createMockYjsSync();
@@ -1804,7 +1806,7 @@ describe('BlockOperations', () => {
 
       testRepo.initialize(testStore);
 
-      const testHierarchy = new BlockHierarchy(testRepo);
+      const testHierarchy = new BlockHierarchy(testRepo, undefined, undefined, testStore);
       const lifecycleOperations = new BlockOperations(
         dependencies,
         testRepo,
@@ -3127,15 +3129,14 @@ describe('BlockOperations', () => {
       expect(newBlock.parentId).toBe('block-1');
     });
 
-    it('calls YjsManager.addBlock with parent id', () => {
-      operations.insertInsideParent('block-1', 1, blocksStore);
+    it('writes the new block to Yjs at its placement under the parent', () => {
+      const newBlock = operations.insertInsideParent('block-1', 1, blocksStore);
 
-      const addBlockCalls = (dependencies.YjsManager.addBlock as ReturnType<typeof vi.fn>).mock.calls;
-      const callWithParent = addBlockCalls.find(
-        (call: unknown[]) => (call[0] as { parent?: string })?.parent === 'block-1'
+      expect(dependencies.YjsManager.addBlock).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.addBlockAt).toHaveBeenCalledWith(
+        expect.objectContaining({ id: newBlock.id }),
+        { parentId: 'block-1', afterId: null }
       );
-
-      expect(callWithParent).toBeDefined();
     });
 
     it('sets parentId on the newly created block', () => {
@@ -3187,13 +3188,13 @@ describe('BlockOperations', () => {
     });
 
     /**
-     * The Yjs `addBlock` payload recorded for a given block id — the CRDT half
+     * The Yjs `addBlockAt` payload recorded for a given block id — the CRDT half
      * of the insert, which must agree with the composed DOM block.
      * @param blockId - id of the inserted block
      * @returns the payload, or undefined when the block was never written
      */
     const yjsPayloadFor = (blockId: string): { type?: string; data?: BlockToolData } | undefined => {
-      const calls = (dependencies.YjsManager.addBlock as ReturnType<typeof vi.fn>).mock.calls;
+      const calls = (dependencies.YjsManager.addBlockAt as ReturnType<typeof vi.fn>).mock.calls;
       const match = calls.find((call: unknown[]) => (call[0] as { id?: string })?.id === blockId);
 
       return match?.[0] as { type?: string; data?: BlockToolData } | undefined;
@@ -3239,12 +3240,10 @@ describe('BlockOperations', () => {
       expect(yjsPayloadFor(newBlock.id)?.data).toEqual({});
     });
 
-    it('keeps the Yjs type and the composed block in agreement when the insert slot sits in a table cell', () => {
-      // The parent itself is NOT in a cell, but the block the new child lands
-      // after IS — which is the neighbour `insert()` runs its own demotion
-      // against. Resolving only from the parent would write `type: 'header'` to
-      // the CRDT while the DOM composes a paragraph, and the divergence would
-      // only surface after a reload or a remote sync.
+    it('keeps the Yjs type and the composed block in agreement when only the insert-slot neighbour sits in a table cell', () => {
+      // The parent is NOT in a cell, the block the new child lands after IS.
+      // The parent alone picks the tool, for the CRDT and the DOM alike: a
+      // split decision would only surface after a reload or a remote sync.
       const neighbour = repository.getBlockByIndex(1);
       const parent = repository.getBlockById('block-1');
 
@@ -3264,8 +3263,8 @@ describe('BlockOperations', () => {
 
       const newBlock = operations.insertInsideParent('block-1', 2, blocksStore, {}, 'header');
 
-      expect(newBlock.name).toBe('paragraph');
       expect(yjsPayloadFor(newBlock.id)?.type).toBe(newBlock.name);
+      expect(newBlock.name).toBe('header');
     });
 
     it('rejects an unregistered requested tool BEFORE anything is written to Yjs', () => {
@@ -3276,6 +3275,7 @@ describe('BlockOperations', () => {
       // A Yjs write that lands before the DOM insert throws would leave a
       // phantom block in the CRDT with no counterpart in the document.
       expect(dependencies.YjsManager.addBlock).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.addBlockAt).not.toHaveBeenCalled();
     });
 
     it('still seeds the default block with { text: "" } when no tool is requested', () => {

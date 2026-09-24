@@ -16,6 +16,7 @@ import { isChildToolAllowed } from '../../utils/child-tools';
 import { canAdoptChild, releasesChildrenOnTurnInto } from '../../utils/turn-into-children';
 import { sanitizeBlocks, clean, composeSanitizerConfig, stripUnsafeUrlsDeep } from '../../utils/sanitizer';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
+import { SELF_PLACING_PARENTS } from '../../../tools/nested-blocks';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
 import type { TreePlacement } from '../../utils/tree-order';
 import { getBlockNestingDepth } from '../drag/utils/depthUtils';
@@ -958,18 +959,22 @@ export class BlockMutation {
       return;
     }
 
-    // A table lists its blocks per cell, so a slot in another cell (or outside
-    // the table) is refused, as blocks.moveTo refuses it. A drag (move group)
-    // may take a block out of its cell; the drop target never offers another cell.
-    if (
-      movingBlock !== undefined
-      && neighborBlock !== undefined
-      && !inCallerMoveGroup
-      && tableCellOf(movingBlock) !== tableCellOf(neighborBlock)
-    ) {
-      log(`Warning during 'move' call: a block cannot move into, out of or between table cells.`, 'warn');
+    // A table lists its blocks per cell: a slot in another cell, or a new
+    // table/database parent, is refused (blocks.moveTo throws there). Leaving
+    // a cell for a slot outside the table stays allowed.
+    if (movingBlock !== undefined && neighborBlock !== undefined && !inCallerMoveGroup) {
+      const neighborCell = tableCellOf(neighborBlock);
+      const sameCell = neighborCell === tableCellOf(movingBlock);
+      const destination = destinationParentId === null ? undefined : this.repository.getBlockById(destinationParentId);
+      const entersSelfPlacing = destination !== undefined
+        && SELF_PLACING_PARENTS.has(destination.name)
+        && (movingBlock.parentId !== destinationParentId || !sameCell);
 
-      return;
+      if ((neighborCell !== null && !sameCell) || entersSelfPlacing) {
+        log(`Warning during 'move' call: a block cannot move into or between table cells.`, 'warn');
+
+        return;
+      }
     }
 
     /**
@@ -1095,15 +1100,27 @@ export class BlockMutation {
       // The slot before anything moves; one inside or right after the subtree moves nothing.
       const slot = this.slotBeforeMove(placement);
       const movesFlat = slot <= fromIndex || slot > fromIndex + members.length;
-      const order = [...blocks];
+      // Replayed before anything moves: the slots read the parents as they were.
+      const steps = movesFlat ? this.replaySubtreeMove(members, fromIndex < slot ? slot - 1 : slot) : [];
 
       this.ctx.suppressStopCapturing = true;
       try {
         this.hierarchy.placeBlock(block, target, { reindent: false });
 
-        if (movesFlat) {
-          this.announceSubtreeMove(order, members, fromIndex < slot ? slot - 1 : slot, atRoot, oldParentId, blocksStore);
-        }
+        steps.forEach(({ report, order }) => {
+          const { block: member, slotParentId } = report;
+          const parentId = member === block ? oldParentId : member.parentId;
+
+          this.announceAsIndexMove(order, () => {
+            this.fireMoveHooks(report, atRoot.has(member), blocksStore);
+            this.blockDidMutated(BlockMovedMutationType, member, {
+              fromIndex: report.fromIndex,
+              toIndex: report.resolvedIndex,
+              ...(slotParentId === parentId && { parentId, oldParentId: parentId }),
+            });
+          });
+          this.ctx.currentBlockIndexValue = this.repository.getBlockIndex(member);
+        });
 
         this.dependencies.YjsManager.moveBlockTo(block.id, target);
       } finally {
@@ -1113,8 +1130,7 @@ export class BlockMutation {
       if (oldParentId !== target.parentId) {
         this.announceReparent(block, oldParentId, this.repository.getBlockIndex(block));
       } else if (target.parentId !== null) {
-        this.reindentChildren(target.parentId);
-        this.hierarchy.announceChildPlaced(target.parentId);
+        this.reassertChildren(target.parentId);
       }
 
       this.ctx.assertHierarchyInvariantInDev('move');
@@ -1122,47 +1138,29 @@ export class BlockMutation {
   }
 
   /**
-   * The events of a subtree moved by index: `Blocks.move` of the root to
-   * `toIndex`, then each descendant it did not carry moved after the member
-   * before it. Replayed on the array as it was before the move, so every
-   * event reports the indices it always did.
-   * @param order - a copy of the array before the move (replayed in place)
+   * The index moves that used to carry a subtree: `Blocks.move` of the root
+   * to `toIndex`, then each descendant it did not carry moved after the
+   * member before it. Replayed on a copy of the array, with the array after
+   * each step, so every event can report the indices it always did.
    * @param members - the subtree, root first, in flat order
    * @param toIndex - the root's index after the move
-   * @param atRoot - members whose holders sat in the working area before the move
-   * @param rootParentId - the root's parent before the move
-   * @param blocksStore - The blocks store
    */
-  private announceSubtreeMove(
-    order: Block[],
-    members: Block[],
-    toIndex: number,
-    atRoot: Set<Block>,
-    rootParentId: string | null,
-    blocksStore: BlocksStore
-  ): void {
-    members.forEach((member, k) => {
-      const parentId = k === 0 ? rootParentId : member.parentId;
+  private replaySubtreeMove(members: Block[], toIndex: number): Array<{ report: IndexMoveReport; order: Block[] }> {
+    const order = [...this.repository.blocks];
+
+    return members.flatMap((member, k) => {
       const anchor = k === 0 ? -1 : order.indexOf(members[k - 1]);
       const memberFrom = order.indexOf(member);
 
       if (k > 0 && memberFrom === anchor + 1) {
-        return;
+        return [];
       }
 
       // A descendant goes right after the member before it.
       const afterAnchor = memberFrom < anchor ? anchor : anchor + 1;
       const report = replayIndexMove(order, member, k === 0 ? toIndex : afterAnchor);
 
-      this.announceAsIndexMove(order, () => {
-        this.fireMoveHooks(report, atRoot.has(member), blocksStore);
-        this.blockDidMutated(BlockMovedMutationType, member, {
-          fromIndex: report.fromIndex,
-          toIndex: report.resolvedIndex,
-          ...(report.slotParentId === parentId && { parentId, oldParentId: parentId }),
-        });
-      });
-      this.ctx.currentBlockIndexValue = this.repository.getBlockIndex(member);
+      return [ { report, order: [...order] } ];
     });
   }
 
@@ -1207,8 +1205,10 @@ export class BlockMutation {
           blocksStore.callRenderedHook(block);
         }
 
+        // What re-asserting the unchanged parent used to do.
         if (!options.skipDOM && !reparents && !this.dependencies.YjsManager.isInMoveGroup && parentId !== null) {
           this.hierarchy.reindentSubtree(block);
+          this.hierarchy.syncVisibilityWithParent(block, parentId);
         }
 
         this.blockDidMutated(BlockMovedMutationType, block, {
@@ -1307,15 +1307,19 @@ export class BlockMutation {
   }
 
   /**
-   * Re-indents each child of `parentId`, last first, as re-asserting each
-   * child's parent used to.
+   * What re-asserting each child's unchanged parent used to do, last child
+   * first: re-indent, hide under a collapsed parent, sync the parent's data.
    * @param parentId - the parent
    */
-  private reindentChildren(parentId: string): void {
+  private reassertChildren(parentId: string): void {
     this.repository.blocks
       .filter(block => block.parentId === parentId)
       .reverse()
-      .forEach(block => this.hierarchy.reindentSubtree(block));
+      .forEach(block => {
+        this.hierarchy.reindentSubtree(block);
+        this.hierarchy.syncVisibilityWithParent(block, parentId);
+      });
+    this.hierarchy.announceChildPlaced(parentId);
   }
 
   /**
@@ -2011,8 +2015,7 @@ export class BlockMutation {
       return;
     }
 
-    this.reindentChildren(containerParentId);
-    this.hierarchy.announceChildPlaced(containerParentId);
+    this.reassertChildren(containerParentId);
   }
 
   /**

@@ -1428,9 +1428,9 @@ describe('BlockHierarchy', () => {
       // must be relocated to workingArea root after the column_list holder.
       repository = createRepositoryWithBlocks([
         { id: 'cl', parentId: null, contentIds: ['col'], name: 'column_list' },
+        { id: 'mover', parentId: null, contentIds: [] },
         { id: 'col', parentId: 'cl', contentIds: ['cp'], name: 'column' },
         { id: 'cp', parentId: 'col', contentIds: [] },
-        { id: 'mover', parentId: null, contentIds: [] },
       ]);
       hierarchy = new BlockHierarchy(repository);
 
@@ -1452,6 +1452,7 @@ describe('BlockHierarchy', () => {
       columnContainer.setAttribute('data-blok-nested-blocks', '');
       wrapper.appendChild(columnContainer);
       columnContainer.appendChild(cp.holder);
+      // The column's holder wraps its wrapper, as in the real columns DOM.
       col.holder.appendChild(wrapper);
       row.appendChild(col.holder);
       cl.holder.appendChild(row);

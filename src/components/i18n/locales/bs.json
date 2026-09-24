@@ -592,5 +592,6 @@
   "find.replace": "Zamijeni",
   "find.replaceAll": "Zamijeni sve",
   "find.matchCase": "Razlikuj velika i mala slova",
-  "find.wholeWord": "Samo cijele riječi"
+  "find.wholeWord": "Samo cijele riječi",
+  "find.move": "Premjesti traku za pretragu"
 }

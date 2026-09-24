@@ -592,5 +592,6 @@
   "find.replace": "बदल्नुहोस्",
   "find.replaceAll": "सबै बदल्नुहोस्",
   "find.matchCase": "अक्षरको केस मिलाउनुहोस्",
-  "find.wholeWord": "पूरा शब्द मिलाउनुहोस्"
+  "find.wholeWord": "पूरा शब्द मिलाउनुहोस्",
+  "find.move": "खोज बार सार्नुहोस्"
 }

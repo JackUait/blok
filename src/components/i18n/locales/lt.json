@@ -592,5 +592,6 @@
   "find.replace": "Pakeisti",
   "find.replaceAll": "Pakeisti visus",
   "find.matchCase": "Skirti didžiąsias ir mažąsias raides",
-  "find.wholeWord": "Tik visi žodžiai"
+  "find.wholeWord": "Tik visi žodžiai",
+  "find.move": "Perkelti paieškos juostą"
 }

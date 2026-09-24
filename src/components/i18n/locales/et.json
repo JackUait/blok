@@ -592,5 +592,6 @@
   "find.replace": "Asenda",
   "find.replaceAll": "Asenda kõik",
   "find.matchCase": "Tõstutundlik",
-  "find.wholeWord": "Ainult terved sõnad"
+  "find.wholeWord": "Ainult terved sõnad",
+  "find.move": "Teisalda otsinguriba"
 }

@@ -1,8 +1,11 @@
 import { DATA_ATTR } from '../../constants/data-attributes';
-import { IconChevronDown, IconChevronRight, IconCross, IconSearch } from '../../icons';
+import { IconChevronDown, IconChevronRight, IconCross, IconMenu, IconSearch } from '../../icons';
 import { hide as hideTooltip, onHover } from '../../utils/tooltip';
+import { promoteToTopLayer, removeFromTopLayer } from '../../utils/top-layer';
 import { createTooltipContent } from '../toolbar/tooltip';
 
+import type { BarPosition } from './find-position';
+import { loadPosition, savePosition, toPixels, toPosition } from './find-position';
 import type { FindOptions } from './match-text';
 
 export interface FindBarCallbacks {
@@ -54,9 +57,15 @@ const ATTR = {
   bump: 'data-blok-find-bump',
   open: 'data-blok-find-open',
   readOnly: 'data-blok-find-read-only',
+  moved: 'data-blok-find-moved',
+  grip: 'data-blok-find-grip',
 } as const;
 
 const TICK_INDEX = 'data-blok-find-index';
+
+/** Keyboard steps for the grip, in px. */
+const NUDGE = 16;
+const NUDGE_LARGE = 64;
 
 /** Keeps `aria-controls` ids unique across editors on one page. */
 const idSequence = { next: 0 };
@@ -135,6 +144,11 @@ export class FindBar {
 
   private readonly listeners: Array<() => void> = [];
 
+  private readonly grip: HTMLButtonElement;
+  /** Where the user parked the bar; null keeps the browser-like default spot. */
+  private position: BarPosition | null = loadPosition();
+  private drag: { pointerX: number; pointerY: number; left: number; top: number } | null = null;
+
   constructor(init: FindBarInit) {
     this.t = init.t;
     this.callbacks = init.callbacks;
@@ -160,6 +174,9 @@ export class FindBar {
     });
 
     const row = build('div', { [ATTR.row]: '' });
+
+    this.grip = this.makeIconButton('find.move', IconMenu, 'find-grip');
+    this.grip.setAttribute(ATTR.grip, '');
 
     this.replaceToggle = this.makeIconButton('find.toggleReplace', IconChevronRight, 'find-replace-toggle');
     this.replaceToggle.setAttribute(ATTR.replaceToggle, '');
@@ -202,6 +219,7 @@ export class FindBar {
     const divider = build('span', { [ATTR.divider]: '', 'aria-hidden': 'true' });
 
     row.append(
+      this.grip,
       this.replaceToggle,
       this.field,
       this.matchCaseButton,
@@ -240,6 +258,7 @@ export class FindBar {
     this.bar.append(row, this.map, this.replaceRow);
     this.element.append(this.bar);
 
+    this.bindTooltip(this.grip, 'find.move');
     this.bindTooltip(this.replaceToggle, 'find.toggleReplace');
     this.bindTooltip(this.matchCaseButton, 'find.matchCase', shortcuts.matchCase);
     this.bindTooltip(this.wholeWordButton, 'find.wholeWord', shortcuts.wholeWord);
@@ -266,6 +285,17 @@ export class FindBar {
       }
     });
     this.listen(this.counter, 'animationend', () => this.counter.removeAttribute(ATTR.bump));
+    this.listen(this.bar, 'pointerdown', (event) => this.startDrag(event));
+    this.listen(this.bar, 'pointermove', (event) => this.moveDrag(event));
+    this.listen(this.bar, 'pointerup', () => this.endDrag());
+    this.listen(this.bar, 'pointercancel', () => this.endDrag());
+    this.listen(this.grip, 'keydown', (event) => this.handleGripKeydown(event));
+    this.listen(this.grip, 'dblclick', () => this.resetPosition());
+
+    const onResize = (): void => this.applyPosition();
+
+    window.addEventListener('resize', onResize);
+    this.listeners.push(() => window.removeEventListener('resize', onResize));
 
     this.renderResults();
   }
@@ -298,6 +328,9 @@ export class FindBar {
     this.opened = true;
     this.element.hidden = false;
     this.element.toggleAttribute('inert', false);
+    // The top layer sits above every stacking context a host page can build.
+    promoteToTopLayer(this.element);
+    this.applyPosition();
 
     if (init.query !== undefined) {
       this.input.value = init.query;
@@ -321,6 +354,8 @@ export class FindBar {
     // `hidden` and `inert` land now; the exit animation rides a discrete `display` transition in find.css.
     this.element.toggleAttribute('inert', true);
     this.element.hidden = true;
+    this.drag = null;
+    removeFromTopLayer(this.element);
   }
 
   public setReadOnly(readOnly: boolean): void {
@@ -344,7 +379,124 @@ export class FindBar {
     hideTooltip();
     this.listeners.forEach((remove) => remove());
     this.listeners.length = 0;
+    removeFromTopLayer(this.element);
     this.element.remove();
+  }
+
+  /**
+   * Put the bar at its parked spot, or clear the inline offsets so find.css
+   * places it where browsers put their own find bar.
+   */
+  private applyPosition(): void {
+    if (this.position === null) {
+      this.element.style.removeProperty('left');
+      this.element.style.removeProperty('top');
+      this.element.removeAttribute(ATTR.moved);
+
+      return;
+    }
+
+    const box = this.layoutBox();
+    const { left, top } = toPixels(this.position, box, this.viewport());
+
+    this.element.style.left = `${left}px`;
+    this.element.style.top = `${top}px`;
+    this.element.setAttribute(ATTR.moved, '');
+  }
+
+  /**
+   * The bar's box without transforms. getBoundingClientRect includes the
+   * entrance animation's scale, which would park the bar a few pixels off.
+   */
+  private layoutBox(): { left: number; top: number; width: number; height: number } {
+    const { offsetLeft, offsetTop, offsetWidth, offsetHeight } = this.element;
+
+    return { left: offsetLeft, top: offsetTop, width: offsetWidth, height: offsetHeight };
+  }
+
+  private viewport(): { width: number; height: number } {
+    return { width: window.innerWidth, height: window.innerHeight };
+  }
+
+  /**
+   * Park the bar with its top-left corner at `left`, `top`, kept inside the window.
+   * @param left - offset from the window's left edge
+   * @param top - offset from the window's top edge
+   */
+  private moveTo(left: number, top: number): void {
+    this.position = toPosition(left, top, this.layoutBox(), this.viewport());
+    this.applyPosition();
+  }
+
+  private startDrag(event: PointerEvent): void {
+    const target = event.target;
+    const isGrip = target instanceof Node && this.grip.contains(target);
+    const isControl = target instanceof Element && target.closest('button, input') !== null;
+
+    if (event.button !== 0 || (!isGrip && isControl)) {
+      return;
+    }
+
+    const box = this.layoutBox();
+
+    event.preventDefault();
+    this.drag = { pointerX: event.clientX, pointerY: event.clientY, left: box.left, top: box.top };
+
+    if (target instanceof Element && typeof target.setPointerCapture === 'function' && typeof event.pointerId === 'number') {
+      target.setPointerCapture(event.pointerId);
+    }
+  }
+
+  private moveDrag(event: PointerEvent): void {
+    if (this.drag === null) {
+      return;
+    }
+
+    this.moveTo(this.drag.left + event.clientX - this.drag.pointerX, this.drag.top + event.clientY - this.drag.pointerY);
+  }
+
+  private endDrag(): void {
+    if (this.drag === null) {
+      return;
+    }
+
+    this.drag = null;
+    savePosition(this.position);
+  }
+
+  private handleGripKeydown(event: KeyboardEvent): void {
+    const step = event.shiftKey ? NUDGE_LARGE : NUDGE;
+    const moves: Record<string, [number, number]> = {
+      ArrowLeft: [-step, 0],
+      ArrowRight: [step, 0],
+      ArrowUp: [0, -step],
+      ArrowDown: [0, step],
+    };
+
+    if (event.key === 'Home') {
+      event.preventDefault();
+      this.resetPosition();
+
+      return;
+    }
+
+    const move = moves[event.key];
+
+    if (move === undefined) {
+      return;
+    }
+
+    const box = this.layoutBox();
+
+    event.preventDefault();
+    this.moveTo(box.left + move[0], box.top + move[1]);
+    savePosition(this.position);
+  }
+
+  private resetPosition(): void {
+    this.position = null;
+    savePosition(null);
+    this.applyPosition();
   }
 
   private focusQuery(): void {

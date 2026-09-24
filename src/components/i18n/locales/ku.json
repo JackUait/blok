@@ -592,5 +592,6 @@
   "find.replace": "گۆڕین",
   "find.replaceAll": "گۆڕینی هەموو",
   "find.matchCase": "جیاکردنەوەی پیتی گەورە و بچووک",
-  "find.wholeWord": "تەنها وشەی تەواو"
+  "find.wholeWord": "تەنها وشەی تەواو",
+  "find.move": "شریتی گەڕان بگوازەوە"
 }

@@ -106,8 +106,19 @@ const press = (target: EventTarget, init: KeyboardEventInit): KeyboardEvent => {
   return event;
 };
 
-const searchInput = (wrapper: HTMLElement): HTMLInputElement => {
-  const input = wrapper.querySelector('input[type="search"], input[role="searchbox"]');
+/** The open find bar lives on <body>, in the top layer, not inside the editor. */
+const openBar = (): HTMLElement => {
+  const dock = document.querySelector<HTMLElement>('[data-blok-find]:not([hidden])');
+
+  if (dock === null) {
+    throw new Error('no open find bar');
+  }
+
+  return dock;
+};
+
+const searchInput = (_wrapper?: HTMLElement): HTMLInputElement => {
+  const input = openBar().querySelector('input[type="search"], input[role="searchbox"]');
 
   if (!(input instanceof HTMLInputElement)) {
     throw new Error('find input missing');
@@ -124,8 +135,8 @@ const typeQuery = (wrapper: HTMLElement, query: string): void => {
   vi.runAllTimers();
 };
 
-const setReplacement = (wrapper: HTMLElement, value: string): void => {
-  const input = wrapper.querySelector('[data-blok-testid="find-replace-input"]');
+const setReplacement = (_wrapper: HTMLElement, value: string): void => {
+  const input = openBar().querySelector('[data-blok-testid="find-replace-input"]');
 
   if (!(input instanceof HTMLInputElement)) {
     throw new Error('replace input missing');
@@ -167,13 +178,43 @@ describe('Find module', () => {
     vi.restoreAllMocks();
   });
 
-  it('takes over Ctrl/Cmd+F and opens the find bar above the content', () => {
+  it('takes over Ctrl/Cmd+F and opens the find bar on the page, above everything', () => {
     const { wrapper, redactor } = editor([{ id: 'a', text: 'hello' }]);
     const event = press(redactor.querySelector('[contenteditable]') ?? redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
 
     expect(event.defaultPrevented).toBe(true);
-    expect(searchInput(wrapper)).toHaveFocus();
-    expect(redactor.previousElementSibling?.contains(searchInput(wrapper))).toBe(true);
+    expect(searchInput()).toHaveFocus();
+    expect(openBar().parentElement).toBe(document.body);
+    expect(openBar().getAttribute('data-blok-top-layer')).toBe('true');
+    expect(wrapper.contains(openBar())).toBe(false);
+  });
+
+  it('treats keys inside its own bar as its own, though the bar is outside the editor', () => {
+    const { wrapper, redactor } = editor([{ id: 'a', text: 'apple one' }, { id: 'b', text: 'apple two' }]);
+
+    press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    typeQuery(wrapper, 'apple');
+
+    expect(press(searchInput(), { key: 'g', code: 'KeyG', ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(activeText()).toBe('apple two');
+  });
+
+  it('takes its text direction from the editor', () => {
+    const { wrapper, redactor } = editor([{ id: 'a', text: 'hello' }]);
+
+    wrapper.setAttribute('dir', 'rtl');
+    press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+
+    expect(openBar().getAttribute('dir')).toBe('rtl');
+  });
+
+  it('removes its bar from the page when the editor is destroyed', () => {
+    const { redactor, find } = editor([{ id: 'a', text: 'hello' }]);
+
+    press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    find.destroy();
+
+    expect(document.querySelector('[data-blok-find]')).toBeNull();
   });
 
   it('opens from the body when this is the only editor', () => {
@@ -204,7 +245,8 @@ describe('Find module', () => {
 
     press(second.redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
 
-    expect(searchInput(second.wrapper)).toHaveFocus();
+    expect(searchInput()).toHaveFocus();
+    expect(document.querySelectorAll('[data-blok-find]')).toHaveLength(1);
     expect(first.wrapper.querySelector('input')).toBeNull();
   });
 
@@ -310,7 +352,7 @@ describe('Find module', () => {
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
     typeQuery(wrapper, 'cat');
     setReplacement(wrapper, 'dog');
-    const replaceButton = [...wrapper.querySelectorAll('button')].find((button) => button.getAttribute('aria-label') === 'find.replace' || button.textContent === 'find.replace');
+    const replaceButton = [...openBar().querySelectorAll('button')].find((button) => button.getAttribute('aria-label') === 'find.replace' || button.textContent === 'find.replace');
 
     replaceButton?.click();
     vi.runAllTimers();
@@ -327,7 +369,7 @@ describe('Find module', () => {
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
     typeQuery(wrapper, 'cat');
     setReplacement(wrapper, 'dog');
-    const replaceAll = [...wrapper.querySelectorAll('button')].find((button) => button.getAttribute('aria-label') === 'find.replaceAll' || button.textContent === 'find.replaceAll');
+    const replaceAll = [...openBar().querySelectorAll('button')].find((button) => button.getAttribute('aria-label') === 'find.replaceAll' || button.textContent === 'find.replaceAll');
 
     replaceAll?.click();
 
@@ -348,7 +390,7 @@ describe('Find module', () => {
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
     typeQuery(wrapper, 'bold');
     setReplacement(wrapper, 'brave');
-    [...wrapper.querySelectorAll('button')].find((button) => button.getAttribute('aria-label') === 'find.replaceAll' || button.textContent === 'find.replaceAll')?.click();
+    [...openBar().querySelectorAll('button')].find((button) => button.getAttribute('aria-label') === 'find.replaceAll' || button.textContent === 'find.replaceAll')?.click();
 
     expect(input.textContent).toBe('a brave move');
     expect(input.querySelector('b')?.textContent).toBe('brave');
@@ -436,7 +478,7 @@ describe('Find module', () => {
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
     typeQuery(wrapper, 'foo');
     setReplacement(wrapper, 'foo2');
-    [...wrapper.querySelectorAll('button')].find((button) => button.textContent === 'find.replace')?.click();
+    [...openBar().querySelectorAll('button')].find((button) => button.textContent === 'find.replace')?.click();
     // A tool re-rendering its content (code highlighting) swaps every text node.
     host.innerHTML = host.textContent.split(' ').map((word) => `<span>${word}</span>`).join(' ');
     // The MutationObserver reports on a microtask.
@@ -480,7 +522,7 @@ describe('Find module', () => {
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
     typeQuery(wrapper, 'cat');
     setReplacement(wrapper, 'dog');
-    [...wrapper.querySelectorAll('button')].find((button) => button.textContent === 'find.replaceAll')?.click();
+    [...openBar().querySelectorAll('button')].find((button) => button.textContent === 'find.replaceAll')?.click();
 
     expect(onEditor).not.toHaveBeenCalled();
     expect(onHost).toHaveBeenCalled();

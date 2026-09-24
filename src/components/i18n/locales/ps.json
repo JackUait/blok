@@ -592,5 +592,6 @@
   "find.replace": "بدل یې کړئ",
   "find.replaceAll": "ټول بدل کړئ",
   "find.matchCase": "د لویو او کوچنیو تورو توپیر",
-  "find.wholeWord": "یوازې بشپړ ټکي"
+  "find.wholeWord": "یوازې بشپړ ټکي",
+  "find.move": "د لټون پټه ولېږدوئ"
 }

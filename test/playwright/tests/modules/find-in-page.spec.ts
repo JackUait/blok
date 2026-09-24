@@ -126,6 +126,8 @@ test.describe('find in page', () => {
 
   test.beforeEach(async ({ page }) => {
     await gotoTestPage(page);
+    // The parked bar position is per viewer and would leak between tests.
+    await page.evaluate(() => localStorage.removeItem('blok:find-bar-position'));
   });
 
   test.describe('opening', () => {
@@ -594,8 +596,134 @@ test.describe('find in page', () => {
 
       await page.keyboard.press(FIND_KEY);
 
-      await expect(page.getByTestId('blok2').getByTestId('find-bar')).toBeVisible();
-      await expect(page.getByTestId('blok').getByTestId('find-dock')).toHaveCount(0);
+      // One page-level bar, and it belongs to the focused editor: it finds that editor's text only.
+      await expect(page.getByTestId('find-dock')).toHaveCount(1);
+      await page.getByTestId('find-input').fill('editor');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 1');
+      await expect.poll(async () => (await readHighlights(page)).activeBlockId).toBe('find-second');
+    });
+  });
+
+  test.describe('placement', () => {
+    const barBox = (page: Page): Promise<{ top: number; right: number; left: number; vw: number } | null> =>
+      page.evaluate(() => {
+        // The layout box: the entrance animation scales the visual one for a moment.
+        const dock = document.querySelector<HTMLElement>('[data-blok-find]');
+
+        if (dock === null) {
+          return null;
+        }
+
+        return {
+          top: dock.offsetTop,
+          left: dock.offsetLeft,
+          right: dock.offsetLeft + dock.offsetWidth,
+          vw: document.documentElement.clientWidth,
+        };
+      });
+
+    test('opens at the top-right of the window, where browsers put their find bar', async ({ page }) => {
+      await page.evaluate(() => localStorage.removeItem('blok:find-bar-position'));
+      await createEditor(page, paragraphs('hello there'), { width: '380px' });
+      await focusParagraph(page, 'hello there');
+      await page.keyboard.press(FIND_KEY);
+      await expect(page.getByTestId('find-bar')).toBeVisible();
+
+      const box = await barBox(page);
+
+      expect(box).not.toBeNull();
+      expect(box?.top).toBeLessThan(40);
+      expect((box?.vw ?? 0) - (box?.right ?? 0)).toBeLessThan(40);
+    });
+
+    test('sits in the top layer, above a host overlay with the highest z-index', async ({ page }) => {
+      await createEditor(page, paragraphs('hello there'));
+      await page.evaluate(() => {
+        const cover = document.createElement('div');
+
+        cover.id = 'host-cover';
+        cover.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,0.1)';
+        document.body.appendChild(cover);
+      });
+      await page.keyboard.press(FIND_KEY);
+
+      const onTop = await page.evaluate(() => {
+        const bar = document.querySelector('[data-blok-testid="find-bar"]');
+        const box = bar?.getBoundingClientRect();
+
+        if (bar === null || box === undefined) {
+          return false;
+        }
+
+        const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+
+        return hit !== null && bar.contains(hit) && bar.closest('[data-blok-find]')?.matches(':popover-open') === true;
+      });
+
+      expect(onTop).toBe(true);
+    });
+
+    test('can be dragged by its grip and a new editor opens it there again', async ({ page }) => {
+      // Scrolled, so a position measured against the document instead of the window would show.
+      await page.addStyleTag({ content: 'body { min-height: 3000px; }' });
+      await createEditor(page, paragraphs('hello there'));
+      await page.evaluate(() => window.scrollTo({ top: 400, behavior: 'instant' }));
+      await focusParagraph(page, 'hello there');
+      await page.keyboard.press(FIND_KEY);
+
+      const grip = page.getByTestId('find-grip');
+
+      // The entrance animation scales the bar from its corner; grab it once it is still.
+      await page.getByTestId('find-bar').evaluate((bar) =>
+        Promise.all(bar.getAnimations({ subtree: true }).map((animation) => animation.finished))
+      );
+      const start = await grip.boundingBox();
+
+      if (start === null) {
+        throw new Error('grip not laid out');
+      }
+      await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(start.x - 300, start.y + 250, { steps: 8 });
+      await page.mouse.up();
+
+      const moved = await barBox(page);
+      const visual = await page.getByTestId('find-bar').boundingBox();
+
+      expect(moved?.top).toBeGreaterThan(200);
+      expect(Math.abs((visual?.y ?? 0) - (moved?.top ?? 0))).toBeLessThan(2);
+
+      await page.keyboard.press('Escape');
+      // A fresh editor builds a fresh bar, which reads the parked spot from storage.
+      await page.evaluate(async () => {
+        await window.blokInstance?.destroy?.();
+      });
+      await expect(page.getByTestId('find-dock')).toHaveCount(0);
+      await createEditor(page, paragraphs('hello there'));
+      await focusParagraph(page, 'hello there');
+      await page.keyboard.press(FIND_KEY);
+      await expect(page.getByTestId('find-bar')).toBeVisible();
+
+      const reopened = await barBox(page);
+
+      expect(Math.abs((reopened?.top ?? 0) - (moved?.top ?? 0))).toBeLessThan(2);
+      expect(Math.abs((reopened?.left ?? 0) - (moved?.left ?? 0))).toBeLessThan(2);
+
+      await page.evaluate(() => localStorage.removeItem('blok:find-bar-position'));
+    });
+
+    test('a double-click on the grip puts it back', async ({ page }) => {
+      await createEditor(page, paragraphs('hello there'));
+      await focusParagraph(page, 'hello there');
+      await page.keyboard.press(FIND_KEY);
+      await page.getByTestId('find-grip').focus();
+      await page.keyboard.press('Shift+ArrowDown');
+      await page.keyboard.press('Shift+ArrowDown');
+      await page.getByTestId('find-grip').dblclick();
+
+      const box = await barBox(page);
+
+      expect(box?.top).toBeLessThan(40);
     });
   });
 

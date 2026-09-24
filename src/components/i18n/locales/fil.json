@@ -592,5 +592,6 @@
   "find.replace": "Palitan",
   "find.replaceAll": "Palitan lahat",
   "find.matchCase": "Itugma ang laki ng titik",
-  "find.wholeWord": "Itugma ang buong salita"
+  "find.wholeWord": "Itugma ang buong salita",
+  "find.move": "Ilipat ang bar ng paghahanap"
 }

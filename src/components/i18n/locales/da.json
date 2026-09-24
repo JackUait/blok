@@ -592,5 +592,6 @@
   "find.replace": "Erstat",
   "find.replaceAll": "Erstat alle",
   "find.matchCase": "Forskel på store og små bogstaver",
-  "find.wholeWord": "Kun hele ord"
+  "find.wholeWord": "Kun hele ord",
+  "find.move": "Flyt søgelinjen"
 }

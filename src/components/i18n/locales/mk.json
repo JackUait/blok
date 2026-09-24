@@ -592,5 +592,6 @@
   "find.replace": "Замени",
   "find.replaceAll": "Замени ги сите",
   "find.matchCase": "Разликувај големи и мали букви",
-  "find.wholeWord": "Само цели зборови"
+  "find.wholeWord": "Само цели зборови",
+  "find.move": "Премести ја лентата за пребарување"
 }

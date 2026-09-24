@@ -592,5 +592,6 @@
   "find.replace": "Замени",
   "find.replaceAll": "Замени све",
   "find.matchCase": "Разликуј велика и мала слова",
-  "find.wholeWord": "Само целе речи"
+  "find.wholeWord": "Само целе речи",
+  "find.move": "Премести траку за претрагу"
 }

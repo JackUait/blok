@@ -592,5 +592,6 @@
   "find.replace": "ප්‍රතිස්ථාපනය",
   "find.replaceAll": "සියල්ල ප්‍රතිස්ථාපනය",
   "find.matchCase": "අකුරු ප්‍රමාණය ගළපන්න",
-  "find.wholeWord": "සම්පූර්ණ වචනය ගළපන්න"
+  "find.wholeWord": "සම්පූර්ණ වචනය ගළපන්න",
+  "find.move": "සෙවුම් තීරුව ගෙනයන්න"
 }

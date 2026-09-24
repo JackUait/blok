@@ -592,5 +592,6 @@
   "find.replace": "बदला",
   "find.replaceAll": "सर्व बदला",
   "find.matchCase": "अक्षरांचा केस जुळवा",
-  "find.wholeWord": "संपूर्ण शब्द जुळवा"
+  "find.wholeWord": "संपूर्ण शब्द जुळवा",
+  "find.move": "शोध बार हलवा"
 }

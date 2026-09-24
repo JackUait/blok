@@ -592,5 +592,6 @@
   "find.replace": "החלף",
   "find.replaceAll": "החלף הכול",
   "find.matchCase": "התאמת רישיות",
-  "find.wholeWord": "מילה שלמה בלבד"
+  "find.wholeWord": "מילה שלמה בלבד",
+  "find.move": "הזזת סרגל החיפוש"
 }

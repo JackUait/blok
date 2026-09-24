@@ -592,5 +592,6 @@
   "find.replace": "Thay thế",
   "find.replaceAll": "Thay thế tất cả",
   "find.matchCase": "Khớp chữ hoa/thường",
-  "find.wholeWord": "Khớp toàn bộ từ"
+  "find.wholeWord": "Khớp toàn bộ từ",
+  "find.move": "Di chuyển thanh tìm kiếm"
 }

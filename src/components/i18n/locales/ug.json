@@ -592,5 +592,6 @@
   "find.replace": "ئالماشتۇرۇش",
   "find.replaceAll": "ھەممىنى ئالماشتۇرۇش",
   "find.matchCase": "چوڭ-كىچىك ھەرپنى پەرقلەندۈرۈش",
-  "find.wholeWord": "پەقەت پۈتۈن سۆز"
+  "find.wholeWord": "پەقەت پۈتۈن سۆز",
+  "find.move": "ئىزدەش بالدىقىنى يۆتكەش"
 }

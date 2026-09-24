@@ -592,5 +592,6 @@
   "find.replace": "جایگزینی",
   "find.replaceAll": "جایگزینی همه",
   "find.matchCase": "تطبیق بزرگی و کوچکی حروف",
-  "find.wholeWord": "تطبیق کل کلمه"
+  "find.wholeWord": "تطبیق کل کلمه",
+  "find.move": "جابه‌جایی نوار جستجو"
 }

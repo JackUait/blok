@@ -592,5 +592,6 @@
   "find.replace": "Ganti",
   "find.replaceAll": "Ganti semua",
   "find.matchCase": "Cocokkan huruf besar/kecil",
-  "find.wholeWord": "Cocokkan seluruh kata"
+  "find.wholeWord": "Cocokkan seluruh kata",
+  "find.move": "Pindahkan bilah pencarian"
 }

@@ -9011,23 +9011,31 @@ span[data-blok-slash-search] {
   background-color: var(--blok-find-match-active-bg);
 }
 
-[data-blok-find] {
-  position: sticky;
-  top: var(--blok-space-2);
-  z-index: var(--blok-z-find);
-  height: 0;
+[data-blok-find], [data-blok-find][data-blok-top-layer][popover] {
+  position: fixed;
+  top: var(--blok-space-3);
+  inset-inline-end: var(--blok-space-4);
+  inset-inline-start: auto;
+  bottom: auto;
+  z-index: 2147483000;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
   overflow: visible;
-  transition: display var(--blok-duration-base) allow-discrete;
+  transition: display var(--blok-duration-base) allow-discrete, overlay var(--blok-duration-base) allow-discrete;
+}
+
+[data-blok-find][data-blok-find-moved], [data-blok-find][data-blok-find-moved][data-blok-top-layer][popover] {
+  inset-inline-end: auto;
 }
 
 [data-blok-find-bar] {
-  position: absolute;
-  top: 0;
-  inset-inline-end: var(--blok-space-2);
+  position: relative;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  width: min(var(--blok-find-bar-width), calc(100% - 16px));
+  width: min(var(--blok-find-bar-width), calc(100vw - 2 * var(--blok-space-4)));
   padding: var(--blok-space-1-5);
   border-radius: var(--blok-radius-lg);
   background: var(--blok-popover-bg);
@@ -9038,6 +9046,27 @@ span[data-blok-slash-search] {
   line-height: var(--blok-line-height-body);
   transform-origin: top right;
   transition: opacity var(--blok-duration-popover-enter) var(--blok-ease-popover), transform var(--blok-duration-popover-enter) var(--blok-ease-popover);
+}
+
+[data-blok-find-bar] {
+  cursor: grab;
+}
+
+[data-blok-find-bar]:active:not(:has(button:active, input:active)) {
+  cursor: grabbing;
+}
+
+[data-blok-find-bar] [data-blok-find-grip] {
+  width: 16px;
+  margin-inline-end: -2px;
+  color: var(--blok-text-secondary);
+  opacity: 0.55;
+  cursor: grab;
+  touch-action: none;
+}
+
+[data-blok-find-bar] [data-blok-find-grip]:hover, [data-blok-find-bar] [data-blok-find-grip]:focus-visible {
+  opacity: 1;
 }
 
 [data-blok-find-bar]:dir(rtl) {

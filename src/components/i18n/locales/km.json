@@ -592,5 +592,6 @@
   "find.replace": "ជំនួស",
   "find.replaceAll": "ជំនួសទាំងអស់",
   "find.matchCase": "ផ្គូផ្គងអក្សរធំតូច",
-  "find.wholeWord": "ផ្គូផ្គងពាក្យទាំងមូល"
+  "find.wholeWord": "ផ្គូផ្គងពាក្យទាំងមូល",
+  "find.move": "ផ្លាស់ទីរបារស្វែងរក"
 }

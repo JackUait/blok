@@ -592,5 +592,6 @@
   "find.replace": "Remplacer",
   "find.replaceAll": "Tout remplacer",
   "find.matchCase": "Respecter la casse",
-  "find.wholeWord": "Mot entier uniquement"
+  "find.wholeWord": "Mot entier uniquement",
+  "find.move": "Déplacer la barre de recherche"
 }

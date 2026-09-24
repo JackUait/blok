@@ -592,5 +592,6 @@
   "find.replace": "Korvaa",
   "find.replaceAll": "Korvaa kaikki",
   "find.matchCase": "Sama kirjainkoko",
-  "find.wholeWord": "Vain kokonaiset sanat"
+  "find.wholeWord": "Vain kokonaiset sanat",
+  "find.move": "Siirrä hakupalkkia"
 }

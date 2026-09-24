@@ -84,6 +84,7 @@ const expectExactReasonedClassification = (
 const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
   'components/modules/blockEvents/composers/emojiTrigger.ts': 'Mount owner for the inline ":" menu, which is the tracked emoji-picker root surface.',
   'components/modules/drag/DragController.ts': 'Pointer-following drag preview; coordinates refresh on every pointer move.',
+  'components/modules/find/index.ts': 'Find bar is fixed to the window like the browser\'s own, promoted to the top layer while open; its only JS coordinates are the user\'s drag spot, clamped to the window.',
   'components/utils/announcer.ts': 'Visually hidden ARIA live region with no element anchor or collision boundary.',
   'components/utils/caret/boundaries.ts': 'Synchronous hidden text-measurement node removed before control returns.',
   'components/utils/link-hover-card.ts': 'Tracked fixed root surface registered in ROOT_SURFACE_CONTRACTS.',
@@ -114,7 +115,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'components/modules/collaboration/presence-carets.ts': 'Remote carets convert a measured Range rect into offsets local to the block holder they are appended to; nothing is written against the root.',
   'components/modules/drag/preview/DragPreview.ts': 'Fixed pointer-following preview; root coordinates refresh on every drag pointer update.',
   'components/modules/drag/utils/ColumnDropAnimation.ts': 'Ephemeral fixed drag preview animates to a viewport target rect and is then removed.',
-  'components/modules/find/find-bar.ts': 'Match-map ticks sit at a percentage of their own track, from each match\'s place in the document; the bar itself is a sticky dock laid out by find.css.',
+  'components/modules/find/find-bar.ts': 'Match-map ticks sit at a percentage of their own track; the bar\'s own left/top are the user\'s drag spot, clamped to the window by find-position.ts and re-applied on resize.',
   'components/modules/rectangleSelection.ts': 'Selection rectangle converts pointer coordinates into its measured local overlay container.',
   'components/modules/toolbar/inline/toolbar-ghost.ts': 'Fading copy of the inline toolbar, placed once at the toolbar\'s measured spot beside its wrapper and removed within 400ms; it never tracks movement.',
   'components/modules/toolbar/index.ts': 'Editor-owned toolbar wrapper uses locally resolved offsets supplied by the toolbar positioner.',

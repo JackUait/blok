@@ -10,6 +10,7 @@ import { Module } from '../../__module';
 import type { Block } from '../../block';
 import { getUserOS } from '../../utils/browser';
 import { findOwn } from '../../utils/own-element';
+import { syncPortalDirection } from '../../utils/portal-direction';
 import { prefersReducedMotion } from '../../utils/reduced-motion';
 import { FindBar } from './find-bar';
 import { FindLens } from './find-lens';
@@ -133,6 +134,7 @@ export class Find extends Module {
       this.startObserving();
     }
 
+    syncPortalDirection(bar.element, { source: this.Blok.UI.nodes.wrapper });
     bar.open({
       query: prefill ?? undefined,
       replace: withReplace,
@@ -325,7 +327,9 @@ export class Find extends Module {
   private ownsKeyTarget(target: EventTarget | null): boolean {
     const { wrapper } = this.Blok.UI.nodes;
 
-    if (target instanceof Node && wrapper.contains(target)) {
+    const isInBar = target instanceof Node && this.bar?.element.contains(target) === true;
+
+    if (target instanceof Node && (wrapper.contains(target) || isInBar)) {
       return true;
     }
 
@@ -346,7 +350,7 @@ export class Find extends Module {
       return this.bar;
     }
 
-    const { wrapper, redactor } = this.Blok.UI.nodes;
+    const { wrapper } = this.Blok.UI.nodes;
     const { I18n } = this.Blok;
 
     this.bar = new FindBar({
@@ -367,7 +371,10 @@ export class Find extends Module {
       },
     });
     this.bar.setReadOnly(this.Blok.ReadOnly.isEnabled);
-    wrapper.insertBefore(this.bar.element, redactor);
+    // On <body>, like the browser's own find bar: fixed to the window, not the editor.
+    // The scope attribute brings Blok's preflight reset and tokens along.
+    this.bar.element.setAttribute('data-blok-interface', 'find');
+    document.body.appendChild(this.bar.element);
     this.lens = new FindLens(wrapper);
 
     return this.bar;
@@ -555,32 +562,39 @@ export class Find extends Module {
 
     const parent = scrollParentOf(this.Blok.UI.nodes.wrapper);
     const view = parent?.getBoundingClientRect() ?? { top: 0, bottom: window.innerHeight };
-    const clearTop = Math.max(view.top, this.barBottomOver(rect)) + REVEAL_MARGIN;
-    const isVisible = rect.top >= clearTop && rect.bottom <= view.bottom - REVEAL_MARGIN;
+    const bar = this.barOver(rect);
+    const isCovered = bar !== null && rect.bottom > bar.top && rect.top < bar.bottom;
+    const isVisible = !isCovered && rect.top >= view.top + REVEAL_MARGIN && rect.bottom <= view.bottom - REVEAL_MARGIN;
 
     if (isVisible) {
       return;
     }
 
-    const top = rect.top - (view.top + (view.bottom - view.top) * 0.4);
+    const preferred = view.top + (view.bottom - view.top) * 0.4;
+    const collides = bar !== null && preferred + rect.height > bar.top - REVEAL_MARGIN && preferred < bar.bottom + REVEAL_MARGIN;
+    const belowBar = bar === null ? preferred : bar.bottom + REVEAL_MARGIN;
+    const fitsBelow = belowBar + rect.height <= view.bottom - REVEAL_MARGIN;
+    const aboveBar = bar === null ? preferred : bar.top - REVEAL_MARGIN - rect.height;
+    const clearOfBar = fitsBelow ? belowBar : aboveBar;
+    const target = collides ? clearOfBar : preferred;
     const behavior: ScrollBehavior = prefersReducedMotion() ? 'instant' : 'smooth';
 
-    (parent ?? window).scrollBy({ top, behavior });
+    (parent ?? window).scrollBy({ top: rect.top - target, behavior });
   }
 
   /**
-   * The bottom edge of the find bar when it covers the same columns as `rect`,
-   * else -Infinity. The bar is sticky, so after scrolling it is still there.
+   * The find bar's box when it shares columns with `rect`, else null. The bar
+   * is fixed to the window, so it stays put while the page scrolls under it.
    * @param rect - the match's box
    */
-  private barBottomOver(rect: DOMRect): number {
-    const box = this.bar?.element.firstElementChild?.getBoundingClientRect();
+  private barOver(rect: DOMRect): DOMRect | null {
+    const box = this.bar?.element.getBoundingClientRect();
 
     if (box === undefined || box.height === 0 || rect.right < box.left || rect.left > box.right) {
-      return -Infinity;
+      return null;
     }
 
-    return box.bottom;
+    return box;
   }
 
   private placeLens(range: Range, pulse: boolean): void {

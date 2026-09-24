@@ -592,5 +592,6 @@
   "find.replace": "Nahradiť",
   "find.replaceAll": "Nahradiť všetko",
   "find.matchCase": "Rozlišovať veľké a malé písmená",
-  "find.wholeWord": "Iba celé slová"
+  "find.wholeWord": "Iba celé slová",
+  "find.move": "Presunúť panel hľadania"
 }

@@ -592,5 +592,6 @@
   "find.replace": "تبدیل کریں",
   "find.replaceAll": "سب تبدیل کریں",
   "find.matchCase": "حروف کا کیس ملائیں",
-  "find.wholeWord": "پورا لفظ ملائیں"
+  "find.wholeWord": "پورا لفظ ملائیں",
+  "find.move": "تلاش بار منتقل کریں"
 }

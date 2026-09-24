@@ -592,5 +592,6 @@
   "find.replace": "બદલો",
   "find.replaceAll": "બધું બદલો",
   "find.matchCase": "અક્ષરનું કદ મેળવો",
-  "find.wholeWord": "આખો શબ્દ મેળવો"
+  "find.wholeWord": "આખો શબ્દ મેળવો",
+  "find.move": "શોધ બાર ખસેડો"
 }

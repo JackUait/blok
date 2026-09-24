@@ -2451,43 +2451,6 @@ describe('BlockHierarchy', () => {
       expect(p.holder.parentElement).toBe(cellTwo);
     });
 
-    it('re-asserting every child after a flat reorder, last first, makes contentIds follow the flat order', () => {
-      repository = createRepositoryWithBlocks([
-        { id: 't', parentId: null, contentIds: ['c1', 'c2', 'c3'] },
-        { id: 'c1', parentId: 't' },
-        { id: 'c2', parentId: 't' },
-        { id: 'c3', parentId: 't' },
-        { id: 'z', parentId: null },
-      ]);
-      hierarchy = hierarchyOf(repository);
-
-      const [t, c1, c2, c3, z] = ['t', 'c1', 'c2', 'c3', 'z'].map(requireBlock);
-
-      repository.reorderBlocks([t, c2, c1, c3, z]);
-      [c3, c1, c2].forEach(child => hierarchy.setBlockParent(child, 't'));
-
-      expect(t.contentIds).toStrictEqual(['c2', 'c1', 'c3']);
-      expect(flatIds()).toStrictEqual(['t', 'c2', 'c1', 'c3', 'z']);
-    });
-
-    it('re-asserting one child after a flat reorder puts its listed siblings in flat order too', () => {
-      repository = createRepositoryWithBlocks([
-        { id: 't', parentId: null, contentIds: ['c1', 'c2', 'c3'] },
-        { id: 'c1', parentId: 't' },
-        { id: 'c2', parentId: 't' },
-        { id: 'c3', parentId: 't' },
-      ]);
-      hierarchy = hierarchyOf(repository);
-
-      const [t, c1, c2, c3] = ['t', 'c1', 'c2', 'c3'].map(requireBlock);
-
-      repository.reorderBlocks([t, c3, c1, c2]);
-      hierarchy.setBlockParent(c1, 't');
-
-      expect(t.contentIds).toStrictEqual(['c3', 'c1', 'c2']);
-      expect(flatIds()).toStrictEqual(['t', 'c3', 'c1', 'c2']);
-    });
-
     it('keeps a parent\'s listed order while replaying from Yjs, even when the flat order differs', () => {
       repository = createRepositoryWithBlocks([
         { id: 't', parentId: null, contentIds: ['c2', 'c1'] },

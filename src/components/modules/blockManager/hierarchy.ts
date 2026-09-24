@@ -48,7 +48,6 @@ export class BlockHierarchy {
   private readonly onParentChanged?: (parentId: string) => void;
   private readonly getIsSyncingFromYjs?: () => boolean;
   private readonly blocksStore?: Pick<Blocks, 'mount'>;
-  private readonly getIsApplyingFromYjs?: () => boolean;
 
   /**
    * @param repository - BlockRepository for looking up blocks by id
@@ -59,22 +58,17 @@ export class BlockHierarchy {
    *   peers can legitimately deliver a transiently-dangling parent id during
    *   conflict resolution, batched undo replay, or initial sync ordering.
    * @param blocksStore - the store behind `repository`; {@link placeBlock} mounts holders through it
-   * @param getIsApplyingFromYjs - optional getter: true only while a sync
-   *   operation's body runs, not in the RAF tail after it. Defaults to
-   *   `getIsSyncingFromYjs`.
    */
   constructor(
     repository: BlockRepository,
     onParentChanged?: (parentId: string) => void,
     getIsSyncingFromYjs?: () => boolean,
-    blocksStore?: Pick<Blocks, 'mount'>,
-    getIsApplyingFromYjs?: () => boolean
+    blocksStore?: Pick<Blocks, 'mount'>
   ) {
     this.repository = repository;
     this.onParentChanged = onParentChanged;
     this.getIsSyncingFromYjs = getIsSyncingFromYjs;
     this.blocksStore = blocksStore;
-    this.getIsApplyingFromYjs = getIsApplyingFromYjs ?? getIsSyncingFromYjs;
   }
 
   /**
@@ -248,36 +242,6 @@ export class BlockHierarchy {
       block,
       parentId
     );
-  }
-
-  /**
-   * Puts the entries of a parent's contentIds that the flat array holds into
-   * flat order; the others keep their places. Callers still move the flat
-   * array first and then re-assert each child (placeRun), so the slot
-   * placeBlock picks after `afterId` must follow the flat order.
-   *
-   * Temporary: it derives contentIds from flat order, the opposite of the
-   * target. Delete it once placeRun, moveTo and drag stop moving the flat
-   * array before re-asserting (wave-2 step 3). Skipped during a Yjs replay,
-   * where contentIds carry the doc's order. Not skipped in the RAF tail of a
-   * sync window: nothing replays there, and a local move made in it (the
-   * first render leaves one open) would keep a stale order.
-   * @param parentId - the parent, or null for the root (nothing to do)
-   */
-  private sortListedChildrenByFlatOrder(parentId: string | null): void {
-    const parent = parentId === null ? undefined : this.repository.getBlockById(parentId);
-
-    if (parent === undefined || this.getIsApplyingFromYjs?.() === true) {
-      return;
-    }
-
-    const flatIndex = new Map(this.repository.blocks.map((candidate, index) => [candidate.id, index]));
-    const inFlatOrder = parent.contentIds
-      .filter(id => flatIndex.has(id))
-      .sort((a, b) => (flatIndex.get(a) ?? 0) - (flatIndex.get(b) ?? 0));
-    const next = inFlatOrder[Symbol.iterator]();
-
-    parent.contentIds = parent.contentIds.map(id => flatIndex.has(id) ? next.next().value ?? id : id);
   }
 
   /**
@@ -491,8 +455,6 @@ export class BlockHierarchy {
     const oldParent = oldParentId !== null ? this.repository.getBlockById(oldParentId) : undefined;
 
     const placement = this.placementForParent(block, sanitizedParentId);
-
-    this.sortListedChildrenByFlatOrder(sanitizedParentId);
 
     const oldHomeSlot =
       oldParent !== undefined && sanitizedParentId !== oldParentId

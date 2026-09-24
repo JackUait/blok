@@ -1050,7 +1050,7 @@ export class BlockMutation {
     // A caller's move group (drag) sets the parent afterwards and needs the
     // flat slot first: a placement under the old parent cannot name it.
     if (inCallerMoveGroup) {
-      this.moveFlat(toIndex, fromIndex, movingBlock, skipDOM, blocksStore, skipMovedHook);
+      this.moveFlat({ toIndex, fromIndex, block: movingBlock, slotParentId: destinationParentId }, skipDOM, blocksStore, skipMovedHook);
 
       return;
     }
@@ -1367,15 +1367,22 @@ export class BlockMutation {
 
   /**
    * A flat reorder that leaves the parent to the caller's move group.
-   * @param toIndex - Index where to move Block
-   * @param fromIndex - Index of Block to move
-   * @param block - the block at `fromIndex`
+   * @param move - the move
+   * @param move.toIndex - Index where to move Block
+   * @param move.fromIndex - Index of Block to move
+   * @param move.block - the block at `fromIndex`
+   * @param move.slotParentId - the parent the flat slot implies
    * @param skipDOM - If true, do not manipulate DOM
    * @param blocksStore - The blocks store to modify
    * @param skipMovedHook - If true, do not fire the moved() lifecycle hook
    */
-  private moveFlat(toIndex: number, fromIndex: number, block: Block, skipDOM: boolean, blocksStore: BlocksStore, skipMovedHook: boolean): void {
-    const slotParentId = slotParentOf(this.repository.blocks, toIndex, fromIndex);
+  private moveFlat(
+    move: { toIndex: number; fromIndex: number; block: Block; slotParentId: string | null },
+    skipDOM: boolean,
+    blocksStore: BlocksStore,
+    skipMovedHook: boolean
+  ): void {
+    const { toIndex, fromIndex, block, slotParentId } = move;
 
     this.ctx.suppressStopCapturing = true;
     try {

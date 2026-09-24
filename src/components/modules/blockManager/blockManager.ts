@@ -2192,7 +2192,7 @@ export class BlockManager extends Module {
     // Registered BEFORE the save starts: between here and the enqueue below
     // this write is invisible to the flush barriers, so a destroy() landing in
     // the gap would tear the document down and drop the last thing typed.
-    const releasePendingWrite = YjsManager.beginPendingBlockDataWrite();
+    const releasePendingWrite = YjsManager.beginPendingBlockDataWrite(block.id);
 
     // Every caller voids this promise (`void this.syncBlockDataToYjs(...)`, and
     // `flushParentSyncs`' bare `Promise.all(...).then`), so a rejection here has

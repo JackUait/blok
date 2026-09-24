@@ -794,15 +794,20 @@ export class BlocksAPI extends Module {
       return;
     }
 
-    const outer = this.derivedFrom;
     const source = { blockId, from: options?.from ?? [] };
 
-    this.derivedFrom = source;
-    try {
-      this.Blok.YjsManager.transactIntoStepThatWrote(blockId, fn, source.from);
-    } finally {
-      this.derivedFrom = outer;
-    }
+    // A save of the block still in flight may carry the edit this write comes
+    // from: until it lands there is no undo step to join.
+    this.Blok.YjsManager.runAfterSavesOf(blockId, () => {
+      const outer = this.derivedFrom;
+
+      this.derivedFrom = source;
+      try {
+        this.Blok.YjsManager.transactIntoStepThatWrote(blockId, fn, source.from);
+      } finally {
+        this.derivedFrom = outer;
+      }
+    });
   }
 
   /**

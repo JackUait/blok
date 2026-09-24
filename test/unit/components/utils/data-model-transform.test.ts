@@ -1210,19 +1210,6 @@ describe('data-model-transform', () => {
 
       expect(seededImage(expandToHierarchical(blocks))).toEqual({ url: GIF, caption: 'cat' });
     });
-
-    it('detects and migrates a table whose only legacy content is a seeded image', () => {
-      const blocks: OutputBlockData[] = [{
-        id: 't1',
-        type: 'table',
-        data: {
-          content: [[{ blocks: [], blockData: [{ tool: 'image', data: { file: { url: GIF } } }] }]],
-        },
-      }];
-
-      expect(analyzeDataFormat(blocks).format).toBe('legacy');
-      expect(seededImage(expandToHierarchical(blocks))).toEqual({ url: GIF });
-    });
   });
 
   describe('collapseToLegacy - table blocks (self-managing container)', () => {

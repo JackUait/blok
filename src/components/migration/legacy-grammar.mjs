@@ -220,7 +220,7 @@ function detectTable(block) {
     return false;
   }
 
-  return rows.some((row) => Array.isArray(row) && row.some((cell) => typeof cell === 'string' || cellSeedsLegacy(cell)));
+  return rows.some((row) => Array.isArray(row) && row.some((cell) => typeof cell === 'string'));
 }
 
 /** A cell's `blockData` seeds (`{ tool, data, tunes? }`), or [] when it has none. */
@@ -237,10 +237,6 @@ function matchSeedRule(seed, grammar) {
   const block = { type: seed.tool, data: seed.data };
 
   return grammar.find((entry) => entry.cardinality === '1:1' && entry.detect(block));
-}
-
-function cellSeedsLegacy(cell) {
-  return getCellSeeds(cell).some((seed) => matchSeedRule(seed, LEGACY_GRAMMAR) !== undefined);
 }
 
 /**

@@ -386,6 +386,77 @@ export const validateFlatOrder = (blocks: LiveBlockInput[]): FlatOrderViolation[
   }];
 };
 
+export interface TreeOrderInput extends LiveBlockInput {
+  contentIds: readonly string[];
+}
+
+export interface TreeOrderViolation {
+  kind: 'flat-order-not-tree-order';
+  index: number;
+  expected: string | undefined;
+  actual: string | undefined;
+  message: string;
+}
+
+/**
+ * Detect a flat block array that is not the depth-first walk of the tree when
+ * sibling order comes from each parent's `contentIds`: roots in flat order,
+ * then listed children in `contentIds` order, then unlisted children (their
+ * parentId names the parent, its contentIds omits them) in flat order.
+ *
+ * Membership comes from `parentId`: a contentIds entry that is dangling or
+ * whose block names another parent is skipped. A dangling parentId counts as
+ * root. Report-only for now: nothing gates on it.
+ * @param blocks - the flat block array
+ */
+export const validateTreeOrder = (blocks: TreeOrderInput[]): TreeOrderViolation[] => {
+  const byId = new Map(blocks.map(b => [b.id, b]));
+  const effectiveParent = (b: TreeOrderInput): string | null =>
+    b.parentId !== null && byId.has(b.parentId) ? b.parentId : null;
+  const childrenOf = (parent: TreeOrderInput): TreeOrderInput[] => {
+    const listed = parent.contentIds.flatMap(id => {
+      const child = byId.get(id);
+
+      return child !== undefined && effectiveParent(child) === parent.id ? [ child ] : [];
+    });
+    const listedIds = new Set(listed.map(b => b.id));
+    const unlisted = blocks.filter(b => effectiveParent(b) === parent.id && !listedIds.has(b.id));
+
+    return [...listed, ...unlisted];
+  };
+  const expected: string[] = [];
+  const visited = new Set<string>();
+  const walk = (b: TreeOrderInput): void => {
+    if (visited.has(b.id)) {
+      return;
+    }
+    visited.add(b.id);
+    expected.push(b.id);
+    childrenOf(b).forEach(walk);
+  };
+
+  blocks.filter(b => effectiveParent(b) === null).forEach(walk);
+
+  const length = Math.max(expected.length, blocks.length);
+  const index = Array.from({ length }, (_, i) => i).find(i => expected[i] !== blocks[i]?.id);
+
+  if (index === undefined) {
+    return [];
+  }
+
+  const around = (list: Array<string | undefined>): string => list.slice(Math.max(0, index - 2), index + 3).map(String).join(',');
+
+  return [{
+    kind: 'flat-order-not-tree-order',
+    index,
+    expected: expected[index],
+    actual: blocks[index]?.id,
+    message:
+      `Flat block order is not the contentIds tree walk at index ${index}: expected ${String(expected[index])}, found ${String(blocks[index]?.id)} ` +
+      `(flat ${around(blocks.map(b => b.id))} vs tree ${around(expected)})`,
+  }];
+};
+
 export const assertHierarchy = (blocks: OutputBlockData[], context: string): void => {
   const violations = validateHierarchy(blocks);
 

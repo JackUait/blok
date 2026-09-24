@@ -967,8 +967,8 @@ export class DocumentStore {
    * below is allowed to undo damage it watched happen, and nothing else: a
    * document that ARRIVES malformed is read leniently, exactly as before, and
    * is never rewritten. That is what keeps a foreign or older writer's
-   * document — and the table tool's cell blocks, which name the table as
-   * parent while deliberately living outside its `contentIds` — untouched.
+   * document — say, a child that names a parent but is missing from its
+   * `contentIds` — untouched.
    */
   private structuralSnapshot(): StructuralSnapshot {
     const placed = new Set<string>();

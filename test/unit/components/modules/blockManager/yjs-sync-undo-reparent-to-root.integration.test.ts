@@ -22,9 +22,9 @@ import type { OutputBlockData, OutputData } from '../../../../../types';
  * doc said root: the flat array followed the doc, contentIds and the DOM did
  * not, and save() then emitted a document that did not match the screen.
  *
- * `stopCapturing()` between the insert and the re-attach is what >500ms of CPU
- * starvation does to that sequence under a loaded CI shard: the capture window
- * closes mid-gesture and one undo rewinds only the re-attach.
+ * The tests start a new gesture before the re-attach, as a keydown (Tab
+ * nesting) does, so one undo rewinds the re-attach alone. `stopCapturing()`
+ * cannot model that: once gestures drive the undo steps it only flushes.
  */
 
 interface TestEditor {
@@ -142,9 +142,7 @@ describe('yjs-sync — undo of a reparent back to root', () => {
       true
     );
 
-    // Close the undo capture window BEFORE the re-attach, so a single undo
-    // rewinds the reparent alone.
-    capturedYjs?.stopCapturing();
+    capturedYjs?.beginGesture('discrete');
     instance.blocks.setBlockParent(inserted.id, 'c1');
     await flush();
 
@@ -181,7 +179,7 @@ describe('yjs-sync — undo of a reparent back to root', () => {
       true
     );
 
-    capturedYjs?.stopCapturing();
+    capturedYjs?.beginGesture('discrete');
     instance.blocks.setBlockParent(inserted.id, 'c1');
     await flush();
 

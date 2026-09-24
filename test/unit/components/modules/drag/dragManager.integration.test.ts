@@ -3246,7 +3246,7 @@ describe("DragManager - Component Integration", () => {
       });
 
       const apiBlocks = {
-        insert,
+        insertAt: insert,
         setBlockParent,
         getById,
         getBlockIndex,
@@ -3305,7 +3305,7 @@ describe("DragManager - Component Integration", () => {
         holder: document.createElement("div"),
       }));
       const apiBlocks = {
-        insert,
+        insertAt: insert,
         setBlockParent,
         getById: vi.fn((id: string) => {
           const block = allBlocks.find(candidate => candidate.id === id);
@@ -3370,7 +3370,7 @@ describe("DragManager - Component Integration", () => {
         holder: document.createElement("div"),
       }));
       const apiBlocks = {
-        insert,
+        insertAt: insert,
         setBlockParent,
         getById: vi.fn((id: string) => {
           const block = allBlocks.find(candidate => candidate.id === id);
@@ -3466,7 +3466,7 @@ describe("DragManager - Component Integration", () => {
         holder: document.createElement("div"),
       }));
       const apiBlocks = {
-        insert,
+        insertAt: insert,
         setBlockParent: vi.fn(),
         setBlockIndent: vi.fn(),
         getById: vi.fn((id: string) => {

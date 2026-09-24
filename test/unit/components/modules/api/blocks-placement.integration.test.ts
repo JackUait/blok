@@ -1032,6 +1032,27 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       expect(await saved(instance)).toEqual(['a^-', 't^-', 'c1^t', 'n^t']);
     }, 30_000);
 
+    it.each([
+      { name: 'insertInsideParent', insert: (instance: TestEditor) => instance.blocks.insertInsideParent('t', 3, { text: 'n' }, 'paragraph', { id: 'n' }) },
+      { name: 'insertAt', insert: (instance: TestEditor) => instance.blocks.insertAt('paragraph', { text: 'n' }, { id: 'n', parentId: 't' }) },
+    ])('a reparent right after $name still announces its move', async ({ insert }) => {
+      const instance = await boot();
+      const seen = events(instance);
+      const moving = instance.module.blockManager.blocks.find(block => block.id === 'b');
+
+      if (moving === undefined) {
+        throw new Error('no block b');
+      }
+
+      const call = vi.spyOn(moving, 'call');
+
+      insert(instance);
+      instance.blocks.setBlockParent('b', 't');
+
+      expect(seen.filter(event => event.type === 'block-moved').map(event => event.detail.target.id)).toEqual(['b']);
+      expect(call).toHaveBeenCalledWith('moved', expect.anything());
+    }, 30_000);
+
     it('is one undo step and redoes', async () => {
       const instance = await boot();
 

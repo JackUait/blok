@@ -4136,10 +4136,13 @@ exports[`column and database placement — characterization > seeds a three-colu
   "events": [
     "block-added n3 parentId=n2 previousSiblingId=null index=3",
     "block-added n2 parentId=null previousSiblingId=n1 index=2",
+    "block-moved n2 parentId=n1 previousSiblingId=null fromIndex=2 toIndex=2 oldParentId=null",
     "block-added n5 parentId=n4 previousSiblingId=null index=5",
     "block-added n4 parentId=n2 previousSiblingId=n3 index=4",
+    "block-moved n4 parentId=n1 previousSiblingId=n2 fromIndex=4 toIndex=4 oldParentId=n2",
     "block-added n7 parentId=n6 previousSiblingId=null index=7",
     "block-added n6 parentId=n4 previousSiblingId=n5 index=6",
+    "block-moved n6 parentId=n1 previousSiblingId=n4 fromIndex=6 toIndex=6 oldParentId=n4",
     "block-added n1 parentId=null previousSiblingId=a index=1",
     "block-changed n2 index=2",
     "block-changed n4 index=4",

@@ -1265,6 +1265,8 @@ export class BlockManager extends Module {
     //   - the drag move pipeline (pointer drag / open move group) which fires
     //     BlockMoved through `move()` already,
     //   - Yjs sync (undo/redo/remote) which drives re-renders via its own path.
+    //     Only an operation BODY counts: the RAF tail that `extendThroughRAF`
+    //     keeps open after a local insert would swallow the next API call's move.
     const actualNewParentId = block.parentId;
     /**
      * Only a DRAG move group (or an adapter-flagged pointer drag) fires the tool
@@ -1275,7 +1277,7 @@ export class BlockManager extends Module {
      */
     const isDragMove = this.Blok.YjsManager.isDragMoveGroupActive || this._isPointerDragActive;
 
-    if (actualNewParentId !== oldParentId && !this.yjsSync.isSyncingFromYjs && !isDragMove) {
+    if (actualNewParentId !== oldParentId && !this.yjsSync.isRunningOperationBody && !isDragMove) {
       const index = this.repository.getBlockIndex(block);
 
       this.blockDidMutated(BlockMovedMutationType, block, {

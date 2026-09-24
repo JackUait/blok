@@ -3,6 +3,7 @@ import { Blok } from '../../../../../src/blok';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import { ColumnList } from '../../../../../src/tools/column-list';
 import { Column } from '../../../../../src/tools/column';
+import { ToggleItem } from '../../../../../src/tools/toggle';
 import { YjsManager } from '../../../../../src/components/modules/yjs';
 import type { OutputBlockData, OutputData } from '../../../../../types';
 
@@ -23,7 +24,8 @@ interface TestEditor {
     insert: (type?: string, data?: unknown, config?: unknown, index?: number) => { id: string };
     getBlocksCount: () => number;
   };
-  history: { undo: () => void; canUndo: () => boolean };
+  history: { undo: () => void; redo: () => void; canUndo: () => boolean };
+  save: () => Promise<OutputData>;
 }
 
 let editor: TestEditor | undefined;
@@ -96,6 +98,7 @@ describe('api.blocks.insertMany — the DOC keeps the blocks that were already t
         paragraph: Paragraph,
         column_list: ColumnList,
         column: Column,
+        toggle: ToggleItem,
       },
       data,
     }) as unknown as TestEditor;
@@ -180,5 +183,69 @@ describe('api.blocks.insertMany — the DOC keeps the blocks that were already t
     expect(docIds()).not.toContain('bulk');
     expect(docIds()).toContain('keep');
     expect(instance.history.canUndo()).toBe(true);
+  });
+
+  describe('a batch block whose parent is already in the document', () => {
+    const toggleDocument = (): OutputData => ({
+      blocks: [
+        { id: 'p0', type: 'paragraph', data: { text: 'p0' } },
+        { id: 'tog', type: 'toggle', data: { text: 'tog', isOpen: true }, content: ['c1'] },
+        { id: 'c1', type: 'paragraph', data: { text: 'c1' }, parent: 'tog' },
+        { id: 'p9', type: 'paragraph', data: { text: 'p9' } },
+      ],
+    });
+
+    /** `id^parent[content]` per block, in order. */
+    const shape = (blocks: OutputBlockData[]): string[] =>
+      blocks.map((block) => `${String(block.id)}^${block.parent ?? '-'}[${(block.content ?? []).join(',')}]`);
+
+    it('keeps the parent in the saved document and in the doc', async () => {
+      const instance = await createEditor(toggleDocument());
+
+      instance.blocks.insertMany([
+        { id: 'x', type: 'paragraph', data: { text: 'x' }, parent: 'tog' },
+        { id: 'y', type: 'paragraph', data: { text: 'y' }, parent: 'tog' },
+      ], 3);
+      await flush();
+
+      const expected = ['p0^-[]', 'tog^-[c1,x,y]', 'c1^tog[]', 'x^tog[]', 'y^tog[]', 'p9^-[]'];
+
+      expect(shape((await instance.save()).blocks)).toEqual(expected);
+      expect(shape(capturedYjs?.toJSON() ?? [])).toEqual(expected);
+    });
+
+    it('puts the block before the children that follow the index', async () => {
+      const instance = await createEditor(toggleDocument());
+
+      instance.blocks.insertMany([{ id: 'x', type: 'paragraph', data: { text: 'x' }, parent: 'tog' }], 2);
+      await flush();
+
+      const expected = ['p0^-[]', 'tog^-[x,c1]', 'x^tog[]', 'c1^tog[]', 'p9^-[]'];
+
+      expect(shape((await instance.save()).blocks)).toEqual(expected);
+      expect(shape(capturedYjs?.toJSON() ?? [])).toEqual(expected);
+    });
+
+    it('undoes and redoes the batch as one step', async () => {
+      const instance = await createEditor(toggleDocument());
+
+      await sleepPastCaptureWindow();
+      instance.blocks.insertMany([{ id: 'x', type: 'paragraph', data: { text: 'x' }, parent: 'tog' }], 3);
+      await flush();
+
+      instance.history.undo();
+      await flushThroughFrame();
+
+      expect(shape(capturedYjs?.toJSON() ?? [])).toEqual(['p0^-[]', 'tog^-[c1]', 'c1^tog[]', 'p9^-[]']);
+      expect(shape((await instance.save()).blocks)).toEqual(['p0^-[]', 'tog^-[c1]', 'c1^tog[]', 'p9^-[]']);
+
+      instance.history.redo();
+      await flushThroughFrame();
+
+      const expected = ['p0^-[]', 'tog^-[c1,x]', 'c1^tog[]', 'x^tog[]', 'p9^-[]'];
+
+      expect(shape(capturedYjs?.toJSON() ?? [])).toEqual(expected);
+      expect(shape((await instance.save()).blocks)).toEqual(expected);
+    });
   });
 });

@@ -26,12 +26,14 @@ import { assertHierarchy, validateHierarchy } from '../../utils/hierarchy-invari
 import { findOwn } from '../../utils/own-element';
 import { releasesChildrenOnTurnInto } from '../../utils/turn-into-children';
 import type { TreePlacement } from '../../utils/tree-order';
+import { lastChildBefore } from '../api/block-placement';
 import { getBlockNestingDepth } from '../drag/utils/depthUtils';
 
 // Imported modules
 import { BlockEventBinder } from './event-binder';
 import { BlockFactory } from './factory';
 import { BlockHierarchy } from './hierarchy';
+import { hideUnderCollapsedParent, isSelfPlacedParent } from './new-block-placement';
 import { BlockOperations } from './operations';
 import { BlockRepository } from './repository';
 import { BlockShortcuts } from './shortcuts';
@@ -669,9 +671,14 @@ export class BlockManager extends Module {
       blockById.set(block.id, block);
     }
 
-    this.reconcileChildrenToParents(blocks, blockById);
+    // Only a live insert has blocks outside the batch to hang children on.
+    const underExistingParents = yjsSync === 'add' && !skipYjsSync
+      ? this.placementsUnderExistingParents(blocks, blockById, index)
+      : new Map<Block, TreePlacement>();
+
+    this.reconcileChildrenToParents(blocks.filter(block => !underExistingParents.has(block)), blockById);
     this.reconcileParentsToChildren(blocks, blockById);
-    this.assertInsertManyHierarchy(blocks);
+    this.assertInsertManyHierarchy(blocks, underExistingParents);
 
     // Load blocks into Yjs BEFORE adding to the store.
     // blocksStore.insertMany() triggers rendered() on each block, which may
@@ -700,7 +707,7 @@ export class BlockManager extends Module {
      */
     if (!skipYjsSync) {
       if (yjsSync === 'add') {
-        this.addBlocksToDocument(blockDataArray, index);
+        this.addBlocksToDocument(blockDataArray, index, underExistingParents);
       } else {
         this.Blok.YjsManager.fromJSON(blockDataArray);
       }
@@ -731,6 +738,11 @@ export class BlockManager extends Module {
       this.isRenderingDocument = false;
     }
 
+    for (const [block, placement] of underExistingParents) {
+      this.hierarchy.placeBlock(block, placement);
+      hideUnderCollapsedParent(block, (id) => this.getBlockById(id));
+    }
+
     // Apply indentation for blocks with parentId (hierarchical structure).
     blocks.forEach(block => {
       if (block.parentId !== null) {
@@ -758,24 +770,62 @@ export class BlockManager extends Module {
    * 'local' origin a single `insert()` writes with — a non-local origin would
    * either skip the undo stack or be replayed back as a remote change.
    *
-   * A child whose parent is in the SAME batch is dropped from that parent's
-   * `content` payload and placed by its own flat index instead: the serializer
-   * copies `content` into the parent's contentIds verbatim, so keeping both
-   * would list that child twice.
+   * Each block goes in by placement, before the batch reaches memory. A
+   * child of a batch block follows the nearest earlier sibling (in its
+   * parent's contentIds) already written, so the doc keeps contentIds order
+   * whatever the batch order. A root block follows the previous batch root,
+   * the first one the root block before `index`.
    * @param blockDataArray - the batch, in flat document order
    * @param index - flat index the batch starts at
+   * @param underExistingParents - placements of batch blocks whose parent is outside the batch
    */
-  private addBlocksToDocument(blockDataArray: OutputBlockData[], index: number): void {
+  private addBlocksToDocument(
+    blockDataArray: OutputBlockData[],
+    index: number,
+    underExistingParents: ReadonlyMap<Block, TreePlacement>
+  ): void {
     const idsInBatch = new Set(blockDataArray.map((blockData) => blockData.id));
+    const placedById = new Map([...underExistingParents].map(([block, placement]) => [block.id, placement]));
+    const contentById = new Map(blockDataArray.map((blockData) => [blockData.id, blockData.content ?? []]));
+    const written = new Set<string>();
+    const previous = { root: lastChildBefore({ blocks: this.blocks, getBlockById: (id) => this.getBlockById(id) }, null, index) };
+
+    const placementOf = (blockData: OutputBlockData, id: string): TreePlacement => {
+      const placed = placedById.get(id);
+
+      if (placed !== undefined) {
+        return placed;
+      }
+
+      if (blockData.parent === undefined || blockData.parent === null) {
+        return { parentId: null, afterId: previous.root };
+      }
+
+      const siblings = contentById.get(blockData.parent) ?? [];
+      const afterId = siblings.slice(0, siblings.indexOf(id)).reverse().find((siblingId) => written.has(siblingId));
+
+      return { parentId: blockData.parent, afterId: afterId ?? null };
+    };
 
     this.Blok.YjsManager.transact(() => {
-      blockDataArray.forEach((blockData, offset) => {
-        const content = blockData.content?.filter((childId) => !idsInBatch.has(childId));
+      blockDataArray.forEach((blockData) => {
+        const id = blockData.id;
 
-        this.Blok.YjsManager.addBlock({
-          ...blockData,
-          ...(content !== undefined && { content }),
-        }, index + offset);
+        if (id === undefined) {
+          return;
+        }
+
+        const placement = placementOf(blockData, id);
+        const content = blockData.content?.filter((childId) => !idsInBatch.has(childId));
+        const unparented = { ...blockData, ...(content !== undefined && { content }) };
+
+        delete unparented.parent;
+        this.Blok.YjsManager.addBlockAt(unparented, placement);
+        written.add(id);
+
+        if (placement.parentId === null) {
+          previous.root = id;
+        }
       });
     });
   }
@@ -2046,6 +2096,37 @@ export class BlockManager extends Module {
   }
 
   /**
+   * insertMany helper: where each batch block whose parent is already in the
+   * editor (not in the batch) goes. Under that parent, after its last child
+   * before `index`; later batch blocks under the same parent follow the
+   * earlier ones. A table/database parent is left out: it places its own
+   * children, and the block falls back to the root.
+   * @param blocks - blocks being inserted
+   * @param blockById - id→block lookup built from `blocks`
+   * @param index - flat index the batch starts at
+   */
+  private placementsUnderExistingParents(blocks: Block[], blockById: Map<string, Block>, index: number): Map<Block, TreePlacement> {
+    const placements = new Map<Block, TreePlacement>();
+    const lastPlacedUnder = new Map<string, string>();
+    const getBlock = (id: string): Block | undefined => this.getBlockById(id);
+
+    for (const block of blocks) {
+      const parent = block.parentId === null || blockById.has(block.parentId) ? undefined : getBlock(block.parentId);
+
+      if (parent === undefined || isSelfPlacedParent(parent, getBlock)) {
+        continue;
+      }
+
+      const afterId = lastPlacedUnder.get(parent.id) ?? lastChildBefore({ blocks: this.blocks, getBlockById: getBlock }, parent.id, index);
+
+      placements.set(block, { parentId: parent.id, afterId });
+      lastPlacedUnder.set(parent.id, block.id);
+    }
+
+    return placements;
+  }
+
+  /**
    * insertMany helper: fills parent.contentIds from child.parentId.
    *
    * Hierarchical input JSON may carry `parent` on children without a matching
@@ -2144,13 +2225,15 @@ export class BlockManager extends Module {
    * the point of introduction; in production we only log, so an edge-case
    * drift never breaks user loads.
    * @param blocks - the fully reconciled blocks about to be handed to Yjs
+   * @param underExistingParents - batch blocks whose parent is outside the batch
    */
-  private assertInsertManyHierarchy(blocks: Block[]): void {
+  private assertInsertManyHierarchy(blocks: Block[], underExistingParents: ReadonlyMap<Block, TreePlacement>): void {
+    // A parent outside the batch is not in the snapshot to check against.
     const snapshot: OutputBlockData[] = blocks.map((block) => ({
       id: block.id,
       type: block.name,
       data: {},
-      ...(block.parentId !== null && { parent: block.parentId }),
+      ...(block.parentId !== null && !underExistingParents.has(block) && { parent: block.parentId }),
       ...(block.contentIds.length > 0 && { content: block.contentIds }),
     }));
     const env = typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined;

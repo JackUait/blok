@@ -43,6 +43,9 @@ export class BlocksAPI extends Module {
       get isPointerDragActive(): boolean {
         return blocksAPI.Blok.BlockManager.isPointerDragActive;
       },
+      get isApplyingRemoteChange(): boolean {
+        return blocksAPI.Blok.BlockManager.isApplyingRemoteChange;
+      },
       clear: (): Promise<void> => this.clear(),
       render: (data: OutputData): Promise<void> => this.render(data),
       renderFromHTML: (data: string): Promise<void> => this.renderFromHTML(data),

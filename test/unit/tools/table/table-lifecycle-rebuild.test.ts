@@ -541,13 +541,17 @@ describe('Table lifecycle rebuild', () => {
      * the table data names its cell, or we send that cell to every peer and
      * the block ends up named in two cells (COB-4).
      */
-    it('is left out of save() until the table data names its cell', () => {
+    const addThenParent = (remote: boolean): string[] => {
       const options = createTableOptions(
         { content: [['A', 'B']] },
         {},
-        { blocks: { isSyncingFromYjs: false, getById: vi.fn(() => undefined) } }
+        { blocks: { isSyncingFromYjs: false, isApplyingRemoteChange: false, getById: vi.fn(() => undefined) } }
       );
-      const blocksApi = options.api.blocks as unknown as { isSyncingFromYjs: boolean; getById: ReturnType<typeof vi.fn> };
+      const blocksApi = options.api.blocks as unknown as {
+        isSyncingFromYjs: boolean;
+        isApplyingRemoteChange: boolean;
+        getById: ReturnType<typeof vi.fn>;
+      };
       const table = new Table(options);
       const element = table.render();
 
@@ -559,22 +563,31 @@ describe('Table lifecycle rebuild', () => {
         .map(([, handler]) => handler as (payload: unknown) => void);
       const cellContainer = element.querySelector('[data-blok-table-cell-blocks]') as HTMLElement;
       const early = document.createElement('div');
-      const peerBlock = { id: 'peer-cell-block', parentId: null as string | null };
+      const added = { id: 'new-cell-block', parentId: null as string | null };
 
-      early.setAttribute('data-blok-id', 'peer-cell-block');
+      early.setAttribute('data-blok-id', 'new-cell-block');
       cellContainer.appendChild(early);
-      blocksApi.getById.mockImplementation((id: string) => (id === 'peer-cell-block' ? peerBlock : undefined));
+      blocksApi.getById.mockImplementation((id: string) => (id === 'new-cell-block' ? added : undefined));
 
+      // A local split also runs in the sync window, but it is not a peer's change.
       blocksApi.isSyncingFromYjs = true;
+      blocksApi.isApplyingRemoteChange = remote;
       blockChanged.forEach((handler) => handler({
-        event: { type: 'block-added', detail: { target: { id: 'peer-cell-block', holder: early }, index: 1 } },
+        event: { type: 'block-added', detail: { target: { id: 'new-cell-block', holder: early }, index: 1 } },
       }));
-      peerBlock.parentId = 'table-lifecycle-test';
+      added.parentId = 'table-lifecycle-test';
       blocksApi.isSyncingFromYjs = false;
+      blocksApi.isApplyingRemoteChange = false;
 
-      const saved = table.save(element);
+      return table.save(element).content.flat().flatMap((cell) => (typeof cell === 'string' ? [] : cell.blocks));
+    };
 
-      expect(saved.content.flat().flatMap((cell) => (typeof cell === 'string' ? [] : cell.blocks))).not.toContain('peer-cell-block');
+    it('is left out of save() until the table data names its cell', () => {
+      expect(addThenParent(true)).not.toContain('new-cell-block');
+    });
+
+    it('is saved in its cell when this client added it', () => {
+      expect(addThenParent(false)).toContain('new-cell-block');
     });
   });
 

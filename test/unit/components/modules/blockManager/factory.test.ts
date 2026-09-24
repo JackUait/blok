@@ -38,6 +38,7 @@ const createMockAPIMethods = (): APIInterface => ({
   blocks: {
     isSyncingFromYjs: false,
     isPointerDragActive: false,
+    isApplyingRemoteChange: false,
     clear: vi.fn().mockResolvedValue(undefined),
     render: vi.fn().mockResolvedValue(undefined),
     renderFromHTML: vi.fn().mockResolvedValue(undefined),

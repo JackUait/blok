@@ -191,6 +191,37 @@ test.describe('find in page', () => {
       await expect(page.getByTestId('find-replace-row')).toBeVisible();
       await expect(page.getByTestId('find-replace-toggle')).toHaveAttribute('aria-expanded', 'true');
     });
+
+    test('the replace row lines up under the find row, above the match map', async ({ page }) => {
+      await createEditor(page, paragraphs('foo one', 'foo two'));
+      await focusParagraph(page, 'foo one');
+      await page.keyboard.press(REPLACE_KEY);
+      await page.getByTestId('find-input').fill('foo');
+      await expect(page.getByTestId('find-map')).toBeVisible();
+      // The row grows open; measure once it has settled.
+      await page.waitForFunction(() =>
+        document.getAnimations().every((animation) => animation.playState !== 'running'));
+
+      const box = async (testId: string): Promise<{ left: number; right: number; top: number; bottom: number }> => {
+        const rect = await page.getByTestId(testId).boundingBox();
+
+        if (rect === null) {
+          throw new Error(`${testId} has no box`);
+        }
+
+        return { left: rect.x, right: rect.x + rect.width, top: rect.y, bottom: rect.y + rect.height };
+      };
+      const findField = await box('find-field');
+      const replaceField = await box('find-replace-field');
+      const close = await box('find-close');
+      const replaceAll = await box('find-replace-all');
+      const map = await box('find-map');
+
+      expect(replaceField.left).toBeCloseTo(findField.left, 0);
+      expect(replaceField.right).toBeCloseTo(findField.right, 0);
+      expect(replaceAll.right).toBeCloseTo(close.right, 0);
+      expect(map.top).toBeGreaterThanOrEqual(replaceField.bottom);
+    });
   });
 
   test.describe('results', () => {

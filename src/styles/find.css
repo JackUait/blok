@@ -73,8 +73,14 @@
 [data-blok-find-bar] {
   position: relative;
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
+  /*
+    Both rows share these columns (toggle | field | controls) through
+    subgrid, so the replace field sits exactly under the find field and
+    both control groups end at the same edge.
+  */
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: var(--blok-space-0-5);
   width: min(var(--blok-find-bar-width), calc(100vw - 2 * var(--blok-space-4)));
   padding: var(--blok-space-1-5);
   border-radius: var(--blok-radius-lg);
@@ -122,11 +128,29 @@
   font: inherit;
 }
 
+[data-blok-find-bar] > *,
 [data-blok-find-row] {
-  display: flex;
+  grid-column: 1 / -1;
+}
+
+[data-blok-find-row],
+[data-blok-find-replace-row] {
+  display: grid;
+  grid-template-columns: subgrid;
   align-items: center;
-  gap: var(--blok-space-0-5);
   min-width: 0;
+}
+
+[data-blok-find-controls] {
+  display: flex;
+  grid-column: 3;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--blok-space-0-5);
+}
+
+[data-blok-find-replace-row] [data-blok-find-controls] {
+  gap: var(--blok-space-1);
 }
 
 /* ─── Field ─── */
@@ -423,8 +447,11 @@
 [data-blok-find-replace-row] > [data-blok-find-row] {
   min-height: 0;
   overflow: hidden;
-  /* Lines the replace field up under the find field, past the chevron. */
-  padding-inline-start: calc(var(--blok-space-5) + var(--blok-space-0-5));
+}
+
+/* Column 1 is the chevron's; the replace field starts under the find field. */
+[data-blok-find-replace-row] [data-blok-find-field] {
+  grid-column: 2;
 }
 
 [data-blok-find-text-button] {

@@ -9049,8 +9049,9 @@ span[data-blok-slash-search] {
 [data-blok-find-bar] {
   position: relative;
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: var(--blok-space-0-5);
   width: min(var(--blok-find-bar-width), calc(100vw - 2 * var(--blok-space-4)));
   padding: var(--blok-space-1-5);
   border-radius: var(--blok-radius-lg);
@@ -9092,11 +9093,27 @@ span[data-blok-slash-search] {
   font: inherit;
 }
 
-[data-blok-find-row] {
-  display: flex;
+[data-blok-find-bar] > *, [data-blok-find-row] {
+  grid-column: 1 / -1;
+}
+
+[data-blok-find-row], [data-blok-find-replace-row] {
+  display: grid;
+  grid-template-columns: subgrid;
   align-items: center;
-  gap: var(--blok-space-0-5);
   min-width: 0;
+}
+
+[data-blok-find-controls] {
+  display: flex;
+  grid-column: 3;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--blok-space-0-5);
+}
+
+[data-blok-find-replace-row] [data-blok-find-controls] {
+  gap: var(--blok-space-1);
 }
 
 [data-blok-find-field] {
@@ -9351,7 +9368,10 @@ span[data-blok-slash-search] {
 [data-blok-find-replace-row] > [data-blok-find-row] {
   min-height: 0;
   overflow: hidden;
-  padding-inline-start: calc(var(--blok-space-5) + var(--blok-space-0-5));
+}
+
+[data-blok-find-replace-row] [data-blok-find-field] {
+  grid-column: 2;
 }
 
 [data-blok-find-text-button] {

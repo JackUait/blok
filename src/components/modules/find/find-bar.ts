@@ -48,6 +48,7 @@ const ATTR = {
   iconButton: 'data-blok-find-icon-button',
   toggle: 'data-blok-find-toggle',
   divider: 'data-blok-find-divider',
+  controls: 'data-blok-find-controls',
   replaceToggle: 'data-blok-find-replace-toggle',
   replaceRow: 'data-blok-find-replace-row',
   textButton: 'data-blok-find-text-button',
@@ -216,9 +217,10 @@ export class FindBar {
 
     const divider = build('span', { [ATTR.divider]: '', 'aria-hidden': 'true' });
 
-    row.append(
-      this.replaceToggle,
-      this.field,
+    // find.css lays both rows on one grid: toggle | field | controls.
+    const controls = build('div', { [ATTR.controls]: '' });
+
+    controls.append(
       this.matchCaseButton,
       this.wholeWordButton,
       divider,
@@ -226,6 +228,7 @@ export class FindBar {
       this.nextButton,
       this.closeButton
     );
+    row.append(this.replaceToggle, this.field, controls);
 
     // Pointer shortcut only; keyboard users step with Enter / Shift+Enter.
     this.map = build('div', { [ATTR.map]: '', 'aria-hidden': 'true', 'data-blok-testid': 'find-map' });
@@ -235,7 +238,7 @@ export class FindBar {
     this.replaceRow.hidden = true;
 
     const replaceInner = build('div', { [ATTR.row]: '' });
-    const replaceField = build('div', { [ATTR.field]: '' });
+    const replaceField = build('div', { [ATTR.field]: '', 'data-blok-testid': 'find-replace-field' });
 
     this.replaceInput = build('input', {
       type: 'text',
@@ -249,10 +252,13 @@ export class FindBar {
 
     this.replaceButton = this.makeTextButton('find.replace', 'find-replace');
     this.replaceAllButton = this.makeTextButton('find.replaceAll', 'find-replace-all');
-    replaceInner.append(replaceField, this.replaceButton, this.replaceAllButton);
+    const replaceControls = build('div', { [ATTR.controls]: '' });
+
+    replaceControls.append(this.replaceButton, this.replaceAllButton);
+    replaceInner.append(replaceField, replaceControls);
     this.replaceRow.append(replaceInner);
 
-    this.bar.append(row, this.map, this.replaceRow);
+    this.bar.append(row, this.replaceRow, this.map);
     this.element.append(this.bar);
 
     this.bindTooltip(this.replaceToggle, 'find.toggleReplace');

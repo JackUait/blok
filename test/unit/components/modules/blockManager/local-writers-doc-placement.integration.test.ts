@@ -169,6 +169,15 @@ describe('local writers place blocks in the doc where the editor tree has them',
     vi.restoreAllMocks();
   });
 
+  it('insertMany under a toggle that is already in the document', async () => {
+    const { author, peer } = await pair([P('a'), T('t', ['x']), P('x', 't'), P('b')]);
+
+    author.blocks.insertMany([P('m', 't'), P('n')], 3);
+    await settle();
+
+    await expectEverywhere(author, peer, ['a^-[]', 't^-[x,m]', 'x^t[]', 'm^t[]', 'n^-[]', 'b^-[]']);
+  }, 60_000);
+
   it('index insert between root blocks', async () => {
     const { author, peer } = await pair([P('a'), T('t', ['x']), P('x', 't'), P('b')]);
 

@@ -1236,10 +1236,10 @@ export class BlockInsertion {
     // `extendThroughRAF: true` keeps `isSyncingFromYjs` elevated past the end
     // of this sync closure and through the next animation frame. Without it,
     // the cleanup runs immediately on return and the subsequent
-    // `await block.ready` → `onPaste` → `addBlock` microtask chain would see
+    // `await block.ready` → `onPaste` → doc add microtask chain would see
     // `isSyncingFromYjs === false`. Any MutationObserver-triggered first
     // `save()` on the freshly rendered block would then land as a separate
-    // Yjs transaction *before* the authoritative `YjsManager.addBlock()` call
+    // Yjs transaction *before* the authoritative doc add
     // below, producing a phantom post-paste undo entry. Mirrors the guard in
     // `convert()` for the same bug class.
     const block = this.yjsSync.withAtomicOperation(() => {

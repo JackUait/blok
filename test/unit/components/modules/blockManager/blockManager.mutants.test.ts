@@ -2815,7 +2815,7 @@ describe('BlockManager prepared boot — real sub-module closures', () => {
     // No id is imposed: a derived one is identical on every peer, and two
     // peers repairing the same removal would then overwrite each other's block.
     expect((insert).mock.calls[0]?.[0]).toEqual({ skipYjsSync: true, id: undefined });
-    expect(harness.yjs.addBlock).toHaveBeenCalledWith({ id: 'repair', type: 'paragraph', data: {} });
+    expect(harness.yjs.addBlockAt).toHaveBeenCalledWith({ id: 'repair', type: 'paragraph', data: {} }, { parentId: null, afterId: null });
 
     await harness.blockManager.destroy();
   });

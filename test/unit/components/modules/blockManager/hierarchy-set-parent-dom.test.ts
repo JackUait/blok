@@ -322,6 +322,21 @@ describe('BlockHierarchy.setBlockParent — holders in the DOM', () => {
     expect(holderIds(workingArea)).toEqual(['a', 'c', 'b']);
   });
 
+  it('leaves the holder of a block that joins a table for the table to place', () => {
+    const h = build(workingArea, [
+      { id: 'table', kind: 'table' },
+      { id: 'a', parentId: 'table' },
+      { id: 'x' },
+    ]);
+    const [firstCell] = h.cellsOf('table');
+
+    h.hierarchy.setBlockParent(h.get('x'), 'table');
+
+    expect(h.get('x').parentId).toBe('table');
+    expect(holderIds(firstCell)).toEqual(['a']);
+    expect(holderIds(workingArea)).toEqual(['table', 'x']);
+  });
+
   it('moves a block that leaves a table cell for the root out of the cell', () => {
     const h = build(workingArea, [
       { id: 'table', kind: 'table' },

@@ -167,6 +167,15 @@ export class BlockHierarchy {
   }
 
   /**
+   * `block` and every block under it, in flat order. Found by parentId, not by
+   * flat contiguity: callers run on arrays whose runs may be broken.
+   * @param block - the subtree root
+   */
+  private subtreeOf(block: Block): Block[] {
+    return this.repository.blocks.filter(candidate => candidate === block || this.isUnder(candidate, block.id));
+  }
+
+  /**
    * The table cell (or other slot of a table/database) that holds `block`'s
    * holder directly, when that slot belongs to the block's nearest
    * table/database ancestor. The cell is the home slot of a block already in
@@ -216,7 +225,7 @@ export class BlockHierarchy {
   private placementForParent(block: Block, parentId: string | null): TreePlacement {
     const blocks = this.repository.blocks;
     const index = blocks.indexOf(block);
-    const subtree = new Set(blocks.filter(candidate => candidate === block || this.isUnder(candidate, block.id)));
+    const subtree = new Set(this.subtreeOf(block));
 
     if (parentId !== null && parentId !== block.parentId) {
       const predecessor = blocks[index - 1] as Block | undefined;
@@ -305,7 +314,7 @@ export class BlockHierarchy {
     }
 
     // Corrupted DOM: mounting would insert the new parent into its own child.
-    const subtree = this.repository.blocks.filter(candidate => candidate === block || this.isUnder(candidate, block.id));
+    const subtree = this.subtreeOf(block);
 
     if (subtree.some(member => member.holder.contains(newContainer))) {
       return false;
@@ -491,7 +500,7 @@ export class BlockHierarchy {
     if (withDom && firstSlot !== null && this.blocksStore !== undefined) {
       const store = this.blocksStore;
       // A slotless block's children sit flat after it, so they come along.
-      const subtree = this.repository.blocks.filter(candidate => candidate === block || this.isUnder(candidate, block.id));
+      const subtree = this.subtreeOf(block);
       const carried = subtree.filter(member =>
         !subtree.some(other => other !== member && other.holder.contains(member.holder)));
 
@@ -623,8 +632,7 @@ export class BlockHierarchy {
       throw new Error(`BlockHierarchy.placeBlock: block "${block.id}" cannot follow itself`);
     }
 
-    // By parentId, not by flat contiguity: the flat run may already be broken.
-    const moving = blocks.filter(candidate => candidate === block || this.isUnder(candidate, block.id));
+    const moving = this.subtreeOf(block);
     const movingSet = new Set(moving);
     const rest = blocks.filter(candidate => !movingSet.has(candidate));
     const getBlock = (id: string): Block | undefined => this.repository.getBlockById(id);

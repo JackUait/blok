@@ -69,7 +69,11 @@ export class GestureController extends Controller {
     this.Blok.YjsManager.beginGesture('discrete');
 
     // A drag inside the editor may pause longer than the capture timeout.
-    if (!this.pointerHeld && this.isInsideWrapper(event.target)) {
+    // Only the main button drags; a right press opens a context menu, which
+    // on macOS takes its pointerup and would leave the hold on.
+    const drags = !(event instanceof MouseEvent) || event.button === 0;
+
+    if (drags && !this.pointerHeld && this.isInsideWrapper(event.target)) {
       this.pointerHeld = true;
       this.Blok.YjsManager.holdCapture();
     }
@@ -124,6 +128,8 @@ export class GestureController extends Controller {
     on(window, 'compositionend', this.compositionendHandler, true);
     on(window, 'pointerup', this.pointerReleaseHandler, true);
     on(window, 'pointercancel', this.pointerReleaseHandler, true);
+    // Ctrl+click on macOS is a main-button press that opens a context menu.
+    on(window, 'contextmenu', this.pointerReleaseHandler, true);
     on(window, 'blur', this.pointerReleaseHandler);
     on(window, 'blur', this.compositionendHandler);
   }

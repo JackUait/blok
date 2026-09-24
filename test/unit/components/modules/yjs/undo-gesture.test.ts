@@ -244,6 +244,26 @@ describe('UndoHistory gestures', () => {
     expect(undoSteps()).toBe(2);
   });
 
+  it('keeps a hold through clear() until every holder has released', () => {
+    history.holdCapture();
+    history.holdCapture();
+    history.clear();
+    history.releaseCapture();
+
+    expect(history.undoManager.captureTimeout).toBe(Infinity);
+
+    history.releaseCapture();
+
+    expect(history.undoManager.captureTimeout).not.toBe(Infinity);
+  });
+
+  it('keeps a hold on the undo manager a scope rebind builds', () => {
+    history.holdCapture();
+    history.rebindScope([new Y.Doc().getArray('blocks') as unknown as UndoScopeType]);
+
+    expect(history.undoManager.captureTimeout).toBe(Infinity);
+  });
+
   it('makes an API call outside a gesture task its own step', async () => {
     putCaret(blocks[0], 2);
     history.beginGesture('typing');

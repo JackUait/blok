@@ -342,7 +342,7 @@ export class UndoHistory {
     this.rootOrderScope = scope.find((root): root is Y.Array<string> => root instanceof Y.Array) ?? null;
 
     return new Y.UndoManager(scope, {
-      captureTimeout: CAPTURE_TIMEOUT_MS,
+      captureTimeout: this.captureHolds > 0 ? Infinity : CAPTURE_TIMEOUT_MS,
       trackedOrigins: new Set(['local']),
       deleteFilter: (item) => {
         const mayDelete = this.mayUndoDelete(item);
@@ -2542,8 +2542,7 @@ export class UndoHistory {
     this.poppedStackItem = null;
     this.openEntry = null;
     this.typingInputKey = null;
-    this.captureHolds = 0;
-    this.undoManager.captureTimeout = CAPTURE_TIMEOUT_MS;
+    // Holds are left alone: each holder still owns its release.
     // Clear smart grouping state
     this.clearBoundary();
     this.undoManager.clear();

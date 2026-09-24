@@ -1448,7 +1448,7 @@ export class BlockYjsSync {
     const getBlock = (id: string): Block | undefined => this.repository.getBlockById(id);
     const parent = docParentId === null ? undefined : getBlock(docParentId);
     const block = getBlock(blockId);
-    const oldParent = block?.parentId == null ? undefined : getBlock(block.parentId);
+    const oldParent = block === undefined || block.parentId === null ? undefined : getBlock(block.parentId);
     const slot = order.indexOf(blockId);
 
     if (
@@ -2276,11 +2276,22 @@ export class BlockYjsSync {
     const inDocOrder = [...this.repository.blocks]
       .sort((a, b) => (docRank.get(a.id) ?? unlisted) - (docRank.get(b.id) ?? unlisted));
     const orderedBlocks = dfsOrder({ blocks: inDocOrder, getById: (id) => this.repository.getBlockById(id) });
-    const childOrder = (): Map<string | null, string> => this.repository.blocks.reduce((order, block) => {
-      const parentId = block.parentId ?? null;
+    const childOrder = (): Map<string | null, string> => {
+      const children = new Map<string | null, string[]>();
 
-      return order.set(parentId, `${order.get(parentId) ?? ''} ${block.id}`);
-    }, new Map<string | null, string>());
+      this.repository.blocks.forEach((block) => {
+        const parentId = block.parentId ?? null;
+        const ids = children.get(parentId);
+
+        if (ids === undefined) {
+          children.set(parentId, [ block.id ]);
+        } else {
+          ids.push(block.id);
+        }
+      });
+
+      return new Map([...children].map(([parentId, ids]) => [parentId, ids.join(' ')]));
+    };
     const before = childOrder();
 
     // Asking the store for each block's index is a scan per block, quadratic

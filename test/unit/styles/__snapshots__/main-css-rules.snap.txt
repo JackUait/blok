@@ -1620,8 +1620,7 @@
   --blok-find-match-bg: rgba(255, 212, 0, 0.32);
   --blok-find-match-active-bg: rgba(255, 138, 0, 0.5);
   --blok-find-lens-ring: rgba(255, 128, 0, 0.72);
-  --blok-find-lens-glow: rgba(255, 138, 0, 0.22);
-  --blok-find-tick: rgba(55, 53, 47, 0.26);
+  --blok-find-tick: #c9c8c5;
   --blok-find-tick-active: #f08a00;
   --blok-find-empty-bg: rgba(235, 87, 87, 0.07);
   --blok-find-empty-border: rgba(235, 87, 87, 0.55);
@@ -1778,8 +1777,7 @@
   --blok-find-match-bg: rgba(255, 212, 0, 0.2);
   --blok-find-match-active-bg: rgba(255, 146, 38, 0.5);
   --blok-find-lens-ring: rgba(255, 163, 68, 0.8);
-  --blok-find-lens-glow: rgba(255, 163, 68, 0.26);
-  --blok-find-tick: rgba(255, 255, 255, 0.26);
+  --blok-find-tick: #5e5e5e;
   --blok-find-tick-active: #ffa344;
   --blok-find-empty-bg: rgba(251, 93, 93, 0.12);
   --blok-find-empty-border: rgba(251, 93, 93, 0.6);
@@ -1931,8 +1929,7 @@
   --blok-find-match-bg: rgba(255, 212, 0, 0.2);
   --blok-find-match-active-bg: rgba(255, 146, 38, 0.5);
   --blok-find-lens-ring: rgba(255, 163, 68, 0.8);
-  --blok-find-lens-glow: rgba(255, 163, 68, 0.26);
-  --blok-find-tick: rgba(255, 255, 255, 0.26);
+  --blok-find-tick: #5e5e5e;
   --blok-find-tick-active: #ffa344;
   --blok-find-empty-bg: rgba(251, 93, 93, 0.12);
   --blok-find-empty-border: rgba(251, 93, 93, 0.6);
@@ -9266,17 +9263,17 @@ span[data-blok-slash-search] {
 
 [data-blok-find-map] {
   position: relative;
-  height: 10px;
-  margin: var(--blok-space-1) var(--blok-space-2) 0;
+  height: 14px;
+  margin: var(--blok-space-1-5) var(--blok-space-2-5) 0;
   cursor: pointer;
 }
 
 [data-blok-find-map]::before {
   content: '';
   position: absolute;
-  inset-inline: 0;
+  inset-inline: -4px;
   top: 50%;
-  height: 2px;
+  height: 4px;
   border-radius: var(--blok-radius-pill);
   background: var(--blok-icon-bg);
   transform: translateY(-50%);
@@ -9286,24 +9283,24 @@ span[data-blok-slash-search] {
   position: absolute;
   top: 50%;
   width: 2px;
-  height: 6px;
+  height: 8px;
   border-radius: var(--blok-radius-pill);
   background: var(--blok-find-tick);
   transform: translate(-50%, -50%);
-  transition: height var(--blok-duration-slow) var(--blok-ease-popover), background-color var(--blok-duration-slow) var(--blok-ease-popover), box-shadow var(--blok-duration-slow) var(--blok-ease-popover);
+  transition: width var(--blok-duration-slow) var(--blok-ease-popover), height var(--blok-duration-slow) var(--blok-ease-popover), background-color var(--blok-duration-slow) var(--blok-ease-popover);
 }
 
 [data-blok-find-tick]:hover {
-  height: 10px;
+  height: 12px;
   background: var(--blok-text-secondary);
 }
 
 [data-blok-find-tick][data-blok-find-active] {
   z-index: 1;
-  width: 3px;
-  height: 10px;
+  width: 4px;
+  height: 14px;
   background: var(--blok-find-tick-active);
-  box-shadow: 0 0 0 3px var(--blok-find-lens-glow);
+  box-shadow: 0 0 0 2px var(--blok-popover-bg);
 }
 
 [data-blok-find-replace-row] {

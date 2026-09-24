@@ -495,8 +495,7 @@
   --blok-find-match-bg: rgba(255, 212, 0, 0.32);
   --blok-find-match-active-bg: rgba(255, 138, 0, 0.5);
   --blok-find-lens-ring: rgba(255, 128, 0, 0.72);
-  --blok-find-lens-glow: rgba(255, 138, 0, 0.22);
-  --blok-find-tick: rgba(55, 53, 47, 0.26);
+  --blok-find-tick: #c9c8c5;
   --blok-find-tick-active: #f08a00;
   --blok-find-empty-bg: rgba(235, 87, 87, 0.07);
   --blok-find-empty-border: rgba(235, 87, 87, 0.55);
@@ -686,8 +685,7 @@
     --blok-find-match-bg: rgba(255, 212, 0, 0.2);
     --blok-find-match-active-bg: rgba(255, 146, 38, 0.5);
     --blok-find-lens-ring: rgba(255, 163, 68, 0.8);
-    --blok-find-lens-glow: rgba(255, 163, 68, 0.26);
-    --blok-find-tick: rgba(255, 255, 255, 0.26);
+    --blok-find-tick: #5e5e5e;
     --blok-find-tick-active: #ffa344;
     --blok-find-empty-bg: rgba(251, 93, 93, 0.12);
     --blok-find-empty-border: rgba(251, 93, 93, 0.6);
@@ -871,8 +869,7 @@
   --blok-find-match-bg: rgba(255, 212, 0, 0.2);
   --blok-find-match-active-bg: rgba(255, 146, 38, 0.5);
   --blok-find-lens-ring: rgba(255, 163, 68, 0.8);
-  --blok-find-lens-glow: rgba(255, 163, 68, 0.26);
-  --blok-find-tick: rgba(255, 255, 255, 0.26);
+  --blok-find-tick: #5e5e5e;
   --blok-find-tick-active: #ffa344;
   --blok-find-empty-bg: rgba(251, 93, 93, 0.12);
   --blok-find-empty-border: rgba(251, 93, 93, 0.6);

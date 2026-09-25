@@ -17,7 +17,7 @@ import { subtreeEndIndex } from '../../utils/blocks-tree';
 import { SELF_PLACING_PARENTS } from '../../../tools/nested-blocks';
 import { findOwn } from '../../utils/own-element';
 import { canAdoptChild, releasesChildrenOnTurnInto } from '../../utils/turn-into-children';
-import { flatIndexForPlacement, type TreePlacement } from '../../utils/tree-order';
+import { flatIndexForPlacement, subtreeEnd, type TreePlacement } from '../../utils/tree-order';
 import { lastChildBefore } from '../api/block-placement';
 import type { BlockFactory } from './factory';
 import { hideUnderCollapsedParent, isSelfPlacedParent } from './new-block-placement';
@@ -986,18 +986,8 @@ export class BlockInsertion {
    */
   private subtreeEnd(parent: Block): number {
     const blocks = this.repository.blocks;
-    const parentIndex = blocks.indexOf(parent);
-    const isUnderParent = (cursor: string | null, seen: Set<string>): boolean => {
-      if (cursor === null || seen.has(cursor)) {
-        return false;
-      }
 
-      return cursor === parent.id || isUnderParent(this.repository.getBlockById(cursor)?.parentId ?? null, seen.add(cursor));
-    };
-    const firstOutside = blocks.slice(parentIndex + 1)
-      .findIndex(candidate => !isUnderParent(candidate.parentId, new Set()));
-
-    return firstOutside === -1 ? blocks.length : parentIndex + 1 + firstOutside;
+    return subtreeEnd({ blocks, getById: id => this.repository.getBlockById(id) }, blocks.indexOf(parent));
   }
 
   /**

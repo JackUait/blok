@@ -15,7 +15,7 @@ import { isChildToolAllowed } from '../../utils/child-tools';
 import { moveElementAfter, moveElementBefore } from '../../utils/html';
 import { equals } from '../../utils/object';
 import { sanitizeBlocks, stripUnsafeUrlsDeep } from '../../utils/sanitizer';
-import { dfsOrder, flatIndexForPlacement, type TreePlacement } from '../../utils/tree-order';
+import { dfsOrder, flatIndexForPlacement, subtreeEnd, type TreePlacement } from '../../utils/tree-order';
 import type { YjsManager } from '../yjs';
 import type { BlockChangeEvent, TransactionOrigin } from '../yjs/types';
 
@@ -1580,14 +1580,9 @@ export class BlockYjsSync {
     const afterRunOf = (sibling: Block): number => {
       const start = blocks.indexOf(sibling);
 
-      if (start === -1) {
-        return docIndex;
-      }
-
-      const runLength = blocks.slice(start + 1)
-        .findIndex(block => !ancestry(block).slice(1).includes(sibling));
-
-      return runLength === -1 ? blocks.length : start + 1 + runLength;
+      return start === -1
+        ? docIndex
+        : subtreeEnd({ blocks, getById: id => this.repository.getBlockById(id) }, start);
     };
 
     // Walk back past doc predecessors memory has not put in the parent yet: a

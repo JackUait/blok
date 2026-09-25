@@ -145,8 +145,6 @@ export class BlockSelection extends Module {
       },
       blockquote: {},
       pre: {},
-      sup: {},
-      sub: {},
       ...INLINE_TEXT_SANITIZE,
       // After the spread: its `rel: true` would override a host's own `rel` rule.
       a: {

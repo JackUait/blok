@@ -367,13 +367,20 @@ describe('htmlToBlocksWithReport — warnings', () => {
   });
 
   it('reports an inline tag whose meaning the sanitizer unwraps away', () => {
+    const report = htmlToBlocksWithReport('<p>Press <kbd>K</kbd> or <small>s</small></p>');
+
+    expect(shape(report.blocks)).toEqual([{ type: 'paragraph', data: { text: 'Press K or s' } }]);
+    expect(report.warnings).toEqual([
+      { construct: 'kbd', action: 'degraded', detail: expect.stringContaining('kbd') },
+      { construct: 'small', action: 'degraded', detail: expect.stringContaining('small') },
+    ]);
+  });
+
+  it('keeps sub and sup, which every text block stores', () => {
     const report = htmlToBlocksWithReport('<p>H<sub>2</sub>O and x<sup>2</sup></p>');
 
-    expect(shape(report.blocks)).toEqual([{ type: 'paragraph', data: { text: 'H2O and x2' } }]);
-    expect(report.warnings).toEqual([
-      { construct: 'sub', action: 'degraded', detail: expect.stringContaining('sub') },
-      { construct: 'sup', action: 'degraded', detail: expect.stringContaining('sup') },
-    ]);
+    expect(shape(report.blocks)).toEqual([{ type: 'paragraph', data: { text: 'H<sub>2</sub>O and x<sup>2</sup>' } }]);
+    expect(report.warnings).toEqual([]);
   });
 
   it('does not report a span, whose text survives unwrapping intact', () => {

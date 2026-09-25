@@ -593,17 +593,17 @@ describe('blocksToHtml', () => {
 
   describe('schema option', () => {
     it('merges the schema baseSanitize over the default inline allowlist', () => {
-      class SupTool {
+      class KbdTool {
         public static isInline = true;
-        public static sanitize = { sup: {} };
+        public static sanitize = { kbd: {} };
         public render(): void {}
       }
 
-      const { viewSchema } = defineBlokSchema({ tools: { sup: SupTool as never } });
-      const blocks = doc([{ type: 'paragraph', data: { text: 'x<sup>2</sup> stays <b>bold</b>' } }]);
+      const { viewSchema } = defineBlokSchema({ tools: { kbd: KbdTool as never } });
+      const blocks = doc([{ type: 'paragraph', data: { text: 'press <kbd>K</kbd> stays <b>bold</b>' } }]);
 
-      expect(blocksToHtml(blocks, { schema: viewSchema })).toBe('<p>x<sup>2</sup> stays <b>bold</b></p>');
-      expect(blocksToHtml(blocks)).toBe('<p>x2 stays <b>bold</b></p>');
+      expect(blocksToHtml(blocks, { schema: viewSchema })).toBe('<p>press <kbd>K</kbd> stays <b>bold</b></p>');
+      expect(blocksToHtml(blocks)).toBe('<p>press K stays <b>bold</b></p>');
     });
   });
 

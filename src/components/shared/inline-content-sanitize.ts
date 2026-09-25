@@ -77,7 +77,7 @@ export const preserveEquationSpan = (node: Element): { [attr: string]: boolean |
  * Tag → rule map for inline formatting that text-bearing block tools allow in
  * their `text` field. Spread this into a tool's `text` sanitize config so the
  * marks produced by the inline tools (bold, italic, underline, strikethrough,
- * link, inline code, marker color, equation) round-trip through save and
+ * link, inline code, superscript/subscript, marker color, equation) round-trip through save and
  * "Turn into" conversion the way they do in Notion.
  */
 export const INLINE_TEXT_SANITIZE = {
@@ -91,6 +91,8 @@ export const INLINE_TEXT_SANITIZE = {
   del: {},
   a: { href: true, target: true, rel: true },
   code: {},
+  sup: {},
+  sub: {},
   mark: preserveColorStyles,
   span: preserveEquationSpan,
 } as unknown as SanitizerConfig;

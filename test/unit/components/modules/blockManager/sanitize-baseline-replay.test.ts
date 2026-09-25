@@ -210,12 +210,12 @@ describe('the replay baseline under a sanitizer that normalises', () => {
       priv.blockDidMutated(BlockChangedMutationType, stub, { index: 0 });
     };
 
-    pushPeerEdit('E = mc<sup>2</sup>');
+    pushPeerEdit('Press <kbd>K</kbd>');
     await settle();
 
     // The DOM holds the stripped value; the document must NOT.
-    expect(domText).toBe('E = mc2');
-    expect(docText()).toBe('E = mc<sup>2</sup>');
+    expect(domText).toBe('Press K');
+    expect(docText()).toBe('Press <kbd>K</kbd>');
   });
 
   it('does not write back the sanitizer\'s own normalisation of a peer edit', async () => {

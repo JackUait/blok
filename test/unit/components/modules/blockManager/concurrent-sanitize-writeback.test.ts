@@ -13,12 +13,12 @@ import type { OutputBlockData } from '../../../../../types';
  * into the shared document, destroying the peer's original for everyone.
  *
  * The path, all of it executed here:
- *   1. Peer B writes `E = mc<sup>2</sup>` into the doc. (B's build allows
- *      `sup`; this client's does not — the version skew two tabs on different
+ *   1. Peer B writes `Press <kbd>K</kbd>` into the doc. (B's build allows
+ *      `kbd`; this client's does not — the version skew two tabs on different
  *      bundles, or two clients with different inline tools, produce every day.)
  *   2. This client sanitizes on the way IN — `handleYjsUpdate`
  *      (`yjs-sync.ts:906`) → `sanitizeToolData` (`yjs-sync.ts:1781`).
- *      Paragraph's `text` config has no `sup`, so HTMLJanitor unwraps it.
+ *      Paragraph's `text` config has no `kbd`, so HTMLJanitor unwraps it.
  *   3. `handleYjsUpdate` calls `markRewrittenFromDocument` (`yjs-sync.ts:1026`)
  *      and applies the STRIPPED string through `setData`.
  *   4. The MutationObserver sees the rewrite. `blockDidMutated`
@@ -41,8 +41,8 @@ import type { OutputBlockData } from '../../../../../types';
  * block store, which shows this client's sanitized view either way.
  */
 
-const SUP_MARKUP = 'E = mc<sup>2</sup>';
-const SUP_STRIPPED = 'E = mc2';
+const PEER_MARKUP = 'Press <kbd>K</kbd>';
+const PEER_STRIPPED = 'Press K';
 
 interface TestEditor {
   isReady: Promise<unknown>;
@@ -181,21 +181,21 @@ describe('a peer edit this client sanitizes — the stripped value is written ba
     yjs().applyRemoteUpdate(otherPeer().encodeStateAsUpdate(yjs().getStateVector()));
   };
 
-  it('keeps the peer\'s <sup> in the document after this client sanitizes it away', async () => {
-    pushPeerEdit(SUP_MARKUP);
+  it('keeps the peer\'s <kbd> in the document after this client sanitizes it away', async () => {
+    pushPeerEdit(PEER_MARKUP);
     await settle();
 
     // THE DEFECT: the document must still hold what the peer typed. A stripped
     // value here means this client overwrote the peer's content for EVERYONE —
     // on their screens, on the server, and on every future reload.
-    expect(docText('shared')).toBe(SUP_MARKUP);
+    expect(docText('shared')).toBe(PEER_MARKUP);
   });
 
   it('control: the peer edit really reaches this client and really is sanitized on the way in', async () => {
-    pushPeerEdit(SUP_MARKUP);
+    pushPeerEdit(PEER_MARKUP);
     await settle();
 
-    expect(renderedText()).toBe(SUP_STRIPPED);
+    expect(renderedText()).toBe(PEER_STRIPPED);
   });
 
   it('control: a peer edit the sanitizer leaves alone survives in the document', async () => {
@@ -219,7 +219,7 @@ describe('a peer edit this client sanitizes — the stripped value is written ba
   });
 
   it('mechanism: the sanitized rewrite is deferred as a suppressed mutation and replayed', async () => {
-    pushPeerEdit(SUP_MARKUP);
+    pushPeerEdit(PEER_MARKUP);
     await settle();
 
     // `markRewrittenFromDocument` armed the baseline, so the deferred record is

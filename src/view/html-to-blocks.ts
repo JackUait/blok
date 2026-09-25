@@ -65,15 +65,15 @@ const TRANSPARENT = new Set([
  * Inline tags that survive into a block's stored `text`. Mirrors
  * {@link INLINE_TEXT_SANITIZE}, which is what actually enforces it.
  */
-const KEPT_INLINE = new Set(['br', 'strong', 'b', 'em', 'i', 'u', 's', 'del', 'a', 'code', 'mark', 'span']);
+const KEPT_INLINE = new Set(['br', 'strong', 'b', 'em', 'i', 'u', 's', 'del', 'a', 'code', 'sup', 'sub', 'mark', 'span']);
 
 /**
- * Inline tags the sanitizer unwraps whose MEANING goes with them — `H<sub>2</sub>O`
- * and `H2O` do not say the same thing. Reported once per occurrence. Purely
+ * Inline tags the sanitizer unwraps whose MEANING goes with them — `<kbd>K</kbd>`
+ * and `K` do not say the same thing. Reported once per occurrence. Purely
  * presentational inline markup (`span`, `font`, `label`) is unwrapped without a
  * warning: its text survives intact, so nothing a reader can point at is lost.
  */
-const LOSSY_INLINE = new Set(['sub', 'sup', 'ins', 'abbr', 'q', 'cite', 'kbd', 'samp', 'var', 'small', 'big', 'ruby', 'rt']);
+const LOSSY_INLINE = new Set(['ins', 'abbr', 'q', 'cite', 'kbd', 'samp', 'var', 'small', 'big', 'ruby', 'rt']);
 
 /** Tags read as inline content when they appear beside text. */
 const INLINE_TAGS = new Set([

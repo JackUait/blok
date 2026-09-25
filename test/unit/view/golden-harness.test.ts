@@ -994,12 +994,12 @@ describe('golden harness: sanitize composition end-to-end', () => {
      * the tag must survive the editor's save AND the view's display when both
      * resolve from one defineBlokSchema — "one map edit away" closed for real.
      */
-    class SupInlineTool {
+    class KbdInlineTool {
       public static isInline = true;
-      public static title = 'Superscript';
+      public static title = 'Keyboard';
 
       public static get sanitize(): Record<string, Record<string, never>> {
-        return { sup: {} };
+        return { kbd: {} };
       }
 
       public render(): HTMLElement {
@@ -1009,27 +1009,27 @@ describe('golden harness: sanitize composition end-to-end', () => {
 
     const tools = {
       paragraph: { class: Paragraph, inlineToolbar: true },
-      sup: { class: SupInlineTool },
+      kbd: { class: KbdInlineTool },
     };
 
     core = new Core({
       holder,
       tools,
-      data: { blocks: [{ id: 'sp1', type: 'paragraph', data: { text: 'E = mc<sup>2</sup>' } }] },
+      data: { blocks: [{ id: 'sp1', type: 'paragraph', data: { text: 'Press <kbd>K</kbd>' } }] },
     });
     await core.isReady;
 
     const saved = await core.moduleInstances.Saver.save();
 
     expect(saved).toBeDefined();
-    expect(saved?.blocks[0]?.data.text).toContain('<sup>2</sup>');
+    expect(saved?.blocks[0]?.data.text).toContain('<kbd>K</kbd>');
 
     const schema = defineBlokSchema({ tools: tools as never }).viewSchema;
     const viewHtml = blocksToHtml(saved, { schema });
 
-    expect(viewHtml).toBe('<p>E = mc<sup>2</sup></p>');
+    expect(viewHtml).toBe('<p>Press <kbd>K</kbd></p>');
     /** Without the schema, the default inline map strips the custom tag — the schema is load-bearing. */
-    expect(blocksToHtml(saved)).toBe('<p>E = mc2</p>');
+    expect(blocksToHtml(saved)).toBe('<p>Press K</p>');
   }, 60_000);
 });
 

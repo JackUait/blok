@@ -32,6 +32,30 @@ let editor: TestEditor | undefined;
 let holder: HTMLDivElement | undefined;
 let capturedYjs: YjsManager | undefined;
 
+/** A container that refuses paragraphs as direct children. */
+class NoParagraphs {
+  private readonly element = document.createElement('div');
+
+  public static get childTools(): { deny: string[] } {
+    return { deny: ['paragraph'] };
+  }
+
+  constructor() {
+    const slot = document.createElement('div');
+
+    slot.setAttribute('data-blok-nested-blocks', '');
+    this.element.append(slot);
+  }
+
+  public render(): HTMLElement {
+    return this.element;
+  }
+
+  public save(): Record<string, never> {
+    return {};
+  }
+}
+
 const flush = async (): Promise<void> => {
   for (let i = 0; i < 12; i++) {
     await Promise.resolve();
@@ -99,6 +123,7 @@ describe('api.blocks.insertMany — the DOC keeps the blocks that were already t
         column_list: ColumnList,
         column: Column,
         toggle: ToggleItem,
+        noParagraphs: NoParagraphs,
       },
       data,
     }) as unknown as TestEditor;
@@ -221,6 +246,43 @@ describe('api.blocks.insertMany — the DOC keeps the blocks that were already t
       await flush();
 
       const expected = ['p0^-[]', 'tog^-[x,c1]', 'x^tog[]', 'c1^tog[]', 'p9^-[]'];
+
+      expect(shape((await instance.save()).blocks)).toEqual(expected);
+      expect(shape(capturedYjs?.toJSON() ?? [])).toEqual(expected);
+    });
+
+    it('leaves a block at the root when its parent owns its children', async () => {
+      const instance = await createEditor({
+        blocks: [
+          { id: 'cl', type: 'column_list', data: {}, content: ['ka', 'kb'] },
+          { id: 'ka', type: 'column', data: {}, parent: 'cl', content: ['x'] },
+          { id: 'x', type: 'paragraph', data: { text: 'x' }, parent: 'ka' },
+          { id: 'kb', type: 'column', data: {}, parent: 'cl', content: ['y'] },
+          { id: 'y', type: 'paragraph', data: { text: 'y' }, parent: 'kb' },
+        ],
+      });
+
+      instance.blocks.insertMany([{ id: 'q', type: 'paragraph', data: { text: 'q' }, parent: 'cl' }], 5);
+      await flush();
+
+      const expected = ['cl^-[ka,kb]', 'ka^cl[x]', 'x^ka[]', 'kb^cl[y]', 'y^kb[]', 'q^-[]'];
+
+      expect(shape((await instance.save()).blocks)).toEqual(expected);
+      expect(shape(capturedYjs?.toJSON() ?? [])).toEqual(expected);
+    });
+
+    it('leaves a block at the root when its parent\'s childTools refuse it', async () => {
+      const instance = await createEditor({
+        blocks: [
+          { id: 'np', type: 'noParagraphs', data: {} },
+          { id: 'p9', type: 'paragraph', data: { text: 'p9' } },
+        ],
+      });
+
+      instance.blocks.insertMany([{ id: 'q', type: 'paragraph', data: { text: 'q' }, parent: 'np' }], 1);
+      await flush();
+
+      const expected = ['np^-[]', 'q^-[]', 'p9^-[]'];
 
       expect(shape((await instance.save()).blocks)).toEqual(expected);
       expect(shape(capturedYjs?.toJSON() ?? [])).toEqual(expected);

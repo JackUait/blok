@@ -22,6 +22,7 @@ import { DATA_ATTR } from '../../constants';
 import { BlockChanged, BlockRendered } from '../../events';
 import { generateBlockId, logLabeled } from '../../utils';
 import { sanitizeBlocks } from '../../utils/sanitizer';
+import { isChildToolAllowed } from '../../utils/child-tools';
 import { assertHierarchy, validateHierarchy } from '../../utils/hierarchy-invariant';
 import { findOwn } from '../../utils/own-element';
 import { releasesChildrenOnTurnInto } from '../../utils/turn-into-children';
@@ -2105,8 +2106,11 @@ export class BlockManager extends Module {
    * insertMany helper: where each batch block whose parent is already in the
    * editor (not in the batch) goes. Under that parent, after its last child
    * before `index`; later batch blocks under the same parent follow the
-   * earlier ones. A table/database parent is left out: it places its own
-   * children, and the block falls back to the root.
+   * earlier ones. Left out, so the block falls back to the root as before:
+   * a table/database parent (it places its own children), a parent that owns
+   * its children, and one whose childTools refuse the block. `insertAt`
+   * demotes a refused tool instead, but a batch block is already built with
+   * its tool and data.
    * @param blocks - blocks being inserted
    * @param blockById - id→block lookup built from `blocks`
    * @param index - flat index the batch starts at
@@ -2119,7 +2123,12 @@ export class BlockManager extends Module {
     for (const block of blocks) {
       const parent = block.parentId === null || blockById.has(block.parentId) ? undefined : getBlock(block.parentId);
 
-      if (parent === undefined || isSelfPlacedParent(parent, getBlock)) {
+      if (
+        parent === undefined
+        || isSelfPlacedParent(parent, getBlock)
+        || parent.tool.ownsChildren
+        || !isChildToolAllowed(parent, block.name)
+      ) {
         continue;
       }
 

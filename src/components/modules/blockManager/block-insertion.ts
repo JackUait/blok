@@ -518,9 +518,11 @@ export class BlockInsertion {
       ...(tunes !== undefined && { tunes }),
     });
 
-    // Appended at the root end, then mounted in its home slot by placeBlock.
-    blocksStore.insert(index, block, false, true);
+    // Model and mount first, so the tool's first rendered() already sees its
+    // parent and its home slot (activateBlock only runs the hook then).
+    blocksStore.addToArray(index, block);
     this.hierarchy.placeBlock(block, placement, { reindent });
+    blocksStore.activateBlock(block);
     hideUnderCollapsedParent(block, this.getBlock);
 
     if (needToFocus) {

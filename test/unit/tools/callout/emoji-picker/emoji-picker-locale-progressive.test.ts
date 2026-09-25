@@ -125,9 +125,9 @@ describe('EmojiPicker progressive locale', () => {
     document.documentElement.style.overflow = '';
   });
 
-  async function createPicker(locale: string): Promise<EmojiPicker> {
+  async function createPicker(locale: string, inline = false): Promise<EmojiPicker> {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale });
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale, inline });
 
     container.appendChild(picker.getElement());
 
@@ -248,5 +248,26 @@ describe('EmojiPicker progressive locale', () => {
 
     expect(button(picker.getElement(), '💡').getAttribute('aria-label')).toBe('лампочка');
     expect(mockLoadEmojiLocale).toHaveBeenCalledTimes(1);
+  });
+
+  it('inline mode relabels the filtered buttons in place, keeping the nodes the ":" composer highlights', async () => {
+    const locale = deferred<EmojiLocaleData | null>();
+
+    mockLoadEmojiLocale.mockReturnValue(locale.promise);
+
+    const picker = await createPicker('ru', true);
+
+    void picker.open(anchor);
+    await flush();
+    picker.setQuery('light');
+
+    const root = picker.getElement();
+    const highlighted = button(root, '💡');
+
+    locale.resolve(RU);
+    await flush();
+
+    expect(button(root, '💡')).toBe(highlighted);
+    expect(highlighted.getAttribute('aria-label')).toBe('лампочка');
   });
 });

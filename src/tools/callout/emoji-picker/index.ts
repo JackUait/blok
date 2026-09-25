@@ -1426,9 +1426,11 @@ export class EmojiPicker {
   /**
    * Relabels the rendered grid once the locale lands. Runs even while closed:
    * a reopen reuses the grid (`_hasFullGrid`) without rebuilding buttons.
+   * Inline mode never re-runs the filter: the ":" composer holds a reference
+   * to the highlighted button, and a rebuild would detach it.
    */
   private applyLocaleToGrid(): void {
-    if (this._open && this._filterInput.value.trim() !== '') {
+    if (this._open && !this._inline && this._filterInput.value.trim() !== '') {
       this.handleFilterChange(this._filterInput.value);
 
       return;

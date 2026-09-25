@@ -114,6 +114,6 @@ test.describe('tool chrome is not content', () => {
     await expect(page.locator('[data-blok-id="X"]')).toHaveAttribute('data-blok-selected', 'true');
     await page.keyboard.press('ControlOrMeta+c');
 
-    await expect.poll(() => page.evaluate(() => window.lastCopiedHtml)).toBe('<p>abc</p>');
+    await expect.poll(() => page.evaluate(() => window.lastCopiedHtml)).toBe('<pre><code>abc</code></pre>');
   });
 });

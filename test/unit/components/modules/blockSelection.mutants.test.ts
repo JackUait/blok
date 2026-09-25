@@ -588,7 +588,7 @@ describe('BlockSelection — surviving mutants', () => {
       expect(htmlWritten(clipboardData)).not.toContain('<p>');
     });
 
-    it('does not wrap content that already has an element child', async () => {
+    it('wraps loose text and inline marks in a paragraph', async () => {
       const block = createBlockStub({ html: '<b>bold</b> tail' });
       const { blockSelection } = createSetup({ blocks: [ block ] });
       const clipboardData: ClipboardDataStub = { setData: vi.fn() };
@@ -598,7 +598,7 @@ describe('BlockSelection — surviving mutants', () => {
 
       await blockSelection.copySelectedBlocks(event);
 
-      expect(htmlWritten(clipboardData)).toBe('<b>bold</b> tail');
+      expect(htmlWritten(clipboardData)).toBe('<p><b>bold</b> tail</p>');
     });
 
     it('keeps line breaks in the copied HTML', async () => {

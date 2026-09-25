@@ -21,6 +21,9 @@ import { translateToolName, translateToolTitle } from '../utils/tools';
 import { ownClone } from '../utils/own-element';
 import { TOOL_NAME as LIST_TOOL_NAME } from '../../tools/list/constants';
 import { buildSemanticListHtml, type SemanticListItem } from '../../tools/list/dom-builder';
+import { TOOL_NAME as CODE_TOOL_NAME } from '../../tools/code/constants';
+import { INLINE_TEXT_SANITIZE } from '../shared/inline-content-sanitize';
+import { COLOR_PRESETS } from '../shared/color-presets';
 import type { ListItemStyle } from '../../tools/list/types';
 
 /**
@@ -41,6 +44,39 @@ type ClipboardSegment =
 const NAVIGATION_ANNOUNCE_THROTTLE_MS = 300;
 
 const BLOCK_HOLDER_SELECTOR = `[${DATA_ATTR.element}]`;
+
+/** Top-level tags that already make their own block in the copied HTML. */
+const CLIPBOARD_BLOCK_TAGS = new Set(['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'PRE', 'UL', 'OL', 'TABLE']);
+
+const PRESET_COLOR_VAR = /var\(--blok-color-([a-z]+)-(text|bg)\)/g;
+
+/**
+ * Other apps cannot resolve Blok's color tokens, so copied styles carry the
+ * light preset literal instead.
+ * @param root - the finished clipboard HTML
+ */
+const resolvePresetColors = (root: HTMLElement): void => {
+  root.querySelectorAll<HTMLElement>('[style]').forEach((element) => {
+    const style = element.getAttribute('style') ?? '';
+
+    element.setAttribute('style', style.replace(PRESET_COLOR_VAR, (match, name: string, mode: 'text' | 'bg') => {
+      return COLOR_PRESETS.find((preset) => preset.name === name)?.[mode] ?? match;
+    }));
+  });
+};
+
+/**
+ * The text of a range with each `<br>` as a newline.
+ * `Range.toString()` drops `<br>` entirely.
+ * @param range - the range to read
+ */
+const rangeToPlainText = (range: Range): string => {
+  const fragment = range.cloneContents();
+
+  fragment.querySelectorAll('br').forEach((br) => br.replaceWith('\n'));
+
+  return fragment.textContent ?? '';
+};
 const TABLE_CELL_BLOCKS_SELECTOR = '[data-blok-table-cell-blocks]';
 
 /**
@@ -119,20 +155,19 @@ export class BlockSelection extends Module {
         colspan: true,
         rowspan: true,
       },
-      br: true,
       img: {
         src: true,
         width: true,
         height: true,
       },
+      blockquote: {},
+      pre: {},
+      sup: {},
+      sub: {},
+      ...INLINE_TEXT_SANITIZE,
+      // After the spread: its `rel: true` would override a host's own `rel` rule.
       a: {
         href: true,
-      },
-      b: {},
-      i: {},
-      u: {},
-      mark: {
-        style: true,
       },
     };
 
@@ -480,6 +515,9 @@ export class BlockSelection extends Module {
      * same Markdown but writes it via navigator.clipboard.writeText.
      */
     const textPlain = blocksToMarkdown(savedData);
+
+    resolvePresetColors(fakeClipboard);
+
     const textHTML = fakeClipboard.innerHTML;
 
     /**
@@ -552,7 +590,9 @@ export class BlockSelection extends Module {
       });
     });
 
-    clipboardData.setData('text/plain', written.map((sub) => sub.range.toString()).join('\n\n'));
+    resolvePresetColors(fakeClipboard);
+
+    clipboardData.setData('text/plain', written.map((sub) => rangeToPlainText(sub.range)).join('\n\n'));
     clipboardData.setData('text/html', fakeClipboard.innerHTML);
   }
 
@@ -670,33 +710,61 @@ export class BlockSelection extends Module {
   }
 
   /**
-   * Append a single non-list block to the fake clipboard via the sanitize path,
-   * wrapping bare text in a paragraph so structure survives in HTML targets.
+   * Append a single non-list block to the fake clipboard via the sanitize path.
+   * Every loose run of text and inline marks becomes its own `<p>`, so blocks
+   * never run together in the pasted document.
    * @param block - the non-list block
    * @param fakeClipboard - the container receiving the sanitized content
    */
   private appendNonListBlock(block: Block, fakeClipboard: HTMLElement): void {
-    const cleanHTML = clean(ownClone(block.holder).innerHTML, this.sanitizerConfig);
-    const wrapper = $.make('div');
-
-    wrapper.innerHTML = cleanHTML;
-
-    const textContent = wrapper.textContent ?? '';
-    const hasElementChildren = Array.from(wrapper.childNodes).some((node) => node.nodeType === Node.ELEMENT_NODE);
-    const shouldWrapWithParagraph = !hasElementChildren && textContent.trim().length > 0;
-
-    if (shouldWrapWithParagraph) {
-      const paragraph = $.make('p');
-
-      paragraph.innerHTML = wrapper.innerHTML;
-      fakeClipboard.appendChild(paragraph);
+    if (block.name === CODE_TOOL_NAME) {
+      this.appendCodeBlock(block, fakeClipboard);
 
       return;
     }
 
-    while (wrapper.firstChild) {
-      fakeClipboard.appendChild(wrapper.firstChild);
-    }
+    const wrapper = $.make('div');
+
+    wrapper.innerHTML = clean(ownClone(block.holder).innerHTML, this.sanitizerConfig);
+
+    const flushRun = (run: Node[]): void => {
+      if (run.every((node) => (node.textContent ?? '').trim().length === 0 && !(node instanceof HTMLImageElement))) {
+        return;
+      }
+
+      const paragraph = $.make('p');
+
+      paragraph.append(...run);
+      fakeClipboard.appendChild(paragraph);
+    };
+
+    const run = Array.from(wrapper.childNodes).reduce<Node[]>((pending, node) => {
+      if (node instanceof Element && CLIPBOARD_BLOCK_TAGS.has(node.tagName)) {
+        flushRun(pending);
+        fakeClipboard.appendChild(node);
+
+        return [];
+      }
+
+      return [...pending, node];
+    }, []);
+
+    flushRun(run);
+  }
+
+  /**
+   * A code block keeps its line breaks and indentation only inside `<pre>`.
+   * @param block - the code block
+   * @param fakeClipboard - the container receiving the code
+   */
+  private appendCodeBlock(block: Block, fakeClipboard: HTMLElement): void {
+    const code = block.preservedData.code;
+    const pre = $.make('pre');
+    const codeElement = $.make('code');
+
+    codeElement.textContent = typeof code === 'string' ? code : '';
+    pre.appendChild(codeElement);
+    fakeClipboard.appendChild(pre);
   }
 
   /**

@@ -1015,4 +1015,149 @@ describe('TableModel merge/split', () => {
       expect(origin.blocks).toEqual(['a', 'd']);
     });
   });
+
+  // ─── deleting through a 2D merge ───────────────────────────────
+
+  describe('deleting a row or column through a 2D merge', () => {
+    const makeGrid = (rows: number, cols: number): TableModel => new TableModel(makeData({
+      content: Array.from({ length: rows }, (_r, r) =>
+        Array.from({ length: cols }, (_c, c) => cell(`r${r}c${c}`))
+      ),
+    }));
+
+    const at = (model: TableModel, row: number, col: number): CellContent => model.snapshot().content[row][col] as CellContent;
+
+    it('deleteRow through the middle of a rowspan 3 x colspan 2 merge shrinks rowspan by exactly one', () => {
+      const model = makeGrid(4, 3);
+
+      model.mergeCells({ minRow: 0, maxRow: 2, minCol: 0, maxCol: 1 });
+      model.deleteRow(1);
+
+      expect(at(model, 0, 0).rowspan).toBe(2);
+      expect(at(model, 0, 0).colspan).toBe(2);
+      expect(at(model, 1, 0).mergedInto).toEqual([0, 0]);
+      expect(at(model, 1, 1).mergedInto).toEqual([0, 0]);
+      expect(at(model, 2, 0).mergedInto).toBeUndefined();
+      expect(() => model.validateInvariants()).not.toThrow();
+    });
+
+    it('deleteRow through the middle of a rowspan 4 x colspan 3 merge shrinks rowspan by exactly one', () => {
+      const model = makeGrid(5, 4);
+
+      model.mergeCells({ minRow: 0, maxRow: 3, minCol: 0, maxCol: 2 });
+      model.deleteRow(2);
+
+      expect(at(model, 0, 0).rowspan).toBe(3);
+      expect(at(model, 0, 0).colspan).toBe(3);
+      expect(at(model, 2, 2).mergedInto).toEqual([0, 0]);
+      expect(at(model, 3, 0).mergedInto).toBeUndefined();
+      expect(() => model.validateInvariants()).not.toThrow();
+    });
+
+    it('deleteColumn through the middle of a colspan 3 x rowspan 2 merge shrinks colspan by exactly one', () => {
+      const model = makeGrid(3, 4);
+
+      model.mergeCells({ minRow: 0, maxRow: 1, minCol: 0, maxCol: 2 });
+      model.deleteColumn(1);
+
+      expect(at(model, 0, 0).colspan).toBe(2);
+      expect(at(model, 0, 0).rowspan).toBe(2);
+      expect(at(model, 1, 1).mergedInto).toEqual([0, 0]);
+      expect(at(model, 0, 2).mergedInto).toBeUndefined();
+      expect(() => model.validateInvariants()).not.toThrow();
+    });
+
+    it('deleteColumn through the middle of a colspan 4 x rowspan 3 merge shrinks colspan by exactly one', () => {
+      const model = makeGrid(4, 5);
+
+      model.mergeCells({ minRow: 0, maxRow: 2, minCol: 0, maxCol: 3 });
+      model.deleteColumn(2);
+
+      expect(at(model, 0, 0).colspan).toBe(3);
+      expect(at(model, 0, 0).rowspan).toBe(3);
+      expect(at(model, 2, 2).mergedInto).toEqual([0, 0]);
+      expect(at(model, 0, 3).mergedInto).toBeUndefined();
+      expect(() => model.validateInvariants()).not.toThrow();
+    });
+  });
+
+  // ─── origin styling survives deleting the origin line ──────────
+
+  describe('deleting the origin row or column keeps the merged cell styling', () => {
+    const makeGrid = (rows: number, cols: number): TableModel => new TableModel(makeData({
+      content: Array.from({ length: rows }, (_r, r) =>
+        Array.from({ length: cols }, (_c, c) => cell(`r${r}c${c}`))
+      ),
+    }));
+
+    const style = (model: TableModel): void => {
+      model.setCellColor(0, 0, '#ff0000');
+      model.setCellTextColor(0, 0, '#0000ff');
+      model.setCellPlacement(0, 0, 'middle-center');
+    };
+
+    const expectStyled = (model: TableModel): void => {
+      const origin = model.snapshot().content[0][0] as CellContent;
+
+      expect({ color: origin.color, textColor: origin.textColor, placement: origin.placement }).toEqual({
+        color: '#ff0000',
+        textColor: '#0000ff',
+        placement: 'middle-center',
+      });
+    };
+
+    it('deleteRow(0) on a 2x2 merge carries color, text color and placement to the new origin', () => {
+      const model = makeGrid(3, 3);
+
+      model.mergeCells({ minRow: 0, maxRow: 1, minCol: 0, maxCol: 1 });
+      style(model);
+      const slotIds = model.snapshot().content[1][0] as CellContent;
+
+      model.deleteRow(0);
+
+      expectStyled(model);
+      // id and rowId belong to the slot, not the merged cell.
+      expect((model.snapshot().content[0][0] as CellContent).id).toBe(slotIds.id);
+      expect((model.snapshot().content[0][0] as CellContent).rowId).toBe(slotIds.rowId);
+      expect(() => model.validateInvariants()).not.toThrow();
+    });
+
+    it('deleteRow(0) on a rowspan-only merge carries the styling to the remaining cell', () => {
+      const model = makeGrid(3, 2);
+
+      model.mergeCells({ minRow: 0, maxRow: 1, minCol: 0, maxCol: 0 });
+      style(model);
+      model.deleteRow(0);
+
+      expectStyled(model);
+      expect(() => model.validateInvariants()).not.toThrow();
+    });
+
+    it('deleteColumn(0) on a 2x2 merge carries color, text color and placement to the new origin', () => {
+      const model = makeGrid(3, 3);
+
+      model.mergeCells({ minRow: 0, maxRow: 1, minCol: 0, maxCol: 1 });
+      style(model);
+      const slotIds = model.snapshot().content[0][1] as CellContent;
+
+      model.deleteColumn(0);
+
+      expectStyled(model);
+      // id and rowId belong to the slot, not the merged cell.
+      expect((model.snapshot().content[0][0] as CellContent).id).toBe(slotIds.id);
+      expect((model.snapshot().content[0][0] as CellContent).rowId).toBe(slotIds.rowId);
+      expect(() => model.validateInvariants()).not.toThrow();
+    });
+
+    it('deleteColumn(0) on a colspan-only merge carries the styling to the remaining cell', () => {
+      const model = makeGrid(2, 3);
+
+      model.mergeCells({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
+      style(model);
+      model.deleteColumn(0);
+
+      expectStyled(model);
+      expect(() => model.validateInvariants()).not.toThrow();
+    });
+  });
 });

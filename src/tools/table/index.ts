@@ -19,16 +19,10 @@ import {
   IconTextSizeLarge,
   IconTextSizeSmall,
 } from '../../components/icons';
-import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
-import { isInvisibleBackground } from '../../components/utils/default-page-colors';
 import { twMerge } from '../../components/utils/tw';
 
 import { TableCellBlocks, CELL_BLOCKS_ATTR } from './table-cell-blocks';
-import {
-  isDefaultBlack,
-  placementFromAlignment,
-  ALLOWED_MARK_STYLE_PROPS,
-} from './table-cell-clipboard';
+import { ALLOWED_MARK_STYLE_PROPS, readPastedCellStyle } from './table-cell-clipboard';
 import { TableGrid, ROW_ATTR, CELL_ATTR, CELL_ROW_ATTR, CELL_COL_ATTR } from './table-core';
 import {
   applyCellColors,
@@ -53,7 +47,7 @@ import { TableModel } from './table-model';
 import { registerAdditionalRestrictedTools } from './table-restrictions';
 import { TableSubsystems } from './table-subsystems';
 import type { TableHost } from './table-subsystems';
-import type { CellContent, LegacyCellContent, TableData, TableConfig, TableTextSize } from './types';
+import type { LegacyCellContent, TableData, TableConfig, TableTextSize } from './types';
 import { isCellWithBlocks } from './types';
 
 const DEFAULT_ROWS = 3;
@@ -267,6 +261,14 @@ export class Table implements BlockTool {
 
     this.mountBlockHoldersInNewTbody(content, newTbody, blockHolders);
 
+    // createGridFromModel emits structure only. Paint heading, color and
+    // placement from the model on the DETACHED table, so the live DOM sees a
+    // single tbody swap and no extra attribute mutations.
+    updateHeadingStyles(newTable, this.model.withHeadings);
+    updateHeadingColumnStyles(newTable, this.model.withHeadingColumn);
+    applyCellColors(newTable, content);
+    applyCellPlacements(newTable, content);
+
     // Reconcile the <colgroup> when the column COUNT changed (delete-col /
     // insert-col on a merged grid route through here). Only swapping <tbody>
     // would leave a stale <col> count, so the rendered grid width and
@@ -304,6 +306,29 @@ export class Table implements BlockTool {
         });
       }, true);
     }
+  }
+
+  /**
+   * Pending content as the model repaired it: blocks left in a merge-covered
+   * cell are already moved into the origin, so initializeCells mounts them
+   * instead of dropping them. Legacy string cells, pasted `text` and
+   * `blockData` never reach the model, so they are taken from the raw content
+   * by position (such cells carry no ids, so the model does not reorder them).
+   */
+  private withModelBlocks(raw: LegacyCellContent[][]): LegacyCellContent[][] {
+    return this.model.snapshot().content.map((row, r) => row.map((cell, c) => {
+      const source = raw[r]?.[c];
+
+      if (typeof source === 'string' || !isCellWithBlocks(cell)) {
+        return source ?? cell;
+      }
+
+      return {
+        ...cell,
+        ...(source?.text !== undefined ? { text: source.text } : {}),
+        ...(source?.blockData !== undefined ? { blockData: source.blockData } : {}),
+      };
+    }));
   }
 
   /**
@@ -735,7 +760,7 @@ export class Table implements BlockTool {
     this.initialContent = null;
 
     this.runTransactedStructuralOp(() => {
-      const initializedContent = this.cellBlocks?.initializeCells(content) ?? content;
+      const initializedContent = this.cellBlocks?.initializeCells(this.withModelBlocks(content)) ?? content;
 
       // When a new table is created with empty content, the DOM grid already has
       // the correct dimensions but the model has zero rows. Pre-populate the
@@ -866,7 +891,7 @@ export class Table implements BlockTool {
           gridEl.querySelectorAll<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`)
             .forEach(container => container.replaceChildren());
 
-          const initializedContent = this.cellBlocks?.initializeCells(pendingContent) ?? pendingContent;
+          const initializedContent = this.cellBlocks?.initializeCells(this.withModelBlocks(pendingContent)) ?? pendingContent;
 
           this.model.replaceAll({
             ...this.model.snapshot(),
@@ -1152,7 +1177,7 @@ export class Table implements BlockTool {
     const isSyncReplay = this.api.blocks.isSyncingFromYjs;
 
     this.runStructuralOp(() => {
-      const setDataContent = this.cellBlocks?.initializeCells(this.initialContent ?? []) ?? this.initialContent ?? [];
+      const setDataContent = this.cellBlocks?.initializeCells(this.withModelBlocks(this.initialContent ?? [])) ?? this.initialContent ?? [];
 
       // Check generation after initializeCells — if a re-entrant setData
       // was triggered during block insertion inside initializeCells, bail
@@ -1254,46 +1279,12 @@ export class Table implements BlockTool {
     });
   }
 
-  /**
-   * Extract background / text color and alignment overrides from a pasted
-   * cell's inline style. `text-align` / `vertical-align` map onto Blok's own
-   * 9-way cell placement — pasteConfig whitelists `style` on TD/TH so both
-   * survive the paste sanitizer; nothing used to read them.
-   */
-  private static extractPastedCellMetadata(cell: Element): Partial<CellContent> {
-    const style = cell.getAttribute('style') ?? '';
-    const entry: Partial<CellContent> = {};
-
-    const bgMatch = /background-color\s*:\s*([^;]+)/i.exec(style);
-
-    if (bgMatch?.[1] && !isInvisibleBackground(bgMatch[1].trim())) {
-      entry.color = mapToNearestPresetColor(bgMatch[1].trim(), 'bg');
-    }
-
-    const textMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style);
-
-    if (textMatch?.[1] && !isDefaultBlack(textMatch[1].trim())) {
-      entry.textColor = mapToNearestPresetColor(textMatch[1].trim(), 'text');
-    }
-
-    const placement = placementFromAlignment(
-      /(?<![a-z-])text-align\s*:\s*([^;]+)/i.exec(style)?.[1],
-      /vertical-align\s*:\s*([^;]+)/i.exec(style)?.[1],
-    );
-
-    if (placement !== undefined) {
-      entry.placement = placement;
-    }
-
-    return entry;
-  }
-
   public onPaste(event: HTMLPasteEvent): void {
     const content = event.detail.data;
     const rows = content.querySelectorAll('tr');
     // Logical grid: spans are honoured, covered slots carry mergedInto and
     // colors sit at their logical (not physical) coordinates.
-    const tableContent = parsePastedTable(rows, Table.extractPastedCellMetadata);
+    const tableContent = parsePastedTable(rows, cell => readPastedCellStyle(cell.getAttribute('style') ?? ''));
 
     const hasTheadHeadings = content.querySelector('thead') !== null;
     const hasThHeadings = rows[0]?.querySelector('th') !== null;

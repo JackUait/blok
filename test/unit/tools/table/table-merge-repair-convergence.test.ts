@@ -256,3 +256,42 @@ describe('two peers merging overlapping rectangles, read back', () => {
   // budget for the machine, not for the ~750 merge pairs it drives.
   }, 30000);
 });
+
+describe('a covered cell naming an origin that does not span it, read back', () => {
+  const load = (content: TableData['content']): TableModel =>
+    new TableModel({ withHeadings: false, withHeadingColumn: false, content });
+
+  it('frees a cell whose named origin is a plain cell, keeping its blocks', () => {
+    const model = load([
+      [{ blocks: ['o'] }, { blocks: ['y'], mergedInto: [0, 0] }],
+      [{ blocks: ['a'] }, { blocks: ['b'] }],
+    ]);
+    const cell = model.snapshot().content[0][1];
+
+    expect(typeof cell !== 'string' && cell.blocks).toEqual(['y']);
+    expect(typeof cell !== 'string' && cell.mergedInto).toBeUndefined();
+    expect(() => model.validateInvariants()).not.toThrow();
+  });
+
+  it('frees a cell whose named origin is out of bounds, keeping its blocks', () => {
+    const model = load([
+      [{ blocks: ['o'] }, { blocks: ['y'], mergedInto: [5, 5] }],
+    ]);
+    const cell = model.snapshot().content[0][1];
+
+    expect(typeof cell !== 'string' && cell.blocks).toEqual(['y']);
+    expect(() => model.validateInvariants()).not.toThrow();
+  });
+
+  it('hands a cell to the live origin that spans it when the named one does not', () => {
+    const model = load([
+      [{ blocks: ['o'], colspan: 2 }, { blocks: ['y'], mergedInto: [1, 0] }],
+      [{ blocks: ['a'] }, { blocks: ['b'] }],
+    ]);
+    const origin = model.snapshot().content[0][0];
+
+    expect(typeof origin !== 'string' && origin.blocks).toEqual(['o', 'y']);
+    expect(model.isSpannedCell(0, 1)).toBe(true);
+    expect(() => model.validateInvariants()).not.toThrow();
+  });
+});

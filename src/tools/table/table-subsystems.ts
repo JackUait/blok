@@ -1,4 +1,4 @@
-import type { API, BlockAPI } from '../../../types';
+import type { API, BlockAPI, SanitizerConfig } from '../../../types';
 
 import { TableAddControls } from './table-add-controls';
 import type { TableCellBlocks } from './table-cell-blocks';
@@ -1206,6 +1206,18 @@ export class TableSubsystems {
         this.applyCellPlacement(cell, coord.row, coord.col, placement === 'top-left' ? undefined : placement);
       }
     });
+
+    // The placement attribute sits on a mutation-free container, so no DOM
+    // record reports this change; dispatchChange is exempt from that scoring.
+    this.dispatchTableChange();
+  }
+
+  private dispatchTableChange(): void {
+    const blockId = this.host.blockId;
+
+    if (blockId !== undefined) {
+      this.host.api.blocks.getById(blockId)?.dispatchChange();
+    }
   }
 
   /**
@@ -1441,13 +1453,17 @@ export class TableSubsystems {
     };
   }
 
+  private toolSanitizeConfig(toolName: string): SanitizerConfig | undefined {
+    return this.host.api.tools?.getBlockTools().find(tool => tool.name === toolName)?.sanitizeConfig;
+  }
+
   private handleGridPaste(e: ClipboardEvent, gridEl: HTMLElement): void {
     if (this.host.readOnly || !e.clipboardData || e.defaultPrevented) {
       return;
     }
 
     const html = e.clipboardData.getData('text/html');
-    const blokPayload = parseClipboardHtml(html);
+    const blokPayload = parseClipboardHtml(html, tool => this.toolSanitizeConfig(tool));
     const externalPayload = blokPayload === null ? parseGenericHtmlTable(html) : null;
     const payload = blokPayload ?? externalPayload;
 
@@ -1746,6 +1762,16 @@ export class TableSubsystems {
     });
 
     this.host.rebuildTableBody();
+
+    // mergeCells resets the origin's placement (right for a user merge), so
+    // the pasted origin's placement is written again after it.
+    merges.forEach(({ row, col }) => {
+      const originCell = this.host.grid.getCell(gridEl, startRow + row, startCol + col);
+
+      if (originCell) {
+        this.applyCellPlacement(originCell, startRow + row, startCol + col, payload.cells[row][col].placement);
+      }
+    });
   }
 
   /**

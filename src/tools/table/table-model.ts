@@ -1279,13 +1279,16 @@ export class TableModel {
    */
   private contractSpansForDeletedRow(rowIndex: number): void {
     const row = this.contentGrid[rowIndex];
+    // A colspan puts several covered cells of one origin in this row; shrink it once.
+    const contracted = new Set<string>();
 
     row.forEach((_cell, c) => {
       const gridCell = this.contentGrid[rowIndex][c];
 
       if ((gridCell.colspan ?? 1) > 1 || (gridCell.rowspan ?? 1) > 1) {
         this.handleOriginInDeletedRow(rowIndex, c);
-      } else if (gridCell.mergedInto !== undefined) {
+      } else if (gridCell.mergedInto !== undefined && !contracted.has(gridCell.mergedInto.join(','))) {
+        contracted.add(gridCell.mergedInto.join(','));
         this.handleCoveredInDeletedRow(rowIndex, c);
       }
     });
@@ -1320,6 +1323,7 @@ export class TableModel {
 
     newOrigin.blocks = [...cell.blocks];
     cell.blocks = [];
+    this.carryOriginStyling(rowIndex, c, nextRow, c);
 
     delete newOrigin.mergedInto;
 
@@ -1342,6 +1346,23 @@ export class TableModel {
       delete newOrigin.colspan;
     }
     this.clearMergedIntoRefs(nextRow, rowIndex + rowspan, c, c + colspan, rowIndex, c, nextRow, c, [nextRow, c]);
+  }
+
+  /**
+   * id and rowId are not carried: they name the grid slot, not the merged cell.
+   */
+  private carryOriginStyling(fromRow: number, fromCol: number, toRow: number, toCol: number): void {
+    const { color, textColor, placement } = this.contentGrid[fromRow][fromCol];
+    const target = this.contentGrid[toRow][toCol];
+
+    delete target.color;
+    delete target.textColor;
+    delete target.placement;
+    Object.assign(target, {
+      ...(color !== undefined ? { color } : {}),
+      ...(textColor !== undefined ? { textColor } : {}),
+      ...(placement !== undefined ? { placement } : {}),
+    });
   }
 
   private handleCoveredInDeletedRow(rowIndex: number, c: number): void {
@@ -1437,12 +1458,16 @@ export class TableModel {
    * Symmetric to contractSpansForDeletedRow.
    */
   private contractSpansForDeletedCol(colIndex: number): void {
+    // A rowspan puts several covered cells of one origin in this column; shrink it once.
+    const contracted = new Set<string>();
+
     this.contentGrid.forEach((_row, r) => {
       const gridCell = this.contentGrid[r][colIndex];
 
       if ((gridCell.colspan ?? 1) > 1 || (gridCell.rowspan ?? 1) > 1) {
         this.handleOriginInDeletedCol(colIndex, r);
-      } else if (gridCell.mergedInto !== undefined) {
+      } else if (gridCell.mergedInto !== undefined && !contracted.has(gridCell.mergedInto.join(','))) {
+        contracted.add(gridCell.mergedInto.join(','));
         this.handleCoveredInDeletedCol(colIndex, r);
       }
     });
@@ -1477,6 +1502,7 @@ export class TableModel {
 
     newOrigin.blocks = [...cell.blocks];
     cell.blocks = [];
+    this.carryOriginStyling(r, colIndex, r, nextCol);
     delete newOrigin.mergedInto;
 
     if (newColspan === 1 && rowspan === 1) {
@@ -1776,41 +1802,41 @@ export class TableModel {
       return;
     }
 
-    const cols = grid[0]?.length ?? 0;
     const named = cell.mergedInto;
-    const inBounds = named[0] >= 0 && named[0] < grid.length && named[1] >= 0 && named[1] < cols;
-    const namedOrigin = inBounds ? grid[named[0]][named[1]] : undefined;
-    const namedIsCovered = namedOrigin !== undefined && namedOrigin.mergedInto !== undefined;
+    const spans = ([originRow, originCol]: [number, number]): boolean => {
+      const origin = grid[originRow]?.[originCol];
 
-    // The named origin lost to a merge above it, so the merge it stood for is
-    // gone. Where a live origin still spans this slot — two peers merging
-    // overlapping rectangles — hand the cell to that origin: freeing it inside
-    // a live span would render a second <td> in a slot the span already claims
-    // and shift the whole row. Where nothing spans the slot, free the cell and
-    // let it keep its content. Scoped to a named origin that is itself covered
-    // on purpose: every other broken reference is left for validateInvariants.
-    const covering = namedIsCovered ? coverage[r][c] : undefined;
+      return origin !== undefined &&
+        !(originRow === r && originCol === c) &&
+        r >= originRow && r < originRow + (origin.rowspan ?? 1) &&
+        c >= originCol && c < originCol + (origin.colspan ?? 1);
+    };
 
-    if (namedIsCovered && covering === undefined) {
+    const namedIsCovered = grid[named[0]]?.[named[1]]?.mergedInto !== undefined;
+
+    // An empty cell with some other broken reference (plain or out-of-bounds
+    // origin) is left for validateInvariants. One holding blocks is repaired,
+    // or its blocks have no <td> and are dropped.
+    if (!spans(named) && !namedIsCovered && cell.blocks.length === 0) {
+      return;
+    }
+
+    // Keep the named origin only while it really spans this slot. Otherwise
+    // hand the cell to the live origin that does — freeing it inside a live
+    // span would render a second <td> and shift the row. Where nothing spans
+    // the slot, free the cell and let it keep its content.
+    const target = spans(named) ? named : coverage[r][c];
+
+    if (target === undefined) {
       delete cell.mergedInto;
 
       return;
     }
 
-    const [originRow, originCol] = covering ?? named;
+    cell.mergedInto = [target[0], target[1]];
 
-    if (covering !== undefined) {
-      cell.mergedInto = [originRow, originCol];
-    }
-
-    const origin = grid[originRow]?.[originCol];
-    const coversCell = origin !== undefined &&
-      !(originRow === r && originCol === c) &&
-      r >= originRow && r < originRow + (origin.rowspan ?? 1) &&
-      c >= originCol && c < originCol + (origin.colspan ?? 1);
-
-    if (coversCell && origin !== undefined && cell.blocks.length > 0) {
-      origin.blocks.push(...cell.blocks);
+    if (cell.blocks.length > 0) {
+      grid[target[0]][target[1]].blocks.push(...cell.blocks);
       cell.blocks = [];
     }
   }

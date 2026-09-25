@@ -100,6 +100,7 @@ describe('TableCellsHandler mutants', () => {
     const Blok = {
       BlockManager: { insert },
       Caret: { setToBlock, positions: { START: 'start', END: 'end' } },
+      Tools: { blockTools: new Map() },
     } as unknown as BlokModules;
 
     handler = new TableCellsHandler(

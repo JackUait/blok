@@ -784,6 +784,12 @@ describe('table-cell-clipboard', () => {
       expect(result?.cells[0][0].blocks[0].data.text).toBe('<mark style="color: #d44c47; background-color: transparent;">red text</mark>');
     });
 
+    it('should read the cell color from the background shorthand', () => {
+      const html = '<table><tr><td style="background: #fbecdd">bg</td></tr></table>';
+
+      expect(parseGenericHtmlTable(html)?.cells[0][0].color).toBe('#fbecdd');
+    });
+
     it('should convert background-color span to <mark> with background-color style in cell content', () => {
       const html = '<table><tr><td><span style="background-color: rgb(255, 255, 0)">highlighted</span></td></tr></table>';
       const result = parseGenericHtmlTable(html);

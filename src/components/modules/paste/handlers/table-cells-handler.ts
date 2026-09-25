@@ -92,7 +92,7 @@ export class TableCellsHandler extends BasePasteHandler implements PasteHandler 
       return false;
     }
 
-    const payload = parseClipboardHtml(data);
+    const payload = parseClipboardHtml(data, tool => this.Blok.Tools.blockTools.get(tool)?.sanitizeConfig);
 
     if (!payload) {
       return false;

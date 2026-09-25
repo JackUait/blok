@@ -194,6 +194,25 @@ describe('Table onPaste cell colors', () => {
     pastedElement.parentNode?.removeChild(pastedElement);
   });
 
+  it('reads the cell color from the background shorthand', () => {
+    const table = new Table(createTableOptions({ content: [['A']] }));
+    const element = table.render();
+
+    document.body.appendChild(element);
+    table.rendered();
+
+    firePasteEvent(table, createPasteTable('<tr><td style="background: #fbecdd">Shorthand</td></tr>'));
+
+    const pastedElement = table.render();
+
+    table.rendered();
+
+    expect(table.save(pastedElement).content[0][0]).toMatchObject({ color: '#fbecdd' });
+
+    element.parentNode?.removeChild(element);
+    pastedElement.parentNode?.removeChild(pastedElement);
+  });
+
   it('maps non-preset colors to nearest preset on paste', () => {
     const options = createTableOptions({
       content: [['A']],

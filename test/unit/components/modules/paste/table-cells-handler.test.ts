@@ -28,7 +28,7 @@ function buildTableHtml(textGrid: string[][]): string {
 describe('TableCellsHandler', () => {
   const mockBlock = { id: 'inserted-block', name: 'table' };
 
-  let mockBlok: Pick<BlokModules, 'BlockManager' | 'Caret'>;
+  let mockBlok: Pick<BlokModules, 'BlockManager' | 'Caret' | 'Tools'>;
   let handler: TableCellsHandler;
   let context: HandlerContext;
 
@@ -44,7 +44,8 @@ describe('TableCellsHandler', () => {
         setToBlock: vi.fn(),
         positions: { END: 'end' },
       },
-    } as unknown as Pick<BlokModules, 'BlockManager' | 'Caret'>;
+      Tools: { blockTools: new Map() },
+    } as unknown as Pick<BlokModules, 'BlockManager' | 'Caret' | 'Tools'>;
 
     const toolRegistry = {} as unknown as ToolRegistry;
     const sanitizerBuilder = {} as unknown as SanitizerConfigBuilder;

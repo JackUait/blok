@@ -7,8 +7,32 @@ import { applyFluidMinWidth, equalWidths, BORDER_WIDTH, ROW_ATTR, CELL_ATTR, CEL
 import type { TableGrid } from './table-core';
 import type { CellContent, LegacyCellContent, TableData, TableTextSize } from './types';
 import { isCellWithBlocks } from './types';
+import { alignRowsToColumns } from './table-ids';
 
 // ─── Pure DOM helpers ───────────────────────────────────────────────
+
+/**
+ * One rendered width per LOGICAL column. A merged cell spans several columns,
+ * so a row holding one returns too few widths; prefer a row of unmerged cells.
+ */
+const measureLogicalColumnWidths = (gridEl: HTMLElement, colCount: number): number[] => {
+  const rows = Array.from(gridEl.querySelectorAll(`[${ROW_ATTR}]`)).map(row =>
+    Array.from(row.querySelectorAll<HTMLTableCellElement>(`[${CELL_ATTR}]`))
+  );
+  const widthOf = (cell: HTMLElement): number => cell.getBoundingClientRect().width;
+  const plainRow = rows.find(cells => cells.length === colCount && cells.every(cell => cell.colSpan <= 1));
+
+  if (plainRow !== undefined) {
+    return plainRow.map(cell => Math.round(widthOf(cell)));
+  }
+
+  // Every row holds a merge: split each first-row cell evenly across its columns.
+  return (rows[0] ?? []).flatMap(cell => {
+    const span = Math.max(cell.colSpan, 1);
+
+    return Array.from({ length: span }, () => Math.round(widthOf(cell) / span));
+  });
+};
 
 export const readPixelWidths = (gridEl: HTMLElement): number[] => {
   const colgroup = gridEl.querySelector('colgroup');
@@ -20,17 +44,9 @@ export const readPixelWidths = (gridEl: HTMLElement): number[] => {
   const cols = colgroup.querySelectorAll('col');
   const firstCol = cols[0] as HTMLElement | undefined;
 
-  // When columns use percentage widths, parseFloat would return the percentage
-  // number (e.g. 50 from "50%") which is not a pixel value. In that case,
-  // read actual rendered widths from the first row's cells.
-  if (firstCol && firstCol.style.width.endsWith('%')) {
-    const firstRow = gridEl.querySelector(`[${ROW_ATTR}]`);
-
-    if (firstRow) {
-      return Array.from(firstRow.querySelectorAll(`[${CELL_ATTR}]`)).map(
-        cell => Math.round(cell.getBoundingClientRect().width)
-      );
-    }
+  // Percent widths are not pixels, so measure the rendered cells instead.
+  if (firstCol && firstCol.style.width.endsWith('%') && gridEl.querySelector(`[${ROW_ATTR}]`)) {
+    return measureLogicalColumnWidths(gridEl, cols.length);
   }
 
   return Array.from(cols).map(col =>
@@ -612,6 +628,17 @@ export const parsePastedTable = (
     filler: () => ({ blocks: [] }),
   });
 
+/**
+ * Put a short row's cells under their own column ids before padding. The
+ * padding carries no id, and after it the model can no longer align the row.
+ */
+const alignIdCarryingRows = (content: LegacyCellContent[][]): LegacyCellContent[][] => {
+  const cellRows = content.filter((row): row is CellContent[] => Array.isArray(row) && row.every(isCellWithBlocks));
+
+  // Legacy string cells and null rows carry no ids; leave them positional.
+  return cellRows.length === content.length ? alignRowsToColumns(cellRows) : content;
+};
+
 export const normalizeTableData = (
   data: TableData | Record<string, never>,
   config: { withHeadings?: boolean; withHeadingColumn?: boolean; stretched?: boolean },
@@ -628,7 +655,7 @@ export const normalizeTableData = (
   }
 
   const tableData = data as TableData;
-  const content = rectangularizeContent(tableData.content ?? []);
+  const content = rectangularizeContent(alignIdCarryingRows(tableData.content ?? []));
   const cols = content[0]?.length;
   const colWidths = tableData.colWidths;
   const validWidths = colWidths

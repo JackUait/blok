@@ -5,7 +5,7 @@ import { parseCellContentToBlocks, serializeCellBlocksToHtml } from './table-cel
 import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
 import { isDefaultDarkBackground, isDefaultWhiteBackground } from '../../components/modules/paste/google-docs-preprocessor';
 import { isInvisibleBackground } from '../../components/utils/default-page-colors';
-import { clean } from '../../components/utils/sanitizer';
+import { clean, sanitizeBlocks } from '../../components/utils/sanitizer';
 import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
 import { resolvePresetColorVars, resolvePresetColors } from '../../components/shared/resolve-preset-colors';
 import { parseUntrustedHtml } from '../../components/utils/inert-html';
@@ -612,6 +612,63 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
 }
 
 /**
+ * A pasted cell's background: the `background-color` longhand, else the
+ * `background` shorthand resolved by a style parser in an inert document
+ * (so a `url()` in it is never fetched).
+ */
+function pastedBackground(style: string): string | undefined {
+  const longhand = /background-color\s*:\s*([^;]+)/i.exec(style)?.[1];
+
+  if (longhand !== undefined) {
+    return longhand.trim();
+  }
+
+  if (!/(?<![a-z-])background\s*:/i.test(style)) {
+    return undefined;
+  }
+
+  const probe = document.implementation.createHTMLDocument('').createElement('div');
+
+  probe.style.cssText = style;
+
+  return probe.style.backgroundColor || undefined;
+}
+
+/**
+ * Cell-level colors and placement from a pasted `<td>`/`<th>` inline style.
+ * Shared by paste-into-cells and paste-as-new-table so the two cannot drift.
+ */
+export function readPastedCellStyle(style: string): Pick<TableClipboardCell, 'color' | 'textColor' | 'placement'> {
+  const result: Pick<TableClipboardCell, 'color' | 'textColor' | 'placement'> = {};
+  const background = pastedBackground(style);
+
+  // Skip invisible bg (transparent, near-white light page, near-black dark
+  // page) so plain cells don't collapse onto the gray preset.
+  if (background !== undefined && !isInvisibleBackground(background)) {
+    result.color = mapToNearestPresetColor(background, 'bg');
+  }
+
+  const textColor = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style)?.[1]?.trim();
+
+  if (textColor !== undefined && !isDefaultBlack(textColor)) {
+    result.textColor = mapToNearestPresetColor(textColor, 'text');
+  }
+
+  // External apps express cell alignment as text-align / vertical-align — Blok
+  // stores exactly that as the 9-way placement.
+  const placement = placementFromAlignment(
+    /(?<![a-z-])text-align\s*:\s*([^;]+)/i.exec(style)?.[1],
+    /vertical-align\s*:\s*([^;]+)/i.exec(style)?.[1],
+  );
+
+  if (placement !== undefined) {
+    result.placement = placement;
+  }
+
+  return result;
+}
+
+/**
  * Build a clipboard cell payload from a single `<td>`/`<th>`: sanitized
  * paragraph blocks (split on line breaks), list blocks for `<ul>`/`<ol>`
  * content (structure would otherwise silently flatten to text), plus
@@ -619,42 +676,16 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
  */
 function buildCellPayloadFromTd(td: Element): TableClipboardCell {
   const blocks: ClipboardBlockData[] = parseCellContentToBlocks(sanitizeCellHtml(td));
-
-  const cell: TableClipboardCell = { blocks };
-
-  // Extract cell-level colors from td/th style attribute
-  const tdStyle = td.getAttribute('style') ?? '';
-  const cellBgMatch = /background-color\s*:\s*([^;]+)/i.exec(tdStyle);
-
-  if (cellBgMatch?.[1]) {
-    const cellBg = cellBgMatch[1].trim();
-
-    // Skip invisible bg (transparent, near-white light page, near-black dark
-    // page) so plain cells don't collapse onto the gray preset.
-    if (!isInvisibleBackground(cellBg)) {
-      cell.color = mapToNearestPresetColor(cellBg, 'bg');
-    }
-  }
-
-  const cellTextColorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(tdStyle);
-
-  if (cellTextColorMatch?.[1] && !isDefaultBlack(cellTextColorMatch[1].trim())) {
-    cell.textColor = mapToNearestPresetColor(cellTextColorMatch[1].trim(), 'text');
-  }
-
-  // External apps express cell alignment as text-align / vertical-align — Blok
-  // stores exactly that as the 9-way placement.
-  const placement = placementFromAlignment(
-    /(?<![a-z-])text-align\s*:\s*([^;]+)/i.exec(tdStyle)?.[1],
-    /vertical-align\s*:\s*([^;]+)/i.exec(tdStyle)?.[1],
-  );
-
-  if (placement !== undefined) {
-    cell.placement = placement;
-  }
+  const cell: TableClipboardCell = { blocks, ...readPastedCellStyle(td.getAttribute('style') ?? '') };
 
   return cell;
 }
+
+/**
+ * Returns a block tool's composed sanitize config (its own fields plus the
+ * inline tools enabled for it), as the editor uses when it saves or pastes that tool.
+ */
+export type ToolSanitizeConfigResolver = (toolName: string) => SanitizerConfig | undefined;
 
 /**
  * Attempt to parse a {@link TableCellsClipboard} from an HTML string.
@@ -662,7 +693,10 @@ function buildCellPayloadFromTd(td: Element): TableClipboardCell {
  * Returns `null` if the HTML does not contain a `<table>` with the expected
  * data attribute, or if the JSON within is invalid.
  */
-export function parseClipboardHtml(html: string): TableCellsClipboard | null {
+export function parseClipboardHtml(
+  html: string,
+  toolSanitizeConfig?: ToolSanitizeConfigResolver,
+): TableCellsClipboard | null {
   // Match both single-quoted and double-quoted attribute values
   const pattern = new RegExp(`${DATA_ATTR}='([^']*)'|${DATA_ATTR}="([^"]*)"`, 's');
   const match = pattern.exec(html);
@@ -691,28 +725,53 @@ export function parseClipboardHtml(html: string): TableCellsClipboard | null {
 
     const payload = JSON.parse(jsonStr) as TableCellsClipboard;
 
-    return sanitizeClipboardPayload(payload);
+    return sanitizeClipboardPayload(payload, toolSanitizeConfig);
   } catch {
     return null;
   }
 }
 
 /**
- * Sanitize every cell block's `data.text` in a parsed clipboard payload.
+ * Sanitize every cell block in a parsed clipboard payload.
  *
  * The `data-blok-table-cells` fast path bypasses the generic-table sanitizer,
- * so untrusted clipboard markup could otherwise reach the DOM verbatim. Run
- * each string `data.text` through {@link clean} with {@link CELL_SANITIZE_CONFIG}
- * to neutralize XSS while preserving allowed inline formatting.
+ * so untrusted clipboard markup could otherwise reach the DOM verbatim.
  */
-function sanitizeClipboardPayload(payload: TableCellsClipboard): TableCellsClipboard {
-  const blocks = payload.cells.flatMap(row => row.flatMap(cell => cell.blocks));
+function sanitizeClipboardPayload(
+  payload: TableCellsClipboard,
+  toolSanitizeConfig: ToolSanitizeConfigResolver | undefined,
+): TableCellsClipboard {
+  const cells = payload.cells.flat();
 
-  for (const block of blocks) {
-    if (typeof block.data.text === 'string') {
-      block.data.text = clean(block.data.text, CELL_SANITIZE_CONFIG);
-    }
+  for (const cell of cells) {
+    cell.blocks = cell.blocks.map(block => sanitizeClipboardBlock(block, toolSanitizeConfig));
   }
 
   return payload;
+}
+
+/**
+ * Clean one block with its tool's own config, so a pasted cell keeps exactly
+ * the marks the same block keeps anywhere else. Without that config (or when
+ * the tool declares none) fall back to {@link CELL_SANITIZE_CONFIG} on `text`.
+ */
+function sanitizeClipboardBlock(
+  block: ClipboardBlockData,
+  toolSanitizeConfig: ToolSanitizeConfigResolver | undefined,
+): ClipboardBlockData {
+  const config = toolSanitizeConfig?.(block.tool);
+
+  // `text: true` declares no tag rules, so it would pass untrusted clipboard
+  // markup through untouched; such text keeps the cell floor below.
+  if (config !== undefined && Object.keys(config).length > 0 && config.text !== true) {
+    const [sanitized] = sanitizeBlocks([{ tool: block.tool, data: block.data }], config);
+
+    return { ...block, data: sanitized.data };
+  }
+
+  if (typeof block.data.text === 'string') {
+    return { ...block, data: { ...block.data, text: clean(block.data.text, CELL_SANITIZE_CONFIG) } };
+  }
+
+  return block;
 }

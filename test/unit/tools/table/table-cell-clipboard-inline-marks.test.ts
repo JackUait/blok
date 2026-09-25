@@ -11,6 +11,7 @@ import {
   parseGenericHtmlTable,
   serializeCellsToClipboard,
 } from '../../../../src/tools/table/table-cell-clipboard';
+import type { SanitizerConfig } from '../../../../types';
 
 const MARKED = 'a <strong>b</strong> <em>i</em> <u>u</u> <s>s</s> <del>d</del> <code>c</code> ' +
   '<a href="https://x.com">l</a> <mark style="color: red;">m</mark>';
@@ -70,5 +71,23 @@ describe('table cell copy resolves Blok color tokens for other apps', () => {
 
     expect(parsed?.cells[0][0].color).toBe('var(--blok-color-red-bg)');
     expect(parsed?.cells[0][0].textColor).toBe('var(--blok-color-blue-text)');
+  });
+});
+
+describe('table cell clipboard with a tool sanitize config', () => {
+  const pasteText = (text: string, config: SanitizerConfig): unknown => {
+    const html = buildClipboardHtml(serializeCellsToClipboard([
+      { row: 0, col: 0, blocks: [{ tool: 'custom', data: { text } }] },
+    ]));
+
+    return cellText(parseClipboardHtml(html, () => config));
+  };
+
+  // A `true` rule means "no tag rules", not "trusted": the payload is untrusted clipboard data.
+  it('still strips event handlers when the tool marks text as true', () => {
+    const text = String(pasteText('<img src="x" onerror="alert(1)">ok<u>u</u>', { text: true }));
+
+    expect(text).not.toContain('onerror');
+    expect(text).toContain('<u>u</u>');
   });
 });

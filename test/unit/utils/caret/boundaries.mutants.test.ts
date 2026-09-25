@@ -186,12 +186,12 @@ describe('caret boundary mutants', () => {
       expect(isCaretAtStartOfInput(host)).toBe(false);
     });
 
-    it('is false inside a nested tag, so the browser can step out of it first', () => {
+    it('is true at offset 0 inside a leading tag, since nothing is before it', () => {
       const host = editable('<b>abc</b>');
 
       putCaret(textHolding(host, 'abc'), 0);
 
-      expect(isCaretAtStartOfInput(host)).toBe(false);
+      expect(isCaretAtStartOfInput(host)).toBe(true);
     });
   });
 

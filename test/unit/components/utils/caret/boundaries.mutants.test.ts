@@ -332,10 +332,43 @@ describe('isCaretAtStartOfInput', () => {
     expect(isCaretAtStartOfInput(input)).toBe(false);
   });
 
-  it('is not at the start when the caret sits inside a nested tag', () => {
-    const input = mountEditable('<b>abc</b>');
+  it('is at the start when the caret sits at offset 0 inside a leading tag', () => {
+    const input = mountEditable('<b>abc</b> tail');
 
     placeCaret(firstText(input), 0);
+
+    expect(isCaretAtStartOfInput(input)).toBe(true);
+  });
+
+  it('is at the start at offset 0 inside tags nested two deep', () => {
+    const input = mountEditable('<b><i>abc</i></b> tail');
+
+    placeCaret(firstText(input), 0);
+
+    expect(isCaretAtStartOfInput(input)).toBe(true);
+  });
+
+  it('is not at the start inside a tag that has text before it', () => {
+    const input = mountEditable('x<b>abc</b>');
+
+    placeCaret(firstText(query(input, 'b')), 0);
+
+    expect(isCaretAtStartOfInput(input)).toBe(false);
+  });
+
+  it('is not at the start inside a leading tag past its first character', () => {
+    const input = mountEditable('<b>abc</b>');
+
+    placeCaret(firstText(input), 1);
+
+    expect(isCaretAtStartOfInput(input)).toBe(false);
+  });
+
+  it('is not at the start when the caret is outside the input', () => {
+    const outside = mountEditable('zzz');
+    const input = mountEditable('abc');
+
+    placeCaret(firstText(outside), 0);
 
     expect(isCaretAtStartOfInput(input)).toBe(false);
   });
@@ -348,12 +381,12 @@ describe('isCaretAtStartOfInput', () => {
     expect(isCaretAtStartOfInput(input)).toBe(true);
   });
 
-  it('is not at the start when the selection focuses a child element node', () => {
+  it('is at the start when the selection focuses a leading child element node', () => {
     const input = mountEditable('<b>abc</b>');
 
     placeCaret(query(input, 'b'), 0);
 
-    expect(isCaretAtStartOfInput(input)).toBe(false);
+    expect(isCaretAtStartOfInput(input)).toBe(true);
   });
 
   it('distinguishes offset 0 from offset 1 in a direct text child', () => {

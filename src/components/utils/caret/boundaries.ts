@@ -183,17 +183,12 @@ export const isCaretAtStartOfInput = (input: HTMLElement): boolean => {
   }
 
   /**
-   * If caret is inside a nested tag (e.g. <b>), we should let browser handle the navigation
-   * to exit the tag first, before moving to the previous block.
+   * The caret must be inside this input; nesting depth does not matter.
+   * A caret outside would collapse the slice below and read as "at start".
    */
-  const selection = window.getSelection();
-  const focusNode = selection?.focusNode ?? null;
+  const focusNode = window.getSelection()?.focusNode ?? null;
 
-  if (
-    focusNode !== null &&
-    focusNode !== input &&
-    !(focusNode.nodeType === Node.TEXT_NODE && focusNode.parentNode === input)
-  ) {
+  if (focusNode === null || !input.contains(focusNode)) {
     return false;
   }
 

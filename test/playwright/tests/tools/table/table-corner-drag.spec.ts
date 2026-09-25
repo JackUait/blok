@@ -690,13 +690,16 @@ test.describe('Table Corner Drag Handle', () => {
     test('a held pointer that trembles past the edge keeps growing the table', async ({ page }) => {
       const { y, x } = await overflowByDragging(page);
       const beforeTheHold = await columnCount(page);
+      const tremble = { moves: 0 };
 
-      for (let i = 0; i < 90; i++) {
-        await page.mouse.move(x + (i % 2 === 0 ? -1 : 1), y);
+      // Growth is paced by the clock and each column slows the next frame, so a
+      // hold counted in frames has no time bound. Hold until one column lands.
+      await expect.poll(async () => {
+        await page.mouse.move(x + (tremble.moves++ % 2 === 0 ? -1 : 1), y);
         await waitFrames(page, 1);
-      }
 
-      expect(await columnCount(page)).toBeGreaterThan(beforeTheHold);
+        return columnCount(page);
+      }, { intervals: [0], timeout: 5_000 }).toBeGreaterThan(beforeTheHold);
 
       await page.mouse.up();
     });

@@ -33,6 +33,7 @@ const RU: EmojiLocaleData = {
 const mockLoadEmojiData = vi.fn();
 
 vi.mock('../../../../../src/components/utils/emoji/emoji-data', () => ({
+  loadEmojiGrid: (...args: unknown[]): unknown => mockLoadEmojiData(...args),
   loadEmojiData: (...args: unknown[]): unknown => mockLoadEmojiData(...args),
   groupEmojisByCategory: vi.fn((emojis: ProcessedEmoji[]) => {
     const m = new Map<string, ProcessedEmoji[]>();

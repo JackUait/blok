@@ -1,6 +1,6 @@
 // src/tools/callout/emoji-picker/index.ts
 
-import { loadEmojiData, groupEmojisByCategory, CURATED_CALLOUT_EMOJIS, type ProcessedEmoji } from '../../../components/utils/emoji/emoji-data';
+import { loadEmojiData, loadEmojiGrid, groupEmojisByCategory, CURATED_CALLOUT_EMOJIS, type ProcessedEmoji } from '../../../components/utils/emoji/emoji-data';
 import { searchEmojisRanked } from '../../../components/utils/emoji/emoji-search-ranked';
 import { loadEmojiLocale, type EmojiLocaleData } from '../../../components/utils/emoji/emoji-locale';
 import { hide as hideTooltip, onHover } from '../../../components/utils/tooltip';
@@ -160,6 +160,8 @@ export class EmojiPicker {
   private readonly _inline: boolean;
   private _localeData: EmojiLocaleData | null = null;
   private _localeLoad: Promise<void> | null = null;
+  private _hasKeywords = false;
+  private _keywordsLoad: Promise<void> | null = null;
   /** Caret rect override for inline mode — see `open()`'s `anchorRect` param. */
   private _anchorRectOverride: DOMRect | null = null;
 
@@ -332,7 +334,7 @@ export class EmojiPicker {
     }
 
     if (this._allEmojis.length === 0) {
-      this._allEmojis = await loadEmojiData();
+      this._allEmojis = await loadEmojiGrid();
     }
 
     if (this._hasFullGrid) {
@@ -389,6 +391,30 @@ export class EmojiPicker {
       document.addEventListener('keydown', this._onDocumentKeydown, true);
       this._filterInput.focus();
     }
+
+    this.loadKeywords();
+  }
+
+  /**
+   * Keywords come in a separate, larger file than the grid. Started after the
+   * grid is shown so they are usually in before the user types; until then
+   * search matches names and ids only.
+   */
+  private loadKeywords(): void {
+    if (this._hasKeywords || this._keywordsLoad !== null) {
+      return;
+    }
+
+    this._keywordsLoad = loadEmojiData()
+      .then(emojis => {
+        this._hasKeywords = true;
+        this._allEmojis = emojis;
+        this.refilterWhileTyping();
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        this._keywordsLoad = null;
+      });
   }
 
   public close(): void {
@@ -1513,18 +1539,30 @@ export class EmojiPicker {
   }
 
   /**
-   * Relabels the rendered grid once the locale lands. Runs even while closed:
-   * a reopen reuses the grid (`_hasFullGrid`) without rebuilding buttons.
-   * Inline mode never re-runs the filter: the ":" composer holds a reference
-   * to the highlighted button, and a rebuild would detach it.
+   * Re-runs the active search after more search data lands.
+   * Only while typing: a rebuild would detach a result the user arrowed to.
+   * Inline mode never re-runs: the ":" composer holds a reference to the
+   * highlighted button.
+   * @returns true when the search was re-run
    */
-  private applyLocaleToGrid(): void {
-    // Only while typing: a rebuild would detach a result the user arrowed to.
+  private refilterWhileTyping(): boolean {
     const typing = document.activeElement === this._filterInput;
 
-    if (this._open && !this._inline && typing && this._filterInput.value.trim() !== '') {
-      this.handleFilterChange(this._filterInput.value);
+    if (!this._open || this._inline || !typing || this._filterInput.value.trim() === '') {
+      return false;
+    }
 
+    this.handleFilterChange(this._filterInput.value);
+
+    return true;
+  }
+
+  /**
+   * Relabels the rendered grid once the locale lands. Runs even while closed:
+   * a reopen reuses the grid (`_hasFullGrid`) without rebuilding buttons.
+   */
+  private applyLocaleToGrid(): void {
+    if (this.refilterWhileTyping()) {
       return;
     }
 

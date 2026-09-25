@@ -5,6 +5,7 @@ import type { API, BlockToolConstructorOptions, HTMLPasteEvent } from '../../../
 import type { CalloutData, CalloutConfig } from '../../../../src/tools/callout/types';
 
 vi.mock('../../../../src/components/utils/emoji/emoji-data', () => ({
+  loadEmojiGrid: vi.fn().mockResolvedValue([]),
   loadEmojiData: vi.fn().mockResolvedValue([]),
   searchEmojis: vi.fn().mockReturnValue([]),
   groupEmojisByCategory: vi.fn().mockReturnValue(new Map()),

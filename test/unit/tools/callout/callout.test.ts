@@ -7,6 +7,7 @@ import type { CalloutData, CalloutConfig } from '../../../../src/tools/callout/t
 import { TOGGLE_ATTR } from '../../../../src/tools/toggle/constants';
 
 vi.mock('../../../../src/components/utils/emoji/emoji-data', () => ({
+  loadEmojiGrid: vi.fn().mockResolvedValue([]),
   loadEmojiData: vi.fn().mockResolvedValue([]),
   searchEmojis: vi.fn().mockReturnValue([]),
   groupEmojisByCategory: vi.fn().mockReturnValue(new Map()),

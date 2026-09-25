@@ -49,6 +49,7 @@ vi.mock('../../../../../../src/components/utils/emoji/emoji-data', async (import
 
   return {
     ...actual,
+    loadEmojiGrid: vi.fn(() => Promise.resolve(FIXTURE_EMOJIS)),
     loadEmojiData: vi.fn(() => new Promise<ProcessedEmoji[]>((resolve) => {
       const delay = DELAYS_MS[callIndex] ?? 0;
 

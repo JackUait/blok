@@ -20,25 +20,30 @@ vi.mock('../../../../../src/components/utils/emoji/emoji-locale', () => ({
   getTranslatedName: (...args: unknown[]): unknown => mockGetTranslatedName(...args),
 }));
 
-vi.mock('../../../../../src/components/utils/emoji/emoji-data', () => ({
-  loadEmojiData: vi.fn().mockResolvedValue([
+vi.mock('../../../../../src/components/utils/emoji/emoji-data', () => {
+  const fixture = [
     { native: '💡', skins: ['💡'], id: 'bulb', name: 'Light Bulb', keywords: ['light', 'idea'], category: 'objects' },
     { native: '😀', skins: ['😀'], id: 'grinning', name: 'Grinning Face', keywords: ['face', 'happy'], category: 'people' },
     { native: '👍', skins: ['👍', '👍🏻', '👍🏼', '👍🏽', '👍🏾', '👍🏿'], id: 'thumbsup', name: 'Thumbs Up', keywords: ['ok', 'yes'], category: 'people' },
     { native: '✅', skins: ['✅'], id: 'check', name: 'Check Mark', keywords: ['ok', 'done'], category: 'symbols' },
-  ] as ProcessedEmoji[]),
-  searchEmojis: vi.fn((emojis: ProcessedEmoji[], q: string) => emojis.filter((e) => e.name.toLowerCase().includes(q))),
-  groupEmojisByCategory: vi.fn((emojis: ProcessedEmoji[]) => {
-    const m = new Map<string, ProcessedEmoji[]>();
-    for (const e of emojis) {
-      const g = m.get(e.category) ?? [];
-      g.push(e);
-      m.set(e.category, g);
-    }
-    return m;
-  }),
-  CURATED_CALLOUT_EMOJIS: ['💡', '✅'],
-}));
+  ] as ProcessedEmoji[];
+
+  return {
+    loadEmojiGrid: vi.fn().mockResolvedValue(fixture),
+    loadEmojiData: vi.fn().mockResolvedValue(fixture),
+    searchEmojis: vi.fn((emojis: ProcessedEmoji[], q: string) => emojis.filter((e) => e.name.toLowerCase().includes(q))),
+    groupEmojisByCategory: vi.fn((emojis: ProcessedEmoji[]) => {
+      const m = new Map<string, ProcessedEmoji[]>();
+      for (const e of emojis) {
+        const g = m.get(e.category) ?? [];
+        g.push(e);
+        m.set(e.category, g);
+      }
+      return m;
+    }),
+    CURATED_CALLOUT_EMOJIS: ['💡', '✅'],
+  };
+});
 
 describe('EmojiPicker', () => {
   let container: HTMLElement;

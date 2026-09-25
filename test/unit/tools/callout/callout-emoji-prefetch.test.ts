@@ -7,6 +7,7 @@ import type { CalloutData, CalloutConfig } from '../../../../src/tools/callout/t
 const mockLoadEmojiData = vi.fn();
 
 vi.mock('../../../../src/components/utils/emoji/emoji-data', () => ({
+  loadEmojiGrid: (...args: unknown[]): unknown => mockLoadEmojiData(...args),
   loadEmojiData: (...args: unknown[]): unknown => mockLoadEmojiData(...args),
   searchEmojis: vi.fn().mockReturnValue([]),
   groupEmojisByCategory: vi.fn().mockReturnValue(new Map()),

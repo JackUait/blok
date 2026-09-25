@@ -4,15 +4,20 @@ import type { CalloutData, CalloutConfig } from '../../../../src/tools/callout/t
 import type { CalloutTool } from '../../../../src/tools/callout';
 import type { ProcessedEmoji } from '../../../../src/components/utils/emoji/emoji-data';
 
-vi.mock('../../../../src/components/utils/emoji/emoji-data', () => ({
-  loadEmojiData: vi.fn().mockResolvedValue([
+vi.mock('../../../../src/components/utils/emoji/emoji-data', () => {
+  const fixture = [
     { native: '😀', skins: ['😀'], id: 'grinning', name: 'Grinning Face', keywords: ['happy'], category: 'people' },
     { native: '✅', skins: ['✅'], id: 'check', name: 'Check Mark', keywords: ['done'], category: 'symbols' },
-  ] as ProcessedEmoji[]),
-  searchEmojis: vi.fn().mockReturnValue([]),
-  groupEmojisByCategory: vi.fn((emojis: ProcessedEmoji[]) => new Map([['people', emojis]])),
-  CURATED_CALLOUT_EMOJIS: [],
-}));
+  ] as ProcessedEmoji[];
+
+  return {
+    loadEmojiGrid: vi.fn().mockResolvedValue(fixture),
+    loadEmojiData: vi.fn().mockResolvedValue(fixture),
+    searchEmojis: vi.fn().mockReturnValue([]),
+    groupEmojisByCategory: vi.fn((emojis: ProcessedEmoji[]) => new Map([['people', emojis]])),
+    CURATED_CALLOUT_EMOJIS: [],
+  };
+});
 
 vi.mock('../../../../src/components/utils/emoji/emoji-locale', () => ({
   loadEmojiLocale: vi.fn().mockResolvedValue(null),

@@ -25,6 +25,7 @@ const EMOJIS: ProcessedEmoji[] = [
 const mockLoadEmojiData = vi.fn();
 
 vi.mock('../../../../../src/components/utils/emoji/emoji-data', () => ({
+  loadEmojiGrid: (...args: unknown[]): unknown => mockLoadEmojiData(...args),
   loadEmojiData: (...args: unknown[]): unknown => mockLoadEmojiData(...args),
   searchEmojis: vi.fn((emojis: ProcessedEmoji[], q: string) => emojis.filter(e => e.name.toLowerCase().includes(q.toLowerCase()))),
   groupEmojisByCategory: vi.fn((emojis: ProcessedEmoji[]) => {

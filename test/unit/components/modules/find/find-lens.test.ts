@@ -52,6 +52,19 @@ describe('FindLens', () => {
     expect(boxes[1].style.width).toBe('40px');
   });
 
+  it('draws one box for pieces of a match that touch on the same line', () => {
+    const lens = new FindLens(container);
+
+    // A struck-out match and its replacement in the preview: two spans, one line.
+    lens.moveTo([rect(10, 20, 40, 18), rect(10, 60, 30, 18), rect(10, 20, 70, 18)]);
+
+    const boxes = boxesIn(container);
+
+    expect(boxes).toHaveLength(1);
+    expect(boxes[0].style.transform).toBe('translate(20px, 10px)');
+    expect(boxes[0].style.width).toBe('70px');
+  });
+
   it('is decorative and never takes pointer events', () => {
     const lens = new FindLens(container);
 

@@ -13,6 +13,19 @@
   background-color: var(--blok-find-match-active-bg);
 }
 
+/* Attribute names are set in replace-preview.ts. */
+/* Not display: none — a resize would wake tools' ResizeObservers, whose writes save. */
+[data-blok-find-preview] > [data-blok-element-content] > :not([data-blok-find-preview-clone]) {
+  content-visibility: hidden;
+  position: absolute;
+  visibility: hidden;
+}
+
+[data-blok-find-preview-old] {
+  color: var(--blok-text-secondary);
+  text-decoration: line-through;
+}
+
 /*
   The dock is fixed to the window, in the top layer (promoteToTopLayer), so
   no host stacking context can cover it; the z-index is only for engines

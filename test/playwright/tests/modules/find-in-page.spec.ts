@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
+import { modificationsObserverBatchTimeout } from '../../../../src/components/constants';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
@@ -112,6 +113,12 @@ const focusParagraph = async (page: Page, text: string): Promise<void> => {
     window.getSelection()?.collapse(element, 0);
   });
 };
+
+/** Outlasts the window onChange batches edits in, so a change would have arrived by now. */
+const waitPastOnChangeBatch = (page: Page): Promise<void> =>
+  page.evaluate((delay) => new Promise<void>((resolve) => {
+    window.setTimeout(resolve, delay);
+  }), modificationsObserverBatchTimeout + 100);
 
 const openFind = async (page: Page, query: string): Promise<void> => {
   await page.keyboard.press(FIND_KEY);
@@ -730,6 +737,98 @@ test.describe('find in page', () => {
 
       await expect(page.getByTestId('find-replace-input')).toBeFocused();
       await expect(code).toHaveText('const bye = "hello";');
+    });
+  });
+
+  test.describe('replace preview', () => {
+    const PREVIEW = '[data-blok-find-preview-clone]';
+
+    const typeReplacement = async (page: Page, query: string, replacement: string): Promise<void> => {
+      await page.keyboard.press(REPLACE_KEY);
+      await page.getByTestId('find-input').fill(query);
+      await page.getByTestId('find-replace-input').fill(replacement);
+    };
+
+    test('shows each replacement in the text, next to the struck-out match', async ({ page }) => {
+      await createEditor(page, paragraphs('foo one', 'two foo'));
+      await focusParagraph(page, 'foo one');
+
+      await typeReplacement(page, 'foo', 'bar');
+
+      await expect(page.locator(`${PREVIEW} [data-blok-find-preview-new]`)).toHaveText(['bar', 'bar']);
+      await expect(page.locator(`${PREVIEW} [data-blok-find-preview-old]`)).toHaveText(['foo', 'foo']);
+      await expect(page.locator(`${PREVIEW} [data-blok-find-preview-old]`).first()).toHaveCSS('text-decoration-line', 'line-through');
+      await expect(page.getByText('foo one', { exact: true })).toBeHidden();
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+    });
+
+    test('never changes the document, in a paragraph, a collapsed toggle or a table', async ({ page }) => {
+      const blocks: Blocks = [
+        { id: 'find-p', type: 'paragraph', data: { text: 'foo para' } },
+        { id: 'find-tgl', type: 'toggle', data: { text: 'foo title', isOpen: false }, content: ['find-child'] },
+        { id: 'find-child', type: 'paragraph', data: { text: 'foo child' }, parent: 'find-tgl' },
+        { id: 'find-table', type: 'table', data: { withHeadings: false, content: [['foo cell', 'b']] } },
+      ];
+
+      const changes = (): Promise<number> => page.evaluate(() => (window as Window & { __findChanges?: number }).__findChanges ?? 0);
+
+      await createEditor(page, blocks);
+      await page.evaluate(async (data) => {
+        const counter = window as Window & { __findChanges?: number };
+
+        window.blokInstance?.destroy();
+        document.getElementById('blok')?.replaceChildren();
+        counter.__findChanges = 0;
+        const blok = new window.Blok({
+          holder: 'blok',
+          data: { blocks: data },
+          onChange: () => {
+            counter.__findChanges = (counter.__findChanges ?? 0) + 1;
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, blocks);
+      await focusParagraph(page, 'foo para');
+      // Clicking may settle the editor; only what follows counts.
+      await waitPastOnChangeBatch(page);
+      const before = await changes();
+
+      await typeReplacement(page, 'foo', 'bar');
+      await expect(page.locator(`${PREVIEW} [data-blok-find-preview-new]`)).toHaveCount(4);
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 4');
+      // onChange is batched; give it time to arrive if the preview set one off.
+      await waitPastOnChangeBatch(page);
+
+      expect(await changes()).toBe(before);
+      await expect(page.locator('[data-blok-toggle-open]').first()).toHaveAttribute('data-blok-toggle-open', 'false');
+    });
+
+    test('Replace all writes what the preview showed, and the preview goes', async ({ page }) => {
+      await createEditor(page, paragraphs('foo one', 'two foo'));
+      await focusParagraph(page, 'foo one');
+      await typeReplacement(page, 'foo', 'bar');
+      await expect(page.locator(PREVIEW)).toHaveCount(2);
+
+      await page.getByTestId('find-replace-input').press('ControlOrMeta+Enter');
+
+      await expect.poll(() => savedTexts(page)).toEqual(['bar one', 'two bar']);
+      await expect(page.locator(PREVIEW)).toHaveCount(0);
+      await expect(page.getByText('bar one', { exact: true })).toBeVisible();
+    });
+
+    test('Escape drops the preview and selects the real match', async ({ page }) => {
+      await createEditor(page, paragraphs('foo one'));
+      await focusParagraph(page, 'foo one');
+      await typeReplacement(page, 'foo', 'bar');
+      await expect(page.locator(PREVIEW)).toHaveCount(1);
+
+      await page.keyboard.press('Escape');
+
+      await expect(page.locator(PREVIEW)).toHaveCount(0);
+      await expect(page.getByText('foo one', { exact: true })).toBeFocused();
+      expect(await page.evaluate(() => window.getSelection()?.toString())).toBe('foo');
     });
   });
 

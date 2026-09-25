@@ -50,12 +50,17 @@ const createEditor = (
 
   const blocks: FakeBlock[] = contents.map(({ id, text, parent, collapsed }) => {
     const holder = document.createElement('div');
+    const content = document.createElement('div');
+    const toolRoot = document.createElement('div');
     const input = document.createElement('div');
 
     holder.setAttribute('data-blok-element', '');
+    content.setAttribute('data-blok-element-content', '');
     input.setAttribute('contenteditable', 'true');
     input.textContent = text;
-    holder.appendChild(input);
+    toolRoot.appendChild(input);
+    content.appendChild(toolRoot);
+    holder.appendChild(content);
     if (collapsed !== undefined) {
       input.setAttribute('data-blok-toggle-open', String(!collapsed));
     }
@@ -66,7 +71,8 @@ const createEditor = (
   blocks.forEach((block) => {
     const parent = blocks.find((candidate) => candidate.id === block.parentId);
 
-    (parent?.holder ?? redactor).appendChild(block.holder);
+    // A child block's holder lives inside its container's tool root, as a toggle's children do.
+    (parent?.holder.querySelector('[data-blok-element-content] > *') ?? redactor).appendChild(block.holder);
   });
 
   const readOnly = { isEnabled: false };
@@ -143,6 +149,37 @@ const setReplacement = (_wrapper: HTMLElement, value: string): void => {
   }
   input.value = value;
 };
+
+/** Open the replace row and type into it, as the reader does. */
+const typeReplacement = (value: string): void => {
+  const toggle = openBar().querySelector('[data-blok-testid="find-replace-toggle"]');
+  const input = openBar().querySelector('[data-blok-testid="find-replace-input"]');
+
+  if (!(toggle instanceof HTMLButtonElement) || !(input instanceof HTMLInputElement)) {
+    throw new Error('replace controls missing');
+  }
+  if (toggle.getAttribute('aria-expanded') !== 'true') {
+    toggle.click();
+  }
+  input.value = value;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  vi.runAllTimers();
+};
+
+const PREVIEW = '[data-blok-find-preview-clone]';
+
+const previewOf = (holder: HTMLElement): HTMLElement => {
+  const preview = holder.querySelector<HTMLElement>(PREVIEW);
+
+  if (preview === null) {
+    throw new Error('no preview');
+  }
+
+  return preview;
+};
+
+const texts = (root: Element, selector: string): string[] =>
+  [...root.querySelectorAll(selector)].map((element) => element.textContent ?? '');
 
 const painted = (name: string): string[] => [...highlights.get(name) ?? []].map((range) => range.toString());
 
@@ -547,5 +584,114 @@ describe('Find module', () => {
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
 
     expect(searchInput(wrapper).value).toBe('this');
+  });
+
+  describe('replace preview', () => {
+    it('shows each match struck through with its replacement after it, without touching the document', () => {
+      const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'cat and cat' }]);
+      const input = blocks[0].holder.querySelector('[contenteditable]');
+
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+      typeReplacement('dog');
+
+      const preview = previewOf(blocks[0].holder);
+
+      expect(texts(preview, '[data-blok-find-preview-old]')).toEqual(['cat', 'cat']);
+      expect(texts(preview, '[data-blok-find-preview-new]')).toEqual(['dog', 'dog']);
+      expect(preview.textContent).toBe('catdog and catdog');
+      expect(input?.textContent).toBe('cat and cat');
+      expect(blocks[0].holder.hasAttribute('data-blok-find-preview')).toBe(true);
+      expect(preview.hasAttribute('inert')).toBe(true);
+      expect(preview.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('does not count the preview as matches, even after the page settles', async () => {
+      const { wrapper, redactor } = editor([{ id: 'a', text: 'cat and cat' }]);
+
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+      typeReplacement('cat cat');
+      await Promise.resolve();
+      vi.runAllTimers();
+
+      expect(painted('blok-find-match').length + painted('blok-find-match-active').length).toBe(2);
+      expect(redactor.querySelectorAll(PREVIEW)).toHaveLength(1);
+    });
+
+    it('previews a nested match once, inside its top-level block', () => {
+      const { wrapper, redactor, blocks } = editor([
+        { id: 'a', text: 'toggle cat' },
+        { id: 'b', text: 'child cat', parent: 'a' },
+      ]);
+
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+      typeReplacement('dog');
+
+      expect(redactor.querySelectorAll(PREVIEW)).toHaveLength(1);
+      expect(texts(previewOf(blocks[0].holder), '[data-blok-find-preview-new]')).toEqual(['dog', 'dog']);
+      expect(blocks[1].holder.hasAttribute('data-blok-find-preview')).toBe(false);
+    });
+
+    it.each([
+      ['the replacement is cleared', () => typeReplacement('')],
+      ['the replace row closes', () => openBar().querySelector<HTMLButtonElement>('[data-blok-testid="find-replace-toggle"]')?.click()],
+      ['the bar closes', () => press(searchInput(), { key: 'Escape', code: 'Escape' })],
+    ])('goes away when %s', (_, act) => {
+      const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'cat' }]);
+
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+      typeReplacement('dog');
+      act();
+      vi.runAllTimers();
+
+      expect(redactor.querySelector(PREVIEW)).toBeNull();
+      expect(blocks[0].holder.hasAttribute('data-blok-find-preview')).toBe(false);
+    });
+
+    it('goes away when the editor turns read-only', () => {
+      const { wrapper, redactor, find, readOnly } = editor([{ id: 'a', text: 'cat' }]);
+
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+      typeReplacement('dog');
+      readOnly.isEnabled = true;
+      find.toggleReadOnly(true);
+
+      expect(redactor.querySelector(PREVIEW)).toBeNull();
+    });
+
+    it('selects the real match, not the preview, when closed', () => {
+      const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'one cat' }]);
+      const input = blocks[0].holder.querySelector('[contenteditable]');
+
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+      typeReplacement('dog');
+      press(searchInput(), { key: 'Escape', code: 'Escape' });
+
+      const selection = window.getSelection();
+
+      expect(selection?.toString()).toBe('cat');
+      expect(input?.contains(selection?.anchorNode ?? null)).toBe(true);
+    });
+
+    it('matches what Replace All then writes', () => {
+      const { wrapper, redactor, blocks } = editor([{ id: 'a', text: 'a <cat> and cat' }]);
+
+      press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(wrapper, 'cat');
+      typeReplacement('dog');
+
+      const preview = previewOf(blocks[0].holder).cloneNode(true) as HTMLElement;
+
+      preview.querySelectorAll('[data-blok-find-preview-old]').forEach((old) => old.remove());
+      [...openBar().querySelectorAll('button')].find((button) => button.textContent === 'find.replaceAll')?.click();
+
+      expect(blocks[0].holder.querySelector('[contenteditable]')?.textContent).toBe(preview.textContent);
+      expect(redactor.querySelector(PREVIEW)).toBeNull();
+    });
   });
 });

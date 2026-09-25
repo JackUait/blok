@@ -18,6 +18,7 @@ const makeCallbacks = (): { [K in keyof FindBarCallbacks]: ReturnType<typeof vi.
     onReplace: vi.fn(),
     onReplaceAll: vi.fn(),
     onSeek: vi.fn(),
+    onReplaceChange: vi.fn(),
   };
 
   return callbacks;
@@ -587,6 +588,32 @@ describe('FindBar', () => {
       expect(replaceInput().placeholder).toBe('find.replacePlaceholder');
     });
 
+    it('reports the replacement as it is typed, for the preview', () => {
+      button(bar.element, 'find.toggleReplace').click();
+      callbacks.onReplaceChange.mockClear();
+      type(replaceInput(), 'dog');
+
+      expect(callbacks.onReplaceChange).toHaveBeenCalledTimes(1);
+      expect(bar.replacement).toBe('dog');
+    });
+
+    it('reports no replacement once the replace row closes, and the typed one when it opens again', () => {
+      const toggle = button(bar.element, 'find.toggleReplace');
+
+      toggle.click();
+      type(replaceInput(), 'dog');
+      callbacks.onReplaceChange.mockClear();
+      toggle.click();
+
+      expect(callbacks.onReplaceChange).toHaveBeenCalledTimes(1);
+      expect(bar.replacement).toBe('');
+
+      toggle.click();
+
+      expect(callbacks.onReplaceChange).toHaveBeenCalledTimes(2);
+      expect(bar.replacement).toBe('dog');
+    });
+
     it('closes again from its toggle', () => {
       const toggle = button(bar.element, 'find.toggleReplace');
 
@@ -713,6 +740,16 @@ describe('FindBar', () => {
       bar.setReadOnly(false);
 
       expect(button(bar.element, 'find.toggleReplace').hidden).toBe(false);
+    });
+
+    it('reports no replacement while read-only', () => {
+      bar.open({ replace: true, readOnly: false });
+      type(replaceInput(), 'dog');
+      callbacks.onReplaceChange.mockClear();
+      bar.setReadOnly(true);
+
+      expect(bar.replacement).toBe('');
+      expect(callbacks.onReplaceChange).toHaveBeenCalledTimes(1);
     });
 
     it('ignores replace keys while read-only', () => {

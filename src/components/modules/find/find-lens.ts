@@ -13,6 +13,35 @@ export interface LensRect {
   height: number;
 }
 
+/** Sub-pixel text rects of neighbouring spans can leave a hairline gap. */
+const TOUCH_TOLERANCE = 1;
+
+/**
+ * Join rects on the same line that touch or overlap, so a match made of
+ * several spans gets one box, not one per span.
+ * @param rects - a match's line rects
+ */
+const joinTouching = (rects: LensRect[]): LensRect[] =>
+  rects.reduce<LensRect[]>((joined, rect) => {
+    const touching = joined.find((other) =>
+      other.top === rect.top
+      && other.height === rect.height
+      && rect.left <= other.left + other.width + TOUCH_TOLERANCE
+      && other.left <= rect.left + rect.width + TOUCH_TOLERANCE
+    );
+
+    if (touching === undefined) {
+      return [...joined, { ...rect }];
+    }
+
+    const right = Math.max(touching.left + touching.width, rect.left + rect.width);
+
+    touching.left = Math.min(touching.left, rect.left);
+    touching.width = right - touching.left;
+
+    return joined;
+  }, []);
+
 const LENS = 'data-blok-find-lens';
 const BOX = 'data-blok-find-lens-box';
 const ARRIVE = 'data-blok-find-lens-arrive';
@@ -26,7 +55,9 @@ export class FindLens {
     this.container = container;
   }
 
-  public moveTo(rects: LensRect[], options: { pulse?: boolean } = {}): void {
+  public moveTo(lineRects: LensRect[], options: { pulse?: boolean } = {}): void {
+    const rects = joinTouching(lineRects);
+
     if (rects.length === 0) {
       this.hide();
 

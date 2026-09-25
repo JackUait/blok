@@ -16,6 +16,8 @@ export interface FindBarCallbacks {
   onReplace(replacement: string): void;
   onReplaceAll(replacement: string): void;
   onSeek(index: number): void;
+  /** The replacement to preview changed; read it from `FindBar.replacement`. */
+  onReplaceChange(): void;
 }
 
 export interface FindBarResults {
@@ -274,6 +276,7 @@ export class FindBar {
     this.listen(this.closeButton, 'click', () => this.callbacks.onClose());
     this.listen(this.replaceButton, 'click', () => this.callbacks.onReplace(this.replaceInput.value));
     this.listen(this.replaceAllButton, 'click', () => this.callbacks.onReplaceAll(this.replaceInput.value));
+    this.listen(this.replaceInput, 'input', () => this.callbacks.onReplaceChange());
     this.listen(this.map, 'click', (event) => this.handleMapClick(event));
     this.listen(this.field, 'animationend', (event) => {
       if (event.target === this.field) {
@@ -292,6 +295,11 @@ export class FindBar {
 
   public get query(): string {
     return this.input.value;
+  }
+
+  /** The text to preview in place of each match: empty while the replace row is closed. */
+  public get replacement(): string {
+    return this.replaceOpen ? this.replaceInput.value : '';
   }
 
   public get options(): FindOptions {
@@ -489,11 +497,16 @@ export class FindBar {
 
   private setReplaceOpen(open: boolean): void {
     const next = open && !this.readOnly;
+    const changed = next !== this.replaceOpen;
 
     this.replaceOpen = next;
     this.replaceRow.hidden = !next;
     this.replaceToggle.setAttribute('aria-expanded', String(next));
     this.bar.toggleAttribute(ATTR.open, next);
+
+    if (changed) {
+      this.callbacks.onReplaceChange();
+    }
   }
 
   private renderResults(current = -1): void {

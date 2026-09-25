@@ -16,6 +16,7 @@ import { FindBar } from './find-bar';
 import { FindLens } from './find-lens';
 import { clearFindHighlights, paintFindHighlights } from './find-highlight';
 import type { FindOptions } from './match-text';
+import { isPreviewMutation, ReplacePreview } from './replace-preview';
 import { editableHostOf, replaceRangeText } from './replace-text';
 import { findRanges } from './text-index';
 import type { TextPoint } from './text-point';
@@ -73,6 +74,7 @@ export class Find extends Module {
 
   private bar: FindBar | null = null;
   private lens: FindLens | null = null;
+  private preview: ReplacePreview | null = null;
   private ranges: Range[] = [];
   private active = -1;
   /** Where the next search starts from: the caret at open, the current match, or the text just replaced. */
@@ -283,7 +285,7 @@ export class Find extends Module {
     const current = this.ranges[this.active];
 
     if (this.isOpen && current !== undefined) {
-      this.placeLens(current, false);
+      this.placeLens(this.onScreen(current), false);
     }
   };
 
@@ -377,6 +379,12 @@ export class Find extends Module {
         onClose: () => this.close(),
         onReplace: (replacement) => this.replace(replacement),
         onReplaceAll: (replacement) => this.replaceAll(replacement),
+        onReplaceChange: () => {
+          if (this.bar?.isOpen === true) {
+            this.showPreview();
+            this.render({ reveal: false });
+          }
+        },
         onSeek: (index) => {
           this.active = Math.max(0, Math.min(index, this.ranges.length - 1));
           this.render({ reveal: true, pulse: true, expand: true });
@@ -389,6 +397,7 @@ export class Find extends Module {
     this.bar.element.setAttribute('data-blok-interface', 'find');
     document.body.appendChild(this.bar.element);
     this.lens = new FindLens(wrapper);
+    this.preview = new ReplacePreview(this.Blok.UI.nodes.redactor);
 
     return this.bar;
   }
@@ -445,7 +454,12 @@ export class Find extends Module {
   private startObserving(): void {
     const { redactor } = this.Blok.UI.nodes;
 
-    this.observer = new MutationObserver(() => this.scheduleSearch(DOM_DEBOUNCE_MS, { reveal: false }, false));
+    this.observer = new MutationObserver((records) => {
+      // Re-searching on the preview's own writes would rebuild it forever.
+      if (!records.every(isPreviewMutation)) {
+        this.scheduleSearch(DOM_DEBOUNCE_MS, { reveal: false }, false);
+      }
+    });
     this.observer.observe(redactor, { childList: true, subtree: true, characterData: true });
 
     if (typeof ResizeObserver === 'function') {
@@ -510,7 +524,32 @@ export class Find extends Module {
     const next = (options.expand === true ? undefined : after.find((range) => !this.isHidden(range))) ?? after[0] ?? this.ranges[0];
 
     this.active = next === undefined ? -1 : this.ranges.indexOf(next);
+    this.showPreview();
     this.render(options);
+  }
+
+  /**
+   * Show the replacement in the text while one is typed. Not in render(): the
+   * preview resizes the redactor, and a resize renders again.
+   */
+  private showPreview(): void {
+    const bar = this.bar;
+
+    if (bar === null || this.Blok.ReadOnly.isEnabled || bar.replacement === '') {
+      this.preview?.clear();
+
+      return;
+    }
+
+    this.preview?.show(this.ranges, bar.query, bar.options, bar.replacement);
+  }
+
+  /**
+   * Where a match is on screen: in the preview while one is shown.
+   * @param range - a real match
+   */
+  private onScreen(range: Range): Range {
+    return this.preview?.rangeFor(range) ?? range;
   }
 
   private render(options: RenderOptions): void {
@@ -524,7 +563,7 @@ export class Find extends Module {
       this.collapsedAncestors(current).reverse().forEach((parent) => parent.call('expand'));
     }
 
-    paintFindHighlights(this, this.ranges, current);
+    paintFindHighlights(this, this.ranges.map((range) => this.onScreen(range)), current === null ? null : this.onScreen(current));
     this.bar?.setResults({
       current: this.active,
       total: this.ranges.length,
@@ -538,9 +577,9 @@ export class Find extends Module {
     }
 
     if (options.reveal) {
-      this.scrollIntoView(current);
+      this.scrollIntoView(this.onScreen(current));
     }
-    this.placeLens(current, options.pulse === true);
+    this.placeLens(this.onScreen(current), options.pulse === true);
   }
 
   /**
@@ -640,7 +679,7 @@ export class Find extends Module {
     }
 
     return this.ranges.map((range) => {
-      const [rect] = rectsOf(range);
+      const [rect] = rectsOf(this.onScreen(range));
       const top = rect?.top ?? this.visibleAncestorTop(range.startContainer);
 
       return Math.min(1, Math.max(0, (top - box.top) / box.height));
@@ -672,6 +711,7 @@ export class Find extends Module {
   }
 
   private clearPaint(): void {
+    this.preview?.clear();
     clearFindHighlights(this);
     this.lens?.hide();
     this.ranges = [];

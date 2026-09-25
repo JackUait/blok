@@ -9013,6 +9013,17 @@ span[data-blok-slash-search] {
   background-color: var(--blok-find-match-active-bg);
 }
 
+[data-blok-find-preview] > [data-blok-element-content] > :not([data-blok-find-preview-clone]) {
+  content-visibility: hidden;
+  position: absolute;
+  visibility: hidden;
+}
+
+[data-blok-find-preview-old] {
+  color: var(--blok-text-secondary);
+  text-decoration: line-through;
+}
+
 [data-blok-find], [data-blok-find][data-blok-top-layer][popover] {
   position: fixed;
   inset: auto;

@@ -249,6 +249,10 @@ describe('DocumentStore — a block moved into a container the peer deletes', ()
 
     sync(a, b);
 
+    // The sync repair cuts the link to the deleted parent; the drag below
+    // names the root anyway, so this is the only check of that repair.
+    expect(a.getBlockById('X')?.get('parentId')).toBeUndefined();
+
     a.moveBlockTo('X', { parentId: null, afterId: null });
 
     expect(idsOf(a)[0]).toBe('X');

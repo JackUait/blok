@@ -250,16 +250,6 @@ describe('ToggleItem', () => {
     });
   });
 
-  describe('renderSettings()', () => {
-    it('returns an empty array', async () => {
-      const { ToggleItem } = await import('../../../../src/tools/toggle');
-      const toggle = new ToggleItem(createToggleOptions());
-      const settings = toggle.renderSettings();
-
-      expect(settings).toEqual([]);
-    });
-  });
-
   describe('merge()', () => {
     it('appends incoming text to existing text', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');

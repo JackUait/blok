@@ -1730,13 +1730,20 @@ export class BlockMutation {
      * that lives OUTSIDE the conversionConfig `text` export/import contract, so
      * it is never carried by the exported string and would be dropped on every
      * "turn into". Preserve it from the source block's saved data onto the
-     * converted block — generically, for ANY target tool — so Notion's "color
-     * survives turn-into" behavior holds. Explicit overrides win.
+     * converted block so Notion's "color survives turn-into" behavior holds.
+     * Explicit overrides win.
+     *
+     * Only onto a target that keeps the field (declares it in its sanitize
+     * config, like the toolbox's color gate). A field the target's save() drops
+     * is pruned later OUTSIDE this undo step, so undo could not restore it.
+     * Left out here, `replaceBlockContent` prunes it inside the step.
      */
+    const targetSanitize = replacingTool.sanitizeConfig;
+
     for (const colorField of ['textColor', 'backgroundColor'] as const) {
       const sourceValue = savedBlock.data[colorField];
 
-      if (typeof sourceValue === 'string' && newBlockData[colorField] === undefined) {
+      if (typeof sourceValue === 'string' && newBlockData[colorField] === undefined && colorField in targetSanitize) {
         newBlockData[colorField] = sourceValue;
       }
     }

@@ -3,11 +3,12 @@
  */
 
 import type { BlockToolData } from '../../../types';
+import type { BlockColorData } from '../../components/shared/block-color';
 
 /**
  * Tool's input and output data format
  */
-export interface ToggleItemData extends BlockToolData {
+export interface ToggleItemData extends BlockToolData, BlockColorData {
   /** Toggle item text content (can include HTML) */
   text: string;
   /** Whether the toggle is open (expanded). Persisted on save so state is restored on reload. */

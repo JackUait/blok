@@ -215,13 +215,10 @@ describe('callout: turn into another block', () => {
     expect(await textOf(instance, 'C')).toBe('');
   }, 30_000);
 
-  const plainCallout = DEFAULT_BLOCKS.map(block =>
-    block.id === 'C' ? { ...block, data: { ...block.data, backgroundColor: null } } : block);
-
   for (const [label, tool, data, blocks] of [
     ['text', 'paragraph', undefined, DEFAULT_BLOCKS],
     ['a heading', 'header', { level: 2 }, DEFAULT_BLOCKS],
-    ['a toggle', 'toggle', undefined, plainCallout],
+    ['a toggle', 'toggle', undefined, DEFAULT_BLOCKS],
   ] as const) {
     it(`comes back exactly as it was after one undo (${label})`, async () => {
       const instance = await boot([...blocks]);
@@ -237,9 +234,7 @@ describe('callout: turn into another block', () => {
     }, 30_000);
   }
 
-  // Not callout-specific: a paragraph with a background turned into a toggle
-  // loses it on undo too. The toggle's own save drops the colour.
-  it.fails('gets its background back after one undo from a toggle', async () => {
+  it('gets its background back after one undo from a toggle', async () => {
     const instance = await boot();
     const before = JSON.stringify((await instance.save()).blocks);
 

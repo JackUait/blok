@@ -44,7 +44,17 @@ export const saveToggleItem = (
   const contentEl = getContentElement();
   const text = contentEl ? stripFakeBackgroundElements(contentEl.innerHTML) : data.text;
 
-  return { text, isOpen };
+  const saved: ToggleItemData = { text, isOpen };
+
+  if (data.textColor) {
+    saved.textColor = data.textColor;
+  }
+
+  if (data.backgroundColor) {
+    saved.backgroundColor = data.backgroundColor;
+  }
+
+  return saved;
 };
 
 /**

@@ -101,7 +101,7 @@ const createMockDependencies = (): BlockOperationsDependencies => {
   };
 };
 
-const createMockBlockToolAdapter = (name: string): BlockToolAdapter => {
+const createMockBlockToolAdapter = (name: string, sanitizeConfig: Record<string, unknown> = {}): BlockToolAdapter => {
   const MockBlockTool = class implements BlockTool {
     render = vi.fn(() => {
       const div = document.createElement('div');
@@ -119,7 +119,7 @@ const createMockBlockToolAdapter = (name: string): BlockToolAdapter => {
     name,
     constructable: MockBlockTool as BlockToolConstructable,
     create: vi.fn(() => new MockBlockTool()),
-    sanitizeConfig: {},
+    sanitizeConfig,
     conversionConfig: { import: 'text', export: 'text' },
     settings: {},
     toolbox: undefined,
@@ -156,7 +156,8 @@ const createMockBlockFactory = (): BlockFactory => {
   const mockTools = new ToolsCollection<BlockToolAdapter>();
 
   mockTools.set('paragraph', createMockBlockToolAdapter('paragraph'));
-  mockTools.set('header', createMockBlockToolAdapter('header'));
+  mockTools.set('header', createMockBlockToolAdapter('header', { textColor: false, backgroundColor: false }));
+  mockTools.set('plain', createMockBlockToolAdapter('plain'));
 
   return new BlockFactory({
     API: {} as unknown as API,
@@ -200,7 +201,7 @@ describe('convert() preserves block-level color', () => {
     operations.setYjsSync(createMockYjsSync());
   });
 
-  it('carries textColor/backgroundColor onto the converted block data (any target tool)', async () => {
+  it('carries textColor/backgroundColor onto a target that keeps block color', async () => {
     const colored = createMockBlock({
       id: 'colored',
       name: 'paragraph',
@@ -242,6 +243,25 @@ describe('convert() preserves block-level color', () => {
     const replaceSpy = vi.spyOn(operations, 'replace').mockReturnValue(plain);
 
     await operations.convert(plain, 'header', blocksStore);
+
+    const passedData = replaceSpy.mock.calls[0][2];
+
+    expect(passedData.textColor).toBeUndefined();
+    expect(passedData.backgroundColor).toBeUndefined();
+  });
+
+  // A carried field the target never saves is dropped later, outside the
+  // convert's undo step, so undo could not bring it back.
+  it('does not carry color onto a target that has no block color', async () => {
+    const colored = createMockBlock({
+      id: 'colored',
+      name: 'paragraph',
+      data: { text: 'Hi', textColor: 'red', backgroundColor: 'blue' },
+    });
+
+    const replaceSpy = vi.spyOn(operations, 'replace').mockReturnValue(colored);
+
+    await operations.convert(colored, 'plain', blocksStore);
 
     const passedData = replaceSpy.mock.calls[0][2];
 

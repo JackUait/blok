@@ -25,6 +25,7 @@ import {
   setToggleItemData,
   parseHTML,
 } from './block-operations';
+import { applyBlockColor, buildBlockColorTunes, BLOCK_COLOR_SANITIZE } from '../../components/shared/block-color';
 import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
 import { clean } from '../../components/utils/sanitizer';
 import { ARIA_LABEL_COLLAPSE_KEY, ARIA_LABEL_EXPAND_KEY, BODY_PLACEHOLDER_KEY, PLACEHOLDER_KEY, TOOL_NAME } from './constants';
@@ -74,6 +75,16 @@ export class ToggleItem implements BlockTool {
 
       if (typeof (data as ToggleItemData).isOpen === 'boolean') {
         normalized.isOpen = (data as ToggleItemData).isOpen;
+      }
+
+      const { textColor, backgroundColor } = data as ToggleItemData;
+
+      if (typeof textColor === 'string') {
+        normalized.textColor = textColor;
+      }
+
+      if (typeof backgroundColor === 'string') {
+        normalized.backgroundColor = backgroundColor;
       }
 
       return normalized;
@@ -132,6 +143,8 @@ export class ToggleItem implements BlockTool {
     this._arrowElement = result.arrowElement;
     this._bodyPlaceholderElement = result.bodyPlaceholderElement;
     this._childContainerElement = result.childContainerElement;
+
+    applyBlockColor(result.contentElement, this._data);
 
     /**
      * Listen for input events from child blocks so the empty-state attribute
@@ -202,6 +215,10 @@ export class ToggleItem implements BlockTool {
     this._data = result.newData;
     this._isOpen = this._data.isOpen ?? true;
 
+    if (this._contentElement) {
+      applyBlockColor(this._contentElement, this._data);
+    }
+
     if (this._arrowElement && this._element) {
       updateArrowState(this._arrowElement, this._element, this._isOpen, {
         collapse: this.api.i18n.t(ARIA_LABEL_COLLAPSE_KEY),
@@ -216,7 +233,19 @@ export class ToggleItem implements BlockTool {
   }
 
   public renderSettings(): MenuConfig {
-    return [];
+    return buildBlockColorTunes({
+      data: this._data,
+      i18n: this.api.i18n,
+      onPick: (field, value): void => {
+        this._data[field] = value;
+
+        if (this._contentElement) {
+          applyBlockColor(this._contentElement, this._data);
+        }
+
+        this.block?.dispatchChange();
+      },
+    });
   }
 
   /**
@@ -439,6 +468,7 @@ export class ToggleItem implements BlockTool {
 
   public static get sanitize(): ToolSanitizerConfig {
     return {
+      ...BLOCK_COLOR_SANITIZE,
       text: {
         ...INLINE_TEXT_SANITIZE,
       },

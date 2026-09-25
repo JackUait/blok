@@ -116,4 +116,48 @@ test.describe('block-level color survives turn-into', () => {
     expect(saved?.blocks[0].data.textColor).toBe('red');
     expect(saved?.blocks[0].data.backgroundColor).toBe('blue');
   });
+
+  // Turn into a toggle keeps the background, and one undo restores the
+  // paragraph with its colour, byte for byte.
+  test('keeps the background on a toggle and one undo restores the paragraph', async ({ page }) => {
+    const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
+    const source = { id: 'p', type: 'paragraph', data: { text: 'Colored text', backgroundColor: 'blue' } };
+
+    await createBlok(page, { blocks: [source] });
+
+    const before = (await save(page))?.blocks;
+
+    expect(before).toEqual([source]);
+
+    await openBlockTunes(page, 'Colored text');
+
+    const convertTo = page.locator(CONVERT_TO_OPTION);
+
+    await expect(convertTo).toBeVisible();
+    await convertTo.dispatchEvent('mouseover');
+    await expect(page.locator(NESTED_POPOVER)).toBeVisible();
+
+    const toggleEntry = page
+      .locator(`${NESTED_POPOVER} [data-blok-testid="popover-item"]`)
+      .filter({ hasText: 'Toggle list' })
+      .first();
+
+    await expect(toggleEntry).toBeVisible();
+    await toggleEntry.click();
+
+    const toggleTitle = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="toggle"] [data-blok-toggle-content]`);
+
+    await expect(toggleTitle).toBeVisible();
+    await expect(toggleTitle).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+
+    await expect.poll(async () => (await save(page))?.blocks).toEqual([
+      { id: 'p', type: 'toggle', data: { text: 'Colored text', isOpen: true, backgroundColor: 'blue' } },
+    ]);
+
+    await toggleTitle.click();
+    await page.keyboard.press(UNDO_SHORTCUT);
+
+    await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"]`)).toBeVisible();
+    await expect.poll(async () => (await save(page))?.blocks).toEqual(before);
+  });
 });

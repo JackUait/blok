@@ -13,6 +13,8 @@ import { normalizeFenceLang } from './fence-language';
 import { renderLatex } from '../shared/katex';
 import { safeHref, safeImageSrc } from '../components/utils/sanitize-url';
 import { sanitizeBlockHtml } from './sanitize-html';
+import { matchAlert } from './alerts';
+import { isBareBreak } from './phrasing-to-html';
 
 /**
  * Math mdast nodes (block `math`, `inlineMath`) come from mdast-util-math and
@@ -32,10 +34,6 @@ type InlineNode = PhrasingContent | MathNode;
  * prose. Keep in sync with `MATH_SIGNAL` in `index.ts`.
  */
 const MATH_SIGNAL = /\$\$[\s\S]+?\$\$|(?<!\$)\$(?![\s\d$])[^$]+(?<=\S)\$(?!\$)/;
-
-/** GitHub alert markers: `> [!NOTE]`, `[!WARNING]`, etc. */
-const ALERT_KINDS = ['note', 'tip', 'important', 'warning', 'caution'] as const;
-const ALERT_MARKER = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/;
 
 /**
  * Per-render state. Markdown features like references and footnotes resolve a
@@ -220,42 +218,6 @@ async function blockquoteToHtml(node: Blockquote, ctx: RenderContext): Promise<s
   return `<blockquote>${await nodesToHtml(node.children, ctx)}</blockquote>`;
 }
 
-/**
- * Detect a GitHub alert blockquote (`> [!NOTE]` on the first line) and return
- * the alert kind plus the blockquote children with the marker text stripped.
- */
-function matchAlert(node: Blockquote): { kind: string; children: RootContent[] } | null {
-  const [first] = node.children;
-  if (first === undefined || first.type !== 'paragraph') {
-    return null;
-  }
-  const [firstInline] = first.children;
-  if (firstInline === undefined || firstInline.type !== 'text') {
-    return null;
-  }
-  const match = ALERT_MARKER.exec(firstInline.value);
-  if (match === null) {
-    return null;
-  }
-  const kind = match[1].toLowerCase();
-  if (!ALERT_KINDS.includes(kind as typeof ALERT_KINDS[number])) {
-    return null;
-  }
-
-  // Strip the marker from the first text node; drop the node if it then becomes
-  // empty (the marker sat on its own line followed by a hard break).
-  const strippedValue = firstInline.value.slice(match[0].length).replace(/^\n+/, '');
-  const restInline: PhrasingContent[] = strippedValue === ''
-    ? first.children.slice(1).filter((c) => c.type !== 'break')
-    : [{ ...firstInline, value: strippedValue }, ...first.children.slice(1)];
-
-  const children: RootContent[] = restInline.length > 0
-    ? [{ ...first, children: restInline }, ...node.children.slice(1)]
-    : node.children.slice(1);
-
-  return { kind, children };
-}
-
 async function listToHtml(list: List, ctx: RenderContext): Promise<string> {
   const tag = list.ordered === true ? 'ol' : 'ul';
   const start = list.ordered === true && list.start != null && list.start !== 1
@@ -375,8 +337,9 @@ async function inlineToHtml(node: InlineNode, ctx: RenderContext): Promise<strin
       return renderLatex(node.value, { displayMode: true });
 
     case 'html':
-      // Raw inline HTML is escaped, never rendered (XSS-safe preview).
-      return escapeHtml(node.value);
+      // Raw inline HTML is escaped, never rendered (XSS-safe preview). A bare
+      // `<br>` is the exporter's line break inside headings and table cells.
+      return isBareBreak(node.value) ? '<br>' : escapeHtml(node.value);
 
     default:
       return '';

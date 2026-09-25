@@ -14,7 +14,7 @@
  */
 
 import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
-import { inlineLosses, serializeBlocksToMarkdown } from './blocks-to-markdown-core';
+import { HARD_BREAK, inlineLosses, serializeBlocksToMarkdown } from './blocks-to-markdown-core';
 import type { InlineBackend, SerializableBlock } from './blocks-to-markdown-core';
 
 export type { SerializableBlock, MarkdownDegradation } from './blocks-to-markdown-core';
@@ -62,7 +62,7 @@ const serializeInlineNode = (node: Node, onLoss: LossReporter): string => {
 
   switch (element.tagName.toLowerCase()) {
     case 'br':
-      return '\n';
+      return HARD_BREAK;
     case 'b':
     case 'strong':
       return inner.trim() === '' ? inner : `**${inner}**`;

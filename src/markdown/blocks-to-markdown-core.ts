@@ -198,6 +198,29 @@ const warn = (
 };
 
 /**
+ * What an inline backend writes for `<br>`: a CommonMark hard break. Two
+ * trailing spaces, not `\`, so a plain-text paste of the clipboard's
+ * Markdown shows no stray backslash. A bare newline is a soft break and
+ * re-imports as a space.
+ */
+export const HARD_BREAK = '  \n';
+
+/**
+ * CommonMark has no hard break at the end of a block: it is dropped (or, as
+ * `\`, read as a literal backslash). Editables often end in a filler `<br>`.
+ */
+const TRAILING_HARD_BREAKS = /(?: {2}\n[ \t]*)+$/;
+
+/**
+ * A break with nothing before it on its line would leave a whitespace-only
+ * line, which ENDS the paragraph. That line takes the `\` form instead.
+ */
+const BREAK_ONLY_LINES = /(?<=^|\n) {2}\n/g;
+
+/** Both hard-break forms, for fields that must spell a break as `<br>`. */
+const HARD_BREAKS = /(?: {2}|\\)\n/g;
+
+/**
  * Convert one inline field, reporting the marks Markdown cannot carry.
  *
  * A kind is reported ONCE per document: the report carries no block location,
@@ -214,7 +237,7 @@ const inlineMarkdown = (context: SerializationContext, html: string): string =>
 
     context.inlineSeen.add(construct);
     warn(context, construct, 'degraded', INLINE_LOSS_DETAILS[construct] ?? `${construct} has no Markdown equivalent`);
-  });
+  }).replace(TRAILING_HARD_BREAKS, '').replace(BREAK_ONLY_LINES, '\\\n');
 
 /**
  * Join loss names into a readable list: `a`, `a and b`, `a, b and c`.
@@ -337,7 +360,7 @@ const tablePresentationLosses = (
  * @param markdown - the cell's Markdown
  */
 const escapeTableCell = (markdown: string): string => {
-  const segments = markdown.split('|');
+  const segments = markdown.replace(HARD_BREAKS, '\n').split('|');
 
   /**
    * A `\` run before a `|` must be doubled before the escaping `\` is added,
@@ -830,7 +853,14 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
         warn(context, block.tool, 'degraded', 'collapsible heading is rendered as a heading followed by its body; collapsibility is lost');
       }
 
-      return `${flatIndent}${'#'.repeat(level)} ${text}`;
+      /**
+       * An ATX heading is one line, so a hard break would end it and push the
+       * rest into a paragraph. Raw `<br>` is the one inline break a heading can
+       * hold; the importer reads it back. A soft newline is just a space.
+       */
+      const line = text.replace(HARD_BREAKS, '<br>').replace(/\n/g, ' ');
+
+      return `${flatIndent}${'#'.repeat(level)} ${line}`;
     }
     case 'quote': {
       /** A blockquote has no attribution line, so the caption has nowhere to go. */

@@ -8,21 +8,22 @@
  * replaying 3000 randomized trees x 5 configs through a mutated copy of the
  * module and diffing the normalized block output):
  *
- * - L163 `node.type === 'html'` -> `false` / `'html'` -> `""` / body -> `{}`:
- *   the raw-html branch is an indirection only. Skipping it drops `convertNode`
- *   into its own fall-through, which calls the same `onUnknownNode` hook and
- *   otherwise emits the same paragraph from the same `escapeHtml(node.value)`,
- *   consuming the same single id.
- * - L518 the whole `handleFallback` body -> `{}`: `handleBuiltInNode` then
+ * - L164 `node.type === 'html'` -> `false` / `'html'` -> `""` / body -> `{}`:
+ *   the raw-html branch is an indirection only, EXCEPT for a bare `<br>` (an
+ *   empty paragraph there, escaped text in the fall-through). Otherwise
+ *   skipping it drops `convertNode` into its own fall-through, which calls the
+ *   same `onUnknownNode` hook and emits the same paragraph from the same
+ *   `escapeHtml(node.value)`, consuming the same single id.
+ * - L572 the whole `handleFallback` body -> `{}`: `handleBuiltInNode` then
  *   returns `undefined`, so `convertNode` takes that same fall-through.
- * - L525 `result === null` -> `false`, and its body -> `{}`: both arms end in
+ * - L579 `result === null` -> `false`, and its body -> `{}`: both arms end in
  *   `return result`, and `result` is null in the arm the guard protects.
- * - L297/L305 `textNodes.length > 0` -> `true` / `>= 0`: an extra
+ * - L299/L307 `textNodes.length > 0` -> `true` / `>= 0`: an extra
  *   `{ type: 'text', nodes: [] }` segment is pushed, and `if (text)` drops it
  *   because `phrasingToHtml([])` is `''`.
- * - L298/L306 `'text'` -> `""`: the segment's `type` is only ever compared
+ * - L300/L308 `'text'` -> `""`: the segment's `type` is only ever compared
  *   with `'math'`, so a renamed label still takes the text path.
- * - L289 the `textNodes` initializer -> `['Stryker was here']`: the injected
+ * - L291 the `textNodes` initializer -> `['Stryker was here']`: the injected
  *   string is a node with no `type`, so `phrasingToHtml` serializes it to `''`
  *   (its `default` branch), and the all-string segment it forces is dropped by
  *   the same `if (text)`.
@@ -427,7 +428,7 @@ describe('mdastToBlocks — blockquote', () => {
     expect(blocks[0].data).toStrictEqual({ text: 'Alpha<br>Beta', size: 'default' });
   });
 
-  it('quotes a heading that is not a paragraph, dropping its line break', () => {
+  it('lifts a heading out of the quote as its own block, keeping its line break', () => {
     const tree: Root = {
       type: 'root',
       children: [{
@@ -439,7 +440,11 @@ describe('mdastToBlocks — blockquote', () => {
       }],
     };
 
-    expect(mdastToBlocks(tree)[0].data.text).toBe('Para one<br>HeadTail');
+    const blocks = mdastToBlocks(tree);
+
+    expect(blocks.map((block) => block.type)).toEqual(['quote', 'header']);
+    expect(blocks[0].data.text).toBe('Para one');
+    expect(blocks[1].data).toStrictEqual({ text: 'Head<br>Tail', level: 2 });
   });
 
   it('keeps inline markup inside a quoted heading', () => {

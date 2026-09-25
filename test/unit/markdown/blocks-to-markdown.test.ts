@@ -414,25 +414,25 @@ describe('blocksToMarkdown: code', () => {
 });
 
 /**
- * A quote's inline `<br>` reaches the serializer as a newline, so a quote is
- * not necessarily one line. Markdown needs the marker on every one of them —
- * a single prefix left line two a plain paragraph, silently dropping it out of
- * the quote.
+ * A quote's inline `<br>` reaches the serializer as a hard break (two spaces
+ * then a newline), so a quote is not necessarily one line. Markdown needs the marker
+ * on every one of them — a single prefix left line two a plain paragraph,
+ * silently dropping it out of the quote.
  */
 describe('blocksToMarkdown: quote', () => {
   it('prefixes every line of a multi-line quote', () => {
     expect(blocksToMarkdown([{ tool: 'quote',
-      data: { text: 'one<br>two<br>three' } }])).toBe('> one\n> two\n> three');
+      data: { text: 'one<br>two<br>three' } }])).toBe('> one  \n> two  \n> three');
   });
 
   it('keeps inline marks on the continuation lines', () => {
     expect(blocksToMarkdown([{ tool: 'quote',
-      data: { text: 'plain<br><b>bold</b>' } }])).toBe('> plain\n> **bold**');
+      data: { text: 'plain<br><b>bold</b>' } }])).toBe('> plain  \n> **bold**');
   });
 
-  it('emits a bare `>` for a blank line inside the quote', () => {
+  it('emits a bare `>` for an empty quote, and a break-only line for a blank one', () => {
     expect(blocksToMarkdown([{ tool: 'quote',
-      data: { text: 'a<br><br>b' } }])).toBe('> a\n>\n> b');
+      data: { text: 'a<br><br>b' } }])).toBe('> a  \n> \\\n> b');
     expect(blocksToMarkdown([{ tool: 'quote',
       data: { text: '' } }])).toBe('>');
   });
@@ -447,7 +447,7 @@ describe('blocksToMarkdown: quote', () => {
         data: { text: 'a<br>b' },
         parentId: 'l',
         indent: 1 },
-    ])).toBe('- item\n\n    > a\n    > b');
+    ])).toBe('- item\n\n    > a  \n    > b');
   });
 
   it('still emits a single-line quote as one marker', () => {

@@ -38,8 +38,8 @@ describe('blocks-to-markdown (view) — inline HTML through parse5', () => {
     expect(inline('a <strike>gone</strike> b')).toBe('a ~~gone~~ b');
   });
 
-  it('turns a br into a newline and decodes entities', () => {
-    expect(inline('one<br>two')).toBe('one\ntwo');
+  it('turns a br into a hard break and decodes entities', () => {
+    expect(inline('one<br>two')).toBe('one  \ntwo');
     expect(inline('a &lt; b &amp; c')).toBe('a < b & c');
   });
 

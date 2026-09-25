@@ -2,9 +2,10 @@ import type { Root, Nodes, List, ListItem, PhrasingContent, Table, Blockquote, R
 import type { OutputBlockData } from '../../types/data-formats/output-data';
 import type { MarkdownImportConfig } from './types';
 import { safeImageSrc } from '../components/utils/sanitize-url';
-import { phrasingToHtml } from './phrasing-to-html';
+import { isBareBreak, phrasingToHtml } from './phrasing-to-html';
 import type { DefinitionMap } from './phrasing-to-html';
 import { normalizeFenceLang } from './fence-language';
+import { matchAlert, type AlertKind } from './alerts';
 
 /** Everything one `mdastToBlocks` call shares with every node handler. */
 interface ConvertContext {
@@ -161,7 +162,8 @@ function handleBuiltInNode(
   }
 
   if (node.type === 'html') {
-    return handleFallback(node, ctx, escapeHtml(node.value));
+    // A `<br>` alone on its line is a blank line, not markup to show.
+    return handleFallback(node, ctx, isBareBreak(node.value) ? '' : escapeHtml(node.value));
   }
 
   return undefined;
@@ -435,8 +437,35 @@ function handleListItem(
   return blocks;
 }
 
+/** Callout emoji and background preset per GitHub alert kind. */
+const ALERT_STYLE: Record<AlertKind, { emoji: string; backgroundColor: string }> = {
+  note: { emoji: 'ℹ️', backgroundColor: 'blue' },
+  tip: { emoji: '💡', backgroundColor: 'green' },
+  important: { emoji: '❗', backgroundColor: 'purple' },
+  warning: { emoji: '⚠️', backgroundColor: 'orange' },
+  caution: { emoji: '🛑', backgroundColor: 'red' },
+};
+
+/**
+ * A quote's text is one inline field, so only paragraphs join into it. Any
+ * other child (code, list, nested quote) becomes its own block in place,
+ * splitting the quote around it, so nothing is dropped.
+ */
 function handleBlockquote(bq: Blockquote, ctx: ConvertContext): OutputBlockData[] {
+  const alert = matchAlert(bq);
+
+  if (alert !== null) {
+    return handleAlert(alert.kind, alert.children, ctx);
+  }
+
+  const blocks: OutputBlockData[] = [];
   const parts: string[] = [];
+  const flush = (): void => {
+    if (parts.length > 0) {
+      blocks.push(makeBlock('quote', { text: parts.join('<br>'), size: 'default' }, ctx.generateId));
+      parts.length = 0;
+    }
+  };
 
   for (const child of bq.children) {
     if (child.type === 'paragraph') {
@@ -444,21 +473,38 @@ function handleBlockquote(bq: Blockquote, ctx: ConvertContext): OutputBlockData[
       continue;
     }
 
-    if (!('children' in child) || !Array.isArray(child.children)) {
-      continue;
-    }
-
-    // For non-paragraph flow content, extract text
-    const innerPhrasing = child.children.filter(
-      (c): c is PhrasingContent => 'value' in c || 'children' in c,
-    );
-
-    if (innerPhrasing.length > 0) {
-      parts.push(phrasingToHtml(innerPhrasing, ctx.definitions));
-    }
+    flush();
+    blocks.push(...(convertNode(child, ctx, 0) ?? []));
   }
 
-  return [makeBlock('quote', { text: parts.join('<br>'), size: 'default' }, ctx.generateId)];
+  // An empty `>` still makes a quote.
+  if (blocks.length === 0 && parts.length === 0) {
+    parts.push('');
+  }
+
+  flush();
+
+  return blocks;
+}
+
+/**
+ * A GitHub alert becomes a callout whose body is its child blocks. Every
+ * top-level body block points at the callout, and `content` holds their order.
+ */
+function handleAlert(kind: AlertKind, children: RootContent[], ctx: ConvertContext): OutputBlockData[] {
+  const callout = makeBlock('callout', { ...ALERT_STYLE[kind], textColor: null }, ctx.generateId);
+  const converted = convertNodes(children, ctx, 0);
+  // A callout keeps its text in children, so an empty one still needs a paragraph.
+  const body = converted.length > 0 ? converted : [makeParagraph('', ctx.generateId)];
+  const own = body.filter((block) => block.parent === undefined);
+
+  for (const block of own) {
+    block.parent = callout.id;
+  }
+
+  callout.content = own.map((block) => block.id).filter((id): id is string => id !== undefined);
+
+  return [callout, ...body];
 }
 
 function handleTable(table: Table, ctx: ConvertContext): OutputBlockData[] {
@@ -466,7 +512,15 @@ function handleTable(table: Table, ctx: ConvertContext): OutputBlockData[] {
   const tableId = ctx.generateId();
   const content: Array<Array<{ blocks: string[] }>> = [];
 
-  for (const row of table.children) {
+  /**
+   * GFM requires a header row, so the exporter writes an EMPTY one for a table
+   * without headings. Read it back as "no heading row" instead of a blank row.
+   */
+  const [head] = table.children;
+  const headless = table.children.length > 1 && head.children.every((cell) => cell.children.length === 0);
+  const rows = headless ? table.children.slice(1) : table.children;
+
+  for (const row of rows) {
     const rowContent = processTableRow(row.children, tableId, blocks, ctx);
 
     content.push(rowContent);
@@ -476,7 +530,7 @@ function handleTable(table: Table, ctx: ConvertContext): OutputBlockData[] {
     id: tableId,
     type: 'table',
     data: {
-      withHeadings: table.children.length > 1,
+      withHeadings: !headless && rows.length > 1,
       withHeadingColumn: false,
       content,
     },

@@ -5,10 +5,12 @@ import { gfmFromMarkdown } from 'mdast-util-gfm';
 import type { Extension as MicromarkExtension } from 'micromark-util-types';
 import type { Root, RootContent } from 'mdast';
 import type { OutputBlockData } from '../../types/data-formats/output-data';
-import type { MarkdownImportConfig } from './types';
+import type { InternalMarkdownImportConfig, MarkdownImportConfig } from './types';
 import { mdastToBlocks } from './mdast-to-blocks';
 import { safeHref, safeImageSrc, urlScheme } from '../components/utils/sanitize-url';
 import type { MarkdownDegradation } from './blocks-to-markdown-core';
+import { isBareBreak } from './phrasing-to-html';
+import { matchAlert } from './alerts';
 
 export type { MarkdownImportConfig, ToolMapEntry } from './types';
 export type { MarkdownDegradation } from './blocks-to-markdown-core';
@@ -123,6 +125,23 @@ function unsafeUrlDegradation(node: RootContent): MarkdownDegradation | null {
 }
 
 /**
+ * A quote holds one inline field, so the importer lifts a code block, list or
+ * nested quote out of it as its own block. An alert is exempt: it becomes a
+ * callout, which holds child blocks.
+ * @param node - the node to inspect
+ * @returns the degradation, or null when the quote holds only paragraphs
+ */
+function blockquoteDegradation(node: RootContent): MarkdownDegradation | null {
+  if (node.type !== 'blockquote' || matchAlert(node) !== null || node.children.every((child) => child.type === 'paragraph')) {
+    return null;
+  }
+
+  return { construct: 'blockquote',
+    action: 'degraded',
+    detail: 'A quote holds only text, so its code blocks, lists and nested quotes become separate blocks after the quote text' };
+}
+
+/**
  * Collect every degradation the import leaves behind.
  *
  * @param tree - the parsed Markdown tree
@@ -136,7 +155,9 @@ function collectImportWarnings(tree: Root): MarkdownDegradation[] {
    * @param node - the node to visit
    */
   const visit = (node: RootContent): void => {
-    const degradation = IMPORT_DEGRADATIONS[node.type] ?? unsafeUrlDegradation(node);
+    const degradation = node.type === 'html' && isBareBreak(node.value)
+      ? null
+      : IMPORT_DEGRADATIONS[node.type] ?? unsafeUrlDegradation(node) ?? blockquoteDegradation(node);
 
     if (degradation !== undefined && degradation !== null) {
       warnings.push({ ...degradation });
@@ -150,6 +171,27 @@ function collectImportWarnings(tree: Root): MarkdownDegradation[] {
   tree.children.forEach(visit);
 
   return warnings;
+}
+
+/**
+ * Split every text node at its soft line endings into `break` nodes, in place.
+ * Code keeps its newlines: its value lives in `code`/`inlineCode`, not `text`.
+ * @param node - the subtree to rewrite
+ */
+function softBreaksToBreaks(node: RootContent): void {
+  if (!('children' in node) || !Array.isArray(node.children)) {
+    return;
+  }
+
+  const children = node.children as RootContent[];
+
+  children.forEach(softBreaksToBreaks);
+  children.splice(0, children.length, ...children.flatMap((child): RootContent[] => child.type === 'text' && child.value.includes('\n')
+    ? child.value.split('\n').flatMap((value, index): RootContent[] => [
+      ...(index > 0 ? [{ type: 'break' } as const] : []),
+      ...(value !== '' ? [{ type: 'text', value } as const] : []),
+    ])
+    : [child]));
 }
 
 /**
@@ -191,6 +233,10 @@ export async function markdownToBlocksWithReport(
     extensions,
     mdastExtensions,
   });
+
+  if ((config as InternalMarkdownImportConfig).softBreaks === true) {
+    tree.children.forEach(softBreaksToBreaks);
+  }
 
   return { blocks: mdastToBlocks(tree, config),
     warnings: collectImportWarnings(tree) };

@@ -7,6 +7,7 @@ import type { PasteHandler } from '../components/modules/paste/handlers/base';
 import { BasePasteHandler } from '../components/modules/paste/handlers/base';
 import { Block } from '../components/block';
 import { normalizeTableChildParents } from '../components/utils/data-model-transform';
+import type { InternalMarkdownImportConfig } from './types';
 
 /**
  * Patterns that indicate text is likely Markdown rather than plain text.
@@ -195,7 +196,10 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
     try {
       const { markdownToBlocks } = await import('./index');
 
-      return await markdownToBlocks(data);
+      // A line break the user pasted is one they can see; keep it.
+      const config: InternalMarkdownImportConfig = { softBreaks: true };
+
+      return await markdownToBlocks(data, config);
     } catch (e) {
       console.warn('MarkdownHandler: markdown conversion failed, falling back to plain text', e);
 

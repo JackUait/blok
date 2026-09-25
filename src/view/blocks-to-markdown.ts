@@ -10,7 +10,7 @@
 import type { DefaultTreeAdapterMap } from 'parse5';
 
 import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
-import { inlineLosses, serializeBlocksToMarkdown } from '../markdown/blocks-to-markdown-core';
+import { HARD_BREAK, inlineLosses, serializeBlocksToMarkdown } from '../markdown/blocks-to-markdown-core';
 import type { InlineBackend, MarkdownDegradation, SerializableBlock } from '../markdown/blocks-to-markdown-core';
 import { buildDocumentModel } from './document-model';
 import type { ViewBlock } from './document-model';
@@ -83,7 +83,7 @@ const serializeNode = (node: P5ChildNode, onLoss: LossReporter): string => {
 
   switch (node.nodeName) {
     case 'br':
-      return '\n';
+      return HARD_BREAK;
     case 'b':
     case 'strong':
       return inner.trim() === '' ? inner : `**${inner}**`;

@@ -9,6 +9,13 @@ import { isSamePageLink } from '../tools/link/registry';
 export type DefinitionMap = ReadonlyMap<string, Definition>;
 
 /**
+ * Whether raw inline HTML is exactly `<br>`, `<br/>` or `<br />`. Anchored and
+ * attribute-free, so nothing else slips past the escaping.
+ * @param html - the raw HTML node's value
+ */
+export const isBareBreak = (html: string): boolean => /^<br\s*\/?>$/i.test(html);
+
+/**
  * Escape HTML special characters to prevent XSS.
  */
 function escapeHtml(text: string): string {
@@ -92,8 +99,10 @@ function serializeNode(node: PhrasingContent, definitions: DefinitionMap): strin
     case 'html':
       // Raw inline HTML from the source is not sanitized downstream (markdown
       // paste bypasses the paste sanitizer), so escape it the same way
-      // block-level raw HTML is escaped in mdast-to-blocks.
-      return escapeHtml(node.value);
+      // block-level raw HTML is escaped in mdast-to-blocks. Only an
+      // attribute-free `<br>` passes: the exporter writes it where Markdown
+      // has no hard break (headings, table cells).
+      return isBareBreak(node.value) ? '<br>' : escapeHtml(node.value);
 
     case 'inlineMath':
     case 'footnoteReference':

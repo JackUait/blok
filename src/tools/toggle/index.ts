@@ -25,6 +25,7 @@ import {
   setToggleItemData,
   parseHTML,
 } from './block-operations';
+import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
 import { clean } from '../../components/utils/sanitizer';
 import { ARIA_LABEL_COLLAPSE_KEY, ARIA_LABEL_EXPAND_KEY, BODY_PLACEHOLDER_KEY, PLACEHOLDER_KEY, TOOL_NAME } from './constants';
 import { IconToggleList } from '../../components/icons';
@@ -439,19 +440,7 @@ export class ToggleItem implements BlockTool {
   public static get sanitize(): ToolSanitizerConfig {
     return {
       text: {
-        br: true,
-        a: {
-          href: true,
-          target: '_blank',
-          rel: 'nofollow',
-        },
-        b: true,
-        i: true,
-        mark: {
-          class: true,
-          style: true,
-        },
-        code: true,
+        ...INLINE_TEXT_SANITIZE,
       },
     };
   }

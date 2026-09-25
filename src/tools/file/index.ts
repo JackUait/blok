@@ -8,7 +8,9 @@ import type {
   PasteConfig,
   PasteEvent,
   ToolboxConfig,
+  ToolSanitizerConfig,
 } from '../../../types';
+import { PLAINTEXT } from '../../components/utils/sanitizer';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import type { FileConfig, FileData, FileUploadResult } from '../../../types/tools/file';
 import type { ImageData } from '../../../types/tools/image';
@@ -154,6 +156,18 @@ export class FileTool implements BlockTool {
       titleKey: 'file',
       searchTerms: ['file', 'attachment', 'upload', 'download', 'pdf', 'document'],
       section: 'media',
+    };
+  }
+
+  /**
+   * Plain text and bare URLs: an HTML parse would cut text at `<` and turn `&` into `&amp;`.
+   */
+  public static get sanitize(): ToolSanitizerConfig {
+    return {
+      url: PLAINTEXT,
+      caption: PLAINTEXT,
+      fileName: PLAINTEXT,
+      mimeType: PLAINTEXT,
     };
   }
 

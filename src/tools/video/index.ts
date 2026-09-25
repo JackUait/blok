@@ -9,7 +9,9 @@ import type {
   PasteEvent,
   PatternPasteEvent,
   ToolboxConfig,
+  ToolSanitizerConfig,
 } from '../../../types';
+import { PLAINTEXT } from '../../components/utils/sanitizer';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import type { VideoAlignment, VideoConfig, VideoData } from '../../../types/tools/video';
 import {
@@ -106,6 +108,19 @@ export class VideoTool implements BlockTool {
       titleKey: 'video',
       searchTerms: ['video', 'movie', 'clip', 'player', 'mp4', 'media'],
       section: 'media',
+    };
+  }
+
+  /**
+   * Plain text and bare URLs: an HTML parse would cut text at `<` and turn `&` into `&amp;`.
+   */
+  public static get sanitize(): ToolSanitizerConfig {
+    return {
+      url: PLAINTEXT,
+      caption: PLAINTEXT,
+      fileName: PLAINTEXT,
+      mimeType: PLAINTEXT,
+      aspectRatio: PLAINTEXT,
     };
   }
 

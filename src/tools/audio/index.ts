@@ -9,7 +9,9 @@ import type {
   PasteEvent,
   PatternPasteEvent,
   ToolboxConfig,
+  ToolSanitizerConfig,
 } from '../../../types';
+import { PLAINTEXT } from '../../components/utils/sanitizer';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import type { AudioAlignment, AudioConfig, AudioData } from '../../../types/tools/audio';
 import {
@@ -115,6 +117,21 @@ export class AudioTool implements BlockTool {
       titleKey: 'audio',
       searchTerms: ['audio', 'music', 'sound', 'song', 'mp3', 'track', 'media'],
       section: 'media',
+    };
+  }
+
+  /**
+   * Plain text and bare URLs: an HTML parse would cut text at `<` and turn `&` into `&amp;`.
+   */
+  public static get sanitize(): ToolSanitizerConfig {
+    return {
+      url: PLAINTEXT,
+      caption: PLAINTEXT,
+      title: PLAINTEXT,
+      artist: PLAINTEXT,
+      coverUrl: PLAINTEXT,
+      fileName: PLAINTEXT,
+      mimeType: PLAINTEXT,
     };
   }
 

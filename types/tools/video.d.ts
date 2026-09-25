@@ -1,4 +1,4 @@
-import { DeleteContext, PasteConfig } from '../configs';
+import { DeleteContext, PasteConfig, SanitizerConfig } from '../configs';
 import { BlockTool, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
 import { MaxSizeConfig } from './max-size';
@@ -116,6 +116,11 @@ export declare class Video implements BlockTool {
    * Is Tool supports read-only mode
    */
   static isReadOnlySupported?: boolean;
+
+  /**
+   * Plain-text and URL fields, declared PLAINTEXT so load and save never parse them as HTML
+   */
+  static sanitize?: SanitizerConfig;
 
   constructor(options: VideoConstructorOptions);
 

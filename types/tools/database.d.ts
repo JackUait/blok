@@ -1,3 +1,4 @@
+import { SanitizerConfig } from '../configs';
 import { BlockTool, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
 import { OutputData } from '../data-formats/output-data';
@@ -182,6 +183,11 @@ export declare class Database implements BlockTool {
    * Is Tool supports read-only mode
    */
   static isReadOnlySupported?: boolean;
+
+  /**
+   * Plain-text and URL fields, declared PLAINTEXT so load and save never parse them as HTML
+   */
+  static sanitize?: SanitizerConfig;
 
   constructor(options: DatabaseConstructorOptions);
 

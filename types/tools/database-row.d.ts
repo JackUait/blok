@@ -1,3 +1,4 @@
+import { SanitizerConfig } from '../configs';
 import { BlockTool, BlockToolConstructorOptions } from './block-tool';
 import { DatabaseRowData, PropertyValue } from './database';
 
@@ -18,6 +19,11 @@ export declare class DatabaseRow implements BlockTool {
    * Is Tool supports read-only mode
    */
   static isReadOnlySupported?: boolean;
+
+  /**
+   * Plain-text and URL fields, declared PLAINTEXT so load and save never parse them as HTML
+   */
+  static sanitize?: SanitizerConfig;
 
   constructor(options: DatabaseRowConstructorOptions);
 

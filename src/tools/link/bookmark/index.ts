@@ -8,7 +8,9 @@ import type {
   PasteEvent,
   PatternPasteEvent,
   ToolboxConfig,
+  ToolSanitizerConfig,
 } from '../../../../types';
+import { PLAINTEXT } from '../../../components/utils/sanitizer';
 import { IconLink } from '../../../components/icons';
 import { deliverToRebuiltBlock } from '../../image/detached-upload';
 import { isHttpUrl, setSafeLinkHref } from '../registry';
@@ -64,6 +66,20 @@ export class Bookmark implements BlockTool {
       titleKey: 'bookmark',
       searchTerms: ['bookmark', 'link', 'url', 'preview', 'card'],
       section: 'media',
+    };
+  }
+
+  /**
+   * Plain text and bare URLs: an HTML parse would cut text at `<` and turn `&` into `&amp;`.
+   */
+  public static get sanitize(): ToolSanitizerConfig {
+    return {
+      url: PLAINTEXT,
+      title: PLAINTEXT,
+      description: PLAINTEXT,
+      image: PLAINTEXT,
+      favicon: PLAINTEXT,
+      domain: PLAINTEXT,
     };
   }
 

@@ -241,20 +241,12 @@ describe('ToggleItem', () => {
   });
 
   describe('static sanitize', () => {
-    it('includes mark with class and style attributes', async () => {
+    it('uses the shared inline text rules for text', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
-      const sanitize = ToggleItem.sanitize;
-      const textRules = sanitize.text as SanitizerConfig;
+      const { INLINE_TEXT_SANITIZE } = await import('../../../../src/components/shared/inline-content-sanitize');
+      const textRules = ToggleItem.sanitize.text as SanitizerConfig;
 
-      expect(textRules.mark).toEqual({ class: true, style: true });
-    });
-
-    it('includes code tag', async () => {
-      const { ToggleItem } = await import('../../../../src/tools/toggle');
-      const sanitize = ToggleItem.sanitize;
-      const textRules = sanitize.text as SanitizerConfig;
-
-      expect(textRules.code).toBe(true);
+      expect(textRules).toEqual(INLINE_TEXT_SANITIZE);
     });
   });
 

@@ -1,4 +1,6 @@
 import type { BlockTool, BlockToolConstructorOptions } from '../../../types/tools/block-tool';
+import type { ToolSanitizerConfig } from '../../../types';
+import { PLAINTEXT } from '../../components/utils/sanitizer';
 import type { DatabaseRowData, PropertyValue } from '../database/types';
 
 const toRowData = (data: DatabaseRowData): DatabaseRowData => {
@@ -122,6 +124,17 @@ export class DatabaseRowTool implements BlockTool {
    */
   public readData(param: { receive: (data: DatabaseRowData) => void }): void {
     param.receive(this.snapshot());
+  }
+
+  /**
+   * Plain text and bare URLs: an HTML parse would cut text at `<` and turn `&` into `&amp;`.
+   */
+  public static get sanitize(): ToolSanitizerConfig {
+    return {
+      title: PLAINTEXT,
+      properties: PLAINTEXT,
+      position: PLAINTEXT,
+    };
   }
 
   public static get isReadOnlySupported(): boolean {

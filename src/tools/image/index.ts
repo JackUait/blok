@@ -10,7 +10,9 @@ import type {
   FilePasteEvent,
   HTMLPasteEvent,
   PatternPasteEvent,
+  ToolSanitizerConfig,
 } from '../../../types';
+import { PLAINTEXT } from '../../components/utils/sanitizer';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import type {
   ImageAlignment,
@@ -163,6 +165,18 @@ export class ImageTool implements BlockTool {
       titleKey: 'image',
       searchTerms: ['image', 'img', 'picture', 'photo', 'media'],
       section: 'media',
+    };
+  }
+
+  /**
+   * Plain text and bare URLs: an HTML parse would cut text at `<` and turn `&` into `&amp;`.
+   */
+  public static get sanitize(): ToolSanitizerConfig {
+    return {
+      url: PLAINTEXT,
+      caption: PLAINTEXT,
+      alt: PLAINTEXT,
+      fileName: PLAINTEXT,
     };
   }
 

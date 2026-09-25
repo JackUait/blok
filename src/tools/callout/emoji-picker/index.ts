@@ -136,6 +136,15 @@ export function prefetchEmojiPickerData(locale: string): void {
   }
 }
 
+/**
+ * Public warm-up for hosts, exported from `@bloklabs/core/tools`. Signature is
+ * hand-mirrored in `types/tools-entry.d.ts`.
+ * @param locale - Blok locale code; defaults to English
+ */
+export function preloadEmojiData(locale = 'en'): void {
+  prefetchEmojiPickerData(locale);
+}
+
 export class EmojiPicker {
   private readonly onSelect: (native: string) => void;
   private readonly onRemove: () => void;

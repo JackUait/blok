@@ -106,6 +106,12 @@ describe('embed registry declared on the ./tools entry', () => {
   });
 });
 
+describe('emoji picker preload declared on the ./tools entry', () => {
+  it('types/tools-entry.d.ts exports preloadEmojiData', () => {
+    expect(exportedNamesOf(join(REPO_ROOT, 'types', 'tools-entry.d.ts')).has('preloadEmojiData')).toBe(true);
+  });
+});
+
 describe('mutation-type constants declared on the core entry', () => {
   const exported = exportedNamesOf(join(REPO_ROOT, 'types', 'index.d.ts'));
 

@@ -45,6 +45,28 @@ export function mountChildBlocks(
   children: { holder: HTMLElement }[],
 ): void;
 
+/**
+ * Starts loading the data the built-in callout emoji picker needs, so its
+ * first open does not wait on the network.
+ *
+ * The picker loads its emoji list (and, for non-English locales, translated
+ * emoji names) lazily. Editable callouts already start this on their own once
+ * the page is idle. Call this earlier, for example after login or on a route
+ * change, to have the data ready before any callout is on screen.
+ *
+ * Safe to call many times: each load runs once and is shared. A failed load
+ * stays silent and is retried the next time the picker opens. Not needed when
+ * you pass your own `emojiPicker` in the Callout config.
+ * @example
+ * import { preloadEmojiData } from '@bloklabs/core/tools';
+ *
+ * preloadEmojiData('ru');
+ * @param locale - the Blok locale code the editor runs in, e.g. `'ru'` or
+ *   `'zh-TW'` (not `'auto'`). Defaults to `'en'`, which loads no translations.
+ *   A code without emoji translations loads the emoji list only.
+ */
+export function preloadEmojiData(locale?: string): void;
+
 // Block tools published as declare-classes: each name is both the runtime
 // value and the instance type, with a single construct signature so
 // `class Custom extends Tool {}` compiles (no TS2510).

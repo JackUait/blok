@@ -142,6 +142,24 @@ describe('callout keyboard exit', () => {
   });
 });
 
+describe('callout emoji data preload', () => {
+  const calloutDescriptionIn = (locale: string): string => {
+    const catalogue = JSON.parse(readSource(`docs/src/i18n/${locale}.json`)) as {
+      tools?: { docs?: { callout?: { description?: string } } };
+    };
+
+    return catalogue.tools?.docs?.callout?.description ?? '';
+  };
+
+  it.each([
+    ['tools-data.ts', TOOL_SECTIONS.find((s) => s.id === 'callout')?.description ?? ''],
+    ['en.json', calloutDescriptionIn('en')],
+    ['ru.json', calloutDescriptionIn('ru')],
+  ])('documents preloadEmojiData in %s', (_file, text) => {
+    expect(text).toContain('preloadEmojiData');
+  });
+});
+
 describe('pasted code language', () => {
   /**
    * A pasted code block only keeps its highlighting if the language survives

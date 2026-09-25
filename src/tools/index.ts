@@ -48,6 +48,9 @@ export { Bookmark } from './link/bookmark';
 export { matchEmbedService, buildEmbedUrl } from './link/registry';
 export type { EmbedMatch, EmbedServiceType } from './link/registry';
 
+// Lets a host warm the callout emoji picker's lazy data before any callout exists.
+export { preloadEmojiData } from './callout/emoji-picker';
+
 // Tool-authoring helpers
 export { defineTool } from './define-tool';
 export { mountChildBlocks } from './nested-blocks';

@@ -120,7 +120,7 @@ describe('Blok Line media completion', () => {
     }
   });
 
-  it('centers the speed needle on its circular dial and uses the image accent size', () => {
+  it('centers the speed needle on its dial, centres the open dial on the canvas and uses the image accent size', () => {
     const speed = svgOf(Icons.IconPlayerSpeed);
     const dial = speed.querySelector('path');
     const hub = speed.querySelector('circle');
@@ -138,7 +138,9 @@ describe('Blok Line media completion', () => {
 
     expect(Number(hub.getAttribute('cx'))).toBeCloseTo(centerX, 5);
     expect(Number(hub.getAttribute('cy'))).toBeCloseTo(centerY, 5);
-    expect([centerX, centerY]).toEqual([10, 10]);
+    // The dial opens at the bottom, so centre the visible arc, not the hub.
+    expect(centerX).toBe(10);
+    expect((centerY - radius + y) / 2).toBeCloseTo(10, 5);
   });
 
   it('gives the loop matching panel radii and rotationally equal arrowheads', () => {

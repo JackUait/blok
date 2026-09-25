@@ -969,9 +969,9 @@ export const IconPlayerTheater = `
 // Player speed — tachometer gauge (arc + needle + hub) for the playback-speed row
 export const IconPlayerSpeed = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M4.8 13.9a6.5 6.5 0 1 1 10.4 0" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M10 10L13 7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="10" cy="10" r=".85" fill="currentColor"/>
+  <path d="M4.8 15.2a6.5 6.5 0 1 1 10.4 0" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10 11.3L13 8.3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="10" cy="11.3" r=".85" fill="currentColor"/>
 </svg>
 `;
 

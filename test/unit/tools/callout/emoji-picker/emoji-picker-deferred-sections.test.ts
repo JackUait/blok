@@ -7,6 +7,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmojiPicker } from '../../../../../src/tools/callout/emoji-picker';
+import { loadEmojiData } from '../../../../../src/components/utils/emoji/emoji-data';
 import type { EmojiMartFixture } from '../../../components/utils/emoji/emoji-data.fixture';
 
 vi.mock('../../../../../src/components/utils/tooltip', () => ({
@@ -185,6 +186,8 @@ describe('EmojiPicker deferred sections', () => {
 
   it('defers search result sections after the first the same way', async () => {
     await picker.open(anchor);
+    // "shared" is a keyword, which loads after the grid.
+    await loadEmojiData();
     picker.setQuery('shared');
 
     expect(section('nature').hasAttribute('data-emoji-section-deferred')).toBe(false);

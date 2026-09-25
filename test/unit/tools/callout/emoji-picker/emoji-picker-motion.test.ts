@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmojiPicker } from '../../../../../src/tools/callout/emoji-picker';
+import { loadEmojiData } from '../../../../../src/components/utils/emoji/emoji-data';
 import { IconEmojiHearts, IconHash } from '../../../../../src/components/icons';
 
 vi.mock('../../../../../src/components/utils/tooltip', () => ({
@@ -320,6 +321,8 @@ describe('EmojiPicker motion', () => {
 
   it('keeps inline tone controls in the first scrolling section after filtering and reopening', async () => {
     await open(true);
+    // "hello" is a keyword; the ":" trigger loads keywords before it searches.
+    await loadEmojiData();
     const toggle = get<HTMLButtonElement>('[data-emoji-picker-skin-toggle]');
 
     expect(get('[data-emoji-section-title]')).toContainElement(toggle);

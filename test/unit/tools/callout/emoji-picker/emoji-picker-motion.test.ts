@@ -37,6 +37,12 @@ describe('EmojiPicker motion', () => {
     return element;
   };
 
+  // The reel only reads inside sections whose box meets the view, and jsdom
+  // gives every box a zero height.
+  const fillBodyWithFirstSection = (): void => {
+    Object.defineProperty(get('[data-emoji-section]'), 'offsetHeight', { configurable: true, value: 300 });
+  };
+
   const open = async (inline = false): Promise<void> => {
     picker = new EmojiPicker({
       inline, locale: 'en', i18n: { t: key => key },
@@ -122,6 +128,7 @@ describe('EmojiPicker motion', () => {
       clientHeight: { configurable: true, value: 100 },
       scrollHeight: { configurable: true, value: 300 },
     });
+    fillBodyWithFirstSection();
     Object.defineProperties(hand, {
       offsetTop: { configurable: true, value: 60 },
       offsetHeight: { configurable: true, value: 36 },
@@ -148,6 +155,7 @@ describe('EmojiPicker motion', () => {
       clientHeight: { configurable: true, value: 100 },
       scrollHeight: { configurable: true, value: 300 },
     });
+    fillBodyWithFirstSection();
     Object.defineProperties(hand, {
       offsetTop: { configurable: true, value: reduce ? 20 : 180 },
       offsetHeight: { configurable: true, value: 36 },
@@ -184,6 +192,7 @@ describe('EmojiPicker motion', () => {
       clientHeight: { configurable: true, value: 100 },
       scrollHeight: { configurable: true, value: 300 },
     });
+    fillBodyWithFirstSection();
     Object.defineProperties(get('[data-emoji-section-title] > span'), {
       offsetTop: { configurable: true, value: 40 },
       offsetHeight: { configurable: true, value: 40 },
@@ -220,6 +229,7 @@ describe('EmojiPicker motion', () => {
       clientHeight: { configurable: true, value: 100 },
       scrollHeight: { configurable: true, value: 300 },
     });
+    fillBodyWithFirstSection();
     // A heading box is mostly padding: 12 units of it sit above the label.
     Object.defineProperties(title, {
       offsetTop: { configurable: true, value: 40 },
@@ -258,6 +268,7 @@ describe('EmojiPicker motion', () => {
       clientHeight: { configurable: true, value: 100 },
       scrollHeight: { configurable: true, value: 300 },
     });
+    fillBodyWithFirstSection();
     Object.defineProperties(title, {
       offsetTop: { configurable: true, value: 40 },
       offsetParent: { configurable: true, value: body },
@@ -290,6 +301,7 @@ describe('EmojiPicker motion', () => {
       clientHeight: { configurable: true, value: 100 },
       scrollHeight: { configurable: true, value: 300 },
     });
+    fillBodyWithFirstSection();
     Object.defineProperties(get('[data-emoji-section-title] > span'), {
       offsetTop: { configurable: true, value: 40 },
       offsetHeight: { configurable: true, value: 40 },

@@ -60,6 +60,12 @@ interface EmojiPickerOptions {
   inline?: boolean;
 }
 
+interface ReelRow {
+  top: number;
+  height: number;
+  glyphs: HTMLElement[];
+}
+
 const UNCAPPED_RESULTS = Number.POSITIVE_INFINITY;
 const REEL_DISTORTION = {
   maxTiltDeg: 50,
@@ -192,7 +198,8 @@ export class EmojiPicker {
   private _navRafId = 0;
   private _emojiButtons: HTMLButtonElement[] = [];
   private _focusedEmoji: HTMLButtonElement | null = null;
-  private _reelRows: Array<{ top: number; height: number; glyphs: HTMLElement[] }> = [];
+  /** Reel rows per section, with `top` measured from the section's own top. */
+  private _reelRows = new Map<HTMLElement, ReelRow[]>();
   private _curledGlyphs = new Set<HTMLElement>();
   /** Bound capture-phase Escape handler, registered on `document` while open. */
   private _onDocumentKeydown: (e: KeyboardEvent) => void;
@@ -337,6 +344,7 @@ export class EmojiPicker {
     this._element.style.animation = 'none';
     this._element.hidden = false;
     this.position(anchor);
+    this.measureCell();
     this._positionTracker?.detach();
     this._positionTracker = createPositionTracker(this._element, (event) => {
       if (event?.target === this._body) {
@@ -347,7 +355,8 @@ export class EmojiPicker {
         this.position(this._anchorEl);
 
         if (event === undefined) {
-          this._reelRows = [];
+          this._reelRows.clear();
+          this.measureCell();
           this.scheduleScrollEffects();
         }
       }
@@ -914,6 +923,7 @@ export class EmojiPicker {
     const emojis = new Map(this._allEmojis.map(emoji => [emoji.native, emoji]));
     const top = this._body.scrollTop;
     const bottom = top + this._body.clientHeight;
+    const sectionsInView = new Set(animate ? this.sectionsInView() : []);
     const changes: Array<{ glyph: HTMLElement; native: string; visible: boolean }> = [];
 
     for (const button of this._emojiButtons) {
@@ -927,10 +937,11 @@ export class EmojiPicker {
       const native = this.getSkinnedNative(emoji);
 
       if (glyph.textContent !== native) {
-        changes.push({
-          glyph, native,
-          visible: animate && button.offsetTop < bottom && button.offsetTop + button.offsetHeight > top,
-        });
+        const section = button.closest<HTMLElement>('[data-emoji-section]');
+        const inView = section !== null && sectionsInView.has(section);
+        const buttonTop = inView ? this.offsetWithinBody(button) : 0;
+
+        changes.push({ glyph, native, visible: inView && buttonTop < bottom && buttonTop + button.offsetHeight > top });
       }
     }
 
@@ -984,9 +995,9 @@ export class EmojiPicker {
   }
 
   /**
-   * Distance from the scroll container's top. Inline mode positions the
-   * heading that carries the tone controls, which makes it the label's
-   * offsetParent, so a single offsetTop read is short by the heading's own.
+   * Distance from the scroll container's top. A single offsetTop read falls
+   * short when an ancestor becomes the offsetParent: a deferred section
+   * (it contains layout), or inline mode's positioned first heading.
    */
   private offsetWithinBody(element: HTMLElement): number {
     if (element === this._body) {
@@ -998,10 +1009,37 @@ export class EmojiPicker {
     return element.offsetTop + (parent instanceof HTMLElement ? this.offsetWithinBody(parent) : 0);
   }
 
-  private measureReelRows(): void {
-    const items = this._body.querySelectorAll<HTMLElement>('[data-emoji-native], [data-emoji-section-title]');
+  /**
+   * Sections whose box meets the view. A skipped section's box is its size
+   * estimate, so this reads nothing inside it — any read in there makes the
+   * browser render the whole section.
+   */
+  private sectionsInView(): HTMLElement[] {
+    const viewTop = this._body.scrollTop;
+    const viewBottom = viewTop + this._body.clientHeight;
 
-    for (const item of items) {
+    return [...this._sectionEls.values()].filter(section =>
+      section.offsetTop < viewBottom && section.offsetTop + section.offsetHeight > viewTop);
+  }
+
+  /** Publishes the real emoji row height, which the section estimates use. */
+  private measureCell(): void {
+    const grid = this._body.querySelector('[data-emoji-grid]');
+    // The laid-out row track, not the cell's width: rows snap up to layout
+    // units, and a rect reads short while the opening animation scales it.
+    const value = grid === null ? '' : getComputedStyle(grid).gridTemplateRows.split(' ')[0] ?? '';
+
+    // Skip unchanged writes: every emoji below the body inherits this property.
+    if (parseFloat(value) > 0 && this._body.style.getPropertyValue('--emoji-cell') !== value) {
+      this._body.style.setProperty('--emoji-cell', value);
+    }
+  }
+
+  private measureReelRows(section: HTMLElement): ReelRow[] {
+    const rows: ReelRow[] = [];
+    const sectionTop = section.offsetTop;
+
+    for (const item of section.querySelectorAll<HTMLElement>('[data-emoji-native], [data-emoji-section-title]')) {
       const glyph = item.firstElementChild;
 
       if (!(glyph instanceof HTMLElement)) {
@@ -1017,15 +1055,17 @@ export class EmojiPicker {
         continue;
       }
 
-      const top = this.offsetWithinBody(glyph);
-      const row = this._reelRows.at(-1);
+      const top = this.offsetWithinBody(glyph) - sectionTop;
+      const row = rows.at(-1);
 
       if (row?.top === top) {
         row.glyphs.push(glyph);
       } else {
-        this._reelRows.push({ top, height, glyphs: [glyph] });
+        rows.push({ top, height, glyphs: [glyph] });
       }
     }
+
+    return rows;
   }
 
   private updateReel(): void {
@@ -1036,17 +1076,21 @@ export class EmojiPicker {
       return;
     }
 
-    // Measure after layout changes, not on every scroll frame.
-    if (this._reelRows.length === 0) {
-      this.measureReelRows();
-    }
-
     const viewTop = this._body.scrollTop;
     const viewBottom = viewTop + this._body.clientHeight;
+    const rows = this.sectionsInView().flatMap(section => {
+      // Measure after layout changes, not on every scroll frame.
+      const sectionRows = this._reelRows.get(section) ?? this.measureReelRows(section);
+      const sectionTop = section.offsetTop;
+
+      this._reelRows.set(section, sectionRows);
+
+      return sectionRows.map(row => ({ ...row, top: sectionTop + row.top }));
+    });
 
     this.resetReel();
 
-    for (const row of this._reelRows) {
+    for (const row of rows) {
       if (row.top + row.height <= viewTop || row.top >= viewBottom) {
         continue;
       }
@@ -1238,7 +1282,7 @@ export class EmojiPicker {
       this._body.innerHTML = '';
       this._emojiButtons = [];
       this._focusedEmoji = null;
-      this._reelRows = [];
+      this._reelRows.clear();
       this.resetReel();
       this._sectionEls.clear();
       this._showingEmptyState = false;
@@ -1267,7 +1311,7 @@ export class EmojiPicker {
     this._body.innerHTML = '';
     this._emojiButtons = [];
     this._focusedEmoji = null;
-    this._reelRows = [];
+    this._reelRows.clear();
     this.resetReel();
     this._sectionEls.clear();
     this._showingEmptyState = false;
@@ -1317,7 +1361,7 @@ export class EmojiPicker {
     this._body.innerHTML = '';
     this._emojiButtons = [];
     this._focusedEmoji = null;
-    this._reelRows = [];
+    this._reelRows.clear();
     this.resetReel();
     this._showingEmptyState = true;
     this._sectionEls.clear();
@@ -1403,6 +1447,14 @@ export class EmojiPicker {
 
     section.appendChild(heading);
     section.appendChild(this.buildGrid(emojis));
+
+    if (this._sectionEls.size > 0) {
+      // Must match the 8-column grid's media query in emoji-picker.css.
+      const columns = window.matchMedia('(max-width: 380px)').matches ? 8 : 10;
+
+      section.setAttribute('data-emoji-section-deferred', '');
+      section.style.setProperty('--emoji-rows', String(Math.ceil(emojis.length / columns)));
+    }
 
     return section;
   }

@@ -2697,6 +2697,7 @@ span[data-blok-slash-search] {
   overscroll-behavior: contain;
   scroll-padding-block: 6px;
   scrollbar-gutter: stable both-edges;
+  --emoji-cell: 35.6px;
 }
 
 [data-blok-emoji-picker] [data-emoji-section-title] {
@@ -2715,6 +2716,11 @@ span[data-blok-slash-search] {
   display: block;
   width: fit-content;
   max-width: 100%;
+}
+
+[data-blok-emoji-picker] [data-emoji-section][data-emoji-section-deferred] {
+  content-visibility: auto;
+  contain-intrinsic-size: auto calc(var(--blok-space-3) + 18px + var(--blok-space-1-25) + var(--blok-space-0-5) + var(--emoji-rows, 1) * (var(--emoji-cell) + var(--blok-space-0-5)));
 }
 
 [data-blok-emoji-picker] [data-emoji-section]:first-child [data-emoji-section-title] {

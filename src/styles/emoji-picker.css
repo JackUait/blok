@@ -232,6 +232,8 @@
   overscroll-behavior: contain;
   scroll-padding-block: 6px;
   scrollbar-gutter: stable both-edges;
+  /* A 400px picker's cell until the script measures the real one. */
+  --emoji-cell: 35.6px;
 }
 
 [data-blok-emoji-picker] [data-emoji-section-title] {
@@ -250,6 +252,14 @@
   display: block;
   width: fit-content;
   max-width: 100%;
+}
+
+/* Skipped until near the view. The estimate must equal the real height or a
+   section jump misses: heading (12px + 18px line-height + 5px), grid paddings
+   less one gap, then a cell and a gap per row. */
+[data-blok-emoji-picker] [data-emoji-section][data-emoji-section-deferred] {
+  content-visibility: auto;
+  contain-intrinsic-size: auto calc(var(--blok-space-3) + 18px + var(--blok-space-1-25) + var(--blok-space-0-5) + var(--emoji-rows, 1) * (var(--emoji-cell) + var(--blok-space-0-5)));
 }
 
 [data-blok-emoji-picker] [data-emoji-section]:first-child [data-emoji-section-title] {

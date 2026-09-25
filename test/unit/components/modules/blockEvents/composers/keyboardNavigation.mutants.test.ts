@@ -511,7 +511,25 @@ describe('KeyboardNavigation — Backspace at the start of a nested block', () =
     expect(harness.setToBlock).not.toHaveBeenCalled();
   });
 
-  it('never collapses a non-column container around its empty sole child', () => {
+  it('never collapses a toggle around its empty sole child', () => {
+    const toggle = createBlock({
+      id: 'toggle',
+      name: 'toggle',
+      parentId: null,
+      contentIds: ['child'],
+      markerHtml: TOGGLE_MARKER,
+    });
+    const child = createBlock({ id: 'child', parentId: 'toggle', isEmpty: true });
+    const harness = createHarness({ currentBlock: child, registry: [toggle, child] });
+    const event = createKeyboardEvent({ key: 'Backspace', keyCode: keyCodes.BACKSPACE });
+
+    harness.nav.handleBackspace(event);
+
+    expect(harness.removeBlock).not.toHaveBeenCalled();
+    expect(harness.setToBlock).not.toHaveBeenCalled();
+  });
+
+  it('turns a callout whose sole child is empty into an empty paragraph with the caret in it', () => {
     const callout = createBlock({
       id: 'callout',
       name: 'callout',
@@ -525,8 +543,26 @@ describe('KeyboardNavigation — Backspace at the start of a nested block', () =
 
     harness.nav.handleBackspace(event);
 
-    expect(harness.removeBlock).not.toHaveBeenCalled();
-    expect(harness.setToBlock).not.toHaveBeenCalled();
+    expect(harness.replace).toHaveBeenCalledWith(callout, 'paragraph', { text: '' });
+    expect(harness.removeBlock).toHaveBeenCalledWith(child, false);
+    expect(harness.setToBlock).toHaveBeenCalledWith(harness.replace.mock.results[0]?.value, 'start');
+  });
+
+  it('keeps a callout that still holds other children when its empty first child is removed', () => {
+    const callout = createBlock({
+      id: 'callout',
+      name: 'callout',
+      parentId: null,
+      contentIds: ['child', 'other'],
+      markerHtml: NESTED_SLOT_MARKER,
+    });
+    const child = createBlock({ id: 'child', parentId: 'callout', isEmpty: true });
+    const harness = createHarness({ currentBlock: child, registry: [callout, child] });
+    const event = createKeyboardEvent({ key: 'Backspace', keyCode: keyCodes.BACKSPACE });
+
+    harness.nav.handleBackspace(event);
+
+    expect(harness.replace).not.toHaveBeenCalled();
   });
 
   it('keeps a column that still holds other children when one empty child is removed', () => {
@@ -571,19 +607,19 @@ describe('KeyboardNavigation — Backspace at the start of a nested block', () =
   });
 
   it('never removes an empty container child whose next block lives in another parent', () => {
-    const callout = createBlock({
-      id: 'callout',
-      name: 'callout',
+    const toggle = createBlock({
+      id: 'toggle',
+      name: 'toggle',
       parentId: null,
       contentIds: ['child'],
-      markerHtml: NESTED_SLOT_MARKER,
+      markerHtml: TOGGLE_MARKER,
     });
-    const child = createBlock({ id: 'child', parentId: 'callout', isEmpty: true });
+    const child = createBlock({ id: 'child', parentId: 'toggle', isEmpty: true });
     const outsider = createBlock({ id: 'outsider' });
     const harness = createHarness({
       currentBlock: child,
       nextBlock: outsider,
-      registry: [callout, child, outsider],
+      registry: [toggle, child, outsider],
     });
     const event = createKeyboardEvent({ key: 'Backspace', keyCode: keyCodes.BACKSPACE });
 

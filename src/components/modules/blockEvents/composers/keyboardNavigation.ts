@@ -828,6 +828,10 @@ export class KeyboardNavigation extends BlockEventComposer {
         return;
       }
 
+      if (this.replaceEmptyCalloutWithParagraph(currentBlock)) {
+        return;
+      }
+
       // A column's sole empty child collapses the column itself; otherwise
       // fall back to the toggle-child behaviour (remove + focus next sibling).
       if (!this.removeSoleEmptyColumnChild(currentBlock)) {
@@ -1553,6 +1557,35 @@ export class KeyboardNavigation extends BlockEventComposer {
     if (newCurrentBlock) {
       Caret.setToBlock(newCurrentBlock, Caret.positions.END);
     }
+
+    return true;
+  }
+
+  /**
+   * When `block` is the SOLE child of a callout and is empty, turn the callout
+   * into an empty paragraph and put the caret in it (Notion). The child goes
+   * first: `replace` keeps the old block's children nested under the new one.
+   * Returns true when it handled the key.
+   */
+  private replaceEmptyCalloutWithParagraph(block: Block): boolean {
+    if (!block.isEmpty || block.parentId === null) {
+      return false;
+    }
+
+    const { BlockManager, Caret, Tools } = this.Blok;
+    const callout = BlockManager.getBlockById(block.parentId);
+
+    if (callout === undefined || callout.name !== 'callout' || callout.contentIds.length > 1) {
+      return false;
+    }
+
+    BlockManager.transactForTool(() => {
+      void BlockManager.removeBlock(block, false);
+
+      const paragraph = BlockManager.replace(callout, Tools.defaultTool.name, { text: '' });
+
+      Caret.setToBlock(paragraph, Caret.positions.START);
+    });
 
     return true;
   }

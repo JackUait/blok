@@ -9,7 +9,8 @@ import { Column } from '../../../src/tools/column';
 import { ToggleItem } from '../../../src/tools/toggle';
 import { CalloutTool } from '../../../src/tools/callout';
 import { ListItem } from '../../../src/tools/list';
-import { wrapBlocksInColumns } from '../../../src/tools/column-drop';
+import { Table } from '../../../src/tools/table';
+import { wrapBlocksInColumns, wrapInNewColumnList } from '../../../src/tools/column-drop';
 import { isMoveTargetValid } from '../../../src/components/modules/drag/utils/moveDestination';
 import type { API, OutputBlockData, OutputData } from '../../../types';
 
@@ -69,6 +70,7 @@ const boot = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
       toggle: ToggleItem,
       callout: CalloutTool,
       list: ListItem,
+      table: Table,
     },
     data: { blocks },
   }) as unknown as TestEditor;
@@ -279,6 +281,59 @@ describe('turn into columns inside a container', () => {
 
     expectRowInContainer(saved, 'tg', [['a'], ['b']]);
     expect(byId(saved, 'tg')?.content).toEqual([listId, 'c']);
+  });
+
+  it('refuses two blocks in one table cell', async () => {
+    const instance = await boot([
+      {
+        id: 'tb',
+        type: 'table',
+        data: { withHeadings: false, content: [[{ blocks: ['x', 'y'] }, { blocks: ['q'] }]] },
+        content: ['x', 'y', 'q'],
+      },
+      P('x', 'tb'),
+      P('y', 'tb'),
+      P('q', 'tb'),
+    ]);
+    const x = instance.module.blockManager.getBlockById('x');
+    const y = instance.module.blockManager.getBlockById('y');
+    const before = await instance.save();
+
+    expect(x?.holder.parentElement).toBe(y?.holder.parentElement);
+    expect(wrapBlocksInColumns(instance as unknown as API, ['x', 'y'])).toBeNull();
+    expect((await instance.save()).blocks).toEqual(before.blocks);
+  });
+
+  it('a side-drop helper call never builds a row inside a table cell', async () => {
+    const instance = await boot([
+      {
+        id: 'tb',
+        type: 'table',
+        data: { withHeadings: false, content: [[{ blocks: ['x', 'y'] }, { blocks: ['q'] }]] },
+        content: ['x', 'y', 'q'],
+      },
+      P('x', 'tb'),
+      P('y', 'tb'),
+      P('q', 'tb'),
+    ]);
+    const before = await instance.save();
+
+    expect(wrapInNewColumnList(instance as unknown as API, 'x', ['y'], 'left')).toBeNull();
+    expect((await instance.save()).blocks).toEqual(before.blocks);
+  });
+
+  it('refuses two columns selected without their row', async () => {
+    const instance = await boot([
+      { id: 'cl', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+      { id: 'c1', type: 'column', data: {}, parent: 'cl', content: ['a'] },
+      { id: 'c2', type: 'column', data: {}, parent: 'cl', content: ['b'] },
+      P('a', 'c1'),
+      P('b', 'c2'),
+    ]);
+    const before = await instance.save();
+
+    expect(wrapBlocksInColumns(instance as unknown as API, ['c1', 'c2'])).toBeNull();
+    expect((await instance.save()).blocks).toEqual(before.blocks);
   });
 
   it('refuses a selection whose blocks live in different containers instead of dropping part of it', async () => {

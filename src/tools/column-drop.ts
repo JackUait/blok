@@ -10,8 +10,25 @@ import {
   rebuildColumnListResizers,
   resetColumnsToEvenWidth,
 } from './columns-shared';
+import { isInsideTableCell, isRestrictedInTableCell } from './table/table-restrictions';
 
 export type ColumnDropSide = 'left' | 'right';
+
+/**
+ * Whether a new column_list may sit under `parentId`, beside `anchorId`.
+ * A column_list may only hold columns, and table cells restrict column_list.
+ * Inserting by placement is not demoted like an index insert, so the wrap
+ * helpers must refuse here or they build a row where none may exist.
+ */
+const canHostColumnList = (api: API, parentId: string | null, anchorId: string): boolean => {
+  if (parentId !== null && api.blocks.getById(parentId)?.name === COLUMN_LIST_TOOL) {
+    return false;
+  }
+
+  const anchorHolder = api.blocks.getById(anchorId)?.holder;
+
+  return !(isRestrictedInTableCell(COLUMN_LIST_TOOL) && isInsideTableCell(anchorHolder));
+};
 
 /**
  * Run `fn` as a single undo entry when the host supports transactions, else
@@ -41,7 +58,8 @@ const runTransacted = (api: API, fn: () => void): void => {
  *
  * Aborts (returns null, no mutation) when:
  * - sources is empty, or includes the target (self-drop),
- * - the target or any source is stale (no flat index).
+ * - the target or any source is stale (no flat index),
+ * - the target's parent cannot hold a column_list (see canHostColumnList).
  */
 export const wrapInNewColumnList = (
   api: API,
@@ -66,6 +84,11 @@ export const wrapInNewColumnList = (
   // FLIP capture: the target's pre-drop width seeds the new row's start state,
   // and the tops of the blocks below it drive their glide to the new layout.
   const target = api.blocks.getById(targetId);
+
+  if (!canHostColumnList(api, target?.parentId ?? null, targetId)) {
+    return null;
+  }
+
   const targetHolder = target?.holder;
   const targetStartWidth = targetHolder?.getBoundingClientRect().width ?? 0;
   const siblingTops = targetHolder !== undefined ? captureSiblingTops(targetHolder) : null;
@@ -130,9 +153,9 @@ export const wrapInNewColumnList = (
  * its descendants selected). The roots must share one parent, because the new
  * row takes their place under that parent. Stale ids are skipped.
  *
- * Returns null when fewer than 2 roots remain or they sit in different
- * containers. Wrapping only some of them would silently drop the rest of the
- * user's selection.
+ * Returns null when fewer than 2 roots remain, they sit in different
+ * containers (wrapping only some would silently drop the rest of the user's
+ * selection), or their parent cannot hold a column_list.
  */
 export const resolveColumnWrapRoots = (
   api: API,
@@ -166,7 +189,7 @@ export const resolveColumnWrapRoots = (
   const parentId = api.blocks.getById(rootIds[0])?.parentId ?? null;
   const shareParent = rootIds.every(blockId => (api.blocks.getById(blockId)?.parentId ?? null) === parentId);
 
-  return shareParent ? { parentId, rootIds } : null;
+  return shareParent && canHostColumnList(api, parentId, rootIds[0]) ? { parentId, rootIds } : null;
 };
 
 /**

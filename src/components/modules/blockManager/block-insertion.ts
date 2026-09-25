@@ -1219,6 +1219,20 @@ export class BlockInsertion {
       ? (currentBlock?.id ?? null)
       : (currentBlock?.parentId ?? null);
     const oldBlockId = replace ? currentBlock?.id : undefined;
+    const predecessorParent = predecessorParentId === null ? undefined : this.getBlock(predecessorParentId);
+    // Placed under the parent at once, so the tree is valid when the insert
+    // returns. Tables and databases place their children themselves.
+    const placement = !replace && currentBlock !== undefined && predecessorParent !== undefined
+      && !isSelfPlacedParent(predecessorParent, this.getBlock)
+      ? {
+        parentId: predecessorParent.id,
+        afterId: lastChildBefore(
+          { blocks: this.repository.blocks, getBlockById: this.getBlock },
+          predecessorParent.id,
+          this.repository.blocks.indexOf(currentBlock) + 1
+        ),
+      }
+      : undefined;
 
     // Insert block without syncing to Yjs yet.
     // Wrap in atomic operation so that child blocks created during rendered()
@@ -1237,7 +1251,7 @@ export class BlockInsertion {
       return this.ctx.insert({
         tool: toolName,
         data,
-        replace,
+        ...(placement === undefined ? { replace } : { placement }),
         needToFocus: false,
         skipYjsSync: true,
         // Pasted content brings its own children (they are parented right after
@@ -1274,7 +1288,7 @@ export class BlockInsertion {
     // call below so Yjs sees the final parentId in one shot. For replace we
     // route through `transferParentLinkToNewBlock` which swaps the old id for
     // the new id inside the parent's contentIds while preserving position.
-    if (predecessorParentId !== null) {
+    if (predecessorParentId !== null && placement === undefined) {
       if (replace && oldBlockId !== undefined) {
         this.ctx.transferParentLinkToNewBlock(oldBlockId, block, predecessorParentId);
       } else {

@@ -151,10 +151,7 @@ describe('BlockOperations tree-order warning (dev/test)', () => {
     expect(treeOrderWarnings(warn)).toEqual([]);
   }, 30_000);
 
-  // Known gap: the paste handler inserts each block by index as a root block
-  // between the toggle's children, and only then calls setBlockParent. The
-  // insert is its own outermost operation, so it ends out of tree order.
-  it.fails('does not warn for a multi-block paste after a toggle child', async () => {
+  it('does not warn for a multi-block paste after a toggle child', async () => {
     const instance = await boot([T('t', ['a', 'b']), P('a', 't'), P('b', 't'), P('z')]);
     const warn = vi.spyOn(console, 'warn');
 
@@ -163,6 +160,7 @@ describe('BlockOperations tree-order warning (dev/test)', () => {
     await settle();
 
     expect(treeOrderWarnings(warn)).toEqual([]);
+    expect(instance.blocks.getChildren('t')).toHaveLength(4);
   }, 30_000);
 
   it('does not warn when a column is added to a column list', async () => {

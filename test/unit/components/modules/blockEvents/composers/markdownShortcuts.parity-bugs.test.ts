@@ -133,6 +133,20 @@ describe('MarkdownShortcuts — Notion parity bugs', () => {
 
       expect(replace).not.toHaveBeenCalledWith(block, 'code', expect.anything());
     });
+
+    it('stores the text after "``` " as plain text, not HTML', () => {
+      const block = createBlock();
+      if (block.currentInput) {
+        block.currentInput.innerHTML = '``` A &amp; <b>b</b><br>c';
+      }
+      const replace = vi.fn(() => block);
+      const blok = createBlokModules(block, replace);
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      markdownShortcuts.handleInput(createInputEvent({ data: ' ' }));
+
+      expect(replace).toHaveBeenCalledWith(block, 'code', expect.objectContaining({ code: 'A & b\nc' }));
+    });
   });
 
   // BUG #13 & #14 (inline)

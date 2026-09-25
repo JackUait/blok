@@ -1,6 +1,7 @@
 import type { Block } from '../../../block';
 import { HEADER_PATTERN, CHECKLIST_PATTERN, UNORDERED_LIST_PATTERN, ORDERED_LIST_PATTERN, ALPHA_ORDERED_LIST_PATTERN, TOGGLE_HEADER_PATTERN, TOGGLE_PATTERN, HEADER_TOOL_NAME, LIST_TOOL_NAME, TOGGLE_TOOL_NAME, DIVIDER_TOOL_NAME, DIVIDER_PATTERN, QUOTE_TOOL_NAME, QUOTE_PATTERN, CODE_TOOL_NAME, CODE_PATTERN } from '../constants';
 import { hasUnsafeScheme } from '../../../utils/sanitize-url';
+import { htmlToPlainText } from '../../../utils/plain-text';
 import { isSamePageLink } from '../../../../tools/link/registry';
 
 import { BlockEventComposer } from './__base';
@@ -881,8 +882,9 @@ export class MarkdownShortcuts extends BlockEventComposer {
     const shortcutLength = textContent.length - remainingText.length;
     const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
 
+    // `code` is a PLAINTEXT field: store the text, not the markup.
     const newBlock = BlockManager.replace(currentBlock, CODE_TOOL_NAME, {
-      code: remainingHtml,
+      code: htmlToPlainText(remainingHtml),
     });
 
     this.setCaretAfterConversion(newBlock, 0);

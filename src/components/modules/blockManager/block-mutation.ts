@@ -14,7 +14,8 @@ import { announce } from '../../utils/announcer';
 import { convertStringToBlockData, isBlockConvertable } from '../../utils/blocks';
 import { isChildToolAllowed } from '../../utils/child-tools';
 import { canAdoptChild, releasesChildrenOnTurnInto } from '../../utils/turn-into-children';
-import { sanitizeBlocks, clean, composeSanitizerConfig, stripUnsafeUrlsDeep } from '../../utils/sanitizer';
+import { sanitizeBlocks, clean, composeSanitizerConfig, stripUnsafeUrlsDeep, PLAINTEXT } from '../../utils/sanitizer';
+import { htmlToPlainText, plainTextToHtml } from '../../utils/plain-text';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import { SELF_PLACING_PARENTS } from '../../../tools/nested-blocks';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
@@ -50,6 +51,18 @@ const textContentOf = (value: string): string => {
   template.innerHTML = value;
 
   return template.content.textContent ?? '';
+};
+
+/**
+ * Whether the field a tool exports/imports through is declared PLAINTEXT.
+ * A function export/import names no field, so it counts as rich text.
+ * @param tool - block tool
+ * @param direction - which side of the conversion config to read
+ */
+const isPlaintextField = (tool: BlockToolAdapter, direction: 'export' | 'import'): boolean => {
+  const field = tool.conversionConfig?.[direction];
+
+  return isString(field) && tool.sanitizeConfig[field] === PLAINTEXT;
 };
 
 /** One index move as `Blocks.move` ran it, replayed on a copy of the array. */
@@ -854,6 +867,35 @@ export class BlockMutation {
   }
 
   /**
+   * Turn a source block's exported string into what the target's import
+   * field accepts. A PLAINTEXT field holds raw text, not HTML, so crossing
+   * between it and a rich field must translate instead of sanitizing:
+   * `clean()` would strip every tag (and <br>) from HTML bound for plain
+   * text, and parse raw code as HTML on the way back.
+   * @param exported - the source block's exported string
+   * @param sourceTool - tool of the block being read
+   * @param targetTool - tool receiving the string
+   * @param globalRules - editor-level sanitizer rules to compose with the target's
+   */
+  private prepareImportString(
+    exported: string,
+    sourceTool: BlockToolAdapter,
+    targetTool: BlockToolAdapter,
+    globalRules?: SanitizerConfig
+  ): string {
+    const sourceIsPlain = isPlaintextField(sourceTool, 'export');
+
+    if (isPlaintextField(targetTool, 'import')) {
+      return sourceIsPlain ? exported : htmlToPlainText(exported);
+    }
+
+    const html = sourceIsPlain ? plainTextToHtml(exported) : exported;
+    const fieldRules = this.resolveImportSanitizeConfig(targetTool);
+
+    return clean(html, globalRules === undefined ? fieldRules : composeSanitizerConfig(globalRules, fieldRules));
+  }
+
+  /**
    * Resolve the FLAT tag-rule {@link SanitizerConfig} that `clean()` needs for
    * the field of `tool` that will receive imported content on convert/merge.
    *
@@ -1597,9 +1639,7 @@ export class BlockMutation {
       /**
        * Extract the field-specific sanitize rules for the field that will receive the imported content.
        */
-      const fieldSanitizeConfig = this.resolveImportSanitizeConfig(targetBlock.tool);
-
-      const cleanData = clean(blockToMergeDataStringified, fieldSanitizeConfig);
+      const cleanData = this.prepareImportString(blockToMergeDataStringified, blockToMerge.tool, targetBlock.tool);
       const blockToMergeData = convertStringToBlockData(cleanData, targetBlock.tool.conversionConfig);
 
       await completeMerge(blockToMergeData);
@@ -1660,16 +1700,11 @@ export class BlockMutation {
       throw new ToolNotFoundError(targetToolName, `Could not convert Block. Tool «${targetToolName}» not found.`);
     }
 
-    /**
-     * Clean exported data with replacing sanitizer config.
-     * We need to extract the field-specific sanitize rules for the field that will receive the imported content.
-     * The tool's sanitizeConfig has the format { fieldName: { tagRules } }, but clean() expects just { tagRules }.
-     */
-    const fieldSanitizeConfig = this.resolveImportSanitizeConfig(replacingTool);
-
-    const cleanData = clean(
+    const cleanData = this.prepareImportString(
       exportedData,
-      composeSanitizerConfig(this.dependencies.config.sanitizer as SanitizerConfig, fieldSanitizeConfig)
+      source.tool,
+      replacingTool,
+      this.dependencies.config.sanitizer
     );
 
     /**

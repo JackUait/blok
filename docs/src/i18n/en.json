@@ -1151,7 +1151,7 @@
           "description": "Convert Markdown to blocks WITHOUT an editor instance. It is the standalone `@bloklabs/core/markdown` subpath, not a method on the hook.\n\nIt needs no DOM and no mounted Blok, so it covers the server-side path that insertMarkdown/exportMarkdown cannot:\n\n- import Markdown in a Node job\n- seed a document\n- precompute `data` before the editor mounts\n\n`config` is a `MarkdownImportConfig` (tool mapping, GFM, extensions). The result is ready for `blocks.render()` or `blocks.insertMany()`."
         },
         "markdownToBlocksWithReport": {
-          "description": "The same blocks, plus what Markdown could not carry into them. Blok has no raw-HTML block, so markup written into the Markdown is escaped and stored as literal text. That is safe, but silent.\n\nUse this when the import is unattended (an MCP tool, an agent, a bulk migration) and something has to be told what changed. Its outbound twin is blocksToMarkdownWithReport in @bloklabs/core/view."
+          "description": "The same blocks, plus what Markdown could not carry into them. Blok has no raw-HTML block, so markup written into the Markdown is escaped and stored as literal text. The one exception is a bare `<br>`, which becomes a line break. The escaping is safe, but silent.\n\nUse this when the import is unattended (an MCP tool, an agent, a bulk migration) and something has to be told what changed. Its outbound twin is blocksToMarkdownWithReport in @bloklabs/core/view."
         }
       }
     },

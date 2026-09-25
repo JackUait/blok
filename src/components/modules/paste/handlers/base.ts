@@ -425,10 +425,10 @@ export abstract class BasePasteHandler implements PasteHandler {
       return;
     }
 
-    const currentToolSanitizeConfig = currentBlock.tool.baseSanitizeConfig;
-
+    // Inline-tool rules have no `br`. Keep it, like the block path does:
+    // the field's own sanitize still decides on save.
     Caret.insertContentAtCaretPosition(
-      clean(content.innerHTML, currentToolSanitizeConfig)
+      clean(content.innerHTML, { ...currentBlock.tool.baseSanitizeConfig, br: {} })
     );
   }
 }

@@ -148,11 +148,18 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
 
       expandedNodes.push({ node });
 
+      // ASIDE: loose inline runs become paragraphs (split at <br>), so text
+      // nodes and marks are not dropped or turned into blocks of their own.
+      if (isAsideElement) {
+        expandedNodes.push(...this.collectCellContentEntries(node as HTMLElement)
+          .map((entry) => ({ ...entry, parentExpandedIndex })));
+        continue;
+      }
+
       // Only direct children are extracted (not deeply nested structures), which
       // is correct for Google Docs DETAILS format where children are flat siblings.
-      // For ASIDE, ALL children become child blocks (no SUMMARY to skip).
       const childElements = Array.from((node as HTMLElement).children).filter(
-        (child) => isAsideElement || child.tagName !== 'SUMMARY'
+        (child) => child.tagName !== 'SUMMARY'
       );
 
       for (const child of childElements) {

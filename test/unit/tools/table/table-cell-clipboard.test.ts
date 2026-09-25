@@ -759,10 +759,11 @@ describe('table-cell-clipboard', () => {
     });
 
     it('should strip disallowed tags but keep their text', () => {
-      const html = '<table><tr><td><div><u>underlined</u></div></td></tr></table>';
+      // <u> is an inline mark cells keep; <big> is not.
+      const html = '<table><tr><td><div><big>big</big></div></td></tr></table>';
       const result = parseGenericHtmlTable(html);
 
-      expect(result?.cells[0][0].blocks[0].data.text).toBe('underlined');
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('big');
     });
 
     it('should still return plain text for cells without formatting', () => {

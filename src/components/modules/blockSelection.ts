@@ -23,7 +23,7 @@ import { TOOL_NAME as LIST_TOOL_NAME } from '../../tools/list/constants';
 import { buildSemanticListHtml, type SemanticListItem } from '../../tools/list/dom-builder';
 import { TOOL_NAME as CODE_TOOL_NAME } from '../../tools/code/constants';
 import { INLINE_TEXT_SANITIZE } from '../shared/inline-content-sanitize';
-import { COLOR_PRESETS } from '../shared/color-presets';
+import { resolvePresetColors } from '../shared/resolve-preset-colors';
 import type { ListItemStyle } from '../../tools/list/types';
 
 /**
@@ -47,23 +47,6 @@ const BLOCK_HOLDER_SELECTOR = `[${DATA_ATTR.element}]`;
 
 /** Top-level tags that already make their own block in the copied HTML. */
 const CLIPBOARD_BLOCK_TAGS = new Set(['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'PRE', 'UL', 'OL', 'TABLE']);
-
-const PRESET_COLOR_VAR = /var\(--blok-color-([a-z]+)-(text|bg)\)/g;
-
-/**
- * Other apps cannot resolve Blok's color tokens, so copied styles carry the
- * light preset literal instead.
- * @param root - the finished clipboard HTML
- */
-const resolvePresetColors = (root: HTMLElement): void => {
-  root.querySelectorAll<HTMLElement>('[style]').forEach((element) => {
-    const style = element.getAttribute('style') ?? '';
-
-    element.setAttribute('style', style.replace(PRESET_COLOR_VAR, (match, name: string, mode: 'text' | 'bg') => {
-      return COLOR_PRESETS.find((preset) => preset.name === name)?.[mode] ?? match;
-    }));
-  });
-};
 
 /**
  * The text of a range with each `<br>` as a newline.

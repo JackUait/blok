@@ -6,6 +6,8 @@ import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
 import { isDefaultDarkBackground, isDefaultWhiteBackground } from '../../components/modules/paste/google-docs-preprocessor';
 import { isInvisibleBackground } from '../../components/utils/default-page-colors';
 import { clean } from '../../components/utils/sanitizer';
+import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
+import { resolvePresetColorVars, resolvePresetColors } from '../../components/shared/resolve-preset-colors';
 import { parseUntrustedHtml } from '../../components/utils/inert-html';
 import { trimTrailingBreaks } from '../../components/utils/trailing-breaks';
 
@@ -314,6 +316,22 @@ function renderCellBlocksHtml(blocks: ClipboardBlockData[]): string {
 }
 
 /**
+ * Resolve Blok color tokens in a cell's visible HTML.
+ * @param html - the cell's rendered content
+ */
+function resolveCellContentColors(html: string): string {
+  if (!html.includes('var(--blok-color-')) {
+    return html;
+  }
+
+  const wrapper = parseUntrustedHtml(html);
+
+  resolvePresetColors(wrapper);
+
+  return wrapper.innerHTML;
+}
+
+/**
  * Build an HTML `<table>` string that carries the clipboard payload in a
  * `data-blok-table-cells` attribute.
  *
@@ -333,13 +351,15 @@ export function buildClipboardHtml(payload: TableCellsClipboard): string {
         // colspan/rowspan below reconstructs).
         .filter((cell) => cell.covered !== true)
         .map((cell) => {
-          const content = renderCellBlocksHtml(cell.blocks);
+          // Only the visible HTML gets literals: the JSON payload keeps the
+          // tokens, so a paste back into Blok still follows the theme.
+          const content = resolveCellContentColors(renderCellBlocksHtml(cell.blocks));
 
-          const styles = [
+          const styles = resolvePresetColorVars([
             cell.color ? `background-color: ${cell.color}` : '',
             cell.textColor ? `color: ${cell.textColor}` : '',
             ...placementStyles(cell.placement),
-          ].filter(Boolean).join('; ');
+          ].filter(Boolean).join('; '));
 
           const styleAttr = styles ? ` style="${styles}"` : '';
           const colspanAttr = (cell.colspan ?? 1) > 1 ? ` colspan="${cell.colspan}"` : '';
@@ -380,15 +400,11 @@ export function buildClipboardPlainText(payload: TableCellsClipboard): string {
 export const ALLOWED_MARK_STYLE_PROPS = new Set(['color', 'background-color']);
 
 /**
- * Sanitizer config for cell content: allows bold, italic, line breaks, links,
- * and color markers (<mark> with color/background-color styles only).
+ * Sanitizer config for cell content: every inline mark a text block keeps,
+ * plus the list structure cells carry. Link and mark rules stay cell-specific.
  */
 const CELL_SANITIZE_CONFIG: SanitizerConfig = {
-  b: true,
-  strong: true,
-  i: true,
-  em: true,
-  br: true,
+  ...INLINE_TEXT_SANITIZE,
   // List structure inside cells: parseCellContentToBlocks reads these to
   // reconstruct list blocks — stripping them silently flattens cell lists.
   ul: true,

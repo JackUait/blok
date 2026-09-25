@@ -509,7 +509,7 @@ export class CodeTool implements BlockTool {
       const content = detail.data;
 
       if (content instanceof HTMLElement) {
-        this._data.code = content.textContent ?? '';
+        this._data.code = CodeTool.textWithLineBreaks(content);
         this._data.language =
           normalizeFenceLang(content.getAttribute(CODE_LANGUAGE_ATTR) ?? '') ?? this._data.language;
       } else if (typeof content === 'string') {
@@ -527,6 +527,19 @@ export class CodeTool implements BlockTool {
     }
 
     void this.highlightCode();
+  }
+
+  /**
+   * Text of a pasted element with each `<br>` read as a newline
+   * (`textContent` drops them).
+   * @param element - the pasted element
+   */
+  private static textWithLineBreaks(element: HTMLElement): string {
+    const copy = element.cloneNode(true) as HTMLElement;
+
+    copy.querySelectorAll('br').forEach((br) => br.replaceWith('\n'));
+
+    return copy.textContent ?? '';
   }
 
   private setLanguage(id: string): void {

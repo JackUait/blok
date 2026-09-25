@@ -152,8 +152,8 @@ export function preloadEmojiData(locale = 'en'): void {
 }
 
 export class EmojiPicker {
-  private readonly onSelect: (native: string) => void;
-  private readonly onRemove: () => void;
+  private onSelect: (native: string) => void;
+  private onRemove: () => void;
   private readonly i18n: I18n;
   private readonly _locale: string;
   private readonly _inline: boolean;
@@ -278,11 +278,25 @@ export class EmojiPicker {
    * @param anchorRect - overrides `anchor`'s own bounding rect for positioning
    * (inline mode: the anchor is the block's contentEditable, but the true
    * anchor point is the ":" character's rect inside it)
+   * @param handlers - replaces the constructor's callbacks, for a picker shared by several blocks
    */
-  public async open(anchor: HTMLElement, anchorRect?: DOMRect): Promise<void> {
+  public async open(
+    anchor: HTMLElement,
+    anchorRect?: DOMRect,
+    handlers?: Pick<EmojiPickerOptions, 'onSelect' | 'onRemove'>
+  ): Promise<void> {
     const active = document.activeElement;
 
-    this._previouslyFocused = active instanceof HTMLElement && active !== document.body ? active : null;
+    if (handlers !== undefined) {
+      this.onSelect = handlers.onSelect;
+      this.onRemove = handlers.onRemove;
+    }
+
+    // Focus inside the picker means it is being reopened for another anchor:
+    // close() must then fall back to that anchor, not to the hidden picker.
+    this._previouslyFocused = active instanceof HTMLElement && active !== document.body && !this._element.contains(active)
+      ? active
+      : null;
     this._anchorEl = anchor;
     this._anchorRectOverride = anchorRect ?? null;
     this._open = true;

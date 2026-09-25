@@ -78,12 +78,34 @@ const CREATION_ORIGINS: ReadonlySet<BlockOrigin | undefined> = new Set<BlockOrig
   'convert',
 ]);
 
+interface SharedEmojiPicker {
+  picker: EmojiPicker;
+  locale: string;
+  users: Set<CalloutTool>;
+  owner: CalloutTool | null;
+}
+
+/**
+ * One built-in picker per editor, so a second callout reuses the built grid.
+ * Keyed on `api.i18n`: ToolsFactory makes one per tool per editor and every
+ * callout of that editor gets the same object, while other editors (with
+ * their own locale and messages) get their own.
+ */
+const sharedEmojiPickers = new WeakMap<API['i18n'], SharedEmojiPicker>();
+
+function disposeSharedEmojiPicker(shared: SharedEmojiPicker): void {
+  if (shared.picker.isOpen()) {
+    shared.picker.close();
+  }
+
+  shared.picker.getElement().remove();
+}
+
 export class CalloutTool implements BlockTool {
   private readonly api: API;
   private readOnly: boolean;
   private _data: CalloutData;
   private _dom: CalloutDOMRefs | null = null;
-  private _emojiPicker: EmojiPicker | null = null;
   private _colorPicker: ColorPickerHandle | null = null;
   private readonly _customEmojiPicker: ((onSelect: (emoji: string) => void) => void) | undefined;
   private blockId?: string;
@@ -419,6 +441,33 @@ export class CalloutTool implements BlockTool {
     // No-op — no subscriptions to clean up
   }
 
+  /**
+   * Editor teardown and a repaint (locale or messages change) destroy every
+   * block, so the last callout out takes the shared picker with it.
+   */
+  public destroy(): void {
+    const shared = sharedEmojiPickers.get(this.api.i18n);
+
+    if (shared === undefined || !shared.users.delete(this)) {
+      return;
+    }
+
+    if (shared.users.size === 0) {
+      disposeSharedEmojiPicker(shared);
+      sharedEmojiPickers.delete(this.api.i18n);
+
+      return;
+    }
+
+    if (shared.owner === this) {
+      shared.owner = null;
+
+      if (shared.picker.isOpen()) {
+        shared.picker.close();
+      }
+    }
+  }
+
   public setReadOnly(state: boolean): void {
     this.readOnly = state;
 
@@ -538,17 +587,45 @@ export class CalloutTool implements BlockTool {
       return;
     }
 
-    if (this._emojiPicker === null) {
-      this._emojiPicker = new EmojiPicker({
-        onSelect: (native: string) => this.setEmoji(native),
-        onRemove: () => this.setEmoji(''),
-        i18n: this.api.i18n,
-        locale: this.api.i18n.getLocale(),
-      });
-      document.body.appendChild(this._emojiPicker.getElement());
+    const handlers = {
+      onSelect: (native: string): void => this.setEmoji(native),
+      onRemove: (): void => this.setEmoji(''),
+    };
+    const shared = this.acquireEmojiPicker(handlers);
+    const element = shared.picker.getElement();
+
+    if (!element.isConnected) {
+      document.body.appendChild(element);
     }
 
-    void this._emojiPicker.open(this._dom.emojiButton);
+    shared.owner = this;
+    void shared.picker.open(this._dom.emojiButton, undefined, handlers);
+  }
+
+  private acquireEmojiPicker(handlers: { onSelect: (native: string) => void; onRemove: () => void }): SharedEmojiPicker {
+    const locale = this.api.i18n.getLocale();
+    const existing = sharedEmojiPickers.get(this.api.i18n);
+
+    if (existing !== undefined && existing.locale === locale) {
+      existing.users.add(this);
+
+      return existing;
+    }
+
+    if (existing !== undefined) {
+      disposeSharedEmojiPicker(existing);
+    }
+
+    const created: SharedEmojiPicker = {
+      picker: new EmojiPicker({ ...handlers, i18n: this.api.i18n, locale }),
+      locale,
+      users: new Set([this]),
+      owner: null,
+    };
+
+    sharedEmojiPickers.set(this.api.i18n, created);
+
+    return created;
   }
 
   private setEmoji(native: string): void {

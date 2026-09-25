@@ -1,5 +1,5 @@
 import type { BlockTool, BlockToolConstructorOptions } from '../../../types/tools/block-tool';
-import type { ToolSanitizerConfig } from '../../../types';
+import type { SanitizerConfig } from '../../../types';
 import { PLAINTEXT } from '../../components/utils/sanitizer';
 import type { DatabaseRowData, PropertyValue } from '../database/types';
 
@@ -129,7 +129,7 @@ export class DatabaseRowTool implements BlockTool {
   /**
    * Plain text and bare URLs: an HTML parse would cut text at `<` and turn `&` into `&amp;`.
    */
-  public static get sanitize(): ToolSanitizerConfig {
+  public static get sanitize(): SanitizerConfig {
     return {
       title: PLAINTEXT,
       properties: PLAINTEXT,

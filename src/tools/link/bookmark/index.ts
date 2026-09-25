@@ -8,7 +8,7 @@ import type {
   PasteEvent,
   PatternPasteEvent,
   ToolboxConfig,
-  ToolSanitizerConfig,
+  SanitizerConfig,
 } from '../../../../types';
 import { PLAINTEXT } from '../../../components/utils/sanitizer';
 import { IconLink } from '../../../components/icons';
@@ -72,7 +72,7 @@ export class Bookmark implements BlockTool {
   /**
    * Plain text and bare URLs: an HTML parse would cut text at `<` and turn `&` into `&amp;`.
    */
-  public static get sanitize(): ToolSanitizerConfig {
+  public static get sanitize(): SanitizerConfig {
     return {
       url: PLAINTEXT,
       title: PLAINTEXT,

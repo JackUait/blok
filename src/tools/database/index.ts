@@ -1,4 +1,4 @@
-import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig, ToolSanitizerConfig } from '../../../types';
+import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig, SanitizerConfig } from '../../../types';
 import { PLAINTEXT } from '../../components/utils/sanitizer';
 import type { DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
 import { DatabaseModel } from './database-model';
@@ -114,7 +114,7 @@ export class DatabaseTool implements BlockTool {
   /**
    * Plain text and bare URLs: an HTML parse would cut text at `<` and turn `&` into `&amp;`.
    */
-  static get sanitize(): ToolSanitizerConfig {
+  static get sanitize(): SanitizerConfig {
     return {
       title: PLAINTEXT,
       schema: PLAINTEXT,

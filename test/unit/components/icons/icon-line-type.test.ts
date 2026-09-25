@@ -61,7 +61,7 @@ describe('Blok Line type family', () => {
 
   it('uses the same cap and baseline for inline letters and the plain heading', () => {
     expect(pathOf(IconItalic)).toBe('M9 5h6m-10 10h6m1-10-4 10');
-    expect(pathOf(IconUnderline)).toBe('M6 5v4a4 4 0 0 0 8 0V5');
+    expect(pathOf(IconUnderline)).toBe('M6 5v3.5a4 4 0 0 0 8 0V5');
     expect(pathOf(IconUnderline, 1)).toBe('M5.5 15h9');
     expect(pathOf(IconClearFormat)).toBe('M4 5h8M8 5v10');
     expect(pathOf(IconHeading)).toBe('M7 5v10M13 5v10M7 10h6');

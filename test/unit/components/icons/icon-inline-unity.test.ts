@@ -118,7 +118,7 @@ describe('inline-toolbar icon unity', () => {
   it('letterforms sit on the shared cap line (y5) and baseline (y15)', () => {
     expect(IconBold).toContain('M6.5 5v10');
     expect(IconItalic).toContain('M9 5h6');
-    expect(IconUnderline).toContain('M6 5v4');
+    expect(IconUnderline).toContain('M6 5v3.5');
     expect(IconUnderline).toContain('M5.5 15h9');
     expect(IconClearFormat).toContain('M4 5h8M8 5v10');
   });

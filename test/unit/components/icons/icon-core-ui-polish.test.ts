@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { IconCheck, IconSearch, IconWand } from '../../../../src/components/icons';
+import { IconCheck, IconSearch, IconUnderline, IconWand } from '../../../../src/components/icons';
 
 const svgOf = (icon: string): Document => new DOMParser().parseFromString(icon, 'image/svg+xml');
 
@@ -66,6 +66,14 @@ describe('Blok Line core UI polish', () => {
     // The handle starts just outside the lens so the two strokes read as one joint.
     expect(Math.hypot(sx - cx, sy - cy) - r).toBeGreaterThan(0);
     expect(Math.hypot(sx - cx, sy - cy) - r).toBeLessThan(1.25 / 2);
+  });
+
+  it('keeps a full stroke of space between the underline U and its rule', () => {
+    const [, top, stem, radius] = numbersOf(pathOf(IconUnderline));
+    const [, rule] = numbersOf(pathOf(IconUnderline, 1));
+    const bowlBottom = top + stem + radius;
+
+    expect(rule - bowlBottom - 1.25).toBeGreaterThanOrEqual(1.25);
   });
 
   it('keeps the slash-search CSS glyph identical to IconSearch', () => {

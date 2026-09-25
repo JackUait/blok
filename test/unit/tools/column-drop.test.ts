@@ -184,16 +184,18 @@ describe('wrapInNewColumnList', () => {
     expect(mock.transact).not.toHaveBeenCalled();
   });
 
-  it('returns null when the target already has a parent', () => {
+  it('a nested target gets its row under its own parent, not at root', () => {
     const mock = createMockAPI([
-      { id: 'target', parentId: 'some-col', index: 4 },
+      { id: 'target', parentId: 'toggle', index: 4 },
       { id: 'src', parentId: null, index: 9 },
     ]);
 
     const result = wrapInNewColumnList(mock.api, 'target', ['src'], side('right'));
 
-    expect(result).toBeNull();
-    expect(mock.created).toEqual([]);
+    expect(mock.created[0].placement).toEqual({ parentId: 'toggle', position: { before: 'target' } });
+    expect(result).toBe('column_list-new-1');
+    expect(mock.setBlockParent).toHaveBeenCalledWith('target', 'column-new-2');
+    expect(mock.setBlockParent).toHaveBeenCalledWith('src', 'column-new-3');
   });
 
   it('returns null when the target is stale (getBlockIndex undefined)', () => {
@@ -358,6 +360,27 @@ describe('wrapBlocksInColumns', () => {
     ]);
 
     expect(wrapBlocksInColumns(mock.api, ['a', 'b'])).toBeNull();
+    expect(mock.created).toEqual([]);
+  });
+
+  it('nested siblings get their row under their shared parent', () => {
+    const mock = createMockAPI([
+      { id: 'a', parentId: 'toggle', index: 3 },
+      { id: 'b', parentId: 'toggle', index: 4 },
+    ]);
+
+    expect(wrapBlocksInColumns(mock.api, ['a', 'b'])).toBe('column_list-new-1');
+    expect(mock.created[0].placement).toEqual({ parentId: 'toggle', position: { before: 'a' } });
+  });
+
+  it('aborts when the selection roots sit in different containers', () => {
+    const mock = createMockAPI([
+      { id: 'a', parentId: null, index: 0 },
+      { id: 'x', parentId: 'toggle', index: 2 },
+      { id: 'b', parentId: null, index: 3 },
+    ]);
+
+    expect(wrapBlocksInColumns(mock.api, ['a', 'x', 'b'])).toBeNull();
     expect(mock.created).toEqual([]);
   });
 

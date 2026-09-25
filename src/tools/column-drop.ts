@@ -28,9 +28,10 @@ const runTransacted = (api: API, fn: () => void): void => {
 };
 
 /**
- * Wrap a top-level `targetId` block and the dragged `sourceIds` into a brand
- * new `column_list` with two columns: one holds the target, the other holds
- * the sources stacked in document order.
+ * Wrap a `targetId` block and the dragged `sourceIds` into a brand new
+ * `column_list` with two columns: one holds the target, the other holds the
+ * sources stacked in document order. The list takes the target's place under
+ * the target's own parent, so a drop inside a toggle or callout stays there.
  *
  * - side 'left'  -> column order = [sources column, target column]
  * - side 'right' -> column order = [target column, sources column]
@@ -40,8 +41,7 @@ const runTransacted = (api: API, fn: () => void): void => {
  *
  * Aborts (returns null, no mutation) when:
  * - sources is empty, or includes the target (self-drop),
- * - the target or any source is stale (no flat index),
- * - the target is already inside a container (use addColumnToList instead).
+ * - the target or any source is stale (no flat index).
  */
 export const wrapInNewColumnList = (
   api: API,
@@ -63,15 +63,10 @@ export const wrapInNewColumnList = (
     }
   }
 
-  // Wrapping is only for top-level targets; a target with a parent should be
-  // dropped beside an existing column via addColumnToList.
-  if (api.blocks.getById(targetId)?.parentId !== null) {
-    return null;
-  }
-
   // FLIP capture: the target's pre-drop width seeds the new row's start state,
   // and the tops of the blocks below it drive their glide to the new layout.
-  const targetHolder = api.blocks.getById(targetId)?.holder;
+  const target = api.blocks.getById(targetId);
+  const targetHolder = target?.holder;
   const targetStartWidth = targetHolder?.getBoundingClientRect().width ?? 0;
   const siblingTops = targetHolder !== undefined ? captureSiblingTops(targetHolder) : null;
 
@@ -88,7 +83,7 @@ export const wrapInNewColumnList = (
   runTransacted(api, () => {
     // The column_list opts out of its default auto-seed; we fill it with
     // explicit columns below.
-    const list = api.blocks.insertAt(COLUMN_LIST_TOOL, { noSeed: true }, { parentId: null, position: { before: targetId } });
+    const list = api.blocks.insertAt(COLUMN_LIST_TOOL, { noSeed: true }, { parentId: target?.parentId ?? null, position: { before: targetId } });
 
     created.listId = list.id;
 
@@ -127,47 +122,86 @@ export const wrapInNewColumnList = (
 };
 
 /**
- * Wrap the top-level `blockIds` into a brand new `column_list`, one block per
- * column, preserving selection order. Each block keeps its subtree (children
- * track their parent), so a selected `column_list` rides into a single column
- * as a nested list. All work runs in a single undo entry via `transact`.
+ * The blocks a "turn into columns" over `blockIds` would wrap, one per column,
+ * or null when it cannot run.
  *
- * Non-top-level ids are IGNORED, not rejected: a cross-block selection that
- * spans a container also marks the container's descendants selected (the
- * selection walks the flat block array), and those descendants ride along
- * inside their container — wrapping them again would tear the subtree apart.
+ * Only selection roots count: a selected block whose ancestor is also selected
+ * rides along inside it (a cross-block selection over a container also marks
+ * its descendants selected). The roots must share one parent, because the new
+ * row takes their place under that parent. Stale ids are skipped.
  *
- * Aborts (returns null, no mutation) when fewer than 2 top-level, non-stale
- * blocks remain after filtering.
+ * Returns null when fewer than 2 roots remain or they sit in different
+ * containers. Wrapping only some of them would silently drop the rest of the
+ * user's selection.
+ */
+export const resolveColumnWrapRoots = (
+  api: API,
+  blockIds: string[]
+): { parentId: string | null; rootIds: string[] } | null => {
+  const liveIds = blockIds.filter(blockId => api.blocks.getBlockIndex(blockId) !== undefined);
+  const selected = new Set(liveIds);
+
+  const hasSelectedAncestor = (blockId: string): boolean => {
+    const seen = new Set<string>();
+    const cursor: { id: string | null } = { id: api.blocks.getById(blockId)?.parentId ?? null };
+
+    while (cursor.id !== null && !seen.has(cursor.id)) {
+      if (selected.has(cursor.id)) {
+        return true;
+      }
+
+      seen.add(cursor.id);
+      cursor.id = api.blocks.getById(cursor.id)?.parentId ?? null;
+    }
+
+    return false;
+  };
+
+  const rootIds = liveIds.filter(blockId => !hasSelectedAncestor(blockId));
+
+  if (rootIds.length < 2) {
+    return null;
+  }
+
+  const parentId = api.blocks.getById(rootIds[0])?.parentId ?? null;
+  const shareParent = rootIds.every(blockId => (api.blocks.getById(blockId)?.parentId ?? null) === parentId);
+
+  return shareParent ? { parentId, rootIds } : null;
+};
+
+/**
+ * Wrap the selection roots of `blockIds` (see resolveColumnWrapRoots) into a
+ * brand new `column_list`, one block per column, preserving selection order.
+ * Each block keeps its subtree (children track their parent), so a selected
+ * `column_list` rides into a single column as a nested list. The row takes the
+ * roots' place under their shared parent. All work runs in a single undo entry
+ * via `transact`.
+ *
+ * Aborts (returns null, no mutation) when resolveColumnWrapRoots does.
  */
 export const wrapBlocksInColumns = (
   api: API,
   blockIds: string[]
 ): string | null => {
-  const topLevelIds = blockIds.filter((blockId) => {
-    if (api.blocks.getBlockIndex(blockId) === undefined) {
-      return false;
-    }
+  const resolved = resolveColumnWrapRoots(api, blockIds);
 
-    return api.blocks.getById(blockId)?.parentId === null;
-  });
-
-  if (topLevelIds.length < 2) {
+  if (resolved === null) {
     return null;
   }
 
+  const { parentId, rootIds } = resolved;
   const created: { listId: string | null } = { listId: null };
 
   runTransacted(api, () => {
-    const list = api.blocks.insertAt(COLUMN_LIST_TOOL, { noSeed: true }, { parentId: null, position: { before: topLevelIds[0] } });
+    const list = api.blocks.insertAt(COLUMN_LIST_TOOL, { noSeed: true }, { parentId, position: { before: rootIds[0] } });
 
     created.listId = list.id;
 
-    const columns = topLevelIds.map(() =>
+    const columns = rootIds.map(() =>
       api.blocks.insertAt(COLUMN_TOOL, { noSeed: true }, { parentId: list.id, position: 'end' })
     );
 
-    topLevelIds.forEach((blockId, i) => {
+    rootIds.forEach((blockId, i) => {
       api.blocks.setBlockParent(blockId, columns[i].id);
     });
 

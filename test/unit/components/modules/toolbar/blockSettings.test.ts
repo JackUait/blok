@@ -204,6 +204,10 @@ type BlokMock = {
           redactor: HTMLElement;
         };
       };
+      blocks: {
+        getBlockIndex: () => number;
+        getById: (id: string) => { id: string; parentId: null };
+      };
     };
   };
   Tools: {
@@ -295,6 +299,10 @@ const createBlokMock = (config: Partial<BlokConfig> = {}): BlokMock => {
           nodes: {
             redactor,
           },
+        },
+        blocks: {
+          getBlockIndex: () => 0,
+          getById: (id: string) => ({ id, parentId: null }),
         },
       },
     },

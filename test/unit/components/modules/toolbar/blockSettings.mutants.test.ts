@@ -19,7 +19,7 @@ import { SelectionUtils } from '../../../../../src/components/selection';
 import { beautifyShortcut } from '../../../../../src/components/utils/string';
 import { DATA_ATTR } from '../../../../../src/components/constants/data-attributes';
 import { UserDirectory } from '../../../../../src/components/modules/userDirectory';
-import type { wrapBlocksInColumns } from '../../../../../src/tools/column-drop';
+import type { resolveColumnWrapRoots, wrapBlocksInColumns } from '../../../../../src/tools/column-drop';
 
 /* ------------------------------------------------------------------ mocks */
 
@@ -125,12 +125,14 @@ vi.mock('../../../../../src/components/utils', async () => {
   };
 });
 
-const { wrapBlocksInColumnsMock } = vi.hoisted(() => ({
+const { wrapBlocksInColumnsMock, resolveColumnWrapRootsMock } = vi.hoisted(() => ({
   wrapBlocksInColumnsMock: vi.fn<typeof wrapBlocksInColumns>(() => null),
+  resolveColumnWrapRootsMock: vi.fn<typeof resolveColumnWrapRoots>(() => null),
 }));
 
 vi.mock('../../../../../src/tools/column-drop', () => ({
   wrapBlocksInColumns: wrapBlocksInColumnsMock,
+  resolveColumnWrapRoots: resolveColumnWrapRootsMock,
 }));
 
 /* --------------------------------------------------------------- fixtures */
@@ -398,6 +400,8 @@ describe('BlockSettings — mutation coverage', () => {
     isMobileScreenMock.mockReturnValue(false);
     wrapBlocksInColumnsMock.mockReset();
     wrapBlocksInColumnsMock.mockReturnValue(null);
+    resolveColumnWrapRootsMock.mockReset();
+    resolveColumnWrapRootsMock.mockReturnValue({ parentId: null, rootIds: ['a', 'b'] });
     build();
   });
 
@@ -1252,6 +1256,16 @@ describe('BlockSettings — mutation coverage', () => {
 
       expect(itemKeys(childrenOf(lastPopover().params.items, 'convert-to'))).toStrictEqual(['header']);
       expect([first.id, second.id]).toHaveLength(2);
+    });
+
+    it('hides the columns entry when the selection cannot be wrapped', async () => {
+      resolveColumnWrapRootsMock.mockReturnValue(null);
+
+      const { first, second } = await openMulti();
+
+      // It was the only convert entry, so the whole submenu goes with it.
+      expect(itemKeys(lastPopover().params.items)).not.toContain('convert-to');
+      expect(resolveColumnWrapRootsMock.mock.calls[0][1]).toStrictEqual([first.id, second.id]);
     });
 
     it('wraps the captured selection ids and lands the caret in the first column', async () => {

@@ -470,6 +470,45 @@ test.describe('Columns tool', () => {
     await expect(page.getByText('Right para')).toBeVisible();
   });
 
+  for (const container of ['toggle', 'callout'] as const) {
+    test(`drag-beside a block inside a ${container} creates a 2-column layout inside that ${container}`, async ({ page }) => {
+      await page.setViewportSize({ width: 1024, height: 800 });
+      await createBlok(page, {
+        blocks: [
+          container === 'toggle'
+            ? { id: 'box', type: 'toggle', data: { text: 'Box', isOpen: true }, content: ['inner', 'after'] }
+            : { id: 'box', type: 'callout', data: { emoji: '', textColor: null, backgroundColor: null }, content: ['inner', 'after'] },
+          { id: 'inner', type: 'paragraph', data: { text: 'Inner para' }, parent: 'box' },
+          { id: 'after', type: 'paragraph', data: { text: 'After para' }, parent: 'box' },
+          { id: 'src', type: 'paragraph', data: { text: 'Dragged para' } },
+        ],
+      });
+
+      const source = page.getByTestId('block-wrapper').filter({ hasText: 'Dragged para' }).last();
+
+      await source.click();
+      await source.hover();
+      const handle = page.locator(SETTINGS_BUTTON);
+      await expect(handle).toBeVisible();
+
+      const target = page.getByTestId('block-wrapper').filter({ hasText: 'Inner para' }).last();
+      await performSideDrop(page, handle, target, 'right');
+
+      await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+
+      const saved = await saveBlok(page);
+      const list = saved.blocks.find(b => b.type === 'column_list');
+
+      expect(list?.parent).toBe('box');
+      expect(saved.blocks.find(b => b.id === 'box')?.content).toEqual([list?.id, 'after']);
+      expect((list?.content ?? []).map(id => saved.blocks.find(b => b.id === id)?.content)).toEqual([['inner'], ['src']]);
+
+      await createBlok(page, saved);
+      await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+      await expect(page.getByText('Dragged para')).toBeVisible();
+    });
+  }
+
   test('drag-beside plays the column-drop animation and the ghost settles into place', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {

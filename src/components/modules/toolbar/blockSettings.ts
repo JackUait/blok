@@ -8,7 +8,7 @@ import { Dom as $ } from '../../dom';
 import { BlockSettingsClosed, BlockSettingsOpened, BlokMobileLayoutToggled } from '../../events';
 import { Flipper } from '../../flipper';
 import { IconColumns, IconCopy, IconReplace, IconTrash } from '../../icons';
-import { wrapBlocksInColumns } from '../../../tools/column-drop';
+import { resolveColumnWrapRoots, wrapBlocksInColumns } from '../../../tools/column-drop';
 import { SelectionUtils } from '../../selection/index';
 import { ScrollLocker } from '../../utils/scroll-locker';
 import type { BlockToolAdapter } from '../../tools/block';
@@ -561,9 +561,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
      * that fires when the popover item is clicked clears the block selection
      * before onActivate runs.
      */
-    if (hasMultipleBlocksSelected) {
-      const selectedBlockIds = selectedBlocks.map((selected) => selected.id);
+    const selectedBlockIds = selectedBlocks.map((selected) => selected.id);
 
+    if (hasMultipleBlocksSelected && resolveColumnWrapRoots(this.Blok.API.methods, selectedBlockIds) !== null) {
       convertToItems.push({
         icon: IconColumns,
         title: this.Blok.I18n.t('toolNames.columns'),

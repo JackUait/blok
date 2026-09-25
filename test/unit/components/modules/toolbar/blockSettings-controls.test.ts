@@ -35,7 +35,14 @@ const createSettings = (commonTunes: MenuConfigItem[], toolTunes: MenuConfigItem
     BlockManager: { currentBlock: block },
     CrossBlockSelection: { isCrossBlockSelectionStarted: false },
     Tools: { blockTools: new Map<string, BlockToolAdapter>() },
-    API: { methods: {} },
+    API: {
+      methods: {
+        blocks: {
+          getBlockIndex: () => 0,
+          getById: (id: string) => ({ id, parentId: null }),
+        } as unknown as API['blocks'],
+      },
+    },
     Toolbar: { close: vi.fn(), isPositionedRight: false },
     DragManager: { duplicateBlocksInPlace: duplicate },
     I18n: {

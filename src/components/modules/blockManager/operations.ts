@@ -607,19 +607,25 @@ export class BlockOperations implements OperationsContext {
    * @param context - the operation that just ran
    */
   private warnOnTreeOrderInDev(context: string): void {
-    if (this.dependencies.YjsManager.isInMoveGroup) {
-      return;
-    }
+    // Runs in a finally: a throw here would replace the operation's own
+    // result or error.
+    try {
+      if (this.dependencies.YjsManager?.isInMoveGroup) {
+        return;
+      }
 
-    const violations = validateTreeOrder(this.repository.blocks.map(b => ({
-      id: b.id,
-      name: b.name,
-      parentId: b.parentId ?? null,
-      contentIds: Array.isArray(b.contentIds) ? b.contentIds : [],
-    })));
+      const violations = validateTreeOrder(this.repository.blocks.map(b => ({
+        id: b.id,
+        name: b.name,
+        parentId: b.parentId ?? null,
+        contentIds: Array.isArray(b.contentIds) ? b.contentIds : [],
+      })));
 
-    if (violations.length > 0) {
-      logLabeled(`Tree order broken at BlockOperations.${context}:\n${violations.map(v => `  - ${v.message}`).join('\n')}`, 'warn');
+      if (violations.length > 0) {
+        logLabeled(`Tree order broken at BlockOperations.${context}:\n${violations.map(v => `  - ${v.message}`).join('\n')}`, 'warn');
+      }
+    } catch (error) {
+      logLabeled(`Tree order check failed at BlockOperations.${context}`, 'error', error);
     }
   }
 

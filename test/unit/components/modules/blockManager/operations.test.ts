@@ -747,6 +747,38 @@ describe('BlockOperations', () => {
     });
   });
 
+  describe('dev tree-order check', () => {
+    it('logs its own failure and lets the operation finish', () => {
+      Object.defineProperty(dependencies.YjsManager, 'isInMoveGroup', {
+        get: () => {
+          throw new Error('tree-order check broke');
+        },
+      });
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      const newBlock = operations.insert({ tool: 'paragraph' }, blocksStore);
+
+      expect(newBlock).toBeDefined();
+      expect(errors.mock.calls.flat().map(String).join(' ')).toContain('tree-order check broke');
+    });
+
+    it('runs with no YjsManager at all', () => {
+      const bare = new BlockOperations(
+        { ...dependencies, YjsManager: undefined } as unknown as BlockOperationsDependencies,
+        repository,
+        factory,
+        hierarchy,
+        blockDidMutatedSpy,
+        0
+      );
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      bare.assertHierarchyInvariantInDev('insert');
+
+      expect(errors).not.toHaveBeenCalled();
+    });
+  });
+
   describe('insert', () => {
     it('inserts a new block using default tool', () => {
       const newBlock = operations.insert({}, blocksStore);

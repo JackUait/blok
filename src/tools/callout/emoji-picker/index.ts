@@ -152,6 +152,7 @@ export class EmojiPicker {
   private readonly _locale: string;
   private readonly _inline: boolean;
   private _localeData: EmojiLocaleData | null = null;
+  private _localeLoad: Promise<void> | null = null;
   /** Caret rect override for inline mode — see `open()`'s `anchorRect` param. */
   private _anchorRectOverride: DOMRect | null = null;
 
@@ -295,16 +296,21 @@ export class EmojiPicker {
       }
     }
 
-    if (this._allEmojis.length === 0) {
-      this._allEmojis = await loadEmojiData();
+    // Chained before the dataset await on purpose: a cached locale's callback
+    // then runs first, so the first render is already localized.
+    if (this._locale !== 'en' && this._localeData === null && this._localeLoad === null) {
+      this._localeLoad = loadEmojiLocale(this._locale).then(localeData => {
+        this._localeLoad = null;
+
+        if (localeData !== null) {
+          this._localeData = localeData;
+          this.applyLocaleToGrid();
+        }
+      });
     }
 
-    if (this._locale !== 'en' && this._localeData === null) {
-      const localeData = await loadEmojiLocale(this._locale);
-
-      if (localeData !== null) {
-        this._localeData = localeData;
-      }
+    if (this._allEmojis.length === 0) {
+      this._allEmojis = await loadEmojiData();
     }
 
     if (this._hasFullGrid) {
@@ -1415,6 +1421,33 @@ export class EmojiPicker {
 
   private getDisplayName(emoji: ProcessedEmoji): string {
     return (this._localeData?.[emoji.native]?.n ?? emoji.name).toLocaleLowerCase();
+  }
+
+  /**
+   * Relabels the rendered grid once the locale lands. Runs even while closed:
+   * a reopen reuses the grid (`_hasFullGrid`) without rebuilding buttons.
+   */
+  private applyLocaleToGrid(): void {
+    if (this._open && this._filterInput.value.trim() !== '') {
+      this.handleFilterChange(this._filterInput.value);
+
+      return;
+    }
+
+    const emojis = new Map(this._allEmojis.map(emoji => [emoji.native, emoji]));
+
+    for (const button of this._emojiButtons) {
+      const emoji = emojis.get(button.getAttribute('data-emoji-native') ?? '');
+
+      if (emoji === undefined) {
+        continue;
+      }
+
+      const name = this.getDisplayName(emoji);
+
+      button.setAttribute('aria-label', name);
+      onHover(button, name, { placement: 'bottom' });
+    }
   }
 
   private buildGrid(emojis: ProcessedEmoji[]): HTMLElement {

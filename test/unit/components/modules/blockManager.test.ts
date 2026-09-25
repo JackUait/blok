@@ -53,7 +53,9 @@ type CreateBlockManagerOptions = {
  */
 const createMockToolAdapter = (options: {
   name?: string;
-  sanitizeConfig?: Record<string, boolean>;
+  sanitizeConfig?: Record<string, unknown>;
+  /** A tool that declares no sanitize rules gets the inline-tools tag map as its whole config. */
+  declaresNoRules?: boolean;
   conversionConfig?: ConversionConfig;
   settings?: Record<string, unknown>;
 } = {}): BlockToolAdapter => {
@@ -62,6 +64,8 @@ const createMockToolAdapter = (options: {
     save: vi.fn(() => ({})),
     rendered: () => {},
   };
+
+  const sanitizeConfig = options.sanitizeConfig ?? {};
 
   const adapter = {
     type: ToolType.Block,
@@ -72,7 +76,8 @@ const createMockToolAdapter = (options: {
       rendered = mockTool.rendered;
     } as unknown as BlockToolConstructable,
     create: vi.fn(() => mockTool),
-    sanitizeConfig: options.sanitizeConfig ?? {},
+    sanitizeConfig,
+    baseSanitizeConfig: options.declaresNoRules === true ? sanitizeConfig : {},
     conversionConfig: options.conversionConfig,
     settings: options.settings ?? {},
     toolbox: undefined,
@@ -893,6 +898,7 @@ describe('BlockManager', () => {
     const headerAdapter = createMockToolAdapter({
       name: 'header',
       sanitizeConfig: { p: true },
+      declaresNoRules: true,
       settings: { level: 2 },
       conversionConfig: {
         import: (text: string, config?: Record<string, unknown>) => ({
@@ -933,6 +939,56 @@ describe('BlockManager', () => {
     expect(callArgs[2].text).toBe('<P>CONVERTED</P>');
     expect(callArgs[2].level).toBe(4);
     expect(result).toBe(replacedBlock);
+  });
+
+  it.each([
+    {
+      title: 'a tool that declares no rules keeps the marks of its inline-tools map',
+      sanitizeConfig: { b: {}, br: true, a: { href: true } },
+      declaresNoRules: true,
+    },
+    {
+      title: 'a tool whose field rules carry no tags keeps inline marks',
+      sanitizeConfig: { emoji: false, color: false },
+      declaresNoRules: false,
+    },
+  ])('convert with a function import: $title', async ({ sanitizeConfig, declaresNoRules }) => {
+    const blockToConvert = createBlockStub({ id: 'paragraph',
+      name: 'paragraph' });
+
+    (blockToConvert.save as unknown as MockInstance).mockResolvedValue({ data: { text: 'Old' } });
+    (blockToConvert.exportDataAsString as unknown as MockInstance).mockResolvedValue('one<br><b>two</b>');
+
+    const targetAdapter = createMockToolAdapter({
+      name: 'target',
+      sanitizeConfig,
+      declaresNoRules,
+      conversionConfig: {
+        import: (text: string) => ({ text }),
+      },
+    });
+
+    const toolsCollection = createMockToolsCollection(['paragraph', 'target']);
+
+    toolsCollection.set('target', targetAdapter);
+
+    const { blockManager } = createBlockManager({
+      initialBlocks: [ blockToConvert ],
+      blokOverrides: {
+        Tools: {
+          blockTools: toolsCollection,
+        } as unknown as BlokModules['Tools'],
+      },
+    });
+
+    const operationsReplaceSpy = vi.spyOn(
+      (blockManager as unknown as BlockManagerInternalAccess).operations,
+      'replace'
+    ).mockReturnValue(createBlockStub({ id: 'target', name: 'target' }));
+
+    await blockManager.convert(blockToConvert, 'target');
+
+    expect(operationsReplaceSpy.mock.calls[0][2].text).toBe('one<br><b>two</b>');
   });
 
   it('sets current block by a child node that belongs to the current blok instance', () => {

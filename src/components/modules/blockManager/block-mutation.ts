@@ -18,6 +18,7 @@ import { sanitizeBlocks, clean, composeSanitizerConfig, stripUnsafeUrlsDeep } fr
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import { SELF_PLACING_PARENTS } from '../../../tools/nested-blocks';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
+import { INLINE_TEXT_SANITIZE } from '../../shared/inline-content-sanitize';
 import { placementImpliedByFlat, type TreePlacement } from '../../utils/tree-order';
 import { INDEX_MOVE_NEIGHBOURS, type IndexMoveNeighbours } from '../../utils/index-move-neighbours';
 import { getBlockNestingDepth } from '../drag/utils/depthUtils';
@@ -864,11 +865,22 @@ export class BlockMutation {
    * make `clean()` treat `text` as the only allowed tag and strip every inline
    * mark (b/i/a/…). Flatten the field-level rule objects into one tag map so
    * inline formatting survives turn-into.
+   *
+   * A tool that declares no rules gets the inline-tools TAG map as its whole
+   * config, so it is already flat; flattening it would turn attributes
+   * (`href`) into tags. When no field carries tag rules (callout: only
+   * `emoji: false`, …) there is nothing to flatten, and the field map must not
+   * reach `clean()` as a tag map: it would strip every mark and `<br>`. Use the
+   * inline baseline instead.
    * @param tool - destination tool receiving the imported content
    */
   private resolveImportSanitizeConfig(tool: BlockToolAdapter): SanitizerConfig {
     const importProp = tool.conversionConfig?.import;
     const sanitizeConfig = tool.sanitizeConfig;
+
+    if (sanitizeConfig === tool.baseSanitizeConfig) {
+      return sanitizeConfig;
+    }
 
     if (isString(importProp)) {
       return isObject(sanitizeConfig[importProp])
@@ -891,7 +903,7 @@ export class BlockMutation {
       }
     }
 
-    return isEmpty(flat) ? sanitizeConfig : flat;
+    return isEmpty(flat) ? INLINE_TEXT_SANITIZE : flat;
   }
 
   /**

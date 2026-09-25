@@ -482,4 +482,16 @@ describe('hierarchy-invariant', () => {
       expect(validateTreeOrder([])).toEqual([]);
     });
   });
+
+  it('validateTreeOrder accepts a 10000-deep parent chain', () => {
+    const depth = 10_000;
+    const blocks = Array.from({ length: depth }, (_, index) => ({
+      id: `d${index}`,
+      name: 'toggle',
+      parentId: index === 0 ? null : `d${index - 1}`,
+      contentIds: index === depth - 1 ? [] : [`d${index + 1}`],
+    }));
+
+    expect(validateTreeOrder(blocks)).toEqual([]);
+  });
 });

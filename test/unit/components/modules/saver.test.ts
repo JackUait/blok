@@ -343,6 +343,24 @@ describe('Saver module', () => {
     expect(logSpy).toHaveBeenCalledWith('Block «quote» skipped because saved data is invalid');
   });
 
+  it('saves a 10000-deep parent chain', async () => {
+    vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+    const depth = 10_000;
+    const blocks = Array.from({ length: depth }, (_, index) => createBlockMock({
+      id: `d${index}`,
+      tool: 'paragraph',
+      data: { text: `d${index}` },
+      parentId: index === 0 ? null : `d${index - 1}`,
+      contentIds: index === depth - 1 ? [] : [`d${index + 1}`],
+    }).block);
+    const { saver } = createSaver({ blocks, toolSanitizeConfigs: { paragraph: {} } });
+
+    const result = await saver.save();
+
+    expect(result?.blocks).toHaveLength(depth);
+    expect(result?.blocks[depth - 1]).toMatchObject({ id: `d${depth - 1}`, parent: `d${depth - 2}` });
+  }, 60_000);
+
   it('preserves invalid child blocks that have a parentId', async () => {
     const logSpy = vi.spyOn(utils, 'log').mockImplementation(() => undefined);
     vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);

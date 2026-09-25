@@ -360,4 +360,25 @@ describe('tree-order', () => {
       }
     });
   });
+
+  describe('a 10000-deep parent chain', () => {
+    const DEPTH = 10_000;
+    const chain = (): BlockTreeView => tree(Array.from({ length: DEPTH }, (_, index) => ({
+      id: `d${index}`,
+      parentId: index === 0 ? null : `d${index - 1}`,
+      contentIds: index === DEPTH - 1 ? [] : [`d${index + 1}`],
+    })));
+
+    it('walks it without running out of stack', () => {
+      const view = chain();
+
+      expect(ids(dfsOrder(view))).toEqual(ids(view.blocks));
+    });
+
+    it('finds the subtree end of a block low in it', () => {
+      const view = chain();
+
+      expect(subtreeEnd(view, DEPTH - 2)).toBe(DEPTH);
+    });
+  });
 });

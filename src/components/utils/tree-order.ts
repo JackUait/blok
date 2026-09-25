@@ -39,15 +39,19 @@ const effectiveParentId = (tree: BlockTreeView, block: TreeBlock): string | null
  * @param ancestorId - the possible ancestor
  */
 const isUnder = (tree: BlockTreeView, block: TreeBlock, ancestorId: string): boolean => {
-  const walk = (cursor: string | null, seen: Set<string>): boolean => {
-    if (cursor === null || seen.has(cursor)) {
-      return false;
+  const seen = new Set<string>();
+  const cursor: { id: string | null } = { id: block.parentId };
+
+  // A loop, not recursion: a chain can be deeper than the call stack.
+  while (cursor.id !== null && !seen.has(cursor.id)) {
+    if (cursor.id === ancestorId) {
+      return true;
     }
+    seen.add(cursor.id);
+    cursor.id = tree.getById(cursor.id)?.parentId ?? null;
+  }
 
-    return cursor === ancestorId || walk(tree.getById(cursor)?.parentId ?? null, seen.add(cursor));
-  };
-
-  return walk(block.parentId, new Set<string>());
+  return false;
 };
 
 /**
@@ -163,17 +167,19 @@ export const dfsOrder = <T extends TreeBlock>(tree: BlockTreeView<T>): T[] => {
 
   const order: T[] = [];
   const visited = new Set<T>();
-  const walk = (block: T): void => {
-    if (visited.has(block)) {
-      return;
+  // An explicit stack, not recursion: a chain can be deeper than the call
+  // stack. Pushed in reverse so the first root / child comes off first.
+  const stack = tree.blocks.filter(block => parentOf(block) === null).reverse();
+
+  while (stack.length > 0) {
+    const block = stack.pop();
+
+    if (block !== undefined && !visited.has(block)) {
+      visited.add(block);
+      order.push(block);
+      orderChildren(tree, block, childrenInFlatOrder.get(block.id) ?? []).reverse().forEach(child => stack.push(child));
     }
-    visited.add(block);
-    order.push(block);
-
-    orderChildren(tree, block, childrenInFlatOrder.get(block.id) ?? []).forEach(walk);
-  };
-
-  tree.blocks.filter(block => parentOf(block) === null).forEach(walk);
+  }
 
   return [...order, ...tree.blocks.filter(block => !visited.has(block))];
 };

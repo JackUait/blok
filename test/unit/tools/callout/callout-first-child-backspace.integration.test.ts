@@ -104,18 +104,6 @@ describe('callout: Backspace on an empty first line', () => {
     expect(saved.blocks[1].data.isToggleable).toBeFalsy();
   }, 30_000);
 
-  it('removes an empty plain heading first line', async () => {
-    const instance = await createEditor([
-      { id: 'C', type: 'callout', data: { emoji: '' }, content: ['S', 'Q'] },
-      { id: 'S', type: 'header', data: { text: '', level: 2 }, parent: 'C' },
-      { id: 'Q', type: 'paragraph', data: { text: 'q' }, parent: 'C' },
-    ]);
-
-    await pressBackspaceAtStart('S');
-
-    expect(await savedTree(instance)).toEqual(['C:callout:root', 'Q:paragraph:C']);
-  }, 30_000);
-
   it('keeps a first-line toggle heading whose title is empty but whose child has text', async () => {
     const instance = await createEditor([
       { id: 'C', type: 'callout', data: { emoji: '' }, content: ['S', 'Q'] },

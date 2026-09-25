@@ -162,4 +162,59 @@ describe('BlockManager.convert — toggle children handling (Notion parity M-5)'
 
     expect(setBlockParentSpy).not.toHaveBeenCalled();
   });
+
+  describe('a callout source', () => {
+    const createCallout = (): Block => ({
+      id: 'src',
+      name: 'callout',
+      parentId: 'box',
+      holder: document.createElement('div'),
+      contentIds: ['c1', 'c2'],
+    } as unknown as Block);
+
+    const runBeforeReplace = (): void => {
+      convertSpy.mockImplementation(async (...args: unknown[]) => {
+        const beforeReplace = args[4];
+
+        if (typeof beforeReplace === 'function') {
+          beforeReplace();
+        }
+
+        return { id: 'new', name: 'paragraph' };
+      });
+    };
+
+    it('RELEASES its lines to its own level when it turns into text', async () => {
+      runBeforeReplace();
+
+      await blockManager.convert(createCallout(), 'paragraph');
+
+      expect(setBlockParentSpy).toHaveBeenNthCalledWith(1, expect.objectContaining({ id: 'c2' }), 'box');
+      expect(setBlockParentSpy).toHaveBeenNthCalledWith(2, expect.objectContaining({ id: 'c1' }), 'box');
+    });
+
+    it('RELEASES its lines when it turns into a plain heading', async () => {
+      runBeforeReplace();
+
+      await blockManager.convert(createCallout(), 'header', { level: 2 });
+
+      expect(setBlockParentSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps its lines nested when it turns into a toggle list', async () => {
+      runBeforeReplace();
+
+      await blockManager.convert(createCallout(), 'toggle');
+
+      expect(setBlockParentSpy).not.toHaveBeenCalled();
+    });
+
+    it('keeps its lines nested when it turns into a toggle heading', async () => {
+      runBeforeReplace();
+
+      await blockManager.convert(createCallout(), 'header', { level: 2, isToggleable: true });
+
+      expect(setBlockParentSpy).not.toHaveBeenCalled();
+    });
+  });
 });

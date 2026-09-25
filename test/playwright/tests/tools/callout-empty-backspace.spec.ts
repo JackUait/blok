@@ -88,4 +88,18 @@ test.describe('callout: Backspace in an empty only line', () => {
 
     await expect.poll(() => savedBlocks(page)).toEqual(['paragraph:before:root', 'callout:undefined:root', 'paragraph::c']);
   });
+
+  // Core handles this; the callout used to have its own handler for it.
+  test('removes an empty heading first line and keeps the lines after it', async ({ page }) => {
+    await createBlok(page, [
+      { id: 'c', type: 'callout', data: { emoji: '' }, content: ['h', 'q'] },
+      { id: 'h', type: 'header', data: { text: '', level: 2 }, parent: 'c' },
+      { id: 'q', type: 'paragraph', data: { text: 'q' }, parent: 'c' },
+    ]);
+
+    await page.locator('[data-blok-id="h"] [contenteditable="true"]').first().click();
+    await page.keyboard.press('Backspace');
+
+    await expect.poll(() => savedBlocks(page)).toEqual(['callout:undefined:root', 'paragraph:q:c']);
+  });
 });

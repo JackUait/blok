@@ -24,7 +24,6 @@ import { YjsManager } from '../../../../src/components/modules/yjs';
 import { handleBackspace as handleListBackspace, handleEnter as handleListEnter } from '../../../../src/tools/list/list-keyboard';
 import { handleToggleBackspace } from '../../../../src/tools/toggle/toggle-keyboard';
 import { handleHeaderToggleBackspace } from '../../../../src/tools/header/header-toggle-keyboard';
-import { handleCalloutFirstChildBackspace } from '../../../../src/tools/callout/callout-keyboard';
 import en from '../../../../src/components/i18n/locales/en.json';
 import type { API } from '../../../../types';
 import type { OutputData } from '../../../../types';
@@ -329,19 +328,6 @@ describe('a refused "turn into" inside a block tool\'s keyboard handler', () => 
       getContentElement: () => content,
       syncContentFromDOM: () => undefined,
     } as never, new KeyboardEvent('keydown', { key: 'Backspace' }))).resolves.toBeUndefined();
-
-    expectReported();
-  });
-
-  it('does not reject out of the callout first-child Backspace handler', async () => {
-    const api = buildApi();
-
-    await expect(handleCalloutFirstChildBackspace({
-      api,
-      calloutBlockId: 'callout',
-      firstChildBlockId: 'child',
-      event: new KeyboardEvent('keydown', { key: 'Backspace' }),
-    })).resolves.toBeUndefined();
 
     expectReported();
   });

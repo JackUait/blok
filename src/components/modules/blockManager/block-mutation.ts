@@ -12,8 +12,9 @@ import type { BlockToolAdapter } from '../../tools/block';
 import { isEmpty, isObject, isString, log } from '../../utils';
 import { announce } from '../../utils/announcer';
 import { convertStringToBlockData, isBlockConvertable } from '../../utils/blocks';
+import { isToolConvertable } from '../../utils/tools';
 import { isChildToolAllowed } from '../../utils/child-tools';
-import { canAdoptChild, releasesChildrenOnTurnInto } from '../../utils/turn-into-children';
+import { canAdoptChild, releasesChildrenOnTurnInto, textLivesInFirstChild } from '../../utils/turn-into-children';
 import { sanitizeBlocks, clean, composeSanitizerConfig, stripUnsafeUrlsDeep, PLAINTEXT } from '../../utils/sanitizer';
 import { htmlToPlainText, plainTextToHtml } from '../../utils/plain-text';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
@@ -1700,9 +1701,12 @@ export class BlockMutation {
       throw new ToolNotFoundError(targetToolName, `Could not convert Block. Tool «${targetToolName}» not found.`);
     }
 
+    // A callout's text is its first line: that child gives the text and goes.
+    const firstLine = textLivesInFirstChild(source) ? await this.readFirstLine(source) : null;
+
     const cleanData = prepareImportString(
-      exportedData,
-      source.tool,
+      firstLine?.exported ?? exportedData,
+      firstLine?.block.tool ?? source.tool,
       replacingTool,
       this.dependencies.config.sanitizer
     );
@@ -1793,9 +1797,13 @@ export class BlockMutation {
      * the document too — so it must also have moved the CONTENT past what was
      * read. Fail closed when it has, for the same reason as above.
      */
+    const drifted = (id: string, data: BlockToolData | undefined, snapshot: Record<string, unknown> | undefined): boolean =>
+      !isEmpty(this.documentDrift(id, snapshot))
+      && !this.readCarriesDocumentContent(data, this.readDocumentData(id));
+
     if (
-      !isEmpty(this.documentDrift(source.id, read.snapshot))
-      && !this.readCarriesDocumentContent(savedBlock.data, this.readDocumentData(source.id))
+      drifted(source.id, savedBlock.data, read.snapshot)
+      || (firstLine !== null && drifted(firstLine.block.id, firstLine.saved?.data, firstLine.snapshot))
     ) {
       throw new Error(`Could not convert Block «${source.id}»: it is being edited by someone else. Nothing was changed.`);
     }
@@ -1806,6 +1814,13 @@ export class BlockMutation {
     this.ctx.suppressStopCapturing = true;
 
     try {
+      const firstLineBlock = firstLine === null ? undefined : this.repository.getBlockById(firstLine.block.id);
+
+      // Before the release, so it does not move out with the other lines.
+      if (firstLineBlock !== undefined) {
+        void this.ctx.removeBlock(firstLineBlock, false, false, blocksStore);
+      }
+
       beforeReplace?.();
 
       return this.yjsSync.withAtomicOperation(
@@ -1822,6 +1837,28 @@ export class BlockMutation {
         this.dependencies.YjsManager.stopCapturing();
       });
     }
+  }
+
+  /**
+   * Read the first child of a block whose text lives there, or null when that
+   * child has no text to give (no export, or lines of its own).
+   * @param source - the block being turned into another tool
+   */
+  private async readFirstLine(source: Block): Promise<Awaited<ReturnType<BlockMutation['readConvertSource']>>> {
+    const childId = source.contentIds[0] as string | undefined;
+    const child = childId === undefined ? undefined : this.repository.getBlockById(childId);
+
+    if (child === undefined || child.contentIds.length > 0 || !isToolConvertable(child.tool, 'export')) {
+      return null;
+    }
+
+    const read = await this.readConvertSource(child, this.readDocumentData(child.id), 3);
+
+    if (read === null) {
+      throw new Error(`Could not convert Block «${source.id}»: it is being edited by someone else. Nothing was changed.`);
+    }
+
+    return read;
   }
 
   /**

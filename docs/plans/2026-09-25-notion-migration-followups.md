@@ -1,0 +1,72 @@
+- wave2: pass contentIds: block.content to SerializableBlock in api/blocks.ts exportMarkdown (~411) and blockSelection copy path; view database rows ordered by content not data.position (pre-existing)
+- insertMany drops a parent that points outside the batch (found by api agent; pre-existing? unverified)
+- blocks.move refuses header→right after a table (pinned it.fails in api branch)
+- is-empty-tool-chrome.integration.test.ts flakes 2/3 alone on clean main (mermaid code block reads not-empty at :98) — pre-existing; hypothesis async mermaid render after isReady
+
+## Release notes (for /release:release)
+- Fix (not BREAKING; changes v1.15.2 behaviour): `insertInsideParent` picks the tool by the parent alone. A header inserted right after a table-cell block that sits inside a toggle (a table inside a toggle) now stays a header instead of being demoted to a paragraph.
+- Fix: splitting a block that has children draws the new block after those children at once, matching the saved document (it used to jump there on reload).
+- 94856fd5 BREAKING migration note should point to the new API: use blocks.insertAt / blocks.moveTo (sibling placement); index-based insert/setBlockParent are legacy.
+- New additive: insertAt, moveTo, BlockPlacementError, BlockPosition/InsertAtOptions/MoveToTarget types; block-added/moved events carry parentId/previousSiblingId/oldParentId (omitted when not final).
+- Visible non-breaking: getCurrentBlockIndex() is -1 after a peer (or local undo) removes the current block; view/markdown order children by content.
+- People hand-mocking the Blocks API need insertAt/moveTo in their mocks.
+- Changed (not BREAKING), index moves now go through tree placements (wave-2 step 3):
+  - `blocks.move` and keyboard move up/down never take a block into or between table cells: the keyboard move stops at the cell edge, `blocks.move` changes nothing and logs a warning (as it always did for refused moves; `moveTo` throws for the same move).
+  - Moving a block out of a table cell by index: the table's own `block-changed` now comes with the first `block-moved` of that move instead of the second, so an `onChange` batch lists it earlier. Same events, same payloads.
+  - `blocks.move` of a child out of its parent lands at the index given; it used to land after its old parent's children.
+  - `blocks.move(i, i)` (no change) no longer records an empty undo step that swallowed the next undo.
+  - Moving a paragraph or header that has children by index or keyboard now carries its children; before, they stayed behind and save() rejected the document.
+## Verify before step 5b
+- insertMany drops a parent outside the batch — verify pre-existing.
+- step4: validateTreeOrder childrenOf is O(n^2) (blocks.filter per parent) — build a parent→children map once before wiring into dev gates
+- step0 finding: same-parent contentIds are NOT stale today (setBlockParent removes+reinserts at childSlotForFlatOrder on every call); wave 2 changes the derivation direction, no order bug exists
+- tree-order-invariant-paths.integration.test.ts flakes on clean b939ad6c (2 of 6 full-file runs red; "a same-parent reorder keeps the public contentIds in step with getChildren": keyboard move down of the first child / blocks.moveTo after a sibling / moveTo the start). Passes alone. Move paths, untouched by s2c.
+- s2c DECIDED (coordinator): a split's tail goes AFTER the split block's subtree, as its next sibling. Saved JSON is unchanged vs base; the screen now matches it (before, a root parent's tail was drawn between it and its children, and save() threw). Pinned in blocks-placement.integration (root paragraph, root toggle, nested paragraph, Tab-nested list item).
+- main (after step 2b, d1b37bff) fails blocks-placement.integration 'moveTo > reorders blocks inside one table cell' deterministically (cells stay p1@0,p2@0; expected p2@0,p1@0). Reproduced on a clean main checkout; not from s2c.
+- tree-order flake: root cause = getIsSyncingFromYjs gate in sortListedChildrenByFlatOrder also true in first-render insertMany RAF tail; product fix fdd7f0d5 (other session) on origin/main; 6/6 green; harness fix 826302c2 dropped. Same hazard noted in move-paths-tree-order*.test.ts, yjs-sync-undo-reparent-to-root.integration boot helpers (unverified).
+- keyboard move up/down in a table picks previous block with same parentId → at the top of a cell that is in the previous cell (untested; potential cross-cell move) — check in step 3/5c
+- block-mutation.ts applyMove comment 'table-cell reorder makes it a DOM no-op' is stale since c3db983c
+- DECISION: 5c-tables dropped — table cell inserts stay on the index path (placement under self-placing parents only via outside→cell(0,0) fallback); step 6 keeps Blocks.insert neighbour-guessing scoped to self-placing parents
+## Step 3 (notion2/s3) — follow-ups
+- Differential probe (400 seeds × 10 ops, real editor, base c3db983c vs s3): every divergence is one of: (a) table cross-cell keyboard/index move now refused; (b) cell block leaving the table by index: the table's nested block-changed now fires during the first block-moved instead of the second (same events/payloads); (c) base broke the tree (save threw) — slotless parent moved without its children, cell block moved into a container; (d) index move out of a slotless parent: base's heal re-placed the block after its old parent's subtree, s3 honours the index; (e) base Yjs doc diverged from the editor after moveTo of a slotless subtree; (f) undo after a no-op blocks.move(i, i): base recorded an empty undo step that swallowed the next undo, s3 records nothing (moveBlockTo's no-op rule). Probe: notion/probe-s3/{diff.template.ts,run.sh,cmp.py,cmp2.py}.
+- DragController still depends on flat-first moves (moveFlat): it reads movedBlock.parentId after moveBlocks to choose reorder vs reparent. Step 5b/6: pass placements from the drop, then delete Blocks.move/resortNestedBlocks/isNested (yjs-sync.ts:2184 is the other caller).
+- moved() events from core carry `[INDEX_MOVE_NEIGHBOURS]` (symbol key, not published) for the list's depth rules; remove in phase 2 (list nesting). (Replaced the live-array swap the s3 review rejected: a re-entrant listener lost blocks.)
+- Unused after s3: `BlockYjsSync.isRunningOperationBody` (yjs-sync.ts:265) — delete in step 6.
+- blocks.move of a cell block out of the table stays allowed (moveTo refuses it). Decide whether to align the two.
+- (b) verified by stack trace: TableCellBlocks.handleBlockMoved drops the cell reference when the holder is outside the grid; s3 moves the holder before the first BlockMoved, base only in the heal's setBlockParent (second BlockMoved). Seeds where both sides' save() already threw before the op (10, 72, 160, 187, 218, 267, 338, 350, 399) were broken identically earlier (probe drags skip real pointer geometry; some index inserts @N also broke both) — root cause of those index-insert breaks unverified.
+- drag-drop.spec 'should NOT reparent when dropping on closed toggle' flaked once (1 of 1 full-file run, load avg ~80–180); 6/6 isolated on s3 and on base. No base full-file run under the same load.
+## Queued bugs (pre-existing on base, found by step-3 review; probe probe-s3-review/ins.template.ts)
+- (i) doc [cl[k1[x], k2[y]]], blocks.insert('paragraph', …, 1) → lands at root between cl and k1; save() throws "not depth-first at index 1".
+- (ii) same doc, insert(…, 0) → lands as LAST child of k2 instead of before cl (valid tree, wrong position).
+- (iii) insert index = first grandchild under a hidden nested column_list → "parent null, outside its home slot" (cause unverified, near block-insertion.ts ~901).
+## Step 5a yjs-sync (notion2/s5y) — follow-ups
+- Pre-existing (base bc0018fc, probe seed 39): multi-select Tab (`blockSelectionKeys.handleIndent` → `indentSelectedBlocksStructurally`) nests a table cell block under the previous cell block; no `isCurrentBlockInsideTableCell`-style guard there.
+- Replay events changed (not BREAKING, same payload shapes): a replaying peer places a reparented block once, so the extra `moved{from≠to}` + `rendered` hooks and the `block-changed` those re-renders caused are gone; `block-changed {index}` carries the final index. Saved JSON unaffected.
+- A replaying peer's DOM now matches its flat order where base left holders out of order (probe seeds 24, 33, 45, 49, 114, 123, 132).
+## Step 4 (notion2/s4) — follow-ups
+- (a) DEFERRED to step 6: per-operation tree-order check (validateTreeOrder in BlockOperations.assertHierarchyInvariantInDev). Tried in s4 and reverted (coordinator): it throws mid-operation on two-step paths that end in a valid tree, and in dev builds the throw aborts them — paste of several blocks after a toggle child (paste/handlers/base.ts applyPastedBlockParent), column-drop addColumnToList (insert by index then setBlockParent), ColumnList.seedColumns, insertInsideParent into a table, and a replace insert whose rendered() runs before transferParentLinkToNewBlock (column_list preset inside a column lost its seeded columns). Wire it only after those paths pass placements; consider warn-only and outermost-operation only. A drag's move group (YjsManager.isInMoveGroup) must be skipped: flat move first, parent later. validateTreeOrder is linear (one dfsOrder map), so cost is fine.
+- (b) QUEUED BUG (pre-existing; base validateFlatOrder flags it too): block-removal.ts promoteChildrenToParent — deleting a container inside a column promotes its children to the root but keeps their flat position between the column_list and its next column. With 2 columns the list unwraps and hides it; with 3 the tree stays broken and save() throws in dev/test. Repro (pinned it.fails in test/unit/tools/columns-tree-order.integration.test.ts 'deleting a container in a column'): cl1[c1[tog[x1,x2]], c2[p2], c3[p3]], blocks.delete(index of tog) → flat cl1,x1,x2,c2,p2,c3,p3 (expected x1,x2 after the list's subtree).
+- (c) GAP: after a move group (drag) closes, nothing rechecks tree order until the next gated operation or save — the group's last call is setBlockParent, which never runs the gate. Check at group close (yjs/index.ts transactMoves) when (a) lands.
+- s4 saver: output array + content[] follow dfsOrder (contentIds first, unlisted appended in flat order); save gate = validateTreeOrder. validateFlatOrder is now test-only — delete in step 6. blockSelection copy already passed contentIds (039df6ed).
+- table/database content[] on a BROKEN tree follows contentIds (may disagree with grid); loader handling of that mismatch unverified
+## From notion2/ins review
+- noFocus creation flag leaks into the Yjs doc for preset columns (all 3 vs base 1); saved JSON clean; pinned it.fails in columns-tree-order. Follow-up: parent save should prune child creation-only keys (column-list/index.ts:202).
+- (base too) a `column` inserted by index elsewhere nests inside a column / lands at root at i=1.
+- (base too) preset column-list insert + stopCapturing + later insertInsideParent share one undo step.
+- Release note: insertInsideParent now reports child inserts + parent block-changed to onChange and stamps parent's last-edited fields when its save changes. Index inserts next to a column list now land in the first column (base threw at save).
+
+## Step 5b (notion2/s5b) — follow-ups
+- VERIFIED + FIXED: insertMany dropped a parent outside the batch (pre-existing on origin/main acca531d): `insertMany([{id:'x', parent:'tog'}], 3)` put x at the root in memory, save() and the doc (consistent, but the parent was lost silently). Now a live insert (yjsSync 'add') places it under that parent after the parent's last child before the index. Table/database parents keep the root fallback. Release note (behaviour change, not a shape change): "insertMany keeps a `parent` that is already in the editor; it used to be dropped and the block landed at the root."
+- Release note: typing over a block selection that starts inside a toggle puts the new block after the toggle in the editor too; the editor used to hold it as a root block between the toggle's children (a broken tree; a peer's save() threw) while the doc had it after the toggle. Where it was drawn before: unverified.
+- Drag reparent (test in local-writers-doc-placement, hand-sequenced move() + setBlockParent(), NOT DragController's real call sequence): flat move to between x and y of t[x,y] + setBlockParent(b, t) gives t[x,y,b]. Doc and memory agree. Hypothesis (unverified): a real drop between x and y lands the same way. Check when DragController passes placements (step 6).
+- DECIDED (coordinator): typing over a selection that starts inside a container keeps the base slot: root, after the container. No change.
+- QUEUED: a no-op drag (drop in place) still records an undo step, on base and on notion2/s5b. Not fixed.
+- Release note: useBlocks `insertTree({parentId})`, `insertMarkdown(md, {parentId})` and `insertOutputData([... parent ...])` land blocks under the named parent. On origin/main they landed at the root (measured); the coordinator traces this to c4382818 (unreleased, after v1.15.2). How v1.15.2 behaved on these paths: unverified. Fixed by the insertMany fix in notion2/s5b.
+- CI red NOT from migration: view-stylesheet-law (find styles from another session; view.css needs node scripts/generate-view-css.mjs), no-inline-svg (25d9d0e8 popover), table-corner-drag (already red at c3db983c), i18n/Docs (pre-existing). columns-create-undo-redo e2e red = migration regression → notion2/colfix.
+## Step 6 part 2 (notion2/s6b) — follow-ups
+- Step 4 (a) LANDED warn-only (BlockOperations.runOperation, outermost op, skipped in a move group). The paste-after-toggle-child warning is FIXED (ddb4016a: BlockInsertion.paste inserts with a placement). The only path still warning in the sweep is the queued removeBlock bug (b).
+- Step 4 (c) still OPEN: nothing checks tree order when a drag move group closes (transactMoves).
+- isUnder consolidation blocked on ownership: export tree-order.ts `isUnder`, then point api/block-placement.ts, hierarchy.ts and yjs-sync.ts (`isUnderBlock`) at it.
+- undo-history.ts:2606/2651 comments still name the deleted `moveBlock`.
+- Release note: pasted list items under a list item now get the nested marker immediately (rendered() sees the real parent); host onChange gets one extra block-changed for the first pasted item.
+- undo-history openGestureTask branch skips isPerformingUndoRedo check (reading-only; no reachable path found) — add guard if a path appears

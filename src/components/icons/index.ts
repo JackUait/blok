@@ -1,14 +1,14 @@
 // Check/Confirm icon
 export const IconCheck = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M4.5 10l3.5 3.5 7.5-7.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4.5 10.25l3.5 3.5 7.5-7.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
 // Sparkle/Auto-detect icon — 4-pointed star (modern AI/auto symbol)
 export const IconWand = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M10 3.5C10.5 7.75 12.25 9.5 16.5 10C12.25 10.5 10.5 12.25 10 16.5C9.5 12.25 7.75 10.5 3.5 10C7.75 9.5 9.5 7.75 10 3.5Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10 3.5C10.35 8.2 11.8 9.65 16.5 10C11.8 10.35 10.35 11.8 10 16.5C9.65 11.8 8.2 10.35 3.5 10C8.2 9.65 9.65 8.2 10 3.5Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
@@ -155,8 +155,8 @@ export const IconChevronRight = `
 // Search icon
 export const IconSearch = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <circle cx="8.75" cy="8.75" r="4.75" stroke="currentColor" stroke-width="1.25"/>
-  <path d="m12.25 12.25 4 4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="9" cy="9" r="5" stroke="currentColor" stroke-width="1.25"/>
+  <path d="m12.75 12.75 3.25 3.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 

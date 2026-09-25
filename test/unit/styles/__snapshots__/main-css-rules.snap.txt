@@ -183,7 +183,7 @@
   height: 16px;
   content: '';
   background-color: var(--blok-text-secondary);
-  --_blok-search-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.25' stroke-linecap='round'%3E%3Ccircle cx='8.75' cy='8.75' r='4.75'/%3E%3Cpath d='m12.25 12.25 4 4'/%3E%3C/svg%3E");
+  --_blok-search-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.25' stroke-linecap='round'%3E%3Ccircle cx='9' cy='9' r='5'/%3E%3Cpath d='m12.75 12.75 3.25 3.25'/%3E%3C/svg%3E");
   -webkit-mask: var(--_blok-search-glyph) center / contain no-repeat;
   mask: var(--_blok-search-glyph) center / contain no-repeat;
   border-color: var(--blok-popover-border);
@@ -1958,7 +1958,7 @@
   border-color: var(--blok-active-icon);
   box-shadow: none;
   animation: blok-checkbox-pop 280ms linear;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 10 10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2.25 5l1.75 1.75 3.75-3.75' stroke='white' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 10 10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2.25 5.125l1.75 1.75 3.75-3.75' stroke='white' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
   background-size: 10px 10px;
   background-position: center;
   background-repeat: no-repeat;

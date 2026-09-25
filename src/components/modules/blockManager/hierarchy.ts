@@ -13,6 +13,7 @@ import { childrenInTreeOrder, flatIndexForPlacement, placementImpliedByFlat } fr
 import type { TreePlacement } from '../../utils/tree-order';
 import type { Blocks } from '../../blocks';
 
+import { hideUnderCollapsedParent } from './new-block-placement';
 import type { BlockRepository } from './repository';
 
 /**
@@ -526,31 +527,7 @@ export class BlockHierarchy {
     const newParentId = block.parentId;
     const newParent = newParentId !== null ? this.repository.getBlockById(newParentId) : undefined;
 
-    // If the new parent's existing children are hidden (toggle is collapsed),
-    // hide this newly added child too so Tab navigation skips it.
-    //
-    // Fix 5: a previously-empty collapsed container has no existing hidden
-    // children to infer state from. Fall back to reading the toggle/header
-    // tool's persistent open-state attribute (`data-blok-toggle-open="false"`)
-    // on the parent's OWN marker, never a nested toggle's.
-    if (newParent !== undefined) {
-      const existingChildren = newParent.contentIds
-        .filter(id => id !== block.id)
-        .map(id => this.repository.getBlockById(id))
-        .filter((b): b is NonNullable<typeof b> => b !== undefined);
-
-      const parentIsCollapsedFromChildren = existingChildren.length > 0 &&
-        existingChildren.every(b => b.holder.classList.contains('hidden'));
-
-      const parentIsCollapsedFromAttr =
-        findOwn(newParent.holder, '[data-blok-toggle-open="false"]') !== null;
-
-      const parentIsCollapsed = parentIsCollapsedFromChildren || parentIsCollapsedFromAttr;
-
-      if (parentIsCollapsed) {
-        block.holder.classList.add('hidden');
-      }
-    }
+    hideUnderCollapsedParent(block, id => this.repository.getBlockById(id));
 
     // A block leaving a collapsed toggle keeps its `hidden` flag unless the
     // new parent hides it too.

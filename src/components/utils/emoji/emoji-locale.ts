@@ -20,6 +20,12 @@ export type EmojiLocaleData = Record<string, EmojiLocaleEntry>;
 const cache = new Map<string, EmojiLocaleData>();
 
 /**
+ * In-flight loads by locale, so concurrent callers share one import.
+ * Dropped once settled: a failed load caches nothing, so a later call retries.
+ */
+const pending = new Map<string, Promise<EmojiLocaleData | null>>();
+
+/**
  * Dynamic importers for each locale JSON file.
  * 65 non-English locale files; English needs no data, CLDR lacks dv and yi,
  * and its `ku` annotations are Kurmanji rather than this product's Sorani.
@@ -113,6 +119,25 @@ export async function loadEmojiLocale(locale: string): Promise<EmojiLocaleData |
     return null;
   }
 
+  const inFlight = pending.get(locale);
+
+  if (inFlight !== undefined) {
+    return inFlight;
+  }
+
+  const load = importLocale(locale, importer).finally(() => {
+    pending.delete(locale);
+  });
+
+  pending.set(locale, load);
+
+  return load;
+}
+
+async function importLocale(
+  locale: string,
+  importer: () => Promise<{ default: EmojiLocaleData }>
+): Promise<EmojiLocaleData | null> {
   try {
     const module = await importer();
     const data = module.default;

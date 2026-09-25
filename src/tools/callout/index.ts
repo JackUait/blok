@@ -202,11 +202,9 @@ export class CalloutTool implements BlockTool {
     const dom = this._dom;
 
     /**
-     * Warm the emoji dataset ahead of the click. Fetching that chunk at click
-     * time is nearly the whole of a slow first open, so two signals start it
-     * early: landing on the trigger (a few hundred ms of runway) and simply
-     * editing this callout (seconds of it, and whoever is writing a callout is
-     * the person likely to reach for its icon).
+     * Warm the emoji dataset ahead of the click: fetching that chunk at click
+     * time is nearly the whole of a slow first open. It starts once the callout
+     * is editable, and landing on the trigger starts it at once.
      *
      * Skipped when a host supplies its own picker — that chunk is never used.
      */
@@ -216,18 +214,7 @@ export class CalloutTool implements BlockTool {
       this.addEditableListener(dom.emojiButton, 'pointerenter', prefetch);
       this.addEditableListener(dom.emojiButton, 'pointerdown', prefetch);
       this.addEditableListener(dom.emojiButton, 'focus', prefetch);
-
-      // Editing is a weaker signal than aiming at the button, so it yields to
-      // real work rather than competing with typing.
-      this.addEditableListener(dom.wrapper, 'focusin', () => {
-        const idle = window.requestIdleCallback;
-
-        if (typeof idle === 'function') {
-          idle(() => prefetch());
-        } else {
-          setTimeout(prefetch, 0);
-        }
-      }, { once: true });
+      this.scheduleIdlePrefetch(prefetch);
     }
 
     this.addEditableListener(dom.emojiButton, 'click', () => this.openEmojiPicker());
@@ -246,6 +233,23 @@ export class CalloutTool implements BlockTool {
         this.handleChildBackspace(e as KeyboardEvent);
       }
     });
+  }
+
+  /** Runs `prefetch` when the page is idle; cancelled with the editable listeners. */
+  private scheduleIdlePrefetch(prefetch: () => void): void {
+    if (typeof window.requestIdleCallback === 'function') {
+      // Idle may never come on a busy main thread; the timeout caps the wait.
+      const handle = window.requestIdleCallback(prefetch, { timeout: 2000 });
+
+      this._editableTeardown.push(() => window.cancelIdleCallback(handle));
+
+      return;
+    }
+
+    // Safari has no requestIdleCallback.
+    const handle = setTimeout(prefetch, 0);
+
+    this._editableTeardown.push(() => clearTimeout(handle));
   }
 
   /** Registers a listener and remembers how to take it back off. */

@@ -1,6 +1,6 @@
 // test/unit/components/utils/emoji/emoji-data.test.ts
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const MOCK_EMOJI_MART_DATA = {
   default: {
@@ -18,12 +18,34 @@ const MOCK_EMOJI_MART_DATA = {
   },
 };
 
-vi.mock('@emoji-mart/data', () => MOCK_EMOJI_MART_DATA);
+const load = vi.hoisted(() => ({ categoryReads: 0, failNext: false }));
+
+vi.mock('@emoji-mart/data', () => ({
+  default: {
+    ...MOCK_EMOJI_MART_DATA.default,
+    get categories() {
+      load.categoryReads++;
+
+      if (load.failNext) {
+        load.failNext = false;
+        throw new Error('chunk failed');
+      }
+
+      return MOCK_EMOJI_MART_DATA.default.categories;
+    },
+  },
+}));
 
 describe('emoji-data', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
+    load.categoryReads = 0;
+    load.failNext = false;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('loadEmojiData returns processed emojis with native char, id, name, keywords, category', async () => {
@@ -46,6 +68,23 @@ describe('emoji-data', () => {
     const second = await loadEmojiData();
 
     expect(first).toBe(second);
+  });
+
+  it('concurrent loads share one pending load and process the dataset once', async () => {
+    const { loadEmojiData } = await import('../../../../../src/components/utils/emoji/emoji-data');
+    const [first, second] = await Promise.all([loadEmojiData(), loadEmojiData()]);
+
+    expect(first).toBe(second);
+    expect(load.categoryReads).toBe(1);
+  });
+
+  it('retries after a failed load instead of replaying the failure', async () => {
+    const { loadEmojiData } = await import('../../../../../src/components/utils/emoji/emoji-data');
+
+    load.failNext = true;
+
+    await expect(loadEmojiData()).rejects.toThrow('chunk failed');
+    await expect(loadEmojiData()).resolves.toHaveLength(4);
   });
 
   it('searchEmojis filters by name', async () => {

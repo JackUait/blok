@@ -57,7 +57,10 @@ describe('CalloutTool emoji data prefetch', () => {
     mockLoadEmojiData.mockResolvedValue([]);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // Every render schedules a warm-up; let it land here, not in the next test.
+    await flushIdle();
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
@@ -70,40 +73,68 @@ describe('CalloutTool emoji data prefetch', () => {
     expect(button).not.toBeNull();
     expect(mockLoadEmojiData).not.toHaveBeenCalled();
 
-    button!.dispatchEvent(new Event('pointerenter'));
+    button?.dispatchEvent(new Event('pointerenter'));
 
     expect(mockLoadEmojiData).toHaveBeenCalled();
   });
 
-  it('warms the emoji dataset once the user starts editing the callout', async () => {
+  describe.each([
+    { env: 'with requestIdleCallback', stubIdle: false },
+    { env: 'without requestIdleCallback (Safari)', stubIdle: true },
+  ])('$env', ({ stubIdle }) => {
+    beforeEach(() => {
+      if (stubIdle) {
+        vi.stubGlobal('requestIdleCallback', undefined);
+      }
+    });
+
+    it('warms the emoji dataset once an editable callout renders, with no interaction', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions());
+
+      tool.render();
+
+      expect(mockLoadEmojiData).not.toHaveBeenCalled();
+
+      await flushIdle();
+
+      expect(mockLoadEmojiData).toHaveBeenCalledTimes(1);
+    });
+
+    it('drops the scheduled warm-up when the callout turns read-only first', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions());
+
+      tool.render();
+      tool.setReadOnly(true);
+      await flushIdle();
+
+      expect(mockLoadEmojiData).not.toHaveBeenCalled();
+    });
+  });
+
+  it('bounds the idle wait with a timeout so a busy main thread still warms', async () => {
+    const requestIdle = vi.fn();
+
+    vi.stubGlobal('requestIdleCallback', requestIdle);
+
     const { CalloutTool } = await import('../../../../src/tools/callout');
     const tool = new CalloutTool(createOptions());
-    const wrapper = tool.render();
 
-    document.body.appendChild(wrapper);
+    tool.render();
 
-    expect(mockLoadEmojiData).not.toHaveBeenCalled();
-
-    wrapper.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
-    await flushIdle();
-
-    expect(mockLoadEmojiData).toHaveBeenCalled();
-
-    wrapper.remove();
+    expect(requestIdle).toHaveBeenCalledTimes(1);
+    expect(requestIdle.mock.calls[0]?.[1]).toEqual({ timeout: 2000 });
   });
 
   it('never warms in read-only mode — the picker cannot be opened there', async () => {
     const { CalloutTool } = await import('../../../../src/tools/callout');
     const tool = new CalloutTool(createOptions({ readOnly: true }));
-    const wrapper = tool.render();
 
-    document.body.appendChild(wrapper);
-    wrapper.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    tool.render();
     await flushIdle();
 
     expect(mockLoadEmojiData).not.toHaveBeenCalled();
-
-    wrapper.remove();
   });
 
   it('never warms when the host supplies its own emoji picker', async () => {
@@ -111,16 +142,9 @@ describe('CalloutTool emoji data prefetch', () => {
     const tool = new CalloutTool(createOptions({ config: { emojiPicker: vi.fn() } }));
     const wrapper = tool.render();
 
-    document.body.appendChild(wrapper);
-    wrapper.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
     await flushIdle();
-
-    const button = wrapper.querySelector('button');
-
-    button?.dispatchEvent(new Event('pointerenter'));
+    wrapper.querySelector('button')?.dispatchEvent(new Event('pointerenter'));
 
     expect(mockLoadEmojiData).not.toHaveBeenCalled();
-
-    wrapper.remove();
   });
 });

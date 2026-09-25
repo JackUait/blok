@@ -7,10 +7,28 @@ const MOCK_FR_DATA = {
   '💡': { n: 'ampoule', k: ['idée', 'lumière'] },
 };
 
+const frLoad = vi.hoisted(() => ({ reads: 0, failNext: false }));
+
+/** A fr.json stand-in that counts every time a load reads its data. */
+const countingFrModule = (): { readonly default: typeof MOCK_FR_DATA } => ({
+  get default() {
+    frLoad.reads++;
+
+    if (frLoad.failNext) {
+      frLoad.failNext = false;
+      throw new Error('chunk failed');
+    }
+
+    return MOCK_FR_DATA;
+  },
+});
+
 describe('emoji-locale', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
+    frLoad.reads = 0;
+    frLoad.failNext = false;
   });
 
   afterEach(() => {
@@ -67,6 +85,27 @@ describe('emoji-locale', () => {
     const second = await loadEmojiLocale('fr');
 
     expect(first).toBe(second);
+  });
+
+  it('concurrent loads of one locale share one pending load', async () => {
+    vi.doMock('../../../../../src/components/utils/emoji/locales/fr.json', countingFrModule);
+
+    const { loadEmojiLocale } = await import('../../../../../src/components/utils/emoji/emoji-locale');
+    const [first, second] = await Promise.all([loadEmojiLocale('fr'), loadEmojiLocale('fr')]);
+
+    expect(first).toBe(second);
+    expect(frLoad.reads).toBe(1);
+  });
+
+  it('retries after a failed load instead of replaying the failure', async () => {
+    vi.doMock('../../../../../src/components/utils/emoji/locales/fr.json', countingFrModule);
+
+    const { loadEmojiLocale } = await import('../../../../../src/components/utils/emoji/emoji-locale');
+
+    frLoad.failNext = true;
+
+    await expect(loadEmojiLocale('fr')).resolves.toBeNull();
+    await expect(loadEmojiLocale('fr')).resolves.toEqual(MOCK_FR_DATA);
   });
 
   it('getTranslatedName returns translated name when available', async () => {

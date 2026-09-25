@@ -27,7 +27,9 @@ export const CURATED_CALLOUT_EMOJIS: string[] = [
   '🚫', '⏰', '♻️', '🔒', '📖', '👣', '➡️', '📢', '🛠️', '⚙️',
 ];
 
-const cache: { data: ProcessedEmoji[] | null } = { data: null };
+// `pending` lets concurrent callers (many callouts rendering, prefetch racing
+// open) share one import and one processing pass.
+const cache: { data: ProcessedEmoji[] | null; pending: Promise<ProcessedEmoji[]> | null } = { data: null, pending: null };
 
 function processCategory(category: { id: string; emojis: string[] }, emojis: EmojiMartData['emojis']): ProcessedEmoji[] {
   const result: ProcessedEmoji[] = [];
@@ -63,6 +65,15 @@ export async function loadEmojiData(): Promise<ProcessedEmoji[]> {
     return cache.data;
   }
 
+  // Cleared on failure so a later call retries.
+  cache.pending ??= importEmojiData().finally(() => {
+    cache.pending = null;
+  });
+
+  return cache.pending;
+}
+
+async function importEmojiData(): Promise<ProcessedEmoji[]> {
   const raw = await import('@emoji-mart/data') as unknown as { default: EmojiMartData } | EmojiMartData;
   const data: EmojiMartData = 'default' in raw && raw.default !== undefined
     ? raw.default

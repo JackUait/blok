@@ -746,7 +746,7 @@ describe('CalloutTool', () => {
           getElement() { return document.createElement('div'); }
           open(...args: unknown[]) { emojiPickerOpenSpy(...args); }
         }
-        return { EmojiPicker: MockEmojiPicker };
+        return { EmojiPicker: MockEmojiPicker, prefetchEmojiPickerData: vi.fn() };
       });
       const { CalloutTool } = await import('../../../../src/tools/callout');
       const tool = new CalloutTool(createOptions());

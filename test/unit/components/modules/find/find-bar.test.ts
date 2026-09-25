@@ -95,6 +95,11 @@ describe('FindBar', () => {
       expect(findInput().placeholder).toBe('find.placeholder');
     });
 
+    it('starts the find field with the input, not a search icon', () => {
+      expect(byTestId(bar.element, 'find-field').firstElementChild).toBe(findInput());
+      expect(byTestId(bar.element, 'find-field').querySelector('svg')).toBeNull();
+    });
+
     it('labels every icon button', () => {
       for (const key of ['find.previous', 'find.next', 'find.close', 'find.matchCase', 'find.wholeWord', 'find.toggleReplace']) {
         expect(button(bar.element, key).type).toBe('button');

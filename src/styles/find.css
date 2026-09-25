@@ -187,18 +187,6 @@
   animation: blok-find-shake 360ms var(--blok-ease-bounce);
 }
 
-[data-blok-find-icon] {
-  display: flex;
-  flex: none;
-  margin-inline-end: var(--blok-space-1-25);
-  color: var(--blok-text-secondary);
-}
-
-[data-blok-find-icon] svg {
-  width: 16px;
-  height: 16px;
-}
-
 [data-blok-find-field] input {
   flex: 1 1 auto;
   min-width: 0;

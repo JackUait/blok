@@ -1,6 +1,6 @@
 import { DATA_ATTR } from '../../constants/data-attributes';
 import type { FindConfig, FindPlacement } from '../../../../types';
-import { IconChevronDown, IconChevronRight, IconCross, IconSearch } from '../../icons';
+import { IconChevronDown, IconChevronRight, IconCross } from '../../icons';
 import { hide as hideTooltip, onHover } from '../../utils/tooltip';
 import { promoteToTopLayer, removeFromTopLayer } from '../../utils/top-layer';
 import { createTooltipContent } from '../toolbar/tooltip';
@@ -43,7 +43,6 @@ const ATTR = {
   bar: 'data-blok-find-bar',
   row: 'data-blok-find-row',
   field: 'data-blok-find-field',
-  icon: 'data-blok-find-icon',
   counter: 'data-blok-find-counter',
   iconButton: 'data-blok-find-icon-button',
   toggle: 'data-blok-find-toggle',
@@ -184,10 +183,6 @@ export class FindBar {
 
     this.field = build('div', { [ATTR.field]: '', 'data-blok-testid': 'find-field' });
 
-    const icon = build('span', { [ATTR.icon]: '', 'aria-hidden': 'true' });
-
-    icon.innerHTML = IconSearch;
-
     this.input = build('input', {
       type: 'search',
       'aria-label': this.t('find.placeholder'),
@@ -206,7 +201,7 @@ export class FindBar {
       'data-blok-testid': 'find-counter',
     });
 
-    this.field.append(icon, this.input, this.counter);
+    this.field.append(this.input, this.counter);
 
     this.matchCaseButton = this.makeToggle('find.matchCase', 'Aa', 'find-match-case');
     this.wholeWordButton = this.makeToggle('find.wholeWord', 'ab', 'find-whole-word');

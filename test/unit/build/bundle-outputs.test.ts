@@ -505,7 +505,7 @@ describe('dist weight (consumer parse cost)', () => {
   // Consumers that bundle this package (Vite/Rollup) parse EVERY reachable dist
   // module — dynamic imports included. Two things blew that cost up to the point
   // of OOMing consumer CI builds at Node's default heap:
-  //   1. JSON locale data (emoji CLDR annotations, UI messages, emoji-mart set)
+  //   1. JSON locale data (emoji CLDR annotations, UI messages, emoji dataset)
   //      compiled into giant JS object literals — thousands of AST nodes each
   //      instead of one string literal.
   //   2. Fully unminified chunk output (~28 MB of ES modules).
@@ -532,15 +532,24 @@ describe('dist weight (consumer parse cost)', () => {
     expect(objectLiteralLocales).toEqual([])
   })
 
-  it('emits the emoji-mart native data chunk as a JSON.parse string', () => {
+  it('emits the emoji grid and keyword data chunks as JSON.parse strings', () => {
     const chunkDir = join(dist, 'chunks')
-    const nativeChunks = readdirSync(chunkDir).filter(
+    const chunks = readdirSync(chunkDir)
+
+    for (const prefix of ['emoji-grid-', 'emoji-keywords-']) {
+      const dataChunks = chunks.filter((name) => name.startsWith(prefix) && name.endsWith('.mjs'))
+      expect(dataChunks, prefix).toHaveLength(1)
+      for (const name of dataChunks) {
+        expect(readFileSync(join(chunkDir, name), 'utf-8')).toContain('JSON.parse(')
+      }
+    }
+  })
+
+  it('does not ship the raw emoji-mart set, which the two emoji data chunks replace', () => {
+    const nativeChunks = readdirSync(join(dist, 'chunks')).filter(
       (name) => name.startsWith('native-') && name.endsWith('.mjs'),
     )
-    expect(nativeChunks.length).toBeGreaterThan(0)
-    for (const name of nativeChunks) {
-      expect(readFileSync(join(chunkDir, name), 'utf-8')).toContain('JSON.parse(')
-    }
+    expect(nativeChunks).toEqual([])
   })
 
   it('keeps the non-data ES code surface under the parse-cost budget', () => {

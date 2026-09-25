@@ -4,7 +4,7 @@ import { createBlock, createBlokModules, setCaret } from './emojiTrigger.fixture
 import type { ProcessedEmoji } from '../../../../../../src/components/utils/emoji/emoji-data';
 
 /**
- * A real @emoji-mart/data package load is slow and, under concurrent test
+ * A real emoji dataset load is slow and, under concurrent test
  * runs, flaky (see emojiTrigger.test.ts's identical rationale). "fire" and
  * "raised_hand" cover every query these tests type, and raised_hand's six
  * skins let handleInput actually open the (mocked) menu for the skin-tone
@@ -39,7 +39,8 @@ const MOCK_EMOJI_MART_DATA = {
   },
 };
 
-vi.mock('@emoji-mart/data', () => MOCK_EMOJI_MART_DATA);
+vi.mock('../../../../../../src/components/utils/emoji/emoji-grid.json', async () => (await import('../../../utils/emoji/emoji-data.fixture')).emojiGridModule(MOCK_EMOJI_MART_DATA.default));
+vi.mock('../../../../../../src/components/utils/emoji/emoji-keywords.json', async () => (await import('../../../utils/emoji/emoji-data.fixture')).emojiKeywordsModule(MOCK_EMOJI_MART_DATA.default));
 
 interface MockEmojiPickerOptions {
   onSelect: (native: string) => void;

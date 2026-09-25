@@ -5,7 +5,7 @@ import type { Block } from '../../../../../../src/components/block';
 import { createBlock, createBlokModules, setCaret } from './emojiTrigger.fixture';
 
 /**
- * The real @emoji-mart/data package is a ~415KB JSON file; loading it for
+ * The real emoji dataset is ~170KB of generated JSON; loading it for
  * real (as emoji-data.test.ts also avoids doing) makes these tests slow and,
  * under concurrent load, flaky. A small fixture is enough: "fire" covers the
  * ":fi" query and nothing here matches ":zzzzzz".
@@ -21,7 +21,8 @@ const MOCK_EMOJI_MART_DATA = {
   },
 };
 
-vi.mock('@emoji-mart/data', () => MOCK_EMOJI_MART_DATA);
+vi.mock('../../../../../../src/components/utils/emoji/emoji-grid.json', async () => (await import('../../../utils/emoji/emoji-data.fixture')).emojiGridModule(MOCK_EMOJI_MART_DATA.default));
+vi.mock('../../../../../../src/components/utils/emoji/emoji-keywords.json', async () => (await import('../../../utils/emoji/emoji-data.fixture')).emojiKeywordsModule(MOCK_EMOJI_MART_DATA.default));
 
 interface MockEmojiPickerOptions {
   onSelect: (native: string) => void;

@@ -22,7 +22,7 @@ import { createBlock, createBlokModules, setCaret } from './emojiTrigger.fixture
 
 /**
  * Small fixed dataset — same rationale as emojiTrigger.test.ts: the real
- * @emoji-mart/data package is ~415KB and loading it for real is slow/flaky
+ * emoji dataset is ~170KB of JSON and loading it for real is slow/flaky
  * under concurrent runs. "fire" and "grinning" cover every query below.
  */
 const MOCK_EMOJI_MART_DATA = {
@@ -36,7 +36,8 @@ const MOCK_EMOJI_MART_DATA = {
   },
 };
 
-vi.mock('@emoji-mart/data', () => MOCK_EMOJI_MART_DATA);
+vi.mock('../../../../../../src/components/utils/emoji/emoji-grid.json', async () => (await import('../../../utils/emoji/emoji-data.fixture')).emojiGridModule(MOCK_EMOJI_MART_DATA.default));
+vi.mock('../../../../../../src/components/utils/emoji/emoji-keywords.json', async () => (await import('../../../utils/emoji/emoji-data.fixture')).emojiKeywordsModule(MOCK_EMOJI_MART_DATA.default));
 
 interface MockEmojiPickerOptions {
   onSelect: (native: string) => void;

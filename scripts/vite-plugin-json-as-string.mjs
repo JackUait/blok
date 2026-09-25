@@ -1,5 +1,5 @@
 /**
- * Emit imported JSON (emoji CLDR locales, UI messages, emoji-mart data — ~30 MB
+ * Emit imported JSON (emoji CLDR locales, UI messages, emoji grid data — ~30 MB
  * of dist before this) as `JSON.parse("…")` instead of JS object literals.
  *
  * Consumers that bundle this package parse every dist module — dynamic imports

@@ -7,17 +7,18 @@ vi.mock('../../../../../src/components/utils/tooltip', () => ({
   hide: vi.fn(),
 }));
 
-vi.mock('@emoji-mart/data', () => ({
-  default: {
-    categories: [{ id: 'people', emojis: ['wave', 'smile'] }, { id: 'symbols', emojis: ['heart'] }],
-    emojis: {
-      heart: { id: 'heart', name: 'Red Heart', keywords: ['love'], skins: [{ native: '❤️', unified: '2764-fe0f' }], version: 1 },
-      wave: { id: 'wave', name: 'Waving Hand', keywords: ['hello'], skins: [{ native: '👋', unified: '1f44b' }, { native: '👋🏻', unified: '1f44b-1f3fb' }], version: 1 },
-      smile: { id: 'smile', name: 'Smiling Face', keywords: ['happy'], skins: [{ native: '😄', unified: '1f604' }], version: 1 },
-    },
-    aliases: {},
+const EMOJI_MART_FIXTURE = {
+  categories: [{ id: 'people', emojis: ['wave', 'smile'] }, { id: 'symbols', emojis: ['heart'] }],
+  emojis: {
+    heart: { id: 'heart', name: 'Red Heart', keywords: ['love'], skins: [{ native: '❤️', unified: '2764-fe0f' }], version: 1 },
+    wave: { id: 'wave', name: 'Waving Hand', keywords: ['hello'], skins: [{ native: '👋', unified: '1f44b' }, { native: '👋🏻', unified: '1f44b-1f3fb' }], version: 1 },
+    smile: { id: 'smile', name: 'Smiling Face', keywords: ['happy'], skins: [{ native: '😄', unified: '1f604' }], version: 1 },
   },
-}));
+  aliases: {},
+};
+
+vi.mock('../../../../../src/components/utils/emoji/emoji-grid.json', async () => (await import('../../../components/utils/emoji/emoji-data.fixture')).emojiGridModule(EMOJI_MART_FIXTURE));
+vi.mock('../../../../../src/components/utils/emoji/emoji-keywords.json', async () => (await import('../../../components/utils/emoji/emoji-data.fixture')).emojiKeywordsModule(EMOJI_MART_FIXTURE));
 
 describe('EmojiPicker motion', () => {
   let picker: EmojiPicker;

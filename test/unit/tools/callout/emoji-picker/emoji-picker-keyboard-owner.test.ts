@@ -8,15 +8,16 @@ import { EmojiPicker } from '../../../../../src/tools/callout/emoji-picker';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import { createBlock, createBlokModules, setCaret } from '../../../components/modules/blockEvents/composers/emojiTrigger.fixture';
 
-vi.mock('@emoji-mart/data', () => ({
-  default: {
-    categories: [{ id: 'people', emojis: ['fire'] }],
-    emojis: {
-      fire: { id: 'fire', name: 'Fire', keywords: ['hot'], skins: [{ native: '\u{1f525}', unified: '1f525' }], version: 1 },
-    },
-    aliases: {},
+const EMOJI_MART_FIXTURE = {
+  categories: [{ id: 'people', emojis: ['fire'] }],
+  emojis: {
+    fire: { id: 'fire', name: 'Fire', keywords: ['hot'], skins: [{ native: '\u{1f525}', unified: '1f525' }], version: 1 },
   },
-}));
+  aliases: {},
+};
+
+vi.mock('../../../../../src/components/utils/emoji/emoji-grid.json', async () => (await import('../../../components/utils/emoji/emoji-data.fixture')).emojiGridModule(EMOJI_MART_FIXTURE));
+vi.mock('../../../../../src/components/utils/emoji/emoji-keywords.json', async () => (await import('../../../components/utils/emoji/emoji-data.fixture')).emojiKeywordsModule(EMOJI_MART_FIXTURE));
 
 describe('EmojiPicker keyboard ownership', () => {
   let wrapper: HTMLElement;

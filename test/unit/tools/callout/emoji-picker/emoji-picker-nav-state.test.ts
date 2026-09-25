@@ -13,16 +13,17 @@ vi.mock('../../../../../src/components/utils/tooltip', () => ({
   hide: vi.fn(),
 }));
 
-vi.mock('@emoji-mart/data', () => ({
-  default: {
-    categories: [{ id: 'people', emojis: ['grinning', 'wave'] }],
-    emojis: {
-      grinning: { id: 'grinning', name: 'Grinning Face', keywords: ['happy'], skins: [{ native: '😀', unified: '1f600' }], version: 1 },
-      wave: { id: 'wave', name: 'Waving Hand', keywords: ['hello'], skins: [{ native: '👋', unified: '1f44b' }, { native: '👋🏻', unified: '1f44b-1f3fb' }], version: 1 },
-    },
-    aliases: {},
+const EMOJI_MART_FIXTURE = {
+  categories: [{ id: 'people', emojis: ['grinning', 'wave'] }],
+  emojis: {
+    grinning: { id: 'grinning', name: 'Grinning Face', keywords: ['happy'], skins: [{ native: '😀', unified: '1f600' }], version: 1 },
+    wave: { id: 'wave', name: 'Waving Hand', keywords: ['hello'], skins: [{ native: '👋', unified: '1f44b' }, { native: '👋🏻', unified: '1f44b-1f3fb' }], version: 1 },
   },
-}));
+  aliases: {},
+};
+
+vi.mock('../../../../../src/components/utils/emoji/emoji-grid.json', async () => (await import('../../../components/utils/emoji/emoji-data.fixture')).emojiGridModule(EMOJI_MART_FIXTURE));
+vi.mock('../../../../../src/components/utils/emoji/emoji-keywords.json', async () => (await import('../../../components/utils/emoji/emoji-data.fixture')).emojiKeywordsModule(EMOJI_MART_FIXTURE));
 
 describe('EmojiPicker nav-less state', () => {
   let picker: EmojiPicker;

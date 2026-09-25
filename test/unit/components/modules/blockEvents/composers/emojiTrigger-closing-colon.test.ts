@@ -5,7 +5,7 @@
 // A closing colon after a non-exact query just closes the menu and leaves
 // the literal text alone.
 //
-// Runs against the REAL @emoji-mart/data dataset (not mocked): an
+// Runs against the REAL emoji dataset (not mocked): an
 // exact-shortcode assertion is only meaningful against the real ids, and a
 // hand-built fixture would let the test assert whatever was assumed about
 // them instead of what the dataset actually contains.

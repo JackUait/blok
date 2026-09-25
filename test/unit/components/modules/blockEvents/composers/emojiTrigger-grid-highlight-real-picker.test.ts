@@ -9,10 +9,10 @@
 // order starts 🇫🇮 ✊ 🧑‍🚒 🐟, rendered order starts 🇫🇮 🏁 🇫🇯 ✊ — index 1
 // already differs).
 //
-// Uses the REAL EmojiPicker and the REAL @emoji-mart/data package — not
+// Uses the REAL EmojiPicker and the REAL emoji dataset — not
 // mocked — because the bug is specifically about what the rendered DOM
 // shows for real, category-grouped data; a small hand-built fixture (tried
-// first) never diverged the same way, and mocking @emoji-mart/data behind
+// first) never diverged the same way, and mocking the dataset behind
 // the real EmojiPicker's full dependency graph did not reliably intercept
 // in this file regardless. The assertion itself never hardcodes which
 // emoji lands where — only that the reported native matches the one the

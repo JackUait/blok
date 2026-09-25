@@ -18,30 +18,59 @@ const MOCK_EMOJI_MART_DATA = {
   },
 };
 
-const load = vi.hoisted(() => ({ categoryReads: 0, failNext: false }));
+const load = vi.hoisted(() => ({
+  gridReads: 0,
+  keywordReads: 0,
+  failGrid: false,
+  failKeywords: false,
+  keywordsOverride: null as string[][] | null,
+}));
 
-vi.mock('@emoji-mart/data', () => ({
-  default: {
-    ...MOCK_EMOJI_MART_DATA.default,
-    get categories() {
-      load.categoryReads++;
+vi.mock('../../../../../src/components/utils/emoji/emoji-grid.json', async () => {
+  const { emojiGridModule } = await import('./emoji-data.fixture');
+  const grid = emojiGridModule(MOCK_EMOJI_MART_DATA.default).default;
 
-      if (load.failNext) {
-        load.failNext = false;
-        throw new Error('chunk failed');
+  return {
+    get default() {
+      load.gridReads++;
+
+      if (load.failGrid) {
+        load.failGrid = false;
+        throw new Error('grid chunk failed');
       }
 
-      return MOCK_EMOJI_MART_DATA.default.categories;
+      return grid;
     },
-  },
-}));
+  };
+});
+
+vi.mock('../../../../../src/components/utils/emoji/emoji-keywords.json', async () => {
+  const { emojiKeywordsModule } = await import('./emoji-data.fixture');
+  const keywords = emojiKeywordsModule(MOCK_EMOJI_MART_DATA.default).default;
+
+  return {
+    get default() {
+      load.keywordReads++;
+
+      if (load.failKeywords) {
+        load.failKeywords = false;
+        throw new Error('keywords chunk failed');
+      }
+
+      return load.keywordsOverride ?? keywords;
+    },
+  };
+});
 
 describe('emoji-data', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
-    load.categoryReads = 0;
-    load.failNext = false;
+    load.gridReads = 0;
+    load.keywordReads = 0;
+    load.failGrid = false;
+    load.failKeywords = false;
+    load.keywordsOverride = null;
   });
 
   afterEach(() => {
@@ -55,11 +84,51 @@ describe('emoji-data', () => {
     expect(emojis).toHaveLength(4);
     expect(emojis[0]).toMatchObject({
       native: '😀',
+      skins: ['😀'],
       id: 'grinning',
       name: 'Grinning Face',
       keywords: ['face', 'happy'],
       category: 'people',
     });
+  });
+
+  it('loadEmojiGrid resolves every emoji in category order with empty keywords, without loading keywords', async () => {
+    const { loadEmojiGrid } = await import('../../../../../src/components/utils/emoji/emoji-data');
+    const emojis = await loadEmojiGrid();
+
+    expect(emojis.map(emoji => [emoji.id, emoji.category])).toEqual([
+      ['grinning', 'people'],
+      ['smile', 'people'],
+      ['bulb', 'objects'],
+      ['key', 'objects'],
+    ]);
+    expect(emojis.every(emoji => emoji.keywords.length === 0)).toBe(true);
+    expect(load.keywordReads).toBe(0);
+  });
+
+  it('loadEmojiData fills keywords in place on the array loadEmojiGrid resolved', async () => {
+    const { loadEmojiGrid, loadEmojiData } = await import('../../../../../src/components/utils/emoji/emoji-data');
+    const grid = await loadEmojiGrid();
+    const firstEmoji = grid[0];
+    const full = await loadEmojiData();
+
+    expect(full).toBe(grid);
+    expect(full[0]).toBe(firstEmoji);
+    expect(full.map(emoji => emoji.keywords)).toEqual([
+      ['face', 'happy'],
+      ['face', 'smile'],
+      ['light', 'idea'],
+      ['lock', 'password'],
+    ]);
+  });
+
+  it('loadEmojiGrid after loadEmojiData resolves the same filled array', async () => {
+    const { loadEmojiGrid, loadEmojiData } = await import('../../../../../src/components/utils/emoji/emoji-data');
+    const full = await loadEmojiData();
+    const grid = await loadEmojiGrid();
+
+    expect(grid).toBe(full);
+    expect(grid[2].keywords).toEqual(['light', 'idea']);
   });
 
   it('loadEmojiData caches result on second call', async () => {
@@ -68,23 +137,52 @@ describe('emoji-data', () => {
     const second = await loadEmojiData();
 
     expect(first).toBe(second);
+    expect(load.gridReads).toBe(1);
+    expect(load.keywordReads).toBe(1);
   });
 
-  it('concurrent loads share one pending load and process the dataset once', async () => {
-    const { loadEmojiData } = await import('../../../../../src/components/utils/emoji/emoji-data');
-    const [first, second] = await Promise.all([loadEmojiData(), loadEmojiData()]);
+  it('concurrent grid and data loads share one pending load and process each file once', async () => {
+    const { loadEmojiGrid, loadEmojiData } = await import('../../../../../src/components/utils/emoji/emoji-data');
+    const [a, b, c, d] = await Promise.all([loadEmojiGrid(), loadEmojiData(), loadEmojiGrid(), loadEmojiData()]);
 
-    expect(first).toBe(second);
-    expect(load.categoryReads).toBe(1);
+    expect(new Set([a, b, c, d]).size).toBe(1);
+    expect(load.gridReads).toBe(1);
+    expect(load.keywordReads).toBe(1);
   });
 
-  it('retries after a failed load instead of replaying the failure', async () => {
+  it('retries the grid after a failed load instead of replaying the failure', async () => {
+    const { loadEmojiGrid } = await import('../../../../../src/components/utils/emoji/emoji-data');
+
+    load.failGrid = true;
+
+    await expect(loadEmojiGrid()).rejects.toThrow('grid chunk failed');
+    await expect(loadEmojiGrid()).resolves.toHaveLength(4);
+  });
+
+  it('retries keywords after a failed load while the grid stays loaded', async () => {
+    const { loadEmojiGrid, loadEmojiData } = await import('../../../../../src/components/utils/emoji/emoji-data');
+
+    load.failKeywords = true;
+
+    await expect(loadEmojiData()).rejects.toThrow('keywords chunk failed');
+
+    const grid = await loadEmojiGrid();
+
+    expect(grid[0].keywords).toEqual([]);
+
+    const full = await loadEmojiData();
+
+    expect(full).toBe(grid);
+    expect(full[0].keywords).toEqual(['face', 'happy']);
+    expect(load.gridReads).toBe(1);
+  });
+
+  it('rejects keywords that do not line up with the grid instead of mislabelling emojis', async () => {
     const { loadEmojiData } = await import('../../../../../src/components/utils/emoji/emoji-data');
 
-    load.failNext = true;
+    load.keywordsOverride = [['face']];
 
-    await expect(loadEmojiData()).rejects.toThrow('chunk failed');
-    await expect(loadEmojiData()).resolves.toHaveLength(4);
+    await expect(loadEmojiData()).rejects.toThrow(/keywords/i);
   });
 
   it('searchEmojis filters by name', async () => {

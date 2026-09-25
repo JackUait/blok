@@ -37,7 +37,8 @@ const MOCK_EMOJI_MART_DATA = {
   },
 };
 
-vi.mock('@emoji-mart/data', () => MOCK_EMOJI_MART_DATA);
+vi.mock('../../../../../src/components/utils/emoji/emoji-grid.json', async () => (await import('../../../components/utils/emoji/emoji-data.fixture')).emojiGridModule(MOCK_EMOJI_MART_DATA.default));
+vi.mock('../../../../../src/components/utils/emoji/emoji-keywords.json', async () => (await import('../../../components/utils/emoji/emoji-data.fixture')).emojiKeywordsModule(MOCK_EMOJI_MART_DATA.default));
 
 describe('EmojiPicker — inline mode', () => {
   let container: HTMLElement;

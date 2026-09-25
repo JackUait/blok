@@ -7,29 +7,30 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmojiPicker } from '../../../../../src/tools/callout/emoji-picker';
+import type { EmojiMartFixture } from '../../../components/utils/emoji/emoji-data.fixture';
 
 vi.mock('../../../../../src/components/utils/tooltip', () => ({
   onHover: vi.fn(),
   hide: vi.fn(),
 }));
 
-vi.mock('@emoji-mart/data', () => {
-  const emojis: Record<string, unknown> = {};
+function buildEmojiMartFixture(): EmojiMartFixture {
+  const emojis: EmojiMartFixture['emojis'] = {};
   const category = (id: string, count: number, firstCodePoint: number, keywords: string[]): { id: string; emojis: string[] } => {
     const ids = Array.from({ length: count }, (_, index) => `${id}-${index}`);
 
     ids.forEach((emojiId, index) => {
       const native = String.fromCodePoint(firstCodePoint + index);
 
-      emojis[emojiId] = { id: emojiId, name: `${id} ${index}`, keywords, skins: [{ native, unified: '' }, { native: `${native}🏻`, unified: '' }], version: 1 };
+      emojis[emojiId] = { id: emojiId, name: `${id} ${index}`, keywords, skins: [{ native }, { native: `${native}🏻` }] };
     });
 
     return { id, emojis: ids };
   };
 
   emojis.wave = {
-    id: 'wave', name: 'Waving Hand', keywords: ['hello'], version: 1,
-    skins: [{ native: '👋', unified: '1f44b' }, { native: '👋🏻', unified: '1f44b-1f3fb' }],
+    id: 'wave', name: 'Waving Hand', keywords: ['hello'],
+    skins: [{ native: '👋' }, { native: '👋🏻' }],
   };
 
   const people = category('people', 11, 0x1F600, ['face']);
@@ -37,17 +38,17 @@ vi.mock('@emoji-mart/data', () => {
   people.emojis.unshift('wave');
 
   return {
-    default: {
-      categories: [
-        people,
-        category('nature', 3, 0x1F330, ['shared']),
-        category('symbols', 25, 0x1F400, ['shared']),
-      ],
-      emojis,
-      aliases: {},
-    },
+    categories: [
+      people,
+      category('nature', 3, 0x1F330, ['shared']),
+      category('symbols', 25, 0x1F400, ['shared']),
+    ],
+    emojis,
   };
-});
+}
+
+vi.mock('../../../../../src/components/utils/emoji/emoji-grid.json', async () => (await import('../../../components/utils/emoji/emoji-data.fixture')).emojiGridModule(buildEmojiMartFixture()));
+vi.mock('../../../../../src/components/utils/emoji/emoji-keywords.json', async () => (await import('../../../components/utils/emoji/emoji-data.fixture')).emojiKeywordsModule(buildEmojiMartFixture()));
 
 const SECTION_BOXES: Readonly<Record<string, { top: number; height: number }>> = {
   people: { top: 0, height: 120 },

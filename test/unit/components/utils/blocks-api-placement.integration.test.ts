@@ -23,7 +23,7 @@ interface TestEditor {
   history: { undo: () => void; redo: () => void };
   module: {
     blockManager: { blocks: Block[] };
-    yjsManager: { stopCapturing: () => void };
+    yjsManager: { stopCapturing: () => void; toJSON: () => OutputBlockData[] };
   };
 }
 
@@ -224,6 +224,57 @@ describe('useBlocks engine: sibling-relative placement on a real editor', () => 
 
       expect(flat(instance)).toEqual(expected);
       expect(await saved(instance)).toEqual(expected);
+    }, 30_000);
+  });
+  /**
+   * Batch inserts go through core insertMany, which used to drop a parent
+   * outside the batch and land the blocks at the root.
+   */
+  describe('batch inserts under an existing parent', () => {
+    /** Doc `id^parent` in doc order, compared with save() order. */
+    const docShape = (instance: TestEditor): string[] =>
+      instance.module.yjsManager.toJSON().map(block => `${block.id ?? '?'}^${block.parent ?? '-'}`);
+
+    it('insertTree lands the subtree under the parent', async () => {
+      const { instance, api } = await boot();
+
+      api.insertTree({ id: 'n', type: 'toggle', data: { text: 'n', isOpen: true }, parentId: 't', children: [{ id: 'm', data: { text: 'm' } }] });
+      await settle();
+
+      const expected = ['a^-', 't^-', 'c1^t', 'c2^t', 'n^t', 'm^n', 'b^-'];
+
+      expect(await saved(instance)).toEqual(expected);
+      expect(contentOf(instance, 't')).toEqual(['c1', 'c2', 'n']);
+      expect(docShape(instance)).toEqual(expected);
+    }, 30_000);
+
+    it('insertMarkdown lands the converted blocks under the parent', async () => {
+      const { instance, api } = await boot();
+
+      const created = await api.insertMarkdown('one\n\ntwo', { parentId: 't' });
+
+      await settle();
+
+      const ids = created.map(node => node.id);
+
+      expect(ids).toHaveLength(2);
+
+      const expected = ['a^-', 't^-', 'c1^t', 'c2^t', `${ids[0]}^t`, `${ids[1]}^t`, 'b^-'];
+
+      expect(await saved(instance)).toEqual(expected);
+      expect(docShape(instance)).toEqual(expected);
+    }, 30_000);
+
+    it('insertOutputData keeps a parent that is already in the document', async () => {
+      const { instance, api } = await boot();
+
+      api.insertOutputData([P('q', 't')], { index: 4 });
+      await settle();
+
+      const expected = ['a^-', 't^-', 'c1^t', 'c2^t', 'q^t', 'b^-'];
+
+      expect(await saved(instance)).toEqual(expected);
+      expect(docShape(instance)).toEqual(expected);
     }, 30_000);
   });
 });

@@ -863,10 +863,20 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
       return `${flatIndent}${'#'.repeat(level)} ${line}`;
     }
     case 'quote': {
-      /** A blockquote has no attribution line, so the caption has nowhere to go. */
-      if (asString(data.caption) !== '') {
-        warn(context, block.tool, 'degraded', 'quote is rendered as a blockquote; its caption is lost');
+      /**
+       * A legacy caption renders as a `<cite>` inside the blockquote, so it
+       * stays inside the quote as an `— attribution` line. The bare `>` makes
+       * it its own paragraph. An import reads it back as quote text, not as a
+       * separate field, hence still degraded.
+       */
+      const caption = inlineMarkdown(context, asString(data.caption));
+
+      if (caption !== '') {
+        warn(context, block.tool, 'degraded', 'quote caption is rendered as an attribution line inside the blockquote; it is no longer a separate field');
       }
+
+      const attribution = caption === '' ? '' : `— ${caption}`;
+      const body = [text, attribution].filter((part) => part !== '').join('\n\n');
 
       /**
        * EVERY line carries the marker: a `<br>` in the quote reaches here as a
@@ -875,7 +885,7 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
        * convention), and the flat indent repeats so a quote inside a list item
        * keeps continuing that item.
        */
-      return text
+      return body
         .split('\n')
         .map((line) => (line === '' ? `${flatIndent}>` : `${flatIndent}> ${line}`))
         .join('\n');

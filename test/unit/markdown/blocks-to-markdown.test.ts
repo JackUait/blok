@@ -450,6 +450,20 @@ describe('blocksToMarkdown: quote', () => {
     ])).toBe('- item\n\n    > a  \n    > b');
   });
 
+  it('keeps a legacy caption as an attribution line on every quote line, list indent included', () => {
+    expect(blocksToMarkdown([
+      { id: 'l',
+        tool: 'list',
+        data: { text: 'item',
+          style: 'unordered' } },
+      { tool: 'quote',
+        data: { text: 'a',
+          caption: '<i>Me</i><br>2020' },
+        parentId: 'l',
+        indent: 1 },
+    ])).toBe('- item\n\n    > a\n    >\n    > — *Me*  \n    > 2020');
+  });
+
   it('still emits a single-line quote as one marker', () => {
     expect(blocksToMarkdown([{ tool: 'quote',
       data: { text: 'wisdom' } }])).toBe('> wisdom');

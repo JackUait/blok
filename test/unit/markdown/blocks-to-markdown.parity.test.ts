@@ -121,6 +121,7 @@ const FIXTURES: Array<{ name: string; document: OutputData }> = [
     document: doc([
       { id: 'h', type: 'header', data: { text: 'Title <b>bold</b>', level: 2 } },
       { id: 'q', type: 'quote', data: { text: 'quoted <i>text</i>' } },
+      { id: 'qc', type: 'quote', data: { text: 'said', caption: 'Cap <b>bold</b><br>two' } },
       { id: 'd', type: 'divider', data: {} },
       { id: 'l1', type: 'list', data: { text: 'one', style: 'unordered' } },
       { id: 'l2', type: 'list', data: { text: 'nested <code>x</code>', style: 'ordered' }, parent: 'l1' },

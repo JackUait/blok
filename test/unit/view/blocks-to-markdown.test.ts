@@ -438,15 +438,28 @@ describe('blocksToMarkdown (view)', () => {
    * through Markdown that the conversion was lossless.
    */
   describe('silently lost constructs', () => {
-    it('reports a quote caption', () => {
+    /** The view paints `caption` as a `<cite>` inside the blockquote, so it stays inside the quote. */
+    it('keeps a quote caption as an attribution line inside the quote, and reports it', () => {
       const { markdown, warnings } = blocksToMarkdownWithReport(doc([
         { type: 'quote', data: { text: 'Цитата', caption: 'Стандарт' } },
       ]));
 
-      expect(markdown).toBe('> Цитата');
+      expect(markdown).toBe('> Цитата\n>\n> — Стандарт');
       expect(warnings).toEqual([
-        { construct: 'quote', action: 'degraded', detail: expect.stringContaining('caption') },
+        { construct: 'quote', action: 'degraded', detail: expect.stringContaining('attribution line') },
       ]);
+    });
+
+    it('keeps rich text and line breaks of a quote caption inside the quote', () => {
+      expect(blocksToMarkdown(doc([
+        { type: 'quote', data: { text: 'Q', caption: 'Cap <b>bold</b><br>two' } },
+      ]))).toBe('> Q\n>\n> — Cap **bold**  \n> two');
+    });
+
+    it('emits only the attribution line for a caption on an empty quote', () => {
+      expect(blocksToMarkdown(doc([
+        { type: 'quote', data: { text: '', caption: 'Author' } },
+      ]))).toBe('> — Author');
     });
 
     it('stays silent for a quote without a caption', () => {

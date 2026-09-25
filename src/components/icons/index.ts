@@ -423,51 +423,57 @@ export const IconDotsHorizontal = `
 </svg>
 `;
 
-// Toggle Heading 1 icon (H1 with toggle arrow)
+// Toggle Heading 1 icon: triangle, H, digit (Notion layout)
 export const IconToggleH1 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M5.75 5 9.75 10 5.75 15" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M13.25 11L14.65 10V15" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M1.5 8.25 3.75 10 1.5 11.75Z" stroke="currentColor" stroke-width="1.25" fill="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6.75 5v10M12.75 5v10M6.75 10h6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M16.25 11L17.65 10V15" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
-// Toggle Heading 2 icon (H2 with toggle arrow)
+// Toggle Heading 2 icon: triangle, H, digit (Notion layout)
 export const IconToggleH2 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M5.75 5 9.75 10 5.75 15" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M12.75 11C12.9 10.35 13.45 10 14.15 10C15.05 10 15.65 10.55 15.65 11.35C15.65 12.05 15.25 12.5 14.5 13.15L12.75 15H16" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M1.5 8.25 3.75 10 1.5 11.75Z" stroke="currentColor" stroke-width="1.25" fill="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6.75 5v10M12.75 5v10M6.75 10h6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M15.75 11C15.9 10.35 16.45 10 17.15 10C18.05 10 18.65 10.55 18.65 11.35C18.65 12.05 18.25 12.5 17.5 13.15L15.75 15H19" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
-// Toggle Heading 3 icon (H3 with toggle arrow)
+// Toggle Heading 3 icon: triangle, H, digit (Notion layout)
 export const IconToggleH3 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M5.75 5 9.75 10 5.75 15" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M12.85 10.9C13.05 10.35 13.55 10 14.25 10C15.15 10 15.75 10.5 15.75 11.2C15.75 11.95 15.15 12.4 14.25 12.4C15.25 12.4 15.9 12.9 15.9 13.65C15.9 14.45 15.25 15 14.3 15C13.55 15 13 14.65 12.75 14" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M1.5 8.25 3.75 10 1.5 11.75Z" stroke="currentColor" stroke-width="1.25" fill="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6.75 5v10M12.75 5v10M6.75 10h6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M15.85 10.9C16.05 10.35 16.55 10 17.25 10C18.15 10 18.75 10.5 18.75 11.2C18.75 11.95 18.15 12.4 17.25 12.4C18.25 12.4 18.9 12.9 18.9 13.65C18.9 14.45 18.25 15 17.3 15C16.55 15 16 14.65 15.75 14" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
-// Toggle Heading 4 icon (H4 with toggle arrow)
+// Toggle Heading 4 icon: triangle, H, digit (Notion layout)
 export const IconToggleH4 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M5.75 5 9.75 10 5.75 15" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M15.25 10L12.75 13.5H16M15.25 10V15" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M1.5 8.25 3.75 10 1.5 11.75Z" stroke="currentColor" stroke-width="1.25" fill="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6.75 5v10M12.75 5v10M6.75 10h6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M18.25 10L15.75 13.5H19M18.25 10V15" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
-// Toggle Heading 5 icon (H5 with toggle arrow)
+// Toggle Heading 5 icon: triangle, H, digit (Notion layout)
 export const IconToggleH5 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M5.75 5 9.75 10 5.75 15" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M15.75 10H13L12.8 12.3C13.2 12 13.7 11.85 14.25 11.85C15.25 11.85 15.9 12.45 15.9 13.4C15.9 14.35 15.25 15 14.25 15C13.55 15 13 14.65 12.75 14" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M1.5 8.25 3.75 10 1.5 11.75Z" stroke="currentColor" stroke-width="1.25" fill="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6.75 5v10M12.75 5v10M6.75 10h6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M18.75 10H16L15.8 12.3C16.2 12 16.7 11.85 17.25 11.85C18.25 11.85 18.9 12.45 18.9 13.4C18.9 14.35 18.25 15 17.25 15C16.55 15 16 14.65 15.75 14" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
-// Toggle Heading 6 icon (H6 with toggle arrow)
+// Toggle Heading 6 icon: triangle, H, digit (Notion layout)
 export const IconToggleH6 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M5.75 5 9.75 10 5.75 15" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M15.5 10.55C15.2 10.2 14.8 10 14.3 10C13.3 10 12.75 11 12.75 12.5C12.75 14.05 13.3 15 14.3 15C15.25 15 15.9 14.4 15.9 13.5C15.9 12.6 15.3 12 14.4 12C13.55 12 12.95 12.5 12.75 13.25" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M1.5 8.25 3.75 10 1.5 11.75Z" stroke="currentColor" stroke-width="1.25" fill="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6.75 5v10M12.75 5v10M6.75 10h6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M18.5 10.55C18.2 10.2 17.8 10 17.3 10C16.3 10 15.75 11 15.75 12.5C15.75 14.05 16.3 15 17.3 15C18.25 15 18.9 14.4 18.9 13.5C18.9 12.6 18.3 12 17.4 12C16.55 12 15.95 12.5 15.75 13.25" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 

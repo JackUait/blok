@@ -17,6 +17,7 @@ interiors open.
 | Type | Cap 5, baseline 15; B, I, H and T share the same weight |
 | Lists | Two rows at 6.5 and 13.5, rules from x 8.5 to 16.5 |
 | Disclosure chevron | Four-unit arms on the 20-unit canvas; rotate or mirror the same skeleton |
+| Toggle headings | Notion's layout: the toggle-list triangle at x 1.5, then the heading H and digit moved right by 3. They use the full canvas, not 3–17 |
 | Detail | Prefer fewer, larger details over dense miniatures |
 
 These are key shapes. They do not mean every icon must sit in a box. A document

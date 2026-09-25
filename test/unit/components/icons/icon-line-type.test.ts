@@ -51,11 +51,11 @@ describe('Blok Line type family', () => {
     }
   });
 
-  it('keeps every toggle digit identical to its heading digit and its chevron cap-height', () => {
-    for (const [index, icon] of toggles.entries()) {
-      expect(pathOf(icon, 1)).toBe(pathOf(headings[index], 1));
-      expect(pathOf(icon)).toBe('M5.75 5 9.75 10 5.75 15');
-      expect(pathsOf(icon)[1]?.getAttribute('stroke-width')).toBe('1.1');
+  it('draws every toggle heading as a triangle, the H on the shared cap and baseline, and the digit weight', () => {
+    for (const icon of toggles) {
+      expect(pathOf(icon)).toBe('M1.5 8.25 3.75 10 1.5 11.75Z');
+      expect(pathOf(icon, 1)).toBe('M6.75 5v10M12.75 5v10M6.75 10h6');
+      expect(pathsOf(icon)[2]?.getAttribute('stroke-width')).toBe('1.1');
     }
   });
 

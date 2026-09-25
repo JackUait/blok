@@ -30,13 +30,28 @@ describe('heading, list and toggle icon structure', () => {
 
   it.each(Object.entries({
     IconH1, IconH2, IconH3, IconH4, IconH5, IconH6,
-    IconToggleH1, IconToggleH2, IconToggleH3, IconToggleH4, IconToggleH5, IconToggleH6,
   }))('%s has one main glyph and one digit, both stroked', (_name, icon) => {
     const all = paths(icon);
 
     expect(all).toHaveLength(2);
 
     for (const path of all) {
+      expect(path.getAttribute('stroke')).toBe('currentColor');
+      expect(path.getAttribute('fill')).toBeNull();
+      expect(path.getAttribute('stroke-linecap')).toBe('round');
+    }
+  });
+
+  it.each(Object.entries({
+    IconToggleH1, IconToggleH2, IconToggleH3, IconToggleH4, IconToggleH5, IconToggleH6,
+  }))('%s is a solid triangle, then a stroked H and digit, like Notion', (_name, icon) => {
+    const [triangle, ...glyphs] = paths(icon);
+
+    expect(glyphs).toHaveLength(2);
+    expect(triangle?.getAttribute('fill')).toBe('currentColor');
+    expect(triangle?.getAttribute('stroke-linejoin')).toBe('round');
+
+    for (const path of glyphs) {
       expect(path.getAttribute('stroke')).toBe('currentColor');
       expect(path.getAttribute('fill')).toBeNull();
       expect(path.getAttribute('stroke-linecap')).toBe('round');

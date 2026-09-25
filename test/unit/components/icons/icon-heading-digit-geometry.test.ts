@@ -12,6 +12,7 @@ import {
   IconToggleH4,
   IconToggleH5,
   IconToggleH6,
+  IconToggleList,
   IconListBulleted,
   IconListNumbered,
   IconListChecklist,
@@ -21,6 +22,36 @@ import {
   IconClearFormat,
 } from '../../../../src/components/icons';
 
+
+// The toggle icons shift the heading H and digit right to make room for the triangle.
+const TOGGLE_OFFSET = 3;
+
+const round = (value: number): number => Math.round(value * 1000) / 1000;
+
+type Point = { command: string; x: number | null; y: number | null };
+
+// Relative steps (h6, v10) keep their length; only absolute x moves.
+const shifted = ({ command, x, y }: Point): Point => ({
+  command,
+  x: x === null || command !== command.toUpperCase() ? x : round(x + TOGGLE_OFFSET),
+  y,
+});
+
+// Absolute points of a path; H/h carry only x, V/v only y (null for the other axis).
+const pairsOf = (command: string, values: number[]): Point[] => {
+  if ('Hh'.includes(command)) {
+    return values.map(x => ({ command, x, y: null }));
+  }
+  if ('Vv'.includes(command)) {
+    return values.map(y => ({ command, x: null, y }));
+  }
+
+  return values.flatMap((value, i) => i % 2 === 0 ? [{ command, x: value, y: values[i + 1] }] : []);
+};
+
+const pointsOf = (d: string): Point[] =>
+  Array.from(d.matchAll(/([A-Za-z])([^A-Za-z]*)/g))
+    .flatMap(([, command, args]) => pairsOf(command, (args.match(/-?(?:\d*\.)?\d+/g) ?? []).map(Number)));
 
 const digitPath = (icon: string): string => {
   const doc = new DOMParser().parseFromString(icon, 'image/svg+xml');
@@ -104,38 +135,49 @@ describe('heading digit skeleton geometry', () => {
   });
 
   it.each(Object.entries(toggles))(
-    '%s digit is byte-identical to its heading icon digit',
+    '%s digit is its heading icon digit moved right by the H offset',
     (name, icon) => {
       const headingIcon = headings[name.replace('Toggle', '')];
 
-      expect(digitPath(icon)).toBe(digitPath(headingIcon));
+      expect(pointsOf(digitPath(icon))).toStrictEqual(
+        pointsOf(digitPath(headingIcon)).map(shifted)
+      );
     },
   );
 
-  it.each(Object.entries(toggles))('%s letterforms stay inside the 3-17 content inset', (_name, icon) => {
+  it.each(Object.entries(toggles))('%s stays on the 20-unit canvas, strokes included', (_name, icon) => {
     const doc = new DOMParser().parseFromString(icon, 'image/svg+xml');
 
     for (const p of Array.from(doc.querySelectorAll('path'))) {
-      const xs = (p.getAttribute('d') ?? '').match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+      const halfStroke = Number(p.getAttribute('stroke-width')) / 2;
+      const xs = pointsOf(p.getAttribute('d') ?? '').flatMap(({ x }) => x === null ? [] : [x]);
 
-      expect(Math.max(...xs)).toBeLessThanOrEqual(17);
+      expect(Math.min(...xs) - halfStroke).toBeGreaterThanOrEqual(0);
+      expect(Math.max(...xs) + halfStroke).toBeLessThanOrEqual(20);
     }
   });
 
-  it.each(Object.entries(toggles))('%s leads with a letterform-height stroked chevron in the H slot', (_name, icon) => {
+  // Notion's toggle-heading icons: a solid disclosure triangle, then the H, then the digit.
+  it.each(Object.entries(toggles))('%s leads with the toggle-list triangle, then the heading H', (name, icon) => {
     const doc = new DOMParser().parseFromString(icon, 'image/svg+xml');
     const paths = Array.from(doc.querySelectorAll('path'));
+    const headingH = new DOMParser().parseFromString(headings[name.replace('Toggle', '')], 'image/svg+xml').querySelector('path');
+    const listTriangle = Array.from(new DOMParser().parseFromString(IconToggleList, 'image/svg+xml').querySelectorAll('path'))
+      .find(path => path.getAttribute('fill') === 'currentColor');
+    const triangle = pointsOf(paths[0]?.getAttribute('d') ?? '');
+    const reference = pointsOf((listTriangle?.getAttribute('d') ?? '').split('Z')[0]);
+    const ys = triangle.flatMap(({ y }) => y === null ? [] : [y]);
 
-    expect(paths.length).toBe(2);
-
-    const chevron = paths[0];
-
-    expect(chevron.getAttribute('fill')).toBeNull();
-    expect(chevron.getAttribute('stroke')).toBe('currentColor');
-
-    const ys = (chevron.getAttribute('d') ?? '').match(/-?\d+(?:\.\d+)?/g)?.filter((_v, i) => i % 2 === 1).map(Number) ?? [];
-
-    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThanOrEqual(8.5);
+    expect(paths).toHaveLength(3);
+    expect(paths[0]?.getAttribute('fill')).toBe('currentColor');
+    expect(paths[0]?.getAttribute('stroke-width')).toBe(listTriangle?.getAttribute('stroke-width'));
+    expect(triangle.map(({ x, y }) => [round((x ?? 0) - (triangle[0].x ?? 0)), round((y ?? 0) - (triangle[0].y ?? 0))]))
+      .toStrictEqual(reference.map(({ x, y }) => [round((x ?? 0) - (reference[0].x ?? 0)), round((y ?? 0) - (reference[0].y ?? 0))]));
+    expect((Math.min(...ys) + Math.max(...ys)) / 2).toBe(10);
+    expect(pointsOf(paths[1]?.getAttribute('d') ?? '')).toStrictEqual(
+      pointsOf(headingH?.getAttribute('d') ?? '').map(shifted)
+    );
+    expect(paths[1]?.getAttribute('fill')).toBeNull();
   });
 });
 

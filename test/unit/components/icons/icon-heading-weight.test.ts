@@ -8,6 +8,10 @@ import {
 const parse = (icon: string): SVGPathElement[] =>
   Array.from(new DOMParser().parseFromString(icon, 'image/svg+xml').querySelectorAll('path'));
 
+// Toggle headings lead with a solid disclosure triangle; the H and digit follow it.
+const letterformsOf = (name: string, icon: string): SVGPathElement[] =>
+  name.startsWith('IconToggle') ? parse(icon).slice(1) : parse(icon);
+
 describe('heading icon weight', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -26,8 +30,8 @@ describe('heading icon weight', () => {
     expect(parse(IconText)[0]?.getAttribute('stroke-width')).toBe('1.25');
   });
 
-  it.each(Object.entries(family))('%s has only stroked letterforms', (_name, icon) => {
-    const paths = parse(icon);
+  it.each(Object.entries(family))('%s has only stroked letterforms', (name, icon) => {
+    const paths = letterformsOf(name, icon);
 
     expect(paths.length).toBeGreaterThanOrEqual(1);
 
@@ -39,8 +43,8 @@ describe('heading icon weight', () => {
     }
   });
 
-  it.each(Object.entries(family))('%s uses a 1.25 main glyph and a lighter 1.1 digit', (_name, icon) => {
-    const paths = parse(icon);
+  it.each(Object.entries(family))('%s uses a 1.25 main glyph and a lighter 1.1 digit', (name, icon) => {
+    const paths = letterformsOf(name, icon);
 
     expect(paths[0]?.getAttribute('stroke-width')).toBe('1.25');
 

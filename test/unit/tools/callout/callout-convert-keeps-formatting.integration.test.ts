@@ -68,7 +68,7 @@ describe('callout: turn into keeps line breaks and inline marks', () => {
     const callout = await instance.blocks.convert('p', 'callout');
 
     expect(await calloutBodyText(instance, callout.id))
-      .toBe('Line one<br>Line <b>bold</b> <i>and</i> <a href="https://example.com">link</a>');
+      .toBe('Line one<br>Line <strong>bold</strong> <i>and</i> <a href="https://example.com">link</a>');
   }, 30_000);
 
   it('keeps <br> and bold when a heading turns into a callout', async () => {
@@ -78,7 +78,7 @@ describe('callout: turn into keeps line breaks and inline marks', () => {
 
     const callout = await instance.blocks.convert('h', 'callout');
 
-    expect(await calloutBodyText(instance, callout.id)).toBe('H <b>bold</b><br>two');
+    expect(await calloutBodyText(instance, callout.id)).toBe('H <strong>bold</strong><br>two');
   }, 30_000);
   it('drops a javascript: link and a script while keeping the marks', async () => {
     const instance = await createEditor([
@@ -101,6 +101,6 @@ describe('callout: turn into keeps line breaks and inline marks', () => {
 
     expect(text).not.toContain('javascript:');
     expect(text).not.toContain('onerror');
-    expect(text).toContain('<b>bold</b><br>');
+    expect(text).toContain('<strong>bold</strong><br>');
   }, 30_000);
 });

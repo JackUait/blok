@@ -67,7 +67,7 @@ describe('legacy content survives a load + save', () => {
     const callout = saved.blocks.find((block) => block.type === 'callout');
     const body = (callout?.data.body as { blocks: OutputBlockData[] } | undefined)?.blocks ?? [];
 
-    expect(body.map((block) => block.data.text)).toEqual(['<b>Heads</b><br>up', 'body']);
+    expect(body.map((block) => block.data.text)).toEqual(['<strong>Heads</strong><br>up', 'body']);
   }, 60_000);
 
   it.each(['legacy', 'auto'] as const)('keeps a list inside a string table cell (dataModel: %s)', async (dataModel) => {

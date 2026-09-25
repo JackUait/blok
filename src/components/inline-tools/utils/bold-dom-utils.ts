@@ -25,7 +25,8 @@ export const ensureStrongElement = (element: HTMLElement): HTMLElement => {
     return element;
   }
 
-  const strong = document.createElement('strong');
+  // The element's own document: the sanitizer renames inside an inert one.
+  const strong = element.ownerDocument.createElement('strong');
 
   if (element.hasAttributes()) {
     Array.from(element.attributes).forEach((attr) => {

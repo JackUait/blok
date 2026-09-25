@@ -35,7 +35,7 @@ import type { SavedData } from '../../../types/data-formats';
 import { isSafeAttribute, PLAINTEXT } from '../../shared/sanitize-rules';
 import { hasUnsafeUrlProtocol } from '../../shared/url-policy';
 import { deepMerge, isBoolean, isEmpty, isFunction, isObject, isString } from '../utils';
-import { normalizeInlineMarkupHtml } from './inline-normalization';
+import { normalizeInlineMarkupHtml, renameLegacyBoldHtml } from './inline-normalization';
 
 type DeepSanitizerRule = SanitizerConfig | SanitizerRule;
 
@@ -247,6 +247,12 @@ const cleanObject = (
 };
 
 /**
+ * Whether a tag config keeps the tag at all.
+ * @param config - tag allowlist
+ */
+const allowsTag = (config: SanitizerConfig) => (tag: string): boolean => config[tag] !== undefined && config[tag] !== false;
+
+/**
  * Clean primitive value
  * @param {string} taintString - string to clean
  * @param {SanitizerConfig|boolean} rule - sanitizer rule
@@ -270,13 +276,13 @@ const cleanOneItem = (
   const effectiveRule = getEffectiveRuleForString(rule, globalRules);
 
   if (effectiveRule) {
-    const cleaned = clean(taintString, effectiveRule);
+    const cleaned = clean(renameLegacyBoldHtml(taintString, allowsTag(effectiveRule)), effectiveRule);
 
     return normalizeInlineMarkupHtml(applyAttributeOverrides(cleaned, effectiveRule));
   }
 
   if (!isEmpty(globalRules)) {
-    const cleaned = clean(taintString, globalRules);
+    const cleaned = clean(renameLegacyBoldHtml(taintString, allowsTag(globalRules)), globalRules);
 
     return normalizeInlineMarkupHtml(applyAttributeOverrides(cleaned, globalRules));
   }

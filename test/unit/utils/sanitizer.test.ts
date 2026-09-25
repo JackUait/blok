@@ -1475,3 +1475,34 @@ describe('URL scheme hardening (whitespace smuggling)', () => {
     });
   });
 });
+
+describe('legacy <b> becomes <strong>', () => {
+  const sanitizeText = (text: string, config: SanitizerConfig): unknown => sanitizeBlocks(
+    [{ tool: 'paragraph', data: { text } }],
+    { text: config }
+  )[0].data.text;
+
+  it('writes <strong> when the field allows it, so stored <b> and typed bold save the same', () => {
+    expect(sanitizeText('<b>ld</b> tail', { b: {}, strong: {} })).toBe('<strong>ld</strong> tail');
+  });
+
+  it('merges a renamed <b> with an adjacent <strong>', () => {
+    expect(sanitizeText('<b>a</b><strong>b</strong>', { b: {}, strong: {} })).toBe('<strong>ab</strong>');
+  });
+
+  it('applies the <strong> rule to the renamed element', () => {
+    expect(sanitizeText('<b class="x">a</b>', { b: { class: true }, strong: {} })).toBe('<strong>a</strong>');
+  });
+
+  it('keeps <b> when the field does not allow <strong>', () => {
+    expect(sanitizeText('<b>a</b>', { b: {} })).toBe('<b>a</b>');
+  });
+
+  it('keeps <b> when <strong> is explicitly disallowed', () => {
+    expect(sanitizeText('<b>a</b>', { b: {}, strong: false })).toBe('<b>a</b>');
+  });
+
+  it('does not touch a string that only looks like a <b> tag', () => {
+    expect(sanitizeText('<br>a<blockquote>q</blockquote>', { b: {}, strong: {}, br: {} })).toBe('<br>aq');
+  });
+});

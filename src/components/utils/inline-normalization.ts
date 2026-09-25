@@ -8,6 +8,7 @@ import {
   type InlineElementView,
 } from '../../shared/inline-normalization-policy';
 import { parseUntrustedHtml } from './inert-html';
+import { ensureStrongElement } from '../inline-tools/utils/bold-dom-utils';
 
 /**
  * Inline markup normalization — DOM implementation.
@@ -210,4 +211,30 @@ export const normalizeInlineMarkupHtml = (html: string): string => {
   const holder = parseUntrustedHtml(html);
 
   return normalizeInlineMarkupIn(holder) ? holder.innerHTML : html;
+};
+
+/**
+ * Rename `<b>` to `<strong>` where the field allows both. The bold tool's DOM
+ * observer skips a `<b>` holding the caret, so without this a stored `<b>`
+ * saves as either tag depending on where the caret was.
+ * Run it BEFORE `clean()` so `<strong>`'s rule filters the attributes.
+ * Returns the input verbatim when nothing was renamed.
+ * @param html - HTML fragment
+ * @param isAllowed - whether the field's config allows a lower-case tag
+ */
+export const renameLegacyBoldHtml = (html: string, isAllowed: (tag: string) => boolean): string => {
+  if (!/<b[\s/>]/i.test(html) || !isAllowed('b') || !isAllowed('strong')) {
+    return html;
+  }
+
+  const holder = parseUntrustedHtml(html);
+  const bolds = Array.from(holder.querySelectorAll<HTMLElement>('b'));
+
+  if (bolds.length === 0) {
+    return html;
+  }
+
+  bolds.forEach((bold) => ensureStrongElement(bold));
+
+  return holder.innerHTML;
 };

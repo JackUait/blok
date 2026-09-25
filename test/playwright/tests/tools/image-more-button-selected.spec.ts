@@ -78,3 +78,89 @@ test('image "more" button shows selected state while its menu is open', async ({
 
   await expect(moreBtn).toHaveAttribute('aria-expanded', 'false');
 });
+
+const TUNES_POPOVER = '[data-blok-testid="block-tunes-popover"][data-blok-popover-opened="true"]';
+
+const savedBlocks = async (page: Page): Promise<Array<{ id?: string; type: string }>> =>
+  page.evaluate(async () => {
+    const saved = await window.blokInstance?.save();
+
+    return (saved?.blocks ?? []).map(({ id, type }) => ({ id, type }));
+  });
+
+test.describe('image "more" menu targets the image, not the block holding the caret', () => {
+  test('Delete removes the image when the caret sits in another block', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [
+        { id: 'img1', type: 'image', data: { url: SAMPLE_IMAGE_URL, alt: 'pic' } },
+        { id: 'p1', type: 'paragraph', data: { text: 'Latte' } },
+      ],
+    });
+
+    await page.getByText('Latte').click();
+
+    const imageBlock = page.locator(IMAGE_BLOCK_SELECTOR);
+
+    await imageBlock.hover();
+    await imageBlock.locator('[data-action="more"]').click();
+
+    const tunes = page.locator(TUNES_POPOVER);
+
+    await expect(tunes.locator('[data-blok-item-name="image-replace"]')).toBeVisible();
+
+    await tunes.locator('[data-blok-item-name="delete"]').click();
+
+    await expect.poll(() => savedBlocks(page)).toEqual([{ id: 'p1', type: 'paragraph' }]);
+  });
+
+  test('Delete removes an image inside a table cell when the caret sits in another cell', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [
+        {
+          id: 'tbl',
+          type: 'table',
+          data: { withHeadings: false, content: [[{ blocks: ['img1'] }], [{ blocks: ['p1'] }]] },
+          content: ['img1', 'p1'],
+        },
+        { id: 'img1', type: 'image', parent: 'tbl', data: { url: SAMPLE_IMAGE_URL, alt: 'pic' } },
+        { id: 'p1', type: 'paragraph', parent: 'tbl', data: { text: 'Latte' } },
+      ],
+    });
+
+    await page.getByText('Latte').click();
+
+    const imageBlock = page.locator(IMAGE_BLOCK_SELECTOR);
+
+    await imageBlock.hover();
+    await imageBlock.locator('[data-action="more"]').click();
+
+    const tunes = page.locator(TUNES_POPOVER);
+
+    await expect(tunes.locator('[data-blok-item-name="image-replace"]')).toBeVisible();
+
+    await tunes.locator('[data-blok-item-name="delete"]').click();
+
+    await expect(page.locator(IMAGE_BLOCK_SELECTOR)).toHaveCount(0);
+    await expect(page.getByText('Latte')).toBeVisible();
+  });
+
+  test('Duplicate copies the image when the caret sits in another block', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [
+        { id: 'img1', type: 'image', data: { url: SAMPLE_IMAGE_URL, alt: 'pic' } },
+        { id: 'p1', type: 'paragraph', data: { text: 'Latte' } },
+      ],
+    });
+
+    await page.getByText('Latte').click();
+
+    const imageBlock = page.locator(IMAGE_BLOCK_SELECTOR);
+
+    await imageBlock.hover();
+    await imageBlock.locator('[data-action="more"]').click();
+    await page.locator(TUNES_POPOVER).locator('[data-blok-item-name="duplicate"]').click();
+
+    await expect.poll(async () => (await savedBlocks(page)).map(({ type }) => type))
+      .toEqual(['image', 'image', 'paragraph']);
+  });
+});

@@ -57,24 +57,34 @@ export class ToolbarAPI extends Module {
   }
 
   /**
-   * Toggles Block Setting of the current block
+   * Toggles Block Settings. With a trigger inside a block, the menu opens for that
+   * block and it becomes the current block; otherwise it opens for the current block.
    * @param {boolean} openingState —  opening state of Block Setting
    * @param {HTMLElement} trigger — element to anchor the settings popover to
    * @param {ToolbarBlockSettingsOptions} options — additional popover placement overrides
    */
   public toggleBlockSettings(openingState?: boolean, trigger?: HTMLElement, options?: ToolbarBlockSettingsOptions): void {
+    /** Check that opening state is set or not */
+    const canOpenBlockSettings = openingState ?? !this.Blok.BlockSettings.opened;
+
+    /**
+     * Resolve the block from the trigger: pointerup on a non-editable button resets
+     * currentBlock to the block that holds the caret. The write matters too: the
+     * Delete tune deletes currentBlock, not the block passed to open().
+     */
+    const triggerBlock = canOpenBlockSettings && trigger !== undefined
+      ? this.Blok.BlockManager.setCurrentBlockByChildNode(trigger)
+      : undefined;
+
     if (this.Blok.BlockManager.currentBlockIndex === -1) {
       logLabeled('Could\'t toggle the Toolbar because there is no block selected ', 'warn');
 
       return;
     }
 
-    /** Check that opening state is set or not */
-    const canOpenBlockSettings = openingState ?? !this.Blok.BlockSettings.opened;
-
     if (canOpenBlockSettings) {
-      this.Blok.Toolbar.moveAndOpen();
-      void this.Blok.BlockSettings.open(undefined, trigger, options);
+      this.Blok.Toolbar.moveAndOpen(triggerBlock);
+      void this.Blok.BlockSettings.open(triggerBlock, trigger, options);
     } else {
       this.Blok.BlockSettings.close();
     }

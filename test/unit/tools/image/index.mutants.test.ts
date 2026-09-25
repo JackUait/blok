@@ -2173,18 +2173,19 @@ describe('ImageTool — overlay actions that leave the tool', () => {
     expect(mockDownload).toHaveBeenCalledWith('https://x/y.png', 'holiday.png');
   });
 
-  it('deletes the block through the editor API', () => {
+  it('deletes its own block by index, since the editor API takes an index, not an id', () => {
     const del = vi.fn();
+    const getBlockIndex = vi.fn((id: string) => (id === 'b7' ? 3 : undefined));
     const api = createMockApi();
     const block = createMockBlock('b7');
 
-    (api as unknown as { blocks: unknown }).blocks = { delete: del };
+    (api as unknown as { blocks: unknown }).blocks = { delete: del, getBlockIndex };
     const tool = new ImageTool({ ...createOptions({ url: 'u' }, {}, block), api });
     const root = tool.render();
 
     el<HTMLButtonElement>(root, '[data-action="delete"]').click();
 
-    expect(del).toHaveBeenCalledWith('b7');
+    expect(del).toHaveBeenCalledWith(3);
   });
 
   it('does nothing when the editor exposes no delete', () => {

@@ -1239,8 +1239,18 @@ export class ImageTool implements BlockTool {
   }
 
   private deleteBlock(): void {
-    const blocks = (this.api as unknown as { blocks?: { delete?: (id: string) => void } }).blocks;
-    blocks?.delete?.(this.block.id);
+    const blocks = (this.api as unknown as {
+      blocks?: {
+        delete?: (index: number) => void;
+        getBlockIndex?: (id: string) => number | undefined;
+      };
+    }).blocks;
+    // `delete` takes an index; an id string would miss, or hit whatever block sits at that index.
+    const index = blocks?.getBlockIndex?.(this.block.id);
+
+    if (index !== undefined) {
+      blocks?.delete?.(index);
+    }
   }
 
   private download(): void {

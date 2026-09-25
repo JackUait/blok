@@ -2413,7 +2413,8 @@ editor.toolbar.toggleBlockSettings(true, triggerEl, { placeLeftOfAnchor: false }
             type: "HTMLElement",
             required: false,
             default: "undefined",
-            description: "Element to anchor the settings popover to.",
+            description:
+              "Element to anchor the settings popover to. If it sits inside a block, the menu opens for that block, not for the block holding the caret.",
           },
           {
             name: "options",

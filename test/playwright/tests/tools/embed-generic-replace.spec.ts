@@ -195,4 +195,37 @@ test.describe('Generic embed + replace source', () => {
     // Standard block tunes ride along for free.
     await expect(tunes.locator('[data-blok-item-name="delete"]')).toBeVisible();
   });
+  test('the embed more-menu Delete removes the embed when the caret sits in another block', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [
+        { id: 'p1', type: 'paragraph', data: { text: 'Latte' } },
+        { id: 'p2', type: 'paragraph', data: { text: '' } },
+      ],
+    }, EMBED_CONFIG);
+
+    const target = page.locator(`${BLOCK_SELECTOR}:nth-of-type(2) [contenteditable]`).first();
+
+    await target.click();
+    await pasteText(target, 'https://example.com/page');
+    await page.locator('[data-blok-item-name="paste-menu-embed"]').click();
+    await expect(page.locator('[data-blok-testid="embed-frame"]')).toBeVisible();
+
+    await page.getByText('Latte').click();
+
+    const figure = page.locator('[data-role="embed-figure"]');
+
+    await figure.hover();
+    await figure.locator('[data-role="embed-overlay"] [data-action="more"]').click();
+
+    const tunes = page
+      .getByTestId('block-tunes-popover')
+      .and(page.locator('[data-blok-popover-opened="true"]'));
+
+    await expect(tunes.locator('[data-blok-item-name="embed-replace"]')).toBeVisible();
+
+    await tunes.locator('[data-blok-item-name="delete"]').click();
+
+    await expect(page.locator('[data-role="embed-figure"]')).toHaveCount(0);
+    await expect(page.getByText('Latte')).toBeVisible();
+  });
 });

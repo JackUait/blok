@@ -9,6 +9,7 @@ import type { BlokEventMap } from '../../../../../src/components/events';
 type ToolbarBlokMock = {
   BlockManager: {
     currentBlockIndex: number;
+    setCurrentBlockByChildNode: ReturnType<typeof vi.fn>;
   };
   BlockSettings: {
     opened: boolean;
@@ -43,6 +44,7 @@ describe('ToolbarAPI', () => {
     blokMock = {
       BlockManager: {
         currentBlockIndex: 0,
+        setCurrentBlockByChildNode: vi.fn(() => undefined),
       },
       BlockSettings: {
         opened: false,
@@ -78,6 +80,7 @@ describe('ToolbarAPI', () => {
   };
 
   beforeEach(() => {
+    vi.clearAllMocks();
     createToolbarApi();
   });
 
@@ -173,6 +176,46 @@ describe('ToolbarAPI', () => {
       toolbarApi.toggleBlockSettings(true, trigger, { placeLeftOfAnchor: false });
 
       expect(blokMock.BlockSettings.open).toHaveBeenCalledWith(undefined, trigger, { placeLeftOfAnchor: false });
+    });
+
+    it('opens the menu for the block that holds the trigger, not the block holding the caret', () => {
+      const trigger = document.createElement('button');
+      const ownBlock = { id: 'img1' };
+
+      blokMock.BlockManager.setCurrentBlockByChildNode.mockReturnValue(ownBlock);
+
+      toolbarApi.toggleBlockSettings(true, trigger);
+
+      expect(blokMock.BlockSettings.open).toHaveBeenCalledWith(ownBlock, trigger, undefined);
+      expect(blokMock.BlockManager.setCurrentBlockByChildNode).toHaveBeenCalledWith(trigger);
+      expect(blokMock.Toolbar.moveAndOpen).toHaveBeenCalledWith(ownBlock);
+    });
+
+    it('opens for the trigger\'s block even when no block is current', () => {
+      const trigger = document.createElement('button');
+      const ownBlock = { id: 'img1' };
+
+      blokMock.BlockManager.currentBlockIndex = -1;
+      blokMock.BlockManager.setCurrentBlockByChildNode.mockImplementation(() => {
+        blokMock.BlockManager.currentBlockIndex = 2;
+
+        return ownBlock;
+      });
+
+      toolbarApi.toggleBlockSettings(true, trigger);
+
+      expect(blokMock.BlockSettings.open).toHaveBeenCalledWith(ownBlock, trigger, undefined);
+    });
+
+    it('does not move the current block when closing', () => {
+      const trigger = document.createElement('button');
+
+      blokMock.BlockSettings.opened = true;
+
+      toolbarApi.toggleBlockSettings(false, trigger);
+
+      expect(blokMock.BlockManager.setCurrentBlockByChildNode).not.toHaveBeenCalled();
+      expect(blokMock.BlockSettings.close).toHaveBeenCalled();
     });
 
     it('logs a warning when no block is selected', () => {

@@ -38,7 +38,8 @@ export interface Toolbar {
   open(): void;
 
   /**
-   * Toggles Block Setting of the current block
+   * Toggles Block Settings. With a trigger inside a block, the menu opens for that
+   * block and it becomes the current block; otherwise it opens for the current block.
    * @param {boolean} openingState —  opening state of Block Setting
    * @param {HTMLElement} trigger — element to anchor the settings popover to
    * @param {ToolbarBlockSettingsOptions} options — additional popover placement overrides

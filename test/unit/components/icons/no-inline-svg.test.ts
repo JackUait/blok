@@ -14,6 +14,10 @@ import { join, relative, sep } from 'node:path';
  * - src/components/icons/index.ts            → the registry itself
  * - src/components/utils/key-icon.ts         → SVGs composed dynamically
  *                                              per keyboard glyph at runtime
+ * - src/components/utils/popover/nothing-found-art.ts → an illustration, not
+ *                                              an icon: 64x48, opacity tints and
+ *                                              animation hooks break the Blok
+ *                                              Line contract the registry enforces
  * - src/stories/** (Storybook story files)   → fixtures demonstrating the
  *                                              external custom-icon API
  * - JSDoc comments mentioning `<svg>...</svg>` as documentation
@@ -24,6 +28,7 @@ const SRC = join(__dirname, '..', '..', '..', '..', 'src');
 const ALLOWED_FILES = new Set([
   'components/icons/index.ts',
   'components/utils/key-icon.ts',
+  'components/utils/popover/nothing-found-art.ts',
 ]);
 
 const ALLOWED_DIR_PREFIXES = [

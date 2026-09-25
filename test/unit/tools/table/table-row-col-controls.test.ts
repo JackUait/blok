@@ -314,196 +314,6 @@ describe('TableRowColControls', () => {
       // translate(-50%, -50%) handles offset from the center point.
       expect(rowGrips[0].style.left).toBe('-0.5px');
     });
-
-    it('centers row grip on the full height of a rowspan=3 merged cell, not just the first row', () => {
-      // Create a 3-row, 2-col table where cell [0,0] spans all 3 rows.
-      // Each row is 40px tall, so the merged cell BCR height = 3 * 40 = 120px,
-      // and the grip for row 0 should be at the center: 0 + 120/2 = 60px.
-      const rowCount = 3;
-      const rowHeight = 40;
-
-      // Merged cell BCR: top=0 (matches the table in viewport), height=120 (3 * 40)
-      // Table/container BCR: top=0
-      const mergedCellBCR = { top: 0, height: 120, left: 0, width: 100, right: 100, bottom: 120 };
-      const containerBCR = { top: 0, height: 120, left: 0, width: 200, right: 200, bottom: 120 };
-
-      const table = document.createElement('table');
-      const tbody = document.createElement('tbody');
-
-      table.appendChild(tbody);
-      table.getBoundingClientRect = vi.fn().mockReturnValue(containerBCR);
-
-      for (let r = 0; r < rowCount; r++) {
-        const tr = document.createElement('tr');
-
-        tr.setAttribute(ROW_ATTR, '');
-        Object.defineProperty(tr, 'offsetTop', { value: r * rowHeight, configurable: true });
-        Object.defineProperty(tr, 'offsetHeight', { value: rowHeight, configurable: true });
-
-        if (r === 0) {
-          // Origin cell spanning all 3 rows
-          const originCell = document.createElement('td');
-
-          originCell.setAttribute(CELL_ATTR, '');
-          originCell.setAttribute(CELL_ROW_ATTR, '0');
-          originCell.setAttribute(CELL_COL_ATTR, '0');
-          originCell.rowSpan = rowCount;
-          originCell.getBoundingClientRect = vi.fn().mockReturnValue(mergedCellBCR);
-          tr.appendChild(originCell);
-
-          // Second column cell (non-merged)
-          const cell2 = document.createElement('td');
-
-          cell2.setAttribute(CELL_ATTR, '');
-          cell2.setAttribute(CELL_ROW_ATTR, '0');
-          cell2.setAttribute(CELL_COL_ATTR, '1');
-          tr.appendChild(cell2);
-        } else {
-          // Rows 1 and 2: only have the second column cell (first column is spanned)
-          const cell2 = document.createElement('td');
-
-          cell2.setAttribute(CELL_ATTR, '');
-          cell2.setAttribute(CELL_ROW_ATTR, String(r));
-          cell2.setAttribute(CELL_COL_ATTR, '1');
-          tr.appendChild(cell2);
-        }
-
-        tbody.appendChild(tr);
-      }
-
-      grid = table;
-      document.body.appendChild(grid);
-
-      controls = new TableRowColControls({
-        grid,
-        getColumnCount: () => 2,
-        getRowCount: () => rowCount,
-        isHeadingRow: () => false,
-        isHeadingColumn: () => false,
-        onAction: vi.fn(),
-        onClearContents: vi.fn(),
-        onColorChange: vi.fn(),
-        i18n: mockI18n,
-      });
-
-      const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
-
-      // Row 0 grip: center of the merged cell BCR relative to container
-      // = mergedCellBCR.top(0) - containerBCR.top(0) + mergedCellBCR.height(120)/2 = 60px
-      expect(rowGrips[0].style.top).toBe('60px');
-
-      // Row 1 grip (non-merged): center of just its own row: 40 + 40/2 = 60px
-      expect(rowGrips[1].style.top).toBe('60px');
-
-      // Row 2 grip (non-merged): center of just its own row: 80 + 40/2 = 100px
-      expect(rowGrips[2].style.top).toBe('100px');
-    });
-
-    it('centers row grip using getBoundingClientRect when merged cell content is taller than individual row heights', () => {
-      // Simulate the real-browser scenario:
-      //   - 3 rows, each with offsetHeight=31 (browser minimum per-row height)
-      //   - But the td[rowspan=3] has actual rendered height=93px (browser distributed the height)
-      //   - The grip for row 0 should be at 93/2 = 46.5px (center of the merged cell's BCR)
-      //     relative to the overlay, NOT at 0 + (31+31+31)/2 = 46.5px... wait, those happen to be equal.
-      //   - Use a more realistic case: rows at offsetTop 10/41/72, merged cell BCR top=10, height=124
-      //     expected center = 10 - 0 + 124/2 = 72 (relative to overlay top=0)
-      const rowCount = 3;
-      const rowOffsets = [10, 41, 72];
-      const rowHeight = 31;
-
-      // Merged cell BCR: top=10 (matches row 0 in viewport), height=124 (taller than 3*31=93)
-      const mergedCellBCR = { top: 10, height: 124, left: 0, width: 100, right: 100, bottom: 134 };
-      // Overlay BCR: top=10 (overlay starts at same y as the table in viewport)
-      const overlayBCR = { top: 10, height: 200, left: 0, width: 200, right: 200, bottom: 210 };
-
-      // Expected center Y relative to overlay: mergedCellBCR.top - overlayBCR.top + mergedCellBCR.height/2
-      // = 10 - 10 + 124/2 = 62
-      const expectedCenterY = 62;
-
-      const table = document.createElement('table');
-      const tbody = document.createElement('tbody');
-
-      table.appendChild(tbody);
-
-      let originCellEl: HTMLTableCellElement | null = null;
-
-      for (let r = 0; r < rowCount; r++) {
-        const tr = document.createElement('tr');
-
-        tr.setAttribute(ROW_ATTR, '');
-        Object.defineProperty(tr, 'offsetTop', { value: rowOffsets[r], configurable: true });
-        Object.defineProperty(tr, 'offsetHeight', { value: rowHeight, configurable: true });
-
-        if (r === 0) {
-          const originCell = document.createElement('td');
-
-          originCell.setAttribute(CELL_ATTR, '');
-          originCell.setAttribute(CELL_ROW_ATTR, '0');
-          originCell.setAttribute(CELL_COL_ATTR, '0');
-          originCell.rowSpan = rowCount;
-          originCellEl = originCell;
-          tr.appendChild(originCell);
-
-          const cell2 = document.createElement('td');
-
-          cell2.setAttribute(CELL_ATTR, '');
-          cell2.setAttribute(CELL_ROW_ATTR, '0');
-          cell2.setAttribute(CELL_COL_ATTR, '1');
-          tr.appendChild(cell2);
-        } else {
-          const cell2 = document.createElement('td');
-
-          cell2.setAttribute(CELL_ATTR, '');
-          cell2.setAttribute(CELL_ROW_ATTR, String(r));
-          cell2.setAttribute(CELL_COL_ATTR, '1');
-          tr.appendChild(cell2);
-        }
-
-        tbody.appendChild(tr);
-      }
-
-      // Create an overlay div and mock its getBoundingClientRect
-      const overlay = document.createElement('div');
-
-      overlay.style.position = 'absolute';
-      overlay.style.inset = '0';
-      overlay.getBoundingClientRect = vi.fn().mockReturnValue(overlayBCR);
-
-      // Mock getBoundingClientRect on the origin cell
-      if (originCellEl) {
-        originCellEl.getBoundingClientRect = vi.fn().mockReturnValue(mergedCellBCR);
-      }
-
-      grid = table;
-      document.body.appendChild(grid);
-
-      controls = new TableRowColControls({
-        grid,
-        overlay,
-        getColumnCount: () => 2,
-        getRowCount: () => rowCount,
-        isHeadingRow: () => false,
-        isHeadingColumn: () => false,
-        onAction: vi.fn(),
-        onClearContents: vi.fn(),
-        onColorChange: vi.fn(),
-        i18n: mockI18n,
-      });
-
-      // Grips are appended to the overlay when overlay is provided
-      const rowGrips = overlay.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
-
-      // Row 0 grip: should use BCR of the origin cell relative to the overlay
-      // mergedCellBCR.top(10) - overlayBCR.top(10) + mergedCellBCR.height(124)/2 = 62
-      expect(rowGrips[0].style.top).toBe(`${expectedCenterY}px`);
-
-      // Row 1 grip (non-merged): should still use offsetTop + offsetHeight/2
-      // = 41 + 31/2 = 56.5px
-      expect(rowGrips[1].style.top).toBe('56.5px');
-
-      // Row 2 grip (non-merged): 72 + 31/2 = 87.5px
-      expect(rowGrips[2].style.top).toBe('87.5px');
-    });
   });
 
   describe('setGripsDisplay', () => {
@@ -1563,6 +1373,147 @@ describe('TableRowColControls', () => {
       // rowGrip[1] should be visible — the logical row of row1
       expect(isGripVisible(rowGrips[1])).toBe(true);
       expect(isGripVisible(rowGrips[0])).toBe(false);
+    });
+  });
+
+  describe('grips over a cell merged across rows and columns', () => {
+    const ROW_HEIGHT = 40;
+    const COL_WIDTH = 100;
+
+    /**
+     * 3x3 table, origin (0,0) with rowspan 3 and colspan 2.
+     * Rows 1 and 2 only hold their col-2 cell; the origin <td> sits in row 0's <tr>.
+     */
+    const createSpanGrid = (): { table: HTMLTableElement; origin: HTMLTableCellElement } => {
+      const table = document.createElement('table');
+      const colgroup = document.createElement('colgroup');
+      const tbody = document.createElement('tbody');
+
+      for (let c = 0; c < 3; c++) {
+        const col = document.createElement('col');
+
+        Object.defineProperty(col, 'offsetWidth', { value: COL_WIDTH, configurable: true });
+        colgroup.appendChild(col);
+      }
+
+      table.appendChild(colgroup);
+      table.appendChild(tbody);
+      table.getBoundingClientRect = vi.fn().mockReturnValue(new DOMRect(0, 0, 3 * COL_WIDTH, 3 * ROW_HEIGHT));
+
+      const origin = document.createElement('td');
+
+      origin.setAttribute(CELL_ATTR, '');
+      origin.setAttribute(CELL_ROW_ATTR, '0');
+      origin.setAttribute(CELL_COL_ATTR, '0');
+      origin.rowSpan = 3;
+      origin.colSpan = 2;
+      origin.getBoundingClientRect = vi.fn().mockReturnValue(new DOMRect(0, 0, 2 * COL_WIDTH, 3 * ROW_HEIGHT));
+
+      for (let r = 0; r < 3; r++) {
+        const tr = document.createElement('tr');
+
+        tr.setAttribute(ROW_ATTR, '');
+        Object.defineProperty(tr, 'offsetTop', { value: r * ROW_HEIGHT, configurable: true });
+        Object.defineProperty(tr, 'offsetHeight', { value: ROW_HEIGHT, configurable: true });
+        tr.getBoundingClientRect = vi.fn().mockReturnValue(new DOMRect(0, r * ROW_HEIGHT, 3 * COL_WIDTH, ROW_HEIGHT));
+
+        if (r === 0) {
+          tr.appendChild(origin);
+        }
+
+        const cell = document.createElement('td');
+
+        cell.setAttribute(CELL_ATTR, '');
+        cell.setAttribute(CELL_ROW_ATTR, String(r));
+        cell.setAttribute(CELL_COL_ATTR, '2');
+        tr.appendChild(cell);
+        tbody.appendChild(tr);
+      }
+
+      document.body.appendChild(table);
+
+      return { table, origin };
+    };
+
+    const mountControls = (table: HTMLElement): TableRowColControls => new TableRowColControls({
+      grid: table,
+      getColumnCount: () => 3,
+      getRowCount: () => 3,
+      isHeadingRow: () => false,
+      isHeadingColumn: () => false,
+      onAction: vi.fn(),
+      onClearContents: vi.fn(),
+      onColorChange: vi.fn(),
+      i18n: mockI18n,
+    });
+
+    const visibleRowGrips = (table: HTMLElement): string[] =>
+      Array.from(table.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}][${GRIP_VISIBLE_ATTR}]`))
+        .map(g => g.getAttribute(GRIP_ROW_ATTR) ?? '');
+
+    const visibleColGrips = (table: HTMLElement): string[] =>
+      Array.from(table.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}][${GRIP_VISIBLE_ATTR}]`))
+        .map(g => g.getAttribute(GRIP_COL_ATTR) ?? '');
+
+    it('places each row grip inside its own row, not on the merged cell centre', () => {
+      const { table } = createSpanGrid();
+
+      grid = table;
+      controls = mountControls(table);
+
+      const rowGrips = table.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
+
+      expect(rowGrips[0].style.top).toBe('20px');
+      expect(rowGrips[1].style.top).toBe('60px');
+      expect(rowGrips[2].style.top).toBe('100px');
+    });
+
+    it('shows the grip of the row under the pointer when entering the merged cell at row 1', () => {
+      const { table, origin } = createSpanGrid();
+
+      grid = table;
+      controls = mountControls(table);
+
+      origin.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 50, clientY: 60 }));
+
+      expect(visibleRowGrips(table)).toEqual(['1']);
+    });
+
+    it('follows the pointer to another row while it moves inside the merged cell', () => {
+      const { table, origin } = createSpanGrid();
+
+      grid = table;
+      controls = mountControls(table);
+
+      origin.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 50, clientY: 10 }));
+      expect(visibleRowGrips(table)).toEqual(['0']);
+
+      origin.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 50, clientY: 100 }));
+      expect(visibleRowGrips(table)).toEqual(['2']);
+    });
+
+    it('shows the grip of the column under the pointer inside a colspan', () => {
+      const { table, origin } = createSpanGrid();
+
+      grid = table;
+      controls = mountControls(table);
+
+      origin.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 150, clientY: 10 }));
+
+      expect(visibleColGrips(table)).toEqual(['1']);
+    });
+
+    it('resolves the row under the pointer when a locked grip is released over the merged cell', () => {
+      const { table, origin } = createSpanGrid();
+
+      grid = table;
+      controls = mountControls(table);
+      controls.setActiveGrip('row', 2);
+
+      origin.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 150, clientY: 60 }));
+
+      expect(visibleRowGrips(table)).toEqual(['1']);
+      expect(visibleColGrips(table)).toEqual(['1']);
     });
   });
 

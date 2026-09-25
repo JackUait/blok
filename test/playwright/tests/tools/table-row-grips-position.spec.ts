@@ -155,6 +155,19 @@ const getRowBoundingBox = async (page: Page, rowIndex: number) => {
   return box;
 };
 
+/**
+ * Each row grip's centre must fall inside its own row: a grip placed on another
+ * row opens that row's menu.
+ */
+const expectEachRowGripInsideItsRow = async (page: Page, rowCount: number): Promise<void> => {
+  for (let i = 0; i < rowCount; i++) {
+    const rowBox = await getRowBoundingBox(page, i);
+
+    await expect.poll(async () => getRowGripCenterY(page, i)).toBeGreaterThan(rowBox.y);
+    await expect.poll(async () => getRowGripCenterY(page, i)).toBeLessThan(rowBox.y + rowBox.height);
+  }
+};
+
 test.describe('table row grip positioning with merged cells (rowspan)', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
@@ -194,71 +207,29 @@ test.describe('table row grip positioning with merged cells (rowspan)', () => {
     });
   });
 
-  test('row grip for rowspan=3 origin cell is centered on full merged height, not just first row', async ({ page }) => {
-    // Hover over the merged cell to show row grips
-    const mergedCell = page.locator('[data-blok-table-cell-row="0"][data-blok-table-cell-col="0"]');
+  test('each row grip sits inside its own row beside a rowspan=3 cell', async ({ page }) => {
+    await expect(page.locator('[data-blok-table-cell-row="0"][data-blok-table-cell-col="0"]')).toHaveAttribute('rowspan', '3');
 
-    await mergedCell.hover();
-
-    const row0Grip = page.locator('[data-blok-table-grip-row="0"][data-blok-table-grip-visible]');
-
-    await expect(row0Grip).toBeVisible();
-
-    // Get the bounding boxes of the first and last rows to compute the visual center of the merged area
-    const row0Box = await getRowBoundingBox(page, 0);
-    const row2Box = await getRowBoundingBox(page, 2);
-
-    // The merged cell spans all 3 rows; its visual center is the midpoint of the
-    // entire spanned area (from the top of row 0 to the bottom of row 2).
-    const mergedAreaTop = row0Box.y;
-    const mergedAreaBottom = row2Box.y + row2Box.height;
-    const mergedAreaCenterY = (mergedAreaTop + mergedAreaBottom) / 2;
-
-    const row0GripY = await getRowGripCenterY(page, 0);
-
-    // The grip should be centered on the full merged span, not just the first row.
-    // Allow 2px tolerance for sub-pixel rendering.
-    expect(Math.abs(row0GripY - mergedAreaCenterY)).toBeLessThan(2);
+    await expectEachRowGripInsideItsRow(page, 3);
   });
 
-  test('row grip stays centered on merged cell when its content is taller than individual row heights', async ({ page }) => {
-    // Click into the merged cell and add enough content to force its height
-    // to exceed what the individual tr.offsetHeight values would report.
-    // This tests the getBoundingClientRect-based fix.
+  test('row grips stay inside their rows when the merged cell content grows', async ({ page }) => {
     const mergedCell = page.locator('[data-blok-table-cell-row="0"][data-blok-table-cell-col="0"]');
 
     await mergedCell.click();
 
-    // Type multiple lines to grow the merged cell's height well beyond the default
     for (let i = 0; i < 8; i++) {
       await page.keyboard.press('Shift+Enter');
       await page.keyboard.type(`Line ${i + 2}`);
     }
 
-    // Wait for the merged cell to grow
     await expect.poll(async () => {
       const box = await mergedCell.boundingBox();
 
       return box?.height ?? 0;
-    }).toBeGreaterThan(60);
+    }).toBeGreaterThan(120);
 
-    // Hover to show grips
-    await mergedCell.hover();
-
-    const row0Grip = page.locator('[data-blok-table-grip-row="0"][data-blok-table-grip-visible]');
-
-    await expect(row0Grip).toBeVisible();
-
-    // Compute the visual center Y of the merged cell
-    const mergedCellCenterY = await mergedCell.evaluate((el) => {
-      const rect = el.getBoundingClientRect();
-
-      return rect.top + rect.height / 2;
-    });
-    const row0GripY = await getRowGripCenterY(page, 0);
-
-    // The grip center should match the merged cell's visual center (within 2px tolerance)
-    expect(Math.abs(row0GripY - mergedCellCenterY)).toBeLessThan(2);
+    await expectEachRowGripInsideItsRow(page, 3);
   });
 });
 

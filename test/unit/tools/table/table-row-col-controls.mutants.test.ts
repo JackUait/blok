@@ -1701,7 +1701,7 @@ describe('TableRowColControls — geometry and grip state', () => {
     });
   });
 
-  describe('merge-aware row grip anchoring', () => {
+  describe('row grip placement beside a merged cell', () => {
     /**
      * One row of cells, each with a rowSpan and its own rendered rect, so the
      * grip's top names the cell the anchor logic picked.
@@ -1750,51 +1750,18 @@ describe('TableRowColControls — geometry and grip state', () => {
       expect(gripsIn(grid, GRIP_ROW_ATTR)).toHaveLength(2);
     });
 
-    it('anchors a merged row grip to the origin cell rect', () => {
+    it('keeps a merged row grip on its own row, not on the merged cell centre', () => {
       grid = createMergedRow([
-        { rowSpan: 2, top: 100, height: 60 },
+        { rowSpan: 3, top: 100, height: 120 },
         { rowSpan: 1, top: 0, height: 20 },
       ]);
       controls = new TableRowColControls(baseOptions(grid, 1, 2));
 
       const rowGrip = gripsIn(grid, GRIP_ROW_ATTR)[0];
 
-      // Centre of the merged cell: 100 + 60/2, and the grip hugs the border.
-      expect(rowGrip.style.top).toBe('130px');
+      // Row centre 400 + 40/2; the merged cell centre (160) would sit on a later row.
+      expect(rowGrip.style.top).toBe('420px');
       expect(rowGrip.style.left).toBe('-0.5px');
-    });
-
-    it('anchors a merged row grip to the widest merge', () => {
-      grid = createMergedRow([
-        { rowSpan: 3, top: 10, height: 20 },
-        { rowSpan: 1, top: 200, height: 20 },
-        { rowSpan: 2, top: 300, height: 20 },
-      ]);
-      controls = new TableRowColControls(baseOptions(grid, 1, 3));
-
-      // The 3-row merge is the tallest origin: 10 + 10, not the row's own top.
-      expect(gripsIn(grid, GRIP_ROW_ATTR)[0].style.top).toBe('20px');
-    });
-
-    it('anchors a merged row grip to the rowSpan the cell reports', () => {
-      grid = createMergedRow([
-        { rowSpan: 1, top: 10, height: 20 },
-        { rowSpan: 2, top: 300, height: 20 },
-      ]);
-      controls = new TableRowColControls(baseOptions(grid, 1, 2));
-
-      // The second cell spans two rows, so it is the origin — 300 + 10.
-      expect(gripsIn(grid, GRIP_ROW_ATTR)[0].style.top).toBe('310px');
-    });
-
-    it('prefers the first cell when two merges tie', () => {
-      grid = createMergedRow([
-        { rowSpan: 2, top: 10, height: 20 },
-        { rowSpan: 2, top: 300, height: 20 },
-      ]);
-      controls = new TableRowColControls(baseOptions(grid, 1, 2));
-
-      expect(gripsIn(grid, GRIP_ROW_ATTR)[0].style.top).toBe('20px');
     });
   });
 });

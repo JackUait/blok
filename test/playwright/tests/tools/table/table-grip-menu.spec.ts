@@ -233,3 +233,84 @@ test.describe('Table grip menu — color, duplicate, clear', () => {
     expect(content[0][1].color).toBeTruthy();
   });
 });
+
+/**
+ * 4x3 table whose cell (0,0) spans rows 0-2 and cols 0-1. Col 2 carries R0..R3.
+ */
+const createMergedTable = async (page: Page): Promise<void> => {
+  await resetBlok(page);
+  await page.waitForFunction(() => typeof window.Blok === 'function');
+
+  await page.evaluate(async ({ holder }) => {
+    const covered = { blocks: [], text: '', mergedInto: [0, 0] };
+    const data = {
+      blocks: [
+        {
+          type: 'table',
+          data: {
+            withHeadings: false,
+            content: [
+              [{ blocks: [], text: 'M', rowspan: 3, colspan: 2 }, covered, { blocks: [], text: 'R0' }],
+              [covered, covered, { blocks: [], text: 'R1' }],
+              [covered, covered, { blocks: [], text: 'R2' }],
+              [{ blocks: [], text: 'X' }, { blocks: [], text: 'Y' }, { blocks: [], text: 'R3' }],
+            ],
+          },
+        },
+      ],
+    } as unknown as OutputData;
+
+    const tableClass: unknown = (window as unknown as { Blok: Record<string, unknown> }).Blok.Table;
+    const blokConfig: Record<string, unknown> = {
+      holder,
+      data,
+      tools: { table: { class: tableClass } },
+    };
+    const blok = new window.Blok(blokConfig);
+
+    window.blokInstance = blok;
+    await blok.isReady;
+  }, { holder: HOLDER_ID });
+};
+
+test.describe('Table grips over a merged cell', () => {
+  test.beforeAll(() => {
+    ensureBlokBundleBuilt();
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await gotoTestPage(page);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+  });
+
+  test('sliding from row 1 across a rowspan to the grip deletes row 1, not row 0', async ({ page }) => {
+    await createMergedTable(page);
+    await expect(getCell(page, 0, 0)).toHaveAttribute('rowspan', '3');
+
+    const rowCell = await getCell(page, 1, 2).boundingBox();
+    const originCell = await getCell(page, 0, 0).boundingBox();
+
+    if (!rowCell || !originCell) {
+      throw new Error('table cells have no box');
+    }
+
+    const y = rowCell.y + rowCell.height / 2;
+
+    // Enter row 1 at col 2, then slide left across the merged cell to the table edge.
+    await page.mouse.move(rowCell.x + rowCell.width / 2, y);
+    await page.mouse.move(originCell.x + 2, y, { steps: 10 });
+    await page.mouse.move(originCell.x, y, { steps: 2 });
+
+    const visibleGrip = page.locator(`[${ROW_GRIP_ATTR}][data-blok-table-grip-visible]`);
+
+    await expect(visibleGrip).toHaveAttribute(ROW_GRIP_ATTR, '1');
+
+    await page.mouse.down();
+    await page.mouse.up();
+    await page.getByText('Delete', { exact: true }).click();
+
+    await expect(page.getByText('R1', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('R0', { exact: true })).toBeVisible();
+    await expect(page.locator('[data-blok-table-row]')).toHaveCount(3);
+  });
+});

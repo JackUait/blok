@@ -165,6 +165,8 @@ export class TableRowColControls {
     this.createGrips();
 
     this.grid.addEventListener('mouseover', this.boundMouseOver);
+    // A merged cell covers several rows/cols, and mouseover fires only on entry.
+    this.grid.addEventListener('mousemove', this.boundMouseOver);
     this.grid.addEventListener('mouseleave', this.boundMouseLeave);
   }
 
@@ -247,7 +249,7 @@ export class TableRowColControls {
     const cell = target?.closest<HTMLElement>(`[${CELL_ATTR}]`);
 
     if (cell) {
-      const position = this.getCellPosition(cell);
+      const position = this.getPointerPosition(cell, e);
 
       if (position) {
         this.clearHideTimeout();
@@ -304,6 +306,7 @@ export class TableRowColControls {
     this.unlockGrip();
     this.drag.cleanup();
     this.grid.removeEventListener('mouseover', this.boundMouseOver);
+    this.grid.removeEventListener('mousemove', this.boundMouseOver);
     this.grid.removeEventListener('mouseleave', this.boundMouseLeave);
     this.clearHideTimeout();
     this.destroyGrips();
@@ -500,39 +503,12 @@ export class TableRowColControls {
       }
 
       const rowEl = rows[i] as HTMLElement;
+      // A row grip must sit inside its own row: centring it on a rowspan puts grip 0 on top of grip 1.
+      const centerY = rowEl.offsetTop + rowEl.offsetHeight / 2;
+      const style = grip.style;
 
-      // Find the cell with the maximum rowSpan in this row to correctly
-      // center the grip over merged cells that span multiple rows.
-      const cellsInRow = this.grid.querySelectorAll<HTMLElement>(`[${CELL_ROW_ATTR}="${i}"]`);
-      const originCell = Array.from(cellsInRow).reduce<HTMLTableCellElement | null>((best, cell) => {
-        const tdCell = cell as HTMLTableCellElement;
-        const bestSpan = best !== null ? best.rowSpan || 1 : 0;
-
-        return (tdCell.rowSpan || 1) > bestSpan ? tdCell : best;
-      }, null);
-      const maxRowSpan = originCell !== null ? (originCell.rowSpan || 1) : 1;
-
-      if (maxRowSpan > 1 && originCell !== null) {
-        // Use getBoundingClientRect() on the origin cell to get its actual rendered
-        // height — summing tr.offsetHeight is inaccurate when the merged cell's
-        // content forces the browser to redistribute height across rows (each
-        // individual tr.offsetHeight stays at its minimum rather than reflecting
-        // the full visual contribution of the merged content).
-        const container = this.overlay ?? this.grid;
-        const containerRect = container.getBoundingClientRect();
-        const cellRect = originCell.getBoundingClientRect();
-        const centerY = cellRect.top - containerRect.top + cellRect.height / 2;
-        const style = grip.style;
-
-        style.left = `${-BORDER_WIDTH / 2}px`;
-        style.top = `${centerY}px`;
-      } else {
-        const centerY = rowEl.offsetTop + rowEl.offsetHeight / 2;
-        const style = grip.style;
-
-        style.left = `${-BORDER_WIDTH / 2}px`;
-        style.top = `${centerY}px`;
-      }
+      style.left = `${-BORDER_WIDTH / 2}px`;
+      style.top = `${centerY}px`;
     });
   }
 
@@ -571,7 +547,7 @@ export class TableRowColControls {
 
     this.clearHideTimeout();
 
-    const position = this.getCellPosition(cell);
+    const position = this.getPointerPosition(cell, e);
 
     if (!position) {
       return;
@@ -588,6 +564,43 @@ export class TableRowColControls {
     }
 
     this.scheduleHideAll();
+  }
+
+  /**
+   * The row/col under the pointer. A merged cell's attributes name only its
+   * origin, so inside a span the pointer coordinates pick the covered row/col.
+   */
+  private getPointerPosition(cell: HTMLElement, e: MouseEvent): { row: number; col: number } | null {
+    const position = this.getCellPosition(cell);
+
+    if (!position) {
+      return null;
+    }
+
+    const rowSpan = (cell as HTMLTableCellElement).rowSpan || 1;
+    const colSpan = (cell as HTMLTableCellElement).colSpan || 1;
+
+    return {
+      row: rowSpan > 1 ? this.getRowInSpan(position.row, rowSpan, e.clientY) : position.row,
+      col: colSpan > 1 ? this.getColInSpan(position.col, colSpan, e.clientX) : position.col,
+    };
+  }
+
+  private getRowInSpan(originRow: number, rowSpan: number, clientY: number): number {
+    const rows = Array.from(this.grid.querySelectorAll<HTMLElement>(`[${ROW_ATTR}]`));
+    const covered = rows.slice(originRow, originRow + rowSpan);
+    const hit = covered.findIndex(row => clientY < row.getBoundingClientRect().bottom);
+
+    return originRow + (hit >= 0 ? hit : Math.max(covered.length - 1, 0));
+  }
+
+  private getColInSpan(originCol: number, colSpan: number, clientX: number): number {
+    const edges = getCumulativeColEdges(this.grid);
+    const x = clientX - this.grid.getBoundingClientRect().left;
+    const rightEdges = edges.slice(originCol + 1, originCol + colSpan + 1);
+    const hit = rightEdges.findIndex(edge => x < edge);
+
+    return originCol + (hit >= 0 ? hit : Math.max(rightEdges.length - 1, 0));
   }
 
   private getCellPosition(cell: HTMLElement): { row: number; col: number } | null {

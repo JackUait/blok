@@ -480,10 +480,6 @@
     translate: 0 -1px;
   }
 
-  [data-blok-emoji-picker] [data-emoji-nav]:hover svg {
-    transform: translateY(-1px);
-  }
-
   [data-blok-emoji-picker] [data-emoji-nav]:hover {
     color: var(--blok-text-primary);
   }

@@ -2936,10 +2936,6 @@ span[data-blok-slash-search] {
   translate: 0 -1px;
 }
 
-[@media (hover: hover)] [data-blok-emoji-picker] [data-emoji-nav]:hover svg {
-  transform: translateY(-1px);
-}
-
 [@media (hover: hover)] [data-blok-emoji-picker] [data-emoji-nav]:hover {
   color: var(--blok-text-primary);
 }

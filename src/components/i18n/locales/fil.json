@@ -273,6 +273,8 @@
   "tools.link.removeLink": "Alisin ang link",
   "tools.link.pageOrUrl": "Pahina o URL",
   "tools.link.linkTitle": "Teksto ng link",
+  "tools.link.recent": "Kamakailan",
+  "tools.link.onThisPage": "Sa pahinang ito",
   "tools.code.autoDetected": "auto",
   "tools.code.plainText": "Tekstong walang format",
   "tools.image.alignment": "Pag-align",

@@ -275,6 +275,8 @@
   "tools.link.removeLink": "Հեռացնել հղումը",
   "tools.link.pageOrUrl": "Էջ կամ URL",
   "tools.link.linkTitle": "Հղման տեքստ",
+  "tools.link.recent": "Վերջինները",
+  "tools.link.onThisPage": "Այս էջում",
   "tools.code.autoDetected": "ավտոմատ",
   "tools.code.plainText": "Պարզ տեքստ",
   "tools.image.alignment": "Հավասարեցում",

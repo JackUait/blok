@@ -275,6 +275,8 @@
   "tools.link.removeLink": "Odstrani povezavo",
   "tools.link.pageOrUrl": "Stran ali URL",
   "tools.link.linkTitle": "Besedilo povezave",
+  "tools.link.recent": "Nedavno",
+  "tools.link.onThisPage": "Na tej strani",
   "tools.code.autoDetected": "samodejno",
   "tools.code.plainText": "Navadno besedilo",
   "tools.image.alignment": "Poravnava",

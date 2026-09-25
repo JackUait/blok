@@ -273,6 +273,8 @@
   "tools.link.removeLink": "הסר קישור",
   "tools.link.pageOrUrl": "עמוד או URL",
   "tools.link.linkTitle": "טקסט הקישור",
+  "tools.link.recent": "אחרונים",
+  "tools.link.onThisPage": "בעמוד זה",
   "tools.code.autoDetected": "אוטומטי",
   "tools.code.plainText": "טקסט רגיל",
   "tools.image.alignment": "יישור",

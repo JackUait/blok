@@ -275,6 +275,8 @@
   "tools.link.removeLink": "සබැඳිය ඉවත් කරන්න",
   "tools.link.pageOrUrl": "පිටුව හෝ URL",
   "tools.link.linkTitle": "සබැඳි පෙළ",
+  "tools.link.recent": "මෑත",
+  "tools.link.onThisPage": "මෙම පිටුවේ",
   "tools.code.autoDetected": "ස්වයංක්‍රීය",
   "tools.code.plainText": "සාමාන්‍ය පෙළ",
   "tools.image.alignment": "පෙළ ගැස්ම",

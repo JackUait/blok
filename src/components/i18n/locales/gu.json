@@ -273,6 +273,8 @@
   "tools.link.removeLink": "લિંક દૂર કરો",
   "tools.link.pageOrUrl": "પેજ અથવા URL",
   "tools.link.linkTitle": "લિંકનું લખાણ",
+  "tools.link.recent": "તાજેતરના",
+  "tools.link.onThisPage": "આ પેજ પર",
   "tools.code.autoDetected": "સ્વચાલિત",
   "tools.code.plainText": "સાદો ટેક્સ્ટ",
   "tools.image.alignment": "સંરેખણ",

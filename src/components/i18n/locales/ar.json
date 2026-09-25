@@ -275,6 +275,8 @@
   "tools.link.removeLink": "إزالة الرابط",
   "tools.link.pageOrUrl": "صفحة أو عنوان URL",
   "tools.link.linkTitle": "نص الرابط",
+  "tools.link.recent": "الأخيرة",
+  "tools.link.onThisPage": "في هذه الصفحة",
   "tools.code.autoDetected": "تلقائي",
   "tools.code.plainText": "نص عادي",
   "tools.image.alignment": "المحاذاة",

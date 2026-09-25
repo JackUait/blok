@@ -275,6 +275,8 @@
   "tools.link.removeLink": "Ukloni vezu",
   "tools.link.pageOrUrl": "Stranica ili URL",
   "tools.link.linkTitle": "Tekst veze",
+  "tools.link.recent": "Nedavno",
+  "tools.link.onThisPage": "Na ovoj stranici",
   "tools.code.autoDetected": "automatski",
   "tools.code.plainText": "Običan tekst",
   "tools.image.alignment": "Poravnanje",

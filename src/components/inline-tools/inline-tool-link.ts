@@ -37,13 +37,6 @@ const SUGGESTION_TYPE_TEXT = 'block text-[11px] leading-[14px] text-gray-text mt
  */
 const ENTER_HINT_CLASSES = 'items-center justify-center size-5 shrink-0 text-gray-text [&_svg]:size-3.5';
 
-/**
- * Absent from the locale dictionaries on purpose: a new key resets the
- * translation audit ledger. Kept in a const so the static i18n scan skips it.
- */
-const RECENT_LABEL_KEY = 'tools.link.recent';
-const HEADINGS_LABEL_KEY = 'tools.link.onThisPage';
-
 const HEADING_LIMIT = 6;
 const HEADING_ICONS: Record<number, string> = { 1: IconH1, 2: IconH2, 3: IconH3, 4: IconH4, 5: IconH5, 6: IconH6 };
 
@@ -759,8 +752,7 @@ export class LinkInlineTool implements InlineTool {
    * "Recent" list of the last links added, shown under the empty field.
    */
   private createRecent(): HTMLElement {
-    const label = this.i18n.has(RECENT_LABEL_KEY) ? this.i18n.t(RECENT_LABEL_KEY) : 'Recent';
-    const { section, list } = this.createSection(`${this.errorId}-recent`, 'data-link-recent', label);
+    const { section, list } = this.createSection(`${this.errorId}-recent`, 'data-link-recent', this.i18n.t('tools.link.recent'));
 
     list.className = RECENT_LIST_CLASSES;
     this.nodes.recentList = list;
@@ -772,8 +764,11 @@ export class LinkInlineTool implements InlineTool {
    * "On this page": headings of this document a link can jump to.
    */
   private createHeadings(): HTMLElement {
-    const label = this.i18n.has(HEADINGS_LABEL_KEY) ? this.i18n.t(HEADINGS_LABEL_KEY) : 'On this page';
-    const { section, list } = this.createSection(`${this.errorId}-headings`, 'data-link-headings', label);
+    const { section, list } = this.createSection(
+      `${this.errorId}-headings`,
+      'data-link-headings',
+      this.i18n.t('tools.link.onThisPage')
+    );
 
     this.nodes.headingList = list;
 

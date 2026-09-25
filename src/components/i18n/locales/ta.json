@@ -273,6 +273,8 @@
   "tools.link.removeLink": "இணைப்பை அகற்று",
   "tools.link.pageOrUrl": "பக்கம் அல்லது URL",
   "tools.link.linkTitle": "இணைப்பு உரை",
+  "tools.link.recent": "சமீபத்தியவை",
+  "tools.link.onThisPage": "இந்தப் பக்கத்தில்",
   "tools.code.autoDetected": "தானியங்கி",
   "tools.code.plainText": "எளிய உரை",
   "tools.image.alignment": "சீரமைப்பு",

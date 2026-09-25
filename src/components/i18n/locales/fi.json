@@ -273,6 +273,8 @@
   "tools.link.removeLink": "Poista linkki",
   "tools.link.pageOrUrl": "Sivu tai URL",
   "tools.link.linkTitle": "Linkin teksti",
+  "tools.link.recent": "Viimeisimmät",
+  "tools.link.onThisPage": "Tällä sivulla",
   "tools.code.autoDetected": "automaattinen",
   "tools.code.plainText": "Pelkkä teksti",
   "tools.image.alignment": "Tasaus",

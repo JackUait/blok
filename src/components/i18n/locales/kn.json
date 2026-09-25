@@ -286,6 +286,8 @@
   "tools.link.removeLink": "ಲಿಂಕ್ ತೆಗೆದುಹಾಕಿ",
   "tools.link.pageOrUrl": "ಪುಟ ಅಥವಾ URL",
   "tools.link.linkTitle": "ಲಿಂಕ್ ಪಠ್ಯ",
+  "tools.link.recent": "ಇತ್ತೀಚಿನವು",
+  "tools.link.onThisPage": "ಈ ಪುಟದಲ್ಲಿ",
   "tools.code.autoDetected": "ಸ್ವಯಂ",
   "tools.code.plainText": "ಸರಳ ಪಠ್ಯ",
   "tools.image.alignment": "ಹೊಂದಾಣಿಕೆ",

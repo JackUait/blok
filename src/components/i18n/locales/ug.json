@@ -273,6 +273,8 @@
   "tools.link.removeLink": "ئۇلانمىنى ئۆچۈر",
   "tools.link.pageOrUrl": "بەت ياكى URL",
   "tools.link.linkTitle": "ئۇلانما تېكىستى",
+  "tools.link.recent": "يېقىنقىلار",
+  "tools.link.onThisPage": "بۇ بەتتە",
   "tools.code.autoDetected": "ئاپتوماتىك",
   "tools.code.plainText": "ئاددىي تېكىست",
   "tools.image.alignment": "توغرىلاش",

@@ -275,6 +275,8 @@
   "tools.link.removeLink": "ލިންކް ނަގާ",
   "tools.link.pageOrUrl": "ޞަފްޙާ ނުވަތަ URL",
   "tools.link.linkTitle": "ލިންކްގެ ލިޔުން",
+  "tools.link.recent": "ދާދިފަހުގެ",
+  "tools.link.onThisPage": "މި ޞަފްޙާގައި",
   "tools.code.autoDetected": "އޮޓޯ",
   "tools.code.plainText": "އާންމު ޓެކްސްޓް",
   "tools.image.alignment": "އެލައިންމަންޓް",

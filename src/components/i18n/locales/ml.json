@@ -284,6 +284,8 @@
   "tools.link.removeLink": "ലിങ്ക് നീക്കം ചെയ്യുക",
   "tools.link.pageOrUrl": "പേജ് അല്ലെങ്കിൽ URL",
   "tools.link.linkTitle": "ലിങ്ക് ടെക്സ്റ്റ്",
+  "tools.link.recent": "അടുത്തിടെയുള്ളവ",
+  "tools.link.onThisPage": "ഈ പേജിൽ",
   "tools.code.autoDetected": "സ്വയമേവ",
   "tools.code.plainText": "പ്ലെയിൻ ടെക്സ്റ്റ്",
   "tools.image.alignment": "അലൈൻമെന്റ്",

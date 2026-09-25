@@ -284,6 +284,8 @@
   "tools.link.removeLink": "दुवा काढून टाका",
   "tools.link.pageOrUrl": "पृष्ठ किंवा URL",
   "tools.link.linkTitle": "दुव्याचा मजकूर",
+  "tools.link.recent": "अलीकडील",
+  "tools.link.onThisPage": "या पृष्ठावर",
   "tools.code.autoDetected": "स्वयंचलित",
   "tools.code.plainText": "साधा मजकूर",
   "tools.image.alignment": "संरेखन",

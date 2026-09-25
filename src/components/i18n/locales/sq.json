@@ -275,6 +275,8 @@
   "tools.link.removeLink": "Hiq lidhjen",
   "tools.link.pageOrUrl": "Faqe ose URL",
   "tools.link.linkTitle": "Teksti i lidhjes",
+  "tools.link.recent": "Së fundmi",
+  "tools.link.onThisPage": "Në këtë faqe",
   "tools.code.autoDetected": "automatik",
   "tools.code.plainText": "Tekst i thjeshtë",
   "tools.image.alignment": "Rreshtimi",

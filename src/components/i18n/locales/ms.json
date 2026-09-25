@@ -284,6 +284,8 @@
   "tools.link.removeLink": "Alih keluar pautan",
   "tools.link.pageOrUrl": "Halaman atau URL",
   "tools.link.linkTitle": "Teks pautan",
+  "tools.link.recent": "Terkini",
+  "tools.link.onThisPage": "Pada halaman ini",
   "tools.code.autoDetected": "automatik",
   "tools.code.plainText": "Teks biasa",
   "tools.image.alignment": "Penjajaran",

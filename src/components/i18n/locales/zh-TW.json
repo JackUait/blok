@@ -286,6 +286,8 @@
   "tools.link.removeLink": "移除連結",
   "tools.link.pageOrUrl": "頁面或網址",
   "tools.link.linkTitle": "連結文字",
+  "tools.link.recent": "最近使用",
+  "tools.link.onThisPage": "本頁內容",
   "tools.code.autoDetected": "自動偵測",
   "tools.code.plainText": "純文字",
   "tools.image.alignment": "對齊",

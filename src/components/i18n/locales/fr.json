@@ -273,6 +273,8 @@
   "tools.link.removeLink": "Supprimer le lien",
   "tools.link.pageOrUrl": "Page ou URL",
   "tools.link.linkTitle": "Texte du lien",
+  "tools.link.recent": "Récents",
+  "tools.link.onThisPage": "Sur cette page",
   "tools.code.autoDetected": "automatique",
   "tools.code.plainText": "Texte brut",
   "tools.image.alignment": "Alignement",

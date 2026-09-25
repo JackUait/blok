@@ -284,6 +284,8 @@
   "tools.link.removeLink": "လင့်ခ်ဖယ်ရှားရန်",
   "tools.link.pageOrUrl": "စာမျက်နှာ သို့မဟုတ် URL",
   "tools.link.linkTitle": "လင့်ခ်စာသား",
+  "tools.link.recent": "မကြာသေးမီက",
+  "tools.link.onThisPage": "ဤစာမျက်နှာတွင်",
   "tools.code.autoDetected": "အလိုအလျောက်",
   "tools.code.plainText": "စာသားသက်သက်",
   "tools.image.alignment": "တန်းညှိခြင်း",

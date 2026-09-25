@@ -275,6 +275,8 @@
   "tools.link.removeLink": "リンクを削除",
   "tools.link.pageOrUrl": "ページまたは URL",
   "tools.link.linkTitle": "リンクテキスト",
+  "tools.link.recent": "最近使用したリンク",
+  "tools.link.onThisPage": "このページ内",
   "tools.code.autoDetected": "自動",
   "tools.code.plainText": "プレーンテキスト",
   "tools.image.alignment": "配置",

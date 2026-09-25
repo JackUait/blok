@@ -273,6 +273,8 @@
   "tools.link.removeLink": "Ondoa kiungo",
   "tools.link.pageOrUrl": "Ukurasa au URL",
   "tools.link.linkTitle": "Maandishi ya kiungo",
+  "tools.link.recent": "Za hivi karibuni",
+  "tools.link.onThisPage": "Kwenye ukurasa huu",
   "tools.code.autoDetected": "otomatiki",
   "tools.code.plainText": "Maandishi wazi",
   "tools.image.alignment": "Mpangilio",

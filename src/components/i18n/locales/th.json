@@ -273,6 +273,8 @@
   "tools.link.removeLink": "นำลิงก์ออก",
   "tools.link.pageOrUrl": "หน้าหรือ URL",
   "tools.link.linkTitle": "ข้อความลิงก์",
+  "tools.link.recent": "ล่าสุด",
+  "tools.link.onThisPage": "ในหน้านี้",
   "tools.code.autoDetected": "อัตโนมัติ",
   "tools.code.plainText": "ข้อความธรรมดา",
   "tools.image.alignment": "การจัดแนว",

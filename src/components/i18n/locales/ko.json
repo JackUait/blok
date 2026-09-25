@@ -286,6 +286,8 @@
   "tools.link.removeLink": "링크 삭제",
   "tools.link.pageOrUrl": "페이지 또는 URL",
   "tools.link.linkTitle": "링크 텍스트",
+  "tools.link.recent": "최근 사용한 링크",
+  "tools.link.onThisPage": "이 페이지 내",
   "tools.code.autoDetected": "자동",
   "tools.code.plainText": "일반 텍스트",
   "tools.image.alignment": "정렬",

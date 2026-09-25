@@ -275,6 +275,8 @@
   "tools.link.removeLink": "Hapus tautan",
   "tools.link.pageOrUrl": "Halaman atau URL",
   "tools.link.linkTitle": "Teks tautan",
+  "tools.link.recent": "Terbaru",
+  "tools.link.onThisPage": "Di halaman ini",
   "tools.code.autoDetected": "otomatis",
   "tools.code.plainText": "Teks biasa",
   "tools.image.alignment": "Perataan",

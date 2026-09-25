@@ -284,6 +284,8 @@
   "tools.link.removeLink": "लिङ्क हटाउनुहोस्",
   "tools.link.pageOrUrl": "पृष्ठ वा URL",
   "tools.link.linkTitle": "लिङ्कको पाठ",
+  "tools.link.recent": "हालैका",
+  "tools.link.onThisPage": "यस पृष्ठमा",
   "tools.code.autoDetected": "स्वतः",
   "tools.code.plainText": "सादा पाठ",
   "tools.image.alignment": "पङ्क्तिबद्धता",

@@ -273,6 +273,8 @@
   "tools.link.removeLink": "移除链接",
   "tools.link.pageOrUrl": "页面或网址",
   "tools.link.linkTitle": "链接文本",
+  "tools.link.recent": "最近使用",
+  "tools.link.onThisPage": "本页内容",
   "tools.code.autoDetected": "自动",
   "tools.code.plainText": "纯文本",
   "tools.image.alignment": "对齐",

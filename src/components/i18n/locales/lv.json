@@ -284,6 +284,8 @@
   "tools.link.removeLink": "Noņemt saiti",
   "tools.link.pageOrUrl": "Lapa vai URL",
   "tools.link.linkTitle": "Saites teksts",
+  "tools.link.recent": "Nesenās",
+  "tools.link.onThisPage": "Šajā lapā",
   "tools.code.autoDetected": "automātiski",
   "tools.code.plainText": "Vienkāršs teksts",
   "tools.image.alignment": "Līdzinājums",

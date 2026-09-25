@@ -273,6 +273,8 @@
   "tools.link.removeLink": "Bağlantıyı kaldır",
   "tools.link.pageOrUrl": "Sayfa veya URL",
   "tools.link.linkTitle": "Bağlantı metni",
+  "tools.link.recent": "Son kullanılanlar",
+  "tools.link.onThisPage": "Bu sayfada",
   "tools.code.autoDetected": "otomatik",
   "tools.code.plainText": "Düz metin",
   "tools.image.alignment": "Hizalama",

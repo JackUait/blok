@@ -275,6 +275,8 @@
   "tools.link.removeLink": "লিঙ্ক সরান",
   "tools.link.pageOrUrl": "পৃষ্ঠা বা URL",
   "tools.link.linkTitle": "লিঙ্কের লেখা",
+  "tools.link.recent": "সাম্প্রতিক",
+  "tools.link.onThisPage": "এই পৃষ্ঠায়",
   "tools.code.autoDetected": "স্বয়ংক্রিয়",
   "tools.code.plainText": "সাধারণ টেক্সট",
   "tools.image.alignment": "সারিবদ্ধকরণ",

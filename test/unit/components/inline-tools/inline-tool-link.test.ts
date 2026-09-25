@@ -114,6 +114,8 @@ const ENGLISH_LINK_TRANSLATIONS: Record<string, string> = {
   'tools.link.emailAddress': defaultDictionary['tools.link.emailAddress'],
   'tools.link.jumpToSection': defaultDictionary['tools.link.jumpToSection'],
   'tools.link.webLink': defaultDictionary['tools.link.webLink'],
+  'tools.link.recent': defaultDictionary['tools.link.recent'],
+  'tools.link.onThisPage': defaultDictionary['tools.link.onThisPage'],
 };
 
 type DocumentBlock = { id: string; name: string; holder: HTMLElement };

@@ -273,6 +273,8 @@
   "tools.link.removeLink": "Ukloni poveznicu",
   "tools.link.pageOrUrl": "Stranica ili URL",
   "tools.link.linkTitle": "Tekst poveznice",
+  "tools.link.recent": "Nedavno",
+  "tools.link.onThisPage": "Na ovoj stranici",
   "tools.code.autoDetected": "automatski",
   "tools.code.plainText": "Obični tekst",
   "tools.image.alignment": "Poravnanje",

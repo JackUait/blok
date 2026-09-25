@@ -273,6 +273,8 @@
   "tools.link.removeLink": "נעם אַראָפּ דעם לינק",
   "tools.link.pageOrUrl": "בלאט אָדער URL",
   "tools.link.linkTitle": "לינק־טעקסט",
+  "tools.link.recent": "לעצטע",
+  "tools.link.onThisPage": "אויף דעם בלאט",
   "tools.code.autoDetected": "אויטא",
   "tools.code.plainText": "פראסטער טעקסט",
   "tools.image.alignment": "אויסגלייכונג",

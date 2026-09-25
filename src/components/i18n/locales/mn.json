@@ -284,6 +284,8 @@
   "tools.link.removeLink": "Холбоос устгах",
   "tools.link.pageOrUrl": "Хуудас эсвэл URL",
   "tools.link.linkTitle": "Холбоосын текст",
+  "tools.link.recent": "Сүүлд ашигласан",
+  "tools.link.onThisPage": "Энэ хуудсанд",
   "tools.code.autoDetected": "авто",
   "tools.code.plainText": "Энгийн текст",
   "tools.image.alignment": "Зэрэгцүүлэлт",

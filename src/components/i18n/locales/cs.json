@@ -275,6 +275,8 @@
   "tools.link.removeLink": "Odebrat odkaz",
   "tools.link.pageOrUrl": "Stránka nebo URL",
   "tools.link.linkTitle": "Text odkazu",
+  "tools.link.recent": "Nedávné",
+  "tools.link.onThisPage": "Na této stránce",
   "tools.code.autoDetected": "automaticky",
   "tools.code.plainText": "Prostý text",
   "tools.image.alignment": "Zarovnání",

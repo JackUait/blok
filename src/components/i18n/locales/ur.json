@@ -273,6 +273,8 @@
   "tools.link.removeLink": "لنک ہٹائیں",
   "tools.link.pageOrUrl": "صفحہ یا URL",
   "tools.link.linkTitle": "لنک کا متن",
+  "tools.link.recent": "حالیہ",
+  "tools.link.onThisPage": "اس صفحے پر",
   "tools.code.autoDetected": "خودکار",
   "tools.code.plainText": "سادہ متن",
   "tools.image.alignment": "سیدھ",

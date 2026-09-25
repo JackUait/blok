@@ -273,6 +273,8 @@
   "tools.link.removeLink": "Xóa liên kết",
   "tools.link.pageOrUrl": "Trang hoặc URL",
   "tools.link.linkTitle": "Văn bản liên kết",
+  "tools.link.recent": "Gần đây",
+  "tools.link.onThisPage": "Trên trang này",
   "tools.code.autoDetected": "tự động",
   "tools.code.plainText": "Văn bản thuần",
   "tools.image.alignment": "Căn chỉnh",

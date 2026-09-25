@@ -275,6 +275,8 @@
   "tools.link.removeLink": "Удалить ссылку",
   "tools.link.pageOrUrl": "Страница или URL",
   "tools.link.linkTitle": "Текст ссылки",
+  "tools.link.recent": "Недавние",
+  "tools.link.onThisPage": "На этой странице",
   "tools.code.autoDetected": "авто",
   "tools.code.plainText": "Обычный текст",
   "tools.image.alignment": "Выравнивание",

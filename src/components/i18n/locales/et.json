@@ -273,6 +273,8 @@
   "tools.link.removeLink": "Eemalda link",
   "tools.link.pageOrUrl": "Leht või URL",
   "tools.link.linkTitle": "Lingi tekst",
+  "tools.link.recent": "Hiljutised",
+  "tools.link.onThisPage": "Sellel lehel",
   "tools.code.autoDetected": "automaatselt",
   "tools.code.plainText": "Lihttekst",
   "tools.image.alignment": "Joondus",

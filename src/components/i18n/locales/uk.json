@@ -273,6 +273,8 @@
   "tools.link.removeLink": "Видалити посилання",
   "tools.link.pageOrUrl": "Сторінка або URL",
   "tools.link.linkTitle": "Текст посилання",
+  "tools.link.recent": "Нещодавні",
+  "tools.link.onThisPage": "На цій сторінці",
   "tools.code.autoDetected": "авто",
   "tools.code.plainText": "Звичайний текст",
   "tools.image.alignment": "Вирівнювання",

@@ -284,6 +284,8 @@
   "tools.link.removeLink": "Отстрани врска",
   "tools.link.pageOrUrl": "Страница или URL",
   "tools.link.linkTitle": "Текст на врската",
+  "tools.link.recent": "Неодамнешни",
+  "tools.link.onThisPage": "На оваа страница",
   "tools.code.autoDetected": "автоматски",
   "tools.code.plainText": "Обичен текст",
   "tools.image.alignment": "Порамнување",

@@ -273,6 +273,8 @@
   "tools.link.removeLink": "حذف پیوند",
   "tools.link.pageOrUrl": "صفحه یا URL",
   "tools.link.linkTitle": "متن پیوند",
+  "tools.link.recent": "اخیر",
+  "tools.link.onThisPage": "در این صفحه",
   "tools.code.autoDetected": "خودکار",
   "tools.code.plainText": "متن ساده",
   "tools.image.alignment": "تراز",

@@ -273,6 +273,8 @@
   "tools.link.removeLink": "లింక్‌ను తీసివేయి",
   "tools.link.pageOrUrl": "పేజీ లేదా URL",
   "tools.link.linkTitle": "లింక్ వచనం",
+  "tools.link.recent": "ఇటీవలివి",
+  "tools.link.onThisPage": "ఈ పేజీలో",
   "tools.code.autoDetected": "ఆటో",
   "tools.code.plainText": "సాదా టెక్స్ట్",
   "tools.image.alignment": "సమలేఖనం",

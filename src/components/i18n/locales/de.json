@@ -275,6 +275,8 @@
   "tools.link.removeLink": "Link entfernen",
   "tools.link.pageOrUrl": "Seite oder URL",
   "tools.link.linkTitle": "Linktext",
+  "tools.link.recent": "Zuletzt verwendet",
+  "tools.link.onThisPage": "Auf dieser Seite",
   "tools.code.autoDetected": "automatisch",
   "tools.code.plainText": "Nur Text",
   "tools.image.alignment": "Ausrichtung",

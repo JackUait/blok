@@ -273,6 +273,8 @@
   "tools.link.removeLink": "Hivatkozás eltávolítása",
   "tools.link.pageOrUrl": "Oldal vagy URL",
   "tools.link.linkTitle": "Hivatkozás szövege",
+  "tools.link.recent": "Legutóbbiak",
+  "tools.link.onThisPage": "Ezen az oldalon",
   "tools.code.autoDetected": "automatikus",
   "tools.code.plainText": "Sima szöveg",
   "tools.image.alignment": "Igazítás",

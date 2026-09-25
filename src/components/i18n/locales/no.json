@@ -273,6 +273,8 @@
   "tools.link.removeLink": "Fjern lenke",
   "tools.link.pageOrUrl": "Side eller URL",
   "tools.link.linkTitle": "Lenketekst",
+  "tools.link.recent": "Nylige",
+  "tools.link.onThisPage": "På denne siden",
   "tools.code.autoDetected": "automatisk",
   "tools.code.plainText": "Ren tekst",
   "tools.image.alignment": "Justering",

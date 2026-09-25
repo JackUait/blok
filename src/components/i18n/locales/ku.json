@@ -286,6 +286,8 @@
   "tools.link.removeLink": "بەستەر بسڕەوە",
   "tools.link.pageOrUrl": "پەڕە یان URL",
   "tools.link.linkTitle": "دەقی بەستەر",
+  "tools.link.recent": "دوایینەکان",
+  "tools.link.onThisPage": "لەم پەڕەیەدا",
   "tools.code.autoDetected": "خۆکار",
   "tools.code.plainText": "دەقی ساکار",
   "tools.image.alignment": "ڕیزبەندی",

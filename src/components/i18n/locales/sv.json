@@ -273,6 +273,8 @@
   "tools.link.removeLink": "Ta bort länk",
   "tools.link.pageOrUrl": "Sida eller URL",
   "tools.link.linkTitle": "Länktext",
+  "tools.link.recent": "Senaste",
+  "tools.link.onThisPage": "På den här sidan",
   "tools.code.autoDetected": "automatiskt",
   "tools.code.plainText": "Oformaterad text",
   "tools.image.alignment": "Justering",

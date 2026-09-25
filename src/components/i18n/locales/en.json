@@ -286,6 +286,8 @@
   "tools.link.removeLink": "Remove link",
   "tools.link.pageOrUrl": "Page or URL",
   "tools.link.linkTitle": "Link text",
+  "tools.link.recent": "Recent",
+  "tools.link.onThisPage": "On this page",
   "tools.code.autoDetected": "auto",
   "tools.code.plainText": "Plain text",
   "tools.image.alignment": "Alignment",

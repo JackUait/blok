@@ -275,6 +275,8 @@
   "tools.link.removeLink": "Keçidi sil",
   "tools.link.pageOrUrl": "Səhifə və ya URL",
   "tools.link.linkTitle": "Keçid mətni",
+  "tools.link.recent": "Son keçidlər",
+  "tools.link.onThisPage": "Bu səhifədə",
   "tools.code.autoDetected": "avtomatik",
   "tools.code.plainText": "Sadə mətn",
   "tools.image.alignment": "Düzləndirmə",

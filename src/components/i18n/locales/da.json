@@ -275,6 +275,8 @@
   "tools.link.removeLink": "Fjern link",
   "tools.link.pageOrUrl": "Side eller URL",
   "tools.link.linkTitle": "Linktekst",
+  "tools.link.recent": "Seneste",
+  "tools.link.onThisPage": "På denne side",
   "tools.code.autoDetected": "automatisk",
   "tools.code.plainText": "Almindelig tekst",
   "tools.image.alignment": "Justering",

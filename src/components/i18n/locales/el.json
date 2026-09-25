@@ -275,6 +275,8 @@
   "tools.link.removeLink": "Κατάργηση συνδέσμου",
   "tools.link.pageOrUrl": "Σελίδα ή URL",
   "tools.link.linkTitle": "Κείμενο συνδέσμου",
+  "tools.link.recent": "Πρόσφατα",
+  "tools.link.onThisPage": "Σε αυτή τη σελίδα",
   "tools.code.autoDetected": "αυτόματο",
   "tools.code.plainText": "Απλό κείμενο",
   "tools.image.alignment": "Στοίχιση",

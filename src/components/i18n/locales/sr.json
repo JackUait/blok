@@ -275,6 +275,8 @@
   "tools.link.removeLink": "Уклони везу",
   "tools.link.pageOrUrl": "Страница или URL",
   "tools.link.linkTitle": "Текст везе",
+  "tools.link.recent": "Недавно",
+  "tools.link.onThisPage": "На овој страници",
   "tools.code.autoDetected": "аутоматски",
   "tools.code.plainText": "Обичан текст",
   "tools.image.alignment": "Поравнање",

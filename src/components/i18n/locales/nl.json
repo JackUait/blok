@@ -273,6 +273,8 @@
   "tools.link.removeLink": "Link verwijderen",
   "tools.link.pageOrUrl": "Pagina of URL",
   "tools.link.linkTitle": "Linktekst",
+  "tools.link.recent": "Recente links",
+  "tools.link.onThisPage": "Op deze pagina",
   "tools.code.autoDetected": "automatisch",
   "tools.code.plainText": "Platte tekst",
   "tools.image.alignment": "Uitlijning",

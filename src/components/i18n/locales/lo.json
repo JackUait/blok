@@ -286,6 +286,8 @@
   "tools.link.removeLink": "ລຶບລິ້ງ",
   "tools.link.pageOrUrl": "ໜ້າ ຫຼື URL",
   "tools.link.linkTitle": "ຂໍ້ຄວາມລິ້ງ",
+  "tools.link.recent": "ລ່າສຸດ",
+  "tools.link.onThisPage": "ໃນໜ້ານີ້",
   "tools.code.autoDetected": "ອັດຕະໂນມັດ",
   "tools.code.plainText": "ຂໍ້ຄວາມທຳມະດາ",
   "tools.image.alignment": "ການຈັດວາງ",

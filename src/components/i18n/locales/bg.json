@@ -275,6 +275,8 @@
   "tools.link.removeLink": "Премахни връзката",
   "tools.link.pageOrUrl": "Страница или URL",
   "tools.link.linkTitle": "Текст на връзката",
+  "tools.link.recent": "Скорошни",
+  "tools.link.onThisPage": "На тази страница",
   "tools.code.autoDetected": "авто",
   "tools.code.plainText": "Обикновен текст",
   "tools.image.alignment": "Подравняване",

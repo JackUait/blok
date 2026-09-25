@@ -275,6 +275,8 @@
   "tools.link.removeLink": "አገናኝ አስወግድ",
   "tools.link.pageOrUrl": "ገጽ ወይም URL",
   "tools.link.linkTitle": "የአገናኝ ጽሑፍ",
+  "tools.link.recent": "የቅርብ ጊዜ",
+  "tools.link.onThisPage": "በዚህ ገጽ ላይ",
   "tools.code.autoDetected": "ራስ-ሰር",
   "tools.code.plainText": "ጽሑፍ ብቻ",
   "tools.image.alignment": "አሰላለፍ",

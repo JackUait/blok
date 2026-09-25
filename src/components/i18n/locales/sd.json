@@ -275,6 +275,8 @@
   "tools.link.removeLink": "لنڪ هٽايو",
   "tools.link.pageOrUrl": "صفحو يا URL",
   "tools.link.linkTitle": "لنڪ جو متن",
+  "tools.link.recent": "تازا",
+  "tools.link.onThisPage": "هن صفحي تي",
   "tools.code.autoDetected": "آٽو",
   "tools.code.plainText": "سادو متن",
   "tools.image.alignment": "ترتيب",

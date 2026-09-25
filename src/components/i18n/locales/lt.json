@@ -286,6 +286,8 @@
   "tools.link.removeLink": "Pašalinti nuorodą",
   "tools.link.pageOrUrl": "Puslapis arba URL",
   "tools.link.linkTitle": "Nuorodos tekstas",
+  "tools.link.recent": "Naujausios",
+  "tools.link.onThisPage": "Šiame puslapyje",
   "tools.code.autoDetected": "automatiškai",
   "tools.code.plainText": "Paprastas tekstas",
   "tools.image.alignment": "Lygiuotė",

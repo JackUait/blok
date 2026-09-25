@@ -23,6 +23,17 @@ export interface LegacyExpandOptions {
    * can cover an unknown legacy type or override a built-in mapping).
    */
   rules?: LegacyGrammarEntry[];
+  /**
+   * Turns a string table cell into blocks. The runtime passes
+   * `parseCellContentToBlocks`; without it a cell becomes one paragraph.
+   */
+  parseCellContent?(html: string): LegacyCellBlock[];
+}
+
+/** One block a string table cell expands into. */
+export interface LegacyCellBlock {
+  tool: string;
+  data: Record<string, unknown>;
 }
 
 /**
@@ -35,6 +46,7 @@ export interface LegacyExpandContext {
   generateId(): string;
   warn(blockType: string, field: string, verb: 'dropped' | 'ignored'): void;
   stampMissingIds: boolean;
+  parseCellContent: ((html: string) => LegacyCellBlock[]) | null;
 }
 
 /**

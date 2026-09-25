@@ -104,3 +104,45 @@ describe('migrateOutputData (host-supplied rules)', () => {
     expect(migrated.blocks[1].data).toEqual({ text: 'keep' });
   });
 });
+
+describe('migrateLegacyBlocks keeps legacy content', () => {
+  const counter = (): (() => string) => {
+    let n = 0;
+
+    return () => `id-${n++}`;
+  };
+
+  it('keeps a legacy callout title as its first child paragraph', () => {
+    const migrated = migrateLegacyBlocks([{
+      id: 'c1',
+      type: 'callout',
+      data: { title: '<b>T</b><br>x', variant: 'note', body: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'body' } }] } },
+    }], { generateId: counter() });
+
+    expect(migrated.map((b) => [b.type, b.data.text, b.parent])).toEqual([
+      ['callout', undefined, undefined],
+      ['paragraph', '<b>T</b><br>x', 'c1'],
+      ['paragraph', 'body', 'c1'],
+    ]);
+    expect(migrated[0].content).toEqual([migrated[1].id, 'p1']);
+  });
+
+  it('splits a string table cell into blocks, lists included', () => {
+    const migrated = migrateLegacyBlocks([{
+      id: 't1',
+      type: 'table',
+      data: { content: [['x<ul><li>one</li><li>two</li></ul>']] },
+    }], { generateId: counter() });
+
+    const cellBlocks = migrated.filter((b) => b.parent === 't1');
+
+    expect(cellBlocks.map((b) => [b.type, b.data.text])).toEqual([
+      ['paragraph', 'x'],
+      ['list', 'one'],
+      ['list', 'two'],
+    ]);
+    const table = migrated.find((b) => b.id === 't1');
+
+    expect(table?.data.content).toEqual([[{ blocks: cellBlocks.map((b) => b.id) }]]);
+  });
+});

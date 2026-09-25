@@ -1168,14 +1168,14 @@ describe('data-model-transform', () => {
       expect(result[0].tunes).toEqual({ alignment: { align: 'center' } });
     });
 
-    it('discards title field during expansion', () => {
+    it('moves a non-empty title into a first child paragraph, rich text intact', () => {
       const blocks: OutputBlockData[] = [
         {
           id: 'c1',
           type: 'callout',
           data: {
-            title: 'Some Title',
-            body: { blocks: [] },
+            title: '<b>Some</b><br>Title',
+            body: { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'body' } }] },
             variant: 'note',
             emoji: '💡',
             isEmojiVisible: true,
@@ -1183,9 +1183,46 @@ describe('data-model-transform', () => {
         },
       ];
 
+      const result = expandToHierarchical(blocks, { generateId: () => 'title-p' });
+
+      expect(result.map(block => [block.id, block.data.text, block.parent])).toEqual([
+        ['c1', undefined, undefined],
+        ['title-p', '<b>Some</b><br>Title', 'c1'],
+        ['p1', 'body', 'c1'],
+      ]);
+      expect(result[0].content).toEqual(['title-p', 'p1']);
+      expect(result[1].type).toBe('paragraph');
+      // The callout has no title field of its own.
+      expect(result[0].data.title).toBeUndefined();
+    });
+
+    it('adds no paragraph for an empty title', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'c1', type: 'callout', data: { title: '', body: { blocks: [] }, variant: 'note' } },
+      ];
+
       const result = expandToHierarchical(blocks);
 
-      expect(result[0].data.title).toBeUndefined();
+      expect(result).toHaveLength(1);
+      expect(result[0].content).toBeUndefined();
+    });
+  });
+
+  describe('expandToHierarchical - legacy string table cells', () => {
+    it('cleans a stored cell before parsing it, keeping lists and inline marks', () => {
+      const blocks: OutputBlockData[] = [{
+        id: 't1',
+        type: 'table',
+        data: { content: [['<img src="x" onerror="alert(1)"><script>alert(2)</script><u>u</u><ul><li aria-level="2">i</li></ul>']] },
+      }];
+
+      const cells = expandToHierarchical(blocks).filter(block => block.parent === 't1');
+
+      expect(cells.map(block => [block.type, block.data.text])).toEqual([
+        ['paragraph', '<u>u</u>'],
+        ['list', 'i'],
+      ]);
+      expect(cells[1].data.depth).toBe(1);
     });
   });
 

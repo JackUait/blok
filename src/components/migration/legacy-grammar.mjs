@@ -20,6 +20,10 @@
  * SAME `LEGACY_GRAMMAR` table, the two migration surfaces cannot drift: adding
  * or fixing a mapping in one place changes it everywhere at once.
  *
+ * One exception: string table cells. Splitting them into blocks needs a DOM, so
+ * the runtime injects `ctx.parseCellContent`; the codemod has none and keeps
+ * each non-empty cell as one paragraph.
+ *
  * Environment concerns (how to mint a block id, whether/how to warn about a
  * dropped field) are injected via `ctx` so every `expand()` stays a pure
  * function of `(block, ctx)`:
@@ -485,7 +489,19 @@ function expandCalloutEntry(block, ctx) {
   const calloutId = block.id != null ? block.id : ctx.generateId();
   const bodyBlocks = (block.data.body && block.data.body.blocks) || [];
 
+  // The callout has no text field, so a title becomes its first child
+  // paragraph. /view renders it the same way (src/view/document-model.ts).
+  const title = block.data.title;
+  const titleBlock = typeof title === 'string' && title.length > 0
+    ? { id: ctx.generateId(), type: 'paragraph', data: { text: title }, parent: calloutId }
+    : null;
+
   const { childIds, childBlocks } = expandLegacyBodyBlocks(bodyBlocks, calloutId, ctx);
+
+  if (titleBlock !== null) {
+    childIds.unshift(titleBlock.id);
+    childBlocks.unshift(titleBlock);
+  }
 
   const variant = block.data.variant !== undefined ? block.data.variant : 'general';
   const backgroundColor = variant in VARIANT_TO_BG_PRESET ? VARIANT_TO_BG_PRESET[variant] : null;
@@ -597,16 +613,21 @@ function expandTableEntry(block, ctx) {
         return { blocks: [] };
       }
 
-      const cellId = ctx.generateId();
+      // Cell HTML → blocks must go through parseCellContentToBlocks (it keeps
+      // lists). It needs a DOM, so the caller injects it; without one (the
+      // Node codemod) the cell stays one paragraph.
+      const inserts = ctx.parseCellContent
+        ? ctx.parseCellContent(text)
+        : [{ tool: 'paragraph', data: { text } }];
+      const cellIds = inserts.map((insert) => {
+        const cellId = ctx.generateId();
 
-      childBlocks.push({
-        id: cellId,
-        type: 'paragraph',
-        data: { text },
-        parent: tableId,
+        childBlocks.push({ id: cellId, type: insert.tool, data: insert.data, parent: tableId });
+
+        return cellId;
       });
 
-      return { blocks: [cellId] };
+      return { blocks: cellIds };
     });
   });
 
@@ -763,7 +784,7 @@ const LEGACY_GRAMMAR = [
     cardinality: '1:N',
     contributesNesting: true,
     lossyFields: [],
-    docNote: 'Legacy `{ body, variant, emoji }` → flat `{ emoji, textColor, backgroundColor }` + child body blocks.',
+    docNote: 'Legacy `{ title, body, variant, emoji }` → flat `{ emoji, textColor, backgroundColor }` + child body blocks; a non-empty `title` becomes the first child paragraph.',
     detect: detectCallout,
     detectNesting: hasLegacyBody,
     expand: expandCalloutEntry,
@@ -794,7 +815,7 @@ const LEGACY_GRAMMAR = [
     cardinality: '1:N',
     contributesNesting: true,
     lossyFields: [],
-    docNote: 'HTML-string cells → Blok cell-block references + child paragraph blocks.',
+    docNote: 'HTML-string cells → Blok cell-block references + child blocks (paragraphs and lists in the editor; one paragraph per cell in the codemod).',
     detect: detectTable,
     expand: expandTableEntry,
   },
@@ -858,6 +879,7 @@ function normalizeCtx(ctx) {
     // byte-identical, so it opts out — migrated/expanded blocks still get ids
     // from their expander (a split or flattened block genuinely needs one).
     stampMissingIds: ctx.stampMissingIds !== false,
+    parseCellContent: typeof ctx.parseCellContent === 'function' ? ctx.parseCellContent : null,
   };
 }
 

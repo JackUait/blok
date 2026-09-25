@@ -40,8 +40,15 @@ const REPO_ROOT = resolve(__dirname, '../../..');
 /** The single file allowed to implement cell-content conversion primitives. */
 const CANONICAL_FILE = 'src/tools/table/table-cell-paste.ts';
 
-/** Paste pipeline files outside src/tools/table that handle cell blocks. */
-const EXTRA_FILES = ['src/components/modules/paste/handlers/table-cells-handler.ts'];
+/**
+ * Files outside src/tools/table that handle cell blocks: the paste pipeline,
+ * and the legacy migration that turns string cells into cell blocks.
+ */
+const EXTRA_FILES = [
+  'src/components/modules/paste/handlers/table-cells-handler.ts',
+  'src/components/migration/legacy-grammar.mjs',
+  'src/components/utils/data-model-transform.ts',
+];
 
 interface ExemptSite {
   file: string;
@@ -88,6 +95,10 @@ const REQUIRED_IMPORTS: Record<string, string[]> = {
   'src/tools/table/table-cell-blocks.ts': ['parseCellContentToBlocks'],
   'src/tools/table/table-cell-clipboard.ts': ['parseCellContentToBlocks', 'serializeCellBlocksToHtml'],
   'src/components/modules/paste/handlers/table-cells-handler.ts': ['serializeCellBlocksToHtml'],
+  // The grammar is zero-dep (the Node codemod loads it), so it cannot import
+  // the parser. It calls an injected one, and the runtime injects the real one.
+  'src/components/migration/legacy-grammar.mjs': ['ctx.parseCellContent'],
+  'src/components/utils/data-model-transform.ts': ['parseCellContentToBlocks'],
 };
 
 /** Flatten fingerprints: [description, matcher]. */

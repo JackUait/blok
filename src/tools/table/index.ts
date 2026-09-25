@@ -429,6 +429,10 @@ export class Table implements BlockTool {
         i: true,
         strong: true,
         em: true,
+        u: true,
+        s: true,
+        del: true,
+        code: true,
         mark: (node: Element): { [attr: string]: boolean | string } => {
           const el = node as HTMLElement;
           const style = el.style;
@@ -445,6 +449,11 @@ export class Table implements BlockTool {
         },
         a: { href: true, target: '_blank', rel: 'nofollow' },
         input: { type: true, checked: true },
+        // Legacy string cells may hold lists; this runs before
+        // parseCellContentToBlocks reads them. Attrs match what it reads.
+        ul: true,
+        ol: true,
+        li: { style: true, 'aria-level': true, 'data-list-style': true },
       },
     };
   }

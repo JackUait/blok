@@ -11,6 +11,9 @@ import { generateBlockId } from '../utils';
 // cannot drift. The runtime drives it with nanoid ids + a deduping console.warn.
 import { expandLegacyBlocks, analyzeLegacyFormat } from '../migration/legacy-grammar.mjs';
 import type { LegacyGrammarEntry } from '../migration/legacy-grammar.d.mts';
+import { parseCellContentToBlocks } from '../../tools/table/table-cell-paste';
+import { INLINE_TEXT_SANITIZE } from '../shared/inline-content-sanitize';
+import { clean } from './sanitizer';
 
 /**
  * Build the per-pass lossy-field warning sink handed to the grammar interpreter.
@@ -164,6 +167,22 @@ export interface ExpandOptions {
   rules?: LegacyGrammarEntry[];
 }
 
+/** Inline marks plus the list tags parseCellContentToBlocks reads. */
+const LEGACY_CELL_SANITIZE = {
+  ...INLINE_TEXT_SANITIZE,
+  ul: true,
+  ol: true,
+  li: { style: true, 'aria-level': true, 'data-list-style': true },
+  input: { type: true, checked: true },
+};
+
+/**
+ * Stored cell HTML is untrusted and the parser fills a live element, so it is
+ * cleaned (in an inert document) first.
+ */
+const parseLegacyCell = (html: string): ReturnType<typeof parseCellContentToBlocks> =>
+  parseCellContentToBlocks(clean(html, LEGACY_CELL_SANITIZE));
+
 /**
  * Expand legacy nested format to hierarchical flat-with-references format
  * @param blocks - array of blocks potentially containing nested structures
@@ -178,6 +197,8 @@ export const expandToHierarchical = (
     generateId: options.generateId ?? generateBlockId,
     warn: options.warn ?? createMigrationWarn(),
     rules: options.rules,
+    // Needs a DOM; a Node caller keeps the one-paragraph-per-cell fallback.
+    parseCellContent: typeof document === 'undefined' ? undefined : parseLegacyCell,
   });
 };
 

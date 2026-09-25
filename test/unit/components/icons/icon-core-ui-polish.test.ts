@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { IconCheck, IconSearch, IconUnderline, IconWand } from '../../../../src/components/icons';
+import { IconCallout, IconCheck, IconSearch, IconSelect, IconUnderline, IconWand } from '../../../../src/components/icons';
 
 const svgOf = (icon: string): Document => new DOMParser().parseFromString(icon, 'image/svg+xml');
 
@@ -11,6 +11,39 @@ const numbersOf = (path: string): number[] => (path.match(/-?(?:\d*\.)?\d+/g) ??
 
 const pathOf = (icon: string, index = 0): string =>
   svgOf(icon).querySelectorAll('path')[index]?.getAttribute('d') ?? '';
+
+const stepOf = (command: string, [x, y]: number[], values: number[]): number[] => {
+  switch (command) {
+    case 'M':
+    case 'L':
+      return values;
+    case 'm':
+    case 'l':
+      return [x + values[0], y + values[1]];
+    case 'H':
+      return [values[0], y];
+    default:
+      return [x + values[0], y];
+  }
+};
+
+// Absolute x of every point in a path made of M/m/h/l commands.
+const xsOf = (d: string): number[] => {
+  const xs: number[] = [];
+  let point = [0, 0];
+
+  for (const [, command, args] of d.matchAll(/([MmHhLl])([^MmHhLl]*)/g)) {
+    const values = numbersOf(args);
+    const size = command.toLowerCase() === 'h' ? 1 : 2;
+
+    for (let i = 0; i < values.length; i += size) {
+      point = stepOf(command, point, values.slice(i, i + size));
+      xs.push(point[0]);
+    }
+  }
+
+  return xs;
+};
 
 const pairsOf = (values: number[]): number[][] =>
   values.reduce<number[][]>((pairs, value, index) => index % 2 === 0 ? [...pairs, [value, values[index + 1]]] : pairs, []);
@@ -74,6 +107,26 @@ describe('Blok Line core UI polish', () => {
     const bowlBottom = top + stem + radius;
 
     expect(rule - bowlBottom - 1.25).toBeGreaterThanOrEqual(1.25);
+  });
+
+  it.each(Object.entries({ IconCallout, IconSelect }))('%s centres its contents inside the panel', (_name, icon) => {
+    const svg = svgOf(icon);
+    const edges: number[] = [];
+
+    for (const dot of svg.querySelectorAll('circle')) {
+      const cx = Number(dot.getAttribute('cx'));
+      const r = Number(dot.getAttribute('r'));
+
+      edges.push(cx - r, cx + r);
+    }
+    for (const path of svg.querySelectorAll('path')) {
+      const halfStroke = Number(path.getAttribute('stroke-width')) / 2;
+      const xs = xsOf(path.getAttribute('d') ?? '');
+
+      edges.push(Math.min(...xs) - halfStroke, Math.max(...xs) + halfStroke);
+    }
+
+    expect((Math.min(...edges) + Math.max(...edges)) / 2).toBeCloseTo(10, 1);
   });
 
   it('keeps the slash-search CSS glyph identical to IconSearch', () => {

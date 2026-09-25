@@ -2126,9 +2126,32 @@ export class UndoHistory {
    * inserting the picked tool while its session holds the step.
    */
   public beginApiCall(): void {
-    if (!this.gestureTaskOpen && this.captureHolds === 0 && this.joiningDepth === 0) {
-      this.startGesture('discrete', true);
+    if (this.gestureTaskOpen || this.joiningDepth > 0) {
+      return;
     }
+
+    // A call under a hold joins the held step, and so does the rest of its
+    // task: the holder can let go mid-call (the block menu closes while the
+    // picked column_list still seeds its columns).
+    if (this.captureHolds > 0) {
+      this.openGestureTask();
+
+      return;
+    }
+
+    this.startGesture('discrete', true);
+  }
+
+  /** Marks the current task as a gesture's, until the task ends. */
+  private openGestureTask(): void {
+    if (this.gestureTaskOpen) {
+      return;
+    }
+
+    this.gestureTaskOpen = true;
+    setTimeout(() => {
+      this.gestureTaskOpen = false;
+    }, 0);
   }
 
   /**
@@ -2142,13 +2165,7 @@ export class UndoHistory {
     }
 
     this.gesturesDriveSteps = true;
-
-    if (!this.gestureTaskOpen) {
-      this.gestureTaskOpen = true;
-      setTimeout(() => {
-        this.gestureTaskOpen = false;
-      }, 0);
-    }
+    this.openGestureTask();
 
     const live = this.liveCaretSnapshot();
 

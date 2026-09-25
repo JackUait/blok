@@ -298,6 +298,38 @@ describe('UndoHistory gestures', () => {
     expect(undoSteps()).toBe(1);
   });
 
+  // The block menu lets go of its hold while the picked tool is still
+  // inserting (a column_list seeding its columns).
+  it('keeps the rest of the task in the gesture when a hold ends mid-call', async () => {
+    putCaret(blocks[0], 2);
+    history.beginGesture('discrete');
+    history.holdCapture();
+    write('x');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    history.beginApiCall();
+    write('y');
+    history.releaseCapture();
+    history.beginApiCall();
+    write('z');
+
+    expect(undoSteps()).toBe(1);
+  });
+
+  it('makes an API call in a later task its own step once the hold has ended', async () => {
+    putCaret(blocks[0], 2);
+    history.beginGesture('discrete');
+    history.holdCapture();
+    write('x');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    history.beginApiCall();
+    history.releaseCapture();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    history.beginApiCall();
+    write('y');
+
+    expect(undoSteps()).toBe(2);
+  });
+
   it('clears a pending caret-before after an undo', () => {
     putCaret(blocks[0], 2);
     history.beginGesture('discrete');

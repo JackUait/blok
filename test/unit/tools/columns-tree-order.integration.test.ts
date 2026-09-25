@@ -24,9 +24,16 @@ interface TestEditor {
   history: { undo: () => void; redo: () => void };
   module: {
     blockManager: { blocks: Block[]; getBlockById: (id: string) => Block | undefined };
-    yjsManager: { stopCapturing: () => void; toJSON: () => OutputBlockData[] };
+    yjsManager: {
+      stopCapturing: () => void;
+      beginGesture: (kind: 'typing' | 'discrete') => void;
+      holdCapture: () => void;
+      releaseCapture: () => void;
+      toJSON: () => OutputBlockData[];
+    };
     dragManager: { duplicateBlocksInPlace: (block: Block) => Promise<Block[]> };
     paste: { processText: (data: string, isHTML?: boolean) => Promise<void> };
+    caret: { setToBlock: (...args: unknown[]) => boolean };
   };
   caret: API['caret'];
 }
@@ -86,6 +93,9 @@ const boot = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
 /** `id^parent` for every block, in flat order. */
 const flat = (instance: TestEditor): string[] =>
   instance.module.blockManager.blocks.map(block => `${block.id}^${block.parentId ?? '-'}`);
+
+const parentById = (blocks: OutputBlockData[]): Record<string, string | undefined> =>
+  Object.fromEntries(blocks.map(block => [block.id ?? '?', block.parent]));
 
 const twoColumns = (): OutputBlockData[] => [
   { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
@@ -266,6 +276,57 @@ describe('column paths keep the tree placement', () => {
       await settle();
       await nextFrames(2);
       await expect(instance.save()).resolves.toBeDefined();
+    }, 30_000);
+
+    // The slash menu holds the undo step while it is open, and closes when
+    // the first seeded column's paragraph takes the caret, before the second
+    // column is inserted.
+    it('picked from the slash menu stays one undo step, so undo and redo keep both columns in the list', async () => {
+      const instance = await boot([P('p0')]);
+      const { yjsManager } = instance.module;
+
+      instance.caret.setToBlock('p0');
+      yjsManager.beginGesture('typing');
+      await settle();
+
+      const { caret } = instance.module;
+      const setToBlock = caret.setToBlock.bind(caret);
+      const menu = { open: true };
+
+      vi.spyOn(caret, 'setToBlock').mockImplementation((...args) => {
+        if (menu.open) {
+          menu.open = false;
+          yjsManager.releaseCapture();
+        }
+
+        return setToBlock(...args);
+      });
+
+      yjsManager.holdCapture();
+
+      // A click inside the menu starts no gesture of its own.
+      await settle();
+      instance.blocks.insert('column_list', { columnCount: 2 }, undefined, 0, undefined, true, undefined, undefined, 'user');
+      await settle();
+      await nextFrames(2);
+
+      expect(menu.open, 'the menu closed mid-seed').toBe(false);
+
+      instance.history.undo();
+      await settle();
+      await nextFrames(2);
+      instance.history.redo();
+      await settle();
+      await nextFrames(2);
+
+      const saved = await instance.save();
+      const lists = saved.blocks.filter(block => block.type === 'column_list');
+      const columns = saved.blocks.filter(block => block.type === 'column');
+      const dump = saved.blocks.map(block => `${block.id}:${block.type}<-${block.parent ?? 'ROOT'}`).join(' | ');
+
+      expect(columns.map(column => column.parent), dump).toEqual([lists[0]?.id, lists[0]?.id]);
+      expect(lists, dump).toHaveLength(1);
+      expect(parentById(yjsManager.toJSON())).toEqual(parentById(saved.blocks));
     }, 30_000);
   });
 

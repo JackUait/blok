@@ -40,8 +40,17 @@ const LINK_INPUT = '[data-blok-testid="inline-tool-input"]';
 // The popover container fades in over 120ms (src/styles/popover-animation.css).
 // An axe scan started mid-fade measures translucent text over whatever is
 // behind the menu and reports colour-contrast failures that do not exist.
+// Content inside the menu has its own entry animations (the "Nothing found"
+// label fades in via element.animate), which the container opacity misses.
+// Infinite animations are skipped: their `finished` never resolves.
 const expectPopoverSettled = async (popover: Locator): Promise<void> => {
   await expect(popover).toHaveCSS('opacity', '1');
+  await popover.evaluate(async (element) => {
+    const finite = element.getAnimations({ subtree: true })
+      .filter(animation => animation.effect?.getComputedTiming().endTime !== Infinity);
+
+    await Promise.all(finite.map(animation => animation.finished.catch(() => undefined)));
+  });
 };
 
 declare global {

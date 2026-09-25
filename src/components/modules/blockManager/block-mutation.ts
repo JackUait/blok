@@ -65,6 +65,88 @@ const isPlaintextField = (tool: BlockToolAdapter, direction: 'export' | 'import'
   return isString(field) && tool.sanitizeConfig[field] === PLAINTEXT;
 };
 
+/**
+ * Resolve the FLAT tag-rule {@link SanitizerConfig} that `clean()` needs for
+ * the field of `tool` that will receive imported content on convert/merge.
+ *
+ * A tool's `sanitizeConfig` is keyed by DATA FIELD (`{ text: { b, i, a } }`),
+ * but `clean()` expects a flat map of TAG rules (`{ b, i, a }`). When
+ * `conversionConfig.import` is a STRING it names the receiving field directly,
+ * so we return that field's rules. When it is a FUNCTION (e.g. the list tool)
+ * there is no field name — returning the whole `{ text: {...} }` object would
+ * make `clean()` treat `text` as the only allowed tag and strip every inline
+ * mark (b/i/a/…). Flatten the field-level rule objects into one tag map so
+ * inline formatting survives turn-into.
+ *
+ * A tool that declares no rules gets the inline-tools TAG map as its whole
+ * config, so it is already flat; flattening it would turn attributes
+ * (`href`) into tags. When no field carries tag rules (callout: only
+ * `emoji: false`, …) there is nothing to flatten, and the field map must not
+ * reach `clean()` as a tag map: it would strip every mark and `<br>`. Use the
+ * inline baseline instead.
+ * @param tool - destination tool receiving the imported content
+ */
+const resolveImportSanitizeConfig = (tool: BlockToolAdapter): SanitizerConfig => {
+  const importProp = tool.conversionConfig?.import;
+  const sanitizeConfig = tool.sanitizeConfig;
+
+  if (sanitizeConfig === tool.baseSanitizeConfig) {
+    return sanitizeConfig;
+  }
+
+  if (isString(importProp)) {
+    return isObject(sanitizeConfig[importProp])
+      ? sanitizeConfig[importProp] as SanitizerConfig
+      : sanitizeConfig;
+  }
+
+  /**
+   * Function import: flatten every field-level tag-rule object into a single
+   * flat tag map. Non-object field rules (booleans/strings) can't merge into a
+   * flat tag config, so they're skipped.
+   */
+  const flat = {} as SanitizerConfig;
+
+  for (const field in sanitizeConfig) {
+    const rule = sanitizeConfig[field];
+
+    if (isObject(rule)) {
+      Object.assign(flat, rule);
+    }
+  }
+
+  return isEmpty(flat) ? INLINE_TEXT_SANITIZE : flat;
+};
+
+/**
+ * Turn a source block's exported string into what the target's import
+ * field accepts. A PLAINTEXT field holds raw text, not HTML, so crossing
+ * between it and a rich field must translate instead of sanitizing:
+ * `clean()` would strip every tag (and <br>) from HTML bound for plain
+ * text, and parse raw code as HTML on the way back.
+ * @param exported - the source block's exported string
+ * @param sourceTool - tool of the block being read
+ * @param targetTool - tool receiving the string
+ * @param globalRules - editor-level sanitizer rules to compose with the target's
+ */
+export const prepareImportString = (
+  exported: string,
+  sourceTool: BlockToolAdapter,
+  targetTool: BlockToolAdapter,
+  globalRules?: SanitizerConfig
+): string => {
+  const sourceIsPlain = isPlaintextField(sourceTool, 'export');
+
+  if (isPlaintextField(targetTool, 'import')) {
+    return sourceIsPlain ? exported : htmlToPlainText(exported);
+  }
+
+  const html = sourceIsPlain ? plainTextToHtml(exported) : exported;
+  const fieldRules = resolveImportSanitizeConfig(targetTool);
+
+  return clean(html, globalRules === undefined ? fieldRules : composeSanitizerConfig(globalRules, fieldRules));
+};
+
 /** One index move as `Blocks.move` ran it, replayed on a copy of the array. */
 interface IndexMoveReport {
   block: Block;
@@ -867,88 +949,6 @@ export class BlockMutation {
   }
 
   /**
-   * Turn a source block's exported string into what the target's import
-   * field accepts. A PLAINTEXT field holds raw text, not HTML, so crossing
-   * between it and a rich field must translate instead of sanitizing:
-   * `clean()` would strip every tag (and <br>) from HTML bound for plain
-   * text, and parse raw code as HTML on the way back.
-   * @param exported - the source block's exported string
-   * @param sourceTool - tool of the block being read
-   * @param targetTool - tool receiving the string
-   * @param globalRules - editor-level sanitizer rules to compose with the target's
-   */
-  private prepareImportString(
-    exported: string,
-    sourceTool: BlockToolAdapter,
-    targetTool: BlockToolAdapter,
-    globalRules?: SanitizerConfig
-  ): string {
-    const sourceIsPlain = isPlaintextField(sourceTool, 'export');
-
-    if (isPlaintextField(targetTool, 'import')) {
-      return sourceIsPlain ? exported : htmlToPlainText(exported);
-    }
-
-    const html = sourceIsPlain ? plainTextToHtml(exported) : exported;
-    const fieldRules = this.resolveImportSanitizeConfig(targetTool);
-
-    return clean(html, globalRules === undefined ? fieldRules : composeSanitizerConfig(globalRules, fieldRules));
-  }
-
-  /**
-   * Resolve the FLAT tag-rule {@link SanitizerConfig} that `clean()` needs for
-   * the field of `tool` that will receive imported content on convert/merge.
-   *
-   * A tool's `sanitizeConfig` is keyed by DATA FIELD (`{ text: { b, i, a } }`),
-   * but `clean()` expects a flat map of TAG rules (`{ b, i, a }`). When
-   * `conversionConfig.import` is a STRING it names the receiving field directly,
-   * so we return that field's rules. When it is a FUNCTION (e.g. the list tool)
-   * there is no field name — returning the whole `{ text: {...} }` object would
-   * make `clean()` treat `text` as the only allowed tag and strip every inline
-   * mark (b/i/a/…). Flatten the field-level rule objects into one tag map so
-   * inline formatting survives turn-into.
-   *
-   * A tool that declares no rules gets the inline-tools TAG map as its whole
-   * config, so it is already flat; flattening it would turn attributes
-   * (`href`) into tags. When no field carries tag rules (callout: only
-   * `emoji: false`, …) there is nothing to flatten, and the field map must not
-   * reach `clean()` as a tag map: it would strip every mark and `<br>`. Use the
-   * inline baseline instead.
-   * @param tool - destination tool receiving the imported content
-   */
-  private resolveImportSanitizeConfig(tool: BlockToolAdapter): SanitizerConfig {
-    const importProp = tool.conversionConfig?.import;
-    const sanitizeConfig = tool.sanitizeConfig;
-
-    if (sanitizeConfig === tool.baseSanitizeConfig) {
-      return sanitizeConfig;
-    }
-
-    if (isString(importProp)) {
-      return isObject(sanitizeConfig[importProp])
-        ? sanitizeConfig[importProp] as SanitizerConfig
-        : sanitizeConfig;
-    }
-
-    /**
-     * Function import: flatten every field-level tag-rule object into a single
-     * flat tag map. Non-object field rules (booleans/strings) can't merge into a
-     * flat tag config, so they're skipped.
-     */
-    const flat = {} as SanitizerConfig;
-
-    for (const field in sanitizeConfig) {
-      const rule = sanitizeConfig[field];
-
-      if (isObject(rule)) {
-        Object.assign(flat, rule);
-      }
-    }
-
-    return isEmpty(flat) ? INLINE_TEXT_SANITIZE : flat;
-  }
-
-  /**
    * Move a block to a new index
    * @param toIndex - Index where to move Block
    * @param fromIndex - Index of Block to move
@@ -1639,7 +1639,7 @@ export class BlockMutation {
       /**
        * Extract the field-specific sanitize rules for the field that will receive the imported content.
        */
-      const cleanData = this.prepareImportString(blockToMergeDataStringified, blockToMerge.tool, targetBlock.tool);
+      const cleanData = prepareImportString(blockToMergeDataStringified, blockToMerge.tool, targetBlock.tool);
       const blockToMergeData = convertStringToBlockData(cleanData, targetBlock.tool.conversionConfig);
 
       await completeMerge(blockToMergeData);
@@ -1700,7 +1700,7 @@ export class BlockMutation {
       throw new ToolNotFoundError(targetToolName, `Could not convert Block. Tool «${targetToolName}» not found.`);
     }
 
-    const cleanData = this.prepareImportString(
+    const cleanData = prepareImportString(
       exportedData,
       source.tool,
       replacingTool,

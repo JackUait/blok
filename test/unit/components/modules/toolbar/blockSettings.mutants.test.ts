@@ -154,6 +154,7 @@ type BlockStub = {
     commonTunes: MenuConfigItem[];
   }>;
   getActiveToolboxEntry: Mock<() => Promise<ToolboxConfigEntry | undefined>>;
+  tool: { conversionConfig: { export: string }; sanitizeConfig: Record<string, unknown> };
 };
 
 let blockCounter = 0;
@@ -181,6 +182,9 @@ const createBlockStub = (overrides: Partial<BlockStub> = {}): BlockStub => {
     exportDataAsString: vi.fn(async () => 'exported'),
     getTunes: vi.fn(() => ({ commonTunes: [] as MenuConfigItem[] })),
     getActiveToolboxEntry: vi.fn(async () => undefined),
+    // A rich-text source: the merge convert reads it to translate each export.
+    tool: { conversionConfig: { export: 'text' },
+      sanitizeConfig: {} },
     ...overrides,
   };
 };
@@ -195,6 +199,8 @@ type ToolStub = {
     import?: string | ((content: string, settings?: unknown) => BlockToolData);
   };
   settings?: Record<string, unknown>;
+  sanitizeConfig?: Record<string, unknown>;
+  baseSanitizeConfig?: Record<string, unknown>;
 };
 
 const asTool = (stub: ToolStub): BlockToolAdapter => stub as unknown as BlockToolAdapter;
@@ -1327,10 +1333,14 @@ describe('BlockSettings — mutation coverage', () => {
       conversionConfig: { export: 'text', import: textImport },
     };
 
+    const listSanitize = {};
     const listTool: ToolStub = {
       name: 'list',
       toolbox: [{ icon: '<svg data-icon="list" />', title: 'List', data: { style: 'ordered' } }],
       conversionConfig: { export: 'text', import: listImport },
+      // Same object: the merge convert sanitizes with it as-is.
+      sanitizeConfig: listSanitize,
+      baseSanitizeConfig: listSanitize,
     };
 
     /** Registry entry for the tools the fixture blocks are made of. */

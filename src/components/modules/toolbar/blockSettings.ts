@@ -23,6 +23,7 @@ import type { PopoverItemParams, Popover } from '../../utils/popover';
 import { PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
 import { css as popoverItemCls } from '../../utils/popover/components/popover-item';
 import { isToolConvertable } from '../../utils/tools';
+import { prepareImportString } from '../blockManager/block-mutation';
 
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -978,9 +979,16 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     toolboxData?: Record<string, unknown>
   ): Promise<Block | null> {
     const { BlockManager } = this.Blok;
+    const targetTool = this.Blok.Tools.blockTools.get(targetToolName);
+
+    if (!targetTool) {
+      return null;
+    }
 
     /**
-     * Export all blocks' content and combine with newlines
+     * Each block goes through the same translation and sanitizer as a single
+     * convert BEFORE the join. After it a rich item holds its line breaks as
+     * <br>, so "\n" only separates blocks.
      */
     const exportedContents: string[] = [];
 
@@ -988,7 +996,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       try {
         const content = await block.exportDataAsString();
 
-        exportedContents.push(content);
+        exportedContents.push(prepareImportString(content, block.tool, targetTool, this.config.sanitizer));
       } catch {
         // Skip blocks that fail to export
       }
@@ -998,20 +1006,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       return null;
     }
 
-    /**
-     * Convert the first block with combined content
-     */
     const firstBlock = blocks[0];
     const combinedContent = exportedContents.join('\n');
-
-    /**
-     * Get the target tool to use its conversion config
-     */
-    const targetTool = this.Blok.Tools.blockTools.get(targetToolName);
-
-    if (!targetTool) {
-      return null;
-    }
 
     /**
      * Import the combined content using the target tool's conversion config

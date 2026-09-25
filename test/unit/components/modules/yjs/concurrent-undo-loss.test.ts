@@ -464,7 +464,7 @@ describe('concurrent undo — undoing a move the peer moved away', () => {
     manager.fromJSON([paragraph('b1', 'one'), paragraph('b2', 'two'), paragraph('b3', 'three')]);
     syncPeerFromManager();
 
-    manager.moveBlock('b3', 0);
+    manager.moveBlockTo('b3', { parentId: null, afterId: null });
 
     peer.updateBlockData('b3', 'text', 'three, typed by B');
     applyPeerChangesToManager();
@@ -481,11 +481,11 @@ describe('concurrent undo — undoing a move the peer moved away', () => {
     manager.fromJSON([paragraph('b1', 'one'), paragraph('b2', 'two'), paragraph('b3', 'three')]);
     syncPeerFromManager();
 
-    manager.moveBlock('b3', 0);
+    manager.moveBlockTo('b3', { parentId: null, afterId: null });
     applyPeerChangesToManager();
     peer.applyRemoteUpdate(manager.encodeStateAsUpdate(peer.getStateVector()));
 
-    peer.moveBlock('b3', 1);
+    peer.moveBlockTo('b3', { parentId: null, afterId: 'b1' });
     applyPeerChangesToManager();
     expect(manager.toJSON().map((block) => block.id)).toEqual(['b1', 'b3', 'b2']);
 

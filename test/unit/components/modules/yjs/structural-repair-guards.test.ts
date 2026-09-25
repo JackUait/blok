@@ -152,8 +152,8 @@ describe('structural repair — converges instead of stacking', () => {
   it('changes nothing when the same remote update is applied twice', () => {
     const { a, b } = twoPeers([paragraph('b1', 'one'), paragraph('b2', 'two'), paragraph('b3', 'three')]);
 
-    a.moveBlock('b3', 0);
-    b.moveBlock('b3', 1);
+    a.moveBlockTo('b3', { parentId: null, afterId: null });
+    b.moveBlockTo('b3', { parentId: null, afterId: 'b1' });
 
     const updateForA = b.encodeStateAsUpdate(a.getStateVector());
 
@@ -177,8 +177,8 @@ describe('structural repair — converges instead of stacking', () => {
   it('reaches the same document on both peers, and stays there, when each repaired a duplicated drag alone', () => {
     const { a, b } = twoPeers([paragraph('b1', 'one'), paragraph('b2', 'two'), paragraph('b3', 'three')]);
 
-    a.moveBlock('b3', 0);
-    b.moveBlock('b3', 1);
+    a.moveBlockTo('b3', { parentId: null, afterId: null });
+    b.moveBlockTo('b3', { parentId: null, afterId: 'b1' });
 
     sync(a, b);
     sync(a, b);

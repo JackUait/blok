@@ -73,7 +73,7 @@ describe('placement-based move undo/redo', () => {
       syncPeerFromManager();
 
       // Local move: b4 leaves its slot after b3 and lands after b1.
-      manager.moveBlock('b4', 1);
+      manager.moveBlockTo('b4', { parentId: null, afterId: 'b1' });
       expect(orderedIds()).toEqual(['b1', 'b4', 'b2', 'b3']);
 
       // Concurrent remote inserts at the head shift every flat index by 2.
@@ -102,7 +102,7 @@ describe('placement-based move undo/redo', () => {
       syncPeerFromManager();
 
       // Local move (b4 → after b1), then undo it back.
-      manager.moveBlock('b4', 1);
+      manager.moveBlockTo('b4', { parentId: null, afterId: 'b1' });
       manager.undo();
       expect(orderedIds()).toEqual(['b1', 'b2', 'b3', 'b4']);
 
@@ -131,7 +131,7 @@ describe('placement-based move undo/redo', () => {
       syncPeerFromManager();
 
       // b4's recorded from-placement points after b3.
-      manager.moveBlock('b4', 1);
+      manager.moveBlockTo('b4', { parentId: null, afterId: 'b1' });
 
       // The sibling the undo would restore after dies remotely.
       peer.removeBlock('b3');
@@ -155,8 +155,8 @@ describe('placement-based move undo/redo', () => {
       syncPeerFromManager();
 
       // Same-parent move inside p: c3 leaves its slot after c2 and becomes
-      // p's first child (flat index 2 = right after p).
-      manager.moveBlock('c3', 2);
+      // p's first child.
+      manager.moveBlockTo('c3', { parentId: 'p', afterId: null });
       expect(orderedIds()).toEqual(['r', 'p', 'c3', 'c1', 'c2']);
 
       // The parent the undo would restore into dies remotely; its children
@@ -185,7 +185,7 @@ describe('placement-based move undo/redo', () => {
       syncPeerFromManager();
 
       // b1's recorded to-placement points after b3.
-      manager.moveBlock('b1', 2);
+      manager.moveBlockTo('b1', { parentId: null, afterId: 'b3' });
       expect(orderedIds()).toEqual(['b2', 'b3', 'b1', 'b4']);
 
       manager.undo();
@@ -212,7 +212,7 @@ describe('placement-based move undo/redo', () => {
       syncPeerFromManager();
 
       // Same-parent move inside p: c2 becomes p's first child.
-      manager.moveBlock('c2', 2);
+      manager.moveBlockTo('c2', { parentId: 'p', afterId: null });
       expect(orderedIds()).toEqual(['r', 'p', 'c2', 'c1']);
 
       manager.undo();
@@ -294,7 +294,7 @@ describe('placement-based move undo/redo', () => {
       // Drag flow: the flat move records the entry (with the true pre-drag
       // from-placement), then the reparent records its own entry.
       manager.transactMoves(() => {
-        manager.moveBlock('x', 3);
+        manager.moveBlockTo('x', { parentId: null, afterId: 'p' });
 
         const midDragFrom = placementOf('x');
         const to: BlockPlacement = { parentId: 'p', afterId: 'c2' };
@@ -332,8 +332,8 @@ describe('placement-based move undo/redo', () => {
       // Drag flow: flat moves first, then each block is reparented. The
       // reparents come AFTER the other block's flat move.
       manager.transactMoves(() => {
-        manager.moveBlock('m2', 4);
-        manager.moveBlock('m1', 4);
+        manager.moveBlockTo('m2', { parentId: null, afterId: 'box' });
+        manager.moveBlockTo('m1', { parentId: null, afterId: 'box' });
 
         for (const [id, afterId] of [['m1', 'k1'], ['m2', 'm1']] as const) {
           const from = placementOf(id);
@@ -410,7 +410,7 @@ describe('placement-based move undo/redo', () => {
 
       manager.removeBlock('b');
       manager.stopCapturing();
-      manager.moveBlock('c', 0);
+      manager.moveBlockTo('c', { parentId: null, afterId: null });
       expect(orderedIds()).toEqual(['c', 'a']);
 
       manager.undo();
@@ -444,7 +444,7 @@ describe('placement-based move undo/redo', () => {
         manager.removeBlock('b2');
       });
       manager.stopCapturing();
-      manager.moveBlock('c', 0);
+      manager.moveBlockTo('c', { parentId: null, afterId: null });
 
       manager.undo();
       manager.undo();

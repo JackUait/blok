@@ -197,7 +197,6 @@ const createDocHarness = (): DocHarness => {
     transact: vi.fn((fn: () => void) => fn()),
     updateBlockData: vi.fn(),
     removeBlock: vi.fn(),
-    moveBlock: vi.fn(),
     stopCapturing: vi.fn(),
     rebaseCaretSnapshots: vi.fn(),
     toJSON: vi.fn(() => []),

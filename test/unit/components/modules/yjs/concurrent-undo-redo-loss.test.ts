@@ -232,13 +232,13 @@ describe('concurrent redo — replaying a move the peer has since made their own
     manager.fromJSON([paragraph('b1', 'one'), paragraph('b2', 'two'), paragraph('b3', 'three')]);
     peer.applyRemoteUpdate(manager.encodeStateAsUpdate());
 
-    manager.moveBlock('b3', 0);
+    manager.moveBlockTo('b3', { parentId: null, afterId: null });
     peer.applyRemoteUpdate(manager.encodeStateAsUpdate(peer.getStateVector()));
 
     manager.undo();
     peer.applyRemoteUpdate(manager.encodeStateAsUpdate(peer.getStateVector()));
 
-    peer.moveBlock('b3', 1);
+    peer.moveBlockTo('b3', { parentId: null, afterId: 'b1' });
     manager.applyRemoteUpdate(peer.encodeStateAsUpdate(manager.getStateVector()));
 
     manager.redo();
@@ -274,7 +274,7 @@ describe('concurrent undo — a remote insert beside a block this editor moved',
 
     manager.updateBlockData('b1', 'text', 'one edited by A');
     manager.stopCapturing();
-    manager.moveBlock('b3', 0);
+    manager.moveBlockTo('b3', { parentId: null, afterId: null });
     peer.applyRemoteUpdate(manager.encodeStateAsUpdate(peer.getStateVector()));
 
     peer.addBlock(paragraph('nb', 'B new'), 0);

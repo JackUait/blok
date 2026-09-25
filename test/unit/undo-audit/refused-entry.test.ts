@@ -249,7 +249,7 @@ describe('a refused replace over a move', () => {
 
     manager.updateBlockData('b1', 'text', 'one edited'); // S0
     manager.stopCapturing();
-    manager.moveBlock('b3', 0); // M
+    manager.moveBlockTo('b3', { parentId: null, afterId: null }); // M
     manager.stopCapturing();
     manager.removeBlock('b2'); // R: replace b2 by b4
     manager.addBlock({ id: 'b4', type: 'quote', data: { text: '' } });
@@ -288,10 +288,10 @@ describe('a move the peer overruled', () => {
 
     manager.updateBlockData('b1', 'text', 'one edited'); // S0
     manager.stopCapturing();
-    manager.moveBlock('b3', 0); // M
+    manager.moveBlockTo('b3', { parentId: null, afterId: null }); // M
     manager.stopCapturing();
     sync(manager, peer);
-    peer.moveBlock('b3', 1);
+    peer.moveBlockTo('b3', { parentId: null, afterId: 'b1' });
     sync(manager, peer);
 
     // M is overruled, so undo reaches past it to S0.
@@ -302,7 +302,7 @@ describe('a move the peer overruled', () => {
     expect(textOf(manager, 'b1')).toBe('one edited');
 
     // Once the peer puts b3 back where M left it, the next undo is M, the newer step.
-    peer.moveBlock('b3', 0);
+    peer.moveBlockTo('b3', { parentId: null, afterId: null });
     sync(manager, peer);
     manager.undo();
     sync(manager, peer);
@@ -467,10 +467,10 @@ describe('a move the peer overruled over nothing that applies', () => {
 
     manager.updateBlockData('b1', 'text', 'one edited'); // S0
     manager.stopCapturing();
-    manager.moveBlock('b3', 0); // M
+    manager.moveBlockTo('b3', { parentId: null, afterId: null }); // M
     manager.stopCapturing();
     sync(manager, peer);
-    peer.moveBlock('b3', 2);
+    peer.moveBlockTo('b3', { parentId: null, afterId: 'b2' });
     peer.removeBlock('b1');
     sync(manager, peer);
 

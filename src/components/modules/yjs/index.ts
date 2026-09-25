@@ -387,33 +387,6 @@ export class YjsManager extends Module {
   }
 
   /**
-   * Move a block to a new index.
-   * @param id - Block id to move
-   * @param toIndex - Target index (the final position where the block should end up)
-   */
-  public moveBlock(id: string, toIndex: number): void {
-    this.flushPendingBlockWrites();
-
-    // The FROM placement must be read BEFORE the mutation — it is what
-    // undo restores, index-free.
-    const from = this.documentStore.getPlacement(id);
-
-    if (from === null) {
-      return;
-    }
-
-    // Caret-before also predates the mutation (idempotent: inside a move
-    // group, startMoveGroup's capture wins).
-    this.undoHistory.markCaretBeforeChange();
-
-    this.documentStore.moveBlock(id, toIndex);
-
-    const to = this.documentStore.getPlacement(id) ?? from;
-
-    this.undoHistory.recordMove({ blockId: id, from, to }, this.isInMoveGroup);
-  }
-
-  /**
    * Move a block to a placement. Records `{from, to}` for move-undo/redo,
    * so a parent change undoes with the position in one step.
    * @param id - Block id to move

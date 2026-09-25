@@ -77,7 +77,6 @@ const createMockYjsManager = (): YjsManager => {
     addBlock: vi.fn(),
     addBlockAt: vi.fn(),
     removeBlock: vi.fn(),
-    moveBlock: vi.fn(),
     updateBlockData: vi.fn(),
     updateBlockTune: vi.fn(),
     stopCapturing: vi.fn(),

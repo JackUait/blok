@@ -758,61 +758,11 @@ export class DocumentStore {
   }
 
   /**
-   * Move a block to a new flat index by editing order arrays ONLY — the
-   * block's Y.Map is never touched, so its identity (and any concurrent
-   * remote edit to it) survives the move.
-   *
-   * The flat toIndex is translated to a placement among the block's
-   * same-parent siblings: insert after the last sibling whose derived
-   * flat position is below the (clamped) target. For a flat root-level
-   * document this reproduces the old clamping semantics exactly.
-   * @param id - Block id to move
-   * @param toIndex - Target flat index (the final position in derived order)
-   */
-  public moveBlock(id: string, toIndex: number): void {
-    const fromIndex = this.deriveOrderedIds().indexOf(id);
-
-    if (fromIndex === -1) {
-      return;
-    }
-
-    // Skip if no actual movement needed
-    if (fromIndex === toIndex) {
-      return;
-    }
-
-    // 'move' keeps the Y.UndoManager from tracking the order edit — the
-    // placement-based move stacks own its history. Replay never comes back
-    // through here: move-undo/move-redo drive `applyPlacement` instead.
-    this.transact(() => {
-      this.removeFromOrderArrays(id);
-
-      const yblock = this.yBlocksMap.get(id);
-      const target = this.resolveTargetOrder(
-        yblock instanceof Y.Map ? yblock.get('parentId') : undefined
-      );
-
-      // Dangling parent: leave the block in no order array (orphan
-      // tolerance — it renders at the end until the parent arrives).
-      if (target === null) {
-        return;
-      }
-
-      const flatIds = this.deriveReachableIds();
-      const desired = Math.max(0, Math.min(toIndex, flatIds.length));
-
-      target.insert(this.orderSlotForFlatIndex(target, flatIds, desired), [id]);
-    }, 'move');
-  }
-
-  /**
-   * Move a block to a placement under the untracked 'move' origin, like
-   * `moveBlock`: the move stacks own its history. Unlike `moveBlock` it may
-   * change the parent; the parentId write rides the same untracked
-   * transaction, so the caller's move entry must carry both sides.
-   * A no-op (see `isNoOpMove`) writes nothing, as `moveBlock` does for an
-   * unchanged index. Otherwise the semantics and refusals are
-   * `applyPlacement`'s.
+   * Move a block to a placement under the untracked 'move' origin: the move
+   * stacks own its history. It may change the parent; the parentId write
+   * rides the same untracked transaction, so the caller's move entry must
+   * carry both sides. A no-op (see `isNoOpMove`) writes nothing. Otherwise
+   * the semantics and refusals are `applyPlacement`'s.
    * @param id - Block id to move
    * @param placement - Target parent and preceding sibling
    */
@@ -1211,9 +1161,9 @@ export class DocumentStore {
    *
    * - parent TOMBSTONED → cut the link (`parentId: null`) and put the block
    *   back at root. A deleted parent is not a parent, and leaving the link
-   *   makes `resolveTargetOrder` answer null for every later drag, so
-   *   `moveBlock` removes the id and re-inserts it nowhere: the block keeps
-   *   its text and can never be moved again.
+   *   makes `resolveTargetOrder` answer null for every later move of it, so
+   *   the move removes the id and re-inserts it nowhere: the block keeps its
+   *   text and can never be moved again.
    * - parent PRESENT → append to that parent's contentIds. The membership was
    *   discarded by a last-writer-wins `set` on `contentIds`; the block's own
    *   parentId is the surviving record of it.

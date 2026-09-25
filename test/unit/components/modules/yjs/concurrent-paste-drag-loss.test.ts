@@ -9,9 +9,10 @@ import { describe, it, expect } from 'vitest';
  *     (src/components/modules/blockManager/block-insertion.ts:343). A paste that
  *     REPLACES the current block wraps `removeBlock(old)` + `addBlock(new)` in
  *     one transaction (same file, :338).
- *   - a drag writes TWICE inside the move group: `moveBlock(id, resolvedIndex)`
- *     (block-mutation.ts:553) and then `applyBlockPlacement` with capture off
- *     (blockManager.ts:1256), which is `DocumentStore.applyPlacement`.
+ *   - a drag writes TWICE inside the move group: `moveBlockTo(id, placement)`
+ *     for the flat move, keeping the old parent (block-mutation.ts `moveFlat`),
+ *     and then `applyBlockPlacement` with capture off, which is
+ *     `DocumentStore.applyPlacement`.
  *
  * Nothing here is a pinned defect: every law below was measured GREEN. The file
  * exists so the space stays ruled out — a red here is a regression in paste or
@@ -229,16 +230,16 @@ describe('paste while a peer edits', () => {
   });
 });
 
-describe('drag while a peer edits — moveBlock then applyPlacement', () => {
+describe('drag while a peer edits — moveBlockTo then applyPlacement', () => {
   it('keeps the peer\'s typing through a cross-container drag', () => {
     const { a, b } = twoPeers([
       toggle('C', ['c1']), paragraph('c1', 'one', 'C'),
       paragraph('b2', 'dragged'), paragraph('b3', 'tail'),
     ]);
 
-    // DragController: transactMoves( move() -> moveBlock, setBlockParent -> applyPlacement )
+    // DragController: transactMoves( move() -> moveBlockTo, setBlockParent -> applyPlacement )
     a.transact(() => {
-      a.moveBlock('b2', 2);
+      a.moveBlockTo('b2', { parentId: null, afterId: 'C' });
       a.applyPlacement('b2', { parentId: 'C', afterId: 'c1' }, 'no-capture');
     }, 'local');
 
@@ -257,11 +258,11 @@ describe('drag while a peer edits — moveBlock then applyPlacement', () => {
     ]);
 
     a.transact(() => {
-      a.moveBlock('x', 2);
+      a.moveBlockTo('x', { parentId: null, afterId: 'C' });
       a.applyPlacement('x', { parentId: 'C', afterId: 'c1' }, 'no-capture');
     }, 'local');
     b.transact(() => {
-      b.moveBlock('y', 2);
+      b.moveBlockTo('y', { parentId: null, afterId: 'C' });
       b.applyPlacement('y', { parentId: 'C', afterId: 'c1' }, 'no-capture');
     }, 'local');
 
@@ -275,7 +276,7 @@ describe('drag while a peer edits — moveBlock then applyPlacement', () => {
     const { a, b } = twoPeers([paragraph('b1', 'one'), paragraph('b2', 'two'), paragraph('b3', 'three')]);
 
     a.transact(() => {
-      a.moveBlock('b3', 1);
+      a.moveBlockTo('b3', { parentId: null, afterId: 'b1' });
       a.applyPlacement('b3', { parentId: null, afterId: 'b1' }, 'no-capture');
     }, 'local');
 
@@ -294,11 +295,11 @@ describe('drag while a peer edits — moveBlock then applyPlacement', () => {
     ]);
 
     a.transact(() => {
-      a.moveBlock('c1', 3);
+      a.moveBlockTo('c1', { parentId: 'C', afterId: 'c2' });
       a.applyPlacement('c1', { parentId: null, afterId: 'z' }, 'no-capture');
     }, 'local');
     b.transact(() => {
-      b.moveBlock('z', 2);
+      b.moveBlockTo('z', { parentId: null, afterId: 'C' });
       b.applyPlacement('z', { parentId: 'C', afterId: 'c1' }, 'no-capture');
     }, 'local');
 
@@ -338,7 +339,7 @@ describe('drag while a peer edits — moveBlock then applyPlacement', () => {
 
     // B drags b2 to the very top.
     b.transact(() => {
-      b.moveBlock('b2', 0);
+      b.moveBlockTo('b2', { parentId: null, afterId: null });
       b.applyPlacement('b2', { parentId: null, afterId: null }, 'no-capture');
     }, 'local');
 
@@ -356,11 +357,11 @@ describe('drag while a peer edits — moveBlock then applyPlacement', () => {
     ]);
 
     a.transact(() => {
-      a.moveBlock('b2', 1);
+      a.moveBlockTo('b2', { parentId: null, afterId: 'C' });
       a.applyPlacement('b2', { parentId: 'C', afterId: null }, 'no-capture');
     }, 'local');
     b.transact(() => {
-      b.moveBlock('C', 2);
+      b.moveBlockTo('C', { parentId: null, afterId: 'D' });
       b.applyPlacement('C', { parentId: 'D', afterId: null }, 'no-capture');
     }, 'local');
 

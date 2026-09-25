@@ -107,10 +107,10 @@ describe('concurrent undo — a refused entry must not block older ones', () => 
   it('still undoes an older edit after the peer moved a block this editor moved', () => {
     manager.updateBlockData('b1', 'text', 'one edited');
     manager.stopCapturing();
-    manager.moveBlock('b3', 0);
+    manager.moveBlockTo('b3', { parentId: null, afterId: null });
     sync(manager, peer);
 
-    peer.moveBlock('b3', 1);
+    peer.moveBlockTo('b3', { parentId: null, afterId: 'b1' });
     sync(manager, peer);
 
     manager.undo();
@@ -124,7 +124,7 @@ describe('concurrent undo — a refused entry must not block older ones', () => 
     expect(manager.canUndo()).toBe(false);
 
     // Once the peer puts b3 back where the move left it, the move undoes.
-    peer.moveBlock('b3', 0);
+    peer.moveBlockTo('b3', { parentId: null, afterId: null });
     sync(manager, peer);
     expect(manager.canUndo()).toBe(true);
     manager.undo();
@@ -135,7 +135,7 @@ describe('concurrent undo — a refused entry must not block older ones', () => 
 
   // COL-3. Same on the redo side.
   it('still redoes a newer edit after the peer moved a block whose move was undone', () => {
-    manager.moveBlock('b3', 0);
+    manager.moveBlockTo('b3', { parentId: null, afterId: null });
     manager.stopCapturing();
     manager.updateBlockData('b1', 'text', 'one edited');
     manager.stopCapturing();
@@ -144,7 +144,7 @@ describe('concurrent undo — a refused entry must not block older ones', () => 
     manager.undo();
     sync(manager, peer);
 
-    peer.moveBlock('b3', 1);
+    peer.moveBlockTo('b3', { parentId: null, afterId: 'b1' });
     sync(manager, peer);
 
     manager.redo();
@@ -158,7 +158,7 @@ describe('concurrent undo — a refused entry must not block older ones', () => 
   it('undoes an older edit after the peer deleted the block this editor moved', () => {
     manager.updateBlockData('b1', 'text', 'one edited');
     manager.stopCapturing();
-    manager.moveBlock('b3', 0);
+    manager.moveBlockTo('b3', { parentId: null, afterId: null });
     sync(manager, peer);
     peer.removeBlock('b3');
     sync(manager, peer);

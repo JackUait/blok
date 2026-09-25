@@ -13,7 +13,7 @@ import type { BlocksStore, ComposeBlockOptions } from '../../../../../src/compon
 import { YjsManager } from '../../../../../src/components/modules/yjs';
 import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
-import type { BlockChangeEvent } from '../../../../../src/components/modules/yjs/types';
+import type { BlockChangeEvent, BlockPlacement } from '../../../../../src/components/modules/yjs/types';
 
 /**
  * Task 7 integration pins: remote reconciliation through the BINARY SEAM.
@@ -346,7 +346,7 @@ describe('BlockYjsSync — remote reconciliation through the binary seam (integr
 
       const before = repository.blocks.map((block) => block);
 
-      peer.moveBlock('b3', 0);
+      peer.moveBlockTo('b3', { parentId: null, afterId: null });
       applyPeerToLocal();
       await flush();
 
@@ -442,7 +442,7 @@ describe('BlockYjsSync — remote reconciliation through the binary seam (integr
       manager.addBlock(paragraph(id), index);
     };
 
-    const localMove = (id: string, toIndex: number): void => {
+    const localMove = (id: string, toIndex: number, placement: BlockPlacement): void => {
       const block = repository.getBlockById(id);
 
       if (block === undefined) {
@@ -450,7 +450,7 @@ describe('BlockYjsSync — remote reconciliation through the binary seam (integr
       }
 
       blocksStore.move(toIndex, repository.getBlockIndex(block));
-      manager.moveBlock(id, toIndex);
+      manager.moveBlockTo(id, placement);
     };
 
     /** Keyboard-nesting analogue: reparent inside a move group. */
@@ -499,7 +499,7 @@ describe('BlockYjsSync — remote reconciliation through the binary seam (integr
       await flush();
       expectOrderInvariant('local add of p3 at the end', ['t1', 'p1', 'p2', 'p3']);
 
-      localMove('p2', 1);
+      localMove('p2', 1, { parentId: null, afterId: 't1' });
       await flush();
       expectOrderInvariant('local move of p2 to index 1', ['t1', 'p2', 'p1', 'p3']);
 
@@ -519,7 +519,7 @@ describe('BlockYjsSync — remote reconciliation through the binary seam (integr
 
       // Concurrent again: the peer reorders a block it has had since the seed,
       // knowing nothing of the reparent or of r1 having been delivered.
-      peer.moveBlock('p1', 0);
+      peer.moveBlockTo('p1', { parentId: null, afterId: null });
       applyPeerToLocal();
       await flush();
       expectConvergedSet('remote reorder of p1, made while apart', ['t1', 'p1', 'p2', 'p3', 'r1']);

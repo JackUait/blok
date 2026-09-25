@@ -298,12 +298,12 @@ describe('typing write coalescing', () => {
       expect(harness.readText()).toBe('ab');
     });
 
-    it('moveBlock flushes buffered writes first', async () => {
+    it('moveBlockTo flushes buffered writes first', async () => {
       const harness = createHarness();
 
       harness.yjsManager.addBlock({ id: 'b2', type: 'paragraph', data: { text: 'x' } });
       await arm(harness);
-      harness.yjsManager.moveBlock('b1', 1);
+      harness.yjsManager.moveBlockTo('b1', { parentId: null, afterId: 'b2' });
 
       expect(harness.readText()).toBe('ab');
     });

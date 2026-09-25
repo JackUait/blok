@@ -224,7 +224,6 @@ const createBlockManager = (
       addBlock: vi.fn(),
       addBlockAt: vi.fn(),
       removeBlock: vi.fn(),
-      moveBlock: vi.fn(),
       moveBlockTo: vi.fn(),
       applyBlockPlacement: vi.fn(),
       replaceBlockContent: vi.fn(() => true),
@@ -1029,7 +1028,6 @@ describe('BlockManager', () => {
       addBlock: vi.fn(),
       addBlockAt: vi.fn(),
       removeBlock: vi.fn(),
-      moveBlock: vi.fn(),
       updateBlockData: vi.fn(),
       pruneBlockData: vi.fn(() => false),
       beginPendingBlockDataWrite: vi.fn(() => vi.fn()),
@@ -1111,7 +1109,6 @@ describe('BlockManager', () => {
       addBlock: vi.fn(),
       addBlockAt: vi.fn(),
       removeBlock: vi.fn(),
-      moveBlock: vi.fn(),
       updateBlockData: vi.fn(() => true),
       pruneBlockData: vi.fn(() => false),
       beginPendingBlockDataWrite: vi.fn(() => vi.fn()),
@@ -1667,7 +1664,6 @@ describe('BlockManager', () => {
         YjsManager: {
           addBlock: vi.fn(),
           removeBlock: vi.fn(),
-          moveBlock: vi.fn(),
           // Return true to indicate the data actually changed — this is what
           // syncBlockDataToYjs uses as the signal to bump edit metadata.
           updateBlockData: vi.fn(() => true),
@@ -1792,7 +1788,6 @@ describe('BlockManager', () => {
         YjsManager: {
           addBlock: vi.fn(),
           removeBlock: vi.fn(),
-          moveBlock: vi.fn(),
           updateBlockData: updateBlockDataMock,
           pruneBlockData: vi.fn(() => false),
           updateBlockMetadata: updateBlockMetadataMock,

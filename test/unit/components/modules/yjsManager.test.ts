@@ -121,15 +121,15 @@ describe('YjsManager', () => {
     });
   });
 
-  describe('moveBlock', () => {
-    it('should move block to new index', () => {
+  describe('moveBlockTo', () => {
+    it('moves the block to the placement', () => {
       manager.fromJSON([
         { id: 'block1', type: 'paragraph', data: { text: 'First' } },
         { id: 'block2', type: 'paragraph', data: { text: 'Second' } },
         { id: 'block3', type: 'paragraph', data: { text: 'Third' } },
       ]);
 
-      manager.moveBlock('block3', 0);
+      manager.moveBlockTo('block3', { parentId: null, afterId: null });
 
       const result = manager.toJSON();
 
@@ -546,8 +546,8 @@ describe('YjsManager', () => {
 
       // Group multiple moves
       manager.transactMoves(() => {
-        manager.moveBlock('block4', 0);
-        manager.moveBlock('block3', 1);
+        manager.moveBlockTo('block4', { parentId: null, afterId: null });
+        manager.moveBlockTo('block3', { parentId: null, afterId: 'block4' });
       });
 
       const movedOrder = manager.toJSON().map((b) => b.id);
@@ -569,7 +569,7 @@ describe('YjsManager', () => {
       // Should not throw even if function throws
       expect(() => {
         manager.transactMoves(() => {
-          manager.moveBlock('block2', 0);
+          manager.moveBlockTo('block2', { parentId: null, afterId: null });
           throw new Error('Test error');
         });
       }).toThrow('Test error');
@@ -586,9 +586,9 @@ describe('YjsManager', () => {
       ]);
 
       manager.transactMoves(() => {
-        manager.moveBlock('block3', 0);
+        manager.moveBlockTo('block3', { parentId: null, afterId: null });
         manager.transactMoves(() => {
-          manager.moveBlock('block2', 1);
+          manager.moveBlockTo('block2', { parentId: null, afterId: 'block3' });
         });
         expect(manager.isInMoveGroup).toBe(true);
       });
@@ -639,8 +639,8 @@ describe('YjsManager', () => {
     });
   });
 
-  describe('moveBlock edge cases', () => {
-    it('does nothing when moving to same index', () => {
+  describe('moveBlockTo edge cases', () => {
+    it('does nothing when the block already holds the placement', () => {
       manager.fromJSON([
         { id: 'block1', type: 'paragraph', data: { text: 'First' } },
         { id: 'block2', type: 'paragraph', data: { text: 'Second' } },
@@ -648,9 +648,10 @@ describe('YjsManager', () => {
 
       const originalOrder = manager.toJSON().map((b) => b.id);
 
-      manager.moveBlock('block2', 1);
+      manager.moveBlockTo('block2', { parentId: null, afterId: 'block1' });
 
       expect(manager.toJSON().map((b) => b.id)).toEqual(originalOrder);
+      expect(manager.canUndo()).toBe(false);
     });
 
     it('does nothing when block is not found', () => {
@@ -658,7 +659,7 @@ describe('YjsManager', () => {
         { id: 'block1', type: 'paragraph', data: { text: 'First' } },
       ]);
 
-      manager.moveBlock('nonexistent', 0);
+      manager.moveBlockTo('nonexistent', { parentId: null, afterId: null });
 
       expect(manager.toJSON()).toHaveLength(1);
       expect(manager.toJSON()[0].id).toBe('block1');
@@ -670,7 +671,7 @@ describe('YjsManager', () => {
         { id: 'block2', type: 'paragraph', data: { text: 'Second' } },
       ]);
 
-      manager.moveBlock('block1', 1);
+      manager.moveBlockTo('block1', { parentId: null, afterId: 'block2' });
 
       expect(manager.toJSON().map((b) => b.id)).toEqual(['block2', 'block1']);
 

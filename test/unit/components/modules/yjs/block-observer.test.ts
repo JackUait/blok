@@ -6,6 +6,7 @@ import { YBlockSerializer } from '../../../../../src/components/modules/yjs/seri
 import {
   LOCAL_ORIGIN_TAGS,
   type BlockChangeEvent,
+  type BlockPlacement,
   type LocalOriginTag,
 } from '../../../../../src/components/modules/yjs/types';
 
@@ -42,8 +43,8 @@ describe('BlockObserver', () => {
     store.addBlock({ id, type: 'paragraph', data: {}, parent });
   };
 
-  const moveBlock = (id: string, toIndex: number): void => {
-    store.moveBlock(id, toIndex);
+  const moveBlock = (id: string, placement: BlockPlacement): void => {
+    store.moveBlockTo(id, placement);
   };
 
   const removeBlock = (id: string): void => {
@@ -133,7 +134,7 @@ describe('BlockObserver', () => {
       observer.onBlocksChanged(callback);
 
       // Move block: root-order edit only, the Y.Map stays put
-      moveBlock('b1', 1);
+      moveBlock('b1', { parentId: null, afterId: 'b2' });
 
       const event = callback.mock.calls[0]?.[0] as SingleBlockEvent;
 
@@ -299,7 +300,7 @@ describe('BlockObserver', () => {
       const callback = vi.fn();
       observer.onBlocksChanged(callback);
 
-      moveBlock('b3', 0);
+      moveBlock('b3', { parentId: null, afterId: null });
 
       const moveEvent = callback.mock.calls.find(
         (call) => (call[0] as BlockChangeEvent)?.type === 'move'
@@ -318,8 +319,8 @@ describe('BlockObserver', () => {
 
       // Move multiple blocks in one transaction
       store.transact(() => {
-        store.moveBlock('b5', 0);
-        store.moveBlock('b4', 1);
+        store.moveBlockTo('b5', { parentId: null, afterId: null });
+        store.moveBlockTo('b4', { parentId: null, afterId: 'b5' });
       }, 'local');
 
       const moveEvents = callback.mock.calls.filter(
@@ -338,7 +339,7 @@ describe('BlockObserver', () => {
 
       // Move b3, add b4, remove b2 — one transaction
       store.transact(() => {
-        store.moveBlock('b3', 0);
+        store.moveBlockTo('b3', { parentId: null, afterId: null });
         store.addBlock({ id: 'b4', type: 'paragraph', data: {} });
         store.removeBlock('b2');
       }, 'local');
@@ -367,8 +368,8 @@ describe('BlockObserver', () => {
       const callback = vi.fn();
       observer.onBlocksChanged(callback);
 
-      // Reorder within the parent: child-b takes child-a's flat slot.
-      moveBlock('child-b', store.orderedIds().indexOf('child-a'));
+      // Reorder within the parent: child-b goes first.
+      moveBlock('child-b', { parentId: 'parent-1', afterId: null });
 
       const moveEvents = callback.mock.calls
         .map((call) => call[0] as BlockChangeEvent)
@@ -695,7 +696,7 @@ describe('BlockObserver — emission order contract', () => {
     collectEvents();
 
     store.transact(() => {
-      store.moveBlock('b4', 0);
+      store.moveBlockTo('b4', { parentId: null, afterId: null });
       store.addBlock({ id: 'b5', type: 'paragraph', data: { text: '5' } });
       store.removeBlock('b2');
       store.updateBlockData('b3', 'text', 'changed');
@@ -718,7 +719,7 @@ describe('BlockObserver — emission order contract', () => {
 
     store.transact(() => {
       // Move comes from the ROOT ORDER array …
-      store.moveBlock('b2', 0);
+      store.moveBlockTo('b2', { parentId: null, afterId: null });
       // … while the add's membership goes into a parent's contentIds, so the
       // add is visible only through the blocks map.
       store.addBlock({ id: 'child-1', type: 'paragraph', data: { text: 'c' }, parent: 'parent-1' });
@@ -746,10 +747,10 @@ describe('BlockObserver — emission order contract', () => {
     collectEvents();
 
     store.transact(() => {
-      // contentIds-array move: swap c1 after c2 (flat target = c2's slot).
-      store.moveBlock('c1', store.orderedIds().indexOf('c2'));
+      // contentIds-array move: swap c1 after c2.
+      store.moveBlockTo('c1', { parentId: 'parent-1', afterId: 'c2' });
       // Root-order move.
-      store.moveBlock('p2', 0);
+      store.moveBlockTo('p2', { parentId: null, afterId: null });
       // Two adds in one transaction → batch-add.
       store.addBlock({ id: 'n1', type: 'paragraph', data: { text: 'n1' } });
       store.addBlock({ id: 'n2', type: 'paragraph', data: { text: 'n2' } });

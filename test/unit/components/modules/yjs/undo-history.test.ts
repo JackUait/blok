@@ -286,7 +286,7 @@ describe('UndoHistory', () => {
       history.stopCapturing();
 
       // M: move C to the front. `recordMove` only records; the doc move
-      // itself is untracked, as YjsManager.moveBlock's is.
+      // itself is untracked, as YjsManager.moveBlockTo's is.
       setCaretIn('C');
       ydoc.transact(() => {
         const moved = getBlock('C').toJSON();

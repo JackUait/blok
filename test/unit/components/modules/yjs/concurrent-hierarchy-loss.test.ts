@@ -138,7 +138,7 @@ const roundTrip = (store: DocumentStore): YjsOutputBlockData[] => {
 
 describe('DocumentStore — a block dragged while a peer drags the same block', () => {
   /**
-   * `moveBlock` deletes the id from every order array and re-inserts it. Each
+   * A move deletes the id from every order array and re-inserts it. Each
    * peer's delete names the ITEM it saw, so neither deletes the other's
    * insert: the id ends up in the root order twice. The read side dedupes, so
    * `toJSON` looks right and the corruption is invisible until the next
@@ -151,8 +151,8 @@ describe('DocumentStore — a block dragged while a peer drags the same block', 
       paragraph('b3', 'three'),
     ]);
 
-    a.moveBlock('b3', 0);
-    b.moveBlock('b3', 1);
+    a.moveBlockTo('b3', { parentId: null, afterId: null });
+    b.moveBlockTo('b3', { parentId: null, afterId: 'b1' });
 
     sync(a, b);
 
@@ -175,8 +175,8 @@ describe('DocumentStore — a block dragged while a peer drags the same block', 
       paragraph('b3', 'three'),
     ]);
 
-    a.moveBlock('b3', 0);
-    b.moveBlock('b3', 1);
+    a.moveBlockTo('b3', { parentId: null, afterId: null });
+    b.moveBlockTo('b3', { parentId: null, afterId: 'b1' });
 
     sync(a, b);
 
@@ -199,12 +199,12 @@ describe('DocumentStore — a block dragged while a peer drags the same block', 
       paragraph('b3', 'three'),
     ]);
 
-    a.moveBlock('b3', 0);
-    b.moveBlock('b3', 1);
+    a.moveBlockTo('b3', { parentId: null, afterId: null });
+    b.moveBlockTo('b3', { parentId: null, afterId: 'b1' });
 
     sync(a, b);
 
-    a.moveBlock('b1', 2);
+    a.moveBlockTo('b1', { parentId: null, afterId: 'b2' });
 
     expect(a.orderedIds()).toEqual(['b3', 'b2', 'b1']);
   });
@@ -238,9 +238,8 @@ describe('DocumentStore — a block moved into a container the peer deletes', ()
 
   /**
    * The block survives, but with a parentId naming a block that is gone for
-   * good. `moveBlock` resolves its target order array from that parentId,
-   * gets null, and returns — so the block sits at the document tail and every
-   * drag of it is silently a no-op. There is no fall-back to the root.
+   * good. A drag of it must still land: the editor no longer holds the
+   * parent, so the drag names the root.
    */
   it('can still be repositioned by a drag', () => {
     const { a, b } = twoPeers([toggle('C', []), paragraph('X', 'ex'), paragraph('tail', 'tail')]);
@@ -250,7 +249,7 @@ describe('DocumentStore — a block moved into a container the peer deletes', ()
 
     sync(a, b);
 
-    a.moveBlock('X', 0);
+    a.moveBlockTo('X', { parentId: null, afterId: null });
 
     expect(idsOf(a)[0]).toBe('X');
     expect(a.rootOrder.toArray()).toContain('X');
@@ -310,7 +309,7 @@ describe('DocumentStore — a block deleted while the peer moves it into a conta
     const { a, b } = twoPeers([paragraph('b1', 'one'), paragraph('b2', 'two'), paragraph('b3', 'three')]);
 
     a.removeBlock('b2');
-    b.moveBlock('b2', 0);
+    b.moveBlockTo('b2', { parentId: null, afterId: null });
 
     sync(a, b);
 

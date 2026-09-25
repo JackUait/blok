@@ -251,7 +251,7 @@ describe('DocumentStore — write origins reach the provider seam', () => {
     expect(originsOf(store, () => store.updateBlockMetadata('b1', 7, 'user-1'))).toEqual([ 'local' ]);
     expect(originsOf(store, () => store.updateBlockTune('b1', 'align', 'center'))).toEqual([ 'local' ]);
     expect(originsOf(store, () => store.removeBlock('b4'))).toEqual([ 'local' ]);
-    expect(originsOf(store, () => store.moveBlock('b1', 2))).toEqual([ 'move' ]);
+    expect(originsOf(store, () => store.moveBlockTo('b1', { parentId: null, afterId: 'b3' }))).toEqual([ 'move' ]);
     expect(
       originsOf(store, () => store.transact(() => store.getBlockById('b1')?.set('type', 'header'), 'local'))
     ).toEqual([ 'local' ]);
@@ -267,8 +267,8 @@ describe('DocumentStore — write origins reach the provider seam', () => {
 
     store.fromJSON([ block('b1', { text: 'a' }) ]);
 
-    // Same index: no transaction, so no origin and no update for the seam.
-    expect(originsOf(store, () => store.moveBlock('b1', 0))).toEqual([]);
+    // Same slot: no transaction, so no origin and no update for the seam.
+    expect(originsOf(store, () => store.moveBlockTo('b1', { parentId: null, afterId: null }))).toEqual([]);
   });
 });
 
@@ -352,29 +352,6 @@ describe('DocumentStore — removing blocks', () => {
 });
 
 describe('DocumentStore — moving blocks', () => {
-  it('ignores a move of an id the document does not hold', () => {
-    const store = createStore();
-
-    store.fromJSON([ block('b1', { text: 'a' }) ]);
-
-    store.moveBlock('ghost', 1);
-
-    // Without the fromIndex guard the unknown id is inserted into the root order.
-    expect(store.rootOrder.toArray()).toEqual([ 'b1' ]);
-    expect(store.toJSON().map((entry) => entry.id)).toEqual([ 'b1' ]);
-  });
-
-  it('leaves a moved block out of every order array when its parent dangles', () => {
-    const store = createStore();
-
-    store.addBlock(block('b1', { text: 'root' }));
-    store.addBlock({ id: 'd', type: 'paragraph', data: { text: 'orphan' }, parent: 'ghost' });
-
-    // The index has to differ from the orphan's own, or the move returns early.
-    expect(() => store.moveBlock('d', 0)).not.toThrow();
-    expect(store.rootOrder.toArray()).toEqual([ 'b1' ]);
-  });
-
   it('ignores a placement of an id the document does not hold', () => {
     const store = createStore();
 

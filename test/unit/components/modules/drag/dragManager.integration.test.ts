@@ -2821,7 +2821,7 @@ describe("DragManager - Component Integration", () => {
    *
    * A drag-reparent currently produces TWO independent undo entries on two
    * separate stacks:
-   *   1) `BlockManager.move` → `YjsManager.moveBlock` → `UndoHistory.recordMove`
+   *   1) `BlockManager.move` → `YjsManager.moveBlockTo` → `UndoHistory.recordMove`
    *      → custom `moveUndoStack` entry
    *   2) `BlockManager.setBlockParent` → `YjsManager.transact('local')`
    *      → `Y.UndoManager` entry (captures `parentId` + parent `contentIds`)

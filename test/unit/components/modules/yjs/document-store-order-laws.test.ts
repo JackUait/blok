@@ -45,7 +45,7 @@ describe('DocumentStore order laws — two-doc convergence via the binary seam',
   });
 
   it('concurrent move + edit of the moved block: the edit survives on both peers', () => {
-    storeA.moveBlock('b3', 0);
+    storeA.moveBlockTo('b3', { parentId: null, afterId: null });
     storeB.updateBlockData('b3', 'text', 'Edited on B');
 
     sync(storeA, storeB);
@@ -59,8 +59,8 @@ describe('DocumentStore order laws — two-doc convergence via the binary seam',
   });
 
   it('concurrent move + move of the same block: it exists once and both peers agree on order', () => {
-    storeA.moveBlock('b3', 0);
-    storeB.moveBlock('b3', 1);
+    storeA.moveBlockTo('b3', { parentId: null, afterId: null });
+    storeB.moveBlockTo('b3', { parentId: null, afterId: 'b1' });
 
     sync(storeA, storeB);
 
@@ -84,7 +84,7 @@ describe('DocumentStore order laws — two-doc convergence via the binary seam',
 });
 
 describe('DocumentStore order laws — block identity', () => {
-  it('moveBlock never touches the block Y.Map: getBlockById is reference-equal across a move', () => {
+  it('moveBlockTo never touches the block Y.Map: getBlockById is reference-equal across a move', () => {
     const store = createStore();
 
     store.fromJSON([
@@ -95,7 +95,7 @@ describe('DocumentStore order laws — block identity', () => {
 
     const before = store.getBlockById('b2');
 
-    store.moveBlock('b2', 0);
+    store.moveBlockTo('b2', { parentId: null, afterId: null });
 
     expect(store.getBlockById('b2')).toBe(before);
   });
@@ -479,68 +479,7 @@ const rawOrder = (store: DocumentStore): Record<string, string[]> => {
 
 const SEEDS = Array.from({ length: 100 }, (_, i) => i + 1);
 
-const siblingsOf = (json: TreeBlock[], block: TreeBlock): TreeBlock[] =>
-  json.filter((other) => (other.parent ?? null) === (block.parent ?? null) && other.id !== block.id);
-
-/**
- * A random tree plus a block that has a sibling to move past, picked nested
- * three times in four when the tree has one. Without the bias most picks
- * are root blocks and the nested path goes nearly untested.
- */
-const treeWithMover = (rand: () => number): { json: TreeBlock[]; mover: TreeBlock } => {
-  const json = randomTree(rand, 4 + Math.floor(rand() * 10));
-  const movers = json.filter((block) => siblingsOf(json, block).length > 0);
-  const nested = movers.filter((block) => block.parent !== undefined);
-
-  if (movers.length === 0) {
-    return treeWithMover(rand);
-  }
-
-  return { json,
-    mover: pick(rand, nested.length > 0 && rand() < 0.75 ? nested : movers) };
-};
-
 describe('DocumentStore order laws — placement API equivalence', () => {
-  it.each(SEEDS)('seed %i: moveBlockTo(placement implied by moveBlock) builds the same doc', (seed) => {
-    const rand = seededRandom(seed);
-    const { json, mover } = treeWithMover(rand);
-    const [byIndex, byPlacement] = twinStores(json);
-    const before = byIndex.orderedIds();
-
-    // A sibling's current flat index always moves the block past it.
-    const toIndex = before.indexOf(pick(rand, siblingsOf(json, mover)).id);
-
-    byIndex.moveBlock(mover.id, toIndex);
-    expect(byIndex.orderedIds()).not.toEqual(before);
-
-    const implied = byIndex.getPlacement(mover.id);
-
-    expect(implied).not.toBeNull();
-    byPlacement.moveBlockTo(mover.id, implied ?? { parentId: null, afterId: null });
-
-    expect(rawOrder(byPlacement)).toEqual(rawOrder(byIndex));
-    expect(byPlacement.toJSON()).toEqual(byIndex.toJSON());
-  });
-
-  it.each(SEEDS)('seed %i: moveBlock(index where moveBlockTo landed) builds the same doc', (seed) => {
-    const rand = seededRandom(seed);
-    const { json, mover } = treeWithMover(rand);
-    const [byIndex, byPlacement] = twinStores(json);
-    const before = byPlacement.orderedIds();
-    const parentId = mover.parent ?? null;
-    const current = byPlacement.getPlacement(mover.id)?.afterId ?? null;
-    const afterId = pick(rand, [null, ...siblingsOf(json, mover).map((other) => other.id)]
-      .filter((candidate) => candidate !== current));
-
-    byPlacement.moveBlockTo(mover.id, { parentId, afterId });
-    expect(byPlacement.orderedIds()).not.toEqual(before);
-
-    byIndex.moveBlock(mover.id, byPlacement.orderedIds().indexOf(mover.id));
-
-    expect(rawOrder(byIndex)).toEqual(rawOrder(byPlacement));
-    expect(byIndex.toJSON()).toEqual(byPlacement.toJSON());
-  });
-
   it.each(SEEDS)('seed %i: addBlockAt(placement implied by addBlock) builds the same doc', (seed) => {
     const rand = seededRandom(seed);
     const json = randomTree(rand, 3 + Math.floor(rand() * 10));

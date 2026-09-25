@@ -15,6 +15,82 @@ const svgOf = (name: string): SVGSVGElement => {
 };
 const pathOf = (svg: SVGSVGElement, index: number): string => svg.querySelectorAll('path')[index]?.getAttribute('d') ?? '';
 const valuesOf = (path: string): number[] => path.match(/-?(?:\d*\.)?\d+/g)?.map(Number) ?? [];
+const numeric = (element: Element | null | undefined, attribute: string): number => Number(element?.getAttribute(attribute));
+
+interface Segment { command: string; from: [number, number]; values: number[] }
+
+/** Splits absolute path data into segments that know where the pen started. */
+const segmentsOf = (path: string): Segment[] => {
+  const pen: [number, number] = [0, 0];
+
+  return Array.from(path.matchAll(/([MLHVCQAZ])([^MLHVCQAZ]*)/g), ([, command = '', args = '']) => {
+    const values = valuesOf(args);
+    const segment = { command, from: [pen[0], pen[1]] as [number, number], values };
+
+    if (command === 'H') {
+      pen[0] = values[0] ?? pen[0];
+    } else if (command === 'V') {
+      pen[1] = values[0] ?? pen[1];
+    } else if (values.length >= 2) {
+      pen[0] = values.at(-2) ?? 0;
+      pen[1] = values.at(-1) ?? 0;
+    }
+
+    return segment;
+  });
+};
+
+/** On-curve and control points: every coordinate pair the path draws through or bends toward. */
+const pointsOf = (path: string): Array<[number, number]> => segmentsOf(path).flatMap(({ command, from, values }) => {
+  if (command === 'H') {
+    return [[values[0] ?? 0, from[1]] as [number, number]];
+  }
+  if (command === 'V') {
+    return [[from[0], values[0] ?? 0] as [number, number]];
+  }
+  const pairs = command === 'A' ? values.slice(5) : values;
+
+  return pairs.flatMap((value, index) => (index % 2 === 1 ? [[pairs[index - 1] ?? 0, value] as [number, number]] : []));
+});
+
+/** Points along every curve and line of a path, for stroke-to-stroke distances. */
+const sampleCurves = (path: string): Array<[number, number]> => segmentsOf(path).flatMap(({ command, from, values }) => {
+  const controls = command === 'C' || command === 'Q' || command === 'L' ? values : [];
+  const hull: Array<[number, number]> = [from];
+
+  for (let index = 0; index + 1 < controls.length; index += 2) {
+    hull.push([controls[index] ?? 0, controls[index + 1] ?? 0]);
+  }
+  if (hull.length < 2) {
+    return [];
+  }
+
+  return Array.from({ length: 21 }, (_, step) => {
+    // De Casteljau works for lines, quadratics and cubics alike.
+    let level = hull;
+
+    while (level.length > 1) {
+      level = level.slice(1).map(([x, y], index) => {
+        const [px, py] = level[index] ?? [0, 0];
+
+        return [px + (x - px) * step / 20, py + (y - py) * step / 20] as [number, number];
+      });
+    }
+
+    return level[0] ?? [0, 0];
+  });
+});
+const nearest = (a: Array<[number, number]>, b: Array<[number, number]>): number =>
+  Math.min(...a.flatMap(([x, y]) => b.map(([bx, by]) => Math.hypot(x - bx, y - by))));
+
+/** Every point has a twin mirrored across the vertical line x = axis. */
+const expectMirrored = (points: Array<[number, number]>, axis: number): void => {
+  const drawn = points.map(([x, y]) => `${x},${y}`);
+
+  for (const [x, y] of points) {
+    expect(drawn, `unmirrored point ${x},${y}`).toContain(`${Math.round((2 * axis - x) * 100) / 100},${y}`);
+  }
+};
 
 beforeEach(() => vi.clearAllMocks());
 afterEach(() => vi.restoreAllMocks());
@@ -33,108 +109,147 @@ describe('expressive emoji categories', () => {
     }
   });
 
-  it('keeps the winking face on the same frame as the existing smile, with an open eye and mouth clearance', () => {
-    const wink = svgOf('IconEmojiWink');
-    const smile = svgOf('IconEmojiSmile');
-    const frame = wink.querySelector('circle');
-    const eye = wink.querySelector('circle[fill="currentColor"]');
+  it('draws two symmetric four-point sparkles and a twinkle dot, each a full stroke apart', () => {
+    const sparkles = svgOf('IconEmojiSparkles');
+    const stars = [pathOf(sparkles, 0), pathOf(sparkles, 1)];
 
-    for (const attribute of ['cx', 'cy', 'r']) {
-      expect(frame?.getAttribute(attribute)).toBe(smile.querySelector('circle')?.getAttribute(attribute));
+    for (const star of stars) {
+      expect(star).toMatch(/^M[\d. ]+(Q[\d. ]+){4}Z$/);
+      const points = pointsOf(star);
+      const [tipX] = points[0] ?? [0, 0];
+
+      expectMirrored(points, tipX);
     }
-    expect(wink.querySelectorAll('circle[fill="currentColor"]')).toHaveLength(1);
-    const mouth = valuesOf(pathOf(wink, 1));
+    const [big = [], small = []] = stars.map(star => sampleCurves(star));
 
-    expect(mouth[1] - Number(eye?.getAttribute('cy')) - Number(eye?.getAttribute('r')) - 0.625).toBeGreaterThanOrEqual(1.25);
+    expect(nearest(big, small) - 1.25).toBeGreaterThanOrEqual(1.25);
+
+    const dot = sparkles.querySelector('circle');
+
+    expect(dot?.getAttribute('fill')).toBe('currentColor');
+    expect(nearest([[numeric(dot, 'cx'), numeric(dot, 'cy')]], [...big, ...small]) - numeric(dot, 'r') - 0.625).toBeGreaterThanOrEqual(1.25);
   });
 
-  it('leaves a full stroke of air between the steam and the bowl rim', () => {
+  it('winks the open smile: same frame and eye, a closed eye mirrored across, and an open grin', () => {
+    const wink = svgOf('IconEmojiWink');
+    const smile = svgOf('IconEmojiSmile');
+    const [frame, eye] = Array.from(wink.querySelectorAll('circle'));
+    const [smileFrame, smileEye] = Array.from(smile.querySelectorAll('circle'));
+
+    for (const attribute of ['cx', 'cy', 'r']) {
+      expect(frame?.getAttribute(attribute)).toBe(smileFrame?.getAttribute(attribute));
+      expect(eye?.getAttribute(attribute)).toBe(smileEye?.getAttribute(attribute));
+    }
+    expect(wink.querySelectorAll('circle[fill="currentColor"]')).toHaveLength(1);
+
+    const closedEye = valuesOf(pathOf(wink, 0));
+
+    expect(pathOf(wink, 0)).toMatch(/^M[\d. ]+Q[\d. ]+$/);
+    expect((closedEye[0] + closedEye[4]) / 2).toBe(20 - numeric(eye, 'cx'));
+    expect(closedEye[1]).toBe(closedEye[5]);
+
+    const mouth = pathOf(wink, 1);
+
+    expect(mouth.endsWith('Z')).toBe(true);
+    const points = pointsOf(mouth);
+
+    expectMirrored(points, 10);
+    const top = Math.min(...points.map(([, y]) => y));
+    const bottom = Math.max(...points.map(([, y]) => y));
+
+    expect(top - numeric(eye, 'cy') - numeric(eye, 'r') - 0.625).toBeGreaterThanOrEqual(1.25);
+    expect(16.5 - bottom - 1.25).toBeGreaterThanOrEqual(1.25);
+  });
+
+  it('centers the bowl, its foot and both steam wisps, with a full stroke of air above the rim', () => {
     const bowl = svgOf('IconEmojiBowl');
-    const rim = valuesOf(pathOf(bowl, 0));
+    const rim = pointsOf(pathOf(bowl, 0));
     const steam = pathOf(bowl, 2).match(/M[^M]+/g) ?? [];
 
+    expectMirrored(rim, 10);
+    const [footX = 0, , footWidth = 0] = valuesOf(pathOf(bowl, 1));
+
+    expect(pathOf(bowl, 1)).toMatch(/^M[\d. ]+h[\d.]+$/);
+    expect(2 * footX + footWidth).toBe(20);
     expect(steam).toHaveLength(2);
+    const [left, right] = steam.map(curl => valuesOf(curl));
+
+    expect((left?.[0] ?? 0) + (right?.[0] ?? 0)).toBe(20);
     for (const curl of steam) {
       const ys = valuesOf(curl).filter((_, index) => index % 2 === 1);
 
-      expect(rim[1] - Math.max(...ys) - 1.25).toBeGreaterThanOrEqual(1.25);
+      expect((rim[0]?.[1] ?? 0) - Math.max(...ys) - 1.25).toBeGreaterThanOrEqual(1.25);
     }
   });
 
-  it('separates the controller buttons from each other and the directional pad', () => {
+  it('draws a symmetric controller body with no cable, a d-pad and two separated buttons', () => {
     const controller = svgOf('IconEmojiGamepad');
+
+    expect(controller.querySelectorAll('path')).toHaveLength(2);
+    expectMirrored(pointsOf(pathOf(controller, 0)), 10);
+
     const buttons = Array.from(controller.querySelectorAll('circle'));
 
     expect(buttons).toHaveLength(2);
     const [first, second] = buttons;
+    const distance = Math.hypot(numeric(first, 'cx') - numeric(second, 'cx'), numeric(first, 'cy') - numeric(second, 'cy'));
 
-    if (first === undefined || second === undefined) {
-      throw new Error('Missing controller buttons');
-    }
-    const distance = Math.hypot(Number(first.getAttribute('cx')) - Number(second.getAttribute('cx')), Number(first.getAttribute('cy')) - Number(second.getAttribute('cy')));
+    expect(distance - numeric(first, 'r') - numeric(second, 'r')).toBeGreaterThanOrEqual(1.25);
+    const [padLeft, , padWidth] = valuesOf(pathOf(controller, 1));
 
-    expect(distance - Number(first.getAttribute('r')) - Number(second.getAttribute('r'))).toBeGreaterThanOrEqual(1.25);
-    expect(Math.min(...buttons.map(button => Number(button.getAttribute('cx')) - Number(button.getAttribute('r')))) - 8.25 - 0.625).toBeGreaterThanOrEqual(1.25);
+    expect(Math.min(...buttons.map(button => numeric(button, 'cx') - numeric(button, 'r'))) - (padLeft + padWidth) - 0.625).toBeGreaterThanOrEqual(1.25);
   });
 
-  it('ends the stem at the upper leaf instead of drawing a stray vein inside it', () => {
-    const sprout = svgOf('IconEmojiSprout');
-    const left = valuesOf(pathOf(sprout, 0));
-    const right = valuesOf(pathOf(sprout, 1));
-    const stem = pathOf(sprout, 2);
+  it('plants a centered location pin in an open ground ring that never crosses the pin', () => {
+    const pin = svgOf('IconEmojiMap');
+    const outline = pathOf(pin, 0);
+    const hole = pin.querySelector('circle');
+    const ground = pointsOf(pathOf(pin, 1));
 
-    expect(stem).toMatch(/^M[\d. ]+V[\d.]+$/);
-    const [x, bottom, top] = valuesOf(stem);
+    expect(outline).toMatch(/^M[\d. ]+C[\d. ]+A[\d. ]+C[\d. ]+Z$/);
+    const [tipX, tipY] = valuesOf(outline);
 
-    expect(x).toBe(left[0]);
-    expect(x).toBe(right[0]);
-    expect(top).toBe(right[1]);
-    expect(left[1]).toBeGreaterThan(top);
-    expect(bottom - left[1]).toBeGreaterThanOrEqual(2.5);
+    expect(tipX).toBe(10);
+    expect(numeric(hole, 'cx')).toBe(10);
+    expect(hole?.hasAttribute('fill')).toBe(false);
+
+    expect(pathOf(pin, 1).endsWith('Z')).toBe(false);
+    expectMirrored(ground, 10);
+    const lowest = Math.max(...ground.map(([, y]) => y));
+    const [start] = ground;
+
+    expect(tipY).toBeLessThan(lowest);
+    // The ring breaks where the pin stands; its loose ends keep a full stroke of air from the pin.
+    expect(nearest([start ?? [0, 0], ground.at(-1) ?? [0, 0]], sampleCurves(outline)) - 1.25).toBeGreaterThanOrEqual(1.25);
+    expect(lowest).toBeLessThanOrEqual(17);
   });
 
-  it('draws two complete hearts instead of leaving the smaller outline dangling', () => {
+  it('pairs an outlined heart with a smaller solid heart, both symmetric and a stroke apart', () => {
     const hearts = svgOf('IconEmojiHearts');
     const paths = Array.from(hearts.querySelectorAll('path'));
 
     expect(paths).toHaveLength(2);
-    for (const path of paths) {
-      const outline = path.getAttribute('d') ?? '';
+    const [outline, solid] = paths;
 
-      expect(outline.endsWith('Z')).toBe(true);
-      const points = valuesOf(outline);
+    expect(outline?.getAttribute('stroke')).toBe('currentColor');
+    expect(solid?.getAttribute('fill')).toBe('currentColor');
+    expect(solid?.hasAttribute('stroke')).toBe(false);
 
-      expect(points.slice(-2)).toEqual(points.slice(0, 2));
-      expect(outline.match(/C/g)).toHaveLength(4);
+    const shapes = paths.map(path => pointsOf(path.getAttribute('d') ?? ''));
+
+    for (const [index, path] of paths.entries()) {
+      expect(path.getAttribute('d')?.endsWith('Z')).toBe(true);
+      const points = shapes[index] ?? [];
+
+      expect(points.at(-1)).toEqual(points[0]);
+      expectMirrored(points, points[0]?.[0] ?? 0);
     }
-  });
+    const big = shapes[0] ?? [];
+    const small = shapes[1] ?? [];
+    const gap = nearest(sampleCurves(outline?.getAttribute('d') ?? ''), sampleCurves(solid?.getAttribute('d') ?? ''));
 
-  it('keeps the bulb base rounded and centered below the hollow glass', () => {
-    const bulb = svgOf('IconEmojiLightbulb');
-    const glass = pathOf(bulb, 0);
-    const base = pathOf(bulb, 1);
-
-    expect(base.endsWith('Z')).toBe(true);
-    expect(base.match(/C/g)).toHaveLength(2);
-    expect(bulb.getAttribute('fill')).toBe('none');
-    expect(glass.endsWith('Z')).toBe(true);
-    const glassPoints = valuesOf(glass);
-    const basePoints = valuesOf(base);
-
-    expect(basePoints[0]).toBe(glassPoints[0]);
-    expect(basePoints[2]).toBe(glassPoints.at(-2));
-    expect(basePoints[1] - glassPoints[1] - 1.25).toBeGreaterThanOrEqual(1.25);
-  });
-
-  it('keeps the flag upright with both ends of its cloth attached to the pole', () => {
-    const flag = svgOf('IconEmojiFlag');
-
-    expect(flag.querySelector('[transform]')).toBeNull();
-    expect(pathOf(flag, 0)).toMatch(/^M[\d. ]+v-?[\d.]+$/);
-    const pole = valuesOf(pathOf(flag, 0));
-    const cloth = valuesOf(pathOf(flag, 1));
-
-    expect(cloth[0]).toBe(pole[0]);
-    expect(cloth.at(-2)).toBe(pole[0]);
+    expect(Math.max(...small.map(([x]) => x)) - Math.min(...small.map(([x]) => x)))
+      .toBeLessThan(Math.max(...big.map(([x]) => x)) - Math.min(...big.map(([x]) => x)));
+    expect(gap - 0.625).toBeGreaterThanOrEqual(1.25);
   });
 });

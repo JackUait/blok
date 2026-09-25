@@ -12,7 +12,8 @@
 import type { BlockToolData, PasteEvent, OutputBlockData } from '../../../../types';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import type { Block } from '../../block';
-import { resolveRuntimeEnv, validateHierarchy } from '../../utils/hierarchy-invariant';
+import { logLabeled } from '../../utils';
+import { resolveRuntimeEnv, validateHierarchy, validateTreeOrder } from '../../utils/hierarchy-invariant';
 import type { TreePlacement } from '../../utils/tree-order';
 import { BlockInsertion } from './block-insertion';
 import { BlockMutation } from './block-mutation';
@@ -63,6 +64,12 @@ export class BlockOperations implements OperationsContext {
    * This prevents breaking undo grouping when currentBlockIndex changes
    */
   public suppressStopCapturing = false;
+
+  /** How many operations are running now, nested ones included. */
+  private operationDepth = 0;
+
+  /** Whether the running outermost operation hit the dev gate. */
+  private treeOrderCheckPending = false;
 
   /**
    * @param dependencies - Required dependencies
@@ -312,7 +319,7 @@ export class BlockOperations implements OperationsContext {
    * @returns The inserted block
    */
   public insert(options: InsertBlockOptions = {}, blocksStore: BlocksStore): Block {
-    return this.insertion.insert(options, blocksStore);
+    return this.runOperation('insert', () => this.insertion.insert(options, blocksStore));
   }
 
   /**
@@ -331,7 +338,8 @@ export class BlockOperations implements OperationsContext {
     blocksStore: BlocksStore,
     forceTopLevel = false
   ): Block {
-    return this.insertion.insertDefaultBlockAtIndex(index, needToFocus, skipYjsSync, blocksStore, forceTopLevel);
+    return this.runOperation('insertDefaultBlockAtIndex', () =>
+      this.insertion.insertDefaultBlockAtIndex(index, needToFocus, skipYjsSync, blocksStore, forceTopLevel));
   }
 
   /**
@@ -340,7 +348,7 @@ export class BlockOperations implements OperationsContext {
    * @returns Inserted Block
    */
   public insertAtEnd(blocksStore: BlocksStore): Block {
-    return this.insertion.insertAtEnd(blocksStore);
+    return this.runOperation('insertAtEnd', () => this.insertion.insertAtEnd(blocksStore));
   }
 
   /**
@@ -361,7 +369,8 @@ export class BlockOperations implements OperationsContext {
     toolName?: string,
     options?: InsertInsideParentOptions
   ): Block {
-    return this.insertion.insertInsideParent(parentId, insertIndex, blocksStore, childData, toolName, options);
+    return this.runOperation('insertInsideParent', () =>
+      this.insertion.insertInsideParent(parentId, insertIndex, blocksStore, childData, toolName, options));
   }
 
   /**
@@ -370,7 +379,7 @@ export class BlockOperations implements OperationsContext {
    * @returns Split block
    */
   public split(blocksStore: BlocksStore): Block {
-    return this.insertion.split(blocksStore);
+    return this.runOperation('split', () => this.insertion.split(blocksStore));
   }
 
   /**
@@ -391,7 +400,8 @@ export class BlockOperations implements OperationsContext {
     insertIndex: number,
     blocksStore: BlocksStore
   ): Block {
-    return this.insertion.splitBlockWithData(currentBlockId, currentBlockData, newBlockType, newBlockData, insertIndex, blocksStore);
+    return this.runOperation('splitBlockWithData', () =>
+      this.insertion.splitBlockWithData(currentBlockId, currentBlockData, newBlockType, newBlockData, insertIndex, blocksStore));
   }
 
   /**
@@ -409,7 +419,7 @@ export class BlockOperations implements OperationsContext {
     blocksStore: BlocksStore,
     data?: BlockToolData
   ): Promise<Block> {
-    return this.insertion.paste(toolName, pasteEvent, replace, blocksStore, data);
+    return this.runOperation('paste', () => this.insertion.paste(toolName, pasteEvent, replace, blocksStore, data));
   }
 
   /**
@@ -420,7 +430,7 @@ export class BlockOperations implements OperationsContext {
    * @param blocksStore - The blocks store to modify
    */
   public removeBlock(block: Block, addLastBlock = true, skipYjsSync = false, blocksStore: BlocksStore): Promise<void> {
-    return this.removal.removeBlock(block, addLastBlock, skipYjsSync, blocksStore);
+    return this.runOperation('removeBlock', () => this.removal.removeBlock(block, addLastBlock, skipYjsSync, blocksStore));
   }
 
   /**
@@ -432,7 +442,7 @@ export class BlockOperations implements OperationsContext {
    * @param derivedFrom - see `BlockMutation.update`
    */
   public update(block: Block, blocksStore: BlocksStore, data?: Partial<BlockToolData>, tunes?: { [name: string]: BlockTuneData }, derivedFrom?: DerivedSource): Promise<Block> {
-    return this.mutation.update(block, blocksStore, data, tunes, derivedFrom);
+    return this.runOperation('update', () => this.mutation.update(block, blocksStore, data, tunes, derivedFrom));
   }
 
   /**
@@ -443,7 +453,7 @@ export class BlockOperations implements OperationsContext {
    * @param blocksStore - The blocks store to modify
    */
   public replace(block: Block, newTool: string, data: BlockToolData, blocksStore: BlocksStore): Block {
-    return this.mutation.replace(block, newTool, data, blocksStore);
+    return this.runOperation('replace', () => this.mutation.replace(block, newTool, data, blocksStore));
   }
 
   /**
@@ -455,7 +465,7 @@ export class BlockOperations implements OperationsContext {
    * @param skipMovedHook - If true, do not fire the moved() lifecycle hook
    */
   public move(toIndex: number, fromIndex: number, skipDOM: boolean, blocksStore: BlocksStore, skipMovedHook = false): void {
-    this.mutation.move(toIndex, fromIndex, skipDOM, blocksStore, skipMovedHook);
+    this.runOperation('move', () => this.mutation.move(toIndex, fromIndex, skipDOM, blocksStore, skipMovedHook));
   }
 
   /**
@@ -465,7 +475,7 @@ export class BlockOperations implements OperationsContext {
    * @param blocksStore - The blocks store to modify
    */
   public moveTo(block: Block, placement: TreePlacement, blocksStore: BlocksStore): void {
-    this.mutation.moveTo(block, placement, blocksStore);
+    this.runOperation('moveTo', () => this.mutation.moveTo(block, placement, blocksStore));
   }
 
   /**
@@ -475,7 +485,7 @@ export class BlockOperations implements OperationsContext {
    * @param blocksStore - The blocks store to modify
    */
   public mergeBlocks(targetBlock: Block, blockToMerge: Block, blocksStore: BlocksStore): Promise<void> {
-    return this.mutation.mergeBlocks(targetBlock, blockToMerge, blocksStore);
+    return this.runOperation('mergeBlocks', () => this.mutation.mergeBlocks(targetBlock, blockToMerge, blocksStore));
   }
 
   /**
@@ -492,7 +502,8 @@ export class BlockOperations implements OperationsContext {
     blockDataOverrides?: BlockToolData,
     beforeReplace?: () => void
   ): Promise<Block> {
-    return this.mutation.convert(blockToConvert, targetToolName, blocksStore, blockDataOverrides, beforeReplace);
+    return this.runOperation('convert', () =>
+      this.mutation.convert(blockToConvert, targetToolName, blocksStore, blockDataOverrides, beforeReplace));
   }
 
   /**
@@ -501,7 +512,7 @@ export class BlockOperations implements OperationsContext {
    * @param selectedBlocks - blocks under block-level selection (moved together)
    */
   public moveCurrentBlockUp(blocksStore: BlocksStore, selectedBlocks?: Block[]): void {
-    this.mutation.moveCurrentBlockUp(blocksStore, selectedBlocks);
+    this.runOperation('moveCurrentBlockUp', () => this.mutation.moveCurrentBlockUp(blocksStore, selectedBlocks));
   }
 
   /**
@@ -510,7 +521,7 @@ export class BlockOperations implements OperationsContext {
    * @param selectedBlocks - blocks under block-level selection (moved together)
    */
   public moveCurrentBlockDown(blocksStore: BlocksStore, selectedBlocks?: Block[]): void {
-    this.mutation.moveCurrentBlockDown(blocksStore, selectedBlocks);
+    this.runOperation('moveCurrentBlockDown', () => this.mutation.moveCurrentBlockDown(blocksStore, selectedBlocks));
   }
 
   /**
@@ -567,6 +578,52 @@ export class BlockOperations implements OperationsContext {
   }
 
   /**
+   * Runs one operation. When the outermost one returns (for an async one, when
+   * its synchronous part returns), checks tree order if the dev gate ran.
+   * Nested operations only mark the check: two-step paths inside one
+   * operation pass through a broken order before they end in a valid one.
+   * @param name - the operation, for the warning
+   * @param fn - the operation body
+   */
+  private runOperation<T>(name: string, fn: () => T): T {
+    this.operationDepth++;
+
+    try {
+      return fn();
+    } finally {
+      this.operationDepth--;
+
+      if (this.operationDepth === 0 && this.treeOrderCheckPending) {
+        this.treeOrderCheckPending = false;
+        this.warnOnTreeOrderInDev(name);
+      }
+    }
+  }
+
+  /**
+   * Warns (never throws) when the flat array is not the contentIds tree walk.
+   * Skipped inside a drag's move group: it moves flat first and reparents
+   * later, in separate calls.
+   * @param context - the operation that just ran
+   */
+  private warnOnTreeOrderInDev(context: string): void {
+    if (this.dependencies.YjsManager.isInMoveGroup) {
+      return;
+    }
+
+    const violations = validateTreeOrder(this.repository.blocks.map(b => ({
+      id: b.id,
+      name: b.name,
+      parentId: b.parentId ?? null,
+      contentIds: Array.isArray(b.contentIds) ? b.contentIds : [],
+    })));
+
+    if (violations.length > 0) {
+      logLabeled(`Tree order broken at BlockOperations.${context}:\n${violations.map(v => `  - ${v.message}`).join('\n')}`, 'warn');
+    }
+  }
+
+  /**
    * Dev/test invariant gate.
    *
    * Validates the parent/contentIds bidirectional invariant against the live
@@ -597,6 +654,12 @@ export class BlockOperations implements OperationsContext {
 
     if (env !== 'test' && env !== 'development') {
       return;
+    }
+
+    if (this.operationDepth > 0) {
+      this.treeOrderCheckPending = true;
+    } else {
+      this.warnOnTreeOrderInDev(context);
     }
 
     const blocks: OutputBlockData[] = this.repository.blocks.map(b => ({

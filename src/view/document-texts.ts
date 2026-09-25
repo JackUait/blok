@@ -52,6 +52,8 @@ const PROSE_FIELDS: Record<string, string[]> = {
    * present exactly when the document predates children-by-reference.
    */
   callout: ['title'],
+  /** Legacy only: the editor migrates a warning to a callout with these as paragraphs. */
+  warning: ['title', 'message'],
 };
 
 /** Types whose LEGACY data nests item text in `data.items[]`. Current list blocks are flat. */

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { blocksToPlainText, blocksToMarkdown, extractTexts } from '../../../src/view';
+import { blocksToHtml, blocksToPlainText, blocksToMarkdown, extractTexts } from '../../../src/view';
 
 import type { LooseOutputData } from '../../../types';
 
@@ -102,7 +102,8 @@ describe('legacy nested documents', () => {
   describe('blocksToMarkdown reads content nested inside `data`', () => {
     it.each([
       ['a list whose items live in data.items', legacyList, '- first item\n    - nested item\n- second item'],
-      ['a callout whose body lives in data.body.blocks', legacyCallout, '> Watch out\n> \n> the floor is wet'],
+      /** The editor gives a legacy callout the default 💡 when it names no emoji. */
+      ['a callout whose body lives in data.body.blocks', legacyCallout, '> 💡 Watch out\n> \n> the floor is wet'],
       /**
        * `toggleList` is the legacy name of `toggle`, so it renders identically:
        * bold summary, then body. Not a blockquote — that is the callout.
@@ -185,5 +186,98 @@ describe('legacy nested documents', () => {
     ])('%s', (_name, document, expected) => {
       expect(extractTexts(document)).toEqual(expect.arrayContaining(expected));
     });
+  });
+});
+
+/**
+ * Every reader, so one assertion covers HTML, Markdown and plain text.
+ * @param document - document to render
+ */
+const readAll = (document: LooseOutputData): { html: string; markdown: string; text: string } => ({
+  html: blocksToHtml(document),
+  markdown: blocksToMarkdown(document),
+  text: blocksToPlainText(document),
+});
+
+/**
+ * The editor migrates these legacy Editor.js blocks on load
+ * (`src/components/migration/legacy-grammar.mjs`). /view must render each one
+ * exactly like the block the editor turns it into.
+ */
+describe('legacy blocks read like their migration result', () => {
+  it('renders a legacy warning as a callout with title and message paragraphs, marks kept', () => {
+    const legacy = readAll({
+      blocks: [{ type: 'warning', data: { title: 'L1<br><b>bold</b>', message: 'M <i>it</i>' } }],
+    });
+
+    expect(legacy.html).toBe('<aside><span>⚠️</span><p>L1<br><b>bold</b></p><p>M <i>it</i></p></aside>');
+    expect(legacy.markdown).toBe('> ⚠️ L1  \n> **bold**\n> \n> M *it*');
+    expect(legacy.text).toBe('L1\nbold\n\nM it');
+  });
+
+  it.each([
+    [
+      'a toggleList becomes a toggle',
+      { type: 'toggleList', data: { title: 'More <b>detail</b>', isExpanded: true, body: { blocks: [{ type: 'paragraph', data: { text: 'inner' } }] } } },
+      [
+        { id: 't', type: 'toggle', data: { text: 'More <b>detail</b>', isOpen: true }, content: ['c'] },
+        { id: 'c', parent: 't', type: 'paragraph', data: { text: 'inner' } },
+      ],
+    ],
+    [
+      'a toggleList with titleVariant becomes a toggle heading',
+      { type: 'toggleList', data: { title: 'Section', titleVariant: 2, body: { blocks: [{ type: 'paragraph', data: { text: 'inner' } }] } } },
+      [
+        { id: 't', type: 'header', data: { text: 'Section', level: 2, isToggleable: true }, content: ['c'] },
+        { id: 'c', parent: 't', type: 'paragraph', data: { text: 'inner' } },
+      ],
+    ],
+    [
+      'a callout with no emoji gets the default one',
+      { type: 'callout', data: { title: 'Title', body: { blocks: [] } } },
+      [
+        { id: 'k', type: 'callout', data: { emoji: '💡', textColor: null, backgroundColor: null }, content: ['p'] },
+        { id: 'p', parent: 'k', type: 'paragraph', data: { text: 'Title' } },
+      ],
+    ],
+    [
+      'a callout with a hidden emoji shows none',
+      { type: 'callout', data: { title: 'Title', emoji: '🔥', isEmojiVisible: false, body: { blocks: [] } } },
+      [
+        { id: 'k', type: 'callout', data: { emoji: '', textColor: null, backgroundColor: null }, content: ['p'] },
+        { id: 'p', parent: 'k', type: 'paragraph', data: { text: 'Title' } },
+      ],
+    ],
+    [
+      'a linkTool becomes a bookmark',
+      { type: 'linkTool', data: { link: 'https://ex.com', meta: { title: 'Site', description: 'About', image: { url: 'https://ex.com/i.png' } } } },
+      [{ id: 'k', type: 'bookmark', data: { url: 'https://ex.com', title: 'Site', description: 'About', image: 'https://ex.com/i.png' } }],
+    ],
+    [
+      'an attaches block becomes a bookmark',
+      { type: 'attaches', data: { file: { url: 'https://ex.com/f.pdf', name: 'f.pdf' }, title: 'Report' } },
+      [{ id: 'k', type: 'bookmark', data: { url: 'https://ex.com/f.pdf', title: 'Report' } }],
+    ],
+    [
+      'a raw block becomes a code block',
+      { type: 'raw', data: { html: '<div>raw</div>' } },
+      [{ id: 'k', type: 'code', data: { code: '<div>raw</div>' } }],
+    ],
+    [
+      'an @editorjs/image block reads its url from file.url',
+      { type: 'image', data: { file: { url: 'https://ex.com/a.png' }, caption: 'cap', withBorder: true } },
+      [{ id: 'k', type: 'image', data: { url: 'https://ex.com/a.png', caption: 'cap', frame: 'border' } }],
+    ],
+  ])('%s', (_name, legacyBlock, currentBlocks) => {
+    const legacy = readAll({ blocks: [legacyBlock] });
+    const current = readAll({ blocks: currentBlocks });
+
+    expect(legacy).toEqual(current);
+  });
+
+  it('offers a legacy warning title and message for translation', () => {
+    const texts = extractTexts({ blocks: [{ type: 'warning', data: { title: 'Heads up', message: 'Read this' } }] });
+
+    expect(texts).toEqual(['Heads up', 'Read this']);
   });
 });

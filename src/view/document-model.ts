@@ -5,10 +5,18 @@
  * fields, mirroring what the Saver emits — see `makeOutput` in
  * `src/components/modules/saver.ts`).
  *
- * PURITY CONTRACT: no DOM access, no editor-module imports.
+ * PURITY CONTRACT: no DOM access, no editor-module imports. The legacy grammar
+ * is the one exception: it is zero-dependency and DOM-free.
  */
 import type { LooseOutputData, OutputData } from '../../types';
 import { orderByContent } from '../shared/content-order';
+import {
+  CALLOUT_DEFAULT_EMOJI,
+  VARIANT_TO_BG_PRESET,
+  WARNING_EMOJI,
+  expandLegacyBlocks,
+  matchLegacyRule,
+} from '../components/migration/legacy-grammar.mjs';
 
 /**
  * A block after defensive normalization: guaranteed string `type` and object
@@ -121,6 +129,52 @@ const withLegacyEmbedSource = (block: ViewBlock): ViewBlock => {
 };
 
 /**
+ * A legacy block's data rewritten to the shape the editor migrates it to on
+ * load (`src/components/migration/legacy-grammar.mjs`). Only the block itself
+ * changes here; its nested children come from `legacyChildren`, which must
+ * read the ORIGINAL data. Returns a new object — the original belongs to the
+ * caller's document.
+ * @param block - the normalized block to read
+ */
+const withCurrentShape = (block: ViewBlock): ViewBlock => {
+  const { data, type } = block;
+
+  if (type === 'warning') {
+    return { ...block, type: 'callout', data: { emoji: WARNING_EMOJI, textColor: null, backgroundColor: 'orange' } };
+  }
+
+  if (type === 'toggleList' && 'title' in data) {
+    const isOpen = typeof data.isExpanded === 'boolean' ? { isOpen: data.isExpanded } : {};
+
+    return typeof data.titleVariant === 'number'
+      ? { ...block, type: 'header', data: { text: data.title, level: data.titleVariant, isToggleable: true, ...isOpen } }
+      : { ...block, type: 'toggle', data: { text: data.title, ...isOpen } };
+  }
+
+  if (type === 'callout' && 'body' in data) {
+    const variant = typeof data.variant === 'string' ? data.variant : 'general';
+    const emoji = data.isEmojiVisible === false ? '' : (data.emoji ?? CALLOUT_DEFAULT_EMOJI);
+
+    return {
+      ...block,
+      data: { emoji, textColor: null, backgroundColor: VARIANT_TO_BG_PRESET[variant] ?? null },
+    };
+  }
+
+  const rule = matchLegacyRule(block);
+
+  /** One-to-one rules (linkTool, attaches, raw, image) run the editor's own expander. */
+  if (rule === null || rule.cardinality !== '1:1') {
+    return block;
+  }
+
+  /** An empty id is dropped by normalizeViewBlock, so no id is invented here. */
+  const [expanded] = expandLegacyBlocks([block], { generateId: () => '' });
+
+  return normalizeViewBlock(expanded) ?? block;
+};
+
+/**
  * Types whose LEGACY data nests its child blocks in `data.body.blocks[]`. A
  * current `toggle` keeps its children by reference like every other container.
  */
@@ -207,8 +261,16 @@ const legacyChildren = (block: ViewBlock): unknown[] => {
 
   const children: unknown[] = [];
 
+  /** A warning has no text field either: title and message become paragraphs. */
+  if (type === 'warning') {
+    return [data.title, data.message]
+      .filter((text) => typeof text === 'string' && text !== '')
+      .map((text) => ({ type: 'paragraph', data: { text } }));
+  }
+
   if (LEGACY_BODY_TYPES.has(type)) {
-    if (typeof data.title === 'string' && data.title !== '') {
+    /** A toggleList title becomes the toggle's own text, not a child. */
+    if (type !== 'toggleList' && typeof data.title === 'string' && data.title !== '') {
       children.push({ type: 'paragraph', data: { text: data.title } });
     }
 
@@ -291,15 +353,13 @@ export const buildDocumentModel = (input: OutputData | LooseOutputData | null | 
       return;
     }
 
-    const block = withLegacyEmbedSource(normalized);
-
     const parentId = nestedParentId ?? parentIdOf(raw);
-    const group = legacyItemGroup(block);
+    const group = legacyItemGroup(normalized);
 
     /** A list block that is only a wrapper for its items IS those items. */
     if (group !== null) {
-      if (block.id !== undefined && !byId.has(block.id)) {
-        byId.set(block.id, block);
+      if (normalized.id !== undefined && !byId.has(normalized.id)) {
+        byId.set(normalized.id, normalized);
       }
 
       for (const item of group) {
@@ -309,7 +369,8 @@ export const buildDocumentModel = (input: OutputData | LooseOutputData | null | 
       return;
     }
 
-    const children = legacyChildren(block);
+    const children = legacyChildren(normalized);
+    const block = withCurrentShape(withLegacyEmbedSource(normalized));
 
     /**
      * Anything that came out of a legacy container needs an id even when it has

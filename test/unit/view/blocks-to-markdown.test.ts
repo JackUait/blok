@@ -653,7 +653,7 @@ describe('blocksToMarkdown (view)', () => {
 
       expect(markdown).toBe('**Summary**\n\nbody');
       expect(warnings).toEqual([
-        { construct: 'toggleList',
+        { construct: 'toggle',
           action: 'degraded',
           detail: 'toggle is rendered as a bold summary followed by its body; collapsibility is lost' },
       ]);

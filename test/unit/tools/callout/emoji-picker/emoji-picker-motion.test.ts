@@ -37,10 +37,20 @@ describe('EmojiPicker motion', () => {
     return element;
   };
 
+  /** Lays the element out at `top` in the body's scrolled content; the body's rect sits at 0. */
+  const placeAt = (element: HTMLElement, top: number, height: number): void => {
+    const body = get('[data-emoji-picker-body]');
+
+    Object.defineProperties(element, {
+      getBoundingClientRect: { configurable: true, value: () => new DOMRect(0, top - body.scrollTop, 0, height) },
+      offsetHeight: { configurable: true, value: height },
+    });
+  };
+
   // The reel only reads inside sections whose box meets the view, and jsdom
   // gives every box a zero height.
   const fillBodyWithFirstSection = (): void => {
-    Object.defineProperty(get('[data-emoji-section]'), 'offsetHeight', { configurable: true, value: 300 });
+    placeAt(get('[data-emoji-section]'), 0, 300);
   };
 
   const open = async (inline = false): Promise<void> => {
@@ -193,10 +203,7 @@ describe('EmojiPicker motion', () => {
       scrollHeight: { configurable: true, value: 300 },
     });
     fillBodyWithFirstSection();
-    Object.defineProperties(get('[data-emoji-section-title] > span'), {
-      offsetTop: { configurable: true, value: 40 },
-      offsetHeight: { configurable: true, value: 40 },
-    });
+    placeAt(get('[data-emoji-section-title] > span'), 40, 40);
     body.scrollTop = 50;
     body.dispatchEvent(new Event('scroll'));
     vi.advanceTimersByTime(20);
@@ -231,14 +238,8 @@ describe('EmojiPicker motion', () => {
     });
     fillBodyWithFirstSection();
     // A heading box is mostly padding: 12 units of it sit above the label.
-    Object.defineProperties(title, {
-      offsetTop: { configurable: true, value: 40 },
-      offsetHeight: { configurable: true, value: 35 },
-    });
-    Object.defineProperties(label, {
-      offsetTop: { configurable: true, value: 52 },
-      offsetHeight: { configurable: true, value: 18 },
-    });
+    placeAt(title, 40, 35);
+    placeAt(label, 52, 18);
 
     // Where scrollToSection lands: the heading box meets the top edge while
     // the label still clears it.
@@ -256,9 +257,9 @@ describe('EmojiPicker motion', () => {
     expect(label.style.transform).toContain('rotateX(');
   });
 
-  it('adds up nested offsets when a heading positions its own label', async () => {
+  it('measures a label from the body when its heading is its offsetParent', async () => {
     // Inline mode makes the heading that carries the tone controls a
-    // positioned box, so its label measures from the heading, not the body.
+    // positioned box, so the label's offsetTop counts from the heading.
     await open(true);
     const body = get('[data-emoji-picker-body]');
     const title = get('[data-emoji-section-title]');
@@ -275,9 +276,9 @@ describe('EmojiPicker motion', () => {
     });
     Object.defineProperties(label, {
       offsetTop: { configurable: true, value: 14 },
-      offsetHeight: { configurable: true, value: 18 },
       offsetParent: { configurable: true, value: title },
     });
+    placeAt(label, 54, 18);
 
     body.scrollTop = 54;
     body.dispatchEvent(new Event('scroll'));
@@ -302,10 +303,7 @@ describe('EmojiPicker motion', () => {
       scrollHeight: { configurable: true, value: 300 },
     });
     fillBodyWithFirstSection();
-    Object.defineProperties(get('[data-emoji-section-title] > span'), {
-      offsetTop: { configurable: true, value: 40 },
-      offsetHeight: { configurable: true, value: 40 },
-    });
+    placeAt(get('[data-emoji-section-title] > span'), 40, 40);
     body.scrollTop = 50;
     body.dispatchEvent(new Event('scroll'));
     vi.advanceTimersByTime(20);

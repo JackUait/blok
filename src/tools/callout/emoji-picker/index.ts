@@ -1049,9 +1049,13 @@ export class EmojiPicker {
     }
   }
 
-  private measureReelRows(section: HTMLElement): ReelRow[] {
+  /**
+   * Rows from the section's top, from rects: offsetTop rounds at every
+   * offsetParent, and a deferred section is one, so summed offsets drop up
+   * to a pixel — a visible share of the curl. Glyphs must not be curled.
+   */
+  private measureReelRows(section: HTMLElement, sectionTop: number, scale: number): ReelRow[] {
     const rows: ReelRow[] = [];
-    const sectionTop = section.offsetTop;
 
     for (const item of section.querySelectorAll<HTMLElement>('[data-emoji-native], [data-emoji-section-title]')) {
       const glyph = item.firstElementChild;
@@ -1069,7 +1073,7 @@ export class EmojiPicker {
         continue;
       }
 
-      const top = this.offsetWithinBody(glyph) - sectionTop;
+      const top = (glyph.getBoundingClientRect().top - sectionTop) / scale;
       const row = rows.at(-1);
 
       if (row?.top === top) {
@@ -1082,6 +1086,14 @@ export class EmojiPicker {
     return rows;
   }
 
+  /** Rects shrink with the opening animation's scale; layout does not. */
+  private openingScale(): number {
+    const match = /^matrix\((?:[^,]+,){3}([^,]+)/.exec(getComputedStyle(this._element).transform);
+    const scale = match === null ? NaN : parseFloat(match[1]);
+
+    return scale > 0 ? scale : 1;
+  }
+
   private updateReel(): void {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches
       || this._body.scrollHeight <= this._body.clientHeight) {
@@ -1092,14 +1104,24 @@ export class EmojiPicker {
 
     const viewTop = this._body.scrollTop;
     const viewBottom = viewTop + this._body.clientHeight;
-    const rows = this.sectionsInView().flatMap(section => {
+    const sections = this.sectionsInView();
+
+    // A curled glyph's rect is not its row.
+    if (sections.some(section => !this._reelRows.has(section))) {
+      this.resetReel();
+    }
+
+    const scale = this.openingScale();
+    const bodyTop = this._body.getBoundingClientRect().top;
+    const rows = sections.flatMap(section => {
+      const sectionTop = section.getBoundingClientRect().top;
       // Measure after layout changes, not on every scroll frame.
-      const sectionRows = this._reelRows.get(section) ?? this.measureReelRows(section);
-      const sectionTop = section.offsetTop;
+      const sectionRows = this._reelRows.get(section) ?? this.measureReelRows(section, sectionTop, scale);
+      const top = (sectionTop - bodyTop) / scale - this._body.clientTop + viewTop;
 
       this._reelRows.set(section, sectionRows);
 
-      return sectionRows.map(row => ({ ...row, top: sectionTop + row.top }));
+      return sectionRows.map(row => ({ ...row, top: top + row.top }));
     });
 
     this.resetReel();

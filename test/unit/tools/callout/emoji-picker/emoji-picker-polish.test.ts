@@ -184,12 +184,16 @@ describe('EmojiPicker polish', () => {
       scrollHeight: { configurable: true, value: 160 },
     });
     // The reel only reads inside sections whose box meets the view, and jsdom
-    // gives every box a zero height.
-    Object.defineProperty(get('[data-emoji-section]'), 'offsetHeight', { configurable: true, value: 160 });
+    // gives every box a zero height. The body's rect sits at 0.
+    const firstSection = get('[data-emoji-section]');
+
+    Object.defineProperty(firstSection, 'offsetHeight', { configurable: true, value: 160 });
+    firstSection.getBoundingClientRect = () => new DOMRect(0, -body.scrollTop, 0, 160);
     glyphs.forEach((glyph, index) => {
-      Object.defineProperties(glyph, {
-        offsetTop: { configurable: true, value: index * 40 },
-        offsetHeight: { configurable: true, value: 40 },
+      Object.defineProperty(glyph, 'offsetHeight', { configurable: true, value: 40 });
+      Object.defineProperty(glyph, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => new DOMRect(0, index * 40 - body.scrollTop, 0, 40),
       });
     });
     body.scrollTop = 20;

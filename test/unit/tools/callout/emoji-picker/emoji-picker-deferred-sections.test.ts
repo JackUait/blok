@@ -235,10 +235,13 @@ describe('EmojiPicker deferred sections', () => {
 
     const glyphs = [...section('symbols').querySelectorAll<HTMLElement>('[data-emoji-glyph]')];
 
+    // The body's rect sits at 0.
+    section('symbols').getBoundingClientRect = () => new DOMRect(0, 200 - body().scrollTop, 0, 160);
     glyphs.forEach((glyph, index) => {
-      Object.defineProperties(glyph, {
-        offsetTop: { configurable: true, value: 240 + Math.floor(index / 10) * 40 },
-        offsetHeight: { configurable: true, value: 40 },
+      Object.defineProperty(glyph, 'offsetHeight', { configurable: true, value: 40 });
+      Object.defineProperty(glyph, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => new DOMRect(0, 240 + Math.floor(index / 10) * 40 - body().scrollTop, 0, 40),
       });
     });
 
@@ -247,6 +250,60 @@ describe('EmojiPicker deferred sections', () => {
 
     expect(glyphs[20]?.style.transform).toContain('rotateX(');
     expect(glyphs[10]?.style.transform).toBe('');
+  });
+
+  /** Chromium geometry of an emoji in a deferred section, with rects at `scale`. */
+  const layOutSubPixelRow = (scale: number): HTMLElement => {
+    // offsetTop rounds at every offsetParent, and a deferred section is one,
+    // so 114.22 + 269.45 reads as 114 + 269.
+    const symbols = section('symbols');
+    const glyph = symbols.querySelector<HTMLElement>('[data-emoji-glyph]');
+
+    if (glyph === null) {
+      throw new Error('Missing glyph');
+    }
+
+    Object.defineProperties(body(), {
+      clientHeight: { configurable: true, value: 260 },
+      scrollHeight: { configurable: true, value: 7526 },
+    });
+    Object.defineProperties(symbols, {
+      offsetTop: { configurable: true, value: 114 },
+      offsetHeight: { configurable: true, value: 1200 },
+    });
+    Object.defineProperties(glyph, {
+      offsetTop: { configurable: true, value: 269 },
+      offsetHeight: { configurable: true, value: 22 },
+      offsetParent: { configurable: true, value: symbols },
+    });
+    body().getBoundingClientRect = () => new DOMRect(0, 100, 300, 260 * scale);
+    symbols.getBoundingClientRect = () => new DOMRect(0, 100 + (114.21875 - body().scrollTop) * scale, 300, 1200 * scale);
+    glyph.getBoundingClientRect = () => new DOMRect(0, 100 + (383.671875 - body().scrollTop) * scale, 22, 22 * scale);
+
+    return glyph;
+  };
+
+  it('curls a row by its sub-pixel position, not by offsets rounded at the section', async () => {
+    await picker.open(anchor);
+    const glyph = layOutSubPixelRow(1);
+
+    // The view ends at 403 and the glyph's center sits at 394.67.
+    scrollBody(143);
+
+    expect(glyph.style.transform).toContain('rotateX(-31.07deg)');
+  });
+
+  it('measures reel rows in layout pixels while the opening animation scales the picker', async () => {
+    await picker.open(anchor);
+    const glyph = layOutSubPixelRow(0.5);
+
+    element.style.transform = 'matrix(0.5, 0, 0, 0.5, 0, 2)';
+    scrollBody(143);
+    element.style.transform = '';
+    layOutSubPixelRow(1);
+    scrollBody(143);
+
+    expect(glyph.style.transform).toContain('rotateX(-31.07deg)');
   });
 
   it('animates the skin swap of emoji in view inside a deferred section', async () => {

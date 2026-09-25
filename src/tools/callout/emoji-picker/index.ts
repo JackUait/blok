@@ -1430,7 +1430,10 @@ export class EmojiPicker {
    * to the highlighted button, and a rebuild would detach it.
    */
   private applyLocaleToGrid(): void {
-    if (this._open && !this._inline && this._filterInput.value.trim() !== '') {
+    // Only while typing: a rebuild would detach a result the user arrowed to.
+    const typing = document.activeElement === this._filterInput;
+
+    if (this._open && !this._inline && typing && this._filterInput.value.trim() !== '') {
       this.handleFilterChange(this._filterInput.value);
 
       return;

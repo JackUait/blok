@@ -231,6 +231,29 @@ describe('EmojiPicker progressive locale', () => {
     expect(findButton(root, '💡')).toBeDefined();
   });
 
+  it('keeps the focused search result when the locale lands while the user arrows through results', async () => {
+    const locale = deferred<EmojiLocaleData | null>();
+
+    mockLoadEmojiLocale.mockReturnValue(locale.promise);
+
+    const picker = await createPicker('ru');
+
+    void picker.open(anchor);
+    await flush();
+    picker.setQuery('light');
+
+    const root = picker.getElement();
+    const focused = button(root, '💡');
+
+    focused.focus();
+    locale.resolve(RU);
+    await flush();
+
+    expect(focused).toHaveFocus();
+    expect(focused.isConnected).toBe(true);
+    expect(focused.getAttribute('aria-label')).toBe('лампочка');
+  });
+
   it('keeps localized labels on a reopen when the picker closed before the locale landed', async () => {
     const locale = deferred<EmojiLocaleData | null>();
 

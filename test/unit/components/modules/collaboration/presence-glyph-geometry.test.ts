@@ -326,16 +326,29 @@ describe('anonymous presence micro-illustrations', () => {
   });
 
   it('draws the saucer canopy and tractor beam as see-through glass around a solid hull', () => {
-    const paths = Array.from(glyphSvg('saucer').querySelectorAll('path'));
-    const group = paths[0]?.parentElement;
-    const hull = paths.find(path => path.getAttribute('fill-rule') === 'evenodd');
-    const glass = paths.filter(path => path.hasAttribute('opacity'));
+    const group = glyphSvg('saucer').querySelector(':scope > g');
+    const own = Array.from(group?.querySelectorAll(':scope > path') ?? []);
+    const hull = own.find(path => path.getAttribute('fill-rule') === 'evenodd');
+    const glass = own.filter(path => path.hasAttribute('opacity'));
+    const portholes = (hull?.getAttribute('d')?.match(/[Mm]/g) ?? []).length - 1;
 
-    expect(paths).toHaveLength(4);
-    expect(group?.localName).toBe('g');
-    expect(paths.every(path => path.parentElement === group)).toBe(true);
     expect(glass).toHaveLength(2);
     expect(hull?.hasAttribute('opacity')).toBe(false);
+    expect(portholes).toBeGreaterThanOrEqual(3);
+  });
+
+  it('lifts a solid spotted cow inside the saucer beam', () => {
+    const group = glyphSvg('saucer').querySelector(':scope > g');
+    const cow = group?.querySelector(':scope > g');
+    const [beam] = Array.from(group?.querySelectorAll(':scope > path[opacity]') ?? []);
+    const [body] = Array.from(cow?.querySelectorAll('path') ?? []);
+
+    // Painted after the beam, so the glass never washes over it.
+    expect(beam?.compareDocumentPosition(cow ?? beam) ?? 0).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(cow?.querySelector('[opacity]')).toBeNull();
+    expect(body?.getAttribute('fill-rule')).toBe('evenodd');
+    // Its outline plus one spot.
+    expect(body?.getAttribute('d')?.match(/M/g)).toHaveLength(2);
   });
 
   it('pairs identical galaxy arms with a half-turn around the center', () => {

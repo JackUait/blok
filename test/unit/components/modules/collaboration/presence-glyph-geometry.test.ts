@@ -36,12 +36,6 @@ const value = (element: Element | undefined | null, attribute: string): number =
 const inherited = (element: Element | undefined | null, attribute: string): string | null | undefined =>
   element?.closest(`[${attribute}]`)?.getAttribute(attribute);
 
-const halfStroke = (element: Element | undefined): number => {
-  const stroke = inherited(element, 'stroke');
-
-  return stroke && stroke !== 'none' ? Number(inherited(element, 'stroke-width') ?? 1) / 2 : 0;
-};
-
 const glyphs = [...ANONYMOUS_GLYPHS, UNKNOWN_GLYPH];
 
 describe('anonymous presence micro-illustrations', () => {
@@ -64,7 +58,9 @@ describe('anonymous presence micro-illustrations', () => {
   it.each(glyphs)('%s stays self-contained and monochrome inside a CSS mask', glyph => {
     const svg = glyphSvg(glyph);
 
-    expect(svg.querySelector('image, use, text, style, script, foreignObject, filter')).toBeNull();
+    // A mask or gradient would bring a second paint into the artwork; knock
+    // shapes out with evenodd clip paths instead.
+    expect(svg.querySelector('image, use, text, style, script, foreignObject, filter, mask, linearGradient, radialGradient, pattern')).toBeNull();
 
     for (const element of [svg, ...svg.querySelectorAll('*')]) {
       for (const paint of ['fill', 'stroke']) {
@@ -73,30 +69,37 @@ describe('anonymous presence micro-illustrations', () => {
     }
   });
 
-  it('gives the satellite matching rounded solar panels with air around the body', () => {
-    const panels = Array.from(glyphSvg('satellite').querySelectorAll('rect'))
-      .sort((a, b) => value(a, 'x') - value(b, 'x'));
-    const [left, body, right] = panels;
+  it.each(glyphs)('%s carries one see-through layer on top of its solid form', glyph => {
+    const svg = glyphSvg(glyph);
+    const opacities = Array.from(svg.querySelectorAll('[opacity]'), element => Number(element.getAttribute('opacity')));
 
-    expect(panels).toHaveLength(3);
-    expect(value(left, 'width')).toBe(value(right, 'width'));
-    expect(value(left, 'height')).toBe(value(right, 'height'));
-    expect(value(left, 'y')).toBe(value(right, 'y'));
-    expect(value(left, 'rx')).toBeGreaterThan(0);
-    expect(value(left, 'rx') + halfStroke(left)).toBeGreaterThanOrEqual(0.75);
-    expect(value(right, 'rx')).toBe(value(left, 'rx'));
-    expect(halfStroke(right)).toBe(halfStroke(left));
-    expect(value(body, 'x') + value(body, 'width') / 2).toBe(10);
-    expect(value(left, 'x') + value(right, 'x') + value(right, 'width')).toBe(20);
-    expect(inherited(body, 'fill')).toBe('none');
-    expect(inherited(body, 'stroke')).toBe('currentColor');
-    expect(inherited(body, 'stroke-width')).toBe('1.25');
+    expect(svg.querySelector('[fill-opacity], [stroke-opacity]')).toBeNull();
+    expect(opacities.length).toBeGreaterThan(0);
 
-    const leftGap = value(body, 'x') - value(left, 'x') - value(left, 'width') - halfStroke(left) - halfStroke(body);
-    const rightGap = value(right, 'x') - value(body, 'x') - value(body, 'width') - halfStroke(right) - halfStroke(body);
+    for (const opacity of opacities) {
+      expect(opacity).toBeGreaterThan(0);
+      expect(opacity).toBeLessThan(1);
+    }
+  });
+
+  it('gives the satellite mirrored solar panels with equal air either side of a centred body', () => {
+    const [body] = Array.from(glyphSvg('satellite').querySelectorAll('rect'));
+    const [left, right] = Array.from(glyphSvg('satellite').querySelectorAll('path[fill-rule="evenodd"]'))
+      .map(panel => panel.getAttribute('d')?.match(/^M(-?\d*\.?\d+)[ ,]?(-?\d*\.?\d+)h(\d*\.?\d+)/)?.slice(1).map(Number) ?? []);
+    const bodyX = value(body, 'x');
+    const bodyWidth = value(body, 'width');
+
+    expect(bodyX + bodyWidth / 2).toBe(10);
+    expect(inherited(body, 'fill')).toBe('currentColor');
+    expect(right[2]).toBe(left[2]);
+    expect(right[1]).toBe(left[1]);
+    expect(left[0] + right[0] + right[2]).toBeCloseTo(20, 10);
+
+    const leftGap = bodyX - left[0] - left[2];
+    const rightGap = right[0] - bodyX - bodyWidth;
 
     expect(leftGap).toBeGreaterThanOrEqual(1.25);
-    expect(rightGap).toBe(leftGap);
+    expect(rightGap).toBeCloseTo(leftGap, 10);
   });
 
   it('leaves a readable glyph canvas inside the block-side ring', () => {
@@ -120,104 +123,82 @@ describe('anonymous presence micro-illustrations', () => {
     expect(declarations.get('height')).toBe(declarations.get('width'));
   });
 
-  it.each(['star', 'sun', 'saucer', 'asteroid'])('%s declares closed evenodd contours for its cutouts', glyph => {
-    const path = glyphSvg(glyph).querySelector('path');
-    const contours = path?.getAttribute('d')?.match(/[Mm][^Mm]*/g) ?? [];
+  it.each(['astronaut', 'rocket', 'satellite', 'telescope', 'saucer', 'asteroid'])('%s cuts its holes with closed evenodd contours', glyph => {
+    const paths = Array.from(glyphSvg(glyph).querySelectorAll('path[fill-rule="evenodd"]'));
 
-    expect(inherited(path, 'fill-rule')).toBe('evenodd');
-    expect(inherited(path, 'fill')).toBe('currentColor');
-    expect(contours.length).toBeGreaterThan(1);
+    expect(paths.length).toBeGreaterThan(0);
 
-    for (const contour of contours) {
-      expect(contour.trim()).toMatch(/[Zz]$/);
-    }
-  });
+    for (const path of paths) {
+      const contours = path.getAttribute('d')?.match(/[Mm][^Mm]*/g) ?? [];
 
-  it('rounds all five tips in the star\'s exterior contour', () => {
-    const paths = glyphSvg('star').querySelectorAll('path');
-    const contour = paths[0]?.getAttribute('d')?.match(/^[Mm][^Mm]*/)?.[0]?.trim() ?? '';
-    const position = [0, 0];
+      expect(inherited(path, 'fill')).toBe('currentColor');
+      expect(contours.length).toBeGreaterThan(1);
 
-    expect(paths).toHaveLength(1);
-    expect(inherited(paths[0], 'fill')).toBe('currentColor');
-    expect(contour).toMatch(/^M[^Mm]+[Zz]$/);
-    expect(contour.match(/[Qq]/g)).toHaveLength(5);
-
-    for (const [, command, argumentsText] of contour.matchAll(/([a-z])([^a-z]*)/gi)) {
-      expect(['M', 'm', 'L', 'l', 'Q', 'q', 'Z', 'z']).toContain(command);
-
-      const values = argumentsText.match(/-?\d*\.?\d+/g)?.map(Number) ?? [];
-      const relative = command === command.toLowerCase();
-      const quadratic = command.toLowerCase() === 'q';
-
-      if (quadratic) {
-        expect(values).toHaveLength(4);
-
-        const [cx, cy, dx, dy] = values.map((value, index) => relative ? value : value - position[index % 2]);
-
-        // Collinear controls would leave the tip flat despite a Q command.
-        expect(Math.abs(cx * dy - cy * dx) / (2 * Math.hypot(dx, dy))).toBeGreaterThanOrEqual(0.5);
-      }
-
-      for (let index = quadratic ? 2 : 0; index < values.length; index += 2) {
-        position[0] = relative ? position[0] + values[index] : values[index];
-        position[1] = relative ? position[1] + values[index + 1] : values[index + 1];
+      for (const contour of contours) {
+        expect(contour.trim()).toMatch(/[Zz]$/);
       }
     }
   });
 
-  it('repeats eight filled curved sun flames every 45 degrees around the center', () => {
-    const [disk, ...rays] = glyphSvg('sun').querySelectorAll('path');
-    const basePath = rays[0]?.getAttribute('d') ?? '';
+  it('bevels the star as one outline, solid on the left half and see-through on the right', () => {
+    const svg = glyphSvg('star');
+    const [lit, shade] = Array.from(svg.querySelectorAll(':scope > path'));
+    const half = (element: Element | undefined): string | null | undefined => {
+      const id = element?.getAttribute('clip-path')?.match(/^url\(#([^)]+)\)$/)?.[1];
 
-    expect(rays).toHaveLength(8);
-    expect(basePath).toMatch(/^[Mm][^Mm]*[Zz]$/);
-    expect(basePath).toMatch(/[CcQqAa]/);
-    expect(basePath).not.toMatch(/[LlHhVv]/);
+      return id ? svg.querySelector(`clipPath[id="${id}"] path`)?.getAttribute('d') : null;
+    };
 
-    for (const [index, ray] of rays.entries()) {
-      expect(ray.getAttribute('d')).toBe(basePath);
-      expect(ray.getAttribute('transform') ?? 'rotate(0 10 10)').toBe(`rotate(${index * 45} 10 10)`);
-      expect(ray.parentElement).toBe(rays[0]?.parentElement);
-      expect(inherited(ray, 'fill')).toBe('currentColor');
-      expect([null, undefined, 'none']).toContain(inherited(ray, 'stroke'));
-    }
-
-    expect(inherited(disk, 'fill')).toBe('currentColor');
+    expect(lit?.getAttribute('d')).toBeTruthy();
+    expect(shade?.getAttribute('d')).toBe(lit?.getAttribute('d'));
+    expect(half(lit)).toBe('M0 0h10v20H0Z');
+    expect(half(shade)).toBe('M10 0h10v20H10Z');
+    expect(lit?.hasAttribute('opacity')).toBe(false);
+    expect(Number(shade?.getAttribute('opacity'))).toBeLessThan(1);
   });
 
-  it('keeps the saucer canopy, highlight, hull and beam in one tilted group', () => {
+  it('alternates four long and four short sun rays every 45 degrees around the center', () => {
+    const rays = Array.from(glyphSvg('sun').querySelectorAll('path'));
+    const angle = (ray: Element): number => Number(ray.getAttribute('transform')?.match(/^rotate\((\d+) 10 10\)$/)?.[1] ?? 0);
+    const long = rays.filter(ray => angle(ray) % 90 === 0);
+    const short = rays.filter(ray => angle(ray) % 90 === 45);
+
+    expect(rays.map(angle).sort((a, b) => a - b)).toStrictEqual([0, 45, 90, 135, 180, 225, 270, 315]);
+    expect(new Set(long.map(ray => ray.getAttribute('d'))).size).toBe(1);
+    expect(new Set(short.map(ray => ray.getAttribute('d'))).size).toBe(1);
+    expect(short[0]?.getAttribute('d')).not.toBe(long[0]?.getAttribute('d'));
+
+    for (const disk of glyphSvg('sun').querySelectorAll('circle')) {
+      expect([value(disk, 'cx'), value(disk, 'cy')]).toEqual([10, 10]);
+    }
+  });
+
+  it('draws the saucer canopy and tractor beam as see-through glass around a solid hull', () => {
     const paths = Array.from(glyphSvg('saucer').querySelectorAll('path'));
-    const [canopy] = paths;
-    const group = canopy?.parentElement;
-    const rotation = group?.getAttribute('transform')?.match(/rotate\(\s*(-?\d*\.?\d+)[ ,]+10[ ,]+10\s*\)/);
+    const group = paths[0]?.parentElement;
+    const hull = paths.find(path => path.getAttribute('fill-rule') === 'evenodd');
+    const glass = paths.filter(path => path.hasAttribute('opacity'));
 
     expect(paths).toHaveLength(4);
     expect(group?.localName).toBe('g');
-    expect(rotation).toBeTruthy();
-    expect(Number(rotation?.[1])).not.toBe(0);
-
-    for (const path of paths) {
-      expect(path.parentElement).toBe(group);
-    }
+    expect(paths.every(path => path.parentElement === group)).toBe(true);
+    expect(glass).toHaveLength(2);
+    expect(hull?.hasAttribute('opacity')).toBe(false);
   });
 
-  it('pairs identical filled galaxy arms with a half-turn around the center', () => {
+  it('pairs identical galaxy arms with a half-turn around the center', () => {
     const svg = glyphSvg('galaxy');
-    const arms = Array.from(svg.querySelectorAll('path'));
+    const arms = Array.from(svg.querySelectorAll('path')).filter(path => inherited(path, 'stroke') === 'currentColor');
     const center = svg.querySelector('circle');
     const [first, second] = arms;
 
     expect(arms).toHaveLength(2);
     expect([value(center, 'cx'), value(center, 'cy')]).toEqual([10, 10]);
     expect(value(center, 'r')).toBeGreaterThan(0);
-    expect(inherited(center, 'fill')).toBe('currentColor');
     expect(first?.getAttribute('d')).toBeTruthy();
     expect(second?.getAttribute('d')).toBe(first?.getAttribute('d'));
     expect(first?.getAttribute('transform') ?? 'rotate(0 10 10)').toBe('rotate(0 10 10)');
     expect(second?.getAttribute('transform')).toBe('rotate(180 10 10)');
     expect(second?.parentElement).toBe(first?.parentElement);
-    expect(inherited(first, 'fill')).toBe('currentColor');
-    expect(inherited(second, 'fill')).toBe('currentColor');
   });
 });

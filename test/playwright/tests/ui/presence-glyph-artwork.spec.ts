@@ -126,8 +126,29 @@ for (const glyph of [...ANONYMOUS_GLYPHS, UNKNOWN_GLYPH]) {
         }
       }
 
+      // A tone pixel is mid-alpha AND has mid-alpha neighbours three pixels
+      // out, so the one-pixel antialiasing fringe of flat art never counts.
+      const isTone = (x: number, y: number): boolean => {
+        const alpha = pixels[(y * canvas.width + x) * 4 + 3];
+
+        return alpha >= 48 && alpha <= 160;
+      };
+      const reach = 3;
+      let tonePixels = 0;
+
+      for (let pixel = 0; pixel < canvas.width * canvas.height; pixel++) {
+        const x = pixel % canvas.width;
+        const y = Math.floor(pixel / canvas.width);
+        const inside = x >= reach && y >= reach && x < canvas.width - reach && y < canvas.height - reach;
+
+        if (inside && isTone(x, y) && isTone(x - reach, y) && isTone(x + reach, y) && isTone(x, y - reach) && isTone(x, y + reach)) {
+          tonePixels++;
+        }
+      }
+
       return {
         openings,
+        tone: tonePixels / (scale * scale),
         left: minX / scale - padding,
         top: minY / scale - padding,
         right: (maxX + 1) / scale - padding,
@@ -139,16 +160,16 @@ for (const glyph of [...ANONYMOUS_GLYPHS, UNKNOWN_GLYPH]) {
 
     const minimumOpenings: Partial<Record<typeof glyph, number>> = {
       astronaut: 3,
-      rocket: 3,
-      satellite: 7,
-      planet: 2,
-      star: 5,
-      sun: 1,
-      telescope: 2,
-      saucer: 6,
+      rocket: 1,
+      satellite: 5,
+      telescope: 1,
+      saucer: 3,
       asteroid: 3,
     };
 
+    // Every silhouette carries one see-through layer (glass, glow, shadow or
+    // fade). A flat glyph drops out of the family.
+    expect.soft(geometry.tone, `${glyph} tonal layer area`).toBeGreaterThanOrEqual(1);
     expect.soft(geometry.openings, `${glyph} readable negative-space details`).toBeGreaterThanOrEqual(minimumOpenings[glyph] ?? 0);
 
     const boundsCenterX = (geometry.left + geometry.right) / 2;

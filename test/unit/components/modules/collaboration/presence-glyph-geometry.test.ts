@@ -167,30 +167,80 @@ describe('anonymous presence micro-illustrations', () => {
     }
   });
 
-  it('pits the lit crescent with craters that show the earthshine through them', () => {
-    const svg = glyphSvg('moon');
-    const earthshine = svg.querySelector('path[opacity]');
-    const crescent = svg.querySelector('path[clip-path][fill-rule="evenodd"]');
-    const [disk, ...craters] = crescent?.getAttribute('d')?.match(/M[^M]*/g) ?? [];
+  describe('moon', () => {
+    type Circle = { x: number; y: number; r: number };
 
-    expect(Number(earthshine?.getAttribute('opacity'))).toBeLessThan(1);
-    expect(crescent?.hasAttribute('opacity')).toBe(false);
-    expect(disk).toBeTruthy();
-    expect(craters.length).toBeGreaterThanOrEqual(5);
+    // Contours are drawn as `M cx top a r r ...`, so the centre is one radius below the start.
+    const circle = (contour: string): Circle => {
+      const [x = Number.NaN, top = Number.NaN, r = Number.NaN] = (contour.match(/-?(?:\d+\.?\d*|\.\d+)/g) ?? []).map(Number);
 
-    for (const crater of craters) {
-      expect(crater.trim()).toMatch(/[Zz]$/);
-    }
-  });
+      return { x, y: top + r, r };
+    };
+    const contours = (d: string | null | undefined): string[] => d?.match(/M[^M]*/g) ?? [];
+    const apart = (a: Circle, b: Circle): number => Math.hypot(a.x - b.x, a.y - b.y);
+    // The shadow is the second contour of an evenodd clip: canvas minus one circle.
+    const clipCircle = (svg: Element, id: string): Circle =>
+      circle(contours(svg.querySelector(`clipPath[id="${id}"] path`)?.getAttribute('d'))[1] ?? '');
+    const lensArea = (a: Circle, b: Circle): number => {
+      const d = apart(a, b);
 
-  it('darkens the moon\'s earthshine with see-through seas', () => {
-    const earthshine = glyphSvg('moon').querySelector('path[opacity]');
-    const [disk, ...seas] = earthshine?.getAttribute('d')?.match(/M[^M]*/g) ?? [];
+      if (d >= a.r + b.r) {
+        return 0;
+      }
+      if (d <= Math.abs(a.r - b.r)) {
+        return Math.PI * Math.min(a.r, b.r) ** 2;
+      }
 
-    expect(earthshine?.getAttribute('fill-rule')).toBe('evenodd');
-    expect(Number(earthshine?.getAttribute('opacity'))).toBeLessThan(1);
-    expect(disk).toBeTruthy();
-    expect(seas.length).toBeGreaterThanOrEqual(2);
+      const alpha = Math.acos((d ** 2 + a.r ** 2 - b.r ** 2) / (2 * d * a.r));
+      const beta = Math.acos((d ** 2 + b.r ** 2 - a.r ** 2) / (2 * d * b.r));
+
+      return a.r ** 2 * (alpha - Math.sin(2 * alpha) / 2) + b.r ** 2 * (beta - Math.sin(2 * beta) / 2);
+    };
+    const parts = (): { svg: Element; disc: Circle; craters: Circle[]; shadow: Circle } => {
+      const svg = glyphSvg('moon');
+      const [disc = '', ...craters] = contours(svg.querySelector('path[clip-path="url(#bk-moon-lit)"]')?.getAttribute('d'));
+
+      return { svg, disc: circle(disc), craters: craters.map(circle), shadow: clipCircle(svg, 'bk-moon-lit') };
+    };
+
+    it('lights at least half of its face, so the solid crescent reads before the see-through shade', () => {
+      const { disc, shadow } = parts();
+      const lit = Math.PI * disc.r ** 2 - lensArea(disc, shadow);
+
+      expect(lit / (Math.PI * disc.r ** 2)).toBeGreaterThanOrEqual(0.5);
+    });
+
+    it('rounds the shade with a see-through terminator band one unit or wider', () => {
+      const { svg, disc, shadow } = parts();
+      const shades = Array.from(svg.querySelectorAll('path[opacity]'));
+      const band = clipCircle(svg, 'bk-moon-band');
+
+      // Earthshine over the whole disc, plus the band copy clipped past the terminator.
+      expect(shades).toHaveLength(2);
+      expect(shades.map(shade => contours(shade.getAttribute('d'))[0])).toStrictEqual([
+        contours(svg.querySelector('path[clip-path="url(#bk-moon-lit)"]')?.getAttribute('d'))[0],
+        contours(svg.querySelector('path[clip-path="url(#bk-moon-lit)"]')?.getAttribute('d'))[0],
+      ]);
+      expect(shades[1]?.getAttribute('clip-path')).toBe('url(#bk-moon-band)');
+      expect(band.r).toBe(shadow.r);
+      // The band's shadow slides straight away from the disc centre.
+      expect(apart(band, disc) - apart(shadow, disc)).toBeGreaterThanOrEqual(1);
+      expect(apart(band, shadow) + apart(shadow, disc)).toBeCloseTo(apart(band, disc), 2);
+    });
+
+    it('pits the lit crescent with a few craters big enough to read at face size', () => {
+      const { disc, shadow, craters } = parts();
+
+      expect(craters.length).toBeGreaterThanOrEqual(2);
+      expect(craters.length).toBeLessThanOrEqual(4);
+
+      for (const crater of craters) {
+        // Under 0.9 units a crater is a one-pixel speck on the 21px glyph.
+        expect(crater.r).toBeGreaterThanOrEqual(0.9);
+        expect(apart(crater, disc) + crater.r).toBeLessThanOrEqual(disc.r);
+        expect(apart(crater, shadow) - crater.r).toBeGreaterThanOrEqual(0);
+      }
+    });
   });
 
   it('alternates four long and four short sun rays every 45 degrees around the center', () => {

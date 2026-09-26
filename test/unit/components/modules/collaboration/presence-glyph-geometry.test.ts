@@ -169,18 +169,28 @@ describe('anonymous presence micro-illustrations', () => {
 
   it('pits the lit crescent with craters that show the earthshine through them', () => {
     const svg = glyphSvg('moon');
-    const earthshine = svg.querySelector('circle[opacity]');
+    const earthshine = svg.querySelector('path[opacity]');
     const crescent = svg.querySelector('path[clip-path][fill-rule="evenodd"]');
     const [disk, ...craters] = crescent?.getAttribute('d')?.match(/M[^M]*/g) ?? [];
 
     expect(Number(earthshine?.getAttribute('opacity'))).toBeLessThan(1);
     expect(crescent?.hasAttribute('opacity')).toBe(false);
     expect(disk).toBeTruthy();
-    expect(craters.length).toBeGreaterThanOrEqual(3);
+    expect(craters.length).toBeGreaterThanOrEqual(5);
 
     for (const crater of craters) {
       expect(crater.trim()).toMatch(/[Zz]$/);
     }
+  });
+
+  it('darkens the moon\'s earthshine with see-through seas', () => {
+    const earthshine = glyphSvg('moon').querySelector('path[opacity]');
+    const [disk, ...seas] = earthshine?.getAttribute('d')?.match(/M[^M]*/g) ?? [];
+
+    expect(earthshine?.getAttribute('fill-rule')).toBe('evenodd');
+    expect(Number(earthshine?.getAttribute('opacity'))).toBeLessThan(1);
+    expect(disk).toBeTruthy();
+    expect(seas.length).toBeGreaterThanOrEqual(2);
   });
 
   it('alternates four long and four short sun rays every 45 degrees around the center', () => {

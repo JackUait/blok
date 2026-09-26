@@ -102,6 +102,33 @@ describe('anonymous presence micro-illustrations', () => {
     expect(rightGap).toBeCloseTo(leftGap, 10);
   });
 
+  it('lights most of the satellite body and shades the rest with a see-through copy', () => {
+    const svg = glyphSvg('satellite');
+    const [lit, shade] = Array.from(svg.querySelectorAll('rect'));
+    const geometry = (rect: Element | undefined): string[] => ['x', 'y', 'width', 'height', 'rx'].map(key => rect?.getAttribute(key) ?? '');
+    const edge = Number(svg.querySelector('clipPath[id="bk-satellite-lit"] path')?.getAttribute('d')?.match(/H(-?\d*\.?\d+)/)?.[1]);
+
+    expect(lit?.getAttribute('clip-path')).toBe('url(#bk-satellite-lit)');
+    expect(lit?.hasAttribute('opacity')).toBe(false);
+    expect(Number(shade?.getAttribute('opacity'))).toBeLessThan(1);
+    expect(geometry(shade)).toStrictEqual(geometry(lit));
+    // The lit edge must fall inside the body, past its middle.
+    expect(edge).toBeGreaterThan(value(lit, 'x') + value(lit, 'width') / 2);
+    expect(edge).toBeLessThan(value(lit, 'x') + value(lit, 'width'));
+  });
+
+  it('beams two widening waves from the satellite dish, a solid one and a see-through one', () => {
+    type Arc = { r: number; opacity: string | null };
+    const waves: Arc[] = Array.from(glyphSvg('satellite').querySelectorAll('path'))
+      .filter(path => inherited(path, 'stroke') === 'currentColor')
+      .map(path => ({ r: Number(path.getAttribute('d')?.match(/A(\d*\.?\d+)/)?.[1]), opacity: path.getAttribute('opacity') }));
+
+    expect(waves).toHaveLength(2);
+    expect(waves[0]?.opacity).toBeNull();
+    expect(Number(waves[1]?.opacity)).toBeLessThan(1);
+    expect(waves[1]?.r).toBeGreaterThan(waves[0]?.r ?? Number.POSITIVE_INFINITY);
+  });
+
   it('leaves a readable glyph canvas inside the block-side ring', () => {
     const declarations = new Map<string, string>();
 

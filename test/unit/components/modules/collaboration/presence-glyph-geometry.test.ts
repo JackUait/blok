@@ -167,6 +167,22 @@ describe('anonymous presence micro-illustrations', () => {
     }
   });
 
+  it('pits the lit crescent with craters that show the earthshine through them', () => {
+    const svg = glyphSvg('moon');
+    const earthshine = svg.querySelector('circle[opacity]');
+    const crescent = svg.querySelector('path[clip-path][fill-rule="evenodd"]');
+    const [disk, ...craters] = crescent?.getAttribute('d')?.match(/M[^M]*/g) ?? [];
+
+    expect(Number(earthshine?.getAttribute('opacity'))).toBeLessThan(1);
+    expect(crescent?.hasAttribute('opacity')).toBe(false);
+    expect(disk).toBeTruthy();
+    expect(craters.length).toBeGreaterThanOrEqual(3);
+
+    for (const crater of craters) {
+      expect(crater.trim()).toMatch(/[Zz]$/);
+    }
+  });
+
   it('alternates four long and four short sun rays every 45 degrees around the center', () => {
     const rays = Array.from(glyphSvg('sun').querySelectorAll('path'));
     const angle = (ray: Element): number => Number(ray.getAttribute('transform')?.match(/^rotate\((\d+) 10 10\)$/)?.[1] ?? 0);

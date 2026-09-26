@@ -325,16 +325,28 @@ describe('anonymous presence micro-illustrations', () => {
     }
   });
 
-  it('draws the saucer canopy and tractor beam as see-through glass around a solid hull', () => {
+  it('draws the saucer beam, underside and canopy as see-through glass around a solid deck', () => {
     const group = glyphSvg('saucer').querySelector(':scope > g');
     const own = Array.from(group?.querySelectorAll(':scope > path') ?? []);
     const hull = own.find(path => path.getAttribute('fill-rule') === 'evenodd');
     const glass = own.filter(path => path.hasAttribute('opacity'));
-    const portholes = (hull?.getAttribute('d')?.match(/[Mm]/g) ?? []).length - 1;
 
-    expect(glass).toHaveLength(2);
+    expect(glass).toHaveLength(3);
     expect(hull?.hasAttribute('opacity')).toBe(false);
-    expect(portholes).toBeGreaterThanOrEqual(3);
+  });
+
+  it('sizes the saucer portholes by perspective, largest in the middle and mirrored', () => {
+    // Scoped to the saucer's own paths: the cow body is evenodd too.
+    const hull = glyphSvg('saucer').querySelector(':scope > g > path[fill-rule="evenodd"]');
+    // Porthole contours are drawn as `M cx top a r r ...`.
+    const radii = (hull?.getAttribute('d')?.match(/M[^M]*/g) ?? []).slice(1)
+      .map(contour => Number(contour.match(/a(\d*\.?\d+)/)?.[1]));
+    const middle = Math.floor(radii.length / 2);
+
+    expect(radii).toHaveLength(5);
+    expect(radii).toStrictEqual([...radii].reverse());
+    expect(Math.max(...radii)).toBe(radii[middle]);
+    expect(radii[0]).toBeLessThan(radii[middle] ?? 0);
   });
 
   it('lifts a solid spotted cow inside the saucer beam', () => {

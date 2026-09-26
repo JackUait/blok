@@ -140,21 +140,31 @@ describe('anonymous presence micro-illustrations', () => {
     }
   });
 
-  it('bevels the star as one outline, solid on the left half and see-through on the right', () => {
+  it('cuts the star into ten facets from its centre, alternately solid and see-through', () => {
     const svg = glyphSvg('star');
-    const [lit, shade] = Array.from(svg.querySelectorAll(':scope > path'));
-    const half = (element: Element | undefined): string | null | undefined => {
+    const [lit, shade] = Array.from(svg.querySelectorAll(':scope > path[clip-path]'));
+    const facets = (element: Element | undefined): string[] => {
       const id = element?.getAttribute('clip-path')?.match(/^url\(#([^)]+)\)$/)?.[1];
+      const d = id ? svg.querySelector(`clipPath[id="${id}"] path`)?.getAttribute('d') : null;
 
-      return id ? svg.querySelector(`clipPath[id="${id}"] path`)?.getAttribute('d') : null;
+      return d?.match(/M[^M]*/g) ?? [];
     };
 
     expect(lit?.getAttribute('d')).toBeTruthy();
     expect(shade?.getAttribute('d')).toBe(lit?.getAttribute('d'));
-    expect(half(lit)).toBe('M0 0h10v20H0Z');
-    expect(half(shade)).toBe('M10 0h10v20H10Z');
     expect(lit?.hasAttribute('opacity')).toBe(false);
     expect(Number(shade?.getAttribute('opacity'))).toBeLessThan(1);
+    expect(facets(lit)).toHaveLength(5);
+    expect(facets(shade)).toHaveLength(5);
+
+    // Every facet is a wedge fanned out from one shared centre.
+    const centres = [...facets(lit), ...facets(shade)].map(facet => facet.match(/^M(-?\d*\.?\d+) (-?\d*\.?\d+)/)?.[0]);
+
+    expect(new Set(centres).size).toBe(1);
+
+    for (const facet of [...facets(lit), ...facets(shade)]) {
+      expect(facet.trim()).toMatch(/^M(?:\s*-?\d*\.?\d+ -?\d*\.?\d+\s*L){2}\s*-?\d*\.?\d+ -?\d*\.?\d+\s*Z$/);
+    }
   });
 
   it('alternates four long and four short sun rays every 45 degrees around the center', () => {

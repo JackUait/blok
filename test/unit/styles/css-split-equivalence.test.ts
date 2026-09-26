@@ -603,8 +603,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // and the measured cell: 592 bytes in emoji-picker.css.
     const EMOJI_DEFERRED_SECTIONS_BYTES = 592;
     // The anonymous presence silhouettes redrawn with a see-through tonal
-    // layer (evenodd clip paths and a shade copy of each form) add 1,461 bytes in presence.css.
-    const PRESENCE_TONAL_GLYPHS_BYTES = 1_461;
+    // layer (evenodd clip paths and a shade copy of each form) and the faceted star add 1,918 bytes in presence.css.
+    const PRESENCE_TONAL_GLYPHS_BYTES = 1_918;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

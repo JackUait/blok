@@ -604,9 +604,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const EMOJI_DEFERRED_SECTIONS_BYTES = 592;
     // The anonymous presence silhouettes redrawn with a see-through tonal
     // layer (evenodd clip paths and a shade copy of each form) the faceted star, the cratered moon, the
-    // lit asteroid with its companion rock, the beaming satellite and the cow-lifting saucer add 4,584 bytes
+    // lit asteroid with its companion rock, the beaming satellite and the cow-lifting saucer add 4,812 bytes
     // in presence.css.
-    const PRESENCE_TONAL_GLYPHS_BYTES = 4_584;
+    const PRESENCE_TONAL_GLYPHS_BYTES = 4_812;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

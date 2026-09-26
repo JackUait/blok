@@ -349,6 +349,8 @@ describe('anonymous presence micro-illustrations', () => {
     expect(body?.getAttribute('fill-rule')).toBe('evenodd');
     // Its outline plus one spot.
     expect(body?.getAttribute('d')?.match(/M/g)).toHaveLength(2);
+    // A gap splits the beam into bands, so it reads as pulling upward.
+    expect(beam?.getAttribute('d')?.match(/M/g)?.length).toBeGreaterThanOrEqual(2);
   });
 
   it('pairs identical galaxy arms with a half-turn around the center', () => {

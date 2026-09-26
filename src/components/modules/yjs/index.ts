@@ -132,6 +132,9 @@ export class YjsManager extends Module {
    */
   private isDragMoveGroup = false;
 
+  /** Nesting depth of {@link joinMovesToStep}. */
+  private movesJoinStepDepth = 0;
+
   /**
    * Whether a move group is currently open (drag OR keyboard nesting).
    * See `isMoveGroupActive`.
@@ -406,6 +409,12 @@ export class YjsManager extends Module {
 
     this.undoHistory.markCaretBeforeChange();
 
+    if (this.movesJoinStep) {
+      this.documentStore.applyPlacement(id, placement, 'local');
+
+      return;
+    }
+
     this.documentStore.moveBlockTo(id, placement);
 
     // Where it LANDED, not what was asked: a missing anchor appends, and a
@@ -443,7 +452,7 @@ export class YjsManager extends Module {
     placement: BlockPlacement,
     options?: { capture?: boolean }
   ): void {
-    const capture = options?.capture ?? true;
+    const capture = (options?.capture ?? true) || this.movesJoinStep;
 
     if (capture) {
       this.flushPendingBlockWrites();
@@ -990,7 +999,39 @@ export class YjsManager extends Module {
     from: BlockPlacement,
     to: BlockPlacement
   ): void {
+    // The write was tracked (see applyBlockPlacement): the step undoes it.
+    if (this.movesJoinStep) {
+      return;
+    }
+
     this.undoHistory.recordParentChangeForPendingMove(blockId, from, to);
+  }
+
+  /**
+   * Run `fn` with its moves written as tracked placements, so they undo with
+   * the open step instead of as move entries of their own. A move entry
+   * stops capturing, which would split `blocks.transact` into several steps.
+   * A move group already open keeps its moves: its entry must hold them all.
+   * @param fn - code whose moves join the step
+   */
+  public joinMovesToStep(fn: () => void): void {
+    if (this.isInMoveGroup) {
+      fn();
+
+      return;
+    }
+
+    this.movesJoinStepDepth++;
+    try {
+      fn();
+    } finally {
+      this.movesJoinStepDepth--;
+    }
+  }
+
+  /** A drag's own move group records its moves even inside a joined step. */
+  private get movesJoinStep(): boolean {
+    return this.movesJoinStepDepth > 0 && !this.isDragMoveGroup;
   }
 
   /**

@@ -81,7 +81,7 @@ type BlokStub = {
   Renderer: { render: ReturnType<typeof vi.fn> };
   Paste: { processText: ReturnType<typeof vi.fn> };
   Tools: { blockTools: Map<string, unknown> };
-  YjsManager: { stopCapturing: ReturnType<typeof vi.fn>; beginApiCall: ReturnType<typeof vi.fn> };
+  YjsManager: { stopCapturing: ReturnType<typeof vi.fn>; beginApiCall: ReturnType<typeof vi.fn>; joinMovesToStep: ReturnType<typeof vi.fn> };
   API: Record<string, unknown>;
 };
 
@@ -94,7 +94,7 @@ const createBlokStub = (blockManager: BlockManagerMock): BlokStub => ({
   Renderer: { render: vi.fn() },
   Paste: { processText: vi.fn() },
   Tools: { blockTools: new Map() },
-  YjsManager: { stopCapturing: vi.fn(), beginApiCall: vi.fn() },
+  YjsManager: { stopCapturing: vi.fn(), beginApiCall: vi.fn(), joinMovesToStep: vi.fn((fn: () => void) => fn()) },
   API: {},
 });
 
@@ -147,6 +147,24 @@ describe('Blocks API transact()', () => {
     blocksApi.methods.transact?.(fn);
 
     expect(blockManager.transactForTool).toHaveBeenCalledWith(fn);
+  });
+
+  it('runs the tool transaction inside joinMovesToStep, so its moves undo as one step', () => {
+    const { blocksApi, blok, blockManager } = createBlocksApi();
+    const insideJoin: boolean[] = [];
+
+    blok.YjsManager.joinMovesToStep.mockImplementation((fn: () => void) => {
+      insideJoin.push(true);
+      fn();
+      insideJoin.pop();
+    });
+    blockManager.transactForTool.mockImplementation(() => {
+      expect(insideJoin).toStrictEqual([true]);
+    });
+
+    blocksApi.methods.transact?.(vi.fn());
+
+    expect(blockManager.transactForTool).toHaveBeenCalledOnce();
   });
 
   it('executes the provided function', () => {

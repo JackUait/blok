@@ -870,7 +870,7 @@ export class BlocksAPI extends Module {
    */
   private transact(fn: () => void): void {
     this.Blok.YjsManager.beginApiCall();
-    this.Blok.BlockManager.transactForTool(fn);
+    this.Blok.YjsManager.joinMovesToStep(() => this.Blok.BlockManager.transactForTool(fn));
   }
 
   /**

@@ -693,6 +693,25 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       expect(await savedCells(instance)).toMatchObject([[{ blocks: ['p1', 'p2'] }, { blocks: ['q2', 'q1'] }]]);
     }, 30_000);
 
+    // Two undo steps: the move entry, then the table-data write the parent
+    // sync makes after it. Undo pops only the data write.
+    it.fails('undo and redo of a reorder inside a table cell move the holders back and forth', async () => {
+      const instance = await boot(twoPerCell());
+
+      instance.blocks.moveTo('q2', { position: { before: 'q1' } });
+      await nextFrames(2);
+      await undoOnce(instance);
+
+      expect(cellsOf()).toEqual(['p1@0', 'p2@0', 'q1@1', 'q2@1']);
+      expect(await savedCells(instance)).toMatchObject([[{ blocks: ['p1', 'p2'] }, { blocks: ['q1', 'q2'] }]]);
+
+      instance.history.redo();
+      await nextFrames(3);
+
+      expect(cellsOf()).toEqual(['p1@0', 'p2@0', 'q2@1', 'q1@1']);
+      expect(await savedCells(instance)).toMatchObject([[{ blocks: ['p1', 'p2'] }, { blocks: ['q2', 'q1'] }]]);
+    }, 30_000);
+
     it.each([
       { name: 'the first cell', from: 2, to: 1, cells: ['p2@0', 'p1@0', 'q1@1', 'q2@1'] },
       { name: 'the second cell', from: 4, to: 3, cells: ['p1@0', 'p2@0', 'q2@1', 'q1@1'] },
@@ -843,6 +862,114 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       await undoOnce(instance);
 
       expect(roots(instance)).toEqual(['a', 'b', 'c']);
+    }, 30_000);
+  });
+
+  describe('inside blocks.transact', () => {
+    it('an insert and moves are one undo step, and redo re-applies them', async () => {
+      const instance = await boot();
+
+      instance.blocks.transact?.(() => {
+        instance.blocks.insert('paragraph', { text: 'n' }, {}, 0, false, false, 'n');
+        instance.blocks.moveTo('b', { position: { before: 'a' } });
+        instance.blocks.moveTo('c2', { parentId: 't', position: { before: 'c1' } });
+        instance.blocks.move(0, 2);
+      });
+      await nextFrames(2);
+
+      const after = { flat: flat(instance), dom: dom(), shared: shared(instance) };
+
+      await undoOnce(instance);
+
+      expect(flat(instance)).toEqual(INITIAL);
+      expect(shared(instance)).toEqual(INITIAL);
+      expect(dom()).toEqual(['a<-', 't<-', 'c1<t', 'c2<t', 'b<-']);
+      expect(await saved(instance)).toEqual(INITIAL);
+
+      instance.history.redo();
+      await nextFrames(3);
+
+      expect({ flat: flat(instance), dom: dom(), shared: shared(instance) }).toEqual(after);
+    }, 30_000);
+
+    it('a reparent is one undo step with the rest of the transaction', async () => {
+      const instance = await boot();
+
+      instance.blocks.transact?.(() => {
+        instance.blocks.insert('paragraph', { text: 'n' }, {}, 0, false, false, 'n');
+        instance.blocks.moveTo('a', { parentId: 't', position: 'end' });
+      });
+      await nextFrames(2);
+
+      expect(flat(instance)).toEqual(['n^-', 't^-', 'c1^t', 'c2^t', 'a^t', 'b^-']);
+
+      await undoOnce(instance);
+
+      expect(flat(instance)).toEqual(INITIAL);
+      expect(shared(instance)).toEqual(INITIAL);
+      expect(dom()).toEqual(['a<-', 't<-', 'c1<t', 'c2<t', 'b<-']);
+
+      instance.history.redo();
+      await nextFrames(3);
+
+      expect(flat(instance)).toEqual(['n^-', 't^-', 'c1^t', 'c2^t', 'a^t', 'b^-']);
+      expect(shared(instance)).toEqual(['n^-', 't^-', 'c1^t', 'c2^t', 'a^t', 'b^-']);
+    }, 30_000);
+
+    const snapshot = (instance: TestEditor): { flat: string[]; dom: string[]; shared: string[] } =>
+      ({ flat: flat(instance), dom: dom(), shared: shared(instance) });
+
+    /** plain move, then a tracked step; undo both, redo both. */
+    const undoRedoAfterPlainMove = async (instance: TestEditor, plainMove: () => void, trackedStep: () => void): Promise<void> => {
+      const initial = snapshot(instance);
+
+      plainMove();
+      await nextFrames(2);
+      instance.module.yjsManager.stopCapturing();
+      const afterPlain = snapshot(instance);
+
+      instance.blocks.transact?.(trackedStep);
+      await nextFrames(2);
+      const afterStep = snapshot(instance);
+
+      await undoOnce(instance);
+      expect(snapshot(instance)).toEqual(afterPlain);
+      await undoOnce(instance);
+      expect(snapshot(instance)).toEqual(initial);
+      instance.history.redo();
+      await nextFrames(3);
+      expect(snapshot(instance)).toEqual(afterPlain);
+      instance.history.redo();
+      await nextFrames(3);
+
+      expect(snapshot(instance)).toEqual(afterStep);
+    };
+
+    // Yjs redoes a tracked order item after its tombstone's left neighbour,
+    // and the plain move's redo puts its block there first.
+    it.fails('redo of a moves-only transact after a plain move puts every block back', async () => {
+      const instance = await boot();
+
+      await undoRedoAfterPlainMove(
+        instance,
+        () => instance.blocks.moveTo('b', { position: { before: 'a' } }),
+        () => {
+          instance.blocks.moveTo('a', { parentId: 't', position: 'end' });
+          instance.blocks.moveTo('c1', { position: { before: 'b' } });
+        }
+      );
+    }, 30_000);
+
+    // Same Yjs redo anchoring, through a tracked reparent. Also red on HEAD
+    // before moves joined the step.
+    it.fails('redo of a tracked reparent after a plain move puts the block back', async () => {
+      const instance = await boot([P('b'), P('a'), T('t', ['c1', 'c2']), P('c1', 't'), P('c2', 't')]);
+
+      await undoRedoAfterPlainMove(
+        instance,
+        () => instance.blocks.moveTo('b', { position: { after: 't' } }),
+        () => instance.blocks.setBlockParent('c1', null)
+      );
     }, 30_000);
   });
 

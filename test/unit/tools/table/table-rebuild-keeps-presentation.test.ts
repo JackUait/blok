@@ -43,6 +43,7 @@ const createMockAPI = (): API => ({
   },
   events: { on: vi.fn(), off: vi.fn() },
   toolbar: { close: vi.fn() },
+  caret: { setToBlock: vi.fn() },
 } as unknown as API);
 
 const BLUE = 'rgb(0, 0, 255)';
@@ -160,7 +161,12 @@ describe('Table rebuild keeps model presentation', () => {
 
     const paintAttributes = ['style', 'role', 'data-blok-table-heading', 'data-blok-table-heading-col', 'data-blok-cell-placement'];
 
-    expect(records.filter(record => paintAttributes.includes(record.attributeName ?? ''))).toStrictEqual([]);
+    // Resize handles re-clip themselves after the tbody swap; they are not cells.
+    const cellRecords = records.filter(record =>
+      !(record.target instanceof Element && record.target.closest('[data-blok-table-resize]') !== null)
+    );
+
+    expect(cellRecords.filter(record => paintAttributes.includes(record.attributeName ?? ''))).toStrictEqual([]);
     expectPresentationKept(gridEl);
   });
 

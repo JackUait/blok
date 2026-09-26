@@ -250,7 +250,8 @@ export class TableCellSelection {
   private onFormatCells: ((cells: HTMLElement[], mark: CellMark) => void) | undefined;
   private onFillCells: ((cells: HTMLElement[], range: SelectionRange, direction: FillDirection) => void) | undefined;
   private lastPaintedRange: SelectionRange | null = null;
-  private preExpansionWasSingleCell = false;
+  private focusBeforeMenu: HTMLElement | null = null;
+  private isReturningFocus = false;
 
   /**
    * Anchor/extent of a KEYBOARD-driven rectangle. Kept separate from
@@ -608,7 +609,7 @@ export class TableCellSelection {
    * programmatic caret moves behave the same way.
    */
   private handleFocusIn(e: FocusEvent): void {
-    if (this.isSelecting || this.anchorCell !== null || this.keyboardAnchor !== null) {
+    if (this.isReturningFocus || this.isSelecting || this.anchorCell !== null || this.keyboardAnchor !== null) {
       return;
     }
 
@@ -927,26 +928,64 @@ export class TableCellSelection {
 
     switch (direction) {
       case 'right':
-        return {
-          row: extent.row,
-          col: clamp(extent.col >= anchor.col ? range.maxCol + 1 : range.minCol + 1, 0, maxCol),
-        };
+        return extent.col >= anchor.col
+          ? { row: extent.row, col: clamp(range.maxCol + 1, 0, maxCol) }
+          : this.shrinkExtent(anchor, extent, range, direction);
       case 'left':
-        return {
-          row: extent.row,
-          col: clamp(extent.col <= anchor.col ? range.minCol - 1 : range.maxCol - 1, 0, maxCol),
-        };
+        return extent.col <= anchor.col
+          ? { row: extent.row, col: clamp(range.minCol - 1, 0, maxCol) }
+          : this.shrinkExtent(anchor, extent, range, direction);
       case 'down':
-        return {
-          row: clamp(extent.row >= anchor.row ? range.maxRow + 1 : range.minRow + 1, 0, maxRow),
-          col: extent.col,
-        };
+        return extent.row >= anchor.row
+          ? { row: clamp(range.maxRow + 1, 0, maxRow), col: extent.col }
+          : this.shrinkExtent(anchor, extent, range, direction);
       case 'up':
-        return {
-          row: clamp(extent.row <= anchor.row ? range.minRow - 1 : range.maxRow - 1, 0, maxRow),
-          col: extent.col,
-        };
+        return extent.row <= anchor.row
+          ? { row: clamp(range.minRow - 1, 0, maxRow), col: extent.col }
+          : this.shrinkExtent(anchor, extent, range, direction);
     }
+  }
+
+  /**
+   * Pull the far edge of the range one step toward the anchor. The first step
+   * inward can still be covered by a merge that reaches the far edge, and
+   * painting it would change nothing. So walk inward until the painted range
+   * really shrinks. When nothing shrinks it, land on the anchor's line, so the
+   * next press grows past the anchor.
+   */
+  private shrinkExtent(
+    anchor: CellCoord,
+    extent: CellCoord,
+    range: SelectionRange,
+    direction: ArrowDirection,
+  ): CellCoord {
+    const vertical = direction === 'up' || direction === 'down';
+    // Left/Up pull the max edge in; Right/Down pull the min edge in.
+    const pullsMaxEdge = direction === 'left' || direction === 'up';
+    const edgeOf = (rect: SelectionRange): number => {
+      if (vertical) {
+        return pullsMaxEdge ? rect.maxRow : rect.minRow;
+      }
+
+      return pullsMaxEdge ? rect.maxCol : rect.minCol;
+    };
+    const at = (line: number): CellCoord => vertical
+      ? { row: line, col: extent.col }
+      : { row: extent.row, col: line };
+    const edge = edgeOf(range);
+    const stop = vertical ? anchor.row : anchor.col;
+    const step = pullsMaxEdge ? -1 : 1;
+    const count = Math.abs(stop - edge);
+
+    const shrunk = Array.from({ length: Math.max(count - 1, 0) }, (_, i) => at(edge + step * (i + 1)))
+      .find(candidate => edgeOf(this.expandRectToMergedSpans({
+        minRow: Math.min(anchor.row, candidate.row),
+        maxRow: Math.max(anchor.row, candidate.row),
+        minCol: Math.min(anchor.col, candidate.col),
+        maxCol: Math.max(anchor.col, candidate.col),
+      })) !== edge);
+
+    return shrunk ?? at(stop);
   }
 
   private handleCopy(e: ClipboardEvent): void {
@@ -1001,7 +1040,7 @@ export class TableCellSelection {
     this.restoreModifiedCells();
     this.hasSelection = false;
     this.lastPaintedRange = null;
-    this.preExpansionWasSingleCell = false;
+    this.focusBeforeMenu = null;
     this.keyboardAnchor = null;
     this.keyboardExtent = null;
 
@@ -1113,6 +1152,22 @@ export class TableCellSelection {
     return changed ? this.expandRectStep(expanded) : expanded;
   }
 
+  /**
+   * True when the range is exactly one merged cell. Decided from the painted
+   * range, so every path that lands on one merge (click, restore, grip,
+   * keyboard) gets Split, not Merge.
+   */
+  private isSingleMergedCell(range: SelectionRange): boolean {
+    // The top-left of an expanded range is always a merge origin.
+    const span = this.getCellSpan?.(range.minRow, range.minCol);
+
+    if (span === undefined || (span.colspan === 1 && span.rowspan === 1)) {
+      return false;
+    }
+
+    return span.colspan === range.maxCol - range.minCol + 1 && span.rowspan === range.maxRow - range.minRow + 1;
+  }
+
   private paintSelection(): void {
     if (!this.anchorCell || !this.extentCell) {
       return;
@@ -1130,7 +1185,6 @@ export class TableCellSelection {
     const minCol = Math.min(this.anchorCell.col, this.extentCell.col);
     const maxCol = Math.max(this.anchorCell.col, this.extentCell.col);
 
-    this.preExpansionWasSingleCell = minRow === maxRow && minCol === maxCol;
     this.lastPaintedRange = this.expandRectToMergedSpans({ minRow, maxRow, minCol, maxCol });
 
     const { minRow: expandedMinRow, maxRow: expandedMaxRow, minCol: expandedMinCol, maxCol: expandedMaxCol } = this.lastPaintedRange;
@@ -1321,6 +1375,10 @@ export class TableCellSelection {
 
     this.expandPill();
 
+    const active = document.activeElement;
+
+    this.focusBeforeMenu = active instanceof HTMLElement && this.grid.contains(active) ? active : null;
+
     const copyShortcut = MODIFIER_KEY === 'Meta' ? '⌘C' : 'Ctrl+C';
 
     const colorPickerItems: PopoverItemParams[] = [];
@@ -1404,7 +1462,7 @@ export class TableCellSelection {
     if (this.lastPaintedRange && this.onMergeCells) {
       const range = this.lastPaintedRange;
       const isMultiCell = range.minRow !== range.maxRow || range.minCol !== range.maxCol;
-      const canMerge = isMultiCell && !this.preExpansionWasSingleCell && this.canMergeCells?.(range);
+      const canMerge = isMultiCell && !this.isSingleMergedCell(range) && this.canMergeCells?.(range);
 
       if (canMerge) {
         mergeItems.push({
@@ -1422,9 +1480,7 @@ export class TableCellSelection {
     if (this.lastPaintedRange && this.onSplitCell) {
       const range = this.lastPaintedRange;
       const isSingleCell = range.minRow === range.maxRow && range.minCol === range.maxCol;
-      const isSingleOriginExpanded = this.preExpansionWasSingleCell && this.isMergedCell?.(range.minRow, range.minCol);
-
-      if ((isSingleCell || isSingleOriginExpanded) && this.isMergedCell?.(range.minRow, range.minCol)) {
+      if ((isSingleCell || this.isSingleMergedCell(range)) && this.isMergedCell?.(range.minRow, range.minCol)) {
         mergeItems.push({
           icon: IconSplitCell,
           title: this.i18n.t('tools.table.splitCell'),
@@ -1473,12 +1529,44 @@ export class TableCellSelection {
         return;
       }
 
+      const menu = this.pillPopover.getElement();
+
       this.destroyPillPopover();
 
       this.collapsePill();
+      this.returnFocusFromMenu(menu);
     });
 
     this.pillPopover.show();
+  }
+
+  /**
+   * Pressing a menu item moves focus into the menu, and closing the menu drops
+   * it on <body>. Put it back in the cell it came from. Skipped when the user
+   * already moved focus somewhere else.
+   */
+  private returnFocusFromMenu(menu: HTMLElement): void {
+    const target = this.focusBeforeMenu;
+    const active = document.activeElement;
+
+    this.focusBeforeMenu = null;
+
+    if (target === null || !target.isConnected) {
+      return;
+    }
+
+    if (active !== null && active !== document.body && !menu.contains(active)) {
+      return;
+    }
+
+    // Refocusing a cell must not collapse the selection to that one cell.
+    this.isReturningFocus = true;
+
+    try {
+      target.focus({ preventScroll: true });
+    } finally {
+      this.isReturningFocus = false;
+    }
   }
 
   private expandPill(): void {

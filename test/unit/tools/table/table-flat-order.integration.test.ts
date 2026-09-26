@@ -151,6 +151,31 @@ describe('table cell blocks keep the flat array depth-first', () => {
     await expectDepthFirst(instance);
   });
 
+  it.each([
+    { name: 'row', button: 'data-blok-table-add-row' },
+    { name: 'column', button: 'data-blok-table-add-col' },
+  ])('lists the cells of an added $name in grid order among the table\'s children', async ({ button }) => {
+    const instance = await boot([tableWithTextCells(), P('after')]);
+    const add = holder?.querySelector<HTMLElement>(`[${button}]`);
+
+    if (add === null || add === undefined) {
+      throw new Error('no add button');
+    }
+    // jsdom has no pointer capture.
+    add.setPointerCapture = vi.fn();
+    add.releasePointerCapture = vi.fn();
+    add.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
+    add.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 }));
+    await settle();
+
+    const saved = (await instance.save()) as { blocks: OutputBlockData[] };
+    const content = saved.blocks.find(block => block.id === TABLE_ID)?.data.content as Array<Array<{ blocks: string[] }>>;
+    const gridIds = content.flat().flatMap(cell => cell.blocks);
+
+    expect(gridIds).toHaveLength(6);
+    expect(instance.blocks.getChildren(TABLE_ID).map(child => child.id)).toEqual(gridIds);
+  });
+
   it('puts the block created by leaving the last cell after the whole table, not between the table and its cells', async () => {
     const instance = await boot([
       P('before'),

@@ -14,6 +14,7 @@
  * PURITY CONTRACT: only pure imports (src/shared/*, src/view/*).
  */
 import type { OutputData } from '../../types';
+import { repairedTableRows } from './table-grid';
 
 /** Options shared by extraction and injection — they must match, or the counts will not. */
 export interface DocumentTextsOptions {
@@ -145,35 +146,34 @@ const collectSlots = (blocks: unknown[], options: DocumentTextsOptions): TextSlo
    * @param data - table block data
    */
   const walkTable = (data: Record<string, unknown>): void => {
-    const rows = Array.isArray(data.content) ? data.content : [];
+    const rows = Array.isArray(data.content) ? data.content.filter((row): row is unknown[] => Array.isArray(row)) : [];
+    // Same row filter as repairedTableRows, so indices line up. Slots write to
+    // the raw rows; the repaired grid is a copy.
+    const repaired = repairedTableRows(data.content);
 
-    for (const row of rows) {
-      if (!Array.isArray(row)) {
-        continue;
+    rows.forEach((row, r) => row.forEach((cell, index) => {
+      if (!isRecord(cell)) {
+        pushSlot(row, index);
+
+        return;
       }
 
-      row.forEach((cell, index) => {
-        if (!isRecord(cell)) {
-          pushSlot(row, index);
+      const shown = repaired[r]?.[index];
 
-          return;
-        }
+      /** A cover a live span backs renders nothing; an unbacked one renders as a plain cell. */
+      if (cell.mergedInto !== undefined && isRecord(shown) && shown.mergedInto !== undefined) {
+        return;
+      }
 
-        /** A covered cell renders nothing — matches `tableText`'s merge handling. */
-        if (cell.mergedInto !== undefined) {
-          return;
-        }
+      const ids = Array.isArray(cell.blocks) ? cell.blocks.filter((id) => typeof id === 'string') : [];
 
-        const ids = Array.isArray(cell.blocks) ? cell.blocks.filter((id) => typeof id === 'string') : [];
+      /** A cell holding block ids owns no text: each referenced block is its own `blocks` entry. */
+      if (ids.length > 0) {
+        return;
+      }
 
-        /** A cell holding block ids owns no text: each referenced block is its own `blocks` entry. */
-        if (ids.length > 0) {
-          return;
-        }
-
-        pushSlot(cell, 'text');
-      });
-    }
+      pushSlot(cell, 'text');
+    }));
   };
 
   /**

@@ -266,11 +266,11 @@ const mergeTopLeft2x2 = async (page: Page): Promise<void> => {
 
   await expect(getCellAt(page, 0, 0)).toHaveAttribute('colspan', '2');
 
-  // Merging clears the selection, which tears down the pill and its popover.
-  // Wait for that: pressing into a cell while the popover is still up would be
-  // swallowed by it, and the next gesture would silently select nothing.
+  // Wait for the popover to close: pressing into a cell while it is still up
+  // would be swallowed by it, and the next gesture would select nothing.
   await expect(page.getByText('Merge cells')).toHaveCount(0);
-  await expect(page.locator('[data-blok-table-selection-pill]')).toHaveCount(0);
+  // The caret then lands in the merged cell, which boxes it alone.
+  await expect(page.locator('[data-blok-table-cell-selected]')).toHaveCount(1);
 };
 
 test.describe('Table merge and split', () => {
@@ -358,7 +358,8 @@ test.describe('Table merge and split', () => {
     await openPill(page);
     await page.getByText('Merge cells').click();
     await expect(getCellAt(page, 1, 0)).toHaveAttribute('rowspan', '3');
-    await expect(page.locator('[data-blok-table-selection-pill]')).toHaveCount(0);
+    // The caret lands in the merged cell, which boxes it alone.
+    await expect(page.locator('[data-blok-table-cell-selected]')).toHaveCount(1);
 
     // Now select the heading row plus the existing merge and merge again.
     const startBox = assertBoundingBox(await getCellAt(page, 0, 0).boundingBox(), 'cell [0,0]');
@@ -396,7 +397,8 @@ test.describe('Table merge and split', () => {
     await openPill(page);
     await page.getByText('Merge cells').click();
     await expect(getCellAt(page, 1, 0)).toHaveAttribute('colspan', '2');
-    await expect(page.locator('[data-blok-table-selection-pill]')).toHaveCount(0);
+    // The caret lands in the merged cell, which boxes it alone.
+    await expect(page.locator('[data-blok-table-cell-selected]')).toHaveCount(1);
 
     // Select columns 1-2 across all rows. Row 1's column 1 is covered by the
     // merge whose origin sits at column 0, outside the rectangle.

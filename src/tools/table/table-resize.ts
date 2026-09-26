@@ -1,4 +1,4 @@
-import { BORDER_WIDTH, MIN_COL_WIDTH } from './table-core';
+import { BORDER_WIDTH, CELL_ATTR, CELL_COL_ATTR, MIN_COL_WIDTH, ROW_ATTR } from './table-core';
 
 const RESIZE_ATTR = 'data-blok-table-resize';
 const HANDLE_HIT_WIDTH = 16;
@@ -31,6 +31,8 @@ export class TableResize {
   private dragColElements: HTMLElement[] | null = null;
   private handles: HTMLElement[] = [];
   private needsInitialApply: boolean;
+  private bodyObserver: MutationObserver | null = null;
+  private rowObserver: ResizeObserver | null = null;
 
   private boundPointerDown: (e: PointerEvent) => void;
   private boundPointerMove: (e: PointerEvent) => void;
@@ -74,11 +76,16 @@ export class TableResize {
     }
 
     this.createHandles();
+    this.watchRows();
 
     this.gridEl.addEventListener('pointerdown', this.boundPointerDown);
   }
 
   public destroy(): void {
+    this.bodyObserver?.disconnect();
+    this.bodyObserver = null;
+    this.rowObserver?.disconnect();
+    this.rowObserver = null;
     this.gridEl.removeEventListener('pointerdown', this.boundPointerDown);
     document.removeEventListener('pointermove', this.boundPointerMove);
     document.removeEventListener('pointerup', this.boundPointerUp);
@@ -134,6 +141,123 @@ export class TableResize {
     });
 
     return handle;
+  }
+
+  /**
+   * Keep each handle off the rows where a merged cell hides its border.
+   * The handle is a full-height strip above the cells and its pointerdown
+   * calls preventDefault, so over a merged cell it would eat the click.
+   * clip-path also clips hit testing, so the strip stays one element.
+   *
+   * Merge and split swap the <tbody> without re-creating TableResize, and
+   * typing changes row heights, so both are watched.
+   */
+  private watchRows(): void {
+    this.bodyObserver = new MutationObserver(() => this.observeRowSizes());
+    this.bodyObserver.observe(this.gridEl, { childList: true });
+    this.observeRowSizes();
+  }
+
+  /**
+   * A new ResizeObserver reports each rendered row once on observe(), and
+   * that report clips the handles, so clipping here too would measure twice.
+   */
+  private observeRowSizes(): void {
+    if (typeof ResizeObserver === 'undefined') {
+      this.clipHandlesToVisibleBorders();
+
+      return;
+    }
+
+    this.rowObserver?.disconnect();
+    this.rowObserver = new ResizeObserver(() => this.clipHandlesToVisibleBorders());
+    this.bodyRows().forEach(row => this.rowObserver?.observe(row));
+  }
+
+  private bodyRows(): HTMLElement[] {
+    return Array.from(this.gridEl.querySelectorAll<HTMLElement>(`:scope > tbody > [${ROW_ATTR}]`));
+  }
+
+  /**
+   * For each border index, the rows where a merged cell spans across it.
+   * Border `c` is the right edge of column `c`.
+   */
+  private crossedRowsByBorder(rows: HTMLElement[]): Map<number, Set<number>> {
+    const crossed = new Map<number, Set<number>>();
+
+    rows.forEach((row, r) => {
+      row.querySelectorAll<HTMLTableCellElement>(`:scope > [${CELL_ATTR}]`).forEach(cell => {
+        const col = Number(cell.getAttribute(CELL_COL_ATTR));
+        const colSpan = cell.colSpan || 1;
+        const rowSpan = cell.rowSpan || 1;
+
+        if (colSpan < 2 || Number.isNaN(col)) {
+          return;
+        }
+
+        Array.from({ length: colSpan - 1 }, (_, i) => col + i).forEach(border => {
+          const set = crossed.get(border) ?? new Set<number>();
+
+          Array.from({ length: rowSpan }, (_, i) => r + i).forEach(covered => set.add(covered));
+          crossed.set(border, set);
+        });
+      });
+    });
+
+    return crossed;
+  }
+
+  private clipHandlesToVisibleBorders(): void {
+    const rows = this.bodyRows();
+    const crossed = this.crossedRowsByBorder(rows);
+
+    this.handles.forEach((handle, border) => {
+      const el: HTMLElement = handle;
+      const hidden = crossed.get(border);
+      const clip = hidden === undefined ? '' : this.clipForVisibleRows(el, rows, hidden);
+
+      if (el.style.clipPath !== clip) {
+        el.style.clipPath = clip;
+      }
+    });
+  }
+
+  /**
+   * A clip that keeps only the runs of rows where the border is visible,
+   * in the handle's own coordinates. The first and last runs reach the
+   * handle's ends so the table's top border stays grabbable.
+   */
+  private clipForVisibleRows(handle: HTMLElement, rows: HTMLElement[], hidden: Set<number>): string {
+    const handleRect = handle.getBoundingClientRect();
+    const runs: Array<[number, number]> = [];
+
+    rows.forEach((row, r) => {
+      if (hidden.has(r)) {
+        return;
+      }
+
+      const rowRect = row.getBoundingClientRect();
+      const top = r === 0 ? 0 : rowRect.top - handleRect.top;
+      const bottom = r === rows.length - 1 ? handleRect.height : rowRect.bottom - handleRect.top;
+      const last = runs[runs.length - 1];
+
+      if (last !== undefined && !hidden.has(r - 1) && r > 0) {
+        last[1] = bottom;
+      } else {
+        runs.push([top, bottom]);
+      }
+    });
+
+    if (runs.length === 0) {
+      return 'inset(50%)';
+    }
+
+    const round = (n: number): number => Math.round(n * 100) / 100;
+    const path = runs
+      .map(([top, bottom]) => `M0 ${round(top)} H${HANDLE_HIT_WIDTH} V${round(bottom)} H0 Z`)
+      .join('');
+
+    return `path('${path}')`;
   }
 
   private getHandleLeftPx(colIndex: number): number {

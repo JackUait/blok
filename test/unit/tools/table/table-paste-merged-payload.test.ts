@@ -35,6 +35,7 @@ const createMockAPI = (): API => ({
       return { id, holder };
     }),
     delete: vi.fn(),
+    getById: vi.fn().mockReturnValue(null),
     getChildren: vi.fn().mockReturnValue([]),
     getCurrentBlockIndex: vi.fn().mockReturnValue(0),
     getBlockIndex: vi.fn().mockReturnValue(undefined),
@@ -196,6 +197,34 @@ describe('Pasting a merged clipboard payload into a table reconstructs the merge
     expect(m.getCellSpan(0, 0)).toEqual({ colspan: 1, rowspan: 2 });
     expect(content[1][0].mergedInto).toEqual([0, 0]);
     expect(content[1][1].blocks.length).toBeGreaterThan(0);
+  });
+
+  it('puts the caret in the merged cell when the pasted region ends under a merge', () => {
+    const { table, gridEl } = createTable([
+      [{ blocks: [] }, { blocks: [] }, { blocks: [] }],
+      [{ blocks: [] }, { blocks: [] }, { blocks: [] }],
+    ]);
+    const setToBlock = vi.fn();
+    const api = (table as unknown as { api: { caret?: { setToBlock: typeof setToBlock } } }).api;
+
+    api.caret = { setToBlock };
+    focusCell(gridEl, 0, 1);
+
+    // The payload's last slot (1,0) is covered by the tall origin.
+    dispatchPaste(gridEl, {
+      rows: 2,
+      cols: 1,
+      cells: [
+        [{ blocks: [{ tool: 'paragraph', data: { text: 'Tall' } }], rowspan: 2 }],
+        [{ blocks: [], covered: true }],
+      ],
+    });
+
+    const origin = gridEl.querySelector('[data-blok-table-cell-row="0"][data-blok-table-cell-col="1"]');
+    const originIds = Array.from(origin?.querySelectorAll('[data-blok-id]') ?? []).map(el => el.getAttribute('data-blok-id'));
+
+    expect(setToBlock).toHaveBeenCalledTimes(1);
+    expect(originIds).toContain(setToBlock.mock.calls[0][0]);
   });
 
   it('pastes legacy covered-only payloads (no spans) without creating merges', () => {

@@ -1416,7 +1416,7 @@ describe('TableCellBlocks', () => {
       expect(container.contains(mockBlockHolder)).toBe(true);
     });
 
-    it('inserts the cell block right after the table subtree, not at the end of the document', async () => {
+    it('inserts the first cell\'s block right after the table, before later cells\' blocks and not at the end of the document', async () => {
       const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       // Flat order: t1, its cell block c1, a nested child n1 of c1, then p-after.
@@ -1461,7 +1461,7 @@ describe('TableCellBlocks', () => {
 
       cellBlocks.ensureCellHasBlock(cell);
 
-      expect(mockInsert).toHaveBeenCalledWith('paragraph', { text: '' }, expect.anything(), 3, true);
+      expect(mockInsert).toHaveBeenCalledWith('paragraph', { text: '' }, expect.anything(), 1, true);
     });
 
     it('does not guess a cell for a peer\'s block whose cell the table data has not named yet', async () => {

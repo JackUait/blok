@@ -235,6 +235,23 @@ export class TableSubsystems {
     this.host.api.blocks.endTransaction?.();
   }
 
+  /**
+   * DOM half of a structural op. TableGrid's mutators work on physical indices
+   * and ignore spans, so on a merged grid rebuild the body from the model
+   * instead. Run the model op first, and read `hadMerges` BEFORE it: removing
+   * the last row/column can remove the only merge.
+   * Enforced by test/unit/architecture/table-merge-structural-op-law.test.ts.
+   */
+  private applyStructuralDom(hadMerges: boolean, physicalOp: () => void): void {
+    if (hadMerges) {
+      this.host.rebuildTableBody();
+
+      return;
+    }
+
+    physicalOp();
+  }
+
   private initAddControls(gridEl: HTMLElement): void {
     this.addControls?.destroy();
 
@@ -261,8 +278,10 @@ export class TableSubsystems {
       },
       onAddRow: () => {
         this.host.runTransactedStructuralOp(() => {
-          this.host.grid.addRow(gridEl);
+          const hadMerges = this.host.model.hasMerges();
+
           this.host.model.addRow();
+          this.applyStructuralDom(hadMerges, () => this.host.grid.addRow(gridEl));
           populateNewCells(gridEl, this.host.cellBlocks);
           updateHeadingStyles(this.host.gridElement, this.host.model.withHeadings);
           updateHeadingColumnStyles(this.host.gridElement, this.host.model.withHeadingColumn);
@@ -278,9 +297,12 @@ export class TableSubsystems {
             ? Math.round((this.host.model.initialColWidth / 2) * 100) / 100
             : computeHalfAvgWidth(colWidths);
 
-          this.host.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
+          const hadMerges = this.host.model.hasMerges();
+
+          // Widths go into the model first: a rebuild reads <col>s from it.
           this.host.model.addColumn(undefined, halfWidth);
           this.host.model.setColWidths([...colWidths, halfWidth]);
+          this.applyStructuralDom(hadMerges, () => this.host.grid.addColumn(gridEl, undefined, colWidths, halfWidth));
           populateNewCells(gridEl, this.host.cellBlocks);
           updateHeadingColumnStyles(this.host.gridElement, this.host.model.withHeadingColumn);
           this.initResize(gridEl);
@@ -306,8 +328,10 @@ export class TableSubsystems {
       },
       onDragAddRow: () => {
         this.host.runTransactedStructuralOp(() => {
-          this.host.grid.addRow(gridEl);
+          const hadMerges = this.host.model.hasMerges();
+
           this.host.model.addRow();
+          this.applyStructuralDom(hadMerges, () => this.host.grid.addRow(gridEl));
           populateNewCells(gridEl, this.host.cellBlocks);
           updateHeadingStyles(this.host.gridElement, this.host.model.withHeadings);
           updateHeadingColumnStyles(this.host.gridElement, this.host.model.withHeadingColumn);
@@ -323,10 +347,11 @@ export class TableSubsystems {
             return false;
           }
 
+          const hadMerges = this.host.model.hasMerges();
           const { blocksToDelete } = this.host.model.deleteRow(rowCount - 1);
 
           this.host.cellBlocks?.deleteBlocks(blocksToDelete, false);
-          this.host.grid.deleteRow(gridEl, rowCount - 1);
+          this.applyStructuralDom(hadMerges, () => this.host.grid.deleteRow(gridEl, rowCount - 1));
 
           return true;
         });
@@ -340,9 +365,11 @@ export class TableSubsystems {
 
           const newWidths = [...colWidths, halfWidth];
 
-          this.host.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
+          const hadMergesForCol = this.host.model.hasMerges();
+
           this.host.model.addColumn(undefined, halfWidth);
           this.host.model.setColWidths(newWidths);
+          this.applyStructuralDom(hadMergesForCol, () => this.host.grid.addColumn(gridEl, undefined, colWidths, halfWidth));
           applyPixelWidths(gridEl, newWidths);
           populateNewCells(gridEl, this.host.cellBlocks);
           updateHeadingColumnStyles(this.host.gridElement, this.host.model.withHeadingColumn);
@@ -367,10 +394,11 @@ export class TableSubsystems {
 
           // model.deleteColumn() already removes the width internally,
           // so no additional syncColWidthsAfterDeleteColumn is needed.
+          const hadMerges = this.host.model.hasMerges();
           const { blocksToDelete } = this.host.model.deleteColumn(colCount - 1);
 
           this.host.cellBlocks?.deleteBlocks(blocksToDelete, false);
-          this.host.grid.deleteColumn(gridEl, colCount - 1);
+          this.applyStructuralDom(hadMerges, () => this.host.grid.deleteColumn(gridEl, colCount - 1));
 
           const updatedWidths = this.host.model.colWidths;
 
@@ -420,8 +448,10 @@ export class TableSubsystems {
       i18n: this.host.api.i18n,
       onAddRow: () => {
         this.host.runStructuralOp(() => {
-          this.host.grid.addRow(gridEl);
+          const hadMerges = this.host.model.hasMerges();
+
           this.host.model.addRow();
+          this.applyStructuralDom(hadMerges, () => this.host.grid.addRow(gridEl));
           populateNewCells(gridEl, this.host.cellBlocks);
           updateHeadingStyles(this.host.gridElement, this.host.model.withHeadings);
           updateHeadingColumnStyles(this.host.gridElement, this.host.model.withHeadingColumn);
@@ -439,9 +469,11 @@ export class TableSubsystems {
           const width = this.host.model.initialColWidth ?? computeAvgWidth(colWidths);
           const newWidths = [...colWidths, width];
 
-          this.host.grid.addColumn(gridEl, undefined, colWidths, width);
+          const hadMerges = this.host.model.hasMerges();
+
           this.host.model.addColumn(undefined, width);
           this.host.model.setColWidths(newWidths);
+          this.applyStructuralDom(hadMerges, () => this.host.grid.addColumn(gridEl, undefined, colWidths, width));
           applyPixelWidths(gridEl, newWidths);
           enableScrollOverflow(this.host.ensureScrollContainer());
           populateNewCells(gridEl, this.host.cellBlocks);
@@ -459,10 +491,11 @@ export class TableSubsystems {
             return;
           }
 
+          const hadMerges = this.host.model.hasMerges();
           const { blocksToDelete } = this.host.model.deleteRow(rowCount - 1);
 
           this.host.cellBlocks?.deleteBlocks(blocksToDelete, false);
-          this.host.grid.deleteRow(gridEl, rowCount - 1);
+          this.applyStructuralDom(hadMerges, () => this.host.grid.deleteRow(gridEl, rowCount - 1));
         });
       },
       onRemoveLastColumn: () => {
@@ -473,10 +506,11 @@ export class TableSubsystems {
             return;
           }
 
+          const hadMerges = this.host.model.hasMerges();
           const { blocksToDelete } = this.host.model.deleteColumn(colCount - 1);
 
           this.host.cellBlocks?.deleteBlocks(blocksToDelete, false);
-          this.host.grid.deleteColumn(gridEl, colCount - 1);
+          this.applyStructuralDom(hadMerges, () => this.host.grid.deleteColumn(gridEl, colCount - 1));
 
           const updatedWidths = this.host.model.colWidths;
 
@@ -531,8 +565,10 @@ export class TableSubsystems {
       onClickAdd: () => {
         this.host.runTransactedStructuralOp(() => {
           // Add row
-          this.host.grid.addRow(gridEl);
+          const hadMerges = this.host.model.hasMerges();
+
           this.host.model.addRow();
+          this.applyStructuralDom(hadMerges, () => this.host.grid.addRow(gridEl));
           populateNewCells(gridEl, this.host.cellBlocks);
           updateHeadingStyles(this.host.gridElement, this.host.model.withHeadings);
           updateHeadingColumnStyles(this.host.gridElement, this.host.model.withHeadingColumn);
@@ -544,9 +580,11 @@ export class TableSubsystems {
             : computeHalfAvgWidth(colWidths);
           const newWidths = [...colWidths, halfWidth];
 
-          this.host.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
+          const hadMergesForCol = this.host.model.hasMerges();
+
           this.host.model.addColumn(undefined, halfWidth);
           this.host.model.setColWidths(newWidths);
+          this.applyStructuralDom(hadMergesForCol, () => this.host.grid.addColumn(gridEl, undefined, colWidths, halfWidth));
           applyPixelWidths(gridEl, newWidths);
           populateNewCells(gridEl, this.host.cellBlocks);
           updateHeadingColumnStyles(this.host.gridElement, this.host.model.withHeadingColumn);
@@ -689,6 +727,19 @@ export class TableSubsystems {
    */
   private cellAt(gridEl: HTMLElement, row: number, col: number): HTMLElement | null {
     return gridEl.querySelector<HTMLElement>(`[${CELL_ROW_ATTR}="${row}"][${CELL_COL_ATTR}="${col}"]`);
+  }
+
+  /**
+   * Merge and split rebuild the tbody, and the menu that held focus is gone
+   * too, so the caret must be put back by hand.
+   */
+  private focusCellAfterMenuAction(row: number, col: number): void {
+    const gridEl = this.host.gridElement;
+    const cell = gridEl === null ? null : this.cellAt(gridEl, row, col);
+
+    if (cell !== null) {
+      this.host.cellBlocks?.focusClearedCell(cell);
+    }
   }
 
   /**
@@ -1125,9 +1176,11 @@ export class TableSubsystems {
             return;
           }
 
-          const sourceCell = direction === 'right'
-            ? this.host.grid.getCell(gridEl, row, range.minCol)
-            : this.host.grid.getCell(gridEl, range.minRow, col);
+          const [sourceRow, sourceCol] = direction === 'right' ? [row, range.minCol] : [range.minRow, col];
+          // A covered source copies the merged cell shown there. A covered
+          // target has no <td> (getCell returns null) and is skipped.
+          const [originRow, originCol] = this.host.model.getMergeOrigin(sourceRow, sourceCol) ?? [sourceRow, sourceCol];
+          const sourceCell = this.host.grid.getCell(gridEl, originRow, originCol);
           const targetCell = this.host.grid.getCell(gridEl, row, col);
 
           if (!sourceCell || !targetCell || sourceCell === targetCell) {
@@ -1403,6 +1456,7 @@ export class TableSubsystems {
           // be recreated to pick up their disabled drag affordance.
           this.rowColControls?.refresh();
         });
+        this.focusCellAfterMenuAction(range.minRow, range.minCol);
       },
       isMergedCell: (row, col) => {
         return this.host.model.isMergedCell(row, col);
@@ -1415,6 +1469,7 @@ export class TableSubsystems {
           // become draggable.
           this.rowColControls?.refresh();
         });
+        this.focusCellAfterMenuAction(row, col);
       },
       getCellSpan: (row, col) => {
         return this.host.model.getCellSpan(row, col);
@@ -1696,11 +1751,11 @@ export class TableSubsystems {
 
     // Caret placement outside the lock (no structural mutation). Resolve the
     // last pasted cell by logical coordinate to stay merge-safe.
-    const lastCell = this.host.grid.getCell(
-      gridEl,
-      startRow + payload.rows - 1,
-      startCol + payload.cols - 1,
-    );
+    const lastRow = startRow + payload.rows - 1;
+    const lastCol = startCol + payload.cols - 1;
+    // The last slot can be covered by a pasted merge: use the merged cell.
+    const [caretRow, caretCol] = this.host.model.getMergeOrigin(lastRow, lastCol) ?? [lastRow, lastCol];
+    const lastCell = this.host.grid.getCell(gridEl, caretRow, caretCol);
 
     if (!lastCell || !this.host.cellBlocks || !this.host.api.caret) {
       return;
@@ -1815,8 +1870,10 @@ export class TableSubsystems {
 
     // Auto-expand rows
     Array.from({ length: Math.max(0, neededRows - currentRowCount) }).forEach(() => {
-      this.host.grid.addRow(gridEl);
+      const hadMerges = this.host.model.hasMerges();
+
       this.host.model.addRow();
+      this.applyStructuralDom(hadMerges, () => this.host.grid.addRow(gridEl));
       populateNewCells(gridEl, this.host.cellBlocks);
       updateHeadingStyles(this.host.gridElement, this.host.model.withHeadings);
       updateHeadingColumnStyles(this.host.gridElement, this.host.model.withHeadingColumn);
@@ -1829,9 +1886,11 @@ export class TableSubsystems {
         ? Math.round((this.host.model.initialColWidth / 2) * 100) / 100
         : computeHalfAvgWidth(colWidths);
 
-      this.host.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
+      const hadMerges = this.host.model.hasMerges();
+
       this.host.model.addColumn(undefined, halfWidth);
       this.host.model.setColWidths([...colWidths, halfWidth]);
+      this.applyStructuralDom(hadMerges, () => this.host.grid.addColumn(gridEl, undefined, colWidths, halfWidth));
       populateNewCells(gridEl, this.host.cellBlocks);
       updateHeadingColumnStyles(this.host.gridElement, this.host.model.withHeadingColumn);
     });

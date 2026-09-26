@@ -1,6 +1,7 @@
 import type { CellContent, CellPlacement, LegacyCellContent, TableData, TableTextSize } from './types';
 import { isCellWithBlocks } from './types';
 import { alignRowsToColumns, ensureTableIds, generateTableId } from './table-ids';
+import { repairMergeGrid } from '../../shared/table-merge-repair';
 
 export interface SelectionRect {
   minRow: number;
@@ -8,12 +9,6 @@ export interface SelectionRect {
   minCol: number;
   maxCol: number;
 }
-
-/**
- * Per-slot map of which live merge origin spans it, or undefined for a slot no
- * merge claims. Read-time only: it never leaves `normalizeContent`.
- */
-type SpanCoverage = (readonly [number, number] | undefined)[][];
 
 export interface MergeResult {
   /** Block IDs that were moved from absorbed cells into the origin cell. */
@@ -599,6 +594,14 @@ export class TableModel {
 
     // Bounds check
     if (minRow < 0 || maxRow >= this.rows || minCol < 0 || maxCol >= this.cols) {
+      return false;
+    }
+
+    // A rect that is already exactly one merge has nothing to merge. Merging it
+    // again would reset the origin's placement.
+    const topLeft = this.contentGrid[minRow][minCol];
+
+    if ((topLeft.colspan ?? 1) === maxCol - minCol + 1 && (topLeft.rowspan ?? 1) === maxRow - minRow + 1) {
       return false;
     }
 
@@ -1720,125 +1723,21 @@ export class TableModel {
       }
     }
 
-    this.repairMergeStructure(grid);
+    const repaired = repairMergeGrid(grid);
 
-    return ensureTableIds(grid);
-  }
-
-  /**
-   * Repair merge bookkeeping that a concurrent edit can leave inconsistent.
-   *
-   * Two things converge wrong and neither throws on its own:
-   * - Two peers merging overlapping rectangles leave one cell carrying BOTH
-   *   colspan/rowspan and mergedInto. It is an origin the renderer skips, so
-   *   its content — and every cell its span claims — disappears from view.
-   * - A merge racing a peer's edit to one of the absorbed cells leaves blocks
-   *   inside a covered cell. There is no <td> to mount them into, and the next
-   *   initializeCells or unmerge clears the cell for good.
-   *
-   * Both repairs are pure functions of the converged grid in row-major order,
-   * so every peer computes the same result without exchanging anything.
-   */
-  private repairMergeStructure(grid: CellContent[][]): void {
-    // A covered cell is never also an origin: the cover wins, and the cell's
-    // own span goes — otherwise it hides the cells it claims.
-    grid.forEach((row, r) => row.forEach((_cell, c) => {
-      const cell = grid[r][c];
+    // A covered cell has no <td>, so styling on it is invisible until a split
+    // brings it back. mergeCells clears it for the same reason.
+    repaired.forEach((row, r) => row.forEach((_cell, c) => {
+      const cell = repaired[r][c];
 
       if (cell.mergedInto !== undefined) {
-        delete cell.colspan;
-        delete cell.rowspan;
+        delete cell.color;
+        delete cell.textColor;
+        delete cell.placement;
       }
     }));
 
-    const coverage = this.buildSpanCoverage(grid);
-
-    grid.forEach((row, r) => row.forEach((_cell, c) => this.repairCoveredCell(grid, coverage, r, c)));
-  }
-
-  /**
-   * For every slot a live merge origin claims, the origin claiming it.
-   *
-   * Built after covered cells lost their own span, so every source here is a
-   * real origin. Row-major first wins, so overlapping origins in a corrupted
-   * grid still resolve the same way on every peer.
-   */
-  private buildSpanCoverage(grid: CellContent[][]): SpanCoverage {
-    const coverage: SpanCoverage = grid.map(row => row.map(() => undefined));
-
-    grid.forEach((row, r) => row.forEach((cell, c) => {
-      const colspan = cell.colspan ?? 1;
-      const rowspan = cell.rowspan ?? 1;
-
-      if (colspan <= 1 && rowspan <= 1) {
-        return;
-      }
-
-      grid.slice(r, r + rowspan).forEach((spanRow, dri) => {
-        spanRow.slice(c, c + colspan).forEach((_spanned, dci) => {
-          const dr = r + dri;
-          const dc = c + dci;
-
-          if ((dr === r && dc === c) || coverage[dr][dc] !== undefined) {
-            return;
-          }
-
-          coverage[dr][dc] = [r, c];
-        });
-      });
-    }));
-
-    return coverage;
-  }
-
-  /**
-   * Reconcile one covered cell with the origin it names. Row-major order means
-   * an origin is always reconciled before the cells that point at it.
-   */
-  private repairCoveredCell(grid: CellContent[][], coverage: SpanCoverage, r: number, c: number): void {
-    const cell = grid[r][c];
-
-    if (cell.mergedInto === undefined) {
-      return;
-    }
-
-    const named = cell.mergedInto;
-    const spans = ([originRow, originCol]: [number, number]): boolean => {
-      const origin = grid[originRow]?.[originCol];
-
-      return origin !== undefined &&
-        !(originRow === r && originCol === c) &&
-        r >= originRow && r < originRow + (origin.rowspan ?? 1) &&
-        c >= originCol && c < originCol + (origin.colspan ?? 1);
-    };
-
-    const namedIsCovered = grid[named[0]]?.[named[1]]?.mergedInto !== undefined;
-
-    // An empty cell with some other broken reference (plain or out-of-bounds
-    // origin) is left for validateInvariants. One holding blocks is repaired,
-    // or its blocks have no <td> and are dropped.
-    if (!spans(named) && !namedIsCovered && cell.blocks.length === 0) {
-      return;
-    }
-
-    // Keep the named origin only while it really spans this slot. Otherwise
-    // hand the cell to the live origin that does — freeing it inside a live
-    // span would render a second <td> and shift the row. Where nothing spans
-    // the slot, free the cell and let it keep its content.
-    const target = spans(named) ? named : coverage[r][c];
-
-    if (target === undefined) {
-      delete cell.mergedInto;
-
-      return;
-    }
-
-    cell.mergedInto = [target[0], target[1]];
-
-    if (cell.blocks.length > 0) {
-      grid[target[0]][target[1]].blocks.push(...cell.blocks);
-      cell.blocks = [];
-    }
+    return ensureTableIds(repaired);
   }
 
   /**

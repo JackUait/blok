@@ -540,12 +540,12 @@ export class TableGrid {
   }
 
   /**
-   * Get a specific cell element.
-   * Tries coordinate-based lookup first (works with merged cells),
-   * then falls back to index-based lookup for backwards compatibility.
+   * Get a specific cell element by logical coordinate.
+   * A merge-covered coordinate has no <td>, so it returns null. The index
+   * fallback is only for grids with no coordinate attributes at all: on a
+   * merged grid it would return the next <td> in the row, a different cell.
    */
   public getCell(table: HTMLElement, row: number, col: number): HTMLElement | null {
-    // Try coordinate-based lookup first (works with merged cells)
     const coordCell = table.querySelector<HTMLElement>(
       `[${CELL_ROW_ATTR}="${row}"][${CELL_COL_ATTR}="${col}"]`
     );
@@ -554,7 +554,10 @@ export class TableGrid {
       return coordCell;
     }
 
-    // Fallback to index-based lookup (for backwards compatibility)
+    if (table.querySelector(`[${CELL_ROW_ATTR}]`)) {
+      return null;
+    }
+
     const rows = table.querySelectorAll(`[${ROW_ATTR}]`);
 
     if (row >= rows.length) {

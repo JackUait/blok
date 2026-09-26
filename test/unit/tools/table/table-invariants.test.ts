@@ -23,6 +23,68 @@ const coveredCell = (originRow: number, originCol: number): CellContent => ({
   mergedInto: [originRow, originCol],
 });
 
+const isCellGrid = (value: unknown): value is CellContent[][] =>
+  Array.isArray(value) && value.every((row: unknown) =>
+    Array.isArray(row) && row.every((c: unknown) => typeof c === 'object' && c !== null && 'blocks' in c));
+
+/**
+ * A model whose grid holds `content` with its merge fields as given. The
+ * constructor repairs bad merge data, so this is the only way to reach the
+ * corrupt grid an editing bug could leave. Blocks load first, in the same
+ * cells, so the block map still matches and only the merge checks can fail.
+ */
+const withRawMerges = (content: CellContent[][]): TableModel => {
+  const model = new TableModel(makeData({ content: content.map(row => row.map(c => cell(...c.blocks))) }));
+  const grid: unknown = Reflect.get(model, 'contentGrid');
+
+  if (!isCellGrid(grid)) {
+    throw new Error('TableModel no longer keeps its grid in contentGrid');
+  }
+
+  content.forEach((row, r) => row.forEach((raw, c) => {
+    grid[r][c] = { ...grid[r][c], ...raw, blocks: [...raw.blocks] };
+  }));
+
+  return model;
+};
+
+// Merge data a bad save or a foreign paste can carry.
+const malformedShapes: Array<{ name: string; content: CellContent[][] }> = [
+  {
+    name: 'mergedInto pointing to a cell without a span',
+    content: [
+      [cell('a'), cell('b')],
+      [coveredCell(0, 0), cell('d')],
+    ],
+  },
+  {
+    name: 'mergedInto pointing out of bounds',
+    content: [
+      [cell('a'), { blocks: [], mergedInto: [5, 5] }],
+    ],
+  },
+  {
+    name: 'mergedInto outside the span of its origin',
+    content: [
+      [originCell(['a', 'b'], 2, 1), coveredCell(0, 0)],
+      [coveredCell(0, 0), cell('d')],
+    ],
+  },
+  {
+    name: 'a cell inside a span with no mergedInto',
+    content: [
+      [originCell(['a'], 2, 2), coveredCell(0, 0)],
+      [coveredCell(0, 0), cell('d')],
+    ],
+  },
+  {
+    name: 'a span past the grid edge',
+    content: [
+      [originCell(['a'], 3, 1), coveredCell(0, 0)],
+    ],
+  },
+];
+
 describe('TableModel invariants', () => {
   describe('validateInvariants()', () => {
     it('passes for a valid empty model', () => {
@@ -104,56 +166,41 @@ describe('TableModel invariants', () => {
     });
 
     it('detects mergedInto pointing to cell without matching span', () => {
-      const model = new TableModel(makeData({
-        content: [
-          [cell('a'), cell('b')],
-          [coveredCell(0, 0), cell('d')],
-        ],
-      }));
+      const model = withRawMerges(malformedShapes[0].content);
 
       expect(() => model.validateInvariants()).toThrow(/mergedInto.*\[1,0\].*\[0,0\].*not a merge origin/);
     });
 
     it('detects mergedInto pointing out of bounds', () => {
-      const model = new TableModel(makeData({
-        content: [
-          [cell('a'), { blocks: [], mergedInto: [5, 5] as [number, number] }],
-        ],
-      }));
+      const model = withRawMerges(malformedShapes[1].content);
 
       expect(() => model.validateInvariants()).toThrow(/mergedInto.*out.of.bounds/i);
     });
 
     it('detects mergedInto outside the span of its claimed origin', () => {
-      const model = new TableModel(makeData({
-        content: [
-          [originCell(['a', 'b'], 2, 1), coveredCell(0, 0)],
-          [coveredCell(0, 0), cell('d')],
-        ],
-      }));
+      const model = withRawMerges(malformedShapes[2].content);
 
       expect(() => model.validateInvariants()).toThrow(/mergedInto.*\[1,0\].*outside the span/);
     });
 
     it('detects missing mergedInto on cell within an origin span', () => {
-      const model = new TableModel(makeData({
-        content: [
-          [originCell(['a'], 2, 2), coveredCell(0, 0)],
-          [coveredCell(0, 0), cell('d')], // [1,1] should have mergedInto but doesn't
-        ],
-      }));
+      // [1,1] is inside the span but has no mergedInto.
+      const model = withRawMerges(malformedShapes[3].content);
 
       expect(() => model.validateInvariants()).toThrow(/\[1,1\].*within span.*\[0,0\].*no mergedInto/);
     });
 
     it('detects origin cell whose span extends beyond grid bounds', () => {
-      const model = new TableModel(makeData({
-        content: [
-          [originCell(['a'], 3, 1), coveredCell(0, 0)], // colspan=3 but only 2 cols
-        ],
-      }));
+      // colspan=3 but only 2 cols.
+      const model = withRawMerges(malformedShapes[4].content);
 
       expect(() => model.validateInvariants()).toThrow(/span.*extends beyond grid bounds/);
+    });
+
+    it.each(malformedShapes)('repairs $name on load, so the loaded model is valid', ({ content }) => {
+      const model = new TableModel(makeData({ content }));
+
+      expect(() => model.validateInvariants()).not.toThrow();
     });
   });
 

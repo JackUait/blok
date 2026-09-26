@@ -1112,7 +1112,7 @@ describe('TableCellBlocks — arrow navigation across the grid', () => {
 
   it('skips a merge-covered row when moving down', () => {
     const content: CellContent[][] = [
-      [{ blocks: [] }],
+      [{ blocks: [], rowspan: 2 }],
       [{ blocks: [], mergedInto: [0, 0] }],
       [{ blocks: [] }],
     ];
@@ -3419,7 +3419,7 @@ describe('TableCellBlocks — staying navigable and quiet at the grid edges', ()
   it('exits the table when the only row below the caret is merge-covered', () => {
     const content: CellContent[][] = [
       [{ blocks: [] }],
-      [{ blocks: [] }],
+      [{ blocks: [], rowspan: 2 }],
       [{ blocks: [], mergedInto: [1, 0] }],
     ];
     const fixture = setup({ rows: 3, cols: 1, content });
@@ -3433,19 +3433,21 @@ describe('TableCellBlocks — staying navigable and quiet at the grid edges', ()
   });
 
   it('exits the table backward when the only row above the caret is merge-covered', () => {
+    // A covered cell always sits below or right of its origin, so the covered
+    // cell above the caret comes from a colspan in the next column over.
     const content: CellContent[][] = [
-      [{ blocks: [], mergedInto: [1, 0] }],
-      [{ blocks: [] }],
-      [{ blocks: [] }],
+      [{ blocks: [], colspan: 2 }, { blocks: [], mergedInto: [0, 0] }],
+      [{ blocks: [] }, { blocks: [] }],
+      [{ blocks: [] }, { blocks: [] }],
     ];
-    const fixture = setup({ rows: 3, cols: 1, content });
+    const fixture = setup({ rows: 3, cols: 2, content });
     const before = fixture.store.add('before');
 
     fixture.store.blocks.splice(fixture.store.blocks.indexOf(before), 1);
     fixture.store.blocks.unshift(before);
-    fillGridWithEditables(fixture.grid, 3, 1);
-    placeCaret(editableIn(fixture.grid, 1, 0, 0), 0);
-    fixture.instance.handleArrowNavigation(keyEvent('ArrowUp'), { row: 1, col: 0 });
+    fillGridWithEditables(fixture.grid, 3, 2);
+    placeCaret(editableIn(fixture.grid, 1, 1, 0), 0);
+    fixture.instance.handleArrowNavigation(keyEvent('ArrowUp'), { row: 1, col: 1 });
 
     expect(fixture.store.caretCalls).toEqual([{ id: 'before', position: 'end' }]);
   });

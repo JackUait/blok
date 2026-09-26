@@ -184,8 +184,8 @@ describe('blocksToPlainText — malformed and cyclic wire data', () => {
           type: 'table',
           data: {
             content: [[
-              { blocks: [], text: 'Alpha' },
-              { blocks: [], text: 'Ghost', mergedInto: { row: 0, col: 0 } },
+              { blocks: [], text: 'Alpha', colspan: 2 },
+              { blocks: [], text: 'Ghost', mergedInto: [0, 0] },
             ]],
           },
         },

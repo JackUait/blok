@@ -1149,6 +1149,28 @@ describe('TableGrid', () => {
       expect(cell12?.getAttribute('data-blok-table-cell-col')).toBe('2');
     });
 
+    it('getCell returns null for a coordinate a merge covers, not the next <td> in the row', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const model = createModel([
+        [
+          { blocks: ['a'], colspan: 2, rowspan: 2 },
+          { blocks: [], mergedInto: [0, 0] },
+          { blocks: ['b'] },
+        ],
+        [
+          { blocks: [], mergedInto: [0, 0] },
+          { blocks: [], mergedInto: [0, 0] },
+          { blocks: ['c'] },
+        ],
+      ]);
+      const table = grid.createGridFromModel(model);
+
+      expect(grid.getCell(table, 1, 0)).toBeNull();
+      expect(grid.getCell(table, 0, 1)).toBeNull();
+      expect(grid.getCell(table, 1, 1)).toBeNull();
+      expect(grid.getCell(table, 1, 2)?.getAttribute('data-blok-table-cell-col')).toBe('2');
+    });
+
     it('createGridFromModel sets coordinate attributes on cells', () => {
       const grid = new TableGrid({ readOnly: false });
       const model = createModel([

@@ -12,6 +12,7 @@ import { createHtmlRenderer } from './blocks-to-html';
 import type { BlocksToHtmlOptions } from './blocks-to-html';
 import { blokDocumentSchema } from './document-schema';
 import { htmlTextContent } from './html-text';
+import { claimedCellTexts, repairedTableRows } from './table-grid';
 
 import type { LooseOutputData, OutputData } from '../../types';
 
@@ -257,8 +258,7 @@ export const blocksToPlainTextWithReport = (
    * @param block - table block
    */
   const tableText = (block: ViewBlock): string => {
-    const content = Array.isArray(block.data.content) ? block.data.content : [];
-    const rows = content.filter((row): row is unknown[] => Array.isArray(row));
+    const rows = repairedTableRows(block.data.content);
 
     const cellText = (cell: unknown): string => {
       if (typeof cell === 'string') {
@@ -280,11 +280,9 @@ export const blocksToPlainTextWithReport = (
         return child === undefined ? [] : [child];
       });
 
-      if (kids.length > 0) {
-        return kids.map(deepText).filter((part) => part !== '').join('\n');
-      }
+      const own = kids.length > 0 ? kids.map(deepText) : [inlineText(cell.text)];
 
-      return inlineText(cell.text);
+      return [...own, ...claimedCellTexts(cell).map(inlineText)].filter((part) => part !== '').join('\n');
     };
 
     return rows

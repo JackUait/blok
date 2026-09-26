@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { extractTexts, injectTexts } from '../../../src/view/document-texts';
+import { blocksToPlainText } from '../../../src/view/blocks-to-plain-text';
 
 /**
  * A document mixing every shape the walker knows: current blocks, media
@@ -305,6 +306,29 @@ describe('extractTexts / injectTexts', () => {
         },
       ],
     });
+  });
+
+  it('translates every table cell text the renderer shows, including an unbacked cover and a claimed legacy cell', () => {
+    const data = {
+      blocks: [
+        {
+          type: 'table',
+          data: {
+            content: [
+              [{ blocks: [], text: 'Alpha' }, { blocks: [], text: 'Orphan', mergedInto: [0, 0] }],
+              'not-a-row',
+              [{ blocks: [], text: 'Wide', colspan: 2 }, 'Claimed'],
+            ],
+          },
+        },
+      ],
+    };
+
+    expect(extractTexts(data)).toEqual(['Alpha', 'Orphan', 'Wide', 'Claimed']);
+
+    const translated = injectTexts(data, ['Альфа', 'Сирота', 'Широкая', 'Занятая']);
+
+    expect(blocksToPlainText(translated)).toBe('Альфа\tСирота\nШирокая\nЗанятая');
   });
 
   it('walks a legacy list\'s nested items, including plain-string items', () => {

@@ -36,6 +36,31 @@ const makeGrid = (rows: number, cols: number): TableModel => {
   return new TableModel(makeData({ content }));
 };
 
+const isCellGrid = (value: unknown): value is CellContent[][] =>
+  Array.isArray(value) && value.every((row: unknown) =>
+    Array.isArray(row) && row.every((c: unknown) => typeof c === 'object' && c !== null && 'blocks' in c));
+
+/**
+ * A model whose grid holds `content` with its merge fields as given. The
+ * constructor repairs bad merge data, so this is the only way to reach the
+ * corrupt grid an editing bug could leave. Blocks load first, in the same
+ * cells, so the block map still matches and only the merge checks can fail.
+ */
+const withRawMerges = (content: CellContent[][]): TableModel => {
+  const model = new TableModel(makeData({ content: content.map(row => row.map(c => ({ blocks: [...c.blocks] }))) }));
+  const grid: unknown = Reflect.get(model, 'contentGrid');
+
+  if (!isCellGrid(grid)) {
+    throw new Error('TableModel no longer keeps its grid in contentGrid');
+  }
+
+  content.forEach((row, r) => row.forEach((raw, c) => {
+    grid[r][c] = { ...grid[r][c], ...raw, blocks: [...raw.blocks] };
+  }));
+
+  return model;
+};
+
 describe('TableModel colors', () => {
   const valid = [
     '#abc',
@@ -383,18 +408,26 @@ describe('TableModel snapshot', () => {
       colWidths: [11, 22],
       initialColWidth: 33,
       textSize: 'comfortable',
-      content: [[
-        { blocks: ['a'], color: '#abc', textColor: '#123', placement: 'middle-center', colspan: 2, rowspan: 3 },
-        { blocks: [], mergedInto: [0, 0] },
-      ]],
+      content: [
+        [
+          { blocks: ['a'], color: '#abc', textColor: '#123', placement: 'middle-center', colspan: 2, rowspan: 3 },
+          { blocks: [], mergedInto: [0, 0] },
+        ],
+        [{ blocks: [], mergedInto: [0, 0] }, { blocks: [], mergedInto: [0, 0] }],
+        [{ blocks: [], mergedInto: [0, 0] }, { blocks: [], mergedInto: [0, 0] }],
+      ],
     }));
 
     const { content, ...rest } = model.snapshot();
 
-    expect(stripIds(content)).toStrictEqual([[
-      { blocks: ['a'], color: '#abc', textColor: '#123', placement: 'middle-center', colspan: 2, rowspan: 3 },
-      { blocks: [], mergedInto: [0, 0] },
-    ]]);
+    expect(stripIds(content)).toStrictEqual([
+      [
+        { blocks: ['a'], color: '#abc', textColor: '#123', placement: 'middle-center', colspan: 2, rowspan: 3 },
+        { blocks: [], mergedInto: [0, 0] },
+      ],
+      [{ blocks: [], mergedInto: [0, 0] }, { blocks: [], mergedInto: [0, 0] }],
+      [{ blocks: [], mergedInto: [0, 0] }, { blocks: [], mergedInto: [0, 0] }],
+    ]);
     expect(rest).toStrictEqual({
       withHeadings: false,
       withHeadingColumn: false,
@@ -1231,9 +1264,9 @@ describe('TableModel merge queries', () => {
     const rowspan = new TableModel(makeData({
       content: [[{ blocks: [], rowspan: 2 }], [{ blocks: [] }]],
     }));
-    const covered = new TableModel(makeData({
-      content: [[{ blocks: [] }, { blocks: [], mergedInto: [0, 0] }]],
-    }));
+    // A torn merge: the reference stays but the origin span is gone. Loading
+    // repairs that, so it is set on the live grid, as an editing bug would.
+    const covered = withRawMerges([[{ blocks: [] }, { blocks: [], mergedInto: [0, 0] }]]);
 
     expect(colspan.hasMerges()).toBe(true);
     expect(rowspan.hasMerges()).toBe(true);
@@ -1674,7 +1707,7 @@ describe('TableModel validateInvariants', () => {
   });
 
   it('rejects an origin whose span runs past the grid', () => {
-    const model = new TableModel(makeData({ content: [[{ blocks: ['a'], colspan: 3 }]] }));
+    const model = withRawMerges([[{ blocks: ['a'], colspan: 3 }]]);
 
     expect(() => model.validateInvariants()).toThrowError(new Error(
       'Invariant violation: origin [0,0] span extends beyond grid bounds (colspan=3, rowspan=1, rows=1, cols=1)'
@@ -1682,7 +1715,7 @@ describe('TableModel validateInvariants', () => {
   });
 
   it('rejects a merge reference that points outside the grid', () => {
-    const model = new TableModel(makeData({ content: [[{ blocks: [], mergedInto: [5, 5] }]] }));
+    const model = withRawMerges([[{ blocks: [], mergedInto: [5, 5] }]]);
 
     expect(() => model.validateInvariants()).toThrowError(new Error(
       'Invariant violation: mergedInto at [0,0] points to out-of-bounds [5,5]'
@@ -1690,13 +1723,13 @@ describe('TableModel validateInvariants', () => {
   });
 
   it('rejects a merge reference with a negative row or column', () => {
-    const above = new TableModel(makeData({ content: [[{ blocks: [], mergedInto: [-1, 0] }]] }));
+    const above = withRawMerges([[{ blocks: [], mergedInto: [-1, 0] }]]);
 
     expect(() => above.validateInvariants()).toThrowError(new Error(
       'Invariant violation: mergedInto at [0,0] points to out-of-bounds [-1,0]'
     ));
 
-    const left = new TableModel(makeData({ content: [[{ blocks: [], mergedInto: [0, -1] }]] }));
+    const left = withRawMerges([[{ blocks: [], mergedInto: [0, -1] }]]);
 
     expect(() => left.validateInvariants()).toThrowError(new Error(
       'Invariant violation: mergedInto at [0,0] points to out-of-bounds [0,-1]'
@@ -1704,7 +1737,7 @@ describe('TableModel validateInvariants', () => {
   });
 
   it('rejects an origin whose rowspan runs past the last row', () => {
-    const model = new TableModel(makeData({ content: [[{ blocks: ['a'], rowspan: 3 }], [{ blocks: [] }]] }));
+    const model = withRawMerges([[{ blocks: ['a'], rowspan: 3 }], [{ blocks: [] }]]);
 
     expect(() => model.validateInvariants()).toThrowError(new Error(
       'Invariant violation: origin [0,0] span extends beyond grid bounds (colspan=1, rowspan=3, rows=2, cols=1)'
@@ -1712,7 +1745,7 @@ describe('TableModel validateInvariants', () => {
   });
 
   it('rejects a merge reference that points at a cell which is not an origin', () => {
-    const model = new TableModel(makeData({ content: [[{ blocks: [] }, { blocks: [], mergedInto: [0, 0] }]] }));
+    const model = withRawMerges([[{ blocks: [] }, { blocks: [], mergedInto: [0, 0] }]]);
 
     expect(() => model.validateInvariants()).toThrowError(new Error(
       'Invariant violation: mergedInto at [0,1] points to [0,0] which is not a merge origin'
@@ -1720,10 +1753,10 @@ describe('TableModel validateInvariants', () => {
   });
 
   it('rejects a merge reference that sits outside the origin span', () => {
-    const model = new TableModel(makeData({ content: [
+    const model = withRawMerges([
       [{ blocks: [], rowspan: 2 }, { blocks: [] }],
       [{ blocks: [], mergedInto: [0, 0] }, { blocks: [], mergedInto: [0, 0] }],
-    ] }));
+    ]);
 
     expect(() => model.validateInvariants()).toThrowError(new Error(
       'Invariant violation: mergedInto at [1,1] is outside the span of origin [0,0] (colspan=1, rowspan=2)'
@@ -1731,7 +1764,7 @@ describe('TableModel validateInvariants', () => {
   });
 
   it('rejects a cell inside an origin span that carries no merge reference', () => {
-    const model = new TableModel(makeData({ content: [[{ blocks: [], colspan: 2 }, { blocks: [] }]] }));
+    const model = withRawMerges([[{ blocks: [], colspan: 2 }, { blocks: [] }]]);
 
     expect(() => model.validateInvariants()).toThrowError(new Error(
       'Invariant violation: cell [0,1] is within span of origin [0,0] but has no mergedInto'
@@ -1739,7 +1772,7 @@ describe('TableModel validateInvariants', () => {
   });
 
   it('rejects a row inside a rowspan that carries no merge reference', () => {
-    const model = new TableModel(makeData({ content: [[{ blocks: ['a'], rowspan: 2 }], [{ blocks: ['b'] }]] }));
+    const model = withRawMerges([[{ blocks: ['a'], rowspan: 2 }], [{ blocks: ['b'] }]]);
 
     expect(() => model.validateInvariants()).toThrowError(new Error(
       'Invariant violation: cell [1,0] is within span of origin [0,0] but has no mergedInto'
@@ -1921,13 +1954,21 @@ describe('TableModel merge predicates on one-directional merges', () => {
   });
 
   it('resolves the origin of a one-directional merge', () => {
-    const colspan = new TableModel(makeData({ content: [[{ blocks: [], colspan: 2 }, { blocks: [] }]] }));
-    const rowspan = new TableModel(makeData({ content: [[{ blocks: [], rowspan: 2 }], [{ blocks: [] }]] }));
+    const colspan = new TableModel(makeData({ content: [
+      [{ blocks: [], colspan: 2 }, { blocks: [], mergedInto: [0, 0] }, { blocks: [] }],
+    ] }));
+    const rowspan = new TableModel(makeData({ content: [
+      [{ blocks: [], rowspan: 2 }],
+      [{ blocks: [], mergedInto: [0, 0] }],
+      [{ blocks: [] }],
+    ] }));
 
     expect(colspan.getMergeOrigin(0, 0)).toEqual([0, 0]);
-    expect(colspan.getMergeOrigin(0, 1)).toBeNull();
+    expect(colspan.getMergeOrigin(0, 1)).toEqual([0, 0]);
+    expect(colspan.getMergeOrigin(0, 2)).toBeNull();
     expect(rowspan.getMergeOrigin(0, 0)).toEqual([0, 0]);
-    expect(rowspan.getMergeOrigin(1, 0)).toBeNull();
+    expect(rowspan.getMergeOrigin(1, 0)).toEqual([0, 0]);
+    expect(rowspan.getMergeOrigin(2, 0)).toBeNull();
   });
 
   it('reports a covered cell as spanned and an origin as not', () => {
@@ -2044,49 +2085,49 @@ describe('TableModel validateInvariants on malformed merge data', () => {
   });
 
   it('rejects a mergedInto row past the last row', () => {
-    const model = new TableModel(makeData({ content: [
+    const model = withRawMerges([
       [{ blocks: [] }, { blocks: [] }],
       [{ blocks: [] }, { blocks: [], mergedInto: [2, 0] }],
-    ] }));
+    ]);
 
     expect(() => model.validateInvariants()).toThrow(/mergedInto at \[1,1\] points to out-of-bounds \[2,0\]/);
   });
 
   it('rejects a mergedInto column past the last column', () => {
-    const model = new TableModel(makeData({ content: [
+    const model = withRawMerges([
       [{ blocks: [] }, { blocks: [] }],
       [{ blocks: [] }, { blocks: [], mergedInto: [0, 2] }],
-    ] }));
+    ]);
 
     expect(() => model.validateInvariants()).toThrow(/mergedInto at \[1,1\] points to out-of-bounds \[0,2\]/);
   });
 
   it('rejects a covered cell above its origin', () => {
-    const model = new TableModel(makeData({ content: [
+    const model = withRawMerges([
       [{ blocks: [] }, { blocks: [], mergedInto: [1, 1] }, { blocks: [] }],
       [{ blocks: [] }, { blocks: [], colspan: 2, rowspan: 2 }, { blocks: [], mergedInto: [1, 1] }],
       [{ blocks: [] }, { blocks: [], mergedInto: [1, 1] }, { blocks: [], mergedInto: [1, 1] }],
-    ] }));
+    ]);
 
     expect(() => model.validateInvariants()).toThrow(/mergedInto at \[0,1\] is outside the span of origin \[1,1\]/);
   });
 
   it('rejects a covered cell below its origin span', () => {
-    const model = new TableModel(makeData({ content: [
+    const model = withRawMerges([
       [{ blocks: [], colspan: 2, rowspan: 2 }, { blocks: [], mergedInto: [0, 0] }, { blocks: [] }],
       [{ blocks: [], mergedInto: [0, 0] }, { blocks: [], mergedInto: [0, 0] }, { blocks: [] }],
       [{ blocks: [], mergedInto: [0, 0] }, { blocks: [] }, { blocks: [] }],
-    ] }));
+    ]);
 
     expect(() => model.validateInvariants()).toThrow(/mergedInto at \[2,0\] is outside the span of origin \[0,0\]/);
   });
 
   it('rejects a covered cell left of its origin', () => {
-    const model = new TableModel(makeData({ content: [
+    const model = withRawMerges([
       [{ blocks: [] }, { blocks: [] }, { blocks: [] }],
       [{ blocks: [], mergedInto: [1, 1] }, { blocks: [], colspan: 2, rowspan: 2 }, { blocks: [], mergedInto: [1, 1] }],
       [{ blocks: [] }, { blocks: [], mergedInto: [1, 1] }, { blocks: [], mergedInto: [1, 1] }],
-    ] }));
+    ]);
 
     expect(() => model.validateInvariants()).toThrow(/mergedInto at \[1,0\] is outside the span of origin \[1,1\]/);
   });

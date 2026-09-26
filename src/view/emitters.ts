@@ -26,6 +26,7 @@ import {
 } from '../shared/tool-classes/list';
 import { TOGGLE_CHILDREN_CLASSES, TOGGLE_CONTENT_CLASSES, TOGGLE_HEADER_ROW_CLASSES } from '../shared/tool-classes/toggle';
 import type { ViewBlock } from './document-model';
+import { claimedCellTexts, repairedTableRows } from './table-grid';
 
 /**
  * Rendering services handed to every emitter by the dispatcher.
@@ -305,7 +306,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
  * Render one table cell's inner HTML: modern cells hold child-block id
  * references (rendered recursively); legacy cells hold an HTML string
  * (sanitized inline). Mirrors the two shapes `readTableGrid` handles in the
- * markdown serializer.
+ * markdown serializer. Legacy cells a live span claimed follow the origin's
+ * own content.
  * @param cell - raw cell value from `data.content`
  * @param env - emitter environment
  */
@@ -319,8 +321,9 @@ const tableCellInner = (cell: unknown, env: EmitterEnv): string => {
   }
 
   const kids = env.blocksById(cell.blocks);
+  const own = kids.length > 0 ? env.renderList(kids) : env.inline(cell.text);
 
-  return kids.length > 0 ? env.renderList(kids) : env.inline(cell.text);
+  return own + claimedCellTexts(cell).map(text => env.inline(text)).join('');
 };
 
 /**
@@ -332,8 +335,7 @@ const tableCellInner = (cell: unknown, env: EmitterEnv): string => {
  * @param env - emitter environment
  */
 const emitTable = (block: ViewBlock, env: EmitterEnv): string => {
-  const content = Array.isArray(block.data.content) ? block.data.content : [];
-  const rows = content.filter((row): row is unknown[] => Array.isArray(row));
+  const rows = repairedTableRows(block.data.content);
 
   if (rows.length === 0) {
     return '';

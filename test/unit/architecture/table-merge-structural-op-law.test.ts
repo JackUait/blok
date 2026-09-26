@@ -1,5 +1,5 @@
-import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { readFileSync, existsSync, readdirSync } from 'fs';
+import { join, relative } from 'path';
 
 import { describe, expect, it } from 'vitest';
 
@@ -244,5 +244,109 @@ describe('table merged-grid structural-op law', () => {
       expect(names.has(handler), `Stale exemption: ${handler} no longer exists`).toBe(true);
       expect(reason.length, `Exemption for ${handler} needs a non-trivial reason`).toBeGreaterThan(20);
     }
+  });
+});
+
+/**
+ * The same law for EVERY caller, not just the grip handler file. The corner
+ * drag, the +/- bar drag and paste auto-expand called TableGrid mutators
+ * directly, so a merged grid kept stray <td>s and stale spans.
+ *
+ * Any direct structural TableGrid call under src/tools/table must sit inside an
+ * `applyStructuralDom(…)` callback (the handler's helper or
+ * TableSubsystems.applyStructuralDom).
+ */
+const TABLE_DIR = join(__dirname, '../../../src/tools/table');
+
+/** table-core.ts defines the mutators, so it is not a caller. */
+const MUTATOR_HOME = 'table-core.ts';
+
+const STRUCTURAL_CALL = /\bgrid\.(addRow|addColumn|deleteRow|deleteColumn|moveRow|moveColumn)\(|\b(computeInsertColumnWidths)\(/g;
+
+/**
+ * Unguarded calls allowed on purpose, keyed by `file::member`.
+ */
+const CALLER_EXEMPTIONS: Record<string, string> = {
+  'table-operations.ts::addColumn': 'computeInsertColumnWidths IS the physical op; its callers are scanned instead (member computeInsertColumnWidths)',
+  'index.ts::deleteRow': 'Table.deleteRowWithCleanup is a public method no editor gesture calls; not yet routed through a rebuild (known open item)',
+  'index.ts::deleteColumn': 'Table.deleteColumnWithCleanup is a public method no editor gesture calls; not yet routed through a rebuild (known open item)',
+};
+
+const listTableSources = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+  const full = join(dir, entry.name);
+
+  if (entry.isDirectory()) {
+    return listTableSources(full);
+  }
+
+  return entry.name.endsWith('.ts') ? [full] : [];
+});
+
+/**
+ * `file::member` for each structural TableGrid call outside a guard.
+ */
+const findUnguardedStructuralCalls = (file: string, source: string): string[] => {
+  const ranges = guardedRanges(source);
+  const isGuarded = (index: number): boolean =>
+    ranges.some(([start, end]) => index > start && index < end);
+  const violations: string[] = [];
+
+  for (const match of source.matchAll(STRUCTURAL_CALL)) {
+    if (!isGuarded(match.index ?? 0)) {
+      violations.push(`${file}::${match[1] ?? match[2]}`);
+    }
+  }
+
+  return violations;
+};
+
+describe('table merged-grid structural-op law: every caller', () => {
+  const scan = (): string[] => listTableSources(TABLE_DIR)
+    .filter(path => !path.endsWith(MUTATOR_HOME))
+    .flatMap(path => findUnguardedStructuralCalls(
+      relative(TABLE_DIR, path),
+      stripComments(readFileSync(path, 'utf8'))
+    ));
+
+  it('scans the files that drive structural ops (guards against the scan going stale)', () => {
+    const files = listTableSources(TABLE_DIR).map(path => relative(TABLE_DIR, path));
+
+    expect(files).toEqual(expect.arrayContaining([
+      'table-subsystems.ts',
+      'table-row-col-action-handler.ts',
+      'table-operations.ts',
+      'index.ts',
+    ]));
+  });
+
+  it('no file calls a TableGrid structural mutator outside applyStructuralDom', () => {
+    const violations = scan().filter(use => !(use in CALLER_EXEMPTIONS));
+
+    expect(
+      violations,
+      'Unguarded structural TableGrid calls:\n'
+      + violations.map(use => `  - ${use}`).join('\n')
+      + '\nOn a merged table they leave stray <td>s and stale spans. Pass the '
+      + 'call as the callback of applyStructuralDom so a merged grid rebuilds from the model.'
+    ).toEqual([]);
+  });
+
+  it('every caller exemption is still used and carries a reason', () => {
+    const found = new Set(scan());
+
+    for (const [key, reason] of Object.entries(CALLER_EXEMPTIONS)) {
+      expect(found.has(key), `Stale exemption: ${key}`).toBe(true);
+      expect(reason.length).toBeGreaterThan(20);
+    }
+  });
+
+  it('the caller scanner catches a violation and clears a guarded call (mutation check)', () => {
+    const violating = 'onRemoveLastRow: () => { this.host.grid.deleteRow(gridEl, 2); },';
+    const guarded = 'onRemoveLastRow: () => { this.applyStructuralDom(had, () => this.host.grid.deleteRow(gridEl, 2)); },';
+    const helper = 'applyStructuralDom(ctx, () => { computeInsertColumnWidths(a, b, c, d, ctx.grid); }); computeInsertColumnWidths(a, b, c, d, g);';
+
+    expect(findUnguardedStructuralCalls('x.ts', violating)).toEqual(['x.ts::deleteRow']);
+    expect(findUnguardedStructuralCalls('x.ts', guarded)).toEqual([]);
+    expect(findUnguardedStructuralCalls('x.ts', helper)).toEqual(['x.ts::computeInsertColumnWidths']);
   });
 });

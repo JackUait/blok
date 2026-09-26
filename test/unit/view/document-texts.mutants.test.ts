@@ -117,9 +117,10 @@ describe('document-texts — mutants', () => {
   /**
    * Three cell dialects in one table: a plain string cell, a block-id cell
    * (its stale `text` is not prose), a cell whose id list holds a non-string,
-   * a row that is not an array, and a merged-away cell.
+   * a row that is not an array, and a cover no span backs (it renders as a
+   * plain cell, so it is prose).
    */
-  it('reads a table\'s inline cells, skipping block-id, merged and non-array rows', () => {
+  it('reads a table\'s inline cells, skipping block-id cells and non-array rows', () => {
     const data = doc([
       {
         id: 'tbl',
@@ -136,7 +137,7 @@ describe('document-texts — mutants', () => {
       { id: 'cell-p', type: 'paragraph', parent: 'tbl', data: { text: 'Referenced cell block' } },
     ]);
 
-    expect(extractTexts(data)).toEqual(['String cell prose', 'Cell with a garbage id', 'Referenced cell block']);
+    expect(extractTexts(data)).toEqual(['String cell prose', 'Cell with a garbage id', 'Covered cell prose', 'Referenced cell block']);
   });
 
   it('walks a legacy columns block\'s columns, tolerating one without a blocks array', () => {

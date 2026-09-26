@@ -17,6 +17,12 @@ import type { ClipboardBlockData, LegacyCellContent, CellContent } from './types
 import { isCellWithBlocks } from './types';
 import { pickTableIds } from './table-ids';
 
+/**
+ * A cell as initializeCells reads it. `leadingText` is a text-only origin's
+ * own legacy text, shown before blocks the merge repair moved into it.
+ */
+export type InitCellContent = LegacyCellContent | (CellContent & { leadingText?: string });
+
 export const CELL_BLOCKS_ATTR = 'data-blok-table-cell-blocks';
 
 /**
@@ -488,15 +494,53 @@ export class TableCellBlocks {
    * core never moves a table's children for it (tables are self-placing).
    */
   public indexAfterTableSubtree(): number {
-    const count = this.api.blocks.getBlocksCount();
+    return this.indexAfterSubtreeOf(this.tableBlockId);
+  }
+
+  /**
+   * Flat index for a new block of `cell`: right after the blocks of the
+   * nearest earlier cell that has any, or right after the table. The table's
+   * children then stay in grid order, which rebuildTableBody's reorder needs:
+   * it can only move blocks inside a cell.
+   */
+  private indexForCell(cell: HTMLElement): number {
+    const cells = Array.from(this.gridElement.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`));
+    const at = cells.indexOf(cell);
+
+    if (at === -1) {
+      return this.indexAfterTableSubtree();
+    }
+
+    const lastBefore = cells.slice(0, at).reverse()
+      .map(candidate => Array.from(candidate.querySelector(`[${CELL_BLOCKS_ATTR}]`)?.children ?? [])
+        .map(child => child.getAttribute('data-blok-id'))
+        .filter(id => id !== null)
+        .pop())
+      .find(id => id !== undefined);
+
+    if (lastBefore !== undefined) {
+      return this.indexAfterSubtreeOf(lastBefore);
+    }
+
     const tableIndex = this.api.blocks.getBlockIndex(this.tableBlockId);
 
-    if (tableIndex === undefined) {
+    return tableIndex === undefined ? this.api.blocks.getBlocksCount() : tableIndex + 1;
+  }
+
+  /**
+   * The flat index right after `blockId` and its descendants.
+   * @param blockId - the block
+   */
+  private indexAfterSubtreeOf(blockId: string): number {
+    const count = this.api.blocks.getBlocksCount();
+    const rootIndex = this.api.blocks.getBlockIndex(blockId);
+
+    if (rootIndex === undefined) {
       return count;
     }
 
-    const inside = new Set<string>([this.tableBlockId]);
-    const firstOutside = Array.from({ length: count - tableIndex - 1 }, (_, i) => tableIndex + 1 + i)
+    const inside = new Set<string>([blockId]);
+    const firstOutside = Array.from({ length: count - rootIndex - 1 }, (_, i) => rootIndex + 1 + i)
       .find(index => {
         const block = this.api.blocks.getBlockByIndex(index);
 
@@ -659,16 +703,19 @@ export class TableCellBlocks {
    * Falls back to a paragraph when the insert's tool is not registered in
    * this editor (e.g. no list tool), so pasted cell content is never lost.
    */
-  private insertCellContentBlock(insert: CellBlockInsert): ReturnType<API['blocks']['insert']> {
+  private insertCellContentBlock(
+    insert: CellBlockInsert,
+    index: number = this.indexAfterTableSubtree()
+  ): ReturnType<API['blocks']['insert']> {
     if (insert.tool !== 'paragraph') {
       try {
-        return this.api.blocks.insert(insert.tool, insert.data, {}, this.indexAfterTableSubtree(), false);
+        return this.api.blocks.insert(insert.tool, insert.data, {}, index, false);
       } catch {
         // Tool unavailable — degrade to a paragraph carrying the item text.
       }
     }
 
-    return this.api.blocks.insert('paragraph', { text: insert.data.text }, {}, this.indexAfterTableSubtree(), false);
+    return this.api.blocks.insert('paragraph', { text: insert.data.text }, {}, index, false);
   }
 
   /**
@@ -698,8 +745,35 @@ export class TableCellBlocks {
     }
   }
 
+  /**
+   * Insert blocks parsed from cell HTML into a cell container, before the
+   * block `beforeId` (undefined appends). Returns their ids in order.
+   */
+  private mountTextBlocks(container: HTMLElement, text: string, beforeId?: string): string[] {
+    const before = beforeId === undefined ? null : this.api.blocks.getById(beforeId)?.holder ?? null;
+
+    return parseCellContentToBlocks(text).map(insert => {
+      // Appending: land right after the cell's last block, not at the table's end,
+      // so the table's children stay in grid order.
+      const lastId = before === null ? container.lastElementChild?.getAttribute('data-blok-id') ?? null : null;
+      const block = lastId === null
+        ? this.insertCellContentBlock(insert)
+        : this.insertCellContentBlock(insert, this.indexAfterSubtreeOf(lastId));
+
+      container.insertBefore(block.holder, before);
+      this.api.blocks.setBlockParent(block.id, this.tableBlockId);
+
+      // The table's child order must match the cell order, or save reorders the cell.
+      if (before !== null && beforeId !== undefined) {
+        this.api.blocks.moveTo(block.id, { parentId: this.tableBlockId, position: { before: beforeId } });
+      }
+
+      return block.id;
+    });
+  }
+
   public initializeCells(
-    content: LegacyCellContent[][]
+    content: InitCellContent[][]
   ): CellContent[][] {
     this.mountedThisPass.clear();
 
@@ -711,7 +785,7 @@ export class TableCellBlocks {
   }
 
   private initializeCellsPass(
-    content: LegacyCellContent[][]
+    content: InitCellContent[][]
   ): CellContent[][] {
     const rowElements = this.gridElement.querySelectorAll(`[${ROW_ATTR}]`);
     const normalizedContent: CellContent[][] = [];
@@ -719,6 +793,8 @@ export class TableCellBlocks {
     // sweep uses this to find rendered cells the model never covered — without
     // depending on DOM/holder state, which varies across call sites and tests.
     const visited = new Set<string>();
+    // Rendered cells by `row:col`, so a claimed cell's text can join its origin.
+    const origins = new Map<string, { container: HTMLElement; entry: CellContent }>();
 
     content.forEach((rowData, rowIndex) => {
       const row = rowElements[rowIndex];
@@ -738,6 +814,15 @@ export class TableCellBlocks {
         // merged table flattens the merge out of the model while the DOM still
         // carries the colspan/rowspan, desyncing the two.
         if (isCellWithBlocks(cellContent) && cellContent.mergedInto !== undefined) {
+          const origin = origins.get(cellContent.mergedInto.join(':'));
+
+          // Legacy text of a claimed cell shows in its origin, after the
+          // origin's own content, as the view renders it. A peer's text is
+          // left to that peer, like an empty cell below.
+          if (origin !== undefined && cellContent.text !== undefined && !this.api.blocks.isApplyingRemoteChange) {
+            origin.entry.blocks.push(...this.mountTextBlocks(origin.container, cellContent.text));
+          }
+
           normalizedRow.push({ blocks: [], mergedInto: [...cellContent.mergedInto], ...pickTableIds(cellContent) });
 
           return;
@@ -792,8 +877,12 @@ export class TableCellBlocks {
           const blockIds = replacements.size > 0
             ? baseIds.map(id => replacements.get(id) ?? id)
             : baseIds;
+          const leading = isCellWithBlocks(cellContent) && 'leadingText' in cellContent
+            && cellContent.leadingText !== undefined && !this.api.blocks.isApplyingRemoteChange
+            ? this.mountTextBlocks(container, cellContent.leadingText, mountedIds[0])
+            : [];
 
-          normalizedRow.push({ blocks: blockIds, ...cellColorProps, ...cellMetaProps });
+          normalizedRow.push({ blocks: [...leading, ...blockIds], ...cellColorProps, ...cellMetaProps });
         } else if (referencedBlockIds !== null && this.api.blocks.isSyncingFromYjs) {
           // The referenced blocks have not arrived yet (a peer's adds, or an
           // undo that restores them later in the same replay). They are
@@ -835,6 +924,7 @@ export class TableCellBlocks {
           });
         }
 
+        origins.set(`${rowIndex}:${colIndex}`, { container, entry: normalizedRow[normalizedRow.length - 1] });
         this.stripPlaceholders(container);
       });
 
@@ -1266,7 +1356,7 @@ export class TableCellBlocks {
     this.isRepairingCell = true;
 
     const fill = (): void => {
-      const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.indexAfterTableSubtree(), true);
+      const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.indexForCell(cell), true);
 
       if (options.track !== true) {
         this.repairIds.add(block.id);

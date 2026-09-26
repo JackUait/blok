@@ -216,10 +216,9 @@ describe('two peers merging overlapping rectangles, read back', () => {
    * orders — which peer wins a shared cell decides whether the repair frees or
    * re-points, and only one of the two hits the 2-D case.
    *
-   * The property is about what the repair OWNS: freeing a covered cell. Other
-   * malformed-merge signatures (a cell outside the winning origin's span, a
-   * slot no peer ever covered) are left alone on purpose so validateInvariants
-   * still reports them, so they are not asserted away here.
+   * This checks only one property: a covered cell is never freed inside a live
+   * span. The load-time repair fixes the other malformed shapes too; their own
+   * tests pin that.
    */
   it('never frees a covered cell into a slot a live span still claims', () => {
     const rects = mergeableRects(3, 3);

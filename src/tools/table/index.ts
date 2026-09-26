@@ -22,6 +22,7 @@ import {
 import { twMerge } from '../../components/utils/tw';
 
 import { TableCellBlocks, CELL_BLOCKS_ATTR } from './table-cell-blocks';
+import type { InitCellContent } from './table-cell-blocks';
 import { ALLOWED_MARK_STYLE_PROPS, readPastedCellStyle } from './table-cell-clipboard';
 import { TableGrid, ROW_ATTR, CELL_ATTR, CELL_ROW_ATTR, CELL_COL_ATTR } from './table-core';
 import {
@@ -289,6 +290,8 @@ export class Table implements BlockTool {
     // Replace old tbody with new
     oldTbody.replaceWith(newTbody);
 
+    this.reorderChildrenToGrid(content);
+
     // Editability backstop. splitCell empties the revealed cells (blocks: []),
     // and mountBlockHoldersInNewTbody only re-mounts EXISTING holders — so a
     // revealed (or merged-into-empty origin) cell would have no paragraph and
@@ -298,14 +301,58 @@ export class Table implements BlockTool {
     // rendered cell holds at least one editable block. Skipped in read-only
     // (no editing surface) — merge/split are edit-only anyway. Wrapped in a
     // structural op so the synthesized block-added events are deferred instead
-    // of being double-claimed by the cell mutation handler.
+    // of being double-claimed by the cell mutation handler. Tracked: the fill
+    // belongs to the merge/split undo step, or undo leaves it as a ghost.
     if (!this.readOnly) {
       this.runTransactedStructuralOp(() => {
         newTbody.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`).forEach(cell => {
-          this.cellBlocks?.ensureCellHasBlock(cell);
+          this.cellBlocks?.ensureCellHasBlock(cell, { track: true });
         });
       }, true);
     }
+  }
+
+  /**
+   * Move cell blocks so the table's children run in grid order: row-major,
+   * each cell's blocks in order. Keyboard moves, moveTo, drag and reload all
+   * read that flat order. moveTo only reorders inside one cell (hence after
+   * the tbody swap), so each cell's first block must already be in grid
+   * order; ensureCellHasBlock inserts fills at their grid slot for that.
+   */
+  private reorderChildrenToGrid(content: TableData['content']): void {
+    const tableId = this.blockId;
+
+    if (tableId === undefined || this.api.blocks.isSyncingFromYjs) {
+      return;
+    }
+
+    const order = this.api.blocks.getChildren(tableId).map(child => child.id);
+
+    content.flat().forEach(cell => {
+      if (!isCellWithBlocks(cell) || cell.mergedInto !== undefined) {
+        return;
+      }
+
+      cell.blocks.forEach((id, i) => {
+        const prev = cell.blocks[i - 1];
+        const at = order.indexOf(id);
+
+        if (i === 0 || at === -1 || !order.includes(prev) || order[at - 1] === prev) {
+          return;
+        }
+
+        // moveTo throws across cells, e.g. for a holder the rebuild could not mount.
+        const container = this.api.blocks.getById(id)?.holder.parentElement;
+
+        if (container == null || container !== this.api.blocks.getById(prev)?.holder.parentElement) {
+          return;
+        }
+
+        this.api.blocks.moveTo(id, { parentId: tableId, position: { after: prev } });
+        order.splice(at, 1);
+        order.splice(order.indexOf(prev) + 1, 0, id);
+      });
+    });
   }
 
   /**
@@ -314,18 +361,39 @@ export class Table implements BlockTool {
    * instead of dropping them. Legacy string cells, pasted `text` and
    * `blockData` never reach the model, so they are taken from the raw content
    * by position (such cells carry no ids, so the model does not reorder them).
+   *
+   * Legacy text follows the view (`src/view/table-grid.ts`): ids beat a cell's
+   * `text`, a cell that says `mergedInto` has stale text, and the text of any
+   * other cell a span claims shows in the origin after the origin's content.
    */
-  private withModelBlocks(raw: LegacyCellContent[][]): LegacyCellContent[][] {
-    return this.model.snapshot().content.map((row, r) => row.map((cell, c) => {
+  private withModelBlocks(raw: LegacyCellContent[][]): InitCellContent[][] {
+    return this.model.snapshot().content.map((row, r) => row.map((cell, c): InitCellContent => {
       const source = raw[r]?.[c];
 
-      if (typeof source === 'string' || !isCellWithBlocks(cell)) {
+      if (!isCellWithBlocks(cell)) {
         return source ?? cell;
       }
 
+      const ownIds = isCellWithBlocks(source) ? source.blocks : [];
+      const text = typeof source === 'string' ? source : source?.text;
+
+      if (cell.mergedInto !== undefined) {
+        const declared = isCellWithBlocks(source) && source.mergedInto !== undefined;
+
+        return !declared && ownIds.length === 0 && text !== undefined && text !== '' ? { ...cell, text } : cell;
+      }
+
+      if (typeof source === 'string') {
+        return source;
+      }
+
+      // Blocks the repair moved into a text-only origin: its text goes first.
+      const isOrigin = cell.colspan !== undefined || cell.rowspan !== undefined;
+      const textField = isOrigin && ownIds.length === 0 && cell.blocks.length > 0 ? 'leadingText' : 'text';
+
       return {
         ...cell,
-        ...(source?.text !== undefined ? { text: source.text } : {}),
+        ...(text !== undefined ? { [textField]: text } : {}),
         ...(source?.blockData !== undefined ? { blockData: source.blockData } : {}),
       };
     }));
@@ -747,7 +815,7 @@ export class Table implements BlockTool {
       // the last place the text exists. setReadOnly(false) consumes it.
       // (regression: a collaboration session boots read-only until sync
       // completes, and every legacy cell lost its text when the veto lifted.)
-      mountCellBlocksReadOnly(gridEl, content, this.api, this.blockId ?? '');
+      mountCellBlocksReadOnly(gridEl, this.withModelBlocks(content), this.api, this.blockId ?? '');
       const snap = this.model.snapshot();
 
       applyCellColors(gridEl, snap.content);

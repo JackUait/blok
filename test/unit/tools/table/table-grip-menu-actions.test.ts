@@ -42,6 +42,9 @@ const createMockAPI = (blocks: Map<string, StoredBlock>): API => {
     id: entry.id,
     name: entry.name,
     holder: entry.holder,
+    get parentId() {
+      return entry.parentId;
+    },
     preservedData: entry.data,
     preservedTunes: {},
     dispatchChange: vi.fn(),
@@ -61,7 +64,7 @@ const createMockAPI = (blocks: Map<string, StoredBlock>): API => {
     },
     i18n: { t: (key: string) => key },
     blocks: {
-      insert: vi.fn((tool: string, data: Record<string, unknown>) => {
+      insert: vi.fn((tool: string, data: Record<string, unknown>, _config?: unknown, index?: number) => {
         counter += 1;
 
         const id = `block-${counter}`;
@@ -78,7 +81,7 @@ const createMockAPI = (blocks: Map<string, StoredBlock>): API => {
         };
 
         blocks.set(id, entry);
-        order.push(id);
+        order.splice(index === undefined ? order.length : Math.min(Math.max(index, 0), order.length), 0, id);
 
         return toBlockApi(entry);
       }),
@@ -101,13 +104,18 @@ const createMockAPI = (blocks: Map<string, StoredBlock>): API => {
 
         return entry === undefined ? null : toBlockApi(entry);
       }),
+      getBlockByIndex: vi.fn((index: number) => {
+        const entry = blocks.get(order[index] ?? '');
+
+        return entry === undefined ? undefined : toBlockApi(entry);
+      }),
       getCurrentBlockIndex: vi.fn().mockReturnValue(0),
       getBlockIndex: vi.fn((id: string) => {
         const index = order.indexOf(id);
 
         return index === -1 ? undefined : index;
       }),
-      getBlocksCount: vi.fn(() => blocks.size),
+      getBlocksCount: vi.fn(() => order.length),
       setBlockParent: vi.fn((id: string, parentId: string) => {
         const entry = blocks.get(id);
 

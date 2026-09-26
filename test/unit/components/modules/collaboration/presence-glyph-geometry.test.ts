@@ -243,6 +243,45 @@ describe('anonymous presence micro-illustrations', () => {
     });
   });
 
+  describe('asteroid', () => {
+    const contours = (d: string | null | undefined): string[] => d?.match(/M[^M]*/g) ?? [];
+    const lit = (): Element | null => glyphSvg('asteroid').querySelector('path[clip-path="url(#bk-asteroid-lit)"]');
+
+    it('lights part of the rock and shades the rest with a see-through copy of the same outline', () => {
+      const svg = glyphSvg('asteroid');
+      const [outline] = contours(lit()?.getAttribute('d'));
+
+      expect(svg.querySelector('clipPath[id="bk-asteroid-lit"] path')).not.toBeNull();
+      expect(lit()?.getAttribute('fill-rule')).toBe('evenodd');
+      expect(lit()?.hasAttribute('opacity')).toBe(false);
+      expect(outline).toBeTruthy();
+      expect(Array.from(svg.querySelectorAll('path[opacity]'), shade => shade.getAttribute('d'))).toContain(outline);
+    });
+
+    it('cuts one or two craters, each big enough to read at face size', () => {
+      // Crater contours are drawn as `M cx top a r r ...`.
+      const radii = contours(lit()?.getAttribute('d')).slice(1)
+        .map(contour => Number(contour.match(/a(-?(?:\d+\.?\d*|\.\d+))/)?.[1]));
+
+      expect(radii.length).toBeGreaterThanOrEqual(1);
+      expect(radii.length).toBeLessThanOrEqual(2);
+
+      for (const r of radii) {
+        expect(r).toBeGreaterThanOrEqual(0.9);
+      }
+    });
+
+    it('gives the companion rock its own lit side and see-through shade', () => {
+      const svg = glyphSvg('asteroid');
+      const moonlet = svg.querySelector('path[clip-path="url(#bk-asteroid-moonlet)"]');
+      const shade = Array.from(svg.querySelectorAll('path[opacity]')).find(path => path.getAttribute('d') === moonlet?.getAttribute('d'));
+
+      expect(svg.querySelector('clipPath[id="bk-asteroid-moonlet"] path')).not.toBeNull();
+      expect(moonlet?.getAttribute('d')).toBeTruthy();
+      expect(shade).toBeDefined();
+    });
+  });
+
   it('alternates four long and four short sun rays every 45 degrees around the center', () => {
     const rays = Array.from(glyphSvg('sun').querySelectorAll('path'));
     const angle = (ray: Element): number => Number(ray.getAttribute('transform')?.match(/^rotate\((\d+) 10 10\)$/)?.[1] ?? 0);

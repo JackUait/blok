@@ -313,27 +313,37 @@ describe('anonymous presence micro-illustrations', () => {
     // Circle contours are drawn as `M cx top a r r ...`.
     const radius = (element: Element | null | undefined): number =>
       Number(element?.getAttribute('d')?.match(/a(\d*\.?\d+)/)?.[1]);
+    const solid = (svg: Element): Element[] => Array.from(svg.querySelectorAll('path:not([opacity])'));
+    // The core is the only solid circle; the streaks are the solid path with several contours.
+    const core = (svg: Element): Element | undefined => solid(svg).find(path => /^M[^M]*a[^M]*Z$/.test(path.getAttribute('d') ?? ''));
+    const streaks = (svg: Element): Element | undefined =>
+      solid(svg).find(path => (path.getAttribute('d')?.match(/M/g)?.length ?? 0) >= 3);
 
-    it('lights the nucleus and wraps it in a wider see-through coma', () => {
+    it('glows from a solid core through an inner glow into the see-through tail, with no clipped seams', () => {
       const svg = glyphSvg('comet');
-      const nucleus = svg.querySelector('path[clip-path="url(#bk-comet-lit)"]');
-      const glass = Array.from(svg.querySelectorAll('path[opacity]:not([clip-path])'));
-      const shade = glass.find(path => path.getAttribute('d') === nucleus?.getAttribute('d'));
-      const coma = glass.find(path => radius(path) > radius(nucleus));
+      const glow = Array.from(svg.querySelectorAll('path[opacity]')).find(path => radius(path) > radius(core(svg)));
 
-      expect(nucleus?.hasAttribute('opacity')).toBe(false);
-      expect(shade).toBeDefined();
-      expect(coma).toBeDefined();
+      expect(core(svg)).toBeDefined();
+      expect(glow).toBeDefined();
+      // Clip edges drew hard cuts across the streaks and a seam between coma and tail.
+      expect(svg.querySelector('clipPath, [clip-path]')).toBeNull();
     });
 
-    it('streams solid ion streaks from behind the nucleus and a see-through dust tail outside the coma', () => {
+    it('fans at least three solid streaks out from behind the core', () => {
       const svg = glyphSvg('comet');
-      const ions = svg.querySelector('path[clip-path="url(#bk-comet-ion)"]');
-      const dust = svg.querySelector('path[clip-path="url(#bk-comet-tail)"]');
+      const all = solid(svg);
+      const contours = streaks(svg)?.getAttribute('d')?.match(/M[^M]*/g) ?? [];
+      // Each streak is `M base Q ctrl tip Q ctrl base Z`: the tip is the fourth number pair.
+      const angles = contours.map(contour => {
+        const [x = 0, y = 0, , , tx = 0, ty = 0] = (contour.match(/-?\d*\.?\d+/g) ?? []).map(Number);
 
-      expect(ions?.hasAttribute('opacity')).toBe(false);
-      expect(ions?.getAttribute('d')?.match(/M/g)?.length).toBeGreaterThanOrEqual(3);
-      expect(Number(dust?.getAttribute('opacity'))).toBeLessThan(1);
+        return Math.atan2(ty - y, tx - x) * 180 / Math.PI;
+      });
+
+      expect(contours.length).toBeGreaterThanOrEqual(3);
+      // Painted first, so the core hides where they start.
+      expect(all.findIndex(path => path === streaks(svg))).toBeLessThan(all.findIndex(path => path === core(svg)));
+      expect(Math.max(...angles) - Math.min(...angles)).toBeGreaterThanOrEqual(4);
     });
   });
 

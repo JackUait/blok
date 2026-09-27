@@ -605,8 +605,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // The anonymous presence silhouettes redrawn with a see-through tonal
     // layer (evenodd clip paths and a shade copy of each form) the faceted star, the cratered moon, the
     // lit asteroid with its companion rock, the beaming satellite, the cow-lifting saucer and the
-    // two-tailed comet add 5,566 bytes in presence.css.
-    const PRESENCE_TONAL_GLYPHS_BYTES = 5_566;
+    // two-tailed comet add 5,030 bytes in presence.css.
+    const PRESENCE_TONAL_GLYPHS_BYTES = 5_030;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

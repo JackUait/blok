@@ -343,6 +343,35 @@ describe('anonymous presence micro-illustrations', () => {
     });
   });
 
+  describe('telescope', () => {
+    const numbers = (d: string | null | undefined): number[] => (d?.match(/-?\d*\.?\d+/g) ?? []).map(Number);
+
+    it('lights the telescope tube over a see-through copy and cuts a band across it', () => {
+      const svg = glyphSvg('telescope');
+      const lit = svg.querySelector('path[clip-path="url(#bk-telescope-lit)"]');
+      const shade = Array.from(svg.querySelectorAll('path[opacity]'))
+        .find(path => Boolean(path.getAttribute('d')) && lit?.getAttribute('d')?.startsWith(path.getAttribute('d') ?? '-'));
+
+      expect(svg.querySelector('clipPath[id="bk-telescope-lit"] path')).not.toBeNull();
+      expect(lit?.getAttribute('fill-rule')).toBe('evenodd');
+      expect(shade).toBeDefined();
+      // The band is one more contour than the shade copy carries.
+      expect(lit?.getAttribute('d')?.match(/M/g)?.length).toBeGreaterThan(shade?.getAttribute('d')?.match(/M/g)?.length ?? Infinity);
+    });
+
+    it('beams starlight from a star straight into the telescope lens', () => {
+      const svg = glyphSvg('telescope');
+      // The star is drawn as `M tip Q centre ...`; the beam as `M rim L apex L rim Z`.
+      const star = Array.from(svg.querySelectorAll('path:not([opacity])')).find(path => /^M[^M]*Q[^M]*Z$/.test(path.getAttribute('d') ?? ''));
+      const beam = Array.from(svg.querySelectorAll('path[opacity]')).find(path => /^M[^M]*L[^M]*L[^M]*Z$/.test(path.getAttribute('d') ?? ''));
+      const [, , cx = Number.NaN, cy = Number.NaN] = numbers(star?.getAttribute('d'));
+      const [, , ax = Number.NaN, ay = Number.NaN] = numbers(beam?.getAttribute('d'));
+
+      expect(beam?.parentElement).toBe(svg);
+      expect([ax, ay]).toEqual([cx, cy]);
+    });
+  });
+
   describe('comet', () => {
     // Circle contours are drawn as `M cx top a r r ...`.
     const radius = (element: Element | null | undefined): number =>

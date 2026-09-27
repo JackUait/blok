@@ -313,22 +313,43 @@ describe('anonymous presence micro-illustrations', () => {
     const contours = (d: string | null | undefined): string[] => d?.match(/M[^M]*/g) ?? [];
     const numbers = (d: string | null | undefined): number[] => (d?.match(/-?\d*\.?\d+/g) ?? []).map(Number);
 
-    it('reflects a ringed planet in the see-through visor', () => {
-      const svg = glyphSvg('astronaut');
-      const helmet = svg.querySelector('path[fill-rule="evenodd"]');
-      const [, visor = ''] = contours(helmet?.getAttribute('d'));
-      const glass = Array.from(svg.querySelectorAll('path[opacity]')).find(path => path.getAttribute('d') === visor);
-      const xs = numbers(visor).filter((_, i) => i % 2 === 0);
-      // The ring is a band between two arcs of one tilted ellipse: `A rx ry angle ...`.
-      const ring = Array.from(svg.querySelectorAll('path:not([opacity]):not([fill-rule])'))
-        .flatMap(path => contours(path.getAttribute('d')))
-        .find(contour => /A[\d.]+ [\d.]+ -[1-9]/.test(contour));
-      const [ringX = Number.NaN] = numbers(ring);
+    // Endpoints of an absolute path (M, L, H, V, Q, A), enough to find its bounds.
+    const ys = (d: string | null | undefined): number[] => {
+      const result: number[] = [];
+      let y = 0;
 
-      expect(glass).toBeDefined();
-      expect(ring).toBeDefined();
-      expect(ringX).toBeGreaterThan(Math.min(...xs));
-      expect(ringX).toBeLessThan(Math.max(...xs));
+      for (const [, command = '', args = ''] of (d ?? '').matchAll(/([MLHVQAZ])([^MLHVQAZ]*)/g)) {
+        const values = numbers(args);
+        const arity = { M: 2, L: 2, H: 1, V: 1, Q: 4, A: 7, Z: 0 }[command] ?? 0;
+
+        for (let i = 0; arity > 0 && i + arity <= values.length; i += arity) {
+          y = command === 'H' ? y : values[i + arity - 1] ?? y;
+          result.push(y);
+        }
+      }
+
+      return result;
+    };
+
+    it('reflects a planet rising in the visor, its atmosphere around it, inset from the helmet', () => {
+      const svg = glyphSvg('astronaut');
+      const [, visor = ''] = contours(svg.querySelector('path[fill-rule="evenodd"]')?.getAttribute('d'));
+      const visorYs = ys(visor);
+      const scene = svg.querySelector('g[clip-path="url(#bk-astronaut-visor)"]');
+      const planet = scene?.querySelector('path:not([opacity])')?.getAttribute('d');
+      const haze = scene?.querySelector('path[opacity]')?.getAttribute('d');
+      // Both are circles drawn from their top: `M x top a r ...`.
+      const [planetX = Number.NaN, planetTop = Number.NaN, planetR = Number.NaN] = numbers(planet);
+      const [hazeX = Number.NaN, hazeTop = Number.NaN, hazeR = Number.NaN] = numbers(haze);
+      const clipYs = ys(svg.querySelector('clipPath[id="bk-astronaut-visor"] path')?.getAttribute('d'));
+
+      expect(planetTop).toBeGreaterThan(Math.min(...visorYs));
+      expect(planetTop).toBeLessThan(Math.max(...visorYs));
+      expect(hazeX).toBe(planetX);
+      expect(hazeTop + hazeR).toBeCloseTo(planetTop + planetR);
+      expect(hazeR).toBeGreaterThan(planetR);
+      // The see-through gutter keeps the solid planet off the solid helmet.
+      expect(Math.max(...clipYs)).toBeLessThan(Math.max(...visorYs));
     });
 
     it('fills every chest panel on the suit with see-through glass', () => {

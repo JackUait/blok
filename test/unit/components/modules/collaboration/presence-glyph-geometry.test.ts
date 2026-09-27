@@ -454,6 +454,29 @@ describe('anonymous presence micro-illustrations', () => {
       expect(reach).toBeGreaterThan(r);
     });
 
+    it('rings the tube with a thin collar between the barrel and the hood', () => {
+      const tube = Array.from(glyphSvg('telescope').querySelectorAll('path:not([opacity]):not([clip-path])'))
+        .find(path => /^(M[^MAa]*L[^MAa]*Z){2,}$/.test(path.getAttribute('d') ?? ''));
+      // Shoelace area over every point of the contour, control points included.
+      const areas = (tube?.getAttribute('d')?.match(/M[^M]*/g) ?? []).map(contour => {
+        const points = numbers(contour);
+        let area = 0;
+
+        for (let i = 0; i + 1 < points.length; i += 2) {
+          const next = (i + 2) % points.length;
+
+          area += (points[i] ?? 0) * (points[next + 1] ?? 0) - (points[next] ?? 0) * (points[i + 1] ?? 0);
+        }
+
+        return Math.abs(area / 2);
+      });
+      const [barrel = 0, collar = 0, hood = 0] = areas;
+
+      expect(areas).toHaveLength(3);
+      expect(collar).toBeLessThan(barrel);
+      expect(collar).toBeLessThan(hood);
+    });
+
     it('catches starlight: a see-through beam runs from the big star into the telescope', () => {
       const svg = glyphSvg('telescope');
       const { x, y, r } = dome(svg);

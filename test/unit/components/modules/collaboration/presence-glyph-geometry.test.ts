@@ -364,16 +364,34 @@ describe('anonymous presence micro-illustrations', () => {
       expect(lit?.getAttribute('d')?.match(/M/g)?.length).toBeGreaterThan(shade?.getAttribute('d')?.match(/M/g)?.length ?? Infinity);
     });
 
-    it('beams starlight from a star straight into the telescope lens', () => {
+    it('aims a beam of starlight at the star and stops it just short, so the star stands on its own', () => {
       const svg = glyphSvg('telescope');
       // The star is drawn as `M tip Q centre ...`; the beam as `M rim L apex L rim Z`.
       const star = Array.from(svg.querySelectorAll('path:not([opacity])')).find(path => /^M[^M]*Q[^M]*Z$/.test(path.getAttribute('d') ?? ''));
       const beam = Array.from(svg.querySelectorAll('path[opacity]')).find(path => /^M[^M]*L[^M]*L[^M]*Z$/.test(path.getAttribute('d') ?? ''));
       const [, , cx = Number.NaN, cy = Number.NaN] = numbers(star?.getAttribute('d'));
-      const [, , ax = Number.NaN, ay = Number.NaN] = numbers(beam?.getAttribute('d'));
+      const [r1x = Number.NaN, r1y = Number.NaN, ax = Number.NaN, ay = Number.NaN, r2x = Number.NaN, r2y = Number.NaN] = numbers(beam?.getAttribute('d'));
+      const [mx, my] = [(r1x + r2x) / 2, (r1y + r2y) / 2];
+      const gap = Math.hypot(cx - ax, cy - ay);
+      // Cross product of lens-midpoint→apex and lens-midpoint→star: zero when the beam points at the star.
+      const aim = ((ax - mx) * (cy - my) - (ay - my) * (cx - mx)) / Math.hypot(cx - mx, cy - my);
 
       expect(beam?.parentElement).toBe(svg);
-      expect([ax, ay]).toEqual([cx, cy]);
+      expect(gap).toBeGreaterThanOrEqual(0.5);
+      expect(gap).toBeLessThanOrEqual(1.5);
+      expect(Math.abs(aim)).toBeLessThan(0.1);
+    });
+
+    it('fronts the telescope with a see-through lens where the beam lands', () => {
+      const group = glyphSvg('telescope').querySelector(':scope > g');
+      // Ellipse contours are drawn as `M cx top a rx ry ...`.
+      const lens = Array.from(group?.querySelectorAll(':scope > path[opacity]') ?? [])
+        .find(path => /^M[^M]*a[^M]*Z$/.test(path.getAttribute('d') ?? ''));
+      const [, , rx = Number.NaN, ry = Number.NaN] = numbers(lens?.getAttribute('d'));
+
+      expect(lens).toBeDefined();
+      // Seen edge-on, so taller than wide.
+      expect(ry).toBeGreaterThan(rx);
     });
   });
 

@@ -295,6 +295,17 @@ describe('Find module', () => {
     expect(first.wrapper.querySelector('input')).toBeNull();
   });
 
+  it('opens the inner editor Find bar for a shortcut inside it', () => {
+    const outer = editor([{ id: 'outer', text: 'outer words' }]);
+    const inner = editor([{ id: 'inner', text: 'inner words' }]);
+
+    outer.redactor.appendChild(inner.wrapper);
+    press(inner.redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+
+    expect(inner.find.isOpen).toBe(true);
+    expect(outer.find.isOpen).toBe(false);
+  });
+
   it('paints every match and walks through them with Enter and Shift+Enter', () => {
     const { wrapper, redactor } = editor([
       { id: 'a', text: 'apple one' },
@@ -362,6 +373,21 @@ describe('Find module', () => {
     expect(leaf.call).not.toHaveBeenCalled();
   });
 
+  it('reveals a collapsed match inside a nested editor', () => {
+    const outer = editor([{ id: 'outer', text: 'treasure outside' }]);
+    const inner = editor([
+      { id: 'inner-toggle', text: 'Toggle title', collapsed: true },
+      { id: 'inner-child', text: 'treasure inside', parent: 'inner-toggle' },
+    ]);
+
+    outer.redactor.appendChild(inner.wrapper);
+    press(outer.redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    typeQuery(outer.wrapper, 'treasure');
+    press(searchInput(outer.wrapper), { key: 'Enter', code: 'Enter' });
+
+    expect(inner.blocks[0].call).toHaveBeenCalledWith('expand');
+  });
+
   it('does not mistake a nested toggle\'s state for its container\'s', () => {
     const { wrapper, redactor, blocks } = editor([
       { id: 'callout', text: 'callout' },
@@ -421,6 +447,19 @@ describe('Find module', () => {
     expect(blocks.map((block) => block.holder.textContent)).toEqual(['dog one', 'two dog, dog']);
     expect(blockManager.beginToolTransaction).toHaveBeenCalledTimes(1);
     expect(blockManager.endToolTransaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('Replace All in an outer editor leaves a nested editor unchanged', () => {
+    const outer = editor([{ id: 'outer', text: 'cat outside' }]);
+    const inner = editor([{ id: 'inner', text: 'cat inside' }]);
+
+    outer.redactor.appendChild(inner.wrapper);
+    press(outer.redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+    typeQuery(outer.wrapper, 'cat');
+    outer.find.replaceAll('dog');
+
+    expect(inner.blocks[0].holder.textContent).toBe('cat inside');
+    expect(outer.blocks[0].holder.textContent).toBe('dog outside');
   });
 
   it('keeps formatting when a replaced match spans two marks', () => {
@@ -604,6 +643,19 @@ describe('Find module', () => {
       expect(blocks[0].holder.hasAttribute('data-blok-find-preview')).toBe(true);
       expect(preview.hasAttribute('inert')).toBe(true);
       expect(preview.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('does not preview a nested editor from the outer Find bar', () => {
+      const outer = editor([{ id: 'outer', text: 'cat outside' }]);
+      const inner = editor([{ id: 'inner', text: 'cat inside' }]);
+
+      outer.redactor.appendChild(inner.wrapper);
+      press(outer.redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
+      typeQuery(outer.wrapper, 'cat');
+      typeReplacement('dog');
+
+      expect(inner.redactor.querySelector(PREVIEW)).toBeNull();
+      expect(outer.blocks[0].holder.querySelector(PREVIEW)).not.toBeNull();
     });
 
     it('does not count the preview as matches, even after the page settles', async () => {

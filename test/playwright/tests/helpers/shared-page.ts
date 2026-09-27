@@ -93,11 +93,9 @@ export const gotoTestPage = async (page: Page): Promise<void> => {
         }
       }
 
-      // The fixture body is only its bootstrap <script> tags and a heading —
-      // everything else (holders, body-mounted popovers/tooltips) is test
-      // debris.
+      // Keep only the fixture's heading, not headings added by tests.
       for (const el of Array.from(document.body.children)) {
-        if (el.tagName !== 'SCRIPT' && el.tagName !== 'H1') {
+        if (el.tagName !== 'SCRIPT' && !(el.tagName === 'H1' && el.textContent === 'Blok test page')) {
           el.remove();
         }
       }

@@ -867,10 +867,10 @@ export interface BlokMountOptions {
 
   /**
    * Find in page: Cmd/Ctrl+F opens Blok's own find bar instead of the browser's.
-   * It searches collapsed toggles too and, when the editor is editable, can
-   * replace matches (Cmd+Option+F on macOS, Ctrl+H elsewhere). Set `false` to
-   * leave Cmd/Ctrl+F to the browser. Pass {@link FindConfig} to choose where
-   * the bar sits.
+   * It searches text across the page, including other editors and collapsed
+   * toggles. Replace affects only this editor (Cmd+Option+F on macOS, Ctrl+H
+   * elsewhere). Set `false` to leave Cmd/Ctrl+F to the browser. Pass
+   * {@link FindConfig} to choose where the bar sits.
    *
    * @default true
    */

@@ -48,11 +48,13 @@ const ARRIVE = 'data-blok-find-lens-arrive';
 
 export class FindLens {
   private readonly container: HTMLElement;
+  private readonly themeSource: HTMLElement;
   private root: HTMLElement | null = null;
   private boxes: HTMLElement[] = [];
 
-  constructor(container: HTMLElement) {
+  constructor(container: HTMLElement, themeSource: HTMLElement = container) {
     this.container = container;
+    this.themeSource = themeSource;
   }
 
   public moveTo(lineRects: LensRect[], options: { pulse?: boolean } = {}): void {
@@ -65,6 +67,15 @@ export class FindLens {
     }
 
     const root = this.ensureRoot();
+    const theme = getComputedStyle(this.themeSource);
+
+    for (const token of ['--blok-find-lens-ring', '--blok-radius-hairline', '--blok-z-find']) {
+      const value = theme.getPropertyValue(token).trim();
+
+      if (value !== '') {
+        root.style.setProperty(token, value);
+      }
+    }
 
     root.hidden = false;
 
@@ -108,6 +119,7 @@ export class FindLens {
     const root = document.createElement('div');
 
     root.setAttribute(LENS, '');
+    root.setAttribute('data-blok-interface', 'find-lens');
     root.setAttribute('data-blok-testid', 'find-lens');
     root.setAttribute('aria-hidden', 'true');
     root.style.pointerEvents = 'none';

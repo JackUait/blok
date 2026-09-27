@@ -144,6 +144,7 @@ const DYNAMIC_STYLE_ACCESS_CLASSIFICATIONS: Record<string, string> = {
   'components/marks/mark-engine.ts': 'Writes/strips the style properties a MarkSpec declares while applying, splitting and sanitizing marks.',
   'components/modules/blockManager/hierarchy.ts': 'Writes the block-depth multiplier custom property; the indent itself is resolved by the stylesheet, never as a coordinate.',
   'components/modules/find/find-bar.ts': 'Writes the host-configured --blok-find-offset-x/y custom properties, finite numbers only; which window edge they measure from is decided by find.css.',
+  'components/modules/find/find-lens.ts': 'Copies three named theme custom properties from the editor onto the body-mounted lens; none set coordinates.',
   'components/modules/collaboration/presence-avatars.ts': 'Writes one presence colour custom property per gutter face, validated hex-only; where the strip sits is decided entirely by presence.css.',
   'components/modules/collaboration/presence-carets.ts': 'Writes one presence colour custom property per caret, validated hex-only; the caret line is shaped entirely by presence.css.',
   'components/utils/color-migration.ts': 'Writes a validated CSS custom-property name during legacy color migration.',

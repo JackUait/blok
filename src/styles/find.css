@@ -1,16 +1,12 @@
 /* ─── Find in page (Cmd/Ctrl+F) ───────────────────────────────────────── */
 
-/*
-  Match fills. The core module registers these two highlight names; renaming
-  either here silently stops painting matches. Unlayered like
-  ::highlight(blok-cross-block-selection) in main.css.
-*/
-[data-blok-interface] ::highlight(blok-find-match) {
-  background-color: var(--blok-find-match-bg);
+/* The names must match the highlights registered by Find. */
+::highlight(blok-find-match) {
+  background-color: var(--blok-find-match-bg, rgba(255, 212, 0, 0.32));
 }
 
-[data-blok-interface] ::highlight(blok-find-match-active) {
-  background-color: var(--blok-find-match-active-bg);
+::highlight(blok-find-match-active) {
+  background-color: var(--blok-find-match-active-bg, rgba(255, 138, 0, 0.5));
 }
 
 /* Attribute names are set in replace-preview.ts. */
@@ -491,14 +487,14 @@
 /* ─── Active match lens ─── */
 
 [data-blok-find-lens] {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: var(--blok-z-relative);
+  z-index: var(--blok-z-find, 25);
   overflow: visible;
 }
 
 /*
-  Drawn from the container's top-left; JS supplies translate, width and height.
+  Drawn from the viewport's top-left; JS supplies translate, width and height.
   No padding: the box must match the ::highlight fill exactly, or a band of
   page shows between fill and ring. The ring is an outer shadow, so it paints
   over the fill's square corners that the radius leaves bare.

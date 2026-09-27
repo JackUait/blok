@@ -1,8 +1,8 @@
 /**
  * Find in page: Cmd/Ctrl+F opens Blok's own find bar.
  *
- * Search runs over the rendered DOM (see text-index.ts), so it sees read-only
- * content and the children of collapsed toggles. Matches are painted with the
+ * Search runs over the page DOM (see text-index.ts), so it sees host text,
+ * read-only content and the children of collapsed toggles. Matches are painted with the
  * Custom Highlight API and never wrapped in markup, so finding never edits the
  * document. Replacing does: it edits text nodes the way typing does.
  */
@@ -23,6 +23,8 @@ import type { TextPoint } from './text-point';
 import { pointOf, startsAtOrAfter } from './text-point';
 
 const EDITOR_SELECTOR = '[data-blok-testid="blok-editor"]';
+const editorOf = (node: Node): Element | null =>
+  (node instanceof Element ? node : node.parentElement)?.closest(EDITOR_SELECTOR) ?? null;
 const TOGGLE_STATE_SELECTOR = '[data-blok-toggle-open]';
 const QUERY_DEBOUNCE_MS = 40;
 const DOM_DEBOUNCE_MS = 120;
@@ -70,6 +72,8 @@ const scrollParentOf = (element: Element): HTMLElement | null => {
 export class Find extends Module {
   /** Every editor listens on `document`; these pick the one a key on <body> belongs to. */
   private static readonly instances = new Set<Find>();
+  /** Disabled Find editors still own matches in collapsed toggles. */
+  private static readonly allInstances = new Set<Find>();
   private static lastActive: Find | null = null;
 
   private bar: FindBar | null = null;
@@ -97,6 +101,8 @@ export class Find extends Module {
    * not read-only-mutable listeners.
    */
   public prepare(): void {
+    Find.allInstances.add(this);
+
     if (this.config.find === false) {
       return;
     }
@@ -107,8 +113,9 @@ export class Find extends Module {
     this.listeners.on(document, 'keydown', this.onDocumentKeydown, true);
     this.listeners.on(wrapper, 'pointerdown', this.markActive, true);
     this.listeners.on(wrapper, 'focusin', this.markActive, true);
-    // Scroll does not bubble; capture sees inner scrollers (a wide table, a code block).
-    this.listeners.on(wrapper, 'scroll', this.onInnerScroll, { capture: true, passive: true });
+    // Scroll does not bubble; capture sees scrollers outside this editor too.
+    this.listeners.on(document, 'scroll', this.onPageScroll, { capture: true, passive: true });
+    this.listeners.on(window, 'scroll', this.onPageScroll, { passive: true });
   }
 
   /**
@@ -131,7 +138,7 @@ export class Find extends Module {
     if (!wasOpen || prefill !== null) {
       const caret = this.caretRange();
 
-      this.anchor = caret === null ? null : pointOf(caret, this.Blok.UI.nodes.redactor);
+      this.anchor = caret === null ? null : pointOf(caret, document.body);
     }
 
     if (!wasOpen) {
@@ -152,7 +159,7 @@ export class Find extends Module {
   }
 
   /**
-   * Close the find bar and select the current match, so typing replaces it.
+   * Close the find bar and select a match in this editor, so typing replaces it.
    * When the reader already went back to the text, their caret stays put.
    */
   public close(): void {
@@ -175,7 +182,7 @@ export class Find extends Module {
       return;
     }
 
-    if (current !== undefined && !current.collapsed) {
+    if (current !== undefined && !current.collapsed && this.ownsRange(current)) {
       editableHostOf(current)?.focus({ preventScroll: true });
       window.getSelection()?.removeAllRanges();
       window.getSelection()?.addRange(current);
@@ -217,7 +224,7 @@ export class Find extends Module {
       return;
     }
 
-    const host = editableHostOf(current);
+    const host = this.ownsRange(current) ? editableHostOf(current) : null;
 
     if (host === null) {
       this.move(1);
@@ -225,7 +232,7 @@ export class Find extends Module {
       return;
     }
 
-    this.anchor = pointOf(replaceRangeText(current, replacement), this.Blok.UI.nodes.redactor);
+    this.anchor = pointOf(replaceRangeText(current, replacement), document.body);
     this.notifyInput([host]);
     this.search({ reveal: true, pulse: true, expand: true });
   }
@@ -235,7 +242,7 @@ export class Find extends Module {
    * @param replacement - the new text
    */
   public replaceAll(replacement: string): void {
-    const editable = this.ranges.filter((range) => editableHostOf(range) !== null);
+    const editable = this.ranges.filter((range) => this.ownsRange(range) && editableHostOf(range) !== null);
 
     if (this.Blok.ReadOnly.isEnabled || editable.length === 0) {
       return;
@@ -275,13 +282,14 @@ export class Find extends Module {
     this.lens = null;
     this.listeners.removeAll();
     Find.instances.delete(this);
+    Find.allInstances.delete(this);
 
     if (Find.lastActive === this) {
       Find.lastActive = null;
     }
   }
 
-  private readonly onInnerScroll = (): void => {
+  private readonly onPageScroll = (): void => {
     const current = this.ranges[this.active];
 
     if (this.isOpen && current !== undefined) {
@@ -340,17 +348,24 @@ export class Find extends Module {
 
     const isInBar = target instanceof Node && this.bar?.element.contains(target) === true;
 
-    if (target instanceof Node && (wrapper.contains(target) || isInBar)) {
+    if (isInBar) {
       return true;
     }
 
-    if (target instanceof Element) {
-      const isInOtherEditor = target.closest(EDITOR_SELECTOR) !== null;
-      const isHostField = target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])') !== null;
+    if (target instanceof Node) {
+      const editor = editorOf(target);
 
-      if (isInOtherEditor || isHostField) {
-        return false;
+      if (editor !== null) {
+        return editor === wrapper;
       }
+
+      if (wrapper.contains(target)) {
+        return true;
+      }
+    }
+
+    if (target instanceof Element && target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])') !== null) {
+      return false;
     }
 
     return Find.instances.size < 2 || Find.lastActive === this;
@@ -396,10 +411,18 @@ export class Find extends Module {
     // The scope attribute brings Blok's preflight reset and tokens along.
     this.bar.element.setAttribute('data-blok-interface', 'find');
     document.body.appendChild(this.bar.element);
-    this.lens = new FindLens(wrapper);
+    this.lens = new FindLens(document.documentElement, wrapper);
     this.preview = new ReplacePreview(this.Blok.UI.nodes.redactor);
 
     return this.bar;
+  }
+
+  private ownsRange(range: Range): boolean {
+    const { wrapper, redactor } = this.Blok.UI.nodes;
+
+    return redactor.contains(range.commonAncestorContainer) &&
+      editorOf(range.startContainer) === wrapper &&
+      editorOf(range.endContainer) === wrapper;
   }
 
   /**
@@ -414,7 +437,7 @@ export class Find extends Module {
 
     const range = selection.getRangeAt(0);
     const text = selection.toString().trim();
-    const isInEditor = this.Blok.UI.nodes.redactor.contains(range.commonAncestorContainer);
+    const isInEditor = this.ownsRange(range);
 
     if (!isInEditor || text === '' || text.length > PREFILL_MAX_LENGTH || /[\n\r]/.test(text)) {
       return null;
@@ -434,7 +457,7 @@ export class Find extends Module {
 
     range.collapse(true);
 
-    return this.Blok.UI.nodes.redactor.contains(range.startContainer) ? range : null;
+    return this.ownsRange(range) ? range : null;
   }
 
   private focusToReturn(): Find['returnFocus'] {
@@ -452,19 +475,22 @@ export class Find extends Module {
   }
 
   private startObserving(): void {
-    const { redactor } = this.Blok.UI.nodes;
-
     this.observer = new MutationObserver((records) => {
-      // Re-searching on the preview's own writes would rebuild it forever.
-      if (!records.every(isPreviewMutation)) {
+      const isOwnMutation = (record: MutationRecord): boolean => {
+        const target = record.target instanceof Element ? record.target : record.target.parentElement;
+
+        return isPreviewMutation(record) || (target?.closest('[data-blok-interface="find"]') ?? null) !== null;
+      };
+
+      if (!records.every(isOwnMutation)) {
         this.scheduleSearch(DOM_DEBOUNCE_MS, { reveal: false }, false);
       }
     });
-    this.observer.observe(redactor, { childList: true, subtree: true, characterData: true });
+    this.observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 
     if (typeof ResizeObserver === 'function') {
       this.resizeObserver = new ResizeObserver(() => this.render({ reveal: false }));
-      this.resizeObserver.observe(redactor);
+      this.resizeObserver.observe(document.body);
     }
   }
 
@@ -513,13 +539,12 @@ export class Find extends Module {
       return;
     }
 
-    const { redactor } = this.Blok.UI.nodes;
     const anchor = this.anchor;
     const findOptions: FindOptions = this.bar.options;
 
-    this.ranges = findRanges(redactor, this.bar.query, findOptions);
+    this.ranges = findRanges(document.body, this.bar.query, findOptions);
 
-    const after = anchor === null ? this.ranges : this.ranges.filter((range) => startsAtOrAfter(range, anchor, redactor));
+    const after = anchor === null ? this.ranges : this.ranges.filter((range) => startsAtOrAfter(range, anchor, document.body));
     // While typing, prefer a match the reader can see; hidden ones are one Enter away.
     const next = (options.expand === true ? undefined : after.find((range) => !this.isHidden(range))) ?? after[0] ?? this.ranges[0];
 
@@ -541,7 +566,7 @@ export class Find extends Module {
       return;
     }
 
-    this.preview?.show(this.ranges, bar.query, bar.options, bar.replacement);
+    this.preview?.show(this.ranges.filter((range) => this.ownsRange(range)), bar.query, bar.options, bar.replacement);
   }
 
   /**
@@ -556,7 +581,7 @@ export class Find extends Module {
     const current = this.ranges[this.active] ?? null;
 
     if (current !== null) {
-      this.anchor = pointOf(current, this.Blok.UI.nodes.redactor);
+      this.anchor = pointOf(current, document.body);
     }
 
     if (current !== null && options.expand === true) {
@@ -588,7 +613,14 @@ export class Find extends Module {
    * @param range - a match
    */
   private collapsedAncestors(range: Range): Block[] {
-    const { BlockManager } = this.Blok;
+    const editor = editorOf(range.startContainer);
+    const owner = Array.from(Find.allInstances).find((instance) => instance.Blok.UI.nodes.wrapper === editor);
+    const BlockManager = owner?.Blok.BlockManager;
+
+    if (BlockManager === undefined) {
+      return [];
+    }
+
     const block = BlockManager.getBlockByChildNode(range.startContainer);
     const ancestorsOf = (parentId: string | null): Block[] => {
       const parent = parentId === null ? undefined : BlockManager.getBlockById(parentId);
@@ -612,13 +644,25 @@ export class Find extends Module {
       return;
     }
 
-    const parent = scrollParentOf(this.Blok.UI.nodes.wrapper);
+    const element = range.startContainer instanceof Element ? range.startContainer : range.startContainer.parentElement;
+    const scrollStart = element?.closest(EDITOR_SELECTOR) ?? element ?? this.Blok.UI.nodes.wrapper;
+    const parent = scrollParentOf(scrollStart);
     const view = parent?.getBoundingClientRect() ?? { top: 0, bottom: window.innerHeight };
+    const behavior: ScrollBehavior = prefersReducedMotion() ? 'instant' : 'smooth';
+
     const bar = this.barOver(rect);
     const isCovered = bar !== null && rect.bottom > bar.top && rect.top < bar.bottom;
-    const isVisible = !isCovered && rect.top >= view.top + REVEAL_MARGIN && rect.bottom <= view.bottom - REVEAL_MARGIN;
+    const isVisible = !isCovered &&
+      rect.top >= Math.max(view.top, 0) + REVEAL_MARGIN &&
+      rect.bottom <= Math.min(view.bottom, window.innerHeight) - REVEAL_MARGIN;
 
     if (isVisible) {
+      return;
+    }
+
+    if (parent !== null && element !== null && (view.top < 0 || view.bottom > window.innerHeight)) {
+      element.scrollIntoView({ block: 'center', behavior });
+
       return;
     }
 
@@ -629,7 +673,6 @@ export class Find extends Module {
     const aboveBar = bar === null ? preferred : bar.top - REVEAL_MARGIN - rect.height;
     const clearOfBar = fitsBelow ? belowBar : aboveBar;
     const target = collides ? clearOfBar : preferred;
-    const behavior: ScrollBehavior = prefersReducedMotion() ? 'instant' : 'smooth';
 
     (parent ?? window).scrollBy({ top: rect.top - target, behavior });
   }
@@ -650,10 +693,9 @@ export class Find extends Module {
   }
 
   private placeLens(range: Range, pulse: boolean): void {
-    const base = this.Blok.UI.nodes.wrapper.getBoundingClientRect();
     const rects: Rect[] = rectsOf(range).map((rect) => ({
-      top: rect.top - base.top,
-      left: rect.left - base.left,
+      top: rect.top,
+      left: rect.left,
       width: rect.width,
       height: rect.height,
     }));
@@ -668,13 +710,13 @@ export class Find extends Module {
   }
 
   /**
-   * Each match's place in the document, 0 (top) to 1 (bottom), for the match
+   * Each match's place on the page, 0 (top) to 1 (bottom), for the match
    * map. A match inside a collapsed toggle takes its nearest visible ancestor's.
    */
   private positions(): number[] {
-    const box = this.Blok.UI.nodes.redactor.getBoundingClientRect();
+    const height = document.documentElement.scrollHeight;
 
-    if (box.height === 0) {
+    if (height === 0) {
       return this.ranges.map((_, index) => (index + 0.5) / this.ranges.length);
     }
 
@@ -682,7 +724,7 @@ export class Find extends Module {
       const [rect] = rectsOf(this.onScreen(range));
       const top = rect?.top ?? this.visibleAncestorTop(range.startContainer);
 
-      return Math.min(1, Math.max(0, (top - box.top) / box.height));
+      return Math.min(1, Math.max(0, (top + window.scrollY) / height));
     });
   }
 

@@ -41,6 +41,12 @@ describe('findRanges', () => {
     expect(found(root, 'one two')).toEqual([]);
   });
 
+  it('does not combine text from separate page regions', () => {
+    const root = mount('<header>red</header><main>blue</main>');
+
+    expect(found(root, 'redblue')).toEqual([]);
+  });
+
   it('skips tool chrome like list markers and toggle arrows', () => {
     const root = mount('<div><span data-blok-chrome>1.</span><div contenteditable="true">1. item</div></div>');
 
@@ -48,10 +54,22 @@ describe('findRanges', () => {
     expect(findRanges(root, '1.')[0].startContainer.parentElement?.hasAttribute('contenteditable')).toBe(true);
   });
 
+  it('skips Blok toolbar text while searching editor content', () => {
+    const root = mount('<div data-blok-toolbar>apple</div><div data-blok-interface="blok" data-blok-editor><p>apple</p></div>');
+
+    expect(found(root, 'apple')).toEqual(['apple']);
+  });
+
   it('finds text in read-only content', () => {
     const root = mount('<div contenteditable="false">read only words</div>');
 
     expect(found(root, 'only')).toEqual(['only']);
+  });
+
+  it('finds rendered View text but not body-mounted controls', () => {
+    const root = mount('<div data-blok-interface="view"><p>apple</p></div><div data-blok-interface="find">apple</div>');
+
+    expect(found(root, 'apple')).toEqual(['apple']);
   });
 
   it('finds text hidden inside a collapsed container', () => {

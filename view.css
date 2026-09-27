@@ -1249,12 +1249,6 @@
 [data-blok-columns] {
   --blok-column-gutter: min(2rem, 4vw);
 }
-[data-blok-interface] ::highlight(blok-find-match) {
-  background-color: var(--blok-find-match-bg);
-}
-[data-blok-interface] ::highlight(blok-find-match-active) {
-  background-color: var(--blok-find-match-active-bg);
-}
 [data-blok-find-roll='down'] {
   --blok-find-roll-shift: -1;
 }

@@ -101,7 +101,7 @@ export class ReplacePreview {
 
     const byHolder = new Map<HTMLElement, Range[]>();
 
-    ranges.filter((range) => editableHostOf(range) !== null).forEach((range) => {
+    ranges.filter((range) => this.redactor.contains(range.commonAncestorContainer) && editableHostOf(range) !== null).forEach((range) => {
       const holder = this.topHolderOf(range.startContainer);
 
       if (holder !== null) {

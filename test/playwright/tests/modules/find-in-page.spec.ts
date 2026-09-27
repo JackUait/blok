@@ -458,6 +458,28 @@ test.describe('find in page', () => {
       expect(await page.evaluate(() => CSS.highlights.has('blok-find-match') || CSS.highlights.has('blok-find-match-active'))).toBe(false);
     });
 
+    test('Escape on a host match does not make host text editable through Find', async ({ page }) => {
+      await createEditor(page, paragraphs('safeneedle in editor'));
+      await page.evaluate(() => {
+        const host = document.createElement('div');
+
+        host.textContent = 'safeneedle outside';
+        host.contentEditable = 'true';
+        host.setAttribute('data-blok-testid', 'host-editable');
+        document.body.appendChild(host);
+      });
+      await focusParagraph(page, 'safeneedle in editor');
+      await openFind(page, 'safeneedle');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+      await page.keyboard.press('Enter');
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 2');
+
+      await page.keyboard.press('Escape');
+      await page.keyboard.type('X');
+
+      await expect(page.getByTestId('host-editable')).toHaveText('safeneedle outside');
+    });
+
     test('Escape with no match gives focus back to where it was', async ({ page }) => {
       await createEditor(page, paragraphs('alpha', 'beta'));
       await focusParagraph(page, 'beta');
@@ -532,6 +554,484 @@ test.describe('find in page', () => {
       await page.getByTestId('find-close').click();
 
       await expect(page.getByTestId('find-bar')).toBeHidden();
+    });
+  });
+
+  test.describe('page content', () => {
+    test('finds host text before and after the editor in page order', async ({ page }) => {
+      await page.evaluate(() => {
+        const before = document.createElement('h1');
+
+        before.textContent = 'saffronneedle before';
+        before.setAttribute('data-blok-testid', 'host-before');
+        document.body.appendChild(before);
+      });
+      await createEditor(page, paragraphs('saffronneedle in editor'));
+      await page.evaluate(() => {
+        const after = document.createElement('p');
+
+        after.textContent = 'saffronneedle after';
+        after.setAttribute('data-blok-testid', 'host-after');
+        document.body.appendChild(after);
+      });
+      await focusParagraph(page, 'saffronneedle in editor');
+
+      await openFind(page, 'saffronneedle');
+
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 3');
+      expect((await readHighlights(page)).activeBlockId).toBe('find-p0');
+
+      await page.keyboard.press('Enter');
+      await expect(page.getByTestId('find-counter')).toHaveText('3 of 3');
+      expect(await page.evaluate(() => {
+        const active = CSS.highlights.get('blok-find-match-active');
+        const [range] = active === undefined ? [] : [...active];
+
+        return range?.startContainer.parentElement?.getAttribute('data-blok-testid') ?? null;
+      })).toBe('host-after');
+
+      await page.keyboard.press('Enter');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 3');
+      expect(await page.evaluate(() => {
+        const active = CSS.highlights.get('blok-find-match-active');
+        const [range] = active === undefined ? [] : [...active];
+
+        return range?.startContainer.parentElement?.getAttribute('data-blok-testid') ?? null;
+      })).toBe('host-before');
+    });
+
+    test('keeps a host match active when match options change', async ({ page }) => {
+      await createEditor(page, paragraphs('caseneedle in editor'));
+      await page.evaluate(() => {
+        const host = document.createElement('p');
+
+        host.textContent = 'caseneedle outside';
+        host.setAttribute('data-blok-testid', 'host-content');
+        document.body.appendChild(host);
+      });
+      await focusParagraph(page, 'caseneedle in editor');
+      await openFind(page, 'caseneedle');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+      await page.keyboard.press('Enter');
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 2');
+
+      await page.getByTestId('find-match-case').click();
+
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 2');
+    });
+
+    test('continues to a later host match when the editor match stops matching', async ({ page }) => {
+      await page.evaluate(() => {
+        const before = document.createElement('p');
+
+        before.textContent = 'casepath before';
+        before.setAttribute('data-blok-testid', 'host-before');
+        document.body.appendChild(before);
+      });
+      await createEditor(page, paragraphs('Casepath in editor'));
+      await page.evaluate(() => {
+        const after = document.createElement('p');
+
+        after.textContent = 'casepath after';
+        after.setAttribute('data-blok-testid', 'host-after');
+        document.body.appendChild(after);
+      });
+      await focusParagraph(page, 'Casepath in editor');
+      await openFind(page, 'casepath');
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 3');
+
+      await page.getByTestId('find-match-case').click();
+
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 2');
+      expect(await page.evaluate(() => {
+        const active = CSS.highlights.get('blok-find-match-active');
+        const [range] = active === undefined ? [] : [...active];
+
+        return range?.startContainer.parentElement?.getAttribute('data-blok-testid') ?? null;
+      })).toBe('host-after');
+    });
+
+    test('keeps the same host match when earlier page text shrinks', async ({ page }) => {
+      await page.evaluate(() => {
+        const before = document.createElement('p');
+
+        before.textContent = 'x'.repeat(300);
+        before.style.cssText = 'height:20px;overflow:hidden;white-space:nowrap';
+        before.setAttribute('data-blok-testid', 'host-before');
+        document.body.appendChild(before);
+      });
+      await createEditor(page, paragraphs('other words'));
+      await page.evaluate(() => {
+        const current = document.createElement('p');
+        const spacer = document.createElement('p');
+        const later = document.createElement('p');
+
+        current.textContent = 'driftneedle current';
+        current.setAttribute('data-blok-testid', 'host-current');
+        spacer.textContent = 'y '.repeat(250);
+        later.textContent = 'driftneedle later';
+        later.setAttribute('data-blok-testid', 'host-later');
+        document.body.append(current, spacer, later);
+      });
+      await focusParagraph(page, 'other words');
+      await openFind(page, 'driftneedle');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+
+      await page.getByTestId('host-before').evaluate((element) => {
+        const host = element;
+
+        host.textContent = 'driftneedle before';
+      });
+
+      await expect(page.getByTestId('find-counter')).toContainText('of 3');
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 3');
+      expect(await page.evaluate(() => {
+        const active = CSS.highlights.get('blok-find-match-active');
+        const [range] = active === undefined ? [] : [...active];
+
+        return range?.startContainer.parentElement?.getAttribute('data-blok-testid') ?? null;
+      })).toBe('host-current');
+    });
+
+    test('does not count text in the find bar', async ({ page }) => {
+      await createEditor(page, paragraphs('Replace this word'));
+      await focusParagraph(page, 'Replace this word');
+      await page.keyboard.press(REPLACE_KEY);
+      await page.getByTestId('find-input').fill('Replace');
+
+      await expect(page.getByTestId('find-replace-row')).toBeVisible();
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 1');
+    });
+
+    test('updates matches when host-page text changes', async ({ page }) => {
+      await createEditor(page, paragraphs('other words'));
+      await page.evaluate(() => {
+        const host = document.createElement('p');
+
+        host.textContent = 'quillneedle outside';
+        host.setAttribute('data-blok-testid', 'host-content');
+        document.body.appendChild(host);
+      });
+      await focusParagraph(page, 'other words');
+      await openFind(page, 'quillneedle');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 1');
+
+      await page.getByTestId('host-content').evaluate((element) => {
+        const host = element;
+
+        host.textContent = 'other words outside';
+      });
+
+      await expect(page.getByTestId('find-counter')).toHaveText('No results');
+    });
+
+    test('reveals a collapsed match in another editor', async ({ page }) => {
+      await createEditor(page, paragraphs('otherneedle visible'));
+      await createEditor(page, [
+        { id: 'other-toggle', type: 'toggle', data: { text: 'Other toggle', isOpen: false }, content: ['other-child'] },
+        { id: 'other-child', type: 'paragraph', data: { text: 'otherneedle hidden' }, parent: 'other-toggle' },
+      ], { holder: 'blok2', globalName: 'blokInstance2' });
+      await focusParagraph(page, 'otherneedle visible');
+
+      await openFind(page, 'otherneedle');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+      await page.keyboard.press('Enter');
+
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 2');
+      await expect(page.locator('[data-blok-toggle-open]')).toHaveAttribute('data-blok-toggle-open', 'true');
+    });
+
+    test('reveals a collapsed match in an editor with Find disabled', async ({ page }) => {
+      await createEditor(page, paragraphs('peerneedle visible'));
+      await createEditor(page, [
+        { id: 'disabled-toggle', type: 'toggle', data: { text: 'Other toggle', isOpen: false }, content: ['disabled-child'] },
+        { id: 'disabled-child', type: 'paragraph', data: { text: 'peerneedle hidden' }, parent: 'disabled-toggle' },
+      ], { holder: 'blok2', globalName: 'blokInstance2', config: { find: false } });
+      await focusParagraph(page, 'peerneedle visible');
+      await openFind(page, 'peerneedle');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+
+      await page.keyboard.press('Enter');
+
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 2');
+      await expect(page.getByTestId('blok2').locator('[data-blok-toggle-open]')).toHaveAttribute('data-blok-toggle-open', 'true');
+      await expect(page.getByText('peerneedle hidden', { exact: true })).toBeVisible();
+    });
+
+    test('does not replace matches in a host contenteditable', async ({ page }) => {
+      await createEditor(page, paragraphs('amberneedle in editor'));
+      await page.evaluate(() => {
+        const host = document.createElement('div');
+
+        host.textContent = 'amberneedle outside';
+        host.contentEditable = 'true';
+        host.setAttribute('data-blok-testid', 'host-editable');
+        document.body.appendChild(host);
+      });
+      await focusParagraph(page, 'amberneedle in editor');
+      await page.keyboard.press(REPLACE_KEY);
+      await page.getByTestId('find-input').fill('amberneedle');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+      await page.getByTestId('find-replace-input').fill('changed');
+
+      await page.getByTestId('find-replace-all').click();
+
+      await expect.poll(() => savedTexts(page)).toEqual(['changed in editor']);
+      await expect(page.getByTestId('host-editable')).toHaveText('amberneedle outside');
+    });
+
+    test('reveals a match inside a host scroll container', async ({ page }) => {
+      await page.evaluate(() => {
+        const scroller = document.createElement('div');
+        const spacer = document.createElement('div');
+        const target = document.createElement('p');
+
+        scroller.setAttribute('data-blok-testid', 'host-scroller');
+        scroller.style.cssText = 'height:100px;overflow:auto';
+        spacer.style.height = '600px';
+        target.textContent = 'oceanneedle outside';
+        scroller.append(spacer, target);
+        document.body.appendChild(scroller);
+      });
+      await createEditor(page, paragraphs('other words'));
+      await focusParagraph(page, 'other words');
+
+      await openFind(page, 'oceanneedle');
+
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 1');
+      await expect.poll(() => page.getByTestId('host-scroller').evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    });
+
+    test('reveals a host match when its scroll container is offscreen', async ({ page }) => {
+      await createEditor(page, paragraphs('other words'));
+      await page.evaluate(() => {
+        const before = document.createElement('div');
+        const scroller = document.createElement('div');
+        const inner = document.createElement('div');
+        const target = document.createElement('p');
+        const after = document.createElement('div');
+
+        before.style.height = '1000px';
+        scroller.style.cssText = 'height:120px;overflow:auto';
+        inner.style.height = '600px';
+        target.textContent = 'revealneedle outside';
+        target.setAttribute('data-blok-testid', 'host-target');
+        after.style.height = '1000px';
+        scroller.append(inner, target);
+        document.body.append(before, scroller, after);
+      });
+      await focusParagraph(page, 'other words');
+      await openFind(page, 'revealneedle');
+
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 1');
+      await expect(page.getByTestId('host-target')).toBeInViewport();
+    });
+
+    test('reveals a host match when its scroll container is partly visible', async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 720 });
+      await createEditor(page, paragraphs('other words'));
+      await focusParagraph(page, 'other words');
+      await page.evaluate(() => {
+        const scroller = document.createElement('div');
+        const inner = document.createElement('div');
+        const target = document.createElement('p');
+        const pageSpacer = document.createElement('div');
+
+        scroller.style.cssText = 'position:absolute;top:690px;left:0;width:400px;height:300px;overflow:auto';
+        inner.style.height = '500px';
+        target.textContent = 'partialneedle outside';
+        target.setAttribute('data-blok-testid', 'host-target');
+        pageSpacer.style.height = '2000px';
+        scroller.append(inner, target);
+        document.body.append(scroller, pageSpacer);
+      });
+
+      await openFind(page, 'partialneedle');
+
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 1');
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+      await expect(page.getByTestId('host-target')).toBeInViewport();
+    });
+
+    test('keeps the active ring on a host match while the page scrolls', async ({ page }) => {
+      await createEditor(page, paragraphs('other words'));
+      await page.evaluate(() => {
+        const scroller = document.createElement('div');
+        const before = document.createElement('div');
+        const target = document.createElement('p');
+        const after = document.createElement('div');
+        const pageSpacer = document.createElement('div');
+
+        scroller.setAttribute('data-blok-testid', 'host-scroller');
+        scroller.style.cssText = 'height:260px;overflow:auto';
+        before.style.height = '80px';
+        target.textContent = 'scrollneedle outside';
+        after.style.height = '600px';
+        pageSpacer.style.height = '1400px';
+        scroller.append(before, target, after);
+        document.body.append(scroller, pageSpacer);
+      });
+      await focusParagraph(page, 'other words');
+      await openFind(page, 'scrollneedle');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 1');
+
+      const ringOffset = (): Promise<number> => page.getByTestId('find-lens-box').evaluate((box) => {
+        const active = CSS.highlights.get('blok-find-match-active');
+        const [range] = active === undefined ? [] : [...active];
+
+        if (!(range instanceof Range)) {
+          return Number.POSITIVE_INFINITY;
+        }
+
+        return Math.abs(box.getBoundingClientRect().top - range.getBoundingClientRect().top);
+      });
+
+      await expect.poll(ringOffset).toBeLessThan(0.5);
+      await page.getByTestId('host-scroller').evaluate((element) => {
+        const scroller = element;
+
+        scroller.scrollTop += 40;
+      });
+      await expect.poll(() => page.getByTestId('host-scroller').evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+      await expect.poll(ringOffset).toBeLessThan(0.5);
+
+      const previousScrollY = await page.evaluate(() => window.scrollY);
+
+      await page.evaluate(() => {
+        window.scrollBy({ top: 50, behavior: 'instant' });
+      });
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(previousScrollY);
+      await expect.poll(ringOffset).toBeLessThan(0.5);
+    });
+
+    test('keeps the active ring aligned when the host transforms the body', async ({ page }) => {
+      await createEditor(page, paragraphs('other words'));
+      await focusParagraph(page, 'other words');
+      await page.evaluate(() => {
+        const host = document.createElement('p');
+
+        host.textContent = 'transformneedle outside';
+        document.body.appendChild(host);
+        document.body.style.transform = 'translateX(50px)';
+      });
+
+      try {
+        await openFind(page, 'transformneedle');
+        await expect(page.getByTestId('find-counter')).toHaveText('1 of 1');
+        await expect.poll(() => page.getByTestId('find-lens-box').evaluate((box) => {
+          const active = CSS.highlights.get('blok-find-match-active');
+          const [range] = active === undefined ? [] : [...active];
+
+          return range instanceof Range
+            ? Math.abs(box.getBoundingClientRect().left - range.getBoundingClientRect().left)
+            : Number.POSITIVE_INFINITY;
+        })).toBeLessThan(0.5);
+      } finally {
+        await page.evaluate(() => {
+          document.body.style.transform = '';
+        });
+      }
+    });
+
+    test('places host matches at different points on the match map', async ({ page }) => {
+      await page.evaluate(() => {
+        const first = document.createElement('p');
+        const spacer = document.createElement('div');
+        const second = document.createElement('p');
+
+        first.textContent = 'mapneedle first';
+        spacer.style.height = '500px';
+        second.textContent = 'mapneedle second';
+        document.body.append(first, spacer, second);
+      });
+      await createEditor(page, paragraphs('other words'));
+      await focusParagraph(page, 'other words');
+
+      await openFind(page, 'mapneedle');
+
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+      const positions = await page.getByTestId('find-map-tick').evaluateAll((ticks) =>
+        ticks.map((tick) => Number.parseFloat((tick as HTMLElement).style.left))
+      );
+
+      expect(positions[1] - positions[0]).toBeGreaterThan(10);
+    });
+
+    test('paints host-page matches', async ({ page }) => {
+      await createEditor(page, paragraphs('other words'));
+      await page.evaluate(() => {
+        const host = document.createElement('p');
+
+        host.textContent = 'citronneedle outside';
+        host.setAttribute('data-blok-testid', 'host-content');
+        document.body.appendChild(host);
+      });
+      await focusParagraph(page, 'other words');
+      await openFind(page, 'citronneedle');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 1');
+
+      const fill = await page.getByTestId('host-content').evaluate((element) =>
+        getComputedStyle(element, '::highlight(blok-find-match-active)').backgroundColor
+      );
+
+      expect(fill).not.toBe('rgba(0, 0, 0, 0)');
+    });
+
+    test('keeps the active ring color in sync with the editor theme', async ({ page }) => {
+      await createEditor(page, paragraphs('themenoodle one', 'themenoodle two'));
+      await focusParagraph(page, 'themenoodle one');
+      await openFind(page, 'themenoodle');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+
+      await page.getByTestId('blok-editor').evaluate((element) => {
+        (element as HTMLElement).style.setProperty('--blok-find-lens-ring', 'rgb(12, 34, 56)');
+      });
+      await page.keyboard.press('Enter');
+
+      await expect(page.getByTestId('find-lens-box')).toHaveCSS('box-shadow', /rgb\(12, 34, 56\)/);
+    });
+
+    test('shows the active ring outside a clipped editor', async ({ page }) => {
+      await createEditor(page, paragraphs('other words'));
+      await page.getByTestId('blok').evaluate((element) => {
+        const holder = element;
+
+        holder.style.overflow = 'hidden';
+        holder.style.height = '40px';
+      });
+      await page.evaluate(() => {
+        const host = document.createElement('p');
+
+        host.textContent = 'indigoneedle outside';
+        host.setAttribute('data-blok-testid', 'host-content');
+        document.body.appendChild(host);
+      });
+      await focusParagraph(page, 'other words');
+      await openFind(page, 'indigoneedle');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 1');
+
+      await expect(page.getByTestId('find-lens-box')).toBeInViewport();
+      const offset = await page.getByTestId('find-lens-box').evaluate((box) => {
+        const active = CSS.highlights.get('blok-find-match-active');
+        const [range] = active === undefined ? [] : [...active];
+
+        if (!(range instanceof Range)) {
+          return null;
+        }
+
+        const ring = box.getBoundingClientRect();
+        const fill = range.getBoundingClientRect();
+
+        return Math.max(
+          Math.abs(ring.left - fill.left),
+          Math.abs(ring.top - fill.top),
+          Math.abs(ring.right - fill.right),
+          Math.abs(ring.bottom - fill.bottom)
+        );
+      });
+
+      expect(offset).not.toBeNull();
+      expect(offset).toBeLessThan(0.5);
     });
   });
 
@@ -762,6 +1262,22 @@ test.describe('find in page', () => {
       await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
     });
 
+    test('previews replacements only in the editor that opened the bar', async ({ page }) => {
+      await createEditor(page, paragraphs('foo first'));
+      await createEditor(page, [{ id: 'find-second', type: 'paragraph', data: { text: 'foo second' } }], {
+        holder: 'blok2',
+        globalName: 'blokInstance2',
+      });
+      await focusParagraph(page, 'foo first');
+
+      await typeReplacement(page, 'foo', 'bar');
+
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+      await expect(page.getByTestId('blok').locator(PREVIEW)).toHaveCount(1);
+      await expect(page.getByTestId('blok2').locator(PREVIEW)).toHaveCount(0);
+      await expect(page.getByText('foo second', { exact: true })).toBeVisible();
+    });
+
     test('never changes the document, in a paragraph, a collapsed toggle or a table', async ({ page }) => {
       const blocks: Blocks = [
         { id: 'find-p', type: 'paragraph', data: { text: 'foo para' } },
@@ -855,7 +1371,7 @@ test.describe('find in page', () => {
       await expect(page.getByTestId('find-dock')).toHaveCount(0);
     });
 
-    test('with two editors, Mod+F opens the bar of the focused one', async ({ page }) => {
+    test('with two editors, Mod+F opens one bar and searches both editors', async ({ page }) => {
       await createEditor(page, paragraphs('first editor'), { holder: 'blok' });
       await createEditor(page, [{ id: 'find-second', type: 'paragraph', data: { text: 'second editor' } }], {
         holder: 'blok2',
@@ -865,11 +1381,15 @@ test.describe('find in page', () => {
 
       await page.keyboard.press(FIND_KEY);
 
-      // One page-level bar, and it belongs to the focused editor: it finds that editor's text only.
       await expect(page.getByTestId('find-dock')).toHaveCount(1);
       await page.getByTestId('find-input').fill('editor');
-      await expect(page.getByTestId('find-counter')).toHaveText('1 of 1');
+      await expect(page.getByTestId('find-counter')).toHaveText('2 of 2');
       await expect.poll(async () => (await readHighlights(page)).activeBlockId).toBe('find-second');
+
+      await page.keyboard.press('Enter');
+
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+      await expect.poll(async () => (await readHighlights(page)).activeBlockId).toBe('find-p0');
     });
   });
 

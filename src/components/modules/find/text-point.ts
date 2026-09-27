@@ -1,10 +1,11 @@
 /**
- * A position in the editor's text that survives a re-render.
+ * A position in the page's text that survives a re-render.
  *
  * A live Range collapses when a tool swaps the text nodes it points into (the
  * code block re-highlights by replacing its innerHTML). A text offset inside
- * the nearest editable host or block holder does not.
+ * the nearest editable host, block holder or page text unit does not.
  */
+import { UNIT_SELECTOR } from './text-index';
 
 const HOST_SELECTOR = '[contenteditable], [data-blok-element]';
 
@@ -13,8 +14,11 @@ export interface TextPoint {
   offset: number;
 }
 
-const hostOf = (node: Node, root: Element): Element =>
-  (node instanceof Element ? node : node.parentElement)?.closest(HOST_SELECTOR) ?? root;
+const hostOf = (node: Node, root: Element): Element => {
+  const element = node instanceof Element ? node : node.parentElement;
+
+  return element?.closest(HOST_SELECTOR) ?? element?.closest(UNIT_SELECTOR) ?? element ?? root;
+};
 
 const textOffset = (host: Element, node: Node, offset: number): number => {
   const range = document.createRange();
@@ -50,9 +54,9 @@ export const startsAtOrAfter = (range: Range, point: TextPoint, root: Element): 
     return true;
   }
 
-  if (host === point.host) {
-    return textOffset(host, range.startContainer, range.startOffset) >= point.offset;
+  if (point.host.contains(host)) {
+    return textOffset(point.host, range.startContainer, range.startOffset) >= point.offset;
   }
 
-  return (point.host.compareDocumentPosition(host) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+  return (point.host.compareDocumentPosition(range.startContainer) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 };

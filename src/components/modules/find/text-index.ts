@@ -1,5 +1,5 @@
 /**
- * Turns the editor's DOM into searchable text and maps matches back to Ranges.
+ * Turns the page DOM into searchable text and maps matches back to Ranges.
  *
  * Text is read from the DOM, not from block data or `block.inputs`: read-only
  * tools render their content with contenteditable="false", and some content
@@ -13,15 +13,17 @@ import { findTextMatches } from './match-text';
  * Elements whose text forms one searchable run. A match never crosses from one
  * run into another, so it never spans two blocks or two table cells.
  */
-const UNIT_SELECTOR = [
+export const UNIT_SELECTOR = [
   '[contenteditable]',
   'div', 'p', 'li', 'ul', 'ol', 'td', 'th', 'tr', 'table',
   'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
   'pre', 'blockquote', 'figure', 'figcaption', 'summary', 'details', 'dt', 'dd', 'label', 'section',
+  'header', 'main', 'footer', 'nav', 'article', 'aside',
 ].join(', ');
 
 const SKIPPED_SELECTOR = [
-  `[${DATA_ATTR.chrome}]`,
+  `[${DATA_ATTR.chrome}]`, `[${DATA_ATTR.toolbar}]`,
+  '[data-blok-interface]:not([data-blok-interface="blok"]):not([data-blok-interface="view"])', '[data-blok-popover]',
   'script', 'style', 'template', 'noscript', 'textarea', 'input', 'select', 'svg',
 ].join(', ');
 
@@ -112,7 +114,7 @@ const endPoint = (segments: Segment[], offset: number): [Text, number] | null =>
 
 /**
  * Every match of `query` under `root`, as Ranges in document order.
- * @param root - element to search, usually the redactor
+ * @param root - element to search, usually document.body
  * @param query - what the user typed
  * @param options - case and whole-word switches
  */

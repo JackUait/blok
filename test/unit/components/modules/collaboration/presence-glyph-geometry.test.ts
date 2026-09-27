@@ -309,6 +309,34 @@ describe('anonymous presence micro-illustrations', () => {
     });
   });
 
+  describe('comet', () => {
+    // Circle contours are drawn as `M cx top a r r ...`.
+    const radius = (element: Element | null | undefined): number =>
+      Number(element?.getAttribute('d')?.match(/a(\d*\.?\d+)/)?.[1]);
+
+    it('lights the nucleus and wraps it in a wider see-through coma', () => {
+      const svg = glyphSvg('comet');
+      const nucleus = svg.querySelector('path[clip-path="url(#bk-comet-lit)"]');
+      const glass = Array.from(svg.querySelectorAll('path[opacity]:not([clip-path])'));
+      const shade = glass.find(path => path.getAttribute('d') === nucleus?.getAttribute('d'));
+      const coma = glass.find(path => radius(path) > radius(nucleus));
+
+      expect(nucleus?.hasAttribute('opacity')).toBe(false);
+      expect(shade).toBeDefined();
+      expect(coma).toBeDefined();
+    });
+
+    it('streams solid ion streaks from behind the nucleus and a see-through dust tail outside the coma', () => {
+      const svg = glyphSvg('comet');
+      const ions = svg.querySelector('path[clip-path="url(#bk-comet-ion)"]');
+      const dust = svg.querySelector('path[clip-path="url(#bk-comet-tail)"]');
+
+      expect(ions?.hasAttribute('opacity')).toBe(false);
+      expect(ions?.getAttribute('d')?.match(/M/g)?.length).toBeGreaterThanOrEqual(3);
+      expect(Number(dust?.getAttribute('opacity'))).toBeLessThan(1);
+    });
+  });
+
   it('alternates four long and four short sun rays every 45 degrees around the center', () => {
     const rays = Array.from(glyphSvg('sun').querySelectorAll('path'));
     const angle = (ray: Element): number => Number(ray.getAttribute('transform')?.match(/^rotate\((\d+) 10 10\)$/)?.[1] ?? 0);

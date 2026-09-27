@@ -397,6 +397,39 @@ describe('anonymous presence micro-illustrations', () => {
       expect(tube).toBeDefined();
       expect(reach).toBeGreaterThan(r);
     });
+
+    it('catches starlight: a see-through beam runs from the big star into the telescope', () => {
+      const svg = glyphSvg('telescope');
+      const { x, y, r } = dome(svg);
+      // The big star is the solid four-point sparkle, drawn from its top tip.
+      const star = Array.from(svg.querySelectorAll('path:not([opacity])'))
+        .find(path => /^M[^M]*(Q[^M]*){4}Z$/.test(path.getAttribute('d') ?? ''));
+      const [tipX = Number.NaN, tipY = Number.NaN, , centreY = Number.NaN] = numbers(star?.getAttribute('d'));
+      const beam = Array.from(svg.querySelectorAll('path[opacity]'))
+        .find(path => /^M[^M]*L[^M]*L[^M]*Z$/.test(path.getAttribute('d') ?? ''));
+      const [fromX = Number.NaN, fromY = Number.NaN, ...mouth] = numbers(beam?.getAttribute('d'));
+
+      expect(beam).toBeDefined();
+      expect(fromX).toBeCloseTo(tipX);
+      expect(fromY).toBeCloseTo(centreY);
+      expect(centreY).toBeGreaterThan(tipY);
+
+      for (let i = 0; i + 1 < mouth.length; i += 2) {
+        expect(Math.hypot((mouth[i] ?? 0) - x, (mouth[i + 1] ?? 0) - y)).toBeGreaterThan(r);
+      }
+    });
+
+    it('puts a see-through glint on the lit dome', () => {
+      const svg = glyphSvg('telescope');
+      const { x, y, r } = dome(svg);
+      // The canvas, then the glint cut out of it.
+      const [canvas, glint = ''] = svg.querySelector('clipPath[id="bk-telescope-lit"] path')?.getAttribute('d')?.match(/M[^M]*/g) ?? [];
+      const [startX = Number.NaN, startY = Number.NaN] = numbers(glint);
+
+      expect(canvas).toBe('M0 0h20v20H0Z');
+      expect(startY).toBeLessThan(y);
+      expect(Math.hypot(startX - x, startY - y)).toBeLessThan(r - 0.5);
+    });
   });
 
   describe('comet', () => {

@@ -26,7 +26,7 @@ import {
 } from '../shared/tool-classes/list';
 import { TOGGLE_CHILDREN_CLASSES, TOGGLE_CONTENT_CLASSES, TOGGLE_HEADER_ROW_CLASSES } from '../shared/tool-classes/toggle';
 import type { ViewBlock } from './document-model';
-import { claimedCellTexts, repairedTableRows } from './table-grid';
+import { claimedCellTexts, leadingCellText, repairedTableRows } from './table-grid';
 
 /**
  * Rendering services handed to every emitter by the dispatcher.
@@ -321,7 +321,10 @@ const tableCellInner = (cell: unknown, env: EmitterEnv): string => {
   }
 
   const kids = env.blocksById(cell.blocks);
-  const own = kids.length > 0 ? env.renderList(kids) : env.inline(cell.text);
+  const leading = leadingCellText(cell);
+  const own = kids.length > 0
+    ? (leading === undefined ? '' : env.inline(leading)) + env.renderList(kids)
+    : env.inline(cell.text);
 
   return own + claimedCellTexts(cell).map(text => env.inline(text)).join('');
 };

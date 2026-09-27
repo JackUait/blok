@@ -382,7 +382,9 @@ export class BlockHierarchy {
    */
   public mayMountHolder(block: Block, parentId: string | null): boolean {
     const oldParent = block.parentId !== null ? this.repository.getBlockById(block.parentId) : undefined;
-    const oldHomeSlot = oldParent !== undefined && parentId !== block.parentId ? this.findHomeSlot(block.parentId) : null;
+    const oldHomeSlot = oldParent !== undefined && parentId !== block.parentId
+      ? this.ownSelfPlacingSlot(block) ?? this.findHomeSlot(block.parentId)
+      : null;
     const newParent = parentId !== null ? this.repository.getBlockById(parentId) : undefined;
 
     return this.blocksStore !== undefined

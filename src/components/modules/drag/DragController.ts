@@ -908,6 +908,23 @@ export class DragController extends Module {
     // while that flag is true, so the parent change attaches to the move
     // entry instead of landing on Y.UndoManager as a separate stack item.
     const yjsManager = this.Blok.YjsManager;
+    const targetCell = targetBlock.holder.parentElement?.closest('[data-blok-table-cell-blocks]');
+    const sourceIds = new Set(sourceBlocks.map(block => block.id));
+    const sourceRoots = sourceBlocks.filter(block => block.parentId === null || !sourceIds.has(block.parentId));
+    const sourceCell = sourceRoots[0]?.holder.parentElement?.closest('[data-blok-table-cell-blocks]');
+    const startsInOneCell = sourceCell !== null && sourceCell !== undefined
+      && sourceRoots.every(block => block.holder.parentElement?.closest('[data-blok-table-cell-blocks]') === sourceCell);
+    const staysOrExits = startsInOneCell && (targetCell === sourceCell || targetCell === null || targetCell === undefined);
+
+    if (staysOrExits && yjsManager !== undefined && typeof yjsManager.transactMoves === 'function') {
+      // The table's deferred data write must share the drag's tracked placement step.
+      yjsManager.beginApiCall();
+      yjsManager.joinMovesToStep(() => this.Blok.BlockManager.transactForTool(() => {
+        yjsManager.transactMoves(() => this.handleDropImpl(sourceBlock, sourceBlocks, targetBlock, edge, clientX), true);
+      }));
+
+      return;
+    }
 
     if (yjsManager !== undefined && typeof yjsManager.transactMoves === 'function') {
       yjsManager.transactMoves(() => {

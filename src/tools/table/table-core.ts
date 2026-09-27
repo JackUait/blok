@@ -188,7 +188,7 @@ export class TableGrid {
     const cols = this.getColumnCount(table);
     const row = this.createRow(cols);
     const tbody = table.querySelector('tbody') ?? table;
-    const rows = tbody.querySelectorAll(`[${ROW_ATTR}]`);
+    const rows = this.getRows(table);
 
     if (index !== undefined && index < rows.length) {
       tbody.insertBefore(row, rows[index]);
@@ -205,7 +205,7 @@ export class TableGrid {
    * Delete a row at index
    */
   public deleteRow(table: HTMLElement, index: number): void {
-    const rows = table.querySelectorAll(`[${ROW_ATTR}]`);
+    const rows = this.getRows(table);
 
     if (index < rows.length) {
       rows[index].remove();
@@ -326,10 +326,10 @@ export class TableGrid {
     }
 
     // Insert <td> in each row
-    const rows = table.querySelectorAll(`[${ROW_ATTR}]`);
+    const rows = this.getRows(table);
 
     rows.forEach(row => {
-      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+      const cells = Array.from(row.children).filter(child => child.hasAttribute(CELL_ATTR));
       const isAppend = index === undefined || index >= cells.length;
       const cell = this.createCell();
 
@@ -357,10 +357,10 @@ export class TableGrid {
     }
 
     // Remove <td> per row
-    const rows = table.querySelectorAll(`[${ROW_ATTR}]`);
+    const rows = this.getRows(table);
 
     rows.forEach(row => {
-      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+      const cells = Array.from(row.children).filter(child => child.hasAttribute(CELL_ATTR));
 
       if (index >= cells.length) {
         return;
@@ -382,7 +382,7 @@ export class TableGrid {
     }
 
     const tbody = table.querySelector('tbody') ?? table;
-    const rows = Array.from(tbody.querySelectorAll(`[${ROW_ATTR}]`));
+    const rows = this.getRows(table);
 
     if (fromIndex >= rows.length || toIndex >= rows.length) {
       return;
@@ -392,7 +392,7 @@ export class TableGrid {
 
     row.remove();
 
-    const updatedRows = Array.from(tbody.querySelectorAll(`[${ROW_ATTR}]`));
+    const updatedRows = this.getRows(table);
 
     if (toIndex >= updatedRows.length) {
       tbody.appendChild(row);
@@ -415,10 +415,10 @@ export class TableGrid {
     this.reorderColElement(table, fromIndex, toIndex);
 
     // Move cells in each row
-    const rows = table.querySelectorAll(`[${ROW_ATTR}]`);
+    const rows = this.getRows(table);
 
     rows.forEach(row => {
-      const cells = Array.from(row.querySelectorAll(`[${CELL_ATTR}]`));
+      const cells = Array.from(row.children).filter(child => child.hasAttribute(CELL_ATTR));
 
       if (fromIndex >= cells.length || toIndex >= cells.length) {
         return;
@@ -428,7 +428,7 @@ export class TableGrid {
 
       cell.remove();
 
-      const updatedCells = Array.from(row.querySelectorAll(`[${CELL_ATTR}]`));
+      const updatedCells = Array.from(row.children).filter(child => child.hasAttribute(CELL_ATTR));
 
       if (toIndex >= updatedCells.length) {
         row.appendChild(cell);
@@ -450,13 +450,15 @@ export class TableGrid {
    * rather than its physical DOM index.
    */
   public reindexCoordinates(table: HTMLElement): void {
-    const rows = Array.from(table.querySelectorAll(`[${ROW_ATTR}]`));
+    const rows = this.getRows(table);
 
     // Map from rowIndex -> Set of columnIndices occupied by rowspan cells from earlier rows
     const occupiedCols: Map<number, Set<number>> = new Map();
 
     rows.forEach((row, r) => {
-      const cells = Array.from(row.querySelectorAll(`[${CELL_ATTR}]`));
+      const cells = Array.from(row.children).filter(
+        (child): child is HTMLElement => child instanceof HTMLElement && child.hasAttribute(CELL_ATTR)
+      );
       const blockedCols = occupiedCols.get(r) ?? new Set<number>();
 
       cells.reduce((modelCol, cell) => {
@@ -512,11 +514,16 @@ export class TableGrid {
     });
   }
 
+  private getRows(table: HTMLElement): HTMLElement[] {
+    return Array.from(table.querySelectorAll<HTMLElement>(`[${ROW_ATTR}]`))
+      .filter(row => row.closest('table') === table);
+  }
+
   /**
    * Get number of rows
    */
   public getRowCount(table: HTMLElement): number {
-    return table.querySelectorAll(`[${ROW_ATTR}]`).length;
+    return this.getRows(table).length;
   }
 
   /**
@@ -546,31 +553,33 @@ export class TableGrid {
    * merged grid it would return the next <td> in the row, a different cell.
    */
   public getCell(table: HTMLElement, row: number, col: number): HTMLElement | null {
-    const coordCell = table.querySelector<HTMLElement>(
-      `[${CELL_ROW_ATTR}="${row}"][${CELL_COL_ATTR}="${col}"]`
+    const rows = this.getRows(table);
+    const cells = rows.flatMap(currentRow => Array.from(currentRow.children).filter(
+      (child): child is HTMLElement => child instanceof HTMLElement && child.hasAttribute(CELL_ATTR)
+    ));
+    const coordCell = cells.find(cell =>
+      cell.getAttribute(CELL_ROW_ATTR) === String(row) && cell.getAttribute(CELL_COL_ATTR) === String(col)
     );
 
     if (coordCell) {
       return coordCell;
     }
 
-    if (table.querySelector(`[${CELL_ROW_ATTR}]`)) {
+    if (cells.some(cell => cell.hasAttribute(CELL_ROW_ATTR))) {
       return null;
     }
 
-    const rows = table.querySelectorAll(`[${ROW_ATTR}]`);
+    const targetRow = rows[row];
 
-    if (row >= rows.length) {
+    if (!targetRow) {
       return null;
     }
 
-    const cells = rows[row].querySelectorAll(`[${CELL_ATTR}]`);
+    const rowCells = Array.from(targetRow.children).filter(
+      (child): child is HTMLElement => child instanceof HTMLElement && child.hasAttribute(CELL_ATTR)
+    );
 
-    if (col >= cells.length) {
-      return null;
-    }
-
-    return cells[col] as HTMLElement;
+    return rowCells[col] ?? null;
   }
 
   /**

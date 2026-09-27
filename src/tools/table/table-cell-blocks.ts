@@ -504,7 +504,10 @@ export class TableCellBlocks {
    * it can only move blocks inside a cell.
    */
   private indexForCell(cell: HTMLElement): number {
-    const cells = Array.from(this.gridElement.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`));
+    // A cell's child block may contain another table; its cells are not siblings.
+    const cells = Array.from(this.gridElement.querySelectorAll<HTMLElement>(
+      `:scope > tbody > [${ROW_ATTR}] > [${CELL_ATTR}], :scope > [${ROW_ATTR}] > [${CELL_ATTR}]`
+    ));
     const at = cells.indexOf(cell);
 
     if (at === -1) {
@@ -660,7 +663,7 @@ export class TableCellBlocks {
    * Get the number of rows in the table
    */
   private getRowCount(): number {
-    return this.gridElement.querySelectorAll('[data-blok-table-row]').length;
+    return this.getOwnRows().length;
   }
 
   /**
@@ -678,18 +681,22 @@ export class TableCellBlocks {
     return firstRow?.querySelectorAll('[data-blok-table-cell]').length ?? 0;
   }
 
+  /** Rows of this table only; a nested table's rows are its own. */
+  private getOwnRows(): NodeListOf<HTMLElement> {
+    return this.gridElement.querySelectorAll<HTMLElement>(`:scope > tbody > [${ROW_ATTR}], :scope > [${ROW_ATTR}]`);
+  }
+
   /**
    * Get a cell element by row and column index
    */
   private getCell(row: number, col: number): HTMLElement | null {
-    const rows = this.gridElement.querySelectorAll('[data-blok-table-row]');
-    const rowEl = rows[row];
+    const rowEl = this.getOwnRows()[row];
 
     if (!rowEl) {
       return null;
     }
 
-    return rowEl.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${col}"]`) ?? null;
+    return rowEl.querySelector<HTMLElement>(`:scope > [${CELL_ATTR}][${CELL_COL_ATTR}="${col}"]`);
   }
 
   /**
@@ -787,7 +794,7 @@ export class TableCellBlocks {
   private initializeCellsPass(
     content: InitCellContent[][]
   ): CellContent[][] {
-    const rowElements = this.gridElement.querySelectorAll(`[${ROW_ATTR}]`);
+    const rowElements = this.gridElement.querySelectorAll<HTMLElement>(`:scope > tbody > [${ROW_ATTR}], :scope > [${ROW_ATTR}]`);
     const normalizedContent: CellContent[][] = [];
     // Every (row, col) the model-driven loop below describes. The completeness
     // sweep uses this to find rendered cells the model never covered — without
@@ -828,13 +835,13 @@ export class TableCellBlocks {
           return;
         }
 
-        const cell = row.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${colIndex}"]`);
+        const cell = row.querySelector<HTMLElement>(`:scope > [${CELL_ATTR}][${CELL_COL_ATTR}="${colIndex}"]`);
 
         if (!cell) {
           return;
         }
 
-        const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+        const container = cell.querySelector<HTMLElement>(`:scope > [${CELL_BLOCKS_ATTR}]`);
 
         if (!container) {
           return;
@@ -955,7 +962,7 @@ export class TableCellBlocks {
     if (!this.api.blocks.isSyncingFromYjs && !this.model.hasMerges()) {
       rowElements.forEach((row, rowIndex) => {
         const normalizedRow = normalizedContent[rowIndex] ?? (normalizedContent[rowIndex] = []);
-        const cellElements = row.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`);
+        const cellElements = row.querySelectorAll<HTMLElement>(`:scope > [${CELL_ATTR}]`);
 
         cellElements.forEach(cell => {
           const colIndex = Number(cell.getAttribute(CELL_COL_ATTR));
@@ -964,7 +971,7 @@ export class TableCellBlocks {
             return;
           }
 
-          const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+          const container = cell.querySelector<HTMLElement>(`:scope > [${CELL_BLOCKS_ATTR}]`);
 
           // No container → merge-covered cell (no editable target by design).
           if (!container) {
@@ -1029,13 +1036,11 @@ export class TableCellBlocks {
   }
 
   /**
-   * After a sync has settled, remove this editor's stand-in from a cell that
-   * also names a lower-id block. Two peers that refill the same emptied cell
-   * each add a stand-in, and a cell's `blocks` merge keeps both. Every peer
-   * sees the same ids, so the lowest one stays and the others go. A stand-in
-   * the user typed into is content and stays.
+   * After a sync settles, a local undo's restored block replaces its stand-in.
+   * Competing peer stand-ins still use the lowest id so both peers agree.
+   * A stand-in the user typed into is content and stays.
    */
-  public yieldRepairsToPeers(): void {
+  public yieldRepairsToPeers(restoredIds: ReadonlySet<string> = new Set()): void {
     if (this.repairIds.size === 0) {
       return;
     }
@@ -1058,7 +1063,8 @@ export class TableCellBlocks {
           return;
         }
 
-        if (ids.some(other => other < id && this.api.blocks.getById?.(other) != null)) {
+        if (ids.some(other => (other < id || (restoredIds.has(other) && !this.repairIds.has(other)))
+          && this.api.blocks.getById?.(other) != null)) {
           losers.push(id);
         }
       });
@@ -1668,17 +1674,19 @@ export class TableCellBlocks {
   }
 
   /**
-   * Handle a block-moved event: if the block left this table (its holder is
-   * no longer inside our grid), remove the stale reference from the model.
-   *
-   * Without this, cross-table moves leave ghost entries in the source table's
-   * model, causing the same block ID to appear in two tables' saved data.
+   * Nested table cells are inside the outer grid, but belong to another table.
    */
   private handleBlockMoved(detail: { target: { id: string; holder: HTMLElement } }): void {
     const blockId = detail.target.id;
     const cellPos = this.model.findCellForBlock(blockId);
+    const cell = detail.target.holder.closest<HTMLElement>(`[${CELL_ATTR}]`);
 
     if (!cellPos) {
+      if (cell !== null && this.getCellPosition(cell) !== null
+        && this.api.blocks.getById?.(blockId)?.parentId === this.tableBlockId) {
+        this.syncBlockToModel(cell, blockId);
+      }
+
       return;
     }
 
@@ -1687,12 +1695,27 @@ export class TableCellBlocks {
     // model order is what save() persists, so skipping this silently reverts
     // the user's reorder on the next save (images-drift-to-cell-bottom
     // regression).
-    if (this.gridElement.contains(detail.target.holder)) {
-      const cell = detail.target.holder.closest<HTMLElement>(`[${CELL_ATTR}]`);
-
-      if (cell && this.gridElement.contains(cell)) {
+    if (this.gridElement.contains(detail.target.holder)
+      && (cell === null || this.getCellPosition(cell) !== null)) {
+      if (cell) {
         this.syncBlockToModel(cell, blockId);
       }
+
+      // Drag moves nested holders after block-moved fires.
+      queueMicrotask(() => {
+        const settledCell = detail.target.holder.closest<HTMLElement>(`[${CELL_ATTR}]`);
+        const currentPos = this.model.findCellForBlock(blockId);
+
+        if (!currentPos) {
+          return;
+        }
+        if (settledCell !== null && this.getCellPosition(settledCell) !== null) {
+          this.syncBlockToModel(settledCell, blockId);
+        } else {
+          this.model.removeBlockFromCell(currentPos.row, currentPos.col, blockId);
+          this.signalCellReferenceDropped();
+        }
+      });
 
       return;
     }

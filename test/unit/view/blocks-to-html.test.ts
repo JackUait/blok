@@ -2,8 +2,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { blocksToHtml, blocksToViewNodes, defineBlokSchema } from '../../../src/view';
+import { TableModel } from '../../../src/tools/table/table-model';
 
 import type { LooseOutputData, OutputBlockData, OutputData } from '../../../types';
+import type { LegacyCellContent } from '../../../src/tools/table/types';
 
 /**
  * Convenience: wrap blocks into an OutputData envelope.
@@ -448,6 +450,94 @@ describe('blocksToHtml', () => {
       expect(html).toBe('<table><tbody><tr><td colspan="2">A</td></tr><tr><td>C</td><td>D</td></tr></tbody></table>');
     });
 
+    it.each([
+      ['declared cover', { blocks: ['b'], mergedInto: [0, 0] }],
+      ['newly claimed cell', { blocks: ['b'] }],
+    ])('keeps a text-only origin before blocks moved from a %s', (_case, covered) => {
+      const html = blocksToHtml(doc([
+        { id: 't', type: 'table', data: { content: [[{ blocks: [], text: 'Origin', colspan: 2 }, covered]] } },
+        { id: 'b', type: 'paragraph', parent: 't', data: { text: 'Claimed' } },
+      ]));
+
+      expect(html).toBe('<table><tbody><tr><td colspan="2">Origin<p>Claimed</p></td></tr></tbody></table>');
+    });
+
+    it('keeps own block ids authoritative over stale origin text after merge repair', () => {
+      const html = blocksToHtml(doc([
+        { id: 't', type: 'table', data: { content: [[{ blocks: ['a'], text: 'Stale', colspan: 2 }, { blocks: ['b'] }]] } },
+        { id: 'a', type: 'paragraph', parent: 't', data: { text: 'Own' } },
+        { id: 'b', type: 'paragraph', parent: 't', data: { text: 'Claimed' } },
+      ]));
+
+      expect(html).toBe('<table><tbody><tr><td colspan="2"><p>Own</p><p>Claimed</p></td></tr></tbody></table>');
+    });
+
+    it('does not show stale text when a block id belongs to an earlier cell', () => {
+      const html = blocksToHtml(doc([
+        { id: 't', type: 'table', data: { content: [[{ blocks: ['shared'] }, { blocks: ['shared'], text: 'Stale' }]] } },
+        { id: 'shared', type: 'paragraph', parent: 't', data: { text: 'First' } },
+      ]));
+
+      expect(html).toBe('<table><tbody><tr><td><p>First</p></td><td></td></tr></tbody></table>');
+    });
+
+    it('does not show stale text when a cell only has malformed block ids', () => {
+      const html = blocksToHtml(doc([
+        { type: 'table', data: { content: [[{ blocks: [42, null], text: 'Stale' }]] } },
+      ]));
+
+      expect(html).toBe('<table><tbody><tr><td></td></tr></tbody></table>');
+    });
+
+    it('keeps multiple claimed legacy cells in row order', () => {
+      const html = blocksToHtml(doc([
+        { type: 'table', data: { content: [[{ blocks: [], text: 'Origin', colspan: 4 }, 'First', 'Second', 'Third']] } },
+      ]));
+
+      expect(html).toBe('<table><tbody><tr><td colspan="4">OriginFirstSecondThird</td></tr></tbody></table>');
+    });
+
+    it('does not revive stale origin text when dedup removes its own block id', () => {
+      const html = blocksToHtml(doc([
+        { id: 't', type: 'table', data: { content: [[{ blocks: ['shared'] }, { blocks: ['shared'], text: 'Stale', colspan: 2 }, { blocks: ['claimed'] }]] } },
+        { id: 'shared', type: 'paragraph', parent: 't', data: { text: 'First' } },
+        { id: 'claimed', type: 'paragraph', parent: 't', data: { text: 'Claimed' } },
+      ]));
+
+      expect(html).toBe('<table><tbody><tr><td><p>First</p></td><td colspan="2"><p>Claimed</p></td></tr></tbody></table>');
+    });
+
+    it('pads a ragged row before repairing a merge that crosses it', () => {
+      const content: LegacyCellContent[][] = [
+        [{ blocks: ['a'], colspan: 2, rowspan: 2 }, { blocks: [], mergedInto: [0, 0] }, { blocks: ['c'] }],
+        [{ blocks: ['b'], mergedInto: [0, 0] }],
+      ];
+      const html = blocksToHtml(doc([
+        { id: 't', type: 'table', data: { content } },
+        { id: 'a', type: 'paragraph', parent: 't', data: { text: 'A' } },
+        { id: 'b', type: 'paragraph', parent: 't', data: { text: 'B' } },
+        { id: 'c', type: 'paragraph', parent: 't', data: { text: 'C' } },
+      ]));
+
+      expect(html).toBe('<table><tbody><tr><td colspan="2" rowspan="2"><p>A</p><p>B</p></td><td><p>C</p></td></tr><tr><td></td></tr></tbody></table>');
+      expect(new TableModel({ content }).findCellForBlock('b')).toEqual({ row: 0, col: 0 });
+    });
+
+    it('aligns a ragged row by stable column id before repairing a merge', () => {
+      const content: LegacyCellContent[][] = [
+        [{ id: 'left', rowId: 'top', blocks: ['a'], colspan: 2 }, { id: 'right', rowId: 'top', blocks: ['c'] }],
+        [{ id: 'left', rowId: 'bottom', blocks: [], text: 'L' }, { id: 'middle', rowId: 'bottom', blocks: [], text: 'M' }, { id: 'right', rowId: 'bottom', blocks: [], text: 'R' }],
+      ];
+      const html = blocksToHtml(doc([
+        { id: 't', type: 'table', data: { content } },
+        { id: 'a', type: 'paragraph', parent: 't', data: { text: 'A' } },
+        { id: 'c', type: 'paragraph', parent: 't', data: { text: 'C' } },
+      ]));
+
+      expect(html).toBe('<table><tbody><tr><td colspan="2"><p>A</p></td><td><p>C</p></td></tr><tr><td>L</td><td>M</td><td>R</td></tr></tbody></table>');
+      expect(new TableModel({ content }).findCellForBlock('c')).toEqual({ row: 0, col: 2 });
+    });
+
     it('marks the first column as th when withHeadingColumn is set', () => {
       const html = blocksToHtml(doc([
         { type: 'table', data: { withHeadings: false, withHeadingColumn: true, content: [[{ blocks: [], text: 'K' }, { blocks: [], text: 'V' }]] } },
@@ -463,6 +553,14 @@ describe('blocksToHtml', () => {
       ]));
 
       expect(html).toBe('<table><tbody><tr><td><p>In cell</p></td></tr></tbody></table>');
+    });
+
+    it('falls back to saved cell text when its block reference is unresolved', () => {
+      const html = blocksToHtml(doc([
+        { type: 'table', data: { content: [[{ blocks: ['missing'], text: 'Saved <b>fallback</b>' }]] } },
+      ]));
+
+      expect(html).toBe('<table><tbody><tr><td>Saved <b>fallback</b></td></tr></tbody></table>');
     });
   });
 

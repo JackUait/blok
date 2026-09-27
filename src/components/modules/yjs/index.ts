@@ -1029,9 +1029,9 @@ export class YjsManager extends Module {
     }
   }
 
-  /** A drag's own move group records its moves even inside a joined step. */
+  /** A drag can join a tracked step before its move group opens. */
   private get movesJoinStep(): boolean {
-    return this.movesJoinStepDepth > 0 && !this.isDragMoveGroup;
+    return this.movesJoinStepDepth > 0;
   }
 
   /**

@@ -511,6 +511,64 @@ test.describe('Table merge browser audit', () => {
     expect(Math.abs(diag.overlays[0].r.width - (diag.cell00?.width ?? 0))).toBeLessThanOrEqual(2);
   });
 
+  test('undoing a merge restores the caret offset in a moved cell block', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            id: 'tbl', type: 'table', data: {
+              withHeadings: false,
+              content: [
+                [{ blocks: ['a'] }, { blocks: ['b'] }],
+                [{ blocks: ['c'] }, { blocks: ['d'] }],
+              ],
+            },
+          },
+          ...(['a', 'b', 'c', 'd'] as const).map(id => ({
+            id, type: 'paragraph', data: { text: id === 'b' ? 'BETA' : id.toUpperCase() }, parent: 'tbl',
+          })),
+        ],
+      },
+    });
+    await selectCells(page, 0, 1, 1, 0);
+    await expect(page.locator(SELECTED)).toHaveCount(4);
+    await cellEditable(page, 0, 1).evaluate(editable => {
+      const text = editable.firstChild;
+      const selection = window.getSelection();
+
+      if (!(text instanceof Text) || selection === null) {
+        throw new Error('No text caret in the selected cell');
+      }
+      editable.focus();
+      const range = document.createRange();
+
+      range.setStart(text, 2);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    });
+    await expect(page.locator(SELECTED)).toHaveCount(4);
+    await openPill(page);
+    await page.getByText('Merge cells').click();
+    await expect(getCellAt(page, 0, 0)).toHaveAttribute('colspan', '2');
+    await pace(page);
+    await page.keyboard.press(undoKey);
+
+    await expect.poll(() => page.evaluate(() => {
+      const selection = window.getSelection();
+      const node = selection?.anchorNode;
+      const element = node instanceof Element ? node : node?.parentElement;
+
+      return {
+        blockId: element?.closest('[data-blok-id]')?.getAttribute('data-blok-id') ?? null,
+        text: node instanceof Text ? node.data : null,
+        offset: selection?.anchorOffset ?? -1,
+      };
+    })).toEqual({ blockId: 'b', text: 'BETA', offset: 2 });
+    await expect(page.locator(`${TABLE_SELECTOR} [data-blok-table-cell]`)).toHaveCount(4);
+  });
+
   test('AUD11 undo right after split restores the merged cell with its content', async ({ page }) => {
     await create3x3Table(page);
     await mergeTopLeft2x2(page);

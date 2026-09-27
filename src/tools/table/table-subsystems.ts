@@ -726,7 +726,9 @@ export class TableSubsystems {
    * index lookup, which resolves a covered coordinate to the wrong cell.
    */
   private cellAt(gridEl: HTMLElement, row: number, col: number): HTMLElement | null {
-    return gridEl.querySelector<HTMLElement>(`[${CELL_ROW_ATTR}="${row}"][${CELL_COL_ATTR}="${col}"]`);
+    const cells = gridEl.querySelectorAll<HTMLElement>(`[${CELL_ROW_ATTR}="${row}"][${CELL_COL_ATTR}="${col}"]`);
+
+    return Array.from(cells).find(cell => cell.closest('table') === gridEl) ?? null;
   }
 
   /**

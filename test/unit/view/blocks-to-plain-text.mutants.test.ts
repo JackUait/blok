@@ -264,13 +264,13 @@ describe('blocksToPlainText — malformed and cyclic wire data', () => {
       expect(text).toBe(`${SENTINEL}\nBeta`);
     });
 
-    it('a block referenced by two cells is read in both', () => {
+    it('a block referenced by two cells is read only in the first', () => {
       const text = blocksToPlainText(doc([
         { id: 'grid', type: 'table', data: { content: [[{ blocks: ['shared'] }, { blocks: ['shared'] }]] } },
         { id: 'shared', type: 'paragraph', parent: 'grid', data: { text: 'Twice' } },
       ]));
 
-      expect(text).toBe('Twice\tTwice');
+      expect(text).toBe('Twice\t');
     });
 
     /**

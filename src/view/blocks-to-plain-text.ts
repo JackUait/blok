@@ -12,7 +12,7 @@ import { createHtmlRenderer } from './blocks-to-html';
 import type { BlocksToHtmlOptions } from './blocks-to-html';
 import { blokDocumentSchema } from './document-schema';
 import { htmlTextContent } from './html-text';
-import { claimedCellTexts, repairedTableRows } from './table-grid';
+import { claimedCellTexts, isSyntheticCell, leadingCellText, repairedTableRows } from './table-grid';
 
 import type { LooseOutputData, OutputData } from '../../types';
 
@@ -280,16 +280,24 @@ export const blocksToPlainTextWithReport = (
         return child === undefined ? [] : [child];
       });
 
-      const own = kids.length > 0 ? kids.map(deepText) : [inlineText(cell.text)];
+      const leading = leadingCellText(cell);
+      const own = kids.length > 0
+        ? [...(leading === undefined ? [] : [inlineText(leading)]), ...kids.map(deepText)]
+        : [inlineText(cell.text)];
 
       return [...own, ...claimedCellTexts(cell).map(inlineText)].filter((part) => part !== '').join('\n');
     };
 
     return rows
-      .map((row) => row
-        .filter((cell) => !(isRecord(cell) && cell.mergedInto !== undefined))
-        .map(cellText)
-        .join('\t'))
+      .map((row) => {
+        const visible = row.filter((cell) => !(isRecord(cell) && cell.mergedInto !== undefined));
+
+        while (visible.length > 0 && isSyntheticCell(visible[visible.length - 1])) {
+          visible.pop();
+        }
+
+        return visible.map(cellText).join('\t');
+      })
       .filter((row) => row.replace(/\t/g, '') !== '')
       .join('\n');
   };

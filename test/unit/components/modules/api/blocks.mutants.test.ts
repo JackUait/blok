@@ -223,6 +223,7 @@ type BlokStub = {
   YjsManager: {
     stopCapturing: Mock<() => void>;
     beginApiCall: Mock<() => void>;
+    runAfterSavesOf: Mock<(blockId: string, run: () => void) => void>;
     transactWithoutCapture: Mock<(fn: () => void) => void>;
   };
   I18n: { t: Mock<(key: string) => string> };
@@ -257,6 +258,7 @@ const createBlokStub = (blockManager: BlockManagerMock, overrides: Partial<BlokS
   YjsManager: {
     stopCapturing: vi.fn(),
     beginApiCall: vi.fn(),
+    runAfterSavesOf: vi.fn((_blockId: string, run: () => void) => run()),
     transactWithoutCapture: vi.fn(),
   },
   I18n: { t: vi.fn((key: string) => key) },

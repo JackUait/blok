@@ -285,6 +285,7 @@ type BlokStub = {
   YjsManager: {
     stopCapturing: ReturnType<typeof vi.fn>;
     beginApiCall: ReturnType<typeof vi.fn>;
+    runAfterSavesOf: Mock<(blockId: string, run: () => void) => void>;
   };
   I18n: {
     t: ReturnType<typeof vi.fn>;
@@ -349,6 +350,7 @@ const createBlokStub = (
     YjsManager: {
       stopCapturing: vi.fn(),
       beginApiCall: vi.fn(),
+      runAfterSavesOf: vi.fn((_blockId: string, run: () => void) => run()),
     },
     I18n: {
       t: vi.fn((key: string) => key),
@@ -608,6 +610,19 @@ describe('BlocksAPI', () => {
   });
 
   describe('block deletion', () => {
+    it('does not delay non-table child deletion for a pending parent save', async () => {
+      const parent = createBlockStub({ id: 'parent', name: 'toggle' });
+      const child = { ...createBlockStub({ id: 'child' }), parentId: 'parent' };
+      const { blocksApi, blok } = createBlocksApi({ blocks: [parent, child] });
+
+      blok.YjsManager.runAfterSavesOf.mockImplementation(() => {});
+      const deletion = blocksApi.delete(1, false);
+
+      await Promise.resolve();
+      expect(blok.Toolbar.close).toHaveBeenCalledOnce();
+      await deletion;
+    });
+
     it('removes block and re-focuses current block', async () => {
       const blocks = [createBlockStub({ id: 'a' }), createBlockStub({ id: 'b' })];
       const { blocksApi, blockManager, blok } = createBlocksApi({ blocks });

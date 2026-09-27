@@ -29,6 +29,7 @@ import { releasesChildrenOnTurnInto } from '../../utils/turn-into-children';
 import type { TreePlacement } from '../../utils/tree-order';
 import { lastChildBefore } from '../api/block-placement';
 import { getBlockNestingDepth } from '../drag/utils/depthUtils';
+import { isInsideTableCell } from '../../../tools/table/table-restrictions';
 
 // Imported modules
 import { BlockEventBinder } from './event-binder';
@@ -1598,7 +1599,9 @@ export class BlockManager extends Module {
    * Move a block to a new index
    */
   public move(toIndex: number, fromIndex: number = this.currentBlockIndex, skipDOM = false, skipMovedHook = false): void {
-    this.operations.move(toIndex, fromIndex, skipDOM, this.blocksStore, skipMovedHook);
+    const block = this.repository.getBlockByIndex(fromIndex);
+
+    this.moveCellBlock(block, () => this.operations.move(toIndex, fromIndex, skipDOM, this.blocksStore, skipMovedHook));
   }
 
   /**
@@ -1608,7 +1611,19 @@ export class BlockManager extends Module {
    * @param placement - its new parent and previous sibling
    */
   public moveTo(block: Block, placement: TreePlacement): void {
-    this.operations.moveTo(block, placement, this.blocksStore);
+    this.moveCellBlock(block, () => this.operations.moveTo(block, placement, this.blocksStore));
+  }
+
+  private moveCellBlock(block: Block | undefined, move: () => void): void {
+    if (!isInsideTableCell(block) || this.Blok.YjsManager.isInMoveGroup || this._isPointerDragActive) {
+      move();
+
+      return;
+    }
+
+    // The deferred table-data write must join the placement's undo step.
+    this.Blok.YjsManager.beginApiCall();
+    this.Blok.YjsManager.joinMovesToStep(() => this.transactForTool(move));
   }
 
   /**
@@ -1873,7 +1888,9 @@ export class BlockManager extends Module {
 
     const selectedBlocks = this.selectedBlocksForMove();
 
-    this.operations.moveCurrentBlockUp(this.blocksStore, selectedBlocks);
+    this.moveCellBlock(selectedBlocks?.[0] ?? this.currentBlock, () => {
+      this.operations.moveCurrentBlockUp(this.blocksStore, selectedBlocks);
+    });
 
     this.reselectAfterMove(selectedBlocks);
   }
@@ -1889,7 +1906,9 @@ export class BlockManager extends Module {
 
     const selectedBlocks = this.selectedBlocksForMove();
 
-    this.operations.moveCurrentBlockDown(this.blocksStore, selectedBlocks);
+    this.moveCellBlock(selectedBlocks?.[0] ?? this.currentBlock, () => {
+      this.operations.moveCurrentBlockDown(this.blocksStore, selectedBlocks);
+    });
 
     this.reselectAfterMove(selectedBlocks);
   }

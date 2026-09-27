@@ -305,7 +305,7 @@ export class Table implements BlockTool {
     // belongs to the merge/split undo step, or undo leaves it as a ghost.
     if (!this.readOnly) {
       this.runTransactedStructuralOp(() => {
-        newTbody.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`).forEach(cell => {
+        newTbody.querySelectorAll<HTMLElement>(`:scope > [${ROW_ATTR}] > [${CELL_ATTR}]`).forEach(cell => {
           this.cellBlocks?.ensureCellHasBlock(cell, { track: true });
         });
       }, true);
@@ -421,14 +421,14 @@ export class Table implements BlockTool {
         }
 
         const newCell = newTbody.querySelector(
-          `[${CELL_ROW_ATTR}="${r}"][${CELL_COL_ATTR}="${c}"]`
+          `:scope > [${ROW_ATTR}] > [${CELL_ATTR}][${CELL_ROW_ATTR}="${r}"][${CELL_COL_ATTR}="${c}"]`
         );
 
         if (!newCell) {
           return;
         }
 
-        const container = newCell.querySelector(`[${CELL_BLOCKS_ATTR}]`);
+        const container = newCell.querySelector(`:scope > [${CELL_BLOCKS_ATTR}]`);
 
         if (!container) {
           return;
@@ -1030,7 +1030,7 @@ export class Table implements BlockTool {
         }
 
         const cellEl = gridEl?.querySelector<HTMLElement>(
-          `[${CELL_ROW_ATTR}="${rowIndex}"][${CELL_COL_ATTR}="${colIndex}"]`
+          `:scope > tbody > [${ROW_ATTR}] > [${CELL_ATTR}][${CELL_ROW_ATTR}="${rowIndex}"][${CELL_COL_ATTR}="${colIndex}"]`
         );
         const container = cellEl?.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`) ?? null;
 
@@ -1137,7 +1137,7 @@ export class Table implements BlockTool {
     }
 
     const cellEl = this.gridElement?.querySelector<HTMLElement>(
-      `[${CELL_ROW_ATTR}="${rowIndex}"][${CELL_COL_ATTR}="${colIndex}"]`
+      `:scope > tbody > [${ROW_ATTR}] > [${CELL_ATTR}][${CELL_ROW_ATTR}="${rowIndex}"][${CELL_COL_ATTR}="${colIndex}"]`
     );
     const container = cellEl?.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
 
@@ -1184,6 +1184,28 @@ export class Table implements BlockTool {
     // doc record). Merging the old snapshot in would keep a key the replay
     // removed, e.g. the colWidths of a first resize.
     const normalized = normalizeTableData(newData as TableData, this.config);
+    const restoredIds = new Set<string>();
+
+    if (this.api.blocks.isSyncingFromYjs && !this.api.blocks.isApplyingRemoteChange) {
+      // Capture local-undo additions before replacing the old cell snapshot.
+      const previous = this.model.snapshot().content;
+
+      normalized.content.forEach((row, rowIndex) => {
+        row.forEach((cell, colIndex) => {
+          if (!isCellWithBlocks(cell)) {
+            return;
+          }
+          const previousCell = previous[rowIndex]?.[colIndex];
+          const previousIds = previousCell !== undefined && isCellWithBlocks(previousCell) ? previousCell.blocks : [];
+
+          cell.blocks.forEach(id => {
+            if (!previousIds.includes(id)) {
+              restoredIds.add(id);
+            }
+          });
+        });
+      });
+    }
 
     this.initialContent = normalized.content;
     this.model.replaceAll(normalized);
@@ -1319,7 +1341,7 @@ export class Table implements BlockTool {
           return;
         }
         this.cellBlocks?.reclaimReferencedBlocks();
-        this.fillUnresolvedCellsAfterSync(currentGeneration, SYNC_SETTLE_MAX_FRAMES);
+        this.fillUnresolvedCellsAfterSync(currentGeneration, SYNC_SETTLE_MAX_FRAMES, restoredIds);
       });
     }
   }
@@ -1328,7 +1350,7 @@ export class Table implements BlockTool {
    * Wait for the sync window to close (it stays open through a frame), then
    * fill cells whose referenced blocks never arrived.
    */
-  private fillUnresolvedCellsAfterSync(generation: number, framesLeft: number): void {
+  private fillUnresolvedCellsAfterSync(generation: number, framesLeft: number, restoredIds = new Set<string>()): void {
     requestAnimationFrame(() => {
       if (generation !== this.setDataGeneration || this.readOnly) {
         return;
@@ -1336,14 +1358,14 @@ export class Table implements BlockTool {
 
       if (this.api.blocks.isSyncingFromYjs) {
         if (framesLeft > 1) {
-          this.fillUnresolvedCellsAfterSync(generation, framesLeft - 1);
+          this.fillUnresolvedCellsAfterSync(generation, framesLeft - 1, restoredIds);
         }
 
         return;
       }
 
       this.cellBlocks?.fillCellsWithUnresolvedBlocks();
-      this.cellBlocks?.yieldRepairsToPeers();
+      this.cellBlocks?.yieldRepairsToPeers(restoredIds);
     });
   }
 

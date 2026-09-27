@@ -14,7 +14,7 @@
  * PURITY CONTRACT: only pure imports (src/shared/*, src/view/*).
  */
 import type { OutputData } from '../../types';
-import { repairedTableRows } from './table-grid';
+import { repairedTableRows, sourceCellsInDisplayOrder } from './table-grid';
 
 /** Options shared by extraction and injection — they must match, or the counts will not. */
 export interface DocumentTextsOptions {
@@ -97,6 +97,34 @@ interface TextSlot {
  */
 const collectSlots = (blocks: unknown[], options: DocumentTextsOptions): TextSlot[] => {
   const slots: TextSlot[] = [];
+  const blockIds = new Set<string>();
+  const indexBlock = (entry: unknown): void => {
+    if (!isRecord(entry) || typeof entry.type !== 'string' || entry.type === '') {
+      return;
+    }
+
+    if (typeof entry.id === 'string' && entry.id !== '') {
+      blockIds.add(entry.id);
+    }
+
+    if (!isRecord(entry.data)) {
+      return;
+    }
+
+    if (LEGACY_BODY_TYPES.has(entry.type) && isRecord(entry.data.body) && Array.isArray(entry.data.body.blocks)) {
+      entry.data.body.blocks.forEach(indexBlock);
+    }
+
+    if (entry.type === 'columns' && Array.isArray(entry.data.cols)) {
+      entry.data.cols.forEach(column => {
+        if (isRecord(column) && Array.isArray(column.blocks)) {
+          column.blocks.forEach(indexBlock);
+        }
+      });
+    }
+  };
+
+  blocks.forEach(indexBlock);
 
   /**
    * Emit a slot for one field of a record, or one element of an array, if it
@@ -147,33 +175,50 @@ const collectSlots = (blocks: unknown[], options: DocumentTextsOptions): TextSlo
    */
   const walkTable = (data: Record<string, unknown>): void => {
     const rows = Array.isArray(data.content) ? data.content.filter((row): row is unknown[] => Array.isArray(row)) : [];
-    // Same row filter as repairedTableRows, so indices line up. Slots write to
-    // the raw rows; the repaired grid is a copy.
     const repaired = repairedTableRows(data.content);
 
-    rows.forEach((row, r) => row.forEach((cell, index) => {
-      if (!isRecord(cell)) {
-        pushSlot(row, index);
+    const ordered: Array<{
+      holder: Record<string, unknown> | unknown[];
+      key: string | number;
+      row: number;
+      column: number;
+      order: number;
+    }> = [];
 
-        return;
+    rows.forEach((row, r) => sourceCellsInDisplayOrder(repaired, r).forEach(({ index, column, shown }) => {
+      const cell = row[index];
+
+      if (isRecord(cell)) {
+        /** A cover a live span backs renders nothing; an unbacked one renders as a plain cell. */
+        if (cell.mergedInto !== undefined && isRecord(shown) && shown.mergedInto !== undefined) {
+          return;
+        }
+
+        const shownBlocks = isRecord(shown) && Array.isArray(shown.blocks) ? shown.blocks : [];
+        const ids = shownBlocks.filter((id): id is string => typeof id === 'string');
+
+        /** The view drops `text` when its raw ids all vanish, and hides it when an id resolves. */
+        if (Array.isArray(cell.blocks) && cell.blocks.length > 0 &&
+          (ids.length === 0 || ids.some(id => blockIds.has(id)))) {
+          return;
+        }
       }
 
-      const shown = repaired[r]?.[index];
+      const claim = isRecord(shown) && Array.isArray(shown.mergedInto) ? shown.mergedInto : undefined;
+      const destinationRow = claim !== undefined && typeof claim[0] === 'number' ? claim[0] : r;
+      const destinationColumn = claim !== undefined && typeof claim[1] === 'number' ? claim[1] : column;
 
-      /** A cover a live span backs renders nothing; an unbacked one renders as a plain cell. */
-      if (cell.mergedInto !== undefined && isRecord(shown) && shown.mergedInto !== undefined) {
-        return;
-      }
-
-      const ids = Array.isArray(cell.blocks) ? cell.blocks.filter((id) => typeof id === 'string') : [];
-
-      /** A cell holding block ids owns no text: each referenced block is its own `blocks` entry. */
-      if (ids.length > 0) {
-        return;
-      }
-
-      pushSlot(cell, 'text');
+      ordered.push({
+        holder: isRecord(cell) ? cell : row,
+        key: isRecord(cell) ? 'text' : index,
+        row: destinationRow,
+        column: destinationColumn,
+        order: ordered.length,
+      });
     }));
+
+    ordered.sort((a, b) => a.row - b.row || a.column - b.column || a.order - b.order)
+      .forEach(({ holder, key }) => pushSlot(holder, key));
   };
 
   /**

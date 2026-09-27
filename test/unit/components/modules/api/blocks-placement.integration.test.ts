@@ -693,12 +693,34 @@ describe('blocks.insertAt / blocks.moveTo', () => {
       expect(await savedCells(instance)).toMatchObject([[{ blocks: ['p1', 'p2'] }, { blocks: ['q2', 'q1'] }]]);
     }, 30_000);
 
-    // Two undo steps: the move entry, then the table-data write the parent
-    // sync makes after it. Undo pops only the data write.
-    it.fails('undo and redo of a reorder inside a table cell move the holders back and forth', async () => {
+    it('undo and redo of a reorder inside a table cell move the holders back and forth', async () => {
       const instance = await boot(twoPerCell());
 
       instance.blocks.moveTo('q2', { position: { before: 'q1' } });
+      await nextFrames(2);
+      await undoOnce(instance);
+
+      expect(cellsOf()).toEqual(['p1@0', 'p2@0', 'q1@1', 'q2@1']);
+      expect(await savedCells(instance)).toMatchObject([[{ blocks: ['p1', 'p2'] }, { blocks: ['q1', 'q2'] }]]);
+
+      instance.history.redo();
+      await nextFrames(3);
+
+      expect(cellsOf()).toEqual(['p1@0', 'p2@0', 'q2@1', 'q1@1']);
+      expect(await savedCells(instance)).toMatchObject([[{ blocks: ['p1', 'p2'] }, { blocks: ['q2', 'q1'] }]]);
+    }, 30_000);
+
+    it.each([
+      { name: 'a no-op', act: (instance: TestEditor) => instance.blocks.moveTo('q2', { position: { before: 'q1' } }) },
+      { name: 'a refused cross-cell index move', act: (instance: TestEditor) => instance.blocks.move(1, 3) },
+    ])('$name inside a cell does not consume the preceding move undo step', async ({ act }) => {
+      const instance = await boot(twoPerCell());
+
+      instance.blocks.moveTo('q2', { position: { before: 'q1' } });
+      await nextFrames(2);
+      expect(cellsOf()).toEqual(['p1@0', 'p2@0', 'q2@1', 'q1@1']);
+
+      act(instance);
       await nextFrames(2);
       await undoOnce(instance);
 

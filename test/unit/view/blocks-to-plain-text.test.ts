@@ -95,6 +95,86 @@ describe('blocksToPlainText', () => {
     expect(text).toBe('In cell\tX');
   });
 
+  it.each([
+    ['declared cover', { blocks: ['b'], mergedInto: [0, 0] }],
+    ['newly claimed cell', { blocks: ['b'] }],
+  ])('reads a text-only origin before blocks moved from a %s', (_case, covered) => {
+    const text = blocksToPlainText(doc([
+      { id: 't', type: 'table', data: { content: [[{ blocks: [], text: 'Origin', colspan: 2 }, covered]] } },
+      { id: 'b', type: 'paragraph', parent: 't', data: { text: 'Claimed' } },
+    ]));
+
+    expect(text).toBe('Origin\nClaimed');
+  });
+
+  it('ignores stale text when a merge origin already held its own block ids', () => {
+    const text = blocksToPlainText(doc([
+      { id: 't', type: 'table', data: { content: [[{ blocks: ['a'], text: 'Stale', colspan: 2 }, { blocks: ['b'] }]] } },
+      { id: 'a', type: 'paragraph', parent: 't', data: { text: 'Own' } },
+      { id: 'b', type: 'paragraph', parent: 't', data: { text: 'Claimed' } },
+    ]));
+
+    expect(text).toBe('Own\nClaimed');
+  });
+
+  it('does not read stale origin text when dedup removes its own block id', () => {
+    const text = blocksToPlainText(doc([
+      { id: 't', type: 'table', data: { content: [[{ blocks: ['shared'] }, { blocks: ['shared'], text: 'Stale', colspan: 2 }, { blocks: ['claimed'] }]] } },
+      { id: 'shared', type: 'paragraph', parent: 't', data: { text: 'First' } },
+      { id: 'claimed', type: 'paragraph', parent: 't', data: { text: 'Claimed' } },
+    ]));
+
+    expect(text).toBe('First\tClaimed');
+  });
+
+  it('does not read stale text when a block id belongs to an earlier cell', () => {
+    const text = blocksToPlainText(doc([
+      { id: 't', type: 'table', data: { content: [[{ blocks: ['shared'] }, { blocks: ['shared'], text: 'Stale' }]] } },
+      { id: 'shared', type: 'paragraph', parent: 't', data: { text: 'First' } },
+    ]));
+
+    expect(text).toBe('First\t');
+  });
+
+  it('does not read stale text when a cell only has malformed block ids', () => {
+    const text = blocksToPlainText(doc([
+      { type: 'table', data: { content: [[{ blocks: [42, null], text: 'Stale' }]] } },
+    ]));
+
+    expect(text).toBe('');
+  });
+
+  it('places blocks from a short row inside the padded merge, not after it', () => {
+    const text = blocksToPlainText(doc([
+      {
+        id: 't', type: 'table', data: { content: [
+          [{ blocks: ['a'], colspan: 2, rowspan: 2 }, { blocks: [], mergedInto: [0, 0] }, { blocks: ['c'] }],
+          [{ blocks: ['b'], mergedInto: [0, 0] }],
+        ] },
+      },
+      { id: 'a', type: 'paragraph', parent: 't', data: { text: 'A' } },
+      { id: 'b', type: 'paragraph', parent: 't', data: { text: 'B' } },
+      { id: 'c', type: 'paragraph', parent: 't', data: { text: 'C' } },
+    ]));
+
+    expect(text).toBe('A\nB\tC');
+  });
+
+  it('keeps a stable-id cell in its column instead of merging it into a neighbor', () => {
+    const text = blocksToPlainText(doc([
+      {
+        id: 't', type: 'table', data: { content: [
+          [{ id: 'left', rowId: 'top', blocks: ['a'], colspan: 2 }, { id: 'right', rowId: 'top', blocks: ['c'] }],
+          [{ id: 'left', rowId: 'bottom', blocks: [], text: 'L' }, { id: 'middle', rowId: 'bottom', blocks: [], text: 'M' }, { id: 'right', rowId: 'bottom', blocks: [], text: 'R' }],
+        ] },
+      },
+      { id: 'a', type: 'paragraph', parent: 't', data: { text: 'A' } },
+      { id: 'c', type: 'paragraph', parent: 't', data: { text: 'C' } },
+    ]));
+
+    expect(text).toBe('A\tC\nL\tM\tR');
+  });
+
   /**
    * A block whose `parent` is the table but which no cell's `blocks` array
    * names is emitted nowhere unless the walk picks it up after the grid.

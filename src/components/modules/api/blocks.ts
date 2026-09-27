@@ -207,8 +207,13 @@ export class BlocksAPI extends Module {
       return;
     }
 
+    const parent = block.parentId === null ? undefined : this.Blok.BlockManager.getBlockById(block.parentId);
+
     try {
       await this.Blok.BlockManager.removeBlock(block);
+      if (parent?.name === 'table') {
+        await new Promise<void>(resolve => this.Blok.YjsManager.runAfterSavesOf(parent.id, resolve));
+      }
     } catch (error: unknown) {
       logLabeled(error as string, 'warn');
 

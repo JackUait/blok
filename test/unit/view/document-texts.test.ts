@@ -331,6 +331,86 @@ describe('extractTexts / injectTexts', () => {
     expect(blocksToPlainText(translated)).toBe('Альфа\tСирота\nШирокая\nЗанятая');
   });
 
+  it('does not translate a cover backed by a merge after padding a ragged row', () => {
+    const data = { blocks: [{ type: 'table', data: { content: [
+      [{ blocks: [], text: 'Origin', colspan: 2, rowspan: 2 }, { blocks: [], mergedInto: [0, 0] }, { blocks: [], text: 'Tail' }],
+      [{ blocks: [], text: 'Hidden', mergedInto: [0, 0] }],
+    ] } }] };
+
+    expect(extractTexts(data)).toEqual(['Origin', 'Tail']);
+    expect(blocksToPlainText(injectTexts(data, ['Начало', 'Конец']))).toBe('Начало\tКонец');
+  });
+
+  it('extracts claimed legacy text with its visible merge origin', () => {
+    const data = { blocks: [{ type: 'table', data: { content: [
+      [{ blocks: [], text: 'O', rowspan: 2 }, { blocks: [], text: 'R' }],
+      ['Claimed', { blocks: [], text: 'S' }],
+    ] } }] };
+
+    expect(extractTexts(data)).toEqual(['O', 'Claimed', 'R', 'S']);
+    expect(blocksToPlainText(data)).toBe('O\nClaimed\tR\nS');
+    expect(blocksToPlainText(injectTexts(data, ['О', 'Занято', 'П', 'С'])))
+      .toBe('О\nЗанято\tП\nС');
+  });
+
+  it('translates an unbacked cover after stable ids move it out of a merge', () => {
+    const data = { blocks: [{ type: 'table', data: { content: [
+      [{ id: 'left', rowId: 'top', blocks: [], text: 'Origin', colspan: 2 }, { id: 'right', rowId: 'top', blocks: [], text: 'Right', mergedInto: [0, 0] }],
+      [{ id: 'left', rowId: 'bottom', blocks: [], text: 'L' }, { id: 'middle', rowId: 'bottom', blocks: [], text: 'M' }, { id: 'right', rowId: 'bottom', blocks: [], text: 'R' }],
+    ] } }] };
+
+    expect(extractTexts(data)).toEqual(['Origin', 'Right', 'L', 'M', 'R']);
+    expect(blocksToPlainText(injectTexts(data, ['Начало', 'Правая', 'Л', 'С', 'П'])))
+      .toBe('Начало\tПравая\nЛ\tС\tП');
+  });
+
+  it('extracts displayed fallback text when a table cell block reference is unresolved', () => {
+    const data = { blocks: [{ type: 'table', data: { content: [[{ blocks: ['missing'], text: 'Fallback' }]] } }] };
+
+    expect(extractTexts(data)).toEqual(['Fallback']);
+    expect(blocksToPlainText(injectTexts(data, ['Translated']))).toBe('Translated');
+  });
+
+  it('extracts visible fallback after duplicate cell references are removed', () => {
+    const data = { blocks: [
+      { id: 'table', type: 'table', data: { content: [[
+        { blocks: ['child'] },
+        { blocks: ['child', 'missing'], text: 'Visible fallback' },
+      ]] } },
+      { id: 'child', type: 'paragraph', parent: 'table', data: { text: 'Visible child' } },
+    ] };
+
+    expect(extractTexts(data)).toEqual(['Visible fallback', 'Visible child']);
+    expect(blocksToPlainText(injectTexts(data, ['Translated fallback', 'Translated child'])))
+      .toBe('Translated child\tTranslated fallback');
+  });
+
+  it('does not extract stale cell text beside a nested legacy child', () => {
+    const data = { blocks: [{ type: 'callout', data: { body: { blocks: [
+      { id: 'table', type: 'table', data: { content: [[{ blocks: ['child'], text: 'Stale fallback' }]] } },
+      { id: 'child', type: 'paragraph', parent: 'table', data: { text: 'Nested child' } },
+    ] } } }] };
+
+    expect(extractTexts(data)).toEqual(['Nested child']);
+  });
+
+  it('does not extract stale cell text when its block ids are malformed', () => {
+    const data = { blocks: [{ type: 'table', data: { content: [[{ blocks: [42, null], text: 'Stale' }]] } }] };
+
+    expect(extractTexts(data)).toEqual([]);
+  });
+
+  it('extracts stable-id cells in their displayed column order', () => {
+    const data = { blocks: [{ type: 'table', data: { content: [
+      [{ id: 'left', rowId: 'top', blocks: [], text: 'Top left' }, { id: 'right', rowId: 'top', blocks: [], text: 'Top right' }],
+      [{ id: 'right', rowId: 'bottom', blocks: [], text: 'Bottom right' }, { id: 'left', rowId: 'bottom', blocks: [], text: 'Bottom left' }],
+    ] } }] };
+
+    expect(extractTexts(data)).toEqual(['Top left', 'Top right', 'Bottom left', 'Bottom right']);
+    expect(blocksToPlainText(injectTexts(data, ['Верх лево', 'Верх право', 'Низ лево', 'Низ право'])))
+      .toBe('Верх лево\tВерх право\nНиз лево\tНиз право');
+  });
+
   it('walks a legacy list\'s nested items, including plain-string items', () => {
     const data = {
       blocks: [

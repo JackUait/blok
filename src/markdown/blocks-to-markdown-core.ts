@@ -15,6 +15,7 @@
 
 import type { BlockToolData } from '../../types';
 import { orderByContent } from '../shared/content-order';
+import { claimedCellTexts, leadingCellText, repairedTableRows } from '../shared/table-grid';
 
 export interface SerializableBlock {
   /**
@@ -417,7 +418,7 @@ const cellBlockLines = (block: SerializableBlock, context: SerializationContext,
  * @param context - the serialization context (resolves cell child blocks by id)
  */
 const tableToMarkdown = (block: SerializableBlock, context: SerializationContext): string => {
-  const grid = readTableGrid(block.data);
+  const grid = readTableGrid({ content: repairedTableRows(block.data.content) });
 
   if (grid.length === 0) {
     return '';
@@ -434,8 +435,12 @@ const tableToMarkdown = (block: SerializableBlock, context: SerializationContext
         return '';
       }
 
+      if (cell.mergedInto !== undefined) {
+        return '';
+      }
+
       const ids = Array.isArray(cell.blocks) ? cell.blocks.filter((id: unknown): id is string => typeof id === 'string') : [];
-      const lines = ids.flatMap((id) => {
+      const blockLines = ids.flatMap((id) => {
         const cellBlock = context.byId.get(id);
 
         if (cellBlock === undefined) {
@@ -446,16 +451,19 @@ const tableToMarkdown = (block: SerializableBlock, context: SerializationContext
 
         return cellBlockLines(cellBlock, context, 0);
       });
+      const own = leadingCellText(cell) ?? (blockLines.length === 0 ? asString(cell.text) : '');
+      const lines = [
+        ...(own === '' ? [] : [inlineMarkdown(context, own)]),
+        ...blockLines,
+        ...claimedCellTexts(cell).map((text) => inlineMarkdown(context, text)),
+      ];
 
-      const markdown = lines.length > 0 ? lines.join('\n') : inlineMarkdown(context, asString(cell.text));
-
-      return escapeTableCell(markdown).trim();
+      return escapeTableCell(lines.join('\n')).trim();
     })
   );
 
-  /** A cell pointing at a block that is not in the document loses its content. */
   warnUnresolvedChildren(context, block, unresolved.length);
-  warnPresentationLosses(context, block, 'a GFM pipe table', tablePresentationLosses(block.data, grid));
+  warnPresentationLosses(context, block, 'a GFM pipe table', tablePresentationLosses(block.data, readTableGrid(block.data)));
 
   const withHeadings = block.data.withHeadings === true;
   const header = withHeadings ? rows[0] : Array.from({ length: columns }, () => '');

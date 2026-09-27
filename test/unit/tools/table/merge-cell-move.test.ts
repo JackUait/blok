@@ -1,8 +1,7 @@
 /**
  * Moving a block inside one table cell, through every user path: keyboard
  * (Cmd/Ctrl+Shift+Up/Down), blocks.moveTo, blocks.move and a drag drop. The
- * DOM, the table model and save() must agree on the new order, undo must
- * restore the old one and redo must re-apply the move.
+ * DOM, the table model, save(), and Yjs must agree through move, undo, and redo.
  *
  * The merged-cell cases use a merge over a merge: the origin cell holds
  * c00,c01,c10,c11,c21,c20, an order no index move of the original row-major
@@ -35,7 +34,11 @@ interface TestEditor {
       moveCurrentBlockUp: () => void;
       moveCurrentBlockDown: () => void;
     };
-    yjsManager: { stopCapturing: () => void };
+    yjsManager: {
+      stopCapturing: () => void;
+      getBlockDataObject: (id: string) => Record<string, unknown> | undefined;
+      onPendingBlockWritesSettled: (callback: () => void) => () => void;
+    };
     blockSelection: { clearSelection: () => void };
     dragManager: {
       lazyInit: () => void;
@@ -79,6 +82,10 @@ const merge = (range: Range): void => {
 
 const settle = (): Promise<void> => new Promise(resolve => {
   setTimeout(resolve, 0);
+});
+
+const settleFrame = (): Promise<void> => new Promise(resolve => {
+  requestAnimationFrame(() => resolve());
 });
 
 const P = (id: string): OutputBlockData => ({ id, type: 'paragraph', data: { text: id }, parent: 'tbl' });
@@ -140,6 +147,26 @@ const layers = async (instance: TestEditor): Promise<Layers> => {
 
 const same = (order: string[]): Layers => ({ dom: order, model: order, saved: order });
 
+const yjsOrder = async (instance: TestEditor): Promise<string[]> => {
+  await new Promise<void>(resolve => {
+    instance.module.yjsManager.onPendingBlockWritesSettled(resolve);
+  });
+  const content = instance.module.yjsManager.getBlockDataObject('tbl')?.content;
+  const row: unknown = Array.isArray(content) ? content[0] : undefined;
+  const cell: unknown = Array.isArray(row) ? row[0] : undefined;
+
+  if (typeof cell !== 'object' || cell === null || !('blocks' in cell)) {
+    throw new Error('Yjs table cell is missing');
+  }
+  const blocks: unknown = cell.blocks;
+
+  if (!Array.isArray(blocks) || !blocks.every((id: unknown) => typeof id === 'string')) {
+    throw new Error('Yjs table cell blocks are invalid');
+  }
+
+  return blocks;
+};
+
 const keyboard = (instance: TestEditor, id: string, direction: 'up' | 'down'): void => {
   const manager = instance.module.blockManager;
 
@@ -189,18 +216,22 @@ const expectMove = async (instance: TestEditor, before: string[], { act, expecte
 };
 
 const expectMoveUndoRedo = async (instance: TestEditor, before: string[], move: MoveCase): Promise<void> => {
+  await settleFrame();
   await expectMove(instance, before, move);
+  expect(await yjsOrder(instance), 'Yjs after the move').toEqual(move.expected);
 
   instance.module.yjsManager.stopCapturing();
   instance.history.undo();
   await settle();
 
   expect.soft(await layers(instance), 'after undo').toEqual(same(before));
+  expect.soft(await yjsOrder(instance), 'Yjs after undo').toEqual(before);
 
   instance.history.redo();
   await settle();
 
   expect.soft(await layers(instance), 'after redo').toEqual(same(move.expected));
+  expect.soft(await yjsOrder(instance), 'Yjs after redo').toEqual(move.expected);
 };
 
 const PLAIN_MOVES: MoveCase[] = [
@@ -255,17 +286,38 @@ describe('moving a block inside one table cell', { timeout: 60_000 }, () => {
       await expectMove(await bootPlain(), PLAIN, move);
     });
 
-    // Two undo steps: the move entry, then the tracked table-data write the
-    // parent sync makes after it. Undo pops the data write and the table
-    // saves the DOM order back.
-    it.fails.each(PLAIN_MOVES)('$name, then undo and redo', async (move) => {
+    it.each(PLAIN_MOVES)('$name, then undo and redo', async (move) => {
       await expectMoveUndoRedo(await bootPlain(), PLAIN, move);
     });
 
-    // A drop inside the cell moves the holder and save() but leaves the
-    // table model at the old order.
-    it.fails.each(PLAIN_DRAGS)('$name', async (move) => {
+    it.each(PLAIN_DRAGS)('$name, then undo and redo', async (move) => {
       await expectMoveUndoRedo(await bootPlain(), PLAIN, move);
+    });
+
+    it.each([
+      { name: 'blocks.move', act: (instance: TestEditor) => flatMove(instance, 'x', 'outside') },
+      { name: 'drag', act: (instance: TestEditor) => drag(instance, 'x', 'outside', 'bottom') },
+    ])('$name out of a cell removes its reference from the model and Yjs', async ({ act }) => {
+      const instance = await boot([
+        ...tableDoc([[['x', 'y', 'z'], ['w']]]),
+        { id: 'outside', type: 'paragraph', data: { text: 'outside' } },
+      ]);
+
+      act(instance);
+      await settle();
+
+      const actual = await layers(instance);
+
+      expect.soft(actual.model).toEqual(['y', 'z']);
+      expect.soft(await yjsOrder(instance)).toEqual(['y', 'z']);
+      expect(actual.dom).toEqual(['y', 'z']);
+      expect(actual.saved).toEqual(['y', 'z']);
+      const output = await instance.save();
+      const moved = output.blocks.find(block => block.id === 'x');
+
+      expect(moved).toMatchObject({ id: 'x' });
+      expect(moved?.parent).toBeUndefined();
+      expect(holder.querySelector('[data-blok-id="x"]')?.closest('[data-blok-table-cell-blocks]')).toBeNull();
     });
   });
 
@@ -274,13 +326,11 @@ describe('moving a block inside one table cell', { timeout: 60_000 }, () => {
       await expectMove(await bootMerged(), MERGED, move);
     });
 
-    // Same two-step undo as the plain cell.
-    it.fails.each(MERGED_MOVES)('$name, then undo and redo', async (move) => {
+    it.each(MERGED_MOVES)('$name, then undo and redo', async (move) => {
       await expectMoveUndoRedo(await bootMerged(), MERGED, move);
     });
 
-    // Same stale table model as the plain-cell drop.
-    it.fails.each(MERGED_DRAGS)('$name', async (move) => {
+    it.each(MERGED_DRAGS)('$name, then undo and redo', async (move) => {
       await expectMoveUndoRedo(await bootMerged(), MERGED, move);
     });
   });

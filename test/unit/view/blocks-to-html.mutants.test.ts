@@ -263,13 +263,13 @@ describe('blocksToHtml — output-exact renderer contracts', () => {
       expect(render()).toBe('<table><tbody><tr><td></td></tr></tbody></table>');
     });
 
-    it('renders a block once per reference when two cells point at it', () => {
+    it('renders a block only in its first cell when two cells point at it', () => {
       const html = blocksToHtml(doc([
         { id: 't1', type: 'table', data: { content: [[{ blocks: ['p1'] }, { blocks: ['p1'] }]] } },
         { id: 'p1', type: 'paragraph', parent: 't1', data: { text: 'X' } },
       ]));
 
-      expect(html).toBe('<table><tbody><tr><td><p>X</p></td><td><p>X</p></td></tr></tbody></table>');
+      expect(html).toBe('<table><tbody><tr><td><p>X</p></td><td></td></tr></tbody></table>');
     });
 
     it('drops a list item whose id is already on the render stack', () => {

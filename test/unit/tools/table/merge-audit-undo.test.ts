@@ -6,72 +6,88 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Blok from '../../../../src/blok';
 import { Table } from '../../../../src/tools/table/index';
 import { Paragraph } from '../../../../src/tools/paragraph';
-import type { CellContent, LegacyCellContent, TableConfig, TableData } from '../../../../src/tools/table/types';
-import type { BlockToolConstructorOptions, OutputBlockData, OutputData } from '../../../../types';
+import type { CellContent, LegacyCellContent, TableData } from '../../../../src/tools/table/types';
+import type { OutputBlockData, OutputData } from '../../../../types';
 
 const TABLE_ID = 'tbl';
 
 interface Range { minRow: number; maxRow: number; minCol: number; maxCol: number }
 
-interface SelectionHandle {
-  onMergeCells?: (range: Range) => void;
-  onSplitCell?: (row: number, col: number) => void;
-}
+const cellAt = (row: number, col: number): HTMLTableCellElement => {
+  const cell = Array.from(holder.querySelectorAll<HTMLTableCellElement>('[data-blok-table-cell]'))
+    .find(td => {
+      const r = Number(td.getAttribute('data-blok-table-cell-row'));
+      const c = Number(td.getAttribute('data-blok-table-cell-col'));
 
-interface ModelHandle {
-  hasMerges: () => boolean;
-  snapshot: () => TableData;
-}
+      return row >= r && row < r + td.rowSpan && col >= c && col < c + td.colSpan;
+    });
 
-const tables = new Map<string, Table>();
-
-class TrackedTable extends Table {
-  constructor(options: BlockToolConstructorOptions<TableData, TableConfig>) {
-    super(options);
-    tables.set(options.block?.id ?? '', this);
-  }
-}
-
-const liveTable = (): Table => {
-  const table = tables.get(TABLE_ID);
-
-  if (table === undefined) {
-    throw new Error('no table');
+  if (cell === undefined) {
+    throw new Error(`no cell at ${row},${col}`);
   }
 
-  return table;
+  return cell;
 };
 
-const selection = (): SelectionHandle => {
-  const subs = (liveTable() as unknown as { subsystems: { cellSelectionSubsystem: SelectionHandle | null } }).subsystems;
-  const sel = subs.cellSelectionSubsystem;
+const activateCellAction = (from: [number, number], to: [number, number], title: string): void => {
+  const start = cellAt(...from);
+  const end = cellAt(...to);
 
-  if (sel === null) {
-    throw new Error('no cell selection');
+  start.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+  if (start !== end) {
+    const priorElementFromPoint = Object.getOwnPropertyDescriptor(document, 'elementFromPoint');
+    const restoreElementFromPoint = (): void => {
+      if (priorElementFromPoint === undefined) {
+        Reflect.deleteProperty(document, 'elementFromPoint');
+      } else {
+        Object.defineProperty(document, 'elementFromPoint', priorElementFromPoint);
+      }
+    };
+
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => end });
+    try {
+      document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 1, clientY: 1 }));
+    } finally {
+      restoreElementFromPoint();
+    }
   }
+  document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
 
-  return sel;
+  const pill = holder.querySelector<HTMLElement>('[data-blok-table-selection-pill]');
+
+  if (pill === null) {
+    throw new Error('no selection menu');
+  }
+  pill.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+  pill.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, button: 0 }));
+
+  const item = Array.from(document.querySelectorAll<HTMLElement>('[data-blok-popover-item]'))
+    .find(candidate => candidate.querySelector('[data-blok-popover-item-title]')?.textContent === title);
+
+  if (item === undefined) {
+    throw new Error(`no ${title} item`);
+  }
+  item.click();
 };
 
-const model = (): ModelHandle => (liveTable() as unknown as { model: ModelHandle }).model;
-
-/** The same callbacks the cell-selection menu's Merge / Split items call. */
 const merge = (range: Range): void => {
-  const fn = selection().onMergeCells;
-
-  if (fn === undefined) {
-    throw new Error('no merge callback');
-  }
-  fn(range);
+  activateCellAction([range.minRow, range.minCol], [range.maxRow, range.maxCol], 'Merge cells');
 };
 
 const split = (row: number, col: number): void => {
-  const fn = selection().onSplitCell;
+  activateCellAction([row, col], [row, col], 'Split cell');
+};
 
-  if (fn === undefined) {
-    throw new Error('no split callback');
+const addColumn = (): void => {
+  const button = holder.querySelector<HTMLElement>('[data-blok-table-add-col]');
+
+  if (button === null) {
+    throw new Error('no add-column button');
   }
-  fn(row, col);
+  button.setPointerCapture = vi.fn();
+  button.releasePointerCapture = vi.fn();
+  button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
+  button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 }));
 };
 
 interface TestEditor {
@@ -108,7 +124,7 @@ const buildDoc = (content: LegacyCellContent[][], texts: Record<string, string>,
 const boot = async (data: OutputData): Promise<TestEditor> => {
   const instance = new Blok({
     holder,
-    tools: { paragraph: Paragraph, table: TrackedTable },
+    tools: { paragraph: Paragraph, table: Table },
     data,
   }) as unknown as TestEditor;
 
@@ -124,6 +140,11 @@ const contentOf = (output: OutputData): CellContent[][] => {
 
   return (table?.data as TableData).content as CellContent[][];
 };
+
+const hasMerge = (output: OutputData): boolean =>
+  contentOf(output).some(row => row.some(cell =>
+    cell.mergedInto !== undefined || (cell.colspan ?? 1) > 1 || (cell.rowspan ?? 1) > 1
+  ));
 
 const blockIdsSorted = (output: OutputData): string[] => output.blocks.map(b => b.id ?? '').sort();
 
@@ -158,7 +179,6 @@ const TEXTS_2X2 = { a: 'A', b: 'B', c: 'C', d: 'D' };
 describe('merge audit: undo/redo of merge and split', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    tables.clear();
     holder = document.createElement('div');
     document.body.appendChild(holder);
   });
@@ -190,7 +210,7 @@ describe('merge audit: undo/redo of merge and split', () => {
     expect(contentOf(undone)).toEqual(contentOf(before));
     expect(blockIdsSorted(undone)).toEqual(blockIdsSorted(before));
     expect(domShape()).toEqual({ cells: 4, spans: [], holders: { '0,0': ['a'], '0,1': ['b'], '1,0': ['c'], '1,1': ['d'] } });
-    expect(model().hasMerges()).toBe(false);
+    expect(hasMerge(undone)).toBe(false);
     // Exactly one entry: nothing left to undo after it.
     expect(editor.history.canUndo()).toBe(false);
     editor.history.undo();
@@ -206,6 +226,7 @@ describe('merge audit: undo/redo of merge and split', () => {
     }
     editable.setAttribute('contenteditable', 'true');
     editable.focus();
+    editable.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, inputType: 'insertText', data: text }));
     editable.textContent = text;
     editable.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
     await sleep(50);
@@ -237,7 +258,7 @@ describe('merge audit: undo/redo of merge and split', () => {
     expect(blockIdsSorted(redone)).toEqual(blockIdsSorted(before));
     expect(domShape()).toEqual(mergedDom);
     expect(mergedDom.spans).toEqual(['0,0:2x2']);
-    expect(model().hasMerges()).toBe(true);
+    expect(hasMerge(redone)).toBe(true);
   }, 90_000);
 
   it('undo of a merge restores scrubbed color / textColor / placement of absorbed cells and origin placement', async () => {
@@ -303,7 +324,7 @@ describe('merge audit: undo/redo of merge and split', () => {
 
     expect(contentOf(undone)).toEqual(contentOf(before));
     expect(blockIdsSorted(undone)).toEqual(blockIdsSorted(before));
-    expect(model().hasMerges()).toBe(true);
+    expect(hasMerge(undone)).toBe(true);
     expect(editor.history.canUndo()).toBe(false);
   }, 90_000);
 
@@ -343,12 +364,7 @@ describe('merge audit: undo/redo of merge and split', () => {
 
   it('adding a column then merging it: undo + redo shows the merged cell in the same order the merge did', async () => {
     const editor = await boot(buildDoc([[{ blocks: ['a'] }], [{ blocks: ['c'] }]], { a: 'A', c: 'C' }));
-    const addControls = (liveTable() as unknown as { subsystems: { addControls: { boundAddColClick: () => void } | null } }).subsystems.addControls;
-
-    if (addControls === null) {
-      throw new Error('no add controls');
-    }
-    addControls.boundAddColClick();
+    addColumn();
     await sleep(CAPTURE);
 
     const withCol = contentOf(await editor.save());
@@ -377,12 +393,7 @@ describe('merge audit: undo/redo of merge and split', () => {
 
   it('reloading the saved result of a merge shows the merged cell in the same order', async () => {
     const editor = await boot(buildDoc([[{ blocks: ['a'] }], [{ blocks: ['c'] }]], { a: 'A', c: 'C' }));
-    const addControls = (liveTable() as unknown as { subsystems: { addControls: { boundAddColClick: () => void } | null } }).subsystems.addControls;
-
-    if (addControls === null) {
-      throw new Error('no add controls');
-    }
-    addControls.boundAddColClick();
+    addColumn();
     await sleep(CAPTURE);
     merge({ minRow: 0, maxRow: 1, minCol: 0, maxCol: 1 });
     await sleep(CAPTURE);
@@ -392,7 +403,6 @@ describe('merge audit: undo/redo of merge and split', () => {
 
     editor.destroy();
     blok = null;
-    tables.clear();
     await boot(merged);
 
     expect(domShape().holders['0,0']).toEqual(seen);
@@ -575,6 +585,6 @@ describe('merge audit: undo/redo of merge and split', () => {
     expect(blockIdsSorted(after)).toEqual(blockIdsSorted(before));
     expect(contentOf(after)).toEqual(contentOf(before));
     expect(domShape().holders).toEqual({ '0,0': ['a'], '0,1': ['b'], '1,0': ['c'], '1,1': ['d'] });
-    expect(model().hasMerges()).toBe(false);
+    expect(hasMerge(after)).toBe(false);
   }, 90_000);
 });

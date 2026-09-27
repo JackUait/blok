@@ -268,6 +268,42 @@ describe('blocksToMarkdown (view)', () => {
     expect(md).toBe('| H1 | H2 |\n| --- | --- |\n| a | b |');
   });
 
+  it('writes a block once when two table cells reference its id', () => {
+    const md = blocksToMarkdown(doc([
+      { id: 't', type: 'table', data: { withHeadings: true, content: [[{ blocks: ['shared'] }, { blocks: ['shared'], text: 'Stale' }]] } },
+      { id: 'shared', type: 'paragraph', parent: 't', data: { text: 'First' } },
+    ]));
+
+    expect(md).toBe('| First |  |\n| --- | --- |');
+  });
+
+  it('moves covered blocks into a merged cell without reviving stale text', () => {
+    const md = blocksToMarkdown(doc([
+      { id: 't', type: 'table', data: { withHeadings: true, content: [[{ blocks: ['own'], text: 'Stale', colspan: 2 }, { blocks: ['claimed'], mergedInto: [0, 0] }]] } },
+      { id: 'own', type: 'paragraph', parent: 't', data: { text: 'Own' } },
+      { id: 'claimed', type: 'paragraph', parent: 't', data: { text: 'Claimed' } },
+    ]));
+
+    expect(md).toBe('| Own<br>Claimed |  |\n| --- | --- |');
+  });
+
+  it('keeps a text-only merge origin before a covered block', () => {
+    const md = blocksToMarkdown(doc([
+      { id: 't', type: 'table', data: { withHeadings: true, content: [[{ blocks: [], text: 'Origin', colspan: 2 }, { blocks: ['claimed'] }]] } },
+      { id: 'claimed', type: 'paragraph', parent: 't', data: { text: 'Claimed' } },
+    ]));
+
+    expect(md).toBe('| Origin<br>Claimed |  |\n| --- | --- |');
+  });
+
+  it('falls back to saved cell text when its block reference is unresolved', () => {
+    const md = blocksToMarkdown(doc([
+      { id: 't', type: 'table', data: { withHeadings: true, content: [[{ blocks: ['missing'], text: 'Saved fallback' }]] } },
+    ]));
+
+    expect(md).toBe('| Saved fallback |\n| --- |');
+  });
+
   describe('degradation report', () => {
     it('reports a dropped spacer', () => {
       const { warnings } = blocksToMarkdownWithReport(doc([{ type: 'spacer', data: {} }]));
@@ -617,6 +653,17 @@ describe('blocksToMarkdown (view)', () => {
           action: 'degraded',
           detail: 'table is rendered as a GFM pipe table; its merged cells, heading column and cell colours are lost' },
       ]);
+    });
+
+    it('keeps cells separate when the span is not numeric', () => {
+      const { markdown, warnings } = blocksToMarkdownWithReport(doc([{
+        id: 't1',
+        type: 'table',
+        data: { withHeadings: true, content: [[{ blocks: [], text: 'Origin', colspan: '2' }, { blocks: [], text: 'Covered' }]] },
+      }]));
+
+      expect(markdown).toBe('| Origin | Covered |\n| --- | --- |');
+      expect(warnings).toEqual([]);
     });
 
     it('stays silent for a table a pipe table can express', () => {

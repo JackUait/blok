@@ -88,7 +88,7 @@ export const getCellPosition = (gridEl: HTMLElement, cell: HTMLElement): { row: 
   // index equals the logical row. Columns DIVERGE: merged cells are not
   // rendered as <td>, so a physical NodeList index would be wrong in any
   // merge-touched row. Read the LOGICAL column the cell carries instead.
-  const row = Array.from(gridEl.querySelectorAll(`[${ROW_ATTR}]`)).indexOf(rowEl);
+  const row = Array.from(ownRows(gridEl)).indexOf(rowEl);
   const colAttr = cell.getAttribute(CELL_COL_ATTR);
 
   if (row < 0 || colAttr === null) {
@@ -734,6 +734,9 @@ export const enableScrollOverflow = (element: HTMLDivElement | null): void => {
 const HEADING_ROW_ATTR = 'data-blok-table-heading';
 const HEADING_COL_ATTR = 'data-blok-table-heading-col';
 
+const ownRows = (gridEl: HTMLElement): NodeListOf<HTMLElement> =>
+  gridEl.querySelectorAll<HTMLElement>(`:scope > tbody > [${ROW_ATTR}], :scope > [${ROW_ATTR}]`);
+
 const headerCellRole = (cell: Element, isInHeadingRow: boolean): string | null => {
   // The corner cell of a table that has BOTH headers reads as a column header,
   // the same choice `<th scope="col">` encodes: it heads the column of row
@@ -756,10 +759,10 @@ const headerCellRole = (cell: Element, isInHeadingRow: boolean): string | null =
  * by reference in selection, merge and resize state.
  */
 const applyHeaderCellRoles = (gridEl: HTMLElement): void => {
-  gridEl.querySelectorAll(`[${ROW_ATTR}]`).forEach(row => {
+  ownRows(gridEl).forEach(row => {
     const isInHeadingRow = row.hasAttribute(HEADING_ROW_ATTR);
 
-    row.querySelectorAll(`[${CELL_ATTR}]`).forEach(cell => {
+    row.querySelectorAll(`:scope > [${CELL_ATTR}]`).forEach(cell => {
       const role = headerCellRole(cell, isInHeadingRow);
 
       if (role === null) {
@@ -776,7 +779,7 @@ export const updateHeadingStyles = (gridEl: HTMLElement | null, withHeadings: bo
     return;
   }
 
-  const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
+  const rows = ownRows(gridEl);
 
   rows.forEach(row => {
     row.removeAttribute(HEADING_ROW_ATTR);
@@ -808,7 +811,7 @@ export const updateTextSizeStyles = (gridEl: HTMLElement | null, textSize: Table
 };
 
 export const applyCellColors = (gridEl: HTMLElement, content: LegacyCellContent[][]): void => {
-  const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
+  const rows = ownRows(gridEl);
 
   content.forEach((rowContent, r) => {
     if (r >= rows.length) {
@@ -816,7 +819,7 @@ export const applyCellColors = (gridEl: HTMLElement, content: LegacyCellContent[
     }
 
     rowContent.forEach((cellContent, c) => {
-      const el = rows[r].querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${c}"]`);
+      const el = rows[r].querySelector<HTMLElement>(`:scope > [${CELL_ATTR}][${CELL_COL_ATTR}="${c}"]`);
 
       if (!el) {
         return;
@@ -838,7 +841,7 @@ export const applyCellColors = (gridEl: HTMLElement, content: LegacyCellContent[
 };
 
 export const applyCellPlacements = (gridEl: HTMLElement, content: LegacyCellContent[][]): void => {
-  const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
+  const rows = ownRows(gridEl);
 
   content.forEach((rowContent, r) => {
     if (r >= rows.length) {
@@ -846,13 +849,13 @@ export const applyCellPlacements = (gridEl: HTMLElement, content: LegacyCellCont
     }
 
     rowContent.forEach((cellContent, c) => {
-      const el = rows[r].querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${c}"]`);
+      const el = rows[r].querySelector<HTMLElement>(`:scope > [${CELL_ATTR}][${CELL_COL_ATTR}="${c}"]`);
 
       if (!el) {
         return;
       }
 
-      const blocksContainer = el.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+      const blocksContainer = el.querySelector<HTMLElement>(`:scope > [${CELL_BLOCKS_ATTR}]`);
 
       if (!blocksContainer) {
         return;
@@ -872,22 +875,22 @@ export const updateHeadingColumnStyles = (gridEl: HTMLElement | null, withHeadin
     return;
   }
 
-  const allCells = gridEl.querySelectorAll(`[${CELL_ATTR}]`);
+  const rows = ownRows(gridEl);
 
-  allCells.forEach(cell => {
-    cell.removeAttribute(HEADING_COL_ATTR);
+  rows.forEach(row => {
+    row.querySelectorAll(`:scope > [${CELL_ATTR}]`).forEach(cell => {
+      cell.removeAttribute(HEADING_COL_ATTR);
+    });
   });
 
   if (withHeadingColumn) {
-    const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
-
     // Query by LOGICAL column, never by first PHYSICAL cell: a row whose
     // column-0 slot is covered by a rowspan has no <td> for it (the origin
     // above renders it), so its first physical cell belongs to a later column
     // and would get the heading shading painted on the wrong cell.
     // Same rule as applyCellColors.
     rows.forEach(row => {
-      const firstCell = row.querySelector(`[${CELL_COL_ATTR}="0"]`);
+      const firstCell = row.querySelector(`:scope > [${CELL_ATTR}][${CELL_COL_ATTR}="0"]`);
 
       if (firstCell) {
         firstCell.setAttribute(HEADING_COL_ATTR, '');

@@ -403,28 +403,37 @@ describe('anonymous presence micro-illustrations', () => {
     expect(beam?.getAttribute('d')?.match(/M/g)?.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('pairs identical galaxy arms and their glows with a half-turn around the center', () => {
+  it('pairs identical galaxy arms with a half-turn and strings mirrored stars along them', () => {
     const svg = glyphSvg('galaxy');
-    const group = svg.querySelector(':scope > g');
-    const own = Array.from(group?.querySelectorAll(':scope > path') ?? []);
-    const pairs = [own.filter(path => !path.hasAttribute('opacity')), own.filter(path => path.hasAttribute('opacity'))]
-      .map(paths => paths.filter(path => (path.getAttribute('d')?.match(/M/g)?.length ?? 0) === 1 && path.getAttribute('d')?.includes('C')));
+    const [first, second, ...rest] = Array.from(svg.querySelectorAll('path[opacity]'));
+    const solid = svg.querySelector('path:not([opacity])');
+    const [core = '', ...stars] = solid?.getAttribute('d')?.match(/M[^M]*/g) ?? [];
+    const numbers = (contour: string): number[] => (contour.match(/-?\d*\.?\d+/g) ?? []).map(Number);
     // Circle contours are drawn as `M cx top a r r ...`, so the centre is one radius below the start.
-    const [x = Number.NaN, top = Number.NaN, r = Number.NaN] = (own.find(path => /^M[^MC]*a/.test(path.getAttribute('d') ?? ''))
-      ?.getAttribute('d')?.match(/-?\d*\.?\d+/g) ?? []).map(Number);
+    const [x = Number.NaN, top = Number.NaN, r = Number.NaN] = numbers(core);
+    // Stars are drawn as `M tip Q centre ...`, so the second pair is the centre.
+    const centres = stars.map(star => numbers(star).slice(2, 4));
 
-    // Filled arms taper; a uniform stroke cannot.
     expect(svg.querySelector('[stroke]')).toBeNull();
-
-    for (const [first, second, ...rest] of pairs) {
-      expect(rest).toHaveLength(0);
-      expect(first?.getAttribute('d')).toBeTruthy();
-      expect(second?.getAttribute('d')).toBe(first?.getAttribute('d'));
-      expect(first?.getAttribute('transform') ?? 'rotate(0 10 10)').toBe('rotate(0 10 10)');
-      expect(second?.getAttribute('transform')).toBe('rotate(180 10 10)');
-    }
+    expect(rest).toHaveLength(0);
+    expect(first?.getAttribute('d')).toBeTruthy();
+    expect(second?.getAttribute('d')).toBe(first?.getAttribute('d'));
+    expect(first?.getAttribute('transform') ?? 'rotate(0 10 10)').toBe('rotate(0 10 10)');
+    expect(second?.getAttribute('transform')).toBe('rotate(180 10 10)');
 
     expect([x, top + r]).toEqual([10, 10]);
     expect(r).toBeGreaterThan(0);
+
+    expect(stars.length).toBeGreaterThanOrEqual(4);
+    expect(stars.length % 2).toBe(0);
+
+    // Each star has a twin on the other arm, a half-turn away.
+    for (let i = 0; i < centres.length; i += 2) {
+      const [ax = 0, ay = 0] = centres[i] ?? [];
+      const [bx = 0, by = 0] = centres[i + 1] ?? [];
+
+      expect(ax + bx).toBeCloseTo(20, 0);
+      expect(ay + by).toBeCloseTo(20, 0);
+    }
   });
 });

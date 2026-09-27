@@ -2006,6 +2006,24 @@
   border-color: var(--color-gray-200, currentcolor);
 }
 
+[data-blok-icon-lid] {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 150ms ease-out;
+}
+
+:is(button, a, [role='button'], [role='menuitem'], [data-blok-popover-item]):is(:focus-visible, [data-blok-focused='true']) [data-blok-icon-lid] {
+  transform: translateY(-1.5px) rotate(-8deg);
+}
+
+[@media (hover: hover)] :is(button, a, [role='button'], [role='menuitem'], [data-blok-popover-item]):hover [data-blok-icon-lid] {
+  transform: translateY(-1.5px) rotate(-8deg);
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-icon-lid] {
+  transition: none;
+}
+
 [@utility blok-block] @apply pt-[var(--blok-block-padding-top,7px)] pb-[var(--blok-block-padding-bottom,7px)] px-[var(--blok-block-padding-inline,2px)] [&::-webkit-input-placeholder]:leading-normal! {
 
 }

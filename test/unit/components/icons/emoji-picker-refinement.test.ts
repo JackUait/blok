@@ -278,13 +278,13 @@ describe('compact emoji picker artwork', () => {
     }
   });
 
-  it('lifts the trash lid as one attached piece above a tapered open bin', () => {
+  it('draws the trash lid as one attached piece above a tapered bin', () => {
     const svg = parse('IconEmojiTrash');
     const lid = svg.querySelector('g');
     const bin = svg.querySelector(':scope > path');
     const ribs = svg.querySelectorAll(':scope > path')[1];
 
-    expect(lid?.getAttribute('transform')).toMatch(/^rotate\(-[\d.]+ 10 5.5\)$/);
+    expect(lid?.hasAttribute('data-blok-icon-lid')).toBe(true);
     expect(lid?.querySelectorAll('path')).toHaveLength(2);
     expect(bin?.getAttribute('d')).not.toMatch(/[zZ]/);
     const body = numbers(bin?.getAttribute('d') ?? '');

@@ -606,8 +606,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // layer (evenodd clip paths and a shade copy of each form) the faceted star, the cratered moon, the
     // lit asteroid with its companion rock, the beaming satellite, the cow-lifting saucer, the
     // two-tailed comet, the starry galaxy, the launching rocket and the observatory add
-    // 6,748 bytes in presence.css.
-    const PRESENCE_TONAL_GLYPHS_BYTES = 6_748;
+    // 6,944 bytes in presence.css.
+    const PRESENCE_TONAL_GLYPHS_BYTES = 6_944;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

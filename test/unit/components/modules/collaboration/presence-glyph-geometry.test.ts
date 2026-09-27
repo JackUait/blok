@@ -370,12 +370,23 @@ describe('anonymous presence micro-illustrations', () => {
       expect(shade?.closest('[clip-path="url(#bk-telescope-slit)"]')).toBeNull();
     });
 
+    it('ends the slit in a rounded cut above the dome base, so it reads as an opening, not a wedge', () => {
+      const svg = glyphSvg('telescope');
+      const { y } = dome(svg);
+      // The slit clip is the canvas plus the slit; the slit starts where its rounded end begins.
+      const slit = svg.querySelector('clipPath[id="bk-telescope-slit"] path')?.getAttribute('d')?.match(/M[^M]*/g)?.[1] ?? '';
+      const [, startY = Number.NaN] = numbers(slit);
+
+      expect(slit).toMatch(/^M[^M]*A/);
+      expect(startY).toBeLessThan(y - 1);
+    });
+
     it('pokes the telescope tube out through the slit, past the dome', () => {
       const svg = glyphSvg('telescope');
       const { x, y, r } = dome(svg);
-      // The tube and its hood are the solid path of straight-edged contours.
+      // The tube and its hood are the solid path of two or more arc-free contours.
       const tube = Array.from(svg.querySelectorAll('path:not([opacity]):not([clip-path])'))
-        .find(path => /^(M[^MAQaq]*L[^MAQaq]*Z)+$/.test(path.getAttribute('d') ?? ''));
+        .find(path => /^(M[^MAa]*L[^MAa]*Z){2,}$/.test(path.getAttribute('d') ?? ''));
       const points = numbers(tube?.getAttribute('d'));
       let reach = 0;
 

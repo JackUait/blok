@@ -309,6 +309,41 @@ describe('anonymous presence micro-illustrations', () => {
     });
   });
 
+  describe('astronaut', () => {
+    const contours = (d: string | null | undefined): string[] => d?.match(/M[^M]*/g) ?? [];
+    const numbers = (d: string | null | undefined): number[] => (d?.match(/-?\d*\.?\d+/g) ?? []).map(Number);
+
+    it('reflects a ringed planet in the see-through visor', () => {
+      const svg = glyphSvg('astronaut');
+      const helmet = svg.querySelector('path[fill-rule="evenodd"]');
+      const [, visor = ''] = contours(helmet?.getAttribute('d'));
+      const glass = Array.from(svg.querySelectorAll('path[opacity]')).find(path => path.getAttribute('d') === visor);
+      const xs = numbers(visor).filter((_, i) => i % 2 === 0);
+      // The ring is a band between two arcs of one tilted ellipse: `A rx ry angle ...`.
+      const ring = Array.from(svg.querySelectorAll('path:not([opacity]):not([fill-rule])'))
+        .flatMap(path => contours(path.getAttribute('d')))
+        .find(contour => /A[\d.]+ [\d.]+ -[1-9]/.test(contour));
+      const [ringX = Number.NaN] = numbers(ring);
+
+      expect(glass).toBeDefined();
+      expect(ring).toBeDefined();
+      expect(ringX).toBeGreaterThan(Math.min(...xs));
+      expect(ringX).toBeLessThan(Math.max(...xs));
+    });
+
+    it('fills every chest panel on the suit with see-through glass', () => {
+      const svg = glyphSvg('astronaut');
+      const suit = Array.from(svg.querySelectorAll('path[fill-rule="evenodd"]')).at(-1);
+      const [, ...panels] = contours(suit?.getAttribute('d'));
+      const glass = Array.from(svg.querySelectorAll('path[opacity]')).flatMap(path => contours(path.getAttribute('d')));
+
+      expect(panels.length).toBeGreaterThan(0);
+      for (const panel of panels) {
+        expect(glass).toContain(panel);
+      }
+    });
+  });
+
   describe('rocket', () => {
     it('lights the rocket body and shades the rest with a see-through copy cut by the same porthole', () => {
       const svg = glyphSvg('rocket');

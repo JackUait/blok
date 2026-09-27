@@ -27,8 +27,8 @@ const CATEGORY_I18N_KEYS: Readonly<Record<string, string>> = {
   flags: EMOJI_CATEGORY_FLAGS_KEY,
 };
 import {
-  IconEmojiTrash,
   IconCross,
+  IconTrash,
   IconEmojiDice,
   IconSearch,
   IconEmojiSparkles,
@@ -590,7 +590,7 @@ export class EmojiPicker {
       'theme-dark:hover:bg-neutral-800 theme-dark:hover:text-neutral-300',
       'transition-colors duration-100 cursor-pointer',
     ].join(' ');
-    removeBtn.innerHTML = IconEmojiTrash;
+    removeBtn.innerHTML = IconTrash;
     removeBtn.addEventListener('click', () => {
       this.onRemove();
       this.close();

@@ -94,7 +94,6 @@ export declare const IconEmojiHeart: string;
 export declare const IconEmojiFlag: string;
 export declare const IconEmojiGlobe: string;
 export declare const IconEmojiDice: string;
-export declare const IconEmojiTrash: string;
 export declare const IconDatabase: string;
 export declare const IconBoard: string;
 export declare const IconGallery: string;

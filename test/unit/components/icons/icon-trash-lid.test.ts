@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { IconEmojiTrash, IconTrash } from '../../../../src/components/icons';
+import { IconTrash } from '../../../../src/components/icons';
 
 const parse = (markup: string): SVGSVGElement => {
   const doc = new DOMParser().parseFromString(markup, 'image/svg+xml');
@@ -25,7 +25,6 @@ describe('trash lid', () => {
 
   it.each([
     ['IconTrash', IconTrash],
-    ['IconEmojiTrash', IconEmojiTrash],
   ])('%s draws the lid closed, as one group CSS can lift', (_name, markup) => {
     const svg = parse(markup);
     const lid = svg.querySelector('[data-blok-icon-lid]');

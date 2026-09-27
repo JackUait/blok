@@ -706,17 +706,6 @@ export const IconEmojiDice = `
 </svg>
 `;
 
-export const IconEmojiTrash = `
-<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <g data-blok-icon-lid="">
-    <path d="M3.5 7.5H16.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M8 7.5V6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
-  <path d="M5 8.75L5.75 15C5.85 15.9 6.5 16.5 7.5 16.5H12.5C13.5 16.5 14.15 15.9 14.25 15L15 8.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M8.5 10.5v3M11.5 10.5v3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
-`;
-
 export const IconDatabase = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <ellipse cx="10" cy="5.5" rx="6.5" ry="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>

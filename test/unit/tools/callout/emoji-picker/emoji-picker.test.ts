@@ -1,7 +1,7 @@
 // test/unit/tools/callout/emoji-picker/emoji-picker.test.ts
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { IconEmojiDice, IconEmojiTrash } from '../../../../../src/components/icons';
+import { IconEmojiDice, IconTrash } from '../../../../../src/components/icons';
 import { simulateInput, simulateKeydown, simulateMousedown } from '../../../../helpers/simulate';
 import type { ProcessedEmoji } from '../../../../../src/components/utils/emoji/emoji-data';
 
@@ -601,14 +601,14 @@ describe('EmojiPicker', () => {
       expect(randomBtn.parentElement!.className).toContain('gap-1');
     });
 
-    it('random and remove buttons use the picker dice and trash SVGs', async () => {
+    it('random and remove buttons use the picker dice and the shared trash SVGs', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
       const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en' });
       const el = picker.getElement();
 
       for (const [selector, icon] of [
         ['[data-emoji-picker-random] > svg', IconEmojiDice],
-        ['[data-emoji-picker-remove] > svg', IconEmojiTrash],
+        ['[data-emoji-picker-remove] > svg', IconTrash],
       ]) {
         const expected = document.createElement('div');
 

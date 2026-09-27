@@ -26,7 +26,7 @@ afterEach(() => {
 
 describe('compact emoji picker artwork', () => {
   it.each([
-    'Star', 'Smile', 'Sprout', 'Utensils', 'Ball', 'Globe', 'Lightbulb', 'Heart', 'Flag', 'Dice', 'Trash',
+    'Star', 'Smile', 'Sprout', 'Utensils', 'Ball', 'Globe', 'Lightbulb', 'Heart', 'Flag', 'Dice',
   ])('%s keeps the standard canvas, self-contained paint and decorative accessibility', (name) => {
     const svg = parse(`IconEmoji${name}`);
 
@@ -278,24 +278,4 @@ describe('compact emoji picker artwork', () => {
     }
   });
 
-  it('draws the trash lid as one attached piece above a tapered bin', () => {
-    const svg = parse('IconEmojiTrash');
-    const lid = svg.querySelector('g');
-    const bin = svg.querySelector(':scope > path');
-    const ribs = svg.querySelectorAll(':scope > path')[1];
-
-    expect(lid?.hasAttribute('data-blok-icon-lid')).toBe(true);
-    expect(lid?.querySelectorAll('path')).toHaveLength(2);
-    expect(bin?.getAttribute('d')).not.toMatch(/[zZ]/);
-    const body = numbers(bin?.getAttribute('d') ?? '');
-    const slats = numbers(ribs?.getAttribute('d') ?? '');
-
-    expect(body[0]).toBeLessThan(body[2]);
-    expect(body[1]).toBeGreaterThanOrEqual(8.5);
-    expect(slats).toHaveLength(6);
-    expect(slats[0] + slats[3]).toBe(20);
-    expect(slats[1]).toBe(slats[4]);
-    expect(slats[2]).toBe(slats[5]);
-    expect(slats[0] - body[2] - 1.25).toBeGreaterThanOrEqual(1.25);
-  });
 });

@@ -419,6 +419,20 @@ describe('anonymous presence micro-illustrations', () => {
       }
     });
 
+    it('rounds the building and arches its windows, so the base matches the dome', () => {
+      const svg = glyphSvg('telescope');
+      const { y } = dome(svg);
+      const building = Array.from(svg.querySelectorAll('path[fill-rule="evenodd"]'))
+        .find(path => (numbers(path.getAttribute('d'))[1] ?? 0) > y);
+      const contours = building?.getAttribute('d')?.match(/M[^M]*/g) ?? [];
+
+      // The outline, the door, then two windows: each one has a curve.
+      expect(contours).toHaveLength(4);
+      for (const contour of contours) {
+        expect(contour).toMatch(/A/);
+      }
+    });
+
     it('puts a see-through glint on the lit dome', () => {
       const svg = glyphSvg('telescope');
       const { x, y, r } = dome(svg);

@@ -1,8 +1,15 @@
-import { BORDER_WIDTH, CELL_ATTR, CELL_COL_ATTR, ROW_ATTR } from './table-core';
+import { BORDER_WIDTH, CELL_ATTR, CELL_COL_ATTR, ownRows } from './table-core';
 import type { RowColAction } from './table-row-col-controls';
 
 const DRAG_THRESHOLD = 10;
 const GHOST_ATTR = 'data-blok-table-drag-ghost';
+
+// Direct children only: a nested table's cells are descendants too.
+const ownCells = (row: Element): NodeListOf<HTMLElement> =>
+  row.querySelectorAll<HTMLElement>(`:scope > [${CELL_ATTR}]`);
+
+const ownCellInCol = (row: Element, col: number): HTMLElement | null =>
+  row.querySelector<HTMLElement>(`:scope > [${CELL_COL_ATTR}="${col}"]`);
 
 /**
  * Build cumulative column edge positions from the first row's cells.
@@ -10,7 +17,7 @@ const GHOST_ATTR = 'data-blok-table-drag-ghost';
  * plus the right edge of the last column.
  */
 export const getCumulativeColEdges = (grid: HTMLElement): number[] => {
-  const colgroup = grid.querySelector('colgroup');
+  const colgroup = grid.querySelector(':scope > colgroup');
 
   if (colgroup) {
     const cols = Array.from(colgroup.querySelectorAll('col'));
@@ -27,19 +34,19 @@ export const getCumulativeColEdges = (grid: HTMLElement): number[] => {
   }
 
   // Fallback for grids without colgroup
-  const firstRow = grid.querySelector(`[${ROW_ATTR}]`);
+  const firstRow = ownRows(grid)[0];
 
   if (!firstRow) {
     return [0];
   }
 
-  const cells = Array.from(firstRow.querySelectorAll(`[${CELL_ATTR}]`));
+  const cells = Array.from(ownCells(firstRow));
 
   return cells.reduce<number[]>(
     (edges, cell) => {
       const last = edges[edges.length - 1];
 
-      return [...edges, last + (cell as HTMLElement).offsetWidth];
+      return [...edges, last + cell.offsetWidth];
     },
     [0]
   );
@@ -267,7 +274,7 @@ export class TableRowColDrag {
   }
 
   private highlightSourceCells(): void {
-    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+    const rows = ownRows(this.grid);
 
     if (this.dragType === 'row') {
       this.highlightRowCells(rows);
@@ -288,10 +295,10 @@ export class TableRowColDrag {
     }
 
     const dragBg = this.getDragSourceBg();
-    const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+    const cells = ownCells(row);
 
     cells.forEach(node => {
-      const cellEl = node as HTMLElement;
+      const cellEl = node;
 
       this.dragOverlayCells.push({ el: cellEl, originalBg: cellEl.style.backgroundColor });
       cellEl.style.backgroundColor = dragBg;
@@ -303,7 +310,7 @@ export class TableRowColDrag {
     const dragBg = this.getDragSourceBg();
 
     rows.forEach(row => {
-      const cellEl = row.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${this.dragFromIndex}"]`);
+      const cellEl = ownCellInCol(row, this.dragFromIndex);
 
       if (!cellEl) {
         return;
@@ -351,8 +358,8 @@ export class TableRowColDrag {
       style.right = '0';
       style.transition = 'top 100ms ease';
     } else {
-      const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
-      const lastRow = rows[rows.length - 1] as HTMLElement | undefined;
+      const rows = ownRows(this.grid);
+      const lastRow = rows[rows.length - 1];
       const bottomPx = lastRow ? lastRow.offsetTop + lastRow.offsetHeight : 0;
 
       style.width = '3px';
@@ -501,14 +508,14 @@ export class TableRowColDrag {
   }
 
   private getRowSourceRect(): DOMRect | null {
-    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
-    const sourceRow = rows[this.dragFromIndex] as HTMLElement | undefined;
+    const rows = ownRows(this.grid);
+    const sourceRow = rows[this.dragFromIndex];
 
     return sourceRow?.getBoundingClientRect() ?? null;
   }
 
   private getColSourceRect(): DOMRect | null {
-    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+    const rows = ownRows(this.grid);
     const firstRow = rows[0];
     const lastRow = rows[rows.length - 1];
 
@@ -516,8 +523,8 @@ export class TableRowColDrag {
       return null;
     }
 
-    const firstCell = firstRow.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${this.dragFromIndex}"]`);
-    const lastCell = lastRow.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${this.dragFromIndex}"]`);
+    const firstCell = ownCellInCol(firstRow, this.dragFromIndex);
+    const lastCell = ownCellInCol(lastRow, this.dragFromIndex);
 
     if (!firstCell || !lastCell) {
       return null;
@@ -530,8 +537,8 @@ export class TableRowColDrag {
   }
 
   private buildRowGhost(): void {
-    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
-    const sourceRow = rows[this.dragFromIndex] as HTMLElement | undefined;
+    const rows = ownRows(this.grid);
+    const sourceRow = rows[this.dragFromIndex];
 
     if (!sourceRow || !this.ghostEl) {
       return;
@@ -542,13 +549,12 @@ export class TableRowColDrag {
     ghostStyle.display = 'flex';
     ghostStyle.height = `${sourceRow.offsetHeight}px`;
 
-    const cells = sourceRow.querySelectorAll(`[${CELL_ATTR}]`);
+    const cells = ownCells(sourceRow);
 
     cells.forEach(cell => {
-      const cellEl = cell as HTMLElement;
-      const clone = cellEl.cloneNode(true) as HTMLElement;
+      const clone = cell.cloneNode(true) as HTMLElement;
 
-      clone.style.width = `${cellEl.offsetWidth}px`;
+      clone.style.width = `${cell.offsetWidth}px`;
       clone.style.flexShrink = '0';
       clone.removeAttribute('contenteditable');
       this.ghostEl?.appendChild(clone);
@@ -560,14 +566,14 @@ export class TableRowColDrag {
       return;
     }
 
-    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+    const rows = ownRows(this.grid);
     const ghostStyle = this.ghostEl.style;
 
     ghostStyle.display = 'flex';
     ghostStyle.flexDirection = 'column';
 
     rows.forEach(row => {
-      const cellEl = row.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${this.dragFromIndex}"]`);
+      const cellEl = ownCellInCol(row, this.dragFromIndex);
 
       if (!cellEl) {
         return;
@@ -599,12 +605,12 @@ export class TableRowColDrag {
   }
 
   private getRowDropIndex(relativeY: number): number {
-    const rows = Array.from(this.grid.querySelectorAll(`[${ROW_ATTR}]`));
+    const rows = Array.from(ownRows(this.grid));
 
-    const edges = rows.map(row => (row as HTMLElement).offsetTop);
+    const edges = rows.map(row => row.offsetTop);
 
     if (rows.length > 0) {
-      const lastRow = rows[rows.length - 1] as HTMLElement;
+      const lastRow = rows[rows.length - 1];
 
       edges.push(lastRow.offsetTop + lastRow.offsetHeight);
     }
@@ -616,14 +622,14 @@ export class TableRowColDrag {
   }
 
   private getRowDropTopPx(dropIndex: number): number {
-    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+    const rows = ownRows(this.grid);
 
     if (dropIndex < rows.length) {
-      return (rows[dropIndex] as HTMLElement).offsetTop;
+      return rows[dropIndex].offsetTop;
     }
 
     if (rows.length > 0) {
-      const lastRow = rows[rows.length - 1] as HTMLElement;
+      const lastRow = rows[rows.length - 1];
 
       return lastRow.offsetTop + lastRow.offsetHeight;
     }

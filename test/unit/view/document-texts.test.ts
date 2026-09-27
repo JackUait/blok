@@ -308,6 +308,13 @@ describe('extractTexts / injectTexts', () => {
     });
   });
 
+  it('reads the cells of the row after a null row', () => {
+    const data = { blocks: [{ type: 'table', data: { content: [null, ['Hello']] } }] };
+
+    expect(extractTexts(data)).toEqual(['Hello']);
+    expect(injectTexts(data, ['Привет'])).toEqual({ blocks: [{ type: 'table', data: { content: [null, ['Привет']] } }] });
+  });
+
   it('translates every table cell text the renderer shows, including an unbacked cover and a claimed legacy cell', () => {
     const data = {
       blocks: [

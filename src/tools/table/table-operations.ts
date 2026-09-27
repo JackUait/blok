@@ -3,7 +3,7 @@ import { DATA_ATTR } from '../../components/constants/data-attributes';
 
 import type { TableCellBlocks } from './table-cell-blocks';
 import { CELL_BLOCKS_ATTR } from './table-cell-blocks';
-import { applyFluidMinWidth, equalWidths, BORDER_WIDTH, ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } from './table-core';
+import { applyFluidMinWidth, equalWidths, BORDER_WIDTH, ROW_ATTR, CELL_ATTR, CELL_COL_ATTR, ownRows } from './table-core';
 import type { TableGrid } from './table-core';
 import type { CellContent, LegacyCellContent, TableData, TableTextSize } from './types';
 import { isCellWithBlocks } from './types';
@@ -16,8 +16,8 @@ import { alignRowsToColumns } from './table-ids';
  * so a row holding one returns too few widths; prefer a row of unmerged cells.
  */
 const measureLogicalColumnWidths = (gridEl: HTMLElement, colCount: number): number[] => {
-  const rows = Array.from(gridEl.querySelectorAll(`[${ROW_ATTR}]`)).map(row =>
-    Array.from(row.querySelectorAll<HTMLTableCellElement>(`[${CELL_ATTR}]`))
+  const rows = Array.from(ownRows(gridEl), row =>
+    Array.from(row.querySelectorAll<HTMLTableCellElement>(`:scope > [${CELL_ATTR}]`))
   );
   const widthOf = (cell: HTMLElement): number => cell.getBoundingClientRect().width;
   const plainRow = rows.find(cells => cells.length === colCount && cells.every(cell => cell.colSpan <= 1));
@@ -117,23 +117,20 @@ export const isCellEmpty = (cell: HTMLElement): boolean => {
 };
 
 export const isRowEmpty = (gridEl: HTMLElement, rowIndex: number): boolean => {
-  const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
-  const row = rows[rowIndex];
+  const row = ownRows(gridEl)[rowIndex];
 
   if (!row) {
     return true;
   }
 
-  const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+  const cells = row.querySelectorAll(`:scope > [${CELL_ATTR}]`);
 
   return Array.from(cells).every(cell => isCellEmpty(cell as HTMLElement));
 };
 
 export const isColumnEmpty = (gridEl: HTMLElement, colIndex: number): boolean => {
-  const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
-
-  return Array.from(rows).every(row => {
-    const cell = row.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${colIndex}"]`);
+  return Array.from(ownRows(gridEl)).every(row => {
+    const cell = row.querySelector<HTMLElement>(`:scope > [${CELL_ATTR}][${CELL_COL_ATTR}="${colIndex}"]`);
 
     return !cell || isCellEmpty(cell);
   });
@@ -352,7 +349,8 @@ export const mountCellBlocksReadOnly = (
   api: API,
   _tableBlockId: string,
 ): void => {
-  const rowElements = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
+  // Own rows/cells only: a nested table's rows and cells sit inside ours.
+  const rowElements = ownRows(gridEl);
 
   content.forEach((rowData, rowIndex) => {
     const row = rowElements[rowIndex];
@@ -362,13 +360,13 @@ export const mountCellBlocksReadOnly = (
     }
 
     rowData.forEach((cellContent, colIndex) => {
-      const cell = row.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${colIndex}"]`);
+      const cell = row.querySelector<HTMLElement>(`:scope > [${CELL_ATTR}][${CELL_COL_ATTR}="${colIndex}"]`);
 
       if (!cell) {
         return;
       }
 
-      const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+      const container = cell.querySelector<HTMLElement>(`:scope > [${CELL_BLOCKS_ATTR}]`);
 
       if (!container) {
         return;
@@ -381,17 +379,18 @@ export const mountCellBlocksReadOnly = (
         return;
       }
 
-      if (!isCellWithBlocks(cellContent)) {
-        // Read-only render path must not mutate block state.
-        // Wrap in a div with leading-[1.5] so the line-height matches paragraph
-        // blocks used in edit mode (where legacy strings are converted to real
-        // paragraph blocks with that line-height). Without this wrapper, the
-        // text inherits the cell's leading-none, producing shorter cells.
+      // Inert markup, no blocks: read-only must not mutate block state. The
+      // wrapper matches edit mode's paragraph line-height; the cell is leading-none.
+      const paintText = (html: string): void => {
         const wrapper = document.createElement('div');
 
         wrapper.className = 'leading-[1.5]';
-        wrapper.innerHTML = cellContent;
+        wrapper.innerHTML = html;
         container.replaceChildren(wrapper);
+      };
+
+      if (!isCellWithBlocks(cellContent)) {
+        paintText(cellContent);
 
         return;
       }
@@ -443,6 +442,11 @@ export const mountCellBlocksReadOnly = (
         }
 
         container.appendChild(block.holder);
+      }
+
+      // No id resolved: show the saved text, as the editor and the view do.
+      if (container.childElementCount === 0 && cellContent.text !== undefined && cellContent.text !== '') {
+        paintText(cellContent.text);
       }
 
       // Strip placeholder attributes so paragraphs inside table cells
@@ -633,10 +637,11 @@ export const parsePastedTable = (
  * padding carries no id, and after it the model can no longer align the row.
  */
 const alignIdCarryingRows = (content: LegacyCellContent[][]): LegacyCellContent[][] => {
-  const cellRows = content.filter((row): row is CellContent[] => Array.isArray(row) && row.every(isCellWithBlocks));
+  const isCellRow = (row: LegacyCellContent[]): row is CellContent[] => Array.isArray(row) && row.every(isCellWithBlocks);
+  const aligned = alignRowsToColumns(content.filter(isCellRow)).values();
 
-  // Legacy string cells and null rows carry no ids; leave them positional.
-  return cellRows.length === content.length ? alignRowsToColumns(cellRows) : content;
+  // Legacy string cells and null rows carry no ids; they stay positional.
+  return content.map(row => (isCellRow(row) ? aligned.next().value ?? row : row));
 };
 
 export const normalizeTableData = (
@@ -733,9 +738,6 @@ export const enableScrollOverflow = (element: HTMLDivElement | null): void => {
 
 const HEADING_ROW_ATTR = 'data-blok-table-heading';
 const HEADING_COL_ATTR = 'data-blok-table-heading-col';
-
-const ownRows = (gridEl: HTMLElement): NodeListOf<HTMLElement> =>
-  gridEl.querySelectorAll<HTMLElement>(`:scope > tbody > [${ROW_ATTR}], :scope > [${ROW_ATTR}]`);
 
 const headerCellRole = (cell: Element, isInHeadingRow: boolean): string | null => {
   // The corner cell of a table that has BOTH headers reads as a column header,

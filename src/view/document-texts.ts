@@ -14,7 +14,7 @@
  * PURITY CONTRACT: only pure imports (src/shared/*, src/view/*).
  */
 import type { OutputData } from '../../types';
-import { repairedTableRows, sourceCellsInDisplayOrder } from './table-grid';
+import { repairedTableRows, sourceCellsInDisplayOrder, tableRows } from './table-grid';
 
 /** Options shared by extraction and injection — they must match, or the counts will not. */
 export interface DocumentTextsOptions {
@@ -174,7 +174,7 @@ const collectSlots = (blocks: unknown[], options: DocumentTextsOptions): TextSlo
    * @param data - table block data
    */
   const walkTable = (data: Record<string, unknown>): void => {
-    const rows = Array.isArray(data.content) ? data.content.filter((row): row is unknown[] => Array.isArray(row)) : [];
+    const rows = tableRows(data.content);
     const repaired = repairedTableRows(data.content);
 
     const ordered: Array<{

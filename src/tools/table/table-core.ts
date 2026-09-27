@@ -6,6 +6,10 @@ import type { TableModel } from './table-model';
 import type { LegacyCellContent } from './types';
 
 export const ROW_ATTR = 'data-blok-table-row';
+
+/** This table's own rows; a nested table's rows are descendants too, so query direct children only. */
+export const ownRows = (grid: HTMLElement): NodeListOf<HTMLElement> =>
+  grid.querySelectorAll<HTMLElement>(`:scope > tbody > [${ROW_ATTR}], :scope > [${ROW_ATTR}]`);
 export const CELL_ATTR = 'data-blok-table-cell';
 export const CELL_ROW_ATTR = 'data-blok-table-cell-row';
 export const CELL_COL_ATTR = 'data-blok-table-cell-col';

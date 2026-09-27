@@ -497,6 +497,15 @@ describe('blocksToHtml', () => {
       expect(html).toBe('<table><tbody><tr><td colspan="4">OriginFirstSecondThird</td></tr></tbody></table>');
     });
 
+    it('keeps a null first row as the empty heading row, as the editor does', () => {
+      const html = blocksToHtml(doc([
+        { id: 't', type: 'table', data: { withHeadings: true, content: [null, [{ blocks: ['x'] }]] } },
+        { id: 'x', type: 'paragraph', parent: 't', data: { text: 'X' } },
+      ]));
+
+      expect(html).toBe('<table><thead><tr><th></th></tr></thead><tbody><tr><td><p>X</p></td></tr></tbody></table>');
+    });
+
     it('does not revive stale origin text when dedup removes its own block id', () => {
       const html = blocksToHtml(doc([
         { id: 't', type: 'table', data: { content: [[{ blocks: ['shared'] }, { blocks: ['shared'], text: 'Stale', colspan: 2 }, { blocks: ['claimed'] }]] } },

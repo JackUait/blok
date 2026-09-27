@@ -2,7 +2,7 @@ import type { I18n } from '../../../types/api';
 import { twMerge } from '../../components/utils/tw';
 
 import type { CellColorMode } from './table-cell-color-picker';
-import { BORDER_WIDTH, CELL_ATTR, CELL_COL_ATTR, CELL_ROW_ATTR, ROW_ATTR } from './table-core';
+import { BORDER_WIDTH, CELL_ATTR, CELL_COL_ATTR, CELL_ROW_ATTR, ownRows } from './table-core';
 import { collapseGrip, createGripDotsSvg, expandGrip, GRIP_HOVER_SIZE, setGripPillSize } from './table-grip-visuals';
 import { getCumulativeColEdges, TableRowColDrag } from './table-row-col-drag';
 import { createGripPopover } from './table-row-col-popover';
@@ -246,7 +246,7 @@ export class TableRowColControls {
     // Re-evaluate grip visibility: the preceding mouseover was blocked
     // by isGripInteractionLocked(). Check if pointer is over a table cell.
     const target = e.target instanceof HTMLElement ? e.target : null;
-    const cell = target?.closest<HTMLElement>(`[${CELL_ATTR}]`);
+    const cell = target ? this.findOwnCell(target) : null;
 
     if (cell) {
       const position = this.getPointerPosition(cell, e);
@@ -464,7 +464,7 @@ export class TableRowColControls {
    * Called after resize or structural changes.
    */
   public positionGrips(): void {
-    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+    const rows = ownRows(this.grid);
     const firstRow = rows[0];
 
     if (!firstRow) {
@@ -502,7 +502,7 @@ export class TableRowColControls {
         return;
       }
 
-      const rowEl = rows[i] as HTMLElement;
+      const rowEl = rows[i];
       // A row grip must sit inside its own row: centring it on a rowspan puts grip 0 on top of grip 1.
       const centerY = rowEl.offsetTop + rowEl.offsetHeight / 2;
       const style = grip.style;
@@ -522,7 +522,7 @@ export class TableRowColControls {
       this.positionGrips();
     });
 
-    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+    const rows = ownRows(this.grid);
 
     rows.forEach(row => {
       this.rowResizeObserver?.observe(row);
@@ -539,7 +539,7 @@ export class TableRowColControls {
     }
 
     const target = e.target as HTMLElement;
-    const cell = target.closest<HTMLElement>(`[${CELL_ATTR}]`);
+    const cell = this.findOwnCell(target);
 
     if (!cell) {
       return;
@@ -567,6 +567,25 @@ export class TableRowColControls {
   }
 
   /**
+   * The cell of THIS table that contains `target`. Inside a nested table the
+   * closest cell belongs to the inner table and carries its coordinates.
+   */
+  private findOwnCell(target: Element): HTMLElement | null {
+    const cell = target.closest<HTMLElement>(`[${CELL_ATTR}]`);
+    const row = cell?.parentElement;
+
+    if (!cell || !row) {
+      return null;
+    }
+
+    if (Array.from(ownRows(this.grid)).includes(row)) {
+      return cell;
+    }
+
+    return this.findOwnCell(row);
+  }
+
+  /**
    * The row/col under the pointer. A merged cell's attributes name only its
    * origin, so inside a span the pointer coordinates pick the covered row/col.
    */
@@ -587,7 +606,7 @@ export class TableRowColControls {
   }
 
   private getRowInSpan(originRow: number, rowSpan: number, clientY: number): number {
-    const rows = Array.from(this.grid.querySelectorAll<HTMLElement>(`[${ROW_ATTR}]`));
+    const rows = Array.from(ownRows(this.grid));
     const covered = rows.slice(originRow, originRow + rowSpan);
     const hit = covered.findIndex(row => clientY < row.getBoundingClientRect().bottom);
 

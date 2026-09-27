@@ -340,8 +340,8 @@ const buildGrid = (rows: number, cols: number): Grid => {
   document.body.appendChild(tableHolder);
 
   const cell = (row: number, col: number): HTMLElement => {
-    const found = element.querySelectorAll<HTMLElement>(`[${ROW_ATTR}]`)[row]
-      ?.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${col}"]`);
+    const found = element.querySelectorAll<HTMLElement>(`:scope > [${ROW_ATTR}]`)[row]
+      ?.querySelector<HTMLElement>(`:scope > [${CELL_COL_ATTR}="${col}"]`);
 
     if (!found) {
       throw new Error(`No cell ${row}:${col}`);
@@ -364,6 +364,15 @@ const buildGrid = (rows: number, cols: number): Grid => {
       return found;
     },
   };
+};
+
+/** A 2×1 table mounted inside `container`; its cells reuse the outer coordinates. */
+const nestTableIn = (container: HTMLElement): Grid => {
+  const inner = buildGrid(2, 1);
+
+  container.appendChild(inner.tableHolder);
+
+  return inner;
 };
 
 /** Ids of the block holders mounted in a cell container, in DOM order. */
@@ -563,6 +572,76 @@ describe('TableCellBlocks — surviving-mutant coverage', () => {
 
       expect(() => fixture.instance.reclaimReferencedBlocks()).not.toThrow();
       expect(stray.holder.parentElement).toBe(document.body);
+    });
+
+    it('reclaims into its own cell, not a nested table cell with the same coordinates', () => {
+      const fixture = setup({ rows: 2, cols: 1 });
+      const stray = fixture.store.add('stray', 'paragraph', {}, 'table-1');
+
+      nestTableIn(fixture.grid.container(0, 0));
+      document.body.appendChild(stray.holder);
+      fixture.model.addBlockToCell(1, 0, 'stray');
+
+      fixture.instance.reclaimReferencedBlocks();
+
+      expect(stray.holder.parentElement).toBe(fixture.grid.container(1, 0));
+    });
+  });
+
+  describe('nested table cells', () => {
+    it('routes a restored block to its own recorded cell, not a nested table cell', () => {
+      const fixture = setup({ rows: 2, cols: 1 });
+      const restored = fixture.store.add('restored', 'paragraph', {}, 'table-1');
+
+      nestTableIn(fixture.grid.container(0, 0));
+      document.body.appendChild(restored.holder);
+      fixture.model.addBlockToCell(1, 0, 'restored');
+
+      fixture.store.eventHandler()(blockAddedEvent('restored', restored.holder, 1));
+
+      expect(restored.holder.parentElement).toBe(fixture.grid.container(1, 0));
+    });
+
+    it('does not offer a nested table cell for a block inserted beside its content', () => {
+      const fixture = setup({ rows: 1, cols: 1 });
+      const inner = nestTableIn(fixture.grid.container(0, 0));
+      const neighbour = fixture.store.add('neighbour', 'paragraph', {}, 'inner-table');
+
+      fixture.store.add('fresh');
+      inner.container(0, 0).appendChild(neighbour.holder);
+
+      expect(fixture.instance.findCellForNewBlock(2)).toBeNull();
+    });
+
+    it('fills its own cell whose blocks never arrived, not the nested cell at those coordinates', () => {
+      const fixture = setup({ rows: 2, cols: 1 });
+      const inner = nestTableIn(fixture.grid.container(0, 0));
+
+      fixture.model.addBlockToCell(1, 0, 'never-arrived');
+
+      fixture.instance.fillCellsWithUnresolvedBlocks();
+
+      expect(holderIds(inner.container(1, 0))).toEqual([]);
+      expect(holderIds(fixture.grid.container(1, 0))).toHaveLength(1);
+    });
+
+    it('yields a stand-in once when a nested cell shares its coordinates', () => {
+      const fixture = setup({ rows: 2, cols: 1 });
+
+      nestTableIn(fixture.grid.container(0, 0));
+      fixture.instance.ensureCellHasBlock(fixture.grid.cell(1, 0));
+
+      const [standIn] = holderIds(fixture.grid.container(1, 0));
+      const restored = fixture.store.add('restored', 'paragraph', {}, 'table-1');
+
+      Object.defineProperty(fixture.store.byId(standIn).api, 'isEmpty', { value: true });
+      fixture.grid.container(1, 0).appendChild(restored.holder);
+      fixture.model.addBlockToCell(1, 0, 'restored');
+      fixture.store.deleteCalls.length = 0;
+
+      fixture.instance.yieldRepairsToPeers(new Set(['restored']));
+
+      expect(fixture.store.deleteCalls).toHaveLength(1);
     });
   });
 
@@ -1466,6 +1545,26 @@ describe('TableCellBlocks — routing block lifecycle events into cells', () => 
     await flushMicrotasks();
 
     expect(fixture.store.insertCalls).toEqual([]);
+  });
+
+  it('leaves a nested table cell\'s replacement block to that table', () => {
+    const fixture = setup({ rows: 1, cols: 1 });
+    const handler = fixture.store.eventHandler();
+    const inner = nestTableIn(fixture.grid.container(0, 0));
+    const old = fixture.store.add('old', 'paragraph', {}, 'inner-table');
+
+    inner.container(0, 0).appendChild(old.holder);
+    handler(blockRemovedEvent('old', old.holder, 1));
+    old.holder.remove();
+    fixture.store.blocks.splice(1, 1);
+
+    const created = fixture.store.add('new');
+
+    document.body.appendChild(created.holder);
+    handler(blockAddedEvent('new', created.holder, 1));
+
+    expect(created.holder.parentElement).toBe(document.body);
+    expect(fixture.store.byId('new').parentId).toBeNull();
   });
 
   it('claims a replacement when the table block alone precedes it and nothing follows', () => {

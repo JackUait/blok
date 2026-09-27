@@ -227,3 +227,175 @@ describe('table cell drag undo', () => {
     }).toEqual({ saved: ['toggle', 'x'], dom: ['toggle', 'x'], tree: ['toggle', 'x'], childParent: 'toggle' });
   });
 });
+
+const savedCell = async (editor: TestEditor, tableId: string, row: number, col: number): Promise<string[]> => {
+  const saved = await editor.save();
+  const content = saved.blocks.find(block => block.id === tableId)?.data.content;
+  const cells: unknown = Array.isArray(content) ? content[row] : undefined;
+  const cell: unknown = Array.isArray(cells) ? cells[col] : undefined;
+
+  if (typeof cell !== 'object' || cell === null || !('blocks' in cell) || !Array.isArray(cell.blocks)) {
+    throw new Error(`cell ${row},${col} of ${tableId} is missing`);
+  }
+
+  return cell.blocks.filter((id): id is string => typeof id === 'string');
+};
+
+const domCell = (editor: TestEditor, tableId: string, row: number, col: number): string[] => {
+  const table = editor.blocks.getById(tableId)?.holder;
+  const cell = Array.from(table?.querySelectorAll(`[data-blok-table-cell-row="${row}"][data-blok-table-cell-col="${col}"]`) ?? [])
+    .find(element => element.closest('[data-blok-element]') === table);
+
+  return Array.from(cell?.querySelectorAll(':scope > [data-blok-table-cell-blocks] > [data-blok-id]') ?? [])
+    .map(element => element.getAttribute('data-blok-id') ?? '');
+};
+
+const select = (editor: TestEditor, ids: string[]): void => {
+  for (const block of editor.module.blockManager.blocks) {
+    block.selected = ids.includes(block.id);
+  }
+};
+
+describe('table cell drag undo across cells', () => {
+  let holder: HTMLDivElement;
+  let editor: TestEditor | null;
+
+  const boot = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
+    const instance = new Blok({ holder, tools: { paragraph: Paragraph, table: Table }, data: { blocks } }) as unknown as TestEditor;
+
+    editor = instance;
+    await instance.isReady;
+    await settle();
+
+    return instance;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    holder = document.createElement('div');
+    document.body.appendChild(holder);
+    editor = null;
+  });
+
+  afterEach(() => {
+    editor?.destroy();
+    holder.remove();
+    vi.restoreAllMocks();
+  });
+
+  it('undoes in one step a multi-block drag from two cells out of the table', async () => {
+    const instance = await boot([
+      { id: 'table', type: 'table', data: { content: [[{ blocks: ['x', 'y'] }, { blocks: ['w', 'v'] }]] }, content: ['x', 'y', 'w', 'v'] },
+      paragraph('x', 'table'),
+      paragraph('y', 'table'),
+      paragraph('w', 'table'),
+      paragraph('v', 'table'),
+      paragraph('outside'),
+    ]);
+
+    select(instance, ['x', 'w']);
+    dragBelow(instance, 'x', 'outside');
+    await settle();
+
+    expect([cellOf(instance, 'x'), cellOf(instance, 'w')]).toEqual(['outside', 'outside']);
+    expect([await savedCell(instance, 'table', 0, 0), await savedCell(instance, 'table', 0, 1)]).toEqual([['y'], ['v']]);
+
+    instance.history.undo();
+    await settle();
+
+    expect({
+      cells: [cellOf(instance, 'x'), cellOf(instance, 'w')],
+      dom: [domCell(instance, 'table', 0, 0), domCell(instance, 'table', 0, 1)],
+      parents: [instance.blocks.getById('x')?.parentId, instance.blocks.getById('w')?.parentId],
+      saved: [await savedCell(instance, 'table', 0, 0), await savedCell(instance, 'table', 0, 1)],
+    }).toEqual({
+      cells: ['0,0', '0,1'],
+      dom: [['x', 'y'], ['w', 'v']],
+      parents: ['table', 'table'],
+      saved: [['x', 'y'], ['w', 'v']],
+    });
+  });
+
+  it('undoes in one step a multi-block drag of a cell block and a root block', async () => {
+    const instance = await boot([
+      paragraph('root'),
+      { id: 'table', type: 'table', data: { content: [[{ blocks: ['x', 'y'] }]] }, content: ['x', 'y'] },
+      paragraph('x', 'table'),
+      paragraph('y', 'table'),
+      paragraph('outside'),
+    ]);
+
+    select(instance, ['root', 'x']);
+    dragBelow(instance, 'root', 'outside');
+    await settle();
+
+    expect(cellOf(instance, 'x')).toBe('outside');
+    expect(await savedCell(instance, 'table', 0, 0)).toEqual(['y']);
+
+    instance.history.undo();
+    await settle();
+
+    expect({
+      cell: cellOf(instance, 'x'),
+      dom: domCell(instance, 'table', 0, 0),
+      parent: instance.blocks.getById('x')?.parentId,
+      saved: await savedCell(instance, 'table', 0, 0),
+      order: (await instance.save()).blocks.filter(block => block.parent === undefined).map(block => block.id),
+    }).toEqual({ cell: '0,0', dom: ['x', 'y'], parent: 'table', saved: ['x', 'y'], order: ['root', 'table', 'outside'] });
+  });
+
+  it('undoes in one step a drag from a nested table cell onto its outer cell', async () => {
+    const instance = await boot([
+      { id: 'outer', type: 'table', data: { content: [[{ blocks: ['inner', 'p'] }]] }, content: ['inner', 'p'] },
+      { id: 'inner', type: 'table', data: { content: [[{ blocks: ['q', 'r'] }]] }, parent: 'outer', content: ['q', 'r'] },
+      paragraph('q', 'inner'),
+      paragraph('r', 'inner'),
+      paragraph('p', 'outer'),
+    ]);
+
+    dragBelow(instance, 'q', 'p');
+    await settle();
+
+    const landed = instance.blocks.getById('q')?.parentId;
+
+    expect(await savedCell(instance, 'inner', 0, 0)).toEqual(['r']);
+
+    instance.history.undo();
+    await settle();
+
+    expect({
+      landed,
+      dom: domCell(instance, 'inner', 0, 0),
+      parent: instance.blocks.getById('q')?.parentId,
+      inner: await savedCell(instance, 'inner', 0, 0),
+      outer: await savedCell(instance, 'outer', 0, 0),
+    }).toEqual({ landed: null, dom: ['q', 'r'], parent: 'inner', inner: ['q', 'r'], outer: ['inner', 'p'] });
+  });
+
+  it('undoes in one step a drag from an outer cell onto a nested table cell', async () => {
+    const instance = await boot([
+      { id: 'outer', type: 'table', data: { content: [[{ blocks: ['p', 'inner'] }]] }, content: ['p', 'inner'] },
+      paragraph('p', 'outer'),
+      { id: 'inner', type: 'table', data: { content: [[{ blocks: ['q'] }]] }, parent: 'outer', content: ['q'] },
+      paragraph('q', 'inner'),
+    ]);
+
+    dragBelow(instance, 'p', 'q');
+    await settle();
+
+    const landed = instance.blocks.getById('p')?.parentId;
+    const afterDrag = await savedCell(instance, 'outer', 0, 0);
+
+    instance.history.undo();
+    await settle();
+
+    expect({
+      landed,
+      afterDrag,
+      dom: domCell(instance, 'outer', 0, 0),
+      parent: instance.blocks.getById('p')?.parentId,
+      inner: await savedCell(instance, 'inner', 0, 0),
+      outer: await savedCell(instance, 'outer', 0, 0),
+    }).toEqual({ landed: 'outer', afterDrag: ['inner', 'p'], dom: ['p', 'inner'], parent: 'outer', inner: ['q'], outer: ['p', 'inner'] });
+  });
+});

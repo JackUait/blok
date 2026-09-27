@@ -8,7 +8,7 @@ import {
   isCaretAtLastLine,
 } from '../../components/utils/caret';
 
-import { CELL_ATTR, ROW_ATTR, CELL_ROW_ATTR, CELL_COL_ATTR } from './table-core';
+import { CELL_ATTR, ROW_ATTR, CELL_COL_ATTR, ownRows } from './table-core';
 import { parseCellContentToBlocks } from './table-cell-paste';
 import type { CellBlockInsert } from './table-cell-paste';
 import { getCellPosition } from './table-operations';
@@ -122,6 +122,12 @@ export class TableCellBlocks {
 
   /** Ids the running initializeCells pass has mounted, so a second reference to one is not a park. */
   private readonly mountedThisPass = new Set<string>();
+
+  /** Saved text of cells whose block ids had not arrived, by their ids; used if they never do. */
+  private readonly fallbackTexts = new Map<string, string>();
+
+  /** Keys like fallbackTexts, for a peer's cell: that peer writes the text, so this editor adds nothing. */
+  private readonly peerFallbackCells = new Set<string>();
 
   private readonly repairIds: Set<string>;
 
@@ -663,7 +669,7 @@ export class TableCellBlocks {
    * Get the number of rows in the table
    */
   private getRowCount(): number {
-    return this.getOwnRows().length;
+    return ownRows(this.gridElement).length;
   }
 
   /**
@@ -681,16 +687,16 @@ export class TableCellBlocks {
     return firstRow?.querySelectorAll('[data-blok-table-cell]').length ?? 0;
   }
 
-  /** Rows of this table only; a nested table's rows are its own. */
-  private getOwnRows(): NodeListOf<HTMLElement> {
-    return this.gridElement.querySelectorAll<HTMLElement>(`:scope > tbody > [${ROW_ATTR}], :scope > [${ROW_ATTR}]`);
+  /** A nested table's cell is inside this grid but belongs to that table. */
+  private isOwnCell(cell: HTMLElement): boolean {
+    return Array.from(ownRows(this.gridElement)).some(row => row === cell.parentElement);
   }
 
   /**
    * Get a cell element by row and column index
    */
   private getCell(row: number, col: number): HTMLElement | null {
-    const rowEl = this.getOwnRows()[row];
+    const rowEl = ownRows(this.gridElement)[row];
 
     if (!rowEl) {
       return null;
@@ -794,7 +800,7 @@ export class TableCellBlocks {
   private initializeCellsPass(
     content: InitCellContent[][]
   ): CellContent[][] {
-    const rowElements = this.gridElement.querySelectorAll<HTMLElement>(`:scope > tbody > [${ROW_ATTR}], :scope > [${ROW_ATTR}]`);
+    const rowElements = ownRows(this.gridElement);
     const normalizedContent: CellContent[][] = [];
     // Every (row, col) the model-driven loop below describes. The completeness
     // sweep uses this to find rendered cells the model never covered — without
@@ -894,6 +900,16 @@ export class TableCellBlocks {
           // The referenced blocks have not arrived yet (a peer's adds, or an
           // undo that restores them later in the same replay). They are
           // placed by id when they land; a fabricated stand-in would outlive them.
+          // A peer's text is left to that peer: every receiver writing it
+          // would put one copy per peer into the shared cell.
+          const fallbackText = isCellWithBlocks(cellContent) && cellContent.text !== '' ? cellContent.text : undefined;
+          const key = JSON.stringify(referencedBlockIds);
+
+          if (fallbackText !== undefined && this.api.blocks.isApplyingRemoteChange) {
+            this.peerFallbackCells.add(key);
+          } else if (fallbackText !== undefined) {
+            this.fallbackTexts.set(key, fallbackText);
+          }
           normalizedRow.push({ blocks: referencedBlockIds, ...cellColorProps, ...cellMetaProps });
         } else if (this.api.blocks.isApplyingRemoteChange && isCellWithBlocks(cellContent)) {
           // A peer's empty cell: that peer fills it and sends the block. A
@@ -1031,7 +1047,30 @@ export class TableCellBlocks {
 
       // The dangling ids stay in the model: save() drops ids with no block,
       // and a block that still lands late is routed back to this cell by them.
-      this.ensureCellHasBlock(cell);
+      const key = JSON.stringify(ids);
+      const text = this.fallbackTexts.get(key);
+
+      if (this.peerFallbackCells.has(key)) {
+        return;
+      }
+
+      if (text === undefined) {
+        this.ensureCellHasBlock(cell);
+
+        return;
+      }
+
+      // The saved text is the cell's only content left; an empty stand-in would erase it on save.
+      this.fallbackTexts.delete(key);
+      this.isRepairingCell = true;
+
+      try {
+        this.api.blocks.transactWithoutCapture?.(() => {
+          this.mountTextBlocks(container, text).forEach(id => this.syncBlockToModel(cell, id));
+        });
+      } finally {
+        this.isRepairingCell = false;
+      }
     });
   }
 
@@ -1087,9 +1126,7 @@ export class TableCellBlocks {
           return;
         }
 
-        const cell = this.gridElement.querySelector<HTMLElement>(
-          `[${CELL_ROW_ATTR}="${rowIndex}"][${CELL_COL_ATTR}="${colIndex}"]`
-        );
+        const cell = this.getCell(rowIndex, colIndex);
 
         if (!cell) {
           return;
@@ -1317,7 +1354,7 @@ export class TableCellBlocks {
     const block = this.api.blocks.getBlockByIndex(adjacentIndex);
     const cell = block?.holder.closest<HTMLElement>(`[${CELL_ATTR}]`);
 
-    if (cell && this.gridElement.contains(cell)) {
+    if (cell && this.isOwnCell(cell)) {
       return cell;
     }
 
@@ -1480,9 +1517,7 @@ export class TableCellBlocks {
     const recordedCellPos = this.model.findCellForBlock(detail.target.id);
 
     if (recordedCellPos) {
-      const cellEl = this.gridElement.querySelector<HTMLElement>(
-        `[${CELL_ROW_ATTR}="${recordedCellPos.row}"][${CELL_COL_ATTR}="${recordedCellPos.col}"]`
-      );
+      const cellEl = this.getCell(recordedCellPos.row, recordedCellPos.col);
 
       if (cellEl) {
         this.claimBlockForCell(cellEl, detail.target.id);
@@ -1812,7 +1847,7 @@ export class TableCellBlocks {
 
     const cell = detail.target.holder.closest<HTMLElement>(`[${CELL_ATTR}]`);
 
-    if (cell && this.gridElement.contains(cell)) {
+    if (cell && this.isOwnCell(cell)) {
       this.removedBlockCells.set(detail.target.id, { cell, index: detail.index });
 
       return;

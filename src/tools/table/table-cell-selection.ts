@@ -378,7 +378,7 @@ export class TableCellSelection {
    * Programmatically select an entire column.
    */
   public selectColumn(colIndex: number): void {
-    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+    const rows = this.ownRows();
     const rowCount = rows.length;
 
     if (rowCount === 0) {
@@ -923,7 +923,7 @@ export class TableCellSelection {
     range: SelectionRange,
     direction: ArrowDirection,
   ): CellCoord {
-    const maxRow = this.grid.querySelectorAll(`[${ROW_ATTR}]`).length - 1;
+    const maxRow = this.ownRows().length - 1;
     const maxCol = this.getLogicalColumnCount() - 1;
 
     switch (direction) {
@@ -1189,7 +1189,7 @@ export class TableCellSelection {
 
     const { minRow: expandedMinRow, maxRow: expandedMaxRow, minCol: expandedMinCol, maxCol: expandedMaxCol } = this.lastPaintedRange;
 
-    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+    const rows = this.ownRows();
 
     // Mark selected cells
     this.selectedCells = this.collectCellsInRange(rows, expandedMinRow, expandedMaxRow, expandedMinCol, expandedMaxCol);
@@ -1268,7 +1268,7 @@ export class TableCellSelection {
       return;
     }
 
-    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+    const rows = this.ownRows();
     const firstCell = this.findCellByCoordOrIndex(rows, range.minRow, range.minCol);
     const lastCell = this.findCellByCoordOrIndex(rows, range.maxRow, range.maxCol);
 
@@ -1608,8 +1608,41 @@ export class TableCellSelection {
     }
   }
 
+  /**
+   * True when `el` belongs to this grid and not to a table nested in one of
+   * its cells. Nested tables reuse the same row/cell attributes and
+   * coordinates, so a plain descendant query mixes both tables.
+   */
+  private isOwnElement(el: Element): boolean {
+    const owner = el.closest('table');
+
+    return owner === null || owner === this.grid || !this.grid.contains(owner);
+  }
+
+  private ownRows(): Element[] {
+    return Array.from(this.grid.querySelectorAll(`[${ROW_ATTR}]`)).filter(row => this.isOwnElement(row));
+  }
+
+  private ownCellsIn(root: Element): HTMLElement[] {
+    return Array.from(root.querySelectorAll(`[${CELL_ATTR}]`))
+      .filter((cell): cell is HTMLElement => cell instanceof HTMLElement && this.isOwnElement(cell));
+  }
+
+  /**
+   * The cell of this grid that holds `el`, walking out of any nested table.
+   */
+  private ownCellOf(el: Element | null): HTMLElement | null {
+    const cell = el?.closest<HTMLElement>(`[${CELL_ATTR}]`) ?? null;
+
+    if (cell === null || this.isOwnElement(cell)) {
+      return cell;
+    }
+
+    return this.ownCellOf(cell.parentElement);
+  }
+
   private resolveCellCoord(target: HTMLElement): CellCoord | null {
-    const cell = target.closest<HTMLElement>(`[${CELL_ATTR}]`);
+    const cell = this.ownCellOf(target);
 
     if (!cell) {
       return null;
@@ -1643,15 +1676,14 @@ export class TableCellSelection {
 
     // Fallback: physical DOM index — only used for grids without coordinate
     // attributes (e.g. legacy non-table grid elements).
-    const rows = Array.from(this.grid.querySelectorAll(`[${ROW_ATTR}]`));
+    const rows = this.ownRows();
     const rowIndex = rows.indexOf(row);
 
     if (rowIndex < 0) {
       return null;
     }
 
-    const cells = Array.from(row.querySelectorAll(`[${CELL_ATTR}]`));
-    const colIndex = cells.indexOf(cell);
+    const colIndex = this.ownCellsIn(row).indexOf(cell);
 
     if (colIndex < 0) {
       return null;
@@ -1666,7 +1698,7 @@ export class TableCellSelection {
     }
 
     const gridRect = this.grid.getBoundingClientRect();
-    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+    const rows = this.ownRows();
     const rowCount = rows.length;
     const colCount = this.getLogicalColumnCount();
 
@@ -1686,7 +1718,7 @@ export class TableCellSelection {
   }
 
   private collectCellsInRange(
-    rows: NodeListOf<Element>,
+    rows: Element[],
     minRow: number,
     maxRow: number,
     minCol: number,
@@ -1696,20 +1728,12 @@ export class TableCellSelection {
 
     if (!hasCoordAttrs) {
       // Fallback: index-based lookup for grids without coordinate attributes
-      return Array.from(rows)
+      return rows
         .slice(minRow, maxRow + 1)
-        .flatMap(row => {
-          const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
-
-          return Array.from(cells)
-            .slice(minCol, maxCol + 1)
-            .filter((cell): cell is HTMLElement => cell instanceof HTMLElement);
-        });
+        .flatMap(row => this.ownCellsIn(row).slice(minCol, maxCol + 1));
     }
 
-    const allCells = this.grid.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`);
-
-    return Array.from(allCells).filter(cell => {
+    return this.ownCellsIn(this.grid).filter(cell => {
       const rowAttr = cell.getAttribute(CELL_ROW_ATTR);
       const colAttr = cell.getAttribute(CELL_COL_ATTR);
 
@@ -1746,12 +1770,12 @@ export class TableCellSelection {
    * just the merged cell.
    */
   private findCellByCoordOrIndex(
-    rows: NodeListOf<Element>,
+    rows: Element[],
     row: number,
     col: number,
   ): HTMLElement | undefined {
-    const coordCell = this.grid.querySelector<HTMLElement>(
-      `[${CELL_ROW_ATTR}="${row}"][${CELL_COL_ATTR}="${col}"]`
+    const coordCell = this.ownCellsIn(this.grid).find(cell =>
+      cell.getAttribute(CELL_ROW_ATTR) === String(row) && cell.getAttribute(CELL_COL_ATTR) === String(col)
     );
 
     if (coordCell) {
@@ -1761,7 +1785,7 @@ export class TableCellSelection {
     const hasCoordAttrs = this.grid.querySelector(`[${CELL_ROW_ATTR}]`) !== null;
 
     if (hasCoordAttrs) {
-      return Array.from(this.grid.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`)).find(cell => {
+      return this.ownCellsIn(this.grid).find(cell => {
         const cellRow = Number(cell.getAttribute(CELL_ROW_ATTR));
         const cellCol = Number(cell.getAttribute(CELL_COL_ATTR));
         const td = cell as HTMLTableCellElement;
@@ -1771,7 +1795,9 @@ export class TableCellSelection {
       });
     }
 
-    return rows[row]?.querySelectorAll(`[${CELL_ATTR}]`)[col] as HTMLElement | undefined;
+    const physicalRow = rows[row];
+
+    return physicalRow === undefined ? undefined : this.ownCellsIn(physicalRow)[col];
   }
 
   /**
@@ -1779,15 +1805,16 @@ export class TableCellSelection {
    * physical cell count in the first row when no colgroup exists.
    */
   private getLogicalColumnCount(): number {
-    const colgroupCount = this.grid.querySelector('colgroup')?.querySelectorAll('col').length;
+    const colgroupCount = Array.from(this.grid.querySelectorAll('colgroup'))
+      .find(colgroup => this.isOwnElement(colgroup))?.querySelectorAll('col').length;
 
     if (colgroupCount !== undefined && colgroupCount > 0) {
       return colgroupCount;
     }
 
-    const firstRow = this.grid.querySelector(`[${ROW_ATTR}]`);
+    const firstRow = this.ownRows()[0];
 
-    return firstRow?.querySelectorAll(`[${CELL_ATTR}]`).length ?? 0;
+    return firstRow === undefined ? 0 : this.ownCellsIn(firstRow).length;
   }
 
   /**

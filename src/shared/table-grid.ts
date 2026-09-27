@@ -125,6 +125,15 @@ const legacyText = (source: unknown, blocks: unknown[]): string | undefined => {
 };
 
 /**
+ * The rows of a table's raw content. A null row stays as an empty row, as the
+ * editor keeps it; other non-array rows are dropped.
+ * @param content - the table block's raw `data.content`
+ */
+export const tableRows = (content: unknown): unknown[][] => (Array.isArray(content) ? content : [])
+  .filter((row): row is unknown[] | null | undefined => Array.isArray(row) || row == null)
+  .map(row => row ?? []);
+
+/**
  * A table block's rows with its merges repaired the way the editor repairs
  * them on load, so a malformed saved table renders the same everywhere.
  * Legacy string cells pass through; one a live span claims renders in its
@@ -132,7 +141,7 @@ const legacyText = (source: unknown, blocks: unknown[]): string | undefined => {
  * @param content - the table block's raw `data.content`
  */
 export const repairedTableRows = (content: unknown): unknown[][] => {
-  const rows = Array.isArray(content) ? content.filter((row): row is unknown[] => Array.isArray(row)) : [];
+  const rows = tableRows(content);
   const seenIds = new Set<string>();
   const cells = rows.map(row => row.map((cell, index) => {
     const view = toViewCell(cell, index);

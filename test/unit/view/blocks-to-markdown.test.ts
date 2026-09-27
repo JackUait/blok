@@ -277,6 +277,15 @@ describe('blocksToMarkdown (view)', () => {
     expect(md).toBe('| First |  |\n| --- | --- |');
   });
 
+  it('keeps a null first row as the empty header row, as the editor does', () => {
+    const md = blocksToMarkdown(doc([
+      { id: 't', type: 'table', data: { withHeadings: true, content: [null, [{ blocks: ['x'] }]] } },
+      { id: 'x', type: 'paragraph', parent: 't', data: { text: 'X' } },
+    ]));
+
+    expect(md).toBe('|  |\n| --- |\n| X |');
+  });
+
   it('moves covered blocks into a merged cell without reviving stale text', () => {
     const md = blocksToMarkdown(doc([
       { id: 't', type: 'table', data: { withHeadings: true, content: [[{ blocks: ['own'], text: 'Stale', colspan: 2 }, { blocks: ['claimed'], mergedInto: [0, 0] }]] } },

@@ -56,6 +56,10 @@ const DEFAULT_COLS = 3;
 /** Frames to wait for a sync replay to close before filling cells it left without a block. */
 const SYNC_SETTLE_MAX_FRAMES = 5;
 
+// Cells of this table only; a nested table's cells sit inside ours.
+const ownCells = (tail = ''): string =>
+  `:scope > tbody > [${ROW_ATTR}] > [${CELL_ATTR}]${tail}, :scope > [${ROW_ATTR}] > [${CELL_ATTR}]${tail}`;
+
 const WRAPPER_CLASSES = [
   'my-2',
   'pr-5',
@@ -375,7 +379,11 @@ export class Table implements BlockTool {
       }
 
       const ownIds = isCellWithBlocks(source) ? source.blocks : [];
-      const text = typeof source === 'string' ? source : source?.text;
+      // Dedup gave this cell's ids to an earlier cell; its text is a stale copy.
+      // Ids that are only missing keep the text as a fallback, as in the view.
+      const deduped = ownIds.length > 0 && cell.blocks.length === 0;
+      const ownText = typeof source === 'string' || deduped ? undefined : source?.text;
+      const text = typeof source === 'string' ? source : ownText;
 
       if (cell.mergedInto !== undefined) {
         const declared = isCellWithBlocks(source) && source.mergedInto !== undefined;
@@ -956,7 +964,7 @@ export class Table implements BlockTool {
           // old text beside the new block, or a mounted holder that
           // mountBlocksInCell reads as already-owned by another container and
           // DUPLICATES — which is how repeated toggles grew a cell's children.
-          gridEl.querySelectorAll<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`)
+          gridEl.querySelectorAll<HTMLElement>(ownCells(` > [${CELL_BLOCKS_ATTR}]`))
             .forEach(container => container.replaceChildren());
 
           const initializedContent = this.cellBlocks?.initializeCells(this.withModelBlocks(pendingContent)) ?? pendingContent;
@@ -967,7 +975,7 @@ export class Table implements BlockTool {
           });
         }
 
-        gridEl.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`).forEach(cell => {
+        gridEl.querySelectorAll<HTMLElement>(ownCells()).forEach(cell => {
           this.cellBlocks?.ensureCellHasBlock(cell);
         });
       }, true);

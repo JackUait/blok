@@ -334,6 +334,11 @@ describe('anonymous presence micro-illustrations', () => {
 
       expect(puffs.length).toBeGreaterThanOrEqual(4);
 
+      // Smoke expands as it drifts off. Only the last puff, which billows beside its neighbour, may be smaller.
+      for (let i = 1; i < puffs.length - 1; i++) {
+        expect(puffs[i]?.r ?? 0).toBeGreaterThanOrEqual(puffs[i - 1]?.r ?? Infinity);
+      }
+
       // Gaps between puffs read as a string of beads, not smoke.
       for (let i = 1; i < puffs.length; i++) {
         const [a, b] = [puffs[i - 1], puffs[i]];

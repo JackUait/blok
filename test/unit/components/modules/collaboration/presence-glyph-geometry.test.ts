@@ -282,6 +282,21 @@ describe('anonymous presence micro-illustrations', () => {
       expect(apart(band, shadow) + apart(shadow, disc)).toBeCloseTo(apart(band, disc), 2);
     });
 
+    it('plants a flag on the lit crescent, its pole rising above the disc', () => {
+      const { svg, disc, shadow } = parts();
+      // The pole is drawn `M left base V top h width V base Z`, then the flag flies from its top.
+      const pole = Array.from(svg.querySelectorAll('path:not([opacity]):not([clip-path])'))
+        .flatMap(path => contours(path.getAttribute('d')))
+        .find(contour => /^M[^M]*V[^M]*h[^M]*V[^M]*Z$/.test(contour));
+      const [left = Number.NaN, base = Number.NaN, top = Number.NaN, width = Number.NaN] = (pole?.match(/-?(?:\d+\.?\d*|\.\d+)/g) ?? []).map(Number);
+      const foot = { x: left + width / 2, y: base, r: 0 };
+
+      expect(pole).toBeDefined();
+      expect(apart(foot, disc)).toBeLessThan(disc.r);
+      expect(apart(foot, shadow)).toBeGreaterThan(shadow.r);
+      expect(top).toBeLessThan(disc.y - disc.r - 2);
+    });
+
     it('pits the lit crescent with a few craters big enough to read at face size', () => {
       const { disc, shadow, craters } = parts();
 

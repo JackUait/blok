@@ -484,20 +484,46 @@ describe('anonymous presence micro-illustrations', () => {
     });
   });
 
-  it('alternates four long and four short sun rays every 45 degrees around the center', () => {
-    const rays = Array.from(glyphSvg('sun').querySelectorAll('path'));
-    const angle = (ray: Element): number => Number(ray.getAttribute('transform')?.match(/^rotate\((\d+) 10 10\)$/)?.[1] ?? 0);
-    const long = rays.filter(ray => angle(ray) % 90 === 0);
-    const short = rays.filter(ray => angle(ray) % 90 === 45);
+  describe('sun', () => {
+    const numbers = (d: string | null | undefined): number[] => (d?.match(/-?\d*\.?\d+/g) ?? []).map(Number);
+    const rays = (): Element[] => Array.from(glyphSvg('sun').querySelectorAll('g[clip-path="url(#bk-sun-rays)"] > path'));
 
-    expect(rays.map(angle).sort((a, b) => a - b)).toStrictEqual([0, 45, 90, 135, 180, 225, 270, 315]);
-    expect(new Set(long.map(ray => ray.getAttribute('d'))).size).toBe(1);
-    expect(new Set(short.map(ray => ray.getAttribute('d'))).size).toBe(1);
-    expect(short[0]?.getAttribute('d')).not.toBe(long[0]?.getAttribute('d'));
+    it('alternates four long and four short flame rays every 45 degrees around the center', () => {
+      const angle = (ray: Element): number => Number(ray.getAttribute('transform')?.match(/^rotate\((\d+) 10 10\)$/)?.[1] ?? 0);
+      const all = rays();
+      const long = all.filter(ray => angle(ray) % 90 === 0);
+      const short = all.filter(ray => angle(ray) % 90 === 45);
 
-    for (const disk of glyphSvg('sun').querySelectorAll('circle')) {
-      expect([value(disk, 'cx'), value(disk, 'cy')]).toEqual([10, 10]);
-    }
+      expect(all.map(angle).sort((a, b) => a - b)).toStrictEqual([0, 45, 90, 135, 180, 225, 270, 315]);
+      expect(new Set(long.map(ray => ray.getAttribute('d'))).size).toBe(1);
+      expect(new Set(short.map(ray => ray.getAttribute('d'))).size).toBe(1);
+      expect(short[0]?.getAttribute('d')).not.toBe(long[0]?.getAttribute('d'));
+
+      for (const disk of glyphSvg('sun').querySelectorAll('circle')) {
+        expect([value(disk, 'cx'), value(disk, 'cy')]).toEqual([10, 10]);
+      }
+    });
+
+    it('curves every ray and sweeps its tip clockwise, so the sun swirls', () => {
+      // The unrotated ray points up: `M left base Q c tip Q c right base Z`.
+      const [leftX = Number.NaN, , , , tipX = Number.NaN, , , , rightX = Number.NaN] = numbers(rays()[0]?.getAttribute('d'));
+
+      expect(rays()[0]?.getAttribute('d')).toMatch(/^M[^M]*Q[^M]*Q[^M]*Z$/);
+      expect(tipX).toBeGreaterThan((leftX + rightX) / 2);
+    });
+
+    it('rings the solid disc with a see-through corona, set apart from the rays', () => {
+      const svg = glyphSvg('sun');
+      const disc = svg.querySelector('circle[clip-path="url(#bk-sun-lit)"]');
+      const corona = Math.max(...Array.from(svg.querySelectorAll('circle[opacity]')).map(circle => value(circle, 'r')));
+      // The ray clip is the canvas minus a circle drawn from its top: `M10 top a r ...`.
+      const hole = svg.querySelector('clipPath[id="bk-sun-rays"] path')?.getAttribute('d')?.match(/M[^M]*/g)?.[1];
+      const [, top = Number.NaN] = numbers(hole);
+
+      expect(disc).not.toBeNull();
+      expect(corona).toBeGreaterThan(value(disc, 'r'));
+      expect(10 - top).toBeGreaterThan(corona);
+    });
   });
 
   it('draws the saucer beam, underside and canopy as see-through glass around a solid deck', () => {

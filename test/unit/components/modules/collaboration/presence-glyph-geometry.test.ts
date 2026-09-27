@@ -117,6 +117,33 @@ describe('anonymous presence micro-illustrations', () => {
     expect(edge).toBeLessThan(value(lit, 'x') + value(lit, 'width'));
   });
 
+  it('glazes each satellite panel with a grid of six see-through cells', () => {
+    const svg = glyphSvg('satellite');
+    const glass = svg.querySelector('g > path[opacity]')?.getAttribute('d') ?? '';
+
+    for (const panel of svg.querySelectorAll('path[fill-rule="evenodd"]')) {
+      const [, ...cells] = panel.getAttribute('d')?.match(/M[^M]*/g) ?? [];
+
+      expect(cells).toHaveLength(6);
+      for (const cell of cells) {
+        expect(glass).toContain(cell);
+      }
+    }
+  });
+
+  it('cuts a see-through porthole into the lit satellite body', () => {
+    const svg = glyphSvg('satellite');
+    const body = svg.querySelector('rect[clip-path]');
+    // The lit clip is the lit half, then the cut-outs drawn from their top.
+    const [, porthole = ''] = svg.querySelector('clipPath[id="bk-satellite-lit"] path')?.getAttribute('d')?.match(/M[^M]*/g) ?? [];
+    const [x = Number.NaN, top = Number.NaN, r = Number.NaN] = (porthole.match(/-?\d*\.?\d+/g) ?? []).map(Number);
+
+    expect(porthole).toMatch(/^M[^M]*a[^M]*Z$/);
+    expect(x - r).toBeGreaterThan(value(body, 'x'));
+    expect(top).toBeGreaterThan(value(body, 'y'));
+    expect(top + 2 * r).toBeLessThan(value(body, 'y') + value(body, 'height'));
+  });
+
   it('beams two widening waves from the satellite dish, a solid one and a see-through one', () => {
     type Arc = { r: number; opacity: string | null };
     const waves: Arc[] = Array.from(glyphSvg('satellite').querySelectorAll('path'))

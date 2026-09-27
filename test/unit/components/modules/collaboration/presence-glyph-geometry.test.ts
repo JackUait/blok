@@ -403,19 +403,28 @@ describe('anonymous presence micro-illustrations', () => {
     expect(beam?.getAttribute('d')?.match(/M/g)?.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('pairs identical galaxy arms with a half-turn around the center', () => {
+  it('pairs identical galaxy arms and their glows with a half-turn around the center', () => {
     const svg = glyphSvg('galaxy');
-    const arms = Array.from(svg.querySelectorAll('path')).filter(path => inherited(path, 'stroke') === 'currentColor');
-    const center = svg.querySelector('circle');
-    const [first, second] = arms;
+    const group = svg.querySelector(':scope > g');
+    const own = Array.from(group?.querySelectorAll(':scope > path') ?? []);
+    const pairs = [own.filter(path => !path.hasAttribute('opacity')), own.filter(path => path.hasAttribute('opacity'))]
+      .map(paths => paths.filter(path => (path.getAttribute('d')?.match(/M/g)?.length ?? 0) === 1 && path.getAttribute('d')?.includes('C')));
+    // Circle contours are drawn as `M cx top a r r ...`, so the centre is one radius below the start.
+    const [x = Number.NaN, top = Number.NaN, r = Number.NaN] = (own.find(path => /^M[^MC]*a/.test(path.getAttribute('d') ?? ''))
+      ?.getAttribute('d')?.match(/-?\d*\.?\d+/g) ?? []).map(Number);
 
-    expect(arms).toHaveLength(2);
-    expect([value(center, 'cx'), value(center, 'cy')]).toEqual([10, 10]);
-    expect(value(center, 'r')).toBeGreaterThan(0);
-    expect(first?.getAttribute('d')).toBeTruthy();
-    expect(second?.getAttribute('d')).toBe(first?.getAttribute('d'));
-    expect(first?.getAttribute('transform') ?? 'rotate(0 10 10)').toBe('rotate(0 10 10)');
-    expect(second?.getAttribute('transform')).toBe('rotate(180 10 10)');
-    expect(second?.parentElement).toBe(first?.parentElement);
+    // Filled arms taper; a uniform stroke cannot.
+    expect(svg.querySelector('[stroke]')).toBeNull();
+
+    for (const [first, second, ...rest] of pairs) {
+      expect(rest).toHaveLength(0);
+      expect(first?.getAttribute('d')).toBeTruthy();
+      expect(second?.getAttribute('d')).toBe(first?.getAttribute('d'));
+      expect(first?.getAttribute('transform') ?? 'rotate(0 10 10)').toBe('rotate(0 10 10)');
+      expect(second?.getAttribute('transform')).toBe('rotate(180 10 10)');
+    }
+
+    expect([x, top + r]).toEqual([10, 10]);
+    expect(r).toBeGreaterThan(0);
   });
 });

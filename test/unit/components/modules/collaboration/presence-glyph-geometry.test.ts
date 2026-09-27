@@ -350,48 +350,41 @@ describe('anonymous presence micro-illustrations', () => {
 
   describe('telescope', () => {
     const numbers = (d: string | null | undefined): number[] => (d?.match(/-?\d*\.?\d+/g) ?? []).map(Number);
+    // The dome is drawn as `M left base A r r 0 0 1 right base Z`.
+    const dome = (svg: Element): { x: number; y: number; r: number; d: string } => {
+      const d = svg.querySelector('path[clip-path="url(#bk-telescope-lit)"]')?.getAttribute('d') ?? '';
+      const [left = Number.NaN, y = Number.NaN, r = Number.NaN, , , , , right = Number.NaN] = numbers(d);
 
-    it('lights the telescope tube over a see-through copy and cuts a band across it', () => {
+      return { x: (left + right) / 2, y, r, d };
+    };
+
+    it('houses the telescope in a lit observatory dome over a see-through copy, with a slit cut through the lit side', () => {
       const svg = glyphSvg('telescope');
-      const lit = svg.querySelector('path[clip-path="url(#bk-telescope-lit)"]');
-      const shade = Array.from(svg.querySelectorAll('path[opacity]'))
-        .find(path => Boolean(path.getAttribute('d')) && lit?.getAttribute('d')?.startsWith(path.getAttribute('d') ?? '-'));
+      const { d } = dome(svg);
+      const shade = Array.from(svg.querySelectorAll('path[opacity]')).find(path => path.getAttribute('d') === d);
 
-      expect(svg.querySelector('clipPath[id="bk-telescope-lit"] path')).not.toBeNull();
-      expect(lit?.getAttribute('fill-rule')).toBe('evenodd');
+      expect(d).toMatch(/^M[^M]*A[^M]*Z$/);
       expect(shade).toBeDefined();
-      // The band is one more contour than the shade copy carries.
-      expect(lit?.getAttribute('d')?.match(/M/g)?.length).toBeGreaterThan(shade?.getAttribute('d')?.match(/M/g)?.length ?? Infinity);
+      // The slit clips only the lit dome, so the see-through copy shows as the dark inside.
+      expect(svg.querySelector('path[clip-path="url(#bk-telescope-lit)"]')?.closest('[clip-path="url(#bk-telescope-slit)"]')).not.toBeNull();
+      expect(shade?.closest('[clip-path="url(#bk-telescope-slit)"]')).toBeNull();
     });
 
-    it('aims a beam of starlight at the star and stops it just short, so the star stands on its own', () => {
+    it('pokes the telescope tube out through the slit, past the dome', () => {
       const svg = glyphSvg('telescope');
-      // The star is drawn as `M tip Q centre ...`; the beam as `M rim L apex L rim Z`.
-      const star = Array.from(svg.querySelectorAll('path:not([opacity])')).find(path => /^M[^M]*Q[^M]*Z$/.test(path.getAttribute('d') ?? ''));
-      const beam = Array.from(svg.querySelectorAll('path[opacity]')).find(path => /^M[^M]*L[^M]*L[^M]*Z$/.test(path.getAttribute('d') ?? ''));
-      const [, , cx = Number.NaN, cy = Number.NaN] = numbers(star?.getAttribute('d'));
-      const [r1x = Number.NaN, r1y = Number.NaN, ax = Number.NaN, ay = Number.NaN, r2x = Number.NaN, r2y = Number.NaN] = numbers(beam?.getAttribute('d'));
-      const [mx, my] = [(r1x + r2x) / 2, (r1y + r2y) / 2];
-      const gap = Math.hypot(cx - ax, cy - ay);
-      // Cross product of lens-midpoint→apex and lens-midpoint→star: zero when the beam points at the star.
-      const aim = ((ax - mx) * (cy - my) - (ay - my) * (cx - mx)) / Math.hypot(cx - mx, cy - my);
+      const { x, y, r } = dome(svg);
+      // The tube and its hood are the solid path of straight-edged contours.
+      const tube = Array.from(svg.querySelectorAll('path:not([opacity]):not([clip-path])'))
+        .find(path => /^(M[^MAQaq]*L[^MAQaq]*Z)+$/.test(path.getAttribute('d') ?? ''));
+      const points = numbers(tube?.getAttribute('d'));
+      let reach = 0;
 
-      expect(beam?.parentElement).toBe(svg);
-      expect(gap).toBeGreaterThanOrEqual(0.5);
-      expect(gap).toBeLessThanOrEqual(1.5);
-      expect(Math.abs(aim)).toBeLessThan(0.1);
-    });
+      for (let i = 0; i + 1 < points.length; i += 2) {
+        reach = Math.max(reach, Math.hypot((points[i] ?? 0) - x, (points[i + 1] ?? 0) - y));
+      }
 
-    it('fronts the telescope with a see-through lens where the beam lands', () => {
-      const group = glyphSvg('telescope').querySelector(':scope > g');
-      // Ellipse contours are drawn as `M cx top a rx ry ...`.
-      const lens = Array.from(group?.querySelectorAll(':scope > path[opacity]') ?? [])
-        .find(path => /^M[^M]*a[^M]*Z$/.test(path.getAttribute('d') ?? ''));
-      const [, , rx = Number.NaN, ry = Number.NaN] = numbers(lens?.getAttribute('d'));
-
-      expect(lens).toBeDefined();
-      // Seen edge-on, so taller than wide.
-      expect(ry).toBeGreaterThan(rx);
+      expect(tube).toBeDefined();
+      expect(reach).toBeGreaterThan(r);
     });
   });
 

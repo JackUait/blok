@@ -309,6 +309,40 @@ describe('anonymous presence micro-illustrations', () => {
     });
   });
 
+  describe('rocket', () => {
+    it('lights the rocket body and shades the rest with a see-through copy cut by the same porthole', () => {
+      const svg = glyphSvg('rocket');
+      const lit = svg.querySelector('path[clip-path="url(#bk-rocket-lit)"]');
+      const shade = Array.from(svg.querySelectorAll('path[opacity]')).find(path => path.getAttribute('d') === lit?.getAttribute('d'));
+
+      expect(svg.querySelector('clipPath[id="bk-rocket-lit"] path')).not.toBeNull();
+      expect(lit?.getAttribute('fill-rule')).toBe('evenodd');
+      expect(lit?.getAttribute('d')?.match(/M/g)?.length).toBeGreaterThanOrEqual(2);
+      expect(shade).toBeDefined();
+    });
+
+    it('trails one continuous plume of smoke puffs, each overlapping the next', () => {
+      // Circle contours are drawn as `M cx top a r r ...`, so the centre is one radius below the start.
+      const puffs = Array.from(glyphSvg('rocket').querySelectorAll('path[opacity]'))
+        .map(path => path.getAttribute('d')?.match(/M[^M]*/g) ?? [])
+        .find(contours => contours.length >= 4 && contours.every(contour => /^M[^M]*a/.test(contour)))
+        ?.map(contour => {
+          const [x = 0, top = 0, r = 0] = (contour.match(/-?\d*\.?\d+/g) ?? []).map(Number);
+
+          return { x, y: top + r, r };
+        }) ?? [];
+
+      expect(puffs.length).toBeGreaterThanOrEqual(4);
+
+      // Gaps between puffs read as a string of beads, not smoke.
+      for (let i = 1; i < puffs.length; i++) {
+        const [a, b] = [puffs[i - 1], puffs[i]];
+
+        expect(Math.hypot((a?.x ?? 0) - (b?.x ?? 0), (a?.y ?? 0) - (b?.y ?? 0))).toBeLessThan((a?.r ?? 0) + (b?.r ?? 0));
+      }
+    });
+  });
+
   describe('comet', () => {
     // Circle contours are drawn as `M cx top a r r ...`.
     const radius = (element: Element | null | undefined): number =>

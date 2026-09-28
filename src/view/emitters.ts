@@ -13,6 +13,7 @@
  * the `src/components/utils` barrel, editor modules, or tool classes.
  */
 import { normalizeHeadingAnchor } from '../shared/heading-anchor';
+import { readVariants } from '../shared/read-variants';
 import { CALLOUT_CHILDREN_CLASSES } from '../shared/tool-classes/callout';
 import { CODE_AREA_CLASSES } from '../shared/tool-classes/code';
 import { DIVIDER_RULE_CLASSES } from '../shared/tool-classes/divider';
@@ -496,15 +497,33 @@ export const builtinEmitters: Record<string, Emitter> = {
 
   image: (block, env) => {
     const img = `<img${env.url('src', block.data.url, block.type)} alt="${env.escape(str(block.data, 'alt'))}">`;
+    const sources = (readVariants(block.data.variants) ?? [])
+      .filter((variant) => variant.url !== block.data.url)
+      .map((variant) => {
+        const src = env.url('src', variant.url, block.type);
 
-    return trail(`<figure>${img}${figcaption(block, env)}</figure>`, block, env);
+        // env.url only speaks src/href; a single-URL srcset takes the same value.
+        return src === '' ? '' : `<source${src.replace(' src=', ' srcset=')} type="${env.escape(variant.mimeType)}">`;
+      })
+      .join('');
+    const media = sources === '' ? img : `<picture>${sources}${img}</picture>`;
+
+    return trail(`<figure>${media}${figcaption(block, env)}</figure>`, block, env);
   },
 
   video: (block, env) => {
     const controls = block.data.hideControls === true ? '' : ' controls';
     const autoplay = block.data.autoplay === true ? ' autoplay' : '';
     const loop = block.data.loop === true ? ' loop' : '';
-    const video = `<video${env.url('src', block.data.url, block.type)}${controls}${autoplay}${loop}></video>`;
+    const sources = (readVariants(block.data.variants) ?? [])
+      .map((variant) => {
+        const src = env.url('src', variant.url, block.type);
+
+        return src === '' ? '' : `<source${src} type="${env.escape(variant.mimeType)}">`;
+      })
+      .join('');
+    const srcAttr = sources === '' ? env.url('src', block.data.url, block.type) : '';
+    const video = `<video${srcAttr}${controls}${autoplay}${loop}>${sources}</video>`;
 
     return trail(`<figure>${video}${figcaption(block, env)}</figure>`, block, env);
   },

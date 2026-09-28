@@ -56,7 +56,7 @@ import { openCropModal } from './crop-modal';
 import { openAltPopover } from './alt-popover';
 import { probeImageDimensions } from './probe-dimensions';
 import { renderUploadingState, type UploadingStateElement } from './uploading-state';
-import { readVariants } from '../../components/media-variants/read-variants';
+import { readVariants } from '../../shared/read-variants';
 import { Uploader, type UploadResult } from './uploader';
 import { convertGifToWebm } from './gif-to-webm';
 import { downloadImage } from './download';

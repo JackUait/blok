@@ -1,5 +1,5 @@
-import type { MediaVariant } from '../../../types/configs/media';
-import { hasUnsafeUrlProtocol } from '../../shared/url-policy';
+import type { MediaVariant } from '../../types/configs/media';
+import { hasUnsafeUrlProtocol } from './url-policy';
 
 /**
  * Stored data is untrusted (hand-edited JSON, old versions), so only clean

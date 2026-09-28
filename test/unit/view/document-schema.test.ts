@@ -179,6 +179,7 @@ const savedData: Record<string, Record<string, unknown>> = {
     alt: 'Alt', fileName: 'a.png', size: 'md', frame: 'border', rounded: true,
     captionVisible: true, naturalWidth: 800, naturalHeight: 600,
     crop: { x: 10, y: 10, w: 50, h: 50, shape: 'circle' },
+    variants: [{ url: 'https://example.com/a.avif', mimeType: 'image/avif' }, { url: 'https://example.com/a.png', mimeType: 'image/png' }],
   })).save(),
 
   file: new FileTool(options({
@@ -197,6 +198,7 @@ const savedData: Record<string, Record<string, unknown>> = {
     url: 'https://example.com/a.mp4', caption: 'Cap', captionVisible: true,
     width: 50, alignment: 'left', autoplay: true, loop: true, hideControls: true,
     fileName: 'a.mp4', mimeType: 'video/mp4', aspectRatio: '16 / 9',
+    variants: [{ url: 'https://example.com/a.webm', mimeType: 'video/webm' }, { url: 'https://example.com/a.mp4', mimeType: 'video/mp4' }],
   })).save(),
 
   column_list: new ColumnList(options({})).save(),

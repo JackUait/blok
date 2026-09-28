@@ -1211,3 +1211,41 @@ describe('blocksToHtml', () => {
     });
   });
 });
+
+describe('media variants', () => {
+  it('renders an image as a picture with better formats first', () => {
+    const html = blocksToHtml(doc([{ type: 'image', data: { url: 'https://x/a.jpg', alt: 'A', variants: [
+      { url: 'https://x/a.avif', mimeType: 'image/avif' },
+      { url: 'https://x/a.jpg', mimeType: 'image/jpeg' },
+    ] } }]));
+
+    expect(html).toContain('<picture><source srcset="https://x/a.avif" type="image/avif"><img src="https://x/a.jpg" alt="A"></picture>');
+  });
+
+  it('renders video sources in stored order', () => {
+    const html = blocksToHtml(doc([{ type: 'video', data: { url: 'https://x/a.mp4', variants: [
+      { url: 'https://x/a.webm', mimeType: 'video/webm' },
+      { url: 'https://x/a.mp4', mimeType: 'video/mp4' },
+    ] } }]));
+
+    expect(html).toContain('<video controls><source src="https://x/a.webm" type="video/webm"><source src="https://x/a.mp4" type="video/mp4"></video>');
+  });
+
+  it('drops a variant whose URL the policy rejects', () => {
+    const html = blocksToHtml(doc([{ type: 'image', data: { url: 'https://x/a.jpg', variants: [{ url: 'javascript:alert(1)', mimeType: 'image/avif' }] } }]));
+
+    expect(html).not.toContain('javascript:');
+    expect(html).not.toContain('<picture>');
+  });
+
+  it('drops a variant the host transformUrl rejects', () => {
+    const html = blocksToHtml(
+      doc([{ type: 'image', data: { url: 'https://x/a.jpg', variants: [{ url: 'https://evil/a.avif', mimeType: 'image/avif' }, { url: 'https://x/a.jpg', mimeType: 'image/jpeg' }] } }]),
+      { transformUrl: (url: string) => (url.includes('evil') ? '' : url) }
+    );
+
+    expect(html).not.toContain('evil');
+    expect(html).not.toContain('<picture>');
+  });
+});
+

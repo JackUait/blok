@@ -33,7 +33,7 @@ import { DEFAULT_CAPTION_PLACEHOLDER, MIN_WIDTH_PX, URL_PATTERN } from './consta
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { tr } from './i18n';
 import { deliverToRebuiltBlock, putBackOnRebuiltBlock, releaseObjectUrl } from '../image/detached-upload';
-import { readVariants } from '../../components/media-variants/read-variants';
+import { readVariants } from '../../shared/read-variants';
 import { renderCaptionRow, renderVideo } from './ui';
 import { attachControls, type ControlsHandle } from './controls';
 import { Uploader, VideoUploadError, type UploadResult } from './uploader';

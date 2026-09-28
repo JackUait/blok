@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readVariants } from '../../../../src/components/media-variants/read-variants';
+import { readVariants } from '../../../src/shared/read-variants';
 
 describe('readVariants', () => {
   it('keeps well-formed entries in stored order', () => {

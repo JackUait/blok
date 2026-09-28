@@ -23,6 +23,7 @@ import {
 } from '../registry';
 
 import type { PasteMenuActionType, PasteMenuOption } from './options';
+import { brandMarkElement } from '../../../components/utils/brand-mark-services';
 
 import type { SupportedLocale } from '../../../../types/configs/i18n-config';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
@@ -91,7 +92,8 @@ const presentationFor = (type: PasteMenuActionType): PasteMenuItemPresentation =
  *
  * When `url` matches a registered embed provider, the embed item is titled with
  * the provider's link-type action template (e.g. "Embed a video from YouTube") and
- * shows the link-type icon instead of the generic globe.
+ * shows the provider's brand mark (link-type icon until it loads, or when none
+ * is bundled) instead of the generic globe.
  */
 export function buildPasteMenuItems(
   options: PasteMenuOption[],
@@ -112,7 +114,9 @@ export function buildPasteMenuItems(
       title: typed && providerTitle
         ? i18n.t(typed.labelKey).replace('{provider}', providerTitle)
         : i18n.t(labelKey),
-      icon: typed ? typed.icon : icon,
+      icon: typed && embedMatch
+        ? brandMarkElement(embedMatch.service, typed.icon) ?? typed.icon
+        : icon,
       closeOnActivate: true,
       onActivate: (): void => {
         onSelect(type);

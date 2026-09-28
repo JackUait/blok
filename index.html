@@ -1249,6 +1249,9 @@
     import * as Icons from './src/components/icons/index.ts';
     import { ALL_LOCALE_CODES, getDirection } from './src/components/i18n/locales/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
+    import { BRAND_MARK_SLUGS, brandMarkSvg } from './src/components/utils/brand-marks.ts';
+    const BRAND_MARK_GROUP = 'Brand marks';
+    const BRAND_MARK_ICONS = Object.fromEntries(BRAND_MARK_SLUGS.map((slug) => [slug, brandMarkSvg(slug)]));
     import { PRESENCE_GLYPH_GROUP, PRESENCE_GLYPH_ICONS } from './src/playground/presence-glyph-icons.ts';
     import { buildPresenceFace } from './src/playground/presence-face.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
@@ -2148,12 +2151,14 @@
       // Decoded from presence.css, which owns this artwork — they are masks,
       // not exports of the icon module.
       [PRESENCE_GLYPH_GROUP]: Object.keys(PRESENCE_GLYPH_ICONS),
+      // Third-party provider marks (brand-marks.ts), not Blok Line icons.
+      [BRAND_MARK_GROUP]: Object.keys(BRAND_MARK_ICONS),
     };
 
     renderIconGallery({
       container: document.getElementById('icon-gallery'),
       iconGroups,
-      icons: { ...Icons, ...PRESENCE_GLYPH_ICONS },
+      icons: { ...Icons, ...PRESENCE_GLYPH_ICONS, ...BRAND_MARK_ICONS },
     });
 
     /**

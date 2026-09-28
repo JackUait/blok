@@ -298,8 +298,12 @@ describe('buildPasteMenuItems', () => {
       const [withUrl] = buildPasteMenuItems([{ type: 'embed' }], identityI18n, vi.fn(), youtubeUrl);
       const [generic] = buildPasteMenuItems([{ type: 'embed' }], identityI18n, vi.fn());
 
-      expect(asDefaultItem(withUrl).icon).not.toBe(asDefaultItem(generic).icon);
-      expect(asDefaultItem(withUrl).icon).toContain('<svg');
+      // A provider with a brand mark gets an element (link-type icon until the
+      // mark loads); compare the markup either way.
+      const markup = (icon: unknown): string => (icon instanceof HTMLElement ? icon.innerHTML : String(icon));
+
+      expect(markup(asDefaultItem(withUrl).icon)).not.toBe(markup(asDefaultItem(generic).icon));
+      expect(markup(asDefaultItem(withUrl).icon)).toContain('<svg');
     });
 
     it('gives different link types different icons', () => {
@@ -342,5 +346,25 @@ describe('buildPasteMenuItems', () => {
       expect(asDefaultItem(item).title).toBe(asDefaultItem(generic).title);
       expect(asDefaultItem(item).icon).toBe(asDefaultItem(generic).icon);
     });
+  });
+});
+
+describe('buildPasteMenuItems brand marks', () => {
+  const embedOnly: PasteMenuOption[] = [{ type: 'embed' }];
+
+  it('shows the provider\'s own logo on the embed item once the marks have loaded', async () => {
+    const [item] = buildPasteMenuItems(embedOnly, identityI18n, vi.fn(), 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    const icon = (item as { icon?: unknown }).icon;
+
+    expect(icon).toBeInstanceOf(HTMLElement);
+    await vi.dynamicImportSettled();
+
+    expect((icon as HTMLElement).querySelector('[data-brand="youtube"]')).not.toBeNull();
+  });
+
+  it('keeps the link-type icon for a provider that has no bundled mark', () => {
+    const [item] = buildPasteMenuItems(embedOnly, identityI18n, vi.fn(), 'https://tally.so/r/abc123');
+
+    expect(typeof (item as { icon?: unknown }).icon).toBe('string');
   });
 });

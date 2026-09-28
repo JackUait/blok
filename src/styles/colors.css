@@ -187,9 +187,6 @@
 
   /* Media empty-state preview: floor and layer shadows, tinted like the ink */
   --blok-media-preview-shadow: rgba(24, 30, 44, 0.8);
-  /* Tile behind a provider logo or site icon in the media Link field; white
-     in every theme so dark brand marks stay visible. */
-  --blok-media-link-logo-bg: #ffffff;
 
   /* Color picker swatch */
   --blok-swatch-neutral-bg: #f7f7f5;

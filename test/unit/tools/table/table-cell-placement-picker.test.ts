@@ -147,66 +147,83 @@ describe('createCellPlacementPicker', () => {
     expect(className).toContain('motion-reduce:transition-none');
   });
 
-  describe('reflow animation', () => {
-    const linesOf = (radio: HTMLElement): HTMLElement[] =>
-      Array.from(radio.querySelectorAll<HTMLElement>('[data-blok-placement-glyph] > *'));
+  describe('live cell preview', () => {
+    const previewOf = (element: HTMLElement): HTMLElement => {
+      const preview = element.querySelector<HTMLElement>('[data-blok-placement-preview]');
 
-    const stubMotion = (reduced: boolean): Mock => {
-      const animate = vi.fn();
+      if (preview === null) {
+        throw new Error('Missing cell preview');
+      }
 
-      // jsdom has neither matchMedia nor element.animate.
-      Object.defineProperty(window, 'matchMedia', {
-        value: (query: string) => ({ matches: reduced && query.includes('reduce'), media: query }),
-        configurable: true,
-        writable: true,
-      });
-      Object.defineProperty(HTMLElement.prototype, 'animate', { value: animate, configurable: true, writable: true });
-
-      return animate;
+      return preview;
     };
 
-    afterEach(() => {
-      Reflect.deleteProperty(HTMLElement.prototype, 'animate');
-      Reflect.deleteProperty(window, 'matchMedia');
+    const shifts = (element: HTMLElement): string[] =>
+      Array.from(previewOf(element).querySelectorAll<HTMLElement>('[data-blok-placement-preview-line]'))
+        .map(line => line.style.transform);
+
+    const guide = (element: HTMLElement): string =>
+      previewOf(element).querySelector<HTMLElement>('[data-blok-placement-guide]')?.style.left ?? '';
+
+    it('is decorative: hidden from assistive tech, which reads the radios instead', () => {
+      expect(previewOf(render(undefined)).getAttribute('aria-hidden')).toBe('true');
     });
 
-    it('springs the new option\'s text lines over from the old alignment, one after another', () => {
-      const animate = stubMotion(false);
+    it.each([
+      ['middle-left', ['translateX(0px)', 'translateX(0px)', 'translateX(0px)'], '0%'],
+      ['middle-center', ['translateX(18px)', 'translateX(38px)', 'translateX(28px)'], '50%'],
+      ['middle-right', ['translateX(36px)', 'translateX(76px)', 'translateX(56px)'], '100%'],
+    ] as const)('lays the cell text out %s, with the guide on the edge it snaps to', (placement, expected, guideAt) => {
+      const element = render(placement);
+
+      expect(shifts(element)).toEqual(expected);
+      expect(guide(element)).toBe(guideAt);
+    });
+
+    it('glides to the hovered option and back to the checked one on leave', () => {
+      const element = render('middle-left');
+      const [, , right] = radios(element);
+
+      right.dispatchEvent(new PointerEvent('pointerenter'));
+      expect(shifts(element)[1]).toBe('translateX(76px)');
+      expect(guide(element)).toBe('100%');
+
+      right.dispatchEvent(new PointerEvent('pointerleave'));
+      expect(shifts(element)[1]).toBe('translateX(0px)');
+      expect(guide(element)).toBe('0%');
+    });
+
+    it('stays on a picked option after the pointer leaves it', () => {
       const element = render('middle-left');
       const [, center] = radios(element);
 
+      center.dispatchEvent(new PointerEvent('pointerenter'));
       center.click();
+      center.dispatchEvent(new PointerEvent('pointerleave'));
 
-      const lines = linesOf(center);
-
-      expect(animate).toHaveBeenCalledTimes(3);
-      animate.mock.contexts.forEach((context, index) => {
-        const width = Number.parseFloat(lines[index].style.width);
-        // From left-aligned (offset 0) to centred (offset (22 - width) / 2).
-        const [frames, timing] = animate.mock.calls[index];
-
-        expect(context).toBe(lines[index]);
-        expect(frames).toEqual([{ transform: `translateX(${-(22 - width) / 2}px)` }, { transform: 'translateX(0)' }]);
-        expect(timing.delay).toBe(index * 40);
-      });
+      expect(guide(element)).toBe('50%');
     });
 
-    it('does not animate when the option is already checked', () => {
-      const animate = stubMotion(false);
-      const [left] = radios(render('middle-left'));
+    it('keeps the cell border widths and the dashed guide through twMerge', () => {
+      const preview = previewOf(render(undefined));
+      const cell = preview.firstElementChild;
+      const guideLine = preview.querySelector('[data-blok-placement-guide]');
 
-      left.click();
-
-      expect(animate).not.toHaveBeenCalled();
+      // twMerge drops border-x / border-y / border-dashed next to a border color it misreads.
+      expect(preview.classList.contains('border-y')).toBe(true);
+      expect(cell?.classList.contains('border-x')).toBe(true);
+      expect(guideLine?.className).toContain('[border-style:dashed]');
+      expect(guideLine?.classList.contains('border-l')).toBe(true);
     });
 
-    it('stands still for people who ask for reduced motion', () => {
-      const animate = stubMotion(true);
-      const [, , right] = radios(render('middle-left'));
+    it('staggers the lines on a spring, and stands still for reduced motion', () => {
+      const lines = Array.from(previewOf(render(undefined)).querySelectorAll<HTMLElement>('[data-blok-placement-preview-line]'));
 
-      right.click();
-
-      expect(animate).not.toHaveBeenCalled();
+      expect(lines.map(line => line.style.transitionDelay)).toEqual(['0ms', '40ms', '80ms']);
+      for (const line of lines) {
+        expect(line.className).toContain('transition-transform');
+        expect(line.className).toContain('motion-reduce:transition-none');
+      }
     });
   });
 

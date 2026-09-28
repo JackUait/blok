@@ -24,51 +24,100 @@ const OPTIONS: { side: Side; placement: CellPlacement; key: string }[] = [
   { side: 'right', placement: 'middle-right', key: 'tools.table.placementMiddleRight' },
 ];
 
-const LINE_ALIGN: Record<Side, string> = {
+const GLYPH_ALIGN: Record<Side, string> = {
   left: 'flex-start',
   center: 'center',
   right: 'flex-end',
 };
 
-/** Text lines drawn inside each option, in px. The glyph is as wide as the first. */
-const GLYPH_WIDTH = 22;
-const LINE_WIDTHS = [22, 14, 18];
+/** Text lines of the small option glyphs, in px. */
+const GLYPH_LINES = [22, 14, 18];
 
-/** Where a line of this width starts when aligned to this side. */
+/**
+ * Text lines of the preview cell, in px, laid out in a PREVIEW_TEXT_WIDTH box.
+ * The box width must match the preview's padding: 184px preview, cell edges
+ * 16px in, 10px cell padding.
+ */
+const PREVIEW_TEXT_WIDTH = 132;
+const PREVIEW_LINES = [96, 56, 76];
+
+const GUIDE_AT: Record<Side, string> = {
+  left: '0%',
+  center: '50%',
+  right: '100%',
+};
+
+/** How far a line of this width sits from the left edge when aligned to this side. */
 const offsetOf = (side: Side, width: number): number => {
   if (side === 'left') {
     return 0;
   }
 
-  return side === 'center' ? (GLYPH_WIDTH - width) / 2 : GLYPH_WIDTH - width;
+  return side === 'center' ? (PREVIEW_TEXT_WIDTH - width) / 2 : PREVIEW_TEXT_WIDTH - width;
 };
 
-const SPRING = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
+const SPRING = '[transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)]';
 
 /**
- * The picked option's lines spring over from the old alignment, like text reflowing.
- * Skipped without the Web Animations API or when reduced motion is asked for.
+ * A slice of a table row: the edited cell in the middle, its neighbours
+ * fading out at both sides.
  */
-const reflowLines = (glyph: HTMLElement, from: Side, to: Side): void => {
-  const reduced = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const PREVIEW_CLASSES = [
+  'relative',
+  'h-[76px]',
+  'mb-1.5',
+  'overflow-hidden',
+  'border-y',
+  '[border-color:var(--blok-table-border)]',
+  '[mask-image:linear-gradient(to_right,transparent,black_28px,black_calc(100%-28px),transparent)]',
+];
 
-  if (reduced) {
-    return;
-  }
+const CELL_CLASSES = [
+  'absolute',
+  'inset-y-0',
+  'left-4',
+  'right-4',
+  'border-x',
+  '[border-color:var(--blok-table-border)]',
+  'bg-popover-bg',
+];
 
-  Array.from(glyph.children).forEach((line, index) => {
-    if (!(line instanceof HTMLElement) || typeof line.animate !== 'function') {
-      return;
-    }
+const TEXT_BOX_CLASSES = [
+  'absolute',
+  'left-2.5',
+  'right-2.5',
+  'top-1/2',
+  '-translate-y-1/2',
+  'flex',
+  'flex-col',
+  'gap-[6px]',
+];
 
-    const width = LINE_WIDTHS[index];
+const PREVIEW_LINE_CLASSES = [
+  'h-[5px]',
+  'rounded-full',
+  'bg-current',
+  'transition-transform',
+  'duration-[480ms]',
+  SPRING,
+  'motion-reduce:transition-none',
+];
 
-    line.animate(
-      [{ transform: `translateX(${offsetOf(from, width) - offsetOf(to, width)}px)` }, { transform: 'translateX(0)' }],
-      { duration: 420, delay: index * 40, easing: SPRING, fill: 'backwards' }
-    );
-  });
-};
+/** Dashed guide on the edge or centre the text snaps to. */
+const GUIDE_CLASSES = [
+  'absolute',
+  '-top-4',
+  '-bottom-4',
+  'w-0',
+  '-ml-px',
+  'border-l',
+  '[border-style:dashed]',
+  'border-text-secondary/50',
+  'transition-[left]',
+  'duration-[480ms]',
+  SPRING,
+  'motion-reduce:transition-none',
+];
 
 const GROUP_CLASSES = [
   'relative',
@@ -76,7 +125,7 @@ const GROUP_CLASSES = [
   'grid-cols-3',
   'p-[3px]',
   'rounded-[10px]',
-  'shadow-[inset_0_0_0_1px_var(--blok-item-hover-bg)]',
+  'shadow-[inset_0_0_0_1px_var(--blok-border-secondary)]',
 ];
 
 /**
@@ -93,8 +142,8 @@ const THUMB_CLASSES = [
   'bg-icon-active-bg',
   'pointer-events-none',
   'transition-transform',
-  'duration-[320ms]',
-  '[transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)]',
+  'duration-[420ms]',
+  SPRING,
   'motion-reduce:transition-none',
 ];
 
@@ -103,7 +152,7 @@ const OPTION_CLASSES = [
   'flex',
   'items-center',
   'justify-center',
-  'h-10',
+  'h-8',
   'rounded-[7px]',
   'border-none',
   'bg-transparent',
@@ -113,9 +162,8 @@ const OPTION_CLASSES = [
   'outline-hidden',
   'transition-transform',
   'duration-150',
-  'active:scale-[0.94]',
+  'active:scale-[0.92]',
   'motion-reduce:transition-none',
-  'can-hover:hover:bg-item-hover-bg',
   // A focus stop in the popover's Flipper needs the same keyboard highlight as other items.
   'data-[blok-focused="true"]:bg-item-focus-bg',
 ];
@@ -123,12 +171,12 @@ const OPTION_CLASSES = [
 const GLYPH_CLASSES = [
   'flex',
   'flex-col',
-  'gap-[3px]',
+  'gap-[2.5px]',
   'pointer-events-none',
 ];
 
-const LINE_CLASSES = [
-  'h-[2px]',
+const GLYPH_LINE_CLASSES = [
+  'h-[1.5px]',
   'rounded-full',
   'bg-current',
 ];
@@ -147,40 +195,85 @@ const sideOf = (placement: CellPlacement | undefined): Side => {
   return side === 'center' || side === 'right' ? side : 'left';
 };
 
+const div = (classes: string[]): HTMLDivElement => {
+  const element = document.createElement('div');
+
+  element.className = twMerge(classes);
+
+  return element;
+};
+
 export const createCellPlacementPicker = (options: PlacementPickerOptions): PlacementPickerResult => {
   const wrapper = document.createElement('div');
 
-  wrapper.className = 'p-1.5 w-[168px]';
+  wrapper.className = 'p-1.5 w-[196px]';
 
-  const group = document.createElement('div');
+  const preview = div(PREVIEW_CLASSES);
+
+  preview.setAttribute('data-blok-placement-preview', '');
+  // Decorative: the radios carry the names and the state.
+  preview.setAttribute('aria-hidden', 'true');
+
+  const cell = div(CELL_CLASSES);
+  const textBox = div(TEXT_BOX_CLASSES);
+  const guide = div(GUIDE_CLASSES);
+
+  guide.setAttribute('data-blok-placement-guide', '');
+  textBox.appendChild(guide);
+
+  const previewLines = PREVIEW_LINES.map((width, index) => {
+    const line = div(PREVIEW_LINE_CLASSES);
+
+    line.setAttribute('data-blok-placement-preview-line', '');
+    line.style.width = `${width}px`;
+    line.style.transitionDelay = `${index * 40}ms`;
+    // A heading-like first line over body text.
+    line.classList.add(index === 0 ? 'text-text-primary' : 'text-text-secondary');
+    textBox.appendChild(line);
+
+    return line;
+  });
+
+  cell.appendChild(textBox);
+  preview.appendChild(cell);
+
+  const group = div(GROUP_CLASSES);
 
   group.setAttribute('role', 'radiogroup');
   group.setAttribute('aria-label', options.i18n.t('tools.table.placement'));
-  group.className = twMerge(GROUP_CLASSES);
 
-  const thumb = document.createElement('div');
+  const thumb = div(THUMB_CLASSES);
 
   thumb.setAttribute('data-blok-placement-thumb', '');
   thumb.setAttribute('aria-hidden', 'true');
-  thumb.className = twMerge(THUMB_CLASSES);
   group.appendChild(thumb);
 
-  const label = document.createElement('div');
+  const label = div(LABEL_CLASSES);
 
   label.setAttribute('data-blok-placement-label', '');
   // The radios already carry their names for assistive tech.
   label.setAttribute('aria-hidden', 'true');
-  label.className = twMerge(LABEL_CLASSES);
 
   const buttons: HTMLButtonElement[] = [];
   const state = { index: OPTIONS.findIndex(option => option.side === sideOf(options.currentPlacement)) };
+
+  /** Shows one option in the preview and the label, without committing it. */
+  const show = (index: number): void => {
+    const { side, key } = OPTIONS[index];
+
+    for (const [lineIndex, line] of previewLines.entries()) {
+      line.style.transform = `translateX(${offsetOf(side, PREVIEW_LINES[lineIndex])}px)`;
+    }
+    guide.style.left = GUIDE_AT[side];
+    label.textContent = options.i18n.t(key);
+  };
 
   const paint = (): void => {
     buttons.forEach((button, index) => {
       button.setAttribute('aria-checked', String(index === state.index));
     });
     thumb.style.transform = `translateX(${state.index * 100}%)`;
-    label.textContent = options.i18n.t(OPTIONS[state.index].key);
+    show(state.index);
   };
 
   OPTIONS.forEach((option, index) => {
@@ -192,37 +285,26 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
     button.setAttribute('aria-label', options.i18n.t(option.key));
     button.className = twMerge(OPTION_CLASSES);
 
-    const glyph = document.createElement('div');
+    const glyph = div(GLYPH_CLASSES);
 
     glyph.setAttribute('data-blok-placement-glyph', '');
-    glyph.className = twMerge(GLYPH_CLASSES);
-    glyph.style.width = `${GLYPH_WIDTH}px`;
-    glyph.style.alignItems = LINE_ALIGN[option.side];
+    glyph.style.width = `${GLYPH_LINES[0]}px`;
+    glyph.style.alignItems = GLYPH_ALIGN[option.side];
 
-    for (const width of LINE_WIDTHS) {
-      const line = document.createElement('div');
+    for (const width of GLYPH_LINES) {
+      const line = div(GLYPH_LINE_CLASSES);
 
-      line.className = twMerge(LINE_CLASSES);
       line.style.width = `${width}px`;
       glyph.appendChild(line);
     }
 
     button.appendChild(glyph);
 
-    button.addEventListener('pointerenter', () => {
-      label.textContent = options.i18n.t(option.key);
-    });
-    button.addEventListener('pointerleave', () => {
-      label.textContent = options.i18n.t(OPTIONS[state.index].key);
-    });
+    button.addEventListener('pointerenter', () => show(index));
+    button.addEventListener('pointerleave', () => show(state.index));
     button.addEventListener('click', () => {
-      const previous = OPTIONS[state.index].side;
-
       state.index = index;
       paint();
-      if (previous !== option.side) {
-        reflowLines(glyph, previous, option.side);
-      }
       options.onPlacementSelect(option.placement);
     });
 
@@ -232,6 +314,7 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
 
   paint();
 
+  wrapper.appendChild(preview);
   wrapper.appendChild(group);
   wrapper.appendChild(label);
 

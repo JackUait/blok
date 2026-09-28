@@ -56,8 +56,8 @@ describe('media Link-tab button (CSS)', () => {
     declsFor(match, prop).join(' ');
   const isSubmit = (s: string): boolean => s.includes('blok-media-empty__embed-submit');
 
-  it('fills the large field: tall enough to be the field\'s own button', () => {
-    expect(decl((s) => s.includes('embed-bar--large') && s.endsWith('.blok-media-empty__embed-submit'), 'height')).toBe('36px');
+  it('fills the large field exactly, without making it taller than 48px', () => {
+    expect(decl((s) => s.includes('embed-bar--large') && s.endsWith('.blok-media-empty__embed-submit'), 'height')).toBe('34px');
   });
 
   it('waits as a crisp button that already shows the Enter key, never a faded ghost', () => {

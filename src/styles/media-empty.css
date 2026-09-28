@@ -457,6 +457,71 @@
   transition: color .15s ease;
 }
 .blok-media-empty__embed-icon svg { width: 16px; height: 16px; }
+/* The site's face: the chain flips over into the site's first letter. */
+.blok-media-empty__embed-site { display: none; }
+.blok-media-empty__embed-icon[data-site] svg { display: none; }
+.blok-media-empty__embed-icon[data-site] .blok-media-empty__embed-site {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--blok-space-1-5);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--blok-bg-primary);
+  background: var(--blok-text-primary);
+  animation: blok-media-empty-site-flip 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes blok-media-empty-site-flip {
+  from { transform: scaleX(0); }
+}
+
+/* ----- Address bar (large Link field): the input's own text is transparent
+   and the mirror behind it draws the same characters in colour. Colour
+   only, never weight or size: the caret must stay on its glyph. ----- */
+/* Icon, then the mirror and the input stacked in one cell, then the
+   read-back and the button. */
+[data-blok-field].blok-media-empty__embed-bar--large { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; }
+.blok-media-empty__embed-mirror,
+.blok-media-empty__embed-bar--large .blok-media-empty__embed-input { grid-row: 1; grid-column: 2; }
+.blok-media-empty__embed-mirror {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  pointer-events: none;
+  white-space: pre;
+  font: inherit;
+  font-size: 15px;
+  line-height: 24px;
+}
+.blok-media-empty__embed-mirror-text { transform: translateX(calc(var(--scroll, 0) * -1px)); }
+/* Must outrank the shared field's "> input { color: inherit }" (field.css). */
+[data-blok-field] > .blok-media-empty__embed-input--mirrored {
+  position: relative;
+  z-index: 1;
+  color: transparent;
+  caret-color: var(--blok-text-primary);
+}
+/* A selection paints over the mirror, so selected characters are drawn by
+   the input itself, in plain ink, while the rest stays transparent. */
+[data-blok-field] > .blok-media-empty__embed-input--mirrored::selection {
+  color: var(--blok-text-primary);
+  background: var(--blok-selection);
+}
+.blok-media-empty__url-proto,
+.blok-media-empty__url-www { color: var(--blok-text-tertiary); }
+.blok-media-empty__url-path { color: var(--blok-text-secondary); }
+/* the domain: full ink, and an underline that sweeps in as the link turns
+   valid, handing off to the Add button's ink */
+.blok-media-empty__url-host {
+  color: var(--blok-text-primary);
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0 1.5px no-repeat;
+  transition: background-size 300ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+.blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__url-host { background-size: 100% 1.5px; }
+.blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-submit::before { transition-delay: 180ms; }
 .blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-icon {
   color: var(--blok-color-accent);
 }
@@ -580,7 +645,9 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .blok-media-empty__embed-submit,
-  .blok-media-empty__embed-submit::before { transition: none; }
+  .blok-media-empty__embed-submit::before,
+  .blok-media-empty__url-host { transition: none; }
+  .blok-media-empty__embed-icon[data-site] .blok-media-empty__embed-site { animation: none; }
   .blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-submit::after,
   .blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-kbd { animation: none; }
 }
@@ -612,7 +679,8 @@
 .blok-media-empty__embed-bar--large .blok-media-empty__embed-host { flex-shrink: 0; max-width: 45%; }
 .blok-media-empty__embed-bar--large .blok-media-empty__embed-input { font-size: 15px; line-height: 24px; }
 .blok-media-empty__embed-bar--large .blok-media-empty__embed-submit {
-  height: 36px;
+  /* Fills the 48px field exactly: 48 - 2 x 6px padding - 2 x 1px border. */
+  height: 34px;
   padding: 0 var(--blok-space-3-5);
   font-size: 13.5px;
 }
@@ -635,10 +703,9 @@
   animation: blok-media-empty-host-in 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .blok-media-empty__embed-host[hidden] { display: none; }
-.blok-media-empty__embed-domain {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.blok-media-empty__embed-provider {
+  font-weight: 600;
+  color: var(--blok-text-secondary);
   white-space: nowrap;
 }
 .blok-media-empty__embed-type {

@@ -224,6 +224,10 @@
   to { transform: translateX(110%) }
 }
 
+@keyframes blok-media-empty-site-flip {
+  from { transform: scaleX(0) }
+}
+
 @keyframes blok-media-preview-breathe {
   0%, 100% { transform: scaleY(0.55) }
   50% { transform: scaleY(1) }

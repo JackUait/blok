@@ -271,31 +271,53 @@ describe('link tab', () => {
     expect(drawing(el)?.style.getPropertyValue('--blok-media-progress')).toBe('0');
   });
 
-  it('reads the link back as its bare domain and the accepted file type', () => {
+  it('reads a file link back as its accepted type, without repeating the domain', () => {
     const el = openLink();
 
     type(el, 'https://images.unsplash.com/photo.jpg');
 
     expect(host(el)?.hidden).toBe(false);
-    expect(el.querySelector('.blok-media-empty__embed-domain')?.textContent).toBe('unsplash.com');
     expect(el.querySelector('.blok-media-empty__embed-type')?.textContent).toBe('JPG');
+    expect(el.querySelector('.blok-media-empty__embed-domain')).toBeNull();
   });
 
-  it('keeps country domains whole', () => {
+  it('names a known provider instead of repeating its domain', () => {
     const el = openLink();
 
-    type(el, 'https://www.bbc.co.uk/news/pic.png');
+    type(el, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
 
-    expect(el.querySelector('.blok-media-empty__embed-domain')?.textContent).toBe('bbc.co.uk');
+    expect(host(el)?.hidden).toBe(false);
+    expect(el.querySelector('.blok-media-empty__embed-provider')?.textContent).toBe('YouTube');
   });
 
-  it('shows no type badge when the link does not end in an accepted file type', () => {
+  it('says nothing beside a link when there is nothing new to say', () => {
     const el = openLink();
 
     type(el, 'https://example.com/gallery');
 
-    expect(el.querySelector('.blok-media-empty__embed-domain')?.textContent).toBe('example.com');
-    expect(el.querySelector('.blok-media-empty__embed-type')).toBeNull();
+    expect(host(el)?.hidden).toBe(true);
+  });
+
+  it('draws the link like an address bar: faded protocol, strong domain, muted path', () => {
+    const el = openLink();
+
+    type(el, 'https://www.youtube.com/watch?v=1');
+    const part = (name: string): string | null | undefined =>
+      el.querySelector(`.blok-media-empty__embed-mirror .blok-media-empty__url-${name}`)?.textContent;
+
+    expect([part('proto'), part('www'), part('host'), part('path')]).toEqual(['https://', 'www.', 'youtube.com', '/watch?v=1']);
+    expect(el.querySelector('.blok-media-empty__embed-mirror')?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('gives the site a face once the link is valid, from its registrable domain', () => {
+    const el = openLink();
+    const icon = (): HTMLElement | null => el.querySelector<HTMLElement>('.blok-media-empty__embed-icon');
+
+    type(el, 'https://www.bbc.co.uk/news/pic.png');
+    expect(icon()?.getAttribute('data-site')).toBe('B');
+
+    type(el, 'not a link');
+    expect(icon()?.hasAttribute('data-site')).toBe(false);
   });
 
   it('hides the read-back while the link is not valid yet', () => {

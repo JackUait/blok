@@ -11,6 +11,7 @@ import { matchesMime } from './mime-match';
 import { rovingRadioGroup } from './roving-radio-group';
 import { clearPreviewProgress, EXIT_CLEAR_MS, makePreview, setPreviewProgress, springHome, type MediaPreviewKind } from './media-empty-preview';
 import { leanPreview } from './media-preview-3d';
+import { matchEmbedService } from '../../tools/link/registry';
 
 /**
  * Shared "empty" uploader surface for media-style block tools (image, file):
@@ -126,7 +127,7 @@ function parseLink(raw: string): URL | null {
  * "unsplash.com", "www.bbc.co.uk" is "bbc.co.uk") and, when the path ends in a
  * type the tool accepts, that type's label. Reads the text only; no requests.
  */
-function readLink(raw: string, types: readonly string[]): { domain: string; type: string | null } | null {
+function readLink(raw: string, types: readonly string[]): { domain: string; type: string | null; provider: string | null } | null {
   const url = parseLink(raw);
   if (!url) return null;
   const host = url.hostname.replace(/^www\./, '');
@@ -138,7 +139,18 @@ function readLink(raw: string, types: readonly string[]): { domain: string; type
   const extension = url.pathname.match(/\.([a-z0-9]{2,5})$/i)?.[1];
   const label = extension ? mimeToLabel(`x/${extension === 'jpeg' ? 'jpg' : extension}`) : null;
   const accepted = label !== null && (types.length === 0 || types.some((t) => mimeToLabel(t) === label));
-  return { domain: parts.slice(-keep).join('.'), type: accepted ? label : null };
+  return {
+    domain: parts.slice(-keep).join('.'),
+    type: accepted ? label : null,
+    provider: matchEmbedService(url.href)?.title ?? null,
+  };
+}
+
+/** Splits typed link text the way an address bar colours it. */
+function urlParts(raw: string): Array<[string, string]> {
+  const match = /^([a-z][\w+.-]*:\/\/)?(www\.)?([^/?#]*)(.*)$/i.exec(raw) ?? [];
+  const parts: Array<[string, string]> = [['proto', match[1] ?? ''], ['www', match[2] ?? ''], ['host', match[3] ?? ''], ['path', match[4] ?? '']];
+  return parts.filter(([, text]) => text !== '');
 }
 
 function formatsLabel(types: readonly string[]): string {
@@ -412,6 +424,10 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     fieldIcon.className = 'blok-media-empty__embed-icon';
     fieldIcon.setAttribute('aria-hidden', 'true');
     fieldIcon.innerHTML = IconLink;
+    // The site's face: the chain flips into its first letter once the link is valid.
+    const site = document.createElement('span');
+    site.className = 'blok-media-empty__embed-site';
+    fieldIcon.append(site);
 
     // The Upload tab's drawing stays on stage, in upload mode: pale until the
     // link is valid, then it plays its "complete" moment.
@@ -424,8 +440,8 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     readBack.className = 'blok-media-empty__embed-host';
     readBack.setAttribute('aria-hidden', 'true');
     readBack.hidden = true;
-    const domainEl = document.createElement('span');
-    domainEl.className = 'blok-media-empty__embed-domain';
+    const providerEl = document.createElement('span');
+    providerEl.className = 'blok-media-empty__embed-provider';
     const typeEl = document.createElement('span');
     typeEl.className = 'blok-media-empty__embed-type';
 
@@ -436,6 +452,33 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     urlInput.setAttribute('aria-label', labels.urlAria);
     urlInput.autocomplete = 'off';
     urlInput.spellcheck = false;
+
+    // Address-bar colouring: the input's own text is transparent and a mirror
+    // behind it draws the same characters in colour. Same font and size, and
+    // colour only (no weight change), so the caret stays on its glyph.
+    const mirror = stage ? document.createElement('span') : null;
+    const mirrorText = document.createElement('span');
+    if (mirror) {
+      mirror.className = 'blok-media-empty__embed-mirror';
+      mirror.setAttribute('aria-hidden', 'true');
+      mirrorText.className = 'blok-media-empty__embed-mirror-text';
+      mirror.append(mirrorText);
+      urlInput.classList.add('blok-media-empty__embed-input--mirrored');
+    }
+    const drawMirror = (): void => {
+      if (!mirror) return;
+      mirrorText.replaceChildren(...urlParts(urlInput.value).map(([part, text]) => {
+        const span = document.createElement('span');
+        span.className = `blok-media-empty__url-${part}`;
+        span.textContent = text;
+        return span;
+      }));
+    };
+    // The mirror shares the input's grid cell (media-empty.css), so only the
+    // horizontal scroll of a long link has to be copied over.
+    const placeMirror = (): void => {
+      if (mirror) mirrorText.style.setProperty('--scroll', String(urlInput.scrollLeft));
+    };
 
     const submit = document.createElement('button');
     submit.type = 'button';
@@ -470,10 +513,17 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
       submit.setAttribute('aria-disabled', valid ? 'false' : 'true');
       if (stage) setPreviewProgress(stage, valid ? 100 : 0);
       const link = valid ? readLink(urlInput.value, types) : null;
-      readBack.hidden = link === null;
-      domainEl.textContent = link?.domain ?? '';
+      providerEl.textContent = link?.provider ?? '';
       typeEl.textContent = link?.type ?? '';
-      readBack.replaceChildren(...(link?.type ? [domainEl, typeEl] : [domainEl]));
+      const said = [link?.provider ? providerEl : null, link?.type ? typeEl : null].filter((el): el is HTMLSpanElement => el !== null);
+      readBack.replaceChildren(...said);
+      readBack.hidden = said.length === 0;
+      const letter = link?.domain.charAt(0).toUpperCase() ?? '';
+      if (letter) fieldIcon.setAttribute('data-site', letter);
+      else fieldIcon.removeAttribute('data-site');
+      site.textContent = letter;
+      drawMirror();
+      placeMirror();
       // Editing after a rejected submit resets the shared invalid state so the
       // stale error doesn't linger while the user fixes the URL.
       if (!error.hidden) {
@@ -510,7 +560,9 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
       }
     });
 
-    bar.append(fieldIcon, urlInput, readBack, submit);
+    for (const type of ['scroll', 'keyup', 'select', 'focus', 'blur']) urlInput.addEventListener(type, placeMirror);
+
+    bar.append(fieldIcon, ...(mirror ? [mirror] : []), urlInput, readBack, submit);
     panel.appendChild(bar);
     sync();
     queueMicrotask(() => urlInput.focus());

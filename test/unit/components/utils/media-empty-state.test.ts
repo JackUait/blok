@@ -231,3 +231,92 @@ describe('preview springs home when the pointer leaves', () => {
     expect(preview.hasAttribute('data-leaving')).toBe(false);
   });
 });
+
+describe('link tab', () => {
+  const openLink = (overrides: Partial<MediaEmptyStateOptions> = {}): HTMLElement => {
+    const el = render({ preview: 'image', acceptTypes: ['image/jpeg', 'image/png'], ...overrides });
+    el.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    return el;
+  };
+
+  const type = (el: HTMLElement, value: string, inputType = 'insertText'): void => {
+    const input = el.querySelector<HTMLInputElement>('input[type="url"]');
+    if (!input) throw new Error('url input missing');
+    input.value = value;
+    input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType }));
+  };
+
+  const mini = (el: HTMLElement): HTMLElement | null =>
+    el.querySelector<HTMLElement>('.blok-media-empty__embed-bar [data-blok-media-preview="image"]');
+
+  const host = (el: HTMLElement): HTMLElement | null =>
+    el.querySelector<HTMLElement>('.blok-media-empty__embed-host');
+
+  it('shows the tool drawing in the field, pale until the link is valid', () => {
+    const el = openLink();
+
+    expect(mini(el)?.style.getPropertyValue('--blok-media-progress')).toBe('0');
+  });
+
+  it('completes the drawing once the link is valid, and resets it when cleared', () => {
+    const el = openLink();
+
+    type(el, 'https://images.unsplash.com/photo.jpg');
+    expect(mini(el)?.style.getPropertyValue('--blok-media-progress')).toBe('1');
+
+    type(el, '');
+    expect(mini(el)?.style.getPropertyValue('--blok-media-progress')).toBe('0');
+  });
+
+  it('reads the link back as its bare domain and the accepted file type', () => {
+    const el = openLink();
+
+    type(el, 'https://images.unsplash.com/photo.jpg');
+
+    expect(host(el)?.hidden).toBe(false);
+    expect(el.querySelector('.blok-media-empty__embed-domain')?.textContent).toBe('unsplash.com');
+    expect(el.querySelector('.blok-media-empty__embed-type')?.textContent).toBe('JPG');
+  });
+
+  it('keeps country domains whole', () => {
+    const el = openLink();
+
+    type(el, 'https://www.bbc.co.uk/news/pic.png');
+
+    expect(el.querySelector('.blok-media-empty__embed-domain')?.textContent).toBe('bbc.co.uk');
+  });
+
+  it('shows no type badge when the link does not end in an accepted file type', () => {
+    const el = openLink();
+
+    type(el, 'https://example.com/gallery');
+
+    expect(el.querySelector('.blok-media-empty__embed-domain')?.textContent).toBe('example.com');
+    expect(el.querySelector('.blok-media-empty__embed-type')).toBeNull();
+  });
+
+  it('hides the read-back while the link is not valid yet', () => {
+    const el = openLink();
+
+    type(el, 'https://images.unsplash.com/photo.jpg');
+    type(el, 'not a link');
+
+    expect(host(el)?.hidden).toBe(true);
+  });
+
+  it('catches a pasted valid link', () => {
+    const el = openLink();
+
+    type(el, 'https://images.unsplash.com/photo.jpg', 'insertFromPaste');
+
+    expect(mini(el)?.classList.contains('is-caught')).toBe(true);
+  });
+
+  it('keeps the plain link icon when no drawing is asked for', () => {
+    const el = render();
+    el.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+
+    expect(el.querySelector('.blok-media-empty__embed-bar [data-blok-media-preview]')).toBeNull();
+    expect(el.querySelector('.blok-media-empty__embed-icon svg')).not.toBeNull();
+  });
+});

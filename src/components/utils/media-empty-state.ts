@@ -9,7 +9,7 @@ import { formatBytes } from './format-bytes';
 import { setFieldValidity } from './field-validity';
 import { matchesMime } from './mime-match';
 import { rovingRadioGroup } from './roving-radio-group';
-import { EXIT_CLEAR_MS, makePreview, springHome, type MediaPreviewKind } from './media-empty-preview';
+import { EXIT_CLEAR_MS, makePreview, setPreviewProgress, springHome, type MediaPreviewKind } from './media-empty-preview';
 import { leanPreview } from './media-preview-3d';
 
 /**
@@ -110,6 +110,35 @@ function mimeToLabel(mime: string): string {
   const slash = key.indexOf('/');
   const tail = slash >= 0 ? key.slice(slash + 1) : key;
   return tail.replace(/^x-/, '').split('+')[0].toUpperCase();
+}
+
+function parseLink(raw: string): URL | null {
+  const value = raw.trim();
+  try {
+    return new URL(/^[a-z][\w+.-]*:\/\//i.test(value) ? value : `https://${value}`);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Where a typed link points: its registrable domain ("images.unsplash.com" is
+ * "unsplash.com", "www.bbc.co.uk" is "bbc.co.uk") and, when the path ends in a
+ * type the tool accepts, that type's label. Reads the text only; no requests.
+ */
+function readLink(raw: string, types: readonly string[]): { domain: string; type: string | null } | null {
+  const url = parseLink(raw);
+  if (!url) return null;
+  const host = url.hostname.replace(/^www\./, '');
+  const parts = host.split('.');
+  const isAddress = /^[\d.]+$/.test(host) || host.startsWith('[');
+  // A two-letter country code behind a short second level (co.uk, com.au).
+  const countryPair = parts.length > 2 && parts[parts.length - 1].length === 2 && parts[parts.length - 2].length <= 3;
+  const keep = isAddress ? parts.length : 2 + Number(countryPair);
+  const extension = url.pathname.match(/\.([a-z0-9]{2,5})$/i)?.[1];
+  const label = extension ? mimeToLabel(`x/${extension === 'jpeg' ? 'jpg' : extension}`) : null;
+  const accepted = label !== null && (types.length === 0 || types.some((t) => mimeToLabel(t) === label));
+  return { domain: parts.slice(-keep).join('.'), type: accepted ? label : null };
 }
 
 function formatsLabel(types: readonly string[]): string {
@@ -368,7 +397,25 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     const fieldIcon = document.createElement('span');
     fieldIcon.className = 'blok-media-empty__embed-icon';
     fieldIcon.setAttribute('aria-hidden', 'true');
-    fieldIcon.innerHTML = IconLink;
+    // The tool's own drawing, pale until the link is valid, then "complete".
+    const mini = opts.preview ? makePreview(opts.preview) : null;
+    if (mini) {
+      mini.classList.add('blok-media-preview--mini');
+      setPreviewProgress(mini, 0);
+      fieldIcon.classList.add('blok-media-empty__embed-icon--preview');
+      fieldIcon.append(mini);
+    } else {
+      fieldIcon.innerHTML = IconLink;
+    }
+
+    const readBack = document.createElement('span');
+    readBack.className = 'blok-media-empty__embed-host';
+    readBack.setAttribute('aria-hidden', 'true');
+    readBack.hidden = true;
+    const domainEl = document.createElement('span');
+    domainEl.className = 'blok-media-empty__embed-domain';
+    const typeEl = document.createElement('span');
+    typeEl.className = 'blok-media-empty__embed-type';
 
     const urlInput = document.createElement('input');
     urlInput.type = 'url';
@@ -409,6 +456,12 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
       const valid = isValid(urlInput.value);
       bar.setAttribute('data-valid', valid ? 'true' : 'false');
       submit.setAttribute('aria-disabled', valid ? 'false' : 'true');
+      if (mini) setPreviewProgress(mini, valid ? 100 : 0);
+      const link = valid ? readLink(urlInput.value, types) : null;
+      readBack.hidden = link === null;
+      domainEl.textContent = link?.domain ?? '';
+      typeEl.textContent = link?.type ?? '';
+      readBack.replaceChildren(...(link?.type ? [domainEl, typeEl] : [domainEl]));
       // Editing after a rejected submit resets the shared invalid state so the
       // stale error doesn't linger while the user fixes the URL.
       if (!error.hidden) {
@@ -429,7 +482,15 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
       if (isValid(urlInput.value)) commit();
     });
     urlInput.addEventListener('click', (ev) => ev.stopPropagation());
-    urlInput.addEventListener('input', sync);
+    urlInput.addEventListener('input', (ev) => {
+      sync();
+      // A pasted valid link gets the same "catch" as a file dropped on Upload.
+      const pasted = ev instanceof InputEvent && ev.inputType === 'insertFromPaste';
+      if (!mini || !pasted || !isValid(urlInput.value)) return;
+      mini.classList.remove('is-caught');
+      void mini.offsetWidth;
+      mini.classList.add('is-caught');
+    });
     urlInput.addEventListener('keydown', (ev) => {
       if (ev.key === 'Enter') {
         ev.preventDefault();
@@ -437,7 +498,11 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
       }
     });
 
-    bar.append(fieldIcon, urlInput, submit);
+    mini?.addEventListener('animationend', (ev) => {
+      if (ev.target === mini) mini.classList.remove('is-caught');
+    });
+
+    bar.append(fieldIcon, urlInput, readBack, submit);
     panel.appendChild(bar);
     sync();
     queueMicrotask(() => urlInput.focus());

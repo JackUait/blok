@@ -113,3 +113,21 @@ describe('renderCaptionRow', () => {
     expect(caption!.getAttribute('data-placeholder')).toBe('My placeholder');
   });
 });
+
+describe('renderVideo with variants', () => {
+  it('emits one source per variant in stored order and no src attribute', () => {
+    const video = renderVideo({ url: 'https://x/a.mp4', variants: [
+      { url: 'https://x/a.webm', mimeType: 'video/webm; codecs="vp9, opus"' },
+      { url: 'https://x/a.mp4', mimeType: 'video/mp4' },
+    ] }).querySelector('video');
+
+    if (!video) throw new Error('no video');
+    expect(video.hasAttribute('src')).toBe(false);
+    expect(Array.from(video.querySelectorAll('source')).map((s) => [s.getAttribute('src'), s.getAttribute('type')]))
+      .toEqual([['https://x/a.webm', 'video/webm; codecs="vp9, opus"'], ['https://x/a.mp4', 'video/mp4']]);
+  });
+
+  it('keeps the src attribute when there are no variants', () => {
+    expect(renderVideo({ url: 'https://x/a.mp4' }).querySelector('video')?.getAttribute('src')).toBe('https://x/a.mp4');
+  });
+});

@@ -43,7 +43,18 @@ export function renderVideo(data: Partial<VideoData> & { url: string }): HTMLEle
     'aria-keyshortcuts',
     'Space k j l ArrowLeft ArrowRight ArrowUp ArrowDown m f Home End',
   );
-  video.setAttribute('src', data.url);
+  const variants = data.variants ?? [];
+
+  if (variants.length === 0) {
+    video.setAttribute('src', data.url);
+  }
+  for (const variant of variants) {
+    const source = document.createElement('source');
+
+    source.setAttribute('src', variant.url);
+    source.setAttribute('type', variant.mimeType);
+    video.appendChild(source);
+  }
   video.style.width = '100%';
   video.style.display = 'block';
   media.appendChild(video);

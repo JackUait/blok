@@ -773,3 +773,31 @@ describe('English fallback when i18n is omitted', () => {
     }
   });
 });
+
+describe('renderImage with variants', () => {
+  const variants = [
+    { url: 'https://x/a.avif', mimeType: 'image/avif' },
+    { url: 'https://x/a.webp', mimeType: 'image/webp' },
+    { url: 'https://x/a.jpg', mimeType: 'image/jpeg' },
+  ];
+
+  it('wraps the img in a picture with one source per better format, best first', () => {
+    const picture = renderImage({ url: 'https://x/a.jpg', variants }).querySelector('picture');
+
+    if (!picture) throw new Error('no picture');
+    expect(Array.from(picture.querySelectorAll('source')).map((s) => [s.getAttribute('type'), s.getAttribute('srcset')]))
+      .toEqual([['image/avif', 'https://x/a.avif'], ['image/webp', 'https://x/a.webp']]);
+    expect(picture.querySelector('img')?.getAttribute('src')).toBe('https://x/a.jpg');
+    expect(picture.style.display).toBe('contents');
+  });
+
+  it('keeps the crop wrapper around the picture', () => {
+    const figure = renderImage({ url: 'https://x/a.jpg', variants, crop: { x: 10, y: 10, w: 50, h: 50 } });
+
+    expect(figure.querySelector('[data-role="image-crop"] > picture > img')).not.toBeNull();
+  });
+
+  it('renders a bare img when there are no variants', () => {
+    expect(renderImage({ url: 'https://x/a.jpg' }).querySelector('picture')).toBeNull();
+  });
+});

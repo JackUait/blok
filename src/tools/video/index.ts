@@ -33,6 +33,7 @@ import { DEFAULT_CAPTION_PLACEHOLDER, MIN_WIDTH_PX, URL_PATTERN } from './consta
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { tr } from './i18n';
 import { deliverToRebuiltBlock, putBackOnRebuiltBlock, releaseObjectUrl } from '../image/detached-upload';
+import { readVariants } from '../../components/media-variants/read-variants';
 import { renderCaptionRow, renderVideo } from './ui';
 import { attachControls, type ControlsHandle } from './controls';
 import { Uploader, VideoUploadError, type UploadResult } from './uploader';
@@ -68,7 +69,7 @@ export class VideoTool implements BlockTool {
     this.block = options.block;
     this.config = options.config ?? {};
     this.readOnly = options.readOnly;
-    this.data = { ...options.data, url: options.data?.url ?? '' };
+    this.data = { ...options.data, url: options.data?.url ?? '', variants: readVariants(options.data?.variants) };
     this.state = this.data.url ? 'RENDERED' : 'EMPTY';
     this.uploader = new Uploader(this.config, this.api.uploader);
   }
@@ -95,6 +96,7 @@ export class VideoTool implements BlockTool {
     if (this.data.hideControls) out.hideControls = true;
     if (this.data.fileName !== undefined) out.fileName = this.data.fileName;
     if (this.data.mimeType !== undefined) out.mimeType = this.data.mimeType;
+    if (this.data.variants !== undefined) out.variants = this.data.variants.map((v) => ({ ...v }));
     if (this.data.aspectRatio !== undefined) out.aspectRatio = this.data.aspectRatio;
     return out;
   }
@@ -306,18 +308,19 @@ export class VideoTool implements BlockTool {
   private startUrl(url: string): void {
     const source = { kind: 'url', url } as const;
     const before = this.data.url;
+    const variantsBefore = this.data.variants;
 
     this.lastFileName = null;
     this.lastSource = source;
     this.state = 'LOADING';
     this.renderState();
     // Entering the link is the edit, so what the upload produces can join its undo step.
-    this.data = { ...this.data, url };
+    this.data = { ...this.data, url, variants: undefined };
     this.block.dispatchChange();
     void this.uploader
       .handleUrl(url, { onProgress: (p) => this.uploadingEl?.setProgress(p) })
       .then((result) => this.applyUrlUpload(result, source))
-      .catch((err) => this.applyUrlError(err, source, before));
+      .catch((err) => this.applyUrlError(err, source, before, variantsBefore));
   }
 
   /**
@@ -326,16 +329,17 @@ export class VideoTool implements BlockTool {
    * @param err - why the upload failed
    * @param source - the job, still `lastSource` unless cancelled or replaced
    * @param before - `data.url` before the link was entered
+   * @param variantsBefore - `data.variants` before the link was entered
    */
-  private applyUrlError(err: unknown, source: { kind: 'url'; url: string }, before: string): void {
+  private applyUrlError(err: unknown, source: { kind: 'url'; url: string }, before: string, variantsBefore: VideoData['variants']): void {
     if (this.detached) {
-      putBackOnRebuiltBlock(this.api, this.block, { url: before }, { url: source.url }, ['url']);
+      putBackOnRebuiltBlock(this.api, this.block, { url: before, variants: variantsBefore }, { url: source.url }, ['url']);
 
       return;
     }
     this.applyError(err, { url: source.url });
     if (this.lastSource !== source || this.data.url !== source.url) return;
-    this.data = { ...this.data, url: before };
+    this.data = { ...this.data, url: before, variants: variantsBefore };
     this.block.dispatchChange({ derived: true, from: ['url'] });
   }
 
@@ -387,7 +391,8 @@ export class VideoTool implements BlockTool {
   }
 
   private resultDelta(result: UploadResult, mimeType?: string): Partial<VideoData> {
-    const delta: Partial<VideoData> = { url: result.url };
+    // Always set, so a new file clears the previous video's variants.
+    const delta: Partial<VideoData> = { url: result.url, variants: undefined };
     const fileName = result.fileName ?? this.lastFileName;
 
     if (fileName !== null && fileName !== undefined) delta.fileName = fileName;
@@ -400,6 +405,7 @@ export class VideoTool implements BlockTool {
     this.data = {
       ...this.data,
       url: result.url,
+      variants: undefined,
       fileName: result.fileName ?? this.lastFileName ?? this.data.fileName,
       mimeType: mimeType || this.data.mimeType,
     };
@@ -688,7 +694,7 @@ export class VideoTool implements BlockTool {
   }
 
   private transitionToEmpty(): void {
-    this.data = { ...this.data, url: '' };
+    this.data = { ...this.data, url: '', variants: undefined };
     this.state = 'EMPTY';
     this.lastSource = null;
     this.lastFileName = null;

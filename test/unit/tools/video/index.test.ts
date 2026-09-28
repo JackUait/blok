@@ -882,3 +882,43 @@ describe('VideoTool — an upload belongs to the pick that started it', () => {
     expect(block.dispatchChange).toHaveBeenLastCalledWith();
   });
 });
+
+describe('VideoTool — variants', () => {
+  const variants = [{ url: 'https://x/a.webm', mimeType: 'video/webm' }, { url: 'https://x/a.mp4', mimeType: 'video/mp4' }];
+
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('saves clean variants and drops malformed ones', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/a.mp4', variants: [variants[0], { url: 'javascript:1', mimeType: 'video/mp4' }] }));
+
+    expect(tool.save().variants).toEqual([variants[0]]);
+  });
+
+  it('drops old variants when the user pastes a link instead', async () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/a.mp4', variants }));
+
+    tool.render();
+    const event = new CustomEvent('paste', { detail: { key: 'video', data: 'https://y/b.mp4' } }) as PatternPasteEvent;
+
+    Object.defineProperty(event, 'type', { value: 'pattern' });
+    tool.onPaste(event);
+    await vi.waitFor(() => expect(tool.save().url).toBe('https://y/b.mp4'));
+
+    expect(tool.save().variants).toBeUndefined();
+  });
+
+  it('drops old variants when a new file is uploaded', async () => {
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:new');
+    const tool = new VideoTool(createOptions({ url: 'https://x/a.mp4', variants }));
+
+    tool.render();
+    const event = new CustomEvent('paste', { detail: { file: new File([new Uint8Array(4)], 'b.mp4', { type: 'video/mp4' }) } }) as FilePasteEvent;
+
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await vi.waitFor(() => expect(tool.save().url).toBe('blob:new'));
+
+    expect(tool.save().variants).toBeUndefined();
+  });
+});

@@ -1,4 +1,5 @@
 import type { ImageCrop, ImageData, ImageSize } from '../../../types/tools/image';
+import type { MediaVariant } from '../../../types/configs/media';
 /**
  * Mirror of the upstream ImageAlign* union from types/tools/image.d.ts,
  * kept local so the i18n regression scan finds no stray hardcoded copy.
@@ -62,6 +63,23 @@ function alignLabel(i18n: I18nInstance | undefined, value: ImageAlign): string {
   }
 }
 
+function wrapInPicture(img: HTMLImageElement, variants: MediaVariant[]): HTMLElement {
+  const picture = document.createElement('picture');
+
+  // No box of its own, so crop and sizing styles on the img still apply.
+  picture.style.display = 'contents';
+  for (const variant of variants) {
+    const source = document.createElement('source');
+
+    source.setAttribute('type', variant.mimeType);
+    source.setAttribute('srcset', variant.url);
+    picture.appendChild(source);
+  }
+  picture.appendChild(img);
+
+  return picture;
+}
+
 export function renderImage(
   data: Partial<ImageData> & { url: string }
 ): HTMLElement {
@@ -80,6 +98,10 @@ export function renderImage(
   img.setAttribute('src', data.url);
   img.setAttribute('alt', data.alt ?? '');
   img.draggable = false;
+
+  // `url` stays on the <img>, so everything that queries `img` keeps working.
+  const better = (data.variants ?? []).filter((variant) => variant.url !== data.url);
+  const content: HTMLElement = better.length === 0 ? img : wrapInPicture(img, better);
 
   if (data.crop) {
     const { x, y, w, h, shape } = data.crop;
@@ -109,10 +131,10 @@ export function renderImage(
     // (w*NW)/(h*NH), not w/h. Refine the wrapper's aspect once intrinsic dims are
     // known so non-square sources aren't squashed into a crop-aspect box.
     bindIntrinsicAspect(img, wrapper, w, h);
-    wrapper.appendChild(img);
+    wrapper.appendChild(content);
     figure.appendChild(wrapper);
   } else {
-    figure.appendChild(img);
+    figure.appendChild(content);
   }
 
   return figure;

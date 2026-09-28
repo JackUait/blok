@@ -370,6 +370,14 @@ export const buildStrykerArgs = ({ mode, mutate, testFiles, allowFull = false })
  * after it (about 60-83 bytes per mutant, measured). A file
  * that alone exceeds the budget goes to the sweep: taking it anyway made every
  * run measure src/blok.ts and nothing else.
+ *
+ * @param {object} options
+ * @param {string[]} options.files
+ * @param {(file: string) => string[]} options.testsOf
+ * @param {(test: string) => number} options.secondsOf
+ * @param {number} options.budget
+ * @param {(file: string) => number} [options.bytesOf]
+ * @param {number} [options.byteBudget]
  */
 export const splitByTime = ({
   files,

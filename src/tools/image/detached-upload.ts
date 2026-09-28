@@ -233,6 +233,21 @@ export const putBackOnRebuiltBlock = (
  * @param blockId - id of the block this instance rendered
  * @param url - the url the instance was rendering; ignored unless it is a blob
  */
+/**
+ * Whether the document still has a block with this id. Removing a block and
+ * rebuilding it (undo, collab replay) look the same to its tool; this tells
+ * them apart. A torn-down editor answers false.
+ * @param api - the tool's editor API
+ * @param blockId - id to look for
+ */
+export const isStillInDocument = (api: API, blockId: string): boolean => {
+  try {
+    return findLiveBlock(api, blockId) !== null;
+  } catch {
+    return false;
+  }
+};
+
 export const releaseObjectUrl = (api: API, blockId: string, url: string | undefined): void => {
   if (url === undefined || !url.startsWith('blob:')) {
     return;

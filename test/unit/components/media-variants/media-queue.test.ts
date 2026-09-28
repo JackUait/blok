@@ -82,4 +82,67 @@ describe('media queue', () => {
     expect(hasPendingMediaJobs()).toBe(false);
     expect(leaveIsGuarded()).toBe(false);
   });
+
+  it('frees the queue and the guard when a hung job is aborted', async () => {
+    const controller = new AbortController();
+    const order: string[] = [];
+
+    void enqueueMediaJob(() => new Promise<void>(() => undefined), controller.signal).catch(() => undefined);
+    const next = enqueueMediaJob(async () => {
+      order.push('next');
+    });
+
+    await settle();
+    expect(order).toEqual([]);
+
+    controller.abort();
+    await next;
+
+    expect(order).toEqual(['next']);
+    await settle();
+    expect(hasPendingMediaJobs()).toBe(false);
+    expect(leaveIsGuarded()).toBe(false);
+  });
+
+  it('skips a job aborted while it waits', async () => {
+    const controller = new AbortController();
+    const first = deferred();
+    const ran: string[] = [];
+
+    const a = enqueueMediaJob(() => first.promise);
+    const b = enqueueMediaJob(async () => {
+      ran.push('b');
+    }, controller.signal);
+
+    controller.abort();
+    first.resolve();
+    await a;
+    await b.catch(() => undefined);
+
+    expect(ran).toEqual([]);
+  });
+
+  it('still runs one job at a time when a waiting job is aborted', async () => {
+    const first = deferred();
+    const controller = new AbortController();
+    const order: string[] = [];
+
+    const a = enqueueMediaJob(async () => {
+      order.push('a start');
+      await first.promise;
+      order.push('a end');
+    });
+    const b = enqueueMediaJob(async () => undefined, controller.signal);
+    const c = enqueueMediaJob(async () => {
+      order.push('c');
+    });
+
+    controller.abort();
+    await settle();
+    expect(order).toEqual(['a start']);
+
+    first.resolve();
+    await Promise.all([a, b.catch(() => undefined), c]);
+    expect(order).toEqual(['a start', 'a end', 'c']);
+  });
 });

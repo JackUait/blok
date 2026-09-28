@@ -120,10 +120,10 @@ not `png` and the image has alpha, the original stays as the final fallback.
 3. Each finished file is uploaded and added to `variants`.
 4. The block shows a small "Optimizing video… 40%" badge. Playback and editing stay enabled.
 
-- Converter: [Mediabunny](https://mediabunny.dev) Conversion API (MPL-2.0, tree-shakable,
-  successor to `webm-muxer` by the same author). Dynamically imported so hosts without
-  `media.formats.video` pay nothing. It is bundled, so it goes in `devDependencies`
-  (see `test/unit/build/bundle-outputs.test.ts`).
+- Converter: [Mediabunny](https://mediabunny.dev) Conversion API (MPL-2.0). NOT bundled: Blok's build
+  admits only permissive licenses, so the host installs it and passes
+  `media.mediabunny: () => import('mediabunny')` (user decision, 2026-09-28). Blok keeps a type-only
+  import; without the loader only `convert` makes video formats.
 - Videos longer than `maxTranscodeDuration` (default 10 min) are not transcoded.
   A copy-only remux still runs.
 - No WebCodecs, or nothing encodable: the original stays, nothing is shown.

@@ -32,7 +32,7 @@ import { renderUploadingState, type UploadingStateElement } from '../image/uploa
 import { DEFAULT_CAPTION_PLACEHOLDER, MIN_WIDTH_PX, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { tr } from './i18n';
-import { deliverToRebuiltBlock, putBackOnRebuiltBlock, releaseObjectUrl } from '../image/detached-upload';
+import { deliverToRebuiltBlock, isStillInDocument, putBackOnRebuiltBlock, releaseObjectUrl } from '../image/detached-upload';
 import { readVariants } from '../../shared/read-variants';
 import type { ConvertedMedia, MediaConfig, VideoFormat } from '../../../types/configs/media';
 import { enqueueMediaJob } from '../../components/media-variants/media-queue';
@@ -50,6 +50,8 @@ type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
 /** Longer videos are only remuxed: a long re-encode can hold the CPU for minutes. */
 const DEFAULT_MAX_TRANSCODE_SECONDS = 600;
+/** A conversion with no progress this long is treated as hung and cancelled. */
+const CONVERSION_IDLE_MS = 10 * 60_000;
 
 export class VideoTool implements BlockTool {
   private readonly api: API;
@@ -73,6 +75,8 @@ export class VideoTool implements BlockTool {
   /** Background conversion progress, or null when none runs. */
   private converting: number | null = null;
   private convertingEl: HTMLElement | null = null;
+  /** Aborts the running background conversion. */
+  private conversion: AbortController | null = null;
 
   constructor(options: BlockToolConstructorOptions<VideoData, VideoConfig>) {
     this.api = options.api;
@@ -270,11 +274,33 @@ export class VideoTool implements BlockTool {
   }
 
   public removed(): void {
+    this.cancelConversionIfGone();
     this.detached = true;
     this.detachResize();
     this.controlsHandle?.destroy();
     this.controlsHandle = null;
     releaseObjectUrl(this.api, this.block.id, this.data.url);
+  }
+
+  /**
+   * Blok calls this on every removal, rebuilds included, and alone when the
+   * editor is destroyed.
+   */
+  public destroy(): void {
+    this.cancelConversionIfGone();
+  }
+
+  /**
+   * A rebuilt block (undo, collab replay) still wants its formats; a deleted
+   * block or a destroyed editor does not. Checked once the removal settles.
+   */
+  private cancelConversionIfGone(): void {
+    const conversion = this.conversion;
+
+    if (conversion === null) return;
+    queueMicrotask(() => {
+      if (!isStillInDocument(this.api, this.block.id)) conversion.abort();
+    });
   }
 
   private startUpload(file: File): void {
@@ -415,16 +441,46 @@ export class VideoTool implements BlockTool {
     // Blok does not bundle Mediabunny: without the host's loader only `convert` can help.
     if (media === undefined || formats === undefined || formats.length === 0) return;
     if (media.mediabunny === undefined && media.convert === undefined) return;
+    const controller = new AbortController();
+
+    const idle: { timer?: ReturnType<typeof setTimeout> } = {};
+    // A hung host hook or upload would hold the page queue and its leave guard forever.
+    const stillWorking = (): void => {
+      clearTimeout(idle.timer);
+      idle.timer = setTimeout(() => controller.abort(), CONVERSION_IDLE_MS);
+    };
+
+    this.conversion?.abort();
+    this.conversion = controller;
     this.showConverting(0);
-    void enqueueMediaJob(() => this.convertVariants(file, url, formats, media))
+    void enqueueMediaJob(() => this.convertVariants(file, url, formats, media, controller.signal, stillWorking), controller.signal)
       .catch(() => undefined)
-      .finally(() => this.showConverting(null));
+      .finally(() => {
+        clearTimeout(idle.timer);
+        if (this.conversion !== controller) return;
+        this.conversion = null;
+        this.showConverting(null);
+      });
   }
 
-  private async convertVariants(file: File, url: string, formats: VideoFormat[], media: MediaConfig): Promise<void> {
+  private async convertVariants(
+    file: File,
+    url: string,
+    formats: VideoFormat[],
+    media: MediaConfig,
+    signal: AbortSignal,
+    stillWorking: () => void
+  ): Promise<void> {
+    const progress = (percent: number): void => {
+      stillWorking();
+      this.showConverting(percent);
+    };
+
+    stillWorking();
+
     const fromHook: unknown = media.convert === undefined
       ? null
-      : await media.convert(file, formats, { kind: 'video', onProgress: (f) => this.showConverting(Math.round(f * 100)) })
+      : await media.convert(file, formats, { kind: 'video', signal, onProgress: (f) => progress(Math.round(f * 100)) })
         .catch(() => null);
     // Untyped hosts can return anything; only an array counts as an answer.
     const listed = Array.isArray(fromHook) ? (fromHook as ConvertedMedia[]) : null;
@@ -439,16 +495,16 @@ export class VideoTool implements BlockTool {
 
         return load === undefined
           ? null
-          : produceVideoVariant(file, format, { maxTranscodeDuration: media.maxTranscodeDuration ?? DEFAULT_MAX_TRANSCODE_SECONDS, onProgress, load });
+          : produceVideoVariant(file, format, { maxTranscodeDuration: media.maxTranscodeDuration ?? DEFAULT_MAX_TRANSCODE_SECONDS, onProgress, load, signal });
       },
       upload: (part, variant) => this.uploader.uploadVariant(part, variant),
       // A rebuilt block is checked by deliverToRebuiltBlock when writing.
-      isCurrent: (expected) => this.detached || this.data.url === expected,
+      isCurrent: (expected) => !signal.aborted && (this.detached || this.data.url === expected),
       write: (next) => {
         this.writeVariants(shown.url, next);
         shown.url = next.url;
       },
-      onProgress: (percent) => this.showConverting(percent),
+      onProgress: progress,
     });
   }
 

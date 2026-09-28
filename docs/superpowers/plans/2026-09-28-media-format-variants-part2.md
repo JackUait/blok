@@ -22,7 +22,7 @@
 - `<source type>` carries the full MIME with codecs, from `output.getMimeType()`.
 - Results are derived data: `dispatchChange({ derived: true, from: ['url'] })`; detached blocks via `deliverToRebuiltBlock`.
 - `beforeunload` handler is present only while a media job is queued or running.
-- Mediabunny is a devDependency (bundled). `package.json` change is authorised by the approved spec.
+- Mediabunny is a devDependency for types and tests only. It is NOT bundled (MPL-2.0 fails the build's license allow-list); hosts pass `media.mediabunny: () => import('mediabunny')` (user decision, 2026-09-28).
 - Scoped lint/tests while iterating; no `let` (lint rule), no `!`, no `any`.
 
 ## Review Focus

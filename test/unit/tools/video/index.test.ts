@@ -936,8 +936,8 @@ describe('VideoTool — background formats', () => {
 
   const loader = async (): Promise<unknown> => ({});
 
-  const toolWith = (media?: MediaConfig): VideoTool => {
-    const api = { ...createMockApi(), config: { media } } as unknown as API;
+  const toolWith = (media?: MediaConfig, blocks?: unknown): VideoTool => {
+    const api = { ...createMockApi(), config: { media }, ...(blocks === undefined ? {} : { blocks }) } as unknown as API;
 
     return new VideoTool({ ...createOptions({}, { uploader: { uploadByFile: async (f: File) => ({ url: `https://cdn/${f.name}` }) } }), api });
   };
@@ -1106,6 +1106,104 @@ describe('VideoTool — background formats', () => {
 
     expect(convert).toHaveBeenCalledWith(expect.any(File), ['webm'], expect.objectContaining({ kind: 'video' }));
     expect(mockProduce).not.toHaveBeenCalled();
+  });
+
+  describe('when the block goes away', () => {
+    const blocking = (): { go: () => void; calls: Array<{ signal?: AbortSignal; onProgress?: (f: number) => void }> } => {
+      const handle = { go: (): void => undefined, calls: [] as Array<{ signal?: AbortSignal; onProgress?: (f: number) => void }> };
+
+      mockProduce.mockImplementation(async (_file, _format, opts) => {
+        handle.calls.push(opts);
+        await new Promise<void>((r) => {
+          handle.go = r;
+        });
+
+        return webm;
+      });
+
+      return handle;
+    };
+
+    it('keeps converting for a block that was only rebuilt, and writes to the rebuilt one', async () => {
+      const update = vi.fn(async () => undefined);
+      const live = { id: 'b1', name: 'video', save: async () => ({ data: { url: 'https://cdn/clip.mov' } }) };
+      const blocks = { getBlocksCount: () => 1, getBlockByIndex: () => live, update };
+      const handle = blocking();
+      const tool = toolWith({ formats: { video: ['webm'] }, mediabunny: loader }, blocks);
+
+      tool.render();
+      pasteFile(tool);
+      await vi.waitFor(() => expect(handle.calls).toHaveLength(1));
+      tool.removed();
+      await Promise.resolve();
+      handle.go();
+      await idle();
+
+      expect(handle.calls[0].signal?.aborted).toBe(false);
+      await vi.waitFor(() => expect(update).toHaveBeenCalledWith('b1', {
+        url: 'https://cdn/clip.mov',
+        variants: [{ url: 'https://cdn/clip.webm', mimeType: WEBM }, { url: 'https://cdn/clip.mov', mimeType: 'video/quicktime' }],
+      }));
+    });
+
+    it('cancels the conversion of a deleted block and converts nothing more', async () => {
+      const blocks = { getBlocksCount: () => 0, getBlockByIndex: () => undefined, update: vi.fn() };
+      const handle = blocking();
+      const tool = toolWith({ formats: { video: ['webm', 'av1'] }, mediabunny: loader }, blocks);
+
+      tool.render();
+      pasteFile(tool);
+      await vi.waitFor(() => expect(handle.calls).toHaveLength(1));
+      tool.removed();
+      await vi.waitFor(() => expect(handle.calls[0].signal?.aborted).toBe(true));
+      handle.go();
+      await idle();
+
+      expect(handle.calls).toHaveLength(1);
+      expect(blocks.update).not.toHaveBeenCalled();
+    });
+
+    it('gives up on a conversion that shows no progress for ten minutes', async () => {
+      const handle = blocking();
+      const tool = toolWith({ formats: { video: ['webm'] }, mediabunny: loader });
+
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      try {
+        tool.render();
+        pasteFile(tool);
+        await vi.waitFor(() => expect(handle.calls).toHaveLength(1));
+
+        vi.advanceTimersByTime(9 * 60_000);
+        expect(handle.calls[0].signal?.aborted).toBe(false);
+        // Progress restarts the clock.
+        handle.calls[0].onProgress?.(0.5);
+        vi.advanceTimersByTime(9 * 60_000);
+        expect(handle.calls[0].signal?.aborted).toBe(false);
+
+        vi.advanceTimersByTime(60_000);
+        expect(handle.calls[0].signal?.aborted).toBe(true);
+      } finally {
+        vi.useRealTimers();
+        handle.go();
+      }
+    });
+
+    it('cancels when the tool is destroyed with the editor', async () => {
+      const handle = blocking();
+      const tool = toolWith({ formats: { video: ['webm', 'av1'] }, mediabunny: loader });
+
+      tool.render();
+      pasteFile(tool);
+      await vi.waitFor(() => expect(handle.calls).toHaveLength(1));
+      // A torn-down editor answers no block queries, which is how the tool tells it from a rebuild.
+      tool.destroy();
+
+      await vi.waitFor(() => expect(handle.calls[0].signal?.aborted).toBe(true));
+      handle.go();
+      await idle();
+      expect(handle.calls).toHaveLength(1);
+      expect(tool.save().variants).toBeUndefined();
+    });
   });
 });
 

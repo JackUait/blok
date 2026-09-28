@@ -120,45 +120,64 @@ describe('Blok Line media completion', () => {
     }
   });
 
-  it('centers the speed needle on its dial, centres the open dial on the canvas and uses the image accent size', () => {
+  it('splits the speed dial into equal segments around the needle hub, sized like the image accent', () => {
     const speed = svgOf(Icons.IconPlayerSpeed);
-    const dial = speed.querySelector('path');
+    const [dial, needle] = Array.from(speed.querySelectorAll('path'));
     const hub = speed.querySelector('circle');
     const imageAccent = svgOf(Icons.IconImage).querySelector('circle');
 
-    expect(hub?.getAttribute('r')).toBe(imageAccent?.getAttribute('r'));
-
-    if (dial === null || hub === null) {
+    if (dial === undefined || needle === undefined || hub === null) {
       throw new Error('Missing speed dial');
     }
+    expect(hub.getAttribute('r')).toBe(imageAccent?.getAttribute('r'));
 
-    const [x, y, radius, , , , , chord] = numbers(dial);
-    const centerX = x + chord / 2;
-    const centerY = y - Math.sqrt(radius * radius - chord * chord / 4);
+    const center = [Number(hub.getAttribute('cx')), Number(hub.getAttribute('cy'))];
+    const segments = (dial.getAttribute('d') ?? '').split(/(?=M)/).map(part => part.match(/-?(?:\d*\.)?\d+/g)?.map(Number) ?? []);
+    const angle = ([x, y]: number[]): number => Math.atan2(y - center[1], x - center[0]);
+    const sweeps = segments.map(([x1, y1, radius, , , , , x2, y2]) => {
+      expect(Math.hypot(x1 - center[0], y1 - center[1])).toBeCloseTo(radius, 1);
+      expect(Math.hypot(x2 - center[0], y2 - center[1])).toBeCloseTo(radius, 1);
 
-    expect(Number(hub.getAttribute('cx'))).toBeCloseTo(centerX, 5);
-    expect(Number(hub.getAttribute('cy'))).toBeCloseTo(centerY, 5);
+      return [angle([x1, y1]), angle([x2, y2])];
+    });
+    const lengths = sweeps.map(([from, to]) => (to - from + 2 * Math.PI) % (2 * Math.PI));
+    const gaps = sweeps.slice(1).map(([from], index) => (from - sweeps[index][1] + 2 * Math.PI) % (2 * Math.PI));
+    const [first] = segments;
+    const last = segments[segments.length - 1];
+
+    expect(segments).toHaveLength(3);
+    lengths.forEach(length => expect(length).toBeCloseTo(lengths[0], 2));
+    expect(gaps[0]).toBeCloseTo(gaps[1], 2);
+    // A gap must survive at 16px: its chord, minus one stroke, stays over half a pixel.
+    expect((2 * first[2] * Math.sin(gaps[0] / 2) - 1.25) * 16 / 20).toBeGreaterThan(0.5);
+    expect(first[0] + last[7]).toBeCloseTo(20, 5);
     // The dial opens at the bottom, so centre the visible arc, not the hub.
-    expect(centerX).toBe(10);
-    expect((centerY - radius + y) / 2).toBeCloseTo(10, 5);
+    expect((center[1] - first[2] + first[1]) / 2).toBeCloseTo(10, 5);
+    expect(numbers(needle).slice(0, 2)).toEqual(center);
   });
 
-  it('gives the loop matching panel radii and rotationally equal arrowheads', () => {
-    const paths = Array.from(svgOf(Icons.IconPlayerLoop).querySelectorAll('path'));
-    const panelRadius = svgOf(Icons.IconImage).querySelector('rect')?.getAttribute('rx');
 
-    for (const path of [paths[0], paths[2]]) {
-      const radii = path.getAttribute('d')?.match(/[aA]([\d.]+) ([\d.]+)/);
+  it('draws the loop as a racetrack whose arrowheads chase each other with a clear gap', () => {
+    const [firstTrack, firstHead, secondTrack, secondHead] = Array.from(svgOf(Icons.IconPlayerLoop).querySelectorAll('path'));
+    const track = numbers(firstTrack);
+    const head = numbers(firstHead);
+    const stroke = Number(firstTrack.getAttribute('stroke-width'));
 
-      expect(radii?.slice(1)).toEqual([panelRadius, panelRadius]);
-    }
-    const top = numbers(paths[1]);
-    const bottom = numbers(paths[3]);
+    expect(track).toHaveLength(10);
+    // Semicircular ends: the arc radius is half the track height.
+    expect(track[2]).toBe(-track[8] / 2);
+    expect(numbers(secondHead)).toEqual(head.map(value => 20 - value));
+    expect(numbers(secondTrack).slice(0, 2)).toEqual(track.slice(0, 2).map(value => 20 - value));
+    expect(numbers(secondTrack).slice(2)).toEqual([...track.slice(2, 7), ...track.slice(7).map(value => 0 - value)]);
 
-    expect(top).toHaveLength(6);
-    expect(bottom).toEqual(top.map(value => 20 - value));
-    expect(Math.abs(top[2] - top[0])).toBe(Math.abs(top[3] - top[1]));
+    const tip = [track[0] + track[7] + track[9], track[1] + track[8]];
+    const nextTrackStart = 20 - track[0];
+
+    expect(head.slice(2, 4)).toEqual(tip);
+    expect(head[4] - head[0]).toBe(0);
+    expect(nextTrackStart - tip[0] - stroke).toBeGreaterThanOrEqual(stroke);
   });
+
 
   it('keeps music noteheads equal and both stems parallel to the beam spacing', () => {
     const svg = svgOf(Icons.IconMusic);
@@ -184,25 +203,49 @@ describe('Blok Line media completion', () => {
     });
   });
 
-  it('puts the upload failure cross in the cloud opening instead of slashing through it', () => {
-    const paths = Array.from(svgOf(Icons.IconUploadFailed).querySelectorAll('path'));
+  it('cuts the cloud open around a round badge that carries the failure cross', () => {
+    const svg = svgOf(Icons.IconUploadFailed);
+    const [cloud, cross] = Array.from(svg.querySelectorAll('path'));
+    const badge = svg.querySelector('circle');
 
-    expect(paths).toHaveLength(2);
+    if (cloud === undefined || cross === undefined || badge === null) {
+      throw new Error('Missing upload failure parts');
+    }
 
-    const cloud = numbers(paths[0]);
-    const cross = numbers(paths[1]);
-    const stroke = Number(paths[0].getAttribute('stroke-width'));
-    const leftEdge = cloud[0];
-    const rightEdge = 24 - leftEdge;
-    const x = cross.filter((_value, index) => index % 2 === 0);
+    const stroke = Number(cloud.getAttribute('stroke-width'));
+    const [cx, cy, radius] = ['cx', 'cy', 'r'].map(name => Number(badge.getAttribute(name)));
+    const commands = Array.from((cloud.getAttribute('d') ?? '').matchAll(/([MHa])([^MHa]*)/g));
+    const ends: number[][] = [];
+    let point = [0, 0];
 
-    expect(cross).toHaveLength(8);
-    expect(Math.min(...x) - leftEdge).toBeGreaterThan(stroke);
-    expect(rightEdge - Math.max(...x)).toBeGreaterThan(stroke);
-    expect(Math.hypot(Math.min(...x) - leftEdge, cross[1] - cloud[1]) - stroke).toBeGreaterThanOrEqual(stroke);
-    expect(Math.hypot(rightEdge - Math.max(...x), cross[3] - cloud[1]) - stroke).toBeGreaterThanOrEqual(stroke);
-    expect(cross[0] + cross[2]).toBe(24);
-    expect(cross[1]).toBe(cross[5]);
-    expect(cross[3]).toBe(cross[7]);
+    for (const [, command, args] of commands) {
+      const values = args.match(/-?(?:\d*\.)?\d+/g)?.map(Number) ?? [];
+
+      if (command === 'M') {
+        point = values;
+      } else if (command === 'H') {
+        point = [values[0], point[1]];
+      } else {
+        point = [point[0] + values[5], point[1] + values[6]];
+      }
+      ends.push(point);
+    }
+
+    const crossPoints = cross.getAttribute('d')?.split(/(?=M)/).map(part => part.match(/-?(?:\d*\.)?\d+/g)?.map(Number) ?? []) ?? [];
+
+    expect(badge.getAttribute('stroke')).toBe('currentColor');
+    expect(badge.getAttribute('stroke-width')).toBe(String(stroke));
+    // Both open ends of the cloud stop a full stroke short of the badge.
+    for (const [x, y] of [ends[0], ends[ends.length - 1]]) {
+      expect(Math.hypot(x - cx, y - cy) - radius - stroke).toBeGreaterThanOrEqual(stroke);
+    }
+    expect(cy + radius + stroke / 2).toBeLessThanOrEqual(24);
+    expect(cx + radius + stroke / 2).toBeLessThanOrEqual(24);
+    for (const [x, y, dx, dy] of crossPoints) {
+      expect(x + dx / 2).toBeCloseTo(cx, 5);
+      expect(y + dy / 2).toBeCloseTo(cy, 5);
+      expect(Math.hypot(dx, dy) / 2 + stroke).toBeLessThanOrEqual(radius - stroke / 2);
+    }
   });
+
 });

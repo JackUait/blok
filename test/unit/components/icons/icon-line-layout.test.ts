@@ -174,20 +174,26 @@ describe('Blok Line layout geometry', () => {
     expect(coordinates).toHaveLength(14);
   });
 
-  it('leaves a visible gap between the image sun and the ridge at 16px', () => {
+  it('layers a small hill on the big slope and keeps the sun clear of both at 16px', () => {
     const svg = svgOf(IconImage);
     const sun = required(svg, 'circle');
     const center: Point = [numberOf(sun, 'cx'), numberOf(sun, 'cy')];
     const radius = numberOf(sun, 'r');
-    const ridge = linePoints(required(svg, 'path'))[0];
-    const distances = ridge.slice(1).map((point, index) => distanceToSegment(center, ridge[index], point));
-    const edgeGap = Math.min(...distances) - radius - 1.25 / 2;
+    const [mountain, hill] = linePoints(required(svg, 'path'));
+    const gaps = [mountain, hill].flatMap(ridge =>
+      ridge.slice(1).map((point, index) => distanceToSegment(center, ridge[index], point) - radius - 1.25 / 2));
 
-    expect(edgeGap * 16 / 20).toBeGreaterThanOrEqual(0.9);
-    expect(center).toStrictEqual([7.5, 7]);
     expect(radius).toBe(0.85);
-    expect(ridge).toStrictEqual([[3, 13], [6.5, 9.5], [9.5, 12.5], [13, 9], [17, 13]]);
+    expect(Math.min(...gaps) * 16 / 20).toBeGreaterThanOrEqual(0.9);
+    // The hill starts on the mountain's far slope, so it reads as standing in front.
+    expect(distanceToSegment(hill[0], mountain[1], mountain[2])).toBeCloseTo(0, 5);
+    // Both ridges end on the panel: the left and bottom edges, then the right edge above the corner.
+    expect(mountain[0][0]).toBe(3);
+    expect(mountain[2][1]).toBe(16);
+    expect(hill[2][0]).toBe(17);
+    expect(hill[2][1]).toBeLessThanOrEqual(16 - 2);
   });
+
 
   it.each([2, 3, 4, 5])('builds %i equal-width columns on the same rounded panel', count => {
     const icon = buildIconColumnsCount(count);

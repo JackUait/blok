@@ -179,11 +179,8 @@ describe('Blok Line small-detail geometry', () => {
     expect(middle[1] - body[1]).toBe(body[1] + body[2] - middle[1]);
   });
 
-  it('makes merge and split a mirrored pair of shafted arrows', () => {
-    expect(pathOf(IconMergeCells)).toBe(pathOf(IconSplitCell));
-    expect(pathOf(IconMergeCells, 1)).toBe('M3 10h4M5 8l2 2-2 2');
-    expect(pathOf(IconMergeCells, 2)).toBe('M17 10h-4M15 8l-2 2 2 2');
-    expect(pathOf(IconSplitCell, 1)).toBe('M7 10H3M5 8l-2 2 2 2');
-    expect(pathOf(IconSplitCell, 2)).toBe('M13 10h4M15 8l2 2-2 2');
+  it('makes merge and split one cell frame with mirrored chevrons', () => {
+    expect(pathOf(IconMergeCells, 1)).toBe('M5.75 8l2 2-2 2M14.25 8l-2 2 2 2');
+    expect(pathOf(IconSplitCell, 1)).toBe('M7.25 8l-2 2 2 2M12.75 8l2 2-2 2');
   });
 });

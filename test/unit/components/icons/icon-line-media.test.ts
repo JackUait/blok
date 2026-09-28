@@ -101,7 +101,6 @@ describe('Blok Line media family', () => {
 
   it.each([
     ['video', Icons.IconVideo],
-    ['picture-in-picture', Icons.IconPlayerPip],
   ])('%s uses the image family frame', (_name, icon) => {
     const frame = svgOf(icon).querySelector('rect');
 
@@ -115,28 +114,112 @@ describe('Blok Line media family', () => {
       .toEqual([3, 4, 14, 12, 2]);
   });
 
-  it('keeps alignment blocks equal, mirrored and softly cornered', () => {
-    const blocks = [Icons.IconAlignLeft, Icons.IconAlignCenter, Icons.IconAlignRight].map((icon) => {
-      const block = svgOf(icon).querySelector('rect');
+  it('opens the picture-in-picture frame corner around a floating window', () => {
+    const svg = svgOf(Icons.IconPlayerPip);
+    const frame = svg.querySelector('path');
+    const window = svg.querySelector('rect');
 
-      if (block === null) {
-        throw new Error('Missing alignment block');
-      }
+    if (frame === null || window === null) {
+      throw new Error('Missing picture-in-picture parts');
+    }
 
-      return block;
+    const outline = required(frame, 'd').match(/^M17 ([\d.]+)V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h([\d.]+)$/);
+    const [x, y, width, height] = ['x', 'y', 'width', 'height'].map(name => Number(required(window, name)));
+    const stroke = Number(required(frame, 'stroke-width'));
+
+    // The image-family panel (x 3–17, y 4–16, radius 2) with its bottom-right corner left open.
+    expect(outline).not.toBeNull();
+
+    const rightEndY = Number(outline?.[1]);
+    const bottomEndX = 5 + Number(outline?.[2]);
+
+    expect(window.getAttribute('rx')).toBe('1');
+    expect(window.getAttribute('stroke')).toBe('currentColor');
+    expect(window.getAttribute('fill')).toBeNull();
+    // The window overflows the panel corner, and both open ends clear it by a stroke.
+    expect(x + width).toBeGreaterThan(17);
+    expect(y + height).toBe(16);
+    expect(y - rightEndY - stroke).toBeGreaterThanOrEqual(stroke);
+    expect(x - bottomEndX - stroke).toBeGreaterThanOrEqual(stroke);
+  });
+
+  it('hangs mirrored alignment bars from a shared guide line', () => {
+    const icons = [Icons.IconAlignLeft, Icons.IconAlignCenter, Icons.IconAlignRight].map(icon => svgOf(icon));
+    const guides = icons.map(svg => svg.querySelector('path')?.getAttribute('d'));
+    const bars = icons.map(svg => Array.from(svg.querySelectorAll('rect')).map(bar =>
+      ['x', 'y', 'width', 'height'].map(name => Number(required(bar, name)))));
+
+    expect(guides).toEqual(['M3.5 3v14', 'M10 3v14', 'M16.5 3v14']);
+    bars.forEach(set => {
+      expect(set).toHaveLength(2);
+      expect(set.map(([, y, width, height]) => [y, width, height])).toEqual(bars[0].map(([, y, width, height]) => [y, width, height]));
     });
-    const x = blocks.map((block) => Number(required(block, 'x')));
-    const widths = blocks.map((block) => Number(required(block, 'width')));
-
-    expect(x[0] + x[2] + widths[0]).toBe(20);
-    expect(x[1] + widths[1] / 2).toBe(10);
-    blocks.forEach((block) => {
-      expect(Number(required(block, 'width'))).toBe(widths[0]);
-      expect(Number(required(block, 'height'))).toBe(widths[0]);
-      expect(block.getAttribute('rx')).toBe('1');
-      expect(block.getAttribute('fill')).toBe('currentColor');
+    icons.forEach(svg => svg.querySelectorAll('rect').forEach(bar => {
+      expect(bar.getAttribute('rx')).toBe('1');
+      expect(bar.getAttribute('fill')).toBe('currentColor');
+    }));
+    bars[0].forEach(([x], index) => {
+      expect(x - 3.5).toBe(2.5);
+      expect(x + bars[2][index][0] + bars[2][index][2]).toBe(20);
+      expect(bars[1][index][0] + bars[1][index][2] / 2).toBe(10);
     });
   });
+
+  it('points the theater arrows outward from the centre of the wide screen', () => {
+    const svg = svgOf(Icons.IconPlayerTheater);
+    const screen = svg.querySelector('rect');
+    const arrows = svg.querySelector('path');
+
+    if (screen === null || arrows === null) {
+      throw new Error('Missing theater parts');
+    }
+
+    const [, y, width, height] = ['x', 'y', 'width', 'height'].map(name => Number(required(screen, name)));
+
+    expect(width).toBeGreaterThan(height * 1.5);
+    expect(y + height / 2).toBe(10);
+    expect(required(arrows, 'd')).toBe('M8.5 10h-3M7 8.5 5.5 10 7 11.5M11.5 10h3M13 8.5l1.5 1.5-1.5 1.5');
+  });
+
+  it('shows the IconImage landscape at overlay scale inside the broken pieces', () => {
+    const image = svgOf(Icons.IconImage);
+    const imageSun = image.querySelector('circle');
+    const imageRidge = image.querySelector('path');
+    const broken = svgOf(Icons.IconImageBroken);
+    const sun = broken.querySelector('circle');
+    const [left, right] = Array.from(broken.querySelectorAll('path')).filter(path => !required(path, 'd').endsWith('Z'));
+
+    if (imageSun === null || imageRidge === null || sun === null || left === undefined || right === undefined) {
+      throw new Error('Missing broken image landscape');
+    }
+
+    const scale = 24 / 20;
+    const imagePoints = pointsOf(imageRidge);
+    // Each piece keeps the image in place but slides sideways by the same amount, in opposite directions.
+    const shift = Number(required(sun, 'cx')) - Number(required(imageSun, 'cx')) * scale;
+    const at = (index: number, dx: number): { x: number; y: number } => ({
+      x: Number((imagePoints[index].x * scale + dx).toFixed(2)),
+      y: Number((imagePoints[index].y * scale).toFixed(2)),
+    });
+    const rounded = (points: { x: number; y: number }[]): { x: number; y: number }[] =>
+      points.map(({ x, y }) => ({ x: Number(x.toFixed(2)), y: Number(y.toFixed(2)) }));
+
+    expect(Number(required(sun, 'r'))).toBeCloseTo(Number(required(imageSun, 'r')) * scale, 5);
+    expect(Number(required(sun, 'cy'))).toBeCloseTo(Number(required(imageSun, 'cy')) * scale, 5);
+    // The mountain's foot and peak sit in the left piece; the hill sits in the right one.
+    expect(rounded(pointsOf(left)).slice(0, 2)).toEqual([at(0, -shift), at(1, -shift)]);
+    expect(rounded(pointsOf(right)).slice(-3)).toEqual([at(3, shift), at(4, shift), at(5, shift)]);
+  });
+
+  it('breaks the image into two pieces along one crack, so the pieces fit back together', () => {
+    const pieces = Array.from(svgOf(Icons.IconImageBroken).querySelectorAll('path'))
+      .map(path => required(path, 'd'))
+      .filter(d => d.endsWith('Z'));
+
+    expect(pieces).toHaveLength(2);
+    expect(pieces[0].match(/l[^Z]+Z$/)?.[0]).toBe(pieces[1].match(/l[^Z]+Z$/)?.[0]);
+  });
+
 
   it('separates one left-aligned caption from the panel and its sun from the ridge', () => {
     const svg = svgOf(Icons.IconCaption);
@@ -166,7 +249,20 @@ describe('Blok Line media family', () => {
     expect(captionEnd.x - captionStart.x).toBeLessThan(Number(required(frame, 'width')));
     expect(Number(required(frame, 'rx'))).toBe(2);
     expect(sunRadius).toBe(0.85);
-    expect(ridge).toHaveLength(5);
+    const image = svgOf(Icons.IconImage);
+    const imageFrame = image.querySelector('rect');
+    const imageSun = image.querySelector('circle');
+    const imageRidge = image.querySelector('path');
+
+    if (imageFrame === null || imageSun === null || imageRidge === null) {
+      throw new Error('Missing image landscape');
+    }
+
+    // The same landscape as IconImage, lifted to the shorter panel's bottom edge.
+    const lift = Number(required(imageFrame, 'y')) + Number(required(imageFrame, 'height')) - frameBottom;
+
+    expect(ridge).toEqual(pointsOf(imageRidge).map(({ x, y }) => ({ x, y: y - lift })));
+    expect(sunX).toBe(Number(required(imageSun, 'cx')));
 
     for (let index = 1; index < ridge.length; index++) {
       const start = ridge[index - 1];

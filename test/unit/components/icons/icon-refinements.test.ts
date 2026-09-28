@@ -112,46 +112,39 @@ describe('icon refinements', () => {
   });
 
   describe('IconMergeCells / IconSplitCell', () => {
+    const CLEARANCE = 0.75;
+
     it.each([
-      ['merge', IconMergeCells],
-      ['split', IconSplitCell],
-    ])('should keep the %s arrows separate from the dotted divider', (action, icon) => {
-      const paths = Array.from(parseSvg(icon).querySelectorAll('path'));
-      const divider = paths[0];
-      const dividerX = Number(divider.getAttribute('d')?.match(/^M([\d.]+)/)?.[1]);
-      const stroke = Number(divider.getAttribute('stroke-width'));
+      ['merge', IconMergeCells, 'M10 4v2M10 16v-2'],
+      ['split', IconSplitCell, 'M10 4v12'],
+    ])('should draw the %s result: an opened wall or a full one, with mirrored chevrons', (action, icon, wall) => {
+      const svg = parseSvg(icon);
+      const frame = svg.querySelector('rect');
+      const paths = Array.from(svg.querySelectorAll('path'));
 
-      expect(paths).toHaveLength(3);
-      expect(divider.getAttribute('stroke-dasharray')).toBe('0.1 2.6');
-      expect(divider.getAttribute('stroke-linecap')).toBe('round');
+      expect(['x', 'y', 'width', 'height', 'rx'].map(name => Number(frame?.getAttribute(name)))).toEqual([3, 4, 14, 12, 2]);
+      expect(paths).toHaveLength(2);
+      expect(paths[0].getAttribute('d')).toBe(wall);
 
-      for (const arrow of paths.slice(1)) {
-        const d = arrow.getAttribute('d') ?? '';
-        const shaft = d.match(/^M([\d.]+) ([\d.]+)([hH])(-?[\d.]+)/);
-        const head = d.match(/M([\d.]+) ([\d.]+)l([^M]+)$/);
-        const headValues = head?.[3].match(/-?[\d.]+/g)?.map(Number) ?? [];
+      const stroke = Number(paths[1].getAttribute('stroke-width'));
+      const chevrons = (paths[1].getAttribute('d') ?? '').split(/(?=M)/).map(part => part.match(/-?(?:\d*\.)?\d+/g)?.map(Number) ?? []);
 
-        expect(shaft).toBeTruthy();
-        expect(head).toBeTruthy();
-        expect(headValues).toHaveLength(4);
+      expect(chevrons).toHaveLength(2);
+      expect(chevrons[0][0] + chevrons[1][0]).toBe(20);
 
-        const shaftStartX = Number(shaft?.[1]);
-        const shaftY = Number(shaft?.[2]);
-        const shaftEndX = Number(shaft?.[4]) + (shaft?.[3] === 'h' ? shaftStartX : 0);
-        const headStartX = Number(head?.[1]);
-        const headStartY = Number(head?.[2]);
-        const tipX = headStartX + headValues[0];
-        const tipY = headStartY + headValues[1];
-        const headEndX = tipX + headValues[2];
-        const headEndY = tipY + headValues[3];
-        const nearestX = Math.min(...[shaftStartX, shaftEndX, headStartX, headEndX].map(x => Math.abs(x - dividerX)));
+      for (const [x, y, dx1, dy1, dx2, dy2] of chevrons) {
+        const tipX = x + dx1;
 
-        expect(tipX).toBe(shaftEndX);
-        expect(tipY).toBe(shaftY);
-        expect(headStartX).toBe(headEndX);
-        expect(tipY - headStartY).toBe(headEndY - tipY);
-        expect(nearestX - stroke).toBeGreaterThanOrEqual(stroke);
-        expect(Math.abs(tipX - dividerX) < Math.abs(shaftStartX - dividerX)).toBe(action === 'merge');
+        expect(y + dy1).toBe(10);
+        expect(dx2).toBe(-dx1);
+        expect(dy2).toBe(dy1);
+        expect(Math.abs(tipX - 10) < Math.abs(x - 10)).toBe(action === 'merge');
+        // Clear of the frame sides, and of the wall where the wall is drawn.
+        expect(Math.min(tipX, x) - 3 - stroke).toBeGreaterThanOrEqual(CLEARANCE);
+        expect(17 - Math.max(tipX, x) - stroke).toBeGreaterThanOrEqual(CLEARANCE);
+        if (action === 'split') {
+          expect(Math.min(Math.abs(tipX - 10), Math.abs(x - 10)) - stroke).toBeGreaterThanOrEqual(CLEARANCE);
+        }
       }
     });
   });

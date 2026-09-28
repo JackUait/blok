@@ -16,6 +16,7 @@ const stepOf = (command: string, [x, y]: number[], values: number[]): number[] =
   switch (command) {
     case 'M':
     case 'L':
+    case 'Q':
       return values;
     case 'm':
     case 'l':
@@ -27,12 +28,12 @@ const stepOf = (command: string, [x, y]: number[], values: number[]): number[] =
   }
 };
 
-// Absolute x of every point in a path made of M/m/h/l commands.
+// Absolute x of every point in a path made of M/m/h/l/Q commands; Q control points stay inside the hull.
 const xsOf = (d: string): number[] => {
   const xs: number[] = [];
   let point = [0, 0];
 
-  for (const [, command, args] of d.matchAll(/([MmHhLl])([^MmHhLl]*)/g)) {
+  for (const [, command, args] of d.matchAll(/([MmHhLlQ])([^MmHhLlQ]*)/g)) {
     const values = numbersOf(args);
     const size = command.toLowerCase() === 'h' ? 1 : 2;
 
@@ -125,9 +126,47 @@ describe('Blok Line core UI polish', () => {
 
       edges.push(Math.min(...xs) - halfStroke, Math.max(...xs) + halfStroke);
     }
+    // Every rect after the panel is content.
+    for (const rect of Array.from(svg.querySelectorAll('rect')).slice(1)) {
+      const x = Number(rect.getAttribute('x'));
+
+      edges.push(x, x + Number(rect.getAttribute('width')));
+    }
 
     expect((Math.min(...edges) + Math.max(...edges)) / 2).toBeCloseTo(10, 1);
   });
+
+  it('gives Select one filled value tag, the single-choice sibling of Multi-select', () => {
+    const tags = Array.from(svgOf(IconSelect).querySelectorAll('rect')).slice(1);
+
+    expect(tags).toHaveLength(1);
+    expect(tags[0].getAttribute('fill')).toBe('currentColor');
+    expect(Number(tags[0].getAttribute('rx'))).toBe(Number(tags[0].getAttribute('height')) / 2);
+    expect(Number(tags[0].getAttribute('y')) + Number(tags[0].getAttribute('height')) / 2).toBe(10);
+  });
+
+  it('marks the callout with a four-point sparkle whose sides pinch in, so it never reads as a plus', () => {
+    const star = svgOf(IconCallout).querySelector('path[fill="currentColor"]');
+    const points = pairsOf(numbersOf(star?.getAttribute('d') ?? ''));
+    const tips = [points[0], points[2], points[4], points[6]];
+    const controls = [points[1], points[3], points[5], points[7]];
+    const [cx, cy] = [tips[0][0], tips[1][1]];
+    const reach = Math.hypot(tips[0][0] - cx, tips[0][1] - cy);
+
+    expect(points).toHaveLength(9);
+    expect(points[8]).toEqual(points[0]);
+    tips.forEach(([x, y]) => expect(Math.hypot(x - cx, y - cy)).toBeCloseTo(reach, 5));
+    expect(tips[2][0]).toBe(cx);
+    expect(tips[3][1]).toBe(cy);
+    controls.forEach(([x, y], index) => {
+      const opposite = controls[(index + 2) % 4];
+
+      expect(x + opposite[0]).toBeCloseTo(2 * cx, 5);
+      expect(y + opposite[1]).toBeCloseTo(2 * cy, 5);
+      expect(Math.hypot(x - cx, y - cy)).toBeLessThan(reach / 4);
+    });
+  });
+
 
   it('keeps the slash-search CSS glyph identical to IconSearch', () => {
     const css = readFileSync(resolve(__dirname, '../../../../src/styles/popover-animation.css'), 'utf8');

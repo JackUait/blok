@@ -215,6 +215,19 @@ describe('AudioTool', () => {
     expect(root.querySelector('[data-role="filename"]')).toBeNull();
   });
 
+  it('turns the audio preview into the upload progress', async () => {
+    const tool = new AudioTool(opts({ url: '' }));
+    const root = tool.render();
+    const uploader = uploaderInstances.at(-1);
+    if (!uploader) throw new Error('uploader instance not captured');
+    uploader.handleUrl.mockImplementation(() => new Promise(() => undefined));
+
+    tool.onPaste({ type: 'pattern', detail: { data: 'https://x/y.mp3' } } as never);
+    await Promise.resolve();
+
+    expect(root.querySelector('[data-role="uploading"] [data-blok-media-preview="audio"]')).not.toBeNull();
+  });
+
   it('shows a Google Drive-specific error when the link needs an upload backend', async () => {
     const { AudioUploadError } = await import('../../../../src/tools/audio/uploader');
     const tool = new AudioTool(opts({ url: '' }, { sources: 'url' }));

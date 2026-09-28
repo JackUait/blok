@@ -518,6 +518,7 @@ export class FileTool implements BlockTool {
         progress: i18n.t('tools.file.uploadProgress'),
       },
       onCancel: () => this.transitionToEmpty(),
+      preview: 'file',
     });
   }
 

@@ -497,6 +497,35 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     input.click();
   });
 
+  if (opts.preview) {
+    const pointer = { x: 0, y: 0, frame: 0 };
+    const lean = (mx: string, my: string): void => {
+      const stage = panel.querySelector<HTMLElement>('.blok-media-preview');
+      stage?.style.setProperty('--mx', mx);
+      stage?.style.setProperty('--my', my);
+    };
+    const axis = (pos: number, start: number, size: number): string =>
+      String(Math.round(Math.min(1, Math.max(-1, ((pos - start) / size) * 2 - 1)) * 1000) / 1000);
+
+    panel.addEventListener('pointermove', (ev) => {
+      if (prefersReducedMotion()) return;
+      pointer.x = ev.clientX;
+      pointer.y = ev.clientY;
+      if (pointer.frame) return;
+      pointer.frame = requestAnimationFrame(() => {
+        pointer.frame = 0;
+        const rect = panel.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        lean(axis(pointer.x, rect.left, rect.width), axis(pointer.y, rect.top, rect.height));
+      });
+    });
+    panel.addEventListener('pointerleave', () => {
+      if (pointer.frame) cancelAnimationFrame(pointer.frame);
+      pointer.frame = 0;
+      lean('0', '0');
+    });
+  }
+
   card.addEventListener('keydown', (ev) => {
     if (ev.target !== card) return;
     if (card.getAttribute('data-active-tab') !== 'upload') return;

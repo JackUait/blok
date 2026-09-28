@@ -216,9 +216,36 @@
   50% { transform: scaleY(1) }
 }
 
+@keyframes blok-media-preview-pan {
+  0%, 100% { transform: translateX(0) }
+  50% { transform: translateX(-34px) }
+}
+
+@keyframes blok-media-preview-play {
+  from { transform: scaleX(0.3) }
+  to { transform: scaleX(1) }
+}
+
+@keyframes blok-media-preview-press {
+  0%, 100% { transform: scale(1) }
+  35% { transform: scale(0.88) }
+  70% { transform: scale(1.08) }
+}
+
 @keyframes blok-media-preview-pulse {
   0%, 100% { transform: scale(1) }
-  50% { transform: scale(1.18) }
+  50% { transform: scale(1.14) }
+}
+
+@keyframes blok-media-preview-ripple {
+  0% { transform: scaleY(0.55) }
+  40% { transform: scaleY(1.3) }
+  100% { transform: scaleY(1) }
+}
+
+@keyframes blok-media-preview-shuffle {
+  0%, 100% { transform: var(--rest) }
+  45% { transform: translate(calc(var(--dir) * 44px), -10px) rotate(calc(var(--dir) * 20deg)) }
 }
 
 @keyframes blok-presence-caret-pulse {

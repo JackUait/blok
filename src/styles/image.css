@@ -543,6 +543,27 @@
   .blok-image-uploading__panel { flex-wrap: wrap; }
 }
 
+/* With a block preview the drawing is the progress indicator; the bar stays
+   for assistive tech only. */
+.blok-image-uploading__card[data-preview] .blok-image-uploading__panel {
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--blok-space-3);
+  min-height: 200px;
+  padding: var(--blok-space-5) var(--blok-space-3);
+}
+.blok-image-uploading__card[data-preview] .blok-image-uploading__content {
+  flex: 0 0 auto;
+  align-items: center;
+}
+.blok-image-uploading__card[data-preview] .blok-image-uploading__bar {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
 /* ----- Error state ----- */
 .blok-image-error {
   padding: var(--blok-space-3);

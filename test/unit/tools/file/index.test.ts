@@ -558,4 +558,14 @@ describe('FileTool — an upload belongs to the pick that started it', () => {
 
     expect(tool.save().url).toBe('');
   });
+
+  it('turns the file preview into the upload progress', async () => {
+    const upload = heldUpload();
+    const tool = new FileTool(createOptions({}, { uploader: { uploadByFile: upload.uploadByFile } }));
+    const root = tool.render();
+    tool.onPaste(filePasteEvent(pdf()));
+    await Promise.resolve();
+
+    expect(root.querySelector('.blok-file-uploading [data-blok-media-preview="file"]')).not.toBeNull();
+  });
 });

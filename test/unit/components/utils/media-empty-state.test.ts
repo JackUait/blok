@@ -106,3 +106,58 @@ describe('media tools pick their own preview', () => {
     expect(make().querySelector(`[data-blok-media-preview="${kind}"]`)).not.toBeNull();
   });
 });
+
+describe('preview depth follows the pointer', () => {
+  const nextFrame = (): Promise<void> => new Promise((r) => requestAnimationFrame(() => r()));
+
+  const setup = (): { panel: HTMLElement; preview: HTMLElement } => {
+    const el = render({ preview: 'image' });
+    const panel = el.querySelector<HTMLElement>('.blok-media-empty__panel');
+    const preview = el.querySelector<HTMLElement>('[data-blok-media-preview]');
+    if (!panel || !preview) throw new Error('panel or preview missing');
+    vi.spyOn(panel, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 200, 100));
+    return { panel, preview };
+  };
+
+  const move = (target: HTMLElement, x: number, y: number): void => {
+    target.dispatchEvent(new MouseEvent('pointermove', { clientX: x, clientY: y, bubbles: true }));
+  };
+
+  afterEach(() => {
+    Reflect.deleteProperty(window, 'matchMedia');
+  });
+
+  it('leans toward the pointer, from -1 at one edge to 1 at the other', async () => {
+    const { panel, preview } = setup();
+
+    move(panel, 200, 0);
+    await nextFrame();
+
+    expect(preview.style.getPropertyValue('--mx')).toBe('1');
+    expect(preview.style.getPropertyValue('--my')).toBe('-1');
+  });
+
+  it('settles back to center when the pointer leaves', async () => {
+    const { panel, preview } = setup();
+
+    move(panel, 50, 75);
+    await nextFrame();
+    panel.dispatchEvent(new MouseEvent('pointerleave'));
+
+    expect(preview.style.getPropertyValue('--mx')).toBe('0');
+    expect(preview.style.getPropertyValue('--my')).toBe('0');
+  });
+
+  it('stays still when the user asks for reduced motion', async () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) => ({ matches: query.includes('reduce'), media: query }),
+    });
+    const { panel, preview } = setup();
+
+    move(panel, 200, 0);
+    await nextFrame();
+
+    expect(preview.style.getPropertyValue('--mx')).toBe('');
+  });
+});

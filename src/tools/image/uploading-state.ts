@@ -1,6 +1,7 @@
 import { IconCross, IconImage } from '../../components/icons';
 import type { I18nInstance } from '../../components/utils/tools';
 import { tr } from './i18n';
+import { makePreview, setPreviewProgress, type MediaPreviewKind } from '../../components/utils/media-empty-preview';
 
 export interface UploadingStateOptions {
   fileName: string | null;
@@ -8,6 +9,8 @@ export interface UploadingStateOptions {
   statusLabel?: string;
   onCancel?(): void;
   i18n?: I18nInstance;
+  /** Draws the block preview, filled by the upload, instead of the icon tile. */
+  preview?: MediaPreviewKind;
 }
 
 export interface UploadingStateElement extends HTMLElement {
@@ -62,10 +65,15 @@ export function renderUploadingState(opts: UploadingStateOptions): UploadingStat
   const panel = document.createElement('div');
   panel.className = 'blok-image-uploading__panel';
 
-  const tile = document.createElement('span');
-  tile.className = 'blok-image-uploading__tile';
-  tile.setAttribute('aria-hidden', 'true');
-  tile.innerHTML = IconImage;
+  const tile = opts.preview ? makePreview(opts.preview) : document.createElement('span');
+  if (opts.preview) {
+    card.setAttribute('data-preview', opts.preview);
+    setPreviewProgress(tile, 0);
+  } else {
+    tile.className = 'blok-image-uploading__tile';
+    tile.setAttribute('aria-hidden', 'true');
+    tile.innerHTML = IconImage;
+  }
 
   const content = document.createElement('div');
   content.className = 'blok-image-uploading__content';
@@ -114,6 +122,7 @@ export function renderUploadingState(opts: UploadingStateOptions): UploadingStat
     fill.style.width = `${value}%`;
     pct.textContent = `${Math.round(value)}%`;
     bar.setAttribute('aria-valuenow', String(Math.round(value)));
+    if (opts.preview) setPreviewProgress(tile, value);
     if (sizeLabel !== undefined) {
       size.textContent = sizeLabel;
     }

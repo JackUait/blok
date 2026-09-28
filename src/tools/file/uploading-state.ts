@@ -1,3 +1,5 @@
+import { makePreview, setPreviewProgress, type MediaPreviewKind } from '../../components/utils/media-empty-preview';
+
 export interface UploadingStateLabels {
   uploading: string;
   cancel: string;
@@ -8,6 +10,8 @@ export interface UploadingStateOptions {
   fileName: string | null;
   labels: UploadingStateLabels;
   onCancel(): void;
+  /** Draws the file preview, filled by the upload, above the label. */
+  preview?: MediaPreviewKind;
 }
 
 export interface UploadingStateElement extends HTMLElement {
@@ -48,12 +52,20 @@ export function renderUploadingState(opts: UploadingStateOptions): UploadingStat
   cancel.textContent = opts.labels.cancel;
   cancel.addEventListener('click', () => opts.onCancel());
 
+  const preview = opts.preview ? makePreview(opts.preview) : null;
+
   root.setProgress = (percent: number): void => {
     const value = clamp(percent);
     fill.style.width = `${value}%`;
     bar.setAttribute('aria-valuenow', String(Math.round(value)));
+    if (preview) setPreviewProgress(preview, value);
   };
 
+  if (preview) {
+    root.setAttribute('data-preview', opts.preview ?? '');
+    setPreviewProgress(preview, 0);
+    root.append(preview);
+  }
   root.append(label, bar, cancel);
   return root;
 }

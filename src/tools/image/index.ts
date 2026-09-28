@@ -923,6 +923,7 @@ export class ImageTool implements BlockTool {
     const el = renderUploadingState({
       fileName: this.lastFileName,
       onCancel: () => this.transitionToEmpty(),
+      preview: 'image',
       i18n: this.api.i18n,
       ...(statusLabel !== undefined ? { statusLabel } : {}),
     });

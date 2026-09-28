@@ -29,3 +29,15 @@ describe('renderUploadingState', () => {
     expect(onCancel).toHaveBeenCalledOnce();
   });
 });
+
+describe('file renderUploadingState with a preview', () => {
+  it('draws the file preview and fills it with the upload', () => {
+    const el = renderUploadingState({ fileName: 'a.pdf', labels, onCancel: () => undefined, preview: 'file' });
+    const preview = el.querySelector<HTMLElement>('[data-blok-media-preview="file"]');
+
+    el.setProgress(150);
+
+    expect(preview?.style.getPropertyValue('--blok-media-progress')).toBe('1');
+    expect(el.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('100');
+  });
+});

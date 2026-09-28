@@ -213,6 +213,21 @@ describe('VideoTool — onPaste', () => {
     expect(root.querySelector('[data-role="filename"]')).toBeNull();
   });
 
+  it('turns the video preview into the upload progress', async () => {
+    const uploadByUrl = (): Promise<{ url: string }> => new Promise(() => undefined);
+    const tool = new VideoTool(createOptions({}, { uploader: { uploadByUrl } }));
+    const root = tool.render();
+    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    const input = root.querySelector<HTMLInputElement>('input[type="url"]');
+    if (!input) throw new Error('url input missing');
+    input.value = 'https://x/y.mp4';
+
+    root.querySelector<HTMLButtonElement>('[data-action="submit-url"]')?.click();
+    await Promise.resolve();
+
+    expect(root.querySelector('[data-role="uploading"] [data-blok-media-preview="video"]')).not.toBeNull();
+  });
+
   it('with sources "url" ignores a pasted file (no upload)', async () => {
     const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fake');
     const tool = new VideoTool(createOptions({}, { sources: 'url' }));

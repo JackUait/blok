@@ -573,6 +573,7 @@ export class AudioTool implements BlockTool {
     this.uploadingEl = renderUploadingState({
       fileName: this.lastFileName,
       onCancel: () => this.transitionToEmpty(),
+      preview: 'audio',
       i18n: this.api.i18n,
       ...(statusLabel !== undefined ? { statusLabel } : {}),
     });

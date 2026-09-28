@@ -99,3 +99,22 @@ describe('renderUploadingState', () => {
     expect(bar.getAttribute('aria-label')).toBe('X-tools.image.uploadProgress');
   });
 });
+
+describe('renderUploadingState with a preview', () => {
+  it('draws the block preview instead of the icon tile', () => {
+    const el = renderUploadingState({ fileName: 'clip.mp4', preview: 'video' });
+
+    expect(el.querySelector('[data-blok-media-preview="video"]')).not.toBeNull();
+    expect(el.querySelector('.blok-image-uploading__tile')).toBeNull();
+  });
+
+  it('fills the preview as the upload advances and keeps the progressbar in sync', () => {
+    const el = renderUploadingState({ fileName: 'clip.mp4', preview: 'video' });
+    const preview = el.querySelector<HTMLElement>('[data-blok-media-preview]');
+
+    el.setProgress(40);
+
+    expect(preview?.style.getPropertyValue('--blok-media-progress')).toBe('0.4');
+    expect(el.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('40');
+  });
+});

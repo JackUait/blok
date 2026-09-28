@@ -993,6 +993,21 @@ describe('ImageTool — upload progression', () => {
     expect(root.querySelector('[data-role="filename"]')).toBeNull();
   });
 
+  it('turns the image preview into the upload progress', async () => {
+    const uploadByUrl = (): Promise<{ url: string }> => new Promise(() => undefined);
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByUrl } }));
+    const root = tool.render();
+    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    const input = root.querySelector<HTMLInputElement>('input[type="url"]');
+    if (!input) throw new Error('url input missing');
+    input.value = 'https://x/p.png';
+
+    root.querySelector<HTMLButtonElement>('[data-action="submit-url"]')?.click();
+    await Promise.resolve();
+
+    expect(root.querySelector('[data-role="uploading"] [data-blok-media-preview="image"]')).not.toBeNull();
+  });
+
   it('cancel button during upload returns to empty state', async () => {
     const tool = new ImageTool(createOptions(
       {},

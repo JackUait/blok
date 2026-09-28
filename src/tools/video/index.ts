@@ -514,6 +514,7 @@ export class VideoTool implements BlockTool {
     this.uploadingEl = renderUploadingState({
       fileName: this.lastFileName,
       onCancel: () => this.transitionToEmpty(),
+      preview: 'video',
       i18n: this.api.i18n,
       ...(statusLabel !== undefined ? { statusLabel } : {}),
     });

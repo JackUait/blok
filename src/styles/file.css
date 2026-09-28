@@ -285,6 +285,21 @@
   background: var(--blok-bg-hover);
   color: var(--blok-text-primary);
 }
+/* With a block preview the drawing is the progress indicator; the bar stays
+   for assistive tech only. */
+[data-blok-tool="file"] .blok-file-uploading[data-preview] {
+  position: relative;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 200px;
+  padding: var(--blok-space-5) var(--blok-space-3);
+}
+[data-blok-tool="file"] .blok-file-uploading[data-preview] .blok-file-bar {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+}
 
 /* ─── Error ───────────────────────────────────────────────────────── */
 

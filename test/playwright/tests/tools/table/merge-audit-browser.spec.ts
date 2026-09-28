@@ -735,8 +735,10 @@ test.describe('Table merge browser audit', () => {
 
     const addRow = page.locator('[data-blok-table-add-row]');
     const lastRowCell = getCellAt(page, 2, 2);
+    // The add-row button hides unless the pointer is within 40px of the bottom edge.
+    const lastRowBox = assertBoundingBox(await lastRowCell.boundingBox(), 'cell 2,2');
 
-    await lastRowCell.hover({ position: { x: 8, y: 8 } });
+    await lastRowCell.hover({ position: { x: 8, y: lastRowBox.height - 8 } });
     console.log('AUD15 add-row count', await addRow.count());
     await addRow.click();
     await expect(page.locator(`${TABLE_SELECTOR} [data-blok-table-row]`)).toHaveCount(4);

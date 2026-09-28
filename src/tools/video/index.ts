@@ -37,6 +37,7 @@ import { renderCaptionRow, renderVideo } from './ui';
 import { attachControls, type ControlsHandle } from './controls';
 import { Uploader, VideoUploadError, type UploadResult } from './uploader';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
+import { resolveUploadError } from '../../components/utils/media-upload-error';
 import { pickDisplayMaxSize } from '../../components/utils/max-size';
 import { safeDownloadHref } from '../../components/utils/sanitize-url';
 
@@ -296,7 +297,7 @@ export class VideoTool implements BlockTool {
 
       return;
     }
-    this.applyError(err);
+    this.applyError(err, { file: source.file });
     if (this.lastSource !== source || this.data.fileName !== source.file.name) return;
     this.data = { ...this.data, fileName: before };
     this.block.dispatchChange({ derived: true, from: ['fileName'] });
@@ -332,7 +333,7 @@ export class VideoTool implements BlockTool {
 
       return;
     }
-    this.applyError(err);
+    this.applyError(err, { url: source.url });
     if (this.lastSource !== source || this.data.url !== source.url) return;
     this.data = { ...this.data, url: before };
     this.block.dispatchChange({ derived: true, from: ['url'] });
@@ -407,28 +408,39 @@ export class VideoTool implements BlockTool {
     this.renderState();
   }
 
-  private applyError(err?: unknown): void {
+  private applyError(err: unknown, source: { file?: File; url?: string }): void {
+    const own = err instanceof VideoUploadError ? err : null;
+    const outcome = resolveUploadError({
+      tool: 'video',
+      error: own,
+      cause: err,
+      message: this.uploadErrorText(own),
+      source,
+      onUploadError: this.config.onUploadError,
+    });
+
+    this.errorMessage = outcome.kind === 'message' ? outcome.message : null;
+    this.state = outcome.kind === 'message' ? 'ERROR' : 'EMPTY';
+    this.renderState();
+  }
+
+  private uploadErrorText(err: VideoUploadError | null): string {
     // A rejected URL is not an upload failure — the generic "Upload failed" copy
     // would hide the one thing the author needs to know: the link is not a file.
-    if (err instanceof VideoUploadError && err.code === 'NOT_MEDIA_URL') {
-      this.errorMessage = tr(
+    if (err?.code === 'NOT_MEDIA_URL') {
+      return tr(
         this.api.i18n,
         'tools.video.errorNotMediaUrl',
         'Link a video file (.mp4, .webm, .mov), or use an embed block',
       );
-      this.state = 'ERROR';
-      this.renderState();
-      return;
     }
 
-    this.errorMessage = err instanceof VideoUploadError
+    return err
       ? uploadErrorMessage(err, (key) => this.api.i18n.t(key), {
         tooLarge: 'tools.video.errorFileTooLarge',
         generic: 'tools.video.errorUploadFailed',
       })
-      : null;
-    this.state = 'ERROR';
-    this.renderState();
+      : tr(this.api.i18n, 'tools.video.errorUploadFailed', 'Upload failed');
   }
 
   /**

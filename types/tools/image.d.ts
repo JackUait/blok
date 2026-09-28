@@ -2,6 +2,7 @@ import { DeleteContext, PasteConfig, SanitizerConfig } from '../configs';
 import { BlockTool, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
 import { MaxSizeConfig } from './max-size';
+import { UploadErrorHandler } from './upload-error';
 import { MediaSource } from './media-source';
 import { MenuConfig } from './menu-config';
 import { PasteEvent } from './paste-events';
@@ -158,6 +159,12 @@ export interface ImageConfig {
    * type with `'*'` as the fallback. Default 30 MiB. See {@link MaxSizeConfig}.
    */
   maxSize?: MaxSizeConfig;
+  /**
+   * Called when an upload fails. Return a string to replace the block's
+   * message, or `false` to take the error over and put the block back to its
+   * empty state. See {@link UploadErrorHandler}.
+   */
+  onUploadError?: UploadErrorHandler;
   /**
    * Restrict how an image may be added. Default `'both'` (Upload + Link).
    * Use `'upload'` for file-only or `'url'` for link-only. See {@link MediaSource}.

@@ -120,6 +120,7 @@ export { EmbedData, EmbedKind, EmbedAlignment, EmbedMatch, EmbedServiceType } fr
 export { matchEmbedService, buildEmbedUrl } from './tools/embed';
 export { BookmarkData, BookmarkConfig, BookmarkMeta } from './tools/bookmark';
 export { MediaSource } from './tools/media-source';
+export { MediaUploadError, MediaUploadErrorCode, UploadErrorHandler } from './tools/upload-error';
 export { ColumnListData } from './tools/column-list';
 export { ColumnData } from './tools/column';
 

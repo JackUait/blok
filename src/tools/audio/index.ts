@@ -39,6 +39,7 @@ import { attachWaveform, decodePeaks, type WaveformHandle } from './waveform';
 import { readTrackMetadata, resolveCover } from './metadata';
 import { Uploader, AudioUploadError, type UploadResult } from './uploader';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
+import { resolveUploadError } from '../../components/utils/media-upload-error';
 import { pickDisplayMaxSize } from '../../components/utils/max-size';
 import { logLabeled } from '../../components/utils/logger';
 import { safeDownloadHref } from '../../components/utils/sanitize-url';
@@ -310,7 +311,7 @@ export class AudioTool implements BlockTool {
 
       return;
     }
-    this.applyError(err);
+    this.applyError(err, { file: source.file });
     if (this.lastSource !== source || this.data.fileName !== source.file.name) return;
     this.data = { ...this.data, fileName: before };
     this.block.dispatchChange({ derived: true, from: ['fileName'] });
@@ -346,7 +347,7 @@ export class AudioTool implements BlockTool {
 
       return;
     }
-    this.applyError(err);
+    this.applyError(err, { url: source.url });
     if (this.lastSource !== source || this.data.url !== source.url) return;
     this.data = { ...this.data, url: before };
     this.block.dispatchChange({ derived: true, from: ['url'] });
@@ -477,35 +478,44 @@ export class AudioTool implements BlockTool {
       .catch(() => { /* leave player working without waveform */ });
   }
 
-  private applyError(err?: unknown): void {
-    if (err instanceof AudioUploadError && err.code === 'GOOGLE_DRIVE_NEEDS_UPLOADER') {
-      this.errorMessage = tr(
+  private applyError(err: unknown, source: { file?: File; url?: string }): void {
+    const own = err instanceof AudioUploadError ? err : null;
+    const outcome = resolveUploadError({
+      tool: 'audio',
+      error: own,
+      cause: err,
+      message: this.uploadErrorText(own),
+      source,
+      onUploadError: this.config.onUploadError,
+    });
+
+    this.errorMessage = outcome.kind === 'message' ? outcome.message : null;
+    this.state = outcome.kind === 'message' ? 'ERROR' : 'EMPTY';
+    this.renderState();
+  }
+
+  private uploadErrorText(err: AudioUploadError | null): string {
+    if (err?.code === 'GOOGLE_DRIVE_NEEDS_UPLOADER') {
+      return tr(
         this.api.i18n,
         'tools.audio.errorGoogleDrive',
         'Audio from Google Drive can’t be played directly. Download the file and upload it here instead.',
       );
-      this.state = 'ERROR';
-      this.renderState();
-      return;
     }
-    if (err instanceof AudioUploadError && err.code === 'ONEDRIVE_NEEDS_UPLOADER') {
-      this.errorMessage = tr(
+    if (err?.code === 'ONEDRIVE_NEEDS_UPLOADER') {
+      return tr(
         this.api.i18n,
         'tools.audio.errorOneDrive',
         'Audio from OneDrive can’t be played directly. Download the file and upload it here instead.',
       );
-      this.state = 'ERROR';
-      this.renderState();
-      return;
     }
-    this.errorMessage = err instanceof AudioUploadError
+
+    return err
       ? uploadErrorMessage(err, (key) => this.api.i18n.t(key), {
         tooLarge: 'tools.audio.errorFileTooLarge',
         generic: 'tools.audio.errorUploadFailed',
       })
-      : null;
-    this.state = 'ERROR';
-    this.renderState();
+      : tr(this.api.i18n, 'tools.audio.errorUploadFailed', 'Upload failed');
   }
 
   private syncRootAttributes(): void {

@@ -23,6 +23,7 @@ import { renderCaptionRow, renderFileCard } from './ui';
 import { Uploader } from './uploader';
 import { FileToolError } from './errors';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
+import { resolveUploadError } from '../../components/utils/media-upload-error';
 import { safeHttpHref } from './url';
 import { isPreviewable } from './preview';
 import { openFilePreview } from './preview-modal';
@@ -221,7 +222,7 @@ export class FileTool implements BlockTool {
 
       return;
     }
-    this.applyError(err);
+    this.applyError(err, { file });
     if (this.uploading !== file || this.data.fileName !== file.name) return;
     this.data = { ...this.data, fileName: before };
     this.block.dispatchChange({ derived: true, from: ['fileName'] });
@@ -258,7 +259,7 @@ export class FileTool implements BlockTool {
 
       return;
     }
-    this.applyError(err);
+    this.applyError(err, { url });
     if (this.uploading !== url || this.data.url !== url) return;
     this.data = { ...this.data, url: before };
     this.block.dispatchChange({ derived: true, from: ['url'] });
@@ -385,14 +386,22 @@ export class FileTool implements BlockTool {
     return true;
   }
 
-  private applyError(err?: unknown): void {
-    this.errorMessage = err instanceof FileToolError
-      ? uploadErrorMessage(err, (key) => this.api.i18n.t(key), {
+  private applyError(err: unknown, source: { file?: File; url?: string }): void {
+    const own = err instanceof FileToolError ? err : null;
+    const outcome = resolveUploadError({
+      tool: 'file',
+      error: own,
+      cause: err,
+      message: uploadErrorMessage(own ?? { code: 'UPLOAD_FAILED' }, (key) => this.api.i18n.t(key), {
         tooLarge: 'tools.file.errorFileTooLarge',
         generic: 'tools.file.errorUploadFailed',
-      })
-      : null;
-    this.state = 'ERROR';
+      }),
+      source,
+      onUploadError: this.config.onUploadError,
+    });
+
+    this.errorMessage = outcome.kind === 'message' ? outcome.message : null;
+    this.state = outcome.kind === 'message' ? 'ERROR' : 'EMPTY';
     this.renderState();
   }
 

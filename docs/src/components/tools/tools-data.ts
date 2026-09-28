@@ -691,6 +691,13 @@ const editor = new Blok({
           'Max upload size. A number caps every type, in bytes. An object caps each MIME type, with `\'*\'` as the fallback. Pass Infinity for unlimited.',
       },
       {
+        option: 'onUploadError',
+        type: 'UploadErrorHandler',
+        default: 'undefined',
+        description:
+          'Called when an upload fails. It receives `{ code, tool, message, file?, url?, size?, maxSize?, cause }`.\n\n- Return nothing: the block shows its own message.\n- Return a string: the block shows it instead.\n- Return `false`: the block goes back to its empty state with no error, so you can show a toast.\n\nA rejection from your own uploader arrives as `UPLOAD_FAILED`. The original error is in `cause`.',
+      },
+      {
         option: 'sources',
         type: "'upload' | 'url' | 'both'",
         default: "'both'",
@@ -999,6 +1006,13 @@ const editor = new Blok({
           'Max upload size. A number caps every type, in bytes. An object caps each MIME type, and `\'*\'` is the fallback. Pass Infinity for unlimited.',
       },
       {
+        option: 'onUploadError',
+        type: 'UploadErrorHandler',
+        default: 'undefined',
+        description:
+          'Called when an upload fails. It receives `{ code, tool, message, file?, url?, size?, maxSize?, cause }`.\n\n- Return nothing: the block shows its own message.\n- Return a string: the block shows it instead.\n- Return `false`: the block goes back to its empty state with no error, so you can show a toast.\n\nA rejection from your own uploader arrives as `UPLOAD_FAILED`. The original error is in `cause`.',
+      },
+      {
         option: 'captionPlaceholder',
         type: 'string',
         default: '"Write a caption…"',
@@ -1076,6 +1090,13 @@ const editor = new Blok({
         default: '30 MiB',
         description:
           'Max upload size. A number caps every type (bytes). An object caps each MIME type, with `\'*\'` as the fallback.',
+      },
+      {
+        option: 'onUploadError',
+        type: 'UploadErrorHandler',
+        default: 'undefined',
+        description:
+          'Called when an upload fails. It receives `{ code, tool, message, file?, url?, size?, maxSize?, cause }`.\n\n- Return nothing: the block shows its own message.\n- Return a string: the block shows it instead.\n- Return `false`: the block goes back to its empty state with no error, so you can show a toast.\n\nA rejection from your own uploader arrives as `UPLOAD_FAILED`. The original error is in `cause`.',
       },
       {
         option: 'sources',
@@ -1167,6 +1188,13 @@ const editor = new Blok({
         default: '100 MiB',
         description:
           'Max upload size. A number caps every type, in bytes. An object caps each MIME type, with `\'*\'` as the fallback.',
+      },
+      {
+        option: 'onUploadError',
+        type: 'UploadErrorHandler',
+        default: 'undefined',
+        description:
+          'Called when an upload fails. It receives `{ code, tool, message, file?, url?, size?, maxSize?, cause }`.\n\n- Return nothing: the block shows its own message.\n- Return a string: the block shows it instead.\n- Return `false`: the block goes back to its empty state with no error, so you can show a toast.\n\nA rejection from your own uploader arrives as `UPLOAD_FAILED`. The original error is in `cause`.',
       },
       {
         option: 'sources',

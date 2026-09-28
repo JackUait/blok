@@ -37,6 +37,7 @@ import {
 import { DEFAULT_RELOAD_ATTEMPTS, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
+import { resolveUploadError } from '../../components/utils/media-upload-error';
 import { pickDisplayMaxSize } from '../../components/utils/max-size';
 import { renderErrorState } from './error-state';
 import { ImageError } from './errors';
@@ -292,7 +293,7 @@ export class ImageTool implements BlockTool {
 
       return;
     }
-    this.applyError(err);
+    this.applyError(err, { file: source.file });
     if (this.lastSource !== source || this.data.fileName !== source.file.name) return;
     this.data = { ...this.data, fileName: before };
     this.block.dispatchChange({ derived: true, from: ['fileName'] });
@@ -424,7 +425,7 @@ export class ImageTool implements BlockTool {
 
       return;
     }
-    this.applyError(err);
+    this.applyError(err, { url: source.url });
     if (this.lastSource !== source || this.data.url !== source.url) return;
     this.data = { ...this.data, url: before };
     this.block.dispatchChange({ derived: true, from: ['url'] });
@@ -547,14 +548,22 @@ export class ImageTool implements BlockTool {
     this.renderState();
   }
 
-  private applyError(err: unknown): void {
-    this.state = 'ERROR';
-    this.errorMessage = err instanceof ImageError
-      ? uploadErrorMessage(err, (key) => this.api.i18n.t(key), {
+  private applyError(err: unknown, source: { file?: File; url?: string }): void {
+    const own = err instanceof ImageError ? err : null;
+    const outcome = resolveUploadError({
+      tool: 'image',
+      error: own,
+      cause: err,
+      message: uploadErrorMessage(own ?? { code: 'UPLOAD_FAILED' }, (key) => this.api.i18n.t(key), {
         tooLarge: 'tools.image.errorFileTooLarge',
         generic: 'tools.image.errorUploadFailed',
-      })
-      : this.api.i18n.t('tools.image.errorUploadFailed');
+      }),
+      source,
+      onUploadError: this.config.onUploadError,
+    });
+
+    this.state = outcome.kind === 'message' ? 'ERROR' : 'EMPTY';
+    this.errorMessage = outcome.kind === 'message' ? outcome.message : null;
     this.brokenImage = false;
     this.retrying = false;
     this.renderState();

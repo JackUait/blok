@@ -2191,6 +2191,9 @@
           "maxSize": {
             "description": "Max upload size. A number caps every type, in bytes. An object caps each MIME type, with `'*'` as the fallback. Pass Infinity for unlimited."
           },
+          "onUploadError": {
+            "description": "Called when an upload fails. It receives `{ code, tool, message, file?, url?, size?, maxSize?, cause }`.\n\n- Return nothing: the block shows its own message.\n- Return a string: the block shows it instead.\n- Return `false`: the block goes back to its empty state with no error, so you can show a toast.\n\nA rejection from your own uploader arrives as `UPLOAD_FAILED`. The original error is in `cause`."
+          },
           "sources": {
             "description": "Restrict how an image may be added: file upload only, URL only, or both."
           },
@@ -2252,6 +2255,9 @@
           "maxSize": {
             "description": "Max upload size. A number caps every type, in bytes. An object caps each MIME type, and `'*'` is the fallback. Pass Infinity for unlimited."
           },
+          "onUploadError": {
+            "description": "Called when an upload fails. It receives `{ code, tool, message, file?, url?, size?, maxSize?, cause }`.\n\n- Return nothing: the block shows its own message.\n- Return a string: the block shows it instead.\n- Return `false`: the block goes back to its empty state with no error, so you can show a toast.\n\nA rejection from your own uploader arrives as `UPLOAD_FAILED`. The original error is in `cause`."
+          },
           "captionPlaceholder": {
             "description": "Placeholder text shown in the caption field. Defaults to the localized `tools.file.captionPlaceholder` string."
           }
@@ -2268,6 +2274,9 @@
           },
           "maxSize": {
             "description": "Max upload size. A number caps every type (bytes). An object caps each MIME type, with `'*'` as the fallback."
+          },
+          "onUploadError": {
+            "description": "Called when an upload fails. It receives `{ code, tool, message, file?, url?, size?, maxSize?, cause }`.\n\n- Return nothing: the block shows its own message.\n- Return a string: the block shows it instead.\n- Return `false`: the block goes back to its empty state with no error, so you can show a toast.\n\nA rejection from your own uploader arrives as `UPLOAD_FAILED`. The original error is in `cause`."
           },
           "sources": {
             "description": "Restrict how the media may be added: file upload only, URL only, or both."
@@ -2288,6 +2297,9 @@
           },
           "maxSize": {
             "description": "Max upload size. A number caps every type, in bytes. An object caps each MIME type, with `'*'` as the fallback."
+          },
+          "onUploadError": {
+            "description": "Called when an upload fails. It receives `{ code, tool, message, file?, url?, size?, maxSize?, cause }`.\n\n- Return nothing: the block shows its own message.\n- Return a string: the block shows it instead.\n- Return `false`: the block goes back to its empty state with no error, so you can show a toast.\n\nA rejection from your own uploader arrives as `UPLOAD_FAILED`. The original error is in `cause`."
           },
           "sources": {
             "description": "Restrict how the media may be added: file upload only, URL only, or both."

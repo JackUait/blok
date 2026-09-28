@@ -76,7 +76,8 @@ describe('image alt popover mutants', () => {
       const { textarea, description } = open();
 
       expect(description.textContent).toBe('i18n:tools.image.altDescription');
-      expect(textarea.placeholder).toBe('i18n:tools.image.altPlaceholder');
+      expect(textarea.placeholder).toBe('i18n:tools.image.altExample');
+      expect(textarea.getAttribute('aria-label')).toBe('i18n:tools.image.altPlaceholder');
     });
 
     it('names the popover and its field for the stylesheet', () => {

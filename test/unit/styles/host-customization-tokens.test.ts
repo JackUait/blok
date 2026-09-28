@@ -369,7 +369,8 @@ describe('Host customization tokens (public --blok-* contract)', () => {
     it('drives the image and file skeleton/placeholder surfaces through --blok-bg-tertiary', () => {
       const consumers = [...css.matchAll(/background:\s*var\(--blok-bg-tertiary\)/g)];
 
-      expect(consumers.length).toBeGreaterThanOrEqual(8);
+      // 4 file-tool skeleton rules. The image Alt chip's four bg-tertiary states left with the chip.
+      expect(consumers.length).toBeGreaterThanOrEqual(4);
     });
   });
 

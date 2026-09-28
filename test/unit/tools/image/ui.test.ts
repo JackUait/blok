@@ -6,7 +6,7 @@ vi.mock('../../../../src/components/utils/tooltip', () => ({
   show: vi.fn(),
 }));
 
-import { renderImage, renderCaption, renderCaptionRow, openLightbox } from '../../../../src/tools/image/ui';
+import { renderImage, renderCaption, renderCaptionRow, renderAltPill, openLightbox } from '../../../../src/tools/image/ui';
 import * as tooltip from '../../../../src/components/utils/tooltip';
 import { simulateKeydown, simulateMousedown } from '../../../helpers/simulate';
 
@@ -168,36 +168,82 @@ describe('renderCaptionRow', () => {
   const i18n = { t: (k: string) => EN_MAP[k] ?? k, has: (k: string) => k in EN_MAP };
 
   it('wraps caption with class blok-image-caption-row and contains the caption element', () => {
-    const row = renderCaptionRow({ caption: baseCaption, onAlt: () => undefined, i18n });
+    const row = renderCaptionRow({ caption: baseCaption, i18n });
     expect(row.classList.contains('blok-image-caption-row')).toBe(true);
     expect(row.querySelector('.blok-image-caption')).not.toBeNull();
   });
 
-  it('renders alt button with text label "Alt" when onAlt is provided', () => {
-    const row = renderCaptionRow({ caption: baseCaption, onAlt: () => undefined, i18n });
-    const btn = row.querySelector<HTMLButtonElement>('[data-action="alt-edit"]');
-    if (!btn) throw new Error('alt button missing');
-    expect(btn.textContent).toBe('Alt');
-    expect(btn.tagName).toBe('BUTTON');
-  });
+  it('renders no alt button — alt lives on the image as a pill', () => {
+    const row = renderCaptionRow({ caption: baseCaption, i18n });
 
-  it('omits alt button when onAlt is not provided (readOnly)', () => {
-    const row = renderCaptionRow({ caption: { ...baseCaption, readOnly: true }, i18n });
     expect(row.querySelector('[data-action="alt-edit"]')).toBeNull();
   });
+});
 
-  it('clicking the alt button invokes onAlt', () => {
-    let calls = 0;
-    const row = renderCaptionRow({ caption: baseCaption, onAlt: () => { calls += 1; }, i18n });
-    row.querySelector<HTMLButtonElement>('[data-action="alt-edit"]')?.click();
-    expect(calls).toBe(1);
+describe('renderAltPill', () => {
+  const noopFn = (): void => undefined;
+
+  afterEach(() => vi.clearAllMocks());
+
+  it('reads "Add alt text" with a help mark when alt is missing', () => {
+    const pill = renderAltPill({ onOpen: noopFn, isEditorOpen: () => false });
+
+    expect(pill.getAttribute('data-action')).toBe('alt-edit');
+    expect(pill.getAttribute('data-state')).toBe('missing');
+    expect(pill.getAttribute('aria-pressed')).toBe('false');
+    expect(pill.getAttribute('aria-label')).toBe('Edit alt text');
+    expect(pill.textContent).toContain('Add alt text');
+    expect(pill.querySelector('.blok-image-alt-pill__help')).not.toBeNull();
   });
 
-  it('alt button reflects hasAlt via aria-pressed so styling can show current state', () => {
-    const onRow = renderCaptionRow({ caption: baseCaption, onAlt: () => undefined, hasAlt: true, i18n });
-    const offRow = renderCaptionRow({ caption: baseCaption, onAlt: () => undefined, hasAlt: false, i18n });
-    expect(onRow.querySelector('[data-action="alt-edit"]')?.getAttribute('aria-pressed')).toBe('true');
-    expect(offRow.querySelector('[data-action="alt-edit"]')?.getAttribute('aria-pressed')).toBe('false');
+  it('shows "Alt" and the start of the text when alt is set, with no help mark', () => {
+    const pill = renderAltPill({ alt: 'Pink yarn mascot', onOpen: noopFn, isEditorOpen: () => false });
+
+    expect(pill.getAttribute('data-state')).toBe('set');
+    expect(pill.getAttribute('aria-pressed')).toBe('true');
+    expect(pill.textContent).toContain('Alt');
+    expect(pill.textContent).toContain('Pink yarn mascot');
+    expect(pill.querySelector('.blok-image-alt-pill__help')).toBeNull();
+    expect(pill.querySelector('.blok-image-alt-pill__mark svg')).not.toBeNull();
+  });
+
+  it('opens the editor on click without bubbling to the block', () => {
+    const onOpen = vi.fn();
+    const parent = document.createElement('div');
+    const parentClick = vi.fn();
+    parent.addEventListener('click', parentClick);
+    const pill = renderAltPill({ onOpen, isEditorOpen: () => false });
+    parent.appendChild(pill);
+    pill.click();
+
+    expect(onOpen).toHaveBeenCalledOnce();
+    expect(parentClick).not.toHaveBeenCalled();
+  });
+
+  it('shows the explaining hint on hover and on focus', () => {
+    const pill = renderAltPill({ onOpen: noopFn, isEditorOpen: () => false });
+    pill.dispatchEvent(new MouseEvent('mouseenter'));
+    pill.dispatchEvent(new FocusEvent('focus'));
+
+    expect(tooltip.show).toHaveBeenCalledTimes(2);
+    const content = vi.mocked(tooltip.show).mock.calls[0][1];
+
+    expect(content instanceof HTMLElement ? content.textContent : content).toContain('What is alt text?');
+  });
+
+  it('does not show the hint while the alt editor is open', () => {
+    const pill = renderAltPill({ onOpen: noopFn, isEditorOpen: () => true });
+    pill.dispatchEvent(new MouseEvent('mouseenter'));
+    pill.dispatchEvent(new FocusEvent('focus'));
+
+    expect(tooltip.show).not.toHaveBeenCalled();
+  });
+
+  it('hides the hint when the pointer leaves', () => {
+    const pill = renderAltPill({ onOpen: noopFn, isEditorOpen: () => false });
+    pill.dispatchEvent(new MouseEvent('mouseleave'));
+
+    expect(tooltip.hide).toHaveBeenCalled();
   });
 });
 
@@ -701,17 +747,6 @@ describe('renderOverlay', () => {
 describe('English fallback when i18n is omitted', () => {
   afterEach(() => {
     document.querySelectorAll('[role="dialog"][aria-modal="true"]').forEach((el) => el.remove());
-  });
-
-  it('caption row alt button falls back to "Alt" and aria-label to "Edit alt text"', () => {
-    const row = renderCaptionRow({
-      caption: { value: '', placeholder: 'p', readOnly: false },
-      onAlt: () => undefined,
-    });
-    const btn = row.querySelector<HTMLButtonElement>('[data-action="alt-edit"]');
-    if (!btn) throw new Error('alt button missing');
-    expect(btn.textContent).toBe('Alt');
-    expect(btn.getAttribute('aria-label')).toBe('Edit alt text');
   });
 
   it('lightbox dialog aria-label falls back to "Image preview"', () => {

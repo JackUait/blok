@@ -50,15 +50,15 @@ export function openAltPopover(opts: OpenAltPopoverOptions): () => void {
   description.id = `blok-image-alt-popover-description-${descriptionIdSeq.current}`;
   description.className = 'blok-image-alt-popover__description';
   description.textContent = tr(opts.i18n, 'tools.image.altDescription');
-  popover.appendChild(description);
 
   const textarea = document.createElement('textarea');
   textarea.className = 'blok-image-alt-popover__input';
   textarea.setAttribute('data-blok-field', 'text');
   textarea.rows = 2;
   textarea.value = opts.value;
-  textarea.placeholder = tr(opts.i18n, 'tools.image.altPlaceholder');
-  popover.appendChild(textarea);
+  textarea.placeholder = tr(opts.i18n, 'tools.image.altExample');
+  textarea.setAttribute('aria-label', tr(opts.i18n, 'tools.image.altPlaceholder'));
+  popover.append(textarea, description);
 
   const state = { detached: false };
 

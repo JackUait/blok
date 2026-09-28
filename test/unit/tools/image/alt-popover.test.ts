@@ -33,6 +33,14 @@ describe('openAltPopover', () => {
       'Describe this image for people who can’t see it.'
     );
     const textarea = popover.querySelector<HTMLTextAreaElement>('textarea');
-    expect(textarea?.placeholder).toBe('Alt text');
+    expect(textarea?.placeholder).toBe('A golden retriever catching a frisbee');
+    expect(textarea?.getAttribute('aria-label')).toBe('Alt text');
+  });
+
+  it('puts the field first and the one-line note under it', () => {
+    detach = openAltPopover({ anchor, value: '', onSave: vi.fn(), onCancel: vi.fn() });
+    const popover = document.querySelector('[data-role="image-alt-popover"]');
+
+    expect(Array.from(popover?.children ?? []).map((c) => c.tagName)).toEqual(['TEXTAREA', 'P']);
   });
 });

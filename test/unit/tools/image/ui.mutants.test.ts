@@ -20,7 +20,7 @@ import {
   renderOverlay,
   updateOverlayTier,
 } from '../../../../src/tools/image/ui';
-import type { CaptionRowOptions, LightboxOptions, OverlayOptions } from '../../../../src/tools/image/ui';
+import type { LightboxOptions, OverlayOptions } from '../../../../src/tools/image/ui';
 import { downloadImage } from '../../../../src/tools/image/download';
 import * as tooltip from '../../../../src/components/utils/tooltip';
 import { simulateClick, simulateKeydown, simulateMousedown } from '../../../helpers/simulate';
@@ -464,71 +464,10 @@ describe('renderCaption', () => {
 });
 
 describe('renderCaptionRow', () => {
-  it('omits the alt button when the host wires no alt handler', () => {
+  it('never renders an alt button — alt lives on the image as a pill', () => {
     const row = renderCaptionRow({ caption: { value: '', placeholder: 'p', readOnly: false } });
 
     expect(row.querySelector('[data-action="alt-edit"]')).toBeNull();
-  });
-
-  it('labels the alt button and marks it pressed when alt text exists', () => {
-    const row = renderCaptionRow({
-      caption: { value: '', placeholder: 'p', readOnly: false },
-      onAlt: vi.fn(),
-      hasAlt: true,
-    });
-    const btn = action(row, 'alt-edit');
-
-    expect(btn.type).toBe('button');
-    expect(btn.className).toBe('blok-image-caption-row__alt');
-    expect(btn.getAttribute('aria-label')).toBe('Edit alt text');
-    expect(btn.getAttribute('title')).toBe('Edit alt text');
-    expect(btn.getAttribute('aria-pressed')).toBe('true');
-    expect(btn.textContent).toBe('Alt');
-  });
-
-  it('marks the alt button unpressed when the image has no alt text', () => {
-    const row = renderCaptionRow({
-      caption: { value: '', placeholder: 'p', readOnly: false },
-      onAlt: vi.fn(),
-    });
-
-    expect(action(row, 'alt-edit').getAttribute('aria-pressed')).toBe('false');
-  });
-
-  it('keeps the alt click inside the row so the block below does not also react', () => {
-    const host = document.createElement('div');
-    const outer = vi.fn();
-    const row = renderCaptionRow({
-      caption: { value: '', placeholder: 'p', readOnly: false },
-      onAlt: vi.fn(),
-    });
-
-    host.appendChild(row);
-    host.addEventListener('click', outer);
-    action(row, 'alt-edit').click();
-
-    expect(outer).not.toHaveBeenCalled();
-  });
-
-  it('invokes the alt handler on click', () => {
-    const onAlt = vi.fn();
-    const row = renderCaptionRow({ caption: { value: '', placeholder: 'p', readOnly: false }, onAlt });
-
-    action(row, 'alt-edit').click();
-
-    expect(onAlt).toHaveBeenCalledTimes(1);
-  });
-
-  it('survives a host that clears its alt handler after render', () => {
-    const opts: CaptionRowOptions = {
-      caption: { value: '', placeholder: 'p', readOnly: false },
-      onAlt: vi.fn(),
-    };
-    const row = renderCaptionRow(opts);
-
-    opts.onAlt = undefined;
-
-    expect(() => action(row, 'alt-edit').click()).not.toThrow();
   });
 });
 

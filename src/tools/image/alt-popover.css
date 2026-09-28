@@ -15,11 +15,13 @@
   gap: var(--blok-space-2-5);
 }
 
+/* A quiet note under the field, not a heading. */
 .blok-image-alt-popover__description {
-  margin: 0;
-  font-size: 13px;
+  /* Pulls the note up against the field; the popover's grid gap would leave 10px. */
+  margin: calc(-1 * var(--blok-space-1)) var(--blok-space-0-5) 0;
+  font-size: 11px;
   line-height: 1.4;
-  color: var(--blok-text-secondary, #707684);
+  color: var(--blok-text-tertiary, #9b9a97);
 }
 
 /* The input's look comes from [data-blok-field] in src/styles/field.css. */

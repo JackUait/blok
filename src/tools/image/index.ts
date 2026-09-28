@@ -48,6 +48,7 @@ import { widthForAspectChange } from './crop-math';
 import {
   applyAutoFull,
   openLightbox,
+  renderAltPill,
   renderCaptionRow,
   renderImage,
   renderOverlay,
@@ -1022,19 +1023,24 @@ export class ImageTool implements BlockTool {
       });
 
       this.observeOverlayWidth(figure, overlay);
+
+      // Must follow the toolbar: the compact-tier rule hides it with `.blok-image-toolbar ~`.
+      figure.appendChild(renderAltPill({
+        alt: this.data.alt,
+        onOpen: () => this.promptAlt(),
+        isEditorOpen: () => this.altPopoverDetach !== null,
+        i18n: this.api.i18n,
+      }));
     }
 
     const placeholder = this.config.captionPlaceholder
       ?? tr(this.api.i18n, 'tools.image.captionPlaceholder');
-    const captionVisible = this.data.captionVisible !== false;
     const captionRow = renderCaptionRow({
       caption: {
         value: this.data.caption ?? '',
         placeholder,
         readOnly: this.readOnly,
       },
-      onAlt: this.readOnly || !captionVisible ? undefined : () => this.promptAlt(),
-      hasAlt: Boolean(this.data.alt),
       i18n: this.api.i18n,
     });
     const captionEl = captionRow.querySelector<HTMLElement>('.blok-image-caption');
@@ -1267,7 +1273,7 @@ export class ImageTool implements BlockTool {
   private promptAlt(): void {
     if (this.altPopoverDetach || !this.root) return;
     const anchor = this.root.querySelector<HTMLElement>(
-      '.blok-image-caption-row [data-action="alt-edit"]'
+      '.blok-image-inner > [data-action="alt-edit"]'
     );
     if (!anchor) return;
     this.closeAlignmentPopover();

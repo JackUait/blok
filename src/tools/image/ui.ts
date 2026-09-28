@@ -6,10 +6,11 @@ import { readVariants } from '../../shared/read-variants';
  * kept local so the i18n regression scan finds no stray hardcoded copy.
  */
 type ImageAlign = 'left' | 'center' | 'right';
-import { onHover as tooltipOnHover, hide as tooltipHide } from '../../components/utils/tooltip';
+import { onHover as tooltipOnHover, hide as tooltipHide, show as tooltipShow } from '../../components/utils/tooltip';
 import type { I18nInstance } from '../../components/utils/tools';
 import {
   IconCaption,
+  IconCheck,
   IconChevronLeft,
   IconChevronRight,
   IconCollapseFullscreen,
@@ -169,8 +170,6 @@ export function renderCaption(opts: CaptionOptions): HTMLElement {
 
 export interface CaptionRowOptions {
   caption: CaptionOptions;
-  onAlt?: () => void;
-  hasAlt?: boolean;
   i18n?: I18nInstance;
 }
 
@@ -179,24 +178,75 @@ export function renderCaptionRow(opts: CaptionRowOptions): HTMLElement {
   row.className = 'blok-image-caption-row';
   row.appendChild(renderCaption(opts.caption));
 
-  if (opts.onAlt) {
-    const altLabel = tr(opts.i18n, 'tools.image.altEdit');
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'blok-image-caption-row__alt';
-    btn.setAttribute('data-action', 'alt-edit');
-    btn.setAttribute('aria-label', altLabel);
-    btn.setAttribute('title', altLabel);
-    btn.setAttribute('aria-pressed', opts.hasAlt ? 'true' : 'false');
-    btn.textContent = tr(opts.i18n, 'tools.image.altButton');
-    btn.addEventListener('click', (event) => {
-      event.stopPropagation();
-      opts.onAlt?.();
-    });
-    row.appendChild(btn);
+  return row;
+}
+
+export interface AltPillOptions {
+  alt?: string;
+  onOpen(): void;
+  isEditorOpen(): boolean;
+  i18n?: I18nInstance;
+}
+
+const ALT_HINT_DELAY_MS = 350;
+
+export function renderAltPill(opts: AltPillOptions): HTMLButtonElement {
+  const hasAlt = Boolean(opts.alt);
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'blok-image-alt-pill';
+  btn.setAttribute('data-action', 'alt-edit');
+  btn.setAttribute('data-state', hasAlt ? 'set' : 'missing');
+  btn.setAttribute('aria-pressed', hasAlt ? 'true' : 'false');
+  btn.setAttribute('aria-label', tr(opts.i18n, 'tools.image.altEdit'));
+
+  const mark = document.createElement('span');
+  mark.className = 'blok-image-alt-pill__mark';
+  mark.setAttribute('aria-hidden', 'true');
+  if (hasAlt) mark.innerHTML = IconCheck;
+  btn.appendChild(mark);
+
+  const text = document.createElement('span');
+  text.className = 'blok-image-alt-pill__text';
+  if (hasAlt) {
+    const label = document.createElement('b');
+    label.textContent = tr(opts.i18n, 'tools.image.altButton');
+    text.append(label, opts.alt ?? '');
+  } else {
+    text.textContent = tr(opts.i18n, 'tools.image.altAdd');
+  }
+  btn.appendChild(text);
+
+  if (!hasAlt) {
+    const help = document.createElement('span');
+    help.className = 'blok-image-alt-pill__help';
+    help.setAttribute('aria-hidden', 'true');
+    help.textContent = '?';
+    btn.appendChild(help);
   }
 
-  return row;
+  const hint = document.createElement('div');
+  const title = document.createElement('strong');
+  title.textContent = tr(opts.i18n, 'tools.image.altHintTitle');
+  hint.append(title, document.createElement('br'), tr(opts.i18n, 'tools.image.altHintBody'));
+
+  // Bound by hand, not via tooltipOnHover: its binding cannot be vetoed while the alt editor is open.
+  const showHint = (): void => {
+    if (opts.isEditorOpen()) return;
+    tooltipShow(btn, hint, { delay: ALT_HINT_DELAY_MS });
+  };
+  btn.addEventListener('mouseenter', showHint);
+  btn.addEventListener('focus', showHint);
+  btn.addEventListener('mouseleave', () => tooltipHide());
+  btn.addEventListener('blur', () => tooltipHide());
+
+  btn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    tooltipHide();
+    opts.onOpen();
+  });
+
+  return btn;
 }
 
 export interface LightboxNavigationItem {

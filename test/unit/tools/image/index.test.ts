@@ -808,12 +808,12 @@ describe('ImageTool — alt button next to caption', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
 
-  it('renders alt-edit button inside the caption row when not readOnly', () => {
+  it('puts the alt pill on the figure, not in the caption row', () => {
     const tool = new ImageTool(createOptions({ url: 'u' }));
     const root = tool.render();
-    const btn = root.querySelector<HTMLButtonElement>('.blok-image-caption-row [data-action="alt-edit"]');
-    expect(btn).not.toBeNull();
-    expect(btn?.textContent).toBe('Alt');
+
+    expect(root.querySelector('.blok-image-inner > [data-action="alt-edit"]')).not.toBeNull();
+    expect(root.querySelector('.blok-image-caption-row [data-action="alt-edit"]')).toBeNull();
   });
 
   it('does not render alt-edit button in readOnly mode', () => {
@@ -935,18 +935,19 @@ describe('ImageTool — caption toggle', () => {
     expect(tool.save().captionVisible).toBe(true);
   });
 
-  it('hides the alt-edit button when the caption is hidden', () => {
+  it('keeps the alt pill when the caption is hidden', () => {
     const tool = new ImageTool(createOptions({ url: 'u', captionVisible: false }));
     const root = tool.render();
-    expect(root.querySelector('[data-action="alt-edit"]')).toBeNull();
+
+    expect(root.querySelector('.blok-image-inner > [data-action="alt-edit"]')).not.toBeNull();
   });
 
-  it('restores the alt-edit button after toggling the caption back on', () => {
-    const tool = new ImageTool(createOptions({ url: 'u', captionVisible: false }));
+  it('keeps the alt pill after toggling the caption', () => {
+    const tool = new ImageTool(createOptions({ url: 'u' }));
     const root = tool.render();
-    expect(root.querySelector('[data-action="alt-edit"]')).toBeNull();
     root.querySelector<HTMLButtonElement>('[data-action="caption-toggle"]')?.click();
-    expect(root.querySelector('[data-action="alt-edit"]')).not.toBeNull();
+
+    expect(root.querySelector('.blok-image-inner > [data-action="alt-edit"]')).not.toBeNull();
   });
 });
 

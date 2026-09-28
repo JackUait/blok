@@ -168,11 +168,6 @@ const EXEMPT_FOCUS_SELECTORS: FocusExemption[] = [
     reason: 'Text input: the invalid-value border belongs to the field, not to keyboard navigation.',
   },
   {
-    file: 'src/styles/image.css',
-    match: '.blok-image-caption:focus',
-    reason: 'The caption is a contenteditable; typing in it reveals the alt-text button.',
-  },
-  {
     file: 'src/components/utils/placeholder.ts',
     match: ':focus:before:',
     reason: 'Renders placeholder TEXT inside a contenteditable — content, not a focus indicator.',

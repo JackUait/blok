@@ -8,6 +8,9 @@ export const DEFAULT_CAPTION_PLACEHOLDER = 'Write a caption…';
 export const MIN_WIDTH_PERCENT = 10;
 export const MAX_WIDTH_PERCENT = 100;
 
+export const IMAGE_SNAP_POINTS = [25, 50, 75, 100] as const;
+export const SNAP_TOLERANCE_PERCENT = 2;
+
 // Hard pixel floor for images resized inside a table cell. The global 10% floor
 // is a percent of the cell, so a narrow column could shrink an image to an
 // unusable sliver; this keeps in-cell images at least a legible thumbnail width.

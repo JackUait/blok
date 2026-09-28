@@ -613,3 +613,60 @@ describe('alignmentFraction', () => {
   });
 });
 
+
+describe('computeWidthResult snapping', () => {
+  const base = { edge: 'right' as const, containerWidth: 1000, startWidth: 600, startX: 0, alignFrac: 0 };
+
+  it('without snapPoints the result is unchanged (video and embed path)', () => {
+    expect(computeWidthResult({ ...base, currentX: -115 })).toEqual({ percent: 49, clampedToMin: false });
+  });
+
+  it('snaps to a point within 2 percent', () => {
+    expect(computeWidthResult({ ...base, currentX: -115, snapPoints: [25, 50, 75, 100] }).percent).toBe(50);
+    expect(computeWidthResult({ ...base, currentX: -70, snapPoints: [25, 50, 75, 100] }).percent).toBe(53);
+  });
+
+  it('snaps at exactly 2 percent away, not at 3', () => {
+    expect(computeWidthResult({ ...base, currentX: -80, snapPoints: [50] }).percent).toBe(50);
+    expect(computeWidthResult({ ...base, currentX: -70, snapPoints: [50] }).percent).toBe(53);
+  });
+
+  it('never snaps below a pixel floor', () => {
+    const r = computeWidthResult({ ...base, currentX: -340, minWidthPx: 260, snapPoints: [25] });
+
+    expect(r.percent).toBe(26);
+    expect(r.clampedToMin).toBe(false);
+  });
+});
+
+describe('attachResizeHandle snapping', () => {
+  it('previews the snapped width', () => {
+    const parent = document.createElement('div');
+    const figure = document.createElement('div');
+    parent.appendChild(figure);
+    const rect = (width: number): DOMRect => ({ left: 0, right: width, width, top: 0, bottom: 100, height: 100, x: 0, y: 0, toJSON: () => ({}) });
+    Object.defineProperty(parent, 'getBoundingClientRect', { value: () => rect(1000) });
+    Object.defineProperty(figure, 'getBoundingClientRect', { value: () => rect(600) });
+    const handle = document.createElement('div');
+    figure.appendChild(handle);
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+    const updates: number[] = [];
+    const detach = attachResizeHandle({
+      handle,
+      figure,
+      container: parent,
+      edge: 'right',
+      alignment: 'left',
+      snapPoints: [25, 50, 75, 100],
+      onPreview: (p) => updates.push(p),
+      onCommit: () => undefined,
+    });
+
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: -80, bubbles: true }));
+
+    expect(updates.at(-1)).toBe(50);
+    detach();
+  });
+});

@@ -1,5 +1,5 @@
 import type { ImageAlignment } from '../../../types/tools/image';
-import { MAX_WIDTH_PERCENT, MIN_WIDTH_PERCENT } from './constants';
+import { MAX_WIDTH_PERCENT, MIN_WIDTH_PERCENT, SNAP_TOLERANCE_PERCENT } from './constants';
 
 export type ResizeEdge = 'left' | 'right';
 
@@ -27,6 +27,8 @@ export interface ComputeWidthInput {
    * lower clamp instead of the global floor.
    */
   minWidthPx?: number;
+  /** Widths (percent) the drag pulls to within SNAP_TOLERANCE_PERCENT. Omit for no snapping. */
+  snapPoints?: readonly number[];
 }
 
 /**
@@ -72,7 +74,13 @@ export function computeWidthResult(input: ComputeWidthInput): WidthResult {
     : MIN_WIDTH_PERCENT;
   const floor = Math.min(Math.max(minPercent, MIN_WIDTH_PERCENT), MAX_WIDTH_PERCENT);
   const raw = Math.round((nextWidth / input.containerWidth) * 100);
-  return { percent: clampPercent(raw, minPercent), clampedToMin: raw < floor };
+  const snapped = snapTo(raw, input.snapPoints);
+  return { percent: clampPercent(snapped, minPercent), clampedToMin: raw < floor };
+}
+
+function snapTo(value: number, points: readonly number[] | undefined): number {
+  if (!points) return value;
+  return points.find((p) => Math.abs(value - p) <= SNAP_TOLERANCE_PERCENT) ?? value;
 }
 
 export function computeWidthPercent(input: ComputeWidthInput): number {
@@ -99,6 +107,7 @@ export interface AttachResizeHandleOptions {
    * table cell) that are only known once the element is mounted.
    */
   minWidthPx?: number | (() => number | undefined);
+  snapPoints?: readonly number[];
   onPreview(percent: number): void;
   onCommit(percent: number): void;
 }
@@ -243,6 +252,7 @@ export function attachResizeHandle(opts: AttachResizeHandleOptions): () => void 
       currentX: event.clientX,
       alignFrac,
       minWidthPx: state.minWidthPx,
+      snapPoints: opts.snapPoints,
     });
     state.lastPercent = result.percent;
     if (result.clampedToMin) {

@@ -2,6 +2,9 @@ import type { ImageConfig } from '../../../types/tools/image';
 import type { Uploader as AssetUploaderApi } from '../../../types/api/uploader';
 import { resolveMaxSize } from '../../components/utils/max-size';
 import { matchesMime } from '../../components/utils/mime-match';
+import type { ConvertedMedia, ImageFormat, MediaConfig, MediaVariant } from '../../../types/configs/media';
+import { produceImageVariants } from '../../components/media-variants/image-variants';
+import { uploadImageVariants, type VariantRole } from '../../components/media-variants/upload-variants';
 import { compressImage } from './compress';
 import { DEFAULT_MAX_SIZE, DEFAULT_MIME_TYPES } from './constants';
 import { ImageError } from './errors';
@@ -9,6 +12,7 @@ import { ImageError } from './errors';
 export interface UploadResult {
   url: string;
   fileName?: string;
+  variants?: MediaVariant[];
 }
 
 export interface UploadOptions {
@@ -49,10 +53,13 @@ export class Uploader {
    * @param assets - the editor's asset uploader (`api.uploader`). Consulted only
    * when the tool declares no uploader of its own, so a tool-level uploader
    * stays authoritative for its kind.
+   * @param media - reads the editor's `media` config per upload, so a runtime
+   * change applies to the next file
    */
   constructor(
     private readonly config: ImageConfig,
     private readonly assets?: AssetUploaderApi,
+    private readonly media: () => MediaConfig | undefined = () => undefined,
   ) {}
 
   public async handleUrl(raw: string, options: UploadOptions = {}): Promise<UploadResult> {
@@ -79,16 +86,57 @@ export class Uploader {
     // and a hostile image is rejected before it is decoded.
     this.validateFile(file);
 
+    const formats = this.media()?.formats?.image;
+
+    if (formats !== undefined && formats.length > 0) {
+      const produced = await this.convert(file, formats);
+
+      return uploadImageVariants(
+        file,
+        produced,
+        (part, variant, onProgress) => this.uploadOne(part, onProgress, variant),
+        options.onProgress
+      );
+    }
+
     const uploaded = (await compressImage(file, this.config.compress)) ?? file;
 
-    if (this.assets?.isConfigured('image', 'uploadByFile')) {
-      return this.assets.uploadByFile(uploaded, { kind: 'image', tool: 'image', onProgress: options.onProgress });
-    }
-    if (this.config.uploader?.uploadByFile) {
-      return this.config.uploader.uploadByFile(uploaded, { onProgress: options.onProgress });
+    return this.uploadOne(uploaded, options.onProgress);
+  }
+
+  private async convert(file: File, formats: ImageFormat[]): Promise<ConvertedMedia[]> {
+    const custom = this.media()?.convert;
+    const fromHook = custom === undefined
+      ? null
+      // A failing hook must not lose the upload: fall through to the built-in converter.
+      : await custom(file, formats, { kind: 'image' }).catch(() => null);
+
+    if (fromHook !== null) {
+      return fromHook;
     }
 
-    return { url: URL.createObjectURL(uploaded), fileName: uploaded.name };
+    const compress = typeof this.config.compress === 'object' ? this.config.compress : {};
+
+    return produceImageVariants(file, formats, {
+      quality: compress.quality ?? 0.92,
+      maxWidth: compress.maxWidth,
+      maxHeight: compress.maxHeight,
+    });
+  }
+
+  private async uploadOne(
+    file: File,
+    onProgress?: (percent: number) => void,
+    variant?: { mimeType: string; role: VariantRole },
+  ): Promise<UploadResult> {
+    if (this.assets?.isConfigured('image', 'uploadByFile')) {
+      return this.assets.uploadByFile(file, { kind: 'image', tool: 'image', onProgress, ...(variant && { variant }) });
+    }
+    if (this.config.uploader?.uploadByFile) {
+      return this.config.uploader.uploadByFile(file, { onProgress });
+    }
+
+    return { url: URL.createObjectURL(file), fileName: file.name };
   }
 
   private async handleDataUrl(raw: string, options: UploadOptions): Promise<UploadResult> {

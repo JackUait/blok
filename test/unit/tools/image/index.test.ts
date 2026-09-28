@@ -11,6 +11,12 @@ vi.mock('../../../../src/tools/image/gif-to-webm', () => ({
 import { convertGifToWebm } from '../../../../src/tools/image/gif-to-webm';
 const mockConvert = vi.mocked(convertGifToWebm);
 
+vi.mock('../../../../src/components/media-variants/image-variants', () => ({
+  produceImageVariants: vi.fn(async () => []),
+}));
+import { produceImageVariants } from '../../../../src/components/media-variants/image-variants';
+const mockProduce = vi.mocked(produceImageVariants);
+
 const createMockApi = (messages: Record<string, string> = {}): API => ({
   styles: { block: 'blok-block' },
   i18n: {
@@ -2068,5 +2074,86 @@ describe('ImageTool — an upload belongs to the pick that started it', () => {
     tool.onPaste(event);
 
     expect(block.dispatchChange).toHaveBeenLastCalledWith();
+  });
+});
+
+describe('ImageTool — variants', () => {
+  const variants = [
+    { url: 'https://x/a.avif', mimeType: 'image/avif' },
+    { url: 'https://x/a.jpg', mimeType: 'image/jpeg' },
+  ];
+
+  const pasteLink = (tool: ImageTool, url: string): void => {
+    const event = new CustomEvent('paste', { detail: { key: 'image', data: url } }) as PatternPasteEvent;
+
+    Object.defineProperty(event, 'type', { value: 'pattern' });
+    tool.onPaste(event);
+  };
+
+  const pasteFile = (tool: ImageTool, file: File): void => {
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+  };
+
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('saves stored variants and drops malformed ones', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/a.jpg', variants: [
+      variants[0],
+      { url: 'javascript:1', mimeType: 'image/webp' },
+    ] }));
+
+    expect(tool.save().variants).toEqual([variants[0]]);
+  });
+
+  it('omits variants from saved data when there are none', () => {
+    expect('variants' in new ImageTool(createOptions({ url: 'https://x/a.jpg' })).save()).toBe(false);
+  });
+
+  it('drops old variants when the user pastes a link instead', async () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/a.jpg', variants }));
+
+    tool.render();
+    pasteLink(tool, 'https://y/b.png');
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(tool.save().url).toBe('https://y/b.png');
+    expect(tool.save().variants).toBeUndefined();
+  });
+
+  it('stores the variants a finished upload returns', async () => {
+    const uploadByFile = vi.fn(async (file: File) => ({ url: `https://cdn/${file.name}` }));
+    const api = {
+      ...createMockApi(),
+      config: { media: { formats: { image: ['jpeg'] } } },
+    } as unknown as API;
+    const tool = new ImageTool({ ...createOptions({}, { uploader: { uploadByFile } }), api });
+
+    mockProduce.mockResolvedValueOnce([
+      { file: new Blob(['a'], { type: 'image/avif' }), mimeType: 'image/avif' },
+      { file: new Blob(['j'], { type: 'image/jpeg' }), mimeType: 'image/jpeg' },
+    ]);
+    tool.render();
+    pasteFile(tool, new File([new Uint8Array(10)], 'p.png', { type: 'image/png' }));
+    await vi.waitFor(() => expect(tool.save().url).toBe('https://cdn/p.jpg'));
+
+    expect(tool.save().variants).toEqual([
+      { url: 'https://cdn/p.avif', mimeType: 'image/avif' },
+      { url: 'https://cdn/p.jpg', mimeType: 'image/jpeg' },
+    ]);
+  });
+
+  it('clears variants when a plain upload replaces a converted image', async () => {
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:new');
+    const tool = new ImageTool(createOptions({ url: 'https://x/a.jpg', variants }));
+
+    tool.render();
+    pasteFile(tool, new File([new Uint8Array(10)], 'p.png', { type: 'image/png' }));
+    await vi.waitFor(() => expect(tool.save().url).toBe('blob:new'));
+
+    expect(tool.save().variants).toBeUndefined();
   });
 });

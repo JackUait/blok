@@ -56,6 +56,7 @@ import { openCropModal } from './crop-modal';
 import { openAltPopover } from './alt-popover';
 import { probeImageDimensions } from './probe-dimensions';
 import { renderUploadingState, type UploadingStateElement } from './uploading-state';
+import { readVariants } from '../../components/media-variants/read-variants';
 import { Uploader, type UploadResult } from './uploader';
 import { convertGifToWebm } from './gif-to-webm';
 import { downloadImage } from './download';
@@ -99,15 +100,17 @@ export class ImageTool implements BlockTool {
   private converting = false;
   /** Set by `removed()`: this instance is no longer the document's block. */
   private detached = false;
+  /** Put back with the old `url` when an entered link fails. */
+  private variantsBeforeLink: ImageData['variants'];
 
   constructor(options: BlockToolConstructorOptions<ImageData, ImageConfig>) {
     this.api = options.api;
     this.block = options.block;
     this.config = options.config ?? {};
     this.readOnly = options.readOnly;
-    this.data = { ...options.data, url: options.data?.url ?? '' };
+    this.data = { ...options.data, url: options.data?.url ?? '', variants: readVariants(options.data?.variants) };
     this.state = this.data.url ? 'RENDERED' : 'EMPTY';
-    this.uploader = new Uploader(this.config, this.api.uploader);
+    this.uploader = new Uploader(this.config, this.api.uploader, () => this.api.config?.media);
   }
 
   /**
@@ -139,6 +142,7 @@ export class ImageTool implements BlockTool {
     if (this.data.alignment !== undefined) out.alignment = this.data.alignment;
     if (typeof this.data.alt === 'string') out.alt = this.data.alt;
     if (this.data.fileName !== undefined) out.fileName = this.data.fileName;
+    if (this.data.variants !== undefined) out.variants = this.data.variants.map((v) => ({ ...v }));
     if (this.data.size !== undefined) out.size = this.data.size;
     if (this.data.frame !== undefined) out.frame = this.data.frame;
     if (this.data.rounded !== undefined) out.rounded = this.data.rounded;
@@ -383,7 +387,8 @@ export class ImageTool implements BlockTool {
   private writeEnteredUrl(url: string): string {
     const before = this.data.url;
 
-    this.data = { ...this.data, url };
+    this.variantsBeforeLink = this.data.variants;
+    this.data = { ...this.data, url, variants: undefined };
     this.block.dispatchChange();
 
     return before;
@@ -421,13 +426,13 @@ export class ImageTool implements BlockTool {
    */
   private applyUrlError(err: unknown, source: { kind: 'url'; url: string }, before: string): void {
     if (this.detached) {
-      putBackOnRebuiltBlock(this.api, this.block, { url: before }, { url: source.url }, ['url']);
+      putBackOnRebuiltBlock(this.api, this.block, { url: before, variants: this.variantsBeforeLink }, { url: source.url }, ['url']);
 
       return;
     }
     this.applyError(err, { url: source.url });
     if (this.lastSource !== source || this.data.url !== source.url) return;
-    this.data = { ...this.data, url: before };
+    this.data = { ...this.data, url: before, variants: this.variantsBeforeLink };
     this.block.dispatchChange({ derived: true, from: ['url'] });
   }
 
@@ -532,7 +537,8 @@ export class ImageTool implements BlockTool {
   }
 
   private resultDelta(result: UploadResult): Partial<ImageData> {
-    const delta: Partial<ImageData> = { url: result.url };
+    // Always set, so a plain result clears the previous image's variants.
+    const delta: Partial<ImageData> = { url: result.url, variants: result.variants };
 
     if (result.fileName !== undefined) delta.fileName = result.fileName;
 
@@ -540,7 +546,7 @@ export class ImageTool implements BlockTool {
   }
 
   private showResult(result: UploadResult): void {
-    this.data = { ...this.data, url: result.url, fileName: result.fileName ?? this.data.fileName };
+    this.data = { ...this.data, url: result.url, fileName: result.fileName ?? this.data.fileName, variants: result.variants };
     this.state = 'RENDERED';
     this.errorMessage = null;
     this.brokenImage = false;
@@ -1168,7 +1174,7 @@ export class ImageTool implements BlockTool {
 
   private transitionToEmpty(): void {
     const outgoing = this.root?.firstElementChild ?? null;
-    this.data = { ...this.data, url: '' };
+    this.data = { ...this.data, url: '', variants: undefined };
     this.state = 'EMPTY';
     this.errorMessage = null;
     this.brokenImage = false;

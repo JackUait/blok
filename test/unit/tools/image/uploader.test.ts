@@ -4,6 +4,10 @@ vi.mock('../../../../src/tools/image/compress', () => ({
   compressImage: vi.fn(async () => null),
 }));
 
+vi.mock('../../../../src/components/media-variants/image-variants', () => ({
+  produceImageVariants: vi.fn(async () => []),
+}));
+
 import type { AssetKind } from '../../../../types/tools/block-tool';
 import type { UploadContext } from '../../../../types/configs/uploader';
 import {
@@ -14,8 +18,10 @@ import {
 } from '../../../../src/components/utils/asset-uploader';
 import { Uploader } from '../../../../src/tools/image/uploader';
 import { compressImage } from '../../../../src/tools/image/compress';
+import { produceImageVariants } from '../../../../src/components/media-variants/image-variants';
 
 const compressImageMock = vi.mocked(compressImage);
+const produceMock = vi.mocked(produceImageVariants);
 
 describe('Uploader', () => {
   beforeEach(() => {
@@ -389,5 +395,85 @@ describe('editor-level uploader fallback', () => {
     await expect(u.handleFile(new File([new Uint8Array(4)], 'a.png', { type: 'image/png' })))
       .resolves.toMatchObject({ url: 'blob:test' });
     expect(assets.uploadByFile).not.toHaveBeenCalled();
+  });
+
+  describe('handleFile with media formats', () => {
+    const photo = (): File => new File([new Uint8Array(10)], 'photo.jpg', { type: 'image/jpeg' });
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      compressImageMock.mockResolvedValue(null);
+      produceMock.mockResolvedValue([]);
+    });
+
+    it('uploads every rendition and returns them as variants', async () => {
+      produceMock.mockResolvedValueOnce([
+        { file: new Blob(['a'], { type: 'image/avif' }), mimeType: 'image/avif' },
+        { file: new Blob(['j'], { type: 'image/jpeg' }), mimeType: 'image/jpeg' },
+      ]);
+      const uploadByFile = vi.fn(async (file: File) => ({ url: `https://cdn/${file.name}` }));
+      const uploader = new Uploader({ uploader: { uploadByFile } }, undefined, () => ({ formats: { image: ['avif', 'jpeg'] } }));
+
+      const result = await uploader.handleFile(photo());
+
+      expect(result.url).toBe('https://cdn/photo.jpg');
+      expect(result.variants?.map((v) => v.mimeType)).toEqual(['image/avif', 'image/jpeg']);
+      expect(compressImageMock).not.toHaveBeenCalled();
+    });
+
+    it('passes the variant to the editor-level uploader context', async () => {
+      produceMock.mockResolvedValueOnce([{ file: new Blob(['j'], { type: 'image/jpeg' }), mimeType: 'image/jpeg' }]);
+      const seen: UploadContext[] = [];
+      const assets = {
+        isConfigured: (kind: AssetKind) => kind === 'image',
+        uploadByFile: vi.fn(async (_f: File, ctx: UploadContext) => {
+          seen.push(ctx);
+
+          return { url: 'u' };
+        }),
+        uploadByUrl: vi.fn(),
+      };
+      const uploader = new Uploader({}, assets, () => ({ formats: { image: ['jpeg'] } }));
+
+      await uploader.handleFile(photo());
+
+      expect(seen[0]).toMatchObject({ kind: 'image', tool: 'image', variant: { mimeType: 'image/jpeg', role: 'variant' } });
+    });
+
+    it('uses the host convert hook, and the built-in converter when it returns null', async () => {
+      const convert = vi.fn(async (): Promise<Array<{ file: Blob; mimeType: string }> | null> =>
+        [{ file: new Blob(['w'], { type: 'image/webp' }), mimeType: 'image/webp' }]);
+      const uploadByFile = vi.fn(async (file: File) => ({ url: file.name }));
+      const uploader = new Uploader({ uploader: { uploadByFile } }, undefined, () => ({ formats: { image: ['webp'] }, convert }));
+
+      const result = await uploader.handleFile(photo());
+
+      expect(convert).toHaveBeenCalledWith(expect.any(File), ['webp'], expect.objectContaining({ kind: 'image' }));
+      expect(produceMock).not.toHaveBeenCalled();
+      expect(result.variants?.map((v) => v.mimeType)).toEqual(['image/webp', 'image/jpeg']);
+
+      convert.mockResolvedValueOnce(null);
+      await uploader.handleFile(photo());
+      expect(produceMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to the built-in converter when the hook throws', async () => {
+      const convert = vi.fn(async () => {
+        throw new Error('boom');
+      });
+      const uploader = new Uploader({ uploader: { uploadByFile: vi.fn(async () => ({ url: 'u' })) } }, undefined, () => ({ formats: { image: ['jpeg'] }, convert }));
+
+      await expect(uploader.handleFile(photo())).resolves.toMatchObject({ url: 'u' });
+      expect(produceMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the old single-file path when no image formats are set', async () => {
+      const uploadByFile = vi.fn(async () => ({ url: 'u' }));
+      const result = await new Uploader({ uploader: { uploadByFile } }, undefined, () => ({ formats: { video: ['mp4'] } })).handleFile(photo());
+
+      expect(result.variants).toBeUndefined();
+      expect(compressImageMock).toHaveBeenCalledTimes(1);
+      expect(produceMock).not.toHaveBeenCalled();
+    });
   });
 });

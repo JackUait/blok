@@ -135,7 +135,7 @@ for (const [theme, width] of [['light', 1280], ['dark', 1280], ['light', 390]] a
       await expect(textarea).toHaveAttribute('rows', '2');
     });
 
-    test('media "paste a link" bar is the shared text field', async ({ page }) => {
+    test('media "paste a link" bar is the shared text field, in its large size', async ({ page }) => {
       await mount(page, [{ type: 'image', data: {} }], theme);
       const block = page.locator('[data-blok-tool="image"]');
 
@@ -143,8 +143,8 @@ for (const [theme, width] of [['light', 1280], ['dark', 1280], ['light', 390]] a
       const input = block.getByRole('textbox');
 
       await expect(input).toBeVisible();
-      // The bar around the URL input is the field.
-      await expectBlokField(input.locator('xpath=..'), input, 'text');
+      // The bar around the URL input is the field; the Link tab draws it 48px tall.
+      await expectBlokField(input.locator('xpath=..'), input, 'text', { height: 48 });
     });
   });
 }

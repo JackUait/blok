@@ -4605,32 +4605,42 @@ span[data-blok-slash-search] {
   transform: translateX(0);
 }
 
-.blok-media-empty__embed-icon--preview {
-  width: 44px;
+.blok-media-empty__card[data-preview][data-active-tab="embed"] .blok-media-empty__panel {
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--blok-space-4);
+  min-height: 200px;
+  padding: var(--blok-space-5) var(--blok-space-4);
+  border-color: var(--blok-border-subtle);
+  background: var(--blok-bg-primary);
+}
+
+[data-blok-field].blok-media-empty__embed-bar--large {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 440px;
+  min-height: 48px;
+  gap: var(--blok-space-3);
+  padding: var(--blok-space-1-5) var(--blok-space-1-5) var(--blok-space-1-5) var(--blok-space-4);
+}
+
+.blok-media-empty__embed-bar--large .blok-media-empty__embed-host {
   flex-shrink: 0;
+  max-width: 45%;
 }
 
-.blok-media-empty__embed-icon--preview svg {
-  width: 100%;
-  height: auto;
+.blok-media-empty__embed-bar--large .blok-media-empty__embed-input {
+  font-size: 15px;
+  line-height: 24px;
 }
 
-.blok-media-preview--mini {
-  width: 100%;
+.blok-media-empty__embed-bar--large .blok-media-empty__embed-submit {
+  padding: var(--blok-space-2) var(--blok-space-3-5);
+  font-size: 13px;
 }
 
-.blok-media-preview--mini :where(svg *) {
-  vector-effect: non-scaling-stroke;
-  stroke-width: 1;
-  transition-duration: 700ms;
-}
-
-.blok-media-preview--mini :is(.blok-media-preview__ground, .blok-media-preview__drop, .blok-media-preview__crease) {
-  display: none;
-}
-
-.blok-media-preview--mini.is-caught {
-  animation: blok-media-preview-catch 520ms cubic-bezier(0.34, 1.56, 0.64, 1);
+.blok-media-preview.is-caught {
+  animation: blok-media-preview-catch 560ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .blok-media-empty__embed-host {
@@ -4672,7 +4682,7 @@ span[data-blok-slash-search] {
   display: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] .blok-media-empty__embed-host, .blok-media-preview--mini.is-caught {
+[@media (prefers-reduced-motion: reduce)] .blok-media-empty__embed-host, .blok-media-preview.is-caught {
   animation: none;
 }
 

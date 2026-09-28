@@ -397,15 +397,14 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     const fieldIcon = document.createElement('span');
     fieldIcon.className = 'blok-media-empty__embed-icon';
     fieldIcon.setAttribute('aria-hidden', 'true');
-    // The tool's own drawing, pale until the link is valid, then "complete".
-    const mini = opts.preview ? makePreview(opts.preview) : null;
-    if (mini) {
-      mini.classList.add('blok-media-preview--mini');
-      setPreviewProgress(mini, 0);
-      fieldIcon.classList.add('blok-media-empty__embed-icon--preview');
-      fieldIcon.append(mini);
-    } else {
-      fieldIcon.innerHTML = IconLink;
+    fieldIcon.innerHTML = IconLink;
+
+    // The same drawing as the Upload tab stays on stage, in upload mode: pale
+    // until the link is valid, then it plays its "complete" moment.
+    const stage = opts.preview ? makePreview(opts.preview) : null;
+    if (stage) {
+      setPreviewProgress(stage, 0);
+      bar.classList.add('blok-media-empty__embed-bar--large');
     }
 
     const readBack = document.createElement('span');
@@ -456,7 +455,7 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
       const valid = isValid(urlInput.value);
       bar.setAttribute('data-valid', valid ? 'true' : 'false');
       submit.setAttribute('aria-disabled', valid ? 'false' : 'true');
-      if (mini) setPreviewProgress(mini, valid ? 100 : 0);
+      if (stage) setPreviewProgress(stage, valid ? 100 : 0);
       const link = valid ? readLink(urlInput.value, types) : null;
       readBack.hidden = link === null;
       domainEl.textContent = link?.domain ?? '';
@@ -486,10 +485,10 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
       sync();
       // A pasted valid link gets the same "catch" as a file dropped on Upload.
       const pasted = ev instanceof InputEvent && ev.inputType === 'insertFromPaste';
-      if (!mini || !pasted || !isValid(urlInput.value)) return;
-      mini.classList.remove('is-caught');
-      void mini.offsetWidth;
-      mini.classList.add('is-caught');
+      if (!stage || !pasted || !isValid(urlInput.value)) return;
+      stage.classList.remove('is-caught');
+      void stage.offsetWidth;
+      stage.classList.add('is-caught');
     });
     urlInput.addEventListener('keydown', (ev) => {
       if (ev.key === 'Enter') {
@@ -498,11 +497,12 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
       }
     });
 
-    mini?.addEventListener('animationend', (ev) => {
-      if (ev.target === mini) mini.classList.remove('is-caught');
+    stage?.addEventListener('animationend', (ev) => {
+      if (ev.target === stage) stage.classList.remove('is-caught');
     });
 
     bar.append(fieldIcon, urlInput, readBack, submit);
+    if (stage) panel.appendChild(stage);
     panel.appendChild(bar);
     sync();
     queueMicrotask(() => urlInput.focus());

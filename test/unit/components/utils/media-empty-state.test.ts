@@ -246,26 +246,29 @@ describe('link tab', () => {
     input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType }));
   };
 
-  const mini = (el: HTMLElement): HTMLElement | null =>
-    el.querySelector<HTMLElement>('.blok-media-empty__embed-bar [data-blok-media-preview="image"]');
+  const drawing = (el: HTMLElement): HTMLElement | null =>
+    el.querySelector<HTMLElement>('.blok-media-empty__panel > [data-blok-media-preview="image"]');
 
   const host = (el: HTMLElement): HTMLElement | null =>
     el.querySelector<HTMLElement>('.blok-media-empty__embed-host');
 
-  it('shows the tool drawing in the field, pale until the link is valid', () => {
+  it('keeps the full-size drawing on stage above a large field, pale until the link is valid', () => {
     const el = openLink();
 
-    expect(mini(el)?.style.getPropertyValue('--blok-media-progress')).toBe('0');
+    expect(drawing(el)?.style.getPropertyValue('--blok-media-progress')).toBe('0');
+    expect(el.querySelector('.blok-media-empty__embed-bar')?.classList.contains('blok-media-empty__embed-bar--large')).toBe(true);
+    expect(el.querySelector('.blok-media-empty__embed-bar [data-blok-media-preview]')).toBeNull();
+    expect(el.querySelector('.blok-media-empty__embed-icon svg')).not.toBeNull();
   });
 
   it('completes the drawing once the link is valid, and resets it when cleared', () => {
     const el = openLink();
 
     type(el, 'https://images.unsplash.com/photo.jpg');
-    expect(mini(el)?.style.getPropertyValue('--blok-media-progress')).toBe('1');
+    expect(drawing(el)?.style.getPropertyValue('--blok-media-progress')).toBe('1');
 
     type(el, '');
-    expect(mini(el)?.style.getPropertyValue('--blok-media-progress')).toBe('0');
+    expect(drawing(el)?.style.getPropertyValue('--blok-media-progress')).toBe('0');
   });
 
   it('reads the link back as its bare domain and the accepted file type', () => {
@@ -309,7 +312,7 @@ describe('link tab', () => {
 
     type(el, 'https://images.unsplash.com/photo.jpg', 'insertFromPaste');
 
-    expect(mini(el)?.classList.contains('is-caught')).toBe(true);
+    expect(drawing(el)?.classList.contains('is-caught')).toBe(true);
   });
 
   it('keeps the plain link icon when no drawing is asked for', () => {
@@ -318,5 +321,6 @@ describe('link tab', () => {
 
     expect(el.querySelector('.blok-media-empty__embed-bar [data-blok-media-preview]')).toBeNull();
     expect(el.querySelector('.blok-media-empty__embed-icon svg')).not.toBeNull();
+    expect(el.querySelector('.blok-media-empty__embed-bar')?.classList.contains('blok-media-empty__embed-bar--large')).toBe(false);
   });
 });

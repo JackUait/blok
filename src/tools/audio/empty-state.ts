@@ -32,14 +32,14 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
     onUrl: opts.onUrl,
     labels: {
       add: tr(i18n, 'tools.audio.emptyAddAudio', 'Add audio'),
-      upload: tr(i18n, 'tools.audio.emptyUpload', 'Upload'),
-      embed: tr(i18n, 'tools.audio.emptyLink', 'Link'),
+      upload: tr(i18n, 'tools.audio.emptyUpload', 'From device'),
+      embed: tr(i18n, 'tools.audio.emptyLink', 'From a link'),
       chooseFile: tr(i18n, 'tools.audio.emptyChooseFile', 'Choose file'),
       orDropHere: tr(i18n, 'tools.audio.emptyOrDropHere', 'or drop an audio file here'),
       dropToUpload: tr(i18n, 'tools.audio.emptyDropToUpload', 'Drop to upload'),
-      urlPlaceholder: tr(i18n, 'tools.audio.emptyUrlPlaceholder', 'Paste an audio URL…'),
+      urlPlaceholder: tr(i18n, 'tools.audio.emptyUrlPlaceholder', 'Paste an audio link…'),
       urlAria: tr(i18n, 'tools.audio.emptyUrlAria', 'Audio URL'),
-      submit: tr(i18n, 'tools.audio.emptyInsert', 'Insert'),
+      submit: tr(i18n, 'tools.audio.emptyInsert', 'Add'),
       sourceAria: tr(i18n, 'tools.audio.emptySourceAria', 'Audio source'),
       maxSize: (size) =>
         i18n?.has('tools.audio.emptyMaxSize')

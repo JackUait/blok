@@ -32,14 +32,14 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
     onUrl: opts.onUrl,
     labels: {
       add: tr(i18n, 'tools.video.emptyAddVideo', 'Add a video'),
-      upload: tr(i18n, 'tools.video.emptyUpload', 'Upload'),
-      embed: tr(i18n, 'tools.video.emptyLink', 'Link'),
+      upload: tr(i18n, 'tools.video.emptyUpload', 'From device'),
+      embed: tr(i18n, 'tools.video.emptyLink', 'From a link'),
       chooseFile: tr(i18n, 'tools.video.emptyChooseFile', 'Choose file'),
       orDropHere: tr(i18n, 'tools.video.emptyOrDropHere', 'or drop a video here'),
       dropToUpload: tr(i18n, 'tools.video.emptyDropToUpload', 'Drop to upload'),
-      urlPlaceholder: tr(i18n, 'tools.video.emptyUrlPlaceholder', 'Paste a video URL…'),
+      urlPlaceholder: tr(i18n, 'tools.video.emptyUrlPlaceholder', 'Paste a video link…'),
       urlAria: tr(i18n, 'tools.video.emptyUrlAria', 'Video URL'),
-      submit: tr(i18n, 'tools.video.emptyInsert', 'Insert'),
+      submit: tr(i18n, 'tools.video.emptyInsert', 'Add'),
       sourceAria: tr(i18n, 'tools.video.emptySourceAria', 'Video source'),
       maxSize: (size) =>
         i18n?.has('tools.video.emptyMaxSize')

@@ -81,7 +81,7 @@ test('inserts image via slash menu and embeds URL', async ({ page }) => {
   await expect(imageBlock).toBeVisible();
 
   await imageBlock.locator('[data-tab="embed"]').click();
-  await imageBlock.getByPlaceholder('Paste an image URL…').fill(SAMPLE_IMAGE_URL);
+  await imageBlock.getByPlaceholder('Paste an image link…').fill(SAMPLE_IMAGE_URL);
   await imageBlock.locator('[data-action="submit-url"]').click();
 
   await expect(imageBlock).toHaveAttribute('data-state', 'rendered');

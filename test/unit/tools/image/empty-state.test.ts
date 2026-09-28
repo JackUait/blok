@@ -189,11 +189,11 @@ describe('renderEmptyState', () => {
     const labelEl = el.querySelector('.blok-media-empty__label');
     expect(labelEl?.textContent).toBe('Add an image');
     const uploadTab = el.querySelector<HTMLButtonElement>('[data-tab="upload"]');
-    expect(uploadTab?.textContent).toBe('Upload');
+    expect(uploadTab?.textContent).toBe('From device');
     const embedTab = el.querySelector<HTMLButtonElement>('[data-tab="embed"]');
-    expect(embedTab?.textContent).toBe('Link');
+    expect(embedTab?.textContent).toBe('From a link');
     embedTab?.click();
     const urlInput = el.querySelector<HTMLInputElement>('input[type="url"]');
-    expect(urlInput?.placeholder).toBe('Paste an image URL…');
+    expect(urlInput?.placeholder).toBe('Paste an image link…');
   });
 });

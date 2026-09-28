@@ -106,11 +106,6 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     // "Link" is the standard loanword for a hyperlink in Danish UIs.
     'toolNames.link',
     'tools.callout.colorOrange',
-    'tools.image.emptyUpload',
-    'tools.image.emptyLink',
-    // "Upload"/"Link" are the standard loanwords in Danish UIs.
-    'tools.file.emptyUpload',
-    'tools.file.emptyLink',
     'tools.database.defaultStatusProperty',
     'searchTerms.layout',
     'notifier.ok',
@@ -127,8 +122,6 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     // "Link" is the standard loanword for a hyperlink in German UIs.
     'toolNames.link',
     'tools.code.codeTab',
-    'tools.image.emptyLink',
-    'tools.file.emptyLink',
     'tools.database.viewTypeBoard',
     'tools.database.propertyTypeText',
     'tools.database.defaultStatusProperty',
@@ -159,8 +152,6 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   // the conventional compact confirmation label.
   et: new Set([
     'toolNames.link',
-    'tools.image.emptyLink',
-    'tools.file.emptyLink',
     'tools.link.webLink',
     'notifier.ok',
     // Placeholder-only swatch template; Estonian independently uses the same
@@ -177,7 +168,6 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     // (Word's Filipino UI keeps the English labels).
     'tools.supSub.superscript',
     'tools.supSub.subscript',
-    'tools.image.emptyLink',
     'tools.image.cropRatioOval',
     // "File"/"Link"/"Preview"/"Board"/"Embed"/"Toggle" are the standard
     // English loanwords in Filipino (Tagalog) product UIs.
@@ -187,7 +177,6 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'toolNames.embed',
     'tools.code.previewTab',
     'tools.toggle.placeholder',
-    'tools.file.emptyLink',
     'tools.file.preview',
     'tools.database.viewTypeBoard',
     'tools.database.propertyTypeCheckbox',
@@ -264,10 +253,6 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     // section titles.
     'toolbox.sectionMedia',
     'toolbox.sectionDatabase',
-    'tools.image.emptyLink',
-    'tools.file.emptyLink',
-    'tools.video.emptyLink',
-    'tools.audio.emptyLink',
     'tools.audio.coverLink',
     'tools.link.webLink',
   ]),
@@ -314,10 +299,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'toolNames.code',
     'tools.code.codeTab',
     'searchTerms.code',
-    'tools.image.emptyLink',
-    // "Link" is the standard loanword for a hyperlink in Dutch UIs.
-    'tools.file.emptyLink',
     'tools.database.defaultStatusProperty',
+    // "Link" is the standard loanword for a hyperlink in Dutch UIs.
     'tools.link.webLink',
     // "OK" is the conventional compact confirmation label in Dutch UIs.
     'notifier.ok',
@@ -347,18 +330,14 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   ]),
   pl: new Set([
     'toolNames.link',
-    'tools.image.emptyLink',
-    // "Link" is the standard loanword for a hyperlink in Polish UIs.
-    'tools.file.emptyLink',
     'tools.database.defaultStatusProperty',
+    // "Link" is the standard loanword for a hyperlink in Polish UIs.
     'tools.link.webLink',
     // "OK" is the conventional compact confirmation label in Polish UIs.
     'notifier.ok',
   ]),
   pt: new Set([
     'toolNames.link',
-    'tools.image.emptyLink',
-    'tools.file.emptyLink',
     'tools.image.cropRatioOval',
     'tools.database.defaultStatusProperty',
     'searchTerms.layout',
@@ -374,13 +353,11 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'toolbox.sectionMedia',
     'searchTerms.separator',
     'searchTerms.program',
-    'tools.image.emptyLink',
-    // "Link" is the standard loanword for a hyperlink in Romanian UIs.
-    'tools.file.emptyLink',
     'tools.image.cropRatioOval',
     'tools.database.propertyTypeText',
     // "Text" is a direct cognate of the English word in Romanian.
     'tools.link.linkText',
+    // "Link" is the standard loanword for a hyperlink in Romanian UIs.
     'tools.link.webLink',
     // "OK" is the conventional compact confirmation label in Romanian UIs.
     'notifier.ok',
@@ -423,20 +400,20 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
 /**
  * Video tool cognates. "Video", "Upload", "Link" and "URL" are the standard
  * loanwords in these locales — identical to the English source for the same
- * reason their already-retained image/file siblings (e.g. tools.image.emptyLink)
- * are. Merged in additively so the per-locale sets above stay readable.
+ * reason their already-retained image/file siblings are. Merged in additively
+ * so the per-locale sets above stay readable.
  */
 const VIDEO_COGNATE_RETENTIONS: Record<string, string[]> = {
   az: ['toolNames.video'],
   bs: ['toolNames.video'],
   cs: ['toolNames.video'],
-  da: ['toolNames.video', 'tools.video.emptyUpload', 'tools.video.emptyLink', 'tools.video.pause'],
+  da: ['toolNames.video', 'tools.video.pause'],
   // "Autoplay" is the native loanword for the setting in German UIs.
-  de: ['toolNames.video', 'tools.video.emptyLink', 'tools.video.autoplay'],
-  et: ['toolNames.video', 'tools.video.emptyLink', 'tools.video.emptyUrlAria'],
+  de: ['toolNames.video', 'tools.video.autoplay'],
+  et: ['toolNames.video', 'tools.video.emptyUrlAria'],
   fi: ['toolNames.video'],
   // "Autoplay"/"Loop" are the standard English loanwords in Filipino (Tagalog) UIs.
-  fil: ['toolNames.video', 'tools.video.emptyLink', 'tools.video.autoplay', 'tools.video.loop', 'tools.video.volume', 'tools.video.theater', 'tools.video.pip'],
+  fil: ['toolNames.video', 'tools.video.autoplay', 'tools.video.loop', 'tools.video.volume', 'tools.video.theater', 'tools.video.pip'],
   // "Pause"/"Volume" are the standard loanwords used by Notion/YouTube in French.
   fr: ['tools.video.pause', 'tools.video.volume'],
   hr: ['toolNames.video'],
@@ -444,11 +421,9 @@ const VIDEO_COGNATE_RETENTIONS: Record<string, string[]> = {
   it: ['toolNames.video', 'tools.video.volume', 'tools.video.pip'],
   lv: ['toolNames.video', 'tools.video.emptyUrlAria'],
   ms: ['toolNames.video'],
-  nl: ['toolNames.video', 'tools.video.emptyLink', 'tools.video.volume'],
+  nl: ['toolNames.video', 'tools.video.volume'],
   no: ['toolNames.video', 'tools.video.pause'],
-  pl: ['tools.video.emptyLink'],
-  pt: ['tools.video.emptyLink', 'tools.video.volume'],
-  ro: ['tools.video.emptyLink'],
+  pt: ['tools.video.volume'],
   sk: ['toolNames.video'],
   sl: ['toolNames.video'],
   sq: ['toolNames.video'],
@@ -473,22 +448,22 @@ const AUDIO_COGNATE_RETENTIONS: Record<string, string[]> = {
   az: ['toolNames.audio'],
   bs: ['toolNames.audio'],
   cs: ['toolNames.audio'],
-  da: ['tools.audio.emptyUpload', 'tools.audio.emptyLink', 'tools.audio.coverUpload', 'tools.audio.coverLink', 'tools.audio.pause'],
-  de: ['toolNames.audio', 'tools.audio.emptyLink', 'tools.audio.coverLink'],
+  da: ['tools.audio.coverUpload', 'tools.audio.coverLink', 'tools.audio.pause'],
+  de: ['toolNames.audio', 'tools.audio.coverLink'],
   es: ['toolNames.audio'],
-  et: ['tools.audio.emptyLink', 'tools.audio.coverLink'],
+  et: ['tools.audio.coverLink'],
   // "Audio"/"Loop"/"Link" are the standard English loanwords in Filipino (Tagalog) UIs.
-  fil: ['toolNames.audio', 'tools.audio.loop', 'tools.audio.emptyLink', 'tools.audio.coverLink', 'tools.audio.volume'],
+  fil: ['toolNames.audio', 'tools.audio.loop', 'tools.audio.coverLink', 'tools.audio.volume'],
   fr: ['toolNames.audio', 'tools.audio.pause', 'tools.audio.volume'],
   id: ['toolNames.audio', 'tools.audio.volume'],
   it: ['toolNames.audio', 'tools.audio.volume'],
   lv: ['toolNames.audio', 'tools.audio.emptyUrlAria'],
   ms: ['toolNames.audio'],
-  nl: ['toolNames.audio', 'tools.audio.emptyLink', 'tools.audio.coverLink', 'tools.audio.volume'],
+  nl: ['toolNames.audio', 'tools.audio.coverLink', 'tools.audio.volume'],
   no: ['tools.audio.pause'],
-  pl: ['toolNames.audio', 'tools.audio.emptyLink', 'tools.audio.coverLink'],
-  pt: ['tools.audio.emptyLink', 'tools.audio.coverLink', 'tools.audio.volume'],
-  ro: ['toolNames.audio', 'tools.audio.emptyLink', 'tools.audio.coverLink'],
+  pl: ['toolNames.audio', 'tools.audio.coverLink'],
+  pt: ['tools.audio.coverLink', 'tools.audio.volume'],
+  ro: ['toolNames.audio', 'tools.audio.coverLink'],
   sk: ['toolNames.audio'],
   sq: ['toolNames.audio'],
   vi: ['toolNames.audio'],

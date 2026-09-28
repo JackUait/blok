@@ -50,3 +50,19 @@ describe('media preview shadows (CSS)', () => {
     expect(declsFor((s) => s.includes('blok-media-preview'), 'flood-color')).toContain('var(--blok-media-preview-shadow)');
   });
 });
+
+describe('media Link-tab button (CSS)', () => {
+  const submitRules = (match: (s: string) => boolean): string[] =>
+    declsFor((s) => s.includes('blok-media-empty__embed-submit') && match(s), 'background');
+
+  it('waits as a crisp filled button, never a faded ghost', () => {
+    const idleOpacity = declsFor((s) => s.includes('blok-media-empty__embed-submit') && !s.includes('data-valid'), 'opacity');
+
+    expect(submitRules((s) => s === '.blok-media-empty__embed-submit').join(' ')).toMatch(/var\(--/);
+    expect(idleOpacity.filter((v) => Number(v) < 1)).toEqual([]);
+  });
+
+  it('turns into the same dark primary button as Choose file once the link is valid', () => {
+    expect(submitRules((s) => s.includes('data-valid="true"')).join(' ')).toContain('var(--blok-text-primary)');
+  });
+});

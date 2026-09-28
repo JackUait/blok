@@ -131,6 +131,12 @@ for (const surface of ['settings', 'inline'] as const) {
           expect.soft(row.y).toBeGreaterThanOrEqual(previous.y + previous.height - 1);
         });
 
+        // A compact search line on desktop. Phone menus keep their own touch sizing.
+        const searchHeight = width < 651 ? 0 : await menu.getByTestId('popover-search-field')
+          .evaluate(element => element instanceof HTMLElement ? element.offsetHeight : Infinity);
+
+        expect.soft(searchHeight).toBeLessThanOrEqual(28);
+
         const box = await menu.boundingBox();
 
         expect.soft(box?.width).toBeLessThanOrEqual(232);

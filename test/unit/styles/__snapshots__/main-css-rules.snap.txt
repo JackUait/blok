@@ -103,8 +103,9 @@
   display: flex;
   align-items: center;
   gap: var(--blok-space-1-5);
-  min-height: 36px;
+  min-height: 28px;
   margin: var(--blok-space-2) 0 0;
+  padding-block: 0;
   padding-inline: var(--blok-space-2);
   border: 1px solid transparent;
   border-radius: var(--blok-space-2);
@@ -119,6 +120,7 @@
   mask: var(--_blok-search-glyph) center / contain no-repeat;
   border-color: var(--blok-popover-border);
   background-color: transparent;
+  min-height: 36px;
 }
 
 [data-blok-popover-items] > [data-blok-popover-item][data-blok-header-level][data-blok-popover-item-active] {

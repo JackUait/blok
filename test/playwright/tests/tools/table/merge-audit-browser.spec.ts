@@ -835,7 +835,11 @@ test.describe('Table merge browser audit', () => {
     await page.getByText('Merge cells').click();
     await expect(getCellAt(page, 0, 2)).toHaveAttribute('rowspan', '2');
     await expect(page.locator(SELECTED)).toHaveCount(1);
-    await getCellAt(page, 2, 2).hover({ position: { x: 8, y: 8 } });
+    // The add-column button hides unless the pointer is within 40px of the right edge.
+    const lastCell = getCellAt(page, 2, 2);
+    const lastBox = assertBoundingBox(await lastCell.boundingBox(), 'cell 2,2');
+
+    await lastCell.hover({ position: { x: lastBox.width - 8, y: 8 } });
     await page.locator('[data-blok-table-add-col]').click();
     const counts = await rowCellCounts(page);
 

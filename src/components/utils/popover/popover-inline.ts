@@ -14,12 +14,6 @@ import type { PopoverParams } from '@/types/utils/popover/popover';
 
 
 /**
- * Inline popover height CSS variables
- */
-const INLINE_HEIGHT = '38px';
-const INLINE_HEIGHT_MOBILE = '46px';
-
-/**
  * Horizontal popover that is displayed inline with the content
  * @internal
  */
@@ -136,6 +130,8 @@ export class PopoverInline extends PopoverDesktop {
         css.popoverContainer,
         cssInline.popoverContainer
       );
+      // Own token so the other menus keep --blok-popover-box-shadow.
+      this.nodes.popoverContainer.style.boxShadow = 'var(--blok-inline-toolbar-shadow)';
     }
 
     // Keep configured tool order while allowing narrow screens to wrap.
@@ -143,10 +139,6 @@ export class PopoverInline extends PopoverDesktop {
       this.nodes.items.className = twMerge(css.items, cssInline.items);
     }
     this.styleConvertControl();
-
-    // Set inline height CSS variables
-    this.nodes.popover.style.setProperty('--height', INLINE_HEIGHT);
-    this.nodes.popover.style.setProperty('--height-mobile', INLINE_HEIGHT_MOBILE);
 
     // Mark as inline popover for any remaining CSS (deprecated, but kept for backwards compatibility)
     this.nodes.popover.setAttribute(DATA_ATTR.popoverInline, '');
@@ -180,7 +172,7 @@ export class PopoverInline extends PopoverDesktop {
     for (const convertEl of root.querySelectorAll(`[${DATA_ATTR.itemName}="convert-to"]`)) {
       // group/convert is named so only row hover, not whole-card hover,
       // drives the chevron motion below.
-      convertEl.className = twMerge(convertEl.className, 'w-auto max-w-full min-w-0 py-2 gap-2 group/convert mobile:basis-full');
+      convertEl.className = twMerge(convertEl.className, 'col-span-full w-auto max-w-full min-w-0 px-2 gap-2 group/convert');
 
       for (const icon of convertEl.querySelectorAll('[data-blok-testid="popover-item-icon"]')) {
         icon.className = popoverItemCls.icon;
@@ -194,20 +186,19 @@ export class PopoverInline extends PopoverDesktop {
         .querySelectorAll('[data-blok-testid="popover-item-chevron-right"]')
         .forEach((chevron) => chevron.classList.add(
           'ml-auto',
-          'rotate-90',
           'text-text-secondary',
           'transition-transform',
           'duration-150',
           'ease-out',
-          'can-hover:group-hover/convert:translate-y-0.5',
-          'group-data-[blok-popover-item-children-open]/convert:translate-y-0.5',
+          'can-hover:group-hover/convert:translate-x-0.5',
+          'group-data-[blok-popover-item-children-open]/convert:translate-x-0.5',
           'group-data-[blok-popover-item-children-open]/convert:text-text-primary'
         ));
     }
 
     root
       .querySelectorAll('[data-blok-testid="popover-item-separator"]')
-      .forEach((separator) => separator.setAttribute('aria-orientation', 'vertical'));
+      .forEach((separator) => separator.setAttribute('aria-orientation', 'horizontal'));
   }
 
   /**

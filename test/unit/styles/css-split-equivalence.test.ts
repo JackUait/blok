@@ -613,6 +613,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // The random-emoji die rolls on hover: roll, pip-face and impact keyframes
     // plus their hover wiring add 2,485 bytes across keyframes.css and emoji-picker.css.
     const DICE_ROLL_HOVER_BYTES = 2_485;
+    // Notion-style inline toolbar card: --blok-inline-toolbar-shadow in the
+    // light palette and both dark palettes of colors.css.
+    const INLINE_TOOLBAR_CARD_BYTES = 402;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -622,7 +625,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + EMOJI_DEFERRED_SECTIONS_BYTES
       + PRESENCE_TONAL_GLYPHS_BYTES
       + TRASH_LID_HOVER_BYTES
-      + DICE_ROLL_HOVER_BYTES;
+      + DICE_ROLL_HOVER_BYTES
+      + INLINE_TOOLBAR_CARD_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

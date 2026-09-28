@@ -60,14 +60,16 @@ export const cssInline = {
   // Popover root element for inline
   popover: 'relative',
 
-  popoverContainer: 'flex-col top-0 min-w-0 w-max max-w-[calc(100vw-16px)] p-1 mobile:absolute',
+  // Notion card: 8px padding, 14px radius. Width comes from the five fixed tracks.
+  popoverContainer: 'flex-col top-0 min-w-0 w-max max-w-[calc(100vw-16px)] p-2 rounded-[14px] mobile:absolute',
 
-  // Custom tools wrap instead of overflowing; mobile gives conversion its own row.
-  items: 'flex flex-wrap items-center gap-0.5 pt-0 pb-0',
+  // Fixed tracks, so extra tools start a new row of five instead of widening the card.
+  // Phones get 40px tracks: 28px-tall cells are too small to tap.
+  items: 'grid grid-cols-[repeat(5,2rem)] mobile:grid-cols-[repeat(5,2.5rem)] gap-1 pt-0 pb-0',
 
-  // Opened state for inline popover - symmetric padding (no scroll area, so pt matches pb).
-  // pt is re-added here because the shared opened state drops it for flush item-list menus.
-  popoverContainerOpened: 'pt-1.5 pb-1.5',
+  // The shared opened state sets px-1.5 pb-0. Per-side classes, because the
+  // house twMerge does not let a later p-2 override px/pb.
+  popoverContainerOpened: 'px-2 pt-2 pb-2',
 };
 
 /**

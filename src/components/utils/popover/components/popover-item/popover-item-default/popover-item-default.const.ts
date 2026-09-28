@@ -38,7 +38,7 @@ export const cssInline = {
   /**
    * Item in inline context - more compact styling
    */
-  item: 'rounded-lg min-w-10 h-10 max-h-none px-1.5 py-2 mb-0 shrink-0 mobile:flex-1 transition-[background-color,scale] duration-150 active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100',
+  item: 'rounded-md h-7 max-h-none min-w-0 p-0 mb-0 shrink-0 mobile:h-10 transition-[background-color,scale] duration-[20ms] ease-in active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100',
   itemIconOnly: 'justify-center',
   itemWithTitle: 'px-2',
 };

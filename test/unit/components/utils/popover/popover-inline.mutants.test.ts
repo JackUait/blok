@@ -154,8 +154,6 @@ describe('PopoverInline — mutation residue', () => {
       expect(instance.nodes.popoverContainer.className).toBe(twMerge(css.popoverContainer, cssInline.popoverContainer));
       expect(instance.nodes.items.className).toBe(twMerge(css.items, cssInline.items));
       expect(instance.nodes.popover.getAttribute(DATA_ATTR.popoverInline)).toBe('');
-      expect(instance.nodes.popover.style.getPropertyValue('--height')).toBe('38px');
-      expect(instance.nodes.popover.style.getPropertyValue('--height-mobile')).toBe('46px');
     });
 
     it('keeps inline icons gapless — no trailing icon margin', () => {
@@ -183,7 +181,7 @@ describe('PopoverInline — mutation residue', () => {
       expect(root?.className).toContain('flex items-center');
     });
 
-    it('turns separators vertical for the horizontal toolbar', () => {
+    it('lays separators across the grid as horizontal rules', () => {
       const popover = make({
         items: [
           { icon: 'B', name: 'bold', onActivate: vi.fn() },
@@ -194,9 +192,10 @@ describe('PopoverInline — mutation residue', () => {
       const separator = popover.getElement().querySelector('[data-blok-testid="popover-item-separator"]');
       const line = separator?.firstElementChild;
 
-      expect(separator?.className).toBe(twMerge('py-1.5 max-h-5 overflow-hidden', 'px-1 py-0 h-6 max-h-none shrink-0 mobile:hidden'));
-      expect(line?.className).toContain('w-px');
-      expect(separator).toHaveAttribute('aria-orientation', 'vertical');
+      expect(separator?.className).toBe(twMerge('py-1.5 max-h-5 overflow-hidden', 'col-span-full px-0 py-1 h-auto max-h-none'));
+      expect(line?.className).toContain('h-px');
+      expect(line?.className).toContain('w-full');
+      expect(separator).toHaveAttribute('aria-orientation', 'horizontal');
     });
   });
 

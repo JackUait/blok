@@ -148,8 +148,8 @@ describe('Blok Line media completion', () => {
     expect(segments).toHaveLength(3);
     lengths.forEach(length => expect(length).toBeCloseTo(lengths[0], 2));
     expect(gaps[0]).toBeCloseTo(gaps[1], 2);
-    // A gap must survive at 16px: its chord, minus one stroke, stays over half a pixel.
-    expect((2 * first[2] * Math.sin(gaps[0] / 2) - 1.25) * 16 / 20).toBeGreaterThan(0.5);
+    // Neighbouring segments stay one stroke apart.
+    expect(2 * first[2] * Math.sin(gaps[0] / 2) - 1.25).toBeGreaterThanOrEqual(1.25);
     expect(first[0] + last[7]).toBeCloseTo(20, 5);
     // The dial opens at the bottom, so centre the visible arc, not the hub.
     expect((center[1] - first[2] + first[1]) / 2).toBeCloseTo(10, 5);
@@ -252,8 +252,12 @@ describe('Blok Line media completion', () => {
     for (const [x, y, dx, dy] of crossPoints) {
       expect(x + dx / 2).toBeCloseTo(cx, 5);
       expect(y + dy / 2).toBeCloseTo(cy, 5);
-      // A full stroke of space between the cross and the badge ring.
-      expect(Math.hypot(dx, dy) / 2 + stroke / 2 + stroke).toBeLessThanOrEqual(radius - stroke / 2 + 1e-9);
+      // Two thirds of a stroke between the cross and the ring: a full stroke shrinks
+      // the cross to a dot at this badge size, and the badge cannot grow past 20.4.
+      const gap = radius - stroke / 2 - (Math.hypot(dx, dy) / 2 + stroke / 2);
+
+      expect(gap).toBeGreaterThanOrEqual(stroke * 2 / 3);
+      expect(gap).toBeLessThan(stroke);
     }
   });
 

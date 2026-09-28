@@ -10,9 +10,9 @@ const cases = [
     name: 'fallback',
     description: TOOL_SECTIONS.find(section => section.id === 'marker')?.description ?? '',
     messages: editorEnglish,
-    tab: /tab/,
+    tab: /\btabs?\b/i,
   },
-  { name: 'English', description: english.tools.docs.marker.description, messages: editorEnglish, tab: /tab/ },
+  { name: 'English', description: english.tools.docs.marker.description, messages: editorEnglish, tab: /\btabs?\b/i },
   { name: 'Russian', description: russian.tools.docs.marker.description, messages: editorRussian, tab: /вкладк/ },
 ];
 
@@ -20,8 +20,8 @@ describe('Marker picker instructions', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
 
-  it.each(cases)('$name describes the tabs using the displayed labels', ({ description, messages, tab }) => {
-    expect(description).toMatch(tab);
+  it.each(cases)('$name names the panel sections by their displayed labels, with no tabs', ({ description, messages, tab }) => {
+    expect(description).not.toMatch(tab);
     expect(description).toContain(messages['tools.marker.textColor']);
     expect(description).toContain(messages['tools.marker.background']);
     expect(description).toContain(messages['tools.marker.default']);

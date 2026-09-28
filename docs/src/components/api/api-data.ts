@@ -588,7 +588,7 @@ const editor = new Blok(config);`,
         type: "string[] | boolean",
         default: "true",
         description:
-          "Default inline toolbar for all tools. An array restricts it to the listed inline tools, and false disables it.\n\nThe array picks which tools appear, never where. The toolbar always renders the built-ins in one fixed order (convert, bold, italic, underline, strikethrough, inline code, equation, sup/sub, link, color, clear formatting). Any custom inline tool is appended after them, in registration order.\n\nLive field: reconfigure it at runtime via `tools.setInlineToolbar(config)`.",
+          "Default inline toolbar for all tools. An array restricts it to the listed inline tools, and false disables it.\n\nThe array picks which tools appear, never where. The toolbar always renders the built-ins in one fixed order (convert, color, bold, italic, underline, clear formatting, link, strikethrough, inline code, equation, sup/sub). Any custom inline tool is appended after them, in registration order.\n\nLive field: reconfigure it at runtime via `tools.setInlineToolbar(config)`.",
       },
       {
         option: "hideToolbar",

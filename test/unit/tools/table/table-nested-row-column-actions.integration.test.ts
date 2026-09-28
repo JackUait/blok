@@ -157,7 +157,8 @@ describe('outer table row and column actions beside a nested table', () => {
       bubbles: true,
       cancelable: true,
     }));
-    const deleteItem = document.querySelector<HTMLElement>('[data-blok-popover-item-destructive]');
+    // Clear contents is destructive too; Delete is the last destructive item.
+    const deleteItem = Array.from(document.querySelectorAll<HTMLElement>('[data-blok-popover-item-destructive]')).at(-1);
 
     if (!deleteItem) {
       throw new Error('delete row action is missing');

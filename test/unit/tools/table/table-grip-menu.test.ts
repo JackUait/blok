@@ -106,6 +106,15 @@ describe('table grip menu (row/column popover items)', () => {
       expect(onAction).toHaveBeenCalledWith({ type: 'duplicate-row', index: 2 });
     });
 
+    it.each([
+      ['row', buildRowMenuItems],
+      ['column', buildColumnMenuItems],
+    ])('marks Clear contents in the %s menu as destructive, like the selection menu', (_type, build) => {
+      const clear = findByTitle(build(0, createOptions()), 'tools.table.clearSelection');
+
+      expect(clear !== undefined && 'isDestructive' in clear && clear.isDestructive).toBe(true);
+    });
+
     it('dispatches clear-contents over the whole row', () => {
       const onClearContents = vi.fn();
 

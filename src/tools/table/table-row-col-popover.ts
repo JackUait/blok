@@ -105,6 +105,7 @@ const buildEditItems = (
   {
     icon: IconCross,
     title: options.i18n.t('tools.table.clearSelection'),
+    isDestructive: true,
     closeOnActivate: true,
     onActivate: (): void => {
       options.onClearContents(type, index);

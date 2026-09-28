@@ -3332,14 +3332,18 @@ describe('Table Tool', () => {
     };
 
     /**
-     * Find and click the destructive (delete) popover item.
+     * Find the Delete item. Clear contents is destructive too, so take the last destructive item.
+     */
+    const findDeleteItem = (el: HTMLElement): HTMLElement | undefined =>
+      Array.from(el.ownerDocument.querySelectorAll<HTMLElement>('[data-blok-popover-item-destructive]')).at(-1);
+
+    /**
+     * Find and click the Delete popover item.
      */
     const clickDeleteItem = (el: HTMLElement): void => {
-      const deleteItem = el.ownerDocument.querySelector<HTMLElement>(
-        '[data-blok-popover-item-destructive]'
-      );
+      const deleteItem = findDeleteItem(el);
 
-      expect(deleteItem).not.toBeNull();
+      expect(deleteItem).toBeDefined();
       deleteItem?.click();
     };
 
@@ -3534,11 +3538,9 @@ describe('Table Tool', () => {
 
       await clickGrip(colGrips[0]);
 
-      const deleteItem = element.ownerDocument.querySelector(
-        '[data-blok-popover-item-destructive]'
-      );
+      const deleteItem = findDeleteItem(element);
 
-      expect(deleteItem).not.toBeNull();
+      expect(deleteItem).toBeDefined();
       expect(deleteItem?.getAttribute('data-blok-disabled')).toBe('true');
 
       document.body.removeChild(element);
@@ -3551,11 +3553,9 @@ describe('Table Tool', () => {
 
       await clickGrip(rowGrips[0]);
 
-      const deleteItem = element.ownerDocument.querySelector(
-        '[data-blok-popover-item-destructive]'
-      );
+      const deleteItem = findDeleteItem(element);
 
-      expect(deleteItem).not.toBeNull();
+      expect(deleteItem).toBeDefined();
       expect(deleteItem?.getAttribute('data-blok-disabled')).toBe('true');
 
       document.body.removeChild(element);

@@ -732,6 +732,25 @@ describe('TableCellSelection', () => {
       expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
     });
 
+    it('marks Clear contents as destructive so it turns red on hover, and leaves Copy neutral', () => {
+      vi.useFakeTimers();
+
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      vi.runAllTimers();
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      pill.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+      vi.useRealTimers();
+
+      const [copy, clear] = lastPopoverArgs?.items ?? [];
+
+      expect(clear !== undefined && 'isDestructive' in clear && clear.isDestructive).toBe(true);
+      expect(copy !== undefined && 'isDestructive' in copy && copy.isDestructive).toBeFalsy();
+    });
+
     it('fires onCopyViaButton with selected cells when Copy action activates', () => {
       const onCopyViaButton = vi.fn();
 

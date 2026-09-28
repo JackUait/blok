@@ -1500,6 +1500,7 @@ export class TableCellSelection {
         icon: IconCross,
         title: this.i18n.t('tools.table.clearSelection'),
         secondaryLabel: 'Del',
+        isDestructive: true,
         closeOnActivate: true,
         onActivate: (): void => {
           this.onClearContent?.([...this.selectedCells]);

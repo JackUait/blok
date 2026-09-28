@@ -1,4 +1,4 @@
-import { fireEvent, getByRole, queryByAttribute } from '@testing-library/dom';
+import { getByRole, queryByAttribute } from '@testing-library/dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createColorPicker } from '../../../../src/components/shared/color-picker';
 import { COLOR_PRESETS } from '../../../../src/components/shared/color-presets';
@@ -63,10 +63,6 @@ describe('color picker polish', () => {
     form.appendChild(picker.element);
     document.body.appendChild(form);
 
-    if (section === 'background') {
-      fireEvent.click(getByRole(picker.element, 'tab', { name: 'Background color' }));
-    }
-
     const sectionKey = section === 'recent' ? 'recent' : mode;
     const sectionElement = queryByAttribute('data-blok-testid', picker.element, `polish-section-${sectionKey}`);
 
@@ -101,20 +97,14 @@ describe('color picker polish', () => {
     document.body.appendChild(picker.element);
     picker.setActiveColor(red.bg, 'background-color');
 
-    fireEvent.click(getByRole(picker.element, 'tab', { name: 'Background color' }));
-
     expect(getByRole(picker.element, 'button', { name: 'Red background color', pressed: true })).toBeTruthy();
     expect(getByRole(picker.element, 'button', { name: 'Default background color', pressed: false })).toBeTruthy();
-
-    fireEvent.click(getByRole(picker.element, 'tab', { name: 'Text color' }));
 
     expect(getByRole(picker.element, 'button', { name: 'Default text color', pressed: true })).toBeTruthy();
 
     picker.reset();
 
     expect(getByRole(picker.element, 'button', { name: 'Default text color', pressed: true })).toBeTruthy();
-
-    fireEvent.click(getByRole(picker.element, 'tab', { name: 'Background color' }));
 
     expect(getByRole(picker.element, 'button', { name: 'Red background color', pressed: false })).toBeTruthy();
     expect(getByRole(picker.element, 'button', { name: 'Default background color', pressed: true })).toBeTruthy();

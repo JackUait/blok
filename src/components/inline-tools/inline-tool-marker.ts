@@ -248,9 +248,7 @@ export class MarkerInlineTool implements InlineTool {
         ],
         onOpen: () => {
           this.onPickerOpen();
-          queueMicrotask(() => {
-            this.picker.element.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus({ preventScroll: true });
-          });
+          queueMicrotask(() => this.picker.focusActiveSwatch());
         },
         onClose: () => {
           this.onPickerClose();

@@ -57,19 +57,21 @@ const openMenu = async (config: MenuConfig, itemName: string, inline = false) =>
   return popover;
 };
 
-const checkNativeTabs = (root: HTMLElement): void => {
-  const textTab = getByRole(root, 'tab', { name: 'Text color', selected: true });
+/**
+ * The keyboard lands on the active swatch, Tab stays native, and every swatch
+ * sits inside the keyboard-owner subtree so Blok's key handling stands down.
+ * @returns the focused swatch
+ */
+const checkNativeKeyboard = (root: HTMLElement): HTMLElement => {
+  const active = getByRole(root, 'button', { name: 'Default text color' });
 
-  expect(textTab).toHaveFocus();
-  fireEvent.keyDown(textTab, { key: 'ArrowRight' });
-  const backgroundTab = getByRole(root, 'tab', { name: 'Background', selected: true });
+  expect(active).toHaveFocus();
+  expect(fireEvent.keyDown(active, { key: 'Tab' })).toBe(true);
+  expect(queryByAttribute('data-blok-keyboard-owner', root, '')).toContainElement(
+    getByRole(root, 'button', { name: 'Red background' })
+  );
 
-  expect(backgroundTab).toHaveFocus();
-  expect(queryByRole(root, 'tabpanel', { name: 'Text color' })).toBeNull();
-  expect(fireEvent.keyDown(backgroundTab, { key: 'Tab' })).toBe(true);
-  const reset = getByRole(getByRole(root, 'tabpanel', { name: 'Background' }), 'button', { name: 'Default' });
-
-  expect(queryByAttribute('data-blok-keyboard-owner', root, '')).toContainElement(reset);
+  return active;
 };
 
 describe('native keyboard in color submenus', () => {
@@ -88,18 +90,18 @@ describe('native keyboard in color submenus', () => {
     vi.restoreAllMocks();
   });
 
-  it('opens block colors on the active tab and leaves dismissal to the real popover', async () => {
+  it('opens block colors on the active swatch and leaves dismissal to the real popover', async () => {
     const onPick = vi.fn();
     const popover = await openMenu(buildBlockColorTunes({ data: {}, i18n, onPick }), 'block-color');
+    const active = checkNativeKeyboard(popover.getElement());
 
-    checkNativeTabs(popover.getElement());
     fireEvent.click(getByRole(popover.getElement(), 'button', { name: 'Red background' }));
     expect(onPick).toHaveBeenCalledExactlyOnceWith('backgroundColor', 'red');
-    fireEvent.keyDown(getByRole(popover.getElement(), 'tab', { name: 'Background' }), { key: 'Escape' });
+    fireEvent.keyDown(active, { key: 'Escape' });
     expect(popover.isShown).toBe(false);
   }, 15000);
 
-  it('saves marker selection before moving focus and applies colors after tab navigation', async () => {
+  it('saves marker selection before moving focus and applies colors after keyboard focus', async () => {
     const editor = document.createElement('div');
 
     editor.contentEditable = 'true';
@@ -117,7 +119,7 @@ describe('native keyboard in color submenus', () => {
     const marker = new MarkerInlineTool({ api });
     const popover = await openMenu(marker.render(), 'marker', true);
 
-    checkNativeTabs(popover.getElement());
+    checkNativeKeyboard(popover.getElement());
     expect(close).not.toHaveBeenCalled();
     window.getSelection()?.removeAllRanges();
     fireEvent.click(getByRole(popover.getElement(), 'button', { name: 'Red background' }));
@@ -156,10 +158,10 @@ describe('native keyboard in color submenus', () => {
     }
     fireEvent.click(marker);
     await Promise.resolve();
-    const tab = getByRole(popover.getElement(), 'tab', { name: 'Text color' });
+    const swatch = getByRole(popover.getElement(), 'button', { name: 'Default text color' });
 
-    expect(tab).toHaveFocus();
-    const defaultAllowed = fireEvent.keyDown(tab, { key: 'Escape' });
+    expect(swatch).toHaveFocus();
+    const defaultAllowed = fireEvent.keyDown(swatch, { key: 'Escape' });
 
     expect(popover.hasNestedPopoverOpen).toBe(false);
     expect(defaultAllowed).toBe(false);
@@ -183,10 +185,11 @@ describe('native keyboard in color submenus', () => {
     const items = type === 'row' ? buildRowMenuItems(1, options) : buildColumnMenuItems(1, options);
     const popover = await openMenu(items, 'cellColor');
 
-    checkNativeTabs(popover.getElement());
+    const active = checkNativeKeyboard(popover.getElement());
+
     fireEvent.click(getByRole(popover.getElement(), 'button', { name: 'Red background' }));
     expect(onColorChange).toHaveBeenCalledExactlyOnceWith(type, 1, '#fdebec', 'backgroundColor');
-    fireEvent.keyDown(getByRole(popover.getElement(), 'tab', { name: 'Background' }), { key: 'Escape' });
+    fireEvent.keyDown(active, { key: 'Escape' });
     expect(popover.isShown).toBe(false);
   });
 
@@ -227,7 +230,7 @@ describe('native keyboard in color submenus', () => {
     }
     /**
      * The pill only opens on pointerdown, which leaves the modality tracker in
-     * pointer mode where the tab is deliberately NOT focused. This test covers
+     * pointer mode where the swatch is deliberately NOT focused. This test covers
      * the keyboard path, so hand the tracker a key first; the pointer path
      * lives in color-picker-focus-modality.test.ts.
      */
@@ -235,11 +238,12 @@ describe('native keyboard in color submenus', () => {
     fireEvent.click(colorItem);
     await Promise.resolve();
 
-    checkNativeTabs(document.body);
+    const active = checkNativeKeyboard(document.body);
+
     fireEvent.click(getByRole(document.body, 'button', { name: 'Red background' }));
     expect(onColorChange).toHaveBeenCalledExactlyOnceWith(cells, '#fdebec', 'backgroundColor');
     expect(selection.getSelectedRange()).toEqual({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
-    fireEvent.keyDown(getByRole(document.body, 'tab', { name: 'Background' }), { key: 'Escape' });
-    expect(queryByRole(document.body, 'tab', { name: 'Background' })).toBeNull();
+    fireEvent.keyDown(active, { key: 'Escape' });
+    expect(queryByRole(document.body, 'button', { name: 'Red background' })).toBeNull();
   });
 });

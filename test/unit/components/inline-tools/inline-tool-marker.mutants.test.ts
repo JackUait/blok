@@ -196,50 +196,35 @@ describe('MarkerInlineTool — mutation targets', () => {
       btn.remove();
     });
 
-    it('focuses the selected picker tab with preventScroll once the popover opens', async () => {
+    it('focuses the active swatch with preventScroll once the popover opens from the keyboard', async () => {
       const pickerEl = internalsOf(tool).picker.element;
 
       document.body.appendChild(pickerEl);
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift' }));
 
-      const selectedTab = pickerEl.querySelector('[role="tab"][aria-selected="true"]');
+      menuOf(tool).children.onOpen();
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(selectedTab).not.toBeNull();
+      expect(document.activeElement?.getAttribute('data-blok-testid')).toBe('marker-swatch-color-default');
+
+      pickerEl.remove();
+    });
+
+    it('does not touch focus when the popover opens after a mouse press', async () => {
+      const pickerEl = internalsOf(tool).picker.element;
+
+      document.body.appendChild(pickerEl);
+      window.dispatchEvent(new PointerEvent('pointerdown'));
 
       const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
 
       menuOf(tool).children.onOpen();
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true });
-
-      pickerEl.remove();
-    });
-
-    it('does not touch focus when the picker has no selected tab', async () => {
-      const pickerEl = internalsOf(tool).picker.element;
-
-      document.body.appendChild(pickerEl);
-
-      vi.spyOn(pickerEl, 'querySelector').mockReturnValue(null);
-
-      const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
-      const uncaught: unknown[] = [];
-      const collect = (error: unknown): void => {
-        uncaught.push(error);
-      };
-
-      process.on('uncaughtException', collect);
-
-      try {
-        menuOf(tool).children.onOpen();
-        await new Promise((resolve) => setTimeout(resolve, 0));
-      } finally {
-        process.off('uncaughtException', collect);
-        pickerEl.remove();
-      }
-
-      expect(uncaught).toStrictEqual([]);
       expect(focusSpy).not.toHaveBeenCalled();
+
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift' }));
+      pickerEl.remove();
     });
   });
 

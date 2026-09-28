@@ -12,7 +12,6 @@ import {
   IconHeaderColumn,
 } from '../../components/icons';
 import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover';
-import { isKeyboardModality } from '../../components/utils/input-modality';
 
 import { createCellColorPicker } from './table-cell-color-picker';
 import type { CellColorMode } from './table-cell-color-picker';
@@ -62,7 +61,7 @@ const buildColorItem = (
   index: number,
   options: PopoverMenuOptions
 ): PopoverItemParams => {
-  const { element } = createCellColorPicker({
+  const { element, focusActiveSwatch } = createCellColorPicker({
     i18n: options.i18n,
     onColorSelect: (color, mode) => {
       options.onColorChange(type, index, color, mode);
@@ -80,16 +79,7 @@ const buildColorItem = (
       }],
       isFlippable: false,
       onOpen: () => {
-        // Focusing the tab after a mouse click paints a real focus ring: the
-        // tab's mousedown preventDefault keeps the browser's focus-visible
-        // flag alive across the click.
-        if (!isKeyboardModality()) {
-          return;
-        }
-
-        queueMicrotask(() => {
-          element.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus({ preventScroll: true });
-        });
+        queueMicrotask(focusActiveSwatch);
       },
     },
   };

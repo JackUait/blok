@@ -4,7 +4,6 @@ import { IconCopy, IconCross, IconDotsHorizontal, IconMarker, IconMergeCells, Ic
 import { MODIFIER_KEY } from '../../components/constants';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover';
-import { isKeyboardModality } from '../../components/utils/input-modality';
 import { twMerge } from '../../components/utils/tw';
 
 import { isCaretAtEndOfInput, isCaretAtStartOfInput } from '../../components/utils/caret';
@@ -1394,7 +1393,7 @@ export class TableCellSelection {
         }
         : undefined;
 
-      const { element: pickerElement } = createCellColorPicker({
+      const { element: pickerElement, focusActiveSwatch } = createCellColorPicker({
         i18n: this.i18n,
         currentColors,
         onColorSelect: (color: string | null, mode: CellColorMode): void => {
@@ -1413,16 +1412,7 @@ export class TableCellSelection {
           }],
           isFlippable: false,
           onOpen: () => {
-            // Focusing the tab after a mouse click paints a real focus ring:
-            // the tab's mousedown preventDefault keeps the browser's
-            // focus-visible flag alive across the click.
-            if (!isKeyboardModality()) {
-              return;
-            }
-
-            queueMicrotask(() => {
-              pickerElement.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus({ preventScroll: true });
-            });
+            queueMicrotask(focusActiveSwatch);
           },
         },
       });

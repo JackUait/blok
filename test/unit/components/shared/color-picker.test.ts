@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fireEvent, getByRole, queryByAttribute, queryByRole } from '@testing-library/dom';
+import { getByRole, queryByAttribute, queryByRole } from '@testing-library/dom';
 import { createColorPicker } from '../../../../src/components/shared/color-picker';
 import type { ColorPickerOptions } from '../../../../src/components/shared/color-picker';
 import { COLOR_PRESETS } from '../../../../src/components/shared/color-presets';
@@ -45,17 +45,13 @@ describe('createColorPicker', () => {
     expect(sections[1].getAttribute('data-blok-testid')).toBe('test-section-bg');
   });
 
-  it('exposes only the selected mode panel until its other tab is activated', () => {
+  it('shows every mode section at once, each labelled as a group', () => {
     const { element } = createColorPicker(createOptions());
 
     document.body.appendChild(element);
-    expect(getByRole(element, 'tabpanel', { name: 'label.text' })).toBeVisible();
-    expect(queryByRole(element, 'tabpanel', { name: 'label.bg' })).toBeNull();
-
-    fireEvent.click(getByRole(element, 'tab', { name: 'label.bg' }));
-
-    expect(getByRole(element, 'tabpanel', { name: 'label.bg' })).toBeVisible();
-    expect(queryByRole(element, 'tabpanel', { name: 'label.text' })).toBeNull();
+    expect(getByRole(element, 'group', { name: 'label.text' })).toBeVisible();
+    expect(getByRole(element, 'group', { name: 'label.bg' })).toBeVisible();
+    expect(queryByRole(element, 'tab')).toBeNull();
   });
 
   it('renders all color swatches in each section (presets + 1 default per section)', () => {
@@ -565,7 +561,7 @@ describe('createColorPicker', () => {
       expect(element.querySelector('[data-blok-testid="test-swatch-recent-bg-blue"]')).not.toBeNull();
     });
 
-    it('keeps recently used colors visible when the other mode is selected', () => {
+    it('shows recently used colors in a fresh picker', () => {
       const first = createColorPicker(createOptions());
 
       clickSwatch(first.element, 'test-swatch-text-red');
@@ -573,7 +569,6 @@ describe('createColorPicker', () => {
       const second = createColorPicker(createOptions());
 
       document.body.appendChild(second.element);
-      fireEvent.click(getByRole(second.element, 'tab', { name: 'label.bg' }));
 
       expect(queryByAttribute('data-blok-testid', second.element, 'test-swatch-recent-text-red')).toBeVisible();
     });

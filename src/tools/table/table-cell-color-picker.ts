@@ -15,6 +15,7 @@ interface CellColorPickerOptions {
 
 interface CellColorPickerResult {
   element: HTMLDivElement;
+  focusActiveSwatch: () => void;
 }
 
 /**
@@ -39,5 +40,5 @@ export const createCellColorPicker = (options: CellColorPickerOptions): CellColo
     },
   });
 
-  return { element: handle.element };
+  return { element: handle.element, focusActiveSwatch: handle.focusActiveSwatch };
 };

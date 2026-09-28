@@ -227,19 +227,25 @@ describe('color-picker mutant kills', () => {
       expect(element.className).toContain('flex flex-col gap-3 p-2');
     });
 
-    it('generates tab ids under the blok-color-picker- prefix', () => {
+    it('titles each section with a picker-unique id under the blok-color-picker- prefix', () => {
       const { element } = createColorPicker(createOptions());
+      const section = byTestId(element, 'test-section-text');
+      const titleId = section.getAttribute('aria-labelledby') ?? '';
+      const title = element.querySelector(`[id="${titleId}"]`);
 
-      expect(byTestId(element, 'test-tab-text').id).toMatch(/^blok-color-picker-.+-tab-0$/);
-      expect(byTestId(element, 'test-tab-bg').id).toMatch(/^blok-color-picker-.+-tab-1$/);
+      expect(section.getAttribute('role')).toBe('group');
+      expect(titleId).toMatch(/^blok-color-picker-.+-title-0$/);
+      expect(byTestId(element, 'test-section-bg').getAttribute('aria-labelledby')).toMatch(/^blok-color-picker-.+-title-1$/);
+      expect(title?.className).toBe('text-xs font-medium text-text-secondary px-0.5');
+      expect(title?.textContent).toBe('Text');
     });
 
-    it('marks the tab list with role=tablist and its layout classes', () => {
+    it('has no tab list, preview row or reset button', () => {
       const { element } = createColorPicker(createOptions());
-      const tabList = element.children[0];
 
-      expect(tabList.getAttribute('role')).toBe('tablist');
-      expect(tabList.className).toBe('grid grid-cols-2 gap-1 rounded-lg bg-item-hover-bg p-1');
+      expect(element.querySelector('[role="tablist"]')).toBeNull();
+      expect(element.querySelector('[data-blok-testid^="test-preview-"]')).toBeNull();
+      expect(element.querySelector('[data-blok-testid^="test-reset-"]')).toBeNull();
     });
 
     it('gives every swatch the shared swatch class contract', () => {
@@ -254,59 +260,6 @@ describe('color-picker mutant kills', () => {
       expect(classes).toContain('transition-[box-shadow,transform,scale]');
       expect(classes).toContain('duration-150');
       expect(classes).toContain('motion-reduce:transition-none motion-reduce:active:scale-100');
-    });
-
-    it('gives every tab the shared tab class contract', () => {
-      const { element } = createColorPicker(createOptions());
-      const classes = byTestId(element, 'test-tab-text').className;
-
-      expect(classes).toContain('min-w-0');
-      expect(classes).toContain('py-1.5');
-      expect(classes).toContain('outline-hidden');
-      expect(classes).toContain('bg-transparent');
-      expect(classes).toContain('text-text-secondary');
-      expect(classes).toContain('transition-colors');
-      expect(classes).toContain('duration-150');
-      expect(classes).toContain('motion-reduce:transition-none');
-    });
-
-    it('wires aria-selected styling classes on the tabs', () => {
-      const classes = byTestId(createColorPicker(createOptions()).element, 'test-tab-text').className;
-
-      expect(classes).toContain('aria-selected:bg-popover-bg');
-      expect(classes).toContain('hover:text-text-primary');
-      expect(classes).toContain('focus-visible:ring-2');
-    });
-
-    it('renders the selected preview row with its layout classes', () => {
-      const { element } = createColorPicker(createOptions());
-      const preview = byTestId(element, 'test-preview-text');
-      const selectedRow = preview.parentElement;
-
-      expect(selectedRow?.className).toBe('flex items-center gap-2 px-0.5');
-      expect(preview.className).toBe('flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm font-semibold');
-      expect(preview.textContent).toBe('A');
-      expect(preview.getAttribute('aria-hidden')).toBe('true');
-    });
-
-    it('marks the color name as a status region with its layout classes', () => {
-      const { element } = createColorPicker(createOptions());
-      const colorName = byTestId(element, 'test-preview-text').nextElementSibling;
-
-      expect(colorName?.className).toBe('min-w-0 flex-1 truncate text-xs font-medium text-text-primary');
-      expect(colorName?.getAttribute('role')).toBe('status');
-    });
-
-    it('renders a reset button per section with the prefixed test id', () => {
-      const { element } = createColorPicker(createOptions());
-      const reset = byTestId(element, 'test-reset-text');
-
-      expect(reset.textContent).toBe('Default');
-      expect(reset.className).toContain('min-h-8');
-      expect(reset.className).toContain('text-text-secondary');
-      expect(reset.className).toContain('hover:bg-item-hover-bg');
-      expect(reset.className).toContain('outline-hidden');
-      expect(reset.className).toContain('focus-visible:ring-2');
     });
 
     it('lays each swatch grid out as five 2.5rem columns', () => {
@@ -383,75 +336,14 @@ describe('color-picker mutant kills', () => {
     });
   });
 
-  describe('preview and color name', () => {
-    it('names the default entry and leaves the preview at the neutral text token when nothing is active', () => {
-      const { element } = createColorPicker(createOptions());
-
-      expect(byTestId(element, 'test-preview-text').nextElementSibling?.textContent).toBe('Default');
-      expect(byTestId(element, 'test-preview-text').style.color).toBe(TEXT_PRIMARY);
-      expect(byTestId(element, 'test-preview-text').style.backgroundColor).toBe(NEUTRAL_BG);
-    });
-
-    it('previews the raw active color for text mode even when it matches no preset', () => {
-      const { element, setActiveColor } = createColorPicker(createOptions());
-
-      setActiveColor('#123456', 'text');
-
-      expect(byTestId(element, 'test-preview-text').style.color).toBe('rgb(18, 52, 86)');
-      expect(byTestId(element, 'test-preview-text').style.backgroundColor).toBe(NEUTRAL_BG);
-    });
-
-    it('previews the preset text color when the active text color is a preset', () => {
-      const { element, setActiveColor } = createColorPicker(createOptions());
-
-      setActiveColor(preset('gray').text, 'text');
-
-      expect(byTestId(element, 'test-preview-text').style.color).toBe(rgbOf(preset('gray').text));
-      expect(byTestId(element, 'test-preview-text').nextElementSibling?.textContent).toBe('Gray');
-    });
-
-    it('previews the matching preset text color for a bg-mode active color', () => {
-      const { element, setActiveColor } = createColorPicker(createOptions());
-
-      setActiveColor(preset('gray').bg, 'bg');
-
-      expect(byTestId(element, 'test-preview-bg').style.color).toBe(rgbOf(preset('gray').text));
-      expect(byTestId(element, 'test-preview-bg').style.backgroundColor).toBe(rgbOf(preset('gray').bg));
-      expect(byTestId(element, 'test-preview-bg').nextElementSibling?.textContent).toBe('Gray');
-    });
-
-    it('names the default entry for a bg-mode picker with no active color', () => {
-      const { element } = createColorPicker(createOptions());
-
-      expect(byTestId(element, 'test-preview-bg').nextElementSibling?.textContent).toBe('Default');
-      expect(byTestId(element, 'test-preview-bg').style.color).toBe(TEXT_PRIMARY);
-      expect(byTestId(element, 'test-preview-bg').style.backgroundColor).toBe(NEUTRAL_BG);
-    });
-  });
-
   describe('section visibility', () => {
-    it('hides the inactive panel and keeps the active one laid out', () => {
+    it('shows every section as a flex column', () => {
       const { element } = createColorPicker(createOptions());
 
-      expect(byTestId(element, 'test-section-text').hidden).toBe(false);
-      expect(byTestId(element, 'test-section-text').className).toContain('flex flex-col gap-3');
-      expect(byTestId(element, 'test-section-text').className).not.toContain('hidden');
-      expect(byTestId(element, 'test-section-bg').hidden).toBe(true);
-      expect(byTestId(element, 'test-section-bg').className).toContain('hidden');
-    });
-
-    it('swaps visibility and aria-selected when the other tab is activated', () => {
-      const { element } = createColorPicker(createOptions());
-
-      byTestId(element, 'test-tab-bg').click();
-
-      expect(byTestId(element, 'test-section-bg').hidden).toBe(false);
-      expect(byTestId(element, 'test-section-bg').className).toContain('flex flex-col gap-3');
-      expect(byTestId(element, 'test-section-text').className).toContain('hidden');
-      expect(byTestId(element, 'test-tab-bg').getAttribute('aria-selected')).toBe('true');
-      expect(byTestId(element, 'test-tab-text').getAttribute('aria-selected')).toBe('false');
-      expect(byTestId(element, 'test-tab-bg').tabIndex).toBe(0);
-      expect(byTestId(element, 'test-tab-text').tabIndex).toBe(-1);
+      for (const key of ['text', 'bg']) {
+        expect(byTestId(element, `test-section-${key}`).hidden).toBe(false);
+        expect(byTestId(element, `test-section-${key}`).className).toBe('flex flex-col gap-2');
+      }
     });
 
     it('resets every section to default on reset()', () => {
@@ -462,7 +354,6 @@ describe('color-picker mutant kills', () => {
 
       expect(byTestId(element, 'test-swatch-text-red').getAttribute('aria-pressed')).toBe('false');
       expect(byTestId(element, 'test-swatch-text-default').getAttribute('aria-pressed')).toBe('true');
-      expect(byTestId(element, 'test-preview-text').nextElementSibling?.textContent).toBe('Default');
     });
   });
 
@@ -556,7 +447,9 @@ describe('color-picker mutant kills', () => {
       const { element } = createColorPicker(createOptions());
       const section = byTestId(element, 'test-section-recent');
 
-      expect(section.className).toBe('flex flex-col gap-2 border-t border-popover-border pt-3');
+      expect(section.className).toBe('flex flex-col gap-2');
+      // Recents lead the panel, like Notion.
+      expect(element.firstElementChild?.contains(section)).toBe(true);
       expect(section.textContent).toContain('Recently used');
       expect(section.children[0].className).toBe('text-xs font-medium text-text-secondary px-0.5');
       expect(byTestId(element, 'test-swatch-recent-text-red').parentElement?.className).toBe('grid gap-1.5');
@@ -687,69 +580,31 @@ describe('color-picker mutant kills', () => {
   });
 
   describe('focus management', () => {
-    it('moves focus with the arrow keys and wraps around the tab ring', () => {
-      const { element } = createColorPicker(createOptions());
+    it('focuses the active swatch of the first section for a keyboard open', () => {
+      const { element, setActiveColor, focusActiveSwatch } = createColorPicker(createOptions());
 
       document.body.appendChild(element);
-      const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
-
-      fireEvent.keyDown(byTestId(element, 'test-tab-text'), { key: 'ArrowLeft' });
-
-      expect(document.activeElement?.getAttribute('data-blok-testid')).toBe('test-tab-bg');
-      expect(focusSpy).toHaveBeenLastCalledWith({ preventScroll: true });
-
-      fireEvent.keyDown(byTestId(element, 'test-tab-bg'), { key: 'ArrowLeft' });
-
-      expect(document.activeElement?.getAttribute('data-blok-testid')).toBe('test-tab-text');
-    });
-
-    it('supports ArrowRight, Home and End on the tab list', () => {
-      const { element } = createColorPicker(createOptions());
-
-      document.body.appendChild(element);
-
-      fireEvent.keyDown(byTestId(element, 'test-tab-text'), { key: 'ArrowRight' });
-      expect(document.activeElement?.getAttribute('data-blok-testid')).toBe('test-tab-bg');
-
-      fireEvent.keyDown(byTestId(element, 'test-tab-bg'), { key: 'Home' });
-      expect(document.activeElement?.getAttribute('data-blok-testid')).toBe('test-tab-text');
-
-      fireEvent.keyDown(byTestId(element, 'test-tab-text'), { key: 'End' });
-      expect(document.activeElement?.getAttribute('data-blok-testid')).toBe('test-tab-bg');
-    });
-
-    it('leaves other keys to the editor', () => {
-      const { element } = createColorPicker(createOptions());
-
-      document.body.appendChild(element);
-      const tab = byTestId(element, 'test-tab-text');
-
-      tab.focus();
-      fireEvent.keyDown(tab, { key: 'a' });
-
-      expect(tab).toHaveFocus();
-    });
-
-    it('moves focus to the activated tab when the focused panel is hidden', () => {
-      const { element } = createColorPicker(createOptions());
-
-      document.body.appendChild(element);
-      // Force keyboard modality so the focus move is allowed.
       fireEvent.keyDown(document.body, { key: 'Tab' });
-
-      const reset = byTestId(element, 'test-reset-text');
-
-      reset.focus();
+      setActiveColor(preset('red').text, 'text');
       const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
 
-      byTestId(element, 'test-tab-bg').click();
+      focusActiveSwatch();
 
-      expect(document.activeElement?.getAttribute('data-blok-testid')).toBe('test-tab-bg');
+      expect(document.activeElement?.getAttribute('data-blok-testid')).toBe('test-swatch-text-red');
       expect(focusSpy).toHaveBeenLastCalledWith({ preventScroll: true });
+    });
 
-      byTestId(element, 'test-tab-text').click();
+    it('leaves focus alone after a mouse press', () => {
+      const { element, focusActiveSwatch } = createColorPicker(createOptions());
 
-      expect(document.activeElement?.getAttribute('data-blok-testid')).toBe('test-tab-text');
+      document.body.appendChild(element);
+      fireEvent.pointerDown(document.body);
+      const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
+
+      focusActiveSwatch();
+
+      expect(focusSpy).not.toHaveBeenCalled();
+      fireEvent.keyDown(document.body, { key: 'Tab' });
     });
 
     it('restores focus to the matching recent swatch after a re-render', () => {

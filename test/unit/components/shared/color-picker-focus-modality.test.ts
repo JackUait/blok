@@ -81,10 +81,10 @@ const openSubmenu = async (
 };
 
 /**
- * Builds the two-tab picker on its own, outside any popover.
- * @returns the mounted picker element
+ * Builds the picker on its own, outside any popover.
+ * @returns the mounted picker handle
  */
-const mountPicker = (): HTMLElement => {
+const mountPickerHandle = (): ReturnType<typeof createColorPicker> => {
   const handle = createColorPicker({
     i18n,
     testIdPrefix: 'block-color',
@@ -101,7 +101,7 @@ const mountPicker = (): HTMLElement => {
 
   document.body.appendChild(handle.element);
 
-  return handle.element;
+  return handle;
 };
 
 /**
@@ -188,39 +188,28 @@ describe('color picker focus follows input modality', () => {
     vi.restoreAllMocks();
   });
 
-  describe('switching tabs inside the picker', () => {
-    it('does not move focus to a tab clicked with the mouse', async () => {
-      const element = mountPicker();
-      const textTab = getByRole(element, 'tab', { name: 'Text color' });
-      const backgroundTab = getByRole(element, 'tab', { name: 'Background' });
+  describe('the picker on its own', () => {
+    it('focuses the active swatch when asked from the keyboard', () => {
+      const handle = mountPickerHandle();
 
-      textTab.focus();
-      pressPointerOn(backgroundTab);
-      fireEvent.click(backgroundTab);
-      await Promise.resolve();
+      restoreKeyboardModality();
+      handle.focusActiveSwatch();
 
-      expect(backgroundTab).not.toHaveFocus();
-      expect(backgroundTab.getAttribute('aria-selected')).toBe('true');
-      expect(textTab.getAttribute('aria-selected')).toBe('false');
-      expect(backgroundTab.tabIndex).toBe(0);
+      expect(getByRole(handle.element, 'button', { name: 'Default text color' })).toHaveFocus();
     });
 
-    it('moves focus to a tab activated from the keyboard', async () => {
-      const element = mountPicker();
-      const textTab = getByRole(element, 'tab', { name: 'Text color' });
-      const backgroundTab = getByRole(element, 'tab', { name: 'Background' });
+    it('focuses nothing when asked after a mouse press', () => {
+      const handle = mountPickerHandle();
 
-      textTab.focus();
-      fireEvent.click(backgroundTab);
-      await Promise.resolve();
+      pressPointerOn(handle.element);
+      handle.focusActiveSwatch();
 
-      expect(backgroundTab).toHaveFocus();
-      expect(backgroundTab.getAttribute('aria-selected')).toBe('true');
+      expect(document.body).toHaveFocus();
     });
   });
 
   describe('block-settings Color submenu', () => {
-    it('leaves the tab unfocused when the row is clicked with the mouse', async () => {
+    it('leaves the swatches unfocused when the row is clicked with the mouse', async () => {
       const popover = await openSubmenu(
         buildBlockColorTunes({ data: {},
           i18n,
@@ -229,12 +218,12 @@ describe('color picker focus follows input modality', () => {
         'pointer'
       );
 
-      const tab = getByRole(popover.getElement(), 'tab', { name: 'Text color' });
+      const swatch = getByRole(popover.getElement(), 'button', { name: 'Default text color' });
 
-      expect(tab).not.toHaveFocus();
+      expect(swatch).not.toHaveFocus();
     });
 
-    it('focuses the selected tab when the row is opened from the keyboard', async () => {
+    it('focuses the active swatch when the row is opened from the keyboard', async () => {
       const popover = await openSubmenu(
         buildBlockColorTunes({ data: {},
           i18n,
@@ -243,9 +232,9 @@ describe('color picker focus follows input modality', () => {
         'keyboard'
       );
 
-      const tab = getByRole(popover.getElement(), 'tab', { name: 'Text color' });
+      const swatch = getByRole(popover.getElement(), 'button', { name: 'Default text color' });
 
-      expect(tab).toHaveFocus();
+      expect(swatch).toHaveFocus();
     });
   });
 
@@ -265,36 +254,36 @@ describe('color picker focus follows input modality', () => {
       type === 'row' ? buildRowMenuItems(1, menuOptions()) : buildColumnMenuItems(1, menuOptions())
     );
 
-    it('leaves the tab unfocused when the row is clicked with the mouse', async () => {
+    it('leaves the swatches unfocused when the row is clicked with the mouse', async () => {
       const popover = await openSubmenu(items(), 'cellColor', 'pointer');
-      const tab = getByRole(popover.getElement(), 'tab', { name: 'Text color' });
+      const swatch = getByRole(popover.getElement(), 'button', { name: 'Default text color' });
 
-      expect(tab).not.toHaveFocus();
+      expect(swatch).not.toHaveFocus();
     });
 
-    it('focuses the selected tab when the row is opened from the keyboard', async () => {
+    it('focuses the active swatch when the row is opened from the keyboard', async () => {
       const popover = await openSubmenu(items(), 'cellColor', 'keyboard');
-      const tab = getByRole(popover.getElement(), 'tab', { name: 'Text color' });
+      const swatch = getByRole(popover.getElement(), 'button', { name: 'Default text color' });
 
-      expect(tab).toHaveFocus();
+      expect(swatch).toHaveFocus();
     });
   });
 
   describe('table cell-selection color submenu', () => {
-    it('leaves the tab unfocused when the row is clicked with the mouse', async () => {
+    it('leaves the swatches unfocused when the row is clicked with the mouse', async () => {
       await openCellSelectionColorMenu('pointer');
 
-      const tab = getByRole(document.body, 'tab', { name: 'Text color' });
+      const swatch = getByRole(document.body, 'button', { name: 'Default text color' });
 
-      expect(tab).not.toHaveFocus();
+      expect(swatch).not.toHaveFocus();
     });
 
-    it('focuses the selected tab when the row is opened from the keyboard', async () => {
+    it('focuses the active swatch when the row is opened from the keyboard', async () => {
       await openCellSelectionColorMenu('keyboard');
 
-      const tab = getByRole(document.body, 'tab', { name: 'Text color' });
+      const swatch = getByRole(document.body, 'button', { name: 'Default text color' });
 
-      expect(tab).toHaveFocus();
+      expect(swatch).toHaveFocus();
     });
   });
 });

@@ -104,6 +104,10 @@ export interface ColorPickerHandle {
    * Reset the picker state back to defaults (clear all active colors).
    */
   reset: () => void;
+  /**
+   * Focus the active swatch of the first section, for a keyboard open only.
+   */
+  focusActiveSwatch: () => void;
 }
 
 /**
@@ -196,15 +200,6 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
   wrapper.className = 'flex flex-col gap-3 p-2';
   const pickerId = generateId('blok-color-picker-');
   const sectionGrids: HTMLDivElement[] = [];
-  const sections: HTMLDivElement[] = [];
-  const previews: HTMLSpanElement[] = [];
-  const colorNames: HTMLSpanElement[] = [];
-  const modeTabs: HTMLButtonElement[] = [];
-  const tabList = document.createElement('div');
-
-  tabList.setAttribute('role', 'tablist');
-  tabList.className = 'grid grid-cols-2 gap-1 rounded-lg bg-item-hover-bg p-1';
-  wrapper.appendChild(tabList);
 
   /**
    * Base swatch button classes shared by every swatch in the picker.
@@ -249,7 +244,7 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
     const section = document.createElement('div');
 
     section.setAttribute('data-blok-testid', `${testIdPrefix}-section-recent`);
-    section.className = 'flex flex-col gap-2 border-t border-popover-border pt-3';
+    section.className = 'flex flex-col gap-2';
 
     const title = document.createElement('div');
 
@@ -287,7 +282,6 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
       }
 
       swatch.addEventListener('click', () => {
-        activateMode(modes.indexOf(mode));
         recordRecentColor(entry);
         renderRecentSection();
         onColorSelect(swatchColor, mode.key);
@@ -308,111 +302,29 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
     }
   };
 
+  // Recents lead, like Notion; the sections follow.
+  wrapper.appendChild(recentSectionHost);
+
   modes.forEach((mode, modeIndex) => {
-    const tab = document.createElement('button');
     const section = document.createElement('div');
-
-    tab.type = 'button';
-    tab.id = `${pickerId}-tab-${modeIndex}`;
-    tab.setAttribute('data-blok-testid', `${testIdPrefix}-tab-${mode.key}`);
-    tab.setAttribute('role', 'tab');
-    tab.setAttribute('aria-controls', `${pickerId}-panel-${modeIndex}`);
-    tab.textContent = i18n.t(mode.labelKey);
-    tab.className = twMerge(
-      'min-w-0 min-h-8 rounded-md border-none bg-transparent px-2 py-1.5',
-      'text-xs font-medium text-text-secondary cursor-pointer outline-hidden',
-      'aria-selected:bg-popover-bg aria-selected:text-text-primary aria-selected:shadow-xs',
-      'hover:text-text-primary focus-visible:ring-2 focus-visible:ring-text-secondary',
-      'transition-colors duration-150 motion-reduce:transition-none'
-    );
-    // Pointer tabs must not collapse the editor selection or close its toolbar.
-    tab.addEventListener('mousedown', (event) => event.preventDefault());
-    tab.addEventListener('click', () => activateMode(modeIndex));
-    tab.addEventListener('keydown', (event) => {
-      const destinations: Record<string, number | undefined> = {
-        ArrowLeft: (modeIndex + modes.length - 1) % modes.length,
-        ArrowRight: (modeIndex + 1) % modes.length,
-        Home: 0,
-        End: modes.length - 1,
-      };
-      const nextIndex = destinations[event.key];
-
-      if (nextIndex === undefined) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      activateMode(nextIndex);
-      modeTabs[nextIndex].focus({ preventScroll: true });
-    });
-    modeTabs.push(tab);
-    tabList.appendChild(tab);
-
-    section.id = `${pickerId}-panel-${modeIndex}`;
-    section.setAttribute('data-blok-testid', `${testIdPrefix}-section-${mode.key}`);
-    section.setAttribute('role', 'tabpanel');
-    section.setAttribute('aria-labelledby', tab.id);
-    sections.push(section);
-
-    const selected = document.createElement('div');
-    const preview = document.createElement('span');
-    const colorName = document.createElement('span');
-    const resetButton = document.createElement('button');
-
-    selected.className = 'flex items-center gap-2 px-0.5';
-    preview.className = 'flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm font-semibold';
-    preview.setAttribute('data-blok-testid', `${testIdPrefix}-preview-${mode.key}`);
-    preview.setAttribute('aria-hidden', 'true');
-    preview.textContent = 'A';
-    previews.push(preview);
-
-    colorName.className = 'min-w-0 flex-1 truncate text-xs font-medium text-text-primary';
-    colorName.setAttribute('role', 'status');
-    colorNames.push(colorName);
-
-    resetButton.type = 'button';
-    resetButton.textContent = i18n.t('tools.marker.default');
-    resetButton.setAttribute('data-blok-testid', `${testIdPrefix}-reset-${mode.key}`);
-    resetButton.className = twMerge(
-      'min-h-8 rounded-md border-none bg-transparent px-2 text-xs text-text-secondary',
-      'cursor-pointer hover:bg-item-hover-bg hover:text-text-primary outline-hidden',
-      'focus-visible:ring-2 focus-visible:ring-text-secondary'
-    );
-    resetButton.addEventListener('click', () => onColorSelect(null, mode.key));
-    selected.append(preview, colorName, resetButton);
-
+    const title = document.createElement('div');
     const grid = document.createElement('div');
+
+    title.id = `${pickerId}-title-${modeIndex}`;
+    title.className = 'text-xs font-medium text-text-secondary px-0.5';
+    title.textContent = i18n.t(mode.labelKey);
+
+    section.setAttribute('data-blok-testid', `${testIdPrefix}-section-${mode.key}`);
+    section.setAttribute('role', 'group');
+    section.setAttribute('aria-labelledby', title.id);
+    section.className = 'flex flex-col gap-2';
 
     grid.className = 'grid gap-1.5';
     grid.style.gridTemplateColumns = 'repeat(5, 2.5rem)';
     sectionGrids.push(grid);
-    section.append(selected, grid);
+    section.append(title, grid);
     wrapper.appendChild(section);
   });
-  wrapper.appendChild(recentSectionHost);
-
-  const activateMode = (modeIndex: number): void => {
-    const focusedPanel = sections.find((section) => section.contains(document.activeElement));
-
-    modes.forEach((_, index) => {
-      const section = sections[index];
-      const active = index === modeIndex;
-
-      section.hidden = !active;
-      section.className = twMerge('flex flex-col gap-3', !active && 'hidden');
-      modeTabs[index].setAttribute('aria-selected', String(active));
-      modeTabs[index].tabIndex = active ? 0 : -1;
-    });
-
-    /**
-     * A tab's mousedown calls preventDefault, so a click never moves focus and
-     * never clears Blink's document-level focus-visible flag. Focusing the tab
-     * after a mouse click would therefore paint a real ring.
-     */
-    if ((focusedPanel?.hidden || tabList.contains(document.activeElement)) && isKeyboardModality()) {
-      modeTabs[modeIndex].focus({ preventScroll: true });
-    }
-  };
 
   /**
    * Render the swatches for one section.
@@ -423,18 +335,6 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
     const presets = getActivePresets();
 
     const activeColor = state.activeColors[mode.key];
-    const activePreset = presets.find((preset) => activeColor !== null && colorsEqual(preset[mode.presetField], activeColor));
-    const preview = previews[modeIndex];
-
-    colorNames[modeIndex].textContent = activePreset
-      ? i18n.t('tools.colorPicker.color.' + activePreset.name)
-      : activeColor ?? i18n.t('tools.marker.default');
-    preview.style.color = mode.presetField === 'text'
-      ? activeColor ?? 'var(--blok-text-primary)'
-      : activePreset?.text ?? 'var(--blok-text-primary)';
-    preview.style.backgroundColor = mode.presetField === 'bg'
-      ? activeColor ?? SWATCH_NEUTRAL_BG
-      : SWATCH_NEUTRAL_BG;
 
     [null, ...presets].forEach((preset, index) => {
       // Keep the buttons mounted: callers update selection during their click callback.
@@ -479,7 +379,6 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
     modes.forEach((_, i) => renderSection(i));
   };
 
-  activateMode(0);
   renderRecentSection();
   renderAll();
 
@@ -498,6 +397,13 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
         state.activeColors[mode.key] = null;
       }
       renderAll();
+    },
+    focusActiveSwatch: () => {
+      // A mouse open must not paint a focus ring.
+      if (!isKeyboardModality()) {
+        return;
+      }
+      sectionGrids[0]?.querySelector<HTMLElement>('[aria-pressed="true"]')?.focus({ preventScroll: true });
     },
   };
 }

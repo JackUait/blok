@@ -1,4 +1,4 @@
-import { fireEvent, getByRole, queryByAttribute } from '@testing-library/dom';
+import { fireEvent, queryByAttribute } from '@testing-library/dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MarkerInlineTool } from '../../../../../../src/components/inline-tools/inline-tool-marker';
 import { InlineKeyboardHandler } from '../../../../../../src/components/modules/toolbar/inline/keyboard-handler';
@@ -47,6 +47,16 @@ const openMarker = async (): Promise<PopoverInline> => {
   return popover;
 };
 
+const defaultTextSwatch = (root: HTMLElement): HTMLElement => {
+  const swatch = queryByAttribute('data-blok-testid', root, 'marker-swatch-color-default');
+
+  if (swatch === null) {
+    throw new Error('Missing default text swatch');
+  }
+
+  return swatch;
+};
+
 describe('native inline color Escape dismissal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -69,18 +79,18 @@ describe('native inline color Escape dismissal', () => {
     if (order === 'after') {
       Notifier.show({ message: 'Saved' });
     }
-    const tab = getByRole(popover.getElement(), 'tab', { name: 'tools.marker.textColor' });
+    const swatch = defaultTextSwatch(popover.getElement());
     const toast = queryByAttribute('data-blok-testid', document.body, 'notification');
 
-    expect(tab).toHaveFocus();
-    fireEvent.keyDown(tab, { key: 'Escape' });
+    expect(swatch).toHaveFocus();
+    fireEvent.keyDown(swatch, { key: 'Escape' });
 
     expect(popover.hasNestedPopoverOpen).toBe(true);
     expect(toast).toHaveAttribute('data-state', 'closed');
     expect(popover.isShown).toBe(true);
-    expect(tab).toHaveFocus();
+    expect(swatch).toHaveFocus();
 
-    fireEvent.keyDown(tab, { key: 'Escape' });
+    fireEvent.keyDown(swatch, { key: 'Escape' });
     expect(popover.hasNestedPopoverOpen).toBe(false);
     expect(popover.isShown).toBe(true);
     expect(window.getSelection()?.toString()).toBe('Keep this selection');
@@ -88,9 +98,9 @@ describe('native inline color Escape dismissal', () => {
 
   it('closes a triggerless native marker when no higher dismissal layer exists', async () => {
     const popover = await openMarker();
-    const tab = getByRole(popover.getElement(), 'tab', { name: 'tools.marker.textColor' });
+    const swatch = defaultTextSwatch(popover.getElement());
 
-    fireEvent.keyDown(tab, { key: 'Escape' });
+    fireEvent.keyDown(swatch, { key: 'Escape' });
     expect(popover.hasNestedPopoverOpen).toBe(false);
     expect(popover.isShown).toBe(true);
     expect(window.getSelection()?.toString()).toBe('Keep this selection');

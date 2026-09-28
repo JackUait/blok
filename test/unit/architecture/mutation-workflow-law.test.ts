@@ -76,6 +76,9 @@ describe('mutation workflow', () => {
     const run = steps.find((step) => step.name === 'Run mutation testing');
 
     expect(run?.run).toBe('yarn mutate');
+    // Setup time varies; the script stops Stryker by the job's own clock.
+    expect(steps[0]?.run).toContain('MUTATION_STOP_AT=');
+    expect(steps[0]?.run).toContain('$GITHUB_ENV');
     expect(workflow.jobs.mutation['timeout-minutes']).toBeLessThanOrEqual(10);
     expect(workflow.jobs.mutation.if).toContain("github.event_name == 'push'");
   });
@@ -96,7 +99,7 @@ describe('mutation workflow', () => {
   it('gives the sweep the same ledger handling as the push job', () => {
     const names = (list: Step[]): Array<string | undefined> => list.map((step) => step.name);
 
-    expect(names(sweepSteps)).toEqual(names(steps));
+    expect(names(sweepSteps)).toEqual(names(steps).filter((name) => name !== 'Record job start'));
     for (const name of ['Checkout code', 'Restore mutation state', 'Upload mutation state']) {
       expect(sweepSteps.find((step) => step.name === name))
         .toEqual(steps.find((step) => step.name === name));

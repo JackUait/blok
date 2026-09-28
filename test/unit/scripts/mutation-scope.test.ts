@@ -7,6 +7,7 @@ import {
   buildStrykerArgs,
   checkRatchet,
   collectSurvivors,
+  deadlineSeconds,
   isPartialRun,
   nextTotal,
   orderQueue,
@@ -754,6 +755,21 @@ describe('mutation-scope', () => {
 
     it('drops a parked file that can no longer be measured', () => {
       expect(orderQueue({ queued: ['src/gone.ts'], mutate: ['src/a.ts'] })).toEqual(['src/a.ts']);
+    });
+  });
+
+  describe('deadlineSeconds', () => {
+    it('uses the fixed deadline when the job clock is unknown', () => {
+      expect(deadlineSeconds({ deadline: 300, stopAt: undefined, now: 1000 })).toBe(300);
+    });
+
+    // A slow install eats into the same 7 minutes, so the job clock wins.
+    it('stops earlier when the job has less time left', () => {
+      expect(deadlineSeconds({ deadline: 300, stopAt: 1200, now: 1000 })).toBe(200);
+    });
+
+    it('never goes below one second', () => {
+      expect(deadlineSeconds({ deadline: 300, stopAt: 900, now: 1000 })).toBe(1);
     });
   });
 

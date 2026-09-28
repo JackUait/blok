@@ -30,10 +30,14 @@ jobs:
     name: Mutation
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && !inputs.sweep)
     runs-on: ubuntu-latest
-    # A backstop only: mutation-scope.mjs stops Stryker at 300 seconds, which
-    # keeps the job under 7 minutes.
+    # A backstop only: mutation-scope.mjs stops Stryker by MUTATION_STOP_AT,
+    # which keeps the job under 7 minutes.
     timeout-minutes: 10
     steps:
+      # 375 seconds leaves the rest of the 7 minutes for the ledger upload.
+      - name: Record job start
+        run: echo "MUTATION_STOP_AT=$(( $(date +%s) + 375 ))" >> "$GITHUB_ENV"
+
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

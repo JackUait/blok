@@ -2,24 +2,24 @@
 // between runs. See docs: the run mutates only what moved, but Stryker's
 // incremental file still reports the whole repository, so a survivor found in an
 // older commit stays visible until someone kills it.
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 
 const SURVIVING_STATUSES = new Set(['Survived', 'NoCoverage']);
 // Seconds of dry run per push run. Stryker's dry run runs a batch's covering
 // suites one file at a time, and CI wants the whole job under 7 minutes. The
 // deadline below is what guarantees that; this only keeps a run from reaching it.
-const DEFAULT_BUDGET = 150;
+const DEFAULT_BUDGET = 110;
 // Stryker's dry run spends this long loading each test file on top of its
 // tests. Measured in CI: 112s over 98 files, and 152s over 129 for src/blok.ts.
 const PER_FILE_OVERHEAD = 1.15;
-// Source bytes per push run, for the mutants the ledger cannot reuse. At 60-83
-// bytes and 0.6-2.5 seconds per fresh mutant, this is 100-330 seconds when
-// nothing is reused.
-const DEFAULT_BYTE_BUDGET = 8000;
+// Source bytes per push run, for the mutants the ledger cannot reuse. CI
+// measured about 65 bytes and 2 seconds per fresh mutant, so this is about 140
+// seconds when nothing is reused. With the dry run budget it fits the deadline.
+const DEFAULT_BYTE_BUDGET = 4500;
 // The scheduled sweep has a 330-minute job timeout. A sweep that hit its
 // deadline would send the same batch back to the next sweep, so its batch must
 // stay small enough to finish even when no mutant is reused.
@@ -426,6 +426,13 @@ export const orderQueue = ({ queued, mutate }) => {
 };
 
 /**
+ * Seconds Stryker may run. CI sets `stopAt` from the job's first step, so a
+ * slow install shortens the run instead of pushing the job past 7 minutes.
+ */
+export const deadlineSeconds = ({ deadline, stopAt, now }) =>
+  (stopAt === undefined ? deadline : Math.max(1, Math.min(deadline, stopAt - now)));
+
+/**
  * The ledger after Stryker was stopped at the deadline. Stryker writes its
  * incremental file only when it finishes, so the ledger is untouched and the
  * bar stays. The batch goes to the sweep, and the diff counts as accounted for.
@@ -799,12 +806,68 @@ const summarise = ({ survivors, ages, ratchet, pending, heavy, scopeChanged }) =
  * already landed, so the run is an alarm, and re-baselining keeps it from
  * staying red forever.
  */
+// Stryker's default sandbox root; stryker.config.json does not move it.
+const SANDBOX_ROOT = '.stryker-tmp';
+
+const sandboxes = () => (existsSync(SANDBOX_ROOT) ? readdirSync(SANDBOX_ROOT) : []);
+
+/**
+ * Runs Stryker in its own process group and kills the whole group at the
+ * deadline. Killing only Stryker left a test runner worker running on without
+ * a parent, and its sandbox behind.
+ */
+const runStryker = (args, seconds) => new Promise((resolvePromise, reject) => {
+  const before = new Set(sandboxes());
+  const child = spawn(process.execPath, ['node_modules/@stryker-mutator/core/bin/stryker.js', ...args], {
+    stdio: 'inherit',
+    detached: true,
+  });
+  const killGroup = (signal) => {
+    try {
+      process.kill(-child.pid, signal);
+    } catch {
+      // The group already exited.
+    }
+  };
+  // A detached child does not get the terminal's Ctrl+C.
+  const forwardInterrupt = () => killGroup('SIGINT');
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    killGroup('SIGKILL');
+  }, seconds * 1000);
+
+  process.on('SIGINT', forwardInterrupt);
+  child.on('error', reject);
+  child.on('exit', (code, signal) => {
+    clearTimeout(timer);
+    process.off('SIGINT', forwardInterrupt);
+
+    if (timedOut) {
+      for (const sandbox of sandboxes().filter((name) => !before.has(name))) {
+        rmSync(join(SANDBOX_ROOT, sandbox), { recursive: true, force: true });
+      }
+      resolvePromise('deadline');
+
+      return;
+    }
+
+    if (code === 0) {
+      resolvePromise('done');
+
+      return;
+    }
+
+    reject(new Error(`Stryker exited with ${code ?? signal}`));
+  });
+});
+
 const writeState = (stateDir, state) => {
   mkdirSync(stateDir, { recursive: true });
   writeFileSync(join(stateDir, 'state.json'), `${JSON.stringify(state, null, 2)}\n`);
 };
 
-const run = (stateDir, { allowFull, budget, deadline, sweep }) => {
+const run = async (stateDir, { allowFull, budget, deadline, sweep }) => {
   const scope = plan(stateDir, { budget, sweep });
   const args = buildStrykerArgs({ ...scope, allowFull });
 
@@ -819,6 +882,12 @@ const run = (stateDir, { allowFull, budget, deadline, sweep }) => {
   }
 
   const state = readJson(join(stateDir, 'state.json'), {});
+  const stopAt = process.env.MUTATION_STOP_AT;
+  const seconds = deadlineSeconds({
+    deadline,
+    stopAt: stopAt === undefined ? undefined : Number(stopAt),
+    now: Math.floor(Date.now() / 1000),
+  });
 
   if (args === null) {
     process.stdout.write('Nothing to mutate.\n');
@@ -829,20 +898,11 @@ const run = (stateDir, { allowFull, budget, deadline, sweep }) => {
     return;
   }
 
-  try {
-    execFileSync(process.execPath, ['node_modules/@stryker-mutator/core/bin/stryker.js', ...args], {
-      stdio: 'inherit',
-      timeout: deadline * 1000,
-    });
-  } catch (error) {
-    if (error.code !== 'ETIMEDOUT') {
-      throw error;
-    }
-
+  if (await runStryker(args, seconds) === 'deadline') {
     const next = stateAfterDeadline({ state, sha: git('rev-parse', 'HEAD'), scope });
 
     process.stdout.write(
-      `Stryker passed the ${deadline}s deadline; ${scope.mutate.length} file(s) moved to the scheduled sweep.\n`,
+      `Stryker passed the ${seconds}s deadline; ${scope.mutate.length} file(s) moved to the scheduled sweep.\n`,
     );
     reportParked(next);
     writeState(stateDir, next);
@@ -859,7 +919,7 @@ const run = (stateDir, { allowFull, budget, deadline, sweep }) => {
   }
 };
 
-const main = () => {
+const main = async () => {
   const args = process.argv.slice(2);
   const allowFull = args.includes('--full');
   const sweep = args.includes('--sweep');
@@ -874,7 +934,7 @@ const main = () => {
   const stateDir = rest[0] ?? '.mutation-state';
 
   if (command === 'run') {
-    run(stateDir, { allowFull, budget, deadline, sweep });
+    await run(stateDir, { allowFull, budget, deadline, sweep });
 
     return;
   }
@@ -897,5 +957,5 @@ const main = () => {
 };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main();
+  await main();
 }

@@ -211,9 +211,6 @@ export class BlocksAPI extends Module {
 
     try {
       await this.Blok.BlockManager.removeBlock(block);
-      if (parent?.name === 'table') {
-        await new Promise<void>(resolve => this.Blok.YjsManager.runAfterSavesOf(parent.id, resolve));
-      }
     } catch (error: unknown) {
       logLabeled(error as string, 'warn');
 
@@ -233,6 +230,12 @@ export class BlocksAPI extends Module {
      */
     if (setCaret && this.Blok.BlockManager.currentBlock) {
       this.Blok.Caret.setToBlock(this.Blok.BlockManager.currentBlock, this.Blok.Caret.positions.END);
+    }
+
+    // Wait only after the caret moves. Moving it after the table save keeps
+    // the cell's stand-in blocks alive through undo, and their cleanup wipes redo.
+    if (parent?.name === 'table') {
+      await new Promise<void>(resolve => this.Blok.YjsManager.runAfterSavesOf(parent.id, resolve));
     }
 
     this.Blok.Toolbar.close();

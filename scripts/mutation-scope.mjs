@@ -9,12 +9,26 @@ import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 
 const SURVIVING_STATUSES = new Set(['Survived', 'NoCoverage']);
-// Source bytes per run, sized so one CI batch stays near ten minutes. Two real
-// runs put a mutant at 60-83 source bytes, but the seconds per mutant ranged
-// from 0.6 to 2.5 depending on how many tests cover the module, so this is cut
-// for the slow end. Seeding locally should raise it: every batch pays for a dry
-// run, and there the wall clock is nobody's runner slot.
-const DEFAULT_BUDGET = 20000;
+// Seconds of covering tests per push run. Stryker's dry run runs a batch's
+// covering suites one file at a time, at about 1.08x their plain vitest time,
+// and CI wants the whole job under 7 minutes. The deadline below is what
+// guarantees that; this only keeps a run from reaching it.
+const DEFAULT_BUDGET = 150;
+// Source bytes per push run, for the mutants the ledger cannot reuse. At 60-83
+// bytes and 0.6-2.5 seconds per fresh mutant, this is 100-330 seconds when
+// nothing is reused.
+const DEFAULT_BYTE_BUDGET = 8000;
+// The scheduled sweep has a 330-minute job timeout. A sweep that hit its
+// deadline would send the same batch back to the next sweep, so its batch must
+// stay small enough to finish even when no mutant is reused.
+const SWEEP_BUDGET = 60 * 60;
+const SWEEP_BYTE_BUDGET = 200000;
+// Seconds Stryker may run before it is stopped. Setup, the plan and the upload
+// take about a minute of the 7.
+const DEFAULT_DEADLINE = 300;
+const SWEEP_DEADLINE = 5 * 60 * 60;
+// Per-test-file seconds from CI. Regenerate with scripts/mutation-test-seconds.mjs.
+const TEST_SECONDS_FILE = 'scripts/mutation-test-seconds.json';
 const SOURCE_PREFIX = 'src/';
 const TEST_PREFIX = 'test/unit/';
 const TEST_SUFFIX = /\.test\.tsx?$/;
@@ -347,29 +361,81 @@ export const buildStrykerArgs = ({ mode, mutate, testFiles, allowFull = false })
 };
 
 /**
- * Splits a list of files into what this run measures and what waits for the
- * next one. Weight stands in for mutant count, and source bytes track it
- * closely enough: the first four measured files came to ~60 bytes per mutant.
- * A file heavier than the whole budget still goes in alone, or it would sit in
- * the queue for ever and hold up everything behind it.
+ * Splits a list of files into what this run measures, what waits for the next
+ * run, and what only the scheduled sweep can afford. Cost is the seconds of
+ * covering test files the dry run must add, since it runs each one once, and
+ * the source bytes, which stand in for the mutants that may need re-testing
+ * after it (about 60-83 bytes per mutant, measured). A file
+ * that alone exceeds the budget goes to the sweep: taking it anyway made every
+ * run measure src/blok.ts and nothing else.
  */
-export const splitByBudget = ({ files, weightOf, budget }) => {
+export const splitByTime = ({
+  files,
+  testsOf,
+  secondsOf,
+  budget,
+  bytesOf = () => 0,
+  byteBudget = Infinity,
+}) => {
   const batch = [];
+  const pending = [];
+  const heavy = [];
+  const paid = new Set();
   let spent = 0;
+  let bytes = 0;
 
   for (const file of files) {
-    const weight = weightOf(file);
+    const tests = testsOf(file);
+    const alone = tests.reduce((sum, test) => sum + secondsOf(test), 0);
+    const size = bytesOf(file);
 
-    if (batch.length > 0 && spent + weight > budget) {
-      break;
+    if (alone > budget || size > byteBudget) {
+      heavy.push(file);
+      continue;
+    }
+
+    const extra = tests
+      .filter((test) => !paid.has(test))
+      .reduce((sum, test) => sum + secondsOf(test), 0);
+
+    if (spent + extra > budget || bytes + size > byteBudget) {
+      pending.push(file);
+      continue;
     }
 
     batch.push(file);
-    spent += weight;
+    spent += extra;
+    bytes += size;
+    for (const test of tests) {
+      paid.add(test);
+    }
   }
 
-  return { batch, pending: files.slice(batch.length) };
+  return { batch, pending, heavy };
 };
+
+/** Files parked by earlier runs go first, so a sorted list cannot starve the tail. */
+export const orderQueue = ({ queued, mutate }) => {
+  const measurable = new Set(mutate);
+  const first = queued.filter((file) => measurable.has(file));
+  const parked = new Set(first);
+
+  return [...first, ...mutate.filter((file) => !parked.has(file))];
+};
+
+/**
+ * The ledger after Stryker was stopped at the deadline. Stryker writes its
+ * incremental file only when it finishes, so the ledger is untouched and the
+ * bar stays. The batch goes to the sweep, and the diff counts as accounted for.
+ */
+export const stateAfterDeadline = ({ state, sha, scope }) => ({
+  lastCheckedSha: sha,
+  survivorTotal: state.survivorTotal ?? null,
+  measuredHash: state.measuredHash,
+  pending: scope.pending,
+  heavy: [...scope.heavy, ...scope.mutate],
+  seeding: state.seeding === true,
+});
 
 /**
  * Reads the survivors out of a Stryker JSON report. Uncovered mutants count as
@@ -528,6 +594,16 @@ const sizeOf = (path) => {
   }
 };
 
+// A test file CI has not timed yet costs the median, so it neither blocks a
+// batch nor rides along for free.
+const loadTestSeconds = () => {
+  const seconds = readJson(TEST_SECONDS_FILE, {});
+  const known = Object.values(seconds).sort((a, b) => a - b);
+  const median = known.length > 0 ? known[Math.floor(known.length / 2)] : 3;
+
+  return (test) => seconds[test] ?? median;
+};
+
 const readSource = (path) => {
   try {
     return readFileSync(path, 'utf8');
@@ -536,32 +612,49 @@ const readSource = (path) => {
   }
 };
 
-const plan = (stateDir, budget) => {
+const plan = (stateDir, { budget, sweep }) => {
   const state = readJson(join(stateDir, 'state.json'), {});
   const base = resolveDiffBase(state, isReachable);
   const { sourceFiles, testFiles } = trackedFiles();
   const importers = buildImporterIndex({ testFiles, sourceFiles, readFile: readSource });
 
   if (base.mode === 'full') {
-    return { ...base, mutate: sourceFiles, testFiles, skipped: [], pending: [] };
+    return { ...base, mutate: sourceFiles, testFiles, skipped: [], pending: [], heavy: [] };
   }
 
   // Files parked by an earlier run join this run's diff. Both are plain source
   // paths, so buildScope pairs them the same way and drops any that went away.
+  // Only the sweep takes the heavy files.
   const queued = Array.isArray(state.pending) ? state.pending : [];
+  const heavyQueued = Array.isArray(state.heavy) ? state.heavy : [];
   const wanted = buildScope({
-    changedPaths: [...gitLines('diff', '--name-only', base.from, 'HEAD'), ...queued],
+    changedPaths: [
+      ...gitLines('diff', '--name-only', base.from, 'HEAD'),
+      ...queued,
+      ...(sweep ? heavyQueued : []),
+    ],
     sourceFiles,
     testFiles,
     importers,
   });
-  const { batch, pending } = splitByBudget({ files: wanted.mutate, weightOf: sizeOf, budget });
+  const split = splitByTime({
+    files: orderQueue({ queued: sweep ? [...heavyQueued, ...queued] : queued, mutate: wanted.mutate }),
+    testsOf: (file) => importers.get(file) ?? [],
+    secondsOf: loadTestSeconds(),
+    budget,
+    bytesOf: sizeOf,
+    byteBudget: sweep ? SWEEP_BYTE_BUDGET : DEFAULT_BYTE_BUDGET,
+  });
+  const scheduled = new Set([...split.batch, ...split.pending]);
+  const heavy = [...new Set([...(sweep ? [] : heavyQueued), ...split.heavy])]
+    .filter((file) => !scheduled.has(file) && (importers.get(file) ?? []).length > 0);
 
   return {
     ...base,
-    ...buildScope({ changedPaths: batch, sourceFiles, testFiles, importers }),
+    ...buildScope({ changedPaths: split.batch, sourceFiles, testFiles, importers }),
     skipped: wanted.skipped,
-    pending,
+    pending: split.pending,
+    heavy,
   };
 };
 
@@ -587,6 +680,7 @@ const seed = (stateDir) => {
       lastCheckedSha: git('rev-parse', 'HEAD'),
       survivorTotal: state.survivorTotal ?? null,
       pending: mutate,
+      heavy: [],
       // Tells the batches that follow that this queue is the ledger filling up,
       // not one wide push that ran out of budget. It clears when the queue does.
       seeding: true,
@@ -607,7 +701,7 @@ const measurableSources = () => {
   return new Set(buildScope({ changedPaths: sourceFiles, sourceFiles, testFiles, importers }).mutate);
 };
 
-const record = (stateDir, reportPath, pending) => {
+const record = (stateDir, reportPath, pending, heavy) => {
   const state = readJson(join(stateDir, 'state.json'), {});
   const previousAges = readJson(join(stateDir, 'ages.json'), {});
   const report = readJson(reportPath, null);
@@ -622,14 +716,14 @@ const record = (stateDir, reportPath, pending) => {
   const previousTotal = state.survivorTotal ?? null;
   const measuredHash = scopeFingerprint(measurable);
   const scopeChanged = scopeMoved(state.measuredHash, measuredHash);
-  const parked = pending.length > 0;
+  const parked = pending.length > 0 || heavy.length > 0;
   // Seeding survives only as long as its queue does, so a wide push after the
   // baseline is built is parked work, not seeding.
   const seeding = state.seeding === true && parked;
   const ratchet = checkRatchet({
     previousTotal,
     currentTotal: survivors.length,
-    partial: isPartialRun({ pending, seeding: state.seeding }) || scopeChanged,
+    partial: isPartialRun({ pending: [...pending, ...heavy], seeding: state.seeding }) || scopeChanged,
   });
 
   const ages = updateSurvivorAges({
@@ -654,14 +748,25 @@ const record = (stateDir, reportPath, pending) => {
       }),
       measuredHash,
       pending,
+      heavy,
       seeding,
     }, null, 2)}\n`,
   );
 
-  return { survivors, ages, ratchet, pending, scopeChanged };
+  return { survivors, ages, ratchet, pending, heavy, scopeChanged };
 };
 
-const summarise = ({ survivors, ages, ratchet, pending, scopeChanged }) => {
+const reportParked = ({ pending, heavy }) => {
+  if (pending.length > 0) {
+    process.stdout.write(`${pending.length} file(s) parked for the next run.\n`);
+  }
+
+  if (heavy.length > 0) {
+    process.stdout.write(`${heavy.length} file(s) wait for the scheduled sweep.\n`);
+  }
+};
+
+const summarise = ({ survivors, ages, ratchet, pending, heavy, scopeChanged }) => {
   const oldest = survivors
     .map((survivor) => ({ ...survivor, ...ages[survivor.key] }))
     .sort((a, b) => a.firstSeenAt.localeCompare(b.firstSeenAt))
@@ -675,9 +780,7 @@ const summarise = ({ survivors, ages, ratchet, pending, scopeChanged }) => {
     process.stdout.write('Measurable scope moved; the bar is re-baselined and this total is not a verdict.\n');
   }
 
-  if (pending.length > 0) {
-    process.stdout.write(`${pending.length} file(s) parked for the next run.\n`);
-  }
+  reportParked({ pending, heavy });
 
   for (const survivor of oldest) {
     process.stdout.write(
@@ -694,8 +797,13 @@ const summarise = ({ survivors, ages, ratchet, pending, scopeChanged }) => {
  * already landed, so the run is an alarm, and re-baselining keeps it from
  * staying red forever.
  */
-const run = (stateDir, allowFull, budget) => {
-  const scope = plan(stateDir, budget);
+const writeState = (stateDir, state) => {
+  mkdirSync(stateDir, { recursive: true });
+  writeFileSync(join(stateDir, 'state.json'), `${JSON.stringify(state, null, 2)}\n`);
+};
+
+const run = (stateDir, { allowFull, budget, deadline, sweep }) => {
+  const scope = plan(stateDir, { budget, sweep });
   const args = buildStrykerArgs({ ...scope, allowFull });
 
   process.stdout.write(
@@ -708,17 +816,39 @@ const run = (stateDir, allowFull, budget) => {
     process.stdout.write(`  skipped ${file} (${reason})\n`);
   }
 
+  const state = readJson(join(stateDir, 'state.json'), {});
+
   if (args === null) {
     process.stdout.write('Nothing to mutate.\n');
+    reportParked(scope);
+    // The diff may have sent files to the sweep, and they must not be lost.
+    writeState(stateDir, stateAfterDeadline({ state, sha: git('rev-parse', 'HEAD'), scope }));
 
     return;
   }
 
-  execFileSync(process.execPath, ['node_modules/@stryker-mutator/core/bin/stryker.js', ...args], {
-    stdio: 'inherit',
-  });
+  try {
+    execFileSync(process.execPath, ['node_modules/@stryker-mutator/core/bin/stryker.js', ...args], {
+      stdio: 'inherit',
+      timeout: deadline * 1000,
+    });
+  } catch (error) {
+    if (error.code !== 'ETIMEDOUT') {
+      throw error;
+    }
 
-  const result = record(stateDir, join(stateDir, 'report.json'), scope.pending);
+    const next = stateAfterDeadline({ state, sha: git('rev-parse', 'HEAD'), scope });
+
+    process.stdout.write(
+      `Stryker passed the ${deadline}s deadline; ${scope.mutate.length} file(s) moved to the scheduled sweep.\n`,
+    );
+    reportParked(next);
+    writeState(stateDir, next);
+
+    return;
+  }
+
+  const result = record(stateDir, join(stateDir, 'report.json'), scope.pending, scope.heavy);
 
   summarise(result);
 
@@ -730,19 +860,25 @@ const run = (stateDir, allowFull, budget) => {
 const main = () => {
   const args = process.argv.slice(2);
   const allowFull = args.includes('--full');
-  const budgetArg = args.find((arg) => arg.startsWith('--budget='));
-  const budget = budgetArg === undefined ? DEFAULT_BUDGET : Number(budgetArg.slice(9));
+  const sweep = args.includes('--sweep');
+  const numberArg = (name, fallback) => {
+    const arg = args.find((value) => value.startsWith(`--${name}=`));
+
+    return arg === undefined ? fallback : Number(arg.slice(name.length + 3));
+  };
+  const budget = numberArg('budget', sweep ? SWEEP_BUDGET : DEFAULT_BUDGET);
+  const deadline = numberArg('deadline', sweep ? SWEEP_DEADLINE : DEFAULT_DEADLINE);
   const [command, ...rest] = args.filter((arg) => !arg.startsWith('--'));
   const stateDir = rest[0] ?? '.mutation-state';
 
   if (command === 'run') {
-    run(stateDir, allowFull, budget);
+    run(stateDir, { allowFull, budget, deadline, sweep });
 
     return;
   }
 
   if (command === 'plan') {
-    process.stdout.write(`${JSON.stringify(plan(stateDir, budget), null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify(plan(stateDir, { budget, sweep }), null, 2)}\n`);
 
     return;
   }
@@ -753,7 +889,9 @@ const main = () => {
     return;
   }
 
-  throw new Error('Usage: node scripts/mutation-scope.mjs <run|plan|seed> [stateDir] [--budget=N]');
+  throw new Error(
+    'Usage: node scripts/mutation-scope.mjs <run|plan|seed> [stateDir] [--sweep] [--budget=S] [--deadline=S]',
+  );
 };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

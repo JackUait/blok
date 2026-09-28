@@ -5,6 +5,16 @@ import type { DatabaseRow, SelectOption, PropertyDefinition } from '../../../../
 import type { I18n, OutputData } from '../../../../types';
 import type { ToolsConfig } from '../../../../types/api/tools';
 
+vi.mock('../../../../src/blok', () => ({
+  Blok: vi.fn(function stubBlok() {
+    return {
+      isReady: Promise.resolve(),
+      save: vi.fn().mockResolvedValue({ blocks: [] }),
+      destroy: vi.fn(),
+    };
+  }),
+}));
+
 const makeRow = (overrides: Partial<DatabaseRow> = {}): DatabaseRow => ({
   id: 'row-1',
   position: 'a0',
@@ -46,6 +56,14 @@ describe('DatabaseCardDrawer', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  // drawer.open() boots the nested editor through a dynamic import no test awaits,
+  // so a real one would construct inside whichever test runs next.
+  it('never loads the real editor for the nested description', async () => {
+    const { Blok } = await import('../../../../src/blok');
+
+    expect(vi.isMockFunction(Blok)).toBe(true);
   });
 
   it('creates a drawer element ([data-blok-database-drawer]) when opened', () => {

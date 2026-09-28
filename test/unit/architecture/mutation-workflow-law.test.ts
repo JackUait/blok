@@ -13,9 +13,12 @@ import { describe, expect, it } from 'vitest';
 type Step = { name?: string; with?: Record<string, unknown>; run?: string };
 
 type Workflow = {
-  on?: { workflow_dispatch?: { inputs?: Record<string, unknown> } };
+  on?: {
+    workflow_dispatch?: { inputs?: Record<string, unknown> };
+    schedule?: Array<{ cron: string }>;
+  };
   concurrency?: { group?: string; 'cancel-in-progress'?: boolean };
-  jobs: Record<string, { steps?: Step[]; 'timeout-minutes'?: number }>;
+  jobs: Record<string, { if?: string; steps?: Step[]; 'timeout-minutes'?: number }>;
 };
 
 const workflow = parse(
@@ -23,6 +26,7 @@ const workflow = parse(
 ) as Workflow;
 
 const steps = workflow.jobs.mutation.steps ?? [];
+const sweepSteps = workflow.jobs.sweep?.steps ?? [];
 
 describe('mutation workflow', () => {
   // Cancelling a superseded run drops its commits for good: the ledger records
@@ -66,10 +70,37 @@ describe('mutation workflow', () => {
     expect(workflow.on?.workflow_dispatch?.inputs ?? {}).not.toHaveProperty('full');
   });
 
-  // One budgeted batch is about ten minutes of mutants on top of install and
-  // the dry run. Cutting it finer would park work every single run.
-  it('leaves room for a budgeted batch to finish', () => {
-    expect(workflow.jobs.mutation['timeout-minutes']).toBeGreaterThanOrEqual(60);
+  // The push job must finish in under 7 minutes. mutation-scope.mjs stops
+  // Stryker at its deadline, so the timeout is only a backstop.
+  it('keeps the push job short', () => {
+    const run = steps.find((step) => step.name === 'Run mutation testing');
+
+    expect(run?.run).toBe('yarn mutate');
+    expect(workflow.jobs.mutation['timeout-minutes']).toBeLessThanOrEqual(10);
+    expect(workflow.jobs.mutation.if).toContain("github.event_name == 'push'");
+  });
+
+  // Files too heavy for a push run wait for the sweep. Without a schedule
+  // nothing ever measures them.
+  it('sweeps the heavy files on a schedule with room to finish', () => {
+    const run = sweepSteps.find((step) => step.name === 'Run mutation testing');
+
+    expect(workflow.on?.schedule?.length).toBeGreaterThan(0);
+    expect(workflow.jobs.sweep.if).toContain("github.event_name == 'schedule'");
+    expect(run?.run).toContain('node scripts/mutation-scope.mjs run --sweep');
+    expect(workflow.jobs.sweep['timeout-minutes']).toBeGreaterThanOrEqual(330);
+  });
+
+  // Both jobs read and write the same ledger, so each needs the full restore
+  // and upload contract.
+  it('gives the sweep the same ledger handling as the push job', () => {
+    const names = (list: Step[]): Array<string | undefined> => list.map((step) => step.name);
+
+    expect(names(sweepSteps)).toEqual(names(steps));
+    for (const name of ['Checkout code', 'Restore mutation state', 'Upload mutation state']) {
+      expect(sweepSteps.find((step) => step.name === name))
+        .toEqual(steps.find((step) => step.name === name));
+    }
   });
 
   // A gate that cannot go red is the gate that measured nothing for a day and

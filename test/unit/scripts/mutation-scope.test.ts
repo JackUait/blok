@@ -9,10 +9,12 @@ import {
   collectSurvivors,
   isPartialRun,
   nextTotal,
+  orderQueue,
   resolveDiffBase,
   scopeFingerprint,
   scopeMoved,
-  splitByBudget,
+  splitByTime,
+  stateAfterDeadline,
   updateSurvivorAges,
 } from '../../../scripts/mutation-scope.mjs';
 
@@ -657,40 +659,119 @@ describe('mutation-scope', () => {
     });
   });
 
-  describe('splitByBudget', () => {
-    const weights: Record<string, number> = {
-      'src/a.ts': 10,
-      'src/b.ts': 20,
-      'src/c.ts': 30,
+  describe('splitByTime', () => {
+    const tests: Record<string, string[]> = {
+      'src/a.ts': ['test/unit/a.test.ts'],
+      'src/b.ts': ['test/unit/b.test.ts'],
+      'src/c.ts': ['test/unit/c.test.ts'],
+      'src/ab.ts': ['test/unit/a.test.ts', 'test/unit/b.test.ts'],
     };
-    const weightOf = (file: string): number => weights[file];
+    const seconds: Record<string, number> = {
+      'test/unit/a.test.ts': 10,
+      'test/unit/b.test.ts': 20,
+      'test/unit/c.test.ts': 30,
+    };
+    const testsOf = (file: string): string[] => tests[file];
+    const secondsOf = (test: string): number => seconds[test];
 
     it('measures every file when the whole list fits in one run', () => {
-      expect(splitByBudget({ files: ['src/a.ts', 'src/b.ts'], weightOf, budget: 100 })).toEqual({
+      expect(splitByTime({ files: ['src/a.ts', 'src/b.ts'], testsOf, secondsOf, budget: 100 })).toEqual({
         batch: ['src/a.ts', 'src/b.ts'],
         pending: [],
+        heavy: [],
       });
     });
 
-    // Carrying the rest forward is what keeps a big push from timing out and
-    // leaving the recorded commit behind, which makes the next range bigger yet.
     it('leaves what does not fit for the next run', () => {
-      expect(splitByBudget({
+      expect(splitByTime({
         files: ['src/a.ts', 'src/b.ts', 'src/c.ts'],
-        weightOf,
+        testsOf,
+        secondsOf,
         budget: 35,
       })).toEqual({
         batch: ['src/a.ts', 'src/b.ts'],
         pending: ['src/c.ts'],
+        heavy: [],
       });
     });
 
-    // A file heavier than the entire budget would otherwise never be measured
-    // and would block everything queued behind it.
-    it('takes one oversized file rather than measuring nothing', () => {
-      expect(splitByBudget({ files: ['src/c.ts', 'src/a.ts'], weightOf, budget: 5 })).toEqual({
-        batch: ['src/c.ts'],
+    // A shared suite runs once in the dry run, so it is paid for once.
+    it('charges a test file shared by two sources only once', () => {
+      expect(splitByTime({ files: ['src/ab.ts', 'src/a.ts', 'src/b.ts'], testsOf, secondsOf, budget: 30 })).toEqual({
+        batch: ['src/ab.ts', 'src/a.ts', 'src/b.ts'],
+        pending: [],
+        heavy: [],
+      });
+    });
+
+    // Taking an oversized file alone made every run measure src/blok.ts and
+    // nothing else, while the queue behind it only grew.
+    it('sends a file that alone exceeds the budget to the sweep', () => {
+      expect(splitByTime({ files: ['src/c.ts', 'src/a.ts'], testsOf, secondsOf, budget: 15 })).toEqual({
+        batch: ['src/a.ts'],
+        pending: [],
+        heavy: ['src/c.ts'],
+      });
+    });
+
+    // The dry run is not the whole run: every mutant the ledger cannot reuse
+    // runs its covering tests again. Source bytes stand in for mutant count.
+    it('also stops at the byte budget', () => {
+      const bytesOf = (file: string): number => (file === 'src/a.ts' ? 900 : 200);
+
+      expect(splitByTime({
+        files: ['src/b.ts', 'src/a.ts', 'src/c.ts'],
+        testsOf,
+        secondsOf,
+        budget: 100,
+        bytesOf,
+        byteBudget: 1000,
+      })).toEqual({
+        batch: ['src/b.ts', 'src/c.ts'],
         pending: ['src/a.ts'],
+        heavy: [],
+      });
+    });
+
+    it('keeps filling the batch past a file that does not fit', () => {
+      expect(splitByTime({ files: ['src/b.ts', 'src/c.ts', 'src/a.ts'], testsOf, secondsOf, budget: 30 })).toEqual({
+        batch: ['src/b.ts', 'src/a.ts'],
+        pending: ['src/c.ts'],
+        heavy: [],
+      });
+    });
+  });
+
+  describe('orderQueue', () => {
+    // Sorted order put the same early files first on every run, so files late in
+    // the alphabet never reached a batch.
+    it('puts files parked by earlier runs before newly changed ones', () => {
+      expect(orderQueue({
+        queued: ['src/z.ts', 'src/m.ts'],
+        mutate: ['src/a.ts', 'src/m.ts', 'src/z.ts'],
+      })).toEqual(['src/z.ts', 'src/m.ts', 'src/a.ts']);
+    });
+
+    it('drops a parked file that can no longer be measured', () => {
+      expect(orderQueue({ queued: ['src/gone.ts'], mutate: ['src/a.ts'] })).toEqual(['src/a.ts']);
+    });
+  });
+
+  describe('stateAfterDeadline', () => {
+    // The diff was accounted for: the batch goes to the sweep, and the next push
+    // must not measure the same range again.
+    it('moves the batch to the sweep and advances the measured commit', () => {
+      expect(stateAfterDeadline({
+        state: { lastCheckedSha: 'old', survivorTotal: 7, measuredHash: 'h', seeding: false },
+        sha: 'new',
+        scope: { mutate: ['src/a.ts'], pending: ['src/b.ts'], heavy: ['src/c.ts'] },
+      })).toEqual({
+        lastCheckedSha: 'new',
+        survivorTotal: 7,
+        measuredHash: 'h',
+        pending: ['src/b.ts'],
+        heavy: ['src/c.ts', 'src/a.ts'],
+        seeding: false,
       });
     });
   });

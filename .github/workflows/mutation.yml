@@ -4,9 +4,18 @@ on:
   push:
     branches: ["main"]
   workflow_dispatch:
+    inputs:
+      sweep:
+        description: "Measure the files too heavy for a push run"
+        type: boolean
+        default: false
+  # Files too heavy for a 7-minute push run wait here.
+  schedule:
+    - cron: "17 3 * * *"
 
 # Runs queue instead of cancelling one another. Two runs would race over the
 # survivor ledger, and a cancelled run's commits would never be measured at all.
+# The sweep shares the group for the same reason.
 concurrency:
   group: mutation-${{ github.ref }}
   cancel-in-progress: false
@@ -19,8 +28,11 @@ permissions:
 jobs:
   mutation:
     name: Mutation
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && !inputs.sweep)
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # A backstop only: mutation-scope.mjs stops Stryker at 300 seconds, which
+    # keeps the job under 7 minutes.
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -60,6 +72,71 @@ jobs:
 
       - name: Run mutation testing
         run: yarn mutate
+
+      # Always: a broken ratchet still leaves a valid ledger, and losing it would
+      # make the next run start from nothing.
+      - name: Upload mutation state
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutation-state
+          # Both reports weigh about as much as the ledger itself, and the next
+          # run reads only the incremental file, the state and the ages.
+          path: |
+            .mutation-state/
+            !.mutation-state/report.html
+            !.mutation-state/report.json
+          # The ledger directory starts with a dot, and the default reads that
+          # as hidden and uploads nothing.
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 90
+
+  sweep:
+    name: Mutation sweep
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.sweep)
+    runs-on: ubuntu-latest
+    # mutation-scope.mjs stops Stryker after 5 hours and sizes the batch to fit.
+    timeout-minutes: 330
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The diff runs from the last measured commit, which can sit many
+          # pushes back. A shallow clone cannot reach it and would force the
+          # run to give up and ask for a full sweep.
+          fetch-depth: 0
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+        with:
+          install-docs: "false"
+
+      # The ledger lives in an artifact, not in git: Stryker's incremental file
+      # has non-deterministic test ids upstream, so committing it would produce a
+      # 15k-line diff on every run.
+      - name: Restore mutation state
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASELINE_TAG: mutation-baseline
+        run: |
+          run_id=$(gh run list --workflow mutation.yml --branch main \
+            --status success --limit 1 --json databaseId -q '.[0].databaseId' || true)
+
+          if [ -n "$run_id" ] && gh run download "$run_id" \
+            --name mutation-state --dir .mutation-state; then
+            echo "Restored mutation state from run $run_id"
+          elif gh release download "$BASELINE_TAG" \
+            --pattern mutation-state.tar.gz --dir .; then
+            mkdir -p .mutation-state
+            tar -xzf mutation-state.tar.gz -C .mutation-state
+            echo "Restored mutation state from release $BASELINE_TAG"
+          else
+            echo "No mutation state anywhere. Build one with 'yarn mutate:seed'."
+          fi
+
+      - name: Run mutation testing
+        run: node scripts/mutation-scope.mjs run --sweep
 
       # Always: a broken ratchet still leaves a valid ledger, and losing it would
       # make the next run start from nothing.

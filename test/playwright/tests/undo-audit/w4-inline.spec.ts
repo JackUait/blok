@@ -269,8 +269,6 @@ test.describe('undo audit W4: inline formatting', () => {
     await mount(page, [P('p', 'Hello world')]);
     await select(page, 'world');
     await toolbarItem(page, 'marker').click();
-    await page.getByTestId('marker-picker').getByRole('tab', { name: 'Background' })
-      .click();
     await page.getByTestId('marker-swatch-background-color-yellow').click();
     await gap(page);
     expect(await savedText(page, 'p')).toContain('<mark');

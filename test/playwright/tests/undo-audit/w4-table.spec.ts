@@ -7,7 +7,6 @@
 import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
-import { activateColorTab } from '../helpers/color-picker';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
@@ -308,7 +307,6 @@ test.describe('W4B colours / headers', () => {
     await expect(item).toBeVisible();
     await item.hover();
     await expect(page.locator('[data-blok-testid="cell-color-picker"]')).toBeVisible();
-    await activateColorTab(page, 'cell-color', mode);
     await page.locator(`[data-blok-testid="cell-color-swatch-${mode}-${name}"]`).click({ force: true });
     await page.mouse.click(5, 5);
   };
@@ -363,7 +361,6 @@ test.describe('W4B colours / headers', () => {
     await roundTrip(page, async () => {
       await openRowGrip(page, 1);
       await page.getByText('Color', { exact: true }).hover();
-      await activateColorTab(page, 'cell-color', 'backgroundColor');
       await page.locator('[data-blok-testid="cell-color-swatch-backgroundColor-green"]').click({ force: true });
       await page.mouse.click(5, 5);
       expect(await cell(page, 1, 2).evaluate(el => (el as HTMLElement).style.backgroundColor)).not.toBe('');

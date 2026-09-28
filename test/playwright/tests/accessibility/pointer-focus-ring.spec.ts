@@ -355,12 +355,11 @@ test.describe('Focus-Visible Law — a mouse gesture never paints a focus afford
 
   /**
    * The colour picker is the case that only reproduces after a keystroke:
-   * typing sets Blink's document-level focus-visible flag, and the picker's
-   * tabs `preventDefault` their mousedown to keep the caret, so the click never
-   * moves focus and never clears the flag. The next programmatic `.focus()`
-   * then paints a real keyboard ring from a pure mouse click.
+   * typing sets Blink's document-level focus-visible flag, so any programmatic
+   * `.focus()` the picker makes after a mouse gesture paints a real keyboard
+   * ring. Opening it and picking a swatch by mouse must paint nothing.
    */
-  test('clicking a colour-picker tab after typing leaves no ring', async ({ page }) => {
+  test('clicking a colour-picker swatch after typing leaves no ring', async ({ page }) => {
     const paragraph = page.locator(BLOCK_SELECTOR).filter({ hasText: 'Hello world' })
       .locator('[contenteditable]')
       .first();
@@ -381,10 +380,8 @@ test.describe('Focus-Visible Law — a mouse gesture never paints a focus afford
     // One legal keyboard gesture inside the picker — this is what arms the flag.
     await page.keyboard.press('ArrowRight');
 
-    const tabs = picker.getByRole('tab');
+    await picker.getByTestId('block-color-swatch-textColor-red').click();
 
-    await tabs.first().click();
-
-    await expectNoFocusAffordance(page, 'click a colour-picker tab after typing and one arrow key');
+    await expectNoFocusAffordance(page, 'click a colour-picker swatch after typing and one arrow key');
   });
 });

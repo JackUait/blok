@@ -1,5 +1,7 @@
 # Table Cell Color - Edge Cases and Interaction Test Plan
 
+> Since 2026-09-28 the color picker has no Text/Background tabs: both sections show at once. Scenarios below that switch tabs are obsolete, and `table-cell-color-tabs.spec.ts` was removed.
+
 ## Application Overview
 
 This plan covers additional edge cases and interactions for the table cell color/marker feature in the Blok editor. The feature allows users to select table cells, trigger a pill popover, and apply background or text colors via a nested color picker. The tests focus on scenarios not covered by the existing suite: keyboard accessibility of the color picker, color persistence across structural table operations (add/delete row/column), color behavior during cell copy/paste, color rendering on initial page load from pre-existing data, independent coloring of multiple cells, tab-switching between text and background color modes, cell selection clearing behavior, and color picker dismissal patterns. All tests assume a fresh browser state with no prior editor data. The test page URL is http://localhost:3303/test/playwright/fixtures/test.html. Tests use the chromium-logic project (pure logic and API testing, browser-agnostic).

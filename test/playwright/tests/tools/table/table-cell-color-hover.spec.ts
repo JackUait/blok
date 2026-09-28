@@ -5,7 +5,6 @@
 import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
-import { activateColorTab } from '../../helpers/color-picker';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
@@ -251,7 +250,6 @@ test.describe('Cell color picker hover behavior', () => {
     await expect(colorPicker).toBeVisible();
 
     // Click a background color swatch
-    await activateColorTab(page, 'cell-color', 'backgroundColor');
 
     const swatch = page.locator('[data-blok-testid="cell-color-swatch-backgroundColor-orange"]');
 

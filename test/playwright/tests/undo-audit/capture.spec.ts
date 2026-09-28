@@ -124,7 +124,7 @@ test.describe('undo audit: capture', () => {
     await wait(page, CAPTURE_WINDOW);
     await openTunes(page, 'Colorful');
     await tuneItem(page, 'block-color').dispatchEvent('mouseover');
-    await page.getByTestId('block-color-reset-textColor').click();
+    await page.getByTestId('block-color-swatch-textColor-default').click();
     await settle(page);
     await pressUndo(page, 'Before');
 

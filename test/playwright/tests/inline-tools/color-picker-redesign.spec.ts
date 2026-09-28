@@ -22,38 +22,28 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test('inline color tabs use native focus and keep hidden swatches out of the tab order', async ({ page }) => {
+test('the inline color panel shows text and background colors at once, with no tabs', async ({ page }) => {
   const paragraph = page.getByTestId('block-wrapper').locator('[contenteditable="true"]');
 
   await selectAllInEditable(paragraph);
   await page.locator('[data-blok-interface="inline-toolbar"] [data-blok-item-name="marker"]').click();
   const picker = page.getByTestId('marker-picker');
-  const tabs = picker.getByRole('tab');
 
-  await expect(tabs).toHaveCount(2);
-  await expect(tabs.first()).toBeFocused();
-  await page.keyboard.press('ArrowRight');
-  await expect(tabs.last()).toBeFocused();
-  await expect(tabs.last()).toHaveAttribute('aria-selected', 'true');
-  await expect(picker.getByRole('tabpanel')).toHaveCount(1);
+  await expect(picker.getByRole('tab')).toHaveCount(0);
+  await expect(picker.getByTestId('marker-section-color')).toBeVisible();
+  await expect(picker.getByTestId('marker-section-background-color')).toBeVisible();
+  await expect(picker.getByRole('group', { name: 'Text color' })).toBeVisible();
 
-  for (let index = 0; index < 6; index++) {
-    await page.keyboard.press('Tab');
-    const hiddenFocus = await picker.evaluate(element =>
-      Array.from(element.querySelectorAll('[role="tabpanel"][hidden]'))
-        .some(panel => panel.contains(document.activeElement))
-    );
-
-    expect(hiddenFocus).toBe(false);
-  }
   await picker.getByTestId('marker-swatch-background-color-blue').click();
   await expect.poll(() => paragraph.innerHTML()).toMatch(/style="[^"]*background-color:\s*var\(--blok-color-blue-bg\)/);
+  await picker.getByTestId('marker-swatch-background-color-default').click();
+  await expect.poll(() => paragraph.innerHTML()).not.toMatch(/background-color/);
   await expect(paragraph).toHaveText('A color of my own.');
   await page.keyboard.press('Escape');
   await expect(picker).not.toBeVisible();
 });
 
-test('block color modes, recents and reset remain independent', async ({ page }) => {
+test('block colors, recents and the default swatch stay independent per axis', async ({ page }) => {
   await page.getByTestId('block-wrapper').locator('[contenteditable="true"]').click();
   await page.getByTestId('settings-toggler').click();
   await page.getByRole('menuitem', { name: 'Color', exact: true }).click();
@@ -61,7 +51,6 @@ test('block color modes, recents and reset remain independent', async ({ page })
 
   await expect(picker).toBeVisible();
   await picker.getByTestId('block-color-swatch-textColor-red').click();
-  await picker.getByRole('tab').last().click();
   await picker.getByTestId('block-color-swatch-backgroundColor-blue').click();
   const data = async () => page.evaluate(async () => {
     if (!window.blokInstance) {
@@ -73,9 +62,8 @@ test('block color modes, recents and reset remain independent', async ({ page })
 
   await expect.poll(data).toMatchObject({ textColor: 'red', backgroundColor: 'blue' });
   await expect(picker.getByTestId('block-color-section-recent')).toBeVisible();
-  await picker.getByTestId('block-color-reset-backgroundColor').click();
+  await picker.getByTestId('block-color-swatch-backgroundColor-default').click();
   await expect.poll(data).toMatchObject({ textColor: 'red' });
   await expect.poll(async () => (await data()).backgroundColor).toBeUndefined();
-  await picker.getByRole('tab').first().click();
   await expect(picker.getByTestId('block-color-swatch-textColor-red')).toHaveAttribute('aria-pressed', 'true');
 });

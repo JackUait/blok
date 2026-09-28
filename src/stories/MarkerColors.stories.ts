@@ -104,7 +104,6 @@ const MARKER_TOOL_SELECTOR = '[data-blok-item-name="marker"]';
 const MARKER_PICKER_SELECTOR = '[data-blok-testid="marker-picker"]';
 const MARKER_COLOR_SWATCH_SELECTOR = '[data-blok-testid^="marker-swatch-color-"]';
 const MARKER_BG_SWATCH_SELECTOR = '[data-blok-testid^="marker-swatch-background-color-"]';
-const MARKER_BG_TAB_SELECTOR = '[data-blok-testid="marker-tab-background-color"]';
 const TIMEOUT_INIT = { timeout: 5000 };
 const TIMEOUT_ACTION = { timeout: 5000 };
 
@@ -437,10 +436,10 @@ export const PickerTextTab: Story = {
 };
 
 /**
- * Opens the marker picker, clicks the Background tab, and verifies its grid
- * holds exactly 10 swatches (Default + 9 presets).
+ * Opens the marker picker and verifies the Background section is visible
+ * beside Text and holds exactly 10 swatches (Default + 9 presets).
  */
-export const PickerBackgroundTab: Story = {
+export const PickerBackgroundSection: Story = {
   args: {
     data: pickerData,
   },
@@ -450,14 +449,6 @@ export const PickerBackgroundTab: Story = {
   play: async ({ canvasElement, step }) => {
     await step('Open marker picker and verify background section', async () => {
       await openMarkerPicker(canvasElement);
-
-      const backgroundTab = document.querySelector(MARKER_BG_TAB_SELECTOR);
-
-      expect(backgroundTab).toBeInTheDocument();
-
-      if (backgroundTab) {
-        simulateClick(backgroundTab);
-      }
 
       await waitFor(
         () => {
@@ -476,7 +467,7 @@ export const PickerBackgroundTab: Story = {
 };
 
 /**
- * Opens the marker picker and verifies the "Default" reset button is visible.
+ * Opens the marker picker and verifies the "Default" swatch is visible.
  */
 export const PickerDefaultButton: Story = {
   args: {
@@ -502,7 +493,7 @@ export const PickerDefaultButton: Story = {
 };
 
 /**
- * Opens the marker picker on uncolored text and verifies no Text-tab swatch
+ * Opens the marker picker on uncolored text and verifies no Text swatch
  * other than Default has an active ring indicator.
  */
 export const PickerNoActiveSwatch: Story = {

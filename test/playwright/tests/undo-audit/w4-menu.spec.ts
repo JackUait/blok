@@ -494,12 +494,6 @@ test.describe('W4M controls: table cell colour', () => {
 
       await expect(colorItem).toBeVisible();
       await colorItem.hover();
-      const tab = page.locator('[data-blok-testid="cell-color-tab-backgroundColor"]');
-
-      await expect(tab).toBeVisible();
-      if (await tab.getAttribute('aria-selected') !== 'true') {
-        await tab.click();
-      }
       await page.locator('[data-blok-testid="cell-color-swatch-backgroundColor-orange"]').click({ force: true });
       await page.keyboard.press('Escape');
     });

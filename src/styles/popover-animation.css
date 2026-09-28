@@ -204,6 +204,22 @@
   }
 }
 
+/* A small menu says "Nothing found" in one quiet line, without the illustration. */
+[data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]:not([data-blok-promoted-item])) > [data-blok-testid='popover-nothing-found'] {
+  padding: var(--blok-space-2);
+  text-align: start;
+
+  > :first-child {
+    display: none;
+  }
+
+  > [data-blok-nothing-found-text] {
+    color: var(--blok-text-secondary);
+    font-size: 13px;
+    font-weight: 400;
+  }
+}
+
 /* Built utilities are unlayered; beat their active, hover, and focus selectors. */
 [data-blok-popover-items] > [data-blok-popover-item][data-blok-header-level][data-blok-popover-item-active] {
   color: var(--blok-text-primary);

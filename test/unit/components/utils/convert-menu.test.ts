@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildConvertMenuEntries, buildConvertMenuItems, type ConvertMenuEntry, type ConvertMenuI18n } from '../../../../src/components/utils/convert-menu';
 import type { BlockToolAdapter } from '../../../../src/components/tools/block';
+import { CURRENT_CONVERT_VARIANT } from '../../../../src/components/utils/blocks';
 import { IconCheck } from '../../../../src/components/icons';
 import { PopoverDesktop } from '../../../../src/components/utils/popover/popover-desktop';
 import { PopoverItemType } from '../../../../types/utils/popover/popover-item-type';
@@ -107,6 +108,16 @@ describe('buildConvertMenuEntries', () => {
     const entries = buildConvertMenuEntries(tools, createI18n());
 
     expect(entries.map((e) => e.name)).toEqual(['paragraph', 'header-2', 'bulleted-list', 'code', 'toggle-header-1', 'custom']);
+  });
+
+  it('keeps the current entry of any kind, so search finds the block\'s own type', () => {
+    const paragraph = createToolStub('paragraph', [
+      { icon: '<svg>p</svg>', titleKey: 'text', [CURRENT_CONVERT_VARIANT]: true } as NonNullable<BlockToolAdapter['toolbox']>[number],
+    ]);
+
+    const [entry] = buildConvertMenuEntries([paragraph], createI18n());
+
+    expect(entry).toMatchObject({ name: 'paragraph', isCurrent: true });
   });
 
   it('falls back englishTitle to the raw title when no titleKey', () => {

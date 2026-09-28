@@ -131,7 +131,9 @@ export const getConvertibleToolsForBlock = async (
       }
 
       if (!hasToolboxData && tool.name === block.name) {
-        return [];
+        return options.keepCurrentVariant
+          ? [{ ...toolboxItem, [CURRENT_CONVERT_VARIANT]: true }]
+          : [];
       }
 
       return [toolboxItem];

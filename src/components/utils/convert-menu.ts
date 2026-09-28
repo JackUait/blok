@@ -85,10 +85,6 @@ export const buildConvertMenuEntries = (
 
       const isCurrent = CURRENT_CONVERT_VARIANT in toolboxItem && toolboxItem[CURRENT_CONVERT_VARIANT] === true;
 
-      if (isCurrent && group === undefined) {
-        return;
-      }
-
       entries.push({ rank: sectionRank(toolboxItem.section), entry: {
         icon: toolboxItem.icon,
         title: translateToolTitle(i18n, toolboxItem, tool.name),

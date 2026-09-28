@@ -88,17 +88,13 @@ describe('Inline conversion picker', () => {
     expect(children.placement).toBe('beside');
   });
 
-  it('leads with heading variants and keeps custom registration order below them', async () => {
+  it('lists section entries first and keeps custom registration order below them, with no tabs', async () => {
     const { tool, convert } = createPicker();
     const children = await childrenOf(tool);
     const items = children.items ?? [];
 
     expect(children.searchable).toBe(true);
-    const tablists = items.filter(item => item.type === PopoverItemType.Html).map(item => item.element);
-
-    expect(tablists).toHaveLength(1);
-    expect(tablists[0].getAttribute('role')).toBe('tablist');
-    expect(Array.from(tablists[0].querySelectorAll('[role="tab"]'), tab => tab.textContent)).toEqual(['Heading', 'Toggle heading']);
+    expect(items.filter(item => item.type === PopoverItemType.Html)).toHaveLength(0);
     expect(names(items)).toEqual(['header-1', 'header-2', 'header-4', 'toggle-header-1', 'toggle-header-2', 'toggle-header-4', 'callout-custom', 'quote-custom']);
     const quote = items.find(item => 'name' in item && item.name === 'quote-custom');
 

@@ -58,7 +58,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 const LIST_ORDER = [
-  'Heading 1', 'Heading 2', 'Heading 3', 'Heading 4', 'Heading 5', 'Heading 6',
+  'Text', 'Heading 1', 'Heading 2', 'Heading 3', 'Heading 4', 'Heading 5', 'Heading 6',
   'Bulleted list', 'Numbered list', 'To-do list', 'Toggle list', 'Callout', 'Quote', 'Code',
   'Toggle heading 1', 'Toggle heading 2', 'Toggle heading 3', 'Toggle heading 4', 'Toggle heading 5', 'Toggle heading 6',
 ];
@@ -161,6 +161,8 @@ for (const surface of ['settings', 'inline'] as const) {
 
     await expect(search).toBeFocused();
     await page.keyboard.press('ArrowDown');
+    await expect(menu.getByRole('menuitemcheckbox', { name: 'Text', exact: true })).toHaveAttribute('data-blok-focused', 'true');
+    await page.keyboard.press('ArrowDown');
     await expect(menu.getByRole('menuitem', { name: 'Heading 1', exact: true })).toHaveAttribute('data-blok-focused', 'true');
     await page.keyboard.press('ArrowDown');
     await expect(menu.getByRole('menuitem', { name: 'Heading 2', exact: true })).toHaveAttribute('data-blok-focused', 'true');
@@ -235,6 +237,40 @@ for (const surface of ['settings', 'inline'] as const) {
       await holder.dispose();
     });
   }
+}
+
+for (const surface of ['settings', 'inline'] as const) {
+  test(`${surface}: searching the block's own type finds it, and a miss is a quiet line`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const before = await saveBlocks(page);
+
+    await openConversion(page, surface);
+    const menu = conversionMenu(page);
+    const search = page.getByRole('combobox', { name: 'Find an action…', exact: true }).last();
+
+    await search.fill('text');
+    const text = menu.getByRole('menuitemcheckbox', { name: 'Text', exact: true });
+
+    await expect(text).toBeVisible();
+    await expect(text.getByTestId('popover-item-trailing-icon')).toBeVisible();
+    await expect(menu.getByTestId('popover-nothing-found')).toBeHidden();
+    await text.click();
+    expect(await saveBlocks(page)).toEqual(before);
+
+    await openConversion(page, surface);
+    await page.getByRole('combobox', { name: 'Find an action…', exact: true }).last().fill('no-matching-shape-xyz');
+    const nothingFound = conversionMenu(page).getByTestId('popover-nothing-found');
+
+    await expect(nothingFound).toBeVisible();
+    await expect(nothingFound).toHaveText('Nothing found');
+    // No illustration: a small menu says it in one line.
+    expect(await nothingFound.evaluate(element => {
+      const art = element.querySelector('svg')?.getBoundingClientRect();
+
+      return art === undefined ? 0 : art.width * art.height;
+    })).toBe(0);
+    expect((await nothingFound.boundingBox())?.height).toBeLessThanOrEqual(40);
+  });
 }
 
 test('custom heading without level data keeps its original icon', async ({ page }) => {

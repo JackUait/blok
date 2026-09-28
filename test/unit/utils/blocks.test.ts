@@ -310,7 +310,7 @@ describe('blocks utilities', () => {
         );
       });
 
-      it('still excludes data-less entries for the current tool', async () => {
+      it('marks the data-less entry of the current tool as current, and excludes it otherwise', async () => {
         const tool = {
           name: 'paragraph',
           conversionConfig: { import: 'text', export: 'text' },
@@ -319,9 +319,14 @@ describe('blocks utilities', () => {
 
         mockSave.mockResolvedValue({ data: { text: 'Section' } });
 
-        expect(await getConvertibleToolsForBlock(createMockBlock('paragraph'), [tool], {
+        const retained = await getConvertibleToolsForBlock(createMockBlock('paragraph'), [tool], {
           keepCurrentVariant: true,
-        })).toEqual([]);
+        });
+        const current = retained[0]?.toolbox?.[0];
+
+        expect(retained[0]?.toolbox).toHaveLength(1);
+        expect(current !== undefined && CURRENT_CONVERT_VARIANT in current && current[CURRENT_CONVERT_VARIANT]).toBe(true);
+        expect(await getConvertibleToolsForBlock(createMockBlock('paragraph'), [tool])).toEqual([]);
       });
 
       it('does not mark a different tool with matching data as current', async () => {

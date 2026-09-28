@@ -123,6 +123,15 @@
   min-height: 36px;
 }
 
+[data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]:not([data-blok-promoted-item])) > [data-blok-testid='popover-nothing-found'] {
+  padding: var(--blok-space-2);
+  text-align: start;
+  display: none;
+  color: var(--blok-text-secondary);
+  font-size: 13px;
+  font-weight: 400;
+}
+
 [data-blok-popover-items] > [data-blok-popover-item][data-blok-header-level][data-blok-popover-item-active] {
   color: var(--blok-text-primary);
   background-color: var(--blok-item-hover-bg);

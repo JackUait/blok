@@ -103,7 +103,8 @@ export class ConvertInlineTool implements InlineTool {
 
     const entries = buildConvertMenuEntries(convertibleTools, this.i18nInstance);
 
-    if (entries.length === 0) {
+    // The current type alone is not a choice.
+    if (entries.every(entry => entry.isCurrent)) {
       return [];
     }
 

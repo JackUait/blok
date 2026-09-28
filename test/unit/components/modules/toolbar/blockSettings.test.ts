@@ -6,6 +6,7 @@ import type { MenuConfigItem } from '../../../../../types/tools';
 import { PopoverItemType } from '../../../../../src/components/utils/popover';
 import type { PopoverItemParams } from '../../../../../types/utils/popover/popover-item';
 import { SelectionUtils } from '../../../../../src/components/selection';
+import { CURRENT_CONVERT_VARIANT } from '../../../../../src/components/utils/blocks';
 import { simulateKeydown } from '../../../../helpers/simulate';
 import type { Dom } from '../../../../../src/components/dom';
 import { UserDirectory } from '../../../../../src/components/modules/userDirectory';
@@ -119,6 +120,7 @@ vi.mock('@/types/utils/popover/popover-event', () => ({
 }));
 
 vi.mock('../../../../../src/components/icons', () => ({
+  IconCheck: '<svg data-blok-icon="check" />',
   IconColumns: '<svg data-blok-icon="columns" />',
   IconCopy: '<svg data-blok-icon="copy" />',
   IconReplace: '<svg data-blok-icon="replace" />',
@@ -1197,6 +1199,27 @@ describe('BlockSettings', () => {
     expect(blockSettings.isOpening).toBe(false);
 
     getTunesItemsSpy.mockRestore();
+  });
+
+  it('hides convert-to when the only choice is the block\'s own type', async () => {
+    const block = createBlock();
+
+    blokMock.Tools.blockTools = new Map([
+      ['paragraph', { name: 'paragraph' }],
+    ]);
+
+    getConvertibleToolsForBlockMock.mockResolvedValueOnce([
+      {
+        name: 'paragraph',
+        toolbox: [{ icon: '<svg />', title: 'Text', [CURRENT_CONVERT_VARIANT]: true }],
+      },
+    ]);
+
+    const items = await (blockSettings as unknown as {
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+    }).getTunesItems(block, []);
+
+    expect(items.some(item => 'name' in item && item.name === 'convert-to')).toBe(false);
   });
 
   it('sets englishTitle and searchTerms on convert-to children for multilingual search', async () => {

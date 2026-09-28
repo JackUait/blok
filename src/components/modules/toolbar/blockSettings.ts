@@ -599,7 +599,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       });
     }
 
-    if (convertToItems.length > 0) {
+    // The current type alone is not a choice.
+    if (convertToItems.some(item => !('isActive' in item && item.isActive === true))) {
       items.push({
         icon: IconReplace,
         name: 'convert-to',

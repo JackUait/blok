@@ -34,7 +34,7 @@ const leaveCategory = async (button: Locator): Promise<void> => {
   await button.dispatchEvent('mouseleave');
 };
 
-test.beforeEach(async ({ page }) => {
+const openPicker = async (page: Page): Promise<void> => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(TEST_PAGE_URL);
@@ -52,6 +52,26 @@ test.beforeEach(async ({ page }) => {
   });
   await page.getByTestId('callout-emoji-btn').click();
   await expect(page.getByRole('dialog', { name: 'Edit icon' })).toBeVisible();
+};
+
+/**
+ * A cold runner stalls rendering for seconds on the first emoji grid paint.
+ * Pay it once per worker, outside each test's 15s budget. The rAF resolves
+ * only after that paint lands.
+ */
+test.beforeAll(async ({ browser }) => {
+  test.setTimeout(60_000);
+  const page = await browser.newPage();
+
+  await openPicker(page);
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  }));
+  await page.close();
+});
+
+test.beforeEach(async ({ page }) => {
+  await openPicker(page);
 });
 
 for (const category of ['callout', 'people', 'nature', 'foods', 'activity', 'places', 'objects', 'symbols', 'flags']) {

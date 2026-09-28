@@ -37,6 +37,7 @@ import { TableRowColControls } from './table-row-col-controls';
 import type { RowColAction } from './table-row-col-controls';
 import { TableScrollHaze } from './table-scroll-haze';
 import type { CellPlacement, ClipboardBlockData, TableCellsClipboard } from './types';
+import { movePlacementWithMotion } from './table-cell-placement-motion';
 
 /**
  * Tags each bulk-formattable mark produces. The first entry is what we WRITE;
@@ -1250,16 +1251,23 @@ export class TableSubsystems {
       return;
     }
 
-    this.host.runTransactedStructuralOp(() => {
-      for (const cell of cells) {
-        const coord = getCellPosition(gridEl, cell);
+    const containers = cells
+      .map(cell => cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`))
+      .filter((container): container is HTMLElement => container !== null);
 
-        if (!coord) {
-          continue;
+    // Only a user's pick glides; load, paste and undo apply placement instantly.
+    movePlacementWithMotion(containers, () => {
+      this.host.runTransactedStructuralOp(() => {
+        for (const cell of cells) {
+          const coord = getCellPosition(gridEl, cell);
+
+          if (!coord) {
+            continue;
+          }
+
+          this.applyCellPlacement(cell, coord.row, coord.col, placement === 'top-left' ? undefined : placement);
         }
-
-        this.applyCellPlacement(cell, coord.row, coord.col, placement === 'top-left' ? undefined : placement);
-      }
+      });
     });
 
     // The placement attribute sits on a mutation-free container, so no DOM

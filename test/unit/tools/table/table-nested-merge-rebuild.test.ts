@@ -217,6 +217,54 @@ describe('merging a table that contains another table', () => {
     expect(savedCell(inner, 0, 1)).toMatchObject({ blocks: ['i01'] });
   });
 
+  it('glides the cell content to a newly picked alignment', async () => {
+    const animate = vi.fn();
+    const realRect = HTMLElement.prototype.getBoundingClientRect;
+
+    // jsdom lays nothing out: place a cell block by its container's placement, and supply the animation APIs.
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      const container = this.parentElement;
+
+      if (container?.hasAttribute('data-blok-table-cell-blocks') !== true) {
+        return realRect.call(this);
+      }
+
+      return new DOMRect(container.getAttribute('data-blok-cell-placement')?.endsWith('right') === true ? 100 : 0, 0, 40, 20);
+    });
+    Object.defineProperty(HTMLElement.prototype, 'animate', { value: animate, configurable: true, writable: true });
+    Object.defineProperty(window, 'matchMedia', {
+      value: (query: string) => ({ matches: false, media: query }),
+      configurable: true,
+      writable: true,
+    });
+
+    try {
+      const target = cell('outer', 1, 0);
+
+      target.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      const pill = holder.querySelector<HTMLElement>('[data-blok-table-selection-pill]');
+
+      if (pill === null) {
+        throw new Error('selection menu is missing');
+      }
+      pill.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+      pill.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, button: 0 }));
+      Array.from(document.querySelectorAll<HTMLElement>('[data-blok-popover-item]'))
+        .find(item => item.querySelector('[data-blok-popover-item-title]')?.textContent === 'Alignment')
+        ?.click();
+      document.querySelector<HTMLElement>('[data-placement="middle-right"]')?.click();
+
+      expect(animate).toHaveBeenCalledTimes(1);
+      expect(animate.mock.contexts[0]).toBe(editor?.blocks.getById('bottom-left')?.holder);
+      expect(animate.mock.calls[0][0]).toEqual([{ transform: 'translate(-100px, 0px)' }, { transform: 'none' }]);
+    } finally {
+      Reflect.deleteProperty(HTMLElement.prototype, 'animate');
+      Reflect.deleteProperty(window, 'matchMedia');
+    }
+  });
+
   it('saves alignment on an outer cell after nested rows', async () => {
     const target = cell('outer', 1, 1);
 

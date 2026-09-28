@@ -99,9 +99,16 @@ const placeCaret = async (page: Page, id: string, offset: number): Promise<void>
   await wait(page, 250);
 };
 
+/** Removes tags until none are left, so a tag split by another tag cannot survive. */
+const stripTags = (html: string): string => {
+  const stripped = html.replace(/<[^>]*>/g, '');
+
+  return stripped === html ? stripped : stripTags(stripped);
+};
+
 /** Saved text of editor b1 per block, tags stripped. */
 const plain = async (page: Page): Promise<string[]> =>
-  (await texts(page, 'b1')).map((t) => t.replace(/^paragraph:/, '').replace(/<[^>]+>/g, ''));
+  (await texts(page, 'b1')).map((t) => stripTags(t.replace(/^paragraph:/, '')));
 
 const P = (id: string, text: string): Blocks[number] => ({ id, type: 'paragraph', data: { text } });
 

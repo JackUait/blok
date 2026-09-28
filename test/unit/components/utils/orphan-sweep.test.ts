@@ -197,7 +197,7 @@ describe('createOrphanSweep — entity-encoded URLs', () => {
       blocks: [ {
         id: 'a',
         type: 'image',
-        data: { file: { url: SIGNED.replace('&', '&amp;') } },
+        data: { file: { url: SIGNED.replace(/&/g, '&amp;') } },
       } ],
     });
 

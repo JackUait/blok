@@ -58,13 +58,20 @@ const open = async (page: Page, doc: string, name: string, seedsEmptyRoom: boole
     seedsEmptyRoom });
 };
 
+/** Removes tags until none are left, so a tag split by another tag cannot survive. */
+const stripTags = (html: string): string => {
+  const stripped = html.replace(/<[^>]*>/g, '');
+
+  return stripped === html ? stripped : stripTags(stripped);
+};
+
 /**
  * The saved text of one editor's first block, tags stripped.
  * @param page - the page the editor is on
  * @param name - the editor's harness name
  */
 const firstText = async (page: Page, name: string): Promise<string> =>
-  ((await savedBlocks(page, name))[0]?.text ?? '').replace(/<[^>]*>/g, '');
+  stripTags((await savedBlocks(page, name))[0]?.text ?? '');
 
 /**
  * Waits `ms` inside the page. A fixed wait, deliberately: these tests are

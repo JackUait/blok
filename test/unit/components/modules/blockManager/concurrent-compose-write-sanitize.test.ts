@@ -6,6 +6,7 @@ import { Paragraph } from '../../../../../src/tools/paragraph';
 import { Header } from '../../../../../src/tools/header';
 import { YjsManager } from '../../../../../src/components/modules/yjs';
 import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
+import { hasUnsafeScheme } from '../../../../../src/components/utils/sanitize-url';
 import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
 import type { OutputBlockData, OutputData } from '../../../../../types';
 
@@ -221,7 +222,7 @@ describe('composeWrite overlaying the shared document into a Tool', () => {
         .map((anchor) => anchor.getAttribute('href'));
 
       // The defect assertion first.
-      expect(hrefs.filter((href) => href?.startsWith('javascript:'))).toHaveLength(0);
+      expect(hrefs.filter((href) => href !== null && hasUnsafeScheme(href))).toHaveLength(0);
     });
   });
 

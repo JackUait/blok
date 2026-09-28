@@ -99,7 +99,11 @@ const firstText = async (page: Page, name: string): Promise<string> =>
   (await savedBlocks(page, name))[0]?.text ?? '';
 
 /** Saved text with every tag removed, so word counts can be read off it. */
-const stripTags = (html: string): string => html.replace(/<[^>]*>/g, '');
+const stripTags = (html: string): string => {
+  const stripped = html.replace(/<[^>]*>/g, '');
+
+  return stripped === html ? stripped : stripTags(stripped);
+};
 
 /** Whether saved text carries a bold tag, whichever element the tool emitted. */
 const hasBold = (html: string): boolean => /<(b|strong)[\s>]/.test(html);

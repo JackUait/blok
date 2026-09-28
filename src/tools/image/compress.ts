@@ -70,7 +70,7 @@ function preferredTargets(format: ImageCompressionFormat): string[] {
 }
 
 /** Fit within the configured cap, preserving aspect ratio. Never upscales. */
-function targetSize(width: number, height: number, cfg: Resolved): { width: number; height: number } {
+export function targetSize(width: number, height: number, cfg: { maxWidth?: number; maxHeight?: number }): { width: number; height: number } {
   const scale = Math.min(
     cfg.maxWidth ? cfg.maxWidth / width : 1,
     cfg.maxHeight ? cfg.maxHeight / height : 1,
@@ -80,7 +80,7 @@ function targetSize(width: number, height: number, cfg: Resolved): { width: numb
   return { width: Math.round(width * scale), height: Math.round(height * scale) };
 }
 
-async function encodeCanvas(
+export async function encodeCanvas(
   bitmap: ImageBitmap,
   size: { width: number; height: number },
   type: string,
@@ -125,7 +125,7 @@ async function runTransform(file: File, transform: Resolved['transform']): Promi
   }
 }
 
-function canDecode(): boolean {
+export function canDecode(): boolean {
   const g = globalThis as Record<string, unknown>;
 
   return typeof g.createImageBitmap === 'function' && typeof g.OffscreenCanvas === 'function';
@@ -189,7 +189,7 @@ async function encodeFirstSupported(
   return null;
 }
 
-async function decode(file: File): Promise<ImageBitmap | null> {
+export async function decode(file: File): Promise<ImageBitmap | null> {
   try {
     return await createImageBitmap(file, { imageOrientation: 'from-image' });
   } catch {

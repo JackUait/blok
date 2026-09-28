@@ -215,6 +215,16 @@
   to { opacity: 1; transform: translateY(0) }
 }
 
+@keyframes blok-media-preview-breathe {
+  0%, 100% { transform: scaleY(0.55) }
+  50% { transform: scaleY(1) }
+}
+
+@keyframes blok-media-preview-pulse {
+  0%, 100% { transform: scale(1) }
+  50% { transform: scale(1.18) }
+}
+
 @keyframes blok-presence-caret-pulse {
   0%, 100% { opacity: 1 }
   50% { opacity: 0.3 }

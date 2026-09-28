@@ -9,6 +9,7 @@ import { formatBytes } from './format-bytes';
 import { setFieldValidity } from './field-validity';
 import { matchesMime } from './mime-match';
 import { rovingRadioGroup } from './roving-radio-group';
+import { makePreview, type MediaPreviewKind } from './media-empty-preview';
 
 /**
  * Shared "empty" uploader surface for media-style block tools (image, file):
@@ -72,12 +73,18 @@ export interface MediaEmptyStateOptions {
    * - `'none'`: swap instantly with no animation.
    */
   swap?: MediaEmptyStateSwap;
+  /**
+   * Outline of the finished block shown in the Upload panel in place of the
+   * small upload icon. Omit it for compact surfaces (the audio cover picker).
+   */
+  preview?: MediaPreviewKind;
 }
 
 export type MediaEmptyStateSwap = 'reflow' | 'slide' | 'none';
 
 /** Re-exported from the public type so the renderer and tools share one source. */
 export type { MediaSource };
+export type { MediaPreviewKind };
 
 const MIME_LABELS: Record<string, string> = {
   'image/jpeg': 'JPG',
@@ -241,6 +248,7 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
   card.tabIndex = 0;
   card.setAttribute('role', 'group');
   card.setAttribute('aria-label', labels.add);
+  if (opts.preview) card.setAttribute('data-preview', opts.preview);
 
   const label = document.createElement('span');
   label.className = 'blok-media-empty__label';
@@ -299,9 +307,17 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     if (file) opts.onFile(file);
   });
 
+  // Re-created by every renderUpload, so drag handlers look it up through this ref.
+  const hintRef: { el: HTMLElement | null } = { el: null };
+
+  const setDragover = (on: boolean): void => {
+    card.classList.toggle('is-dragover', on);
+    if (hintRef.el) hintRef.el.textContent = on ? labels.dropToUpload : labels.orDropHere;
+  };
+
   const renderUpload = (): void => {
     panel.replaceChildren();
-    panel.appendChild(makeTile(IconUpload));
+    panel.appendChild(opts.preview ? makePreview(opts.preview) : makeTile(IconUpload));
 
     const content = document.createElement('div');
     content.className = 'blok-media-empty__content';
@@ -322,6 +338,7 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     const hint = document.createElement('span');
     hint.className = 'blok-media-empty__hint';
     hint.textContent = labels.orDropHere;
+    hintRef.el = hint;
 
     primary.append(choose, hint);
 
@@ -340,6 +357,7 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
 
   const renderEmbed = (): void => {
     panel.replaceChildren();
+    hintRef.el = null;
 
     const bar = document.createElement('div');
     bar.className = 'blok-media-empty__embed-bar';
@@ -510,7 +528,7 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
       if (!ev.dataTransfer?.types.includes('Files')) return;
       ev.preventDefault();
       drag.depth += 1;
-      card.classList.add('is-dragover');
+      setDragover(true);
     });
     card.addEventListener('dragover', (ev) => {
       const dt = ev.dataTransfer;
@@ -520,12 +538,12 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     });
     card.addEventListener('dragleave', () => {
       drag.depth = Math.max(0, drag.depth - 1);
-      if (drag.depth === 0) card.classList.remove('is-dragover');
+      if (drag.depth === 0) setDragover(false);
     });
     card.addEventListener('drop', (ev) => {
       ev.preventDefault();
       drag.depth = 0;
-      card.classList.remove('is-dragover');
+      setDragover(false);
       const file = ev.dataTransfer?.files?.[0];
       if (file) opts.onFile(file);
     });

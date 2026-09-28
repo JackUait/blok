@@ -619,6 +619,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Its entrance: blok-inline-toolbar-in keyframes, the opened-card rule and
     // its reduced-motion opt-out.
     const INLINE_TOOLBAR_ENTRANCE_BYTES = 853;
+    // Media empty-state previews: the per-tool outlines, their hover and
+    // drag-over motion, and the reduced-motion opt-out in media-empty.css.
+    const MEDIA_EMPTY_PREVIEW_BYTES = 4_143;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -630,7 +633,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + TRASH_LID_HOVER_BYTES
       + DICE_ROLL_HOVER_BYTES
       + INLINE_TOOLBAR_CARD_BYTES
-      + INLINE_TOOLBAR_ENTRANCE_BYTES;
+      + INLINE_TOOLBAR_ENTRANCE_BYTES
+      + MEDIA_EMPTY_PREVIEW_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

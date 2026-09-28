@@ -25,6 +25,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
     acceptTypes: opts.acceptTypes,
     maxSize: opts.maxSize,
     sources: opts.sources,
+    preview: 'file',
     onFile: opts.onFile,
     onUrl: opts.onUrl,
     labels: {

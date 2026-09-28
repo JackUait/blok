@@ -97,7 +97,7 @@
   justify-content: center;
   gap: var(--blok-space-3);
   padding: var(--blok-space-5) var(--blok-space-3);
-  min-height: 160px;
+  min-height: 200px;
 }
 .blok-media-empty__card[data-active-tab="upload"] .blok-media-empty__panel:hover {
   border-color: var(--blok-border-primary);
@@ -141,6 +141,99 @@
 .blok-media-empty__card.is-dragover .blok-media-empty__glyph {
   color: var(--blok-color-accent);
   border-color: var(--blok-color-accent);
+}
+
+/* ----- Preview: outline of the finished block (media-empty-preview.ts) ----- */
+.blok-media-preview {
+  --blok-media-preview-ink: var(--blok-text-tertiary);
+  --blok-media-preview-fill: color-mix(in srgb, var(--blok-media-preview-ink) 10%, transparent);
+  flex-shrink: 0;
+  display: block;
+  color: var(--blok-media-preview-ink);
+  transition:
+    transform var(--blok-duration-standard) cubic-bezier(0.22, 1, 0.36, 1),
+    color var(--blok-duration-standard) ease;
+}
+.blok-media-preview svg { display: block; overflow: visible; width: 144px; height: auto; }
+/* :where keeps this at one class so the per-part transform-origin rules below win */
+.blok-media-preview :where(svg *) {
+  stroke: currentColor;
+  stroke-width: 1.25;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    transform var(--blok-duration-standard) cubic-bezier(0.22, 1, 0.36, 1),
+    fill var(--blok-duration-standard) ease,
+    opacity var(--blok-duration-standard) ease;
+}
+.blok-media-preview :where(svg g) { stroke: none; }
+.blok-media-preview__frame,
+.blok-media-preview__sheet rect,
+.blok-media-preview__sheet path:first-child { fill: var(--blok-bg-primary); }
+.blok-media-preview__knob,
+.blok-media-preview__track,
+.blok-media-preview__hill--far { fill: var(--blok-media-preview-fill); }
+.blok-media-preview__glyph,
+.blok-media-preview__progress,
+.blok-media-preview__bar,
+.blok-media-preview__hill,
+.blok-media-preview__sun { fill: currentColor; }
+.blok-media-preview__hill--far { opacity: 0.9; }
+.blok-media-preview__progress { transform-origin: left center; }
+.blok-media-preview__sheet { transform-origin: 50% 100%; }
+.blok-media-preview__sheet--back { opacity: 0.55; transform: translateX(-4px) rotate(-7deg); }
+.blok-media-preview__sheet--mid { opacity: 0.8; transform: translateX(4px) rotate(6deg); }
+.blok-media-preview__fold,
+.blok-media-preview__line { fill: none; }
+
+/* audio idles: the waveform breathes */
+.blok-media-preview__bar {
+  animation: blok-media-preview-breathe 2.4s ease-in-out infinite;
+  animation-delay: calc(var(--i) * -0.19s);
+}
+@keyframes blok-media-preview-breathe {
+  0%, 100% { transform: scaleY(0.55); }
+  50% { transform: scaleY(1); }
+}
+
+/* hover: the preview lifts */
+.blok-media-empty__card[data-active-tab="upload"] .blok-media-empty__panel:hover .blok-media-preview {
+  --blok-media-preview-ink: var(--blok-text-secondary);
+  transform: translateY(-2px);
+}
+
+/* drag-over: the preview catches the file */
+.blok-media-empty__card.is-dragover .blok-media-preview {
+  --blok-media-preview-ink: var(--blok-color-accent);
+  transform: translateY(-3px) scale(1.04);
+}
+.blok-media-empty__card.is-dragover .blok-media-preview__knob {
+  animation: blok-media-preview-pulse 1.1s ease-in-out infinite;
+}
+.blok-media-empty__card.is-dragover .blok-media-preview__progress { transform: scaleX(2.82); }
+.blok-media-empty__card.is-dragover .blok-media-preview__bar {
+  animation-duration: 0.55s;
+}
+.blok-media-empty__card.is-dragover .blok-media-preview__sun { transform: translateY(-5px) scale(1.2); }
+.blok-media-empty__card.is-dragover .blok-media-preview__hill--far { fill: color-mix(in srgb, currentColor 30%, transparent); }
+.blok-media-empty__card.is-dragover .blok-media-preview__sheet--back { transform: translateX(-14px) rotate(-14deg); }
+.blok-media-empty__card.is-dragover .blok-media-preview__sheet--mid { transform: translateX(14px) rotate(12deg); }
+.blok-media-empty__card.is-dragover .blok-media-preview__sheet--front { transform: translateY(-4px); }
+@keyframes blok-media-preview-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+
+/* the preview carries the drag-over story on the Upload tab */
+.blok-media-empty__card[data-preview][data-active-tab="upload"] .blok-media-empty__drop-overlay { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .blok-media-preview,
+  .blok-media-preview :where(svg *) { transition: none; animation: none !important; }
+  .blok-media-empty__card .blok-media-empty__panel:hover .blok-media-preview,
+  .blok-media-empty__card.is-dragover .blok-media-preview { transform: none; }
 }
 
 .blok-media-empty__content {

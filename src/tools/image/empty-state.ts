@@ -31,6 +31,7 @@ export function renderEmptyState(opts: EmptyStateOptions): EmptyStateElement {
     acceptTypes: opts.acceptTypes ?? [...DEFAULT_MIME_TYPES],
     maxSize: opts.maxSize,
     sources: opts.sources,
+    preview: 'image',
     onFile: opts.onFile,
     onUrl: opts.onUrl,
     labels: {

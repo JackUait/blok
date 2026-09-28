@@ -388,6 +388,28 @@
   transition-duration: 0s;
 }
 
+[data-blok-tool="image"] [data-role="image-resize-readout"] {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: var(--blok-space-1-25) var(--blok-space-1-75);
+  border-radius: var(--blok-radius-md);
+  background: var(--blok-image-readout-bg);
+  color: var(--blok-image-readout-fg);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+  z-index: 3;
+}
+[data-blok-tool="image"] [data-role="image-resize-readout"][data-edge="right"] { left: calc(100% + 18px); }
+[data-blok-tool="image"] [data-role="image-resize-readout"][data-edge="left"]  { right: calc(100% + 18px); }
+[data-blok-tool="image"][data-resizing="true"] [data-role="image-resize-readout"] { opacity: 1; }
+
 /* ----- Fullscreen lightbox ----- */
 /*
   The lightbox mounts directly on `<body>`, outside [data-blok-interface],

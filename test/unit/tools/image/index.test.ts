@@ -2172,3 +2172,90 @@ describe('ImageTool — stale variants', () => {
     expect(tool.save().variants).toBeUndefined();
   });
 });
+
+const renderRenderedImage = (
+  data: Partial<ImageData> = {},
+  opts: { readOnly?: boolean } = {}
+): { root: HTMLElement; tool: ImageTool } => {
+  const tool = new ImageTool({ ...createOptions({ url: 'https://x/y.png', ...data }), readOnly: opts.readOnly ?? false });
+  const root = tool.render();
+  document.body.appendChild(root);
+
+  return { root, tool };
+};
+
+describe('ImageTool — image chrome wiring', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('renders a selection ring inside the figure', () => {
+    const { root } = renderRenderedImage();
+
+    expect(root.querySelector('.blok-image-inner > [data-role="image-selection-ring"]')).not.toBeNull();
+  });
+
+  it('stamps an island placement on the toolbar', () => {
+    const { root } = renderRenderedImage();
+
+    expect(['above', 'inside']).toContain(root.querySelector('[data-role="image-overlay"]')?.getAttribute('data-islands-placement'));
+  });
+
+  it('puts the islands inside when the figure has no room above', () => {
+    const { root } = renderRenderedImage();
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    if (!figure) throw new Error('figure missing');
+    Object.defineProperty(figure, 'getBoundingClientRect', { value: () => ({ top: 5, left: 0, width: 400, height: 300, right: 400, bottom: 305 }) });
+    figure.dispatchEvent(new MouseEvent('mouseenter'));
+
+    expect(root.querySelector('[data-role="image-overlay"]')?.getAttribute('data-islands-placement')).toBe('inside');
+  });
+
+  it('floats the islands above when there is room', () => {
+    const { root } = renderRenderedImage();
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    if (!figure) throw new Error('figure missing');
+    Object.defineProperty(figure, 'getBoundingClientRect', { value: () => ({ top: 300, left: 0, width: 400, height: 300, right: 400, bottom: 600 }) });
+    figure.dispatchEvent(new MouseEvent('mouseenter'));
+
+    expect(root.querySelector('[data-role="image-overlay"]')?.getAttribute('data-islands-placement')).toBe('above');
+  });
+
+  it('marks the root as resizing and shows a snapped readout while a handle is dragged', () => {
+    const { root } = renderRenderedImage({ alignment: 'left', width: 60 });
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    const handle = root.querySelector<HTMLElement>('[data-role="resize-handle"][data-edge="right"]');
+    if (!figure || !handle) throw new Error('figure or handle missing');
+    const rect = (width: number): DOMRect => ({ left: 0, right: width, width, top: 300, bottom: 600, height: 300, x: 0, y: 300, toJSON: () => ({}) });
+    Object.defineProperty(figure, 'getBoundingClientRect', { value: () => rect(600) });
+    Object.defineProperty(root, 'getBoundingClientRect', { value: () => rect(1000) });
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+
+    handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, pointerId: 1, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointermove', { clientX: -80, pointerId: 1, bubbles: true }));
+
+    expect(root.getAttribute('data-resizing')).toBe('true');
+    expect(root.querySelector('[data-role="image-resize-readout"]')?.textContent).toBe('50% · 500 px');
+
+    handle.dispatchEvent(new PointerEvent('pointerup', { clientX: -80, pointerId: 1, bubbles: true }));
+
+    expect(root.hasAttribute('data-resizing')).toBe(false);
+  });
+
+  it('clears the resizing mark on a click that never moved', () => {
+    const { root } = renderRenderedImage();
+    const handle = root.querySelector<HTMLElement>('[data-role="resize-handle"][data-edge="right"]');
+    if (!handle) throw new Error('handle missing');
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+    root.setAttribute('data-resizing', 'true');
+
+    handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, pointerId: 1, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointerup', { clientX: 0, pointerId: 1, bubbles: true }));
+
+    expect(root.hasAttribute('data-resizing')).toBe(false);
+  });
+});

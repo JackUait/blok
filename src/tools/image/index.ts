@@ -34,7 +34,8 @@ import {
   IconImage,
   IconReplace,
 } from '../../components/icons';
-import { DEFAULT_RELOAD_ATTEMPTS, URL_PATTERN } from './constants';
+import { DEFAULT_RELOAD_ATTEMPTS, IMAGE_SNAP_POINTS, URL_PATTERN } from './constants';
+import { islandBoundaryTop, resolveIslandPlacement } from './island-placement';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
 import { resolveUploadError } from '../../components/utils/media-upload-error';
@@ -89,6 +90,7 @@ export class ImageTool implements BlockTool {
   private uploadingEl: UploadingStateElement | null = null;
   private resizeDetach: (() => void)[] = [];
   private overlayResizeObserver: ResizeObserver | null = null;
+  private placementDetach: (() => void) | null = null;
   private cropDetach: (() => void) | null = null;
   private altPopoverDetach: (() => void) | null = null;
   private errorMessage: string | null = null;
@@ -853,6 +855,8 @@ export class ImageTool implements BlockTool {
     }
     this.overlayResizeObserver?.disconnect();
     this.overlayResizeObserver = null;
+    this.placementDetach?.();
+    this.placementDetach = null;
   }
 
   private syncRootAttributes(): void {
@@ -986,6 +990,11 @@ export class ImageTool implements BlockTool {
     }
 
     if (!this.readOnly) {
+      const ring = document.createElement('div');
+      ring.setAttribute('data-role', 'image-selection-ring');
+      ring.setAttribute('aria-hidden', 'true');
+      figure.appendChild(ring);
+
       const overlay = renderOverlay({
         state: {
           alignment: this.data.alignment ?? 'center',
@@ -1004,6 +1013,7 @@ export class ImageTool implements BlockTool {
         i18n: this.api.i18n,
       });
       figure.appendChild(overlay);
+      this.watchIslandPlacement(figure, overlay);
 
       const moreBtn = overlay.querySelector<HTMLButtonElement>('[data-action="more"]');
       moreBtn?.addEventListener('click', (event) => {
@@ -1086,15 +1096,42 @@ export class ImageTool implements BlockTool {
     this.overlayResizeObserver.observe(figure);
   }
 
+  private watchIslandPlacement(figure: HTMLElement, overlay: HTMLElement): void {
+    this.placementDetach?.();
+    const sync = (): void => {
+      overlay.setAttribute('data-islands-placement', resolveIslandPlacement({
+        figureTop: figure.getBoundingClientRect().top,
+        islandHeight: overlay.getBoundingClientRect().height,
+        boundaryTop: islandBoundaryTop(figure),
+      }));
+    };
+    sync();
+    figure.addEventListener('mouseenter', sync);
+    window.addEventListener('scroll', sync, { passive: true, capture: true });
+    this.placementDetach = (): void => {
+      figure.removeEventListener('mouseenter', sync);
+      window.removeEventListener('scroll', sync, { capture: true });
+    };
+  }
+
   private attachResizeHandles(figure: HTMLElement): void {
+    const readout = document.createElement('div');
+    readout.setAttribute('data-role', 'image-resize-readout');
+    readout.setAttribute('aria-hidden', 'true');
+    figure.appendChild(readout);
+    const container = figure.parentElement ?? figure;
+    const endDrag = (): void => this.root?.removeAttribute('data-resizing');
     const edges: ResizeEdge[] = ['left', 'right'];
     for (const edge of edges) {
       const handle = this.createResizeHandle(edge);
       figure.appendChild(handle);
+      handle.addEventListener('pointerup', endDrag);
+      handle.addEventListener('pointercancel', endDrag);
       const detach = attachResizeHandle({
         handle,
         figure,
-        container: figure.parentElement ?? figure,
+        container,
+        snapPoints: IMAGE_SNAP_POINTS,
         edge,
         alignment: this.data.alignment ?? 'center',
         // Resolved at drag start: an image inside a table cell can't shrink below
@@ -1103,8 +1140,13 @@ export class ImageTool implements BlockTool {
         minWidthPx: () => resizeFloorPx(figure),
         onPreview: (percent) => {
           figure.style.setProperty('width', `${percent}%`);
+          this.root?.setAttribute('data-resizing', 'true');
+          readout.setAttribute('data-edge', edge);
+          const px = Math.round((container.getBoundingClientRect().width * percent) / 100);
+          readout.textContent = `${percent}% · ${px} px`;
         },
         onCommit: (percent) => {
+          endDrag();
           this.data.width = percent;
           this.block.dispatchChange();
         },

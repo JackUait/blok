@@ -167,6 +167,7 @@ const SHARED_POSITION_CALL_CLASSIFICATIONS: Record<string, string> = {
 const CAPTURE_SCROLL_CLASSIFICATIONS: Record<string, string> = {
   'components/utils/tooltip.ts': 'Capture-phase scroll listener intentionally dismisses the snapshot tooltip.',
   'tools/file/preview-scroll-haze.ts': 'Capture-phase listener refreshes local file-preview scroll haze state.',
+  'tools/image/index.ts': 'Capture-phase listener re-decides whether image tool islands fit above the figure; the editor may scroll inside any ancestor.',
 };
 
 type SurfaceContract = 'shared' | 'popover-core' | 'tracked-manual' | 'dismiss-on-scroll';

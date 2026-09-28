@@ -258,7 +258,11 @@ describe('merging a table that contains another table', () => {
 
       expect(animate).toHaveBeenCalledTimes(1);
       expect(animate.mock.contexts[0]).toBe(editor?.blocks.getById('bottom-left')?.holder);
-      expect(animate.mock.calls[0][0]).toEqual([{ transform: 'translate(-100px, 0px)' }, { transform: 'none' }]);
+      expect(animate.mock.calls[0][0]).toEqual([
+        { transform: 'translate(-100px, 0px) skewX(0deg)' },
+        { offset: 0.5, transform: 'translate(-50px, 0px) skewX(-8deg)' },
+        { transform: 'translate(0px, 0px) skewX(0deg)' },
+      ]);
     } finally {
       Reflect.deleteProperty(HTMLElement.prototype, 'animate');
       Reflect.deleteProperty(window, 'matchMedia');

@@ -6,9 +6,22 @@
  * Web Animations never touch the DOM, so no MutationObserver sees the glide.
  */
 
-/** Short and without overshoot: longer or springy glides read as lag after the click. */
-const EASE_OUT = 'cubic-bezier(0.2, 0, 0, 1)';
-const DURATION_MS = 200;
+/**
+ * Accelerates from rest, then brakes hard. Kept short and without overshoot:
+ * longer or springy glides read as lag after the click.
+ */
+const EASE_IN_OUT = 'cubic-bezier(0.7, 0, 0.2, 1)';
+const DURATION_MS = 240;
+
+/** Horizontal lean at mid-flight: one degree per LEAN_PX of travel, capped. */
+const LEAN_PX = 12;
+const MAX_LEAN_DEG = 8;
+
+const round = (value: number): number => Number(value.toFixed(2));
+
+/** The block leans into its travel, like text being pulled across. */
+const leanFor = (dx: number): number =>
+  round(Math.sign(dx) * Math.min(Math.abs(dx) / LEAN_PX, MAX_LEAN_DEG));
 
 const holdersOf = (container: HTMLElement): HTMLElement[] =>
   Array.from(container.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
@@ -45,8 +58,12 @@ export const movePlacementWithMotion = (containers: HTMLElement[], apply: () => 
     }
 
     holder.animate(
-      [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }],
-      { duration: DURATION_MS, easing: EASE_OUT }
+      [
+        { transform: `translate(${dx}px, ${dy}px) skewX(0deg)` },
+        { offset: 0.5, transform: `translate(${round(dx / 2)}px, ${round(dy / 2)}px) skewX(${leanFor(dx)}deg)` },
+        { transform: 'translate(0px, 0px) skewX(0deg)' },
+      ],
+      { duration: DURATION_MS, easing: EASE_IN_OUT }
     );
   }
 };

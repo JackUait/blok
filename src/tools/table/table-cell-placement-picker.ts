@@ -49,8 +49,11 @@ const offsetOf = (side: Side, width: number): number => {
   return side === 'center' ? (PREVIEW_TEXT_WIDTH - width) / 2 : PREVIEW_TEXT_WIDTH - width;
 };
 
-/** Short and without overshoot: longer or springy motion reads as lag after the click. */
-const EASE_OUT = '[transition-timing-function:cubic-bezier(0.2,0,0,1)]';
+/**
+ * Same motion as the cell glide: accelerates from rest, then brakes hard,
+ * without overshoot. Longer or springy motion reads as lag after the click.
+ */
+const EASE_IN_OUT = '[transition-timing-function:cubic-bezier(0.7,0,0.2,1)]';
 
 /** Same width, radius and neutral surface as the options track below it. */
 const PREVIEW_CLASSES = [
@@ -77,8 +80,8 @@ const PREVIEW_LINE_CLASSES = [
   'rounded-full',
   'bg-current',
   'transition-transform',
-  'duration-200',
-  EASE_OUT,
+  'duration-[240ms]',
+  EASE_IN_OUT,
   'motion-reduce:transition-none',
 ];
 
@@ -105,8 +108,8 @@ const THUMB_CLASSES = [
   'bg-icon-active-bg',
   'pointer-events-none',
   'transition-transform',
-  'duration-200',
-  EASE_OUT,
+  'duration-[240ms]',
+  EASE_IN_OUT,
   'motion-reduce:transition-none',
 ];
 

@@ -65,11 +65,33 @@ describe('movePlacementWithMotion', () => {
 
     expect(animate).toHaveBeenCalledTimes(2);
     expect(animate.mock.contexts).toEqual(holders);
-    expect(animate.mock.calls[0][0]).toEqual([{ transform: 'translate(-60px, -30px)' }, { transform: 'none' }]);
-    expect(animate.mock.calls[1][0]).toEqual([{ transform: 'translate(-70px, -30px)' }, { transform: 'none' }]);
+    // Halfway there each block leans into its travel, then straightens as it lands.
+    expect(animate.mock.calls[0][0]).toEqual([
+      { transform: 'translate(-60px, -30px) skewX(0deg)' },
+      { offset: 0.5, transform: 'translate(-30px, -15px) skewX(-5deg)' },
+      { transform: 'translate(0px, 0px) skewX(0deg)' },
+    ]);
+    expect(animate.mock.calls[1][0]).toEqual([
+      { transform: 'translate(-70px, -30px) skewX(0deg)' },
+      { offset: 0.5, transform: 'translate(-35px, -15px) skewX(-5.83deg)' },
+      { transform: 'translate(0px, 0px) skewX(0deg)' },
+    ]);
   });
 
-  it('moves every block at once and lands within 200ms, with no overshoot, so it never trails the click', () => {
+  it.each([
+    ['left', [[200, 0]], [[0, 0]], 8],
+    ['right, capped for a long trip', [[0, 0]], [[300, 0]], -8],
+    ['straight down, without leaning', [[0, 0]], [[0, 40]], 0],
+  ] as const)('leans a block moving %s', (_direction, from, to, lean) => {
+    const animate = stubMotion(false);
+    const { container } = makeCell({ 'top-left': from.map(([x, y]) => [x, y]), 'middle-right': to.map(([x, y]) => [x, y]) }, 1);
+
+    movePlacementWithMotion([container], () => container.setAttribute('data-blok-cell-placement', 'middle-right'));
+
+    expect(animate.mock.calls[0][0][1].transform).toContain(`skewX(${lean}deg)`);
+  });
+
+  it('moves every block at once, fast, accelerating from rest and braking without overshoot', () => {
     const animate = stubMotion(false);
     const { container } = makeCell({ 'top-left': [[0, 0], [0, 24]], 'middle-right': [[80, 30], [90, 54]] }, 2);
 
@@ -77,11 +99,14 @@ describe('movePlacementWithMotion', () => {
 
     for (const [, timing] of animate.mock.calls) {
       expect(timing.delay ?? 0).toBe(0);
-      expect(Number(timing.duration)).toBeLessThanOrEqual(200);
-      // No control point above 1: the block never passes its target and comes back.
+      expect(Number(timing.duration)).toBeLessThanOrEqual(240);
       const controls = (timing.easing ?? '').match(/-?[\d.]+/g)?.map(Number) ?? [];
 
       expect(controls).toHaveLength(4);
+      // Starts at rest and builds speed: the first control point sits flat and late.
+      expect(controls[0]).toBeGreaterThanOrEqual(0.5);
+      expect(controls[1]).toBe(0);
+      // No control point above 1: the block never passes its target and comes back.
       expect(Math.max(controls[1], controls[3])).toBeLessThanOrEqual(1);
     }
   });

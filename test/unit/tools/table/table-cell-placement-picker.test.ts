@@ -128,11 +128,12 @@ describe('createCellPlacementPicker', () => {
     expect(thumb.className).not.toMatch(/blue|primary|focus/);
   });
 
-  it('slides the thumb quickly without overshoot, and stands still for reduced motion', () => {
+  it('slides the thumb fast, accelerating then braking without overshoot, and stands still for reduced motion', () => {
     const { className } = thumbOf(render(undefined));
 
     expect(className).toContain('transition-transform');
-    expect(className).toContain('duration-200');
+    expect(className).toContain('duration-[240ms]');
+    expect(className).toContain('cubic-bezier(0.7,0,0.2,1)');
     expect(className).not.toContain('1.56');
     expect(className).toContain('motion-reduce:transition-none');
   });
@@ -198,13 +199,14 @@ describe('createCellPlacementPicker', () => {
       expect(shifts(element)[1]).toBe('translateX(46px)');
     });
 
-    it('moves the lines together and quickly, without overshoot, and stands still for reduced motion', () => {
+    it('moves the lines together, accelerating then braking without overshoot, and stands still for reduced motion', () => {
       const lines = Array.from(previewOf(render(undefined)).querySelectorAll<HTMLElement>('[data-blok-placement-preview-line]'));
 
       for (const line of lines) {
         expect(line.style.transitionDelay).toBe('');
         expect(line.className).toContain('transition-transform');
-        expect(line.className).toContain('duration-200');
+        expect(line.className).toContain('duration-[240ms]');
+        expect(line.className).toContain('cubic-bezier(0.7,0,0.2,1)');
         expect(line.className).not.toContain('1.56');
         expect(line.className).toContain('motion-reduce:transition-none');
       }

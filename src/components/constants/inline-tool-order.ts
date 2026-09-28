@@ -7,22 +7,22 @@
  * list (any third-party Inline Tool) are appended after all built-ins in
  * registration order.
  *
- * Grouped by what the marks do: block type, emphasis, technical marks,
- * reference, color, and finally the destructive reset.
+ * Laid out as Notion's grid: color and emphasis on the first row, link and
+ * technical marks on the second.
  *
  * Adding an Inline Tool to `allTools` in `src/full.ts` without placing it here
  * fails `test/unit/components/modules/tools.test.ts`.
  */
 export const INLINE_TOOL_ORDER: readonly string[] = [
   'convertTo',
+  'marker',
   'bold',
   'italic',
   'underline',
+  'clearFormat',
+  'link',
   'strikethrough',
   'inlineCode',
   'equation',
   'supSub',
-  'link',
-  'marker',
-  'clearFormat',
 ];

@@ -1020,7 +1020,7 @@ describe('tools module', () => {
         ['clearFormat', 'link', 'bold']
       );
 
-      expect(order).toStrictEqual(['convertTo', 'bold', 'link', 'clearFormat']);
+      expect(order).toStrictEqual(['convertTo', 'bold', 'clearFormat', 'link']);
     });
 
     it('places unknown inline tools after the built-ins, keeping their registration order', async () => {

@@ -12,3 +12,13 @@ describe('defaultInlineTools order', () => {
     expect(Object.keys(defaultInlineTools)).toEqual(expected);
   });
 });
+
+describe('INLINE_TOOL_ORDER', () => {
+  it('lays the cells out in Notion order: color and emphasis first, then link and technical marks', () => {
+    expect(INLINE_TOOL_ORDER).toEqual([
+      'convertTo',
+      'marker', 'bold', 'italic', 'underline', 'clearFormat',
+      'link', 'strikethrough', 'inlineCode', 'equation', 'supSub',
+    ]);
+  });
+});

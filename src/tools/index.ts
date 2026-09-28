@@ -99,14 +99,14 @@ export const defaultBlockTools = {
 // list reads the way the toolbar renders. The toolbar sorts by that constant
 // regardless, so a stray order here changes nothing but the reading.
 export const defaultInlineTools = {
+  marker: {},
   bold: {},
   italic: {},
   underline: {},
+  clearFormat: {},
+  link: {},
   strikethrough: {},
   inlineCode: {},
   equation: {},
   supSub: {},
-  link: {},
-  marker: {},
-  clearFormat: {},
 } as const;

@@ -379,7 +379,10 @@ describe('BlockManager.moveCurrentBlockUp/Down (block selection)', () => {
   });
 
   it('passes the block selection to operations.moveCurrentBlockDown', () => {
-    const selected = [{ id: 'a' }, { id: 'b' }] as unknown as Block[];
+    const selected = [
+      { id: 'a', holder: document.createElement('div') },
+      { id: 'b', holder: document.createElement('div') },
+    ] as unknown as Block[];
     const { blockManager, moveDownSpy } = createBlockManagerWithSelection(selected);
 
     blockManager.moveCurrentBlockDown();
@@ -388,7 +391,10 @@ describe('BlockManager.moveCurrentBlockUp/Down (block selection)', () => {
   });
 
   it('passes the block selection to operations.moveCurrentBlockUp', () => {
-    const selected = [{ id: 'a' }, { id: 'b' }] as unknown as Block[];
+    const selected = [
+      { id: 'a', holder: document.createElement('div') },
+      { id: 'b', holder: document.createElement('div') },
+    ] as unknown as Block[];
     const { blockManager, moveUpSpy } = createBlockManagerWithSelection(selected);
 
     blockManager.moveCurrentBlockUp();
@@ -397,7 +403,10 @@ describe('BlockManager.moveCurrentBlockUp/Down (block selection)', () => {
   });
 
   it('re-applies the block selection after a move so it can be repeated', () => {
-    const selected = [{ id: 'a' }, { id: 'b' }] as unknown as Block[];
+    const selected = [
+      { id: 'a', holder: document.createElement('div') },
+      { id: 'b', holder: document.createElement('div') },
+    ] as unknown as Block[];
     const { blockManager, selectBlockSpy } = createBlockManagerWithSelection(selected);
 
     blockManager.moveCurrentBlockDown();

@@ -23,6 +23,12 @@ export function setPreviewProgress(stage: HTMLElement, percent: number): void {
   stage.style.setProperty('--blok-media-progress', String(value / 100));
 }
 
+/** Takes a preview back out of upload mode, to its resting look. */
+export function clearPreviewProgress(stage: HTMLElement): void {
+  stage.removeAttribute('data-uploading');
+  stage.style.removeProperty('--blok-media-progress');
+}
+
 const EXIT_MS = 900;
 
 /** Long enough for the slowest staggered part to finish its exit. */

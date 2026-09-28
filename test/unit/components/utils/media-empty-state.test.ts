@@ -324,3 +324,31 @@ describe('link tab', () => {
     expect(el.querySelector('.blok-media-empty__embed-bar')?.classList.contains('blok-media-empty__embed-bar--large')).toBe(false);
   });
 });
+
+describe('switching tabs', () => {
+  it('keeps the very same drawing on stage, so it never re-renders', () => {
+    const el = render({ preview: 'image' });
+    const first = el.querySelector('[data-blok-media-preview]');
+
+    el.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    const onLink = el.querySelector('[data-blok-media-preview]');
+    el.querySelector<HTMLButtonElement>('[data-tab="upload"]')?.click();
+    const backOnUpload = el.querySelector('[data-blok-media-preview]');
+
+    expect(first).not.toBeNull();
+    expect(onLink).toBe(first);
+    expect(backOnUpload).toBe(first);
+  });
+
+  it('waits for a link on the Link tab and rests again back on Upload', () => {
+    const el = render({ preview: 'image' });
+    const drawing = el.querySelector<HTMLElement>('[data-blok-media-preview]');
+
+    el.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    expect(drawing?.hasAttribute('data-uploading')).toBe(true);
+
+    el.querySelector<HTMLButtonElement>('[data-tab="upload"]')?.click();
+    expect(drawing?.hasAttribute('data-uploading')).toBe(false);
+    expect(drawing?.style.getPropertyValue('--blok-media-progress')).toBe('');
+  });
+});

@@ -9,7 +9,7 @@ import { formatBytes } from './format-bytes';
 import { setFieldValidity } from './field-validity';
 import { matchesMime } from './mime-match';
 import { rovingRadioGroup } from './roving-radio-group';
-import { EXIT_CLEAR_MS, makePreview, setPreviewProgress, springHome, type MediaPreviewKind } from './media-empty-preview';
+import { clearPreviewProgress, EXIT_CLEAR_MS, makePreview, setPreviewProgress, springHome, type MediaPreviewKind } from './media-empty-preview';
 import { leanPreview } from './media-preview-3d';
 
 /**
@@ -211,7 +211,7 @@ function prefersReducedMotion(): boolean {
  * `startHeight` is captured before the content swaps; degrades to an instant
  * swap when WAAPI is unavailable or reduced motion is requested.
  */
-function animatePanelSwap(panel: HTMLElement, startHeight: number): void {
+function animatePanelSwap(panel: HTMLElement, startHeight: number, keep: Element | null): void {
   const endHeight = panel.getBoundingClientRect().height;
 
   panel.classList.add('is-swapping');
@@ -228,7 +228,7 @@ function animatePanelSwap(panel: HTMLElement, startHeight: number): void {
   // Fade the incoming content in promptly (no delay/offset) so it reveals as
   // the panel grows rather than popping in once the height tween settles.
   for (const child of Array.from(panel.children)) {
-    if (!canAnimate(child)) continue;
+    if (child === keep || !canAnimate(child)) continue;
     child.animate(
       [{ opacity: 0 }, { opacity: 1 }],
       { duration: 150, easing: 'ease-out', fill: 'backwards' }
@@ -242,10 +242,10 @@ function animatePanelSwap(panel: HTMLElement, startHeight: number): void {
  * The panel keeps its new height instantly; only the content moves, so there is
  * no bottom-edge crawl (the part that read as lag in a floating popover).
  */
-function animatePanelContent(panel: HTMLElement, dir: number): void {
+function animatePanelContent(panel: HTMLElement, dir: number, keep: Element | null): void {
   const dx = dir * 12;
   for (const child of Array.from(panel.children)) {
-    if (!canAnimate(child)) continue;
+    if (child === keep || !canAnimate(child)) continue;
     child.animate(
       [
         { opacity: 0, transform: `translateX(${dx}px)` },
@@ -345,9 +345,23 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     if (hintRef.el) hintRef.el.textContent = on ? labels.dropToUpload : labels.orDropHere;
   };
 
+  // One drawing for both tabs: rebuilding it on every switch made it blink and
+  // lose its tilt. Each tab clears everything else and keeps it first.
+  const stage = opts.preview ? makePreview(opts.preview) : null;
+  stage?.addEventListener('animationend', (ev) => {
+    if (ev.target === stage) stage.classList.remove('is-caught');
+  });
+  const clearPanel = (): void => {
+    for (const child of Array.from(panel.children)) {
+      if (child !== stage) child.remove();
+    }
+    if (stage && stage.parentElement !== panel) panel.prepend(stage);
+  };
+
   const renderUpload = (): void => {
-    panel.replaceChildren();
-    panel.appendChild(opts.preview ? makePreview(opts.preview) : makeTile(IconUpload));
+    clearPanel();
+    if (stage) clearPreviewProgress(stage);
+    else panel.appendChild(makeTile(IconUpload));
 
     const content = document.createElement('div');
     content.className = 'blok-media-empty__content';
@@ -386,7 +400,7 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
   };
 
   const renderEmbed = (): void => {
-    panel.replaceChildren();
+    clearPanel();
     hintRef.el = null;
 
     const bar = document.createElement('div');
@@ -399,9 +413,8 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     fieldIcon.setAttribute('aria-hidden', 'true');
     fieldIcon.innerHTML = IconLink;
 
-    // The same drawing as the Upload tab stays on stage, in upload mode: pale
-    // until the link is valid, then it plays its "complete" moment.
-    const stage = opts.preview ? makePreview(opts.preview) : null;
+    // The Upload tab's drawing stays on stage, in upload mode: pale until the
+    // link is valid, then it plays its "complete" moment.
     if (stage) {
       setPreviewProgress(stage, 0);
       bar.classList.add('blok-media-empty__embed-bar--large');
@@ -497,12 +510,7 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
       }
     });
 
-    stage?.addEventListener('animationend', (ev) => {
-      if (ev.target === stage) stage.classList.remove('is-caught');
-    });
-
     bar.append(fieldIcon, urlInput, readBack, submit);
-    if (stage) panel.appendChild(stage);
     panel.appendChild(bar);
     sync();
     queueMicrotask(() => urlInput.focus());
@@ -534,8 +542,8 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     else renderEmbed();
 
     if (!motion) return;
-    if (swapMode === 'reflow' && startHeight !== null) animatePanelSwap(panel, startHeight);
-    else if (swapMode === 'slide') animatePanelContent(panel, dir);
+    if (swapMode === 'reflow' && startHeight !== null) animatePanelSwap(panel, startHeight, stage);
+    else if (swapMode === 'slide') animatePanelContent(panel, dir, stage);
   };
 
   tabList.forEach((tab, idx) => {

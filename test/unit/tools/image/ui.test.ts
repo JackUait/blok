@@ -440,6 +440,32 @@ const makeOverlayOpts = (over: Partial<Parameters<typeof renderOverlay>[0]> = {}
 });
 
 describe('renderOverlay', () => {
+  it('groups the actions into layout, edit and view islands, in order', () => {
+    const overlay = renderOverlay(makeOverlayOpts());
+    const islands = Array.from(overlay.querySelectorAll<HTMLElement>(':scope > [data-island]'));
+
+    expect(islands.map((i) => i.dataset.island)).toEqual(['layout', 'edit', 'view']);
+    const actions = (i: HTMLElement): string[] =>
+      Array.from(i.querySelectorAll<HTMLElement>(':scope > button[data-action], :scope > div > button[data-action="align-trigger"]'))
+        .map((b) => b.dataset.action ?? '');
+
+    expect(actions(islands[0])).toEqual(['align-trigger', 'caption-toggle']);
+    expect(actions(islands[1])).toEqual(['crop', 'replace']);
+    expect(actions(islands[2])).toEqual(['fullscreen', 'download', 'more']);
+  });
+
+  it('draws no dividers — each island is its own card', () => {
+    const overlay = renderOverlay(makeOverlayOpts());
+
+    expect(overlay.querySelector('.blok-image-toolbar__divider')).toBeNull();
+  });
+
+  it('keeps the hidden delete alias outside the islands', () => {
+    const overlay = renderOverlay(makeOverlayOpts());
+
+    expect(overlay.querySelector('[data-action="delete"]')?.parentElement).toBe(overlay);
+  });
+
   it('exposes data-action buttons for each command', () => {
     const overlay = renderOverlay(makeOverlayOpts());
     expect(overlay.querySelector('[data-action="align-trigger"]')).not.toBeNull();

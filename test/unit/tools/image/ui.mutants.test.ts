@@ -640,10 +640,11 @@ describe('renderOverlay', () => {
     expect(root.querySelector('.blok-image-toolbar__align')).not.toBeNull();
   });
 
-  it('separates the alignment control from the action buttons with dividers', () => {
+  it('separates the alignment control from the action buttons by island', () => {
     const root = renderOverlay(overlayOptions());
 
-    expect(root.querySelectorAll('.blok-image-toolbar__divider')).toHaveLength(2);
+    expect(action(root, 'align-trigger').closest('[data-island]')?.getAttribute('data-island')).toBe('layout');
+    expect(action(root, 'crop').closest('[data-island]')?.getAttribute('data-island')).toBe('edit');
   });
 
   it('labels every action button with its localized name', () => {
@@ -2529,12 +2530,6 @@ describe('renderOverlay chrome', () => {
     expect(renderOverlay(overlayOptions()).className).toBe('blok-image-toolbar');
   });
 
-  it('hides both toolbar dividers from assistive tech', () => {
-    const root = renderOverlay(overlayOptions());
-    const dividers = [...root.querySelectorAll('.blok-image-toolbar__divider')];
-
-    expect(dividers.map((divider) => divider.getAttribute('aria-hidden'))).toEqual(['true', 'true']);
-  });
 });
 
 describe('alignment popover keyboard', () => {

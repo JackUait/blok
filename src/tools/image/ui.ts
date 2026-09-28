@@ -1077,43 +1077,43 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
   root.setAttribute('data-role', 'image-overlay');
   root.className = 'blok-image-toolbar';
 
-  appendAlignCtrl(root, opts);
-
-  appendDivider(root);
-
-  appendSimpleButton(root, {
+  const layout = appendIsland(root, 'layout');
+  appendAlignCtrl(layout, opts);
+  appendSimpleButton(layout, {
     action: 'caption-toggle',
     label: tr(opts.i18n, 'tools.image.toggleCaption'),
     pressed: opts.state.captionVisible,
     icon: IconCaption,
     onClick: opts.onToggleCaption,
   });
-  appendSimpleButton(root, {
-    action: 'replace',
-    label: tr(opts.i18n, 'tools.image.replace'),
-    icon: IconReplace,
-    onClick: opts.onReplace,
-  });
-  appendSimpleButton(root, {
+
+  const edit = appendIsland(root, 'edit');
+  appendSimpleButton(edit, {
     action: 'crop',
     label: tr(opts.i18n, 'tools.image.crop'),
     icon: IconCrop,
     onClick: opts.onCrop,
   });
-  appendSimpleButton(root, {
+  appendSimpleButton(edit, {
+    action: 'replace',
+    label: tr(opts.i18n, 'tools.image.replace'),
+    icon: IconReplace,
+    onClick: opts.onReplace,
+  });
+
+  const view = appendIsland(root, 'view');
+  appendSimpleButton(view, {
     action: 'fullscreen',
     label: tr(opts.i18n, 'tools.image.viewFullscreen'),
     icon: IconExpandFullscreen,
     onClick: opts.onFullscreen,
   });
-  appendSimpleButton(root, {
+  appendSimpleButton(view, {
     action: 'download',
     label: tr(opts.i18n, 'tools.image.downloadOriginal'),
     icon: IconDownload,
     onClick: opts.onDownload,
   });
-
-  appendDivider(root);
 
   const moreLabel = tr(opts.i18n, 'tools.image.moreOptions');
   const more = document.createElement('button');
@@ -1124,7 +1124,7 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
   more.setAttribute('aria-expanded', 'false');
   more.innerHTML = IconDotsHorizontal;
   tooltipOnHover(more, moreLabel);
-  root.appendChild(more);
+  view.appendChild(more);
 
   // Delete is reachable from the popover; expose an invisible legacy button for consumers/tests.
   const deleteAlias = document.createElement('button');
@@ -1142,7 +1142,7 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
   return root;
 }
 
-function appendAlignCtrl(root: HTMLElement, opts: OverlayOptions): void {
+function appendAlignCtrl(parent: HTMLElement, opts: OverlayOptions): void {
   const wrapper = document.createElement('div');
   wrapper.className = 'blok-image-toolbar__align';
   wrapper.style.position = 'relative';
@@ -1187,7 +1187,7 @@ function appendAlignCtrl(root: HTMLElement, opts: OverlayOptions): void {
   }
 
   wrapper.appendChild(popover);
-  root.appendChild(wrapper);
+  parent.appendChild(wrapper);
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.key === 'Escape' && !popover.hidden) {
@@ -1233,11 +1233,13 @@ function appendAlignCtrl(root: HTMLElement, opts: OverlayOptions): void {
   });
 }
 
-function appendDivider(parent: HTMLElement): void {
-  const d = document.createElement('div');
-  d.className = 'blok-image-toolbar__divider';
-  d.setAttribute('aria-hidden', 'true');
-  parent.appendChild(d);
+function appendIsland(parent: HTMLElement, name: 'layout' | 'edit' | 'view'): HTMLElement {
+  const island = document.createElement('div');
+  island.className = 'blok-image-toolbar__island';
+  island.setAttribute('data-island', name);
+  parent.appendChild(island);
+
+  return island;
 }
 
 interface SimpleButtonSpec {

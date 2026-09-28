@@ -2,6 +2,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { VideoTool } from '../../../../src/tools/video';
 import type { VideoData, VideoConfig } from '../../../../types/tools/video';
 import type { API, BlockToolConstructorOptions, BlockAPI, FilePasteEvent, PatternPasteEvent } from '../../../../types';
+import type { MediaConfig } from '../../../../types/configs/media';
+
+vi.mock('../../../../src/components/media-variants/video-variants', () => ({
+  produceVideoVariant: vi.fn(async () => null),
+}));
+import { produceVideoVariant } from '../../../../src/components/media-variants/video-variants';
+const mockProduce = vi.mocked(produceVideoVariant);
 
 const createMockApi = (messages: Record<string, string> = {}): API => ({
   styles: { block: 'blok-block' },
@@ -922,3 +929,156 @@ describe('VideoTool — variants', () => {
     expect(tool.save().variants).toBeUndefined();
   });
 });
+
+describe('VideoTool — background formats', () => {
+  const WEBM = 'video/webm; codecs="vp09.00.10.08, opus"';
+  const webm = { file: new Blob(['w'], { type: WEBM }), mimeType: WEBM };
+
+  const toolWith = (media?: MediaConfig): VideoTool => {
+    const api = { ...createMockApi(), config: { media } } as unknown as API;
+
+    return new VideoTool({ ...createOptions({}, { uploader: { uploadByFile: async (f: File) => ({ url: `https://cdn/${f.name}` }) } }), api });
+  };
+
+  const pasteFile = (tool: VideoTool): void => {
+    const event = new CustomEvent('paste', { detail: { file: new File([new Uint8Array(4)], 'clip.mov', { type: 'video/quicktime' }) } }) as FilePasteEvent;
+
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+  };
+
+  const idle = async (): Promise<void> => {
+    const { hasPendingMediaJobs } = await import('../../../../src/components/media-variants/media-queue');
+
+    await vi.waitFor(() => expect(hasPendingMediaJobs()).toBe(false));
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockProduce.mockResolvedValue(null);
+  });
+  afterEach(async () => {
+    await idle();
+    vi.restoreAllMocks();
+  });
+
+  it('saves the original at once, then adds the formats it could make', async () => {
+    const release: { go: () => void } = { go: () => undefined };
+
+    mockProduce.mockImplementation(async (_file, format) => {
+      if (format !== 'webm') return null;
+      await new Promise<void>((r) => {
+        release.go = r;
+      });
+
+      return webm;
+    });
+    const tool = toolWith({ formats: { video: ['webm'] } });
+    const root = tool.render();
+
+    pasteFile(tool);
+    await vi.waitFor(() => expect(tool.save().url).toBe('https://cdn/clip.mov'));
+    const player = root.querySelector('video');
+
+    expect(tool.save().variants).toBeUndefined();
+
+    release.go();
+    await idle();
+
+    expect(tool.save()).toMatchObject({
+      url: 'https://cdn/clip.mov',
+      variants: [{ url: 'https://cdn/clip.webm', mimeType: WEBM }, { url: 'https://cdn/clip.mov', mimeType: 'video/quicktime' }],
+    });
+    // The playing video is not rebuilt under the viewer.
+    expect(root.querySelector('video')).toBe(player);
+  });
+
+  it('switches url to the MP4 and records its type once one is made', async () => {
+    const MP4 = 'video/mp4; codecs="avc1.64001f, mp4a.40.2"';
+
+    mockProduce.mockImplementation(async (_file, format) => (format === 'mp4' ? { file: new Blob(['m'], { type: MP4 }), mimeType: MP4 } : null));
+    const tool = toolWith({ formats: { video: ['mp4'] } });
+
+    tool.render();
+    pasteFile(tool);
+    await vi.waitFor(() => expect(tool.save().url).toBe('https://cdn/clip.mp4'));
+
+    expect(tool.save().mimeType).toBe('video/mp4');
+  });
+
+  it('does nothing extra when no video formats are set', async () => {
+    const tool = toolWith({ formats: { image: ['jpeg'] } });
+
+    tool.render();
+    pasteFile(tool);
+    await vi.waitFor(() => expect(tool.save().url).toBe('https://cdn/clip.mov'));
+    await idle();
+
+    expect(mockProduce).not.toHaveBeenCalled();
+  });
+
+  it('does not write a finished format onto a video the user replaced', async () => {
+    const release: { go: () => void } = { go: () => undefined };
+
+    mockProduce.mockImplementation(async () => {
+      await new Promise<void>((r) => {
+        release.go = r;
+      });
+
+      return webm;
+    });
+    const tool = toolWith({ formats: { video: ['webm'] } });
+
+    tool.render();
+    pasteFile(tool);
+    await vi.waitFor(() => expect(mockProduce).toHaveBeenCalled());
+
+    const link = new CustomEvent('paste', { detail: { key: 'video', data: 'https://y/other.mp4' } }) as PatternPasteEvent;
+
+    Object.defineProperty(link, 'type', { value: 'pattern' });
+    tool.onPaste(link);
+    await vi.waitFor(() => expect(tool.save().url).toBe('https://y/other.mp4'));
+    release.go();
+    await idle();
+
+    expect(tool.save().variants).toBeUndefined();
+    expect(tool.save().url).toBe('https://y/other.mp4');
+  });
+
+  it('shows a converting status while it works, and removes it after', async () => {
+    const release: { go: () => void } = { go: () => undefined };
+
+    mockProduce.mockImplementation(async (_file, _format, opts) => {
+      opts.onProgress?.(0.4);
+      await new Promise<void>((r) => {
+        release.go = r;
+      });
+
+      return webm;
+    });
+    const tool = toolWith({ formats: { video: ['webm'] } });
+    const root = tool.render();
+
+    pasteFile(tool);
+    await vi.waitFor(() => expect(root.querySelector('[data-blok-testid="video-converting"]')?.textContent).toBe('tools.image.converting 40%'));
+    expect(root.querySelector('[data-blok-testid="video-converting"]')?.getAttribute('role')).toBe('status');
+
+    release.go();
+    await idle();
+
+    expect(root.querySelector('[data-blok-testid="video-converting"]')).toBeNull();
+  });
+
+  it('uses the renditions a host convert hook returns', async () => {
+    const convert = vi.fn(async () => [webm]);
+    const tool = toolWith({ formats: { video: ['webm'] }, convert });
+
+    tool.render();
+    pasteFile(tool);
+    await vi.waitFor(() => expect(tool.save().variants?.[0]?.url).toBe('https://cdn/clip.webm'));
+
+    expect(convert).toHaveBeenCalledWith(expect.any(File), ['webm'], expect.objectContaining({ kind: 'video' }));
+    expect(mockProduce).not.toHaveBeenCalled();
+  });
+});
+

@@ -7018,6 +7018,21 @@ span[data-blok-slash-search] {
   animation: none;
 }
 
+[data-blok-tool="video"] .blok-video-converting {
+  position: absolute;
+  top: var(--blok-space-2);
+  left: var(--blok-space-2);
+  padding: 2px var(--blok-space-2);
+  border-radius: var(--blok-radius-md);
+  background: var(--blok-video-burst-bg);
+  box-shadow: var(--blok-video-burst-shadow);
+  color: var(--blok-video-control-fg);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
 [data-blok-tool="audio"] {
   --blok-audio-cover-size: 104px;
   --blok-audio-gap: var(--blok-space-3-5);

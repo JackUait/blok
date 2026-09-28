@@ -76,3 +76,30 @@ describe('editor-level uploader fallback', () => {
       .resolves.toMatchObject({ url: 'blob:video' });
   });
 });
+
+describe('video Uploader.uploadVariant', () => {
+  const file = (): File => new File([new Uint8Array(4)], 'clip.webm', { type: 'video/webm' });
+  const variant = { mimeType: 'video/webm; codecs="vp9, opus"', role: 'variant' as const };
+
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('sends the rendition through the editor uploader with its kind and variant', async () => {
+    const uploadByFile = vi.fn(async () => ({ url: 'https://cdn/clip.webm' }));
+    const assets = { isConfigured: () => true, uploadByFile, uploadByUrl: vi.fn() };
+
+    await new Uploader({}, assets).uploadVariant(file(), variant);
+
+    expect(uploadByFile).toHaveBeenCalledWith(expect.any(File), { kind: 'video', tool: 'video', variant });
+  });
+
+  it('falls back to the tool uploader, then to a blob URL', async () => {
+    const uploadByFile = vi.fn(async () => ({ url: 'https://cdn/tool.webm' }));
+
+    await expect(new Uploader({ uploader: { uploadByFile } }).uploadVariant(file(), variant))
+      .resolves.toEqual({ url: 'https://cdn/tool.webm' });
+
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:variant');
+    await expect(new Uploader({}).uploadVariant(file(), variant)).resolves.toEqual({ url: 'blob:variant' });
+  });
+});

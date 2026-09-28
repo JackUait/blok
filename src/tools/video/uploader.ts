@@ -69,6 +69,23 @@ export class Uploader {
     return { url: URL.createObjectURL(file), fileName: file.name };
   }
 
+  /**
+   * Store one converted rendition. No validation: Blok made the file, and a
+   * host `types`/`maxSize` limit is about what users may pick.
+   * @param file - the rendition
+   * @param variant - its type and role, passed on to the host uploader
+   */
+  public async uploadVariant(file: File, variant: { mimeType: string; role: 'variant' }): Promise<{ url: string }> {
+    if (this.assets?.isConfigured('video', 'uploadByFile')) {
+      return this.assets.uploadByFile(file, { kind: 'video', tool: 'video', variant });
+    }
+    if (this.config.uploader?.uploadByFile) {
+      return this.config.uploader.uploadByFile(file);
+    }
+
+    return { url: URL.createObjectURL(file) };
+  }
+
   private validateUrl(raw: string): void {
     const parsed = parseUrl(raw);
 

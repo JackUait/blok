@@ -34,6 +34,10 @@ import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { tr } from './i18n';
 import { deliverToRebuiltBlock, putBackOnRebuiltBlock, releaseObjectUrl } from '../image/detached-upload';
 import { readVariants } from '../../shared/read-variants';
+import type { ConvertedMedia, MediaConfig, VideoFormat } from '../../../types/configs/media';
+import { enqueueMediaJob } from '../../components/media-variants/media-queue';
+import { convertVideoInBackground, videoFormatOf } from '../../components/media-variants/video-background';
+import { produceVideoVariant } from '../../components/media-variants/video-variants';
 import { renderCaptionRow, renderVideo } from './ui';
 import { attachControls, type ControlsHandle } from './controls';
 import { Uploader, VideoUploadError, type UploadResult } from './uploader';
@@ -43,6 +47,9 @@ import { pickDisplayMaxSize } from '../../components/utils/max-size';
 import { safeDownloadHref } from '../../components/utils/sanitize-url';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
+
+/** Longer videos are only remuxed: a long re-encode can hold the CPU for minutes. */
+const DEFAULT_MAX_TRANSCODE_SECONDS = 600;
 
 export class VideoTool implements BlockTool {
   private readonly api: API;
@@ -63,6 +70,9 @@ export class VideoTool implements BlockTool {
   private theater = false;
   /** Set by `removed()`: this instance is no longer the document's block. */
   private detached = false;
+  /** Background conversion progress, or null when none runs. */
+  private converting: number | null = null;
+  private convertingEl: HTMLElement | null = null;
 
   constructor(options: BlockToolConstructorOptions<VideoData, VideoConfig>) {
     this.api = options.api;
@@ -389,6 +399,96 @@ export class VideoTool implements BlockTool {
     if (this.lastSource !== source || this.data.url !== fromUrl) return;
     this.showResult(result, mimeType);
     this.block.dispatchChange({ derived: true, from: ['fileName'] });
+    this.startVariants(source.file, result.url);
+  }
+
+  /**
+   * Convert the uploaded original into the host's formats, one job per page at
+   * a time. The original already plays; nothing here blocks the user.
+   * @param file - the file the user picked
+   * @param url - where the original was stored
+   */
+  private startVariants(file: File, url: string): void {
+    const media = this.api.config?.media;
+    const formats = media?.formats?.video;
+
+    if (media === undefined || formats === undefined || formats.length === 0) return;
+    this.showConverting(0);
+    void enqueueMediaJob(() => this.convertVariants(file, url, formats, media))
+      .catch(() => undefined)
+      .finally(() => this.showConverting(null));
+  }
+
+  private async convertVariants(file: File, url: string, formats: VideoFormat[], media: MediaConfig): Promise<void> {
+    const fromHook: unknown = media.convert === undefined
+      ? null
+      : await media.convert(file, formats, { kind: 'video', onProgress: (f) => this.showConverting(Math.round(f * 100)) })
+        .catch(() => null);
+    // Untyped hosts can return anything; only an array counts as an answer.
+    const listed = Array.isArray(fromHook) ? (fromHook as ConvertedMedia[]) : null;
+    const shown = { url };
+
+    await convertVideoInBackground({ file, url }, formats, {
+      produce: async (format, onProgress) => listed === null
+        ? produceVideoVariant(file, format, { maxTranscodeDuration: media.maxTranscodeDuration ?? DEFAULT_MAX_TRANSCODE_SECONDS, onProgress })
+        : listed.find((item) => videoFormatOf(item.mimeType) === format) ?? null,
+      upload: (part, variant) => this.uploader.uploadVariant(part, variant),
+      // A rebuilt block is checked by deliverToRebuiltBlock when writing.
+      isCurrent: (expected) => this.detached || this.data.url === expected,
+      write: (next) => {
+        this.writeVariants(shown.url, next);
+        shown.url = next.url;
+      },
+      onProgress: (percent) => this.showConverting(percent),
+    });
+  }
+
+  /**
+   * Derived data: the edit was the upload, so no undo step. The playing
+   * `<video>` is left alone; the new sources apply on the next render.
+   * @param expected - the url the block should still hold
+   * @param next - the new url and variants
+   */
+  private writeVariants(expected: string, next: { url: string; variants?: VideoData['variants'] }): void {
+    const delta: Partial<VideoData> = { url: next.url, variants: next.variants };
+
+    // Only an MP4 ever replaces the original as url.
+    if (next.url !== expected) delta.mimeType = 'video/mp4';
+    if (this.detached) {
+      deliverToRebuiltBlock(this.api, this.block, 'Video', delta, { url: expected }, ['url']);
+
+      return;
+    }
+    if (this.data.url !== expected) return;
+    this.data = { ...this.data, ...delta };
+    this.block.dispatchChange({ derived: true, from: ['url'] });
+  }
+
+  /**
+   * @param percent - progress 0–100, or null to remove the status
+   */
+  private showConverting(percent: number | null): void {
+    this.converting = percent;
+    if (percent === null) {
+      this.convertingEl?.remove();
+      this.convertingEl = null;
+
+      return;
+    }
+
+    const media = this.root?.querySelector<HTMLElement>('[data-role="video-media"]');
+
+    if (!media) return;
+    if (this.convertingEl === null || !media.contains(this.convertingEl)) {
+      const el = document.createElement('div');
+
+      el.className = 'blok-video-converting';
+      el.setAttribute('data-blok-testid', 'video-converting');
+      el.setAttribute('role', 'status');
+      media.appendChild(el);
+      this.convertingEl = el;
+    }
+    this.convertingEl.textContent = `${this.api.i18n.t('tools.image.converting')} ${percent}%`;
   }
 
   private resultDelta(result: UploadResult, mimeType?: string): Partial<VideoData> {
@@ -498,6 +598,7 @@ export class VideoTool implements BlockTool {
       return;
     }
     this.renderRendered();
+    if (this.converting !== null) this.showConverting(this.converting);
   }
 
   private renderEmpty(): void {

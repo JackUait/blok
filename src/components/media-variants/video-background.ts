@@ -19,6 +19,23 @@ export interface BackgroundVideoDeps {
   onProgress?(percent: number): void;
 }
 
+/**
+ * @param mimeType - a full video MIME type, codecs allowed
+ * @returns the listed format it is, or null
+ */
+export const videoFormatOf = (mimeType: string): VideoFormat | null => {
+  const type = mimeType.toLowerCase().split(';')[0].trim();
+
+  if (type === 'video/mp4') {
+    return 'mp4';
+  }
+  if (type === 'video/webm') {
+    return /av01/i.test(mimeType) ? 'av1' : 'webm';
+  }
+
+  return null;
+};
+
 const nameFor = (original: string, format: VideoFormat): string => {
   const dot = original.lastIndexOf('.');
 

@@ -104,11 +104,19 @@ describe('image islands (frame and islands design)', () => {
     expect(css).toContain('[data-blok-selected="true"] [data-blok-tool="image"] [data-role="resize-handle"]');
   });
 
-  it('one animation name serves every show state, so hover then select does not replay it', () => {
-    const shows = css.match(/[^}]*\.blok-image-toolbar__island \{[^}]*animation:[^}]*\}/g) ?? [];
+  it('one show rule per element, so hover then select does not replay the split', () => {
+    const island = css.match(/[^}]*\.blok-image-toolbar__island \{[^}]*animation:[^}]*\}/g) ?? [];
+    const row = (css.match(/[^}]*\.blok-image-toolbar \{[^}]*animation:[^}]*\}/g) ?? [])
+      .filter((rule) => !rule.includes('animation: none'));
 
-    expect(shows).toHaveLength(1);
-    expect(shows[0]).toContain('blok-image-islands-rise');
+    expect(island).toHaveLength(1);
+    expect(island[0]).toContain('blok-image-islands-split');
+    expect(row).toHaveLength(1);
+    expect(row[0]).toContain('blok-image-islands-rise');
+  });
+
+  it('never animates gap, so buttons do not slide under a placed tooltip', () => {
+    expect(css).not.toMatch(/@keyframes blok-image-islands[^{]*\{[^@]*\bgap:/);
   });
 
   it('reduced motion switches the split off', () => {

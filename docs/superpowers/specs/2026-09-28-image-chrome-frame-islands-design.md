@@ -66,8 +66,16 @@ Tiers keep today's thresholds (`OVERLAY_MEDIUM_THRESHOLD` 360, `OVERLAY_COMPACT_
 
 ## Motion: split
 
-- One bar rises about 14 px into place (~380 ms, ease-out).
-- Then the gaps between islands open to 6 px and inner corners round (~500 ms, slight overshoot).
+- The row of islands rises about 14 px into place (~380 ms, ease-out).
+- For the first moment the islands sit on one shared card, so they read as one bar.
+- Then that shared card fades while each island's own card fades in and its corners round
+  (~500 ms, slight overshoot). The seams between islands appear to open.
+- Buttons never move sideways. A tooltip is placed once, where its button is at that moment,
+  so a sliding button would leave its tooltip off-centre. (Found in e2e: an earlier version
+  animated the gap and left tooltips 6 px off.) When the rise ends, the hovered button's
+  tooltip is shown again at its final spot.
+- While a handle is dragged, the animation is switched off so the islands can hide;
+  they rise back in when the drag ends.
 - The frame fades in. The dots pop in with a small overshoot.
 - With fewer islands (medium, compact) the same motion runs with two or one.
 

@@ -80,7 +80,8 @@ test.describe('Image inside a column', () => {
     await expect(img).toHaveAttribute('alt', 'Blok logotype');
 
     // The caption content renders too.
-    await expect(image.getByText('Blok logotype')).toBeVisible();
+    // The alt pill on the image shows the same text, so read the caption field itself.
+    await expect(image.getByRole('textbox')).toHaveText('Blok logotype');
 
     // The image holder physically lives inside the first column (index 0).
     const columnIndex = await page.evaluate(() => {

@@ -500,6 +500,31 @@ describe('renderOverlay', () => {
     expect(actions(islands[2])).toEqual(['fullscreen', 'download', 'more']);
   });
 
+  it('re-anchors the hovered button tooltip once the islands finish splitting apart', () => {
+    const overlay = renderOverlay(makeOverlayOpts());
+    const crop = overlay.querySelector<HTMLElement>('[data-action="crop"]');
+    if (!crop) throw new Error('crop missing');
+    crop.dispatchEvent(new MouseEvent('mouseenter'));
+    vi.mocked(tooltip.show).mockClear();
+
+    overlay.dispatchEvent(new Event('animationend'));
+
+    expect(tooltip.show).toHaveBeenCalledWith(crop, crop.getAttribute('aria-label'));
+  });
+
+  it('does not re-show a tooltip after the pointer left the button', () => {
+    const overlay = renderOverlay(makeOverlayOpts());
+    const crop = overlay.querySelector<HTMLElement>('[data-action="crop"]');
+    if (!crop) throw new Error('crop missing');
+    crop.dispatchEvent(new MouseEvent('mouseenter'));
+    crop.dispatchEvent(new MouseEvent('mouseleave'));
+    vi.mocked(tooltip.show).mockClear();
+
+    overlay.dispatchEvent(new Event('animationend'));
+
+    expect(tooltip.show).not.toHaveBeenCalled();
+  });
+
   it('draws no dividers — each island is its own card', () => {
     const overlay = renderOverlay(makeOverlayOpts());
 

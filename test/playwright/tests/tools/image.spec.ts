@@ -241,7 +241,8 @@ test('image controls only show when hovering image or caption, not surrounding w
 test('alignment change does not leave controls stuck visible after mouse leaves', async ({ page }) => {
   await createBlok(page, {
     blocks: [
-      { type: 'image', data: { url: SAMPLE_IMAGE_URL, alt: 'pic', size: 'sm', alignment: 'center' } },
+      // md, not sm: below 360px the layout island (align) moves into the "more" menu.
+      { type: 'image', data: { url: SAMPLE_IMAGE_URL, alt: 'pic', size: 'md', alignment: 'center' } },
     ],
   });
 

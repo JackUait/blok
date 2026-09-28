@@ -178,19 +178,18 @@
   80% { transform: translateX(1px) }
 }
 
+@keyframes blok-image-islands-merged {
+  from { opacity: 1 }
+  to { opacity: 0 }
+}
+
 @keyframes blok-image-islands-rise {
-  from { opacity: 0; transform: translateY(14px) }
-  to { opacity: 1; transform: none }
+  from { opacity: 0; translate: 0 14px }
+  to { opacity: 1; translate: 0 0 }
 }
 
-@keyframes blok-image-islands-round {
-  from { border-radius: var(--blok-radius-sm) }
-  to { border-radius: var(--blok-space-2-25) }
-}
-
-@keyframes blok-image-islands-split-gap {
-  from { gap: 0 }
-  to { gap: var(--blok-space-1-5) }
+@keyframes blok-image-islands-split {
+  from { border-radius: var(--blok-radius-sm); background: transparent; box-shadow: none }
 }
 
 @keyframes blok-image-loading-pulse {

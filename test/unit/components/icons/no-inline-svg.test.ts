@@ -23,6 +23,10 @@ import { join, relative, sep } from 'node:path';
  *                                              fills, per-instance clip ids and
  *                                              animation hooks break the Blok
  *                                              Line contract the registry enforces
+ * - src/components/utils/brand-marks.ts   → third-party brand marks (Simple
+ *                                              Icons geometry, brand colours);
+ *                                              trademarks drawn as their owners
+ *                                              ship them, never Blok Line icons
  * - src/stories/** (Storybook story files)   → fixtures demonstrating the
  *                                              external custom-icon API
  * - JSDoc comments mentioning `<svg>...</svg>` as documentation
@@ -35,6 +39,7 @@ const ALLOWED_FILES = new Set([
   'components/utils/key-icon.ts',
   'components/utils/popover/nothing-found-art.ts',
   'components/utils/media-preview-art.ts',
+  'components/utils/brand-marks.ts',
 ]);
 
 const ALLOWED_DIR_PREFIXES = [

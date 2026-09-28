@@ -1264,6 +1264,7 @@
   --blok-checklist-hover-ring: rgba(35, 131, 226, 0.14);
   --blok-checklist-readonly-fill: #94a3b8;
   --blok-media-preview-shadow: rgba(24, 30, 44, 0.8);
+  --blok-media-link-logo-bg: #ffffff;
   --blok-swatch-neutral-bg: #f7f7f5;
   --blok-swatch-ring-hover: rgba(0, 0, 0, 0.1);
   --blok-swatch-ring-active: rgba(0, 0, 0, 0.3);
@@ -4528,7 +4529,7 @@ span[data-blok-slash-search] {
   display: none;
 }
 
-.blok-media-empty__embed-icon[data-site] svg {
+.blok-media-empty__embed-icon[data-site] > svg {
   display: none;
 }
 
@@ -4544,6 +4545,37 @@ span[data-blok-slash-search] {
   color: var(--blok-bg-primary);
   background: var(--blok-text-primary);
   animation: blok-media-empty-site-flip 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.blok-media-empty__embed-logo {
+  display: none;
+}
+
+.blok-media-empty__embed-icon[data-logo] .blok-media-empty__embed-site {
+  display: none;
+}
+
+.blok-media-empty__embed-icon[data-logo] .blok-media-empty__embed-logo {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+  border-radius: var(--blok-space-1-5);
+  background: var(--blok-media-link-logo-bg);
+  box-shadow: inset 0 0 0 1px var(--blok-border-subtle);
+  animation: blok-media-empty-site-flip 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.blok-media-empty__embed-logo svg {
+  width: 14px;
+  height: 14px;
+}
+
+.blok-media-empty__embed-favicon {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 [data-blok-field].blok-media-empty__embed-bar--large {
@@ -4725,7 +4757,7 @@ span[data-blok-slash-search] {
   transition: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] .blok-media-empty__embed-icon[data-site] .blok-media-empty__embed-site {
+[@media (prefers-reduced-motion: reduce)] .blok-media-empty__embed-icon[data-site] .blok-media-empty__embed-site, .blok-media-empty__embed-icon[data-logo] .blok-media-empty__embed-logo {
   animation: none;
 }
 
@@ -4786,12 +4818,6 @@ span[data-blok-slash-search] {
 
 .blok-media-empty__embed-host[hidden] {
   display: none;
-}
-
-.blok-media-empty__embed-provider {
-  font-weight: 600;
-  color: var(--blok-text-secondary);
-  white-space: nowrap;
 }
 
 .blok-media-empty__embed-type {

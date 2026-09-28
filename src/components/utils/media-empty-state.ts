@@ -12,6 +12,8 @@ import { rovingRadioGroup } from './roving-radio-group';
 import { clearPreviewProgress, EXIT_CLEAR_MS, makePreview, setPreviewProgress, springHome, type MediaPreviewKind } from './media-empty-preview';
 import { leanPreview } from './media-preview-3d';
 import { matchEmbedService } from '../../tools/link/registry';
+import { brandMarkSlug } from './brand-mark-services';
+import { safeImageSrc } from './sanitize-url';
 
 /**
  * Shared "empty" uploader surface for media-style block tools (image, file):
@@ -127,7 +129,7 @@ function parseLink(raw: string): URL | null {
  * "unsplash.com", "www.bbc.co.uk" is "bbc.co.uk") and, when the path ends in a
  * type the tool accepts, that type's label. Reads the text only; no requests.
  */
-function readLink(raw: string, types: readonly string[]): { domain: string; type: string | null; provider: string | null } | null {
+function readLink(raw: string, types: readonly string[]): { domain: string; type: string | null } | null {
   const url = parseLink(raw);
   if (!url) return null;
   const host = url.hostname.replace(/^www\./, '');
@@ -142,7 +144,6 @@ function readLink(raw: string, types: readonly string[]): { domain: string; type
   return {
     domain: parts.slice(-keep).join('.'),
     type: accepted ? label : null,
-    provider: matchEmbedService(url.href)?.title ?? null,
   };
 }
 
@@ -427,7 +428,10 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     // The site's face: the chain flips into its first letter once the link is valid.
     const site = document.createElement('span');
     site.className = 'blok-media-empty__embed-site';
-    fieldIcon.append(site);
+    // A known provider's bundled mark, or the site's own icon, over the letter.
+    const logo = document.createElement('span');
+    logo.className = 'blok-media-empty__embed-logo';
+    fieldIcon.append(site, logo);
 
     // The Upload tab's drawing stays on stage, in upload mode: pale until the
     // link is valid, then it plays its "complete" moment.
@@ -440,8 +444,6 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     readBack.className = 'blok-media-empty__embed-host';
     readBack.setAttribute('aria-hidden', 'true');
     readBack.hidden = true;
-    const providerEl = document.createElement('span');
-    providerEl.className = 'blok-media-empty__embed-provider';
     const typeEl = document.createElement('span');
     typeEl.className = 'blok-media-empty__embed-type';
 
@@ -496,6 +498,57 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
 
     submit.append(submitLabelEl, kbd);
 
+    // The site's face: a known provider's bundled mark, loaded lazily; for any
+    // other site its own icon, asked for only once typing pauses, sharp icon
+    // first, no referrer. The letter tile shows until one of them arrives.
+    const face = { token: 0, timer: 0, url: '' };
+    const clearFace = (): void => {
+      face.token += 1;
+      window.clearTimeout(face.timer);
+      logo.replaceChildren();
+      fieldIcon.removeAttribute('data-logo');
+    };
+    const askSite = (origin: string, token: number): void => {
+      const candidates = ['/apple-touch-icon.png', '/favicon.ico'].map((path) => new URL(path, origin).href);
+      const img = document.createElement('img');
+      img.className = 'blok-media-empty__embed-favicon';
+      img.alt = '';
+      img.decoding = 'async';
+      img.setAttribute('referrerpolicy', 'no-referrer');
+      img.addEventListener('load', () => {
+        if (token === face.token) fieldIcon.setAttribute('data-logo', '');
+      });
+      img.addEventListener('error', () => {
+        const next = safeImageSrc(candidates.shift() ?? '');
+        if (next && token === face.token) img.setAttribute('src', next);
+        else img.remove();
+      });
+      const first = safeImageSrc(candidates.shift() ?? '');
+      if (!first) return;
+      img.setAttribute('src', first);
+      logo.replaceChildren(img);
+    };
+    const showFace = (url: URL | null): void => {
+      const link = url ? url.toString() : '';
+      if (link === face.url) return;
+      face.url = link;
+      clearFace();
+      if (!url) return;
+      const token = face.token;
+      const service = matchEmbedService(url.href)?.service;
+      const slug = service ? brandMarkSlug(service) : null;
+      if (slug) {
+        void import('./brand-marks').then(({ brandMarkSvg }) => {
+          const svg = brandMarkSvg(slug);
+          if (token !== face.token || !svg) return;
+          logo.innerHTML = svg;
+          fieldIcon.setAttribute('data-logo', '');
+        });
+        return;
+      }
+      face.timer = window.setTimeout(() => askSite(url.origin, token), 400);
+    };
+
     const isValid = (raw: string): boolean => {
       const value = raw.trim();
       if (!value) return false;
@@ -513,11 +566,10 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
       submit.setAttribute('aria-disabled', valid ? 'false' : 'true');
       if (stage) setPreviewProgress(stage, valid ? 100 : 0);
       const link = valid ? readLink(urlInput.value, types) : null;
-      providerEl.textContent = link?.provider ?? '';
       typeEl.textContent = link?.type ?? '';
-      const said = [link?.provider ? providerEl : null, link?.type ? typeEl : null].filter((el): el is HTMLSpanElement => el !== null);
-      readBack.replaceChildren(...said);
-      readBack.hidden = said.length === 0;
+      readBack.replaceChildren(...(link?.type ? [typeEl] : []));
+      readBack.hidden = !link?.type;
+      showFace(valid ? parseLink(urlInput.value) : null);
       const letter = link?.domain.charAt(0).toUpperCase() ?? '';
       if (letter) fieldIcon.setAttribute('data-site', letter);
       else fieldIcon.removeAttribute('data-site');

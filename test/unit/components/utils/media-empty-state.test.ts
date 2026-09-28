@@ -281,13 +281,16 @@ describe('link tab', () => {
     expect(el.querySelector('.blok-media-empty__embed-domain')).toBeNull();
   });
 
-  it('names a known provider instead of repeating its domain', () => {
+  it('shows a known provider\'s own logo on the left, never its name on the right', async () => {
     const el = openLink();
 
     type(el, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    await vi.dynamicImportSettled();
 
-    expect(host(el)?.hidden).toBe(false);
-    expect(el.querySelector('.blok-media-empty__embed-provider')?.textContent).toBe('YouTube');
+    expect(el.querySelector('.blok-media-empty__embed-icon [data-brand="youtube"]')).not.toBeNull();
+    expect(el.querySelector('.blok-media-empty__embed-icon')?.hasAttribute('data-logo')).toBe(true);
+    expect(el.querySelector('.blok-media-empty__embed-provider')).toBeNull();
+    expect(host(el)?.hidden).toBe(true);
   });
 
   it('says nothing beside a link when there is nothing new to say', () => {
@@ -372,5 +375,83 @@ describe('switching tabs', () => {
     el.querySelector<HTMLButtonElement>('[data-tab="upload"]')?.click();
     expect(drawing?.hasAttribute('data-uploading')).toBe(false);
     expect(drawing?.style.getPropertyValue('--blok-media-progress')).toBe('');
+  });
+});
+
+describe('link tab site icon fallback', () => {
+  const openLink = (): HTMLElement => {
+    const el = render({ preview: 'image', acceptTypes: ['image/jpeg'] });
+    el.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    return el;
+  };
+  const type = (el: HTMLElement, value: string): void => {
+    const input = el.querySelector<HTMLInputElement>('input[type="url"]');
+    if (!input) throw new Error('url input missing');
+    input.value = value;
+    input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }));
+  };
+  const favicon = (el: HTMLElement): HTMLImageElement | null =>
+    el.querySelector<HTMLImageElement>('.blok-media-empty__embed-icon img.blok-media-empty__embed-favicon');
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('asks nothing of the site while the link is still being typed', () => {
+    const el = openLink();
+
+    type(el, 'https://example.com/clip');
+    vi.advanceTimersByTime(300);
+
+    expect(favicon(el)).toBeNull();
+  });
+
+  it('tries the site\'s sharp icon first, without sending a referrer', () => {
+    const el = openLink();
+
+    type(el, 'https://example.com/clip');
+    vi.advanceTimersByTime(450);
+
+    expect(favicon(el)?.getAttribute('src')).toBe('https://example.com/apple-touch-icon.png');
+    expect(favicon(el)?.getAttribute('referrerpolicy')).toBe('no-referrer');
+    expect(el.querySelector('.blok-media-empty__embed-icon')?.hasAttribute('data-logo')).toBe(false);
+  });
+
+  it('falls back to favicon.ico, then to the letter when the site has neither', () => {
+    const el = openLink();
+    type(el, 'https://example.com/clip');
+    vi.advanceTimersByTime(450);
+
+    favicon(el)?.dispatchEvent(new Event('error'));
+    expect(favicon(el)?.getAttribute('src')).toBe('https://example.com/favicon.ico');
+
+    favicon(el)?.dispatchEvent(new Event('error'));
+    expect(favicon(el)).toBeNull();
+    expect(el.querySelector('.blok-media-empty__embed-icon')?.getAttribute('data-site')).toBe('E');
+  });
+
+  it('shows the site\'s icon once it has loaded', () => {
+    const el = openLink();
+    type(el, 'https://example.com/clip');
+    vi.advanceTimersByTime(450);
+
+    favicon(el)?.dispatchEvent(new Event('load'));
+
+    expect(el.querySelector('.blok-media-empty__embed-icon')?.hasAttribute('data-logo')).toBe(true);
+  });
+
+  it('only asks about the link that is there now', () => {
+    const el = openLink();
+
+    type(el, 'https://first.example/clip');
+    vi.advanceTimersByTime(200);
+    type(el, 'https://second.example/clip');
+    vi.advanceTimersByTime(450);
+
+    expect(favicon(el)?.getAttribute('src')).toBe('https://second.example/apple-touch-icon.png');
   });
 });

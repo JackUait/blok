@@ -160,6 +160,9 @@ const e2eMatrix: MatrixEntry[] = [
   { project: 'chromium-default', browser: 'chromium', shard: '1/3' },
   { project: 'chromium-default', browser: 'chromium', shard: '2/3' },
   { project: 'chromium-default', browser: 'chromium', shard: '3/3' },
+  { project: 'chromium-undo', browser: 'chromium', shard: '1/3' },
+  { project: 'chromium-undo', browser: 'chromium', shard: '2/3' },
+  { project: 'chromium-undo', browser: 'chromium', shard: '3/3' },
 ];
 
 describe('CI critical-path law', () => {

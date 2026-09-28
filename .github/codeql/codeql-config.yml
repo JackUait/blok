@@ -1,0 +1,5 @@
+# Test code never ships. For JavaScript it is over half of the extracted files,
+# so scanning it pushes the CI CodeQL job past its time budget.
+# The C# leg builds manually, so these filters do not apply to it.
+paths-ignore:
+  - 'test/**'

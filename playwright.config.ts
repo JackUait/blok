@@ -120,11 +120,17 @@ const VISUAL_TESTS = [
   '**/visual-regression/**/*.spec.ts',
 ] as const;
 
+// Undo audit specs are ~half of the catch-all project's runtime. Shards take
+// contiguous runs of tests, so left in chromium-default they pile into one
+// shard. Their own project lets CI shard them separately.
+const UNDO_AUDIT_TESTS = [
+  '**/undo-audit/**/*.spec.ts',
+] as const;
+
 // Logic/API tests - browser-agnostic, run once on Chromium
 const LOGIC_TESTS = [
-  // View<->read-only visual parity. MUST live in LOGIC_TESTS: CI's e2e matrix
-  // (.github/workflows/ci.yml) runs chromium/firefox/webkit/chromium-logic only,
-  // so a spec left in the chromium-default project never gates a PR.
+  // View<->read-only visual parity. MUST live in LOGIC_TESTS: chromium-default
+  // skips everything under visual-regression/ unless BLOK_VISUAL=1.
   '**/visual-regression/view-parity.spec.ts',
 
   // API tests (pure logic, no DOM dependencies)
@@ -229,11 +235,17 @@ export default defineConfig({
       testMatch: [...LOGIC_TESTS],
     },
     {
+      name: 'chromium-undo',
+      use: { browserName: 'chromium' },
+      testMatch: [...UNDO_AUDIT_TESTS],
+    },
+    {
       name: 'chromium-default',
       use: { browserName: 'chromium' },
       testIgnore: [
         ...CROSS_BROWSER_TESTS,
         ...LOGIC_TESTS,
+        ...UNDO_AUDIT_TESTS,
         ...(process.env.BLOK_VISUAL === '1' ? [] : VISUAL_TESTS),
       ],
     },
@@ -255,4 +267,4 @@ export default defineConfig({
 });
 
 // Export for tooling/scripts
-export { CROSS_BROWSER_TESTS, LOGIC_TESTS, VISUAL_TESTS };
+export { CROSS_BROWSER_TESTS, LOGIC_TESTS, UNDO_AUDIT_TESTS, VISUAL_TESTS };

@@ -213,6 +213,7 @@ describe('production readiness gates', () => {
     const readiness = job(ci, 'production-readiness');
 
     expect(projects).toContain('chromium-default');
+    expect(projects).toContain('chromium-undo');
     expect(visual['runs-on']).toBe('macos-15');
     expect(visual.steps?.some(step =>
       step.run?.includes('BLOK_VISUAL=1') === true &&
@@ -300,6 +301,21 @@ describe('production readiness gates', () => {
     expect(codeql).toContain('language: csharp');
     expect(codeql).toContain('language: javascript-typescript');
     expect(read('.github/workflows/ci.yml')).toContain('check-codeql-results.mjs');
+  });
+
+  it('keeps test code out of every CodeQL scan', () => {
+    const configPath = './.github/codeql/codeql-config.yml';
+    const config = parse(read(configPath.slice(2))) as { 'paths-ignore'?: string[] };
+
+    expect(config['paths-ignore']).toContain('test/**');
+
+    for (const file of ['.github/workflows/ci.yml', '.github/workflows/codeql.yml']) {
+      const init = Object.values(workflow(file).jobs ?? {})
+        .flatMap(entry => entry.steps ?? [])
+        .find(step => step.uses?.startsWith('github/codeql-action/init@') === true);
+
+      expect(init?.with?.['config-file'], file).toBe(configPath);
+    }
   });
 
   it('grants Pages write access only to the deploy job', () => {

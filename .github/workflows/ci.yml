@@ -196,6 +196,7 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
+          config-file: ./.github/codeql/codeql-config.yml
 
       - name: Build C# server
         if: matrix.language == 'csharp'
@@ -514,6 +515,15 @@ jobs:
             browser: chromium
             shard: 2/3
           - project: chromium-default
+            browser: chromium
+            shard: 3/3
+          - project: chromium-undo
+            browser: chromium
+            shard: 1/3
+          - project: chromium-undo
+            browser: chromium
+            shard: 2/3
+          - project: chromium-undo
             browser: chromium
             shard: 3/3
     uses: ./.github/workflows/e2e.yml

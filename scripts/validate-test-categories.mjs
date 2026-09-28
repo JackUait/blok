@@ -50,6 +50,7 @@ function getTestPatterns() {
   const crossBrowserMatch = configContent.match(/const CROSS_BROWSER_TESTS = \[([\s\S]*?)\] as const/);
   const logicMatch = configContent.match(/const LOGIC_TESTS = \[([\s\S]*?)\] as const/);
   const visualMatch = configContent.match(/const VISUAL_TESTS = \[([\s\S]*?)\] as const/);
+  const undoMatch = configContent.match(/const UNDO_AUDIT_TESTS = \[([\s\S]*?)\] as const/);
 
   const extractPatterns = (match) => {
     if (!match) return [];
@@ -63,6 +64,7 @@ function getTestPatterns() {
     crossBrowser: extractPatterns(crossBrowserMatch),
     logic: extractPatterns(logicMatch),
     visual: extractPatterns(visualMatch),
+    undo: extractPatterns(undoMatch),
   };
 }
 
@@ -124,19 +126,23 @@ function main() {
   const duplicates = [];
   const crossBrowserFiles = [];
   const logicFiles = [];
+  const undoFiles = [];
   const visualFiles = [];
   const defaultFiles = [];
 
   for (const file of testFiles) {
     const inCrossBrowser = matchesPatterns(file, patterns.crossBrowser);
     const inLogic = matchesPatterns(file, patterns.logic);
+    const inUndo = matchesPatterns(file, patterns.undo);
 
-    if (inCrossBrowser && inLogic) {
+    if ([inCrossBrowser, inLogic, inUndo].filter(Boolean).length > 1) {
       duplicates.push(file);
     } else if (inCrossBrowser) {
       crossBrowserFiles.push(file);
     } else if (inLogic) {
       logicFiles.push(file);
+    } else if (inUndo) {
+      undoFiles.push(file);
     } else if (matchesPatterns(file, patterns.visual)) {
       visualFiles.push(file);
     } else {
@@ -147,6 +153,7 @@ function main() {
   console.log(`Found ${testFiles.length} test files:\n`);
   console.log(`  Cross-browser tests: ${crossBrowserFiles.length}`);
   console.log(`  Logic-only tests:    ${logicFiles.length}`);
+  console.log(`  Undo audit tests:    ${undoFiles.length}`);
   console.log(`  Visual tests:        ${visualFiles.length}`);
   console.log(`  Chromium default:    ${defaultFiles.length}`);
 

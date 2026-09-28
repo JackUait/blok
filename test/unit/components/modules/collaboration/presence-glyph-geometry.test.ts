@@ -687,37 +687,146 @@ describe('anonymous presence micro-illustrations', () => {
     expect(beam?.getAttribute('d')?.match(/M/g)?.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('pairs identical galaxy arms with a half-turn and strings mirrored stars along them', () => {
-    const svg = glyphSvg('galaxy');
-    const [first, second, ...rest] = Array.from(svg.querySelectorAll('path[opacity]'));
-    const solid = svg.querySelector('path:not([opacity])');
-    const [core = '', ...stars] = solid?.getAttribute('d')?.match(/M[^M]*/g) ?? [];
+  describe('galaxy', () => {
+    type Point = [number, number];
+    type Ellipse = { x: number; y: number; rx: number; ry: number; rot: number };
+
     const numbers = (contour: string): number[] => (contour.match(/-?\d*\.?\d+/g) ?? []).map(Number);
-    // Circle contours are drawn as `M cx top a r r ...`, so the centre is one radius below the start.
-    const [x = Number.NaN, top = Number.NaN, r = Number.NaN] = numbers(core);
-    // Stars are drawn as `M tip Q centre ...`, so the second pair is the centre.
-    const centres = stars.map(star => numbers(star).slice(2, 4));
+    const contours = (element: Element | null | undefined): string[] => element?.getAttribute('d')?.match(/M[^M]*/g) ?? [];
+    // `M x y` then `C c1 c2 end` segments: every sixth pair after the start is on the curve.
+    const onCurve = (contour: string): Point[] => {
+      const [x = Number.NaN, y = Number.NaN, ...rest] = numbers(contour);
+      const points: Point[] = [[x, y]];
 
-    expect(svg.querySelector('[stroke]')).toBeNull();
-    expect(rest).toHaveLength(0);
-    expect(first?.getAttribute('d')).toBeTruthy();
-    expect(second?.getAttribute('d')).toBe(first?.getAttribute('d'));
-    expect(first?.getAttribute('transform') ?? 'rotate(0 10 10)').toBe('rotate(0 10 10)');
-    expect(second?.getAttribute('transform')).toBe('rotate(180 10 10)');
+      for (let i = 4; i < rest.length; i += 6) {
+        points.push([rest[i] ?? Number.NaN, rest[i + 1] ?? Number.NaN]);
+      }
 
-    expect([x, top + r]).toEqual([10, 10]);
-    expect(r).toBeGreaterThan(0);
+      return points;
+    };
+    // Ellipses are drawn `M p0 A rx ry rot 1 0 p1 A ...`, from one end of the long axis to the other.
+    const ellipse = (contour: string | undefined): Ellipse => {
+      const [x0 = Number.NaN, y0 = Number.NaN, rx = Number.NaN, ry = Number.NaN, rot = Number.NaN, , , x1 = Number.NaN, y1 = Number.NaN] = numbers(contour ?? '');
 
-    expect(stars.length).toBeGreaterThanOrEqual(4);
-    expect(stars.length % 2).toBe(0);
+      return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, rx, ry, rot };
+    };
+    // Undoes the tilt, so the distance is measured in the galaxy's own face-on plane.
+    const faceOn = ([px, py]: Point, frame: Ellipse): number => {
+      const angle = -frame.rot * Math.PI / 180;
+      const dx = px - frame.x;
+      const dy = py - frame.y;
 
-    // Each star has a twin on the other arm, a half-turn away.
-    for (let i = 0; i < centres.length; i += 2) {
-      const [ax = 0, ay = 0] = centres[i] ?? [];
-      const [bx = 0, by = 0] = centres[i + 1] ?? [];
+      return Math.hypot(dx * Math.cos(angle) - dy * Math.sin(angle), (dx * Math.sin(angle) + dy * Math.cos(angle)) * frame.rx / frame.ry);
+    };
 
-      expect(ax + bx).toBeCloseTo(20, 0);
-      expect(ay + by).toBeCloseTo(20, 0);
-    }
+    const parts = (): { arms: string[]; halo: Ellipse; spines: string[]; core: Ellipse; dots: string[]; sparkles: string[] } => {
+      const svg = glyphSvg('galaxy');
+      const [glow, ...extraGlow] = Array.from(svg.querySelectorAll('path[opacity]'));
+      const solid = contours(svg.querySelector('path:not([opacity])'));
+
+      expect(extraGlow).toHaveLength(0);
+
+      return {
+        arms: contours(glow).filter(contour => contour.includes('C')),
+        halo: ellipse(contours(glow).find(contour => contour.includes('A'))),
+        spines: solid.filter(contour => contour.includes('C')),
+        core: ellipse(solid.find(contour => contour.includes('A'))),
+        dots: solid.filter(contour => contour.includes('a')),
+        sparkles: solid.filter(contour => contour.includes('Q')),
+      };
+    };
+    const twins = (first: string | undefined, second: string | undefined): void => {
+      const a = onCurve(first ?? '');
+      const b = onCurve(second ?? '');
+
+      expect(a.length).toBeGreaterThan(4);
+      expect(b).toHaveLength(a.length);
+      a.forEach(([x, y], i) => {
+        const [tx = Number.NaN, ty = Number.NaN] = b[i] ?? [];
+
+        expect(Math.abs(x + tx - 20)).toBeLessThanOrEqual(0.15);
+        expect(Math.abs(y + ty - 20)).toBeLessThanOrEqual(0.15);
+      });
+    };
+
+    it('tilts its disc: the core and its halo are centred, flattened ellipses at the same angle', () => {
+      const { halo, core } = parts();
+
+      for (const disc of [halo, core]) {
+        expect(disc.x).toBeCloseTo(10, 1);
+        expect(disc.y).toBeCloseTo(10, 1);
+        expect(disc.ry / disc.rx).toBeLessThan(0.85);
+        expect(disc.rot).not.toBe(0);
+      }
+
+      expect(core.rot).toBe(halo.rot);
+      expect(core.ry / core.rx).toBeCloseTo(halo.ry / halo.rx, 1);
+      expect(halo.rx - core.rx).toBeGreaterThanOrEqual(1.5);
+    });
+
+    it('sweeps two see-through arms, a half-turn apart, that taper out to their tips', () => {
+      const { arms } = parts();
+
+      expect(arms).toHaveLength(2);
+      twins(arms[0], arms[1]);
+
+      // Each arm runs out along one edge, round the tip and back along the other;
+      // the last point closes onto the first, so drop it.
+      const edge = onCurve(arms[0] ?? '').slice(0, -1);
+      const across = (i: number): number => {
+        const [ax = 0, ay = 0] = edge[i] ?? [];
+        const [bx = 0, by = 0] = edge[edge.length - 1 - i] ?? [];
+
+        return Math.hypot(ax - bx, ay - by);
+      };
+      const tip = (edge.length - 3) / 2;
+
+      expect(across(0)).toBeGreaterThan(2 * across(tip));
+    });
+
+    it('winds a solid spine through each arm, stopping short of the core so the halo shows between', () => {
+      const { spines, core, halo } = parts();
+
+      expect(spines).toHaveLength(2);
+      twins(spines[0], spines[1]);
+
+      for (const point of spines.flatMap(onCurve)) {
+        expect(faceOn(point, core)).toBeGreaterThan(core.rx);
+      }
+
+      // Each spine starts inside the halo, so it reads as growing out of the glow.
+      expect(Math.min(...spines.flatMap(onCurve).map(point => faceOn(point, halo)))).toBeLessThan(halo.rx);
+    });
+
+    it('studs the arms with twin star clusters and keeps its sparkle out in open sky', () => {
+      const { arms, dots, sparkles } = parts();
+      // Circles are drawn `M cx top a r r ...`, so the centre is one radius below the start.
+      const circles = dots.map(contour => {
+        const [x = Number.NaN, top = Number.NaN, r = Number.NaN] = numbers(contour);
+
+        return { x, y: top + r, r };
+      });
+      const clusters = circles.filter(({ x, y }) => Math.hypot(x - 10, y - 10) < 6);
+
+      expect(clusters.length).toBeGreaterThanOrEqual(2);
+      expect(clusters.length % 2).toBe(0);
+
+      for (let i = 0; i < clusters.length; i += 2) {
+        const [a, b] = [clusters[i], clusters[i + 1]];
+
+        expect((a?.x ?? 0) + (b?.x ?? 0)).toBeCloseTo(20, 1);
+        expect((a?.y ?? 0) + (b?.y ?? 0)).toBeCloseTo(20, 1);
+      }
+
+      expect(sparkles).toHaveLength(1);
+
+      // Sparkles are drawn `M cx top Q cx cy ...`, so the second pair is the centre.
+      const [, top = Number.NaN, x = Number.NaN, y = Number.NaN] = numbers(sparkles[0] ?? '');
+      const reach = y - top;
+
+      for (const [px, py] of arms.flatMap(onCurve)) {
+        expect(Math.hypot(px - x, py - y)).toBeGreaterThan(reach + 0.5);
+      }
+    });
   });
 });

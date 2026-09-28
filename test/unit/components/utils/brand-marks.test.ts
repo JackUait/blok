@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { BRAND_MARK_HOST_SLUGS, BRAND_MARK_SERVICES, brandMarkSlug, brandMarkSlugForUrl } from '../../../../src/components/utils/brand-mark-services';
-import { brandMarkSvg } from '../../../../src/components/utils/brand-marks';
+import { BRAND_MARK_SLUGS, brandMarkSvg } from '../../../../src/components/utils/brand-marks';
 import { EMBED_SERVICES } from '../../../../src/tools/link/registry';
+
+const slugFor = (href: string): string | null => brandMarkSlugForUrl(new URL(href));
 
 describe('brand mark library', () => {
   it('only holds marks for providers in the embed registry', () => {
@@ -32,8 +34,6 @@ describe('brand mark library', () => {
 });
 
 describe('brand mark for a site address', () => {
-  const slugFor = (href: string): string | null => brandMarkSlugForUrl(new URL(href));
-
   it('knows a provider by its bare site address', () => {
     expect(slugFor('https://youtube.com/')).toBe('youtube');
     expect(slugFor('https://www.spotify.com/')).toBe('spotify');
@@ -90,5 +90,47 @@ describe('brand mark for a site address', () => {
 
   it('has a drawing behind every mark a site address can name', () => {
     expect(BRAND_MARK_HOST_SLUGS.filter((slug) => brandMarkSvg(slug) === null)).toEqual([]);
+  });
+});
+
+describe('brand marks drawn from other sources', () => {
+  it('names the providers Simple Icons lacks with their own marks', () => {
+    const services = ['codepen', 'linkedin', 'tunein', 'rutube', 'soop', 'buzzsprout', 'transistor', 'tally', 'jotform', 'genially'];
+
+    expect(services.filter((service) => {
+      const slug = brandMarkSlug(service);
+      return slug === null || brandMarkSvg(slug) === null;
+    })).toEqual([]);
+    expect(slugFor('https://codepen.io/')).toBe('codepen');
+    expect(slugFor('https://www.linkedin.com/')).toBe('linkedin');
+    expect(slugFor('https://tunein.com/')).toBe('tunein');
+    expect(slugFor('https://rutube.ru/')).toBe('rutube');
+    expect(slugFor('https://vod.afreecatv.com/')).toBe('soop');
+    expect(slugFor('https://www.buzzsprout.com/')).toBe('buzzsprout');
+    expect(slugFor('https://share.transistor.fm/')).toBe('transistor');
+    expect(slugFor('https://tally.so/')).toBe('tally');
+    expect(slugFor('https://form.jotform.com/')).toBe('jotform');
+    expect(slugFor('https://view.genial.ly/')).toBe('genially');
+  });
+
+  it('holds only inert shapes, so a bundled drawing can never run code or load anything', () => {
+    const allowedTags = new Set(['path', 'g', 'circle', 'ellipse', 'rect', 'polygon', 'polyline', 'defs', 'linearGradient', 'radialGradient', 'stop', 'clipPath']);
+    const allowedAttrs = new Set(['d', 'fill', 'fill-rule', 'clip-rule', 'transform', 'opacity', 'fill-opacity', 'cx', 'cy', 'r', 'rx', 'ry', 'x', 'y', 'width', 'height', 'points', 'x1', 'y1', 'x2', 'y2', 'offset', 'stop-color', 'stop-opacity', 'gradientUnits', 'gradientTransform', 'id', 'clip-path', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin']);
+    const bad = BRAND_MARK_SLUGS.flatMap((slug) => {
+      const svg = new DOMParser().parseFromString(brandMarkSvg(slug) ?? '', 'image/svg+xml').documentElement;
+      return [...svg.querySelectorAll('*')].flatMap((el) => [
+        ...(allowedTags.has(el.tagName) ? [] : [`${slug}: <${el.tagName}>`]),
+        ...[...el.attributes].filter((a) => !allowedAttrs.has(a.name)).map((a) => `${slug}: ${el.tagName}[${a.name}]`),
+        ...[...el.attributes].filter((a) => /url\((?!#)/.test(a.value)).map((a) => `${slug}: external ${a.name}`),
+      ]);
+    });
+
+    expect(bad).toEqual([]);
+  });
+
+  it('keeps element ids unique to their mark, so two marks on one page never share a gradient', () => {
+    const ids = BRAND_MARK_SLUGS.flatMap((slug) => [...(brandMarkSvg(slug) ?? '').matchAll(/\sid="([^"]+)"/g)].map((m) => [slug, m[1]]));
+
+    expect(ids.filter(([slug, id]) => !id.startsWith(`blok-brand-${slug}-`))).toEqual([]);
   });
 });

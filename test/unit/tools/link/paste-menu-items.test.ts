@@ -363,7 +363,7 @@ describe('buildPasteMenuItems brand marks', () => {
   });
 
   it('keeps the link-type icon for a provider that has no bundled mark', () => {
-    const [item] = buildPasteMenuItems(embedOnly, identityI18n, vi.fn(), 'https://tally.so/r/abc123');
+    const [item] = buildPasteMenuItems(embedOnly, identityI18n, vi.fn(), 'https://www.desmos.com/calculator/abc123');
 
     expect(typeof (item as { icon?: unknown }).icon).toBe('string');
   });

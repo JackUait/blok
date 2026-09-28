@@ -67,8 +67,23 @@ describe('movePlacementWithMotion', () => {
     expect(animate.mock.contexts).toEqual(holders);
     expect(animate.mock.calls[0][0]).toEqual([{ transform: 'translate(-60px, -30px)' }, { transform: 'none' }]);
     expect(animate.mock.calls[1][0]).toEqual([{ transform: 'translate(-70px, -30px)' }, { transform: 'none' }]);
-    // Blocks follow one another, like lines of text reflowing.
-    expect(animate.mock.calls.map(([, timing]) => timing.delay)).toEqual([0, 30]);
+  });
+
+  it('moves every block at once and lands within 200ms, with no overshoot, so it never trails the click', () => {
+    const animate = stubMotion(false);
+    const { container } = makeCell({ 'top-left': [[0, 0], [0, 24]], 'middle-right': [[80, 30], [90, 54]] }, 2);
+
+    movePlacementWithMotion([container], () => container.setAttribute('data-blok-cell-placement', 'middle-right'));
+
+    for (const [, timing] of animate.mock.calls) {
+      expect(timing.delay ?? 0).toBe(0);
+      expect(Number(timing.duration)).toBeLessThanOrEqual(200);
+      // No control point above 1: the block never passes its target and comes back.
+      const controls = (timing.easing ?? '').match(/-?[\d.]+/g)?.map(Number) ?? [];
+
+      expect(controls).toHaveLength(4);
+      expect(Math.max(controls[1], controls[3])).toBeLessThanOrEqual(1);
+    }
   });
 
   it('applies the placement exactly once, after measuring', () => {

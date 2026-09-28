@@ -49,7 +49,8 @@ const offsetOf = (side: Side, width: number): number => {
   return side === 'center' ? (PREVIEW_TEXT_WIDTH - width) / 2 : PREVIEW_TEXT_WIDTH - width;
 };
 
-const SPRING = '[transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)]';
+/** Short and without overshoot: longer or springy motion reads as lag after the click. */
+const EASE_OUT = '[transition-timing-function:cubic-bezier(0.2,0,0,1)]';
 
 /** Same width, radius and neutral surface as the options track below it. */
 const PREVIEW_CLASSES = [
@@ -76,8 +77,8 @@ const PREVIEW_LINE_CLASSES = [
   'rounded-full',
   'bg-current',
   'transition-transform',
-  'duration-[480ms]',
-  SPRING,
+  'duration-200',
+  EASE_OUT,
   'motion-reduce:transition-none',
 ];
 
@@ -91,7 +92,7 @@ const GROUP_CLASSES = [
 ];
 
 /**
- * The selection is a neutral surface that springs between options — never blue.
+ * The selection is a neutral surface that slides between options — never blue.
  * Its width matches one grid column, so translateX(n * 100%) lands on option n.
  */
 const THUMB_CLASSES = [
@@ -104,8 +105,8 @@ const THUMB_CLASSES = [
   'bg-icon-active-bg',
   'pointer-events-none',
   'transition-transform',
-  'duration-[420ms]',
-  SPRING,
+  'duration-200',
+  EASE_OUT,
   'motion-reduce:transition-none',
 ];
 
@@ -175,7 +176,6 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
 
     line.setAttribute('data-blok-placement-preview-line', '');
     line.style.width = `${width}px`;
-    line.style.transitionDelay = `${index * 40}ms`;
     // A heading-like first line over body text.
     line.classList.add(index === 0 ? 'text-text-primary' : 'text-text-secondary');
     textBox.appendChild(line);

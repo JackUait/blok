@@ -128,10 +128,12 @@ describe('createCellPlacementPicker', () => {
     expect(thumb.className).not.toMatch(/blue|primary|focus/);
   });
 
-  it('lets the thumb spring, but stands still for people who ask for reduced motion', () => {
+  it('slides the thumb quickly without overshoot, and stands still for reduced motion', () => {
     const { className } = thumbOf(render(undefined));
 
     expect(className).toContain('transition-transform');
+    expect(className).toContain('duration-200');
+    expect(className).not.toContain('1.56');
     expect(className).toContain('motion-reduce:transition-none');
   });
 
@@ -196,12 +198,14 @@ describe('createCellPlacementPicker', () => {
       expect(shifts(element)[1]).toBe('translateX(46px)');
     });
 
-    it('staggers the lines on a spring, and stands still for reduced motion', () => {
+    it('moves the lines together and quickly, without overshoot, and stands still for reduced motion', () => {
       const lines = Array.from(previewOf(render(undefined)).querySelectorAll<HTMLElement>('[data-blok-placement-preview-line]'));
 
-      expect(lines.map(line => line.style.transitionDelay)).toEqual(['0ms', '40ms', '80ms']);
       for (const line of lines) {
+        expect(line.style.transitionDelay).toBe('');
         expect(line.className).toContain('transition-transform');
+        expect(line.className).toContain('duration-200');
+        expect(line.className).not.toContain('1.56');
         expect(line.className).toContain('motion-reduce:transition-none');
       }
     });

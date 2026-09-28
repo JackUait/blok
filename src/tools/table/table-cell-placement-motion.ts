@@ -6,10 +6,9 @@
  * Web Animations never touch the DOM, so no MutationObserver sees the glide.
  */
 
-const EASE_OUT = 'cubic-bezier(0.22, 1, 0.36, 1)';
-const DURATION_MS = 380;
-/** Holders in one cell follow each other by this much, like reflowing lines. */
-const STAGGER_MS = 30;
+/** Short and without overshoot: longer or springy glides read as lag after the click. */
+const EASE_OUT = 'cubic-bezier(0.2, 0, 0, 1)';
+const DURATION_MS = 200;
 
 const holdersOf = (container: HTMLElement): HTMLElement[] =>
   Array.from(container.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
@@ -24,9 +23,8 @@ export const movePlacementWithMotion = (containers: HTMLElement[], apply: () => 
     return;
   }
 
-  const moves = containers.flatMap(container => holdersOf(container).map((holder, index) => ({
+  const moves = containers.flatMap(container => holdersOf(container).map(holder => ({
     holder,
-    index,
     // Measured mid-glide this is where the block is on screen, so a quick second change continues from there.
     before: holder.getBoundingClientRect(),
   })));
@@ -37,7 +35,7 @@ export const movePlacementWithMotion = (containers: HTMLElement[], apply: () => 
 
   apply();
 
-  for (const { holder, index, before } of moves) {
+  for (const { holder, before } of moves) {
     const after = holder.getBoundingClientRect();
     const dx = before.left - after.left;
     const dy = before.top - after.top;
@@ -48,7 +46,7 @@ export const movePlacementWithMotion = (containers: HTMLElement[], apply: () => 
 
     holder.animate(
       [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }],
-      { duration: DURATION_MS, delay: index * STAGGER_MS, easing: EASE_OUT, fill: 'backwards' }
+      { duration: DURATION_MS, easing: EASE_OUT }
     );
   }
 };

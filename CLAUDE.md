@@ -164,6 +164,12 @@ The law applies to **tags and downstream parsing too**, not just attributes:
 - Three similar lines > premature abstraction
 - Only comment where logic isn't self-evident
 
+### No blue selected states
+A selected, current, or active item is NEVER blue: no blue fill, no blue text, no blue icon. Mark it the Notion way, with a checkmark or primary ink on a neutral surface (`--blok-text-primary`, `--blok-item-hover-bg` at most). Blue stays for links and focus rings only.
+
+- Known violation: the public `--blok-icon-active-bg` / `--blok-icon-active-text` tokens default to blue (`src/styles/colors.css`), and every popover item takes them via `data-blok-popover-item-active` (`popover-item-default.const.ts`). The convert menu overrides them locally. Changing the defaults is a BREAKING default change, so ask the user before touching them.
+- When you add a selected state, add a test asserting it has no fill and the same ink as an unselected row.
+
 
 ## Testing
 

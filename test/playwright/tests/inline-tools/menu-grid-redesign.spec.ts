@@ -52,7 +52,7 @@ for (const width of [1280, 390]) {
       await expect(page.getByRole('heading', { name: 'Keep this anchor', level: 4 })).toHaveAttribute('id', 'keep-anchor');
     });
 
-    test('conversion groups compact heading tiles and keeps search actionable', async ({ page }) => {
+    test('conversion lists every heading as a stacked row and keeps search actionable', async ({ page }) => {
       const paragraph = page.getByTestId('block-wrapper').filter({ hasText: 'Choose a new shape.' })
         .locator('[contenteditable="true"]');
 
@@ -62,43 +62,29 @@ for (const width of [1280, 390]) {
 
       await expect(menu).toBeVisible();
       await expect(menu).toHaveCSS('transform', 'none');
-      const headings = menu.locator('[data-blok-convert-group="heading"]');
-      const toggles = menu.locator('[data-blok-convert-group="toggle-heading"]');
+      const names = [1, 2, 3, 4, 5, 6].flatMap(level => [`Heading ${level}`, `Toggle heading ${level}`]);
 
-      await expect(headings).toHaveCount(6);
-      await expect(toggles).toHaveCount(6);
-      // Family tabs show one strip at a time, all six previews in one row.
-      await expect(menu.locator('[data-blok-convert-group="toggle-heading"]:visible')).toHaveCount(0);
-      // Tiles rise in on open and on tab switch; measure where they settle.
-      const settle = (): Promise<void> => menu.evaluate(async element => {
-        await Promise.all(element.getAnimations({ subtree: true }).map(animation => animation.finished.catch(() => undefined)));
-      });
+      for (const name of names) {
+        await expect(menu.getByRole('menuitem', { name, exact: true })).toBeVisible();
+      }
+      await expect(menu.getByRole('tab', { includeHidden: true })).toHaveCount(0);
+      // Layout boxes, not getBoundingClientRect: rows near the scroll edge
+      // carry the reel tilt transform, which shifts their painted box.
+      const rows = await menu.locator('[data-blok-convert-item]').evaluateAll(elements => elements.map(element => {
+        if (!(element instanceof HTMLElement)) {
+          throw new Error('conversion row is not an HTML element');
+        }
 
-      await settle();
-      const rects = await headings.evaluateAll(elements => elements.map(element => {
-        const rect = element.getBoundingClientRect();
-
-        return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+        return { left: element.offsetLeft, top: element.offsetTop, bottom: element.offsetTop + element.offsetHeight };
       }));
 
-      rects.forEach(rect => {
-        expect(Math.abs(rect.y - rects[0].y)).toBeLessThanOrEqual(1);
-        expect(rect.height).toBeGreaterThanOrEqual(40);
-        expect(rect.x).toBeGreaterThanOrEqual(0);
-        expect(rect.x + rect.width).toBeLessThanOrEqual(width);
-      });
-      rects.slice(1).forEach((rect, index) => {
-        expect(rect.x).toBeGreaterThanOrEqual(rects[index].x + rects[index].width);
-      });
-      await menu.getByRole('tab', { name: 'Toggle heading', exact: true }).click();
-      await expect(menu.locator('[data-blok-convert-group="toggle-heading"]:visible')).toHaveCount(6);
-      await expect(menu.locator('[data-blok-convert-group="heading"]:visible')).toHaveCount(0);
-      await settle();
-      const toggleBounds = await toggles.first().boundingBox();
+      expect(rows.length).toBeGreaterThanOrEqual(names.length);
+      rows.forEach(row => expect(row.left).toBe(rows[0].left));
+      rows.slice(1).forEach((row, index) => expect(row.top).toBeGreaterThanOrEqual(rows[index].bottom));
+      const box = await menu.boundingBox();
 
-      // The other family takes over the same strip instead of stacking below it.
-      expect(Math.abs((toggleBounds?.y ?? -1) - rects[0].y)).toBeLessThanOrEqual(1);
-      await menu.getByRole('tab', { name: 'Heading', exact: true }).click();
+      expect(box?.x).toBeGreaterThanOrEqual(0);
+      expect((box?.x ?? 0) + (box?.width ?? width + 1)).toBeLessThanOrEqual(width);
       const search = menu.getByRole('combobox');
 
       await search.fill('no-matching-shape-xyz');

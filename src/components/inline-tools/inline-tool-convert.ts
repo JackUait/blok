@@ -109,7 +109,6 @@ export class ConvertInlineTool implements InlineTool {
 
     const convertToItems = buildConvertMenuItems(
       entries,
-      this.i18nInstance,
       async (entry) => {
         if (entry.isCurrent) {
           return;

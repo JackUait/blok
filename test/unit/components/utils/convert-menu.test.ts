@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildConvertMenuEntries, buildConvertMenuItems, type ConvertMenuEntry, type ConvertMenuI18n } from '../../../../src/components/utils/convert-menu';
 import type { BlockToolAdapter } from '../../../../src/components/tools/block';
+import { IconCheck } from '../../../../src/components/icons';
 import { PopoverDesktop } from '../../../../src/components/utils/popover/popover-desktop';
 import { PopoverItemType } from '../../../../types/utils/popover/popover-item-type';
 import type { MenuConfigItemDefaultParams } from '../../../../types/tools';
@@ -89,21 +90,23 @@ describe('buildConvertMenuEntries', () => {
     expect(entries[0].title).toBe('translated:toolNames.quote');
   });
 
-  it('sinks ungrouped entries below the heading tile groups', () => {
+  it('orders entries by toolbox section like the slash menu, keeping toolbox order inside a section', () => {
     const tools = [
-      createToolStub('paragraph', [{ icon: '<svg>p</svg>', titleKey: 'text' }]),
+      createToolStub('paragraph', [{ icon: '<svg>p</svg>', titleKey: 'text', section: 'basic' }]),
       createToolStub('header', [
-        { icon: '<svg>h2</svg>', titleKey: 'tools.header.heading2', name: 'header-2', data: { level: 2 } },
-        { icon: '<svg>t1</svg>', titleKey: 'tools.header.toggleHeading1', name: 'toggle-header-1', data: { level: 1, isToggleable: true } },
+        { icon: '<svg>h2</svg>', titleKey: 'tools.header.heading2', name: 'header-2', data: { level: 2 }, section: 'basic' },
+        { icon: '<svg>t1</svg>', titleKey: 'tools.header.toggleHeading1', name: 'toggle-header-1', data: { level: 1, isToggleable: true }, section: 'advanced' },
       ]),
+      createToolStub('custom', [{ icon: '<svg>c</svg>', title: 'Custom' }]),
+      createToolStub('code', [{ icon: '<svg>code</svg>', titleKey: 'code', section: 'media' }]),
       createToolStub('list', [
-        { icon: '<svg>ul</svg>', titleKey: 'bulletedList', name: 'bulleted-list', data: { style: 'unordered' } },
+        { icon: '<svg>ul</svg>', titleKey: 'bulletedList', name: 'bulleted-list', data: { style: 'unordered' }, section: 'basic' },
       ]),
     ];
 
     const entries = buildConvertMenuEntries(tools, createI18n());
 
-    expect(entries.map((e) => e.name)).toEqual(['header-2', 'toggle-header-1', 'paragraph', 'bulleted-list']);
+    expect(entries.map((e) => e.name)).toEqual(['paragraph', 'header-2', 'bulleted-list', 'code', 'toggle-header-1', 'custom']);
   });
 
   it('falls back englishTitle to the raw title when no titleKey', () => {
@@ -134,150 +137,32 @@ describe('buildConvertMenuItems', () => {
     vi.restoreAllMocks();
   });
 
-  it.each<{
-    description: string;
-    groups: ConvertMenuEntry['group'][];
-    expected: string[];
-  }>([
-    {
-      description: 'all sections without separating entries in the same section',
-      groups: ['heading', 'heading', 'toggle-heading', 'toggle-heading', undefined, undefined],
-      expected: [
-        'convert-heading-tabs', 'choice-0', 'choice-1',
-        'choice-2', 'choice-3', 'separator',
-        'choice-4', 'choice-5',
-      ],
-    },
-    {
-      description: 'headings followed directly by ordinary choices',
-      groups: ['heading', undefined, undefined],
-      expected: ['convert-heading-tabs', 'choice-0', 'separator', 'choice-1', 'choice-2'],
-    },
-    {
-      description: 'toggle headings followed directly by ordinary choices',
-      groups: ['toggle-heading', undefined],
-      expected: ['convert-heading-tabs', 'choice-0', 'separator', 'choice-1'],
-    },
-    {
-      description: 'heading sections without ordinary choices',
-      groups: ['heading', 'toggle-heading'],
-      expected: ['convert-heading-tabs', 'choice-0', 'choice-1'],
-    },
-    {
-      description: 'only ordinary choices',
-      groups: [undefined, undefined],
-      expected: ['choice-0', 'choice-1'],
-    },
-    {
-      description: 'only headings',
-      groups: ['heading', 'heading'],
-      expected: ['convert-heading-tabs', 'choice-0', 'choice-1'],
-    },
-    {
-      description: 'only toggle headings',
-      groups: ['toggle-heading', 'toggle-heading'],
-      expected: ['convert-heading-tabs', 'choice-0', 'choice-1'],
-    },
-    {
-      description: 'no choices',
-      groups: [],
-      expected: [],
-    },
-  ])('places native separators correctly for $description', ({ groups, expected }) => {
-    const entries = groups.map((group, index): ConvertMenuEntry => ({
-      group,
-      icon: '<svg></svg>',
-      title: `Choice ${index}`,
-      name: `choice-${index}`,
-      toolName: 'custom',
-    }));
-
-    const items = buildConvertMenuItems(entries, createI18n(), () => undefined);
-
-    expect(items.map((item) => item.type === PopoverItemType.Separator ? item.type : item.name)).toEqual(expected);
-  });
-
-  it('hides unfocusable native separators during search and restores their order on clear', () => {
+  it('renders one plain row per entry: no tabs, no separators, full titles', () => {
     const entries = buildConvertMenuEntries([
-      createToolStub('header', [
-        { icon: '<svg>h1</svg>', titleKey: 'tools.header.heading1' },
-        { icon: '<svg>t1</svg>', titleKey: 'tools.header.toggleHeading1' },
-      ]),
       createToolStub('paragraph', [{ icon: '<svg>p</svg>', titleKey: 'text' }]),
-    ], createI18n());
-    const popover = new PopoverDesktop({
-      items: buildConvertMenuItems(entries, createI18n(), () => undefined),
-      searchable: true,
-    });
-    const root = popover.getElement();
-
-    document.body.appendChild(root);
-
-    try {
-      const separators = Array.from(root.querySelectorAll<HTMLElement>('[role="separator"]'));
-      const searchInput = root.querySelector<HTMLInputElement>('[data-blok-testid="popover-search-input"]');
-      const itemsContainer = root.querySelector('[data-blok-popover-items]');
-
-      expect(separators).toHaveLength(1);
-
-      if (searchInput === null || itemsContainer === null) {
-        throw new Error('Searchable conversion menu is missing its search input or items');
-      }
-
-      const originalOrder = Array.from(itemsContainer.children);
-
-      separators.forEach((separator) => {
-        expect(separator.tabIndex).toBe(-1);
-        separator.focus();
-        expect(separator).not.toHaveFocus();
-      });
-
-      searchInput.value = 'heading';
-      searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-
-      expect(root.querySelectorAll('[data-blok-convert-item]:not([data-blok-hidden])')).toHaveLength(2);
-      separators.forEach((separator) => expect(separator).toHaveAttribute('data-blok-hidden', 'true'));
-
-      searchInput.value = 'zzzz-no-result';
-      searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-
-      expect(root.querySelectorAll('[data-blok-convert-item]:not([data-blok-hidden])')).toHaveLength(0);
-      separators.forEach((separator) => expect(separator).toHaveAttribute('data-blok-hidden', 'true'));
-
-      searchInput.value = '';
-      searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-
-      expect(root.querySelectorAll('[data-blok-convert-item]:not([data-blok-hidden])')).toHaveLength(2);
-      separators.forEach((separator) => expect(separator).not.toHaveAttribute('data-blok-hidden'));
-      Array.from(itemsContainer.children).forEach((item, index) => expect(item).toBe(originalOrder[index]));
-    } finally {
-      popover.destroy();
-      root.remove();
-    }
-  });
-
-  it('keeps translated family tabs before the searchable choices', () => {
-    const entries = buildConvertMenuEntries([
       createToolStub('header', [
-        { icon: '<svg>h1</svg>', titleKey: 'tools.header.heading1' },
-        { icon: '<svg>t1</svg>', titleKey: 'tools.header.toggleHeading1' },
+        { icon: '<svg>h1</svg>', titleKey: 'tools.header.heading1', name: 'header-1', data: { level: 1 } },
+        { icon: '<svg>t1</svg>', titleKey: 'tools.header.toggleHeading1', name: 'toggle-header-1', data: { level: 1, isToggleable: true } },
       ]),
     ], createI18n());
 
-    const items = buildConvertMenuItems(entries, createI18n(), () => undefined);
+    const items = buildConvertMenuItems(entries, () => undefined);
 
-    expect(items).toMatchObject([
-      { type: PopoverItemType.Html, element: { textContent: 'translated:toolNames.headingtranslated:tools.header.toggleHeading' } },
-      { title: 'translated:tools.header.heading1' },
-      { title: 'translated:tools.header.toggleHeading1' },
+    expect(items.map((item) => item.type ?? PopoverItemType.Default)).toEqual([
+      PopoverItemType.Default, PopoverItemType.Default, PopoverItemType.Default,
     ]);
+    items.forEach((item) => {
+      expect(item).not.toHaveProperty('titleEl');
+      expect(item).toMatchObject({ dataset: { 'blok-convert-item': 'true' } });
+      expect(Object.keys((item as MenuConfigItemDefaultParams).dataset ?? {})).toEqual(['blok-convert-item']);
+    });
   });
 
-  it.each(['heading', 'toggle-heading'] as const)('keeps the current %s selected without a checkmark', (group) => {
+  it.each(['heading', 'toggle-heading'] as const)('marks the current %s with a trailing checkmark', (group) => {
     const popover = new PopoverDesktop({
       items: buildConvertMenuItems([
         { name: 'current-heading', title: 'Heading 1', icon: '<svg/>', toolName: 'header', group, data: { level: 1 }, isCurrent: true },
-      ], createI18n(), () => undefined),
+      ], () => undefined),
     });
     const root = popover.getElement();
 
@@ -290,7 +175,7 @@ describe('buildConvertMenuItems', () => {
         throw new Error('Current heading is missing');
       }
 
-      expect(current.querySelector('[data-blok-testid="popover-item-trailing-icon"]')).toBeNull();
+      expect(current.querySelector('[data-blok-testid="popover-item-trailing-icon"]')).toContainHTML(IconCheck);
       expect(current).toHaveAttribute('data-blok-popover-item-active', 'true');
       expect(current).toHaveAttribute('aria-checked', 'true');
     } finally {
@@ -305,7 +190,7 @@ describe('buildConvertMenuItems', () => {
       items: buildConvertMenuItems([
         { name: 'heading-2', title: 'Heading 2', icon: '<svg/>', toolName: 'header', group: 'heading', data: { level: 2 }, isCurrent: true },
         { name: 'paragraph', title: 'Text', icon: '<svg/>', toolName: 'paragraph' },
-      ], createI18n(), entry => { activated.push(entry.name); }),
+      ], entry => { activated.push(entry.name); }),
       searchable: true,
     });
     const root = popover.getElement();
@@ -343,56 +228,7 @@ describe('buildConvertMenuItems', () => {
     }
   });
 
-  it('switches families without converting and restores the chosen tab after search', () => {
-    const activated: string[] = [];
-    const popover = new PopoverDesktop({
-      items: buildConvertMenuItems([
-        { name: 'heading-1', title: 'Heading 1', icon: '<svg/>', toolName: 'header', group: 'heading', data: { level: 1 } },
-        { name: 'toggle-1', title: 'Toggle heading 1', icon: '<svg/>', toolName: 'header', group: 'toggle-heading', data: { level: 1, isToggleable: true } },
-      ], createI18n(), entry => { activated.push(entry.name); }),
-      searchable: true,
-    });
-    const root = popover.getElement();
-
-    document.body.appendChild(root);
-
-    try {
-      const heading = root.querySelector('[data-blok-item-name="heading-1"]');
-      const toggle = root.querySelector('[data-blok-item-name="toggle-1"]');
-      const toggleTab = root.querySelector<HTMLButtonElement>('[role="tab"][data-blok-popover-tab="toggle-heading"]');
-      const search = root.querySelector<HTMLInputElement>('[data-blok-testid="popover-search-input"]');
-
-      if (toggleTab === null || search === null) {
-        throw new Error('Picker tabs or search are missing');
-      }
-
-      expect(heading).not.toHaveAttribute('data-blok-hidden');
-      expect(toggle).toHaveAttribute('data-blok-hidden', 'true');
-      toggleTab.click();
-      expect(toggleTab).toHaveAttribute('aria-selected', 'true');
-      expect(heading).toHaveAttribute('data-blok-hidden', 'true');
-      expect(toggle).not.toHaveAttribute('data-blok-hidden');
-      expect(activated).toEqual([]);
-
-      search.value = 'heading';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
-      expect(heading).not.toHaveAttribute('data-blok-hidden');
-      expect(toggle).not.toHaveAttribute('data-blok-hidden');
-      expect(toggle).toHaveAccessibleName('Toggle heading 1');
-
-      search.value = '';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
-      expect(heading).toHaveAttribute('data-blok-hidden', 'true');
-      expect(toggle).not.toHaveAttribute('data-blok-hidden');
-      expect(toggleTab).toHaveAttribute('aria-selected', 'true');
-      expect(activated).toEqual([]);
-    } finally {
-      popover.destroy();
-      root.remove();
-    }
-  });
-
-  it('keeps native searchable choices and their conversion payloads across a separator', () => {
+  it('keeps native searchable choices and their conversion payloads', () => {
     const entries = buildConvertMenuEntries([
       createToolStub('header', [
         { icon: '<svg>h2</svg>', titleKey: 'tools.header.heading2', name: 'header-2', searchTerms: ['h2'], data: { level: 2 } },
@@ -402,11 +238,9 @@ describe('buildConvertMenuItems', () => {
       ]),
     ], createI18n());
     const conversions: { toolName: string; data: ConvertMenuEntry['data'] }[] = [];
-    const items = buildConvertMenuItems(entries, createI18n(), (entry) => {
+    const items = buildConvertMenuItems(entries, (entry) => {
       conversions.push({ toolName: entry.toolName, data: entry.data });
     });
-
-    expect(items[2]).toEqual({ type: PopoverItemType.Separator });
 
     const choices = items.filter(
       (item): item is MenuConfigItemDefaultParams => item.type === undefined || item.type === PopoverItemType.Default,
@@ -419,7 +253,7 @@ describe('buildConvertMenuItems', () => {
         name: 'header-2',
         englishTitle: 'en:tools.header.heading2',
         searchTerms: ['h2'],
-        dataset: { 'blok-convert-item': 'true', 'blok-convert-group': 'heading' },
+        dataset: { 'blok-convert-item': 'true' },
         closeOnActivate: true,
       },
       {

@@ -509,7 +509,6 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     const convertToItems = buildConvertMenuItems(
       buildConvertMenuEntries(convertibleTools, this.Blok.I18n),
-      this.Blok.I18n,
       async (entry) => {
         const { Caret, Toolbar } = this.Blok;
 

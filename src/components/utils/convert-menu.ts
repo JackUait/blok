@@ -1,6 +1,6 @@
 import type { BlockToolData } from '@/types';
 import type { MenuConfigItem } from '../../../types/tools';
-import { PopoverItemType } from '../../../types/utils/popover/popover-item-type';
+import { IconCheck } from '../icons';
 import type { BlockToolAdapter } from '../tools/block';
 import { CURRENT_CONVERT_VARIANT } from './blocks';
 import { translateToolTitle, type I18nInstance } from './tools';
@@ -37,6 +37,15 @@ export interface ConvertMenuEntry {
   isCurrent?: boolean;
 }
 
+// Same order as the slash menu's sections; entries without a section go last.
+const SECTION_ORDER = ['basic', 'media', 'database', 'advanced'];
+
+const sectionRank = (section: string | undefined): number => {
+  const rank = section === undefined ? -1 : SECTION_ORDER.indexOf(section);
+
+  return rank === -1 ? SECTION_ORDER.length : rank;
+};
+
 /**
  * Turn the already-filtered convertible tools into flat menu entries.
  *
@@ -55,7 +64,7 @@ export const buildConvertMenuEntries = (
   convertibleTools: BlockToolAdapter[],
   i18n: ConvertMenuI18n,
 ): ConvertMenuEntry[] => {
-  const entries: ConvertMenuEntry[] = [];
+  const entries: { entry: ConvertMenuEntry; rank: number }[] = [];
 
   convertibleTools.forEach((tool) => {
     tool.toolbox?.forEach((toolboxItem) => {
@@ -80,7 +89,7 @@ export const buildConvertMenuEntries = (
         return;
       }
 
-      entries.push({
+      entries.push({ rank: sectionRank(toolboxItem.section), entry: {
         icon: toolboxItem.icon,
         title: translateToolTitle(i18n, toolboxItem, tool.name),
         englishTitle,
@@ -90,38 +99,14 @@ export const buildConvertMenuEntries = (
         data: toolboxItem.data,
         group,
         ...(isCurrent ? { isCurrent: true } : {}),
-      });
+      } });
     });
   });
 
-  // Keep the picker above ordinary actions without changing toolbox order.
-  return [
-    ...entries.filter((entry) => entry.group !== undefined),
-    ...entries.filter((entry) => entry.group === undefined),
-  ];
-};
-
-// Tiles show a short "H1" in the level's own size; search shows the full title.
-const buildConvertMenuTitle = (entry: ConvertMenuEntry): HTMLElement | undefined => {
-  const level = entry.data?.level;
-
-  if (entry.group === undefined || typeof level !== 'number') {
-    return undefined;
-  }
-
-  const titleEl = document.createElement('span');
-  const preview = document.createElement('span');
-  const fullTitle = document.createElement('span');
-
-  titleEl.setAttribute('aria-label', entry.title);
-  preview.setAttribute('data-blok-convert-preview', '');
-  preview.setAttribute('aria-hidden', 'true');
-  preview.textContent = `H${level}`;
-  fullTitle.setAttribute('data-blok-convert-full-title', '');
-  fullTitle.textContent = entry.title;
-  titleEl.append(preview, fullTitle);
-
-  return titleEl;
+  // Array sort is stable, so toolbox order holds inside each section.
+  return entries
+    .sort((a, b) => a.rank - b.rank)
+    .map(({ entry }) => entry);
 };
 
 /**
@@ -129,95 +114,17 @@ const buildConvertMenuTitle = (entry: ConvertMenuEntry): HTMLElement | undefined
  */
 export const buildConvertMenuItems = (
   entries: ConvertMenuEntry[],
-  i18n: ConvertMenuI18n,
   onActivate: (entry: ConvertMenuEntry) => void | Promise<void>,
 ): MenuConfigItem[] => {
-  const items: MenuConfigItem[] = [];
-  const groups = (['heading', 'toggle-heading'] as const)
-    .filter(group => entries.some(entry => entry.group === group));
-
-  if (groups.length > 0) {
-    const tabs = document.createElement('div');
-    const selectedGroup = entries.find(entry => entry.isCurrent)?.group ?? groups[0];
-
-    tabs.setAttribute('role', 'tablist');
-    tabs.setAttribute('aria-label', i18n.t('toolNames.heading'));
-    tabs.setAttribute('data-blok-popover-tabs', '');
-
-    const buttons = groups.map(group => {
-      const button = document.createElement('button');
-
-      button.type = 'button';
-      button.setAttribute('role', 'tab');
-      button.setAttribute('data-blok-popover-tab', group);
-      button.setAttribute('aria-selected', String(group === selectedGroup));
-      button.tabIndex = group === selectedGroup ? 0 : -1;
-      button.textContent = i18n.t(group === 'heading' ? 'toolNames.heading' : 'tools.header.toggleHeading');
-      tabs.appendChild(button);
-
-      return button;
-    });
-    const selectTab = (selected: HTMLButtonElement): void => {
-      buttons.forEach(button => {
-        button.setAttribute('aria-selected', String(button === selected));
-        button.setAttribute('tabindex', button === selected ? '0' : '-1');
-      });
-      tabs.dispatchEvent(new Event('blok-popover-tabs-change', { bubbles: true }));
-    };
-
-    buttons.forEach((button, index) => {
-      button.addEventListener('click', () => selectTab(button));
-      button.addEventListener('keydown', event => {
-        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
-          return;
-        }
-
-        event.preventDefault();
-        event.stopPropagation();
-        const direction = event.key === 'ArrowRight' ? 1 : -1;
-        const adjacentIndex = (index + direction + buttons.length) % buttons.length;
-        const endOrAdjacentIndex = event.key === 'End' ? buttons.length - 1 : adjacentIndex;
-        const nextIndex = event.key === 'Home' ? 0 : endOrAdjacentIndex;
-        const next = buttons[nextIndex];
-
-        if (next !== undefined) {
-          selectTab(next);
-          next.focus();
-        }
-      });
-    });
-
-    items.push({ type: PopoverItemType.Html, name: 'convert-heading-tabs', element: tabs });
-  }
-
-  entries.forEach((entry, index) => {
-    if (index > 0 && entry.group === undefined && entries[index - 1]?.group !== undefined) {
-      items.push({ type: PopoverItemType.Separator });
-    }
-
-    const level = entry.data?.level;
-    const titleEl = buildConvertMenuTitle(entry);
-
-    items.push({
-      icon: entry.icon,
-      title: entry.title,
-      ...(titleEl === undefined ? {} : { titleEl }),
-      name: entry.name,
-      englishTitle: entry.englishTitle,
-      searchTerms: entry.searchTerms,
-      ...(entry.isCurrent ? { isActive: true } : {}),
-      dataset: {
-        'blok-convert-item': 'true',
-        ...(entry.group === undefined ? {} : {
-          'blok-convert-group': entry.group,
-          'blok-popover-tab': entry.group,
-          'blok-convert-level': typeof level === 'number' ? String(level) : '',
-        }),
-      },
-      closeOnActivate: true,
-      onActivate: () => onActivate(entry),
-    });
-  });
-
-  return items;
+  return entries.map(entry => ({
+    icon: entry.icon,
+    title: entry.title,
+    name: entry.name,
+    englishTitle: entry.englishTitle,
+    searchTerms: entry.searchTerms,
+    ...(entry.isCurrent ? { isActive: true, trailingIcon: IconCheck } : {}),
+    dataset: { 'blok-convert-item': 'true' },
+    closeOnActivate: true,
+    onActivate: () => onActivate(entry),
+  }));
 };

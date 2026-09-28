@@ -194,21 +194,6 @@ describe('main.css split — cascade-preserving equivalence', () => {
     );
   });
 
-  it('ordinary conversions start a row after grouped heading previews', () => {
-    const starts: string[] = [];
-
-    postcss.parse(inlined).walkRules(
-      '> [data-blok-convert-group] + [data-blok-convert-item]:not([data-blok-convert-group])',
-      rule => {
-        rule.walkDecls('grid-column-start', declaration => {
-          starts.push(declaration.value);
-        });
-      }
-    );
-
-    expect(starts).toEqual(['1']);
-  });
-
   it('every @keyframes name is defined exactly once', () => {
     const names = collectKeyframeNames(inlined);
     const duplicates = names.filter((n, idx) => names.indexOf(n) !== idx);

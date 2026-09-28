@@ -1029,12 +1029,7 @@ describe('BlockSettings — mutation coverage', () => {
       expect(convertTo.title).toBe('popover.convertTo');
       expect((convertTo.children as { width?: string }).width).toBe('320px');
       expect((convertTo.children as { searchable?: boolean }).searchable).toBe(true);
-      expect(itemKeys(childrenOf(items, 'convert-to'))).toStrictEqual(['convert-heading-tabs', 'header']);
-
-      const groupLabel = itemNamed(childrenOf(items, 'convert-to'), 'convert-heading-tabs');
-
-      expect(groupLabel).toMatchObject({ type: 'html', element: expect.any(HTMLElement) });
-      expect((groupLabel.element as HTMLElement).textContent).toBe('toolNames.heading');
+      expect(itemKeys(childrenOf(items, 'convert-to'))).toStrictEqual(['header']);
 
       const entry = itemNamed(childrenOf(items, 'convert-to'), 'header');
 

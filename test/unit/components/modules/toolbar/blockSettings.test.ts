@@ -1235,11 +1235,9 @@ describe('BlockSettings', () => {
 
     const children = convertTo?.children?.items ?? [];
 
-    expect(children).toHaveLength(2);
-    expect(children[0]).toMatchObject({ type: PopoverItemType.Html, name: 'convert-heading-tabs' });
-    expect('element' in children[0] && children[0].element.textContent).toBe('toolNames.heading');
+    expect(children).toHaveLength(1);
 
-    const headerItem = children[1];
+    const headerItem = children[0];
 
     expect(headerItem).toMatchObject({ name: 'header-1' });
 

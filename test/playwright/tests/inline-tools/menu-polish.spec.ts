@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { gotoTestPage } from '../helpers/shared-page';
 
@@ -57,7 +57,7 @@ for (const width of [1280, 390]) {
         await expect(page.getByRole('heading', { name: 'A better way to work', level: 2 })).toHaveAttribute('id', 'keep-anchor');
       });
 
-      test('keeps heading strips together above a full-width conversion divider', async ({ page }) => {
+      test('keeps the conversion list plain: no dividers, no tabs, one left edge', async ({ page }) => {
         const settings = page.getByTestId('block-tunes-popover');
         const color = settings.getByRole('menuitem', { name: 'Color', exact: true });
 
@@ -65,44 +65,26 @@ for (const width of [1280, 390]) {
         await expect(settings.getByRole('separator')).toHaveCount(4);
         await settings.getByRole('menuitem', { name: 'Convert to', exact: true }).click();
         const conversion = page.getByTestId('popover-container').filter({
-          has: page.locator('[data-blok-convert-group="toggle-heading"]'),
+          has: page.locator('[data-blok-convert-item]'),
         }).last();
 
         await expect(conversion).toHaveCSS('transform', 'none');
-        const dividers = conversion.getByRole('separator');
-        const allDividers = conversion.getByRole('separator', { includeHidden: true });
-
-        // Family tabs replaced the two section labels, so a single divider now
-        // parts the heading picker from the ordinary conversions.
-        await expect(allDividers).toHaveCount(1);
-        await expect(dividers).toHaveCount(1);
-        const sections = await dividers.evaluateAll(elements => elements.map(element => {
-          const section = element.parentElement;
-
-          if (section === null) {
-            throw new Error('separator is not mounted in the menu');
+        await expect(conversion.getByRole('separator', { includeHidden: true })).toHaveCount(0);
+        await expect(conversion.getByRole('tab', { includeHidden: true })).toHaveCount(0);
+        await expect(conversion.getByRole('tablist', { includeHidden: true })).toHaveCount(0);
+        // Layout boxes, not getBoundingClientRect: rows near the scroll edge
+        // carry the reel tilt transform, which shifts their painted box.
+        const rows = await conversion.locator('[data-blok-convert-item]:visible').evaluateAll(elements => elements.map(element => {
+          if (!(element instanceof HTMLElement)) {
+            throw new Error('conversion row is not an HTML element');
           }
 
-          return {
-            before: element.previousElementSibling?.getAttribute('data-blok-convert-group'),
-            after: element.nextElementSibling?.getAttribute('data-blok-item-name'),
-            width: element.getBoundingClientRect().width,
-            sectionWidth: section.getBoundingClientRect().width,
-          };
+          return { left: element.offsetLeft, top: element.offsetTop, bottom: element.offsetTop + element.offsetHeight };
         }));
 
-        expect(sections.map(({ before, after }) => ({ before, after }))).toEqual([
-          { before: 'toggle-heading', after: 'paragraph' },
-        ]);
-        for (const section of sections) {
-          expect(section.width).toBeCloseTo(section.sectionWidth, 1);
-        }
-        const lines = dividers.locator('[data-blok-popover-item-separator-line]');
-
-        for (const line of await lines.all()) {
-          await expect(line).toHaveCSS('height', '1px');
-          await expect(line).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-        }
+        expect(rows.length).toBeGreaterThan(6);
+        rows.forEach(row => expect(row.left).toBe(rows[0].left));
+        rows.slice(1).forEach((row, index) => expect(row.top).toBeGreaterThanOrEqual(rows[index].bottom));
       });
 
       if (width === 390) {
@@ -118,7 +100,7 @@ for (const width of [1280, 390]) {
           expect(Math.min(...headings)).toBeGreaterThanOrEqual(44);
           await settings.getByRole('menuitem', { name: 'Convert to', exact: true }).click();
           const conversion = page.getByTestId('popover-container').filter({
-            has: page.locator('[data-blok-convert-group="toggle-heading"]'),
+            has: page.locator('[data-blok-convert-item]'),
           }).last();
 
           await expect(conversion).toHaveCSS('transform', 'none');
@@ -162,7 +144,7 @@ for (const width of [1280, 390]) {
             await heading.click({ button: 'right', position: { x: headingBox.width - 30, y: 10 } });
             await page.getByTestId('block-tunes-popover').getByRole('menuitem', { name: 'Convert to', exact: true }).click();
             const conversion = page.getByTestId('popover-container').filter({
-              has: page.locator('[data-blok-convert-group="toggle-heading"]'),
+              has: page.locator('[data-blok-convert-item]'),
             }).last();
 
             await expect(conversion).toHaveCSS('transform', 'none');
@@ -177,24 +159,27 @@ for (const width of [1280, 390]) {
           });
         }
 
-        test('hides conversion separators during search and restores them when cleared', async ({ page }) => {
+        test('search narrows the conversion list without adding dividers and clearing restores it', async ({ page }) => {
           const settings = page.getByTestId('block-tunes-popover');
 
           await settings.getByRole('menuitem', { name: 'Convert to', exact: true }).click();
           const conversion = page.getByTestId('popover-container').filter({
-            has: page.locator('[data-blok-convert-group="toggle-heading"]'),
+            has: page.locator('[data-blok-convert-item]'),
           }).last();
-          const dividers = conversion.getByRole('separator', { includeHidden: true });
+          const rows = conversion.locator('[data-blok-convert-item]:visible');
           const search = conversion.getByRole('combobox');
 
-          await expect(dividers).toHaveCount(1);
-          await expect(dividers.last()).toBeVisible();
+          await expect(conversion.getByRole('menuitem', { name: 'Code', exact: true })).toBeVisible();
+          const total = await rows.count();
+
           await search.fill('Heading');
+          await expect(conversion.getByRole('menuitem', { name: 'Code', exact: true })).toBeHidden();
+          await expect(conversion.getByRole('menuitem', { name: 'Toggle heading 6', exact: true })).toBeVisible();
           await expect(conversion.locator('[role="separator"]:not([data-blok-hidden])')).toHaveCount(0);
-          await expect(dividers.last()).toBeHidden();
+          expect(await rows.count()).toBeLessThan(total);
           await search.fill('');
-          await expect(dividers).toHaveCount(1);
-          await expect(dividers.last()).toBeVisible();
+          await expect(rows).toHaveCount(total);
+          await expect(conversion.getByRole('separator', { includeHidden: true })).toHaveCount(0);
         });
 
         test('keeps the menu within a short viewport', async ({ page }) => {
@@ -221,11 +206,11 @@ for (const width of [1280, 390]) {
 
         await settings.getByRole('menuitem', { name: 'Convert to', exact: true }).click();
         const conversion = page.getByTestId('popover-container').filter({
-          has: page.locator('[data-blok-convert-group="toggle-heading"]'),
+          has: page.locator('[data-blok-convert-item]'),
         }).last();
 
         await expect(conversion).toBeVisible();
-        const labels = conversion.locator('[data-blok-convert-item]:not([data-blok-convert-group]) [data-blok-popover-item-title]');
+        const labels = conversion.locator('[data-blok-convert-item]:visible [data-blok-popover-item-title]');
         const fits = await labels.evaluateAll(elements => elements.map(element => {
           const label = element.getBoundingClientRect();
           const item = element.parentElement?.getBoundingClientRect();
@@ -240,28 +225,23 @@ for (const width of [1280, 390]) {
         expect(rect).not.toBeNull();
         expect(rect?.x).toBeGreaterThanOrEqual(0);
         expect((rect?.x ?? 0) + (rect?.width ?? 0)).toBeLessThanOrEqual(width);
-        const result = conversion.getByRole('menuitem', { name: 'Heading 3', exact: true });
-
         const keyboardTarget = width < 650
           ? conversion.getByRole('menu', { name: 'Convert to', exact: true })
           : conversion.getByRole('combobox');
+        const order = ['Text', 'Heading 1', 'Heading 2', 'Heading 3'];
 
-        if (width >= 650) {
-          await keyboardTarget.fill('Heading 3');
-        }
-        const visibleLabel = width < 650
-          ? conversion.getByRole('menuitem', { name: 'Text', exact: true }).getByTestId('popover-item-title')
-          : result.getByTestId('popover-item-title');
+        await expect(conversion.getByRole('menuitem', { name: 'Text', exact: true }).getByTestId('popover-item-title')).toHaveCSS('clip-path', 'none');
+        // ArrowDown walks the rows top to bottom, one row per press.
+        const row = (name: string): Locator => conversion.locator('[data-blok-convert-item]').filter({
+          has: page.getByTestId('popover-item-title').and(page.getByText(name, { exact: true })),
+        });
 
-        await expect(result).toBeVisible();
-        await expect(visibleLabel).toHaveCSS('clip-path', 'none');
-        // The convert menu never auto-focuses a choice (the family tabs take the
-        // first cursor stop), so walk the cursor down onto Heading 3 first.
-        await expect.poll(async () => {
+        await expect(row('Heading 2')).toHaveAttribute('aria-checked', 'true');
+        await expect(row('Heading 2').getByTestId('popover-item-trailing-icon')).toBeVisible();
+        for (const name of order) {
           await keyboardTarget.press('ArrowDown');
-
-          return result.getAttribute('data-blok-focused');
-        }).toBe('true');
+          await expect(row(name)).toHaveAttribute('data-blok-focused', 'true');
+        }
         await keyboardTarget.press('Enter');
         await expect(page.getByRole('heading', { name: 'A better way to work', level: 3 })).toBeVisible();
       });

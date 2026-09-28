@@ -4129,6 +4129,40 @@ span[data-blok-slash-search] {
   opacity: 0.2;
 }
 
+.blok-media-preview__line--title {
+  opacity: 0.6;
+}
+
+.blok-media-preview__cell {
+  fill: var(--blok-media-preview-tone);
+  stroke: none;
+}
+
+.blok-media-preview__cell--head {
+  fill: color-mix(in srgb, currentColor 22%, var(--blok-bg-primary));
+}
+
+.blok-media-preview__chart-bar, .blok-media-preview__chip-mark {
+  fill: currentColor;
+  stroke: none;
+  opacity: 0.35;
+}
+
+.blok-media-preview__flap, .blok-media-preview__crease {
+  transform-box: view-box;
+  transform-origin: 119px 23px;
+}
+
+.blok-media-preview__flap {
+  fill: color-mix(in srgb, currentColor 10%, var(--blok-bg-primary));
+}
+
+.blok-media-preview__crease {
+  stroke: none;
+  opacity: 0.5;
+  translate: -1px 1.5px;
+}
+
 .blok-media-preview__groove, .blok-media-preview__fold {
   fill: none;
 }
@@ -4256,7 +4290,11 @@ span[data-blok-slash-search] {
 }
 
 :is(.blok-media-empty__panel > [data-hover], .blok-media-empty__card:focus-visible .blok-media-empty__panel > *).blok-media-preview :is(.blok-media-preview__sheet--back, .blok-media-preview__sheet--mid) {
-  animation: blok-media-preview-shuffle 1.1s cubic-bezier(0.22, 1, 0.36, 1) calc((var(--dir) + 1) * 90ms) both;
+  animation: blok-media-preview-shuffle 1.8s cubic-bezier(0.22, 1, 0.36, 1) calc((var(--dir) + 1) * 90ms) both;
+}
+
+:is(.blok-media-empty__panel > [data-hover], .blok-media-empty__card:focus-visible .blok-media-empty__panel > *).blok-media-preview :is(.blok-media-preview__flap, .blok-media-preview__crease) {
+  animation: blok-media-preview-flap 1.3s cubic-bezier(0.22, 1, 0.36, 1) 150ms both;
 }
 
 .blok-media-preview[data-leaving], .blok-media-preview[data-leaving] :where(svg *) {
@@ -4343,6 +4381,12 @@ span[data-blok-slash-search] {
 
 .blok-media-preview[data-uploading] .blok-media-preview__photo {
   transform: rotate(calc((1 - var(--p)) * -3deg));
+}
+
+.blok-media-preview[data-uploading] .blok-media-preview__line--write {
+  transform-origin: left center;
+  transform: scaleX(clamp(0, calc(var(--p) * 4 - var(--row)), 1));
+  transition: transform 200ms linear;
 }
 
 .blok-media-preview[data-uploading] .blok-media-preview__fill {

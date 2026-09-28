@@ -193,6 +193,22 @@
 .blok-media-preview__scene { opacity: 0.55; }
 .blok-media-preview__line { fill: currentColor; stroke: none; opacity: 0.35; }
 .blok-media-preview__line--soft { opacity: 0.2; }
+.blok-media-preview__line--title { opacity: 0.6; }
+/* file: spreadsheet cells, slide chart, badge mark */
+.blok-media-preview__cell { fill: var(--blok-media-preview-tone); stroke: none; }
+.blok-media-preview__cell--head { fill: color-mix(in srgb, currentColor 22%, var(--blok-bg-primary)); }
+.blok-media-preview__chart-bar,
+.blok-media-preview__chip-mark { fill: currentColor; stroke: none; opacity: 0.35; }
+/* file: the dog-ear shows the paper's underside and shades the page along the
+   crease. The origin sits on the fold line (media-preview-art.ts FLAP), so a
+   scale across that line lifts the corner. */
+.blok-media-preview__flap,
+.blok-media-preview__crease {
+  transform-box: view-box;
+  transform-origin: 119px 23px;
+}
+.blok-media-preview__flap { fill: color-mix(in srgb, currentColor 10%, var(--blok-bg-primary)); }
+.blok-media-preview__crease { stroke: none; opacity: 0.5; translate: -1px 1.5px; }
 .blok-media-preview__groove,
 .blok-media-preview__fold { fill: none; }
 .blok-media-preview__fill { fill: color-mix(in srgb, var(--blok-color-accent) 20%, transparent); stroke: none; transform-origin: bottom; transform: scaleY(0); }
@@ -259,7 +275,10 @@
 :is(.blok-media-empty__panel > [data-hover], .blok-media-empty__card:focus-visible .blok-media-empty__panel > *).blok-media-preview .blok-media-preview__photo-back { transform: rotate(9deg); }
 :is(.blok-media-empty__panel > [data-hover], .blok-media-empty__card:focus-visible .blok-media-empty__panel > *).blok-media-preview .blok-media-preview__sun { transform: translateY(-6px); }
 :is(.blok-media-empty__panel > [data-hover], .blok-media-empty__card:focus-visible .blok-media-empty__panel > *).blok-media-preview :is(.blok-media-preview__sheet--back, .blok-media-preview__sheet--mid) {
-  animation: blok-media-preview-shuffle 1.1s cubic-bezier(0.22, 1, 0.36, 1) calc((var(--dir) + 1) * 90ms) both;
+  animation: blok-media-preview-shuffle 1.8s cubic-bezier(0.22, 1, 0.36, 1) calc((var(--dir) + 1) * 90ms) both;
+}
+:is(.blok-media-empty__panel > [data-hover], .blok-media-empty__card:focus-visible .blok-media-empty__panel > *).blok-media-preview :is(.blok-media-preview__flap, .blok-media-preview__crease) {
+  animation: blok-media-preview-flap 1.3s cubic-bezier(0.22, 1, 0.36, 1) 150ms both;
 }
 @keyframes blok-media-preview-pan {
   0%, 100% { transform: translateX(0); }
@@ -279,9 +298,16 @@
   40% { transform: scaleY(1.3); }
   100% { transform: scaleY(1); }
 }
+/* the stack fans out like a hand of cards, holds, and gathers back */
 @keyframes blok-media-preview-shuffle {
   0%, 100% { transform: var(--rest); }
-  45% { transform: translate(calc(var(--dir) * 44px), -10px) rotate(calc(var(--dir) * 20deg)); }
+  30%, 70% { transform: translate(calc(var(--dir) * 30px), -6px) rotate(calc(var(--dir) * 16deg)); }
+}
+/* the dog-ear lifts off the page, then drops back with a small bounce */
+@keyframes blok-media-preview-flap {
+  0%, 100% { transform: rotate(45deg) scaleY(1) rotate(-45deg); }
+  40% { transform: rotate(45deg) scaleY(-0.45) rotate(-45deg); }
+  70% { transform: rotate(45deg) scaleY(1.12) rotate(-45deg); }
 }
 
 /* ----- Leaving: springHome (media-empty-preview.ts) springs the moving parts
@@ -338,6 +364,11 @@
 }
 .blok-media-preview[data-uploading] .blok-media-preview__scene { opacity: calc(0.25 + var(--p) * 0.75); }
 .blok-media-preview[data-uploading] .blok-media-preview__photo { transform: rotate(calc((1 - var(--p)) * -3deg)); }
+.blok-media-preview[data-uploading] .blok-media-preview__line--write {
+  transform-origin: left center;
+  transform: scaleX(clamp(0, calc(var(--p) * 4 - var(--row)), 1));
+  transition: transform 200ms linear;
+}
 .blok-media-preview[data-uploading] .blok-media-preview__fill { transform: scaleY(var(--p)); transition: transform 200ms linear; }
 
 @media (prefers-reduced-motion: reduce) {

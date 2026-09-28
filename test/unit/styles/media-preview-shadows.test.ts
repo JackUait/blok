@@ -39,6 +39,13 @@ describe('media preview shadows (CSS)', () => {
     expect(dragged).toBeLessThan(lifted);
   });
 
+  it('writes the file preview lines in, one after another, as the upload advances', () => {
+    const transforms = declsFor((s) => s.includes('data-uploading') && s.includes('blok-media-preview__line--write'), 'transform').join(' ');
+
+    expect(transforms).toMatch(/var\(--p\)/);
+    expect(transforms).toMatch(/var\(--row\)/);
+  });
+
   it('colors every shadow with the themeable shadow token', () => {
     expect(declsFor((s) => s.includes('blok-media-preview'), 'flood-color')).toContain('var(--blok-media-preview-shadow)');
   });

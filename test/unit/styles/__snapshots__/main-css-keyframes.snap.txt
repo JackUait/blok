@@ -216,6 +216,12 @@
   50% { transform: scaleY(1) }
 }
 
+@keyframes blok-media-preview-flap {
+  0%, 100% { transform: rotate(45deg) scaleY(1) rotate(-45deg) }
+  40% { transform: rotate(45deg) scaleY(-0.45) rotate(-45deg) }
+  70% { transform: rotate(45deg) scaleY(1.12) rotate(-45deg) }
+}
+
 @keyframes blok-media-preview-pan {
   0%, 100% { transform: translateX(0) }
   50% { transform: translateX(-34px) }
@@ -245,7 +251,7 @@
 
 @keyframes blok-media-preview-shuffle {
   0%, 100% { transform: var(--rest) }
-  45% { transform: translate(calc(var(--dir) * 44px), -10px) rotate(calc(var(--dir) * 20deg)) }
+  30%, 70% { transform: translate(calc(var(--dir) * 30px), -6px) rotate(calc(var(--dir) * 16deg)) }
 }
 
 @keyframes blok-presence-caret-pulse {

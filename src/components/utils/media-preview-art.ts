@@ -40,6 +40,31 @@ const waveBars = (): string => WAVE
   })
   .join('');
 
+// The document page: its top-right corner is cut along a 45-degree diagonal,
+// and the dog-ear (FLAP) is that corner folded down onto the page.
+const PAGE = 'M78 10h28l26 26v58a8 8 0 0 1-8 8H78a8 8 0 0 1-8-8V18a8 8 0 0 1 8-8z';
+const FLAP = 'M106 10v22a4 4 0 0 0 4 4h22z';
+
+// Separate shapes, not one multi-part path: media-preview-3d.ts samples each
+// shape as a single outline.
+const sheetCells = (): string => [32, 42, 52, 62, 72]
+  .flatMap((y) => [77, 103].map((x) => `<rect class="blok-media-preview__cell" x="${x}" y="${y}" width="22" height="7" rx="1.5"/>`))
+  .join('');
+
+const chartBars = (): string => [14, 24, 18, 30]
+  .map((h, i) => `<rect class="blok-media-preview__chart-bar" x="${80 + i * 11}" y="${92 - h}" width="7" height="${h}" rx="1.5"/>`)
+  .join('');
+
+// --row orders the lines for the upload write-in in media-empty.css.
+const docLines = (): string => [
+  { y: 44, width: 30, height: 5, title: true },
+  { y: 55, width: 44, height: 3.5, title: false },
+  { y: 63, width: 44, height: 3.5, title: false },
+  { y: 71, width: 30, height: 3.5, title: false },
+]
+  .map((line, row) => `<rect class="blok-media-preview__line blok-media-preview__line--write${line.title ? ' blok-media-preview__line--title' : ''}" style="--row:${row}" x="78" y="${line.y}" width="${line.width}" height="${line.height}" rx="${line.height / 2}"/>`)
+  .join('');
+
 // Clip, filter and shadow ids must be unique per instance: several empty
 // blocks share one document.
 const drawings: Record<MediaPreviewKind, (id: string) => string> = {
@@ -97,19 +122,30 @@ const drawings: Record<MediaPreviewKind, (id: string) => string> = {
         <rect class="blok-media-preview__line blok-media-preview__line--soft" x="42" y="92" width="46" height="4" rx="2"/>
       </g>`)}`,
   file: (id) => `
-    <defs><clipPath id="${id}"><path d="M78 10h30l24 24v60a8 8 0 0 1-8 8H78a8 8 0 0 1-8-8V18a8 8 0 0 1 8-8z"/></clipPath>${shadowFilters(id)}</defs>
+    <defs><clipPath id="${id}"><path d="${PAGE}"/></clipPath>${shadowFilters(id)}</defs>
     ${ground(id)}
-    ${layer(1, `<rect class="blok-media-preview__frame blok-media-preview__sheet blok-media-preview__sheet--back" x="70" y="10" width="62" height="92" rx="8"/>`)}
-    ${layer(2, `<rect class="blok-media-preview__frame blok-media-preview__sheet blok-media-preview__sheet--mid" x="70" y="10" width="62" height="92" rx="8"/>${drop(id)}`)}
+    ${layer(1, `
+      <g class="blok-media-preview__sheet blok-media-preview__sheet--back">
+        <rect class="blok-media-preview__frame" x="70" y="10" width="62" height="92" rx="8"/>
+        <rect class="blok-media-preview__cell blok-media-preview__cell--head" x="77" y="20" width="48" height="8" rx="2"/>
+        ${sheetCells()}
+      </g>`)}
+    ${layer(2, `
+      <g class="blok-media-preview__sheet blok-media-preview__sheet--mid">
+        <rect class="blok-media-preview__frame" x="70" y="10" width="62" height="92" rx="8"/>
+        <rect class="blok-media-preview__line" x="78" y="20" width="30" height="4" rx="2"/>
+        ${chartBars()}
+      </g>
+      ${drop(id)}`)}
     ${layer(5, `
       <g id="${id}-f" class="blok-media-preview__sheet blok-media-preview__sheet--front">
-        <path id="${id}-s" class="blok-media-preview__frame" d="M78 10h30l24 24v60a8 8 0 0 1-8 8H78a8 8 0 0 1-8-8V18a8 8 0 0 1 8-8z"/>
+        <path id="${id}-s" class="blok-media-preview__frame" d="${PAGE}"/>
         <g clip-path="url(#${id})"><rect class="blok-media-preview__fill" x="70" y="10" width="62" height="92"/></g>
-        <path class="blok-media-preview__fold" d="M108 10v16a8 8 0 0 0 8 8h16"/>
-        <rect class="blok-media-preview__line" x="80" y="46" width="40" height="4" rx="2"/>
-        <rect class="blok-media-preview__line" x="80" y="56" width="40" height="4" rx="2"/>
-        <rect class="blok-media-preview__line blok-media-preview__line--soft" x="80" y="66" width="26" height="4" rx="2"/>
-        <rect class="blok-media-preview__chip" x="80" y="82" width="22" height="10" rx="3"/>
+        <path class="blok-media-preview__crease" filter="url(#${id}-d)" d="${FLAP}"/>
+        <path class="blok-media-preview__flap" d="${FLAP}"/>
+        ${docLines()}
+        <rect class="blok-media-preview__chip" x="78" y="82" width="22" height="11" rx="3"/>
+        <rect class="blok-media-preview__chip-mark" x="82" y="86" width="14" height="3" rx="1.5"/>
       </g>`)}`,
 };
 

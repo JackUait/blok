@@ -149,21 +149,59 @@
 
 /* toolbar base rule lives in main.css to satisfy direct readFileSync audits.
    Additional toolbar states/children remain here. */
+[data-blok-tool="image"] .blok-image-toolbar[data-islands-placement="inside"] {
+  bottom: auto;
+  top: 10px;
+}
+[data-blok-tool="image"] .blok-image-toolbar__island {
+  display: inline-flex;
+  gap: var(--blok-space-0-25);
+  padding: var(--blok-space-0-75);
+  border-radius: var(--blok-space-2-25);
+  background: var(--blok-overlay-surface);
+  box-shadow:
+    inset 0 0 0 1px var(--blok-overlay-ring),
+    var(--blok-image-shadow-toolbar);
+}
 [data-blok-tool="image"] .blok-image-inner:hover .blok-image-toolbar,
-[data-blok-tool="image"][data-selected="true"] .blok-image-toolbar,
+[data-blok-selected="true"] [data-blok-tool="image"] .blok-image-toolbar,
 [data-blok-tool="image"][data-settings-open="true"] .blok-image-toolbar,
 [data-blok-tool="image"][data-align-open="true"] .blok-image-toolbar,
 [data-blok-tool="image"][data-alt-open="true"] .blok-image-toolbar {
   opacity: 1;
-  transform: translateY(0);
   pointer-events: auto;
+  /* One animation per element for every show state, so hover -> select does not replay it. */
+  animation: blok-image-islands-split-gap 500ms cubic-bezier(0.34, 1.3, 0.64, 1) 320ms both;
 }
-/* While the image bytes are still loading (spinner state), keep the floating
-   toolbar hidden so its controls don't sit over the loading placeholder, even
-   when the block is hovered/selected. Mirrors the caption-row hide above. */
+[data-blok-tool="image"] .blok-image-inner:hover .blok-image-toolbar__island,
+[data-blok-selected="true"] [data-blok-tool="image"] .blok-image-toolbar__island,
+[data-blok-tool="image"][data-settings-open="true"] .blok-image-toolbar__island,
+[data-blok-tool="image"][data-align-open="true"] .blok-image-toolbar__island,
+[data-blok-tool="image"][data-alt-open="true"] .blok-image-toolbar__island {
+  animation:
+    blok-image-islands-rise 380ms cubic-bezier(0.2, 0.9, 0.25, 1) both,
+    blok-image-islands-round 500ms cubic-bezier(0.34, 1.3, 0.64, 1) 320ms both;
+}
+@keyframes blok-image-islands-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes blok-image-islands-split-gap {
+  from { gap: 0; }
+  to { gap: var(--blok-space-1-5); }
+}
+@keyframes blok-image-islands-round {
+  from { border-radius: var(--blok-radius-sm); }
+  to { border-radius: var(--blok-space-2-25); }
+}
+[data-blok-tool="image"][data-resizing="true"] .blok-image-toolbar {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+/* While the image bytes are still loading, keep the islands off the loading placeholder. */
 [data-blok-tool="image"] .blok-image-inner[data-loading="true"] .blok-image-toolbar {
   opacity: 0;
-  transform: translateY(-4px);
   pointer-events: none;
 }
 [data-blok-tool="image"] .blok-image-toolbar button {
@@ -187,25 +225,46 @@
 }
 [data-blok-tool="image"] .blok-image-toolbar button[aria-pressed="true"],
 [data-blok-tool="image"] .blok-image-toolbar button[aria-expanded="true"] {
-  background: var(--blok-overlay-fg-pressed);
-  color: var(--blok-overlay-fg-strong);
-}
-[data-blok-tool="image"] .blok-image-toolbar__divider {
-  width: 1px; align-self: stretch; margin: var(--blok-space-1) var(--blok-space-0-5);
-  background: var(--blok-overlay-divider);
+  background: var(--blok-icon-active-bg);
+  color: var(--blok-icon-active-text);
 }
 [data-blok-tool="image"] .blok-image-toolbar__pill { display: inline-flex; border-radius: var(--blok-space-1); overflow: hidden; }
 [data-blok-tool="image"] .blok-image-toolbar__pill button { width: 26px; border-radius: 0; }
-/* Medium tier — secondary actions (caption, replace, download) move into the
-   "..." menu so align/crop/fullscreen keep their full size on mid-width figures. */
-[data-blok-tool="image"] .blok-image-toolbar[data-tier="medium"] [data-action="caption-toggle"],
-[data-blok-tool="image"] .blok-image-toolbar[data-tier="medium"] [data-action="replace"],
-[data-blok-tool="image"] .blok-image-toolbar[data-tier="medium"] [data-action="download"] {
+/* Medium tier: the edit island plus "more"; "more" opens block settings, which hold everything else. */
+[data-blok-tool="image"] .blok-image-toolbar[data-tier="medium"] [data-island="layout"] {
   display: none;
 }
-/* Compact toolbar — figure too narrow to fit all actions; collapse to just the "..." button. */
-[data-blok-tool="image"] .blok-image-toolbar[data-compact="true"] > :not([data-action="more"]) {
+[data-blok-tool="image"] .blok-image-toolbar[data-tier="medium"] [data-island="view"] > :not([data-action="more"]) {
   display: none;
+}
+[data-blok-tool="image"] .blok-image-toolbar[data-compact="true"] [data-island="layout"],
+[data-blok-tool="image"] .blok-image-toolbar[data-compact="true"] [data-island="edit"],
+[data-blok-tool="image"] .blok-image-toolbar[data-compact="true"] [data-island="view"] > :not([data-action="more"]) {
+  display: none;
+}
+
+[data-blok-tool="image"] [data-role="image-selection-ring"] {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--blok-radius-lg);
+  box-shadow: 0 0 0 1px var(--blok-image-frame-ring);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    inset 300ms cubic-bezier(0.2, 0.9, 0.25, 1),
+    opacity 200ms ease,
+    box-shadow 150ms ease;
+}
+[data-blok-selected="true"] [data-blok-tool="image"] [data-role="image-selection-ring"],
+[data-blok-tool="image"][data-settings-open="true"] [data-role="image-selection-ring"],
+[data-blok-tool="image"][data-align-open="true"] [data-role="image-selection-ring"],
+[data-blok-tool="image"][data-alt-open="true"] [data-role="image-selection-ring"],
+[data-blok-tool="image"][data-resizing="true"] [data-role="image-selection-ring"] {
+  inset: -6px;
+  opacity: 1;
+}
+[data-blok-tool="image"][data-resizing="true"] [data-role="image-selection-ring"] {
+  box-shadow: 0 0 0 1.5px var(--blok-image-frame-ring-strong);
 }
 
 /* alignment popover — floats below the trigger, rides the same solid dark overlay surface.
@@ -286,47 +345,46 @@
   color: var(--blok-bg-primary);
 }
 
-/* resize handle visual — Notion-style pill straddling the edge */
+/* resize handles — dots on the selection ring's midline (ring sits 6px outside the figure) */
 [data-blok-tool="image"] [data-role="resize-handle"] {
   position: absolute;
   top: 50%;
-  /* Fixed grab-target width; height already scales via 25% of the figure. */
-  width: 6px;
-  height: clamp(24px, 25%, 50px);
-  background: var(--blok-handle-bg-default);
-  border: 1px solid var(--blok-handle-fg-default);
-  border-radius: var(--blok-radius-pill);
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--blok-overlay-surface);
+  box-shadow:
+    0 0 0 1px var(--blok-image-frame-ring-strong),
+    var(--blok-image-handle-shadow);
   cursor: ew-resize;
   opacity: 0;
-  transform: translateY(-50%) scale(1);
-  transform-origin: center;
+  transform: translateY(-50%) scale(0);
   transition:
     opacity 120ms ease,
-    background-color 120ms ease,
-    transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
   z-index: 2;
 }
 [data-blok-tool="image"] [data-role="resize-handle"]::before {
   content: '';
   position: absolute;
-  inset: -8px -6px;
+  inset: -24px -10px;
 }
-[data-blok-tool="image"] [data-role="resize-handle"][data-edge="left"]  { left: 8px; }
-[data-blok-tool="image"] [data-role="resize-handle"][data-edge="right"] { right: 8px; }
+[data-blok-tool="image"] [data-role="resize-handle"][data-edge="left"]  { left: -10.5px; }
+[data-blok-tool="image"] [data-role="resize-handle"][data-edge="right"] { right: -10.5px; }
 [data-blok-tool="image"] .blok-image-inner:hover [data-role="resize-handle"],
-[data-blok-tool="image"][data-selected="true"] [data-role="resize-handle"],
+[data-blok-selected="true"] [data-blok-tool="image"] [data-role="resize-handle"],
 [data-blok-tool="image"][data-alt-open="true"] [data-role="resize-handle"],
 [data-blok-tool="image"][data-settings-open="true"] [data-role="resize-handle"],
-[data-blok-tool="image"][data-align-open="true"] [data-role="resize-handle"] {
+[data-blok-tool="image"][data-align-open="true"] [data-role="resize-handle"],
+[data-blok-tool="image"][data-resizing="true"] [data-role="resize-handle"] {
   opacity: 1;
+  transform: translateY(-50%) scale(1);
 }
-[data-blok-tool="image"] [data-role="resize-handle"]:hover {
-  background: var(--blok-handle-bg-hover);
-  transform: translateY(-50%) scale(1.15);
+[data-blok-tool="image"] [data-role="resize-handle"]:hover,
+[data-blok-tool="image"] [data-role="resize-handle"]:active {
+  transform: translateY(-50%) scale(1.45);
 }
 [data-blok-tool="image"] [data-role="resize-handle"]:active {
-  background: var(--blok-handle-bg-active);
-  transform: translateY(-50%) scale(1.15);
   transition-duration: 0s;
 }
 
@@ -706,6 +764,13 @@
   50%      { opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
+  [data-blok-tool="image"] .blok-image-toolbar,
+  [data-blok-tool="image"] .blok-image-toolbar__island,
+  [data-blok-tool="image"] [data-role="resize-handle"],
+  [data-blok-tool="image"] [data-role="image-selection-ring"] {
+    animation: none !important;
+    transition: none !important;
+  }
   [data-blok-tool="image"] .blok-image-inner[data-loading="true"]::before { animation: none; }
   [data-blok-tool="image"] .blok-image-inner[data-loading="true"]::after {
     animation: blok-image-retry-spin 1.4s linear infinite;

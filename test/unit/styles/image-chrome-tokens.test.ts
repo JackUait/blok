@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const css = readFileSync(resolve(__dirname, '../../../src/styles/colors.css'), 'utf-8');
-const TOKENS = ['--blok-image-frame-ring', '--blok-image-frame-ring-strong', '--blok-image-readout-bg', '--blok-image-readout-fg'];
+const TOKENS = ['--blok-image-frame-ring', '--blok-image-frame-ring-strong', '--blok-image-readout-bg', '--blok-image-readout-fg', '--blok-image-handle-shadow'];
 
 describe('image chrome tokens', () => {
   it.each(TOKENS)('%s is defined for light, system-dark and forced-dark', (token) => {

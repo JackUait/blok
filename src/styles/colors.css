@@ -242,6 +242,7 @@
   --blok-image-frame-ring-strong: rgba(55, 53, 47, 0.4);
   --blok-image-readout-bg: #191919;
   --blok-image-readout-fg: #ffffff;
+  --blok-image-handle-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
   --blok-overlay-fg: rgba(15, 15, 14, 0.62);
   --blok-overlay-fg-strong: #1d1d1d;
   --blok-overlay-fg-hover: rgba(15, 15, 14, 0.06);
@@ -646,6 +647,7 @@
     --blok-image-frame-ring-strong: rgba(255, 255, 255, 0.45);
     --blok-image-readout-bg: #f1f1ef;
     --blok-image-readout-fg: #191919;
+    --blok-image-handle-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
     --blok-overlay-fg: rgba(255, 255, 255, 0.86);
     --blok-overlay-fg-strong: #ffffff;
     --blok-overlay-fg-hover: rgba(255, 255, 255, 0.14);
@@ -839,6 +841,7 @@
   --blok-image-frame-ring-strong: rgba(255, 255, 255, 0.45);
   --blok-image-readout-bg: #f1f1ef;
   --blok-image-readout-fg: #191919;
+  --blok-image-handle-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   --blok-overlay-fg: rgba(255, 255, 255, 0.86);
   --blok-overlay-fg-strong: #ffffff;
   --blok-overlay-fg-hover: rgba(255, 255, 255, 0.14);

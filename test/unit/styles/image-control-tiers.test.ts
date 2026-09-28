@@ -52,28 +52,13 @@ describe('Image control size tiers (src/styles/image.css)', () => {
     expect(body).toContain('width: 26px');
   });
 
-  it('resize handles are fixed at 6px wide', () => {
+  it('handles are 9px dots, not 6px bars', () => {
     const body = findRuleBody('[data-blok-tool="image"] [data-role="resize-handle"]');
 
     expect(body).not.toBeNull();
-    expect(body).toContain('width: 6px');
-  });
-
-  it('medium tier hides caption-toggle, replace and download (and nothing else)', () => {
-    for (const action of ['caption-toggle', 'replace', 'download']) {
-      expect(css).toMatch(
-        new RegExp(`\\.blok-image-toolbar\\[data-tier="medium"\\][^{]*\\[data-action="${action}"\\]`)
-      );
-    }
-    for (const action of ['crop', 'fullscreen', 'more']) {
-      expect(css).not.toMatch(
-        new RegExp(`\\.blok-image-toolbar\\[data-tier="medium"\\][^{]*\\[data-action="${action}"\\]`)
-      );
-    }
-  });
-
-  it('compact tier still collapses to just the "more" button', () => {
-    expect(css).toContain('.blok-image-toolbar[data-compact="true"] > :not([data-action="more"])');
+    expect(body).toContain('width: 9px');
+    expect(body).toContain('height: 9px');
+    expect(body).toContain('border-radius: 50%');
   });
 
   it('caption steps between exactly two fixed sizes at the medium breakpoint', () => {
@@ -87,5 +72,46 @@ describe('Image control size tiers (src/styles/image.css)', () => {
      */
     expect(body).toContain('font-size: var(--blok-image-caption-font-size, 12px)');
     expect(css).toMatch(/@container\s*\(min-width:\s*360px\)/);
+  });
+});
+
+const mainCss = readFileSync(resolve(__dirname, '../../../src/styles/main.css'), 'utf-8');
+
+describe('image islands (frame and islands design)', () => {
+  it('the toolbar is a transparent row; each island is the card', () => {
+    const island = findRuleBody('[data-blok-tool="image"] .blok-image-toolbar__island');
+
+    expect(island).toContain('background: var(--blok-overlay-surface)');
+    expect(mainCss).toMatch(/\.blok-image-toolbar \{[^}]*background: transparent/);
+  });
+
+  it('floats 20px above the figure, or 10px inside when told to', () => {
+    expect(mainCss).toMatch(/\.blok-image-toolbar \{[^}]*bottom: calc\(100% \+ 20px\)/);
+    expect(findRuleBody('[data-blok-tool="image"] .blok-image-toolbar[data-islands-placement="inside"]')).toContain('top: 10px');
+  });
+
+  it('medium tier shows only the edit island and more', () => {
+    expect(css).toMatch(/\.blok-image-toolbar\[data-tier="medium"\] \[data-island="layout"\] \{\s*display: none/);
+    expect(css).toMatch(/\.blok-image-toolbar\[data-tier="medium"\] \[data-island="view"\] > :not\(\[data-action="more"\]\)/);
+  });
+
+  it('compact tier keeps only the more button', () => {
+    expect(css).toMatch(/\.blok-image-toolbar\[data-compact="true"\] \[data-island="layout"\],\s*\[data-blok-tool="image"\] \.blok-image-toolbar\[data-compact="true"\] \[data-island="edit"\]/);
+  });
+
+  it('selection is read from the block holder, not the dead data-selected', () => {
+    expect(css).toContain('[data-blok-selected="true"] [data-blok-tool="image"] [data-role="image-selection-ring"]');
+    expect(css).toContain('[data-blok-selected="true"] [data-blok-tool="image"] [data-role="resize-handle"]');
+  });
+
+  it('one animation name serves every show state, so hover then select does not replay it', () => {
+    const shows = css.match(/[^}]*\.blok-image-toolbar__island \{[^}]*animation:[^}]*\}/g) ?? [];
+
+    expect(shows).toHaveLength(1);
+    expect(shows[0]).toContain('blok-image-islands-rise');
+  });
+
+  it('reduced motion switches the split off', () => {
+    expect(css).toMatch(/prefers-reduced-motion: reduce\)[\s\S]*\.blok-image-toolbar__island[\s\S]*animation: none/);
   });
 });

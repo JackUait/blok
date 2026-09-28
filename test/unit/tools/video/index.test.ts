@@ -1006,6 +1006,8 @@ describe('VideoTool — background formats', () => {
     await vi.waitFor(() => expect(tool.save().url).toBe('https://cdn/clip.mp4'));
 
     expect(tool.save().mimeType).toBe('video/mp4');
+    // A download of url must not carry the original's extension.
+    expect(tool.save().fileName).toBe('clip.mp4');
   });
 
   it('does nothing extra when no video formats are set', async () => {

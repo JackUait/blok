@@ -462,7 +462,10 @@ export class VideoTool implements BlockTool {
     const delta: Partial<VideoData> = { url: next.url, variants: next.variants };
 
     // Only an MP4 ever replaces the original as url.
-    if (next.url !== expected) delta.mimeType = 'video/mp4';
+    if (next.url !== expected) {
+      delta.mimeType = 'video/mp4';
+      if (this.data.fileName !== undefined) delta.fileName = this.data.fileName.replace(/(\.[^./]*)?$/, '.mp4');
+    }
     if (this.detached) {
       deliverToRebuiltBlock(this.api, this.block, 'Video', delta, { url: expected }, ['url']);
 

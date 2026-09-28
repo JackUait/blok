@@ -21,10 +21,18 @@ vi.mock('../../../../../../src/components/modules/toolbar/inline/lifecycle-manag
   },
 }));
 
+const positionerHolder = vi.hoisted<{ side: 'below' | 'above' }>(() => ({ side: 'below' }));
+
 vi.mock('../../../../../../src/components/modules/toolbar/inline/positioner', () => ({
   InlinePositioner: class MockPositioner {
-    apply = vi.fn();
+    apply = vi.fn(() => positionerHolder.side);
   },
+}));
+
+const ghostHolder = vi.hoisted(() => ({ mount: vi.fn() }));
+
+vi.mock('../../../../../../src/components/modules/toolbar/inline/toolbar-ghost', () => ({
+  mountToolbarGhost: ghostHolder.mount,
 }));
 
 vi.mock('../../../../../../src/components/modules/toolbar/inline/tools-manager', () => ({
@@ -84,6 +92,7 @@ vi.mock('../../../../../../src/components/selection/index', () => {
   class MockSelectionUtils {
     removeFakeBackground = vi.fn();
     setFakeBackground = vi.fn();
+    clearFakeBackground = vi.fn();
   }
 
   // Add static properties
@@ -224,6 +233,34 @@ describe('InlineToolbar.tryToShow error recovery', () => {
     expect(wrapper.getAttribute('role')).toBe('toolbar');
     expect(wrapper.getAttribute('aria-orientation')).toBe('horizontal');
     expect(wrapper.getAttribute('aria-label')).toBe('a11y.textFormatting');
+  });
+
+  it('grows the card from the bottom edge when it opens above the selection', async () => {
+    positionerHolder.side = 'above';
+
+    await inlineToolbar.tryToShow();
+
+    const wrapper = (inlineToolbar as unknown as { nodes: { wrapper: HTMLElement } }).nodes.wrapper;
+
+    expect(wrapper.style.getPropertyValue('--_blok-inline-toolbar-origin')).toBe('left bottom');
+    positionerHolder.side = 'below';
+  });
+
+  it('grows the card from the top edge when it opens below the selection', async () => {
+    await inlineToolbar.tryToShow();
+
+    const wrapper = (inlineToolbar as unknown as { nodes: { wrapper: HTMLElement } }).nodes.wrapper;
+
+    expect(wrapper.style.getPropertyValue('--_blok-inline-toolbar-origin')).toBe('left top');
+  });
+
+  it('leaves a fading copy of the card when it closes', async () => {
+    await inlineToolbar.tryToShow();
+    ghostHolder.mount.mockClear();
+
+    inlineToolbar.close();
+
+    expect(ghostHolder.mount).toHaveBeenCalledTimes(1);
   });
 
   it('passes the localized action-group label to its popover', async () => {

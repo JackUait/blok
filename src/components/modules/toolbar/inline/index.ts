@@ -410,6 +410,12 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
 
     // Hide and destroy popover
     if (this.popover) {
+      const shownRoot = this.popover.getElement?.();
+
+      if (shownRoot && this.nodes.wrapper) {
+        // Fade the card out instead of cutting it.
+        mountToolbarGhost(shownRoot, this.nodes.wrapper, null);
+      }
       this.popover.hide?.();
       this.popover.destroy?.();
       this.popover = null;
@@ -652,7 +658,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     const contentRect = this.Blok.UI.contentRect;
     const selectionRect = SelectionUtils.rect;
 
-    this.positioner.apply({
+    const side = this.positioner.apply({
       wrapper: this.nodes.wrapper,
       selectionRect,
       wrapperOffset,
@@ -660,6 +666,9 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
       popoverWidth,
       popoverHeight,
     });
+
+    // The entrance grows out of the edge nearest the selection.
+    this.nodes.wrapper.style.setProperty('--_blok-inline-toolbar-origin', side === 'above' ? 'left bottom' : 'left top');
   }
 
 

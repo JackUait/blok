@@ -29,6 +29,20 @@ describe('InlinePositioner', () => {
     vi.unstubAllGlobals();
   });
 
+  describe('side', () => {
+    it('opens below a selection with room under it', () => {
+      positioner = new InlinePositioner(false);
+
+      expect(positioner.apply({ ...mockOptions, popoverHeight: 110 })).toBe('below');
+    });
+
+    it('reports above when it flips over a selection near the viewport bottom', () => {
+      positioner = new InlinePositioner(false);
+
+      expect(positioner.apply({ ...mockOptions, selectionRect: new DOMRect(100, 540, 50, 20), popoverHeight: 110 })).toBe('above');
+    });
+  });
+
   describe('constructor', () => {
     it('uses desktop margin when isMobile is false', () => {
       positioner = new InlinePositioner(false);

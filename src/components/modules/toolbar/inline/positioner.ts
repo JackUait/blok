@@ -21,8 +21,9 @@ export class InlinePositioner {
 
   /**
    * Calculate and apply position to wrapper element
+   * @returns which side of the selection the toolbar landed on
    */
-  public apply(options: InlinePositioningOptions): void {
+  public apply(options: InlinePositioningOptions): 'below' | 'above' {
     const { wrapper, selectionRect, wrapperOffset, popoverWidth, popoverHeight = 0 } = options;
 
     const newCoords = {
@@ -36,9 +37,11 @@ export class InlinePositioner {
     // Constrain to the viewport, not the editor column, to preserve selection alignment.
     newCoords.x = Math.max(8, Math.min(newCoords.x + wrapperOffset.x, window.innerWidth - popoverWidth - 8)) - wrapperOffset.x;
 
+    const bottomTop = newCoords.y + wrapperOffset.top;
+    const side = popoverHeight > 0 && bottomTop + popoverHeight > window.innerHeight - 8 ? 'above' : 'below';
+
     if (popoverHeight > 0) {
-      const bottomTop = newCoords.y + wrapperOffset.top;
-      const top = bottomTop + popoverHeight > window.innerHeight - 8
+      const top = side === 'above'
         ? selectionRect.top - popoverHeight - this.toolbarVerticalMargin
         : bottomTop;
 
@@ -47,5 +50,7 @@ export class InlinePositioner {
 
     wrapper.style.left = Math.floor(newCoords.x) + 'px';
     wrapper.style.top = Math.floor(newCoords.y) + 'px';
+
+    return side;
   }
 }

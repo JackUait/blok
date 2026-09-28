@@ -47,10 +47,14 @@ actions.
   slot. `INLINE_TOOL_ORDER` and `defaultInlineTools` change to match.
 - Consumer custom tools go on extra rows of five below. The card width never
   grows past five cells.
-- Card: 14px radius, 8px padding, Notion's three-layer shadow. Dark mode gets
-  matching values from existing color tokens.
+- Card: 14px radius, 8px padding, Notion's three-layer shadow. The shared
+  `--blok-popover-box-shadow` stays for other menus; the card uses a new
+  `--blok-inline-toolbar-shadow` token (additive public CSS variable), with a
+  dark-mode value.
 - Hover: ~5% ink fill, ~20ms.
 - Active format: the icon turns the accent (blue) color on a faint accent fill.
+  This already exists (`--blok-icon-active-bg` / `--blok-icon-active-text` on
+  `data-blok-popover-item-active`); it gets an e2e pin, not new code.
 - Convert row: current block icon + name (medium weight) + `›` chevron.
 - Separators are horizontal again; `aria-orientation` becomes `horizontal`.
 - Mobile keeps the same card; it only follows the existing mobile placement.
@@ -71,9 +75,11 @@ Exit is a ~100ms fade. The existing ghost hand-off (`toolbar-ghost.ts`) stays.
 This replaces the "inline toolbar appears instantly" rule in
 `src/styles/popover-animation.css`. `prefers-reduced-motion`: no animation.
 
-**Moving while open.** A new selection while the toolbar is open makes it
-glide to the new place, about 160ms ease-out. If the side changes
-(below ↔ above) it snaps instead.
+**Moving to a new selection.** No glide (dropped 2026-09-28). A mouse
+reselect already closes the toolbar on pointerdown and opens a fresh one on
+release, so it plays the entrance. Shift+arrow extension keeps the toolbar in
+place (`selection.ts` returns early while it is open); changing that would
+rework the `25882910` stale-selectionchange guards.
 
 **Submenus.**
 - Color (A): panel opens under the A cell, overlapping the lower card.
@@ -101,7 +107,8 @@ everywhere it is used (marker, table cells, callout, block settings).
   button; choosing the default swatch resets.
 - Recently used keeps its storage (`blok-recent-colors`) and behavior.
 - The toolbar's A cell reflects the selection: glyph in the text color, tile in
-  the background color.
+  the background color. This already exists (`updateToolbarColors` in
+  `inline-tool-marker.ts`); it gets a pin, not new code.
 - The panel is ~250px tall. Near the viewport bottom it flips above the cell.
 
 Breaking check before implementation: the `<prefix>-reset-*` test ids go away.
@@ -119,12 +126,13 @@ TDD: each change starts with a failing test.
 2. Unit, `inline-tools-order.test.ts`: the new cell order.
 3. Unit, color picker: untabbed sections, 10 swatches per section, no reset
    row, ring on the current color, A cell reflects the selection.
-4. Unit, positioner: glide on same side, snap on flip, entrance origin by side.
+4. Unit: entrance origin follows the side (below → top-left, above → bottom-left);
+   the ghost clone plays no entrance.
 5. E2E (chromium), new spec: cell and card geometry, below/above placement,
    active state color, color panel under the A cell, Turn into beside the card
    and flipping at the right edge, viewport extremes (narrow width; selection
    at top, bottom and right edges).
-6. Motion: entrance and glide via computed styles; none under reduced motion.
+6. Motion: entrance via computed styles; none under reduced motion.
 
 Test rot to rewrite (not patch): `test/playwright/tests/inline-tools/menu-grid-redesign.spec.ts`,
 `control-redesign.spec.ts`, `color-picker-redesign.spec.ts`, the

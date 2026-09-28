@@ -18,7 +18,10 @@ vi.mock('../../../src/tools/audio/waveform', () => ({
 
 interface ToolConfig {
   maxSize?: number;
-  uploader?: { uploadByFile?: (file: File) => Promise<{ url: string }> };
+  uploader?: {
+    uploadByFile?: (file: File) => Promise<{ url: string }>;
+    uploadByUrl?: (url: string) => Promise<{ url: string }>;
+  };
   onUploadError?: UploadErrorHandler;
 }
 
@@ -141,6 +144,33 @@ describe.each(cases)('$tool tool — onUploadError', ({ tool: name, create, file
     }), file);
 
     expect(root.querySelector(errorSelector)?.textContent).toContain(`tools.${name}.errorFileTooLarge`);
+  });
+
+  it('reports the link for a failed link upload, and false leaves no link saved', async () => {
+    const serverError = new Error('404');
+    const onUploadError = vi.fn<UploadErrorHandler>(() => false);
+    const tool = create({ uploader: { uploadByUrl: () => Promise.reject(serverError) }, onUploadError });
+    const root = tool.render() as HTMLElement;
+
+    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    const input = root.querySelector<HTMLInputElement>('input[type="url"]');
+    const submit = root.querySelector<HTMLButtonElement>('[data-action="submit-url"]');
+
+    if (!input || !submit) throw new Error('link field missing');
+    input.value = 'https://x/clip';
+    submit.click();
+    await flush();
+
+    expect(onUploadError).toHaveBeenCalledTimes(1);
+    expect(onUploadError.mock.calls[0][0]).toMatchObject({
+      code: 'UPLOAD_FAILED',
+      tool: name,
+      url: 'https://x/clip',
+      cause: serverError,
+    });
+    expect(onUploadError.mock.calls[0][0].file).toBeUndefined();
+    expect(root.querySelector(errorSelector)).toBeNull();
+    expect((tool.save(root) as { url: string }).url).toBe('');
   });
 
   it('reports a rejection from the consumer uploader as UPLOAD_FAILED with the original error', async () => {

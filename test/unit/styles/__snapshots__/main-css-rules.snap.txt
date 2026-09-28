@@ -4572,12 +4572,6 @@ span[data-blok-slash-search] {
   height: 14px;
 }
 
-.blok-media-empty__embed-favicon {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
 [data-blok-field].blok-media-empty__embed-bar--large {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;

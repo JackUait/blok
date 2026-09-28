@@ -86,6 +86,125 @@ const SERVICE_MARKS: Record<string, string> = {
   youtubeplaylist: 'youtube',
 };
 
+// Site address -> Simple Icons slug, for links that are not embeddable (a
+// bare "youtube.com/"). Hosts come from the registry regexes. A key may carry
+// one path segment when products share a host (docs.google.com). Never add a
+// shared parent (google.com, apple.com, mit.edu, 163.com): every subdomain
+// would get one product's mark.
+const HOST_MARKS: Record<string, string> = {
+  'airtable.com': 'airtable',
+  'music.apple.com': 'applemusic',
+  'podcasts.apple.com': 'applepodcasts',
+  'arcgis.com': 'arcgis',
+  'audioboom.com': 'audioboom',
+  'audiomack.com': 'audiomack',
+  'beatport.com': 'beatport',
+  'behance.net': 'behance',
+  'bilibili.com': 'bilibili',
+  'b23.tv': 'bilibili',
+  'calendly.com': 'calendly',
+  'castbox.fm': 'castbox',
+  'chromatic.com': 'chromatic',
+  'codesandbox.io': 'codesandbox',
+  'dailymotion.com': 'dailymotion',
+  'dai.ly': 'dailymotion',
+  'deezer.com': 'deezer',
+  'douyin.com': 'tiktok',
+  'diagrams.net': 'diagramsdotnet',
+  'draw.io': 'diagramsdotnet',
+  'excalidraw.com': 'excalidraw',
+  'facebook.com': 'facebook',
+  'figma.com': 'figma',
+  'giphy.com': 'giphy',
+  'docs.google.com': 'googledocs',
+  'docs.google.com/document': 'googledocs',
+  'docs.google.com/forms': 'googleforms',
+  'docs.google.com/spreadsheets': 'googlesheets',
+  'docs.google.com/presentation': 'googleslides',
+  'drive.google.com': 'googledrive',
+  'hearthis.at': 'hearthisdotat',
+  'iheart.com': 'iheartradio',
+  'instagram.com': 'instagram',
+  'instagr.am': 'instagram',
+  'archive.org': 'internetarchive',
+  'jsfiddle.net': 'jsfiddle',
+  'kahoot.it': 'kahoot',
+  'kick.com': 'kick',
+  'loom.com': 'loom',
+  'mail.ru': 'maildotru',
+  'mastodon.social': 'mastodon',
+  'mastodon.online': 'mastodon',
+  'mstdn.social': 'mastodon',
+  'hachyderm.io': 'mastodon',
+  'fosstodon.org': 'mastodon',
+  'infosec.exchange': 'mastodon',
+  'mas.to': 'mastodon',
+  'mastodon.world': 'mastodon',
+  'techhub.social': 'mastodon',
+  'miro.com': 'miro',
+  'mixcloud.com': 'mixcloud',
+  'naver.com': 'naver',
+  'music.163.com': 'neteasecloudmusic',
+  'nicovideo.jp': 'niconico',
+  'nico.ms': 'niconico',
+  'observablehq.com': 'observable',
+  'odysee.com': 'odysee',
+  'ok.ru': 'odnoklassniki',
+  'odnoklassniki.ru': 'odnoklassniki',
+  'openstreetmap.org': 'openstreetmap',
+  'p5js.org': 'p5dotjs',
+  'pinterest.com': 'pinterest',
+  'pca.st': 'pocketcasts',
+  'reddit.com': 'reddit',
+  'scratch.mit.edu': 'scratch',
+  'sketchfab.com': 'sketchfab',
+  'snapchat.com': 'snapchat',
+  'soundcloud.com': 'soundcloud',
+  'spotify.com': 'spotify',
+  'anchor.fm': 'spotify',
+  'spreaker.com': 'spreaker',
+  'stackblitz.com': 'stackblitz',
+  'substack.com': 'substack',
+  'suno.com': 'suno',
+  'ted.com': 'ted',
+  't.me': 'telegram',
+  'telegram.me': 'telegram',
+  'telegram.dog': 'telegram',
+  'threads.com': 'threads',
+  'threads.net': 'threads',
+  'tidal.com': 'tidal',
+  'tiktok.com': 'tiktok',
+  'tldraw.com': 'tldraw',
+  'twitter.com': 'x',
+  'x.com': 'x',
+  'typeform.com': 'typeform',
+  'vimeo.com': 'vimeo',
+  'vk.com': 'vk',
+  'vk.ru': 'vk',
+  'vkvideo.ru': 'vk',
+  'wistia.com': 'wistia',
+  'wistia.net': 'wistia',
+  'wolframcloud.com': 'wolfram',
+  'youtube.com': 'youtube',
+  'youtube-nocookie.com': 'youtube',
+  'youtu.be': 'youtube',
+};
+
+/** Every slug a site address can name. */
+export const BRAND_MARK_HOST_SLUGS: readonly string[] = [...new Set(Object.values(HOST_MARKS))];
+
+/**
+ * The Simple Icons slug for a site address: its host or any parent of it,
+ * tried with the first path segment before without. Null for other sites.
+ */
+export function brandMarkSlugForUrl(url: URL): string | null {
+  const segment = url.pathname.split('/')[1] ?? '';
+  const labels = url.hostname.toLowerCase().split('.');
+  const hosts = labels.slice(0, -1).map((_, i) => labels.slice(i).join('.'));
+  const slugs = hosts.map((host) => (segment ? HOST_MARKS[`${host}/${segment}`] : undefined) ?? HOST_MARKS[host]);
+  return slugs.find((slug) => slug !== undefined) ?? null;
+}
+
 /** Registry services that have a bundled mark. */
 export const BRAND_MARK_SERVICES: readonly string[] = Object.keys(SERVICE_MARKS);
 

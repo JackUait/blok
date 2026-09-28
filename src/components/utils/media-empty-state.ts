@@ -12,8 +12,7 @@ import { rovingRadioGroup } from './roving-radio-group';
 import { clearPreviewProgress, EXIT_CLEAR_MS, makePreview, setPreviewProgress, springHome, type MediaPreviewKind } from './media-empty-preview';
 import { leanPreview } from './media-preview-3d';
 import { matchEmbedService } from '../../tools/link/registry';
-import { brandMarkSlug } from './brand-mark-services';
-import { safeImageSrc } from './sanitize-url';
+import { brandMarkSlug, brandMarkSlugForUrl } from './brand-mark-services';
 
 /**
  * Shared "empty" uploader surface for media-style block tools (image, file):
@@ -428,7 +427,7 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     // The site's face: the chain flips into its first letter once the link is valid.
     const site = document.createElement('span');
     site.className = 'blok-media-empty__embed-site';
-    // A known provider's bundled mark, or the site's own icon, over the letter.
+    // A known provider's bundled mark over the letter.
     const logo = document.createElement('span');
     logo.className = 'blok-media-empty__embed-logo';
     fieldIcon.append(site, logo);
@@ -498,35 +497,13 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
 
     submit.append(submitLabelEl, kbd);
 
-    // The site's face: a known provider's bundled mark, loaded lazily; for any
-    // other site its own icon, asked for only once typing pauses, sharp icon
-    // first, no referrer. The letter tile shows until one of them arrives.
-    const face = { token: 0, timer: 0, url: '' };
+    // The site's face: a known provider's bundled mark, loaded lazily. Other
+    // sites keep the letter tile; their own icons are often low-res and blurry.
+    const face = { token: 0, url: '' };
     const clearFace = (): void => {
       face.token += 1;
-      window.clearTimeout(face.timer);
       logo.replaceChildren();
       fieldIcon.removeAttribute('data-logo');
-    };
-    const askSite = (origin: string, token: number): void => {
-      const candidates = ['/apple-touch-icon.png', '/favicon.ico'].map((path) => new URL(path, origin).href);
-      const img = document.createElement('img');
-      img.className = 'blok-media-empty__embed-favicon';
-      img.alt = '';
-      img.decoding = 'async';
-      img.setAttribute('referrerpolicy', 'no-referrer');
-      img.addEventListener('load', () => {
-        if (token === face.token) fieldIcon.setAttribute('data-logo', '');
-      });
-      img.addEventListener('error', () => {
-        const next = safeImageSrc(candidates.shift() ?? '');
-        if (next && token === face.token) img.setAttribute('src', next);
-        else img.remove();
-      });
-      const first = safeImageSrc(candidates.shift() ?? '');
-      if (!first) return;
-      img.setAttribute('src', first);
-      logo.replaceChildren(img);
     };
     const showFace = (url: URL | null): void => {
       const link = url ? url.toString() : '';
@@ -536,17 +513,14 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
       if (!url) return;
       const token = face.token;
       const service = matchEmbedService(url.href)?.service;
-      const slug = service ? brandMarkSlug(service) : null;
-      if (slug) {
-        void import('./brand-marks').then(({ brandMarkSvg }) => {
-          const svg = brandMarkSvg(slug);
-          if (token !== face.token || !svg) return;
-          logo.innerHTML = svg;
-          fieldIcon.setAttribute('data-logo', '');
-        });
-        return;
-      }
-      face.timer = window.setTimeout(() => askSite(url.origin, token), 400);
+      const slug = (service ? brandMarkSlug(service) : null) ?? brandMarkSlugForUrl(url);
+      if (!slug) return;
+      void import('./brand-marks').then(({ brandMarkSvg }) => {
+        const svg = brandMarkSvg(slug);
+        if (token !== face.token || !svg) return;
+        logo.innerHTML = svg;
+        fieldIcon.setAttribute('data-logo', '');
+      });
     };
 
     const isValid = (raw: string): boolean => {

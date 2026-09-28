@@ -238,6 +238,10 @@
      with dark glyphs in light theme; dark blocks below override to the inverse. */
   --blok-overlay-surface: #ffffff;
   --blok-overlay-ring: rgba(15, 15, 14, 0.08);
+  --blok-image-frame-ring: rgba(55, 53, 47, 0.16);
+  --blok-image-frame-ring-strong: rgba(55, 53, 47, 0.4);
+  --blok-image-readout-bg: #191919;
+  --blok-image-readout-fg: #ffffff;
   --blok-overlay-fg: rgba(15, 15, 14, 0.62);
   --blok-overlay-fg-strong: #1d1d1d;
   --blok-overlay-fg-hover: rgba(15, 15, 14, 0.06);
@@ -638,6 +642,10 @@
     --blok-overlay-dark: rgba(44, 44, 42, 0.92);
     --blok-overlay-surface: #2c2c2a;
     --blok-overlay-ring: rgba(255, 255, 255, 0.1);
+    --blok-image-frame-ring: rgba(255, 255, 255, 0.18);
+    --blok-image-frame-ring-strong: rgba(255, 255, 255, 0.45);
+    --blok-image-readout-bg: #f1f1ef;
+    --blok-image-readout-fg: #191919;
     --blok-overlay-fg: rgba(255, 255, 255, 0.86);
     --blok-overlay-fg-strong: #ffffff;
     --blok-overlay-fg-hover: rgba(255, 255, 255, 0.14);
@@ -827,6 +835,10 @@
   --blok-overlay-dark: rgba(44, 44, 42, 0.92);
   --blok-overlay-surface: #2c2c2a;
   --blok-overlay-ring: rgba(255, 255, 255, 0.1);
+  --blok-image-frame-ring: rgba(255, 255, 255, 0.18);
+  --blok-image-frame-ring-strong: rgba(255, 255, 255, 0.45);
+  --blok-image-readout-bg: #f1f1ef;
+  --blok-image-readout-fg: #191919;
   --blok-overlay-fg: rgba(255, 255, 255, 0.86);
   --blok-overlay-fg-strong: #ffffff;
   --blok-overlay-fg-hover: rgba(255, 255, 255, 0.14);

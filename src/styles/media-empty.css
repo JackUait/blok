@@ -144,12 +144,11 @@
 }
 
 /* ----- Preview: outline of the finished block (media-empty-preview.ts) -----
-   --mx/--my come from the pointer handler in media-empty-state.ts;
-   --blok-media-progress from setPreviewProgress in upload mode. */
+   The pointer tilt is real 3D drawn as vectors by media-preview-3d.ts, never a
+   CSS 3D transform (that tilts a bitmap; see media-preview-no-3d.test.ts).
+   --blok-media-progress comes from setPreviewProgress in upload mode. */
 .blok-media-preview {
   --blok-media-progress: 0;
-  --mx: 0;
-  --my: 0;
   --lift: 0px;
   --scale: 1;
   --blok-media-preview-ink: var(--blok-text-tertiary);
@@ -178,15 +177,6 @@
     opacity 600ms ease;
 }
 .blok-media-preview :where(svg g, svg defs *) { stroke: none; }
-.blok-media-preview__tilt {
-  transform-box: view-box;
-  transform-origin: 50% 50%;
-  transform: rotate(calc(var(--mx) * 2.5deg)) skewX(calc(var(--mx) * -3deg)) skewY(calc(var(--my) * 1.5deg));
-}
-.blok-media-preview__layer {
-  transform: translate(calc(var(--mx) * var(--d) * 1.3px), calc(var(--my) * var(--d) * 1.3px));
-  transition: transform 260ms ease-out;
-}
 
 .blok-media-preview__frame { fill: var(--blok-bg-primary); }
 .blok-media-preview__screen { fill: var(--blok-media-preview-tone); }
@@ -271,15 +261,13 @@
 }
 
 /* ----- Leaving: springHome (media-empty-preview.ts) springs the moving parts
-   home; these rules give the tilt, lift and transitions the same spring,
-   back layers first. --spring is a linear() curve set from JS. ----- */
+   home; these rules give the lift and transitions the same spring.
+   --spring is a linear() curve set from JS. ----- */
 .blok-media-preview[data-leaving],
-.blok-media-preview[data-leaving] .blok-media-preview__layer,
 .blok-media-preview[data-leaving] :where(svg *) {
   transition-duration: 900ms;
   transition-timing-function: var(--spring, cubic-bezier(0.34, 1.56, 0.64, 1));
 }
-.blok-media-preview[data-leaving] .blok-media-preview__layer { transition-delay: calc(var(--d) * 30ms); }
 /* hold the idle breathing still so the bars spring to a fixed target */
 .blok-media-preview[data-leaving] .blok-media-preview__bar { animation-play-state: paused; }
 
@@ -327,11 +315,8 @@
 .blok-media-preview[data-uploading] .blok-media-preview__fill { transform: scaleY(var(--p)); transition: transform 200ms linear; }
 
 @media (prefers-reduced-motion: reduce) {
+  .blok-media-preview { transform: none; }
   .blok-media-preview,
-  .blok-media-preview__tilt,
-  .blok-media-preview__layer { transform: none; }
-  .blok-media-preview,
-  .blok-media-preview__layer,
   .blok-media-preview :where(svg *) { transition: none; animation: none !important; }
 }
 

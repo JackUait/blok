@@ -4037,8 +4037,6 @@ span[data-blok-slash-search] {
 
 .blok-media-preview {
   --blok-media-progress: 0;
-  --mx: 0;
-  --my: 0;
   --lift: 0px;
   --scale: 1;
   --blok-media-preview-ink: var(--blok-text-tertiary);
@@ -4071,17 +4069,6 @@ span[data-blok-slash-search] {
 
 .blok-media-preview :where(svg g, svg defs *) {
   stroke: none;
-}
-
-.blok-media-preview__tilt {
-  transform-box: view-box;
-  transform-origin: 50% 50%;
-  transform: rotate(calc(var(--mx) * 2.5deg)) skewX(calc(var(--mx) * -3deg)) skewY(calc(var(--my) * 1.5deg));
-}
-
-.blok-media-preview__layer {
-  transform: translate(calc(var(--mx) * var(--d) * 1.3px), calc(var(--my) * var(--d) * 1.3px));
-  transition: transform 260ms ease-out;
 }
 
 .blok-media-preview__frame {
@@ -4228,13 +4215,9 @@ span[data-blok-slash-search] {
   animation: blok-media-preview-shuffle 1.1s cubic-bezier(0.22, 1, 0.36, 1) calc((var(--dir) + 1) * 90ms) both;
 }
 
-.blok-media-preview[data-leaving], .blok-media-preview[data-leaving] .blok-media-preview__layer, .blok-media-preview[data-leaving] :where(svg *) {
+.blok-media-preview[data-leaving], .blok-media-preview[data-leaving] :where(svg *) {
   transition-duration: 900ms;
   transition-timing-function: var(--spring, cubic-bezier(0.34, 1.56, 0.64, 1));
-}
-
-.blok-media-preview[data-leaving] .blok-media-preview__layer {
-  transition-delay: calc(var(--d) * 30ms);
 }
 
 .blok-media-preview[data-leaving] .blok-media-preview__bar {
@@ -4314,11 +4297,11 @@ span[data-blok-slash-search] {
   transition: transform 200ms linear;
 }
 
-[@media (prefers-reduced-motion: reduce)] .blok-media-preview, .blok-media-preview__tilt, .blok-media-preview__layer {
+[@media (prefers-reduced-motion: reduce)] .blok-media-preview {
   transform: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] .blok-media-preview, .blok-media-preview__layer, .blok-media-preview :where(svg *) {
+[@media (prefers-reduced-motion: reduce)] .blok-media-preview, .blok-media-preview :where(svg *) {
   transition: none;
   animation: none !important;
 }

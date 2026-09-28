@@ -10,6 +10,7 @@ import { setFieldValidity } from './field-validity';
 import { matchesMime } from './mime-match';
 import { rovingRadioGroup } from './roving-radio-group';
 import { EXIT_CLEAR_MS, makePreview, springHome, type MediaPreviewKind } from './media-empty-preview';
+import { leanPreview } from './media-preview-3d';
 
 /**
  * Shared "empty" uploader surface for media-style block tools (image, file):
@@ -502,8 +503,10 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     const pointer = { x: 0, y: 0, frame: 0 };
     const lean = (mx: string, my: string): void => {
       const stage = panel.querySelector<HTMLElement>('.blok-media-preview');
-      stage?.style.setProperty('--mx', mx);
-      stage?.style.setProperty('--my', my);
+      if (!stage) return;
+      stage.style.setProperty('--mx', mx);
+      stage.style.setProperty('--my', my);
+      leanPreview(stage, Number(mx), Number(my));
     };
     const axis = (pos: number, start: number, size: number): string =>
       String(Math.round(Math.min(1, Math.max(-1, ((pos - start) / size) * 2 - 1)) * 1000) / 1000);

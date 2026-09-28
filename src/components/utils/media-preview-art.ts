@@ -3,7 +3,7 @@
  * tone fills, per-instance clip ids, animation hooks), so it lives here and
  * not in the icons registry. media-empty.css animates the
  * `blok-media-preview__*` part classes; `__layer` groups carry a `--d` depth
- * that the pointer parallax multiplies.
+ * that media-preview-3d.ts turns into distance from the viewer.
  */
 import type { MediaPreviewKind } from './media-empty-preview';
 
@@ -97,7 +97,5 @@ function uid(): string {
   return Math.random().toString(36).slice(2, 9);
 }
 
-// The tilt lives on a group inside the SVG: a transform on the element around
-// the SVG makes the browser tilt a bitmap, and the lines turn jagged.
 export const previewSvg = (kind: MediaPreviewKind): string =>
-  `<svg viewBox="0 0 200 120" width="200" height="120" fill="none" focusable="false"><g class="blok-media-preview__tilt">${drawings[kind](`blok-media-preview-${uid()}`)}</g></svg>`;
+  `<svg viewBox="0 0 200 120" width="200" height="120" fill="none" focusable="false">${drawings[kind](`blok-media-preview-${uid()}`)}</svg>`;

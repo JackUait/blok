@@ -15,7 +15,7 @@ import { CSSVariables, css as popoverCss } from './popover.const';
 import { clampNestedPopoverTop, NESTED_POPOVER_VIEWPORT_MARGIN, resolveNestedPopoverBelowPlacement } from './popover-nested-position';
 import { resolvePosition } from './popover-position';
 import { createPositionTracker, resolveBoundaryRect, type PositionTracker } from './anchored-position';
-import { stripPopoverAttribute } from '../top-layer';
+import { promoteToTopLayer, removeFromTopLayer, stripPopoverAttribute } from '../top-layer';
 import { twMerge } from '../tw';
 
 import type {
@@ -139,6 +139,14 @@ export class PopoverDesktop extends PopoverAbstract {
    * types, and unobserved growth would push the card past the viewport edge.
    */
   private nestedBelowResizeObserver: ResizeObserver | null = null;
+
+  /**
+   * True while the open submenu sits in the Top Layer. Its coordinates are
+   * then viewport-based, and it must follow the page on scroll itself.
+   */
+  private nestedInTopLayer = false;
+
+  private nestedPositionTracker: PositionTracker | null = null;
 
   /**
    * Last hovered item inside popover.
@@ -1266,6 +1274,9 @@ export class PopoverDesktop extends PopoverAbstract {
     this.nestedBelowResizeObserver?.disconnect();
     this.nestedBelowResizeObserver = null;
 
+    this.nestedPositionTracker?.detach();
+    this.nestedPositionTracker = null;
+
     this.nestedPopover.off(PopoverEvent.ClosedOnActivate, this.closeOnNestedActivate);
     this.nestedPopover.hide();
     this.nestedPopover.destroy();
@@ -1340,6 +1351,21 @@ export class PopoverDesktop extends PopoverAbstract {
 
     this.nodes.popover.appendChild(nestedPopoverEl);
 
+    // Submenus always paint above host content, even when this popover is
+    // not in the Top Layer (the inline toolbar mounts in its own wrapper).
+    // Branch on the return value: promote() tags the element even when the
+    // Popover API is missing, and then the old parent-relative layout applies.
+    this.nestedInTopLayer = promoteToTopLayer(nestedPopoverEl);
+
+    if (this.nestedInTopLayer) {
+      // The top-layer reset sets inset:auto; pin the mount to the viewport
+      // origin so the container's coordinates are viewport coordinates.
+      nestedPopoverEl.style.top = '0';
+      nestedPopoverEl.style.left = '0';
+    } else {
+      removeFromTopLayer(nestedPopoverEl);
+    }
+
     this.setTriggerItemPosition(nestedPopoverEl, item);
 
     // Apply nested popover positioning (horizontal offset resolved to explicit
@@ -1366,6 +1392,17 @@ export class PopoverDesktop extends PopoverAbstract {
     });
 
     this.nestedPopover.show();
+
+    // A top-layer submenu is fixed to the viewport while its trigger scrolls
+    // with the page, so follow the trigger on scroll and resize.
+    if (this.nestedInTopLayer) {
+      this.nestedPositionTracker = createPositionTracker(nestedPopoverEl, () => {
+        if (this.nestedPopover !== null && this.nestedPopover !== undefined) {
+          this.applyNestedPopoverPositioning(nestedPopoverEl, item);
+        }
+      });
+      this.nestedPositionTracker.attach();
+    }
 
     // A below-placement popover keeps its content-driven width while open, so
     // observe it and re-clamp its position as the content grows or shrinks.
@@ -1421,7 +1458,11 @@ export class PopoverDesktop extends PopoverAbstract {
     // root (its offset parent), so viewport coordinates are converted into
     // that local coordinate space.
     const parentRect = this.nodes.popoverContainer.getBoundingClientRect();
-    const parentRootRect = this.nodes.popover.getBoundingClientRect();
+    // Coordinates are relative to the container's containing block: the
+    // pinned top-layer mount (the viewport origin), or else the parent root.
+    const parentRootRect = this.nestedInTopLayer
+      ? nestedPopoverEl.getBoundingClientRect()
+      : this.nodes.popover.getBoundingClientRect();
 
     // Items may opt out of the beside-placement and open under the parent
     // popover instead (the inline toolbar's submenus). The card sits under the
@@ -1521,6 +1562,9 @@ export class PopoverDesktop extends PopoverAbstract {
       });
 
       nestedContainer.style.top = `${clampedTop - parentRootRect.top}px`;
+    } else if (this.nestedInTopLayer && triggerItemRect) {
+      // The CSS fallback below is parent-relative; a top-layer mount is not.
+      nestedContainer.style.top = `${triggerItemRect.top - parentRootRect.top}px`;
     } else {
       nestedContainer.style.top = 'calc(var(--trigger-item-top) - var(--popover-height) / 2 + var(--item-height) / 2)';
     }

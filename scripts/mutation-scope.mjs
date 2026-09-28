@@ -9,11 +9,13 @@ import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 
 const SURVIVING_STATUSES = new Set(['Survived', 'NoCoverage']);
-// Seconds of covering tests per push run. Stryker's dry run runs a batch's
-// covering suites one file at a time, at about 1.08x their plain vitest time,
-// and CI wants the whole job under 7 minutes. The deadline below is what
-// guarantees that; this only keeps a run from reaching it.
+// Seconds of dry run per push run. Stryker's dry run runs a batch's covering
+// suites one file at a time, and CI wants the whole job under 7 minutes. The
+// deadline below is what guarantees that; this only keeps a run from reaching it.
 const DEFAULT_BUDGET = 150;
+// Stryker's dry run spends this long loading each test file on top of its
+// tests. Measured in CI: 112s over 98 files, and 152s over 129 for src/blok.ts.
+const PER_FILE_OVERHEAD = 1.15;
 // Source bytes per push run, for the mutants the ledger cannot reuse. At 60-83
 // bytes and 0.6-2.5 seconds per fresh mutant, this is 100-330 seconds when
 // nothing is reused.
@@ -601,7 +603,7 @@ const loadTestSeconds = () => {
   const known = Object.values(seconds).sort((a, b) => a - b);
   const median = known.length > 0 ? known[Math.floor(known.length / 2)] : 3;
 
-  return (test) => seconds[test] ?? median;
+  return (test) => (seconds[test] ?? median) + PER_FILE_OVERHEAD;
 };
 
 const readSource = (path) => {

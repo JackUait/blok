@@ -319,14 +319,16 @@ describe('PopoverItemDefault — contextual class matrix', () => {
     vi.restoreAllMocks();
   });
 
-  it('keeps popover padding off inline items and centers an icon-only inline item', () => {
+  it('centers an icon-only inline item with zero padding, dropping the popover item padding', () => {
     const item = makeItem({ icon: ALPHA_ICON, onActivate: () => {} }, { isInline: true });
     const root = getElement(item);
 
     expect(root.classList.contains('justify-center')).toBe(true);
     expect(root.classList.contains('pl-2')).toBe(false);
-    expect(root.classList.contains('px-1.5')).toBe(true);
+    expect(root.classList.contains('px-0')).toBe(true);
+    expect(root.classList.contains('py-0')).toBe(true);
     expect(root.classList.contains('px-2')).toBe(false);
+    expect(root.classList.contains('py-1.5')).toBe(false);
   });
 
   it('drops inline centering once a title joins an inline item', () => {

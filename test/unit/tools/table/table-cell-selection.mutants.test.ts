@@ -54,25 +54,21 @@ vi.mock('../../../../src/components/utils/popover', () => ({
   },
 }));
 
-/** The options and the tab node the pill menu's colour picker was built with. */
+/** The options and the focus hook the pill menu's colour picker was built with. */
 const colorPickerState = vi.hoisted(() => ({
   lastOptions: null as null | Record<string, unknown>,
-  tab: null as null | HTMLElement,
+  focusActiveSwatch: null as null | Mock,
 }));
 
 vi.mock('../../../../src/tools/table/table-cell-color-picker', () => ({
   createCellColorPicker: (options: Record<string, unknown>) => {
     colorPickerState.lastOptions = options;
 
-    const element = document.createElement('div');
-    const tab = document.createElement('button');
+    const focusActiveSwatch = vi.fn();
 
-    tab.setAttribute('role', 'tab');
-    tab.setAttribute('aria-selected', 'true');
-    element.appendChild(tab);
-    colorPickerState.tab = tab;
+    colorPickerState.focusActiveSwatch = focusActiveSwatch;
 
-    return { element };
+    return { element: document.createElement('div'), focusActiveSwatch };
   },
 }));
 
@@ -2888,36 +2884,21 @@ describe('TableCellSelection — mutation gaps', () => {
       expect(onColorChange.mock.calls[0][2]).toBe('background');
     });
 
-    it('focuses the active colour tab when the submenu opens by keyboard', async () => {
+    it('asks the picker to focus its active swatch once the submenu has opened', async () => {
       openMenu({ onColorChange: vi.fn() });
 
       const children = itemNamed('tools.table.cellColor')?.children as { onOpen: () => void };
-      const tab = colorPickerState.tab as HTMLElement;
-      const focus = vi.spyOn(tab, 'focus').mockImplementation(() => undefined);
+      const focusActiveSwatch = colorPickerState.focusActiveSwatch;
 
-      // The menu itself was opened by a synthetic press; a key press is what
-      // puts the editor back into keyboard modality.
-      document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
       children.onOpen();
 
       // Deferred: focusing synchronously would fight the click that opened the menu.
-      expect(focus).not.toHaveBeenCalled();
+      // The keyboard-only gate lives inside focusActiveSwatch itself.
+      expect(focusActiveSwatch).not.toHaveBeenCalled();
 
       await Promise.resolve();
 
-      expect(focus).toHaveBeenCalledWith({ preventScroll: true });
-    });
-
-    it('leaves focus alone when the submenu opens by pointer', () => {
-      openMenu({ onColorChange: vi.fn() });
-
-      const children = itemNamed('tools.table.cellColor')?.children as { onOpen: () => void };
-      const tab = colorPickerState.tab as HTMLElement;
-      const focus = vi.spyOn(tab, 'focus').mockImplementation(() => undefined);
-
-      children.onOpen();
-
-      expect(focus).not.toHaveBeenCalled();
+      expect(focusActiveSwatch).toHaveBeenCalledTimes(1);
     });
 
     it('adds a placement entry only when a placement handler exists', () => {
@@ -4422,24 +4403,6 @@ describe('TableCellSelection — mutation gaps', () => {
 
       expect(sink).not.toHaveBeenCalled();
     });
-
-    it('survives a submenu whose tab has gone', async () => {
-      grid = createPlainGrid();
-      mockRects(grid, PAINT_ROW_HEIGHT, 2, 2);
-      selection = makeSelection({ onColorChange: vi.fn() });
-      selection.selectRange({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
-      openPillMenu(grid);
-
-      const children = itemNamed('tools.table.cellColor')?.children as { onOpen: () => void };
-
-      colorPickerState.tab?.remove();
-      document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
-      children.onOpen();
-
-      await Promise.resolve();
-
-      expect(colorPickerState.tab?.isConnected).toBe(false);
-    });
   });
 
   /* ---------------------------------------------------------------- *
@@ -5448,41 +5411,6 @@ describe('TableCellSelection — mutation gaps', () => {
       expect(selection.getSelectedRange()).toBeNull();
       expect(selectedCoords(grid)).toStrictEqual([]);
       expect(active).toStrictEqual([]);
-    });
-  });
-
-  describe('colour submenu with no active tab', () => {
-    /**
-     * The deferred focus runs in a microtask, where a throw escapes the test's
-     * own stack — the recorder is what makes it visible.
-     */
-    it('does not explode when the picker has no selected tab', async () => {
-      const uncaught: unknown[] = [];
-      const record = (error: unknown): void => {
-        uncaught.push(error);
-      };
-
-      process.on('uncaughtException', record);
-
-      try {
-        grid = createPlainGrid();
-        mockRects(grid, PAINT_ROW_HEIGHT, 2, 2);
-        selection = makeSelection({ onColorChange: vi.fn() });
-        selection.selectRange({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 1 });
-        openPillMenu(grid);
-
-        const children = itemNamed('tools.table.cellColor')?.children as { onOpen: () => void };
-
-        colorPickerState.tab?.remove();
-        document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
-        children.onOpen();
-
-        await new Promise(resolve => setTimeout(resolve, 0));
-
-        expect(uncaught).toStrictEqual([]);
-      } finally {
-        process.off('uncaughtException', record);
-      }
     });
   });
 

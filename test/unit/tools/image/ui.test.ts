@@ -191,7 +191,8 @@ describe('renderAltPill', () => {
     expect(pill.getAttribute('data-action')).toBe('alt-edit');
     expect(pill.getAttribute('data-state')).toBe('missing');
     expect(pill.getAttribute('aria-pressed')).toBe('false');
-    expect(pill.getAttribute('aria-label')).toBe('Edit alt text');
+    // Named by its visible text, so a voice user saying "click Add alt text" hits it.
+    expect(pill.hasAttribute('aria-label')).toBe(false);
     expect(pill.textContent).toContain('Add alt text');
     expect(pill.querySelector('.blok-image-alt-pill__help')).not.toBeNull();
   });
@@ -205,6 +206,7 @@ describe('renderAltPill', () => {
     expect(pill.textContent).toContain('Pink yarn mascot');
     expect(pill.querySelector('.blok-image-alt-pill__help')).toBeNull();
     expect(pill.querySelector('.blok-image-alt-pill__mark svg')).not.toBeNull();
+    expect(pill.hasAttribute('aria-label')).toBe(false);
   });
 
   it('opens the editor on click without bubbling to the block', () => {

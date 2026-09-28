@@ -30,7 +30,11 @@ vi.mock('../../../../src/tools/image/gif-to-webm', () => ({ convertGifToWebm: vi
 vi.mock('../../../../src/tools/image/download', () => ({ downloadImage: vi.fn() }));
 vi.mock('../../../../src/tools/image/crop-modal', () => ({ openCropModal: vi.fn() }));
 vi.mock('../../../../src/tools/image/probe-dimensions', () => ({ probeImageDimensions: vi.fn() }));
-vi.mock('../../../../src/tools/image/resizer', () => ({ attachResizeHandle: vi.fn() }));
+vi.mock('../../../../src/tools/image/resizer', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+
+  return { ...actual, attachResizeHandle: vi.fn() };
+});
 vi.mock('../../../../src/tools/image/ui', async (importOriginal) => {
   const actual = await importOriginal<typeof ImageUiModule>();
 

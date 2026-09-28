@@ -2280,3 +2280,46 @@ describe('ImageTool — chrome sized to the picture, not the caption', () => {
     expect(figure.style.getPropertyValue('--blok-image-media-height')).toBe('320px');
   });
 });
+
+describe('ImageTool — destroy', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('drops its window scroll listener when the editor is destroyed', () => {
+    const remove = vi.spyOn(window, 'removeEventListener');
+    const { tool } = renderRenderedImage();
+
+    tool.destroy();
+
+    expect(remove).toHaveBeenCalledWith('scroll', expect.any(Function), { capture: true });
+  });
+});
+
+describe('ImageTool — snap guides', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('draws a guide per snap width where the dragged edge would land, and marks the one it snapped to', () => {
+    const { root } = renderRenderedImage({ alignment: 'left', width: 60 });
+    const figure = root.querySelector<HTMLElement>('[data-role="image-figure"]');
+    const handle = root.querySelector<HTMLElement>('[data-role="resize-handle"][data-edge="right"]');
+    if (!figure || !handle) throw new Error('figure or handle missing');
+    const rect = (width: number): DOMRect => ({ left: 0, right: width, width, top: 300, bottom: 600, height: 300, x: 0, y: 300, toJSON: () => ({}) });
+    Object.defineProperty(figure, 'getBoundingClientRect', { value: () => rect(600) });
+    Object.defineProperty(root, 'getBoundingClientRect', { value: () => rect(1000) });
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+
+    handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, pointerId: 1, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointermove', { clientX: -80, pointerId: 1, bubbles: true }));
+
+    const guides = Array.from(root.querySelectorAll<HTMLElement>('[data-role="image-snap-guides"] > *'));
+
+    expect(guides.map((g) => g.style.left)).toEqual(['25%', '50%', '75%', '100%']);
+    expect(guides.map((g) => g.hasAttribute('data-hit'))).toEqual([false, true, false, false]);
+  });
+});

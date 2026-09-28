@@ -9,6 +9,7 @@ import {
   attachHeightResizeHandle,
   MIN_HEIGHT_PX,
   MAX_HEIGHT_PX,
+  edgePositionPercent,
 } from '../../../../src/tools/image/resizer';
 
 describe('clampPercent', () => {
@@ -668,5 +669,20 @@ describe('attachResizeHandle snapping', () => {
 
     expect(updates.at(-1)).toBe(50);
     detach();
+  });
+});
+
+describe('edgePositionPercent', () => {
+  it('centered: each edge sits half the width from the middle', () => {
+    expect(edgePositionPercent(50, 0.5, 'right')).toBe(75);
+    expect(edgePositionPercent(50, 0.5, 'left')).toBe(25);
+  });
+
+  it('left-aligned: the right edge sits at the width', () => {
+    expect(edgePositionPercent(75, 0, 'right')).toBe(75);
+  });
+
+  it('right-aligned: the left edge sits at 100 minus the width', () => {
+    expect(edgePositionPercent(25, 1, 'left')).toBe(75);
   });
 });

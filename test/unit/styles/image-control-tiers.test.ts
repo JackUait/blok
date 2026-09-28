@@ -147,3 +147,34 @@ describe('alt hint and pill width', () => {
     expect(findRuleBody('[data-blok-tool="image"] .blok-image-alt-pill')).toContain('max-width: min(calc(100% - 20px), 240px)');
   });
 });
+
+describe('image chrome inside a table cell (the cell clips overflow)', () => {
+  it('keeps the ring and the dots inside the figure', () => {
+    expect(css).toMatch(/\[data-blok-table-cell\] \[data-blok-tool="image"\] \[data-role="image-selection-ring"\][^{]*\{[^}]*left: 0/);
+    expect(css).toMatch(/\[data-blok-table-cell\] \[data-blok-tool="image"\] \[data-role="resize-handle"\]\[data-edge="left"\]\s*\{\s*left: var\(--blok-space-1\)/);
+    expect(css).toMatch(/\[data-blok-table-cell\] \[data-blok-tool="image"\] \[data-role="resize-handle"\]\[data-edge="right"\]\s*\{\s*right: var\(--blok-space-1\)/);
+  });
+});
+
+describe('alt stays reachable on small images', () => {
+  it('does not hide the alt pill in the compact tier (the settings menu has no alt entry)', () => {
+    expect(css).not.toContain('[data-compact="true"] ~ .blok-image-alt-pill');
+  });
+});
+
+describe('snap guides', () => {
+  it('show only while resizing, and the hit guide is stronger', () => {
+    expect(findRuleBody('[data-blok-tool="image"] [data-role="image-snap-guides"]')).toContain('opacity: 0');
+    expect(findRuleBody('[data-blok-tool="image"][data-resizing="true"] [data-role="image-snap-guides"]')).toContain('opacity: 1');
+    expect(findRuleBody('[data-blok-tool="image"] [data-role="image-snap-guides"] > [data-hit]')).toContain('var(--blok-image-frame-ring-strong)');
+  });
+});
+
+describe('hover bridge above the picture', () => {
+  it('spans the 20px gap below islands that float above', () => {
+    const body = findRuleBody('[data-blok-tool="image"] .blok-image-toolbar[data-islands-placement="above"]::after');
+
+    expect(body).toContain('top: 100%');
+    expect(body).toContain('height: 20px');
+  });
+});

@@ -46,3 +46,21 @@ describe('islandBoundaryTop', () => {
     editor.remove();
   });
 });
+
+describe('islandBoundaryTop inside a table cell', () => {
+  it('uses the cell top: the cell clips anything above it', () => {
+    const editor = document.createElement('div');
+    editor.setAttribute('data-blok-redactor', '');
+    const cell = document.createElement('div');
+    cell.setAttribute('data-blok-table-cell', '');
+    const figure = document.createElement('div');
+    cell.appendChild(figure);
+    editor.appendChild(cell);
+    document.body.appendChild(editor);
+    Object.defineProperty(editor, 'getBoundingClientRect', { value: () => ({ top: 10 }) });
+    Object.defineProperty(cell, 'getBoundingClientRect', { value: () => ({ top: 400 }) });
+
+    expect(islandBoundaryTop(figure)).toBe(400);
+    editor.remove();
+  });
+});

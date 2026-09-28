@@ -611,11 +611,12 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // --blok-media-preview-shadow token in the colors.css palettes.
     const MEDIA_EMPTY_PREVIEW_BYTES = 22_434;
     // Image chrome (frame and islands): island cards and their split motion,
-    // selection ring, dot handles, width readout and the on-image alt pill in
+    // selection ring, dot handles, width readout, snap guides, hover bridge,
+    // table-cell insets and the on-image alt pill in
     // image.css, minus the old toolbar base in main.css and the caption-row Alt
     // chip; the quiet alt note in alt-popover.css; five --blok-image-* tokens in
     // the colors.css palettes. Measured net growth against 523c1716.
-    const IMAGE_CHROME_ISLANDS_BYTES = 6_666;
+    const IMAGE_CHROME_ISLANDS_BYTES = 8_510;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

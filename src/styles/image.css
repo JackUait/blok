@@ -102,6 +102,41 @@
   text-align: start;
 }
 
+/* Snap guides: where the dragged edge lands at each snap width. Placed by tools/image/index.ts. */
+[data-blok-tool="image"] [data-role="image-snap-guides"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+[data-blok-tool="image"][data-resizing="true"] [data-role="image-snap-guides"] {
+  opacity: 1;
+}
+[data-blok-tool="image"] [data-role="image-snap-guides"] > * {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  translate: -50% 0;
+  background: repeating-linear-gradient(to bottom, var(--blok-image-frame-ring) 0 3px, transparent 3px 6px);
+}
+[data-blok-tool="image"] [data-role="image-snap-guides"] > [data-hit] {
+  background: var(--blok-image-frame-ring-strong);
+}
+
+/* A table cell clips its overflow, so the ring and dots that sit outside the figure move inside it. */
+[data-blok-table-cell] [data-blok-tool="image"] [data-role="image-selection-ring"],
+[data-blok-selected="true"] [data-blok-table-cell] [data-blok-tool="image"] [data-role="image-selection-ring"],
+[data-blok-table-cell] [data-blok-tool="image"][data-resizing="true"] [data-role="image-selection-ring"] {
+  top: 0;
+  right: 0;
+  left: 0;
+  height: var(--blok-image-media-height, 100%);
+}
+[data-blok-table-cell] [data-blok-tool="image"] [data-role="resize-handle"][data-edge="left"]  { left: var(--blok-space-1); }
+[data-blok-table-cell] [data-blok-tool="image"] [data-role="resize-handle"][data-edge="right"] { right: var(--blok-space-1); }
+
 /* alt pill — sits on the figure, bottom-left */
 [data-blok-tool="image"] .blok-image-alt-pill {
   position: absolute;
@@ -143,8 +178,7 @@
 [data-blok-tool="image"] .blok-image-alt-pill:focus-visible {
   opacity: 1;
 }
-[data-blok-tool="image"] .blok-image-inner[data-loading="true"] .blok-image-alt-pill,
-[data-blok-tool="image"] .blok-image-toolbar[data-compact="true"] ~ .blok-image-alt-pill {
+[data-blok-tool="image"] .blok-image-inner[data-loading="true"] .blok-image-alt-pill {
   display: none;
 }
 [data-blok-tool="image"] .blok-image-alt-pill__mark {
@@ -192,6 +226,16 @@
 
 /* toolbar base rule lives in main.css to satisfy direct readFileSync audits.
    Additional toolbar states/children remain here. */
+/* Bridges the 20px gap to the figure: the pointer is still "on" the figure while it climbs to the islands.
+   Only when they float above; inside, it would cover the picture and swallow the lightbox click. */
+[data-blok-tool="image"] .blok-image-toolbar[data-islands-placement="above"]::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  height: 20px;
+}
 [data-blok-tool="image"] .blok-image-toolbar[data-islands-placement="inside"] {
   bottom: auto;
   top: 10px;
@@ -869,7 +913,8 @@
   [data-blok-tool="image"] .blok-image-toolbar__island,
   [data-blok-tool="image"] [data-role="resize-handle"],
   [data-blok-tool="image"] [data-role="image-selection-ring"],
-  [data-blok-tool="image"] .blok-image-alt-pill {
+  [data-blok-tool="image"] .blok-image-alt-pill,
+  [data-blok-tool="image"] [data-role="image-snap-guides"] {
     animation: none !important;
     transition: none !important;
   }

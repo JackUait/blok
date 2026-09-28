@@ -1,4 +1,5 @@
 import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { TABLE_CELL_ATTR } from './constants';
 
 /** Must match the `bottom: calc(100% + 20px)` on `.blok-image-toolbar` in main.css. */
 export const ISLAND_GAP_PX = 20;
@@ -15,12 +16,17 @@ export function resolveIslandPlacement(input: {
   return room >= input.islandHeight + ISLAND_GAP_PX ? 'above' : 'inside';
 }
 
-/** The lower of the viewport top and the editor's top edge: islands must not poke out past either. */
+/**
+ * The lowest of the viewport top, the editor's top edge and a table cell's top edge:
+ * islands must not poke out past any of them (a cell clips its overflow).
+ */
 export function islandBoundaryTop(figure: HTMLElement): number {
   const editor = figure.closest<HTMLElement>(`[${DATA_ATTR.redactor}]`);
+  const cell = figure.closest<HTMLElement>(`[${TABLE_CELL_ATTR}]`);
   const editorTop = editor ? editor.getBoundingClientRect().top : 0;
+  const cellTop = cell ? cell.getBoundingClientRect().top : 0;
 
-  return Math.max(0, editorTop);
+  return Math.max(0, editorTop, cellTop);
 }
 
 /**

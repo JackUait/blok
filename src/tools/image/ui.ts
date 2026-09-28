@@ -198,7 +198,6 @@ export function renderAltPill(opts: AltPillOptions): HTMLButtonElement {
   btn.setAttribute('data-action', 'alt-edit');
   btn.setAttribute('data-state', hasAlt ? 'set' : 'missing');
   btn.setAttribute('aria-pressed', hasAlt ? 'true' : 'false');
-  btn.setAttribute('aria-label', tr(opts.i18n, 'tools.image.altEdit'));
 
   const mark = document.createElement('span');
   mark.className = 'blok-image-alt-pill__mark';

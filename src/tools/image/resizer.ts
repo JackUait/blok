@@ -83,6 +83,13 @@ function snapTo(value: number, points: readonly number[] | undefined): number {
   return points.find((p) => Math.abs(value - p) <= SNAP_TOLERANCE_PERCENT) ?? value;
 }
 
+/** Where the dragged edge sits, as a percent of the container, when the figure is `width` percent wide. */
+export function edgePositionPercent(width: number, alignFrac: number, edge: ResizeEdge): number {
+  const left = alignFrac * (100 - width);
+
+  return edge === 'right' ? left + width : left;
+}
+
 export function computeWidthPercent(input: ComputeWidthInput): number {
   return computeWidthResult(input).percent;
 }

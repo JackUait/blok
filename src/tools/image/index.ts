@@ -42,7 +42,7 @@ import { resolveUploadError } from '../../components/utils/media-upload-error';
 import { pickDisplayMaxSize } from '../../components/utils/max-size';
 import { renderErrorState } from './error-state';
 import { ImageError } from './errors';
-import { attachResizeHandle, type ResizeEdge } from './resizer';
+import { alignmentFraction, attachResizeHandle, edgePositionPercent, type ResizeEdge } from './resizer';
 import { resizeFloorPx } from './resize-floor';
 import { widthForAspectChange } from './crop-math';
 import {
@@ -849,6 +849,13 @@ export class ImageTool implements BlockTool {
     releaseObjectUrl(this.api, this.block.id, this.data.url);
   }
 
+  /** Editor teardown: `removed()` only runs when the block is deleted, not on `editor.destroy()`. */
+  public destroy(): void {
+    this.detachResize();
+    this.altPopoverDetach?.();
+    this.altPopoverDetach = null;
+  }
+
   private detachResize(): void {
     while (this.resizeDetach.length > 0) {
       const detach = this.resizeDetach.pop();
@@ -1025,7 +1032,6 @@ export class ImageTool implements BlockTool {
 
       this.observeOverlayWidth(figure, overlay);
 
-      // Must follow the toolbar: the compact-tier rule hides it with `.blok-image-toolbar ~`.
       figure.appendChild(renderAltPill({
         alt: this.data.alt,
         onOpen: () => this.promptAlt(),
@@ -1128,6 +1134,12 @@ export class ImageTool implements BlockTool {
     readout.setAttribute('aria-hidden', 'true');
     figure.appendChild(readout);
     const container = figure.parentElement ?? figure;
+    const guides = document.createElement('div');
+    guides.setAttribute('data-role', 'image-snap-guides');
+    guides.setAttribute('aria-hidden', 'true');
+    const guideLines = IMAGE_SNAP_POINTS.map(() => guides.appendChild(document.createElement('div')));
+    container.appendChild(guides);
+    const alignFrac = alignmentFraction(this.data.alignment ?? 'center');
     const endDrag = (): void => this.root?.removeAttribute('data-resizing');
     const edges: ResizeEdge[] = ['left', 'right'];
     for (const edge of edges) {
@@ -1152,6 +1164,10 @@ export class ImageTool implements BlockTool {
           readout.setAttribute('data-edge', edge);
           const px = Math.round((container.getBoundingClientRect().width * percent) / 100);
           readout.textContent = `${percent}% · ${px} px`;
+          IMAGE_SNAP_POINTS.forEach((snap, i) => {
+            guideLines[i].style.left = `${edgePositionPercent(snap, alignFrac, edge)}%`;
+            guideLines[i].toggleAttribute('data-hit', snap === percent);
+          });
         },
         onCommit: (percent) => {
           endDrag();

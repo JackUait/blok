@@ -63,6 +63,10 @@ Tiers keep today's thresholds (`OVERLAY_MEDIUM_THRESHOLD` 360, `OVERLAY_COMPACT_
   they sit just inside the image's top edge. Same look, same animation.
 - Placement is checked when the islands show, and on scroll while they are visible.
 - The toolbar carries `data-islands-placement="above" | "inside"`.
+- A table cell clips its overflow, so its top counts as a boundary too, and inside a cell the ring
+  and the dots move inside the figure.
+- While the islands float above, an invisible 20 px strip under them keeps the figure hovered,
+  so a pointer climbing from the picture reaches them.
 
 ## Motion: split
 
@@ -98,7 +102,9 @@ Tiers keep today's thresholds (`OVERLAY_MEDIUM_THRESHOLD` 360, `OVERLAY_COMPACT_
 - Missing alt: gray dot, "Add alt text", and a small "?".
 - Set alt: a check, "Alt", and the start of the text, cut with an ellipsis.
 - Keeps `data-action="alt-edit"` and `aria-pressed`. Click opens the existing alt popover.
-- Hidden in the compact tier. Alt stays reachable from the block settings menu.
+- Shown in every tier, compact included. (An earlier draft hid it in compact on the belief that
+  the block settings menu has an alt entry. It has none, so hiding it would remove alt editing
+  from small images.)
 - Shown whether or not the caption is visible. Today the Alt chip disappears with the caption,
   because it lives in the caption row.
 - **Hint.** A Blok tooltip after a short hover delay, or on keyboard focus:

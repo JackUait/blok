@@ -94,11 +94,6 @@ const EXEMPT_SINKS: FontSizeSink[] = [
     reason: 'fixed-size list bullet on a child that is neither a [data-blok-tool] root nor a [role="listitem"]; intentional, matches its size outside cells',
   },
   {
-    file: 'src/tools/table/table-cell-placement-picker.ts',
-    match: 'label.style.fontSize',
-    reason: 'table cell-placement picker chrome (a control label) — never rendered as cell block content',
-  },
-  {
     file: 'src/tools/database/index.ts',
     match: 'titleEl.style.fontSize',
     reason: 'database page title, not inline cell body text; database is a page container and its title size is intentional',

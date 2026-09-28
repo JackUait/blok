@@ -239,12 +239,12 @@ describe('merging a table that contains another table', () => {
     }
     alignment.click();
 
-    const bottomRight = document.querySelector<HTMLElement>('[data-placement="bottom-right"]');
+    const middleRight = document.querySelector<HTMLElement>('[data-placement="middle-right"]');
 
-    if (bottomRight === null) {
-      throw new Error('bottom-right placement is missing');
+    if (middleRight === null) {
+      throw new Error('middle-right placement is missing');
     }
-    bottomRight.click();
+    middleRight.click();
 
     const saved = await editor?.save();
     const outer = saved?.blocks.find(block => block.id === 'outer');
@@ -253,6 +253,6 @@ describe('merging a table that contains another table', () => {
     if (!Array.isArray(content)) {
       throw new Error('outer table content is missing');
     }
-    expect(content[1][1]).toMatchObject({ placement: 'bottom-right' });
+    expect(content[1][1]).toMatchObject({ placement: 'middle-right' });
   });
 });

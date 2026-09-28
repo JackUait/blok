@@ -87,7 +87,7 @@ test('block menu search focuses the first result when Convert to entries match',
 });
 
 for (const surface of ['settings', 'inline'] as const) {
-  test(`${surface}: the real convert menu keeps its wide layout`, async ({ page }) => {
+  test(`${surface}: the real convert menu keeps its narrow list layout`, async ({ page }) => {
     const content = page.getByText(TEXT, { exact: true });
 
     if (surface === 'inline') {
@@ -103,6 +103,6 @@ for (const surface of ['settings', 'inline'] as const) {
     await expect(heading).toBeVisible();
     await expect.poll(() => heading.evaluate(element =>
       Math.round(element.closest('[data-blok-popover-container]')?.getBoundingClientRect().width ?? 0)
-    )).toBe(392);
+    )).toBe(232);
   });
 }

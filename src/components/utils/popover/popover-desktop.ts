@@ -2,7 +2,8 @@ import { DATA_ATTR } from '../../constants/data-attributes';
 import { Flipper } from '../../flipper';
 import { keyCodes } from '../../utils';
 import { generateId } from '../id-generator';
-import { isKeyboardModality } from '../input-modality';
+import { isKeyboardModality, recordPointerGesture } from '../input-modality';
+import { KeyboardEngagement } from './keyboard-engagement';
 
 import type { PopoverItem, PopoverItemRenderParamsMap } from './components/popover-item';
 import { PopoverItemSeparator, css as popoverItemCls, PopoverItemDefault, PopoverItemType } from './components/popover-item';
@@ -147,6 +148,12 @@ export class PopoverDesktop extends PopoverAbstract {
   private nestedInTopLayer = false;
 
   private nestedPositionTracker: PositionTracker | null = null;
+
+  /**
+   * Whether the user has used the keyboard in the open submenu. Only that may
+   * hold a submenu open against the pointer grace; focus alone may not.
+   */
+  private nestedKeyboard: KeyboardEngagement | null = null;
 
   /**
    * Last hovered item inside popover.
@@ -990,6 +997,19 @@ export class PopoverDesktop extends PopoverAbstract {
     this.nestedPopoverTriggerItem = item;
 
     this.showNestedPopoverForItem(item);
+    // A click records pointer modality before it lands here; a key press keyboard.
+    this.trackNestedKeyboard(isKeyboardModality());
+  }
+
+  /**
+   * Starts tracking keyboard use in the submenu that just opened.
+   * @param openedByKeyboard - true when a key press opened it
+   */
+  private trackNestedKeyboard(openedByKeyboard: boolean): void {
+    this.nestedKeyboard?.destroy();
+    this.nestedKeyboard = this.nestedPopover === null || this.nestedPopover === undefined
+      ? null
+      : new KeyboardEngagement(this.nestedPopover.getElement(), openedByKeyboard);
   }
 
   /**
@@ -1164,9 +1184,9 @@ export class PopoverDesktop extends PopoverAbstract {
       // Pointer intent must never evict a submenu the keyboard is inside:
       // typing into its search field or stepping through its items is an
       // active interaction that the pointer position says nothing about.
-      // Without this the grace fires ~300ms after the mouse wanders off and
-      // the submenu vanishes mid-typing, dropping focus to <body>.
-      if (this.isNestedPopoverFocused()) {
+      // Focus alone is not that signal — opening a submenu focuses it by
+      // itself — so the user must also have used the keyboard in it.
+      if (this.nestedKeyboard?.isEngaged === true && this.isNestedPopoverFocused()) {
         return;
       }
 
@@ -1208,7 +1228,11 @@ export class PopoverDesktop extends PopoverAbstract {
     this.destroyNestedPopoverIfExists(false);
 
     this.nestedPopoverTriggerItem = item;
+    // The hover is the gesture that opened it: open hooks must see pointer modality.
+    recordPointerGesture();
     this.showNestedPopoverForItem(item);
+    // Hover never counts as keyboard use, whatever the last modality was.
+    this.trackNestedKeyboard(false);
   }
 
   /**
@@ -1276,6 +1300,9 @@ export class PopoverDesktop extends PopoverAbstract {
 
     this.nestedPositionTracker?.detach();
     this.nestedPositionTracker = null;
+
+    this.nestedKeyboard?.destroy();
+    this.nestedKeyboard = null;
 
     this.nestedPopover.off(PopoverEvent.ClosedOnActivate, this.closeOnNestedActivate);
     this.nestedPopover.hide();
@@ -1389,6 +1416,22 @@ export class PopoverDesktop extends PopoverAbstract {
     this.listeners.on(nestedPopoverEl, 'pointerenter', () => {
       this.cancelNestedOpenIntent();
       this.cancelNestedCloseIntent();
+    });
+
+    // The parent's own mouseleave ignores a move INTO the submenu, so a pointer
+    // that exits the page THROUGH the submenu must start the close here, or the
+    // submenu and its lit trigger row stay forever. A move back into the parent
+    // menu is left to its hover handling.
+    this.listeners.on(nestedPopoverEl, 'pointerleave', (event: Event) => {
+      const to = event instanceof MouseEvent ? event.relatedTarget : null;
+
+      if (to instanceof Node && (this.nodes.popoverContainer.contains(to) || nestedPopoverEl.contains(to))) {
+        return;
+      }
+
+      this.cancelNestedOpenIntent();
+      this.scheduleNestedClose();
+      this.previouslyHoveredItem = null;
     });
 
     this.nestedPopover.show();

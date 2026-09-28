@@ -94,7 +94,7 @@ test.describe('Block settings active state', () => {
     await expect(activeItems).toHaveCount(0);
   });
 
-  test('convert-to submenu items should not have active state', async ({ page }) => {
+  test('convert-to submenu marks only the block\'s own type as active', async ({ page }) => {
     await openBlockSettings(page);
 
     /**
@@ -109,12 +109,14 @@ test.describe('Block settings active state', () => {
     await expect(nestedPopover).toBeVisible();
 
     /**
-     * No items in the nested popover should have the active attribute.
-     * These are tool options for conversion and none should be pre-selected.
+     * Only the block's current type is marked, with its checkmark, like Notion.
+     * Every conversion target stays unselected.
      */
     const activeNestedItems = nestedPopover.locator('[data-blok-popover-item-active]');
 
-    await expect(activeNestedItems).toHaveCount(0);
+    await expect(activeNestedItems).toHaveCount(1);
+    await expect(activeNestedItems).toHaveAccessibleName('Text');
+    await expect(activeNestedItems.getByTestId('popover-item-trailing-icon')).toBeVisible();
   });
 
   test('items should not appear focused when block settings opens without keyboard interaction', async ({ page }) => {

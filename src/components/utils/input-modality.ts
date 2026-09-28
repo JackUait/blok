@@ -62,6 +62,16 @@ if (typeof document !== 'undefined') {
 }
 
 /**
+ * Records a pointer gesture that no pointerdown announces: a hover that opens a
+ * submenu. Pointer motion alone never changes modality, so without this a key
+ * pressed earlier keeps 'keyboard' alive and the hover-opened menu paints a
+ * keyboard cursor and focus ring on its first control.
+ */
+export function recordPointerGesture(): void {
+  rememberPointer();
+}
+
+/**
  * Whether the last user gesture came from the keyboard.
  * @returns true when a focus cursor or focus ring should be shown.
  */

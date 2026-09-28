@@ -83,6 +83,7 @@ vi.mock('../../../../../src/components/flipper', () => {
   };
 });
 
+import { isKeyboardModality } from '../../../../../src/components/utils/input-modality';
 import { PopoverDesktop } from '../../../../../src/components/utils/popover/popover-desktop';
 import type { PopoverItem } from '../../../../../src/components/utils/popover/components/popover-item';
 import { PopoverItemDefault } from '../../../../../src/components/utils/popover/components/popover-item/popover-item-default/popover-item-default';
@@ -618,6 +619,8 @@ describe('PopoverDesktop — show() side effects', () => {
   it('pre-focuses the first item via the flipper under keyboard modality', async () => {
     const popover = createPopover({ items: [parentWithChildren()] });
 
+    // Modality is page-wide; an earlier hover open leaves 'pointer' behind.
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift' }));
     popover.show();
     await Promise.resolve();
 
@@ -1353,6 +1356,7 @@ describe('PopoverDesktop — nested submenu lifecycle', () => {
 
     (opened as PopoverDesktop).getElement().appendChild(focusTarget);
     focusTarget.focus();
+    focusTarget.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
     expect(focusTarget).toHaveFocus();
 
     // Pointer leaves the parent popover entirely → grace close scheduled.
@@ -1361,6 +1365,152 @@ describe('PopoverDesktop — nested submenu lifecycle', () => {
 
     expect(instance.nestedPopover).toBe(opened);
     expect(focusTarget).toHaveFocus();
+  });
+
+  /**
+   * Opening a submenu moves focus into it by itself (its search field, or its
+   * first row in keyboard modality). That focus says nothing about the user,
+   * so it must not keep a pointer-opened submenu alive after the pointer left.
+   */
+  const focusInside = (submenu: PopoverDesktop): HTMLInputElement => {
+    const input = document.createElement('input');
+
+    submenu.getElement().appendChild(input);
+    input.focus();
+
+    return input;
+  };
+
+  it('closes a hover-opened submenu that took focus on open once the pointer leaves', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+    const parentElement = itemByName(popover, 'c-parent').getElement();
+
+    popover.show();
+    instance.handleHover(hoverOn(parentElement as Element, { clientX: 5, clientY: 5 }));
+    vi.advanceTimersByTime(100);
+    const opened = instance.nestedPopover;
+
+    expect(opened).toBeInstanceOf(PopoverDesktop);
+    focusInside(opened as PopoverDesktop);
+
+    instance.handleMouseLeave(new MouseEvent('mouseleave'));
+    vi.advanceTimersByTime(1000);
+
+    expect(instance.nestedPopover).toBeNull();
+  });
+
+  it('closes a click-opened submenu that took focus on open once the pointer leaves', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+
+    popover.show();
+    // A click is a pointer gesture: it records pointer modality before the open.
+    window.dispatchEvent(new Event('pointerdown'));
+    instance.showNestedItems(itemByName(popover, 'c-parent'));
+    focusInside(instance.nestedPopover as PopoverDesktop);
+
+    instance.handleMouseLeave(new MouseEvent('mouseleave'));
+    vi.advanceTimersByTime(1000);
+
+    expect(instance.nestedPopover).toBeNull();
+  });
+
+  it('closes a hover-opened submenu when the pointer leaves the page through it', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+    const parentElement = itemByName(popover, 'c-parent').getElement();
+
+    popover.show();
+    instance.handleHover(hoverOn(parentElement as Element, { clientX: 5, clientY: 5 }));
+    vi.advanceTimersByTime(100);
+    const submenu = (instance.nestedPopover as PopoverDesktop).getElement();
+
+    // Pointer moves onto the submenu, then off it to the page outside both menus.
+    submenu.dispatchEvent(new PointerEvent('pointerenter'));
+    submenu.dispatchEvent(new PointerEvent('pointerleave', { relatedTarget: document.body }));
+    vi.advanceTimersByTime(1000);
+
+    expect(instance.nestedPopover).toBeNull();
+  });
+
+  it('keeps the submenu when the pointer leaves it back into the parent menu', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+    const parentElement = itemByName(popover, 'c-parent').getElement();
+
+    popover.show();
+    instance.handleHover(hoverOn(parentElement as Element, { clientX: 5, clientY: 5 }));
+    vi.advanceTimersByTime(100);
+    const opened = instance.nestedPopover as PopoverDesktop;
+
+    opened.getElement().dispatchEvent(new PointerEvent('pointerleave', { relatedTarget: parentElement }));
+    vi.advanceTimersByTime(1000);
+
+    // Back on its own trigger row: the parent's hover logic owns it from here.
+    expect(instance.nestedPopover).toBe(opened);
+  });
+
+  it('records a hover open as a pointer gesture, so open hooks paint no keyboard cursor', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+    const parentElement = itemByName(popover, 'c-parent').getElement();
+
+    popover.show();
+    // A key pressed earlier leaves keyboard modality behind; moving the mouse does not clear it.
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift' }));
+    expect(isKeyboardModality()).toBe(true);
+
+    instance.handleHover(hoverOn(parentElement as Element, { clientX: 5, clientY: 5 }));
+    vi.advanceTimersByTime(100);
+
+    expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+    expect(isKeyboardModality()).toBe(false);
+
+    // Modality is page-wide state; hand the next test the default back.
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift' }));
+  });
+
+  it('keeps a hover-opened submenu once the user types in it', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+    const parentElement = itemByName(popover, 'c-parent').getElement();
+
+    popover.show();
+    instance.handleHover(hoverOn(parentElement as Element, { clientX: 5, clientY: 5 }));
+    vi.advanceTimersByTime(100);
+    const opened = instance.nestedPopover as PopoverDesktop;
+    const input = focusInside(opened);
+
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'h', bubbles: true }));
+    instance.handleMouseLeave(new MouseEvent('mouseleave'));
+    vi.advanceTimersByTime(1000);
+
+    expect(instance.nestedPopover).toBe(opened);
+    expect(input).toHaveFocus();
+  });
+
+  it('keeps a keyboard-opened submenu when the pointer grace elapses', () => {
+    vi.useFakeTimers();
+    const popover = createPopover({ items: [parentWithChildren()] });
+    const instance = asInternal(popover);
+
+    popover.show();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    instance.showNestedItems(itemByName(popover, 'c-parent'));
+    const opened = instance.nestedPopover;
+
+    focusInside(opened as PopoverDesktop);
+    instance.handleMouseLeave(new MouseEvent('mouseleave'));
+    vi.advanceTimersByTime(1000);
+
+    expect(instance.nestedPopover).toBe(opened);
   });
 
   it('still closes on the pointer grace when the keyboard focus is outside the submenu', () => {

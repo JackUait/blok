@@ -410,7 +410,7 @@ describe('Focus-Visible Law', () => {
   it('places Blok\'s own popover focus cursor only for keyboard gestures', () => {
     const source = readFileSync(join(REPO_ROOT, 'src/components/utils/popover/popover-desktop.ts'), 'utf-8');
 
-    expect(source).toContain("import { isKeyboardModality } from '../input-modality'");
+    expect(source).toMatch(/import \{[^}]*\bisKeyboardModality\b[^}]*\} from '..\/input-modality'/);
 
     const focusInitial = source.slice(source.indexOf('private focusInitialElement('));
     const body = focusInitial.slice(0, focusInitial.indexOf('\n  }\n'));

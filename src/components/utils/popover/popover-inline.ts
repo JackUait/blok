@@ -233,13 +233,13 @@ export class PopoverInline extends PopoverDesktop {
       // Measure wrapped rows rather than assuming a single-row height.
     }
 
-    const containerRect = this.nestingLevel === 0
-      ? this.nodes.popoverContainer?.getBoundingClientRect()
-      : undefined;
+    const container = this.nestingLevel === 0 ? this.nodes.popoverContainer : null;
 
-    if (containerRect !== undefined) {
-      const width = `${containerRect.width}px`;
-      const heightPx = `${containerRect.height}px`;
+    // Layout size, not getBoundingClientRect: the entrance has just started at
+    // scale(0.98), and the positioner reads the size set here.
+    if (container) {
+      const width = `${container.offsetWidth}px`;
+      const heightPx = `${container.offsetHeight}px`;
 
       this.nodes.popover.style.setProperty(CSSVariables.InlinePopoverWidth, width);
       this.nodes.popover.style.width = width;

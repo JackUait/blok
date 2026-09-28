@@ -116,8 +116,9 @@ export class InlinePopoverBuilder {
 
     result.push(popoverItem);
 
-    // Append separator after first item with children
-    if ('children' in popoverItem && isFirstItem) {
+    // Rule the convert row off from the grid. Only convertTo: a custom
+    // inlineToolbar list may lead with Marker, which also has children.
+    if ('children' in popoverItem && isFirstItem && toolName === 'convertTo') {
       result.push({
         type: PopoverItemType.Separator,
       });

@@ -263,6 +263,16 @@ describe('InlineToolbar.tryToShow error recovery', () => {
     expect(ghostHolder.mount).toHaveBeenCalledTimes(1);
   });
 
+  it('closes without a fading copy when the caller already left one', async () => {
+    await inlineToolbar.tryToShow();
+    ghostHolder.mount.mockClear();
+
+    inlineToolbar.close(false);
+
+    expect(ghostHolder.mount).not.toHaveBeenCalled();
+    expect(inlineToolbar.opened).toBe(false);
+  });
+
   it('passes the localized action-group label to its popover', async () => {
     await inlineToolbar.tryToShow();
 

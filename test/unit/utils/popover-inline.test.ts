@@ -477,6 +477,22 @@ describe('PopoverInline', () => {
       expect(element.style.height).not.toBe('');
     });
 
+    it('sizes the root from layout, not the mid-entrance scaled box', () => {
+      const popover = createPopoverInline();
+      const instance = popover as unknown as PopoverInlineInternal;
+      const container = instance.nodes.popoverContainer;
+
+      // The entrance starts at scale(0.98), so the transformed box reads short.
+      vi.spyOn(container, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 188.16, 117.6));
+      vi.spyOn(container, 'offsetWidth', 'get').mockReturnValue(192);
+      vi.spyOn(container, 'offsetHeight', 'get').mockReturnValue(120);
+
+      popover.show();
+
+      expect(popover.getElement().style.width).toBe('192px');
+      expect(popover.getElement().style.height).toBe('120px');
+    });
+
     it('should not set width/height CSS variables when nestingLevel is not 0', () => {
       const params: PopoverParams = {
         items: [{ name: 'test', title: 'Test', icon: 'Icon', onActivate: vi.fn() }],

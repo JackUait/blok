@@ -14,6 +14,7 @@ const GHOST_MAX_LIFETIME_MS = 400;
  * item lookups by name, the tooltip's "is a popover open" query, the top layer
  * (`popover` would hide the copy until shown), and the a11y tree. Styling hooks
  * (`data-blok-popover*`) stay, so the copy looks exactly like the toolbar.
+ * The direct-menu marker goes too: its entrance rule would replay on the copy.
  */
 const IDENTITY_ATTRS = [
   'id',
@@ -25,6 +26,7 @@ const IDENTITY_ATTRS = [
   'data-blok-focused',
   'data-blok-popover-opened',
   'data-blok-top-layer',
+  'data-blok-inline-direct-menu',
 ];
 
 const stripIdentity = (element: Element): void => {

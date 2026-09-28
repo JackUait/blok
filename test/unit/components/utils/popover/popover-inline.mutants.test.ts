@@ -101,14 +101,12 @@ describe('PopoverInline — mutation residue', () => {
       expect(instance.nodes.popover.className).toBe(twMerge(cssInline.popover, 'inline-block'));
     });
 
-    it('publishes the measured container box as width variable, width and height', () => {
+    it('publishes the container layout size as width variable, width and height', () => {
       const popover = make();
       const instance = popover as unknown as Internal;
 
-      instance.nodes.popoverContainer.getBoundingClientRect = (): DOMRect => ({
-        width: 120,
-        height: 38,
-      } as DOMRect);
+      vi.spyOn(instance.nodes.popoverContainer, 'offsetWidth', 'get').mockReturnValue(120);
+      vi.spyOn(instance.nodes.popoverContainer, 'offsetHeight', 'get').mockReturnValue(38);
 
       popover.show();
 

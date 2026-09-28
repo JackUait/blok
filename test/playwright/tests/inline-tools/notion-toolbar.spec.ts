@@ -290,3 +290,40 @@ for (const top of [ 480, 490, 495, 500, 505, 510, 520, 540, 560 ]) {
     await expect.poll(() => paragraph.innerHTML()).toMatch(/^<(b|strong)>Keep me visible\.<\/\1>$/);
   });
 }
+
+test('extra custom tools start new rows of five without widening the card', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 844 });
+  await gotoTestPage(page);
+  await page.evaluate(async ({ text }) => {
+    const holder = document.createElement('div');
+    const tools: Record<string, { class: unknown }> = {};
+
+    for (const name of [ 'extraOne', 'extraTwo', 'extraThree', 'extraFour' ]) {
+      tools[name] = {
+        class: class {
+          public static isInline = true;
+
+          public render(): { icon: string; name: string; title: string; onActivate: () => void } {
+            return { icon: '<svg width="16" height="16"></svg>', name, title: name, onActivate: () => undefined };
+          }
+        },
+      };
+    }
+
+    holder.style.cssText = 'max-width:650px;margin:120px auto 0;padding:0 8px';
+    document.body.appendChild(holder);
+    window.blokInstance = new window.Blok({ holder, tools, data: { blocks: [ { type: 'paragraph', data: { text } } ] } });
+    await window.blokInstance.isReady;
+  }, { text: TEXT });
+  await selectParagraph(page);
+  await settle(page);
+  const cells = toolbar(page).locator('[data-blok-popover-item]:not([data-blok-item-name="convert-to"])');
+  const names = await cells.evaluateAll(elements => elements.map(element => element.getAttribute('data-blok-item-name')));
+
+  expect(names.slice(-4)).toEqual([ 'extraOne', 'extraTwo', 'extraThree', 'extraFour' ]);
+  expect(names.length).toBeGreaterThan(10);
+  const tops = [ ...new Set(await cells.evaluateAll(elements => elements.map(element => Math.round(element.getBoundingClientRect().y)))) ];
+
+  expect(tops).toHaveLength(Math.ceil(names.length / 5));
+  expect((await rectOf(card(page))).width).toBeCloseTo(192, 0);
+});

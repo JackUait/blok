@@ -384,8 +384,9 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
 
   /**
    * Hides Inline Toolbar
+   * @param fade - leave a fading copy behind; off when the caller already left one
    */
-  public close(): void {
+  public close(fade = true): void {
     if (!this.opened) {
       return;
     }
@@ -412,7 +413,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     if (this.popover) {
       const shownRoot = this.popover.getElement?.();
 
-      if (shownRoot && this.nodes.wrapper) {
+      if (fade && shownRoot && this.nodes.wrapper) {
         // Fade the card out instead of cutting it.
         mountToolbarGhost(shownRoot, this.nodes.wrapper, null);
       }
@@ -798,8 +799,9 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
   private async openToolMenuDirect(toolName: string, from: 'toolbar' | 'shortcut' = 'shortcut'): Promise<void> {
     this.directMenuEntrance = { from, originX: from === 'toolbar' ? this.leaveToolbarGhost(toolName) : null };
 
-    // Tear down whatever is open (full toolbar or a previous menu) first.
-    this.close();
+    // Tear down whatever is open (full toolbar or a previous menu) first. No
+    // fade: from the toolbar the hand-off ghost above already covers it.
+    this.close(false);
     this.initialize();
 
     /**

@@ -158,29 +158,40 @@ describe('InlinePopoverBuilder', () => {
       expect(items[0].type).toBe(PopoverItemType.Separator);
     });
 
-    it('should add separator after first item with children', async () => {
-      const boldAdapter = createMockInlineToolAdapter('bold', {
+    it('rules off the convert row from the formatting cells', async () => {
+      const convertAdapter = createMockInlineToolAdapter('convertTo', {
         renderResult: {
-          icon: 'B',
-          label: 'Bold',
-          children: [
-            { icon: 'B1', label: 'Bold 1' },
-            { icon: 'B2', label: 'Bold 2' },
-          ],
+          icon: 'T',
+          label: 'Text',
+          children: [ { icon: 'H', label: 'Heading' } ],
         },
       });
 
-      mockBlok.Tools.inlineTools.set('bold', boldAdapter);
+      mockBlok.Tools.inlineTools.set('convertTo', convertAdapter);
 
-      const boldInstance = boldAdapter.create();
-      const toolsMap = new Map([[boldAdapter, boldInstance]]);
-
-      const items = await popoverBuilder.build(toolsMap);
+      const items = await popoverBuilder.build(new Map([[convertAdapter, convertAdapter.create()]]));
 
       expect(items).toHaveLength(2);
-      const firstItem = getItemParams(items[0]);
-      expect(firstItem.name).toBe('bold');
+      expect(getItemParams(items[0]).name).toBe('convertTo');
       expect(items[1].type).toBe(PopoverItemType.Separator);
+    });
+
+    it('adds no rule after a first formatting tool that has a submenu', async () => {
+      // Without convertTo (a custom inlineToolbar list) Marker leads the grid.
+      const markerAdapter = createMockInlineToolAdapter('marker', {
+        renderResult: {
+          icon: 'A',
+          label: 'Color',
+          children: [ { icon: 'R', label: 'Red' } ],
+        },
+      });
+
+      mockBlok.Tools.inlineTools.set('marker', markerAdapter);
+
+      const items = await popoverBuilder.build(new Map([[markerAdapter, markerAdapter.create()]]));
+
+      expect(items).toHaveLength(1);
+      expect(items[0].type).not.toBe(PopoverItemType.Separator);
     });
 
     it('should handle array returns', async () => {

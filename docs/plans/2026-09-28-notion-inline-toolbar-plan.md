@@ -573,7 +573,7 @@ Expected: FAIL (tablist exists, background section hidden, reset/preview exist, 
 
 - [ ] **Step 4: Implement in `color-picker.ts`**
 - Delete `modeTabs`, `tabList`, `previews`, `colorNames`, `activateMode`, the tab/selected-row/reset/preview construction, and every `activateMode(...)` call (including in the recent swatch click handler).
-- Append `recentSectionHost` to `wrapper` BEFORE the modes loop. Its section keeps `border-t`? No: it is now first, so move the divider: recent section classes become `'flex flex-col gap-2'`, and each mode section after the first gets `border-t border-popover-border pt-3` only when it follows a visible block — simplest: give every mode section `'flex flex-col gap-2'` and rely on `wrapper`'s `gap-3`.
+- Append `recentSectionHost` to `wrapper` BEFORE the modes loop. The recent section's classes become `'flex flex-col gap-2'` (drop its `border-t … pt-3`: it is now first). Every mode section is also `'flex flex-col gap-2'`; the wrapper's existing `gap-3` spaces the sections, as in Notion (no dividers).
 - Each mode section:
 
 ```ts

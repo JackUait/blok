@@ -43,7 +43,7 @@ const boot = async (inlineToolbar: boolean | string[], withSupSub: boolean, bloc
       ...(withSupSub ? { supSub: { class: SupSubInlineTool } } : {}),
     },
     data: { blocks: [block] },
-  } as never) as unknown as TestEditor;
+  }) as unknown as TestEditor;
 
   editor = instance;
   await instance.isReady;

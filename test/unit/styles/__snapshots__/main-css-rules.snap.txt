@@ -2150,6 +2150,18 @@
   font-size: var(--blok-table-comfortable-font-size, 1rem);
 }
 
+[data-blok-table-cell-blocks] {
+  text-align: start;
+}
+
+[data-blok-table-cell-blocks][data-blok-cell-placement$="-center"] {
+  text-align: center;
+}
+
+[data-blok-table-cell-blocks][data-blok-cell-placement$="-right"] {
+  text-align: right;
+}
+
 [data-blok-cell-placement="top-center"] {
   align-items: center;
 }

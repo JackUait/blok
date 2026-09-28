@@ -64,6 +64,26 @@
 
 /* ─── Cell content placement ──────────────────────────────────── */
 
+/*
+ * Flex placement below moves whole block boxes, but a block that wraps is
+ * already full width, so only text-align lines its text up. Every cell resets
+ * it first, so a nested table never inherits the outer cell's alignment.
+ * The build lowers `start` to `:not(:lang(…rtl…))`, lifting the reset to two
+ * attributes of specificity, so the placement rules carry two as well and come
+ * after it.
+ */
+[data-blok-table-cell-blocks] {
+  text-align: start;
+}
+
+[data-blok-table-cell-blocks][data-blok-cell-placement$="-center"] {
+  text-align: center;
+}
+
+[data-blok-table-cell-blocks][data-blok-cell-placement$="-right"] {
+  text-align: right;
+}
+
 [data-blok-cell-placement="top-center"] {
   align-items: center;
 }

@@ -252,6 +252,56 @@ test.describe('Cell Placement', () => {
     expect(placementAttr).toBe('bottom-right');
   });
 
+  for (const [placement, edge] of [['top-right', 'right'], ['middle-center', 'center']] as const) {
+    test(`${placement} aligns every line of a wrapped paragraph, not just its box`, async ({ page }) => {
+      await create3x3TableWithContent(page);
+
+      const cell = getCell(page, 1, 1);
+
+      await cell.getByText('B2').click();
+      await page.keyboard.press('End');
+      await page.keyboard.press('Enter');
+      await page.keyboard.type('a much longer paragraph that has to wrap across several lines inside this cell');
+      await page.keyboard.press('Enter');
+      await page.keyboard.type('3rd');
+
+      await selectSingleCell(page, 1, 1);
+      await openPlacementPicker(page);
+      await page.locator(`[data-placement="${placement}"]`).click({ force: true });
+      // Let the glide finish before measuring.
+      await expect.poll(() => cell.evaluate(element =>
+        element.getAnimations({ subtree: true }).filter(animation => animation.playState === 'running').length)).toBe(0);
+
+      const lines = await cell.evaluate((element, side) => {
+        const wrapped = Array.from(element.querySelectorAll<HTMLElement>('[contenteditable="true"]'))
+          .find(editable => (editable.textContent ?? '').startsWith('a much longer'));
+
+        if (wrapped === undefined) {
+          return null;
+        }
+
+        const range = document.createRange();
+
+        range.selectNodeContents(wrapped);
+        const rects = Array.from(range.getClientRects()).filter(rect => rect.width > 0);
+        const box = wrapped.getBoundingClientRect();
+
+        return {
+          count: new Set(rects.map(rect => Math.round(rect.top))).size,
+          offsets: rects.map(rect => side === 'right'
+            ? Math.round(box.right - rect.right)
+            : Math.round((rect.left + rect.right) / 2 - (box.left + box.right) / 2)),
+        };
+      }, edge);
+
+      expect(lines).not.toBeNull();
+      expect(lines?.count).toBeGreaterThan(1);
+      for (const offset of lines?.offsets ?? []) {
+        expect(Math.abs(offset)).toBeLessThanOrEqual(1);
+      }
+    });
+  }
+
   test('placement persists through save', async ({ page }) => {
     await create3x3TableWithContent(page);
 

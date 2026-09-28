@@ -23,8 +23,12 @@ const round = (value: number): number => Number(value.toFixed(2));
 const leanFor = (dx: number): number =>
   round(Math.sign(dx) * Math.min(Math.abs(dx) / LEAN_PX, MAX_LEAN_DEG));
 
+/**
+ * Only block holders move. A wrapped block is full width in every placement, so
+ * its box stays put and its lines snap to the new text-align (see tables.css).
+ */
 const holdersOf = (container: HTMLElement): HTMLElement[] =>
-  Array.from(container.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
+  Array.from(container.querySelectorAll<HTMLElement>(':scope > [data-blok-element]'));
 
 const prefersReducedMotion = (): boolean =>
   typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;

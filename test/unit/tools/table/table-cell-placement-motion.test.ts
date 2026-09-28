@@ -159,6 +159,20 @@ describe('movePlacementWithMotion', () => {
     expect(running.cancel).toHaveBeenCalledTimes(1);
   });
 
+  it('moves only blocks, never other elements in the cell', () => {
+    const animate = stubMotion(false);
+    const { container, holders } = makeCell({ 'top-left': [[0, 0]], 'middle-right': [[80, 0]] }, 1);
+    const stray = document.createElement('div');
+
+    stray.getBoundingClientRect = (): DOMRect =>
+      new DOMRect(container.hasAttribute('data-blok-cell-placement') ? 80 : 0, 0, 10, 10);
+    container.appendChild(stray);
+
+    movePlacementWithMotion([container], () => container.setAttribute('data-blok-cell-placement', 'middle-right'));
+
+    expect(animate.mock.contexts).toEqual(holders);
+  });
+
   it('moves the blocks of every selected cell', () => {
     const animate = stubMotion(false);
     const first = makeCell({ 'top-left': [[0, 0]], 'middle-center': [[50, 20]] }, 1);

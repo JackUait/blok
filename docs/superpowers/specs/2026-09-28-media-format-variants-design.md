@@ -20,7 +20,7 @@ and falls back to the most widely supported one.
 
 Two implementation plans:
 
-- **Part 1** — config, `sources` data shape, rendering everywhere, image conversion.
+- **Part 1** — config, `variants` data shape, rendering everywhere, image conversion.
 - **Part 2** — video background conversion, progress badge, leave-page guard.
 
 Part 2 depends on Part 1's config, data shape and rendering.
@@ -61,8 +61,11 @@ New public types go in a hand-authored `types/configs/media.d.ts` (Published-typ
 `ImageData` and `VideoData` gain:
 
 ```ts
-sources?: { url: string; mimeType: string }[];   // best format first
+variants?: { url: string; mimeType: string }[];   // best format first
 ```
+
+- Named `variants`, not `sources`: `ImageConfig.sources` / `VideoConfig.sources` already exist
+  (the empty-state Upload/Link switch), and one word for two things would confuse hosts.
 
 - `url` stays and always holds the most widely supported produced format.
   Every consumer that reads only `url` keeps working.
@@ -103,18 +106,18 @@ not `png` and the image has alpha, the original stays as the final fallback.
 ## Images (Part 1)
 
 - On drop, paste or pick, the block shows the existing "Converting…" state.
-- Blok encodes every listed format, uploads each, then saves `sources` + `url` in one write.
+- Blok encodes every listed format, uploads each, then saves `variants` + `url` in one write.
 - Image encoding reuses `compress.ts` (canvas, verify `blob.type` against the silent-PNG trap)
   and `avif-webcodecs.ts` for AVIF.
 - SVG and animated GIF skip image conversion. An animated GIF still goes to video; when
-  `media.formats.video` is set, that path produces the video list instead of one WebM.
+  `media.formats.video` is set, that path produces the video list instead of one WebM (Part 2).
 
 ## Video (Part 2)
 
 1. The original uploads first. The block plays it at once.
 2. Blok converts one format at a time, most compatible first (`mp4`, then `webm`, then `av1`),
    so the universal fallback lands soonest.
-3. Each finished file is uploaded and added to `sources`.
+3. Each finished file is uploaded and added to `variants`.
 4. The block shows a small "Optimizing video… 40%" badge. Playback and editing stay enabled.
 
 - Converter: [Mediabunny](https://mediabunny.dev) Conversion API (MPL-2.0, tree-shakable,
@@ -139,7 +142,7 @@ not `png` and the image has alpha, the original stays as the final fallback.
 - Before writing, Blok checks the block still exists (`findLiveBlock`) and still holds the
   same original `url` (`stillHolds`). Otherwise the result is dropped.
 - Never mutate the tool's `_data` before `api.blocks.update` (setData diff law).
-- Only the uploading client converts. Peers get `sources` through normal sync.
+- Only the uploading client converts. Peers get `variants` through normal sync.
 - Conversion is cancelled on editor destroy and block removal.
 
 ## Rendering
@@ -149,14 +152,19 @@ Every path that emits image or video HTML renders sources best-first:
 - Editor: `<picture><source type srcset>…<img></picture>` and `<video><source src type>…</video>`.
 - Everything that queries the `<img>` (probe-dimensions, reload attempts, crop editor)
   must survive the `<picture>` wrapper.
-- `/view` renderer (`src/view/emitters.ts`), clipboard HTML, markdown export.
+- `/view` renderer (`src/view/emitters.ts`) and its JSON schema (`document-schema.ts`,
+  `additionalProperties: false`, so `variants` must be declared there).
+- Markdown export keeps `![alt](url)`: Markdown cannot carry alternatives, and `url` is the
+  most compatible file.
+- Clipboard HTML is the holder's sanitized HTML. It must keep an `<img src=url>` / playable
+  `<video src=url>`, even if the sanitizer strips `<picture>`/`<source>`.
 
 ## Open items to settle in planning (unverified)
 
 - Whether Mediabunny runs in a Web Worker. Measure; fall back to main thread
   (WebCodecs encoding is off-thread either way).
 - How conversion should behave when the editor turns read-only mid-run.
-- Whether the C# server renderer emits image/video HTML and needs `sources`.
+- Whether the C# server renderer emits image/video HTML and needs `variants`.
 - Per-browser encoder coverage (AAC encode, AV1 encode): detect at runtime, never assume.
 
 ## Testing

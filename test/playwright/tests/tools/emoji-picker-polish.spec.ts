@@ -433,3 +433,30 @@ test('announces skin-tone expansion, restores focus, and removes the icon with t
   await expect(picker).not.toBeVisible();
   await expect(page.getByTestId('callout-emoji-btn')).toHaveText('');
 });
+
+test('rolls the random-emoji die on hover and flashes a six mid-roll', async ({ page }) => {
+  const picker = await openCalloutPicker(page);
+  const random = picker.getByRole('button', { name: 'Pick a random emoji', exact: true });
+  const sidePip = random.locator('[data-blok-dice-pip="side"]').first();
+  const animationNames = (): Promise<string[]> => random.evaluate(button => button
+    .getAnimations({ subtree: true })
+    .map(animation => (animation instanceof CSSAnimation ? animation.animationName : '')));
+
+  await page.mouse.move(0, 0);
+  await expect.poll(animationNames).toEqual([]);
+  expect(await sidePip.evaluate(pip => pip.getBoundingClientRect().width)).toBe(0);
+
+  await random.hover();
+  await expect.poll(async () => (await animationNames()).includes('blok-dice-roll')).toBe(true);
+
+  const sixFrame = await random.evaluate((button) => {
+    for (const animation of button.getAnimations({ subtree: true })) {
+      animation.pause();
+      animation.currentTime = 400;
+    }
+
+    return Array.from(button.querySelectorAll('circle')).filter(pip => pip.getBoundingClientRect().width > 0).length;
+  });
+
+  expect(sixFrame).toBe(6);
+});

@@ -695,14 +695,19 @@ export const IconEmojiGlobe = `
 
 export const IconEmojiDice = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <g transform="rotate(-12 10 10)">
-    <rect x="4" y="4" width="12" height="12" rx="2.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="7" cy="7" r="0.8" fill="currentColor"/>
-    <circle cx="13" cy="7" r="0.8" fill="currentColor"/>
-    <circle cx="10" cy="10" r="0.8" fill="currentColor"/>
-    <circle cx="7" cy="13" r="0.8" fill="currentColor"/>
-    <circle cx="13" cy="13" r="0.8" fill="currentColor"/>
+  <g data-blok-dice-roll="">
+    <g transform="rotate(-12 10 10)">
+      <rect x="4" y="4" width="12" height="12" rx="2.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="7" cy="7" r="0.8" fill="currentColor" data-blok-dice-pip="corner"/>
+      <circle cx="13" cy="7" r="0.8" fill="currentColor"/>
+      <circle cx="7" cy="10" r="0.8" fill="currentColor" data-blok-dice-pip="side" transform="scale(0)"/>
+      <circle cx="10" cy="10" r="0.8" fill="currentColor" data-blok-dice-pip="center"/>
+      <circle cx="13" cy="10" r="0.8" fill="currentColor" data-blok-dice-pip="side" transform="scale(0)"/>
+      <circle cx="7" cy="13" r="0.8" fill="currentColor"/>
+      <circle cx="13" cy="13" r="0.8" fill="currentColor" data-blok-dice-pip="corner"/>
+    </g>
   </g>
+  <path d="M3 15.5 1.25 14.5M17 15.5 18.75 14.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" data-blok-dice-impact="" transform="scale(0)"/>
 </svg>
 `;
 

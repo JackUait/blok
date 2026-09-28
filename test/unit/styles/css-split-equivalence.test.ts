@@ -610,6 +610,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const PRESENCE_TONAL_GLYPHS_BYTES = 12_103;
     // Trash lids drawn closed and lifted on hover: 677 bytes in main.css.
     const TRASH_LID_HOVER_BYTES = 677;
+    // The random-emoji die rolls on hover: roll, pip-face and impact keyframes
+    // plus their hover wiring add 2,485 bytes across keyframes.css and emoji-picker.css.
+    const DICE_ROLL_HOVER_BYTES = 2_485;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -618,7 +621,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + FIND_IN_PAGE_BYTES
       + EMOJI_DEFERRED_SECTIONS_BYTES
       + PRESENCE_TONAL_GLYPHS_BYTES
-      + TRASH_LID_HOVER_BYTES;
+      + TRASH_LID_HOVER_BYTES
+      + DICE_ROLL_HOVER_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

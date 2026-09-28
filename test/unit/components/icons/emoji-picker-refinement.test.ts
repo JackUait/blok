@@ -249,11 +249,23 @@ describe('compact emoji picker artwork', () => {
     expect(wave[15]).toBeLessThan(pole[1]);
   });
 
+  it('hides the two side pips a six needs until the die rolls', () => {
+    const svg = parse('IconEmojiDice');
+    const sides = Array.from(svg.querySelectorAll('[data-blok-dice-pip="side"]'));
+
+    expect(sides.map(pip => [numeric(pip, 'cx'), numeric(pip, 'cy')])).toEqual([[7, 10], [13, 10]]);
+    for (const pip of sides) {
+      expect(pip.getAttribute('transform')).toBe('scale(0)');
+    }
+    expect(svg.querySelectorAll('[data-blok-dice-pip="corner"]')).toHaveLength(2);
+    expect(svg.querySelectorAll('[data-blok-dice-pip="center"]')).toHaveLength(1);
+  });
+
   it('centers five pips in a single tilted die with generous edge clearance', () => {
     const svg = parse('IconEmojiDice');
-    const group = svg.querySelector('g');
+    const group = svg.querySelector('[data-blok-dice-roll] > g');
     const frame = group?.querySelector('rect');
-    const pips = Array.from(group?.querySelectorAll('circle') ?? []);
+    const pips = Array.from(group?.querySelectorAll('circle:not([transform])') ?? []);
 
     expect(group?.getAttribute('transform')).toMatch(/^rotate\(-[\d.]+ 10 10\)$/);
     expect(pips).toHaveLength(5);

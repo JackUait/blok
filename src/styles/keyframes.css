@@ -51,6 +51,42 @@
   }
 }
 
+/* Random-emoji die: crouch, hop, one full tumble, squash on landing. The pip
+   keyframes share the roll's timeline and flip faces 5 → 2 → 6 → 3 → 4 → 5;
+   step-end holds each face until the next stop. */
+@keyframes blok-dice-roll {
+  0%   { transform: none; }
+  12%  { transform: translateY(1px) scale(1.12, 0.86); }
+  30%  { transform: translateY(-6px) rotate(130deg) scale(0.94, 1.06); }
+  50%  { transform: translateY(-7px) rotate(250deg); }
+  70%  { transform: translateY(0) rotate(350deg); }
+  78%  { transform: translateY(0.8px) rotate(360deg) scale(1.14, 0.84); }
+  89%  { transform: translateY(-1px) rotate(363deg) scale(0.97, 1.04); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Impact rays burst from the die's base as it lands (78% of the roll). */
+@keyframes blok-dice-impact {
+  0%, 76% { transform: scale(0); opacity: 1; }
+  84% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+@keyframes blok-dice-pip-corner {
+  0%, 34%, 64%, 100% { transform: scale(1); }
+  18%, 50% { transform: scale(0); }
+}
+
+@keyframes blok-dice-pip-side {
+  0%, 50%, 100% { transform: scale(0); }
+  34% { transform: scale(1); }
+}
+
+@keyframes blok-dice-pip-center {
+  0%, 50%, 74%, 100% { transform: scale(1); }
+  18%, 64% { transform: scale(0); }
+}
+
 /* Callout emoji swap — the newcomer leaps in from above and lands with a
    squash-and-rebound (transform-origin: bottom on the call site), while the
    incumbent tips over and falls off its perch. Both run simultaneously so the

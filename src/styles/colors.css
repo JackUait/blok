@@ -99,9 +99,9 @@
   --blok-line-gray: #eff0f1;
   --blok-tooltip-bg: #1d202b;
   --blok-tooltip-font: #cdd1e0;
-  --blok-icon-active-bg: rgba(35, 131, 226, 0.14);
-  /* Selected labels need 4.5:1 on the tint and a color distinct from focused labels. */
-  --blok-icon-active-text: #155fa8;
+  /* Selected is gray, never blue (CLAUDE.md); the blue focus fill keeps it distinct from focus. */
+  --blok-icon-active-bg: rgba(55, 53, 47, 0.1);
+  --blok-icon-active-text: var(--blok-text-primary);
   --blok-text-primary: black;
   /* Tracks --blok-gray-text; see the contrast note there. */
   --blok-text-secondary: #646a79;
@@ -139,7 +139,7 @@
 
   /* Popover icon container */
   --blok-popover-icon-bg: rgba(55, 53, 47, 0.04);
-  --blok-popover-icon-active-bg: rgba(35, 131, 226, 0.1);
+  --blok-popover-icon-active-bg: rgba(55, 53, 47, 0.08);
 
   /* Table */
   --blok-table-border: #d1d5db;
@@ -525,8 +525,8 @@
     --blok-line-gray: #37352f;
     --blok-tooltip-bg: #2e2e2d;
     --blok-tooltip-font: #e8e6e3;
-    --blok-icon-active-bg: rgba(35, 131, 226, 0.2);
-    --blok-icon-active-text: #6aaed8;
+    --blok-icon-active-bg: rgba(255, 255, 255, 0.09);
+    --blok-icon-active-text: var(--blok-text-primary);
     --blok-text-primary: #e2e0dc;
     --blok-text-secondary: #a39e98;
     --blok-popover-border: rgba(255, 255, 255, 0.14);
@@ -557,7 +557,7 @@
     --blok-search-input-focus-border: rgba(35, 131, 226, 0.5);
     --blok-link-input-border: #37352f;
     --blok-popover-icon-bg: rgba(255, 255, 255, 0.08);
-    --blok-popover-icon-active-bg: rgba(35, 131, 226, 0.15);
+    --blok-popover-icon-active-bg: rgba(255, 255, 255, 0.08);
 
     /* Table */
     --blok-table-border: #3e3e3d;
@@ -711,8 +711,8 @@
   --blok-line-gray: #37352f;
   --blok-tooltip-bg: #2e2e2d;
   --blok-tooltip-font: #e8e6e3;
-  --blok-icon-active-bg: rgba(35, 131, 226, 0.2);
-  --blok-icon-active-text: #6aaed8;
+  --blok-icon-active-bg: rgba(255, 255, 255, 0.09);
+  --blok-icon-active-text: var(--blok-text-primary);
   --blok-text-primary: #e2e0dc;
   --blok-text-secondary: #a39e98;
   --blok-popover-border: rgba(255, 255, 255, 0.14);
@@ -743,7 +743,7 @@
   --blok-search-input-focus-border: rgba(35, 131, 226, 0.5);
   --blok-link-input-border: #37352f;
   --blok-popover-icon-bg: rgba(255, 255, 255, 0.08);
-  --blok-popover-icon-active-bg: rgba(35, 131, 226, 0.15);
+  --blok-popover-icon-active-bg: rgba(255, 255, 255, 0.08);
 
   /* Table */
   --blok-table-border: #3e3e3d;

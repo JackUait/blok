@@ -1,0 +1,39 @@
+import { describe, it, expect } from 'vitest';
+import { readMainCss } from './helpers/read-main-css';
+
+/**
+ * Selected states are gray, never blue (CLAUDE.md "No blue selected states").
+ * These tokens paint every selected popover item, active inline tool button
+ * and pressed find toggle, so their defaults decide the whole editor.
+ */
+
+const css = readMainCss();
+
+const SELECTED_FILLS = ['--blok-icon-active-bg', '--blok-popover-icon-active-bg'];
+
+const declarations = (token: string): string[] =>
+  [...css.matchAll(new RegExp(`${token}:\\s*([^;]+);`, 'g'))].map(match => match[1].trim());
+
+describe('selected-state tokens are neutral', () => {
+  it.each(SELECTED_FILLS)('%s is a gray fill in every theme', (token) => {
+    const values = declarations(token);
+
+    expect(values.length).toBeGreaterThanOrEqual(3);
+    values.forEach(value => {
+      const channels = value.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+
+      expect(channels, `${token}: ${value}`).not.toBeNull();
+      const [r, g, b] = (channels ?? []).slice(1).map(Number);
+
+      // Gray: the channels differ by a warm tint at most, never a blue hue.
+      expect(Math.max(r, g, b) - Math.min(r, g, b), `${token}: ${value}`).toBeLessThanOrEqual(10);
+    });
+  });
+
+  it('--blok-icon-active-text is the primary ink in every theme', () => {
+    const values = declarations('--blok-icon-active-text');
+
+    expect(values.length).toBeGreaterThanOrEqual(3);
+    values.forEach(value => expect(value).toBe('var(--blok-text-primary)'));
+  });
+});

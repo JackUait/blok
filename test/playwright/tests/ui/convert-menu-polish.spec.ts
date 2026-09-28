@@ -193,10 +193,13 @@ for (const surface of ['settings', 'inline'] as const) {
       await expect(current).toBeVisible();
       await expect(current).toHaveAttribute('data-blok-popover-item-active', 'true');
       await page.mouse.move(5, 850);
-      // Selected is neutral: no fill, same ink as any other row; the checkmark alone marks it.
+      // Selected is gray, never blue: a neutral fill, same ink as any other row, plus the checkmark.
       const plainInk = await menu.getByRole('menuitem', { name: 'Quote', exact: true }).evaluate(element => getComputedStyle(element).color);
+      const fill = await current.evaluate(element => getComputedStyle(element).backgroundColor);
+      const [r = 0, g = 0, b = 0, alpha = 1] = (fill.match(/[\d.]+/g) ?? []).map(Number);
 
-      await expect(current).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+      expect(alpha).toBeGreaterThan(0);
+      expect(Math.max(r, g, b) - Math.min(r, g, b)).toBeLessThanOrEqual(10);
       await expect(current).toHaveCSS('color', plainInk);
       await expect(current.getByTestId('popover-item-trailing-icon')).toBeVisible();
       await expect(current.getByTestId('popover-item-trailing-icon')).toHaveCSS('color', plainInk);

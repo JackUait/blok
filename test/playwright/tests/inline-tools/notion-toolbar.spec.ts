@@ -115,7 +115,7 @@ test('touch cells are at least 40px on a phone', async ({ page }) => {
   expect(bold.width).toBeGreaterThanOrEqual(40);
 });
 
-test('an active format shows in the accent color', async ({ page }) => {
+test('an active format shows in primary ink on a gray fill, never blue', async ({ page }) => {
   await mount(page, 1280);
   const paragraph = await selectParagraph(page);
   const bold = toolbar(page).locator('[data-blok-item-name="bold"]');
@@ -123,8 +123,12 @@ test('an active format shows in the accent color', async ({ page }) => {
   await bold.click();
   await expect.poll(() => paragraph.innerHTML()).toMatch(/^<(b|strong)>/);
   await expect(bold).toHaveAttribute('data-blok-popover-item-active', /.*/);
-  // #155fa8 is the light --blok-icon-active-text.
-  await expect(bold).toHaveCSS('color', 'rgb(21, 95, 168)');
+  const ink = await toolbar(page).locator('[data-blok-item-name="italic"]').evaluate(element => getComputedStyle(element).color);
+  const fill = await bold.evaluate(element => getComputedStyle(element).backgroundColor);
+  const [r = 0, g = 0, b = 0] = (fill.match(/[\d.]+/g) ?? []).map(Number);
+
+  await expect(bold).toHaveCSS('color', ink);
+  expect(Math.max(r, g, b) - Math.min(r, g, b)).toBeLessThanOrEqual(10);
 });
 
 test('the A cell shows the text color already applied to the selection', async ({ page }) => {

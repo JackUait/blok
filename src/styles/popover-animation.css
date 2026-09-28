@@ -206,22 +206,6 @@
   box-shadow: inset 0 0 0 1px var(--blok-popover-border);
 }
 
-/* Selected is neutral: the checkmark marks it, never a blue fill (see CLAUDE.md). */
-[data-blok-popover-items] > [data-blok-popover-item][data-blok-convert-item][data-blok-popover-item-active] {
-  color: var(--blok-text-primary);
-  background-color: transparent;
-
-  &:is([data-blok-focused='true'], [data-blok-force-hover]) {
-    background-color: var(--blok-item-hover-bg);
-  }
-
-  @media (hover: hover) {
-    &:hover {
-      background-color: var(--blok-item-hover-bg);
-    }
-  }
-}
-
 /* Labelled choices may wrap in narrow menus or longer translations. */
 [data-blok-convert-item] > [data-blok-popover-item-title] {
   min-width: 0;

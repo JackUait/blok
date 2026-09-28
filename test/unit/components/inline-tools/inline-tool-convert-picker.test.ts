@@ -81,6 +81,13 @@ describe('Inline conversion picker', () => {
     vi.restoreAllMocks();
   });
 
+  it('opens Turn into beside the toolbar card, matching its sideways chevron', async () => {
+    const { tool } = createPicker();
+    const children = await childrenOf(tool);
+
+    expect(children.placement).toBe('beside');
+  });
+
   it('leads with heading variants and keeps custom registration order below them', async () => {
     const { tool, convert } = createPicker();
     const children = await childrenOf(tool);

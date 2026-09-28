@@ -146,6 +146,7 @@ export class ConvertInlineTool implements InlineTool {
         title: this.i18nAPI.t('popover.convertTo'),
       },
       children: {
+        placement: 'beside',
         items: convertToItems,
         searchable: true,
         width: '320px',

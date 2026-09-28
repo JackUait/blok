@@ -47,6 +47,9 @@ export class API extends Module {
         get link() {
           return apiConfig.link;
         },
+        get media() {
+          return apiConfig.media;
+        },
       },
       /**
        * Curated facade exposing exactly the publicly-typed RectangleSelection

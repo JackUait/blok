@@ -49,4 +49,18 @@ describe('API.config', () => {
 
     expect(api.methods.config.link).toBeUndefined();
   });
+
+  it('exposes the media config slice', () => {
+    const convert = async (): Promise<null> => null;
+    const api = makeApi({ media: { formats: { image: ['avif', 'jpeg'] }, convert } });
+
+    expect(api.methods.config.media?.formats?.image).toEqual(['avif', 'jpeg']);
+    expect(api.methods.config.media?.convert).toBe(convert);
+  });
+
+  it('returns undefined media when unset', () => {
+    const api = makeApi({});
+
+    expect(api.methods.config.media).toBeUndefined();
+  });
 });

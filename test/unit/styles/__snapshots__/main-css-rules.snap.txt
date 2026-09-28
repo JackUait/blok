@@ -4533,6 +4533,9 @@ span[data-blok-slash-search] {
 }
 
 .blok-media-empty__embed-submit {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   appearance: none;
   border: 0;
   cursor: default;
@@ -4546,23 +4549,59 @@ span[data-blok-slash-search] {
   height: 20px;
   padding: 0 var(--blok-space-2);
   color: var(--blok-text-tertiary);
-  background: color-mix(in srgb, var(--blok-text-primary) 8%, transparent);
+  background: var(--blok-bg-primary);
+  box-shadow: inset 0 0 0 1px var(--blok-border-subtle);
   border-radius: var(--blok-radius-md);
-  transition: color var(--blok-duration-standard) ease, background var(--blok-duration-standard) ease, transform .08s ease;
+  transition: color 160ms ease 90ms, box-shadow var(--blok-duration-standard) ease, transform 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.blok-media-empty__embed-submit::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--blok-text-primary);
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform 360ms cubic-bezier(0.65, 0, 0.35, 1), background var(--blok-duration-standard) ease;
+}
+
+.blok-media-empty__embed-submit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--blok-image-embed-submit-fg) 40%, transparent) 50%, transparent 70%);
+  transform: translateX(-110%);
 }
 
 .blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-submit {
   cursor: pointer;
   color: var(--blok-bg-primary);
-  background: var(--blok-text-primary);
+  box-shadow: inset 0 0 0 1px transparent;
+}
+
+.blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-submit::before {
+  transform: scaleX(1);
+  transform-origin: left center;
+}
+
+.blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-submit::after {
+  animation: blok-media-empty-shine 700ms ease-out 340ms both;
 }
 
 .blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-submit:hover {
+  transform: translateY(-1px);
+}
+
+.blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-submit:hover::before {
   background: color-mix(in srgb, var(--blok-text-primary) 86%, var(--blok-bg-primary));
 }
 
 .blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-submit:active {
-  transform: translateY(1px);
+  transform: scale(0.96);
+  transition-duration: 80ms;
 }
 
 .blok-media-empty__embed-submit:focus-visible {
@@ -4581,9 +4620,9 @@ span[data-blok-slash-search] {
   align-items: center;
   justify-content: center;
   height: 16px;
-  max-width: 0;
-  margin-left: 0;
-  padding: var(--blok-space-0-25) var(--blok-space-0, 0) var(--blok-space-0, 0);
+  max-width: 40px;
+  margin-left: var(--blok-space-1-5);
+  padding: var(--blok-space-0-25) var(--blok-space-1) var(--blok-space-0, 0);
   font-family: var(--blok-font-family, var(--blok-font-sans));
   font-size: 11px;
   font-weight: 600;
@@ -4591,18 +4630,21 @@ span[data-blok-slash-search] {
   color: currentColor;
   background: color-mix(in srgb, currentColor 14%, transparent);
   border-radius: var(--blok-space-1);
-  overflow: hidden;
-  opacity: 0;
-  transform: translateX(-4px);
-  transition: max-width .2s ease, margin-left .2s ease, padding .2s ease, opacity .15s ease .05s, transform .2s ease;
+  opacity: 0.5;
+  transition: opacity 160ms ease 120ms;
 }
 
 .blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-kbd {
-  max-width: 40px;
-  margin-left: var(--blok-space-1-5);
-  padding: var(--blok-space-0-25) var(--blok-space-1) var(--blok-space-0, 0);
   opacity: 1;
-  transform: translateX(0);
+  animation: blok-media-empty-kbd-nudge 420ms cubic-bezier(0.34, 1.56, 0.64, 1) 320ms;
+}
+
+[@media (prefers-reduced-motion: reduce)] .blok-media-empty__embed-submit, .blok-media-empty__embed-submit::before {
+  transition: none;
+}
+
+[@media (prefers-reduced-motion: reduce)] .blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-submit::after, .blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-kbd {
+  animation: none;
 }
 
 .blok-media-empty__card[data-preview][data-active-tab="embed"] .blok-media-empty__panel {
@@ -4635,8 +4677,9 @@ span[data-blok-slash-search] {
 }
 
 .blok-media-empty__embed-bar--large .blok-media-empty__embed-submit {
-  padding: var(--blok-space-2) var(--blok-space-3-5);
-  font-size: 13px;
+  height: 36px;
+  padding: 0 var(--blok-space-3-5);
+  font-size: 13.5px;
 }
 
 .blok-media-preview.is-caught {

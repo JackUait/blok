@@ -466,6 +466,9 @@
 }
 
 .blok-media-empty__embed-submit {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   appearance: none;
   border: 0;
   cursor: default;
@@ -478,28 +481,68 @@
   line-height: 1;
   height: 20px;
   padding: 0 var(--blok-space-2);
-  /* Waiting for a valid link: a solid, crisp chip (never an opacity fade). */
+  /* Waiting for a valid link: a crisp outlined button, never an opacity fade. */
   color: var(--blok-text-tertiary);
-  background: color-mix(in srgb, var(--blok-text-primary) 8%, transparent);
+  background: var(--blok-bg-primary);
+  box-shadow: inset 0 0 0 1px var(--blok-border-subtle);
   border-radius: var(--blok-radius-md);
   transition:
-    color var(--blok-duration-standard) ease,
-    background var(--blok-duration-standard) ease,
-    transform .08s ease;
+    color 160ms ease 90ms,
+    box-shadow var(--blok-duration-standard) ease,
+    transform 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-/* A valid link: the same dark primary button as Choose file on the Upload tab. */
+/* The ink: sweeps in from the left when the link turns valid and drains out
+   to the right when it breaks (the origin flips with the state). */
+.blok-media-empty__embed-submit::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--blok-text-primary);
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition:
+    transform 360ms cubic-bezier(0.65, 0, 0.35, 1),
+    background var(--blok-duration-standard) ease;
+}
+/* One shine across the ink, above it and below the label. */
+.blok-media-empty__embed-submit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  /* White in every palette: a shine must brighten the ink, never darken it. */
+  background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--blok-image-embed-submit-fg) 40%, transparent) 50%, transparent 70%);
+  transform: translateX(-110%);
+}
 .blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-submit {
   cursor: pointer;
   color: var(--blok-bg-primary);
-  background: var(--blok-text-primary);
+  box-shadow: inset 0 0 0 1px transparent;
 }
-.blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-submit:hover {
+.blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-submit::before {
+  transform: scaleX(1);
+  transform-origin: left center;
+}
+.blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-submit::after {
+  animation: blok-media-empty-shine 700ms ease-out 340ms both;
+}
+.blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-submit:hover { transform: translateY(-1px); }
+.blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-submit:hover::before {
   background: color-mix(in srgb, var(--blok-text-primary) 86%, var(--blok-bg-primary));
 }
-.blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-submit:active { transform: translateY(1px); }
+.blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-submit:active {
+  transform: scale(0.96);
+  transition-duration: 80ms;
+}
 .blok-media-empty__embed-submit:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 45%, transparent);
+}
+@keyframes blok-media-empty-shine {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(110%); }
 }
 
 .blok-media-empty__embed-submit-label {
@@ -508,14 +551,16 @@
   height: 16px;
 }
 
+/* Enter already works while the button waits, so its key is shown, dimmed;
+   it lights up and nudges once when the link turns valid. */
 .blok-media-empty__embed-kbd {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   height: 16px;
-  max-width: 0;
-  margin-left: 0;
-  padding: var(--blok-space-0-25) var(--blok-space-0, 0) var(--blok-space-0, 0);
+  max-width: 40px;
+  margin-left: var(--blok-space-1-5);
+  padding: var(--blok-space-0-25) var(--blok-space-1) var(--blok-space-0, 0);
   font-family: var(--blok-font-family, var(--blok-font-sans));
   font-size: 11px;
   font-weight: 600;
@@ -523,22 +568,21 @@
   color: currentColor;
   background: color-mix(in srgb, currentColor 14%, transparent);
   border-radius: var(--blok-space-1);
-  overflow: hidden;
-  opacity: 0;
-  transform: translateX(-4px);
-  transition:
-    max-width .2s ease,
-    margin-left .2s ease,
-    padding .2s ease,
-    opacity .15s ease .05s,
-    transform .2s ease;
+  opacity: 0.5;
+  transition: opacity 160ms ease 120ms;
 }
 .blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-kbd {
-  max-width: 40px;
-  margin-left: var(--blok-space-1-5);
-  padding: var(--blok-space-0-25) var(--blok-space-1) var(--blok-space-0, 0);
   opacity: 1;
-  transform: translateX(0);
+  animation: blok-media-empty-kbd-nudge 420ms cubic-bezier(0.34, 1.56, 0.64, 1) 320ms;
+}
+@keyframes blok-media-empty-kbd-nudge {
+  50% { transform: translateX(2px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .blok-media-empty__embed-submit,
+  .blok-media-empty__embed-submit::before { transition: none; }
+  .blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-submit::after,
+  .blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-kbd { animation: none; }
 }
 
 /* ----- Link tab with a drawing (renderEmbed): the same stage as Upload. The
@@ -568,8 +612,9 @@
 .blok-media-empty__embed-bar--large .blok-media-empty__embed-host { flex-shrink: 0; max-width: 45%; }
 .blok-media-empty__embed-bar--large .blok-media-empty__embed-input { font-size: 15px; line-height: 24px; }
 .blok-media-empty__embed-bar--large .blok-media-empty__embed-submit {
-  padding: var(--blok-space-2) var(--blok-space-3-5);
-  font-size: 13px;
+  height: 36px;
+  padding: 0 var(--blok-space-3-5);
+  font-size: 13.5px;
 }
 .blok-media-preview.is-caught { animation: blok-media-preview-catch 560ms cubic-bezier(0.34, 1.56, 0.64, 1); }
 @keyframes blok-media-preview-catch {

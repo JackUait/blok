@@ -52,17 +52,43 @@ describe('media preview shadows (CSS)', () => {
 });
 
 describe('media Link-tab button (CSS)', () => {
-  const submitRules = (match: (s: string) => boolean): string[] =>
-    declsFor((s) => s.includes('blok-media-empty__embed-submit') && match(s), 'background');
+  const decl = (match: (s: string) => boolean, prop: string): string =>
+    declsFor(match, prop).join(' ');
+  const isSubmit = (s: string): boolean => s.includes('blok-media-empty__embed-submit');
 
-  it('waits as a crisp filled button, never a faded ghost', () => {
-    const idleOpacity = declsFor((s) => s.includes('blok-media-empty__embed-submit') && !s.includes('data-valid'), 'opacity');
-
-    expect(submitRules((s) => s === '.blok-media-empty__embed-submit').join(' ')).toMatch(/var\(--/);
-    expect(idleOpacity.filter((v) => Number(v) < 1)).toEqual([]);
+  it('fills the large field: tall enough to be the field\'s own button', () => {
+    expect(decl((s) => s.includes('embed-bar--large') && s.endsWith('.blok-media-empty__embed-submit'), 'height')).toBe('36px');
   });
 
-  it('turns into the same dark primary button as Choose file once the link is valid', () => {
-    expect(submitRules((s) => s.includes('data-valid="true"')).join(' ')).toContain('var(--blok-text-primary)');
+  it('waits as a crisp button that already shows the Enter key, never a faded ghost', () => {
+    const idleOpacity = declsFor((s) => isSubmit(s) && !s.includes('data-valid') && !s.includes('::'), 'opacity');
+
+    expect(idleOpacity.filter((v) => Number(v) < 1)).toEqual([]);
+    expect(decl((s) => s === '.blok-media-empty__embed-kbd', 'max-width')).not.toBe('0');
+  });
+
+  it('sweeps dark ink in from the left once the link is valid, and drains it out to the right', () => {
+    expect(decl((s) => s === '.blok-media-empty__embed-submit::before', 'background')).toContain('var(--blok-text-primary)');
+    expect(decl((s) => s === '.blok-media-empty__embed-submit::before', 'transform')).toBe('scaleX(0)');
+    expect(decl((s) => s === '.blok-media-empty__embed-submit::before', 'transform-origin')).toContain('right');
+    expect(decl((s) => s.includes('data-valid="true"') && s.endsWith('.blok-media-empty__embed-submit::before'), 'transform')).toBe('scaleX(1)');
+    expect(decl((s) => s.includes('data-valid="true"') && s.endsWith('.blok-media-empty__embed-submit::before'), 'transform-origin')).toContain('left');
+  });
+
+  it('glides one shine across the button after the ink lands', () => {
+    expect(decl((s) => s.includes('data-valid="true"') && s.endsWith('.blok-media-empty__embed-submit::after'), 'animation')).toContain('blok-media-empty-shine');
+  });
+
+  it('switches instantly under reduced motion', () => {
+    const reduced: string[] = [];
+    root.walkAtRules('media', (rule) => {
+      if (!rule.params.includes('reduce')) return;
+      rule.walkRules((r) => {
+        if (r.selector.includes('embed-submit')) reduced.push(r.toString());
+      });
+    });
+
+    expect(reduced.join(' ')).toMatch(/::before[\s\S]*transition: none|transition: none[\s\S]*::before/);
+    expect(reduced.join(' ')).toContain('::after');
   });
 });

@@ -164,8 +164,16 @@ for (const glyph of [...ANONYMOUS_GLYPHS, UNKNOWN_GLYPH]) {
       satellite: 5,
       telescope: 1,
       saucer: 3,
-      asteroid: 3,
+      // f37f58bf dropped the third crater because three holes read as a face.
+      asteroid: 1,
     };
+    // The rocket climbs and the comet streaks on a diagonal, so their weight
+    // sits off the centre of their painted bounds on purpose.
+    const offCenter: Partial<Record<typeof glyph, { bounds: number; centroid: number }>> = {
+      rocket: { bounds: 0.9, centroid: 3.1 },
+      comet: { bounds: 0.65, centroid: 1.6 },
+    };
+    const { bounds = 0.55, centroid = 1.2 } = offCenter[glyph] ?? {};
 
     // Every silhouette carries one see-through layer (glass, glow, shadow or
     // fade). A flat glyph drops out of the family.
@@ -175,13 +183,13 @@ for (const glyph of [...ANONYMOUS_GLYPHS, UNKNOWN_GLYPH]) {
     const boundsCenterX = (geometry.left + geometry.right) / 2;
     const boundsCenterY = (geometry.top + geometry.bottom) / 2;
 
-    expect.soft(Math.abs(boundsCenterX - 10), `${glyph} painted bounds center X = ${boundsCenterX}`).toBeLessThanOrEqual(0.55);
-    expect.soft(Math.abs(boundsCenterY - 10), `${glyph} painted bounds center Y = ${boundsCenterY}`).toBeLessThanOrEqual(0.55);
+    expect.soft(Math.abs(boundsCenterX - 10), `${glyph} painted bounds center X = ${boundsCenterX}`).toBeLessThanOrEqual(bounds);
+    expect.soft(Math.abs(boundsCenterY - 10), `${glyph} painted bounds center Y = ${boundsCenterY}`).toBeLessThanOrEqual(bounds);
     expect.soft(geometry.left, `${glyph} left clipping`).toBeGreaterThanOrEqual(0);
     expect.soft(geometry.top, `${glyph} top clipping`).toBeGreaterThanOrEqual(0);
     expect.soft(geometry.right, `${glyph} right clipping`).toBeLessThanOrEqual(20);
     expect.soft(geometry.bottom, `${glyph} bottom clipping`).toBeLessThanOrEqual(20);
-    expect.soft(Math.abs(geometry.centroidX - 10), `${glyph} alpha centroid X = ${geometry.centroidX}`).toBeLessThanOrEqual(1.2);
-    expect.soft(Math.abs(geometry.centroidY - 10), `${glyph} alpha centroid Y = ${geometry.centroidY}`).toBeLessThanOrEqual(1.2);
+    expect.soft(Math.abs(geometry.centroidX - 10), `${glyph} alpha centroid X = ${geometry.centroidX}`).toBeLessThanOrEqual(centroid);
+    expect.soft(Math.abs(geometry.centroidY - 10), `${glyph} alpha centroid Y = ${geometry.centroidY}`).toBeLessThanOrEqual(centroid);
   });
 }

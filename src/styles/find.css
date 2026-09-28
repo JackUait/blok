@@ -164,27 +164,11 @@
 
 /* ─── Field ─── */
 
+/* The box itself is the shared field look (field.css, data-blok-field). */
 [data-blok-find-field] {
-  position: relative;
-  display: flex;
   flex: 1 1 auto;
-  align-items: center;
   min-width: 0;
-  height: var(--blok-find-control-size);
   margin-inline-end: var(--blok-space-1);
-  padding-inline: var(--blok-space-2) var(--blok-space-1-5);
-  border: 1px solid transparent;
-  border-radius: var(--blok-radius-md-plus);
-  background: var(--blok-icon-bg);
-  transition:
-    background-color var(--blok-duration-standard) var(--blok-ease-standard),
-    border-color var(--blok-duration-standard) var(--blok-ease-standard);
-}
-
-/* Text fields show focus however it arrived; inputs always match :focus-visible. */
-[data-blok-find-field]:has(> input:focus-visible) {
-  border-color: var(--blok-search-input-focus-border);
-  background: var(--blok-popover-bg);
 }
 
 [data-blok-find-field][data-blok-find-empty] {
@@ -194,20 +178,6 @@
 
 [data-blok-find-field][data-blok-find-shake] {
   animation: blok-find-shake 360ms var(--blok-ease-bounce);
-}
-
-[data-blok-find-field] input {
-  flex: 1 1 auto;
-  min-width: 0;
-  height: 100%;
-  padding: 0;
-  outline: none;
-  color: var(--blok-text-primary);
-}
-
-[data-blok-find-field] input::placeholder {
-  color: var(--blok-text-secondary);
-  opacity: 1;
 }
 
 [data-blok-find-field] input::-webkit-search-cancel-button,
@@ -224,6 +194,8 @@
   mask-image: linear-gradient(transparent, black var(--blok-space-1-5), black calc(100% - var(--blok-space-1-5)), transparent);
   color: var(--blok-text-secondary);
   font-size: var(--blok-font-size-ui-compact);
+  /* The field sets a 22px line; with this padding that would grow it past 28px. */
+  line-height: var(--blok-line-height-body);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

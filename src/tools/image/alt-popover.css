@@ -22,21 +22,4 @@
   color: var(--blok-text-secondary, #707684);
 }
 
-.blok-image-alt-popover__input {
-  width: 100%;
-  padding: var(--blok-space-2) var(--blok-space-2-5);
-  font: inherit;
-  font-size: 14px;
-  line-height: 1.4;
-  color: var(--blok-text-primary, #1d1d1d);
-  background: var(--blok-bg-hover, rgba(15, 15, 14, 0.04));
-  border: 1px solid var(--blok-border-primary, #e0ddd6);
-  border-radius: var(--blok-space-1-5);
-  resize: vertical;
-  box-sizing: border-box;
-  outline: none;
-}
-
-.blok-image-alt-popover__input:focus-visible {
-  border-color: var(--blok-accent, #4c9aff);
-}
+/* The input's look comes from [data-blok-field] in src/styles/field.css. */

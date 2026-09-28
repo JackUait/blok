@@ -183,7 +183,7 @@ export class FindBar {
     this.replaceToggle.setAttribute('aria-expanded', 'false');
     this.replaceToggle.setAttribute('aria-controls', replaceRowId);
 
-    this.field = build('div', { [ATTR.field]: '', 'data-blok-testid': 'find-field' });
+    this.field = build('div', { [ATTR.field]: '', 'data-blok-field': 'search', 'data-blok-testid': 'find-field' });
 
     this.input = build('input', {
       type: 'search',
@@ -235,7 +235,7 @@ export class FindBar {
     this.replaceRow.hidden = true;
 
     const replaceInner = build('div', { [ATTR.row]: '' });
-    const replaceField = build('div', { [ATTR.field]: '', 'data-blok-testid': 'find-replace-field' });
+    const replaceField = build('div', { [ATTR.field]: '', 'data-blok-field': 'text', 'data-blok-testid': 'find-replace-field' });
 
     this.replaceInput = build('input', {
       type: 'text',

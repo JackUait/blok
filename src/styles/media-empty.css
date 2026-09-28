@@ -400,57 +400,27 @@
   padding: var(--blok-space-2);
 }
 
-/* ----- Embed bar: unified pill with icon, input, inline submit ----- */
+/* ----- Embed bar: the shared text field (data-blok-field) with icon, input, inline submit ----- */
 .blok-media-empty__embed-bar {
   position: relative;
   flex: 1;
   min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--blok-space-2);
-  padding: var(--blok-space-1) var(--blok-space-1) var(--blok-space-1) var(--blok-space-3);
-  background: var(--blok-bg-primary);
-  border: 1px solid var(--blok-border-subtle);
-  border-radius: var(--blok-space-2-5);
-  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
-}
-.blok-media-empty__embed-bar:hover {
-  border-color: var(--blok-border-primary);
-}
-.blok-media-empty__embed-bar:has(input:focus) {
-  border-color: var(--blok-color-accent);
 }
 
 .blok-media-empty__embed-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--blok-text-tertiary);
+  color: var(--blok-text-secondary);
   transition: color .15s ease;
 }
 .blok-media-empty__embed-icon svg { width: 16px; height: 16px; }
-.blok-media-empty__embed-bar:has(input:focus) .blok-media-empty__embed-icon {
-  color: var(--blok-color-accent);
-}
 .blok-media-empty__embed-bar[data-valid="true"] .blok-media-empty__embed-icon {
   color: var(--blok-color-accent);
 }
 
 .blok-media-empty__embed-input {
   appearance: none;
-  flex: 1;
-  min-width: 0;
-  font: inherit;
-  font-size: 13px;
-  line-height: 20px;
-  padding: var(--blok-space-1-5) var(--blok-space-0, 0);
-  border: 0;
-  background: transparent;
-  color: var(--blok-text-primary);
-  outline: none;
-}
-.blok-media-empty__embed-input::placeholder {
-  color: var(--blok-text-tertiary);
 }
 
 .blok-media-empty__embed-submit {
@@ -464,7 +434,8 @@
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1;
-  padding: var(--blok-space-1-75) var(--blok-space-3);
+  height: 20px;
+  padding: 0 var(--blok-space-2);
   color: var(--blok-text-tertiary);
   background: transparent;
   border: 1px solid var(--blok-border-subtle);

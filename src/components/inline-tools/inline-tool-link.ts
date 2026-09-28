@@ -124,9 +124,16 @@ export class LinkInlineTool implements InlineTool {
   }
 
   /**
-   * Tailwind classes for input
+   * Layout classes for a closed input. The look comes from data-blok-field.
+   * `hidden!` because field.css shows an input field with an unlayered
+   * display rule that a plain `hidden` loses to.
    */
-  private readonly INPUT_BASE_CLASSES = 'hidden w-full min-w-[220px] m-0 px-2.5 py-1.5 text-sm leading-[22px] font-medium text-text-primary bg-item-hover-bg border border-transparent rounded-[10px]! outline-hidden box-border appearance-none font-[inherit] placeholder:text-gray-text transition-[background-color,border-color,box-shadow] duration-150 ease-out focus:bg-popover-bg focus:border-search-input-focus-border aria-invalid:border-[var(--blok-color-danger)] focus:aria-invalid:border-[var(--blok-color-danger)] mobile:text-[15px] mobile:font-medium';
+  private readonly INPUT_BASE_CLASSES = 'hidden! w-full min-w-[220px] m-0 box-border appearance-none';
+
+  /**
+   * Layout classes for an open input.
+   */
+  private readonly INPUT_OPEN_CLASSES = 'block w-full min-w-[220px] m-0 box-border appearance-none';
 
   /**
    * Data attributes for e2e selectors
@@ -275,8 +282,6 @@ export class LinkInlineTool implements InlineTool {
     this.nodes.divider = this.createDivider();
     this.nodes.removeButton = this.createRemoveButton();
     this.nodes.inputWrapper = document.createElement('div');
-    // Horizontal padding keeps the URL input's 2px focus ring from being clipped
-    // by the popover's overflow-y-auto items box, which sits flush to the wrapper.
     // One card width for every state, so the lists never make it jump.
     this.nodes.inputWrapper.className = 'px-1 w-80 mobile:w-auto';
     this.nodes.inputWrapper.append(
@@ -331,6 +336,7 @@ export class LinkInlineTool implements InlineTool {
     input.placeholder = this.i18n.t('tools.link.addLink');
     input.enterKeyHint = 'done';
     input.className = this.INPUT_BASE_CLASSES;
+    input.setAttribute('data-blok-field', 'text');
     input.setAttribute('data-blok-testid', 'inline-tool-input');
     input.setAttribute('role', 'combobox');
     input.setAttribute('aria-autocomplete', 'list');
@@ -373,6 +379,7 @@ export class LinkInlineTool implements InlineTool {
     input.placeholder = this.i18n.t('tools.link.linkText');
     input.enterKeyHint = 'done';
     input.className = this.INPUT_BASE_CLASSES;
+    input.setAttribute('data-blok-field', 'text');
     input.setAttribute('data-blok-testid', 'inline-tool-title-input');
     input.addEventListener('keydown', (event: KeyboardEvent) => {
       if (event.key === 'Enter') {
@@ -1270,7 +1277,7 @@ export class LinkInlineTool implements InlineTool {
     this.nodes.headingList?.replaceChildren();
     this.updateOptions();
 
-    this.nodes.input.className = twMerge(this.INPUT_BASE_CLASSES, 'block');
+    this.nodes.input.className = this.INPUT_OPEN_CLASSES;
     this.setBooleanStateAttribute(this.nodes.input, this.DATA_ATTRIBUTES.inputOpened, true);
 
     /**
@@ -1297,7 +1304,7 @@ export class LinkInlineTool implements InlineTool {
     if (this.nodes.titleInput) {
       this.nodes.titleInput.value = visible ? titleValue : '';
       this.nodes.titleInput.className = visible
-        ? twMerge(this.INPUT_BASE_CLASSES, 'block')
+        ? this.INPUT_OPEN_CLASSES
         : this.INPUT_BASE_CLASSES;
     }
 

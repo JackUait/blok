@@ -153,9 +153,9 @@ const EXEMPT_FOCUS_SELECTORS: FocusExemption[] = [
     reason: 'Generated from main.css: the same Preflight rule as src/styles/preflight.css. Listed so the published stylesheet is scanned rather than trusted.',
   },
   {
-    file: 'src/components/utils/popover/components/search-input/search-input.const.ts',
-    match: 'focus-within:border-search-input-focus-border',
-    reason: 'Text input: the wrapper it sits on has exactly one child, the `type="search"` input (search-input.ts appends only `this.input`), so focus-within here can only ever mean that field is focused.',
+    file: 'src/styles/field.css',
+    match: 'textarea):focus',
+    reason: 'Text input: the shared field keys its focus look on the text input or textarea only (never a button inside the box), so it may look active however the field was focused.',
   },
   {
     file: 'src/styles/media-empty.css',
@@ -166,16 +166,6 @@ const EXEMPT_FOCUS_SELECTORS: FocusExemption[] = [
     file: 'src/styles/media-empty.css',
     match: '[aria-invalid="true"]',
     reason: 'Text input: the invalid-value border belongs to the field, not to keyboard navigation.',
-  },
-  {
-    file: 'src/styles/embed.css',
-    match: ':has(input:focus)',
-    reason: 'Text input: the URL bar accent tracks the field, not the submit button beside it.',
-  },
-  {
-    file: 'src/styles/media-empty.css',
-    match: ':has(input:focus)',
-    reason: 'Text input: the URL bar accent tracks the field, not the submit button beside it.',
   },
   {
     file: 'src/styles/image.css',
@@ -196,31 +186,6 @@ const EXEMPT_FOCUS_SELECTORS: FocusExemption[] = [
     file: 'src/components/modules/ui.ts',
     match: ':focus]:before:opacity-0',
     reason: 'Hides that same contenteditable placeholder while the toolbox is open.',
-  },
-  {
-    file: 'src/tools/callout/emoji-picker/index.ts',
-    match: 'focus:ring',
-    reason: 'Text input: the emoji picker search field.',
-  },
-  {
-    file: 'src/styles/emoji-picker.css',
-    match: 'input:focus',
-    reason: 'Text input: the emoji picker search field may look active however it was focused.',
-  },
-  {
-    file: 'src/components/inline-tools/inline-tool-link.ts',
-    match: 'focus:bg-popover-bg',
-    reason: 'Text input: the link URL field.',
-  },
-  {
-    file: 'src/components/inline-tools/inline-tool-link.ts',
-    match: 'focus:border-search-input-focus-border',
-    reason: 'Text input: the link URL field.',
-  },
-  {
-    file: 'src/components/inline-tools/inline-tool-link.ts',
-    match: 'focus:aria-invalid:border-',
-    reason: 'Text input: the link URL field in its invalid state.',
   },
   {
     file: 'src/components/inline-tools/inline-tool-equation.ts',

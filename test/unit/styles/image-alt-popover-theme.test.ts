@@ -65,9 +65,10 @@ function altSurfaceRule(): string {
   return css.slice(open + 1, findMatchingBrace(css, open));
 }
 
+/** The alt text field takes its look from the shared `[data-blok-field]` rule. */
 function altInputRule(): string {
-  const idx = css.indexOf('.blok-image-alt-popover__input {');
-  if (idx === -1) throw new Error('alt popover input rule missing');
+  const idx = css.indexOf('[data-blok-field] {');
+  if (idx === -1) throw new Error('shared field rule missing');
   const open = css.indexOf('{', idx);
   return css.slice(open + 1, findMatchingBrace(css, open));
 }
@@ -108,7 +109,7 @@ describe('image alt popover theming', () => {
   });
 
   it('paints its input field with a theme-aware token (light ≠ dark)', () => {
-    const bgVar = varName(declLine(altInputRule(), 'background'));
+    const bgVar = varName(declLine(altInputRule(), 'background-color'));
     const lightVal = light.get(bgVar);
     const darkVal = dark.get(bgVar) ?? lightVal;
     expect(lightVal).toBeDefined();

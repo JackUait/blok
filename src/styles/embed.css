@@ -177,48 +177,24 @@
 
 .blok-embed-empty__bar {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: var(--blok-space-2);
   width: 100%;
-  padding: var(--blok-space-1) var(--blok-space-1) var(--blok-space-1) var(--blok-space-3);
-  background: var(--blok-bg-primary);
-  border: 1px solid var(--blok-border-subtle);
-  border-radius: var(--blok-space-2-5);
-  transition: border-color .15s ease, box-shadow .15s ease;
-}
-.blok-embed-empty__bar:hover { border-color: var(--blok-border-primary); }
-.blok-embed-empty__bar:has(input:focus) {
-  border-color: var(--blok-color-accent);
 }
 
 .blok-embed-empty__bar-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--blok-text-tertiary);
+  color: var(--blok-text-secondary);
   transition: color .15s ease;
 }
 .blok-embed-empty__bar-icon svg { width: 16px; height: 16px; }
-.blok-embed-empty__bar:has(input:focus) .blok-embed-empty__bar-icon,
 .blok-embed-empty__bar[data-valid="true"] .blok-embed-empty__bar-icon {
   color: var(--blok-color-accent);
 }
 
 .blok-embed-empty__input {
   appearance: none;
-  flex: 1;
-  min-width: 0;
-  font: inherit;
-  font-size: 13px;
-  line-height: 20px;
-  padding: var(--blok-space-1-5) var(--blok-space-0, 0);
-  border: 0;
-  background: transparent;
-  color: var(--blok-text-primary);
-  outline: none;
 }
-.blok-embed-empty__input::placeholder { color: var(--blok-text-tertiary); }
 
 .blok-embed-empty__submit {
   appearance: none;
@@ -231,7 +207,8 @@
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1;
-  padding: var(--blok-space-1-75) var(--blok-space-3);
+  height: 20px;
+  padding: 0 var(--blok-space-2);
   color: var(--blok-text-secondary);
   background: transparent;
   border: 1px solid var(--blok-border-subtle);
@@ -318,7 +295,7 @@
 
 @container (max-width: 360px) {
   .blok-embed-empty__submit-label { display: none; }
-  .blok-embed-empty__submit { padding: var(--blok-space-1-75) var(--blok-space-2); }
+  .blok-embed-empty__submit { padding: 0 var(--blok-space-1-5); }
 }
 
 /* caption — editable line under the embed */

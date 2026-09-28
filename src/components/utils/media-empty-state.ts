@@ -362,6 +362,7 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     const bar = document.createElement('div');
     bar.className = 'blok-media-empty__embed-bar';
     bar.setAttribute('data-valid', 'false');
+    bar.setAttribute('data-blok-field', 'text');
 
     const fieldIcon = document.createElement('span');
     fieldIcon.className = 'blok-media-empty__embed-icon';

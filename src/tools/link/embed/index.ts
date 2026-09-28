@@ -636,6 +636,7 @@ export class Embed implements BlockTool {
 
     bar.setAttribute('data-role', 'embed-url-bar');
     bar.setAttribute('data-valid', 'false');
+    bar.setAttribute('data-blok-field', 'text');
     bar.className = 'blok-embed-empty__bar';
 
     const fieldIcon = document.createElement('span');

@@ -548,22 +548,19 @@ describe('EmojiPicker', () => {
     });
   });
 
-  it('search icon is 16×16 and vertically centered inside the input', async () => {
+  it('the search wrapper is the shared search field, with no icon element or input styling of its own', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en' });
     const el = picker.getElement();
 
     const input = el.querySelector('input[type="text"]') as HTMLInputElement;
-    const iconSpan = input.parentElement!.querySelector('span') as HTMLSpanElement;
-    // Icon should be 16×16
-    expect(iconSpan.className).toContain('[&>svg]:w-[16px]');
-    expect(iconSpan.className).toContain('[&>svg]:h-[16px]');
+    const field = input.parentElement as HTMLElement;
 
-    // Vertically centered — flex removes inline baseline offset
-    expect(iconSpan.className).toContain('flex');
-    expect(iconSpan.className).toContain('items-center');
-    expect(iconSpan.className).toContain('top-1/2');
-    expect(iconSpan.className).toContain('-translate-y-1/2');
+    expect(field.getAttribute('data-blok-field')).toBe('search');
+    expect(field.querySelector(':scope > span')).toBeNull();
+    // Leftover utilities are unlayered and would beat field.css.
+    expect(input.className).toBe('');
+    expect(input.getAttribute('aria-label')).toBe('tools.callout.filterEmojis');
   });
 
   describe('header button sizing matches search input', () => {

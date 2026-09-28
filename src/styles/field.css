@@ -1,0 +1,93 @@
+/* ─── Field: the one look for every Blok text field ─────────────────────── */
+
+/* A filled rounded box. Focus is a border change only, never a halo
+   (see the Input Focus Double-Border Law test). The element carrying
+   data-blok-field is the box: an <input> itself, or a wrapper around one. */
+[data-blok-field] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  box-sizing: border-box;
+  min-height: 28px;
+  padding-block: 0;
+  padding-inline: var(--blok-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--blok-space-2);
+  outline: none;
+  background-color: var(--blok-item-hover-bg);
+  box-shadow: none;
+  color: var(--blok-text-primary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 22px;
+
+  /* Only the text input's focus counts: a button inside the box (submit,
+     clear) must not flip it, or a mouse click empties the fill with no caret. */
+  &:is(input, textarea):focus,
+  &:has(:is(input, textarea):focus) {
+    border-color: var(--blok-popover-border);
+    background-color: transparent;
+  }
+
+  /* After the focus rule, and as specific, so an error stays red while typing. */
+  &:is(input, textarea)[aria-invalid='true'],
+  &:has(> :is(input, textarea)[aria-invalid='true']) {
+    border-color: var(--blok-color-danger);
+  }
+
+  /* The public placeholder token; its default tracks --blok-text-secondary. */
+  &::placeholder,
+  > input::placeholder {
+    color: var(--blok-search-input-placeholder);
+  }
+
+  /* A wrapped input draws no box of its own; the field is the box. */
+  > input {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+  }
+
+  /* Phones: tall enough to tap. */
+  @media (max-width: 650px) {
+    min-height: 36px;
+  }
+}
+
+/* An <input> field has no flex children, so it sizes by height, not min-height. */
+input[data-blok-field] {
+  display: block;
+  width: 100%;
+  height: 28px;
+
+  @media (max-width: 650px) {
+    height: 36px;
+  }
+}
+
+/* A multi-line field keeps the look but grows with its rows. */
+textarea[data-blok-field] {
+  display: block;
+  width: 100%;
+  padding-block: var(--blok-space-1);
+  resize: vertical;
+}
+
+/* Search fields lead with the search glyph. Mirrors IconSearch in
+   src/components/icons/index.ts. */
+[data-blok-field='search']::before {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  content: '';
+  background-color: var(--blok-text-secondary);
+  --_blok-search-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.25' stroke-linecap='round'%3E%3Ccircle cx='9' cy='9' r='5'/%3E%3Cpath d='m12.75 12.75 3.25 3.25'/%3E%3C/svg%3E");
+  -webkit-mask: var(--_blok-search-glyph) center / contain no-repeat;
+  mask: var(--_blok-search-glyph) center / contain no-repeat;
+}

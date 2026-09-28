@@ -158,14 +158,14 @@ test('scrolls emoji directly beneath the search field without a blank header str
 
   await scrollEmojiTo(emoji, 'top');
   const gap = await picker.evaluate((root) => {
-    const input = root.querySelector('input');
+    const field = root.querySelector('[data-emoji-picker-search]');
     const body = root.querySelector('[data-emoji-picker-body]');
 
-    if (input === null || body === null) {
+    if (field === null || body === null) {
       throw new Error('Missing picker layout');
     }
 
-    return body.getBoundingClientRect().top - input.getBoundingClientRect().bottom;
+    return body.getBoundingClientRect().top - field.getBoundingClientRect().bottom;
   });
 
   expect(gap).toBeLessThanOrEqual(1);
@@ -319,7 +319,7 @@ test('clears search inline and keeps match counts offscreen with an actionable e
   await expect(clear).toHaveAccessibleName('Clear search');
 
   await page.setViewportSize({ width: 320, height: 640 });
-  const searchRect = await search.boundingBox();
+  const searchRect = await picker.locator('[data-emoji-picker-search]').boundingBox();
   const clearRect = await clear.boundingBox();
 
   expect(clearRect?.width).toBeGreaterThanOrEqual(24);

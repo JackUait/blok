@@ -50,60 +50,37 @@
   padding: var(--blok-space-3) var(--blok-space-3) 0;
 }
 
-[data-blok-emoji-picker] [data-emoji-picker-search] > span {
-  left: 10px;
-  color: var(--blok-text-secondary);
-}
-
-[data-blok-emoji-picker] [data-emoji-picker-search] svg {
-  width: 18px;
-  height: 18px;
-}
-
-[data-blok-emoji-picker] [data-emoji-picker-search] input {
-  box-sizing: border-box;
-  height: 36px;
-  padding: 0 34px;
-  border: 1px solid transparent;
-  border-radius: var(--blok-space-2-25);
-  background: var(--blok-icon-bg);
-  color: var(--blok-text-primary);
-  font-size: 13px;
-  line-height: 20px;
-  box-shadow: none;
-  outline: none;
-}
-
+/* In-flow and shorter than the field, so showing it never grows the box. */
 [data-blok-emoji-picker] [data-emoji-picker-clear] {
-  position: absolute;
-  right: 4px;
-  top: 4px;
   display: grid;
+  flex-shrink: 0;
   place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--blok-radius-md-plus);
+  width: 24px;
+  height: 24px;
+  margin-inline-end: -6px;
+  border-radius: var(--blok-radius-md);
   color: var(--blok-text-secondary);
   cursor: pointer;
 }
 
-[data-blok-emoji-picker] [data-emoji-picker-search] input::placeholder {
-  color: var(--blok-text-secondary);
-  opacity: 1;
+[data-blok-emoji-picker] [data-emoji-picker-clear] svg {
+  width: 16px;
+  height: 16px;
 }
 
-[data-blok-emoji-picker] [data-emoji-picker-search] input:focus {
-  border-color: var(--blok-text-secondary);
-  background: var(--blok-popover-bg);
-  box-shadow: none;
-}
-
+/* Same height as the search field (field.css), so the header has no stripe below it. */
 [data-blok-emoji-picker] :is([data-emoji-picker-skin-toggle], [data-emoji-picker-random], [data-emoji-picker-remove]) {
   width: 32px;
-  height: 36px;
+  height: 28px;
   border-radius: var(--blok-space-2-25);
   color: var(--blok-text-secondary);
   transition: transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (max-width: 650px) {
+  [data-blok-emoji-picker] :is([data-emoji-picker-skin-toggle], [data-emoji-picker-random], [data-emoji-picker-remove]) {
+    height: 36px;
+  }
 }
 
 [data-blok-emoji-picker] [data-emoji-picker-skin-toggle] {

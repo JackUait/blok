@@ -184,11 +184,6 @@ describe('focus-within modality law', () => {
     expect(css).toContain('.blok-video-controls:has(:focus-visible) .blok-video-controls__bar');
   });
 
-  it('drives the embed URL bar accent from the input, not the submit button', () => {
-    expect(css).toContain('.blok-embed-empty__bar:has(input:focus)');
-    expect(css).toContain('.blok-media-empty__embed-bar:has(input:focus)');
-  });
-
   it('drops rules whose subtree holds nothing focusable', () => {
     // Crop handles are <span> with no tabindex; `.blok-media-empty__search` is
     // rendered nowhere in src/.

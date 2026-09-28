@@ -106,12 +106,6 @@
 
   > [data-blok-testid='popover-search-field'] {
     margin-top: var(--blok-space-2);
-    background: transparent;
-    border-color: var(--blok-popover-border);
-
-    &:focus-within {
-      border-color: var(--blok-text-secondary);
-    }
   }
 
   > [data-blok-popover-items] {
@@ -170,38 +164,7 @@
 }
 
 [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]:not([data-blok-promoted-item])) > [data-blok-testid='popover-search-field'] {
-  display: flex;
-  align-items: center;
-  gap: var(--blok-space-1-5);
-  min-height: 28px;
   margin: var(--blok-space-2) 0 0;
-  padding-block: 0;
-  padding-inline: var(--blok-space-2);
-  border: 1px solid transparent;
-  border-radius: var(--blok-space-2);
-  background-color: var(--blok-item-hover-bg);
-
-  /* Mirrors IconSearch in src/components/icons/index.ts. */
-  &::before {
-    flex-shrink: 0;
-    width: 16px;
-    height: 16px;
-    content: '';
-    background-color: var(--blok-text-secondary);
-    --_blok-search-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.25' stroke-linecap='round'%3E%3Ccircle cx='9' cy='9' r='5'/%3E%3Cpath d='m12.75 12.75 3.25 3.25'/%3E%3C/svg%3E");
-    -webkit-mask: var(--_blok-search-glyph) center / contain no-repeat;
-    mask: var(--_blok-search-glyph) center / contain no-repeat;
-  }
-
-  /* Text field: focus is a border change only, never a halo. */
-  &:focus-within {
-    border-color: var(--blok-popover-border);
-    background-color: transparent;
-  }
-
-  @media (max-width: 650px) {
-    min-height: 36px;
-  }
 }
 
 /* A small menu says "Nothing found" in one quiet line, without the illustration. */

@@ -53,8 +53,10 @@ describe('Host customization tokens (public --blok-* contract)', () => {
       expect(css).toMatch(/--blok-search-input-placeholder:\s*[^;]+;/);
     });
 
-    it('styles the placeholder through the token instead of a hardcoded color', () => {
-      expect(searchInputCss.input).toContain('placeholder:text-search-input-placeholder');
+    it('styles every field placeholder through the token instead of a hardcoded color', () => {
+      const placeholder = css.match(/> input::placeholder\s*\{([^}]*)\}/)?.[1] ?? '';
+
+      expect(placeholder).toMatch(/color:\s*var\(--blok-search-input-placeholder\)/);
       expect(searchInputCss.input).not.toContain('placeholder:text-gray-text');
     });
   });

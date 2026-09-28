@@ -54,6 +54,7 @@ export function openAltPopover(opts: OpenAltPopoverOptions): () => void {
 
   const textarea = document.createElement('textarea');
   textarea.className = 'blok-image-alt-popover__input';
+  textarea.setAttribute('data-blok-field', 'text');
   textarea.rows = 2;
   textarea.value = opts.value;
   textarea.placeholder = tr(opts.i18n, 'tools.image.altPlaceholder');

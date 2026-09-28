@@ -1058,7 +1058,7 @@ describe('LinkInlineTool', () => {
 
       const itemWrapper = renderResult.children.items[0].element;
 
-      expect(getTitleInput(itemWrapper).classList.contains('hidden')).toBe(true);
+      expect(getTitleInput(itemWrapper).classList.contains('hidden!')).toBe(true);
       expect(getRemoveButton(itemWrapper).classList.contains('hidden')).toBe(true);
     });
 
@@ -1112,7 +1112,7 @@ describe('LinkInlineTool', () => {
       const removeButton = getRemoveButton(itemWrapper);
 
       expect(titleInput.value).toBe('');
-      expect(titleInput.classList.contains('hidden')).toBe(true);
+      expect(titleInput.classList.contains('hidden!')).toBe(true);
       expect(removeButton.classList.contains('hidden')).toBe(true);
     });
   });

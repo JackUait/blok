@@ -60,6 +60,7 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
     /** Build ui */
     this.wrapper = Dom.make('div', css.wrapper);
     this.wrapper.setAttribute('data-blok-testid', 'popover-search-field');
+    this.wrapper.setAttribute('data-blok-field', 'search');
 
     this.input = Dom.make('input', css.input, {
       type: 'search',

@@ -30,7 +30,6 @@ import {
   IconCross,
   IconTrash,
   IconEmojiDice,
-  IconSearch,
   IconEmojiSparkles,
   IconEmojiWink,
   IconEmojiSprout,
@@ -497,31 +496,18 @@ export class EmojiPicker {
     header.className = 'flex items-center gap-2.5 px-3 pt-3 pb-2';
 
     const searchWrapper = document.createElement('div');
-    searchWrapper.className = 'relative flex-1 min-w-0';
+    searchWrapper.className = 'flex-1 min-w-0';
     searchWrapper.setAttribute('data-emoji-picker-search', '');
-
-    const iconSpan = document.createElement('span');
-    iconSpan.className = [
-      'pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center',
-      'text-neutral-400 theme-dark:text-neutral-500 [&>svg]:w-[16px] [&>svg]:h-[16px]',
-    ].join(' ');
-    iconSpan.innerHTML = IconSearch;
+    // The field draws the box and the search glyph; see field.css.
+    searchWrapper.setAttribute('data-blok-field', 'search');
 
     const input = document.createElement('input');
     input.type = 'text';
     input.setAttribute('role', 'searchbox');
     input.setAttribute('aria-label', this.i18n.t(FILTER_EMOJIS_KEY));
     input.placeholder = this.i18n.t(FILTER_EMOJIS_KEY);
-    input.className = [
-      'w-full text-[13px] rounded-lg py-[7px] pl-8 pr-3 outline-hidden',
-      'bg-neutral-100 text-neutral-800 placeholder:text-neutral-400',
-      'theme-dark:bg-neutral-800 theme-dark:text-neutral-200 theme-dark:placeholder:text-neutral-500',
-      'focus:ring-2 focus:ring-neutral-300/60 theme-dark:focus:ring-neutral-600/60',
-      'transition-shadow duration-150',
-    ].join(' ');
     input.addEventListener('input', () => this.handleFilterChange(input.value));
 
-    searchWrapper.appendChild(iconSpan);
     searchWrapper.appendChild(input);
 
     const clearSearch = document.createElement('button');

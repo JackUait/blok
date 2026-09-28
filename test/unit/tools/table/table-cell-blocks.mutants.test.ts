@@ -700,6 +700,24 @@ describe('TableCellBlocks — surviving-mutant coverage', () => {
       expect(fixture.store.caretCalls).toEqual([]);
       expect(fixture.store.insertCalls).toEqual([]);
     });
+
+    it('does nothing when the table is destroyed before the frame runs', () => {
+      const fixture = setup({ rows: 1, cols: 1 });
+      const frames: FrameRequestCallback[] = [];
+
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback: FrameRequestCallback) => {
+        frames.push(callback);
+
+        return 1;
+      });
+
+      fixture.instance.focusClearedCell(fixture.grid.cell(0, 0));
+      fixture.instance.destroy();
+      frames.forEach(frame => frame(0));
+
+      expect(fixture.store.insertCalls).toEqual([]);
+      expect(fixture.store.caretCalls).toEqual([]);
+    });
   });
 
   describe('ensureCellHasBlock', () => {

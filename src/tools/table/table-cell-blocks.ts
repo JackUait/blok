@@ -73,6 +73,9 @@ export class TableCellBlocks {
   private _activeCellWithBlocks: CellPosition | null = null;
   private onNavigateToCell?: CellNavigationCallback;
 
+  /** Set by destroy so a frame queued before it cannot repair a table that is gone. */
+  private isDestroyed = false;
+
   /**
    * Cells that need an empty-check after a block-removed event.
    * A pending microtask will call ensureCellHasBlock for each cell still in this Set.
@@ -1433,7 +1436,7 @@ export class TableCellBlocks {
    */
   public focusClearedCell(cell: HTMLElement): void {
     requestAnimationFrame(() => {
-      if (!this.gridElement.contains(cell)) {
+      if (this.isDestroyed || !this.gridElement.contains(cell)) {
         return;
       }
 
@@ -2169,6 +2172,7 @@ export class TableCellBlocks {
     this.cellsPendingCheck.clear();
     this.removedBlockCells.clear();
     this.deferredEvents.length = 0;
+    this.isDestroyed = true;
   }
 
   /**

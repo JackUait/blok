@@ -7,6 +7,7 @@ import { MediaSource } from './media-source';
 import { MenuConfig } from './menu-config';
 import { PasteEvent } from './paste-events';
 import { ToolboxConfig } from './tool-settings';
+import { MediaVariant } from '../configs/media';
 
 /** Horizontal alignment of the video within its container. */
 export type VideoAlignment = 'left' | 'center' | 'right';
@@ -38,6 +39,8 @@ export interface VideoData extends BlockToolData {
   fileName?: string;
   /** Source MIME type (e.g. video/mp4), when known */
   mimeType?: string;
+  /** Other renditions, best format first. `url` is the most compatible one. */
+  variants?: MediaVariant[];
   /** Intrinsic aspect ratio string (e.g. '16 / 9'), cached from loadedmetadata. */
   aspectRatio?: string;
 }

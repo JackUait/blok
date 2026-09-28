@@ -242,7 +242,7 @@ export interface API {
   /** Runtime setter for the live callback config (see {@link Handlers}). */
   handlers: Handlers;
   /** Read-only view of selected editor configuration. */
-  config: Readonly<Pick<BlokConfig, 'linkPaste' | 'link'>>;
+  config: Readonly<Pick<BlokConfig, 'linkPaste' | 'link' | 'media'>>;
   rectangleSelection: {
     cancelActiveSelection: () => void;
     isRectActivated: () => boolean;

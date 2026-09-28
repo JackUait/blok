@@ -7,6 +7,7 @@ import { MediaSource } from './media-source';
 import { MenuConfig } from './menu-config';
 import { PasteEvent } from './paste-events';
 import { ToolboxConfig } from './tool-settings';
+import { MediaVariant } from '../configs/media';
 
 /** Horizontal alignment of the image within its container. */
 export type ImageAlignment = 'left' | 'center' | 'right';
@@ -58,6 +59,8 @@ export interface ImageData extends BlockToolData {
   naturalWidth?: number;
   /** Intrinsic pixel height of the source image. Cached after first successful load. */
   naturalHeight?: number;
+  /** Other renditions, best format first. `url` is the most compatible one. */
+  variants?: MediaVariant[];
 }
 
 /**

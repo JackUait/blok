@@ -7,6 +7,7 @@ import { BlockMutationEvent } from '../events/block';
 import type { BlockMigrations } from '../migrate';
 import type { UserInfo } from './user-info';
 import type { BlokUploader } from './uploader';
+import type { MediaConfig } from './media';
 import type { NotifierPosition, NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions } from './notifier';
 
 /**
@@ -688,6 +689,12 @@ export interface BlokMountOptions {
   };
 
   uploader?: BlokUploader;
+
+  /**
+   * Convert uploaded photos and videos into several formats, rendered best-first.
+   * Off unless `formats.image` or `formats.video` is set.
+   */
+  media?: MediaConfig;
 
   /**
    * Turn on real-time multiplayer editing against the `server`'s sync service.

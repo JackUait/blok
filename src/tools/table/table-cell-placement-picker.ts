@@ -12,26 +12,42 @@ interface PlacementPickerResult {
   element: HTMLDivElement;
 }
 
-type Side = 'left' | 'center' | 'right';
+type Row = 'top' | 'middle' | 'bottom';
+type Column = 'left' | 'center' | 'right';
 
-/**
- * Only the middle row is offered. Cells saved with any other placement still
- * render as saved; the picker checks the option on the same side.
- */
-const OPTIONS: { side: Side; placement: CellPlacement; key: string }[] = [
-  { side: 'left', placement: 'middle-left', key: 'tools.table.placementMiddleLeft' },
-  { side: 'center', placement: 'middle-center', key: 'tools.table.placementMiddleCenter' },
-  { side: 'right', placement: 'middle-right', key: 'tools.table.placementMiddleRight' },
-];
+const ROWS: Row[] = ['top', 'middle', 'bottom'];
+const COLUMNS: Column[] = ['left', 'center', 'right'];
 
-const GLYPH_ALIGN: Record<Side, string> = {
+const I18N_KEYS: Record<CellPlacement, string> = {
+  'top-left': 'tools.table.placementTopLeft',
+  'top-center': 'tools.table.placementTopCenter',
+  'top-right': 'tools.table.placementTopRight',
+  'middle-left': 'tools.table.placementMiddleLeft',
+  'middle-center': 'tools.table.placementMiddleCenter',
+  'middle-right': 'tools.table.placementMiddleRight',
+  'bottom-left': 'tools.table.placementBottomLeft',
+  'bottom-center': 'tools.table.placementBottomCenter',
+  'bottom-right': 'tools.table.placementBottomRight',
+};
+
+/** Row by row, so option n sits at grid column n % 3, row floor(n / 3). */
+const OPTIONS = ROWS.flatMap(row => COLUMNS.map(column => ({
+  row,
+  column,
+  placement: `${row}-${column}` as CellPlacement,
+})));
+
+const FLEX: Record<Row | Column, string> = {
+  top: 'flex-start',
+  middle: 'center',
+  bottom: 'flex-end',
   left: 'flex-start',
   center: 'center',
   right: 'flex-end',
 };
 
 /** Text lines of the small option glyphs, in px. */
-const GLYPH_LINES = [22, 14, 18];
+const GLYPH_LINES = [12, 8];
 
 /**
  * Text lines of the preview card, in px, laid out in a PREVIEW_TEXT_WIDTH box:
@@ -40,13 +56,23 @@ const GLYPH_LINES = [22, 14, 18];
 const PREVIEW_TEXT_WIDTH = 156;
 const PREVIEW_LINES = [104, 64, 88];
 
-/** How far a line of this width sits from the left edge when aligned to this side. */
-const offsetOf = (side: Side, width: number): number => {
-  if (side === 'left') {
+/**
+ * Where the text box's top sits for each row: 12px padding in an 84px card
+ * holding three 4px lines 6px apart (24px of text).
+ */
+const PREVIEW_TOP: Record<Row, number> = {
+  top: 12,
+  middle: 30,
+  bottom: 48,
+};
+
+/** How far a line of this width sits from the left edge when aligned to this column. */
+const offsetOf = (column: Column, width: number): number => {
+  if (column === 'left') {
     return 0;
   }
 
-  return side === 'center' ? (PREVIEW_TEXT_WIDTH - width) / 2 : PREVIEW_TEXT_WIDTH - width;
+  return column === 'center' ? (PREVIEW_TEXT_WIDTH - width) / 2 : PREVIEW_TEXT_WIDTH - width;
 };
 
 /**
@@ -55,10 +81,17 @@ const offsetOf = (side: Side, width: number): number => {
  */
 const EASE_IN_OUT = '[transition-timing-function:cubic-bezier(0.7,0,0.2,1)]';
 
+const MOTION = [
+  'transition-transform',
+  'duration-[240ms]',
+  EASE_IN_OUT,
+  'motion-reduce:transition-none',
+];
+
 /** Same width, radius and neutral surface as the options track below it. */
 const PREVIEW_CLASSES = [
   'relative',
-  'h-[68px]',
+  'h-[84px]',
   'mb-1.5',
   'rounded-[10px]',
   'bg-item-hover-bg',
@@ -67,22 +100,19 @@ const PREVIEW_CLASSES = [
 
 const TEXT_BOX_CLASSES = [
   'absolute',
+  'top-0',
   'inset-x-[14px]',
-  'top-1/2',
-  '-translate-y-1/2',
   'flex',
   'flex-col',
   'gap-[6px]',
+  ...MOTION,
 ];
 
 const PREVIEW_LINE_CLASSES = [
   'h-1',
   'rounded-full',
   'bg-current',
-  'transition-transform',
-  'duration-[240ms]',
-  EASE_IN_OUT,
-  'motion-reduce:transition-none',
+  ...MOTION,
 ];
 
 const GROUP_CLASSES = [
@@ -96,21 +126,18 @@ const GROUP_CLASSES = [
 
 /**
  * The selection is a neutral surface that slides between options — never blue.
- * Its width matches one grid column, so translateX(n * 100%) lands on option n.
+ * It is one grid cell in size, so translate(col * 100%, row * 100%) lands on it.
  */
 const THUMB_CLASSES = [
   'absolute',
   'top-[3px]',
-  'bottom-[3px]',
   'left-[3px]',
   'w-[calc((100%-6px)/3)]',
+  'h-[calc((100%-6px)/3)]',
   'rounded-[7px]',
   'bg-icon-active-bg',
   'pointer-events-none',
-  'transition-transform',
-  'duration-[240ms]',
-  EASE_IN_OUT,
-  'motion-reduce:transition-none',
+  ...MOTION,
 ];
 
 const OPTION_CLASSES = [
@@ -134,24 +161,30 @@ const OPTION_CLASSES = [
   'data-[blok-focused="true"]:bg-item-focus-bg',
 ];
 
+/**
+ * A tiny outlined cell with two text lines pushed to the option's corner, edge
+ * or centre. The outline is what makes the row readable at a glance.
+ * [border-color:…] because twMerge drops `border` next to some border-color utilities.
+ */
 const GLYPH_CLASSES = [
   'flex',
   'flex-col',
-  'gap-[2.5px]',
+  'gap-[2px]',
+  'w-5',
+  'h-4',
+  'p-[2px]',
+  'rounded-[3px]',
+  'border',
+  '[border-color:color-mix(in_srgb,currentColor_30%,transparent)]',
   'pointer-events-none',
 ];
 
+/** Whole-pixel lines: fractional ones blur differently in each row. */
 const GLYPH_LINE_CLASSES = [
-  'h-[1.5px]',
+  'h-[2px]',
   'rounded-full',
   'bg-current',
 ];
-
-const sideOf = (placement: CellPlacement | undefined): Side => {
-  const side = (placement ?? 'top-left').split('-')[1];
-
-  return side === 'center' || side === 'right' ? side : 'left';
-};
 
 const div = (classes: string[]): HTMLDivElement => {
   const element = document.createElement('div');
@@ -173,6 +206,8 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
   preview.setAttribute('aria-hidden', 'true');
 
   const textBox = div(TEXT_BOX_CLASSES);
+
+  textBox.setAttribute('data-blok-placement-preview-text', '');
 
   const previewLines = PREVIEW_LINES.map((width, index) => {
     const line = div(PREVIEW_LINE_CLASSES);
@@ -200,14 +235,16 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
   group.appendChild(thumb);
 
   const buttons: HTMLButtonElement[] = [];
-  const state = { index: OPTIONS.findIndex(option => option.side === sideOf(options.currentPlacement)) };
+  const current = options.currentPlacement ?? 'top-left';
+  const state = { index: Math.max(0, OPTIONS.findIndex(option => option.placement === current)) };
 
   /** Shows one option in the preview without committing it. */
   const show = (index: number): void => {
-    const { side } = OPTIONS[index];
+    const { row, column } = OPTIONS[index];
 
+    textBox.style.transform = `translateY(${PREVIEW_TOP[row]}px)`;
     for (const [lineIndex, line] of previewLines.entries()) {
-      line.style.transform = `translateX(${offsetOf(side, PREVIEW_LINES[lineIndex])}px)`;
+      line.style.transform = `translateX(${offsetOf(column, PREVIEW_LINES[lineIndex])}px)`;
     }
   };
 
@@ -215,7 +252,7 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
     buttons.forEach((button, index) => {
       button.setAttribute('aria-checked', String(index === state.index));
     });
-    thumb.style.transform = `translateX(${state.index * 100}%)`;
+    thumb.style.transform = `translate(${(state.index % 3) * 100}%, ${Math.floor(state.index / 3) * 100}%)`;
     show(state.index);
   };
 
@@ -225,14 +262,14 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
     button.type = 'button';
     button.setAttribute('role', 'radio');
     button.setAttribute('data-placement', option.placement);
-    button.setAttribute('aria-label', options.i18n.t(option.key));
+    button.setAttribute('aria-label', options.i18n.t(I18N_KEYS[option.placement]));
     button.className = twMerge(OPTION_CLASSES);
 
     const glyph = div(GLYPH_CLASSES);
 
     glyph.setAttribute('data-blok-placement-glyph', '');
-    glyph.style.width = `${GLYPH_LINES[0]}px`;
-    glyph.style.alignItems = GLYPH_ALIGN[option.side];
+    glyph.style.justifyContent = FLEX[option.row];
+    glyph.style.alignItems = FLEX[option.column];
 
     for (const width of GLYPH_LINES) {
       const line = div(GLYPH_LINE_CLASSES);

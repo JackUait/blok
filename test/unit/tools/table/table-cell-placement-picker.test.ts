@@ -2,18 +2,28 @@ import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vite
 import { createCellPlacementPicker } from '../../../../src/tools/table/table-cell-placement-picker';
 import type { CellPlacement } from '../../../../src/tools/table/types';
 
-const mockI18n = {
-  t: (key: string): string => {
-    const map: Record<string, string> = {
-      'tools.table.placement': 'Alignment',
-      'tools.table.placementMiddleLeft': 'Middle left',
-      'tools.table.placementMiddleCenter': 'Center',
-      'tools.table.placementMiddleRight': 'Middle right',
-    };
+const LABELS: Record<string, string> = {
+  'tools.table.placement': 'Alignment',
+  'tools.table.placementTopLeft': 'Top left',
+  'tools.table.placementTopCenter': 'Top center',
+  'tools.table.placementTopRight': 'Top right',
+  'tools.table.placementMiddleLeft': 'Middle left',
+  'tools.table.placementMiddleCenter': 'Center',
+  'tools.table.placementMiddleRight': 'Middle right',
+  'tools.table.placementBottomLeft': 'Bottom left',
+  'tools.table.placementBottomCenter': 'Bottom center',
+  'tools.table.placementBottomRight': 'Bottom right',
+};
 
-    return map[key] ?? key;
-  },
+const mockI18n = {
+  t: (key: string): string => LABELS[key] ?? key,
 } as Parameters<typeof createCellPlacementPicker>[0]['i18n'];
+
+const ALL: CellPlacement[] = [
+  'top-left', 'top-center', 'top-right',
+  'middle-left', 'middle-center', 'middle-right',
+  'bottom-left', 'bottom-center', 'bottom-right',
+];
 
 const render = (currentPlacement: CellPlacement | undefined, onPlacementSelect: (placement: CellPlacement) => void = vi.fn()): HTMLElement => {
   const { element } = createCellPlacementPicker({ i18n: mockI18n, currentPlacement, onPlacementSelect });
@@ -25,6 +35,16 @@ const render = (currentPlacement: CellPlacement | undefined, onPlacementSelect: 
 
 const radios = (element: HTMLElement): HTMLButtonElement[] =>
   Array.from(element.querySelectorAll<HTMLButtonElement>('[role="radio"]'));
+
+const radio = (element: HTMLElement, placement: CellPlacement): HTMLButtonElement => {
+  const found = element.querySelector<HTMLButtonElement>(`[role="radio"][data-placement="${placement}"]`);
+
+  if (found === null) {
+    throw new Error(`Missing ${placement}`);
+  }
+
+  return found;
+};
 
 const checked = (element: HTMLElement): string | null =>
   element.querySelector('[role="radio"][aria-checked="true"]')?.getAttribute('data-placement') ?? null;
@@ -39,7 +59,6 @@ const thumbOf = (element: HTMLElement): HTMLElement => {
   return thumb;
 };
 
-
 describe('createCellPlacementPicker', () => {
   let onPlacementSelect: Mock<(placement: CellPlacement) => void>;
 
@@ -53,63 +72,62 @@ describe('createCellPlacementPicker', () => {
     document.body.replaceChildren();
   });
 
-  it('offers only the middle row — left, center, right — as a named radio group', () => {
+  it('offers all nine placements, row by row, as a named radio group', () => {
     const element = render(undefined);
     const group = element.querySelector('[role="radiogroup"]');
 
     expect(group?.getAttribute('aria-label')).toBe('Alignment');
-    expect(radios(element).map(radio => radio.getAttribute('data-placement'))).toEqual([
-      'middle-left', 'middle-center', 'middle-right',
+    expect(radios(element).map(option => option.getAttribute('data-placement'))).toEqual(ALL);
+    expect(radios(element).map(option => option.getAttribute('aria-label'))).toEqual([
+      'Top left', 'Top center', 'Top right',
+      'Middle left', 'Center', 'Middle right',
+      'Bottom left', 'Bottom center', 'Bottom right',
     ]);
-    expect(radios(element).map(radio => radio.getAttribute('aria-label'))).toEqual(['Middle left', 'Center', 'Middle right']);
   });
 
   it('uses real buttons, so each option is a keyboard stop inside the popover', () => {
-    expect(radios(render(undefined))).toHaveLength(3);
+    expect(radios(render(undefined))).toHaveLength(9);
 
-    for (const radio of radios(document.body)) {
-      expect(radio.tagName).toBe('BUTTON');
-      expect(radio.type).toBe('button');
+    for (const option of radios(document.body)) {
+      expect(option.tagName).toBe('BUTTON');
+      expect(option.type).toBe('button');
     }
   });
 
-  it.each([
-    [undefined, 'middle-left'],
-    ['top-left', 'middle-left'],
-    ['middle-center', 'middle-center'],
-    ['bottom-center', 'middle-center'],
-    ['top-right', 'middle-right'],
-    ['bottom-right', 'middle-right'],
-  ] as const)('checks the option on the same side as the current placement %s', (current, expected) => {
-    const element = render(current);
+  it('checks top-left, the default, when the cell has no placement', () => {
+    expect(checked(render(undefined))).toBe('top-left');
+  });
 
-    expect(checked(element)).toBe(expected);
+  it.each(ALL)('checks exactly the current placement %s', placement => {
+    const element = render(placement);
+
+    expect(checked(element)).toBe(placement);
     expect(element.querySelectorAll('[role="radio"][aria-checked="true"]')).toHaveLength(1);
   });
 
-  it('parks the thumb under the checked option', () => {
-    expect(thumbOf(render('top-left')).style.transform).toBe('translateX(0%)');
-    document.body.replaceChildren();
-    expect(thumbOf(render('bottom-center')).style.transform).toBe('translateX(100%)');
-    document.body.replaceChildren();
-    expect(thumbOf(render('middle-right')).style.transform).toBe('translateX(200%)');
+  it.each([
+    ['top-left', 'translate(0%, 0%)'],
+    ['top-right', 'translate(200%, 0%)'],
+    ['middle-center', 'translate(100%, 100%)'],
+    ['bottom-left', 'translate(0%, 200%)'],
+    ['bottom-right', 'translate(200%, 200%)'],
+  ] as const)('parks the thumb under %s', (placement, transform) => {
+    expect(thumbOf(render(placement)).style.transform).toBe(transform);
   });
 
-  it('selecting an option reports it, checks it and slides the thumb', () => {
+  it('selecting an option reports it, checks it and slides the thumb in both directions', () => {
     const element = render('top-left', onPlacementSelect);
-    const [, center, right] = radios(element);
 
-    center.click();
+    radio(element, 'bottom-center').click();
 
-    expect(onPlacementSelect).toHaveBeenLastCalledWith('middle-center');
-    expect(checked(element)).toBe('middle-center');
-    expect(thumbOf(element).style.transform).toBe('translateX(100%)');
+    expect(onPlacementSelect).toHaveBeenLastCalledWith('bottom-center');
+    expect(checked(element)).toBe('bottom-center');
+    expect(thumbOf(element).style.transform).toBe('translate(100%, 200%)');
 
-    right.click();
+    radio(element, 'middle-right').click();
 
     expect(onPlacementSelect).toHaveBeenLastCalledWith('middle-right');
-    expect(checked(element)).toBe('middle-right');
-    expect(thumbOf(element).style.transform).toBe('translateX(200%)');
+    expect(thumbOf(element).style.transform).toBe('translate(200%, 100%)');
     expect(onPlacementSelect).toHaveBeenCalledTimes(2);
   });
 
@@ -119,11 +137,10 @@ describe('createCellPlacementPicker', () => {
 
   it('never marks the selection in blue: the option keeps its look and a neutral thumb carries the state', () => {
     const element = render('middle-center');
-    const [left, center] = radios(element);
     const thumb = thumbOf(element);
 
-    expect(center.className).toBe(left.className);
-    expect(center.style.backgroundColor).toBe('');
+    expect(radio(element, 'middle-center').className).toBe(radio(element, 'top-left').className);
+    expect(radio(element, 'middle-center').style.backgroundColor).toBe('');
     expect(thumb.className).toContain('bg-icon-active-bg');
     expect(thumb.className).not.toMatch(/blue|primary|focus/);
   });
@@ -136,6 +153,28 @@ describe('createCellPlacementPicker', () => {
     expect(className).toContain('cubic-bezier(0.7,0,0.2,1)');
     expect(className).not.toContain('1.56');
     expect(className).toContain('motion-reduce:transition-none');
+  });
+
+  it('draws each option as text lines placed at its own corner, edge or centre', () => {
+    const element = render(undefined);
+    const glyphs = radios(element).map(option => option.querySelector<HTMLElement>('[data-blok-placement-glyph]'));
+
+    expect(glyphs.map(glyph => [glyph?.style.justifyContent, glyph?.style.alignItems])).toEqual([
+      ['flex-start', 'flex-start'], ['flex-start', 'center'], ['flex-start', 'flex-end'],
+      ['center', 'flex-start'], ['center', 'center'], ['center', 'flex-end'],
+      ['flex-end', 'flex-start'], ['flex-end', 'center'], ['flex-end', 'flex-end'],
+    ]);
+  });
+
+  it('frames each option as a tiny outlined cell with whole-pixel lines, so its row reads at 16px', () => {
+    for (const option of radios(render(undefined))) {
+      const glyph = option.querySelector<HTMLElement>('[data-blok-placement-glyph]');
+
+      expect(glyph?.classList.contains('border')).toBe(true);
+      for (const line of Array.from(glyph?.children ?? [])) {
+        expect(line.classList.contains('h-[2px]')).toBe(true);
+      }
+    }
   });
 
   describe('live cell preview', () => {
@@ -153,6 +192,9 @@ describe('createCellPlacementPicker', () => {
       Array.from(previewOf(element).querySelectorAll<HTMLElement>('[data-blok-placement-preview-line]'))
         .map(line => line.style.transform);
 
+    const drop = (element: HTMLElement): string =>
+      previewOf(element).querySelector<HTMLElement>('[data-blok-placement-preview-text]')?.style.transform ?? '';
+
     it('is decorative: hidden from assistive tech, which reads the radios instead', () => {
       expect(previewOf(render(undefined)).getAttribute('aria-hidden')).toBe('true');
     });
@@ -166,58 +208,58 @@ describe('createCellPlacementPicker', () => {
       expect(preview.classList.contains('rounded-[10px]')).toBe(true);
       expect(track?.classList.contains('rounded-[10px]')).toBe(true);
       expect(Array.from(preview.classList).filter(name => /^border|border-/.test(name))).toEqual([]);
-      expect(preview.querySelector('[data-blok-placement-guide]')).toBeNull();
     });
 
     it.each([
-      ['middle-left', ['translateX(0px)', 'translateX(0px)', 'translateX(0px)']],
-      ['middle-center', ['translateX(26px)', 'translateX(46px)', 'translateX(34px)']],
-      ['middle-right', ['translateX(52px)', 'translateX(92px)', 'translateX(68px)']],
-    ] as const)('lays the cell text out %s', (placement, expected) => {
-      expect(shifts(render(placement))).toEqual(expected);
+      ['top-left', ['translateX(0px)', 'translateX(0px)', 'translateX(0px)'], 'translateY(12px)'],
+      ['middle-center', ['translateX(26px)', 'translateX(46px)', 'translateX(34px)'], 'translateY(30px)'],
+      ['bottom-right', ['translateX(52px)', 'translateX(92px)', 'translateX(68px)'], 'translateY(48px)'],
+    ] as const)('lays the cell text out %s', (placement, expected, vertical) => {
+      const element = render(placement);
+
+      expect(shifts(element)).toEqual(expected);
+      expect(drop(element)).toBe(vertical);
     });
 
     it('glides to the hovered option and back to the checked one on leave', () => {
-      const element = render('middle-left');
-      const [, , right] = radios(element);
+      const element = render('top-left');
+      const target = radio(element, 'bottom-right');
 
-      right.dispatchEvent(new PointerEvent('pointerenter'));
+      target.dispatchEvent(new PointerEvent('pointerenter'));
       expect(shifts(element)[1]).toBe('translateX(92px)');
+      expect(drop(element)).toBe('translateY(48px)');
 
-      right.dispatchEvent(new PointerEvent('pointerleave'));
+      target.dispatchEvent(new PointerEvent('pointerleave'));
       expect(shifts(element)[1]).toBe('translateX(0px)');
+      expect(drop(element)).toBe('translateY(12px)');
     });
 
     it('stays on a picked option after the pointer leaves it', () => {
-      const element = render('middle-left');
-      const [, center] = radios(element);
+      const element = render('top-left');
+      const target = radio(element, 'middle-center');
 
-      center.dispatchEvent(new PointerEvent('pointerenter'));
-      center.click();
-      center.dispatchEvent(new PointerEvent('pointerleave'));
+      target.dispatchEvent(new PointerEvent('pointerenter'));
+      target.click();
+      target.dispatchEvent(new PointerEvent('pointerleave'));
 
       expect(shifts(element)[1]).toBe('translateX(46px)');
+      expect(drop(element)).toBe('translateY(30px)');
     });
 
-    it('moves the lines together, accelerating then braking without overshoot, and stands still for reduced motion', () => {
-      const lines = Array.from(previewOf(render(undefined)).querySelectorAll<HTMLElement>('[data-blok-placement-preview-line]'));
+    it('moves the text together, accelerating then braking without overshoot, and stands still for reduced motion', () => {
+      const preview = previewOf(render(undefined));
+      const moving = [
+        ...preview.querySelectorAll<HTMLElement>('[data-blok-placement-preview-line]'),
+        preview.querySelector<HTMLElement>('[data-blok-placement-preview-text]'),
+      ];
 
-      for (const line of lines) {
-        expect(line.style.transitionDelay).toBe('');
-        expect(line.className).toContain('transition-transform');
-        expect(line.className).toContain('duration-[240ms]');
-        expect(line.className).toContain('cubic-bezier(0.7,0,0.2,1)');
-        expect(line.className).not.toContain('1.56');
-        expect(line.className).toContain('motion-reduce:transition-none');
+      for (const part of moving) {
+        expect(part?.style.transitionDelay).toBe('');
+        expect(part?.className).toContain('transition-transform');
+        expect(part?.className).toContain('duration-[240ms]');
+        expect(part?.className).toContain('cubic-bezier(0.7,0,0.2,1)');
+        expect(part?.className).toContain('motion-reduce:transition-none');
       }
     });
-  });
-
-  it('draws each option as text lines aligned to its own side', () => {
-    const element = render(undefined);
-    const alignments = radios(element).map(radio =>
-      radio.querySelector<HTMLElement>('[data-blok-placement-glyph]')?.style.alignItems);
-
-    expect(alignments).toEqual(['flex-start', 'center', 'flex-end']);
   });
 });

@@ -308,7 +308,7 @@ interface CellContent {
   rowId?: string;      // Row id, the same on every cell of the row; minted on load when missing
   color?: string;      // Cell background colour
   textColor?: string;  // Cell text colour
-  placement?: CellPlacement; // 9-way vertical+horizontal alignment (e.g. 'top-left'); the menu sets 'middle-left' | 'middle-center' | 'middle-right', all nine render
+  placement?: CellPlacement; // 9-way vertical+horizontal alignment (e.g. 'top-left', 'middle-center')
   colspan?: number;    // Columns this cell spans (origin cells only)
   rowspan?: number;    // Rows this cell spans (origin cells only)
   mergedInto?: [number, number]; // Set when covered by a merge; origin cell at [row, col]

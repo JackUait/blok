@@ -206,7 +206,7 @@ const openPlacementPicker = async (page: Page): Promise<void> => {
   await page.mouse.move(itemBox.x + itemBox.width / 2, itemBox.y + itemBox.height / 2);
 
   // Wait for the alignment options to appear in the submenu
-  const gridCell = page.locator('[data-placement="middle-right"]');
+  const gridCell = page.locator('[data-placement="bottom-right"]');
 
   await expect(gridCell).toBeVisible();
 };
@@ -235,10 +235,10 @@ test.describe('Cell Placement', () => {
 
     await expect(pill).toBeAttached();
 
-    // Open pill popover → hover Alignment → pick middle-right
+    // Open pill popover → hover Alignment → pick bottom-right
     await openPlacementPicker(page);
 
-    const gridCell = page.locator('[data-placement="middle-right"]');
+    const gridCell = page.locator('[data-placement="bottom-right"]');
 
     await gridCell.click({ force: true });
 
@@ -249,7 +249,7 @@ test.describe('Cell Placement', () => {
       return blocksContainer?.getAttribute('data-blok-cell-placement') ?? null;
     });
 
-    expect(placementAttr).toBe('middle-right');
+    expect(placementAttr).toBe('bottom-right');
   });
 
   test('placement persists through save', async ({ page }) => {

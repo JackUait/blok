@@ -744,6 +744,7 @@ const editor = new Blok({
   fileName?: string;       // Original filename, when known
   naturalWidth?: number;   // Intrinsic pixel width of the source (cached)
   naturalHeight?: number;  // Intrinsic pixel height of the source (cached)
+  variants?: { url: string; mimeType: string }[]; // Other formats, best first
 }`,
     saveDataExample: `{
   "id": "img001",
@@ -1227,6 +1228,7 @@ const editor = new Blok({
   fileName?: string;       // Original filename, when known
   mimeType?: string;       // MIME type
   aspectRatio?: string;    // e.g. "16 / 9", used to reserve layout space
+  variants?: { url: string; mimeType: string }[]; // Other formats, best first
 }`,
     saveDataExample: `{
   "id": "vid001",

@@ -619,6 +619,13 @@ const editor = new Blok(config);`,
           "Editor-level uploader for every media asset, routed by asset KIND rather than by tool. `uploadByFile(file, { kind, tool })` and `uploadByUrl(url, { kind, tool })` receive `kind: 'image' | 'video' | 'audio' | 'file'`, so one implementation serves the image, video, audio and file blocks.\n\nThat includes assets a tool owns outside its own media family, such as the audio block's cover art (`kind: 'image'`, `tool: 'audio'`), which has no tool-level uploader of its own.\n\nA tool-level uploader (`tools.image.config.uploader`) stays authoritative for its own kind and takes precedence. This one is the fallback. Without either, assets become `blob:` URLs that do not survive a reload.",
       },
       {
+        option: "media",
+        type: "MediaConfig",
+        default: "undefined",
+        description:
+          "Convert every uploaded photo into several formats. The editor then shows the best format each browser supports. It is off until you list formats.\n\n- `formats.image` takes `'avif'`, `'webp'`, `'jpeg'` and `'png'`.\n- The order you write does not matter. Blok stores and renders the formats best first.\n- The most compatible format becomes `url`, so readers that ignore `variants` still work.\n- A format the browser cannot encode is skipped. When no JPEG or PNG was made, the original file is kept as the fallback.\n- A transparent image never gets a JPEG.\n\nEach format is a separate upload. Your uploader receives `variant: { mimeType, role }` in its context.\n\n`convert(file, formats, ctx)` replaces the built-in converter. Return `null` to use Blok's own.\n\n`formats.video` has no effect yet. Video conversion is still in progress.",
+      },
+      {
         option: "server",
         type: "string",
         default: "undefined",

@@ -34,18 +34,11 @@ const GLYPH_ALIGN: Record<Side, string> = {
 const GLYPH_LINES = [22, 14, 18];
 
 /**
- * Text lines of the preview cell, in px, laid out in a PREVIEW_TEXT_WIDTH box.
- * The box width must match the preview's padding: 184px preview, cell edges
- * 16px in, 10px cell padding.
+ * Text lines of the preview card, in px, laid out in a PREVIEW_TEXT_WIDTH box:
+ * the 184px card minus its 14px padding on each side.
  */
-const PREVIEW_TEXT_WIDTH = 132;
-const PREVIEW_LINES = [96, 56, 76];
-
-const GUIDE_AT: Record<Side, string> = {
-  left: '0%',
-  center: '50%',
-  right: '100%',
-};
+const PREVIEW_TEXT_WIDTH = 156;
+const PREVIEW_LINES = [104, 64, 88];
 
 /** How far a line of this width sits from the left edge when aligned to this side. */
 const offsetOf = (side: Side, width: number): number => {
@@ -58,34 +51,19 @@ const offsetOf = (side: Side, width: number): number => {
 
 const SPRING = '[transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)]';
 
-/**
- * A slice of a table row: the edited cell in the middle, its neighbours
- * fading out at both sides.
- */
+/** Same width, radius and neutral surface as the options track below it. */
 const PREVIEW_CLASSES = [
   'relative',
-  'h-[76px]',
+  'h-[68px]',
   'mb-1.5',
+  'rounded-[10px]',
+  'bg-item-hover-bg',
   'overflow-hidden',
-  'border-y',
-  '[border-color:var(--blok-table-border)]',
-  '[mask-image:linear-gradient(to_right,transparent,black_28px,black_calc(100%-28px),transparent)]',
-];
-
-const CELL_CLASSES = [
-  'absolute',
-  'inset-y-0',
-  'left-4',
-  'right-4',
-  'border-x',
-  '[border-color:var(--blok-table-border)]',
-  'bg-popover-bg',
 ];
 
 const TEXT_BOX_CLASSES = [
   'absolute',
-  'left-2.5',
-  'right-2.5',
+  'inset-x-[14px]',
   'top-1/2',
   '-translate-y-1/2',
   'flex',
@@ -94,26 +72,10 @@ const TEXT_BOX_CLASSES = [
 ];
 
 const PREVIEW_LINE_CLASSES = [
-  'h-[5px]',
+  'h-1',
   'rounded-full',
   'bg-current',
   'transition-transform',
-  'duration-[480ms]',
-  SPRING,
-  'motion-reduce:transition-none',
-];
-
-/** Dashed guide on the edge or centre the text snaps to. */
-const GUIDE_CLASSES = [
-  'absolute',
-  '-top-4',
-  '-bottom-4',
-  'w-0',
-  '-ml-px',
-  'border-l',
-  '[border-style:dashed]',
-  'border-text-secondary/50',
-  'transition-[left]',
   'duration-[480ms]',
   SPRING,
   'motion-reduce:transition-none',
@@ -181,14 +143,6 @@ const GLYPH_LINE_CLASSES = [
   'bg-current',
 ];
 
-const LABEL_CLASSES = [
-  'mt-1.5',
-  'text-center',
-  'text-xs',
-  'text-text-secondary',
-  'select-none',
-];
-
 const sideOf = (placement: CellPlacement | undefined): Side => {
   const side = (placement ?? 'top-left').split('-')[1];
 
@@ -214,12 +168,7 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
   // Decorative: the radios carry the names and the state.
   preview.setAttribute('aria-hidden', 'true');
 
-  const cell = div(CELL_CLASSES);
   const textBox = div(TEXT_BOX_CLASSES);
-  const guide = div(GUIDE_CLASSES);
-
-  guide.setAttribute('data-blok-placement-guide', '');
-  textBox.appendChild(guide);
 
   const previewLines = PREVIEW_LINES.map((width, index) => {
     const line = div(PREVIEW_LINE_CLASSES);
@@ -234,8 +183,7 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
     return line;
   });
 
-  cell.appendChild(textBox);
-  preview.appendChild(cell);
+  preview.appendChild(textBox);
 
   const group = div(GROUP_CLASSES);
 
@@ -248,24 +196,16 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
   thumb.setAttribute('aria-hidden', 'true');
   group.appendChild(thumb);
 
-  const label = div(LABEL_CLASSES);
-
-  label.setAttribute('data-blok-placement-label', '');
-  // The radios already carry their names for assistive tech.
-  label.setAttribute('aria-hidden', 'true');
-
   const buttons: HTMLButtonElement[] = [];
   const state = { index: OPTIONS.findIndex(option => option.side === sideOf(options.currentPlacement)) };
 
-  /** Shows one option in the preview and the label, without committing it. */
+  /** Shows one option in the preview without committing it. */
   const show = (index: number): void => {
-    const { side, key } = OPTIONS[index];
+    const { side } = OPTIONS[index];
 
     for (const [lineIndex, line] of previewLines.entries()) {
       line.style.transform = `translateX(${offsetOf(side, PREVIEW_LINES[lineIndex])}px)`;
     }
-    guide.style.left = GUIDE_AT[side];
-    label.textContent = options.i18n.t(key);
   };
 
   const paint = (): void => {
@@ -316,7 +256,6 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
 
   wrapper.appendChild(preview);
   wrapper.appendChild(group);
-  wrapper.appendChild(label);
 
   return { element: wrapper };
 };

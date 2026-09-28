@@ -39,8 +39,6 @@ const thumbOf = (element: HTMLElement): HTMLElement => {
   return thumb;
 };
 
-const labelOf = (element: HTMLElement): string =>
-  element.querySelector('[data-blok-placement-label]')?.textContent ?? '';
 
 describe('createCellPlacementPicker', () => {
   let onPlacementSelect: Mock<(placement: CellPlacement) => void>;
@@ -87,7 +85,6 @@ describe('createCellPlacementPicker', () => {
 
     expect(checked(element)).toBe(expected);
     expect(element.querySelectorAll('[role="radio"][aria-checked="true"]')).toHaveLength(1);
-    expect(labelOf(element)).toBe({ 'middle-left': 'Middle left', 'middle-center': 'Center', 'middle-right': 'Middle right' }[expected]);
   });
 
   it('parks the thumb under the checked option', () => {
@@ -98,7 +95,7 @@ describe('createCellPlacementPicker', () => {
     expect(thumbOf(render('middle-right')).style.transform).toBe('translateX(200%)');
   });
 
-  it('selecting an option reports it, checks it, slides the thumb and renames the label', () => {
+  it('selecting an option reports it, checks it and slides the thumb', () => {
     const element = render('top-left', onPlacementSelect);
     const [, center, right] = radios(element);
 
@@ -107,26 +104,17 @@ describe('createCellPlacementPicker', () => {
     expect(onPlacementSelect).toHaveBeenLastCalledWith('middle-center');
     expect(checked(element)).toBe('middle-center');
     expect(thumbOf(element).style.transform).toBe('translateX(100%)');
-    expect(labelOf(element)).toBe('Center');
 
     right.click();
 
     expect(onPlacementSelect).toHaveBeenLastCalledWith('middle-right');
     expect(checked(element)).toBe('middle-right');
     expect(thumbOf(element).style.transform).toBe('translateX(200%)');
-    expect(labelOf(element)).toBe('Middle right');
     expect(onPlacementSelect).toHaveBeenCalledTimes(2);
   });
 
-  it('previews the hovered option in the label and restores the checked one on leave', () => {
-    const element = render('middle-center');
-    const [left] = radios(element);
-
-    left.dispatchEvent(new PointerEvent('pointerenter'));
-    expect(labelOf(element)).toBe('Middle left');
-
-    left.dispatchEvent(new PointerEvent('pointerleave'));
-    expect(labelOf(element)).toBe('Center');
+  it('shows no text label: the preview shows the choice and each radio carries its name', () => {
+    expect(render(undefined).querySelector('[data-blok-placement-label]')).toBeNull();
   });
 
   it('never marks the selection in blue: the option keeps its look and a neutral thumb carries the state', () => {
@@ -162,22 +150,28 @@ describe('createCellPlacementPicker', () => {
       Array.from(previewOf(element).querySelectorAll<HTMLElement>('[data-blok-placement-preview-line]'))
         .map(line => line.style.transform);
 
-    const guide = (element: HTMLElement): string =>
-      previewOf(element).querySelector<HTMLElement>('[data-blok-placement-guide]')?.style.left ?? '';
-
     it('is decorative: hidden from assistive tech, which reads the radios instead', () => {
       expect(previewOf(render(undefined)).getAttribute('aria-hidden')).toBe('true');
     });
 
-    it.each([
-      ['middle-left', ['translateX(0px)', 'translateX(0px)', 'translateX(0px)'], '0%'],
-      ['middle-center', ['translateX(18px)', 'translateX(38px)', 'translateX(28px)'], '50%'],
-      ['middle-right', ['translateX(36px)', 'translateX(76px)', 'translateX(56px)'], '100%'],
-    ] as const)('lays the cell text out %s, with the guide on the edge it snaps to', (placement, expected, guideAt) => {
-      const element = render(placement);
+    it('is a soft card as wide and as round as the options track, with no borders', () => {
+      const element = render(undefined);
+      const preview = previewOf(element);
+      const track = element.querySelector('[role="radiogroup"]');
 
-      expect(shifts(element)).toEqual(expected);
-      expect(guide(element)).toBe(guideAt);
+      expect(preview.parentElement).toBe(track?.parentElement);
+      expect(preview.classList.contains('rounded-[10px]')).toBe(true);
+      expect(track?.classList.contains('rounded-[10px]')).toBe(true);
+      expect(Array.from(preview.classList).filter(name => /^border|border-/.test(name))).toEqual([]);
+      expect(preview.querySelector('[data-blok-placement-guide]')).toBeNull();
+    });
+
+    it.each([
+      ['middle-left', ['translateX(0px)', 'translateX(0px)', 'translateX(0px)']],
+      ['middle-center', ['translateX(26px)', 'translateX(46px)', 'translateX(34px)']],
+      ['middle-right', ['translateX(52px)', 'translateX(92px)', 'translateX(68px)']],
+    ] as const)('lays the cell text out %s', (placement, expected) => {
+      expect(shifts(render(placement))).toEqual(expected);
     });
 
     it('glides to the hovered option and back to the checked one on leave', () => {
@@ -185,12 +179,10 @@ describe('createCellPlacementPicker', () => {
       const [, , right] = radios(element);
 
       right.dispatchEvent(new PointerEvent('pointerenter'));
-      expect(shifts(element)[1]).toBe('translateX(76px)');
-      expect(guide(element)).toBe('100%');
+      expect(shifts(element)[1]).toBe('translateX(92px)');
 
       right.dispatchEvent(new PointerEvent('pointerleave'));
       expect(shifts(element)[1]).toBe('translateX(0px)');
-      expect(guide(element)).toBe('0%');
     });
 
     it('stays on a picked option after the pointer leaves it', () => {
@@ -201,19 +193,7 @@ describe('createCellPlacementPicker', () => {
       center.click();
       center.dispatchEvent(new PointerEvent('pointerleave'));
 
-      expect(guide(element)).toBe('50%');
-    });
-
-    it('keeps the cell border widths and the dashed guide through twMerge', () => {
-      const preview = previewOf(render(undefined));
-      const cell = preview.firstElementChild;
-      const guideLine = preview.querySelector('[data-blok-placement-guide]');
-
-      // twMerge drops border-x / border-y / border-dashed next to a border color it misreads.
-      expect(preview.classList.contains('border-y')).toBe(true);
-      expect(cell?.classList.contains('border-x')).toBe(true);
-      expect(guideLine?.className).toContain('[border-style:dashed]');
-      expect(guideLine?.classList.contains('border-l')).toBe(true);
+      expect(shifts(element)[1]).toBe('translateX(46px)');
     });
 
     it('staggers the lines on a spring, and stands still for reduced motion', () => {

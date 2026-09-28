@@ -1,5 +1,10 @@
 import type { ConvertedMedia, VideoFormat } from '../../../types/configs/media';
 
+// Type-only: erased at build, so Blok never bundles the MPL-2.0 package.
+import type * as MediabunnyModule from 'mediabunny';
+
+type Mediabunny = typeof MediabunnyModule;
+
 interface VideoTarget {
   container: 'mp4' | 'webm';
   video: 'avc' | 'vp9' | 'av1';
@@ -18,6 +23,8 @@ export interface VideoVariantOptions {
   /** Progress from 0 to 1. */
   onProgress?: (fraction: number) => void;
   signal?: AbortSignal;
+  /** The host's loader, `media.mediabunny`. */
+  load: () => Promise<unknown>;
 }
 
 /**
@@ -36,8 +43,13 @@ export const produceVideoVariant = async (
   const target = VIDEO_TARGETS[format];
   // A call, not a property read: the flag flips during the awaits below.
   const aborted = (): boolean => opts.signal?.aborted === true;
-  // Loaded on first use, so hosts without video formats never download it.
-  const mb = await import('mediabunny');
+  const mb = (await opts.load().catch(() => null)) as Mediabunny | null;
+
+  // A missing or wrong module means no built-in conversion, not a crash.
+  if (mb === null || typeof mb.Input !== 'function' || typeof mb.Conversion?.init !== 'function') {
+    return null;
+  }
+
   const input = new mb.Input({ formats: mb.ALL_FORMATS, source: new mb.BlobSource(file) });
 
   try {

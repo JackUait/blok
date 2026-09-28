@@ -53,4 +53,12 @@ export interface MediaConfig {
   convert?(file: File, formats: readonly string[], ctx: MediaConvertContext): Promise<ConvertedMedia[] | null>;
   /** Videos longer than this (seconds) are not re-encoded. Default 600. */
   maxTranscodeDuration?: number;
+  /**
+   * Loads Mediabunny for the built-in video converter:
+   * `mediabunny: () => import('mediabunny')`.
+   *
+   * Blok does not bundle it (it is MPL-2.0), so install it yourself. Without
+   * it, video formats come only from `convert`.
+   */
+  mediabunny?: () => Promise<unknown>;
 }

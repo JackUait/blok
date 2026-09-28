@@ -934,6 +934,8 @@ describe('VideoTool — background formats', () => {
   const WEBM = 'video/webm; codecs="vp09.00.10.08, opus"';
   const webm = { file: new Blob(['w'], { type: WEBM }), mimeType: WEBM };
 
+  const loader = async (): Promise<unknown> => ({});
+
   const toolWith = (media?: MediaConfig): VideoTool => {
     const api = { ...createMockApi(), config: { media } } as unknown as API;
 
@@ -973,7 +975,7 @@ describe('VideoTool — background formats', () => {
 
       return webm;
     });
-    const tool = toolWith({ formats: { video: ['webm'] } });
+    const tool = toolWith({ formats: { video: ['webm'] }, mediabunny: loader });
     const root = tool.render();
 
     pasteFile(tool);
@@ -997,7 +999,7 @@ describe('VideoTool — background formats', () => {
     const MP4 = 'video/mp4; codecs="avc1.64001f, mp4a.40.2"';
 
     mockProduce.mockImplementation(async (_file, format) => (format === 'mp4' ? { file: new Blob(['m'], { type: MP4 }), mimeType: MP4 } : null));
-    const tool = toolWith({ formats: { video: ['mp4'] } });
+    const tool = toolWith({ formats: { video: ['mp4'] }, mediabunny: loader });
 
     tool.render();
     pasteFile(tool);
@@ -1027,7 +1029,7 @@ describe('VideoTool — background formats', () => {
 
       return webm;
     });
-    const tool = toolWith({ formats: { video: ['webm'] } });
+    const tool = toolWith({ formats: { video: ['webm'] }, mediabunny: loader });
 
     tool.render();
     pasteFile(tool);
@@ -1056,7 +1058,7 @@ describe('VideoTool — background formats', () => {
 
       return webm;
     });
-    const tool = toolWith({ formats: { video: ['webm'] } });
+    const tool = toolWith({ formats: { video: ['webm'] }, mediabunny: loader });
     const root = tool.render();
 
     pasteFile(tool);
@@ -1067,6 +1069,29 @@ describe('VideoTool — background formats', () => {
     await idle();
 
     expect(root.querySelector('[data-blok-testid="video-converting"]')).toBeNull();
+  });
+
+  it('converts nothing when the host has not provided Mediabunny', async () => {
+    const tool = toolWith({ formats: { video: ['webm'] } });
+
+    tool.render();
+    pasteFile(tool);
+    await vi.waitFor(() => expect(tool.save().url).toBe('https://cdn/clip.mov'));
+    await idle();
+
+    expect(mockProduce).not.toHaveBeenCalled();
+    expect(tool.save().variants).toBeUndefined();
+  });
+
+  it('hands the host loader to the converter', async () => {
+    mockProduce.mockResolvedValue(webm);
+    const tool = toolWith({ formats: { video: ['webm'] }, mediabunny: loader });
+
+    tool.render();
+    pasteFile(tool);
+    await vi.waitFor(() => expect(mockProduce).toHaveBeenCalled());
+
+    expect(mockProduce.mock.calls[0][2]).toMatchObject({ load: loader });
   });
 
   it('uses the renditions a host convert hook returns', async () => {

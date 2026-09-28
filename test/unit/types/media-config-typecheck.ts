@@ -12,6 +12,7 @@ const ok: BlokConfig['media'] = {
   formats: { image: ['avif', 'webp', 'jpeg'], video: ['av1', 'webm', 'mp4'] },
   convert: async (_file, _formats, ctx) => (ctx.kind === 'image' ? null : []),
   maxTranscodeDuration: 600,
+  mediabunny: async () => ({ Conversion: {} }),
 };
 
 void ok;

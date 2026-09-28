@@ -80,12 +80,10 @@ const mb = vi.hoisted(() => {
   };
 });
 
-vi.mock('mediabunny', () => mb.module);
-
 import { produceVideoVariant } from '../../../../src/components/media-variants/video-variants';
 
 const clip = (): File => new File([new Uint8Array(16)], 'clip.mov', { type: 'video/quicktime' });
-const opts = { maxTranscodeDuration: 600 };
+const opts = { maxTranscodeDuration: 600, load: async () => mb.module };
 
 describe('produceVideoVariant', () => {
   beforeEach(() => {
@@ -177,5 +175,12 @@ describe('produceVideoVariant', () => {
 
     expect(await produceVideoVariant(clip(), 'webm', { ...opts, signal: controller.signal })).toBeNull();
     expect(mb.state.cancelled).toBe(1);
+  });
+
+  it('gives up when the host loader fails or returns something else', async () => {
+    expect(await produceVideoVariant(clip(), 'webm', { ...opts, load: async () => {
+      throw new Error('not installed');
+    } })).toBeNull();
+    expect(await produceVideoVariant(clip(), 'webm', { ...opts, load: async () => ({}) })).toBeNull();
   });
 });

@@ -412,7 +412,9 @@ export class VideoTool implements BlockTool {
     const media = this.api.config?.media;
     const formats = media?.formats?.video;
 
+    // Blok does not bundle Mediabunny: without the host's loader only `convert` can help.
     if (media === undefined || formats === undefined || formats.length === 0) return;
+    if (media.mediabunny === undefined && media.convert === undefined) return;
     this.showConverting(0);
     void enqueueMediaJob(() => this.convertVariants(file, url, formats, media))
       .catch(() => undefined)
@@ -426,12 +428,19 @@ export class VideoTool implements BlockTool {
         .catch(() => null);
     // Untyped hosts can return anything; only an array counts as an answer.
     const listed = Array.isArray(fromHook) ? (fromHook as ConvertedMedia[]) : null;
+    const load = media.mediabunny;
     const shown = { url };
 
     await convertVideoInBackground({ file, url }, formats, {
-      produce: async (format, onProgress) => listed === null
-        ? produceVideoVariant(file, format, { maxTranscodeDuration: media.maxTranscodeDuration ?? DEFAULT_MAX_TRANSCODE_SECONDS, onProgress })
-        : listed.find((item) => videoFormatOf(item.mimeType) === format) ?? null,
+      produce: async (format, onProgress) => {
+        if (listed !== null) {
+          return listed.find((item) => videoFormatOf(item.mimeType) === format) ?? null;
+        }
+
+        return load === undefined
+          ? null
+          : produceVideoVariant(file, format, { maxTranscodeDuration: media.maxTranscodeDuration ?? DEFAULT_MAX_TRANSCODE_SECONDS, onProgress, load });
+      },
       upload: (part, variant) => this.uploader.uploadVariant(part, variant),
       // A rebuilt block is checked by deliverToRebuiltBlock when writing.
       isCurrent: (expected) => this.detached || this.data.url === expected,

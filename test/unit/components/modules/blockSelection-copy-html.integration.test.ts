@@ -6,6 +6,7 @@ import { Paragraph } from '../../../../src/tools/paragraph';
 import { Header } from '../../../../src/tools/header';
 import { Quote } from '../../../../src/tools/quote';
 import { CodeTool } from '../../../../src/tools/code';
+import { ImageTool } from '../../../../src/tools/image';
 import type { OutputBlockData } from '../../../../types';
 import type { Block } from '../../../../src/components/block';
 import type { CrossBlockSubRange } from '../../../../src/components/selection/cross-block-range';
@@ -28,7 +29,7 @@ let holder: HTMLDivElement | undefined;
 const createEditor = async (blocks: OutputBlockData[]): Promise<TestEditor> => {
   const instance = new Blok({
     holder,
-    tools: { paragraph: Paragraph, header: Header, quote: Quote, code: CodeTool },
+    tools: { paragraph: Paragraph, header: Header, quote: Quote, code: CodeTool, image: ImageTool },
     data: { blocks },
   }) as unknown as TestEditor;
 
@@ -160,3 +161,24 @@ describe('copy of a text selection across blocks as text/plain', () => {
     expect(written.get('text/plain')).toBe('line1\nline2\n\nnext');
   });
 });
+
+describe('copy of an image block as text/html', () => {
+  const imageSrcs = (html: string): Array<string | null> =>
+    Array.from(parse(html).querySelectorAll('img')).map((img) => img.getAttribute('src'));
+
+  it('writes a plain image as an img', async () => {
+    const instance = await createEditor([{ id: 'i', type: 'image', data: { url: 'https://x/a.jpg' } }]);
+
+    expect(imageSrcs(await copyAllAsHtml(instance))).toEqual(['https://x/a.jpg']);
+  });
+
+  it('writes an image with variants as an img pointing at the compatible url', async () => {
+    const instance = await createEditor([{ id: 'i', type: 'image', data: { url: 'https://x/a.jpg', variants: [
+      { url: 'https://x/a.avif', mimeType: 'image/avif' },
+      { url: 'https://x/a.jpg', mimeType: 'image/jpeg' },
+    ] } }]);
+
+    expect(imageSrcs(await copyAllAsHtml(instance))).toEqual(['https://x/a.jpg']);
+  });
+});
+

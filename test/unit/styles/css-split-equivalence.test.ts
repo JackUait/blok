@@ -605,9 +605,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // The anonymous presence silhouettes redrawn with a see-through tonal
     // layer (evenodd clip paths and a shade copy of each form) the faceted star, the cratered moon, the
     // lit asteroid with its companion rock, the beaming satellite, the cow-lifting saucer, the
-    // two-tailed comet, the tilted spiral galaxy, the launching rocket and the observatory add
-    // 12,267 bytes in presence.css.
-    const PRESENCE_TONAL_GLYPHS_BYTES = 12_267;
+    // two-tailed comet, the crescent-armed galaxy, the launching rocket and the observatory add
+    // 12,103 bytes in presence.css.
+    const PRESENCE_TONAL_GLYPHS_BYTES = 12_103;
     // Trash lids drawn closed and lifted on hover: 677 bytes in main.css.
     const TRASH_LID_HOVER_BYTES = 677;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952

@@ -690,25 +690,33 @@ describe('anonymous presence micro-illustrations', () => {
   describe('galaxy', () => {
     type Point = [number, number];
     type Ellipse = { x: number; y: number; rx: number; ry: number; rot: number };
+    type Star = { x: number; y: number; reach: number };
 
     const numbers = (contour: string): number[] => (contour.match(/-?\d*\.?\d+/g) ?? []).map(Number);
     const contours = (element: Element | null | undefined): string[] => element?.getAttribute('d')?.match(/M[^M]*/g) ?? [];
-    // `M x y` then `C c1 c2 end` segments: every sixth pair after the start is on the curve.
+    // `M x y` then fixed-size segments: the last pair of each segment is on the curve.
     const onCurve = (contour: string): Point[] => {
       const [x = Number.NaN, y = Number.NaN, ...rest] = numbers(contour);
+      const step = contour.includes('C') ? 6 : 4;
       const points: Point[] = [[x, y]];
 
-      for (let i = 4; i < rest.length; i += 6) {
+      for (let i = step - 2; i < rest.length; i += step) {
         points.push([rest[i] ?? Number.NaN, rest[i + 1] ?? Number.NaN]);
       }
 
       return points;
     };
-    // Ellipses are drawn `M p0 A rx ry rot 1 0 p1 A ...`, from one end of the long axis to the other.
+    // Ellipses are drawn `M p0 A rx ry rot 1 1 p1 A ...`, from one end of the long axis to the other.
     const ellipse = (contour: string | undefined): Ellipse => {
       const [x0 = Number.NaN, y0 = Number.NaN, rx = Number.NaN, ry = Number.NaN, rot = Number.NaN, , , x1 = Number.NaN, y1 = Number.NaN] = numbers(contour ?? '');
 
       return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, rx, ry, rot };
+    };
+    // Stars are drawn `M cx top Q cx cy ...`, so the second pair is the centre.
+    const star = (contour: string): Star => {
+      const [, top = Number.NaN, x = Number.NaN, y = Number.NaN] = numbers(contour);
+
+      return { x, y, reach: y - top };
     };
     // Undoes the tilt, so the distance is measured in the galaxy's own face-on plane.
     const faceOn = ([px, py]: Point, frame: Ellipse): number => {
@@ -718,21 +726,54 @@ describe('anonymous presence micro-illustrations', () => {
 
       return Math.hypot(dx * Math.cos(angle) - dy * Math.sin(angle), (dx * Math.sin(angle) + dy * Math.cos(angle)) * frame.rx / frame.ry);
     };
+    // Clockwise on screen is +1. Arcs carry it in their sweep flag; outlines in their signed area.
+    const turn = (contour: string): number => {
+      const arc = contour.match(/[Aa]\s*-?\d*\.?\d+[\s,]+-?\d*\.?\d+[\s,]+-?\d*\.?\d+[\s,]+[01][\s,]*([01])/);
 
-    const parts = (): { arms: string[]; halo: Ellipse; spines: string[]; core: Ellipse; dots: string[]; sparkles: string[] } => {
+      if (arc) {
+        return arc[1] === '1' ? 1 : -1;
+      }
+
+      const points = onCurve(contour);
+
+      return Math.sign(points.reduce((sum, [x, y], i) => {
+        const [nx = x, ny = y] = points[(i + 1) % points.length] ?? [];
+
+        return sum + x * ny - nx * y;
+      }, 0));
+    };
+    const crosses = ([ax, ay]: Point, [bx, by]: Point, [cx, cy]: Point, [dx, dy]: Point): boolean => {
+      const side = (px: number, py: number, qx: number, qy: number, rx: number, ry: number): number =>
+        Math.sign((qx - px) * (ry - py) - (qy - py) * (rx - px));
+
+      return side(ax, ay, bx, by, cx, cy) * side(ax, ay, bx, by, dx, dy) < 0
+        && side(cx, cy, dx, dy, ax, ay) * side(cx, cy, dx, dy, bx, by) < 0;
+    };
+    // Pairs of non-neighbouring edges of a closed outline that cross each other.
+    const selfCrossings = (points: Point[]): number => {
+      const edges = points.slice(0, -1).map((point, i): [Point, Point] => [point, points[i + 1] ?? point]);
+
+      return edges.flatMap(([a, b], i) => edges.slice(i + 2)
+        .filter((_, k) => !(i === 0 && k === edges.length - i - 3))
+        .filter(([c, d]) => crosses(a, b, c, d))).length;
+    };
+
+    const parts = (): { arms: string[]; halo: Ellipse; crescents: string[]; core: Ellipse; nucleus: Star[]; sparkles: Star[] } => {
       const svg = glyphSvg('galaxy');
       const [glow, ...extraGlow] = Array.from(svg.querySelectorAll('path[opacity]'));
       const solid = contours(svg.querySelector('path:not([opacity])'));
+      const stars = solid.filter(contour => contour.includes('Q')).map(star);
+      const central = ({ x, y }: Star): boolean => Math.hypot(x - 10, y - 10) < 0.2;
 
       expect(extraGlow).toHaveLength(0);
 
       return {
         arms: contours(glow).filter(contour => contour.includes('C')),
         halo: ellipse(contours(glow).find(contour => contour.includes('A'))),
-        spines: solid.filter(contour => contour.includes('C')),
+        crescents: solid.filter(contour => contour.includes('C')),
         core: ellipse(solid.find(contour => contour.includes('A'))),
-        dots: solid.filter(contour => contour.includes('a')),
-        sparkles: solid.filter(contour => contour.includes('Q')),
+        nucleus: stars.filter(central),
+        sparkles: stars.filter(candidate => !central(candidate)),
       };
     };
     const twins = (first: string | undefined, second: string | undefined): void => {
@@ -749,6 +790,23 @@ describe('anonymous presence micro-illustrations', () => {
       });
     };
 
+    it('winds every shape in a layer the same way, so overlaps never cancel into holes', () => {
+      for (const path of Array.from(glyphSvg('galaxy').querySelectorAll('path'))) {
+        const turns = contours(path).map(turn);
+
+        expect(turns).not.toContain(0);
+        expect(new Set(turns).size).toBe(1);
+      }
+    });
+
+    it('draws each arm and crescent as a simple outline that never crosses itself', () => {
+      const { arms, crescents } = parts();
+
+      for (const outline of [...arms, ...crescents]) {
+        expect(selfCrossings(onCurve(outline))).toBe(0);
+      }
+    });
+
     it('tilts its disc: the core and its halo are centred, flattened ellipses at the same angle', () => {
       const { halo, core } = parts();
 
@@ -764,7 +822,7 @@ describe('anonymous presence micro-illustrations', () => {
       expect(halo.rx - core.rx).toBeGreaterThanOrEqual(1.5);
     });
 
-    it('sweeps two see-through arms, a half-turn apart, that taper out to their tips', () => {
+    it('sweeps two see-through arms, a half-turn apart, that thin out to their tips', () => {
       const { arms } = parts();
 
       expect(arms).toHaveLength(2);
@@ -773,59 +831,48 @@ describe('anonymous presence micro-illustrations', () => {
       // Each arm runs out along one edge, round the tip and back along the other;
       // the last point closes onto the first, so drop it.
       const edge = onCurve(arms[0] ?? '').slice(0, -1);
+      const tip = (edge.length - 1) / 2;
       const across = (i: number): number => {
-        const [ax = 0, ay = 0] = edge[i] ?? [];
-        const [bx = 0, by = 0] = edge[edge.length - 1 - i] ?? [];
+        const [ax = 0, ay = 0] = edge[tip - i] ?? [];
+        const [bx = 0, by = 0] = edge[tip + i] ?? [];
 
         return Math.hypot(ax - bx, ay - by);
       };
-      const tip = (edge.length - 3) / 2;
+      const widest = Math.max(...Array.from({ length: tip }, (_, i) => across(i + 1)));
 
-      expect(across(0)).toBeGreaterThan(2 * across(tip));
+      expect(widest).toBeGreaterThan(1.5 * across(1));
     });
 
-    it('winds a solid spine through each arm, stopping short of the core so the halo shows between', () => {
-      const { spines, core, halo } = parts();
+    it('sweeps two solid crescents a half-turn apart that clear the core, so the halo rings the nucleus', () => {
+      const { crescents, core, halo } = parts();
+      const points = crescents.flatMap(onCurve);
 
-      expect(spines).toHaveLength(2);
-      twins(spines[0], spines[1]);
+      expect(crescents).toHaveLength(2);
+      twins(crescents[0], crescents[1]);
 
-      for (const point of spines.flatMap(onCurve)) {
+      for (const point of points) {
         expect(faceOn(point, core)).toBeGreaterThan(core.rx);
       }
 
-      // Each spine starts inside the halo, so it reads as growing out of the glow.
-      expect(Math.min(...spines.flatMap(onCurve).map(point => faceOn(point, halo)))).toBeLessThan(halo.rx);
+      // Each crescent starts inside the halo, so it reads as flung out of the glow.
+      expect(Math.min(...points.map(point => faceOn(point, halo)))).toBeLessThan(halo.rx);
     });
 
-    it('studs the arms with twin star clusters and keeps its sparkle out in open sky', () => {
-      const { arms, dots, sparkles } = parts();
-      // Circles are drawn `M cx top a r r ...`, so the centre is one radius below the start.
-      const circles = dots.map(contour => {
-        const [x = Number.NaN, top = Number.NaN, r = Number.NaN] = numbers(contour);
+    it('fires a starburst from the nucleus that reaches past the core into the halo', () => {
+      const { nucleus: [burst, ...extra], core, halo } = parts();
 
-        return { x, y: top + r, r };
-      });
-      const clusters = circles.filter(({ x, y }) => Math.hypot(x - 10, y - 10) < 6);
+      expect(extra).toHaveLength(0);
+      expect(burst?.reach).toBeGreaterThan(core.rx);
+      expect(burst?.reach).toBeLessThan(halo.rx);
+    });
 
-      expect(clusters.length).toBeGreaterThanOrEqual(2);
-      expect(clusters.length % 2).toBe(0);
+    it('keeps its corner sparkle out in open sky, clear of the arms', () => {
+      const { arms, sparkles: [sparkle, ...extra] } = parts();
 
-      for (let i = 0; i < clusters.length; i += 2) {
-        const [a, b] = [clusters[i], clusters[i + 1]];
-
-        expect((a?.x ?? 0) + (b?.x ?? 0)).toBeCloseTo(20, 1);
-        expect((a?.y ?? 0) + (b?.y ?? 0)).toBeCloseTo(20, 1);
-      }
-
-      expect(sparkles).toHaveLength(1);
-
-      // Sparkles are drawn `M cx top Q cx cy ...`, so the second pair is the centre.
-      const [, top = Number.NaN, x = Number.NaN, y = Number.NaN] = numbers(sparkles[0] ?? '');
-      const reach = y - top;
+      expect(extra).toHaveLength(0);
 
       for (const [px, py] of arms.flatMap(onCurve)) {
-        expect(Math.hypot(px - x, py - y)).toBeGreaterThan(reach + 0.5);
+        expect(Math.hypot(px - (sparkle?.x ?? 10), py - (sparkle?.y ?? 10))).toBeGreaterThan((sparkle?.reach ?? 0) + 0.5);
       }
     });
   });

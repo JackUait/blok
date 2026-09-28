@@ -41,3 +41,25 @@ describe('media empty-state wording', () => {
     expect(clashes).toEqual([]);
   });
 });
+
+describe('media empty-state Upload tab wording', () => {
+  const HINT_KEY = { image: 'emptyOrDropHere', video: 'emptyOrDropHere', audio: 'emptyOrDropHere', file: 'emptyDropHint' } as const;
+  const EN_CHOOSE = { image: 'Choose an image', video: 'Choose a video', audio: 'Choose audio', file: 'Choose a file' };
+  const RU_CHOOSE = { image: 'Выбрать изображение', video: 'Выбрать видео', audio: 'Выбрать аудио', file: 'Выбрать файл' };
+
+  it.each(TOOLS)('English %s: the button names the thing and the hint points back at it', (tool) => {
+    const en = load('en');
+
+    expect(en[`tools.${tool}.emptyChooseFile`]).toBe(EN_CHOOSE[tool]);
+    expect(en[`tools.${tool}.${HINT_KEY[tool]}`]).toBe('or drag it here');
+    expect(en[`tools.${tool}.emptyDropToUpload`]).toBe('Drop to add');
+  });
+
+  it.each(TOOLS)('Russian %s speaks the card\'s one verb', (tool) => {
+    const ru = load('ru');
+
+    expect(ru[`tools.${tool}.emptyChooseFile`]).toBe(RU_CHOOSE[tool]);
+    expect(ru[`tools.${tool}.${HINT_KEY[tool]}`]).toBe('или перетащите его сюда');
+    expect(ru[`tools.${tool}.emptyDropToUpload`]).toBe('Отпустите, чтобы добавить');
+  });
+});

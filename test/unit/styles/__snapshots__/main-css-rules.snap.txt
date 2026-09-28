@@ -35,7 +35,7 @@
 
 [data-blok-popover-inline][data-blok-popover-opened='true']:not([data-blok-inline-direct-menu]) > [data-blok-popover-container] {
   transform-origin: var(--_blok-inline-toolbar-origin, left top);
-  animation: blok-inline-toolbar-in 140ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: blok-inline-toolbar-in 140ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
 [data-blok-popover-item][data-blok-focused='true'] {

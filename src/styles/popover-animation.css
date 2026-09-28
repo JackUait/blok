@@ -45,7 +45,9 @@
    replays the entrance while it fades out. Direct menus keep their own. */
 [data-blok-popover-inline][data-blok-popover-opened='true']:not([data-blok-inline-direct-menu]) > [data-blok-popover-container] {
   transform-origin: var(--_blok-inline-toolbar-origin, left top);
-  animation: blok-inline-toolbar-in 140ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  /* backwards, not both: a held end transform would make the card the
+     containing block of its nested menus. */
+  animation: blok-inline-toolbar-in 140ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
 [data-blok-popover-item][data-blok-focused='true'] {

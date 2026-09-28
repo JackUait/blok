@@ -802,7 +802,7 @@ test.describe('inline toolbar', () => {
     expect(Math.abs(toolbarBox.x - selectionRect.left)).toBeLessThanOrEqual(2);
   });
 
-  test('appears without an entrance animation', async ({ page }) => {
+  test('skips the shared popover transition and settles flat after its own entrance', async ({ page }) => {
     await createBlok(page, {
       data: {
         blocks: [
@@ -824,7 +824,9 @@ test.describe('inline toolbar', () => {
 
     await expect(toolbar).toBeVisible();
 
-    const motion = await toolbar.evaluate((element) => {
+    // The entrance (blok-inline-toolbar-in) is pinned in notion-toolbar.spec.ts.
+    const motion = await toolbar.evaluate(async (element) => {
+      await Promise.all(element.getAnimations().map(animation => animation.finished.catch(() => undefined)));
       const style = getComputedStyle(element);
 
       return {

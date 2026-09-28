@@ -79,6 +79,8 @@ export const BlokEditor = defineComponent({
     migrations: { type: Object as PropType<BlokConfig['migrations']>, default: undefined },
     /** Editor-level uploader, routed by asset kind (images, video, audio, files). */
     uploader: { type: Object as PropType<BlokConfig['uploader']>, default: undefined },
+    /** Convert uploaded photos and videos into several formats, rendered best-first. */
+    media: { type: Object as PropType<BlokConfig['media']>, default: undefined },
     /** Base URL of a service speaking Blok's upload and unfurl contracts. */
     server: { type: String as PropType<BlokConfig['server']>, default: undefined },
     /** Endpoint in your app that mints a short-lived access pass for the current user. */

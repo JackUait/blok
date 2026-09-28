@@ -52,6 +52,7 @@ export const BLOK_EDITOR_CONFIG_KEYS = [
   'onError',
   'migrations',
   'uploader',
+  'media',
   'server',
   'ticket',
   'persistence',

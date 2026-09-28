@@ -63,6 +63,8 @@ const EXEMPT_SINKS: Record<string, string> = {
     'HTMLAudioElement src — media elements do not execute javascript: URLs',
   'tools/video/ui.ts » data.url':
     'HTMLVideoElement src — media elements do not execute javascript: URLs',
+  'tools/video/ui.ts » variant.url':
+    '<source src> inside a <video> — media elements do not execute javascript: URLs, and readVariants drops script schemes first',
   'tools/video/controls.ts » src':
     'HTMLVideoElement src (seek-preview clone, copied from the rendered video) — media elements do not execute javascript: URLs',
   'components/inline-tools/inline-tool-link.ts » entry.favicon':

@@ -42,6 +42,11 @@ interface UploadContext {
   tool?: string;
   /** Upload progress in percent (0–100), when the host reports it. */
   onProgress?(percent: number): void;
+  /**
+   * Set when this upload is one of several renditions of the same asset.
+   * `role: 'original'` is the untouched file the user picked.
+   */
+  variant?: { mimeType: string; role: 'original' | 'variant' };
 }
 
 /**

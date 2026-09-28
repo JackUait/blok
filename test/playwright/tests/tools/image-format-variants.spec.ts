@@ -83,7 +83,7 @@ const savedImage = async (page: Page): Promise<SavedImage> => {
   return page.evaluate(async () => {
     const saved = await window.blokInstance?.save();
 
-    return saved?.blocks[0].data as SavedImage;
+    return saved?.blocks[0].data as unknown as SavedImage;
   });
 };
 

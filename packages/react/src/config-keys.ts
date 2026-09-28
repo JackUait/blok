@@ -52,6 +52,7 @@ export const USE_BLOK_CONFIG_KEYS = [
   'width',
   'migrations',
   'uploader',
+  'media',
   'server',
   'ticket',
   'persistence',

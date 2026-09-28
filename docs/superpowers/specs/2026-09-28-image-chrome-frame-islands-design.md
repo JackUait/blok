@@ -115,7 +115,11 @@ All inside `src/tools/image/` and `src/styles/image.css`, except the shared resi
   Dividers go. `updateOverlayTier` keeps setting `data-tier` and `data-compact`.
 - New `island-placement.ts`: a pure function from the figure rect and the room above
   to `'above' | 'inside'`.
-- New frame element `data-role="image-frame"` inside the figure. CSS only.
+- New ring element `data-role="image-selection-ring"` inside the figure. CSS only.
+  Not called "frame": `data.frame` / `data-frame` already means the image's border/shadow style.
+- "Selected" means the block holder carries `data-blok-selected="true"` (set by core's
+  `selection-manager.ts`). The tool's own `data-selected` attribute is always `"false"` today,
+  so existing `[data-selected="true"]` rules never match. New rules must not key off it.
 - `resizer.ts` `attachResizeHandle`: new optional `snapPoints?: number[]`
   (and the 2 % tolerance). Default is no snapping, so video and embed are unchanged.
 - Readout: a small element the image block updates from `onPreview`.

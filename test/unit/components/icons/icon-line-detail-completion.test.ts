@@ -181,6 +181,6 @@ describe('Blok Line small-detail geometry', () => {
 
   it('makes merge and split one cell frame with mirrored chevrons', () => {
     expect(pathOf(IconMergeCells, 1)).toBe('M5.75 8l2 2-2 2M14.25 8l-2 2 2 2');
-    expect(pathOf(IconSplitCell, 1)).toBe('M7.25 8l-2 2 2 2M12.75 8l2 2-2 2');
+    expect(pathOf(IconSplitCell, 1)).toBe('M7.5 8l-2 2 2 2M12.5 8l2 2-2 2');
   });
 });

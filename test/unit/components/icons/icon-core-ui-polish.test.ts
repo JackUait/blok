@@ -165,6 +165,14 @@ describe('Blok Line core UI polish', () => {
       expect(y + opposite[1]).toBeCloseTo(2 * cy, 5);
       expect(Math.hypot(x - cx, y - cy)).toBeLessThan(reach / 4);
     });
+
+    const halfStroke = 1.25 / 2;
+    const lines = xsOf(svgOf(IconCallout).querySelectorAll('path')[1]?.getAttribute('d') ?? '');
+
+    // One stroke of space to the panel, and between the sparkle and the text lines.
+    expect(tips[3][0] - halfStroke - (3 + halfStroke)).toBeGreaterThanOrEqual(1.25);
+    expect(Math.min(...lines) - halfStroke - (tips[1][0] + halfStroke)).toBeGreaterThanOrEqual(1.25);
+    expect(17 - halfStroke - (Math.max(...lines) + halfStroke)).toBeGreaterThanOrEqual(1.25);
   });
 
 

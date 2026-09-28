@@ -136,8 +136,8 @@ describe('Blok Line media family', () => {
     expect(window.getAttribute('rx')).toBe('1');
     expect(window.getAttribute('stroke')).toBe('currentColor');
     expect(window.getAttribute('fill')).toBeNull();
-    // The window overflows the panel corner, and both open ends clear it by a stroke.
-    expect(x + width).toBeGreaterThan(17);
+    // The window fills the open corner up to the panel edge, and both open ends clear it by a stroke.
+    expect(x + width).toBe(17);
     expect(y + height).toBe(16);
     expect(y - rightEndY - stroke).toBeGreaterThanOrEqual(stroke);
     expect(x - bottomEndX - stroke).toBeGreaterThanOrEqual(stroke);
@@ -181,35 +181,44 @@ describe('Blok Line media family', () => {
     expect(required(arrows, 'd')).toBe('M8.5 10h-3M7 8.5 5.5 10 7 11.5M11.5 10h3M13 8.5l1.5 1.5-1.5 1.5');
   });
 
-  it('shows the IconImage landscape at overlay scale inside the broken pieces', () => {
-    const image = svgOf(Icons.IconImage);
-    const imageSun = image.querySelector('circle');
-    const imageRidge = image.querySelector('path');
+  it('slides two pieces of IconImage apart and keeps them inside the overlay drawing area', () => {
     const broken = svgOf(Icons.IconImageBroken);
+    const [left, right] = Array.from(broken.querySelectorAll('path'))
+      .map(path => required(path, 'd'))
+      .filter(d => d.endsWith('Z'));
     const sun = broken.querySelector('circle');
-    const [left, right] = Array.from(broken.querySelectorAll('path')).filter(path => !required(path, 'd').endsWith('Z'));
+    const piece = /^M([\d.]+) ([\d.]+)H([\d.]+)a([\d.]+) \4 0 0 [01] ?-?\4 \4v([\d.]+)a\4 \4 0 0 [01] ?-?\4 \4H([\d.]+)l([^Z]+)Z$/;
+    const leftParts = left?.match(piece)?.slice(1);
+    const rightParts = right?.match(piece)?.slice(1);
 
-    if (imageSun === null || imageRidge === null || sun === null || left === undefined || right === undefined) {
-      throw new Error('Missing broken image landscape');
+    if (leftParts === undefined || rightParts === undefined || sun === null) {
+      throw new Error('Missing broken image pieces');
     }
 
-    const scale = 24 / 20;
-    const imagePoints = pointsOf(imageRidge);
-    // Each piece keeps the image in place but slides sideways by the same amount, in opposite directions.
-    const shift = Number(required(sun, 'cx')) - Number(required(imageSun, 'cx')) * scale;
-    const at = (index: number, dx: number): { x: number; y: number } => ({
-      x: Number((imagePoints[index].x * scale + dx).toFixed(2)),
-      y: Number((imagePoints[index].y * scale).toFixed(2)),
-    });
-    const rounded = (points: { x: number; y: number }[]): { x: number; y: number }[] =>
-      points.map(({ x, y }) => ({ x: Number(x.toFixed(2)), y: Number(y.toFixed(2)) }));
+    const [leftTopX, top, leftCornerX, radius, side] = leftParts.map(Number);
+    const [rightTopX, rightTop, rightCornerX] = rightParts.map(Number);
+    const bottom = top + side + 2 * radius;
+    const crack = (leftParts[6].match(/-?(?:\d*\.)?\d+/g) ?? []).map(Number);
+    const slide = rightTopX - leftTopX;
+    const stroke = 1.5;
 
-    expect(Number(required(sun, 'r'))).toBeCloseTo(Number(required(imageSun, 'r')) * scale, 5);
-    expect(Number(required(sun, 'cy'))).toBeCloseTo(Number(required(imageSun, 'cy')) * scale, 5);
-    // The mountain's foot and peak sit in the left piece; the hill sits in the right one.
-    expect(rounded(pointsOf(left)).slice(0, 2)).toEqual([at(0, -shift), at(1, -shift)]);
-    expect(rounded(pointsOf(right)).slice(-3)).toEqual([at(3, shift), at(4, shift), at(5, shift)]);
+    // The pieces are IconImage scaled to fit: its 14×12 panel and radius 2 keep their proportions.
+    expect(radius / (bottom - top)).toBeCloseTo(2 / 12, 2);
+    // Both pieces stay inside the overlay drawing area, 3.6–20.4.
+    expect(leftCornerX - radius).toBeGreaterThanOrEqual(3.6 - 0.01);
+    expect(rightCornerX + radius).toBeLessThanOrEqual(20.4 + 0.01);
+    expect(rightTop).toBe(top);
+    expect(top + bottom).toBeCloseTo(24, 1);
+    // Across every crack segment the slide leaves a full stroke of space between the pieces.
+    for (let index = 0; index < crack.length; index += 2) {
+      const [dx, dy] = [crack[index], crack[index + 1]];
+
+      expect(slide * Math.abs(dy) / Math.hypot(dx, dy) - stroke).toBeGreaterThanOrEqual(stroke - 0.05);
+    }
+    // The sun is IconImage's accent at the same scale, which keeps it a stroke clear of the crack and the edge.
+    expect(Number(sun.getAttribute('r'))).toBeCloseTo(0.85 * radius / 2, 2);
   });
+
 
   it('breaks the image into two pieces along one crack, so the pieces fit back together', () => {
     const pieces = Array.from(svgOf(Icons.IconImageBroken).querySelectorAll('path'))
@@ -258,11 +267,20 @@ describe('Blok Line media family', () => {
       throw new Error('Missing image landscape');
     }
 
-    // The same landscape as IconImage, lifted to the shorter panel's bottom edge.
-    const lift = Number(required(imageFrame, 'y')) + Number(required(imageFrame, 'height')) - frameBottom;
+    // The same landscape as IconImage, squeezed into the shorter panel so the sun keeps its clearance.
+    const imageTop = Number(required(imageFrame, 'y'));
+    const frameTop = Number(required(frame, 'y'));
+    const squeeze = Number(required(frame, 'height')) / Number(required(imageFrame, 'height'));
+    const toCaption = (y: number): number => frameTop + (y - imageTop) * squeeze;
 
-    expect(ridge).toEqual(pointsOf(imageRidge).map(({ x, y }) => ({ x, y: y - lift })));
+    pointsOf(imageRidge).forEach(({ x, y }, index) => {
+      expect(ridge[index].x).toBe(x);
+      expect(ridge[index].y).toBeCloseTo(toCaption(y), 2);
+    });
     expect(sunX).toBe(Number(required(imageSun, 'cx')));
+    expect(sunY).toBeCloseTo(toCaption(Number(required(imageSun, 'cy'))), 2);
+    // A full stroke between the sun and the panel top.
+    expect(sunY - sunRadius - (frameTop + 1.25 / 2)).toBeGreaterThanOrEqual(1.25);
 
     for (let index = 1; index < ridge.length; index++) {
       const start = ridge[index - 1];
@@ -272,7 +290,7 @@ describe('Blok Line media family', () => {
       const projection = Math.max(0, Math.min(1, ((sunX - start.x) * dx + (sunY - start.y) * dy) / (dx * dx + dy * dy)));
       const distance = Math.hypot(sunX - start.x - projection * dx, sunY - start.y - projection * dy);
 
-      expect(distance - sunRadius - 1.25 / 2).toBeGreaterThan(0.4);
+      expect(distance - sunRadius - 1.25 / 2).toBeGreaterThanOrEqual(1.25);
     }
   });
 

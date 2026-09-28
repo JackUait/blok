@@ -530,8 +530,8 @@ export const IconQuote = `
 export const IconCallout = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M7.25 7.75Q7.6 9.65 9.5 10Q7.6 10.35 7.25 12.25Q6.9 10.35 5 10Q6.9 9.65 7.25 7.75Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M11 8.5h4M11 11.5h2.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7.25 8.25Q7.52 9.73 9 10Q7.52 10.27 7.25 11.75Q6.98 10.27 5.5 10Q6.98 9.73 7.25 8.25Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M11.5 8.5h3M11.5 11.5h2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
@@ -770,7 +770,7 @@ export const IconSplitCell = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M10 4v12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M7.25 8l-2 2 2 2M12.75 8l2 2-2 2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7.5 8l-2 2 2 2M12.5 8l2 2-2 2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
@@ -818,11 +818,11 @@ export const IconImage = `
 const wrapImageSvg = (inner: string): string =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${inner}</svg>`;
 
-// Both pieces share one crack path and show IconImage's landscape, each slid 1.3 sideways.
-export const IconImageBroken = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11.3 4.8H4.7a2.4 2.4 0 0 0-2.4 2.4v9.6a2.4 2.4 0 0 0 2.4 2.4h5.4l1.8-5.4-2.1-4.2 1.5-4.8Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.9 4.8h5.4a2.4 2.4 0 0 1 2.4 2.4v9.6a2.4 2.4 0 0 1-2.4 2.4h-6.6l1.8-5.4-2.1-4.2 1.5-4.8Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16.9" cy="9" r="1.02" fill="currentColor" stroke="none"/><path d="M2.3 16.8l5.4-5.4 3.75 3.75" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.05 15.15l4.05 4.05M14.8 15.9l3-3 3.9 3.9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+// IconImage scaled to fit, cut along one crack, each piece slid 1.6 sideways.
+export const IconImageBroken = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.79 6.17H5.54a1.94 1.94 0 0 0-1.94 1.94v7.77a1.94 1.94 0 0 0 1.94 1.94H10.21l0.83-4.37-0.97-3.4 0.73-3.89Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.99 6.17H18.46a1.94 1.94 0 0 1 1.94 1.94v7.77a1.94 1.94 0 0 1-1.94 1.94H13.41l0.83-4.37-0.97-3.4 0.73-3.89Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16.51" cy="9.57" r=".82" fill="currentColor" stroke="none"/><path d="M3.6 15.89L7.97 11.51 10.85 14.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.06 14.4L17.49 17.83M14.81 15.16L17.24 12.73 20.4 15.89" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 // The cloud stops a full stroke short of the failure badge.
-export const IconUploadFailed = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.5 16.8H7.2a3.6 3.6 0 0 1 0-7.2a4.8 4.8 0 0 1 9.6 0a3.6 3.6 0 0 1 2.55 1.05" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="17.4" cy="17.4" r="3.9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.3 16.3l2.2 2.2M18.5 16.3l-2.2 2.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+export const IconUploadFailed = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9.6 16.8H7.2a3.6 3.6 0 0 1 0-7.2a4.8 4.8 0 0 1 9.6 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16.5" cy="16.5" r="3.9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.87 15.87l1.26 1.26M17.13 15.87l-1.26 1.26" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 // External link — rounded square with arrow exiting top-right (open original)
 export const IconLinkExternal = wrapImageSvg('<path d="M19.2 13.2v4.2a2.4 2.4 0 0 1-2.4 2.4H6.6a2.4 2.4 0 0 1-2.4-2.4V7.2a2.4 2.4 0 0 1 2.4-2.4h4.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.4 4.2h5.4v5.4M19.8 4.2l-9 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>');
@@ -862,10 +862,10 @@ export const IconAlignRight = `
 // The shorter panel leaves room for one caption inside the 20-unit grid.
 export const IconCaption = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <rect x="3" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.25"/>
-  <circle cx="13" cy="5.5" r=".85" fill="currentColor"/>
-  <path d="M3 11l4.5-4.5 6.5 6.5M11.25 10.25l2.5-2.5 3.25 3.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M3 16h9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <rect x="3" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="13" cy="5.92" r=".85" fill="currentColor"/>
+  <path d="M3 11.33L7.5 7.58 14 13M11.25 10.71L13.75 8.625 17 11.33" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3 16h9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
@@ -960,7 +960,7 @@ export const IconPlayerSettings = `
 export const IconPlayerPip = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path d="M17 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="10.5" y="10.5" width="7" height="5.5" rx="1" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="10.5" y="10.5" width="6.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
@@ -976,7 +976,7 @@ export const IconPlayerTheater = `
 export const IconPlayerSpeed = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path d="M4.8 15.2A6.5 6.5 0 0 1 4.55 7.76M6.28 5.97A6.5 6.5 0 0 1 13.72 5.97M15.45 7.76A6.5 6.5 0 0 1 15.2 15.2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M10 11.3L13 8.3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10 11.3L12.8 8.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <circle cx="10" cy="11.3" r=".85" fill="currentColor"/>
 </svg>
 `;
@@ -984,10 +984,10 @@ export const IconPlayerSpeed = `
 // Player loop — racetrack whose two arrows chase each other
 export const IconPlayerLoop = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M6 13.5a3.5 3.5 0 0 1 0-7h5.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M9.5 4.5 11.5 6.5 9.5 8.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M14 6.5a3.5 3.5 0 0 1 0 7h-5.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M10.5 15.5 8.5 13.5 10.5 11.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6 13a3 3 0 0 1 0-6h5.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M9.75 5.25 11.5 7 9.75 8.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14 7a3 3 0 0 1 0 6h-5.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10.25 14.75 8.5 13 10.25 11.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 

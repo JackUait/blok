@@ -112,7 +112,8 @@ describe('icon refinements', () => {
   });
 
   describe('IconMergeCells / IconSplitCell', () => {
-    const CLEARANCE = 0.75;
+    // Blok Line keeps separate features one stroke apart.
+    const CLEARANCE = 1.25;
 
     it.each([
       ['merge', IconMergeCells, 'M10 4v2M10 16v-2'],
@@ -140,10 +141,10 @@ describe('icon refinements', () => {
         expect(dy2).toBe(dy1);
         expect(Math.abs(tipX - 10) < Math.abs(x - 10)).toBe(action === 'merge');
         // Clear of the frame sides, and of the wall where the wall is drawn.
-        expect(Math.min(tipX, x) - 3 - stroke).toBeGreaterThanOrEqual(CLEARANCE);
-        expect(17 - Math.max(tipX, x) - stroke).toBeGreaterThanOrEqual(CLEARANCE);
+        expect(Math.min(tipX, x) - 3 - stroke).toBeGreaterThanOrEqual(CLEARANCE - 1e-9);
+        expect(17 - Math.max(tipX, x) - stroke).toBeGreaterThanOrEqual(CLEARANCE - 1e-9);
         if (action === 'split') {
-          expect(Math.min(Math.abs(tipX - 10), Math.abs(x - 10)) - stroke).toBeGreaterThanOrEqual(CLEARANCE);
+          expect(Math.min(Math.abs(tipX - 10), Math.abs(x - 10)) - stroke).toBeGreaterThanOrEqual(CLEARANCE - 1e-9);
         }
       }
     });

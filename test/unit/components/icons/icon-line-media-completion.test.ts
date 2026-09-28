@@ -154,6 +154,8 @@ describe('Blok Line media completion', () => {
     // The dial opens at the bottom, so centre the visible arc, not the hub.
     expect((center[1] - first[2] + first[1]) / 2).toBeCloseTo(10, 5);
     expect(numbers(needle).slice(0, 2)).toEqual(center);
+    // The needle tip stays a full stroke inside the dial.
+    expect(first[2] - Math.hypot(numbers(needle)[2] - center[0], numbers(needle)[3] - center[1]) - 1.25).toBeGreaterThanOrEqual(1.25);
   });
 
 
@@ -175,7 +177,12 @@ describe('Blok Line media completion', () => {
 
     expect(head.slice(2, 4)).toEqual(tip);
     expect(head[4] - head[0]).toBe(0);
+    // The two inner arms, one above the other at the centre, stay a stroke apart.
+    expect(Math.hypot(numbers(secondHead)[4] - head[4], numbers(secondHead)[5] - head[5]) - stroke).toBeGreaterThanOrEqual(stroke);
     expect(nextTrackStart - tip[0] - stroke).toBeGreaterThanOrEqual(stroke);
+    // The rounded ends stay inside the 3–17 drawing area.
+    expect(track[0] - track[2]).toBeGreaterThanOrEqual(3);
+    expect(nextTrackStart + track[2]).toBeLessThanOrEqual(17);
   });
 
 
@@ -239,12 +246,14 @@ describe('Blok Line media completion', () => {
     for (const [x, y] of [ends[0], ends[ends.length - 1]]) {
       expect(Math.hypot(x - cx, y - cy) - radius - stroke).toBeGreaterThanOrEqual(stroke);
     }
-    expect(cy + radius + stroke / 2).toBeLessThanOrEqual(24);
-    expect(cx + radius + stroke / 2).toBeLessThanOrEqual(24);
+    // The badge stays inside the overlay drawing area (3–17 at 20 units = 3.6–20.4 here).
+    expect(cy + radius).toBeLessThanOrEqual(20.4);
+    expect(cx + radius).toBeLessThanOrEqual(20.4);
     for (const [x, y, dx, dy] of crossPoints) {
       expect(x + dx / 2).toBeCloseTo(cx, 5);
       expect(y + dy / 2).toBeCloseTo(cy, 5);
-      expect(Math.hypot(dx, dy) / 2 + stroke).toBeLessThanOrEqual(radius - stroke / 2);
+      // A full stroke of space between the cross and the badge ring.
+      expect(Math.hypot(dx, dy) / 2 + stroke / 2 + stroke).toBeLessThanOrEqual(radius - stroke / 2 + 1e-9);
     }
   });
 

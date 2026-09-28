@@ -106,7 +106,8 @@ test('a photo is saved in every format this browser can encode, best first, with
   expect(types.at(-1)).toBe('image/jpeg');
   expect(saved.url).toBe(saved.variants?.at(-1)?.url);
   expect([...types].sort((a, b) => RANK.indexOf(a) - RANK.indexOf(b))).toEqual(types);
-  expect(await page.evaluate(() => window.__uploads?.map((u) => u.type))).toEqual(types);
+  // The JPEG the image needs uploads first; better formats follow, best first.
+  expect(await page.evaluate(() => window.__uploads?.map((u) => u.type))).toEqual(['image/jpeg', ...types.slice(0, -1)]);
 });
 
 test('the image shows the best format this browser made, through a picture element', async ({ page }) => {

@@ -35,7 +35,7 @@ import {
   IconReplace,
 } from '../../components/icons';
 import { DEFAULT_RELOAD_ATTEMPTS, IMAGE_SNAP_POINTS, URL_PATTERN } from './constants';
-import { islandBoundaryTop, resolveIslandPlacement } from './island-placement';
+import { islandBoundaryTop, resolveIslandPlacement, syncMediaHeight } from './island-placement';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
 import { resolveUploadError } from '../../components/utils/media-upload-error';
@@ -979,6 +979,7 @@ export class ImageTool implements BlockTool {
       imgEl.addEventListener('error', () => this.handleImgLoadFailure(imgEl, figure));
       imgEl.addEventListener('load', () => {
         figure.removeAttribute('data-loading');
+        syncMediaHeight(figure);
         figure.style.removeProperty('aspect-ratio');
         figure.style.removeProperty('min-height');
         imgEl.style.removeProperty('min-height');
@@ -1092,6 +1093,7 @@ export class ImageTool implements BlockTool {
         applyAutoFull(this.root, img, containerWidth);
       }
       updateOverlayTier(overlay, figure.clientWidth, figure.clientHeight);
+      syncMediaHeight(figure);
     };
     sync();
     if (img && !img.complete) {

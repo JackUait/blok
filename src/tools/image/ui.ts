@@ -226,6 +226,7 @@ export function renderAltPill(opts: AltPillOptions): HTMLButtonElement {
   }
 
   const hint = document.createElement('div');
+  hint.className = 'blok-image-alt-hint';
   const title = document.createElement('strong');
   title.textContent = tr(opts.i18n, 'tools.image.altHintTitle');
   hint.append(title, document.createElement('br'), tr(opts.i18n, 'tools.image.altHintBody'));

@@ -2260,3 +2260,23 @@ describe('ImageTool — image chrome wiring', () => {
     expect(root.hasAttribute('data-resizing')).toBe(false);
   });
 });
+
+describe('ImageTool — chrome sized to the picture, not the caption', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('publishes the picture height so the ring, dots and alt pill ignore the caption row', () => {
+    const { root } = renderRenderedImage({ caption: 'A caption' });
+    const figure = root.querySelector<HTMLElement>('[data-role="image-figure"]');
+    const img = figure?.querySelector('img');
+    if (!figure || !img) throw new Error('figure or img missing');
+    Object.defineProperty(img, 'offsetHeight', { value: 320, configurable: true });
+    Object.defineProperty(img, 'naturalWidth', { value: 800, configurable: true });
+
+    img.dispatchEvent(new Event('load'));
+
+    expect(figure.style.getPropertyValue('--blok-image-media-height')).toBe('320px');
+  });
+});

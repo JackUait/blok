@@ -231,6 +231,14 @@ describe('renderAltPill', () => {
     expect(content instanceof HTMLElement ? content.textContent : content).toContain('What is alt text?');
   });
 
+  it('gives the hint its own class so it wraps as a short paragraph, not one long line', () => {
+    const pill = renderAltPill({ onOpen: noopFn, isEditorOpen: () => false });
+    pill.dispatchEvent(new MouseEvent('mouseenter'));
+    const content = vi.mocked(tooltip.show).mock.calls[0][1];
+
+    expect(content instanceof HTMLElement && content.classList.contains('blok-image-alt-hint')).toBe(true);
+  });
+
   it('does not show the hint while the alt editor is open', () => {
     const pill = renderAltPill({ onOpen: noopFn, isEditorOpen: () => true });
     pill.dispatchEvent(new MouseEvent('mouseenter'));

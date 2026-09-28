@@ -95,15 +95,23 @@
   [data-blok-tool="image"] .blok-image-caption { font-size: var(--blok-image-caption-font-size, 13.5px); }
 }
 
+/* The alt hint mounts in the shared tooltip, outside the image block, so it is not scoped. */
+.blok-image-alt-hint {
+  max-width: 260px;
+  white-space: normal;
+  text-align: start;
+}
+
 /* alt pill — sits on the figure, bottom-left */
 [data-blok-tool="image"] .blok-image-alt-pill {
   position: absolute;
+  top: calc(var(--blok-image-media-height, 100%) - var(--blok-space-2-5));
   left: var(--blok-space-2-5);
-  bottom: var(--blok-space-2-5);
+  translate: 0 -100%;
   display: inline-flex;
   align-items: center;
   gap: var(--blok-space-1-5);
-  max-width: calc(100% - 20px);
+  max-width: min(calc(100% - 20px), 240px);
   padding: var(--blok-space-1-25) var(--blok-space-2-25) var(--blok-space-1-25) var(--blok-space-1-75);
   border: 0;
   border-radius: var(--blok-radius-pill);
@@ -306,13 +314,19 @@
 
 [data-blok-tool="image"] [data-role="image-selection-ring"] {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: var(--blok-image-media-height, 100%);
   border-radius: var(--blok-radius-lg);
   box-shadow: 0 0 0 1px var(--blok-image-frame-ring);
   opacity: 0;
   pointer-events: none;
   transition:
-    inset 300ms cubic-bezier(0.2, 0.9, 0.25, 1),
+    top 300ms cubic-bezier(0.2, 0.9, 0.25, 1),
+    right 300ms cubic-bezier(0.2, 0.9, 0.25, 1),
+    left 300ms cubic-bezier(0.2, 0.9, 0.25, 1),
+    height 300ms cubic-bezier(0.2, 0.9, 0.25, 1),
     opacity 200ms ease,
     box-shadow 150ms ease;
 }
@@ -321,7 +335,10 @@
 [data-blok-tool="image"][data-align-open="true"] [data-role="image-selection-ring"],
 [data-blok-tool="image"][data-alt-open="true"] [data-role="image-selection-ring"],
 [data-blok-tool="image"][data-resizing="true"] [data-role="image-selection-ring"] {
-  inset: -6px;
+  top: -6px;
+  right: -6px;
+  left: -6px;
+  height: calc(var(--blok-image-media-height, 100%) + 12px);
   opacity: 1;
 }
 [data-blok-tool="image"][data-resizing="true"] [data-role="image-selection-ring"] {
@@ -409,7 +426,7 @@
 /* resize handles — dots on the selection ring's midline (ring sits 6px outside the figure) */
 [data-blok-tool="image"] [data-role="resize-handle"] {
   position: absolute;
-  top: 50%;
+  top: calc(var(--blok-image-media-height, 100%) / 2);
   width: 9px;
   height: 9px;
   border-radius: 50%;
@@ -451,7 +468,7 @@
 
 [data-blok-tool="image"] [data-role="image-resize-readout"] {
   position: absolute;
-  top: 50%;
+  top: calc(var(--blok-image-media-height, 100%) / 2);
   transform: translateY(-50%);
   padding: var(--blok-space-1-25) var(--blok-space-1-75);
   border-radius: var(--blok-radius-md);

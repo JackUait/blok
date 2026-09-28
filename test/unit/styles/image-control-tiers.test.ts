@@ -123,3 +123,27 @@ describe('image islands (frame and islands design)', () => {
     expect(css).toMatch(/prefers-reduced-motion: reduce\)[\s\S]*\.blok-image-toolbar__island[\s\S]*animation: none/);
   });
 });
+
+describe('image chrome anchors to the picture, not the whole figure', () => {
+  it.each([
+    '[data-blok-tool="image"] [data-role="image-selection-ring"]',
+    '[data-blok-tool="image"] [data-role="resize-handle"]',
+    '[data-blok-tool="image"] .blok-image-alt-pill',
+    '[data-blok-tool="image"] [data-role="image-resize-readout"]',
+  ])('%s is placed from --blok-image-media-height', (selector) => {
+    expect(findRuleBody(selector)).toContain('var(--blok-image-media-height');
+  });
+});
+
+describe('alt hint and pill width', () => {
+  it('wraps the hint to a readable width', () => {
+    const body = findRuleBody('.blok-image-alt-hint');
+
+    expect(body).toContain('max-width: 260px');
+    expect(body).toContain('white-space: normal');
+  });
+
+  it('caps the alt pill so a long description does not cover the picture', () => {
+    expect(findRuleBody('[data-blok-tool="image"] .blok-image-alt-pill')).toContain('max-width: min(calc(100% - 20px), 240px)');
+  });
+});

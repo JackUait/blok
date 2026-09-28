@@ -181,7 +181,6 @@
 .blok-media-preview__frame { fill: var(--blok-bg-primary); }
 .blok-media-preview__screen { fill: var(--blok-media-preview-tone); }
 .blok-media-preview__knob { fill: var(--blok-bg-primary); }
-.blok-media-preview__shadow { fill: currentColor; stroke: none; opacity: 0.12; }
 .blok-media-preview__track,
 .blok-media-preview__chip { fill: var(--blok-media-preview-tone); stroke: none; }
 .blok-media-preview__progress,
@@ -203,6 +202,28 @@
 .blok-media-preview__sheet--back { --dir: -1; --rest: translateX(-6px) rotate(-8deg); opacity: 0.55; transform: var(--rest); }
 .blok-media-preview__sheet--mid { --dir: 1; --rest: translateX(6px) rotate(6deg); opacity: 0.8; transform: var(--rest); }
 
+/* ----- Shadows: light comes from the pointer, so every shadow falls away
+   from it. --tilt-x/--tilt-y are the live tilt from media-preview-3d.ts. The
+   floor shadows copy the body's outline (media-preview-art.ts) and flatten it
+   onto the floor: skew first, then squash, so the far edge trails. ----- */
+.blok-media-preview { --tilt-x: 0; --tilt-y: 0; }
+.blok-media-preview__shade { flood-color: var(--blok-media-preview-shadow); }
+/* the floor stays put while the drawing lifts */
+.blok-media-preview__ground { transform: translateY(calc(var(--lift) * -1)); }
+.blok-media-preview__cast { transform-origin: 50% 100%; }
+.blok-media-preview__cast--contact {
+  transform: translate(calc(var(--tilt-x) * -4px), calc(1px + var(--tilt-y) * -2px)) scale(0.92, 0.05) skewX(calc(var(--tilt-x) * 16deg));
+}
+.blok-media-preview__cast--ambient {
+  transform: translate(calc(var(--tilt-x) * -11px), calc(9px + var(--tilt-y) * -5px)) scale(0.98, 0.16) skewX(calc(var(--tilt-x) * 26deg));
+}
+.blok-media-preview__contact { opacity: 0.4; }
+.blok-media-preview__ambient { opacity: 0.16; }
+.blok-media-preview__drop {
+  opacity: 0.2;
+  transform: translate(calc(var(--tilt-x) * -5px), calc(1.5px + var(--tilt-y) * -3px));
+}
+
 /* audio idles: the waveform breathes */
 .blok-media-preview__bar { animation: blok-media-preview-breathe 2.4s ease-in-out calc(var(--i) * -0.19s) infinite; }
 @keyframes blok-media-preview-breathe {
@@ -216,6 +237,9 @@
   --lift: -3px;
   --blok-media-preview-ink: var(--blok-text-secondary);
 }
+/* lifted off the floor: the contact shadow fades, the ambient one spreads */
+:is(.blok-media-empty__panel > [data-hover], .blok-media-empty__card:focus-visible .blok-media-empty__panel > *).blok-media-preview .blok-media-preview__contact { opacity: 0.24; }
+:is(.blok-media-empty__panel > [data-hover], .blok-media-empty__card:focus-visible .blok-media-empty__panel > *).blok-media-preview .blok-media-preview__ambient { opacity: 0.2; transform: scale(1.1); }
 :is(.blok-media-empty__panel > [data-hover], .blok-media-empty__card:focus-visible .blok-media-empty__panel > *).blok-media-preview :is(.blok-media-preview__scene, .blok-media-preview__sun) {
   opacity: 1;
 }
@@ -278,6 +302,8 @@
   --blok-media-preview-ink: var(--blok-color-accent);
 }
 .blok-media-empty__card.is-dragover .blok-media-preview :is(.blok-media-preview__scene, .blok-media-preview__sun) { opacity: 1; }
+.blok-media-empty__card.is-dragover .blok-media-preview__contact { opacity: 0.12; }
+.blok-media-empty__card.is-dragover .blok-media-preview__ambient { opacity: 0.24; transform: scale(1.2); }
 .blok-media-empty__card.is-dragover .blok-media-preview__knob-group { animation: blok-media-preview-pulse 1.1s ease-in-out infinite; }
 .blok-media-empty__card.is-dragover .blok-media-preview__progress { animation: none; transform: scaleX(1); }
 .blok-media-empty__card.is-dragover .blok-media-preview__bar { animation: blok-media-preview-breathe 0.55s ease-in-out calc(var(--i) * -0.07s) infinite; }

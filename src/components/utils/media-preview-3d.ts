@@ -99,8 +99,9 @@ function draw(shapes: Shape[], leanX: number, leanY: number): void {
 }
 
 // Springs the tilt toward the latest target and redraws; the frame loop runs
-// only until it settles.
-function springTilt(shapes: Shape[]): Lean {
+// only until it settles. The live tilt goes out as --tilt-x/--tilt-y so the
+// shadows in media-empty.css move with the light.
+function springTilt(shapes: Shape[], stage: HTMLElement): Lean {
   const tilt = { x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0, frame: 0, last: 0 };
 
   const step = (now: number): void => {
@@ -118,6 +119,8 @@ function springTilt(shapes: Shape[]): Lean {
       tilt.y = tilt.ty;
     }
     draw(shapes, tilt.x, tilt.y);
+    stage.style.setProperty('--tilt-x', String(Math.round(tilt.x * 1000) / 1000));
+    stage.style.setProperty('--tilt-y', String(Math.round(tilt.y * 1000) / 1000));
     tilt.frame = settled ? 0 : requestAnimationFrame(step);
   };
 
@@ -140,7 +143,7 @@ export function leanPreview(stage: HTMLElement, leanX: number, leanY: number): v
     if (leanX === 0 && leanY === 0) return;
     const svg = stage.querySelector('svg');
     const shapes = svg ? toShapes(svg) : null;
-    depths.set(stage, shapes ? springTilt(shapes) : null);
+    depths.set(stage, shapes ? springTilt(shapes, stage) : null);
   }
   depths.get(stage)?.(leanX, leanY);
 }

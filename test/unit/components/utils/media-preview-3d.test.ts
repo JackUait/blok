@@ -99,6 +99,20 @@ describe('leanPreview', () => {
     expect(frames.queue).toHaveLength(1);
   });
 
+  it('shares its live tilt so the shadows can follow the light', () => {
+    const stage = makePreview('video');
+    leanPreview(stage, 1, -1);
+
+    runFrames(3);
+    const midway = Number(stage.style.getPropertyValue('--tilt-x'));
+    runFrames(2000);
+
+    expect(midway).toBeGreaterThan(0);
+    expect(midway).toBeLessThan(1);
+    expect(stage.style.getPropertyValue('--tilt-x')).toBe('1');
+    expect(stage.style.getPropertyValue('--tilt-y')).toBe('-1');
+  });
+
   it('does nothing when a never-tilted drawing is told to rest', () => {
     const stage = makePreview('video');
 

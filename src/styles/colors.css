@@ -185,6 +185,9 @@
   --blok-checklist-hover-ring: rgba(35, 131, 226, 0.14);
   --blok-checklist-readonly-fill: #94a3b8;
 
+  /* Media empty-state preview: floor and layer shadows, tinted like the ink */
+  --blok-media-preview-shadow: rgba(24, 30, 44, 0.8);
+
   /* Color picker swatch */
   --blok-swatch-neutral-bg: #f7f7f5;
   --blok-swatch-ring-hover: rgba(0, 0, 0, 0.1);
@@ -603,6 +606,9 @@
     --blok-checklist-hover-ring: rgba(82, 156, 202, 0.2);
     --blok-checklist-readonly-fill: #475569;
 
+    /* Media empty-state preview: deeper shadows so they read on dark */
+    --blok-media-preview-shadow: rgba(0, 0, 0, 1);
+
     /* Color picker swatch */
     --blok-swatch-neutral-bg: #3a3a38;
     --blok-swatch-ring-hover: rgba(255, 255, 255, 0.15);
@@ -788,6 +794,9 @@
   --blok-checklist-shadow: rgba(0, 0, 0, 0.3);
   --blok-checklist-hover-ring: rgba(82, 156, 202, 0.2);
   --blok-checklist-readonly-fill: #475569;
+
+  /* Media empty-state preview: deeper shadows so they read on dark */
+  --blok-media-preview-shadow: rgba(0, 0, 0, 1);
 
   /* Color picker swatch */
   --blok-swatch-neutral-bg: #3a3a38;

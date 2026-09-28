@@ -95,11 +95,11 @@ export function springHome(stage: HTMLElement): () => void {
     stage.querySelectorAll(selector).forEach((el) => played.push(el.animate(keyframes, options)));
   };
 
-  // The drawing lands: its shadow squashes wide, then relaxes.
-  flourish('.blok-media-preview__shadow', [
-    { transform: 'none' },
-    { transform: 'scale(1.22, 0.7)', offset: 0.3 },
-    { transform: 'none' },
+  // The drawing lands: its contact shadow snaps in tight and dark, then relaxes.
+  flourish('.blok-media-preview__contact', [
+    { opacity: 0.24, transform: 'scaleX(1.15)' },
+    { opacity: 0.6, transform: 'scaleX(0.9)', offset: 0.35 },
+    { opacity: 0.4, transform: 'none' },
   ], { duration: EXIT_MS, easing: 'ease-out' });
   // The sun sets behind the hills and comes back up.
   flourish('.blok-media-preview__sun', [

@@ -604,6 +604,7 @@
   --blok-checklist-shadow: rgba(0, 0, 0, 0.08);
   --blok-checklist-hover-ring: rgba(35, 131, 226, 0.14);
   --blok-checklist-readonly-fill: #94a3b8;
+  --blok-media-preview-shadow: rgba(24, 30, 44, 0.8);
   --blok-swatch-neutral-bg: #f7f7f5;
   --blok-swatch-ring-hover: rgba(0, 0, 0, 0.1);
   --blok-swatch-ring-active: rgba(0, 0, 0, 0.3);
@@ -906,6 +907,7 @@
     --blok-checklist-shadow: rgba(0, 0, 0, 0.3);
     --blok-checklist-hover-ring: rgba(82, 156, 202, 0.2);
     --blok-checklist-readonly-fill: #475569;
+    --blok-media-preview-shadow: rgba(0, 0, 0, 1);
     --blok-swatch-neutral-bg: #3a3a38;
     --blok-swatch-ring-hover: rgba(255, 255, 255, 0.15);
     --blok-swatch-ring-active: rgba(255, 255, 255, 0.35);
@@ -1060,6 +1062,7 @@
   --blok-checklist-shadow: rgba(0, 0, 0, 0.3);
   --blok-checklist-hover-ring: rgba(82, 156, 202, 0.2);
   --blok-checklist-readonly-fill: #475569;
+  --blok-media-preview-shadow: rgba(0, 0, 0, 1);
   --blok-swatch-neutral-bg: #3a3a38;
   --blok-swatch-ring-hover: rgba(255, 255, 255, 0.15);
   --blok-swatch-ring-active: rgba(255, 255, 255, 0.35);

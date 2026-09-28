@@ -4116,7 +4116,7 @@ span[data-blok-slash-search] {
   display: block;
   max-width: 100%;
   color: var(--blok-media-preview-ink);
-  transform: perspective(700px) translateY(var(--lift)) scale(var(--scale)) rotateX(calc(var(--my) * -7deg)) rotateY(calc(var(--mx) * 9deg));
+  transform: translateY(var(--lift)) scale(var(--scale));
   transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1), color var(--blok-duration-standard) ease;
 }
 
@@ -4140,6 +4140,12 @@ span[data-blok-slash-search] {
 
 .blok-media-preview :where(svg g, svg defs *) {
   stroke: none;
+}
+
+.blok-media-preview__tilt {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  transform: rotate(calc(var(--mx) * 2.5deg)) skewX(calc(var(--mx) * -3deg)) skewY(calc(var(--my) * 1.5deg));
 }
 
 .blok-media-preview__layer {
@@ -4377,7 +4383,7 @@ span[data-blok-slash-search] {
   transition: transform 200ms linear;
 }
 
-[@media (prefers-reduced-motion: reduce)] .blok-media-preview, .blok-media-preview__layer {
+[@media (prefers-reduced-motion: reduce)] .blok-media-preview, .blok-media-preview__tilt, .blok-media-preview__layer {
   transform: none;
 }
 

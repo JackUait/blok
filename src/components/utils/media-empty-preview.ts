@@ -100,7 +100,9 @@ export function makePreview(kind: MediaPreviewKind): HTMLElement {
   stage.className = 'blok-media-preview';
   stage.setAttribute('data-blok-media-preview', kind);
   stage.setAttribute('aria-hidden', 'true');
-  stage.innerHTML = `<svg viewBox="0 0 200 120" width="200" height="120" fill="none" focusable="false">${drawings[kind](`blok-media-preview-${uid()}`)}</svg>`;
+  // The tilt lives on a group inside the SVG: a transform on the element around
+  // the SVG makes the browser tilt a bitmap, and the lines turn jagged.
+  stage.innerHTML = `<svg viewBox="0 0 200 120" width="200" height="120" fill="none" focusable="false"><g class="blok-media-preview__tilt">${drawings[kind](`blok-media-preview-${uid()}`)}</g></svg>`;
   return stage;
 }
 
@@ -164,7 +166,8 @@ export function springHome(stage: HTMLElement): () => void {
   const canCapture = typeof stage.getAnimations === 'function';
   const moving = canCapture
     ? Array.from(stage.querySelectorAll<SVGElement>('svg *'))
-      .filter((el) => el.getAnimations().length > 0)
+      // Only keyframe demos: a running transition has no fixed end to spring to.
+      .filter((el) => el.getAnimations().some((animation) => 'animationName' in animation))
       .map((el) => ({ el, from: getComputedStyle(el).transform }))
     : [];
 

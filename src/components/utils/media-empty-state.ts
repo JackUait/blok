@@ -533,14 +533,16 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     panel.addEventListener('pointerleave', () => {
       if (pointer.frame) cancelAnimationFrame(pointer.frame);
       pointer.frame = 0;
-      lean('0', '0');
       const stage = stageEl();
-      if (!stage) return;
-      if (prefersReducedMotion()) {
-        stage.removeAttribute('data-hover');
+      if (!stage || prefersReducedMotion()) {
+        stage?.removeAttribute('data-hover');
+        lean('0', '0');
         return;
       }
+      // springHome must switch on data-leaving before the lean resets, or the
+      // tilt starts its way back on the plain curve instead of the spring.
       exit.stop = springHome(stage);
+      lean('0', '0');
       exit.timer = window.setTimeout(() => stage.removeAttribute('data-leaving'), EXIT_CLEAR_MS);
     });
   }

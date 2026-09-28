@@ -46,12 +46,14 @@ Tiers keep today's thresholds (`OVERLAY_MEDIUM_THRESHOLD` 360, `OVERLAY_COMPACT_
 | State | Frame | Islands | Handle dots | Alt pill |
 |---|---|---|---|---|
 | Resting | — | — | — | — |
-| Hover | — | split in | — | fades in |
+| Hover | — | split in | pop in | fades in |
 | Selected, or settings / align / alt open | draws in | stay | pop in | stays |
 | Dragging a handle | stronger ring | step aside | dragged one grows | stays |
 | Loading, crop, error, empty, read-only | — | — | — | — |
 
-- Hover → select does not replay the split. Only the frame and dots are added.
+- Hover → select does not replay the split. Only the frame is added.
+- Dots show on hover, as the resize handles do today (`.blok-image-inner:hover` in `image.css`).
+  The chat design said "selected only"; that misread today's CSS and would have been a regression.
 - `prefers-reduced-motion`: everything appears in its final state, no animation.
 
 ## Placement
@@ -89,6 +91,8 @@ Tiers keep today's thresholds (`OVERLAY_MEDIUM_THRESHOLD` 360, `OVERLAY_COMPACT_
 - Set alt: a check, "Alt", and the start of the text, cut with an ellipsis.
 - Keeps `data-action="alt-edit"` and `aria-pressed`. Click opens the existing alt popover.
 - Hidden in the compact tier. Alt stays reachable from the block settings menu.
+- Shown whether or not the caption is visible. Today the Alt chip disappears with the caption,
+  because it lives in the caption row.
 - **Hint.** A Blok tooltip after a short hover delay, or on keyboard focus:
   "What is alt text?" / "A short description of the image. Screen readers read it aloud,
   and browsers show it when the image can't load. Search engines use it too."
@@ -96,10 +100,12 @@ Tiers keep today's thresholds (`OVERLAY_MEDIUM_THRESHOLD` 360, `OVERLAY_COMPACT_
 
 ## Alt editor
 
-- One field. The placeholder is an example, not the word "Alt text".
-- One quiet line under it: "Read aloud to people who can't see the image."
+- One field. The placeholder is an example (new key `tools.image.altExample`), not the word "Alt text".
+- One quiet line under it. It reuses the existing `tools.image.altDescription`
+  ("Describe this image for people who can't see it."), moved below the field and set small and gray.
+  Reusing it avoids re-translating a line that already exists in 71 locales.
+- The old placeholder key `tools.image.altPlaceholder` becomes the field's `aria-label`.
 - Enter saves. Clicking away saves. Escape closes. Same as today.
-- The existing `tools.image.altDescription` heading line is removed from the popover.
 
 ## Code
 
@@ -115,10 +121,13 @@ All inside `src/tools/image/` and `src/styles/image.css`, except the shared resi
 - Readout: a small element the image block updates from `onPreview`.
 - `renderCaptionRow`: loses the Alt button. The pill is rendered on the figure.
 - `alt-popover.ts`: new placeholder and note line; description line removed.
-- Tokens in `src/styles/colors.css`, light and dark: frame ring, island surface and shadow,
-  dot, readout. Pressed buttons use `--blok-icon-active-bg` / `--blok-icon-active-text`.
+- Islands reuse the toolbar's existing tokens: `--blok-overlay-surface`, `--blok-overlay-ring`,
+  `--blok-image-shadow-toolbar` (already light and dark). Dots use `--blok-overlay-surface` too.
+- New tokens in `src/styles/colors.css`, light and dark: `--blok-image-frame-ring`,
+  `--blok-image-frame-ring-strong`, `--blok-image-readout-bg`, `--blok-image-readout-fg`. Pressed buttons use `--blok-icon-active-bg` / `--blok-icon-active-text`.
   Nothing selected is blue.
-- i18n, all 71 locales: hint title, hint body, editor note, new placeholder.
+- i18n, all locales: four new keys — `tools.image.altAdd` ("Add alt text"),
+  `tools.image.altHintTitle`, `tools.image.altHintBody`, `tools.image.altExample`.
 
 ## Testing
 

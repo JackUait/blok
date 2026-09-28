@@ -27,8 +27,11 @@ export const hasAlpha = (bitmap: ImageBitmap): boolean => {
   ctx.drawImage(bitmap, 0, 0);
 
   const { data } = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
+  // One read per pixel, stopping at the first see-through one. RGBA bytes read
+  // as a little-endian uint32 put alpha in the top byte (every browser platform).
+  const pixels = new Uint32Array(data.buffer, data.byteOffset, data.length / 4);
 
-  return data.some((value, index) => index % 4 === 3 && value < 255);
+  return pixels.some((pixel) => pixel >>> 24 !== 255);
 };
 
 const encodeOne = async (
@@ -70,7 +73,8 @@ export const produceImageVariants = async (
 
   try {
     const size = targetSize(bitmap.width, bitmap.height, opts);
-    const alpha = formats.includes('jpeg') && hasAlpha(bitmap);
+    // A JPEG has no alpha channel, so there is nothing to lose.
+    const alpha = formats.includes('jpeg') && file.type !== 'image/jpeg' && hasAlpha(bitmap);
     const mimes = [...new Set(formats)]
       .map((format) => IMAGE_FORMAT_MIME[format])
       .filter((mime) => !(alpha && mime === 'image/jpeg'));

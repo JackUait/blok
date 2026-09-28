@@ -11,6 +11,9 @@ const encodable = new Set<string>();
 /** Alpha the fake canvas reports for every pixel, and the decoded size. */
 const state = { alpha: 255, width: 40, height: 30 };
 const encodes: Array<{ type: string; width: number; height: number }> = [];
+const alphaReads = { count: 0 };
+/** When set, only the last pixel gets this alpha. */
+const lastPixelAlpha: { value: number | null } = { value: null };
 
 const install = (): void => {
   (globalThis as Record<string, unknown>).createImageBitmap = vi.fn(async () => ({
@@ -26,10 +29,14 @@ const install = (): void => {
       return {
         drawImage: vi.fn(),
         getImageData: (_x: number, _y: number, w: number, h: number) => {
+          alphaReads.count += 1;
           const data = new Uint8ClampedArray(w * h * 4).fill(255);
 
           for (let i = 3; i < data.length; i += 4) {
             data[i] = state.alpha;
+          }
+          if (lastPixelAlpha.value !== null) {
+            data[data.length - 1] = lastPixelAlpha.value;
           }
 
           return { data };
@@ -54,6 +61,8 @@ describe('produceImageVariants', () => {
     encodable.clear();
     encodes.length = 0;
     state.alpha = 255;
+    alphaReads.count = 0;
+    lastPixelAlpha.value = null;
     install();
   });
 
@@ -124,5 +133,24 @@ describe('produceImageVariants', () => {
 
     delete (globalThis as Record<string, unknown>).OffscreenCanvas;
     expect(await produceImageVariants(photo(), ['jpeg'], { quality: 0.92 })).toEqual([]);
+  });
+
+  it('does not scan a JPEG for transparency, since JPEG has none', async () => {
+    encodable.add('image/jpeg');
+
+    await produceImageVariants(photo('image/jpeg'), ['jpeg'], { quality: 0.92 });
+
+    expect(alphaReads.count).toBe(0);
+  });
+
+  it('finds a single transparent pixel', async () => {
+    encodable.add('image/jpeg').add('image/png');
+    state.alpha = 255;
+    // One pixel, the last one, is see-through.
+    lastPixelAlpha.value = 0;
+
+    const out = await produceImageVariants(photo('image/png'), ['jpeg', 'png'], { quality: 0.92 });
+
+    expect(out.map((v) => v.mimeType)).toEqual(['image/png']);
   });
 });

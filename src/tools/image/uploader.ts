@@ -88,17 +88,19 @@ export class Uploader {
 
     const formats = this.media()?.formats?.image;
 
-    if (formats !== undefined && formats.length > 0) {
-      const produced = await this.convert(file, formats);
+    const produced = formats !== undefined && formats.length > 0 ? await this.convert(file, formats) : [];
 
+    if (produced.length > 0) {
       return uploadImageVariants(
         file,
         produced,
         (part, variant, onProgress) => this.uploadOne(part, onProgress, variant),
-        options.onProgress
+        options.onProgress,
+        async (original) => (await compressImage(original, this.config.compress)) ?? original
       );
     }
 
+    // Nothing made (or nothing asked for): exactly the single-file upload of before.
     const uploaded = (await compressImage(file, this.config.compress)) ?? file;
 
     return this.uploadOne(uploaded, options.onProgress);
@@ -106,13 +108,14 @@ export class Uploader {
 
   private async convert(file: File, formats: ImageFormat[]): Promise<ConvertedMedia[]> {
     const custom = this.media()?.convert;
-    const fromHook = custom === undefined
+    const fromHook: unknown = custom === undefined
       ? null
       // A failing hook must not lose the upload: fall through to the built-in converter.
       : await custom(file, formats, { kind: 'image' }).catch(() => null);
 
-    if (fromHook !== null) {
-      return fromHook;
+    // Untyped hosts can return anything; only an array counts as an answer.
+    if (Array.isArray(fromHook)) {
+      return fromHook as ConvertedMedia[];
     }
 
     const compress = typeof this.config.compress === 'object' ? this.config.compress : {};

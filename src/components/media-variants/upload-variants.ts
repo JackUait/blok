@@ -23,43 +23,51 @@ const nameFor = (original: string, mime: string): string => {
   return `${base}.${EXTENSION[mime] ?? 'bin'}`;
 };
 
+type Job = { file: File; mimeType: string; role: VariantRole };
+
 /**
- * Upload every rendition, best first. The last one is the most compatible
- * and becomes `url`.
+ * Upload every rendition. The most compatible one becomes `url`: it is
+ * uploaded first and must succeed. A better format that fails to upload is
+ * dropped, so one rejected type never costs the user the image.
  * @param original - the file the user picked
  * @param produced - renditions made from it, any order
  * @param upload - stores one file
  * @param onProgress - overall progress, 0–100
- * @returns `variants` is undefined when only one file was uploaded
+ * @param prepareOriginal - shapes the original before it is kept as the fallback
+ * @returns `variants` is best-first, and undefined when only one file was stored
  */
 export const uploadImageVariants = async (
   original: File,
   produced: readonly ConvertedMedia[],
   upload: VariantUpload,
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
+  prepareOriginal: (file: File) => Promise<File> = async (file) => file
 ): Promise<{ url: string; fileName?: string; variants?: MediaVariant[] }> => {
-  const jobs: Array<{ file: File; mimeType: string; role: VariantRole }> = sortBestFirst(produced).map((item) => ({
+  const better: Job[] = sortBestFirst(produced).map((item) => ({
     file: new File([item.file], nameFor(original.name, item.mimeType), { type: item.mimeType }),
     mimeType: item.mimeType,
     role: 'variant',
   }));
+  const universal = better.filter((job) => UNIVERSAL_IMAGE_MIMES.has(job.mimeType)).at(-1);
+  const needed: Job = universal ?? await prepareOriginal(original).then((file) => ({ file, mimeType: file.type, role: 'original' as const }));
+  const rest = better.filter((job) => job !== needed);
+  const total = rest.length + 1;
+  const progressFor = (index: number) => (percent: number): void =>
+    onProgress?.(Math.round(((index + percent / 100) / total) * 100));
 
-  if (!jobs.some((job) => UNIVERSAL_IMAGE_MIMES.has(job.mimeType))) {
-    jobs.push({ file: original, mimeType: original.type, role: 'original' });
-  }
-
-  const uploaded: Array<{ url: string; fileName?: string; mimeType: string }> = [];
+  const main = await upload(needed.file, { mimeType: needed.mimeType, role: needed.role }, progressFor(0));
+  const stored: MediaVariant[] = [];
 
   // One at a time, so a host endpoint never sees a burst.
-  for (const [index, job] of jobs.entries()) {
-    const result = await upload(job.file, { mimeType: job.mimeType, role: job.role }, (percent) =>
-      onProgress?.(Math.round(((index + percent / 100) / jobs.length) * 100)));
+  for (const [index, job] of rest.entries()) {
+    const result = await upload(job.file, { mimeType: job.mimeType, role: job.role }, progressFor(index + 1))
+      .catch(() => null);
 
-    uploaded.push({ ...result, mimeType: job.mimeType });
+    stored.push(...(result ? [{ url: result.url, mimeType: job.mimeType }] : []));
   }
 
-  const last = uploaded[uploaded.length - 1];
-  const variants = uploaded.map(({ url, mimeType }) => ({ url, mimeType }));
+  // `rest` is already best-first; `url` stays last whatever its type.
+  const variants = [...stored, { url: main.url, mimeType: needed.mimeType }];
 
-  return { url: last.url, fileName: last.fileName, variants: variants.length > 1 ? variants : undefined };
+  return { url: main.url, fileName: main.fileName, variants: variants.length > 1 ? variants : undefined };
 };

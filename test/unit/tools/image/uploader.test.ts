@@ -467,6 +467,42 @@ describe('editor-level uploader fallback', () => {
       expect(produceMock).toHaveBeenCalledTimes(1);
     });
 
+    it('uploads the compressed original alone, as today, when no format could be made', async () => {
+      const compressed = new File([new Uint8Array(3)], 'photo.jpg', { type: 'image/jpeg' });
+      const uploadByFile = vi.fn(async () => ({ url: 'u' }));
+
+      compressImageMock.mockResolvedValueOnce(compressed);
+      const result = await new Uploader({ uploader: { uploadByFile } }, undefined, () => ({ formats: { image: ['avif'] } })).handleFile(photo());
+
+      expect(uploadByFile).toHaveBeenCalledTimes(1);
+      expect(uploadByFile.mock.calls[0][0]).toBe(compressed);
+      expect(result.variants).toBeUndefined();
+    });
+
+    it('compresses the original when it is kept as the fallback', async () => {
+      const compressed = new File([new Uint8Array(3)], 'photo.jpg', { type: 'image/jpeg' });
+      const uploaded: File[] = [];
+      const uploadByFile = vi.fn(async (file: File) => {
+        uploaded.push(file);
+
+        return { url: file.name };
+      });
+
+      produceMock.mockResolvedValueOnce([{ file: new Blob(['w'], { type: 'image/webp' }), mimeType: 'image/webp' }]);
+      compressImageMock.mockResolvedValueOnce(compressed);
+      await new Uploader({ uploader: { uploadByFile } }, undefined, () => ({ formats: { image: ['webp'] } })).handleFile(photo());
+
+      expect(uploaded).toContain(compressed);
+    });
+
+    it('uses the built-in converter when a JavaScript hook returns nothing', async () => {
+      const convert = vi.fn(async () => undefined as unknown as null);
+      const uploader = new Uploader({ uploader: { uploadByFile: vi.fn(async () => ({ url: 'u' })) } }, undefined, () => ({ formats: { image: ['jpeg'] }, convert }));
+
+      await expect(uploader.handleFile(photo())).resolves.toMatchObject({ url: 'u' });
+      expect(produceMock).toHaveBeenCalledTimes(1);
+    });
+
     it('keeps the old single-file path when no image formats are set', async () => {
       const uploadByFile = vi.fn(async () => ({ url: 'u' }));
       const result = await new Uploader({ uploader: { uploadByFile } }, undefined, () => ({ formats: { video: ['mp4'] } })).handleFile(photo());

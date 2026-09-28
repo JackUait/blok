@@ -385,7 +385,7 @@ export const blokDocumentSchema = {
         url: { type: 'string', description: 'http(s) or blob: source.' },
         variants: {
           type: 'array',
-          description: 'Other renditions, best format first. `url` is the most compatible one.',
+          description: 'Every rendition, best format first. Ignored unless it contains `url`, the most compatible one.',
           items: {
             type: 'object',
             required: ['url', 'mimeType'],
@@ -465,7 +465,7 @@ export const blokDocumentSchema = {
         url: { type: 'string' },
         variants: {
           type: 'array',
-          description: 'Other renditions, best format first. `url` is the most compatible one.',
+          description: 'Every rendition, best format first. Ignored unless it contains `url`, the most compatible one.',
           items: {
             type: 'object',
             required: ['url', 'mimeType'],

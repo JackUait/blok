@@ -142,7 +142,8 @@ export class ImageTool implements BlockTool {
     if (this.data.alignment !== undefined) out.alignment = this.data.alignment;
     if (typeof this.data.alt === 'string') out.alt = this.data.alt;
     if (this.data.fileName !== undefined) out.fileName = this.data.fileName;
-    if (this.data.variants !== undefined) out.variants = this.data.variants.map((v) => ({ ...v }));
+    const variants = readVariants(this.data.variants, this.data.url);
+    if (variants !== undefined) out.variants = variants;
     if (this.data.size !== undefined) out.size = this.data.size;
     if (this.data.frame !== undefined) out.frame = this.data.frame;
     if (this.data.rounded !== undefined) out.rounded = this.data.rounded;

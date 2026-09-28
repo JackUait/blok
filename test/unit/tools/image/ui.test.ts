@@ -801,3 +801,15 @@ describe('renderImage with variants', () => {
     expect(renderImage({ url: 'https://x/a.jpg' }).querySelector('picture')).toBeNull();
   });
 });
+
+describe('renderImage with stale variants', () => {
+  it('shows the url, not the variants, when the url is not one of them', () => {
+    const figure = renderImage({ url: 'https://x/NEW.jpg', variants: [
+      { url: 'https://x/a.avif', mimeType: 'image/avif' },
+      { url: 'https://x/a.jpg', mimeType: 'image/jpeg' },
+    ] });
+
+    expect(figure.querySelector('picture')).toBeNull();
+    expect(figure.querySelector('img')?.getAttribute('src')).toBe('https://x/NEW.jpg');
+  });
+});

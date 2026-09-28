@@ -2104,9 +2104,10 @@ describe('ImageTool — variants', () => {
     const tool = new ImageTool(createOptions({ url: 'https://x/a.jpg', variants: [
       variants[0],
       { url: 'javascript:1', mimeType: 'image/webp' },
+      variants[1],
     ] }));
 
-    expect(tool.save().variants).toEqual([variants[0]]);
+    expect(tool.save().variants).toEqual(variants);
   });
 
   it('omits variants from saved data when there are none', () => {
@@ -2153,6 +2154,20 @@ describe('ImageTool — variants', () => {
     tool.render();
     pasteFile(tool, new File([new Uint8Array(10)], 'p.png', { type: 'image/png' }));
     await vi.waitFor(() => expect(tool.save().url).toBe('blob:new'));
+
+    expect(tool.save().variants).toBeUndefined();
+  });
+});
+
+describe('ImageTool — stale variants', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('does not save variants that describe another image', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/NEW.jpg', variants: [
+      { url: 'https://x/a.avif', mimeType: 'image/avif' },
+      { url: 'https://x/a.jpg', mimeType: 'image/jpeg' },
+    ] }));
 
     expect(tool.save().variants).toBeUndefined();
   });

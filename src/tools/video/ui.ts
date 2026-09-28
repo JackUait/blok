@@ -1,4 +1,5 @@
 import type { VideoAlignment, VideoData } from '../../../types/tools/video';
+import { readVariants } from '../../shared/read-variants';
 
 const ALIGN_TO_TEXT_ALIGN: Record<VideoAlignment, string> = {
   left: 'left',
@@ -43,7 +44,7 @@ export function renderVideo(data: Partial<VideoData> & { url: string }): HTMLEle
     'aria-keyshortcuts',
     'Space k j l ArrowLeft ArrowRight ArrowUp ArrowDown m f Home End',
   );
-  const variants = data.variants ?? [];
+  const variants = readVariants(data.variants, data.url) ?? [];
 
   if (variants.length === 0) {
     video.setAttribute('src', data.url);

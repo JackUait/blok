@@ -1238,6 +1238,16 @@ describe('media variants', () => {
     expect(html).not.toContain('<picture>');
   });
 
+  it('renders the url alone when it is not one of the variants', () => {
+    const variants = [{ url: 'https://x/a.avif', mimeType: 'image/avif' }, { url: 'https://x/a.jpg', mimeType: 'image/jpeg' }];
+    const image = blocksToHtml(doc([{ type: 'image', data: { url: 'https://x/NEW.jpg', variants } }]));
+    const video = blocksToHtml(doc([{ type: 'video', data: { url: 'https://x/NEW.mp4', variants } }]));
+
+    expect(image).not.toContain('<picture>');
+    expect(image).toContain('src="https://x/NEW.jpg"');
+    expect(video).toContain('<video src="https://x/NEW.mp4" controls></video>');
+  });
+
   it('drops a variant the host transformUrl rejects', () => {
     const html = blocksToHtml(
       doc([{ type: 'image', data: { url: 'https://x/a.jpg', variants: [{ url: 'https://evil/a.avif', mimeType: 'image/avif' }, { url: 'https://x/a.jpg', mimeType: 'image/jpeg' }] } }]),

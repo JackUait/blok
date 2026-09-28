@@ -59,7 +59,10 @@ export interface ImageData extends BlockToolData {
   naturalWidth?: number;
   /** Intrinsic pixel height of the source image. Cached after first successful load. */
   naturalHeight?: number;
-  /** Other renditions, best format first. `url` is the most compatible one. */
+  /**
+   * Every rendition, best format first. The last one is also `url`, the most
+   * compatible. A list that does not contain `url` is ignored.
+   */
   variants?: MediaVariant[];
 }
 

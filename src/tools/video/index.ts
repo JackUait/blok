@@ -96,7 +96,8 @@ export class VideoTool implements BlockTool {
     if (this.data.hideControls) out.hideControls = true;
     if (this.data.fileName !== undefined) out.fileName = this.data.fileName;
     if (this.data.mimeType !== undefined) out.mimeType = this.data.mimeType;
-    if (this.data.variants !== undefined) out.variants = this.data.variants.map((v) => ({ ...v }));
+    const variants = readVariants(this.data.variants, this.data.url);
+    if (variants !== undefined) out.variants = variants;
     if (this.data.aspectRatio !== undefined) out.aspectRatio = this.data.aspectRatio;
     return out;
   }

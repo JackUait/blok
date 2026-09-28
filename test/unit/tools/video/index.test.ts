@@ -890,9 +890,9 @@ describe('VideoTool — variants', () => {
   afterEach(() => vi.restoreAllMocks());
 
   it('saves clean variants and drops malformed ones', () => {
-    const tool = new VideoTool(createOptions({ url: 'https://x/a.mp4', variants: [variants[0], { url: 'javascript:1', mimeType: 'video/mp4' }] }));
+    const tool = new VideoTool(createOptions({ url: 'https://x/a.mp4', variants: [variants[0], { url: 'javascript:1', mimeType: 'video/mp4' }, variants[1]] }));
 
-    expect(tool.save().variants).toEqual([variants[0]]);
+    expect(tool.save().variants).toEqual(variants);
   });
 
   it('drops old variants when the user pastes a link instead', async () => {

@@ -131,3 +131,15 @@ describe('renderVideo with variants', () => {
     expect(renderVideo({ url: 'https://x/a.mp4' }).querySelector('video')?.getAttribute('src')).toBe('https://x/a.mp4');
   });
 });
+
+describe('renderVideo with stale variants', () => {
+  it('plays the url when it is not one of the variants', () => {
+    const video = renderVideo({ url: 'https://x/NEW.mp4', variants: [
+      { url: 'https://x/a.webm', mimeType: 'video/webm' },
+      { url: 'https://x/a.mp4', mimeType: 'video/mp4' },
+    ] }).querySelector('video');
+
+    expect(video?.getAttribute('src')).toBe('https://x/NEW.mp4');
+    expect(video?.querySelectorAll('source')).toHaveLength(0);
+  });
+});

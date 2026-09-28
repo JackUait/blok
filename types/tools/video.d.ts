@@ -39,7 +39,10 @@ export interface VideoData extends BlockToolData {
   fileName?: string;
   /** Source MIME type (e.g. video/mp4), when known */
   mimeType?: string;
-  /** Other renditions, best format first. `url` is the most compatible one. */
+  /**
+   * Every rendition, best format first. The last one is also `url`, the most
+   * compatible. A list that does not contain `url` is ignored.
+   */
   variants?: MediaVariant[];
   /** Intrinsic aspect ratio string (e.g. '16 / 9'), cached from loadedmetadata. */
   aspectRatio?: string;

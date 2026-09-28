@@ -497,7 +497,7 @@ export const builtinEmitters: Record<string, Emitter> = {
 
   image: (block, env) => {
     const img = `<img${env.url('src', block.data.url, block.type)} alt="${env.escape(str(block.data, 'alt'))}">`;
-    const sources = (readVariants(block.data.variants) ?? [])
+    const sources = (readVariants(block.data.variants, block.data.url) ?? [])
       .filter((variant) => variant.url !== block.data.url)
       .map((variant) => {
         const src = env.url('src', variant.url, block.type);
@@ -515,7 +515,7 @@ export const builtinEmitters: Record<string, Emitter> = {
     const controls = block.data.hideControls === true ? '' : ' controls';
     const autoplay = block.data.autoplay === true ? ' autoplay' : '';
     const loop = block.data.loop === true ? ' loop' : '';
-    const sources = (readVariants(block.data.variants) ?? [])
+    const sources = (readVariants(block.data.variants, block.data.url) ?? [])
       .map((variant) => {
         const src = env.url('src', variant.url, block.type);
 

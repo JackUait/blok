@@ -1,5 +1,6 @@
 import type { ImageCrop, ImageData, ImageSize } from '../../../types/tools/image';
 import type { MediaVariant } from '../../../types/configs/media';
+import { readVariants } from '../../shared/read-variants';
 /**
  * Mirror of the upstream ImageAlign* union from types/tools/image.d.ts,
  * kept local so the i18n regression scan finds no stray hardcoded copy.
@@ -100,7 +101,7 @@ export function renderImage(
   img.draggable = false;
 
   // `url` stays on the <img>, so everything that queries `img` keeps working.
-  const better = (data.variants ?? []).filter((variant) => variant.url !== data.url);
+  const better = (readVariants(data.variants, data.url) ?? []).filter((variant) => variant.url !== data.url);
   const content: HTMLElement = better.length === 0 ? img : wrapInPicture(img, better);
 
   if (data.crop) {

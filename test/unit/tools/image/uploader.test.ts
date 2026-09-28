@@ -469,7 +469,7 @@ describe('editor-level uploader fallback', () => {
 
     it('uploads the compressed original alone, as today, when no format could be made', async () => {
       const compressed = new File([new Uint8Array(3)], 'photo.jpg', { type: 'image/jpeg' });
-      const uploadByFile = vi.fn(async () => ({ url: 'u' }));
+      const uploadByFile = vi.fn(async (_file: File) => ({ url: 'u' }));
 
       compressImageMock.mockResolvedValueOnce(compressed);
       const result = await new Uploader({ uploader: { uploadByFile } }, undefined, () => ({ formats: { image: ['avif'] } })).handleFile(photo());

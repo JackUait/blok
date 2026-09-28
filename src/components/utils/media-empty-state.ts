@@ -9,7 +9,7 @@ import { formatBytes } from './format-bytes';
 import { setFieldValidity } from './field-validity';
 import { matchesMime } from './mime-match';
 import { rovingRadioGroup } from './roving-radio-group';
-import { makePreview, type MediaPreviewKind } from './media-empty-preview';
+import { EXIT_CLEAR_MS, makePreview, springHome, type MediaPreviewKind } from './media-empty-preview';
 
 /**
  * Shared "empty" uploader surface for media-style block tools (image, file):
@@ -519,10 +519,29 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
         lean(axis(pointer.x, rect.left, rect.width), axis(pointer.y, rect.top, rect.height));
       });
     });
+    const exit = { timer: 0, stop: (): void => undefined };
+    const stageEl = (): HTMLElement | null => panel.querySelector<HTMLElement>('.blok-media-preview');
+
+    panel.addEventListener('pointerenter', () => {
+      const stage = stageEl();
+      if (!stage) return;
+      window.clearTimeout(exit.timer);
+      exit.stop();
+      stage.removeAttribute('data-leaving');
+      stage.setAttribute('data-hover', '');
+    });
     panel.addEventListener('pointerleave', () => {
       if (pointer.frame) cancelAnimationFrame(pointer.frame);
       pointer.frame = 0;
       lean('0', '0');
+      const stage = stageEl();
+      if (!stage) return;
+      if (prefersReducedMotion()) {
+        stage.removeAttribute('data-hover');
+        return;
+      }
+      exit.stop = springHome(stage);
+      exit.timer = window.setTimeout(() => stage.removeAttribute('data-leaving'), EXIT_CLEAR_MS);
     });
   }
 

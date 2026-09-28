@@ -161,3 +161,73 @@ describe('preview depth follows the pointer', () => {
     expect(preview.style.getPropertyValue('--mx')).toBe('');
   });
 });
+
+describe('preview springs home when the pointer leaves', () => {
+  const setup = (): { panel: HTMLElement; preview: HTMLElement } => {
+    const el = render({ preview: 'video' });
+    const panel = el.querySelector<HTMLElement>('.blok-media-empty__panel');
+    const preview = el.querySelector<HTMLElement>('[data-blok-media-preview]');
+    if (!panel || !preview) throw new Error('panel or preview missing');
+    return { panel, preview };
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    Reflect.deleteProperty(window, 'matchMedia');
+  });
+
+  it('plays the demo while the pointer is over the panel', () => {
+    const { panel, preview } = setup();
+
+    panel.dispatchEvent(new MouseEvent('pointerenter'));
+
+    expect(preview.hasAttribute('data-hover')).toBe(true);
+  });
+
+  it('swaps the demo for an exit that clears once it has played', () => {
+    const { panel, preview } = setup();
+    panel.dispatchEvent(new MouseEvent('pointerenter'));
+
+    panel.dispatchEvent(new MouseEvent('pointerleave'));
+
+    expect(preview.hasAttribute('data-hover')).toBe(false);
+    expect(preview.hasAttribute('data-leaving')).toBe(true);
+
+    vi.advanceTimersByTime(2000);
+
+    expect(preview.hasAttribute('data-leaving')).toBe(false);
+  });
+
+  it('drops the exit and replays the demo when the pointer comes back', () => {
+    const { panel, preview } = setup();
+    panel.dispatchEvent(new MouseEvent('pointerenter'));
+    panel.dispatchEvent(new MouseEvent('pointerleave'));
+
+    panel.dispatchEvent(new MouseEvent('pointerenter'));
+
+    expect(preview.hasAttribute('data-leaving')).toBe(false);
+    expect(preview.hasAttribute('data-hover')).toBe(true);
+
+    vi.advanceTimersByTime(2000);
+
+    expect(preview.hasAttribute('data-hover')).toBe(true);
+  });
+
+  it('skips the exit when the user asks for reduced motion', () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) => ({ matches: query.includes('reduce'), media: query }),
+    });
+    const { panel, preview } = setup();
+    panel.dispatchEvent(new MouseEvent('pointerenter'));
+
+    panel.dispatchEvent(new MouseEvent('pointerleave'));
+
+    expect(preview.hasAttribute('data-hover')).toBe(false);
+    expect(preview.hasAttribute('data-leaving')).toBe(false);
+  });
+});

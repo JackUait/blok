@@ -100,7 +100,7 @@ api.media.clearFailure(blockId): void
 - Clears an entry itself when its block is removed. It does not trust the tool to call `clearFailure`.
 - Coalesces failure toasts (~300 ms window, updates an open toast).
 - Report-once per (block, reason).
-- Registers an unsaved-work source through the existing `registerUnsavedWork` (`src/components/utils/persistence.ts`) while `upload` failures exist and the editor is not read-only. The existing `syncUnloadGuard` attaches or detaches `beforeunload`. There is no second listener.
+- Holds a `beforeunload` listener while `upload` failures exist and the editor is not read-only. It adds the listener on the first such failure and removes it on the last, the same pattern as `enqueueMediaJob` in `src/components/media-variants/media-queue.ts`. Only one listener exists at a time, so bfcache is kept whenever nothing is failed. `registerUnsavedWork` is **not** used: it is a no-op when the host has no `persistence` config (`persistence.ts:186`), so most hosts would never get the dialog.
 - Owns `confirmLeave()` and the banner.
 - Releases everything on editor destroy.
 
@@ -139,7 +139,8 @@ All additive. Every file under `types/` is hand-written with no `src/` imports (
 - `types/configs/blok-config.d.ts`: `onImageFailure`, `ImageFailureReport`, `ImageFailure`.
 - `types/configs/notifier.d.ts`: `actions`.
 - The Blok class and its public type: `confirmLeave()`.
-- The React, Vue and Angular adapters: `confirmLeave` (the adapter parity guard requires all three).
+- The React, Vue and Angular adapters: `confirmLeave` (the adapter parity guard requires all three), and `onImageFailure` as a config key / prop / `@Input()` (the config-key drift guards require it).
+- `NotifierOptions` also gets `dismissText?: string`, the label of the "×" that toasts with `actions` carry.
 
 **Behaviour change:** existing consumers will see a toast when an image fails, where today they see nothing. The opt-out is `onImageFailure: () => false`. It ships as a feature, not labelled BREAKING (approved).
 
@@ -159,7 +160,7 @@ Every locale, through the `blok-translations` skill. Keys cover:
   - coalescing
   - report-once and reset after recovery
   - auto-clear on block removal
-  - unsaved-work source on/off for `upload` only, and off in read-only
+  - `beforeunload` listener on/off for `upload` only, and off in read-only
   - `confirmLeave` resolution per button, plus the no-failure, read-only and callback-`false` paths
   - a callback throw still shows Blok UI
 - **Unit, notifier:** actions render and fire; a toast with actions does not auto-dismiss.

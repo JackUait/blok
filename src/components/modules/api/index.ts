@@ -28,6 +28,7 @@ export class API extends Module {
       history: this.Blok.HistoryAPI.methods,
       listeners: this.Blok.ListenersAPI.methods,
       notifier: this.Blok.NotifierAPI.methods,
+      media: this.Blok.MediaAPI.methods,
       sanitizer: this.Blok.SanitizerAPI.methods,
       saver: this.Blok.SaverAPI.methods,
       selection: this.Blok.SelectionAPI.methods,

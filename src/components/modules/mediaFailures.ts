@@ -1,0 +1,229 @@
+import type { ImageFailure, ImageFailureReport } from '../../../types';
+import type { MediaFailureInput } from '../../../types/api/media';
+import { BlockRemovedMutationType } from '../../../types/events/block/BlockRemoved';
+import type { ModuleConfig } from '../../types-internal/module-config';
+import { Module } from '../__module';
+import { BlockChanged } from '../events';
+import { log } from '../utils';
+
+type Reason = ImageFailureReport['reason'];
+
+interface Entry extends MediaFailureInput {
+  reported: Set<Reason>;
+}
+
+/**
+ * Long enough to catch images on one page that run out of reloads together.
+ */
+export const COALESCE_MS = 300;
+
+/**
+ * Keeps track of failed media and tells the user about them: a toast when
+ * they fail, a toast on save, and a leave guard while uploads are lost.
+ */
+export class MediaFailures extends Module {
+  private readonly entries = new Map<string, Entry>();
+  private flushTimer: ReturnType<typeof setTimeout> | null = null;
+  private holdingLeave = false;
+
+  /**
+   * One listener per editor: a shared one would let one editor drop another's guard.
+   * The browser shows its own "Leave site?" text; a page cannot set the wording.
+   * @param event - the unload attempt
+   */
+  private readonly holdLeave = (event: BeforeUnloadEvent): void => {
+    event.preventDefault();
+  };
+
+  /**
+   * @param options - module config
+   */
+  constructor({ config, eventsDispatcher }: ModuleConfig) {
+    super({ config, eventsDispatcher });
+    // blocks.clear() and render() skip this event; tools clear from removed() instead.
+    this.eventsDispatcher.on(BlockChanged, ({ event }) => {
+      if (event.type === BlockRemovedMutationType) {
+        this.clear(event.detail.target.id);
+      }
+    });
+  }
+
+  /**
+   * Record a failure. Replaces an earlier one for the same block.
+   * @param input - what failed
+   */
+  public report(input: MediaFailureInput): void {
+    if (this.isDestroyed) {
+      return;
+    }
+    this.entries.set(input.blockId, { ...input, reported: new Set() });
+    this.syncLeaveHold();
+    this.flushTimer ??= setTimeout(() => this.flushFail(), COALESCE_MS);
+  }
+
+  /**
+   * Drop the failure recorded for a block, if any.
+   * @param blockId - the block
+   */
+  public clear(blockId: string): void {
+    if (this.entries.delete(blockId)) {
+      this.syncLeaveHold();
+    }
+  }
+
+  /**
+   * @returns every current failure, in the order they were reported
+   */
+  public list(): ImageFailure[] {
+    return [ ...this.entries.values() ].map((entry) => this.toPublic(entry));
+  }
+
+  /**
+   * Called after each real save. Toasts failures not yet reported on save.
+   */
+  public onSave(): void {
+    if (this.isDestroyed || this.Blok.ReadOnly.isEnabled || !this.takeUnreported('save')) {
+      return;
+    }
+    this.notify('save', this.summary());
+  }
+
+  /**
+   * Ask before an in-app navigation.
+   * @returns true to leave, false to stay
+   */
+  public confirmLeave(): Promise<boolean> {
+    return Promise.resolve(true);
+  }
+
+  /**
+   * Release timers and the unload listener.
+   */
+  public destroy(): void {
+    if (this.flushTimer !== null) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
+    this.entries.clear();
+    this.syncLeaveHold();
+  }
+
+  private flushFail(): void {
+    this.flushTimer = null;
+    if (this.isDestroyed || !this.takeUnreported('fail')) {
+      return;
+    }
+    const all = [ ...this.entries.values() ];
+    const [ only ] = all;
+    const single = only.kind === 'upload' ? 'imageFailure.uploadFailed' : 'imageFailure.loadFailed';
+    const message = all.length === 1
+      ? this.Blok.I18n.t(single)
+      : this.Blok.I18n.t('imageFailure.failedMany', { count: all.length });
+
+    this.notify('fail', message);
+  }
+
+  /**
+   * Marks every entry as reported for `reason`.
+   * @param reason - the report reason
+   * @returns true when at least one entry was new for it
+   */
+  private takeUnreported(reason: Reason): boolean {
+    const fresh = [ ...this.entries.values() ].filter((entry) => !entry.reported.has(reason));
+
+    fresh.forEach((entry) => entry.reported.add(reason));
+
+    return fresh.length > 0;
+  }
+
+  /**
+   * "Won't be saved: n · Won't display: m", with zero parts left out.
+   */
+  private summary(): string {
+    const all = [ ...this.entries.values() ];
+    const lost = all.filter((entry) => entry.kind === 'upload').length;
+    const broken = all.length - lost;
+    const parts: string[] = [];
+
+    if (lost > 0) {
+      parts.push(this.Blok.I18n.t('imageFailure.notSaved', { count: lost }));
+    }
+    if (broken > 0) {
+      parts.push(this.Blok.I18n.t('imageFailure.notDisplayed', { count: broken }));
+    }
+
+    return parts.join(' · ');
+  }
+
+  private notify(reason: Reason, message: string): void {
+    if (this.askHost(reason) === false) {
+      return;
+    }
+    this.Blok.NotifierAPI.show({
+      message,
+      style: 'error',
+      actions: [
+        { label: this.Blok.I18n.t('imageFailure.retry'), onClick: () => this.retryAll() },
+        { label: this.Blok.I18n.t('imageFailure.show'), onClick: () => this.showFirst() },
+      ],
+    });
+  }
+
+  /**
+   * @param reason - why the host is asked
+   * @returns the host's answer, or undefined when it threw
+   */
+  private askHost(reason: Reason): boolean | void {
+    const handler = this.config.onImageFailure;
+
+    if (handler === undefined) {
+      return undefined;
+    }
+    try {
+      return handler({ reason, failures: this.list() });
+    } catch (thrown: unknown) {
+      log('`onImageFailure` threw. Blok showed its own notice instead.', 'warn', thrown);
+
+      return undefined;
+    }
+  }
+
+  private retryAll(): void {
+    [ ...this.entries.values() ].forEach((entry) => entry.retry());
+  }
+
+  private showFirst(): void {
+    const first = this.entries.keys().next();
+
+    if (first.done !== true) {
+      this.Blok.BlocksAPI.scrollToBlock(first.value);
+    }
+  }
+
+  private toPublic(entry: Entry): ImageFailure {
+    return {
+      blockId: entry.blockId,
+      tool: entry.tool,
+      kind: entry.kind,
+      url: entry.url,
+      retry: () => entry.retry(),
+      scrollTo: () => this.Blok.BlocksAPI.scrollToBlock(entry.blockId),
+    };
+  }
+
+  private syncLeaveHold(): void {
+    // `this.Blok` is still empty while modules are being constructed.
+    const readOnly = 'ReadOnly' in this.Blok && this.Blok.ReadOnly.isEnabled;
+    const should = !this.isDestroyed && !readOnly && [ ...this.entries.values() ].some((entry) => entry.kind === 'upload');
+
+    if (should === this.holdingLeave) {
+      return;
+    }
+    this.holdingLeave = should;
+    if (should) {
+      window.addEventListener('beforeunload', this.holdLeave);
+    } else {
+      window.removeEventListener('beforeunload', this.holdLeave);
+    }
+  }
+}

@@ -104,6 +104,11 @@ const createMockAPIMethods = (): APIInterface => ({
   notifier: {
     show: vi.fn(),
   },
+  media: {
+    reportFailure: vi.fn(),
+    clearFailure: vi.fn(),
+    confirmLeave: vi.fn(),
+  },
   sanitizer: {
     clean: vi.fn(() => ''),
   },

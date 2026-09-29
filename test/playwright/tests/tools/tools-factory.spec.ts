@@ -45,6 +45,7 @@ const apiMethodsStub: ToolApiMethods = {
   history: {} as ToolApiMethods['history'],
   listeners: {} as ToolApiMethods['listeners'],
   notifier: {} as ToolApiMethods['notifier'],
+  media: {} as ToolApiMethods['media'],
   sanitizer: {} as ToolApiMethods['sanitizer'],
   saver: {} as ToolApiMethods['saver'],
   selection: {} as ToolApiMethods['selection'],

@@ -8,6 +8,7 @@ import { API } from './api/index';
 import { InlineToolbarAPI } from './api/inlineToolbar';
 import { ListenersAPI } from './api/listeners';
 import { MarksAPI } from './api/marks';
+import { MediaAPI } from './api/media';
 import { NotifierAPI } from './api/notifier';
 import { ReadOnlyAPI } from './api/readonly';
 import { SanitizerAPI } from './api/sanitizer';
@@ -34,6 +35,7 @@ import { Paste } from './paste';
 import { ReadOnly } from './readonly';
 import { RectangleSelection } from './rectangleSelection';
 import { Renderer } from './renderer';
+import { MediaFailures } from './mediaFailures';
 import { Saver } from './saver';
 import { BlockSettings } from './toolbar/blockSettings';
 import { Toolbar } from './toolbar/index';
@@ -61,6 +63,7 @@ export const Modules = {
   InlineToolbarAPI,
   ListenersAPI,
   MarksAPI,
+  MediaAPI,
   NotifierAPI,
   ReadOnlyAPI,
   SanitizerAPI,
@@ -93,6 +96,8 @@ export const Modules = {
   ReadOnly,
   RectangleSelection,
   Renderer,
+  // Before Saver: destroy walks this map in order.
+  MediaFailures,
   Saver,
   Tools,
   UI,

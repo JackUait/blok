@@ -8,6 +8,7 @@ import { API } from '../components/modules/api/index';
 import { InlineToolbarAPI } from '../components/modules/api/inlineToolbar';
 import { ListenersAPI } from '../components/modules/api/listeners';
 import { MarksAPI } from '../components/modules/api/marks';
+import { MediaAPI } from '../components/modules/api/media';
 import { NotifierAPI } from '../components/modules/api/notifier';
 import { ReadOnlyAPI } from '../components/modules/api/readonly';
 import { SanitizerAPI } from '../components/modules/api/sanitizer';
@@ -37,6 +38,7 @@ import { Paste } from '../components/modules/paste';
 import { ReadOnly } from '../components/modules/readonly';
 import { RectangleSelection } from '../components/modules/rectangleSelection';
 import { Renderer } from '../components/modules/renderer';
+import { MediaFailures } from '../components/modules/mediaFailures';
 import { Saver } from '../components/modules/saver';
 import { Tools } from '../components/modules/tools';
 import { UI } from '../components/modules/ui';
@@ -64,6 +66,7 @@ export interface BlokModules {
   InlineToolbarAPI: InlineToolbarAPI,
   ListenersAPI: ListenersAPI,
   MarksAPI: MarksAPI,
+  MediaAPI: MediaAPI,
   NotifierAPI: NotifierAPI,
   ReadOnlyAPI: ReadOnlyAPI,
   SanitizerAPI: SanitizerAPI,
@@ -94,6 +97,7 @@ export interface BlokModules {
   ReadOnly: ReadOnly,
   RectangleSelection: RectangleSelection,
   Renderer: Renderer,
+  MediaFailures: MediaFailures,
   Saver: Saver,
   Tools: Tools,
   UI: UI,

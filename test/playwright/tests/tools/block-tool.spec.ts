@@ -153,6 +153,7 @@ const createApiStub = (): API => ({
   history: {} as API['history'],
   listeners: {} as API['listeners'],
   notifier: {} as API['notifier'],
+  media: {} as API['media'],
   sanitizer: {} as API['sanitizer'],
   saver: {} as API['saver'],
   selection: {} as API['selection'],

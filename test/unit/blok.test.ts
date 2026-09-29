@@ -60,6 +60,9 @@ vi.mock('../../src/components/core', () => {
         saver: {
           save: vi.fn(),
         },
+        media: {
+          confirmLeave: vi.fn(),
+        },
         rectangleSelection: {
           cancelActiveSelection: vi.fn(),
           isRectActivated: vi.fn(),
@@ -209,6 +212,9 @@ describe('Blok', () => {
         },
         saver: {
           save: vi.fn(),
+        },
+        media: {
+          confirmLeave: vi.fn(),
         },
         rectangleSelection: {
           cancelActiveSelection: vi.fn(),
@@ -717,6 +723,23 @@ describe('Blok', () => {
       }
 
       expect((blok as unknown as { save: unknown }).save).toBe(instances.API?.methods.saver.save);
+    });
+
+    it('should create a shorthand for confirmLeave', async () => {
+      const blok = new Blok();
+
+      await blok.isReady;
+
+      const coreModule = await import('../../src/components/core') as {
+        lastInstance?: () => Core | undefined;
+      };
+      const instances = coreModule.lastInstance?.()?.moduleInstances;
+
+      if (!instances) {
+        throw new Error('Core instance not found');
+      }
+
+      expect((blok as unknown as { confirmLeave: unknown }).confirmLeave).toBe(instances.API?.methods.media.confirmLeave);
     });
 
     it('should delete exportAPI method after export', async () => {

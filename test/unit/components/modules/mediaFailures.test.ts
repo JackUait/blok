@@ -250,3 +250,159 @@ describe('MediaFailures', () => {
     expect(show).not.toHaveBeenCalled();
   });
 });
+
+describe('MediaFailures.confirmLeave', () => {
+  const click = (id: string): void => {
+    document.querySelector<HTMLElement>(`[data-blok-testid="${id}"]`)?.click();
+  };
+  const banner = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-testid="leave-banner"]');
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    created.splice(0).forEach((module) => {
+      module.markDestroyed();
+      module.destroy();
+    });
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('resolves true at once with nothing failed', async () => {
+    const { module } = setup();
+
+    await expect(module.confirmLeave()).resolves.toBe(true);
+    expect(banner()).toBeNull();
+  });
+
+  it('resolves true at once in read-only mode', async () => {
+    const { module } = setup({}, true);
+
+    module.report(input('a', 'upload'));
+
+    await expect(module.confirmLeave()).resolves.toBe(true);
+    expect(banner()).toBeNull();
+  });
+
+  it.each([
+    [ 'leave-banner-leave', true ],
+    [ 'leave-banner-stay', false ],
+    [ 'leave-banner-show', false ],
+  ])('%s resolves %s and closes the banner', async (id, expected) => {
+    const { module } = setup();
+
+    module.report(input('a', 'upload'));
+    const answer = module.confirmLeave();
+
+    expect(banner()).not.toBeNull();
+    click(id);
+
+    await expect(answer).resolves.toBe(expected);
+    expect(banner()).toBeNull();
+  });
+
+  it('shows the counts in the banner', () => {
+    const { module } = setup();
+
+    module.report(input('a', 'upload'));
+    module.report(input('b', 'load'));
+    void module.confirmLeave();
+
+    expect(document.querySelector('[data-blok-testid="leave-banner-summary"]')?.textContent).toBe('imageFailure.notSaved:1 · imageFailure.notDisplayed:1');
+  });
+
+  it('Show scrolls to the first failure', async () => {
+    const { module, scrollToBlock } = setup();
+
+    module.report(input('a'));
+    const answer = module.confirmLeave();
+
+    click('leave-banner-show');
+    await answer;
+
+    expect(scrollToBlock).toHaveBeenCalledWith('a');
+  });
+
+  it('Retry keeps the banner and resolves true once everything recovers', async () => {
+    const { module } = setup();
+    const retry = vi.fn(() => module.clear('a'));
+
+    module.report(input('a', 'upload', retry));
+    const answer = module.confirmLeave();
+
+    click('leave-banner-retry');
+
+    await expect(answer).resolves.toBe(true);
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it('Retry keeps the banner open while failures remain', () => {
+    const { module } = setup();
+
+    module.report(input('a', 'upload'));
+    void module.confirmLeave();
+    click('leave-banner-retry');
+
+    expect(banner()).not.toBeNull();
+  });
+
+  it('updates the counts as failures clear', () => {
+    const { module } = setup();
+
+    module.report(input('a', 'upload'));
+    module.report(input('b', 'upload'));
+    void module.confirmLeave();
+    module.clear('a');
+
+    expect(document.querySelector('[data-blok-testid="leave-banner-summary"]')?.textContent).toBe('imageFailure.notSaved:1');
+  });
+
+  it('returns the same promise and one banner when called twice', () => {
+    const { module } = setup();
+
+    module.report(input('a'));
+    const first = module.confirmLeave();
+    const second = module.confirmLeave();
+
+    expect(second).toBe(first);
+    expect(document.querySelectorAll('[data-blok-testid="leave-banner"]')).toHaveLength(1);
+  });
+
+  it('resolves true without a banner when the host returns false', async () => {
+    const onImageFailure = vi.fn(() => false);
+    const { module } = setup({ onImageFailure });
+
+    module.report(input('a'));
+
+    await expect(module.confirmLeave()).resolves.toBe(true);
+    expect(onImageFailure).toHaveBeenCalledWith(expect.objectContaining({ reason: 'leave' }));
+    expect(banner()).toBeNull();
+  });
+
+  it('shows the banner when the host throws', () => {
+    const { module } = setup({ onImageFailure: () => {
+      throw new Error('x');
+    } });
+
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    module.report(input('a'));
+    void module.confirmLeave();
+
+    expect(banner()).not.toBeNull();
+  });
+
+  it('resolves true and removes the banner on destroy', async () => {
+    const { module } = setup();
+
+    module.report(input('a'));
+    const answer = module.confirmLeave();
+
+    module.markDestroyed();
+    module.destroy();
+
+    await expect(answer).resolves.toBe(true);
+    expect(banner()).toBeNull();
+  });
+});

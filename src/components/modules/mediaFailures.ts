@@ -5,6 +5,8 @@ import type { ModuleConfig } from '../../types-internal/module-config';
 import { Module } from '../__module';
 import { BlockChanged } from '../events';
 import { log } from '../utils';
+import { openLeaveBanner } from '../utils/leave-banner';
+import type { LeaveBanner } from '../utils/leave-banner';
 
 type Reason = ImageFailureReport['reason'];
 
@@ -25,6 +27,7 @@ export class MediaFailures extends Module {
   private readonly entries = new Map<string, Entry>();
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private holdingLeave = false;
+  private leave: { promise: Promise<boolean>; settle(answer: boolean): void; banner: LeaveBanner } | null = null;
 
   /**
    * One listener per editor: a shared one would let one editor drop another's guard.
@@ -66,8 +69,17 @@ export class MediaFailures extends Module {
    * @param blockId - the block
    */
   public clear(blockId: string): void {
-    if (this.entries.delete(blockId)) {
-      this.syncLeaveHold();
+    if (!this.entries.delete(blockId)) {
+      return;
+    }
+    this.syncLeaveHold();
+    if (this.leave === null) {
+      return;
+    }
+    if (this.entries.size === 0) {
+      this.settleLeave(true);
+    } else {
+      this.leave.banner.update(this.summary());
     }
   }
 
@@ -93,19 +105,61 @@ export class MediaFailures extends Module {
    * @returns true to leave, false to stay
    */
   public confirmLeave(): Promise<boolean> {
-    return Promise.resolve(true);
+    if (this.leave !== null) {
+      return this.leave.promise;
+    }
+    if (this.isDestroyed || this.Blok.ReadOnly.isEnabled || this.entries.size === 0 || this.askHost('leave') === false) {
+      return Promise.resolve(true);
+    }
+
+    const i18n = this.Blok.I18n;
+    const answer: { resolve: (value: boolean) => void } = { resolve: () => undefined };
+    const promise = new Promise<boolean>((resolve) => {
+      answer.resolve = resolve;
+    });
+    const banner = openLeaveBanner(this.summary(), {
+      title: i18n.t('imageFailure.bannerTitle'),
+      retry: i18n.t('imageFailure.retry'),
+      show: i18n.t('imageFailure.show'),
+      stay: i18n.t('imageFailure.stay'),
+      leave: i18n.t('imageFailure.leaveAnyway'),
+    }, {
+      onRetry: () => this.retryAll(),
+      onShow: () => {
+        this.settleLeave(false);
+        this.showFirst();
+      },
+      onStay: () => this.settleLeave(false),
+      onLeave: () => this.settleLeave(true),
+    });
+
+    this.leave = { promise, settle: answer.resolve, banner };
+
+    return promise;
   }
 
   /**
    * Release timers and the unload listener.
    */
   public destroy(): void {
+    this.settleLeave(true);
     if (this.flushTimer !== null) {
       clearTimeout(this.flushTimer);
       this.flushTimer = null;
     }
     this.entries.clear();
     this.syncLeaveHold();
+  }
+
+  private settleLeave(answer: boolean): void {
+    const leave = this.leave;
+
+    if (leave === null) {
+      return;
+    }
+    this.leave = null;
+    leave.banner.close();
+    leave.settle(answer);
   }
 
   private flushFail(): void {

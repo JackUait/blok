@@ -688,6 +688,9 @@ class Blok {
       saver: {
         save: 'save',
       },
+      media: {
+        confirmLeave: 'confirmLeave',
+      },
     };
 
     Object.entries(shorthands)

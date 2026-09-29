@@ -577,6 +577,11 @@ export class ImageTool implements BlockTool {
     this.brokenImage = false;
     this.retrying = false;
     this.renderState();
+    if (outcome.kind === 'message') {
+      this.api.media.reportFailure({ blockId: this.block.id, tool: 'image', kind: 'upload', url: source.url, retry: () => this.retryLastSource() });
+    } else {
+      this.api.media.clearFailure(this.block.id);
+    }
     if (!(err instanceof ImageError)) {
       console.error('[image] upload failed', err);
     }
@@ -588,6 +593,7 @@ export class ImageTool implements BlockTool {
     this.brokenImage = true;
     this.errorMessage = this.api.i18n.t('tools.image.errorSourceOffline');
     this.renderState();
+    this.api.media.reportFailure({ blockId: this.block.id, tool: 'image', kind: 'load', url: this.data.url, retry: () => this.retryBrokenImage() });
   }
 
   private cacheNaturalDimensions(imgEl: HTMLImageElement): void {
@@ -842,6 +848,7 @@ export class ImageTool implements BlockTool {
 
   public removed(): void {
     this.detached = true;
+    this.api.media.clearFailure(this.block.id);
     this.detachResize();
     this.detachCrop();
     this.altPopoverDetach?.();
@@ -985,6 +992,7 @@ export class ImageTool implements BlockTool {
       this.reloadAttempts = 0;
       imgEl.addEventListener('error', () => this.handleImgLoadFailure(imgEl, figure));
       imgEl.addEventListener('load', () => {
+        this.api.media.clearFailure(this.block.id);
         figure.removeAttribute('data-loading');
         syncMediaHeight(figure);
         figure.style.removeProperty('aspect-ratio');

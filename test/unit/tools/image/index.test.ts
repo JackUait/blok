@@ -19,6 +19,7 @@ const mockProduce = vi.mocked(produceImageVariants);
 
 const createMockApi = (messages: Record<string, string> = {}): API => ({
   styles: { block: 'blok-block' },
+  media: { reportFailure: vi.fn(), clearFailure: vi.fn(), confirmLeave: vi.fn() },
   i18n: {
     t: (k: string) => messages[k] ?? k,
     has: (k: string) => k in messages,
@@ -2321,5 +2322,101 @@ describe('ImageTool — snap guides', () => {
 
     expect(guides.map((g) => g.style.left)).toEqual(['25%', '50%', '75%', '100%']);
     expect(guides.map((g) => g.hasAttribute('data-hit'))).toEqual([false, true, false, false]);
+  });
+});
+
+describe('ImageTool — failure reporting', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  const pasteFile = (tool: ImageTool): void => {
+    const file = new File([new Uint8Array(10)], 'p.png', { type: 'image/png' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+  };
+
+  const imgOf = (root: HTMLElement): HTMLImageElement => {
+    const img = root.querySelector<HTMLImageElement>('img');
+
+    if (!img) throw new Error('img missing');
+
+    return img;
+  };
+
+  it('reports a load failure once reloads run out', () => {
+    const options = createOptions({ url: 'https://x/y.png' }, { reloadAttempts: 0 });
+    const tool = new ImageTool(options);
+    const root = tool.render();
+
+    imgOf(root).dispatchEvent(new Event('error'));
+
+    expect(options.api.media.reportFailure).toHaveBeenCalledWith(expect.objectContaining({ blockId: 'b1', tool: 'image', kind: 'load', url: 'https://x/y.png' }));
+  });
+
+  it('does not report while reloads remain', () => {
+    const options = createOptions({ url: 'https://x/y.png' }, { reloadAttempts: 2 });
+    const tool = new ImageTool(options);
+    const root = tool.render();
+
+    imgOf(root).dispatchEvent(new Event('error'));
+
+    expect(options.api.media.reportFailure).not.toHaveBeenCalled();
+  });
+
+  it('reports an upload failure with a retry that re-runs the upload', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const uploadByFile = vi.fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce({ url: 'https://x/ok.png' });
+    const options = createOptions({}, { uploader: { uploadByFile } });
+    const tool = new ImageTool(options);
+
+    tool.render();
+    pasteFile(tool);
+    await new Promise((r) => setTimeout(r, 0));
+    const [ [ reported ] ] = vi.mocked(options.api.media.reportFailure).mock.calls;
+
+    expect(reported).toEqual(expect.objectContaining({ blockId: 'b1', tool: 'image', kind: 'upload' }));
+    reported.retry();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(uploadByFile).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not report when onUploadError dismisses the error', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const options = createOptions({}, { uploader: { uploadByFile: () => Promise.reject(new Error('boom')) }, onUploadError: () => false });
+    const tool = new ImageTool(options);
+
+    tool.render();
+    pasteFile(tool);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(options.api.media.reportFailure).not.toHaveBeenCalled();
+  });
+
+  it('clears when the image finally loads', () => {
+    const options = createOptions({ url: 'https://x/y.png' }, { reloadAttempts: 0 });
+    const tool = new ImageTool(options);
+    const root = tool.render();
+
+    imgOf(root).dispatchEvent(new Event('error'));
+    const [ [ reported ] ] = vi.mocked(options.api.media.reportFailure).mock.calls;
+
+    reported.retry();
+    imgOf(root).dispatchEvent(new Event('load'));
+
+    expect(options.api.media.clearFailure).toHaveBeenCalledWith('b1');
+  });
+
+  it('clears when the block is removed', () => {
+    const options = createOptions({ url: 'https://x/y.png' });
+    const tool = new ImageTool(options);
+
+    tool.render();
+    tool.removed();
+
+    expect(options.api.media.clearFailure).toHaveBeenCalledWith('b1');
   });
 });

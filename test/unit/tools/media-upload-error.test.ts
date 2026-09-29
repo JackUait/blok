@@ -35,6 +35,7 @@ interface Case {
 const api = {
   styles: { block: 'blok-block' },
   i18n: { t: (k: string) => k, has: () => false },
+  media: { reportFailure: vi.fn(), clearFailure: vi.fn(), confirmLeave: vi.fn() },
   blocks: { getBlockIndex: vi.fn(() => 0), insert: vi.fn() },
 } as unknown as API;
 

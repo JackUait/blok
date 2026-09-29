@@ -61,6 +61,7 @@ let resizeDetach: Mock<() => void>;
 
 const createMockApi = (messages: Record<string, string> = {}): API => ({
   styles: { block: 'blok-block' },
+  media: { reportFailure: vi.fn(), clearFailure: vi.fn(), confirmLeave: vi.fn() },
   i18n: {
     t: (k: string) => messages[k] ?? k,
     has: (k: string) => k in messages,

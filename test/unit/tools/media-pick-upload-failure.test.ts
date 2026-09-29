@@ -20,6 +20,7 @@ const flush = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 const createApi = (blocks: Record<string, unknown> = {}): API => ({
   styles: { block: 'blok-block' },
   i18n: { t: (k: string) => k, has: () => false },
+  media: { reportFailure: vi.fn(), clearFailure: vi.fn(), confirmLeave: vi.fn() },
   uploader: { isConfigured: () => false },
   tools: { getBlockTools: () => [] },
   blocks: { getBlockIndex: () => 0, insert: vi.fn(), ...blocks },

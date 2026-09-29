@@ -42,7 +42,7 @@ const EN: Record<string, string> = {
   'tools.image.altEdit': 'Edit alt text',
 };
 const i18nStub = { t: (k: string): string => EN[k] ?? k, has: (k: string): boolean => k in EN };
-const mockApi = { i18n: i18nStub } as unknown as API;
+const mockApi = { i18n: i18nStub, media: { reportFailure: vi.fn(), clearFailure: vi.fn(), confirmLeave: vi.fn() } } as unknown as API;
 const mockBlock = { id: 'b1', dispatchChange: () => {} } as unknown as BlockAPI;
 
 const createTool = (data: Partial<ImageData>): ImageTool => new ImageTool({

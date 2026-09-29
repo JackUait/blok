@@ -181,6 +181,7 @@ const toolApi = (live: LiveDocument): unknown => ({
     has: (): boolean => false,
   },
   tools: { getBlockTools: (): unknown[] => [] },
+  media: { reportFailure: (): void => undefined, clearFailure: (): void => undefined },
   blocks: live.api(),
   uploader: undefined,
 });

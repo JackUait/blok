@@ -80,4 +80,61 @@ describe('openLeaveBanner', () => {
 
     expect(byId('leave-banner')?.querySelector('b')).toBeNull();
   });
+
+  describe('as a modal', () => {
+    const press = (target: HTMLElement | null, key: string, shiftKey = false): void => {
+      target?.dispatchEvent(new KeyboardEvent('keydown', { key, shiftKey, bubbles: true, cancelable: true }));
+    };
+
+    it('declares itself modal', () => {
+      openLeaveBanner('s', labels, handlers());
+
+      expect(byId('leave-banner')?.getAttribute('aria-modal')).toBe('true');
+    });
+
+    it('wraps Tab from the last button to the first, and Shift+Tab back', () => {
+      openLeaveBanner('s', labels, handlers());
+      const leave = byId('leave-banner-leave');
+
+      leave?.focus();
+      press(leave, 'Tab');
+      expect(byId('leave-banner-retry')).toHaveFocus();
+
+      press(byId('leave-banner-retry'), 'Tab', true);
+      expect(leave).toHaveFocus();
+    });
+
+    it('pulls focus back when something behind it is focused', () => {
+      const behind = document.createElement('button');
+
+      document.body.appendChild(behind);
+      openLeaveBanner('s', labels, handlers());
+      behind.focus();
+
+      expect(behind).not.toHaveFocus();
+      expect(byId('leave-banner')?.contains(document.activeElement)).toBe(true);
+    });
+
+    it('makes the page behind inert while open and releases it on close', () => {
+      const page = document.createElement('main');
+
+      document.body.appendChild(page);
+      const banner = openLeaveBanner('s', labels, handlers());
+
+      expect(page.hasAttribute('inert')).toBe(true);
+      expect(byId('leave-banner')?.hasAttribute('inert')).toBe(false);
+
+      banner.close();
+      expect(page.hasAttribute('inert')).toBe(false);
+    });
+
+    it('stops treating Escape as Stay once closed', () => {
+      const h = handlers();
+
+      openLeaveBanner('s', labels, h).close();
+      press(document.body, 'Escape');
+
+      expect(h.onStay).not.toHaveBeenCalled();
+    });
+  });
 });

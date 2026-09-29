@@ -1,3 +1,4 @@
+import { openModalDialog } from './modal-dialog';
 import { CSS } from './notifier/draw';
 import { twJoin } from './tw';
 
@@ -31,7 +32,6 @@ const idState = { count: 0 };
  * @returns a handle to update the summary or close the banner
  */
 export const openLeaveBanner = (summary: string, labels: LeaveBannerLabels, handlers: LeaveBannerHandlers): LeaveBanner => {
-  const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   const banner = document.createElement('div');
   const title = document.createElement('div');
   const text = document.createElement('div');
@@ -42,9 +42,6 @@ export const openLeaveBanner = (summary: string, labels: LeaveBannerLabels, hand
   text.id = `blok-leave-banner-summary-${idState.count}`;
 
   banner.className = twJoin(CSS.notification, 'fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex-col items-start');
-  banner.setAttribute('role', 'alertdialog');
-  banner.setAttribute('aria-labelledby', title.id);
-  banner.setAttribute('aria-describedby', text.id);
   banner.setAttribute('data-blok-testid', 'leave-banner');
   // Body-mounted: without a scope root, blok's utilities and reset do not apply.
   banner.setAttribute('data-blok-interface', 'leave-banner');
@@ -74,24 +71,28 @@ export const openLeaveBanner = (summary: string, labels: LeaveBannerLabels, hand
   addButton(labels.stay, 'stay', false, () => handlers.onStay());
   addButton(labels.leave, 'leave', false, () => handlers.onLeave());
 
-  banner.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-      event.stopPropagation();
-      handlers.onStay();
-    }
-  });
-
   banner.append(title, text, buttons);
+  // Mounted before the dialog opens so inert and focus apply synchronously.
   document.body.appendChild(banner);
-  first.focus();
+
+  const dialog = openModalDialog({
+    content: banner,
+    role: 'alertdialog',
+    labelledBy: title.id,
+    describedBy: text.id,
+    initialFocus: () => first,
+    onDismiss: () => handlers.onStay(),
+    container: null,
+    // The top-layer reset (inset/padding/border) would undo the banner's own placement and chrome.
+    topLayer: false,
+    // Only a button or Escape answers the question.
+    outside: false,
+  });
 
   return {
     update: (next) => {
       text.textContent = next;
     },
-    close: () => {
-      banner.remove();
-      previousFocus?.focus();
-    },
+    close: dialog.close,
   };
 };

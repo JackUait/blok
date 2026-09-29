@@ -87,6 +87,7 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
   'components/modules/find/index.ts': 'Find bar is fixed to the window at the host-configured placement and promoted to the top layer while open; find.css places it, no JS coordinates.',
   'components/utils/announcer.ts': 'Visually hidden ARIA live region with no element anchor or collision boundary.',
   'components/utils/caret/boundaries.ts': 'Synchronous hidden text-measurement node removed before control returns.',
+  'components/utils/leave-banner.ts': 'Modal banner pinned to the top centre of the viewport by fixed CSS classes; no live element anchor, JS coordinates or collision calculation.',
   'components/utils/link-hover-card.ts': 'Tracked fixed root surface registered in ROOT_SURFACE_CONTRACTS.',
   'components/utils/notifier/index.ts': 'Viewport toast region with no live element anchor or collision calculation.',
   'components/utils/popover/popover-abstract.ts': 'Root mount primitive whose desktop subclass owns positioning and tracking.',

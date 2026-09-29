@@ -62,6 +62,21 @@ export const NOTIFIER_DISMISS_KEY = 'notifier.dismiss';
  */
 export const modalCleanups = new WeakMap<HTMLElement, () => void>();
 
+const toastDismissers = new WeakMap<HTMLElement, () => void>();
+
+/**
+ * Lets a toast's close button reach the lifecycle index.ts starts after mount.
+ * @param notify - the toast element
+ * @param dismiss - closes it; pass null to unregister
+ */
+export const setToastDismisser = (notify: HTMLElement, dismiss: (() => void) | null): void => {
+  if (dismiss === null) {
+    toastDismissers.delete(notify);
+  } else {
+    toastDismissers.set(notify, dismiss);
+  }
+};
+
 /**
  * Builds the transient toast's dismiss button. Radix Toast / Sonner give every
  * toast an explicit, keyboard-reachable close affordance; the built-in toast
@@ -254,6 +269,24 @@ export const alert = (options: NotifierOptions): HTMLElement => {
 
   messageWrapper.appendChild(messageText);
   notify.appendChild(messageWrapper);
+
+  if (options.actions !== undefined && options.actions.length > 0) {
+    const btns = document.createElement('div');
+
+    btns.className = CSS.btnsWrapper;
+    options.actions.forEach((action) => {
+      const button = document.createElement('button');
+
+      button.type = 'button';
+      button.className = twJoin(CSS.btn, CSS.okBtn);
+      button.setAttribute('data-blok-testid', 'notification-action');
+      button.textContent = action.label;
+      button.addEventListener('click', () => action.onClick());
+      btns.appendChild(button);
+    });
+    messageWrapper.appendChild(btns);
+    notify.appendChild(createDismissButton(() => toastDismissers.get(notify)?.(), options.dismissText ?? 'Close'));
+  }
 
   return notify;
 };

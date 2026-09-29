@@ -12,6 +12,14 @@ export type NotifierPosition = 'bottom-left' | 'bottom-right' | 'bottom-center' 
 /**
  * Base options interface for notifications
  */
+/**
+ * A button on an alert toast. A toast with actions stays until closed.
+ */
+export interface NotifierAction {
+  label: string;
+  onClick(): void;
+}
+
 export interface NotifierOptions {
   /**
    * Notification message (can contains HTML)
@@ -36,6 +44,16 @@ export interface NotifierOptions {
    * Only 'alert' notifies expires
    */
   time?: number;
+
+  /**
+   * Buttons on an alert toast. With any, the toast does not expire and shows a close button.
+   */
+  actions?: NotifierAction[];
+
+  /**
+   * Accessible label of the close button shown with `actions`.
+   */
+  dismissText?: string;
 }
 
 /**

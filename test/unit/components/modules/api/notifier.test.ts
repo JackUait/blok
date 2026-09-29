@@ -73,6 +73,20 @@ describe('NotifierAPI', () => {
     expect(customNotifier).toHaveBeenCalledWith(options);
   });
 
+  it('fills a localized close label for toasts with actions', async () => {
+    const { show: builtInShow } = await import('../../../../../src/components/utils/notifier/index');
+    const api = new NotifierAPI(makeConfig());
+    const { state } = makeTranslatorState({ 'notifier.dismiss': 'Schließen' });
+    api.state = state;
+    const options: NotifierOptions = { message: 'm', actions: [ { label: 'Retry', onClick: vi.fn() } ] };
+
+    api.show(options);
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(builtInShow).toHaveBeenCalledWith({ ...options, dismissText: 'Schließen' }, expect.anything());
+    expect(options).not.toHaveProperty('dismissText');
+  });
+
   it('uses localized defaults for the built-in confirm buttons', async () => {
     const { show: builtInShow } = await import('../../../../../src/components/utils/notifier/index');
     const api = new NotifierAPI(makeConfig());

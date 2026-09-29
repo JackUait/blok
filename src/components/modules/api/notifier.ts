@@ -78,6 +78,12 @@ export class NotifierAPI extends Module {
       return;
     }
 
+    if (options.actions !== undefined && options.dismissText === undefined) {
+      this.builtInNotifier.show({ ...options, dismissText: this.Blok.I18n.t('notifier.dismiss') });
+
+      return;
+    }
+
     this.builtInNotifier.show(options);
   }
 }

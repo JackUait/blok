@@ -46,6 +46,7 @@ vi.mock('../../../../src/components/utils/notifier/draw', () => {
     createProgressBar: vi.fn(createProgressBar),
     createDismissButton: vi.fn((onDismiss: () => void) => createDismissButton(onDismiss)),
     modalCleanups: new WeakMap<HTMLElement, () => void>(),
+    setToastDismisser: vi.fn(),
     getWrapper: vi.fn(() => {
       const wrapper = document.createElement('div');
 

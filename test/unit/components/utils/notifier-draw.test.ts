@@ -480,3 +480,37 @@ describe('Notifier draw', () => {
     });
   });
 });
+
+describe('alert with actions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders one button per action and runs its handler', () => {
+    const onRetry = vi.fn();
+    const notify = alert({ message: 'Image failed to load', actions: [ { label: 'Retry', onClick: onRetry }, { label: 'Show', onClick: vi.fn() } ] });
+    const buttons = notify.querySelectorAll<HTMLButtonElement>('[data-blok-testid="notification-action"]');
+
+    expect(Array.from(buttons, (b) => b.textContent)).toEqual([ 'Retry', 'Show' ]);
+    buttons[0].click();
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('adds a labelled close button only when actions exist', () => {
+    const withActions = alert({ message: 'm', dismissText: 'Close', actions: [ { label: 'Retry', onClick: vi.fn() } ] });
+    const plain = alert({ message: 'm' });
+
+    expect(withActions.querySelector('[data-blok-testid="notification-dismiss"]')?.getAttribute('aria-label')).toBe('Close');
+    expect(plain.querySelector('[data-blok-testid="notification-dismiss"]')).toBeNull();
+  });
+
+  it('sets action text as text, not HTML', () => {
+    const notify = alert({ message: 'm', actions: [ { label: '<b>x</b>', onClick: vi.fn() } ] });
+
+    expect(notify.querySelector('[data-blok-testid="notification-action"] b')).toBeNull();
+  });
+});

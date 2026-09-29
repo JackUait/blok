@@ -1,7 +1,7 @@
 import { registerLayer } from '../dismissable-layer';
 import { promoteToTopLayer, removeFromTopLayer } from '../top-layer';
 
-import { alert, confirm, getWrapper, modalCleanups, prompt } from './draw';
+import { alert, confirm, getWrapper, modalCleanups, prompt, setToastDismisser } from './draw';
 import type { NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions, NotifierPosition } from './types';
 import { DEFAULT_NOTIFIER_POSITION } from './types';
 
@@ -147,7 +147,7 @@ const prepare_ = (position: NotifierPosition = DEFAULT_NOTIFIER_POSITION): HTMLE
  * Escape-to-dismiss via the shared dismissal layer, `data-state` animation
  * hooks, and Top-Layer promotion of the wrapper.
  */
-const startToastLifecycle = (wrapper: HTMLElement, notify: HTMLElement, position: NotifierPosition, time: number): void => {
+const startToastLifecycle = (wrapper: HTMLElement, notify: HTMLElement, position: NotifierPosition, time: number, sticky: boolean): void => {
   notify.setAttribute('data-state', 'open');
 
   // Promote the toast wrapper into the CSS Top Layer so it renders above host
@@ -165,6 +165,7 @@ const startToastLifecycle = (wrapper: HTMLElement, notify: HTMLElement, position
     timer.clear();
     unregisterLayer();
     toastCleanups.delete(notify);
+    setToastDismisser(notify, null);
   };
 
   const dismiss = (): void => {
@@ -189,7 +190,11 @@ const startToastLifecycle = (wrapper: HTMLElement, notify: HTMLElement, position
     }, { once: true });
   };
 
-  const timer = createPausableTimer(time, dismiss);
+  // A toast with actions waits for the user. Never pass Infinity instead:
+  // setTimeout treats delays above 2^31-1 ms as ~1 ms.
+  const timer: PausableTimer = sticky
+    ? { pause: () => undefined, resume: () => undefined, clear: () => undefined }
+    : createPausableTimer(time, dismiss);
 
   const unregisterLayer = registerLayer({
     element: notify,
@@ -229,6 +234,7 @@ const startToastLifecycle = (wrapper: HTMLElement, notify: HTMLElement, position
   });
 
   toastCleanups.set(notify, dispose);
+  setToastDismisser(notify, dismiss);
 
   timer.resume();
 };
@@ -237,7 +243,7 @@ const startToastLifecycle = (wrapper: HTMLElement, notify: HTMLElement, position
  * Appends the notification to the wrapper and, for transient toasts, starts
  * their auto-dismiss lifecycle.
  */
-const appendNotify = (wrapper: HTMLElement, notify: HTMLElement, position: NotifierPosition, time: number, autoDismiss: boolean): void => {
+const appendNotify = (wrapper: HTMLElement, notify: HTMLElement, position: NotifierPosition, time: number, autoDismiss: boolean, sticky: boolean): void => {
   wrapper.appendChild(notify);
   notify.classList.add(getSlideInClass(position));
   notify.setAttribute('data-blok-bounce-in', 'true');
@@ -247,7 +253,7 @@ const appendNotify = (wrapper: HTMLElement, notify: HTMLElement, position: Notif
     return;
   }
 
-  startToastLifecycle(wrapper, notify, position, time);
+  startToastLifecycle(wrapper, notify, position, time, sticky);
 };
 
 /**
@@ -263,6 +269,7 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
   const wrapper = prepare_(position);
   const time = options.time || DEFAULT_TIME;
   const autoDismiss = options.type !== 'confirm' && options.type !== 'prompt';
+  const sticky = options.actions !== undefined && options.actions.length > 0;
 
   const buildNotify = (): HTMLElement => {
     const type = options.type;
@@ -295,7 +302,7 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
     // Closing a modal handle removes its element synchronously; with nothing
     // left to swap-animate (animationend would never fire), mount immediately.
     if (!existing.isConnected) {
-      appendNotify(wrapper, buildNotify(), position, time, autoDismiss);
+      appendNotify(wrapper, buildNotify(), position, time, autoDismiss, sticky);
 
       return;
     }
@@ -303,12 +310,12 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
     swapOut(existing, () => {
       const notify = buildNotify();
 
-      appendNotify(wrapper, notify, position, time, autoDismiss);
+      appendNotify(wrapper, notify, position, time, autoDismiss, sticky);
     });
   } else {
     const notify = buildNotify();
 
-    appendNotify(wrapper, notify, position, time, autoDismiss);
+    appendNotify(wrapper, notify, position, time, autoDismiss, sticky);
   }
 };
 

@@ -192,6 +192,8 @@ export interface BlokEditorHandle {
   clear(): Promise<void>;
   /** Serialize the current content, or resolve to `null` before ready. */
   save(): Promise<OutputData | null>;
+  /** Ask before an in-app navigation (see `Blok.confirmLeave`). Resolves `true` before ready. */
+  confirmLeave(): Promise<boolean>;
   /**
    * Render new content in place. Resolves immediately (no-op) before ready. Safe
    * to mix with a controlled `data` prop: the rendered document becomes the

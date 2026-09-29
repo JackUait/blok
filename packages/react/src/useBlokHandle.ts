@@ -44,6 +44,8 @@ export interface BlokEditorHandle {
   clear(): Promise<void>;
   /** Serialize the current content, or resolve to `null` before ready. */
   save(): Promise<OutputData | null>;
+  /** Ask before an in-app navigation (see `Blok.confirmLeave`). Resolves `true` before ready. */
+  confirmLeave(): Promise<boolean>;
   /**
    * Render new content in place. Resolves immediately (no-op) before ready.
    *
@@ -111,6 +113,8 @@ export function useBlokHandle(): BlokEditorHandle {
     },
     save: (): Promise<OutputData | null> =>
       instanceRef.current !== null ? instanceRef.current.save() : Promise.resolve(null),
+    confirmLeave: (): Promise<boolean> =>
+      instanceRef.current !== null ? instanceRef.current.confirmLeave() : Promise.resolve(true),
     render: (data: OutputData | LooseOutputData): Promise<void> => {
       const instance = instanceRef.current;
 

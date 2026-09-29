@@ -124,6 +124,8 @@ export interface BlokEditorExposed {
   instance: Blok | null;
   /** Serialize the current content (undefined until ready). */
   save(): Promise<OutputData> | undefined;
+  /** Ask before an in-app navigation (see `Blok.confirmLeave`). Resolves true until ready. */
+  confirmLeave(): Promise<boolean>;
   /** Move the caret into the editor. */
   focus(atEnd?: boolean): void;
   /**

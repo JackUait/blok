@@ -32,6 +32,7 @@ export interface MockBlokRecord {
   i18n: { update: ReturnType<typeof vi.fn> };
   focus: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
+  confirmLeave: ReturnType<typeof vi.fn>;
   render: ReturnType<typeof vi.fn>;
   on: ReturnType<typeof vi.fn>;
   off: ReturnType<typeof vi.fn>;
@@ -63,6 +64,7 @@ export class MockBlok {
   public i18n = { update: vi.fn().mockResolvedValue(undefined) };
   public focus = vi.fn().mockReturnValue(true);
   public save = vi.fn().mockResolvedValue({ time: 0, blocks: [], version: '0' });
+  public confirmLeave = vi.fn().mockResolvedValue(false);
   public render = vi.fn().mockResolvedValue(undefined);
   public on = vi.fn();
   public off = vi.fn();
@@ -94,6 +96,7 @@ export class MockBlok {
       i18n: this.i18n,
       focus: this.focus,
       save: this.save,
+      confirmLeave: this.confirmLeave,
       render: this.render,
       on: this.on,
       off: this.off,

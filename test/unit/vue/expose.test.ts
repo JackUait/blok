@@ -10,6 +10,7 @@ import type { OutputData } from '@/types';
 interface ExposedEditor {
   instance: unknown;
   save: () => Promise<OutputData> | undefined;
+  confirmLeave: () => Promise<boolean>;
   focus: (atEnd?: boolean) => void;
   render: (data: OutputData) => Promise<void> | undefined;
 }
@@ -63,5 +64,18 @@ describe('BlokEditor exposed instance + facade', () => {
     expect(() => vm.save()).not.toThrow();
     expect(() => vm.focus()).not.toThrow();
     expect(() => vm.render({ blocks: [] })).not.toThrow();
+  });
+
+  it('confirmLeave resolves true before ready and delegates after', async () => {
+    const wrapper = mount(BlokEditor);
+    const vm = wrapper.vm as unknown as ExposedEditor;
+
+    await expect(vm.confirmLeave()).resolves.toBe(true);
+
+    blokRegistry.last!.resolveReady();
+    await flushPromises();
+
+    await expect(vm.confirmLeave()).resolves.toBe(false);
+    expect(blokRegistry.last!.confirmLeave).toHaveBeenCalledTimes(1);
   });
 });

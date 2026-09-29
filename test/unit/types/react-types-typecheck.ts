@@ -25,7 +25,9 @@ import type {
   BlockPortalHostProps as PublishedBlockPortalHostProps,
   ReactInlineToolRenderProps as PublishedReactInlineToolRenderProps,
   CreateReactInlineToolSpec as PublishedCreateReactInlineToolSpec,
+  BlokEditorHandle as PublishedBlokEditorHandle,
 } from '../../../packages/react/types/index';
+import type { BlokEditorHandle as SourceBlokEditorHandle } from '../../../packages/react/src/useBlokHandle';
 import type {
   ReactBlockRenderProps as SourceReactBlockRenderProps,
   CreateReactBlockSpec as SourceCreateReactBlockSpec,
@@ -75,6 +77,7 @@ type AssertIdentical<A, B> =
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : never;
 
 const _useBlokConfig: AssertEqual<PublishedUseBlokConfig, SourceUseBlokConfig> = true;
+const _editorHandle: AssertEqual<keyof PublishedBlokEditorHandle, keyof SourceBlokEditorHandle> = true;
 const _contentProps: AssertEqual<PublishedBlokContentProps, SourceBlokContentProps> = true;
 const _editorProps: AssertEqual<PublishedBlokEditorProps, SourceBlokEditorProps> = true;
 
@@ -131,3 +134,4 @@ void _insertSpec;
 void _treeInsertSpec;
 void _moveTarget;
 void _useBlocksApi;
+void _editorHandle;

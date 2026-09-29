@@ -46,3 +46,8 @@ type PublishedValueExports = Exclude<
 type _ExportsCovered = Expect<Equal<PublishedValueExports, keyof typeof Source>>;
 
 export type { _ConfigMatches, _ContentPropsMatch, _BlocksApiMatches, _ExportsCovered };
+
+// The exposed facade must carry confirmLeave, the ref-side route to Blok.confirmLeave.
+const _exposedConfirmLeave: ReturnType<Published.BlokEditorExposed['confirmLeave']> extends Promise<boolean> ? true : never = true;
+
+void _exposedConfirmLeave;

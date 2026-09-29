@@ -620,6 +620,11 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValue
     return this.instance()?.save();
   }
 
+  /** Ask before an in-app navigation (see `Blok.confirmLeave`). Resolves true until the editor is ready. */
+  confirmLeave(): Promise<boolean> {
+    return this.instance()?.confirmLeave() ?? Promise.resolve(true);
+  }
+
   /** Move the caret into the editor. */
   focus(atEnd?: boolean): void {
     this.instance()?.focus(atEnd);

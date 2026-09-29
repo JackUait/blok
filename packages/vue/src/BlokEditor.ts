@@ -262,6 +262,7 @@ export const BlokEditor = defineComponent({
     expose({
       instance: computed(() => editor.value),
       save: (): ReturnType<NonNullable<typeof editor.value>['save']> | undefined => editor.value?.save(),
+      confirmLeave: (): Promise<boolean> => editor.value?.confirmLeave() ?? Promise.resolve(true),
       focus: (atEnd?: boolean): void => {
         editor.value?.focus(atEnd);
       },

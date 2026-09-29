@@ -21,6 +21,7 @@ export interface MockBlokInstance {
   destroy: ReturnType<typeof vi.fn>;
   focus: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
+  confirmLeave: ReturnType<typeof vi.fn>;
   render: ReturnType<typeof vi.fn>;
   readOnly: { set: ReturnType<typeof vi.fn>; togglesInPlace: true };
   theme: { set: ReturnType<typeof vi.fn> };
@@ -43,6 +44,7 @@ class MockBlok implements MockBlokInstance {
   public destroy = vi.fn();
   public focus = vi.fn().mockReturnValue(true);
   public save = vi.fn().mockResolvedValue({ time: 0, blocks: [], version: '0' });
+  public confirmLeave = vi.fn().mockResolvedValue(false);
   public render = vi.fn().mockResolvedValue(undefined);
   public readOnly = { set: vi.fn().mockResolvedValue(false), togglesInPlace: true as const };
   public theme = { set: vi.fn() };

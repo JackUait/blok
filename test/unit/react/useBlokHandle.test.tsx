@@ -6,6 +6,7 @@ import type { Blok } from '../../../types';
 interface MockInstance {
   focus: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
+  confirmLeave: ReturnType<typeof vi.fn>;
   clear: ReturnType<typeof vi.fn>;
   render: ReturnType<typeof vi.fn>;
   readOnly: { set: ReturnType<typeof vi.fn>; isEnabled: boolean };
@@ -14,6 +15,7 @@ interface MockInstance {
 const createMockInstance = (): MockInstance => ({
   focus: vi.fn(() => true),
   save: vi.fn(async () => ({ blocks: [] })),
+  confirmLeave: vi.fn(async () => false),
   clear: vi.fn(async () => undefined),
   render: vi.fn(async () => undefined),
   readOnly: { set: vi.fn(async () => true), isEnabled: false },
@@ -42,6 +44,7 @@ describe('useBlokHandle', () => {
       expect(() => handle.focus()).not.toThrow();
       expect(handle.focus()).toBe(false);
       await expect(handle.save()).resolves.toBeNull();
+      await expect(handle.confirmLeave()).resolves.toBe(true);
       await expect(handle.clear()).resolves.toBeUndefined();
       await expect(handle.render({ blocks: [] })).resolves.toBeUndefined();
       await expect(handle.setReadOnly(true)).resolves.toBe(false);
@@ -77,6 +80,9 @@ describe('useBlokHandle', () => {
 
       await handle.save();
       expect(instance.save).toHaveBeenCalledTimes(1);
+
+      await expect(handle.confirmLeave()).resolves.toBe(false);
+      expect(instance.confirmLeave).toHaveBeenCalledTimes(1);
 
       await handle.clear();
       expect(instance.clear).toHaveBeenCalledTimes(1);

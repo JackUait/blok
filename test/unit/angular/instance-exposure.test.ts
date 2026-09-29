@@ -75,5 +75,13 @@ describe('BlokEditorComponent instance exposure', () => {
     // Not ready yet — calling the facade must not throw.
     expect(() => fixture.componentInstance.editor.focus()).not.toThrow();
     expect(fixture.componentInstance.editor.save$()).toBeUndefined();
+    await expect(fixture.componentInstance.editor.confirmLeave()).resolves.toBe(true);
+  });
+
+  it('delegates confirmLeave() to the live instance', async () => {
+    const fixture = await mountReady();
+
+    await expect(fixture.componentInstance.editor.confirmLeave()).resolves.toBe(false);
+    expect(blokRegistry.last.confirmLeave).toHaveBeenCalledTimes(1);
   });
 });

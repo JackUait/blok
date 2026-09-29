@@ -160,6 +160,9 @@ const createSaver = (options: CreateSaverOptions = {}): { saver: Saver; eventsDi
       blockTools,
       stubTool,
     },
+    MediaFailures: {
+      onSave: vi.fn(),
+    },
     ...(options.renderer !== undefined ? { Renderer: options.renderer } : {}),
   };
 

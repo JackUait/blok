@@ -108,6 +108,9 @@ const createSaver = (options: CreateSaverOptions = {}): { saver: Saver; eventsDi
       blockTools,
       stubTool,
     },
+    MediaFailures: {
+      onSave: vi.fn(),
+    },
     Renderer: {
       pendingRender: options.pendingRender ?? null,
       getDetectedInputFormat: vi.fn(() => 'flat'),

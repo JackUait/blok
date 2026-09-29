@@ -152,7 +152,14 @@ export class Saver extends Module {
   private startSave(dialect: 'host' | 'internal'): Promise<OutputData | undefined> {
     this.pendingSaveRevision = this.documentRevision;
 
-    const started = this.doSave({ dialect }).finally(() => {
+    // Only here, not in doSave: internal saves (undo, collaboration) must not toast.
+    const started = this.doSave({ dialect }).then((output) => {
+      if (output !== undefined) {
+        this.Blok.MediaFailures.onSave();
+      }
+
+      return output;
+    }).finally(() => {
       this.pendingSave = null;
     });
 

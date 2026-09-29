@@ -51,6 +51,7 @@ interface CreateSaverOptions {
   stubTool?: string;
   toolSanitizeConfigs?: Record<string, SanitizerConfig>;
   onError?: BlokConfig['onError'];
+  mediaOnSave?: () => void;
 }
 
 const createBlockMock = (options: BlockMockOptions): BlockMock => {
@@ -125,6 +126,9 @@ const createSaver = (options: CreateSaverOptions = {}): { saver: Saver; eventsDi
       blockTools,
       stubTool,
     },
+    MediaFailures: {
+      onSave: options.mediaOnSave ?? vi.fn(),
+    },
   };
 
   (saver as unknown as { state: Saver['Blok'] }).state = blokState as unknown as Saver['Blok'];
@@ -136,6 +140,39 @@ describe('Saver module', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.useRealTimers();
+  });
+
+  it('tells MediaFailures once per real save, not per joined caller', async () => {
+    const mediaOnSave = vi.fn();
+    const block = createBlockMock({ id: 'block-1', tool: 'paragraph', data: { text: 'x' } });
+    const { saver } = createSaver({ blocks: [block.block], mediaOnSave });
+
+    await Promise.all([ saver.save(), saver.save() ]);
+
+    expect(mediaOnSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not tell MediaFailures about an internal save', async () => {
+    const mediaOnSave = vi.fn();
+    const block = createBlockMock({ id: 'block-1', tool: 'paragraph', data: { text: 'x' } });
+    const { saver } = createSaver({ blocks: [block.block], mediaOnSave });
+
+    await saver.save({ dialect: 'internal' });
+
+    expect(mediaOnSave).not.toHaveBeenCalled();
+  });
+
+  it('does not tell MediaFailures when the save failed', async () => {
+    const mediaOnSave = vi.fn();
+    const failing = createBlockMock({ id: 'block-1', tool: 'paragraph', data: { text: 'x' } });
+
+    failing.saveMock.mockRejectedValue(new Error('boom'));
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { saver } = createSaver({ blocks: [failing.block], mediaOnSave });
+
+    await saver.save();
+
+    expect(mediaOnSave).not.toHaveBeenCalled();
   });
 
   it('reports a save failure via config.onError and the SaveFailed event, and still returns undefined', async () => {

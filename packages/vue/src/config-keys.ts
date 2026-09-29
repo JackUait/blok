@@ -50,6 +50,7 @@ export const BLOK_EDITOR_CONFIG_KEYS = [
   'onEnter',
   'onSubmit',
   'onError',
+  'onImageFailure',
   'migrations',
   'uploader',
   'media',

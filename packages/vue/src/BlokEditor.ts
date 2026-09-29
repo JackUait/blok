@@ -75,6 +75,7 @@ export const BlokEditor = defineComponent({
     onSubmit: { type: Function as PropType<BlokConfig['onSubmit']>, default: undefined },
     // Fire-and-forget error channel — a plain declared prop copied into config.
     onError: { type: Function as PropType<BlokConfig['onError']>, default: undefined },
+    onImageFailure: { type: Function as PropType<BlokConfig['onImageFailure']>, default: undefined },
     /** Host-supplied per-type block migrations applied at load. */
     migrations: { type: Object as PropType<BlokConfig['migrations']>, default: undefined },
     /** Editor-level uploader, routed by asset kind (images, video, audio, files). */

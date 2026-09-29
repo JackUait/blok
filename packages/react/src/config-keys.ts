@@ -33,6 +33,7 @@ export const USE_BLOK_CONFIG_KEYS = [
   'onChange',
   'onSave',
   'onError',
+  'onImageFailure',
   'onEnter',
   'onSubmit',
   'onBeforeRender',

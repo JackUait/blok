@@ -148,6 +148,11 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValue
    */
   @Input() onError?: BlokConfig['onError'];
 
+  /**
+   * Failed-image channel (core `onImageFailure`). Return false to replace blok's own notice.
+   */
+  @Input() onImageFailure?: BlokConfig['onImageFailure'];
+
   // ---- Reactive inputs (signal-backed setters; synced in place, never recreate) ----
   // Default undefined (not false) so an unset input falls back to a provideBlok
   // default; the readOnly effect / buildConfig coerce undefined to false.
@@ -530,6 +535,12 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValue
 
     if (onError !== undefined) {
       cfg.onError = onError;
+    }
+
+    const onImageFailure = this.onImageFailure;
+
+    if (onImageFailure !== undefined) {
+      cfg.onImageFailure = onImageFailure;
     }
 
     return cfg;

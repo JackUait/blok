@@ -19,6 +19,7 @@ import { BlokEditorComponent } from '../../../packages/angular/src/blok-editor.c
     [onBeforeRender]="beforeRender"
     [onBeforePaste]="beforePaste"
     [onError]="error"
+    [onImageFailure]="imageFailure"
   ></blok-editor>`,
 })
 class WiredHost {
@@ -33,6 +34,12 @@ class WiredHost {
   beforePaste = (html: string): string => html.toUpperCase();
   error = (err: Error): void => {
     this.errors.push(err);
+  };
+  imageFailures: unknown[] = [];
+  imageFailure = (report: unknown): boolean => {
+    this.imageFailures.push(report);
+
+    return false;
   };
 }
 
@@ -144,6 +151,15 @@ describe('BlokEditorComponent opt-in callbacks', () => {
     expect(fixture.componentInstance.errors).toEqual([error]);
   });
 
+  it('threads the onImageFailure callback into core config', async () => {
+    const fixture = await mountReady(WiredHost);
+    const report = blokRegistry.last.config.onImageFailure as (report: unknown) => boolean | void;
+    const payload = { reason: 'fail', failures: [] };
+
+    expect(report(payload)).toBe(false);
+    expect(fixture.componentInstance.imageFailures).toEqual([ payload ]);
+  });
+
   it('does not wire callbacks the consumer did not provide', async () => {
     await mountReady(BareHost);
     const config = blokRegistry.last.config;
@@ -154,6 +170,7 @@ describe('BlokEditorComponent opt-in callbacks', () => {
     expect(config.onBeforeRender).toBeUndefined();
     expect(config.onBeforePaste).toBeUndefined();
     expect(config.onError).toBeUndefined();
+    expect(config.onImageFailure).toBeUndefined();
     expect(config.onSubmit).toBeUndefined();
   });
 

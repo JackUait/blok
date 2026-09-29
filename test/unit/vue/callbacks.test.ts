@@ -157,4 +157,14 @@ describe('BlokEditor callbacks + gating', () => {
 
     expect(onError).toHaveBeenCalledWith(error, { source: 'save' });
   });
+
+  it('threads the onImageFailure prop into core', async () => {
+    const onImageFailure = vi.fn(() => false);
+    const payload = { reason: 'fail', failures: [] };
+
+    await mountEditor({ props: { onImageFailure } });
+
+    expect((coreConfig().onImageFailure as (report: unknown) => boolean | void)(payload)).toBe(false);
+    expect(onImageFailure).toHaveBeenCalledWith(payload);
+  });
 });

@@ -3,6 +3,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 // Mock the dynamic import of the built-in notifier module
 vi.mock('../../../../../src/components/utils/notifier/index', () => ({
   show: vi.fn(),
+  dismiss: vi.fn(),
 }));
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
@@ -71,6 +72,27 @@ describe('NotifierAPI', () => {
     api.show(options);
 
     expect(customNotifier).toHaveBeenCalledWith(options);
+  });
+
+  it('dismisses a built-in toast by the options it was shown with', async () => {
+    const { dismiss: builtInDismiss } = await import('../../../../../src/components/utils/notifier/index');
+    const api = new NotifierAPI(makeConfig());
+    const options: NotifierOptions = { message: 'm' };
+
+    api.dismiss(options);
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(builtInDismiss).toHaveBeenCalledWith(options);
+  });
+
+  it('cannot dismiss for a custom notifier and does not reach the built-in one', async () => {
+    const { dismiss: builtInDismiss } = await import('../../../../../src/components/utils/notifier/index');
+    const api = new NotifierAPI(makeConfig(vi.fn()));
+
+    api.dismiss({ message: 'm' });
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(builtInDismiss).not.toHaveBeenCalled();
   });
 
   it('fills a localized close label for toasts with actions', async () => {

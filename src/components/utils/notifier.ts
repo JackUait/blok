@@ -6,6 +6,7 @@ import { DEFAULT_NOTIFIER_POSITION } from './notifier/types';
 
 type NotifierModule = {
   show: (options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions, position?: NotifierPosition) => void;
+  dismiss: (options: NotifierOptions) => void;
 };
 
 /**
@@ -77,6 +78,20 @@ export class Notifier {
       })
       .catch((error) => {
         console.error('[Blok] Failed to display notification. Reason:', error);
+      });
+  }
+
+  /**
+   * Close the toast shown with this options object, if still open.
+   * @param options - the object passed to `show`
+   */
+  public dismiss(options: NotifierOptions): void {
+    void this.loadNotifierModule()
+      .then((notifier) => {
+        notifier.dismiss(options);
+      })
+      .catch((error) => {
+        console.error('[Blok] Failed to dismiss notification. Reason:', error);
       });
   }
 

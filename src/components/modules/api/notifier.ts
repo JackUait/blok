@@ -45,6 +45,16 @@ export class NotifierAPI extends Module {
   }
 
   /**
+   * Close a toast shown with this options object. A custom notifier cannot be closed from here.
+   * @param options - the object passed to `show`
+   */
+  public dismiss(options: NotifierOptions): void {
+    if (this.customNotifier === undefined) {
+      this.builtInNotifier.dismiss(options);
+    }
+  }
+
+  /**
    * Show notification — delegates to custom handler if provided, else built-in
    * @param {NotifierOptions} options - message option
    */

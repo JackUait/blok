@@ -588,7 +588,8 @@ export class ImageTool implements BlockTool {
   }
 
   private applyBrokenImage(): void {
-    if (this.state === 'ERROR' && this.brokenImage) return;
+    // A detached <img> keeps its reload chain; the deleted block must not report.
+    if (this.detached || (this.state === 'ERROR' && this.brokenImage)) return;
     this.state = 'ERROR';
     this.brokenImage = true;
     this.errorMessage = this.api.i18n.t('tools.image.errorSourceOffline');
@@ -1255,6 +1256,7 @@ export class ImageTool implements BlockTool {
     this.brokenImage = false;
     this.lastSource = null;
     this.lastFileName = null;
+    this.api.media.clearFailure(this.block.id);
     this.swapToEmptyAnimated(outgoing);
     this.block.dispatchChange();
   }

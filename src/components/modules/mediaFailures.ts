@@ -1,5 +1,6 @@
 import type { ImageFailure, ImageFailureReport } from '../../../types';
 import type { MediaFailureInput } from '../../../types/api/media';
+import type { NotifierOptions } from '../../../types/configs/notifier';
 import { BlockRemovedMutationType } from '../../../types/events/block/BlockRemoved';
 import type { ModuleConfig } from '../../types-internal/module-config';
 import { Module } from '../__module';
@@ -27,6 +28,7 @@ export class MediaFailures extends Module {
   private readonly entries = new Map<string, Entry>();
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private holdingLeave = false;
+  private shownToast: NotifierOptions | null = null;
   private leave: { promise: Promise<boolean>; settle(answer: boolean): void; banner: LeaveBanner } | null = null;
 
   /**
@@ -73,6 +75,10 @@ export class MediaFailures extends Module {
       return;
     }
     this.syncLeaveHold();
+    if (this.entries.size === 0 && this.shownToast !== null) {
+      this.Blok.NotifierAPI.dismiss(this.shownToast);
+      this.shownToast = null;
+    }
     if (this.leave === null) {
       return;
     }
@@ -213,14 +219,22 @@ export class MediaFailures extends Module {
     if (this.askHost(reason) === false) {
       return;
     }
-    this.Blok.NotifierAPI.show({
+    // A host notifier may throw; onSave runs inside the save chain and must not reject it.
+    const options: NotifierOptions = {
       message,
       style: 'error',
       actions: [
         { label: this.Blok.I18n.t('imageFailure.retry'), onClick: () => this.retryAll() },
         { label: this.Blok.I18n.t('imageFailure.show'), onClick: () => this.showFirst() },
       ],
-    });
+    };
+
+    try {
+      this.Blok.NotifierAPI.show(options);
+      this.shownToast = options;
+    } catch (thrown: unknown) {
+      log('The notifier threw while showing an image failure notice.', 'warn', thrown);
+    }
   }
 
   /**

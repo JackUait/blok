@@ -2410,6 +2410,33 @@ describe('ImageTool — failure reporting', () => {
     expect(options.api.media.clearFailure).toHaveBeenCalledWith('b1');
   });
 
+  it('clears when the user swaps the failed image for the empty uploader', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const options = createOptions({}, { uploader: { uploadByFile: () => Promise.reject(new Error('boom')) } });
+    const tool = new ImageTool(options);
+    const root = tool.render();
+
+    pasteFile(tool);
+    await new Promise((r) => setTimeout(r, 0));
+    vi.mocked(options.api.media.clearFailure).mockClear();
+    root.querySelector<HTMLButtonElement>('[data-role="error-state"] [data-action="replace"]')?.click();
+
+    expect(root.getAttribute('data-state')).toBe('empty');
+    expect(options.api.media.clearFailure).toHaveBeenCalledWith('b1');
+  });
+
+  it('does not report a load failure that lands after the block was removed', () => {
+    const options = createOptions({ url: 'https://x/y.png' }, { reloadAttempts: 0 });
+    const tool = new ImageTool(options);
+    const root = tool.render();
+    const img = imgOf(root);
+
+    tool.removed();
+    img.dispatchEvent(new Event('error'));
+
+    expect(options.api.media.reportFailure).not.toHaveBeenCalled();
+  });
+
   it('clears when the block is removed', () => {
     const options = createOptions({ url: 'https://x/y.png' });
     const tool = new ImageTool(options);

@@ -14,23 +14,25 @@ const setup = (config: Partial<BlokConfig> = {}, readOnly = false): {
   module: MediaFailures;
   eventsDispatcher: EventsDispatcher<BlokEventMap>;
   show: ReturnType<typeof vi.fn<(o: NotifierOptions) => void>>;
+  dismiss: ReturnType<typeof vi.fn<(o: NotifierOptions) => void>>;
   scrollToBlock: ReturnType<typeof vi.fn<(id: string) => void>>;
 } => {
   const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const show = vi.fn<(o: NotifierOptions) => void>();
+  const dismiss = vi.fn<(o: NotifierOptions) => void>();
   const scrollToBlock = vi.fn<(id: string) => void>();
   const module = new MediaFailures({ config, eventsDispatcher });
 
   created.push(module);
 
   module.state = {
-    NotifierAPI: { show },
+    NotifierAPI: { show, dismiss },
     BlocksAPI: { scrollToBlock },
     ReadOnly: { isEnabled: readOnly },
     I18n: { t: (key: string, vars?: Record<string, string | number>) => (vars ? `${key}:${String(vars.count)}` : key) },
   } as unknown as BlokModules;
 
-  return { module, eventsDispatcher, show, scrollToBlock };
+  return { module, eventsDispatcher, show, dismiss, scrollToBlock };
 };
 
 const input = (blockId: string, kind: 'upload' | 'load' = 'load', retry = vi.fn()): { blockId: string; tool: string; kind: 'upload' | 'load'; url: string; retry: () => void } =>
@@ -206,6 +208,31 @@ describe('MediaFailures', () => {
     vi.advanceTimersByTime(COALESCE_MS);
 
     expect(show).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes its toast once every failure has recovered', () => {
+    const { module, show, dismiss } = setup();
+
+    module.report(input('a'));
+    module.report(input('b'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    module.clear('a');
+
+    expect(dismiss).not.toHaveBeenCalled();
+    module.clear('b');
+    expect(dismiss).toHaveBeenCalledWith(show.mock.calls[0][0]);
+  });
+
+  it('does not let a throwing notifier break the save that triggered it', () => {
+    const { module, show } = setup();
+
+    show.mockImplementation(() => {
+      throw new Error('host notifier bug');
+    });
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    module.report(input('a', 'upload'));
+
+    expect(() => module.onSave()).not.toThrow();
   });
 
   it('holds beforeunload only while upload failures exist', () => {

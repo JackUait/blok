@@ -19,6 +19,10 @@ const NOTIFICATION_SELECTOR = '[data-blok-testid^="notification"]';
  */
 const toastCleanups = new WeakMap<HTMLElement, () => void>();
 
+// Keyed by the caller's options object so `dismiss` closes only the toast that caller showed.
+const toastsByOptions = new WeakMap<NotifierOptions, HTMLElement>();
+const toastDismiss = new WeakMap<HTMLElement, () => void>();
+
 /**
  * A pausable auto-dismiss timer. Instead of a fixed `setTimeout` (which keeps
  * counting while the user reads or interacts — a WCAG 2.2.1 failure), it tracks
@@ -235,6 +239,7 @@ const startToastLifecycle = (wrapper: HTMLElement, notify: HTMLElement, position
 
   toastCleanups.set(notify, dispose);
   setToastDismisser(notify, dismiss);
+  toastDismiss.set(notify, dismiss);
 
   timer.resume();
 };
@@ -282,7 +287,11 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
       return prompt(options as PromptNotifierOptions);
     }
 
-    return alert(options);
+    const notify = alert(options);
+
+    toastsByOptions.set(options, notify);
+
+    return notify;
   };
 
   const existing = wrapper.querySelector<HTMLElement>('[data-blok-testid]');
@@ -319,6 +328,19 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
   }
 };
 
+/**
+ * Close the toast shown with exactly this options object, if it is still open.
+ * @param options - the object passed to `show`
+ */
+export const dismiss = (options: NotifierOptions): void => {
+  const notify = toastsByOptions.get(options);
+
+  if (notify?.isConnected === true) {
+    toastDismiss.get(notify)?.();
+  }
+};
+
 export const Notifier = {
   show,
+  dismiss,
 };

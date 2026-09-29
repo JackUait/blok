@@ -9,6 +9,7 @@ export * from './styles';
 export * from './caret';
 export * from './toolbar';
 export * from './notifier';
+export * from './media';
 export * from './tooltip';
 export * from './inline-toolbar';
 export * from './block';

@@ -144,6 +144,35 @@ export interface BlokFontSizeConfig {
 }
 
 /**
+ * One failed image, as handed to {@link BlokConfig.onImageFailure}.
+ */
+export interface ImageFailure {
+  blockId: string;
+
+  /** Tool name, e.g. `'image'`. */
+  tool: string;
+
+  /** `upload` is lost on save; `load` is saved but will not display. */
+  kind: 'upload' | 'load';
+
+  url?: string;
+
+  /** Tries the failed source again. */
+  retry(): void;
+
+  /** Scrolls to the block and highlights it. */
+  scrollTo(): void;
+}
+
+/**
+ * What {@link BlokConfig.onImageFailure} receives.
+ */
+export interface ImageFailureReport {
+  reason: 'fail' | 'save' | 'leave';
+  failures: ImageFailure[];
+}
+
+/**
  * Context handed to {@link BlokConfig.onError} describing where a reported
  * error originated. Modeled as an object (rather than a bare string) so new
  * error sources can be added without a breaking signature change.
@@ -1027,6 +1056,18 @@ export interface BlokMountOptions {
    * @param context - where the error originated (see {@link BlokErrorContext})
    */
   onError?(error: Error, context: BlokErrorContext): void;
+
+  /**
+   * Fires when images fail (`fail`), on save while failures remain (`save`),
+   * and from `confirmLeave()` (`leave`). Each failure is reported once per
+   * reason until it recovers and fails again.
+   *
+   * Return `false` to hide blok's own toast or banner and show your own.
+   * For `leave`, `confirmLeave()` then resolves `true` and your guard decides.
+   *
+   * @param report - why it fired and what failed
+   */
+  onImageFailure?(report: ImageFailureReport): boolean | void;
 
   /**
    * Common Block Tunes list. Will be added to all the blocks which do not specify their own 'tunes' set

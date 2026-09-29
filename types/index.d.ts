@@ -24,6 +24,7 @@ import {
   Listeners,
   Marks,
   MarkSpec,
+  Media,
   Notifier,
   ReadOnly,
   Sanitizer,
@@ -92,6 +93,8 @@ export {
   BlokConfig,
   BlokErrorContext,
   BlokMountOptions,
+  ImageFailure,
+  ImageFailureReport,
   BlokState,
   ReadOnlyModeConfig,
   FindConfig,
@@ -162,6 +165,9 @@ export {
   MarkSnapshot,
   MarkSpec,
   MarkValue,
+  Media,
+  MediaFailureInput,
+  MediaFailureKind,
   Notifier,
   ReadOnly,
   Sanitizer,
@@ -226,6 +232,8 @@ export interface API {
   history: History;
   listeners: Listeners;
   notifier: Notifier;
+  /** Failed-media reporting and leave confirmation (see {@link Media}). */
+  media: Media;
   sanitizer: Sanitizer;
   saver: Saver;
   selection: Selection;
@@ -608,6 +616,11 @@ export class Blok {
    * @see Saver.save
    */
   public save(): Promise<OutputData>;
+
+  /**
+   * @see Media.confirmLeave
+   */
+  public confirmLeave(): Promise<boolean>;
 
   /**
    * @see Blocks.clear

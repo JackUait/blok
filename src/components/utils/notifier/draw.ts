@@ -24,18 +24,20 @@ export const CSS = {
     // line-height; the rule is now off (see eslint.config.mjs).
     // Guarded by test/unit/styles/tailwind-class-emits-law.test.ts.
     'text-[15px] font-normal leading-[1.4] tracking-[-0.015em] wrap-break-word overflow-hidden',
-    'rounded-[14px]',
     'shadow-[0_8px_32px_rgba(0,0,0,0.4),0_1px_4px_rgba(0,0,0,0.25)]',
     'border border-white/[0.08]'
   ),
+  // A toast is a surface; confirm, prompt and the leave banner are modal, so dialogs.
+  surface: 'rounded-(--blok-radius-surface)',
+  dialog: 'rounded-(--blok-radius-dialog)',
   messageWrapper: 'flex-1 min-w-0',
   btnsWrapper: 'flex flex-row flex-nowrap mt-[8px] gap-2',
-  btn: 'border-none rounded-[7px] text-[13px] py-[5px] px-3 cursor-pointer outline-hidden font-medium',
+  btn: 'border-none rounded-(--blok-radius-control) text-[13px] py-[5px] px-3 cursor-pointer outline-hidden font-medium',
   okBtn: 'bg-white/15 text-[#f5f5f5] hover:bg-white/25',
   cancelBtn: 'bg-white/8 text-[#a1a1aa] hover:bg-white/12',
   input: twJoin(
     // px, not the rem-based `max-w-35`: the toast must not resize with the host's root font-size.
-    'max-w-[140px] py-[5px] px-3 bg-white/10 border border-white/10 rounded-[7px]',
+    'max-w-[140px] py-[5px] px-3 bg-white/10 border border-white/10 rounded-(--blok-radius-field)',
     'text-[13px] text-[#e4e4e7] outline-hidden',
     'placeholder:text-white/30 focus:border-white/20'
   ),
@@ -187,6 +189,7 @@ const makeModal = (
   // The message is now a dialog label, not a standalone announcement.
   messageText.removeAttribute('aria-live');
   messageText.removeAttribute('aria-atomic');
+  notify.classList.replace(CSS.surface, CSS.dialog);
 
   return openModalDialog({
     content: notify,
@@ -451,7 +454,7 @@ export const alert = (options: NotifierOptions): HTMLElement => {
   const notify = document.createElement('DIV');
   const style = options.style;
 
-  notify.className = CSS.notification;
+  notify.className = twJoin(CSS.notification, CSS.surface);
   // `status` is the correct role for a transient, non-critical live message;
   // `region` implies a persistent landmark. confirm()/prompt() upgrade this to
   // `alertdialog` via openModalDialog().

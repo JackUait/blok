@@ -481,7 +481,7 @@ export class EmojiPicker {
     }
 
     el.className = [
-      'fixed z-50 w-[400px] overflow-hidden rounded-xl',
+      'fixed z-50 w-[400px] overflow-hidden',
       'border border-neutral-200/70 bg-white shadow-2xl',
       'theme-dark:border-neutral-700/50 theme-dark:bg-neutral-900',
     ].join(' ');
@@ -536,7 +536,7 @@ export class EmojiPicker {
     skinToggle.setAttribute('aria-expanded', 'false');
     skinToggle.title = this.i18n.t(SKIN_TONE_KEY);
     skinToggle.className = [
-      'w-[28px] h-[28px] flex items-center justify-center rounded-lg',
+      'w-[28px] h-[28px] flex items-center justify-center',
       'text-[14px] leading-none cursor-pointer select-none',
       'hover:bg-neutral-100 theme-dark:hover:bg-neutral-800',
       'active:scale-90 transition-all duration-100',
@@ -556,7 +556,7 @@ export class EmojiPicker {
     randomBtn.setAttribute('data-emoji-picker-random', '');
     randomBtn.setAttribute('aria-label', this.i18n.t(PICK_RANDOM_KEY));
     randomBtn.className = [
-      'flex-shrink-0 w-[34px] h-[34px] flex items-center justify-center rounded-lg',
+      'flex-shrink-0 w-[34px] h-[34px] flex items-center justify-center',
       'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600',
       'theme-dark:hover:bg-neutral-800 theme-dark:hover:text-neutral-300',
       'transition-colors duration-100 cursor-pointer',
@@ -571,7 +571,7 @@ export class EmojiPicker {
     removeBtn.setAttribute('data-emoji-picker-remove', '');
     removeBtn.setAttribute('aria-label', this.i18n.t(REMOVE_EMOJI_KEY));
     removeBtn.className = [
-      'flex-shrink-0 w-[34px] h-[34px] flex items-center justify-center rounded-lg',
+      'flex-shrink-0 w-[34px] h-[34px] flex items-center justify-center',
       'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600',
       'theme-dark:hover:bg-neutral-800 theme-dark:hover:text-neutral-300',
       'transition-colors duration-100 cursor-pointer',
@@ -773,7 +773,7 @@ export class EmojiPicker {
     popover.setAttribute('data-emoji-picker-skin-tone', '');
     popover.className = [
       'absolute right-0 top-full mt-1.5 z-20',
-      'flex items-center gap-0.5 p-1 rounded-xl',
+      'flex items-center gap-0.5 p-1',
       'bg-white border border-neutral-200/70 shadow-lg',
       'theme-dark:bg-neutral-800 theme-dark:border-neutral-700/50',
     ].join(' ');
@@ -815,7 +815,7 @@ export class EmojiPicker {
       btn.style.setProperty('--emoji-tone-order', String(index));
       btn.setAttribute('aria-label', `${this.i18n.t(SKIN_TONE_KEY)} ${index + 1}`);
       btn.className = [
-        'w-[32px] h-[32px] flex items-center justify-center rounded-lg',
+        'w-[32px] h-[32px] flex items-center justify-center',
         'text-[1.2rem] leading-none cursor-pointer select-none',
         'hover:bg-neutral-100 theme-dark:hover:bg-neutral-700',
         'active:scale-90 transition-all duration-100',
@@ -1195,7 +1195,7 @@ export class EmojiPicker {
       btn.setAttribute('data-emoji-nav', catId);
       btn.className = [
         'flex-1 h-[36px] flex items-center justify-center',
-        'rounded-lg cursor-pointer opacity-50',
+        'cursor-pointer opacity-50',
         'text-neutral-500 theme-dark:text-neutral-400',
         '[&>svg]:w-[20px] [&>svg]:h-[20px]',
         'hover:opacity-100 hover:bg-neutral-100',
@@ -1599,7 +1599,7 @@ export class EmojiPicker {
       this._emojiButtons.push(btn);
       btn.className = [
         'aspect-square flex items-center justify-center',
-        'text-[1.25rem] leading-none rounded-lg cursor-pointer',
+        'text-[1.25rem] leading-none cursor-pointer',
         'hover:bg-neutral-100 theme-dark:hover:bg-neutral-800',
         'transition-transform duration-75',
       ].join(' ');

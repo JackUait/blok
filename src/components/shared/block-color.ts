@@ -61,7 +61,7 @@ export const applyBlockColor = (element: HTMLElement, data: BlockColorData): voi
  */
 const swatch = (cssValue: string, isBackground: boolean): string => {
   const base =
-    'display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;font-weight:600;';
+    'display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:var(--blok-radius-control-sm);font-weight:600;';
 
   return isBackground
     ? `<span style="${base}background-color:${cssValue};border:1px solid rgba(0,0,0,0.08)"></span>`

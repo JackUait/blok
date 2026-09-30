@@ -41,7 +41,7 @@ export const openLeaveBanner = (summary: string, labels: LeaveBannerLabels, hand
   title.id = `blok-leave-banner-title-${idState.count}`;
   text.id = `blok-leave-banner-summary-${idState.count}`;
 
-  banner.className = twJoin(CSS.notification, 'fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex-col items-start');
+  banner.className = twJoin(CSS.notification, CSS.dialog, 'fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex-col items-start');
   banner.setAttribute('data-blok-testid', 'leave-banner');
   // Body-mounted: without a scope root, blok's utilities and reset do not apply.
   banner.setAttribute('data-blok-interface', 'leave-banner');

@@ -52,6 +52,17 @@ describe('FindLens', () => {
     expect(boxes[1].style.width).toBe('40px');
   });
 
+  it('copies the notch radius from the theme source, since the lens root is outside it', () => {
+    const lens = new FindLens(container);
+
+    container.style.setProperty('--blok-radius-notch', '0.09375rem');
+    lens.moveTo([rect(10, 20, 100, 18)]);
+
+    expect(lensIn(container)?.style.getPropertyValue('--blok-radius-notch')).toBe('0.09375rem');
+
+    lens.destroy();
+  });
+
   it('draws one box for pieces of a match that touch on the same line', () => {
     const lens = new FindLens(container);
 

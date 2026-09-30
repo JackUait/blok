@@ -23,7 +23,7 @@
   max-height: calc(100dvh - 16px);
   overflow: hidden;
   border: 1px solid var(--blok-popover-border);
-  border-radius: var(--blok-radius-xl);
+  border-radius: var(--blok-radius-surface);
   background: var(--blok-popover-bg);
   color: var(--blok-text-primary);
   box-shadow: var(--blok-popover-box-shadow);
@@ -58,7 +58,7 @@
   width: 24px;
   height: 24px;
   margin-inline-end: -6px;
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-control);
   color: var(--blok-text-secondary);
   cursor: pointer;
 }
@@ -72,7 +72,7 @@
 [data-blok-emoji-picker] :is([data-emoji-picker-skin-toggle], [data-emoji-picker-random], [data-emoji-picker-remove]) {
   width: 32px;
   height: 28px;
-  border-radius: var(--blok-space-2-25);
+  border-radius: var(--blok-radius-control);
   color: var(--blok-text-secondary);
   transition: transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -137,7 +137,8 @@
   padding: var(--blok-space-1-25);
   gap: 0;
   border: 1px solid var(--blok-popover-border);
-  border-radius: var(--blok-radius-lg);
+  border-radius: var(--blok-radius-surface);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - 1px - var(--blok-space-1-25)));
   background: var(--blok-popover-bg);
   box-shadow: var(--blok-popover-box-shadow);
   transform-origin: right top;
@@ -151,7 +152,7 @@
   min-width: 0;
   height: 36px;
   border: 1px solid transparent;
-  border-radius: var(--blok-radius-md-plus);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control-lg));
   font-size: 22px;
   box-shadow: none;
   transition: transform 140ms ease-out;
@@ -169,7 +170,7 @@
   height: 36px;
   box-sizing: border-box;
   border: 1px solid var(--blok-popover-border);
-  border-radius: var(--blok-radius-md-plus);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control-lg));
   background: var(--blok-item-hover-bg);
   transform: translateX(calc(var(--emoji-skin-index, 0) * 100%));
   transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -272,7 +273,7 @@
 [data-blok-emoji-picker] [data-emoji-native] {
   position: static;
   min-width: 0;
-  border-radius: var(--blok-radius-md-plus);
+  border-radius: var(--blok-radius-control-lg);
   font-size: 22px;
   transform: none;
   transition: none;
@@ -302,13 +303,15 @@
   border: 0;
   padding: var(--blok-space-1) var(--blok-space-2);
   gap: var(--blok-space-0-5);
+  /* The nav meets the card's bottom corners: card border 1px + the smaller (block) padding. */
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - 1px - var(--blok-space-1)));
 }
 
 [data-blok-emoji-picker] [data-emoji-nav] {
   position: relative;
   z-index: 1;
   height: 36px;
-  border-radius: var(--blok-space-2-25);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control-lg));
   background: transparent;
   color: var(--blok-text-secondary);
   opacity: 1;
@@ -336,7 +339,7 @@
   left: 0;
   height: 36px;
   border: 1px solid var(--blok-popover-border);
-  border-radius: var(--blok-space-2-25);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control-lg));
   background: var(--blok-icon-bg);
   pointer-events: none;
   transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -391,7 +394,7 @@
   width: 48px;
   height: 52px;
   border: 1px solid var(--blok-popover-border);
-  border-radius: 15px;
+  border-radius: var(--blok-radius-surface);
   background: var(--blok-icon-bg);
   font-size: 25px;
   line-height: 1;
@@ -406,7 +409,7 @@
   left: 43px;
   width: 60px;
   height: 64px;
-  border-radius: 18px;
+  border-radius: var(--blok-radius-surface);
   background: var(--blok-popover-bg);
   box-shadow: 0 4px 10px color-mix(in srgb, var(--blok-text-primary) 7%, transparent);
   font-size: 34px;
@@ -447,7 +450,7 @@
   transition: transform 160ms ease-out;
   background: var(--blok-icon-bg);
   border: 1px solid var(--blok-popover-border);
-  border-radius: var(--blok-radius-md-plus);
+  border-radius: var(--blok-radius-control);
   color: var(--blok-text-primary);
   font-size: 12px;
   cursor: pointer;
@@ -545,7 +548,7 @@
 
 [data-emoji-picker-body]::-webkit-scrollbar-thumb {
   background: transparent;
-  border-radius: var(--blok-radius-sm);
+  border-radius: var(--blok-radius-control-sm);
 }
 
 [data-emoji-picker-body]:hover::-webkit-scrollbar-thumb,

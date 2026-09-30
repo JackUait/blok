@@ -136,8 +136,21 @@ describe('spacer alignment guide — mutant cover', () => {
 
       expect(line.getAttribute('data-blok-spacer-guide')).toBe('');
       expect(line.style.height).toBe('2px');
-      expect(line.style.borderRadius).toBe('1px');
+      expect(line.style.borderRadius).toBe('var(--blok-radius-pill)');
       expect(line.style.pointerEvents).toBe('none');
+
+      guide.hide();
+    });
+
+    it('copies the pill radius from the editor scope, since the line is mounted on body', () => {
+      const scope = document.createElement('div');
+      const guide = new AlignmentGuide();
+
+      scope.style.setProperty('--blok-radius-pill', '9999px');
+      document.body.appendChild(scope);
+      guide.show(120, new DOMRect(10, 0, 600, 2), scope);
+
+      expect(guideLine().style.getPropertyValue('--blok-radius-pill')).toBe('9999px');
 
       guide.hide();
     });

@@ -69,7 +69,7 @@ export class FindLens {
     const root = this.ensureRoot();
     const theme = getComputedStyle(this.themeSource);
 
-    for (const token of ['--blok-find-lens-ring', '--blok-radius-hairline', '--blok-z-find']) {
+    for (const token of ['--blok-find-lens-ring', '--blok-radius-notch', '--blok-z-find']) {
       const value = theme.getPropertyValue(token).trim();
 
       if (value !== '') {

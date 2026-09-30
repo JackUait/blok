@@ -155,7 +155,7 @@ export class AlignmentGuide {
       line.setAttribute('aria-hidden', 'true');
       line.style.position = 'fixed';
       line.style.height = '2px';
-      line.style.borderRadius = '1px';
+      line.style.borderRadius = 'var(--blok-radius-pill)';
       line.style.pointerEvents = 'none';
       line.style.zIndex = GUIDE_Z_INDEX;
 
@@ -165,11 +165,13 @@ export class AlignmentGuide {
 
     // The editor's --blok-* custom properties are scoped to its root, and the
     // guide is parented to <body> — a var() reference here would resolve to
-    // nothing and paint an invisible line. Resolve the theme's accent against
-    // the editor scope and set it as a literal.
-    const accent = window.getComputedStyle(scope).getPropertyValue('--blok-color-accent').trim();
+    // nothing and paint an invisible line. Resolve the theme's accent and pill
+    // radius against the editor scope and set them as literals.
+    const theme = window.getComputedStyle(scope);
+    const accent = theme.getPropertyValue('--blok-color-accent').trim();
 
     this.line.style.backgroundColor = accent === '' ? FALLBACK_ACCENT : accent;
+    this.line.style.setProperty('--blok-radius-pill', theme.getPropertyValue('--blok-radius-pill').trim());
 
     // Center the 2px line on the alignment y.
     this.line.style.top = `${Math.round(y) - 1}px`;

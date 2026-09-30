@@ -481,8 +481,27 @@ describe('Notifier draw', () => {
   });
 
   describe('CSS', () => {
-    it('uses refined border radius', () => {
-      expect(CSS.notification).toContain('rounded');
+    it('rounds the toast as a surface, its ~28px buttons as controls and its input as a field', () => {
+      expect(CSS.surface).toBe('rounded-(--blok-radius-surface)');
+      expect(CSS.dialog).toBe('rounded-(--blok-radius-dialog)');
+      expect(CSS.notification).not.toMatch(/(^|\s)rounded/);
+      expect(CSS.btn.split(' ')).toContain('rounded-(--blok-radius-control)');
+      expect(CSS.input.split(' ')).toContain('rounded-(--blok-radius-field)');
+    });
+
+    it('rounds confirm and prompt as dialogs, with no surface radius left to fight it', () => {
+      for (const el of [ confirm({ message: 'Sure?', okHandler: vi.fn() }), prompt({ message: 'Name?', okHandler: vi.fn() }) ]) {
+        const classes = el.className.split(' ');
+
+        expect(classes).toContain('rounded-(--blok-radius-dialog)');
+        expect(classes.filter((c) => c.startsWith('rounded'))).toHaveLength(1);
+      }
+    });
+
+    it('keeps a plain alert toast a surface', () => {
+      const classes = alert({ message: 'Saved' }).className.split(' ');
+
+      expect(classes.filter((c) => c.startsWith('rounded'))).toEqual([ 'rounded-(--blok-radius-surface)' ]);
     });
 
     it('suppresses native focus outline on action buttons', () => {

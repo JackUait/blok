@@ -92,7 +92,8 @@
   column-gap: var(--blok-space-0-5);
   width: min(var(--blok-find-bar-width), calc(100vw - 2 * var(--blok-space-4)));
   padding: var(--blok-space-1-5);
-  border-radius: var(--blok-radius-lg);
+  border-radius: var(--blok-radius-surface);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1-5)));
   background: var(--blok-popover-bg);
   color: var(--blok-text-primary);
   box-shadow: var(--blok-popover-box-shadow);
@@ -264,7 +265,7 @@
   width: var(--blok-find-control-size);
   height: var(--blok-find-control-size);
   padding: 0;
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   color: var(--blok-text-secondary);
   cursor: pointer;
   transition:
@@ -325,7 +326,7 @@
   height: 3px;
   border: 1.25px solid currentColor;
   border-top: 0;
-  border-radius: 0 0 var(--blok-space-0-25) var(--blok-space-0-25);
+  border-radius: 0 0 var(--blok-radius-notch) var(--blok-radius-notch);
 }
 
 [data-blok-find-toggle][aria-pressed='true'],
@@ -446,7 +447,7 @@
   flex: none;
   height: var(--blok-find-control-size);
   padding-inline: var(--blok-space-2-5);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   background: var(--blok-icon-bg);
   color: var(--blok-text-primary);
   font-size: var(--blok-font-size-ui-compact);
@@ -490,7 +491,7 @@
   position: absolute;
   top: 0;
   left: 0;
-  border-radius: var(--blok-radius-hairline);
+  border-radius: var(--blok-radius-notch);
   box-shadow: 0 0 0 1.5px var(--blok-find-lens-ring);
 }
 

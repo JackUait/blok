@@ -697,18 +697,18 @@ describe('EmojiPicker', () => {
     expect(nav.className).not.toContain('pt-2');
   });
 
-  it('nav button corners use rounded-lg to match the outer rounded-xl container', async () => {
+  it('leaves every radius to emoji-picker.css, so no rounded-* class can fight it', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k }, locale: 'en' });
     container.appendChild(picker.getElement());
     await picker.open(container);
 
-    const navButtons = picker.getElement().querySelectorAll('[data-emoji-nav]');
+    const nodes = [ picker.getElement(), ...Array.from(picker.getElement().querySelectorAll('*')) ];
 
-    expect(navButtons.length).toBeGreaterThan(0);
-    for (const btn of Array.from(navButtons)) {
-      expect(btn.className).toContain('rounded-lg');
-      expect(btn.className).not.toContain('rounded-md');
+    expect(picker.getElement().querySelectorAll('[data-emoji-nav]').length).toBeGreaterThan(0);
+    expect(picker.getElement().querySelectorAll('[data-emoji-picker-skin-tone] button').length).toBeGreaterThan(0);
+    for (const node of nodes) {
+      expect(Array.from(node.classList).filter((c) => c.startsWith('rounded'))).toEqual([]);
     }
   });
 

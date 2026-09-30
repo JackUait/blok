@@ -32,6 +32,13 @@ describe('openLeaveBanner', () => {
     expect(byId('leave-banner-retry')).toHaveFocus();
   });
 
+  it('is rounded as a dialog, with no toast surface radius left to fight it', () => {
+    openLeaveBanner('s', labels, handlers());
+    const classes = (byId('leave-banner')?.className ?? '').split(' ');
+
+    expect(classes.filter((c) => c.startsWith('rounded'))).toEqual([ 'rounded-(--blok-radius-dialog)' ]);
+  });
+
   it('sits inside a blok styling scope, since it is mounted on body', () => {
     openLeaveBanner('s', labels, handlers());
 

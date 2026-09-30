@@ -511,11 +511,15 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     const mod = e.metaKey || e.ctrlKey;
     // Same rule as the editor's shortcutLetter: the physical key counts only when the layout types a non-Latin letter there.
     const nonLatin = e.key.length === 1 && !/^[\x20-\x7e]$/.test(e.key) && !e.altKey;
+    const isLetter = (letter: string): boolean =>
+      e.key.toLowerCase() === letter || (nonLatin && e.code === `Key${letter.toUpperCase()}`);
+    // Same history keys as the editor's KeyboardController: Ctrl+Y redoes on Windows and Linux.
+    const redoY = e.ctrlKey && !e.shiftKey && isLetter('y');
 
-    if (mod && (e.key.toLowerCase() === 'z' || (nonLatin && e.code === 'KeyZ'))) {
+    if ((mod && isLetter('z')) || redoY) {
       e.preventDefault();
       flushKeyCommit();
-      restore(e.shiftKey ? hist.stack.redo() : hist.stack.undo());
+      restore(e.shiftKey || redoY ? hist.stack.redo() : hist.stack.undo());
 
       return;
     }

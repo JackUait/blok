@@ -709,6 +709,25 @@ describe('openDarkroom fix round 1', () => {
       expect(frame?.style.getPropertyValue('--blok-radius-darkroom-frame')).toBe('0%');
     });
 
+    it.each([
+      { name: 'Ctrl+Y', init: { key: 'y', ctrlKey: true } },
+      { name: 'Ctrl+Y on a non-Latin layout', init: { key: 'н', code: 'KeyY', ctrlKey: true } },
+      { name: 'Cmd+Shift+Z', init: { key: 'z', metaKey: true, shiftKey: true } },
+    ])('$name redoes an undone shape change', ({ init }) => {
+      const { advance } = open();
+      const circle = document.querySelector<HTMLButtonElement>('[data-ratio="circle"]');
+
+      circle?.click();
+      advance(3000);
+      key(dialog(), { key: 'z', metaKey: true });
+      advance(3000);
+      expect(circle?.getAttribute('aria-checked')).toBe('false');
+      key(dialog(), init);
+      advance(3000);
+
+      expect(circle?.getAttribute('aria-checked')).toBe('true');
+    });
+
     it('Cmd+Z works on a non-Latin keyboard layout', () => {
       const { advance } = open();
       const circle = document.querySelector<HTMLButtonElement>('[data-ratio="circle"]');

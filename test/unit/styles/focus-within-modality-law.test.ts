@@ -40,6 +40,14 @@ const STANDALONE_CSS_ENTRIES = [
     file: 'src/playground/playground.css',
     reason: 'Dev-page Tailwind entry, loaded by index.html alone — never reachable from main.css.',
   },
+  {
+    file: 'src/tools/image/crop-editor.css',
+    reason: 'No longer imported: the darkroom replaced it. Delete this entry with the file.',
+  },
+  {
+    file: 'src/tools/image/crop-modal.css',
+    reason: 'No longer imported: the darkroom replaced it. Delete this entry with the file.',
+  },
 ];
 
 /** Every local .css file main.css pulls in, transitively. */

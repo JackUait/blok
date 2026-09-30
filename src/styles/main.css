@@ -2,8 +2,7 @@
 @import './fonts.css';
 @import './popover-animation.css';
 @import './keyframes.css';
-@import '../tools/image/crop-editor.css';
-@import '../tools/image/crop-modal.css';
+@import '../tools/image/darkroom/darkroom.css';
 @import '../tools/image/alt-popover.css';
 
 /*

@@ -1,0 +1,292 @@
+/* Always-dark palette, kept apart from layout. */
+.blok-darkroom {
+  --blok-darkroom-bg-center: #17171b;
+  --blok-darkroom-bg-edge: #070708;
+  --blok-darkroom-ink: #fff;
+  --blok-darkroom-ink-muted: rgba(255, 255, 255, 0.72);
+  --blok-darkroom-ink-faint: rgba(255, 255, 255, 0.55);
+  --blok-darkroom-chip-ink: rgba(255, 255, 255, 0.6);
+  --blok-darkroom-btn-hover-bg: rgba(255, 255, 255, 0.08);
+  --blok-darkroom-done-bg: #fff;
+  --blok-darkroom-done-ink: #000;
+  --blok-darkroom-ring: rgba(255, 255, 255, 0.9);
+  --blok-darkroom-dim: rgba(7, 7, 8, 0.72);
+  --blok-darkroom-dim-off: rgba(7, 7, 8, 0);
+  --blok-darkroom-grid-line: rgba(255, 255, 255, 0.35);
+  --blok-darkroom-pill-bg: rgba(38, 38, 44, 0.62);
+  --blok-darkroom-pill-edge: rgba(255, 255, 255, 0.12);
+  --blok-darkroom-pill-shadow: rgba(0, 0, 0, 0.4);
+  --blok-darkroom-stroke: 3px;
+  --blok-darkroom-bar-pad: 14px 16px;
+  --blok-darkroom-btn-pad: 8px 14px;
+  --blok-darkroom-pill-gap: 2px;
+}
+
+/*
+  Always dark, in every theme: a neutral black lets colours read true.
+  The double selector outranks the top-layer reset in main.css (0,2,0).
+*/
+.blok-darkroom,
+.blok-darkroom[data-blok-top-layer][popover] {
+  position: fixed;
+  inset: 0;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: radial-gradient(120% 90% at 50% 40%, var(--blok-darkroom-bg-center) 0%, var(--blok-darkroom-bg-edge) 70%);
+  color: var(--blok-darkroom-ink);
+  z-index: 9998;
+  animation: blok-darkroom-in 200ms ease;
+}
+
+@keyframes blok-darkroom-in {
+  from { background-color: transparent; opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Rules below set display, which would beat the UA [hidden] rule. */
+.blok-darkroom [hidden] {
+  display: none;
+}
+
+.blok-darkroom__surface {
+  position: absolute;
+  inset: 0;
+  outline: none;
+  font-family: var(--blok-font-family, system-ui, sans-serif);
+}
+
+.blok-darkroom__surface[data-entering="fade"] .blok-darkroom__stage {
+  animation: blok-darkroom-stage-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes blok-darkroom-stage-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+.blok-darkroom__bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--blok-darkroom-bar-pad);
+  transition: opacity 120ms ease;
+}
+
+.blok-darkroom__bar-lead {
+  display: flex;
+  gap: var(--blok-space-1);
+}
+
+.blok-darkroom__readout {
+  font: 500 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--blok-darkroom-ink-faint);
+}
+
+.blok-darkroom__btn {
+  appearance: none;
+  border: 0;
+  border-radius: var(--blok-radius-pill);
+  padding: var(--blok-darkroom-btn-pad);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  background: transparent;
+  color: var(--blok-darkroom-ink-muted);
+}
+
+.blok-darkroom__btn--ghost:hover { color: var(--blok-darkroom-ink); background: var(--blok-darkroom-btn-hover-bg); }
+.blok-darkroom__btn:disabled { opacity: 0.4; cursor: default; }
+
+.blok-darkroom__btn--primary {
+  background: var(--blok-darkroom-done-bg);
+  color: var(--blok-darkroom-done-ink);
+  font-weight: 600;
+}
+
+.blok-darkroom__btn:focus-visible,
+.blok-darkroom__chip:focus-visible,
+.blok-darkroom__stage:focus-visible {
+  outline: 2px solid var(--blok-darkroom-ring);
+  outline-offset: 2px;
+}
+
+.blok-darkroom__stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+
+.blok-darkroom__stage:active { cursor: grabbing; }
+
+.blok-darkroom__photo {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: none;
+  transform-origin: 0 0;
+  will-change: transform;
+  pointer-events: none;
+}
+
+.blok-darkroom__frame {
+  --blok-radius-darkroom-frame: 0;
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: var(--blok-radius-darkroom-frame);
+  box-shadow: 0 0 0 1.5px var(--blok-darkroom-ink), 0 0 0 9999px var(--blok-darkroom-dim);
+  pointer-events: none;
+  transition: box-shadow 200ms ease;
+}
+
+.blok-darkroom__surface[data-peek] .blok-darkroom__frame {
+  box-shadow: 0 0 0 0 transparent, 0 0 0 9999px var(--blok-darkroom-dim-off);
+}
+
+.blok-darkroom__grid {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--blok-radius-darkroom-frame);
+  opacity: 0;
+  transition: opacity 120ms ease;
+  background:
+    linear-gradient(to right, transparent calc(33.333% - 0.5px), var(--blok-darkroom-grid-line) calc(33.333% - 0.5px), var(--blok-darkroom-grid-line) calc(33.333% + 0.5px), transparent calc(33.333% + 0.5px), transparent calc(66.666% - 0.5px), var(--blok-darkroom-grid-line) calc(66.666% - 0.5px), var(--blok-darkroom-grid-line) calc(66.666% + 0.5px), transparent calc(66.666% + 0.5px)),
+    linear-gradient(to bottom, transparent calc(33.333% - 0.5px), var(--blok-darkroom-grid-line) calc(33.333% - 0.5px), var(--blok-darkroom-grid-line) calc(33.333% + 0.5px), transparent calc(33.333% + 0.5px), transparent calc(66.666% - 0.5px), var(--blok-darkroom-grid-line) calc(66.666% - 0.5px), var(--blok-darkroom-grid-line) calc(66.666% + 0.5px), transparent calc(66.666% + 0.5px));
+}
+
+.blok-darkroom__handle {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.blok-darkroom__handle--corner::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 0 solid var(--blok-darkroom-ink);
+}
+
+.blok-darkroom__handle--nw { left: -14px; top: -14px; cursor: nwse-resize; }
+.blok-darkroom__handle--ne { right: -14px; top: -14px; cursor: nesw-resize; }
+.blok-darkroom__handle--se { right: -14px; bottom: -14px; cursor: nwse-resize; }
+.blok-darkroom__handle--sw { left: -14px; bottom: -14px; cursor: nesw-resize; }
+.blok-darkroom__handle--nw::before { left: 11px; top: 11px; border-left-width: var(--blok-darkroom-stroke); border-top-width: var(--blok-darkroom-stroke); }
+.blok-darkroom__handle--ne::before { right: 11px; top: 11px; border-right-width: var(--blok-darkroom-stroke); border-top-width: var(--blok-darkroom-stroke); }
+.blok-darkroom__handle--se::before { right: 11px; bottom: 11px; border-right-width: var(--blok-darkroom-stroke); border-bottom-width: var(--blok-darkroom-stroke); }
+.blok-darkroom__handle--sw::before { left: 11px; bottom: 11px; border-left-width: var(--blok-darkroom-stroke); border-bottom-width: var(--blok-darkroom-stroke); }
+
+.blok-darkroom__handle--edge::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: var(--blok-darkroom-ink);
+  border-radius: var(--blok-radius-pill);
+  transform: translate(-50%, -50%);
+}
+
+.blok-darkroom__handle--n,
+.blok-darkroom__handle--s { left: calc(50% - 14px); cursor: ns-resize; }
+.blok-darkroom__handle--e,
+.blok-darkroom__handle--w { top: calc(50% - 14px); cursor: ew-resize; }
+.blok-darkroom__handle--n { top: -14px; }
+.blok-darkroom__handle--s { bottom: -14px; }
+.blok-darkroom__handle--e { right: -14px; }
+.blok-darkroom__handle--w { left: -14px; }
+.blok-darkroom__handle--n::before,
+.blok-darkroom__handle--s::before { width: 22px; height: var(--blok-darkroom-stroke); }
+.blok-darkroom__handle--e::before,
+.blok-darkroom__handle--w::before { width: var(--blok-darkroom-stroke); height: 22px; }
+
+.blok-darkroom__pill {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  z-index: 2;
+  display: flex;
+  gap: var(--blok-darkroom-pill-gap);
+  padding: var(--blok-space-1);
+  transform: translateX(-50%);
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-darkroom-pill-bg);
+  box-shadow: inset 0 0 0 0.5px var(--blok-darkroom-pill-edge), 0 8px 24px var(--blok-darkroom-pill-shadow);
+  backdrop-filter: blur(20px) saturate(1.6);
+  transition: opacity 120ms ease;
+}
+
+.blok-darkroom__chip {
+  appearance: none;
+  border: 0;
+  border-radius: var(--blok-radius-pill);
+  padding: 7px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  background: transparent;
+  color: var(--blok-darkroom-chip-ink);
+}
+
+.blok-darkroom__chip:hover { color: var(--blok-darkroom-ink); }
+
+.blok-darkroom__chip[data-active="true"] {
+  background: var(--blok-icon-active-bg);
+  color: var(--blok-icon-active-text);
+}
+
+.blok-darkroom__live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.blok-darkroom-flight {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 9999;
+  overflow: hidden;
+  border-radius: var(--blok-radius-darkroom-frame);
+  pointer-events: none;
+}
+
+.blok-darkroom-flight img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: none;
+  transform-origin: 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blok-darkroom,
+  .blok-darkroom[data-blok-top-layer][popover],
+  .blok-darkroom__surface[data-entering="fade"] .blok-darkroom__stage { animation: none; }
+  .blok-darkroom__bar,
+  .blok-darkroom__pill,
+  .blok-darkroom__grid,
+  .blok-darkroom__frame { transition: none; }
+}

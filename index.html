@@ -1249,6 +1249,7 @@
     import * as Icons from './src/components/icons/index.ts';
     import { ALL_LOCALE_CODES, getDirection } from './src/components/i18n/locales/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
+    import { slowImageRetries } from './src/playground/slow-image-retry.ts';
     import { BRAND_MARK_SLUGS, brandMarkSvg } from './src/components/utils/brand-marks.ts';
     const BRAND_MARK_GROUP = 'Brand marks';
     const BRAND_MARK_ICONS = Object.fromEntries(BRAND_MARK_SLUGS.map((slug) => [slug, brandMarkSvg(slug)]));
@@ -2842,6 +2843,9 @@
         minHeight: 0,
       });
       blockStatesInstances.push(instance);
+
+      // The broken demo image 404s at once; keep Retry's loading state visible.
+      if (blocks.some((block) => block.id === 'im-broken')) slowImageRetries(holder, 2000);
 
       // Force persistent loading overlay on the "Loading" image state demo.
       // Clone the <img> to strip load/error listeners (so overlay can't clear),

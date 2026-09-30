@@ -5,6 +5,7 @@ vi.mock('../../../../../src/components/utils/notifier/index', () => ({
   show: vi.fn(),
   dismiss: vi.fn(),
   resolve: vi.fn(),
+  isClosed: vi.fn(() => false),
 }));
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
@@ -132,6 +133,28 @@ describe('NotifierAPI', () => {
 
     expect(vi.mocked(notifierModule.resolve).mock.calls[0][0]).toBe(shown);
     expect(vi.mocked(notifierModule.dismiss).mock.calls[0][0]).toBe(shown);
+  });
+
+  it('asks the built-in notifier about the very object it was shown', async () => {
+    const notifierModule = await import('../../../../../src/components/utils/notifier/index');
+    const api = new NotifierAPI(makeConfig());
+    const { state } = makeTranslatorState({});
+    api.state = state;
+    const options: NotifierOptions = { message: 'm', actions: [ { label: 'Retry', onClick: vi.fn() } ] };
+
+    api.show(options);
+    await new Promise(r => setTimeout(r, 0));
+    vi.mocked(notifierModule.isClosed).mockReturnValueOnce(true);
+    const [ [ shown ] ] = vi.mocked(notifierModule.show).mock.calls;
+
+    expect(api.isClosed(options)).toBe(true);
+    expect(notifierModule.isClosed).toHaveBeenCalledWith(shown);
+  });
+
+  it('treats a custom notifier\'s toast as closed, since it cannot be closed or shown again from here', () => {
+    const api = new NotifierAPI(makeConfig(vi.fn()));
+
+    expect(api.isClosed({ message: 'm' })).toBe(true);
   });
 
   it('fills a localized close label for toasts with actions', async () => {

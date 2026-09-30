@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { dismiss, resolve, RESOLVED_HOLD_MS, show } from '../../../../src/components/utils/notifier/index';
+import { dismiss, isClosed, resolve, RESOLVED_HOLD_MS, show } from '../../../../src/components/utils/notifier/index';
 
 const toast = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-testid^="notification"]');
 
@@ -51,6 +51,20 @@ describe('Notifier toast with actions', () => {
     dismiss({ message: 'failed' });
 
     expect(toast()?.getAttribute('data-state')).toBe('open');
+  });
+
+  it('isClosed is false while the toast is up and true once the user closes it', () => {
+    const options = { message: 'failed', actions: [ { label: 'Retry', onClick: (): void => undefined } ] };
+
+    show(options);
+    expect(isClosed(options)).toBe(false);
+    document.querySelector<HTMLButtonElement>('[data-blok-testid="notification-dismiss"]')?.click();
+
+    expect(isClosed(options)).toBe(true);
+  });
+
+  it('isClosed is false for options never drawn', () => {
+    expect(isClosed({ message: 'never shown' })).toBe(false);
   });
 
   describe('resolve', () => {

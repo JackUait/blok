@@ -16,18 +16,66 @@ import type { NotifierOptions } from '../../../../types/configs/notifier';
 
 const created: MediaFailures[] = [];
 
-const setup = (config: Partial<BlokConfig> = {}, readOnly = false): {
+/**
+ * jsdom has no IntersectionObserver. This one reports on observe and on `setOnScreen`.
+ */
+class FakeIntersectionObserver {
+  public static readonly onScreen = new Map<Element, boolean>();
+  private static readonly live = new Set<FakeIntersectionObserver>();
+  private readonly targets = new Set<Element>();
+
+  constructor(private readonly callback: IntersectionObserverCallback) {
+    FakeIntersectionObserver.live.add(this);
+  }
+
+  public static setOnScreen(target: Element, onScreen: boolean): void {
+    FakeIntersectionObserver.onScreen.set(target, onScreen);
+    FakeIntersectionObserver.live.forEach((observer) => {
+      if (observer.targets.has(target)) {
+        observer.fire(target);
+      }
+    });
+  }
+
+  public observe(target: Element): void {
+    this.targets.add(target);
+    this.fire(target);
+  }
+
+  public disconnect(): void {
+    this.targets.clear();
+    FakeIntersectionObserver.live.delete(this);
+  }
+
+  private fire(target: Element): void {
+    const entry = { target, isIntersecting: FakeIntersectionObserver.onScreen.get(target) ?? true } as IntersectionObserverEntry;
+
+    this.callback([ entry ], this as unknown as IntersectionObserver);
+  }
+}
+
+const setup = (config: Partial<BlokConfig> = {}, readOnly = false, onScreen = true): {
   module: MediaFailures;
   eventsDispatcher: EventsDispatcher<BlokEventMap>;
   show: ReturnType<typeof vi.fn<(o: NotifierOptions) => void>>;
   dismiss: ReturnType<typeof vi.fn<(o: NotifierOptions) => void>>;
   resolve: ReturnType<typeof vi.fn<(o: NotifierOptions, message: string) => void>>;
+  isClosed: ReturnType<typeof vi.fn<(o: NotifierOptions) => boolean>>;
+  wrapper: HTMLElement;
   blockOf: (id: string) => { holder: HTMLElement; pluginsContent: HTMLElement };
 } => {
   const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const show = vi.fn<(o: NotifierOptions) => void>();
   const dismiss = vi.fn<(o: NotifierOptions) => void>();
   const resolve = vi.fn<(o: NotifierOptions, message: string) => void>();
+  const isClosed = vi.fn<(o: NotifierOptions) => boolean>(() => false);
+  const wrapper = document.createElement('div');
+  const field = document.createElement('div');
+
+  field.tabIndex = 0;
+  wrapper.append(field);
+  document.body.append(wrapper);
+  FakeIntersectionObserver.setOnScreen(wrapper, onScreen);
   const blocks = new Map<string, { holder: HTMLElement; pluginsContent: HTMLElement }>();
   const blockOf = (id: string): { holder: HTMLElement; pluginsContent: HTMLElement } => {
     const known = blocks.get(id) ?? { holder: document.createElement('div'), pluginsContent: document.createElement('div') };
@@ -41,13 +89,14 @@ const setup = (config: Partial<BlokConfig> = {}, readOnly = false): {
   created.push(module);
 
   module.state = {
-    NotifierAPI: { show, dismiss, resolve },
+    NotifierAPI: { show, dismiss, resolve, isClosed },
+    UI: { nodes: { wrapper } },
     BlockManager: { getBlockById: (id: string) => blockOf(id) },
     ReadOnly: { isEnabled: readOnly },
     I18n: { t: (key: string, vars?: Record<string, string | number>) => (vars ? `${key}:${String(vars.count)}` : key) },
   } as unknown as BlokModules;
 
-  return { module, eventsDispatcher, show, dismiss, resolve, blockOf };
+  return { module, eventsDispatcher, show, dismiss, resolve, isClosed, wrapper, blockOf };
 };
 
 const input = (blockId: string, kind: 'upload' | 'load' = 'load', retry = vi.fn()): { blockId: string; tool: string; kind: 'upload' | 'load'; url: string; retry: () => void } =>
@@ -63,6 +112,15 @@ const unloadPrevented = (): boolean => {
   return event.defaultPrevented;
 };
 
+beforeEach(() => {
+  vi.stubGlobal('IntersectionObserver', FakeIntersectionObserver);
+});
+
+afterEach(() => {
+  FakeIntersectionObserver.onScreen.clear();
+  vi.unstubAllGlobals();
+});
+
 describe('MediaFailures', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -77,6 +135,117 @@ describe('MediaFailures', () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
     document.body.innerHTML = '';
+  });
+
+  it('holds the toast while its editor is off screen and shows it once the editor comes into view', () => {
+    const { module, show, wrapper } = setup({}, false, false);
+
+    module.report(input('a'));
+    vi.advanceTimersByTime(COALESCE_MS);
+
+    expect(show).not.toHaveBeenCalled();
+    FakeIntersectionObserver.setOnScreen(wrapper, true);
+    expect(show).toHaveBeenCalledTimes(1);
+    expect(show.mock.calls[0][0].message).toBe('imageFailure.loadFailed');
+  });
+
+  it('shows the held toast when focus enters the editor', () => {
+    const { module, show, wrapper } = setup({}, false, false);
+
+    module.report(input('a'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    wrapper.querySelector<HTMLElement>('[tabindex]')?.focus();
+
+    expect(show).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides the toast when the user leaves the editor and brings it back on return', () => {
+    const { module, show, dismiss, wrapper } = setup();
+
+    module.report(input('a'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    const [ [ shown ] ] = show.mock.calls;
+
+    FakeIntersectionObserver.setOnScreen(wrapper, false);
+    expect(dismiss).toHaveBeenCalledWith(shown);
+    FakeIntersectionObserver.setOnScreen(wrapper, true);
+    expect(show).toHaveBeenCalledTimes(2);
+    expect(show.mock.calls[1][0]).toBe(shown);
+  });
+
+  it('keeps the toast while focus stays in the editor even if it scrolls off screen', () => {
+    const { module, dismiss, wrapper } = setup();
+
+    wrapper.querySelector<HTMLElement>('[tabindex]')?.focus();
+    module.report(input('a'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    FakeIntersectionObserver.setOnScreen(wrapper, false);
+
+    expect(dismiss).not.toHaveBeenCalled();
+  });
+
+  it('does not count focus moving into the toast as leaving the editor', () => {
+    const { module, dismiss, wrapper } = setup();
+    const toast = document.createElement('div');
+    const button = document.createElement('button');
+
+    toast.setAttribute('data-blok-testid', 'notifier-container');
+    toast.append(button);
+    document.body.append(toast);
+    wrapper.querySelector<HTMLElement>('[tabindex]')?.focus();
+    module.report(input('a'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    FakeIntersectionObserver.setOnScreen(wrapper, false);
+    button.focus();
+
+    expect(dismiss).not.toHaveBeenCalled();
+  });
+
+  it('does not bring back a toast the user closed', () => {
+    const { module, show, isClosed, wrapper } = setup();
+
+    module.report(input('a'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    isClosed.mockReturnValue(true);
+    FakeIntersectionObserver.setOnScreen(wrapper, false);
+    FakeIntersectionObserver.setOnScreen(wrapper, true);
+
+    expect(show).toHaveBeenCalledTimes(1);
+  });
+
+  it('drops the held toast when the image recovers while the user is away', () => {
+    const { module, show, resolve, wrapper } = setup({}, false, false);
+
+    module.report(input('a'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    module.clear('a', { recovered: true });
+    FakeIntersectionObserver.setOnScreen(wrapper, true);
+
+    expect(show).not.toHaveBeenCalled();
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it('holds the save toast while the user is away too', () => {
+    const { module, show, wrapper } = setup({}, false, false);
+
+    module.report(input('a', 'upload'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    module.onSave();
+
+    expect(show).not.toHaveBeenCalled();
+    FakeIntersectionObserver.setOnScreen(wrapper, true);
+    expect(show).toHaveBeenCalledTimes(1);
+    expect(show.mock.calls[0][0].message).toBe('imageFailure.notSaved:1');
+  });
+
+  it('shows the toast at once where IntersectionObserver is missing', () => {
+    vi.stubGlobal('IntersectionObserver', undefined);
+    const { module, show } = setup({}, false, false);
+
+    module.report(input('a'));
+    vi.advanceTimersByTime(COALESCE_MS);
+
+    expect(show).toHaveBeenCalledTimes(1);
   });
 
   it('groups failures that arrive together into one toast', () => {

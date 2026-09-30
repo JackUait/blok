@@ -71,6 +71,14 @@ export class NotifierAPI extends Module {
   }
 
   /**
+   * @param options - the object passed to `show`
+   * @returns true once that toast has closed; always true with a custom notifier, which cannot be closed from here
+   */
+  public isClosed(options: NotifierOptions): boolean {
+    return this.customNotifier !== undefined || this.builtInNotifier.isClosed(this.sentCopies.get(options) ?? options);
+  }
+
+  /**
    * Show notification — delegates to custom handler if provided, else built-in
    * @param {NotifierOptions} options - message option
    */

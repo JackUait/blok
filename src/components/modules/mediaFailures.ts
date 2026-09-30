@@ -30,7 +30,12 @@ export class MediaFailures extends Module {
   private readonly entries = new Map<string, Entry>();
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private holdingLeave = false;
+  /**
+   * The toast the user should see. It is on screen only while they are in this editor.
+   */
   private shownToast: NotifierOptions | null = null;
+  private toastOnScreen = false;
+  private presence: { wrapper: HTMLElement; observer: IntersectionObserver | null; onScreen: boolean; focused: boolean } | null = null;
   private recoveredSinceToast = 0;
   private leave: { promise: Promise<boolean>; settle(answer: boolean): void; banner: LeaveBanner } | null = null;
 
@@ -65,6 +70,7 @@ export class MediaFailures extends Module {
       return;
     }
     this.entries.set(input.blockId, { ...input, reported: new Set() });
+    this.watchPresence();
     this.syncLeaveHold();
     this.flushTimer ??= setTimeout(() => this.flushFail(), COALESCE_MS);
   }
@@ -161,6 +167,7 @@ export class MediaFailures extends Module {
     }
     this.entries.clear();
     this.syncLeaveHold();
+    this.stopWatchingPresence();
   }
 
   private settleLeave(answer: boolean): void {
@@ -231,6 +238,10 @@ export class MediaFailures extends Module {
       return;
     }
     this.shownToast = null;
+    if (!this.toastOnScreen) {
+      return;
+    }
+    this.toastOnScreen = false;
     if (!recovered) {
       this.Blok.NotifierAPI.dismiss(toast);
 
@@ -260,7 +271,6 @@ export class MediaFailures extends Module {
     if (this.askHost(reason) === false) {
       return;
     }
-    // A host notifier may throw; onSave runs inside the save chain and must not reject it.
     const options: NotifierOptions = {
       message,
       style: 'error',
@@ -272,14 +282,103 @@ export class MediaFailures extends Module {
       ],
     };
 
+    this.shownToast = options;
+    this.toastOnScreen = false;
+    this.recoveredSinceToast = 0;
+    this.syncToast();
+  }
+
+  /**
+   * Put the toast up while the user is in this editor, take it down when they leave.
+   * A toast the user closed stays closed.
+   */
+  private syncToast(): void {
+    const toast = this.shownToast;
+
+    if (toast === null || this.isDestroyed) {
+      return;
+    }
+    const present = this.presence === null || this.presence.onScreen || this.presence.focused;
+
+    if (present === this.toastOnScreen) {
+      return;
+    }
+    if (!present) {
+      this.toastOnScreen = false;
+      if (this.Blok.NotifierAPI.isClosed(toast)) {
+        this.shownToast = null;
+
+        return;
+      }
+      this.Blok.NotifierAPI.dismiss(toast);
+
+      return;
+    }
+    // A host notifier may throw; onSave runs inside the save chain and must not reject it.
     try {
-      this.Blok.NotifierAPI.show(options);
-      this.shownToast = options;
-      this.recoveredSinceToast = 0;
+      this.Blok.NotifierAPI.show(toast);
+      this.toastOnScreen = true;
     } catch (thrown: unknown) {
+      this.shownToast = null;
       log('The notifier threw while showing an image failure notice.', 'warn', thrown);
     }
   }
+
+  /**
+   * "In this editor" means it is on screen or holds focus. Without IntersectionObserver
+   * the editor counts as on screen, so the toast still shows.
+   */
+  private watchPresence(): void {
+    const wrapper = this.presence === null && 'UI' in this.Blok ? this.Blok.UI.nodes.wrapper : undefined;
+
+    if (wrapper === undefined || typeof IntersectionObserver === 'undefined') {
+      return;
+    }
+    const presence = { wrapper, observer: null as IntersectionObserver | null, onScreen: false, focused: wrapper.contains(document.activeElement) };
+
+    this.presence = presence;
+    wrapper.addEventListener('focusin', this.onFocusIn);
+    wrapper.addEventListener('focusout', this.onFocusOut);
+    presence.observer = new IntersectionObserver((entries) => {
+      presence.onScreen = entries[entries.length - 1].isIntersecting;
+      this.syncToast();
+    });
+    presence.observer.observe(wrapper);
+  }
+
+  private stopWatchingPresence(): void {
+    const presence = this.presence;
+
+    if (presence === null) {
+      return;
+    }
+    this.presence = null;
+    presence.observer?.disconnect();
+    presence.wrapper.removeEventListener('focusin', this.onFocusIn);
+    presence.wrapper.removeEventListener('focusout', this.onFocusOut);
+  }
+
+  private readonly onFocusIn = (): void => {
+    if (this.presence !== null) {
+      this.presence.focused = true;
+      this.syncToast();
+    }
+  };
+
+  /**
+   * Focus that moves onto the toast itself (Retry, Show) still counts as in the editor.
+   * @param event - the focus change
+   */
+  private readonly onFocusOut = (event: FocusEvent): void => {
+    const next = event.relatedTarget instanceof Element ? event.relatedTarget : null;
+    const presence = this.presence;
+    const stays = next !== null && (presence?.wrapper.contains(next) === true || next.closest('[data-blok-testid="notifier-container"]') !== null);
+
+    if (presence !== null && !stays) {
+      presence.focused = false;
+      this.syncToast();
+    }
+  };
 
   /**
    * @param reason - why the host is asked

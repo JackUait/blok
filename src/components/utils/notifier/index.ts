@@ -341,6 +341,16 @@ export const dismiss = (options: NotifierOptions): void => {
 };
 
 /**
+ * @param options - the object passed to `show`
+ * @returns true once that toast was drawn and has closed; false while it is still mounting
+ */
+export const isClosed = (options: NotifierOptions): boolean => {
+  const notify = toastsByOptions.get(options);
+
+  return notify !== undefined && (!notify.isConnected || notify.getAttribute('data-state') !== 'open');
+};
+
+/**
  * How long a resolved card stays before it closes itself.
  */
 export const RESOLVED_HOLD_MS = 1600;
@@ -364,4 +374,5 @@ export const Notifier = {
   show,
   dismiss,
   resolve,
+  isClosed,
 };

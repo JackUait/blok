@@ -8,6 +8,7 @@ type NotifierModule = {
   show: (options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions, position?: NotifierPosition) => void;
   dismiss: (options: NotifierOptions) => void;
   resolve: (options: NotifierOptions, message: string) => void;
+  isClosed: (options: NotifierOptions) => boolean;
 };
 
 /**
@@ -109,6 +110,14 @@ export class Notifier {
       .catch((error) => {
         console.error('[Blok] Failed to update notification. Reason:', error);
       });
+  }
+
+  /**
+   * @param options - the object passed to `show`
+   * @returns true once that toast was drawn and has closed
+   */
+  public isClosed(options: NotifierOptions): boolean {
+    return this.notifierModule?.isClosed(options) ?? false;
   }
 
   /**

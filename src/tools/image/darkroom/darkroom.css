@@ -23,6 +23,17 @@
 }
 
 /*
+  Chips sit on dark glass in every host theme, so the light theme's black ink would vanish.
+  icon-active-text is re-declared here because a var() in a custom property resolves
+  where it is declared: the top-layer palette's copy is already black by the time it inherits.
+*/
+.blok-darkroom__pill {
+  --blok-icon-active-bg: rgba(255, 255, 255, 0.14);
+  --blok-text-primary: var(--blok-darkroom-ink);
+  --blok-icon-active-text: var(--blok-text-primary);
+}
+
+/*
   Always dark, in every theme: a neutral black lets colours read true.
   The double selector outranks the top-layer reset in main.css (0,2,0).
 */

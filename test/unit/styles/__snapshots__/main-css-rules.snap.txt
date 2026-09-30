@@ -188,6 +188,12 @@
   --blok-darkroom-pill-gap: 2px;
 }
 
+.blok-darkroom__pill {
+  --blok-icon-active-bg: rgba(255, 255, 255, 0.14);
+  --blok-text-primary: var(--blok-darkroom-ink);
+  --blok-icon-active-text: var(--blok-text-primary);
+}
+
 .blok-darkroom, .blok-darkroom[data-blok-top-layer][popover] {
   position: fixed;
   inset: 0;

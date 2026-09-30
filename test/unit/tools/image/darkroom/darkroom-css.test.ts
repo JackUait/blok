@@ -30,6 +30,18 @@ describe('darkroom.css', () => {
     expect(selected).not.toMatch(BLUE);
   });
 
+  it('the selected chip reads light-on-dark whatever the host theme', () => {
+    const chipScope = rule('.blok-darkroom__pill');
+    const bg = /--blok-icon-active-bg:\s*([^;]+);/.exec(chipScope)?.[1] ?? '';
+
+    expect(bg).toMatch(/^rgba\(255, 255, 255, 0?\.\d+\)$/);
+    // Ink must be re-declared under the dark scope, or it keeps the host's black.
+    expect(chipScope).toMatch(/--blok-text-primary:\s*var\(--blok-darkroom-ink\);/);
+    expect(chipScope).toMatch(/--blok-icon-active-text:\s*var\(--blok-text-primary\);/);
+    expect(rule('.blok-darkroom')).toMatch(/--blok-darkroom-ink:\s*#fff;/);
+    expect(chipScope).not.toMatch(BLUE);
+  });
+
   it('Done is white on black, not blue', () => {
     const done = rule('.blok-darkroom__btn--primary');
 

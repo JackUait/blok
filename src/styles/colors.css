@@ -328,11 +328,6 @@
   /* Border widths + radii — shared structural tokens. */
   --blok-border-width-hairline: 1px;
   --blok-border-width-2: 2px;
-  --blok-radius-xs: 0.25rem;
-  --blok-radius-sm: 3px;
-  --blok-radius-md: 6px;
-  --blok-radius-lg: 12px;
-  --blok-radius-xl: 16px;
   --blok-radius-pill: var(--blok-radius-full);
 
   /* Radius scale. Names are px at a 16px root; values are rem so they follow
@@ -391,10 +386,6 @@
   --blok-space-5: 20px;
   --blok-space-6: 24px;
   --blok-space-10: 40px;
-
-  /* Micro radii for the crop-editor handle notches. */
-  --blok-radius-hairline: 1.5px;
-  --blok-radius-none: 0;
 
   /* Icon sizing (non-scale, role-based). */
   --blok-size-icon-sm: 18px;
@@ -493,9 +484,6 @@
 
   /* Crop-modal button shadow. */
   --blok-crop-modal-btn-shadow: rgba(0, 0, 0, 0.3);
-
-  /* Image error-state radius (slightly larger than --blok-radius-md). */
-  --blok-radius-md-plus: 8px;
 
   /* Video player custom controls — Notion-style minimal palette: white glyphs
      on a subtle dark scrim, neutral progress fill, no coral. */

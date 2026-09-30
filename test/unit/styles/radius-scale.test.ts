@@ -69,6 +69,12 @@ describe('radius primitives', () => {
   });
 });
 
+describe('removed radius names', () => {
+  it.each(['xs', 'sm', 'md', 'lg', 'xl', 'md-plus', 'hairline', 'none'])('--blok-radius-%s is gone', (name) => {
+    expect(declared(colors, `--blok-radius-${name}`)).toBeNull();
+  });
+});
+
 describe('radius roles', () => {
   it('every role points at a primitive, never a literal', () => {
     for (const [role, step] of Object.entries(ROLES)) {

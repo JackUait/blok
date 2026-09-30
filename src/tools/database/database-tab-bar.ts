@@ -550,6 +550,8 @@ export class DatabaseTabBar {
         this.ghostEl.style.pointerEvents = 'none';
         this.ghostEl.style.zIndex = '50';
         this.ghostEl.style.opacity = '0.7';
+        // Body-mounted, so Blok's radius tokens do not resolve here: copy the used value.
+        this.ghostEl.style.borderRadius = getComputedStyle(sourceTab).borderRadius;
         const rect = sourceTab.getBoundingClientRect();
         this.ghostEl.style.top = `${rect.top}px`;
         this.ghostEl.style.width = `${rect.width}px`;

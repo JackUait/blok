@@ -62,7 +62,7 @@ export interface TableRowColControlsOptions {
 export const GRIP_CAPSULE_CLASSES = [
   'absolute',
   'z-3',
-  'rounded-sm',
+  'rounded-(--blok-radius-control-sm)',
   'cursor-grab',
   'select-none',
   'transition-[opacity,background-color,width,height]',

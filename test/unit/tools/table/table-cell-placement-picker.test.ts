@@ -205,9 +205,24 @@ describe('createCellPlacementPicker', () => {
       const track = element.querySelector('[role="radiogroup"]');
 
       expect(preview.parentElement).toBe(track?.parentElement);
-      expect(preview.classList.contains('rounded-[10px]')).toBe(true);
-      expect(track?.classList.contains('rounded-[10px]')).toBe(true);
+      expect(preview.classList.contains('rounded-(--blok-radius-control-lg)')).toBe(true);
+      expect(track?.classList.contains('rounded-(--blok-radius-control-lg)')).toBe(true);
       expect(Array.from(preview.classList).filter(name => /^border|border-/.test(name))).toEqual([]);
+    });
+
+    it('rounds the thumb and options concentric with the track they sit in', () => {
+      const element = render(undefined);
+      const track = element.querySelector('[role="radiogroup"]');
+      const thumb = element.querySelector('[data-blok-placement-thumb]');
+      const options = Array.from(element.querySelectorAll('[role="radio"]'));
+
+      expect(track?.classList.contains('p-(--blok-space-0-75)')).toBe(true);
+      expect(track?.classList.contains(
+        '[--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-control-lg)-var(--blok-space-0-75)))]'
+      )).toBe(true);
+      expect(thumb?.classList.contains('rounded-(--blok-radius-inner)')).toBe(true);
+      expect(options.length).toBe(9);
+      expect(options.every(option => option.classList.contains('rounded-(--blok-radius-inner)'))).toBe(true);
     });
 
     it.each([

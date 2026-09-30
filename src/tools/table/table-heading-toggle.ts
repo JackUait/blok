@@ -13,7 +13,7 @@ const TOGGLE_ROW_CLASSES = [
   'select-none',
   'border-none',
   'bg-transparent',
-  'rounded-md',
+  'rounded-(--blok-radius-control)',
   'p-(--item-padding)',
   'text-text-primary',
   'mb-px',

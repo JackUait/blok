@@ -1260,6 +1260,24 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
       expect(tabOf(el, 'v1').style.opacity).toBe('0.4');
     });
 
+    it('keeps the radius of the tab it came from', () => {
+      const sheet = document.createElement('style');
+
+      sheet.textContent = '[data-blok-database-tab] { border-radius: 7px; }';
+      document.head.appendChild(sheet);
+
+      try {
+        const { el } = mount(threeViews(), 'v1');
+
+        dragFrom(el, 'v1', 50);
+        document.dispatchEvent(pointer('pointermove', 200));
+
+        expect(ghost()?.style.borderRadius).toBe('7px');
+      } finally {
+        sheet.remove();
+      }
+    });
+
     it('tracks the pointer while the drag continues', () => {
       const { el } = mount(threeViews(), 'v1');
 

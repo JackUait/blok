@@ -174,7 +174,6 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     header.style.display = 'flex';
     header.style.alignItems = 'center';
     header.style.padding = '0 0 6px 0';
-    header.style.borderRadius = '4px';
     header.style.gap = '6px';
     header.style.cursor = 'grab';
 
@@ -274,7 +273,6 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     cardEl.setAttribute('data-row-id', row.id);
     cardEl.setAttribute('role', 'listitem');
     cardEl.style.padding = '10px 12px';
-    cardEl.style.borderRadius = '10px';
     cardEl.style.cursor = 'pointer';
     cardEl.style.position = 'relative';
     cardEl.style.backgroundColor = 'var(--blok-database-card-bg)';

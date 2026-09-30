@@ -393,7 +393,6 @@ describe('database column drag — strict mutants', () => {
       expect(g?.style.opacity).toBe('0.85');
       expect(g?.style.zIndex).toBe('50');
       expect(g?.style.boxShadow).toBe('0 12px 28px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.1)');
-      expect(g?.style.borderRadius).toBe('10px');
       expect(g?.style.overflow).toBe('hidden');
       expect(g?.style.transform).toBe('rotate(1deg) scale(1.02)');
       expect(g?.style.transformOrigin).toBe('center center');
@@ -406,6 +405,25 @@ describe('database column drag — strict mutants', () => {
       expect(clone instanceof HTMLElement ? clone.style.opacity : null).toBe('');
 
       board.drag.cleanup();
+    });
+
+    it('keeps the radius the column has on the board', () => {
+      const sheet = document.createElement('style');
+
+      sheet.textContent = '[data-blok-database-column] { border-radius: 9px; }';
+      document.head.appendChild(sheet);
+
+      try {
+        const board = buildBoard(['a', 'b', 'c']);
+
+        startDrag(board);
+
+        expect(ghost()?.style.borderRadius).toBe('9px');
+
+        board.drag.cleanup();
+      } finally {
+        sheet.remove();
+      }
     });
 
     it('keeps the grab offset of a column that does not start at the viewport edge', () => {

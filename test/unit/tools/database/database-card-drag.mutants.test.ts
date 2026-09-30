@@ -295,10 +295,24 @@ describe('database card drag mutants', () => {
       expect(el?.style.pointerEvents).toBe('none');
       expect(el?.style.opacity).toBe('0.85');
       expect(el?.style.zIndex).toBe('50');
-      expect(el?.style.borderRadius).toBe('8px');
       expect(el?.style.overflow).toBe('hidden');
       expect(el?.style.transform).toBe('rotate(2deg) scale(1.02)');
       expect(el?.style.transformOrigin).toBe('center center');
+    });
+
+    it('keeps the radius the card has in its column', () => {
+      const sheet = document.createElement('style');
+
+      sheet.textContent = '[data-blok-database-card] { border-radius: 7px; }';
+      document.head.appendChild(sheet);
+
+      try {
+        startDrag(buildBoard(TWO_COLUMNS));
+
+        expect(ghost()?.style.borderRadius).toBe('7px');
+      } finally {
+        sheet.remove();
+      }
     });
 
     it('marks the wrapper with an empty dragging attribute', () => {

@@ -2374,7 +2374,7 @@ describe('TableCellSelection — mutation gaps', () => {
       expect(overlay?.style.position).toBe('absolute');
       expect(overlay?.style.pointerEvents).toBe('none');
       expect(overlay?.style.boxSizing).toBe('border-box');
-      expect(overlay?.style.borderRadius).toBe('2px');
+      expect(overlay?.style.borderRadius).toBe('var(--blok-radius-mark)');
       expect(overlay?.style.border).toBe('2px solid rgb(59, 130, 246)');
       expect(pill?.getAttribute('data-blok-table-cell-menu')).toBe('');
       expect(pill?.getAttribute('contenteditable')).toBe('false');

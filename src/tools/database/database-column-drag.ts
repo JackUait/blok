@@ -149,7 +149,6 @@ export class DatabaseColumnDrag {
     style.opacity = '0.85';
     style.zIndex = '50';
     style.boxShadow = '0 12px 28px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.1)';
-    style.borderRadius = '10px';
     style.overflow = 'hidden';
     style.transform = 'rotate(1deg) scale(1.02)';
     style.transformOrigin = 'center center';
@@ -159,6 +158,9 @@ export class DatabaseColumnDrag {
 
       clone.style.opacity = '';
       ghost.appendChild(clone);
+
+      // Body-mounted, so Blok's radius tokens do not resolve here: copy the used value.
+      style.borderRadius = getComputedStyle(this.sourceColumn).borderRadius;
 
       const rect = this.sourceColumn.getBoundingClientRect();
 

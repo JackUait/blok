@@ -147,7 +147,6 @@ export class DatabaseListRowDrag {
     style.opacity = '0.85';
     style.zIndex = '50';
     style.boxShadow = '0 12px 28px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.1)';
-    style.borderRadius = '8px';
     style.overflow = 'hidden';
 
     if (this.sourceRow) {
@@ -155,6 +154,9 @@ export class DatabaseListRowDrag {
 
       clone.style.opacity = '';
       ghost.appendChild(clone);
+
+      // Body-mounted, so Blok's radius tokens do not resolve here: copy the used value.
+      style.borderRadius = getComputedStyle(this.sourceRow).borderRadius;
 
       const rect = this.sourceRow.getBoundingClientRect();
 

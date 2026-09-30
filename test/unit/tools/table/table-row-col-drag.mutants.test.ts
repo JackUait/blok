@@ -579,7 +579,7 @@ describe('TableRowColDrag mutation coverage', () => {
 
       expect(indicator.style.position).toBe('absolute');
       expect(indicator.style.backgroundColor).toBe('rgb(59, 130, 246)');
-      expect(indicator.style.borderRadius).toBe('1.5px');
+      expect(indicator.style.borderRadius).toBe('var(--blok-radius-pill)');
       expect(indicator.style.zIndex).toBe('5');
       expect(indicator.style.pointerEvents).toBe('none');
       expect(indicator.getAttribute('contenteditable')).toBe('false');
@@ -672,7 +672,7 @@ describe('TableRowColDrag mutation coverage', () => {
       expect(ghost.style.pointerEvents).toBe('none');
       expect(ghost.style.opacity).toBe('0.5');
       expect(ghost.style.zIndex).toBe('50');
-      expect(ghost.style.borderRadius).toBe('4px');
+      expect(ghost.style.borderRadius).toBe('var(--blok-radius-control-sm)');
       expect(ghost.style.overflow).toBe('hidden');
     });
 

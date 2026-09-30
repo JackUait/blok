@@ -93,7 +93,7 @@ const PREVIEW_CLASSES = [
   'relative',
   'h-[84px]',
   'mb-1.5',
-  'rounded-[10px]',
+  'rounded-(--blok-radius-control-lg)',
   'bg-item-hover-bg',
   'overflow-hidden',
 ];
@@ -119,8 +119,10 @@ const GROUP_CLASSES = [
   'relative',
   'grid',
   'grid-cols-3',
-  'p-[3px]',
-  'rounded-[10px]',
+  'p-(--blok-space-0-75)',
+  'rounded-(--blok-radius-control-lg)',
+  // The thumb and options round to this, so they stay concentric with the track.
+  '[--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-control-lg)-var(--blok-space-0-75)))]',
   'shadow-[inset_0_0_0_1px_var(--blok-border-secondary)]',
 ];
 
@@ -134,7 +136,7 @@ const THUMB_CLASSES = [
   'left-[3px]',
   'w-[calc((100%-6px)/3)]',
   'h-[calc((100%-6px)/3)]',
-  'rounded-[7px]',
+  'rounded-(--blok-radius-inner)',
   'bg-icon-active-bg',
   'pointer-events-none',
   ...MOTION,
@@ -146,7 +148,7 @@ const OPTION_CLASSES = [
   'items-center',
   'justify-center',
   'h-8',
-  'rounded-[7px]',
+  'rounded-(--blok-radius-inner)',
   'border-none',
   'bg-transparent',
   'text-text-primary',
@@ -173,7 +175,7 @@ const GLYPH_CLASSES = [
   'w-5',
   'h-4',
   'p-[2px]',
-  'rounded-[3px]',
+  'rounded-(--blok-radius-control-sm)',
   'border',
   '[border-color:color-mix(in_srgb,currentColor_30%,transparent)]',
   'pointer-events-none',

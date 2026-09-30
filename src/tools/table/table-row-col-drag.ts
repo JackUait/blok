@@ -347,7 +347,7 @@ export class TableRowColDrag {
 
     style.position = 'absolute';
     style.backgroundColor = '#3b82f6';
-    style.borderRadius = '1.5px';
+    style.borderRadius = 'var(--blok-radius-pill)';
     style.zIndex = '5';
     style.pointerEvents = 'none';
     this.dropIndicator.setAttribute('contenteditable', 'false');
@@ -467,7 +467,7 @@ export class TableRowColDrag {
     style.pointerEvents = 'none';
     style.opacity = '0.5';
     style.zIndex = '50';
-    style.borderRadius = '4px';
+    style.borderRadius = 'var(--blok-radius-control-sm)';
     style.overflow = 'hidden';
     style.boxShadow = this.isDarkMode()
       ? '0 8px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08)'

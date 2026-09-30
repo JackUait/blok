@@ -35,7 +35,7 @@
 }
 [data-blok-database-board]::-webkit-scrollbar-thumb {
   background: transparent;
-  border-radius: var(--blok-space-1);
+  border-radius: var(--blok-radius-control-sm);
 }
 [data-blok-database-board]:hover::-webkit-scrollbar-thumb {
   background: color-mix(in srgb, currentColor 15%, transparent);
@@ -49,8 +49,9 @@
  */
 [data-blok-database-column] {
   background-color: var(--blok-database-column-bg);
-  border-radius: var(--blok-space-2-5);
+  border-radius: var(--blok-radius-surface);
   padding: var(--blok-space-2);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-2)));
 }
 
 /**
@@ -58,6 +59,7 @@
  */
 [data-blok-database-column-header] {
   cursor: grab;
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control-sm));
 }
 
 /**
@@ -67,7 +69,7 @@
   background-color: var(--blok-database-card-bg);
   box-shadow: var(--blok-database-card-shadow);
   border: 1px solid var(--blok-database-card-border);
-  border-radius: var(--blok-space-2);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-surface));
   transition: background-color 150ms ease, box-shadow 150ms ease, border-color 150ms ease, outline-color 150ms ease;
 }
 
@@ -134,8 +136,9 @@
   pointer-events: none;
   transition: opacity 120ms ease;
   background: var(--blok-database-card-actions-bg);
-  border-radius: var(--blok-space-2);
+  border-radius: var(--blok-radius-control-lg);
   padding: var(--blok-space-0-5);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-control-lg) - var(--blok-space-0-5)));
 }
 
 [data-blok-database-card]:hover [data-blok-database-card-actions],
@@ -153,7 +156,7 @@
   color: var(--blok-database-card-actions-icon);
   width: 28px;
   height: 28px;
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -196,7 +199,6 @@
   color: var(--blok-database-add-text);
   font-size: 14px;
   padding: var(--blok-space-1-5) var(--blok-space-2);
-  border-radius: var(--blok-space-2);
   text-align: left;
   width: 100%;
   display: flex;
@@ -230,7 +232,7 @@
   align-self: flex-start;
   flex-shrink: 0;
   padding: var(--blok-space-2-5) var(--blok-space-3);
-  border-radius: var(--blok-space-2);
+  border-radius: var(--blok-radius-control-lg);
 }
 
 /**
@@ -245,7 +247,7 @@
   font-size: 14px;
   line-height: 1;
   padding: var(--blok-space-0-5) var(--blok-space-1);
-  border-radius: var(--blok-radius-sm);
+  border-radius: var(--blok-radius-control-sm);
   flex-shrink: 0;
   transition: opacity 120ms ease, color 120ms ease;
 }
@@ -268,7 +270,7 @@
   align-items: center;
   gap: var(--blok-space-1-25);
   padding: var(--blok-space-0-5) var(--blok-space-1-75) var(--blok-space-0-5) var(--blok-space-1-25);
-  border-radius: var(--blok-space-5);
+  border-radius: var(--blok-radius-pill);
   flex: 0 0 auto;
   min-width: 0;
   width: fit-content;
@@ -376,7 +378,7 @@
   border: none;
   cursor: pointer;
   padding: var(--blok-space-1);
-  border-radius: var(--blok-space-1);
+  border-radius: var(--blok-radius-control-sm);
   color: var(--blok-database-add-text);
   gap: calc(-1 * var(--blok-space-1));
 }
@@ -416,7 +418,7 @@
 /* Thumb hidden at rest (system auto-hide behavior), revealed on hover. */
 [data-blok-database-drawer-content]::-webkit-scrollbar-thumb {
   background: transparent;
-  border-radius: var(--blok-space-1);
+  border-radius: var(--blok-radius-control-sm);
 }
 [data-blok-database-drawer-content]:hover::-webkit-scrollbar-thumb {
   background: color-mix(in srgb, currentColor 15%, transparent);
@@ -481,30 +483,6 @@
 }
 
 /**
- * Drawer status pill badge — colored chip.
- */
-[data-blok-database-drawer-status-pill] {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--blok-space-1-5);
-  padding: var(--blok-space-0-5) var(--blok-space-2);
-  border-radius: var(--blok-space-1);
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.4;
-}
-
-/**
- * Drawer status dot — small circle inside pill.
- */
-[data-blok-database-drawer-status-dot] {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-/**
  * Drawer divider.
  */
 [data-blok-database-drawer] hr {
@@ -528,7 +506,7 @@
 [data-blok-database-add-card] {
   margin-top: var(--blok-space-1-5);
   padding: var(--blok-space-2-5) var(--blok-space-3);
-  border-radius: var(--blok-space-3);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-surface));
 }
 
 [data-blok-database-add-card-icon] {
@@ -620,7 +598,8 @@
   align-items: center;
   gap: var(--blok-space-1-5);
   padding: var(--blok-space-2) var(--blok-space-4);
-  border-radius: var(--blok-space-2-5);
+  border-radius: var(--blok-radius-control-lg);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-control-lg) - var(--blok-space-2)));
   cursor: grab;
   font-size: 14px;
   font-weight: 400;
@@ -657,7 +636,7 @@
   height: 32px;
   border: none;
   background: none;
-  border-radius: var(--blok-space-2);
+  border-radius: var(--blok-radius-control);
   cursor: pointer;
   color: var(--blok-database-tab-text);
   margin-left: var(--blok-space-0-5);
@@ -684,7 +663,7 @@
 
 [data-blok-database-tab-more] {
   padding: var(--blok-space-1) var(--blok-space-2-5);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-control);
   font-size: 13px;
   color: var(--blok-database-tab-text);
   cursor: pointer;
@@ -699,9 +678,10 @@
 /* Overflow dropdown */
 [data-blok-database-tab-overflow-dropdown] {
   background: var(--blok-database-popover-bg);
-  border-radius: var(--blok-space-2-5);
+  border-radius: var(--blok-radius-surface);
   box-shadow: var(--blok-database-popover-shadow);
-  padding: var(--blok-space-1-5);
+  padding: var(--blok-space-1);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1)));
 }
 
 /* View option items (rendered as Html items inside PopoverDesktop) */
@@ -720,7 +700,7 @@
   align-items: flex-start;
   gap: var(--blok-space-2-5);
   padding: var(--blok-space-1-75) var(--blok-space-2);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   cursor: pointer;
   transition: background-color 120ms ease;
 }
@@ -735,7 +715,7 @@
   justify-content: center;
   width: 30px;
   height: 30px;
-  border-radius: var(--blok-space-1-75);
+  border-radius: var(--blok-radius-control);
   background: var(--blok-database-popover-hover);
   color: var(--blok-database-tab-text-active);
   flex-shrink: 0;
@@ -772,7 +752,7 @@
   align-items: center;
   gap: var(--blok-space-2-5);
   padding: var(--blok-space-1-75) var(--blok-space-2-5);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   cursor: pointer;
   font-size: 14px;
   font-weight: 400;
@@ -792,7 +772,7 @@
   font-size: 14px;
   color: var(--blok-database-tab-text);
   cursor: pointer;
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   transition: background-color 120ms ease;
 }
 
@@ -809,7 +789,7 @@
 /* Tab rename input */
 [data-blok-database-tab-rename-input] {
   border: 1px solid var(--blok-database-drawer-border);
-  border-radius: var(--blok-space-1);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   padding: var(--blok-space-0-5) var(--blok-space-1-5);
   font-size: 14px;
   font-family: inherit;
@@ -822,7 +802,6 @@
 /* Tab ghost during drag */
 [data-blok-database-tab-ghost] {
   box-shadow: var(--blok-shadow-tab-ghost);
-  border-radius: var(--blok-radius-md);
   background: var(--blok-database-tab-bg-active);
 }
 
@@ -854,7 +833,7 @@
   align-items: center;
   gap: var(--blok-space-2);
   padding: var(--blok-space-1-25) var(--blok-space-2);
-  border-radius: var(--blok-space-1);
+  border-radius: var(--blok-radius-control);
   cursor: pointer;
   position: relative;
   font-size: 14px;
@@ -908,7 +887,7 @@
   font-weight: 500;
   line-height: 1;
   padding: var(--blok-space-0-5) var(--blok-space-1-75);
-  border-radius: var(--blok-space-1);
+  border-radius: var(--blok-radius-control-sm);
   white-space: nowrap;
   background: var(--blok-database-add-hover-bg);
   color: var(--blok-database-tab-text-active);
@@ -927,7 +906,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  border-radius: var(--blok-space-1);
+  border-radius: var(--blok-radius-control-sm);
   color: var(--blok-database-add-text);
   flex-shrink: 0;
   transition: opacity 80ms ease, background-color 80ms ease, color 80ms ease;
@@ -941,7 +920,7 @@
   border-right: 2px solid currentColor;
   border-top: 2px solid currentColor;
   transform: rotate(45deg);
-  border-radius: var(--blok-border-width-hairline);
+  border-radius: var(--blok-radius-notch);
   flex-shrink: 0;
 }
 
@@ -967,7 +946,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  border-radius: var(--blok-radius-sm);
+  border-radius: var(--blok-radius-control-sm);
   color: var(--blok-database-delete-text);
   font-size: 15px;
   line-height: 1;
@@ -997,7 +976,7 @@
   padding: var(--blok-space-1-5) var(--blok-space-2);
   background: none;
   border: none;
-  border-radius: var(--blok-space-2);
+  border-radius: var(--blok-radius-control);
   cursor: pointer;
   font-size: 13px;
   color: var(--blok-database-add-text);
@@ -1030,7 +1009,7 @@
   gap: var(--blok-space-1-5);
   padding: var(--blok-space-1-5) var(--blok-space-2) var(--blok-space-1);
   cursor: pointer;
-  border-radius: var(--blok-space-1);
+  border-radius: var(--blok-radius-control);
   user-select: none;
   transition: background-color 80ms ease;
 }
@@ -1110,7 +1089,7 @@
   margin-top: var(--blok-space-1);
   background: none;
   border: 1.5px dashed transparent;
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-control);
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
@@ -1141,9 +1120,10 @@
 [data-blok-database-property-type-popover] {
   min-width: 210px;
   background: var(--blok-database-popover-bg);
-  border-radius: var(--blok-space-2-5);
+  border-radius: var(--blok-radius-surface);
   box-shadow: var(--blok-database-popover-shadow);
-  padding: var(--blok-space-1-5);
+  padding: var(--blok-space-1);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1)));
   animation: blok-prop-popover-in 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
   transform-origin: top left;
 }
@@ -1169,7 +1149,7 @@
   align-items: center;
   gap: var(--blok-space-2-5);
   padding: var(--blok-space-1-5) var(--blok-space-2);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   cursor: pointer;
   font-size: 13.5px;
   color: var(--blok-database-tab-text-active);

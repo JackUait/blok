@@ -48,7 +48,7 @@ const createCellMenuDotsSvg = (): SVGElement => {
 const PILL_CLASSES = [
   'absolute',
   'z-3',
-  'rounded-sm',
+  'rounded-(--blok-radius-control-sm)',
   'select-none',
   'transition-[opacity,background-color,width]',
   'duration-150',
@@ -1234,7 +1234,7 @@ export class TableCellSelection {
       this.overlay.style.border = SELECTION_BORDER;
       this.overlay.style.pointerEvents = 'none';
       this.overlay.style.boxSizing = 'border-box';
-      this.overlay.style.borderRadius = '2px';
+      this.overlay.style.borderRadius = 'var(--blok-radius-mark)';
       this.grid.appendChild(this.overlay);
     }
 

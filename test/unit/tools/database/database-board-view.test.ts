@@ -563,7 +563,7 @@ describe('DatabaseBoardView', () => {
       expect(column.style.flex).toBe('0 0 260px');
     });
 
-    it('column header has flex layout with padding and border-radius', () => {
+    it('column header has flex layout with padding', () => {
       const options = [makeOption({ id: 'opt-1', position: 'a0' })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
       const board = view.createView();
@@ -573,7 +573,6 @@ describe('DatabaseBoardView', () => {
       expect(header.style.display).toBe('flex');
       expect(header.style.alignItems).toBe('center');
       expect(header.style.padding).toBeTruthy();
-      expect(header.style.borderRadius).toBeTruthy();
     });
 
     it('column header has no top padding', () => {
@@ -599,7 +598,7 @@ describe('DatabaseBoardView', () => {
       expect(container.style.gap).toBeTruthy();
     });
 
-    it('card element has padding, border-radius, and pointer cursor', () => {
+    it('card element has padding and pointer cursor', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1' })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
@@ -608,7 +607,6 @@ describe('DatabaseBoardView', () => {
       const card = board.querySelector('[data-blok-database-card]') as HTMLElement;
 
       expect(card.style.padding).toBeTruthy();
-      expect(card.style.borderRadius).toBeTruthy();
       expect(card.style.cursor).toBe('pointer');
     });
 
@@ -703,15 +701,17 @@ describe('DatabaseBoardView', () => {
       expect(card.style.padding).toBe('10px 12px');
     });
 
-    it('card element has border-radius of 10px to match Notion', () => {
+    it('leaves the card and column header radius to database.css', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1' })];
       const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
       const board = view.createView();
 
       const card = board.querySelector('[data-blok-database-card]') as HTMLElement;
+      const header = board.querySelector('[data-blok-database-column-header]') as HTMLElement;
 
-      expect(card.style.borderRadius).toBe('10px');
+      expect(card.style.borderRadius).toBe('');
+      expect(header.style.borderRadius).toBe('');
     });
 
     it('applies Notion-style card background via --blok-database-card-bg token', () => {

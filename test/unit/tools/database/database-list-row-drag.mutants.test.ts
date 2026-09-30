@@ -51,7 +51,7 @@ const ROW_LEFT = 24;
 const ROW_WIDTH = 376;
 
 /**
- * The seven unconditional declarations `createGhost` writes before it looks at
+ * The six unconditional declarations `createGhost` writes before it looks at
  * the source row. Asserted as a whole so a blanked literal (which cssstyle
  * drops from the declaration entirely) cannot hide.
  */
@@ -61,12 +61,11 @@ const GHOST_BASE_STYLE: Record<string, string> = {
   opacity: '0.85',
   'z-index': '50',
   'box-shadow': '0 12px 28px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.1)',
-  'border-radius': '8px',
   overflow: 'hidden',
 };
 
 /**
- * The same seven declarations in source order. cssText is asserted as well as
+ * The same six declarations in source order. cssText is asserted as well as
  * the map because a blanked `top` in `createGhost` is re-added by
  * `updateGhostPosition` with an identical value — only the position of `top`
  * within the declaration moves.
@@ -74,7 +73,7 @@ const GHOST_BASE_STYLE: Record<string, string> = {
 const GHOST_BASE_CSS =
   'position: fixed; pointer-events: none; opacity: 0.85; z-index: 50; ' +
   'box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.1); ' +
-  'border-radius: 8px; overflow: hidden;';
+  'overflow: hidden;';
 
 /**
  * jsdom performs no layout, so every rect is all-zeros unless it is stubbed.
@@ -531,6 +530,22 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
 
       expect(clone).not.toBeNull();
       expect(readStyle(clone ?? ghost)).toEqual({});
+    });
+
+    it('keeps the radius the row has in the list', () => {
+      const sheet = document.createElement('style');
+
+      sheet.textContent = '[data-blok-database-list-row] { border-radius: 5px; }';
+      document.head.appendChild(sheet);
+
+      try {
+        drag.beginTracking('row-2', 0, 100);
+        move(150);
+
+        expect(requireGhost().style.borderRadius).toBe('5px');
+      } finally {
+        sheet.remove();
+      }
     });
 
     it('anchors to the bare pointer when the row is not in the wrapper', () => {

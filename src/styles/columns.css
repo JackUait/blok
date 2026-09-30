@@ -71,7 +71,7 @@
   inset-block: 0.25rem;
   left: 50%;
   width: 3px;
-  border-radius: 9999px;
+  border-radius: var(--blok-radius-pill);
   /* Theme-aware so the handle stays visible on both light and dark surfaces. */
   background-color: var(--blok-border-strong);
   transform: translateX(-50%);

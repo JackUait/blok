@@ -157,7 +157,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     chip.setAttribute('role', 'radio');
     chip.setAttribute('data-ratio', r.key);
     chip.textContent = tr(opts.i18n, r.i18nKey);
-    chip.addEventListener('click', () => { setRatio(r); commit(); });
+    chip.addEventListener('click', () => { flushKeyCommit(); setRatio(r); commit(); });
     pill.appendChild(chip);
 
     return chip;
@@ -248,14 +248,14 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   const roving = rovingRadioGroup({
     radios: chips,
     getSelectedIndex: () => RATIOS.findIndex((r) => r.key === st.def.key),
-    onSelect: (i) => { setRatio(RATIOS[i]); commit(); },
+    onSelect: (i) => { flushKeyCommit(); setRatio(RATIOS[i]); commit(); },
   });
 
   syncChips();
 
   const dissolve = createDissolve([bar, pill], grid);
 
-  // A nudge commits after a short idle; undo and a new gesture must see it recorded first.
+  // A nudge commits after a short idle; undo, a gesture, a chip and Reset must see it recorded first.
   const flushKeyCommit = (): void => {
     if (st.keyIdle === 0) return;
     window.clearTimeout(st.keyIdle);
@@ -454,6 +454,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   doneBtn.addEventListener('click', apply);
   cancelBtn.addEventListener('click', cancel);
   resetBtn.addEventListener('click', () => {
+    flushKeyCommit();
     const r = pctRatio();
 
     st.rect = r === null ? { ...FULL_RECT } : applyRatio({ ...FULL_RECT }, r);

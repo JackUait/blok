@@ -617,6 +617,54 @@ describe('openDarkroom fix round 1', () => {
       expect(dialog().hasAttribute('data-peek')).toBe(false);
     });
 
+    describe('a nudge still waiting to commit', () => {
+      const shownX = (): number => {
+        const rest = painted();
+
+        return cameraToRect(rest.cam, NATURAL, rest.frame).x;
+      };
+      const nudgedThen = (act: () => void): { nudged: number; afterUndo: number } => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+        const { advance } = open({ initial: { x: 25, y: 25, w: 50, h: 50 } });
+
+        key(stageEl(), { key: 'ArrowLeft' });
+        advance(3000);
+        const nudged = shownX();
+
+        act();
+        advance(3000);
+        key(dialog(), { key: 'z', metaKey: true });
+        vi.advanceTimersByTime(1000);
+        advance(3000);
+
+        return { nudged, afterUndo: shownX() };
+      };
+
+      it('is its own undo step before a chip click', () => {
+        const { nudged, afterUndo } = nudgedThen(() => {
+          document.querySelector<HTMLButtonElement>('[data-ratio="1"]')?.click();
+        });
+
+        expect(afterUndo).toBeCloseTo(nudged, 2);
+        expect(document.querySelector('[data-ratio="free"]')?.getAttribute('aria-checked')).toBe('true');
+      });
+
+      it('is its own undo step before an arrow key in the chips', () => {
+        const { nudged, afterUndo } = nudgedThen(() => {
+          key(document.querySelector('[data-ratio="free"]'), { key: 'ArrowRight' });
+        });
+
+        expect(afterUndo).toBeCloseTo(nudged, 2);
+        expect(document.querySelector('[data-ratio="free"]')?.getAttribute('aria-checked')).toBe('true');
+      });
+
+      it('is its own undo step before Reset', () => {
+        const { nudged, afterUndo } = nudgedThen(() => button('reset').click());
+
+        expect(afterUndo).toBeCloseTo(nudged, 2);
+      });
+    });
+
     it('Cmd+Z works on a non-Latin keyboard layout', () => {
       const { advance } = open();
       const circle = document.querySelector<HTMLButtonElement>('[data-ratio="circle"]');

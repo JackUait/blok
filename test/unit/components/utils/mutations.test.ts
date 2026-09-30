@@ -33,6 +33,15 @@ describe('isMutationBelongsToElement', () => {
     expect(isMutationBelongsToElement(mutation, element)).toBe(false);
   });
 
+  it('ignores the Show spotlight, which is not an edit', () => {
+    const element = document.createElement('div');
+    const card = document.createElement('div');
+
+    element.appendChild(card);
+
+    expect(isMutationBelongsToElement(createMutation({ type: 'attributes', attributeName: 'data-blok-spotlight', target: card }), element)).toBe(false);
+  });
+
   it('ignores internal data-blok-toggle-open attribute updates', () => {
     const element = document.createElement('div');
     const mutation = createMutation({

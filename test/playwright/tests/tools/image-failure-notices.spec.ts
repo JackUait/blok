@@ -18,6 +18,7 @@ declare global {
     blokInstance?: Blok;
     Blok: new (...args: unknown[]) => Blok;
     BlokImage: unknown;
+    __imageFailureChanges?: number;
   }
 }
 
@@ -39,9 +40,13 @@ const createBlok = async (page: Page, data: OutputData, failUploads = false): Pr
     container.id = holder;
     document.body.appendChild(container);
 
+    window.__imageFailureChanges = 0;
     const blok = new window.Blok({
       holder,
       data: initialData,
+      onChange: () => {
+        window.__imageFailureChanges = (window.__imageFailureChanges ?? 0) + 1;
+      },
       tools: {
         image: {
           class: window.BlokImage,
@@ -81,8 +86,27 @@ test.describe('image failure notices', () => {
     await expect(toast).toContainText('Image failed to load');
     await expect(page.locator('[data-blok-id="img1"]')).not.toBeInViewport();
 
+    const changesBefore = await page.evaluate(() => window.__imageFailureChanges);
+
     await toast.getByRole('button', { name: 'Show' }).click();
-    await expect(page.locator('[data-blok-id="img1"]')).toBeInViewport();
+
+    const card = page.locator('[data-blok-id="img1"] [data-blok-spotlight-target]');
+
+    await expect(card).toHaveAttribute('data-blok-spotlight', 'true');
+    await expect(card).toBeInViewport({ ratio: 1 });
+    await expect(card.locator('[data-blok-spotlight-focus]')).toBeFocused();
+
+    const middle = await page.evaluate(() => {
+      const box = document.querySelector('[data-blok-id="img1"] [data-blok-spotlight-target]')?.getBoundingClientRect();
+
+      return box === undefined ? -1 : (box.top + box.height / 2) / window.innerHeight;
+    });
+
+    expect(middle).toBeGreaterThan(0.35);
+    expect(middle).toBeLessThan(0.65);
+    // Pointing at the image is not an edit: no onChange, so no autosave.
+    await expect(card).not.toHaveAttribute('data-blok-spotlight');
+    expect(await page.evaluate(() => window.__imageFailureChanges)).toBe(changesBefore);
 
     served.ok = true;
     await toast.getByRole('button', { name: 'Retry' }).click();

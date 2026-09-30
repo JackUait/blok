@@ -313,6 +313,20 @@
   100% { transform: translateX(0) }
 }
 
+@keyframes blok-spotlight-bloom {
+  0% { box-shadow: 0 8px 28px -6px var(--blok-spotlight-bloom-off) }
+  25% { box-shadow: 0 10px 34px -4px var(--blok-spotlight-bloom) }
+  70% { box-shadow: 0 10px 34px -4px var(--blok-spotlight-bloom) }
+  100% { box-shadow: 0 8px 28px -6px var(--blok-spotlight-bloom-off) }
+}
+
+@keyframes blok-spotlight-trace {
+  0% { --blok-spotlight-angle: -90deg; opacity: 0 }
+  10% { opacity: 1 }
+  66% { --blok-spotlight-angle: 270deg; opacity: 1 }
+  100% { --blok-spotlight-angle: 300deg; opacity: 0 }
+}
+
 @keyframes blok-toast-check-in {
   0% { opacity: 0; scale: 0.5 }
   100% { opacity: 1; scale: 1 }

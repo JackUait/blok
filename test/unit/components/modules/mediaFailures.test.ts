@@ -1,4 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('../../../../src/components/utils/reveal-block', () => ({ revealBlock: vi.fn() }));
+vi.mock('../../../../src/components/utils/announcer', () => ({ announce: vi.fn() }));
+
+import { revealBlock } from '../../../../src/components/utils/reveal-block';
+import { announce } from '../../../../src/components/utils/announcer';
 import { MediaFailures, COALESCE_MS } from '../../../../src/components/modules/mediaFailures';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 import { BlockChanged } from '../../../../src/components/events';
@@ -16,25 +22,32 @@ const setup = (config: Partial<BlokConfig> = {}, readOnly = false): {
   show: ReturnType<typeof vi.fn<(o: NotifierOptions) => void>>;
   dismiss: ReturnType<typeof vi.fn<(o: NotifierOptions) => void>>;
   resolve: ReturnType<typeof vi.fn<(o: NotifierOptions, message: string) => void>>;
-  scrollToBlock: ReturnType<typeof vi.fn<(id: string) => void>>;
+  blockOf: (id: string) => { holder: HTMLElement; pluginsContent: HTMLElement };
 } => {
   const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const show = vi.fn<(o: NotifierOptions) => void>();
   const dismiss = vi.fn<(o: NotifierOptions) => void>();
   const resolve = vi.fn<(o: NotifierOptions, message: string) => void>();
-  const scrollToBlock = vi.fn<(id: string) => void>();
+  const blocks = new Map<string, { holder: HTMLElement; pluginsContent: HTMLElement }>();
+  const blockOf = (id: string): { holder: HTMLElement; pluginsContent: HTMLElement } => {
+    const known = blocks.get(id) ?? { holder: document.createElement('div'), pluginsContent: document.createElement('div') };
+
+    blocks.set(id, known);
+
+    return known;
+  };
   const module = new MediaFailures({ config, eventsDispatcher });
 
   created.push(module);
 
   module.state = {
     NotifierAPI: { show, dismiss, resolve },
-    BlocksAPI: { scrollToBlock },
+    BlockManager: { getBlockById: (id: string) => blockOf(id) },
     ReadOnly: { isEnabled: readOnly },
     I18n: { t: (key: string, vars?: Record<string, string | number>) => (vars ? `${key}:${String(vars.count)}` : key) },
   } as unknown as BlokModules;
 
-  return { module, eventsDispatcher, show, dismiss, resolve, scrollToBlock };
+  return { module, eventsDispatcher, show, dismiss, resolve, blockOf };
 };
 
 const input = (blockId: string, kind: 'upload' | 'load' = 'load', retry = vi.fn()): { blockId: string; tool: string; kind: 'upload' | 'load'; url: string; retry: () => void } =>
@@ -88,7 +101,7 @@ describe('MediaFailures', () => {
   });
 
   it('Retry retries every failure and Show scrolls to the first', () => {
-    const { module, show, scrollToBlock } = setup();
+    const { module, show, blockOf } = setup();
     const retryA = vi.fn();
     const retryB = vi.fn();
 
@@ -102,7 +115,8 @@ describe('MediaFailures', () => {
 
     expect(retryA).toHaveBeenCalledTimes(1);
     expect(retryB).toHaveBeenCalledTimes(1);
-    expect(scrollToBlock).toHaveBeenCalledWith('a');
+    expect(revealBlock).toHaveBeenCalledWith(blockOf('a').holder, blockOf('a').pluginsContent);
+    expect(announce).toHaveBeenCalledWith('a11y.navigatedToBlock');
   });
 
   it('does not toast a failure cleared before the window ends', () => {
@@ -191,13 +205,13 @@ describe('MediaFailures', () => {
 
   it('hands the host a scrollTo that reaches the block', () => {
     const onImageFailure = vi.fn(() => false);
-    const { module, scrollToBlock } = setup({ onImageFailure });
+    const { module, blockOf } = setup({ onImageFailure });
 
     module.report(input('a'));
     vi.advanceTimersByTime(COALESCE_MS);
     module.list()[0].scrollTo();
 
-    expect(scrollToBlock).toHaveBeenCalledWith('a');
+    expect(revealBlock).toHaveBeenCalledWith(blockOf('a').holder, blockOf('a').pluginsContent);
   });
 
   it('still shows its toast when onImageFailure throws', () => {
@@ -412,7 +426,7 @@ describe('MediaFailures.confirmLeave', () => {
   });
 
   it('Show scrolls to the first failure', async () => {
-    const { module, scrollToBlock } = setup();
+    const { module, blockOf } = setup();
 
     module.report(input('a'));
     const answer = module.confirmLeave();
@@ -420,7 +434,7 @@ describe('MediaFailures.confirmLeave', () => {
     click('leave-banner-show');
     await answer;
 
-    expect(scrollToBlock).toHaveBeenCalledWith('a');
+    expect(revealBlock).toHaveBeenCalledWith(blockOf('a').holder, blockOf('a').pluginsContent);
   });
 
   it('Retry keeps the banner and resolves true once everything recovers', async () => {

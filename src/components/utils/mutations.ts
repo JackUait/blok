@@ -33,9 +33,14 @@ export const isMutationBelongsToElement = (mutationRecord: MutationRecord, eleme
   const { type, target, addedNodes, removedNodes } = mutationRecord;
 
   /**
-   * Skip own technical mutations, for example, data-blok-empty or data-blok-toggle-open attribute changes
+   * Skip own technical mutations: data-blok-empty, data-blok-toggle-open, and
+   * the Show spotlight (utils/reveal-block.ts), which lights a tool's card.
    */
-  if (mutationRecord.type === 'attributes' && (mutationRecord.attributeName === 'data-blok-empty' || mutationRecord.attributeName === 'data-blok-toggle-open')) {
+  if (mutationRecord.type === 'attributes' && (
+    mutationRecord.attributeName === 'data-blok-empty'
+    || mutationRecord.attributeName === 'data-blok-toggle-open'
+    || mutationRecord.attributeName === DATA_ATTR.spotlight
+  )) {
     return false;
   }
 

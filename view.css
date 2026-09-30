@@ -646,7 +646,7 @@
   --blok-overlay-danger-bg: rgba(226, 74, 74, 0.12);
   --blok-overlay-danger-fg: #e24a4a;
   --blok-image-shadow-resting: 0 8px 24px -10px rgba(15, 15, 14, 0.25), 0 0 0 1px rgba(15, 15, 14, 0.04);
-  --blok-image-shadow-toolbar: 0 8px 20px rgba(0, 0, 0, 0.25);
+  --blok-image-shadow-toolbar: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.08);
   --blok-image-shadow-popover: 0 20px 40px -12px rgba(15, 15, 14, 0.22), 0 0 0 1px rgba(15, 15, 14, 0.06);
   --blok-color-gray-text: #787774;
   --blok-color-gray-bg: #f1f1ef;
@@ -927,7 +927,7 @@
     --blok-color-accent: #4c9fff;
     --blok-color-danger: #ff6b6b;
     --blok-image-shadow-resting: 0 10px 28px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);
-    --blok-image-shadow-toolbar: 0 12px 28px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+    --blok-image-shadow-toolbar: 0 1px 3px rgba(0, 0, 0, 0.3), 0 6px 16px rgba(0, 0, 0, 0.35);
     --blok-image-shadow-popover: 0 24px 48px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
     --blok-overlay-dark: rgba(44, 44, 42, 0.92);
     --blok-overlay-surface: #2c2c2a;
@@ -1087,7 +1087,7 @@
   --blok-color-accent: #4c9fff;
   --blok-color-danger: #ff6b6b;
   --blok-image-shadow-resting: 0 10px 28px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);
-  --blok-image-shadow-toolbar: 0 12px 28px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+  --blok-image-shadow-toolbar: 0 1px 3px rgba(0, 0, 0, 0.3), 0 6px 16px rgba(0, 0, 0, 0.35);
   --blok-image-shadow-popover: 0 24px 48px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
   --blok-overlay-dark: rgba(44, 44, 42, 0.92);
   --blok-overlay-surface: #2c2c2a;
@@ -1273,6 +1273,11 @@
 [data-blok-find-roll='down'] {
   --blok-find-roll-shift: -1;
 }
+@property --blok-spotlight-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: -90deg;
+}
 [data-blok-tool="callout"] [data-blok-tool="paragraph"] {
   font-size: inherit;
 }
@@ -1311,6 +1316,7 @@
       --tw-duration: initial;
       --tw-ease: initial;
       --tw-content: "";
+      --blok-spotlight-angle: -90deg;
     }
   }
 }

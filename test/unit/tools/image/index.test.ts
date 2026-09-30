@@ -2463,6 +2463,17 @@ describe('ImageTool — failure reporting', () => {
     expect(options.api.media.reportFailure).not.toHaveBeenCalled();
   });
 
+  it('marks its error card and Retry for the Show spotlight', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }, { reloadAttempts: 0 }));
+    const root = tool.render();
+
+    imgOf(root).dispatchEvent(new Event('error'));
+    const card = root.querySelector('[data-blok-spotlight-target]');
+
+    expect(card?.getAttribute('data-role')).toBe('error-state');
+    expect(card?.querySelector('[data-blok-spotlight-focus]')?.getAttribute('data-action')).toBe('retry');
+  });
+
   it('clears when the block is removed', () => {
     const options = createOptions({ url: 'https://x/y.png' });
     const tool = new ImageTool(options);

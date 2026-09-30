@@ -6,7 +6,9 @@ import type { ModuleConfig } from '../../types-internal/module-config';
 import { Module } from '../__module';
 import { BlockChanged } from '../events';
 import { log } from '../utils';
+import { announce } from '../utils/announcer';
 import { openLeaveBanner } from '../utils/leave-banner';
+import { revealBlock } from '../utils/reveal-block';
 import type { LeaveBanner } from '../utils/leave-banner';
 
 type Reason = ImageFailureReport['reason'];
@@ -306,8 +308,23 @@ export class MediaFailures extends Module {
     const first = this.entries.keys().next();
 
     if (first.done !== true) {
-      this.Blok.BlocksAPI.scrollToBlock(first.value);
+      this.reveal(first.value);
     }
+  }
+
+  /**
+   * Centre the failed block and spotlight it once it is in view. Unlike
+   * scrollToBlock, it does not select the block: a selection tint does not show on an error card.
+   * @param blockId - the failed block
+   */
+  private reveal(blockId: string): void {
+    const block = this.Blok.BlockManager.getBlockById(blockId);
+
+    if (block === undefined) {
+      return;
+    }
+    revealBlock(block.holder, block.pluginsContent);
+    announce(this.Blok.I18n.t('a11y.navigatedToBlock'));
   }
 
   private toPublic(entry: Entry): ImageFailure {
@@ -317,7 +334,7 @@ export class MediaFailures extends Module {
       kind: entry.kind,
       url: entry.url,
       retry: () => entry.retry(),
-      scrollTo: () => this.Blok.BlocksAPI.scrollToBlock(entry.blockId),
+      scrollTo: () => this.reveal(entry.blockId),
     };
   }
 

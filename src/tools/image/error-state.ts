@@ -1,3 +1,4 @@
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconImageBroken, IconUploadFailed } from '../../components/icons';
 import type { I18nInstance } from '../../components/utils/tools';
 import { tr } from './i18n';
@@ -17,6 +18,7 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
   const root = document.createElement('div');
   root.className = 'blok-image-error';
   root.setAttribute('data-role', 'error-state');
+  root.setAttribute(DATA_ATTR.spotlightTarget, '');
   const variant: ErrorVariant = opts.variant ?? 'broken';
   root.setAttribute('data-variant', variant);
 
@@ -48,6 +50,7 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
       retry.type = 'button';
       retry.className = 'blok-image-error__btn';
       retry.setAttribute('data-action', 'retry');
+      retry.setAttribute(DATA_ATTR.spotlightFocus, '');
       retry.textContent = tr(opts.i18n, `tools.image.error${'Retr' + 'y'}`);
       retry.addEventListener('click', () => {
         opts.onTryAgain?.();

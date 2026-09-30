@@ -63,6 +63,12 @@ export const DATA_ATTR: {
   readonly focused: 'data-blok-focused';
   /** Block is selected */
   readonly selected: 'data-blok-selected';
+  /** On a block's spotlight target while it is being pointed out (Show in the failed-image notice) */
+  readonly spotlight: 'data-blok-spotlight';
+  /** Marks the element inside a block that Show points at, e.g. the image's error card */
+  readonly spotlightTarget: 'data-blok-spotlight-target';
+  /** Marks the control inside a spotlight target that receives focus, e.g. Retry */
+  readonly spotlightFocus: 'data-blok-spotlight-focus';
   /** Block is stretched */
   readonly stretched: 'data-blok-stretched';
   /** Editor or element is empty */

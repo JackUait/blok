@@ -133,7 +133,7 @@ describe('revealBlock', () => {
   it('keeps the light on exactly as long as the pulse runs', () => {
     const css = readFileSync(join(process.cwd(), 'src/styles/spotlight.css'), 'utf8');
 
-    expect(css).toMatch(new RegExp(`blok-spotlight-trace ${SPOTLIGHT_MS}ms`));
-    expect(css).toMatch(new RegExp(`blok-spotlight-bloom ${SPOTLIGHT_MS}ms`));
+    expect(SPOTLIGHT_MS).toBe(1200);
+    expect(css).toMatch(new RegExp(`blok-spotlight-flash ${SPOTLIGHT_MS}ms`));
   });
 });

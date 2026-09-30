@@ -8,9 +8,9 @@ import { prefersReducedMotion } from './reduced-motion';
 export const SCROLL_SETTLE_MS = 700;
 
 /**
- * How long the spotlight stays on: matches the two pulses in spotlight.css.
+ * How long the spotlight stays on: the flash in spotlight.css.
  */
-export const SPOTLIGHT_MS = 1600;
+export const SPOTLIGHT_MS = 1200;
 
 const isInView = (el: Element): boolean => {
   const { top, bottom } = el.getBoundingClientRect();

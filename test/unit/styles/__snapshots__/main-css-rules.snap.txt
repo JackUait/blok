@@ -10459,43 +10459,15 @@ textarea[data-blok-field] {
 }
 
 [data-blok-spotlight] {
-  --blok-spotlight-gap: 4px;
-  --blok-spotlight-stroke: 2px;
-  --blok-spotlight-radius: calc(var(--blok-radius-lg) + var(--blok-spotlight-gap));
-  --blok-spotlight-head: var(--blok-color-danger);
-  --blok-spotlight-tail: color-mix(in srgb, var(--blok-color-danger) 40%, transparent);
-  --blok-spotlight-base: color-mix(in srgb, var(--blok-color-danger) 12%, transparent);
-  --blok-spotlight-glow: color-mix(in srgb, var(--blok-color-danger) 55%, transparent);
-  --blok-spotlight-bloom: color-mix(in srgb, var(--blok-color-danger) 18%, transparent);
-  --blok-spotlight-bloom-off: color-mix(in srgb, var(--blok-color-danger) 0%, transparent);
-  --blok-spotlight-mask: linear-gradient(#000 0 0);
-  position: relative;
-  animation: blok-spotlight-bloom 1600ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-[data-blok-spotlight]::before {
-  --blok-spotlight-angle: -90deg;
-  content: '';
-  position: absolute;
-  inset: calc(var(--blok-spotlight-gap) * -1);
-  padding: var(--blok-spotlight-stroke);
-  border-radius: var(--blok-spotlight-radius);
-  background: conic-gradient( from var(--blok-spotlight-angle), transparent 0deg 210deg, var(--blok-spotlight-tail) 300deg, var(--blok-spotlight-head) 352deg, transparent 360deg ), linear-gradient(var(--blok-spotlight-base), var(--blok-spotlight-base));
-  -webkit-mask: var(--blok-spotlight-mask) content-box, var(--blok-spotlight-mask);
-  -webkit-mask-composite: xor;
-  mask: var(--blok-spotlight-mask) content-box exclude, var(--blok-spotlight-mask);
-  filter: drop-shadow(0 0 5px var(--blok-spotlight-glow));
-  pointer-events: none;
-  animation: blok-spotlight-trace 1600ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  --blok-spotlight-tint: transparent;
+  --blok-spotlight-flash: color-mix(in srgb, var(--blok-color-yellow-text) 14%, transparent);
+  background-image: linear-gradient(var(--blok-spotlight-tint), var(--blok-spotlight-tint));
+  animation: blok-spotlight-flash 1200ms ease-out both;
 }
 
 [@media (prefers-reduced-motion: reduce)] [data-blok-spotlight] {
+  --blok-spotlight-tint: var(--blok-spotlight-flash);
   animation: none;
-}
-
-[@media (prefers-reduced-motion: reduce)] [data-blok-spotlight]::before {
-  animation: none;
-  background: var(--blok-spotlight-tail);
 }
 
 [data-blok-tool="callout"] [data-blok-tool="paragraph"] {

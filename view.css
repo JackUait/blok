@@ -1273,10 +1273,10 @@
 [data-blok-find-roll='down'] {
   --blok-find-roll-shift: -1;
 }
-@property --blok-spotlight-angle {
-  syntax: '<angle>';
+@property --blok-spotlight-tint {
+  syntax: '<color>';
   inherits: false;
-  initial-value: -90deg;
+  initial-value: transparent;
 }
 [data-blok-tool="callout"] [data-blok-tool="paragraph"] {
   font-size: inherit;
@@ -1316,7 +1316,7 @@
       --tw-duration: initial;
       --tw-ease: initial;
       --tw-content: "";
-      --blok-spotlight-angle: -90deg;
+      --blok-spotlight-tint: transparent;
     }
   }
 }

@@ -621,9 +621,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // narrow-screen row, tile fan, count badge, pill actions, busy spinner,
     // resolved check with ring pulse, reduced-motion opt-out) and its @import.
     const NOTIFIER_MEDIA_CARD_BYTES = 10_796;
-    // Show's spotlight: spotlight.css (a danger-hued light tracing the failed
-    // block's card edge with a bloom, reduced-motion steady ring) and its @import.
-    const SPOTLIGHT_BYTES = 3_101;
+    // Show's spotlight: spotlight.css (a Notion-style warm background flash on
+    // the failed block's card, reduced-motion steady tint) and its @import.
+    const SPOTLIGHT_BYTES = 1_245;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

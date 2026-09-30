@@ -82,6 +82,8 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     rectFrom: { ...FULL_RECT },
     keyIdle: 0,
     closed: false,
+    // A chip picked before load; only then is the rect re-fitted to the ratio at load.
+    ratioPicked: false,
   };
   const startRect = { ...st.rect };
   const hist = { stack: createHistory({ rect: { ...st.rect }, ratioKey: st.def.key }) };
@@ -226,6 +228,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
   const setRatio = (def: RatioDef): void => {
     st.def = def;
+    if (!st.ready) st.ratioPicked = true;
     const r = pctRatio();
 
     st.rect = r === null ? st.rect : applyRatio(st.rect, r);
@@ -361,7 +364,8 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     const r = pctRatio();
 
     // A ratio picked before load was applied against the fallback size.
-    if (r !== null) st.rect = applyRatio(st.rect, r);
+    // An untouched saved crop keeps its rect: an old circle may not be square in pixels.
+    if (r !== null && st.ratioPicked) st.rect = applyRatio(st.rect, r);
     // Steps taken before load hold rects measured against the fallback size, so the loaded state is the new base.
     hist.stack = createHistory({ rect: { ...st.rect }, ratioKey: st.def.key });
     readout.hidden = !st.measured;
@@ -458,15 +462,20 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   });
 
   const nudge = (e: KeyboardEvent): boolean => {
+    const dirs: Record<string, [number, number]> = {
+      ArrowLeft: [1, 0], ArrowRight: [-1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1],
+    };
+    const dir = dirs[e.key];
+
+    if (!dir && e.key !== '+' && e.key !== '=' && e.key !== '-') return false;
+    const r = pctRatio();
+
+    // A saved circle that is not square in pixels is squared by its first edit.
+    if (r !== null) st.rect = applyRatio(st.rect, r);
     // From the committed rect, not the in-flight spring, so key repeats keep their full distance.
     const f = fitFrame(rectAspect(st.rect, st.natural), st.stage, PAD);
     const step = (e.shiftKey ? NUDGE_BIG : NUDGE) * f.w;
-    const moves: Record<string, [number, number]> = {
-      ArrowLeft: [step, 0], ArrowRight: [-step, 0], ArrowUp: [0, step], ArrowDown: [0, -step],
-    };
-    const move = moves[e.key];
-
-    if (!move && e.key !== '+' && e.key !== '=' && e.key !== '-') return false;
+    const move = dir ? [dir[0] * step, dir[1] * step] : null;
     const centre = { x: f.x + f.w / 2, y: f.y + f.h / 2 };
     const cam = rectToCamera(st.rect, st.natural, f);
     const next = move

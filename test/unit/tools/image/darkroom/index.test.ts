@@ -300,6 +300,19 @@ describe('openDarkroom fix round 1', () => {
       expect(got.y).toBeCloseTo(want.y, 3);
     });
 
+    it('the fly-in of an old circle starts from its saved rect, not a squared one', () => {
+      const { clock } = fakeFrameClock();
+
+      document.body.appendChild(source);
+      track(openDarkroom({
+        url: 'x.png', onApply: vi.fn(), onCancel: vi.fn(), clock, sourceEl: source,
+        initial: { x: 10, y: 10, w: 50, h: 50, shape: 'circle' },
+      }));
+
+      // The 200 px source box shows 50% of the 800 px photo.
+      expect(painted().cam.s).toBeCloseTo(200 / (0.5 * NATURAL.w), 3);
+    });
+
     it('the fly-in from the block keeps animating through the first resize observation', () => {
       const { clock, advance } = fakeFrameClock();
 
@@ -481,7 +494,7 @@ describe('openDarkroom fix round 1', () => {
       expect(shown()).toBeCloseTo(50, 2);
     });
 
-    it('undoing back to the first step keeps a saved circle square in pixels', () => {
+    it('undoing back to the first step restores a saved circle exactly', () => {
       const { onApply, advance } = open({ initial: { x: 10, y: 10, w: 50, h: 50, shape: 'circle' } });
 
       document.querySelector<HTMLButtonElement>('[data-ratio="free"]')?.click();
@@ -490,10 +503,63 @@ describe('openDarkroom fix round 1', () => {
       key(dialog(), { key: 'z', metaKey: true });
       advance(3000);
       button('done').click();
+
+      expect(onApply).toHaveBeenCalledWith({ x: 10, y: 10, w: 50, h: 50, shape: 'circle' });
+    });
+
+    it('Done with no edits keeps an old circle that is not square in pixels exactly', () => {
+      const { onApply } = open({ initial: { x: 10, y: 10, w: 50, h: 50, shape: 'circle' } });
+
+      button('done').click();
+
+      expect(onApply).toHaveBeenCalledWith({ x: 10, y: 10, w: 50, h: 50, shape: 'circle' });
+    });
+
+    it('one pan on an old circle squares it in pixels', () => {
+      const { onApply, advance } = open({ initial: { x: 10, y: 10, w: 50, h: 50, shape: 'circle' } });
+
+      pointer('pointerdown', 600, 400);
+      pointer('pointermove', 620, 410);
+      pointer('pointerup', 620, 410);
+      advance(3000);
+      button('done').click();
       const saved = onApply.mock.calls[0][0];
 
       expect(saved.shape).toBe('circle');
-      expect(Math.abs(saved.w * NATURAL.w - saved.h * NATURAL.h)).toBeLessThan(0.01 * NATURAL.w);
+      expect((saved.w * NATURAL.w) / (saved.h * NATURAL.h)).toBeCloseTo(1, 2);
+    });
+
+    it('one arrow nudge on an old circle squares it in pixels', () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      const { onApply, advance } = open({ initial: { x: 10, y: 10, w: 50, h: 50, shape: 'circle' } });
+
+      key(stageEl(), { key: 'ArrowLeft' });
+      vi.advanceTimersByTime(1000);
+      advance(3000);
+      button('done').click();
+      const saved = onApply.mock.calls[0][0];
+
+      expect((saved.w * NATURAL.w) / (saved.h * NATURAL.h)).toBeCloseTo(1, 2);
+    });
+
+    it('Circle picked again before load still squares an old circle in pixels', () => {
+      const { clock, advance } = fakeFrameClock();
+      const onApply = vi.fn();
+
+      track(openDarkroom({ url: 'x.png', onApply, onCancel: vi.fn(), clock, initial: { x: 10, y: 10, w: 50, h: 50, shape: 'circle' } }));
+      document.querySelector<HTMLButtonElement>('[data-ratio="free"]')?.click();
+      document.querySelector<HTMLButtonElement>('[data-ratio="circle"]')?.click();
+      const photo = document.querySelector<HTMLImageElement>('[data-role="darkroom-photo"]');
+
+      if (!photo) throw new Error('no photo');
+      setNatural(photo, NATURAL.w, NATURAL.h);
+      photo.dispatchEvent(new Event('load'));
+      advance(3000);
+      button('done').click();
+      const saved = onApply.mock.calls[0][0];
+
+      expect(saved.shape).toBe('circle');
+      expect((saved.w * NATURAL.w) / (saved.h * NATURAL.h)).toBeCloseTo(1, 2);
     });
 
     it('a ratio picked before the photo loads is square in pixels', () => {

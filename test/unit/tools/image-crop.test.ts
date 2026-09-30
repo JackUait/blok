@@ -146,12 +146,12 @@ describe('ImageTool crop lifecycle', () => {
     cropBtn!.click();
 
     // Modal lives in document.body, NOT inside the block root
-    expect(root.querySelector('.blok-image-crop-editor')).toBeNull();
+    expect(root.querySelector('.blok-darkroom')).toBeNull();
     const dialog = document.body.querySelector<HTMLElement>(
       '[role="dialog"][aria-label="Crop image"]'
     );
     expect(dialog).not.toBeNull();
-    expect(dialog!.querySelector('.blok-image-crop-editor')).not.toBeNull();
+    expect(dialog!.closest('.blok-darkroom')).not.toBeNull();
 
     // Block still renders image + overlay while modal is open
     expect(root.querySelector('.blok-image-inner img')).not.toBeNull();
@@ -200,7 +200,7 @@ describe('ImageTool crop lifecycle', () => {
     document.body.appendChild(root);
     root.querySelector<HTMLButtonElement>('[data-action="crop"]')!.click();
 
-    const dialog = document.body.querySelector<HTMLElement>('.blok-image-crop-modal-dialog')!;
+    const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]')!;
     dialog.querySelector<HTMLButtonElement>(`[data-ratio="${String(16 / 9)}"]`)!.click();
     dialog.querySelector<HTMLButtonElement>('[data-action="done"]')!.click();
 

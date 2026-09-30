@@ -40,14 +40,6 @@ const STANDALONE_CSS_ENTRIES = [
     file: 'src/playground/playground.css',
     reason: 'Dev-page Tailwind entry, loaded by index.html alone — never reachable from main.css.',
   },
-  {
-    file: 'src/tools/image/crop-editor.css',
-    reason: 'No longer imported: the darkroom replaced it. Delete this entry with the file.',
-  },
-  {
-    file: 'src/tools/image/crop-modal.css',
-    reason: 'No longer imported: the darkroom replaced it. Delete this entry with the file.',
-  },
 ];
 
 /** Every local .css file main.css pulls in, transitively. */
@@ -195,7 +187,7 @@ describe('focus-within modality law', () => {
   it('drops rules whose subtree holds nothing focusable', () => {
     // Crop handles are <span> with no tabindex; `.blok-media-empty__search` is
     // rendered nowhere in src/.
-    expect(css).not.toContain('.blok-image-crop-editor__rect:focus-within');
+    expect(css).not.toContain('.blok-darkroom__frame:focus-within');
     expect(css).not.toContain('.blok-media-empty__search:focus-within');
   });
 });

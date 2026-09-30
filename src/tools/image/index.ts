@@ -54,7 +54,7 @@ import {
   renderOverlay,
   updateOverlayTier,
 } from './ui';
-import { openCropModal } from './crop-modal';
+import { openDarkroom } from './darkroom';
 import { openAltPopover } from './alt-popover';
 import { probeImageDimensions } from './probe-dimensions';
 import { renderUploadingState, type UploadingStateElement } from './uploading-state';
@@ -842,14 +842,23 @@ export class ImageTool implements BlockTool {
   private enterCrop(): void {
     if (this.cropDetach) return;
     this.closeAlignmentPopover();
-    this.cropDetach = openCropModal({
+    this.cropDetach = openDarkroom({
       url: this.data.url,
       alt: this.data.alt,
       initial: this.data.crop,
       onApply: (rect) => this.applyCrop(rect),
       onCancel: () => this.cancelCrop(),
       i18n: this.api.i18n,
+      sourceEl: this.cropVisual(),
+      getTargetEl: () => this.cropVisual(),
     });
+  }
+
+  /** The box the reader sees: the crop wrapper when cropped, else the image. */
+  private cropVisual(): HTMLElement | null {
+    return this.root?.querySelector<HTMLElement>('[data-role="image-crop"]')
+      ?? this.root?.querySelector<HTMLElement>('[data-role="image-figure"] img')
+      ?? null;
   }
 
   private applyCrop(rect: ImageCrop | null): void {

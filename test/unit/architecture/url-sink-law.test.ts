@@ -53,8 +53,10 @@ const EXEMPT_SINKS: Record<string, string> = {
     'HTMLImageElement src — <img> is not a script-execution sink',
   'tools/image/ui.ts » item.url':
     'HTMLImageElement src (lightbox display) — <img> is not a script-execution sink',
-  'tools/image/crop-editor.ts » opts.url':
-    'HTMLImageElement src (crop source) — <img> is not a script-execution sink',
+  'tools/image/darkroom/index.ts » opts.url':
+    'HTMLImageElement src (darkroom photo) — <img> is not a script-execution sink',
+  'tools/image/darkroom/motion.ts » opts.url':
+    'HTMLImageElement src (fly-out clone) — <img> is not a script-execution sink',
   'components/utils/notifier/draw.ts » source':
     'HTMLImageElement src (failed-image toast tile), set only after SAFE_THUMBNAIL allows blob: or a raster data: image — <img> is not a script-execution sink',
   'tools/image/probe-dimensions.ts » url':

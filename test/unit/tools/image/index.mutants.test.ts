@@ -28,7 +28,7 @@ import type * as ImageUiModule from '../../../../src/tools/image/ui';
 
 vi.mock('../../../../src/tools/image/gif-to-webm', () => ({ convertGifToWebm: vi.fn() }));
 vi.mock('../../../../src/tools/image/download', () => ({ downloadImage: vi.fn() }));
-vi.mock('../../../../src/tools/image/crop-modal', () => ({ openCropModal: vi.fn() }));
+vi.mock('../../../../src/tools/image/darkroom', () => ({ openDarkroom: vi.fn() }));
 vi.mock('../../../../src/tools/image/probe-dimensions', () => ({ probeImageDimensions: vi.fn() }));
 vi.mock('../../../../src/tools/image/resizer', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
@@ -43,14 +43,14 @@ vi.mock('../../../../src/tools/image/ui', async (importOriginal) => {
 
 import { convertGifToWebm } from '../../../../src/tools/image/gif-to-webm';
 import { downloadImage } from '../../../../src/tools/image/download';
-import { openCropModal } from '../../../../src/tools/image/crop-modal';
+import { openDarkroom } from '../../../../src/tools/image/darkroom';
 import { probeImageDimensions } from '../../../../src/tools/image/probe-dimensions';
 import { attachResizeHandle } from '../../../../src/tools/image/resizer';
 import { openLightbox } from '../../../../src/tools/image/ui';
 
 const mockConvert = vi.mocked(convertGifToWebm);
 const mockDownload = vi.mocked(downloadImage);
-const mockCropModal = vi.mocked(openCropModal);
+const mockCropModal = vi.mocked(openDarkroom);
 const mockProbe = vi.mocked(probeImageDimensions);
 const mockAttachResize = vi.mocked(attachResizeHandle);
 const mockLightbox = vi.mocked(openLightbox);
@@ -1511,7 +1511,7 @@ describe('ImageTool — opening the lightbox', () => {
   });
 });
 
-type CropModalOptions = Parameters<typeof openCropModal>[0];
+type CropModalOptions = Parameters<typeof openDarkroom>[0];
 
 const cropModalOptions = (): CropModalOptions => {
   const call = mockCropModal.mock.calls.at(-1);
@@ -1525,6 +1525,27 @@ describe('ImageTool — cropping', () => {
   const openCrop = (tool: ImageTool): void => {
     settingsItem(tool, 'image-crop').onActivate?.();
   };
+
+  it('flies out of the crop box the reader sees', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png', crop: { x: 5, y: 5, w: 40, h: 40 } }));
+    const root = tool.render();
+
+    openCrop(tool);
+
+    expect(cropModalOptions().sourceEl).toBe(root.querySelector('[data-role="image-crop"]'));
+  });
+
+  it('flies back into the re-rendered image after Done', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    const root = tool.render();
+
+    openCrop(tool);
+    const opts = cropModalOptions();
+
+    opts.onApply({ x: 10, y: 10, w: 50, h: 50 });
+
+    expect(opts.getTargetEl?.()).toBe(root.querySelector('[data-role="image-crop"]'));
+  });
 
   it('opens the modal on the current image, alt and crop', () => {
     const crop: ImageCrop = { x: 5, y: 5, w: 40, h: 40 };

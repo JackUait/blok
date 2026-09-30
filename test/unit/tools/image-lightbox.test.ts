@@ -194,8 +194,7 @@ describe('openLightbox toolbar', () => {
 describe('no-glass CSS regression', () => {
   const projectRoot = path.resolve(__dirname, '../../..');
   const mainCss = readFileSync(path.join(projectRoot, 'src/styles/main.css'), 'utf8');
-  const cropModalCss = readFileSync(path.join(projectRoot, 'src/tools/image/crop-modal.css'), 'utf8');
-  const cropEditorCss = readFileSync(path.join(projectRoot, 'src/tools/image/crop-editor.css'), 'utf8');
+  const darkroomCss = readFileSync(path.join(projectRoot, 'src/tools/image/darkroom/darkroom.css'), 'utf8');
 
   const ruleBody = (css: string, selectorPattern: RegExp): string => {
     const match = css.match(selectorPattern);
@@ -231,12 +230,12 @@ describe('no-glass CSS regression', () => {
     expect(body).not.toMatch(/backdrop-filter/);
   });
 
-  it('crop modal backdrop has no backdrop-filter', () => {
-    expect(cropModalCss).not.toMatch(/backdrop-filter/);
-  });
+  it('darkroom glass stays on the pill; the full-viewport backdrop never blurs', () => {
+    const glassSelectors = [...darkroomCss.matchAll(/([^{}]+)\{([^}]*)\}/g)]
+      .filter(([, , body]) => /backdrop-filter/.test(body))
+      .map(([, selector]) => selector.replace(/\/\*[\s\S]*?\*\//g, '').trim());
 
-  it('crop editor size pill has no backdrop-filter', () => {
-    expect(cropEditorCss).not.toMatch(/backdrop-filter/);
+    expect(glassSelectors).toEqual(['.blok-darkroom__pill']);
   });
 
   /**

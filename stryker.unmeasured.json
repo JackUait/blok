@@ -200,7 +200,6 @@
     "src/tools/file/preview-error.ts",
     "src/tools/header/index.ts",
     "src/tools/image/constants.ts",
-    "src/tools/image/crop-modal.ts",
     "src/tools/index.ts",
     "src/tools/link/bookmark/index.ts",
     "src/tools/link/embed/allowed-origins.ts",

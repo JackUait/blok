@@ -590,7 +590,7 @@ const KNOWN_HARDCODED_STRINGS: Array<{ file: string; needle: string }> = [
   { file: 'src/tools/image/ui.ts', needle: 'More options' },
   { file: 'src/tools/image/ui.ts', needle: 'Alignment' },
   { file: 'src/tools/image/uploading-state.ts', needle: 'Cancel upload' },
-  { file: 'src/tools/image/crop-editor.ts', needle: 'Crop image' },
+  { file: 'src/tools/image/darkroom/index.ts', needle: 'Crop image' },
   { file: 'src/tools/image/empty-state.ts', needle: 'Add an image' },
   { file: 'src/tools/image/empty-state.ts', needle: 'Drop an image here' },
   { file: 'src/tools/image/empty-state.ts', needle: 'Stock images' },

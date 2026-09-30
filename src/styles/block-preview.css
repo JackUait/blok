@@ -50,6 +50,11 @@
   pointer-events: none;
 }
 
+/* The top-layer reset in main.css sets width: auto at this specificity; without this the card sizes to its drawing. */
+[data-blok-interface='block-preview'][data-blok-top-layer][popover] {
+  width: var(--blok-preview-card-width);
+}
+
 [data-blok-interface='block-preview'][hidden] {
   display: none;
 }

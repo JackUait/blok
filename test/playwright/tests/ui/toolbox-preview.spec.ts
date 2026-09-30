@@ -110,6 +110,37 @@ test.describe('Toolbox hover preview', () => {
     await expect(page.getByTestId('toolbox-preview')).toBeVisible();
   });
 
+  test('the live card keeps its 232x156 paper on every row', async ({ page }) => {
+    await openToolbox(page);
+
+    const rows = await page.getByTestId('toolbox-popover').locator('[data-blok-item-name]').count();
+    const seen = new Map<string, string>();
+
+    for (let i = 0; i < rows; i++) {
+      await page.keyboard.press('ArrowDown');
+
+      // Color rows have no preview, so the card is closed there.
+      const measured = await page.evaluate(() => {
+        const root = document.querySelector('[data-blok-testid="toolbox-preview"]');
+        const paper = root?.querySelector<HTMLElement>('[data-blok-preview-paper]');
+
+        if (root?.getAttribute('data-state') !== 'open' || paper === undefined || paper === null) {
+          return null;
+        }
+
+        // Layout size: the card's open animation scales it for a moment.
+        return [ paper.firstElementChild?.getAttribute('data-blok-preview') ?? '?', `${paper.offsetWidth}x${paper.offsetHeight}` ];
+      });
+
+      if (measured !== null) {
+        seen.set(measured[0], measured[1]);
+      }
+    }
+
+    expect(seen.size).toBeGreaterThan(20);
+    expect([ ...seen ].filter(([, size]) => size !== '232x156')).toEqual([]);
+  });
+
   test('closes with the menu', async ({ page }) => {
     await openToolbox(page);
     await option(page, 'header-1').hover();

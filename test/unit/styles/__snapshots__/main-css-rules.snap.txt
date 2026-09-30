@@ -11225,6 +11225,10 @@ span[data-blok-slash-search] {
   pointer-events: none;
 }
 
+[data-blok-interface='block-preview'][data-blok-top-layer][popover] {
+  width: var(--blok-preview-card-width);
+}
+
 [data-blok-interface='block-preview'][hidden] {
   display: none;
 }

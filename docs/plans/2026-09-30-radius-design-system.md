@@ -1,6 +1,6 @@
 # Radius design system
 
-Status: proposal. Nothing in `src/` has changed yet.
+Status: accepted 2026-09-30 (decisions in §5). Foundation shipped in 490597d1; migration in progress.
 
 Research behind it (all read from source or measured, 2026-09-30):
 
@@ -52,12 +52,12 @@ A component picks its role, never a primitive.
 
 | Role token | Value | Used by |
 |---|---|---|
-| `--blok-radius-dialog` | 16 | modal, leave banner, crop dialog, lightbox, toast card |
-| `--blok-radius-surface` | 12 | popover and menu cards (desktop and mobile), inline toolbar card, emoji picker, link hover card, find bar, floating media toolbars, cards (bookmark, file, database column/add-card) |
-| `--blok-radius-block` | 12 | block frames: callout, code, media-empty panel, audio, image, video, embed frames |
+| `--blok-radius-dialog` | 12 | modal, leave banner, crop dialog, lightbox |
+| `--blok-radius-surface` | 10 | popover and menu cards (desktop and mobile), inline toolbar card, toast card, emoji picker, link hover card, find bar, floating media toolbars, cards (bookmark, file, database column/add-card) |
+| `--blok-radius-block` | 10 | block frames: callout, code, media-empty panel, audio, image, video, embed frames |
 | `--blok-radius-field` | 8 | text inputs and search fields (32–36px tall) |
 | `--blok-radius-control-lg` | 8 | buttons 36px and taller |
-| `--blok-radius-control` | 6 | buttons 24–32px, menu rows, tabs, tooltips, block hover fill |
+| `--blok-radius-control` | 6 | buttons 24–32px, menu rows, tabs, tooltips, block hover and selection fill around a square block |
 | `--blok-radius-control-sm` | 4 | buttons and toggles up to 20px, tags, keyboard hints, toggle arrow, scrollbar thumb |
 | `--blok-radius-mark` | 2 | inline marks: code span, find match, highlight, checkbox |
 | `--blok-radius-pill` | full | pills, status chips, badges, avatars, round handles, progress tracks |
@@ -76,21 +76,21 @@ inner = max(floor, outer − border − gap)
 
 `gap` is the distance from the parent's padding edge to the child's edge along that corner: parent padding plus child margin. `border` is the parent's border width. This is the CSS spec's own rule for the inner edge of one box (Backgrounds 3 §4.2), applied one box further.
 
-- **Floor is 4px** (Decision 3). Below 4 a menu row looks square next to its card.
-- **When `outer − border − gap` is at or below the floor**, the child uses its own role token. The parent's corner is too far away to matter.
+- **Floor is 4px** (`--blok-radius-floor`). Below 4 a menu row looks square next to its card.
+- **When `border + gap` is at least `outer`**, the child's corner sits outside the parent's curve. The child uses its own role token.
 - **Pills and circles never derive.** Height/2 is their shape.
 - **Derived values are exact, not snapped.** The scale governs radii that stand alone. A derived radius may land off the scale (12 − 7 = 5). The CSS below is a plain `calc()`, and the built-bundle check asserts the exact value.
-- **The rule also runs outward.** A fill *around* a rounded child must be `child + gap`. Today the 4px block selection fill wraps 12px code and callout cards. The fill lives on the block holder, an ancestor of the tool root, and CSS variables do not flow up. So the publish pattern below cannot express it. The mechanism is open (Decision 5).
+- **The rule also runs outward.** A fill *around* a rounded child must be `child + gap`. The block selection fill lives on the content wrapper, an ancestor of the tool root, and CSS variables do not flow up. So a tool declares its frame radius and core writes it on the content wrapper as `--blok-radius-frame` (Decision 5). The fill uses `frame + gap`, or `control` when the block is square.
 
 **How it is written in CSS.** The container publishes one variable for its children:
 
 ```css
 [data-blok-popover-container] {
   border-radius: var(--blok-radius-surface);
-  padding: var(--blok-space-1-5);
+  padding: var(--blok-space-1);
   --blok-radius-inner: max(
-    var(--blok-radius-4),
-    calc(var(--blok-radius-surface) - var(--blok-space-1-5))
+    var(--blok-radius-floor),
+    calc(var(--blok-radius-surface) - var(--blok-space-1))
   );
 }
 [data-blok-popover-item] {
@@ -107,19 +107,17 @@ inner = max(floor, outer − border − gap)
 
 | Container | Outer | Border + gap | Inner |
 |---|---|---|---|
-| Popover card | 12 | 6 | **6** (today 8) |
-| Popover card, mobile | 12 | 6 | **6** (today card 10, items 8) |
-| Inline toolbar card | 12 | 8 | **4** (today card 14 in build) |
-| Find bar, lightbox bar | 12 | 6 | **6** |
-| Video menu (1px border) | 12 | 7 | **5** |
-| Small overlay toolbar (image align, embed) | 8 | 4 | **4** (already OK) |
-| Media-empty card, audio picker | 12 | 9 | **4** (floor; today 12) |
-| Toast card | 16 | 11–13 | **4** (floor; tile today 10) |
-| Emoji picker | 16→12 | 11 | **4** (floor) |
-| Database column | 12 | 8 | **4** (add-card today 12) |
+| Popover card (padding goes 6 → 4) | 10 | 4 | **6** (today card 12, items 8) |
+| Popover card, mobile | 10 | 4 | **6** (today card 10, items 8) |
+| Inline toolbar card | 10 | 8 | **4** (floor; today card 14 in build) |
+| Find bar, lightbox bar | 10 | 6 | **4** |
+| Video menu (1px border) | 10 | 7 | **4** (floor) |
+| Small overlay toolbar (image align, embed) | 8 | 4 | **4** |
+| Media-empty card, audio picker | 10 | 9 | **4** (floor; today 12) |
+| Toast card | 10 | 11–13 | own role (gap ≥ outer; tile today 10) |
+| Emoji picker | 10 | 11 | own role |
+| Database column | 10 | 8 | **4** (floor; add-card today 12) |
 | Segmented control track | 8 | 2–3 | **6 / 5** |
-
-Rows marked "floor" mean the child uses its own role token if that is smaller than 4, otherwise 4.
 
 ## 3. Enforcement (to build with the migration)
 
@@ -161,13 +159,13 @@ Conflicts that must end with one source:
 - Audio vs video speed chips: 3 vs 6 for the same control.
 - `embed.css:20` fallback `8px` vs `--blok-radius-md` 6px.
 
-## 5. Decisions for the user
+## 5. Decisions (user, 2026-09-30)
 
-1. **Is 10 a step?** Notion's popover, callout and code cards are 10 (measured) with 4px inset rows at 6. Blok's cards are 12 with 6px padding. Keeping 12 moves the fewest pixels. Switching to 10 matches Notion but also means changing popover padding to 4.
-2. **Do the old `--blok-radius-*` names get removed?** Keeping them as deprecated aliases is non-breaking. Removing them, or fixing `xs`/`sm` order in place, is BREAKING.
-3. **Floor value.** 4px proposed. 0 or 2 are possible; no source fixes a number.
-4. **Media frames: 12 or smaller?** The proposal keeps 12 (least change). Notion's image frames were not measurable (the pages were blocked), so there is no parity number.
-5. **How does the block selection fill follow a rounded tool?** It must be the tool's frame radius plus its inset. Options: (a) a tool declares its frame radius (for example a static property) and core writes it on the holder as `--blok-radius-frame`; (b) a `:has()` rule on the holder — avoid, `:has()` on a broad root recalcs the subtree on every childList change; (c) keep one fill radius and accept the mismatch. Proposed: (a).
+1. **Cards are 10px** (Notion). Popover padding goes from 6 to 4 so items stay at 6.
+2. **The old `--blok-radius-*` names are removed** (xs, sm, md, lg, xl, md-plus, hairline, none). BREAKING, labelled in the commit that removes them. `--blok-radius-pill` stays as a role (now `var(--blok-radius-full)`).
+3. **Floor is 4px.**
+4. **Media frames use `--blok-radius-block` (10px)**, the same as callout and code, so every block frame has one radius. Chosen by Claude; Notion's image frame could not be measured.
+5. **The selection fill follows a rounded block.** A tool declares its frame radius; core writes it on the content wrapper as `--blok-radius-frame`; the fill is `frame + gap`. `:has()` is avoided (subtree invalidation).
 
 ## 6. Unverified points
 

@@ -89,9 +89,9 @@ describe('marks and handles inside blocks', () => {
     expect(preflight).toMatch(/code:not\(pre code\),[^{]*\{\s*border-radius:\s*var\(--blok-radius-mark\);/);
   });
 
-  it('the checklist checkbox uses the mark role', () => {
+  it('the checklist checkbox is a small control (20px tall)', () => {
     expect(radiusOf(read('src/styles/checklist.css'), '[data-blok-interface] [data-list-style="checklist"] input[type="checkbox"]'))
-      .toBe('var(--blok-radius-mark)');
+      .toBe('var(--blok-radius-control-sm)');
   });
 
   it('the column resizer bar is a pill', () => {

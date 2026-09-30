@@ -160,7 +160,8 @@
 }
 @utility blok-input {
   /* Input element styles */
-  @apply w-full rounded-[3px] border border-line-gray px-3 py-2.5 outline-hidden shadow-input data-blok-placeholder:before:static! data-blok-placeholder:before:inline-block data-blok-placeholder:before:w-0 data-blok-placeholder:before:whitespace-nowrap data-blok-placeholder:before:pointer-events-none;
+  @apply w-full border border-line-gray px-3 py-2.5 outline-hidden shadow-input data-blok-placeholder:before:static! data-blok-placeholder:before:inline-block data-blok-placeholder:before:w-0 data-blok-placeholder:before:whitespace-nowrap data-blok-placeholder:before:pointer-events-none;
+  border-radius: var(--blok-radius-field);
 }
 @utility blok-loader {
   /* Loader styles with spinning animation */
@@ -168,7 +169,8 @@
 }
 @utility blok-button {
   /* Button styles */
-  @apply p-[13px] rounded-[3px] border border-line-gray text-[14.9px] bg-white text-center cursor-pointer text-gray-text shadow-button-base hover:shadow-button-base-hover [&_svg]:h-5 [&_svg]:mr-[0.2em] [&_svg]:-mt-0.5;
+  @apply p-[13px] border border-line-gray text-[14.9px] bg-white text-center cursor-pointer text-gray-text shadow-button-base hover:shadow-button-base-hover [&_svg]:h-5 [&_svg]:mr-[0.2em] [&_svg]:-mt-0.5;
+  border-radius: var(--blok-radius-control-lg);
 
   &:hover {
     background-color: var(--blok-button-focus-bg-hover);
@@ -176,7 +178,8 @@
 }
 @utility blok-settings-button {
   /* Settings button styles */
-  @apply inline-flex items-center justify-center rounded-[3px] cursor-pointer border-0 outline-hidden bg-transparent align-bottom text-inherit m-0 min-w-toolbox-btn min-h-toolbox-btn [&_svg]:w-auto [&_svg]:h-auto mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile mobile:rounded-lg mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile can-hover:hover:bg-bg-light;
+  @apply inline-flex items-center justify-center cursor-pointer border-0 outline-hidden bg-transparent align-bottom text-inherit m-0 min-w-toolbox-btn min-h-toolbox-btn [&_svg]:w-auto [&_svg]:h-auto mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile can-hover:hover:bg-bg-light;
+  border-radius: var(--blok-radius-control);
 }
 @utility blok-settings-button--active {
   @apply text-active-icon;
@@ -195,7 +198,7 @@
  * w-content-width + mx-auto shifted the block right).
  */
 [data-blok-navigation-focused="true"] {
-  @apply rounded-md;
+  border-radius: var(--blok-radius-control);
 }
 
 /**
@@ -225,7 +228,8 @@
  * where the bar is pinned.
  */
 [data-drop-indicator]::before {
-  @apply content-[''] absolute rounded-xs pointer-events-none z-10;
+  @apply content-[''] absolute pointer-events-none z-10;
+  border-radius: var(--blok-radius-pill);
   background-color: var(--blok-dnd-drop-indicator-bg);
 }
 
@@ -266,7 +270,8 @@
  * only via the controller-set `data-drop-indicator-lead` attribute (lists).
  */
 [data-drop-indicator-lead]::after {
-  @apply content-[''] absolute rounded-xs pointer-events-none;
+  @apply content-[''] absolute pointer-events-none;
+  border-radius: var(--blok-radius-pill);
   z-index: 9;
   height: var(--blok-dnd-drop-indicator-thickness);
   left: 0;
@@ -311,10 +316,18 @@
   transform: translateX(50%);
 }
 
+/*
+ * A framed tool's --blok-radius-frame is written inline on its own content
+ * wrapper. Reset it here so a nested block's wrapper does not inherit it.
+ */
+[data-blok-element-content] {
+  --blok-radius-frame: initial;
+}
+
 /* Spring-loaded: flash selection highlight on toggle after it auto-expands */
 [data-blok-spring-loaded] [data-blok-element-content] {
   animation: spring-loaded-flash 700ms ease-out forwards;
-  border-radius: var(--blok-space-1);
+  border-radius: var(--blok-radius-frame, var(--blok-radius-control));
 }
 
 /*
@@ -323,7 +336,7 @@
  */
 .blok-block--target {
   animation: blok-block-target-pulse 1.5s ease-out;
-  border-radius: var(--blok-space-1);
+  border-radius: var(--blok-radius-control);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -553,7 +566,8 @@
 }
 
 [data-blok-selected="true"] [data-list-style] [role="listitem"] {
-  @apply bg-selection rounded-[4px];
+  @apply bg-selection;
+  border-radius: var(--blok-radius-control);
 }
 
 [data-blok-selected="true"] [data-list-style] [role="listitem"] [contenteditable] {
@@ -572,7 +586,9 @@
 }
 
 [data-blok-selected="true"] [data-role="embed-figure"]::before {
-  @apply content-[''] absolute -inset-2 rounded-md bg-selection pointer-events-none;
+  @apply content-[''] absolute -inset-2 bg-selection pointer-events-none;
+  /* Concentric with the frame it wraps: -inset-2 puts it 8px outside. */
+  border-radius: calc(var(--blok-radius-block) + var(--blok-space-2));
 }
 
 /**

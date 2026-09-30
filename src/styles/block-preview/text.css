@@ -19,11 +19,6 @@
   margin: 0;
 }
 
-/* Wider than the paper on purpose: the edge crops it like a real page. */
-[data-blok-interface='block-preview'] [data-blok-preview='text'] [data-part='long'] {
-  width: 292px;
-}
-
 [data-blok-interface='block-preview'] [data-blok-preview='text'] em {
   font-style: italic;
 }

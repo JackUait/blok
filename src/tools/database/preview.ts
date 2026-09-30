@@ -41,10 +41,10 @@ export const renderDatabasePreview = (): HTMLElement =>
         h('span', { 'data-cell': 'status' }, icon(IconSelect), 'Status'),
         h('span', { 'data-cell': 'date' }, icon(IconCalendar), 'Date')
       ),
-      row('Write the brief', 'green', 'Done', 'Sep 12'),
-      row('Name the thing', 'yellow', 'Doing', 'Sep 18'),
-      row('Book the venue', 'gray', 'To do', 'Oct 2'),
-      row('Throw a party', 'purple', 'Idea', 'Oct 9', true)
+      row('Write brief', 'green', 'Done', 'Sep 12'),
+      row('Pick a name', 'yellow', 'Doing', 'Sep 18'),
+      row('Book venue', 'gray', 'To do', 'Oct 2'),
+      row('Throw party', 'purple', 'Idea', 'Oct 9', true)
     )
   );
 
@@ -72,7 +72,6 @@ export const renderBoardPreview = (): HTMLElement =>
     h(
       'div',
       { 'data-board': '' },
-      column('To do', 'gray', '2', '2', card('Pack', 'Trip', 'gray'), card('Visa', 'Docs', 'gray')),
       column(
         'In progress',
         'yellow',

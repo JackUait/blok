@@ -64,7 +64,7 @@ export const renderNumberedListPreview = (): HTMLElement =>
     'numbered-list',
     row('1.', 'Preheat the oven to 220°'),
     row('2.', 'Knead the dough'),
-    row('a.', 'Ten minutes, no shortcuts', 1),
+    row('a.', 'Ten minutes by hand', 1),
     row('3.', 'Let it rise for an hour'),
     row('4.', 'Bake until golden')
   );

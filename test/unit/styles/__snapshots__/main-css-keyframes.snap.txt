@@ -376,9 +376,9 @@
 @keyframes blok-preview-database-card-glide {
   0%, 12% { opacity: 1; transform: none }
   22% { transform: translateY(-3px) rotate(-3deg) scale(1.05) }
-  48% { transform: translate(94px, -3px) rotate(2deg) scale(1.05) }
-  58%, 86% { opacity: 1; transform: translateX(94px) }
-  92% { opacity: 0; transform: translateX(94px) }
+  48% { transform: translate(105px, -3px) rotate(2deg) scale(1.05) }
+  58%, 86% { opacity: 1; transform: translateX(105px) }
+  92% { opacity: 0; transform: translateX(105px) }
   93% { opacity: 0; transform: none }
   100% { opacity: 1; transform: none }
 }

@@ -2,11 +2,9 @@
 
 /* ─── Table ─────────────────────────────────────────── */
 
-/* Wider than the paper on purpose: the last column is cropped by the edge. */
 [data-blok-interface='block-preview'] [data-blok-preview='table'] [data-grid] {
   display: grid;
-  width: max-content;
-  grid-template-columns: 68px 52px 50px 50px;
+  grid-template-columns: repeat(4, auto);
   border-top: 1px solid var(--blok-table-border);
   border-left: 1px solid var(--blok-table-border);
   font-size: 12px;
@@ -14,7 +12,7 @@
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='table'] [data-cell] {
-  padding: var(--blok-preview-space-4) var(--blok-preview-space-8);
+  padding: var(--blok-preview-space-4) var(--blok-preview-space-6);
   border-right: 1px solid var(--blok-table-border);
   border-bottom: 1px solid var(--blok-table-border);
   white-space: nowrap;
@@ -29,8 +27,6 @@
 /* ─── Code ──────────────────────────────────────────── */
 
 [data-blok-interface='block-preview'] [data-blok-preview='code'] [data-card] {
-  /* Bleeds past the paper's right edge, like a window onto a wider page. */
-  margin-right: calc(-1 * var(--blok-preview-space-44));
   border: 1px solid var(--blok-border-secondary);
   border-radius: var(--blok-radius-block);
   background: var(--blok-bg-secondary);

@@ -65,9 +65,8 @@
 /* ---------- database: table view ---------- */
 
 /* Doubled attribute: base padding in block-preview.css comes later and would win a tie. */
-/* Cropped on the right like a wide table running off the page. */
 [data-blok-interface='block-preview'] [data-blok-preview='database'][data-blok-preview] {
-  padding: var(--blok-preview-space-12) 0 0 var(--blok-preview-space-14);
+  padding: var(--blok-preview-space-12) var(--blok-preview-space-14) 0;
   font-size: 12px;
 }
 
@@ -102,7 +101,7 @@
 [data-blok-interface='block-preview'] [data-blok-preview='database'] [data-row] {
   position: relative;
   display: grid;
-  grid-template-columns: 98px 70px 64px;
+  grid-template-columns: 88px 62px 54px;
   align-items: center;
   height: 22px;
   border-bottom: 1px solid color-mix(in srgb, currentColor 7%, transparent);
@@ -149,21 +148,21 @@
 
 /* ---------- board: kanban view ---------- */
 
-/* The first column peeks in from the left, as if the board scrolled. */
 [data-blok-interface='block-preview'] [data-blok-preview='board'][data-blok-preview] {
-  padding: var(--blok-preview-space-12) 0 0;
+  padding: var(--blok-preview-space-12) var(--blok-preview-space-14);
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='board'] [data-board] {
   display: flex;
   gap: var(--blok-preview-space-6);
-  margin-left: -50px;
+  height: 100%;
 }
 
+/* Two columns fill the paper's 204px row: (204 - 6px gap) / 2. The glide keyframes use it. */
 [data-blok-interface='block-preview'] [data-blok-preview='board'] [data-column] {
-  flex: 0 0 88px;
+  flex: 0 0 99px;
   box-sizing: border-box;
-  height: 160px;
+  height: 100%;
   padding: var(--blok-preview-space-6);
   border-radius: var(--blok-radius-block);
   background: var(--pill-bg);
@@ -319,7 +318,7 @@
   }
 }
 
-/* 94px = one column (88px) + the gap (6px). */
+/* 105px = one column (99px) + the gap (6px). */
 @keyframes blok-preview-database-card-glide {
   0%,
   12% {
@@ -332,18 +331,18 @@
   }
 
   48% {
-    transform: translate(94px, -3px) rotate(2deg) scale(1.05);
+    transform: translate(105px, -3px) rotate(2deg) scale(1.05);
   }
 
   58%,
   86% {
     opacity: 1;
-    transform: translateX(94px);
+    transform: translateX(105px);
   }
 
   92% {
     opacity: 0;
-    transform: translateX(94px);
+    transform: translateX(105px);
   }
 
   93% {

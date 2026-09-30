@@ -13,7 +13,7 @@ const HEADINGS: Record<number, HeadingSample> = {
   1: { title: 'How?', body: [ line('Start with the question.') ] },
   2: { title: 'Our Values', body: [ bullet('Ship small, learn fast'), bullet('Leave it better than you found it') ] },
   3: { title: 'Tuesday standup', body: [ line('Design review moved to 3pm. Bring the prototype, not the slides.') ] },
-  4: { title: 'Open questions', body: [ bullet('Who owns onboarding?'), bullet('Do we need dark mode on day one?') ] },
+  4: { title: 'Open questions', body: [ bullet('Who owns onboarding?'), bullet('Dark mode on day one?') ] },
   5: { title: 'Ingredients', body: [ bullet('2 cups flour'), bullet('1 tsp sea salt'), bullet('A little patience') ] },
   6: { title: 'Footnotes', body: [ line('¹ March survey, 212 replies.'), line('² Rounded to whole percent.') ] },
 };

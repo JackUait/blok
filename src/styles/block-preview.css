@@ -38,7 +38,6 @@
   --blok-preview-space-18: 18px;
   --blok-preview-space-24: 24px;
   --blok-preview-space-26: 26px;
-  --blok-preview-space-44: 44px;
 
   position: fixed;
   z-index: var(--blok-z-tooltip);

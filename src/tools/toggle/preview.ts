@@ -8,7 +8,7 @@ import { createPreview, h } from '../../components/utils/block-preview';
 const bullet = (text: string): HTMLElement =>
   h('div', { 'data-row': '' }, h('span', { 'data-marker': '' }, '•'), h('span', {}, text));
 
-/** Toggle list: an open toggle with bullets inside, cropped by the paper. */
+/** Toggle list: an open toggle with bullets inside. */
 export const renderTogglePreview = (): HTMLElement => {
   const arrow = h('span', { 'data-arrow': '' });
 
@@ -21,9 +21,8 @@ export const renderTogglePreview = (): HTMLElement => {
       'div',
       { 'data-children': '' },
       bullet('Colossus of Rhodes'),
-      bullet('Great Pyramid of Giza'),
-      bullet('Hanging Gardens of Babylon'),
-      bullet('Lighthouse of Alexandria')
+      bullet('Pyramids of Giza'),
+      bullet('Hanging Gardens')
     )
   );
 };

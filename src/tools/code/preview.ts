@@ -4,11 +4,11 @@ type Token = [kind: string, text: string];
 
 /** Kinds map to Prism's hue families: kw purple, fn blue, str green, num orange, cm gray. */
 const LINES: Token[][] = [
-  [['kw', 'const'], ['', ' order = '], ['fn', 'brew'], ['p', '('], ['str', "'oat latte'"], ['p', ');']],
-  [['kw', 'if'], ['p', ' ('], ['', 'order.temp '], ['kw', '>'], ['num', ' 60'], ['p', ') {']],
-  [['', '  '], ['fn', 'sip'], ['p', '('], ['', 'order'], ['p', ');'], ['cm', ' // slowly']],
+  [['kw', 'const'], ['', ' cup = '], ['fn', 'brew'], ['p', '();']],
+  [['kw', 'if'], ['p', ' ('], ['', 'cup.temp '], ['kw', '>'], ['num', ' 60'], ['p', ') {']],
+  [['', '  '], ['fn', 'sip'], ['p', '('], ['', 'cup'], ['p', ');'], ['cm', ' // slow']],
   [['p', '}']],
-  [['fn', 'notify'], ['p', '('], ['str', "'Coffee is ready'"], ['p', ');']],
+  [['fn', 'notify'], ['p', '('], ['str', "'Ready!'"], ['p', ');']],
 ];
 
 /** Typing speed; the stylesheet reads these per line as --d (delay) and --t (duration). */

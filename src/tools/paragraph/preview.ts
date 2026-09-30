@@ -1,8 +1,8 @@
 import { createPreview, h } from '../../components/utils/block-preview';
 
 /**
- * Toolbox drawing: a paragraph running past the paper's right edge, then a
- * short line being typed with a blinking caret.
+ * Toolbox drawing: a paragraph, then a short line being typed with a
+ * blinking caret.
  */
 export const renderTextPreview = (): HTMLElement => createPreview(
   'text',

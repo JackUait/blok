@@ -118,4 +118,157 @@ test.describe('Toolbox hover preview', () => {
 
     await expect(page.getByTestId('toolbox-preview')).toBeHidden();
   });
+
+  test('every drawing fits inside the 232x156 paper', async ({ page }) => {
+    const renderProbes = (): Promise<number> => page.evaluate(() => {
+      type Entry = { name?: string; preview?: { render: () => HTMLElement } };
+      const tools = (window as unknown as { defaultBlockTools: Record<string, { class: { toolbox?: Entry | Entry[] } }> }).defaultBlockTools;
+
+      document.querySelectorAll('[data-preview-fit-probe]').forEach((el) => el.remove());
+
+      const entries = Object.entries(tools).flatMap(([toolName, { class: tool }]) => {
+        const toolbox = tool.toolbox ?? [];
+
+        return (Array.isArray(toolbox) ? toolbox : [ toolbox ]).map((entry) => ({ toolName, entry }));
+      });
+
+      return entries.filter(({ toolName, entry }) => {
+        if (entry.preview === undefined) {
+          return false;
+        }
+
+        const root = document.createElement('div');
+        const card = document.createElement('div');
+        const paper = document.createElement('div');
+
+        root.setAttribute('data-blok-interface', 'block-preview');
+        root.setAttribute('data-preview-fit-probe', `${toolName}/${entry.name ?? ''}`);
+        root.style.position = 'static';
+        card.setAttribute('data-blok-preview-card', '');
+        paper.setAttribute('data-blok-preview-paper', '');
+        paper.appendChild(entry.preview.render());
+        card.appendChild(paper);
+        root.appendChild(card);
+        document.body.appendChild(root);
+
+        return true;
+      }).length;
+    });
+
+    const findSpills = (): Promise<string[]> => page.evaluate(() => {
+      const problems: string[] = [];
+
+      // A box only counts where no clipping ancestor inside the drawing hides it.
+      const visibleRect = (rect: DOMRect, from: Element, paper: Element): DOMRect | null => {
+        let { left, top, right, bottom } = rect;
+
+        for (let el: Element | null = from; el !== null && el !== paper; el = el.parentElement) {
+          const style = getComputedStyle(el);
+
+          if (el !== from && (style.overflowX !== 'visible' || style.overflowY !== 'visible')) {
+            const clip = el.getBoundingClientRect();
+
+            left = Math.max(left, clip.left);
+            top = Math.max(top, clip.top);
+            right = Math.min(right, clip.right);
+            bottom = Math.min(bottom, clip.bottom);
+          }
+        }
+
+        return right - left > 0.5 && bottom - top > 0.5 ? new DOMRect(left, top, right - left, bottom - top) : null;
+      };
+
+      const isShown = (el: Element): boolean => {
+        for (let node: Element | null = el; node !== null; node = node.parentElement) {
+          const style = getComputedStyle(node);
+
+          if (style.visibility === 'hidden' || Number(style.opacity) === 0 || style.display === 'none') {
+            return false;
+          }
+        }
+
+        return true;
+      };
+
+      document.querySelectorAll('[data-preview-fit-probe]').forEach((root) => {
+        const label = root.getAttribute('data-preview-fit-probe');
+        const paper = root.querySelector('[data-blok-preview-paper]');
+
+        if (paper === null) {
+          return;
+        }
+
+        const bounds = paper.getBoundingClientRect();
+
+        if (Math.round(bounds.width) !== 232 || Math.round(bounds.height) !== 156) {
+          problems.push(`${label}: paper is ${bounds.width}x${bounds.height}`);
+        }
+
+        const check = (rect: DOMRect, from: Element, what: string): void => {
+          const shown = visibleRect(rect, from, paper);
+
+          if (shown === null) {
+            return;
+          }
+
+          const spill = Math.max(bounds.left - shown.left, shown.right - bounds.right, bounds.top - shown.top, shown.bottom - bounds.bottom);
+
+          if (spill > 1) {
+            problems.push(`${label}: ${what} spills ${Math.round(spill)}px`);
+          }
+        };
+
+        paper.querySelectorAll('*').forEach((el) => {
+          if (isShown(el)) {
+            check(el.getBoundingClientRect(), el, `<${el.tagName.toLowerCase()}>`);
+          }
+        });
+
+        const walker = document.createTreeWalker(paper, NodeFilter.SHOW_TEXT);
+
+        for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+          const parent = node.parentElement;
+
+          if (parent === null || node.textContent?.trim() === '' || !isShown(parent)) {
+            continue;
+          }
+
+          const range = document.createRange();
+
+          range.selectNodeContents(node);
+          Array.from(range.getClientRects()).forEach((rect) => {
+            check(rect, parent, `"${node.textContent?.trim().slice(0, 20)}"`);
+          });
+        }
+      });
+
+      return [ ...new Set(problems) ];
+    });
+
+    // The finished frame, as reduced motion shows it.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+
+    try {
+      expect(await renderProbes()).toBeGreaterThanOrEqual(35);
+      expect(await findSpills()).toEqual([]);
+    } finally {
+      await page.emulateMedia({ reducedMotion: null });
+    }
+
+    // Moving frames: seek every looping animation across one ~3s cycle.
+    await renderProbes();
+
+    for (const at of [ 400, 1100, 1800, 2500, 3200 ]) {
+      await page.evaluate((ms) => {
+        document.getAnimations().forEach((animation) => {
+          animation.pause();
+          Object.assign(animation, { currentTime: ms });
+        });
+      }, at);
+
+      expect(await findSpills(), `at ${at}ms`).toEqual([]);
+    }
+
+    await page.evaluate(() => document.querySelectorAll('[data-preview-fit-probe]').forEach((el) => el.remove()));
+  });
 });

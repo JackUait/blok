@@ -3,7 +3,7 @@ import type { ImageCrop } from '../../../types/tools/image';
 export type Handle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 
 export const FULL_RECT: ImageCrop = { x: 0, y: 0, w: 100, h: 100 };
-const MIN = 5;
+export const MIN = 5;
 
 export function isFullRect(r: ImageCrop): boolean {
   return r.x === 0 && r.y === 0 && r.w === 100 && r.h === 100;

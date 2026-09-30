@@ -531,12 +531,13 @@ describe('Find module', () => {
     expect(input).toHaveFocus();
   });
 
-  it('hands a second Cmd+F in the find field to the browser', () => {
+  it('keeps a second Cmd+F in the find field from opening the browser find', () => {
     const { wrapper, redactor } = editor([{ id: 'a', text: 'hello' }]);
 
     press(redactor, { key: 'f', code: 'KeyF', ctrlKey: true });
 
-    expect(press(searchInput(wrapper), { key: 'f', code: 'KeyF', ctrlKey: true }).defaultPrevented).toBe(false);
+    expect(press(searchInput(wrapper), { key: 'f', code: 'KeyF', ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(searchInput(wrapper)).toHaveFocus();
   });
 
   it('keeps Escape in the find bar from reaching the page', () => {

@@ -312,11 +312,6 @@ export class Find extends Module {
       ? event.metaKey && event.altKey && event.code === 'KeyF'
       : event.ctrlKey && !event.altKey && !event.shiftKey && event.code === 'KeyH';
 
-    // Pressed again inside the bar: the reader wants the browser's own find for the whole page.
-    if (isFind && this.bar?.element.contains(event.target as Node) === true) {
-      return;
-    }
-
     if (isFind || isReplace) {
       event.preventDefault();
       event.stopPropagation();

@@ -149,17 +149,36 @@ test.describe('find in page', () => {
       await expect.poll(() => page.evaluate(() => window.__lastFindKey)).toEqual({ code: 'KeyF', prevented: true });
     });
 
-    test('a second Mod+F inside the find bar is left to the browser', async ({ page }) => {
+    test('a second Mod+F inside the find bar stays in the bar and selects the query', async ({ page }) => {
       await createEditor(page, paragraphs('alpha'));
       await focusParagraph(page, 'alpha');
       await page.keyboard.press(FIND_KEY);
-      await expect(page.getByTestId('find-input')).toBeFocused();
+      const input = page.getByTestId('find-input');
+
+      await input.fill('alp');
+      await input.press('End');
       await recordNextFKeydown(page);
 
       await page.keyboard.press(FIND_KEY);
 
-      await expect.poll(() => page.evaluate(() => window.__lastFindKey)).toEqual({ code: 'KeyF', prevented: false });
+      await expect.poll(() => page.evaluate(() => window.__lastFindKey)).toEqual({ code: 'KeyF', prevented: true });
       await expect(page.getByTestId('find-bar')).toBeVisible();
+      await expect(input).toBeFocused();
+      await expect.poll(() => input.evaluate((el: HTMLInputElement) => [el.selectionStart, el.selectionEnd])).toEqual([0, 3]);
+    });
+
+    test('Mod+F in the replace field moves to the find field, not the browser find', async ({ page }) => {
+      await createEditor(page, paragraphs('alpha'));
+      await focusParagraph(page, 'alpha');
+      await page.keyboard.press(REPLACE_KEY);
+      await page.getByTestId('find-replace-input').focus();
+      await recordNextFKeydown(page);
+
+      await page.keyboard.press(FIND_KEY);
+
+      await expect.poll(() => page.evaluate(() => window.__lastFindKey)).toEqual({ code: 'KeyF', prevented: true });
+      await expect(page.getByTestId('find-input')).toBeFocused();
+      await expect(page.getByTestId('find-replace-row')).toBeVisible();
     });
 
     test('Mod+F on the body opens the find bar when the page has one editor', async ({ page }) => {

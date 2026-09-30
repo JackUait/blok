@@ -190,6 +190,22 @@ describe('openDarkroom', () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
+  it('a photo that loads after Cancel leaves the block image visible', () => {
+    const source = document.createElement('div');
+
+    document.body.appendChild(source);
+    track(openDarkroom({ url: 'x.png', onApply: vi.fn(), onCancel: vi.fn(), clock: fakeFrameClock().clock, sourceEl: source }));
+    const photo = document.querySelector<HTMLImageElement>('[data-role="darkroom-photo"]');
+
+    if (!photo) throw new Error('no photo');
+    button('cancel').click();
+    setNatural(photo, 800, 534);
+    photo.dispatchEvent(new Event('load'));
+
+    expect(source.style.visibility).toBe('');
+    expect(document.querySelector('[class^="blok-darkroom"]')).toBeNull();
+  });
+
   it('an SVG with no intrinsic size still opens with finite transforms and no readout', () => {
     const { clock, advance } = fakeFrameClock();
 

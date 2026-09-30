@@ -81,6 +81,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     panFrom: { s: 1, tx: 0, ty: 0 },
     rectFrom: { ...FULL_RECT },
     keyIdle: 0,
+    closed: false,
   };
   const startRect = { ...st.rect };
   const hist = { stack: createHistory({ rect: { ...st.rect }, ratioKey: st.def.key }) };
@@ -345,7 +346,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   };
 
   const start = (): void => {
-    if (st.ready) return;
+    if (st.ready || st.closed) return;
     st.measured = photo.naturalWidth > 0 && photo.naturalHeight > 0;
     if (st.measured) {
       st.natural = { w: photo.naturalWidth, h: photo.naturalHeight };
@@ -372,6 +373,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   };
 
   const fail = (): void => {
+    if (st.closed) return;
     stage.replaceChildren(renderErrorState({ variant: 'broken', i18n: opts.i18n }));
     doneBtn.disabled = true;
     resetBtn.disabled = true;
@@ -512,6 +514,9 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     outside: false,
     onDismiss: () => cancel(),
     onClose: () => {
+      st.closed = true;
+      photo.removeEventListener('load', start);
+      photo.removeEventListener('error', fail);
       view.stop();
       dissolve.destroy();
       detachGestures();

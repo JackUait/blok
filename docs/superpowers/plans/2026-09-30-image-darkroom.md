@@ -1316,6 +1316,7 @@ git commit -m "feat(image): darkroom chrome dissolve and fly-out clone"
   - `OpenDarkroomOptions { url; alt?; initial?: ImageCrop; onApply(rect: ImageCrop | null): void; onCancel(): void; i18n?: I18nInstance; sourceEl?: HTMLElement | null; getTargetEl?: () => HTMLElement | null; clock?: SpringClock }`
   - `openDarkroom(opts): () => void` (the teardown is instant and has no fly-out)
   - DOM hooks:
+    - `data-settled` on the stage while the view spring is at rest (the final `onUpdate` of a settle runs before `onSettle`, so the attribute ends up set)
     - `[data-role="darkroom-stage"]`, `[data-role="darkroom-photo"]`, `[data-role="darkroom-frame"]`, `[data-role="darkroom-readout"]`, `[data-role="darkroom-live"]`
     - `[data-darkroom-chrome]` on the bar and the pill
     - `data-peek` on the surface
@@ -1466,6 +1467,12 @@ describe('openDarkroom', () => {
 
     expect(circle?.getAttribute('aria-checked')).toBe('false');
     expect(document.querySelector('[data-ratio="free"]')?.getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('marks the stage settled once the view is at rest', () => {
+    open();
+
+    expect(document.querySelector('[data-role="darkroom-stage"]')?.hasAttribute('data-settled')).toBe(true);
   });
 
   it('shows the size readout from the natural size', () => {
@@ -1697,7 +1704,12 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   const view = createSpring<ViewKey>({
     from: { s: 1, tx: 0, ty: 0, x: 0, y: 0, w: 0, h: 0, round: roundOf(st.def.shape) },
     clock: opts.clock,
-    onUpdate: paint,
+    onUpdate: (v) => {
+      // e2e waits on this; a gesture that starts mid-spring measures a moving frame.
+      stage.removeAttribute('data-settled');
+      paint(v);
+    },
+    onSettle: () => stage.setAttribute('data-settled', ''),
   });
 
   /** Target layout for the current rect: frame fitted and centred, camera showing the rect in it. */
@@ -1888,13 +1900,14 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     dialogHandle.close();
     after();
     if (source) source.style.visibility = '';
-    if (!st.ready) return;
-    requestAnimationFrame(() => {
-      const target = opts.getTargetEl?.() ?? null;
+    const getTarget = opts.getTargetEl;
 
+    // Without a target there is nothing to land on; skipping also keeps a late rAF out of torn-down tests.
+    if (!st.ready || !getTarget) return;
+    requestAnimationFrame(() => {
       flyOut({
         url: opts.url, natural: st.natural, rect, from, fromRound: v.round,
-        target, targetRound: rect.shape && rect.shape !== 'rect' ? 1 : 0,
+        target: getTarget(), targetRound: round,
         clock: opts.clock,
       });
     });
@@ -1904,7 +1917,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     if (doneBtn.disabled) return;
     const result = finish();
 
-    leave(result ?? FULL_RECT, view.values().round, () => opts.onApply(result));
+    leave(result ?? FULL_RECT, roundOf(st.def.shape), () => opts.onApply(result));
   };
 
   const cancel = (): void => {
@@ -2509,12 +2522,15 @@ Expected: all PASS. The positioning and URL-sink laws may report the exact key f
 ```bash
 npx eslint src/tools/image/index.ts test/unit/tools/image/index.mutants.test.ts test/unit/tools/image-crop.test.ts test/unit/tools/image-lightbox.test.ts test/unit/styles/focus-within-modality-law.test.ts test/unit/architecture/floating-positioning-law.test.ts test/unit/architecture/url-sink-law.test.ts test/unit/components/i18n/untranslated-strings.test.ts
 NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p tsconfig.json
-git add -u src/tools/image test/unit
-git add src/tools/image/index.ts
+git add src/tools/image/index.ts test/unit/tools/image/index.mutants.test.ts test/unit/tools/image-crop.test.ts \
+  test/unit/tools/image-lightbox.test.ts test/unit/styles/focus-within-modality-law.test.ts \
+  test/unit/architecture/floating-positioning-law.test.ts test/unit/architecture/url-sink-law.test.ts \
+  test/unit/components/i18n/untranslated-strings.test.ts
+git status --short   # the git rm deletions are already staged; nothing else of yours should be listed
 git commit -m "feat(image): open the darkroom from the image block; retire the crop modal"
 ```
 
-(`git add -u` stages the deletions and edits under those two paths only. Check `git status` first so no peer's files come along.)
+(This checkout is shared with other sessions. Never use `git add -u` or `-A` here.)
 
 ---
 
@@ -2573,8 +2589,8 @@ const openDarkroom = async (page: Page, crop?: { x: number; y: number; w: number
 
   await expect(dialog).toBeVisible();
   await expect(page.locator('[data-role="darkroom-readout"]')).toHaveText(/× \d+ px/);
-  // Wait until the fly-in has settled.
-  await expect(page.locator('[data-role="darkroom-flight"]')).toHaveCount(0);
+  // The fly-in animates the darkroom's own photo; gestures must start from rest.
+  await expect(page.locator('[data-role="darkroom-stage"][data-settled]')).toHaveCount(1);
 
   return { dialog, stage: page.locator('[data-role="darkroom-stage"]') };
 };
@@ -2627,7 +2643,7 @@ test('wheel zoom narrows the crop', async ({ page }) => {
   expect(box).not.toBeNull();
   await page.mouse.move((box?.x ?? 0) + (box?.width ?? 0) / 2, (box?.y ?? 0) + (box?.height ?? 0) / 2);
   await page.mouse.wheel(0, -400);
-  await page.waitForTimeout(400);
+  await expect(page.locator('[data-role="darkroom-stage"][data-settled]')).toHaveCount(1);
   await dialog.locator('[data-action="done"]').click();
   const { crop } = await cropOf(page);
 
@@ -2644,7 +2660,7 @@ test('dragging the zoomed photo moves the crop', async ({ page }) => {
   await page.mouse.down();
   await page.mouse.move(cx - 60, cy, { steps: 6 });
   await page.mouse.up();
-  await page.waitForTimeout(600);
+  await expect(page.locator('[data-role="darkroom-stage"][data-settled]')).toHaveCount(1);
   await dialog.locator('[data-action="done"]').click();
   const { crop } = await cropOf(page);
 

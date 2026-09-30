@@ -15,24 +15,26 @@ const setup = (config: Partial<BlokConfig> = {}, readOnly = false): {
   eventsDispatcher: EventsDispatcher<BlokEventMap>;
   show: ReturnType<typeof vi.fn<(o: NotifierOptions) => void>>;
   dismiss: ReturnType<typeof vi.fn<(o: NotifierOptions) => void>>;
+  resolve: ReturnType<typeof vi.fn<(o: NotifierOptions, message: string) => void>>;
   scrollToBlock: ReturnType<typeof vi.fn<(id: string) => void>>;
 } => {
   const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const show = vi.fn<(o: NotifierOptions) => void>();
   const dismiss = vi.fn<(o: NotifierOptions) => void>();
+  const resolve = vi.fn<(o: NotifierOptions, message: string) => void>();
   const scrollToBlock = vi.fn<(id: string) => void>();
   const module = new MediaFailures({ config, eventsDispatcher });
 
   created.push(module);
 
   module.state = {
-    NotifierAPI: { show, dismiss },
+    NotifierAPI: { show, dismiss, resolve },
     BlocksAPI: { scrollToBlock },
     ReadOnly: { isEnabled: readOnly },
     I18n: { t: (key: string, vars?: Record<string, string | number>) => (vars ? `${key}:${String(vars.count)}` : key) },
   } as unknown as BlokModules;
 
-  return { module, eventsDispatcher, show, dismiss, scrollToBlock };
+  return { module, eventsDispatcher, show, dismiss, resolve, scrollToBlock };
 };
 
 const input = (blockId: string, kind: 'upload' | 'load' = 'load', retry = vi.fn()): { blockId: string; tool: string; kind: 'upload' | 'load'; url: string; retry: () => void } =>
@@ -210,7 +212,76 @@ describe('MediaFailures', () => {
     expect(show).toHaveBeenCalledTimes(1);
   });
 
-  it('closes its toast once every failure has recovered', () => {
+  it('draws the card with the picked image, a reason and a busy primary Retry', () => {
+    const { module, show } = setup();
+
+    module.report({ ...input('a', 'upload'), preview: 'blob:https://x/a' });
+    vi.advanceTimersByTime(COALESCE_MS);
+    const [ [ options ] ] = show.mock.calls;
+    const [ retry, showButton ] = actionsOf(options);
+
+    expect(options.thumbnails).toEqual([ 'blob:https://x/a' ]);
+    expect(options.detail).toBe('imageFailure.uploadDetail');
+    expect([ retry.primary, retry.busyOnClick ]).toEqual([ true, true ]);
+    expect(showButton.primary).toBeUndefined();
+  });
+
+  it('draws one tile per failure and the shared reason when all failed the same way', () => {
+    const { module, show } = setup();
+
+    module.report(input('a', 'load'));
+    module.report(input('b', 'load'));
+    vi.advanceTimersByTime(COALESCE_MS);
+
+    expect(show.mock.calls[0][0].thumbnails).toEqual([ null, null ]);
+    expect(show.mock.calls[0][0].detail).toBe('imageFailure.loadDetail');
+  });
+
+  it('leaves out the reason when failures differ', () => {
+    const { module, show } = setup();
+
+    module.report(input('a', 'load'));
+    module.report(input('b', 'upload'));
+    vi.advanceTimersByTime(COALESCE_MS);
+
+    expect(show.mock.calls[0][0].detail).toBeUndefined();
+  });
+
+  it('shows the restored state when the last failure recovers', () => {
+    const { module, show, dismiss, resolve } = setup();
+
+    module.report(input('a'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    module.clear('a', { recovered: true });
+
+    expect(resolve).toHaveBeenCalledWith(show.mock.calls[0][0], 'imageFailure.restored');
+    expect(dismiss).not.toHaveBeenCalled();
+  });
+
+  it('counts every image that recovered', () => {
+    const { module, resolve } = setup();
+
+    module.report(input('a'));
+    module.report(input('b'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    module.clear('a', { recovered: true });
+    module.clear('b', { recovered: true });
+
+    expect(resolve).toHaveBeenCalledWith(expect.anything(), 'imageFailure.restoredMany:2');
+  });
+
+  it('closes quietly when the last failure went away without recovering', () => {
+    const { module, dismiss, resolve } = setup();
+
+    module.report(input('a'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    module.clear('a');
+
+    expect(resolve).not.toHaveBeenCalled();
+    expect(dismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes its toast once every failure is gone', () => {
     const { module, show, dismiss } = setup();
 
     module.report(input('a'));

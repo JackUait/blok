@@ -645,6 +645,7 @@
 @import './presence.css';
 @import './find.css';
 @import './field.css';
+@import './notifier-card.css';
 
 /*
   Callout body type scale.

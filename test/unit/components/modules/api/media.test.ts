@@ -22,9 +22,11 @@ describe('MediaAPI', () => {
     api.state = { MediaFailures: { report, clear, confirmLeave } } as unknown as BlokModules;
     api.methods.reportFailure(failure);
     api.methods.clearFailure('b');
+    api.methods.clearFailure('c', { recovered: true });
 
     await expect(api.methods.confirmLeave()).resolves.toBe(false);
     expect(report).toHaveBeenCalledWith(failure);
-    expect(clear).toHaveBeenCalledWith('b');
+    expect(clear).toHaveBeenCalledWith('b', undefined);
+    expect(clear).toHaveBeenCalledWith('c', { recovered: true });
   });
 });

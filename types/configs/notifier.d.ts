@@ -10,16 +10,26 @@
 export type NotifierPosition = 'bottom-left' | 'bottom-right' | 'bottom-center' | 'top-left' | 'top-right' | 'top-center';
 
 /**
- * Base options interface for notifications
- */
-/**
  * A button on an alert toast. A toast with actions stays until closed.
  */
 export interface NotifierAction {
   label: string;
   onClick(): void;
+
+  /**
+   * The main action: drawn as a solid button.
+   */
+  primary?: boolean;
+
+  /**
+   * The click starts work: the button shows a spinner until the toast changes.
+   */
+  busyOnClick?: boolean;
 }
 
+/**
+ * Base options interface for notifications
+ */
 export interface NotifierOptions {
   /**
    * Notification message (can contains HTML)
@@ -54,6 +64,17 @@ export interface NotifierOptions {
    * Accessible label of the close button shown with `actions`.
    */
   dismissText?: string;
+
+  /**
+   * A muted second line under the message. Plain text.
+   */
+  detail?: string;
+
+  /**
+   * Image tiles on a toast with `actions`, up to 3 drawn. Each is a `blob:` or
+   * `data:image/` URL; `null` (or any other URL) draws a broken-image glyph.
+   */
+  thumbnails?: (string | null)[];
 }
 
 /**

@@ -11,7 +11,7 @@ export class MediaAPI extends Module {
   public get methods(): Media {
     return {
       reportFailure: (failure) => this.Blok.MediaFailures.report(failure),
-      clearFailure: (blockId) => this.Blok.MediaFailures.clear(blockId),
+      clearFailure: (blockId, options) => this.Blok.MediaFailures.clear(blockId, options),
       confirmLeave: () => this.Blok.MediaFailures.confirmLeave(),
     };
   }

@@ -1,7 +1,7 @@
 import { registerLayer } from '../dismissable-layer';
 import { promoteToTopLayer, removeFromTopLayer } from '../top-layer';
 
-import { alert, confirm, getWrapper, modalCleanups, prompt, setToastDismisser } from './draw';
+import { alert, confirm, drawResolved, getWrapper, modalCleanups, prompt, setToastDismisser } from './draw';
 import type { NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions, NotifierPosition } from './types';
 import { DEFAULT_NOTIFIER_POSITION } from './types';
 
@@ -340,7 +340,28 @@ export const dismiss = (options: NotifierOptions): void => {
   }
 };
 
+/**
+ * How long a resolved card stays before it closes itself.
+ */
+export const RESOLVED_HOLD_MS = 1600;
+
+/**
+ * Show the success state on the card shown with these options, then close it.
+ * @param options - the object passed to `show`
+ * @param message - plain text, e.g. "Image restored"
+ */
+export const resolve = (options: NotifierOptions, message: string): void => {
+  const notify = toastsByOptions.get(options);
+
+  if (notify?.isConnected !== true || notify.hasAttribute('data-resolved')) {
+    return;
+  }
+  drawResolved(notify, message);
+  window.setTimeout(() => toastDismiss.get(notify)?.(), RESOLVED_HOLD_MS);
+};
+
 export const Notifier = {
   show,
   dismiss,
+  resolve,
 };

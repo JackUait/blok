@@ -514,3 +514,91 @@ describe('alert with actions', () => {
     expect(notify.querySelector('[data-blok-testid="notification-action"] b')).toBeNull();
   });
 });
+
+describe('alert as a media card', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const retry = { label: 'Retry', onClick: (): void => undefined, primary: true, busyOnClick: true };
+  const showAction = { label: 'Show', onClick: (): void => undefined };
+  const byId = (root: HTMLElement, id: string): HTMLElement | null => root.querySelector<HTMLElement>(`[data-blok-testid="${id}"]`);
+
+  it('marks a toast with actions as a card and leaves a plain toast alone', () => {
+    expect(alert({ message: 'm', actions: [ showAction ] }).getAttribute('data-blok-toast')).toBe('card');
+    expect(alert({ message: 'm' }).hasAttribute('data-blok-toast')).toBe(false);
+  });
+
+  it('draws the picked image as a tile', () => {
+    const card = alert({ message: 'm', actions: [ retry ], thumbnails: [ 'blob:https://x/1' ] });
+    const thumb = byId(card, 'notification-thumb')?.querySelector('img');
+
+    expect(thumb?.getAttribute('src')).toBe('blob:https://x/1');
+    expect(thumb?.getAttribute('alt')).toBe('');
+  });
+
+  it('draws a broken-image glyph for a missing or unsafe source', () => {
+    const card = alert({ message: 'm', actions: [ retry ], thumbnails: [ null, 'javascript:alert(1)', 'https://evil.test/a.png' ] });
+    const thumbs = card.querySelectorAll('[data-blok-testid="notification-thumb"]');
+
+    expect(thumbs).toHaveLength(3);
+    expect(card.querySelector('[data-blok-testid="notification-thumb"] img')).toBeNull();
+    thumbs.forEach((thumb) => expect(thumb.querySelector('svg')).not.toBeNull());
+  });
+
+  it('draws the glyph for an svg data source', () => {
+    const card = alert({ message: 'm', actions: [ retry ], thumbnails: [ 'data:image/svg+xml;base64,PHN2Zy8+' ] });
+
+    expect(card.querySelector('[data-blok-testid="notification-thumb"] img')).toBeNull();
+  });
+
+  it('accepts a data:image source', () => {
+    const card = alert({ message: 'm', actions: [ retry ], thumbnails: [ 'data:image/png;base64,AAAA' ] });
+
+    expect(card.querySelector('[data-blok-testid="notification-thumb"] img')).not.toBeNull();
+  });
+
+  it('fans out at most three tiles and counts them all', () => {
+    const card = alert({ message: 'm', actions: [ retry ], thumbnails: [ null, null, null, null, null ] });
+
+    expect(card.querySelectorAll('[data-blok-testid="notification-thumb"]')).toHaveLength(3);
+    expect(byId(card, 'notification-count')?.textContent).toBe('5');
+  });
+
+  it('shows no count for a single tile and no tile without thumbnails', () => {
+    expect(byId(alert({ message: 'm', actions: [ retry ], thumbnails: [ null ] }), 'notification-count')).toBeNull();
+    expect(byId(alert({ message: 'm', actions: [ retry ] }), 'notification-tile')).toBeNull();
+  });
+
+  it('writes the detail line as text', () => {
+    const card = alert({ message: 'm', actions: [ retry ], detail: '<b>The link isn’t responding</b>' });
+
+    expect(byId(card, 'notification-detail')?.textContent).toBe('<b>The link isn’t responding</b>');
+  });
+
+  it('marks the primary action', () => {
+    const card = alert({ message: 'm', actions: [ retry, showAction ] });
+    const [ first, second ] = Array.from(card.querySelectorAll('[data-blok-testid="notification-action"]'));
+
+    expect(first.getAttribute('data-primary')).toBe('true');
+    expect(second.hasAttribute('data-primary')).toBe(false);
+  });
+
+  it('turns a busy-on-click action into a spinner and blocks a second click', () => {
+    const onClick = vi.fn();
+    const card = alert({ message: 'm', actions: [ { ...retry, onClick } ] });
+    const button = byId(card, 'notification-action') as HTMLButtonElement;
+
+    button.click();
+    button.click();
+
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(button.getAttribute('aria-busy')).toBe('true');
+    expect(byId(card, 'notification-spinner')).not.toBeNull();
+    expect(button.getAttribute('aria-label')).toBe('Retry');
+  });
+});

@@ -18,6 +18,11 @@ export class NotifierAPI extends Module {
   /**
    * Optional consumer-provided notifier handler from BlokConfig
    */
+  /**
+   * The built-in notifier keys a toast by the object it was shown with; `show`
+   * may send a copy, so `dismiss`/`resolve` must pass that copy back.
+   */
+  private readonly sentCopies = new WeakMap<NotifierOptions, NotifierOptions>();
   private readonly customNotifier:
     | ((options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions) => void)
     | undefined;
@@ -50,7 +55,18 @@ export class NotifierAPI extends Module {
    */
   public dismiss(options: NotifierOptions): void {
     if (this.customNotifier === undefined) {
-      this.builtInNotifier.dismiss(options);
+      this.builtInNotifier.dismiss(this.sentCopies.get(options) ?? options);
+    }
+  }
+
+  /**
+   * Show a card's success state, then close it. A custom notifier cannot be reached from here.
+   * @param options - the object passed to `show`
+   * @param message - plain text
+   */
+  public resolve(options: NotifierOptions, message: string): void {
+    if (this.customNotifier === undefined) {
+      this.builtInNotifier.resolve(this.sentCopies.get(options) ?? options, message);
     }
   }
 
@@ -89,7 +105,10 @@ export class NotifierAPI extends Module {
     }
 
     if (options.actions !== undefined && options.dismissText === undefined) {
-      this.builtInNotifier.show({ ...options, dismissText: this.Blok.I18n.t('notifier.dismiss') });
+      const sent = { ...options, dismissText: this.Blok.I18n.t('notifier.dismiss') };
+
+      this.sentCopies.set(options, sent);
+      this.builtInNotifier.show(sent);
 
       return;
     }

@@ -102,6 +102,8 @@ export class ImageTool implements BlockTool {
   private converting = false;
   /** Set by `removed()`: this instance is no longer the document's block. */
   private detached = false;
+  /** Object URL of the picked file shown in the failure notice; freed when the failure ends. */
+  private failurePreview: string | null = null;
   /** Put back with the old `url` when an entered link fails. */
   private variantsBeforeLink: ImageData['variants'];
 
@@ -577,9 +579,18 @@ export class ImageTool implements BlockTool {
     this.retrying = false;
     this.renderState();
     if (outcome.kind === 'message') {
-      this.api.media.reportFailure({ blockId: this.block.id, tool: 'image', kind: 'upload', url: source.url, retry: () => this.retryLastSource() });
+      this.releaseFailurePreview();
+      this.failurePreview = source.file === undefined ? null : URL.createObjectURL(source.file);
+      this.api.media.reportFailure({
+        blockId: this.block.id,
+        tool: 'image',
+        kind: 'upload',
+        url: source.url,
+        retry: () => this.retryLastSource(),
+        ...(this.failurePreview === null ? {} : { preview: this.failurePreview }),
+      });
     } else {
-      this.api.media.clearFailure(this.block.id);
+      this.clearFailure();
     }
     if (!(err instanceof ImageError)) {
       console.error('[image] upload failed', err);
@@ -641,6 +652,18 @@ export class ImageTool implements BlockTool {
     }
     imgEl.setAttribute('src', '');
     imgEl.setAttribute('src', src);
+  }
+
+  private clearFailure(options?: { recovered?: boolean }): void {
+    this.releaseFailurePreview();
+    this.api.media.clearFailure(this.block.id, options);
+  }
+
+  private releaseFailurePreview(): void {
+    if (this.failurePreview !== null) {
+      URL.revokeObjectURL(this.failurePreview);
+      this.failurePreview = null;
+    }
   }
 
   private retryBrokenImage(): void {
@@ -848,7 +871,7 @@ export class ImageTool implements BlockTool {
 
   public removed(): void {
     this.detached = true;
-    this.api.media.clearFailure(this.block.id);
+    this.clearFailure();
     this.detachResize();
     this.detachCrop();
     this.altPopoverDetach?.();
@@ -990,7 +1013,7 @@ export class ImageTool implements BlockTool {
       this.reloadAttempts = 0;
       imgEl.addEventListener('error', () => this.handleImgLoadFailure(imgEl, figure));
       imgEl.addEventListener('load', () => {
-        this.api.media.clearFailure(this.block.id);
+        this.clearFailure({ recovered: true });
         figure.removeAttribute('data-loading');
         syncMediaHeight(figure);
         figure.style.removeProperty('aspect-ratio');
@@ -1234,7 +1257,7 @@ export class ImageTool implements BlockTool {
     this.brokenImage = false;
     this.lastSource = null;
     this.lastFileName = null;
-    this.api.media.clearFailure(this.block.id);
+    this.clearFailure();
     this.swapToEmptyAnimated(outgoing);
     this.block.dispatchChange();
   }

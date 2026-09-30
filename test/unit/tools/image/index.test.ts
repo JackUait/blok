@@ -2389,7 +2389,51 @@ describe('ImageTool — failure reporting', () => {
     reported.retry();
     imgOf(root).dispatchEvent(new Event('load'));
 
-    expect(options.api.media.clearFailure).toHaveBeenCalledWith('b1');
+    expect(options.api.media.clearFailure).toHaveBeenCalledWith('b1', { recovered: true });
+  });
+
+  it('shows the picked file in the notice when its upload fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:preview');
+    const options = createOptions({}, { uploader: { uploadByFile: () => Promise.reject(new Error('boom')) } });
+    const tool = new ImageTool(options);
+
+    tool.render();
+    pasteFile(tool);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(options.api.media.reportFailure).toHaveBeenCalledWith(expect.objectContaining({ kind: 'upload', preview: 'blob:preview' }));
+  });
+
+  it('frees the notice preview when the block is removed', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:preview');
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const options = createOptions({}, { uploader: { uploadByFile: () => Promise.reject(new Error('boom')) } });
+    const tool = new ImageTool(options);
+
+    tool.render();
+    pasteFile(tool);
+    await new Promise((r) => setTimeout(r, 0));
+    tool.removed();
+
+    expect(revoke).toHaveBeenCalledWith('blob:preview');
+  });
+
+  it('frees the old preview when the upload fails again', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValueOnce('blob:first').mockReturnValueOnce('blob:second');
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const options = createOptions({}, { uploader: { uploadByFile: () => Promise.reject(new Error('boom')) } });
+    const tool = new ImageTool(options);
+
+    tool.render();
+    pasteFile(tool);
+    await new Promise((r) => setTimeout(r, 0));
+    vi.mocked(options.api.media.reportFailure).mock.calls[0][0].retry();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(revoke).toHaveBeenCalledWith('blob:first');
   });
 
   it('clears when the user swaps the failed image for the empty uploader', async () => {
@@ -2404,7 +2448,7 @@ describe('ImageTool — failure reporting', () => {
     root.querySelector<HTMLButtonElement>('[data-role="error-state"] [data-action="replace"]')?.click();
 
     expect(root.getAttribute('data-state')).toBe('empty');
-    expect(options.api.media.clearFailure).toHaveBeenCalledWith('b1');
+    expect(options.api.media.clearFailure).toHaveBeenCalledWith('b1', undefined);
   });
 
   it('does not report a load failure that lands after the block was removed', () => {
@@ -2426,6 +2470,6 @@ describe('ImageTool — failure reporting', () => {
     tool.render();
     tool.removed();
 
-    expect(options.api.media.clearFailure).toHaveBeenCalledWith('b1');
+    expect(options.api.media.clearFailure).toHaveBeenCalledWith('b1', undefined);
   });
 });

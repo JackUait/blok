@@ -21,3 +21,13 @@ assert<Equal<ReturnType<Blok['confirmLeave']>, Promise<boolean>>>();
 const failure: ImageFailure = { blockId: 'b', tool: 'image', kind: 'load', retry: () => undefined, scrollTo: () => undefined };
 
 void failure;
+
+import type { NotifierAction, NotifierOptions } from '../../../types/configs/notifier';
+import type { MediaFailureInput } from '../../../types/api/media';
+
+assert<Equal<NotifierOptions['detail'], string | undefined>>();
+assert<Equal<NotifierOptions['thumbnails'], (string | null)[] | undefined>>();
+assert<Equal<NotifierAction['primary'], boolean | undefined>>();
+assert<Equal<NotifierAction['busyOnClick'], boolean | undefined>>();
+assert<Equal<MediaFailureInput['preview'], string | undefined>>();
+assert<Equal<Parameters<API['media']['clearFailure']>[1], { recovered?: boolean } | undefined>>();

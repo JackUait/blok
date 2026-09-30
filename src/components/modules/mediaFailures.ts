@@ -29,6 +29,7 @@ export class MediaFailures extends Module {
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private holdingLeave = false;
   private shownToast: NotifierOptions | null = null;
+  private recoveredSinceToast = 0;
   private leave: { promise: Promise<boolean>; settle(answer: boolean): void; banner: LeaveBanner } | null = null;
 
   /**
@@ -69,15 +70,18 @@ export class MediaFailures extends Module {
   /**
    * Drop the failure recorded for a block, if any.
    * @param blockId - the block
+   * @param options - `recovered` when the image now works, so the toast can say so
    */
-  public clear(blockId: string): void {
+  public clear(blockId: string, options: { recovered?: boolean } = {}): void {
     if (!this.entries.delete(blockId)) {
       return;
     }
     this.syncLeaveHold();
+    if (options.recovered === true) {
+      this.recoveredSinceToast += 1;
+    }
     if (this.entries.size === 0 && this.shownToast !== null) {
-      this.Blok.NotifierAPI.dismiss(this.shownToast);
-      this.shownToast = null;
+      this.closeToast(options.recovered === true);
     }
     if (this.leave === null) {
       return;
@@ -215,6 +219,41 @@ export class MediaFailures extends Module {
     return parts.join(' · ');
   }
 
+  /**
+   * @param recovered - the last failure went away because the image now works
+   */
+  private closeToast(recovered: boolean): void {
+    const toast = this.shownToast;
+
+    if (toast === null) {
+      return;
+    }
+    this.shownToast = null;
+    if (!recovered) {
+      this.Blok.NotifierAPI.dismiss(toast);
+
+      return;
+    }
+    const message = this.recoveredSinceToast > 1
+      ? this.Blok.I18n.t('imageFailure.restoredMany', { count: this.recoveredSinceToast })
+      : this.Blok.I18n.t('imageFailure.restored');
+
+    this.Blok.NotifierAPI.resolve(toast, message);
+  }
+
+  /**
+   * The shared reason line, or undefined when failures differ in kind.
+   */
+  private detail(): string | undefined {
+    const kinds = new Set([ ...this.entries.values() ].map((entry) => entry.kind));
+
+    if (kinds.size !== 1) {
+      return undefined;
+    }
+
+    return this.Blok.I18n.t(kinds.has('upload') ? 'imageFailure.uploadDetail' : 'imageFailure.loadDetail');
+  }
+
   private notify(reason: Reason, message: string): void {
     if (this.askHost(reason) === false) {
       return;
@@ -223,8 +262,10 @@ export class MediaFailures extends Module {
     const options: NotifierOptions = {
       message,
       style: 'error',
+      detail: this.detail(),
+      thumbnails: [ ...this.entries.values() ].map((entry) => entry.preview ?? null),
       actions: [
-        { label: this.Blok.I18n.t('imageFailure.retry'), onClick: () => this.retryAll() },
+        { label: this.Blok.I18n.t('imageFailure.retry'), onClick: () => this.retryAll(), primary: true, busyOnClick: true },
         { label: this.Blok.I18n.t('imageFailure.show'), onClick: () => this.showFirst() },
       ],
     };
@@ -232,6 +273,7 @@ export class MediaFailures extends Module {
     try {
       this.Blok.NotifierAPI.show(options);
       this.shownToast = options;
+      this.recoveredSinceToast = 0;
     } catch (thrown: unknown) {
       log('The notifier threw while showing an image failure notice.', 'warn', thrown);
     }

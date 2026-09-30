@@ -89,6 +89,8 @@ test.describe('image failure notices', () => {
     // The failure clears only on the <img> load event, so confirmLeave() going true proves it loaded.
     await expect.poll(() => page.evaluate(() => window.blokInstance?.confirmLeave())).toBe(true);
     await expect(page.locator(IMAGE_BLOCK_SELECTOR)).not.toHaveAttribute('data-state', 'error');
+    await expect(toast).toContainText('Image restored');
+    await expect(toast).toBeHidden();
   });
 
   test('saving with a failed upload shows the save toast', async ({ page }) => {

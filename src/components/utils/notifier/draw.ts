@@ -1,3 +1,4 @@
+import { IconCheck, IconImageBroken } from '../../icons';
 import { openModalDialog, type ModalDialogHandle } from '../modal-dialog';
 import { twJoin } from '../tw';
 
@@ -220,6 +221,150 @@ const makeCancelHandler = (
   getHandle().close();
 };
 
+// The only sources a tile loads: a local object URL or an inert raster data image.
+// No http(s) (the toast must not fetch a host string) and no svg data.
+const SAFE_THUMBNAIL = /^(?:blob:|data:image\/(?:png|jpe?g|gif|webp|avif|bmp)[;,])/i;
+const MAX_TILES = 3;
+
+const drawThumb = (source: string | null): HTMLElement => {
+  const thumb = document.createElement('div');
+
+  thumb.setAttribute('data-blok-testid', 'notification-thumb');
+  thumb.setAttribute('data-blok-toast-part', 'thumb');
+
+  if (source !== null && SAFE_THUMBNAIL.test(source)) {
+    const img = document.createElement('img');
+
+    img.setAttribute('alt', '');
+    img.setAttribute('src', source);
+    thumb.appendChild(img);
+  } else {
+    thumb.setAttribute('data-broken', '');
+    thumb.innerHTML = IconImageBroken;
+  }
+
+  return thumb;
+};
+
+const drawTile = (thumbnails: (string | null)[]): HTMLElement => {
+  const tile = document.createElement('div');
+
+  tile.setAttribute('data-blok-testid', 'notification-tile');
+  tile.setAttribute('data-blok-toast-part', 'tile');
+  tile.setAttribute('aria-hidden', 'true');
+  tile.setAttribute('data-stack', String(Math.min(thumbnails.length, MAX_TILES)));
+  // Reversed so the first thumbnail paints on top of the fan.
+  thumbnails.slice(0, MAX_TILES).reverse().forEach((source) => tile.appendChild(drawThumb(source)));
+
+  if (thumbnails.length > 1) {
+    const count = document.createElement('span');
+
+    count.setAttribute('data-blok-testid', 'notification-count');
+    count.setAttribute('data-blok-toast-part', 'count');
+    count.textContent = String(thumbnails.length);
+    tile.appendChild(count);
+  }
+
+  return tile;
+};
+
+const drawSpinner = (): HTMLElement => {
+  const spinner = document.createElement('span');
+
+  spinner.setAttribute('data-blok-testid', 'notification-spinner');
+  spinner.setAttribute('data-blok-toast-part', 'spinner');
+  spinner.setAttribute('aria-hidden', 'true');
+
+  return spinner;
+};
+
+/**
+ * Lays an alert with actions out as a card: tile, text, actions, close.
+ * @param notify - the toast root
+ * @param messageWrapper - holds the live-region message text
+ * @param options - the toast options
+ */
+const drawCard = (notify: HTMLElement, messageWrapper: HTMLElement, options: NotifierOptions): void => {
+  notify.setAttribute('data-blok-toast', 'card');
+  messageWrapper.setAttribute('data-blok-toast-part', 'body');
+
+  if (options.thumbnails !== undefined && options.thumbnails.length > 0) {
+    notify.insertBefore(drawTile(options.thumbnails), messageWrapper);
+  }
+
+  if (options.detail !== undefined && options.detail !== '') {
+    const detail = document.createElement('div');
+
+    detail.setAttribute('data-blok-testid', 'notification-detail');
+    detail.setAttribute('data-blok-toast-part', 'detail');
+    detail.textContent = options.detail;
+    messageWrapper.appendChild(detail);
+  }
+
+  const actions = document.createElement('div');
+
+  actions.setAttribute('data-blok-toast-part', 'actions');
+  (options.actions ?? []).forEach((action) => {
+    const button = document.createElement('button');
+
+    button.type = 'button';
+    button.setAttribute('data-blok-testid', 'notification-action');
+    button.setAttribute('data-blok-toast-part', 'action');
+    if (action.primary === true) {
+      button.setAttribute('data-primary', 'true');
+    }
+    button.textContent = action.label;
+    button.addEventListener('click', () => {
+      if (button.getAttribute('aria-busy') === 'true') {
+        return;
+      }
+      if (action.busyOnClick === true) {
+        // The label stays the accessible name while the spinner replaces it on screen.
+        button.setAttribute('aria-label', action.label);
+        button.setAttribute('aria-busy', 'true');
+        button.appendChild(drawSpinner());
+      }
+      action.onClick();
+    });
+    actions.appendChild(button);
+  });
+  notify.appendChild(actions);
+  notify.appendChild(createDismissButton(() => toastDismissers.get(notify)?.(), options.dismissText ?? 'Close'));
+};
+
+/**
+ * Turns a card into its success state: check tile, new message, no actions.
+ * @param notify - a card drawn by `alert`
+ * @param message - plain text
+ */
+export const drawResolved = (notify: HTMLElement, message: string): void => {
+  const hadFocus = notify.contains(document.activeElement);
+  const width = notify.getBoundingClientRect().width;
+  const check = document.createElement('div');
+
+  // Hold the width: the shorter success content would otherwise snap the card narrower.
+  if (width > 0) {
+    notify.style.setProperty('width', `${width}px`);
+  }
+  const text = notify.querySelector<HTMLElement>(`[data-blok-testid="${MESSAGE_TEXT_TESTID}"]`);
+
+  notify.setAttribute('data-resolved', 'true');
+  check.setAttribute('data-blok-testid', 'notification-check');
+  check.setAttribute('data-blok-toast-part', 'check');
+  check.setAttribute('aria-hidden', 'true');
+  check.innerHTML = IconCheck;
+  notify.querySelector('[data-blok-toast-part="tile"]')?.remove();
+  notify.querySelector('[data-blok-toast-part="detail"]')?.remove();
+  notify.querySelector('[data-blok-toast-part="actions"]')?.remove();
+  notify.insertBefore(check, notify.firstChild);
+  if (text !== null) {
+    text.textContent = message;
+  }
+  if (hadFocus) {
+    notify.querySelector<HTMLElement>('[data-blok-testid="notification-dismiss"]')?.focus();
+  }
+};
+
 /**
  * @param {NotifierOptions} options - options for the notification
  * @returns {HTMLElement} - the notification element
@@ -262,7 +407,8 @@ export const alert = (options: NotifierOptions): HTMLElement => {
   // synchronously (they need it for aria-labelledby), so this deferral only
   // affects the standalone alert toast.
   queueMicrotask(() => {
-    if (messageText.isConnected) {
+    // A card resolved before this ran already holds its final text.
+    if (messageText.isConnected && !notify.hasAttribute('data-resolved')) {
       messageText.innerHTML = options.message;
     }
   });
@@ -271,21 +417,7 @@ export const alert = (options: NotifierOptions): HTMLElement => {
   notify.appendChild(messageWrapper);
 
   if (options.actions !== undefined && options.actions.length > 0) {
-    const btns = document.createElement('div');
-
-    btns.className = CSS.btnsWrapper;
-    options.actions.forEach((action) => {
-      const button = document.createElement('button');
-
-      button.type = 'button';
-      button.className = twJoin(CSS.btn, CSS.okBtn);
-      button.setAttribute('data-blok-testid', 'notification-action');
-      button.textContent = action.label;
-      button.addEventListener('click', () => action.onClick());
-      btns.appendChild(button);
-    });
-    messageWrapper.appendChild(btns);
-    notify.appendChild(createDismissButton(() => toastDismissers.get(notify)?.(), options.dismissText ?? 'Close'));
+    drawCard(notify, messageWrapper, options);
   }
 
   return notify;

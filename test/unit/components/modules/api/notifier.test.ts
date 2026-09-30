@@ -4,6 +4,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 vi.mock('../../../../../src/components/utils/notifier/index', () => ({
   show: vi.fn(),
   dismiss: vi.fn(),
+  resolve: vi.fn(),
 }));
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
@@ -93,6 +94,44 @@ describe('NotifierAPI', () => {
     await new Promise(r => setTimeout(r, 0));
 
     expect(builtInDismiss).not.toHaveBeenCalled();
+  });
+
+  it('resolves a built-in card by the options it was shown with', async () => {
+    const { resolve: builtInResolve } = await import('../../../../../src/components/utils/notifier/index');
+    const api = new NotifierAPI(makeConfig());
+    const options: NotifierOptions = { message: 'm' };
+
+    api.resolve(options, 'Image restored');
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(builtInResolve).toHaveBeenCalledWith(options, 'Image restored');
+  });
+
+  it('does not resolve through the built-in notifier when a custom one is set', async () => {
+    const { resolve: builtInResolve } = await import('../../../../../src/components/utils/notifier/index');
+    const api = new NotifierAPI(makeConfig(vi.fn()));
+
+    api.resolve({ message: 'm' }, 'Image restored');
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(builtInResolve).not.toHaveBeenCalled();
+  });
+
+  it('resolves and dismisses the very object the built-in notifier was shown', async () => {
+    const notifierModule = await import('../../../../../src/components/utils/notifier/index');
+    const api = new NotifierAPI(makeConfig());
+    const { state } = makeTranslatorState({});
+    api.state = state;
+    const options: NotifierOptions = { message: 'm', actions: [ { label: 'Retry', onClick: vi.fn() } ] };
+
+    api.show(options);
+    api.resolve(options, 'Image restored');
+    api.dismiss(options);
+    await new Promise(r => setTimeout(r, 0));
+    const [ [ shown ] ] = vi.mocked(notifierModule.show).mock.calls;
+
+    expect(vi.mocked(notifierModule.resolve).mock.calls[0][0]).toBe(shown);
+    expect(vi.mocked(notifierModule.dismiss).mock.calls[0][0]).toBe(shown);
   });
 
   it('fills a localized close label for toasts with actions', async () => {

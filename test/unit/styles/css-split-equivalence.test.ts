@@ -617,6 +617,10 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // chip; the quiet alt note in alt-popover.css; five --blok-image-* tokens in
     // the colors.css palettes. Measured net growth against 523c1716.
     const IMAGE_CHROME_ISLANDS_BYTES = 8_510;
+    // Failed-image media card toast: notifier-card.css (grid areas with a
+    // narrow-screen row, tile fan, count badge, pill actions, busy spinner,
+    // resolved check with ring pulse, reduced-motion opt-out) and its @import.
+    const NOTIFIER_MEDIA_CARD_BYTES = 10_796;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -630,7 +634,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + INLINE_TOOLBAR_CARD_BYTES
       + INLINE_TOOLBAR_ENTRANCE_BYTES
       + MEDIA_EMPTY_PREVIEW_BYTES
-      + IMAGE_CHROME_ISLANDS_BYTES;
+      + IMAGE_CHROME_ISLANDS_BYTES
+      + NOTIFIER_MEDIA_CARD_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

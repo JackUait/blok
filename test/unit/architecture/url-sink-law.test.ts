@@ -55,6 +55,8 @@ const EXEMPT_SINKS: Record<string, string> = {
     'HTMLImageElement src (lightbox display) — <img> is not a script-execution sink',
   'tools/image/crop-editor.ts » opts.url':
     'HTMLImageElement src (crop source) — <img> is not a script-execution sink',
+  'components/utils/notifier/draw.ts » source':
+    'HTMLImageElement src (failed-image toast tile), set only after SAFE_THUMBNAIL allows blob: or a raster data: image — <img> is not a script-execution sink',
   'tools/image/probe-dimensions.ts » url':
     'HTMLImageElement src (off-DOM dimension probe) — <img> is not a script-execution sink',
   'tools/audio/ui.ts » data.coverUrl':

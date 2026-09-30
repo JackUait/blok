@@ -10118,6 +10118,292 @@ textarea[data-blok-field] {
   mask: var(--_blok-search-glyph) center / contain no-repeat;
 }
 
+[data-blok-interface='notifier']:has(> [data-blok-toast='card']) {
+  width: max-content;
+}
+
+[data-blok-interface='notifier'] [data-blok-toast='card'] {
+  --blok-toast-card-pad: 10px 8px 10px 12px;
+  --blok-toast-card-gap: 12px;
+  --blok-toast-card-row-gap: 8px;
+  --blok-toast-card-radius: 16px;
+  --blok-toast-tile-size: 40px;
+  --blok-toast-tile-radius: 10px;
+  --blok-toast-fan-room: 0 8px;
+  --blok-toast-action-gap: 4px;
+  --blok-toast-action-pad: 0 12px;
+  --blok-toast-ink: #f5f5f5;
+  --blok-toast-ink-muted: #a1a1aa;
+  --blok-toast-ink-soft: #d4d4d8;
+  --blok-toast-ink-on-light: #18181b;
+  --blok-toast-success: #34c759;
+  --blok-toast-success-wash: rgb(52 199 89 / 0.16);
+  --blok-toast-success-ring: rgb(52 199 89 / 0.55);
+  --blok-toast-success-ring-end: rgb(52 199 89 / 0);
+  --blok-toast-cutout: #232326;
+  --blok-toast-tile-bg: rgb(255 255 255 / 0.07);
+  --blok-toast-tile-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.1), 0 2px 6px rgb(0 0 0 / 0.35);
+  --blok-toast-hover: rgb(255 255 255 / 0.09);
+  --blok-toast-primary-hover: #fff;
+  --blok-toast-primary-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.18), 0 1px 2px rgb(0 0 0 / 0.3);
+  --blok-toast-focus: rgb(255 255 255 / 0.55);
+  --blok-toast-spinner-track: rgb(24 24 27 / 0.2);
+  --blok-toast-spinner-track-light: rgb(255 255 255 / 0.2);
+  --blok-toast-pill-radius: 999px;
+  --blok-toast-count-radius: 9px;
+  --blok-toast-count-pad: 0 5px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-areas: 'tile body actions close';
+  align-items: center;
+  column-gap: var(--blok-toast-card-gap);
+  justify-content: stretch;
+  min-width: 340px;
+  max-width: min(620px, calc(100vw - 32px));
+  padding: var(--blok-toast-card-pad);
+  border-radius: var(--blok-toast-card-radius);
+  background: linear-gradient(180deg, #26262a 0%, #1c1c1f 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07), 0 18px 48px -12px rgb(0 0 0 / 0.55), 0 4px 12px rgb(0 0 0 / 0.25);
+  color: var(--blok-toast-ink);
+  font-family: var(--blok-font-family, var(--blok-font-sans));
+  text-align: start;
+  overflow: visible;
+}
+
+[data-blok-interface='notifier'] [data-blok-toast='card']:not(:has([data-blok-toast-part='tile'], [data-blok-toast-part='check'])) {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: 'body actions close';
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='tile'], [data-blok-toast='card'] [data-blok-toast-part='check'] {
+  grid-area: tile;
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='body'] {
+  grid-area: body;
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='actions'] {
+  grid-area: actions;
+}
+
+[data-blok-toast='card'] [data-blok-testid='notification-dismiss'] {
+  grid-area: close;
+}
+
+[@media (max-width: 520px)] [data-blok-interface='notifier'] [data-blok-toast='card'] {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'tile body close' 'tile actions actions';
+  row-gap: var(--blok-toast-card-row-gap);
+}
+
+[@media (max-width: 520px)] [data-blok-interface='notifier'] [data-blok-toast='card']:not(:has([data-blok-toast-part='tile'], [data-blok-toast-part='check'])) {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'body close' 'actions actions';
+}
+
+[@media (max-width: 520px)] [data-blok-toast='card'] [data-blok-toast-part='tile'] {
+  align-self: start;
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='tile'] {
+  position: relative;
+  width: var(--blok-toast-tile-size);
+  height: var(--blok-toast-tile-size);
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='thumb'] {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--blok-toast-tile-radius);
+  background: var(--blok-toast-tile-bg);
+  box-shadow: var(--blok-toast-tile-shadow);
+  color: var(--blok-toast-ink-muted);
+  animation: blok-toast-thumb-in 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='thumb'] img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.7) brightness(0.78);
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='thumb'] svg {
+  width: 20px;
+  height: 20px;
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='tile']:not([data-stack='1']) {
+  margin: var(--blok-toast-fan-room);
+}
+
+[data-blok-toast='card'] [data-stack='2'] [data-blok-toast-part='thumb']:nth-child(1), [data-blok-toast='card'] [data-stack='3'] [data-blok-toast-part='thumb']:nth-child(2) {
+  rotate: 14deg;
+  translate: 10px 1px;
+  scale: 0.88;
+  animation-delay: 60ms;
+}
+
+[data-blok-toast='card'] [data-stack='3'] [data-blok-toast-part='thumb']:nth-child(1) {
+  rotate: -16deg;
+  translate: -10px 1px;
+  scale: 0.84;
+  animation-delay: 120ms;
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='count'] {
+  position: absolute;
+  top: -7px;
+  right: -8px;
+  z-index: 1;
+  min-width: 18px;
+  height: 18px;
+  padding: var(--blok-toast-count-pad);
+  border-radius: var(--blok-toast-count-radius);
+  background: var(--blok-toast-ink);
+  box-shadow: 0 0 0 2px var(--blok-toast-cutout);
+  color: var(--blok-toast-ink-on-light);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='body'] {
+  min-width: 0;
+}
+
+[data-blok-toast='card'] [data-blok-testid='notification-message-text'] {
+  text-wrap: balance;
+  font-size: 14px;
+  font-weight: 560;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='detail'] {
+  color: var(--blok-toast-ink-muted);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='actions'] {
+  display: flex;
+  gap: var(--blok-toast-action-gap);
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='action'] {
+  position: relative;
+  height: 30px;
+  padding: var(--blok-toast-action-pad);
+  border: none;
+  border-radius: var(--blok-toast-pill-radius);
+  background: transparent;
+  color: var(--blok-toast-ink-soft);
+  font-size: 13px;
+  font-weight: 540;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, scale 140ms ease;
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='action']:hover {
+  background: var(--blok-toast-hover);
+  color: var(--blok-toast-ink);
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='action'][data-primary='true'] {
+  background: var(--blok-toast-ink);
+  box-shadow: var(--blok-toast-primary-shadow);
+  color: var(--blok-toast-ink-on-light);
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='action'][data-primary='true']:hover {
+  background: var(--blok-toast-primary-hover);
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='action']:active {
+  scale: 0.96;
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='action']:focus-visible {
+  outline: 2px solid var(--blok-toast-focus);
+  outline-offset: 2px;
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='action'][aria-busy='true'] {
+  color: transparent;
+  cursor: progress;
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='spinner'] {
+  position: absolute;
+  inset: 0;
+  width: 14px;
+  height: 14px;
+  margin: auto;
+  border: 2px solid var(--blok-toast-spinner-track);
+  border-top-color: var(--blok-toast-ink-on-light);
+  border-radius: 50%;
+  animation: blok-toast-spin 700ms linear infinite;
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='action']:not([data-primary='true']) [data-blok-toast-part='spinner'] {
+  border-color: var(--blok-toast-spinner-track-light);
+  border-top-color: var(--blok-toast-ink);
+}
+
+[data-blok-toast='card'] [data-blok-testid='notification-dismiss'] {
+  margin: 0;
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='check'] {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--blok-toast-tile-size);
+  height: var(--blok-toast-tile-size);
+  border-radius: var(--blok-toast-tile-radius);
+  background: var(--blok-toast-success-wash);
+  color: var(--blok-toast-success);
+  animation: blok-toast-check-in 480ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='check'] svg {
+  width: 22px;
+  height: 22px;
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='check']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  animation: blok-toast-ring 700ms ease-out 120ms both;
+}
+
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-resolved='true'] {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'tile body close';
+}
+
+[data-blok-toast='card'][data-resolved='true'] [data-blok-testid='notification-message-text'] {
+  animation: blok-toast-roll-in 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-toast='card'] [data-blok-toast-part='thumb'], [data-blok-toast='card'] [data-blok-toast-part='check'], [data-blok-toast='card'] [data-blok-toast-part='check']::after, [data-blok-toast='card'][data-resolved='true'] [data-blok-testid='notification-message-text'] {
+  animation: none;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-toast='card'] [data-blok-toast-part='action'] {
+  transition: none;
+}
+
 [data-blok-tool="callout"] [data-blok-tool="paragraph"] {
   font-size: inherit;
 }

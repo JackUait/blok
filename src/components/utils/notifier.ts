@@ -7,6 +7,7 @@ import { DEFAULT_NOTIFIER_POSITION } from './notifier/types';
 type NotifierModule = {
   show: (options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions, position?: NotifierPosition) => void;
   dismiss: (options: NotifierOptions) => void;
+  resolve: (options: NotifierOptions, message: string) => void;
 };
 
 /**
@@ -92,6 +93,21 @@ export class Notifier {
       })
       .catch((error) => {
         console.error('[Blok] Failed to dismiss notification. Reason:', error);
+      });
+  }
+
+  /**
+   * Show the success state on the card shown with this options object, then close it.
+   * @param options - the object passed to `show`
+   * @param message - plain text
+   */
+  public resolve(options: NotifierOptions, message: string): void {
+    void this.loadNotifierModule()
+      .then((notifier) => {
+        notifier.resolve(options, message);
+      })
+      .catch((error) => {
+        console.error('[Blok] Failed to update notification. Reason:', error);
       });
   }
 

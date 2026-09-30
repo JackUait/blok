@@ -20,6 +20,9 @@ export interface MediaFailureInput {
 
   /** Tries the failed source again. */
   retry(): void;
+
+  /** A `blob:` or `data:image/` URL of what the user picked, shown in the notice. */
+  preview?: string;
 }
 
 /**
@@ -33,8 +36,9 @@ export interface Media {
 
   /**
    * Drop the failure recorded for a block, if any.
+   * Pass `recovered: true` when the media now works, so the notice can say so.
    */
-  clearFailure(blockId: string): void;
+  clearFailure(blockId: string, options?: { recovered?: boolean }): void;
 
   /**
    * Ask before an in-app navigation. Shows a banner while images are failed.

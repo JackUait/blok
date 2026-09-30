@@ -51,7 +51,6 @@ const ACTIVATOR_STYLE: Partial<CSSStyleDeclaration> = {
   padding: '0',
   border: '0',
   background: 'transparent',
-  borderRadius: 'inherit',
   appearance: 'none',
   // UA stylesheets give buttons `cursor: default`; the card declares pointer.
   cursor: 'inherit',

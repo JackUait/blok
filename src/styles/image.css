@@ -37,6 +37,13 @@
   transition: box-shadow 150ms ease;
 }
 [data-blok-tool="image"][data-rounded="off"] .blok-image-inner img { border-radius: 0; }
+/* A crop wrapper is the visible frame; the scaled img inside it overflows. */
+[data-blok-tool="image"] .blok-image-crop { border-radius: var(--blok-radius-block); }
+[data-blok-tool="image"][data-rounded="off"] .blok-image-crop { border-radius: 0; }
+[data-blok-tool="image"] .blok-image-crop[data-shape="circle"],
+[data-blok-tool="image"] .blok-image-crop[data-shape="ellipse"],
+.blok-image-lightbox__crop[data-shape="circle"],
+.blok-image-lightbox__crop[data-shape="ellipse"] { border-radius: 50%; }
 [data-blok-tool="image"][data-frame="border"] .blok-image-inner img { box-shadow: inset 0 0 0 1px var(--blok-border-primary); }
 [data-blok-tool="image"][data-frame="shadow"] .blok-image-inner img {
   box-shadow: var(--blok-image-shadow-resting);

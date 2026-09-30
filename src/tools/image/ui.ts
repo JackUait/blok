@@ -116,9 +116,6 @@ export function renderImage(
     wrapper.style.aspectRatio = `${w} / ${h}`;
     wrapper.style.width = '100%';
     if (shape) wrapper.setAttribute('data-shape', shape);
-    if (shape === 'circle' || shape === 'ellipse') {
-      wrapper.style.borderRadius = '50%';
-    }
     img.style.display = 'block';
     // Opt out of the editor's global `img { max-width: 100% }` preflight so
     // the (100/w)*100% width below can actually scale the source past the wrapper.
@@ -382,9 +379,6 @@ export function openLightbox(opts: LightboxOptions): () => void {
     wrapper.style.overflow = 'hidden';
     wrapper.style.aspectRatio = `${w} / ${h}`;
     if (shape) wrapper.setAttribute('data-shape', shape);
-    if (shape === 'circle' || shape === 'ellipse') {
-      wrapper.style.borderRadius = '50%';
-    }
     el.style.display = 'block';
     el.style.maxWidth = 'none';
     el.style.width = `${(100 / w) * 100}%`;

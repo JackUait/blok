@@ -632,9 +632,10 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // net growth against 19ecc9ca.
     const IMAGE_MEND_BYTES = 10_825;
     // Media radius roles: containers publish --blok-radius-inner for their
-    // children, the image selection ring grows with its gap. Net growth after
+    // children, crop wrappers get the frame radius in CSS instead of inline,
+    // and the image selection ring grows with its gap. Net growth after
     // deleting the dead image popover and toolbar pill rules.
-    const MEDIA_RADIUS_ROLES_BYTES = 1_829;
+    const MEDIA_RADIUS_ROLES_BYTES = 2_479;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

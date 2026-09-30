@@ -42,15 +42,15 @@ describe('openLightbox with crop', () => {
     close();
   });
 
-  it('applies a circular mask on the wrapper when crop shape is circle', () => {
+  it('stamps the circle shape on the wrapper for image.css to mask, with no inline radius', () => {
     const close = openLightbox({
       url: 'https://example.com/pic.jpg',
       crop: { x: 0, y: 0, w: 100, h: 100, shape: 'circle' },
     });
 
     const wrapper = dialog().querySelector<HTMLElement>('.blok-image-lightbox__crop')!;
-    expect(wrapper.style.borderRadius).toBe('50%');
     expect(wrapper.getAttribute('data-shape')).toBe('circle');
+    expect(wrapper.style.borderRadius).toBe('');
     close();
   });
 

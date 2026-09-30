@@ -353,8 +353,8 @@ describe('renderImage crop rendering', () => {
     expect(wrapperOf(renderImage({ url: 'u', crop: { ...crop, shape: 'circle' } })).getAttribute('data-shape')).toBe('circle');
   });
 
-  it('rounds a circle crop into a disc', () => {
-    expect(wrapperOf(renderImage({ url: 'u', crop: { ...crop, shape: 'circle' } })).style.borderRadius).toBe('50%');
+  it('leaves the circle crop radius to image.css, keyed on data-shape', () => {
+    expect(wrapperOf(renderImage({ url: 'u', crop: { ...crop, shape: 'circle' } })).style.borderRadius).toBe('');
   });
 
   it('leaves a rect crop square', () => {
@@ -990,7 +990,7 @@ describe('openLightbox chrome', () => {
     expect(wrapper.style.overflow).toBe('hidden');
     expect(wrapper.style.aspectRatio).toBe('50 / 25');
     expect(wrapper.getAttribute('data-shape')).toBe('circle');
-    expect(wrapper.style.borderRadius).toBe('50%');
+    expect(wrapper.style.borderRadius).toBe('');
     expect(img.style.display).toBe('block');
     expect(img.style.width).toBe('200%');
     expect(img.style.transform).toBe('translate(-10%, -20%)');
@@ -1006,12 +1006,13 @@ describe('openLightbox chrome', () => {
     expect(img.style.maxWidth).toBe('none');
   });
 
-  it('rounds an ellipse crop in the preview', () => {
+  it('stamps an ellipse crop in the preview for image.css to round', () => {
     open({ url: 'https://x/a.png', crop: { x: 0, y: 0, w: 50, h: 25, shape: 'ellipse' } });
 
     const wrapper = required(document.body.querySelector<HTMLElement>('[data-role="lightbox-crop"]'), 'crop wrapper');
 
-    expect(wrapper.style.borderRadius).toBe('50%');
+    expect(wrapper.getAttribute('data-shape')).toBe('ellipse');
+    expect(wrapper.style.borderRadius).toBe('');
   });
 
   it('leaves a rect crop square in the preview', () => {

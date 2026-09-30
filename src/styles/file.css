@@ -49,6 +49,10 @@
     border-color var(--blok-duration-base) var(--blok-ease-standard),
     background-color var(--blok-duration-base) var(--blok-ease-standard);
 }
+/* The transparent activator laid over the card (tools/file/ui.ts). */
+[data-blok-tool="file"] [data-role="file-card"] {
+  border-radius: inherit;
+}
 [data-blok-tool="file"] .blok-file-card:hover {
   border-color: var(--blok-border-strong);
   background: var(--blok-bg-hover);

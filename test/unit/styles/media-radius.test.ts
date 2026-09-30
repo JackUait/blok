@@ -73,6 +73,13 @@ const RADII: Array<[string, string, string]> = [
   ['styles/image.css', '[data-blok-tool="image"] [data-role="image-selection-ring"]', 'calc(var(--blok-radius-block) + var(--blok-image-ring-gap))'],
   ['styles/image.css', '[data-blok-tool="image"][data-rounded="off"] [data-role="image-selection-ring"]', '0'],
   ['styles/image.css', '[data-blok-tool="image"] [data-role="image-resize-readout"]', role('control')],
+  ['styles/image.css', '[data-blok-tool="image"] .blok-image-crop', role('block')],
+  ['styles/image.css', '[data-blok-tool="image"][data-rounded="off"] .blok-image-crop', '0'],
+  ['styles/image.css', '[data-blok-tool="image"] .blok-image-crop[data-shape="circle"]', '50%'],
+  ['styles/image.css', '[data-blok-tool="image"] .blok-image-crop[data-shape="ellipse"]', '50%'],
+  ['styles/image.css', '.blok-image-lightbox__crop[data-shape="circle"]', '50%'],
+  ['styles/image.css', '.blok-image-lightbox__crop[data-shape="ellipse"]', '50%'],
+  ['styles/file.css', '[data-blok-tool="file"] [data-role="file-card"]', 'inherit'],
   ['styles/image.css', '.blok-image-uploading__card', role('block')],
   ['styles/image.css', '.blok-image-uploading__cancel', nested('control')],
   ['styles/image.css', '.blok-image-uploading__cancel:focus-visible', nested('control')],
@@ -218,6 +225,10 @@ describe('media files hold no off-system radius', () => {
     for (const value of radii) {
       expect(value, value).not.toMatch(/--blok-space-|--blok-border-width-|--radius-|\d+px/);
     }
+  });
+
+  it.each(['tools/image/ui.ts', 'tools/file/ui.ts'])('%s sets no inline radius', (file) => {
+    expect(read(file)).not.toMatch(/borderRadius/);
   });
 
   it('no dead image popover, toolbar pill or audio radius CSS is left', () => {

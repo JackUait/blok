@@ -35,6 +35,7 @@ interface Exemption {
 const EXEMPT_FILES: Exemption[] = [
   { file: 'src/components/utils/logger.ts', reason: 'dev console badge styling, never rendered in the editor' },
   { file: 'src/tools/database/database-view.ts', reason: 'not rendered by the product; only unit tests import it' },
+  { file: 'src/playground/radius-gallery.ts', reason: 'the rounding page draws any radius and every primitive to explain the rule' },
 ];
 
 const exempt = new Set(EXEMPT_FILES.map((e) => e.file));

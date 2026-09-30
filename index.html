@@ -227,6 +227,11 @@
       .playground-wordmark__tag { display: none; }
       .playground-header .playground-wordmark { margin-right: 12px; }
     }
+    /* Four tabs outgrow a phone header; the pill scrolls instead of the page. */
+    @media (max-width: 560px) {
+      .playground-nav { min-width: 0; overflow-x: auto; scrollbar-width: none; }
+      .playground-nav::-webkit-scrollbar { display: none; }
+    }
 
     /* Dark mode nav overrides */
     .dark-mode .playground-nav {
@@ -417,6 +422,74 @@
       outline: 2px solid var(--pg-ink);
       outline-offset: 3px;
     }
+    /* Rounding page (radius-gallery.ts). Previews use the real Blok tokens. */
+    .rg { font-family: var(--pg-font); color: var(--pg-ink); }
+    .rg-probe { position: absolute; width: 40px; height: 40px; visibility: hidden; pointer-events: none; }
+    .rg-heading { font-size: 32px; font-weight: 700; margin: 0 0 8px; }
+    .rg-lead { font-size: 15px; line-height: 1.55; color: var(--pg-muted); margin: 0 0 24px; max-width: 640px; }
+    .rg-section { margin-top: 56px; }
+    .rg-title { font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+    .rg-subtitle { font-size: 16px; font-weight: 600; margin: 24px 0 8px; }
+    .rg-muted { color: var(--pg-muted); font-size: 13px; line-height: 1.45; margin: 0; }
+    .rg-mono { font-family: 'PT Mono', ui-monospace, monospace; font-size: 12.5px; white-space: nowrap; }
+    .rg-scale__tile .rg-mono { font-size: 11.5px; }
+    .rg-code { background: var(--pg-hover); border-radius: 12px; padding: 16px 20px; overflow-x: auto; white-space: pre; margin: 0 0 16px; font-family: 'PT Mono', ui-monospace, monospace; font-size: 13px; line-height: 1.6; }
+    .rg-rules { margin: 0 0 16px; padding-left: 20px; font-size: 14px; line-height: 1.7; list-style: disc; }
+
+    .rg-scale { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 24px 16px; }
+    .rg-scale__tile { display: flex; flex-direction: column; gap: 6px; }
+    .rg-scale__shape { width: 72px; height: 72px; background: var(--pg-hover); border: 1px solid var(--pg-line-strong); margin-bottom: 4px; }
+
+    .rg-roles { display: flex; flex-direction: column; }
+    .rg-role { display: grid; grid-template-columns: 180px 1fr; gap: 24px; align-items: center; padding: 16px 0; border-top: 1px solid var(--pg-line); }
+    .rg-role__stage { display: flex; align-items: center; justify-content: center; height: 88px; }
+    .rg-role__meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+    .rg-role__meta .rg-muted { flex-basis: 100%; }
+    .rg-role__px { font-size: 13px; font-weight: 600; }
+    .rg-preview { background: #ffffff; border: 1px solid var(--pg-line-strong); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); }
+    .rg-preview--card { width: 160px; height: 80px; }
+    .rg-preview--control { width: 96px; height: 32px; }
+    .rg-preview--small { width: 64px; height: 20px; }
+    .rg-preview--mark { width: 56px; height: 20px; background: rgba(135, 131, 120, 0.15); border: 0; box-shadow: none; }
+    .rg-preview--pill { width: 88px; height: 24px; }
+    .rg-preview--line { width: 3px; height: 40px; background: var(--pg-ink); border: 0; }
+
+    .rg-heights { display: flex; flex-wrap: wrap; gap: 32px; }
+    .rg-heights__item { display: flex; flex-direction: column; gap: 6px; }
+    .rg-heights__button { display: inline-flex; align-items: center; justify-content: center; padding: 0 14px; width: max-content; border: 1px solid var(--pg-line-strong); font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+
+    .rg-demo { display: grid; grid-template-columns: 240px 1fr; gap: 32px; align-items: start; }
+    .rg-demo__controls { display: flex; flex-direction: column; gap: 14px; }
+    .rg-demo__field { display: flex; flex-direction: column; gap: 6px; }
+    .rg-input { font: inherit; font-size: 14px; accent-color: var(--pg-ink); }
+    select.rg-input { padding: 6px 10px; border: 1px solid var(--pg-line-strong); border-radius: 8px; background: #ffffff; color: var(--pg-ink); }
+    .rg-demo__readout { font-size: 14px; font-weight: 600; margin: 4px 0 0; }
+    .rg-demo__stages { display: flex; flex-wrap: wrap; gap: 32px; }
+    .rg-demo__figure { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+    /* Drawn at 2x so a 4px gap and a 6px corner are visible. */
+    .rg-demo__outer { box-sizing: border-box; width: 130px; height: 90px; zoom: 2; border-style: solid; border-color: var(--pg-ink); background: #e3e2de; }
+    .rg-demo__inner { width: 100%; height: 100%; background: #ffffff; outline: 0.5px solid var(--pg-ink); }
+
+    .rg-table { border-collapse: collapse; width: 100%; font-size: 14px; }
+    .rg-table th { text-align: left; font-weight: 600; font-size: 13px; color: var(--pg-muted); padding: 0 12px 10px 0; }
+    .rg-table td { padding: 12px 12px 12px 0; border-top: 1px solid var(--pg-line); }
+
+    .rg-outward { display: flex; align-items: center; gap: 24px; margin-bottom: 16px; }
+    .rg-outward__fill { background: rgba(35, 131, 226, 0.14); }
+    .rg-outward__block { width: 200px; padding: 16px; background: #f1f1ef; font-size: 14px; }
+
+    /* The --pg-* palette has no dark values; the page takes the dark neutrals here. */
+    .dark-mode .rg { --pg-ink: #ffffff; --pg-muted: #a8a8a8; --pg-line: #2f2f2f; --pg-line-strong: #3d3d3d; --pg-hover: #202020; }
+    .dark-mode .rg-preview, .dark-mode select.rg-input, .dark-mode .rg-demo__inner { background: #252525; }
+    .dark-mode .rg-scale__shape { background: #202020; }
+    .dark-mode .rg-demo__outer { background: #3a3a3a; }
+    .dark-mode .rg-outward__block { background: #2a2a2a; }
+
+    @media (max-width: 760px) {
+      .rg-role { grid-template-columns: 1fr; }
+      .rg-demo { grid-template-columns: 1fr; }
+    }
+
     .icon-group { margin-bottom: 56px; }
     .icon-group-title {
       font-family: var(--pg-font);
@@ -1083,6 +1156,7 @@
         <a class="playground-tab" role="tab" aria-selected="true" href="/editor" data-tab="editor">Editor</a>
         <a class="playground-tab" role="tab" aria-selected="false" href="/block-states" data-tab="block-states">Block States</a>
         <a class="playground-tab" role="tab" aria-selected="false" href="/icons" data-tab="icons">Icons</a>
+        <a class="playground-tab" role="tab" aria-selected="false" href="/rounding" data-tab="rounding">Rounding</a>
       </nav>
       <div class="ml-auto">
         <a href="https://github.com/JackUait/blok" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-full text-[#717171] hover:text-[#222222] hover:bg-[#f7f7f7] dark-mode:text-[#a8a8a8] dark-mode:hover:text-[#ffffff] dark-mode:hover:bg-white/5 transition-colors" aria-label="View on GitHub">
@@ -1116,6 +1190,11 @@
     <!-- Icons tab -->
     <div id="tab-icons" class="hidden" role="tabpanel">
       <div class="pg-sheet icon-gallery" id="icon-gallery"></div>
+    </div>
+
+    <!-- Rounding tab -->
+    <div id="tab-rounding" class="hidden" role="tabpanel">
+      <div class="pg-sheet radius-gallery max-md:px-5" id="radius-gallery"></div>
     </div>
 
     <!-- Footer -->
@@ -1249,6 +1328,7 @@
     import * as Icons from './src/components/icons/index.ts';
     import { ALL_LOCALE_CODES, getDirection } from './src/components/i18n/locales/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
+    import { renderRadiusGallery } from './src/playground/radius-gallery.ts';
     import { slowImageRetries } from './src/playground/slow-image-retry.ts';
     import { BRAND_MARK_SLUGS, brandMarkSvg } from './src/components/utils/brand-marks.ts';
     const BRAND_MARK_GROUP = 'Brand marks';
@@ -1497,7 +1577,7 @@
      */
     const tabs = document.querySelectorAll('[role="tab"]');
 
-    const VALID_PAGES = ['editor', 'block-states', 'icons'];
+    const VALID_PAGES = ['editor', 'block-states', 'icons', 'rounding'];
 
     function parseRoute(pathname) {
       const segments = pathname.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean);
@@ -1507,13 +1587,25 @@
     }
 
     let blockStatesInitialized = false;
+    let radiusGalleryHandle = null;
     let blockStatesHandle = null;
 
     function navigateTo(page, subpath) {
       tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.tab === page ? 'true' : 'false'));
+      // On phones the pill scrolls; keep the active tab in view without moving the page.
+      const activeTab = [...tabs].find(t => t.dataset.tab === page);
+      if (activeTab && activeTab.parentElement) {
+        const nav = activeTab.parentElement;
+        nav.scrollLeft = activeTab.offsetLeft - (nav.clientWidth - activeTab.offsetWidth) / 2;
+      }
       document.getElementById('tab-editor').classList.toggle('hidden', page !== 'editor');
       document.getElementById('tab-block-states').classList.toggle('hidden', page !== 'block-states');
       document.getElementById('tab-icons').classList.toggle('hidden', page !== 'icons');
+      document.getElementById('tab-rounding').classList.toggle('hidden', page !== 'rounding');
+
+      if (page === 'rounding') {
+        radiusGalleryHandle?.refresh();
+      }
 
       if (page === 'block-states') {
         if (!blockStatesInitialized) {
@@ -2155,6 +2247,8 @@
       // Third-party provider marks (brand-marks.ts), not Blok Line icons.
       [BRAND_MARK_GROUP]: Object.keys(BRAND_MARK_ICONS),
     };
+
+    radiusGalleryHandle = renderRadiusGallery({ container: document.getElementById('radius-gallery') });
 
     renderIconGallery({
       container: document.getElementById('icon-gallery'),

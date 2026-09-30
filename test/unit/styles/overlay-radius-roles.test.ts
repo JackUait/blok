@@ -124,7 +124,7 @@ describe('presence', () => {
   });
 
   it('keeps the published caret token, which hosts may override', () => {
-    expect(prop(css, '[data-blok-interface]', '--blok-presence-caret-radius')).toBe('1px');
-    expect(radius(css, '[data-blok-presence-caret]')).toBe('var(--blok-presence-caret-radius)');
+    expect(prop(css, '[data-blok-interface]', '--blok-presence-caret-radius')).toBe('var(--blok-radius-pill)');
+    expect(radius(css, '[data-blok-presence-caret]')).toBe('var(--blok-presence-caret-radius, var(--blok-radius-pill))');
   });
 });

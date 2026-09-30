@@ -6,8 +6,8 @@
   /* The gutter strip's inline gap. */
   --blok-presence-gap: 6px;
   --blok-presence-caret-width: 2px;
-  /* Half the width, so both ends read as a cap rather than a cut corner. */
-  --blok-presence-caret-radius: 1px;
+  /* A pill, so both ends read as a cap rather than a cut corner. */
+  --blok-presence-caret-radius: var(--blok-radius-pill);
   --blok-presence-pulse: 1.6s;
   --blok-presence-face-size: 32px;
   /* Ring around a gutter face. */
@@ -28,7 +28,7 @@
   /* Half the width, so the line straddles the character boundary it was
      measured at instead of sitting to the right of it. */
   margin-left: calc(-0.5 * var(--blok-presence-caret-width));
-  border-radius: var(--blok-presence-caret-radius);
+  border-radius: var(--blok-presence-caret-radius, var(--blok-radius-pill));
   background: var(--blok-presence-color);
   pointer-events: none;
   user-select: none;

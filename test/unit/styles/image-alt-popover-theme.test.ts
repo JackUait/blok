@@ -150,3 +150,26 @@ describe('image overlay toolbar theming', () => {
     expect(hexLuminance(lightVal)).toBeGreaterThan(0.5);
   });
 });
+
+describe('image overlay toolbar shadow', () => {
+  const layers = (shadow: string | undefined): Array<{ blur: number; alpha: number }> =>
+    (shadow ?? '').split(/,(?![^(]*\))/).map((layer) => {
+      const blur = Number(/^\s*-?\d+(?:px)?\s+-?\d+(?:px)?\s+(\d+)px/.exec(layer)?.[1] ?? Number.NaN);
+      const alpha = Number(/rgba\([^)]*,\s*([\d.]+)\)/.exec(layer)?.[1] ?? Number.NaN);
+
+      return { blur, alpha };
+    });
+
+  it.each([
+    ['light', light, 0.12],
+    ['dark', dark, 0.4],
+  ])('stays soft in %s theme, so it does not spill onto the next island', (_name, tokens, maxAlpha) => {
+    const shadow = layers(tokens.get('--blok-image-shadow-toolbar'));
+
+    expect(shadow.length).toBeGreaterThan(0);
+    shadow.forEach(({ blur, alpha }) => {
+      expect(blur).toBeLessThanOrEqual(16);
+      expect(alpha).toBeLessThanOrEqual(maxAlpha);
+    });
+  });
+});

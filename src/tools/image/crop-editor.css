@@ -297,17 +297,17 @@
    inner (vertex) ends square so the union reads as one continuous L shape.
    Parent filter: drop-shadow paints a single outline around the union.
    Hitbox is 18×18, vertex at (9,9) relative to the hugged rect corner. */
-.blok-image-crop-editor__handle--nw .blok-image-crop-editor__handle-stroke--a { top: 7px; left: 7px; width: 13px; height: 3px; border-radius: var(--blok-radius-none, 0) var(--blok-radius-hairline) var(--blok-radius-hairline) var(--blok-radius-none, 0); }
-.blok-image-crop-editor__handle--nw .blok-image-crop-editor__handle-stroke--b { top: 7px; left: 7px; width: 3px; height: 13px; border-radius: var(--blok-radius-none, 0) var(--blok-radius-none, 0) var(--blok-radius-hairline) var(--blok-radius-hairline); }
+.blok-image-crop-editor__handle--nw .blok-image-crop-editor__handle-stroke--a { top: 7px; left: 7px; width: 13px; height: 3px; border-radius: 0 var(--blok-radius-notch) var(--blok-radius-notch) 0; }
+.blok-image-crop-editor__handle--nw .blok-image-crop-editor__handle-stroke--b { top: 7px; left: 7px; width: 3px; height: 13px; border-radius: 0 0 var(--blok-radius-notch) var(--blok-radius-notch); }
 
-.blok-image-crop-editor__handle--ne .blok-image-crop-editor__handle-stroke--a { top: 7px; right: 7px; width: 13px; height: 3px; border-radius: var(--blok-radius-hairline) var(--blok-radius-none, 0) var(--blok-radius-none, 0) var(--blok-radius-hairline); }
-.blok-image-crop-editor__handle--ne .blok-image-crop-editor__handle-stroke--b { top: 7px; right: 7px; width: 3px; height: 13px; border-radius: var(--blok-radius-none, 0) var(--blok-radius-none, 0) var(--blok-radius-hairline) var(--blok-radius-hairline); }
+.blok-image-crop-editor__handle--ne .blok-image-crop-editor__handle-stroke--a { top: 7px; right: 7px; width: 13px; height: 3px; border-radius: var(--blok-radius-notch) 0 0 var(--blok-radius-notch); }
+.blok-image-crop-editor__handle--ne .blok-image-crop-editor__handle-stroke--b { top: 7px; right: 7px; width: 3px; height: 13px; border-radius: 0 0 var(--blok-radius-notch) var(--blok-radius-notch); }
 
-.blok-image-crop-editor__handle--se .blok-image-crop-editor__handle-stroke--a { bottom: 7px; right: 7px; width: 13px; height: 3px; border-radius: var(--blok-radius-hairline) var(--blok-radius-none, 0) var(--blok-radius-none, 0) var(--blok-radius-hairline); }
-.blok-image-crop-editor__handle--se .blok-image-crop-editor__handle-stroke--b { bottom: 7px; right: 7px; width: 3px; height: 13px; border-radius: var(--blok-radius-hairline) var(--blok-radius-hairline) var(--blok-radius-none, 0) var(--blok-radius-none, 0); }
+.blok-image-crop-editor__handle--se .blok-image-crop-editor__handle-stroke--a { bottom: 7px; right: 7px; width: 13px; height: 3px; border-radius: var(--blok-radius-notch) 0 0 var(--blok-radius-notch); }
+.blok-image-crop-editor__handle--se .blok-image-crop-editor__handle-stroke--b { bottom: 7px; right: 7px; width: 3px; height: 13px; border-radius: var(--blok-radius-notch) var(--blok-radius-notch) 0 0; }
 
-.blok-image-crop-editor__handle--sw .blok-image-crop-editor__handle-stroke--a { bottom: 7px; left: 7px; width: 13px; height: 3px; border-radius: var(--blok-radius-none, 0) var(--blok-radius-hairline) var(--blok-radius-hairline) var(--blok-radius-none, 0); }
-.blok-image-crop-editor__handle--sw .blok-image-crop-editor__handle-stroke--b { bottom: 7px; left: 7px; width: 3px; height: 13px; border-radius: var(--blok-radius-hairline) var(--blok-radius-hairline) var(--blok-radius-none, 0) var(--blok-radius-none, 0); }
+.blok-image-crop-editor__handle--sw .blok-image-crop-editor__handle-stroke--a { bottom: 7px; left: 7px; width: 13px; height: 3px; border-radius: 0 var(--blok-radius-notch) var(--blok-radius-notch) 0; }
+.blok-image-crop-editor__handle--sw .blok-image-crop-editor__handle-stroke--b { bottom: 7px; left: 7px; width: 3px; height: 13px; border-radius: var(--blok-radius-notch) var(--blok-radius-notch) 0 0; }
 
 .blok-image-crop-editor__handle--edge {
   background: var(--crop-handle-fill);
@@ -368,6 +368,9 @@
 
 .blok-image-crop-editor__toolbar--footer {
   border-top: 1px solid var(--crop-divider);
+  /* The footer's padding is the gap to the crop dialog's bottom corners
+     (crop-modal.css); the hairline term is the dialog's 1px border. */
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-dialog) - var(--blok-border-width-hairline) - var(--blok-space-2-5)));
 }
 
 /* Segmented ratio chips */
@@ -378,7 +381,12 @@
   padding: var(--blok-space-0-75);
   background: var(--crop-chip-group-bg);
   border: 1px solid var(--crop-divider);
-  border-radius: var(--blok-space-2-5);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
+}
+
+/* Published on the chips, not the group: the group itself reads the footer's value. */
+.blok-image-crop-editor__ratio-group > * {
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-control) - var(--blok-border-width-hairline) - var(--blok-space-0-75)));
 }
 
 .blok-image-crop-editor__ratio-chip {
@@ -389,7 +397,7 @@
   padding: var(--blok-space-1-25) var(--blok-space-2-75);
   font: 500 12px/1 inherit;
   letter-spacing: 0.01em;
-  border-radius: var(--blok-space-1-75);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   cursor: pointer;
   transition:
     color 140ms ease,
@@ -440,7 +448,7 @@
   padding: var(--blok-space-0-25) var(--blok-space-1-25);
   background: var(--crop-kbd-bg);
   border: 1px solid var(--crop-divider);
-  border-radius: var(--blok-space-1);
+  border-radius: var(--blok-radius-control-sm);
   color: var(--crop-fg);
   min-width: 14px;
   text-align: center;
@@ -463,7 +471,7 @@
   background: transparent;
   color: inherit;
   border: 1px solid transparent;
-  border-radius: var(--blok-space-2);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   padding: var(--blok-space-1-5) var(--blok-space-3-5);
   font: 500 13px/1.2 inherit;
   cursor: pointer;

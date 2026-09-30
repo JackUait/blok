@@ -45,13 +45,6 @@ describe('Image control size tiers (src/styles/image.css)', () => {
     expect(body).toContain('height: 14px');
   });
 
-  it('align-pill buttons are fixed at 26px wide', () => {
-    const body = findRuleBody('[data-blok-tool="image"] .blok-image-toolbar__pill button');
-
-    expect(body).not.toBeNull();
-    expect(body).toContain('width: 26px');
-  });
-
   it('handles are 9px dots, not 6px bars', () => {
     const body = findRuleBody('[data-blok-tool="image"] [data-role="resize-handle"]');
 

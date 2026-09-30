@@ -8,7 +8,7 @@
   background: var(--blok-popover-bg, #fff);
   color: var(--blok-text-primary, #1d1d1d);
   border: 1px solid var(--blok-border-primary, #e0ddd6);
-  border-radius: var(--blok-space-2-5);
+  border-radius: var(--blok-radius-surface);
   box-shadow: var(--blok-popover-box-shadow);
   z-index: 9999;
   display: grid;

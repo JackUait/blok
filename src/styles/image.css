@@ -33,7 +33,7 @@
   width: 100%;
   height: auto;
   object-fit: cover;
-  border-radius: var(--blok-radius-lg);
+  border-radius: var(--blok-radius-block);
   transition: box-shadow 150ms ease;
 }
 [data-blok-tool="image"][data-rounded="off"] .blok-image-inner img { border-radius: 0; }
@@ -52,7 +52,7 @@
 }
 [data-blok-element-content].bg-selection:has([data-blok-tool="image"]) .blok-image-inner {
   background-color: var(--blok-selection);
-  border-radius: var(--blok-space-1);
+  border-radius: var(--blok-radius-block);
 }
 
 /* caption */
@@ -129,6 +129,7 @@
 [data-blok-table-cell] [data-blok-tool="image"] [data-role="image-selection-ring"],
 [data-blok-selected="true"] [data-blok-table-cell] [data-blok-tool="image"] [data-role="image-selection-ring"],
 [data-blok-table-cell] [data-blok-tool="image"][data-resizing="true"] [data-role="image-selection-ring"] {
+  --blok-image-ring-gap: 0px;
   top: 0;
   right: 0;
   left: 0;
@@ -231,8 +232,9 @@
   display: inline-flex;
   gap: var(--blok-space-0-25);
   padding: var(--blok-space-0-75);
-  border-radius: var(--blok-space-2-25);
-  --blok-image-island-merged-radius: var(--blok-radius-xs);
+  border-radius: var(--blok-radius-surface);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-0-75)));
+  --blok-image-island-merged-radius: var(--blok-radius-floor);
 }
 /* The islands grow out of one bar. Only these pseudo-elements move: a button that moved would leave its tooltip behind.
    Resting styles are the split state, so with motion off the islands simply sit apart. */
@@ -241,7 +243,7 @@
   position: absolute;
   inset: 0;
   z-index: -1;
-  border-radius: var(--blok-space-2-25);
+  border-radius: var(--blok-radius-surface);
   background: var(--blok-overlay-surface);
   box-shadow:
     inset 0 0 0 1px var(--blok-overlay-ring),
@@ -251,13 +253,13 @@
 /* Inner corners start square so the cards join into one bar; outer ones stay round. The recoil pulls away from the neck. */
 [data-blok-tool="image"] .blok-image-toolbar__island[data-island="layout"],
 [data-blok-tool="image"] .blok-image-toolbar[data-tier="medium"] [data-island="edit"] {
-  --blok-image-island-merged-radius: var(--blok-space-2-25) var(--blok-radius-xs) var(--blok-radius-xs) var(--blok-space-2-25);
+  --blok-image-island-merged-radius: var(--blok-radius-surface) var(--blok-radius-floor) var(--blok-radius-floor) var(--blok-radius-surface);
 }
 [data-blok-tool="image"] .blok-image-toolbar__island[data-island="view"] {
-  --blok-image-island-merged-radius: var(--blok-radius-xs) var(--blok-space-2-25) var(--blok-space-2-25) var(--blok-radius-xs);
+  --blok-image-island-merged-radius: var(--blok-radius-floor) var(--blok-radius-surface) var(--blok-radius-surface) var(--blok-radius-floor);
 }
 [data-blok-tool="image"] .blok-image-toolbar[data-compact="true"] [data-island="view"] {
-  --blok-image-island-merged-radius: var(--blok-space-2-25);
+  --blok-image-island-merged-radius: var(--blok-radius-surface);
 }
 [data-blok-tool="image"] .blok-image-toolbar[data-tier="medium"] [data-island="edit"]::before,
 [data-blok-tool="image"] .blok-image-toolbar__island[data-island="layout"]::before {
@@ -272,9 +274,9 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  left: calc(100% - var(--blok-space-2-25));
+  left: calc(100% - var(--blok-radius-surface));
   z-index: -1;
-  width: calc(var(--blok-space-1-5) + 2 * var(--blok-space-2-25));
+  width: calc(var(--blok-space-1-5) + 2 * var(--blok-radius-surface));
   background: var(--blok-overlay-surface);
   /* Full height at both ends (hidden inside the cards), a waist over the gap: the concave sides of a liquid bridge. */
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 34' preserveAspectRatio='none'%3E%3Cpath d='M0 0C8 0 9 11 12 11S16 0 24 0V34C16 34 15 23 12 23S8 34 0 34Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
@@ -291,7 +293,7 @@
   position: absolute;
   inset: 0;
   z-index: -1;
-  border-radius: var(--blok-space-2-25);
+  border-radius: var(--blok-radius-surface);
   background-color: var(--blok-overlay-surface);
   box-shadow:
     inset 0 0 0 1px var(--blok-overlay-ring),
@@ -388,7 +390,7 @@
   color: var(--blok-overlay-fg);
   background: transparent;
   border: 0;
-  border-radius: var(--blok-space-1);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   cursor: pointer;
   transition: background 80ms ease, color 80ms ease;
 }
@@ -403,8 +405,6 @@
   background: var(--blok-icon-active-bg);
   color: var(--blok-icon-active-text);
 }
-[data-blok-tool="image"] .blok-image-toolbar__pill { display: inline-flex; border-radius: var(--blok-space-1); overflow: hidden; }
-[data-blok-tool="image"] .blok-image-toolbar__pill button { width: 26px; border-radius: 0; }
 /* Medium tier: the edit island plus "more"; "more" opens block settings, which hold everything else. */
 [data-blok-tool="image"] .blok-image-toolbar[data-tier="medium"] [data-island="layout"] {
   display: none;
@@ -418,13 +418,16 @@
   display: none;
 }
 
+/* The ring sits --blok-image-ring-gap outside the picture; its radius grows by
+   the same gap so the two curves stay concentric. */
 [data-blok-tool="image"] [data-role="image-selection-ring"] {
+  --blok-image-ring-gap: 0px;
   position: absolute;
   top: 0;
   right: 0;
   left: 0;
   height: var(--blok-image-media-height, 100%);
-  border-radius: var(--blok-radius-lg);
+  border-radius: calc(var(--blok-radius-block) + var(--blok-image-ring-gap));
   box-shadow: 0 0 0 1px var(--blok-image-frame-ring);
   opacity: 0;
   pointer-events: none;
@@ -433,6 +436,7 @@
     right 300ms cubic-bezier(0.2, 0.9, 0.25, 1),
     left 300ms cubic-bezier(0.2, 0.9, 0.25, 1),
     height 300ms cubic-bezier(0.2, 0.9, 0.25, 1),
+    border-radius 300ms cubic-bezier(0.2, 0.9, 0.25, 1),
     opacity 200ms ease,
     box-shadow 150ms ease;
 }
@@ -441,12 +445,14 @@
 [data-blok-tool="image"][data-align-open="true"] [data-role="image-selection-ring"],
 [data-blok-tool="image"][data-alt-open="true"] [data-role="image-selection-ring"],
 [data-blok-tool="image"][data-resizing="true"] [data-role="image-selection-ring"] {
-  top: -6px;
-  right: -6px;
-  left: -6px;
-  height: calc(var(--blok-image-media-height, 100%) + 12px);
+  --blok-image-ring-gap: 6px;
+  top: calc(0px - var(--blok-image-ring-gap));
+  right: calc(0px - var(--blok-image-ring-gap));
+  left: calc(0px - var(--blok-image-ring-gap));
+  height: calc(var(--blok-image-media-height, 100%) + 2 * var(--blok-image-ring-gap));
   opacity: 1;
 }
+[data-blok-tool="image"][data-rounded="off"] [data-role="image-selection-ring"] { border-radius: 0; }
 [data-blok-tool="image"][data-resizing="true"] [data-role="image-selection-ring"] {
   box-shadow: 0 0 0 1.5px var(--blok-image-frame-ring-strong);
 }
@@ -456,78 +462,6 @@
    readFileSync audits see it without walking @imports. */
 [data-blok-tool="image"] .blok-image-toolbar__align { position: relative; }
 [data-blok-tool="image"] .blok-image-toolbar__align-popover[hidden] { display: none; }
-
-/* overflow popover */
-[data-blok-tool="image"] .blok-image-popover {
-  position: absolute;
-  top: 44px; right: 10px;
-  min-width: 220px;
-  background: var(--blok-bg-primary);
-  border: 1px solid var(--blok-border-primary);
-  border-radius: var(--blok-space-2);
-  padding: var(--blok-space-1);
-  box-shadow: var(--blok-image-shadow-popover);
-  opacity: 0;
-  transform: translateY(-4px) scale(0.98);
-  transform-origin: top right;
-  transition: opacity 120ms ease, transform 120ms ease;
-  pointer-events: none;
-  z-index: 3;
-}
-[data-blok-tool="image"] .blok-image-popover.is-open {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-  pointer-events: auto;
-}
-[data-blok-tool="image"] .blok-image-popover__label {
-  font-size: 11px; font-weight: 500;
-  color: var(--blok-text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: var(--blok-space-2) var(--blok-space-2-5) var(--blok-space-1);
-}
-[data-blok-tool="image"] .blok-image-popover__sep {
-  height: 1px;
-  background: var(--blok-border-subtle);
-  margin: var(--blok-space-1) 0;
-}
-[data-blok-tool="image"] .blok-image-popover__item {
-  display: flex; align-items: center; gap: var(--blok-space-2-5);
-  padding: var(--blok-space-1-75) var(--blok-space-2-5);
-  border-radius: var(--blok-space-1);
-  font-size: 13px;
-  color: var(--blok-text-primary);
-  cursor: pointer;
-  user-select: none;
-  background: transparent;
-  border: 0;
-  width: 100%;
-  text-align: left;
-}
-[data-blok-tool="image"] .blok-image-popover__item:hover {
-  background: var(--blok-bg-hover);
-}
-[data-blok-tool="image"] .blok-image-popover__item.is-danger { color: var(--blok-color-danger); }
-[data-blok-tool="image"] .blok-image-popover__sizes {
-  display: flex;
-  gap: var(--blok-space-1);
-  padding: var(--blok-space-1);
-}
-[data-blok-tool="image"] .blok-image-popover__size {
-  flex: 1;
-  padding: var(--blok-space-1-5) var(--blok-space-2);
-  border-radius: var(--blok-space-1);
-  font-size: 12px;
-  text-align: center;
-  color: var(--blok-text-secondary);
-  cursor: pointer;
-  background: var(--blok-bg-hover);
-  border: 0;
-}
-[data-blok-tool="image"] .blok-image-popover__size[aria-pressed="true"] {
-  background: var(--blok-text-primary);
-  color: var(--blok-bg-primary);
-}
 
 /* resize handles — dots on the selection ring's midline (ring sits 6px outside the figure) */
 [data-blok-tool="image"] [data-role="resize-handle"] {
@@ -577,7 +511,7 @@
   top: calc(var(--blok-image-media-height, 100%) / 2);
   transform: translateY(-50%);
   padding: var(--blok-space-1-25) var(--blok-space-1-75);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-control);
   background: var(--blok-image-readout-bg);
   color: var(--blok-image-readout-fg);
   font-size: 11px;
@@ -684,13 +618,16 @@
     radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--blok-bg-primary) 55%, transparent) 0%, transparent 60%),
     var(--blok-bg-secondary);
   border: 1px solid var(--blok-border-subtle);
-  border-radius: var(--blok-radius-lg);
+  border-radius: var(--blok-radius-block);
   overflow: hidden;
 }
 
+/* The card has no padding; this header makes the gap to its corner. The
+   hairline term is the card's 1px border. */
 .blok-image-uploading__header {
   display: flex; align-items: center; gap: var(--blok-space-3);
   padding: var(--blok-space-2) var(--blok-space-3);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-block) - var(--blok-border-width-hairline) - var(--blok-space-2)));
   min-width: 0;
 }
 .blok-image-uploading__label {
@@ -719,7 +656,7 @@
   flex-shrink: 0;
   width: 24px; height: 24px;
   display: grid; place-items: center;
-  border-radius: var(--blok-space-1-5);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   border: 0;
   background: transparent;
   color: var(--blok-text-tertiary);
@@ -737,7 +674,7 @@
 }
 .blok-image-uploading__cancel:focus-visible {
   outline: none;
-  border-radius: var(--blok-space-1-5);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 45%, transparent);
 }
 
@@ -754,7 +691,7 @@
   color: var(--blok-text-secondary);
   background: color-mix(in srgb, var(--blok-bg-primary) 70%, transparent);
   border: 1px solid var(--blok-border-subtle);
-  border-radius: 9px;
+  border-radius: var(--blok-radius-control-lg);
 }
 .blok-image-uploading__tile svg { width: 18px; height: 18px; }
 
@@ -783,7 +720,7 @@
 
 .blok-image-uploading__bar {
   height: 3px;
-  border-radius: 999px;
+  border-radius: var(--blok-radius-pill);
   background: color-mix(in srgb, var(--blok-bg-primary) 70%, transparent);
   border: 1px solid var(--blok-border-subtle);
   overflow: hidden;
@@ -835,7 +772,7 @@
      quiet tint + restrained border, not a gradient wash. */
   background: color-mix(in srgb, var(--blok-color-danger) 6%, var(--blok-bg-secondary));
   border: 1px solid color-mix(in srgb, var(--blok-color-danger) 18%, var(--blok-border-subtle));
-  border-radius: var(--blok-radius-lg);
+  border-radius: var(--blok-radius-block);
   display: flex; gap: var(--blok-space-3); align-items: center;
   color: var(--blok-text-primary);
   font-family: var(--blok-font-family, var(--blok-font-sans));
@@ -847,7 +784,7 @@
   color: var(--blok-color-danger);
   /* Flat soft tile + a single hairline danger ring — no gradient or drop shadow. */
   background: color-mix(in srgb, var(--blok-color-danger) 12%, var(--blok-bg-secondary));
-  border-radius: var(--blok-radius-md-plus, calc(var(--blok-radius-md) + 2px));
+  border-radius: var(--blok-radius-control-lg);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blok-color-danger) 22%, transparent);
 }
 .blok-image-error__icon svg { width: 22px; height: 22px; opacity: 0.92; }
@@ -876,7 +813,7 @@
 .blok-image-error__btn {
   appearance: none;
   padding: var(--blok-space-1-5) var(--blok-space-3);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-control);
   border: 1px solid var(--blok-border-subtle);
   background: var(--blok-bg-primary);
   color: var(--blok-text-primary);
@@ -920,7 +857,7 @@
    Ambient blur backdrop + shimmer sweep + soft-glow spinner. */
 [data-blok-tool="image"] .blok-image-inner[data-loading="true"] {
   overflow: hidden;
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-block);
   isolation: isolate;
   min-height: 220px;
   background: color-mix(in srgb, var(--blok-bg-secondary) 65%, var(--blok-bg-primary));

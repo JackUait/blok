@@ -18,7 +18,6 @@
   --blok-audio-cover-size: 104px;
   --blok-audio-gap: var(--blok-space-3-5);
   --blok-audio-pad: var(--blok-space-3-5);
-  --blok-audio-radius: var(--blok-radius-md);
   --blok-audio-wave-height: 56px;
   --blok-audio-bar-height: 4px;
   /* lift the slim slider thumbs (volume + speed) off the track so they read as
@@ -99,7 +98,7 @@
   padding: var(--blok-audio-pad);
   background: var(--blok-bg-primary);
   border: 1px solid var(--blok-border-subtle);
-  border-radius: var(--blok-radius-lg);
+  border-radius: var(--blok-radius-block);
   box-shadow: var(--blok-image-shadow-resting);
   text-align: left;
   transition: box-shadow var(--blok-duration-base) ease, border-color var(--blok-duration-base) ease;
@@ -142,7 +141,7 @@
   align-self: stretch;
   width: var(--blok-audio-cover-size);
   min-height: var(--blok-audio-cover-size);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-block);
   overflow: hidden;
   background: var(--blok-bg-secondary);
   box-shadow: inset 0 0 0 1px var(--blok-border-subtle);
@@ -210,8 +209,13 @@
   padding: var(--blok-space-2);
   background: var(--blok-bg-primary);
   border: 1px solid var(--blok-border-subtle);
-  border-radius: var(--blok-radius-lg);
+  border-radius: var(--blok-radius-surface);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-border-width-hairline) - var(--blok-space-2)));
   box-shadow: var(--blok-popover-box-shadow);
+}
+/* The picker's padding is the gap to the uploader card's corners. */
+.blok-audio-cover-picker .blok-media-empty__card {
+  border-radius: var(--blok-radius-inner, var(--blok-radius-block));
 }
 /* The picker lives at document.body, outside blok's scoped border-box reset, so
    its subtree would default to content-box. The media-empty Upload/Link height-
@@ -583,7 +587,8 @@
   padding: var(--blok-space-2);
   background: var(--blok-bg-primary);
   border: 1px solid var(--blok-border-subtle);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-surface);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-border-width-hairline) - var(--blok-space-2)));
   box-shadow: var(--blok-image-shadow-popover);
   z-index: var(--blok-z-popover);
 }
@@ -614,7 +619,7 @@
   height: 24px;
   padding: 0;
   border: 0;
-  border-radius: var(--blok-radius-sm);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   background: transparent;
   color: var(--blok-text-tertiary);
   cursor: pointer;
@@ -678,7 +683,7 @@
   flex: 1 1 0;
   padding: var(--blok-space-1) 0;
   border: 0;
-  border-radius: var(--blok-radius-sm);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   background: transparent;
   color: var(--blok-text-secondary);
   font-size: var(--blok-font-size-ui-compact);
@@ -751,7 +756,7 @@
   padding: var(--blok-space-3);
   background: color-mix(in srgb, var(--blok-color-danger) 6%, var(--blok-bg-secondary));
   border: 1px solid color-mix(in srgb, var(--blok-color-danger) 18%, var(--blok-border-subtle));
-  border-radius: var(--blok-radius-lg);
+  border-radius: var(--blok-radius-block);
   display: flex; gap: var(--blok-space-3); align-items: center;
   color: var(--blok-text-primary);
   font-family: var(--blok-font-family, var(--blok-font-sans));
@@ -762,7 +767,7 @@
   flex-shrink: 0;
   appearance: none;
   padding: var(--blok-space-1-5) var(--blok-space-3);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-control);
   border: 1px solid var(--blok-border-subtle);
   background: var(--blok-bg-primary);
   color: var(--blok-text-primary);

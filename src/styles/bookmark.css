@@ -24,7 +24,7 @@
   width: 100%;
   overflow: hidden;
   border: 1px solid var(--blok-popover-border);
-  border-radius: var(--blok-radius-lg);
+  border-radius: var(--blok-radius-block);
   color: inherit;
   text-decoration: none;
   cursor: pointer;
@@ -107,7 +107,7 @@
 [data-blok-tool="bookmark"] .blok-bookmark__placeholder {
   --bookmark-scale: 1em;
   border: 1px solid var(--blok-popover-border);
-  border-radius: var(--blok-radius-lg);
+  border-radius: var(--blok-radius-block);
   padding: calc(var(--bookmark-scale) * 6 / 7) var(--bookmark-scale);
   color: var(--blok-text-secondary);
   font-size: var(--blok-bookmark-title-font-size, 14px);

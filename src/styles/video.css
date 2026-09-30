@@ -28,7 +28,7 @@
    soft resting shadow that lifts the player off the page */
 [data-blok-tool="video"] .blok-video-media {
   position: relative;
-  border-radius: var(--blok-radius-lg);
+  border-radius: var(--blok-radius-block);
   overflow: hidden;
   background: var(--blok-video-stage);
   box-shadow: var(--blok-image-shadow-resting);
@@ -56,7 +56,7 @@
 }
 [data-blok-element-content].bg-selection:has([data-blok-tool="video"]) .blok-video-inner {
   background-color: var(--blok-selection);
-  border-radius: var(--blok-space-1);
+  border-radius: var(--blok-radius-block);
 }
 
 /* ----- caption ----- */
@@ -199,7 +199,7 @@
   padding: var(--blok-space-3);
   background: color-mix(in srgb, var(--blok-color-danger) 6%, var(--blok-bg-secondary));
   border: 1px solid color-mix(in srgb, var(--blok-color-danger) 18%, var(--blok-border-subtle));
-  border-radius: var(--blok-radius-lg);
+  border-radius: var(--blok-radius-block);
   display: flex; gap: var(--blok-space-3); align-items: center;
   color: var(--blok-text-primary);
   font-family: var(--blok-font-family, var(--blok-font-sans));
@@ -210,7 +210,7 @@
   flex-shrink: 0;
   appearance: none;
   padding: var(--blok-space-1-5) var(--blok-space-3);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-control);
   border: 1px solid var(--blok-border-subtle);
   background: var(--blok-bg-primary);
   color: var(--blok-text-primary);
@@ -540,7 +540,8 @@
   align-items: center;
   gap: var(--blok-space-1);
   padding: var(--blok-space-1);
-  border-radius: var(--blok-radius-sm);
+  border-radius: var(--blok-radius-control);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-control) - var(--blok-space-1)));
   background: var(--blok-video-burst-bg);
   color: var(--blok-video-burst-fg);
   box-shadow: var(--blok-video-burst-shadow);
@@ -558,7 +559,7 @@
   display: none;
   width: 160px;
   height: auto;
-  border-radius: var(--blok-radius-xs);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control-sm));
   background: var(--blok-video-stage);
 }
 [data-blok-tool="video"] .blok-video-controls__seek-thumb[data-ready="true"] { display: block; }
@@ -662,7 +663,8 @@
   overflow: hidden;
   padding: var(--blok-space-1-5);
   border: 1px solid var(--blok-video-menu-border);
-  border-radius: var(--blok-radius-lg);
+  border-radius: var(--blok-radius-surface);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-border-width-hairline) - var(--blok-space-1-5)));
   box-shadow: var(--blok-video-burst-shadow);
   color: var(--blok-video-control-fg);
   transform-origin: bottom right;
@@ -741,7 +743,7 @@
   min-height: 34px;
   padding: var(--blok-space-1-5) var(--blok-space-2-5);
   border: 0;
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   background: transparent;
   color: inherit;
   font-size: 13px;
@@ -837,7 +839,7 @@
   height: 26px;
   padding: 0;
   border: 0;
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   background: transparent;
   color: var(--blok-video-menu-icon);
   cursor: pointer;
@@ -915,7 +917,7 @@
   min-height: 30px;
   padding: var(--blok-space-1);
   border: 0;
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   background: transparent;
   color: var(--blok-video-menu-value-fg);
   font-size: 12px;
@@ -1063,7 +1065,7 @@
   transform: translateZ(0);
   /* the composited layer escapes the media's overflow:hidden rounding, so round
      the <video> itself to keep the theater frame's corners soft */
-  border-radius: var(--blok-radius-lg);
+  border-radius: var(--blok-radius-block);
 }
 [data-blok-tool="video"] .blok-video-inner[data-theater="true"] [data-role="resize-handle"],
 [data-blok-tool="video"] .blok-video-inner[data-theater="true"] .blok-video-controls__ambient {
@@ -1142,7 +1144,8 @@
   min-width: 210px;
   max-width: 90%;
   padding: var(--blok-space-1-5);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-surface);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1-5)));
   background: var(--blok-video-burst-bg);
   box-shadow: var(--blok-video-burst-shadow);
   -webkit-backdrop-filter: blur(12px);
@@ -1157,7 +1160,7 @@
   width: 100%;
   padding: var(--blok-space-1-5) var(--blok-space-2);
   border: 0;
-  border-radius: var(--blok-radius-sm);
+  border-radius: var(--blok-radius-inner, var(--blok-radius-control));
   background: transparent;
   color: inherit;
   font-size: 13px;
@@ -1172,7 +1175,7 @@
   top: var(--blok-space-3);
   left: var(--blok-space-3);
   padding: var(--blok-space-2) var(--blok-space-2-5);
-  border-radius: var(--blok-radius-sm);
+  border-radius: var(--blok-radius-surface);
   background: var(--blok-video-burst-bg);
   color: var(--blok-video-control-fg);
   font-size: 11px;
@@ -1225,7 +1228,7 @@
   top: var(--blok-space-2);
   left: var(--blok-space-2);
   padding: 2px var(--blok-space-2);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-control-sm);
   background: var(--blok-video-burst-bg);
   box-shadow: var(--blok-video-burst-shadow);
   color: var(--blok-video-control-fg);

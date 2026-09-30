@@ -36,7 +36,7 @@
   padding: var(--blok-space-3) var(--blok-space-3-5);
   padding-inline-end: calc(var(--file-action-size) + var(--blok-space-3-5) + var(--blok-space-3));
   border: 1px solid var(--blok-border-subtle);
-  border-radius: var(--blok-radius-xl);
+  border-radius: var(--blok-radius-block);
   background: var(--blok-bg-primary);
   box-shadow: var(--blok-image-shadow-resting);
   font: inherit;
@@ -62,7 +62,7 @@
   justify-content: center;
   width: var(--file-tile-size);
   height: var(--file-tile-size);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-control-lg);
   background: var(--blok-bg-secondary);
   color: var(--blok-text-secondary);
 }
@@ -218,7 +218,7 @@
   gap: var(--blok-space-3);
   padding: var(--blok-space-3) var(--blok-space-3-5);
   border: 1px solid var(--blok-border-subtle);
-  border-radius: var(--blok-radius-xl);
+  border-radius: var(--blok-radius-block);
   background: var(--blok-bg-primary);
   box-shadow: var(--blok-image-shadow-resting);
 }
@@ -273,7 +273,7 @@
   flex: 0 0 auto;
   padding: var(--blok-space-1-5) var(--blok-space-3);
   border: 0;
-  border-radius: var(--blok-radius-pill);
+  border-radius: var(--blok-radius-control);
   background: transparent;
   font-size: var(--blok-font-size-ui-label);
   font-weight: var(--blok-font-weight-medium);
@@ -309,7 +309,7 @@
   gap: var(--blok-space-3);
   padding: var(--blok-space-3) var(--blok-space-3-5);
   border: 1px solid var(--blok-border-subtle);
-  border-radius: var(--blok-radius-xl);
+  border-radius: var(--blok-radius-block);
   background: var(--blok-item-destructive-hover-bg);
   font-size: var(--blok-font-size-ui-label);
   color: var(--blok-item-destructive-text);
@@ -322,7 +322,7 @@
   flex: 0 0 auto;
   padding: var(--blok-space-1-5) var(--blok-space-3);
   border: 0;
-  border-radius: var(--blok-radius-pill);
+  border-radius: var(--blok-radius-control);
   background: var(--blok-bg-primary);
   font-size: var(--blok-font-size-ui-label);
   font-weight: var(--blok-font-weight-semibold);
@@ -388,7 +388,7 @@
   width: min(960px, 100%);
   height: min(90vh, 100%);
   overflow: hidden;
-  border-radius: var(--blok-radius-xl);
+  border-radius: var(--blok-radius-dialog);
   background: var(--blok-bg-primary);
   box-shadow: var(--blok-image-shadow-resting);
   transform-origin: center bottom;
@@ -621,7 +621,7 @@
 .blok-file-preview-md::-webkit-scrollbar-thumb,
 .blok-file-preview-office::-webkit-scrollbar-thumb {
   background: transparent;
-  border-radius: var(--blok-space-1);
+  border-radius: var(--blok-radius-control-sm);
 }
 .blok-file-preview-pre:hover::-webkit-scrollbar-thumb,
 .blok-file-preview-md:hover::-webkit-scrollbar-thumb,
@@ -816,14 +816,14 @@
   font-size: 0.875em;
   background: var(--blok-bg-tertiary);
   padding: var(--blok-space-0-5) var(--blok-space-1);
-  border-radius: var(--blok-radius-sm);
+  border-radius: var(--blok-radius-mark);
 }
 
 .blok-file-preview-md pre {
   padding: var(--blok-space-3) var(--blok-space-4);
   background: var(--blok-bg-tertiary);
   border: 1px solid var(--blok-border-subtle);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-block);
   overflow-x: auto;
   font-size: 0.8125rem;
   line-height: 1.6;
@@ -838,7 +838,7 @@
 .blok-file-preview-md img {
   max-width: 100%;
   height: auto;
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-block);
 }
 
 .blok-file-preview-md table {
@@ -942,7 +942,7 @@
 .blok-md-alert {
   padding: var(--blok-space-3) var(--blok-space-4);
   border-left: 3px solid var(--blok-color-blue-text);
-  border-radius: var(--blok-radius-sm);
+  border-radius: var(--blok-radius-block);
   background: var(--blok-color-blue-bg);
 }
 
@@ -1040,7 +1040,7 @@
 
 .blok-file-preview-docx .blok-docx {
   border: 1px solid var(--blok-border-subtle);
-  border-radius: var(--blok-radius-lg);
+  border-radius: var(--blok-radius-surface);
   box-shadow: var(--blok-image-shadow-resting);
 }
 
@@ -1062,7 +1062,7 @@
   line-height: var(--blok-line-height-tight);
   background: var(--blok-bg-primary);
   border: 1px solid var(--blok-border-subtle);
-  border-radius: var(--blok-radius-md);
+  border-radius: var(--blok-radius-surface);
   box-shadow: var(--blok-image-shadow-resting);
   overflow: hidden;
 }
@@ -1119,7 +1119,7 @@
    down to just its title band. The shadow + radius carry the card framing. */
 .blok-file-preview-pptx > * {
   flex-shrink: 0;
-  border-radius: var(--blok-radius-lg);
+  border-radius: var(--blok-radius-surface);
   box-shadow: var(--blok-image-shadow-resting);
   overflow: hidden;
 }

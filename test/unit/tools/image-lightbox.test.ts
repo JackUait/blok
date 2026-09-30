@@ -208,17 +208,17 @@ describe('no-glass CSS regression', () => {
     expect(body).not.toMatch(/backdrop-filter/);
   });
 
-  it('lightbox bar uses 12px radius (space-3), matching inline popover — not pill', () => {
+  it('lightbox bar is a surface card, not a pill', () => {
     const body = ruleBody(mainCss, /\.blok-image-lightbox__bar\s*\{([^}]+)\}/);
-    expect(body).toMatch(/border-radius:\s*var\(--blok-space-3\)/);
+    expect(body).toMatch(/border-radius:\s*var\(--blok-radius-surface\)/);
     expect(body).not.toMatch(/--blok-radius-pill/);
   });
 
-  it('lightbox button uses 32px square with 8px radius (matches inline popover item proportions)', () => {
+  it('lightbox button is a 32px square whose corner is concentric with the bar', () => {
     const body = ruleBody(mainCss, /\.blok-image-lightbox__btn\s*\{([^}]+)\}/);
     expect(body).toMatch(/width:\s*32px/);
     expect(body).toMatch(/height:\s*32px/);
-    expect(body).toMatch(/border-radius:\s*var\(--blok-space-2\)/);
+    expect(body).toMatch(/border-radius:\s*var\(--blok-radius-inner, var\(--blok-radius-control\)\)/);
   });
 
   it('in-doc image toolbar has no backdrop-filter', () => {

@@ -72,6 +72,25 @@ describe('darkroom.css', () => {
     expect(rule('.blok-darkroom-flight img')).toMatch(/transform-origin:\s*0 0/);
   });
 
+  it('the veil paints the same dark surround, square, and never takes a press', () => {
+    const veil = rule('.blok-darkroom-veil');
+    const background = (r: string): string => /background:\s*([^;]+);/.exec(r)?.[1] ?? 'none';
+
+    expect(background(veil)).toBe(background(rule('.blok-darkroom[data-blok-top-layer][popover]')));
+    expect(veil).toMatch(/position:\s*fixed/);
+    expect(veil).toMatch(/inset:\s*0/);
+    expect(veil).toMatch(/pointer-events:\s*none/);
+    expect(veil).not.toMatch(/border-radius/);
+    expect(veil).not.toMatch(BLUE);
+    // The palette the gradient reads must reach the veil too.
+    expect(css).toMatch(/\.blok-darkroom-veil,\s*\.blok-darkroom \{\s*--blok-darkroom-bg-center/);
+  });
+
+  it('the promoted veil and clone outrank the top-layer reset that would shrink them', () => {
+    expect(css).toMatch(/\.blok-darkroom-veil\[data-blok-top-layer\]\[popover\],\s*\.blok-darkroom-veil \{/);
+    expect(css).toMatch(/\.blok-darkroom-flight\[data-blok-top-layer\]\[popover\],\s*\.blok-darkroom-flight \{/);
+  });
+
   it('is imported by main.css instead of the old crop styles', () => {
     const main = readFileSync(resolve(__dirname, '../../../../../src/styles/main.css'), 'utf8');
 

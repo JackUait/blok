@@ -1,5 +1,6 @@
 import type { ImageCrop } from '../../../../types/tools/image';
 import { createSpring, SPRING_SOFT, type SpringClock } from '../../../components/utils/spring';
+import { promoteToTopLayer } from '../../../components/utils/top-layer';
 import { rectToCamera, type Box, type Size } from './camera';
 
 export const CHROME_OUT_MS = 120;
@@ -44,10 +45,25 @@ export interface FlyOutOptions {
   targetRound: number;
   clock?: SpringClock;
   reducedMotion?: () => boolean;
+  /** The dark surround left behind by the closed dialog; fades out with the flight. */
+  veil?: HTMLElement | null;
   onDone?(): void;
 }
 
-const isOnScreen = (r: DOMRect): boolean => r.width > 0 && r.height > 0
+/** Must be promoted before the flight shell, so the shell stacks above it. */
+export function createVeil(): HTMLElement {
+  const veil = document.createElement('div');
+
+  veil.className = 'blok-darkroom-veil';
+  veil.setAttribute('data-role', 'darkroom-veil');
+  veil.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(veil);
+  promoteToTopLayer(veil);
+
+  return veil;
+}
+
+export const isOnScreen = (r: DOMRect): boolean => r.width > 0 && r.height > 0
   && r.bottom > 0 && r.right > 0 && r.top < window.innerHeight && r.left < window.innerWidth;
 
 export function flyOut(opts: FlyOutOptions): void {
@@ -64,6 +80,8 @@ export function flyOut(opts: FlyOutOptions): void {
   img.style.height = `${opts.natural.h}px`;
   shell.appendChild(img);
   document.body.appendChild(shell);
+  promoteToTopLayer(shell);
+  const veil = opts.veil ?? null;
 
   const { target } = opts;
   const box = target?.getBoundingClientRect() ?? null;
@@ -71,7 +89,8 @@ export function flyOut(opts: FlyOutOptions): void {
 
   if (target) target.style.visibility = 'hidden';
 
-  const paint = (v: Readonly<Record<'x' | 'y' | 'w' | 'h' | 'round' | 'o', number>>): void => {
+  const paint = (v: Readonly<Record<'x' | 'y' | 'w' | 'h' | 'round' | 'o' | 'veil', number>>): void => {
+    if (veil) veil.style.opacity = String(v.veil);
     shell.style.transform = `translate(${v.x}px, ${v.y}px)`;
     shell.style.width = `${v.w}px`;
     shell.style.height = `${v.h}px`;
@@ -83,13 +102,14 @@ export function flyOut(opts: FlyOutOptions): void {
   };
 
   const spring = createSpring({
-    from: { ...opts.from, round: opts.fromRound, o: 1 },
+    from: { ...opts.from, round: opts.fromRound, o: 1, veil: 1 },
     config: SPRING_SOFT,
     clock: opts.clock,
     reducedMotion: opts.reducedMotion,
     onUpdate: paint,
     onSettle: () => {
       shell.remove();
+      veil?.remove();
       if (target) target.style.visibility = '';
       opts.onDone?.();
     },
@@ -97,6 +117,6 @@ export function flyOut(opts: FlyOutOptions): void {
 
   paint(spring.values());
   spring.to(land
-    ? { x: land.left, y: land.top, w: land.width, h: land.height, round: opts.targetRound }
-    : { o: 0 });
+    ? { x: land.left, y: land.top, w: land.width, h: land.height, round: opts.targetRound, veil: 0 }
+    : { o: 0, veil: 0 });
 }

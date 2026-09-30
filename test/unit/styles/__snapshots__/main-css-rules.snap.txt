@@ -165,7 +165,7 @@
   animation: none;
 }
 
-.blok-darkroom {
+.blok-darkroom-veil, .blok-darkroom {
   --blok-darkroom-bg-center: #17171b;
   --blok-darkroom-bg-edge: #070708;
   --blok-darkroom-ink: #fff;
@@ -492,10 +492,28 @@
   white-space: nowrap;
 }
 
-.blok-darkroom-flight {
+.blok-darkroom-veil[data-blok-top-layer][popover], .blok-darkroom-veil {
   position: fixed;
+  inset: 0;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: radial-gradient(120% 90% at 50% 40%, var(--blok-darkroom-bg-center) 0%, var(--blok-darkroom-bg-edge) 70%);
+  z-index: 9998;
+  pointer-events: none;
+}
+
+.blok-darkroom-flight[data-blok-top-layer][popover], .blok-darkroom-flight {
+  position: fixed;
+  inset: auto;
   left: 0;
   top: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
   z-index: 9999;
   overflow: hidden;
   border-radius: var(--blok-radius-darkroom-frame);

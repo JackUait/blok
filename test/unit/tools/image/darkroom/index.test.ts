@@ -319,6 +319,68 @@ describe('openDarkroom fix round 1', () => {
       vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 1200, 800));
     });
 
+    describe('the dark surround on the way out', () => {
+      const veil = (): Element | null => document.querySelector('[data-role="darkroom-veil"]');
+      const withTarget = (): Partial<OpenDarkroomOptions> => {
+        const target = document.createElement('div');
+
+        document.body.appendChild(target);
+
+        return { initial: { x: 10, y: 10, w: 60, h: 60 }, getTargetEl: () => target };
+      };
+
+      it('Done leaves a veil that fades with the flight and is gone once it lands', () => {
+        const promoted: Element[] = [];
+
+        vi.spyOn(HTMLElement.prototype, 'showPopover').mockImplementation(function show(this: HTMLElement) { promoted.push(this); });
+        const { advance } = open(withTarget());
+
+        button('done').click();
+
+        expect(veil()).not.toBeNull();
+        expect(veil()?.getAttribute('aria-hidden')).toBe('true');
+        expect(veil()?.hasAttribute('data-blok-testid')).toBe(false);
+        expect(document.querySelector('[data-blok-testid="image-crop-backdrop"]')).toBeNull();
+        advance(64);
+        const flight = document.querySelector('[data-role="darkroom-flight"]');
+        const shown = veil();
+
+        if (!flight || !shown) throw new Error('flight or veil missing mid-flight');
+        // Top-layer order is promotion order: the clone must paint over the veil.
+        expect(promoted.indexOf(flight)).toBeGreaterThan(promoted.indexOf(shown));
+        advance(3000);
+
+        expect(veil()).toBeNull();
+        expect(document.querySelector('[data-role="darkroom-flight"]')).toBeNull();
+      });
+
+      it('under reduced motion Done leaves no veil behind', () => {
+        vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('reduce'), media: q }));
+        open(withTarget());
+
+        button('done').click();
+
+        expect(veil()).toBeNull();
+      });
+
+      it('Cancel without a landing target leaves no veil', () => {
+        open({ initial: { x: 10, y: 10, w: 60, h: 60 } });
+
+        button('cancel').click();
+
+        expect(veil()).toBeNull();
+      });
+
+      it('Cancel after a load error leaves no veil', () => {
+        track(openDarkroom({ url: 'x.png', onApply: vi.fn(), onCancel: vi.fn(), clock: fakeFrameClock().clock, getTargetEl: () => null }));
+        document.querySelector('[data-role="darkroom-photo"]')?.dispatchEvent(new Event('error'));
+
+        button('cancel').click();
+
+        expect(veil()).toBeNull();
+      });
+    });
+
     it('a pan that starts mid-spring keeps the ratio and saves the rect it shows at rest', () => {
       const { onApply, advance } = open({ initial: { x: 20, y: 20, w: 50, h: 50 } });
 

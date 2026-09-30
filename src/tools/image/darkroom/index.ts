@@ -2,7 +2,7 @@ import type { ImageCrop, ImageCropShape } from '../../../../types/tools/image';
 import { DATA_ATTR } from '../../../components/constants/data-attributes';
 import { openModalDialog } from '../../../components/utils/modal-dialog';
 import { rovingRadioGroup } from '../../../components/utils/roving-radio-group';
-import { createSpring, type SpringClock } from '../../../components/utils/spring';
+import { createSpring, prefersReducedMotion, type SpringClock } from '../../../components/utils/spring';
 import type { I18nInstance } from '../../../components/utils/tools';
 import { applyRatio, clampRect, FULL_RECT, isFullRect, resizeRect, type Handle } from '../crop-math';
 import { renderErrorState } from '../error-state';
@@ -13,7 +13,7 @@ import {
 } from './camera';
 import { attachGestures } from './gestures';
 import { createHistory, type Snapshot } from './history';
-import { createDissolve, flyOut } from './motion';
+import { createDissolve, createVeil, flyOut } from './motion';
 
 export interface OpenDarkroomOptions {
   url: string;
@@ -412,19 +412,23 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     const stageBox = stage.getBoundingClientRect();
     const from: Box = { x: v.x + stageBox.left, y: v.y + stageBox.top, w: v.w, h: v.h };
     const source = opts.sourceEl ?? null;
+    const getTarget = opts.getTargetEl;
+    // Without a target there is nothing to land on; skipping also keeps a late rAF out of torn-down tests.
+    const flies = st.ready && getTarget !== undefined;
+    // Made before close() so the dark surround never drops for a frame. Reduced motion lets it drop at once.
+    const veil = flies && !prefersReducedMotion() ? createVeil() : null;
 
     dialogHandle.close();
     after();
     if (source) source.style.visibility = '';
-    const getTarget = opts.getTargetEl;
+    if (!flies) return;
+    const request = opts.clock ? opts.clock.request : requestAnimationFrame;
 
-    // Without a target there is nothing to land on; skipping also keeps a late rAF out of torn-down tests.
-    if (!st.ready || !getTarget) return;
-    requestAnimationFrame(() => {
+    request(() => {
       flyOut({
         url: opts.url, natural: st.natural, rect, from, fromRound: v.round,
         target: getTarget(), targetRound: round,
-        clock: opts.clock,
+        clock: opts.clock, veil,
       });
     });
   };

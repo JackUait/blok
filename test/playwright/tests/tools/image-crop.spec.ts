@@ -66,21 +66,23 @@ const openDarkroom = async (page: Page, crop?: { x: number; y: number; w: number
 };
 
 type FlightSpan = { added: number; removed?: number };
+type Recorded = { __flights: FlightSpan[]; __veils: FlightSpan[] };
 
 // The fly-out starts a rAF after Done and may live for one frame only, so polling can miss it.
 const recordFlights = async (page: Page): Promise<void> => {
   await page.evaluate(() => {
-    const spans: FlightSpan[] = [];
+    const spans: Record<string, FlightSpan[]> = { 'darkroom-flight': [], 'darkroom-veil': [] };
     const live = new Map<Node, FlightSpan>();
-    const isFlight = (n: Node): boolean => n instanceof HTMLElement && n.dataset.role === 'darkroom-flight';
 
     new MutationObserver((records) => {
       for (const r of records) {
         r.addedNodes.forEach((n) => {
-          if (!isFlight(n)) return;
+          const list = n instanceof HTMLElement ? spans[n.dataset.role ?? ''] : undefined;
+
+          if (!list) return;
           const span: FlightSpan = { added: performance.now() };
 
-          spans.push(span);
+          list.push(span);
           live.set(n, span);
         });
         r.removedNodes.forEach((n) => {
@@ -90,16 +92,19 @@ const recordFlights = async (page: Page): Promise<void> => {
         });
       }
     }).observe(document.body, { childList: true });
-    (window as unknown as { __flights: FlightSpan[] }).__flights = spans;
+    Object.assign(window, { __flights: spans['darkroom-flight'], __veils: spans['darkroom-veil'] });
   });
 };
+
+const veilsSoFar = async (page: Page): Promise<FlightSpan[]> =>
+  page.evaluate(() => (window as unknown as Recorded).__veils);
 
 const flightsAfterLanding = async (page: Page): Promise<FlightSpan[]> => {
   await expect(page.locator(`${IMAGE_BLOCK_SELECTOR} [data-role="image-crop"]`)).toBeVisible();
   // Two frames: one for leave()'s rAF that starts the flight, one more for it to settle.
   await page.evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
 
-  return page.evaluate(() => (window as unknown as { __flights: FlightSpan[] }).__flights);
+  return page.evaluate(() => (window as unknown as Recorded).__flights);
 };
 
 const cropOf = async (page: Page) =>
@@ -244,6 +249,12 @@ test('the photo flies back into the block after Done', async ({ page }) => {
 
   expect(flights).toHaveLength(1);
   expect(flights[0].removed).toBeDefined();
+  await expect.poll(async () => (await veilsSoFar(page))[0]?.removed).toBeDefined();
+  const veils = await veilsSoFar(page);
+
+  // The dark surround fades with the flight instead of dropping in one frame.
+  expect(veils).toHaveLength(1);
+  expect((veils[0].removed ?? 0) - veils[0].added).toBeGreaterThan(17);
 });
 
 test('reduced motion applies with no flight', async ({ page }) => {
@@ -259,5 +270,6 @@ test('reduced motion applies with no flight', async ({ page }) => {
     expect(f.removed).toBeDefined();
     expect((f.removed ?? Infinity) - f.added).toBeLessThan(17);
   }
+  expect(await veilsSoFar(page)).toHaveLength(0);
   expect((await cropOf(page)).crop).toStrictEqual({ x: 10, y: 10, w: 60, h: 60 });
 });

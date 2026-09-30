@@ -1,6 +1,6 @@
 # Radius design system
 
-Status: accepted 2026-09-30 (decisions in §5). Foundation shipped in 490597d1; migration in progress.
+Status: shipped 2026-09-30 (decisions in §5). Enforced by `test/unit/architecture/radius-law.test.ts`.
 
 Research behind it (all read from source or measured, 2026-09-30):
 
@@ -27,7 +27,7 @@ Components use **role tokens** (layer 2). Role tokens use **primitives** (layer 
 
 One ordered scale. Names are px values, like the spacing scale (`--blok-space-1-5`), so there is no clash with Tailwind names and no ordering trap.
 
-| Token | Value | Tailwind class it backs |
+| Token | Value | Tailwind step it matches |
 |---|---|---|
 | `--blok-radius-0` | 0 | `rounded-none` |
 | `--blok-radius-2` | 0.125rem | `rounded-xs` |
@@ -43,8 +43,8 @@ Names give the px at a 16px root. Values are in **rem** on purpose: Tailwind's r
 - Micro notches (crop handles, find caret) keep `--blok-radius-hairline` (1.5px). It is not a step.
 - Circles use `50%`. That is a shape, not a size, and stays a literal.
 - Why these steps: they are Tailwind's own values, so re-pointing Tailwind's `--radius-*` at them changes nothing, at any root font size. They also cover Notion's measured values except 10 (see Decision 1).
-- **Tailwind wiring.** `isolation.css` sets `--radius-xs: var(--blok-radius-2)` … `--radius-2xl: var(--blok-radius-16)` instead of literal rems. One scale, and a host that overrides a Blok primitive moves the Tailwind class with it. Add the link hover card and drag preview roots to that selector list.
-- **Old tokens stay.** `--blok-radius-xs/sm/md/lg/xl/pill/md-plus/hairline/none` shipped in v1.15.2, so their values cannot change without a BREAKING release. They keep their exact current declarations (`xs` is already 0.25rem = `--blok-radius-4`; `sm` 3px, `md` 6px, `lg` 12px and the rest stay literal px) and are marked deprecated. Nothing in `src/` uses them after migration.
+- **Tailwind.** Components never use Tailwind's radius steps (`rounded-sm/md/lg/…`, bare `rounded`, `rounded-[Npx]`). In TS they write `rounded-(--blok-radius-<role>)`; `rounded-full` and `rounded-none` stay. Nothing reads `--radius-*`, so Blok does not re-pin it.
+- **Old tokens are removed** (Decision 2, BREAKING): `--blok-radius-xs/sm/md/lg/xl/md-plus/hairline/none`. `--blok-radius-pill` stays as a role. Also removed: the unused `--blok-audio-radius` and the unshipped `--blok-toast-*-radius`. `--blok-presence-caret-radius` stays as a host override that defaults to `pill`.
 
 ### Layer 2 — role tokens
 
@@ -58,8 +58,8 @@ A component picks its role, never a primitive.
 | `--blok-radius-field` | 8 | text inputs and search fields (32–36px tall) |
 | `--blok-radius-control-lg` | 8 | buttons 36px and taller |
 | `--blok-radius-control` | 6 | buttons 24–32px, menu rows, tabs, tooltips, block hover and selection fill around a square block |
-| `--blok-radius-control-sm` | 4 | buttons and toggles up to 20px, tags, keyboard hints, toggle arrow, scrollbar thumb |
-| `--blok-radius-mark` | 2 | inline marks: code span, find match, highlight, checkbox |
+| `--blok-radius-control-sm` | 4 | checklist checkbox (20px), buttons and toggles up to 20px, tags, keyboard hints, toggle arrow, scrollbar thumb |
+| `--blok-radius-mark` | 2 | inline marks: code span, find match, highlight |
 | `--blok-radius-pill` | full | pills, status chips, badges, avatars, round handles, progress tracks |
 
 Height rule for controls (from Notion's button sizes): **≤20px → 4, 24–32px → 6, ≥36px → 8.** A control between these sizes takes the nearer step.
@@ -119,18 +119,25 @@ inner = max(floor, outer − border − gap)
 | Database column | 10 | 8 | **4** (floor; add-card today 12) |
 | Segmented control track | 8 | 2–3 | **6 / 5** |
 
-## 3. Enforcement (to build with the migration)
+## 3. Enforcement
 
-Same shape as the other architecture laws (`paste-stamp-law`, `table-cell-content-law`).
+1. **`test/unit/architecture/radius-law.test.ts`** scans tracked files in `src/`:
+   - A CSS `border-radius` is a role token, `var(--blok-radius-inner, …)`, `var(--blok-radius-frame, …)`, arithmetic around one of those (`calc(frame + gap)`), a component radius variable whose own value is lawful, or `0` / `50%` / `inherit` / `revert` / `initial`.
+   - No spacing or border-width token inside a radius, no primitive outside `colors.css`, no removed name anywhere.
+   - No Tailwind radius step, bare `rounded` or `rounded-[…]` in a TS string or `@apply`.
+   - No literal `borderRadius` in TS.
+   - `--blok-radius-inner` is never defined from itself (a cycle resolves to 0).
+   - Exemptions list a reason (`logger.ts`, the unused `database-view.ts`). Mutation-checked: a planted raw px, arbitrary class and primitive each fail it.
+2. **`test/unit/styles/radius-scale.test.ts`** pins the scale, the roles and the removed names.
+3. Per-area role tests: `popover-radius`, `overlay-radius-roles`, `media-radius`, `database-table-radius`, `block-chrome-radius`, `frame-radius`.
 
-1. **`test/unit/architecture/radius-token-law.test.ts`** — static scan of tracked files in `src/` (skip untracked build scratch):
-   - `border-radius` in CSS must be a `--blok-radius-*` role token, `var(--blok-radius-inner, …)`, `0`, `50%`, `inherit`, or `--blok-radius-hairline`.
-   - No `--blok-space-*` or `--blok-border-width-*` inside a radius.
-   - No `rounded-[…]` arbitrary class in TS or `@apply`.
-   - No literal `borderRadius` in TS style objects.
-   - Every exemption lists a reason. The scan is mutation-checked (plant a violation, see it fail).
-2. **Built-bundle check** for the most-seen nested pairs: popover item, inline toolbar button, toast tile, find bar button. It reads computed `border-radius` and padding in a real browser and asserts `inner = max(4, outer − border − gap)`. jsdom returns empty CSS, so this must be e2e against the build.
-3. **Order test**: the primitive scale is strictly increasing, and every Tailwind `--radius-*` re-pin resolves to a Blok primitive.
+## Selection fill (Decision 5, built)
+
+- A block tool declares `static frameRadius = 'var(--blok-radius-block)'` (public, typed in `types/tools/block-tool.d.ts`).
+- Core writes it on the block's content wrapper as `--blok-radius-frame`. The fill is `rounded-(--blok-radius-frame,var(--blok-radius-control))`.
+- The gap is 0: the wrapper has no padding and the tool root's margins collapse through it.
+- `[data-blok-element-content] { --blok-radius-frame: initial }` stops nested blocks inheriting a parent's frame.
+- Built-in framed tools: callout, code, stub, image, video, audio, file, embed, bookmark.
 
 ## 4. Migration plan
 

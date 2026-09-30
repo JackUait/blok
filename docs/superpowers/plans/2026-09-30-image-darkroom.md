@@ -1825,7 +1825,14 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     const r = stage.getBoundingClientRect();
 
     st.stage = { w: r.width, h: r.height };
-    if (animate) view.to(fitted()); else view.jump(fitted());
+    if (animate) {
+      view.to(fitted());
+
+      return;
+    }
+    view.jump(fitted());
+    // jump() never settles, so an instant layout marks rest itself.
+    stage.setAttribute('data-settled', '');
   };
 
   const flyIn = (): void => {

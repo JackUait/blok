@@ -422,7 +422,7 @@ describe('the popover markup', () => {
     it('paints the wrapper, the input and the preview with the exact class list and markers', () => {
       const { wrapper, input, preview } = build();
 
-      expect(wrapper.className).toBe('relative flex items-center gap-2 w-[300px] h-9 pl-3 pr-[3px] rounded-[10px] border border-transparent bg-item-hover-bg transition-[background-color,border-color] duration-150 ease-out focus-within:bg-popover-bg focus-within:border-search-input-focus-border');
+      expect(wrapper.className).toBe('relative flex items-center gap-2 w-[300px] h-9 pl-3 pr-(--blok-space-0-75) rounded-(--blok-radius-field) [--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-field)-var(--blok-border-width-hairline)-var(--blok-space-0-75)))] border border-transparent bg-item-hover-bg transition-[background-color,border-color] duration-150 ease-out focus-within:bg-popover-bg focus-within:border-search-input-focus-border');
       expect(wrapper.getAttribute('data-blok-equation-tool')).toBe('');
       // `input.type` reads back as 'text' even when the IDL is set to '', so the
       // content attribute is the only witness that 'text' was actually written.
@@ -579,9 +579,9 @@ describe('the popover markup', () => {
       expect(button.textContent).toContain('tools.equation.done');
       expect(button.querySelector('svg')).not.toBeNull();
       expect(harness.input.nextElementSibling).toBe(button);
-      // Inset 4px inside a 10px-radius field, so the corners stay concentric.
+      // Inset 4px inside the field, so it takes the field's inner radius.
       expect(button.className).toContain('h-7');
-      expect(button.className).toContain('rounded-md');
+      expect(button.className).toContain('rounded-(--blok-radius-inner,var(--blok-radius-control))');
     });
 
     it('confirms the typed formula when Done is clicked', async () => {

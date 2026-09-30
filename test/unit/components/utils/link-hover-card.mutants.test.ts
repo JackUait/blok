@@ -648,7 +648,7 @@ describe('LinkHoverCard mutants', () => {
   describe('chrome', () => {
     const ACTION_BUTTON_BASE = [
       'appearance-none border-0 bg-transparent m-0 p-0 box-border font-[inherit] cursor-pointer',
-      'inline-flex items-center justify-center h-6 rounded-md select-none',
+      'inline-flex items-center justify-center h-6 rounded-(--blok-radius-inner,var(--blok-radius-control)) select-none',
       'text-gray-text transition-colors',
       'can-hover:hover:bg-item-hover-bg can-hover:hover:text-text-primary',
     ].join(' ');
@@ -683,20 +683,24 @@ describe('LinkHoverCard mutants', () => {
       expect(wrapper.className).toBe([
         'fixed z-overlay top-0 left-0',
         'flex items-center',
-        'bg-popover-bg rounded-lg',
+        'bg-popover-bg rounded-(--blok-radius-surface)',
         'shadow-[0_1px_2px_rgba(13,20,33,0.04),0_8px_22px_-8px_rgba(13,20,33,0.12)]',
         'text-sm leading-none text-text-primary',
         'opacity-0 -translate-y-px transition-[opacity,transform] duration-150 ease-out',
         'data-[state=open]:opacity-100 data-[state=open]:translate-y-0',
         'mobile:hidden',
       ].join(' '));
-      expect(wrapper.style.borderWidth).toBe('1px');
+      expect(wrapper.style.borderWidth).toBe('var(--blok-border-width-hairline)');
       expect(wrapper.style.borderStyle).toBe('solid');
       expect(wrapper.style.borderColor).toBe('var(--blok-popover-border, rgba(13, 20, 33, 0.12))');
-      expect(wrapper.style.paddingTop).toBe('0.25rem');
-      expect(wrapper.style.paddingBottom).toBe('0.25rem');
-      expect(wrapper.style.paddingLeft).toBe('0.75rem');
-      expect(wrapper.style.paddingRight).toBe('0.25rem');
+      expect(wrapper.style.paddingTop).toBe('var(--blok-space-1)');
+      expect(wrapper.style.paddingBottom).toBe('var(--blok-space-1)');
+      expect(wrapper.style.paddingLeft).toBe('var(--blok-space-3)');
+      expect(wrapper.style.paddingRight).toBe('var(--blok-space-1)');
+      // The action buttons at the right corner: surface - border - right padding.
+      expect(wrapper.style.getPropertyValue('--blok-radius-inner')).toBe(
+        'max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-border-width-hairline) - var(--blok-space-1)))'
+      );
       expect(wrapper.getAttribute('data-blok-testid')).toBe('link-hover-card');
       expect(wrapper.getAttribute('data-blok-interface')).toBe('link-hover-card');
     });

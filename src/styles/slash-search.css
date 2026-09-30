@@ -26,7 +26,7 @@
    the first line's top, so it follows the text in every tool. */
 [data-blok-slash-search][contenteditable]::before {
   content: '' !important;
-  @apply bg-search-input-bg rounded-[6px] pointer-events-none;
+  @apply bg-search-input-bg rounded-(--blok-radius-control) pointer-events-none;
   position: absolute;
   inset-inline: 0;
   width: auto;
@@ -38,7 +38,7 @@
 /* The "/query" pill inside a block with text. Must stay inline with no
    margin, or the block grows taller. */
 span[data-blok-slash-search] {
-  @apply bg-search-input-bg rounded-[6px] whitespace-nowrap px-1 py-[2px] m-0;
+  @apply bg-search-input-bg rounded-(--blok-radius-control) whitespace-nowrap px-1 py-[2px] m-0;
   display: inline;
   vertical-align: baseline;
 }
@@ -65,10 +65,10 @@ span[data-blok-slash-search] {
  *
  * So the native scrollbar is hidden in EVERY engine and Blok draws its own
  * thumb (`[data-blok-popover-scrollbar]`, sized and positioned in JS from the
- * scroll metrics — see popover-abstract `updateScrollbar`). The 6px content
- * indent comes entirely from the container padding (px-1.5); the 4px thumb is
- * an overlay in the container's right padding zone, 1px from the popover edge,
- * leaving a 1px gap to the content. Because it is an overlay, nothing reflows
+ * scroll metrics — see popover-abstract `updateScrollbar`). The 4px content
+ * indent comes entirely from the container padding (--blok-space-1); the 4px
+ * thumb is an overlay 1px from the popover edge, so it overlaps the content's
+ * right edge by 1px. Because it is an overlay, nothing reflows
  * when it appears — the geometry and the auto-hide behavior are byte-identical
  * on Chromium, WebKit, Firefox, desktop and mobile.
  */
@@ -88,7 +88,7 @@ span[data-blok-slash-search] {
   top: 0;
   right: var(--blok-space-0-25);
   width: var(--blok-space-1);
-  border-radius: var(--blok-space-1);
+  border-radius: var(--blok-radius-pill);
   background: var(--blok-popover-border);
   opacity: 0;
   transition: opacity 150ms ease;

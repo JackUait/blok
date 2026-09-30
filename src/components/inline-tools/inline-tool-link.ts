@@ -19,7 +19,7 @@ import { isHttpUrl } from '../../tools/link/registry';
 import { MetadataFetcher } from '../../tools/link/metadata-fetcher';
 import { getRecentLinks, recordRecentLink, updateRecentLinkMeta, type RecentLink } from './link-history';
 
-const SUGGESTION_ROW_BASE = 'flex items-center gap-2.5 w-full mt-0.5 px-1.5 py-1.5 rounded-[10px] text-left appearance-none border-0 bg-transparent font-[inherit] outline-hidden';
+const SUGGESTION_ROW_BASE = 'flex items-center gap-2.5 w-full mt-0.5 px-1.5 py-1.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) text-left appearance-none border-0 bg-transparent font-[inherit] outline-hidden';
 const SUGGESTION_ROW_VALID = `${SUGGESTION_ROW_BASE} cursor-pointer can-hover:hover:bg-item-hover-bg focus-visible:bg-item-hover-bg transition-colors`;
 const SUGGESTION_ROW_INVALID = `${SUGGESTION_ROW_BASE} pointer-events-none`;
 
@@ -62,7 +62,7 @@ interface HeadingTarget {
  * Rows cascade in with the suggestion row's keyframes. Each row sets its own
  * animation-delay; motion-safe drops the whole cascade for reduced motion.
  */
-const OPTION_ROW_CLASSES = 'group flex items-center gap-2.5 w-full h-8 px-2 rounded-lg cursor-pointer can-hover:hover:bg-item-hover-bg aria-selected:bg-item-hover-bg transition-colors motion-safe:animate-[blok-link-reveal_160ms_ease-out_both]';
+const OPTION_ROW_CLASSES = 'group flex items-center gap-2.5 w-full h-8 px-2 rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer can-hover:hover:bg-item-hover-bg aria-selected:bg-item-hover-bg transition-colors motion-safe:animate-[blok-link-reveal_160ms_ease-out_both]';
 // One line per row: the title truncates first, the site name keeps its room.
 const OPTION_TEXT_CLASSES = 'flex-1 min-w-0 flex items-baseline gap-2';
 const OPTION_TITLE_CLASSES = 'min-w-0 text-sm leading-5 text-text-primary truncate';
@@ -74,8 +74,8 @@ const SECTION_CLASSES = 'w-0 min-w-full [[data-link-group]:not([hidden])~&]:pt-1
 const SECTION_LABEL_CLASSES = 'px-2 pt-1.5 pb-1 text-xs leading-4 font-medium text-gray-text';
 // Recent links are cards in a row of three: tile, then title, then site.
 const RECENT_LIST_CLASSES = 'grid grid-cols-3 gap-1';
-const RECENT_CARD_CLASSES = 'group relative flex flex-col items-start gap-2 min-w-0 p-2 rounded-xl cursor-pointer outline-1 outline-transparent can-hover:hover:bg-item-hover-bg can-hover:hover:-translate-y-px aria-selected:bg-item-hover-bg aria-selected:outline-search-input-focus-border transition-[background-color,outline-color,translate] duration-150 motion-safe:animate-[blok-link-reveal_160ms_ease-out_both]';
-const RECENT_TILE_CLASSES = 'flex items-center justify-center size-9 shrink-0 rounded-[10px] overflow-hidden shadow-[inset_0_0_0_1px_rgba(13,20,33,0.06)]';
+const RECENT_CARD_CLASSES = 'group relative flex flex-col items-start gap-2 min-w-0 p-2 rounded-(--blok-radius-control-lg) cursor-pointer outline-1 outline-transparent can-hover:hover:bg-item-hover-bg can-hover:hover:-translate-y-px aria-selected:bg-item-hover-bg aria-selected:outline-search-input-focus-border transition-[background-color,outline-color,translate] duration-150 motion-safe:animate-[blok-link-reveal_160ms_ease-out_both]';
+const RECENT_TILE_CLASSES = 'flex items-center justify-center size-9 shrink-0 rounded-(--blok-radius-control-lg) overflow-hidden shadow-[inset_0_0_0_1px_rgba(13,20,33,0.06)]';
 // Mixed toward the theme's text color, so one hue reads in light and dark.
 const RECENT_MONOGRAM_CLASSES = 'bg-[color-mix(in_oklch,hsl(var(--blok-link-tile-hue)_70%_55%)_18%,transparent)] text-[color:color-mix(in_oklch,hsl(var(--blok-link-tile-hue)_65%_45%)_55%,var(--blok-text-primary))] text-sm font-semibold';
 const RECENT_TITLE_CLASSES = 'block w-full text-[13px] leading-[18px] font-medium text-text-primary truncate';
@@ -432,7 +432,7 @@ export class LinkInlineTool implements InlineTool {
     const button = document.createElement('button');
 
     button.type = 'button';
-    button.className = 'hidden group/remove w-full flex items-center gap-2.5 px-2 py-1.5 rounded-[10px] text-left text-sm font-medium text-text-primary cursor-pointer can-hover:hover:bg-red-500/10 can-hover:hover:text-red-500 focus-visible:bg-red-500/10 focus-visible:text-red-500 outline-hidden transition-colors appearance-none border-0 bg-transparent font-[inherit]';
+    button.className = 'hidden group/remove w-full flex items-center gap-2.5 px-2 py-1.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) text-left text-sm font-medium text-text-primary cursor-pointer can-hover:hover:bg-red-500/10 can-hover:hover:text-red-500 focus-visible:bg-red-500/10 focus-visible:text-red-500 outline-hidden transition-colors appearance-none border-0 bg-transparent font-[inherit]';
     button.setAttribute('data-blok-testid', 'inline-tool-remove-link');
 
     const iconEl = document.createElement('span');

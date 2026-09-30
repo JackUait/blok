@@ -10,10 +10,23 @@
 }
 
 /* Keep chrome unlayered so host resets cannot erase it. The @theme inline
-   color alias does not exist at runtime; use --blok-popover-bg instead. */
+   color alias does not exist at runtime; use --blok-popover-bg instead.
+   The only source of the card radius. --blok-radius-inner must subtract the
+   padding the card really has (popover.const.ts). */
 [data-blok-popover-container] {
-  border-radius: var(--radius-xl);
+  border-radius: var(--blok-radius-surface);
   background-color: var(--blok-popover-bg);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1)));
+}
+
+/* The inline toolbar card pads 8px (cssInline in popover.const.ts). */
+[data-blok-popover-inline] > [data-blok-popover-container] {
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-2)));
+}
+
+/* Only a field at the card's edge follows the card; fields deeper inside keep their role. */
+[data-blok-popover-container] > [data-blok-field] {
+  border-radius: var(--blok-radius-inner, var(--blok-radius-field));
 }
 
 [data-blok-popover][data-blok-popover-open-top='true'] [data-blok-popover-container] {
@@ -99,6 +112,8 @@
 /* Scope the denser chrome to block settings and conversion, not tool pickers. */
 :is([data-blok-testid='block-tunes-popover'] > [data-blok-popover-container], [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]:not([data-blok-promoted-item]))) {
   padding-inline: var(--blok-space-2);
+  /* Smallest corner gap is the items' 6px bottom padding below. */
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1-5)));
 
   @media (min-width: 651px) {
     max-height: min(var(--max-height), calc(100dvh - 16px));
@@ -116,7 +131,6 @@
       min-height: 32px;
       max-height: none;
       margin-block: 0;
-      border-radius: var(--blok-space-1-5);
 
       &:not([data-blok-header-level]) {
         padding-block: var(--blok-space-1);

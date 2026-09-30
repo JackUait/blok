@@ -87,7 +87,7 @@ class Tooltip {
          * exactly like the `visibility` case in updateTooltipVisibility().
          */
         'select-none',
-        'rounded-lg shadow-tooltip',
+        'rounded-(--blok-radius-control) shadow-tooltip',
         'mobile:hidden'
       ).split(' '),
       tooltipContent: twJoin(

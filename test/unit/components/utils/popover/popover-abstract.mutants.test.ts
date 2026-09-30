@@ -1039,8 +1039,8 @@ describe('PopoverAbstract', () => {
 
       expect(popover.testNodes.nothingFoundMessage.classList.contains('hidden')).toBe(false);
       expect(popover.testNodes.nothingFoundMessage.getAttribute(DATA_ATTR.nothingFoundDisplayed)).toBe('true');
-      expect(popover.testNodes.items.classList.contains('pb-1.5')).toBe(false);
-      expect(popover.testNodes.popoverContainer.classList.contains('px-1.5')).toBe(false);
+      expect(popover.testNodes.items.classList.contains('pb-(--blok-space-1)')).toBe(false);
+      expect(popover.testNodes.popoverContainer.classList.contains('px-(--blok-space-1)')).toBe(false);
     });
 
     it('restores the padding of an open popover when the message goes away', () => {
@@ -1052,8 +1052,8 @@ describe('PopoverAbstract', () => {
 
       expect(popover.testNodes.nothingFoundMessage.classList.contains('hidden')).toBe(true);
       expect(popover.testNodes.nothingFoundMessage.hasAttribute(DATA_ATTR.nothingFoundDisplayed)).toBe(false);
-      expect(popover.testNodes.items.classList.contains('pb-1.5')).toBe(true);
-      expect(popover.testNodes.popoverContainer.classList.contains('px-1.5')).toBe(true);
+      expect(popover.testNodes.items.classList.contains('pb-(--blok-space-1)')).toBe(true);
+      expect(popover.testNodes.popoverContainer.classList.contains('px-(--blok-space-1)')).toBe(true);
     });
   });
 

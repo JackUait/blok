@@ -1346,7 +1346,7 @@ describe('PopoverAbstract — mutation coverage', () => {
       popover.setTestNothingFound(false);
 
       // Horizontal padding belongs to the opened container styling.
-      expect(nodes.popoverContainer.classList.contains('px-1.5')).toBe(false);
+      expect(nodes.popoverContainer.classList.contains('px-(--blok-space-1)')).toBe(false);
     });
 
   });

@@ -324,7 +324,7 @@ export class PopoverInline extends PopoverDesktop {
       // matching the desktop popover. px/pb come from the shared opened state.
       nestedContainer.className = twMerge(
         nestedContainer.className,
-        'h-fit px-1.5 pb-0 flex-col',
+        'h-fit px-(--blok-space-1) pb-0 flex-col',
       );
     }
 

@@ -66,7 +66,7 @@ const ACTION_BUTTON_BASE = twJoin(
   // any host-page `button {}` padding inflates the hover target. Reset it, then
   // let each button add back only the padding it wants.
   'appearance-none border-0 bg-transparent m-0 p-0 box-border font-[inherit] cursor-pointer',
-  'inline-flex items-center justify-center h-6 rounded-md select-none',
+  'inline-flex items-center justify-center h-6 rounded-(--blok-radius-inner,var(--blok-radius-control)) select-none',
   'text-gray-text transition-colors',
   'can-hover:hover:bg-item-hover-bg can-hover:hover:text-text-primary'
 );
@@ -436,7 +436,7 @@ export class LinkHoverCard {
       // `height: auto`, so any height utility is dead — the card's height comes
       // entirely from its content plus the inline vertical padding set below.
       'flex items-center',
-      'bg-popover-bg rounded-lg',
+      'bg-popover-bg rounded-(--blok-radius-surface)',
       'shadow-[0_1px_2px_rgba(13,20,33,0.04),0_8px_22px_-8px_rgba(13,20,33,0.12)]',
       'text-sm leading-none text-text-primary',
       // Enter/leave: fade + very subtle rise. Base (closed) state is hidden and
@@ -455,13 +455,18 @@ export class LinkHoverCard {
     // without it the action buttons' hover background fills the card top-to-
     // bottom edge-to-edge. This padding gives the buttons vertical breathing
     // room so the hover reads as a snug pill, not a full-height block.
-    wrapper.style.borderWidth = '1px';
+    wrapper.style.borderWidth = 'var(--blok-border-width-hairline)';
     wrapper.style.borderStyle = 'solid';
     wrapper.style.borderColor = 'var(--blok-popover-border, rgba(13, 20, 33, 0.12))';
-    wrapper.style.paddingTop = '0.25rem';
-    wrapper.style.paddingBottom = '0.25rem';
-    wrapper.style.paddingLeft = '0.75rem';
-    wrapper.style.paddingRight = '0.25rem';
+    wrapper.style.paddingTop = 'var(--blok-space-1)';
+    wrapper.style.paddingBottom = 'var(--blok-space-1)';
+    wrapper.style.paddingLeft = 'var(--blok-space-3)';
+    wrapper.style.paddingRight = 'var(--blok-space-1)';
+    // The action buttons sit at the right corner: border + right padding in.
+    wrapper.style.setProperty(
+      '--blok-radius-inner',
+      'max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-border-width-hairline) - var(--blok-space-1)))'
+    );
     wrapper.setAttribute('data-state', 'closed');
     wrapper.setAttribute('data-blok-testid', 'link-hover-card');
     wrapper.inert = true;

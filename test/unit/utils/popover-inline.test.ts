@@ -158,7 +158,7 @@ describe('PopoverInline', () => {
       expect(convert?.className).toContain('col-span-full');
     });
 
-    it('sizes formatting cells 32x28 with a 6px radius', () => {
+    it('sizes formatting cells 32x28 with the card\'s inner radius', () => {
       const popover = createGridPopover();
 
       popover.show();
@@ -166,7 +166,7 @@ describe('PopoverInline', () => {
       const bold = popover.getElement().querySelector('[data-blok-item-name="bold"]');
 
       expect(bold?.className).toContain('h-7');
-      expect(bold?.className).toContain('rounded-md');
+      expect(bold?.className).toContain('rounded-(--blok-radius-inner,var(--blok-radius-control))');
       expect(bold?.className).not.toContain('min-w-10');
     });
 
@@ -186,7 +186,7 @@ describe('PopoverInline', () => {
       expect(items?.className).not.toContain('flex-wrap');
     });
 
-    it('draws the card with the inline toolbar shadow, 14px radius and 8px padding', () => {
+    it('draws the card with the inline toolbar shadow and 8px padding, its radius left to CSS', () => {
       const popover = createGridPopover();
 
       popover.show();
@@ -194,8 +194,10 @@ describe('PopoverInline', () => {
       const container = popover.getElement().querySelector<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`);
 
       expect(container?.style.boxShadow).toBe('var(--blok-inline-toolbar-shadow)');
-      expect(container?.className).toContain('rounded-[14px]');
-      expect(container?.className).toContain('p-2');
+      expect(container?.className).not.toMatch(/(^|\s)rounded/);
+      expect(container?.className).toContain('px-(--blok-space-2)');
+      expect(container?.className).toContain('pt-(--blok-space-2)');
+      expect(container?.className).toContain('pb-(--blok-space-2)');
     });
 
     it('pushes the convert row chevron to the right edge', () => {
@@ -534,9 +536,9 @@ describe('PopoverInline', () => {
       const instance = popover as unknown as PopoverInlineInternal;
 
       // The inline toolbar is a single horizontal row; its symmetric breathing room comes
-      // from the container (pt-1.5/pb-1.5), so the items list must not carry the vertical
+      // from the container (pt/pb), so the items list must not carry the vertical
       // before-first-element gap that vertical menus use.
-      expect(instance.nodes.items.className).not.toContain('pt-1.5');
+      expect(instance.nodes.items.className).not.toContain('pt-(--blok-space-1)');
     });
 
     it('should activate flipper with flippableElements', () => {
@@ -845,13 +847,13 @@ describe('PopoverInline', () => {
 
       // The nested "Turn into" menu is a vertical item list — the outer container carries
       // horizontal padding but no top padding.
-      expect(nestedContainer?.className).toContain('px-1.5');
-      expect(nestedContainer?.className).not.toContain('pt-1.5');
+      expect(nestedContainer?.className).toContain('px-(--blok-space-1)');
+      expect(nestedContainer?.className).not.toContain('pt-(--blok-space-1)');
       expect(nestedContainer?.className).not.toContain('p-1.5');
 
       // The 6px before-first-element gap lives on the scrollable items list instead, so it
       // sits above "Heading 1" and scrolls with the list inside the reel clip.
-      expect(nestedItems?.className).toContain('pt-1.5');
+      expect(nestedItems?.className).toContain('pt-(--blok-space-1)');
     });
   });
 

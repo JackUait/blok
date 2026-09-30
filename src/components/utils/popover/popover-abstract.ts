@@ -750,8 +750,8 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
       this.nodes.nothingFoundMessage.classList.remove('hidden');
       this.nodes.nothingFoundMessage.setAttribute(DATA_ATTR.nothingFoundDisplayed, 'true');
-      this.nodes.items?.classList.remove('pb-1.5');
-      this.nodes.popoverContainer?.classList.remove('px-1.5');
+      this.nodes.items?.classList.remove('pb-(--blok-space-1)');
+      this.nodes.popoverContainer?.classList.remove('px-(--blok-space-1)');
 
       // Only on entry: replaying on every unmatched keystroke would flicker.
       if (wasHidden) {
@@ -760,9 +760,9 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     } else {
       this.nodes.nothingFoundMessage.classList.add('hidden');
       this.nodes.nothingFoundMessage.removeAttribute(DATA_ATTR.nothingFoundDisplayed);
-      this.nodes.items?.classList.add('pb-1.5');
+      this.nodes.items?.classList.add('pb-(--blok-space-1)');
       if (this.isShown) {
-        this.nodes.popoverContainer?.classList.add('px-1.5');
+        this.nodes.popoverContainer?.classList.add('px-(--blok-space-1)');
       }
     }
   }

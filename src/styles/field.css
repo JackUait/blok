@@ -12,7 +12,7 @@
   padding-block: 0;
   padding-inline: var(--blok-space-2);
   border: 1px solid transparent;
-  border-radius: var(--blok-space-2);
+  border-radius: var(--blok-radius-field);
   outline: none;
   background-color: var(--blok-item-hover-bg);
   box-shadow: none;

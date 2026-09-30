@@ -67,18 +67,10 @@ describe('Slash search input styling (src/styles/main.css)', () => {
     expect(body).not.toMatch(/max-w-\[240px\]/);
   });
 
-  it('uses a smaller corner radius (<= 6px) so the pill feels like a tight search input', () => {
+  it('uses the control radius (6px) so the pill feels like a tight search input', () => {
     const body = findRuleBody(css, '[data-blok-slash-search][contenteditable]::before');
 
     expect(body).not.toBeNull();
-    expect(body).not.toMatch(/rounded-\[10px\]/);
-
-    const match = body?.match(/rounded-\[(\d+)px\]/);
-
-    expect(match).not.toBeNull();
-
-    const radius = match !== null && match !== undefined ? parseInt(match[1], 10) : Number.POSITIVE_INFINITY;
-
-    expect(radius).toBeLessThanOrEqual(6);
+    expect(body).toMatch(/rounded-\(--blok-radius-control\)/);
   });
 });

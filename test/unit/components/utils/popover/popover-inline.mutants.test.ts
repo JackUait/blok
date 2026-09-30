@@ -390,7 +390,7 @@ describe('PopoverInline — mutation residue', () => {
       expect(container?.className).toContain('h-fit');
       expect(container?.className).toContain('pb-0');
       expect(container?.className).toContain('flex-col');
-      expect(container?.className).toContain('px-1.5');
+      expect(container?.className).toContain('px-(--blok-space-1)');
     });
 
     it('lays the submenu item list out as a block', () => {

@@ -270,8 +270,9 @@ export class EquationInlineTool implements InlineTool {
   private createUi(): { wrapper: HTMLElement; input: HTMLInputElement; preview: HTMLElement } {
     const wrapper = document.createElement('div');
 
-    // The wrapper is the field; Done sits inside it, inset 4px from the edge.
-    wrapper.className = 'relative flex items-center gap-2 w-[300px] h-9 pl-3 pr-[3px] rounded-[10px] border border-transparent bg-item-hover-bg transition-[background-color,border-color] duration-150 ease-out focus-within:bg-popover-bg focus-within:border-search-input-focus-border';
+    // The wrapper is the field; Done sits inside it, inset 4px from the edge
+    // (1px border + 3px padding), which the inner radius subtracts.
+    wrapper.className = 'relative flex items-center gap-2 w-[300px] h-9 pl-3 pr-(--blok-space-0-75) rounded-(--blok-radius-field) [--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-field)-var(--blok-border-width-hairline)-var(--blok-space-0-75)))] border border-transparent bg-item-hover-bg transition-[background-color,border-color] duration-150 ease-out focus-within:bg-popover-bg focus-within:border-search-input-focus-border';
     wrapper.setAttribute('data-blok-equation-tool', '');
 
     const input = document.createElement('input');
@@ -285,7 +286,7 @@ export class EquationInlineTool implements InlineTool {
     const done = document.createElement('button');
 
     done.type = 'button';
-    done.className = 'shrink-0 inline-flex items-center gap-1 h-7 pl-2.5 pr-2 rounded-md border-0 text-[13px] font-medium text-popover-bg bg-text-primary can-hover:hover:opacity-85 focus-visible:opacity-85 outline-hidden cursor-pointer transition-opacity font-[inherit] [&_svg]:size-3.5 [&_svg]:opacity-60';
+    done.className = 'shrink-0 inline-flex items-center gap-1 h-7 pl-2.5 pr-2 rounded-(--blok-radius-inner,var(--blok-radius-control)) border-0 text-[13px] font-medium text-popover-bg bg-text-primary can-hover:hover:opacity-85 focus-visible:opacity-85 outline-hidden cursor-pointer transition-opacity font-[inherit] [&_svg]:size-3.5 [&_svg]:opacity-60';
     done.setAttribute('data-blok-testid', 'inline-equation-done');
     done.innerHTML = IconReturn;
     done.prepend(this.i18n.t('tools.equation.done'));

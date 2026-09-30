@@ -152,7 +152,7 @@ describe('Tooltip utility — mutation coverage', () => {
         'bg-tooltip-bg',
         'opacity-0',
         'select-none',
-        'rounded-lg',
+        'rounded-(--blok-radius-control)',
         'shadow-tooltip',
         'mobile:hidden',
       ]);

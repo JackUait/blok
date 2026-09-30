@@ -10,8 +10,9 @@ export const css = {
    * A trigger whose submenu is open keeps the hover tint via data-blok-popover-item-children-open
    * Note: noHover state is handled via [data-blok-popover-item-no-hover] which disables hover
    * Active colors stay paired on hover and focus; the outline marks keyboard focus.
+   * The radius comes from the card's --blok-radius-inner; every variant keeps it.
    */
-  item: 'flex items-center select-none border-none bg-transparent rounded-lg px-2 py-1.5 text-text-primary mb-px outline-hidden max-h-9 overflow-hidden data-blok-popover-item-active:bg-icon-active-bg data-blok-popover-item-active:text-icon-active-text can-hover:data-blok-popover-item-active:hover:bg-icon-active-bg [&[data-blok-popover-item-active][data-blok-focused="true"]]:bg-icon-active-bg data-blok-popover-item-children-open:bg-item-hover-bg can-hover:hover:cursor-pointer can-hover:hover:bg-item-hover-bg data-blok-force-hover:cursor-pointer data-blok-force-hover:bg-item-hover-bg data-[blok-focused="true"]:bg-item-focus-bg data-blok-popover-item-no-hover:hover:bg-transparent data-blok-popover-item-no-hover:cursor-default can-hover:data-blok-popover-item-destructive:hover:text-item-destructive-text can-hover:data-blok-popover-item-destructive:hover:bg-item-destructive-hover-bg [&[data-blok-popover-item-destructive][data-blok-force-hover]]:text-item-destructive-text [&[data-blok-popover-item-destructive][data-blok-force-hover]]:bg-item-destructive-hover-bg [&[data-blok-popover-item-destructive][data-blok-focused="true"]]:text-item-destructive-text [&[data-blok-popover-item-destructive][data-blok-focused="true"]]:bg-item-destructive-hover-bg',
+  item: 'flex items-center select-none border-none bg-transparent rounded-(--blok-radius-inner,var(--blok-radius-control)) px-2 py-1.5 text-text-primary mb-px outline-hidden max-h-9 overflow-hidden data-blok-popover-item-active:bg-icon-active-bg data-blok-popover-item-active:text-icon-active-text can-hover:data-blok-popover-item-active:hover:bg-icon-active-bg [&[data-blok-popover-item-active][data-blok-focused="true"]]:bg-icon-active-bg data-blok-popover-item-children-open:bg-item-hover-bg can-hover:hover:cursor-pointer can-hover:hover:bg-item-hover-bg data-blok-force-hover:cursor-pointer data-blok-force-hover:bg-item-hover-bg data-[blok-focused="true"]:bg-item-focus-bg data-blok-popover-item-no-hover:hover:bg-transparent data-blok-popover-item-no-hover:cursor-default can-hover:data-blok-popover-item-destructive:hover:text-item-destructive-text can-hover:data-blok-popover-item-destructive:hover:bg-item-destructive-hover-bg [&[data-blok-popover-item-destructive][data-blok-force-hover]]:text-item-destructive-text [&[data-blok-popover-item-destructive][data-blok-force-hover]]:bg-item-destructive-hover-bg [&[data-blok-popover-item-destructive][data-blok-focused="true"]]:text-item-destructive-text [&[data-blok-popover-item-destructive][data-blok-focused="true"]]:bg-item-destructive-hover-bg',
 
   /**
    * Item disabled state
@@ -38,7 +39,7 @@ export const cssInline = {
   /**
    * Item in inline context - more compact styling
    */
-  item: 'rounded-md h-7 max-h-none min-w-0 px-0 py-0 mb-0 shrink-0 mobile:h-10 transition-[background-color,scale] duration-[20ms] ease-in active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100',
+  item: 'h-7 max-h-none min-w-0 px-0 py-0 mb-0 shrink-0 mobile:h-10 transition-[background-color,scale] duration-[20ms] ease-in active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100',
   itemIconOnly: 'justify-center',
   itemWithTitle: 'px-2',
 };
@@ -50,5 +51,5 @@ export const cssNestedInline = {
   /**
    * Nested item - back to desktop popover styling
    */
-  item: 'rounded p-[3px] mobile:p-1',
+  item: 'p-[3px] mobile:p-1',
 };

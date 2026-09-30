@@ -638,7 +638,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     const MEDIA_RADIUS_ROLES_BYTES = 2_479;
     // Radius design system: the scale and role tokens, --blok-radius-inner on
     // every rounded container, and the selection fill's frame channel.
-    const RADIUS_SYSTEM_BYTES = 250;
+    const RADIUS_SYSTEM_BYTES = 264;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES

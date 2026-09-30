@@ -253,6 +253,22 @@ const uncaughtDuring = (run: () => void): string[] => {
   return seen;
 };
 
+const hideComputedShorthand = (): void => {
+  const real = window.getComputedStyle.bind(window);
+
+  // Model an engine that does not serialize the computed border-radius shorthand.
+  vi.spyOn(window, 'getComputedStyle').mockImplementation((element, pseudo) => new Proxy(real(element, pseudo), {
+    get: (target, key) => (key === 'borderRadius' ? '' : Reflect.get(target, key, target) as unknown),
+  }));
+};
+
+const corners = (element: HTMLElement | null | undefined): string[] => [
+  element?.style.borderTopLeftRadius ?? '',
+  element?.style.borderTopRightRadius ?? '',
+  element?.style.borderBottomRightRadius ?? '',
+  element?.style.borderBottomLeftRadius ?? '',
+];
+
 describe('DatabaseTabBar — surviving-mutant coverage', () => {
   let onTabClick: ReturnType<typeof vi.fn<(viewId: string) => void>>;
   let onAddView: ReturnType<typeof vi.fn<(type: ViewType) => void>>;
@@ -1263,16 +1279,18 @@ describe('DatabaseTabBar — surviving-mutant coverage', () => {
     it('keeps the radius of the tab it came from', () => {
       const sheet = document.createElement('style');
 
-      sheet.textContent = '[data-blok-database-tab] { border-radius: 7px; }';
+      // Longhands: jsdom does not expand a stylesheet shorthand into computed longhands.
+      sheet.textContent = '[data-blok-database-tab] { border-top-left-radius: 1px; border-top-right-radius: 2px; border-bottom-right-radius: 3px; border-bottom-left-radius: 4px; }';
       document.head.appendChild(sheet);
 
       try {
         const { el } = mount(threeViews(), 'v1');
 
+        hideComputedShorthand();
         dragFrom(el, 'v1', 50);
         document.dispatchEvent(pointer('pointermove', 200));
 
-        expect(ghost()?.style.borderRadius).toBe('7px');
+        expect(corners(ghost())).toEqual(['1px', '2px', '3px', '4px']);
       } finally {
         sheet.remove();
       }

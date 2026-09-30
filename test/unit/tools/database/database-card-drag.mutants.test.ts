@@ -187,6 +187,22 @@ const assertClean = (board: Board): void => {
 
 const TWO_COLUMNS = [['a1', 'a2', 'a3'], ['b1', 'b2']];
 
+const hideComputedShorthand = (): void => {
+  const real = window.getComputedStyle.bind(window);
+
+  // Model an engine that does not serialize the computed border-radius shorthand.
+  vi.spyOn(window, 'getComputedStyle').mockImplementation((element, pseudo) => new Proxy(real(element, pseudo), {
+    get: (target, key) => (key === 'borderRadius' ? '' : Reflect.get(target, key, target) as unknown),
+  }));
+};
+
+const corners = (element: HTMLElement | null | undefined): string[] => [
+  element?.style.borderTopLeftRadius ?? '',
+  element?.style.borderTopRightRadius ?? '',
+  element?.style.borderBottomRightRadius ?? '',
+  element?.style.borderBottomLeftRadius ?? '',
+];
+
 describe('database card drag mutants', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -303,13 +319,15 @@ describe('database card drag mutants', () => {
     it('keeps the radius the card has in its column', () => {
       const sheet = document.createElement('style');
 
-      sheet.textContent = '[data-blok-database-card] { border-radius: 7px; }';
+      // Longhands: jsdom does not expand a stylesheet shorthand into computed longhands.
+      sheet.textContent = '[data-blok-database-card] { border-top-left-radius: 1px; border-top-right-radius: 2px; border-bottom-right-radius: 3px; border-bottom-left-radius: 4px; }';
       document.head.appendChild(sheet);
 
       try {
+        hideComputedShorthand();
         startDrag(buildBoard(TWO_COLUMNS));
 
-        expect(ghost()?.style.borderRadius).toBe('7px');
+        expect(corners(ghost())).toEqual(['1px', '2px', '3px', '4px']);
       } finally {
         sheet.remove();
       }

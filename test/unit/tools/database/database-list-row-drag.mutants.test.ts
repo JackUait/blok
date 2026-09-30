@@ -249,6 +249,22 @@ const pressKey = (key: string): void => {
   document.dispatchEvent(new KeyboardEvent('keydown', { key }));
 };
 
+const hideComputedShorthand = (): void => {
+  const real = window.getComputedStyle.bind(window);
+
+  // Model an engine that does not serialize the computed border-radius shorthand.
+  vi.spyOn(window, 'getComputedStyle').mockImplementation((element, pseudo) => new Proxy(real(element, pseudo), {
+    get: (target, key) => (key === 'borderRadius' ? '' : Reflect.get(target, key, target) as unknown),
+  }));
+};
+
+const corners = (element: HTMLElement | null | undefined): string[] => [
+  element?.style.borderTopLeftRadius ?? '',
+  element?.style.borderTopRightRadius ?? '',
+  element?.style.borderBottomRightRadius ?? '',
+  element?.style.borderBottomLeftRadius ?? '',
+];
+
 describe('DatabaseListRowDrag — mutation coverage', () => {
   let wrapper: HTMLElement;
   let onDrop: Mock<(result: ListRowDragResult) => void>;
@@ -519,11 +535,19 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
       });
       expect(readStyle(ghost)).toEqual({
         ...GHOST_BASE_STYLE,
+        // The fixture row is square, so the copied corners are too.
+        'border-top-left-radius': '0px',
+        'border-top-right-radius': '0px',
+        'border-bottom-right-radius': '0px',
+        'border-bottom-left-radius': '0px',
         left: '24px',
         top: '130px',
         width: '376px',
       });
-      expect(ghost.style.cssText).toBe(`${GHOST_BASE_CSS} left: 24px; top: 130px; width: 376px;`);
+      expect(ghost.style.cssText).toBe(
+        `${GHOST_BASE_CSS} border-top-left-radius: 0px; border-top-right-radius: 0px; ` +
+        'border-bottom-right-radius: 0px; border-bottom-left-radius: 0px; left: 24px; top: 130px; width: 376px;'
+      );
       expect(ghost.children).toHaveLength(1);
 
       const clone = ghost.querySelector<HTMLElement>('[data-row-id="row-2"]');
@@ -535,14 +559,16 @@ describe('DatabaseListRowDrag — mutation coverage', () => {
     it('keeps the radius the row has in the list', () => {
       const sheet = document.createElement('style');
 
-      sheet.textContent = '[data-blok-database-list-row] { border-radius: 5px; }';
+      // Longhands: jsdom does not expand a stylesheet shorthand into computed longhands.
+      sheet.textContent = '[data-blok-database-list-row] { border-top-left-radius: 1px; border-top-right-radius: 2px; border-bottom-right-radius: 3px; border-bottom-left-radius: 4px; }';
       document.head.appendChild(sheet);
 
       try {
+        hideComputedShorthand();
         drag.beginTracking('row-2', 0, 100);
         move(150);
 
-        expect(requireGhost().style.borderRadius).toBe('5px');
+        expect(corners(requireGhost())).toEqual(['1px', '2px', '3px', '4px']);
       } finally {
         sheet.remove();
       }

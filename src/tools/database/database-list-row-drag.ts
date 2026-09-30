@@ -1,3 +1,5 @@
+import { copyGhostRadius } from './copy-ghost-radius';
+
 const DRAG_THRESHOLD = 10;
 
 export interface ListRowDragResult {
@@ -155,8 +157,7 @@ export class DatabaseListRowDrag {
       clone.style.opacity = '';
       ghost.appendChild(clone);
 
-      // Body-mounted, so Blok's radius tokens do not resolve here: copy the used value.
-      style.borderRadius = getComputedStyle(this.sourceRow).borderRadius;
+      copyGhostRadius(this.sourceRow, ghost);
 
       const rect = this.sourceRow.getBoundingClientRect();
 

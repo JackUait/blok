@@ -14,6 +14,7 @@ import { rovingRadioGroup, type RovingRadioGroup } from '../../components/utils/
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import type { API } from '../../../types';
 import type { DatabaseViewConfig, ViewType } from './types';
+import { copyGhostRadius } from './copy-ghost-radius';
 
 const DRAG_THRESHOLD = 10;
 
@@ -550,8 +551,7 @@ export class DatabaseTabBar {
         this.ghostEl.style.pointerEvents = 'none';
         this.ghostEl.style.zIndex = '50';
         this.ghostEl.style.opacity = '0.7';
-        // Body-mounted, so Blok's radius tokens do not resolve here: copy the used value.
-        this.ghostEl.style.borderRadius = getComputedStyle(sourceTab).borderRadius;
+        copyGhostRadius(sourceTab, this.ghostEl);
         const rect = sourceTab.getBoundingClientRect();
         this.ghostEl.style.top = `${rect.top}px`;
         this.ghostEl.style.width = `${rect.width}px`;

@@ -697,6 +697,18 @@ describe('openDarkroom fix round 1', () => {
       });
     });
 
+    it('Cancel after Circle flies back square-cornered, like the block it lands on', () => {
+      const { advance } = open({ initial: { x: 20, y: 20, w: 50, h: 50 } });
+      const frame = document.querySelector<HTMLElement>('[data-role="darkroom-frame"]');
+
+      document.querySelector<HTMLButtonElement>('[data-ratio="circle"]')?.click();
+      advance(3000);
+      expect(frame?.style.getPropertyValue('--blok-radius-darkroom-frame')).toBe('50%');
+      button('cancel').click();
+
+      expect(frame?.style.getPropertyValue('--blok-radius-darkroom-frame')).toBe('0%');
+    });
+
     it('Cmd+Z works on a non-Latin keyboard layout', () => {
       const { advance } = open();
       const circle = document.querySelector<HTMLButtonElement>('[data-ratio="circle"]');

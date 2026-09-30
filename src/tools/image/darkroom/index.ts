@@ -450,8 +450,11 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   const cancel = (): void => {
     const f = fitFrame(rectAspect(startRect, st.natural), st.stage, PAD);
 
-    view.jump({ ...rectToCamera(startRect, st.natural, f), ...f });
-    leave({ ...startRect }, roundOf(initialDef.shape), () => opts.onCancel());
+    const round = roundOf(initialDef.shape);
+
+    // The clone starts from this view, so its corners must already match the block.
+    view.jump({ ...rectToCamera(startRect, st.natural, f), ...f, round });
+    leave({ ...startRect }, round, () => opts.onCancel());
   };
 
   doneBtn.addEventListener('click', apply);

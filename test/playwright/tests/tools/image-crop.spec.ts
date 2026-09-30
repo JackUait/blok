@@ -101,8 +101,8 @@ const veilsSoFar = async (page: Page): Promise<FlightSpan[]> =>
 
 const flightsAfterLanding = async (page: Page): Promise<FlightSpan[]> => {
   await expect(page.locator(`${IMAGE_BLOCK_SELECTOR} [data-role="image-crop"]`)).toBeVisible();
-  // Two frames: one for leave()'s rAF that starts the flight, one more for it to settle.
-  await page.evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
+  // The flight starts a rAF after Done and lives until its spring settles, many frames later.
+  await expect.poll(() => page.evaluate(() => (window as unknown as Recorded).__flights[0]?.removed)).toBeDefined();
 
   return page.evaluate(() => (window as unknown as Recorded).__flights);
 };

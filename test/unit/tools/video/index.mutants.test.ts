@@ -197,6 +197,7 @@ describe('VideoTool — constructor and statics', () => {
       titleKey: 'video',
       searchTerms: ['video', 'movie', 'clip', 'player', 'mp4', 'media'],
       section: 'media',
+      preview: { render: expect.any(Function), descriptionKey: 'toolbox.preview.video' },
     });
   });
 

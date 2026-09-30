@@ -466,10 +466,14 @@ const main = async () => {
    * alone, so they read as theme token carriers and are kept wholesale. A
    * rendered view has no awareness, no peers and no silhouettes, so all of it
    * is dead weight in a budgeted sheet.
+   *
+   * `block-preview.css` likewise: its drawings declare custom properties per
+   * block, and the toolbox hover card they live in never exists in a view.
    */
   const entrySource = readFileSync(STYLES_ENTRY, 'utf-8')
     .replace(/^@import '\.\/fonts\.css';$/m, '')
-    .replace(/^@import '\.\/presence\.css';$/m, '');
+    .replace(/^@import '\.\/presence\.css';$/m, '')
+    .replace(/^@import '\.\/block-preview\.css';$/m, '');
 
   const compiler = await compile(entrySource, {
     base: dirname(STYLES_ENTRY),

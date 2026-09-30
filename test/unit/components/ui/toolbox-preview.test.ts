@@ -1,0 +1,194 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { PREVIEW_CARD_WIDTH, PREVIEW_OPEN_DELAY, ToolboxPreview } from '../../../../src/components/ui/toolbox-preview';
+import type { ToolboxPreviewConfig } from '../../../../types';
+
+const rect = (left: number, top: number, width: number, height: number): DOMRect => ({
+  left,
+  top,
+  width,
+  height,
+  right: left + width,
+  bottom: top + height,
+  x: left,
+  y: top,
+  toJSON: () => ({}),
+});
+
+const makeAnchors = (surfaceLeft = 100): { surface: HTMLElement; item: HTMLElement } => {
+  const surface = document.createElement('div');
+  const item = document.createElement('div');
+
+  surface.appendChild(item);
+  document.body.appendChild(surface);
+  vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue(rect(surfaceLeft, 50, 300, 400));
+  vi.spyOn(item, 'getBoundingClientRect').mockReturnValue(rect(surfaceLeft + 4, 120, 292, 32));
+
+  return { surface, item };
+};
+
+const config = (text = 'drawing'): ToolboxPreviewConfig => ({
+  render: () => {
+    const el = document.createElement('div');
+
+    el.textContent = text;
+    el.setAttribute('data-testid', 'drawing');
+
+    return el;
+  },
+  descriptionKey: 'toolbox.preview.columns',
+  descriptionParams: { count: 3 },
+});
+
+const translate = (key: string, params?: Record<string, string | number>): string =>
+  `${key}:${params?.count ?? ''}`;
+
+const cardRoot = (): HTMLElement | null => document.querySelector('[data-blok-interface="block-preview"]');
+
+describe('ToolboxPreview', () => {
+  let preview: ToolboxPreview;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1200);
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(800);
+    preview = new ToolboxPreview({ translate });
+  });
+
+  afterEach(() => {
+    preview.destroy();
+    document.body.innerHTML = '';
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('waits for the pointer to rest before the first card opens', () => {
+    const { surface, item } = makeAnchors();
+
+    preview.show({ item, surface, config: config(), source: 'pointer' });
+
+    expect(cardRoot()?.hidden ?? true).toBe(true);
+
+    vi.advanceTimersByTime(PREVIEW_OPEN_DELAY);
+
+    expect(cardRoot()?.hidden).toBe(false);
+  });
+
+  it('opens at once for keyboard focus', () => {
+    const { surface, item } = makeAnchors();
+
+    preview.show({ item, surface, config: config(), source: 'keyboard' });
+
+    expect(cardRoot()?.hidden).toBe(false);
+  });
+
+  it('shows the drawing and the translated caption', () => {
+    const { surface, item } = makeAnchors();
+
+    preview.show({ item, surface, config: config('hello'), source: 'keyboard' });
+
+    const root = cardRoot();
+
+    expect(root?.querySelector('[data-blok-preview-paper] [data-testid="drawing"]')?.textContent).toBe('hello');
+    expect(root?.querySelector('[data-blok-preview-caption]')?.textContent).toBe('toolbox.preview.columns:3');
+  });
+
+  it('uses the plain description when there is no key', () => {
+    const { surface, item } = makeAnchors();
+
+    preview.show({ item, surface, config: { render: config().render, description: 'Plain words' }, source: 'keyboard' });
+
+    expect(cardRoot()?.querySelector('[data-blok-preview-caption]')?.textContent).toBe('Plain words');
+  });
+
+  it('is hidden from assistive tech and never takes the pointer', () => {
+    const { surface, item } = makeAnchors();
+
+    preview.show({ item, surface, config: config(), source: 'keyboard' });
+
+    const root = cardRoot();
+
+    expect(root?.getAttribute('aria-hidden')).toBe('true');
+    expect(root?.inert).toBe(true);
+    expect(root?.style.pointerEvents).toBe('none');
+  });
+
+  it('sits to the right of the menu, level with the row', () => {
+    const { surface, item } = makeAnchors(100);
+
+    preview.show({ item, surface, config: config(), source: 'keyboard' });
+
+    const root = cardRoot();
+
+    expect(parseFloat(root?.style.left ?? '')).toBeGreaterThanOrEqual(400);
+    expect(parseFloat(root?.style.top ?? '')).toBe(120);
+  });
+
+  it('flips to the left of the menu when the right side has no room', () => {
+    const { surface, item } = makeAnchors(1200 - 300 - 20);
+
+    preview.show({ item, surface, config: config(), source: 'keyboard' });
+
+    const left = parseFloat(cardRoot()?.style.left ?? '');
+
+    expect(left + PREVIEW_CARD_WIDTH).toBeLessThanOrEqual(1200 - 300 - 20);
+  });
+
+  it('stays closed when neither side has room', () => {
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(320);
+    const { surface, item } = makeAnchors(10);
+
+    preview.show({ item, surface, config: config(), source: 'keyboard' });
+
+    expect(cardRoot()?.hidden ?? true).toBe(true);
+  });
+
+  it('swaps content at once while already open', () => {
+    const { surface, item } = makeAnchors();
+
+    preview.show({ item, surface, config: config('first'), source: 'keyboard' });
+    preview.show({ item, surface, config: config('second'), source: 'pointer' });
+
+    expect(cardRoot()?.hidden).toBe(false);
+    expect(cardRoot()?.querySelector('[data-testid="drawing"]')?.textContent).toBe('second');
+  });
+
+  it('cancels a pending open when hidden first', () => {
+    const { surface, item } = makeAnchors();
+
+    preview.show({ item, surface, config: config(), source: 'pointer' });
+    preview.hide();
+    vi.advanceTimersByTime(PREVIEW_OPEN_DELAY * 2);
+
+    expect(cardRoot()?.hidden ?? true).toBe(true);
+  });
+
+  it('reopens without the delay right after it closed', () => {
+    const { surface, item } = makeAnchors();
+
+    preview.show({ item, surface, config: config(), source: 'keyboard' });
+    preview.hide();
+    preview.show({ item, surface, config: config(), source: 'pointer' });
+
+    expect(cardRoot()?.hidden).toBe(false);
+  });
+
+  it('closes when the page scrolls', () => {
+    const { surface, item } = makeAnchors();
+
+    preview.show({ item, surface, config: config(), source: 'keyboard' });
+    document.dispatchEvent(new Event('scroll'));
+
+    expect(cardRoot()?.hidden).toBe(true);
+  });
+
+  it('removes its root on destroy', () => {
+    const { surface, item } = makeAnchors();
+
+    preview.show({ item, surface, config: config(), source: 'keyboard' });
+    preview.destroy();
+
+    expect(cardRoot()).toBeNull();
+  });
+});

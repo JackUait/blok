@@ -28,6 +28,7 @@ import { safeHttpHref } from './url';
 import { isPreviewable } from './preview';
 import { openFilePreview } from './preview-modal';
 import { deliverToRebuiltBlock, putBackOnRebuiltBlock, writeDerived } from '../image/detached-upload';
+import { renderFilePreview } from './toolbox-preview';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -157,6 +158,7 @@ export class FileTool implements BlockTool {
       titleKey: 'file',
       searchTerms: ['file', 'attachment', 'upload', 'download', 'pdf', 'document'],
       section: 'media',
+      preview: { render: renderFilePreview, descriptionKey: 'toolbox.preview.file' },
     };
   }
 

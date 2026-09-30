@@ -93,6 +93,39 @@ export interface ToolboxConfigEntry {
    * stays a flat list.
    */
   section?: ToolboxSection;
+
+  /**
+   * Card shown beside this entry while it is hovered or keyboard-focused in
+   * the toolbox: a small drawing of the block and a one-line caption.
+   * Entries without it show no card.
+   */
+  preview?: ToolboxPreviewConfig;
+}
+
+/**
+ * Toolbox hover preview for one entry.
+ */
+export interface ToolboxPreviewConfig {
+  /**
+   * Draws the block. Called each time the card shows the entry, so return a
+   * fresh element. It is placed on a fixed-size page surface that clips overflow.
+   */
+  render: () => HTMLElement;
+
+  /**
+   * Caption under the drawing, used as-is when {@link descriptionKey} is absent.
+   */
+  description?: string;
+
+  /**
+   * Full i18n key of the caption (e.g. 'toolbox.preview.text').
+   */
+  descriptionKey?: string;
+
+  /**
+   * Values for `{placeholders}` in the translated caption.
+   */
+  descriptionParams?: Record<string, string | number>;
 }
 
 /**

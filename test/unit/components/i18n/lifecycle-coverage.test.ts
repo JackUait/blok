@@ -196,6 +196,7 @@ const deriveLifecycle = (): {
   }
   for (const count of [2, 3, 4, 5]) addDynamic(`tools.columns.col${count}`);
   for (const level of [1, 2, 3, 4, 5, 6]) addDynamic(`tools.header.toggleHeading${level}`);
+  for (const level of [1, 2, 3, 4, 5, 6]) addDynamic(`toolbox.preview.heading${level}`);
   addDynamic('tools.image.errorRetry');
   addDynamic('tools.image.errorReplace');
 
@@ -261,7 +262,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 463 + 122 + 25 + 4 closure for all 614 keys', () => {
+  it('rebuilds a disjoint 483 + 128 + 26 + 4 closure for all 641 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -275,7 +276,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(614);
+    expect(lifecycle.size).toBe(641);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -295,9 +296,9 @@ describe('current English catalog lifecycle coverage', () => {
       // trigger's menu is now the real EmojiPicker (Task 6b), whose own
       // empty state already renders through NO_EMOJIS_FOUND_KEY
       // (tools.callout.noEmojisFound) — see CATALOG_ONLY_KEYS above.
-      'executable-literal': 463,
-      'finite-dynamic': 122,
-      'registered-namespace-compatible': 25,
+      'executable-literal': 483,
+      'finite-dynamic': 128,
+      'registered-namespace-compatible': 26,
       'catalog-only': 4,
     });
     expect(

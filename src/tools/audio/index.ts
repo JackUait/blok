@@ -43,6 +43,7 @@ import { resolveUploadError } from '../../components/utils/media-upload-error';
 import { pickDisplayMaxSize } from '../../components/utils/max-size';
 import { logLabeled } from '../../components/utils/logger';
 import { safeDownloadHref } from '../../components/utils/sanitize-url';
+import { renderAudioPreview } from './preview';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -118,6 +119,7 @@ export class AudioTool implements BlockTool {
       titleKey: 'audio',
       searchTerms: ['audio', 'music', 'sound', 'song', 'mp3', 'track', 'media'],
       section: 'media',
+      preview: { render: renderAudioPreview, descriptionKey: 'toolbox.preview.audio' },
     };
   }
 

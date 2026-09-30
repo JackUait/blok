@@ -1,0 +1,531 @@
+/* Toolbox preview drawings — see ../block-preview.css. */
+
+/*
+  Animations only touch children: the drawing root already runs the shared
+  entrance, and every delay here starts after it (~260ms). Keyframes are
+  `from`-only, so the static frame (and reduced motion) is the finished look.
+*/
+
+/* ─── Bulleted + numbered lists ─────────────────────────── */
+
+[data-blok-interface='block-preview'] [data-blok-preview='bulleted-list'],
+[data-blok-interface='block-preview'] [data-blok-preview='numbered-list'] {
+  padding-top: var(--blok-preview-space-14);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='bulleted-list'] [data-row],
+[data-blok-interface='block-preview'] [data-blok-preview='numbered-list'] [data-row] {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--blok-preview-space-2) 0 var(--blok-preview-space-2) var(--blok-preview-space-2);
+  line-height: 1.5;
+}
+
+/* Real indents (27px / 26px) scaled to the drawing's 14px text. */
+[data-blok-interface='block-preview'] [data-blok-preview='bulleted-list'] [data-depth='1'] {
+  margin-inline-start: var(--blok-preview-space-24);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='numbered-list'] [data-depth='1'] {
+  margin-inline-start: 23px;
+}
+
+/* Same glyph box as the list tool's createMarker. */
+[data-blok-interface='block-preview'] [data-blok-preview='bulleted-list'] [data-marker] {
+  flex-shrink: 0;
+  width: 1em;
+  padding-inline: var(--blok-preview-marker-pad-start) var(--blok-preview-marker-pad-end);
+  font-family: Arial, sans-serif;
+  font-size: 1.5em;
+  line-height: 1;
+  text-align: center;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='numbered-list'] [data-marker] {
+  flex-shrink: 0;
+  min-width: 1.1em;
+  padding-inline-end: 0.6875em;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+/* ─── To-do list ────────────────────────────────────────── */
+
+[data-blok-interface='block-preview'] [data-blok-preview='check-list'] {
+  padding-top: var(--blok-preview-space-14);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='check-list'] [data-row] {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-preview-space-9);
+  padding: var(--blok-preview-space-4) 0 var(--blok-preview-space-4) var(--blok-preview-space-2);
+  line-height: 1.5;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='check-list'] [data-checkbox] {
+  position: relative;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border: 1.75px solid var(--blok-checklist-border);
+  border-radius: var(--blok-radius-control-sm);
+  box-shadow: inset 0 1px 2px var(--blok-checklist-shadow);
+}
+
+/* Checked = primary ink, never the editor's blue. The fill is a layer so it can scale in. */
+[data-blok-interface='block-preview'] [data-blok-preview='check-list'] [data-checkbox='checked']::before {
+  content: '';
+  position: absolute;
+  inset: -1.75px;
+  border-radius: inherit;
+  background: var(--blok-text-primary);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='check-list'] [data-tick] {
+  position: absolute;
+  inset: -1.75px;
+  display: grid;
+  place-items: center;
+  color: var(--blok-bg-primary);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='check-list'] [data-tick] svg {
+  width: 17px;
+  height: 17px;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='check-list'] [data-tick] path {
+  stroke-width: 2.4;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+
+/* The list tool's checked text: line-through + 60% opacity. The strike is a bar so it can draw. */
+[data-blok-interface='block-preview'] [data-blok-preview='check-list'] [data-checked='true'] [data-text] {
+  position: relative;
+  opacity: 0.6;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='check-list'] [data-checked='true'] [data-text]::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 54%;
+  height: 1px;
+  background: currentColor;
+  transform-origin: left center;
+}
+
+/* ─── Toggle list ───────────────────────────────────────── */
+
+[data-blok-interface='block-preview'] [data-blok-preview='toggle'] {
+  padding-top: var(--blok-preview-space-14);
+  padding-inline-start: var(--blok-preview-space-12);
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='toggle'] [data-title] {
+  display: flex;
+  align-items: center;
+  padding: var(--blok-preview-space-2) 0 var(--blok-preview-space-4);
+  font-weight: var(--blok-font-weight-semibold, 600);
+  line-height: 1.5;
+}
+
+/* The real arrow pill is 28px at 16px text; children indent by the same width. */
+[data-blok-interface='block-preview'] [data-blok-preview='toggle'] [data-arrow] {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='toggle'] [data-arrow] svg {
+  width: 19px;
+  height: 19px;
+  transform: rotate(90deg);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='toggle'] [data-arrow] path {
+  stroke-width: 1.6;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='toggle'] [data-children] {
+  padding-inline-start: var(--blok-preview-space-26);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='toggle'] [data-row] {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--blok-preview-space-3) 0 var(--blok-preview-space-3) var(--blok-preview-space-2);
+  line-height: 1.5;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='toggle'] [data-marker] {
+  flex-shrink: 0;
+  width: 1em;
+  padding-inline: var(--blok-preview-marker-pad-start) var(--blok-preview-marker-pad-end);
+  font-family: Arial, sans-serif;
+  font-size: 1.5em;
+  line-height: 1;
+  text-align: center;
+}
+
+/* ─── Quote ─────────────────────────────────────────────── */
+
+[data-blok-interface='block-preview'] [data-blok-preview='quote'] {
+  padding-top: var(--blok-preview-space-18);
+  font-size: 13px;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='quote'] [data-lead] {
+  margin: 0 0 var(--blok-preview-space-10);
+  color: var(--blok-text-secondary);
+}
+
+/* The quote tool's "large" size: 1.2em text, 3px current-color bar, 0.9em inset. */
+[data-blok-interface='block-preview'] [data-blok-preview='quote'] blockquote {
+  position: relative;
+  display: grid;
+  gap: var(--blok-preview-space-6);
+  margin: 0;
+  padding: var(--blok-preview-space-1) 0 var(--blok-preview-space-1) 0.9em;
+  font-size: 1.2em;
+  line-height: 1.5;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='quote'] [data-bar] {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  background: currentColor;
+  transform-origin: top center;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='quote'] [data-text] {
+  letter-spacing: -0.01em;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='quote'] [data-cite] {
+  color: var(--blok-text-secondary);
+  font-size: 0.75em;
+}
+
+/* ─── Callout ───────────────────────────────────────────── */
+
+[data-blok-interface='block-preview'] [data-blok-preview='callout'] {
+  padding-top: var(--blok-preview-space-18);
+  font-size: 13px;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='callout'] [data-lead] {
+  margin: 0 0 var(--blok-preview-space-8);
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='callout'] [data-panel] {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--blok-preview-space-9);
+  padding: var(--blok-preview-space-11) var(--blok-preview-space-14) var(--blok-preview-space-11) var(--blok-preview-space-12);
+  border-radius: var(--blok-radius-block);
+  background: var(--blok-color-gray-bg);
+  line-height: 1.5;
+}
+
+/* 1.5em emoji on a 1.5 line box: its line lands on the text's first line. */
+[data-blok-interface='block-preview'] [data-blok-preview='callout'] [data-emoji] {
+  flex-shrink: 0;
+  font-size: 1.5em;
+  line-height: 1;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='callout'] [data-after] {
+  margin: var(--blok-preview-space-10) 0 0;
+  color: var(--blok-text-secondary);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='callout'] kbd {
+  padding: var(--blok-preview-space-1) var(--blok-preview-space-5);
+  border-radius: var(--blok-radius-mark);
+  background: var(--blok-inline-code-bg);
+  color: var(--blok-inline-code-text);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+/* ─── Divider ───────────────────────────────────────────── */
+
+[data-blok-interface='block-preview'] [data-blok-preview='divider'] {
+  padding-top: var(--blok-preview-space-18);
+  font-size: 13px;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='divider'] p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Blok's real rule: 1px --blok-border-primary inside a py-3 wrapper. */
+[data-blok-interface='block-preview'] [data-blok-preview='divider'] [data-rule] {
+  padding: var(--blok-preview-space-12) 0;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='divider'] [data-rule] span {
+  display: block;
+  height: 1px;
+  background: var(--blok-border-primary);
+  transform-origin: left center;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='divider'] [data-heading] {
+  margin-bottom: var(--blok-preview-space-2);
+  font-size: 15px;
+  font-weight: var(--blok-font-weight-semibold, 600);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='divider'] p:last-child {
+  color: var(--blok-text-secondary);
+}
+
+/* ─── Motion ────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Lists: each row arrives as if Enter was just pressed. */
+  [data-blok-interface='block-preview'] [data-blok-preview='bulleted-list'] [data-row],
+  [data-blok-interface='block-preview'] [data-blok-preview='numbered-list'] [data-row] {
+    animation: blok-preview-lists-row-in 360ms var(--blok-preview-ease-out) both;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='bulleted-list'] [data-marker] {
+    animation: blok-preview-lists-bullet-pop 420ms var(--blok-preview-ease-spring) both;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='numbered-list'] [data-marker] {
+    animation: blok-preview-lists-number-roll 420ms var(--blok-preview-ease-spring) both;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='bulleted-list'] [data-row]:nth-child(1),
+  [data-blok-interface='block-preview'] [data-blok-preview='bulleted-list'] [data-row]:nth-child(1) [data-marker],
+  [data-blok-interface='block-preview'] [data-blok-preview='numbered-list'] [data-row]:nth-child(1),
+  [data-blok-interface='block-preview'] [data-blok-preview='numbered-list'] [data-row]:nth-child(1) [data-marker] {
+    animation-delay: 280ms;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='bulleted-list'] [data-row]:nth-child(2),
+  [data-blok-interface='block-preview'] [data-blok-preview='bulleted-list'] [data-row]:nth-child(2) [data-marker],
+  [data-blok-interface='block-preview'] [data-blok-preview='numbered-list'] [data-row]:nth-child(2),
+  [data-blok-interface='block-preview'] [data-blok-preview='numbered-list'] [data-row]:nth-child(2) [data-marker] {
+    animation-delay: 400ms;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='bulleted-list'] [data-row]:nth-child(3),
+  [data-blok-interface='block-preview'] [data-blok-preview='bulleted-list'] [data-row]:nth-child(3) [data-marker],
+  [data-blok-interface='block-preview'] [data-blok-preview='numbered-list'] [data-row]:nth-child(3),
+  [data-blok-interface='block-preview'] [data-blok-preview='numbered-list'] [data-row]:nth-child(3) [data-marker] {
+    animation-delay: 520ms;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='bulleted-list'] [data-row]:nth-child(4),
+  [data-blok-interface='block-preview'] [data-blok-preview='bulleted-list'] [data-row]:nth-child(4) [data-marker],
+  [data-blok-interface='block-preview'] [data-blok-preview='numbered-list'] [data-row]:nth-child(4),
+  [data-blok-interface='block-preview'] [data-blok-preview='numbered-list'] [data-row]:nth-child(4) [data-marker] {
+    animation-delay: 640ms;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='bulleted-list'] [data-row]:nth-child(5),
+  [data-blok-interface='block-preview'] [data-blok-preview='bulleted-list'] [data-row]:nth-child(5) [data-marker],
+  [data-blok-interface='block-preview'] [data-blok-preview='numbered-list'] [data-row]:nth-child(5),
+  [data-blok-interface='block-preview'] [data-blok-preview='numbered-list'] [data-row]:nth-child(5) [data-marker] {
+    animation-delay: 760ms;
+  }
+
+  /* To-do: the box fills, the tick draws, then the text is struck through. */
+  [data-blok-interface='block-preview'] [data-blok-preview='check-list'] [data-checkbox='checked']::before {
+    animation: blok-preview-lists-check-fill 320ms var(--blok-preview-ease-spring) 520ms both;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='check-list'] [data-tick] path {
+    animation: blok-preview-lists-tick-draw 300ms var(--blok-preview-ease-out) 700ms both;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='check-list'] [data-checked='true'] [data-text] {
+    animation: blok-preview-lists-done-fade 420ms ease-out 900ms both;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='check-list'] [data-checked='true'] [data-text]::after {
+    animation: blok-preview-lists-strike 420ms var(--blok-preview-ease-out) 900ms both;
+  }
+
+  /* Toggle: the arrow turns open, then the children unfold one by one. */
+  [data-blok-interface='block-preview'] [data-blok-preview='toggle'] [data-arrow] svg {
+    animation: blok-preview-lists-arrow-open 320ms var(--blok-preview-ease-out) 420ms both;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='toggle'] [data-row] {
+    animation: blok-preview-lists-unfold 380ms var(--blok-preview-ease-out) both;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='toggle'] [data-row]:nth-child(1) {
+    animation-delay: 560ms;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='toggle'] [data-row]:nth-child(2) {
+    animation-delay: 630ms;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='toggle'] [data-row]:nth-child(3) {
+    animation-delay: 700ms;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='toggle'] [data-row]:nth-child(4) {
+    animation-delay: 770ms;
+  }
+
+  /* Quote: the bar draws down, then the words and the author settle in. */
+  [data-blok-interface='block-preview'] [data-blok-preview='quote'] [data-bar] {
+    animation: blok-preview-lists-bar-grow 480ms var(--blok-preview-ease-out) 300ms both;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='quote'] [data-text] {
+    animation: blok-preview-lists-slide-in 520ms var(--blok-preview-ease-out) 480ms both;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='quote'] [data-cite] {
+    animation: blok-preview-lists-slide-in 520ms var(--blok-preview-ease-out) 720ms both;
+  }
+
+  /* Callout: the panel settles, then the bulb switches on. */
+  [data-blok-interface='block-preview'] [data-blok-preview='callout'] [data-panel] {
+    animation: blok-preview-lists-panel-in 420ms var(--blok-preview-ease-out) 280ms both;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='callout'] [data-emoji] {
+    animation: blok-preview-lists-bulb-on 640ms var(--blok-preview-ease-spring) 520ms both;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='callout'] [data-after] {
+    animation: blok-preview-lists-row-in 420ms var(--blok-preview-ease-out) 680ms both;
+  }
+
+  /* Divider: the rule draws itself across the page. */
+  [data-blok-interface='block-preview'] [data-blok-preview='divider'] [data-rule] span {
+    animation: blok-preview-lists-rule-draw 760ms var(--blok-preview-ease-out) 320ms both;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='divider'] [data-heading],
+  [data-blok-interface='block-preview'] [data-blok-preview='divider'] p:last-child {
+    animation: blok-preview-lists-row-in 420ms var(--blok-preview-ease-out) 620ms both;
+  }
+}
+
+@keyframes blok-preview-lists-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+}
+
+@keyframes blok-preview-lists-bullet-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+}
+
+@keyframes blok-preview-lists-number-roll {
+  from {
+    opacity: 0;
+    transform: translateY(-70%);
+  }
+}
+
+@keyframes blok-preview-lists-check-fill {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+
+/* Round caps paint a dot on a zero-length dash, so the tick hides until it starts. */
+@keyframes blok-preview-lists-tick-draw {
+  from {
+    opacity: 0;
+    stroke-dashoffset: 1;
+  }
+
+  1% {
+    opacity: 1;
+  }
+}
+
+@keyframes blok-preview-lists-done-fade {
+  from {
+    opacity: 1;
+  }
+}
+
+@keyframes blok-preview-lists-strike {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes blok-preview-lists-arrow-open {
+  from {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes blok-preview-lists-unfold {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes blok-preview-lists-bar-grow {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes blok-preview-lists-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+
+@keyframes blok-preview-lists-panel-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes blok-preview-lists-bulb-on {
+  0% {
+    opacity: 0.35;
+    transform: scale(0.7) rotate(-12deg);
+  }
+
+  60% {
+    transform: scale(1.18) rotate(6deg);
+  }
+}
+
+@keyframes blok-preview-lists-rule-draw {
+  from {
+    transform: scaleX(0);
+  }
+}

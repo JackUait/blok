@@ -33,6 +33,7 @@ import { BODY_PLACEHOLDER_STYLES, TOGGLE_ATTR } from '../toggle/constants';
 import { buildArrow } from '../toggle/dom-builder';
 import { createArrowTooltip, updateArrowState, updateBodyPlaceholderVisibility, updateChildrenVisibility, updateToggleEmptyState } from '../toggle/toggle-lifecycle';
 import { handleHeaderToggleEnter, handleHeaderToggleBackspace } from './header-toggle-keyboard';
+import { renderHeadingPreview, renderToggleHeadingPreview } from './preview';
 
 /**
  * Toggle-heading icon per level. Keyed 1-6 so toggle headings stay one-to-one
@@ -1467,6 +1468,10 @@ export class Header implements BlockTool {
       searchTermKeys: ['title', 'header', 'heading'],
       shortcut: '#'.repeat(level.number),
       section: 'basic' as const,
+      preview: {
+        render: () => renderHeadingPreview(level.number),
+        descriptionKey: `toolbox.preview.heading${level.number}`,
+      },
     }));
 
     const toggleHeadingEntries = Header.DEFAULT_LEVELS
@@ -1480,6 +1485,10 @@ export class Header implements BlockTool {
         searchTermKeys: ['toggle', 'heading', 'collapsible'],
         shortcut: '>' + '#'.repeat(level.number),
         section: 'advanced' as const,
+        preview: {
+          render: () => renderToggleHeadingPreview(level.number),
+          descriptionKey: 'toolbox.preview.toggleHeading',
+        },
       }));
 
     return [...headingEntries, ...toggleHeadingEntries];

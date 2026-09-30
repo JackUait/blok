@@ -28,6 +28,7 @@ import {
   localizeDatabaseSelectOptions,
   localizeDatabaseViews,
 } from './database-localization';
+import { renderBoardPreview, renderDatabasePreview } from './preview';
 
 interface ChangedBlock {
   id?: unknown;
@@ -100,6 +101,7 @@ export class DatabaseTool implements BlockTool {
         name: 'database',
         searchTerms: ['database', 'kanban', 'board', 'cards', 'columns'],
         section: 'database',
+        preview: { render: renderDatabasePreview, descriptionKey: 'toolbox.preview.database' },
       },
       {
         icon: IconBoard,
@@ -107,6 +109,7 @@ export class DatabaseTool implements BlockTool {
         name: 'board',
         searchTerms: ['board', 'kanban', 'cards', 'columns', 'database'],
         section: 'database',
+        preview: { render: renderBoardPreview, descriptionKey: 'toolbox.preview.board' },
       },
     ];
   }

@@ -30,6 +30,7 @@ import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-san
 import { clean } from '../../components/utils/sanitizer';
 import { ARIA_LABEL_COLLAPSE_KEY, ARIA_LABEL_EXPAND_KEY, BODY_PLACEHOLDER_KEY, PLACEHOLDER_KEY, TOOL_NAME } from './constants';
 import { IconToggleList } from '../../components/icons';
+import { renderTogglePreview } from './preview';
 import { createArrowTooltip, renderToggleItem, updateArrowState, updateChildrenVisibility, updateBodyPlaceholderVisibility, updateToggleEmptyState } from './toggle-lifecycle';
 import { handleToggleEnter, handleToggleBackspace } from './toggle-keyboard';
 import type { ToggleItemData, ToggleItemConfig } from './types';
@@ -456,6 +457,7 @@ export class ToggleItem implements BlockTool {
       searchTermKeys: ['toggle', 'collapse', 'expand', 'accordion'],
       shortcut: '>',
       section: 'basic',
+      preview: { render: renderTogglePreview, descriptionKey: 'toolbox.preview.toggleList' },
     };
   }
 

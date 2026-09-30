@@ -11,6 +11,7 @@ import { IconSpacer } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 import { SPACER_WRAPPER_CLASSES } from '../../shared/tool-classes/spacer';
 import { AlignmentGuide, collectSiblingBlocks, findSnapTarget, measureEdgeOffsets } from './alignment-guide';
+import { renderSpacerPreview } from './preview';
 import { COLUMNS_ATTR } from '../columns-shared';
 
 /**
@@ -189,6 +190,7 @@ export class SpacerTool implements BlockTool {
       searchTerms: ['spacer', 'space', 'gap', 'blank', 'whitespace', 'margin', 'padding'],
       searchTermKeys: ['spacer', 'space', 'gap'],
       section: 'advanced',
+      preview: { render: renderSpacerPreview, descriptionKey: 'toolbox.preview.spacer' },
     };
   }
 

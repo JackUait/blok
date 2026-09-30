@@ -45,6 +45,7 @@ import { uploadErrorMessage } from '../../components/utils/upload-error-message'
 import { resolveUploadError } from '../../components/utils/media-upload-error';
 import { pickDisplayMaxSize } from '../../components/utils/max-size';
 import { safeDownloadHref } from '../../components/utils/sanitize-url';
+import { renderVideoPreview } from './preview';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -126,6 +127,7 @@ export class VideoTool implements BlockTool {
       titleKey: 'video',
       searchTerms: ['video', 'movie', 'clip', 'player', 'mp4', 'media'],
       section: 'media',
+      preview: { render: renderVideoPreview, descriptionKey: 'toolbox.preview.video' },
     };
   }
 

@@ -65,6 +65,7 @@ import { downloadImage } from './download';
 import { resolveConvertedUploader } from './converted-uploader';
 import { tr } from './i18n';
 import { deliverToRebuiltBlock, putBackOnRebuiltBlock, releaseObjectUrl, writeDerived } from './detached-upload';
+import { renderImagePreview } from './preview';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -177,6 +178,7 @@ export class ImageTool implements BlockTool {
       titleKey: 'image',
       searchTerms: ['image', 'img', 'picture', 'photo', 'media'],
       section: 'media',
+      preview: { render: renderImagePreview, descriptionKey: 'toolbox.preview.image' },
     };
   }
 

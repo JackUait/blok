@@ -623,6 +623,10 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // The staged resolve (ghosts, green flood, drawn check, sweep, height
     // glide) adds 2_535, measured against 652e0f36.
     const NOTIFIER_MEDIA_CARD_BYTES = 10_796 + 2_535;
+    // Toolbox hover previews: the card in block-preview.css and one drawing per
+    // built-in toolbox entry (35) in block-preview/*.css, plus the @import.
+    // About 11.5KB gzipped; the repeated scope prefix is most of the bytes.
+    const TOOLBOX_HOVER_PREVIEWS_BYTES = 94_491;
     // Show's spotlight: spotlight.css (a Notion-style warm background flash on
     // the failed block's card, reduced-motion steady tint) and its @import.
     const SPOTLIGHT_BYTES = 1_245;
@@ -662,7 +666,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + NOTIFIER_MEDIA_CARD_BYTES
       + SPOTLIGHT_BYTES
       + MEDIA_RADIUS_ROLES_BYTES
-      + RADIUS_SYSTEM_BYTES;
+      + RADIUS_SYSTEM_BYTES
+      + TOOLBOX_HOVER_PREVIEWS_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

@@ -84,6 +84,7 @@ const expectExactReasonedClassification = (
 const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
   'components/modules/blockEvents/composers/emojiTrigger.ts': 'Mount owner for the inline ":" menu, which is the tracked emoji-picker root surface.',
   'components/modules/drag/DragController.ts': 'Pointer-following drag preview; coordinates refresh on every pointer move.',
+  'components/ui/toolbox-preview.ts': 'Top-layer toolbox hover card placed beside the menu once per row change and closed on capture-phase scroll, so it never outlives its anchor.',
   'components/modules/find/index.ts': 'Find bar is fixed to the window at the host-configured placement and promoted to the top layer while open; find.css places it, no JS coordinates.',
   'components/utils/announcer.ts': 'Visually hidden ARIA live region with no element anchor or collision boundary.',
   'components/utils/caret/boundaries.ts': 'Synchronous hidden text-measurement node removed before control returns.',
@@ -117,6 +118,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'components/modules/collaboration/presence-carets.ts': 'Remote carets convert a measured Range rect into offsets local to the block holder they are appended to; nothing is written against the root.',
   'components/modules/drag/preview/DragPreview.ts': 'Fixed pointer-following preview; root coordinates refresh on every drag pointer update.',
   'components/modules/drag/utils/ColumnDropAnimation.ts': 'Ephemeral fixed drag preview animates to a viewport target rect and is then removed.',
+  'components/ui/toolbox-preview.ts': 'Fixed hover card reads the menu and row rects on every row change and closes on scroll instead of tracking movement.',
   'components/modules/find/find-bar.ts': 'Match-map ticks sit at a percentage of their own track; the bar itself is placed by find.css from the host config.',
   'components/modules/rectangleSelection.ts': 'Selection rectangle converts pointer coordinates into its measured local overlay container.',
   'components/modules/toolbar/inline/toolbar-ghost.ts': 'Fading copy of the inline toolbar, placed once at the toolbar\'s measured spot beside its wrapper and removed within 400ms; it never tracks movement.',
@@ -167,6 +169,7 @@ const SHARED_POSITION_CALL_CLASSIFICATIONS: Record<string, string> = {
 };
 
 const CAPTURE_SCROLL_CLASSIFICATIONS: Record<string, string> = {
+  'components/ui/toolbox-preview.ts': 'Capture-phase scroll listener closes the toolbox hover card, whose coordinates are a snapshot.',
   'components/utils/tooltip.ts': 'Capture-phase scroll listener intentionally dismisses the snapshot tooltip.',
   'tools/file/preview-scroll-haze.ts': 'Capture-phase listener refreshes local file-preview scroll haze state.',
   'tools/image/index.ts': 'Capture-phase listener re-decides whether image tool islands fit above the figure; the editor may scroll inside any ancestor.',

@@ -17,6 +17,7 @@ import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { twMerge } from '../../components/utils/tw';
 import { buildIconColumnsCount } from '../../components/icons';
 import type { ColumnListData } from './types';
+import { renderColumnsPreview } from './preview';
 
 /**
  * Origins that mean "the author just made this block" — the only ones allowed to
@@ -263,6 +264,11 @@ export class ColumnList implements BlockTool {
       data: { columnCount: count },
       searchTerms: [...base.searchTerms, `${count}c`, `c${count}`],
       section: 'advanced' as const,
+      preview: {
+        render: () => renderColumnsPreview(count),
+        descriptionKey: 'toolbox.preview.columns',
+        descriptionParams: { count },
+      },
     }));
   }
 

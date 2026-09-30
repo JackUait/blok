@@ -18,6 +18,7 @@ import { attachResizeHandle, attachHeightResizeHandle, type ResizeEdge } from '.
 import { renderEmbedOverlay, type EmbedAlignment } from './overlay';
 import { EMBED_SERVICES, matchEmbedService, isHttpUrl, isHttpsUrl, setSafeLinkHref, type EmbedKind } from '../registry';
 import { isAllowedEmbedOrigin } from './allowed-origins';
+import { renderEmbedPreview } from './preview';
 
 export interface EmbedData extends BlockToolData {
   service: string;
@@ -172,6 +173,7 @@ export class Embed implements BlockTool {
       titleKey: 'embed',
       searchTerms: ['embed', 'iframe', 'video', 'youtube', 'media'],
       section: 'media',
+      preview: { render: renderEmbedPreview, descriptionKey: 'toolbox.preview.embed' },
     };
   }
 

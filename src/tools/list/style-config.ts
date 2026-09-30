@@ -5,6 +5,7 @@
 import type { ToolboxConfig } from '../../../types';
 import { IconListBulleted, IconListNumbered, IconListChecklist } from '../../components/icons';
 
+import { renderBulletedListPreview, renderNumberedListPreview, renderTodoListPreview } from './preview';
 import type { StyleConfig } from './types';
 
 /**
@@ -44,6 +45,7 @@ export const getToolboxConfig = (): ToolboxConfig => [
     searchTermKeys: ['bullet', 'unordered', 'list'],
     shortcut: 'CMD+SHIFT+5',
     section: 'basic',
+    preview: { render: renderBulletedListPreview, descriptionKey: 'toolbox.preview.bulletedList' },
   },
   {
     icon: IconListNumbered,
@@ -54,6 +56,7 @@ export const getToolboxConfig = (): ToolboxConfig => [
     searchTermKeys: ['ordered', 'number', 'list'],
     shortcut: 'CMD+SHIFT+6',
     section: 'basic',
+    preview: { render: renderNumberedListPreview, descriptionKey: 'toolbox.preview.numberedList' },
   },
   {
     icon: IconListChecklist,
@@ -64,5 +67,6 @@ export const getToolboxConfig = (): ToolboxConfig => [
     searchTermKeys: ['checkbox', 'task', 'todo', 'check', 'list'],
     shortcut: 'CMD+SHIFT+7',
     section: 'basic',
+    preview: { render: renderTodoListPreview, descriptionKey: 'toolbox.preview.todoList' },
   },
 ];

@@ -401,6 +401,12 @@
 
     /* Icon gallery */
     .icon-gallery.pg-sheet { padding: 40px 40px 88px; }
+    /* Previews page (preview-gallery.ts): the floating card, laid out in a grid. */
+    .preview-gallery.pg-sheet { padding: 40px 40px 88px; }
+    .preview-gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(248px, 1fr)); gap: 32px 24px; }
+    .preview-gallery-cell { margin: 0; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+    .preview-gallery-cell [data-preview-gallery-card] { position: relative; }
+    .preview-gallery-cell figcaption { font-size: 12px; color: #717171; font-family: ui-monospace, monospace; }
     @media (max-width: 768px) {
       .icon-gallery.pg-sheet { padding: 32px 20px 64px; }
     }
@@ -1181,6 +1187,7 @@
         <a class="playground-tab" role="tab" aria-selected="false" href="/block-states" data-tab="block-states">Block States</a>
         <a class="playground-tab" role="tab" aria-selected="false" href="/icons" data-tab="icons">Icons</a>
         <a class="playground-tab" role="tab" aria-selected="false" href="/rounding" data-tab="rounding">Rounding</a>
+        <a class="playground-tab" role="tab" aria-selected="false" href="/previews" data-tab="previews">Previews</a>
       </nav>
       <div class="ml-auto">
         <a href="https://github.com/JackUait/blok" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-full text-[#717171] hover:text-[#222222] hover:bg-[#f7f7f7] dark-mode:text-[#a8a8a8] dark-mode:hover:text-[#ffffff] dark-mode:hover:bg-white/5 transition-colors" aria-label="View on GitHub">
@@ -1219,6 +1226,11 @@
     <!-- Rounding tab -->
     <div id="tab-rounding" class="hidden" role="tabpanel">
       <div class="pg-sheet radius-gallery max-md:px-5" id="radius-gallery"></div>
+    </div>
+
+    <!-- Previews tab: every toolbox hover card, laid out in place -->
+    <div id="tab-previews" class="hidden" role="tabpanel">
+      <div class="pg-sheet preview-gallery max-md:px-5" id="preview-gallery"></div>
     </div>
 
     <!-- Footer -->
@@ -1353,6 +1365,9 @@
     import { ALL_LOCALE_CODES, getDirection } from './src/components/i18n/locales/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
     import { renderRadiusGallery } from './src/playground/radius-gallery.ts';
+    import { renderPreviewGallery } from './src/playground/preview-gallery.ts';
+    import enMessagesModule from './src/components/i18n/locales/en.json';
+    import * as BuiltInTools from './src/tools/index.ts';
     import { slowImageRetries } from './src/playground/slow-image-retry.ts';
     import { BRAND_MARK_SLUGS, brandMarkSvg } from './src/components/utils/brand-marks.ts';
     const BRAND_MARK_GROUP = 'Brand marks';
@@ -1601,7 +1616,7 @@
      */
     const tabs = document.querySelectorAll('[role="tab"]');
 
-    const VALID_PAGES = ['editor', 'block-states', 'icons', 'rounding'];
+    const VALID_PAGES = ['editor', 'block-states', 'icons', 'rounding', 'previews'];
 
     function parseRoute(pathname) {
       const segments = pathname.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean);
@@ -1626,6 +1641,7 @@
       document.getElementById('tab-block-states').classList.toggle('hidden', page !== 'block-states');
       document.getElementById('tab-icons').classList.toggle('hidden', page !== 'icons');
       document.getElementById('tab-rounding').classList.toggle('hidden', page !== 'rounding');
+      document.getElementById('tab-previews').classList.toggle('hidden', page !== 'previews');
 
       if (page === 'rounding') {
         radiusGalleryHandle?.refresh();
@@ -2273,6 +2289,17 @@
     };
 
     radiusGalleryHandle = renderRadiusGallery({ container: document.getElementById('radius-gallery') });
+
+    {
+      // The json-as-string plugin may hand the locale over as a string.
+      const enMessages = typeof enMessagesModule === 'string' ? JSON.parse(enMessagesModule) : enMessagesModule;
+
+      renderPreviewGallery({
+        container: document.getElementById('preview-gallery'),
+        tools: BuiltInTools,
+        translate: (key, params = {}) => (enMessages[key] ?? key).replace(/\{(\w+)\}/g, (_, name) => String(params[name] ?? '')),
+      });
+    }
 
     renderIconGallery({
       container: document.getElementById('icon-gallery'),

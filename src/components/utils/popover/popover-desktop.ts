@@ -102,6 +102,15 @@ const resolveAnchorSnapshot = (snapshot: AnchorSnapshot): DOMRect => {
   );
 };
 
+/**
+ * The row a popover treats as current: the one under a genuine pointer hover,
+ * or the one keyboard focus moved to.
+ */
+export interface PopoverCurrentItem {
+  name: string | undefined;
+  element: HTMLElement;
+  source: 'pointer' | 'keyboard';
+}
 
 /**
  * Desktop popover.
@@ -161,6 +170,10 @@ export class PopoverDesktop extends PopoverAbstract {
    * Helps prevent reopening nested popover while cursor is moving inside one item area.
    */
   private previouslyHoveredItem: PopoverItem | null = null;
+
+  private currentItemListeners = new Set<(current: PopoverCurrentItem | null) => void>();
+
+  private currentItemElement: HTMLElement | null = null;
 
   /**
    * Suppresses the synthesized mouseover that Chromium fires immediately
@@ -847,6 +860,7 @@ export class PopoverDesktop extends PopoverAbstract {
     this.flipper?.deactivate();
 
     this.previouslyHoveredItem = null;
+    this.reportCurrentItem(null, 'pointer');
 
     // Tear down synthesized-hover suppression so a future show() starts
     // from a known state.
@@ -876,6 +890,34 @@ export class PopoverDesktop extends PopoverAbstract {
   /**
    * Clears memory
    */
+  /**
+   * Subscribes to changes of the current row. Pointer hovers arrive only after
+   * the synthesized-hover gate, so a parked pointer never reports a row on open.
+   * @param listener - receives the new current row, or null when there is none
+   * @returns unsubscribe function
+   */
+  public onCurrentItemChange(listener: (current: PopoverCurrentItem | null) => void): () => void {
+    this.currentItemListeners.add(listener);
+
+    return () => {
+      this.currentItemListeners.delete(listener);
+    };
+  }
+
+  private reportCurrentItem(item: PopoverItem | null, source: PopoverCurrentItem['source']): void {
+    const element = item?.getElement() ?? null;
+
+    if (element === this.currentItemElement) {
+      return;
+    }
+
+    this.currentItemElement = element;
+
+    const current = item !== null && element !== null ? { name: item.name, element, source } : null;
+
+    this.currentItemListeners.forEach(listener => listener(current));
+  }
+
   public destroy(): void {
     this.hide();
     super.destroy();
@@ -1074,6 +1116,7 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     this.previouslyHoveredItem = item;
+    this.reportCurrentItem(item, 'pointer');
 
     // Moving onto a different item abandons a pending open-intent that targeted
     // the item we just left — this is what keeps a diagonal pointer path that
@@ -1137,6 +1180,7 @@ export class PopoverDesktop extends PopoverAbstract {
 
     this.scheduleNestedClose();
     this.previouslyHoveredItem = null;
+    this.reportCurrentItem(null, 'pointer');
   }
 
   /**
@@ -1737,6 +1781,7 @@ export class PopoverDesktop extends PopoverAbstract {
     const focusedItem = this.itemsDefault.find(item => item.isFocused);
 
     focusedItem?.onFocus();
+    this.reportCurrentItem(focusedItem ?? null, 'keyboard');
   };
 
   /**
@@ -2168,6 +2213,12 @@ export class PopoverDesktop extends PopoverAbstract {
     if (flippableElements.length > 0 && !this.nodes.items.querySelector(`[data-blok-convert-item]:not([${DATA_ATTR.promotedItem}])`)) {
       this.flipper.focusItem(0, { skipNextTab: true });
     }
+
+    // Typing a query is keyboard intent: the first match becomes current.
+    const firstMatch = isEmptyQuery ? undefined : [...allTopLevel, ...data.promotedItems.map(({ item }) => item)]
+      .find(item => item.getElement() === flippableElements[0]);
+
+    this.reportCurrentItem(firstMatch ?? null, 'keyboard');
   };
 
   /**

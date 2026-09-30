@@ -22,6 +22,7 @@ import { colorVarName } from '../../components/shared/color-presets';
 import { mapToNearestPresetName } from '../../components/utils/color-mapping';
 import { EmojiPicker, prefetchEmojiPickerData } from './emoji-picker';
 import { IconCallout, IconEmojiSmile, IconPaintRoller } from '../../components/icons';
+import { renderCalloutPreview } from './preview';
 import {
   TOOL_NAME,
   COLOR_KEY,
@@ -643,6 +644,7 @@ export class CalloutTool implements BlockTool {
       searchTerms: ['callout', 'note', 'info', 'warning', 'tip', 'alert'],
       searchTermKeys: ['callout', 'note', 'info', 'warning', 'tip', 'alert'],
       section: 'basic',
+      preview: { render: renderCalloutPreview, descriptionKey: 'toolbox.preview.callout' },
     };
   }
 

@@ -359,6 +359,7 @@ describe('AudioTool — static tool declarations', () => {
       titleKey: 'audio',
       searchTerms: ['audio', 'music', 'sound', 'song', 'mp3', 'track', 'media'],
       section: 'media',
+      preview: { render: expect.any(Function), descriptionKey: 'toolbox.preview.audio' },
     });
   });
 

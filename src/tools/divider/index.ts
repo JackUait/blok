@@ -9,6 +9,7 @@ import type {
 import type { DividerData } from './types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconMinus } from '../../components/icons';
+import { renderDividerPreview } from './preview';
 import { twMerge } from '../../components/utils/tw';
 import { DIVIDER_RULE_CLASSES, DIVIDER_WRAPPER_CLASSES } from '../../shared/tool-classes/divider';
 
@@ -73,6 +74,7 @@ export class DividerTool implements BlockTool {
       searchTerms: ['hr', 'line', 'separator', 'rule', '---', 'divider', 'delimiter', 'splitter'],
       searchTermKeys: ['divider', 'separator', 'delimiter', 'splitter'],
       section: 'basic',
+      preview: { render: renderDividerPreview, descriptionKey: 'toolbox.preview.divider' },
     };
   }
 

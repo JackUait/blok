@@ -40,6 +40,7 @@ const popoverSpies = vi.hoisted(() => ({
   updatePosition: vi.fn<(rect: DOMRect, update: Record<string, unknown>) => void>(),
   setLeftAlignElement: vi.fn(),
   setActiveDescendantHost: vi.fn(),
+  onCurrentItemChange: vi.fn(() => () => {}),
 }));
 
 const popoverState = vi.hoisted((): {
@@ -87,6 +88,7 @@ vi.mock('../../../../src/components/utils/popover', () => {
     public updatePosition = popoverSpies.updatePosition;
     public setLeftAlignElement = popoverSpies.setLeftAlignElement;
     public setActiveDescendantHost = popoverSpies.setActiveDescendantHost;
+    public onCurrentItemChange = popoverSpies.onCurrentItemChange;
   }
 
   class MockPopoverMobile {

@@ -13,9 +13,10 @@ import type { Popover } from '../utils/popover';
 import { PopoverDesktop, PopoverMobile } from '../utils/popover';
 import { Shortcuts } from '../utils/shortcuts';
 import { translateToolTitle, type I18nInstance } from '../utils/tools';
+import { ToolboxPreview } from './toolbox-preview';
 import { getBlockColorToolboxEntries, type BlockColorData } from '../shared/block-color';
 
-import type { API, BlockToolData, ToolboxConfigEntry, PopoverItemParams, BlockAPI } from '@/types';
+import type { API, BlockToolData, ToolboxConfigEntry, ToolboxPreviewConfig, PopoverItemParams, BlockAPI } from '@/types';
 import type { PopoverPositionUpdate } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
@@ -200,6 +201,18 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * Null until initialized
    */
   private popover: Popover | null = null;
+
+  /**
+   * Hover card beside the popover; desktop only.
+   */
+  private preview: ToolboxPreview | null = null;
+
+  private stopPreviewTracking: (() => void) | null = null;
+
+  /**
+   * Entry previews by popover item name, rebuilt with the item list.
+   */
+  private previewConfigs = new Map<string, ToolboxPreviewConfig>();
 
   /**
    * List of Tools available. Some of them will be shown in the Toolbox
@@ -668,12 +681,43 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
     this.popover.getElement().setAttribute('data-blok-testid', 'toolbox-popover');
+
+    if (this.popover instanceof PopoverDesktop) {
+      this.initPreview(this.popover);
+    }
+  }
+
+  /**
+   * Shows the entry's hover card for whichever row the popover treats as current.
+   * @param popover - the desktop toolbox popover
+   */
+  private initPreview(popover: PopoverDesktop): void {
+    const preview = new ToolboxPreview({ translate: (key, params) => this.i18n.t(key, params) });
+    const surface = popover.getElement().querySelector<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`) ?? popover.getElement();
+
+    this.preview = preview;
+    this.stopPreviewTracking = popover.onCurrentItemChange((current) => {
+      const config = current?.name === undefined ? undefined : this.previewConfigs.get(current.name);
+
+      if (current === null || config === undefined) {
+        preview.hide();
+
+        return;
+      }
+
+      preview.show({ item: current.element, surface, config, source: current.source });
+    });
   }
 
   /**
    * Destroys popover instance and removes it from DOM
    */
   private destroyPopover(): void {
+    this.stopPreviewTracking?.();
+    this.stopPreviewTracking = null;
+    this.preview?.destroy();
+    this.preview = null;
+
     if (this.popover !== null) {
       this.popover.hide();
       this.popover.off(PopoverEvent.Closed, this.onPopoverClose);
@@ -945,6 +989,11 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
       // Use entry-level shortcut if available, otherwise fall back to tool-level shortcut (for first entry only)
       const shortcut = toolboxItem.shortcut ?? (displaySecondaryLabel ? tool.shortcut : undefined);
+      const name = toolboxItem.name ?? tool.name;
+
+      if (toolboxItem.preview !== undefined) {
+        this.previewConfigs.set(name, toolboxItem.preview);
+      }
 
       return {
         icon: toolboxItem.icon,
@@ -952,7 +1001,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
         // A live host element (a portal target the adapter owns) renders in
         // place of the string title, tracking the host's own i18n.
         titleEl: toolboxItem.titleEl,
-        name: toolboxItem.name ?? tool.name,
+        name,
         onActivate: (): void => {
           void this.toolButtonActivated(tool.name, toolboxItem.data);
         },

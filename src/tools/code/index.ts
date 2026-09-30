@@ -48,6 +48,7 @@ import { renderMermaid } from './mermaid-loader';
 import { tokenizePrism, isHighlightable } from './prism-loader';
 import { applyPrismHighlight, disposePrismStyles } from './prism-applier';
 import { detectLanguage } from './language-detector';
+import { renderCodePreview } from './preview';
 import { normalizeFenceLang } from '../../markdown/fence-language';
 import { CODE_LANGUAGE_ATTR } from '../../components/modules/paste/constants';
 
@@ -920,6 +921,7 @@ export class CodeTool implements BlockTool {
       searchTerms: ['code', 'pre', 'snippet', 'program'],
       searchTermKeys: ['code', 'pre', 'snippet', 'program'],
       section: 'media',
+      preview: { render: renderCodePreview, descriptionKey: 'toolbox.preview.code' },
     };
   }
 

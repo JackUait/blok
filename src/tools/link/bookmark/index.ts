@@ -19,6 +19,7 @@ import {
   type BookmarkConfig,
   type BookmarkMeta,
 } from '../metadata-fetcher';
+import { renderBookmarkPreview } from './preview';
 
 export interface BookmarkData extends BookmarkMeta, BlockToolData {}
 
@@ -66,6 +67,7 @@ export class Bookmark implements BlockTool {
       titleKey: 'bookmark',
       searchTerms: ['bookmark', 'link', 'url', 'preview', 'card'],
       section: 'media',
+      preview: { render: renderBookmarkPreview, descriptionKey: 'toolbox.preview.bookmark' },
     };
   }
 

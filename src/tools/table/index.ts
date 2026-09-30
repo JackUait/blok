@@ -45,6 +45,7 @@ import {
   updateTextSizeStyles,
 } from './table-operations';
 import { TableModel } from './table-model';
+import { renderTablePreview } from './preview';
 import { registerAdditionalRestrictedTools } from './table-restrictions';
 import { TableSubsystems } from './table-subsystems';
 import type { TableHost } from './table-subsystems';
@@ -485,6 +486,7 @@ export class Table implements BlockTool {
       searchTerms: ['table', 'grid', 'spreadsheet'],
       searchTermKeys: ['table', 'grid', 'spreadsheet'],
       section: 'basic',
+      preview: { render: renderTablePreview, descriptionKey: 'toolbox.preview.table' },
     };
   }
 

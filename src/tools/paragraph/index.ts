@@ -31,6 +31,7 @@ import { stripFakeBackgroundElements } from '../../components/utils';
 import { getPlaceholderClasses, isContentEmpty, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
 import { PARAGRAPH_CLASSES } from '../../shared/tool-classes/paragraph';
+import { renderTextPreview } from './preview';
 
 /**
  * Tool's input and output data format
@@ -525,6 +526,7 @@ export class Paragraph implements BlockTool {
       searchTerms: ['p', 'paragraph', 'plain'],
       searchTermKeys: ['paragraph', 'plain'],
       section: 'basic',
+      preview: { render: renderTextPreview, descriptionKey: 'toolbox.preview.text' },
     };
   }
 }

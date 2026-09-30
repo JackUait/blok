@@ -106,7 +106,7 @@ describe('marks and handles inside blocks', () => {
 describe('code block header', () => {
   it('publishes the inner radius for controls at the card corner', () => {
     expect(tokens(HEADER_STYLES)).toContain(
-      '[--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-block)_-_1px_-_var(--spacing)*1.5))]'
+      '[--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-block)-var(--blok-border-width-hairline)-var(--blok-space-1-5)))]'
     );
   });
 
@@ -121,7 +121,7 @@ describe('code block header', () => {
   it('the view-mode track is a large control that publishes its own inner radius', () => {
     expect(roundedTokens(VIEW_MODE_CONTAINER_STYLES)).toEqual(['rounded-(--blok-radius-control-lg)']);
     expect(tokens(VIEW_MODE_CONTAINER_STYLES)).toContain(
-      '[--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-control-lg)_-_1px_-_var(--spacing)*0.5))]'
+      '[--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-control-lg)-var(--blok-border-width-hairline)-var(--blok-space-0-5)))]'
     );
     expect(roundedTokens(VIEW_MODE_BUTTON_STYLES)).toEqual([INNER_OR_CONTROL]);
     expect(roundedTokens(VIEW_MODE_BUTTON_ACTIVE_STYLES)).toEqual([INNER_OR_CONTROL]);

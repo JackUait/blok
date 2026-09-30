@@ -458,6 +458,8 @@ const EDIT_CHROME_CLASSES = new Set<string>([
   'text-gray-text',
   'opacity-0',
   'transition-opacity',
+  /** The header bar's corner radius for its buttons (it sits in the card's corner). */
+  '[--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-block)-var(--blok-border-width-hairline)-var(--blok-space-1-5)))]',
   /** The code block's line-number gutter, also editor-only. */
   'flex-1',
   'min-w-0',

@@ -132,6 +132,19 @@ describe('Radius law', () => {
     expect(violations, `Unlawful radius variables:\n${report(violations)}`).toEqual([]);
   });
 
+  it('TS arbitrary-property classes that set a radius variable hold lawful values', () => {
+    const violations = TS_FILES.flatMap((file) => {
+      const source = stripComments(readFileSync(resolve(REPO_ROOT, file), 'utf8'));
+
+      return classTokens(file, source)
+        .map(({ token, index }) => ({ match: token.match(/^\[(--blok-[\w-]*radius[\w-]*):(.+)\]$/), index }))
+        .filter(({ match }) => match !== null && !isLawfulRadius((match?.[2] ?? '').replace(/_/g, ' '), CHANNELS))
+        .map(({ match, index }) => ({ file, line: lineOf(source, index), text: match?.[0] ?? '' }));
+    });
+
+    expect(violations, `Unlawful radius variables in classes:\n${report(violations)}`).toEqual([]);
+  });
+
   it('TS sets no literal borderRadius', () => {
     const violations = scan(TS_FILES, /borderRadius\s*[:=]\s*(['"`])((?:(?!\1).)*)\1/g, (m) => !isLawfulRadius(m[2]));
 

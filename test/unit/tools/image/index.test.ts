@@ -2489,7 +2489,7 @@ describe('ImageTool — retrying a broken image', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
 
-  const brokenTool = (): { root: HTMLElement; retry: () => void; img: () => HTMLImageElement } => {
+  const brokenTool = (): { tool: ImageTool; root: HTMLElement; retry: () => void; img: () => HTMLImageElement } => {
     const options = createOptions({ url: 'https://x/y.png' }, { reloadAttempts: 0 });
     const tool = new ImageTool(options);
     const root = tool.render();
@@ -2504,7 +2504,7 @@ describe('ImageTool — retrying a broken image', () => {
     img().dispatchEvent(new Event('error'));
     const [ [ reported ] ] = vi.mocked(options.api.media.reportFailure).mock.calls;
 
-    return { root, retry: () => reported.retry(), img };
+    return { tool, root, retry: () => reported.retry(), img };
   };
 
   it('keeps the failed card on screen, mending, while the image reloads', () => {
@@ -2544,6 +2544,28 @@ describe('ImageTool — retrying a broken image', () => {
     expect(root.hasAttribute('data-mending')).toBe(false);
     expect(root.hasAttribute('data-retrying')).toBe(false);
     expect(card?.querySelector<HTMLButtonElement>('[data-action="retry"]')?.disabled).toBe(false);
+  });
+
+  it('stops mending when the image is replaced mid-retry, so the empty state shows', () => {
+    const { tool, root, retry } = brokenTool();
+
+    retry();
+    const replace = (tool.renderSettings() as unknown[]).find((item): item is { onActivate: () => void } =>
+      typeof item === 'object' && item !== null && 'name' in item && item.name === 'image-replace');
+
+    replace?.onActivate();
+
+    expect(root.hasAttribute('data-mending')).toBe(false);
+    expect(root.getAttribute('data-state')).toBe('empty');
+  });
+
+  it('anchors block controls to the block root while mending, not the hidden caption', () => {
+    const { tool, root, retry } = brokenTool();
+
+    retry();
+
+    expect(tool.getToolbarAnchorElement()).toBe(root);
+    expect(tool.getContentOffset(document.body)).toBeUndefined();
   });
 
   it('does not play the break-apart on the first failure', () => {

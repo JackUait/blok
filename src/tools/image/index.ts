@@ -691,13 +691,17 @@ export class ImageTool implements BlockTool {
   }
 
   public getToolbarAnchorElement(): HTMLElement | undefined {
+    // While mending the figure and caption are hidden; without this the toolbar
+    // falls back to the hidden caption and opens below the card.
+    // The root is what the failed card resolves to, so the controls stay put.
+    if (this.mending) return this.root ?? undefined;
     return this.root?.querySelector<HTMLElement>('.blok-image-inner') ?? undefined;
   }
 
   public getContentOffset(_hoveredElement: Element): { left: number } | undefined {
     const root = this.root;
     const figure = root?.querySelector<HTMLElement>('.blok-image-inner');
-    if (!root || !figure) return undefined;
+    if (!root || !figure || this.mending) return undefined;
     const delta = figure.getBoundingClientRect().left - root.getBoundingClientRect().left;
     return delta > 0 ? { left: delta } : undefined;
   }
@@ -943,6 +947,9 @@ export class ImageTool implements BlockTool {
     if (!this.root) return;
     this.detachResize();
     this.root.replaceChildren();
+    // Any other state (replace, a new upload…) ends the retry; left on, its
+    // CSS would hide that state's DOM.
+    if (this.state !== 'RENDERED') this.mending = false;
     this.syncRootAttributes();
 
     if (this.state === 'EMPTY') {

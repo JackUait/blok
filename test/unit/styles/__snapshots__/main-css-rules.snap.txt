@@ -857,14 +857,14 @@
   color: var(--blok-text-primary) !important;
 }
 
-[data-blok-interface=blok], [data-blok-interface=tooltip], [data-blok-popover] {
-  --radius: 0.25rem;
-  --radius-xs: 0.125rem;
-  --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
-  --radius-2xl: 1rem;
+:where([data-blok-interface]), :where([data-blok-popover]), :where([data-blok-top-layer]) {
+  --radius: var(--blok-radius-4);
+  --radius-xs: var(--blok-radius-2);
+  --radius-sm: var(--blok-radius-4);
+  --radius-md: var(--blok-radius-6);
+  --radius-lg: var(--blok-radius-8);
+  --radius-xl: var(--blok-radius-12);
+  --radius-2xl: var(--blok-radius-16);
   --radius-3xl: 1.5rem;
   --radius-4xl: 2rem;
 }
@@ -1354,7 +1354,25 @@
   --blok-radius-md: 6px;
   --blok-radius-lg: 12px;
   --blok-radius-xl: 16px;
-  --blok-radius-pill: 999px;
+  --blok-radius-pill: var(--blok-radius-full);
+  --blok-radius-0: 0;
+  --blok-radius-2: 0.125rem;
+  --blok-radius-4: 0.25rem;
+  --blok-radius-6: 0.375rem;
+  --blok-radius-8: 0.5rem;
+  --blok-radius-10: 0.625rem;
+  --blok-radius-12: 0.75rem;
+  --blok-radius-16: 1rem;
+  --blok-radius-full: 9999px;
+  --blok-radius-dialog: var(--blok-radius-12);
+  --blok-radius-surface: var(--blok-radius-10);
+  --blok-radius-block: var(--blok-radius-10);
+  --blok-radius-field: var(--blok-radius-8);
+  --blok-radius-control-lg: var(--blok-radius-8);
+  --blok-radius-control: var(--blok-radius-6);
+  --blok-radius-control-sm: var(--blok-radius-4);
+  --blok-radius-mark: var(--blok-radius-2);
+  --blok-radius-floor: var(--blok-radius-4);
   --blok-handle-bg-default: rgba(15, 15, 15, 0.6);
   --blok-handle-bg-hover: rgba(15, 15, 15, 0.85);
   --blok-handle-bg-active: rgba(15, 15, 15, 1);

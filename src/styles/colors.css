@@ -333,7 +333,34 @@
   --blok-radius-md: 6px;
   --blok-radius-lg: 12px;
   --blok-radius-xl: 16px;
-  --blok-radius-pill: 999px;
+  --blok-radius-pill: var(--blok-radius-full);
+
+  /* Radius scale. Names are px at a 16px root; values are rem so they follow
+     the root font size like Tailwind's rounded-* classes, which isolation.css
+     wires to these. Components use the role tokens below, never a step. */
+  --blok-radius-0: 0;
+  --blok-radius-2: 0.125rem;
+  --blok-radius-4: 0.25rem;
+  --blok-radius-6: 0.375rem;
+  --blok-radius-8: 0.5rem;
+  --blok-radius-10: 0.625rem;
+  --blok-radius-12: 0.75rem;
+  --blok-radius-16: 1rem;
+  --blok-radius-full: 9999px;
+
+  /* Radius roles. Controls follow height: up to 20px → sm, 24–32px → control,
+     36px and up → lg. A child near a rounded parent's corner uses
+     max(floor, parent − border − gap) instead (the container publishes it as
+     --blok-radius-inner). */
+  --blok-radius-dialog: var(--blok-radius-12);
+  --blok-radius-surface: var(--blok-radius-10);
+  --blok-radius-block: var(--blok-radius-10);
+  --blok-radius-field: var(--blok-radius-8);
+  --blok-radius-control-lg: var(--blok-radius-8);
+  --blok-radius-control: var(--blok-radius-6);
+  --blok-radius-control-sm: var(--blok-radius-4);
+  --blok-radius-mark: var(--blok-radius-2);
+  --blok-radius-floor: var(--blok-radius-4);
 
   /* Image resize-handle surface colors (Notion-style dark pill + white rim). */
   --blok-handle-bg-default: rgba(15, 15, 15, 0.6);

@@ -337,7 +337,7 @@ export class MediaFailures extends Module {
     const presence = { wrapper, observer: null as IntersectionObserver | null, onScreen: false, focused: wrapper.contains(document.activeElement) };
 
     this.presence = presence;
-    wrapper.addEventListener('focusin', this.onFocusIn);
+    document.addEventListener('focusin', this.onFocusIn, true);
     wrapper.addEventListener('focusout', this.onFocusOut);
     presence.observer = new IntersectionObserver((entries) => {
       presence.onScreen = entries[entries.length - 1].isIntersecting;
@@ -354,28 +354,35 @@ export class MediaFailures extends Module {
     }
     this.presence = null;
     presence.observer?.disconnect();
-    presence.wrapper.removeEventListener('focusin', this.onFocusIn);
+    document.removeEventListener('focusin', this.onFocusIn, true);
     presence.wrapper.removeEventListener('focusout', this.onFocusOut);
   }
 
-  private readonly onFocusIn = (): void => {
-    if (this.presence !== null) {
-      this.presence.focused = true;
-      this.syncToast();
+  /**
+   * Focus that moves onto the toast itself (Retry, Show) keeps the editor's state.
+   * @param event - the focus change, anywhere on the page
+   */
+  private readonly onFocusIn = (event: FocusEvent): void => {
+    const presence = this.presence;
+    const target = event.target instanceof Node ? event.target : null;
+
+    if (presence === null || target === null) {
+      return;
     }
+    if (target instanceof Element && target.closest('[data-blok-testid="notifier-container"]') !== null) {
+      return;
+    }
+    presence.focused = presence.wrapper.contains(target);
+    this.syncToast();
   };
 
   /**
-   * Focus that moves onto the toast itself (Retry, Show) still counts as in the editor.
-   * @param event - the focus change
+   * Focus that goes nowhere fires no focusin, so it is caught here.
+   * @param event - focus leaving an element in the editor
    */
   private readonly onFocusOut = (event: FocusEvent): void => {
-    const next = event.relatedTarget instanceof Element ? event.relatedTarget : null;
-    const presence = this.presence;
-    const stays = next !== null && (presence?.wrapper.contains(next) === true || next.closest('[data-blok-testid="notifier-container"]') !== null);
-
-    if (presence !== null && !stays) {
-      presence.focused = false;
+    if (this.presence !== null && event.relatedTarget === null) {
+      this.presence.focused = false;
       this.syncToast();
     }
   };

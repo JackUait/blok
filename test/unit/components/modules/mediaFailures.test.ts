@@ -201,6 +201,25 @@ describe('MediaFailures', () => {
     expect(dismiss).not.toHaveBeenCalled();
   });
 
+  it('lets go of the editor once focus moves from the toast to somewhere else', () => {
+    const { module, dismiss, wrapper } = setup();
+    const toast = document.createElement('div');
+    const button = document.createElement('button');
+    const search = document.createElement('input');
+
+    toast.setAttribute('data-blok-testid', 'notifier-container');
+    toast.append(button);
+    document.body.append(toast, search);
+    wrapper.querySelector<HTMLElement>('[tabindex]')?.focus();
+    module.report(input('a'));
+    vi.advanceTimersByTime(COALESCE_MS);
+    button.focus();
+    search.focus();
+    FakeIntersectionObserver.setOnScreen(wrapper, false);
+
+    expect(dismiss).toHaveBeenCalledTimes(1);
+  });
+
   it('does not bring back a toast the user closed', () => {
     const { module, show, isClosed, wrapper } = setup();
 

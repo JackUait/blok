@@ -87,6 +87,10 @@ export class Bookmark implements BlockTool {
     return true;
   }
 
+  public static get frameRadius(): string {
+    return 'var(--blok-radius-block)';
+  }
+
   public static get pasteConfig(): PasteConfig {
     // URL_PATTERN is a catch-all: it matches ANY http(s) link. Give it a low
     // priority so specific patterns (embed's per-service regexes) always resolve

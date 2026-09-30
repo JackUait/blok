@@ -166,6 +166,16 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
   }
 
   /**
+   * CSS radius of the rounded frame the Tool draws at its edge, or undefined
+   * for a square block.
+   */
+  public get frameRadius(): string | undefined {
+    const value = (this.constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.FrameRadius];
+
+    return typeof value === 'string' && value !== '' ? value : undefined;
+  }
+
+  /**
    * Upgrade a stored block's data through the Tool's own `upgradeData` hook, if
    * it declares one. Lets a Tool migrate a legacy data shape it once wrote into
    * the shape it reads today — the shapes core's global grammar migration can't

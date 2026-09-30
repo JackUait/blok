@@ -19,18 +19,28 @@ export class StyleManager {
      */
     wrapper: BLOCK_WRAPPER_CLASSES.join(' '),
     content: BLOCK_CONTENT_CLASSES.join(' '),
-    contentSelected: 'bg-selection rounded-[4px] **:[[contenteditable]]:select-none [&_img]:opacity-55 **:data-[blok-tool=stub]:opacity-55',
+    /**
+     * The fill is the content wrapper, which has no padding, so the gap to a
+     * framed tool's corner is 0 and the fill radius is the frame radius itself.
+     */
+    contentSelected: 'bg-selection rounded-(--blok-radius-frame,var(--blok-radius-control)) **:[[contenteditable]]:select-none [&_img]:opacity-55 **:data-[blok-tool=stub]:opacity-55',
     contentStretched: 'max-w-none',
   };
 
   /**
    * @param holder - Block's holder element
    * @param contentElement - Content wrapper element (can be null initially)
+   * @param frameRadius - radius of the tool's rounded frame, if it has one
    */
   constructor(
     private readonly holder: HTMLDivElement,
-    private readonly contentElement: HTMLElement | null
-  ) {}
+    private readonly contentElement: HTMLElement | null,
+    frameRadius?: string
+  ) {
+    if (frameRadius !== undefined) {
+      this.contentElement?.style.setProperty('--blok-radius-frame', frameRadius);
+    }
+  }
 
   /**
    * Get wrapper styles

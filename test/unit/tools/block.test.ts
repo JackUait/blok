@@ -382,6 +382,19 @@ describe('BlockToolAdapter', () => {
       expect(tool.assetKind).toBeUndefined();
     });
 
+    it('reports the frame radius when the tool declares one', () => {
+      const constructable = createConstructable({ frameRadius: 'var(--blok-radius-block)' });
+      const { tool } = createBlockTool({ constructable });
+
+      expect(tool.frameRadius).toBe('var(--blok-radius-block)');
+    });
+
+    it('reports no frame radius for a square tool', () => {
+      const { tool } = createBlockTool();
+
+      expect(tool.frameRadius).toBeUndefined();
+    });
+
     it('reports the Enter-containment declaration when the tool declares one', () => {
       const constructable = createConstructable({ keepsChildrenOnEnter: true });
       const { tool } = createBlockTool({ constructable });

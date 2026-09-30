@@ -60,6 +60,11 @@ export declare class Callout implements BlockTool {
    */
   static isReadOnlySupported?: boolean;
 
+  /**
+   * Radius of the rounded frame at the block's edge; the selection fill follows it
+   */
+  static frameRadius?: string;
+
   constructor(options: CalloutConstructorOptions);
 
   /**

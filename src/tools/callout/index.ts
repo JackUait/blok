@@ -685,6 +685,10 @@ export class CalloutTool implements BlockTool {
   public static get isReadOnlySupported(): boolean {
     return true;
   }
+
+  public static get frameRadius(): string {
+    return 'var(--blok-radius-block)';
+  }
 }
 
 export type { CalloutData, CalloutConfig };

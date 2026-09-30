@@ -120,7 +120,7 @@ describe('StyleManager', () => {
       const classes = styleManager.getContentClasses(true, false);
 
       expect(classes).toContain('bg-selection');
-      expect(classes).toContain('rounded-[4px]');
+      expect(classes).toContain('rounded-(--blok-radius-frame,var(--blok-radius-control))');
     });
 
     it('returns stretched classes when stretched is true', () => {

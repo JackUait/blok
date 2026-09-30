@@ -296,6 +296,28 @@ export interface BlockToolConstructable extends BaseToolConstructable {
   assetKind?: AssetKind;
 
   /**
+   * CSS radius of the rounded frame this Tool draws at its outer edge, for
+   * example `'var(--blok-radius-block)'`.
+   *
+   * Core writes it on the block's content wrapper as `--blok-radius-frame`, and
+   * the block selection fill takes its radius from it, so the fill follows the
+   * frame's corners instead of a square behind them. A content wrapper does not
+   * inherit its parent's value, so nested blocks keep their own fill.
+   *
+   * Give the radius of the frame where it meets the content wrapper edge. If
+   * the frame is inset from the Tool's root, add that inset. Leave unset for a
+   * square block: the fill then uses `--blok-radius-control`.
+   *
+   * @example
+   * class Card {
+   *   static get frameRadius() {
+   *     return 'var(--blok-radius-block)';
+   *   }
+   * }
+   */
+  frameRadius?: string;
+
+  /**
    * Per-tool data-migration hook (a STATIC method on the Tool class). Upgrades a
    * stored block's `data` from a legacy shape the Tool once wrote into the shape
    * it reads today.

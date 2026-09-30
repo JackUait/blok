@@ -945,6 +945,10 @@ export class CodeTool implements BlockTool {
     return true;
   }
 
+  public static get frameRadius(): string {
+    return 'var(--blok-radius-block)';
+  }
+
   /**
    * CodeTool handles Enter and Tab itself (see handleCodeKeydown). Declaring
    * this flag tells KeyboardNavigation to skip its own Enter handling — without

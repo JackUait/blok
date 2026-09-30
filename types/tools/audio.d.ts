@@ -95,6 +95,11 @@ export declare class Audio implements BlockTool {
   static isReadOnlySupported?: boolean;
 
   /**
+   * Radius of the rounded frame at the block's edge; the selection fill follows it
+   */
+  static frameRadius?: string;
+
+  /**
    * Plain-text and URL fields, declared PLAINTEXT so load and save never parse them as HTML
    */
   static sanitize?: SanitizerConfig;

@@ -111,6 +111,12 @@ export enum InternalBlockToolSettings {
    */
   AssetKind = 'assetKind',
   /**
+   * CSS radius of the rounded frame at the Tool's edge. Core writes it on the
+   * block's content wrapper as `--blok-radius-frame` so the selection fill
+   * rounds with the frame
+   */
+  FrameRadius = 'frameRadius',
+  /**
    * Per-tool data-migration hook: upgrades a stored block's `data` from a
    * legacy shape the tool once wrote into the shape it reads today. Runs at load
    * (block composition), before the tool is constructed.

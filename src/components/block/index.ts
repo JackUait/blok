@@ -357,7 +357,8 @@ export class Block extends EventsDispatcher<BlockEvents> {
     // Initialize StyleManager with holder and content element
     this.styleManager = new StyleManager(
       this.holder,
-      this.toolRenderer.contentElement
+      this.toolRenderer.contentElement,
+      tool.frameRadius
     );
 
     // Initialize SelectionManager with dependencies

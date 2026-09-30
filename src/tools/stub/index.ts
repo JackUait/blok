@@ -18,6 +18,8 @@ export class Stub implements BlockTool {
    */
   public static isReadOnlySupported = true;
 
+  public static frameRadius = 'var(--blok-radius-block)';
+
   /**
    * Main stub wrapper
    */
@@ -98,7 +100,7 @@ export class Stub implements BlockTool {
    * @returns {HTMLElement}
    */
   private make(): HTMLElement {
-    const wrapper = $.make('div', 'flex items-center py-3 px-[18px] my-2.5 rounded-[10px] bg-bg-light border border-line-gray text-gray-text text-sm [&_svg]:size-icon');
+    const wrapper = $.make('div', 'flex items-center py-3 px-[18px] my-2.5 rounded-(--blok-radius-block) bg-bg-light border border-line-gray text-gray-text text-sm [&_svg]:size-icon');
     const icon = IconWarning;
     const infoContainer = $.make('div', 'ml-3.5');
     const title = $.make('div', 'font-medium capitalize', {

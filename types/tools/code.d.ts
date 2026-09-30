@@ -53,6 +53,11 @@ export declare class Code implements BlockTool {
   static isReadOnlySupported?: boolean;
 
   /**
+   * Radius of the rounded frame at the block's edge; the selection fill follows it
+   */
+  static frameRadius?: string;
+
+  /**
    * Enter inside the code block inserts a newline, not a new block
    */
   static enableLineBreaks?: boolean;

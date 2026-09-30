@@ -191,6 +191,10 @@ export class Embed implements BlockTool {
     return true;
   }
 
+  public static get frameRadius(): string {
+    return 'var(--blok-radius-block)';
+  }
+
   public static get pasteConfig(): PasteConfig {
     const patterns = Object.fromEntries(
       Object.entries(EMBED_SERVICES).map(([service, config]) => [service, config.regex])

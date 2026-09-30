@@ -1907,7 +1907,7 @@
 
 }
 
-[@utility blok-inline-tool-button] @apply flex justify-center items-center border-0 rounded-(--blok-radius-inner,var(--blok-radius-control)) h-full p-0 w-7 bg-transparent cursor-pointer leading-normal text-black {
+[@utility blok-inline-tool-button] @apply flex justify-center items-center border-0 h-full p-0 w-7 bg-transparent cursor-pointer leading-normal text-black {
 
 }
 

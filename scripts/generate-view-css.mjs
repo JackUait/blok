@@ -199,10 +199,23 @@ const matchesView = (selector, root) => {
  * `[data-blok-interface]`), so a token carrier hung off a CLASS is component
  * state — `.blok-image-crop-editor` and friends — and prunes like any other
  * rule.
+ *
+ * The radius nesting channels are the same kind of component state: a
+ * container publishes `--blok-radius-inner` for its own children and core
+ * writes `--blok-radius-frame` per block. Neither is theme surface, so a rule
+ * carrying only those prunes by its selector too.
  * @param rule - a postcss rule
  */
+const COMPONENT_CHANNELS = new Set(['--blok-radius-inner', '--blok-radius-frame']);
+
 const isTokenCarrier = (rule) => {
   if (rule.selector.includes('.')) {
+    return false;
+  }
+
+  const props = (rule.nodes ?? []).filter((node) => node.type === 'decl').map((node) => node.prop);
+
+  if (props.length > 0 && props.every((prop) => COMPONENT_CHANNELS.has(prop))) {
     return false;
   }
 

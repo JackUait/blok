@@ -636,6 +636,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // and the image selection ring grows with its gap. Net growth after
     // deleting the dead image popover and toolbar pill rules.
     const MEDIA_RADIUS_ROLES_BYTES = 2_479;
+    // Radius design system: the scale and role tokens, --blok-radius-inner on
+    // every rounded container, and the selection fill's frame channel.
+    const RADIUS_SYSTEM_BYTES = 250;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -653,7 +656,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + IMAGE_MEND_BYTES
       + NOTIFIER_MEDIA_CARD_BYTES
       + SPOTLIGHT_BYTES
-      + MEDIA_RADIUS_ROLES_BYTES;
+      + MEDIA_RADIUS_ROLES_BYTES
+      + RADIUS_SYSTEM_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

@@ -141,28 +141,6 @@
 }
 
 /*
-  Wire Tailwind's --radius-* to Blok's radius scale. A host page may set
-  e.g. `--radius-lg: 20px` on :root, and `all: initial` does NOT reset custom
-  properties, so each root that carries Blok tokens (same list as colors.css)
-  re-pins them here. :where() is enough: a value declared on the element beats
-  one inherited from :root at any specificity. --radius-3xl/4xl have no Blok
-  step and keep Tailwind's value.
-*/
-:where([data-blok-interface]),
-:where([data-blok-popover]),
-:where([data-blok-top-layer]) {
-  --radius: var(--blok-radius-4);
-  --radius-xs: var(--blok-radius-2);
-  --radius-sm: var(--blok-radius-4);
-  --radius-md: var(--blok-radius-6);
-  --radius-lg: var(--blok-radius-8);
-  --radius-xl: var(--blok-radius-12);
-  --radius-2xl: var(--blok-radius-16);
-  --radius-3xl: 1.5rem;
-  --radius-4xl: 2rem;
-}
-
-/*
   Reset inherited CSS properties on body-level popover and tooltip roots.
   Only inherited properties can cascade in from host-page styles;
   non-inherited properties (position, top, left, display, width, etc.)

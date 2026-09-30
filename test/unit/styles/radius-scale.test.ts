@@ -90,32 +90,9 @@ describe('radius roles', () => {
 });
 
 describe('Tailwind radius classes', () => {
-  const TAILWIND: Record<string, string> = {
-    '--radius': '4',
-    '--radius-xs': '2',
-    '--radius-sm': '4',
-    '--radius-md': '6',
-    '--radius-lg': '8',
-    '--radius-xl': '12',
-    '--radius-2xl': '16',
-  };
-
-  it('resolve to Blok primitives, so a host override of a primitive moves the class too', () => {
-    for (const [name, step] of Object.entries(TAILWIND)) {
-      expect(declared(isolation, name), name).toBe(`var(--blok-radius-${step})`);
-    }
-  });
-
-  it('are re-pinned on every root that carries Blok tokens', () => {
-    const block = isolation.match(/([^{}]*)\{\s*--radius:/);
-
-    expect(block).not.toBeNull();
-    const selectors = (block?.[1] ?? '').split(',').map((s) => s.trim());
-
-    expect(selectors).toEqual(expect.arrayContaining([
-      ':where([data-blok-interface])',
-      ':where([data-blok-popover])',
-      ':where([data-blok-top-layer])',
-    ]));
+  // The radius law bans every Tailwind radius step, so nothing reads --radius-*.
+  // A re-pin would only add bytes to every stylesheet, view.css included.
+  it('are not re-pinned, because no Blok class reads --radius-*', () => {
+    expect(isolation).not.toMatch(/--radius(?:-\w+)?\s*:/);
   });
 });

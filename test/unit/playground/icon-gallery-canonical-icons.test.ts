@@ -101,23 +101,6 @@ describe('playground canonical icons', () => {
     expect(toggle?.textContent).toContain('Toggle');
   });
 
-  it.each([
-    ['upload', Icons.IconUploadFailed],
-    ['broken', Icons.IconImageBroken],
-  ])('renders the %s error demo with the same icon as the real image tool', (variant, icon) => {
-    const root = page.createElement('div');
-
-    runInNewContext(`${section('function renderImageErrorDemo(', 'function initBlockStatesGallery(')}
-      renderImageErrorDemo(root, { variant, title: 'Image unavailable', message: 'Try again' });`, {
-      document: page, Icons, root, variant,
-    });
-
-    expect(root.querySelector('svg')?.outerHTML).toBe(svgOf(icon).outerHTML);
-    expect(root.getAttribute('data-state')).toBe('error');
-    expect(root.querySelector('[data-variant]')?.getAttribute('data-variant')).toBe(variant);
-    expect(root.querySelector('[data-action="retry"]')?.textContent).toBe('Retry');
-  });
-
   it('keeps reset as one clockwise refresh arc in the house grid, not a repeat glyph', () => {
     const svg = page.querySelector('#reset-content svg');
     const paths = Array.from(svg?.querySelectorAll('path') ?? []);

@@ -20,8 +20,8 @@
      anchoring is unchanged. */
   container-type: inline-size;
 }
-[data-blok-tool="image"][data-size="sm"]   .blok-image-inner { width: 280px; }
-[data-blok-tool="image"][data-size="md"]   .blok-image-inner { width: 520px; }
+[data-blok-tool="image"][data-size="sm"]   :is(.blok-image-inner, .blok-image-error[data-variant="broken"]) { width: 280px; }
+[data-blok-tool="image"][data-size="md"]   :is(.blok-image-inner, .blok-image-error[data-variant="broken"]) { width: 520px; }
 [data-blok-tool="image"][data-size="lg"]   .blok-image-inner { width: 100%; }
 [data-blok-tool="image"][data-size="full"] .blok-image-inner { width: 100%; }
 /* banner-shaped / tiny-natural images: force full width so resize handles
@@ -815,7 +815,8 @@
   text-align: left;
 }
 .blok-image-error__title { font-size: 13px; font-weight: 600; letter-spacing: -0.005em; text-align: left; }
-.blok-image-error__msg   { font-size: 12.5px; color: var(--blok-text-secondary); text-align: left; line-height: 1.45; }
+.blok-image-error__msg,
+.blok-image-error__size  { font-size: 12.5px; color: var(--blok-text-secondary); text-align: left; line-height: 1.45; }
 .blok-image-error__actions { margin-left: auto; display: flex; gap: var(--blok-space-1-5); flex-shrink: 0; }
 .blok-image-error__btn {
   appearance: none;
@@ -834,11 +835,82 @@
   background: var(--blok-bg-hover);
   border-color: var(--blok-border-primary);
 }
-.blok-image-error__btn:focus-visible {
+.blok-image-error__btn:focus-visible,
+.blok-image-error__dismiss:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 40%, transparent);
 }
-.blok-image-error__btn:disabled {
+/* Broken: a frame in the picture's own shape. index.ts sets its width (%) and
+   aspect-ratio from the saved image; without saved dimensions it keeps the
+   min-height rather than guess a ratio. The cap keeps a tall picture's frame
+   on screen, where Show centres it. */
+.blok-image-error[data-variant="broken"] {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 180px;
+  max-height: min(60vh, 480px);
+  padding: var(--blok-space-5);
+  vertical-align: top;
+  text-align: center;
+}
+.blok-image-error[data-variant="broken"] .blok-image-error__body {
+  flex: 0 0 auto;
+  align-items: center;
+}
+.blok-image-error[data-variant="broken"] :is(.blok-image-error__title, .blok-image-error__msg) { text-align: center; }
+.blok-image-error[data-variant="broken"] .blok-image-error__actions { margin-left: 0; }
+
+/* Upload: a file row. The tile is the picked picture; the title names it, the
+   size sits beside it, and the reason reads in danger ink below. */
+.blok-image-error__icon[data-thumb="true"] {
+  overflow: hidden;
+  background: var(--blok-bg-secondary);
+}
+.blok-image-error__icon[data-thumb="true"] img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.blok-image-error[data-variant="upload"] .blok-image-error__body {
+  flex-flow: row wrap;
+  align-items: baseline;
+  column-gap: var(--blok-space-1-5);
+}
+.blok-image-error[data-variant="upload"] .blok-image-error__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.blok-image-error[data-variant="upload"] .blok-image-error__size { flex: none; }
+.blok-image-error[data-variant="upload"] .blok-image-error__msg {
+  flex-basis: 100%;
+  color: var(--blok-color-danger);
+}
+.blok-image-error__dismiss {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  aspect-ratio: 1;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-radius-control);
+  background: transparent;
+  color: var(--blok-text-secondary);
+  cursor: pointer;
+  transition: background var(--blok-duration-base) ease, color var(--blok-duration-base) ease;
+}
+.blok-image-error__dismiss:hover {
+  background: var(--blok-bg-hover);
+  color: var(--blok-text-primary);
+}
+
+.blok-image-error__btn:disabled,
+.blok-image-error__dismiss:disabled {
   cursor: default;
   opacity: 0.55;
 }

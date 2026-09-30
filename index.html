@@ -2627,12 +2627,10 @@
             width: 40,
             alignment: 'center',
           } }] },
-          { label: 'Upload failed', blocks: [{ id: 'im-upload-error', type: 'image', data: {
-            url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400',
-            alt: 'Upload error',
-            width: 40,
-            alignment: 'center',
-          } }] },
+          // A real failed upload (see failDemoUpload), so the card is the product's own.
+          { label: 'Upload failed', toolConfig: { image: { uploader: {
+            uploadByFile: () => Promise.reject(new Error('Playground: this upload always fails')),
+          } } }, blocks: [{ id: 'im-upload-error', type: 'image', data: {} }] },
         ],
       },
       {
@@ -2984,13 +2982,8 @@
           figure.setAttribute('data-loading', 'true');
         }
 
-        // Force an "upload failed" error state demo by replacing the tool DOM.
-        const uploadErrRoot = holder.querySelector('[data-blok-id="im-upload-error"] [data-blok-tool="image"]');
-        if (uploadErrRoot) renderImageErrorDemo(uploadErrRoot, {
-          variant: 'upload',
-          title: 'Upload failed',
-          message: 'Check your connection and try again, or choose a different file.',
-        });
+        const uploadErrBlock = holder.querySelector('[data-blok-id="im-upload-error"]');
+        if (uploadErrBlock) failDemoUpload(uploadErrBlock);
 
         // Force a video "upload failed" error state demo by replacing the tool DOM.
         const videoErrRoot = holder.querySelector('[data-blok-id="vd-upload-error"] [data-blok-tool="video"]');
@@ -3047,26 +3040,15 @@
       });
     }
 
-    function renderImageErrorDemo(root, { variant, title, message }) {
-      root.setAttribute('data-state', 'error');
-      root.replaceChildren();
-      const wrap = document.createElement('div');
-      wrap.className = 'blok-image-error';
-      wrap.setAttribute('data-role', 'error-state');
-      wrap.setAttribute('data-variant', variant);
-      wrap.innerHTML = `
-        <div class="blok-image-error__icon" aria-hidden="true">${variant === 'upload' ? Icons.IconUploadFailed : Icons.IconImageBroken}</div>
-        <div class="blok-image-error__body">
-          <div class="blok-image-error__title"></div>
-          <div class="blok-image-error__msg"></div>
-        </div>
-        <div class="blok-image-error__actions">
-          <button type="button" class="blok-image-error__btn" data-action="retry">Retry</button>
-          <button type="button" class="blok-image-error__btn" data-action="replace">Replace</button>
-        </div>`;
-      wrap.querySelector('.blok-image-error__title').textContent = title;
-      wrap.querySelector('.blok-image-error__msg').textContent = message;
-      root.appendChild(wrap);
+    // Picks a real picture in the block's empty state; the playground uploader rejects it.
+    async function failDemoUpload(block) {
+      const blob = await (await fetch('/samples/soundhelix-song-1-cover.png')).blob();
+      const input = block.querySelector('[data-blok-testid="file-input"]');
+      if (!input) return;
+      const picked = new DataTransfer();
+      picked.items.add(new File([blob], 'album-cover.png', { type: 'image/png' }));
+      input.files = picked.files;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
     function initBlockStatesGallery(initialTool) {

@@ -583,10 +583,13 @@ export class ImageTool implements BlockTool {
     this.errorMessage = outcome.kind === 'message' ? outcome.message : null;
     this.brokenImage = false;
     this.retrying = false;
-    this.renderState();
     if (outcome.kind === 'message') {
+      // Before rendering: the card shows this preview as the failed file's thumbnail.
       this.releaseFailurePreview();
       this.failurePreview = source.file === undefined ? null : URL.createObjectURL(source.file);
+    }
+    this.renderState();
+    if (outcome.kind === 'message') {
       this.api.media.reportFailure({
         blockId: this.block.id,
         tool: 'image',
@@ -1027,7 +1030,19 @@ export class ImageTool implements BlockTool {
         : () => this.retryLastSource(),
       onSwap: this.readOnly ? undefined : () => this.transitionToEmpty(),
       i18n: this.api.i18n,
+      ...(isBroken ? { frame: this.data } : this.failedFile()),
     });
+  }
+
+  /** What the upload card names: the picked file, or the link that failed. */
+  private failedFile(): { file?: { name: string; size?: number; preview?: string | null } } {
+    const source = this.lastSource;
+
+    if (source?.kind === 'file') {
+      return { file: { name: source.file.name, size: source.file.size, preview: this.failurePreview } };
+    }
+
+    return source?.kind === 'url' ? { file: { name: source.url } } : {};
   }
 
   /** The reload worked: drop the card and let the picture develop in its place. */

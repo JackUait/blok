@@ -1053,7 +1053,7 @@ describe('ImageTool — error state', () => {
     expect(root.querySelector('[data-action="replace"]')).not.toBeNull();
   });
 
-  it('upload error shows distinct "Upload failed" title (not the broken-image title)', async () => {
+  it('upload error names the file and says the upload failed (not the broken-image title)', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const tool = new ImageTool(createOptions(
       {},
@@ -1065,8 +1065,9 @@ describe('ImageTool — error state', () => {
     Object.defineProperty(event, 'type', { value: 'file' });
     tool.onPaste(event);
     await new Promise((r) => setTimeout(r, 0));
-    const title = root.querySelector('[data-role="error-state"] .blok-image-error__title');
-    expect(title?.textContent).toBe('tools.image.errorUploadFailedTitle');
+    const card = root.querySelector('[data-role="error-state"]');
+    expect(card?.querySelector('.blok-image-error__title')?.textContent).toBe('p.png');
+    expect(card?.querySelector('.blok-image-error__msg')?.textContent).toBe('tools.image.errorUploadFailed');
   });
 
   it('routes a FILE_TOO_LARGE rejection through human-readable copy (no raw error code leaks)', async () => {
@@ -2390,6 +2391,32 @@ describe('ImageTool — failure reporting', () => {
     imgOf(root).dispatchEvent(new Event('load'));
 
     expect(options.api.media.clearFailure).toHaveBeenCalledWith('b1', { recovered: true });
+  });
+
+  it('shows the picked file on the card when its upload fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:preview');
+    const tool = new ImageTool(createOptions({}, { uploader: { uploadByFile: () => Promise.reject(new Error('boom')) } }));
+    const root = tool.render();
+
+    pasteFile(tool);
+    await new Promise((r) => setTimeout(r, 0));
+    const card = root.querySelector('[data-role="error-state"]');
+
+    expect(card?.getAttribute('data-variant')).toBe('upload');
+    expect(card?.querySelector('.blok-image-error__icon img')?.getAttribute('src')).toBe('blob:preview');
+    expect(card?.querySelector('.blok-image-error__title')?.textContent).toBe('p.png');
+  });
+
+  it('keeps a broken image in the shape it was saved with', () => {
+    const options = createOptions({ url: 'https://x/y.png', width: 40, naturalWidth: 1200, naturalHeight: 800 }, { reloadAttempts: 0 });
+    const root = new ImageTool(options).render();
+
+    imgOf(root).dispatchEvent(new Event('error'));
+    const card = root.querySelector<HTMLElement>('[data-role="error-state"]');
+
+    expect(card?.style.aspectRatio).toBe('1200 / 800');
+    expect(card?.style.width).toBe('40%');
   });
 
   it('shows the picked file in the notice when its upload fails', async () => {

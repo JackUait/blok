@@ -1,5 +1,6 @@
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { IconImage, IconImageBroken, IconUploadFailed } from '../../components/icons';
+import { IconCross, IconImage, IconImageBroken, IconUploadFailed } from '../../components/icons';
+import { formatBytes } from '../../components/utils/format-bytes';
 import type { I18nInstance } from '../../components/utils/tools';
 import { tr } from './i18n';
 
@@ -11,6 +12,10 @@ export interface ErrorStateOptions {
   variant?: ErrorVariant;
   /** The same card while a retry runs: busy, buttons off, so nothing moves. */
   mending?: boolean;
+  /** Broken: the picture's saved width (%) and size, so the card keeps its shape. */
+  frame?: { width?: number; naturalWidth?: number; naturalHeight?: number };
+  /** Upload: the file (or link) that did not upload. */
+  file?: { name: string; size?: number; preview?: string | null };
   onTryAgain?(): void;
   onSwap?(): void;
   i18n?: I18nInstance;
@@ -27,6 +32,9 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
   }
   const variant: ErrorVariant = opts.variant ?? 'broken';
   root.setAttribute('data-variant', variant);
+  if (variant === 'broken') {
+    applyFrame(root, opts.frame);
+  }
 
   const icon = document.createElement('div');
   icon.className = 'blok-image-error__icon';
@@ -45,7 +53,10 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
 
   const title = document.createElement('div');
   title.className = 'blok-image-error__title';
-  title.textContent = opts.title ?? tr(opts.i18n, 'tools.image.errorDefaultTitle');
+  // A failed upload is named by its file; everything else by its title.
+  title.textContent = variant === 'upload' && opts.file !== undefined
+    ? displayName(opts.file.name)
+    : opts.title ?? tr(opts.i18n, 'tools.image.errorDefaultTitle');
 
   const msg = document.createElement('div');
   msg.className = 'blok-image-error__msg';
@@ -53,6 +64,9 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
 
   body.append(title, msg);
   root.append(icon, body);
+  if (variant === 'upload' && opts.file !== undefined) {
+    showFile(icon, title, opts.file);
+  }
 
   if (opts.onTryAgain || opts.onSwap) {
     const actions = document.createElement('div');
@@ -72,7 +86,9 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
       actions.appendChild(retry);
     }
 
-    if (opts.onSwap) {
+    if (opts.onSwap && variant === 'upload' && opts.file !== undefined) {
+      actions.appendChild(crossButton(opts));
+    } else if (opts.onSwap) {
       const replace = document.createElement('button');
       replace.type = 'button';
       replace.className = 'blok-image-error__btn';
@@ -89,4 +105,85 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
   }
 
   return root;
+}
+
+/**
+ * Sizes a broken card like the picture it stands in for. Without saved
+ * dimensions it keeps the CSS default height rather than guess a ratio.
+ * @param root - the card
+ * @param frame - the picture's saved width and size
+ */
+function applyFrame(root: HTMLElement, frame: ErrorStateOptions['frame']): void {
+  if (frame?.width !== undefined) {
+    root.style.setProperty('width', `${frame.width}%`);
+  }
+  if (frame?.naturalWidth && frame.naturalHeight) {
+    root.style.setProperty('aspect-ratio', `${frame.naturalWidth} / ${frame.naturalHeight}`);
+  }
+}
+
+/**
+ * Puts the file on the card: its picture in the tile, its size beside the title.
+ * @param icon - the tile
+ * @param title - the title line, already naming the file
+ * @param file - the file or link that did not upload
+ */
+function showFile(icon: HTMLElement, title: HTMLElement, file: NonNullable<ErrorStateOptions['file']>): void {
+  const size = file.size === undefined ? '' : formatBytes(file.size);
+
+  if (size !== '') {
+    const sizeEl = document.createElement('span');
+
+    sizeEl.className = 'blok-image-error__size';
+    sizeEl.textContent = size;
+    title.after(sizeEl);
+  }
+  if (file.preview) {
+    const img = document.createElement('img');
+
+    img.src = file.preview;
+    img.alt = '';
+    icon.replaceChildren(img);
+    icon.setAttribute('data-thumb', 'true');
+  }
+}
+
+/**
+ * A link's last path segment, or its host; a plain file name as is.
+ * @param name - a file name or a URL
+ * @returns the name to show
+ */
+function displayName(name: string): string {
+  if (!/^[a-z][a-z\d+.-]*:\/\//i.test(name)) {
+    return name;
+  }
+  try {
+    const url = new URL(name);
+    const last = url.pathname.split('/').filter(Boolean).pop();
+
+    return last === undefined ? url.host : decodeURIComponent(last);
+  } catch {
+    return name;
+  }
+}
+
+/**
+ * The upload card's dismiss: drops the failed upload and reopens the picker.
+ * @param opts - the card options (onSwap, i18n, mending)
+ * @returns the button
+ */
+function crossButton(opts: ErrorStateOptions): HTMLButtonElement {
+  const cross = document.createElement('button');
+
+  cross.type = 'button';
+  cross.className = 'blok-image-error__dismiss';
+  cross.setAttribute('data-action', 'replace');
+  cross.setAttribute('aria-label', tr(opts.i18n, 'tools.image.cancelUpload'));
+  cross.disabled = opts.mending === true;
+  cross.innerHTML = IconCross;
+  cross.addEventListener('click', () => {
+    opts.onSwap?.();
+  });
+
+  return cross;
 }

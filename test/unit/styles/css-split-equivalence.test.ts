@@ -631,6 +631,10 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // develop, and the crack back to broken; reduced-motion opt-out. Measured
     // net growth against 19ecc9ca.
     const IMAGE_MEND_BYTES = 10_825;
+    // Image errors told apart: the broken card as a frame in the picture's shape,
+    // the failed upload as a file row (thumbnail, name, size, dismiss cross).
+    // Measured net growth against cc45ec8f.
+    const IMAGE_ERROR_SHAPES_BYTES = 2_440;
     // Media radius roles: containers publish --blok-radius-inner for their
     // children, crop wrappers get the frame radius in CSS instead of inline,
     // and the image selection ring grows with its gap. Net growth after
@@ -654,6 +658,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + MEDIA_EMPTY_PREVIEW_BYTES
       + IMAGE_CHROME_ISLANDS_BYTES
       + IMAGE_MEND_BYTES
+      + IMAGE_ERROR_SHAPES_BYTES
       + NOTIFIER_MEDIA_CARD_BYTES
       + SPOTLIGHT_BYTES
       + MEDIA_RADIUS_ROLES_BYTES

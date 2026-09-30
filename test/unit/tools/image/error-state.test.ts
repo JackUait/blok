@@ -112,5 +112,59 @@ describe('renderErrorState', () => {
 
     expect(tile?.querySelector('[data-icon="whole"]')).toBeNull();
   });
+
+  describe('a broken image keeps the picture\'s own shape', () => {
+    it('takes the saved width and ratio', () => {
+      const el = renderErrorState({ variant: 'broken', frame: { width: 40, naturalWidth: 1200, naturalHeight: 800 } });
+
+      expect(el.style.width).toBe('40%');
+      expect(el.style.aspectRatio).toBe('1200 / 800');
+    });
+
+    it('does not guess a ratio it was never told', () => {
+      const el = renderErrorState({ variant: 'broken', frame: {} });
+
+      expect(el.style.aspectRatio).toBe('');
+      expect(el.style.width).toBe('');
+    });
+  });
+
+  describe('a failed upload shows the file that did not upload', () => {
+    const file = { name: 'beach.jpg', size: 2.4 * 1024 * 1024, preview: 'blob:preview' };
+
+    it('names the file, its size and the reason', () => {
+      const el = renderErrorState({ variant: 'upload', message: 'Upload failed', file, onTryAgain: vi.fn(), onSwap: vi.fn() });
+
+      expect(el.querySelector('.blok-image-error__title')?.textContent).toBe('beach.jpg');
+      expect(el.querySelector('.blok-image-error__size')?.textContent).toBe('2.4 MB');
+      expect(el.querySelector('.blok-image-error__msg')?.textContent).toBe('Upload failed');
+    });
+
+    it('shows the picked picture in the tile', () => {
+      const el = renderErrorState({ variant: 'upload', file });
+
+      expect(el.querySelector('.blok-image-error__icon img')?.getAttribute('src')).toBe('blob:preview');
+    });
+
+    it('offers Retry and a cross that cancels the upload', () => {
+      const onSwap = vi.fn();
+      const el = renderErrorState({ variant: 'upload', file, onTryAgain: vi.fn(), onSwap });
+      const cross = el.querySelector<HTMLButtonElement>('[data-action="replace"]');
+
+      expect(el.querySelector('.blok-image-error__btn[data-action="retry"]')).not.toBeNull();
+      expect(cross?.getAttribute('aria-label')).toBe('Cancel upload');
+      expect(cross?.querySelector('svg')).not.toBeNull();
+      cross?.click();
+      expect(onSwap).toHaveBeenCalledTimes(1);
+    });
+
+    it('names a failed link by its file and draws no picture', () => {
+      const el = renderErrorState({ variant: 'upload', file: { name: 'https://cdn.test/photos/beach.jpg?w=800' } });
+
+      expect(el.querySelector('.blok-image-error__title')?.textContent).toBe('beach.jpg');
+      expect(el.querySelector('.blok-image-error__icon img')).toBeNull();
+      expect(el.querySelector('.blok-image-error__size')).toBeNull();
+    });
+  });
 });
 

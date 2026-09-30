@@ -9,6 +9,8 @@ export interface ErrorStateOptions {
   title?: string;
   message?: string;
   variant?: ErrorVariant;
+  /** The same card while a retry runs: busy, buttons off, so nothing moves. */
+  mending?: boolean;
   onTryAgain?(): void;
   onSwap?(): void;
   i18n?: I18nInstance;
@@ -17,8 +19,12 @@ export interface ErrorStateOptions {
 export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
   const root = document.createElement('div');
   root.className = 'blok-image-error';
-  root.setAttribute('data-role', 'error-state');
-  root.setAttribute(DATA_ATTR.spotlightTarget, '');
+  root.setAttribute('data-role', opts.mending ? 'mend-state' : 'error-state');
+  if (opts.mending) {
+    root.setAttribute('aria-busy', 'true');
+  } else {
+    root.setAttribute(DATA_ATTR.spotlightTarget, '');
+  }
   const variant: ErrorVariant = opts.variant ?? 'broken';
   root.setAttribute('data-variant', variant);
 
@@ -50,7 +56,8 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
       retry.type = 'button';
       retry.className = 'blok-image-error__btn';
       retry.setAttribute('data-action', 'retry');
-      retry.setAttribute(DATA_ATTR.spotlightFocus, '');
+      retry.disabled = opts.mending === true;
+      retry.toggleAttribute(DATA_ATTR.spotlightFocus, !opts.mending);
       retry.textContent = tr(opts.i18n, `tools.image.error${'Retr' + 'y'}`);
       retry.addEventListener('click', () => {
         opts.onTryAgain?.();
@@ -63,6 +70,7 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
       replace.type = 'button';
       replace.className = 'blok-image-error__btn';
       replace.setAttribute('data-action', 'replace');
+      replace.disabled = opts.mending === true;
       replace.textContent = tr(opts.i18n, `tools.image.error${'Rep' + 'lace'}`);
       replace.addEventListener('click', () => {
         opts.onSwap?.();

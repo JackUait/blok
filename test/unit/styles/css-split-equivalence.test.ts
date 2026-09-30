@@ -624,6 +624,10 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Show's spotlight: spotlight.css (a Notion-style warm background flash on
     // the failed block's card, reduced-motion steady tint) and its @import.
     const SPOTLIGHT_BYTES = 1_245;
+    // Retrying a broken image: image.css mend state (hidden figure, edge light,
+    // closing icon halves, seam, title sweep), develop and unmend keyframes,
+    // reduced-motion opt-out. Measured net growth against 19ecc9ca.
+    const IMAGE_MEND_BYTES = 8_428;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -638,6 +642,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + INLINE_TOOLBAR_ENTRANCE_BYTES
       + MEDIA_EMPTY_PREVIEW_BYTES
       + IMAGE_CHROME_ISLANDS_BYTES
+      + IMAGE_MEND_BYTES
       + NOTIFIER_MEDIA_CARD_BYTES
       + SPOTLIGHT_BYTES;
     const actual = localImportedByteBudget(ENTRY);

@@ -98,6 +98,8 @@ export class ImageTool implements BlockTool {
   private lastSource: { kind: 'file'; file: File } | { kind: 'url'; url: string } | null = null;
   private brokenImage = false;
   private retrying = false;
+  /** A broken image's Retry is reloading; the card stays up until it loads or fails. */
+  private mending = false;
   private reloadAttempts = 0;
   private converting = false;
   /** Set by `removed()`: this instance is no longer the document's block. */
@@ -600,10 +602,19 @@ export class ImageTool implements BlockTool {
   private applyBrokenImage(): void {
     // A detached <img> keeps its reload chain; the deleted block must not report.
     if (this.detached || (this.state === 'ERROR' && this.brokenImage)) return;
+    const wasMending = this.mending;
+    this.mending = false;
     this.state = 'ERROR';
     this.brokenImage = true;
     this.errorMessage = this.api.i18n.t('tools.image.errorSourceOffline');
     this.renderState();
+    if (wasMending) {
+      const card = this.root?.querySelector<HTMLElement>('[data-role="error-state"]');
+      card?.setAttribute('data-unmended', 'true');
+      card?.addEventListener('animationend', (event) => {
+        if (event.animationName === 'blok-image-unmend') card.removeAttribute('data-unmended');
+      });
+    }
     this.api.media.reportFailure({ blockId: this.block.id, tool: 'image', kind: 'load', url: this.data.url, retry: () => this.retryBrokenImage() });
   }
 
@@ -667,6 +678,7 @@ export class ImageTool implements BlockTool {
   }
 
   private retryBrokenImage(): void {
+    this.mending = true;
     this.brokenImage = false;
     this.errorMessage = null;
     this.state = 'RENDERED';
@@ -910,6 +922,11 @@ export class ImageTool implements BlockTool {
     r.setAttribute('data-alt', this.data.alt ? 'set' : 'none');
     r.setAttribute('data-selected', 'false');
     r.removeAttribute('data-align-open');
+    if (this.mending) {
+      r.setAttribute('data-mending', 'true');
+    } else {
+      r.removeAttribute('data-mending');
+    }
     this.syncRetryingAttribute();
   }
 
@@ -980,24 +997,44 @@ export class ImageTool implements BlockTool {
 
   private renderError(): void {
     if (!this.root) return;
-    const isBroken = this.brokenImage;
-    const el = renderErrorState({
+    this.root.appendChild(this.buildErrorCard(this.brokenImage, false));
+  }
+
+  private buildErrorCard(isBroken: boolean, mending: boolean): HTMLElement {
+    return renderErrorState({
+      mending,
       variant: isBroken ? 'broken' : 'upload',
       title: isBroken
         ? this.api.i18n.t('tools.image.errorImageFailedToLoad')
         : this.api.i18n.t('tools.image.errorUploadFailedTitle'),
-      message: this.errorMessage ?? undefined,
+      // Retry clears errorMessage, so the mending card names the cause itself.
+      message: mending
+        ? this.api.i18n.t('tools.image.errorSourceOffline')
+        : this.errorMessage ?? undefined,
       onTryAgain: isBroken
         ? () => this.retryBrokenImage()
         : () => this.retryLastSource(),
       onSwap: this.readOnly ? undefined : () => this.transitionToEmpty(),
       i18n: this.api.i18n,
     });
-    this.root.appendChild(el);
+  }
+
+  /** The reload worked: drop the card and let the picture develop in its place. */
+  private endMending(figure: HTMLElement): void {
+    if (!this.mending) return;
+    this.mending = false;
+    this.root?.removeAttribute('data-mending');
+    this.root?.querySelector('[data-role="mend-state"]')?.remove();
+    figure.setAttribute('data-developing', 'true');
+    figure.addEventListener('animationend', (event) => {
+      if (event.animationName === 'blok-image-develop') figure.removeAttribute('data-developing');
+    });
   }
 
   private renderRendered(): void {
     if (!this.root) return;
+    // The card goes first so the hidden figure below it takes no room.
+    if (this.mending) this.root.appendChild(this.buildErrorCard(true, true));
     const figure = renderImage(this.data);
     if (this.data.naturalWidth && this.data.naturalHeight) {
       figure.style.setProperty('aspect-ratio', `${this.data.naturalWidth} / ${this.data.naturalHeight}`);
@@ -1013,6 +1050,7 @@ export class ImageTool implements BlockTool {
       this.reloadAttempts = 0;
       imgEl.addEventListener('error', () => this.handleImgLoadFailure(imgEl, figure));
       imgEl.addEventListener('load', () => {
+        this.endMending(figure);
         this.clearFailure({ recovered: true });
         figure.removeAttribute('data-loading');
         syncMediaHeight(figure);

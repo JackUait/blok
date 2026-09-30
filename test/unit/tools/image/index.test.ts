@@ -2484,3 +2484,71 @@ describe('ImageTool — failure reporting', () => {
     expect(options.api.media.clearFailure).toHaveBeenCalledWith('b1', undefined);
   });
 });
+
+describe('ImageTool — retrying a broken image', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  const brokenTool = (): { root: HTMLElement; retry: () => void; img: () => HTMLImageElement } => {
+    const options = createOptions({ url: 'https://x/y.png' }, { reloadAttempts: 0 });
+    const tool = new ImageTool(options);
+    const root = tool.render();
+    const img = (): HTMLImageElement => {
+      const el = root.querySelector<HTMLImageElement>('img');
+
+      if (!el) throw new Error('img missing');
+
+      return el;
+    };
+
+    img().dispatchEvent(new Event('error'));
+    const [ [ reported ] ] = vi.mocked(options.api.media.reportFailure).mock.calls;
+
+    return { root, retry: () => reported.retry(), img };
+  };
+
+  it('keeps the failed card on screen, mending, while the image reloads', () => {
+    const { root, retry, img } = brokenTool();
+
+    retry();
+
+    const card = root.querySelector('[data-role="mend-state"]');
+
+    expect(root.getAttribute('data-mending')).toBe('true');
+    expect(card?.getAttribute('aria-busy')).toBe('true');
+    expect(root.querySelector('[data-role="error-state"]')).toBeNull();
+    expect(img().getAttribute('src')).toBe('https://x/y.png');
+    expect(root.getAttribute('data-state')).toBe('rendered');
+  });
+
+  it('develops the image when the reload succeeds', () => {
+    const { root, retry, img } = brokenTool();
+
+    retry();
+    img().dispatchEvent(new Event('load'));
+
+    expect(root.hasAttribute('data-mending')).toBe(false);
+    expect(root.querySelector('[data-role="mend-state"]')).toBeNull();
+    expect(root.querySelector('.blok-image-inner')?.getAttribute('data-developing')).toBe('true');
+  });
+
+  it('breaks the card apart again when the reload fails', () => {
+    const { root, retry, img } = brokenTool();
+
+    retry();
+    img().dispatchEvent(new Event('error'));
+
+    const card = root.querySelector('[data-role="error-state"]');
+
+    expect(card?.getAttribute('data-unmended')).toBe('true');
+    expect(root.hasAttribute('data-mending')).toBe(false);
+    expect(root.hasAttribute('data-retrying')).toBe(false);
+    expect(card?.querySelector<HTMLButtonElement>('[data-action="retry"]')?.disabled).toBe(false);
+  });
+
+  it('does not play the break-apart on the first failure', () => {
+    const { root } = brokenTool();
+
+    expect(root.querySelector('[data-role="error-state"]')?.hasAttribute('data-unmended')).toBe(false);
+  });
+});

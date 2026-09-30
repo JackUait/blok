@@ -986,3 +986,221 @@
     animation: blok-image-retry-spin 1.4s linear infinite;
   }
 }
+
+/* ----- Retrying a broken image: the card mends -----
+   Retry keeps the failed card in place while the <img> reloads out of sight.
+   The red cools to neutral, a light runs the card's edge, and the icon's two
+   halves press shut over a glowing seam. Success develops the picture;
+   failure springs the halves apart. The names blok-image-develop and
+   blok-image-unmend are read by index.ts on animationend. */
+@property --blok-image-mend-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@property --blok-image-mend-surface {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+
+[data-blok-tool="image"][data-mending="true"] { position: relative; }
+/* Visually hidden, not display:none: the img must keep loading. !important
+   beats the inline position:relative that renderImage puts on the figure. */
+[data-blok-tool="image"][data-mending="true"] > :not([data-role="mend-state"]) {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.blok-image-error[data-role="mend-state"] {
+  --blok-image-mend-angle: 0deg;
+  --blok-image-mend-ink: color-mix(in srgb, var(--blok-text-primary) 70%, transparent);
+  --blok-image-mend-neutral: color-mix(in srgb, var(--blok-text-primary) 3%, var(--blok-bg-secondary));
+  --blok-image-mend-danger: color-mix(in srgb, var(--blok-color-danger) 6%, var(--blok-bg-secondary));
+
+  position: relative;
+  isolation: isolate;
+  border-color: transparent;
+  background:
+    linear-gradient(var(--blok-image-mend-surface), var(--blok-image-mend-surface)) padding-box,
+    /* Opaque floor: bg-secondary is translucent in dark mode, and the light would show through. */
+    linear-gradient(var(--blok-bg-primary), var(--blok-bg-primary)) padding-box,
+    conic-gradient(
+      from var(--blok-image-mend-angle),
+      var(--blok-border-subtle) 0 40%,
+      color-mix(in srgb, var(--blok-image-mend-ink) 25%, var(--blok-border-subtle)) 62%,
+      var(--blok-image-mend-ink) 79%,
+      var(--blok-border-subtle) 81%
+    ) border-box;
+  animation:
+    blok-image-mend-cool 520ms ease-out both,
+    blok-image-mend-orbit 2.4s linear infinite;
+}
+.blok-image-error[data-role="mend-state"] .blok-image-error__icon {
+  position: relative;
+  color: var(--blok-text-primary);
+  background: color-mix(in srgb, var(--blok-text-primary) 6%, var(--blok-bg-secondary));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blok-text-primary) 12%, transparent);
+  animation: blok-image-mend-tile 520ms ease-out both;
+}
+/* Left half: frame + hill. Right half: frame, sun, hills. Order is IconImageBroken's. */
+.blok-image-error[data-role="mend-state"] .blok-image-error__icon svg :is(path:nth-of-type(1), path:nth-of-type(3)) {
+  animation: blok-image-mend-left 1.6s cubic-bezier(0.6, 0, 0.3, 1) infinite;
+}
+.blok-image-error[data-role="mend-state"] .blok-image-error__icon svg :is(path:nth-of-type(2), path:nth-of-type(4), circle) {
+  animation: blok-image-mend-right 1.6s cubic-bezier(0.6, 0, 0.3, 1) infinite;
+}
+/* The seam: a stitch of light drawn down the crack as the halves meet. */
+.blok-image-error[data-role="mend-state"] .blok-image-error__icon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 1px;
+  height: 10px;
+  margin: auto;
+  background: color-mix(in srgb, var(--blok-text-primary) 45%, transparent);
+  transform-origin: top;
+  animation: blok-image-mend-seam 1.6s cubic-bezier(0.6, 0, 0.3, 1) infinite;
+  pointer-events: none;
+}
+
+.blok-image-error[data-role="mend-state"] .blok-image-error__title {
+  color: transparent;
+  background: linear-gradient(
+    100deg,
+    var(--blok-text-secondary) 35%,
+    var(--blok-text-primary) 50%,
+    var(--blok-text-secondary) 65%
+  ) 100% 0 / 300% 100% no-repeat;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: blok-image-mend-sweep 2.4s linear infinite;
+}
+.blok-image-error[data-role="mend-state"] .blok-image-error__btn:disabled { opacity: 0.35; }
+
+/* Success: the picture develops, from a pale blur to full colour, under one pass of light. */
+[data-blok-tool="image"] .blok-image-inner[data-developing="true"] img {
+  animation: blok-image-develop 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+[data-blok-tool="image"] .blok-image-inner[data-developing="true"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    color-mix(in srgb, var(--blok-bg-primary) 55%, transparent) 50%,
+    transparent 70%
+  ) 120% 0 / 250% 100% no-repeat;
+  animation: blok-image-develop-sweep 900ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  pointer-events: none;
+}
+
+/* Failure: the halves spring apart and the red comes back. */
+.blok-image-error[data-unmended="true"] {
+  animation: blok-image-unmend 560ms ease-out both;
+}
+.blok-image-error[data-unmended="true"] .blok-image-error__icon svg :is(path:nth-of-type(1), path:nth-of-type(3)) {
+  animation: blok-image-unmend-left 560ms cubic-bezier(0.3, 1.8, 0.5, 1) both;
+}
+.blok-image-error[data-unmended="true"] .blok-image-error__icon svg :is(path:nth-of-type(2), path:nth-of-type(4), circle) {
+  animation: blok-image-unmend-right 560ms cubic-bezier(0.3, 1.8, 0.5, 1) both;
+}
+
+@keyframes blok-image-mend-orbit {
+  to { --blok-image-mend-angle: 360deg; }
+}
+@keyframes blok-image-mend-cool {
+  from { --blok-image-mend-surface: var(--blok-image-mend-danger); }
+  to   { --blok-image-mend-surface: var(--blok-image-mend-neutral); }
+}
+@keyframes blok-image-mend-tile {
+  from {
+    color: var(--blok-color-danger);
+    background: color-mix(in srgb, var(--blok-color-danger) 12%, var(--blok-bg-secondary));
+  }
+}
+@keyframes blok-image-mend-left {
+  0%, 100% { transform: translateX(0); }
+  40%, 70% { transform: translateX(0.9px); }
+}
+@keyframes blok-image-mend-right {
+  0%, 100% { transform: translateX(0); }
+  40%, 70% { transform: translateX(-0.9px); }
+}
+@keyframes blok-image-mend-seam {
+  0%, 30%  { transform: scaleY(0); opacity: 0; }
+  45%      { transform: scaleY(1); opacity: 1; }
+  70%      { transform: scaleY(1); opacity: 0.8; }
+  90%, 100% { transform: scaleY(1); opacity: 0; }
+}
+@keyframes blok-image-mend-sweep {
+  from { background-position: 100% 0; }
+  to   { background-position: 0% 0; }
+}
+@keyframes blok-image-develop {
+  from { opacity: 0; filter: blur(16px) grayscale(1) brightness(1.25); }
+  55%  { opacity: 1; filter: blur(3px) grayscale(0.4) brightness(1.08); }
+  to   { opacity: 1; filter: none; }
+}
+@keyframes blok-image-develop-sweep {
+  from { background-position: 120% 0; opacity: 1; }
+  to   { background-position: -120% 0; opacity: 0; }
+}
+@keyframes blok-image-unmend {
+  from {
+    background-color: color-mix(in srgb, var(--blok-text-primary) 3%, var(--blok-bg-secondary));
+    border-color: var(--blok-border-subtle);
+  }
+}
+@keyframes blok-image-unmend-left {
+  from { transform: translateX(0.9px); }
+  45%  { transform: translateX(-0.9px); }
+  to   { transform: translateX(0); }
+}
+@keyframes blok-image-unmend-right {
+  from { transform: translateX(-0.9px); }
+  45%  { transform: translateX(0.9px); }
+  to   { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blok-image-error[data-role="mend-state"] {
+    --blok-image-mend-surface: var(--blok-image-mend-neutral);
+
+    animation: none;
+  }
+  .blok-image-error[data-role="mend-state"] .blok-image-error__icon { animation: none; }
+  .blok-image-error[data-role="mend-state"] .blok-image-error__title {
+    color: var(--blok-text-secondary);
+    background: none;
+    animation: none;
+  }
+  .blok-image-error[data-role="mend-state"] .blok-image-error__icon svg :is(path:nth-of-type(1), path:nth-of-type(3)) {
+    animation: none;
+    transform: translateX(0.9px);
+  }
+  .blok-image-error[data-role="mend-state"] .blok-image-error__icon svg :is(path:nth-of-type(2), path:nth-of-type(4), circle) {
+    animation: none;
+    transform: translateX(-0.9px);
+  }
+  .blok-image-error[data-role="mend-state"] .blok-image-error__icon::after {
+    animation: none;
+    transform: none;
+    opacity: 0.8;
+  }
+  [data-blok-tool="image"] .blok-image-inner[data-developing="true"] img,
+  [data-blok-tool="image"] .blok-image-inner[data-developing="true"]::before,
+  .blok-image-error[data-unmended="true"],
+  .blok-image-error[data-unmended="true"] .blok-image-error__icon svg :is(path, circle) {
+    animation: none;
+  }
+}

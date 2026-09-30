@@ -84,4 +84,17 @@ describe('renderErrorState', () => {
     expect(retry.textContent).toBe('X-tools.image.errorRetry');
     expect(replace.textContent).toBe('X-tools.image.errorReplace');
   });
+
+  it('a mending card is busy, inert, and not a Show target', () => {
+    const onTryAgain = vi.fn();
+    const el = renderErrorState({ mending: true, onTryAgain, onSwap: vi.fn() });
+    const retry = el.querySelector<HTMLButtonElement>('[data-action="retry"]');
+
+    expect(el.getAttribute('data-role')).toBe('mend-state');
+    expect(el.getAttribute('aria-busy')).toBe('true');
+    expect(el.hasAttribute('data-blok-spotlight-target')).toBe(false);
+    expect(retry?.disabled).toBe(true);
+    expect(el.querySelector<HTMLButtonElement>('[data-action="replace"]')?.disabled).toBe(true);
+  });
 });
+

@@ -117,6 +117,30 @@ test.describe('image failure notices', () => {
     await expect(toast).toBeHidden();
   });
 
+  test('a slow retry keeps the failed card in place, then breaks it apart again', async ({ page }) => {
+    const retried = { now: false };
+
+    await page.route('https://media.test/**', async (route) => {
+      if (retried.now) await new Promise((resolve) => setTimeout(resolve, 1500));
+      await route.fulfill({ status: 404, body: '' });
+    });
+    await createBlok(page, { blocks: [ { id: 'img1', type: 'image', data: { url: 'https://media.test/a.jpg' } } ] });
+
+    const block = page.locator('[data-blok-id="img1"]');
+
+    await expect(block.locator('[data-role="error-state"]')).toBeVisible();
+    const failedHeight = await block.evaluate((el) => el.getBoundingClientRect().height);
+
+    retried.now = true;
+    await block.getByRole('button', { name: 'Retry' }).click();
+
+    await expect(block.locator('[data-role="mend-state"]')).toBeVisible();
+    expect(await block.evaluate((el) => el.getBoundingClientRect().height)).toBeCloseTo(failedHeight, 0);
+
+    await expect(block.locator('[data-role="error-state"]')).toHaveAttribute('data-unmended', 'true');
+    await expect(block.locator('[data-role="mend-state"]')).toHaveCount(0);
+  });
+
   test('saving with a failed upload shows the save toast', async ({ page }) => {
     await createBlok(page, { blocks: [ { type: 'image', data: {} } ] }, true);
     await page.locator(IMAGE_BLOCK_SELECTOR).getByTestId('file-input').setInputFiles(PHOTO_FIXTURE_PATH);

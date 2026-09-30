@@ -178,6 +178,17 @@
   80% { transform: translateX(1px) }
 }
 
+@keyframes blok-image-develop {
+  from { opacity: 0; filter: blur(16px) grayscale(1) brightness(1.25) }
+  55% { opacity: 1; filter: blur(3px) grayscale(0.4) brightness(1.08) }
+  to { opacity: 1; filter: none }
+}
+
+@keyframes blok-image-develop-sweep {
+  from { background-position: 120% 0; opacity: 1 }
+  to { background-position: -120% 0; opacity: 0 }
+}
+
 @keyframes blok-image-islands-merged {
   0%, 78% { opacity: 1 }
   100% { opacity: 0 }
@@ -209,6 +220,41 @@
   100% { background-position: -120% 0 }
 }
 
+@keyframes blok-image-mend-cool {
+  from { --blok-image-mend-surface: var(--blok-image-mend-danger) }
+  to { --blok-image-mend-surface: var(--blok-image-mend-neutral) }
+}
+
+@keyframes blok-image-mend-left {
+  0%, 100% { transform: translateX(0) }
+  40%, 70% { transform: translateX(0.9px) }
+}
+
+@keyframes blok-image-mend-orbit {
+  to { --blok-image-mend-angle: 360deg }
+}
+
+@keyframes blok-image-mend-right {
+  0%, 100% { transform: translateX(0) }
+  40%, 70% { transform: translateX(-0.9px) }
+}
+
+@keyframes blok-image-mend-seam {
+  0%, 30% { transform: scaleY(0); opacity: 0 }
+  45% { transform: scaleY(1); opacity: 1 }
+  70% { transform: scaleY(1); opacity: 0.8 }
+  90%, 100% { transform: scaleY(1); opacity: 0 }
+}
+
+@keyframes blok-image-mend-sweep {
+  from { background-position: 100% 0 }
+  to { background-position: 0% 0 }
+}
+
+@keyframes blok-image-mend-tile {
+  from { color: var(--blok-color-danger); background: color-mix(in srgb, var(--blok-color-danger) 12%, var(--blok-bg-secondary)) }
+}
+
 @keyframes blok-image-retry-spin {
   to { transform: rotate(360deg) }
 }
@@ -216,6 +262,22 @@
 @keyframes blok-image-shimmer {
   from { transform: translateX(-100%) }
   to { transform: translateX(100%) }
+}
+
+@keyframes blok-image-unmend {
+  from { background-color: color-mix(in srgb, var(--blok-text-primary) 3%, var(--blok-bg-secondary)); border-color: var(--blok-border-subtle) }
+}
+
+@keyframes blok-image-unmend-left {
+  from { transform: translateX(0.9px) }
+  45% { transform: translateX(-0.9px) }
+  to { transform: translateX(0) }
+}
+
+@keyframes blok-image-unmend-right {
+  from { transform: translateX(-0.9px) }
+  45% { transform: translateX(0.9px) }
+  to { transform: translateX(0) }
 }
 
 @keyframes blok-inline-toolbar-ghost-out {

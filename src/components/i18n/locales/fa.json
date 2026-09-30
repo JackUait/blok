@@ -380,6 +380,7 @@
   "tools.image.cropCancel": "لغو",
   "tools.image.cropDone": "انجام شد",
   "tools.image.cropDialogLabel": "برش تصویر",
+  "tools.image.cropStageLabel": "تصویر. برای جابه‌جایی بکشید، برای تغییر بزرگ‌نمایی انگشتان را جمع کنید یا پیمایش کنید، برای دیدن نسخهٔ اصلی نگه دارید",
   "tools.database.titlePlaceholder": "پایگاه داده جدید",
   "tools.database.renameView": "تغییر نام",
   "tools.database.duplicateView": "تکثیر",

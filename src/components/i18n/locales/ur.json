@@ -380,6 +380,7 @@
   "tools.image.cropCancel": "منسوخ کریں",
   "tools.image.cropDone": "مکمل",
   "tools.image.cropDialogLabel": "تصویر تراشیں",
+  "tools.image.cropStageLabel": "تصویر۔ منتقل کرنے کے لیے گھسیٹیں، زوم کرنے کے لیے چٹکی لیں یا اسکرول کریں، اصل دیکھنے کے لیے دبائے رکھیں",
   "tools.database.titlePlaceholder": "نیا ڈیٹابیس",
   "tools.database.renameView": "نام تبدیل کریں",
   "tools.database.duplicateView": "نقل کریں",

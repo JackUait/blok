@@ -380,6 +380,7 @@
   "tools.image.cropCancel": "Annuler",
   "tools.image.cropDone": "Terminé",
   "tools.image.cropDialogLabel": "Rogner l’image",
+  "tools.image.cropStageLabel": "Image. Glisser pour déplacer, pincer ou faire défiler pour zoomer, maintenir appuyé pour voir l’original",
   "tools.database.titlePlaceholder": "Nouvelle base de données",
   "tools.database.renameView": "Renommer",
   "tools.database.duplicateView": "Dupliquer",

@@ -393,6 +393,7 @@
   "tools.image.cropCancel": "پاشگەزبوونەوە",
   "tools.image.cropDone": "تەواو",
   "tools.image.cropDialogLabel": "بڕینی وێنە",
+  "tools.image.cropStageLabel": "وێنە. ڕاکێشە بۆ گواستنەوە، قوچاندن یان سکرۆڵ بکە بۆ زووم، دایگرە بۆ بینینی ڕەسەن",
   "tools.database.titlePlaceholder": "داتابەیسی نوێ",
   "tools.database.renameView": "ناو گۆڕینەوە",
   "tools.database.duplicateView": "دووبارەکردنەوە",

@@ -382,6 +382,7 @@
   "tools.image.cropCancel": "ކެންސަލް",
   "tools.image.cropDone": "ނިމިއްޖެ",
   "tools.image.cropDialogLabel": "ފޮޓޯ ކްރޮޕް",
+  "tools.image.cropStageLabel": "ފޮޓޯ. ބަދަލުކުރަން ދަމާލާ، ޒޫމްކުރަން ޕިންޗް ނުވަތަ ސްކްރޯލް ކުރޭ، އަސްލު ބަލަން ފިތާލާފައި ހިފަހައްޓާ",
   "tools.database.titlePlaceholder": "އާ ޑޭޓާބޭސް",
   "tools.database.renameView": "ނަން ބަދަލުކުރޭ",
   "tools.database.duplicateView": "ކޮޕީ ހަދާ",

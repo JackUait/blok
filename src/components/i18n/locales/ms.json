@@ -391,6 +391,7 @@
   "tools.image.cropCancel": "Batal",
   "tools.image.cropDone": "Selesai",
   "tools.image.cropDialogLabel": "Pangkas imej",
+  "tools.image.cropStageLabel": "Imej. Seret untuk mengalihkan, cubit atau tatal untuk mengezum, tahan untuk melihat imej asal",
   "tools.database.titlePlaceholder": "Pangkalan data baharu",
   "tools.database.renameView": "Namakan semula",
   "tools.database.duplicateView": "Gandakan",

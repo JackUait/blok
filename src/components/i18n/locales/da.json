@@ -382,6 +382,7 @@
   "tools.image.cropCancel": "Annuller",
   "tools.image.cropDone": "Færdig",
   "tools.image.cropDialogLabel": "Beskær billede",
+  "tools.image.cropStageLabel": "Billede. Træk for at flytte, knib eller rul for at zoome, hold nede for at se originalen",
   "tools.database.titlePlaceholder": "Ny database",
   "tools.database.renameView": "Omdøb",
   "tools.database.duplicateView": "Dupliker",

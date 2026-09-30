@@ -380,6 +380,7 @@
   "tools.image.cropCancel": "ביטול",
   "tools.image.cropDone": "סיום",
   "tools.image.cropDialogLabel": "חיתוך תמונה",
+  "tools.image.cropStageLabel": "תמונה. גרור להזזה, צבוט או גלול לשינוי הזום, לחץ לחיצה ארוכה כדי לראות את המקור",
   "tools.database.titlePlaceholder": "מסד נתונים חדש",
   "tools.database.renameView": "שנה שם",
   "tools.database.duplicateView": "שכפל",

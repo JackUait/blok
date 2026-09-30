@@ -380,6 +380,7 @@
   "tools.image.cropCancel": "Hủy",
   "tools.image.cropDone": "Xong",
   "tools.image.cropDialogLabel": "Cắt hình ảnh",
+  "tools.image.cropStageLabel": "Hình ảnh. Kéo để di chuyển, chụm hoặc cuộn để thu phóng, nhấn giữ để xem ảnh gốc",
   "tools.database.titlePlaceholder": "Cơ sở dữ liệu mới",
   "tools.database.renameView": "Đổi tên",
   "tools.database.duplicateView": "Nhân bản",

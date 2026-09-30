@@ -380,6 +380,7 @@
   "tools.image.cropCancel": "रद्द करें",
   "tools.image.cropDone": "हो गया",
   "tools.image.cropDialogLabel": "छवि क्रॉप करें",
+  "tools.image.cropStageLabel": "छवि। खिसकाने के लिए खींचें, ज़ूम करने के लिए पिंच या स्क्रॉल करें, मूल छवि देखने के लिए दबाकर रखें",
   "tools.database.titlePlaceholder": "नया डेटाबेस",
   "tools.database.renameView": "नाम बदलें",
   "tools.database.duplicateView": "प्रतिलिपि बनाएं",

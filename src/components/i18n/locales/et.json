@@ -380,6 +380,7 @@
   "tools.image.cropCancel": "Tühista",
   "tools.image.cropDone": "Valmis",
   "tools.image.cropDialogLabel": "Kärbi pilti",
+  "tools.image.cropStageLabel": "Pilt. Lohista teisaldamiseks, suumimiseks näpista või keri, originaali nägemiseks hoia all",
   "tools.database.titlePlaceholder": "Uus andmebaas",
   "tools.database.renameView": "Nimeta ümber",
   "tools.database.duplicateView": "Dubleeri",

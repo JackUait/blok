@@ -380,6 +380,7 @@
   "tools.image.cropCancel": "Ghairi",
   "tools.image.cropDone": "Maliza",
   "tools.image.cropDialogLabel": "Kata picha",
+  "tools.image.cropStageLabel": "Picha. Buruta ili kusogeza, bana au sogeza ili kukuza, bonyeza na ushikilie ili kuona picha ya asili",
   "tools.database.titlePlaceholder": "Hifadhidata mpya",
   "tools.database.renameView": "Badilisha jina",
   "tools.database.duplicateView": "Rudufu",

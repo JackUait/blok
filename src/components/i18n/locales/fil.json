@@ -380,6 +380,7 @@
   "tools.image.cropCancel": "Kanselahin",
   "tools.image.cropDone": "Tapos",
   "tools.image.cropDialogLabel": "I-crop ang larawan",
+  "tools.image.cropStageLabel": "Larawan. I-drag para ilipat, i-pinch o i-scroll para mag-zoom, pindutin nang matagal para makita ang orihinal",
   "tools.database.titlePlaceholder": "Bagong database",
   "tools.database.renameView": "Palitan ang pangalan",
   "tools.database.duplicateView": "Kopyahin",

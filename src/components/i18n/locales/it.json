@@ -382,6 +382,7 @@
   "tools.image.cropCancel": "Annulla",
   "tools.image.cropDone": "Fine",
   "tools.image.cropDialogLabel": "Ritaglia immagine",
+  "tools.image.cropStageLabel": "Immagine. Trascina per spostare, avvicina le dita o scorri per lo zoom, tieni premuto per vedere l’originale",
   "tools.database.titlePlaceholder": "Nuovo database",
   "tools.database.renameView": "Rinomina",
   "tools.database.duplicateView": "Duplica",

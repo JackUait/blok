@@ -382,6 +382,7 @@
   "tools.image.cropCancel": "لغوه کړئ",
   "tools.image.cropDone": "بشپړ",
   "tools.image.cropDialogLabel": "انځور پرې کړئ",
+  "tools.image.cropStageLabel": "انځور. د لېږدولو لپاره کش کړئ، د زوم لپاره چونډی یا سکرول کړئ، د اصلي انځور لیدو لپاره فشار ورکړئ او ونیسئ",
   "tools.database.titlePlaceholder": "نوی ډیټابیس",
   "tools.database.renameView": "نوم بدل کړئ",
   "tools.database.duplicateView": "کاپي جوړه کړئ",

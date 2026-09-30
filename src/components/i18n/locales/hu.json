@@ -380,6 +380,7 @@
   "tools.image.cropCancel": "Mégse",
   "tools.image.cropDone": "Kész",
   "tools.image.cropDialogLabel": "Kép körülvágása",
+  "tools.image.cropStageLabel": "Kép. Húzással mozgathatja, csippentéssel vagy görgetéssel nagyíthat, lenyomva tartva megtekintheti az eredetit",
   "tools.database.titlePlaceholder": "Új adatbázis",
   "tools.database.renameView": "Átnevezés",
   "tools.database.duplicateView": "Megkettőzés",

@@ -391,6 +391,7 @@
   "tools.image.cropCancel": "रद्द करा",
   "tools.image.cropDone": "पूर्ण",
   "tools.image.cropDialogLabel": "प्रतिमा क्रॉप करा",
+  "tools.image.cropStageLabel": "प्रतिमा. हलवण्यासाठी ओढा, झूम करण्यासाठी पिंच किंवा स्क्रोल करा, मूळ प्रतिमा पाहण्यासाठी दाबून ठेवा",
   "tools.database.titlePlaceholder": "नवीन डेटाबेस",
   "tools.database.renameView": "नाव बदला",
   "tools.database.duplicateView": "प्रत बनवा",

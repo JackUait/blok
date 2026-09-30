@@ -382,6 +382,7 @@
   "tools.image.cropCancel": "رد ڪريو",
   "tools.image.cropDone": "مڪمل",
   "tools.image.cropDialogLabel": "تصوير ڪراپ ڪريو",
+  "tools.image.cropStageLabel": "تصوير. منتقل ڪرڻ لاءِ ڇڪيو، زوم لاءِ چپٽي ڀريو يا اسڪرول ڪريو، اصل ڏسڻ لاءِ دٻائي رکو",
   "tools.database.titlePlaceholder": "نئون ڊيٽابيس",
   "tools.database.renameView": "نالو بدلايو",
   "tools.database.duplicateView": "نقل ٺاهيو",

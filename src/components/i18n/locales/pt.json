@@ -382,6 +382,7 @@
   "tools.image.cropCancel": "Cancelar",
   "tools.image.cropDone": "Concluído",
   "tools.image.cropDialogLabel": "Recortar imagem",
+  "tools.image.cropStageLabel": "Imagem. Arraste para mover, faça pinça ou role para aplicar zoom, mantenha pressionado para ver o original",
   "tools.database.titlePlaceholder": "Novo banco de dados",
   "tools.database.renameView": "Renomear",
   "tools.database.duplicateView": "Duplicar",

@@ -382,6 +382,7 @@
   "tools.image.cropCancel": "Չեղարկել",
   "tools.image.cropDone": "Պատրաստ է",
   "tools.image.cropDialogLabel": "Կտրել պատկերը",
+  "tools.image.cropStageLabel": "Պատկեր։ Քաշեք՝ տեղափոխելու համար, մատներով սեղմեք կամ ոլորեք՝ մասշտաբը փոխելու համար, սեղմած պահեք՝ բնօրինակը տեսնելու համար",
   "tools.database.titlePlaceholder": "Նոր տվյալների բազա",
   "tools.database.renameView": "Վերանվանել",
   "tools.database.duplicateView": "Կրկնօրինակել",

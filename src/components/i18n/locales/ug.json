@@ -380,6 +380,7 @@
   "tools.image.cropCancel": "بىكار قىلىش",
   "tools.image.cropDone": "تامام",
   "tools.image.cropDialogLabel": "رەسىمنى كېسىش",
+  "tools.image.cropStageLabel": "رەسىم. يۆتكەش ئۈچۈن سۆرەڭ، چوڭايتىپ-كىچىكلىتىش ئۈچۈن قىسىڭ ياكى دومىلىتىڭ، ئەسلىنى كۆرۈش ئۈچۈن بېسىپ تۇرۇڭ",
   "tools.database.titlePlaceholder": "يېڭى ساندان",
   "tools.database.renameView": "قايتا ئاتاش",
   "tools.database.duplicateView": "كۆپەيتىش",

@@ -391,6 +391,7 @@
   "tools.image.cropCancel": "Цуцлах",
   "tools.image.cropDone": "Дууссан",
   "tools.image.cropDialogLabel": "Зураг тайрах",
+  "tools.image.cropStageLabel": "Зураг. Зөөхийн тулд чирнэ үү, томруулж жижигрүүлэхийн тулд чимхэх эсвэл гүйлгэнэ үү, эх хувийг харахын тулд дараад барина уу",
   "tools.database.titlePlaceholder": "Шинэ мэдээллийн сан",
   "tools.database.renameView": "Нэр өөрчлөх",
   "tools.database.duplicateView": "Хувилах",

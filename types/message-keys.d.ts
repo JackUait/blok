@@ -475,6 +475,7 @@ export type BlokMessageKey =
   | 'tools.image.cropRatioFree'
   | 'tools.image.cropRatioOval'
   | 'tools.image.cropReset'
+  | 'tools.image.cropStageLabel'
   | 'tools.image.download'
   | 'tools.image.downloadOriginal'
   | 'tools.image.emptyAddImage'

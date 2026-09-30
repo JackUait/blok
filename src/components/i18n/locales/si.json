@@ -382,6 +382,7 @@
   "tools.image.cropCancel": "අවලංගු",
   "tools.image.cropDone": "අවසන්",
   "tools.image.cropDialogLabel": "රූපය කපන්න",
+  "tools.image.cropStageLabel": "රූපය. ගෙනයාමට අදින්න, විශාලනය වෙනස් කිරීමට ඇඟිලි හකුළන්න හෝ අනුචලනය කරන්න, මුල් පිටපත බැලීමට ඔබාගෙන සිටින්න",
   "tools.database.titlePlaceholder": "නව දත්ත ගබඩාව",
   "tools.database.renameView": "නැවත නම් කරන්න",
   "tools.database.duplicateView": "අනුපිටපත",

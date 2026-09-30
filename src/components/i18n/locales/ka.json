@@ -382,6 +382,7 @@
   "tools.image.cropCancel": "გაუქმება",
   "tools.image.cropDone": "მზადაა",
   "tools.image.cropDialogLabel": "სურათის ამოჭრა",
+  "tools.image.cropStageLabel": "სურათი. ჩავლებით გადაიტანეთ, მასშტაბის შესაცვლელად მოუჭირეთ თითები ან გადაახვიეთ, ორიგინალის სანახავად დააჭირეთ და გეჭიროთ",
   "tools.database.titlePlaceholder": "ახალი მონაცემთა ბაზა",
   "tools.database.renameView": "გადარქმევა",
   "tools.database.duplicateView": "დუბლირება",

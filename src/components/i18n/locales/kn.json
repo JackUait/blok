@@ -393,6 +393,7 @@
   "tools.image.cropCancel": "ರದ್ದುಮಾಡಿ",
   "tools.image.cropDone": "ಮುಗಿದಿದೆ",
   "tools.image.cropDialogLabel": "ಚಿತ್ರ ಕ್ರಾಪ್ ಮಾಡಿ",
+  "tools.image.cropStageLabel": "ಚಿತ್ರ. ಸರಿಸಲು ಎಳೆಯಿರಿ, ಝೂಮ್ ಮಾಡಲು ಪಿಂಚ್ ಅಥವಾ ಸ್ಕ್ರಾಲ್ ಮಾಡಿ, ಮೂಲ ಚಿತ್ರವನ್ನು ನೋಡಲು ಒತ್ತಿ ಹಿಡಿಯಿರಿ",
   "tools.database.titlePlaceholder": "ಹೊಸ ಡೇಟಾಬೇಸ್",
   "tools.database.renameView": "ಮರುಹೆಸರಿಸಿ",
   "tools.database.duplicateView": "ನಕಲು ಮಾಡಿ",

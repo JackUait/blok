@@ -382,6 +382,7 @@
   "tools.image.cropCancel": "ሰርዝ",
   "tools.image.cropDone": "ጨርስ",
   "tools.image.cropDialogLabel": "ምስል ቁረጥ",
+  "tools.image.cropStageLabel": "ምስል። ለማንቀሳቀስ ይጎትቱ፣ ለማጉላት ይቆንጥጡ ወይም ያሸብልሉ፣ ዋናውን ለማየት ተጭነው ይያዙ",
   "tools.database.titlePlaceholder": "አዲስ የውሂብ ጎታ",
   "tools.database.renameView": "ዳግም ሰይም",
   "tools.database.duplicateView": "አባዛ",

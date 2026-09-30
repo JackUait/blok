@@ -382,6 +382,7 @@
   "tools.image.cropCancel": "Anulează",
   "tools.image.cropDone": "Gata",
   "tools.image.cropDialogLabel": "Decupează imaginea",
+  "tools.image.cropStageLabel": "Imagine. Trageți pentru a muta, ciupiți sau derulați pentru zoom, țineți apăsat pentru a vedea originalul",
   "tools.database.titlePlaceholder": "Bază de date nouă",
   "tools.database.renameView": "Redenumește",
   "tools.database.duplicateView": "Duplică",

@@ -380,6 +380,7 @@
   "tools.image.cropCancel": "રદ કરો",
   "tools.image.cropDone": "થઈ ગયું",
   "tools.image.cropDialogLabel": "છબી ક્રોપ કરો",
+  "tools.image.cropStageLabel": "છબી. ખસેડવા માટે ખેંચો, ઝૂમ કરવા માટે પિંચ અથવા સ્ક્રોલ કરો, મૂળ છબી જોવા માટે દબાવી રાખો",
   "tools.database.titlePlaceholder": "નવું ડેટાબેઝ",
   "tools.database.renameView": "નામ બદલો",
   "tools.database.duplicateView": "નકલ બનાવો",

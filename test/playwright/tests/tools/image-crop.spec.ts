@@ -49,66 +49,152 @@ const seedImage = async (
   }, { holder: HOLDER_ID, initialData: data });
 };
 
-test('crop flow: Done with unchanged full rect → no crop saved', async ({ page }) => {
-  await seedImage(page);
+const openDarkroom = async (page: Page, crop?: { x: number; y: number; w: number; h: number }) => {
+  await seedImage(page, crop);
   const image = page.locator(IMAGE_BLOCK_SELECTOR);
-  await image.hover();
-  const cropBtn = image.locator('[data-action="crop"]');
-  await expect(cropBtn).toBeVisible();
-  await cropBtn.click();
-  const dialog = page.getByRole('dialog', { name: 'Crop image' });
-  await expect(dialog).toBeVisible();
-  // Block root remains in DOM while modal is open
-  await expect(image).toBeVisible();
-  await dialog.locator('[data-action="done"]').click();
-  await expect(dialog).toHaveCount(0);
-  const saved = await saveBlok(page);
-  const first = saved.blocks[0].data as { crop?: unknown };
-  expect(first.crop).toBeUndefined();
-});
 
-test('crop flow: Reset clears existing crop', async ({ page }) => {
-  await seedImage(page, { x: 10, y: 10, w: 60, h: 60 });
-  const image = page.locator(IMAGE_BLOCK_SELECTOR);
-  await expect(image.locator('[data-role="image-crop"]')).toBeVisible();
-  await image.hover();
-  const cropBtn = image.locator('[data-action="crop"]');
-  await expect(cropBtn).toBeVisible();
-  await cropBtn.click();
-  const dialog = page.getByRole('dialog', { name: 'Crop image' });
-  await expect(dialog).toBeVisible();
-  await dialog.locator('[data-action="reset"]').click();
-  await dialog.locator('[data-action="done"]').click();
-  const saved = await saveBlok(page);
-  const first = saved.blocks[0].data as { crop?: unknown };
-  expect(first.crop).toBeUndefined();
-});
-
-test('crop flow: Cancel preserves existing crop', async ({ page }) => {
-  await seedImage(page, { x: 10, y: 10, w: 60, h: 60 });
-  const image = page.locator(IMAGE_BLOCK_SELECTOR);
-  await image.hover();
-  const cropBtn = image.locator('[data-action="crop"]');
-  await expect(cropBtn).toBeVisible();
-  await cropBtn.click();
-  const dialog = page.getByRole('dialog', { name: 'Crop image' });
-  await dialog.locator('[data-action="cancel"]').click();
-  const saved = await saveBlok(page);
-  const first = saved.blocks[0].data as { crop?: { w: number; h: number } };
-  expect(first.crop).toStrictEqual({ x: 10, y: 10, w: 60, h: 60 });
-});
-
-test('crop flow: backdrop click cancels', async ({ page }) => {
-  await seedImage(page, { x: 10, y: 10, w: 60, h: 60 });
-  const image = page.locator(IMAGE_BLOCK_SELECTOR);
   await image.hover();
   await image.locator('[data-action="crop"]').click();
-  const backdrop = page.getByTestId('image-crop-backdrop');
-  await expect(backdrop).toBeVisible();
-  // Click near the top-left corner of the backdrop (outside the centered dialog)
-  await backdrop.click({ position: { x: 10, y: 10 } });
-  await expect(page.getByRole('dialog', { name: 'Crop image' })).toHaveCount(0);
-  const saved = await saveBlok(page);
-  const first = saved.blocks[0].data as { crop?: { w: number; h: number } };
-  expect(first.crop).toStrictEqual({ x: 10, y: 10, w: 60, h: 60 });
+  const dialog = page.getByRole('dialog', { name: 'Crop image' });
+
+  await expect(dialog).toBeVisible();
+  await expect(page.locator('[data-role="darkroom-readout"]')).toHaveText(/× \d+ px/);
+  // The fly-in animates the darkroom's own photo; gestures must start from rest.
+  await expect(page.locator('[data-role="darkroom-stage"][data-settled]')).toHaveCount(1);
+
+  return { dialog, stage: page.locator('[data-role="darkroom-stage"]') };
+};
+
+const cropOf = async (page: Page) =>
+  (await saveBlok(page)).blocks[0].data as { crop?: { x: number; y: number; w: number; h: number; shape?: string } };
+
+test('Done on an untouched image saves no crop', async ({ page }) => {
+  const { dialog } = await openDarkroom(page);
+
+  await dialog.locator('[data-action="done"]').click();
+  await expect(dialog).toHaveCount(0);
+  expect((await cropOf(page)).crop).toBeUndefined();
+});
+
+test('Reset clears an existing crop', async ({ page }) => {
+  const { dialog } = await openDarkroom(page, { x: 10, y: 10, w: 60, h: 60 });
+
+  await dialog.locator('[data-action="reset"]').click();
+  await dialog.locator('[data-action="done"]').click();
+  expect((await cropOf(page)).crop).toBeUndefined();
+});
+
+test('Cancel keeps the existing crop', async ({ page }) => {
+  const { dialog } = await openDarkroom(page, { x: 10, y: 10, w: 60, h: 60 });
+
+  await dialog.locator('[data-action="cancel"]').click();
+  expect((await cropOf(page)).crop).toStrictEqual({ x: 10, y: 10, w: 60, h: 60 });
+});
+
+test('a press on the dark surround does not cancel', async ({ page }) => {
+  const { dialog } = await openDarkroom(page, { x: 10, y: 10, w: 60, h: 60 });
+
+  await page.mouse.click(8, 400);
+  await expect(dialog).toBeVisible();
+});
+
+test('one Escape cancels', async ({ page }) => {
+  const { dialog } = await openDarkroom(page);
+
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  expect((await cropOf(page)).crop).toBeUndefined();
+});
+
+test('wheel zoom narrows the crop', async ({ page }) => {
+  const { dialog, stage } = await openDarkroom(page);
+  const box = await stage.boundingBox();
+
+  expect(box).not.toBeNull();
+  await page.mouse.move((box?.x ?? 0) + (box?.width ?? 0) / 2, (box?.y ?? 0) + (box?.height ?? 0) / 2);
+  await page.mouse.wheel(0, -400);
+  await expect(page.locator('[data-role="darkroom-stage"][data-settled]')).toHaveCount(1);
+  await dialog.locator('[data-action="done"]').click();
+  const { crop } = await cropOf(page);
+
+  expect(crop?.w ?? 100).toBeLessThan(100);
+});
+
+test('dragging the zoomed photo moves the crop', async ({ page }) => {
+  const { dialog, stage } = await openDarkroom(page, { x: 25, y: 25, w: 50, h: 50 });
+  const box = await stage.boundingBox();
+  const cx = (box?.x ?? 0) + (box?.width ?? 0) / 2;
+  const cy = (box?.y ?? 0) + (box?.height ?? 0) / 2;
+
+  await page.mouse.move(cx, cy);
+  await page.mouse.down();
+  await page.mouse.move(cx - 60, cy, { steps: 6 });
+  await page.mouse.up();
+  await expect(page.locator('[data-role="darkroom-stage"][data-settled]')).toHaveCount(1);
+  await dialog.locator('[data-action="done"]').click();
+  const { crop } = await cropOf(page);
+
+  expect(crop?.x ?? 25).toBeGreaterThan(25);
+});
+
+test('releasing a handle springs the frame back to the centre', async ({ page }) => {
+  const { stage } = await openDarkroom(page);
+  const handle = page.locator('[data-handle="se"]');
+  const hb = await handle.boundingBox();
+  const sb = await stage.boundingBox();
+
+  await page.mouse.move((hb?.x ?? 0) + 14, (hb?.y ?? 0) + 14);
+  await page.mouse.down();
+  await page.mouse.move((hb?.x ?? 0) - 120, (hb?.y ?? 0) - 80, { steps: 8 });
+  const frameOffset = async (): Promise<number> => {
+    const f = await page.locator('[data-role="darkroom-frame"]').boundingBox();
+
+    return Math.abs(((f?.x ?? 0) + (f?.width ?? 0) / 2) - ((sb?.x ?? 0) + (sb?.width ?? 0) / 2));
+  };
+
+  // Without an off-centre frame mid-drag, the spring-back check below proves nothing.
+  expect(await frameOffset()).toBeGreaterThan(20);
+  await page.mouse.up();
+  await expect.poll(frameOffset).toBeLessThan(2);
+});
+
+test('Circle saves a crop that is square in pixels', async ({ page }) => {
+  const { dialog } = await openDarkroom(page);
+
+  await page.locator('[data-ratio="circle"]').click();
+  await dialog.locator('[data-action="done"]').click();
+  const { crop } = await cropOf(page);
+
+  expect(crop?.shape).toBe('circle');
+  expect(((crop?.w ?? 0) * 600) / ((crop?.h ?? 1) * 400)).toBeCloseTo(1, 1);
+});
+
+test('Cmd+Z inside the darkroom undoes the crop edit, not the document', async ({ page }) => {
+  const { dialog } = await openDarkroom(page);
+  const mod = process.platform === 'darwin' ? 'Meta' : 'Control';
+
+  await page.locator('[data-ratio="1"]').click();
+  await expect(page.locator('[data-ratio="1"]')).toHaveAttribute('aria-checked', 'true');
+  await page.keyboard.press(`${mod}+z`);
+  await expect(page.locator('[data-ratio="free"]')).toHaveAttribute('aria-checked', 'true');
+  await expect(dialog).toBeVisible();
+  await expect(page.locator(IMAGE_BLOCK_SELECTOR)).toHaveCount(1);
+});
+
+test('the photo flies back into the block after Done', async ({ page }) => {
+  const { dialog } = await openDarkroom(page, { x: 10, y: 10, w: 60, h: 60 });
+
+  await dialog.locator('[data-action="done"]').click();
+  await expect(page.locator('[data-role="darkroom-flight"]')).toHaveCount(1);
+  await expect(page.locator('[data-role="darkroom-flight"]')).toHaveCount(0);
+  await expect(page.locator(`${IMAGE_BLOCK_SELECTOR} [data-role="image-crop"]`)).toBeVisible();
+});
+
+test('reduced motion applies with no flight', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const { dialog } = await openDarkroom(page, { x: 10, y: 10, w: 60, h: 60 });
+
+  await dialog.locator('[data-action="done"]').click();
+  await expect(page.locator('[data-role="darkroom-flight"]')).toHaveCount(0);
+  expect((await cropOf(page)).crop).toStrictEqual({ x: 10, y: 10, w: 60, h: 60 });
 });

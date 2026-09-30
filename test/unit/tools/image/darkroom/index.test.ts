@@ -581,6 +581,25 @@ describe('openDarkroom fix round 1', () => {
       expect((saved.w * NATURAL.w) / (saved.h * NATURAL.h)).toBeCloseTo(1, 2);
     });
 
+    it('a pinch that starts on one point never saves a broken crop', () => {
+      const { onApply, advance } = open({ initial: { x: 20, y: 20, w: 50, h: 50 } });
+      const touch = (type: string, pointerId: number, x: number): void => {
+        stageEl()?.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId, clientX: x, clientY: 400 }));
+      };
+
+      touch('pointerdown', 1, 600);
+      touch('pointerdown', 2, 600);
+      touch('pointermove', 2, 600);
+      touch('pointermove', 2, 700);
+      touch('pointerup', 2, 700);
+      touch('pointerup', 1, 600);
+      advance(3000);
+      button('done').click();
+      const saved: Record<string, unknown> = onApply.mock.calls[0][0];
+
+      for (const k of ['x', 'y', 'w', 'h']) expect(Number.isFinite(saved[k])).toBe(true);
+    });
+
     it('Cmd+Z works on a non-Latin keyboard layout', () => {
       const { advance } = open();
       const circle = document.querySelector<HTMLButtonElement>('[data-ratio="circle"]');

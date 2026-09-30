@@ -90,6 +90,7 @@ export function rubberCamera(c: Camera, n: Size, frame: Box): Camera {
 }
 
 export function zoomAt(c: Camera, factor: number, p: Point, n: Size, frame: Box): Camera {
+  if (!Number.isFinite(factor) || factor <= 0) return c;
   const { min, max } = scaleLimits(n, frame);
   const s = Math.min(max, Math.max(min, c.s * factor));
   const k = s / c.s;

@@ -113,7 +113,8 @@ export function attachGestures(stage: HTMLElement, h: GestureHandlers): () => vo
     if (st.mode === 'pinch' && pointers.size === 2) {
       const g = pinchGeometry();
 
-      h.onZoom(g.dist / st.pinchDist, g.mid, g.mid.x - st.pinchMid.x, g.mid.y - st.pinchMid.y);
+      // Fingers that start on one point have no distance to scale from; wait for one.
+      if (st.pinchDist >= 1) h.onZoom(g.dist / st.pinchDist, g.mid, g.mid.x - st.pinchMid.x, g.mid.y - st.pinchMid.y);
       st.pinchDist = g.dist;
       st.pinchMid = g.mid;
     }

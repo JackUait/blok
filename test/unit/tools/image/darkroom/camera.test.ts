@@ -77,6 +77,13 @@ describe('darkroom camera', () => {
     expect(z.s).toBeCloseTo(cam.s * 2, 6);
   });
 
+  it.each([0 / 0, 0, -1, Infinity])('zoomAt ignores a broken factor %s', (factor) => {
+    const frame = fitFrame(rectAspect(FULL_RECT, N), STAGE, PAD);
+    const cam = rectToCamera(FULL_RECT, N, frame);
+
+    expect(zoomAt(cam, factor, { x: 10, y: 10 }, N, frame)).toEqual(cam);
+  });
+
   it('clampCamera never leaves an empty edge inside the frame', () => {
     const frame = fitFrame(rectAspect(FULL_RECT, N), STAGE, PAD);
     const cam = rectToCamera(FULL_RECT, N, frame);

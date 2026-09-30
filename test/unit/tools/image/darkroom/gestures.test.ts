@@ -97,6 +97,20 @@ describe('darkroom gestures', () => {
     expect(center).toEqual({ x: 200, y: 100 });
   });
 
+  it('a pinch that starts with both fingers on one point waits for a real distance', () => {
+    const h = handlers();
+
+    detach = attachGestures(stage, h);
+    fire(stage, 'pointerdown', { pointerId: 1, clientX: 100, clientY: 100 });
+    fire(stage, 'pointerdown', { pointerId: 2, clientX: 100, clientY: 100 });
+    fire(stage, 'pointermove', { pointerId: 2, clientX: 150, clientY: 100 });
+
+    expect(h.onZoom).not.toHaveBeenCalled();
+    fire(stage, 'pointermove', { pointerId: 2, clientX: 200, clientY: 100 });
+
+    expect(vi.mocked(h.onZoom).mock.calls[0][0]).toBeCloseTo(2, 6);
+  });
+
   it('a ctrl+wheel burst is one zoom gesture that ends after idle', () => {
     const h = handlers();
 

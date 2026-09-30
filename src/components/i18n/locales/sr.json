@@ -382,7 +382,7 @@
   "tools.image.cropCancel": "Откажи",
   "tools.image.cropDone": "Готово",
   "tools.image.cropDialogLabel": "Исеци слику",
-  "tools.image.cropStageLabel": "Слика. Превуците за премештање, штипните или померајте за зумирање, задржите да видите оригинал",
+  "tools.image.cropStageLabel": "Слика. Тастери са стрелицама премештају, плус и минус зумирају, задржите обрнуту косу црту да видите оригинал, Enter примењује",
   "tools.database.titlePlaceholder": "Нова база података",
   "tools.database.renameView": "Преименуј",
   "tools.database.duplicateView": "Дуплирај",

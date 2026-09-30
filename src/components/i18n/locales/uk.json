@@ -380,7 +380,7 @@
   "tools.image.cropCancel": "Скасувати",
   "tools.image.cropDone": "Готово",
   "tools.image.cropDialogLabel": "Обрізати зображення",
-  "tools.image.cropStageLabel": "Зображення. Перетягніть для переміщення, зведіть пальці або прокрутіть для масштабування, утримуйте, щоб побачити оригінал",
+  "tools.image.cropStageLabel": "Зображення. Стрілки переміщують, плюс і мінус масштабують, утримуйте зворотну скісну риску, щоб побачити оригінал, Enter застосовує",
   "tools.database.titlePlaceholder": "Нова база даних",
   "tools.database.renameView": "Перейменувати",
   "tools.database.duplicateView": "Дублювати",

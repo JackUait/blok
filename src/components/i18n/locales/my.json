@@ -391,7 +391,7 @@
   "tools.image.cropCancel": "ပယ်ဖျက်",
   "tools.image.cropDone": "ပြီးပြီ",
   "tools.image.cropDialogLabel": "ပုံဖြတ်ညှပ်",
-  "tools.image.cropStageLabel": "ပုံ။ ရွှေ့ရန် ဆွဲယူပါ၊ ချဲ့ချုံ့ရန် လက်ချောင်းဖြင့် ညှပ်ပါ သို့မဟုတ် လှိမ့်ပါ၊ မူရင်းကိုကြည့်ရန် ဖိထားပါ",
+  "tools.image.cropStageLabel": "ပုံ။ မြှားခလုတ်များဖြင့် ရွှေ့ပါ၊ အပေါင်းနှင့် အနုတ်ဖြင့် ချဲ့ချုံ့ပါ၊ မူရင်းကိုကြည့်ရန် နောက်ပြန်မျဉ်းစောင်းကို ဖိထားပါ၊ Enter ဖြင့် အသုံးချပါ",
   "tools.database.titlePlaceholder": "ဒေတာဘေ့စ်အသစ်",
   "tools.database.renameView": "အမည်ပြောင်း",
   "tools.database.duplicateView": "ပွားယူ",

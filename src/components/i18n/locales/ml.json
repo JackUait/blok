@@ -391,7 +391,7 @@
   "tools.image.cropCancel": "റദ്ദാക്കുക",
   "tools.image.cropDone": "പൂർത്തിയായി",
   "tools.image.cropDialogLabel": "ചിത്രം ക്രോപ്പ് ചെയ്യുക",
-  "tools.image.cropStageLabel": "ചിത്രം. നീക്കാൻ വലിച്ചിടുക, സൂം ചെയ്യാൻ പിഞ്ച് ചെയ്യുകയോ സ്ക്രോൾ ചെയ്യുകയോ ചെയ്യുക, ഒറിജിനൽ കാണാൻ അമർത്തിപ്പിടിക്കുക",
+  "tools.image.cropStageLabel": "ചിത്രം. അമ്പടയാള കീകൾ നീക്കുന്നു, പ്ലസും മൈനസും സൂം ചെയ്യുന്നു, ഒറിജിനൽ കാണാൻ ബാക്ക്‌സ്ലാഷ് അമർത്തിപ്പിടിക്കുക, Enter പ്രയോഗിക്കുന്നു",
   "tools.database.titlePlaceholder": "പുതിയ ഡാറ്റാബേസ്",
   "tools.database.renameView": "പേരുമാറ്റുക",
   "tools.database.duplicateView": "പകർപ്പുണ്ടാക്കുക",

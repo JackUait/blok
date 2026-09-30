@@ -393,7 +393,7 @@
   "tools.image.cropCancel": "取消",
   "tools.image.cropDone": "完成",
   "tools.image.cropDialogLabel": "裁切圖片",
-  "tools.image.cropStageLabel": "圖片。拖曳以移動，雙指捏合或捲動以縮放，長按以檢視原始圖片",
+  "tools.image.cropStageLabel": "圖片。方向鍵移動，加號和減號縮放，長按反斜線以檢視原始圖片，按 Enter 套用",
   "toolNames.file": "檔案",
   "tools.file.emptyAddFile": "新增檔案",
   "tools.file.emptyUpload": "從裝置",

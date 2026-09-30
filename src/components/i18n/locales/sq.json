@@ -382,7 +382,7 @@
   "tools.image.cropCancel": "Anulo",
   "tools.image.cropDone": "U krye",
   "tools.image.cropDialogLabel": "Prit imazhin",
-  "tools.image.cropStageLabel": "Imazh. Tërhiq për të lëvizur, afro gishtat ose rrëshqit për zmadhim, mbaj shtypur për të parë origjinalin",
+  "tools.image.cropStageLabel": "Imazh. Tastet me shigjeta lëvizin, plus dhe minus zmadhojnë, mbaj shtypur vijën e pjerrët së prapthi për të parë origjinalin, Enter zbaton",
   "tools.database.titlePlaceholder": "Bazë të dhënash e re",
   "tools.database.renameView": "Riemërto",
   "tools.database.duplicateView": "Dyfisho",

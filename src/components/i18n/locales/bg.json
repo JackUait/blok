@@ -382,7 +382,7 @@
   "tools.image.cropCancel": "Отмени",
   "tools.image.cropDone": "Готово",
   "tools.image.cropDialogLabel": "Изрязване на изображение",
-  "tools.image.cropStageLabel": "Изображение. Плъзнете за преместване, щипнете или превъртете за мащабиране, задръжте, за да видите оригинала",
+  "tools.image.cropStageLabel": "Изображение. Клавишите със стрелки преместват, плюс и минус мащабират, задръжте обратната наклонена черта, за да видите оригинала, Enter прилага",
   "tools.database.titlePlaceholder": "Нова база данни",
   "tools.database.renameView": "Преименувай",
   "tools.database.duplicateView": "Дублирай",

@@ -380,7 +380,7 @@
   "tools.image.cropCancel": "لغو",
   "tools.image.cropDone": "انجام شد",
   "tools.image.cropDialogLabel": "برش تصویر",
-  "tools.image.cropStageLabel": "تصویر. برای جابه‌جایی بکشید، برای تغییر بزرگ‌نمایی انگشتان را جمع کنید یا پیمایش کنید، برای دیدن نسخهٔ اصلی نگه دارید",
+  "tools.image.cropStageLabel": "تصویر. کلیدهای جهت‌نما جابه‌جا می‌کنند، به‌علاوه و منها بزرگ‌نمایی را تغییر می‌دهند، برای دیدن نسخهٔ اصلی بک‌اسلش را نگه دارید، Enter اعمال می‌کند",
   "tools.database.titlePlaceholder": "پایگاه داده جدید",
   "tools.database.renameView": "تغییر نام",
   "tools.database.duplicateView": "تکثیر",

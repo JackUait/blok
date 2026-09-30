@@ -380,7 +380,7 @@
   "tools.image.cropCancel": "రద్దు",
   "tools.image.cropDone": "పూర్తయింది",
   "tools.image.cropDialogLabel": "చిత్రాన్ని క్రాప్ చేయి",
-  "tools.image.cropStageLabel": "చిత్రం. తరలించడానికి లాగండి, జూమ్ చేయడానికి పించ్ లేదా స్క్రోల్ చేయండి, అసలైనదాన్ని చూడటానికి నొక్కి పట్టుకోండి",
+  "tools.image.cropStageLabel": "చిత్రం. బాణం కీలు తరలిస్తాయి, ప్లస్ మరియు మైనస్ జూమ్ చేస్తాయి, అసలైనదాన్ని చూడటానికి బ్యాక్‌స్లాష్‌ను నొక్కి పట్టుకోండి, Enter వర్తింపజేస్తుంది",
   "tools.database.titlePlaceholder": "కొత్త డేటాబేస్",
   "tools.database.renameView": "పేరు మార్చు",
   "tools.database.duplicateView": "నకలు చేయి",

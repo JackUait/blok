@@ -380,7 +380,7 @@
   "tools.image.cropCancel": "取消",
   "tools.image.cropDone": "完成",
   "tools.image.cropDialogLabel": "裁剪图片",
-  "tools.image.cropStageLabel": "图片。拖动以移动，双指捏合或滚动以缩放，长按以查看原图",
+  "tools.image.cropStageLabel": "图片。方向键移动，加号和减号缩放，长按反斜杠以查看原图，按 Enter 应用",
   "tools.database.titlePlaceholder": "新数据库",
   "tools.database.renameView": "重命名",
   "tools.database.duplicateView": "复制",

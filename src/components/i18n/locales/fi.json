@@ -380,7 +380,7 @@
   "tools.image.cropCancel": "Peruuta",
   "tools.image.cropDone": "Valmis",
   "tools.image.cropDialogLabel": "Rajaa kuva",
-  "tools.image.cropStageLabel": "Kuva. Vedä siirtääksesi, nipistä tai vieritä zoomataksesi, pidä painettuna nähdäksesi alkuperäisen",
+  "tools.image.cropStageLabel": "Kuva. Nuolinäppäimet siirtävät, plus ja miinus zoomaavat, pidä kenoviiva painettuna nähdäksesi alkuperäisen, Enter ottaa muutokset käyttöön",
   "tools.database.titlePlaceholder": "Uusi tietokanta",
   "tools.database.renameView": "Nimeä uudelleen",
   "tools.database.duplicateView": "Monista",

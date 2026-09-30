@@ -382,7 +382,7 @@
   "tools.image.cropCancel": "បោះបង់",
   "tools.image.cropDone": "រួចរាល់",
   "tools.image.cropDialogLabel": "កាត់តម្រឹមរូបភាព",
-  "tools.image.cropStageLabel": "រូបភាព។ អូសដើម្បីផ្លាស់ទី ច្បិច ឬរំកិលដើម្បីពង្រីកបង្រួម ចុចឱ្យជាប់ដើម្បីមើលដើម",
+  "tools.image.cropStageLabel": "រូបភាព។ គ្រាប់ចុចព្រួញផ្លាស់ទី បូក និងដកពង្រីកបង្រួម ចុចសញ្ញាខ្វែងបញ្ច្រាសឱ្យជាប់ដើម្បីមើលដើម Enter អនុវត្ត",
   "tools.database.titlePlaceholder": "មូលដ្ឋានទិន្នន័យថ្មី",
   "tools.database.renameView": "ប្ដូរឈ្មោះ",
   "tools.database.duplicateView": "ស្ទួន",

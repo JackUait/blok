@@ -382,7 +382,7 @@
   "tools.image.cropCancel": "বাতিল",
   "tools.image.cropDone": "সম্পন্ন",
   "tools.image.cropDialogLabel": "ছবি ক্রপ করুন",
-  "tools.image.cropStageLabel": "ছবি। সরাতে টেনে আনুন, জুম করতে পিঞ্চ বা স্ক্রোল করুন, আসল ছবি দেখতে চেপে ধরে রাখুন",
+  "tools.image.cropStageLabel": "ছবি। তীরচিহ্নের কী দিয়ে সরান, প্লাস ও মাইনাস দিয়ে জুম করুন, আসল ছবি দেখতে ব্যাকস্ল্যাশ চেপে ধরে রাখুন, Enter চাপলে প্রয়োগ হয়",
   "tools.database.titlePlaceholder": "নতুন ডেটাবেস",
   "tools.database.renameView": "নাম পরিবর্তন",
   "tools.database.duplicateView": "প্রতিলিপি",

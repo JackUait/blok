@@ -393,7 +393,7 @@
   "tools.image.cropCancel": "ຍົກເລີກ",
   "tools.image.cropDone": "ສຳເລັດ",
   "tools.image.cropDialogLabel": "ຕັດຮູບ",
-  "tools.image.cropStageLabel": "ຮູບ. ລາກເພື່ອຍ້າຍ, ບີບ ຫຼື ເລື່ອນເພື່ອຊູມ, ກົດຄ້າງໄວ້ເພື່ອເບິ່ງຕົ້ນສະບັບ",
+  "tools.image.cropStageLabel": "ຮູບ. ປຸ່ມລູກສອນເພື່ອຍ້າຍ, ບວກ ແລະ ລົບເພື່ອຊູມ, ກົດແບັກສະແລັດຄ້າງໄວ້ເພື່ອເບິ່ງຕົ້ນສະບັບ, Enter ເພື່ອນຳໃຊ້",
   "tools.database.titlePlaceholder": "ຖານຂໍ້ມູນໃໝ່",
   "tools.database.renameView": "ປ່ຽນຊື່",
   "tools.database.duplicateView": "ສຳເນົາ",

@@ -391,7 +391,7 @@
   "tools.image.cropCancel": "Atcelt",
   "tools.image.cropDone": "Gatavs",
   "tools.image.cropDialogLabel": "Apgriezt attēlu",
-  "tools.image.cropStageLabel": "Attēls. Velciet, lai pārvietotu, savelciet pirkstus vai ritiniet, lai tālummainītu, turiet nospiestu, lai redzētu oriģinālu",
+  "tools.image.cropStageLabel": "Attēls. Bulttaustiņi pārvieto, pluss un mīnuss tālummaina, turiet nospiestu atpakaļvērsto slīpsvītru, lai redzētu oriģinālu, Enter lieto",
   "tools.database.titlePlaceholder": "Jauna datubāze",
   "tools.database.renameView": "Pārdēvēt",
   "tools.database.duplicateView": "Dublēt",

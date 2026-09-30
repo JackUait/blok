@@ -380,7 +380,7 @@
   "tools.image.cropCancel": "ยกเลิก",
   "tools.image.cropDone": "เสร็จสิ้น",
   "tools.image.cropDialogLabel": "ครอบตัดรูปภาพ",
-  "tools.image.cropStageLabel": "รูปภาพ ลากเพื่อย้าย จีบนิ้วหรือเลื่อนเพื่อซูม กดค้างไว้เพื่อดูต้นฉบับ",
+  "tools.image.cropStageLabel": "รูปภาพ ปุ่มลูกศรเพื่อย้าย บวกและลบเพื่อซูม กดแบ็กสแลชค้างไว้เพื่อดูต้นฉบับ Enter เพื่อใช้",
   "tools.database.titlePlaceholder": "ฐานข้อมูลใหม่",
   "tools.database.renameView": "เปลี่ยนชื่อ",
   "tools.database.duplicateView": "ทำสำเนา",

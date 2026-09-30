@@ -391,7 +391,7 @@
   "tools.image.cropCancel": "Откажи",
   "tools.image.cropDone": "Готово",
   "tools.image.cropDialogLabel": "Исечи слика",
-  "tools.image.cropStageLabel": "Слика. Повлечете за преместување, штипнете или лизгајте за зумирање, задржете за да го видите оригиналот",
+  "tools.image.cropStageLabel": "Слика. Стрелките преместуваат, плус и минус зумираат, задржете ја обратната коса црта за да го видите оригиналот, Enter применува",
   "tools.database.titlePlaceholder": "Нова база на податоци",
   "tools.database.renameView": "Преименувај",
   "tools.database.duplicateView": "Дуплирај",

@@ -382,7 +382,7 @@
   "tools.image.cropCancel": "Ləğv et",
   "tools.image.cropDone": "Hazır",
   "tools.image.cropDialogLabel": "Şəkli kəs",
-  "tools.image.cropStageLabel": "Şəkil. Köçürmək üçün dartın, miqyası dəyişmək üçün barmaqlarla sıxın və ya sürüşdürün, orijinalı görmək üçün basıb saxlayın",
+  "tools.image.cropStageLabel": "Şəkil. Ox düymələri köçürür, plus və minus miqyası dəyişir, orijinalı görmək üçün tərs kəsik xətti basıb saxlayın, Enter tətbiq edir",
   "tools.database.titlePlaceholder": "Yeni verilənlər bazası",
   "tools.database.renameView": "Adını dəyiş",
   "tools.database.duplicateView": "Dublikatını çıxar",

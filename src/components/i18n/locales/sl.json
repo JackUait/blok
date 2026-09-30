@@ -382,7 +382,7 @@
   "tools.image.cropCancel": "Prekliči",
   "tools.image.cropDone": "Končano",
   "tools.image.cropDialogLabel": "Obreži sliko",
-  "tools.image.cropStageLabel": "Slika. Povlecite za premik, uščipnite ali se pomikajte za povečavo, pridržite za ogled izvirnika",
+  "tools.image.cropStageLabel": "Slika. Puščične tipke premikajo, plus in minus povečujeta, pridržite levo poševnico za ogled izvirnika, Enter uporabi",
   "tools.database.titlePlaceholder": "Nova zbirka podatkov",
   "tools.database.renameView": "Preimenuj",
   "tools.database.duplicateView": "Podvoji",

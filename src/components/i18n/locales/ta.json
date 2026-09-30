@@ -380,7 +380,7 @@
   "tools.image.cropCancel": "ரத்து",
   "tools.image.cropDone": "முடிந்தது",
   "tools.image.cropDialogLabel": "படத்தைச் செதுக்கு",
-  "tools.image.cropStageLabel": "படம். நகர்த்த இழுக்கவும், பெரிதாக்க அல்லது சிறிதாக்க கிள்ளவும் அல்லது உருட்டவும், அசலைப் பார்க்க அழுத்திப் பிடிக்கவும்",
+  "tools.image.cropStageLabel": "படம். அம்புக்குறி விசைகள் நகர்த்தும், கூட்டல் மற்றும் கழித்தல் பெரிதாக்கும் அல்லது சிறிதாக்கும், அசலைப் பார்க்க பின்சாய்வை அழுத்திப் பிடிக்கவும், Enter பயன்படுத்தும்",
   "tools.database.titlePlaceholder": "புதிய தரவுத்தளம்",
   "tools.database.renameView": "மறுபெயரிடு",
   "tools.database.duplicateView": "நகலெடு",

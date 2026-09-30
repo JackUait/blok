@@ -382,7 +382,7 @@
   "tools.image.cropCancel": "Anuluj",
   "tools.image.cropDone": "Gotowe",
   "tools.image.cropDialogLabel": "Przytnij obraz",
-  "tools.image.cropStageLabel": "Obraz. Przeciągnij, aby przenieść, uszczypnij lub przewiń, aby zmienić powiększenie, przytrzymaj, aby zobaczyć oryginał",
+  "tools.image.cropStageLabel": "Obraz. Strzałki przesuwają, plus i minus zmieniają powiększenie, przytrzymaj ukośnik wsteczny, aby zobaczyć oryginał, Enter zatwierdza",
   "tools.database.titlePlaceholder": "Nowa baza danych",
   "tools.database.renameView": "Zmień nazwę",
   "tools.database.duplicateView": "Duplikuj",

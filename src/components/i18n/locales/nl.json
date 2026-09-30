@@ -380,7 +380,7 @@
   "tools.image.cropCancel": "Annuleren",
   "tools.image.cropDone": "Klaar",
   "tools.image.cropDialogLabel": "Afbeelding bijsnijden",
-  "tools.image.cropStageLabel": "Afbeelding. Sleep om te verplaatsen, knijp of scrol om te zoomen, houd ingedrukt om het origineel te zien",
+  "tools.image.cropStageLabel": "Afbeelding. Pijltoetsen verplaatsen, plus en min zoomen, houd de backslash ingedrukt om het origineel te zien, Enter past toe",
   "tools.database.titlePlaceholder": "Nieuwe database",
   "tools.database.renameView": "Naam wijzigen",
   "tools.database.duplicateView": "Dupliceren",

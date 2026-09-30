@@ -85,6 +85,13 @@ describe('openDarkroom', () => {
     expect(dialog().getAttribute('aria-label')).toBe('Crop image');
   });
 
+  it('the stage label names the keys it answers to', () => {
+    open();
+
+    expect(stageEl()?.getAttribute('aria-label'))
+      .toBe('Photo. Arrow keys move, plus and minus zoom, hold backslash to see the original, Enter applies');
+  });
+
   it('a press on the dark surround does not cancel', () => {
     const { onCancel } = open();
     const backdrop = document.querySelector<HTMLElement>('[data-blok-testid="image-crop-backdrop"]');

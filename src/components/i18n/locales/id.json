@@ -382,7 +382,7 @@
   "tools.image.cropCancel": "Batal",
   "tools.image.cropDone": "Selesai",
   "tools.image.cropDialogLabel": "Pangkas gambar",
-  "tools.image.cropStageLabel": "Gambar. Seret untuk memindahkan, cubit atau gulir untuk memperbesar atau memperkecil, tahan untuk melihat versi asli",
+  "tools.image.cropStageLabel": "Gambar. Tombol panah memindahkan, plus dan minus memperbesar atau memperkecil, tahan garis miring terbalik untuk melihat versi asli, Enter menerapkan",
   "tools.database.titlePlaceholder": "Basis data baru",
   "tools.database.renameView": "Ubah nama",
   "tools.database.duplicateView": "Gandakan",

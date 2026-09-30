@@ -380,7 +380,7 @@
   "tools.image.cropCancel": "İptal",
   "tools.image.cropDone": "Tamam",
   "tools.image.cropDialogLabel": "Görseli kırp",
-  "tools.image.cropStageLabel": "Görsel. Taşımak için sürükle, yakınlaştırmak için sıkıştır veya kaydır, orijinali görmek için basılı tut",
+  "tools.image.cropStageLabel": "Görsel. Ok tuşları taşır, artı ve eksi yakınlaştırır, orijinali görmek için ters eğik çizgiyi basılı tut, Enter uygular",
   "tools.database.titlePlaceholder": "Yeni veritabanı",
   "tools.database.renameView": "Yeniden adlandır",
   "tools.database.duplicateView": "Çoğalt",

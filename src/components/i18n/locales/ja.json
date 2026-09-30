@@ -382,7 +382,7 @@
   "tools.image.cropCancel": "キャンセル",
   "tools.image.cropDone": "完了",
   "tools.image.cropDialogLabel": "画像をトリミング",
-  "tools.image.cropStageLabel": "画像。ドラッグして移動、ピンチまたはスクロールでズーム、長押しでオリジナルを表示",
+  "tools.image.cropStageLabel": "画像。矢印キーで移動、プラスとマイナスでズーム、バックスラッシュ長押しでオリジナルを表示、Enterキーで適用",
   "tools.database.titlePlaceholder": "新しいデータベース",
   "tools.database.renameView": "名前を変更",
   "tools.database.duplicateView": "複製",

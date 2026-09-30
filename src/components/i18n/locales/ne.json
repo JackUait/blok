@@ -391,7 +391,7 @@
   "tools.image.cropCancel": "रद्द गर्नुहोस्",
   "tools.image.cropDone": "सकियो",
   "tools.image.cropDialogLabel": "तस्बिर क्रप गर्नुहोस्",
-  "tools.image.cropStageLabel": "तस्बिर। सार्न तान्नुहोस्, जुम गर्न पिन्च वा स्क्रोल गर्नुहोस्, मूल तस्बिर हेर्न थिचिराख्नुहोस्",
+  "tools.image.cropStageLabel": "तस्बिर। एरो कुञ्जीहरूले सार्छन्, प्लस र माइनसले जुम गर्छन्, मूल तस्बिर हेर्न ब्याकस्ल्यास थिचिराख्नुहोस्, Enter ले लागू गर्छ",
   "tools.database.titlePlaceholder": "नयाँ डाटाबेस",
   "tools.database.renameView": "नाम बदल्नुहोस्",
   "tools.database.duplicateView": "नक्कल बनाउनुहोस्",

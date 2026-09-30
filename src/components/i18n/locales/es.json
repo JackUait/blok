@@ -380,7 +380,7 @@
   "tools.image.cropCancel": "Cancelar",
   "tools.image.cropDone": "Listo",
   "tools.image.cropDialogLabel": "Recortar imagen",
-  "tools.image.cropStageLabel": "Imagen. Arrastra para mover, pellizca o desplázate para hacer zoom, mantén pulsado para ver el original",
+  "tools.image.cropStageLabel": "Imagen. Las flechas mueven, más y menos hacen zoom, mantén pulsada la barra invertida para ver el original, Intro aplica",
   "tools.database.titlePlaceholder": "Nueva base de datos",
   "tools.database.renameView": "Cambiar nombre",
   "tools.database.duplicateView": "Duplicar",

@@ -382,7 +382,7 @@
   "tools.image.cropCancel": "إلغاء",
   "tools.image.cropDone": "تم",
   "tools.image.cropDialogLabel": "اقتصاص الصورة",
-  "tools.image.cropStageLabel": "الصورة. اسحب للتحريك، واقرص أو مرّر للتكبير والتصغير، واضغط مطولًا لعرض الأصل",
+  "tools.image.cropStageLabel": "الصورة. مفاتيح الأسهم للتحريك، والجمع والطرح للتكبير والتصغير، واضغط مطولًا على الشرطة المائلة العكسية لعرض الأصل، وEnter للتطبيق",
   "tools.database.titlePlaceholder": "قاعدة بيانات جديدة",
   "tools.database.renameView": "إعادة تسمية",
   "tools.database.duplicateView": "تكرار",

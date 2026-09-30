@@ -393,7 +393,7 @@
   "tools.image.cropCancel": "Atšaukti",
   "tools.image.cropDone": "Atlikta",
   "tools.image.cropDialogLabel": "Apkirpti paveikslą",
-  "tools.image.cropStageLabel": "Paveikslas. Vilkite norėdami perkelti, suimkite pirštais arba slinkite norėdami keisti mastelį, laikykite paspaudę norėdami matyti originalą",
+  "tools.image.cropStageLabel": "Paveikslas. Rodyklių klavišai perkelia, pliusas ir minusas keičia mastelį, laikykite paspaudę kairinį pasvirąjį brūkšnį norėdami matyti originalą, Enter pritaiko",
   "tools.database.titlePlaceholder": "Nauja duomenų bazė",
   "tools.database.renameView": "Pervadinti",
   "tools.database.duplicateView": "Dubliuoti",

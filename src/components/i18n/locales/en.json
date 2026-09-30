@@ -393,7 +393,7 @@
   "tools.image.cropCancel": "Cancel",
   "tools.image.cropDone": "Done",
   "tools.image.cropDialogLabel": "Crop image",
-  "tools.image.cropStageLabel": "Photo. Drag to move, pinch or scroll to zoom, hold to see the original",
+  "tools.image.cropStageLabel": "Photo. Arrow keys move, plus and minus zoom, hold backslash to see the original, Enter applies",
   "toolNames.file": "File",
   "tools.file.emptyAddFile": "Add a file",
   "tools.file.emptyUpload": "From device",

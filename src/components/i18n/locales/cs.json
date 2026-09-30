@@ -382,7 +382,7 @@
   "tools.image.cropCancel": "Zrušit",
   "tools.image.cropDone": "Hotovo",
   "tools.image.cropDialogLabel": "Oříznout obrázek",
-  "tools.image.cropStageLabel": "Obrázek. Přetažením přesunete, sevřením prstů nebo posouváním změníte přiblížení, podržením zobrazíte originál",
+  "tools.image.cropStageLabel": "Obrázek. Šipky posouvají, plus a minus mění přiblížení, podržením zpětného lomítka zobrazíte originál, Enter použije",
   "tools.database.titlePlaceholder": "Nová databáze",
   "tools.database.renameView": "Přejmenovat",
   "tools.database.duplicateView": "Duplikovat",

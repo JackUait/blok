@@ -380,7 +380,7 @@
   "tools.image.cropCancel": "Avbryt",
   "tools.image.cropDone": "Ferdig",
   "tools.image.cropDialogLabel": "Beskjær bilde",
-  "tools.image.cropStageLabel": "Bilde. Dra for å flytte, knip eller rull for å zoome, hold inne for å se originalen",
+  "tools.image.cropStageLabel": "Bilde. Piltastene flytter, pluss og minus zoomer, hold inne omvendt skråstrek for å se originalen, Enter bruker endringen",
   "tools.database.titlePlaceholder": "Ny database",
   "tools.database.renameView": "Gi nytt navn",
   "tools.database.duplicateView": "Dupliser",

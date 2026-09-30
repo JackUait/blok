@@ -380,7 +380,7 @@
   "tools.image.cropCancel": "Avbryt",
   "tools.image.cropDone": "Klar",
   "tools.image.cropDialogLabel": "Beskär bild",
-  "tools.image.cropStageLabel": "Bild. Dra för att flytta, nyp eller skrolla för att zooma, håll ned för att se originalet",
+  "tools.image.cropStageLabel": "Bild. Piltangenterna flyttar, plus och minus zoomar, håll ned omvänt snedstreck för att se originalet, Enter verkställer",
   "tools.database.titlePlaceholder": "Ny databas",
   "tools.database.renameView": "Byt namn",
   "tools.database.duplicateView": "Duplicera",

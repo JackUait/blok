@@ -382,7 +382,7 @@
   "tools.image.cropCancel": "Abbrechen",
   "tools.image.cropDone": "Fertig",
   "tools.image.cropDialogLabel": "Bild zuschneiden",
-  "tools.image.cropStageLabel": "Bild. Zum Verschieben ziehen, zum Zoomen Finger zusammenziehen oder scrollen, zum Anzeigen des Originals gedrückt halten",
+  "tools.image.cropStageLabel": "Bild. Pfeiltasten verschieben, Plus und Minus zoomen, zum Anzeigen des Originals Backslash gedrückt halten, Eingabetaste übernimmt",
   "tools.database.titlePlaceholder": "Neue Datenbank",
   "tools.database.renameView": "Umbenennen",
   "tools.database.duplicateView": "Duplizieren",

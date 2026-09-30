@@ -382,7 +382,7 @@
   "tools.image.cropCancel": "Ακύρωση",
   "tools.image.cropDone": "Τέλος",
   "tools.image.cropDialogLabel": "Περικοπή εικόνας",
-  "tools.image.cropStageLabel": "Εικόνα. Σύρετε για μετακίνηση, τσιμπήστε ή κάντε κύλιση για ζουμ, κρατήστε πατημένο για να δείτε το πρωτότυπο",
+  "tools.image.cropStageLabel": "Εικόνα. Τα βέλη μετακινούν, το συν και το πλην κάνουν ζουμ, κρατήστε πατημένη την ανάστροφη κάθετο για να δείτε το πρωτότυπο, το Enter εφαρμόζει",
   "tools.database.titlePlaceholder": "Νέα βάση δεδομένων",
   "tools.database.renameView": "Μετονομασία",
   "tools.database.duplicateView": "Διπλότυπο",

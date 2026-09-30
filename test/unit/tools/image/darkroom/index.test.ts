@@ -607,6 +607,16 @@ describe('openDarkroom fix round 1', () => {
       for (const k of ['x', 'y', 'w', 'h']) expect(Number.isFinite(saved[k])).toBe(true);
     });
 
+    it('a backslash peek ends when focus leaves the stage', () => {
+      open();
+
+      key(stageEl(), { key: '\\' });
+      expect(dialog().hasAttribute('data-peek')).toBe(true);
+      stageEl()?.dispatchEvent(new FocusEvent('blur'));
+
+      expect(dialog().hasAttribute('data-peek')).toBe(false);
+    });
+
     it('Cmd+Z works on a non-Latin keyboard layout', () => {
       const { advance } = open();
       const circle = document.querySelector<HTMLButtonElement>('[data-ratio="circle"]');

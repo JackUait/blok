@@ -497,6 +497,8 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   stage.addEventListener('keyup', (e) => {
     if (e.key === '\\') surface.removeAttribute('data-peek');
   });
+  // A keyup that lands elsewhere never reaches the stage.
+  stage.addEventListener('blur', () => surface.removeAttribute('data-peek'));
 
   surface.addEventListener('keydown', (e) => {
     const mod = e.metaKey || e.ctrlKey;

@@ -183,6 +183,17 @@ describe('ToolboxPreview', () => {
     expect(cardRoot()?.hidden).toBe(true);
   });
 
+  it('stays open and follows the row when the menu list itself scrolls', () => {
+    const { surface, item } = makeAnchors();
+
+    preview.show({ item, surface, config: config(), source: 'keyboard' });
+    vi.spyOn(item, 'getBoundingClientRect').mockReturnValue(rect(104, 90, 292, 32));
+    surface.dispatchEvent(new Event('scroll'));
+
+    expect(cardRoot()?.hidden).toBe(false);
+    expect(parseFloat(cardRoot()?.style.top ?? '')).toBe(90);
+  });
+
   it('removes its root on destroy', () => {
     const { surface, item } = makeAnchors();
 

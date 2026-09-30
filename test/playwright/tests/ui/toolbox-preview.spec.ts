@@ -96,6 +96,20 @@ test.describe('Toolbox hover preview', () => {
     await expect(page.getByTestId('toolbox-preview')).toBeVisible();
   });
 
+  test('stays open while arrow keys scroll the menu list', async ({ page }) => {
+    await openToolbox(page);
+
+    const list = page.getByTestId('toolbox-popover').locator('[data-blok-popover-items]');
+    const before = await list.evaluate((el) => el.scrollTop);
+
+    for (let i = 0; i < 15; i++) {
+      await page.keyboard.press('ArrowDown');
+    }
+
+    expect(await list.evaluate((el) => el.scrollTop)).toBeGreaterThan(before);
+    await expect(page.getByTestId('toolbox-preview')).toBeVisible();
+  });
+
   test('closes with the menu', async ({ page }) => {
     await openToolbox(page);
     await option(page, 'header-1').hover();

@@ -54,6 +54,7 @@ export class ToolboxPreview {
   private openTimer: ReturnType<typeof setTimeout> | null = null;
   private warmUntil = 0;
   private visible = false;
+  private current: ToolboxPreviewShowParams | null = null;
 
   constructor(private readonly options: ToolboxPreviewOptions) {}
 
@@ -80,6 +81,7 @@ export class ToolboxPreview {
     }
 
     this.visible = false;
+    this.current = null;
     this.warmUntil = Date.now() + WARM_WINDOW;
     this.root.hidden = true;
     this.root.removeAttribute('data-state');
@@ -122,13 +124,17 @@ export class ToolboxPreview {
       document.addEventListener('scroll', this.onScroll, { capture: true, passive: true });
     }
 
-    const height = root.getBoundingClientRect().height;
-    const maxTop = window.innerHeight - VIEWPORT_MARGIN - height;
-
-    root.style.top = `${Math.max(VIEWPORT_MARGIN, Math.min(params.item.getBoundingClientRect().top, maxTop))}px`;
+    this.current = params;
+    root.style.top = this.resolveTop(root, params.item);
     root.setAttribute('data-state', 'open');
     root.setAttribute('data-blok-preview-side', left < params.surface.getBoundingClientRect().left ? 'left' : 'right');
     this.visible = true;
+  }
+
+  private resolveTop(root: HTMLElement, item: HTMLElement): string {
+    const maxTop = window.innerHeight - VIEWPORT_MARGIN - root.getBoundingClientRect().height;
+
+    return `${Math.max(VIEWPORT_MARGIN, Math.min(item.getBoundingClientRect().top, maxTop))}px`;
   }
 
   private resolveLeft(surface: DOMRect): number | null {
@@ -183,7 +189,14 @@ export class ToolboxPreview {
     }
   }
 
-  private onScroll = (): void => {
+  private onScroll = (event: Event): void => {
+    // Arrow keys scroll the menu's own list to reveal the focused row: follow the row.
+    if (this.current !== null && this.root !== null && event.target instanceof Node && this.current.surface.contains(event.target)) {
+      this.root.style.top = this.resolveTop(this.root, this.current.item);
+
+      return;
+    }
+
     this.hide();
   };
 }

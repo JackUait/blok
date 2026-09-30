@@ -57,6 +57,7 @@ const ATTR = {
   tick: 'data-blok-find-tick',
   active: 'data-blok-find-active',
   empty: 'data-blok-find-empty',
+  overflow: 'data-blok-find-overflow',
   shake: 'data-blok-find-shake',
   bump: 'data-blok-find-bump',
   roll: 'data-blok-find-roll',
@@ -151,6 +152,7 @@ export class FindBar {
   private noResults = false;
 
   private readonly listeners: Array<() => void> = [];
+  private inputResize: ResizeObserver | undefined;
 
   constructor(init: FindBarInit) {
     this.t = init.t;
@@ -267,6 +269,8 @@ export class FindBar {
     this.bindTooltip(this.replaceAllButton, 'find.replaceAll', shortcuts.replaceAll);
 
     this.listen(this.input, 'input', () => this.handleInput());
+    this.listen(this.input, 'input', () => this.syncOverflow());
+    this.listen(this.input, 'scroll', () => this.syncOverflow());
     this.listen(this.bar, 'keydown', (event) => this.handleKeydown(event));
     this.listen(this.replaceToggle, 'click', () => this.setReplaceOpen(!this.replaceOpen));
     this.listen(this.matchCaseButton, 'click', () => this.toggleOption('matchCase'));
@@ -284,6 +288,7 @@ export class FindBar {
       }
     });
     this.listen(this.counter, 'animationend', () => this.counter.removeAttribute(ATTR.bump));
+    this.watchInputWidth();
     this.place(init.placement, init.offset);
 
     this.renderResults();
@@ -376,6 +381,7 @@ export class FindBar {
     hideTooltip();
     this.listeners.forEach((remove) => remove());
     this.listeners.length = 0;
+    this.inputResize?.disconnect();
     removeFromTopLayer(this.element);
     this.element.remove();
   }
@@ -725,6 +731,26 @@ export class FindBar {
       : [label, { text: '  ', highlight: false }, { text: shortcut, highlight: false, direction: 'ltr' as const }];
 
     onHover(element, createTooltipContent([line]), { placement: 'bottom', delay: 400 });
+  }
+
+  /**
+   * The counter appearing narrows the input without a scroll or input event,
+   * so width changes re-check the haze too.
+   */
+  private watchInputWidth(): void {
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    this.inputResize = new ResizeObserver(() => this.syncOverflow());
+    this.inputResize.observe(this.input);
+  }
+
+  /** find.css hazes the input's end while text hides past it. */
+  private syncOverflow(): void {
+    // scrollLeft is negative in RTL, so measure from the end either way.
+    const hidden = this.input.scrollWidth - this.input.clientWidth - Math.abs(this.input.scrollLeft);
+
+    this.field.toggleAttribute(ATTR.overflow, hidden > 1);
   }
 
   private listen<K extends keyof HTMLElementEventMap>(

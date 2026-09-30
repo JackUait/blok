@@ -67,7 +67,8 @@ function altSurfaceRule(): string {
 
 /** The alt text field takes its look from the shared `[data-blok-field]` rule. */
 function altInputRule(): string {
-  const idx = css.indexOf('[data-blok-field] {');
+  // Line start, so a compound selector ending in [data-blok-field] does not match.
+  const idx = css.search(/^\[data-blok-field\] \{/m);
   if (idx === -1) throw new Error('shared field rule missing');
   const open = css.indexOf('{', idx);
   return css.slice(open + 1, findMatchingBrace(css, open));

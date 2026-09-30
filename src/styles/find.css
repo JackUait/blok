@@ -171,6 +171,21 @@
   margin-inline-end: var(--blok-space-1);
 }
 
+/* The text runs up to the counter's digits. Two attributes to beat the
+   shared field gap, which loads after this file. */
+[data-blok-find-field][data-blok-field] {
+  gap: 0;
+}
+
+/* find-bar.ts sets data-blok-find-overflow while text hides past the end. */
+[data-blok-find-field][data-blok-find-overflow] > input {
+  mask-image: linear-gradient(to right, black calc(100% - var(--blok-space-4)), transparent);
+}
+
+[data-blok-find-field][data-blok-find-overflow]:dir(rtl) > input {
+  mask-image: linear-gradient(to left, black calc(100% - var(--blok-space-4)), transparent);
+}
+
 [data-blok-find-field][data-blok-find-empty] {
   border-color: var(--blok-find-empty-border);
   background: var(--blok-find-empty-bg);
@@ -189,7 +204,7 @@
 [data-blok-find-counter] {
   flex: none;
   padding-block: var(--blok-space-1);
-  padding-inline-start: var(--blok-space-1-5);
+  padding-inline-start: var(--blok-space-1);
   overflow: clip;
   mask-image: linear-gradient(transparent, black var(--blok-space-1-5), black calc(100% - var(--blok-space-1-5)), transparent);
   color: var(--blok-text-secondary);

@@ -5,7 +5,8 @@ import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 const IS_MAC = process.platform === 'darwin';
 const REPLACE_KEY = IS_MAC ? 'Meta+Alt+f' : 'Control+h';
-const TEXT = 'foo one foo two';
+const TEXT = 'foo one foo two, and on this page you can find a long sentence';
+const LONG_QUERY = 'and on this page you can find a long sentence';
 
 const openReplace = async (page: Page, theme: 'light' | 'dark'): Promise<void> => {
   await page.evaluate(async text => {
@@ -65,6 +66,45 @@ for (const [theme, width] of [['light', 1280], ['dark', 1280], ['light', 390]] a
 
       expect(find?.width).toBe(expected);
       expect(replace?.width).toBe(expected);
+    });
+
+    test('a long query runs up to the counter digits', async ({ page }) => {
+      await openReplace(page, theme);
+      await page.getByTestId('find-input').fill(LONG_QUERY);
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 1');
+
+      const { inputRight, digitsLeft } = await page.getByTestId('find-field').evaluate((field) => {
+        const input = field.querySelector('input');
+        const counter = field.querySelector('[data-blok-testid="find-counter"]');
+        const range = document.createRange();
+
+        if (input === null || counter === null) {
+          throw new Error('The field has no input or counter');
+        }
+        range.selectNodeContents(counter);
+
+        return { inputRight: input.getBoundingClientRect().right, digitsLeft: range.getBoundingClientRect().left };
+      });
+
+      expect(digitsLeft - inputRight).toBeLessThanOrEqual(4);
+    });
+
+    test('hazes the right edge only while text hides past it', async ({ page }) => {
+      await openReplace(page, theme);
+      const input = page.getByTestId('find-input');
+      const mask = (): Promise<string> => input.evaluate(el => getComputedStyle(el).maskImage);
+
+      await input.fill(LONG_QUERY);
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 1');
+      await input.press('Home');
+      await expect.poll(mask).not.toBe('none');
+
+      await input.press('End');
+      await expect.poll(mask).toBe('none');
+
+      await input.fill('foo');
+      await input.press('Home');
+      await expect.poll(mask).toBe('none');
     });
 
     test('the counter sits inside the find field', async ({ page }) => {

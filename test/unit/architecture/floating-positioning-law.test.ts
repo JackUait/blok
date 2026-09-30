@@ -172,7 +172,6 @@ const CAPTURE_SCROLL_CLASSIFICATIONS: Record<string, string> = {
   'components/ui/toolbox-preview.ts': 'Capture-phase scroll listener re-places the toolbox hover card when the menu list scrolls and closes it on any other scroll.',
   'components/utils/tooltip.ts': 'Capture-phase scroll listener intentionally dismisses the snapshot tooltip.',
   'tools/file/preview-scroll-haze.ts': 'Capture-phase listener refreshes local file-preview scroll haze state.',
-  'tools/image/index.ts': 'Capture-phase listener re-decides whether image tool islands fit above the figure; the editor may scroll inside any ancestor.',
 };
 
 type SurfaceContract = 'shared' | 'popover-core' | 'tracked-manual' | 'dismiss-on-scroll';

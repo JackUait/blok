@@ -74,12 +74,27 @@ describe('renderRadiusGallery', () => {
     expect(container.querySelector('[data-blok-interface="radius-gallery"]')).not.toBeNull();
   });
 
-  it('shows a row for every role, painted with the role token itself', () => {
+  it('shows instead of tells: no text on the page runs past a few words', () => {
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    const long: string[] = [];
+
+    for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+      const words = (node.textContent ?? '').trim().split(/\s+/).filter(Boolean);
+
+      if (words.length > 4) {
+        long.push(node.textContent ?? '');
+      }
+    }
+
+    expect(long).toEqual([]);
+  });
+
+  it('shows a specimen for every role, painted with the role token itself', () => {
     for (const role of RADIUS_ROLES) {
       const row = container.querySelector(`[data-radius-role="${role.token}"]`);
 
       expect(row, role.token).not.toBeNull();
-      expect(row?.textContent).toContain(role.token);
+      expect(row?.textContent).toContain(role.token.replace('--blok-radius-', ''));
       expect(row?.querySelector<HTMLElement>('[data-radius-preview]')?.style.borderRadius).toBe(`var(${role.token})`);
     }
   });
@@ -99,6 +114,6 @@ describe('renderRadiusGallery', () => {
     gap.value = '12';
     gap.dispatchEvent(new Event('input'));
 
-    expect(readout.textContent).toContain('own role');
+    expect(readout.textContent).toContain('own');
   });
 });

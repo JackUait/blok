@@ -1,46 +1,38 @@
 /**
  * Playground page for the radius design system
- * (docs/plans/2026-09-30-radius-design-system.md). Every preview is painted
- * with the real token, and every px value is read back from the browser, so
- * the page cannot drift from colors.css.
+ * (docs/plans/2026-09-30-radius-design-system.md). Each specimen is a tiny
+ * real-looking component painted with the real token; px values are read
+ * back from the browser, so the page cannot drift from colors.css.
  */
 
 export interface RadiusToken {
   token: string;
-  use: string;
 }
 
 export const RADIUS_PRIMITIVES: RadiusToken[] = [
-  { token: '--blok-radius-0', use: 'Square' },
-  { token: '--blok-radius-2', use: 'Tailwind xs' },
-  { token: '--blok-radius-4', use: 'Tailwind sm' },
-  { token: '--blok-radius-6', use: 'Tailwind md' },
-  { token: '--blok-radius-8', use: 'Tailwind lg' },
-  { token: '--blok-radius-10', use: 'Notion card' },
-  { token: '--blok-radius-12', use: 'Tailwind xl' },
-  { token: '--blok-radius-16', use: 'Tailwind 2xl' },
-  { token: '--blok-radius-full', use: 'Pill' },
-];
+  '0', '2', '4', '6', '8', '10', '12', '16', 'full',
+].map((step) => ({ token: `--blok-radius-${step}` }));
 
-/** Preview box size per role, so each shape is shown at a size it is used at. */
-type PreviewSize = 'card' | 'control' | 'small' | 'mark' | 'pill' | 'line';
+type Specimen = 'dialog' | 'popover' | 'callout' | 'field' | 'button' | 'mark' | 'pill' | 'caret' | 'floor';
 
 export interface RadiusRole extends RadiusToken {
-  size: PreviewSize;
+  specimen: Specimen;
+  /** Button height in px, for the three control roles. */
+  height?: number;
 }
 
 export const RADIUS_ROLES: RadiusRole[] = [
-  { token: '--blok-radius-dialog', size: 'card', use: 'Modal, leave banner, crop dialog, lightbox' },
-  { token: '--blok-radius-surface', size: 'card', use: 'Popovers, menus, inline toolbar, toasts, emoji picker, find bar, floating toolbars, cards' },
-  { token: '--blok-radius-block', size: 'card', use: 'Block frames: callout, code, image, video, audio, embed, bookmark, file' },
-  { token: '--blok-radius-field', size: 'control', use: 'Text inputs and search fields' },
-  { token: '--blok-radius-control-lg', size: 'control', use: 'Buttons 36px and taller, icon tiles' },
-  { token: '--blok-radius-control', size: 'control', use: 'Buttons 24–32px, menu rows, tabs, tooltips, block hover and selection fill' },
-  { token: '--blok-radius-control-sm', size: 'small', use: 'Controls up to 20px, checkbox, tags, keyboard hints, scrollbar thumb' },
-  { token: '--blok-radius-mark', size: 'mark', use: 'Inline marks: code span, find match, highlight' },
-  { token: '--blok-radius-pill', size: 'pill', use: 'Pills, badges, status chips, round handles, progress tracks' },
-  { token: '--blok-radius-notch', size: 'line', use: 'Sub-step corners: crop-handle notches, caret ends' },
-  { token: '--blok-radius-floor', size: 'small', use: 'Not a shape: the smallest radius a nested child may get' },
+  { token: '--blok-radius-dialog', specimen: 'dialog' },
+  { token: '--blok-radius-surface', specimen: 'popover' },
+  { token: '--blok-radius-block', specimen: 'callout' },
+  { token: '--blok-radius-field', specimen: 'field' },
+  { token: '--blok-radius-control-lg', specimen: 'button', height: 36 },
+  { token: '--blok-radius-control', specimen: 'button', height: 28 },
+  { token: '--blok-radius-control-sm', specimen: 'button', height: 20 },
+  { token: '--blok-radius-mark', specimen: 'mark' },
+  { token: '--blok-radius-pill', specimen: 'pill' },
+  { token: '--blok-radius-notch', specimen: 'caret' },
+  { token: '--blok-radius-floor', specimen: 'floor' },
 ];
 
 export const FLOOR_PX = 4;
@@ -66,25 +58,6 @@ export const innerRadius = ({ outer, border, gap }: { outer: number; border: num
   return derived < FLOOR_PX ? { value: FLOOR_PX, reason: 'floor' } : { value: derived, reason: 'derived' };
 };
 
-interface Example {
-  container: string;
-  outer: string;
-  border: number;
-  gap: number;
-  child: string;
-}
-
-/** Real containers in the editor, with the padding they really have. */
-const EXAMPLES: Example[] = [
-  { container: 'Popover card', outer: '--blok-radius-surface', border: 0, gap: 4, child: 'menu rows, search field' },
-  { container: 'Block settings, Turn into', outer: '--blok-radius-surface', border: 0, gap: 4, child: 'menu rows' },
-  { container: 'Inline toolbar card', outer: '--blok-radius-surface', border: 0, gap: 8, child: 'toolbar buttons' },
-  { container: 'Find bar', outer: '--blok-radius-surface', border: 0, gap: 6, child: 'icon and text buttons' },
-  { container: 'Database column', outer: '--blok-radius-surface', border: 0, gap: 8, child: 'cards, add-card button' },
-  { container: 'Placement picker track', outer: '--blok-radius-control-lg', border: 0, gap: 3, child: 'thumb, option buttons' },
-  { container: 'Toast card', outer: '--blok-radius-surface', border: 1, gap: 12, child: 'thumbnail tile' },
-];
-
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string): HTMLElementTagNameMap[K] => {
   const node = document.createElement(tag);
 
@@ -97,6 +70,28 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, t
   }
 
   return node;
+};
+
+const radius = <T extends HTMLElement>(node: T, value: string): T => {
+  node.style.setProperty('border-radius', value);
+
+  return node;
+};
+
+/** Paints a specimen with its role token and marks it as the preview. */
+const painted = <T extends HTMLElement>(node: T, value: string): T => {
+  node.setAttribute('data-radius-preview', '');
+
+  return radius(node, value);
+};
+
+/** A gray placeholder line standing in for text. */
+const line = (width: string): HTMLElement => {
+  const bar = el('span', 'rg-line');
+
+  bar.style.width = width;
+
+  return bar;
 };
 
 /** Reads a token's px the browser really uses, by painting a probe with it. */
@@ -113,260 +108,265 @@ const makeProbe = (root: HTMLElement): ((token: string) => number) => {
   };
 };
 
-const pxLabel = (px: number): string => (px >= 999 ? 'full' : `${px}px`);
+const pxLabel = (px: number): string => (px >= 999 ? 'full' : String(px));
 
-const section = (root: HTMLElement, title: string, lead: string): HTMLElement => {
+const shortName = (token: string): string => token.replace('--blok-radius-', '');
+
+const specimen = (role: RadiusRole): HTMLElement => {
+  const value = `var(${role.token})`;
+
+  switch (role.specimen) {
+    case 'dialog': {
+      const dialog = painted(el('div', 'rg-dialog'), value);
+      const actions = el('div', 'rg-dialog__actions');
+
+      actions.append(el('span', 'rg-btn', 'Cancel'), el('span', 'rg-btn rg-btn--primary', 'Leave'));
+      dialog.append(line('70%'), line('90%'), actions);
+
+      return dialog;
+    }
+    case 'popover': {
+      const card = painted(el('div', 'rg-popover'), value);
+
+      card.style.setProperty('--blok-radius-inner', 'max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1)))');
+      for (const [index, width] of ['60%', '45%', '70%'].entries()) {
+        const row = radius(el('div', index === 0 ? 'rg-row rg-row--hover' : 'rg-row'), 'var(--blok-radius-inner)');
+
+        row.append(el('span', 'rg-row__icon'), line(width));
+        card.append(row);
+      }
+
+      return card;
+    }
+    case 'callout': {
+      const callout = painted(el('div', 'rg-callout'), value);
+      const body = el('div', 'rg-callout__body');
+
+      body.append(line('85%'), line('55%'));
+      callout.append(el('span', 'rg-callout__icon', '💡'), body);
+
+      return callout;
+    }
+    case 'field':
+      return painted(el('div', 'rg-field', 'Search'), value);
+    case 'button': {
+      const button = painted(el('div', 'rg-btn rg-btn--solid', 'Button'), value);
+
+      button.style.height = `${role.height ?? 28}px`;
+
+      return button;
+    }
+    case 'mark': {
+      const text = el('div', 'rg-text', 'Use ');
+
+      text.append(painted(el('span', 'rg-mark', 'npm'), value), document.createTextNode(' here'));
+
+      return text;
+    }
+    case 'pill':
+      return painted(el('div', 'rg-pill', 'Done'), value);
+    case 'caret': {
+      const text = el('div', 'rg-text rg-text--big', 'Ab');
+
+      text.append(painted(el('span', 'rg-caret'), value));
+
+      return text;
+    }
+    case 'floor': {
+      // 10 − 8 would be 2; the floor holds the child at its own token.
+      const box = radius(el('div', 'rg-nest'), '10px');
+      const child = painted(el('div', 'rg-nest__child'), value);
+
+      box.style.setProperty('padding', '8px');
+      box.append(child);
+
+      return box;
+    }
+  }
+};
+
+const section = (root: HTMLElement, title: string): HTMLElement => {
   const node = el('section', 'rg-section');
 
-  node.append(el('h2', 'rg-title', title), el('p', 'rg-lead', lead));
+  node.append(el('h2', 'rg-title', title));
   root.append(node);
 
   return node;
 };
 
-const code = (text: string): HTMLElement => {
-  // Not <pre>/<code>: Blok's scoped preflight styles those as inline code.
-  return el('div', 'rg-code', text);
+const caption = (name: string, px: string): HTMLElement => {
+  const text = el('div', 'rg-caption');
+
+  text.append(el('span', 'rg-caption__name', name), el('span', 'rg-caption__px', px));
+
+  return text;
 };
 
 const renderScale = (root: HTMLElement, pxOf: (token: string) => number): void => {
-  const node = section(root, 'Scale', 'One ordered set of steps. Components never use these directly; they use a role.');
-  const grid = el('div', 'rg-scale');
+  const row = el('div', 'rg-scale');
 
   for (const primitive of RADIUS_PRIMITIVES) {
     const tile = el('div', 'rg-scale__tile');
-    const shape = el('div', 'rg-scale__shape');
 
-    shape.style.borderRadius = `var(${primitive.token})`;
-    tile.append(shape, el('span', 'rg-mono', primitive.token), el('span', 'rg-muted', `${pxLabel(pxOf(primitive.token))} · ${primitive.use}`));
-    grid.append(tile);
+    tile.append(radius(el('div', 'rg-scale__shape'), `var(${primitive.token})`), el('span', 'rg-caption__px', pxLabel(pxOf(primitive.token))));
+    row.append(tile);
   }
 
-  node.append(grid);
+  section(root, 'Scale').append(row);
 };
 
 const renderRoles = (root: HTMLElement, pxOf: (token: string) => number): void => {
-  const node = section(root, 'Roles', 'Pick the role by what the element is. The role decides the radius.');
-  const list = el('div', 'rg-roles');
+  const grid = el('div', 'rg-roles');
 
   for (const role of RADIUS_ROLES) {
-    const row = el('div', 'rg-role');
-    const stage = el('div', 'rg-role__stage');
-    const preview = el('div', `rg-preview rg-preview--${role.size}`);
-    const meta = el('div', 'rg-role__meta');
+    const cell = el('div', 'rg-cell');
+    const stage = el('div', 'rg-stage');
+    const shape = specimen(role);
 
-    row.setAttribute('data-radius-role', role.token);
-    preview.setAttribute('data-radius-preview', '');
-    preview.style.borderRadius = `var(${role.token})`;
-    stage.append(preview);
-    meta.append(el('span', 'rg-mono', role.token), el('span', 'rg-role__px', pxLabel(pxOf(role.token))), el('p', 'rg-muted', role.use));
-    row.append(stage, meta);
-    list.append(row);
+    cell.setAttribute('data-radius-role', role.token);
+    stage.append(shape);
+    cell.append(stage, caption(shortName(role.token), pxLabel(pxOf(role.token))));
+    grid.append(cell);
   }
 
-  node.append(list);
+  section(root, 'Roles').append(grid);
 };
 
-const renderHeights = (root: HTMLElement): void => {
-  const node = section(root, 'Controls follow height', 'A taller control gets a rounder corner. A mobile variant keeps the same role.');
-  const row = el('div', 'rg-heights');
-
-  for (const [height, token, range] of [
-    [20, '--blok-radius-control-sm', 'up to 20px'],
-    [28, '--blok-radius-control', '24–32px'],
-    [36, '--blok-radius-control-lg', '36px and up'],
-  ] as const) {
-    const item = el('div', 'rg-heights__item');
-    const button = el('div', 'rg-heights__button', 'Button');
-
-    button.style.height = `${height}px`;
-    button.style.borderRadius = `var(${token})`;
-    item.append(button, el('span', 'rg-mono', token), el('span', 'rg-muted', range));
-    row.append(item);
-  }
-
-  node.append(row);
+/** Outer radii the demo offers, with the px to use before the stylesheet loads. */
+const FALLBACK_PX: Record<string, number> = {
+  '--blok-radius-surface': 10,
+  '--blok-radius-dialog': 12,
+  '--blok-radius-control-lg': 8,
 };
 
 const renderNesting = (root: HTMLElement, pxOf: (token: string) => number): void => {
-  const node = section(root, 'Nesting', 'A child near a rounded parent\'s corner shares its centre. Subtract the space between them.');
-
-  node.append(code('inner = max(4px, outer − border − gap)'));
-
-  const rules = el('ul', 'rg-rules');
-
-  for (const text of [
-    'gap is the parent\'s padding plus the child\'s margin at that corner.',
-    'Never below 4px (--blok-radius-floor).',
-    'If border + gap reaches the outer radius, the child keeps its own role.',
-    'Pills and circles never derive. Their shape is height / 2.',
-    'Derived values are exact, not snapped to the scale.',
-    'A container computes --blok-radius-inner from its own tokens, never from --blok-radius-inner (a cycle resolves to 0).',
-  ]) {
-    rules.append(el('li', undefined, text));
-  }
-
-  node.append(rules);
-
+  const node = section(root, 'Nesting');
   const demo = el('div', 'rg-demo');
   const controls = el('div', 'rg-demo__controls');
   const outerSelect = el('select', 'rg-input');
   const gapInput = el('input', 'rg-input');
-  const borderInput = el('input', 'rg-input');
-  const readout = el('p', 'rg-demo__readout');
+  const readout = el('div', 'rg-demo__readout');
 
+  outerSelect.setAttribute('aria-label', 'Outer radius');
   outerSelect.setAttribute('data-radius-demo', 'outer');
-  readout.setAttribute('data-radius-demo', 'readout');
-  for (const token of ['--blok-radius-surface', '--blok-radius-dialog', '--blok-radius-control-lg', '--blok-radius-16']) {
-    const px = pxOf(token) || Number(token.match(/\d+$/)?.[0] ?? 10);
-    const option = el('option', undefined, `${token.replace('--blok-radius-', '')} · ${px}px`);
+  for (const token of Object.keys(FALLBACK_PX)) {
+    const px = pxOf(token) || FALLBACK_PX[token];
+    const option = el('option', undefined, `${px}px`);
 
     option.value = String(px);
     outerSelect.append(option);
   }
   outerSelect.value = String(pxOf('--blok-radius-surface') || 10);
 
-  for (const [input, name, max, value] of [[gapInput, 'gap', 16, 4], [borderInput, 'border', 2, 0]] as const) {
-    input.type = 'range';
-    input.min = '0';
-    input.max = String(max);
-    input.value = String(value);
-    input.setAttribute('data-radius-demo', name);
-  }
+  gapInput.type = 'range';
+  gapInput.min = '0';
+  gapInput.max = '14';
+  gapInput.value = '4';
+  gapInput.setAttribute('aria-label', 'Gap');
+  gapInput.setAttribute('data-radius-demo', 'gap');
+  readout.setAttribute('data-radius-demo', 'readout');
 
-  const labelled = (label: string, control: HTMLElement): HTMLElement => {
-    const wrap = el('label', 'rg-demo__field');
+  controls.append(outerSelect, gapInput, readout);
 
-    wrap.append(el('span', 'rg-muted', label), control);
-
-    return wrap;
-  };
-
-  controls.append(labelled('Outer', outerSelect), labelled('Gap', gapInput), labelled('Border', borderInput), readout);
-
-  const figure = (caption: string): { wrap: HTMLElement; outer: HTMLElement; inner: HTMLElement } => {
+  const figure = (mark: string): { wrap: HTMLElement; outer: HTMLElement; inner: HTMLElement } => {
     const wrap = el('figure', 'rg-demo__figure');
     const outer = el('div', 'rg-demo__outer');
     const inner = el('div', 'rg-demo__inner');
 
     outer.append(inner);
-    wrap.append(outer, el('figcaption', 'rg-muted', caption));
+    wrap.append(outer, el('figcaption', `rg-verdict rg-verdict--${mark === '✓' ? 'yes' : 'no'}`, mark));
 
     return { wrap, outer, inner };
   };
 
-  const right = figure('Concentric: the rule (shown at 2×)');
-  const wrong = figure('Same radius: bulges at the corner');
+  const right = figure('✓');
+  const wrong = figure('✗');
   const stages = el('div', 'rg-demo__stages');
 
   stages.append(right.wrap, wrong.wrap);
-  demo.append(controls, stages);
+  demo.append(stages, controls);
   node.append(demo);
 
   const update = (): void => {
     const outer = Number(outerSelect.value);
     const gap = Number(gapInput.value);
-    const border = Number(borderInput.value);
-    const result = innerRadius({ outer, border, gap });
+    const result = innerRadius({ outer, border: 0, gap });
     const own = pxOf('--blok-radius-control') || 6;
     const inner = result.value ?? own;
 
     for (const view of [right, wrong]) {
       view.outer.style.borderRadius = `${outer}px`;
       view.outer.style.padding = `${gap}px`;
-      view.outer.style.borderWidth = `${border}px`;
     }
     right.inner.style.borderRadius = `${inner}px`;
     wrong.inner.style.borderRadius = `${outer}px`;
 
-    readout.textContent = result.reason === 'own-role'
-      ? `inner: own role (${own}px for a control), because border + gap ≥ outer`
-      : `inner: ${inner}px${result.reason === 'floor' ? ' (the 4px floor)' : ` = ${outer} − ${border} − ${gap}`}`;
+    if (result.reason === 'own-role') {
+      readout.textContent = `${outer}−${gap} → own`;
+    } else if (result.reason === 'floor') {
+      readout.textContent = `${outer}−${gap} → ${inner}px`;
+    } else {
+      readout.textContent = `${outer}−${gap} = ${inner}px`;
+    }
   };
 
   outerSelect.addEventListener('change', update);
   gapInput.addEventListener('input', update);
-  borderInput.addEventListener('input', update);
   update();
 };
 
-const renderExamples = (root: HTMLElement, pxOf: (token: string) => number): void => {
-  const node = section(root, 'In the editor', 'Every rounded container publishes --blok-radius-inner for its children.');
-  const table = el('table', 'rg-table');
-  const head = el('tr');
+interface Example {
+  outer: string;
+  gap: number;
+  children: number;
+  layout: 'rows' | 'buttons';
+}
 
-  for (const title of ['Container', 'Outer', 'Border + gap', 'Children', 'Inner']) {
-    head.append(el('th', undefined, title));
-  }
-  table.append(head);
+/** Real containers in the editor, with the padding they really have. */
+const EXAMPLES: Example[] = [
+  { outer: '--blok-radius-surface', gap: 4, children: 3, layout: 'rows' },
+  { outer: '--blok-radius-surface', gap: 8, children: 4, layout: 'buttons' },
+  { outer: '--blok-radius-control-lg', gap: 3, children: 3, layout: 'buttons' },
+];
+
+const renderExamples = (root: HTMLElement, pxOf: (token: string) => number): void => {
+  const grid = el('div', 'rg-examples');
 
   for (const example of EXAMPLES) {
     const outer = pxOf(example.outer) || 10;
-    const result = innerRadius({ outer, border: example.border, gap: example.gap });
-    const row = el('tr');
+    const inner = innerRadius({ outer, border: 0, gap: example.gap }).value ?? outer;
+    const cell = el('div', 'rg-cell');
+    const stage = el('div', 'rg-stage rg-stage--zoom');
+    const box = radius(el('div', `rg-mini rg-mini--${example.layout}`), `${outer}px`);
 
-    row.append(
-      el('td', undefined, example.container),
-      el('td', 'rg-mono', `${outer}px`),
-      el('td', 'rg-mono', `${example.border + example.gap}px`),
-      el('td', 'rg-muted', example.child),
-      el('td', 'rg-mono', result.value === null ? 'own role' : `${result.value}px`)
-    );
-    table.append(row);
+    box.style.padding = `${example.gap}px`;
+    Array.from({ length: example.children }, (_, i) => radius(el('span', i === 0 ? 'rg-mini__child rg-mini__child--on' : 'rg-mini__child'), `${inner}px`))
+      .forEach((child) => box.append(child));
+    stage.append(box);
+    cell.append(stage, caption(`${outer}−${example.gap}`, `${inner}`));
+    grid.append(cell);
   }
 
-  node.append(table);
+  section(root, 'In the editor').append(grid);
 };
 
 const renderOutward = (root: HTMLElement, pxOf: (token: string) => number): void => {
-  const node = section(root, 'Selection follows the block', 'The rule runs outward too: a fill around a rounded block is the block\'s radius plus the gap.');
-  const stage = el('div', 'rg-outward');
-  const fill = el('div', 'rg-outward__fill');
-  const block = el('div', 'rg-outward__block', 'Callout');
+  const block = pxOf('--blok-radius-block') || 10;
   const gap = 8;
+  const cell = el('div', 'rg-cell rg-cell--wide');
+  const stage = el('div', 'rg-stage');
+  const fill = radius(el('div', 'rg-selection'), `${block + gap}px`);
+  const callout = radius(el('div', 'rg-callout'), `${block}px`);
+  const body = el('div', 'rg-callout__body');
 
   fill.style.padding = `${gap}px`;
-  fill.style.borderRadius = `calc(var(--blok-radius-block) + ${gap}px)`;
-  block.style.borderRadius = 'var(--blok-radius-block)';
-  fill.append(block);
-  stage.append(fill, el('p', 'rg-muted', `fill = ${pxOf('--blok-radius-block') || 10}px + ${gap}px`));
-  node.append(stage, code([
-    'class Callout {',
-    '  // Core writes it on the content wrapper as --blok-radius-frame.',
-    "  static frameRadius = 'var(--blok-radius-block)';",
-    '}',
-  ].join('\n')));
-};
+  body.append(line('85%'), line('55%'));
+  callout.append(el('span', 'rg-callout__icon', '💡'), body);
+  fill.append(callout);
+  stage.append(fill);
+  cell.append(stage, caption(`${block}+${gap}`, `${block + gap}`));
 
-const renderUsage = (root: HTMLElement): void => {
-  const node = section(root, 'Writing it', 'Checked on every run by test/unit/architecture/radius-law.test.ts.');
-
-  node.append(code([
-    '/* CSS: a container publishes the inner radius from its own tokens */',
-    '.card {',
-    '  border-radius: var(--blok-radius-surface);',
-    '  padding: var(--blok-space-1);',
-    '  --blok-radius-inner: max(var(--blok-radius-floor),',
-    '    calc(var(--blok-radius-surface) - var(--blok-space-1)));',
-    '}',
-    '.card > .row { border-radius: var(--blok-radius-inner, var(--blok-radius-control)); }',
-    '',
-    '// TS: Tailwind v4 variable syntax',
-    "'rounded-(--blok-radius-control)'",
-  ].join('\n')));
-
-  const donts = el('ul', 'rg-rules');
-
-  for (const text of [
-    'No raw px, no --blok-space-* or border-width token as a radius.',
-    'No Tailwind radius steps (rounded-sm, rounded-lg…), no bare rounded, no rounded-[Npx].',
-    'No primitive (--blok-radius-6) outside colors.css. Use a role.',
-    'No literal borderRadius in TS.',
-  ]) {
-    donts.append(el('li', undefined, text));
-  }
-
-  node.append(el('h3', 'rg-subtitle', 'Don\'t'), donts);
+  section(root, 'Selection').append(cell);
 };
 
 export interface RadiusGalleryHandle {
@@ -398,17 +398,12 @@ export const renderRadiusGallery = ({ container }: { container: HTMLElement }): 
 
   const build = (): void => {
     built.surface = pxOf('--blok-radius-surface');
-    content.replaceChildren(
-      el('h1', 'rg-heading', 'Rounding'),
-      el('p', 'rg-lead', 'Three layers: a scale, roles built from it, and one rule for nested corners. Values below are read live from the tokens.')
-    );
+    content.replaceChildren(el('h1', 'rg-heading', 'Rounding'));
     renderScale(content, pxOf);
     renderRoles(content, pxOf);
-    renderHeights(content);
     renderNesting(content, pxOf);
     renderExamples(content, pxOf);
     renderOutward(content, pxOf);
-    renderUsage(content);
   };
 
   const refresh = (): void => {

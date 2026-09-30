@@ -99,6 +99,9 @@ const EXEMPTIONS: Record<string, Exemption> = {
   'tools/audio/cover-picker.ts': {
     reason: 'dialog styled by authored blok-audio-cover-picker / blok-media-empty BEM classes (unscoped)',
   },
+  'tools/image/darkroom/motion.ts': {
+    reason: 'fly-out clone and veil styled by authored blok-darkroom-* classes (unscoped) + inline geometry; no utilities, and the clone img must stay out of the preflight img reset',
+  },
   'tools/image/download.ts': { reason: 'transient styleless <a download> clicked and removed' },
   'tools/video/index.ts': { reason: 'transient styleless <a download> clicked and removed' },
   'tools/audio/index.ts': { reason: 'transient styleless <a download> clicked and removed' },

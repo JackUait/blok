@@ -445,6 +445,30 @@ describe('openDarkroom fix round 1', () => {
         expect(errors).toEqual([boom]);
       });
 
+      it('an onApply that throws still shows the block image again', () => {
+        const source = document.createElement('div');
+        const { clock } = fakeFrameClock();
+
+        document.body.appendChild(source);
+        track(openDarkroom({
+          url: 'x.png', onCancel: vi.fn(), clock, sourceEl: source,
+          onApply: () => { throw new Error('host failed'); },
+        }));
+        const photo = document.querySelector<HTMLImageElement>('[data-role="darkroom-photo"]');
+
+        if (!photo) throw new Error('no photo');
+        setNatural(photo, NATURAL.w, NATURAL.h);
+        photo.dispatchEvent(new Event('load'));
+        expect(source.style.visibility).toBe('hidden');
+        const onError = (e: ErrorEvent): void => { e.preventDefault(); };
+
+        window.addEventListener('error', onError);
+        button('done').click();
+        window.removeEventListener('error', onError);
+
+        expect(source.style.visibility).toBe('');
+      });
+
       it('Cancel without a landing target leaves no veil', () => {
         open({ initial: { x: 10, y: 10, w: 60, h: 60 } });
 

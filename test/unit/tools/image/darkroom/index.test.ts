@@ -165,6 +165,15 @@ describe('openDarkroom', () => {
     expect(document.querySelector('[data-role="darkroom-readout"]')?.textContent).toBe('400 × 267 px');
   });
 
+  it('a photo that fails to load moves focus from the hidden Done to Cancel', () => {
+    track(openDarkroom({ url: 'x.png', onApply: vi.fn(), onCancel: vi.fn(), clock: fakeFrameClock().clock }));
+
+    expect(button('done')).toHaveFocus();
+    document.querySelector('[data-role="darkroom-photo"]')?.dispatchEvent(new Event('error'));
+
+    expect(button('cancel')).toHaveFocus();
+  });
+
   it('a photo that fails to load shows the error state and keeps Cancel', () => {
     const onCancel = vi.fn();
 
@@ -294,10 +303,10 @@ describe('openDarkroom fix round 1', () => {
       vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 1200, 800));
     });
 
-    it('a pan that starts mid-spring saves the rect it shows at rest', () => {
+    it('a pan that starts mid-spring keeps the ratio and saves the rect it shows at rest', () => {
       const { onApply, advance } = open({ initial: { x: 20, y: 20, w: 50, h: 50 } });
 
-      document.querySelector<HTMLButtonElement>('[data-ratio="16:9"], [data-ratio="' + String(16 / 9) + '"]')?.click();
+      document.querySelector<HTMLButtonElement>(`[data-ratio="${String(16 / 9)}"]`)?.click();
       advance(48);
       pointer('pointerdown', 600, 400);
       pointer('pointermove', 640, 420);
@@ -309,6 +318,7 @@ describe('openDarkroom fix round 1', () => {
       button('done').click();
       const saved = onApply.mock.calls[0][0];
 
+      expect(Math.abs((saved.w * NATURAL.w) / (saved.h * NATURAL.h) - 16 / 9)).toBeLessThan(0.01);
       expect(saved.x).toBeCloseTo(want.x, 2);
       expect(saved.y).toBeCloseTo(want.y, 2);
       expect(saved.w).toBeCloseTo(want.w, 2);
@@ -391,6 +401,21 @@ describe('openDarkroom fix round 1', () => {
       advance(3000);
 
       expect(shown()).toBeCloseTo(50, 2);
+    });
+
+    it('undoing back to the first step keeps a saved circle square in pixels', () => {
+      const { onApply, advance } = open({ initial: { x: 10, y: 10, w: 50, h: 50, shape: 'circle' } });
+
+      document.querySelector<HTMLButtonElement>('[data-ratio="free"]')?.click();
+      advance(3000);
+      key(dialog(), { key: 'z', metaKey: true });
+      key(dialog(), { key: 'z', metaKey: true });
+      advance(3000);
+      button('done').click();
+      const saved = onApply.mock.calls[0][0];
+
+      expect(saved.shape).toBe('circle');
+      expect(Math.abs(saved.w * NATURAL.w - saved.h * NATURAL.h)).toBeLessThan(0.01 * NATURAL.w);
     });
 
     it('a ratio picked before the photo loads is square in pixels', () => {

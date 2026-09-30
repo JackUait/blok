@@ -83,7 +83,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     keyIdle: 0,
   };
   const startRect = { ...st.rect };
-  const history = createHistory({ rect: { ...st.rect }, ratioKey: st.def.key });
+  const hist = { stack: createHistory({ rect: { ...st.rect }, ratioKey: st.def.key }) };
 
   const backdrop = el('div', 'blok-darkroom');
 
@@ -219,7 +219,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   };
 
   const commit = (): void => {
-    history.push({ rect: { ...st.rect }, ratioKey: st.def.key });
+    hist.stack.push({ rect: { ...st.rect }, ratioKey: st.def.key });
     announce();
   };
 
@@ -300,7 +300,11 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
         const f = frameOf(v);
         const settled = clampCamera(camOf(v), st.natural, f);
 
+        const r = pctRatio();
+
+        // A mid-flight frame has the spring's in-between aspect, not the chip's.
         st.rect = cameraToRect(settled, st.natural, f);
+        if (r !== null) st.rect = applyRatio(st.rect, r);
       }
       // stop() keeps the old target, so every end retargets all keys to the new rect.
       view.to(fitted());
@@ -357,6 +361,8 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
     // A ratio picked before load was applied against the fallback size.
     if (r !== null) st.rect = applyRatio(st.rect, r);
+    // Steps taken before load hold rects measured against the fallback size, so the loaded state is the new base.
+    hist.stack = createHistory({ rect: { ...st.rect }, ratioKey: st.def.key });
     readout.hidden = !st.measured;
     photo.style.width = `${st.natural.w}px`;
     photo.style.height = `${st.natural.h}px`;
@@ -372,6 +378,8 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     doneBtn.hidden = true;
     resetBtn.hidden = true;
     pill.hidden = true;
+    // Done holds the initial focus; a hidden control cannot keep it.
+    if ([doneBtn, resetBtn, pill].some((n) => n.contains(document.activeElement))) cancelBtn.focus();
   };
 
   photo.addEventListener('load', start);
@@ -483,7 +491,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     if (mod && (e.key.toLowerCase() === 'z' || (nonLatin && e.code === 'KeyZ'))) {
       e.preventDefault();
       flushKeyCommit();
-      restore(e.shiftKey ? history.redo() : history.undo());
+      restore(e.shiftKey ? hist.stack.redo() : hist.stack.undo());
 
       return;
     }

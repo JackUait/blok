@@ -38,7 +38,7 @@ const createBlok = async (page: Page, data: OutputData): Promise<void> => {
   }, { holder: HOLDER_ID, initialData: data });
 };
 
-// Islands need their height plus 20px above the figure; one short paragraph is not enough.
+// Room above the image: the islands must stay inside the picture even when they would fit above it.
 const ROOM_ABOVE = [
   { type: 'paragraph', data: { text: 'One' } },
   { type: 'paragraph', data: { text: 'Two' } },
@@ -78,6 +78,41 @@ test('hover shows the islands inside the image even with room above; selecting a
 
   await expect(imageBlock(page)).toHaveAttribute('data-blok-selected', 'true');
   await expect(imageBlock(page).locator('[data-role="image-selection-ring"]')).toHaveCSS('opacity', '1');
+});
+
+test('the islands split without sliding a button sideways, and every neck ends pinched off', async ({ page }) => {
+  await createBlok(page, { blocks: [...ROOM_ABOVE, { id: 'img', type: 'image', data: IMAGE }] });
+  await expect(figure(page)).not.toHaveAttribute('data-loading');
+  await figure(page).hover();
+
+  const sample = async (time: number): Promise<{ crop: number; more: number; neck: string; bar: string }> =>
+    page.evaluate((t) => {
+      for (const animation of document.getAnimations()) {
+        animation.pause();
+        animation.currentTime = t;
+      }
+      const at = (action: string): number => document.querySelector(`[data-blok-id="img"] [data-action="${action}"]`)?.getBoundingClientRect().x ?? Number.NaN;
+      const edit = document.querySelector('[data-blok-id="img"] [data-island="edit"]');
+      const bar = document.querySelector('[data-blok-id="img"] [data-role="image-overlay"]');
+
+      return {
+        crop: at('crop'),
+        more: at('more'),
+        neck: edit ? getComputedStyle(edit, '::after').transform : '',
+        bar: bar ? getComputedStyle(bar, '::after').opacity : '',
+      };
+    }, time);
+
+  const first = await sample(0);
+  const frames = [first, await sample(200), await sample(420), await sample(560), await sample(5000)];
+  const last = frames[frames.length - 1];
+
+  frames.forEach((frame) => {
+    expect(frame.crop).toBeCloseTo(first.crop, 1);
+    expect(frame.more).toBeCloseTo(first.more, 1);
+  });
+  expect(last.bar).toBe('0');
+  expect(last.neck).toMatch(/^matrix\(1, 0, 0, 0,/);
 });
 
 test('an image in a table cell keeps its islands inside the cell, where they can be clicked', async ({ page }) => {

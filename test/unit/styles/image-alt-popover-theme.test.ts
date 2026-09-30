@@ -128,7 +128,7 @@ describe('image alt popover theming', () => {
 /** Declarations of the base `[data-blok-tool="image"] .blok-image-toolbar` rule. */
 /** The painted surface: each island is a card, the toolbar row itself is transparent. */
 function imageToolbarRule(): string {
-  const idx = css.indexOf('[data-blok-tool="image"] .blok-image-toolbar__island {');
+  const idx = css.indexOf('[data-blok-tool="image"] .blok-image-toolbar__island::before {');
   if (idx === -1) throw new Error('image toolbar island rule missing');
   const open = css.indexOf('{', idx);
   return css.slice(open + 1, findMatchingBrace(css, open));

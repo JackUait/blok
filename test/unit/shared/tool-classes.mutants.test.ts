@@ -42,7 +42,7 @@ describe('shared tool classes mutants', () => {
     it('gives the wrapper its full set', () => {
       expect(CALLOUT_WRAPPER_CLASSES).toStrictEqual([
         'text-[length:var(--blok-callout-font-size,var(--blok-paragraph-font-size,inherit))]',
-        'rounded-xl',
+        'rounded-(--blok-radius-block)',
         'pl-8',
         'pr-4',
         'pt-[var(--blok-callout-padding-block,5px)]',
@@ -96,7 +96,7 @@ describe('shared tool classes mutants', () => {
       expect(CODE_WRAPPER_CLASSES).toStrictEqual([
         'flex',
         'flex-col',
-        'rounded-xl',
+        'rounded-(--blok-radius-block)',
         'border',
         'border-border-secondary',
         'bg-bg-secondary',
@@ -142,7 +142,7 @@ describe('shared tool classes mutants', () => {
 
   describe('spacer', () => {
     it('carries no height, because the size is an inline style', () => {
-      expect(SPACER_WRAPPER_CLASSES).toStrictEqual(['relative', 'rounded-md']);
+      expect(SPACER_WRAPPER_CLASSES).toStrictEqual(['relative', 'rounded-(--blok-radius-control)']);
 
       for (const className of SPACER_WRAPPER_CLASSES) {
         expect(className).not.toMatch(/^h-|^min-h-|^max-h-/);

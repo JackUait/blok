@@ -23,7 +23,7 @@ export const CALLOUT_WRAPPER_CLASSES: readonly string[] = [
    * documented callout → paragraph → inherit precedence in one declaration.
    */
   'text-[length:var(--blok-callout-font-size,var(--blok-paragraph-font-size,inherit))]',
-  'rounded-xl',
+  'rounded-(--blok-radius-block)',
   'pl-8',
   'pr-4',
   /**

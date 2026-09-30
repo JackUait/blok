@@ -432,7 +432,7 @@ describe('buildCodeDOM', () => {
     it('wrapper has rounded corners and overflow hidden', async () => {
       const { WRAPPER_STYLES } = await import('../../../../src/tools/code/constants');
 
-      expect(WRAPPER_STYLES).toContain('rounded-xl');
+      expect(WRAPPER_STYLES).toContain('rounded-(--blok-radius-block)');
       expect(WRAPPER_STYLES).toContain('overflow-hidden');
     });
   });

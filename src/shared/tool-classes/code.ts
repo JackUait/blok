@@ -28,7 +28,7 @@ export const CODE_AREA_CLASSES: readonly string[] = [
 export const CODE_WRAPPER_CLASSES: readonly string[] = [
   'flex',
   'flex-col',
-  'rounded-xl',
+  'rounded-(--blok-radius-block)',
   'border',
   'border-border-secondary',
   'bg-bg-secondary',

@@ -63,8 +63,12 @@ export const LANGUAGES: LanguageEntry[] = [
  * controls below, which a static view never renders.
  */
 export const WRAPPER_STYLES = ['group/code', ...CODE_WRAPPER_CLASSES].join(' ');
-export const HEADER_STYLES = 'flex items-center gap-1 px-3 py-1.5 text-xs text-gray-text';
-export const LANGUAGE_BUTTON_STYLES = 'inline-flex items-center px-1.5 py-0.5 rounded cursor-pointer bg-transparent border-0 text-xs text-gray-text font-medium transition-colors can-hover:hover:bg-item-hover-bg select-none';
+/**
+ * Publishes the corner radius for the header controls: the card's block
+ * radius minus its 1px border and this row's `py-1.5`.
+ */
+export const HEADER_STYLES = 'flex items-center gap-1 px-3 py-1.5 text-xs text-gray-text [--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-block)_-_1px_-_var(--spacing)*1.5))]';
+export const LANGUAGE_BUTTON_STYLES = 'inline-flex items-center px-1.5 py-0.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer bg-transparent border-0 text-xs text-gray-text font-medium transition-colors can-hover:hover:bg-item-hover-bg select-none';
 /** Read-only has no picker to open — the language label is plain, unfocusable text there. */
 export const LANGUAGE_LABEL_STYLES = 'inline-flex items-center px-1.5 py-0.5 bg-transparent border-0 text-xs text-gray-text font-medium';
 export const HEADER_CONTROLS_STYLES = 'flex items-center gap-1 opacity-0 group-hover/code:opacity-100 transition-opacity';
@@ -73,8 +77,8 @@ export const HEADER_CONTROLS_STYLES = 'flex items-center gap-1 opacity-0 group-h
  * text-xs "Copied!" label, which would otherwise shrink it below the height of
  * its own icon state and of the neighbouring view-mode buttons.
  */
-export const HEADER_BUTTON_STYLES = 'p-1 h-7 min-w-7 rounded cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
-export const HEADER_BUTTON_MATCHED_STYLES = 'p-1.5 h-8.5 min-w-8.5 rounded-lg cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
+export const HEADER_BUTTON_STYLES = 'p-1 h-7 min-w-7 rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
+export const HEADER_BUTTON_MATCHED_STYLES = 'p-1.5 h-8.5 min-w-8.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
 /**
  * Static classes live in `src/shared/tool-classes/code.ts`. `outline-hidden` and
  * `caret-text-primary` stay here — a static render has no focus ring and no
@@ -100,9 +104,10 @@ export const SIDE_BY_SIDE_KEY = 'tools.code.sideBySide';
 export type CodeViewMode = 'code' | 'preview' | 'split';
 
 // CSS — view mode segmented control
-export const VIEW_MODE_CONTAINER_STYLES = 'flex items-center rounded-lg border border-border-secondary p-0.5 gap-0.5';
-export const VIEW_MODE_BUTTON_STYLES = 'p-1 rounded cursor-pointer bg-transparent border-0 text-gray-text transition-colors flex items-center justify-center';
-export const VIEW_MODE_BUTTON_ACTIVE_STYLES = 'p-1 rounded cursor-pointer bg-item-hover-bg border-0 text-text-primary transition-colors flex items-center justify-center';
+/** Publishes its own inner radius: large-control radius minus 1px border and `p-0.5`. */
+export const VIEW_MODE_CONTAINER_STYLES = 'flex items-center rounded-(--blok-radius-control-lg) border border-border-secondary p-0.5 gap-0.5 [--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-control-lg)_-_1px_-_var(--spacing)*0.5))]';
+export const VIEW_MODE_BUTTON_STYLES = 'p-1 rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer bg-transparent border-0 text-gray-text transition-colors flex items-center justify-center';
+export const VIEW_MODE_BUTTON_ACTIVE_STYLES = 'p-1 rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer bg-item-hover-bg border-0 text-text-primary transition-colors flex items-center justify-center';
 
 // CSS — split container
 export const SPLIT_CONTAINER_STYLES = 'flex flex-col overflow-hidden';

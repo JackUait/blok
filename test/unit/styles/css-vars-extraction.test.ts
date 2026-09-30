@@ -265,6 +265,9 @@ describe('R2 — repeated length literals in themeable properties must be tokeni
  * var() call so the reference resolves.
  */
 const DANGLING_VAR_ALLOWLIST = new Set([
+  // Published by a rounded container for the child at its corner (radius
+  // nesting rule); children fall back to their own role token.
+  '--blok-radius-inner',
   // Consumer-supplied font-family; falls back to --blok-font-sans.
   '--blok-font-family',
   // Consumer-supplied content column cap; falls back to --max-width-content.

@@ -133,7 +133,7 @@
 
   :where([data-blok-interface], [data-blok-popover]) code:not(pre code),
   :where([data-blok-interface]) span[data-latex][data-blok-equation-editing] {
-    border-radius: 0.25em;
+    border-radius: var(--blok-radius-mark);
   }
 
   /* Add the correct font size in all browsers. */

@@ -92,7 +92,7 @@ export const TOGGLE_WRAPPER_STYLES = [...TOGGLE_HEADER_ROW_CLASSES, 'group/toggl
  * dom-builder and the header tool) — without it users read the bare chevron as
  * decoration and never discover it is clickable.
  */
-export const ARROW_STYLES = 'flex-shrink-0 w-7 h-7 mt-[calc(0.75em_-_14px)] flex items-center justify-center cursor-pointer select-none rounded can-hover:hover:bg-item-hover-bg can-hover:group-hover/toggle-row:bg-item-hover-bg transition-colors duration-200 ease-in-out focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none in-data-[blok-toggle-empty=true]:text-gray-text [&>svg]:w-[clamp(0.9375rem,0.9375em,1.71875rem)] [&>svg]:h-[clamp(0.9375rem,0.9375em,1.71875rem)]';
+export const ARROW_STYLES = 'flex-shrink-0 w-7 h-7 mt-[calc(0.75em_-_14px)] flex items-center justify-center cursor-pointer select-none rounded-(--blok-radius-control-sm) can-hover:hover:bg-item-hover-bg can-hover:group-hover/toggle-row:bg-item-hover-bg transition-colors duration-200 ease-in-out focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none in-data-[blok-toggle-empty=true]:text-gray-text [&>svg]:w-[clamp(0.9375rem,0.9375em,1.71875rem)] [&>svg]:h-[clamp(0.9375rem,0.9375em,1.71875rem)]';
 
 /**
  * SVG icon for the toggle arrow

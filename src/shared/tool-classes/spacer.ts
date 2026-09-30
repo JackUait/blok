@@ -14,4 +14,4 @@
  * means these classes are NOT covered by the class-parity gate. The
  * visual-regression spec is what verifies them.
  */
-export const SPACER_WRAPPER_CLASSES: readonly string[] = ['relative', 'rounded-md'];
+export const SPACER_WRAPPER_CLASSES: readonly string[] = ['relative', 'rounded-(--blok-radius-control)'];

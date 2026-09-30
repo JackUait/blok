@@ -620,9 +620,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Failed-image media card toast: notifier-card.css (grid areas with a
     // narrow-screen row, tile fan, count badge, pill actions, busy spinner,
     // resolved check with ring pulse, reduced-motion opt-out) and its @import.
-    // The staged resolve (ghosts, green flood, drawn check, ripple, sweep,
-    // height glide) adds 3_327, measured against 652e0f36.
-    const NOTIFIER_MEDIA_CARD_BYTES = 10_796 + 3_327;
+    // The staged resolve (ghosts, green flood, drawn check, sweep, height
+    // glide) adds 2_535, measured against 652e0f36.
+    const NOTIFIER_MEDIA_CARD_BYTES = 10_796 + 2_535;
     // Show's spotlight: spotlight.css (a Notion-style warm background flash on
     // the failed block's card, reduced-motion steady tint) and its @import.
     const SPOTLIGHT_BYTES = 1_245;

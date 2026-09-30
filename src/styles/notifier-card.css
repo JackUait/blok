@@ -25,8 +25,6 @@
   --blok-toast-ink-on-light: #18181b;
   --blok-toast-success: #34c759;
   --blok-toast-success-wash: rgb(52 199 89 / 0.16);
-  --blok-toast-success-ring: rgb(52 199 89 / 0.55);
-  --blok-toast-success-ring-end: rgb(52 199 89 / 0);
   --blok-toast-success-edge: rgb(52 199 89 / 0.4);
   --blok-toast-success-sweep: rgb(52 199 89 / 0.13);
   --blok-toast-cutout: #232326;
@@ -276,8 +274,8 @@
    One staged beat. The failed parts drift up and blur away as ghosts
    (drawResolved pins copies where they were) while the card eases to its new
    height. The tile floods green from its centre, the check draws itself, then
-   the tile pops, a crisp ring ripples out and a faint green light crosses the
-   card. The new title rolls up into place. */
+   the tile pops and a faint green light crosses the card. The new title
+   rolls up into place. */
 
 [data-blok-toast='card'] [data-blok-toast-part='check'] {
   position: relative;
@@ -312,18 +310,6 @@
   stroke-width: 1.6;
   stroke-dasharray: 1;
   animation: blok-toast-draw 320ms cubic-bezier(0.65, 0, 0.35, 1) 220ms both;
-}
-
-/* One crisp ring, not a blurred spread: it scales out with the tile's own corners. */
-[data-blok-toast='card'] [data-blok-toast-part='check']::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border: 1.5px solid var(--blok-toast-success-ring);
-  border-radius: inherit;
-  /* Hidden until it fires: a backwards fill would show the ring during the delay. */
-  opacity: 0;
-  animation: blok-toast-ripple 640ms cubic-bezier(0.2, 0.7, 0.2, 1) 540ms forwards;
 }
 
 /* Only the close stays: drop the actions track so it sits flush right. */
@@ -392,12 +378,6 @@
   40% { scale: 1.1; }
 }
 
-@keyframes blok-toast-ripple {
-  from { opacity: 0.9; scale: 1; }
-  60% { opacity: 0.25; }
-  to { opacity: 0; scale: 1.6; }
-}
-
 @keyframes blok-toast-sweep {
   from { background-position: 130% 0; opacity: 1; }
   to { background-position: -130% 0; opacity: 0; }
@@ -422,7 +402,6 @@
     animation: none;
   }
 
-  [data-blok-toast='card'] [data-blok-toast-part='check']::after,
   [data-blok-toast='card'] [data-blok-toast-ghost] {
     display: none;
   }

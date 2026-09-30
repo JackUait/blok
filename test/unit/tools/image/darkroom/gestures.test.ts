@@ -123,6 +123,20 @@ describe('darkroom gestures', () => {
     expect(vi.mocked(h.onZoom).mock.calls[0][0]).toBeCloseTo(2, 6);
   });
 
+  it('a drag measures the stage once, at the press', () => {
+    const h = handlers();
+    const measure = vi.spyOn(stage, 'getBoundingClientRect').mockReturnValue(new DOMRect(10, 20, 400, 300));
+
+    detach = attachGestures(stage, h);
+    fire(stage, 'pointerdown', { clientX: 100, clientY: 100 });
+    fire(stage, 'pointermove', { clientX: 120, clientY: 100 });
+    fire(stage, 'pointermove', { clientX: 140, clientY: 110 });
+    fire(stage, 'pointerup', { clientX: 140, clientY: 110 });
+
+    expect(measure).toHaveBeenCalledTimes(1);
+    expect(h.onPan).toHaveBeenLastCalledWith(40, 10);
+  });
+
   it('a ctrl+wheel burst is one zoom gesture that ends after idle', () => {
     const h = handlers();
 

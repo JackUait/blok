@@ -35,13 +35,11 @@ export function attachGestures(stage: HTMLElement, h: GestureHandlers): () => vo
     wheelIdle: 0,
     pinchDist: 0,
     pinchMid: { x: 0, y: 0 },
+    // Measured at each press; a move reuses it instead of forcing layout per event.
+    box: { left: 0, top: 0 },
   };
 
-  const local = (e: MouseEvent): Point => {
-    const r = stage.getBoundingClientRect();
-
-    return { x: e.clientX - r.left, y: e.clientY - r.top };
-  };
+  const local = (e: MouseEvent, r: { left: number; top: number }): Point => ({ x: e.clientX - r.left, y: e.clientY - r.top });
 
   const pinchGeometry = (): { dist: number; mid: Point } => {
     const [a, b] = [...pointers.values()];
@@ -60,7 +58,8 @@ export function attachGestures(stage: HTMLElement, h: GestureHandlers): () => vo
   const onDown = (e: PointerEvent): void => {
     // A right or middle click opens menus or scrolls; it is not a gesture.
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    const p = local(e);
+    st.box = stage.getBoundingClientRect();
+    const p = local(e, st.box);
 
     pointers.set(e.pointerId, p);
     stage.setPointerCapture?.(e.pointerId);
@@ -99,7 +98,7 @@ export function attachGestures(stage: HTMLElement, h: GestureHandlers): () => vo
 
   const onMove = (e: PointerEvent): void => {
     if (!pointers.has(e.pointerId)) return;
-    const p = local(e);
+    const p = local(e, st.box);
 
     pointers.set(e.pointerId, p);
     const dx = p.x - st.origin.x;
@@ -140,7 +139,7 @@ export function attachGestures(stage: HTMLElement, h: GestureHandlers): () => vo
 
     if (st.wheelIdle === 0) h.onStart('zoom');
     window.clearTimeout(st.wheelIdle);
-    h.onZoom(Math.exp(-e.deltaY * rate), local(e), 0, 0);
+    h.onZoom(Math.exp(-e.deltaY * rate), local(e, stage.getBoundingClientRect()), 0, 0);
     st.wheelIdle = window.setTimeout(() => {
       st.wheelIdle = 0;
       h.onEnd('zoom');

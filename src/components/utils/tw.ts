@@ -86,7 +86,7 @@ const CLASS_PATTERNS: Array<{ pattern: RegExp; getGroup: (match: RegExpMatchArra
   { pattern: /^gap-(.+)$/, getGroup: () => 'gap' },
 
   // Border radius: rounded-*
-  { pattern: /^rounded(-.*)?$/, getGroup: () => 'rounded-sm' },
+  { pattern: /^rounded(-.*)?$/, getGroup: () => 'border-radius' },
 
   // Visibility: visible, invisible
   { pattern: /^(visible|invisible)$/, getGroup: () => 'visibility' },

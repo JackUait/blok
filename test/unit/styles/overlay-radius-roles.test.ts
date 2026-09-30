@@ -75,7 +75,7 @@ describe('emoji picker', () => {
 
     expect(radius(css, tray)).toBe('var(--blok-radius-surface)');
     expect(prop(css, tray, '--blok-radius-inner'))
-      .toBe('max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - 1px - var(--blok-space-1-25)))');
+      .toBe('max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-border-width-hairline) - var(--blok-space-1-25)))');
     expect(radius(css, `${tray} button`)).toBe(inner('control-lg'));
     expect(radius(css, `${scope} [data-emoji-skin-indicator]`)).toBe(inner('control-lg'));
   });
@@ -84,7 +84,7 @@ describe('emoji picker', () => {
     const nav = `${scope} [data-emoji-picker-nav]`;
 
     expect(prop(css, nav, '--blok-radius-inner'))
-      .toBe('max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - 1px - var(--blok-space-1)))');
+      .toBe('max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-border-width-hairline) - var(--blok-space-1)))');
     expect(radius(css, `${scope} [data-emoji-nav]`)).toBe(inner('control-lg'));
     expect(radius(css, `${scope} [data-emoji-nav-indicator]`)).toBe(inner('control-lg'));
   });

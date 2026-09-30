@@ -172,7 +172,7 @@ describe('DragPreview — recorded mutants', () => {
         'bottom-1',
         'px-1',
         'right-1',
-        'rounded',
+        'rounded-(--blok-radius-control-sm)',
         'text-gray-400',
         'text-xs',
       ]);

@@ -138,7 +138,7 @@
   gap: 0;
   border: 1px solid var(--blok-popover-border);
   border-radius: var(--blok-radius-surface);
-  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - 1px - var(--blok-space-1-25)));
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-border-width-hairline) - var(--blok-space-1-25)));
   background: var(--blok-popover-bg);
   box-shadow: var(--blok-popover-box-shadow);
   transform-origin: right top;
@@ -304,7 +304,7 @@
   padding: var(--blok-space-1) var(--blok-space-2);
   gap: var(--blok-space-0-5);
   /* The nav meets the card's bottom corners: card border 1px + the smaller (block) padding. */
-  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - 1px - var(--blok-space-1)));
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-border-width-hairline) - var(--blok-space-1)));
 }
 
 [data-blok-emoji-picker] [data-emoji-nav] {

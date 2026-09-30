@@ -205,7 +205,7 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
    * Base swatch button classes shared by every swatch in the picker.
    */
   const swatchClassName = twMerge(
-    'w-10 h-10 rounded-lg cursor-pointer border-none outline-hidden',
+    'w-10 h-10 rounded-(--blok-radius-control-lg) cursor-pointer border-none outline-hidden',
     'flex items-center justify-center text-sm font-semibold',
     'ring-inset hover:ring-2 hover:ring-swatch-ring-hover aria-pressed:ring-swatch-ring-active',
     'focus-visible:ring-2 focus-visible:ring-text-secondary aria-pressed:focus-visible:ring-text-secondary',

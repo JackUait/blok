@@ -61,7 +61,7 @@ export class DragPreview {
     const childCount = block?.contentIds?.length ?? 0;
 
     if (childCount > 0) {
-      const badge = $.make('span', 'absolute bottom-1 right-1 text-xs text-gray-400 bg-white/80 px-1 rounded');
+      const badge = $.make('span', 'absolute bottom-1 right-1 text-xs text-gray-400 bg-white/80 px-1 rounded-(--blok-radius-control-sm)');
       badge.setAttribute('data-blok-children-badge', '');
       badge.textContent = `+${childCount}`;
       preview.appendChild(badge);

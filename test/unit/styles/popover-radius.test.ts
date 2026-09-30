@@ -138,7 +138,10 @@ describe('inline tool button (api.styles.inlineToolButton)', () => {
   it('sits in the inline toolbar card like its own items', () => {
     const main = readSource('src/styles/main.css');
 
-    expect(roundedTokens(ruleBody(main, '@utility blok-inline-tool-button'))).toEqual([INNER_ITEM]);
+    const body = squash(ruleBody(main, '@utility blok-inline-tool-button'));
+
+    expect(body).toContain('border-radius: var(--blok-radius-inner, var(--blok-radius-control));');
+    expect(roundedTokens(body)).toEqual([]);
   });
 });
 

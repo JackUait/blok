@@ -109,6 +109,56 @@ describe('Notifier toast with actions', () => {
       expect(part('notification-dismiss')).toHaveFocus();
     });
 
+    it('lets the old title, detail, tile and buttons leave as inert ghosts', async () => {
+      const options = card();
+
+      show(options);
+      await Promise.resolve();
+      resolve(options, 'Image restored');
+
+      const ghosts = Array.from(document.querySelectorAll<HTMLElement>('[data-blok-toast-ghost]'));
+
+      expect(ghosts.map((ghost) => ghost.textContent).join('|')).toContain('Image failed to load');
+      expect(ghosts.map((ghost) => ghost.textContent).join('|')).toContain('The link isn’t responding');
+      expect(ghosts.map((ghost) => ghost.textContent).join('|')).toContain('Retry');
+      expect(ghosts.every((ghost) => ghost.inert && ghost.getAttribute('aria-hidden') === 'true')).toBe(true);
+      expect(ghosts.some((ghost) => ghost.querySelector('[data-blok-testid]') !== null || ghost.hasAttribute('data-blok-testid'))).toBe(false);
+    });
+
+    it('removes a ghost once it has faded', () => {
+      const options = card();
+
+      show(options);
+      resolve(options, 'Image restored');
+      document.querySelectorAll('[data-blok-toast-ghost]').forEach((ghost) => ghost.dispatchEvent(new Event('animationend')));
+
+      expect(document.querySelector('[data-blok-toast-ghost]')).toBeNull();
+    });
+
+    it('gives the check a unit path length so it can draw itself', () => {
+      const options = card();
+
+      show(options);
+      resolve(options, 'Image restored');
+
+      expect(part('notification-check')?.querySelector('path')?.getAttribute('pathLength')).toBe('1');
+    });
+
+    it('glides to its new height, then lets go of it', () => {
+      const options = card();
+
+      show(options);
+      vi.spyOn(toast() as HTMLElement, 'getBoundingClientRect')
+        .mockReturnValueOnce(new DOMRect(0, 0, 546, 64))
+        .mockReturnValue(new DOMRect(0, 0, 546, 48));
+      resolve(options, 'Image restored');
+
+      expect(toast()?.style.height).toBe('64px');
+      toast()?.dispatchEvent(Object.assign(new Event('transitionend'), { propertyName: 'height' }));
+
+      expect(toast()?.style.height).toBe('');
+    });
+
     it('ignores options it never showed', () => {
       show(card());
       resolve(card(), 'Image restored');

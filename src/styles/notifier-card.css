@@ -29,6 +29,8 @@
   --blok-toast-success-wash: rgb(52 199 89 / 0.16);
   --blok-toast-success-ring: rgb(52 199 89 / 0.55);
   --blok-toast-success-ring-end: rgb(52 199 89 / 0);
+  --blok-toast-success-edge: rgb(52 199 89 / 0.4);
+  --blok-toast-success-sweep: rgb(52 199 89 / 0.13);
   --blok-toast-cutout: #232326;
   --blok-toast-tile-bg: rgb(255 255 255 / 0.07);
   --blok-toast-tile-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.1), 0 2px 6px rgb(0 0 0 / 0.35);
@@ -274,7 +276,12 @@
   margin: 0;
 }
 
-/* ---- Resolved: the image works again ---- */
+/* ---- Resolved: the image works again ----
+   One staged beat. The failed parts drift up and blur away as ghosts
+   (drawResolved pins copies where they were) while the card eases to its new
+   height. The tile floods green from its centre, the check draws itself, then
+   the tile pops, a crisp ring ripples out and a faint green light crosses the
+   card. The new title rolls up into place. */
 
 [data-blok-toast='card'] [data-blok-toast-part='check'] {
   position: relative;
@@ -283,32 +290,86 @@
   width: var(--blok-toast-tile-size);
   height: var(--blok-toast-tile-size);
   border-radius: var(--blok-toast-tile-radius);
-  background: var(--blok-toast-success-wash);
   color: var(--blok-toast-success);
-  animation: blok-toast-check-in 480ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: blok-toast-check-pop 460ms cubic-bezier(0.3, 1.6, 0.5, 1) 520ms both;
 }
 
-[data-blok-toast='card'] [data-blok-toast-part='check'] svg {
-  width: 22px;
-  height: 22px;
-}
-
-[data-blok-toast='card'] [data-blok-toast-part='check']::after {
+/* The wash, flooding out from the centre. */
+[data-blok-toast='card'] [data-blok-toast-part='check']::before {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  animation: blok-toast-ring 700ms ease-out 120ms both;
+  background: var(--blok-toast-success-wash);
+  box-shadow: inset 0 0 0 1px var(--blok-toast-success-edge);
+  animation: blok-toast-flood 360ms cubic-bezier(0.2, 0.8, 0.2, 1) 60ms both;
+}
+
+[data-blok-toast='card'] [data-blok-toast-part='check'] svg {
+  position: relative;
+  width: 22px;
+  height: 22px;
+}
+
+/* pathLength="1" (set in drawResolved) makes these offsets a fraction of the stroke. */
+[data-blok-toast='card'] [data-blok-toast-part='check'] svg path {
+  stroke-width: 1.6;
+  stroke-dasharray: 1;
+  animation: blok-toast-draw 320ms cubic-bezier(0.65, 0, 0.35, 1) 220ms both;
+}
+
+/* One crisp ring, not a blurred spread: it scales out with the tile's own corners. */
+[data-blok-toast='card'] [data-blok-toast-part='check']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid var(--blok-toast-success-ring);
+  border-radius: inherit;
+  /* Hidden until it fires: a backwards fill would show the ring during the delay. */
+  opacity: 0;
+  animation: blok-toast-ripple 640ms cubic-bezier(0.2, 0.7, 0.2, 1) 540ms forwards;
 }
 
 /* Only the close stays: drop the actions track so it sits flush right. */
 [data-blok-interface='notifier'] [data-blok-toast='card'][data-resolved='true'] {
   grid-template-columns: auto minmax(0, 1fr) auto;
   grid-template-areas: 'tile body close';
+  transition: height 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* A faint green light crossing the card once. */
+[data-blok-interface='notifier'] [data-blok-toast='card'][data-resolved='true']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    100deg,
+    transparent 35%,
+    var(--blok-toast-success-sweep) 50%,
+    transparent 65%
+  ) 130% 0 / 260% 100% no-repeat;
+  animation: blok-toast-sweep 1000ms cubic-bezier(0.4, 0, 0.2, 1) 480ms both;
+  pointer-events: none;
 }
 
 [data-blok-toast='card'][data-resolved='true'] [data-blok-testid='notification-message-text'] {
-  animation: blok-toast-roll-in 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: blok-toast-roll-in 420ms cubic-bezier(0.16, 1, 0.3, 1) 150ms both;
+}
+
+/* Pinned copies of the parts that left; drawResolved removes them on animationend. */
+[data-blok-toast='card'] [data-blok-toast-ghost] {
+  position: absolute;
+  /* A grid-area would make its grid cell, not the card, the offset origin. */
+  grid-area: auto;
+  margin: 0;
+  pointer-events: none;
+  animation: blok-toast-ghost-out 220ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+/* A copy is a fresh element: without this its thumbs would play their entrance again. */
+[data-blok-toast='card'] [data-blok-toast-ghost] [data-blok-toast-part] {
+  animation: none;
 }
 
 /* No `scale` in `to`: each tile settles on its own (the fan's back tiles are smaller). */
@@ -321,27 +382,61 @@
   to { rotate: 360deg; }
 }
 
-@keyframes blok-toast-check-in {
-  0% { opacity: 0; scale: 0.5; }
-  100% { opacity: 1; scale: 1; }
+@keyframes blok-toast-flood {
+  from { clip-path: circle(0% at 50% 50%); }
+  to { clip-path: circle(72% at 50% 50%); }
 }
 
-@keyframes blok-toast-ring {
-  from { box-shadow: 0 0 0 0 var(--blok-toast-success-ring); }
-  to { box-shadow: 0 0 0 12px var(--blok-toast-success-ring-end); }
+@keyframes blok-toast-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes blok-toast-check-pop {
+  40% { scale: 1.1; }
+}
+
+@keyframes blok-toast-ripple {
+  from { opacity: 0.9; scale: 1; }
+  60% { opacity: 0.25; }
+  to { opacity: 0; scale: 1.6; }
+}
+
+@keyframes blok-toast-sweep {
+  from { background-position: 130% 0; opacity: 1; }
+  to { background-position: -130% 0; opacity: 0; }
 }
 
 @keyframes blok-toast-roll-in {
-  from { opacity: 0; translate: 0 8px; }
-  to { opacity: 1; translate: 0 0; }
+  from { opacity: 0; translate: 0 10px; filter: blur(4px); }
+  to { opacity: 1; translate: 0 0; filter: blur(0); }
+}
+
+@keyframes blok-toast-ghost-out {
+  to { opacity: 0; translate: 0 -8px; filter: blur(4px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   [data-blok-toast='card'] [data-blok-toast-part='thumb'],
   [data-blok-toast='card'] [data-blok-toast-part='check'],
-  [data-blok-toast='card'] [data-blok-toast-part='check']::after,
+  [data-blok-toast='card'] [data-blok-toast-part='check']::before,
+  [data-blok-toast='card'] [data-blok-toast-part='check'] svg path,
+  [data-blok-toast='card'][data-resolved='true']::after,
   [data-blok-toast='card'][data-resolved='true'] [data-blok-testid='notification-message-text'] {
     animation: none;
+  }
+
+  [data-blok-toast='card'] [data-blok-toast-part='check']::after,
+  [data-blok-toast='card'] [data-blok-toast-ghost] {
+    display: none;
+  }
+
+  [data-blok-interface='notifier'] [data-blok-toast='card'][data-resolved='true'] {
+    transition: none;
+  }
+
+  [data-blok-toast='card'][data-resolved='true']::after {
+    opacity: 0;
   }
 
   [data-blok-toast='card'] [data-blok-toast-part='action'] {

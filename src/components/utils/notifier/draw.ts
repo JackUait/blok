@@ -340,20 +340,29 @@ const drawCard = (notify: HTMLElement, messageWrapper: HTMLElement, options: Not
  */
 export const drawResolved = (notify: HTMLElement, message: string): void => {
   const hadFocus = notify.contains(document.activeElement);
-  const width = notify.getBoundingClientRect().width;
+  const box = notify.getBoundingClientRect();
   const check = document.createElement('div');
+  const text = notify.querySelector<HTMLElement>(`[data-blok-testid="${MESSAGE_TEXT_TESTID}"]`);
+  const leaving = [
+    notify.querySelector<HTMLElement>('[data-blok-toast-part="tile"]'),
+    text,
+    notify.querySelector<HTMLElement>('[data-blok-toast-part="detail"]'),
+    notify.querySelector<HTMLElement>('[data-blok-toast-part="actions"]'),
+  ].filter((part): part is HTMLElement => part !== null);
+  const ghosts = leaving.map((part) => ghostOf(part, box));
 
   // Hold the width: the shorter success content would otherwise snap the card narrower.
-  if (width > 0) {
-    notify.style.setProperty('width', `${width}px`);
+  if (box.width > 0) {
+    notify.style.setProperty('width', `${box.width}px`);
   }
-  const text = notify.querySelector<HTMLElement>(`[data-blok-testid="${MESSAGE_TEXT_TESTID}"]`);
 
   notify.setAttribute('data-resolved', 'true');
   check.setAttribute('data-blok-testid', 'notification-check');
   check.setAttribute('data-blok-toast-part', 'check');
   check.setAttribute('aria-hidden', 'true');
   check.innerHTML = IconCheck;
+  // A unit length lets CSS draw the stroke with a 0→1 dash offset.
+  check.querySelector('path')?.setAttribute('pathLength', '1');
   notify.querySelector('[data-blok-toast-part="tile"]')?.remove();
   notify.querySelector('[data-blok-toast-part="detail"]')?.remove();
   notify.querySelector('[data-blok-toast-part="actions"]')?.remove();
@@ -361,9 +370,77 @@ export const drawResolved = (notify: HTMLElement, message: string): void => {
   if (text !== null) {
     text.textContent = message;
   }
+  notify.append(...ghosts);
+  glideHeight(notify, box.height);
   if (hadFocus) {
     notify.querySelector<HTMLElement>('[data-blok-testid="notification-dismiss"]')?.focus();
   }
+};
+
+/**
+ * A copy of a leaving part, pinned where it was, that fades out on its own.
+ * @param part - the element about to be removed or rewritten
+ * @param box - the card's box before the change
+ * @returns the ghost, not yet attached
+ */
+const ghostOf = (part: HTMLElement, box: DOMRect): HTMLElement => {
+  const rect = part.getBoundingClientRect();
+  const ghost = part.cloneNode(true);
+
+  if (!(ghost instanceof HTMLElement)) {
+    return document.createElement('div');
+  }
+  const look = window.getComputedStyle(part);
+
+  // The title is styled by its test id, which must go: carry its type inline.
+  ['font-size', 'font-weight', 'line-height', 'letter-spacing', 'color'].forEach((name) => {
+    ghost.style.setProperty(name, look.getPropertyValue(name));
+  });
+  // Test ids would make the ghost pass for the live part it copies.
+  [ghost, ...Array.from(ghost.querySelectorAll('[data-blok-testid]'))].forEach((el) => el.removeAttribute('data-blok-testid'));
+  ghost.setAttribute('data-blok-toast-ghost', 'true');
+  ghost.setAttribute('aria-hidden', 'true');
+  ghost.inert = true;
+  ghost.style.setProperty('left', `${rect.left - box.left}px`);
+  ghost.style.setProperty('top', `${rect.top - box.top}px`);
+  ghost.style.setProperty('width', `${rect.width}px`);
+  ghost.style.setProperty('height', `${rect.height}px`);
+  ghost.addEventListener('animationend', () => ghost.remove());
+  // Reduced motion runs no animation, so animationend never comes.
+  window.setTimeout(() => ghost.remove(), GHOST_MAX_MS);
+
+  return ghost;
+};
+
+/** Longer than the ghost's fade in notifier-card.css. */
+const GHOST_MAX_MS = 600;
+
+/**
+ * Lets the card ease from its old height to its new one, then releases it.
+ * @param notify - the card, already holding its new content
+ * @param from - its height before the change
+ */
+const glideHeight = (notify: HTMLElement, from: number): void => {
+  const to = notify.getBoundingClientRect().height;
+
+  if (from <= 0 || Math.abs(to - from) < 1) {
+    return;
+  }
+  notify.style.setProperty('height', `${from}px`);
+  const release = (): void => {
+    notify.style.removeProperty('height');
+    notify.removeEventListener('transitionend', onEnd);
+  };
+  const onEnd = (event: Event): void => {
+    if ('propertyName' in event && event.propertyName === 'height') {
+      release();
+    }
+  };
+
+  notify.addEventListener('transitionend', onEnd);
+  // Reduced motion has no transition, so transitionend never comes.
+  window.setTimeout(release, GHOST_MAX_MS);
+  requestAnimationFrame(() => notify.style.setProperty('height', `${to}px`));
 };
 
 /**

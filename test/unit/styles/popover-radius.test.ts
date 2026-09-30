@@ -110,7 +110,9 @@ describe('popover card', () => {
     const selector = ':is([data-blok-testid=\'block-tunes-popover\'] > [data-blok-popover-container], [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]:not([data-blok-promoted-item])))';
     const body = squash(ruleBody(popoverAnimation, selector));
 
-    expect(body).toContain(`${inner('surface', '--blok-space-1-5')};`);
+    // Same 4px inset as the default card, so rows stay at 6 (10 − 4).
+    expect(body).toContain('padding-inline: var(--blok-space-1);');
+    expect(body).toContain(`${inner('surface', '--blok-space-1')};`);
     // The rows take the inner radius from the shared item class, not a second rule.
     expect(body).not.toContain('border-radius');
   });

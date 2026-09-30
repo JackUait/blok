@@ -43,7 +43,7 @@ for (const [theme, width] of [['light', 1280], ['dark', 1280]] as const) {
       const field = menu.getByTestId('popover-search-field').first();
 
       await expect(field).toBeVisible();
-      await expectBlokField(field, field.getByRole('combobox'), 'search');
+      await expectBlokField(field, field.getByRole('combobox'), 'search', { radius: '6px' });
     });
 
     test('"Turn into" search is the shared search field', async ({ page }) => {
@@ -54,7 +54,7 @@ for (const [theme, width] of [['light', 1280], ['dark', 1280]] as const) {
         .getByTestId('popover-search-field');
 
       await expect(field).toBeVisible();
-      await expectBlokField(field, field.getByRole('combobox'), 'search');
+      await expectBlokField(field, field.getByRole('combobox'), 'search', { radius: '6px' });
     });
   });
 }

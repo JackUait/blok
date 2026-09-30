@@ -127,7 +127,7 @@ for (const width of [1280, 390]) {
         await expect.poll(() => container.getByTestId('popover-items').first().evaluate(items =>
           items.firstElementChild?.getAttribute('data-blok-item-name')
         )).toBe('block-color');
-        await expect(container).toHaveCSS('padding-left', '8px');
+        await expect(container).toHaveCSS('padding-left', '4px');
       });
 
       if (width === 1280) {

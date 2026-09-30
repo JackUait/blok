@@ -113,7 +113,7 @@ test.describe('CSS layer conflict resistance', () => {
       };
     });
 
-    // rounded-xl → border-radius should be non-zero (12px / 0.75rem)
+    // The surface role → a non-zero radius.
     expect(containerStyles.borderRadius).not.toBe('0px');
 
     // bg-popover-bg → background should NOT be transparent

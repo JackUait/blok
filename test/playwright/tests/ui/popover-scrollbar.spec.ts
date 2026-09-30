@@ -193,8 +193,8 @@ test.describe('popover scrollbar — identical across platforms', () => {
     // Chromium, Firefox and WebKit must all render this one literal spec.
     // 4px wide (var(--blok-space-1)).
     expect(geometry.width).toBe(4);
-    // 4px radius (var(--blok-space-1)) — a fully-rounded pill at 4px wide.
-    expect(geometry.borderRadius).toBe('4px');
+    // The pill role — fully rounded at any width.
+    expect(geometry.borderRadius).toBe('9999px');
     // The border token resolved to a real, opaque colour (not transparent),
     // identically across engines — proves the same paint, not just the same box.
     expect(geometry.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');

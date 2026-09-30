@@ -11,12 +11,13 @@ import type { Locator } from '@playwright/test';
  * @param kind - 'search' adds the glyph, 'text' has none
  * @param options.multiline - a textarea field grows with its rows, so it is at least one line tall
  * @param options.height - a field drawn in a larger size on purpose (the media Link tab's 48px field)
+ * @param options.radius - a field at a rounded card's corner takes the card's inner radius instead of the field role
  */
 export const expectBlokField = async (
   field: Locator,
   input: Locator,
   kind: 'search' | 'text',
-  options: { multiline?: boolean; height?: number } = {}
+  options: { multiline?: boolean; height?: number; radius?: string } = {}
 ): Promise<void> => {
   await expect(field).toHaveAttribute('data-blok-field', kind);
   await input.blur();
@@ -44,7 +45,7 @@ export const expectBlokField = async (
   });
 
   expect(rest.background, 'filled at rest').toBe(rest.fill);
-  expect(rest.radius).toBe('8px');
+  expect(rest.radius).toBe(options.radius ?? '8px');
   expect(rest.borders).toEqual(['1px', '1px', '1px', '1px']);
   const lineHeight = options.height ?? (rest.phone ? 36 : 28);
 

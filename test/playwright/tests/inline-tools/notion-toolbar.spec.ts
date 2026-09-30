@@ -98,7 +98,7 @@ test('desktop cells are 32x28 with 4px gaps inside an 8px-padded, 14px-round car
   expect(bold.width).toBeCloseTo(32, 0);
   expect(bold.height).toBeCloseTo(28, 0);
   expect(italic.x - (bold.x + bold.width)).toBeCloseTo(4, 0);
-  await expect(card(page)).toHaveCSS('border-top-left-radius', '14px');
+  await expect(card(page)).toHaveCSS('border-top-left-radius', '10px');
   await expect(card(page)).toHaveCSS('padding-top', '8px');
   await expect(card(page)).toHaveCSS('padding-left', '8px');
   await expect(card(page)).toHaveCSS('padding-bottom', '8px');

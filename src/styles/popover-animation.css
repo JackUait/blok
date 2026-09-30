@@ -111,20 +111,20 @@
 
 /* Scope the denser chrome to block settings and conversion, not tool pickers. */
 :is([data-blok-testid='block-tunes-popover'] > [data-blok-popover-container], [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]:not([data-blok-promoted-item]))) {
-  padding-inline: var(--blok-space-2);
-  /* Smallest corner gap is the items' 6px bottom padding below. */
-  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1-5)));
+  /* Every corner gap is 4px, like the default card, so rows stay at 6. */
+  padding-inline: var(--blok-space-1);
+  --blok-radius-inner: max(var(--blok-radius-floor), calc(var(--blok-radius-surface) - var(--blok-space-1)));
 
   @media (min-width: 651px) {
     max-height: min(var(--max-height), calc(100dvh - 16px));
   }
 
   > [data-blok-testid='popover-search-field'] {
-    margin-top: var(--blok-space-2);
+    margin-top: var(--blok-space-1);
   }
 
   > [data-blok-popover-items] {
-    padding-block: var(--blok-space-1) var(--blok-space-1-5);
+    padding-block: var(--blok-space-1);
     row-gap: var(--blok-space-0-5);
 
     > [data-blok-popover-item]:not([data-blok-hidden]) {
@@ -178,7 +178,7 @@
 }
 
 [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]:not([data-blok-promoted-item])) > [data-blok-testid='popover-search-field'] {
-  margin: var(--blok-space-2) 0 0;
+  margin: var(--blok-space-1) 0 0;
 }
 
 /* A small menu says "Nothing found" in one quiet line, without the illustration. */

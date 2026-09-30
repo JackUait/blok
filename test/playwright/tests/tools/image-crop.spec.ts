@@ -65,6 +65,43 @@ const openDarkroom = async (page: Page, crop?: { x: number; y: number; w: number
   return { dialog, stage: page.locator('[data-role="darkroom-stage"]') };
 };
 
+type FlightSpan = { added: number; removed?: number };
+
+// The fly-out starts a rAF after Done and may live for one frame only, so polling can miss it.
+const recordFlights = async (page: Page): Promise<void> => {
+  await page.evaluate(() => {
+    const spans: FlightSpan[] = [];
+    const live = new Map<Node, FlightSpan>();
+    const isFlight = (n: Node): boolean => n instanceof HTMLElement && n.dataset.role === 'darkroom-flight';
+
+    new MutationObserver((records) => {
+      for (const r of records) {
+        r.addedNodes.forEach((n) => {
+          if (!isFlight(n)) return;
+          const span: FlightSpan = { added: performance.now() };
+
+          spans.push(span);
+          live.set(n, span);
+        });
+        r.removedNodes.forEach((n) => {
+          const span = live.get(n);
+
+          if (span) span.removed = performance.now();
+        });
+      }
+    }).observe(document.body, { childList: true });
+    (window as unknown as { __flights: FlightSpan[] }).__flights = spans;
+  });
+};
+
+const flightsAfterLanding = async (page: Page): Promise<FlightSpan[]> => {
+  await expect(page.locator(`${IMAGE_BLOCK_SELECTOR} [data-role="image-crop"]`)).toBeVisible();
+  // Two frames: one for leave()'s rAF that starts the flight, one more for it to settle.
+  await page.evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
+
+  return page.evaluate(() => (window as unknown as { __flights: FlightSpan[] }).__flights);
+};
+
 const cropOf = async (page: Page) =>
   (await saveBlok(page)).blocks[0].data as { crop?: { x: number; y: number; w: number; h: number; shape?: string } };
 
@@ -99,11 +136,13 @@ test('a press on the dark surround does not cancel', async ({ page }) => {
 });
 
 test('one Escape cancels', async ({ page }) => {
-  const { dialog } = await openDarkroom(page);
+  const { dialog } = await openDarkroom(page, { x: 10, y: 10, w: 60, h: 60 });
 
+  await page.locator('[data-ratio="1"]').click();
+  await expect(page.locator('[data-ratio="1"]')).toHaveAttribute('aria-checked', 'true');
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
-  expect((await cropOf(page)).crop).toBeUndefined();
+  expect((await cropOf(page)).crop).toStrictEqual({ x: 10, y: 10, w: 60, h: 60 });
 });
 
 test('wheel zoom narrows the crop', async ({ page }) => {
@@ -170,31 +209,55 @@ test('Circle saves a crop that is square in pixels', async ({ page }) => {
 });
 
 test('Cmd+Z inside the darkroom undoes the crop edit, not the document', async ({ page }) => {
-  const { dialog } = await openDarkroom(page);
+  await seedImage(page);
   const mod = process.platform === 'darwin' ? 'Meta' : 'Control';
+  const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"] [contenteditable]`);
 
+  // A typed edit gives document undo something to revert.
+  await page.evaluate(() => window.blokInstance?.blocks.insert('paragraph', { text: '' }));
+  await paragraph.click();
+  await page.keyboard.type('kept');
+  await expect(paragraph).toHaveText('kept');
+
+  const image = page.locator(IMAGE_BLOCK_SELECTOR);
+
+  await image.hover();
+  await image.locator('[data-action="crop"]').click();
+  const dialog = page.getByRole('dialog', { name: 'Crop image' });
+
+  await expect(page.locator('[data-role="darkroom-stage"][data-settled]')).toHaveCount(1);
   await page.locator('[data-ratio="1"]').click();
   await expect(page.locator('[data-ratio="1"]')).toHaveAttribute('aria-checked', 'true');
   await page.keyboard.press(`${mod}+z`);
   await expect(page.locator('[data-ratio="free"]')).toHaveAttribute('aria-checked', 'true');
   await expect(dialog).toBeVisible();
   await expect(page.locator(IMAGE_BLOCK_SELECTOR)).toHaveCount(1);
+  await expect(paragraph).toHaveText('kept');
 });
 
 test('the photo flies back into the block after Done', async ({ page }) => {
   const { dialog } = await openDarkroom(page, { x: 10, y: 10, w: 60, h: 60 });
 
+  await recordFlights(page);
   await dialog.locator('[data-action="done"]').click();
-  await expect(page.locator('[data-role="darkroom-flight"]')).toHaveCount(1);
-  await expect(page.locator('[data-role="darkroom-flight"]')).toHaveCount(0);
-  await expect(page.locator(`${IMAGE_BLOCK_SELECTOR} [data-role="image-crop"]`)).toBeVisible();
+  const flights = await flightsAfterLanding(page);
+
+  expect(flights).toHaveLength(1);
+  expect(flights[0].removed).toBeDefined();
 });
 
 test('reduced motion applies with no flight', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const { dialog } = await openDarkroom(page, { x: 10, y: 10, w: 60, h: 60 });
 
+  await recordFlights(page);
   await dialog.locator('[data-action="done"]').click();
-  await expect(page.locator('[data-role="darkroom-flight"]')).toHaveCount(0);
+  const flights = await flightsAfterLanding(page);
+
+  // A reduced-motion spring settles in the frame it starts, so any shell lives under one frame.
+  for (const f of flights) {
+    expect(f.removed).toBeDefined();
+    expect((f.removed ?? Infinity) - f.added).toBeLessThan(17);
+  }
   expect((await cropOf(page)).crop).toStrictEqual({ x: 10, y: 10, w: 60, h: 60 });
 });

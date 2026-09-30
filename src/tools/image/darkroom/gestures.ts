@@ -58,6 +58,8 @@ export function attachGestures(stage: HTMLElement, h: GestureHandlers): () => vo
   };
 
   const onDown = (e: PointerEvent): void => {
+    // A right or middle click opens menus or scrolls; it is not a gesture.
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     const p = local(e);
 
     pointers.set(e.pointerId, p);

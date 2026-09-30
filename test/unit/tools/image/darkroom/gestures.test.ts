@@ -55,6 +55,18 @@ describe('darkroom gestures', () => {
     expect(h.onStart).not.toHaveBeenCalled();
   });
 
+  it('a right-button press held still never peeks', () => {
+    const h = handlers();
+
+    detach = attachGestures(stage, h);
+    fire(stage, 'pointerdown', { pointerType: 'mouse', button: 2, clientX: 100, clientY: 100 });
+    vi.advanceTimersByTime(HOLD_MS);
+    fire(stage, 'pointermove', { pointerType: 'mouse', button: -1, clientX: 140, clientY: 100 });
+
+    expect(h.onPeek).not.toHaveBeenCalled();
+    expect(h.onStart).not.toHaveBeenCalled();
+  });
+
   it('moving before the hold fires cancels the peek', () => {
     const h = handlers();
 

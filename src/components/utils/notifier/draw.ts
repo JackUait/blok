@@ -1,4 +1,4 @@
-import { IconCheck, IconImageBroken } from '../../icons';
+import { IconCheck, IconCross, IconImageBroken } from '../../icons';
 import { openModalDialog, type ModalDialogHandle } from '../modal-dialog';
 import { twJoin } from '../tw';
 
@@ -101,7 +101,8 @@ export const createDismissButton = (
   const glyph = document.createElement('span');
 
   glyph.setAttribute('aria-hidden', 'true');
-  glyph.textContent = '×';
+  glyph.className = 'grid';
+  glyph.innerHTML = IconCross;
   button.appendChild(glyph);
 
   button.addEventListener('click', () => onDismiss());

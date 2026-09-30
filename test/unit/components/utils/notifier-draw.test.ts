@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { alert, confirm, prompt, getWrapper, CSS, createDismissButton, NOTIFIER_DISMISS_KEY } from '../../../../src/components/utils/notifier/draw';
 import { show } from '../../../../src/components/utils/notifier/index';
+import { IconCross } from '../../../../src/components/icons';
 
 describe('Notifier draw', () => {
   beforeEach(() => {
@@ -133,6 +134,16 @@ describe('Notifier draw', () => {
       expect(btn.getAttribute('data-blok-testid')).toBe('notification-dismiss');
 
       expect(btn.getAttribute('aria-label')).toBe(localizedLabel);
+    });
+
+    it('draws the shared cross icon, not a text glyph', () => {
+      const btn = createDismissButton(vi.fn(), 'Dismiss');
+      const glyph = btn.querySelector('[aria-hidden="true"]');
+
+      const cross = new DOMParser().parseFromString(IconCross, 'image/svg+xml').querySelector('path');
+
+      expect(btn.textContent?.trim()).toBe('');
+      expect(glyph?.querySelector('svg path')?.getAttribute('d')).toBe(cross?.getAttribute('d'));
     });
 
     it('invokes the dismiss callback on click', () => {

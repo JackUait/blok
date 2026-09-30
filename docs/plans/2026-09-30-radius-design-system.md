@@ -30,19 +30,21 @@ One ordered scale. Names are px values, like the spacing scale (`--blok-space-1-
 | Token | Value | Tailwind class it backs |
 |---|---|---|
 | `--blok-radius-0` | 0 | `rounded-none` |
-| `--blok-radius-2` | 2px | `rounded-xs` |
-| `--blok-radius-4` | 4px | `rounded-sm`, `rounded` |
-| `--blok-radius-6` | 6px | `rounded-md` |
-| `--blok-radius-8` | 8px | `rounded-lg` |
-| `--blok-radius-12` | 12px | `rounded-xl` |
-| `--blok-radius-16` | 16px | `rounded-2xl` |
+| `--blok-radius-2` | 0.125rem | `rounded-xs` |
+| `--blok-radius-4` | 0.25rem | `rounded-sm`, `rounded` |
+| `--blok-radius-6` | 0.375rem | `rounded-md` |
+| `--blok-radius-8` | 0.5rem | `rounded-lg` |
+| `--blok-radius-12` | 0.75rem | `rounded-xl` |
+| `--blok-radius-16` | 1rem | `rounded-2xl` |
 | `--blok-radius-full` | 9999px | `rounded-full` |
+
+Names give the px at a 16px root. Values are in **rem** on purpose: Tailwind's radii and the `isolation.css` re-pin are rem, so they follow the host's root font size. Primitives in px would move every `rounded-*` class on a host whose root is not 16px. That would change a default.
 
 - Micro notches (crop handles, find caret) keep `--blok-radius-hairline` (1.5px). It is not a step.
 - Circles use `50%`. That is a shape, not a size, and stays a literal.
-- Why these steps: they are Tailwind's own values, so re-pointing Tailwind's `--radius-*` at them changes no pixel. They also cover Notion's measured values except 10 (see Decision 1).
+- Why these steps: they are Tailwind's own values, so re-pointing Tailwind's `--radius-*` at them changes nothing, at any root font size. They also cover Notion's measured values except 10 (see Decision 1).
 - **Tailwind wiring.** `isolation.css` sets `--radius-xs: var(--blok-radius-2)` … `--radius-2xl: var(--blok-radius-16)` instead of literal rems. One scale, and a host that overrides a Blok primitive moves the Tailwind class with it. Add the link hover card and drag preview roots to that selector list.
-- **Old tokens stay.** `--blok-radius-xs/sm/md/lg/xl/pill/md-plus/hairline/none` shipped in v1.15.2, so their values cannot change without a BREAKING release. They become aliases of the new primitives with the same px (`sm` → a literal 3px, since 3 leaves the scale) and are marked deprecated. Nothing in `src/` uses them after migration.
+- **Old tokens stay.** `--blok-radius-xs/sm/md/lg/xl/pill/md-plus/hairline/none` shipped in v1.15.2, so their values cannot change without a BREAKING release. They keep their exact current declarations (`xs` is already 0.25rem = `--blok-radius-4`; `sm` 3px, `md` 6px, `lg` 12px and the rest stay literal px) and are marked deprecated. Nothing in `src/` uses them after migration.
 
 ### Layer 2 — role tokens
 
@@ -55,7 +57,7 @@ A component picks its role, never a primitive.
 | `--blok-radius-block` | 12 | block frames: callout, code, media-empty panel, audio, image, video, embed frames |
 | `--blok-radius-field` | 8 | text inputs and search fields (32–36px tall) |
 | `--blok-radius-control-lg` | 8 | buttons 36px and taller |
-| `--blok-radius-control` | 6 | buttons 24–32px, menu rows, tabs, tooltips, block hover/selection fill |
+| `--blok-radius-control` | 6 | buttons 24–32px, menu rows, tabs, tooltips, block hover fill |
 | `--blok-radius-control-sm` | 4 | buttons and toggles up to 20px, tags, keyboard hints, toggle arrow, scrollbar thumb |
 | `--blok-radius-mark` | 2 | inline marks: code span, find match, highlight, checkbox |
 | `--blok-radius-pill` | full | pills, status chips, badges, avatars, round handles, progress tracks |
@@ -77,7 +79,8 @@ inner = max(floor, outer − border − gap)
 - **Floor is 4px** (Decision 3). Below 4 a menu row looks square next to its card.
 - **When `outer − border − gap` is at or below the floor**, the child uses its own role token. The parent's corner is too far away to matter.
 - **Pills and circles never derive.** Height/2 is their shape.
-- **The rule also runs outward.** A fill *around* a rounded child (block selection fill, selection ring) must be `child + gap`. Today the 4px selection fill wraps 12px code and callout cards; it should be 12 + its inset, or match the child when the inset is 0.
+- **Derived values are exact, not snapped.** The scale governs radii that stand alone. A derived radius may land off the scale (12 − 7 = 5). The CSS below is a plain `calc()`, and the built-bundle check asserts the exact value.
+- **The rule also runs outward.** A fill *around* a rounded child must be `child + gap`. Today the 4px block selection fill wraps 12px code and callout cards. The fill lives on the block holder, an ancestor of the tool root, and CSS variables do not flow up. So the publish pattern below cannot express it. The mechanism is open (Decision 5).
 
 **How it is written in CSS.** The container publishes one variable for its children:
 
@@ -107,13 +110,14 @@ inner = max(floor, outer − border − gap)
 | Popover card | 12 | 6 | **6** (today 8) |
 | Popover card, mobile | 12 | 6 | **6** (today card 10, items 8) |
 | Inline toolbar card | 12 | 8 | **4** (today card 14 in build) |
-| Find bar, lightbox bar, video menu | 12 | 6–7 | **6 / 5→6** |
+| Find bar, lightbox bar | 12 | 6 | **6** |
+| Video menu (1px border) | 12 | 7 | **5** |
 | Small overlay toolbar (image align, embed) | 8 | 4 | **4** (already OK) |
 | Media-empty card, audio picker | 12 | 9 | **4** (floor; today 12) |
 | Toast card | 16 | 11–13 | **4** (floor; tile today 10) |
 | Emoji picker | 16→12 | 11 | **4** (floor) |
 | Database column | 12 | 8 | **4** (add-card today 12) |
-| Segmented control track | 8 | 2–3 | **6 / 5→6** |
+| Segmented control track | 8 | 2–3 | **6 / 5** |
 
 Rows marked "floor" mean the child uses its own role token if that is smaller than 4, otherwise 4.
 
@@ -136,7 +140,7 @@ Per area, one subagent each, in this order (each is a small commit with its own 
 
 1. Primitives, role tokens, Tailwind re-pin, deprecated aliases (`colors.css`, `isolation.css`). No pixel changes.
 2. Popover family: card, items, search field, mobile sheet, inline toolbar card and its menus, link tool rows, equation field.
-3. Block chrome: toolbar plus/settings buttons, selection fill (`style-manager.ts`), stub card, callout, code.
+3. Block chrome: toolbar plus/settings buttons, stub card, callout, code. The selection fill waits for Decision 5.
 4. Media: image, video, audio, embed, bookmark, file, media-empty, crop editor, lightbox.
 5. Database: cards, columns, pills, drag ghosts (inline styles move to CSS).
 6. Toasts, emoji picker, find bar, table handles and pills, presence.
@@ -163,6 +167,7 @@ Conflicts that must end with one source:
 2. **Do the old `--blok-radius-*` names get removed?** Keeping them as deprecated aliases is non-breaking. Removing them, or fixing `xs`/`sm` order in place, is BREAKING.
 3. **Floor value.** 4px proposed. 0 or 2 are possible; no source fixes a number.
 4. **Media frames: 12 or smaller?** The proposal keeps 12 (least change). Notion's image frames were not measurable (the pages were blocked), so there is no parity number.
+5. **How does the block selection fill follow a rounded tool?** It must be the tool's frame radius plus its inset. Options: (a) a tool declares its frame radius (for example a static property) and core writes it on the holder as `--blok-radius-frame`; (b) a `:has()` rule on the holder — avoid, `:has()` on a broad root recalcs the subtree on every childList change; (c) keep one fill radius and accept the mismatch. Proposed: (a).
 
 ## 6. Unverified points
 

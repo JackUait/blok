@@ -77,6 +77,10 @@ describe('radius roles', () => {
 
     expect(declared(colors, '--blok-radius-pill')).toBe('var(--blok-radius-full)');
   });
+
+  it('keeps sub-step notches (crop handles, carets) on one micro token', () => {
+    expect(toPx(declared(colors, '--blok-radius-notch') ?? '')).toBe(1.5);
+  });
 });
 
 describe('Tailwind radius classes', () => {

@@ -361,6 +361,8 @@
   --blok-radius-control-sm: var(--blok-radius-4);
   --blok-radius-mark: var(--blok-radius-2);
   --blok-radius-floor: var(--blok-radius-4);
+  /* Below the scale on purpose: crop-handle notches and caret ends. */
+  --blok-radius-notch: 0.09375rem;
 
   /* Image resize-handle surface colors (Notion-style dark pill + white rim). */
   --blok-handle-bg-default: rgba(15, 15, 15, 0.6);

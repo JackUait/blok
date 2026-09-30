@@ -251,9 +251,18 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
   const dissolve = createDissolve([bar, pill], grid);
 
+  // A nudge commits after a short idle; undo and a new gesture must see it recorded first.
+  const flushKeyCommit = (): void => {
+    if (st.keyIdle === 0) return;
+    window.clearTimeout(st.keyIdle);
+    st.keyIdle = 0;
+    commit();
+  };
+
   const detachGestures = attachGestures(stage, {
     onStart: (kind) => {
       if (!st.ready) return;
+      flushKeyCommit();
       dissolve.begin();
       view.stop();
       st.panFrom = camOf(view.values());
@@ -292,11 +301,9 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
         const settled = clampCamera(camOf(v), st.natural, f);
 
         st.rect = cameraToRect(settled, st.natural, f);
-        view.to(settled);
-      } else {
-        // The frame springs back to centre and the photo scales with it.
-        view.to(fitted());
       }
+      // stop() keeps the old target, so every end retargets all keys to the new rect.
+      view.to(fitted());
       commit();
     },
     onPeek: (active) => { surface.toggleAttribute('data-peek', active); },
@@ -346,6 +353,10 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
       st.natural = { w: FALLBACK_NATURAL, h: FALLBACK_NATURAL / aspect };
     }
+    const r = pctRatio();
+
+    // A ratio picked before load was applied against the fallback size.
+    if (r !== null) st.rect = applyRatio(st.rect, r);
     readout.hidden = !st.measured;
     photo.style.width = `${st.natural.w}px`;
     photo.style.height = `${st.natural.h}px`;
@@ -358,15 +369,22 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     stage.replaceChildren(renderErrorState({ variant: 'broken', i18n: opts.i18n }));
     doneBtn.disabled = true;
     resetBtn.disabled = true;
+    doneBtn.hidden = true;
+    resetBtn.hidden = true;
+    pill.hidden = true;
   };
 
   photo.addEventListener('load', start);
   photo.addEventListener('error', fail);
   photo.src = opts.url;
-  if (photo.complete && photo.naturalWidth > 0) start();
 
+  // The first observation repeats the size start() measured; a relayout then would snap over the fly-in.
   const resize = typeof ResizeObserver === 'function'
-    ? new ResizeObserver(() => { if (st.ready) layout(false); })
+    ? new ResizeObserver(() => {
+      const r = stage.getBoundingClientRect();
+
+      if (st.ready && (r.width !== st.stage.w || r.height !== st.stage.h)) layout(false);
+    })
     : null;
 
   resize?.observe(stage);
@@ -426,8 +444,8 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   });
 
   const nudge = (e: KeyboardEvent): boolean => {
-    const v = view.values();
-    const f = frameOf(v);
+    // From the committed rect, not the in-flight spring, so key repeats keep their full distance.
+    const f = fitFrame(rectAspect(st.rect, st.natural), st.stage, PAD);
     const step = (e.shiftKey ? NUDGE_BIG : NUDGE) * f.w;
     const moves: Record<string, [number, number]> = {
       ArrowLeft: [step, 0], ArrowRight: [-step, 0], ArrowUp: [0, step], ArrowDown: [0, -step],
@@ -436,14 +454,14 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
     if (!move && e.key !== '+' && e.key !== '=' && e.key !== '-') return false;
     const centre = { x: f.x + f.w / 2, y: f.y + f.h / 2 };
-    const cam = camOf(v);
+    const cam = rectToCamera(st.rect, st.natural, f);
     const next = move
       ? clampCamera({ ...cam, tx: cam.tx + move[0], ty: cam.ty + move[1] }, st.natural, f)
       : zoomAt(cam, e.key === '-' ? 1 / ZOOM_STEP : ZOOM_STEP, centre, st.natural, f);
-    view.to(next);
+    view.to({ ...next, ...f });
     st.rect = cameraToRect(next, st.natural, f);
     window.clearTimeout(st.keyIdle);
-    st.keyIdle = window.setTimeout(commit, KEY_IDLE_MS);
+    st.keyIdle = window.setTimeout(() => { st.keyIdle = 0; commit(); }, KEY_IDLE_MS);
 
     return true;
   };
@@ -459,9 +477,12 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
   surface.addEventListener('keydown', (e) => {
     const mod = e.metaKey || e.ctrlKey;
+    // Same rule as the editor's shortcutLetter: the physical key counts only when the layout types a non-Latin letter there.
+    const nonLatin = e.key.length === 1 && !/^[\x20-\x7e]$/.test(e.key) && !e.altKey;
 
-    if (mod && e.key.toLowerCase() === 'z') {
+    if (mod && (e.key.toLowerCase() === 'z' || (nonLatin && e.code === 'KeyZ'))) {
       e.preventDefault();
+      flushKeyCommit();
       restore(e.shiftKey ? history.redo() : history.undo());
 
       return;
@@ -492,6 +513,9 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
       if (opts.sourceEl) opts.sourceEl.style.removeProperty('visibility');
     },
   });
+
+  // openModalDialog mounts the backdrop; a cached photo measured before that sees a 0×0 stage.
+  if (photo.complete && photo.naturalWidth > 0) start();
 
   return dialogHandle.close;
 }

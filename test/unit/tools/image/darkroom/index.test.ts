@@ -181,6 +181,27 @@ describe('openDarkroom', () => {
     expect(button('cancel')).toHaveFocus();
   });
 
+  it('a failed load still moves focus to Cancel where hiding Done drops focus first', () => {
+    track(openDarkroom({ url: 'x.png', onApply: vi.fn(), onCancel: vi.fn(), clock: fakeFrameClock().clock }));
+    const done = button('done');
+
+    // Browsers blur a focused control the moment it is disabled or hidden; jsdom does not.
+    for (const prop of ['disabled', 'hidden'] as const) {
+      Object.defineProperty(done, prop, {
+        configurable: true,
+        get: () => done.hasAttribute(prop),
+        set: (v: boolean) => {
+          if (v) done.blur();
+          done.toggleAttribute(prop, v);
+        },
+      });
+    }
+    expect(done).toHaveFocus();
+    document.querySelector('[data-role="darkroom-photo"]')?.dispatchEvent(new Event('error'));
+
+    expect(button('cancel')).toHaveFocus();
+  });
+
   it('a photo that fails to load shows the error state and keeps Cancel', () => {
     const onCancel = vi.fn();
 

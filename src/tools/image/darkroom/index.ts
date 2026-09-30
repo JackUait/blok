@@ -378,6 +378,9 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
 
   const fail = (): void => {
     if (st.closed) return;
+    // Read first: a browser drops focus to <body> the moment its control is disabled or hidden.
+    const focused = document.activeElement;
+
     stage.replaceChildren(renderErrorState({ variant: 'broken', i18n: opts.i18n }));
     doneBtn.disabled = true;
     resetBtn.disabled = true;
@@ -385,7 +388,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     resetBtn.hidden = true;
     pill.hidden = true;
     // Done holds the initial focus; a hidden control cannot keep it.
-    if ([doneBtn, resetBtn, pill].some((n) => n.contains(document.activeElement))) cancelBtn.focus();
+    if ([doneBtn, resetBtn, pill].some((n) => n.contains(focused))) cancelBtn.focus();
   };
 
   photo.addEventListener('load', start);

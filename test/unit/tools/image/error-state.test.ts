@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderErrorState } from '../../../../src/tools/image/error-state';
+import { IconImage } from '../../../../src/components/icons';
 
 describe('renderErrorState', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -95,6 +96,21 @@ describe('renderErrorState', () => {
     expect(el.hasAttribute('data-blok-spotlight-target')).toBe(false);
     expect(retry?.disabled).toBe(true);
     expect(el.querySelector<HTMLButtonElement>('[data-action="replace"]')?.disabled).toBe(true);
+  });
+
+  it('a broken card carries the whole image under the broken one, to mend into and break from', () => {
+    const tile = renderErrorState({ variant: 'broken' }).querySelector('.blok-image-error__icon');
+    const whole = tile?.querySelector('[data-icon="whole"]');
+    const intact = new DOMParser().parseFromString(IconImage, 'image/svg+xml').querySelector('rect');
+
+    expect(tile?.querySelector('[data-icon="broken"]')).not.toBeNull();
+    expect(whole?.querySelector('rect')?.getAttribute('width')).toBe(intact?.getAttribute('width'));
+  });
+
+  it('an upload card has no whole image to mend into', () => {
+    const tile = renderErrorState({ variant: 'upload' }).querySelector('.blok-image-error__icon');
+
+    expect(tile?.querySelector('[data-icon="whole"]')).toBeNull();
   });
 });
 

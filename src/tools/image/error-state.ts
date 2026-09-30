@@ -1,5 +1,5 @@
 import { DATA_ATTR } from '../../components/constants/data-attributes';
-import { IconImageBroken, IconUploadFailed } from '../../components/icons';
+import { IconImage, IconImageBroken, IconUploadFailed } from '../../components/icons';
 import type { I18nInstance } from '../../components/utils/tools';
 import { tr } from './i18n';
 
@@ -32,6 +32,13 @@ export function renderErrorState(opts: ErrorStateOptions): HTMLElement {
   icon.className = 'blok-image-error__icon';
   icon.setAttribute('aria-hidden', 'true');
   icon.innerHTML = variant === 'upload' ? IconUploadFailed : IconImageBroken;
+  if (variant === 'broken') {
+    // The whole picture the broken one was cut from; CSS shows it once a
+    // retry closes the crack, and a failed retry breaks it again.
+    icon.firstElementChild?.setAttribute('data-icon', 'broken');
+    icon.insertAdjacentHTML('beforeend', IconImage);
+    icon.lastElementChild?.setAttribute('data-icon', 'whole');
+  }
 
   const body = document.createElement('div');
   body.className = 'blok-image-error__body';

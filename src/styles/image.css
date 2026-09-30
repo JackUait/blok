@@ -851,6 +851,20 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blok-color-danger) 22%, transparent);
 }
 .blok-image-error__icon svg { width: 22px; height: 22px; opacity: 0.92; }
+/* The whole picture waits under the broken one at the size its halves close
+   to. IconImageBroken is IconImage cut with each half slid 1.6 units out, so
+   closed they frame 13.6 units = IconImage's 14-unit rect at 17.81px; stroke
+   1.544 there equals the broken icon's 1.5 at 22px. */
+.blok-image-error__icon { position: relative; }
+.blok-image-error__icon svg[data-icon="whole"] {
+  position: absolute;
+  inset: 0;
+  width: 17.81px;
+  height: 17.81px;
+  margin: auto;
+  opacity: 0;
+}
+.blok-image-error__icon svg[data-icon="whole"] :is(rect, path) { stroke-width: 1.544; }
 .blok-image-error__body {
   flex: 1; min-width: 0;
   display: flex; flex-direction: column; gap: var(--blok-space-0-5);
@@ -990,8 +1004,8 @@
 /* ----- Retrying a broken image: the card mends -----
    Retry keeps the failed card in place while the <img> reloads out of sight.
    The red cools to neutral, a light runs the card's edge, and the icon's two
-   halves press shut over a glowing seam. Success develops the picture;
-   failure springs the halves apart. The names blok-image-develop and
+   halves close, the seam flashes, and the picture is whole again. Success
+   develops the photo; failure cracks the whole picture and springs it apart. The names blok-image-develop and
    blok-image-unmend are read by index.ts on animationend. */
 @property --blok-image-mend-angle {
   syntax: '<angle>';
@@ -1043,30 +1057,38 @@
     blok-image-mend-orbit 2.4s linear infinite;
 }
 .blok-image-error[data-role="mend-state"] .blok-image-error__icon {
-  position: relative;
   color: var(--blok-text-primary);
   background: color-mix(in srgb, var(--blok-text-primary) 6%, var(--blok-bg-secondary));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blok-text-primary) 12%, transparent);
-  animation: blok-image-mend-tile 520ms ease-out both;
+  animation:
+    blok-image-mend-tile 520ms ease-out both,
+    blok-image-mend-pop 380ms cubic-bezier(0.3, 1.6, 0.5, 1) 470ms both;
 }
-/* Left half: frame + hill. Right half: frame, sun, hills. Order is IconImageBroken's. */
-.blok-image-error[data-role="mend-state"] .blok-image-error__icon svg :is(path:nth-of-type(1), path:nth-of-type(3)) {
-  animation: blok-image-mend-left 1.6s cubic-bezier(0.6, 0, 0.3, 1) infinite;
+/* Left half: frame + hill. Right half: frame, sun, hills. Order is IconImageBroken's.
+   1.6 is the slide the broken icon was cut with, so the halves meet exactly. */
+.blok-image-error[data-role="mend-state"] svg[data-icon="broken"] :is(path:nth-of-type(1), path:nth-of-type(3)) {
+  animation: blok-image-mend-left 480ms cubic-bezier(0.55, 0, 0.85, 0.3) both;
 }
-.blok-image-error[data-role="mend-state"] .blok-image-error__icon svg :is(path:nth-of-type(2), path:nth-of-type(4), circle) {
-  animation: blok-image-mend-right 1.6s cubic-bezier(0.6, 0, 0.3, 1) infinite;
+.blok-image-error[data-role="mend-state"] svg[data-icon="broken"] :is(path:nth-of-type(2), path:nth-of-type(4), circle) {
+  animation: blok-image-mend-right 480ms cubic-bezier(0.55, 0, 0.85, 0.3) both;
 }
-/* The seam: a stitch of light drawn down the crack as the halves meet. */
+/* Once closed, the cut drawing hands over to the whole one and stays whole. */
+.blok-image-error[data-role="mend-state"] svg[data-icon="broken"] {
+  animation: blok-image-mend-fade-out 140ms linear 470ms both;
+}
+.blok-image-error[data-role="mend-state"] svg[data-icon="whole"] {
+  animation: blok-image-mend-fade-in 140ms linear 470ms both;
+}
+/* The seam flashes once as the halves meet. */
 .blok-image-error[data-role="mend-state"] .blok-image-error__icon::after {
   content: "";
   position: absolute;
   inset: 0;
   width: 1px;
-  height: 10px;
+  height: 11px;
   margin: auto;
-  background: color-mix(in srgb, var(--blok-text-primary) 45%, transparent);
-  transform-origin: top;
-  animation: blok-image-mend-seam 1.6s cubic-bezier(0.6, 0, 0.3, 1) infinite;
+  background: var(--blok-text-primary);
+  animation: blok-image-mend-seam 380ms ease-out 440ms both;
   pointer-events: none;
 }
 
@@ -1104,15 +1126,37 @@
   pointer-events: none;
 }
 
-/* Failure: the halves spring apart and the red comes back. */
+/* Failure: the whole picture holds a beat, a red seam cracks it, the halves
+   spring apart and the red comes back. */
 .blok-image-error[data-unmended="true"] {
-  animation: blok-image-unmend 560ms ease-out both;
+  animation: blok-image-unmend 560ms ease-out 140ms both;
 }
-.blok-image-error[data-unmended="true"] .blok-image-error__icon svg :is(path:nth-of-type(1), path:nth-of-type(3)) {
-  animation: blok-image-unmend-left 560ms cubic-bezier(0.3, 1.8, 0.5, 1) both;
+.blok-image-error[data-unmended="true"] .blok-image-error__icon {
+  animation: blok-image-unmend-tile 420ms ease-out 140ms both;
 }
-.blok-image-error[data-unmended="true"] .blok-image-error__icon svg :is(path:nth-of-type(2), path:nth-of-type(4), circle) {
-  animation: blok-image-unmend-right 560ms cubic-bezier(0.3, 1.8, 0.5, 1) both;
+/* Played in reverse: the whole picture starts shown and drops out as it cracks. */
+.blok-image-error[data-unmended="true"] svg[data-icon="whole"] {
+  animation: blok-image-mend-fade-in 60ms linear 160ms reverse both;
+}
+.blok-image-error[data-unmended="true"] svg[data-icon="broken"] {
+  animation: blok-image-mend-fade-out 60ms linear 160ms reverse both;
+}
+.blok-image-error[data-unmended="true"] svg[data-icon="broken"] :is(path:nth-of-type(1), path:nth-of-type(3)) {
+  animation: blok-image-unmend-left 600ms cubic-bezier(0.2, 0.9, 0.3, 1) 160ms both;
+}
+.blok-image-error[data-unmended="true"] svg[data-icon="broken"] :is(path:nth-of-type(2), path:nth-of-type(4), circle) {
+  animation: blok-image-unmend-right 600ms cubic-bezier(0.2, 0.9, 0.3, 1) 160ms both;
+}
+.blok-image-error[data-unmended="true"] .blok-image-error__icon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 1px;
+  height: 11px;
+  margin: auto;
+  background: var(--blok-color-danger);
+  animation: blok-image-mend-seam 320ms ease-out 110ms both;
+  pointer-events: none;
 }
 
 @keyframes blok-image-mend-orbit {
@@ -1129,18 +1173,24 @@
   }
 }
 @keyframes blok-image-mend-left {
-  0%, 100% { transform: translateX(0); }
-  40%, 70% { transform: translateX(0.9px); }
+  to { transform: translateX(1.6px); }
 }
 @keyframes blok-image-mend-right {
-  0%, 100% { transform: translateX(0); }
-  40%, 70% { transform: translateX(-0.9px); }
+  to { transform: translateX(-1.6px); }
+}
+@keyframes blok-image-mend-fade-out {
+  to { opacity: 0; }
+}
+@keyframes blok-image-mend-fade-in {
+  to { opacity: 0.92; }
+}
+@keyframes blok-image-mend-pop {
+  40% { transform: scale(1.08); }
 }
 @keyframes blok-image-mend-seam {
-  0%, 30%  { transform: scaleY(0); opacity: 0; }
-  45%      { transform: scaleY(1); opacity: 1; }
-  70%      { transform: scaleY(1); opacity: 0.8; }
-  90%, 100% { transform: scaleY(1); opacity: 0; }
+  from { opacity: 0; transform: scaleY(0.2); }
+  30%  { opacity: 0.9; transform: scaleY(1); }
+  to   { opacity: 0; transform: scaleY(1); }
 }
 @keyframes blok-image-mend-sweep {
   from { background-position: 100% 0; }
@@ -1161,14 +1211,21 @@
     border-color: var(--blok-border-subtle);
   }
 }
+@keyframes blok-image-unmend-tile {
+  from {
+    color: var(--blok-text-primary);
+    background: color-mix(in srgb, var(--blok-text-primary) 6%, var(--blok-bg-secondary));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blok-text-primary) 12%, transparent);
+  }
+}
 @keyframes blok-image-unmend-left {
-  from { transform: translateX(0.9px); }
-  45%  { transform: translateX(-0.9px); }
+  from { transform: translateX(1.6px); }
+  40%  { transform: translateX(-0.7px); }
   to   { transform: translateX(0); }
 }
 @keyframes blok-image-unmend-right {
-  from { transform: translateX(-0.9px); }
-  45%  { transform: translateX(0.9px); }
+  from { transform: translateX(-1.6px); }
+  40%  { transform: translateX(0.7px); }
   to   { transform: translateX(0); }
 }
 
@@ -1184,23 +1241,27 @@
     background: none;
     animation: none;
   }
-  .blok-image-error[data-role="mend-state"] .blok-image-error__icon svg :is(path:nth-of-type(1), path:nth-of-type(3)) {
-    animation: none;
-    transform: translateX(0.9px);
-  }
-  .blok-image-error[data-role="mend-state"] .blok-image-error__icon svg :is(path:nth-of-type(2), path:nth-of-type(4), circle) {
-    animation: none;
-    transform: translateX(-0.9px);
-  }
+  .blok-image-error[data-role="mend-state"] svg[data-icon] :is(path, circle),
   .blok-image-error[data-role="mend-state"] .blok-image-error__icon::after {
     animation: none;
-    transform: none;
-    opacity: 0.8;
   }
+  .blok-image-error[data-role="mend-state"] svg[data-icon="broken"] {
+    animation: none;
+    opacity: 0;
+  }
+  .blok-image-error[data-role="mend-state"] svg[data-icon="whole"] {
+    animation: none;
+    opacity: 0.92;
+  }
+  .blok-image-error[data-role="mend-state"] .blok-image-error__icon::after,
+  .blok-image-error[data-unmended="true"] .blok-image-error__icon::after { opacity: 0; }
   [data-blok-tool="image"] .blok-image-inner[data-developing="true"] img,
   [data-blok-tool="image"] .blok-image-inner[data-developing="true"]::before,
   .blok-image-error[data-unmended="true"],
-  .blok-image-error[data-unmended="true"] .blok-image-error__icon svg :is(path, circle) {
+  .blok-image-error[data-unmended="true"] .blok-image-error__icon,
+  .blok-image-error[data-unmended="true"] .blok-image-error__icon::after,
+  .blok-image-error[data-unmended="true"] svg[data-icon],
+  .blok-image-error[data-unmended="true"] svg[data-icon] :is(path, circle) {
     animation: none;
   }
 }

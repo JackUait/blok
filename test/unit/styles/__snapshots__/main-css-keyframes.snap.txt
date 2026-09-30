@@ -225,25 +225,34 @@
   to { --blok-image-mend-surface: var(--blok-image-mend-neutral) }
 }
 
+@keyframes blok-image-mend-fade-in {
+  to { opacity: 0.92 }
+}
+
+@keyframes blok-image-mend-fade-out {
+  to { opacity: 0 }
+}
+
 @keyframes blok-image-mend-left {
-  0%, 100% { transform: translateX(0) }
-  40%, 70% { transform: translateX(0.9px) }
+  to { transform: translateX(1.6px) }
 }
 
 @keyframes blok-image-mend-orbit {
   to { --blok-image-mend-angle: 360deg }
 }
 
+@keyframes blok-image-mend-pop {
+  40% { transform: scale(1.08) }
+}
+
 @keyframes blok-image-mend-right {
-  0%, 100% { transform: translateX(0) }
-  40%, 70% { transform: translateX(-0.9px) }
+  to { transform: translateX(-1.6px) }
 }
 
 @keyframes blok-image-mend-seam {
-  0%, 30% { transform: scaleY(0); opacity: 0 }
-  45% { transform: scaleY(1); opacity: 1 }
-  70% { transform: scaleY(1); opacity: 0.8 }
-  90%, 100% { transform: scaleY(1); opacity: 0 }
+  from { opacity: 0; transform: scaleY(0.2) }
+  30% { opacity: 0.9; transform: scaleY(1) }
+  to { opacity: 0; transform: scaleY(1) }
 }
 
 @keyframes blok-image-mend-sweep {
@@ -269,15 +278,19 @@
 }
 
 @keyframes blok-image-unmend-left {
-  from { transform: translateX(0.9px) }
-  45% { transform: translateX(-0.9px) }
+  from { transform: translateX(1.6px) }
+  40% { transform: translateX(-0.7px) }
   to { transform: translateX(0) }
 }
 
 @keyframes blok-image-unmend-right {
-  from { transform: translateX(-0.9px) }
-  45% { transform: translateX(0.9px) }
+  from { transform: translateX(-1.6px) }
+  40% { transform: translateX(0.7px) }
   to { transform: translateX(0) }
+}
+
+@keyframes blok-image-unmend-tile {
+  from { color: var(--blok-text-primary); background: color-mix(in srgb, var(--blok-text-primary) 6%, var(--blok-bg-secondary)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blok-text-primary) 12%, transparent) }
 }
 
 @keyframes blok-inline-toolbar-ghost-out {

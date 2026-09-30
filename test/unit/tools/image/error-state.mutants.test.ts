@@ -94,8 +94,11 @@ describe('renderErrorState mutants', () => {
     it('draws the broken-image icon for the broken variant', () => {
       const root = renderErrorState({ variant: 'broken' });
 
+      const broken = childAt(root, 0).querySelector('[data-icon="broken"]');
+
+      broken?.removeAttribute('data-icon');
       expect(root.getAttribute('data-variant')).toBe('broken');
-      expect(childAt(root, 0).innerHTML).toBe(serialized(IconImageBroken));
+      expect(broken?.outerHTML).toBe(serialized(IconImageBroken));
     });
 
     it('draws the upload-failed icon for the upload variant', () => {

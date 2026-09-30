@@ -426,7 +426,13 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     const veil = flies && !prefersReducedMotion() ? createVeil() : null;
 
     dialogHandle.close();
-    after();
+    try {
+      after();
+    } catch (error) {
+      // No flight will come to fade it, and an opaque top-layer veil would cover the page for good.
+      veil?.remove();
+      throw error;
+    }
     if (source) source.style.visibility = '';
     if (!flies) return;
     const request = opts.clock ? opts.clock.request : requestAnimationFrame;
@@ -461,6 +467,8 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
   cancelBtn.addEventListener('click', cancel);
   resetBtn.addEventListener('click', () => {
     flushKeyCommit();
+    // Reset before load squares against the fallback size; start() must redo it at the real size.
+    if (!st.ready) st.ratioPicked = true;
     const r = pctRatio();
 
     st.rect = r === null ? { ...FULL_RECT } : applyRatio({ ...FULL_RECT }, r);

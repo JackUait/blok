@@ -415,6 +415,36 @@ describe('openDarkroom fix round 1', () => {
         expect(veil()).toBeNull();
       });
 
+      it('an onApply that throws still takes the veil down and rethrows', () => {
+        const boom = new Error('host failed');
+        const { clock } = fakeFrameClock();
+        const target = document.createElement('div');
+
+        document.body.appendChild(target);
+        track(openDarkroom({
+          url: 'x.png', onCancel: vi.fn(), clock, initial: { x: 10, y: 10, w: 60, h: 60 },
+          getTargetEl: () => target,
+          onApply: () => { throw boom; },
+        }));
+        const photo = document.querySelector<HTMLImageElement>('[data-role="darkroom-photo"]');
+
+        if (!photo) throw new Error('no photo');
+        setNatural(photo, NATURAL.w, NATURAL.h);
+        photo.dispatchEvent(new Event('load'));
+        const done = button('done');
+        const errors: unknown[] = [];
+
+        // A listener's throw is reported, not raised, by dispatchEvent; capture it here.
+        const onError = (e: ErrorEvent): void => { errors.push(e.error); e.preventDefault(); };
+
+        window.addEventListener('error', onError);
+        done.click();
+        window.removeEventListener('error', onError);
+
+        expect(veil()).toBeNull();
+        expect(errors).toEqual([boom]);
+      });
+
       it('Cancel without a landing target leaves no veil', () => {
         open({ initial: { x: 10, y: 10, w: 60, h: 60 } });
 
@@ -579,6 +609,25 @@ describe('openDarkroom fix round 1', () => {
       const saved = onApply.mock.calls[0][0];
 
       expect((saved.w * NATURAL.w) / (saved.h * NATURAL.h)).toBeCloseTo(1, 2);
+    });
+
+    it('Reset before load still saves an old circle square in pixels', () => {
+      const { clock, advance } = fakeFrameClock();
+      const onApply = vi.fn();
+
+      track(openDarkroom({ url: 'x.png', onApply, onCancel: vi.fn(), clock, initial: { x: 10, y: 10, w: 50, h: 50, shape: 'circle' } }));
+      button('reset').click();
+      const photo = document.querySelector<HTMLImageElement>('[data-role="darkroom-photo"]');
+
+      if (!photo) throw new Error('no photo');
+      setNatural(photo, NATURAL.w, NATURAL.h);
+      photo.dispatchEvent(new Event('load'));
+      advance(3000);
+      button('done').click();
+      const saved = onApply.mock.calls[0][0];
+
+      expect(saved.shape).toBe('circle');
+      expect(Math.abs(saved.w * NATURAL.w - saved.h * NATURAL.h)).toBeLessThan(0.01 * NATURAL.w);
     });
 
     it('Circle picked again before load still squares an old circle in pixels', () => {

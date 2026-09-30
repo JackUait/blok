@@ -155,6 +155,12 @@ describe('SettingsTogglerHandler — recorded mutants', () => {
       expect(tokens).toContain('mobile:w-toolbox-btn-mobile');
     });
 
+    it('uses the control radius role on desktop and mobile alike', () => {
+      const tokens = classTokens(handler.make(emptyNodes()));
+
+      expect(tokens.filter((token) => token.includes('rounded'))).toEqual(['rounded-(--blok-radius-control)']);
+    });
+
     it('renders the menu icon into the handle', () => {
       const element = handler.make(emptyNodes());
 

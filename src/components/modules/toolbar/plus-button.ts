@@ -120,7 +120,7 @@ export class PlusButtonHandler {
     const plusButton = $.make('div', [
       twJoin(
         // Base toolbox-button styles
-        'text-text-secondary cursor-pointer w-6 h-6 rounded-[5px] inline-flex justify-center items-center select-none',
+        'text-text-secondary cursor-pointer w-6 h-6 rounded-(--blok-radius-control) inline-flex justify-center items-center select-none',
         'shrink-0',
         // SVG sizing
         '[&_svg]:h-[22px] [&_svg]:w-[22px]',
@@ -131,7 +131,7 @@ export class PlusButtonHandler {
         // Hide when block settings popover is open
         'group-data-[blok-block-settings-opened=true]:hidden',
         // Mobile styles (static positioning with overlay-pane appearance)
-        'mobile:bg-popover-bg mobile:border mobile:border-mobile-border mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-2',
+        'mobile:bg-popover-bg mobile:border mobile:border-mobile-border mobile:shadow-overlay-pane mobile:z-2',
         'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
         // RTL styles
         'group-data-[blok-rtl=true]:right-[calc(-1*(var(--spacing-toolbox-btn)))] group-data-[blok-rtl=true]:left-auto'

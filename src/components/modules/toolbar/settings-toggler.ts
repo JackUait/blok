@@ -124,7 +124,7 @@ export class SettingsTogglerHandler {
     const settingsToggler = $.make('span', [
       twJoin(
         // Base toolbox-button styles
-        'text-text-secondary cursor-pointer w-[18px] h-6 rounded-[5px] inline-flex justify-center items-center select-none',
+        'text-text-secondary cursor-pointer w-[18px] h-6 rounded-(--blok-radius-control) inline-flex justify-center items-center select-none',
         // SVG sizing
         '[&_svg]:h-[22px] [&_svg]:w-[22px] [&_svg]:shrink-0',
         // Hover (can-hover)
@@ -137,7 +137,7 @@ export class SettingsTogglerHandler {
         // background instead.
         'group-data-[blok-block-settings-opened=true]:bg-bg-light',
         // Mobile styles (static positioning with overlay-pane appearance)
-        'mobile:bg-popover-bg mobile:border mobile:border-mobile-border mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-2',
+        'mobile:bg-popover-bg mobile:border mobile:border-mobile-border mobile:shadow-overlay-pane mobile:z-2',
         'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile'
       ),
     ], {

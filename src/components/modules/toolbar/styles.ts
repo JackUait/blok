@@ -26,48 +26,6 @@ export const getToolbarStyles = (): { [name: string]: string } => {
       'mobile:group-data-[blok-rtl=true]:ml-0 mobile:group-data-[blok-rtl=true]:mr-auto mobile:group-data-[blok-rtl=true]:pr-0 mobile:group-data-[blok-rtl=true]:pl-[10px]'
     ),
     actionsOpened: 'opacity-100',
-
-    plusButton: twJoin(
-      // Base toolbox-button styles
-      'text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none',
-      'shrink-0',
-      // SVG sizing
-      '[&_svg]:h-6 [&_svg]:w-6',
-      // Hover (can-hover)
-      'can-hover:hover:bg-bg-light',
-      // Keep hover background when toolbox is opened
-      'group-data-[blok-toolbox-opened=true]:bg-bg-light',
-      // Mobile styles (static positioning with overlay-pane appearance)
-      'mobile:bg-popover-bg mobile:border mobile:border-mobile-border mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-2',
-      'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
-      // RTL styles
-      'group-data-[blok-rtl=true]:right-[calc(-1*(var(--spacing-toolbox-btn)))] group-data-[blok-rtl=true]:left-auto'
-    ),
-    plusButtonShortcutKey: 'text-white',
-    /**
-     * Data attribute selector used for SortableJS for drag handle
-     */
-    settingsToggler: twJoin(
-      // Base toolbox-button styles
-      'text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none',
-      'cursor-pointer select-none',
-      // SVG sizing
-      '[&_svg]:h-6 [&_svg]:w-6',
-      // Active state
-      'active:cursor-grabbing',
-      // Hover (can-hover)
-      'can-hover:hover:bg-bg-light can-hover:hover:cursor-grab',
-      // When toolbox is opened, use pointer cursor on hover
-      'can-hover:hover:group-data-[blok-toolbox-opened=true]:cursor-pointer',
-      // When block settings is opened, show hover background and pointer cursor
-      'group-data-[blok-block-settings-opened=true]:bg-bg-light',
-      'can-hover:hover:group-data-[blok-block-settings-opened=true]:cursor-pointer',
-      // Mobile styles (static positioning with overlay-pane appearance)
-      'mobile:bg-popover-bg mobile:border mobile:border-mobile-border mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-2',
-      'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
-      // Not-mobile styles
-      'not-mobile:w-6'
-    ),
     settingsTogglerHidden: 'hidden',
   };
 }

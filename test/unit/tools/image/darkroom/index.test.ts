@@ -728,6 +728,18 @@ describe('openDarkroom fix round 1', () => {
       expect(circle?.getAttribute('aria-checked')).toBe('true');
     });
 
+    it('Reset is an undo entry: Cmd+Z brings back the crop it cleared', () => {
+      const { onApply, advance } = open({ initial: { x: 10, y: 10, w: 60, h: 60 } });
+
+      button('reset').click();
+      advance(3000);
+      key(dialog(), { key: 'z', metaKey: true });
+      advance(3000);
+      button('done').click();
+
+      expect(onApply).toHaveBeenCalledWith({ x: 10, y: 10, w: 60, h: 60 });
+    });
+
     it('Cmd+Z works on a non-Latin keyboard layout', () => {
       const { advance } = open();
       const circle = document.querySelector<HTMLButtonElement>('[data-ratio="circle"]');

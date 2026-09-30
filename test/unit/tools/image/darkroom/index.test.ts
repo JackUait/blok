@@ -218,6 +218,17 @@ describe('openDarkroom', () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
+  it('a block image scrolled off-screen fades the photo in instead of flying it', () => {
+    const source = document.createElement('div');
+
+    document.body.appendChild(source);
+    vi.spyOn(source, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, -600, 200, 150));
+    open({ sourceEl: source });
+
+    expect(dialog().getAttribute('data-entering')).toBe('fade');
+    expect(source.style.visibility).toBe('');
+  });
+
   it('a photo that loads after Cancel leaves the block image visible', () => {
     const source = document.createElement('div');
 

@@ -13,7 +13,7 @@ import {
 } from './camera';
 import { attachGestures } from './gestures';
 import { createHistory, type Snapshot } from './history';
-import { createDissolve, createVeil, flyOut } from './motion';
+import { createDissolve, createVeil, flyOut, isOnScreen } from './motion';
 
 export interface OpenDarkroomOptions {
   url: string;
@@ -336,7 +336,7 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
     const stageBox = stage.getBoundingClientRect();
 
     layout(false);
-    if (!src || src.width === 0 || src.height === 0) {
+    if (!src || !isOnScreen(src)) {
       surface.setAttribute('data-entering', 'fade');
 
       return;

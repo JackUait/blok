@@ -99,6 +99,8 @@ describe('FindBar', () => {
     it('starts the find field with the input, not a search icon', () => {
       expect(byTestId(bar.element, 'find-field').firstElementChild).toBe(findInput());
       expect(byTestId(bar.element, 'find-field').querySelector('svg')).toBeNull();
+      // field.css draws the glyph as ::before on the 'search' variant.
+      expect(byTestId(bar.element, 'find-field').getAttribute('data-blok-field')).toBe('text');
     });
 
     it('labels every icon button', () => {

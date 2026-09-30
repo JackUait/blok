@@ -40,10 +40,10 @@ for (const [theme, width] of [['light', 1280], ['dark', 1280], ['light', 390]] a
       await gotoTestPage(page);
     });
 
-    test('find input is the shared search field', async ({ page }) => {
+    test('find input is the shared text field, no search glyph', async ({ page }) => {
       await openReplace(page, theme);
       await expect(page.getByTestId('find-field')).toBeVisible();
-      await expectBlokField(page.getByTestId('find-field'), page.getByTestId('find-input'), 'search');
+      await expectBlokField(page.getByTestId('find-field'), page.getByTestId('find-input'), 'text');
     });
 
     test('replace input is the shared text field', async ({ page }) => {

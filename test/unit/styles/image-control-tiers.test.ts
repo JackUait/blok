@@ -85,9 +85,10 @@ describe('image islands (frame and islands design)', () => {
     expect(mainCss).toMatch(/\.blok-image-toolbar \{[^}]*background: transparent/);
   });
 
-  it('floats 20px above the figure, or 10px inside when told to', () => {
-    expect(mainCss).toMatch(/\.blok-image-toolbar \{[^}]*bottom: calc\(100% \+ 20px\)/);
-    expect(findRuleBody('[data-blok-tool="image"] .blok-image-toolbar[data-islands-placement="inside"]')).toContain('top: 10px');
+  it('always sits 10px inside the top of the picture', () => {
+    expect(mainCss).toMatch(/\.blok-image-toolbar \{[^}]*top: 10px/);
+    expect(mainCss).not.toMatch(/\.blok-image-toolbar \{[^}]*bottom:/);
+    expect(css).not.toContain('data-islands-placement');
   });
 
   it('medium tier shows only the edit island and more', () => {
@@ -170,11 +171,3 @@ describe('snap guides', () => {
   });
 });
 
-describe('hover bridge above the picture', () => {
-  it('spans the 20px gap below islands that float above', () => {
-    const body = findRuleBody('[data-blok-tool="image"] .blok-image-toolbar[data-islands-placement="above"]::after');
-
-    expect(body).toContain('top: 100%');
-    expect(body).toContain('height: 20px');
-  });
-});

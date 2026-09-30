@@ -62,12 +62,15 @@ const box = async (locator: Locator, label: string): Promise<{ x: number; y: num
   return b as { x: number; y: number; width: number; height: number };
 };
 
-test('hover shows the islands above the image; selecting adds the ring', async ({ page }) => {
+test('hover shows the islands inside the image even with room above; selecting adds the ring', async ({ page }) => {
   await createBlok(page, { blocks: [...ROOM_ABOVE, { id: 'img', type: 'image', data: IMAGE }] });
   await hoverLoadedFigure(page);
 
   await expect(imageBlock(page).locator('[data-island="edit"]')).toBeVisible();
-  await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveAttribute('data-islands-placement', 'above');
+  const islands = await box(imageBlock(page).locator('[data-island="edit"]'), 'edit island');
+  const fig = await box(figure(page), 'figure');
+
+  expect(islands.y).toBeGreaterThanOrEqual(fig.y);
   await expect(imageBlock(page).locator('[data-role="image-selection-ring"]')).toHaveCSS('opacity', '0');
 
   await imageBlock(page).getByRole('textbox').click();
@@ -75,22 +78,6 @@ test('hover shows the islands above the image; selecting adds the ring', async (
 
   await expect(imageBlock(page)).toHaveAttribute('data-blok-selected', 'true');
   await expect(imageBlock(page).locator('[data-role="image-selection-ring"]')).toHaveCSS('opacity', '1');
-});
-
-test('a pointer travelling up from the picture reaches the islands above it', async ({ page }) => {
-  await createBlok(page, { blocks: [...ROOM_ABOVE, { id: 'img', type: 'image', data: IMAGE }] });
-  await hoverLoadedFigure(page);
-  const crop = imageBlock(page).locator('[data-action="crop"]');
-  const target = await box(crop, 'crop button');
-  const fig = await box(figure(page), 'figure');
-  const x = target.x + target.width / 2;
-
-  // Walk up in small steps, as a real mouse does; a one-jump hover skips the gap.
-  await page.mouse.move(x, fig.y + 30);
-  await page.mouse.move(x, target.y + target.height / 2, { steps: 12 });
-
-  await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveCSS('pointer-events', 'auto');
-  await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveCSS('opacity', '1');
 });
 
 test('an image in a table cell keeps its islands inside the cell, where they can be clicked', async ({ page }) => {
@@ -102,7 +89,6 @@ test('an image in a table cell keeps its islands inside the cell, where they can
   ] });
   await hoverLoadedFigure(page);
 
-  await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveAttribute('data-islands-placement', 'inside');
   const more = await box(imageBlock(page).locator('[data-action="more"]'), 'more button');
   const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('[data-action]')?.getAttribute('data-action'), { x: more.x + more.width / 2, y: more.y + more.height / 2 });
 
@@ -113,7 +99,6 @@ test('an image as the first block puts its islands inside', async ({ page }) => 
   await createBlok(page, { blocks: [{ id: 'img', type: 'image', data: IMAGE }] });
   await hoverLoadedFigure(page);
 
-  await expect(imageBlock(page).locator('[data-role="image-overlay"]')).toHaveAttribute('data-islands-placement', 'inside');
   const islands = await box(imageBlock(page).locator('[data-island="edit"]'), 'edit island');
   const fig = await box(figure(page), 'figure');
 

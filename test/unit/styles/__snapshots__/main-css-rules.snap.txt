@@ -5295,20 +5295,6 @@ span[data-blok-slash-search] {
   font-weight: 600;
 }
 
-[data-blok-tool="image"] .blok-image-toolbar[data-islands-placement="above"]::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  right: 0;
-  left: 0;
-  height: 20px;
-}
-
-[data-blok-tool="image"] .blok-image-toolbar[data-islands-placement="inside"] {
-  bottom: auto;
-  top: 10px;
-}
-
 [data-blok-tool="image"] .blok-image-toolbar__island {
   display: inline-flex;
   gap: var(--blok-space-0-25);
@@ -10139,7 +10125,7 @@ textarea[data-blok-field] {
 [data-blok-tool="image"] .blok-image-toolbar {
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 20px);
+  top: 10px;
   transform: translateX(-50%);
   display: inline-flex;
   gap: var(--blok-space-1-5);

@@ -676,11 +676,10 @@
   test/unit/styles/helpers/read-main-css.ts for the general pattern; these
   specific rules must stay here to satisfy tests that read main.css directly.
 */
-/* 20px must equal ISLAND_GAP_PX in src/tools/image/island-placement.ts. */
 [data-blok-tool="image"] .blok-image-toolbar {
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 20px);
+  top: 10px;
   transform: translateX(-50%);
   display: inline-flex;
   gap: var(--blok-space-1-5);

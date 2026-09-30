@@ -2199,30 +2199,14 @@ describe('ImageTool — image chrome wiring', () => {
     expect(root.querySelector('.blok-image-inner > [data-role="image-selection-ring"]')).not.toBeNull();
   });
 
-  it('stamps an island placement on the toolbar', () => {
-    const { root } = renderRenderedImage();
-
-    expect(['above', 'inside']).toContain(root.querySelector('[data-role="image-overlay"]')?.getAttribute('data-islands-placement'));
-  });
-
-  it('puts the islands inside when the figure has no room above', () => {
-    const { root } = renderRenderedImage();
-    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
-    if (!figure) throw new Error('figure missing');
-    Object.defineProperty(figure, 'getBoundingClientRect', { value: () => ({ top: 5, left: 0, width: 400, height: 300, right: 400, bottom: 305 }) });
-    figure.dispatchEvent(new MouseEvent('mouseenter'));
-
-    expect(root.querySelector('[data-role="image-overlay"]')?.getAttribute('data-islands-placement')).toBe('inside');
-  });
-
-  it('floats the islands above when there is room', () => {
+  it('keeps the islands inside the picture even when there is room above', () => {
     const { root } = renderRenderedImage();
     const figure = root.querySelector<HTMLElement>('.blok-image-inner');
     if (!figure) throw new Error('figure missing');
     Object.defineProperty(figure, 'getBoundingClientRect', { value: () => ({ top: 300, left: 0, width: 400, height: 300, right: 400, bottom: 600 }) });
     figure.dispatchEvent(new MouseEvent('mouseenter'));
 
-    expect(root.querySelector('[data-role="image-overlay"]')?.getAttribute('data-islands-placement')).toBe('above');
+    expect(root.querySelector('[data-role="image-overlay"]')?.hasAttribute('data-islands-placement')).toBe(false);
   });
 
   it('marks the root as resizing and shows a snapped readout while a handle is dragged', () => {
@@ -2288,13 +2272,11 @@ describe('ImageTool — destroy', () => {
     document.body.innerHTML = '';
   });
 
-  it('drops its window scroll listener when the editor is destroyed', () => {
-    const remove = vi.spyOn(window, 'removeEventListener');
-    const { tool } = renderRenderedImage();
+  it('adds no window scroll listener that destroy would have to drop', () => {
+    const add = vi.spyOn(window, 'addEventListener');
+    renderRenderedImage();
 
-    tool.destroy();
-
-    expect(remove).toHaveBeenCalledWith('scroll', expect.any(Function), { capture: true });
+    expect(add).not.toHaveBeenCalledWith('scroll', expect.anything(), expect.anything());
   });
 });
 

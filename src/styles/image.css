@@ -226,20 +226,6 @@
 
 /* toolbar base rule lives in main.css to satisfy direct readFileSync audits.
    Additional toolbar states/children remain here. */
-/* Bridges the 20px gap to the figure: the pointer is still "on" the figure while it climbs to the islands.
-   Only when they float above; inside, it would cover the picture and swallow the lightbox click. */
-[data-blok-tool="image"] .blok-image-toolbar[data-islands-placement="above"]::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  right: 0;
-  left: 0;
-  height: 20px;
-}
-[data-blok-tool="image"] .blok-image-toolbar[data-islands-placement="inside"] {
-  bottom: auto;
-  top: 10px;
-}
 [data-blok-tool="image"] .blok-image-toolbar__island {
   display: inline-flex;
   gap: var(--blok-space-0-25);

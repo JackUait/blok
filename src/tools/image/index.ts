@@ -35,7 +35,7 @@ import {
   IconReplace,
 } from '../../components/icons';
 import { DEFAULT_RELOAD_ATTEMPTS, IMAGE_SNAP_POINTS, URL_PATTERN } from './constants';
-import { islandBoundaryTop, resolveIslandPlacement, syncMediaHeight } from './island-placement';
+import { syncMediaHeight } from './media-height';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
 import { resolveUploadError } from '../../components/utils/media-upload-error';
@@ -91,7 +91,6 @@ export class ImageTool implements BlockTool {
   private uploadingEl: UploadingStateElement | null = null;
   private resizeDetach: (() => void)[] = [];
   private overlayResizeObserver: ResizeObserver | null = null;
-  private placementDetach: (() => void) | null = null;
   private cropDetach: (() => void) | null = null;
   private altPopoverDetach: (() => void) | null = null;
   private errorMessage: string | null = null;
@@ -871,8 +870,6 @@ export class ImageTool implements BlockTool {
     }
     this.overlayResizeObserver?.disconnect();
     this.overlayResizeObserver = null;
-    this.placementDetach?.();
-    this.placementDetach = null;
   }
 
   private syncRootAttributes(): void {
@@ -1031,7 +1028,6 @@ export class ImageTool implements BlockTool {
         i18n: this.api.i18n,
       });
       figure.appendChild(overlay);
-      this.watchIslandPlacement(figure, overlay);
 
       const moreBtn = overlay.querySelector<HTMLButtonElement>('[data-action="more"]');
       moreBtn?.addEventListener('click', (event) => {
@@ -1117,24 +1113,6 @@ export class ImageTool implements BlockTool {
     if (typeof ResizeObserver === 'undefined') return;
     this.overlayResizeObserver = new ResizeObserver(sync);
     this.overlayResizeObserver.observe(figure);
-  }
-
-  private watchIslandPlacement(figure: HTMLElement, overlay: HTMLElement): void {
-    this.placementDetach?.();
-    const sync = (): void => {
-      overlay.setAttribute('data-islands-placement', resolveIslandPlacement({
-        figureTop: figure.getBoundingClientRect().top,
-        islandHeight: overlay.getBoundingClientRect().height,
-        boundaryTop: islandBoundaryTop(figure),
-      }));
-    };
-    sync();
-    figure.addEventListener('mouseenter', sync);
-    window.addEventListener('scroll', sync, { passive: true, capture: true });
-    this.placementDetach = (): void => {
-      figure.removeEventListener('mouseenter', sync);
-      window.removeEventListener('scroll', sync, { capture: true });
-    };
   }
 
   private attachResizeHandles(figure: HTMLElement): void {

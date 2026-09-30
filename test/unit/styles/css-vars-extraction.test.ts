@@ -309,7 +309,7 @@ const DANGLING_VAR_ALLOWLIST = new Set([
   // declaration would shadow ancestor-level host overrides via
   // nearest-ancestor custom-property inheritance.
   '--blok-placeholder-color',
-  // Set at runtime on the image figure by syncMediaHeight (tools/image/island-placement.ts):
+  // Set at runtime on the image figure by syncMediaHeight (tools/image/media-height.ts):
   // the picture's own height, so the ring, dots, readout and alt pill skip the caption row.
   // Every read carries a fallback for the moment before the image has loaded.
   '--blok-image-media-height',

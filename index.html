@@ -2844,8 +2844,12 @@
       });
       blockStatesInstances.push(instance);
 
-      // The broken demo image 404s at once; keep Retry's loading state visible.
-      if (blocks.some((block) => block.id === 'im-broken')) slowImageRetries(holder, 2000);
+      // The broken demo image 404s at once; keep Retry's loading state visible
+      // and let half the retries succeed.
+      if (blocks.some((block) => block.id === 'im-broken')) slowImageRetries(holder, {
+        delayMs: 2000,
+        recoverUrl: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800',
+      });
 
       // Force persistent loading overlay on the "Loading" image state demo.
       // Clone the <img> to strip load/error listeners (so overlay can't clear),

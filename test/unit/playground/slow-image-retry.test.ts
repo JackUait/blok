@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { slowImageRetries } from '../../../src/playground/slow-image-retry';
 
 /** Mimics the image tool: it reloads silently `reloads` times, then flips the tool root to the error state. */
+const GOOD_URL = '/good.png';
+
 const mountFakeImage = (reloads = 0): { holder: HTMLElement; img: HTMLImageElement; failures: () => number } => {
   const holder = document.createElement('div');
   const toolRoot = document.createElement('div');
@@ -48,7 +50,7 @@ describe('playground slow image retries', () => {
   test('the first failure shows at once so the demo boots already failed', () => {
     const { holder, img, failures } = mountFakeImage();
 
-    slowImageRetries(holder, 2000);
+    slowImageRetries(holder, { delayMs: 2000, recoverUrl: GOOD_URL, random: () => 0.9 });
     img.dispatchEvent(new Event('error'));
 
     expect(failures()).toBe(1);
@@ -57,7 +59,7 @@ describe('playground slow image retries', () => {
   test('a retry fails again only after the delay', async () => {
     const { holder, img, failures } = mountFakeImage();
 
-    slowImageRetries(holder, 2000);
+    slowImageRetries(holder, { delayMs: 2000, recoverUrl: GOOD_URL, random: () => 0.9 });
     img.dispatchEvent(new Event('error'));
     await Promise.resolve();
     await retry(holder);
@@ -76,7 +78,7 @@ describe('playground slow image retries', () => {
     const { holder, img, failures } = mountFakeImage(Infinity);
     const toolRoot = holder.querySelector('[data-blok-tool="image"]');
 
-    slowImageRetries(holder, 2000);
+    slowImageRetries(holder, { delayMs: 2000, recoverUrl: GOOD_URL, random: () => 0.9 });
     img.dispatchEvent(new Event('error'));
     await Promise.resolve();
     toolRoot?.setAttribute('data-state', 'error');
@@ -91,7 +93,7 @@ describe('playground slow image retries', () => {
   test('reload attempts inside one retry are not delayed again', async () => {
     const { holder, img, failures } = mountFakeImage(1);
 
-    slowImageRetries(holder, 2000);
+    slowImageRetries(holder, { delayMs: 2000, recoverUrl: GOOD_URL, random: () => 0.9 });
     img.dispatchEvent(new Event('error'));
     img.dispatchEvent(new Event('error'));
     await Promise.resolve();
@@ -108,7 +110,7 @@ describe('playground slow image retries', () => {
   test('every retry gets its own delay', async () => {
     const { holder, img, failures } = mountFakeImage();
 
-    slowImageRetries(holder, 2000);
+    slowImageRetries(holder, { delayMs: 2000, recoverUrl: GOOD_URL, random: () => 0.9 });
     img.dispatchEvent(new Event('error'));
     await Promise.resolve();
 
@@ -123,5 +125,21 @@ describe('playground slow image retries', () => {
 
     vi.advanceTimersByTime(2000);
     expect(failures()).toBe(3);
+  });
+
+  test('half of the retries load the image instead of failing', async () => {
+    const { holder, img, failures } = mountFakeImage();
+
+    slowImageRetries(holder, { delayMs: 2000, recoverUrl: GOOD_URL, random: () => 0.1 });
+    img.dispatchEvent(new Event('error'));
+    await Promise.resolve();
+    await retry(holder);
+
+    img.dispatchEvent(new Event('error'));
+    expect(img.getAttribute('src')).not.toBe(GOOD_URL);
+
+    vi.advanceTimersByTime(2000);
+    expect(failures()).toBe(1);
+    expect(img.getAttribute('src')).toBe(GOOD_URL);
   });
 });

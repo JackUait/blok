@@ -52,6 +52,18 @@ for (const [theme, width] of [['light', 1280], ['dark', 1280], ['light', 390]] a
       await expectBlokField(page.getByTestId('find-replace-field'), page.getByTestId('find-replace-input'), 'text');
     });
 
+    test('the find field is 140px wide, with the replace field under it', async ({ page }) => {
+      await openReplace(page, theme);
+
+      const [find, replace] = await Promise.all([
+        page.getByTestId('find-field').boundingBox(),
+        page.getByTestId('find-replace-field').boundingBox(),
+      ]);
+
+      expect(find?.width).toBe(140);
+      expect(replace?.width).toBe(140);
+    });
+
     test('the counter sits inside the find field', async ({ page }) => {
       await openReplace(page, theme);
       await page.getByTestId('find-input').fill('foo');

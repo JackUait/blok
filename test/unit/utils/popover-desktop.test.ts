@@ -2852,9 +2852,9 @@ describe('PopoverDesktop', () => {
 
       expect(element).not.toBeNull();
 
-      // Desktop items should have pl-2 (8px) and pr-3 (12px)
-      expect(element?.className).toContain('pl-2');
-      expect(element?.className).toContain('pr-3');
+      // Desktop items pad 8px at the inline start and 12px at the end
+      expect(element?.className).toContain('ps-2');
+      expect(element?.className).toContain('pe-3');
     });
 
     it('adds symmetric top/bottom padding inside the scrollable items container so gaps only show at the list edges', () => {

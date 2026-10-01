@@ -473,6 +473,96 @@ test.describe('table in RTL', () => {
       return Math.abs(center(corner).x - grid.x) <= 20;
     }).toBe(true);
   });
+  test('a read-only table moves its scroll haze on a live flip to rtl', async ({ page }) => {
+    const row = ['أ', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح'];
+
+    await page.evaluate(async ({ holder, data }) => {
+      document.getElementById(holder)?.remove();
+
+      const container = document.createElement('div');
+
+      container.id = holder;
+      container.style.width = '760px';
+      container.style.margin = '0 auto';
+      document.body.appendChild(container);
+
+      const blok = new window.Blok({ holder, data, readOnly: true, i18n: { direction: 'ltr' } });
+
+      window.blokInstance = blok;
+      await blok.isReady;
+    }, { holder: HOLDER_ID, data: tableData([row, row], row.map(() => 200)) });
+
+    const haze = (side: string): string => `[data-blok-table-haze="${side}"]`;
+
+    await expect(page.locator(haze('right'))).toHaveAttribute('data-blok-table-haze-visible', '');
+
+    await page.evaluate(async () => {
+      await window.blokInstance?.i18n.update({ direction: 'rtl' });
+    });
+
+    // RTL starts scrolled to the right edge, so the hidden columns are on the left.
+    await expect(page.locator(haze('left'))).toHaveAttribute('data-blok-table-haze-visible', '');
+    await expect(page.locator(haze('right'))).not.toHaveAttribute('data-blok-table-haze-visible', '');
+
+    const leftHaze = await box(page, haze('left'));
+    const scroller = await box(page, '[data-blok-table-scroll]');
+
+    expect(Math.abs(leftHaze.x - scroller.x)).toBeLessThanOrEqual(TOLERANCE);
+  });
+
+  for (const direction of ['rtl', 'ltr'] as const) {
+    test(`${direction}: the heading switch thumb moves toward the inline end when on`, async ({ page }) => {
+      await createBlok(page, tableData(cellText(direction)), direction);
+
+      const target = await box(page, cell(0, 0));
+
+      await page.mouse.move(center(target).x, center(target).y);
+      await page.locator('[data-blok-table-grip-row="0"]').click();
+
+      const toggle = page.getByRole('switch').first();
+
+      await expect(toggle).toBeVisible();
+
+      const thumbOffset = async (): Promise<number> => toggle.evaluate(async (row) => {
+        const track = row.lastElementChild;
+        const thumb = track?.firstElementChild;
+
+        await Promise.all((thumb?.getAnimations() ?? []).map(a => a.finished.catch(() => undefined)));
+
+        if (!(track instanceof HTMLElement) || !(thumb instanceof HTMLElement)) {
+          return Number.NaN;
+        }
+
+        const t = track.getBoundingClientRect();
+        const h = thumb.getBoundingClientRect();
+        const isRtl = getComputedStyle(row).direction === 'rtl';
+
+        // Distance of the thumb from the track's inline start.
+        return isRtl ? t.right - h.right : h.left - t.left;
+      });
+
+      await expect(toggle).toHaveAttribute('aria-checked', 'false');
+      expect(await thumbOffset()).toBeLessThanOrEqual(3);
+
+      await toggle.click();
+      await expect(toggle).toHaveAttribute('aria-checked', 'true');
+      await expect.poll(thumbOffset).toBeGreaterThanOrEqual(13);
+
+      // The gap between icon and label sits on the icon's inline-end side.
+      const gap = await toggle.evaluate((row, dir) => {
+        const icon = row.children[0]?.getBoundingClientRect();
+        const label = row.children[1]?.getBoundingClientRect();
+
+        if (icon === undefined || label === undefined) {
+          return Number.NaN;
+        }
+
+        return dir === 'rtl' ? icon.left - label.right : label.left - icon.right;
+      }, direction);
+
+      expect(gap).toBeGreaterThanOrEqual(6);
+    });
+  }
   test('a live direction flip is not an edit', async ({ page }) => {
     await createBlok(page, tableData([['A', 'B', 'C'], ['D', 'E', 'F']]), 'ltr');
     await clearChanges(page);

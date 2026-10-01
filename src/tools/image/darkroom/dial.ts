@@ -1,4 +1,5 @@
 import { IconCross } from '../../../components/icons';
+import { registerLayer } from '../../../components/utils/dismissable-layer';
 
 export interface DialOptions {
   min: number;
@@ -68,6 +69,7 @@ export function createDial(o: DialOptions): Dial {
   const bigStep = o.bigStep ?? 5;
   const setup: DialSetup = { min: o.min, max: o.max, value: o.value, label: o.label, valueText: o.valueText, resetLabel: o.resetLabel };
   const st = { value: o.value, keyTimer: 0, pointerId: -1, startX: 0, startValue: 0 };
+  const edit: { input: HTMLInputElement | null; unlayer: (() => void) | null } = { input: null, unlayer: null };
 
   const root = el('blok-darkroom__dial', 'dial');
   const label = el('blok-darkroom__dial-value', 'dial-value');
@@ -175,7 +177,70 @@ export function createDial(o: DialOptions): Dial {
     o.onCommit(0);
   };
 
+  // Reads what a person types: a typographic minus, a plus sign, a decimal comma.
+  const parse = (text: string): number | null => {
+    const n = Number.parseFloat(text.trim().replace('−', '-').replace('+', '').replace(',', '.'));
+
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const closeEditor = (apply: boolean): void => {
+    const input = edit.input;
+
+    if (input === null) return;
+    edit.input = null;
+    edit.unlayer?.();
+    edit.unlayer = null;
+    const typed = apply ? parse(input.value) : null;
+
+    input.remove();
+    label.removeAttribute('data-editing');
+    root.focus({ preventScroll: true });
+    if (typed === null) return;
+    flush();
+    if (change(clamp(snap(typed)))) o.onCommit(st.value);
+  };
+
+  /** A field beside the slider, laid over the number: a text field may not sit inside a slider. */
+  const openEditor = (seed: string): void => {
+    if (edit.input !== null) return;
+    flush();
+    const input = document.createElement('input');
+
+    input.type = 'text';
+    input.inputMode = 'decimal';
+    input.className = 'blok-darkroom__dial-input';
+    input.setAttribute('data-role', 'dial-input');
+    input.setAttribute('aria-label', setup.label);
+    input.value = seed;
+    input.addEventListener('keydown', (e) => {
+      // The darkroom reads Enter as Done and Cmd+Z as its own undo; both belong to the field now.
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        closeEditor(true);
+      }
+    });
+    input.addEventListener('blur', () => closeEditor(true));
+    edit.input = input;
+    // Escape is caught at the document in the capture phase; this layer makes it cancel the edit, not the dialog.
+    edit.unlayer = registerLayer({
+      element: input,
+      onDismiss: (reason) => closeEditor(reason !== 'escape'),
+    });
+    label.setAttribute('data-editing', '');
+    box.appendChild(input);
+    input.focus({ preventScroll: true });
+    input.select();
+  };
+
   const onKeyDown = (e: KeyboardEvent): void => {
+    if (/^[\d.,+−-]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      openEditor(e.key);
+
+      return;
+    }
     const target = keyTarget(e);
 
     if (target === null) return;
@@ -190,6 +255,8 @@ export function createDial(o: DialOptions): Dial {
 
   const onDown = (e: PointerEvent): void => {
     if (st.pointerId !== -1) return;
+    // The number opens the field on click; it is not a grip.
+    if (e.target instanceof Node && label.contains(e.target)) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     flush();
     st.pointerId = e.pointerId;
@@ -222,6 +289,9 @@ export function createDial(o: DialOptions): Dial {
   root.addEventListener('pointercancel', onEnd);
   root.addEventListener('dblclick', resetToZero);
   reset?.addEventListener('click', resetToZero);
+  const onLabelClick = (): void => openEditor(String(st.value));
+
+  label.addEventListener('click', onLabelClick);
   drawTicks();
   render();
 
@@ -243,6 +313,8 @@ export function createDial(o: DialOptions): Dial {
     },
     flush,
     destroy(): void {
+      closeEditor(false);
+      label.removeEventListener('click', onLabelClick);
       cancelKeyCommit();
       st.pointerId = -1;
       root.removeEventListener('keydown', onKeyDown);

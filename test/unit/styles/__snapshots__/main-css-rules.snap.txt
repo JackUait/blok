@@ -762,6 +762,30 @@
   font: 500 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
   font-variant-numeric: tabular-nums;
   color: var(--blok-darkroom-ink);
+  cursor: text;
+}
+
+.blok-darkroom__dial-value[data-editing] {
+  visibility: hidden;
+}
+
+.blok-darkroom__dial-input {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 6ch;
+  height: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--blok-darkroom-ink-muted);
+  transform: translateX(-50%);
+  background: transparent;
+  font: 500 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--blok-darkroom-ink);
+  outline: none;
 }
 
 .blok-darkroom__dial-track {

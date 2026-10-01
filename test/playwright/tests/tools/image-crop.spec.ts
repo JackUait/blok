@@ -436,3 +436,28 @@ test('a changed adjust tool shows its reset on top of the chip row, where a clic
   await reset.click();
   await expect(reset).toBeHidden();
 });
+
+test('a click on the dial number takes a typed value; Escape there keeps the darkroom open', async ({ page }) => {
+  const { dialog } = await openDarkroom(page);
+  const slider = dialog.getByRole('slider', { name: 'Straighten' });
+
+  await dialog.locator('[data-role="dial-value"]').first().click();
+  const field = dialog.getByRole('textbox', { name: 'Straighten' });
+
+  await expect(field).toBeFocused();
+  await field.fill('12');
+  await field.press('Enter');
+  await expect(slider).toHaveAttribute('aria-valuenow', '12');
+  await expect(dialog).toBeVisible();
+
+  await dialog.locator('[data-role="dial-value"]').first().click();
+  await field.fill('30');
+  await field.press('Escape');
+  await expect(field).toHaveCount(0);
+  await expect(dialog).toBeVisible();
+  await expect(slider).toHaveAttribute('aria-valuenow', '12');
+
+  await dialog.locator('[data-action="done"]').click();
+  await expect(dialog).toHaveCount(0);
+  expect((await editsOf(page)).straighten).toBe(12);
+});

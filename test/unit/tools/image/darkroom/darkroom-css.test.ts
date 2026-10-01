@@ -133,6 +133,17 @@ describe('darkroom.css', () => {
     expect(layer).toMatch(/z-index:\s*1/);
   });
 
+  it('the typed-value field lies over the number in the same type, and the number hides under it', () => {
+    const field = rule('.blok-darkroom__dial-input');
+
+    expect(field).toMatch(/position:\s*absolute/);
+    expect(field).toMatch(/top:\s*0/);
+    expect(field).toMatch(/ui-monospace/);
+    expect(field).not.toMatch(BLUE);
+    expect(rule('.blok-darkroom__dial-value')).toMatch(/cursor:\s*text/);
+    expect(rule('.blok-darkroom__dial-value[data-editing]')).toMatch(/visibility:\s*hidden/);
+  });
+
   describe('outside Crop mode the photo shows as the cropped result', () => {
     // The body of the rule whose selector list names this selector, grouped or not.
     const offCrop = (target: string): string => {

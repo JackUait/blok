@@ -417,3 +417,154 @@ describe('createDial', () => {
   });
 });
 
+
+describe('createDial typed value', () => {
+  let dial: Dial;
+  let onInput: ReturnType<typeof vi.fn<(v: number) => void>>;
+  let onCommit: ReturnType<typeof vi.fn<(v: number) => void>>;
+
+  const make = (over: Partial<DialOptions> = {}): Dial => {
+    dial = createDial({
+      min: -45, max: 45, value: 0, label: 'Straighten', valueText: (v) => `${v} degrees`, onInput, onCommit, ...over,
+    });
+    document.body.appendChild(dial.box);
+
+    return dial;
+  };
+
+  const valueEl = (): HTMLElement => {
+    const el = dial.el.querySelector<HTMLElement>('[data-role="dial-value"]');
+
+    if (el === null) throw new Error('no value');
+
+    return el;
+  };
+
+  const field = (): HTMLInputElement | null => dial.box.querySelector<HTMLInputElement>('input[data-role="dial-input"]');
+
+  const typeAndSubmit = (text: string, submit = 'Enter'): KeyboardEvent => {
+    const input = field();
+
+    if (input === null) throw new Error('no field');
+    input.value = text;
+
+    return key(input, submit);
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    onInput = vi.fn<(v: number) => void>();
+    onCommit = vi.fn<(v: number) => void>();
+  });
+
+  afterEach(() => {
+    dial.destroy();
+    dial.box.remove();
+    document.body.replaceChildren();
+    vi.restoreAllMocks();
+  });
+
+  it('a click on the number opens a focused field named like the dial, holding the value', () => {
+    make({ value: 7 });
+    valueEl().click();
+    const input = field();
+
+    expect(input).not.toBeNull();
+    expect(input?.getAttribute('aria-label')).toBe('Straighten');
+    expect(input?.value).toBe('7');
+    expect(input).toHaveFocus();
+    // A text field may not sit inside a slider.
+    expect(dial.el.contains(input)).toBe(false);
+  });
+
+  it('Enter applies the typed value as one commit, closes the field and keeps Enter from reaching Done', () => {
+    make();
+    const outer = vi.fn();
+
+    document.body.addEventListener('keydown', outer);
+    valueEl().click();
+    typeAndSubmit('12');
+
+    expect(onInput).toHaveBeenCalledWith(12);
+    expect(onCommit).toHaveBeenCalledTimes(1);
+    expect(onCommit).toHaveBeenCalledWith(12);
+    expect(dial.el.getAttribute('aria-valuenow')).toBe('12');
+    expect(field()).toBeNull();
+    expect(dial.el).toHaveFocus();
+    expect(outer).not.toHaveBeenCalled();
+    document.body.removeEventListener('keydown', outer);
+  });
+
+  it('clamps to the range and reads a typographic minus or a plus sign', () => {
+    make();
+    valueEl().click();
+    typeAndSubmit('99');
+    expect(dial.el.getAttribute('aria-valuenow')).toBe('45');
+    valueEl().click();
+    typeAndSubmit('−7');
+    expect(dial.el.getAttribute('aria-valuenow')).toBe('-7');
+    valueEl().click();
+    typeAndSubmit('+3');
+    expect(dial.el.getAttribute('aria-valuenow')).toBe('3');
+  });
+
+  it('text that is not a number changes nothing', () => {
+    make({ value: 4 });
+    valueEl().click();
+    typeAndSubmit('abc');
+
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(dial.el.getAttribute('aria-valuenow')).toBe('4');
+    expect(field()).toBeNull();
+  });
+
+  it('Escape cancels the edit only: the dialog under it stays open', async () => {
+    const { registerLayer } = await import('../../../../../src/components/utils/dismissable-layer');
+    const dialogDismiss = vi.fn();
+    const unregister = registerLayer({ element: document.body, onDismiss: dialogDismiss });
+
+    make({ value: 4 });
+    valueEl().click();
+    const input = field();
+
+    if (input === null) throw new Error('no field');
+    input.value = '20';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+    expect(dialogDismiss).not.toHaveBeenCalled();
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(dial.el.getAttribute('aria-valuenow')).toBe('4');
+    expect(field()).toBeNull();
+    unregister();
+  });
+
+  it('leaving the field applies it', () => {
+    make();
+    valueEl().click();
+    const input = field();
+
+    if (input === null) throw new Error('no field');
+    input.value = '-9';
+    input.dispatchEvent(new FocusEvent('blur'));
+
+    expect(onCommit).toHaveBeenCalledWith(-9);
+    expect(field()).toBeNull();
+  });
+
+  it('typing a digit on the focused dial opens the field with that digit', () => {
+    make();
+    dial.el.focus();
+    key(dial.el, '3');
+
+    expect(field()?.value).toBe('3');
+    expect(field()).toHaveFocus();
+  });
+
+  it('a press on the number does not start a drag', () => {
+    make();
+    pointer(valueEl(), 'pointerdown', { clientX: 100, button: 0, pointerType: 'mouse' });
+    pointer(dial.el, 'pointermove', { clientX: 40 });
+
+    expect(onInput).not.toHaveBeenCalled();
+  });
+});

@@ -379,6 +379,25 @@ test.describe('table in RTL', () => {
     })).toBe(true);
   });
 
+  test('rtl: a corner held past the scroller\'s left edge scrolls and keeps adding columns', async ({ page }) => {
+    const wide = Array.from({ length: 20 }, (_, i) => `C${i}`);
+
+    await createBlok(page, tableData([wide, wide]), 'rtl');
+
+    const scroller = await box(page, '[data-blok-table-scroll]');
+    const corner = center(await box(page, '[data-blok-table-corner-drag]'));
+    const parked = (await firstRowTexts(page)).length;
+
+    await page.mouse.move(corner.x, corner.y);
+    await page.mouse.down();
+    await page.mouse.move(scroller.x - 160, corner.y, { steps: 5 });
+
+    await expect.poll(async () => (await firstRowTexts(page)).length, { timeout: 5_000 }).toBeGreaterThan(parked);
+    await expect.poll(() => page.evaluate(() => document.querySelector<HTMLElement>('[data-blok-table-scroll]')?.scrollLeft ?? 0)).toBeLessThan(0);
+
+    await page.mouse.up();
+  });
+
   test('a live flip to rtl moves the handles and the corner', async ({ page }) => {
     await createBlok(page, tableData([['A', 'B', 'C'], ['D', 'E', 'F']]), 'ltr');
 

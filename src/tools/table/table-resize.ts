@@ -1,3 +1,4 @@
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { getElementDirection, inlineDelta } from '../../components/utils/direction';
 import type { TextDirection } from '../../components/utils/direction';
 
@@ -120,6 +121,8 @@ export class TableResize {
     const handle = document.createElement('div');
 
     handle.setAttribute(RESIZE_ATTR, '');
+    // Chrome, not content: placing it (scroll, direction flip) is not an edit.
+    handle.setAttribute(DATA_ATTR.mutationFree, 'true');
     handle.setAttribute('data-col', String(colIndex));
     handle.style.position = 'absolute';
     handle.style.top = `-${BORDER_WIDTH}px`;

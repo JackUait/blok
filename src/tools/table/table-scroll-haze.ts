@@ -6,6 +6,7 @@
  * Uses a passive scroll event listener with rAF throttling.
  */
 
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { getElementDirection, scrollFromInlineStart } from '../../components/utils/direction';
 
 const HAZE_ATTR = 'data-blok-table-haze';
@@ -113,6 +114,8 @@ export class TableScrollHaze {
     const el = document.createElement('div');
 
     el.setAttribute(HAZE_ATTR, side);
+    // Chrome, not content: showing or placing it on scroll is not an edit.
+    el.setAttribute(DATA_ATTR.mutationFree, 'true');
     el.setAttribute('aria-hidden', 'true');
     el.classList.add(...HAZE_CLASSES, ...(side === 'left' ? LEFT_HAZE_CLASSES : RIGHT_HAZE_CLASSES));
 

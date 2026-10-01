@@ -1,3 +1,4 @@
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import type { I18n } from '../../../types/api';
 import { createTooltipContent } from '../../components/modules/toolbar/tooltip';
 import { show as showTooltip, hide as hideTooltip } from '../../components/utils/tooltip';
@@ -172,6 +173,8 @@ export class TableCornerDrag {
 
     this.hitZone = document.createElement('div');
     this.hitZone.setAttribute(CORNER_DRAG_ATTR, '');
+    // Chrome, not content: placing it (scroll, direction flip) is not an edit.
+    this.hitZone.setAttribute(DATA_ATTR.mutationFree, 'true');
     this.hitZone.setAttribute('contenteditable', 'false');
     this.hitZone.style.position = 'absolute';
     this.hitZone.style.width = '36px';

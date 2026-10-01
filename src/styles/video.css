@@ -859,7 +859,7 @@
    is the number of 0.05× steps from the start; --blok-speed-step-px is the tick gap. */
 [data-blok-tool="video"] .blok-video-controls__speed-ruler {
   position: relative;
-  height: 46px;
+  height: 32px;
   margin: 0 calc(-1 * var(--blok-space-1-5));
   overflow: hidden;
   cursor: grab;
@@ -879,24 +879,26 @@
 }
 [data-blok-tool="video"] .blok-video-controls__speed-tick {
   position: absolute;
-  bottom: 20px;
+  bottom: 14px;
   left: calc(var(--blok-speed-tick) * var(--blok-speed-step-px));
-  width: 1.5px;
-  height: 8px;
+  width: 1px;
+  height: 5px;
   border-radius: var(--blok-radius-pill);
   background: var(--blok-video-track);
   transform: translateX(-50%);
 }
 [data-blok-tool="video"] .blok-video-controls__speed-tick.is-major {
-  height: 14px;
+  height: 9px;
   background: var(--blok-video-menu-value-fg);
 }
 [data-blok-tool="video"] .blok-video-controls__speed-tick-label {
   position: absolute;
-  top: 18px;
+  top: 100%;
+  margin-top: 2px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 10.5px;
+  font-size: 9.5px;
+  line-height: 1;
   font-weight: 500;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -904,10 +906,10 @@
 }
 [data-blok-tool="video"] .blok-video-controls__speed-needle {
   position: absolute;
-  bottom: 16px;
+  bottom: 12px;
   left: 50%;
   width: 2px;
-  height: 26px;
+  height: 16px;
   margin-left: -1px;
   border-radius: var(--blok-radius-pill);
   background: var(--blok-video-accent);
@@ -918,11 +920,11 @@
 [data-blok-tool="video"] .blok-video-controls__speed-needle::before {
   content: "";
   position: absolute;
-  top: -5px;
+  top: -3px;
   left: 50%;
-  width: 6px;
-  height: 6px;
-  margin-left: -3px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
   border-radius: var(--blok-radius-pill);
   background: var(--blok-video-accent);
 }

@@ -38,3 +38,14 @@ describe('video speed ruler — focus ring', () => {
     expect(css).toMatch(/\.blok-video-controls__speed-ruler:not\(\[data-pointer-focus\]\) \.blok-video-controls__speed-slider:focus-visible ~ \.blok-video-controls__speed-needle\s*\{/);
   });
 });
+
+describe('video speed ruler — size', () => {
+  const px = (selector: string, prop: string): number =>
+    Number(block(selector).match(new RegExp(`(?:^|;|\\s)${prop}:\\s*([\\d.]+)px`))?.[1] ?? NaN);
+
+  it('stays a compact strip, not taller than the preset bar plus its gap', () => {
+    expect(px('[data-blok-tool="video"] .blok-video-controls__speed-ruler', 'height')).toBeLessThanOrEqual(32);
+    expect(px('[data-blok-tool="video"] .blok-video-controls__speed-needle', 'height')).toBeLessThanOrEqual(16);
+    expect(px('[data-blok-tool="video"] .blok-video-controls__speed-tick.is-major', 'height')).toBeLessThanOrEqual(9);
+  });
+});

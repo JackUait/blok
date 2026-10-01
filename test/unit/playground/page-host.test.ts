@@ -57,8 +57,8 @@ describe('PageRegistry', () => {
   it('starts from the seed and resolves a page to its title and emoji icon', () => {
     const pages = new PageRegistry(seed());
 
-    expect(pages.info('guide')).toEqual({ title: 'Guide', icon: { type: 'emoji', value: '📘' }, path: ['Playground'] });
-    expect(pages.info('keys')).toEqual({ title: 'Keys', path: ['Playground', 'Guide'] });
+    expect(pages.info('guide')).toEqual({ title: 'Guide', icon: { type: 'emoji', value: '📘' }, path: ['Blok'] });
+    expect(pages.info('keys')).toEqual({ title: 'Keys', path: ['Blok', 'Guide'] });
     expect(pages.info('nope')).toBeNull();
   });
 
@@ -72,7 +72,7 @@ describe('PageRegistry', () => {
 
     const second = new PageRegistry(seed());
 
-    expect(second.info('guide')).toEqual({ title: 'Handbook', path: ['Playground'] });
+    expect(second.info('guide')).toEqual({ title: 'Handbook', path: ['Blok'] });
     expect(second.get('fresh')).toEqual({
       title: '',
       parentId: 'guide',
@@ -154,7 +154,7 @@ describe('root page header', () => {
     renderPageHeader(host, headerOptions(new PageRegistry(seed()), null));
 
     expect(host.hidden).toBe(false);
-    expect(host.querySelector('h1')?.textContent).toBe('Playground');
+    expect(host.querySelector('h1')?.textContent).toBe('Blok');
     expect(host.querySelector('button')?.getAttribute('aria-label')).toBe('Add icon');
     expect(host.querySelector('[role="status"]')).toBeNull();
     expect(host.querySelector('nav')).toBeNull();
@@ -177,10 +177,10 @@ describe('root page header', () => {
     expect(options.changed).toHaveBeenCalled();
   });
 
-  it('clicking Add icon sets a random icon at once, without opening the picker', () => {
+  it('clicking Add icon sets a random icon at once and opens the picker on it', () => {
     const pages = new PageRegistry(seed());
     const host = document.createElement('header');
-    const options = headerOptions(pages, null);
+    const options = { ...headerOptions(pages, null), i18n: vi.fn(() => ({ i18n: { t: (key: string) => key }, locale: 'en' })) };
 
     renderPageHeader(host, options);
     host.querySelector<HTMLButtonElement>('button[aria-label="Add icon"]')?.click();
@@ -191,7 +191,9 @@ describe('root page header', () => {
     expect(host.querySelector('button')?.getAttribute('aria-label')).toBe('Change icon');
     expect(host.querySelector('button')?.textContent).toBe(icon);
     expect(options.changed).toHaveBeenCalled();
-    expect(options.i18n).not.toHaveBeenCalled();
+    expect(document.body.querySelector('[data-emoji-picker-random]')).not.toBeNull();
+
+    document.body.replaceChildren();
   });
 
   it('keeps the root title and icon in localStorage, and reset brings back the default', () => {
@@ -204,8 +206,8 @@ describe('root page header', () => {
 
     expect(second.root()).toEqual({ title: 'Workspace', icon: '🏠' });
     second.reset();
-    expect(second.root()).toEqual({ title: 'Playground' });
-    expect(new PageRegistry(seed()).root()).toEqual({ title: 'Playground' });
+    expect(second.root()).toEqual({ title: 'Blok' });
+    expect(new PageRegistry(seed()).root()).toEqual({ title: 'Blok' });
   });
 
   it('a renamed root shows up in page paths and in a sub-page breadcrumb', () => {

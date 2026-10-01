@@ -29,7 +29,7 @@ export type PageMap = Record<string, PageRecord>;
 export const PAGES_STORAGE_KEY = 'blok-playground-pages';
 
 /** The root playground document's name, in breadcrumbs and page paths. */
-const ROOT_LABEL = 'Playground';
+const ROOT_LABEL = 'Blok';
 
 /** The root document's title and icon. Apart from the page map, so no page loop meets it. */
 export const ROOT_STORAGE_KEY = 'blok-playground-root';
@@ -525,8 +525,6 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
   iconButton.addEventListener('click', () => {
     if (currentIcon() === undefined) {
       setIcon(randomIcon());
-
-      return;
     }
 
     const { i18n, locale } = options.i18n();

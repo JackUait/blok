@@ -1,4 +1,7 @@
 import type { API, BlockAPI, SanitizerConfig } from '../../../types';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { getElementDirection } from '../../components/utils/direction';
+import type { TextDirection } from '../../components/utils/direction';
 
 import { TableAddControls } from './table-add-controls';
 import type { TableCellBlocks } from './table-cell-blocks';
@@ -36,6 +39,7 @@ import type { PendingHighlight } from './table-row-col-action-handler';
 import { TableRowColControls } from './table-row-col-controls';
 import type { RowColAction } from './table-row-col-controls';
 import { TableScrollHaze } from './table-scroll-haze';
+import { scrollToInlineEnd } from './table-direction';
 import type { CellPlacement, ClipboardBlockData, TableCellsClipboard } from './types';
 import { movePlacementWithMotion } from './table-cell-placement-motion';
 
@@ -135,6 +139,7 @@ export class TableSubsystems {
   private cornerDrag: TableCornerDrag | null = null;
   private scrollHaze: TableScrollHaze | null = null;
   private gridPasteCleanup: (() => void) | null = null;
+  private directionObserver: MutationObserver | null = null;
   private pendingHighlight: PendingHighlight | null = null;
   /** Whether a drag's undo transaction is open (see {@link closeDragTransaction}). */
   private dragTransactionOpen = false;
@@ -178,6 +183,7 @@ export class TableSubsystems {
     this.initCellSelection(gridEl);
     this.initGridPasteListener(gridEl);
     this.initScrollHaze();
+    this.observeDirection(gridEl);
   }
 
   /**
@@ -210,6 +216,41 @@ export class TableSubsystems {
     this.scrollHaze = null;
     this.gridPasteCleanup?.();
     this.gridPasteCleanup = null;
+    this.directionObserver?.disconnect();
+    this.directionObserver = null;
+  }
+
+  /**
+   * Every control is placed in physical pixels for the direction it was laid
+   * out in, so a live direction flip (i18n.update, a block's own dir) must
+   * place them again.
+   */
+  private observeDirection(gridEl: HTMLElement): void {
+    this.directionObserver?.disconnect();
+    this.directionObserver = null;
+
+    const root = gridEl.closest(`[${DATA_ATTR.editor}]`);
+
+    if (root === null) {
+      return;
+    }
+
+    const state: { direction: TextDirection } = { direction: getElementDirection(gridEl) };
+
+    this.directionObserver = new MutationObserver(() => {
+      const direction = getElementDirection(gridEl);
+
+      if (direction === state.direction) {
+        return;
+      }
+
+      state.direction = direction;
+      this.refreshResize(gridEl);
+      this.cornerDrag?.syncPosition();
+      this.scrollHaze?.update();
+      this.cellSelection?.reposition();
+    });
+    this.directionObserver.observe(root, { attributes: true, attributeFilter: ['dir'], subtree: true });
   }
 
   /**
@@ -310,7 +351,7 @@ export class TableSubsystems {
           this.rowColControls?.refresh();
 
           if (this.host.scrollContainer) {
-            this.host.scrollContainer.scrollLeft = this.host.scrollContainer.scrollWidth;
+            scrollToInlineEnd(this.host.scrollContainer);
           }
 
           this.addControls?.syncRowButtonWidth();
@@ -379,7 +420,7 @@ export class TableSubsystems {
           dragState.addedCols++;
 
           if (this.host.scrollContainer) {
-            this.host.scrollContainer.scrollLeft = this.host.scrollContainer.scrollWidth;
+            scrollToInlineEnd(this.host.scrollContainer);
           }
         });
 
@@ -419,7 +460,11 @@ export class TableSubsystems {
         this.rowColControls?.refresh();
 
         if (this.host.scrollContainer) {
-          this.host.scrollContainer.scrollLeft = dragState.addedCols > 0 ? this.host.scrollContainer.scrollWidth : 0;
+          if (dragState.addedCols > 0) {
+            scrollToInlineEnd(this.host.scrollContainer);
+          } else {
+            this.host.scrollContainer.scrollLeft = 0;
+          }
         }
 
         this.addControls?.syncRowButtonWidth();

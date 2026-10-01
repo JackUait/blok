@@ -1,6 +1,7 @@
 import type { API, BlockAPI } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { hasCrossHostSelectionWithin } from '../../components/selection/cross-block-range';
+import { getElementDirection, logicalArrow } from '../../components/utils/direction';
 import {
   isCaretAtStartOfInput,
   isCaretAtEndOfInput,
@@ -240,28 +241,39 @@ export class TableCellBlocks {
         this.commitArrowNavigation(event, () => above ? this.navigateToCell(above, true) : this.exitTableBackward());
         break;
       }
-      case 'ArrowRight': {
-        if (caretInput !== null && !(isCaretAtEndOfInput(caretInput) && this.isCaretInLastCellBlock(caretInput))) {
-          return;
-        }
-
-        const next = this.findAdjacentLogicalCell(position, 1);
-
-        this.commitArrowNavigation(event, () => next ? this.navigateToCell(next) : this.exitTableForward());
+      case 'ArrowRight':
+      case 'ArrowLeft':
+        this.handleInlineArrow(event, position, caretInput);
         break;
-      }
-      case 'ArrowLeft': {
-        if (caretInput !== null && !(isCaretAtStartOfInput(caretInput) && this.isCaretInFirstCellBlock(caretInput))) {
-          return;
-        }
-
-        const previous = this.findAdjacentLogicalCell(position, -1);
-
-        this.commitArrowNavigation(event, () => previous ? this.navigateToCell(previous, true) : this.exitTableBackward());
-        break;
-      }
       default:
     }
+  }
+
+  /**
+   * Left/Right in the caret text's reading order: in RTL ArrowLeft moves forward.
+   */
+  private handleInlineArrow(event: KeyboardEvent, position: CellPosition, caretInput: HTMLElement | null): void {
+    const source = caretInput ?? (event.target instanceof Element ? event.target : null);
+
+    if (logicalArrow(event.key, getElementDirection(source)) === 'forward') {
+      if (caretInput !== null && !(isCaretAtEndOfInput(caretInput) && this.isCaretInLastCellBlock(caretInput))) {
+        return;
+      }
+
+      const next = this.findAdjacentLogicalCell(position, 1);
+
+      this.commitArrowNavigation(event, () => next ? this.navigateToCell(next) : this.exitTableForward());
+
+      return;
+    }
+
+    if (caretInput !== null && !(isCaretAtStartOfInput(caretInput) && this.isCaretInFirstCellBlock(caretInput))) {
+      return;
+    }
+
+    const previous = this.findAdjacentLogicalCell(position, -1);
+
+    this.commitArrowNavigation(event, () => previous ? this.navigateToCell(previous, true) : this.exitTableBackward());
   }
 
   /**

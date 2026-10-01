@@ -6,6 +6,8 @@
  * Uses a passive scroll event listener with rAF throttling.
  */
 
+import { getElementDirection, scrollFromInlineStart } from '../../components/utils/direction';
+
 const HAZE_ATTR = 'data-blok-table-haze';
 const HAZE_VISIBLE_ATTR = 'data-blok-table-haze-visible';
 
@@ -46,6 +48,7 @@ export class TableScrollHaze {
   private leftHaze: HTMLDivElement | null = null;
   private rightHaze: HTMLDivElement | null = null;
   private scrollContainer: HTMLElement | null = null;
+  private wrapper: HTMLElement | null = null;
   private boundOnScroll: (() => void) | null = null;
   private ticking = false;
 
@@ -57,6 +60,7 @@ export class TableScrollHaze {
    */
   public init(wrapper: HTMLElement, scrollContainer: HTMLElement): void {
     this.scrollContainer = scrollContainer;
+    this.wrapper = wrapper;
 
     this.leftHaze = this.createHazeElement('left');
     this.rightHaze = this.createHazeElement('right');
@@ -100,6 +104,7 @@ export class TableScrollHaze {
     this.leftHaze = null;
     this.rightHaze = null;
     this.scrollContainer = null;
+    this.wrapper = null;
     this.boundOnScroll = null;
     this.ticking = false;
   }
@@ -131,11 +136,31 @@ export class TableScrollHaze {
       return;
     }
 
-    const { scrollLeft, scrollWidth, clientWidth } = sc;
-    const maxScroll = scrollWidth - clientWidth;
+    const direction = getElementDirection(sc);
+    const fromStart = scrollFromInlineStart(sc, direction);
+    const maxScroll = sc.scrollWidth - sc.clientWidth;
+    const startHidden = fromStart > SCROLL_THRESHOLD;
+    const endHidden = maxScroll > SCROLL_THRESHOLD && fromStart < maxScroll - SCROLL_THRESHOLD;
 
-    this.setVisible(this.leftHaze, scrollLeft > SCROLL_THRESHOLD);
-    this.setVisible(this.rightHaze, maxScroll > SCROLL_THRESHOLD && scrollLeft < maxScroll - SCROLL_THRESHOLD);
+    this.placeHazes(direction);
+    this.setVisible(this.leftHaze, direction === 'rtl' ? endHidden : startHidden);
+    this.setVisible(this.rightHaze, direction === 'rtl' ? startHidden : endHidden);
+  }
+
+  /**
+   * The wrapper's inline-end padding is on the left in RTL, so both hazes
+   * shift to keep hugging the scroller. LTR keeps the class offsets.
+   */
+  private placeHazes(direction: 'ltr' | 'rtl'): void {
+    if (!this.leftHaze || !this.rightHaze) {
+      return;
+    }
+
+    const isRtl = direction === 'rtl';
+    const padding = isRtl && this.wrapper ? getComputedStyle(this.wrapper).paddingLeft : '';
+
+    this.leftHaze.style.left = padding;
+    this.rightHaze.style.right = isRtl ? '0px' : '';
   }
 
   private setVisible(el: HTMLElement | null, visible: boolean): void {

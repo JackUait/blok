@@ -1,4 +1,8 @@
+import { getElementDirection, inlineDelta } from '../../components/utils/direction';
+import type { TextDirection } from '../../components/utils/direction';
+
 import { BORDER_WIDTH, CELL_ATTR, CELL_COL_ATTR, MIN_COL_WIDTH, ROW_ATTR } from './table-core';
+import { gridX } from './table-direction';
 
 const RESIZE_ATTR = 'data-blok-table-resize';
 const HANDLE_HIT_WIDTH = 16;
@@ -7,7 +11,7 @@ const DBLCLICK_MS = 300;
 
 /**
  * Handles column resize drag interaction on the table grid.
- * Each handle controls the column to its left.
+ * Each handle controls the column on its inline-start side.
  * Table width = sum of all column widths.
  */
 export class TableResize {
@@ -21,6 +25,7 @@ export class TableResize {
   private onResetWidths: (() => void) | null;
   private isDragging = false;
   private dragStartX = 0;
+  private dragDirection: TextDirection = 'ltr';
   private dragColIndex = -1;
   private startColWidth = 0;
   /** True once a drag has moved — so a no-move press-release reads as a click. */
@@ -269,7 +274,7 @@ export class TableResize {
    * grid's own box.
    *
    * A handle is a HANDLE_HIT_WIDTH-wide hit area centred on the column border
-   * it controls. For the last column that border IS the table's right edge, so
+   * it controls. For the last column that border IS the table's inline-end edge, so
    * a centred handle would hang HANDLE_HIT_WIDTH / 2 px past the grid — and the
    * grid lives inside an `overflow-x: auto` scroll container (every table has
    * one, see Table.render), which counts that overhang as scrollable content.
@@ -279,8 +284,9 @@ export class TableResize {
    * grabbable, but contributing nothing to scrollWidth.
    */
   private getHandleOffsetPx(colIndex: number): number {
-    const centred = this.getHandleLeftPx(colIndex) - HANDLE_HIT_WIDTH / 2;
     const gridWidth = this.colWidths.reduce((sum, w) => sum + w, 0);
+    const border = gridX(this.getHandleLeftPx(colIndex), gridWidth, getElementDirection(this.gridEl));
+    const centred = border - HANDLE_HIT_WIDTH / 2;
 
     return Math.max(0, Math.min(centred, gridWidth - HANDLE_HIT_WIDTH));
   }
@@ -346,6 +352,7 @@ export class TableResize {
     this.didDrag = false;
     this.isDragging = true;
     this.dragStartX = e.clientX;
+    this.dragDirection = getElementDirection(this.gridEl);
     this.startColWidth = this.colWidths[this.dragColIndex];
     this.dragColElements = this.resolveColElements();
 
@@ -373,7 +380,7 @@ export class TableResize {
       return;
     }
 
-    const deltaPx = e.clientX - this.dragStartX;
+    const deltaPx = inlineDelta(e.clientX - this.dragStartX, this.dragDirection);
     const rawWidth = this.startColWidth + deltaPx;
     const newWidth = Math.max(MIN_COL_WIDTH, rawWidth);
 

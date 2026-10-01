@@ -3,6 +3,10 @@ import { IconPlus } from '../../components/icons';
 import { createTooltipContent } from '../../components/modules/toolbar/tooltip';
 import { hide as hideTooltip, onHover, show as showTooltip } from '../../components/utils/tooltip';
 import { twMerge } from '../../components/utils/tw';
+import { getElementDirection } from '../../components/utils/direction';
+import type { TextDirection } from '../../components/utils/direction';
+
+import { inlineAxis } from './table-direction';
 
 const ADD_ROW_ATTR = 'data-blok-table-add-row';
 const ADD_COL_ATTR = 'data-blok-table-add-col';
@@ -42,6 +46,8 @@ interface DragState {
   addedCount: number;
   pointerId: number;
   didDrag: boolean;
+  /** Pointer positions are mirrored in RTL, so outward is always positive. */
+  direction: TextDirection;
 }
 
 interface TableAddControlsOptions {
@@ -145,7 +151,7 @@ export class TableAddControls {
    * Compute the visible pixel width for the add-row button when the grid has
    * explicit pixel widths set. Accounts for scroll-container clipping.
    */
-  private computeVisibleWidth(numericWidth: number, isInsideScrollContainer: boolean, scrollContainer: HTMLElement | null): number {
+  private computeVisibleWidth(numericWidth: number, isInsideScrollContainer: boolean, scrollContainer: HTMLElement | null, direction: TextDirection): number {
     if (!isInsideScrollContainer || scrollContainer === null) {
       return numericWidth;
     }
@@ -153,10 +159,11 @@ export class TableAddControls {
     const wrapperRect = this.wrapper.getBoundingClientRect();
 
     if (wrapperRect.width > 0) {
+      const axis = inlineAxis(direction);
       const gridRect = this.grid.getBoundingClientRect();
       const scrollRect = scrollContainer.getBoundingClientRect();
 
-      return Math.min(gridRect.right, scrollRect.right) - wrapperRect.left;
+      return Math.min(axis.end(gridRect), axis.end(scrollRect)) - axis.start(wrapperRect);
     }
 
     if (scrollContainer.clientWidth > 0) {
@@ -178,6 +185,10 @@ export class TableAddControls {
    */
   public syncRowButtonWidth(): void {
     const gridWidth = this.grid.style.width;
+    const direction = getElementDirection(this.wrapper);
+    // Both buttons hang off the inline end: physical right in LTR, left in RTL.
+    const start = direction === 'rtl' ? 'right' : 'left';
+    const end = direction === 'rtl' ? 'left' : 'right';
 
     if (gridWidth && gridWidth.endsWith('px')) {
       const numericWidth = parseFloat(gridWidth);
@@ -191,26 +202,27 @@ export class TableAddControls {
        * scroll position. Fall back to clientWidth in pre-layout / jsdom where
        * getBoundingClientRect returns all-zero rects.
        */
-      const visibleWidth = this.computeVisibleWidth(numericWidth, isInsideScrollContainer, scrollContainer);
+      const visibleWidth = this.computeVisibleWidth(numericWidth, isInsideScrollContainer, scrollContainer, direction);
 
       this.addRowBtn.style.width = `${visibleWidth}px`;
-      this.addRowBtn.style.right = '';
-      this.addRowBtn.style.left = '0px';
+      this.addRowBtn.style[end] = '';
+      this.addRowBtn.style[start] = '0px';
       this.addRowBtn.style.transform = '';
 
-      this.addColBtn.style.left = `${visibleWidth + 4}px`;
-      this.addColBtn.style.right = '';
+      this.addColBtn.style[start] = `${visibleWidth + 4}px`;
+      this.addColBtn.style[end] = '';
     } else {
       this.addRowBtn.style.width = '';
-      this.addRowBtn.style.left = '0px';
+      this.addRowBtn.style[start] = '0px';
       this.addRowBtn.style.transform = '';
 
-      const paddingRight = parseFloat(getComputedStyle(this.wrapper).paddingRight) || 0;
+      const wrapperStyle = getComputedStyle(this.wrapper);
+      const paddingEnd = parseFloat(direction === 'rtl' ? wrapperStyle.paddingLeft : wrapperStyle.paddingRight) || 0;
 
-      this.addRowBtn.style.right = `${paddingRight}px`;
+      this.addRowBtn.style[end] = `${paddingEnd}px`;
 
-      this.addColBtn.style.left = '';
-      this.addColBtn.style.right = `${paddingRight - 36}px`;
+      this.addColBtn.style[start] = '';
+      this.addColBtn.style[end] = `${paddingEnd - 36}px`;
     }
 
     // Pin both buttons' positions to the grid's rendered rect to prevent
@@ -351,13 +363,16 @@ export class TableAddControls {
 
     const unitSize = this.measureUnitSize(axis);
 
+    const direction = getElementDirection(this.grid);
+
     this.dragState = {
       axis,
-      startPos: axis === 'row' ? e.clientY : e.clientX,
+      startPos: axis === 'row' ? e.clientY : inlineAxis(direction).x(e.clientX),
       unitSize,
       addedCount: 0,
       pointerId: e.pointerId,
       didDrag: false,
+      direction,
     };
 
     target.addEventListener('pointermove', this.boundPointerMove);
@@ -370,8 +385,8 @@ export class TableAddControls {
       return;
     }
 
-    const { axis, startPos, unitSize } = this.dragState;
-    const currentPos = axis === 'row' ? e.clientY : e.clientX;
+    const { axis, startPos, unitSize, direction } = this.dragState;
+    const currentPos = axis === 'row' ? e.clientY : inlineAxis(direction).x(e.clientX);
     const delta = currentPos - startPos;
     const targetCount = Math.floor(delta / unitSize);
 
@@ -500,12 +515,13 @@ export class TableAddControls {
     const gridRect = this.grid.getBoundingClientRect();
     const scrollContainer = this.grid.parentElement;
     const isInsideScrollContainer = scrollContainer !== null && scrollContainer !== this.wrapper;
-    const visibleRight = isInsideScrollContainer
-      ? Math.min(gridRect.right, scrollContainer.getBoundingClientRect().right)
-      : gridRect.right;
+    const axis = inlineAxis(getElementDirection(this.grid));
+    const visibleEnd = isInsideScrollContainer
+      ? Math.min(axis.end(gridRect), axis.end(scrollContainer.getBoundingClientRect()))
+      : axis.end(gridRect);
 
     const distFromBottom = Math.abs(e.clientY - gridRect.bottom);
-    const distFromRight = Math.abs(e.clientX - visibleRight);
+    const distFromEnd = Math.abs(axis.x(e.clientX) - visibleEnd);
 
     if (distFromBottom <= PROXIMITY_PX) {
       this.showRow();
@@ -513,7 +529,7 @@ export class TableAddControls {
       this.scheduleHideRow();
     }
 
-    if (distFromRight <= PROXIMITY_PX) {
+    if (distFromEnd <= PROXIMITY_PX) {
       this.showCol();
     } else {
       this.scheduleHideCol();

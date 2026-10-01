@@ -1,8 +1,10 @@
 import type { I18n } from '../../../types/api';
+import { getElementDirection } from '../../components/utils/direction';
 import { twMerge } from '../../components/utils/tw';
 
 import type { CellColorMode } from './table-cell-color-picker';
 import { BORDER_WIDTH, CELL_ATTR, CELL_COL_ATTR, CELL_ROW_ATTR, ownRows } from './table-core';
+import { colEdgeX, gridX } from './table-direction';
 import { collapseGrip, createGripDotsSvg, expandGrip, GRIP_HOVER_SIZE, setGripPillSize } from './table-grip-visuals';
 import { getCumulativeColEdges, TableRowColDrag } from './table-row-col-drag';
 import { createGripPopover } from './table-row-col-popover';
@@ -472,20 +474,16 @@ export class TableRowColControls {
     }
 
     const edges = getCumulativeColEdges(this.grid);
-    const scrollLeft = this.overlay && this.scrollContainer
-      ? this.scrollContainer.scrollLeft
-      : 0;
-    const containerWidth = this.overlay && this.scrollContainer
-      ? this.scrollContainer.clientWidth
-      : Infinity;
+    const direction = getElementDirection(this.grid);
+    const frame = this.getGripFrame(direction);
 
     this.colGrips.forEach((grip, i) => {
       if (i + 1 >= edges.length) {
         return;
       }
 
-      const centerX = (edges[i] + edges[i + 1]) / 2;
-      const adjustedX = centerX - scrollLeft;
+      const centerX = (colEdgeX(edges, i, direction) + colEdgeX(edges, i + 1, direction)) / 2;
+      const adjustedX = centerX + frame.gridOffset;
       const style = grip.style;
 
       style.top = `${-BORDER_WIDTH / 2}px`;
@@ -493,7 +491,7 @@ export class TableRowColControls {
 
       // Hide grips scrolled out of the visible area
       if (this.overlay) {
-        style.visibility = (adjustedX < 0 || adjustedX > containerWidth) ? 'hidden' : '';
+        style.visibility = (adjustedX < frame.visibleStart || adjustedX > frame.visibleStart + frame.visibleWidth) ? 'hidden' : '';
       }
     });
 
@@ -507,9 +505,38 @@ export class TableRowColControls {
       const centerY = rowEl.offsetTop + rowEl.offsetHeight / 2;
       const style = grip.style;
 
-      style.left = `${-BORDER_WIDTH / 2}px`;
+      style.left = `${frame.rowGripX}px`;
       style.top = `${centerY}px`;
     });
+  }
+
+  /**
+   * Where the grid and the visible strip sit inside the grip container.
+   * Row grips ride the scroller's inline-start edge, so they stay put while
+   * the grid scrolls under them.
+   */
+  private getGripFrame(direction: 'ltr' | 'rtl'): { gridOffset: number; visibleStart: number; visibleWidth: number; rowGripX: number } {
+    const scroller = this.overlay ? this.scrollContainer : undefined;
+
+    if (!scroller) {
+      const gridWidth = this.grid.offsetWidth;
+
+      return { gridOffset: 0, visibleStart: 0, visibleWidth: Infinity, rowGripX: gridX(-BORDER_WIDTH / 2, gridWidth, direction) };
+    }
+
+    if (direction === 'ltr') {
+      return { gridOffset: -scroller.scrollLeft, visibleStart: 0, visibleWidth: scroller.clientWidth, rowGripX: -BORDER_WIDTH / 2 };
+    }
+
+    const containerLeft = (this.overlay ?? scroller).getBoundingClientRect().left;
+    const scrollerRect = scroller.getBoundingClientRect();
+
+    return {
+      gridOffset: this.grid.getBoundingClientRect().left - containerLeft,
+      visibleStart: scrollerRect.left - containerLeft,
+      visibleWidth: scroller.clientWidth,
+      rowGripX: scrollerRect.right - containerLeft + BORDER_WIDTH / 2,
+    };
   }
 
   /**
@@ -615,7 +642,7 @@ export class TableRowColControls {
 
   private getColInSpan(originCol: number, colSpan: number, clientX: number): number {
     const edges = getCumulativeColEdges(this.grid);
-    const x = clientX - this.grid.getBoundingClientRect().left;
+    const x = gridX(clientX - this.grid.getBoundingClientRect().left, edges[edges.length - 1] ?? 0, getElementDirection(this.grid));
     const rightEdges = edges.slice(originCol + 1, originCol + colSpan + 1);
     const hit = rightEdges.findIndex(edge => x < edge);
 

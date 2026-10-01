@@ -63,7 +63,7 @@ const ownCells = (tail = ''): string =>
 
 const WRAPPER_CLASSES = [
   'my-2',
-  'pr-5',
+  'pe-5',
 ];
 
 const WRAPPER_EDIT_CLASSES = [

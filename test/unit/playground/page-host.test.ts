@@ -148,6 +148,9 @@ describe('root page header', () => {
     navigate: vi.fn(),
     splitTitle: vi.fn(),
     toFirstBlock: vi.fn(),
+    recordTitle: vi.fn(),
+    undo: vi.fn(),
+    redo: vi.fn(),
     i18n: vi.fn(),
     changed: vi.fn(),
     restore: vi.fn(),
@@ -175,6 +178,71 @@ describe('root page header', () => {
 
     return event;
   };
+
+  const renderRootTitle = (): { host: HTMLElement; title: HTMLElement; options: Parameters<typeof renderPageHeader>[1] } => {
+    const host = document.createElement('header');
+    const options = headerOptions(new PageRegistry(seed()), null);
+
+    document.body.append(host);
+    renderPageHeader(host, options);
+    const title = host.querySelector<HTMLElement>('h1');
+
+    if (title === null) {
+      throw new Error('no title');
+    }
+
+    return { host, title, options };
+  };
+
+  it('records typing in the title as typing, and a paste as a step of its own', () => {
+    const { host, title, options } = renderRootTitle();
+
+    title.textContent = 'Bloke';
+    title.dispatchEvent(new InputEvent('input', { inputType: 'insertText', data: 'e' }));
+
+    expect(options.recordTitle).toHaveBeenLastCalledWith('Bloke', true);
+
+    window.getSelection()?.setPosition(title.firstChild, 5);
+    const paste = new Event('paste', { cancelable: true });
+
+    Object.defineProperty(paste, 'clipboardData', { value: { getData: () => 'd' } });
+    title.dispatchEvent(paste);
+
+    expect(options.recordTitle).toHaveBeenLastCalledWith('Bloked', false);
+    host.remove();
+  });
+
+  it('Enter records the shortened title as a step before opening the block', () => {
+    const { host, title, options } = renderRootTitle();
+    const order: string[] = [];
+
+    vi.mocked(options.recordTitle).mockImplementation((text, typing) => order.push(`record ${text} ${typing}`));
+    vi.mocked(options.splitTitle).mockImplementation((html) => order.push(`split ${html}`));
+    pressEnterAt(title, 2);
+
+    expect(order).toEqual(['record Bl false', 'split ok']);
+    host.remove();
+  });
+
+  it('Cmd+Z and Cmd+Shift+Z in the title run the editor history, not the browser\'s', () => {
+    const { host, title, options } = renderRootTitle();
+    const press = (init: KeyboardEventInit): KeyboardEvent => {
+      const event = new KeyboardEvent('keydown', { cancelable: true, ...init });
+
+      title.dispatchEvent(event);
+
+      return event;
+    };
+
+    expect(press({ key: 'z', metaKey: true }).defaultPrevented).toBe(true);
+    expect(options.undo).toHaveBeenCalledTimes(1);
+    expect(press({ key: 'z', metaKey: true, shiftKey: true }).defaultPrevented).toBe(true);
+    expect(press({ key: 'y', ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(options.redo).toHaveBeenCalledTimes(2);
+    expect(press({ key: 'y', ctrlKey: true, shiftKey: true }).defaultPrevented).toBe(false);
+    expect(options.redo).toHaveBeenCalledTimes(2);
+    host.remove();
+  });
 
   it('ArrowDown on the last line of the title goes to the first block at the same x', () => {
     const host = document.createElement('header');
@@ -558,6 +626,9 @@ describe('page trash', () => {
       navigate: vi.fn(),
       splitTitle: vi.fn(),
       toFirstBlock: vi.fn(),
+      recordTitle: vi.fn(),
+      undo: vi.fn(),
+      redo: vi.fn(),
       i18n: vi.fn(),
       changed: vi.fn(),
       restore,
@@ -588,6 +659,9 @@ describe('page trash', () => {
       navigate: vi.fn(),
       splitTitle: vi.fn(),
       toFirstBlock: vi.fn(),
+      recordTitle: vi.fn(),
+      undo: vi.fn(),
+      redo: vi.fn(),
       i18n: vi.fn(),
       changed: vi.fn(),
       restore: vi.fn(),
@@ -617,6 +691,9 @@ describe('page trash', () => {
       navigate: vi.fn(),
       splitTitle: vi.fn(),
       toFirstBlock: vi.fn(),
+      recordTitle: vi.fn(),
+      undo: vi.fn(),
+      redo: vi.fn(),
       i18n: vi.fn(),
       changed: vi.fn(),
       restore: vi.fn(),
@@ -882,6 +959,8 @@ describe('firstBlockKeydown', () => {
 
     title.id = 'pg-page-title';
     title.contentEditable = 'true';
+    // jsdom only focuses an element with a tabindex.
+    title.tabIndex = 0;
     title.textContent = 'Blok';
 
     const holder = document.createElement('div');
@@ -962,6 +1041,19 @@ describe('firstBlockKeydown', () => {
     expect(title.textContent).toBe('Blok rocks');
     expect(remove).toHaveBeenCalledWith(0, false);
     expect(caretOffsetInTitle(title)).toBe(4);
+  });
+
+  it('Backspace writes the title while the caret is still in the block, so undo returns it there', () => {
+    const { title, editable, press } = setup(' rocks', 0);
+    let caretInBlock: boolean | null = null;
+
+    // jsdom's focus() leaves the selection alone; a browser's moves it into the title.
+    title.addEventListener('input', () => {
+      caretInBlock = document.activeElement !== title && editable.contains(window.getSelection()?.anchorNode ?? null);
+    });
+    press();
+
+    expect(caretInBlock).toBe(true);
   });
 
   it('Backspace keeps a first block that has children and only moves the caret', () => {

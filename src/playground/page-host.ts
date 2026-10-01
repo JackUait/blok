@@ -3,6 +3,7 @@ import type { PageInfo } from '../../types/tools/page';
 import { IconEmojiSmile } from '../components/icons';
 import { EmojiPicker } from '../tools/callout/emoji-picker';
 import { DATA_ATTR } from '../components/constants/data-attributes';
+import { findOwn } from '../components/utils/own-element';
 import { getCaretXPosition, isCaretAtFirstLine, isCaretAtLastLine, setCaretAtXPosition } from '../components/utils/caret';
 import { loadEmojiGrid } from '../components/utils/emoji/emoji-data';
 import seedPages from '../../playground-pages.json';
@@ -433,12 +434,12 @@ export const firstBlockKeydown = (event: KeyboardEvent, editor: FirstBlockEditor
 
   event.preventDefault();
   event.stopPropagation();
-  title.focus();
 
   const movable = editor.blocks.getChildren(first.id).length === 0
-    && first.holder.querySelectorAll('[contenteditable="true"]').length === 1;
+    && first.holder.querySelectorAll('[contenteditable="true"]:not([data-blok-mutation-free])').length === 1;
 
   if (!movable) {
+    title.focus();
     caretToTitleEnd(title);
 
     return true;
@@ -446,10 +447,13 @@ export const firstBlockKeydown = (event: KeyboardEvent, editor: FirstBlockEditor
 
   const join = (title.textContent ?? '').length;
 
+  // Written before the title takes focus: the undo step then starts with the
+  // caret in this block, and undo puts it back here.
   title.append(field.textContent ?? '');
   title.normalize();
   title.dispatchEvent(new Event('input'));
   void editor.blocks.delete(0, false);
+  title.focus();
   placeCaret(title.firstChild ?? title, title.firstChild === null ? 0 : join);
 
   return true;
@@ -465,9 +469,10 @@ export const caretToFirstBlock = (
 ): void => {
   editor.caret.setToFirstBlock('start');
 
-  const field = editor.blocks.getBlockByIndex(0)?.holder.querySelector<HTMLElement>('[contenteditable="true"]');
+  const holder = editor.blocks.getBlockByIndex(0)?.holder;
+  const field = holder === undefined ? null : findOwn(holder, '[contenteditable="true"]:not([data-blok-mutation-free])');
 
-  if (x !== null && field != null) {
+  if (x !== null && field instanceof HTMLElement) {
     setCaretAtXPosition(field, x, true);
   }
 };
@@ -485,6 +490,12 @@ export interface PageHeaderOptions {
   splitTitle(html: string): void;
   /** ArrowDown on the title's last line; `x` is the caret's, when known. */
   toFirstBlock(x: number | null): void;
+  /** The title changed by the user: `typing` continues an undo step, otherwise it is one of its own. */
+  recordTitle(text: string, typing: boolean): void;
+  /** Cmd+Z in the title. */
+  undo(): void;
+  /** Cmd+Shift+Z or Ctrl+Y in the title. */
+  redo(): void;
   /** The current editor's i18n and locale, for the emoji picker's strings. */
   i18n(): { i18n: I18n; locale: string };
   /** Title or icon changed. */
@@ -681,7 +692,9 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
   title.spellcheck = false;
   title.contentEditable = options.readOnly ? 'false' : 'true';
 
-  title.addEventListener('input', () => {
+  // Keystrokes arrive as InputEvents; our own writes (paste, Enter, Backspace
+  // from the first block) dispatch a plain Event, so each is an undo step.
+  title.addEventListener('input', (event) => {
     const text = (title.textContent ?? '').replace(/\n/g, ' ');
 
     // A stray <br> left by the browser would hide the placeholder.
@@ -689,6 +702,7 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
       title.replaceChildren();
     }
     pages.setTitle(pageId, text);
+    options.recordTitle(text, event instanceof InputEvent);
     if (currentText !== null) {
       currentText.textContent = untitled(text);
     }
@@ -711,6 +725,20 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
     title.dispatchEvent(new Event('input'));
   });
   title.addEventListener('keydown', (event) => {
+    const letter = event.key.toLowerCase();
+    const redo = ((event.metaKey || event.ctrlKey) && event.shiftKey && letter === 'z')
+      || (event.ctrlKey && !event.shiftKey && letter === 'y');
+
+    if (redo || ((event.metaKey || event.ctrlKey) && !event.shiftKey && letter === 'z')) {
+      event.preventDefault();
+      if (redo) {
+        options.redo();
+      } else {
+        options.undo();
+      }
+
+      return;
+    }
     if (event.key === 'ArrowDown' && !event.isComposing && !event.shiftKey && isCaretAtLastLine(title)) {
       event.preventDefault();
       options.toFirstBlock(getCaretXPosition());

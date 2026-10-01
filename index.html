@@ -1728,6 +1728,9 @@
           blok.caret.setToFirstBlock('start');
         },
         toFirstBlock: (x) => caretToFirstBlock(blok, x),
+        recordTitle: (text, typing) => titleHistory?.set(text, { typing }),
+        undo: () => blok.history.undo(),
+        redo: () => blok.history.redo(),
         i18n: () => ({ i18n: blok.i18n, locale: state.locale }),
         changed: () => updateDocumentTitle(),
         restore: (id) => restorePage(id),
@@ -1765,17 +1768,43 @@
         : `${page.icon ? `${page.icon} ` : ''}${page.title.trim() || 'Untitled'} · ${baseDocumentTitle}`;
     }
 
+    /** The open page's title in the editor's undo history. */
+    let titleHistory = null;
+
+    function wireTitleHistory(editor) {
+      titleHistory = editor.history.track('title', (value) => {
+        pages.setTitle(currentPageId, value ?? '');
+        renderHeader();
+        const title = document.querySelector(PAGE_TITLE_SELECTOR);
+        if (title === null) return;
+        title.focus();
+        window.getSelection()?.selectAllChildren(title);
+        window.getSelection()?.collapseToEnd();
+      });
+      const page = currentPageId === null ? pages.root() : pages.get(currentPageId);
+      // A shared document may already carry the title a peer gave it.
+      const shared = titleHistory.get();
+      if (shared === undefined) {
+        titleHistory.set(page?.title ?? '', { record: false });
+      } else if (shared !== page?.title) {
+        pages.setTitle(currentPageId, shared);
+        renderHeader();
+      }
+    }
+
     /** Destroys the live editor and builds one for currentPageId. */
     async function swapEditor() {
       clearTimeout(persistTimer);
       persistPending = false;
       blok.destroy();
+      titleHistory = null;
       const editor = new Blok(buildConfig());
       blok = editor;
       window.blok = editor;
       editorPageId = currentPageId;
       try {
         await editor.isReady;
+        wireTitleHistory(editor);
         refreshBlokView();
         wireCollaborationPresence(editor);
         syncLoadedPointers(editor);
@@ -1835,6 +1864,7 @@
     let blok = new Blok(buildConfig());
     window.blok = blok;
     blok.isReady.then(() => {
+      wireTitleHistory(blok);
       wireCollaborationPresence(blok);
       syncLoadedPointers(blok);
       alignPageHeader(pageHeader, document.getElementById('blok'));

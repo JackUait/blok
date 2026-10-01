@@ -19,6 +19,7 @@ import { destroyAnnouncer, registerAnnouncer } from '../utils/announcer';
 import { buildFontSizeVarLines } from '../utils/font-size-tokens';
 import { LinkHoverCard } from '../utils/link-hover-card';
 import { log } from '../utils/logger';
+import { resyncPortalDirections } from '../utils/portal-direction';
 import { decodeHashFragment, resolveHashTarget } from '../utils/hash-target';
 import { hasUnsafeScheme } from '../utils/sanitize-url';
 import { isSamePageLink } from '../../tools/link/registry';
@@ -505,6 +506,9 @@ export class UI extends Module<UINodes> {
     } else {
       this.nodes.wrapper.removeAttribute(DATA_ATTR.rtl);
     }
+
+    // Open menus, the find bar and toasts live outside the wrapper.
+    resyncPortalDirections(this.nodes.wrapper);
   }
 
   /**

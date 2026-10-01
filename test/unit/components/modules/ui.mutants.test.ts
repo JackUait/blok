@@ -12,6 +12,7 @@ import { Flipper } from '../../../../src/components/flipper';
 import { SelectionUtils } from '../../../../src/components/selection/index';
 import { destroyAnnouncer } from '../../../../src/components/utils/announcer';
 import * as Logger from '../../../../src/components/utils/logger';
+import { syncPortalDirection } from '../../../../src/components/utils/portal-direction';
 import { KeyboardController } from '../../../../src/components/modules/uiControllers/controllers/keyboard';
 import { SelectionController } from '../../../../src/components/modules/uiControllers/controllers/selection';
 import { BlockHoverController } from '../../../../src/components/modules/uiControllers/controllers/blockHover';
@@ -2693,6 +2694,24 @@ describe('UI module — mutants', () => {
 
       ui.setDirection('rtl');
       expect(wrapper.getAttribute('dir')).toBe('rtl');
+    });
+
+    it('re-syncs open portals of this editor when the direction flips', () => {
+      const { ui, wrapper } = createMadeUI();
+      const trigger = document.createElement('button');
+      const portal = document.createElement('div');
+
+      wrapper.appendChild(trigger);
+      document.body.append(wrapper, portal);
+      syncPortalDirection(portal, { source: trigger });
+      expect(portal.getAttribute('dir')).toBe('ltr');
+
+      // jsdom does not derive `direction` from `dir`, so set it where the browser would.
+      trigger.style.direction = 'rtl';
+      ui.setDirection('rtl');
+
+      expect(portal.getAttribute('dir')).toBe('rtl');
+      portal.remove();
     });
 
     it('stamps dir="ltr" on an LTR editor', () => {

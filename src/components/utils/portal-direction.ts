@@ -51,6 +51,27 @@ const resolveSourceDirection = (source: Element | null | undefined): TextDirecti
 };
 
 /**
+ * Portals synced from a live source, so a runtime direction flip can re-read
+ * them. Closed (disconnected) portals are dropped on every sync, which keeps
+ * this bounded by the portals open at once.
+ */
+const syncedPortals = new Map<HTMLElement, Element>();
+
+const rememberPortal = (target: HTMLElement, options: PortalDirectionOptions): void => {
+  syncedPortals.forEach((_source, portal) => {
+    if (portal !== target && !portal.isConnected) {
+      syncedPortals.delete(portal);
+    }
+  });
+
+  if (options.direction === undefined && options.source !== null && options.source !== undefined) {
+    syncedPortals.set(target, options.source);
+  } else {
+    syncedPortals.delete(target);
+  }
+};
+
+/**
  * Carries an editor's effective direction onto a root that is detached from
  * the editor ancestry (body portal, CSS Top Layer, or reset nested popover).
  *
@@ -66,6 +87,8 @@ export const syncPortalDirection = (
   target: HTMLElement,
   options: PortalDirectionOptions = {}
 ): TextDirection | undefined => {
+  rememberPortal(target, options);
+
   const resolvedDirection = options.direction ?? resolveSourceDirection(options.source);
 
   if (resolvedDirection === undefined) {
@@ -76,4 +99,17 @@ export const syncPortalDirection = (
   target.style.setProperty('direction', resolvedDirection, 'important');
 
   return resolvedDirection;
+};
+
+/**
+ * Re-reads the direction of every open portal whose source lives in `root`.
+ * Called when an editor flips direction at runtime; portals of other editors
+ * are left alone. Placement is not recomputed here.
+ */
+export const resyncPortalDirections = (root: Element): void => {
+  syncedPortals.forEach((source, portal) => {
+    if (portal.isConnected && source.isConnected && root.contains(source)) {
+      syncPortalDirection(portal, { source });
+    }
+  });
 };

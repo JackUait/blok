@@ -2,8 +2,10 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { I18n } from '../../../types';
 import {
   PAGES_STORAGE_KEY,
+  ROOT_STORAGE_KEY,
   PageRegistry,
   PointerWatch,
   keepPageHeaderAligned,
@@ -180,7 +182,10 @@ describe('root page header', () => {
   it('clicking Add icon sets a random icon at once and opens the picker on it', () => {
     const pages = new PageRegistry(seed());
     const host = document.createElement('header');
-    const options = { ...headerOptions(pages, null), i18n: vi.fn(() => ({ i18n: { t: (key: string) => key }, locale: 'en' })) };
+    const i18n: I18n = { t: (key) => key, has: () => false, getEnglishTranslation: (key) => key, getLocale: () => 'en' };
+    const options = { ...headerOptions(pages, null), i18n: vi.fn(() => ({ i18n, locale: 'en' })) };
+
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false })));
 
     renderPageHeader(host, options);
     host.querySelector<HTMLButtonElement>('button[aria-label="Add icon"]')?.click();
@@ -194,6 +199,7 @@ describe('root page header', () => {
     expect(document.body.querySelector('[data-emoji-picker-random]')).not.toBeNull();
 
     document.body.replaceChildren();
+    vi.unstubAllGlobals();
   });
 
   it('keeps the root title and icon in localStorage, and reset brings back the default', () => {
@@ -208,6 +214,19 @@ describe('root page header', () => {
     second.reset();
     expect(second.root()).toEqual({ title: 'Blok' });
     expect(new PageRegistry(seed()).root()).toEqual({ title: 'Blok' });
+  });
+
+  it('an icon picked on the root does not pin the default title', () => {
+    new PageRegistry(seed()).setIcon(null, '😭');
+
+    expect(JSON.parse(localStorage.getItem(ROOT_STORAGE_KEY) ?? '{}')).toEqual({ icon: '😭' });
+    expect(new PageRegistry(seed()).root()).toEqual({ title: 'Blok', icon: '😭' });
+  });
+
+  it('a root saved under the old default title reads the current default', () => {
+    localStorage.setItem(ROOT_STORAGE_KEY, JSON.stringify({ title: 'Playground', icon: '😭' }));
+
+    expect(new PageRegistry(seed()).root()).toEqual({ title: 'Blok', icon: '😭' });
   });
 
   it('a renamed root shows up in page paths and in a sub-page breadcrumb', () => {

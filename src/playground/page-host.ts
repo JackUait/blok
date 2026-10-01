@@ -30,6 +30,7 @@ export const PAGES_STORAGE_KEY = 'blok-playground-pages';
 
 /** The root playground document's name, in breadcrumbs and page paths. */
 const ROOT_LABEL = 'Blok';
+const LEGACY_ROOT_LABEL = 'Playground';
 
 /** The root document's title and icon. Apart from the page map, so no page loop meets it. */
 export const ROOT_STORAGE_KEY = 'blok-playground-root';
@@ -80,9 +81,13 @@ const readRoot = (): RootRecord => {
   try {
     const parsed: unknown = JSON.parse(localStorage.getItem(ROOT_STORAGE_KEY) ?? '{}');
 
-    if (isRecord(parsed) && typeof parsed.title === 'string') {
+    if (isRecord(parsed)) {
+      // A missing title is the default. 'Playground' was the old default, saved
+      // whenever an icon was picked, so it reads as the default too.
+      const title = typeof parsed.title === 'string' && parsed.title !== LEGACY_ROOT_LABEL ? parsed.title : ROOT_LABEL;
+
       return {
-        title: parsed.title,
+        title,
         ...(typeof parsed.icon === 'string' && { icon: parsed.icon }),
       };
     }
@@ -274,7 +279,9 @@ export class PageRegistry {
   private editRoot(root: RootRecord): void {
     this.rootPage = root;
     try {
-      localStorage.setItem(ROOT_STORAGE_KEY, JSON.stringify(root));
+      const { title, ...rest } = root;
+
+      localStorage.setItem(ROOT_STORAGE_KEY, JSON.stringify(title === ROOT_LABEL ? rest : root));
     } catch {
       // Quota or blocked storage: the title still works for this tab.
     }

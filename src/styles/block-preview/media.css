@@ -366,38 +366,249 @@
   display: block;
 }
 
-[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='star'] {
-  fill: var(--blok-text-on-dark);
-  opacity: 0.75;
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='scene']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 40%, transparent 55%, color-mix(in srgb, var(--blok-overlay-dark) 45%, transparent));
+  pointer-events: none;
 }
 
-[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='moon'] {
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='milky-way'],
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='milky-core'] {
+  fill: none;
+  stroke: color-mix(in srgb, var(--blok-color-pink-text) 30%, var(--blok-text-on-dark));
+  stroke-width: var(--w, 30);
+  stroke-linecap: round;
+  opacity: 0.035;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='milky-core'] {
+  stroke-width: 8;
+  opacity: 0.06;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='star'] {
+  fill: none;
+  stroke: var(--blok-text-on-dark);
+  stroke-width: var(--s);
+  stroke-linecap: round;
+  opacity: 0.8;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='sparkle'] {
+  fill: color-mix(in srgb, var(--blok-color-yellow-text) 20%, var(--blok-text-on-dark));
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='meteor'] {
+  /* Hidden at rest; it only streaks across while the video plays. */
+  opacity: 0;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='meteor-tail'],
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='meteor-head'] {
+  fill: none;
+  stroke: var(--blok-text-on-dark);
+  stroke-width: 1;
+  stroke-linecap: round;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='meteor-tail'] {
+  stroke-width: 0.5;
+  opacity: 0.35;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='halo'] {
+  fill: color-mix(in srgb, var(--blok-color-yellow-text) 30%, var(--blok-text-on-dark));
+  opacity: 0.035;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='moon-disc'] {
   fill: color-mix(in srgb, var(--blok-color-yellow-text) 22%, var(--blok-text-on-dark));
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='crater'] {
+  fill: color-mix(in srgb, var(--blok-color-yellow-text) 30%, var(--blok-overlay-dark));
+  opacity: 0.18;
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='cloud'] {
   fill: none;
-  stroke: var(--blok-text-on-dark);
-  stroke-width: 2.4;
+  stroke: color-mix(in srgb, var(--blok-color-pink-text) 40%, var(--blok-text-on-dark));
+  stroke-width: 2.2;
   stroke-linecap: round;
-  opacity: 0.22;
+  opacity: 0.28;
 }
 
-/* Hidden at rest; it only streaks across while the video plays. */
-[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='meteor'] {
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='bat-wing'] {
+  fill: color-mix(in srgb, var(--blok-color-purple-text) 20%, var(--blok-overlay-dark));
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='mesa'] {
+  fill: color-mix(in srgb, var(--blok-color-purple-text) 46%, var(--blok-overlay-dark));
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='mesa-strata'] {
+  fill: none;
+  stroke: var(--blok-overlay-dark);
+  stroke-width: 0.5;
+  opacity: 0.35;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='mesa-rim'],
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='ridge'] {
+  fill: none;
+  stroke: color-mix(in srgb, var(--blok-color-yellow-text) 30%, var(--blok-text-on-dark));
+  stroke-width: 0.6;
+  stroke-linecap: round;
+  opacity: 0.45;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='ridge'] {
+  stroke-width: 0.5;
+  opacity: 0.3;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='ripple'] {
   fill: none;
   stroke: var(--blok-text-on-dark);
-  stroke-width: 0.8;
-  stroke-linecap: round;
-  opacity: 0;
+  stroke-width: 0.4;
+  opacity: 0.1;
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='dune-far'] {
   fill: color-mix(in srgb, var(--blok-color-purple-text) 42%, var(--blok-overlay-dark));
 }
 
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='camel'],
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='rider'],
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='pack'] {
+  fill: color-mix(in srgb, var(--blok-color-purple-text) 22%, var(--blok-overlay-dark));
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='leg'] {
+  fill: none;
+  stroke: color-mix(in srgb, var(--blok-color-purple-text) 22%, var(--blok-overlay-dark));
+  stroke-width: 0.75;
+  stroke-linecap: round;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='lantern'],
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='tent-door'] {
+  fill: color-mix(in srgb, var(--blok-color-yellow-text) 60%, var(--blok-color-orange-text));
+}
+
 [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='dune'] {
   fill: color-mix(in srgb, var(--blok-color-purple-text) 16%, var(--blok-overlay-dark));
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='fire-glow'] {
+  fill: var(--blok-color-orange-text);
+  opacity: 0.14;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='tent'],
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='sitter'] {
+  fill: color-mix(in srgb, var(--blok-color-purple-text) 10%, var(--blok-overlay-dark));
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='tent-pole'],
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='trunk'],
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='frond'],
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='coconut'],
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='reed'] {
+  fill: none;
+  stroke: color-mix(in srgb, var(--blok-color-purple-text) 8%, var(--blok-overlay-dark));
+  stroke-width: 0.9;
+  stroke-linecap: round;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='tent-pole'],
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='reed'] {
+  stroke-width: 0.45;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='trunk'] {
+  stroke-width: 1.1;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='coconut'] {
+  stroke-width: 1.2;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='log'] {
+  fill: none;
+  stroke: color-mix(in srgb, var(--blok-color-orange-text) 30%, var(--blok-overlay-dark));
+  stroke-width: 0.7;
+  stroke-linecap: round;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='flame'] {
+  fill: var(--blok-color-orange-text);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='flame-core'] {
+  fill: color-mix(in srgb, var(--blok-color-yellow-text) 60%, var(--blok-text-on-dark));
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='ember'] {
+  fill: color-mix(in srgb, var(--blok-color-yellow-text) 50%, var(--blok-color-orange-text));
+  opacity: 0;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='smoke'] {
+  fill: none;
+  stroke: var(--blok-text-on-dark);
+  stroke-width: 0.5;
+  stroke-linecap: round;
+  opacity: 0.15;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='pond'] {
+  fill: color-mix(in srgb, var(--blok-color-blue-text) 30%, var(--blok-overlay-dark));
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='pond-rim'] {
+  fill: none;
+  stroke: var(--blok-text-on-dark);
+  stroke-width: 0.4;
+  opacity: 0.25;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='reflection'] {
+  fill: none;
+  stroke: color-mix(in srgb, var(--blok-color-yellow-text) 30%, var(--blok-text-on-dark));
+  stroke-width: 0.7;
+  stroke-linecap: round;
+  opacity: 0.75;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='firefly'] {
+  fill: color-mix(in srgb, var(--blok-color-yellow-text) 60%, var(--blok-color-green-text));
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='dune-front'] {
+  fill: color-mix(in srgb, var(--blok-color-purple-text) 6%, var(--blok-overlay-dark));
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='tuft'] {
+  fill: none;
+  stroke: color-mix(in srgb, var(--blok-color-purple-text) 6%, var(--blok-overlay-dark));
+  stroke-width: 0.5;
+  stroke-linecap: round;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='sand'] {
+  fill: none;
+  stroke: color-mix(in srgb, var(--blok-color-orange-text) 25%, var(--blok-text-on-dark));
+  stroke-width: 0.45;
+  stroke-linecap: round;
+  opacity: 0.3;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='caravan'] {
+  /* Mid-frame in the still; the walk starts from here too. */
+  transform: translateX(40px);
 }
 
 /* Shown only while the play press plays out; at rest the video is running. */
@@ -1045,31 +1256,134 @@
     animation: blok-preview-media-clock 24s steps(24) 1s infinite both;
   }
 
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='scene'] > svg {
+    transform-origin: 50% 60%;
+    animation: blok-preview-media-camera 24s ease-in-out infinite alternate;
+  }
+
   [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='star'] {
+    animation: blok-preview-media-blink calc(1.2s + var(--i) * 0.5s) ease-in-out calc(var(--i) * -0.4s) infinite alternate;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='sparkle'] {
     transform-box: fill-box;
     transform-origin: center;
-    animation: blok-preview-media-twinkle 1.4s ease-in-out calc(var(--i) * -0.45s) infinite alternate;
+    animation: blok-preview-media-twinkle 1.6s ease-in-out calc(var(--i) * -0.7s) infinite alternate;
   }
 
   [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='meteor'] {
-    animation: blok-preview-media-meteor 5s ease-in 1.6s infinite;
+    /* Delays put the first streak about 1.8s in: the card restarts on every open. */
+    animation: blok-preview-media-meteor 6s ease-in infinite;
+    animation-delay: calc(-2.4s + var(--i) * 2.6s);
   }
 
   [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='moon'] {
-    animation: blok-preview-media-moon-rise 12s ease-in-out infinite alternate;
+    animation: blok-preview-media-moon-rise 24s ease-in-out infinite alternate;
   }
 
   [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='cloud'] {
     animation: blok-preview-media-cloud-pass 9s ease-in-out calc(var(--i) * -4.5s) infinite alternate;
   }
 
-  /* The near dune pans further than the far one, so the camera reads as moving. */
-  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='dune-far'] {
-    animation: blok-preview-media-pan-far 12s ease-in-out infinite alternate;
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='bat'] {
+    /* Crosses the moon about 2.5s in. */
+    animation: blok-preview-media-bat-flight 16s linear -1.2s infinite;
   }
 
-  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='dune'] {
-    animation: blok-preview-media-pan-near 12s ease-in-out infinite alternate;
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='bat-wing'] {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: blok-preview-media-flap 0.22s ease-in-out infinite alternate;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='caravan'] {
+    /* Starts with the lead camel at x≈40. */
+    animation: blok-preview-media-caravan 30s linear -8s infinite;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='leg'] {
+    transform-box: fill-box;
+    transform-origin: 50% 0;
+    animation: blok-preview-media-stride 0.6s ease-in-out infinite alternate;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='leg'][data-lag] {
+    animation-delay: -0.6s;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='lantern'] {
+    animation: blok-preview-media-flicker 1.4s linear infinite;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='crown'] {
+    /* The crown's base in the palm's own units. */
+    transform-origin: 1.5px -16px;
+    animation: blok-preview-media-sway 3.2s ease-in-out calc(var(--i, 0) * -1.1s) infinite alternate;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='flame'] {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: blok-preview-media-flame 0.45s ease-in-out infinite alternate;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='flame-core'] {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: blok-preview-media-flame 0.35s ease-in-out -0.2s infinite alternate;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='fire-glow'] {
+    animation: blok-preview-media-glow 0.9s ease-in-out infinite alternate;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='ember'] {
+    animation: blok-preview-media-ember 1.8s ease-out calc(var(--i) * -0.45s) infinite;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='smoke'] {
+    animation: blok-preview-media-smoke 3.2s ease-out calc(var(--i) * -1.6s) infinite;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='firefly'] {
+    animation: blok-preview-media-firefly 4s ease-in-out calc(var(--i) * -0.7s) infinite alternate;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='reflection'] {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: blok-preview-media-glint 1.6s ease-in-out calc(var(--i) * -0.5s) infinite alternate;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='tuft'] {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: blok-preview-media-sway 2.4s ease-in-out calc(var(--i, 0) * -0.8s) infinite alternate;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='sand'] {
+    animation: blok-preview-media-sand 2.6s linear infinite;
+  }
+
+  /* Nearer layers pan further, so the camera reads as moving. */
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='layer-far'] {
+    --pan: 4px;
+    animation: blok-preview-media-pan 12s ease-in-out infinite alternate;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='layer-mid'] {
+    --pan: 10px;
+    animation: blok-preview-media-pan 12s ease-in-out infinite alternate;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='layer-near'] {
+    --pan: 16px;
+    animation: blok-preview-media-pan 12s ease-in-out infinite alternate;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='layer-front'] {
+    --pan: 24px;
+    animation: blok-preview-media-pan 12s ease-in-out infinite alternate;
   }
 
   [data-blok-interface='block-preview'] [data-blok-preview='audio'] [data-part='wave-bar'] {
@@ -1326,24 +1640,109 @@
   }
 }
 
-/* Dunes overhang the frame by 30px (far) and 40px (near): the pan must stay inside that. */
-@keyframes blok-preview-media-pan-far {
-  from {
-    transform: translateX(8px);
-  }
-
+@keyframes blok-preview-media-camera {
   to {
-    transform: translateX(-16px);
+    transform: scale(1.06);
   }
 }
 
-@keyframes blok-preview-media-pan-near {
+@keyframes blok-preview-media-blink {
+  to {
+    opacity: 0.25;
+  }
+}
+
+/* Starts and ends past both edges (moon at x=152), so the wrap is never seen. */
+@keyframes blok-preview-media-bat-flight {
+  0% {
+    transform: translate(70px, 4px);
+  }
+
+  50% {
+    transform: translate(-80px, -6px);
+  }
+
+  100% {
+    transform: translate(-230px, -2px);
+  }
+}
+
+@keyframes blok-preview-media-flap {
+  to {
+    transform: scaleY(-0.5);
+  }
+}
+
+/* The lead camel enters and the last one leaves fully off-frame, even with the ±10px pan. */
+@keyframes blok-preview-media-caravan {
   from {
-    transform: translateX(16px);
+    transform: translateX(-32px);
   }
 
   to {
-    transform: translateX(-30px);
+    transform: translateX(240px);
+  }
+}
+
+@keyframes blok-preview-media-stride {
+  from {
+    transform: rotate(16deg);
+  }
+
+  to {
+    transform: rotate(-16deg);
+  }
+}
+
+@keyframes blok-preview-media-sway {
+  from {
+    transform: rotate(-4deg);
+  }
+
+  to {
+    transform: rotate(4deg);
+  }
+}
+
+@keyframes blok-preview-media-flame {
+  to {
+    transform: scale(0.86, 1.18) skewX(4deg);
+  }
+}
+
+@keyframes blok-preview-media-glow {
+  to {
+    opacity: 0.07;
+  }
+}
+
+@keyframes blok-preview-media-ember {
+  from {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate(calc((var(--i) - 1.5) * 1.6px), -12px);
+  }
+}
+
+/* One 60-unit period of the sand pattern, so the loop is seamless. */
+@keyframes blok-preview-media-sand {
+  to {
+    transform: translateX(-60px);
+  }
+}
+
+/* Overhangs: far 30, mid and near 40, front 40 (sand 60). Each --pan must stay below its layer's. */
+@keyframes blok-preview-media-pan {
+  from {
+    transform: translateX(var(--pan));
+  }
+
+  to {
+    transform: translateX(calc(var(--pan) * -1));
   }
 }
 

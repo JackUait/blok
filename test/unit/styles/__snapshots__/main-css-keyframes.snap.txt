@@ -481,8 +481,27 @@
   from { opacity: 0; transform: translateY(-8px) }
 }
 
+@keyframes blok-preview-media-bat-flight {
+  0% { transform: translate(70px, 4px) }
+  50% { transform: translate(-80px, -6px) }
+  100% { transform: translate(-230px, -2px) }
+}
+
+@keyframes blok-preview-media-blink {
+  to { opacity: 0.25 }
+}
+
 @keyframes blok-preview-media-bob {
   to { transform: translateY(0.8px) }
+}
+
+@keyframes blok-preview-media-camera {
+  to { transform: scale(1.06) }
+}
+
+@keyframes blok-preview-media-caravan {
+  from { transform: translateX(-32px) }
+  to { transform: translateX(240px) }
 }
 
 @keyframes blok-preview-media-clock {
@@ -503,6 +522,11 @@
   to { transform: translateX(6px) }
 }
 
+@keyframes blok-preview-media-ember {
+  from { opacity: 1; transform: translate(0, 0) }
+  to { opacity: 0; transform: translate(calc((var(--i) - 1.5) * 1.6px), -12px) }
+}
+
 @keyframes blok-preview-media-fade {
   from { opacity: 0 }
 }
@@ -511,6 +535,14 @@
   0% { opacity: 0.2; transform: translate(0, 0) }
   50% { opacity: 1; transform: translate(1.5px, -2px) }
   100% { opacity: 0.3; transform: translate(-1px, -3.5px) }
+}
+
+@keyframes blok-preview-media-flame {
+  to { transform: scale(0.86, 1.18) skewX(4deg) }
+}
+
+@keyframes blok-preview-media-flap {
+  to { transform: scaleY(-0.5) }
 }
 
 @keyframes blok-preview-media-flicker {
@@ -524,6 +556,10 @@
 
 @keyframes blok-preview-media-glint {
   to { opacity: 0.45; transform: scaleX(0.75) }
+}
+
+@keyframes blok-preview-media-glow {
+  to { opacity: 0.07 }
 }
 
 @keyframes blok-preview-media-ken-burns {
@@ -549,14 +585,9 @@
   65% { transform: translateY(2px) }
 }
 
-@keyframes blok-preview-media-pan-far {
-  from { transform: translateX(8px) }
-  to { transform: translateX(-16px) }
-}
-
-@keyframes blok-preview-media-pan-near {
-  from { transform: translateX(16px) }
-  to { transform: translateX(-30px) }
+@keyframes blok-preview-media-pan {
+  from { transform: translateX(var(--pan)) }
+  to { transform: translateX(calc(var(--pan) * -1)) }
 }
 
 @keyframes blok-preview-media-pin-drop {
@@ -593,6 +624,10 @@
   from { opacity: 0; transform: translateY(4px) }
 }
 
+@keyframes blok-preview-media-sand {
+  to { transform: translateX(-60px) }
+}
+
 @keyframes blok-preview-media-shimmer {
   to { transform: translateX(100%) }
 }
@@ -600,6 +635,16 @@
 @keyframes blok-preview-media-smoke {
   from { opacity: 0.55; transform: translateY(1px) }
   to { opacity: 0; transform: translateY(-3px) }
+}
+
+@keyframes blok-preview-media-stride {
+  from { transform: rotate(16deg) }
+  to { transform: rotate(-16deg) }
+}
+
+@keyframes blok-preview-media-sway {
+  from { transform: rotate(-4deg) }
+  to { transform: rotate(4deg) }
 }
 
 @keyframes blok-preview-media-twinkle {

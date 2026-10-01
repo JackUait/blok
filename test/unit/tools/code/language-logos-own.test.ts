@@ -55,4 +55,28 @@ describe('Blok-drawn language logos', () => {
 
     expect(keyframes).toContain('@keyframes blok-code-logo-blink');
   });
+
+  it('keeps every ellipse, stroke and rotation included, inside the 24×24 box', () => {
+    const outside: string[] = [];
+
+    for (const [id, logo] of Object.entries(OWN_LANGUAGE_LOGOS)) {
+      const markup = `${logo.body}${logo.over ?? ''}`;
+
+      for (const match of markup.matchAll(/<ellipse ([^>]*)\/>/g)) {
+        const attr = (name: string): number => Number(new RegExp(`(?:^| )${name}="([^"]+)"`).exec(match[1])?.[1] ?? 0);
+        const angle = (Number(/rotate\((-?[\d.]+)/.exec(match[1])?.[1] ?? 0) * Math.PI) / 180;
+        const half = attr('stroke-width') / 2;
+        const [rx, ry] = [attr('rx'), attr('ry')];
+        const dx = Math.hypot(rx * Math.cos(angle), ry * Math.sin(angle)) + half;
+        const dy = Math.hypot(rx * Math.sin(angle), ry * Math.cos(angle)) + half;
+        const [cx, cy] = [attr('cx'), attr('cy')];
+
+        if (cx - dx < 0 || cx + dx > 24 || cy - dy < 0 || cy + dy > 24) {
+          outside.push(`${id}: ellipse at ${cx},${cy} spans x ${(cx - dx).toFixed(2)}..${(cx + dx).toFixed(2)}`);
+        }
+      }
+    }
+
+    expect(outside).toStrictEqual([]);
+  });
 });

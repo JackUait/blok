@@ -56,7 +56,7 @@ export const OWN_LANGUAGE_LOGOS: Readonly<Record<string, DrawnLogo>> = {
   /** R: a lit two-tone ring behind a bevelled R. */
   r: {
     hex: '#276dc3',
-    body: '<ellipse cx="11.4" cy="10.2" rx="10.4" ry="6.6" transform="rotate(-10 11.4 10.2)" fill="none" stroke="#9aa1ab" stroke-width="2.9"/><ellipse cx="11.4" cy="10.2" rx="10.4" ry="6.6" transform="rotate(-10 11.4 10.2)" fill="none" stroke="#d6dae0" stroke-width=".7" stroke-dasharray="18 60" stroke-dashoffset="-34"/><ellipse cx="11.4" cy="10.2" rx="10.4" ry="6.6" transform="rotate(-10 11.4 10.2)" fill="none" stroke="#6f7680" stroke-width=".7" stroke-dasharray="16 60" stroke-dashoffset="2" opacity=".8"/>',
+    body: '<ellipse cx="12" cy="10.2" rx="9.8" ry="6.4" transform="rotate(-10 12 10.2)" fill="none" stroke="#9aa1ab" stroke-width="2.7"/><ellipse cx="12" cy="10.2" rx="9.8" ry="6.4" transform="rotate(-10 12 10.2)" fill="none" stroke="#d6dae0" stroke-width=".7" stroke-dasharray="18 60" stroke-dashoffset="-34"/><ellipse cx="12" cy="10.2" rx="9.8" ry="6.4" transform="rotate(-10 12 10.2)" fill="none" stroke="#6f7680" stroke-width=".7" stroke-dasharray="16 60" stroke-dashoffset="2" opacity=".8"/>',
     cuts: '<path d="M9.6 21V9.4h5.1a3.15 3.15 0 0 1 0 6.3H9.6M14.3 15.7l3.9 5.3" fill="none" stroke="#000" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>',
     over: '<path d="M9.6 21V9.4h5.1a3.15 3.15 0 0 1 0 6.3H9.6M14.3 15.7l3.9 5.3" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.85 20.2V10.2" fill="none" stroke-width=".7" stroke-linecap="round" style="stroke:color-mix(in srgb,currentColor 55%,#fff)"/>',
   },

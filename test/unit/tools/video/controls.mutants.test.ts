@@ -1191,6 +1191,15 @@ describe('video controls — settings menu behaviour', () => {
     expect(menu().style.bottom).toBe('28px');
   });
 
+  it('anchors the card to the gear\'s left edge in RTL, growing toward the inline start', () => {
+    h.figure.setAttribute('dir', 'rtl');
+    setProp(gear(), 'getBoundingClientRect', () => rect({ left: 40, right: 70, top: 380 }));
+    setProp(h.figure, 'getBoundingClientRect', () => rect({ left: 10, right: 600, bottom: 400 }));
+    gear().click();
+    expect(menu().style.left).toBe('30px');
+    expect(menu().style.right).toBe('');
+  });
+
   it('re-anchors the card when the viewport changes under it', () => {
     stubRects(500, 380, 600, 400);
     gear().click();

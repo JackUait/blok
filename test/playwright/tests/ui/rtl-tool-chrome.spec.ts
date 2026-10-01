@@ -100,7 +100,7 @@ for (const direction of DIRECTIONS) {
       const image = page.locator('[data-blok-tool="image"]');
 
       await expect(image).toHaveAttribute('data-state', 'rendered');
-      await image.getByRole('img').first().hover();
+      await image.hover();
 
       const pill = image.locator('[data-action="alt-edit"]');
 
@@ -269,6 +269,28 @@ for (const direction of DIRECTIONS) {
       const startGap = direction === 'rtl' ? gearBox.right - menuBox.right : menuBox.left - gearBox.left;
 
       expect(Math.abs(startGap)).toBeLessThanOrEqual(TOLERANCE);
+    });
+    test('the code language picker section label keeps its start padding', async ({ page }) => {
+      await page.evaluate(() => {
+        localStorage.setItem('blok:code:recent-languages', JSON.stringify(['python', 'rust']));
+      });
+      await createBlok(page, direction, [
+        { type: 'code', data: { code: 'print(1)', language: 'python' } },
+      ]);
+
+      await page.getByTestId('code-language-btn').click();
+
+      const label = page.getByTestId('code-language-section');
+
+      await expect(label).toBeVisible();
+
+      const startPadding = await label.evaluate((element) => {
+        const style = getComputedStyle(element);
+
+        return style.direction === 'rtl' ? style.paddingRight : style.paddingLeft;
+      });
+
+      expect(startPadding).toBe('8px');
     });
   });
 }

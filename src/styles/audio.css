@@ -582,7 +582,7 @@
 [data-blok-tool="audio"] .blok-audio-controls__speed-menu {
   position: absolute;
   bottom: calc(100% + var(--blok-space-2));
-  left: 0;
+  inset-inline-start: 0;
   min-width: 132px;
   padding: var(--blok-space-2);
   background: var(--blok-bg-primary);

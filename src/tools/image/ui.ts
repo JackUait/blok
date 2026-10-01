@@ -1003,7 +1003,7 @@ function renderLightboxNav(opts: LightboxNavOptions): HTMLElement {
     shortcut: isRtl ? '→' : '←',
     html: isRtl ? IconChevronRight : IconChevronLeft,
     onClick: opts.onPrev,
-    tooltipPlacement: 'right',
+    tooltipPlacement: isRtl ? 'left' : 'right',
   });
   appendLightboxButton(nav, {
     action: 'lightbox-next',
@@ -1011,7 +1011,7 @@ function renderLightboxNav(opts: LightboxNavOptions): HTMLElement {
     shortcut: isRtl ? '←' : '→',
     html: isRtl ? IconChevronLeft : IconChevronRight,
     onClick: opts.onNext,
-    tooltipPlacement: 'right',
+    tooltipPlacement: isRtl ? 'left' : 'right',
   });
 
   return nav;

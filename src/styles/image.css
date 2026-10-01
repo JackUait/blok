@@ -145,17 +145,18 @@
 [data-blok-table-cell] [data-blok-tool="image"] [data-role="resize-handle"][data-edge="left"]  { left: var(--blok-space-1); }
 [data-blok-table-cell] [data-blok-tool="image"] [data-role="resize-handle"][data-edge="right"] { right: var(--blok-space-1); }
 
-/* alt pill — sits on the figure, bottom-left */
+/* alt pill — sits on the figure, bottom inline-start */
 [data-blok-tool="image"] .blok-image-alt-pill {
   position: absolute;
   top: calc(var(--blok-image-media-height, 100%) - var(--blok-space-2-5));
-  left: var(--blok-space-2-5);
+  inset-inline-start: var(--blok-space-2-5);
   translate: 0 -100%;
   display: inline-flex;
   align-items: center;
   gap: var(--blok-space-1-5);
   max-width: min(calc(100% - 20px), 240px);
-  padding: var(--blok-space-1-25) var(--blok-space-2-25) var(--blok-space-1-25) var(--blok-space-1-75);
+  padding-block: var(--blok-space-1-25);
+  padding-inline: var(--blok-space-1-75) var(--blok-space-2-25);
   border: 0;
   border-radius: var(--blok-radius-pill);
   background: var(--blok-overlay-surface);

@@ -19,6 +19,7 @@ import {
 } from '../../components/icons';
 import { promoteToTopLayer, removeFromTopLayer, supportsPopoverAPI } from '../../components/utils/top-layer';
 import { isKeyboardModality } from '../../components/utils/input-modality';
+import { getElementDirection } from '../../components/utils/direction';
 import { tr } from './i18n';
 import type { I18nInstance } from '../../components/utils/tools';
 import type { VideoGlow } from '../../../types/tools/video';
@@ -954,9 +955,15 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   const positionMenu = (): void => {
     const g = gear.getBoundingClientRect();
     const f = figure.getBoundingClientRect();
-    // Right edge tracks the gear's right edge; bottom sits MENU_GAP above the gear,
+    // The card's inline-end edge tracks the gear's; bottom sits MENU_GAP above the gear,
     // so the card grows upward — out of the player when there isn't room below the bar.
-    menu.style.right = `${f.right - g.right}px`;
+    if (getElementDirection(figure) === 'rtl') {
+      menu.style.right = '';
+      menu.style.left = `${g.left - f.left}px`;
+    } else {
+      menu.style.left = '';
+      menu.style.right = `${f.right - g.right}px`;
+    }
     menu.style.bottom = `${f.bottom - g.top + MENU_GAP}px`;
   };
 

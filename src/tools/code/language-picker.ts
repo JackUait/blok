@@ -380,7 +380,7 @@ export function rememberLanguage(id: string): void {
 function sectionHeader(label: string): PopoverItemParams {
   const element = document.createElement('div');
 
-  element.className = 'pl-2 pr-3 pt-0.5 pb-1.5 text-xs font-medium text-menu-section-label cursor-default';
+  element.className = 'ps-2 pe-3 pt-0.5 pb-1.5 text-xs font-medium text-menu-section-label cursor-default';
   element.setAttribute('role', 'presentation');
   element.setAttribute('data-blok-testid', 'code-language-section');
   element.textContent = label;

@@ -3,6 +3,7 @@ import type { ToolsConfig } from '../../../types/api/tools';
 import { englishDictionary } from '../../components/i18n/lightweight-i18n';
 import type { DatabaseRow, PropertyDefinition, PropertyType, PropertyValue } from './types';
 import { IconChevronRight } from '../../components/icons';
+import { getElementDirection } from '../../components/utils/direction';
 import { DatabasePropertyTypePopover } from './database-property-type-popover';
 
 interface BlokInstance {
@@ -613,6 +614,8 @@ export class DatabaseCardDrawer {
         holder: editorHolder,
         data: description as OutputData | undefined,
         readOnly: this.readOnly,
+        // A fresh editor defaults to LTR; the page body reads like its database.
+        i18n: { direction: getElementDirection(editorHolder) },
         onChange: async () => {
           try {
             const data = await instance.save();

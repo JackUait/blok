@@ -141,6 +141,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'tools/table/table-resize.ts': 'Column-resize handles are placed from stored column widths; measured row rects only build a clip-path in the handle\'s own box so it ignores the pointer where a merged cell covers its border.',
   'tools/table/table-row-col-controls.ts': 'Row and column grips convert cell rects into offsets local to their table overlay.',
   'tools/table/table-row-col-drag.ts': 'Fixed ghost follows pointer coordinates while the local drop indicator uses table offsets.',
+  'tools/video/controls.ts': 'Settings menu converts the gear rect into an offset local to the video figure, re-run on open and resize.',
 };
 
 /** Dynamic property setters remain exact review points, never silent escapes. */

@@ -190,8 +190,9 @@ export class TableSubsystems {
    * Initialize only the scroll-haze subsystem. Used by Table for the read-only
    * render path where the interactive subsystems are not created.
    */
-  public initScrollHazeOnly(): void {
+  public initScrollHazeOnly(gridEl: HTMLElement): void {
     this.initScrollHaze();
+    this.observeDirection(gridEl);
   }
 
   /**

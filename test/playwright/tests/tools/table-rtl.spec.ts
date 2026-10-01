@@ -16,6 +16,7 @@ declare global {
   interface Window {
     blokInstance?: Blok;
     tableChanges?: string[];
+    readOnlyTableChanges?: { count: number };
   }
 }
 
@@ -486,7 +487,19 @@ test.describe('table in RTL', () => {
       container.style.margin = '0 auto';
       document.body.appendChild(container);
 
-      const blok = new window.Blok({ holder, data, readOnly: true, i18n: { direction: 'ltr' } });
+      const changes = { count: 0 };
+
+      window.readOnlyTableChanges = changes;
+
+      const blok = new window.Blok({
+        holder,
+        data,
+        readOnly: true,
+        i18n: { direction: 'ltr' },
+        onChange: () => {
+          changes.count += 1;
+        },
+      });
 
       window.blokInstance = blok;
       await blok.isReady;
@@ -508,6 +521,8 @@ test.describe('table in RTL', () => {
     const scroller = await box(page, '[data-blok-table-scroll]');
 
     expect(Math.abs(leftHaze.x - scroller.x)).toBeLessThanOrEqual(TOLERANCE);
+    // Re-placing chrome is not an edit.
+    expect(await page.evaluate(() => window.readOnlyTableChanges?.count)).toBe(0);
   });
 
   for (const direction of ['rtl', 'ltr'] as const) {

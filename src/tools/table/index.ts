@@ -830,7 +830,7 @@ export class Table implements BlockTool {
 
       applyCellColors(gridEl, snap.content);
       applyCellPlacements(gridEl, snap.content);
-      this.subsystems.initScrollHazeOnly();
+      this.subsystems.initScrollHazeOnly(gridEl);
 
       return;
     }

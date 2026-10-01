@@ -3363,13 +3363,33 @@ describe('scroll haze and lifecycle', () => {
   it('creates only the haze on the read-only render path', () => {
     const harness = createHarness({ init: false });
 
-    harness.subsystems.initScrollHazeOnly();
+    harness.subsystems.initScrollHazeOnly(harness.gridEl);
 
     expect(captured.scrollHazeSelf).toHaveLength(1);
     expect(captured.addControls).toHaveLength(0);
     expect(captured.cellSelection).toHaveLength(0);
     expect(harness.subsystems.cellSelectionSubsystem).toBeNull();
     expect(harness.subsystems.rowColControlsSubsystem).toBeNull();
+  });
+
+  it('re-places the read-only haze when the editor flips direction', async () => {
+    const harness = createHarness({ init: false });
+    const root = document.createElement('div');
+
+    root.setAttribute('data-blok-editor', '');
+    root.setAttribute('dir', 'ltr');
+    document.body.appendChild(root);
+    root.appendChild(harness.gridEl.closest('div')?.parentElement ?? harness.gridEl);
+
+    harness.subsystems.initScrollHazeOnly(harness.gridEl);
+    scrollHazeMock().update.mockClear();
+
+    root.setAttribute('dir', 'rtl');
+    root.style.direction = 'rtl';
+    await Promise.resolve();
+
+    expect(scrollHazeMock().update).toHaveBeenCalled();
+    root.remove();
   });
 
   it('exposes the cell-selection and grip subsystems once initialized', () => {

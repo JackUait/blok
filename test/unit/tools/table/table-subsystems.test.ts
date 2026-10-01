@@ -139,7 +139,7 @@ describe('TableSubsystems', () => {
     it('initScrollHazeOnly does not create the interactive subsystems', () => {
       const { subsystems } = createSubsystems();
 
-      subsystems.initScrollHazeOnly();
+      subsystems.initScrollHazeOnly(document.createElement('table'));
 
       expect(subsystems.cellSelectionSubsystem).toBeNull();
       expect(subsystems.rowColControlsSubsystem).toBeNull();

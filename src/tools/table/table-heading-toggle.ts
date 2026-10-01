@@ -9,7 +9,7 @@ const TOGGLE_ROW_CLASSES = [
   // A <button> shrinks to fit-content and centres its text under the UA
   // stylesheet; the row must keep filling the popover like the <div> it replaced.
   'w-full',
-  'text-left',
+  'text-start',
   'select-none',
   'border-none',
   'bg-transparent',
@@ -33,7 +33,7 @@ const ICON_WRAPPER_CLASSES = [
   'justify-center',
   'w-[26px]',
   'h-[26px]',
-  'mr-2',
+  'me-2',
   '[&_svg]:w-icon',
   '[&_svg]:h-icon',
 ];
@@ -42,7 +42,7 @@ const ICON_WRAPPER_CLASSES = [
  * Matches the default popover item title styling
  */
 const LABEL_CLASSES = [
-  'mr-auto',
+  'me-auto',
   'truncate',
   'text-sm',
   'font-medium',
@@ -58,7 +58,7 @@ const TRACK_CLASSES = [
   'duration-[180ms]',
   'ease-out',
   'shrink-0',
-  'ml-2',
+  'ms-2',
 ];
 
 const THUMB_CLASSES = [
@@ -68,7 +68,7 @@ const THUMB_CLASSES = [
   'h-[14px]',
   'rounded-full',
   'bg-white',
-  'transition-[left]',
+  'transition-[inset-inline-start]',
   'duration-[220ms]',
   '[transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)]',
 ];
@@ -127,7 +127,7 @@ export const createHeadingToggle = (options: HeadingToggleOptions): HTMLElement 
   const applyState = (): void => {
     row.setAttribute('aria-checked', String(state.active));
     track.style.backgroundColor = state.active ? 'var(--blok-toggle-on-bg)' : 'var(--blok-toggle-off-bg)';
-    thumb.style.left = state.active ? '14px' : '2px';
+    thumb.style.insetInlineStart = state.active ? '14px' : '2px';
     thumb.style.backgroundColor = state.active ? 'var(--blok-toggle-thumb-on-bg)' : '';
     thumb.style.boxShadow = state.active
       ? '0 1px 3px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.04)'

@@ -10986,6 +10986,22 @@ span[data-blok-slash-search] {
   fill: color-mix(in srgb, var(--blok-color-yellow-text) 22%, var(--blok-text-on-dark));
 }
 
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='cloud'] {
+  fill: none;
+  stroke: var(--blok-text-on-dark);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  opacity: 0.22;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='meteor'] {
+  fill: none;
+  stroke: var(--blok-text-on-dark);
+  stroke-width: 0.8;
+  stroke-linecap: round;
+  opacity: 0;
+}
+
 [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='dune-far'] {
   fill: color-mix(in srgb, var(--blok-color-purple-text) 42%, var(--blok-overlay-dark));
 }
@@ -11036,14 +11052,14 @@ span[data-blok-slash-search] {
   inset: 0;
   border-radius: inherit;
   background: var(--blok-text-on-dark);
-  transform: scaleX(0.34);
+  transform: scaleX(0.33);
   transform-origin: left;
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='head'] {
   position: absolute;
   inset: 0;
-  transform: translateX(34%);
+  transform: translateX(33%);
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='head']::after {
@@ -11074,6 +11090,15 @@ span[data-blok-slash-search] {
   display: block;
   width: 16px;
   height: 16px;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='elapsed'] {
+  --blok-preview-video-second: 8;
+  counter-reset: blok-preview-video-second var(--blok-preview-video-second);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='elapsed']::before {
+  content: '0:' counter(blok-preview-video-second, decimal-leading-zero);
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='spacer'] {
@@ -11567,11 +11592,41 @@ span[data-blok-slash-search] {
 }
 
 [@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='fill'] {
-  animation: blok-preview-media-progress-fill 3s cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation: blok-preview-media-progress-fill 24s linear 1s infinite both;
 }
 
 [@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='head'] {
-  animation: blok-preview-media-progress-head 3s cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation: blok-preview-media-progress-head 24s linear 1s infinite both;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='elapsed'] {
+  animation: blok-preview-media-clock 24s steps(24) 1s infinite both;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='star'] {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: blok-preview-media-twinkle 1.4s ease-in-out calc(var(--i) * -0.45s) infinite alternate;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='meteor'] {
+  animation: blok-preview-media-meteor 5s ease-in 1.6s infinite;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='moon'] {
+  animation: blok-preview-media-moon-rise 12s ease-in-out infinite alternate;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='cloud'] {
+  animation: blok-preview-media-cloud-pass 9s ease-in-out calc(var(--i) * -4.5s) infinite alternate;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='dune-far'] {
+  animation: blok-preview-media-pan-far 12s ease-in-out infinite alternate;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='dune'] {
+  animation: blok-preview-media-pan-near 12s ease-in-out infinite alternate;
 }
 
 [@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='audio'] [data-part='wave-bar'] {

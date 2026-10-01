@@ -627,8 +627,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // built-in toolbox entry (35) in block-preview/*.css, plus the @import.
     // About 11.5KB gzipped; the repeated scope prefix is most of the bytes.
     // The detailed, animated Lake Bled image scene adds 14_740, measured
-    // against 944b5b9f.
-    const TOOLBOX_HOVER_PREVIEWS_BYTES = 94_491 + 14_740;
+    // against 944b5b9f. The playing video scene (pan, clock, meteor) adds
+    // 3_616, measured against de4b6d9d.
+    const TOOLBOX_HOVER_PREVIEWS_BYTES = 94_491 + 14_740 + 3_616;
     // Show's spotlight: spotlight.css (a Notion-style warm background flash on
     // the failed block's card, reduced-motion steady tint) and its @import.
     const SPOTLIGHT_BYTES = 1_245;

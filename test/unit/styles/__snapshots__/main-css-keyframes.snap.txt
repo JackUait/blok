@@ -485,6 +485,16 @@
   to { transform: translateY(0.8px) }
 }
 
+@keyframes blok-preview-media-clock {
+  from { --blok-preview-video-second: 0 }
+  to { --blok-preview-video-second: 24 }
+}
+
+@keyframes blok-preview-media-cloud-pass {
+  from { transform: translateX(6px) }
+  to { transform: translateX(-14px) }
+}
+
 @keyframes blok-preview-media-cover {
   from { transform: translateY(8px) }
 }
@@ -524,9 +534,29 @@
   0%, 70% { opacity: 1 }
 }
 
+@keyframes blok-preview-media-meteor {
+  0%, 70% { opacity: 0; transform: translate(0, 0) }
+  74% { opacity: 0.9 }
+  84%, 100% { opacity: 0; transform: translate(-22px, 11px) }
+}
+
+@keyframes blok-preview-media-moon-rise {
+  to { transform: translate(-6px, -4px) }
+}
+
 @keyframes blok-preview-media-nudge {
   0%, 45%, 100% { transform: translateY(0) }
   65% { transform: translateY(2px) }
+}
+
+@keyframes blok-preview-media-pan-far {
+  from { transform: translateX(8px) }
+  to { transform: translateX(-16px) }
+}
+
+@keyframes blok-preview-media-pan-near {
+  from { transform: translateX(16px) }
+  to { transform: translateX(-30px) }
 }
 
 @keyframes blok-preview-media-pin-drop {
@@ -540,11 +570,13 @@
 }
 
 @keyframes blok-preview-media-progress-fill {
-  0%, 34% { transform: scaleX(0.02) }
+  from { transform: scaleX(0) }
+  to { transform: scaleX(1) }
 }
 
 @keyframes blok-preview-media-progress-head {
-  0%, 34% { transform: translateX(2%) }
+  from { transform: translateX(0) }
+  to { transform: translateX(100%) }
 }
 
 @keyframes blok-preview-media-rays {

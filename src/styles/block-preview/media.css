@@ -375,6 +375,23 @@
   fill: color-mix(in srgb, var(--blok-color-yellow-text) 22%, var(--blok-text-on-dark));
 }
 
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='cloud'] {
+  fill: none;
+  stroke: var(--blok-text-on-dark);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  opacity: 0.22;
+}
+
+/* Hidden at rest; it only streaks across while the video plays. */
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='meteor'] {
+  fill: none;
+  stroke: var(--blok-text-on-dark);
+  stroke-width: 0.8;
+  stroke-linecap: round;
+  opacity: 0;
+}
+
 [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='dune-far'] {
   fill: color-mix(in srgb, var(--blok-color-purple-text) 42%, var(--blok-overlay-dark));
 }
@@ -426,15 +443,15 @@
   inset: 0;
   border-radius: inherit;
   background: var(--blok-text-on-dark);
-  transform: scaleX(0.34);
+  transform: scaleX(0.33);
   transform-origin: left;
 }
 
-/* Full track width, so translateX(34%) lands the knob on the fill's end. */
+/* Full track width, so translateX(33%) lands the knob on the fill's end. */
 [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='head'] {
   position: absolute;
   inset: 0;
-  transform: translateX(34%);
+  transform: translateX(33%);
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='head']::after {
@@ -466,6 +483,24 @@
   display: block;
   width: 16px;
   height: 16px;
+}
+
+/* An integer, so the clock can animate it; a plain custom property would not interpolate. */
+@property --blok-preview-video-second {
+  syntax: '<integer>';
+  inherits: false;
+  initial-value: 0;
+}
+
+/* 8 of the 24 seconds: matches the still progress bar at 33%. */
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='elapsed'] {
+  --blok-preview-video-second: 8;
+
+  counter-reset: blok-preview-video-second var(--blok-preview-video-second);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='elapsed']::before {
+  content: '0:' counter(blok-preview-video-second, decimal-leading-zero);
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='spacer'] {
@@ -997,12 +1032,44 @@
     animation: blok-preview-media-press-play 3s var(--blok-preview-ease-out) both;
   }
 
+  /* Playback starts as the play press fades: 1s in. The 24s matches the 0:24 duration and steps(24). */
   [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='fill'] {
-    animation: blok-preview-media-progress-fill 3s cubic-bezier(0.4, 0, 0.2, 1) both;
+    animation: blok-preview-media-progress-fill 24s linear 1s infinite both;
   }
 
   [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='head'] {
-    animation: blok-preview-media-progress-head 3s cubic-bezier(0.4, 0, 0.2, 1) both;
+    animation: blok-preview-media-progress-head 24s linear 1s infinite both;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='elapsed'] {
+    animation: blok-preview-media-clock 24s steps(24) 1s infinite both;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='star'] {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: blok-preview-media-twinkle 1.4s ease-in-out calc(var(--i) * -0.45s) infinite alternate;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='meteor'] {
+    animation: blok-preview-media-meteor 5s ease-in 1.6s infinite;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='moon'] {
+    animation: blok-preview-media-moon-rise 12s ease-in-out infinite alternate;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='cloud'] {
+    animation: blok-preview-media-cloud-pass 9s ease-in-out calc(var(--i) * -4.5s) infinite alternate;
+  }
+
+  /* The near dune pans further than the far one, so the camera reads as moving. */
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='dune-far'] {
+    animation: blok-preview-media-pan-far 12s ease-in-out infinite alternate;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='dune'] {
+    animation: blok-preview-media-pan-near 12s ease-in-out infinite alternate;
   }
 
   [data-blok-interface='block-preview'] [data-blok-preview='audio'] [data-part='wave-bar'] {
@@ -1196,16 +1263,87 @@
 }
 
 @keyframes blok-preview-media-progress-fill {
-  0%,
-  34% {
-    transform: scaleX(0.02);
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
   }
 }
 
 @keyframes blok-preview-media-progress-head {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes blok-preview-media-clock {
+  from {
+    --blok-preview-video-second: 0;
+  }
+
+  to {
+    --blok-preview-video-second: 24;
+  }
+}
+
+@keyframes blok-preview-media-meteor {
   0%,
-  34% {
-    transform: translateX(2%);
+  70% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+
+  74% {
+    opacity: 0.9;
+  }
+
+  84%,
+  100% {
+    opacity: 0;
+    transform: translate(-22px, 11px);
+  }
+}
+
+@keyframes blok-preview-media-moon-rise {
+  to {
+    transform: translate(-6px, -4px);
+  }
+}
+
+@keyframes blok-preview-media-cloud-pass {
+  from {
+    transform: translateX(6px);
+  }
+
+  to {
+    transform: translateX(-14px);
+  }
+}
+
+/* Dunes overhang the frame by 30px (far) and 40px (near): the pan must stay inside that. */
+@keyframes blok-preview-media-pan-far {
+  from {
+    transform: translateX(8px);
+  }
+
+  to {
+    transform: translateX(-16px);
+  }
+}
+
+@keyframes blok-preview-media-pan-near {
+  from {
+    transform: translateX(16px);
+  }
+
+  to {
+    transform: translateX(-30px);
   }
 }
 

@@ -25,6 +25,7 @@ import { findScrollableAncestor } from './utils/findScrollableAncestor';
 import { ListItemDescendants } from './utils/ListItemDescendants';
 import { getListItemDepth } from './utils/depthUtils';
 import { resolveStructuralParent } from './utils/structuralParent';
+import { acceptsChildren } from '../../utils/child-tools';
 import { findOwn } from '../../utils/own-element';
 import {
   areSourceRootsChildrenOf,
@@ -1137,6 +1138,7 @@ export class DragController extends Module {
       .map(candidate => ({
         id: candidate.id,
         isList: candidate.name === 'list',
+        acceptsChildren: acceptsChildren(candidate),
         depth: this.Blok.BlockManager.getBlockDepth(candidate),
       }));
 

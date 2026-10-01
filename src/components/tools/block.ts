@@ -141,6 +141,14 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
   }
 
   /**
+   * False when the Tool's block never has children. `childTools` cannot say
+   * this: an empty `allow` reads as "no restriction".
+   */
+  public get acceptsChildren(): boolean {
+    return (this.constructable as unknown as Record<string, boolean | undefined>)[InternalBlockToolSettings.AcceptsChildren] !== false;
+  }
+
+  /**
    * Returns true when Enter on this container's empty LAST child must create
    * the new line INSIDE the container rather than escaping it.
    *

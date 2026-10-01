@@ -163,10 +163,26 @@ describe('Page tool', () => {
       expect(root.querySelector('[data-blok-testid="page-icon"] svg')).not.toBeNull();
     });
 
-    it('gives the link its own keyboard so Enter on it follows the link', () => {
+    it('leaves the keyboard to Blok, so undo and Escape still work after a click', () => {
       const root = new PageTool(createOptions()).render();
 
-      expect(anchorOf(root).hasAttribute('data-blok-keyboard-owner')).toBe(true);
+      expect(anchorOf(root).hasAttribute('data-blok-keyboard-owner')).toBe(false);
+    });
+
+    it('keeps the link out of the tab order and stops a primary mousedown from focusing it', () => {
+      const root = new PageTool(createOptions({ config: { href: (id) => `/p/${id}` } })).render();
+      const link = anchorOf(root);
+      const press = (button: number): MouseEvent => {
+        const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true, button });
+
+        link.dispatchEvent(event);
+
+        return event;
+      };
+
+      expect(link.tabIndex).toBe(-1);
+      expect(press(0).defaultPrevented).toBe(true);
+      expect(press(1).defaultPrevented).toBe(false);
     });
   });
 
@@ -204,7 +220,7 @@ describe('Page tool', () => {
     });
   });
 
-  describe('activate (Enter in navigation mode)', () => {
+  describe('onNavigationEnter (Enter in navigation mode)', () => {
     const enter = (init: KeyboardEventInit = {}): KeyboardEvent =>
       new KeyboardEvent('keydown', { key: 'Enter', ...init });
 
@@ -215,7 +231,7 @@ describe('Page tool', () => {
       tool.render();
       const event = enter({ metaKey: true });
 
-      expect(tool.activate(event)).toBe(true);
+      expect(tool.onNavigationEnter(event)).toBe(true);
       expect(open).toHaveBeenCalledTimes(1);
       expect(open).toHaveBeenCalledWith('p1', { event });
     });
@@ -226,7 +242,7 @@ describe('Page tool', () => {
 
       tool.render();
 
-      expect(tool.activate(enter())).toBe(true);
+      expect(tool.onNavigationEnter(enter())).toBe(true);
       expect(open).toHaveBeenCalledTimes(1);
     });
 
@@ -236,7 +252,7 @@ describe('Page tool', () => {
 
       tool.render();
 
-      expect(tool.activate(enter())).toBe(true);
+      expect(tool.onNavigationEnter(enter())).toBe(true);
       expect(open).toHaveBeenCalledTimes(1);
     });
 
@@ -251,8 +267,24 @@ describe('Page tool', () => {
         event.preventDefault();
       });
 
-      expect(tool.activate(enter())).toBe(true);
+      expect(tool.onNavigationEnter(enter())).toBe(true);
       expect(clicks).toHaveLength(1);
+    });
+
+    it.each([
+      ['meta', { metaKey: true }],
+      ['ctrl', { ctrlKey: true }],
+    ])('opens a new tab on %s+Enter when the host gives no open()', (_name, init) => {
+      const opened = vi.spyOn(window, 'open').mockReturnValue(null);
+      const tool = new PageTool(createOptions({ config: { href: (id) => `/p/${id}` } }));
+      const root = tool.render();
+      const clicks = vi.fn();
+
+      anchorOf(root).addEventListener('click', clicks);
+
+      expect(tool.onNavigationEnter(enter(init))).toBe(true);
+      expect(opened).toHaveBeenCalledWith('/p/p1', '_blank', 'noopener');
+      expect(clicks).not.toHaveBeenCalled();
     });
 
     it('does nothing when there is no open() and no href', () => {
@@ -260,7 +292,7 @@ describe('Page tool', () => {
 
       tool.render();
 
-      expect(tool.activate(enter())).toBe(false);
+      expect(tool.onNavigationEnter(enter())).toBe(false);
     });
 
     it.each([
@@ -276,7 +308,7 @@ describe('Page tool', () => {
       tool.rendered();
       await flush();
 
-      expect(tool.activate(enter())).toBe(false);
+      expect(tool.onNavigationEnter(enter())).toBe(false);
       expect(open).not.toHaveBeenCalled();
     });
   });
@@ -669,6 +701,155 @@ describe('Page tool', () => {
 
       expect(create).not.toHaveBeenCalled();
       expect(open).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('a failed create', () => {
+    it('shows the page as missing, with no link to follow', async () => {
+      const open = vi.fn();
+      const tool = new PageTool(createOptions({
+        data: { pageId: '' },
+        config: { create: () => Promise.reject(new Error('no')), open, href: (id) => `/p/${id}` },
+        origin: 'user',
+      }));
+      const root = tool.render();
+
+      tool.rendered();
+      await flush();
+
+      expect(anchorOf(root).getAttribute('data-blok-page-state')).toBe('missing');
+      expect(anchorOf(root).hasAttribute('href')).toBe(false);
+      click(anchorOf(root));
+      expect(open).not.toHaveBeenCalled();
+    });
+
+    it('still asks resolve, so a page the host made after all comes back', async () => {
+      const resolve = vi.fn().mockResolvedValue({ title: 'Made anyway' });
+      const tool = new PageTool(createOptions({
+        data: { pageId: '' },
+        config: { create: () => Promise.reject(new Error('timeout')), resolve },
+        origin: 'user',
+      }));
+      const root = tool.render();
+
+      tool.rendered();
+      await flush();
+
+      expect(resolve).toHaveBeenCalledTimes(1);
+      expect(anchorOf(root).getAttribute('data-blok-page-state')).toBe('normal');
+      expect(titleOf(root).textContent).toBe('Made anyway');
+    });
+  });
+
+  describe('setData (undo/redo and peers)', () => {
+    it('shows the new cache in place without asking resolve or writing', async () => {
+      const dispatchChange = vi.fn();
+      const resolve = vi.fn().mockResolvedValue({ title: 'Mine' });
+      const tool = new PageTool(createOptions({
+        data: { pageId: 'p1', cache: { title: 'Mine' } },
+        config: { resolve },
+        dispatchChange,
+      }));
+      const root = tool.render();
+
+      tool.rendered();
+      await flush();
+      resolve.mockClear();
+
+      expect(tool.setData({ pageId: 'p1', cache: { title: 'Theirs' } })).toBe(true);
+      await flush();
+
+      expect(resolve).not.toHaveBeenCalled();
+      expect(dispatchChange).not.toHaveBeenCalled();
+      expect(titleOf(root).textContent).toBe('Theirs');
+      expect(tool.save()).toEqual({ pageId: 'p1', cache: { title: 'Theirs' } });
+    });
+
+    it('drops a missing verdict when the block points at another page', async () => {
+      const tool = new PageTool(createOptions({
+        data: { pageId: 'p1' },
+        config: { resolve: () => null, href: (id) => `/p/${id}` },
+      }));
+      const root = tool.render();
+
+      tool.rendered();
+      await flush();
+      expect(anchorOf(root).getAttribute('data-blok-page-state')).toBe('missing');
+
+      tool.setData({ pageId: 'p2', cache: { title: 'Other' } });
+
+      expect(anchorOf(root).getAttribute('data-blok-page-state')).toBe('normal');
+      expect(anchorOf(root).getAttribute('href')).toBe('/p/p2');
+    });
+
+    it('ignores a resolve for the old page that lands after the page changed', async () => {
+      const dispatchChange = vi.fn();
+      const pending: Array<(info: { title: string }) => void> = [];
+      const tool = new PageTool(createOptions({
+        data: { pageId: 'p1', cache: { title: 'One' } },
+        config: { resolve: () => new Promise((resolve) => pending.push(resolve)) },
+        dispatchChange,
+      }));
+      const root = tool.render();
+
+      tool.rendered();
+      await flush();
+      tool.setData({ pageId: 'p2', cache: { title: 'Two' } });
+      pending.forEach((resolve) => resolve({ title: 'Stale one' }));
+      await flush();
+
+      expect(dispatchChange).not.toHaveBeenCalled();
+      expect(titleOf(root).textContent).toBe('Two');
+      expect(tool.save()).toEqual({ pageId: 'p2', cache: { title: 'Two' } });
+    });
+
+    it('reads incoming data like saved data', () => {
+      const tool = new PageTool(createOptions());
+
+      tool.render();
+      tool.setData({ pageId: 'p1', cache: { title: 'T', icon: { type: 'emoji' } as never } });
+
+      expect(tool.save()).toEqual({ pageId: 'p1', cache: { title: 'T' } });
+    });
+  });
+
+  describe('read-only, then editable', () => {
+    it('saves the fresh title it showed, once, when editing turns on', async () => {
+      const dispatchChange = vi.fn();
+      const resolve = vi.fn().mockResolvedValue({ title: 'New' });
+      const tool = new PageTool(createOptions({
+        data: { pageId: 'p1', cache: { title: 'Old' } },
+        config: { resolve },
+        readOnly: true,
+        dispatchChange,
+      }));
+      const root = tool.render();
+
+      tool.rendered();
+      await flush();
+      tool.setReadOnly(false);
+      tool.setReadOnly(true);
+      tool.setReadOnly(false);
+      await flush();
+
+      expect(dispatchChange).toHaveBeenCalledTimes(1);
+      expect(tool.save()).toEqual({ pageId: 'p1', cache: { title: 'New' } });
+      expect(titleOf(root).textContent).toBe('New');
+      expect(resolve).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows a page the host reports untitled as untitled, not the old cached title', async () => {
+      const tool = new PageTool(createOptions({
+        data: { pageId: 'p1', cache: { title: 'Old' } },
+        config: { resolve: () => ({}) },
+        readOnly: true,
+      }));
+      const root = tool.render();
+
+      tool.rendered();
+      await flush();
+
+      expect(titleOf(root).textContent).toBe('tools.page.untitled');
     });
   });
 

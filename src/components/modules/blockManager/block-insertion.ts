@@ -12,13 +12,13 @@ import { Dom as $ } from '../../dom';
 import { generateBlockId } from '../../utils';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
-import { resolveChildTool } from '../../utils/child-tools';
+import { acceptsChildren, resolveChildTool } from '../../utils/child-tools';
 import { subtreeEndIndex } from '../../utils/blocks-tree';
 import { SELF_PLACING_PARENTS } from '../../../tools/nested-blocks';
 import { findOwn } from '../../utils/own-element';
 import { canAdoptChild, releasesChildrenOnTurnInto } from '../../utils/turn-into-children';
 import { flatIndexForPlacement, subtreeEnd, type TreePlacement } from '../../utils/tree-order';
-import { lastChildBefore } from '../api/block-placement';
+import { BlockPlacementError, lastChildBefore } from '../api/block-placement';
 import type { BlockFactory } from './factory';
 import { hideUnderCollapsedParent, isSelfPlacedParent } from './new-block-placement';
 import type { BlockHierarchy } from './hierarchy';
@@ -116,6 +116,14 @@ export class BlockInsertion {
    */
   public insert(options: InsertBlockOptions = {}, blocksStore: BlocksStore): Block {
     if (options.placement !== undefined) {
+      const { parentId } = options.placement;
+
+      // Only a caller-named parent is refused. An inferred one (Enter in a child
+      // already stored under such a block) must still produce a block.
+      if (parentId !== null && !acceptsChildren(this.repository.getBlockById(parentId))) {
+        throw new BlockPlacementError(`"${parentId}" takes no children`);
+      }
+
       return this.insertAtPlacement(options, options.placement, blocksStore);
     }
 
@@ -1083,6 +1091,10 @@ export class BlockInsertion {
 
     if (parentBlock === undefined) {
       throw new Error(`Parent block with id "${parentId}" not found`);
+    }
+
+    if (!acceptsChildren(parentBlock)) {
+      throw new BlockPlacementError(`"${parentId}" takes no children`);
     }
 
     const { id: requestedId, tunes, focus = false, keepCurrent = false } = options;

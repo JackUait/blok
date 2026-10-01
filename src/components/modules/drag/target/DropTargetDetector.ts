@@ -7,6 +7,7 @@ import { DATA_ATTR, createSelector } from '../../../constants';
 import { DRAG_CONFIG } from '../utils/drag.constants';
 import { getBlockNestingDepth, getListItemDepth } from '../utils/depthUtils';
 import { deepestLegalStructuralDepth } from '../utils/structuralParent';
+import { acceptsChildren } from '../../../utils/child-tools';
 import { areSourceRootsChildrenOf, isOpenToggleBlock } from '../utils/toggleState';
 import { resolveTargetDepth, selectPointerDepth } from '../../../../tools/list/depth-validator';
 import { INDENT_PER_LEVEL } from '../../../../tools/list/constants';
@@ -986,7 +987,8 @@ export class DropTargetDetector {
    * cap the indicator tucked itself one indent step in whenever the cursor moved
    * right — promising a nesting the drop then declined, so the block silently
    * landed at root. List items are exempt: they carry their own indent via the
-   * list tool's moved() hook, so their previewed depth is honest either way.
+   * list tool's moved() hook, so their previewed depth is honest either way —
+   * except under a block that takes no children, where no drop nests at all.
    *
    * @param depth - the depth resolved from the cursor / neighbours
    * @param dropIndex - index of the slot the block is dropping into
@@ -995,7 +997,7 @@ export class DropTargetDetector {
    */
   private clampToApplicableDepth(depth: number, dropIndex: number, sourceBlock?: Block): number {
     // No source (unit tests, the parity guard) leaves auto-resolution untouched.
-    if (depth <= 0 || sourceBlock === undefined || sourceBlock.name === 'list') {
+    if (depth <= 0 || sourceBlock === undefined) {
       return depth;
     }
 
@@ -1012,8 +1014,17 @@ export class DropTargetDetector {
     const candidates = preceding.map(block => ({
       id: block.id,
       isList: block.name === 'list',
+      acceptsChildren: acceptsChildren(block),
       depth: this.structuralDepthOf(block, byId),
     }));
+
+    if (sourceBlock.name === 'list') {
+      // A list item keeps its previewed depth, except right under a block that
+      // takes no children: the drop lands it beside that block instead.
+      const parentSlot = candidates.find(candidate => candidate.depth <= depth - 1);
+
+      return parentSlot?.depth === depth - 1 && !parentSlot.acceptsChildren ? parentSlot.depth : depth;
+    }
 
     return deepestLegalStructuralDepth(false, depth, candidates);
   }

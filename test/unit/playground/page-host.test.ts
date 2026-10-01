@@ -27,6 +27,11 @@ describe('page routes', () => {
     expect(pageIdFromPath('/icons/page/abc')).toBeNull();
   });
 
+  it('treats a malformed escape in the id as the root document instead of throwing', () => {
+    expect(pageIdFromPath('/editor/page/%E0')).toBeNull();
+    expect(pageIdFromPath('/editor/page/%')).toBeNull();
+  });
+
   it('decodes an encoded id and keeps the query on the built path', () => {
     expect(pageIdFromPath('/editor/page/a%20b')).toBe('a b');
     expect(pagePath('a b', '?collab=off')).toBe('/editor/page/a%20b?collab=off');
@@ -135,5 +140,100 @@ describe('playground collaboration room per page', () => {
   it('keeps the root document and the off switch as they were', () => {
     expect(roomFor('', 'collaborationConfig()')).toEqual({ doc: 'playground' });
     expect(roomFor('?collab=off', "collaborationConfig('abc')")).toBeNull();
+  });
+});
+
+describe('playground saves a pending page edit when the tab goes away', () => {
+  const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
+  const from = html.indexOf('let persistTimer;');
+  const source = html.slice(from, html.indexOf('function renderHeader()', from));
+
+  type Listener = () => void;
+
+  const boot = (options: { save?: () => Promise<{ blocks: unknown[] }>; collab?: boolean } = {}) => {
+    const windowListeners = new Map<string, Listener>();
+    const documentListeners = new Map<string, Listener>();
+    const stored: unknown[] = [];
+    const timers = new Map<number, () => void>();
+    const save = vi.fn(options.save ?? (() => Promise.resolve({ blocks: [{ id: 'live' }] })));
+    const context = {
+      blok: { save },
+      editorPageId: 'guide',
+      collaborationConfig: () => (options.collab === true ? { doc: 'x' } : null),
+      storeBlocks: (_pageId: string | null, blocks: unknown[]) => stored.push(blocks),
+      setTimeout: (fn: () => void) => {
+        const id = timers.size + 1;
+
+        timers.set(id, fn);
+
+        return id;
+      },
+      clearTimeout: (id: number) => timers.delete(id),
+      console: { error: vi.fn() },
+      window: { addEventListener: (type: string, fn: Listener) => windowListeners.set(type, fn) },
+      document: {
+        visibilityState: 'visible',
+        addEventListener: (type: string, fn: Listener) => documentListeners.set(type, fn),
+      },
+    };
+
+    runInNewContext(`${source}; this.schedulePersist = schedulePersist;`, context);
+
+    const schedule = (context as unknown as { schedulePersist: (api: unknown, pageId: string) => void }).schedulePersist;
+
+    return { context, save, stored, timers, windowListeners, documentListeners, schedule };
+  };
+
+  const settle = (): Promise<void> => new Promise((done) => {
+    setImmediate(done);
+  });
+
+  it('flushes the debounced save on pagehide, so the last edit survives a reload', async () => {
+    const page = boot();
+
+    page.schedule({ saver: { save: page.save } }, 'guide');
+    page.windowListeners.get('pagehide')?.();
+    await settle();
+
+    expect(page.stored).toEqual([[{ id: 'live' }]]);
+    expect(page.timers.size).toBe(0);
+  });
+
+  it('flushes when the tab is hidden, but not when it becomes visible', async () => {
+    const page = boot();
+
+    page.schedule({ saver: { save: page.save } }, 'guide');
+    page.documentListeners.get('visibilitychange')?.();
+    await settle();
+    expect(page.stored).toEqual([]);
+
+    page.context.document.visibilityState = 'hidden';
+    page.documentListeners.get('visibilitychange')?.();
+    await settle();
+    expect(page.stored).toEqual([[{ id: 'live' }]]);
+  });
+
+  it('does nothing when no save is pending', async () => {
+    const page = boot();
+
+    page.windowListeners.get('pagehide')?.();
+    await settle();
+
+    expect(page.save).not.toHaveBeenCalled();
+    expect(page.stored).toEqual([]);
+  });
+
+  it('does not throw when the editor is gone mid-destroy', async () => {
+    const page = boot({
+      save: () => {
+        throw new Error('destroyed');
+      },
+    });
+
+    page.schedule({ saver: { save: page.save } }, 'guide');
+
+    expect(() => page.windowListeners.get('pagehide')?.()).not.toThrow();
+    await settle();
+    expect(page.stored).toEqual([]);
   });
 });

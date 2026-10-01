@@ -11,7 +11,7 @@ import type { Block } from '../../block';
 import { modificationsObserverBatchTimeout } from '../../constants';
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { logLabeled } from '../../utils';
-import { isChildToolAllowed } from '../../utils/child-tools';
+import { acceptsChildren, isChildToolAllowed } from '../../utils/child-tools';
 import { moveElementAfter, moveElementBefore } from '../../utils/html';
 import { equals } from '../../utils/object';
 import { sanitizeBlocks, stripUnsafeUrlsDeep } from '../../utils/sanitizer';
@@ -1667,9 +1667,9 @@ export class BlockYjsSync {
   }
 
   /**
-   * `childTools` is enforced on the local insert and move paths only. A
-   * child the container denies that arrives through the doc is placed as
-   * the doc says — demoting it here would write back and loop against the
+   * `childTools` and `acceptsChildren` are enforced on the local insert and
+   * move paths only. A child the container denies that arrives through the
+   * doc is placed as the doc says — demoting it here would write back and loop against the
    * peer — so the host is told instead.
    */
   private warnIfChildToolDenied(child: Block, parentId: string | null | undefined): void {
@@ -1683,8 +1683,10 @@ export class BlockYjsSync {
       return;
     }
 
+    const reason = acceptsChildren(parent) ? 'that container\'s childTools does not allow it' : 'that block takes no children';
+
     logLabeled(
-      `Block «${child.id}» (${child.name}) was placed under «${parentId}» by the document, but that container's childTools does not allow it.`,
+      `Block «${child.id}» (${child.name}) was placed under «${parentId}» by the document, but ${reason}.`,
       'warn'
     );
   }

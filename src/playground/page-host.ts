@@ -28,7 +28,16 @@ const ROUTE = /^\/editor\/page\/([^/]+)\/?$/;
 export const pageIdFromPath = (pathname: string): string | null => {
   const match = ROUTE.exec(pathname);
 
-  return match === null ? null : decodeURIComponent(match[1]);
+  if (match === null) {
+    return null;
+  }
+
+  // Runs at playground boot: a throw on a bad escape would blank the page.
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return null;
+  }
 };
 
 /** Keeps the query: `?collab=` and `?name=` are read again on every editor rebuild. */

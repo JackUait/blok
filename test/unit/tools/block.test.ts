@@ -407,6 +407,19 @@ describe('BlockToolAdapter', () => {
 
       expect(tool.keepsChildrenOnEnter).toBe(false);
     });
+
+    it('reports a tool that takes no children', () => {
+      const constructable = createConstructable({ acceptsChildren: false });
+      const { tool } = createBlockTool({ constructable });
+
+      expect(tool.acceptsChildren).toBe(false);
+    });
+
+    it('accepts children when the tool declares nothing', () => {
+      const { tool } = createBlockTool();
+
+      expect(tool.acceptsChildren).toBe(true);
+    });
   });
 
   describe('data upgrade hook', () => {

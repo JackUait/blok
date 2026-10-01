@@ -37,5 +37,5 @@ export interface PageConfig {
   /** Fresh title and icon. `null` means the page does not exist. */
   resolve?(pageId: string): PageInfo | null | undefined | Promise<PageInfo | null | undefined>;
   /** Makes the page a new page block points at. */
-  create?(init: { pageId: string; title?: string }): void | Promise<void>;
+  create?(init: { pageId: string }): void | Promise<void>;
 }

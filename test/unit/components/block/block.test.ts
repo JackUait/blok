@@ -1404,42 +1404,42 @@ describe('Block', () => {
     });
   });
 
-  describe('activate', () => {
+  describe('onNavigationEnter', () => {
     const keydown = (): KeyboardEvent => new KeyboardEvent('keydown', { key: 'Enter' });
 
     it('passes the event to the tool and reports that it handled it', () => {
       const { block } = createBlock();
-      const activate = vi.fn(() => true);
+      const onNavigationEnter = vi.fn(() => true);
       const event = keydown();
 
-      (block as unknown as { toolInstance: Record<string, unknown> }).toolInstance.activate = activate;
+      (block as unknown as { toolInstance: Record<string, unknown> }).toolInstance.onNavigationEnter = onNavigationEnter;
 
-      expect(block.activate(event)).toBe(true);
-      expect(activate).toHaveBeenCalledWith(event);
+      expect(block.onNavigationEnter(event)).toBe(true);
+      expect(onNavigationEnter).toHaveBeenCalledWith(event);
     });
 
-    it('reports false when the tool has no activate', () => {
+    it('reports false when the tool has no onNavigationEnter', () => {
       const { block } = createBlock();
 
-      expect(block.activate(keydown())).toBe(false);
+      expect(block.onNavigationEnter(keydown())).toBe(false);
     });
 
     it('reports false when the tool returns anything but true', () => {
       const { block } = createBlock();
 
-      (block as unknown as { toolInstance: Record<string, unknown> }).toolInstance.activate = vi.fn(() => 'yes');
+      (block as unknown as { toolInstance: Record<string, unknown> }).toolInstance.onNavigationEnter = vi.fn(() => 'yes');
 
-      expect(block.activate(keydown())).toBe(false);
+      expect(block.onNavigationEnter(keydown())).toBe(false);
     });
 
     it('reports false when the tool throws', () => {
       const { block } = createBlock();
 
-      (block as unknown as { toolInstance: Record<string, unknown> }).toolInstance.activate = vi.fn(() => {
+      (block as unknown as { toolInstance: Record<string, unknown> }).toolInstance.onNavigationEnter = vi.fn(() => {
         throw new Error('boom');
       });
 
-      expect(block.activate(keydown())).toBe(false);
+      expect(block.onNavigationEnter(keydown())).toBe(false);
     });
   });
 

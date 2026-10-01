@@ -13,6 +13,7 @@ import { findOwn } from '../../../utils/own-element';
 
 import { BlockEventComposer } from './__base';
 import { getIndentTarget, getFollowingSiblings } from './structural-siblings';
+import { acceptsChildren } from '../../../utils/child-tools';
 
 /**
  * Checks if the keyboard event is a block movement shortcut (Cmd/Ctrl+Shift+Arrow)
@@ -286,7 +287,8 @@ export class KeyboardNavigation extends BlockEventComposer {
      * the parent's contentIds), then adopt them under the outdented block so the
      * content that used to sit below it stays nested beneath it.
      */
-    const followingSiblings = getFollowingSiblings(BlockManager, currentBlock);
+    // A block that takes no children leaves its following siblings where they are.
+    const followingSiblings = acceptsChildren(currentBlock) ? getFollowingSiblings(BlockManager, currentBlock) : [];
 
     for (const sibling of followingSiblings) {
       BlockManager.setBlockParent(sibling, currentBlock.id);

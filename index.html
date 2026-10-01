@@ -1642,9 +1642,12 @@
     }
 
     let persistTimer;
+    let persistPending = false;
     function schedulePersist(api, pageId) {
       clearTimeout(persistTimer);
+      persistPending = true;
       persistTimer = setTimeout(async () => {
+        persistPending = false;
         try {
           storeBlocks(pageId, (await api.saver.save()).blocks);
         } catch (error) {
@@ -1656,6 +1659,7 @@
     /** Saves the live editor's document under the page it shows. */
     async function snapshotEditor() {
       clearTimeout(persistTimer);
+      persistPending = false;
       if (collaborationConfig(editorPageId) !== null) return;
       try {
         storeBlocks(editorPageId, (await blok.save()).blocks);
@@ -1663,6 +1667,15 @@
         console.error('Saving the page failed', error);
       }
     }
+
+    // A reload or close would drop the edit still waiting on the debounce.
+    function flushPendingSave() {
+      if (persistPending) void snapshotEditor();
+    }
+    window.addEventListener('pagehide', flushPendingSave);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') flushPendingSave();
+    });
 
     function renderHeader() {
       renderPageHeader(pageHeader, {
@@ -1690,6 +1703,7 @@
     /** Destroys the live editor and builds one for currentPageId. */
     async function swapEditor() {
       clearTimeout(persistTimer);
+      persistPending = false;
       blok.destroy();
       const editor = new Blok(buildConfig());
       blok = editor;
@@ -1762,8 +1776,7 @@
     /**
      * Reinitialize editor with current state.
      * Debounced to prevent zombie instances when toggling multiple checkboxes rapidly.
-     * The root document restarts from the showcase, as it always has; a page
-     * keeps its content. `reset` also puts every page back to the seed.
+     * The root document restarts from the showcase; a page keeps its content. `reset` also puts every page back to the seed.
      */
     let reinitTimeout;
     function reinitEditor({ reset = false } = {}) {
@@ -1771,6 +1784,7 @@
       reinitTimeout = setTimeout(() => queueEditorWork(async () => {
         if (reset) {
           clearTimeout(persistTimer);
+          persistPending = false;
           pages.reset();
           rootBlocks = null;
           if (currentPageId !== null && !pages.has(currentPageId)) {
@@ -1779,6 +1793,7 @@
           }
         } else if (editorPageId === null) {
           clearTimeout(persistTimer);
+          persistPending = false;
           rootBlocks = null;
         } else {
           await snapshotEditor();

@@ -16,7 +16,7 @@ interface Runtime {
   save: () => Promise<OutputData>;
   history: { undo: () => void; redo: () => void; canUndo: () => boolean };
   blocks: API['blocks'];
-  module: { yjsManager: { stopCapturing: () => void } };
+  module: { yjsManager: { stopCapturing: () => void; toJSON: () => Array<{ id?: string; data: unknown }> } };
 }
 
 let editor: Runtime | undefined;
@@ -152,7 +152,49 @@ describe('a page block in a real editor', () => {
     vi.restoreAllMocks();
   });
 
-  it('booted read-only shows a fresh title from resolve and never saves it, even after editing turns on', async () => {
+  // jsdom never focuses on mousedown, so focus() stands in for a browser that does.
+  it('a focused link leaves undo and Escape to Blok', async () => {
+    const instance = new Blok({
+      holder,
+      tools: { paragraph: Paragraph, page: { class: PageTool, config: { href: (id: string) => `/p/${id}` } } },
+      data: { blocks: [{ id: 'a', type: 'paragraph', data: { text: 'one' } }, { id: 'pg', type: 'page', data: { pageId: 'p1', cache: { title: 'T' } } }] },
+    }) as unknown as Runtime;
+
+    editor = instance;
+    await instance.isReady;
+    await settleFrame();
+    instance.module.yjsManager.stopCapturing();
+    instance.blocks.insert('paragraph', { text: 'added' }, {}, 2, false);
+    await settleFrame();
+    instance.module.yjsManager.stopCapturing();
+
+    const link = holder?.querySelector('[data-blok-testid="page-link"]');
+
+    if (!(link instanceof HTMLAnchorElement)) {
+      throw new Error('no page link');
+    }
+    link.focus();
+
+    const press = (init: KeyboardEventInit): KeyboardEvent => {
+      const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
+
+      link.dispatchEvent(event);
+
+      return event;
+    };
+    const undo = press({ key: 'z', code: 'KeyZ', metaKey: true, ctrlKey: true });
+
+    await settleFrame();
+
+    expect(undo.defaultPrevented).toBe(true);
+    expect(instance.blocks.getBlocksCount()).toBe(2);
+    expect(press({ key: 'Escape', code: 'Escape' }).defaultPrevented).toBe(true);
+    expect(holder?.querySelector('[data-blok-navigation-focused]')).not.toBeNull();
+  }, 30_000);
+
+  // Read-only never writes; once editing turns on, the title it showed is
+  // saved, so the block does not show one title and save another.
+  it('booted read-only shows a fresh title from resolve, and saves it once editing turns on', async () => {
     const resolve = vi.fn().mockResolvedValue({ title: 'New' });
     const data = { pageId: 'p1', cache: { title: 'Old' } };
     const instance = new Blok({
@@ -172,7 +214,9 @@ describe('a page block in a real editor', () => {
     await instance.readOnly.toggle(false);
     await settleFrame();
 
-    expect((await instance.save()).blocks.find(block => block.id === 'x')?.data).toEqual(data);
+    expect((await instance.save()).blocks.find(block => block.id === 'x')?.data).toEqual({ pageId: 'p1', cache: { title: 'New' } });
+    expect(instance.module.yjsManager.toJSON().find(block => block.id === 'x')?.data).toEqual({ pageId: 'p1', cache: { title: 'New' } });
+    expect(holder?.querySelector('[data-blok-testid="page-title"]')?.textContent).toBe('New');
     expect(resolve).toHaveBeenCalledTimes(1);
   }, 30_000);
 

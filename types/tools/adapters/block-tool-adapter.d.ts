@@ -59,6 +59,12 @@ interface BlockToolAdapter extends BaseToolAdapter<ToolType.Block, BlockTool>{
   childTools: ChildToolRestrictions | undefined;
 
   /**
+   * False when this Tool's block never has children. Declared by the Tool as
+   * `static acceptsChildren` — see {@link BlockToolConstructable.acceptsChildren}.
+   */
+  acceptsChildren: boolean;
+
+  /**
    * Returns true if Tool supports linebreaks
    */
   isLineBreaksEnabled: boolean;

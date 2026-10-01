@@ -346,7 +346,7 @@ describe('NavigationMode', () => {
           BlockSelection: {
             navigationModeEnabled: true,
             disableNavigationMode,
-            navigationFocusedBlock: { activate: activateSpy },
+            navigationFocusedBlock: { onNavigationEnter: activateSpy },
           } as unknown as BlokModules['BlockSelection'],
         });
 

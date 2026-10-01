@@ -127,7 +127,7 @@ export interface BlockTool extends BaseTool {
    *
    * @param event - the Enter keydown
    */
-  activate?(event: KeyboardEvent): boolean;
+  onNavigationEnter?(event: KeyboardEvent): boolean;
 
   /**
    * Called when read-only mode is toggled without re-rendering the block.
@@ -271,6 +271,21 @@ export interface BlockToolConstructable extends BaseToolConstructable {
    * }
    */
   childTools?: ChildToolRestrictions;
+
+  /**
+   * Set to false when this Tool's block never has children — for example a
+   * page block, whose body lives in another document, so a child stored under
+   * it would be dropped by every export.
+   *
+   * Core then refuses every way to nest a block in it: Tab is a no-op, an
+   * insert or `moveTo` with it as the parent throws `BlockPlacementError`,
+   * `setBlockParent` onto it does nothing, a reorder that would carry a block
+   * in is refused, and a drop never nests under it.
+   *
+   * `childTools` cannot express this: an empty `allow` list means "no
+   * restriction". Leave unset (or true) for any block that may hold children.
+   */
+  acceptsChildren?: boolean;
 
   /**
    * Set to true when Enter on this container's empty LAST child must create the

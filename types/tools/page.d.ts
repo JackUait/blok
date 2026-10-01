@@ -53,7 +53,7 @@ export interface PageConfig {
    */
   href?(pageId: string): string;
   /**
-   * Opens the page on a plain left click (and Enter on the focused link).
+   * Opens the page on a plain left click, or on Enter when the block is selected.
    * Without it the link navigates to `href`. Also called once after the user
    * inserts a new page from the toolbox and `create` succeeds.
    */
@@ -63,15 +63,17 @@ export interface PageConfig {
    * - `null`: the page does not exist. The block shows "Page not found" and stays.
    * - `undefined`: nothing known. The cached copy stays.
    * - `{ access: 'none' }`: no access.
-   * The cached copy is saved only when it changed, and never in read-only mode.
+   * The cached copy is saved only when it changed. Read-only mode shows it
+   * and saves it once editing turns on.
    */
   resolve?(pageId: string): PageInfo | null | undefined | Promise<PageInfo | null | undefined>;
   /**
    * Makes the page for a new page block. Called once, when a page block is
    * inserted without a `pageId`, with the id Blok minted. Never called on load,
-   * undo, redo or a collaborator's change.
+   * undo, redo or a collaborator's change. If it throws, the block shows
+   * "Page not found" until `resolve` finds the page.
    */
-  create?(init: { pageId: string; title?: string }): void | Promise<void>;
+  create?(init: { pageId: string }): void | Promise<void>;
 }
 
 /**
@@ -103,6 +105,11 @@ export declare class Page implements BlockTool {
    * Exports the cached title, so a page can be turned into text
    */
   static conversionConfig?: ConversionConfig;
+
+  /**
+   * Always false: the page body lives in another document, so nothing nests under the block
+   */
+  static acceptsChildren?: boolean;
 
   constructor(options: PageConstructorOptions);
 

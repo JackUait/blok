@@ -1,5 +1,6 @@
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import type { Block } from '../../../block';
+import { acceptsChildren } from '../../../utils/child-tools';
 
 type BlockManager = BlokModules['BlockManager'];
 
@@ -52,7 +53,7 @@ export const getPrecedingSibling = (BlockManager: BlockManager, block: Block): B
 export const getIndentTarget = (BlockManager: BlockManager, block: Block): Block | null => {
   const precedingSibling = getPrecedingSibling(BlockManager, block);
 
-  if (precedingSibling === null || precedingSibling.tool.ownsChildren) {
+  if (precedingSibling === null || precedingSibling.tool.ownsChildren || !acceptsChildren(precedingSibling)) {
     return null;
   }
 

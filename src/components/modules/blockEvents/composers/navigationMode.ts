@@ -7,7 +7,7 @@ import { BlockEventComposer } from './__base';
  *
  * In navigation mode:
  * - ArrowUp/ArrowDown: navigate between blocks
- * - Enter: let the block handle it (Block.activate), else focus it for editing
+ * - Enter: let the block handle it (Block.onNavigationEnter), else focus it for editing
  * - Escape: exit navigation mode without focusing
  * - Any printable key: exits navigation mode and allows normal input
  */
@@ -113,7 +113,7 @@ export class NavigationMode extends BlockEventComposer {
         event.stopImmediatePropagation();
 
         // Cmd/Ctrl+Enter lands here too: event.key is still 'Enter'.
-        const activated = BlockSelection.navigationFocusedBlock?.activate(event) === true;
+        const activated = BlockSelection.navigationFocusedBlock?.onNavigationEnter(event) === true;
 
         BlockSelection.disableNavigationMode(!activated);
 

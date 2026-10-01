@@ -22,7 +22,7 @@ import { DATA_ATTR } from '../../constants';
 import { BlockChanged, BlockRendered } from '../../events';
 import { generateBlockId, logLabeled } from '../../utils';
 import { sanitizeBlocks } from '../../utils/sanitizer';
-import { isChildToolAllowed } from '../../utils/child-tools';
+import { acceptsChildren, isChildToolAllowed } from '../../utils/child-tools';
 import { assertHierarchy, validateHierarchy } from '../../utils/hierarchy-invariant';
 import { findOwn } from '../../utils/own-element';
 import { releasesChildrenOnTurnInto } from '../../utils/turn-into-children';
@@ -1312,6 +1312,14 @@ export class BlockManager extends Module {
    * @param newParentId - the new parent block id, or null for root level
    */
   public setBlockParent(block: Block, newParentId: string | null): void {
+    // Re-asserting the current parent stays allowed: drag and replay re-place
+    // children a stored document already put there.
+    if (newParentId !== null && newParentId !== block.parentId && !acceptsChildren(this.getBlockById(newParentId))) {
+      logLabeled(`Block «${block.id}» was not nested under «${newParentId}»: that block takes no children.`, 'warn');
+
+      return;
+    }
+
     // Capture the old parent id BEFORE hierarchy.setBlockParent mutates it —
     // the BlockMoved emission guard below compares against it.
     const oldParentId = block.parentId;

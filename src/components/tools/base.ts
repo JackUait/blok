@@ -99,6 +99,11 @@ export enum InternalBlockToolSettings {
    */
   ChildTools = 'childTools',
   /**
+   * False when this Tool's block never has children (a page whose body lives
+   * in another document). Core refuses every path that would nest a block in it.
+   */
+  AcceptsChildren = 'acceptsChildren',
+  /**
    * Enter on this Tool's empty LAST child stays INSIDE the container instead of
    * escaping it (a column, a card) — per-tool policy the DOM cannot express,
    * since a callout renders the same nested-blocks slot yet wants the escape

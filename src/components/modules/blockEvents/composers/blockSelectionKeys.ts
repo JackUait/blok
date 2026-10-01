@@ -9,6 +9,7 @@ import { LIST_TOOL_NAME } from '../constants';
 
 import { BlockEventComposer } from './__base';
 import { getIndentTarget, getFollowingSiblings } from './structural-siblings';
+import { acceptsChildren } from '../../../utils/child-tools';
 
 /**
  * BlockSelectionKeys Composer handles keyboard interactions when blocks are selected.
@@ -215,6 +216,10 @@ export class BlockSelectionKeys extends BlockEventComposer {
     const anchor = indentTarget ?? first;
     const originalParentId = first.parentId;
 
+    if (!acceptsChildren(anchor)) {
+      return;
+    }
+
     for (const block of blocks) {
       if (block === anchor) {
         continue;
@@ -256,7 +261,9 @@ export class BlockSelectionKeys extends BlockEventComposer {
      * mutates the parent's contentIds) so the content below the selection stays
      * nested beneath the outdented group.
      */
-    for (const sibling of getFollowingSiblings(BlockManager, last)) {
+    const adopted = acceptsChildren(last) ? getFollowingSiblings(BlockManager, last) : [];
+
+    for (const sibling of adopted) {
       BlockManager.setBlockParent(sibling, last.id);
     }
 

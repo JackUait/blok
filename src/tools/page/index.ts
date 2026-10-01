@@ -84,8 +84,11 @@ export class PageTool implements BlockTool {
   private readonly isProbe: boolean;
   private root: HTMLElement | null = null;
   private found: 'yes' | 'missing' | 'no-access' = 'yes';
-  /** What read-only mode shows from `resolve` without saving it. */
-  private shownCache: PageCache | undefined;
+  /**
+   * What read-only mode shows from `resolve` without saving it. Wrapped so
+   * a page with no title or icon still hides the old cache.
+   */
+  private shown: { cache: PageCache | undefined } | undefined;
   private started = false;
   private detached = false;
 
@@ -129,6 +132,11 @@ export class PageTool implements BlockTool {
 
   public static get isReadOnlySupported(): boolean {
     return true;
+  }
+
+  /** The body lives in another document; exports skip a page's children. */
+  public static get acceptsChildren(): boolean {
+    return false;
   }
 
   /** Turn into text keeps the title as literal text. */
@@ -182,8 +190,36 @@ export class PageTool implements BlockTool {
     return typeof data.pageId === 'string' && data.pageId.length > 0;
   }
 
+  /**
+   * Undo/redo and peers land here. Never resolves or writes: a re-created
+   * block would, and two viewers whose hosts disagree would then rewrite
+   * each other forever.
+   */
+  public setData(data: PageData): boolean {
+    const pageId = typeof data.pageId === 'string' ? data.pageId : '';
+
+    if (pageId !== this.data.pageId) {
+      // The missing or locked verdict was about the old page.
+      this.found = 'yes';
+      this.shown = undefined;
+    }
+    this.data = { pageId, cache: readCache(data.cache) };
+    this.renderView();
+
+    return true;
+  }
+
   public setReadOnly(state: boolean): void {
     this.readOnly = state;
+
+    const shown = this.shown;
+
+    if (state || shown === undefined) {
+      return;
+    }
+    // Read-only showed a fresher cache than the document holds; save it now.
+    this.shown = undefined;
+    this.writeCache(shown.cache);
   }
 
   public removed(): void {
@@ -194,7 +230,7 @@ export class PageTool implements BlockTool {
    * Enter on the selected block opens the page. A missing or locked page
    * returns false: the block has no inputs, so core just keeps it selected.
    */
-  public activate(event: KeyboardEvent): boolean {
+  public onNavigationEnter(event: KeyboardEvent): boolean {
     if (!this.isNavigable) {
       return false;
     }
@@ -211,6 +247,12 @@ export class PageTool implements BlockTool {
 
     if (!(link instanceof HTMLAnchorElement)) {
       return false;
+    }
+    // A synthetic click drops the modifier keys, so a new tab must be asked for.
+    if (event.metaKey || event.ctrlKey) {
+      window.open(link.getAttribute('href') ?? '', '_blank', 'noopener');
+
+      return true;
     }
     // A real click, so the browser follows the href as it would for a mouse.
     link.click();
@@ -234,7 +276,15 @@ export class PageTool implements BlockTool {
     try {
       await this.config.create?.({ pageId });
     } catch {
-      // The host failed to make the page. Keep the block; resolve will show it as missing later.
+      if (this.detached) {
+        return;
+      }
+      // The host failed to make the page: show it missing, unless resolve
+      // finds it after all.
+      this.found = 'missing';
+      this.renderView();
+      await this.refresh();
+
       return;
     }
 
@@ -280,21 +330,24 @@ export class PageTool implements BlockTool {
     const fresh = readCache({ title: info.title, icon: info.icon });
 
     if (this.readOnly) {
-      this.shownCache = fresh;
+      this.shown = { cache: fresh };
       this.renderView();
 
       return;
     }
 
-    this.shownCache = undefined;
+    this.shown = undefined;
+    this.writeCache(fresh);
+  }
 
-    if (sameCache(fresh, this.data.cache)) {
+  private writeCache(cache: PageCache | undefined): void {
+    if (sameCache(cache, this.data.cache)) {
       this.renderView();
 
       return;
     }
 
-    this.data = { pageId: this.data.pageId, cache: fresh };
+    this.data = { pageId: this.data.pageId, cache };
     this.renderView();
     this.block.dispatchChange({ derived: true });
   }
@@ -313,7 +366,7 @@ export class PageTool implements BlockTool {
   }
 
   private visibleCache(): PageCache | undefined {
-    return this.shownCache ?? this.data.cache;
+    return this.shown === undefined ? this.data.cache : this.shown.cache;
   }
 
   private get isNavigable(): boolean {
@@ -331,8 +384,9 @@ export class PageTool implements BlockTool {
     link.className = `${PAGE_LINK_CLASSES} ${this.isNavigable ? PAGE_LINK_ENABLED_CLASSES : PAGE_LINK_DISABLED_CLASSES}`;
     link.setAttribute(DATA_ATTR.testid, 'page-link');
     link.setAttribute('data-blok-page-state', state);
-    // A focused link owns its keys: Enter must follow it, not split the block.
-    link.setAttribute(DATA_ATTR.keyboardOwner, '');
+    // Never focused, so Blok keeps its keys (undo, Escape, arrows). Tab is
+    // Blok's indent; the keyboard opens the page from navigation mode.
+    link.tabIndex = -1;
     // Blocks move by Blok's drag handle, not by a native link drag.
     link.draggable = false;
 
@@ -346,6 +400,7 @@ export class PageTool implements BlockTool {
       link.setAttribute('aria-disabled', 'true');
     }
 
+    link.addEventListener('mousedown', this.handleMouseDown);
     link.addEventListener('click', this.handleClick);
     link.append(this.buildIcon(), this.buildTitle(state));
 
@@ -407,6 +462,13 @@ export class PageTool implements BlockTool {
         return this.visibleCache()?.title ?? '';
     }
   }
+
+  /** A browser focuses a link on mousedown; tabIndex -1 alone does not stop that. */
+  private readonly handleMouseDown = (event: MouseEvent): void => {
+    if (event.button === 0) {
+      event.preventDefault();
+    }
+  };
 
   private readonly handleClick = (event: MouseEvent): void => {
     if (!this.isNavigable) {

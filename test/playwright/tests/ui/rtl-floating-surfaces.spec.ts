@@ -20,7 +20,8 @@ const createBlok = async (page: Page, direction: Direction, blocks: OutputBlockD
     const holder = document.createElement('div');
 
     holder.id = 'blok';
-    holder.style.cssText = 'max-width:650px;margin:120px auto 0';
+    // Pushed right: room on both sides of the block menu for its submenu.
+    holder.style.cssText = 'max-width:650px;margin:120px 200px 0 auto';
     document.body.appendChild(holder);
     window.blokInstance = new window.Blok({ holder, i18n: { direction: dir }, data: { blocks: data } });
     await window.blokInstance.isReady;
@@ -86,12 +87,10 @@ for (const direction of DIRECTIONS) {
       await createBlok(page, direction, [paragraph('Submenu side')]);
       await page.getByText('Submenu side', { exact: true }).hover();
       await page.getByTestId('settings-toggler').click();
-      const parent = openPopover(page).locator('[data-blok-popover-container]').first();
       const convert = page.getByRole('menuitem', { name: 'Convert to', exact: true });
+      const parent = page.getByTestId('popover-container').filter({ has: convert });
 
       await expect(convert).toBeVisible();
-      // Measured before the submenu opens: it then becomes the last open popover.
-      const parentBox = await box(parent);
       const chevron = convert.locator('[data-blok-popover-item-icon-chevron-right] svg');
 
       // The chevron points where the submenu will open.
@@ -102,7 +101,7 @@ for (const direction of DIRECTIONS) {
       const submenu = page.getByTestId('popover-container').filter({ has: page.locator('[data-blok-convert-item]') }).last();
 
       await expect(submenu).toBeVisible();
-      const submenuBox = await box(submenu);
+      const [parentBox, submenuBox] = await Promise.all([box(parent), box(submenu)]);
 
       // Past the parent's inline end, overlapping its trailing edge by 4px.
       const pastParentEnd = direction === 'rtl'

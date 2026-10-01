@@ -231,6 +231,52 @@ for (const direction of DIRECTIONS) {
 
       expect(Math.abs((startOf(direction, pickerBox) - startOf(direction, triggerBox)) * outward - 8)).toBeLessThanOrEqual(1);
     });
+
+    test('the skin-tone tray hangs from the picker end edge', async ({ page }) => {
+      await createBlok(page, direction, [{ type: 'callout', data: { emoji: '💡', color: 'default' } }]);
+      await page.getByTestId('callout-emoji-btn').click();
+      const picker = page.getByRole('dialog', { name: 'Edit icon' });
+
+      await expect(picker).toBeVisible();
+      await picker.getByRole('button', { name: 'Skin tone', exact: true }).click();
+      const tray = picker.getByRole('group', { name: 'Skin tone', exact: true });
+
+      await expect(tray).toBeVisible();
+      const [pickerBox, trayBox] = await Promise.all([box(picker), box(tray)]);
+      const fromEnd = direction === 'rtl' ? trayBox.left - pickerBox.left : pickerBox.right - trayBox.right;
+
+      // 12px inset from the header's end, plus the picker's 1px border.
+      expect(Math.abs(fromEnd - 13)).toBeLessThanOrEqual(1);
+    });
+
+    test('the link field card lines up with the link button start edge', async ({ page }) => {
+      await createBlok(page, direction, [paragraph('Hello world here')]);
+      await page.locator('[data-blok-component="paragraph"]').first().evaluate((element) => {
+        const text = document.createTreeWalker(element, NodeFilter.SHOW_TEXT).nextNode();
+        const range = document.createRange();
+
+        if (text === null) {
+          throw new Error('Missing text node');
+        }
+        range.setStart(text, 6);
+        range.setEnd(text, 11);
+        const selection = document.getSelection();
+
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        document.dispatchEvent(new Event('selectionchange'));
+      });
+      const link = page.getByTestId('inline-toolbar').filter({ visible: true }).getByRole('menuitemcheckbox', { name: 'Link', exact: true });
+
+      await link.click();
+      const field = page.getByPlaceholder('Paste a link or search headings');
+
+      await expect(field).toBeVisible();
+      const card = page.getByTestId('popover-container').filter({ has: field });
+      const [cardBox, linkBox] = await Promise.all([box(card), box(link)]);
+
+      expect(Math.abs(startOf(direction, cardBox) - startOf(direction, linkBox))).toBeLessThanOrEqual(1);
+    });
   });
 }
 

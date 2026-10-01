@@ -124,6 +124,8 @@ test.describe('RTL drag-to-nest measures from the inline start', () => {
   });
 
   test('a drop near the inline start stays at root and a drop one indent in nests, mirrored in RTL', async ({ page }) => {
+    // Four full drags in one editor take ~11s alone, close to the 15s budget.
+    test.slow();
     await page.evaluate(async ({ holder, blocks }) => {
       document.getElementById(holder)?.remove();
 

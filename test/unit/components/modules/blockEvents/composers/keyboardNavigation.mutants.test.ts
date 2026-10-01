@@ -131,8 +131,6 @@ interface HarnessOptions {
   someFlipperButtonFocused?: boolean;
   anyBlockSelected?: boolean;
   navigated?: boolean;
-  /** `'absent'` leaves `UI.isRtl` undefined, exercising the `?? false` default. */
-  isRtl?: boolean | 'absent';
   onEnter?: BlokConfig['onEnter'];
   onSubmit?: BlokConfig['onSubmit'];
   saverResult?: unknown;
@@ -215,10 +213,6 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
     someFlipperButtonFocused: options.someFlipperButtonFocused ?? false,
     closeAllToolbars,
   };
-
-  if (options.isRtl !== 'absent') {
-    ui.isRtl = options.isRtl ?? false;
-  }
 
   const blok = {
     BlockManager: blockManager as unknown as BlokModules['BlockManager'],
@@ -949,68 +943,133 @@ describe('KeyboardNavigation — block movement shortcut truth table', () => {
 });
 
 describe('KeyboardNavigation — reading direction', () => {
-  it('a UI without an isRtl flag behaves as left-to-right for ArrowRight', () => {
-    const harness = createHarness({ navigated: true, isRtl: 'absent' });
+  /**
+   * Puts the block's input in the document with the given `dir`, so its
+   * computed direction is real, and returns it as the keydown target.
+   */
+  const mountInput = (block: Block, dir: 'ltr' | 'rtl', wrapperDir: 'ltr' | 'rtl' = dir): HTMLElement => {
+    const wrapper = document.createElement('div');
 
-    harness.nav.handleArrowRightAndDown(createKeyboardEvent({ key: 'ArrowRight', keyCode: keyCodes.RIGHT }));
+    wrapper.setAttribute('dir', wrapperDir);
+    wrapper.appendChild(block.holder);
+    document.body.appendChild(wrapper);
 
-    expect(harness.navigateNext).toHaveBeenCalledTimes(1);
+    const input = block.inputs[0];
+
+    // jsdom has no `contentEditable` setter, so the attribute must be explicit.
+    input.setAttribute('contenteditable', 'true');
+    input.setAttribute('dir', dir);
+
+    return input;
+  };
+
+  afterEach(() => {
+    document.body.innerHTML = '';
   });
 
-  it('RTL keeps plain ArrowRight inside the block', () => {
-    const harness = createHarness({ navigated: true, isRtl: true });
+  it('an input with no direction of its own behaves as left-to-right for ArrowRight', () => {
+    const harness = createHarness({ navigated: true });
 
     harness.nav.handleArrowRightAndDown(createKeyboardEvent({ key: 'ArrowRight', keyCode: keyCodes.RIGHT }));
+
+    expect(harness.navigateNext).toHaveBeenCalledWith(false, false);
+  });
+
+  it('RTL ArrowLeft moves the caret into the next block', () => {
+    const block = createBlock();
+    const harness = createHarness({ currentBlock: block, navigated: true });
+    const target = mountInput(block, 'rtl');
+
+    harness.nav.handleArrowRightAndDown(createKeyboardEvent({ key: 'ArrowLeft', keyCode: keyCodes.LEFT, target }));
+
+    expect(harness.navigateNext).toHaveBeenCalledWith(false, false);
+    expect(harness.navigatePrevious).not.toHaveBeenCalled();
+  });
+
+  it('RTL ArrowRight moves the caret into the previous block', () => {
+    const block = createBlock();
+    const harness = createHarness({ currentBlock: block, navigated: true });
+    const target = mountInput(block, 'rtl');
+
+    harness.nav.handleArrowLeftAndUp(createKeyboardEvent({ key: 'ArrowRight', keyCode: keyCodes.RIGHT, target }));
+
+    expect(harness.navigatePrevious).toHaveBeenCalledTimes(1);
+    expect(harness.navigateNext).not.toHaveBeenCalled();
+  });
+
+  it('RTL ArrowRight never reaches forward navigation', () => {
+    const block = createBlock();
+    const harness = createHarness({ currentBlock: block, navigated: true });
+    const target = mountInput(block, 'rtl');
+
+    harness.nav.handleArrowRightAndDown(createKeyboardEvent({ key: 'ArrowRight', keyCode: keyCodes.RIGHT, target }));
 
     expect(harness.navigateNext).not.toHaveBeenCalled();
   });
 
-  it('RTL turns Shift+ArrowRight into a plain native shift-extend', () => {
-    const harness = createHarness({ navigated: true, isRtl: true });
+  it('RTL Shift+ArrowLeft at the end extends the selection into the next block', () => {
+    const block = createBlock();
+    const harness = createHarness({ currentBlock: block, navigated: true });
+    const target = mountInput(block, 'rtl');
 
     vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
 
     harness.nav.handleArrowRightAndDown(
-      createKeyboardEvent({ key: 'ArrowRight', keyCode: keyCodes.RIGHT, shiftKey: true })
+      createKeyboardEvent({ key: 'ArrowLeft', keyCode: keyCodes.LEFT, shiftKey: true, target })
     );
 
-    expect(harness.toggleBlockSelectedState).not.toHaveBeenCalled();
+    expect(harness.toggleBlockSelectedState).toHaveBeenCalledWith();
   });
 
-  it('RTL keeps plain ArrowLeft inside the block', () => {
-    const harness = createHarness({ navigated: true, isRtl: true });
-
-    harness.nav.handleArrowLeftAndUp(createKeyboardEvent({ key: 'ArrowLeft', keyCode: keyCodes.LEFT }));
-
-    expect(harness.navigatePrevious).not.toHaveBeenCalled();
-  });
-
-  it('RTL turns Shift+ArrowLeft into a plain native shift-extend', () => {
-    const harness = createHarness({ navigated: true, isRtl: true });
+  it('RTL Shift+ArrowRight at the start extends the selection into the previous block', () => {
+    const block = createBlock();
+    const harness = createHarness({ currentBlock: block, navigated: true });
+    const target = mountInput(block, 'rtl');
 
     vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
 
     harness.nav.handleArrowLeftAndUp(
-      createKeyboardEvent({ key: 'ArrowLeft', keyCode: keyCodes.LEFT, shiftKey: true })
+      createKeyboardEvent({ key: 'ArrowRight', keyCode: keyCodes.RIGHT, shiftKey: true, target })
     );
 
-    expect(harness.toggleBlockSelectedState).not.toHaveBeenCalled();
+    expect(harness.toggleBlockSelectedState).toHaveBeenCalledWith(false);
   });
 
-  it('RTL never consults the nbsp hop for a plain ArrowRight', () => {
-    const harness = createHarness({ navigated: true, isRtl: true });
+  it('RTL ArrowLeft takes the nbsp hop', () => {
+    const block = createBlock();
+    const harness = createHarness({ currentBlock: block, navigated: true });
+    const target = mountInput(block, 'rtl');
     const nbspNode = document.createTextNode(' ');
 
     vi.spyOn(caretUtils, 'findNbspAfterEmptyInline').mockReturnValue({ node: nbspNode, offset: 1 });
 
     const setCursor = vi.spyOn(SelectionUtils, 'setCursor').mockImplementation(() => new DOMRect());
 
-    harness.nav.handleArrowRightAndDown(createKeyboardEvent({ key: 'ArrowRight', keyCode: keyCodes.RIGHT }));
+    harness.nav.handleArrowRightAndDown(createKeyboardEvent({ key: 'ArrowLeft', keyCode: keyCodes.LEFT, target }));
 
-    expect(setCursor).not.toHaveBeenCalled();
+    expect(setCursor).toHaveBeenCalledWith(nbspNode, 1);
+  });
+
+  it('a left-to-right block inside a right-to-left editor keeps ArrowRight as forward', () => {
+    const block = createBlock();
+    const harness = createHarness({ currentBlock: block, navigated: true });
+    const target = mountInput(block, 'ltr', 'rtl');
+
+    harness.nav.handleArrowRightAndDown(createKeyboardEvent({ key: 'ArrowRight', keyCode: keyCodes.RIGHT, target }));
+
+    expect(harness.navigateNext).toHaveBeenCalledWith(false, false);
+  });
+
+  it('a right-to-left block inside a left-to-right editor reads ArrowLeft as forward', () => {
+    const block = createBlock();
+    const harness = createHarness({ currentBlock: block, navigated: true });
+    const target = mountInput(block, 'rtl', 'ltr');
+
+    harness.nav.handleArrowRightAndDown(createKeyboardEvent({ key: 'ArrowLeft', keyCode: keyCodes.LEFT, target }));
+
+    expect(harness.navigateNext).toHaveBeenCalledWith(false, false);
   });
 });
-
 describe('KeyboardNavigation — table cell containment', () => {
   beforeEach(() => {
     vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);

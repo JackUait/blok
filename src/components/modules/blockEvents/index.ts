@@ -12,7 +12,7 @@ import { EmojiTrigger } from './composers/emojiTrigger';
 import { KeyboardNavigation } from './composers/keyboardNavigation';
 import { MarkdownShortcuts } from './composers/markdownShortcuts';
 import { NavigationMode } from './composers/navigationMode';
-import { isPrintableKeyEvent, isInsideKeyboardOwner, keyCodeFromEvent } from './utils/keyboard';
+import { horizontalArrowIntent, isPrintableKeyEvent, isInsideKeyboardOwner, keyCodeFromEvent } from './utils/keyboard';
 import { isTextLikeBlock } from './utils/text-like-block';
 
 /**
@@ -218,13 +218,20 @@ export class BlockEvents extends Module {
         break;
 
       case keyCodes.DOWN:
-      case keyCodes.RIGHT:
         this.keyboardNavigation.handleArrowRightAndDown(event);
         break;
 
       case keyCodes.UP:
-      case keyCodes.LEFT:
         this.keyboardNavigation.handleArrowLeftAndUp(event);
+        break;
+
+      case keyCodes.RIGHT:
+      case keyCodes.LEFT:
+        if (horizontalArrowIntent(event, this.Blok.UI.nodes.wrapper) === 'forward') {
+          this.keyboardNavigation.handleArrowRightAndDown(event);
+        } else {
+          this.keyboardNavigation.handleArrowLeftAndUp(event);
+        }
         break;
 
       case keyCodes.TAB:

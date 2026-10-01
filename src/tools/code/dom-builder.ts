@@ -36,6 +36,7 @@ export interface CodeDOMRefs {
   copyButton: HTMLButtonElement;
   copyLabel: HTMLElement;
   activeLine: HTMLElement | null;
+  previewLayer: HTMLElement | null;
   preElement: HTMLPreElement;
   codeElement: HTMLElement;
   gutterElement: HTMLElement;
@@ -315,6 +316,21 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   preElement.className = 'relative flex-1 min-w-0';
   preElement.appendChild(codeElement);
 
+  // Hover preview of another language, laid over the code with the same box
+  // and type so every glyph lands where the real one is. The editable code is
+  // never touched; the layer is mutation-free, so previews are never edits.
+  const previewLayer = readOnly ? null : document.createElement('code');
+
+  if (previewLayer) {
+    previewLayer.className = `${CODE_AREA_STYLES} absolute inset-0 pointer-events-none bg-code-bg`;
+    previewLayer.hidden = true;
+    previewLayer.setAttribute('aria-hidden', 'true');
+    previewLayer.setAttribute(DATA_ATTR.chrome, '');
+    previewLayer.setAttribute(DATA_ATTR.mutationFree, 'true');
+    previewLayer.setAttribute('data-blok-testid', 'code-language-preview');
+    preElement.appendChild(previewLayer);
+  }
+
   // Code body container (flex: gutter + pre)
   const codeBody = document.createElement('div');
   codeBody.className = CODE_BODY_STYLES;
@@ -349,5 +365,5 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
     wrapper.appendChild(codeBody);
   }
 
-  return { wrapper, languageButton, languageChevron: chevronSpan, languageDot, filenameElement, copyButton, copyLabel: copyLabelElement, activeLine, preElement, codeElement, gutterElement, viewModeContainer, previewElement, splitContainer };
+  return { wrapper, languageButton, languageChevron: chevronSpan, languageDot, filenameElement, copyButton, copyLabel: copyLabelElement, activeLine, previewLayer, preElement, codeElement, gutterElement, viewModeContainer, previewElement, splitContainer };
 }

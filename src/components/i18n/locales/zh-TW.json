@@ -290,6 +290,8 @@
   "tools.code.sideBySide": "並排",
   "tools.code.lineNumbers": "行號",
   "tools.code.filename": "檔案名稱",
+  "tools.code.suggested": "建議",
+  "tools.code.allLanguages": "所有語言",
   "searchTerms.code": "程式碼",
   "searchTerms.snippet": "程式碼片段",
   "searchTerms.program": "程式",

@@ -279,6 +279,8 @@
   "tools.code.searchLanguage": "Hae kieliä…",
   "tools.code.lineNumbers": "Rivinumerot",
   "tools.code.filename": "Tiedostonimi",
+  "tools.code.suggested": "Ehdotetut",
+  "tools.code.allLanguages": "Kaikki kielet",
   "searchTerms.code": "koodi",
   "searchTerms.snippet": "koodinpätkä",
   "searchTerms.program": "ohjelma",

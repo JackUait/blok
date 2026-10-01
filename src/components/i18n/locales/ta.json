@@ -279,6 +279,8 @@
   "tools.code.searchLanguage": "மொழிகளைத் தேடு…",
   "tools.code.lineNumbers": "வரி எண்கள்",
   "tools.code.filename": "கோப்பின் பெயர்",
+  "tools.code.suggested": "பரிந்துரைக்கப்பட்டவை",
+  "tools.code.allLanguages": "அனைத்து மொழிகளும்",
   "searchTerms.code": "குறியீடு",
   "searchTerms.snippet": "குறியீட்டுத் துணுக்கு",
   "searchTerms.program": "நிரல்",

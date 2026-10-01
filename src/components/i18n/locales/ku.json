@@ -290,6 +290,8 @@
   "tools.code.searchLanguage": "بەدوای زمانەکاندا بگەڕێ…",
   "tools.code.lineNumbers": "ژمارەی دێڕەکان",
   "tools.code.filename": "ناوی فایل",
+  "tools.code.suggested": "پێشنیارکراو",
+  "tools.code.allLanguages": "هەموو زمانەکان",
   "searchTerms.code": "کۆد",
   "searchTerms.snippet": "پارچە کۆد",
   "searchTerms.program": "بەرنامە",

@@ -279,6 +279,8 @@
   "tools.code.searchLanguage": "Hľadať jazyk…",
   "tools.code.lineNumbers": "Čísla riadkov",
   "tools.code.filename": "Názov súboru",
+  "tools.code.suggested": "Navrhované",
+  "tools.code.allLanguages": "Všetky jazyky",
   "searchTerms.code": "kód",
   "searchTerms.snippet": "úryvok",
   "searchTerms.program": "programovanie",

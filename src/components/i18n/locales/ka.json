@@ -279,6 +279,8 @@
   "tools.code.searchLanguage": "ენების ძიება…",
   "tools.code.lineNumbers": "სტრიქონების ნომრები",
   "tools.code.filename": "ფაილის სახელი",
+  "tools.code.suggested": "შემოთავაზებული",
+  "tools.code.allLanguages": "ყველა ენა",
   "searchTerms.code": "კოდი",
   "searchTerms.snippet": "ნაწყვეტი",
   "searchTerms.program": "პროგრამა",

@@ -279,6 +279,8 @@
   "tools.code.searchLanguage": "Căutați limbaje…",
   "tools.code.lineNumbers": "Numere de linie",
   "tools.code.filename": "Nume fișier",
+  "tools.code.suggested": "Sugerate",
+  "tools.code.allLanguages": "Toate limbajele",
   "searchTerms.code": "cod",
   "searchTerms.snippet": "fragment",
   "searchTerms.program": "program",

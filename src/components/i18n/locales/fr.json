@@ -279,6 +279,8 @@
   "tools.code.searchLanguage": "Rechercher des langages…",
   "tools.code.lineNumbers": "Numéros de ligne",
   "tools.code.filename": "Nom du fichier",
+  "tools.code.suggested": "Suggestions",
+  "tools.code.allLanguages": "Tous les langages",
   "searchTerms.code": "code",
   "searchTerms.snippet": "extrait",
   "searchTerms.program": "programme",

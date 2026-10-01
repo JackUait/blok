@@ -279,6 +279,8 @@
   "tools.code.searchLanguage": "ભાષાઓ શોધો…",
   "tools.code.lineNumbers": "લીટી નંબર",
   "tools.code.filename": "ફાઇલનું નામ",
+  "tools.code.suggested": "સૂચવેલ",
+  "tools.code.allLanguages": "બધી ભાષાઓ",
   "searchTerms.code": "કોડ",
   "searchTerms.snippet": "કોડ ટુકડો",
   "searchTerms.program": "પ્રોગ્રામ",

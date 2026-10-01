@@ -279,6 +279,8 @@
   "tools.code.searchLanguage": "Talen zoeken…",
   "tools.code.lineNumbers": "Regelnummers",
   "tools.code.filename": "Bestandsnaam",
+  "tools.code.suggested": "Voorgesteld",
+  "tools.code.allLanguages": "Alle talen",
   "searchTerms.code": "code",
   "searchTerms.snippet": "fragment",
   "searchTerms.program": "programma",

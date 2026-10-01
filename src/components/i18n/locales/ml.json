@@ -290,6 +290,8 @@
   "tools.code.searchLanguage": "ഭാഷകൾ തിരയുക…",
   "tools.code.lineNumbers": "വരി നമ്പറുകൾ",
   "tools.code.filename": "ഫയലിന്റെ പേര്",
+  "tools.code.suggested": "നിർദ്ദേശിച്ചവ",
+  "tools.code.allLanguages": "എല്ലാ ഭാഷകളും",
   "searchTerms.code": "കോഡ്",
   "searchTerms.snippet": "കോഡ് ഭാഗം",
   "searchTerms.program": "പ്രോഗ്രാം",

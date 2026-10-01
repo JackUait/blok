@@ -279,6 +279,8 @@
   "tools.code.searchLanguage": "Поиск языков…",
   "tools.code.lineNumbers": "Номера строк",
   "tools.code.filename": "Имя файла",
+  "tools.code.suggested": "Рекомендуемые",
+  "tools.code.allLanguages": "Все языки",
   "searchTerms.code": "код",
   "searchTerms.snippet": "фрагмент",
   "searchTerms.program": "программа",

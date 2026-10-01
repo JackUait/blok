@@ -279,6 +279,8 @@
   "tools.code.searchLanguage": "搜索语言…",
   "tools.code.lineNumbers": "行号",
   "tools.code.filename": "文件名",
+  "tools.code.suggested": "建议",
+  "tools.code.allLanguages": "所有语言",
   "searchTerms.code": "代码",
   "searchTerms.snippet": "片段",
   "searchTerms.program": "程序",

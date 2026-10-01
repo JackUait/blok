@@ -279,6 +279,8 @@
   "tools.code.searchLanguage": "تىل ئىزدەش...",
   "tools.code.lineNumbers": "قۇر نومۇرى",
   "tools.code.filename": "ھۆججەت نامى",
+  "tools.code.suggested": "تەۋسىيە قىلىنغانلار",
+  "tools.code.allLanguages": "بارلىق تىللار",
   "searchTerms.code": "كود",
   "searchTerms.snippet": "پارچە",
   "searchTerms.program": "پروگرامما",

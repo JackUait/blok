@@ -51,7 +51,8 @@ import type { CodeViewMode } from './constants';
 import { renderLatex } from '../../shared/katex';
 import { renderMermaid } from './mermaid-loader';
 import { tokenizePrism, isHighlightable } from './prism-loader';
-import { applyPrismHighlight, disposePrismStyles } from './prism-applier';
+import { applyPrismHighlight, disposePrismStyles, ensurePrismStyles } from './prism-applier';
+import { buildLanguagePickerItems as buildPickerItems, readRecentLanguages, rememberLanguage } from './language-picker';
 import { detectLanguage } from './language-detector';
 import { renderCodePreview } from './preview';
 import { normalizeFenceLang } from '../../markdown/fence-language';
@@ -105,6 +106,7 @@ export class CodeTool implements BlockTool {
   private _rowHeight = 0;
   private _paddingTop = 0;
   private _geometryRafId: number | null = null;
+  private _previewRequest = 0;
   private _resizeObserver: ResizeObserver | null = null;
   private _copiedTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private readonly onSelectionChange = (): void => this.updateActiveLine();
@@ -254,14 +256,19 @@ export class CodeTool implements BlockTool {
         return;
       }
 
-      this.ensureLanguagePicker();
-
       if (this._picker?.isShown) {
         this._picker.hide();
-      } else {
-        this._picker?.show();
-        this.setLanguagePickerExpanded(true);
+
+        return;
       }
+
+      // Suggestions depend on recent picks in other blocks and on the filename,
+      // so the rows are rebuilt on every open.
+      this._picker?.destroy();
+      this._picker = null;
+      this.ensureLanguagePicker();
+      this._picker?.show();
+      this.setLanguagePickerExpanded(true);
     });
 
     if (!this.readOnly) {
@@ -716,45 +723,19 @@ export class CodeTool implements BlockTool {
     void this.highlightCode();
   }
 
-  /**
-   * Builds the language items array. When a detected language differs from the
-   * chosen one, it appears first with a wand icon and "auto" secondary label.
-   * The currently selected language is shown with a check icon and active state
-   * in its natural position in the full language list.
-   */
   private buildLanguagePickerItems(): PopoverItemParams[] {
-    const selectedId = this._data.language;
-    const detectedId = this._detectedLanguage;
-    const showDetected = detectedId !== null && detectedId !== selectedId;
-
-    const items: PopoverItemParams[] = [];
-
-    if (showDetected) {
-      const detectedLanguage = LANGUAGES.find((lang) => lang.id === detectedId);
-      if (detectedLanguage) {
-        items.push({
-          title: this.getLanguageName(detectedLanguage.id),
-          name: detectedLanguage.id,
-          icon: IconWand,
-          toggle: 'language',
-          isActive: (): boolean => this._data.language === detectedLanguage.id,
-          closeOnActivate: true,
-          onActivate: (): void => this.setLanguage(detectedLanguage.id),
-        });
-        items.push({ type: PopoverItemType.Separator });
-      }
-    }
-
-    items.push(...LANGUAGES.map((lang) => ({
-      title: this.getLanguageName(lang.id),
-      name: lang.id,
-      trailingIcon: lang.id === selectedId ? IconCheck : undefined,
-      toggle: 'language',
-      closeOnActivate: true,
-      onActivate: (): void => this.setLanguage(lang.id),
-    })));
-
-    return items;
+    return buildPickerItems({
+      selectedId: this._data.language,
+      detectedId: this._detectedLanguage,
+      filename: this._data.filename ?? '',
+      recent: readRecentLanguages(),
+      nameOf: (id) => this.getLanguageName(id),
+      t: (key) => this.api.i18n.t(key),
+      onPick: (id) => {
+        rememberLanguage(id);
+        this.setLanguage(id);
+      },
+    });
   }
 
   /**
@@ -766,7 +747,7 @@ export class CodeTool implements BlockTool {
       trigger,
       leftAlignElement,
       searchable: true,
-      width: '200px',
+      width: '240px',
       messages: {
         search: this.api.i18n.t(SEARCH_LANGUAGE_KEY),
         nothingFound: this.api.i18n.t('popover.nothingFound'),
@@ -779,11 +760,58 @@ export class CodeTool implements BlockTool {
 
     // Covers every close path the trigger's own click handler cannot see:
     // outside click, Escape, and picking a language.
-    picker.on(PopoverEvent.Closed, () => this.setLanguagePickerExpanded(false));
+    picker.on(PopoverEvent.Closed, () => {
+      this.setLanguagePickerExpanded(false);
+      void this.previewLanguage(null);
+    });
+    picker.onCurrentItemChange((current) => {
+      void this.previewLanguage(current?.name ?? null);
+    });
 
     this.setLanguagePickerExpanded(false);
 
     return picker;
+  }
+
+  /**
+   * Recolor the code as `id` would, on the overlay layer only. `null`, the
+   * current language, or a hidden code area clears it. A newer call wins over
+   * a tokenize still in flight.
+   */
+  private async previewLanguage(id: string | null): Promise<void> {
+    const layer = this._dom?.previewLayer;
+
+    if (!layer || !this._dom) {
+      return;
+    }
+
+    const request = ++this._previewRequest;
+    const code = this._dom.codeElement.textContent ?? '';
+
+    if (id === null || id === this._data.language || this._dom.preElement.hidden || code === '') {
+      layer.hidden = true;
+      layer.textContent = '';
+
+      return;
+    }
+
+    const html = isHighlightable(id) ? await tokenizePrism(code, id) : null;
+
+    if (request !== this._previewRequest || !this._dom) {
+      return;
+    }
+
+    ensurePrismStyles();
+    layer.className = layer.className.replace(/\s?(blok-code|lang-\S+)/g, '');
+    layer.classList.add('blok-code', `lang-${id.replace(/\s+/g, '-')}`);
+
+    if (html === null) {
+      layer.textContent = code;
+    } else {
+      layer.innerHTML = html;
+    }
+
+    layer.hidden = false;
   }
 
   /**

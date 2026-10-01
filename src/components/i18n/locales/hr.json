@@ -279,6 +279,8 @@
   "tools.code.searchLanguage": "Pretraži jezike…",
   "tools.code.lineNumbers": "Brojevi redaka",
   "tools.code.filename": "Naziv datoteke",
+  "tools.code.suggested": "Predloženo",
+  "tools.code.allLanguages": "Svi jezici",
   "searchTerms.code": "kod",
   "searchTerms.snippet": "isječak",
   "searchTerms.program": "programski",

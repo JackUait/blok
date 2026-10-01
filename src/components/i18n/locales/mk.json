@@ -290,6 +290,8 @@
   "tools.code.searchLanguage": "Пребарај јазици…",
   "tools.code.lineNumbers": "Броеви на редови",
   "tools.code.filename": "Име на датотека",
+  "tools.code.suggested": "Предложени",
+  "tools.code.allLanguages": "Сите јазици",
   "searchTerms.code": "код",
   "searchTerms.snippet": "фрагмент",
   "searchTerms.program": "програма",

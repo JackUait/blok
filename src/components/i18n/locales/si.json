@@ -279,6 +279,8 @@
   "tools.code.searchLanguage": "භාෂා සොයන්න…",
   "tools.code.lineNumbers": "පේළි අංක",
   "tools.code.filename": "ගොනුවේ නම",
+  "tools.code.suggested": "යෝජිත",
+  "tools.code.allLanguages": "සියලු භාෂා",
   "searchTerms.code": "කේතය",
   "searchTerms.snippet": "කේත කොටස",
   "searchTerms.program": "වැඩසටහන",

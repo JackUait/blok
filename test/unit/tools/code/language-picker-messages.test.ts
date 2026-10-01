@@ -16,6 +16,9 @@ vi.mock('../../../../src/components/utils/popover', async (importOriginal) => {
     }
 
     public on(): void {}
+    public onCurrentItemChange(): () => void {
+      return () => undefined;
+    }
     public show(): void {}
     public hide(): void {}
     public destroy(): void {}

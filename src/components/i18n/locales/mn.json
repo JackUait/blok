@@ -290,6 +290,8 @@
   "tools.code.searchLanguage": "Хэл хайх…",
   "tools.code.lineNumbers": "Мөрийн дугаарууд",
   "tools.code.filename": "Файлын нэр",
+  "tools.code.suggested": "Санал болгосон",
+  "tools.code.allLanguages": "Бүх хэл",
   "searchTerms.code": "код",
   "searchTerms.snippet": "кодын хэсэг",
   "searchTerms.program": "програм",

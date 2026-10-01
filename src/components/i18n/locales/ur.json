@@ -279,6 +279,8 @@
   "tools.code.searchLanguage": "زبان تلاش کریں...",
   "tools.code.lineNumbers": "سطر نمبر",
   "tools.code.filename": "فائل کا نام",
+  "tools.code.suggested": "تجویز کردہ",
+  "tools.code.allLanguages": "تمام زبانیں",
   "searchTerms.code": "کوڈ",
   "searchTerms.snippet": "ٹکڑا",
   "searchTerms.program": "پروگرام",

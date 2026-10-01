@@ -279,6 +279,8 @@
   "tools.code.searchLanguage": "Søk etter språk…",
   "tools.code.lineNumbers": "Linjenumre",
   "tools.code.filename": "Filnavn",
+  "tools.code.suggested": "Forslag",
+  "tools.code.allLanguages": "Alle språk",
   "searchTerms.code": "kode",
   "searchTerms.snippet": "kodesnutt",
   "searchTerms.program": "programmering",

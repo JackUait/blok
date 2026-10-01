@@ -46,6 +46,8 @@ const EXEMPTIONS: Record<string, string> = {
   'is-focused': 'behaviour marker read by Flipper/DomIterator; the visual state comes from [data-blok-focused]',
   className:
     'not a class at all — it is the VALUE of the `class` key in the HTML-attribute→React-prop map in packages/react/src/view-nodes-to-react.ts, which the harvest cannot tell apart from a class list',
+  scss: 'not a class — a search alias under the `css` language key in src/tools/code/language-picker.ts; the key name reads as a class context',
+  styles: 'not a class — a search alias under the `css` language key in src/tools/code/language-picker.ts; the key name reads as a class context',
 };
 
 const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', 'coverage', 'build', 'Generated']);

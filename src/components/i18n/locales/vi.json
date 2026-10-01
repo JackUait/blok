@@ -279,6 +279,8 @@
   "tools.code.searchLanguage": "Tìm ngôn ngữ...",
   "tools.code.lineNumbers": "Số dòng",
   "tools.code.filename": "Tên tệp",
+  "tools.code.suggested": "Đề xuất",
+  "tools.code.allLanguages": "Tất cả ngôn ngữ",
   "searchTerms.code": "mã",
   "searchTerms.snippet": "đoạn mã",
   "searchTerms.program": "chương trình",

@@ -11,6 +11,8 @@ export const SEARCH_LANGUAGE_KEY = 'tools.code.searchLanguage';
 export const AUTO_DETECTED_KEY = 'tools.code.autoDetected';
 export const PLAIN_TEXT_KEY = 'tools.code.plainText';
 export const FILENAME_KEY = 'tools.code.filename';
+export const SUGGESTED_KEY = 'tools.code.suggested';
+export const ALL_LANGUAGES_KEY = 'tools.code.allLanguages';
 
 // Default values
 export const DEFAULT_LANGUAGE = 'plain text';

@@ -61,10 +61,20 @@ describe('loading skeleton styles', () => {
     expect(overlay).toMatch(/container-type:\s*inline-size/);
     expect(bar).toMatch(/background-size:\s*300cqw 100%/);
     expect(bar).toMatch(/background-position:[^;]*var\(--blok-skeleton-sweep\)\s*-\s*var\(--blok-skeleton-shift\)/);
-    expect(sweep).toMatch(/-300cqw/);
-    expect(sweep).toMatch(/100cqw/);
     expect(sweep).not.toMatch(/\d%/);
     expect(bar).not.toMatch(/background-attachment\s*:/);
     expect(css).toMatch(/\[data-blok-skeleton-bar="list"\]\s*\{[^}]*--blok-skeleton-shift:\s*var\(--blok-skeleton-indent\)/);
+  });
+
+  it('the band starts and ends just off the overlay, so it is on the bars for most of each cycle', () => {
+    const sweep = css.match(/@keyframes blok-skeleton-sweep\s*\{([^}]*\}[^}]*\})/)?.[1] ?? '';
+    const [from, to] = [...sweep.matchAll(/--blok-skeleton-sweep:\s*(-?\d+(?:\.\d+)?)cqw/g)].map(match => Number(match[1]));
+    // The gradient is 300cqw wide with its band at 40%..60%, so the band covers the overlay while the start sits in (-180cqw, -20cqw).
+    const bandEntersAt = -180;
+    const bandLeavesAt = -20;
+
+    expect(from).toBeLessThanOrEqual(bandEntersAt);
+    expect(to).toBeGreaterThanOrEqual(bandLeavesAt);
+    expect(to - from).toBeLessThanOrEqual(1.6 * (bandLeavesAt - bandEntersAt));
   });
 });

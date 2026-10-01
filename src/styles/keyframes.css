@@ -192,9 +192,10 @@
   }
 }
 
+/* The band is on the bars while the start runs -180cqw..-20cqw. */
 @keyframes blok-skeleton-sweep {
-  from { --blok-skeleton-sweep: -300cqw; }
-  to { --blok-skeleton-sweep: 100cqw; }
+  from { --blok-skeleton-sweep: -220cqw; }
+  to { --blok-skeleton-sweep: 20cqw; }
 }
 
 @keyframes blok-skeleton-breathe {

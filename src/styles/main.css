@@ -537,23 +537,15 @@
   --blok-block-indent-step: 0px;
 }
 
-/*
- * Reading-direction sign for direction-dependent transforms. A custom property
- * inherits, so the NEAREST [dir] wins (an LTR block inside an RTL editor);
- * `[dir="rtl"] x` alone would match any RTL ancestor.
- */
-:where([data-blok-interface=blok][dir="rtl"], [data-blok-interface=blok] [dir="rtl"]) {
-  --_blok-inline-sign: -1;
-}
-
-:where([data-blok-interface=blok] [dir="ltr"]) {
-  --_blok-inline-sign: 1;
-}
-
 /* A collapsed toggle chevron points toward the inline end. The open state is an
- * inline rotate(90deg) (down), which overrides this. */
+ * inline rotate(90deg) (down), which overrides this. The second rule restores
+ * an LTR block (or editor) that sits inside an RTL one. */
 [dir="rtl"] [data-blok-toggle-arrow] > svg {
-  transform: rotate(calc((1 - var(--_blok-inline-sign, 1)) * 90deg));
+  transform: rotate(180deg);
+}
+
+[dir="rtl"] [dir="ltr"] [data-blok-toggle-arrow] > svg {
+  transform: none;
 }
 
 /**

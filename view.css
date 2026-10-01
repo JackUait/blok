@@ -79,6 +79,9 @@
   .my-px {
     margin-block: 1px;
   }
+  .me-2 {
+    margin-inline-end: calc(var(--spacing) * 2);
+  }
   .mt-3 {
     margin-top: calc(var(--spacing) * 3);
   }
@@ -102,9 +105,6 @@
   }
   .mt-px {
     margin-top: 1px;
-  }
-  .mr-2 {
-    margin-right: calc(var(--spacing) * 2);
   }
   .mb-\[0\.3em\] {
     margin-bottom: 0.3em;
@@ -194,6 +194,10 @@
     border-style: var(--tw-border-style);
     border-width: 1px;
   }
+  .border-s-\[3px\] {
+    border-inline-start-style: var(--tw-border-style);
+    border-inline-start-width: 3px;
+  }
   .border-t {
     border-top-style: var(--tw-border-style);
     border-top-width: 1px;
@@ -213,10 +217,6 @@
   .border-l-0 {
     border-left-style: var(--tw-border-style);
     border-left-width: 0px;
-  }
-  .border-l-\[3px\] {
-    border-left-style: var(--tw-border-style);
-    border-left-width: 3px;
   }
   .border-solid {
     --tw-border-style: solid;
@@ -258,8 +258,20 @@
   .py-3 {
     padding-block: calc(var(--spacing) * 3);
   }
+  .ps-0\.5 {
+    padding-inline-start: calc(var(--spacing) * 0.5);
+  }
+  .ps-7 {
+    padding-inline-start: calc(var(--spacing) * 7);
+  }
+  .ps-8 {
+    padding-inline-start: calc(var(--spacing) * 8);
+  }
   .ps-\[var\(--_blok-list-pad\,0px\)\] {
     padding-inline-start: var(--_blok-list-pad,0px);
+  }
+  .pe-4 {
+    padding-inline-end: calc(var(--spacing) * 4);
   }
   .pt-\[var\(--blok-block-padding-top\,0\.2em\)\] {
     padding-top: var(--blok-block-padding-top,0.2em);
@@ -269,9 +281,6 @@
   }
   .pt-\[var\(--blok-callout-padding-block\,5px\)\] {
     padding-top: var(--blok-callout-padding-block,5px);
-  }
-  .pr-4 {
-    padding-right: calc(var(--spacing) * 4);
   }
   .pr-\[0\.9em\] {
     padding-right: 0.9em;
@@ -284,15 +293,6 @@
   }
   .pb-\[var\(--blok-callout-padding-block\,5px\)\] {
     padding-bottom: var(--blok-callout-padding-block,5px);
-  }
-  .pl-0\.5 {
-    padding-left: calc(var(--spacing) * 0.5);
-  }
-  .pl-7 {
-    padding-left: calc(var(--spacing) * 7);
-  }
-  .pl-8 {
-    padding-left: calc(var(--spacing) * 8);
   }
   .pl-\[0\.9em\] {
     padding-left: 0.9em;
@@ -1311,7 +1311,7 @@
   --_blok-slot-indent-step: var(--blok-block-indent-step, 24px);
 }
 :where([data-blok-element]) {
-  margin-left: calc(var(--_blok-block-depth, 0) * var(--blok-block-indent-step, 24px) + var(--_blok-slot-depth, 0) * var(--_blok-slot-indent-step, 0px));
+  margin-inline-start: calc(var(--_blok-block-depth, 0) * var(--blok-block-indent-step, 24px) + var(--_blok-slot-depth, 0) * var(--_blok-slot-indent-step, 0px));
 }
 :where([data-blok-nested-blocks]) {
   --blok-block-indent-step: 0px;

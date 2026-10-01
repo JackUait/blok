@@ -2656,16 +2656,12 @@
   --blok-block-indent-step: 0px;
 }
 
-:where([data-blok-interface=blok][dir="rtl"], [data-blok-interface=blok] [dir="rtl"]) {
-  --_blok-inline-sign: -1;
-}
-
-:where([data-blok-interface=blok] [dir="ltr"]) {
-  --_blok-inline-sign: 1;
-}
-
 [dir="rtl"] [data-blok-toggle-arrow] > svg {
-  transform: rotate(calc((1 - var(--_blok-inline-sign, 1)) * 90deg));
+  transform: rotate(180deg);
+}
+
+[dir="rtl"] [dir="ltr"] [data-blok-toggle-arrow] > svg {
+  transform: none;
 }
 
 [data-blok-dragging-multi="true"] [data-blok-selected="true"] {

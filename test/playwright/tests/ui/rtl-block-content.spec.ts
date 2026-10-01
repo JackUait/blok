@@ -243,6 +243,13 @@ test.describe('RTL block content mirrors LTR', () => {
 
     await createBlok(page, blocks, 'rtl');
     expect(await read()).toEqual({ closed: -1, open: 0 });
+
+    // An LTR block inside the RTL editor keeps the LTR chevron. Polled: the
+    // svg transitions its transform.
+    await page.evaluate(() => {
+      document.querySelector('[data-blok-id="tc"]')?.setAttribute('dir', 'ltr');
+    });
+    await expect.poll(read).toEqual({ closed: 1, open: 0 });
   });
 
   test('code body stays LTR with the gutter on the left', async ({ page }) => {

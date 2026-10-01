@@ -108,12 +108,12 @@ const EXEMPT_SITES: ExemptSite[] = [
   },
   {
     file: 'src/tools/list/depth-validator.ts',
-    snippet: "block.holder?.querySelector('[role=\"listitem\"]')",
+    snippet: "block.holder?.querySelector('[data-list-depth]')",
     reason: 'every caller checks name === list first, and list items are slotless',
   },
   {
     file: 'src/tools/list/marker-calculator.ts',
-    snippet: "block.holder?.querySelector('[role=\"listitem\"]')",
+    snippet: "block.holder?.querySelector('[data-list-depth]')",
     reason: 'every caller checks name === list first, and list items are slotless',
   },
   {

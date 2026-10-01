@@ -1,6 +1,7 @@
 import { DATA_ATTR } from '../../constants/data-attributes';
 import type { FindConfig, FindPlacement } from '../../../../types';
 import { IconChevronDown, IconChevronRight, IconCross } from '../../icons';
+import { getElementDirection, inlineStartOffset } from '../../utils/direction';
 import { hide as hideTooltip, onHover } from '../../utils/tooltip';
 import { promoteToTopLayer, removeFromTopLayer } from '../../utils/top-layer';
 import { createTooltipContent } from '../toolbar/tooltip';
@@ -643,7 +644,7 @@ export class FindBar {
     firstIndex.forEach((matchIndex, tickIndex) => {
       const tick = this.ticks[tickIndex] ?? this.makeTick();
 
-      tick.style.left = `${positionOf(matchIndex) * 100}%`;
+      tick.style.setProperty('--_blok-find-tick-at', `${positionOf(matchIndex) * 100}%`);
       tick.setAttribute(TICK_INDEX, String(matchIndex));
       tick.toggleAttribute(ATTR.active, tickIndex === activeTick);
     });
@@ -679,7 +680,7 @@ export class FindBar {
       return;
     }
 
-    const ratio = (event.clientX - box.left) / box.width;
+    const ratio = inlineStartOffset(event.clientX, box, getElementDirection(this.map)) / box.width;
     const nearest = this.positions.reduce((best, position, i) =>
       Math.abs(position - ratio) < Math.abs(this.positions[best] - ratio) ? i : best, 0);
 

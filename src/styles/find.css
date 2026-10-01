@@ -387,8 +387,10 @@
 }
 
 /* The tick colour is opaque: stacked translucent ticks would paint darker. */
+/* Positioned from the inline start (find-bar.ts sets the variable), so the map mirrors in RTL. */
 [data-blok-find-tick] {
   position: absolute;
+  inset-inline-start: var(--_blok-find-tick-at, 0%);
   top: 50%;
   width: 2px;
   height: 10px;
@@ -399,6 +401,10 @@
     width var(--blok-duration-slow) var(--blok-ease-popover),
     height var(--blok-duration-slow) var(--blok-ease-popover),
     background-color var(--blok-duration-slow) var(--blok-ease-popover);
+}
+
+[data-blok-find][dir="rtl"] [data-blok-find-tick] {
+  transform: translate(50%, -50%);
 }
 
 [data-blok-find-tick]:hover {

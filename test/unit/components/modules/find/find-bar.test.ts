@@ -779,7 +779,9 @@ describe('FindBar', () => {
       bar.setResults({ current: 1, total: 3, positions: [0, 0.25, 1] });
 
       expect(ticks()).toHaveLength(3);
-      expect(ticks()[1].style.left).toBe('25%');
+      // A custom property feeds inset-inline-start, so ticks mirror in RTL (and on a runtime flip).
+      expect(ticks()[1].style.getPropertyValue('--_blok-find-tick-at')).toBe('25%');
+      expect(ticks()[1].style.left).toBe('');
       expect(map().hidden).toBe(false);
     });
 
@@ -826,6 +828,16 @@ describe('FindBar', () => {
       vi.spyOn(map(), 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 0, 200, 8));
 
       map().dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 100 + 200 * 0.3 }));
+
+      expect(callbacks.onSeek).toHaveBeenCalledWith(1);
+    });
+
+    it('measures a track click from the right edge in RTL', () => {
+      bar.setResults({ current: 0, total: 3, positions: [0, 0.25, 1] });
+      map().style.direction = 'rtl';
+      vi.spyOn(map(), 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 0, 200, 8));
+
+      map().dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 300 - 200 * 0.3 }));
 
       expect(callbacks.onSeek).toHaveBeenCalledWith(1);
     });

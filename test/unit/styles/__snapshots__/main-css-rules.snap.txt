@@ -2735,6 +2735,10 @@
 
 }
 
+[data-blok-popover][dir="rtl"] [data-blok-popover-item-icon-chevron-right] svg {
+  transform: scaleX(-1);
+}
+
 [data-blok-table-cell-blocks] > [data-blok-element] {
 
 }
@@ -13552,6 +13556,10 @@ span[data-blok-slash-search] {
   transform: rotate(90deg);
 }
 
+[data-blok-find][dir="rtl"] [data-blok-find-bar]:not([data-blok-find-open]) [data-blok-find-replace-toggle] svg {
+  transform: scaleX(-1);
+}
+
 [data-blok-find-replace-toggle] {
   width: 20px;
 }
@@ -13617,6 +13625,7 @@ span[data-blok-slash-search] {
 
 [data-blok-find-tick] {
   position: absolute;
+  inset-inline-start: var(--_blok-find-tick-at, 0%);
   top: 50%;
   width: 2px;
   height: 10px;
@@ -13624,6 +13633,10 @@ span[data-blok-slash-search] {
   background: var(--blok-find-tick);
   transform: translate(-50%, -50%);
   transition: width var(--blok-duration-slow) var(--blok-ease-popover), height var(--blok-duration-slow) var(--blok-ease-popover), background-color var(--blok-duration-slow) var(--blok-ease-popover);
+}
+
+[data-blok-find][dir="rtl"] [data-blok-find-tick] {
+  transform: translate(50%, -50%);
 }
 
 [data-blok-find-tick]:hover {

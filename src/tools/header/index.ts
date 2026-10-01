@@ -852,7 +852,7 @@ export class Header implements BlockTool {
      */
     if (this._data.isToggleable) {
       this._element.setAttribute(TOGGLE_ATTR.toggleOpen, String(this._isOpen));
-      this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'), 'pl-8');
+      this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'), 'ps-8');
 
       if (!this._wrapper) {
         /**
@@ -930,10 +930,10 @@ export class Header implements BlockTool {
 
     /**
      * Add styles class using twMerge to combine base and level-specific styles.
-     * When isToggleable, add left padding to leave room for the arrow (which lives
+     * When isToggleable, add start padding to leave room for the arrow (which lives
      * in the wrapper div as a sibling, not inside this element).
      */
-    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'), this._data.isToggleable ? 'pl-8' : '');
+    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'), this._data.isToggleable ? 'ps-8' : '');
 
     /**
      * Apply inline styles for custom overrides (dynamic values from config)
@@ -1001,7 +1001,7 @@ export class Header implements BlockTool {
    * Build the arrow element for toggle heading.
    *
    * The arrow is absolutely positioned within the header row, sitting in the area
-   * to the left of the heading text (which has pl-8 padding). This keeps the arrow
+   * on the inline-start side of the heading text (which has ps-8 padding). This keeps the arrow
    * completely outside the heading's contenteditable scope, allowing Chrome to
    * place a cursor and insert text without interference.
    *
@@ -1028,7 +1028,7 @@ export class Header implements BlockTool {
     });
     const textSizeClass = this.currentLevel.styles.match(/\btext-(?:xs|sm|base|lg|xl|\dxl)\b/)?.[0] ?? '';
 
-    arrow.className = twMerge(arrow.className, 'absolute left-0 top-[calc(var(--blok-block-padding-top,7px)_+_0.65em)] -translate-y-1/2 mt-0', textSizeClass);
+    arrow.className = twMerge(arrow.className, 'absolute start-0 top-[calc(var(--blok-block-padding-top,7px)_+_0.65em)] -translate-y-1/2 mt-0', textSizeClass);
 
     return arrow;
   }
@@ -1036,7 +1036,7 @@ export class Header implements BlockTool {
   /**
    * Build the wrapper div that contains the arrow and heading as siblings.
    * The wrapper has relative positioning so the absolutely-positioned arrow
-   * is anchored to it. The heading occupies the full width with pl-7 padding.
+   * is anchored to it. The heading occupies the full width with ps-8 padding.
    *
    * @returns The wrapper element (with arrow and heading already appended)
    */
@@ -1056,8 +1056,8 @@ export class Header implements BlockTool {
     wrapper.appendChild(headerRow);
 
     const bodyPlaceholder = document.createElement('div');
-    // pl-8 (32px) matches the heading's left padding so body aligns with the title text start.
-    bodyPlaceholder.className = twMerge(BODY_PLACEHOLDER_STYLES, 'pl-8');
+    // ps-8 (32px) matches the heading's start padding so body aligns with the title text start.
+    bodyPlaceholder.className = twMerge(BODY_PLACEHOLDER_STYLES, 'ps-8');
     bodyPlaceholder.setAttribute(TOGGLE_ATTR.toggleBodyPlaceholder, '');
     bodyPlaceholder.setAttribute(DATA_ATTR.chrome, '');
     // Class changes on the body placeholder (show/hide) must not trigger didMutated →
@@ -1072,8 +1072,8 @@ export class Header implements BlockTool {
     wrapper.appendChild(bodyPlaceholder);
 
     const childContainer = document.createElement('div');
-    // pl-8 (32px) matches the heading's left padding so children align with the title text start.
-    childContainer.className = 'pl-8';
+    // ps-8 (32px) matches the heading's start padding so children align with the title text start.
+    childContainer.className = 'ps-8';
     childContainer.setAttribute(TOGGLE_ATTR.toggleChildren, '');
     childContainer.setAttribute(DATA_ATTR.nestedBlocks, '');
     // Block DOM mutations inside the children container from triggering the header tool's

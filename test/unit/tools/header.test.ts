@@ -677,43 +677,43 @@ describe('Header Tool - Custom Configurations', () => {
         expect(element.innerHTML).toContain('<b>Bold</b> toggle heading');
       });
 
-      it('applies pl-8 padding to heading element when isToggleable is true', () => {
+      it('applies ps-8 padding to heading element when isToggleable is true', () => {
         const options = createHeaderOptions({ text: 'Toggle Heading', level: 2, isToggleable: true });
         const header = new Header(options);
         const wrapper = header.render();
         const heading = wrapper.querySelector('h2') as HTMLElement;
 
         expect(heading).not.toBeNull();
-        expect(heading.classList.contains('pl-8')).toBe(true);
-        expect(heading.classList.contains('pl-7')).toBe(false);
+        expect(heading.classList.contains('ps-8')).toBe(true);
+        expect(heading.classList.contains('ps-7')).toBe(false);
       });
 
-      it('does not apply pl-8 padding to heading element when isToggleable is false', () => {
+      it('does not apply ps-8 padding to heading element when isToggleable is false', () => {
         const options = createHeaderOptions({ text: 'Normal Heading', level: 2, isToggleable: false });
         const header = new Header(options);
         const element = header.render();
 
-        expect(element.classList.contains('pl-8')).toBe(false);
+        expect(element.classList.contains('ps-8')).toBe(false);
       });
 
-      it('applies pl-8 to children container so body aligns with heading text start', () => {
+      it('applies ps-8 to children container so body aligns with heading text start', () => {
         const options = createHeaderOptions({ text: 'Toggle Heading', level: 2, isToggleable: true });
         const header = new Header(options);
         const wrapper = header.render();
         const childContainer = wrapper.querySelector('[data-blok-toggle-children]') as HTMLElement;
 
         expect(childContainer).not.toBeNull();
-        expect(childContainer.classList.contains('pl-8')).toBe(true);
+        expect(childContainer.classList.contains('ps-8')).toBe(true);
       });
 
-      it('applies pl-8 to body placeholder so it aligns with heading text start', () => {
+      it('applies ps-8 to body placeholder so it aligns with heading text start', () => {
         const options = createHeaderOptions({ text: 'Toggle Heading', level: 2, isToggleable: true });
         const header = new Header(options);
         const wrapper = header.render();
         const bodyPlaceholder = wrapper.querySelector('[data-blok-toggle-body-placeholder]') as HTMLElement;
 
         expect(bodyPlaceholder).not.toBeNull();
-        expect(bodyPlaceholder.classList.contains('pl-8')).toBe(true);
+        expect(bodyPlaceholder.classList.contains('ps-8')).toBe(true);
       });
     });
 

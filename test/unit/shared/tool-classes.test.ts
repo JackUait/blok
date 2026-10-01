@@ -61,8 +61,8 @@ describe('shared tool classes', () => {
     });
 
     it('reserves arrow room only for toggleable headings', () => {
-      expect(headerClasses(2, true)).toContain('pl-8');
-      expect(headerClasses(2, false)).not.toContain('pl-8');
+      expect(headerClasses(2, true)).toContain('ps-8');
+      expect(headerClasses(2, false)).not.toContain('ps-8');
     });
 
     it.skipIf(isInstrumented())('is the single source for the tool level config', async () => {

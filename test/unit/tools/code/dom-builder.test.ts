@@ -39,6 +39,21 @@ describe('buildCodeDOM', () => {
     expect(preElement.contains(codeElement)).toBe(true);
   });
 
+  it('pins the code body to LTR so source code and its gutter do not mirror in an RTL editor', async () => {
+    const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+    const { gutterElement, preElement } = buildCodeDOM({
+      code: 'const a = 1;',
+      languageName: 'JavaScript',
+      readOnly: false,
+      copyLabel: 'Copy code',
+    });
+
+    const codeBody = gutterElement.parentElement;
+
+    expect(codeBody?.getAttribute('dir')).toBe('ltr');
+    expect(codeBody?.contains(preElement)).toBe(true);
+  });
+
   it('header contains languageButton, filename, and controls container', async () => {
     const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
     const { wrapper, languageButton } = buildCodeDOM({

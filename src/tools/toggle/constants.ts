@@ -73,7 +73,7 @@ export const TOGGLE_WRAPPER_STYLES = [...TOGGLE_HEADER_ROW_CLASSES, 'group/toggl
  * (half a line − half the pill) so the pill's center coincides with the first
  * line's center (0.75em = half of leading-[1.5]; 14px = half of h-7). em resolves
  * against the shared block font-size, so this stays correct if the font changes.
- * The 28px width keeps children (pl-7) aligned under the title text.
+ * The 28px width keeps children (ps-7) aligned under the title text.
  *
  * The chevron INSIDE the pill does scale: clamp(0.9375rem, 0.9375em, 1.71875rem).
  * em resolves against the arrow's OWN font-size — the header copies the level's
@@ -107,13 +107,13 @@ export const ARROW_ICON = IconChevronRight;
  *   - Combined per side: 7px padding + 1px margin = 8px
  * Using fixed px values (not em) because py-[7px] and mt-px are also fixed.
  *
- * pl-7 (28px) aligns the placeholder with the title text start (arrow button width: the pill is a fixed 28px regardless of the chevron inside it).
+ * ps-7 (28px) aligns the placeholder with the title text start (arrow button width: the pill is a fixed 28px regardless of the chevron inside it).
  */
-export const BODY_PLACEHOLDER_STYLES = 'hidden pl-7 pt-[8px] pb-[8px] text-gray-text leading-[1.5] cursor-pointer select-none';
+export const BODY_PLACEHOLDER_STYLES = 'hidden ps-7 pt-[8px] pb-[8px] text-gray-text leading-[1.5] cursor-pointer select-none';
 
 /**
  * Styles for the children container element.
- * pl-7 (28px) aligns children with the toggle list title text start (arrow button total width).
+ * ps-7 (28px) aligns children with the toggle list title text start (arrow button total width).
  */
 export const TOGGLE_CHILDREN_STYLES = TOGGLE_CHILDREN_CLASSES.join(' ');
 

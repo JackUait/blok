@@ -26,8 +26,8 @@ describe('BODY_PLACEHOLDER_STYLES', () => {
     expect(BODY_PLACEHOLDER_STYLES).not.toContain('py-[7px]');
   });
 
-  it('uses pl-7 to align body placeholder with toggle list title text start', () => {
-    expect(BODY_PLACEHOLDER_STYLES).toContain('pl-7');
+  it('uses ps-7 to align body placeholder with toggle list title text start', () => {
+    expect(BODY_PLACEHOLDER_STYLES).toContain('ps-7');
   });
 
   it('does not use pl-[1.1em] (body should align with title, not use Notion indent)', () => {
@@ -72,8 +72,8 @@ describe('ARROW_STYLES (fixed-size pill, first-line aligned)', () => {
 });
 
 describe('TOGGLE_CHILDREN_STYLES (title alignment)', () => {
-  it('uses pl-7 to align children with toggle list title text start (arrow button width)', () => {
-    expect(TOGGLE_CHILDREN_STYLES).toContain('pl-7');
+  it('uses ps-7 to align children with toggle list title text start (arrow button width)', () => {
+    expect(TOGGLE_CHILDREN_STYLES).toContain('ps-7');
   });
 
   it('does not use pl-[1.1em] (children should start at same point as title, not Notion indent)', () => {

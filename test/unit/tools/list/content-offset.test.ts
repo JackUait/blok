@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import {
-  getMarginLeftFromElement,
+  getInlineStartMarginFromElement,
   getOffsetFromDepthAttribute,
   getContentOffset,
 } from '../../../../src/tools/list/content-offset';
 
 describe('content-offset', () => {
-  describe('getMarginLeftFromElement', () => {
+  describe('getInlineStartMarginFromElement', () => {
     it('returns undefined when element is null', () => {
-      const result = getMarginLeftFromElement(null);
+      const result = getInlineStartMarginFromElement(null);
 
       expect(result).toBeUndefined();
     });
@@ -16,79 +16,79 @@ describe('content-offset', () => {
     it('returns undefined when element has no style attribute', () => {
       const element = document.createElement('div');
 
-      const result = getMarginLeftFromElement(element);
+      const result = getInlineStartMarginFromElement(element);
 
       expect(result).toBeUndefined();
     });
 
-    it('returns undefined when style has no margin-left', () => {
+    it('returns undefined when style has no inline-start margin', () => {
       const element = document.createElement('div');
       element.setAttribute('style', 'color: red; padding: 10px;');
 
-      const result = getMarginLeftFromElement(element);
+      const result = getInlineStartMarginFromElement(element);
 
       expect(result).toBeUndefined();
     });
 
-    it('returns left offset when margin-left is positive', () => {
+    it('returns left offset when inline-start margin is positive', () => {
       const element = document.createElement('div');
-      element.setAttribute('style', 'margin-left: 24px;');
+      element.setAttribute('style', 'margin-inline-start: 24px;');
 
-      const result = getMarginLeftFromElement(element);
+      const result = getInlineStartMarginFromElement(element);
 
       expect(result).toEqual({ left: 24 });
     });
 
     it('returns left offset for large margin values', () => {
       const element = document.createElement('div');
-      element.setAttribute('style', 'margin-left: 72px;');
+      element.setAttribute('style', 'margin-inline-start: 72px;');
 
-      const result = getMarginLeftFromElement(element);
+      const result = getInlineStartMarginFromElement(element);
 
       expect(result).toEqual({ left: 72 });
     });
 
-    it('returns undefined when margin-left is zero', () => {
+    it('returns undefined when inline-start margin is zero', () => {
       const element = document.createElement('div');
-      element.setAttribute('style', 'margin-left: 0px;');
+      element.setAttribute('style', 'margin-inline-start: 0px;');
 
-      const result = getMarginLeftFromElement(element);
+      const result = getInlineStartMarginFromElement(element);
 
       expect(result).toBeUndefined();
     });
 
-    it('returns undefined when margin-left is negative', () => {
+    it('returns undefined when inline-start margin is negative', () => {
       const element = document.createElement('div');
-      element.setAttribute('style', 'margin-left: -10px;');
+      element.setAttribute('style', 'margin-inline-start: -10px;');
 
-      const result = getMarginLeftFromElement(element);
+      const result = getInlineStartMarginFromElement(element);
 
       expect(result).toBeUndefined();
     });
 
-    it('extracts margin-left from style with multiple properties', () => {
+    it('extracts inline-start margin from style with multiple properties', () => {
       const element = document.createElement('div');
-      element.setAttribute('style', 'color: blue; margin-left: 48px; padding: 5px;');
+      element.setAttribute('style', 'color: blue; margin-inline-start: 48px; padding: 5px;');
 
-      const result = getMarginLeftFromElement(element);
+      const result = getInlineStartMarginFromElement(element);
 
       expect(result).toEqual({ left: 48 });
     });
 
-    it('handles margin-left with spaces', () => {
+    it('handles inline-start margin with spaces', () => {
       const element = document.createElement('div');
-      element.setAttribute('style', 'margin-left:  36px  ;');
+      element.setAttribute('style', 'margin-inline-start:  36px  ;');
 
-      const result = getMarginLeftFromElement(element);
+      const result = getInlineStartMarginFromElement(element);
 
       expect(result).toEqual({ left: 36 });
     });
 
-    it('handles margin-left with px unit (standard format)', () => {
+    it('handles inline-start margin with px unit (standard format)', () => {
       const element = document.createElement('div');
-      element.setAttribute('style', 'margin-left: 24px;');
+      element.setAttribute('style', 'margin-inline-start: 24px;');
 
-      const result = getMarginLeftFromElement(element);
+      const result = getInlineStartMarginFromElement(element);
 
       expect(result).toEqual({ left: 24 });
     });
@@ -191,7 +191,7 @@ describe('content-offset', () => {
       const wrapper = document.createElement('div');
       const listItem = document.createElement('div');
       listItem.setAttribute('role', 'listitem');
-      listItem.style.marginLeft = '24px';
+      listItem.style.marginInlineStart = '24px';
       const content = document.createElement('span');
       content.textContent = 'Text';
 
@@ -207,7 +207,7 @@ describe('content-offset', () => {
       const wrapper = document.createElement('div');
       const listItem = document.createElement('div');
       listItem.setAttribute('role', 'listitem');
-      listItem.style.marginLeft = '48px';
+      listItem.style.marginInlineStart = '48px';
       const content = document.createElement('span');
 
       wrapper.appendChild(listItem);
@@ -218,7 +218,7 @@ describe('content-offset', () => {
       expect(result).toEqual({ left: 48 });
     });
 
-    it('returns undefined when listitem has no margin-left', () => {
+    it('returns undefined when listitem has no inline-start margin', () => {
       const wrapper = document.createElement('div');
       const listItem = document.createElement('div');
       listItem.setAttribute('role', 'listitem');
@@ -232,12 +232,12 @@ describe('content-offset', () => {
       expect(result).toBeUndefined();
     });
 
-    it('falls back to data-list-depth attribute when margin-left not found', () => {
+    it('falls back to data-list-depth attribute when inline-start margin not found', () => {
       const wrapper = document.createElement('div');
       wrapper.setAttribute('data-list-depth', '2');
       const listItem = document.createElement('div');
       listItem.setAttribute('role', 'listitem');
-      // No margin-left
+      // No inline-start margin
       const content = document.createElement('span');
 
       wrapper.appendChild(listItem);
@@ -248,12 +248,12 @@ describe('content-offset', () => {
       expect(result).toEqual({ left: 54 });
     });
 
-    it('prioritizes margin-left over data-list-depth attribute', () => {
+    it('prioritizes inline-start margin over data-list-depth attribute', () => {
       const wrapper = document.createElement('div');
       wrapper.setAttribute('data-list-depth', '3');
       const listItem = document.createElement('div');
       listItem.setAttribute('role', 'listitem');
-      listItem.style.marginLeft = '24px';
+      listItem.style.marginInlineStart = '24px';
       const content = document.createElement('span');
 
       wrapper.appendChild(listItem);
@@ -261,14 +261,14 @@ describe('content-offset', () => {
 
       const result = getContentOffset(content);
 
-      expect(result).toEqual({ left: 24 }); // margin-left takes priority
+      expect(result).toEqual({ left: 24 }); // inline-start margin takes priority
     });
 
     it('handles deeply nested content structure', () => {
       const wrapper = document.createElement('div');
       const listItem = document.createElement('div');
       listItem.setAttribute('role', 'listitem');
-      listItem.style.marginLeft = '72px';
+      listItem.style.marginInlineStart = '72px';
       const innerDiv = document.createElement('div');
       const span = document.createElement('span');
       const text = document.createTextNode('Text');
@@ -297,11 +297,11 @@ describe('content-offset', () => {
       const outerWrapper = document.createElement('div');
       const outerListItem = document.createElement('div');
       outerListItem.setAttribute('role', 'listitem');
-      outerListItem.style.marginLeft = '24px';
+      outerListItem.style.marginInlineStart = '24px';
 
       const innerListItem = document.createElement('div');
       innerListItem.setAttribute('role', 'listitem');
-      innerListItem.style.marginLeft = '48px';
+      innerListItem.style.marginInlineStart = '48px';
 
       const content = document.createElement('span');
 

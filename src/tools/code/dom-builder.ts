@@ -334,6 +334,8 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   // Code body container (flex: gutter + pre)
   const codeBody = document.createElement('div');
   codeBody.className = CODE_BODY_STYLES;
+  // Source code reads LTR in any editor direction; the gutter stays on its left.
+  codeBody.setAttribute('dir', 'ltr');
 
   const activeLine = readOnly ? null : buildActiveLine();
 

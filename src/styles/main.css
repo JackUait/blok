@@ -510,8 +510,6 @@
  * reaches a holder the moment it is mounted into a child slot, however late
  * that is (a framework adapter commits its slot a render after core inserts the
  * child, and nothing re-indents afterwards) — a JS `closest()` check cannot.
- * Physical `margin-left` keeps the pre-token behaviour and dodges the
- * lightningcss logical-property lowering trap noted in the gutter comment.
  * --blok-block-indent-step is public: declare it on your own slot to opt
  * indentation back IN, or on any ancestor to rescale nesting.
  */
@@ -522,7 +520,7 @@
 }
 
 :where([data-blok-element]) {
-  margin-left: calc(var(--_blok-block-depth, 0) * var(--blok-block-indent-step, 24px) + var(--_blok-slot-depth, 0) * var(--_blok-slot-indent-step, 0px));
+  margin-inline-start: calc(var(--_blok-block-depth, 0) * var(--blok-block-indent-step, 24px) + var(--_blok-slot-depth, 0) * var(--_blok-slot-indent-step, 0px));
 }
 
 /* Every child slot — first-party containers (toggle, callout, header toggle,
@@ -530,6 +528,25 @@
  * marker — positions its own children, so depth must not add margin on top. */
 :where([data-blok-nested-blocks]) {
   --blok-block-indent-step: 0px;
+}
+
+/*
+ * Reading-direction sign for direction-dependent transforms. A custom property
+ * inherits, so the NEAREST [dir] wins (an LTR block inside an RTL editor);
+ * `[dir="rtl"] x` alone would match any RTL ancestor.
+ */
+:where([data-blok-interface=blok][dir="rtl"], [data-blok-interface=blok] [dir="rtl"]) {
+  --_blok-inline-sign: -1;
+}
+
+:where([data-blok-interface=blok] [dir="ltr"]) {
+  --_blok-inline-sign: 1;
+}
+
+/* A collapsed toggle chevron points toward the inline end. The open state is an
+ * inline rotate(90deg) (down), which overrides this. */
+[dir="rtl"] [data-blok-toggle-arrow] > svg {
+  transform: rotate(calc((1 - var(--_blok-inline-sign, 1)) * 90deg));
 }
 
 /**
@@ -546,9 +563,8 @@
  * --blok-checklist-padding-start overrides it for checklists only (so a
  * host can indent bulleted/ordered lists without indenting checklists).
  * Redeclaring a custom property (rather than overriding padding) is immune
- * to the production @layer flattening + logical-property lowering that
- * makes selector-specificity overrides unreliable (see the read-only
- * gutter comment above).
+ * to the production @layer flattening that makes selector-specificity
+ * overrides unreliable.
  */
 [data-list-style] {
   --_blok-list-pad: var(--blok-list-padding-start, 0px);
@@ -561,7 +577,7 @@
 /**
  * List item selection styles
  * Applies selection background to the list item itself (not the content wrapper)
- * so that margin-left indentation is respected
+ * so that the inline-start indentation is respected
  */
 [data-blok-selected="true"] [data-blok-element-content]:has([data-list-style]) {
   @apply bg-transparent;

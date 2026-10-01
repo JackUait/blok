@@ -119,13 +119,13 @@ const buildFlatList = (depths: number[], focusedIndex: number): { blocks: Harnes
  * Reads the depth the USER sees: the wrapper attribute plus the indent, both
  * written exclusively by `adjustDepthTo`.
  */
-const readRenderedDepth = (block: HarnessBlock): { attribute: string | null; marginLeft: string } => {
+const readRenderedDepth = (block: HarnessBlock): { attribute: string | null; indent: string } => {
   const wrapper = block.holder.firstElementChild;
   const listItem = wrapper?.querySelector('[role="listitem"]');
 
   return {
     attribute: wrapper?.getAttribute('data-list-depth') ?? null,
-    marginLeft: listItem instanceof HTMLElement ? listItem.style.marginLeft : '',
+    indent: listItem instanceof HTMLElement ? listItem.style.marginInlineStart : '',
   };
 };
 
@@ -162,7 +162,7 @@ describe('flat-carrier list depth — model and DOM must not diverge', () => {
 
     await pressTab(target, { shiftKey: true });
 
-    expect(readRenderedDepth(target)).toEqual({ attribute: '0', marginLeft: '' });
+    expect(readRenderedDepth(target)).toEqual({ attribute: '0', indent: '' });
   });
 
   it('Tab indents the RENDERED item, not just the saved data', async () => {
@@ -173,7 +173,7 @@ describe('flat-carrier list depth — model and DOM must not diverge', () => {
 
     expect(readRenderedDepth(target)).toEqual({
       attribute: '2',
-      marginLeft: `${2 * INDENT_PER_LEVEL}px`,
+      indent: `${2 * INDENT_PER_LEVEL}px`,
     });
   });
 

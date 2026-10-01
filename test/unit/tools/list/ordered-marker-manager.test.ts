@@ -29,9 +29,8 @@ const createMockBlock = (
 
   const listItem = document.createElement('div');
   listItem.setAttribute('role', 'listitem');
-  // The depth is stored in marginLeft, which ListDepthValidator reads
   if (depth > 0) {
-    listItem.style.marginLeft = `${depth * INDENT_PER_LEVEL}px`;
+    listItem.style.marginInlineStart = `${depth * INDENT_PER_LEVEL}px`;
   }
 
   const marker = document.createElement('span');

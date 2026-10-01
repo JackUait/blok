@@ -203,7 +203,7 @@ describe('Host customization tokens (public --blok-* contract)', () => {
 
       expect(body).not.toBeNull();
       expect(body).toMatch(
-        /margin-left:\s*calc\(var\(--_blok-block-depth,\s*0\)\s*\*\s*var\(--blok-block-indent-step,\s*24px\)/
+        /margin-inline-start:\s*calc\(var\(--_blok-block-depth,\s*0\)\s*\*\s*var\(--blok-block-indent-step,\s*24px\)/
       );
     });
 

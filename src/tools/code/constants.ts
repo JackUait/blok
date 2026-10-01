@@ -115,7 +115,7 @@ export const LANGUAGE_DOT_STYLES = 'size-2 shrink-0 rounded-full shadow-[inset_0
 const FILENAME_TEXT_STYLES = 'min-w-0 truncate font-mono text-xs text-text-primary';
 export const FILENAME_BUTTON_STYLES = [
   FILENAME_TEXT_STYLES,
-  'flex-1 text-left px-1.5 py-0.5 select-none rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-text bg-transparent border-0 transition-colors can-hover:hover:bg-item-hover-bg',
+  'flex-1 text-start px-1.5 py-0.5 select-none rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-text bg-transparent border-0 transition-colors can-hover:hover:bg-item-hover-bg',
   'data-[empty=true]:text-gray-text data-[empty=true]:font-sans data-[empty=true]:opacity-0 group-hover/code:data-[empty=true]:opacity-100 group-focus-within/code:data-[empty=true]:opacity-100 focus-visible:opacity-100',
 ].join(' ');
 export const FILENAME_LABEL_STYLES = [FILENAME_TEXT_STYLES, 'flex-1 px-1.5 py-0.5'].join(' ');

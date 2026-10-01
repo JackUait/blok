@@ -99,7 +99,7 @@ describe('blocksToHtml — output-exact renderer contracts', () => {
        */
       expect(html).toBe(scaffolded(
         '<aside class="text-[length:var(--blok-callout-font-size,var(--blok-paragraph-font-size,inherit))] '
-        + 'rounded-(--blok-radius-block) pl-8 pr-4 pt-[var(--blok-callout-padding-block,5px)] pb-[var(--blok-callout-padding-block,5px)] '
+        + 'rounded-(--blok-radius-block) ps-8 pe-4 pt-[var(--blok-callout-padding-block,5px)] pb-[var(--blok-callout-padding-block,5px)] '
         + 'my-1 flex items-start gap-2 relative">'
         + '<div class="flex-1 min-w-0" data-blok-toggle-children></div></aside>'
       ));

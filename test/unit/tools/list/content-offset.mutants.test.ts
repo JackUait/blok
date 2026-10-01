@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   getContentOffset,
-  getMarginLeftFromElement,
+  getInlineStartMarginFromElement,
   getOffsetFromDepthAttribute,
 } from '../../../../src/tools/list/content-offset';
 import { INDENT_PER_LEVEL } from '../../../../src/tools/list/constants';
@@ -10,13 +10,8 @@ import { INDENT_PER_LEVEL } from '../../../../src/tools/list/constants';
 /**
  * Mutation-coverage tests for `src/tools/list/content-offset.ts`.
  *
- * Equivalence proofs for the three mutants left alive:
+ * Equivalence proof for the mutant left alive:
  *
- * - L20 `element.getAttribute('style') || ''` with the fallback replaced by
- *   `"Stryker was here!"`. The fallback is read exactly once, by
- *   `style.match(/margin-left:\s*(\d+)px/)`, and the injected string has no
- *   `margin-left:` in it - so both fallbacks miss the pattern and the function
- *   returns `undefined` either way. Only a fallback that matched could differ.
  * - L47 `depthAttr === null` replaced by `false`, and its block replaced by
  *   `{}` (which drops the `return undefined`). The branch is unreachable:
  *   `wrapper` is whatever `closest('[data-list-depth]')` returned, and that
@@ -51,21 +46,21 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('getMarginLeftFromElement mutants', () => {
+describe('getInlineStartMarginFromElement mutants', () => {
   it('returns undefined for an element with no style attribute', () => {
-    expect(getMarginLeftFromElement(document.createElement('div'))).toBeUndefined();
+    expect(getInlineStartMarginFromElement(document.createElement('div'))).toBeUndefined();
   });
 
   it('returns undefined for a style that carries other declarations only', () => {
-    expect(getMarginLeftFromElement(withStyle('color: red; padding: 10px'))).toBeUndefined();
+    expect(getInlineStartMarginFromElement(withStyle('color: red; padding: 10px'))).toBeUndefined();
   });
 
-  it('reads a positive margin-left', () => {
-    expect(getMarginLeftFromElement(withStyle('margin-left: 24px'))).toEqual({ left: 24 });
+  it('reads a positive inline-start margin', () => {
+    expect(getInlineStartMarginFromElement(withStyle('margin-inline-start: 24px'))).toEqual({ left: 24 });
   });
 
-  it('treats a zero margin-left as no offset', () => {
-    expect(getMarginLeftFromElement(withStyle('margin-left: 0px'))).toBeUndefined();
+  it('treats a zero inline-start margin as no offset', () => {
+    expect(getInlineStartMarginFromElement(withStyle('margin-inline-start: 0px'))).toBeUndefined();
   });
 });
 
@@ -96,7 +91,7 @@ describe('getOffsetFromDepthAttribute mutants', () => {
 describe('getContentOffset mutants', () => {
   it('prefers the margin of the list item the hover is inside', () => {
     const wrapper = withDepth('3');
-    const item = withStyle('margin-left: 48px');
+    const item = withStyle('margin-inline-start: 48px');
 
     item.setAttribute('role', 'listitem');
     wrapper.appendChild(item);
@@ -106,7 +101,7 @@ describe('getContentOffset mutants', () => {
 
   it('finds a list item below the hovered wrapper', () => {
     const wrapper = document.createElement('div');
-    const item = withStyle('margin-left: 16px');
+    const item = withStyle('margin-inline-start: 16px');
 
     item.setAttribute('role', 'listitem');
     wrapper.appendChild(item);

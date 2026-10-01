@@ -1,0 +1,217 @@
+export interface DialOptions {
+  min: number;
+  max: number;
+  value: number;
+  /** Arrow key step. Default 1. */
+  step?: number;
+  /** Shift+arrow and PageUp/PageDown step. Default 5. */
+  bigStep?: number;
+  /** aria-label. */
+  label: string;
+  /** aria-valuetext. */
+  valueText(v: number): string;
+  /** Every change while dragging, and per key. */
+  onInput(v: number): void;
+  /** On pointerup, or 250 ms after the last key. */
+  onCommit(v: number): void;
+}
+
+export type DialSetup = Pick<DialOptions, 'min' | 'max' | 'label' | 'valueText'> & { value: number };
+
+export interface Dial {
+  el: HTMLElement;
+  /** Moves the dial without callbacks and drops a pending key commit. */
+  set(v: number): void;
+  /** Commits a pending key burst first, then swaps range, name and value. */
+  configure(o: DialSetup): void;
+  /** Commits a pending key burst now. Call before undo, Reset or Done. */
+  flush(): void;
+  destroy(): void;
+}
+
+export const PX_PER_UNIT = 6;
+export const KEY_COMMIT_MS = 250;
+const TICK_EVERY = 5;
+const MAJOR_EVERY = 15;
+const DETENT = 1;
+
+const el = (cls: string, role: string): HTMLElement => {
+  const node = document.createElement('div');
+
+  node.className = cls;
+  node.setAttribute('data-role', role);
+
+  return node;
+};
+
+const decimals = (n: number): number => (String(n).split('.')[1] ?? '').length;
+
+const format = (v: number): string => {
+  const text = String(Math.abs(Math.round(v * 10) / 10));
+
+  if (v > 0) return `+${text}`;
+
+  // U+2212 minus: the hyphen reads too short next to digits.
+  return v < 0 ? `−${text}` : '0';
+};
+
+export function createDial(o: DialOptions): Dial {
+  const step = o.step ?? 1;
+  const bigStep = o.bigStep ?? 5;
+  const setup: DialSetup = { min: o.min, max: o.max, value: o.value, label: o.label, valueText: o.valueText };
+  const st = { value: o.value, keyTimer: 0, pointerId: -1, startX: 0, startValue: 0 };
+
+  const root = el('blok-darkroom__dial', 'dial');
+  const label = el('blok-darkroom__dial-value', 'dial-value');
+  const track = el('blok-darkroom__dial-track', 'dial-track');
+  const ruler = el('blok-darkroom__dial-ruler', 'dial-ruler');
+  const needle = el('blok-darkroom__dial-needle', 'dial-needle');
+
+  root.setAttribute('role', 'slider');
+  root.setAttribute('tabindex', '0');
+  root.setAttribute('aria-orientation', 'horizontal');
+  label.setAttribute('aria-hidden', 'true');
+  track.setAttribute('aria-hidden', 'true');
+  track.append(ruler, needle);
+  root.append(label, track);
+
+  const clamp = (v: number): number => Math.min(setup.max, Math.max(setup.min, v));
+  // Rounds away float dust (0.1 + 0.2) so aria-valuenow and the saved value stay clean.
+  const snap = (v: number): number => Number((Math.round(v / step) * step).toFixed(decimals(step)));
+
+  const drawTicks = (): void => {
+    const first = Math.ceil(setup.min / TICK_EVERY) * TICK_EVERY;
+    const count = Math.max(0, Math.floor((setup.max - first) / TICK_EVERY) + 1);
+    const ticks = Array.from({ length: count }, (_, i) => {
+      const t = first + i * TICK_EVERY;
+      const tick = el('blok-darkroom__dial-tick', 'dial-tick');
+
+      tick.setAttribute('data-value', String(t));
+      tick.style.left = `${t * PX_PER_UNIT}px`;
+      if (t % MAJOR_EVERY === 0) tick.setAttribute('data-major', '');
+
+      return tick;
+    });
+
+    ruler.replaceChildren(...ticks);
+  };
+
+  const render = (): void => {
+    root.setAttribute('aria-label', setup.label);
+    root.setAttribute('aria-valuemin', String(setup.min));
+    root.setAttribute('aria-valuemax', String(setup.max));
+    root.setAttribute('aria-valuenow', String(st.value));
+    root.setAttribute('aria-valuetext', setup.valueText(st.value));
+    label.textContent = format(st.value);
+    ruler.style.transform = `translateX(${-st.value * PX_PER_UNIT + 0}px)`;
+  };
+
+  const change = (v: number): boolean => {
+    if (v === st.value) return false;
+    st.value = v;
+    render();
+    o.onInput(v);
+
+    return true;
+  };
+
+  const cancelKeyCommit = (): void => {
+    window.clearTimeout(st.keyTimer);
+    st.keyTimer = 0;
+  };
+
+  const flush = (): void => {
+    if (st.keyTimer === 0) return;
+    cancelKeyCommit();
+    o.onCommit(st.value);
+  };
+
+  const keyTarget = (e: KeyboardEvent): number | null => {
+    const small = e.shiftKey ? bigStep : step;
+
+    switch (e.key) {
+      case 'ArrowLeft':
+      case 'ArrowDown': return st.value - small;
+      case 'ArrowRight':
+      case 'ArrowUp': return st.value + small;
+      case 'PageUp': return st.value + bigStep;
+      case 'PageDown': return st.value - bigStep;
+      case 'Home': return 0;
+      default: return null;
+    }
+  };
+
+  const onKeyDown = (e: KeyboardEvent): void => {
+    const target = keyTarget(e);
+
+    if (target === null) return;
+    e.preventDefault();
+    if (!change(clamp(snap(target)))) return;
+    cancelKeyCommit();
+    st.keyTimer = window.setTimeout(() => {
+      st.keyTimer = 0;
+      o.onCommit(st.value);
+    }, KEY_COMMIT_MS);
+  };
+
+  const onDown = (e: PointerEvent): void => {
+    if (st.pointerId !== -1) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    flush();
+    st.pointerId = e.pointerId;
+    st.startX = e.clientX;
+    st.startValue = st.value;
+    root.setPointerCapture?.(e.pointerId);
+    e.preventDefault();
+    root.focus({ preventScroll: true });
+  };
+
+  const onMove = (e: PointerEvent): void => {
+    if (e.pointerId !== st.pointerId) return;
+    // The ruler moves under a fixed needle: dragging it left brings higher values to the centre.
+    const raw = clamp(snap(st.startValue - (e.clientX - st.startX) / PX_PER_UNIT));
+
+    change(clamp(Math.abs(raw) < DETENT ? 0 : raw));
+  };
+
+  // pointercancel ends the drag too, or a taken-over touch would never commit.
+  const onEnd = (e: PointerEvent): void => {
+    if (e.pointerId !== st.pointerId) return;
+    st.pointerId = -1;
+    if (st.value !== st.startValue) o.onCommit(st.value);
+  };
+
+  root.addEventListener('keydown', onKeyDown);
+  root.addEventListener('pointerdown', onDown);
+  root.addEventListener('pointermove', onMove);
+  root.addEventListener('pointerup', onEnd);
+  root.addEventListener('pointercancel', onEnd);
+  drawTicks();
+  render();
+
+  return {
+    el: root,
+    set(v: number): void {
+      cancelKeyCommit();
+      st.value = v;
+      render();
+    },
+    configure(next: DialSetup): void {
+      flush();
+      Object.assign(setup, next);
+      st.value = next.value;
+      drawTicks();
+      render();
+    },
+    flush,
+    destroy(): void {
+      cancelKeyCommit();
+      st.pointerId = -1;
+      root.removeEventListener('keydown', onKeyDown);
+      root.removeEventListener('pointerdown', onDown);
+      root.removeEventListener('pointermove', onMove);
+      root.removeEventListener('pointerup', onEnd);
+      root.removeEventListener('pointercancel', onEnd);
+    },
+  };
+}

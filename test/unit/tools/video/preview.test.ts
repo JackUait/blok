@@ -36,6 +36,13 @@ describe('video toolbox preview', () => {
       'bat-wing',
       'mesa',
       'mesa-rim',
+      'mesa-lit',
+      'mesa-cap',
+      'mesa-gully',
+      'talus',
+      'spire',
+      'mesa-distant',
+      'haze',
       'ridge',
       'camel',
       'leg',
@@ -88,6 +95,15 @@ describe('video toolbox preview', () => {
     expect(preview.querySelectorAll("[data-part='spindrift']").length).toBeGreaterThanOrEqual(4);
   });
 
+  // Ruler-straight strata across a box read as a drawing of a shelf, not rock.
+  it('breaks the strata into uneven pieces', () => {
+    const strata = renderVideoPreview().querySelector("[data-part='mesa-strata']")?.getAttribute('d') ?? '';
+    const lengths = [...strata.matchAll(/H(-?[\d.]+)/g)].length;
+
+    expect(lengths).toBe(0);
+    expect(strata.split('M').length - 1).toBeGreaterThanOrEqual(12);
+  });
+
   it('shows the elapsed time apart from the duration, so the clock can run', () => {
     const preview = renderVideoPreview();
 
@@ -100,7 +116,7 @@ describe('video toolbox preview motion', () => {
   it.each([
     'star', 'sparkle', 'moon', 'cloud', 'meteor', 'bat', 'bat-wing', 'caravan', 'leg', 'lantern',
     'crown', 'flame', 'flame-mid', 'fire-glow', 'ember', 'puff', 'scarf', 'glint', 'firefly', 'reflection', 'scrub', 'spindrift',
-    'layer-far', 'layer-mid', 'layer-near', 'layer-front',
+    'layer-horizon', 'layer-far', 'layer-mid', 'layer-near', 'layer-front',
   ])(
     'moves the %s in the scene only when motion is allowed',
     (part) => {
@@ -115,7 +131,7 @@ describe('video toolbox preview motion', () => {
   });
 
   // A one-way move that restarts with the clock reads as a camera; a ping-pong reads as a slide.
-  it.each([ 'layer-far', 'layer-mid', 'layer-near', 'layer-front', 'camera' ])(
+  it.each([ 'layer-horizon', 'layer-far', 'layer-mid', 'layer-near', 'layer-front', 'camera' ])(
     'moves the %s one way through the clip, starting on play',
     (part) => {
       const rule = motionRule(part);

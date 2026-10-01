@@ -44,7 +44,7 @@ const SIMPLIFY_PRESSURE = 0.08;
 type Shape = ImageMarkupShape['type'];
 
 const SHAPES: readonly Shape[] = ['rect', 'ellipse', 'line', 'arrow'];
-const STYLES: readonly ImageMarkupTextStyle[] = ['outline', 'background'];
+const TEXT_STYLE_VALUES: readonly ImageMarkupTextStyle[] = ['outline', 'background'];
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -94,7 +94,7 @@ const buildText = (src: Omit<ImageMarkupText, 'rotation'> & { rotation?: number 
   };
   const rotation = isNum(src.rotation) ? normaliseRotation(src.rotation) : 0;
 
-  if (src.style !== undefined && STYLES.includes(src.style)) out.style = src.style;
+  if (src.style !== undefined && TEXT_STYLE_VALUES.includes(src.style)) out.style = src.style;
   if (rotation !== 0) out.rotation = rotation;
 
   return out;
@@ -120,7 +120,7 @@ const readPoints = (raw: unknown): number[] => {
     .slice(0, MAX_POINTS * 3);
 };
 
-const readStyle = (v: unknown): ImageMarkupTextStyle | undefined => STYLES.find((s) => s === v);
+const readStyle = (v: unknown): ImageMarkupTextStyle | undefined => TEXT_STYLE_VALUES.find((s) => s === v);
 
 const readText = (raw: unknown): string | null => {
   if (typeof raw !== 'string' || raw.trim() === '') return null;

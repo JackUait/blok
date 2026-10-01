@@ -24,6 +24,9 @@ const BINARY = join(BINARY_DIRECTORY, process.platform === 'win32' ? 'Blok.Serve
 const SERVER_SOURCES = join(ROOT, 'packages/server/dotnet');
 const HOST_PROJECT = join(SERVER_SOURCES, 'Blok.Server.Host/Blok.Server.Host.csproj');
 const PLAYGROUND_DOCUMENT = join(ROOT, 'playground-document.json');
+const PLAYGROUND_PAGES = join(ROOT, 'playground-pages.json');
+// Must match the room name `collaborationConfig` in index.html gives a page.
+const PAGE_ROOM = '--page--';
 const VITE = join(ROOT, 'node_modules/.bin', process.platform === 'win32' ? 'vite.cmd' : 'vite');
 
 const SYNC_PORT = 4000;
@@ -159,6 +162,27 @@ export function vitePort(viteArgs) {
   return Number.isInteger(value) ? value : DEFAULT_VITE_PORT;
 }
 
+/**
+ * The first content of each collaboration room: the showcase for the root
+ * document, a demo page's own blocks, and nothing for a page the user made.
+ *
+ * @param {object} options
+ * @param {unknown} options.showcase The root document.
+ * @param {Record<string, { blocks: unknown[] }>} options.pages Demo pages, by page id.
+ * @returns {(id: string) => unknown}
+ */
+export function playgroundSeedFor({ showcase, pages }) {
+  return (id) => {
+    const at = id.indexOf(PAGE_ROOM);
+
+    if (at === -1) {
+      return showcase;
+    }
+
+    return { blocks: pages[id.slice(at + PAGE_ROOM.length)]?.blocks ?? [] };
+  };
+}
+
 async function main() {
   const { noServer, viteArgs } = parseDevArgs(process.argv.slice(2));
   const mode = resolveBackendMode({ noServer, hasDotnet: noServer ? false : hasDotnet() });
@@ -206,7 +230,10 @@ async function main() {
 
       await startDocumentStore({
         port: DOCUMENT_PORT,
-        seed: { blocks: JSON.parse(readFileSync(PLAYGROUND_DOCUMENT, 'utf8')) },
+        seedFor: playgroundSeedFor({
+          showcase: { blocks: JSON.parse(readFileSync(PLAYGROUND_DOCUMENT, 'utf8')) },
+          pages: JSON.parse(readFileSync(PLAYGROUND_PAGES, 'utf8')),
+        }),
       });
 
       const origins = [`http://localhost:${vitePort(viteArgs)}`, `http://127.0.0.1:${vitePort(viteArgs)}`];

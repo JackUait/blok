@@ -2,6 +2,7 @@ import type { I18n, OutputBlockData } from '../../types';
 import type { PageInfo } from '../../types/tools/page';
 import { IconEmojiSmile } from '../components/icons';
 import { EmojiPicker } from '../tools/callout/emoji-picker';
+import seedPages from '../../playground-pages.json';
 
 /**
  * The playground's own "host app" for page blocks. Blok only links to pages;
@@ -646,55 +647,11 @@ export const runPageTransition = async (update: () => Promise<void>, options: Pa
 
 /* ------------------------------------------------------------------ seed */
 
-const paragraph = (id: string, text: string): OutputBlockData => ({ id, type: 'paragraph', data: { text } });
-
-const pageLink = (id: string, pageId: string, title: string, icon: string): OutputBlockData => ({
-  id,
-  type: 'page',
-  data: { pageId, cache: { title, icon: { type: 'emoji', value: icon } } },
-});
-
-/** Pages the root playground document links to (`playground-document.json` uses these ids). */
-export const SEED_PAGES: PageMap = {
-  'getting-started': {
-    title: 'Getting started',
-    icon: '🚀',
-    parentId: null,
-    blocks: [
-      paragraph('gs-intro', 'This is a page inside the playground. It is its own document: edits here are saved to this page, not to the one you came from.'),
-      { id: 'gs-h-try', type: 'header', data: { text: 'Things to try', level: 2 } },
-      { id: 'gs-try-1', type: 'list', data: { style: 'checklist', text: 'Rename this page in the big title above', checked: false } },
-      { id: 'gs-try-2', type: 'list', data: { style: 'checklist', text: 'Pick an icon, then go back: the link shows it', checked: false } },
-      { id: 'gs-try-3', type: 'list', data: { style: 'checklist', text: 'Type <code>/page</code> to make a sub-page', checked: false } },
-      { id: 'gs-h-sub', type: 'header', data: { text: 'Sub-pages', level: 2 } },
-      paragraph('gs-sub-intro', 'Pages nest as deep as you like. The breadcrumbs at the top always lead back.'),
-      pageLink('gs-link-shortcuts', 'keyboard-shortcuts', 'Keyboard shortcuts', '⌨️'),
-    ],
-  },
-  'keyboard-shortcuts': {
-    title: 'Keyboard shortcuts',
-    icon: '⌨️',
-    parentId: 'getting-started',
-    blocks: [
-      paragraph('ks-intro', 'A few keys worth knowing.'),
-      { id: 'ks-1', type: 'list', data: { style: 'unordered', text: '<b>/</b> opens the block menu' } },
-      { id: 'ks-2', type: 'list', data: { style: 'unordered', text: '<b>Tab</b> and <b>Shift+Tab</b> nest and un-nest list items' } },
-      { id: 'ks-3', type: 'list', data: { style: 'unordered', text: '<b>Cmd/Ctrl+F</b> finds text on the page' } },
-      { id: 'ks-4', type: 'list', data: { style: 'unordered', text: '<b>Escape</b> selects the current block' } },
-    ],
-  },
-  'design-notes': {
-    title: 'Design notes',
-    icon: '🎨',
-    parentId: null,
-    blocks: [
-      paragraph('dn-intro', 'Calm, neutral, and quiet until you need it.'),
-      { id: 'dn-1', type: 'list', data: { style: 'ordered', text: 'Content first, chrome second' } },
-      { id: 'dn-2', type: 'list', data: { style: 'ordered', text: 'Selected states are gray, never blue' } },
-      { id: 'dn-3', type: 'list', data: { style: 'ordered', text: 'Motion explains where you went' } },
-    ],
-  },
-};
+/**
+ * Pages the root playground document links to (`playground-document.json` uses these ids).
+ * `yarn serve` seeds their collaboration rooms from the same file.
+ */
+export const SEED_PAGES = seedPages as PageMap;
 
 /**
  * Puts the header over the editor's text column. The column's offset comes

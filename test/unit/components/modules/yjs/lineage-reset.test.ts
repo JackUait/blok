@@ -116,7 +116,8 @@ describe('lineage reset', () => {
 
       expect(store.blocksMap.has('b1')).toBe(true);
       expect(store.rootOrder.toArray()).toEqual(['b1']);
-      expect(store.undoScope).toEqual([store.blocksMap, store.rootOrder]);
+      expect(store.undoScope).toEqual([store.blocksMap, store.rootOrder, store.values]);
+      expect(store.values.doc).toBe(store.blocksMap.doc);
     });
 
     it('re-attaches the seam update handlers to the fresh document', () => {
@@ -221,6 +222,22 @@ describe('lineage reset', () => {
   });
 
   describe('YjsManager.resetForRelineage', () => {
+    it('keeps handing tracked values to the host after the swap', () => {
+      const manager = createManager();
+      const onChange = vi.fn();
+
+      manager.trackValue('title', onChange);
+      manager.resetForRelineage();
+
+      const peer = new Y.Doc();
+
+      peer.getMap('values').set('title', 'From a peer');
+      manager.applyRemoteUpdate(Y.encodeStateAsUpdate(peer), { source: 'peer' });
+
+      expect(onChange).toHaveBeenCalledWith('From a peer');
+      expect(manager.getValue('title')).toBe('From a peer');
+    });
+
     it('flushes buffered typing writes BEFORE the swap, and lands none in the fresh doc', () => {
       vi.useFakeTimers();
 

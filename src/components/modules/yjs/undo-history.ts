@@ -305,6 +305,9 @@ export class UndoHistory {
   /** `blockId#inputIndex` of the open typing run; null when the open step is not typing. */
   private typingInputKey: string | null = null;
 
+  /** A tracked value write is about to open a step; see {@link CaretHistoryEntry.outsideEditor}. */
+  private pendingValueWrite = false;
+
   /** True from a gesture start until the end of its task (microtasks included). */
   private gestureTaskOpen = false;
 
@@ -1047,6 +1050,10 @@ export class UndoHistory {
           kind: 'edit',
         };
 
+        if (this.pendingValueWrite && this.liveCaretSnapshot() === null) {
+          entry.outsideEditor = true;
+        }
+
         this.entryByStackItem.set(event.stackItem, entry);
         this.caretUndoStack.push(entry);
         this.openEntry = entry;
@@ -1351,6 +1358,7 @@ export class UndoHistory {
   private resetPendingCaretState(): void {
     this.hasPendingCaret = false;
     this.pendingCaretBefore = null;
+    this.pendingValueWrite = false;
   }
 
   /**
@@ -1832,6 +1840,12 @@ export class UndoHistory {
 
     stack.push(entry);
 
+    if (entry.outsideEditor === true) {
+      this.caretJustRestored = false;
+
+      return;
+    }
+
     // Use the requested position, falling back to the other one when the
     // requested snapshot wasn't captured (e.g., the debounced selectionchange
     // hadn't set currentBlock for table cell paragraphs).
@@ -2142,6 +2156,37 @@ export class UndoHistory {
     this.startGesture('discrete', true);
   }
 
+  /**
+   * A host write to a tracked value (`history.track`). Like an API call, but
+   * typing into the same key continues the open step, as typing in one block
+   * input does.
+   * @param key - the tracked value's key
+   * @param typing - whether the write is typing
+   */
+  public beginValueEdit(key: string, typing: boolean): void {
+    if (this.gestureTaskOpen || this.joiningDepth > 0) {
+      // It joins that gesture, but the next keystroke must still see the run:
+      // the first keystroke often lands while the click's gesture is open.
+      if (typing) {
+        this.typingInputKey = `value:${key}`;
+      }
+      this.pendingValueWrite = true;
+
+      return;
+    }
+
+    if (this.captureHolds > 0) {
+      this.openGestureTask();
+      this.pendingValueWrite = true;
+
+      return;
+    }
+
+    this.startGesture(typing ? 'typing' : 'discrete', true, `value:${key}`);
+    // After the gesture's split: its flush may record the closing step.
+    this.pendingValueWrite = true;
+  }
+
   /** Marks the current task as a gesture's, until the task ends. */
   private openGestureTask(): void {
     if (this.gestureTaskOpen) {
@@ -2158,8 +2203,10 @@ export class UndoHistory {
    * @param kind - see {@link beginGesture}
    * @param keepPending - keep a caret-before that is still pending instead of
    *   taking the live caret
+   * @param typingKey - what a typing run continues in, when it is not a block
+   *   input (a tracked value)
    */
-  private startGesture(kind: 'typing' | 'discrete', keepPending: boolean): boolean {
+  private startGesture(kind: 'typing' | 'discrete', keepPending: boolean, typingKey?: string): boolean {
     if (this.isPerformingUndoRedo) {
       return false;
     }
@@ -2174,7 +2221,7 @@ export class UndoHistory {
     }
     this.openEntry = null;
 
-    const liveKey = live === null ? null : `${live.blockId}#${live.inputIndex}`;
+    const liveKey = typingKey ?? (live === null ? null : `${live.blockId}#${live.inputIndex}`);
     const continuesTyping = kind === 'typing' && liveKey !== null && liveKey === this.typingInputKey;
 
     if (!continuesTyping) {

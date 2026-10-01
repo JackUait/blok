@@ -66,6 +66,15 @@ export class YjsManager extends Module {
   private blockObserver: BlockObserver;
 
   /**
+   * `history.track` callbacks, by key. One per key: tracking a key again
+   * replaces its callback.
+   */
+  private readonly valueListeners = new Map<string, (value: unknown) => void>();
+
+  /** The values map {@link onValuesChanged} watches; swapped by a lineage reset. */
+  private observedValues: Y.Map<unknown> | null = null;
+
+  /**
    * Coalescing buffer for typing-driven block data writes (leading + trailing
    * flush on the 400ms mutation batch window). Drained synchronously by
    * `flushPendingBlockWrites`, which every structural chokepoint calls first.
@@ -193,6 +202,9 @@ export class YjsManager extends Module {
    * once at construction and again after a lineage reset swaps both.
    */
   private observeDocument(): void {
+    this.observedValues?.unobserve(this.onValuesChanged);
+    this.observedValues = this.documentStore.values;
+    this.observedValues.observe(this.onValuesChanged);
     this.blockObserver.observe(
       {
         blocksMap: this.documentStore.blocksMap,
@@ -201,6 +213,22 @@ export class YjsManager extends Module {
       this.undoHistory.undoManager
     );
   }
+
+  /**
+   * Hands a tracked value back to the host when it changes other than by the
+   * host's own write: undo, redo, or a peer.
+   */
+  private readonly onValuesChanged = (event: Y.YMapEvent<unknown>): void => {
+    const { transaction } = event;
+
+    if (transaction.local && transaction.origin !== this.undoHistory.undoManager) {
+      return;
+    }
+
+    event.keysChanged.forEach((key: string) => {
+      this.valueListeners.get(key)?.(event.target.get(key));
+    });
+  };
 
   /**
    * Discard this document and start over on a genuinely FRESH Y.Doc, because
@@ -841,6 +869,50 @@ export class YjsManager extends Module {
    */
   public canRedo(): boolean {
     return this.undoHistory.canRedo();
+  }
+
+  /**
+   * See `history.track`.
+   * @param key - the value's key
+   * @param onChange - called when undo, redo or a peer changes the value
+   */
+  public trackValue(key: string, onChange: (value: unknown) => void): void {
+    this.valueListeners.set(key, onChange);
+  }
+
+  /**
+   * @param key - the value's key
+   * @returns the tracked value, or undefined when it was never set
+   */
+  public getValue(key: string): unknown {
+    return this.documentStore.values.get(key);
+  }
+
+  /**
+   * Write a tracked value. A recorded write is a step of its own, unless it
+   * continues a typing run in the same key or another write in this task
+   * already opened one (a host writing the value and inserting a block).
+   * @param key - the value's key
+   * @param value - JSON-compatible value
+   * @param options - typing: continues a typing run; record: false keeps it out of the history
+   */
+  public setValue(key: string, value: unknown, options: { typing?: boolean; record?: boolean } = {}): void {
+    const { values } = this.documentStore;
+
+    if (values.has(key) && JSON.stringify(values.get(key)) === JSON.stringify(value)) {
+      return;
+    }
+
+    if (options.record === false) {
+      this.transactWithoutCapture(() => values.set(key, value));
+
+      return;
+    }
+
+    if (!this.Blok.BlockManager.isApplyingRemoteChange && !this.documentStore.isTransactingWithoutCapture) {
+      this.undoHistory.beginValueEdit(key, options.typing === true);
+    }
+    this.transact(() => values.set(key, value));
   }
 
   /**

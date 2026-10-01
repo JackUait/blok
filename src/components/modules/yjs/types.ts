@@ -1,11 +1,11 @@
 import type * as Y from 'yjs';
 
 /**
- * Shared types the Y.UndoManager tracks: the blocks map and the root
- * order array. contentIds arrays nest inside blocks-map values, so these
- * two roots cover every block write.
+ * Shared types the Y.UndoManager tracks: the blocks map, the root order
+ * array and the host's tracked values. contentIds arrays nest inside
+ * blocks-map values, so the first two cover every block write.
  */
-export type UndoScopeType = Y.Map<Y.Map<unknown>> | Y.Array<string>;
+export type UndoScopeType = Y.Map<Y.Map<unknown>> | Y.Array<string> | Y.Map<unknown>;
 
 /**
  * The two top-level shared types of doc schema v2, handed to the observer.
@@ -110,6 +110,11 @@ export interface CaretHistoryEntry {
    * reverse-chronological even when a move sits between edits.
    */
   kind?: 'move' | 'edit';
+  /**
+   * The step began with a tracked host value (`history.track`) written while
+   * the caret was outside the editor. Undo and redo leave the caret to the host.
+   */
+  outsideEditor?: boolean;
 }
 
 /**

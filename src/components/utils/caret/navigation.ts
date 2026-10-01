@@ -7,7 +7,7 @@
 
 import { Dom as $ } from '../../dom';
 
-import { getElementDirection } from '../direction';
+import { getElementDirection, inlineStartOffset } from '../direction';
 import { setSelectionToElement } from './focus';
 
 /**
@@ -187,12 +187,9 @@ export const findBestPositionInRange = (
    */
   const inputRect = input.getBoundingClientRect();
   const style = window.getComputedStyle(input);
-  const paddingLeft = parseFloat(style.paddingLeft) || 0;
-
-  /**
-   * For native inputs, we approximate position based on character width
-   */
-  const relativeX = targetX - inputRect.left - paddingLeft;
+  const direction = getElementDirection(input);
+  const paddingStart = parseFloat(direction === 'rtl' ? style.paddingRight : style.paddingLeft) || 0;
+  const relativeX = inlineStartOffset(targetX, inputRect, direction) - paddingStart;
 
   if (relativeX <= 0) {
     return start;

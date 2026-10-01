@@ -27,6 +27,18 @@ describe('image toolbox preview', () => {
       'cloud',
       'ripple',
       'island-reflection',
+      'ray',
+      'range-light',
+      'range-reflection',
+      'forest',
+      'house',
+      'flag',
+      'crag',
+      'pier',
+      'rower',
+      'flower',
+      'rock',
+      'lamp',
     ]));
   });
 
@@ -36,4 +48,18 @@ describe('image toolbox preview', () => {
       expect(css, part).toContain(`[data-blok-preview='image'] [data-part='${part}']`);
     });
   });
+});
+
+describe('image toolbox preview motion', () => {
+  const motion = css.slice(css.indexOf('@media (prefers-reduced-motion: no-preference)'));
+
+  it.each([ 'star', 'cloud', 'bird', 'ray', 'shimmer', 'ripple', 'boat', 'rower', 'flag', 'lamp' ])(
+    'animates the %s only when motion is allowed',
+    (part) => {
+      const rule = new RegExp(`\\[data-blok-preview='image'\\] \\[data-part='${part}'\\][^{]*\\{[^}]*animation:`);
+
+      expect(motion).toMatch(rule);
+      expect(css.slice(0, css.indexOf('@media (prefers-reduced-motion: no-preference)'))).not.toMatch(rule);
+    }
+  );
 });

@@ -481,12 +481,37 @@
   from { opacity: 0; transform: translateY(-8px) }
 }
 
+@keyframes blok-preview-media-bob {
+  to { transform: translateY(0.8px) }
+}
+
 @keyframes blok-preview-media-cover {
   from { transform: translateY(8px) }
 }
 
+@keyframes blok-preview-media-drift {
+  to { transform: translateX(6px) }
+}
+
 @keyframes blok-preview-media-fade {
   from { opacity: 0 }
+}
+
+@keyframes blok-preview-media-flap {
+  to { transform: scaleY(0.4) }
+}
+
+@keyframes blok-preview-media-flicker {
+  0%, 40%, 48%, 100% { opacity: 1 }
+  44% { opacity: 0.55 }
+}
+
+@keyframes blok-preview-media-glide {
+  to { transform: translate(12px, -3px) }
+}
+
+@keyframes blok-preview-media-glint {
+  to { opacity: 0.45; transform: scaleX(0.75) }
 }
 
 @keyframes blok-preview-media-ken-burns {
@@ -520,6 +545,16 @@
   0%, 34% { transform: translateX(2%) }
 }
 
+@keyframes blok-preview-media-rays {
+  from { opacity: 0.2; transform: rotate(-5deg) }
+  to { opacity: 0.45; transform: rotate(5deg) }
+}
+
+@keyframes blok-preview-media-ripple {
+  from { transform: translateX(-2px) }
+  to { opacity: 0.1; transform: translateX(2px) }
+}
+
 @keyframes blok-preview-media-rise {
   from { opacity: 0; transform: translateY(4px) }
 }
@@ -528,8 +563,16 @@
   to { transform: translateX(100%) }
 }
 
+@keyframes blok-preview-media-twinkle {
+  to { opacity: 0.2; transform: scale(0.6) }
+}
+
 @keyframes blok-preview-media-wave {
   50% { transform: scaleY(0.5) }
+}
+
+@keyframes blok-preview-media-wave-flag {
+  to { transform: scaleX(0.7) skewY(6deg) }
 }
 
 @keyframes blok-preview-structure-blink {

@@ -5784,6 +5784,10 @@ span[data-blok-slash-search] {
   min-height: 220px;
 }
 
+[data-blok-tool="image"] .blok-image-inner[data-loading="true"] [data-role="image-plane"] img {
+  min-height: 0;
+}
+
 [data-blok-tool="image"] .blok-image-inner[data-loading="true"] img {
   opacity: 0.35;
   filter: blur(18px) saturate(1.1);
@@ -10380,11 +10384,11 @@ span[data-blok-slash-search] {
   opacity: 0.85;
 }
 
-[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='castle'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='cliff'] {
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='castle'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='house'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='rock'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='cliff'] {
   fill: color-mix(in srgb, var(--blok-color-purple-text) 36%, var(--blok-overlay-dark));
 }
 
-[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='window'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='church'] {
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='window'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='lamp'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='church'] {
   fill: color-mix(in srgb, var(--blok-color-yellow-text) 40%, var(--blok-text-on-dark));
 }
 
@@ -10410,7 +10414,7 @@ span[data-blok-slash-search] {
   opacity: 0.35;
 }
 
-[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='boat'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='pine'] {
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='boat'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='rower'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='pier'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='pine'] {
   fill: color-mix(in srgb, var(--blok-color-purple-text) 20%, var(--blok-overlay-dark));
 }
 
@@ -10418,6 +10422,47 @@ span[data-blok-slash-search] {
   fill: none;
   stroke: color-mix(in srgb, var(--blok-color-purple-text) 24%, var(--blok-overlay-dark));
   stroke-width: 0.8;
+  stroke-linecap: round;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='ray'] {
+  fill: none;
+  stroke: color-mix(in srgb, var(--blok-color-yellow-text) 40%, var(--blok-text-on-dark));
+  stroke-width: 0.9;
+  stroke-linecap: round;
+  opacity: 0.35;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='range-light'] {
+  fill: color-mix(in srgb, var(--blok-color-orange-text) 50%, var(--blok-text-on-dark));
+  opacity: 0.22;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='forest'] {
+  fill: color-mix(in srgb, var(--blok-color-purple-text) 40%, var(--blok-overlay-dark));
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='range-reflection'] {
+  fill: var(--blok-overlay-dark);
+  opacity: 0.14;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='flag'] {
+  fill: var(--blok-color-red-text);
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='crag'] {
+  fill: none;
+  stroke: color-mix(in srgb, var(--blok-color-purple-text) 50%, var(--blok-overlay-dark));
+  stroke-width: 0.6;
+  stroke-linecap: round;
+  opacity: 0.6;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='flower'] {
+  fill: none;
+  stroke: color-mix(in srgb, var(--blok-color-pink-text) 60%, var(--blok-text-on-dark));
+  stroke-width: 1.3;
   stroke-linecap: round;
 }
 
@@ -10964,6 +11009,53 @@ span[data-blok-slash-search] {
 
 [@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='scene'] {
   animation: blok-preview-media-ken-burns 3.2s var(--blok-preview-ease-out) both;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='star'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='bird'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='shimmer'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='flag'] {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='star'] {
+  animation: blok-preview-media-twinkle 1.6s ease-in-out calc(var(--i) * -0.55s) infinite alternate;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='cloud'] {
+  animation: blok-preview-media-drift 7s ease-in-out calc(var(--i) * -3.5s) infinite alternate;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='flock'] {
+  animation: blok-preview-media-glide 6s ease-in-out infinite alternate;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='bird'] {
+  animation: blok-preview-media-flap 0.45s ease-in-out infinite alternate;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='ray'] {
+  transform-origin: 112px 58px;
+  animation: blok-preview-media-rays 8s ease-in-out infinite alternate;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='shimmer'] {
+  animation: blok-preview-media-glint 2.2s ease-in-out infinite alternate;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='ripple'] {
+  animation: blok-preview-media-ripple 3s ease-in-out calc(var(--i) * -1.5s) infinite alternate;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='boat'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='rower'] {
+  animation: blok-preview-media-bob 2.6s ease-in-out infinite alternate;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='flag'] {
+  transform-origin: left center;
+  animation: blok-preview-media-wave-flag 0.7s ease-in-out infinite alternate;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='lamp'] {
+  animation: blok-preview-media-flicker 2.4s linear infinite;
 }
 
 [@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='disc'] {

@@ -197,8 +197,8 @@ export class TableCellBlocks {
   /**
    * Grid-aware caret navigation for the four arrow keys, matching Notion:
    * - Up/Down move the caret to the cell directly above/below in the SAME column;
-   * - Left/Right cross into the previous/next cell (reading order) at the cell's
-   *   text edge;
+   * - Left/Right cross into the cell visually on the arrow's side (grid order)
+   *   once the caret is at that edge of the cell's text (text direction);
    * - at the outer grid edge the caret exits the table (forward/backward).
    *
    * Runs in the CAPTURE phase (registered by setupKeyboardNavigation) so it acts

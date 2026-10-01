@@ -908,10 +908,10 @@ export class TableCellSelection {
 
   /**
    * True when the caret sits at the far edge of the whole CELL (not merely of
-   * its own block): the last block's end when moving right/down, the first
-   * block's start when moving left/up. Anywhere else, Shift+Arrow stays a normal
-   * text/line gesture inside the cell. Left/Right read the edge from the
-   * text's own direction, not the grid's.
+   * its own block): the last block's end for Down or an arrow toward the text's
+   * end, the first block's start for Up or an arrow toward the text's start.
+   * Left/Right read that from the text's own direction, not the grid's.
+   * Anywhere else, Shift+Arrow stays a normal text/line gesture inside the cell.
    */
   private isCaretAtCellBoundary(input: HTMLElement, direction: ArrowDirection, key: string): boolean {
     const inline = logicalArrow(key, getElementDirection(input));

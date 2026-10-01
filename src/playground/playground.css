@@ -33,6 +33,8 @@
   --pg-page-muted: #717171;
   --pg-page-faint: #a8a8a8;
   --pg-page-hover: rgba(55, 53, 47, 0.06);
+  --pg-page-line: #ebebeb;
+  --pg-page-line-strong: #dddddd;
 
   /* Same column as the editor content (--max-width-content), so the title lines up with the text. */
   max-width: 720px;
@@ -44,6 +46,8 @@
   --pg-page-muted: #a8a8a8;
   --pg-page-faint: #6e6e6e;
   --pg-page-hover: rgba(255, 255, 255, 0.06);
+  --pg-page-line: #2f2f2f;
+  --pg-page-line-strong: #3d3d3d;
 }
 .pg-page-header[hidden] { display: none; }
 

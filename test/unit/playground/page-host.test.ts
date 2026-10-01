@@ -5,7 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   PAGES_STORAGE_KEY,
   PageRegistry,
+  PointerWatch,
   keepPageHeaderAligned,
+  pointerBlock,
+  renderPageHeader,
   pageIdFromPath,
   pagePath,
   type PageMap,
@@ -121,6 +124,167 @@ describe('PageRegistry', () => {
   });
 });
 
+describe('page trash', () => {
+  const pointer = (pageId: string): { id: string; type: string; data: { pageId: string } } =>
+    ({ id: `p-${pageId}`, type: 'page', data: { pageId } });
+  const para = { id: 'x', type: 'paragraph', data: { text: 'Hi' } };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+    document.body.innerHTML = '';
+  });
+
+  it('trashes a page once its block is seen and then removed from the parent', () => {
+    const pages = new PageRegistry(seed());
+    const watch = new PointerWatch(pages);
+
+    watch.observe([para, pointer('keys')]);
+    expect(pages.trashedIn('keys')).toBeNull();
+
+    watch.observe([para]);
+    expect(pages.trashedIn('keys')?.id).toBe('keys');
+    expect(new PageRegistry(seed()).trashedIn('keys')?.id).toBe('keys');
+  });
+
+  it('never trashes a page whose block was missing from the start', () => {
+    const pages = new PageRegistry(seed());
+    const watch = new PointerWatch(pages);
+
+    watch.observe([para]);
+    watch.observe([para]);
+
+    expect(pages.trashedIn('keys')).toBeNull();
+  });
+
+  it('takes the page out of trash when its block comes back, as undo does', () => {
+    const pages = new PageRegistry(seed());
+    const watch = new PointerWatch(pages);
+
+    watch.observe([pointer('keys')]);
+    watch.observe([]);
+    watch.observe([pointer('keys')]);
+
+    expect(pages.trashedIn('keys')).toBeNull();
+  });
+
+  it('untrashes a page whose block a fresh editor finds in its parent', () => {
+    const pages = new PageRegistry(seed());
+
+    pages.trash('keys');
+    new PointerWatch(pages).observe([pointer('keys')]);
+
+    expect(pages.trashedIn('keys')).toBeNull();
+  });
+
+  it('puts a sub-page in trash with the page that holds it', () => {
+    const pages = new PageRegistry(seed());
+
+    pages.trash('guide');
+
+    expect(pages.trashedIn('keys')?.id).toBe('guide');
+  });
+
+  it('restore takes the page out of trash and asks its parent for a block back', () => {
+    const pages = new PageRegistry(seed());
+
+    pages.trash('keys');
+    pages.restore('keys');
+
+    expect(pages.trashedIn('keys')).toBeNull();
+    expect(pages.pendingRestores('guide')).toEqual(['keys']);
+    expect(pages.pendingRestores(null)).toEqual([]);
+
+    pages.restored('keys');
+    expect(pages.pendingRestores('guide')).toEqual([]);
+  });
+
+  it('builds the restored block with the page title and icon', () => {
+    const pages = new PageRegistry(seed());
+    const block = pointerBlock('guide', pages);
+
+    expect(block.type).toBe('page');
+    expect(block.data).toEqual({ pageId: 'guide', cache: { title: 'Guide', icon: { type: 'emoji', value: '📘' } } });
+  });
+
+  it('permanent delete drops the page and its sub-pages and names where to go', () => {
+    const pages = new PageRegistry(seed());
+
+    pages.trash('guide');
+
+    expect(pages.purge('guide')).toBeNull();
+    expect(pages.has('guide')).toBe(false);
+    expect(pages.has('keys')).toBe(false);
+    expect(new PageRegistry(seed()).has('keys')).toBe(false);
+  });
+
+  it('reset clears trash', () => {
+    const pages = new PageRegistry(seed());
+
+    pages.trash('guide');
+    pages.reset();
+
+    expect(pages.trashedIn('guide')).toBeNull();
+  });
+
+  it('the header of a trashed page offers restore and permanent delete', () => {
+    const pages = new PageRegistry(seed());
+    const host = document.createElement('header');
+    const restore = vi.fn();
+    const purge = vi.fn();
+
+    pages.trash('guide');
+    document.body.append(host);
+    renderPageHeader(host, {
+      pageId: 'keys',
+      pages,
+      search: '',
+      readOnly: false,
+      navigate: vi.fn(),
+      focusEditor: vi.fn(),
+      i18n: vi.fn(),
+      changed: vi.fn(),
+      restore,
+      purge,
+    });
+
+    const banner = host.querySelector('[role="status"]');
+
+    expect(banner?.textContent).toContain('Guide');
+    host.querySelectorAll('button').forEach((button) => {
+      if (button.textContent === 'Restore page') button.click();
+      if (button.textContent === 'Permanently delete') button.click();
+    });
+    expect(restore).toHaveBeenCalledWith('guide');
+    expect(purge).toHaveBeenCalledWith('guide');
+  });
+
+  it('a page that is not in trash has no banner', () => {
+    const pages = new PageRegistry(seed());
+    const host = document.createElement('header');
+
+    renderPageHeader(host, {
+      pageId: 'keys',
+      pages,
+      search: '',
+      readOnly: false,
+      navigate: vi.fn(),
+      focusEditor: vi.fn(),
+      i18n: vi.fn(),
+      changed: vi.fn(),
+      restore: vi.fn(),
+      purge: vi.fn(),
+    });
+
+    expect(host.querySelector('[role="status"]')).toBeNull();
+  });
+});
+
 describe('playground collaboration room per page', () => {
   const html = readFileSync(resolve(__dirname, '../../../index.html'), 'utf-8');
   const from = html.indexOf('const DEV_SERVER_URL =');
@@ -150,6 +314,7 @@ describe('playground saves a pending page edit when the tab goes away', () => {
   const source = html.slice(from, html.indexOf('function renderHeader()', from));
 
   type Listener = () => void;
+  const livePages = [{ type: 'page', data: { pageId: 'keys' } }];
 
   const boot = (options: { save?: () => Promise<{ blocks: unknown[] }>; collab?: boolean } = {}) => {
     const windowListeners = new Map<string, Listener>();
@@ -159,6 +324,8 @@ describe('playground saves a pending page edit when the tab goes away', () => {
     const save = vi.fn(options.save ?? (() => Promise.resolve({ blocks: [{ id: 'live' }] })));
     const context = {
       blok: { save },
+      livePointers: null as unknown,
+      syncPointers: (_api: unknown, _pageId: unknown, pointers: { observe(blocks: unknown[]): void } | null | undefined) => pointers?.observe(livePages),
       editorPageId: 'guide',
       collaborationConfig: () => (options.collab === true ? { doc: 'x' } : null),
       storeBlocks: (_pageId: string | null, blocks: unknown[]) => stored.push(blocks),
@@ -180,7 +347,7 @@ describe('playground saves a pending page edit when the tab goes away', () => {
 
     runInNewContext(`${source}; this.schedulePersist = schedulePersist;`, context);
 
-    const schedule = (context as unknown as { schedulePersist: (api: unknown, pageId: string) => void }).schedulePersist;
+    const schedule = (context as unknown as { schedulePersist: (api: unknown, pageId: string, options?: unknown) => void }).schedulePersist;
 
     return { context, save, stored, timers, windowListeners, documentListeners, schedule };
   };
@@ -212,6 +379,51 @@ describe('playground saves a pending page edit when the tab goes away', () => {
     page.documentListeners.get('visibilitychange')?.();
     await settle();
     expect(page.stored).toEqual([[{ id: 'live' }]]);
+  });
+
+  it('checks page blocks after each change, and stores only a local document', async () => {
+    const local = boot();
+    const localWatch = { observe: vi.fn() };
+
+    local.schedule({ saver: { save: local.save } }, 'guide', { store: true, pointers: localWatch });
+    [...local.timers.values()][0]();
+    await settle();
+    expect(local.stored).toEqual([[{ id: 'live' }]]);
+    expect(localWatch.observe).toHaveBeenCalledWith(livePages);
+
+    const shared = boot({ collab: true });
+    const sharedWatch = { observe: vi.fn() };
+
+    shared.schedule({ saver: { save: shared.save } }, 'guide', { store: false, pointers: sharedWatch });
+    [...shared.timers.values()][0]();
+    await settle();
+    expect(shared.save).not.toHaveBeenCalled();
+    expect(shared.stored).toEqual([]);
+    expect(sharedWatch.observe).toHaveBeenCalledWith(livePages);
+  });
+
+  it('checks page blocks even when saving the document fails', async () => {
+    const page = boot({ save: () => Promise.reject(new Error('Saver: table children diverge')) });
+    const watch = { observe: vi.fn() };
+
+    page.schedule({ saver: { save: page.save } }, 'guide', { store: true, pointers: watch });
+    [...page.timers.values()][0]();
+    await settle();
+
+    expect(watch.observe).toHaveBeenCalledWith(livePages);
+  });
+
+  it('checks page blocks when leaving a collaborative page before the debounce ran', async () => {
+    const page = boot({ collab: true });
+    const watch = { observe: vi.fn() };
+
+    page.context.livePointers = watch;
+    page.schedule({ saver: { save: page.save } }, 'guide', { store: false, pointers: watch });
+    page.windowListeners.get('pagehide')?.();
+    await settle();
+
+    expect(page.stored).toEqual([]);
+    expect(watch.observe).toHaveBeenCalledWith(livePages);
   });
 
   it('does nothing when no save is pending', async () => {

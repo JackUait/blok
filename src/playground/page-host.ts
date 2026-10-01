@@ -16,11 +16,18 @@ export interface PageRecord {
   /** null = the root playground document. */
   parentId: string | null;
   blocks: OutputBlockData[];
+  /** Its block was removed from the parent: the page is in Trash. */
+  trashed?: true;
+  /** Restored from Trash; the parent still needs its block back. */
+  restorePending?: true;
 }
 
 export type PageMap = Record<string, PageRecord>;
 
 export const PAGES_STORAGE_KEY = 'blok-playground-pages';
+
+/** Pages deleted for good. Without it a deleted seed page returns on reload. */
+const PURGED_STORAGE_KEY = 'blok-playground-pages-purged';
 
 const ROUTE = /^\/editor\/page\/([^/]+)\/?$/;
 
@@ -57,12 +64,26 @@ const readStored = (): PageMap => {
   }
 };
 
+const readPurged = (): string[] => {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(PURGED_STORAGE_KEY) ?? '[]');
+
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+};
+
 export class PageRegistry {
   private pages: PageMap;
 
   constructor(private readonly seed: PageMap) {
     // Stored edits win, but a page added to the seed later still shows up.
-    this.pages = { ...structuredClone(seed), ...readStored() };
+    const purged = readPurged();
+
+    this.pages = Object.fromEntries(
+      Object.entries({ ...structuredClone(seed), ...readStored() }).filter(([id]) => !purged.includes(id))
+    );
   }
 
   public get(pageId: string): PageRecord | undefined {
@@ -123,9 +144,71 @@ export class PageRegistry {
     return climb(pageId, []);
   }
 
+  public trash(pageId: string): void {
+    if (this.get(pageId)?.trashed === true) {
+      return;
+    }
+    this.edit(pageId, (page) => ({ ...page, trashed: true }));
+  }
+
+  public untrash(pageId: string): void {
+    if (this.get(pageId)?.trashed !== true) {
+      return;
+    }
+    this.edit(pageId, ({ trashed: _old, ...page }) => page);
+  }
+
+  /** The trashed page that puts `pageId` in Trash: itself or an ancestor. */
+  public trashedIn(pageId: string): (PageRecord & { id: string }) | null {
+    return this.trail(pageId).find((page) => page.trashed === true) ?? null;
+  }
+
+  public restore(pageId: string): void {
+    this.edit(pageId, ({ trashed: _old, ...page }) => ({ ...page, restorePending: true }));
+  }
+
+  /** Restored pages whose block `parentId` still has to put back. */
+  public pendingRestores(parentId: string | null): string[] {
+    return Object.keys(this.pages).filter((id) => this.pages[id].restorePending === true && this.pages[id].parentId === parentId);
+  }
+
+  public restored(pageId: string): void {
+    this.edit(pageId, ({ restorePending: _old, ...page }) => page);
+  }
+
+  /** Deletes the page and its sub-pages for good. Returns its parent, the page to show next. */
+  public purge(pageId: string): string | null {
+    const parentId = this.get(pageId)?.parentId ?? null;
+    const doomed = new Set([pageId]);
+
+    // Sub-pages first point at the page, then at each other: grow until stable.
+    const collect = (): void => {
+      const before = doomed.size;
+
+      Object.entries(this.pages)
+        .filter(([, page]) => page.parentId !== null && doomed.has(page.parentId))
+        .forEach(([id]) => doomed.add(id));
+      if (doomed.size > before) {
+        collect();
+      }
+    };
+
+    collect();
+    this.pages = Object.fromEntries(Object.entries(this.pages).filter(([id]) => !doomed.has(id)));
+    this.persist();
+    try {
+      localStorage.setItem(PURGED_STORAGE_KEY, JSON.stringify([...new Set([...readPurged(), ...doomed])]));
+    } catch {
+      // Blocked storage: the page is gone for this tab only.
+    }
+
+    return parentId;
+  }
+
   public reset(): void {
     try {
       localStorage.removeItem(PAGES_STORAGE_KEY);
+      localStorage.removeItem(PURGED_STORAGE_KEY);
     } catch {
       // Storage blocked: the in-memory reset below still applies.
     }
@@ -151,6 +234,57 @@ export class PageRegistry {
   }
 }
 
+/* ----------------------------------------------------------------- trash */
+
+const pointedPages = (blocks: OutputBlockData[]): string[] =>
+  blocks.flatMap((block) => (block.type === 'page' && typeof block.data?.pageId === 'string' ? [block.data.pageId] : []));
+
+/**
+ * Notion's Trash, derived from page blocks: a page whose block this editor saw
+ * and then lost is trashed; a page whose block is there is not. A block missing
+ * from the start trashes nothing: a collaborative document renders late, and
+ * the root document forgets its pages on reload.
+ */
+export class PointerWatch {
+  private readonly seen = new Set<string>();
+
+  constructor(private readonly pages: PageRegistry) {}
+
+  public observe(blocks: OutputBlockData[]): void {
+    const present = new Set(pointedPages(blocks));
+
+    this.seen.forEach((id) => {
+      if (!present.has(id)) {
+        this.seen.delete(id);
+        this.pages.trash(id);
+      }
+    });
+    present.forEach((id) => {
+      this.seen.add(id);
+      this.pages.untrash(id);
+    });
+  }
+}
+
+export const hasPointer = (blocks: OutputBlockData[], pageId: string): boolean => pointedPages(blocks).includes(pageId);
+
+/** A page block for `pageId`, to put back into its parent on restore. */
+export const pointerBlock = (pageId: string, pages: PageRegistry): OutputBlockData => {
+  const page = pages.get(pageId);
+
+  return {
+    id: `page-${pageId}-${Date.now().toString(36)}`,
+    type: 'page',
+    data: {
+      pageId,
+      cache: {
+        title: page?.title ?? '',
+        ...(page?.icon !== undefined && { icon: { type: 'emoji', value: page.icon } }),
+      },
+    },
+  };
+};
+
 /* ---------------------------------------------------------------- header */
 
 export interface PageHeaderOptions {
@@ -166,6 +300,10 @@ export interface PageHeaderOptions {
   i18n(): { i18n: I18n; locale: string };
   /** Title or icon changed. */
   changed(): void;
+  /** "Restore page" on the Trash banner, for the trashed page. */
+  restore(pageId: string): void;
+  /** "Permanently delete" on the Trash banner, for the trashed page. */
+  purge(pageId: string): void;
 }
 
 export const PAGE_TITLE_SELECTOR = '#pg-page-title';
@@ -365,7 +503,41 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
     options.focusEditor();
   });
 
-  host.replaceChildren(nav, iconRow, title);
+  const trashed = pages.trashedIn(pageId);
+
+  host.replaceChildren(...(trashed === null ? [] : [trashBanner(trashed, pageId, options)]), nav, iconRow, title);
+};
+
+const trashBanner = (trashed: PageRecord & { id: string }, pageId: string, options: PageHeaderOptions): HTMLElement => {
+  const banner = document.createElement('div');
+  const text = document.createElement('p');
+  const name = trashed.title.trim() === '' ? 'Untitled' : trashed.title;
+
+  banner.className = 'pg-trash-banner';
+  banner.setAttribute('role', 'status');
+  text.textContent = trashed.id === pageId
+    ? 'This page is in Trash.'
+    : `This page is in Trash with “${name}”.`;
+  banner.append(text);
+
+  const actions: Array<[string, () => void]> = [
+    ['Restore page', () => options.restore(trashed.id)],
+    ['Permanently delete', () => options.purge(trashed.id)],
+  ];
+
+  if (!options.readOnly) {
+    actions.forEach(([label, run]) => {
+      const button = document.createElement('button');
+
+      button.type = 'button';
+      button.className = 'pg-trash-action';
+      button.textContent = label;
+      button.addEventListener('click', run);
+      banner.append(button);
+    });
+  }
+
+  return banner;
 };
 
 /* ----------------------------------------------------------- icon picker */

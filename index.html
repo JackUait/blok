@@ -509,6 +509,39 @@
     .rg-mini__child--on { background: var(--rg-bar); }
     .rg-selection { background: rgba(35, 131, 226, 0.16); }
 
+    /* Trash banner on a page (page-host.ts). Here, not in playground.css: Blok's
+       radius roles are not defined outside the editor. Notion paints it red; the
+       playground keeps its neutral chrome. */
+    .pg-trash-banner {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+      margin: 0 0 24px;
+      padding: 10px 12px 10px 16px;
+      border: 1px solid var(--pg-page-line);
+      border-radius: 12px;
+      background: var(--pg-page-hover);
+      font-family: var(--pg-font);
+      font-size: 14px;
+      line-height: 20px;
+      color: var(--pg-page-ink);
+    }
+    .pg-trash-banner p { flex: 1 1 auto; margin: 0; }
+    .pg-trash-action {
+      padding: 4px 12px;
+      border: 1px solid var(--pg-page-line-strong);
+      border-radius: 8px;
+      background: transparent;
+      font: inherit;
+      font-weight: 500;
+      color: var(--pg-page-ink);
+      cursor: pointer;
+      transition: border-color 120ms ease;
+    }
+    .pg-trash-action:hover { border-color: var(--pg-page-ink); }
+    .pg-trash-action:focus-visible { outline: 2px solid var(--pg-page-ink); outline-offset: 2px; }
+
     /* The --pg-* palette has no dark values; the page takes the dark neutrals here. */
     .dark-mode .rg {
       --pg-ink: #ffffff; --pg-muted: #a8a8a8; --pg-line: #2f2f2f; --pg-line-strong: #3d3d3d;
@@ -1376,7 +1409,7 @@
     import { PRESENCE_GLYPH_GROUP, PRESENCE_GLYPH_ICONS } from './src/playground/presence-glyph-icons.ts';
     import { buildPresenceFace } from './src/playground/presence-face.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
-    import { PAGE_TITLE_SELECTOR, PageRegistry, alignPageHeader, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, pageLinkSelector, pagePath, renderPageHeader, runPageTransition } from './src/playground/page-host.ts';
+    import { PAGE_TITLE_SELECTOR, PageRegistry, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, pageLinkSelector, pagePath, renderPageHeader, runPageTransition } from './src/playground/page-host.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
     // Default import only — the json-as-string vite plugin rewrites JSON
@@ -1548,6 +1581,8 @@
       // Captured now: callbacks of this editor must keep writing to ITS page
       // even after navigation has moved `currentPageId` on.
       const pageId = currentPageId;
+      const pointers = new PointerWatch(pages);
+      livePointers = pointers;
 
       if (state.tools.page) tools.page = {
         class: Page,
@@ -1584,8 +1619,9 @@
         onChange(api, event) {
           console.log('something changed', event);
           refreshBlokView();
-          // Under collaboration the sync service owns the document.
-          if (collaboration === null) schedulePersist(api, pageId);
+          // Under collaboration the sync service owns the document; the page
+          // blocks are still checked, for Trash.
+          schedulePersist(api, pageId, { store: collaboration === null, pointers });
         },
       };
     }
@@ -1627,6 +1663,8 @@
     }
     // The page the live editor shows. Differs from currentPageId mid-navigation.
     let editorPageId = currentPageId;
+    // The live editor's PointerWatch: Trash follows the page blocks it sees.
+    let livePointers = null;
     // Root edits live for the tab only, so a reload still starts pristine.
     let rootBlocks = null;
     const scrollByPage = new Map();
@@ -1641,13 +1679,46 @@
       else pages.setBlocks(pageId, blocks);
     }
 
+    /**
+     * The page blocks in the live editor. Read block by block, not through
+     * save(): one block that fails to save must not hide them.
+     */
+    function livePagePointers(api) {
+      const found = [];
+      for (let i = 0; i < api.blocks.getBlocksCount(); i++) {
+        const block = api.blocks.getBlockByIndex(i);
+        if (block?.name === 'page') found.push({ type: 'page', data: block.preservedData });
+      }
+      return found;
+    }
+
+    /**
+     * Updates Trash from the editor's page blocks, then puts back the block of
+     * every page restored from Trash. A collaborative document is written only
+     * after it loaded (an onChange), never at `isReady`, when it is empty.
+     */
+    function syncPointers(api, pageId, pointers, { restore = true } = {}) {
+      const blocks = livePagePointers(api);
+      pointers?.observe(blocks);
+      if (!restore || api.readOnly?.isEnabled) return;
+      for (const id of pages.pendingRestores(pageId)) {
+        if (!hasPointer(blocks, id)) {
+          const { type, data } = pointerBlock(id, pages);
+          api.blocks.insert(type, data, undefined, api.blocks.getBlocksCount(), false);
+        }
+        pages.restored(id);
+      }
+    }
+
     let persistTimer;
     let persistPending = false;
-    function schedulePersist(api, pageId) {
+    function schedulePersist(api, pageId, { store = true, pointers } = {}) {
       clearTimeout(persistTimer);
       persistPending = true;
       persistTimer = setTimeout(async () => {
         persistPending = false;
+        syncPointers(api, pageId, pointers);
+        if (!store) return;
         try {
           storeBlocks(pageId, (await api.saver.save()).blocks);
         } catch (error) {
@@ -1660,6 +1731,8 @@
     async function snapshotEditor() {
       clearTimeout(persistTimer);
       persistPending = false;
+      // Leaving a page right after deleting a page block must still trash it.
+      syncPointers(blok, editorPageId, livePointers, { restore: false });
       if (collaborationConfig(editorPageId) !== null) return;
       try {
         storeBlocks(editorPageId, (await blok.save()).blocks);
@@ -1687,11 +1760,31 @@
         focusEditor: () => blok.caret.setToFirstBlock('start'),
         i18n: () => ({ i18n: blok.i18n, locale: state.locale }),
         changed: () => updateDocumentTitle(),
+        restore: (id) => restorePage(id),
+        purge: (id) => goToPage(pages.purge(id)),
       });
       updateDocumentTitle();
       alignPageHeader(pageHeader, document.getElementById('blok'));
     }
     keepPageHeaderAligned(pageHeader, document.getElementById('blok'));
+
+    /** Takes a page out of Trash and puts its block back in its parent. */
+    function restorePage(id) {
+      pages.restore(id);
+      const parentId = pages.get(id)?.parentId ?? null;
+      // A collaborative parent gets its block when it next opens (syncPointers).
+      if (collaborationConfig(parentId) === null) {
+        const blocks = blocksFor(parentId);
+        if (!hasPointer(blocks, id)) storeBlocks(parentId, [...blocks, pointerBlock(id, pages)]);
+        pages.restored(id);
+      }
+      renderHeader();
+    }
+
+    /** A local document is whole at `isReady`, so its page blocks are checked right away. */
+    function syncLoadedPointers(editor) {
+      if (collaborationConfig(editorPageId) === null) syncPointers(editor, editorPageId, livePointers);
+    }
 
     function updateDocumentTitle() {
       const page = currentPageId === null ? undefined : pages.get(currentPageId);
@@ -1713,6 +1806,7 @@
         await editor.isReady;
         refreshBlokView();
         wireCollaborationPresence(editor);
+        syncLoadedPointers(editor);
       } catch (error) {
         console.error('Editor failed to start', error);
       }
@@ -1743,7 +1837,8 @@
 
         const from = editorPageId;
         // Up the tree (breadcrumbs, browser back) slides the other way.
-        const back = from !== null && (target === null || pages.trail(from).some((page) => page.id === target));
+        // A page deleted for good goes up to its parent, so it slides back too.
+        const back = from !== null && (target === null || !pages.has(from) || pages.trail(from).some((page) => page.id === target));
 
         scrollByPage.set(from, window.scrollY);
         await snapshotEditor();
@@ -1769,6 +1864,7 @@
     window.blok = blok;
     blok.isReady.then(() => {
       wireCollaborationPresence(blok);
+      syncLoadedPointers(blok);
       alignPageHeader(pageHeader, document.getElementById('blok'));
     });
     renderHeader();

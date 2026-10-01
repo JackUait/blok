@@ -7,6 +7,7 @@ import {
   isCaretAtEndOfInput,
   isCaretAtFirstLine,
   isCaretAtLastLine,
+  focus,
 } from '../../components/utils/caret';
 
 import { CELL_ATTR, ROW_ATTR, CELL_COL_ATTR, ownRows } from './table-core';
@@ -269,17 +270,20 @@ export class TableCellBlocks {
       }
     }
 
+    // The caret enters the neighbour on the visual edge facing the cell it left.
+    const facingEdge = event.key === 'ArrowLeft' ? 'right' : 'left';
+
     if (gridStep === 'forward') {
       const next = this.findAdjacentLogicalCell(position, 1);
 
-      this.commitArrowNavigation(event, () => next ? this.navigateToCell(next) : this.exitTableForward());
+      this.commitArrowNavigation(event, () => next ? this.navigateToCell(next, false, facingEdge) : this.exitTableForward());
 
       return;
     }
 
     const previous = this.findAdjacentLogicalCell(position, -1);
 
-    this.commitArrowNavigation(event, () => previous ? this.navigateToCell(previous, true) : this.exitTableBackward());
+    this.commitArrowNavigation(event, () => previous ? this.navigateToCell(previous, true, facingEdge) : this.exitTableBackward());
   }
 
   /**
@@ -658,8 +662,9 @@ export class TableCellBlocks {
    * Navigate to a different cell, focusing the appropriate contenteditable element
    * @param position - Target cell position
    * @param focusLast - If true, focus the last contenteditable; otherwise focus the first
+   * @param facingEdge - visual edge of the target that faces the cell the caret came from
    */
-  private navigateToCell(position: CellPosition, focusLast = false): void {
+  private navigateToCell(position: CellPosition, focusLast = false, facingEdge?: 'left' | 'right'): void {
     this.clearActiveCellWithBlocks();
 
     const cell = this.getCell(position.row, position.col);
@@ -681,8 +686,18 @@ export class TableCellBlocks {
     }
 
     const target = focusLast ? editables[editables.length - 1] : editables[0];
+    const targetDirection = getElementDirection(target);
 
-    target.focus();
+    // Text that runs against the grid is entered on the edge facing the source
+    // cell. Same-direction cells keep plain focus().
+    if (facingEdge !== undefined && targetDirection !== getElementDirection(this.gridElement)) {
+      const atStart = (facingEdge === 'left') === (targetDirection === 'ltr');
+
+      focus(atStart ? editables[0] : editables[editables.length - 1], atStart);
+    } else {
+      target.focus();
+    }
+
     this.onNavigateToCell?.(position);
   }
 

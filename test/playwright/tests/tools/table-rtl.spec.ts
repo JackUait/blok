@@ -681,4 +681,57 @@ test.describe('table in RTL', () => {
       expect(zero.x > one.x ? 'ArrowRight' : 'ArrowLeft').toBe(towardEnd);
     });
   }
+
+  /** Caret x and the x range of the text it sits in. */
+  const caretInText = async (page: Page): Promise<{ x: number; left: number; right: number }> =>
+    page.evaluate(() => {
+      const selection = window.getSelection();
+      const node = selection?.anchorNode ?? null;
+      const el = node instanceof HTMLElement ? node : node?.parentElement ?? null;
+      const field = el?.closest('[contenteditable="true"]');
+
+      if (!selection || selection.rangeCount === 0 || !field) {
+        throw new Error('no caret');
+      }
+
+      const text = document.createRange();
+
+      text.selectNodeContents(field);
+      const textRect = text.getBoundingClientRect();
+
+      return { x: selection.getRangeAt(0).getBoundingClientRect().x, left: textRect.left, right: textRect.right };
+    });
+
+  const caretLanding = [
+    { table: 'ltr', text: 'ltr', content: [['Alpha', 'Bravo', 'Charlie']] },
+    { table: 'rtl', text: 'rtl', content: [['مرحبا', 'عالم', 'جميل']] },
+    { table: 'rtl', text: 'ltr', content: [['Alpha', 'Bravo', 'Charlie']] },
+    { table: 'ltr', text: 'rtl', content: [['مرحبا', 'عالم', 'جميل']] },
+  ] as const;
+
+  for (const { table, text, content } of caretLanding) {
+    test(`${table} table with ${text} text: an arrow into a cell lands on the edge it came from`, async ({ page }) => {
+      await createBlok(page, tableData(content.map(row => [...row])), table);
+
+      const towardEnd = text === 'ltr' ? 'ArrowRight' : 'ArrowLeft';
+      // Same-direction cells only pin the forward key: a backward step lands at
+      // the cell's logical start today, which is not this test's concern.
+      const keys = table === text ? [towardEnd] : ['ArrowLeft', 'ArrowRight'] as const;
+
+      for (const key of keys) {
+        // Put the caret on the middle cell's visual edge on the key's side.
+
+        await page.locator(`${cell(0, 1)} [contenteditable="true"]`).first().click();
+        await page.keyboard.press(key === towardEnd ? 'End' : 'Home');
+        await page.keyboard.press(key);
+        await expect.poll(() => caretCol(page)).not.toBe('1');
+
+        const caret = await caretInText(page);
+        // Moving left enters the neighbour from its right edge, and vice versa.
+        const edge = key === 'ArrowLeft' ? caret.right : caret.left;
+
+        expect(Math.abs(caret.x - edge), `${key}: caret ${caret.x} in ${caret.left}..${caret.right}`).toBeLessThanOrEqual(TOLERANCE);
+      }
+    });
+  }
 });

@@ -1564,6 +1564,11 @@
       };
 
       const collaboration = collaborationConfig(pageId);
+      // ?slowLoad=<ms> holds the document back to show the boot skeleton.
+      const slowLoadMs = Number(new URLSearchParams(location.search).get('slowLoad'));
+      const documentSource = slowLoadMs > 0
+        ? { persistence: { load: () => new Promise(r => setTimeout(() => r({ blocks: blocksFor(pageId) }), slowLoadMs)), save: async () => {} } }
+        : { data: { blocks: blocksFor(pageId) } };
 
       return {
         readOnly: state.readOnly,
@@ -1582,7 +1587,7 @@
         // Under collaboration the document comes from the sync service, which
         // seeds it from this same file — passing `data` too would give it two owners.
         ...(collaboration === null
-          ? { data: { blocks: blocksFor(pageId) } }
+          ? documentSource
           : { server: DEV_SERVER_URL, collaboration }),
         onChange(api, event) {
           console.log('something changed', event);
@@ -3411,8 +3416,19 @@
       });
     }
 
-    // Reveal page once editor is ready (Tailwind CSS is injected during Blok init)
-    blok.isReady.then(() => document.body.classList.add('ready'));
+    // Reveal page once editor is ready (Tailwind CSS is injected during Blok init, before either fires).
+    // A slow load shows Blok's skeleton first; revealing only at isReady would fade the page in again after the skeleton handoff.
+    const skeletonShown = new Promise((resolve) => {
+      const observer = new MutationObserver(() => {
+        if (document.querySelector('#blok [data-blok-loading-skeleton]')) {
+          observer.disconnect();
+          resolve();
+        }
+      });
+      observer.observe(document.getElementById('blok'), { childList: true, subtree: true });
+      blok.isReady.finally(() => observer.disconnect());
+    });
+    Promise.race([blok.isReady, skeletonShown]).then(() => document.body.classList.add('ready'));
   </script>
 </body>
 </html>

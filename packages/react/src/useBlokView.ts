@@ -33,6 +33,7 @@ export const useBlokView = (
   const inlineRenderers = options?.inlineRenderers;
   const pageHref = options?.pageHref;
   const classes = options?.classes;
+  const direction = options?.direction;
 
   return useMemo(() => {
     return createElement(
@@ -59,8 +60,9 @@ export const useBlokView = (
            * already owns a wrapper and its job IS to look like the editor.
            */
           classes,
+          direction,
         })
       )
     );
-  }, [data, schema, renderers, onUnknownBlock, toolAttributes, blockIds, transformUrl, inlineRenderers, pageHref, classes]);
+  }, [data, schema, renderers, onUnknownBlock, toolAttributes, blockIds, transformUrl, inlineRenderers, pageHref, classes, direction]);
 };

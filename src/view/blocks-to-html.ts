@@ -12,6 +12,7 @@ import type { BlokViewSchema } from '../shared/sanitize-schema';
 import { BLOCK_CONTENT_CLASSES, BLOCK_WRAPPER_CLASSES } from '../shared/block-scaffolding';
 import { classesFor } from '../shared/tool-classes';
 import { hasUnsafeUrlProtocol } from '../shared/url-policy';
+import { firstStrongDirection } from '../shared/text-direction';
 import { buildDocumentModel, normalizeViewBlock } from './document-model';
 import type { DocumentModel, ViewBlock } from './document-model';
 import { builtinEmitters, renderListRun } from './emitters';
@@ -167,6 +168,20 @@ export interface BlocksToHtmlOptions {
    * {@link BlocksToHtmlOptions.transformUrl} and the unsafe-scheme strip.
    */
   pageHref?: (pageId: string) => string;
+  /**
+   * Base direction of the document (default: none).
+   *
+   * Sets `dir` on the {@link root} wrapper, and turns on per-block direction:
+   * each block whose own text has a strong letter carries `dir` from the
+   * first one, the same rule the editor applies. A block with no strong letter
+   * (empty, digits only) carries none and follows the document. Code is never
+   * stamped. Under {@link classes} the `dir` sits on the content element, as
+   * in the editor; otherwise on the block's root element (each `<li>` for
+   * lists).
+   *
+   * Opt-in: without it the output has no `dir` anywhere.
+   */
+  direction?: 'ltr' | 'rtl';
 }
 
 /**
@@ -207,6 +222,31 @@ const BARE_CONTAINER_TOOLS = new Set(['database', 'database-row']);
  * weight then override it. A new wrapping emitter must be added here.
  */
 const SELF_STAMPING_TOOLS = new Set(['header', 'divider', 'code']);
+
+/**
+ * Text fields that set a block's direction, in order. Mirrors the editable
+ * fields the editor reads; code is absent because its text is pinned LTR.
+ */
+const DIRECTION_FIELDS: Record<string, readonly string[]> = {
+  paragraph: ['text'],
+  header: ['text'],
+  toggle: ['text'],
+  list: ['text'],
+  quote: ['text', 'caption'],
+  image: ['caption'],
+  video: ['caption'],
+  embed: ['caption'],
+  audio: ['caption'],
+  file: ['caption'],
+};
+
+/**
+ * The `direction` option, or undefined for anything but 'ltr'/'rtl' — the
+ * value is written into markup, so a stray string must never reach it.
+ * @param options - render options
+ */
+const documentDirection = (options: BlocksToHtmlOptions): 'ltr' | 'rtl' | undefined =>
+  options.direction === 'ltr' || options.direction === 'rtl' ? options.direction : undefined;
 
 /** One rendering unit of a sibling run: a block, or a grouped run of `list` blocks. */
 type Segment = { kind: 'block'; block: ViewBlock } | { kind: 'list'; run: ViewBlock[] };
@@ -257,6 +297,28 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
   const blockIds = options.blockIds === true;
   const classes = options.classes === true;
   const transformUrl = options.transformUrl;
+  const directionEnabled = documentDirection(options) !== undefined;
+
+  /**
+   * Direction of the block's own text, or null for none or when the option is off.
+   * @param block - block to read
+   */
+  const directionOf = (block: ViewBlock): 'ltr' | 'rtl' | null => {
+    if (!directionEnabled) {
+      return null;
+    }
+
+    for (const field of DIRECTION_FIELDS[block.type] ?? []) {
+      const value = block.data[field];
+      const direction = typeof value === 'string' ? firstStrongDirection(htmlTextContent(value)) : null;
+
+      if (direction !== null) {
+        return direction;
+      }
+    }
+
+    return null;
+  };
 
   /**
    * The composed inline allowlist: the schema's baseSanitize wins over the
@@ -335,6 +397,11 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
     },
     classList: (list) => (classes && list.length > 0 ? ` class="${escapeHtml(list.join(' '))}"` : ''),
     classesEnabled: classes,
+    dirAttr: (block) => {
+      const direction = directionOf(block);
+
+      return direction === null ? '' : ` dir="${direction}"`;
+    },
   };
 
   const ctxFor = (block: ViewBlock): ViewRenderContext => ({
@@ -413,15 +480,34 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
    * `data-blok-element` marks the holder, matching the editor's own marker.
    * @param html - the block's own rendered markup
    */
-  const scaffold = (html: string): string => {
+  const scaffold = (html: string, direction: 'ltr' | 'rtl' | null): string => {
     if (!classes || html === '') {
       return html;
     }
 
     const wrapper = escapeHtml(BLOCK_WRAPPER_CLASSES.join(' '));
     const content = escapeHtml(BLOCK_CONTENT_CLASSES.join(' '));
+    const dir = direction === null ? '' : ` dir="${direction}"`;
 
-    return `<div data-blok-element class="${wrapper}"><div class="${content}">${html}</div></div>`;
+    return `<div data-blok-element class="${wrapper}"><div class="${content}"${dir}>${html}</div></div>`;
+  };
+
+  /**
+   * A built-in block's markup with its `dir`: on the content element under
+   * parity, else on its root tag. Custom renderers own their output, and an
+   * unknown tool has no root of its own, so neither is stamped.
+   * @param block - block being rendered
+   */
+  const renderWithDirection = (block: ViewBlock): string => {
+    const html = renderBlock(block);
+    const ownsRoot = renderers[block.type] === undefined && builtinEmitters[block.type] !== undefined;
+    const direction = ownsRoot ? directionOf(block) : null;
+
+    if (classes) {
+      return scaffold(html, direction);
+    }
+
+    return direction === null ? html : stampAttr(html, 'dir', direction);
   };
 
   const renderGuarded = (block: ViewBlock): string => {
@@ -434,7 +520,7 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
 
     try {
       /** Bare containers contribute no block of their own, so they get no holder. */
-      return BARE_CONTAINER_TOOLS.has(block.type) ? renderBlock(block) : scaffold(renderBlock(block));
+      return BARE_CONTAINER_TOOLS.has(block.type) ? renderBlock(block) : renderWithDirection(block);
     } finally {
       if (block.id !== undefined) {
         active.delete(block.id);
@@ -515,5 +601,8 @@ export const blocksToHtml = (
    * the container, and a container that vanishes for empty content forces them
    * to handle two output shapes.
    */
-  return options.root === true ? `<div data-blok-interface="view">${body}</div>` : body;
+  const direction = documentDirection(options);
+  const dir = direction === undefined ? '' : ` dir="${direction}"`;
+
+  return options.root === true ? `<div data-blok-interface="view"${dir}>${body}</div>` : body;
 };

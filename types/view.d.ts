@@ -179,6 +179,19 @@ export interface BlocksToHtmlOptions {
    * blocksToHtml(data, { pageHref: (pageId) => `/pages/${pageId}` });
    */
   pageHref?: (pageId: string) => string;
+  /**
+   * Base direction of the document (default: none).
+   *
+   * Sets `dir` on the {@link root} wrapper and turns on per-block direction:
+   * each block whose own text has a strong letter carries `dir` from the first
+   * one, the same rule the editor applies. A block with no strong letter
+   * (empty, digits only) carries none and follows the document. Code is never
+   * stamped. Under {@link classes} the `dir` sits on the content element, as in
+   * the editor; otherwise on the block's root element (each `<li>` for lists).
+   *
+   * Opt-in: without it the output has no `dir` anywhere.
+   */
+  direction?: 'ltr' | 'rtl';
 }
 
 /**

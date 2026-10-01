@@ -35,6 +35,8 @@ export interface BlokViewProps extends Omit<HTMLAttributes<HTMLDivElement>, 'chi
    * semantic markup.
    */
   classes?: BlocksToHtmlOptions['classes'];
+  /** Document direction: set as `dir` on the wrapper, and each block follows its own text. */
+  direction?: BlocksToHtmlOptions['direction'];
 }
 
 /**
@@ -63,6 +65,7 @@ export const BlokView = ({
   inlineRenderers,
   pageHref,
   classes,
+  direction,
   ...divProps
 }: BlokViewProps): ReactNode => {
   /**
@@ -82,6 +85,7 @@ export const BlokView = ({
     inlineRenderers,
     pageHref,
     classes: classes ?? true,
+    direction,
   });
 
   /**
@@ -94,5 +98,5 @@ export const BlokView = ({
    *
    * Written BEFORE the `divProps` spread so a caller can still override it.
    */
-  return <div data-blok-interface="view" {...divProps}>{content}</div>;
+  return <div data-blok-interface="view" dir={direction} {...divProps}>{content}</div>;
 };

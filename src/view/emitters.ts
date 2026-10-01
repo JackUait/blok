@@ -99,6 +99,11 @@ export interface EmitterEnv {
    * existing consumers already receive.
    */
   classesEnabled: boolean;
+  /**
+   * ` dir="ltr|rtl"` from the block's own text when the `direction` option is
+   * set, else ''. Only list items read it here; the dispatcher stamps the rest.
+   */
+  dirAttr(block: ViewBlock): string;
 }
 
 /**
@@ -275,7 +280,7 @@ export const renderListRun = (items: ViewBlock[], env: EmitterEnv): string => {
      * is also what lets the parity harness pair view `<li>`s against the
      * editor's item blocks one-to-one.
      */
-    const li = `<li${env.classesEnabled ? env.rootAttrs(items[from]) : env.idAttr(items[from])}>${itemContent(items[from])}${nested.html}</li>`;
+    const li = `<li${env.classesEnabled ? env.rootAttrs(items[from]) : env.idAttr(items[from])}${env.dirAttr(items[from])}>${itemContent(items[from])}${nested.html}</li>`;
     const rest = buildItems(nested.next, depth, style);
 
     return { html: li + rest.html, next: rest.next };

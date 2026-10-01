@@ -18,6 +18,27 @@ describe('BlokView', () => {
     vi.restoreAllMocks();
   });
 
+  it('sets the document direction on the wrapper and each block follows its own text', () => {
+    const { container } = render(
+      <BlokView
+        direction="rtl"
+        data={{
+          blocks: [
+            { type: 'paragraph', data: { text: 'Hello' } },
+            { type: 'paragraph', data: { text: '123' } },
+          ],
+        }}
+      />
+    );
+
+    expect(container.firstElementChild?.getAttribute('dir')).toBe('rtl');
+
+    const contents = container.querySelectorAll('[data-blok-element] > div');
+
+    expect(contents[0]?.getAttribute('dir')).toBe('ltr');
+    expect(contents[1]?.hasAttribute('dir')).toBe(false);
+  });
+
   it('renders semantic HTML synchronously inside a single wrapper div', () => {
     const { container } = render(
       <BlokView

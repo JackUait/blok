@@ -923,6 +923,28 @@ describe('DropTargetDetector', () => {
         targetBlock.holder.remove();
       });
 
+      it('keeps the editor axis for a non-list target whose text runs against the editor', () => {
+        // A nested non-list block indents on its holder, in the editor's direction.
+        const previousBlock = createMockListBlock('prev', 0);
+        const targetBlock = { id: 'target', holder: document.createElement('div'), name: 'paragraph', stretched: false } as Block;
+        const sourceBlock = createMockListBlock('source', 0);
+        const content = document.createElement('div');
+
+        targetBlock.holder.setAttribute(DATA_ATTR.element, 'block');
+        content.setAttribute('data-blok-element-content', '');
+        content.setAttribute('dir', 'rtl');
+        targetBlock.holder.appendChild(content);
+        document.body.append(previousBlock.holder, targetBlock.holder);
+        mockBlockManager.getBlockIndex = vi.fn(() => 0);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => (index === 0 ? previousBlock : undefined));
+
+        // 5px in from the left edge: root on the editor's (LTR) axis.
+        expect(detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock, 105)).toBe(0);
+
+        previousBlock.holder.remove();
+        targetBlock.holder.remove();
+      });
+
       it('falls back to auto-resolution when clientX is omitted', () => {
         const previousBlock = createMockListBlock('prev', 0);
         const targetBlock = createMockListBlock('target', 0);

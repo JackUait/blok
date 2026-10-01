@@ -121,6 +121,99 @@ const dropAtOffset = async (
   return { ...indicator, saved };
 };
 
+const CHILD_BLOCKS: OutputData['blocks'] = [
+  { id: 'la', type: 'list', data: { text: 'List head', style: 'unordered' }, content: ['ch'] },
+  { id: 'ch', type: 'paragraph', data: { text: 'Child paragraph' }, parent: 'la' },
+  { id: 'mv', type: 'paragraph', data: { text: 'Mover paragraph' } },
+];
+
+type Indicator = { depth: string; left: string; right: string };
+
+/**
+ * Drags "Mover paragraph" onto the bottom edge of the nested "Child paragraph"
+ * with the pointer near one of the EDITOR's inline content edges, and
+ * reads the drop line before dropping.
+ */
+const childParagraphIndicator = async (
+  page: Page,
+  direction: Direction,
+  textDirection: Direction,
+  side: 'start' | 'end'
+): Promise<Indicator> => {
+  const blocks = textDirection === 'ltr'
+    ? CHILD_BLOCKS
+    : CHILD_BLOCKS.map(block => ({ ...block, data: { ...block.data, text: `${RTL_MARK}${String(block.data.text)}` } }));
+
+  // A fresh editor per case: re-rendering after a drop that nested a block can
+  // leave the editor without its block toolbar.
+  await page.evaluate(async ({ holder, dir, data }) => {
+    await window.blokInstance?.destroy();
+    document.getElementById(holder)?.remove();
+
+    const container = document.createElement('div');
+
+    container.id = holder;
+    container.style.width = '900px';
+    document.body.appendChild(container);
+
+    const blok = new window.Blok({ holder, i18n: { direction: dir }, data: { blocks: data } });
+
+    window.blokInstance = blok;
+    await blok.isReady;
+  }, { holder: HOLDER_ID, dir: direction, data: blocks });
+
+  await page.mouse.move(0, 0);
+  await page.locator('[data-blok-id="mv"]').hover();
+
+  const handle = page.getByTestId('settings-toggler');
+
+  await expect(handle).toBeVisible();
+
+  const handleBox = await handle.boundingBox();
+  const geometry = await page.evaluate(() => {
+    const child = document.querySelector('[data-blok-id="ch"]');
+    const editorContent = document.querySelector('[data-blok-id="la"] [data-blok-element-content]');
+
+    if (!child || !editorContent) {
+      throw new Error('no blocks');
+    }
+
+    const rect = editorContent.getBoundingClientRect();
+
+    return { bottom: child.getBoundingClientRect().bottom, left: rect.left, right: rect.right };
+  });
+
+  if (!handleBox) {
+    throw new Error('no handle box');
+  }
+
+  // 30px in from the editor's inline start, or 10px in from its inline end.
+  const fromLeft = (direction === 'ltr') === (side === 'start');
+  const x = fromLeft ? geometry.left + (side === 'start' ? 30 : 10) : geometry.right - (side === 'start' ? 30 : 10);
+
+  await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(x, geometry.bottom - 3, { steps: 15 });
+  await page.waitForFunction(() => document.querySelector('[data-blok-id="ch"][data-drop-indicator="bottom"]') !== null);
+
+  const indicator = await page.evaluate(() => {
+    const el = document.querySelector<HTMLElement>('[data-blok-id="ch"]');
+
+    if (!el) {
+      throw new Error('no indicator');
+    }
+
+    const line = getComputedStyle(el, '::before');
+
+    return { depth: el.style.getPropertyValue('--drop-indicator-depth'), left: line.left, right: line.right };
+  });
+
+  await page.mouse.up();
+  await page.waitForFunction(() => document.querySelector('[data-blok-interface=blok]')?.getAttribute('data-blok-dragging') !== 'true');
+
+  return indicator;
+};
+
 test.describe('RTL drag-to-nest measures from the inline start', () => {
   test.beforeAll(ensureBlokBundleBuilt);
 
@@ -203,5 +296,24 @@ test.describe('RTL drag-to-nest measures from the inline start', () => {
     expect(px(rtlTextNested.line[0])).toBe(px(rtlTextRoot.line[0]));
     expect(px(ltrTextNested.line[0])).toBeGreaterThan(px(ltrTextRoot.line[0]));
     expect(px(ltrTextNested.line[1])).toBe(px(ltrTextRoot.line[1]));
+  });
+
+  test('a nested non-list block keeps the editor axis whatever its text direction', async ({ page }) => {
+    test.slow();
+
+    // A nested non-list block is indented on its holder, in the editor's
+    // direction, so its text direction must not move the drop line.
+    for (const direction of ['ltr', 'rtl'] as const) {
+      const against = direction === 'ltr' ? 'rtl' : 'ltr';
+      const pureStart = await childParagraphIndicator(page, direction, direction, 'start');
+      const mixedStart = await childParagraphIndicator(page, direction, against, 'start');
+      const pureEnd = await childParagraphIndicator(page, direction, direction, 'end');
+      const mixedEnd = await childParagraphIndicator(page, direction, against, 'end');
+
+      expect(pureStart.depth).toBe('1');
+      expect(pureEnd.depth).toBe('1');
+      expect(mixedEnd).toEqual(pureEnd);
+      expect(mixedStart).toEqual(pureStart);
+    }
   });
 });

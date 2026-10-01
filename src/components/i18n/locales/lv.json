@@ -113,6 +113,7 @@
   "a11y.searchResults": "Meklēšanas rezultātu skaits: {count}",
   "a11y.blockToolbar": "Bloka rīkjosla",
   "a11y.textFormatting": "Teksta formatēšana",
+  "a11y.loadingContent": "Notiek satura ielāde…",
   "a11y.allBlocksSelected": "Atlasīti visi bloki. Kopā: {count}.",
   "a11y.blocksSelected": "Atlasīto bloku skaits: {count}",
   "a11y.navigationModeEntered": "Navigācijas režīms. Izmantojiet bulttaustiņus, lai pārvietotos starp blokiem, taustiņu Enter, lai rediģētu, un taustiņu Escape, lai izietu.",

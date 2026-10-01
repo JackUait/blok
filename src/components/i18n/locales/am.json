@@ -116,6 +116,7 @@
   "a11y.searchResults": "የፍለጋ ውጤቶች፦ {count}",
   "a11y.blockToolbar": "የብሎክ የመሣሪያ አሞሌ",
   "a11y.textFormatting": "የጽሑፍ ቅርጸት",
+  "a11y.loadingContent": "ይዘት በመጫን ላይ…",
   "tools.table.title": "ሰንጠረዥ",
   "tools.table.clearSelection": "ይዘት አጽዳ",
   "tools.table.copySelection": "ቅዳ",

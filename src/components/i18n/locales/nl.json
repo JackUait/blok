@@ -118,6 +118,7 @@
   "a11y.searchResults": "Zoekresultaten: {count}",
   "a11y.blockToolbar": "Blokwerkbalk",
   "a11y.textFormatting": "Tekstopmaak",
+  "a11y.loadingContent": "Inhoud laden…",
   "tools.table.title": "Tabel",
   "tools.table.clearSelection": "Inhoud wissen",
   "tools.table.copySelection": "Kopiëren",

@@ -144,6 +144,7 @@
   "a11y.searchResults": "Suchergebnisse: {count}",
   "a11y.blockToolbar": "Block-Symbolleiste",
   "a11y.textFormatting": "Textformatierung",
+  "a11y.loadingContent": "Inhalt wird geladen…",
   "blockSettings.convertWithChildrenWarning": "Verschachtelte Blöcke: {count}. Beim Umwandeln dieses Blocks wird der verschachtelte Inhalt auf die oberste Ebene verschoben. Fortfahren?",
   "toolNames.underline": "Unterstrichen",
   "toolNames.strikethrough": "Durchgestrichen",

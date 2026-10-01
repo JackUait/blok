@@ -144,6 +144,7 @@
   "a11y.searchResults": "Resultados de búsqueda: {count}",
   "a11y.blockToolbar": "Barra de herramientas de bloque",
   "a11y.textFormatting": "Formato de texto",
+  "a11y.loadingContent": "Cargando contenido…",
   "blockSettings.convertWithChildrenWarning": "Bloques anidados: {count}. Al convertir este bloque, el contenido anidado se moverá al nivel superior. ¿Quieres continuar?",
   "toolNames.underline": "Subrayado",
   "toolNames.strikethrough": "Tachado",

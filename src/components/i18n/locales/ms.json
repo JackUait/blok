@@ -144,6 +144,7 @@
   "a11y.searchResults": "Hasil carian: {count}",
   "a11y.blockToolbar": "Bar alat blok",
   "a11y.textFormatting": "Pemformatan teks",
+  "a11y.loadingContent": "Memuatkan kandungan…",
   "a11y.allBlocksSelected": "Semua blok dipilih. Jumlah: {count}.",
   "a11y.blocksSelected": "{count} blok dipilih",
   "a11y.navigationModeEntered": "Mod navigasi. Gunakan kekunci anak panah untuk bergerak antara blok, Enter untuk mengedit, Escape untuk keluar.",

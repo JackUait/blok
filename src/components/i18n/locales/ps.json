@@ -144,6 +144,7 @@
   "a11y.searchResults": "د لټون پایلې: {count}",
   "a11y.blockToolbar": "د بلاک وسایلو پټه",
   "a11y.textFormatting": "د متن بڼه ورکول",
+  "a11y.loadingContent": "منځپانګه بارېږي…",
   "blockSettings.convertWithChildrenWarning": "دننه بلاکونه: {count}. د دې بلاک بدلول به دننه منځپانګه تر ټولو لوړې کچې ته یوسي. دوام ورکړئ؟",
   "toolNames.underline": "کرښن",
   "toolNames.strikethrough": "کرښول",

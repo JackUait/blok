@@ -142,6 +142,7 @@
   "a11y.searchResults": "தேடல் முடிவுகள்: {count}",
   "a11y.blockToolbar": "தொகுதிக் கருவிப்பட்டை",
   "a11y.textFormatting": "உரை வடிவமைப்பு",
+  "a11y.loadingContent": "உள்ளடக்கம் ஏற்றப்படுகிறது…",
   "blockSettings.convertWithChildrenWarning": "உள்ளமைக்கப்பட்ட தொகுதிகள்: {count}. இந்தத் தொகுதியை மாற்றினால் உள்ளமைக்கப்பட்ட உள்ளடக்கம் மேல் நிலைக்கு நகர்த்தப்படும். தொடரவா?",
   "toolNames.underline": "அடிக்கோடு",
   "toolNames.strikethrough": "குறுக்குக்கோடு",

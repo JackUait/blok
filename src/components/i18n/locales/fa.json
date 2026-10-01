@@ -118,6 +118,7 @@
   "a11y.searchResults": "نتایج جستجو: {count}",
   "a11y.blockToolbar": "نوار ابزار بلوک",
   "a11y.textFormatting": "قالب‌بندی متن",
+  "a11y.loadingContent": "در حال بارگذاری محتوا…",
   "tools.table.title": "جدول",
   "tools.table.clearSelection": "پاک کردن محتوا",
   "tools.table.copySelection": "کپی",

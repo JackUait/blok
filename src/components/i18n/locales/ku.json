@@ -144,6 +144,7 @@
   "a11y.searchResults": "ئەنجامەکانی گەڕان: {count}",
   "a11y.blockToolbar": "شریتی ئامرازەکانی بلۆک",
   "a11y.textFormatting": "شێوەپێدانی دەق",
+  "a11y.loadingContent": "ناوەڕۆک بار دەکرێت…",
   "a11y.allBlocksSelected": "هەموو بلۆکەکان هەڵبژێردران. کۆی گشتی: {count}",
   "a11y.blocksSelected": "{count} بلۆک هەڵبژێردرا",
   "a11y.navigationModeEntered": "دۆخی ڕێدۆزی. بۆ جووڵان لە نێوان بلۆکەکاندا کلیلەکانی ئاراستە بەکاربهێنە، Enter بۆ دەستکاری و Escape بۆ دەرچوون.",

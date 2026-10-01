@@ -113,6 +113,7 @@
   "a11y.searchResults": "Paieškos rezultatų: {count}",
   "a11y.blockToolbar": "Bloko įrankių juosta",
   "a11y.textFormatting": "Teksto formatavimas",
+  "a11y.loadingContent": "Įkeliamas turinys…",
   "a11y.allBlocksSelected": "Pasirinkti visi blokai. Iš viso: {count}",
   "a11y.blocksSelected": "Pasirinkta blokų: {count}",
   "a11y.navigationModeEntered": "Naršymo režimas. Rodyklių klavišais judėkite tarp blokų. Norėdami redaguoti, paspauskite Enter, o norėdami išeiti – Escape.",

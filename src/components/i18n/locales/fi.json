@@ -118,6 +118,7 @@
   "a11y.searchResults": "Hakutuloksia: {count}",
   "a11y.blockToolbar": "Lohkon työkalupalkki",
   "a11y.textFormatting": "Tekstin muotoilu",
+  "a11y.loadingContent": "Ladataan sisältöä…",
   "tools.table.title": "Taulukko",
   "tools.table.clearSelection": "Tyhjennä sisältö",
   "tools.table.copySelection": "Kopioi",

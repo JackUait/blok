@@ -144,6 +144,7 @@
   "a11y.searchResults": "Matokeo ya utafutaji: {count}",
   "a11y.blockToolbar": "Upau wa vidhibiti vya kizuizi",
   "a11y.textFormatting": "Uumbizaji wa maandishi",
+  "a11y.loadingContent": "Inapakia maudhui…",
   "blockSettings.convertWithChildrenWarning": "Vizuizi vilivyowekwa ndani: {count}. Kubadilisha kizuizi hiki kutahamisha maudhui yaliyowekwa ndani hadi kiwango cha juu. Endelea?",
   "toolNames.underline": "Mstari chini",
   "toolNames.strikethrough": "Mstari katikati",

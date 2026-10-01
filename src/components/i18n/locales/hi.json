@@ -118,6 +118,7 @@
   "a11y.searchResults": "खोज के नतीजे: {count}",
   "a11y.blockToolbar": "ब्लॉक टूलबार",
   "a11y.textFormatting": "टेक्स्ट फ़ॉर्मेटिंग",
+  "a11y.loadingContent": "कॉन्टेंट लोड हो रहा है…",
   "tools.table.title": "तालिका",
   "tools.table.clearSelection": "सामग्री साफ़ करें",
   "tools.table.copySelection": "कॉपी करें",

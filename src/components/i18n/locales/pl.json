@@ -144,6 +144,7 @@
   "a11y.searchResults": "Wyniki wyszukiwania: {count}",
   "a11y.blockToolbar": "Pasek narzędzi bloku",
   "a11y.textFormatting": "Formatowanie tekstu",
+  "a11y.loadingContent": "Ładowanie treści…",
   "blockSettings.convertWithChildrenWarning": "Liczba zagnieżdżonych bloków: {count}. Przekształcenie tego bloku przeniesie zagnieżdżoną zawartość na poziom główny. Kontynuować?",
   "toolNames.underline": "Podkreślenie",
   "toolNames.strikethrough": "Przekreślenie",

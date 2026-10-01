@@ -262,7 +262,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 545 + 117 + 70 + 4 closure for all 736 keys', () => {
+  it('rebuilds a disjoint 546 + 117 + 70 + 4 closure for all 737 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -276,7 +276,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(736);
+    expect(lifecycle.size).toBe(737);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -305,7 +305,8 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: tools.image.filterStrength names the strength slider by literal.
       // +8: the filter family tabs and their row name are listed by literal.
       // find.options labels the find bar's options button by literal.
-      'executable-literal': 545,
+      // +1: a11y.loadingContent names the loading skeleton's status by literal.
+      'executable-literal': 546,
       // +1: toolNames.page comes from the page tool's titleKey.
       // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
       // when the video settings became one pane (1b400077); still shipped.

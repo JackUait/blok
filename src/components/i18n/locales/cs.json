@@ -144,6 +144,7 @@
   "a11y.searchResults": "Výsledky hledání: {count}",
   "a11y.blockToolbar": "Panel nástrojů bloku",
   "a11y.textFormatting": "Formátování textu",
+  "a11y.loadingContent": "Načítání obsahu…",
   "blockSettings.convertWithChildrenWarning": "Počet vnořených bloků: {count}. Při převodu tohoto bloku se vnořený obsah přesune na nejvyšší úroveň. Pokračovat?",
   "toolNames.underline": "Podtržené",
   "toolNames.strikethrough": "Přeškrtnuté",

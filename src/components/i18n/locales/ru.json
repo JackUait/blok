@@ -144,6 +144,7 @@
   "a11y.searchResults": "Результаты поиска: {count}",
   "a11y.blockToolbar": "Панель инструментов блока",
   "a11y.textFormatting": "Форматирование текста",
+  "a11y.loadingContent": "Загрузка содержимого…",
   "blockSettings.convertWithChildrenWarning": "Вложенных блоков: {count}. При преобразовании этого блока вложенное содержимое будет перемещено на верхний уровень. Продолжить?",
   "toolNames.underline": "Подчёркнутый",
   "toolNames.strikethrough": "Зачёркнутый",

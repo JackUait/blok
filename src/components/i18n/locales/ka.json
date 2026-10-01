@@ -113,6 +113,7 @@
   "a11y.searchResults": "{count} შედეგი",
   "a11y.blockToolbar": "ბლოკის ხელსაწყოთა პანელი",
   "a11y.textFormatting": "ტექსტის ფორმატირება",
+  "a11y.loadingContent": "შიგთავსი იტვირთება…",
   "tools.paragraph.placeholder": "დაწერეთ რამე ან ხელსაწყოს ასარჩევად დააჭირეთ „/“-ს",
   "tools.toggle.placeholder": "ჩაკეცვადი ბლოკი",
   "tools.toggle.bodyPlaceholder": "ცარიელი ჩაკეცვადი ბლოკი. დააწკაპუნეთ ბლოკის დასამატებლად ან ჩავლებით გადაიტანეთ ბლოკები აქ.",

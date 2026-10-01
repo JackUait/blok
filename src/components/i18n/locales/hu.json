@@ -144,6 +144,7 @@
   "a11y.searchResults": "{count} találat",
   "a11y.blockToolbar": "Blokkeszköztár",
   "a11y.textFormatting": "Szövegformázás",
+  "a11y.loadingContent": "Tartalom betöltése…",
   "blockSettings.convertWithChildrenWarning": "Beágyazott blokkok: {count}. A blokk átalakításakor a beágyazott tartalom a legfelső szintre kerül. Folytatja?",
   "toolNames.underline": "Aláhúzás",
   "toolNames.strikethrough": "Áthúzás",

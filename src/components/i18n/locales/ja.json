@@ -144,6 +144,7 @@
   "a11y.searchResults": "検索結果：{count}件",
   "a11y.blockToolbar": "ブロックツールバー",
   "a11y.textFormatting": "テキストの書式設定",
+  "a11y.loadingContent": "コンテンツを読み込み中…",
   "blockSettings.convertWithChildrenWarning": "ネストされたブロック：{count}個。このブロックを変換すると、ネストされた内容が最上位に移動します。続けますか？",
   "toolNames.underline": "下線",
   "toolNames.strikethrough": "取り消し線",

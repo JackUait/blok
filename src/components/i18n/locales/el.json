@@ -118,6 +118,7 @@
   "a11y.searchResults": "Αποτελέσματα αναζήτησης: {count}",
   "a11y.blockToolbar": "Γραμμή εργαλείων μπλοκ",
   "a11y.textFormatting": "Μορφοποίηση κειμένου",
+  "a11y.loadingContent": "Φόρτωση περιεχομένου…",
   "tools.table.title": "Πίνακας",
   "tools.table.clearSelection": "Απαλοιφή περιεχομένων",
   "tools.table.copySelection": "Αντιγραφή",

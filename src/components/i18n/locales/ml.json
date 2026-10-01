@@ -142,6 +142,7 @@
   "a11y.searchResults": "തിരയൽ ഫലങ്ങളുടെ എണ്ണം: {count}",
   "a11y.blockToolbar": "ബ്ലോക്ക് ടൂൾബാർ",
   "a11y.textFormatting": "ടെക്സ്റ്റ് ഫോർമാറ്റിംഗ്",
+  "a11y.loadingContent": "ഉള്ളടക്കം ലോഡ് ചെയ്യുന്നു…",
   "a11y.allBlocksSelected": "എല്ലാ ബ്ലോക്കുകളും തിരഞ്ഞെടുത്തു. ആകെ: {count}.",
   "a11y.blocksSelected": "തിരഞ്ഞെടുത്ത ബ്ലോക്കുകളുടെ എണ്ണം: {count}",
   "a11y.navigationModeEntered": "നാവിഗേഷൻ മോഡ്. ബ്ലോക്കുകൾക്കിടയിൽ നീങ്ങാൻ അമ്പടയാള കീകൾ, എഡിറ്റ് ചെയ്യാൻ Enter, പുറത്തുകടക്കാൻ Escape എന്നിവ ഉപയോഗിക്കുക.",

@@ -144,6 +144,7 @@
   "a11y.searchResults": "Søgeresultater: {count}",
   "a11y.blockToolbar": "Blokværktøjslinje",
   "a11y.textFormatting": "Tekstformatering",
+  "a11y.loadingContent": "Indlæser indhold…",
   "blockSettings.convertWithChildrenWarning": "Indlejrede blokke: {count}. Hvis blokken konverteres, flyttes det indlejrede indhold til øverste niveau. Fortsæt?",
   "toolNames.underline": "Understregning",
   "toolNames.strikethrough": "Gennemstregning",

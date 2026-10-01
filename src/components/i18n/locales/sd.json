@@ -144,6 +144,7 @@
   "a11y.searchResults": "ڳولا جا نتيجا: {count}",
   "a11y.blockToolbar": "بلاڪ ٽول بار",
   "a11y.textFormatting": "متن جي فارميٽنگ",
+  "a11y.loadingContent": "مواد لوڊ ٿي رهيو آهي…",
   "blockSettings.convertWithChildrenWarning": "اندر رکيل بلاڪ: {count}. هن بلاڪ کي تبديل ڪرڻ سان اندر رکيل مواد مٿين سطح تي منتقل ٿيندو. جاري رکو؟",
   "toolNames.underline": "هيٺ لڪير",
   "toolNames.strikethrough": "منجهي ليڪ",

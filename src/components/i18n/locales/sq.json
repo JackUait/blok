@@ -144,6 +144,7 @@
   "a11y.searchResults": "Rezultatet e kërkimit: {count}",
   "a11y.blockToolbar": "Shiriti i veglave të bllokut",
   "a11y.textFormatting": "Formatimi i tekstit",
+  "a11y.loadingContent": "Po ngarkohet përmbajtja…",
   "blockSettings.convertWithChildrenWarning": "Blloqe të ndërfutura: {count}. Konvertimi i këtij blloku do ta zhvendosë përmbajtjen e ndërfutur në nivelin e sipërm. Vazhdoni?",
   "toolNames.underline": "Nënvizim",
   "toolNames.strikethrough": "Vizë përmes",

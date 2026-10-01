@@ -118,6 +118,7 @@
   "a11y.searchResults": "搜索结果：{count} 个",
   "a11y.blockToolbar": "内容块工具栏",
   "a11y.textFormatting": "文本格式",
+  "a11y.loadingContent": "正在加载内容…",
   "tools.table.title": "表格",
   "tools.table.clearSelection": "清除内容",
   "tools.table.copySelection": "复制",

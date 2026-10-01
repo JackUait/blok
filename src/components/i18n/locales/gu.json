@@ -116,6 +116,7 @@
   "a11y.searchResults": "શોધ પરિણામો: {count}",
   "a11y.blockToolbar": "બ્લોક ટૂલબાર",
   "a11y.textFormatting": "ટેક્સ્ટ ફોર્મેટિંગ",
+  "a11y.loadingContent": "કન્ટેન્ટ લોડ થઈ રહ્યું છે…",
   "tools.table.title": "કોષ્ટક",
   "tools.table.clearSelection": "સામગ્રી સાફ કરો",
   "tools.table.copySelection": "કૉપી કરો",

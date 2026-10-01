@@ -116,6 +116,7 @@
   "a11y.searchResults": "Rezultati pretrage: {count}",
   "a11y.blockToolbar": "Alatna traka bloka",
   "a11y.textFormatting": "Oblikovanje teksta",
+  "a11y.loadingContent": "Učitavanje sadržaja…",
   "tools.table.title": "Tabela",
   "tools.table.clearSelection": "Očisti sadržaj",
   "tools.table.copySelection": "Kopiraj",

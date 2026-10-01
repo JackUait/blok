@@ -142,6 +142,7 @@
   "a11y.searchResults": "Resulta ng paghahanap: {count}",
   "a11y.blockToolbar": "Toolbar ng block",
   "a11y.textFormatting": "Pag-format ng teksto",
+  "a11y.loadingContent": "Nilo-load ang nilalaman…",
   "blockSettings.convertWithChildrenWarning": "Mga nakapaloob na block: {count}. Kapag na-convert ang block na ito, ililipat sa pinakamataas na antas ang nakapaloob na nilalaman. Ituloy?",
   "toolNames.underline": "Salungguhit",
   "toolNames.strikethrough": "Guhit sa gitna",

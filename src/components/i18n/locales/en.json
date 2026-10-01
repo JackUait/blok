@@ -164,6 +164,7 @@
   "a11y.dropCreateColumnRight": "Will create a column to the right",
   "a11y.blockToolbar": "Block toolbar",
   "a11y.textFormatting": "Text formatting",
+  "a11y.loadingContent": "Loading content…",
   "toolNames.underline": "Underline",
   "toolNames.strikethrough": "Strikethrough",
   "toolNames.supSub": "Superscript & subscript",

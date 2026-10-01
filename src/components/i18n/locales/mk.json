@@ -144,6 +144,7 @@
   "a11y.searchResults": "Резултати од пребарувањето: {count}",
   "a11y.blockToolbar": "Лента со алатки за блок",
   "a11y.textFormatting": "Форматирање на текст",
+  "a11y.loadingContent": "Содржината се вчитува…",
   "a11y.allBlocksSelected": "Избрани се сите блокови. Вкупно: {count}.",
   "a11y.blocksSelected": "Избрани блокови: {count}",
   "a11y.navigationModeEntered": "Режим на навигација. Користете ги стрелките за движење меѓу блоковите, Enter за уредување, Escape за излез.",

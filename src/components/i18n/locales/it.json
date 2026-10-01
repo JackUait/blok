@@ -144,6 +144,7 @@
   "a11y.searchResults": "Risultati di ricerca: {count}",
   "a11y.blockToolbar": "Barra degli strumenti del blocco",
   "a11y.textFormatting": "Formattazione del testo",
+  "a11y.loadingContent": "Caricamento contenuto…",
   "blockSettings.convertWithChildrenWarning": "Blocchi nidificati: {count}. La conversione di questo blocco sposterà il contenuto nidificato al livello superiore. Continuare?",
   "toolNames.underline": "Sottolineato",
   "toolNames.strikethrough": "Barrato",

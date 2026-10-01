@@ -142,6 +142,7 @@
   "a11y.searchResults": "លទ្ធផលស្វែងរក៖ {count}",
   "a11y.blockToolbar": "របារឧបករណ៍ប្លុក",
   "a11y.textFormatting": "ការធ្វើទ្រង់ទ្រាយអត្ថបទ",
+  "a11y.loadingContent": "កំពុងផ្ទុកខ្លឹមសារ…",
   "blockSettings.convertWithChildrenWarning": "ប្លុករង៖ {count}។ ការបម្លែងប្លុកនេះនឹងផ្លាស់ទីមាតិកាដែលបានដាក់នៅខាងក្នុងទៅកម្រិតកំពូល។ បន្តទេ?",
   "toolNames.underline": "គូសបន្ទាត់ពីក្រោម",
   "toolNames.strikethrough": "គូសបន្ទាត់ចំកណ្ដាល",

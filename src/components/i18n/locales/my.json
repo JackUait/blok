@@ -142,6 +142,7 @@
   "a11y.searchResults": "ရှာဖွေမှုရလဒ် {count} ခု",
   "a11y.blockToolbar": "ဘလောက်ကိရိယာဘား",
   "a11y.textFormatting": "စာသားဖော်မတ်ချခြင်း",
+  "a11y.loadingContent": "အကြောင်းအရာကို တင်နေသည်…",
   "a11y.allBlocksSelected": "ဘလောက်အားလုံးကို ရွေးထားသည်။ စုစုပေါင်း {count} ခု",
   "a11y.blocksSelected": "ဘလောက် {count} ခု ရွေးထားသည်",
   "a11y.navigationModeEntered": "လမ်းညွှန်မုဒ်။ ဘလောက်များအကြား ရွှေ့ရန် မြှားခလုတ်များ၊ တည်းဖြတ်ရန် Enter၊ ထွက်ရန် Escape ကို သုံးပါ။",

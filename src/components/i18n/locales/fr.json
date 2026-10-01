@@ -118,6 +118,7 @@
   "a11y.searchResults": "Résultats de recherche : {count}",
   "a11y.blockToolbar": "Barre d’outils de bloc",
   "a11y.textFormatting": "Mise en forme du texte",
+  "a11y.loadingContent": "Chargement du contenu…",
   "tools.table.title": "Tableau",
   "tools.table.clearSelection": "Effacer le contenu",
   "tools.table.copySelection": "Copier",

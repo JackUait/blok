@@ -144,6 +144,7 @@
   "a11y.searchResults": "Резултати от търсенето: {count}",
   "a11y.blockToolbar": "Лента с инструменти за блокове",
   "a11y.textFormatting": "Форматиране на текст",
+  "a11y.loadingContent": "Зареждане на съдържанието…",
   "blockSettings.convertWithChildrenWarning": "Вложени блокове: {count}. Преобразуването на този блок ще премести вложеното съдържание на най-горното ниво. Искате ли да продължите?",
   "toolNames.underline": "Подчертан",
   "toolNames.strikethrough": "Зачертан",

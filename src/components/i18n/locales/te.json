@@ -111,6 +111,7 @@
   "a11y.searchResults": "శోధన ఫలితాలు: {count}",
   "a11y.blockToolbar": "బ్లాక్ టూల్‌బార్",
   "a11y.textFormatting": "టెక్స్ట్ ఫార్మాటింగ్",
+  "a11y.loadingContent": "కంటెంట్ లోడ్ అవుతోంది…",
   "tools.paragraph.placeholder": "ఏదైనా రాయండి లేదా సాధనాన్ని ఎంచుకోవడానికి / నొక్కండి",
   "tools.toggle.placeholder": "మడత",
   "tools.toggle.bodyPlaceholder": "ఖాళీ మడత. బ్లాక్‌ను జోడించడానికి నొక్కండి లేదా బ్లాక్‌లను ఇక్కడికి లాగండి.",

@@ -144,6 +144,7 @@
   "a11y.searchResults": "Otsingutulemusi: {count}",
   "a11y.blockToolbar": "Ploki tööriistariba",
   "a11y.textFormatting": "Teksti vormindamine",
+  "a11y.loadingContent": "Sisu laadimine…",
   "blockSettings.convertWithChildrenWarning": "Pesastatud plokke: {count}. Selle ploki teisendamisel tõstetakse pesastatud sisu ülemisele tasemele. Jätkata?",
   "toolNames.underline": "Allajoonimine",
   "toolNames.strikethrough": "Läbikriipsutus",

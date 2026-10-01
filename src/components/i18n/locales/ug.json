@@ -144,6 +144,7 @@
   "a11y.searchResults": "ئىزدەش نەتىجىسى: {count}",
   "a11y.blockToolbar": "بۆلەك قورال بالدىقى",
   "a11y.textFormatting": "تېكىست فورماتلاش",
+  "a11y.loadingContent": "مەزمۇن يۈكلىنىۋاتىدۇ…",
   "blockSettings.convertWithChildrenWarning": "قاتلانغان بۆلەكلەر: {count}. بۇ بۆلەكنى ئۆزگەرتىش قاتلانغان مەزمۇننى ئەڭ ئۈستكى قاتلامغا يۆتكەيدۇ. داۋاملاشتۇرامسىز؟",
   "toolNames.underline": "ئاستى سىزىق",
   "toolNames.strikethrough": "ئۆچۈرۈش سىزىقى",

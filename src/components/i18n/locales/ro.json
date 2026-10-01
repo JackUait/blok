@@ -113,6 +113,7 @@
   "a11y.searchResults": "Rezultate ale căutării: {count}",
   "a11y.blockToolbar": "Bară de instrumente pentru blocuri",
   "a11y.textFormatting": "Formatarea textului",
+  "a11y.loadingContent": "Se încarcă conținutul…",
   "tools.paragraph.placeholder": "Scrieți ceva sau apăsați / pentru a selecta un instrument",
   "tools.toggle.placeholder": "Listă reductibilă",
   "tools.toggle.bodyPlaceholder": "Bloc reductibil gol. Faceți clic pentru a adăuga un bloc sau trageți blocuri aici.",

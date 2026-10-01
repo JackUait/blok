@@ -144,6 +144,7 @@
   "a11y.searchResults": "Kết quả tìm kiếm: {count}",
   "a11y.blockToolbar": "Thanh công cụ khối",
   "a11y.textFormatting": "Định dạng văn bản",
+  "a11y.loadingContent": "Đang tải nội dung…",
   "blockSettings.convertWithChildrenWarning": "Khối lồng nhau: {count}. Việc chuyển đổi khối này sẽ đưa nội dung lồng nhau lên cấp cao nhất. Tiếp tục?",
   "toolNames.underline": "Gạch chân",
   "toolNames.strikethrough": "Gạch ngang",

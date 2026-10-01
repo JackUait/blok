@@ -142,6 +142,7 @@
   "a11y.searchResults": "Axtarış nəticələri: {count}",
   "a11y.blockToolbar": "Blok alətlər paneli",
   "a11y.textFormatting": "Mətn formatlaması",
+  "a11y.loadingContent": "Məzmun yüklənir…",
   "blockSettings.convertWithChildrenWarning": "İç-içə blokların sayı: {count}. Bu blok çevrildikdə iç-içə məzmun ən yuxarı səviyyəyə köçürüləcək. Davam edilsin?",
   "toolNames.underline": "Altından xətt",
   "toolNames.strikethrough": "Üstüxətli",

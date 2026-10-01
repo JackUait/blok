@@ -144,6 +144,7 @@
   "a11y.searchResults": "نتائج البحث: {count}",
   "a11y.blockToolbar": "شريط أدوات الكتلة",
   "a11y.textFormatting": "تنسيق النص",
+  "a11y.loadingContent": "جارٍ تحميل المحتوى…",
   "blockSettings.convertWithChildrenWarning": "الكتل المتداخلة: {count}. سيؤدي تحويل هذه الكتلة إلى نقل المحتوى المتداخل إلى المستوى الأعلى. هل تريد المتابعة؟",
   "toolNames.underline": "تسطير",
   "toolNames.strikethrough": "يتوسطه خط",

@@ -144,6 +144,7 @@
   "a11y.searchResults": "Rezultati iskanja: {count}",
   "a11y.blockToolbar": "Orodna vrstica bloka",
   "a11y.textFormatting": "Oblikovanje besedila",
+  "a11y.loadingContent": "Nalaganje vsebine…",
   "blockSettings.convertWithChildrenWarning": "Ugnezdeni bloki: {count}. Pretvorba tega bloka bo ugnezdeno vsebino premaknila na najvišjo raven. Nadaljevati?",
   "toolNames.underline": "Podčrtano",
   "toolNames.strikethrough": "Prečrtano",

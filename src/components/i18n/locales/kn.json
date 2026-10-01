@@ -142,6 +142,7 @@
   "a11y.searchResults": "ಹುಡುಕಾಟ ಫಲಿತಾಂಶಗಳ ಸಂಖ್ಯೆ: {count}",
   "a11y.blockToolbar": "ಬ್ಲಾಕ್ ಟೂಲ್‌ಬಾರ್",
   "a11y.textFormatting": "ಪಠ್ಯ ಫಾರ್ಮ್ಯಾಟಿಂಗ್",
+  "a11y.loadingContent": "ವಿಷಯ ಲೋಡ್ ಆಗುತ್ತಿದೆ…",
   "a11y.allBlocksSelected": "ಎಲ್ಲಾ ಬ್ಲಾಕ್‌ಗಳು ಆಯ್ಕೆಯಾಗಿವೆ. ಒಟ್ಟು: {count}.",
   "a11y.blocksSelected": "{count} ಬ್ಲಾಕ್‌ಗಳು ಆಯ್ಕೆಯಾಗಿವೆ",
   "a11y.navigationModeEntered": "ನ್ಯಾವಿಗೇಶನ್ ಮೋಡ್. ಬ್ಲಾಕ್‌ಗಳ ನಡುವೆ ಚಲಿಸಲು ಬಾಣದ ಕೀಗಳನ್ನು, ಸಂಪಾದಿಸಲು Enter, ನಿರ್ಗಮಿಸಲು Escape ಬಳಸಿ.",

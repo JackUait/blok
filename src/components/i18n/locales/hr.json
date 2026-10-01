@@ -144,6 +144,7 @@
   "a11y.searchResults": "Rezultati pretraživanja: {count}",
   "a11y.blockToolbar": "Alatna traka bloka",
   "a11y.textFormatting": "Oblikovanje teksta",
+  "a11y.loadingContent": "Učitavanje sadržaja…",
   "blockSettings.convertWithChildrenWarning": "Ugniježđeni blokovi: {count}. Pretvorbom ovog bloka ugniježđeni sadržaj premjestit će se na najvišu razinu. Nastaviti?",
   "toolNames.underline": "Podcrtano",
   "toolNames.strikethrough": "Precrtano",

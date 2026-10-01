@@ -144,6 +144,7 @@
   "a11y.searchResults": "Sökresultat: {count}",
   "a11y.blockToolbar": "Blockverktygsfält",
   "a11y.textFormatting": "Textformatering",
+  "a11y.loadingContent": "Läser in innehåll…",
   "blockSettings.convertWithChildrenWarning": "Nästlade block: {count}. Om du omvandlar det här blocket flyttas det nästlade innehållet till den översta nivån. Fortsätta?",
   "toolNames.underline": "Understrykning",
   "toolNames.strikethrough": "Genomstrykning",

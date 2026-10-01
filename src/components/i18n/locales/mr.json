@@ -111,6 +111,7 @@
   "a11y.searchResults": "शोध परिणाम: {count}",
   "a11y.blockToolbar": "ब्लॉक टूलबार",
   "a11y.textFormatting": "मजकूर स्वरूपण",
+  "a11y.loadingContent": "आशय लोड होत आहे…",
   "a11y.allBlocksSelected": "सर्व ब्लॉक निवडले. एकूण: {count}.",
   "a11y.blocksSelected": "{count} ब्लॉक निवडले",
   "a11y.navigationModeEntered": "नेव्हिगेशन मोड. ब्लॉकदरम्यान हलण्यासाठी बाण की, संपादित करण्यासाठी Enter, बाहेर पडण्यासाठी Escape वापरा.",

@@ -144,6 +144,7 @@
   "a11y.searchResults": "Søkeresultater: {count}",
   "a11y.blockToolbar": "Blokkverktøylinje",
   "a11y.textFormatting": "Tekstformatering",
+  "a11y.loadingContent": "Laster innhold…",
   "blockSettings.convertWithChildrenWarning": "Nestede blokker: {count}. Når denne blokken konverteres, flyttes det nestede innholdet til øverste nivå. Vil du fortsette?",
   "toolNames.underline": "Understreking",
   "toolNames.strikethrough": "Gjennomstreking",

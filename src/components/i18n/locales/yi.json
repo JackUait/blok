@@ -144,6 +144,7 @@
   "a11y.searchResults": "זוך־רעזולטאַטן: {count}",
   "a11y.blockToolbar": "בלאָק־געצייגלייסט",
   "a11y.textFormatting": "טעקסט פֿאָרמאַטירונג",
+  "a11y.loadingContent": "לאָדט אינהאַלט…",
   "blockSettings.convertWithChildrenWarning": "אַרײַנגענעסטלטע בלאָקן: {count}. איבערמאַכן דעם בלאָק וועט אַרויפֿרוקן דעם אַרײַנגענעסטלטן אינהאַלט צום אויבערשטן שטאַפּל. פֿאָרזעצן?",
   "toolNames.underline": "אונטערשטרייכן",
   "toolNames.strikethrough": "דורכשטרייכן",

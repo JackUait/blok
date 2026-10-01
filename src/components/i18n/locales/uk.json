@@ -113,6 +113,7 @@
   "a11y.searchResults": "Результатів пошуку: {count}",
   "a11y.blockToolbar": "Панель інструментів блока",
   "a11y.textFormatting": "Форматування тексту",
+  "a11y.loadingContent": "Завантаження вмісту…",
   "tools.paragraph.placeholder": "Напишіть щось або натисніть /, щоб вибрати інструмент",
   "tools.toggle.placeholder": "Згортний",
   "tools.toggle.bodyPlaceholder": "Порожній згортний блок. Натисніть, щоб додати блок, або перетягніть блоки сюди.",

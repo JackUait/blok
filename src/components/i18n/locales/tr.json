@@ -113,6 +113,7 @@
   "a11y.searchResults": "Arama sonuçları: {count}",
   "a11y.blockToolbar": "Blok araç çubuğu",
   "a11y.textFormatting": "Metin biçimlendirme",
+  "a11y.loadingContent": "İçerik yükleniyor…",
   "tools.paragraph.placeholder": "Bir şeyler yazın veya bir araç seçmek için / tuşuna basın",
   "tools.toggle.placeholder": "Açılır",
   "tools.toggle.bodyPlaceholder": "Boş açılır blok. Blok eklemek için tıklayın veya blokları buraya sürükleyin.",

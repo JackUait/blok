@@ -144,6 +144,7 @@
   "a11y.searchResults": "Хайлтын үр дүн: {count}.",
   "a11y.blockToolbar": "Блокийн хэрэгслийн самбар",
   "a11y.textFormatting": "Текстийн хэлбэржүүлэлт",
+  "a11y.loadingContent": "Агуулгыг ачаалж байна…",
   "a11y.allBlocksSelected": "Бүх блок сонгогдлоо. Нийт: {count}.",
   "a11y.blocksSelected": "{count} блок сонгогдсон",
   "a11y.navigationModeEntered": "Навигацийн горим. Блокуудын хооронд шилжихийн тулд сумтай товчлууруудыг, засварлахын тулд Enter, гарахын тулд Escape дарна уу.",

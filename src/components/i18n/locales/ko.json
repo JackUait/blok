@@ -144,6 +144,7 @@
   "a11y.searchResults": "결과 {count}개",
   "a11y.blockToolbar": "블록 도구 모음",
   "a11y.textFormatting": "텍스트 서식",
+  "a11y.loadingContent": "콘텐츠를 불러오는 중…",
   "a11y.allBlocksSelected": "모든 블록이 선택되었습니다. 총 {count}개입니다.",
   "a11y.blocksSelected": "{count}개 블록 선택됨",
   "a11y.navigationModeEntered": "탐색 모드. 화살표 키로 블록 간 이동, Enter로 편집, Escape로 종료합니다.",

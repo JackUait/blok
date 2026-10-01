@@ -164,6 +164,7 @@
   "a11y.dropCreateColumnRight": "將在右側建立一欄",
   "a11y.blockToolbar": "區塊工具列",
   "a11y.textFormatting": "文字格式",
+  "a11y.loadingContent": "正在載入內容…",
   "toolNames.underline": "底線",
   "toolNames.strikethrough": "刪除線",
   "toolNames.supSub": "上標與下標",

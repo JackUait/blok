@@ -144,6 +144,7 @@
   "a11y.searchResults": "תוצאות חיפוש: {count}",
   "a11y.blockToolbar": "סרגל כלים של בלוק",
   "a11y.textFormatting": "עיצוב טקסט",
+  "a11y.loadingContent": "טוען תוכן…",
   "blockSettings.convertWithChildrenWarning": "בלוקים מקוננים: {count}. המרת הבלוק הזה תעביר את התוכן המקונן לרמה העליונה. להמשיך?",
   "toolNames.underline": "קו תחתון",
   "toolNames.strikethrough": "קו חוצה",

@@ -144,6 +144,7 @@
   "a11y.searchResults": "Резултати претраге: {count}",
   "a11y.blockToolbar": "Трака са алаткама блока",
   "a11y.textFormatting": "Форматирање текста",
+  "a11y.loadingContent": "Учитавање садржаја…",
   "blockSettings.convertWithChildrenWarning": "Угнежђени блокови: {count}. Конвертовање овог блока преместиће угнежђени садржај на највиши ниво. Наставити?",
   "toolNames.underline": "Подвучено",
   "toolNames.strikethrough": "Прецртано",

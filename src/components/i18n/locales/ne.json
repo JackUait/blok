@@ -111,6 +111,7 @@
   "a11y.searchResults": "खोज परिणामहरूको सङ्ख्या: {count}",
   "a11y.blockToolbar": "ब्लक टूलबार",
   "a11y.textFormatting": "पाठ ढाँचा",
+  "a11y.loadingContent": "सामग्री लोड हुँदैछ…",
   "a11y.allBlocksSelected": "सबै ब्लकहरू चयन गरिए। जम्मा: {count}।",
   "a11y.blocksSelected": "चयन गरिएका ब्लकहरूको सङ्ख्या: {count}",
   "a11y.navigationModeEntered": "नेभिगेसन मोड। ब्लकहरूबीच जान एरो कुञ्जीहरू, सम्पादन गर्न Enter र बाहिर निस्कन Escape प्रयोग गर्नुहोस्।",

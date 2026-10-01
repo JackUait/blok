@@ -116,6 +116,7 @@
   "a11y.searchResults": "অনুসন্ধানের ফলাফল: {count}",
   "a11y.blockToolbar": "ব্লক টুলবার",
   "a11y.textFormatting": "লেখার বিন্যাস",
+  "a11y.loadingContent": "কনটেন্ট লোড হচ্ছে…",
   "tools.table.title": "টেবিল",
   "tools.table.clearSelection": "বিষয়বস্তু সাফ করুন",
   "tools.table.copySelection": "কপি",

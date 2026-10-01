@@ -118,6 +118,7 @@
   "a11y.searchResults": "{count} արդյունք",
   "a11y.blockToolbar": "Բլոկի գործիքագոտի",
   "a11y.textFormatting": "Տեքստի ձևաչափում",
+  "a11y.loadingContent": "Բովանդակությունը բեռնվում է…",
   "tools.table.title": "Աղյուսակ",
   "tools.table.clearSelection": "Մաքրել",
   "tools.table.copySelection": "Պատճենել",

@@ -113,6 +113,7 @@
   "a11y.searchResults": "Výsledky vyhľadávania: {count}",
   "a11y.blockToolbar": "Panel nástrojov bloku",
   "a11y.textFormatting": "Formátovanie textu",
+  "a11y.loadingContent": "Načítava sa obsah…",
   "tools.paragraph.placeholder": "Napíšte niečo alebo stlačte /, aby ste vybrali nástroj",
   "tools.toggle.placeholder": "Zbaliteľný zoznam",
   "tools.toggle.bodyPlaceholder": "Prázdny zbaliteľný blok. Kliknutím pridáte blok alebo sem presuňte bloky.",

@@ -90,6 +90,8 @@ for (const direction of DIRECTIONS) {
       const convert = page.getByRole('menuitem', { name: 'Convert to', exact: true });
 
       await expect(convert).toBeVisible();
+      // Measured before the submenu opens: it then becomes the last open popover.
+      const parentBox = await box(parent);
       const chevron = convert.locator('[data-blok-popover-item-icon-chevron-right] svg');
 
       // The chevron points where the submenu will open.
@@ -100,7 +102,7 @@ for (const direction of DIRECTIONS) {
       const submenu = page.getByTestId('popover-container').filter({ has: page.locator('[data-blok-convert-item]') }).last();
 
       await expect(submenu).toBeVisible();
-      const [parentBox, submenuBox] = await Promise.all([box(parent), box(submenu)]);
+      const submenuBox = await box(submenu);
 
       // Past the parent's inline end, overlapping its trailing edge by 4px.
       const pastParentEnd = direction === 'rtl'
@@ -234,19 +236,20 @@ for (const direction of DIRECTIONS) {
 }
 
 test('open menus and toasts follow a runtime direction flip', async ({ page }) => {
-  await createBlok(page, 'ltr', [paragraph('')]);
-  await page.locator('[data-blok-component="paragraph"]').first().click();
-  await page.keyboard.type('/');
-  await expect(openPopover(page)).toHaveAttribute('dir', 'ltr');
+  await createBlok(page, 'ltr', [{ type: 'code', data: { code: 'int main() {}', language: 'cpp' } }]);
+  await page.getByTestId('code-language-btn').click();
+  const picker = openPopover(page);
+
+  await expect(picker).toHaveAttribute('dir', 'ltr');
   await page.evaluate(() => window.blokInstance?.notifier.show({ message: 'Saved', time: 20_000 }));
   const toast = page.getByTestId('notification');
 
-  await expect(toast).toBeVisible();
+  await expect(toast).toHaveAttribute('dir', 'ltr');
 
   await page.evaluate(async () => {
     await window.blokInstance?.i18n.update({ direction: 'rtl' });
   });
 
-  await expect(openPopover(page)).toHaveAttribute('dir', 'rtl');
+  await expect(picker).toHaveAttribute('dir', 'rtl');
   await expect(toast).toHaveAttribute('dir', 'rtl');
 });

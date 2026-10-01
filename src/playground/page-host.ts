@@ -357,6 +357,54 @@ export const pointerBlock = (pageId: string, pages: PageRegistry): OutputBlockDa
   };
 };
 
+/** What `backspaceIntoTitle` needs from the editor. */
+export interface TitleBackspaceEditor {
+  blocks: {
+    getBlockByIndex(index: number): { id: string; holder: HTMLElement; isEmpty: boolean } | undefined;
+    getChildren(parentId: string): unknown[];
+    delete(index: number, setCaret: boolean): Promise<void>;
+  };
+}
+
+/**
+ * Backspace at the very start of the first block goes up into the title, as in
+ * Notion. An empty first block is removed on the way; one with text or
+ * children stays. Returns whether it handled the key.
+ */
+export const backspaceIntoTitle = (event: KeyboardEvent, editor: TitleBackspaceEditor): boolean => {
+  const title = document.querySelector<HTMLElement>(PAGE_TITLE_SELECTOR);
+  const first = editor.blocks.getBlockByIndex(0);
+  const selection = window.getSelection();
+  const node = selection?.anchorNode ?? null;
+
+  if (event.key !== 'Backspace' || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
+    || title === null || title.contentEditable !== 'true' || first === undefined
+    || selection === null || node === null || !selection.isCollapsed || !first.holder.contains(node)) {
+    return false;
+  }
+
+  // From the caret's own field: a list marker before it is not text.
+  const field = (node instanceof Element ? node : node.parentElement)?.closest('[contenteditable="true"]') ?? first.holder;
+  const before = document.createRange();
+
+  before.setStart(field, 0);
+  before.setEnd(node, selection.anchorOffset);
+  if (before.toString() !== '') {
+    return false;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  if (first.isEmpty && editor.blocks.getChildren(first.id).length === 0) {
+    void editor.blocks.delete(0, false);
+  }
+  title.focus();
+  selection.selectAllChildren(title);
+  selection.collapseToEnd();
+
+  return true;
+};
+
 /* ---------------------------------------------------------------- header */
 
 export interface PageHeaderOptions {
@@ -366,8 +414,8 @@ export interface PageHeaderOptions {
   readOnly: boolean;
   /** Plain click on a breadcrumb. */
   navigate(pageId: string | null): void;
-  /** Enter in the title. */
-  focusEditor(): void;
+  /** Enter in the title: open a new first block holding `html`, the title's text after the caret. */
+  splitTitle(html: string): void;
   /** The current editor's i18n and locale, for the emoji picker's strings. */
   i18n(): { i18n: I18n; locale: string };
   /** Title or icon changed. */
@@ -598,7 +646,21 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
       return;
     }
     event.preventDefault();
-    options.focusEditor();
+
+    const range = window.getSelection()?.getRangeAt(0);
+
+    if (range === undefined || !title.contains(range.commonAncestorContainer)) {
+      return;
+    }
+    range.deleteContents();
+    range.setEnd(title, title.childNodes.length);
+
+    const rest = document.createElement('div');
+
+    rest.append(range.extractContents());
+    title.normalize();
+    title.dispatchEvent(new Event('input'));
+    options.splitTitle(rest.innerHTML);
   });
 
   const trashed = pageId === null ? null : pages.trashedIn(pageId);

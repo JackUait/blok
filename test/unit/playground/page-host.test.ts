@@ -8,6 +8,7 @@ import {
   ROOT_STORAGE_KEY,
   PageRegistry,
   PointerWatch,
+  backspaceIntoTitle,
   keepPageHeaderAligned,
   pointerBlock,
   renderPageHeader,
@@ -133,7 +134,7 @@ describe('root page header', () => {
     search: '',
     readOnly: false,
     navigate: vi.fn(),
-    focusEditor: vi.fn(),
+    splitTitle: vi.fn(),
     i18n: vi.fn(),
     changed: vi.fn(),
     restore: vi.fn(),
@@ -148,6 +149,76 @@ describe('root page header', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     localStorage.clear();
+  });
+
+  const pressEnterAt = (title: HTMLElement, offset: number, end = offset): KeyboardEvent => {
+    const text = title.firstChild ?? title;
+
+    window.getSelection()?.setBaseAndExtent(text, offset, text, end);
+
+    const event = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
+
+    title.dispatchEvent(event);
+
+    return event;
+  };
+
+  it('Enter at the end of the title opens an empty first block', () => {
+    const host = document.createElement('header');
+    const options = headerOptions(new PageRegistry(seed()), null);
+
+    document.body.append(host);
+    renderPageHeader(host, options);
+
+    const title = host.querySelector<HTMLElement>('h1');
+
+    if (title === null) {
+      throw new Error('no title');
+    }
+
+    expect(pressEnterAt(title, 4).defaultPrevented).toBe(true);
+    expect(options.splitTitle).toHaveBeenCalledWith('');
+    expect(title.textContent).toBe('Blok');
+    host.remove();
+  });
+
+  it('Enter mid-title moves the text after the caret into the new block', () => {
+    const host = document.createElement('header');
+    const pages = new PageRegistry(seed());
+    const options = headerOptions(pages, null);
+
+    document.body.append(host);
+    renderPageHeader(host, options);
+    const title = host.querySelector<HTMLElement>('h1');
+
+    if (title === null) {
+      throw new Error('no title');
+    }
+    title.textContent = 'Tom & <Jerry>';
+    pressEnterAt(title, 3);
+
+    expect(options.splitTitle).toHaveBeenCalledWith(' &amp; &lt;Jerry&gt;');
+    expect(title.textContent).toBe('Tom');
+    expect(pages.root().title).toBe('Tom');
+    host.remove();
+  });
+
+  it('Enter over a selection in the title drops the selected text first', () => {
+    const host = document.createElement('header');
+    const options = headerOptions(new PageRegistry(seed()), null);
+
+    document.body.append(host);
+    renderPageHeader(host, options);
+    const title = host.querySelector<HTMLElement>('h1');
+
+    if (title === null) {
+      throw new Error('no title');
+    }
+    pressEnterAt(title, 1, 2);
+
+    expect(options.splitTitle).toHaveBeenCalledWith('ok');
+    expect(title.textContent).toBe('B');
+    host.remove();
   });
 
   it('the root document shows a title and an icon button, like a page', () => {
@@ -442,7 +513,7 @@ describe('page trash', () => {
       search: '',
       readOnly: false,
       navigate: vi.fn(),
-      focusEditor: vi.fn(),
+      splitTitle: vi.fn(),
       i18n: vi.fn(),
       changed: vi.fn(),
       restore,
@@ -471,7 +542,7 @@ describe('page trash', () => {
       search: '',
       readOnly: false,
       navigate: vi.fn(),
-      focusEditor: vi.fn(),
+      splitTitle: vi.fn(),
       i18n: vi.fn(),
       changed: vi.fn(),
       restore: vi.fn(),
@@ -499,7 +570,7 @@ describe('page trash', () => {
       search: '',
       readOnly: false,
       navigate: vi.fn(),
-      focusEditor: vi.fn(),
+      splitTitle: vi.fn(),
       i18n: vi.fn(),
       changed: vi.fn(),
       restore: vi.fn(),
@@ -718,5 +789,118 @@ describe('keepPageHeaderAligned', () => {
 
     expect(header.style.marginLeft).toBe('168px');
     expect(header.style.maxWidth).toBe('720px');
+  });
+});
+
+describe('backspaceIntoTitle', () => {
+  const setup = (text: string, caret: number, children: unknown[] = []): { title: HTMLElement; editable: HTMLElement; remove: ReturnType<typeof vi.fn>; press: () => { event: KeyboardEvent; handled: boolean } } => {
+    const title = document.createElement('h1');
+
+    title.id = 'pg-page-title';
+    title.contentEditable = 'true';
+    title.textContent = 'Blok';
+
+    const holder = document.createElement('div');
+    const editable = document.createElement('div');
+
+    editable.contentEditable = 'true';
+    editable.textContent = text;
+    holder.append(editable);
+    document.body.append(title, holder);
+    window.getSelection()?.setPosition(editable.firstChild ?? editable, caret);
+
+    const remove = vi.fn(() => Promise.resolve());
+    const press = (): { event: KeyboardEvent; handled: boolean } => {
+      const event = new KeyboardEvent('keydown', { key: 'Backspace', cancelable: true });
+      const handled = backspaceIntoTitle(event, {
+        blocks: {
+          getBlockByIndex: (index: number) => (index === 0 ? { id: 'first', holder, isEmpty: text === '' } : undefined),
+          getChildren: (parentId: string) => (parentId === 'first' ? children : []),
+          delete: remove,
+        },
+      });
+
+      return { event, handled };
+    };
+
+    return { title, editable, remove, press };
+  };
+
+  const caretIsAtTitleEnd = (title: HTMLElement): boolean => {
+    const selection = window.getSelection();
+    const node = selection?.anchorNode ?? null;
+
+    if (selection === null || node === null || !selection.isCollapsed || !title.contains(node)) {
+      return false;
+    }
+
+    return selection.anchorOffset === (node === title ? title.childNodes.length : (node.textContent ?? '').length);
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('removes an empty first block and puts the caret at the end of the title', () => {
+    const { title, remove, press } = setup('', 0);
+    const { event, handled } = press();
+
+    expect(handled).toBe(true);
+    expect(remove).toHaveBeenCalledWith(0, false);
+    expect(event.defaultPrevented).toBe(true);
+    expect(caretIsAtTitleEnd(title)).toBe(true);
+  });
+
+  it('keeps a first block with text and moves the caret to the end of the title', () => {
+    const { title, remove, press } = setup('Hello', 0);
+    const { event, handled } = press();
+
+    expect(handled).toBe(true);
+    expect(remove).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(true);
+    expect(caretIsAtTitleEnd(title)).toBe(true);
+  });
+
+  it('keeps an empty first block that has children', () => {
+    const { title, remove, press } = setup('', 0, [{ id: 'child' }]);
+
+    expect(press().handled).toBe(true);
+    expect(remove).not.toHaveBeenCalled();
+    expect(caretIsAtTitleEnd(title)).toBe(true);
+  });
+
+  it('leaves Backspace alone when the caret is inside the text', () => {
+    const { remove, press } = setup('Hello', 2);
+    const { event, handled } = press();
+
+    expect(handled).toBe(false);
+    expect(remove).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('leaves Backspace alone outside the first block', () => {
+    const { remove, press } = setup('', 0);
+    const other = document.createElement('div');
+
+    other.contentEditable = 'true';
+    document.body.append(other);
+    window.getSelection()?.setPosition(other, 0);
+
+    expect(press().handled).toBe(false);
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it('leaves Backspace alone over a selection', () => {
+    const { editable, remove, press } = setup('Hello', 0);
+
+    window.getSelection()?.setBaseAndExtent(editable, 0, editable, 1);
+
+    expect(press().handled).toBe(false);
+    expect(remove).not.toHaveBeenCalled();
   });
 });

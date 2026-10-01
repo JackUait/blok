@@ -1376,7 +1376,7 @@
     import { PRESENCE_GLYPH_GROUP, PRESENCE_GLYPH_ICONS } from './src/playground/presence-glyph-icons.ts';
     import { buildPresenceFace } from './src/playground/presence-face.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
-    import { PAGE_TITLE_SELECTOR, PageRegistry, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, pageLinkSelector, pagePath, renderPageHeader, runPageTransition } from './src/playground/page-host.ts';
+    import { PAGE_TITLE_SELECTOR, PageRegistry, backspaceIntoTitle, PointerWatch, alignPageHeader, hasPointer, pointerBlock, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, pageLinkSelector, pagePath, renderPageHeader, runPageTransition } from './src/playground/page-host.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
     // Default import only — the json-as-string vite plugin rewrites JSON
@@ -1723,7 +1723,10 @@
         search: window.location.search,
         readOnly: state.readOnly,
         navigate: (id) => goToPage(id),
-        focusEditor: () => blok.caret.setToFirstBlock('start'),
+        splitTitle: (html) => {
+          blok.blocks.insert('paragraph', { text: html }, {}, 0, false);
+          blok.caret.setToFirstBlock('start');
+        },
         i18n: () => ({ i18n: blok.i18n, locale: state.locale }),
         changed: () => updateDocumentTitle(),
         restore: (id) => restorePage(id),
@@ -1733,6 +1736,8 @@
       alignPageHeader(pageHeader, document.getElementById('blok'));
     }
     keepPageHeaderAligned(pageHeader, document.getElementById('blok'));
+    // Capture: runs before the editor's own Backspace handling.
+    document.getElementById('blok').addEventListener('keydown', (event) => backspaceIntoTitle(event, blok), true);
 
     /** Takes a page out of Trash and puts its block back in its parent. */
     function restorePage(id) {

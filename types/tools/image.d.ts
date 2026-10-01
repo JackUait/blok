@@ -29,6 +29,19 @@ export interface ImageCrop {
   shape?: ImageCropShape;
 }
 
+/** Clockwise quarter turn, applied after the mirror. */
+export type ImageRotation = 0 | 90 | 180 | 270;
+
+/** Named colour look, applied with CSS `filter` at render time. */
+export type ImageFilterPreset = 'none' | 'vivid' | 'dramatic' | 'warm' | 'mono' | 'noir' | 'fade' | 'sepia';
+
+/** Colour adjustments. Each value is -100..100; 0 or absent leaves the image unchanged. */
+export interface ImageAdjust {
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+}
+
 /**
  * Persisted data shape for the Image block tool.
  */
@@ -49,8 +62,21 @@ export interface ImageData extends BlockToolData {
   rounded?: boolean;
   /** Caption visible in the rendered state. Default true. */
   captionVisible?: boolean;
-  /** Non-destructive crop rectangle. */
+  /**
+   * Non-destructive crop rectangle. With `rotation`, `flipX` or `straighten` set it is
+   * in the turned image's box, not the source file's.
+   */
   crop?: ImageCrop;
+  /** Quarter turn, clockwise. Omitted for 0. */
+  rotation?: ImageRotation;
+  /** Mirrored left to right, before `rotation`. Omitted for false. */
+  flipX?: boolean;
+  /** Fine turn in degrees, -45..45, clockwise, after `rotation`. Omitted for 0. */
+  straighten?: number;
+  /** Colour preset. Omitted for 'none'. */
+  filter?: ImageFilterPreset;
+  /** Colour adjustments. Omitted when every value is 0. */
+  adjust?: ImageAdjust;
   /** Alt text for screen readers */
   alt?: string;
   /** Original filename, when known */

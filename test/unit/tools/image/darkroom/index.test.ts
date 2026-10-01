@@ -1368,6 +1368,17 @@ describe('openDarkroom geometry, adjust and filters', () => {
       expect(result(onApply)).toMatchObject({ filter: 'mono', strength: 50 });
     });
 
+    it('opening Filters scrolls the strip to the selected look', () => {
+      open({ initialFilter: 'retro' });
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+        return this.matches('[data-preset="retro"]') ? new DOMRect(1500, 0, 60, 80) : new DOMRect(0, 0, 1200, 800);
+      });
+
+      q<HTMLButtonElement>('[role="tab"][data-mode="filters"]').click();
+
+      expect(q('[role="radiogroup"][aria-label="Filters"]').scrollLeft).toBe(930);
+    });
+
     it('opens with the saved strength applied', () => {
       open({ initialFilter: 'mono', initialStrength: 30 });
 

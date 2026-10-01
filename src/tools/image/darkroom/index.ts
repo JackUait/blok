@@ -495,6 +495,8 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
       markupEditor.setActive(mode === 'markup');
       st.mode = mode;
       surface.setAttribute('data-mode', mode);
+      // The tabs unhide the panel before onSelect, so the strip has a layout box here.
+      if (mode === 'filters') filterStrip.reveal();
       stage.setAttribute('aria-label', tr(opts.i18n, mode === 'markup' ? 'tools.image.markupStageLabel' : 'tools.image.cropStageLabel'));
     },
   });

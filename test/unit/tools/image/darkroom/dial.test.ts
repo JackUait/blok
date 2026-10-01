@@ -184,6 +184,14 @@ describe('createDial', () => {
     expect(dial.el.querySelector('[data-role="dial-needle"]')).not.toBeNull();
   });
 
+  it('shows a plain number when the range has no negatives, so a strength reads 60, not +60', () => {
+    make({ min: 0, max: 100, value: 60 });
+
+    expect(shown()).toBe('60');
+    dial.configure({ min: -45, max: 45, value: 5, label: 'Straighten', valueText: String });
+    expect(shown()).toBe('+5');
+  });
+
   it('draws a tick every 5 units, a long one every 15', () => {
     make();
     const ticks = [...dial.el.querySelectorAll<HTMLElement>('[data-role="dial-tick"]')];

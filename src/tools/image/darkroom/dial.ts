@@ -55,10 +55,11 @@ const el = (cls: string, role: string): HTMLElement => {
 
 const decimals = (n: number): number => (String(n).split('.')[1] ?? '').length;
 
-const format = (v: number): string => {
+/** A plus sign only where the range also goes below zero. */
+const format = (v: number, signed: boolean): string => {
   const text = String(Math.abs(Math.round(v * 10) / 10));
 
-  if (v > 0) return `+${text}`;
+  if (v > 0) return signed ? `+${text}` : text;
 
   // U+2212 minus: the hyphen reads too short next to digits.
   return v < 0 ? `−${text}` : '0';
@@ -123,7 +124,7 @@ export function createDial(o: DialOptions): Dial {
     root.setAttribute('aria-valuemax', String(setup.max));
     root.setAttribute('aria-valuenow', String(st.value));
     root.setAttribute('aria-valuetext', setup.valueText(st.value));
-    label.textContent = format(st.value);
+    label.textContent = format(st.value, setup.min < 0);
     ruler.style.transform = `translateX(${-st.value * PX_PER_UNIT + 0}px)`;
     if (!reset) return;
     const shown = st.value !== 0;

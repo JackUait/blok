@@ -241,6 +241,17 @@ describe('createFilterStrip', () => {
     expect(onStrengthCommit).not.toHaveBeenCalled();
   });
 
+  it('reveal() scrolls the strip so the selected chip sits in the middle', () => {
+    make('retro');
+    vi.spyOn(group(), 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 400, 80));
+    vi.spyOn(chip('retro'), 'getBoundingClientRect').mockReturnValue(new DOMRect(900, 0, 60, 80));
+    group().scrollLeft = 100;
+
+    strip.reveal();
+    // Chip centre 930, strip centre 200: scroll 730 further right.
+    expect(group().scrollLeft).toBe(830);
+  });
+
   it('destroy() detaches click and keyboard handling', () => {
     make();
 

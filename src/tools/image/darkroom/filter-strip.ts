@@ -22,6 +22,8 @@ export interface FilterStrip {
   set(p: string, strength: number): void;
   /** Commits a pending slider key burst now. Call before undo, Reset or Done. */
   flush(): void;
+  /** Scrolls the selected chip to the strip's middle. Call once the strip is visible. */
+  reveal(): void;
   destroy(): void;
 }
 
@@ -124,6 +126,16 @@ export function createFilterStrip(o: FilterStripOptions): FilterStrip {
       render();
     },
     flush: dial.flush,
+    reveal(): void {
+      const on = chips[names.indexOf(st.current)];
+
+      if (on === undefined) return;
+      const box = group.getBoundingClientRect();
+      const r = on.getBoundingClientRect();
+
+      // Not scrollIntoView: that would also scroll the page behind the dialog.
+      group.scrollLeft += r.left + r.width / 2 - (box.left + box.width / 2);
+    },
     destroy(): void {
       dial.destroy();
       roving.destroy();

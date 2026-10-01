@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   PAGES_STORAGE_KEY,
   PageRegistry,
+  keepPageHeaderAligned,
   pageIdFromPath,
   pagePath,
   type PageMap,
@@ -235,5 +236,51 @@ describe('playground saves a pending page edit when the tab goes away', () => {
     expect(() => page.windowListeners.get('pagehide')?.()).not.toThrow();
     await settle();
     expect(page.stored).toEqual([]);
+  });
+});
+
+describe('keepPageHeaderAligned', () => {
+  const rect = (left: number, width: number): DOMRect => ({ left, width } as DOMRect);
+  let resize: () => void = () => undefined;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: () => void) {
+        resize = callback;
+      }
+
+      observe(): void {}
+
+      disconnect(): void {}
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('lines the header up with the text once a late document renders', () => {
+    const column = document.createElement('div');
+    const header = document.createElement('header');
+    const holder = document.createElement('div');
+
+    column.append(header, holder);
+    document.body.append(column);
+    vi.spyOn(column, 'getBoundingClientRect').mockReturnValue(rect(100, 1000));
+
+    keepPageHeaderAligned(header, holder);
+
+    const content = document.createElement('div');
+
+    content.setAttribute('data-blok-element-content', '');
+    vi.spyOn(content, 'getBoundingClientRect').mockReturnValue(rect(268, 720));
+    holder.append(content);
+    resize();
+
+    expect(header.style.marginLeft).toBe('168px');
+    expect(header.style.maxWidth).toBe('720px');
   });
 });

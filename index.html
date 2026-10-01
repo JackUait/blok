@@ -1376,7 +1376,7 @@
     import { PRESENCE_GLYPH_GROUP, PRESENCE_GLYPH_ICONS } from './src/playground/presence-glyph-icons.ts';
     import { buildPresenceFace } from './src/playground/presence-face.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
-    import { PAGE_TITLE_SELECTOR, PageRegistry, alignPageHeader, SEED_PAGES, pageIdFromPath, pageLinkSelector, pagePath, renderPageHeader, runPageTransition } from './src/playground/page-host.ts';
+    import { PAGE_TITLE_SELECTOR, PageRegistry, alignPageHeader, keepPageHeaderAligned, SEED_PAGES, pageIdFromPath, pageLinkSelector, pagePath, renderPageHeader, runPageTransition } from './src/playground/page-host.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
     // Default import only — the json-as-string vite plugin rewrites JSON
@@ -1691,7 +1691,7 @@
       updateDocumentTitle();
       alignPageHeader(pageHeader, document.getElementById('blok'));
     }
-    window.addEventListener('resize', () => alignPageHeader(pageHeader, document.getElementById('blok')));
+    keepPageHeaderAligned(pageHeader, document.getElementById('blok'));
 
     function updateDocumentTitle() {
       const page = currentPageId === null ? undefined : pages.get(currentPageId);

@@ -527,3 +527,11 @@ export const alignPageHeader = (header: HTMLElement, holder: HTMLElement): void 
   header.style.setProperty('margin-left', `${Math.round(box.left - column.getBoundingClientRect().left)}px`);
   header.style.setProperty('max-width', `${Math.round(box.width)}px`);
 };
+
+/**
+ * Re-aligns whenever the editor box changes size. A collaborative document
+ * renders after `isReady`, so a one-off measurement finds no blocks yet.
+ */
+export const keepPageHeaderAligned = (header: HTMLElement, holder: HTMLElement): void => {
+  new ResizeObserver(() => alignPageHeader(header, holder)).observe(holder);
+};

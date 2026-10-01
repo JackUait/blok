@@ -24,7 +24,7 @@ export interface InlinePositioningOptions {
   popoverWidth: number;
   /** Measured height, including wrapped rows */
   popoverHeight?: number;
-  /** Direction of the selected text. In RTL the toolbar ends at the selection's right edge. */
+  /** Editor direction. In RTL the toolbar ends at the selection's right edge. */
   direction?: 'ltr' | 'rtl';
 }
 

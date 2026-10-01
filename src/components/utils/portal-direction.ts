@@ -1,3 +1,5 @@
+import { DATA_ATTR } from '../constants/data-attributes';
+
 export type TextDirection = 'ltr' | 'rtl';
 
 interface PortalDirectionOptions {
@@ -41,13 +43,16 @@ const resolveSourceDirection = (source: Element | null | undefined): TextDirecti
     return undefined;
   }
 
-  const computedDirection = window.getComputedStyle(source).direction;
+  // Menus speak the editor's UI language. A block may carry its own `dir`
+  // (an English paragraph in an RTL editor), so read the editor root instead.
+  const owner = source.closest(`[${DATA_ATTR.editor}]`) ?? source;
+  const computedDirection = window.getComputedStyle(owner).direction;
 
   if (isTextDirection(computedDirection)) {
     return computedDirection;
   }
 
-  return resolveSemanticDirection(source);
+  return resolveSemanticDirection(owner);
 };
 
 /**

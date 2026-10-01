@@ -609,13 +609,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     const renderedRect = popoverElement?.getBoundingClientRect();
 
     if (renderedRect && renderedRect.width > 0) {
-      // Layout width, not the rect: the entrance scale shrinks the rect, and
-      // in RTL the toolbar's right edge is placed from this width.
-      const renderedWidth = popoverElement instanceof HTMLElement && popoverElement.offsetWidth > 0
-        ? popoverElement.offsetWidth
-        : renderedRect.width;
-
-      this.applyPosition(renderedWidth, renderedRect.height);
+      this.applyPosition(renderedRect.width, renderedRect.height);
     }
 
     if (directName !== null) {
@@ -665,7 +659,8 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
       : new DOMRect(0, 0, 0, 0);
     const contentRect = this.Blok.UI.contentRect;
     const selectionRect = SelectionUtils.rect;
-    const direction = getElementDirection(SelectionUtils.anchorElement ?? uiWrapper);
+    // The toolbar follows the editor's direction, not the selected block's own `dir`.
+    const direction = getElementDirection(uiWrapper);
 
     const side = this.positioner.apply({
       wrapper: this.nodes.wrapper,

@@ -14,6 +14,32 @@ const mount = (direction: 'ltr' | 'rtl'): { editor: HTMLElement; source: HTMLEle
   return { editor, source, portal };
 };
 
+describe('syncPortalDirection', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('takes the editor direction, not the direction of the block holding the anchor', () => {
+    const editor = document.createElement('div');
+    const block = document.createElement('div');
+    const anchor = document.createElement('button');
+    const portal = document.createElement('div');
+
+    editor.setAttribute('data-blok-editor', '');
+    editor.style.direction = 'rtl';
+    // An English block in an RTL editor carries its own LTR direction.
+    block.dir = 'ltr';
+    block.style.direction = 'ltr';
+    block.appendChild(anchor);
+    editor.appendChild(block);
+    document.body.append(editor, portal);
+
+    syncPortalDirection(portal, { source: anchor });
+
+    expect(portal.getAttribute('dir')).toBe('rtl');
+  });
+});
+
 describe('resyncPortalDirections', () => {
   beforeEach(() => {
     vi.clearAllMocks();

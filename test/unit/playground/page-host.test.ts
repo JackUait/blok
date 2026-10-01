@@ -179,7 +179,7 @@ describe('root page header', () => {
     expect(options.changed).toHaveBeenCalled();
   });
 
-  it('clicking Add icon sets a random icon at once and opens the picker on it', () => {
+  it('clicking Add icon sets a random icon at once and opens the picker on it', async () => {
     const pages = new PageRegistry(seed());
     const host = document.createElement('header');
     const i18n: I18n = { t: (key) => key, has: () => false, getEnglishTranslation: (key) => key, getLocale: () => 'en' };
@@ -197,6 +197,33 @@ describe('root page header', () => {
     expect(host.querySelector('button')?.textContent).toBe(icon);
     expect(options.changed).toHaveBeenCalled();
     expect(document.body.querySelector('[data-emoji-picker-random]')).not.toBeNull();
+    // The open finishes async and still reads matchMedia.
+    await vi.waitFor(() => expect(document.body.querySelector('[data-emoji-section-deferred]')).not.toBeNull());
+
+    document.body.replaceChildren();
+    vi.unstubAllGlobals();
+  });
+
+  it('the icon stays marked as open while its picker is open', async () => {
+    const pages = new PageRegistry(seed());
+    const host = document.createElement('header');
+    const i18n: I18n = { t: (key) => key, has: () => false, getEnglishTranslation: (key) => key, getLocale: () => 'en' };
+
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false })));
+    pages.setIcon(null, '😭');
+    document.body.append(host);
+    renderPageHeader(host, { ...headerOptions(pages, null), i18n: vi.fn(() => ({ i18n, locale: 'en' })) });
+
+    const button = host.querySelector('button');
+
+    if (button === null) throw new Error('no icon button');
+    button.click();
+    await vi.waitFor(() => expect(document.body.querySelector('[data-emoji-section-deferred]')).not.toBeNull());
+
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await vi.waitFor(() => expect(button.getAttribute('aria-expanded')).toBe('false'));
 
     document.body.replaceChildren();
     vi.unstubAllGlobals();

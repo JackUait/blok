@@ -670,6 +670,17 @@ const openIconPicker = (
   if (!element.isConnected) {
     document.body.append(element);
   }
+
+  // The picker has no close callback; it hides its root on close.
+  const watch = new MutationObserver(() => {
+    if (element.hidden) {
+      anchor.setAttribute('aria-expanded', 'false');
+      watch.disconnect();
+    }
+  });
+
+  anchor.setAttribute('aria-expanded', 'true');
+  watch.observe(element, { attributes: true, attributeFilter: ['hidden'] });
   void pickerSlot.current.instance.open(anchor, undefined, { onSelect, onRemove });
 };
 

@@ -134,7 +134,8 @@ a.pg-crumb:hover { background: var(--pg-page-hover); color: var(--pg-page-ink); 
   cursor: pointer;
   transition: background-color 120ms ease;
 }
-.pg-page-icon:hover:not(:disabled) { background: var(--pg-page-hover); }
+.pg-page-icon:hover:not(:disabled),
+.pg-page-icon[aria-expanded="true"] { background: var(--pg-page-hover); }
 .pg-page-add-icon {
   display: inline-flex;
   align-items: center;

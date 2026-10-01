@@ -905,10 +905,9 @@ describe('openDarkroom geometry, adjust and filters', () => {
   describe('mode tabs', () => {
     it('a tablist of Crop, Adjust, Filters and Markup, each tab controlling its panel', () => {
       open();
-      const list = q('[role="tablist"]');
+      const list = q('[role="tablist"][aria-label="Edit modes"]');
       const tabs = [...list.querySelectorAll<HTMLElement>('[role="tab"]')];
 
-      expect(list.getAttribute('aria-label')).toBe('Edit modes');
       expect(tabs.map((t) => t.textContent)).toEqual(['Crop', 'Adjust', 'Filters', 'Markup']);
       tabs.forEach((tab) => {
         const panel = document.getElementById(tab.getAttribute('aria-controls') ?? '');

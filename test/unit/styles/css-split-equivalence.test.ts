@@ -662,8 +662,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // sizes, text styles, the shape picker grid and its hairline) and markup-editor.css (cursors,
     // selection handles, text editor), plus their two imports in main.css.
     const DARKROOM_MARKUP_BYTES = 17_400;
-    // Filter strength slider: the filter panel column and the hidden dial box.
-    const DARKROOM_FILTER_STRENGTH_BYTES = 216;
+    // Filter strip: the strength slider column, family tabs, fixed-width chips,
+    // the Original divider and the phone sizes.
+    const DARKROOM_FILTER_STRIP_BYTES = 1_712;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -686,7 +687,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + RADIUS_SYSTEM_BYTES
       + DARKROOM_EDIT_PANELS_BYTES
       + DARKROOM_MARKUP_BYTES
-      + DARKROOM_FILTER_STRENGTH_BYTES
+      + DARKROOM_FILTER_STRIP_BYTES
       + TOOLBOX_HOVER_PREVIEWS_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 

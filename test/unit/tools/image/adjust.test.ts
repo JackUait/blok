@@ -247,6 +247,39 @@ describe('resolveFilters', () => {
     expect(filters.order).toEqual(['none', 'vivid']);
   });
 
+  it('sorts the built-ins into six families, in strip order', () => {
+    expect(resolveFilters(undefined).groups).toEqual([
+      { key: 'vivid', names: ['vivid', 'vivid-warm', 'vivid-cool', 'chrome', 'lomo'] },
+      { key: 'dramatic', names: ['dramatic', 'dramatic-warm', 'dramatic-cool'] },
+      { key: 'tone', names: ['warm', 'golden', 'cool', 'dusk'] },
+      { key: 'soft', names: ['fade', 'matte', 'pastel'] },
+      { key: 'vintage', names: ['film', 'vintage', 'retro', 'sepia'] },
+      { key: 'bw', names: ['mono', 'silvertone', 'noir', 'high-key'] },
+    ]);
+  });
+
+  it('keeps only families the host list uses, in its order within each, and puts host filters in Custom', () => {
+    const filters = resolveFilters(['noir', { name: 'brand', title: 'Brand', css: 'sepia(1)' }, 'mono', 'vivid']);
+
+    expect(filters.groups).toEqual([
+      { key: 'vivid', names: ['vivid'] },
+      { key: 'bw', names: ['noir', 'mono'] },
+      { key: 'custom', names: ['brand'] },
+    ]);
+  });
+
+  it('a host entry that retunes a built-in name stays in that built-in\'s family', () => {
+    expect(resolveFilters([{ name: 'noir', title: 'Ink', css: 'grayscale(1)' }]).groups).toEqual([{ key: 'bw', names: ['noir'] }]);
+  });
+
+  it('names the family of any look, Custom for a name it does not know', () => {
+    const filters = resolveFilters(['vivid']);
+
+    expect(filters.groupOf('retro')).toBe('vintage');
+    expect(filters.groupOf('brand')).toBe('custom');
+    expect(filters.groupOf('none')).toBeUndefined();
+  });
+
   it('adds a host filter with its title', () => {
     const filters = resolveFilters([{ name: 'brand', title: 'Brand', css: 'saturate(1.2)' }]);
 

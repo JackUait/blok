@@ -858,9 +858,48 @@
   display: none;
 }
 
+.blok-darkroom__filters > :first-child {
+  margin-inline-start: auto;
+}
+
+.blok-darkroom__filters > :last-child {
+  margin-inline-end: auto;
+}
+
+.blok-darkroom__filter-divider {
+  flex: none;
+  width: 1px;
+  margin: var(--blok-space-2) var(--blok-space-1) var(--blok-space-6);
+  background: var(--blok-darkroom-pill-edge);
+}
+
+.blok-darkroom__tabs--families {
+  display: flex;
+  max-width: 100%;
+  padding: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.blok-darkroom__tabs--families::-webkit-scrollbar {
+  display: none;
+}
+
+.blok-darkroom__tabs--families > :first-child {
+  margin-inline-start: auto;
+}
+
+.blok-darkroom__tabs--families > :last-child {
+  margin-inline-end: auto;
+}
+
 .blok-darkroom__filter {
   appearance: none;
   flex: none;
+  width: 72px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -879,6 +918,22 @@
   transition: background-color 120ms ease, color 120ms ease;
 }
 
+.blok-darkroom__filter[hidden] {
+  display: none;
+}
+
+.blok-darkroom__filter-name {
+  display: -webkit-box;
+  max-width: 100%;
+  min-height: 2.4em;
+  overflow: hidden;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .blok-darkroom__filter:hover {
   color: var(--blok-darkroom-ink);
 }
@@ -895,6 +950,19 @@
   object-fit: cover;
   border-radius: var(--blok-radius-control-sm);
   pointer-events: none;
+}
+
+[@media (max-width: 480px)] .blok-darkroom__filters {
+  gap: var(--blok-space-1);
+}
+
+[@media (max-width: 480px)] .blok-darkroom__filter {
+  width: 56px;
+}
+
+[@media (max-width: 480px)] .blok-darkroom__filter-thumb {
+  width: 48px;
+  height: 48px;
 }
 
 [@media (prefers-reduced-motion: reduce)] .blok-darkroom__tab, .blok-darkroom__filter {

@@ -12,6 +12,18 @@ export const FILTER_PRESETS: readonly ImageFilterPreset[] = [
   'mono', 'silvertone', 'noir', 'high-key',
 ];
 
+export type FilterGroupKey = 'vivid' | 'dramatic' | 'tone' | 'soft' | 'vintage' | 'bw' | 'custom';
+
+/** Families the strip groups the built-ins into, in strip order. */
+const BUILT_IN_GROUPS: ReadonlyArray<{ key: FilterGroupKey; names: readonly ImageFilterPreset[] }> = [
+  { key: 'vivid', names: ['vivid', 'vivid-warm', 'vivid-cool', 'chrome', 'lomo'] },
+  { key: 'dramatic', names: ['dramatic', 'dramatic-warm', 'dramatic-cool'] },
+  { key: 'tone', names: ['warm', 'golden', 'cool', 'dusk'] },
+  { key: 'soft', names: ['fade', 'matte', 'pastel'] },
+  { key: 'vintage', names: ['film', 'vintage', 'retro', 'sepia'] },
+  { key: 'bw', names: ['mono', 'silvertone', 'noir', 'high-key'] },
+];
+
 export const ADJUST_KEYS = ['brightness', 'contrast', 'saturation'] as const;
 
 type Adjust = Required<ImageAdjust>;
@@ -103,7 +115,17 @@ export interface FilterSet {
   ops(name: string): readonly FilterOp[];
   /** A host filter's title; undefined for built-ins, which are translated. */
   title(name: string): string | undefined;
+  /** The offered looks (Original aside) by family; families with none are left out. */
+  groups: ReadonlyArray<{ key: FilterGroupKey; names: readonly string[] }>;
+  /** A look's family; a name no built-in has is Custom. Undefined for Original. */
+  groupOf(name: string): FilterGroupKey | undefined;
 }
+
+const groupOf = (name: string): FilterGroupKey | undefined => {
+  if (name === 'none') return undefined;
+
+  return BUILT_IN_GROUPS.find((g) => (g.names as readonly string[]).includes(name))?.key ?? 'custom';
+};
 
 const BUILT_IN_OPS = new Map<string, FilterOp[]>(FILTER_PRESETS.map((p) => [p, parseOps(PRESET_CSS[p])]));
 
@@ -130,8 +152,14 @@ export function resolveFilters(config: ReadonlyArray<ImageFilterPreset | ImageFi
     order.push(name);
   }
 
+  const groups = [...BUILT_IN_GROUPS.map((g) => g.key), 'custom' as const]
+    .map((key) => ({ key, names: order.filter((name) => groupOf(name) === key) }))
+    .filter((g) => g.names.length > 0);
+
   return {
     order,
+    groups,
+    groupOf,
     ops: (name) => custom.get(name)?.ops ?? BUILT_IN_OPS.get(name) ?? [],
     title: (name) => custom.get(name)?.title,
   };

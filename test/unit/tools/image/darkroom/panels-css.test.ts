@@ -77,6 +77,55 @@ describe('darkroom.css panels', () => {
     expect(body(full, '.blok-darkroom__dial-box[hidden]')).toMatch(/display:\s*none/);
   });
 
+  it('every filter chip is the same width, and a long name wraps to two lines instead of widening it', () => {
+    const chip = body(section, '.blok-darkroom__filter');
+    const name = body(section, '.blok-darkroom__filter-name');
+
+    expect(chip).toMatch(/\bwidth:\s*\d+px/);
+    expect(name).toMatch(/-webkit-line-clamp:\s*2/);
+    expect(name).toMatch(/text-align:\s*center/);
+  });
+
+  it('centres a short row but still scrolls from the first chip when it overflows', () => {
+    // justify-content: center would cut off the start of an overflowing row.
+    expect(body(section, '.blok-darkroom__filters')).not.toMatch(/justify-content:\s*center/);
+    expect(body(section, '.blok-darkroom__filters > :first-child')).toMatch(/margin-inline-start:\s*auto/);
+    expect(body(section, '.blok-darkroom__filters > :last-child')).toMatch(/margin-inline-end:\s*auto/);
+  });
+
+  it('the family tabs are plain text tabs, not a second glass pill', () => {
+    const rule = body(section, '.blok-darkroom__tabs--families');
+
+    expect(rule).toMatch(/background:\s*transparent/);
+    expect(rule).toMatch(/box-shadow:\s*none/);
+    expect(rule).toMatch(/backdrop-filter:\s*none/);
+  });
+
+  it('the family tabs scroll sideways on a narrow screen instead of clipping', () => {
+    const rule = body(section, '.blok-darkroom__tabs--families');
+
+    expect(rule).toMatch(/max-width:\s*100%/);
+    expect(rule).toMatch(/overflow-x:\s*auto/);
+    expect(body(section, '.blok-darkroom__tabs--families > :first-child')).toMatch(/margin-inline-start:\s*auto/);
+    expect(body(section, '.blok-darkroom__tabs--families > :last-child')).toMatch(/margin-inline-end:\s*auto/);
+  });
+
+  it('the divider after Original is a hairline in the glass edge token', () => {
+    expect(body(section, '.blok-darkroom__filter-divider')).toMatch(/background:\s*var\(--blok-darkroom-pill-edge\)/);
+  });
+
+  it('a phone fits a five-look family: smaller chips and gaps under 480px', () => {
+    const narrow = /@media \(max-width: 480px\)\s*\{([\s\S]*?)\n\}/.exec(section)?.[1] ?? '';
+
+    expect(body(narrow, '.blok-darkroom__filter')).toMatch(/width:\s*56px/);
+    expect(body(narrow, '.blok-darkroom__filter-thumb')).toMatch(/width:\s*48px/);
+    expect(body(narrow, '.blok-darkroom__filters')).toMatch(/gap:\s*var\(--blok-space-1\)/);
+  });
+
+  it('a hidden chip takes no room', () => {
+    expect(body(section, '.blok-darkroom__filter[hidden]')).toMatch(/display:\s*none/);
+  });
+
   it('shows a tool reset only for a changed value, keeping its cell', () => {
     const off = body(section, '.blok-darkroom__adjust-reset[data-shown="false"]');
 

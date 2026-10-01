@@ -11,6 +11,14 @@ const NAMES: Record<ImageFilterPreset, string> = Object.fromEntries(
 
 const LABELS: Record<string, string> = {
   'tools.image.filterPresets': 'Filters',
+  'tools.image.filterGroups': 'Filter groups',
+  'tools.image.filterGroupVivid': 'Vivid',
+  'tools.image.filterGroupDramatic': 'Dramatic',
+  'tools.image.filterGroupTone': 'Warm & Cool',
+  'tools.image.filterGroupSoft': 'Soft',
+  'tools.image.filterGroupVintage': 'Vintage',
+  'tools.image.filterGroupBlackWhite': 'B&W',
+  'tools.image.filterGroupCustom': 'Custom',
   'tools.image.filterStrength': 'Strength',
   ...Object.fromEntries(FILTER_PRESETS.map((p) => [`tools.image.filter${pascal(p)}`, NAMES[p]])),
 };
@@ -58,6 +66,20 @@ describe('createFilterStrip', () => {
     const el = strip.el.querySelector<HTMLElement>('[role="slider"]');
 
     if (el === null) throw new Error('no slider');
+
+    return el;
+  };
+
+  const visible = (): string[] => [...group().querySelectorAll<HTMLElement>('[role="radio"]')]
+    .filter((c) => !c.hidden)
+    .map((c) => c.getAttribute('data-preset') ?? '');
+
+  const familyTabs = (): HTMLElement[] => [...strip.el.querySelectorAll<HTMLElement>('[role="tablist"] [role="tab"]')];
+
+  const family = (key: string): HTMLElement => {
+    const el = strip.el.querySelector<HTMLElement>(`[role="tab"][data-mode="${key}"]`);
+
+    if (el === null) throw new Error(`no family ${key}`);
 
     return el;
   };
@@ -145,8 +167,9 @@ describe('createFilterStrip', () => {
     expect(onSelect).toHaveBeenLastCalledWith('vivid');
     key(chip('vivid'), 'ArrowLeft');
     key(chip('none'), 'ArrowLeft');
-    expect(onSelect).toHaveBeenLastCalledWith('high-key');
-    key(chip('high-key'), 'Home');
+    // Arrows stay inside the open family: Original wraps to its last look.
+    expect(onSelect).toHaveBeenLastCalledWith('lomo');
+    key(chip('lomo'), 'Home');
     expect(onSelect).toHaveBeenLastCalledWith('none');
   });
 
@@ -257,6 +280,91 @@ describe('createFilterStrip', () => {
     strip.reveal();
     // Chip centre 930, strip centre 200: scroll 730 further right.
     expect(group().scrollLeft).toBe(830);
+  });
+
+  describe('families', () => {
+    it('a labelled tab row names the six built-in families', () => {
+      make();
+
+      expect(strip.el.querySelector('[role="tablist"]')?.getAttribute('aria-label')).toBe('Filter groups');
+      expect(familyTabs().map((t) => t.textContent)).toEqual(['Vivid', 'Dramatic', 'Warm & Cool', 'Soft', 'Vintage', 'B&W']);
+      familyTabs().forEach((t) => expect(t.getAttribute('aria-controls')).toBe(group().id));
+    });
+
+    it('shows Original and the open family only', () => {
+      make();
+
+      expect(family('vivid').getAttribute('aria-selected')).toBe('true');
+      expect(visible()).toEqual(['none', 'vivid', 'vivid-warm', 'vivid-cool', 'chrome', 'lomo']);
+    });
+
+    it('opens on the family of the current look', () => {
+      make('retro');
+
+      expect(family('vintage').getAttribute('aria-selected')).toBe('true');
+      expect(visible()).toEqual(['none', 'film', 'vintage', 'retro', 'sepia']);
+    });
+
+    it('switching family shows its looks and keeps the current one', () => {
+      make('retro');
+
+      family('bw').click();
+      expect(visible()).toEqual(['none', 'mono', 'silvertone', 'noir', 'high-key']);
+      expect(onSelect).not.toHaveBeenCalled();
+      expect(chip('retro').getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('a hidden chip is never a tab stop; Original is when the current look is elsewhere', () => {
+      make('retro');
+
+      family('bw').click();
+      expect(chip('retro').getAttribute('tabindex')).toBe('-1');
+      expect(chip('none').getAttribute('tabindex')).toBe('0');
+    });
+
+    it('set() opens the family of the look it selects', () => {
+      make();
+
+      strip.set('noir', 100);
+      expect(family('bw').getAttribute('aria-selected')).toBe('true');
+      expect(visible()).toContain('noir');
+    });
+
+    it('puts host filters under Custom', () => {
+      make('none', { filters: resolveFilters([...FILTER_PRESETS, { name: 'brand', title: 'Brand', css: 'sepia(1)' }]) });
+
+      family('custom').click();
+      expect(family('custom').textContent).toBe('Custom');
+      expect(visible()).toEqual(['none', 'brand']);
+    });
+
+    it('a short list shows every look in one row, without family tabs', () => {
+      make('none', { filters: resolveFilters(['vivid', 'noir', 'sepia', 'fade']) });
+
+      expect(strip.el.querySelector('[role="tablist"]')).toBeNull();
+      expect(visible()).toEqual(['none', 'vivid', 'noir', 'sepia', 'fade']);
+    });
+
+    it('reveal() also scrolls the family row to the open family', () => {
+      make('noir');
+      const row = strip.el.querySelector<HTMLElement>('[role="tablist"]');
+
+      if (row === null) throw new Error('no family row');
+      vi.spyOn(row, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 300, 30));
+      vi.spyOn(family('bw'), 'getBoundingClientRect').mockReturnValue(new DOMRect(500, 0, 40, 30));
+
+      strip.reveal();
+      // Tab centre 520, row centre 150.
+      expect(row.scrollLeft).toBe(370);
+    });
+
+    it('a divider sets Original apart, hidden from screen readers', () => {
+      make();
+      const divider = group().querySelector('[data-role="filter-divider"]');
+
+      expect(divider?.previousElementSibling).toBe(chip('none'));
+      expect(divider?.getAttribute('aria-hidden')).toBe('true');
+    });
   });
 
   it('destroy() detaches click and keyboard handling', () => {

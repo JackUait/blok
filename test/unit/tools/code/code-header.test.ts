@@ -97,6 +97,19 @@ describe('code block header', () => {
       expect(Dom.findAllInputs(el)).toStrictEqual([query(el, 'code-content')]);
     });
 
+    it('swaps button and field inside a mutation-free slot, so opening it is not an edit', async () => {
+      const CodeTool = await loadTool();
+      const el = new CodeTool(createOptions({ filename: 'a.ts' })).render();
+      const slot = query(el, 'code-filename')?.parentElement;
+
+      expect(slot?.getAttribute(DATA_ATTR.mutationFree)).toBe('true');
+
+      document.body.appendChild(el);
+      query<HTMLButtonElement>(el, 'code-filename')?.click();
+
+      expect(query(el, 'code-filename-input')?.parentElement).toBe(slot);
+    });
+
     it('shows the saved filename', async () => {
       const CodeTool = await loadTool();
       const el = new CodeTool(createOptions({ filename: 'block.ts' })).render();
@@ -323,6 +336,14 @@ describe('code block header', () => {
       expect(overlay?.getAttribute(DATA_ATTR.mutationFree)).toBe('true');
       expect(overlay?.className).toContain('pointer-events-none');
       expect(overlay?.className).toContain('absolute');
+    });
+
+    it('marks the current line the neutral way: gray band and primary-ink number, never blue', async () => {
+      const { ACTIVE_LINE_STYLES, GUTTER_LINE_STYLES } = await import('../../../../src/tools/code/constants');
+
+      expect(ACTIVE_LINE_STYLES).toContain('var(--blok-item-hover-bg)');
+      expect(GUTTER_LINE_STYLES).toContain('data-[active=true]:text-text-primary');
+      expect(`${ACTIVE_LINE_STYLES} ${GUTTER_LINE_STYLES}`).not.toMatch(/blue|accent|link|focus-ring/);
     });
 
     it('is not rendered in read-only', async () => {

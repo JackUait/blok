@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { CALLOUT_CHILDREN_CLASSES, CALLOUT_WRAPPER_CLASSES } from '../../../src/shared/tool-classes/callout';
-import { CODE_AREA_CLASSES, CODE_FILENAME_CLASSES, CODE_HEADER_CLASSES, CODE_WRAPPER_CLASSES } from '../../../src/shared/tool-classes/code';
+import { CODE_AREA_CLASSES, CODE_CAPTIONED_AREA_CLASSES, CODE_FILENAME_CLASSES, CODE_HEADER_CLASSES, CODE_WRAPPER_CLASSES } from '../../../src/shared/tool-classes/code';
 import { DIVIDER_WRAPPER_CLASSES, DIVIDER_RULE_CLASSES } from '../../../src/shared/tool-classes/divider';
 import { SPACER_WRAPPER_CLASSES } from '../../../src/shared/tool-classes/spacer';
 import {
@@ -105,15 +105,13 @@ describe('shared tool classes mutants', () => {
       ]);
     });
 
-    it('splits the header from the code with a hairline on its own surface', () => {
-      expect(CODE_HEADER_CLASSES).toContain('border-b');
-      expect(CODE_HEADER_CLASSES).toContain('border-border-secondary');
-      expect(CODE_HEADER_CLASSES).toContain('bg-bg-secondary');
+    it('separates the view caption from the code with a hairline on the code edge', () => {
+      expect(CODE_HEADER_CLASSES).toContain('py-3');
+      expect(CODE_CAPTIONED_AREA_CLASSES).toStrictEqual(['border-t', 'border-border-secondary']);
     });
 
     it('sets the filename in the code font so it reads as a path', () => {
       expect(CODE_FILENAME_CLASSES).toContain('font-mono');
-      expect(CODE_FILENAME_CLASSES).toContain('truncate');
     });
 
     it('reads its font size from the host hook, so per-block sizing reaches it', () => {

@@ -101,6 +101,10 @@ export class CodeTool implements BlockTool {
   private _highlightCleanup: (() => void) | null = null;
   private _highlightedLang: string | null = null;
   private _lineRows: number[] = [];
+  private _activeLineIndex: number | null = null;
+  private _rowHeight = 0;
+  private _paddingTop = 0;
+  private _geometryRafId: number | null = null;
   private _resizeObserver: ResizeObserver | null = null;
   private _copiedTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private readonly onSelectionChange = (): void => this.updateActiveLine();
@@ -281,11 +285,11 @@ export class CodeTool implements BlockTool {
 
     if (this._dom && typeof ResizeObserver !== 'undefined') {
       // Width changes rewrap lines, which moves every gutter number below.
-      this._resizeObserver = new ResizeObserver(() => this.syncLineGeometry());
+      this._resizeObserver = new ResizeObserver(() => this.scheduleLineGeometry());
       this._resizeObserver.observe(this._dom.codeElement);
     }
 
-    this.syncLineGeometry();
+    this.scheduleLineGeometry();
   }
 
   private setViewMode(mode: CodeViewMode): void {
@@ -870,7 +874,7 @@ export class CodeTool implements BlockTool {
       this.rebuildGutter(lineCount);
     }
 
-    this.syncLineGeometry();
+    this.scheduleLineGeometry();
   }
 
   private rebuildGutter(lineCount: number): void {
@@ -890,6 +894,19 @@ export class CodeTool implements BlockTool {
       gutter.appendChild(lineEl);
     });
     this._lineRows = [];
+    this._activeLineIndex = null;
+  }
+
+  /** One layout read per frame, however many edits, highlights and resizes land in it. */
+  private scheduleLineGeometry(): void {
+    if (this._geometryRafId !== null) {
+      return;
+    }
+
+    this._geometryRafId = requestAnimationFrame(() => {
+      this._geometryRafId = null;
+      this.syncLineGeometry();
+    });
   }
 
   /**
@@ -903,9 +920,11 @@ export class CodeTool implements BlockTool {
 
     const rows = measureLineRows(this._dom.codeElement);
     const changed = rows.length !== this._lineRows.length || rows.some((r, i) => r !== this._lineRows[i]);
+    const row = rowHeight(this._dom.codeElement);
 
-    if (changed) {
-      const row = rowHeight(this._dom.codeElement);
+    this._paddingTop = parseFloat(getComputedStyle(this._dom.codeElement).paddingTop || '0');
+
+    if (changed || row !== this._rowHeight) {
 
       Array.from(this._dom.gutterElement.children).forEach((line, index) => {
         if (line instanceof HTMLElement) {
@@ -917,6 +936,7 @@ export class CodeTool implements BlockTool {
         }
       });
       this._lineRows = rows;
+      this._rowHeight = row;
     }
 
     this.updateActiveLine();
@@ -932,9 +952,19 @@ export class CodeTool implements BlockTool {
     const isFocused = dom.codeElement.ownerDocument.activeElement === dom.codeElement;
     const index = isFocused && !this.readOnly ? caretLineIndex(dom.codeElement) : null;
 
-    Array.from(dom.gutterElement.children).forEach((line, lineIndex) => {
-      line.setAttribute('data-active', String(lineIndex === index));
-    });
+    if (index !== this._activeLineIndex) {
+      const rows = dom.gutterElement.children;
+
+      if (this._activeLineIndex !== null) {
+        rows[this._activeLineIndex]?.removeAttribute('data-active');
+      }
+
+      if (index !== null) {
+        rows[index]?.setAttribute('data-active', 'true');
+      }
+
+      this._activeLineIndex = index;
+    }
 
     if (!dom.activeLine) {
       return;
@@ -946,13 +976,19 @@ export class CodeTool implements BlockTool {
       return;
     }
 
-    const row = rowHeight(dom.codeElement);
-    const rows = this._lineRows.length > 0 ? this._lineRows : measureLineRows(dom.codeElement);
-    const rowsBefore = rows.slice(0, index).reduce((sum, r) => sum + r, 0);
-    const paddingTop = parseFloat(getComputedStyle(dom.codeElement).paddingTop || '0');
+    const rowsBefore = this._lineRows.slice(0, index).reduce((sum, r) => sum + r, 0);
+    const transform = `translateY(${this._paddingTop + rowsBefore * this._rowHeight}px)`;
+    const height = `${(this._lineRows[index] ?? 1) * this._rowHeight}px`;
 
-    dom.activeLine.style.transform = `translateY(${paddingTop + rowsBefore * row}px)`;
-    dom.activeLine.style.height = `${(rows[index] ?? 1) * row}px`;
+    // Each write invalidates layout for the whole block; skip unchanged ones.
+    if (dom.activeLine.style.transform !== transform) {
+      dom.activeLine.style.transform = transform;
+    }
+
+    if (dom.activeLine.style.height !== height) {
+      dom.activeLine.style.height = height;
+    }
+
     dom.activeLine.hidden = false;
   }
 
@@ -1078,7 +1114,7 @@ export class CodeTool implements BlockTool {
     // sentinel that the keydown handler installed. Without it, a final
     // newline collapses and the caret has no line box on the new line.
     this.syncTrailingBr();
-    this.syncLineGeometry();
+    this.scheduleLineGeometry();
   }
 
   /**
@@ -1125,6 +1161,11 @@ export class CodeTool implements BlockTool {
   public removed(): void {
     document.removeEventListener('selectionchange', this.onSelectionChange);
     this._resizeObserver?.disconnect();
+
+    if (this._geometryRafId !== null) {
+      cancelAnimationFrame(this._geometryRafId);
+      this._geometryRafId = null;
+    }
     this._resizeObserver = null;
 
     if (this._copiedTimeoutId !== null) {

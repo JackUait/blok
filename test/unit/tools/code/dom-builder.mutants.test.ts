@@ -98,8 +98,10 @@ describe('buildCodeDOM — attributes the code tool reads back', () => {
   it('pushes the controls to the right with a growing filename slot', () => {
     const dom = build();
 
-    expect(headerOf(dom).children[1]).toBe(dom.filenameElement);
-    expect(dom.filenameElement.className.split(' ')).toContain('flex-1');
+    const slot = headerOf(dom).children[1];
+
+    expect(slot.contains(dom.filenameElement)).toBe(true);
+    expect(slot.className.split(' ')).toContain('flex-1');
   });
 
   it('lets the pre element fill the code body width above the active-line band', () => {

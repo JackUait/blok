@@ -417,6 +417,8 @@ const EDITOR_ONLY_CLASSES = new Set([
   'group/code',
   'group/spacer',
   'group/toggle-row',
+  /** Lets the code header drop its Copy label in a narrow block; a view has no Copy button. */
+  '@container/code',
 ]);
 
 /**

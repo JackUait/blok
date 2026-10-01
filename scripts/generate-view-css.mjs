@@ -59,7 +59,7 @@ const FIXTURE_BLOCKS = [
   { id: 'htc', type: 'paragraph', parent: 'ht', data: { text: 'Inside a toggleable heading' } },
   { id: 'q1', type: 'quote', data: { text: 'A quote' } },
   { id: 'q2', type: 'quote', data: { text: 'A large quote', size: 'large' } },
-  { id: 'c1', type: 'code', data: { code: 'const answer = 42;', language: 'javascript' } },
+  { id: 'c1', type: 'code', data: { code: 'const answer = 42;', language: 'javascript', filename: 'answer.js' } },
   { id: 'd1', type: 'divider', data: {} },
   { id: 's1', type: 'spacer', data: {} },
   { id: 'u1', type: 'list', data: { text: 'Unordered item', style: 'unordered' } },

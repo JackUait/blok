@@ -36,25 +36,29 @@ export const CODE_WRAPPER_CLASSES: readonly string[] = [
   'my-2',
 ];
 
-/** The header row: language, filename and controls sit above a hairline. */
+/**
+ * The view's caption row above the code, emitted only when the block has a
+ * filename. Built from rules view.css already carries, so it costs the
+ * budgeted sheet almost nothing. The editor's header is chrome with its own
+ * classes (`HEADER_STYLES` in src/tools/code/constants.ts).
+ */
 export const CODE_HEADER_CLASSES: readonly string[] = [
   'flex',
-  'items-center',
-  'gap-1',
-  'min-h-10',
-  'px-2',
-  'py-1.5',
-  'border-b',
+  'px-4',
+  'py-3',
+];
+
+/**
+ * Added to the code area under a caption row: the hairline sits on the code's
+ * top edge (`border-t`, a rule view.css already has) rather than the caption's
+ * bottom edge, which would cost the sheet a new rule.
+ */
+export const CODE_CAPTIONED_AREA_CLASSES: readonly string[] = [
+  'border-t',
   'border-border-secondary',
-  'bg-bg-secondary',
-  'text-xs',
-  'text-gray-text',
 ];
 
 export const CODE_FILENAME_CLASSES: readonly string[] = [
-  'min-w-0',
-  'truncate',
   'font-mono',
-  'text-xs',
-  'text-text-primary',
+  'text-sm',
 ];

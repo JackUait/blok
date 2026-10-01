@@ -179,4 +179,27 @@ test.describe('code block chrome', () => {
 
     expect(saved?.blocks[0].data).toMatchObject({ filename: 'src/app.js', code: 'x' });
   });
+
+  test('keeps every header control inside a narrow block by dropping the Copy label', async ({ page }) => {
+    await createBlok(page, [{ type: 'code', data: { code: 'graph TD\n  A-->B', language: 'mermaid', filename: 'flow.mmd' } }], 300);
+
+    const copy = page.getByTestId('code-copy-btn');
+    const wrapper = page.locator('[data-blok-tool="code"]');
+
+    // Mermaid opens on its preview, so the code area is hidden; hover the card.
+    await wrapper.hover();
+
+    await expect(page.getByTestId('code-copy-label')).toBeHidden();
+
+    const [copyBox, wrapperBox] = [await copy.boundingBox(), await wrapper.boundingBox()];
+
+    expect((copyBox?.x ?? 0) + (copyBox?.width ?? 0)).toBeLessThanOrEqual((wrapperBox?.x ?? 0) + (wrapperBox?.width ?? 0));
+  });
+
+  test('shows the Copy label when the block has room', async ({ page }) => {
+    await createBlok(page, [{ type: 'code', data: { code: 'x', language: 'javascript' } }], 640);
+
+    await page.getByTestId('code-content').hover();
+    await expect(page.getByTestId('code-copy-label')).toBeVisible();
+  });
 });

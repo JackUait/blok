@@ -15,7 +15,7 @@
 import { normalizeHeadingAnchor } from '../shared/heading-anchor';
 import { readVariants } from '../shared/read-variants';
 import { CALLOUT_CHILDREN_CLASSES } from '../shared/tool-classes/callout';
-import { CODE_AREA_CLASSES, CODE_FILENAME_CLASSES, CODE_HEADER_CLASSES } from '../shared/tool-classes/code';
+import { CODE_AREA_CLASSES, CODE_CAPTIONED_AREA_CLASSES, CODE_FILENAME_CLASSES, CODE_HEADER_CLASSES } from '../shared/tool-classes/code';
 import { DIVIDER_RULE_CLASSES } from '../shared/tool-classes/divider';
 import {
   LIST_CHECKBOX_CLASSES,
@@ -452,7 +452,7 @@ export const builtinEmitters: Record<string, Emitter> = {
         : '';
 
       return trail(
-        `<div${env.rootAttrs(block)}>${header}<pre${env.classList(CODE_AREA_CLASSES)}>${inner}</pre></div>`,
+        `<div${env.rootAttrs(block)}>${header}<pre${env.classList(hasFilename ? [...CODE_AREA_CLASSES, ...CODE_CAPTIONED_AREA_CLASSES] : CODE_AREA_CLASSES)}>${inner}</pre></div>`,
         block,
         env
       );

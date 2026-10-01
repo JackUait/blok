@@ -21,6 +21,7 @@ import {
   FILENAME_LABEL_STYLES,
   ACTIVE_LINE_STYLES,
   LANGUAGE_DOT_FALLBACK,
+  COPY_LABEL_STYLES,
 } from './constants';
 import type { CodeViewMode } from './constants';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
@@ -202,6 +203,7 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
 
   const langText = document.createElement('span');
   langText.textContent = languageName;
+  langText.className = 'truncate';
   langText.setAttribute('data-blok-testid', 'code-language-name');
   languageButton.appendChild(langText);
 
@@ -214,10 +216,18 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
 
   // Filename fills the space between language and controls. In edit mode it is
   // a button that swaps to an <input> only while editing: a resident input would
-  // become the block's first input and take the caret from the code.
+  // become the block's first input and take the caret from the code. The swap
+  // happens in a mutation-free slot so opening the field is not an edit; the
+  // tool reports a real rename itself. A div, not a span, so the header never
+  // reads as inline text.
+  const filenameSlot = document.createElement('div');
+  filenameSlot.className = 'flex flex-1 min-w-0 overflow-hidden';
+  filenameSlot.setAttribute(DATA_ATTR.mutationFree, 'true');
+
   const filenameElement = document.createElement(readOnly ? 'span' : 'button');
   filenameElement.setAttribute('data-blok-testid', 'code-filename');
   setFilenameDisplay(filenameElement, filename, filenamePlaceholder, readOnly);
+  filenameSlot.appendChild(filenameElement);
 
   // View mode segmented control — always built in edit mode, hidden for non-previewable languages
   const viewModeResult = !readOnly && viewModeLabels
@@ -245,6 +255,7 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   copyButton.setAttribute('data-blok-testid', 'code-copy-btn');
 
   const copyLabelElement = document.createElement('span');
+  copyLabelElement.className = COPY_LABEL_STYLES;
   copyLabelElement.textContent = copyLabel;
   copyLabelElement.setAttribute('data-blok-testid', 'code-copy-label');
   copyButton.appendChild(copyLabelElement);
@@ -282,7 +293,7 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
 
   // Assemble header: [language] [filename] [controls: view mode? | copy]
   header.appendChild(languageButton);
-  header.appendChild(filenameElement);
+  header.appendChild(filenameSlot);
 
   // Controls container — hidden by default, visible on wrapper hover
   const controls = document.createElement('div');

@@ -17,27 +17,53 @@ export function rowHeight(code: HTMLElement): number {
   return parseFloat(style.fontSize) * 1.2 || 0;
 }
 
-function textPosition(root: Node, target: number): { node: Node; offset: number } | null {
-  const walker = (root.ownerDocument ?? document).createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  const step = (consumed: number): { node: Node; offset: number } | null => {
-    const next = walker.nextNode() as Text | null;
+interface TextRun {
+  node: Text;
+  start: number;
+}
 
-    if (!next) {
-      return null;
+/** Every text node under `root` with its starting offset, from one walk. */
+function textRuns(root: Node): TextRun[] {
+  const walker = (root.ownerDocument ?? document).createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const runs: TextRun[] = [];
+  const total = { offset: 0 };
+
+  // eslint-disable-next-line no-restricted-syntax -- TreeWalker requires iteration with nextNode()
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    const text = node as Text;
+
+    runs.push({ node: text, start: total.offset });
+    total.offset += text.data.length;
+  }
+
+  return runs;
+}
+
+/** The run holding `target`, by binary search. A boundary offset resolves to the earlier run's end. */
+function positionIn(runs: TextRun[], target: number): { node: Text; offset: number } | null {
+  if (runs.length === 0) {
+    return null;
+  }
+
+  const search = (low: number, high: number): number => {
+    if (low >= high) {
+      return low;
     }
 
-    const length = next.data.length;
+    const mid = Math.ceil((low + high) / 2);
 
-    return consumed + length >= target ? { node: next, offset: target - consumed } : step(consumed + length);
+    return runs[mid].start < target ? search(mid, high) : search(low, mid - 1);
   };
 
-  return step(0);
+  const run = runs[search(0, runs.length - 1)];
+
+  return { node: run.node, offset: Math.min(target - run.start, run.node.data.length) };
 }
 
 /** Visual rows one non-empty line occupies, read from its text's client rects. */
-function rowsOf(code: HTMLElement, start: number, end: number, row: number): number {
-  const from = textPosition(code, start);
-  const to = textPosition(code, end);
+function rowsOf(code: HTMLElement, runs: TextRun[], start: number, end: number, row: number): number {
+  const from = positionIn(runs, start + 1);
+  const to = positionIn(runs, end);
 
   if (!from || !to) {
     return 1;
@@ -45,7 +71,7 @@ function rowsOf(code: HTMLElement, start: number, end: number, row: number): num
 
   const range = code.ownerDocument.createRange();
 
-  range.setStart(from.node, from.offset);
+  range.setStart(from.node, Math.max(0, from.offset - 1));
   range.setEnd(to.node, to.offset);
 
   const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 || rect.height > 0);
@@ -75,9 +101,14 @@ export function measureLineRows(code: HTMLElement): number[] {
     return lines.map(() => 1);
   }
 
-  const starts = lines.reduce<number[]>((acc, line, index) => [...acc, index === 0 ? 0 : acc[index - 1] + lines[index - 1].length + 1], []);
+  const runs = textRuns(code);
+  const starts = lines.reduce<number[]>((acc, _line, index) => {
+    acc.push(index === 0 ? 0 : acc[index - 1] + lines[index - 1].length + 1);
 
-  return lines.map((line, index) => (line === '' ? 1 : rowsOf(code, starts[index], starts[index] + line.length, row)));
+    return acc;
+  }, []);
+
+  return lines.map((line, index) => (line === '' ? 1 : rowsOf(code, runs, starts[index], starts[index] + line.length, row)));
 }
 
 /** Logical line holding a collapsed caret inside `code`, or null when there is none. */

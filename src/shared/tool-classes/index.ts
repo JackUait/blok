@@ -30,7 +30,7 @@
  * classes here from a tool already caught one such near-miss.
  */
 import { CALLOUT_CHILDREN_CLASSES, CALLOUT_WRAPPER_CLASSES } from './callout';
-import { CODE_AREA_CLASSES, CODE_WRAPPER_CLASSES } from './code';
+import { CODE_AREA_CLASSES, CODE_CAPTIONED_AREA_CLASSES, CODE_FILENAME_CLASSES, CODE_HEADER_CLASSES, CODE_WRAPPER_CLASSES } from './code';
 import { DIVIDER_RULE_CLASSES, DIVIDER_WRAPPER_CLASSES } from './divider';
 import { HEADER_LEVEL_CLASSES, headerClasses } from './header';
 import {
@@ -149,6 +149,9 @@ export const ALL_STATIC_CLASSES: readonly string[] = [
     ...TOGGLE_HEADER_ROW_CLASSES,
     ...TOGGLE_CHILDREN_CLASSES,
     ...CODE_AREA_CLASSES,
+    ...CODE_HEADER_CLASSES,
+    ...CODE_FILENAME_CLASSES,
+    ...CODE_CAPTIONED_AREA_CLASSES,
     ...LIST_ITEM_ROW_CLASSES,
     ...LIST_CHECKLIST_ROW_CLASSES,
     ...LIST_CONTENT_CLASSES,

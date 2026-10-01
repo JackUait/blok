@@ -233,12 +233,14 @@ describe('blocksToHtml', () => {
       const html = blocksToHtml(doc([{ type: 'code', data: { code: 'x', filename: '<b>a</b>.ts' } }]), { classes: true });
 
       expect(html).toContain(`<div class="${CODE_WRAPPER_CLASSES.join(' ')}"><div class="${header}"><span class="${name}">&lt;b&gt;a&lt;/b&gt;.ts</span></div><pre class="`);
+      expect(html).toMatch(/<pre class="[^"]*\bborder-t border-border-secondary"/);
     });
 
     it('under classes, adds no header row without a filename', () => {
       const html = blocksToHtml(doc([{ type: 'code', data: { code: 'x' } }]), { classes: true });
 
       expect(html).not.toContain(CODE_HEADER_CLASSES.join(' '));
+      expect(html).not.toContain('border-t');
     });
   });
 

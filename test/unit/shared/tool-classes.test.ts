@@ -118,7 +118,7 @@ describe('shared tool classes', () => {
         import('../../../src/tools/code/constants'),
       ]);
 
-      expect(codeTool.WRAPPER_STYLES).toBe(['group/code', ...codeShared.CODE_WRAPPER_CLASSES].join(' '));
+      expect(codeTool.WRAPPER_STYLES).toBe(['group/code', '@container/code', ...codeShared.CODE_WRAPPER_CLASSES].join(' '));
 
       const [calloutShared, calloutTool] = await Promise.all([
         import('../../../src/shared/tool-classes/callout'),

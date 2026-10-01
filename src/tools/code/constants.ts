@@ -1,4 +1,4 @@
-import { CODE_AREA_CLASSES, CODE_FILENAME_CLASSES, CODE_HEADER_CLASSES, CODE_WRAPPER_CLASSES } from '../../shared/tool-classes/code';
+import { CODE_AREA_CLASSES, CODE_WRAPPER_CLASSES } from '../../shared/tool-classes/code';
 
 export const TOOL_NAME = 'code';
 
@@ -98,25 +98,28 @@ export const LANGUAGE_DOT_FALLBACK = 'var(--blok-gray-text)';
  * nothing, existing only to enable the `group-hover/code:` rules on the header
  * controls below, which a static view never renders.
  */
-export const WRAPPER_STYLES = ['group/code', ...CODE_WRAPPER_CLASSES].join(' ');
+export const WRAPPER_STYLES = ['group/code', '@container/code', ...CODE_WRAPPER_CLASSES].join(' ');
+/** Below this block width the Copy button keeps only its icon, so the header never clips. */
+export const COPY_LABEL_STYLES = 'hidden @min-[26rem]/code:inline';
 /**
  * Publishes the corner radius for the header controls: the card's block
  * radius minus its 1px border and this row's `py-1.5`.
  */
-export const HEADER_STYLES = [...CODE_HEADER_CLASSES, '[--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-block)-var(--blok-border-width-hairline)-var(--blok-space-1-5)))]'].join(' ');
-export const LANGUAGE_BUTTON_STYLES = 'inline-flex shrink-0 items-center gap-1.5 px-1.5 py-0.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer bg-transparent border-0 text-xs text-gray-text font-medium transition-colors can-hover:hover:bg-item-hover-bg select-none';
+export const HEADER_STYLES = ['flex items-center gap-1 min-h-10 px-2 py-1.5 border-b border-border-secondary bg-bg-secondary text-xs text-gray-text', '[--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-block)-var(--blok-border-width-hairline)-var(--blok-space-1-5)))]'].join(' ');
+export const LANGUAGE_BUTTON_STYLES = 'inline-flex min-w-0 items-center gap-1.5 px-1.5 py-0.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer bg-transparent border-0 text-xs text-gray-text font-medium transition-colors can-hover:hover:bg-item-hover-bg select-none';
 /** Read-only has no picker to open — the language label is plain, unfocusable text there. */
-export const LANGUAGE_LABEL_STYLES = 'inline-flex shrink-0 items-center gap-1.5 px-1.5 py-0.5 bg-transparent border-0 text-xs text-gray-text font-medium';
+export const LANGUAGE_LABEL_STYLES = 'inline-flex min-w-0 items-center gap-1.5 px-1.5 py-0.5 bg-transparent border-0 text-xs text-gray-text font-medium';
 export const LANGUAGE_DOT_STYLES = 'size-2 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)]';
 /** Placeholder only shows while the block is hovered or focused, so filename-less blocks stay quiet. */
+const FILENAME_TEXT_STYLES = 'min-w-0 truncate font-mono text-xs text-text-primary';
 export const FILENAME_BUTTON_STYLES = [
-  ...CODE_FILENAME_CLASSES,
-  'flex-1 text-left px-1.5 py-0.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-text bg-transparent border-0 transition-colors can-hover:hover:bg-item-hover-bg',
+  FILENAME_TEXT_STYLES,
+  'flex-1 text-left px-1.5 py-0.5 select-none rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-text bg-transparent border-0 transition-colors can-hover:hover:bg-item-hover-bg',
   'data-[empty=true]:text-gray-text data-[empty=true]:font-sans data-[empty=true]:opacity-0 group-hover/code:data-[empty=true]:opacity-100 group-focus-within/code:data-[empty=true]:opacity-100 focus-visible:opacity-100',
 ].join(' ');
-export const FILENAME_LABEL_STYLES = [...CODE_FILENAME_CLASSES, 'flex-1 px-1.5 py-0.5'].join(' ');
+export const FILENAME_LABEL_STYLES = [FILENAME_TEXT_STYLES, 'flex-1 px-1.5 py-0.5'].join(' ');
 export const FILENAME_INPUT_STYLES = [
-  ...CODE_FILENAME_CLASSES,
+  FILENAME_TEXT_STYLES,
   'flex-1 px-1.5 py-0.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) bg-item-hover-bg border-0 outline-hidden placeholder:text-gray-text placeholder:font-sans',
 ].join(' ');
 export const HEADER_CONTROLS_STYLES = 'flex shrink-0 items-center gap-1 opacity-0 group-hover/code:opacity-100 group-focus-within/code:opacity-100 transition-opacity';
@@ -125,8 +128,8 @@ export const HEADER_CONTROLS_STYLES = 'flex shrink-0 items-center gap-1 opacity-
  * text-xs "Copied!" label, which would otherwise shrink it below the height of
  * its own icon state and of the neighbouring view-mode buttons.
  */
-export const HEADER_BUTTON_STYLES = 'gap-1 px-1.5 h-7 min-w-7 text-xs font-medium rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
-export const HEADER_BUTTON_MATCHED_STYLES = 'gap-1 px-2 h-8.5 min-w-8.5 text-xs font-medium rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
+export const HEADER_BUTTON_STYLES = 'select-none gap-1 px-1.5 h-7 min-w-7 text-xs font-medium rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
+export const HEADER_BUTTON_MATCHED_STYLES = 'select-none gap-1 px-2 h-8.5 min-w-8.5 text-xs font-medium rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
 /**
  * Static classes live in `src/shared/tool-classes/code.ts`. `outline-hidden` and
  * `caret-text-primary` stay here — a static render has no focus ring and no

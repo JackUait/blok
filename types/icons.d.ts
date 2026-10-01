@@ -113,6 +113,8 @@ export declare const IconAlignCenter: string;
 export declare const IconAlignRight: string;
 export declare const IconCaption: string;
 export declare const IconCrop: string;
+export declare const IconRotateLeft: string;
+export declare const IconFlipHorizontal: string;
 export declare const IconExpandFullscreen: string;
 export declare const IconCollapseFullscreen: string;
 export declare const IconPlayerPlay: string;

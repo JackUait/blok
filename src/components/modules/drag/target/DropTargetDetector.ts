@@ -4,7 +4,7 @@
 
 import type { Block } from '../../../block';
 import { DATA_ATTR, createSelector } from '../../../constants';
-import { getElementDirection, logicalSide } from '../../../utils/direction';
+import { getElementDirection, inlineStartOffset, logicalSide } from '../../../utils/direction';
 import { DRAG_CONFIG } from '../utils/drag.constants';
 import { getBlockNestingDepth, getListItemDepth } from '../utils/depthUtils';
 import { deepestLegalStructuralDepth } from '../utils/structuralParent';
@@ -12,7 +12,6 @@ import { acceptsChildren } from '../../../utils/child-tools';
 import { areSourceRootsChildrenOf, isOpenToggleBlock } from '../utils/toggleState';
 import { resolveTargetDepth, selectPointerDepth } from '../../../../tools/list/depth-validator';
 import { INDENT_PER_LEVEL } from '../../../../tools/list/constants';
-import { getElementDirection, inlineStartOffset } from '../../../utils/direction';
 
 export interface DropTarget {
   block: Block;

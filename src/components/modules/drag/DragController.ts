@@ -28,7 +28,6 @@ import { getListItemDepth } from './utils/depthUtils';
 import { resolveStructuralParent } from './utils/structuralParent';
 import { acceptsChildren } from '../../utils/child-tools';
 import { findOwn } from '../../utils/own-element';
-import { getElementDirection } from '../../utils/direction';
 import {
   areSourceRootsChildrenOf,
   isCollapsedToggleBlock,

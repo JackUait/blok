@@ -4,6 +4,8 @@ import * as motion from '../../../../src/components/utils/reduced-motion';
 
 type AnimateCall = { el: Element; keyframes: Keyframe[]; options: KeyframeAnimationOptions };
 
+const last = (keyframes: Keyframe[]): Keyframe => keyframes[keyframes.length - 1] ?? {};
+
 const rect = (top: number, height: number, width = 600, left = 0): DOMRect =>
   ({ top, left, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON: () => ({}) });
 
@@ -43,8 +45,8 @@ describe('runSkeletonHandoff', () => {
     const barCalls = calls.filter(call => bars.includes(call.el as HTMLElement));
 
     expect(barCalls).toHaveLength(2);
-    expect(String(barCalls[0].keyframes[1].transform)).toContain('translate(0px, 100px)');
-    expect(String(barCalls[1].keyframes[1].transform)).toContain('translate(0px, 130px)');
+    expect(String(last(barCalls[0].keyframes).transform)).toContain('translate(0px, 100px)');
+    expect(String(last(barCalls[1].keyframes).transform)).toContain('translate(0px, 130px)');
     expect(barCalls[1].options.delay).toBeGreaterThan(Number(barCalls[0].options.delay ?? 0));
   });
 
@@ -77,7 +79,7 @@ describe('runSkeletonHandoff', () => {
 
     const barCall = calls.find(call => call.el === bar);
 
-    expect(String(barCall?.keyframes[1].transform)).toContain('translate(100px, 50px)');
+    expect(String(last(barCall?.keyframes ?? []).transform)).toContain('translate(100px, 50px)');
     expect(bar.style.transformOrigin).toBe('100% 0');
     overlay.remove();
   });
@@ -93,8 +95,39 @@ describe('runSkeletonHandoff', () => {
 
     const barCall = calls.find(call => call.el === bar);
 
-    expect(String(barCall?.keyframes[1].transform)).toContain('translate(-100px, 50px)');
+    expect(String(last(barCall?.keyframes ?? []).transform)).toContain('translate(-100px, 50px)');
     expect(bar.style.transformOrigin).toBe('0 0');
+  });
+
+  it('a bar starts from its breathing opacity and holds it through its stagger delay', async () => {
+    const bars = make(2, [0, 30]);
+    const targets = make(1, [100]);
+
+    bars.forEach(bar => bar.style.setProperty('opacity', '0.72'));
+
+    await runSkeletonHandoff({ bars, targets, content: document.createElement('div') });
+
+    // Bar 0 glides onto a block, bar 1 has none and fades in place: both wait out a delay.
+    bars.forEach(bar => {
+      const call = calls.find(c => c.el === bar);
+
+      expect(Number(call?.keyframes[0].opacity)).toBe(0.72);
+      expect(call?.options.fill).toBe('both');
+    });
+  });
+
+  it('a gliding bar stays solid for the first part of its move, then dissolves', async () => {
+    const bars = make(1, [0]);
+    const targets = make(1, [100]);
+
+    await runSkeletonHandoff({ bars, targets, content: document.createElement('div') });
+
+    const { keyframes } = calls.find(c => c.el === bars[0]) ?? { keyframes: [] };
+    const held = keyframes.find(frame => typeof frame.offset === 'number' && frame.offset >= 0.3);
+
+    expect(held?.opacity).toBe(keyframes[0].opacity);
+    expect(held?.transform).toBeUndefined();
+    expect(last(keyframes).opacity).toBe(0);
   });
 
   it('under reduced motion only crossfades: no transforms, no blur', async () => {

@@ -6,6 +6,9 @@ export const REDUCED_FADE = 150;
 
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
+/** Share of a bar's flight it stays solid, so the glide reads before the dissolve. */
+const HOLD = 0.4;
+
 // A cancelled animation rejects `finished` with AbortError; the caller's cleanup must still run.
 const settle = (animation: Animation): Promise<unknown> => animation.finished.catch(() => undefined);
 
@@ -39,12 +42,15 @@ export const runSkeletonHandoff = async ({ bars, targets, content }: {
     from: bar.getBoundingClientRect(),
     to: targets[i]?.getBoundingClientRect(),
     rtl: getComputedStyle(bar).direction === 'rtl',
+    // The CSS breathe animation is mid-cycle; starting from 1 would pop the bar when its delay ends.
+    opacity: Number.parseFloat(getComputedStyle(bar).opacity) || 1,
   }));
   const delayOf = (i: number): number => i * HANDOFF_STAGGER;
 
-  const barAnimations = pairs.map(({ bar, from, to, rtl }, i) => {
+  // 'both' holds the first keyframe through the stagger delay, so the bar stops breathing instead of popping.
+  const barAnimations = pairs.map(({ bar, from, to, rtl, opacity }, i) => {
     if (to === undefined) {
-      return settle(bar.animate([{ opacity: 1 }, { opacity: 0 }], { duration: HANDOFF_DURATION, delay: delayOf(i), easing: EASE, fill: 'forwards' }));
+      return settle(bar.animate([{ opacity }, { opacity: 0 }], { duration: HANDOFF_DURATION, delay: delayOf(i), easing: EASE, fill: 'both' }));
     }
 
     // An RTL bar starts at the right edge, so it must scale from there and land on the target's right edge.
@@ -55,9 +61,10 @@ export const runSkeletonHandoff = async ({ bars, targets, content }: {
     bar.style.setProperty('transform-origin', rtl ? '100% 0' : '0 0');
 
     return settle(bar.animate([
-      { transform: 'translate(0px, 0px) scaleX(1)', opacity: 1, filter: 'blur(0px)' },
+      { transform: 'translate(0px, 0px) scaleX(1)', opacity, filter: 'blur(0px)' },
+      { opacity, filter: 'blur(0px)', offset: HOLD },
       { transform: `translate(${dx}px, ${dy}px) scaleX(${sx})`, opacity: 0, filter: 'blur(4px)' },
-    ], { duration: HANDOFF_DURATION, delay: delayOf(i), easing: EASE, fill: 'forwards' }));
+    ], { duration: HANDOFF_DURATION, delay: delayOf(i), easing: EASE, fill: 'both' }));
   });
 
   // The content arrives as one sheet; the per-bar stagger carries the top-to-bottom feel.

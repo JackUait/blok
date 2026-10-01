@@ -740,7 +740,12 @@ const editor = new Blok({
   frame?: 'none' | 'border' | 'shadow'; // Decorative frame treatment (default 'none')
   rounded?: boolean;       // Rounded corners (default true)
   captionVisible?: boolean; // Caption visible in the rendered state (default true)
-  crop?: ImageCrop;        // Non-destructive crop rectangle
+  crop?: ImageCrop;        // Non-destructive crop rectangle, in the turned image's box
+  rotation?: 0 | 90 | 180 | 270; // Clockwise quarter turn (omitted for 0)
+  flipX?: boolean;         // Mirrored left to right, before rotation
+  straighten?: number;     // Fine turn in degrees, -45 to 45, after rotation
+  filter?: 'none' | 'vivid' | 'dramatic' | 'warm' | 'mono' | 'noir' | 'fade' | 'sepia';
+  adjust?: { brightness?: number; contrast?: number; saturation?: number }; // Each -100 to 100
   alt?: string;            // Alt text for screen readers
   fileName?: string;       // Original filename, when known
   naturalWidth?: number;   // Intrinsic pixel width of the source (cached)

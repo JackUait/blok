@@ -803,16 +803,30 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   });
   const speedChipRow = document.createElement('div');
   speedChipRow.className = 'blok-video-controls__speed-chips';
+  speedChipRow.setAttribute('data-role', 'speed-presets');
   speedChipRow.setAttribute('role', 'group');
   speedChipRow.setAttribute('aria-label', i18nLabel('speedPresets', 'Speed presets'));
-  speedChipRow.append(...speedChips);
+  // One puck rides the rate across the presets: an outline between them, filled on one.
+  const speedPuck = document.createElement('span');
+  speedPuck.className = 'blok-video-controls__speed-puck';
+  speedPuck.setAttribute('data-role', 'speed-puck');
+  speedPuck.setAttribute('aria-hidden', 'true');
+  speedChipRow.append(speedPuck, ...speedChips);
 
   speedSection.append(speedHead, speedReadout, speedRuler, speedChipRow);
 
   // Paints the slider + tape only. setRate owns the rate; the glide repaints in between.
+  // Preset index of a rate, interpolated between neighbours (1.8× → 2.6); the puck's slot.
+  const presetIndex = (rate: number): number => {
+    const next = SPEED_PRESETS.findIndex((preset) => preset >= rate);
+    if (next <= 0) return Math.max(0, next);
+    const low = SPEED_PRESETS[next - 1];
+    return next - 1 + (rate - low) / (SPEED_PRESETS[next] - low);
+  };
   const paintSpeedTape = (rate: number): void => {
     speedSlider.value = String(rate);
     speedRuler.style.setProperty('--blok-speed-pos', String(Math.round(((rate - SPEED_MIN) / SPEED_SLIDER_STEP) * 100) / 100));
+    speedChipRow.style.setProperty('--blok-speed-puck', String(Math.round(presetIndex(rate) * 100) / 100));
   };
 
   // A preset-jump glide in flight (rAF id; 0 = idle). Any direct rate change — drag,
@@ -823,6 +837,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     speedSlider.setAttribute('aria-valuetext', SPEED_LABEL(rate));
     paintSpeedTape(rate);
     SPEED_PRESETS.forEach((preset, i) => speedChips[i].setAttribute('aria-pressed', String(preset === rate)));
+    speedChipRow.toggleAttribute('data-snapped', SPEED_PRESETS.includes(rate));
   };
   const setRate = (rate: number): void => {
     cancelAnimationFrame(speedGlide.raf);

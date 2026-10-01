@@ -1127,6 +1127,29 @@ describe('video controls — playback gear menu', () => {
     ['0.5', '1', '1.5', '2'].forEach((rate) => expect(chip(rate).getAttribute('aria-pressed')).toBe('false'));
   });
 
+  it('a puck in the preset bar tracks the rate and snaps onto a matching preset', () => {
+    const presets = q(h.figure, '[data-role="speed-presets"]');
+    const puck = q(presets, '[data-role="speed-puck"]');
+    expect(puck.getAttribute('aria-hidden')).toBe('true');
+    // --blok-speed-puck is a preset index: 0.5× → 0, 1× → 1, 1.5× → 2, 2× → 3.
+    expect(presets.style.getPropertyValue('--blok-speed-puck')).toBe('1');
+    expect(presets.hasAttribute('data-snapped')).toBe(true);
+
+    // Between presets it sits part way along, and is no longer snapped.
+    dragSlider(1.8);
+    expect(presets.style.getPropertyValue('--blok-speed-puck')).toBe('2.6');
+    expect(presets.hasAttribute('data-snapped')).toBe(false);
+
+    // Below the first preset it waits at the start.
+    dragSlider(0.25);
+    expect(presets.style.getPropertyValue('--blok-speed-puck')).toBe('0');
+    expect(presets.hasAttribute('data-snapped')).toBe(false);
+
+    // A preset click snaps at once; the puck then glides there with the tape.
+    chip('2').click();
+    expect(presets.hasAttribute('data-snapped')).toBe(true);
+  });
+
   it('a preset keeps the card open so the rate can still be fine-tuned', () => {
     gear().click();
     chip('2').click();
@@ -1212,6 +1235,8 @@ describe('video controls — preset glide animation', () => {
     // The tape starts back at the prior rate (1×), not snapped to 2×.
     expect(Number(slider().value)).toBe(1);
     expect(ruler().style.getPropertyValue('--blok-speed-pos')).toBe('15');
+    // The puck glides with the tape, from the 1× preset.
+    expect(q(h.figure, '[data-role="speed-presets"]').style.getPropertyValue('--blok-speed-puck')).toBe('1');
   });
 
   it('jumps straight to the rate with no animation under prefers-reduced-motion', () => {

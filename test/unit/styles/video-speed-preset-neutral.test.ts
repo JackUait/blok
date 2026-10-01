@@ -19,17 +19,26 @@ const block = (selector: string): string => {
 const CHIP = '[data-blok-tool="video"] .blok-video-controls__speed-chip';
 
 describe('video speed preset — pressed state', () => {
-  it('fills with the hover gray and primary ink, like a hovered chip', () => {
-    const pressed = block(`${CHIP}[aria-pressed="true"]`);
+  const PUCK = '[data-blok-tool="video"] .blok-video-controls__speed-puck';
+  const SNAPPED = '[data-blok-tool="video"] .blok-video-controls__speed-chips[data-snapped] .blok-video-controls__speed-puck';
 
-    expect(pressed).toContain('background: var(--blok-video-control-bg-hover)');
-    expect(pressed).toContain('color: var(--blok-video-control-fg)');
+  it('the snapped puck fills with the hover gray; the pressed chip shows primary ink', () => {
+    expect(block(SNAPPED)).toContain('background: var(--blok-video-control-bg-hover)');
+    expect(block(`${CHIP}[aria-pressed="true"]`)).toContain('color: var(--blok-video-control-fg)');
+  });
+
+  it('between presets the puck is a thin line under the labels, not a tile across them', () => {
+    // A 2px line resting just above the well's bottom edge; snapping lifts its top to a full tile.
+    expect(block(PUCK)).toContain('top: calc(100% - var(--blok-space-1) - 2px)');
+    expect(block(PUCK)).toContain('bottom: var(--blok-space-1)');
+    expect(block(SNAPPED)).toContain('top: var(--blok-space-0-5)');
+    expect(block(SNAPPED)).toContain('bottom: var(--blok-space-0-5)');
   });
 
   it('paints no blue and no focus-ring token', () => {
-    const pressed = block(`${CHIP}[aria-pressed="true"]`);
-
-    expect(pressed).not.toMatch(/blue|focus-ring|#[0-9a-f]{3,6}|rgb/i);
+    [block(SNAPPED), block(PUCK), block(`${CHIP}[aria-pressed="true"]`)].forEach((rule) => {
+      expect(rule).not.toMatch(/blue|focus-ring|#[0-9a-f]{3,6}|rgb/i);
+    });
   });
 });
 

@@ -549,11 +549,16 @@
  * property inherits, so the NEAREST [dir] wins: a block's own dir beats the
  * editor's. `[dir="rtl"] x` alone would match any RTL ancestor.
  */
-:where([data-blok-interface=blok][dir="rtl"], [data-blok-interface=blok] [dir="rtl"]) {
+:where(
+  [data-blok-interface=blok][dir="rtl"],
+  [data-blok-interface=blok] [dir="rtl"],
+  [data-blok-popover][dir="rtl"],
+  [data-blok-popover] [dir="rtl"]
+) {
   --_blok-inline-sign: -1;
 }
 
-:where([data-blok-interface=blok] [dir="ltr"]) {
+:where([data-blok-interface=blok] [dir="ltr"], [data-blok-popover] [dir="ltr"]) {
   --_blok-inline-sign: 1;
 }
 

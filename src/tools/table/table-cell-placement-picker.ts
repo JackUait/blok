@@ -66,7 +66,7 @@ const PREVIEW_TOP: Record<Row, number> = {
   bottom: 48,
 };
 
-/** How far a line of this width sits from the left edge when aligned to this column. */
+/** How far a line of this width sits from the inline start when aligned to this column. */
 const offsetOf = (column: Column, width: number): number => {
   if (column === 'left') {
     return 0;
@@ -80,6 +80,9 @@ const offsetOf = (column: Column, width: number): number => {
  * without overshoot. Longer or springy motion reads as lag after the click.
  */
 const EASE_IN_OUT = '[transition-timing-function:cubic-bezier(0.7,0,0.2,1)]';
+
+/** -1 in an RTL popover. paint() runs before the picker is attached, so CSS resolves it. */
+const INLINE_SIGN = 'var(--_blok-inline-sign, 1)';
 
 const MOTION = [
   'transition-transform',
@@ -129,11 +132,12 @@ const GROUP_CLASSES = [
 /**
  * The selection is a neutral surface that slides between options — never blue.
  * It is one grid cell in size, so translate(col * 100%, row * 100%) lands on it.
+ * Left/right mean start/end, so x steps toward the inline end.
  */
 const THUMB_CLASSES = [
   'absolute',
   'top-[3px]',
-  'left-[3px]',
+  'start-[3px]',
   'w-[calc((100%-6px)/3)]',
   'h-[calc((100%-6px)/3)]',
   'rounded-(--blok-radius-inner)',
@@ -246,7 +250,7 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
 
     textBox.style.transform = `translateY(${PREVIEW_TOP[row]}px)`;
     for (const [lineIndex, line] of previewLines.entries()) {
-      line.style.transform = `translateX(${offsetOf(column, PREVIEW_LINES[lineIndex])}px)`;
+      line.style.transform = `translateX(calc(${offsetOf(column, PREVIEW_LINES[lineIndex])}px * ${INLINE_SIGN}))`;
     }
   };
 
@@ -254,7 +258,7 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
     buttons.forEach((button, index) => {
       button.setAttribute('aria-checked', String(index === state.index));
     });
-    thumb.style.transform = `translate(${(state.index % 3) * 100}%, ${Math.floor(state.index / 3) * 100}%)`;
+    thumb.style.transform = `translate(calc(${(state.index % 3) * 100}% * ${INLINE_SIGN}), ${Math.floor(state.index / 3) * 100}%)`;
     show(state.index);
   };
 

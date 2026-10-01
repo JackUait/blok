@@ -730,4 +730,207 @@ test.describe('table in RTL', () => {
       }
     });
   }
+
+  const ROWS = ['top', 'middle', 'bottom'] as const;
+  const COLUMNS = ['left', 'center', 'right'] as const;
+  const LONG_TEXT: Record<Direction, string> = {
+    ltr: 'a paragraph long enough to wrap across several lines in this cell',
+    rtl: 'هذه فقرة طويلة بما يكفي لتلتف عبر عدة أسطر داخل هذه الخلية',
+  };
+
+  /**
+   * Rows top/middle/bottom, columns left/center/right, plus a tall last
+   * column so every row has room to move its text vertically.
+   */
+  const placementTable = (text: string): OutputData => {
+    const children: OutputData['blocks'] = [];
+    const content = ROWS.map((row, r) => [
+      ...COLUMNS.map((column, c) => {
+        const id = `p${r}${c}`;
+
+        children.push({ id, type: 'paragraph', data: { text }, parent: 't' });
+
+        return { blocks: [id], placement: `${row}-${column}` };
+      }),
+      (() => {
+        const id = `tall${r}`;
+
+        children.push({ id, type: 'paragraph', data: { text: Array(9).fill('x').join('<br>') }, parent: 't' });
+
+        return { blocks: [id] };
+      })(),
+    ]);
+
+    return {
+      blocks: [
+        { id: 't', type: 'table', data: { withHeadings: false, content }, content: children.map(child => child.id ?? '') },
+        ...children,
+      ],
+    };
+  };
+
+  /** A cell's text line offsets from its content box. */
+  const placementGeometry = async (page: Page, row: number, col: number): Promise<{
+    left: number[];
+    right: number[];
+    middle: number[];
+    top: number;
+    bottom: number;
+  }> =>
+    page.evaluate(({ r, c }) => {
+      const cellEl = document.querySelector(`[data-blok-table-cell][data-blok-table-cell-row="${r}"][data-blok-table-cell-col="${c}"]`);
+      const container = cellEl?.querySelector('[data-blok-table-cell-blocks]');
+      const editable = cellEl?.querySelector<HTMLElement>('[contenteditable="true"]');
+
+      if (!container || !editable) {
+        throw new Error('no cell');
+      }
+
+      const range = document.createRange();
+
+      range.selectNodeContents(editable);
+      const box = container.getBoundingClientRect();
+      const text = range.getBoundingClientRect();
+      const lines = Array.from(range.getClientRects()).filter(rect => rect.width > 0);
+
+      return {
+        left: lines.map(line => line.left - box.left),
+        right: lines.map(line => box.right - line.right),
+        middle: lines.map(line => (line.left + line.right) / 2 - (box.left + box.right) / 2),
+        top: text.top - box.top,
+        bottom: box.bottom - text.bottom,
+      };
+    }, { r: row, c: col });
+
+  /** left = inline start, right = inline end, both read in the TABLE's direction. */
+  const physicalSide = (column: typeof COLUMNS[number], table: Direction): 'left' | 'center' | 'right' => {
+    if (column === 'center') {
+      return 'center';
+    }
+
+    return (column === 'left') === (table === 'ltr') ? 'left' : 'right';
+  };
+
+  const VERTICAL_LEAN = { top: -1, middle: 0, bottom: 1 } as const;
+
+  const placementCases = [
+    { table: 'ltr', text: 'ltr' },
+    { table: 'rtl', text: 'rtl' },
+    { table: 'rtl', text: 'ltr' },
+    { table: 'ltr', text: 'rtl' },
+  ] as const;
+
+  for (const { table, text } of placementCases) {
+    test(`${table} table with ${text} text: left/right placement means the grid's start/end`, async ({ page }) => {
+      await createBlok(page, placementTable(LONG_TEXT[text]), table);
+
+      const cells = ROWS.flatMap((row, r) => COLUMNS.map((column, c) => ({ row, column, r, c })));
+
+      for (const { row, column, r, c } of cells) {
+        const label = `${row}-${column}`;
+        const geometry = await placementGeometry(page, r, c);
+        const physical = physicalSide(column, table);
+        const offsets = { left: geometry.left, right: geometry.right, center: geometry.middle }[physical];
+
+        expect(geometry.left.length, `${label} wraps`).toBeGreaterThan(1);
+        expect(Math.max(...offsets.map(Math.abs)), `${label}: every line on the ${physical}`).toBeLessThanOrEqual(1.5);
+        // -1 sits high, 1 sits low, 0 is centred within 10px.
+        expect(Math.sign(Math.trunc((geometry.top - geometry.bottom) / 10)), `${label} vertical`).toBe(VERTICAL_LEAN[row]);
+      }
+    });
+  }
+
+  const openPlacementPicker = async (page: Page): Promise<void> => {
+    const target = await box(page, cell(0, 0));
+
+    await page.mouse.click(target.x + target.width / 2, target.y + target.height / 2);
+
+    const pill = page.locator('[data-blok-table-selection-pill]');
+
+    await expect(pill).toBeAttached();
+    const pillBox = await box(page, '[data-blok-table-selection-pill]');
+
+    await page.mouse.move(pillBox.x + pillBox.width / 2, pillBox.y + pillBox.height / 2);
+    await pill.click();
+
+    const item = page.locator('[data-blok-testid="popover-item"][data-blok-item-name="cellPlacement"]');
+    const itemBox = await box(page, '[data-blok-testid="popover-item"][data-blok-item-name="cellPlacement"]');
+
+    await expect(item).toBeVisible();
+    await page.mouse.move(itemBox.x + itemBox.width / 2, itemBox.y + itemBox.height / 2);
+    await expect(page.locator('[data-placement="bottom-right"]')).toBeVisible();
+  };
+
+  /** Where the picker draws one option: its button, its glyph lines, the thumb and the preview lines. */
+  const pickerGeometry = async (page: Page, placement: string): Promise<{
+    thumbInside: boolean;
+    buttonX: Record<string, number>;
+    glyphLinesFrom: { left: number; right: number };
+    previewLinesFrom: { left: number[]; right: number[] };
+  }> =>
+    page.evaluate((selected) => {
+      const thumb = document.querySelector('[data-blok-placement-thumb]');
+      const button = document.querySelector(`[data-placement="${selected}"]`);
+      const glyph = button?.querySelector('[data-blok-placement-glyph]');
+      const preview = document.querySelector('[data-blok-placement-preview]');
+
+      if (!thumb || !button || !glyph || !preview) {
+        throw new Error('no picker');
+      }
+
+      const t = thumb.getBoundingClientRect();
+      const b = button.getBoundingClientRect();
+      const g = glyph.getBoundingClientRect();
+      const p = preview.getBoundingClientRect();
+      const glyphLines = Array.from(glyph.children).map(line => line.getBoundingClientRect());
+      const previewLines = Array.from(document.querySelectorAll('[data-blok-placement-preview-line]')).map(line => line.getBoundingClientRect());
+      const cx = t.left + t.width / 2;
+      const cy = t.top + t.height / 2;
+
+      return {
+        thumbInside: cx > b.left && cx < b.right && cy > b.top && cy < b.bottom,
+        buttonX: Object.fromEntries(['top-left', 'top-center', 'top-right'].map(name => [
+          name,
+          document.querySelector(`[data-placement="${name}"]`)?.getBoundingClientRect().x ?? Number.NaN,
+        ])),
+        glyphLinesFrom: {
+          left: Math.min(...glyphLines.map(line => line.left)) - g.left,
+          right: g.right - Math.max(...glyphLines.map(line => line.right)),
+        },
+        previewLinesFrom: {
+          left: previewLines.map(line => line.left - p.left),
+          right: previewLines.map(line => p.right - line.right),
+        },
+      };
+    }, placement);
+
+  for (const direction of ['ltr', 'rtl'] as const) {
+    test(`${direction}: the placement picker lays out its options where the content goes`, async ({ page }) => {
+      await createBlok(page, tableData(cellText(direction)), direction);
+      await openPlacementPicker(page);
+      await page.locator('[data-placement="middle-right"]').click({ force: true });
+      await expect.poll(() => page.evaluate(() => document.getAnimations().filter(animation => animation.playState === 'running').length)).toBe(0);
+
+      const geometry = await pickerGeometry(page, 'middle-right');
+      // "right" is the inline end: physically left in RTL.
+      const endIsLeft = direction === 'rtl';
+
+      expect(geometry.thumbInside, 'thumb sits on the picked option').toBe(true);
+      expect(geometry.buttonX['top-right'] < geometry.buttonX['top-left'], 'end column on the end side').toBe(endIsLeft);
+      expect(geometry.glyphLinesFrom.left < geometry.glyphLinesFrom.right, 'glyph lines at the end side').toBe(endIsLeft);
+
+      const nearSide = endIsLeft ? geometry.previewLinesFrom.left : geometry.previewLinesFrom.right;
+      const farSide = endIsLeft ? geometry.previewLinesFrom.right : geometry.previewLinesFrom.left;
+
+      for (const [index, near] of nearSide.entries()) {
+        expect(near, 'preview lines flush with the end side').toBeLessThan(farSide[index]);
+        expect(near).toBeGreaterThanOrEqual(0);
+      }
+      expect(new Set(nearSide.map(Math.round)).size, 'preview lines share one edge').toBe(1);
+
+      const saved = await savedTable(page);
+
+      expect((saved.content[0][0] as { placement?: string }).placement).toBe('middle-right');
+    });
+  }
 });

@@ -19,6 +19,9 @@ const mockI18n = {
   t: (key: string): string => LABELS[key] ?? key,
 } as Parameters<typeof createCellPlacementPicker>[0]['i18n'];
 
+/** Horizontal steps run toward the inline end: the popover's dir flips the sign in CSS. */
+const inline = (length: string): string => `calc(${length} * var(--_blok-inline-sign, 1))`;
+
 const ALL: CellPlacement[] = [
   'top-left', 'top-center', 'top-right',
   'middle-left', 'middle-center', 'middle-right',
@@ -106,11 +109,11 @@ describe('createCellPlacementPicker', () => {
   });
 
   it.each([
-    ['top-left', 'translate(0%, 0%)'],
-    ['top-right', 'translate(200%, 0%)'],
-    ['middle-center', 'translate(100%, 100%)'],
-    ['bottom-left', 'translate(0%, 200%)'],
-    ['bottom-right', 'translate(200%, 200%)'],
+    ['top-left', `translate(${inline('0%')}, 0%)`],
+    ['top-right', `translate(${inline('200%')}, 0%)`],
+    ['middle-center', `translate(${inline('100%')}, 100%)`],
+    ['bottom-left', `translate(${inline('0%')}, 200%)`],
+    ['bottom-right', `translate(${inline('200%')}, 200%)`],
   ] as const)('parks the thumb under %s', (placement, transform) => {
     expect(thumbOf(render(placement)).style.transform).toBe(transform);
   });
@@ -122,12 +125,12 @@ describe('createCellPlacementPicker', () => {
 
     expect(onPlacementSelect).toHaveBeenLastCalledWith('bottom-center');
     expect(checked(element)).toBe('bottom-center');
-    expect(thumbOf(element).style.transform).toBe('translate(100%, 200%)');
+    expect(thumbOf(element).style.transform).toBe(`translate(${inline('100%')}, 200%)`);
 
     radio(element, 'middle-right').click();
 
     expect(onPlacementSelect).toHaveBeenLastCalledWith('middle-right');
-    expect(thumbOf(element).style.transform).toBe('translate(200%, 100%)');
+    expect(thumbOf(element).style.transform).toBe(`translate(${inline('200%')}, 100%)`);
     expect(onPlacementSelect).toHaveBeenCalledTimes(2);
   });
 
@@ -226,9 +229,9 @@ describe('createCellPlacementPicker', () => {
     });
 
     it.each([
-      ['top-left', ['translateX(0px)', 'translateX(0px)', 'translateX(0px)'], 'translateY(12px)'],
-      ['middle-center', ['translateX(26px)', 'translateX(46px)', 'translateX(34px)'], 'translateY(30px)'],
-      ['bottom-right', ['translateX(52px)', 'translateX(92px)', 'translateX(68px)'], 'translateY(48px)'],
+      ['top-left', [`translateX(${inline('0px')})`, `translateX(${inline('0px')})`, `translateX(${inline('0px')})`], 'translateY(12px)'],
+      ['middle-center', [`translateX(${inline('26px')})`, `translateX(${inline('46px')})`, `translateX(${inline('34px')})`], 'translateY(30px)'],
+      ['bottom-right', [`translateX(${inline('52px')})`, `translateX(${inline('92px')})`, `translateX(${inline('68px')})`], 'translateY(48px)'],
     ] as const)('lays the cell text out %s', (placement, expected, vertical) => {
       const element = render(placement);
 
@@ -241,11 +244,11 @@ describe('createCellPlacementPicker', () => {
       const target = radio(element, 'bottom-right');
 
       target.dispatchEvent(new PointerEvent('pointerenter'));
-      expect(shifts(element)[1]).toBe('translateX(92px)');
+      expect(shifts(element)[1]).toBe(`translateX(${inline('92px')})`);
       expect(drop(element)).toBe('translateY(48px)');
 
       target.dispatchEvent(new PointerEvent('pointerleave'));
-      expect(shifts(element)[1]).toBe('translateX(0px)');
+      expect(shifts(element)[1]).toBe(`translateX(${inline('0px')})`);
       expect(drop(element)).toBe('translateY(12px)');
     });
 
@@ -257,7 +260,7 @@ describe('createCellPlacementPicker', () => {
       target.click();
       target.dispatchEvent(new PointerEvent('pointerleave'));
 
-      expect(shifts(element)[1]).toBe('translateX(46px)');
+      expect(shifts(element)[1]).toBe(`translateX(${inline('46px')})`);
       expect(drop(element)).toBe('translateY(30px)');
     });
 

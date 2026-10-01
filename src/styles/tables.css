@@ -68,12 +68,16 @@
  * Flex placement below moves whole block boxes, but a block that wraps is
  * already full width, so only text-align lines its text up. Every cell resets
  * it first, so a nested table never inherits the outer cell's alignment.
- * The build lowers `start` to `:not(:lang(…rtl…))`, lifting the reset to two
- * attributes of specificity, so the placement rules carry two as well and come
- * after it.
+ * Left/right mean the grid's start/end. The values are physical and keyed on
+ * the editor's data-blok-rtl because each block's content carries the dir of
+ * its own text: `start`/`end` (and Chrome's match-parent) would follow that.
  */
 [data-blok-table-cell-blocks] {
-  text-align: start;
+  text-align: left;
+}
+
+[data-blok-rtl="true"] [data-blok-table-cell-blocks] {
+  text-align: right;
 }
 
 [data-blok-table-cell-blocks][data-blok-cell-placement$="-center"] {
@@ -82,6 +86,10 @@
 
 [data-blok-table-cell-blocks][data-blok-cell-placement$="-right"] {
   text-align: right;
+}
+
+[data-blok-rtl="true"] [data-blok-table-cell-blocks][data-blok-cell-placement$="-right"] {
+  text-align: left;
 }
 
 [data-blok-cell-placement="top-center"] {

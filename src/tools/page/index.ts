@@ -21,7 +21,7 @@ import {
   PAGE_TITLE_MUTED_CLASSES,
   PAGE_WRAPPER_CLASSES,
 } from './constants';
-import { PageHoverPreview, pageIconNode, type PageHoverContent } from './hover-preview';
+import { PageHoverPreview, pageIconNode, previewLines, type PageHoverContent, type PagePreviewLine } from './hover-preview';
 import { renderPagePreview } from './preview';
 import type { PageCache, PageConfig, PageData, PageIcon, PageInfo } from './types';
 
@@ -94,7 +94,7 @@ export class PageTool implements BlockTool {
   private detached = false;
   /** Titles above the page, from the last `resolve`. Shown only in the hover preview. */
   private path: string[] = [];
-  private readonly preview = new PageHoverPreview(() => this.previewContent());
+  private readonly preview = new PageHoverPreview(() => this.previewContent(), () => this.previewBody());
 
   constructor(options: BlockToolConstructorOptions<PageData, PageConfig>) {
     this.api = options.api;
@@ -408,6 +408,18 @@ export class PageTool implements BlockTool {
     // The preview is anchored to the link being replaced.
     this.preview.hide();
     this.root?.replaceChildren(this.buildLink());
+  }
+
+  private previewBody(): Promise<PagePreviewLine[]> | null {
+    const preview = this.config.preview;
+
+    if (preview === undefined || !this.isNavigable) {
+      return null;
+    }
+
+    const { pageId } = this.data;
+
+    return Promise.resolve().then(() => preview(pageId)).then(previewLines);
   }
 
   private previewContent(): PageHoverContent | null {

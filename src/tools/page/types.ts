@@ -1,4 +1,4 @@
-import type { BlockToolData } from '../../../types';
+import type { BlockToolData, OutputBlockData } from '../../../types';
 
 /** A page's icon: an emoji, or an image at a URL. */
 export type PageIcon = { type: 'emoji'; value: string } | { type: 'image'; url: string };
@@ -40,4 +40,6 @@ export interface PageConfig {
   resolve?(pageId: string): PageInfo | null | undefined | Promise<PageInfo | null | undefined>;
   /** Makes the page a new page block points at. */
   create?(init: { pageId: string }): void | Promise<void>;
+  /** The page's opening blocks, for the hover preview. */
+  preview?(pageId: string): OutputBlockData[] | null | undefined | Promise<OutputBlockData[] | null | undefined>;
 }

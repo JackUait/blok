@@ -1,6 +1,7 @@
 import { ConversionConfig, SanitizerConfig } from '../configs';
 import { BlockTool, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
+import { OutputBlockData } from '../data-formats/output-data';
 import { ToolboxConfig } from './tool-settings';
 
 /**
@@ -79,6 +80,12 @@ export interface PageConfig {
    * "Page not found" until `resolve` finds the page.
    */
   create?(init: { pageId: string }): void | Promise<void>;
+  /**
+   * The page's opening blocks, asked for when a hover on the block starts.
+   * The hover preview shows the first few as small lines of text under the
+   * title, like Notion. Without it the preview shows only icon, path and title.
+   */
+  preview?(pageId: string): OutputBlockData[] | null | undefined | Promise<OutputBlockData[] | null | undefined>;
 }
 
 /**

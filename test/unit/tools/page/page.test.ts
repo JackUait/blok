@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PageTool } from '../../../../src/tools/page';
 import type { PageConfig, PageData } from '../../../../src/tools/page/types';
 import { renderPagePreview } from '../../../../src/tools/page/preview';
+import { previewLines } from '../../../../src/tools/page/hover-preview';
 import { sanitizeBlocks } from '../../../../src/components/utils/sanitizer';
 import { convertBlockDataToString } from '../../../../src/components/utils/blocks';
 import type { API, BlockOrigin, BlockToolConstructorOptions } from '../../../../types';
@@ -903,6 +904,52 @@ describe('Page tool', () => {
       // Blok's utilities and tokens apply only inside an interface root.
       expect(card?.getAttribute('data-blok-interface')).toBe('page-hover-preview');
       expect(card?.style.boxSizing).toBe('border-box');
+    });
+
+    it('shows the start of the page content, as plain lines', async () => {
+      const preview = vi.fn(() => Promise.resolve([
+        { type: 'header', data: { text: 'Goals', level: 2 } },
+        { type: 'paragraph', data: { text: 'Ship <b>fast</b> &amp; safe' } },
+        { type: 'paragraph', data: { text: '' } },
+        { type: 'list', data: { text: 'First', style: 'unordered' } },
+        { type: 'image', data: { url: 'x.png' } },
+      ]));
+      const { root } = await mount({ data: { pageId: 'p1', cache: { title: 'Roadmap' } }, config: { preview } });
+
+      vi.useFakeTimers();
+      hoverOver(anchorOf(root));
+      await vi.advanceTimersByTimeAsync(500);
+
+      const lines = [...document.querySelectorAll('[data-blok-testid="page-hover-preview-line"]')];
+
+      expect(lines.map((line) => line.textContent)).toEqual(['Goals', 'Ship fast & safe', '• First']);
+      expect(lines[0].getAttribute('data-blok-preview-heading')).toBe('true');
+      expect(preview).toHaveBeenCalledWith('p1');
+      expect(document.querySelector('[data-blok-testid="page-hover-preview-content"] script, [data-blok-testid="page-hover-preview-content"] b')).toBeNull();
+    });
+
+    it('numbers ordered items, restarting after other blocks, and marks to-dos', () => {
+      expect(previewLines([
+        { type: 'list', data: { text: 'a', style: 'ordered' } },
+        { type: 'list', data: { text: 'b', style: 'ordered' } },
+        { type: 'paragraph', data: { text: 'break' } },
+        { type: 'list', data: { text: 'c', style: 'ordered' } },
+        { type: 'list', data: { text: 'done', style: 'checklist', checked: true } },
+        { type: 'list', data: { text: 'todo', style: 'checklist' } },
+      ]).map((line) => line.text)).toEqual(['1. a', '2. b', 'break', '1. c', '☑ done', '☐ todo']);
+    });
+
+    it('asks for the content once per hover, and still shows the card when it fails', async () => {
+      const preview = vi.fn(() => Promise.reject(new Error('offline')));
+      const { root } = await mount({ data: { pageId: 'p1', cache: { title: 'Roadmap' } }, config: { preview } });
+
+      vi.useFakeTimers();
+      hoverOver(anchorOf(root));
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(preview).toHaveBeenCalledTimes(1);
+      expect(document.querySelector('[data-blok-testid="page-hover-preview"]')).not.toBeNull();
+      expect(document.querySelector('[data-blok-testid="page-hover-preview-content"]')).toBeNull();
     });
 
     it('names an untitled page and leaves out an empty path', async () => {

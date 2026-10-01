@@ -410,11 +410,11 @@ describe('playground saves a pending page edit when the tab goes away', () => {
     expect(page.stored).toEqual([[{ id: 'live' }]]);
   });
 
-  it('checks page blocks after each change, and stores only a local document', async () => {
+  it('checks page blocks after each change, and keeps a copy of the page, collab included, for the hover preview', async () => {
     const local = boot();
     const localWatch = { observe: vi.fn() };
 
-    local.schedule({ saver: { save: local.save } }, 'guide', { store: true, pointers: localWatch });
+    local.schedule({ saver: { save: local.save } }, 'guide', { pointers: localWatch });
     [...local.timers.values()][0]();
     await settle();
     expect(local.stored).toEqual([[{ id: 'live' }]]);
@@ -423,11 +423,10 @@ describe('playground saves a pending page edit when the tab goes away', () => {
     const shared = boot({ collab: true });
     const sharedWatch = { observe: vi.fn() };
 
-    shared.schedule({ saver: { save: shared.save } }, 'guide', { store: false, pointers: sharedWatch });
+    shared.schedule({ saver: { save: shared.save } }, 'guide', { pointers: sharedWatch });
     [...shared.timers.values()][0]();
     await settle();
-    expect(shared.save).not.toHaveBeenCalled();
-    expect(shared.stored).toEqual([]);
+    expect(shared.stored).toEqual([[{ id: 'live' }]]);
     expect(sharedWatch.observe).toHaveBeenCalledWith(livePages);
   });
 
@@ -435,7 +434,7 @@ describe('playground saves a pending page edit when the tab goes away', () => {
     const page = boot({ save: () => Promise.reject(new Error('Saver: table children diverge')) });
     const watch = { observe: vi.fn() };
 
-    page.schedule({ saver: { save: page.save } }, 'guide', { store: true, pointers: watch });
+    page.schedule({ saver: { save: page.save } }, 'guide', { pointers: watch });
     [...page.timers.values()][0]();
     await settle();
 
@@ -447,11 +446,11 @@ describe('playground saves a pending page edit when the tab goes away', () => {
     const watch = { observe: vi.fn() };
 
     page.context.livePointers = watch;
-    page.schedule({ saver: { save: page.save } }, 'guide', { store: false, pointers: watch });
+    page.schedule({ saver: { save: page.save } }, 'guide', { pointers: watch });
     page.windowListeners.get('pagehide')?.();
     await settle();
 
-    expect(page.stored).toEqual([]);
+    expect(page.stored).toEqual([[{ id: 'live' }]]);
     expect(watch.observe).toHaveBeenCalledWith(livePages);
   });
 

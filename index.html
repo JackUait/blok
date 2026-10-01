@@ -1559,6 +1559,7 @@
           open: (id) => setTimeout(() => goToPage(id), 0),
           resolve: (id) => pages.info(id),
           create: ({ pageId: id }) => pages.create(id, pageId),
+          preview: (id) => pages.get(id)?.blocks,
         },
       };
 
@@ -1586,9 +1587,9 @@
         onChange(api, event) {
           console.log('something changed', event);
           refreshBlokView();
-          // Under collaboration the sync service owns the document; the page
-          // blocks are still checked, for Trash.
-          schedulePersist(api, pageId, { store: collaboration === null, pointers });
+          // Under collaboration the stored copy only feeds hover previews; the
+          // sync service owns the document and an editor never loads it.
+          schedulePersist(api, pageId, { pointers });
         },
       };
     }
@@ -1679,13 +1680,12 @@
 
     let persistTimer;
     let persistPending = false;
-    function schedulePersist(api, pageId, { store = true, pointers } = {}) {
+    function schedulePersist(api, pageId, { pointers } = {}) {
       clearTimeout(persistTimer);
       persistPending = true;
       persistTimer = setTimeout(async () => {
         persistPending = false;
         syncPointers(api, pageId, pointers);
-        if (!store) return;
         try {
           storeBlocks(pageId, (await api.saver.save()).blocks);
         } catch (error) {
@@ -1700,7 +1700,6 @@
       persistPending = false;
       // Leaving a page right after deleting a page block must still trash it.
       syncPointers(blok, editorPageId, livePointers, { restore: false });
-      if (collaborationConfig(editorPageId) !== null) return;
       try {
         storeBlocks(editorPageId, (await blok.save()).blocks);
       } catch (error) {

@@ -16,6 +16,73 @@ const HIDE_GRACE = 250;
 /** Notion's page preview card width (measured). */
 const CARD_WIDTH = 260;
 
+/** One line of the page's opening content. */
+export interface PagePreviewLine {
+  text: string;
+  heading: boolean;
+}
+
+/** Notion draws about this many lines before the fade (measured: three 27px rows in 76px). */
+const MAX_LINES = 6;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/** Markup to text through an inert template: nothing loads and no handler runs. */
+const toText = (html: string): string => {
+  const template = document.createElement('template');
+
+  template.innerHTML = html;
+
+  return (template.content.textContent ?? '').replace(/\s+/g, ' ').trim();
+};
+
+/**
+ * The page's opening blocks as plain lines: any block with a `text` field,
+ * a heading for a numeric `level`, a marker for a list `style`. Blocks
+ * without text (images, dividers) are skipped.
+ */
+const textOf = (block: unknown): { text: string; data: Record<string, unknown> | null } => {
+  const data = isRecord(block) && isRecord(block.data) ? block.data : null;
+
+  return { data, text: data !== null && typeof data.text === 'string' ? toText(data.text) : '' };
+};
+
+const listMarker = (data: Record<string, unknown> | null, position: number): string => {
+  switch (data?.style) {
+    case 'ordered':
+      return `${position}. `;
+    case 'checklist':
+      return data.checked === true ? '☑ ' : '☐ ';
+    case 'unordered':
+      return '• ';
+    default:
+      return '';
+  }
+};
+
+export const previewLines = (blocks: unknown): PagePreviewLine[] => {
+  if (!Array.isArray(blocks)) {
+    return [];
+  }
+
+  const read = blocks.map(textOf);
+  // An ordered item's number counts the ordered items right before it.
+  const positions = read.reduce<number[]>((acc, { data }, index) => [
+    ...acc,
+    data?.style === 'ordered' ? (acc[index - 1] ?? 0) + 1 : 0,
+  ], []);
+
+  return read
+    .map(({ data, text }, index) => ({ data, text, marker: listMarker(data, positions[index]) }))
+    .filter(({ text }) => text !== '')
+    .slice(0, MAX_LINES)
+    .map(({ data, text, marker }) => ({
+      text: marker + text,
+      heading: marker === '' && typeof data?.level === 'number',
+    }));
+};
+
 export interface PageHoverContent {
   icon?: PageIcon;
   title: string;
@@ -72,8 +139,17 @@ export class PageHoverPreview {
   private hideTimer: ReturnType<typeof setTimeout> | null = null;
   private tracker: PositionTracker | null = null;
 
-  /** `content` returns null when the page has nothing to preview. */
-  constructor(private readonly content: () => PageHoverContent | null) {}
+  /** The page's opening content, asked for when a hover starts. */
+  private body: Promise<PagePreviewLine[]> | null = null;
+
+  /**
+   * `content` returns null when the page has nothing to preview. `loadBody`
+   * returns the page's opening lines, or null when the host gives none.
+   */
+  constructor(
+    private readonly content: () => PageHoverContent | null,
+    private readonly loadBody: () => Promise<PagePreviewLine[]> | null = () => null
+  ) {}
 
   public attach(link: HTMLElement): void {
     link.addEventListener('mouseenter', () => this.queueShow(link));
@@ -98,6 +174,8 @@ export class PageHoverPreview {
     if (this.link === link && this.card?.isConnected === true) {
       return;
     }
+    // Asked now, so the lines are there when the card appears.
+    this.body = this.loadBody()?.catch((): PagePreviewLine[] => []) ?? null;
     this.showTimer = setTimeout(() => {
       this.showTimer = null;
       this.show(link);
@@ -141,6 +219,11 @@ export class PageHoverPreview {
     this.card = card;
     this.link = link;
     this.fill(card, content);
+    void this.body?.then((lines) => {
+      if (this.link === link && lines.length > 0) {
+        card.append(this.buildBody(lines));
+      }
+    });
     if (!card.isConnected) {
       document.body.appendChild(card);
     }
@@ -176,6 +259,36 @@ export class PageHoverPreview {
     card.addEventListener('mouseleave', () => this.queueHide());
 
     return card;
+  }
+
+  /** Small lines clipped under a fade, like Notion's shrunken page. */
+  private buildBody(lines: PagePreviewLine[]): HTMLElement {
+    const body = document.createElement('div');
+
+    body.className = 'relative w-full mt-2 max-h-[76px] overflow-hidden';
+    body.setAttribute(DATA_ATTR.testid, 'page-hover-preview-content');
+    body.setAttribute('aria-hidden', 'true');
+    body.append(...lines.map((line) => {
+      const row = document.createElement('div');
+
+      row.className = line.heading
+        ? 'truncate px-1 py-1.5 text-[10px] leading-[14px] font-semibold'
+        : 'truncate px-1 py-1.5 text-[8px] leading-[12px]';
+      row.setAttribute(DATA_ATTR.testid, 'page-hover-preview-line');
+      if (line.heading) {
+        row.setAttribute('data-blok-preview-heading', 'true');
+      }
+      row.textContent = line.text;
+
+      return row;
+    }));
+
+    const fade = document.createElement('div');
+
+    fade.className = 'pointer-events-none absolute inset-x-0 bottom-0 h-11 bg-linear-to-b from-transparent to-popover-bg';
+    body.append(fade);
+
+    return body;
   }
 
   private fill(card: HTMLElement, content: PageHoverContent): void {

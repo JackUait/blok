@@ -8,6 +8,20 @@ import { languageBadge } from '../../../../src/tools/code/language-picker';
 
 const ALL = { ...LANGUAGE_LOGOS, ...OWN_LANGUAGE_LOGOS };
 
+/** Where an `<ellipse>` (stroke and rotation included) leaves the 24×24 box, or null when it fits. */
+const ellipseOverflow = (id: string, attributes: string): string | null => {
+  const attr = (name: string): number => Number(new RegExp(`(?:^| )${name}="([^"]+)"`).exec(attributes)?.[1] ?? 0);
+  const angle = (Number(/rotate\((-?[\d.]+)/.exec(attributes)?.[1] ?? 0) * Math.PI) / 180;
+  const half = attr('stroke-width') / 2;
+  const [rx, ry, cx, cy] = [attr('rx'), attr('ry'), attr('cx'), attr('cy')];
+  const dx = Math.hypot(rx * Math.cos(angle), ry * Math.sin(angle)) + half;
+  const dy = Math.hypot(rx * Math.sin(angle), ry * Math.cos(angle)) + half;
+
+  return cx - dx < 0 || cx + dx > 24 || cy - dy < 0 || cy + dy > 24
+    ? `${id}: ellipse at ${cx},${cy} spans x ${(cx - dx).toFixed(2)}..${(cx + dx).toFixed(2)}`
+    : null;
+};
+
 describe('Blok-drawn language logos', () => {
   it('covers every language that has no vendored logo, so no row falls back to a monogram', () => {
     const missing = LANGUAGES
@@ -57,25 +71,9 @@ describe('Blok-drawn language logos', () => {
   });
 
   it('keeps every ellipse, stroke and rotation included, inside the 24×24 box', () => {
-    const outside: string[] = [];
-
-    for (const [id, logo] of Object.entries(OWN_LANGUAGE_LOGOS)) {
-      const markup = `${logo.body}${logo.over ?? ''}`;
-
-      for (const match of markup.matchAll(/<ellipse ([^>]*)\/>/g)) {
-        const attr = (name: string): number => Number(new RegExp(`(?:^| )${name}="([^"]+)"`).exec(match[1])?.[1] ?? 0);
-        const angle = (Number(/rotate\((-?[\d.]+)/.exec(match[1])?.[1] ?? 0) * Math.PI) / 180;
-        const half = attr('stroke-width') / 2;
-        const [rx, ry] = [attr('rx'), attr('ry')];
-        const dx = Math.hypot(rx * Math.cos(angle), ry * Math.sin(angle)) + half;
-        const dy = Math.hypot(rx * Math.sin(angle), ry * Math.cos(angle)) + half;
-        const [cx, cy] = [attr('cx'), attr('cy')];
-
-        if (cx - dx < 0 || cx + dx > 24 || cy - dy < 0 || cy + dy > 24) {
-          outside.push(`${id}: ellipse at ${cx},${cy} spans x ${(cx - dx).toFixed(2)}..${(cx + dx).toFixed(2)}`);
-        }
-      }
-    }
+    const outside = Object.entries(OWN_LANGUAGE_LOGOS).flatMap(([id, logo]) =>
+      Array.from(`${logo.body}${logo.over ?? ''}`.matchAll(/<ellipse ([^>]*)\/>/g), (match) => ellipseOverflow(id, match[1]))
+        .filter((problem): problem is string => problem !== null));
 
     expect(outside).toStrictEqual([]);
   });

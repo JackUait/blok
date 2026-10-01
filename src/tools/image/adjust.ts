@@ -92,6 +92,48 @@ export function cssFilter(filter: ImageFilterPreset, adjust: ImageAdjust): strin
   return parts.filter((part) => part !== '').join(' ');
 }
 
+/** One SVG filter primitive that does what one CSS filter function does. */
+export type SvgFilterStep =
+  | { kind: 'linear'; slope: number; intercept: number }
+  | { kind: 'saturate'; amount: number }
+  | { kind: 'matrix'; values: number[] };
+
+const round4 = (v: number): number => Math.round(v * 10000) / 10000 + 0;
+
+/** Rows from the Filter Effects spec, at amount 1; `1 - a` of the identity blends them back. */
+const TONE_MATRIX: Record<'grayscale' | 'sepia', number[]> = {
+  grayscale: [0.2126, 0.7152, 0.0722, 0.2126, 0.7152, 0.0722, 0.2126, 0.7152, 0.0722],
+  sepia: [0.393, 0.769, 0.189, 0.349, 0.686, 0.168, 0.272, 0.534, 0.131],
+};
+
+const toneStep = (rows: number[], amount: number): SvgFilterStep => {
+  const a = Math.min(1, Math.max(0, amount));
+  const at = (i: number): number => round4((rows[i] ?? 0) * a + (i % 4 === 0 ? 1 - a : 0));
+
+  return {
+    kind: 'matrix',
+    values: [at(0), at(1), at(2), 0, 0, at(3), at(4), at(5), 0, 0, at(6), at(7), at(8), 0, 0, 0, 0, 0, 1, 0],
+  };
+};
+
+/**
+ * The filter `cssFilter` writes, as SVG primitives. WebKit ignores CSS filter
+ * functions on SVG content, so SVG copies of the photo need these instead.
+ */
+export function svgFilterSteps(css: string): SvgFilterStep[] {
+  return Array.from(css.matchAll(/([a-z-]+)\(([-\d.]+)\)/g)).flatMap(([, fn, raw]): SvgFilterStep[] => {
+    const v = Number(raw);
+
+    if (!Number.isFinite(v)) return [];
+    if (fn === 'brightness') return [{ kind: 'linear', slope: v, intercept: 0 }];
+    if (fn === 'contrast') return [{ kind: 'linear', slope: v, intercept: round4(0.5 - 0.5 * v) }];
+    if (fn === 'saturate') return [{ kind: 'saturate', amount: v }];
+    if (fn === 'grayscale' || fn === 'sepia') return [toneStep(TONE_MATRIX[fn], v)];
+
+    return [];
+  });
+}
+
 export function isNeutral(filter: ImageFilterPreset, adjust: ImageAdjust): boolean {
   return cssFilter(filter, adjust) === '';
 }

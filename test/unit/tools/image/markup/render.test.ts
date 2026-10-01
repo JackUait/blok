@@ -181,6 +181,87 @@ describe('marks', () => {
     });
   });
 
+  describe('magnifier', () => {
+    // Box (100, 100)..(300, 300) on O 1000 × 500: lens centre (200, 200), radius 100.
+    const lens = (): ImageMarkupShape => shape({ id: 'mg', type: 'magnifier', x1: 0.1, y1: 0.2, x2: 0.3, y2: 0.6 });
+    const PHOTO_STYLE = 'position:absolute;width:50%;height:200%;left:25%;top:-50%;transform:rotate(90deg) scaleX(-1);filter:contrast(1.2)';
+    const planeWith = (markup: ImageMarkup[]): { svg: SVGSVGElement; photo: HTMLImageElement } => {
+      const plane = document.createElement('div');
+      const photo = document.createElement('img');
+
+      photo.src = 'https://example.com/photo.jpg';
+      photo.setAttribute('style', PHOTO_STYLE);
+      const svg = createMarkupLayer([], null);
+
+      plane.append(photo, svg);
+      document.body.appendChild(plane);
+      updateMarkupLayer(svg, markup, O);
+
+      return { svg, photo };
+    };
+    // An SVG image, not HTML in a foreignObject: WebKit paints foreignObject HTML over the clip and the other marks.
+    const copy = (svg: SVGSVGElement): SVGImageElement | null => mark(svg, 'mg').querySelector('image');
+
+    afterEach(() => {
+      document.body.replaceChildren();
+    });
+
+    it('shows the photo under it as an SVG image, clipped to the lens', () => {
+      const { svg, photo } = planeWith([lens()]);
+      const clipped = copy(svg)?.closest('[clip-path]');
+      const clipId = /url\(#(.+)\)/.exec(clipped?.getAttribute('clip-path') ?? '')?.[1] ?? '';
+      const circle = svg.querySelector(`clipPath[id="${clipId}"] circle`);
+
+      expect(mark(svg, 'mg').querySelector('foreignObject')).toBeNull();
+      expect(copy(svg)?.getAttribute('href')).toBe(photo.src);
+      expect([num(circle as Element, 'cx'), num(circle as Element, 'cy'), num(circle as Element, 'r')]).toEqual([200, 200, 100]);
+    });
+
+    it('places the copy on the photo\'s box and turns and paints it the same way', () => {
+      const { svg } = planeWith([lens()]);
+      const img = copy(svg) as Element;
+
+      // 50% × 200% of 1000 × 500, at 25% / -50%.
+      expect(['x', 'y', 'width', 'height'].map((a) => num(img, a))).toEqual([250, -250, 500, 1000]);
+      expect(img.getAttribute('preserveAspectRatio')).toBe('none');
+      expect((img as SVGElement).style.transform).toBe('rotate(90deg) scaleX(-1)');
+      expect((img as SVGElement).style.transformOrigin).toBe('center');
+    });
+
+    it('paints the photo\'s filter with an SVG filter, which WebKit draws on SVG content and CSS filters are not', () => {
+      const { svg } = planeWith([lens()]);
+      const img = copy(svg) as SVGElement;
+      const id = /url\(#(.+)\)/.exec(img.getAttribute('filter') ?? '')?.[1] ?? '';
+      const filter = svg.querySelector(`filter[id="${id}"]`);
+
+      expect(img.style.filter).toBe('');
+      expect(filter?.getAttribute('color-interpolation-filters')).toBe('sRGB');
+      expect(filter?.querySelector('feFuncR')?.getAttribute('slope')).toBe('1.2');
+    });
+
+    it('enlarges twice about the lens centre', () => {
+      const { svg } = planeWith([lens()]);
+
+      expect(copy(svg)?.parentElement?.getAttribute('transform')).toBe('translate(200 200) scale(2) translate(-200 -200)');
+    });
+
+    it('follows the photo when it turns or takes a filter', async () => {
+      const { svg, photo } = planeWith([lens()]);
+
+      photo.style.setProperty('filter', 'grayscale(1)');
+      await vi.waitFor(() => expect(svg.querySelector('[data-markup-id="mg"] filter feColorMatrix')).not.toBeNull());
+      photo.style.removeProperty('filter');
+      await vi.waitFor(() => expect(copy(svg)?.hasAttribute('filter')).toBe(false));
+    });
+
+    it('rings the lens', () => {
+      const { svg } = planeWith([lens()]);
+      const ring = mark(svg, 'mg').querySelector('circle[stroke]');
+
+      expect([num(ring as Element, 'cx'), num(ring as Element, 'r')]).toEqual([200, 100]);
+    });
+  });
+
   it('fills a rect and an ellipse with a translucent wash of their colour', () => {
     const svg = createMarkupLayer([shape({ fill: true }), shape({ id: 'e', type: 'ellipse', fill: true })], O);
     const rect = child(mark(svg, 's1'), 'rect');

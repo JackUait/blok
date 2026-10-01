@@ -373,6 +373,18 @@ describe('createMarkupEditor', () => {
       expect(lastCommit(onCommit)[0]).not.toHaveProperty('fill');
     });
 
+    it('a magnifier is always round, even without Shift', () => {
+      const { layer, editor, onCommit } = setup();
+
+      editor.setState({ ...BASE, tool: 'magnifier' });
+      drag(layer, [150, 100], [250, 130]);
+
+      const r = lastCommit(onCommit)[0] as ImageMarkupShape;
+
+      expect(r.type).toBe('magnifier');
+      expect((r.x2 - r.x1) * O.w).toBeCloseTo((r.y2 - r.y1) * O.h, 3);
+    });
+
     it('a bubble is drawn with its tail while it is dragged out, before it lands', () => {
       const { layer, plane, editor, advance } = setup();
 

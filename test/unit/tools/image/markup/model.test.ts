@@ -749,6 +749,27 @@ describe('spotlight', () => {
   });
 });
 
+describe('magnifier', () => {
+  const lens = (over: Partial<ImageMarkupShape> = {}): ImageMarkupShape =>
+    shape({ id: 'mg', type: 'magnifier', x1: 0.1, y1: 0.2, x2: 0.3, y2: 0.6, ...over });
+
+  it('survives a save and load, and never keeps a fill', () => {
+    expect(readMarkup([lens()])).toEqual([lens()]);
+    expect(readMarkup([lens({ fill: true })])).toEqual([lens()]);
+  });
+
+  it('is a box shape without a fill', () => {
+    expect(isClosedShape('magnifier')).toBe(true);
+    expect(takesFill('magnifier')).toBe(false);
+  });
+
+  it('is hit anywhere in its lens, not in the corners of its box', () => {
+    // Box (100, 100)..(300, 300) px: a lens of radius 100 round (200, 200).
+    expect(hitTest([lens()], { x: 200, y: 200 }, O, 2)?.id).toBe('mg');
+    expect(hitTest([lens()], { x: 105, y: 105 }, O, 2)).toBeNull();
+  });
+});
+
 describe('contrastInk', () => {
   it('picks the ink with more contrast for every palette colour', () => {
     expect(MARKUP_COLORS.map((c) => contrastInk(c))).toEqual([

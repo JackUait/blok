@@ -7,6 +7,7 @@ import {
   cssFilter,
   isNeutral,
   readAdjust,
+  svgFilterSteps,
 } from '../../../../src/tools/image/adjust';
 
 const ZERO = { brightness: 0, contrast: 0, saturation: 0 };
@@ -168,6 +169,34 @@ describe('cssFilter', () => {
   it('normalises adjust values before mapping', () => {
     expect(cssFilter('none', { brightness: 300, contrast: 0.2, saturation: NaN })).toBe('brightness(1.5)');
     expect(cssFilter('none', { brightness: 2.5 })).toBe('brightness(1.015)');
+  });
+});
+
+describe('svgFilterSteps', () => {
+  it('maps every function the darkroom writes onto its Filter Effects primitive', () => {
+    expect(svgFilterSteps('brightness(1.5) contrast(1.2) saturate(0.5)')).toEqual([
+      { kind: 'linear', slope: 1.5, intercept: 0 },
+      { kind: 'linear', slope: 1.2, intercept: -0.1 },
+      { kind: 'saturate', amount: 0.5 },
+    ]);
+  });
+
+  it('turns grayscale and sepia into their spec matrices', () => {
+    const [gray] = svgFilterSteps('grayscale(1)');
+    const [sepia] = svgFilterSteps('sepia(1)');
+
+    expect(gray?.kind).toBe('matrix');
+    expect(gray?.kind === 'matrix' ? gray.values.slice(0, 3) : []).toEqual([0.2126, 0.7152, 0.0722]);
+    expect(sepia?.kind === 'matrix' ? sepia.values.slice(0, 3) : []).toEqual([0.393, 0.769, 0.189]);
+  });
+
+  it('reads every preset and skips what it does not know', () => {
+    FILTER_PRESETS.forEach((preset) => {
+      const css = cssFilter(preset, {});
+
+      expect(svgFilterSteps(css)).toHaveLength(css === '' ? 0 : css.split(') ').length);
+    });
+    expect(svgFilterSteps('blur(2px) none')).toEqual([]);
   });
 });
 

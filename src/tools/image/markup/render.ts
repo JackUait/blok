@@ -1,5 +1,6 @@
 import type { ImageMarkup, ImageMarkupShape, ImageMarkupStroke, ImageMarkupText } from '../../../../types/tools/image';
 import type { Point, Size } from '../darkroom/camera';
+import { svgFilterSteps, type SvgFilterStep } from '../adjust';
 import { smoothStroke, strokeOutline } from './freehand';
 import { ARROW_HEAD_HALF_WIDTH, TEXT_LINE_HEIGHT, arrowHeadLength, contrastInk, isMarkupColor, shapeOutline } from './model';
 
@@ -16,6 +17,10 @@ export const HIGHLIGHTER_PASSES: readonly { blend: string; opacity: string }[] =
 ];
 const FILL_OPACITY = '0.2';
 const SPOTLIGHT_DIM = '0.55';
+const LOUPE_ZOOM = 2;
+/** Lens ring width as a share of the image's short side, with a floor so it reads on small images. */
+const LOUPE_RING = 0.006;
+const LOUPE_RING_MIN = 2;
 const OUTLINE_WIDTH = 0.16;
 /** The head's concave back, in head lengths. */
 const HEAD_BACK_PULL = 0.55;
@@ -135,7 +140,114 @@ const drawArrow = (a: Point, b: Point, color: string, width: number): SVGElement
   ];
 };
 
-const drawShape = (item: ImageMarkupShape, o: Size, width: number, color: string): SVGElement[] => {
+/** The photo this layer draws over: the img in the same plane. */
+const photoOf = (svg: SVGSVGElement): HTMLImageElement | null => svg.parentElement?.querySelector('img') ?? null;
+
+/** A plane img length (`%` of the plane, or px) in O px. */
+const inPlane = (value: string, side: number): number => {
+  const n = Number.parseFloat(value);
+
+  if (!Number.isFinite(n)) return 0;
+
+  return value.trim().endsWith('%') ? (n / 100) * side : n;
+};
+
+const filterStep = (step: SvgFilterStep): SVGElement => {
+  if (step.kind === 'saturate') return svgEl('feColorMatrix', { type: 'saturate', values: String(step.amount) });
+  if (step.kind === 'matrix') return svgEl('feColorMatrix', { type: 'matrix', values: step.values.join(' ') });
+  const transfer = svgEl('feComponentTransfer');
+
+  for (const fn of ['feFuncR', 'feFuncG', 'feFuncB'] as const) {
+    transfer.appendChild(svgEl(fn, { type: 'linear', slope: String(step.slope), intercept: String(step.intercept) }));
+  }
+
+  return transfer;
+};
+
+/** Puts the photo's box, turn and paint on the lens copy; the plane places the img with these four lengths. */
+const copyPhoto = (from: HTMLImageElement, to: SVGImageElement, o: Size): void => {
+  const src = from.currentSrc || from.getAttribute('src') || '';
+  const { width, height, left, top, transform, filter } = from.style;
+  const paint = to.parentElement?.querySelector('filter');
+  const steps = svgFilterSteps(filter);
+
+  if (to.getAttribute('href') !== src) to.setAttribute('href', src);
+  to.setAttribute('x', fmt(inPlane(left, o.w)));
+  to.setAttribute('y', fmt(inPlane(top, o.h)));
+  to.setAttribute('width', fmt(width === '' ? o.w : inPlane(width, o.w)));
+  to.setAttribute('height', fmt(height === '' ? o.h : inPlane(height, o.h)));
+  to.style.setProperty('transform', transform);
+  paint?.replaceChildren(...steps.map(filterStep));
+  if (paint && steps.length > 0) to.setAttribute('filter', `url(#${paint.id})`);
+  else to.removeAttribute('filter');
+};
+
+const syncLoupes = (svg: SVGSVGElement, o: Size): void => {
+  const photo = photoOf(svg);
+
+  if (photo === null) return;
+  svg.querySelectorAll<SVGImageElement>('image[data-markup-loupe-photo]').forEach((copy) => copyPhoto(photo, copy, o));
+};
+
+/** The photo each layer's lenses copy, and the box it was last drawn at. */
+const watchers = new WeakMap<SVGSVGElement, { photo: HTMLImageElement; observer: MutationObserver; o: Size }>();
+
+/** Re-copies the photo into every lens when it turns, takes a filter or loads another source. */
+const watchPhoto = (svg: SVGSVGElement, o: Size): void => {
+  const photo = photoOf(svg);
+  const was = watchers.get(svg);
+
+  if (photo === null) return;
+  if (was?.photo === photo) {
+    watchers.set(svg, { ...was, o });
+
+    return;
+  }
+  was?.observer.disconnect();
+  const resync = (): void => {
+    const now = watchers.get(svg);
+
+    if (now) syncLoupes(svg, now.o);
+  };
+  const observer = new MutationObserver(resync);
+
+  observer.observe(photo, { attributes: true, attributeFilter: ['style', 'src', 'srcset'] });
+  photo.addEventListener('load', resync);
+  watchers.set(svg, { photo, observer, o });
+};
+
+/*
+ * SVG all the way down: WebKit paints HTML in a foreignObject above the clip and the
+ * other marks, so a foreignObject img would cover the whole image.
+ */
+const drawLoupe = (item: ImageMarkupShape, o: Size, c: Point, r: number, state: LayerState): SVGElement[] => {
+  const clipId = `blok-markup-loupe-${state.seq}-${item.id}`;
+  const clip = svgEl('clipPath', { id: clipId });
+  const lens = svgEl('g', { 'clip-path': `url(#${clipId})` });
+  const zoom = svgEl('g', { transform: `translate(${fmt(c.x)} ${fmt(c.y)}) scale(${LOUPE_ZOOM}) translate(${fmt(-c.x)} ${fmt(-c.y)})` });
+  const copy = svgEl('image', { 'data-markup-loupe-photo': '', preserveAspectRatio: 'none' });
+  const paint = svgEl('filter', {
+    id: `blok-markup-loupe-paint-${state.seq}-${item.id}`, 'color-interpolation-filters': 'sRGB',
+    x: '0', y: '0', width: '1', height: '1',
+  });
+  const ring = Math.max(LOUPE_RING_MIN, LOUPE_RING * Math.min(o.w, o.h));
+
+  clip.appendChild(svgEl('circle', { cx: fmt(c.x), cy: fmt(c.y), r: fmt(r) }));
+  // The plane turns the img about its own centre.
+  copy.style.setProperty('transform-box', 'fill-box');
+  copy.style.setProperty('transform-origin', 'center');
+  zoom.append(paint, copy);
+  lens.appendChild(zoom);
+
+  return [
+    clip,
+    lens,
+    svgEl('circle', { cx: fmt(c.x), cy: fmt(c.y), r: fmt(r), fill: 'none', stroke: '#000', 'stroke-opacity': '0.35', 'stroke-width': fmt(ring * 2) }),
+    svgEl('circle', { cx: fmt(c.x), cy: fmt(c.y), r: fmt(r), fill: 'none', stroke: '#fff', 'stroke-width': fmt(ring) }),
+  ];
+};
+
+const drawShape = (item: ImageMarkupShape, o: Size, width: number, color: string, state: LayerState): SVGElement[] => {
   const a = { x: item.x1 * o.w, y: item.y1 * o.h };
   const b = { x: item.x2 * o.w, y: item.y2 * o.h };
 
@@ -157,6 +269,7 @@ const drawShape = (item: ImageMarkupShape, o: Size, width: number, color: string
     return [svgEl('path', { d: `${d}Z`, ...paint })];
   }
   if (item.type === 'rect') return [svgEl('rect', { x: fmt(x), y: fmt(y), width: fmt(w), height: fmt(h), ...paint })];
+  if (item.type === 'magnifier') return drawLoupe(item, o, { x: x + w / 2, y: y + h / 2 }, Math.min(w, h) / 2, state);
   // The layer's one dim sheet paints it; this box only gives selection and the erase fade a size.
   if (item.type === 'spotlight') return [svgEl('rect', { x: fmt(x), y: fmt(y), width: fmt(w), height: fmt(h), fill: 'none', stroke: 'none' })];
 
@@ -209,7 +322,7 @@ const drawMark = (item: ImageMarkup, o: Size, state: LayerState): SVGGElement =>
 
   if (isStroke(item)) g.appendChild(drawStroke(item, o, px, color));
   else if (isText(item)) g.appendChild(drawText(item, o, px, color, state));
-  else g.append(...drawShape(item, o, px, color));
+  else g.append(...drawShape(item, o, px, color, state));
 
   drawn.set(g, { item, json: JSON.stringify(item) });
 
@@ -344,6 +457,10 @@ export function updateMarkupLayer(svg: SVGSVGElement, markup: ImageMarkup[], o: 
   })());
 
   syncFilters(defs, markup, state);
+  if (markup.some((m) => m.type === 'magnifier')) {
+    watchPhoto(svg, o);
+    syncLoupes(svg, o);
+  }
 }
 
 /** An inert overlay for the O box. With `o` null it stays empty until `updateMarkupLayer`. */

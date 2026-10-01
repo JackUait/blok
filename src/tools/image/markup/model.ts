@@ -46,9 +46,11 @@ const SIMPLIFY_PRESSURE = 0.08;
 type Shape = ImageMarkupShape['type'];
 type Cut = NonNullable<ImageMarkupStroke['cut']>;
 
-const SHAPES: readonly Shape[] = ['rect', 'rounded-rect', 'ellipse', 'line', 'arrow', 'bubble', 'star', 'polygon', 'spotlight'];
+const SHAPES: readonly Shape[] = [
+  'rect', 'rounded-rect', 'ellipse', 'line', 'arrow', 'bubble', 'star', 'polygon', 'spotlight', 'magnifier',
+];
 /** Box shapes that frame the image rather than draw on it: no fill. */
-const FRAMING: readonly Shape[] = ['spotlight'];
+const FRAMING: readonly Shape[] = ['spotlight', 'magnifier'];
 /** Shapes whose outline turns with the image: they keep a rotation. */
 const TURNING: readonly Shape[] = ['star', 'polygon'];
 
@@ -642,8 +644,10 @@ const hits = (item: ImageMarkup, p: Point, o: Size, tolerance: number): boolean 
   const rx = (right - left) / 2;
   const ry = (bottom - top) / 2;
   const inside = rx > 0 && ry > 0 && ((p.x - c.x) / rx) ** 2 + ((p.y - c.y) / ry) ** 2 <= 1;
+  // A lens is solid glass: it is grabbed anywhere inside.
+  const solid = item.fill === true || item.type === 'magnifier';
 
-  return (item.fill === true && inside) || ellipseDistance(p, c, rx, ry) <= reach;
+  return (solid && inside) || ellipseDistance(p, c, rx, ry) <= reach;
 };
 
 interface Ink { x: number; y: number; p: number; r: number }

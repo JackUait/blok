@@ -87,7 +87,7 @@ const OUTLINE_WIDTH = 0.16;
 const BG_PAD_X = 0.08;
 const BG_PAD_Y = 0.2;
 const FONT_FAMILY = "system-ui, -apple-system, 'Segoe UI', sans-serif";
-const SHAPES = new Set<MarkupTool>(['rect', 'rounded-rect', 'ellipse', 'arrow', 'line', 'bubble', 'star', 'polygon', 'spotlight']);
+const SHAPES = new Set<MarkupTool>(['rect', 'rounded-rect', 'ellipse', 'arrow', 'line', 'bubble', 'star', 'polygon', 'spotlight', 'magnifier']);
 
 const rafClock: SpringClock = {
   now: () => performance.now(),
@@ -680,7 +680,8 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
     const raw = { x: b.x - a.x, y: b.y - a.y };
     const box = isClosedShape(type);
     const d = ((): Point => {
-      if (!e.shiftKey) return raw;
+      // A lens is always round.
+      if (!e.shiftKey && type !== 'magnifier') return raw;
       if (box) {
         const m = Math.max(Math.abs(raw.x), Math.abs(raw.y));
 

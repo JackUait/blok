@@ -29,6 +29,7 @@ const LABELS: Record<string, string> = {
   'tools.image.markupStar': 'Star',
   'tools.image.markupPolygon': 'Polygon',
   'tools.image.markupSpotlight': 'Spotlight',
+  'tools.image.markupMagnifier': 'Magnifier',
   'tools.image.markupEraser': 'Eraser',
   'tools.image.markupColors': 'Colors',
   'tools.image.markupColorWhite': 'White',
@@ -61,7 +62,7 @@ const i18n: I18nInstance = {
 /** Visual rail order, which is also the arrow-key order. */
 const RAIL = ['select', 'pen', 'highlighter', 'eraser', 'text', 'shapes'] as const;
 /** Apple's grid order, two to a row. */
-const SHAPE_GRID: MarkupTool[] = ['line', 'arrow', 'rect', 'rounded-rect', 'ellipse', 'bubble', 'star', 'polygon', 'spotlight'];
+const SHAPE_GRID: MarkupTool[] = ['line', 'arrow', 'rect', 'rounded-rect', 'ellipse', 'bubble', 'star', 'polygon', 'spotlight', 'magnifier'];
 
 const COLOR_NAMES = ['White', 'Black', 'Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple', 'Pink'];
 
@@ -387,7 +388,7 @@ describe('markup panel', () => {
       expect(picker()?.querySelector('[role="radiogroup"]')?.getAttribute('aria-label')).toBe('Shapes');
       expect(items.map((b) => b.getAttribute('data-tool'))).toEqual(SHAPE_GRID);
       expect(items.map((b) => b.getAttribute('aria-label'))).toEqual(
-        ['Line', 'Arrow', 'Rectangle', 'Rounded rectangle', 'Ellipse', 'Speech bubble', 'Star', 'Polygon', 'Spotlight']
+        ['Line', 'Arrow', 'Rectangle', 'Rounded rectangle', 'Ellipse', 'Speech bubble', 'Star', 'Polygon', 'Spotlight', 'Magnifier']
       );
       items.forEach((b) => expect(b.querySelector('svg')).not.toBeNull());
       expect(shapeItem('star').getAttribute('aria-checked')).toBe('true');
@@ -401,7 +402,7 @@ describe('markup panel', () => {
       const grid = picker()?.querySelector('[role="radiogroup"]');
       const order = [...(grid?.children ?? [])].map((c) => c.getAttribute('data-tool') ?? '|');
 
-      expect(order.slice(-2)).toEqual(['|', 'spotlight']);
+      expect(order.slice(-3)).toEqual(['|', 'spotlight', 'magnifier']);
     });
 
     it('a pick closes the picker and the rail button shows that shape', () => {
@@ -579,6 +580,8 @@ describe('markup panel', () => {
       { tool: 'select', sel: 'star', color: true, style: false, fill: true, del: true },
       { tool: 'spotlight', sel: null, color: false, style: false, fill: false, del: false },
       { tool: 'select', sel: 'spotlight', color: false, style: false, fill: false, del: true },
+      { tool: 'magnifier', sel: null, color: false, style: false, fill: false, del: false },
+      { tool: 'select', sel: 'magnifier', color: false, style: false, fill: false, del: true },
       { tool: 'select', sel: 'pen', color: true, style: false, fill: false, del: true },
       { tool: 'select', sel: 'highlighter', color: true, style: false, fill: false, del: true },
       { tool: 'select', sel: 'text', color: true, style: true, fill: false, del: true },

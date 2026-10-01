@@ -15,6 +15,7 @@ import {
   IconPencil,
   IconRectangle,
   IconRoundedRectangle,
+  IconSearch,
   IconSpotlight,
   IconText,
   IconTrash,
@@ -29,7 +30,7 @@ import { contrastInk, MARKUP_COLORS, takesFill } from '../markup/model';
 
 export type MarkupTool =
   | 'select' | 'pen' | 'highlighter' | 'text' | 'eraser'
-  | 'rect' | 'rounded-rect' | 'ellipse' | 'arrow' | 'line' | 'bubble' | 'star' | 'polygon' | 'spotlight';
+  | 'rect' | 'rounded-rect' | 'ellipse' | 'arrow' | 'line' | 'bubble' | 'star' | 'polygon' | 'spotlight' | 'magnifier';
 export type MarkupSizeIndex = 0 | 1 | 2;
 
 export interface MarkupPanelState {
@@ -100,10 +101,11 @@ const SHAPE_DEFS: ToolDef[] = [
   { tool: 'star', key: 'markupStar', icon: IconEmojiStar },
   { tool: 'polygon', key: 'markupPolygon', icon: IconHexagon },
   { tool: 'spotlight', key: 'markupSpotlight', icon: IconSpotlight },
+  { tool: 'magnifier', key: 'markupMagnifier', icon: IconSearch },
 ];
 
 /** These frame the photo instead of drawing on it: no ink to pick, and a hairline above them in the grid. */
-const FRAMING_TOOLS: readonly MarkupTool[] = ['spotlight'];
+const FRAMING_TOOLS: readonly MarkupTool[] = ['spotlight', 'magnifier'];
 const isFraming = (t: MarkupTool | MarkupSelectionKind): boolean => FRAMING_TOOLS.some((f) => f === t);
 
 const isShapeTool = (t: MarkupTool): boolean => SHAPE_DEFS.some((d) => d.tool === t);

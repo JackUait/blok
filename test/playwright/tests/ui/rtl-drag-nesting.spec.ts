@@ -53,6 +53,9 @@ const dropAtOffset = async (page: Page, direction: Direction, offset: number): P
     await blok.render({ blocks });
   }, { dir: direction, blocks: blocksFor(direction) });
 
+  // The previous drop parks the pointer inside the editor; if it already sits
+  // where hover() aims, no mousemove fires and the toolbar never shows.
+  await page.mouse.move(0, 0);
   await page.locator('[data-blok-id="c"]').hover();
 
   const handle = page.getByTestId('settings-toggler');

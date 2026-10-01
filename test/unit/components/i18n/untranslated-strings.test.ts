@@ -485,15 +485,18 @@ for (const [locale, keys] of Object.entries(AUDIO_COGNATE_RETENTIONS)) {
  * these locales. Each entry needs a matching ledger retention row.
  */
 const IMAGE_EDIT_COGNATE_RETENTIONS: Record<string, string[]> = {
+  cs: ['tools.image.filterRetro'],
   da: ['tools.image.filterNone', 'tools.image.filterSepia'],
   de: ['tools.image.filterNone', 'tools.image.filterWarm', 'tools.image.filterSepia'],
   es: ['tools.image.filterNone', 'tools.image.filterSepia'],
+  fi: ['tools.image.filterRetro'],
   fr: ['tools.image.adjustSaturation', 'tools.image.filterNone'],
   nl: ['tools.image.editModeFilters', 'tools.image.adjustContrast', 'tools.image.filterPresets', 'tools.image.filterWarm', 'tools.image.filterSepia'],
   no: ['tools.image.filterNone'],
-  pl: ['tools.image.filterSepia'],
+  pl: ['tools.image.filterSepia', 'tools.image.filterRetro'],
   pt: ['tools.image.filterNone'],
   ro: ['tools.image.adjustContrast', 'tools.image.filterSepia'],
+  sl: ['tools.image.filterRetro'],
   sv: ['tools.image.filterNone'],
 };
 

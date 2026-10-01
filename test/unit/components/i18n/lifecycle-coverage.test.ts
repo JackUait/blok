@@ -262,7 +262,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 535 + 122 + 49 + 4 closure for all 710 keys', () => {
+  it('rebuilds a disjoint 536 + 122 + 65 + 4 closure for all 727 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -276,7 +276,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(710);
+    expect(lifecycle.size).toBe(727);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -302,14 +302,16 @@ describe('current English catalog lifecycle coverage', () => {
       // their colours with tools.colorPicker.color.* at a literal call site.
       // +4: the page block calls tools.page.* and toolbox.preview.page by literal.
       // +1: tools.image.markupShapes names the shape picker by literal.
-      'executable-literal': 535,
+      // +1: tools.image.filterStrength names the strength slider by literal.
+      'executable-literal': 536,
       // +1: toolNames.page comes from the page tool's titleKey.
       'finite-dynamic': 122,
       // 12 of the 20 image darkroom keys are called by literal. The 8 filter
       // names stay here: filter-strip.ts builds them from the preset name.
       // +9: the markup tool names; markup-panel.ts builds them from a short key.
       // +6: the new shape names, built the same way.
-      'registered-namespace-compatible': 49,
+      // +16: the new filter names, built from the preset name like the first 8.
+      'registered-namespace-compatible': 65,
       'catalog-only': 4,
     });
     expect(

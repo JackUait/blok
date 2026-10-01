@@ -970,7 +970,7 @@ test.describe('find in page', () => {
 
       await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
       const positions = await page.getByTestId('find-map-tick').evaluateAll((ticks) =>
-        ticks.map((tick) => Number.parseFloat((tick as HTMLElement).style.left))
+        ticks.map((tick) => tick.getBoundingClientRect().left)
       );
 
       expect(positions[1] - positions[0]).toBeGreaterThan(10);

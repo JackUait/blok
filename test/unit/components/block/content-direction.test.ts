@@ -281,7 +281,37 @@ describe('per-block content direction', () => {
       const title = content('db').querySelector<HTMLElement>('[contenteditable]');
 
       expect(content('db').hasAttribute('dir')).toBe(false);
-      expect(title?.getAttribute('dir')).toBe('auto');
+      expect(title?.getAttribute('dir')).toBe('rtl');
+    });
+
+    it('does not let an Arabic first title keystroke flip the database', async () => {
+      await boot([
+        {
+          id: 'db',
+          type: 'database',
+          data: {
+            schema: [{ id: 'p-title', name: 'Name', type: 'title', position: 'a0' }],
+            views: [{ id: 'v-list', name: 'List', type: 'list', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+            activeViewId: 'v-list',
+          },
+        },
+      ]);
+
+      await typeInto('db', 'ب');
+      await settle();
+
+      expect(content('db').hasAttribute('dir')).toBe(false);
+      expect(field('db').getAttribute('dir')).toBe('rtl');
+    });
+
+    it.each([false, true])('reads past a leading equation: math is not the text direction (readOnly: %s)', async (readOnly) => {
+      await boot([
+        P('eq-first', '<span data-latex="a-b=c">a-b=c</span> مرحبا'),
+        P('eq-only', '<span data-latex="a-b=c">a-b=c</span>'),
+      ], { readOnly, i18n: { direction: 'rtl' } });
+
+      expect(content('eq-first').getAttribute('dir')).toBe('rtl');
+      expect(content('eq-only').hasAttribute('dir')).toBe(false);
     });
 
     it('stamps a read-only editor too', async () => {

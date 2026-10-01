@@ -250,6 +250,36 @@ describe('DatabaseTool', () => {
       expect(titleEl?.textContent).toBe('');
     });
 
+    it.each([
+      ['مشروعي', 'rtl'],
+      ['My Project', 'ltr'],
+    ])('gives the title %s its own direction %s', (title, direction) => {
+      const tool = new DatabaseTool(createDatabaseOptions({ title }));
+      const titleEl = queryByData(tool.render(), 'data-blok-database-title');
+
+      expect(titleEl?.getAttribute('dir')).toBe(direction);
+    });
+
+    it('leaves an empty title without dir, so its placeholder follows the editor', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const titleEl = queryByData(tool.render(), 'data-blok-database-title');
+
+      expect(titleEl?.hasAttribute('dir')).toBe(false);
+    });
+
+    it('updates the title direction as it is typed, and drops it when cleared', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const titleEl = queryByData(tool.render(), 'data-blok-database-title') as HTMLElement;
+
+      titleEl.textContent = 'مشروعي';
+      titleEl.dispatchEvent(new InputEvent('input', { bubbles: true }));
+      expect(titleEl.getAttribute('dir')).toBe('rtl');
+
+      titleEl.textContent = '';
+      titleEl.dispatchEvent(new InputEvent('input', { bubbles: true }));
+      expect(titleEl.hasAttribute('dir')).toBe(false);
+    });
+
     it('renders title element with data-placeholder="New database" when no title provided', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const element = tool.render();

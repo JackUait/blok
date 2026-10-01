@@ -5,6 +5,7 @@ import { DatabaseModel } from './database-model';
 import { DatabaseBoardView } from './database-board-view';
 import { DatabaseListView } from './database-list-view';
 import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
+import { firstStrongDirection } from '../../shared/text-direction';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { DatabaseBackendSync } from './database-backend-sync';
 import { DatabaseCardDrag } from './database-card-drag';
@@ -183,9 +184,21 @@ export class DatabaseTool implements BlockTool {
     titleEl.style.cursor = 'text';
     titleEl.style.wordBreak = 'break-word';
 
-    // Own dir: the title follows its text, and core then skips it, so an RTL
-    // title does not flip the whole database grid.
-    titleEl.setAttribute('dir', 'auto');
+    // Own dir from its text, so core skips it and an RTL title does not flip
+    // the grid. No dir when there is no letter: `dir="auto"` would resolve an
+    // empty title to LTR and push the placeholder out of an RTL column.
+    const syncTitleDirection = (): void => {
+      const direction = firstStrongDirection(titleEl.textContent ?? '');
+
+      if (direction === null) {
+        titleEl.removeAttribute('dir');
+      } else {
+        titleEl.setAttribute('dir', direction);
+      }
+    };
+
+    syncTitleDirection();
+    titleEl.addEventListener('input', syncTitleDirection);
     titleEl.className = getPlaceholderClasses('always').join(' ');
     setupPlaceholder(titleEl, this.api.i18n.t('tools.database.titlePlaceholder'));
 

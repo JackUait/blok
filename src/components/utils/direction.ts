@@ -38,6 +38,18 @@ export const inlineStartOffset = (
 ): number => direction === 'rtl' ? rect.right - clientX : clientX - rect.left;
 
 /**
+ * Horizontal pointer delta measured toward the inline end.
+ */
+export const inlineDelta = (deltaX: number, direction: TextDirection): number =>
+  direction === 'rtl' ? -deltaX : deltaX;
+
+/**
+ * Physical side expressed in reading order.
+ */
+export const logicalSide = (side: 'left' | 'right', direction: TextDirection): 'start' | 'end' =>
+  (side === 'left') === (direction === 'ltr') ? 'start' : 'end';
+
+/**
  * Scroll distance from the inline start, always `0…max`. Browsers report RTL
  * `scrollLeft` as `0` at the start and negative toward the end.
  */

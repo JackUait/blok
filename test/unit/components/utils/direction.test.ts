@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   getElementDirection,
+  inlineDelta,
   inlineStartOffset,
+  logicalSide,
   logicalArrow,
   scrollFromInlineStart,
 } from '../../../../src/components/utils/direction';
@@ -77,6 +79,22 @@ describe('direction utils', () => {
 
     it('measures from the right edge in RTL', () => {
       expect(inlineStartOffset(370, rect, 'rtl')).toBe(30);
+    });
+  });
+
+  describe('inlineDelta', () => {
+    it('keeps a pointer delta in LTR and flips it in RTL', () => {
+      expect(inlineDelta(25, 'ltr')).toBe(25);
+      expect(inlineDelta(25, 'rtl')).toBe(-25);
+    });
+  });
+
+  describe('logicalSide', () => {
+    it('maps physical sides to start/end', () => {
+      expect(logicalSide('left', 'ltr')).toBe('start');
+      expect(logicalSide('right', 'ltr')).toBe('end');
+      expect(logicalSide('left', 'rtl')).toBe('end');
+      expect(logicalSide('right', 'rtl')).toBe('start');
     });
   });
 

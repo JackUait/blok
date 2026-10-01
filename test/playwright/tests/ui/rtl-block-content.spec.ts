@@ -168,13 +168,16 @@ test.describe('RTL block content mirrors LTR', () => {
     }
   });
 
-  test('stub, spacer readout and code language chevron mirror', async ({ page }) => {
+  test('stub, spacer readout, code language chevron and media empty state mirror', async ({ page }) => {
     const blocks: OutputData['blocks'] = [
       { id: 'st', type: 'not-a-registered-tool', data: { text: 'x' } },
       { id: 'sp', type: 'spacer', data: { height: 40 } },
       { id: 'cd', type: 'code', data: { code: 'a', language: 'javascript' } },
+      { id: 'im', type: 'image', data: {} },
     ];
     const probes = {
+      mediaEmptyLabel: '[data-blok-id="im"] .blok-media-empty__label',
+      mediaEmptyTabs: '[data-blok-id="im"] .blok-media-empty__tabs',
       stubInfo: '[data-blok-id="st"] [data-blok-stub-info]',
       spacerReadout: '[data-blok-id="sp"] [data-blok-spacer-readout]',
       codeChevron: '[data-blok-id="cd"] [data-blok-testid="code-language-chevron"]',

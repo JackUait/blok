@@ -6,6 +6,15 @@ export const REDUCED_FADE = 150;
 
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
+// A cancelled animation rejects `finished` with AbortError; the caller's cleanup must still run.
+const settle = (animation: Animation): Promise<unknown> => animation.finished.catch(() => undefined);
+
+/**
+ * Moves each skeleton bar onto its block and fades the content in.
+ * `targets[i]` is the visible content box of block i, the element the bar should land on,
+ * not the full-width holder. Always resolves, even when an animation is cancelled.
+ */
+
 export const runSkeletonHandoff = async ({ bars, targets, content }: {
   bars: HTMLElement[];
   targets: HTMLElement[];
@@ -17,8 +26,8 @@ export const runSkeletonHandoff = async ({ bars, targets, content }: {
 
   if (prefersReducedMotion()) {
     await Promise.all([
-      ...bars.map(bar => bar.animate([{ opacity: 1 }, { opacity: 0 }], { duration: REDUCED_FADE, fill: 'forwards' }).finished),
-      content.animate([{ opacity: 0 }, { opacity: 1 }], { duration: REDUCED_FADE, fill: 'forwards' }).finished,
+      ...bars.map(bar => settle(bar.animate([{ opacity: 1 }, { opacity: 0 }], { duration: REDUCED_FADE, fill: 'forwards' }))),
+      settle(content.animate([{ opacity: 0 }, { opacity: 1 }], { duration: REDUCED_FADE, fill: 'forwards' })),
     ]);
 
     return;
@@ -35,7 +44,7 @@ export const runSkeletonHandoff = async ({ bars, targets, content }: {
 
   const barAnimations = pairs.map(({ bar, from, to, rtl }, i) => {
     if (to === undefined) {
-      return bar.animate([{ opacity: 1 }, { opacity: 0 }], { duration: HANDOFF_DURATION, delay: delayOf(i), easing: EASE, fill: 'forwards' }).finished;
+      return settle(bar.animate([{ opacity: 1 }, { opacity: 0 }], { duration: HANDOFF_DURATION, delay: delayOf(i), easing: EASE, fill: 'forwards' }));
     }
 
     // An RTL bar starts at the right edge, so it must scale from there and land on the target's right edge.
@@ -45,17 +54,17 @@ export const runSkeletonHandoff = async ({ bars, targets, content }: {
 
     bar.style.setProperty('transform-origin', rtl ? '100% 0' : '0 0');
 
-    return bar.animate([
+    return settle(bar.animate([
       { transform: 'translate(0px, 0px) scaleX(1)', opacity: 1, filter: 'blur(0px)' },
       { transform: `translate(${dx}px, ${dy}px) scaleX(${sx})`, opacity: 0, filter: 'blur(4px)' },
-    ], { duration: HANDOFF_DURATION, delay: delayOf(i), easing: EASE, fill: 'forwards' }).finished;
+    ], { duration: HANDOFF_DURATION, delay: delayOf(i), easing: EASE, fill: 'forwards' }));
   });
 
   // The content arrives as one sheet; the per-bar stagger carries the top-to-bottom feel.
-  const contentAnimation = content.animate([
+  const contentAnimation = settle(content.animate([
     { opacity: 0, filter: 'blur(6px)' },
     { opacity: 1, filter: 'blur(0px)' },
-  ], { duration: HANDOFF_DURATION + delayOf(Math.max(bars.length - 1, 0)), easing: EASE, fill: 'forwards' }).finished;
+  ], { duration: HANDOFF_DURATION + delayOf(Math.max(bars.length - 1, 0)), easing: EASE, fill: 'forwards' }));
 
   await Promise.all([...barAnimations, contentAnimation]);
 };

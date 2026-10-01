@@ -113,6 +113,23 @@ describe('runSkeletonHandoff', () => {
     });
   });
 
+  describe('when an animation is cancelled', () => {
+    beforeEach(() => {
+      Element.prototype.animate = vi.fn(() =>
+        ({ finished: Promise.reject(new DOMException('', 'AbortError')), cancel: vi.fn() }) as unknown as Animation);
+    });
+
+    it('still resolves on the motion path', async () => {
+      await expect(runSkeletonHandoff({ bars: make(2, [0, 30]), targets: make(1, [100]), content: document.createElement('div') })).resolves.toBeUndefined();
+    });
+
+    it('still resolves on the reduced-motion path', async () => {
+      vi.spyOn(motion, 'prefersReducedMotion').mockReturnValue(true);
+
+      await expect(runSkeletonHandoff({ bars: make(1, [0]), targets: make(1, [100]), content: document.createElement('div') })).resolves.toBeUndefined();
+    });
+  });
+
   it('resolves at once when animate is unavailable', async () => {
     Reflect.deleteProperty(Element.prototype, 'animate');
 

@@ -108,8 +108,6 @@ describe('find', () => {
   });
 
   it('micro shapes use the notch; the tick is a pill', () => {
-    expect(radius(css, "[data-blok-find-toggle='find-whole-word'] > span::after"))
-      .toBe('0 0 var(--blok-radius-notch) var(--blok-radius-notch)');
     expect(radius(css, '[data-blok-find-lens-box]')).toBe('var(--blok-radius-notch)');
     expect(radius(css, '[data-blok-find-tick]')).toBe('var(--blok-radius-pill)');
   });

@@ -733,5 +733,6 @@
   "find.replace": "טויש",
   "find.replaceAll": "טויש אַלץ",
   "find.matchCase": "אונטערשיידן גרויסע און קליינע אותיות",
-  "find.wholeWord": "נאָר גאַנצע ווערטער"
+  "find.wholeWord": "נאָר גאַנצע ווערטער",
+  "find.options": "זוך־אפציעס"
 }

@@ -1,8 +1,11 @@
 import { DATA_ATTR } from '../../constants/data-attributes';
 import type { FindConfig, FindPlacement } from '../../../../types';
-import { IconChevronDown, IconChevronRight, IconCross } from '../../icons';
+import type { PopoverItemParams } from '../../../../types/utils/popover/popover-item';
+import { PopoverEvent } from '../../../../types/utils/popover/popover-event';
+import { IconCheck, IconChevronDown, IconChevronRight, IconCross, IconPlayerSettings } from '../../icons';
 import { getElementDirection, inlineStartOffset } from '../../utils/direction';
 import { hide as hideTooltip, onHover } from '../../utils/tooltip';
+import { PopoverDesktop } from '../../utils/popover';
 import { promoteToTopLayer, removeFromTopLayer } from '../../utils/top-layer';
 import { createTooltipContent } from '../toolbar/tooltip';
 
@@ -48,7 +51,9 @@ const ATTR = {
   field: 'data-blok-find-field',
   counter: 'data-blok-find-counter',
   iconButton: 'data-blok-find-icon-button',
-  toggle: 'data-blok-find-toggle',
+  options: 'data-blok-find-options',
+  optionsActive: 'data-blok-find-options-active',
+  optionsMenu: 'data-blok-find-options-menu',
   divider: 'data-blok-find-divider',
   controls: 'data-blok-find-controls',
   replaceToggle: 'data-blok-find-replace-toggle',
@@ -128,8 +133,7 @@ export class FindBar {
   private readonly input: HTMLInputElement;
   private readonly counter: HTMLElement;
   private readonly replaceToggle: HTMLButtonElement;
-  private readonly matchCaseButton: HTMLButtonElement;
-  private readonly wholeWordButton: HTMLButtonElement;
+  private readonly optionsButton: HTMLButtonElement;
   private readonly previousButton: HTMLButtonElement;
   private readonly nextButton: HTMLButtonElement;
   private readonly closeButton: HTMLButtonElement;
@@ -151,6 +155,8 @@ export class FindBar {
   /** The count the counter shows now, -1 when it shows none. */
   private shown = { current: -1, total: 0 };
   private noResults = false;
+
+  private optionsMenu: PopoverDesktop | null = null;
 
   private readonly listeners: Array<() => void> = [];
   private inputResize: ResizeObserver | undefined;
@@ -208,8 +214,10 @@ export class FindBar {
 
     this.field.append(this.input, this.counter);
 
-    this.matchCaseButton = this.makeToggle('find.matchCase', 'Aa', 'find-match-case');
-    this.wholeWordButton = this.makeToggle('find.wholeWord', 'ab', 'find-whole-word');
+    this.optionsButton = this.makeIconButton('find.options', IconPlayerSettings, 'find-options');
+    this.optionsButton.setAttribute(ATTR.options, '');
+    this.optionsButton.setAttribute('aria-haspopup', 'menu');
+    this.optionsButton.setAttribute('aria-expanded', 'false');
     this.previousButton = this.makeIconButton('find.previous', IconChevronDown, 'find-previous');
     this.previousButton.setAttribute('data-blok-find-previous', '');
     this.nextButton = this.makeIconButton('find.next', IconChevronDown, 'find-next');
@@ -221,8 +229,7 @@ export class FindBar {
     const controls = build('div', { [ATTR.controls]: '' });
 
     controls.append(
-      this.matchCaseButton,
-      this.wholeWordButton,
+      this.optionsButton,
       divider,
       this.previousButton,
       this.nextButton,
@@ -261,8 +268,7 @@ export class FindBar {
     this.bar.append(row, this.replaceRow, this.map);
     this.element.append(this.bar);
 
-    this.bindTooltip(this.matchCaseButton, 'find.matchCase', shortcuts.matchCase);
-    this.bindTooltip(this.wholeWordButton, 'find.wholeWord', shortcuts.wholeWord);
+    this.bindTooltip(this.optionsButton, 'find.options');
     this.bindTooltip(this.previousButton, 'find.previous', shortcuts.previous);
     this.bindTooltip(this.nextButton, 'find.next', shortcuts.next);
     this.bindTooltip(this.closeButton, 'find.close', shortcuts.close);
@@ -274,8 +280,7 @@ export class FindBar {
     this.listen(this.input, 'scroll', () => this.syncOverflow());
     this.listen(this.bar, 'keydown', (event) => this.handleKeydown(event));
     this.listen(this.replaceToggle, 'click', () => this.setReplaceOpen(!this.replaceOpen));
-    this.listen(this.matchCaseButton, 'click', () => this.toggleOption('matchCase'));
-    this.listen(this.wholeWordButton, 'click', () => this.toggleOption('wholeWord'));
+    this.listen(this.optionsButton, 'click', () => this.toggleOptionsMenu());
     this.listen(this.previousButton, 'click', () => this.callbacks.onPrevious());
     this.listen(this.nextButton, 'click', () => this.callbacks.onNext());
     this.listen(this.closeButton, 'click', () => this.callbacks.onClose());
@@ -355,6 +360,7 @@ export class FindBar {
 
     this.opened = false;
     hideTooltip();
+    this.optionsMenu?.hide();
     // `hidden` and `inert` land now; the exit animation rides a discrete `display` transition in find.css.
     this.element.toggleAttribute('inert', true);
     this.element.hidden = true;
@@ -380,6 +386,7 @@ export class FindBar {
   public destroy(): void {
     this.opened = false;
     hideTooltip();
+    this.optionsMenu?.destroy();
     this.listeners.forEach((remove) => remove());
     this.listeners.length = 0;
     this.inputResize?.disconnect();
@@ -490,16 +497,82 @@ export class FindBar {
     }
   }
 
-  private toggleOption(option: 'matchCase' | 'wholeWord'): void {
+  private toggleOption(option: 'matchCase' | 'wholeWord', fromMenu = false): void {
     if (option === 'matchCase') {
       this.matchCase = !this.matchCase;
-      this.matchCaseButton.setAttribute('aria-pressed', String(this.matchCase));
     } else {
       this.wholeWord = !this.wholeWord;
-      this.wholeWordButton.setAttribute('aria-pressed', String(this.wholeWord));
     }
 
+    // The menu's rows cannot be re-checked from outside, so a shortcut closes it.
+    if (!fromMenu) {
+      this.optionsMenu?.hide();
+    }
+
+    this.optionsButton.toggleAttribute(ATTR.optionsActive, this.matchCase || this.wholeWord);
     this.callbacks.onOptionsChange(this.options);
+  }
+
+  private toggleOptionsMenu(): void {
+    if (this.optionsMenu !== null) {
+      this.optionsMenu.hide();
+
+      return;
+    }
+
+    const shortcuts = shortcutsFor(this.isMac);
+    const row = (option: 'matchCase' | 'wholeWord', labelKey: string, shortcut: string): PopoverItemParams => ({
+      title: this.t(labelKey),
+      name: option,
+      toggle: true,
+      isActive: this[option],
+      secondaryLabel: shortcut,
+      trailingIcon: IconCheck,
+      onActivate: () => this.toggleOption(option, true),
+    });
+
+    const menu = new PopoverDesktop({
+      items: [
+        row('matchCase', 'find.matchCase', shortcuts.matchCase),
+        row('wholeWord', 'find.wholeWord', shortcuts.wholeWord),
+      ],
+      trigger: this.optionsButton,
+      flippable: true,
+    });
+
+    // One Escape closes one layer: the menu, not the bar. Window capture runs
+    // before the bar's own handler and the popover registry's.
+    const onKeydown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        menu.hide();
+      }
+    };
+
+    menu.getElement().setAttribute(ATTR.optionsMenu, '');
+    menu.on(PopoverEvent.Closed, () => {
+      window.removeEventListener('keydown', onKeydown, true);
+
+      if (this.optionsMenu !== menu) {
+        return;
+      }
+
+      this.optionsMenu = null;
+      this.optionsButton.setAttribute('aria-expanded', 'false');
+
+      // A row click or Escape would leave focus on <body>, where the bar's keys stop working.
+      if (this.opened && (document.activeElement === document.body || (document.activeElement !== null && menu.hasNode(document.activeElement)))) {
+        this.optionsButton.focus({ preventScroll: true });
+      }
+
+      menu.destroy();
+    });
+
+    window.addEventListener('keydown', onKeydown, true);
+    this.optionsMenu = menu;
+    this.optionsButton.setAttribute('aria-expanded', 'true');
+    menu.show();
   }
 
   private setReplaceOpen(open: boolean): void {
@@ -696,23 +769,6 @@ export class FindBar {
     });
 
     button.innerHTML = icon;
-
-    return button;
-  }
-
-  private makeToggle(labelKey: string, glyph: string, testId: string): HTMLButtonElement {
-    const button = build('button', {
-      type: 'button',
-      [ATTR.iconButton]: '',
-      [ATTR.toggle]: testId,
-      'aria-label': this.t(labelKey),
-      'aria-pressed': 'false',
-      'data-blok-testid': testId,
-    });
-    const glyphElement = build('span', { 'aria-hidden': 'true' });
-
-    glyphElement.textContent = glyph;
-    button.append(glyphElement);
 
     return button;
   }

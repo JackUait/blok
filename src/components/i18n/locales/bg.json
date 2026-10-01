@@ -733,5 +733,6 @@
   "find.replace": "Замени",
   "find.replaceAll": "Замени всички",
   "find.matchCase": "Съвпадение на регистъра",
-  "find.wholeWord": "Само цели думи"
+  "find.wholeWord": "Само цели думи",
+  "find.options": "Опции за търсене"
 }

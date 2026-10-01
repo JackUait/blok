@@ -65,6 +65,11 @@ const savedTexts = (page: Page): Promise<string[]> =>
   });
 
 /** Text of each painted range, per highlight name; null when the name is not registered. */
+const pickOption = async (page: Page, name: 'Match case' | 'Match whole word'): Promise<void> => {
+  await page.getByTestId('find-options').click();
+  await page.getByRole('menuitemcheckbox', { name }).click();
+};
+
 const readHighlights = (page: Page): Promise<{ matches: string[] | null; active: string[] | null; activeBlockId: string | null }> =>
   page.evaluate(() => {
     const texts = (name: string): string[] | null => {
@@ -634,7 +639,7 @@ test.describe('find in page', () => {
       await page.keyboard.press('Enter');
       await expect(page.getByTestId('find-counter')).toHaveText('2 of 2');
 
-      await page.getByTestId('find-match-case').click();
+      await pickOption(page, 'Match case');
 
       await expect(page.getByTestId('find-counter')).toHaveText('2 of 2');
     });
@@ -659,7 +664,7 @@ test.describe('find in page', () => {
       await openFind(page, 'casepath');
       await expect(page.getByTestId('find-counter')).toHaveText('2 of 3');
 
-      await page.getByTestId('find-match-case').click();
+      await pickOption(page, 'Match case');
 
       await expect(page.getByTestId('find-counter')).toHaveText('2 of 2');
       expect(await page.evaluate(() => {
@@ -1070,10 +1075,10 @@ test.describe('find in page', () => {
       await openFind(page, 'apple');
       await expect(page.getByTestId('find-counter')).toHaveText('1 of 3');
 
-      await page.getByTestId('find-match-case').click();
+      await pickOption(page, 'Match case');
 
       await expect(page.getByTestId('find-counter')).toHaveText('1 of 1');
-      await expect(page.getByTestId('find-match-case')).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByRole('menuitemcheckbox', { name: 'Match case' })).toHaveAttribute('aria-checked', 'true');
       expect((await readHighlights(page)).active).toEqual(['apple']);
     });
 
@@ -1083,9 +1088,64 @@ test.describe('find in page', () => {
       await openFind(page, 'cat');
       await expect(page.getByTestId('find-counter')).toHaveText('1 of 3');
 
-      await page.getByTestId('find-whole-word').click();
+      await pickOption(page, 'Match whole word');
 
       await expect(page.getByTestId('find-counter')).toHaveText('1 of 2');
+    });
+
+    test('arrow keys move across the search options and Enter checks one', async ({ page }) => {
+      await createEditor(page, paragraphs('Apple apple APPLE'));
+      await focusParagraph(page, 'Apple apple APPLE');
+      await openFind(page, 'apple');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 3');
+
+      await page.getByTestId('find-options').focus();
+      await page.keyboard.press('Enter');
+
+      const matchCase = page.getByRole('menuitemcheckbox', { name: 'Match case' });
+      const wholeWord = page.getByRole('menuitemcheckbox', { name: 'Match whole word' });
+
+      await expect(matchCase).toHaveAttribute('data-blok-focused', 'true');
+      await page.keyboard.press('ArrowDown');
+      await expect(wholeWord).toHaveAttribute('data-blok-focused', 'true');
+      await page.keyboard.press('ArrowUp');
+      await expect(matchCase).toHaveAttribute('data-blok-focused', 'true');
+
+      await page.keyboard.press('Enter');
+
+      await expect(matchCase).toHaveAttribute('aria-checked', 'true');
+      await expect(page.getByTestId('find-counter')).toHaveText('1 of 1');
+    });
+
+    test('Escape closes the options menu first, then the bar', async ({ page }) => {
+      await createEditor(page, paragraphs('Apple apple APPLE'));
+      await focusParagraph(page, 'Apple apple APPLE');
+      await openFind(page, 'apple');
+
+      await page.getByTestId('find-options').click();
+      await expect(page.getByRole('menu')).toBeVisible();
+
+      await page.keyboard.press('Escape');
+
+      await expect(page.getByRole('menu')).toBeHidden();
+      await expect(page.getByTestId('find-bar')).toBeVisible();
+      await expect(page.getByTestId('find-options')).toBeFocused();
+
+      await page.keyboard.press('Escape');
+
+      await expect(page.getByTestId('find-bar')).toBeHidden();
+    });
+
+    test('only a checked option shows its checkmark', async ({ page }) => {
+      await createEditor(page, paragraphs('Apple apple APPLE'));
+      await focusParagraph(page, 'Apple apple APPLE');
+      await openFind(page, 'apple');
+      await pickOption(page, 'Match case');
+
+      const check = (name: string) => page.getByRole('menuitemcheckbox', { name }).getByTestId('popover-item-trailing-icon');
+
+      await expect(check('Match case')).toBeVisible();
+      await expect(check('Match whole word')).toBeHidden();
     });
 
     test('matching ignores accents', async ({ page }) => {

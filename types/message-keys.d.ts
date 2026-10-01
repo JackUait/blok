@@ -75,6 +75,7 @@ export type BlokMessageKey =
   | 'find.matchCase'
   | 'find.next'
   | 'find.noResults'
+  | 'find.options'
   | 'find.placeholder'
   | 'find.previous'
   | 'find.replace'

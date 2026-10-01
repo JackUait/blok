@@ -733,5 +733,6 @@
   "find.replace": "Replace",
   "find.replaceAll": "Replace all",
   "find.matchCase": "Match case",
-  "find.wholeWord": "Match whole word"
+  "find.wholeWord": "Match whole word",
+  "find.options": "Search options"
 }

@@ -104,7 +104,7 @@ describe('FindBar', () => {
     });
 
     it('labels every icon button', () => {
-      for (const key of ['find.previous', 'find.next', 'find.close', 'find.matchCase', 'find.wholeWord', 'find.toggleReplace']) {
+      for (const key of ['find.previous', 'find.next', 'find.close', 'find.options', 'find.toggleReplace']) {
         expect(button(bar.element, key).type).toBe('button');
       }
     });
@@ -312,33 +312,83 @@ describe('FindBar', () => {
     });
   });
 
-  describe('option toggles', () => {
+  describe('search options', () => {
+    const optionsButton = (): HTMLButtonElement => button(bar.element, 'find.options');
+    const row = (label: string): HTMLElement => {
+      const found = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitemcheckbox"]'))
+        .find((el) => (el.textContent ?? '').includes(label));
+
+      if (found === undefined) {
+        throw new Error(`No menu row ${label}`);
+      }
+
+      return found;
+    };
+    const menuRows = (): HTMLElement[] => Array.from(document.querySelectorAll<HTMLElement>('[role="menuitemcheckbox"]'));
+
     beforeEach(() => {
       bar.open({ readOnly: false });
     });
 
-    it('toggles match case from its button', () => {
-      const toggle = button(bar.element, 'find.matchCase');
-
-      toggle.click();
-
-      expect(toggle.getAttribute('aria-pressed')).toBe('true');
-      expect(bar.options).toEqual({ matchCase: true, wholeWord: false });
-      expect(callbacks.onOptionsChange).toHaveBeenLastCalledWith({ matchCase: true, wholeWord: false });
-
-      toggle.click();
-
-      expect(toggle.getAttribute('aria-pressed')).toBe('false');
-      expect(callbacks.onOptionsChange).toHaveBeenLastCalledWith({ matchCase: false, wholeWord: false });
+    it('folds match case and whole word into one menu button', () => {
+      expect(optionsButton().getAttribute('aria-haspopup')).toBe('menu');
+      expect(optionsButton().getAttribute('aria-expanded')).toBe('false');
+      expect(Array.from(bar.element.querySelectorAll('button')).some((el) =>
+        el.getAttribute('aria-label') === 'find.matchCase' || el.getAttribute('aria-label') === 'find.wholeWord')).toBe(false);
     });
 
-    it('toggles whole word from its button', () => {
-      const toggle = button(bar.element, 'find.wholeWord');
+    it('opens a menu with a checkbox row per option', () => {
+      optionsButton().click();
 
-      toggle.click();
+      expect(optionsButton().getAttribute('aria-expanded')).toBe('true');
+      expect(menuRows()).toHaveLength(2);
+      expect(row('find.matchCase').getAttribute('aria-checked')).toBe('false');
+      expect(row('find.wholeWord').getAttribute('aria-checked')).toBe('false');
+    });
 
-      expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    it('toggles an option from its row and keeps the menu open', () => {
+      optionsButton().click();
+      row('find.matchCase').click();
+
+      expect(row('find.matchCase').getAttribute('aria-checked')).toBe('true');
+      expect(bar.options).toEqual({ matchCase: true, wholeWord: false });
+      expect(callbacks.onOptionsChange).toHaveBeenLastCalledWith({ matchCase: true, wholeWord: false });
+      expect(optionsButton().getAttribute('aria-expanded')).toBe('true');
+
+      row('find.wholeWord').click();
+      row('find.matchCase').click();
+
       expect(callbacks.onOptionsChange).toHaveBeenLastCalledWith({ matchCase: false, wholeWord: true });
+      expect(row('find.matchCase').getAttribute('aria-checked')).toBe('false');
+    });
+
+    it('marks the button while any option is on', () => {
+      expect(optionsButton().hasAttribute('data-blok-find-options-active')).toBe(false);
+
+      press(findInput(), { key: '∑', code: 'KeyW', altKey: true });
+
+      expect(optionsButton().hasAttribute('data-blok-find-options-active')).toBe(true);
+
+      press(findInput(), { key: '∑', code: 'KeyW', altKey: true });
+
+      expect(optionsButton().hasAttribute('data-blok-find-options-active')).toBe(false);
+    });
+
+    it('closes only the menu on Escape', () => {
+      optionsButton().click();
+      press(row('find.matchCase'), { key: 'Escape' });
+
+      expect(callbacks.onClose).not.toHaveBeenCalled();
+      expect(optionsButton().getAttribute('aria-expanded')).toBe('false');
+      expect(menuRows()).toHaveLength(0);
+      expect(bar.isOpen).toBe(true);
+    });
+
+    it('closes the menu with the bar', () => {
+      optionsButton().click();
+      bar.close();
+
+      expect(menuRows()).toHaveLength(0);
     });
 
     it('reads Alt+C and Alt+W by key code, since macOS Option changes event.key', () => {
@@ -350,7 +400,11 @@ describe('FindBar', () => {
       press(findInput(), { key: '∑', code: 'KeyW', altKey: true });
 
       expect(callbacks.onOptionsChange).toHaveBeenLastCalledWith({ matchCase: true, wholeWord: true });
-      expect(button(bar.element, 'find.wholeWord').getAttribute('aria-pressed')).toBe('true');
+
+      optionsButton().click();
+
+      expect(row('find.matchCase').getAttribute('aria-checked')).toBe('true');
+      expect(row('find.wholeWord').getAttribute('aria-checked')).toBe('true');
     });
 
     it('also takes Alt+C from the replace field', () => {

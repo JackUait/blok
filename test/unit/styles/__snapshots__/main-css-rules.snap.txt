@@ -13849,31 +13849,13 @@ span[data-blok-slash-search] {
   width: 20px;
 }
 
-[data-blok-find-toggle] > span {
-  font-size: var(--blok-font-size-ui-compact);
-  font-weight: var(--blok-font-weight-semibold);
-  letter-spacing: -0.01em;
-}
-
-[data-blok-find-toggle='find-whole-word'] > span {
-  position: relative;
-  padding-inline: var(--blok-space-0-5);
-}
-
-[data-blok-find-toggle='find-whole-word'] > span::after {
-  content: '';
-  position: absolute;
-  inset-inline: 0;
-  bottom: -2px;
-  height: 3px;
-  border: 1.25px solid currentColor;
-  border-top: 0;
-  border-radius: 0 0 var(--blok-radius-notch) var(--blok-radius-notch);
-}
-
-[data-blok-find-toggle][aria-pressed='true'], [data-blok-find-toggle][aria-pressed='true']:hover {
+[data-blok-find-options][data-blok-find-options-active], [data-blok-find-options][data-blok-find-options-active]:hover, [data-blok-find-options][aria-expanded='true'] {
   background: var(--blok-popover-icon-active-bg);
   color: var(--blok-icon-active-text);
+}
+
+[data-blok-find-options-menu] [data-blok-popover-item]:not([data-blok-popover-item-active]) > [data-blok-testid='popover-item-trailing-icon'] {
+  visibility: hidden;
 }
 
 [data-blok-find-bar] button:focus-visible {

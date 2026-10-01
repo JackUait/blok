@@ -733,5 +733,6 @@
   "find.replace": "Zamień",
   "find.replaceAll": "Zamień wszystko",
   "find.matchCase": "Uwzględniaj wielkość liter",
-  "find.wholeWord": "Tylko całe wyrazy"
+  "find.wholeWord": "Tylko całe wyrazy",
+  "find.options": "Opcje wyszukiwania"
 }

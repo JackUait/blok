@@ -91,18 +91,20 @@ describe('marks', () => {
     expect(path.hasAttribute('stroke')).toBe(false);
   });
 
-  it('draws a highlighter as a flat, translucent, multiplied stroke', () => {
+  it('draws a highlighter as a flat stroke in two passes: multiply keeps ink dark, screen keeps it bright on dark photos', () => {
     const svg = createMarkupLayer([pen({ id: 'h', type: 'highlighter', color: '#ffcc00', size: 0.03 })], O);
-    const path = child(mark(svg, 'h'), 'path');
+    const paths = Array.from(mark(svg, 'h').querySelectorAll('path'));
 
-    expect(path.getAttribute('fill')).toBe('none');
-    expect(path.getAttribute('stroke')).toBe('#ffcc00');
-    expect(num(path, 'stroke-width')).toBe(15);
-    expect(path.getAttribute('stroke-linecap')).toBe('round');
-    expect(path.getAttribute('stroke-linejoin')).toBe('round');
-    expect(path.getAttribute('opacity')).toBe('0.45');
-    expect(path.getAttribute('style')).toContain('mix-blend-mode:multiply');
-    expect(path.getAttribute('d')).toMatch(/^M100 50/);
+    expect(paths.map((p) => p.getAttribute('style'))).toEqual(['mix-blend-mode:multiply', 'mix-blend-mode:screen']);
+    expect(paths.map((p) => p.getAttribute('opacity'))).toEqual(['0.55', '0.4']);
+    for (const path of paths) {
+      expect(path.getAttribute('fill')).toBe('none');
+      expect(path.getAttribute('stroke')).toBe('#ffcc00');
+      expect(num(path, 'stroke-width')).toBe(15);
+      expect(path.getAttribute('stroke-linecap')).toBe('round');
+      expect(path.getAttribute('stroke-linejoin')).toBe('round');
+      expect(path.getAttribute('d')).toMatch(/^M100 50/);
+    }
   });
 
   it('draws a one-point highlighter as a dot', () => {

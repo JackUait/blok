@@ -207,6 +207,19 @@ describe('createMarkupEditor', () => {
       expect(livePaths()).toBeGreaterThan(0);
     });
 
+    it('a live highlighter paints the same two blend passes as the committed one', () => {
+      const { layer, plane, advance } = setup({ state: { ...BASE, tool: 'highlighter', color: '#ffcc00' } });
+
+      fire(layer, 'pointerdown', 350, 175);
+      fire(layer, 'pointermove', 380, 190);
+      advance(16);
+      const live = Array.from(plane.querySelectorAll<SVGPathElement>('[data-role="markup-live"] path'));
+
+      expect(live.map((p) => p.style.mixBlendMode)).toEqual(['multiply', 'screen']);
+      expect(live.map((p) => p.getAttribute('opacity'))).toEqual(['0.55', '0.4']);
+      expect(live[0]?.getAttribute('d')).toBe(live[1]?.getAttribute('d'));
+    });
+
     it('a long live stroke only re-outlines its tail each frame', () => {
       const { layer, advance } = setup();
 

@@ -5,7 +5,15 @@ import { ARROW_HEAD_HALF_WIDTH, TEXT_LINE_HEIGHT, arrowHeadLength, contrastInk, 
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const FONT_FAMILY = "system-ui, -apple-system, 'Segoe UI', sans-serif";
-const HIGHLIGHTER_OPACITY = '0.45';
+/**
+ * Highlighter blend passes, back to front. Multiply keeps dark ink under it dark;
+ * screen keeps the colour visible over dark photo areas, where multiply alone turns muddy.
+ * markup-editor.ts paints its live highlighter with the same passes.
+ */
+export const HIGHLIGHTER_PASSES: readonly { blend: string; opacity: string }[] = [
+  { blend: 'multiply', opacity: '0.55' },
+  { blend: 'screen', opacity: '0.4' },
+];
 const FILL_OPACITY = '0.2';
 const OUTLINE_WIDTH = 0.16;
 /** The head's concave back, in head lengths. */
@@ -73,16 +81,23 @@ const drawStroke = (item: ImageMarkupStroke, o: Size, width: number, color: stri
 
   if (item.type === 'pen') return svgEl('path', { d: strokeOutline(pts, width, { taper: true }), fill: color });
 
-  return svgEl('path', {
-    d: centreline(pts),
-    fill: 'none',
-    stroke: color,
-    'stroke-width': fmt(width),
-    'stroke-linecap': 'round',
-    'stroke-linejoin': 'round',
-    opacity: HIGHLIGHTER_OPACITY,
-    style: 'mix-blend-mode:multiply',
-  });
+  const d = centreline(pts);
+  const g = svgEl('g', {});
+
+  for (const pass of HIGHLIGHTER_PASSES) {
+    g.appendChild(svgEl('path', {
+      d,
+      fill: 'none',
+      stroke: color,
+      'stroke-width': fmt(width),
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round',
+      opacity: pass.opacity,
+      style: `mix-blend-mode:${pass.blend}`,
+    }));
+  }
+
+  return g;
 };
 
 const lineAttrs = (color: string, width: number): Record<string, string> => ({

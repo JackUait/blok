@@ -8,7 +8,7 @@ import {
   resizeMarkup, TEXT_LINE_HEIGHT, textBoxSize,
 } from '../markup/model';
 import { smoothStroke, strokeOutline } from '../markup/freehand';
-import { createMarkupLayer, updateMarkupLayer } from '../markup/render';
+import { createMarkupLayer, HIGHLIGHTER_PASSES, updateMarkupLayer } from '../markup/render';
 import type { Box, Point, Size } from './camera';
 import type { MarkupPanelState, MarkupSelectionKind, MarkupSizeIndex, MarkupTool } from './markup-panel';
 
@@ -73,7 +73,6 @@ const LIVE_CHUNK = 48;
 const LIVE_OVERLAP = 3;
 /** The live ink crossfades into the committed, tapered stroke. */
 const HANDOVER_MS = 90;
-const HIGHLIGHTER_OPACITY = '0.45';
 const ERASE_MS = 160;
 /** A shape placed by a click pops from small; a mark the user watched being drawn only settles. */
 const POP_FROM_CLICK = 0.4;
@@ -204,7 +203,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
   live.setAttribute('aria-hidden', 'true');
   live.setAttribute('style', 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none');
   opts.plane.append(svg, live, ghosts);
-  const ink: { group: SVGGElement | null; tail: SVGPathElement | null; frozen: number } = { group: null, tail: null, frozen: 0 };
+  const ink: { group: SVGGElement | null; tail: SVGPathElement | null; twins: SVGPathElement[]; frozen: number } = { group: null, tail: null, twins: [], frozen: 0 };
 
   const layer = document.createElement('div');
 
@@ -285,13 +284,23 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
       live.appendChild(ink.group);
       if (item.type === 'pen') ink.group.setAttribute('fill', item.color);
       else {
-        ink.tail.setAttribute('fill', 'none');
-        ink.tail.setAttribute('stroke', item.color);
-        ink.tail.setAttribute('stroke-width', String(width));
-        ink.tail.setAttribute('stroke-linecap', 'round');
-        ink.tail.setAttribute('stroke-linejoin', 'round');
-        ink.tail.setAttribute('opacity', HIGHLIGHTER_OPACITY);
-        ink.tail.style.mixBlendMode = 'multiply';
+        // One path per blend pass; the first is the tail, the rest follow its d.
+        const passes = HIGHLIGHTER_PASSES.map((pass, i) => {
+          const path = i === 0 ? ink.tail ?? inkPath() : inkPath();
+
+          path.setAttribute('fill', 'none');
+          path.setAttribute('stroke', item.color);
+          path.setAttribute('stroke-width', String(width));
+          path.setAttribute('stroke-linecap', 'round');
+          path.setAttribute('stroke-linejoin', 'round');
+          path.setAttribute('opacity', pass.opacity);
+          path.style.mixBlendMode = pass.blend;
+
+          return path;
+        });
+
+        ink.twins = passes.slice(1);
+        ink.group.append(...ink.twins);
       }
     }
     const { group, tail } = ink;
@@ -299,7 +308,10 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
     if (!tail) return;
     if (item.type === 'highlighter') {
       // A flat stroke: one cheap path. Chunks would darken where they overlap.
-      tail.setAttribute('d', centreline(strokePx(item, 0, n)));
+      const d = centreline(strokePx(item, 0, n));
+
+      tail.setAttribute('d', d);
+      ink.twins.forEach((twin) => twin.setAttribute('d', d));
 
       return;
     }
@@ -320,6 +332,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
 
     ink.group = null;
     ink.tail = null;
+    ink.twins = [];
     ink.frozen = 0;
 
     return group;

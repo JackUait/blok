@@ -858,6 +858,8 @@ export class PopoverDesktop extends PopoverAbstract {
     this.destroyNestedPopoverIfExists();
 
     this.flipper?.deactivate();
+    // After destroyNestedPopoverIfExists: its focus restore flips the cursor.
+    this.nodes.popover.removeAttribute(DATA_ATTR.keyboardNavigated);
 
     this.previouslyHoveredItem = null;
     this.reportCurrentItem(null, 'pointer');
@@ -1779,6 +1781,8 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   private onFlip = (): void => {
     const focusedItem = this.itemsDefault.find(item => item.isFocused);
+
+    this.nodes.popover.setAttribute(DATA_ATTR.keyboardNavigated, '');
 
     focusedItem?.onFocus();
     this.reportCurrentItem(focusedItem ?? null, 'keyboard');

@@ -23,7 +23,7 @@
   --shadow-tool-icon: 0 0 0 1px #eff0f1;
   --shadow-tooltip: 0 8px 12px 0 rgba(29, 32, 43, 0.17), 0 4px 5px -3px rgba(5, 6, 12, 0.49);
   --shadow-notify: 0 11px 17px 0 rgba(23, 32, 61, 0.13);
-  --shadow-button-focused: inset 0 0 0 1px rgba(7, 161, 227, 0.08);
+  --shadow-button-focused: inset 0 0 0 1px rgba(55, 53, 47, 0.08);
   --shadow-input: inset 0 1px 2px 0 rgba(35, 44, 72, 0.06);
   --shadow-button-base: 0 2px 2px 0 rgba(18, 30, 57, 0.04);
   --shadow-button-base-hover: 0 1px 3px 0 rgba(18, 30, 57, 0.08);

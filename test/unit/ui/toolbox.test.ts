@@ -49,6 +49,7 @@ const mockPopoverInstance = vi.hoisted(() => ({
   toggleItemHiddenByName: vi.fn(),
   updatePosition: vi.fn(),
   setLeftAlignElement: vi.fn(),
+  onCurrentItemChange: vi.fn(() => () => {}),
   setActiveDescendantHost: vi.fn(),
 }));
 
@@ -92,6 +93,7 @@ vi.mock('../../../src/components/utils/popover', () => {
       public toggleItemHiddenByName = mockPopoverInstance.toggleItemHiddenByName;
       public updatePosition = mockPopoverInstance.updatePosition;
       public setLeftAlignElement = mockPopoverInstance.setLeftAlignElement;
+      public onCurrentItemChange = mockPopoverInstance.onCurrentItemChange;
       public setActiveDescendantHost = mockPopoverInstance.setActiveDescendantHost;
     },
     PopoverMobile: class MockPopoverMobile {
@@ -106,6 +108,7 @@ vi.mock('../../../src/components/utils/popover', () => {
       public toggleItemHiddenByName = mockPopoverInstance.toggleItemHiddenByName;
       public updatePosition = mockPopoverInstance.updatePosition;
       public setLeftAlignElement = mockPopoverInstance.setLeftAlignElement;
+      public onCurrentItemChange = mockPopoverInstance.onCurrentItemChange;
       public setActiveDescendantHost = mockPopoverInstance.setActiveDescendantHost;
     },
   };
@@ -2957,6 +2960,24 @@ describe('Toolbox', () => {
       // The mock i18n echoes the key, proving the label went through i18n.t
       expect(headerElement?.textContent).toBe('toolbox.sectionBasic');
       expect(headerElement?.getAttribute('data-blok-testid')).toBe('toolbox-section-title');
+    });
+
+    it('draws a divider above every section header except the topmost', () => {
+      const tools = createToolsCollection([
+        ['paragraph', makeTool('paragraph', { title: 'Text', icon: svg, section: 'basic' })],
+        ['image', makeTool('image', { title: 'Image', icon: svg, section: 'media' })],
+      ]);
+
+      new Toolbox({ api: mocks.api, tools, i18nLabels, i18n: mockI18n });
+
+      const items = lastPopoverItems.value as Array<{ element?: HTMLElement }>;
+      const divider = (header: HTMLElement | undefined): Element | null | undefined =>
+        header?.querySelector('[data-blok-testid="toolbox-section-divider"]');
+
+      expect(divider(items[0].element)).toBeNull();
+      expect(divider(items[2].element)).not.toBeNull();
+      expect(divider(items[2].element)?.getAttribute('aria-hidden')).toBe('true');
+      expect(items[2].element?.textContent).toBe('toolbox.sectionMedia');
     });
 
     it('renders section labels in sentence case, not all-caps', () => {

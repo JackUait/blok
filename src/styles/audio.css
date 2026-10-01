@@ -783,7 +783,7 @@
 }
 [data-blok-tool="audio"] .blok-audio-retry:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 40%, transparent);
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 
 /* ----- hide caption in non-rendered states --------------- */

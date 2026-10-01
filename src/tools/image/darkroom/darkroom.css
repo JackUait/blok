@@ -10,7 +10,6 @@
   --blok-darkroom-btn-hover-bg: rgba(255, 255, 255, 0.08);
   --blok-darkroom-done-bg: #fff;
   --blok-darkroom-done-ink: #000;
-  --blok-darkroom-ring: rgba(255, 255, 255, 0.9);
   --blok-darkroom-dim: rgba(7, 7, 8, 0.72);
   --blok-darkroom-dim-off: rgba(7, 7, 8, 0);
   --blok-darkroom-grid-line: rgba(255, 255, 255, 0.35);
@@ -129,7 +128,7 @@
 .blok-darkroom__btn:focus-visible,
 .blok-darkroom__chip:focus-visible,
 .blok-darkroom__stage:focus-visible {
-  outline: 2px solid var(--blok-darkroom-ring);
+  outline: 2px solid var(--blok-focus-ring);
   outline-offset: 2px;
 }
 

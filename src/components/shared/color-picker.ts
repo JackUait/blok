@@ -208,7 +208,7 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
     'w-10 h-10 rounded-(--blok-radius-control-lg) cursor-pointer border-none outline-hidden',
     'flex items-center justify-center text-sm font-semibold',
     'ring-inset hover:ring-2 hover:ring-swatch-ring-hover aria-pressed:ring-swatch-ring-active',
-    'focus-visible:ring-2 focus-visible:ring-text-secondary aria-pressed:focus-visible:ring-text-secondary',
+    'focus-visible:ring-2 focus-visible:ring-focus-ring aria-pressed:focus-visible:ring-focus-ring',
     'transition-[box-shadow,transform,scale] duration-150 active:scale-[0.96]',
     'motion-reduce:transition-none motion-reduce:active:scale-100'
   );

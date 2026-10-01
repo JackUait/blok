@@ -231,7 +231,7 @@
 .blok-embed-empty__submit:active { transform: translateY(1px); }
 .blok-embed-empty__submit:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 45%, transparent);
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 
 .blok-embed-empty__submit-label {

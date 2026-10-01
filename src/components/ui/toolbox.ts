@@ -1173,6 +1173,17 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     element.setAttribute('data-blok-testid', 'toolbox-section-title');
     element.textContent = this.i18n.t(Toolbox.SECTION_TITLE_KEYS[section]);
 
+    if (!isFirst) {
+      // A line inside the header, not a Separator item: role="separator" is an
+      // invalid owned child of the listbox, and it hides with the header.
+      const divider = document.createElement('div');
+
+      divider.className = 'h-px -mr-1 mb-2 bg-popover-border/60';
+      divider.setAttribute('aria-hidden', 'true');
+      divider.setAttribute('data-blok-testid', 'toolbox-section-divider');
+      element.prepend(divider);
+    }
+
     return {
       type: PopoverItemType.Html,
       element,

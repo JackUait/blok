@@ -30,8 +30,8 @@
 .blok-media-empty__card:focus-visible {
   outline: none;
   outline-offset: 0;
-  border-color: var(--blok-color-accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 35%, transparent);
+  border-color: var(--blok-focus-ring);
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 .blok-media-empty__card.is-dragover {
   border-color: var(--blok-color-accent);
@@ -71,7 +71,7 @@
 }
 .blok-media-empty__tab:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 35%, transparent);
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 .blok-media-empty__tab[aria-selected="true"],
 .blok-media-empty__tab[aria-current="true"] {
@@ -420,7 +420,7 @@
 .blok-media-empty__choose:active { opacity: 0.78; }
 .blok-media-empty__choose:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 40%, transparent);
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 
 .blok-media-empty__hint {
@@ -627,7 +627,7 @@
 }
 .blok-media-empty__embed-submit:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 45%, transparent);
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 @keyframes blok-media-empty-shine {
   from { transform: translateX(-110%); }
@@ -817,7 +817,7 @@
 .blok-media-empty__submit:active { opacity: 0.78; }
 .blok-media-empty__submit:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 40%, transparent);
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 
 .blok-media-empty__badge {

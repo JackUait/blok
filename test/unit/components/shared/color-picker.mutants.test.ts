@@ -256,7 +256,7 @@ describe('color-picker mutant kills', () => {
       expect(classes).toContain('w-10 h-10 rounded-(--blok-radius-control-lg) cursor-pointer border-none outline-hidden');
       expect(classes).toContain('flex items-center justify-center text-sm font-semibold');
       expect(classes).toContain('ring-inset hover:ring-2 hover:ring-swatch-ring-hover aria-pressed:ring-swatch-ring-active');
-      expect(classes).toContain('focus-visible:ring-2 focus-visible:ring-text-secondary aria-pressed:focus-visible:ring-text-secondary');
+      expect(classes).toContain('focus-visible:ring-2 focus-visible:ring-focus-ring aria-pressed:focus-visible:ring-focus-ring');
       expect(classes).toContain('transition-[box-shadow,transform,scale]');
       expect(classes).toContain('duration-150');
       expect(classes).toContain('motion-reduce:transition-none motion-reduce:active:scale-100');

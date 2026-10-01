@@ -531,8 +531,9 @@
   --blok-inline-toolbar-shadow: 0 20px 24px rgba(25, 25, 25, 0.05), 0 5px 8px rgba(25, 25, 25, 0.027), 0 0 0 1px rgba(42, 28, 0, 0.07);
   --blok-popover-border-icon: rgb(201 201 204 / 48%);
   --blok-popover-border-icon-disabled: #eff0f1;
-  --blok-item-focus-bg: rgba(35, 131, 226, 0.14);
-  --blok-item-focus-shadow: rgba(35, 131, 226, 0.14);
+  --blok-item-focus-bg: rgba(55, 53, 47, 0.08);
+  --blok-item-focus-shadow: rgba(55, 53, 47, 0.08);
+  --blok-focus-ring: #2383e2;
   --blok-item-hover-bg: rgba(55, 53, 47, 0.08);
   --blok-icon-bg: rgba(0, 0, 0, 0.04);
   --blok-item-confirm-bg: #c93636;
@@ -563,7 +564,7 @@
   --blok-database-card-shadow: rgba(25, 25, 25, 0.027) 0 4px 12px 0, rgba(25, 25, 25, 0.02) 0 1px 2px 0, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-card-shadow-hover: rgba(25, 25, 25, 0.06) 0 4px 12px 0, rgba(25, 25, 25, 0.04) 0 1px 2px 0, rgba(42, 28, 0, 0.1) 0 0 0 1px;
   --blok-database-card-border: rgba(0, 0, 0, 0.06);
-  --blok-database-card-border-active: rgba(35, 131, 226, 0.57);
+  --blok-database-card-border-active: rgba(55, 53, 47, 0.35);
   --blok-database-card-placeholder: rgba(55, 53, 47, 0.4);
   --blok-database-card-colored-overlay: var(--blok-database-card-bg);
   --blok-database-card-colored-overlay-hover: var(--blok-database-card-bg-hover);
@@ -809,10 +810,7 @@
   --blok-video-scrim-strong: rgba(0, 0, 0, 0.6);
   --blok-video-scrim-mid: rgba(0, 0, 0, 0.2);
   --blok-video-shadow-hover: 0 8px 24px -8px rgba(0, 0, 0, 0.18);
-  --blok-video-focus-ring: var(--blok-video-accent);
-  @supports (color: color-mix(in lab, red, red)) {
-    --blok-video-focus-ring: color-mix(in srgb, var(--blok-video-accent) 30%, transparent);
-  }
+  --blok-video-focus-ring: var(--blok-focus-ring);
   --blok-find-match-bg: rgba(255, 212, 0, 0.32);
   --blok-find-match-active-bg: rgba(255, 138, 0, 0.5);
   --blok-find-lens-ring: rgba(255, 128, 0, 0.72);
@@ -851,8 +849,9 @@
     --blok-inline-toolbar-shadow: 0 20px 24px rgba(0, 0, 0, 0.35), 0 5px 8px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1);
     --blok-popover-border-icon: #37352f;
     --blok-popover-border-icon-disabled: #2f2d29;
-    --blok-item-focus-bg: rgba(35, 131, 226, 0.2);
-    --blok-item-focus-shadow: rgba(35, 131, 226, 0.2);
+    --blok-item-focus-bg: rgba(255, 255, 255, 0.055);
+    --blok-item-focus-shadow: rgba(255, 255, 255, 0.055);
+    --blok-focus-ring: #4c9fff;
     --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
     --blok-icon-bg: rgba(255, 255, 255, 0.07);
     --blok-item-confirm-bg: #3d1f1f;
@@ -882,7 +881,7 @@
     --blok-database-card-shadow: rgba(0, 0, 0, 0.4) 0 4px 12px 0, rgba(0, 0, 0, 0.3) 0 1px 2px 0, rgba(255, 255, 255, 0.06) 0 0 0 1px;
     --blok-database-card-shadow-hover: rgba(0, 0, 0, 0.5) 0 4px 12px 0, rgba(0, 0, 0, 0.4) 0 1px 2px 0, rgba(255, 255, 255, 0.09) 0 0 0 1px;
     --blok-database-card-border: rgba(255, 255, 255, 0.06);
-    --blok-database-card-border-active: rgba(35, 131, 226, 0.7);
+    --blok-database-card-border-active: rgba(255, 255, 255, 0.35);
     --blok-database-card-placeholder: rgba(255, 255, 255, 0.3);
     --blok-database-card-colored-overlay: rgba(255, 255, 255, 0.06);
     --blok-database-card-colored-overlay-hover: rgba(255, 255, 255, 0.11);
@@ -1011,8 +1010,9 @@
   --blok-inline-toolbar-shadow: 0 20px 24px rgba(0, 0, 0, 0.35), 0 5px 8px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1);
   --blok-popover-border-icon: #37352f;
   --blok-popover-border-icon-disabled: #2f2d29;
-  --blok-item-focus-bg: rgba(35, 131, 226, 0.2);
-  --blok-item-focus-shadow: rgba(35, 131, 226, 0.2);
+  --blok-item-focus-bg: rgba(255, 255, 255, 0.055);
+  --blok-item-focus-shadow: rgba(255, 255, 255, 0.055);
+  --blok-focus-ring: #4c9fff;
   --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-icon-bg: rgba(255, 255, 255, 0.07);
   --blok-item-confirm-bg: #3d1f1f;
@@ -1042,7 +1042,7 @@
   --blok-database-card-shadow: rgba(0, 0, 0, 0.4) 0 4px 12px 0, rgba(0, 0, 0, 0.3) 0 1px 2px 0, rgba(255, 255, 255, 0.06) 0 0 0 1px;
   --blok-database-card-shadow-hover: rgba(0, 0, 0, 0.5) 0 4px 12px 0, rgba(0, 0, 0, 0.4) 0 1px 2px 0, rgba(255, 255, 255, 0.09) 0 0 0 1px;
   --blok-database-card-border: rgba(255, 255, 255, 0.06);
-  --blok-database-card-border-active: rgba(35, 131, 226, 0.7);
+  --blok-database-card-border-active: rgba(255, 255, 255, 0.35);
   --blok-database-card-placeholder: rgba(255, 255, 255, 0.3);
   --blok-database-card-colored-overlay: rgba(255, 255, 255, 0.06);
   --blok-database-card-colored-overlay-hover: rgba(255, 255, 255, 0.11);

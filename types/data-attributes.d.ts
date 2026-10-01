@@ -61,6 +61,8 @@ export const DATA_ATTR: {
   readonly disabled: 'data-blok-disabled';
   /** Element is focused via keyboard navigation */
   readonly focused: 'data-blok-focused';
+  /** On a popover once a navigation key moved its cursor; gates the focus ring */
+  readonly keyboardNavigated: 'data-blok-keyboard-navigated';
   /** Block is selected */
   readonly selected: 'data-blok-selected';
   /** On a block's spotlight target while it is being pointed out (Show in the failed-image notice) */

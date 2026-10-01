@@ -323,12 +323,12 @@
     outline: none;
   }
 
-  /* Restore browser-default :focus-visible styles inside Blok boundaries,
-     preventing host-page outline/border-radius overrides. */
+  /* Paint Blok's own ring on :focus-visible inside Blok boundaries. The UA
+     default is not reliably blue, and host pages may override it. */
   [data-blok-interface] :focus-visible,
   [data-blok-popover] :focus-visible {
-    outline: revert;
-    outline-offset: revert;
+    outline: 2px solid var(--blok-focus-ring);
+    outline-offset: 1px;
     border-radius: revert;
   }
 

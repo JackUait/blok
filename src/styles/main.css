@@ -182,7 +182,7 @@
   border-radius: var(--blok-radius-control);
 }
 @utility blok-settings-button--active {
-  @apply text-active-icon;
+  @apply bg-icon-active-bg text-icon-active-text;
 }
 @utility blok-settings-button--focused {
   @apply shadow-button-focused bg-item-focus-bg;

@@ -552,6 +552,8 @@ export class Flipper {
     if (this.skipNextTabFocus) {
       this.skipNextTabFocus = false;
       this.focusCurrentTab();
+      // The cursor stays put, but the user has started navigating.
+      this.flipCallback();
 
       return;
     }

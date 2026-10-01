@@ -1913,6 +1913,24 @@ describe('PopoverDesktop', () => {
     });
   });
 
+  describe('keyboard navigation stamp', () => {
+    it('stamps the popover only after a keyboard flip and clears it on hide', () => {
+      const popover = createPopover();
+
+      popover.show();
+
+      expect(popover.getElement()).not.toHaveAttribute(DATA_ATTR.keyboardNavigated);
+
+      getMockFlipper().triggerFlip();
+
+      expect(popover.getElement()).toHaveAttribute(DATA_ATTR.keyboardNavigated);
+
+      popover.hide();
+
+      expect(popover.getElement()).not.toHaveAttribute(DATA_ATTR.keyboardNavigated);
+    });
+  });
+
   describe('item activation', () => {
     it('refreshes active state of sibling items after an item is activated', () => {
       /**

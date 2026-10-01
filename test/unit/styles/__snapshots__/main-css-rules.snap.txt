@@ -47,8 +47,8 @@
   animation: blok-inline-toolbar-in 140ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
-[data-blok-popover-item][data-blok-focused='true'] {
-  outline: 2px solid var(--blok-text-secondary);
+:root:not([data-blok-modality="pointer"]) [data-blok-keyboard-navigated] [data-blok-popover-item][data-blok-focused='true'] {
+  outline: 2px solid var(--blok-focus-ring);
   outline-offset: -2px;
 }
 
@@ -175,7 +175,6 @@
   --blok-darkroom-btn-hover-bg: rgba(255, 255, 255, 0.08);
   --blok-darkroom-done-bg: #fff;
   --blok-darkroom-done-ink: #000;
-  --blok-darkroom-ring: rgba(255, 255, 255, 0.9);
   --blok-darkroom-dim: rgba(7, 7, 8, 0.72);
   --blok-darkroom-dim-off: rgba(7, 7, 8, 0);
   --blok-darkroom-grid-line: rgba(255, 255, 255, 0.35);
@@ -278,7 +277,7 @@
 }
 
 .blok-darkroom__btn:focus-visible, .blok-darkroom__chip:focus-visible, .blok-darkroom__stage:focus-visible {
-  outline: 2px solid var(--blok-darkroom-ring);
+  outline: 2px solid var(--blok-focus-ring);
   outline-offset: 2px;
 }
 
@@ -848,8 +847,8 @@
 }
 
 [@layer base] [data-blok-interface] :focus-visible, [data-blok-popover] :focus-visible {
-  outline: revert;
-  outline-offset: revert;
+  outline: 2px solid var(--blok-focus-ring);
+  outline-offset: 1px;
   border-radius: revert;
 }
 
@@ -943,8 +942,9 @@
   --blok-inline-toolbar-shadow: 0 20px 24px rgba(25, 25, 25, 0.05), 0 5px 8px rgba(25, 25, 25, 0.027), 0 0 0 1px rgba(42, 28, 0, 0.07);
   --blok-popover-border-icon: rgb(201 201 204 / 48%);
   --blok-popover-border-icon-disabled: #eff0f1;
-  --blok-item-focus-bg: rgba(35, 131, 226, 0.14);
-  --blok-item-focus-shadow: rgba(35, 131, 226, 0.14);
+  --blok-item-focus-bg: rgba(55, 53, 47, 0.08);
+  --blok-item-focus-shadow: rgba(55, 53, 47, 0.08);
+  --blok-focus-ring: #2383e2;
   --blok-item-hover-bg: rgba(55, 53, 47, 0.08);
   --blok-icon-bg: rgba(0, 0, 0, 0.04);
   --blok-item-confirm-bg: #c93636;
@@ -975,7 +975,7 @@
   --blok-database-card-shadow: rgba(25, 25, 25, 0.027) 0 4px 12px 0, rgba(25, 25, 25, 0.02) 0 1px 2px 0, rgba(42, 28, 0, 0.07) 0 0 0 1px;
   --blok-database-card-shadow-hover: rgba(25, 25, 25, 0.06) 0 4px 12px 0, rgba(25, 25, 25, 0.04) 0 1px 2px 0, rgba(42, 28, 0, 0.1) 0 0 0 1px;
   --blok-database-card-border: rgba(0, 0, 0, 0.06);
-  --blok-database-card-border-active: rgba(35, 131, 226, 0.57);
+  --blok-database-card-border-active: rgba(55, 53, 47, 0.35);
   --blok-database-card-placeholder: rgba(55, 53, 47, 0.4);
   --blok-database-card-colored-overlay: var(--blok-database-card-bg);
   --blok-database-card-colored-overlay-hover: var(--blok-database-card-bg-hover);
@@ -1218,7 +1218,7 @@
   --blok-video-scrim-strong: rgba(0, 0, 0, 0.6);
   --blok-video-scrim-mid: rgba(0, 0, 0, 0.2);
   --blok-video-shadow-hover: 0 8px 24px -8px rgba(0, 0, 0, 0.18);
-  --blok-video-focus-ring: color-mix(in srgb, var(--blok-video-accent) 30%, transparent);
+  --blok-video-focus-ring: var(--blok-focus-ring);
   --blok-find-match-bg: rgba(255, 212, 0, 0.32);
   --blok-find-match-active-bg: rgba(255, 138, 0, 0.5);
   --blok-find-lens-ring: rgba(255, 128, 0, 0.72);
@@ -1257,8 +1257,9 @@
   --blok-inline-toolbar-shadow: 0 20px 24px rgba(0, 0, 0, 0.35), 0 5px 8px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1);
   --blok-popover-border-icon: #37352f;
   --blok-popover-border-icon-disabled: #2f2d29;
-  --blok-item-focus-bg: rgba(35, 131, 226, 0.2);
-  --blok-item-focus-shadow: rgba(35, 131, 226, 0.2);
+  --blok-item-focus-bg: rgba(255, 255, 255, 0.055);
+  --blok-item-focus-shadow: rgba(255, 255, 255, 0.055);
+  --blok-focus-ring: #4c9fff;
   --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-icon-bg: rgba(255, 255, 255, 0.07);
   --blok-item-confirm-bg: #3d1f1f;
@@ -1288,7 +1289,7 @@
   --blok-database-card-shadow: rgba(0, 0, 0, 0.4) 0 4px 12px 0, rgba(0, 0, 0, 0.3) 0 1px 2px 0, rgba(255, 255, 255, 0.06) 0 0 0 1px;
   --blok-database-card-shadow-hover: rgba(0, 0, 0, 0.5) 0 4px 12px 0, rgba(0, 0, 0, 0.4) 0 1px 2px 0, rgba(255, 255, 255, 0.09) 0 0 0 1px;
   --blok-database-card-border: rgba(255, 255, 255, 0.06);
-  --blok-database-card-border-active: rgba(35, 131, 226, 0.7);
+  --blok-database-card-border-active: rgba(255, 255, 255, 0.35);
   --blok-database-card-placeholder: rgba(255, 255, 255, 0.3);
   --blok-database-card-colored-overlay: rgba(255, 255, 255, 0.06);
   --blok-database-card-colored-overlay-hover: rgba(255, 255, 255, 0.11);
@@ -1417,8 +1418,9 @@
   --blok-inline-toolbar-shadow: 0 20px 24px rgba(0, 0, 0, 0.35), 0 5px 8px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1);
   --blok-popover-border-icon: #37352f;
   --blok-popover-border-icon-disabled: #2f2d29;
-  --blok-item-focus-bg: rgba(35, 131, 226, 0.2);
-  --blok-item-focus-shadow: rgba(35, 131, 226, 0.2);
+  --blok-item-focus-bg: rgba(255, 255, 255, 0.055);
+  --blok-item-focus-shadow: rgba(255, 255, 255, 0.055);
+  --blok-focus-ring: #4c9fff;
   --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
   --blok-icon-bg: rgba(255, 255, 255, 0.07);
   --blok-item-confirm-bg: #3d1f1f;
@@ -1448,7 +1450,7 @@
   --blok-database-card-shadow: rgba(0, 0, 0, 0.4) 0 4px 12px 0, rgba(0, 0, 0, 0.3) 0 1px 2px 0, rgba(255, 255, 255, 0.06) 0 0 0 1px;
   --blok-database-card-shadow-hover: rgba(0, 0, 0, 0.5) 0 4px 12px 0, rgba(0, 0, 0, 0.4) 0 1px 2px 0, rgba(255, 255, 255, 0.09) 0 0 0 1px;
   --blok-database-card-border: rgba(255, 255, 255, 0.06);
-  --blok-database-card-border-active: rgba(35, 131, 226, 0.7);
+  --blok-database-card-border-active: rgba(255, 255, 255, 0.35);
   --blok-database-card-placeholder: rgba(255, 255, 255, 0.3);
   --blok-database-card-colored-overlay: rgba(255, 255, 255, 0.06);
   --blok-database-card-colored-overlay-hover: rgba(255, 255, 255, 0.11);
@@ -1602,7 +1604,7 @@
 }
 
 [data-blok-interface] [data-list-style="checklist"] input[type="checkbox"]:focus-visible {
-  outline: 2px solid var(--blok-active-icon);
+  outline: 2px solid var(--blok-focus-ring);
   outline-offset: 2px;
 }
 
@@ -1672,7 +1674,7 @@
 
 }
 
-[@utility blok-settings-button--active] @apply text-active-icon {
+[@utility blok-settings-button--active] @apply bg-icon-active-bg text-icon-active-text {
 
 }
 
@@ -2158,7 +2160,7 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-emoji-picker] button:focus-visible {
-  outline: 2px solid var(--blok-text-secondary);
+  outline: 2px solid var(--blok-focus-ring);
   outline-offset: -2px;
 }
 
@@ -3664,8 +3666,8 @@ span[data-blok-slash-search] {
 .blok-media-empty__card:focus-visible {
   outline: none;
   outline-offset: 0;
-  border-color: var(--blok-color-accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 35%, transparent);
+  border-color: var(--blok-focus-ring);
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 
 .blok-media-empty__card.is-dragover {
@@ -3717,7 +3719,7 @@ span[data-blok-slash-search] {
 
 .blok-media-empty__tab:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 35%, transparent);
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 
 .blok-media-empty__tab[aria-selected="true"], .blok-media-empty__tab[aria-current="true"] {
@@ -4238,7 +4240,7 @@ span[data-blok-slash-search] {
 
 .blok-media-empty__choose:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 40%, transparent);
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 
 .blok-media-empty__hint {
@@ -4477,7 +4479,7 @@ span[data-blok-slash-search] {
 
 .blok-media-empty__embed-submit:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 45%, transparent);
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 
 .blok-media-empty__embed-submit-label {
@@ -4691,7 +4693,7 @@ span[data-blok-slash-search] {
 
 .blok-media-empty__submit:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 40%, transparent);
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 
 .blok-media-empty__badge {
@@ -4997,7 +4999,7 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-tool="image"] .blok-image-alt-pill:focus-visible {
-  outline: 2px solid var(--blok-border-strong);
+  outline: 2px solid var(--blok-focus-ring);
   outline-offset: 2px;
 }
 
@@ -5455,7 +5457,7 @@ span[data-blok-slash-search] {
 .blok-image-uploading__cancel:focus-visible {
   outline: none;
   border-radius: var(--blok-radius-inner, var(--blok-radius-control));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 45%, transparent);
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 
 .blok-image-uploading__panel {
@@ -5661,7 +5663,7 @@ span[data-blok-slash-search] {
 
 .blok-image-error__btn:focus-visible, .blok-image-error__dismiss:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 40%, transparent);
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 
 .blok-image-error[data-variant="broken"] {
@@ -6215,7 +6217,7 @@ span[data-blok-slash-search] {
 
 [data-blok-tool="video"] .blok-video-retry:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 40%, transparent);
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 
 [data-blok-tool="video"] .blok-video-controls {
@@ -7840,7 +7842,7 @@ span[data-blok-slash-search] {
 
 [data-blok-tool="audio"] .blok-audio-retry:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 40%, transparent);
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 
 [data-blok-tool="audio"]:not([data-state="rendered"]) .blok-audio-caption-row {
@@ -8119,7 +8121,7 @@ span[data-blok-slash-search] {
 
 .blok-embed-empty__submit:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 45%, transparent);
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 
 .blok-embed-empty__submit-label {
@@ -11768,7 +11770,7 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-find-bar] button:focus-visible {
-  outline: 2px solid var(--blok-text-secondary);
+  outline: 2px solid var(--blok-focus-ring);
   outline-offset: -2px;
 }
 
@@ -11994,7 +11996,6 @@ textarea[data-blok-field] {
   --blok-toast-hover: rgb(255 255 255 / 0.09);
   --blok-toast-primary-hover: #fff;
   --blok-toast-primary-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.18), 0 1px 2px rgb(0 0 0 / 0.3);
-  --blok-toast-focus: rgb(255 255 255 / 0.55);
   --blok-toast-spinner-track: rgb(24 24 27 / 0.2);
   --blok-toast-spinner-track-light: rgb(255 255 255 / 0.2);
   --blok-toast-count-pad: 0 5px;
@@ -12178,7 +12179,7 @@ textarea[data-blok-field] {
 }
 
 [data-blok-toast='card'] [data-blok-toast-part='action']:focus-visible {
-  outline: 2px solid var(--blok-toast-focus);
+  outline: 2px solid var(--blok-focus-ring);
   outline-offset: 2px;
 }
 

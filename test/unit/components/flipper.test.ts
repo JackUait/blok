@@ -137,6 +137,26 @@ describe('Flipper', () => {
     flipper.deactivate();
   });
 
+  it('reports a skipped first Tab as navigation, keeping the cursor in place', () => {
+    const items = createItems();
+    const flipper = new Flipper({
+      focusedItemClass: focusedClass,
+      items,
+    });
+    const onFlipSpy = vi.fn();
+
+    flipper.onFlip(onFlipSpy);
+    flipper.activate();
+    flipper.focusItem(0, { skipNextTab: true });
+
+    flipper.handleExternalKeydown(createKeyboardEvent('Tab'));
+
+    expect(onFlipSpy).toHaveBeenCalledTimes(1);
+    expect(items[0]).toHaveAttribute('data-blok-focused', 'true');
+
+    flipper.deactivate();
+  });
+
   it('ignores keydown events whose default action was already prevented', () => {
     const items = createItems();
     const flipper = new Flipper({

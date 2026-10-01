@@ -176,7 +176,7 @@
 }
 [data-blok-tool="image"] .blok-image-alt-pill:active { transform: scale(0.94); }
 [data-blok-tool="image"] .blok-image-alt-pill:focus-visible {
-  outline: 2px solid var(--blok-border-strong);
+  outline: 2px solid var(--blok-focus-ring);
   outline-offset: 2px;
 }
 [data-blok-tool="image"] .blok-image-inner:hover .blok-image-alt-pill,
@@ -682,7 +682,7 @@
 .blok-image-uploading__cancel:focus-visible {
   outline: none;
   border-radius: var(--blok-radius-inner, var(--blok-radius-control));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 45%, transparent);
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 
 .blok-image-uploading__panel {
@@ -838,7 +838,7 @@
 .blok-image-error__btn:focus-visible,
 .blok-image-error__dismiss:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 40%, transparent);
+  box-shadow: 0 0 0 2px var(--blok-focus-ring);
 }
 /* Broken: a frame in the picture's own shape. index.ts sets its width (%) and
    aspect-ratio from the saved image; without saved dimensions it keeps the

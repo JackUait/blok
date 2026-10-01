@@ -378,6 +378,26 @@ describe('Toolbar — public surface', () => {
     });
   });
 
+  describe('isDockedPhysicallyRight', () => {
+    const dock = (toolbarPosition: 'left' | 'right', direction: 'ltr' | 'rtl'): boolean => {
+      const h = createHarness({ config: { toolbarPosition } });
+
+      h.editorWrapper.style.direction = direction;
+
+      return h.toolbar.isDockedPhysicallyRight;
+    };
+
+    it('docks left by default in LTR and right with toolbarPosition right', () => {
+      expect(dock('left', 'ltr')).toBe(false);
+      expect(dock('right', 'ltr')).toBe(true);
+    });
+
+    it('mirrors both sides in RTL', () => {
+      expect(dock('left', 'rtl')).toBe(true);
+      expect(dock('right', 'rtl')).toBe(false);
+    });
+  });
+
   describe('setPosition()', () => {
     it('writes the wrapper attribute when the side changes', () => {
       const h = createHarness({ config: { toolbarPosition: 'left' } });

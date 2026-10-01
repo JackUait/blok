@@ -304,12 +304,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
          */
         placeLeftOfAnchor: options?.placeLeftOfAnchor ?? (anchorRect === undefined),
         /**
-         * ...and which side of the toggler that is. With the block controls in
-         * the inline-end gutter (`config.toolbarPosition: 'right'`) the block
-         * content lies to the toggler's LEFT, so the menu mirrors — otherwise
-         * it would open straight over the block it belongs to.
+         * ...and which side of the toggler that is: away from the content.
+         * Controls on the physical right (`toolbarPosition: 'right'` in LTR,
+         * the default in RTL) have the content on their LEFT, so the menu
+         * mirrors — otherwise it would open straight over its own block.
          */
-        asideSide: this.Blok.Toolbar.isPositionedRight ? 'right' as const : 'left' as const,
+        asideSide: this.Blok.Toolbar.isDockedPhysicallyRight ? 'right' as const : 'left' as const,
         /**
          * The menu hugs the six-dots handle and yields only to the actual
          * screen edge: a small aesthetic gap. A larger margin visibly

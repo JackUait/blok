@@ -747,8 +747,7 @@ test.describe('ui module', () => {
         async ({ holder, blokData }) => {
           const blokConfig: Record<string, unknown> = {
             holder: holder,
-            // Enable RTL mode
-            rtl: true,
+            i18n: { direction: 'rtl' },
           };
 
           if (blokData) {
@@ -765,6 +764,8 @@ test.describe('ui module', () => {
           blokData: data,
         }
       );
+      // Guard against a config that silently stays LTR.
+      await expect(page.locator(BLOK_INTERFACE_SELECTOR)).toHaveAttribute('data-blok-rtl', 'true');
     };
 
     /**
@@ -842,6 +843,11 @@ test.describe('ui module', () => {
       const newBlockId = await getToolbarBlockId(page);
 
       expect(newBlockId).toBe('block-rtl-1');
+
+      // The controls live in that same right-hand (inline-start) gutter.
+      const actionsBox = await getRequiredBoundingBox(page.locator('[data-blok-toolbar-actions]'));
+
+      expect(actionsBox.x).toBeGreaterThanOrEqual(positions.contentRight - 1);
     });
 
     test('does not trigger hover when cursor is beyond the RTL extended zone boundary', async ({ page }) => {

@@ -113,11 +113,11 @@ describe('DropTargetDetector', () => {
     });
   });
 
-  describe('findBlockInLeftDropZone', () => {
+  describe('findBlockInGutterDropZone', () => {
     it('should return null when cursor is to the right of content', () => {
       mockUI.contentRect = { left: 100, right: 750 };
 
-      const result = detector.findBlockInLeftDropZone(150, 50);
+      const result = detector.findBlockInGutterDropZone(150, 50);
 
       expect(result).toBeNull();
     });
@@ -125,7 +125,7 @@ describe('DropTargetDetector', () => {
     it('should return null when cursor is too far left', () => {
       mockUI.contentRect = { left: 100, right: 750 };
 
-      const result = detector.findBlockInLeftDropZone(40, 50); // 60px from edge, more than 50px zone
+      const result = detector.findBlockInGutterDropZone(40, 50); // 60px from edge, more than 50px zone
 
       expect(result).toBeNull();
     });
@@ -149,7 +149,7 @@ describe('DropTargetDetector', () => {
       mockBlockManager.blocks = [block1, block2];
       mockUI.contentRect = { left: 100, right: 750 };
 
-      const result = detector.findBlockInLeftDropZone(70, 75);
+      const result = detector.findBlockInGutterDropZone(70, 75);
 
       expect(result).toBe(block1);
     });
@@ -186,7 +186,7 @@ describe('DropTargetDetector', () => {
       mockUI.contentRect = { left: 100, right: 750 };
 
       // Cursor at block1's Y position, but block1 is a source block
-      const result = detector.findBlockInLeftDropZone(70, 75);
+      const result = detector.findBlockInGutterDropZone(70, 75);
 
       expect(result).toBeNull();
     });
@@ -210,9 +210,32 @@ describe('DropTargetDetector', () => {
       mockUI.contentRect = { left: 100, right: 750 };
 
       // Cursor at Y position with no block
-      const result = detector.findBlockInLeftDropZone(70, 150);
+      const result = detector.findBlockInGutterDropZone(70, 150);
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('drop zone follows the block controls to the right gutter', () => {
+    const holderRect = (top: number, bottom: number): DOMRect => ({
+      top, bottom, left: 100, right: 500, width: 400, height: bottom - top, x: 100, y: top, toJSON: () => ({}),
+    });
+
+    it('finds the block in the right-hand gutter when the controls dock right', () => {
+      const block = createMockBlock('block-1');
+
+      vi.spyOn(block.holder, 'getBoundingClientRect').mockReturnValue(holderRect(50, 100));
+      mockBlockManager.blocks = [block];
+
+      const rightDocked = new DropTargetDetector(
+        { contentRect: { left: 100, right: 500 } },
+        mockBlockManager,
+        { controlsOnRight: () => true }
+      );
+
+      expect(rightDocked.findBlockInGutterDropZone(530, 75)).toBe(block);
+      expect(rightDocked.findBlockInGutterDropZone(70, 75)).toBeNull();
+      expect(rightDocked.findBlockInGutterDropZone(560, 75)).toBeNull();
     });
   });
 

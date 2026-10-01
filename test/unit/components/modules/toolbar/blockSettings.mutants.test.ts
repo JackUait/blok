@@ -244,7 +244,7 @@ type BlokMock = {
   };
   CrossBlockSelection: { isCrossBlockSelectionStarted: boolean };
   DragManager?: { duplicateBlocksInPlace: Mock<(block: Block) => Promise<void>> };
-  Toolbar: { close: Mock<() => void>; isPositionedRight: boolean };
+  Toolbar: { close: Mock<() => void>; isDockedPhysicallyRight: boolean };
   Caret: {
     positions: { START: string; END: string; DEFAULT: string };
     setToBlock: Mock<(block: Block, position: string, offset?: number) => void>;
@@ -284,7 +284,7 @@ const createBlokMock = (config: BlokConfig): BlokMock => ({
   },
   CrossBlockSelection: { isCrossBlockSelectionStarted: false },
   DragManager: { duplicateBlocksInPlace: vi.fn(async () => undefined) },
-  Toolbar: { close: vi.fn(), isPositionedRight: false },
+  Toolbar: { close: vi.fn(), isDockedPhysicallyRight: false },
   Caret: {
     positions: { START: 'start', END: 'end', DEFAULT: 'default' },
     setToBlock: vi.fn(),
@@ -595,11 +595,11 @@ describe('BlockSettings — mutation coverage', () => {
       });
     });
 
-    it('mirrors the menu side when the block controls sit in the inline-end gutter', async () => {
+    it('mirrors the menu side when the block controls sit on the physical right', async () => {
       const block = createBlockStub();
 
       blok.BlockManager.currentBlock = asBlock(block);
-      blok.Toolbar.isPositionedRight = true;
+      blok.Toolbar.isDockedPhysicallyRight = true;
 
       await settings.open(asBlock(block), document.createElement('button'));
 

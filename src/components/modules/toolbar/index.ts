@@ -12,6 +12,7 @@ import { BlockSettingsClosed } from '../../events/BlockSettingsClosed';
 import { BlockSettingsOpened } from '../../events/BlockSettingsOpened';
 import { Toolbox, ToolboxEvent } from '../../ui/toolbox';
 import { getUserOS, isMobileScreen, log } from '../../utils';
+import { getElementDirection } from '../../utils/direction';
 import { RovingTabindexController } from '../../utils/roving-tabindex';
 import { hide } from '../../utils/tooltip';
 
@@ -515,6 +516,17 @@ export class Toolbar extends Module<ToolbarNodes> {
   }
 
   /**
+   * True while the controls sit on the PHYSICAL right of the content column:
+   * the inline-end gutter in LTR, the inline-start one in RTL. Read from the
+   * toolbar's own computed direction, which follows the editor wrapper.
+   */
+  public get isDockedPhysicallyRight(): boolean {
+    const rtl = getElementDirection(this.nodes.wrapper ?? this.Blok.UI.nodes.wrapper) === 'rtl';
+
+    return this.isPositionedRight !== rtl;
+  }
+
+  /**
    * Runtime setter for `config.toolbarPosition` (reactive contract).
    *
    * Mirrors `setHidden`: the wrapper's `DATA_ATTR.toolbarPosition` attribute is
@@ -798,9 +810,9 @@ export class Toolbar extends Module<ToolbarNodes> {
     const visualOffset = computeVisualContentOffset(targetBlockHolder, contentRect, wrapperRect);
     const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
     const contentWidth = resolveVisualContentWidth(targetBlockHolder, contentRect, wrapperRect);
-    const effectiveOffset = this.isPositionedRight
-      ? this.clampOffsetForEndDock(visualOffset, contentWidth, actionsWidth, wrapperRect)
-      : this.clampOffsetForStartDock(visualOffset, actionsWidth, wrapperRect);
+    const effectiveOffset = this.isDockedPhysicallyRight
+      ? this.clampOffsetForRightDock(visualOffset, contentWidth, actionsWidth, wrapperRect)
+      : this.clampOffsetForLeftDock(visualOffset, actionsWidth, wrapperRect);
 
     this.nodes.content.style.marginLeft = `${effectiveOffset}px`;
     this.nodes.content.style.maxWidth = `${contentWidth}px`;
@@ -808,7 +820,7 @@ export class Toolbar extends Module<ToolbarNodes> {
 
   /**
    * Floor for the toolbar content's left margin while the actions bar is docked
-   * at `right:100%` — it grows leftwards, so the margin must leave at least its
+   * to the content's physical left — it grows leftwards, so the margin must leave at least its
    * own width of room or the drag handle lands off-screen and stops receiving
    * pointer events. Space to the left of the editor wrapper counts as slack, so
    * a nested (already indented) block is not pushed into its own text.
@@ -816,7 +828,7 @@ export class Toolbar extends Module<ToolbarNodes> {
    * @param actionsWidth - measured width of the actions bar
    * @param wrapperRect - bounding rect of the toolbar wrapper (co-located with the holder)
    */
-  private clampOffsetForStartDock(
+  private clampOffsetForLeftDock(
     visualOffset: number,
     actionsWidth: number,
     wrapperRect: DOMRect | undefined
@@ -827,8 +839,9 @@ export class Toolbar extends Module<ToolbarNodes> {
   }
 
   /**
-   * Mirror of {@link clampOffsetForStartDock} for `toolbarPosition: 'right'`,
-   * where the bar is docked at `left:100%` and grows rightwards: the ceiling is
+   * Mirror of {@link clampOffsetForLeftDock} for a bar docked to the content's
+   * physical right (`toolbarPosition: 'right'` in LTR, the default in RTL), which
+   * grows rightwards: the ceiling is
    * on the offset, not the floor, and the slack is whatever lies between the
    * editor wrapper's right edge and the viewport's.
    * @param visualOffset - the alignment offset the block's content column asks for
@@ -836,7 +849,7 @@ export class Toolbar extends Module<ToolbarNodes> {
    * @param actionsWidth - measured width of the actions bar
    * @param wrapperRect - bounding rect of the toolbar wrapper (co-located with the holder)
    */
-  private clampOffsetForEndDock(
+  private clampOffsetForRightDock(
     visualOffset: number,
     contentWidth: number,
     actionsWidth: number,

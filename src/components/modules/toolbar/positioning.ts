@@ -1,5 +1,6 @@
 import type { Block } from '../../block';
 
+import { getElementDirection } from '../../utils/direction';
 import { POSITION_TOLERANCE } from './constants';
 import type { PositioningOptions, ToolbarNodes } from './types';
 
@@ -213,8 +214,8 @@ export class ToolbarPositioner {
    * @param targetBlock - The block to get the content offset from
    * @param dockedToEnd - true while the actions bar is docked past the content
    *   column's far edge (`toolbarPosition: 'right'`). Nested content is indented
-   *   from the START edge only — a list item's right edge is the block's right
-   *   edge — so the nudge that closes the gap on the left would open one there.
+   *   from the START edge only — a list item's end edge is the block's end
+   *   edge — so the nudge that closes the gap at the start would open one there.
    */
   public applyContentOffset(nodes: ToolbarNodes, targetBlock: Block, dockedToEnd = false): void {
     const { actions } = nodes;
@@ -232,6 +233,9 @@ export class ToolbarPositioner {
     const contentOffset = targetBlock.getContentOffset(this.hoveredTarget);
     const hasValidOffset = contentOffset && contentOffset.left > 0;
 
-    actions.style.transform = hasValidOffset ? `translateX(${contentOffset.left}px)` : '';
+    // The offset is measured from the inline-start edge, so RTL nudges leftwards.
+    const sign = getElementDirection(actions) === 'rtl' ? -1 : 1;
+
+    actions.style.transform = hasValidOffset ? `translateX(${sign * contentOffset.left}px)` : '';
   }
 }

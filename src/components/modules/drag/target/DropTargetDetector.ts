@@ -47,6 +47,11 @@ export interface DropTargetDetectorOptions {
    * `tools.update` takes effect on the next drag.
    */
   isColumnsEnabled?: () => boolean;
+  /**
+   * Whether the block controls sit on the content's physical right (RTL, or
+   * `toolbarPosition: 'right'` in LTR). The gutter drop zone follows them.
+   */
+  controlsOnRight?: () => boolean;
 }
 
 /** A block paired with its measured holder rect. */
@@ -104,11 +109,13 @@ export class DropTargetDetector {
   private sourceBlocks: Block[] = [];
   private dragOriginX: number | null = null;
   private isColumnsEnabled: () => boolean;
+  private controlsOnRight: () => boolean;
 
   constructor(ui: UIAdapter, blockManager: BlockManagerAdapter, options: DropTargetDetectorOptions = {}) {
     this.ui = ui;
     this.blockManager = blockManager;
     this.isColumnsEnabled = options.isColumnsEnabled ?? ((): boolean => true);
+    this.controlsOnRight = options.controlsOnRight ?? ((): boolean => false);
   }
 
   /**
@@ -127,7 +134,7 @@ export class DropTargetDetector {
   }
 
   /**
-   * Finds the drop target block from an element or by checking the left drop zone
+   * Finds the drop target block from an element or by checking the gutter drop zone
    * @param elementUnderCursor - Element directly under the cursor
    * @param clientX - Cursor X position
    * @param clientY - Cursor Y position
@@ -164,11 +171,11 @@ export class DropTargetDetector {
       return { block, holder: directHolder };
     }
 
-    // Fallback: check if cursor is in the left drop zone
-    const leftZoneBlock = this.findBlockInLeftDropZone(clientX, clientY);
+    // Fallback: check if cursor is in the gutter drop zone
+    const gutterZoneBlock = this.findBlockInGutterDropZone(clientX, clientY);
 
-    if (leftZoneBlock) {
-      return { block: leftZoneBlock, holder: leftZoneBlock.holder };
+    if (gutterZoneBlock) {
+      return { block: gutterZoneBlock, holder: gutterZoneBlock.holder };
     }
 
     // Fallback: the cursor is in the vertical margin BETWEEN two holders, which
@@ -203,18 +210,22 @@ export class DropTargetDetector {
   }
 
   /**
-   * Finds a block by vertical position when cursor is in the left drop zone
+   * Finds a block by vertical position when the cursor is in the gutter drop
+   * zone — the gutter the block controls sit in.
    * Used as a fallback when elementFromPoint doesn't find a block directly
    * @param clientX - Cursor X position
    * @param clientY - Cursor Y position
-   * @returns Block at the vertical position, or null if not in left zone or no block found
+   * @returns Block at the vertical position, or null if not in the zone or no block found
    */
-  findBlockInLeftDropZone(clientX: number, clientY: number): Block | null {
-    const contentRect = this.ui.contentRect;
-    const leftEdge = contentRect.left;
+  findBlockInGutterDropZone(clientX: number, clientY: number): Block | null {
+    const { left, right } = this.ui.contentRect;
+    const onRight = this.controlsOnRight();
 
-    // Check if cursor is within left drop zone (between leftEdge - leftDropZone and leftEdge)
-    const distanceFromEdge = leftEdge - clientX;
+    if (onRight && right === undefined) {
+      return null;
+    }
+
+    const distanceFromEdge = onRight ? clientX - (right ?? 0) : left - clientX;
 
     if (distanceFromEdge < 0 || distanceFromEdge > DRAG_CONFIG.leftDropZone) {
       return null;

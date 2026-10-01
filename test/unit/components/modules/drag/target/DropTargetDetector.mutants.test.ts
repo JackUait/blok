@@ -285,37 +285,37 @@ describe('DropTargetDetector — geometry and guards', () => {
     it('accepts a cursor exactly on the content edge', () => {
       const { a, b, c } = stack();
 
-      expect(detectorFor([a, b, c]).findBlockInLeftDropZone(120, 230)).toBe(a);
+      expect(detectorFor([a, b, c]).findBlockInGutterDropZone(120, 230)).toBe(a);
     });
 
     it('accepts a cursor exactly one drop-zone width out', () => {
       const { a, b, c } = stack();
 
-      expect(detectorFor([a, b, c]).findBlockInLeftDropZone(70, 230)).toBe(a);
+      expect(detectorFor([a, b, c]).findBlockInGutterDropZone(70, 230)).toBe(a);
     });
 
     it('rejects a cursor one pixel beyond the drop zone', () => {
       const { a, b, c } = stack();
 
-      expect(detectorFor([a, b, c]).findBlockInLeftDropZone(69, 230)).toBeNull();
+      expect(detectorFor([a, b, c]).findBlockInGutterDropZone(69, 230)).toBeNull();
     });
 
     it('rejects a cursor right of the content edge', () => {
       const { a, b, c } = stack();
 
-      expect(detectorFor([a, b, c]).findBlockInLeftDropZone(130, 230)).toBeNull();
+      expect(detectorFor([a, b, c]).findBlockInGutterDropZone(130, 230)).toBeNull();
     });
 
     it('counts a cursor on the first block top edge', () => {
       const { a, b, c } = stack();
 
-      expect(detectorFor([a, b, c]).findBlockInLeftDropZone(100, 200)).toBe(a);
+      expect(detectorFor([a, b, c]).findBlockInGutterDropZone(100, 200)).toBe(a);
     });
 
     it('counts a cursor on the last block bottom edge', () => {
       const { a, b, c } = stack();
 
-      expect(detectorFor([a, b, c]).findBlockInLeftDropZone(100, 436)).toBe(c);
+      expect(detectorFor([a, b, c]).findBlockInGutterDropZone(100, 436)).toBe(c);
     });
   });
 

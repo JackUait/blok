@@ -103,6 +103,7 @@ export class DragController extends Module {
 
           return blockTools.has('column_list') && blockTools.has('column');
         },
+        controlsOnRight: () => this.Blok.Toolbar.isDockedPhysicallyRight,
       }
     );
 

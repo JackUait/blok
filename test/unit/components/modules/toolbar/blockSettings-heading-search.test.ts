@@ -63,7 +63,7 @@ const createSettings = (data: Partial<HeaderData> = {}, locale: 'en' | 'ru' = 'e
     CrossBlockSelection: { isCrossBlockSelectionStarted: false },
     Tools: { blockTools: new Map([['header', tool]]) },
     API: { methods: api },
-    Toolbar: { close: closeToolbar, isPositionedRight: false },
+    Toolbar: { close: closeToolbar, isDockedPhysicallyRight: false },
     Caret: { setToBlock: setCaret, positions: { DEFAULT: 'default', END: 'end' } },
     I18n: i18n,
   } as unknown as BlokModules;

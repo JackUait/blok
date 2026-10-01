@@ -461,37 +461,25 @@
 }
 
 /*
- * ...and the bar itself follows. Physical properties, because the default is a
- * physical `right:100%` Tailwind utility and unlayered physical overrides beat
- * it without the lightningcss logical-lowering trap noted above.
- *
- * LTR only: an RTL editor already docks this bar to the physical left, which IS
- * the mirrored side once the gutter above moves. Mobile is excluded because
- * below 650px the buttons are free-standing overlay pills, not a gutter bar.
+ * ...and the bar itself follows, to the inline-end side of the content column.
+ * Mobile is excluded because below 650px the buttons are free-standing overlay
+ * pills, not a gutter bar.
  */
 @media (min-width: 651px) {
-  [data-blok-toolbar-position="right"]:not([data-blok-rtl="true"]) [data-blok-toolbar-actions] {
-    right: auto;
-    left: 100%;
-    padding-right: 0;
-    padding-left: 5px;
+  [data-blok-toolbar-position="right"] [data-blok-toolbar-actions] {
+    inset-inline-end: auto;
+    inset-inline-start: 100%;
+    padding-inline-end: 0;
+    padding-inline-start: 5px;
   }
 }
 
 /*
  * The gutter exists solely to house the edit-mode +/⠿ controls, so it
- * collapses automatically in read-only mode. This redeclares the gutter
- * tokens (rather than overriding padding-inline directly) because
- * lightningcss lowers the base rule's `padding-inline-start` into a
- * `:lang()`-guarded physical-property rule in the production build,
- * pushing it to (0,2,0) — a `:where(...) [data-blok-redactor] { padding-
- * inline: 0 }` override at (0,1,0) loses that fight in production (verified
- * live against the built bundle: the read-only editor kept its gutter).
- * Custom-property declarations are immune to logical-property lowering and
- * layer flattening, so redeclaring the tokens here always wins by normal
- * CSS inheritance: this wrapper sits closer to the redactor than any host
- * container that set the tokens further out, and inheritance resolves from
- * the nearest ancestor regardless of selector specificity.
+ * collapses automatically in hidden-controls mode. It redeclares the gutter
+ * tokens rather than overriding padding-inline, so it wins by inheritance:
+ * this wrapper sits closer to the redactor than any host container that set
+ * the tokens further out, whatever that host selector's specificity.
  * A host that wants a gutter to persist declares the token on the wrapper
  * itself at >= (0,1,1) (one level closer than this rule's (0,0,0)), e.g.
  * `.host [data-blok-interface] { --blok-editor-gutter-start: 56px }`.
@@ -513,7 +501,7 @@
  * (the wrapper is stamped with data-blok-toolbar-hidden in UI.make): the
  * gutter exists solely to house the toolbar's +/⠿ controls, so a toolbar-less
  * editor reserves no space for them. Token redeclaration for the same
- * production-cascade reasons as the read-only rule above; a host can opt the
+ * inheritance reason as the rule above; a host can opt the
  * gutter back in with any (0,1,1)+ declaration on the wrapper.
  */
 :where([data-blok-toolbar-hidden]) {

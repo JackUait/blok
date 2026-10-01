@@ -892,7 +892,8 @@
   --blok-icon-active-bg: rgba(255, 255, 255, 0.14);
   --blok-text-primary: var(--blok-darkroom-ink);
   --blok-icon-active-text: var(--blok-text-primary);
-  --blok-markup-hit: 36px;
+  --blok-markup-size: 36px;
+  --blok-markup-hit: var(--blok-markup-size);
   --blok-markup-pad: 4px;
   --blok-markup-gap: 2px;
   --blok-markup-row: calc(var(--blok-markup-hit) + 2 * var(--blok-markup-pad));
@@ -910,6 +911,13 @@
   --blok-markup-swatch: transparent;
   --blok-markup-swatch-ink: var(--blok-darkroom-done-ink);
   --blok-markup-dot: 8px;
+  --blok-markup-grow: 0px;
+  --blok-markup-drop: 0px;
+}
+
+.blok-darkroom__markup[data-context-empty] {
+  --blok-markup-grow: 6px;
+  --blok-markup-drop: calc((var(--blok-markup-row) + var(--blok-space-3)) / 2);
 }
 
 .blok-darkroom__markup [hidden] {
@@ -930,14 +938,19 @@
 }
 
 .blok-darkroom__markup-rail {
+  --blok-markup-hit: calc(var(--blok-markup-size) + var(--blok-markup-grow));
+  --blok-markup-row: calc(var(--blok-markup-hit) + 2 * var(--blok-markup-pad));
   position: relative;
   flex: none;
   height: var(--blok-markup-row);
+  margin-block: calc(-1 * var(--blok-markup-grow) / 2);
+  translate: 0 var(--blok-markup-drop);
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
+  transition: height 420ms var(--blok-markup-spring), margin 420ms var(--blok-markup-spring), translate 420ms var(--blok-markup-spring);
 }
 
 .blok-darkroom__markup-context {
@@ -1024,13 +1037,14 @@
   font-family: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: color 140ms ease, background-color 140ms ease, transform 220ms var(--blok-markup-spring);
+  transition: color 140ms ease, background-color 140ms ease, transform 220ms var(--blok-markup-spring), width 420ms var(--blok-markup-spring), height 420ms var(--blok-markup-spring);
 }
 
 .blok-darkroom__markup-tool svg, .blok-darkroom__markup-btn svg {
-  width: 20px;
-  height: 20px;
+  width: calc(var(--blok-markup-hit) * 5 / 9);
+  height: calc(var(--blok-markup-hit) * 5 / 9);
   pointer-events: none;
+  transition: width 420ms var(--blok-markup-spring), height 420ms var(--blok-markup-spring);
 }
 
 .blok-darkroom__markup-tool:hover, .blok-darkroom__markup-size:hover, .blok-darkroom__markup-style:hover, .blok-darkroom__markup-btn:hover {
@@ -1059,7 +1073,7 @@
   background: var(--blok-icon-active-bg);
   box-shadow: inset 0 0.5px 0 var(--blok-markup-puck-sheen), 0 2px 6px var(--blok-markup-puck-shadow);
   pointer-events: none;
-  transition: inset-inline-start 420ms var(--blok-markup-spring);
+  transition: inset-inline-start 420ms var(--blok-markup-spring), width 420ms var(--blok-markup-spring), height 420ms var(--blok-markup-spring);
 }
 
 .blok-darkroom__markup-swatch::before {
@@ -1158,7 +1172,7 @@
   outline-offset: 1px;
 }
 
-[@media (prefers-reduced-motion: reduce)] .blok-darkroom__markup-puck, .blok-darkroom__markup-ctl, .blok-darkroom__markup-tool, .blok-darkroom__markup-swatch, .blok-darkroom__markup-size, .blok-darkroom__markup-style, .blok-darkroom__markup-btn, .blok-darkroom__markup-swatch::before, .blok-darkroom__markup-swatch svg, .blok-darkroom__markup-dot, .blok-darkroom__markup-aa {
+[@media (prefers-reduced-motion: reduce)] .blok-darkroom__markup-rail, .blok-darkroom__markup-tool svg, .blok-darkroom__markup-btn svg, .blok-darkroom__markup-puck, .blok-darkroom__markup-ctl, .blok-darkroom__markup-tool, .blok-darkroom__markup-swatch, .blok-darkroom__markup-size, .blok-darkroom__markup-style, .blok-darkroom__markup-btn, .blok-darkroom__markup-swatch::before, .blok-darkroom__markup-swatch svg, .blok-darkroom__markup-dot, .blok-darkroom__markup-aa {
   transition: none;
 }
 

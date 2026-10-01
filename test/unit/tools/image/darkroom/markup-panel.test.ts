@@ -477,6 +477,16 @@ describe('markup panel', () => {
       expect(shown(styles())).toBe(c.style);
       expect(shown(q('markup-fill'))).toBe(c.fill);
       expect(shown(q('markup-delete'))).toBe(c.del);
+      expect(panel.el.hasAttribute('data-context-empty')).toBe(!c.color && !c.style && !c.fill && !c.del);
+    });
+
+    it('flags an empty context row as the user picks, so the rail can take its room', () => {
+      make({ tool: 'pen' });
+      expect(panel.el.hasAttribute('data-context-empty')).toBe(false);
+      tool('select').click();
+      expect(panel.el.hasAttribute('data-context-empty')).toBe(true);
+      panel.setSelection('rect');
+      expect(panel.el.hasAttribute('data-context-empty')).toBe(false);
     });
 
     it('follows the tool as the user picks', () => {

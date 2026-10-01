@@ -96,6 +96,20 @@ describe('markup-panel.css', () => {
     expect(body(css, '.blok-darkroom__markup-context')).toMatch(/margin-block:\s*calc\(-1 \* var\(--blok-markup-bleed\)\)/);
   });
 
+  it('grows the rail and drops it to the middle of both rows when the context row is empty', () => {
+    const empty = body(css, '.blok-darkroom__markup[data-context-empty]');
+    const rail = body(css, '.blok-darkroom__markup-rail');
+
+    // Declared on the panel, so the drop reads the base row, not the grown one.
+    expect(empty).toMatch(/--blok-markup-grow:\s*[1-9]\d*px/);
+    expect(empty).toMatch(/--blok-markup-drop:\s*calc\(\(var\(--blok-markup-row\) \+ var\(--blok-space-3\)\) \/ 2\)/);
+    expect(rail).toMatch(/--blok-markup-hit:\s*calc\(var\(--blok-markup-size\) \+ var\(--blok-markup-grow\)\)/);
+    expect(rail).toMatch(/translate:\s*0 var\(--blok-markup-drop\)/);
+    // The grown rail must not change the panel height, or the dock jumps.
+    expect(rail).toMatch(/margin-block:\s*calc\(-1 \* var\(--blok-markup-grow\) \/ 2\)/);
+    expect(body(css, '.blok-darkroom__markup')).toMatch(/--blok-markup-hit:\s*var\(--blok-markup-size\)/);
+  });
+
   it('scrolls both rows sideways instead of wrapping', () => {
     expect(body(css, '.blok-darkroom__markup-rail')).toMatch(/overflow-x:\s*auto/);
     expect(body(css, '.blok-darkroom__markup-context')).toMatch(/overflow-x:\s*auto/);
@@ -103,6 +117,7 @@ describe('markup-panel.css', () => {
 
   it('stills the puck and the context fades under reduced motion', () => {
     expect(body(reducedMotion, '.blok-darkroom__markup-puck')).toMatch(/transition:\s*none/);
+    expect(body(reducedMotion, '.blok-darkroom__markup-rail')).toMatch(/transition:\s*none/);
     expect(body(reducedMotion, '.blok-darkroom__markup-ctl')).toMatch(/transition:\s*none/);
   });
 });

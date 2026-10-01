@@ -335,6 +335,7 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
     setShown(fillBtn, showFill);
     setShown(deleteBtn, showDelete);
     setShown(extra, showStyles || showFill || showDelete);
+    root.toggleAttribute('data-context-empty', !showPaint && !showStyles && !showFill && !showDelete);
     rovings.forEach((r) => r.refresh());
   };
 

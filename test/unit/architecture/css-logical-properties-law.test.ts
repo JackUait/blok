@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { createRequire } from 'node:module';
 import { describe, it, expect } from 'vitest';
-import { transform } from 'lightningcss';
 import viteConfig from '../../../vite.config.mjs';
 
 /**
@@ -10,6 +10,12 @@ import viteConfig from '../../../vite.config.mjs';
  * by `:lang(ar|he|…)`, which key on the HOST page's `lang` — not on Blok's
  * direction. An RTL editor on a `lang="en"` page then lays out as LTR.
  */
+// The copy Vite minifies with, resolved through Vite (not a declared dependency).
+interface LightningCss {
+  transform: (options: { filename: string; code: Buffer; minify: boolean; targets: Record<string, number> }) => { code: Buffer };
+}
+const { transform } = createRequire(createRequire(import.meta.url).resolve('vite'))('lightningcss') as LightningCss;
+
 const LOGICAL_SAMPLE = '.a{padding-inline-start:4px;margin-inline-end:2px;inset-inline-start:0;border-inline-start:1px solid red;text-align:start}';
 
 const toLightningTargets = (targets: string[]): Record<string, number> => {

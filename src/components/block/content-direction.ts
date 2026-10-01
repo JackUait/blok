@@ -10,6 +10,12 @@ const EDITABLE_FIELD_SELECTOR = '[contenteditable]:not([contenteditable="false"]
 const READ_ONLY_FIELD_SELECTOR = '[contenteditable]';
 
 /**
+ * Text hidden from assistive tech is chrome (a list marker "a.", a readout),
+ * not content, in either mode.
+ */
+const HIDDEN_SELECTOR = '[aria-hidden="true"]';
+
+/**
  * First strong letter in one field. Skips nested blocks, `dir` islands (a
  * pinned or isolated run) and non-editable widgets inside the field.
  * @param field - text field to walk
@@ -25,7 +31,8 @@ const fieldDirection = (field: HTMLElement, holder: HTMLElement): 'ltr' | 'rtl' 
       const element = node as Element;
       const skip = (element !== holder && element.hasAttribute(DATA_ATTR.element))
         || element.hasAttribute('dir')
-        || element.getAttribute('contenteditable') === 'false';
+        || element.getAttribute('contenteditable') === 'false'
+        || element.matches(HIDDEN_SELECTOR);
 
       return skip ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_SKIP;
     },
@@ -57,8 +64,13 @@ const ownTextDirection = (toolRoot: HTMLElement, holder: HTMLElement, readOnly: 
 
   for (const field of fields) {
     const pinned = field.closest('[dir]');
+    const hidden = field.closest(HIDDEN_SELECTOR);
 
-    if (field.closest(`[${DATA_ATTR.element}]`) !== holder || (pinned !== null && toolRoot.contains(pinned))) {
+    if (
+      field.closest(`[${DATA_ATTR.element}]`) !== holder
+      || (pinned !== null && toolRoot.contains(pinned))
+      || (hidden !== null && toolRoot.contains(hidden))
+    ) {
       continue;
     }
 

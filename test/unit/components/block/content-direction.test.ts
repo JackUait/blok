@@ -293,6 +293,30 @@ describe('per-block content direction', () => {
       expect(content('ar').getAttribute('dir')).toBe('rtl');
     });
 
+    // The "a." / "i." marker is chrome hidden from assistive tech, not text.
+    it.each([1, 2])('reads a read-only Arabic list item at depth %i from its text, not its marker', async (depth) => {
+      await boot([
+        { id: 'root', type: 'list', data: { text: 'واحد', style: 'ordered', depth: 0 } },
+        { id: 'deep', type: 'list', data: { text: 'مرحبا', style: 'ordered', depth } },
+      ], { readOnly: true });
+
+      expect(content('deep').getAttribute('dir')).toBe('rtl');
+    });
+
+    it('keeps an Arabic list item RTL across a read-only toggle', async () => {
+      const instance = await boot([
+        { id: 'root', type: 'list', data: { text: 'واحد', style: 'ordered', depth: 0 } },
+        { id: 'deep', type: 'list', data: { text: 'مرحبا', style: 'ordered', depth: 1 } },
+      ]);
+
+      expect(content('deep').getAttribute('dir')).toBe('rtl');
+
+      await instance.readOnly.toggle(true);
+      await frames(2);
+
+      expect(content('deep').getAttribute('dir')).toBe('rtl');
+    });
+
     it('reads a header from its own text', async () => {
       await boot([{ id: 'h', type: 'header', data: { text: 'عنوان', level: 2 } }]);
 

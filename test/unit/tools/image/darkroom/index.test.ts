@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ImageCrop, ImageMarkup } from '../../../../../types/tools/image';
 import { openDarkroom, type DarkroomResult, type OpenDarkroomOptions } from '../../../../../src/tools/image/darkroom';
 import { cameraToRect, fitFrame } from '../../../../../src/tools/image/darkroom/camera';
+import { resolveFilters } from '../../../../../src/tools/image/adjust';
 import { coverCrop } from '../../../../../src/tools/image/geometry';
 import { fakeFrameClock } from '../../../helpers/fake-frame-clock';
 
@@ -873,6 +874,7 @@ describe('openDarkroom geometry, adjust and filters', () => {
   const IDENTITY_RESULT = {
     geometry: { rotation: 0, flipX: false, straighten: 0 },
     filter: 'none',
+    strength: 100,
     adjust: { brightness: 0, contrast: 0, saturation: 0 },
     markup: [],
   };
@@ -1283,7 +1285,7 @@ describe('openDarkroom geometry, adjust and filters', () => {
       button('done').click();
 
       expect(result(onApply)).toEqual({
-        crop: initial, geometry: initialGeometry, filter: 'warm', adjust: { brightness: 5, contrast: 0, saturation: -10 }, markup: [],
+        crop: initial, geometry: initialGeometry, filter: 'warm', strength: 100, adjust: { brightness: 5, contrast: 0, saturation: -10 }, markup: [],
       });
     });
   });
@@ -1345,6 +1347,56 @@ describe('openDarkroom geometry, adjust and filters', () => {
 
       expect(photoImg().style.filter).toBe('grayscale(1) brightness(1.1)');
     });
+
+    it('the strength slider scales the look live, saves, and is one undo step', () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      const { onApply, advance } = open();
+
+      q<HTMLButtonElement>('[role="tab"][data-mode="filters"]').click();
+      q<HTMLButtonElement>('[data-preset="mono"]').click();
+      for (let i = 0; i < 10; i++) key(q('[role="slider"][aria-label="Strength"]'), { key: 'ArrowLeft', shiftKey: true });
+      vi.advanceTimersByTime(1000);
+
+      expect(photoImg().style.filter).toBe('grayscale(0.5)');
+      undo();
+      advance(3000);
+      expect(photoImg().style.filter).toBe('grayscale(1)');
+      key(dialog(), { key: 'z', metaKey: true, shiftKey: true });
+      advance(3000);
+      expect(q('[role="slider"][aria-label="Strength"]').getAttribute('aria-valuenow')).toBe('50');
+      button('done').click();
+      expect(result(onApply)).toMatchObject({ filter: 'mono', strength: 50 });
+    });
+
+    it('opens with the saved strength applied', () => {
+      open({ initialFilter: 'mono', initialStrength: 30 });
+
+      expect(photoImg().style.filter).toBe('grayscale(0.3)');
+    });
+
+    it('offers the host filters and renders their look', () => {
+      const { onApply } = open({ filters: resolveFilters([{ name: 'brand', title: 'Brand', css: 'sepia(0.6)' }, 'noir']) });
+
+      q<HTMLButtonElement>('[role="tab"][data-mode="filters"]').click();
+      expect([...document.querySelectorAll('[data-preset]')].map((c) => c.getAttribute('data-preset'))).toEqual(['none', 'brand', 'noir']);
+      q<HTMLButtonElement>('[data-preset="brand"]').click();
+      expect(photoImg().style.filter).toBe('sepia(0.6)');
+      button('done').click();
+      expect(result(onApply).filter).toBe('brand');
+    });
+
+    it('has no Filters tab when the host offers no filters', () => {
+      open({ filters: resolveFilters([]) });
+
+      expect(document.querySelector('[role="tab"][data-mode="filters"]')).toBeNull();
+      expect([...document.querySelectorAll('[role="tab"]')].map((t) => t.textContent)).toEqual(['Crop', 'Adjust', 'Markup']);
+    });
+
+    it('keeps the Filters tab when the image uses a look the empty host list leaves out', () => {
+      open({ filters: resolveFilters([]), initialFilter: 'noir' });
+
+      expect(document.querySelector('[role="tab"][data-mode="filters"]')).not.toBeNull();
+    });
   });
 
   it('Reset clears crop, geometry, filter and adjustments in one undo step', () => {
@@ -1353,6 +1405,7 @@ describe('openDarkroom geometry, adjust and filters', () => {
       initial,
       initialGeometry: { rotation: 90 as const, flipX: true, straighten: 10 },
       initialFilter: 'noir' as const,
+      initialStrength: 40,
       initialAdjust: { brightness: 20, contrast: 0, saturation: 0 },
     };
     const { onApply, advance } = open(opts);
@@ -1551,6 +1604,7 @@ describe('openDarkroom local resets', () => {
         crop: null,
         geometry: { rotation: 0, flipX: false, straighten: 0 },
         filter: 'noir',
+        strength: 100,
         adjust: edited.initialAdjust,
         markup: [],
       });
@@ -1565,7 +1619,7 @@ describe('openDarkroom local resets', () => {
       advance(3000);
       button('done').click();
 
-      expect(result(onApply)).toEqual({ crop: edited.initial, geometry: edited.initialGeometry, filter: 'noir', adjust: edited.initialAdjust, markup: [] });
+      expect(result(onApply)).toEqual({ crop: edited.initial, geometry: edited.initialGeometry, filter: 'noir', strength: 100, adjust: edited.initialAdjust, markup: [] });
     });
 
     it('shows after a rotate alone', () => {
@@ -1649,7 +1703,7 @@ describe('openDarkroom local resets', () => {
       advance(3000);
       button('done').click();
 
-      expect(result(onApply)).toEqual({ crop: edited.initial, geometry: edited.initialGeometry, filter: 'noir', adjust: { brightness: 0, contrast: 0, saturation: 0 }, markup: [] });
+      expect(result(onApply)).toEqual({ crop: edited.initial, geometry: edited.initialGeometry, filter: 'noir', strength: 100, adjust: { brightness: 0, contrast: 0, saturation: 0 }, markup: [] });
     });
 
     it('a focused Reset adjustments that disappears hands focus to the adjust dial', () => {
@@ -1679,7 +1733,18 @@ describe('openDarkroom local resets', () => {
       advance(3000);
       button('done').click();
 
-      expect(result(onApply)).toEqual({ crop: edited.initial, geometry: edited.initialGeometry, filter: 'none', adjust: edited.initialAdjust, markup: [] });
+      expect(result(onApply)).toEqual({ crop: edited.initial, geometry: edited.initialGeometry, filter: 'none', strength: 100, adjust: edited.initialAdjust, markup: [] });
+    });
+
+    it('brings the strength back to full', () => {
+      const { onApply } = open({ ...edited, initialStrength: 40 });
+
+      tab('filters');
+      named('Reset filter').click();
+
+      expect(q('[role="slider"][aria-label="Strength"]').getAttribute('aria-valuenow')).toBe('100');
+      button('done').click();
+      expect(result(onApply).strength).toBe(100);
     });
 
     it('a focused reset that disappears hands focus to the selected preset', () => {

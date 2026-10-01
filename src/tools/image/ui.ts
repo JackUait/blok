@@ -27,7 +27,7 @@ import {
   IconMinus,
 } from '../../components/icons';
 import { applyRubberBand } from './spring';
-import { readAdjust } from './adjust';
+import { readAdjust, type FilterSet } from './adjust';
 import { isIdentity, orientedSize, readGeometry } from './geometry';
 import { applyImageFilter, buildFrame, naturalOf, pickEdits, type ImageEdits } from './image-view';
 import { readMarkup } from './markup/model';
@@ -88,7 +88,8 @@ function wrapInPicture(img: HTMLImageElement, variants: MediaVariant[]): HTMLEle
 }
 
 export function renderImage(
-  data: Partial<ImageData> & { url: string }
+  data: Partial<ImageData> & { url: string },
+  filters?: FilterSet
 ): HTMLElement {
   const alignment = data.alignment ?? 'center';
   const figure = document.createElement('figure');
@@ -110,11 +111,11 @@ export function renderImage(
   const better = (readVariants(data.variants, data.url) ?? []).filter((variant) => variant.url !== data.url);
   const content: HTMLElement = better.length === 0 ? img : wrapInPicture(img, better);
   const geometry = readGeometry(data);
-  const { filter, adjust } = readAdjust(data);
+  const { filter, strength, adjust } = readAdjust(data);
 
   const markup = readMarkup(data.markup);
 
-  applyImageFilter(img, filter, adjust);
+  applyImageFilter(img, filter, adjust, strength, filters);
 
   if (!isIdentity(geometry) || markup.length > 0) {
     const frame = buildFrame(img, { natural: naturalOf(data), geometry, crop: data.crop, content, markup });
@@ -296,6 +297,8 @@ export interface LightboxOptions extends ImageEdits {
    */
   direction?: 'ltr' | 'rtl';
   i18n?: I18nInstance;
+  /** How host filters render. Default: built-ins only. */
+  filters?: FilterSet;
   /**
    * Other images on the page, enabling prev/next navigation within the lightbox.
    * The entry at `startIndex` is the image the lightbox opens on; it should
@@ -386,8 +389,8 @@ export function openLightbox(opts: LightboxOptions): () => void {
     const crop = item.crop;
     const edits = pickEdits(item);
     const geometry = readGeometry(edits);
-    const { filter, adjust } = readAdjust(edits);
-    applyImageFilter(el, filter, adjust);
+    const { filter, strength, adjust } = readAdjust(edits);
+    applyImageFilter(el, filter, adjust, strength, opts.filters);
     const markup = readMarkup(edits.markup);
     if (!isIdentity(geometry) || markup.length > 0) {
       const { w, h } = crop ?? { w: 100, h: 100 };

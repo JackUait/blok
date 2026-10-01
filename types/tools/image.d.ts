@@ -32,8 +32,30 @@ export interface ImageCrop {
 /** Clockwise quarter turn, applied after the mirror. */
 export type ImageRotation = 0 | 90 | 180 | 270;
 
-/** Named colour look, applied with CSS `filter` at render time. */
-export type ImageFilterPreset = 'none' | 'vivid' | 'dramatic' | 'warm' | 'mono' | 'noir' | 'fade' | 'sepia';
+/** Built-in colour look, applied with CSS `filter` at render time. */
+export type ImageFilterPreset =
+  | 'none'
+  | 'vivid' | 'vivid-warm' | 'vivid-cool'
+  | 'dramatic' | 'dramatic-warm' | 'dramatic-cool'
+  | 'chrome' | 'lomo'
+  | 'warm' | 'golden' | 'cool' | 'dusk'
+  | 'fade' | 'matte' | 'pastel'
+  | 'film' | 'vintage' | 'retro' | 'sepia'
+  | 'mono' | 'silvertone' | 'noir' | 'high-key';
+
+/** A host-defined colour look for the image editor's filter strip. */
+export interface ImageFilterDefinition {
+  /** Saved in `ImageData.filter`. Reusing a built-in name retunes that built-in. */
+  name: string;
+  /** Label under the thumbnail. Shown as is, not translated. */
+  title: string;
+  /**
+   * CSS filter functions, e.g. `'sepia(0.3) hue-rotate(-10deg) saturate(1.2)'`.
+   * Only `brightness`, `contrast`, `saturate`, `grayscale`, `sepia`, `invert` and
+   * `hue-rotate` are kept, so SVG copies of the photo can draw the same look.
+   */
+  css: string;
+}
 
 /** Colour adjustments. Each value is -100..100; 0 or absent leaves the image unchanged. */
 export interface ImageAdjust {
@@ -145,8 +167,13 @@ export interface ImageData extends BlockToolData {
   flipX?: boolean;
   /** Fine turn in degrees, -45..45, clockwise, after `rotation`. Omitted for 0. */
   straighten?: number;
-  /** Colour preset. Omitted for 'none'. */
-  filter?: ImageFilterPreset;
+  /**
+   * Colour look: a built-in preset or a host filter's name. Omitted for 'none'.
+   * A name the host does not know renders unfiltered and is kept on save.
+   */
+  filter?: ImageFilterPreset | (string & {});
+  /** How strongly `filter` applies, 0–100. Omitted for 100 and when there is no filter. */
+  filterStrength?: number;
   /** Colour adjustments. Omitted when every value is 0. */
   adjust?: ImageAdjust;
   /** Drawings, shapes and text on top of the image, back to front. Omitted when empty. */
@@ -297,6 +324,13 @@ export interface ImageConfig {
    * auto-retry (fail on the first error).
    */
   reloadAttempts?: number;
+  /**
+   * Looks offered in the image editor's filter strip, in order. Entries are
+   * built-in names or {@link ImageFilterDefinition}s. Default: every built-in.
+   * Original always comes first; `[]` hides the Filters tab. Built-ins left out
+   * still render on images that already use them.
+   */
+  filters?: Array<ImageFilterPreset | ImageFilterDefinition>;
 }
 
 /**

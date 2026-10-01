@@ -1,16 +1,16 @@
-import type { ImageAdjust, ImageCrop, ImageData, ImageFilterPreset, ImageMarkup } from '../../../types/tools/image';
+import type { ImageAdjust, ImageCrop, ImageData, ImageMarkup } from '../../../types/tools/image';
 import type { Size } from './darkroom/camera';
-import { cssFilter } from './adjust';
+import { cssFilter, type FilterSet } from './adjust';
 import { orientedSize, planeImageStyle, type Geometry } from './geometry';
 import { createMarkupLayer, updateMarkupLayer } from './markup/render';
 
 /** The saved fields every renderer needs beyond url and crop. */
 export type ImageEdits = Pick<
   ImageData,
-  'rotation' | 'flipX' | 'straighten' | 'filter' | 'adjust' | 'naturalWidth' | 'naturalHeight' | 'markup'
+  'rotation' | 'flipX' | 'straighten' | 'filter' | 'filterStrength' | 'adjust' | 'naturalWidth' | 'naturalHeight' | 'markup'
 >;
 
-const EDIT_KEYS = ['rotation', 'flipX', 'straighten', 'filter', 'adjust', 'naturalWidth', 'naturalHeight', 'markup'] as const;
+const EDIT_KEYS = ['rotation', 'flipX', 'straighten', 'filter', 'filterStrength', 'adjust', 'naturalWidth', 'naturalHeight', 'markup'] as const;
 
 export function pickEdits(data: ImageEdits): ImageEdits {
   const out: ImageEdits = {};
@@ -30,8 +30,14 @@ export function naturalOf(data: Pick<ImageData, 'naturalWidth' | 'naturalHeight'
   return w !== undefined && h !== undefined && w > 0 && h > 0 ? { w, h } : null;
 }
 
-export function applyImageFilter(img: HTMLImageElement, filter: ImageFilterPreset, adjust: ImageAdjust): void {
-  const css = cssFilter(filter, adjust);
+export function applyImageFilter(
+  img: HTMLImageElement,
+  filter: string,
+  adjust: ImageAdjust,
+  strength?: number,
+  filters?: FilterSet
+): void {
+  const css = cssFilter(filter, adjust, strength, filters);
 
   if (css !== '') {
     img.style.setProperty('filter', css);

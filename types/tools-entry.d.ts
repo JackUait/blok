@@ -111,7 +111,7 @@ export { SpacerData } from './tools/spacer';
 export { CalloutData, CalloutConfig } from './tools/callout';
 export { QuoteData } from './tools/quote';
 export { DatabaseData, DatabaseConfig, DatabaseAdapter, DatabaseViewConfig, DatabaseRowData } from './tools/database';
-export { ImageData, ImageConfig, ImageUploader, ImageAlignment, ImageSize, ImageFrame, ImageCrop, ImageCropShape, ImageRotation, ImageFilterPreset, ImageAdjust } from './tools/image';
+export { ImageData, ImageConfig, ImageUploader, ImageAlignment, ImageSize, ImageFrame, ImageCrop, ImageCropShape, ImageRotation, ImageFilterPreset, ImageFilterDefinition, ImageAdjust } from './tools/image';
 export { FileData, FileConfig, FileUploader, FileUploadContext, FileUploadResult } from './tools/file';
 export { AudioData, AudioConfig, AudioUploader, AudioUploadContext, AudioAlignment } from './tools/audio';
 export { VideoData, VideoConfig, VideoUploader, VideoUploadContext, VideoAlignment, VideoGlow } from './tools/video';

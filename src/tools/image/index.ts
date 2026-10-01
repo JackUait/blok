@@ -46,7 +46,7 @@ import { alignmentFraction, attachResizeHandle, edgePositionPercent, type Resize
 import { resizeFloorPx } from './resize-floor';
 import { widthForAspectChange } from './crop-math';
 import { readGeometry, geometryFields, orientedSize } from './geometry';
-import { readAdjust, adjustFields } from './adjust';
+import { readAdjust, adjustFields, resolveFilters, type FilterSet } from './adjust';
 import {
   applyAutoFull,
   openLightbox,
@@ -87,6 +87,7 @@ export class ImageTool implements BlockTool {
   private readonly api: API;
   private readonly block: BlockAPI;
   private readonly config: ImageConfig;
+  private readonly filters: FilterSet;
   private readonly uploader: Uploader;
   private data: ImageData;
   private readOnly: boolean;
@@ -119,6 +120,7 @@ export class ImageTool implements BlockTool {
     this.api = options.api;
     this.block = options.block;
     this.config = options.config ?? {};
+    this.filters = resolveFilters(this.config.filters);
     this.readOnly = options.readOnly;
     const { markup, ...rest } = options.data ?? { url: '' };
 
@@ -173,8 +175,8 @@ export class ImageTool implements BlockTool {
         out.crop = isShaped ? { x, y, w, h, shape } : { x, y, w, h };
       }
     }
-    const { filter, adjust } = readAdjust(this.data);
-    Object.assign(out, geometryFields(readGeometry(this.data)), adjustFields(filter, adjust), markupFields(readMarkup(this.data.markup)));
+    const { filter, strength, adjust } = readAdjust(this.data);
+    Object.assign(out, geometryFields(readGeometry(this.data)), adjustFields(filter, adjust, strength), markupFields(readMarkup(this.data.markup)));
     return out;
   }
 
@@ -818,6 +820,7 @@ export class ImageTool implements BlockTool {
       ...pickEdits(this.data),
       origin,
       i18n: this.api.i18n,
+      filters: this.filters,
       navigation: this.collectNavigation(),
     });
   }
@@ -863,7 +866,9 @@ export class ImageTool implements BlockTool {
       initial: this.data.crop,
       initialGeometry: readGeometry(this.data),
       initialFilter: readAdjust(this.data).filter,
+      initialStrength: readAdjust(this.data).strength,
       initialAdjust: readAdjust(this.data).adjust,
+      filters: this.filters,
       initialMarkup: readMarkup(this.data.markup),
       onApply: (result) => this.applyCrop(result),
       onCancel: () => this.cancelCrop(),
@@ -880,7 +885,7 @@ export class ImageTool implements BlockTool {
       ?? null;
   }
 
-  private applyCrop({ crop: rect, geometry, filter, adjust, markup }: DarkroomResult): void {
+  private applyCrop({ crop: rect, geometry, filter, strength, adjust, markup }: DarkroomResult): void {
     this.cropDetach = null;
     const prevCrop = this.data.crop;
     const prevGeometry = readGeometry(this.data);
@@ -906,9 +911,10 @@ export class ImageTool implements BlockTool {
     delete this.data.flipX;
     delete this.data.straighten;
     delete this.data.filter;
+    delete this.data.filterStrength;
     delete this.data.adjust;
     delete this.data.markup;
-    Object.assign(this.data, geometryFields(geometry), adjustFields(filter, adjust), markupFields(readMarkup(markup)));
+    Object.assign(this.data, geometryFields(geometry), adjustFields(filter, adjust, strength), markupFields(readMarkup(markup)));
     this.block.dispatchChange();
     this.renderState();
   }
@@ -1114,7 +1120,7 @@ export class ImageTool implements BlockTool {
     if (!this.root) return;
     // The card goes first so the hidden figure below it takes no room.
     if (this.mending) this.root.appendChild(this.buildErrorCard(true, true));
-    const figure = renderImage(this.data);
+    const figure = renderImage(this.data, this.filters);
     const natural = naturalOf(this.data);
     if (natural) {
       const oriented = orientedSize(natural, readGeometry(this.data));
@@ -1127,7 +1133,7 @@ export class ImageTool implements BlockTool {
     const originEl = figure.querySelector<HTMLElement>('.blok-image-crop') ?? imgEl ?? undefined;
     if (imgEl) {
       imgEl.style.cursor = 'zoom-in';
-      imgEl.addEventListener('click', () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, ...pickEdits(this.data), origin: originEl, i18n: this.api.i18n, navigation: this.collectNavigation() }));
+      imgEl.addEventListener('click', () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, ...pickEdits(this.data), origin: originEl, i18n: this.api.i18n, filters: this.filters, navigation: this.collectNavigation() }));
       this.reloadAttempts = 0;
       imgEl.addEventListener('error', () => this.handleImgLoadFailure(imgEl, figure));
       imgEl.addEventListener('load', () => {
@@ -1163,7 +1169,7 @@ export class ImageTool implements BlockTool {
         onReplace: () => this.transitionToEmpty(),
         onDelete: () => this.deleteBlock(),
         onDownload: () => this.download(),
-        onFullscreen: () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, ...pickEdits(this.data), origin: originEl, i18n: this.api.i18n, navigation: this.collectNavigation() }),
+        onFullscreen: () => openLightbox({ url: this.data.url, alt: this.data.alt, fileName: this.data.fileName, crop: this.data.crop, ...pickEdits(this.data), origin: originEl, i18n: this.api.i18n, filters: this.filters, navigation: this.collectNavigation() }),
         onCopyUrl: () => this.copyUrl(),
         onToggleCaption: () => this.toggleCaption(),
         onCrop: () => this.enterCrop(),

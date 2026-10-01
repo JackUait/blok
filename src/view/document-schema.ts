@@ -425,9 +425,10 @@ export const blokDocumentSchema = {
         straighten: { type: 'number', minimum: -45, maximum: 45, description: 'Clockwise degrees, after the turn. Omitted for 0.' },
         filter: {
           type: 'string',
-          enum: ['none', 'vivid', 'dramatic', 'warm', 'mono', 'noir', 'fade', 'sepia'],
-          description: 'Colour preset. Omitted for "none".',
+          minLength: 1,
+          description: 'Colour look: a built-in preset (vivid, noir, sepia, …) or a host filter name from the image tool\'s `filters` config. Omitted for "none".',
         },
+        filterStrength: { type: 'number', minimum: 0, maximum: 100, description: 'How strongly `filter` applies. Omitted for 100 and when there is no filter.' },
         adjust: {
           type: 'object',
           description: 'Colour adjustments, each -100..100. Zero entries are omitted, and so is an empty object.',

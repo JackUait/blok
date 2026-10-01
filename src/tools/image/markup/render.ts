@@ -154,6 +154,7 @@ const inPlane = (value: string, side: number): number => {
 
 const filterStep = (step: SvgFilterStep): SVGElement => {
   if (step.kind === 'saturate') return svgEl('feColorMatrix', { type: 'saturate', values: String(step.amount) });
+  if (step.kind === 'hue') return svgEl('feColorMatrix', { type: 'hueRotate', values: String(step.degrees) });
   if (step.kind === 'matrix') return svgEl('feColorMatrix', { type: 'matrix', values: step.values.join(' ') });
   const transfer = svgEl('feComponentTransfer');
 

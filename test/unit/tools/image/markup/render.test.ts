@@ -239,6 +239,18 @@ describe('marks', () => {
       expect(filter?.querySelector('feFuncR')?.getAttribute('slope')).toBe('1.2');
     });
 
+    it('turns a hue-rotate look into an SVG hueRotate matrix', async () => {
+      const { svg, photo } = planeWith([lens()]);
+
+      photo.style.setProperty('filter', 'hue-rotate(-15deg)');
+      await vi.waitFor(() => {
+        const m = svg.querySelector('[data-markup-id="mg"] filter feColorMatrix');
+
+        expect(m?.getAttribute('type')).toBe('hueRotate');
+        expect(m?.getAttribute('values')).toBe('-15');
+      });
+    });
+
     it('enlarges twice about the lens centre', () => {
       const { svg } = planeWith([lens()]);
 

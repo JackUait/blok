@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ImageMarkup } from '../../../../../types/tools/image';
+import { resolveFilters } from '../../../../../src/tools/image/adjust';
 import { CHROME_BACK_DELAY_MS, cameraPlane, createDissolve, createVeil, fitCameraPlane, flyOut } from '../../../../../src/tools/image/darkroom/motion';
 import { fakeFrameClock } from '../../../helpers/fake-frame-clock';
 
@@ -158,6 +159,19 @@ describe('darkroom motion', () => {
     expect(plane?.style.transform).toBe('translate(0px, 0px) scale(1)');
     expect(img?.style.transform).toBe('rotate(90deg) scaleX(-1)');
     expect(img?.style.filter).toBe('grayscale(1) brightness(1.1)');
+  });
+
+  it('the fly-out clone lands with the look at its strength, from the host filter set', () => {
+    const { clock } = fakeFrameClock();
+
+    flyOut({
+      url: 'x.png', natural: { w: 800, h: 400 }, rect: { x: 0, y: 0, w: 100, h: 100 },
+      from: { x: 0, y: 0, w: 400, h: 200 }, fromRound: 0, target: null, targetRound: 0,
+      clock, reducedMotion: () => false,
+      filter: 'brand', strength: 50, filters: resolveFilters([{ name: 'brand', title: 'Brand', css: 'sepia(0.8)' }]),
+    });
+
+    expect(document.querySelector<HTMLImageElement>('[data-role="darkroom-flight"] img')?.style.filter).toBe('sepia(0.4)');
   });
 
   it('the fly-out clone carries the marks over the photo, in the oriented box', () => {

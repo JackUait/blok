@@ -191,7 +191,7 @@ const savedData: Record<string, Record<string, unknown>> = {
     alt: 'Alt', fileName: 'a.png', size: 'md', frame: 'border', rounded: true,
     captionVisible: true, naturalWidth: 800, naturalHeight: 600,
     crop: { x: 10, y: 10, w: 50, h: 50, shape: 'circle' },
-    rotation: 90, flipX: true, straighten: 5, filter: 'warm',
+    rotation: 90, flipX: true, straighten: 5, filter: 'warm', filterStrength: 60,
     adjust: { brightness: 10, contrast: 20, saturation: 30 },
     variants: [{ url: 'https://example.com/a.avif', mimeType: 'image/avif' }, { url: 'https://example.com/a.png', mimeType: 'image/png' }],
     markup: [
@@ -343,7 +343,10 @@ describe('blokDocumentSchema', () => {
 
       expect(props.rotation?.enum).toEqual([0, 90, 180, 270]);
       expect(props.straighten).toMatchObject({ minimum: -45, maximum: 45 });
-      expect(props.filter?.enum).toEqual(['none', 'vivid', 'dramatic', 'warm', 'mono', 'noir', 'fade', 'sepia']);
+      // A host may define its own filters, so any non-empty name is valid.
+      expect(props.filter).toMatchObject({ type: 'string', minLength: 1 });
+      expect(props.filter?.enum).toBeUndefined();
+      expect(props.filterStrength).toMatchObject({ minimum: 0, maximum: 100 });
       expect(props.adjust?.additionalProperties).toBe(false);
       expect(Object.keys(props.adjust?.properties ?? {}).sort()).toEqual(['brightness', 'contrast', 'saturation']);
       Object.values(props.adjust?.properties ?? {}).forEach(p => expect(p).toMatchObject({ minimum: -100, maximum: 100 }));

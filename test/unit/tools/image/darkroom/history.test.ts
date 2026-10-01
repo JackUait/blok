@@ -6,6 +6,7 @@ const snap = (x: number, ratioKey = 'free', over: Partial<Snapshot> = {}): Snaps
   ratioKey,
   geometry: { rotation: 0, flipX: false, straighten: 0 },
   filter: 'none',
+  strength: 100,
   adjust: { brightness: 0, contrast: 0, saturation: 0 },
   markup: [],
   ...over,
@@ -65,6 +66,7 @@ describe('darkroom history', () => {
     ['a flip', { geometry: { rotation: 0, flipX: true, straighten: 0 } }],
     ['a straighten', { geometry: { rotation: 0, flipX: false, straighten: 4.5 } }],
     ['a filter preset', { filter: 'mono' }],
+    ['a filter strength', { strength: 40 }],
     ['an adjustment', { adjust: { brightness: 0, contrast: 12, saturation: 0 } }],
   ])('%s alone is a new entry', (_name, over) => {
     const h = createHistory(snap(0));

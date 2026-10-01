@@ -2713,12 +2713,41 @@ describe('ImageTool — save() geometry and adjust', () => {
       rotation: 45,
       flipX: 'yes',
       straighten: 0,
-      filter: 'lomo',
+      filter: '',
+      filterStrength: 30,
       adjust: { brightness: 0, contrast: 0, saturation: 0 },
     };
     const tool = new ImageTool(createOptions(bad as Partial<ImageData>));
 
     expect(tool.save()).toEqual({ url: 'https://x/y.png' });
+  });
+
+  it('keeps a filter name this host does not know, and its strength', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png', filter: 'other-host-look', filterStrength: 40 }));
+
+    expect(tool.save()).toEqual({ url: 'https://x/y.png', filter: 'other-host-look', filterStrength: 40 });
+  });
+
+  it('omits full strength', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png', filter: 'noir', filterStrength: 100 }));
+
+    expect(tool.save()).toEqual({ url: 'https://x/y.png', filter: 'noir' });
+  });
+
+  it('renders a host filter at its strength from the tool config', () => {
+    const config: ImageConfig = { filters: [{ name: 'brand', title: 'Brand', css: 'sepia(0.8)' }] };
+    const root = new ImageTool(createOptions({ url: 'https://x/y.png', filter: 'brand', filterStrength: 50 }, config)).render();
+
+    expect(root.querySelector<HTMLImageElement>('[data-role="image-figure"] img')?.style.filter).toBe('sepia(0.4)');
+  });
+
+  it('shows a host filter in the lightbox too', () => {
+    const config: ImageConfig = { filters: [{ name: 'brand', title: 'Brand', css: 'sepia(0.8)' }] };
+    const root = new ImageTool(createOptions({ url: 'https://x/y.png', filter: 'brand' }, config)).render();
+
+    root.querySelector<HTMLImageElement>('img')?.click();
+    expect(document.querySelector<HTMLImageElement>('[role="dialog"] img')?.style.filter).toBe('sepia(0.8)');
+    document.querySelectorAll('[role="dialog"]').forEach((el) => el.remove());
   });
 
   it('omits every new key for an old document', () => {

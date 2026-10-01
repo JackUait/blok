@@ -72,6 +72,11 @@ describe('darkroom.css panels', () => {
     expect(body(section, '.blok-darkroom__filters')).toMatch(/overflow-x:\s*auto/);
   });
 
+  it('stacks the strength slider under the strip, and a hidden one takes no room', () => {
+    expect(body(section, '.blok-darkroom__filter-panel')).toMatch(/flex-direction:\s*column/);
+    expect(body(full, '.blok-darkroom__dial-box[hidden]')).toMatch(/display:\s*none/);
+  });
+
   it('shows a tool reset only for a changed value, keeping its cell', () => {
     const off = body(section, '.blok-darkroom__adjust-reset[data-shown="false"]');
 

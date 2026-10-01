@@ -1552,6 +1552,7 @@ const darkroomResult = (
   crop,
   geometry: { rotation: 0, flipX: false, straighten: 0 },
   filter: 'none',
+  strength: 100,
   adjust: { brightness: 0, contrast: 0, saturation: 0 },
   markup: [],
   ...over,
@@ -1717,6 +1718,7 @@ describe('ImageTool — cropping', () => {
     cropModalOptions().onApply(darkroomResult({ x: 10, y: 10, w: 50, h: 50 }, {
       geometry: { rotation: 270, flipX: true, straighten: -2.5 },
       filter: 'noir',
+      strength: 40,
       adjust: { brightness: 15, contrast: 0, saturation: -30 },
     }));
 
@@ -1727,13 +1729,27 @@ describe('ImageTool — cropping', () => {
       flipX: true,
       straighten: -2.5,
       filter: 'noir',
+      filterStrength: 40,
       adjust: { brightness: 15, saturation: -30 },
     });
   });
 
+  it('opens the darkroom on the saved strength and the host filter list', () => {
+    const tool = new ImageTool(createOptions({ url: 'u', filter: 'brand', filterStrength: 25 }, {
+      filters: [{ name: 'brand', title: 'Brand', css: 'sepia(1)' }],
+    }));
+
+    tool.render();
+    openCrop(tool);
+    const opts = cropModalOptions();
+
+    expect(opts).toMatchObject({ initialFilter: 'brand', initialStrength: 25 });
+    expect(opts.filters?.order).toEqual(['none', 'brand']);
+  });
+
   it('Done drops every edit field that went back to its default', () => {
     const tool = new ImageTool(createOptions({
-      url: 'u', rotation: 180, flipX: true, straighten: 5, filter: 'warm', adjust: { brightness: 40 },
+      url: 'u', rotation: 180, flipX: true, straighten: 5, filter: 'warm', filterStrength: 30, adjust: { brightness: 40 },
     }));
 
     tool.render();

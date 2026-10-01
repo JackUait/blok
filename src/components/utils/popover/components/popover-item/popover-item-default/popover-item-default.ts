@@ -18,7 +18,6 @@ import type {
  * Represents single popover item node
  * @todo replace multiple make() usages with constructing separate instances
  * @todo split regular popover item and popover item with confirmation to separate classes
- * @todo display icon on the right side of the item for rtl languages
  */
 export class PopoverItemDefault extends PopoverItem {
   /**
@@ -302,7 +301,7 @@ export class PopoverItemDefault extends PopoverItem {
 
       titleEl.className = params.secondaryLabel
         ? 'grow whitespace-nowrap text-[13px] font-medium leading-5'
-        : 'mr-auto whitespace-nowrap text-[13px] font-medium leading-5';
+        : 'me-auto whitespace-nowrap text-[13px] font-medium leading-5';
       titleEl.setAttribute(DATA_ATTR.popoverItemTitle, '');
       titleEl.setAttribute('data-blok-testid', 'popover-item-title');
       PopoverItemDefault.setTitleContent(titleEl, titleHost ?? title ?? '');
@@ -325,7 +324,7 @@ export class PopoverItemDefault extends PopoverItem {
     if (params.secondaryLabel) {
       const secondaryEl = document.createElement('div');
 
-      secondaryEl.className = 'ml-auto shrink-0 inline-flex items-center whitespace-nowrap pl-8 leading-none text-text-secondary';
+      secondaryEl.className = 'ms-auto shrink-0 inline-flex items-center whitespace-nowrap ps-8 leading-none text-text-secondary';
       secondaryEl.setAttribute(DATA_ATTR.popoverItemSecondaryTitle, '');
       secondaryEl.setAttribute('data-blok-testid', 'popover-item-secondary-title');
       secondaryEl.innerHTML = makeShortcutHtml(params.secondaryLabel);
@@ -349,11 +348,11 @@ export class PopoverItemDefault extends PopoverItem {
       }
     }
 
-    // Trailing icon (right-side indicator, e.g. checkmark)
+    // Trailing icon (end-side indicator, e.g. checkmark)
     if (params.trailingIcon) {
       const trailingEl = document.createElement('div');
 
-      trailingEl.className = 'ml-auto shrink-0 flex items-center justify-center [&_svg]:w-icon [&_svg]:h-icon';
+      trailingEl.className = 'ms-auto shrink-0 flex items-center justify-center [&_svg]:w-icon [&_svg]:h-icon';
       trailingEl.setAttribute('data-blok-testid', 'popover-item-trailing-icon');
       trailingEl.setAttribute('aria-hidden', 'true');
       trailingEl.innerHTML = params.trailingIcon;
@@ -427,7 +426,18 @@ export class PopoverItemDefault extends PopoverItem {
    * @param title - title text or live host element
    */
   private static setTitleContent(container: HTMLElement, title: string | HTMLElement): void {
-    container.replaceChildren(title instanceof HTMLElement ? title : document.createTextNode(title));
+    if (title instanceof HTMLElement) {
+      container.replaceChildren(title);
+
+      return;
+    }
+
+    // `<bdi>` takes its direction from the text, so a Latin name such as
+    // "C++" keeps its order inside an RTL menu while the row stays start-aligned.
+    const isolate = document.createElement('bdi');
+
+    isolate.textContent = title;
+    container.replaceChildren(isolate);
   }
 
   /**
@@ -439,7 +449,7 @@ export class PopoverItemDefault extends PopoverItem {
 
     return twMerge(
       css.item,
-      !isInline && !isNestedInline && 'pl-2 pr-3',
+      !isInline && !isNestedInline && 'ps-2 pe-3',
       isInline && cssInline.item,
       isInline && this.params.icon && cssInline.itemIconOnly,
       isInline && this.params.title && cssInline.itemWithTitle,
@@ -456,20 +466,20 @@ export class PopoverItemDefault extends PopoverItem {
       css.icon,
       isInline && 'w-auto h-auto [&_svg]:w-icon [&_svg]:h-icon mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile',
       isNestedInline && 'w-toolbox-btn h-toolbox-btn',
-      iconWithGap && 'mr-2.5',
-      iconWithGap && isInline && 'shadow-none mr-0!',
-      iconWithGap && isNestedInline && 'mr-2!'
+      iconWithGap && 'me-2.5',
+      iconWithGap && isInline && 'shadow-none me-0!',
+      iconWithGap && isNestedInline && 'me-2!'
     );
   }
 
   /**
-   * Gets the chevron class. The glyph always points right — submenus open
+   * Gets the chevron class. The glyph points to the inline end (mirrored in RTL by CSS) — submenus open
    * sideways in every context, including the inline toolbar.
    */
   private getChevronClass(): string {
     return twMerge(
       css.icon,
-      'ml-3 w-4 h-4 text-text-secondary'
+      'ms-3 w-4 h-4 text-text-secondary'
     );
   }
 

@@ -74,7 +74,7 @@ describe('PopoverItemDefault', () => {
     const secondary = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-secondary-title"]');
 
     expect(icon?.innerHTML).toBe(params.icon);
-    expect(title?.innerHTML).toBe(params.title);
+    expect(title?.textContent).toBe(params.title);
     expect(secondary?.textContent).toBe(secondaryLabel);
   });
 
@@ -258,15 +258,15 @@ describe('PopoverItemDefault', () => {
   it('uses symmetric horizontal padding for items without secondary label or chevron', () => {
     const { element } = createItem();
 
-    expect(element.className).toContain('pl-2');
-    expect(element.className).toContain('pr-3');
+    expect(element.className).toContain('ps-2');
+    expect(element.className).toContain('pe-3');
   });
 
   it('uses symmetric horizontal padding when item has secondary label', () => {
     const { element } = createItem({ secondaryLabel: '#' });
 
-    expect(element.className).toContain('pl-2');
-    expect(element.className).toContain('pr-3');
+    expect(element.className).toContain('ps-2');
+    expect(element.className).toContain('pe-3');
   });
 
   it('uses symmetric horizontal padding when item has children with visible chevron', () => {
@@ -278,8 +278,29 @@ describe('PopoverItemDefault', () => {
       },
     });
 
-    expect(element.className).toContain('pl-2');
-    expect(element.className).toContain('pr-3');
+    expect(element.className).toContain('ps-2');
+    expect(element.className).toContain('pe-3');
+  });
+
+  it('lays out every row part with logical spacing so RTL rows mirror', () => {
+    const { element } = createItem({
+      secondaryLabel: '⌘D',
+      trailingIcon: '<svg></svg>',
+      children: { items: [ { title: 'Child item', onActivate: vi.fn() } ] },
+    });
+    const physical = /(^|\s)-?(ml|mr|pl|pr)-/;
+    const parts = [element, ...Array.from(element.querySelectorAll<HTMLElement>('*'))]
+      .filter((node) => typeof node.className === 'string');
+
+    expect(parts.filter((node) => physical.test(node.className)).map((node) => node.className)).toStrictEqual([]);
+  });
+
+  it('isolates a string title so a Latin name keeps its order inside an RTL menu', () => {
+    const { element } = createItem({ title: 'C++' });
+    const title = element.querySelector(`[${DATA_ATTR.popoverItemTitle}]`);
+
+    expect(title?.firstElementChild?.tagName).toBe('BDI');
+    expect(title?.textContent).toBe('C++');
   });
 
   it('exposes toggle, title and disabled getters', () => {

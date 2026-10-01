@@ -487,15 +487,16 @@ export class UI extends Module<UINodes> {
    *
    * Direction was applied only while the wrapper was being built, so an
    * already-mounted editor could not follow a locale change from an LTR to an
-   * RTL language. Both hooks are toggled here: the `[direction:rtl]` utility
-   * that drives layout and the `data-blok-rtl` attribute that scoped CSS and
-   * the keyboard-navigation composer read.
+   * RTL language. Every hook is toggled here: the `[direction:rtl]` utility
+   * that drives layout, `dir` for assistive tech and `[dir]` selectors, and the
+   * `data-blok-rtl` attribute that scoped CSS reads.
    * @param direction - the direction to apply
    */
   public setDirection(direction: 'ltr' | 'rtl'): void {
     const isRtl = direction === 'rtl';
 
     this.nodes.wrapper.classList.toggle('[direction:rtl]', isRtl);
+    this.nodes.wrapper.setAttribute('dir', direction);
 
     if (isRtl) {
       this.nodes.wrapper.setAttribute(DATA_ATTR.rtl, 'true');
@@ -728,6 +729,7 @@ export class UI extends Module<UINodes> {
     this.nodes.wrapper.setAttribute('data-blok-testid', 'blok-editor');
     this.nodes.wrapper.setAttribute(DATA_ATTR.contentAlign, this.config.style?.contentAlign ?? 'left');
     this.nodes.wrapper.setAttribute(DATA_ATTR.toolbarPosition, this.config.toolbarPosition ?? 'left');
+    this.nodes.wrapper.setAttribute('dir', this.isRtl ? 'rtl' : 'ltr');
     if (this.isRtl) {
       this.nodes.wrapper.setAttribute(DATA_ATTR.rtl, 'true');
     }

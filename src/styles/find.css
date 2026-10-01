@@ -110,8 +110,14 @@
   transform-origin: bottom right;
 }
 
-[data-blok-find-bar]:dir(rtl) {
+/* The dock carries `dir` (syncPortalDirection). The dir pseudo-class would be lowered to
+   page-`lang` rules by the build, so select the attribute instead. */
+[data-blok-find][dir="rtl"] [data-blok-find-bar] {
   transform-origin: top left;
+}
+
+[data-blok-find][dir="rtl"][data-blok-find-placement^="bottom"] [data-blok-find-bar] {
+  transform-origin: bottom left;
 }
 
 [data-blok-find][hidden] [data-blok-find-bar] {
@@ -183,7 +189,7 @@
   mask-image: linear-gradient(to right, black calc(100% - var(--blok-space-4)), transparent);
 }
 
-[data-blok-find-field][data-blok-find-overflow]:dir(rtl) > input {
+[data-blok-find][dir="rtl"] [data-blok-find-field][data-blok-find-overflow] > input {
   mask-image: linear-gradient(to left, black calc(100% - var(--blok-space-4)), transparent);
 }
 

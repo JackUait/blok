@@ -27,6 +27,11 @@ export default defineConfig(({ mode }) => {
     build: {
       copyPublicDir: false,
       target: 'es2017',
+      // Without this, CSS inherits the es2017 target and lightningcss lowers
+      // logical properties into rules keyed on the page's `lang`, so an RTL
+      // editor on a `lang="en"` page lays out as LTR. The floor matches what the
+      // CSS already needs (`:has()`, container queries).
+      cssTarget: [ 'chrome105', 'edge105', 'firefox110', 'safari16' ],
       lib: {
         entry: {
           blok: path.resolve(__dirname, 'src', 'blok.ts'),

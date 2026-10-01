@@ -2664,6 +2664,26 @@ describe('UI module — mutants', () => {
       expect(wrapper.classList.contains('[direction:rtl]')).toBe(false);
     });
 
+    // `dir` is what assistive tech, `[dir=rtl]` selectors and a block's own
+    // inherited base direction read; the class alone only sets CSS direction.
+    it('stamps a dir attribute that follows the direction', () => {
+      const { ui, wrapper } = createMadeUI({ configOverrides: { i18n: { direction: 'rtl' } } });
+
+      expect(wrapper.getAttribute('dir')).toBe('rtl');
+
+      ui.setDirection('ltr');
+      expect(wrapper.getAttribute('dir')).toBe('ltr');
+
+      ui.setDirection('rtl');
+      expect(wrapper.getAttribute('dir')).toBe('rtl');
+    });
+
+    it('stamps dir="ltr" on an LTR editor', () => {
+      const { wrapper } = createMadeUI();
+
+      expect(wrapper.getAttribute('dir')).toBe('ltr');
+    });
+
     it('closes every toolbar at once', () => {
       const { ui, blok } = createMadeUI();
 

@@ -3,12 +3,15 @@ import { resolve } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { I18n } from '../../../types';
+import { getCaretXPosition, isCaretAtFirstLine, isCaretAtLastLine, setCaretAtXPosition } from '../../../src/components/utils/caret';
+import type * as Caret from '../../../src/components/utils/caret';
 import {
   PAGES_STORAGE_KEY,
   ROOT_STORAGE_KEY,
   PageRegistry,
   PointerWatch,
-  backspaceIntoTitle,
+  caretToFirstBlock,
+  firstBlockKeydown,
   keepPageHeaderAligned,
   pointerBlock,
   renderPageHeader,
@@ -21,6 +24,15 @@ const seed = (): PageMap => ({
   guide: { title: 'Guide', icon: '📘', parentId: null, blocks: [{ id: 'g1', type: 'paragraph', data: { text: 'Hi' } }] },
   keys: { title: 'Keys', parentId: 'guide', blocks: [] },
 });
+
+// Line and x lookups need layout, which jsdom does not have.
+vi.mock('../../../src/components/utils/caret', async (importOriginal) => ({
+  ...await importOriginal<typeof Caret>(),
+  isCaretAtFirstLine: vi.fn(() => true),
+  isCaretAtLastLine: vi.fn(() => true),
+  getCaretXPosition: vi.fn(() => null),
+  setCaretAtXPosition: vi.fn(),
+}));
 
 describe('page routes', () => {
   it('reads the page id from an /editor/page/<id> path', () => {
@@ -135,6 +147,7 @@ describe('root page header', () => {
     readOnly: false,
     navigate: vi.fn(),
     splitTitle: vi.fn(),
+    toFirstBlock: vi.fn(),
     i18n: vi.fn(),
     changed: vi.fn(),
     restore: vi.fn(),
@@ -162,6 +175,36 @@ describe('root page header', () => {
 
     return event;
   };
+
+  it('ArrowDown on the last line of the title goes to the first block at the same x', () => {
+    const host = document.createElement('header');
+    const options = headerOptions(new PageRegistry(seed()), null);
+
+    document.body.append(host);
+    renderPageHeader(host, options);
+    const title = host.querySelector<HTMLElement>('h1');
+
+    if (title === null) {
+      throw new Error('no title');
+    }
+    vi.mocked(getCaretXPosition).mockReturnValueOnce(64);
+    const event = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true });
+
+    title.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(isCaretAtLastLine).toHaveBeenCalledWith(title);
+    expect(options.toFirstBlock).toHaveBeenCalledWith(64);
+
+    vi.mocked(isCaretAtLastLine).mockReturnValueOnce(false);
+    const above = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true });
+
+    title.dispatchEvent(above);
+
+    expect(above.defaultPrevented).toBe(false);
+    expect(options.toFirstBlock).toHaveBeenCalledTimes(1);
+    host.remove();
+  });
 
   it('Enter at the end of the title opens an empty first block', () => {
     const host = document.createElement('header');
@@ -514,6 +557,7 @@ describe('page trash', () => {
       readOnly: false,
       navigate: vi.fn(),
       splitTitle: vi.fn(),
+      toFirstBlock: vi.fn(),
       i18n: vi.fn(),
       changed: vi.fn(),
       restore,
@@ -543,6 +587,7 @@ describe('page trash', () => {
       readOnly: false,
       navigate: vi.fn(),
       splitTitle: vi.fn(),
+      toFirstBlock: vi.fn(),
       i18n: vi.fn(),
       changed: vi.fn(),
       restore: vi.fn(),
@@ -571,6 +616,7 @@ describe('page trash', () => {
       readOnly: false,
       navigate: vi.fn(),
       splitTitle: vi.fn(),
+      toFirstBlock: vi.fn(),
       i18n: vi.fn(),
       changed: vi.fn(),
       restore: vi.fn(),
@@ -792,8 +838,15 @@ describe('keepPageHeaderAligned', () => {
   });
 });
 
-describe('backspaceIntoTitle', () => {
-  const setup = (text: string, caret: number, children: unknown[] = []): { title: HTMLElement; editable: HTMLElement; remove: ReturnType<typeof vi.fn>; press: () => { event: KeyboardEvent; handled: boolean } } => {
+describe('firstBlockKeydown', () => {
+  interface Setup {
+    title: HTMLElement;
+    editable: HTMLElement;
+    remove: ReturnType<typeof vi.fn>;
+    press: (key?: string) => { event: KeyboardEvent; handled: boolean };
+  }
+
+  const setup = (text: string, caret: number, options: { children?: unknown[]; fields?: number } = {}): Setup => {
     const title = document.createElement('h1');
 
     title.id = 'pg-page-title';
@@ -801,21 +854,30 @@ describe('backspaceIntoTitle', () => {
     title.textContent = 'Blok';
 
     const holder = document.createElement('div');
-    const editable = document.createElement('div');
 
-    editable.contentEditable = 'true';
+    holder.setAttribute('data-blok-element', '');
+
+    const fields = Array.from({ length: options.fields ?? 1 }, () => {
+      const field = document.createElement('div');
+
+      field.setAttribute('contenteditable', 'true');
+      holder.append(field);
+
+      return field;
+    });
+    const editable = fields[0];
+
     editable.textContent = text;
-    holder.append(editable);
     document.body.append(title, holder);
     window.getSelection()?.setPosition(editable.firstChild ?? editable, caret);
 
     const remove = vi.fn(() => Promise.resolve());
-    const press = (): { event: KeyboardEvent; handled: boolean } => {
-      const event = new KeyboardEvent('keydown', { key: 'Backspace', cancelable: true });
-      const handled = backspaceIntoTitle(event, {
+    const press = (key = 'Backspace'): { event: KeyboardEvent; handled: boolean } => {
+      const event = new KeyboardEvent('keydown', { key, cancelable: true });
+      const handled = firstBlockKeydown(event, {
         blocks: {
           getBlockByIndex: (index: number) => (index === 0 ? { id: 'first', holder, isEmpty: text === '' } : undefined),
-          getChildren: (parentId: string) => (parentId === 'first' ? children : []),
+          getChildren: (parentId: string) => (parentId === 'first' ? options.children ?? [] : []),
           delete: remove,
         },
       });
@@ -826,15 +888,20 @@ describe('backspaceIntoTitle', () => {
     return { title, editable, remove, press };
   };
 
-  const caretIsAtTitleEnd = (title: HTMLElement): boolean => {
+  const caretOffsetInTitle = (title: HTMLElement): number | null => {
     const selection = window.getSelection();
     const node = selection?.anchorNode ?? null;
 
     if (selection === null || node === null || !selection.isCollapsed || !title.contains(node)) {
-      return false;
+      return null;
     }
 
-    return selection.anchorOffset === (node === title ? title.childNodes.length : (node.textContent ?? '').length);
+    const before = document.createRange();
+
+    before.setStart(title, 0);
+    before.setEnd(node, selection.anchorOffset);
+
+    return before.toString().length;
   };
 
   beforeEach(() => {
@@ -846,32 +913,41 @@ describe('backspaceIntoTitle', () => {
     document.body.innerHTML = '';
   });
 
-  it('removes an empty first block and puts the caret at the end of the title', () => {
+  it('Backspace removes an empty first block and puts the caret at the end of the title', () => {
     const { title, remove, press } = setup('', 0);
     const { event, handled } = press();
 
     expect(handled).toBe(true);
     expect(remove).toHaveBeenCalledWith(0, false);
     expect(event.defaultPrevented).toBe(true);
-    expect(caretIsAtTitleEnd(title)).toBe(true);
+    expect(title.textContent).toBe('Blok');
+    expect(caretOffsetInTitle(title)).toBe(4);
   });
 
-  it('keeps a first block with text and moves the caret to the end of the title', () => {
-    const { title, remove, press } = setup('Hello', 0);
-    const { event, handled } = press();
+  it('Backspace moves the first block\'s text into the title, caret at the join', () => {
+    const { title, remove, press } = setup(' rocks', 0);
 
-    expect(handled).toBe(true);
-    expect(remove).not.toHaveBeenCalled();
-    expect(event.defaultPrevented).toBe(true);
-    expect(caretIsAtTitleEnd(title)).toBe(true);
+    expect(press().handled).toBe(true);
+    expect(title.textContent).toBe('Blok rocks');
+    expect(remove).toHaveBeenCalledWith(0, false);
+    expect(caretOffsetInTitle(title)).toBe(4);
   });
 
-  it('keeps an empty first block that has children', () => {
-    const { title, remove, press } = setup('', 0, [{ id: 'child' }]);
+  it('Backspace keeps a first block that has children and only moves the caret', () => {
+    const { title, remove, press } = setup('Hello', 0, { children: [{ id: 'child' }] });
 
     expect(press().handled).toBe(true);
     expect(remove).not.toHaveBeenCalled();
-    expect(caretIsAtTitleEnd(title)).toBe(true);
+    expect(title.textContent).toBe('Blok');
+    expect(caretOffsetInTitle(title)).toBe(4);
+  });
+
+  it('Backspace keeps a first block with more than one field, like a captioned image', () => {
+    const { title, remove, press } = setup('Caption', 0, { fields: 2 });
+
+    expect(press().handled).toBe(true);
+    expect(remove).not.toHaveBeenCalled();
+    expect(title.textContent).toBe('Blok');
   });
 
   it('leaves Backspace alone when the caret is inside the text', () => {
@@ -887,9 +963,24 @@ describe('backspaceIntoTitle', () => {
     const { remove, press } = setup('', 0);
     const other = document.createElement('div');
 
-    other.contentEditable = 'true';
+    other.setAttribute('contenteditable', 'true');
     document.body.append(other);
     window.getSelection()?.setPosition(other, 0);
+
+    expect(press().handled).toBe(false);
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it('leaves Backspace alone inside a block nested in the first block', () => {
+    const { editable, remove, press } = setup('Hello', 0);
+    const nested = document.createElement('div');
+    const field = document.createElement('div');
+
+    nested.setAttribute('data-blok-element', '');
+    field.setAttribute('contenteditable', 'true');
+    nested.append(field);
+    editable.parentElement?.append(nested);
+    window.getSelection()?.setPosition(field, 0);
 
     expect(press().handled).toBe(false);
     expect(remove).not.toHaveBeenCalled();
@@ -902,5 +993,79 @@ describe('backspaceIntoTitle', () => {
 
     expect(press().handled).toBe(false);
     expect(remove).not.toHaveBeenCalled();
+  });
+
+  it('ArrowUp on the first line goes to the title at the same x', () => {
+    const { title, editable, press } = setup('Hello', 3);
+
+    vi.mocked(getCaretXPosition).mockReturnValueOnce(120);
+    const { event, handled } = press('ArrowUp');
+
+    expect(handled).toBe(true);
+    expect(event.defaultPrevented).toBe(true);
+    expect(isCaretAtFirstLine).toHaveBeenCalledWith(editable);
+    expect(setCaretAtXPosition).toHaveBeenCalledWith(title, 120, false);
+  });
+
+  it('ArrowUp without a caret x lands at the end of the title', () => {
+    const { title, press } = setup('Hello', 3);
+
+    expect(press('ArrowUp').handled).toBe(true);
+    expect(caretOffsetInTitle(title)).toBe(4);
+  });
+
+  it('leaves ArrowUp alone below the first line', () => {
+    const { press } = setup('Hello', 3);
+
+    vi.mocked(isCaretAtFirstLine).mockReturnValueOnce(false);
+    const { event, handled } = press('ArrowUp');
+
+    expect(handled).toBe(false);
+    expect(event.defaultPrevented).toBe(false);
+  });
+});
+
+describe('caretToFirstBlock', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  const editor = (field: HTMLElement | null): Parameters<typeof caretToFirstBlock>[0] => {
+    const holder = document.createElement('div');
+
+    if (field !== null) {
+      holder.append(field);
+    }
+
+    return {
+      blocks: { getBlockByIndex: () => ({ holder }) },
+      caret: { setToFirstBlock: vi.fn(() => true) },
+    };
+  };
+
+  it('puts the caret on the first line of the first block at the given x', () => {
+    const field = document.createElement('div');
+
+    field.setAttribute('contenteditable', 'true');
+    const target = editor(field);
+
+    caretToFirstBlock(target, 80);
+
+    expect(target.caret.setToFirstBlock).toHaveBeenCalledWith('start');
+    expect(setCaretAtXPosition).toHaveBeenCalledWith(field, 80, true);
+  });
+
+  it('falls back to the start of the first block without an x', () => {
+    const target = editor(null);
+
+    caretToFirstBlock(target, null);
+
+    expect(target.caret.setToFirstBlock).toHaveBeenCalledWith('start');
+    expect(setCaretAtXPosition).not.toHaveBeenCalled();
   });
 });

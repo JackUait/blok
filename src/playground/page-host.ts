@@ -2,6 +2,8 @@ import type { I18n, OutputBlockData } from '../../types';
 import type { PageInfo } from '../../types/tools/page';
 import { IconEmojiSmile } from '../components/icons';
 import { EmojiPicker } from '../tools/callout/emoji-picker';
+import { DATA_ATTR } from '../components/constants/data-attributes';
+import { getCaretXPosition, isCaretAtFirstLine, isCaretAtLastLine, setCaretAtXPosition } from '../components/utils/caret';
 import { loadEmojiGrid } from '../components/utils/emoji/emoji-data';
 import seedPages from '../../playground-pages.json';
 
@@ -357,8 +359,8 @@ export const pointerBlock = (pageId: string, pages: PageRegistry): OutputBlockDa
   };
 };
 
-/** What `backspaceIntoTitle` needs from the editor. */
-export interface TitleBackspaceEditor {
+/** What `firstBlockKeydown` needs from the editor. */
+export interface FirstBlockEditor {
   blocks: {
     getBlockByIndex(index: number): { id: string; holder: HTMLElement; isEmpty: boolean } | undefined;
     getChildren(parentId: string): unknown[];
@@ -366,25 +368,61 @@ export interface TitleBackspaceEditor {
   };
 }
 
+const placeCaret = (node: Node, offset: number): void => {
+  window.getSelection()?.setPosition(node, offset);
+};
+
+const caretToTitleEnd = (title: HTMLElement): void => {
+  placeCaret(title, title.childNodes.length);
+};
+
 /**
- * Backspace at the very start of the first block goes up into the title, as in
- * Notion. An empty first block is removed on the way; one with text or
- * children stays. Returns whether it handled the key.
+ * Backspace at the very start of the first block, or ArrowUp on its first
+ * line, goes up into the title, as in Notion. Backspace also pulls the block's
+ * text into the title and removes the block, unless the block has children or
+ * more than one field (an image caption, a table). Returns whether it handled
+ * the key.
  */
-export const backspaceIntoTitle = (event: KeyboardEvent, editor: TitleBackspaceEditor): boolean => {
+export const firstBlockKeydown = (event: KeyboardEvent, editor: FirstBlockEditor): boolean => {
   const title = document.querySelector<HTMLElement>(PAGE_TITLE_SELECTOR);
   const first = editor.blocks.getBlockByIndex(0);
   const selection = window.getSelection();
   const node = selection?.anchorNode ?? null;
 
-  if (event.key !== 'Backspace' || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
+  if ((event.key !== 'Backspace' && event.key !== 'ArrowUp')
+    || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
     || title === null || title.contentEditable !== 'true' || first === undefined
-    || selection === null || node === null || !selection.isCollapsed || !first.holder.contains(node)) {
+    || selection === null || node === null || !selection.isCollapsed) {
     return false;
   }
 
-  // From the caret's own field: a list marker before it is not text.
-  const field = (node instanceof Element ? node : node.parentElement)?.closest('[contenteditable="true"]') ?? first.holder;
+  const field = (node instanceof Element ? node : node.parentElement)?.closest<HTMLElement>('[contenteditable="true"]') ?? null;
+
+  // A block nested in the first one has its own holder in between.
+  if (field === null || field.closest(`[${DATA_ATTR.element}]`) !== first.holder) {
+    return false;
+  }
+
+  if (event.key === 'ArrowUp') {
+    if (!isCaretAtFirstLine(field)) {
+      return false;
+    }
+
+    const x = getCaretXPosition();
+
+    event.preventDefault();
+    event.stopPropagation();
+    title.focus();
+    if (x === null) {
+      caretToTitleEnd(title);
+    } else {
+      setCaretAtXPosition(title, x, false);
+    }
+
+    return true;
+  }
+
+  // Measured from the caret's own field: a list marker before it is not text.
   const before = document.createRange();
 
   before.setStart(field, 0);
@@ -395,14 +433,43 @@ export const backspaceIntoTitle = (event: KeyboardEvent, editor: TitleBackspaceE
 
   event.preventDefault();
   event.stopPropagation();
-  if (first.isEmpty && editor.blocks.getChildren(first.id).length === 0) {
-    void editor.blocks.delete(0, false);
-  }
   title.focus();
-  selection.selectAllChildren(title);
-  selection.collapseToEnd();
+
+  const movable = editor.blocks.getChildren(first.id).length === 0
+    && first.holder.querySelectorAll('[contenteditable="true"]').length === 1;
+
+  if (!movable) {
+    caretToTitleEnd(title);
+
+    return true;
+  }
+
+  const join = (title.textContent ?? '').length;
+
+  title.append(field.textContent ?? '');
+  title.normalize();
+  title.dispatchEvent(new Event('input'));
+  void editor.blocks.delete(0, false);
+  placeCaret(title.firstChild ?? title, title.firstChild === null ? 0 : join);
 
   return true;
+};
+
+/** ArrowDown out of the title: the first block's first line, at `x` when known. */
+export const caretToFirstBlock = (
+  editor: {
+    blocks: { getBlockByIndex(index: number): { holder: HTMLElement } | undefined };
+    caret: { setToFirstBlock(position: 'start'): boolean };
+  },
+  x: number | null
+): void => {
+  editor.caret.setToFirstBlock('start');
+
+  const field = editor.blocks.getBlockByIndex(0)?.holder.querySelector<HTMLElement>('[contenteditable="true"]');
+
+  if (x !== null && field != null) {
+    setCaretAtXPosition(field, x, true);
+  }
 };
 
 /* ---------------------------------------------------------------- header */
@@ -416,6 +483,8 @@ export interface PageHeaderOptions {
   navigate(pageId: string | null): void;
   /** Enter in the title: open a new first block holding `html`, the title's text after the caret. */
   splitTitle(html: string): void;
+  /** ArrowDown on the title's last line; `x` is the caret's, when known. */
+  toFirstBlock(x: number | null): void;
   /** The current editor's i18n and locale, for the emoji picker's strings. */
   i18n(): { i18n: I18n; locale: string };
   /** Title or icon changed. */
@@ -642,6 +711,12 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
     title.dispatchEvent(new Event('input'));
   });
   title.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowDown' && !event.isComposing && !event.shiftKey && isCaretAtLastLine(title)) {
+      event.preventDefault();
+      options.toFirstBlock(getCaretXPosition());
+
+      return;
+    }
     if (event.key !== 'Enter' || event.isComposing) {
       return;
     }

@@ -16,6 +16,7 @@ import { createCellColorPicker } from './table-cell-color-picker';
 import type { CellColorMode } from './table-cell-color-picker';
 import { createCellPlacementPicker } from './table-cell-placement-picker';
 import { inlineAxis } from './table-direction';
+import type { InlineAxis } from './table-direction';
 import type { CellPlacement } from './types';
 
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -230,6 +231,8 @@ export class TableCellSelection {
   private anchorCell: CellCoord | null = null;
   private extentCell: CellCoord | null = null;
   private isSelecting = false;
+  /** Read once per pointer drag: past which side the pointer reaches the last column. */
+  private dragAxis: InlineAxis = inlineAxis('ltr');
   private hasSelection = false;
   private selectedCells: HTMLElement[] = [];
   private overlay: HTMLElement | null = null;
@@ -477,6 +480,7 @@ export class TableCellSelection {
 
     this.anchorCell = cell;
     this.isSelecting = false;
+    this.dragAxis = inlineAxis(getElementDirection(this.grid));
 
     // Suppress DOM-mutation-triggered Yjs syncs for the duration of this pointer drag.
     // The browser can mutate contenteditable DOM across cell boundaries during a drag,
@@ -1303,7 +1307,7 @@ export class TableCellSelection {
 
     if (this.pill) {
       // Centre of the 2px inline-end border; translate(-50%,-50%) handles centering
-      const isRtl = getElementDirection(this.grid) === 'rtl';
+      const isRtl = gridStyle.direction === 'rtl';
 
       this.pill.style.left = `${isRtl ? left + 1 : left + width - 1}px`;
       this.pill.style.top = `${top + height / 2}px`;
@@ -1709,7 +1713,7 @@ export class TableCellSelection {
     }
 
     const row = this.clampAxis(e.clientY, gridRect.top, gridRect.bottom, rowCount, this.extentCell?.row ?? this.anchorCell.row);
-    const axis = inlineAxis(getElementDirection(this.grid));
+    const axis = this.dragAxis;
     const col = this.clampAxis(axis.x(e.clientX), axis.start(gridRect), axis.end(gridRect), colCount, this.extentCell?.col ?? this.anchorCell.col);
 
     const clamped = { row, col };

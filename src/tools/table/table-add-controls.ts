@@ -50,6 +50,17 @@ interface DragState {
   direction: TextDirection;
 }
 
+/**
+ * Write a button's insets from the wrapper's inline start and end. Both
+ * physical sides are always written so a stale one cannot win after a flip.
+ */
+const setInlineInsets = (el: HTMLElement, isRtl: boolean, start: string, end: string): void => {
+  const { style } = el;
+
+  style.left = isRtl ? end : start;
+  style.right = isRtl ? start : end;
+};
+
 interface TableAddControlsOptions {
   wrapper: HTMLElement;
   grid: HTMLElement;
@@ -186,9 +197,7 @@ export class TableAddControls {
   public syncRowButtonWidth(): void {
     const gridWidth = this.grid.style.width;
     const direction = getElementDirection(this.wrapper);
-    // Both buttons hang off the inline end: physical right in LTR, left in RTL.
-    const start = direction === 'rtl' ? 'right' : 'left';
-    const end = direction === 'rtl' ? 'left' : 'right';
+    const isRtl = direction === 'rtl';
 
     if (gridWidth && gridWidth.endsWith('px')) {
       const numericWidth = parseFloat(gridWidth);
@@ -205,24 +214,19 @@ export class TableAddControls {
       const visibleWidth = this.computeVisibleWidth(numericWidth, isInsideScrollContainer, scrollContainer, direction);
 
       this.addRowBtn.style.width = `${visibleWidth}px`;
-      this.addRowBtn.style[end] = '';
-      this.addRowBtn.style[start] = '0px';
+      setInlineInsets(this.addRowBtn, isRtl, '0px', '');
       this.addRowBtn.style.transform = '';
 
-      this.addColBtn.style[start] = `${visibleWidth + 4}px`;
-      this.addColBtn.style[end] = '';
+      setInlineInsets(this.addColBtn, isRtl, `${visibleWidth + 4}px`, '');
     } else {
       this.addRowBtn.style.width = '';
-      this.addRowBtn.style[start] = '0px';
       this.addRowBtn.style.transform = '';
 
       const wrapperStyle = getComputedStyle(this.wrapper);
-      const paddingEnd = parseFloat(direction === 'rtl' ? wrapperStyle.paddingLeft : wrapperStyle.paddingRight) || 0;
+      const paddingEnd = parseFloat(isRtl ? wrapperStyle.paddingLeft : wrapperStyle.paddingRight) || 0;
 
-      this.addRowBtn.style[end] = `${paddingEnd}px`;
-
-      this.addColBtn.style[start] = '';
-      this.addColBtn.style[end] = `${paddingEnd - 36}px`;
+      setInlineInsets(this.addRowBtn, isRtl, '0px', `${paddingEnd}px`);
+      setInlineInsets(this.addColBtn, isRtl, '', `${paddingEnd - 36}px`);
     }
 
     // Pin both buttons' positions to the grid's rendered rect to prevent

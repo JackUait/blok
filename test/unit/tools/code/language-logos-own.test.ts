@@ -42,4 +42,17 @@ describe('Blok-drawn language logos', () => {
 
     expect(new Set(ids).size).toBe(3);
   });
+
+  it('blinks the shell cursor only on its row\'s hover or focus, and only when motion is welcome', () => {
+    const cursor = languageBadge('shell', { theme: 'light', logos: ALL }).querySelector('[data-blok-code-logo-cursor]');
+    const classes = cursor?.getAttribute('class') ?? '';
+
+    expect(classes).toContain('motion-safe:in-[[data-blok-popover-item]:hover]:animate-[blok-code-logo-blink_1s_steps(1)_infinite]');
+    expect(classes).toContain('motion-safe:in-[[data-blok-focused=true]]:animate-[blok-code-logo-blink_1s_steps(1)_infinite]');
+    expect(classes).not.toMatch(/(^| )animate-/);
+
+    const keyframes = readFileSync(resolve(__dirname, '../../../../src/styles/keyframes.css'), 'utf8');
+
+    expect(keyframes).toContain('@keyframes blok-code-logo-blink');
+  });
 });

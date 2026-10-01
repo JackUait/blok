@@ -184,3 +184,10 @@
     transform: scale(0.97);
   }
 }
+
+/* Code language picker: the Shell mark's cursor, while its row is hovered or focused. */
+@keyframes blok-code-logo-blink {
+  50% {
+    opacity: 0;
+  }
+}

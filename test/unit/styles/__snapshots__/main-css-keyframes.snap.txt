@@ -35,6 +35,10 @@
   100% { transform: scale(1) }
 }
 
+@keyframes blok-code-logo-blink {
+  50% { opacity: 0 }
+}
+
 @keyframes blok-darkroom-in {
   from { background-color: transparent; opacity: 0 }
   to { opacity: 1 }

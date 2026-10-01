@@ -175,6 +175,9 @@ export function loadedLanguageLogos(): LogoMap | null {
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+/** The Shell mark's cursor blinks while its row is hovered or focused. */
+const CURSOR_BLINK_STYLES = 'motion-safe:in-[[data-blok-popover-item]:hover]:animate-[blok-code-logo-blink_1s_steps(1)_infinite] motion-safe:in-[[data-blok-focused=true]]:animate-[blok-code-logo-blink_1s_steps(1)_infinite]';
+
 /** Mask ids are document-global, so every drawn badge needs its own. */
 const maskCounter = { next: 0 };
 
@@ -189,6 +192,8 @@ const drawnSvg = (svg: SVGSVGElement, logo: DrawnLogo): SVGSVGElement => {
     : `<defs><mask id="${maskId}" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff"/>${logo.cuts}</mask></defs><g mask="url(#${maskId})">${logo.body}</g>`;
 
   svg.insertAdjacentHTML('beforeend', masked + (logo.over ?? ''));
+  // Set here, not in the markup, so Tailwind sees the classes and emits them.
+  svg.querySelector('[data-blok-code-logo-cursor]')?.setAttribute('class', CURSOR_BLINK_STYLES);
 
   return svg;
 };

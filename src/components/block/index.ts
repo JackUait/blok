@@ -26,6 +26,7 @@ import { hasContentMatching, isContentEmpty } from '../utils/own-element';
 import { BlockAPI } from './api';
 import { DataPersistenceManager } from './data-persistence-manager';
 import { InputManager } from './input-manager';
+import { syncContentDirection } from './content-direction';
 import { MutationHandler } from './mutation-handler';
 import { SelectionManager } from './selection-manager';
 import { StyleManager } from './style-manager';
@@ -415,7 +416,10 @@ export class Block extends EventsDispatcher<BlockEvents> {
       }
     }
 
-    void this.ready.then(() => this.hydrateInlineTools());
+    void this.ready.then(() => {
+      this.hydrateInlineTools();
+      this.syncContentDirection();
+    });
   }
 
   /**
@@ -670,6 +674,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
       // update path (undo/redo, a controlled host, api.blocks.update), which
       // deliberately does NOT recompose the Block.
       this.hydrateInlineTools();
+      this.syncContentDirection();
     }
 
     return applied;
@@ -1025,6 +1030,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
     this.inputManager.dropCache();
     this.inputManager.updateCurrentInput();
     this.toggleInputsEmptyMark();
+    this.syncContentDirection();
     this.call(BlockToolAPI.UPDATED);
     this.emit('didMutated', this);
   };
@@ -1064,6 +1070,22 @@ export class Block extends EventsDispatcher<BlockEvents> {
     // The tool just replaced or rewrote its element (this is the post-onPaste
     // hook), so marks with derived DOM have to be rebuilt over what it wrote.
     this.hydrateInlineTools();
+    this.syncContentDirection();
+  }
+
+  /**
+   * Stamp the content element's `dir` from the block's own text. Every path
+   * that changes a block's text (render, typing, paste, setData from undo,
+   * redo and remote updates) calls this, so it is the one place to change.
+   */
+  private syncContentDirection(): void {
+    const { contentElement, toolRenderedElement } = this.toolRenderer;
+
+    if (contentElement === null || toolRenderedElement === null) {
+      return;
+    }
+
+    syncContentDirection(contentElement, toolRenderedElement, this.holder);
   }
 
   /**

@@ -275,7 +275,17 @@ describe('VideoTool — toolbar anchoring and content offset', () => {
     stubRect(root, 1000, 100);
     stubRect(mustFigure(root), 800, 130);
 
-    expect(tool.getContentOffset(root)).toStrictEqual({ left: 30 });
+    expect(tool.getContentOffset(root)).toStrictEqual({ left: 30, right: 170 });
+  });
+
+  it('reports a left-flush figure as a right inset only', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
+    const root = tool.render();
+
+    stubRect(root, 1000, 100);
+    stubRect(mustFigure(root), 600, 100);
+
+    expect(tool.getContentOffset(root)).toStrictEqual({ left: 0, right: 400 });
   });
 
   it('reports no offset when the figure is flush with the root', () => {

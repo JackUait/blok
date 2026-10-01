@@ -28,6 +28,7 @@ import {
   IconVideo,
 } from '../../components/icons';
 import { attachResizeHandle, type ResizeEdge } from '../image/resizer';
+import { figureInsets } from '../image/figure-insets';
 import { renderUploadingState, type UploadingStateElement } from '../image/uploading-state';
 import { DEFAULT_CAPTION_PLACEHOLDER, MIN_WIDTH_PX, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
@@ -180,12 +181,11 @@ export class VideoTool implements BlockTool {
     return this.root?.querySelector<HTMLElement>('[data-role="video-figure"]') ?? undefined;
   }
 
-  public getContentOffset(_hoveredElement: Element): { left: number } | undefined {
+  public getContentOffset(_hoveredElement: Element): { left: number; right: number } | undefined {
     const root = this.root;
     const figure = root?.querySelector<HTMLElement>('[data-role="video-figure"]');
     if (!root || !figure) return undefined;
-    const delta = figure.getBoundingClientRect().left - root.getBoundingClientRect().left;
-    return delta > 0 ? { left: delta } : undefined;
+    return figureInsets(root, figure);
   }
 
   public setReadOnly(state: boolean): void {

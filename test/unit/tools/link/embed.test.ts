@@ -823,7 +823,21 @@ describe('Embed block toolbar anchoring', () => {
     Object.defineProperty(root, 'getBoundingClientRect', { value: () => makeRect(1000, 0) });
     Object.defineProperty(figure, 'getBoundingClientRect', { value: () => makeRect(325, 120) });
 
-    expect(tool.getContentOffset(figure)).toEqual({ left: 120 });
+    expect(tool.getContentOffset(figure)).toStrictEqual({ left: 120, right: 555 });
+  });
+
+  it('getContentOffset() reports a right-flush figure as a left inset only', () => {
+    const tool = new Embed(createOptions(iframeData()));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('[data-role="embed-figure"]');
+
+    if (!figure) {
+      throw new Error('figure missing');
+    }
+    Object.defineProperty(root, 'getBoundingClientRect', { value: () => makeRect(1000, 0) });
+    Object.defineProperty(figure, 'getBoundingClientRect', { value: () => makeRect(400, 600) });
+
+    expect(tool.getContentOffset(figure)).toStrictEqual({ left: 600, right: 0 });
   });
 
   it('getContentOffset() returns undefined when the figure fills the content area', () => {

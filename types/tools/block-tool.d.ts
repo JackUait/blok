@@ -99,13 +99,18 @@ export interface BlockTool extends BaseTool {
   moved?(event: MoveEvent): void;
 
   /**
-   * Returns the horizontal offset of the content at the hovered element.
-   * Used by the toolbar to position itself closer to nested content (e.g., nested list items).
+   * Returns how far the content at the hovered element is inset from the block's
+   * edges. Used by the toolbar to sit closer to nested content (e.g., nested list items).
+   *
+   * Both insets are PHYSICAL, whatever the text direction. The toolbar reads the
+   * one on the side its controls sit: `right` when they are on the right of the
+   * content (the default in an RTL editor), `left` otherwise.
    *
    * @param hoveredElement - The element that is currently being hovered
-   * @returns Object with left offset in pixels, or undefined if no offset should be applied
+   * @returns `left`: inset from the physical left edge in px; `right` (optional):
+   *   inset from the physical right edge in px. Undefined if no offset applies.
    */
-  getContentOffset?(hoveredElement: Element): { left: number } | undefined;
+  getContentOffset?(hoveredElement: Element): { left: number; right?: number } | undefined;
 
   /**
    * Returns the element that the toolbar should vertically center on.

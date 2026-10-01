@@ -70,6 +70,7 @@ import { resolveConvertedUploader } from './converted-uploader';
 import { tr } from './i18n';
 import { deliverToRebuiltBlock, putBackOnRebuiltBlock, releaseObjectUrl, writeDerived } from './detached-upload';
 import { renderImagePreview } from './preview';
+import { figureInsets } from './figure-insets';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -720,12 +721,11 @@ export class ImageTool implements BlockTool {
     return this.root?.querySelector<HTMLElement>('.blok-image-inner') ?? undefined;
   }
 
-  public getContentOffset(_hoveredElement: Element): { left: number } | undefined {
+  public getContentOffset(_hoveredElement: Element): { left: number; right: number } | undefined {
     const root = this.root;
     const figure = root?.querySelector<HTMLElement>('.blok-image-inner');
     if (!root || !figure || this.mending) return undefined;
-    const delta = figure.getBoundingClientRect().left - root.getBoundingClientRect().left;
-    return delta > 0 ? { left: delta } : undefined;
+    return figureInsets(root, figure);
   }
 
   public renderSettings(): MenuConfig {

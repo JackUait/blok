@@ -530,9 +530,9 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * Delegates to the tool's getContentOffset method if implemented.
    *
    * @param hoveredElement - The element that is currently being hovered
-   * @returns Object with left offset in pixels, or undefined if no offset should be applied
+   * @returns Physical left/right insets in px, or undefined if no offset should be applied
    */
-  public getContentOffset(hoveredElement: Element): { left: number } | undefined {
+  public getContentOffset(hoveredElement: Element): { left: number; right?: number } | undefined {
     if (typeof this.toolInstance.getContentOffset === 'function') {
       return this.toolInstance.getContentOffset(hoveredElement);
     }

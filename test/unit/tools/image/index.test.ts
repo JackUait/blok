@@ -397,7 +397,26 @@ describe('ImageTool — overlay actions', () => {
       left: 220, top: 0, right: 580, bottom: 100, width: 360, height: 100, x: 220, y: 0, toJSON: () => ({}),
     });
 
-    expect(tool.getContentOffset(figure)).toEqual({ left: 120 });
+    expect(tool.getContentOffset(figure)).toStrictEqual({ left: 120, right: 120 });
+  });
+
+  it('getContentOffset() reports physical insets: a figure flush with the root left edge has only a right inset, whatever the caption direction', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png', width: 60, alignment: 'left', caption: 'مرحبا بالعالم' }));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('.blok-image-inner');
+    if (!figure) throw new Error('figure missing');
+    root.setAttribute('dir', 'rtl');
+    document.body.appendChild(root);
+
+    vi.spyOn(root, 'getBoundingClientRect').mockReturnValue({
+      left: 100, top: 0, right: 700, bottom: 100, width: 600, height: 100, x: 100, y: 0, toJSON: () => ({}),
+    });
+    vi.spyOn(figure, 'getBoundingClientRect').mockReturnValue({
+      left: 100, top: 0, right: 460, bottom: 100, width: 360, height: 100, x: 100, y: 0, toJSON: () => ({}),
+    });
+
+    expect(tool.getContentOffset(figure)).toStrictEqual({ left: 0, right: 240 });
+    root.remove();
   });
 
   it('getContentOffset() returns undefined when figure is missing (empty state)', () => {

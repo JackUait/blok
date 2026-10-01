@@ -1841,6 +1841,8 @@ describe('Toolbar — public surface', () => {
       expect((args?.[1] as { hoveredTarget: Element | null }).hoveredTarget).toBe(target);
       expect((args?.[1] as { isMobile: boolean }).isMobile).toBe(true);
       expect((args?.[1] as { dockedToEnd: boolean }).dockedToEnd).toBe(true);
+      // LTR + toolbarPosition 'right' puts the controls on the physical right.
+      expect((args?.[1] as { physicallyRight: boolean }).physicallyRight).toBe(true);
       expect(args?.[2]).toBe(h.plusButton);
     });
 

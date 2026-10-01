@@ -36,6 +36,10 @@ export interface PositioningOptions {
    * (`config.toolbarPosition: 'right'`)
    */
   dockedToEnd?: boolean;
+  /**
+   * Whether the controls sit on the content column's physical right
+   */
+  physicallyRight?: boolean;
 }
 
 /**

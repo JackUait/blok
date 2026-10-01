@@ -15,6 +15,7 @@ import type { MenuConfig } from '../../../../types/tools/menu-config';
 import { IconCopy, IconGlobe, IconLink, IconReplace, IconTrash } from '../../../components/icons';
 import { setFieldValidity } from '../../../components/utils/field-validity';
 import { attachResizeHandle, attachHeightResizeHandle, type ResizeEdge } from '../../image/resizer';
+import { figureInsets } from '../../image/figure-insets';
 import { renderEmbedOverlay, type EmbedAlignment } from './overlay';
 import { EMBED_SERVICES, matchEmbedService, isHttpUrl, isHttpsUrl, setSafeLinkHref, type EmbedKind } from '../registry';
 import { isAllowedEmbedOrigin } from './allowed-origins';
@@ -369,10 +370,10 @@ export class Embed implements BlockTool {
   }
 
   /**
-   * Shifts the block toolbar to the figure's left edge when the embed is
+   * Shifts the block toolbar to the figure's edge when the embed is
    * narrower than the content column (centered / right-aligned / fixed-width).
    */
-  public getContentOffset(_hoveredElement: Element): { left: number } | undefined {
+  public getContentOffset(_hoveredElement: Element): { left: number; right: number } | undefined {
     const root = this.root;
     const figure = root?.querySelector<HTMLElement>('[data-role="embed-figure"]');
 
@@ -380,9 +381,7 @@ export class Embed implements BlockTool {
       return undefined;
     }
 
-    const delta = figure.getBoundingClientRect().left - root.getBoundingClientRect().left;
-
-    return delta > 0 ? { left: delta } : undefined;
+    return figureInsets(root, figure);
   }
 
   private renderState(): void {

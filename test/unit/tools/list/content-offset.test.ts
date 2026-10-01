@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import {
   getInlineStartMarginFromElement,
   getOffsetFromDepthAttribute,
@@ -30,22 +30,22 @@ describe('content-offset', () => {
       expect(result).toBeUndefined();
     });
 
-    it('returns left offset when inline-start margin is positive', () => {
+    it('returns the indent when inline-start margin is positive', () => {
       const element = document.createElement('div');
       element.setAttribute('style', 'margin-inline-start: 24px;');
 
       const result = getInlineStartMarginFromElement(element);
 
-      expect(result).toEqual({ left: 24 });
+      expect(result).toBe(24);
     });
 
-    it('returns left offset for large margin values', () => {
+    it('returns the indent for large margin values', () => {
       const element = document.createElement('div');
       element.setAttribute('style', 'margin-inline-start: 72px;');
 
       const result = getInlineStartMarginFromElement(element);
 
-      expect(result).toEqual({ left: 72 });
+      expect(result).toBe(72);
     });
 
     it('returns undefined when inline-start margin is zero', () => {
@@ -72,7 +72,7 @@ describe('content-offset', () => {
 
       const result = getInlineStartMarginFromElement(element);
 
-      expect(result).toEqual({ left: 48 });
+      expect(result).toBe(48);
     });
 
     it('handles inline-start margin with spaces', () => {
@@ -81,7 +81,7 @@ describe('content-offset', () => {
 
       const result = getInlineStartMarginFromElement(element);
 
-      expect(result).toEqual({ left: 36 });
+      expect(result).toBe(36);
     });
 
     it('handles inline-start margin with px unit (standard format)', () => {
@@ -90,7 +90,7 @@ describe('content-offset', () => {
 
       const result = getInlineStartMarginFromElement(element);
 
-      expect(result).toEqual({ left: 24 });
+      expect(result).toBe(24);
     });
   });
 
@@ -121,31 +121,31 @@ describe('content-offset', () => {
       expect(result).toBeUndefined();
     });
 
-    it('returns left offset for depth 1', () => {
+    it('returns the indent for depth 1', () => {
       const element = document.createElement('div');
       element.setAttribute('data-list-depth', '1');
 
       const result = getOffsetFromDepthAttribute(element);
 
-      expect(result).toEqual({ left: 27 });
+      expect(result).toBe(27);
     });
 
-    it('returns left offset for depth 2', () => {
+    it('returns the indent for depth 2', () => {
       const element = document.createElement('div');
       element.setAttribute('data-list-depth', '2');
 
       const result = getOffsetFromDepthAttribute(element);
 
-      expect(result).toEqual({ left: 54 });
+      expect(result).toBe(54);
     });
 
-    it('returns left offset for depth 3', () => {
+    it('returns the indent for depth 3', () => {
       const element = document.createElement('div');
       element.setAttribute('data-list-depth', '3');
 
       const result = getOffsetFromDepthAttribute(element);
 
-      expect(result).toEqual({ left: 81 });
+      expect(result).toBe(81);
     });
 
     it('finds data-list-depth on ancestor element', () => {
@@ -156,7 +156,7 @@ describe('content-offset', () => {
 
       const result = getOffsetFromDepthAttribute(child);
 
-      expect(result).toEqual({ left: 54 });
+      expect(result).toBe(54);
     });
 
     it('handles negative depth values', () => {
@@ -313,6 +313,57 @@ describe('content-offset', () => {
 
       // closest() finds the nearest ancestor, which is innerListItem
       expect(result).toEqual({ left: 48 });
+    });
+
+    describe('reports the indent on the physical side it lies on', () => {
+      const mount = (itemDir: 'ltr' | 'rtl', withMargin: boolean): HTMLElement => {
+        const wrapper = document.createElement('div');
+        wrapper.setAttribute('data-list-depth', '2');
+        wrapper.setAttribute('dir', itemDir);
+        const listItem = document.createElement('div');
+        listItem.setAttribute('role', 'listitem');
+        if (withMargin) {
+          listItem.style.marginInlineStart = '48px';
+        }
+        const content = document.createElement('span');
+
+        wrapper.appendChild(listItem);
+        listItem.appendChild(content);
+        document.body.appendChild(wrapper);
+
+        return content;
+      };
+
+      afterEach(() => {
+        document.body.innerHTML = '';
+      });
+
+      it('an RTL item indents from the physical right', () => {
+        expect(getContentOffset(mount('rtl', true))).toStrictEqual({ left: 0, right: 48 });
+      });
+
+      it('an LTR item indents from the physical left', () => {
+        expect(getContentOffset(mount('ltr', true))).toStrictEqual({ left: 48 });
+      });
+
+      it('the depth fallback of an RTL item indents from the physical right', () => {
+        expect(getContentOffset(mount('rtl', false))).toStrictEqual({ left: 0, right: 54 });
+      });
+
+      it('an RTL item inside an LTR editor still indents from the right', () => {
+        const editor = document.createElement('div');
+        editor.setAttribute('dir', 'ltr');
+        const content = mount('rtl', true);
+        const item = content.closest('[data-list-depth]');
+
+        if (item === null) {
+          throw new Error('list wrapper missing');
+        }
+        editor.appendChild(item);
+        document.body.appendChild(editor);
+
+        expect(getContentOffset(content)).toStrictEqual({ left: 0, right: 48 });
+      });
     });
   });
 });

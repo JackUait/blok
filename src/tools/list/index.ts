@@ -757,7 +757,7 @@ export class ListItem implements BlockTool {
     return true;
   }
 
-  public getContentOffset(hoveredElement: Element): { left: number } | undefined {
+  public getContentOffset(hoveredElement: Element): { left: number; right?: number } | undefined {
     return getContentOffset(hoveredElement);
   }
 

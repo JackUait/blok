@@ -56,7 +56,7 @@ describe('getInlineStartMarginFromElement mutants', () => {
   });
 
   it('reads a positive inline-start margin', () => {
-    expect(getInlineStartMarginFromElement(withStyle('margin-inline-start: 24px'))).toEqual({ left: 24 });
+    expect(getInlineStartMarginFromElement(withStyle('margin-inline-start: 24px'))).toEqual(24);
   });
 
   it('treats a zero inline-start margin as no offset', () => {
@@ -75,7 +75,7 @@ describe('getOffsetFromDepthAttribute mutants', () => {
 
     wrapper.appendChild(item);
 
-    expect(getOffsetFromDepthAttribute(item)).toEqual({ left: 2 * INDENT_PER_LEVEL });
+    expect(getOffsetFromDepthAttribute(item)).toEqual(2 * INDENT_PER_LEVEL);
   });
 
   it('returns undefined at depth zero', () => {

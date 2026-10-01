@@ -69,6 +69,7 @@ describe('ToolbarPositioner', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   describe('state management', () => {
@@ -393,6 +394,72 @@ describe('ToolbarPositioner', () => {
       positioner.applyContentOffset(mockNodes, mockBlock);
 
       expect(mockNodes.actions.style.transform).toBe('translateX(50px)');
+    });
+
+    describe('picks the inset on the side the controls sit on', () => {
+      const cases: Array<{
+        name: string;
+        offset: { left: number; right?: number } | undefined;
+        dockedToEnd: boolean;
+        physicallyRight: boolean;
+        expected: string;
+      }> = [
+        { name: 'left controls use the left inset', offset: { left: 48, right: 10 }, dockedToEnd: false, physicallyRight: false, expected: 'translateX(48px)' },
+        { name: 'left controls ignore a right-only inset', offset: { left: 0, right: 48 }, dockedToEnd: false, physicallyRight: false, expected: '' },
+        { name: 'right controls use the right inset, nudged leftwards', offset: { left: 10, right: 48 }, dockedToEnd: false, physicallyRight: true, expected: 'translateX(-48px)' },
+        { name: 'right controls ignore a left-only inset', offset: { left: 48 }, dockedToEnd: false, physicallyRight: true, expected: '' },
+        { name: 'right controls ignore a zero right inset', offset: { left: 48, right: 0 }, dockedToEnd: false, physicallyRight: true, expected: '' },
+        { name: 'end dock never nudges (LTR toolbarPosition right)', offset: { left: 48, right: 48 }, dockedToEnd: true, physicallyRight: true, expected: '' },
+        { name: 'end dock never nudges (RTL toolbarPosition right)', offset: { left: 48, right: 48 }, dockedToEnd: true, physicallyRight: false, expected: '' },
+      ];
+
+      it.each(cases)('$name', ({ offset, dockedToEnd, physicallyRight, expected }) => {
+        if (!mockNodes.actions) {
+          throw new Error('actions is undefined');
+        }
+
+        positioner.setHoveredTarget(document.createElement('div'));
+        mockBlock.getContentOffset.mockReturnValue(offset);
+        mockNodes.actions.style.transform = 'translateX(7px)';
+
+        positioner.applyContentOffset(mockNodes, mockBlock, dockedToEnd, physicallyRight);
+
+        expect(mockNodes.actions.style.transform).toBe(expected);
+      });
+
+      it('does not read the actions direction: an RTL-looking bar on the left still uses the left inset', () => {
+        if (!mockNodes.actions) {
+          throw new Error('actions is undefined');
+        }
+
+        mockNodes.actions.setAttribute('dir', 'rtl');
+        document.body.appendChild(mockNodes.actions);
+        positioner.setHoveredTarget(document.createElement('div'));
+        mockBlock.getContentOffset.mockReturnValue({ left: 48 });
+
+        positioner.applyContentOffset(mockNodes, mockBlock, false, false);
+
+        expect(mockNodes.actions.style.transform).toBe('translateX(48px)');
+      });
+
+      it('repositionToolbar forwards the physical side', () => {
+        if (!mockNodes.actions || !mockNodes.plusButton) {
+          throw new Error('actions or plusButton is undefined');
+        }
+
+        const hovered = document.createElement('div');
+
+        positioner.setHoveredTarget(hovered);
+        mockBlock.getContentOffset.mockReturnValue({ left: 10, right: 30 });
+
+        positioner.repositionToolbar(
+          mockNodes,
+          { targetBlock: mockBlock, hoveredTarget: hovered, isMobile: false, physicallyRight: true },
+          mockNodes.plusButton
+        );
+
+        expect(mockNodes.actions.style.transform).toBe('translateX(-30px)');
+      });
     });
   });
 

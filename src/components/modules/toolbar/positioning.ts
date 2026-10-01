@@ -1,6 +1,5 @@
 import type { Block } from '../../block';
 
-import { getElementDirection } from '../../utils/direction';
 import { POSITION_TOLERANCE } from './constants';
 import type { PositioningOptions, ToolbarNodes } from './types';
 
@@ -202,22 +201,27 @@ export class ToolbarPositioner {
       wrapper.style.top = `${newToolbarY}px`;
     }
 
-    this.applyContentOffset(nodes, options.targetBlock, options.dockedToEnd === true);
+    this.applyContentOffset(nodes, options.targetBlock, options.dockedToEnd === true, options.physicallyRight === true);
 
     return positionChanged;
   }
 
   /**
-   * Applies the content offset transform to the actions element based on the hovered target.
-   * This positions the toolbar closer to nested content like list items.
+   * Nudges the actions bar toward nested content (e.g. an indented list item).
    * @param nodes - Toolbar nodes
    * @param targetBlock - The block to get the content offset from
    * @param dockedToEnd - true while the actions bar is docked past the content
-   *   column's far edge (`toolbarPosition: 'right'`). Nested content is indented
-   *   from the START edge only — a list item's end edge is the block's end
-   *   edge — so the nudge that closes the gap at the start would open one there.
+   *   column's far edge (`toolbarPosition: 'right'`). Content is never inset from
+   *   that edge, so no nudge applies there.
+   * @param physicallyRight - true while the controls sit on the content column's
+   *   physical right; the block's right inset applies then, its left one otherwise
    */
-  public applyContentOffset(nodes: ToolbarNodes, targetBlock: Block, dockedToEnd = false): void {
+  public applyContentOffset(
+    nodes: ToolbarNodes,
+    targetBlock: Block,
+    dockedToEnd = false,
+    physicallyRight = false
+  ): void {
     const { actions } = nodes;
 
     if (!actions) {
@@ -231,11 +235,9 @@ export class ToolbarPositioner {
     }
 
     const contentOffset = targetBlock.getContentOffset(this.hoveredTarget);
-    const hasValidOffset = contentOffset && contentOffset.left > 0;
+    const inset = (physicallyRight ? contentOffset?.right : contentOffset?.left) ?? 0;
+    const sign = physicallyRight ? -1 : 1;
 
-    // The offset is measured from the inline-start edge, so RTL nudges leftwards.
-    const sign = getElementDirection(actions) === 'rtl' ? -1 : 1;
-
-    actions.style.transform = hasValidOffset ? `translateX(${sign * contentOffset.left}px)` : '';
+    actions.style.transform = inset > 0 ? `translateX(${sign * inset}px)` : '';
   }
 }

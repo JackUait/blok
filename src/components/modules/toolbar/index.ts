@@ -683,7 +683,7 @@ export class Toolbar extends Module<ToolbarNodes> {
      *
      * The callout block itself still shows BOTH buttons — the actions container
      * sits outside the block (positioned via right:100% on the left gutter) and
-     * does not overlap the emoji which is inside the block at pl-8.
+     * does not overlap the emoji which is inside the block at ps-8.
      *
      * Note: when the toolbar resolves to a parent table block from a focused
      * cell, the settings toggler must STAY visible — it is wired via
@@ -755,7 +755,7 @@ export class Toolbar extends Module<ToolbarNodes> {
     /**
      * Apply content offset for nested elements (e.g., nested list items)
      */
-    this.positioner.applyContentOffset(this.nodes, targetBlock, this.isPositionedRight);
+    this.positioner.applyContentOffset(this.nodes, targetBlock, this.isPositionedRight, this.isDockedPhysicallyRight);
 
     /**
      * Keep the toolbar aligned with the block's current bounds while its size
@@ -1001,7 +1001,7 @@ export class Toolbar extends Module<ToolbarNodes> {
     /**
      * Reset content offset for multi-block selection
      */
-    this.positioner.applyContentOffset(this.nodes, targetBlock, this.isPositionedRight);
+    this.positioner.applyContentOffset(this.nodes, targetBlock, this.isPositionedRight, this.isDockedPhysicallyRight);
 
     /**
      * Always show the settings toggler for multi-block selection
@@ -1977,6 +1977,7 @@ export class Toolbar extends Module<ToolbarNodes> {
         hoveredTarget: this.positioner.target,
         isMobile: this.Blok.UI.isMobile,
         dockedToEnd: this.isPositionedRight,
+        physicallyRight: this.isDockedPhysicallyRight,
       },
       this.nodes.plusButton
     );

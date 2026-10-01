@@ -14,6 +14,7 @@ describe('blocksToHtml direction', () => {
     { id: 'l1', type: 'list', data: { text: 'واحد', style: 'unordered' } },
     { id: 'l2', type: 'list', data: { text: 'two', style: 'unordered' } },
     { id: 'code', type: 'code', data: { code: 'const a = 1;', language: 'js' } },
+    { id: 'eq', type: 'paragraph', data: { text: 'مرحبا <span data-latex="a-b=c">a-b=c</span>' } },
   ]);
 
   it('leaves the output byte-identical without the option', () => {
@@ -36,7 +37,38 @@ describe('blocksToHtml direction', () => {
     // Each list item is a block: dir goes on the <li>, not the <ul>.
     expect(html).toContain('<ul><li dir="rtl">واحد</li><li dir="ltr">two</li></ul>');
     // Code is not prose: its source never sets a direction.
-    expect(html).not.toMatch(/<pre[^>]* dir=/);
+    expect(html).toContain('<pre dir="ltr"><code class="language-js">');
+  });
+
+  describe('code and math read left-to-right in any direction', () => {
+    const code = (data: Record<string, unknown>): OutputData => doc([{ id: 'c', type: 'code', data: { code: '\\frac{a}{b} = c - d', language: 'latex', ...data } }]);
+
+    it('pins every <pre> shape LTR', () => {
+      expect(blocksToHtml(code({}), { direction: 'rtl' })).toMatch(/^<pre dir="ltr"/);
+      expect(blocksToHtml(code({ filename: 'f.tex' }), { direction: 'rtl' })).toContain('<pre dir="ltr">');
+      expect(blocksToHtml(code({}), { direction: 'rtl', classes: true })).toMatch(/<pre class="[^"]*" dir="ltr">/);
+    });
+
+    it('pins an inline equation LTR, kept as stored', () => {
+      const html = blocksToHtml(doc([{ type: 'paragraph', data: { text: 'مرحبا <span data-latex="a-b=c">a-b=c</span>' } }]), { direction: 'rtl' });
+
+      expect(html).toBe('<p dir="rtl">مرحبا <span data-latex="a-b=c" dir="ltr">a-b=c</span></p>');
+    });
+
+    it('pins an inline equation LTR when a renderer replaces it', () => {
+      const html = blocksToHtml(doc([{ type: 'paragraph', data: { text: 'مرحبا <span data-latex="a-b=c">a-b=c</span>' } }]), {
+        direction: 'rtl',
+        inlineRenderers: { span: ({ attrs }) => attrs['data-latex'] === undefined ? undefined : '<span class="katex">math</span>' },
+      });
+
+      expect(html).toBe('<p dir="rtl">مرحبا <span dir="ltr"><span class="katex">math</span></span></p>');
+    });
+
+    it('does not let a leading equation turn a right-to-left paragraph left-to-right', () => {
+      const html = blocksToHtml(doc([{ type: 'paragraph', data: { text: '<span data-latex="a-b=c">a-b=c</span> مرحبا' } }]), { direction: 'ltr' });
+
+      expect(html).toMatch(/^<p dir="rtl">/);
+    });
   });
 
   it('stamps the content element under editor parity, as the editor does', () => {

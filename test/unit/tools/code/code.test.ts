@@ -730,6 +730,14 @@ describe('CodeTool', () => {
       expect(el.querySelector('[data-blok-testid="code-view-mode"]')).toBeNull();
     });
 
+    it.each([false, true])('pins the rendered preview LTR so math and diagrams do not mirror in RTL (readOnly: %s)', async (readOnly) => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'x = \\frac12', language: 'latex' }, { readOnly }));
+      const el = tool.render();
+
+      expect(el.querySelector('[data-blok-testid="code-preview"]')?.getAttribute('dir')).toBe('ltr');
+    });
+
     it('shows view mode control for mermaid language', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'graph TD; A-->B;', language: 'mermaid' }));

@@ -18,7 +18,7 @@ type P5ChildNode = DefaultTreeAdapterMap['childNode'];
  * Collect the concatenated text of parse5 child nodes.
  * @param nodes - nodes to walk
  */
-const collect = (nodes: P5ChildNode[]): string => {
+const collect = (nodes: P5ChildNode[], equations: 'source' | 'skip' = 'source'): string => {
   return nodes.map((node) => {
     if (node.nodeName === '#text') {
       return (node as DefaultTreeAdapterMap['textNode']).value;
@@ -38,11 +38,11 @@ const collect = (nodes: P5ChildNode[]): string => {
       const source = node.attrs.find((attr) => attr.name === EQUATION_SOURCE_ATTR);
 
       if (source !== undefined) {
-        return source.value;
+        return equations === 'source' ? source.value : '';
       }
     }
 
-    return 'childNodes' in node ? collect(node.childNodes) : '';
+    return 'childNodes' in node ? collect(node.childNodes, equations) : '';
   }).join('');
 };
 
@@ -113,4 +113,17 @@ export const htmlTextContent = (html: string): string => {
   }
 
   return collect(parseInlineFragment(html).childNodes);
+};
+
+/**
+ * Plain text without inline equations: the letters that set a block's
+ * direction. Math is always LTR, so its source says nothing about the prose.
+ * @param html - fragment markup
+ */
+export const proseTextContent = (html: string): string => {
+  if (html === '' || !needsTokenizing(html)) {
+    return html;
+  }
+
+  return collect(parseInlineFragment(html).childNodes, 'skip');
 };

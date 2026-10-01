@@ -13,11 +13,12 @@ import { BLOCK_CONTENT_CLASSES, BLOCK_WRAPPER_CLASSES } from '../shared/block-sc
 import { classesFor } from '../shared/tool-classes';
 import { hasUnsafeUrlProtocol } from '../shared/url-policy';
 import { firstStrongDirection } from '../shared/text-direction';
+import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
 import { buildDocumentModel, normalizeViewBlock } from './document-model';
 import type { DocumentModel, ViewBlock } from './document-model';
 import { builtinEmitters, renderListRun } from './emitters';
 import type { EmitterEnv } from './emitters';
-import { htmlTextContent } from './html-text';
+import { htmlTextContent, proseTextContent } from './html-text';
 import { applyInlineRenderers } from './inline-renderers';
 import type { ViewInlineRenderer } from './inline-renderers';
 import { escapeHtml, sanitizeHtmlFragment } from './sanitize';
@@ -311,7 +312,7 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
 
     for (const field of DIRECTION_FIELDS[block.type] ?? []) {
       const value = block.data[field];
-      const direction = typeof value === 'string' ? firstStrongDirection(htmlTextContent(value)) : null;
+      const direction = typeof value === 'string' ? firstStrongDirection(proseTextContent(value)) : null;
 
       if (direction !== null) {
         return direction;
@@ -347,11 +348,43 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
   const inlineRenderers = options.inlineRenderers ?? {};
   const hasInlineRenderers = Object.keys(inlineRenderers).length > 0;
 
+  /**
+   * With a direction set, an inline equation is pinned LTR so math never
+   * mirrors. A renderer's replacement is the host's markup, so it is wrapped
+   * rather than edited. Without the option the output stays byte-identical.
+   */
+  const ownSpanRenderer = inlineRenderers.span;
+  const mathPinningRenderers: Record<string, ViewInlineRenderer> = {
+    ...inlineRenderers,
+    span: (element) => {
+      const rendered = ownSpanRenderer?.(element);
+
+      if (element.attrs[EQUATION_SOURCE_ATTR] === undefined) {
+        return rendered;
+      }
+
+      if (typeof rendered === 'string') {
+        return rendered === '' ? '' : `<span dir="ltr">${rendered}</span>`;
+      }
+
+      const attrs = Object.entries(element.attrs)
+        .filter(([name]) => name !== 'dir')
+        .map(([name, value]) => ` ${name}="${escapeHtml(value)}"`)
+        .join('');
+
+      return `<span${attrs} dir="ltr">${element.html}</span>`;
+    },
+  };
+
   const pageHref = options.pageHref;
 
   const env: EmitterEnv = {
     inline: (value) => {
       const sanitized = sanitizeHtmlFragment(typeof value === 'string' ? value : '', inlineConfig, inlineUrlTransform);
+
+      if (directionEnabled && sanitized.includes(EQUATION_SOURCE_ATTR)) {
+        return applyInlineRenderers(sanitized, mathPinningRenderers);
+      }
 
       return hasInlineRenderers ? applyInlineRenderers(sanitized, inlineRenderers) : sanitized;
     },
@@ -398,6 +431,7 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
     },
     classList: (list) => (classes && list.length > 0 ? ` class="${escapeHtml(list.join(' '))}"` : ''),
     classesEnabled: classes,
+    ltrAttr: directionEnabled ? ' dir="ltr"' : '',
     dirAttr: (block) => {
       const direction = directionOf(block);
 

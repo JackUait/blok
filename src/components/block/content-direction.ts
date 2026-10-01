@@ -1,5 +1,6 @@
 import { firstStrongDirection } from '../../shared/text-direction';
 import { DATA_ATTR } from '../constants/data-attributes';
+import { EQUATION_SOURCE_ATTR } from '../../shared/equation-mark';
 
 /**
  * Text fields. While editing, a `contenteditable="false"` element is chrome (a
@@ -10,10 +11,11 @@ const EDITABLE_FIELD_SELECTOR = '[contenteditable]:not([contenteditable="false"]
 const READ_ONLY_FIELD_SELECTOR = '[contenteditable]';
 
 /**
- * Chrome, not content, in either mode: text hidden from assistive tech (a list
- * marker "a.", a readout) and elements tools mark as chrome.
+ * Not prose, in either mode: text hidden from assistive tech (a list marker
+ * "a.", a readout), elements tools mark as chrome, and inline equations (math
+ * is always LTR, so its letters say nothing about the text around it).
  */
-const NON_CONTENT_SELECTOR = `[aria-hidden="true"], [${DATA_ATTR.chrome}]`;
+const NON_CONTENT_SELECTOR = `[aria-hidden="true"], [${DATA_ATTR.chrome}], [${EQUATION_SOURCE_ATTR}]`;
 
 /**
  * First strong letter in one field. Skips nested blocks, `dir` islands (a

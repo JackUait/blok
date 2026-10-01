@@ -163,6 +163,7 @@ export class CodeTool implements BlockTool {
       previewEl.className = PREVIEW_AREA_STYLES;
       previewEl.setAttribute('data-blok-testid', 'code-preview');
       previewEl.setAttribute(DATA_ATTR.chrome, '');
+      previewEl.setAttribute('dir', 'ltr');
       dom.wrapper.appendChild(previewEl);
       dom.preElement.hidden = true;
       dom.gutterElement.hidden = true;

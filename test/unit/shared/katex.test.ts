@@ -26,7 +26,17 @@ describe('shared katex renderer', () => {
     const html = await renderLatex('E = mc^2');
 
     expect(mockRenderToString).toHaveBeenCalledWith('E = mc^2', expect.objectContaining({ throwOnError: false }));
-    expect(html).toBe('<span class="katex">rendered</span>');
+    expect(html).toBe('<span dir="ltr" class="katex">rendered</span>');
+  });
+
+  it('pins the rendered math left-to-right, so an RTL host does not mirror the equation', async () => {
+    const { createLatexRenderer } = await import('../../../src/shared/katex');
+    const render = await createLatexRenderer();
+    const host = document.createElement('div');
+
+    host.innerHTML = render('a-b=c', { displayMode: false });
+
+    expect(host.firstElementChild?.getAttribute('dir')).toBe('ltr');
   });
 
   it('injects KaTeX CSS link into document head on first call', async () => {

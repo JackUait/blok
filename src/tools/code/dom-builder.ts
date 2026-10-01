@@ -105,6 +105,8 @@ function buildViewModeElements(
   previewElement.setAttribute('data-blok-testid', 'code-preview');
   // Rendered from the code, not typed: an empty block's error text must not make it non-empty.
   previewElement.setAttribute(DATA_ATTR.chrome, '');
+  // Math and diagrams read LTR in any editor direction.
+  previewElement.setAttribute('dir', 'ltr');
 
   // Split container — wraps code body + preview
   const splitContainer = document.createElement('div');

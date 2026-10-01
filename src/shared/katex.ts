@@ -54,7 +54,7 @@ function renderWith(
   latex: string,
   options: LatexRenderOptions
 ): string {
-  return katex.renderToString(latex, {
+  const html = katex.renderToString(latex, {
     throwOnError: false,
     trust: false,
     strict: 'ignore',
@@ -62,6 +62,10 @@ function renderWith(
     maxExpand: 1000,
     displayMode: options.displayMode ?? true,
   });
+
+  // Math reads left to right in any language; an RTL host would mirror it into
+  // a different equation. A dir island also keeps it out of block direction.
+  return html.replace(/^<span\b/, '<span dir="ltr"');
 }
 
 /**

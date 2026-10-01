@@ -104,6 +104,8 @@ export interface EmitterEnv {
    * set, else ''. Only list items read it here; the dispatcher stamps the rest.
    */
   dirAttr(block: ViewBlock): string;
+  /** ` dir="ltr"` when the `direction` option is set, else '': pins code LTR. */
+  ltrAttr: string;
 }
 
 /**
@@ -501,7 +503,7 @@ export const builtinEmitters: Record<string, Emitter> = {
         : '';
 
       return trail(
-        `<div${env.rootAttrs(block)}>${header}<pre${env.classList(hasFilename ? [...CODE_AREA_CLASSES, ...CODE_CAPTIONED_AREA_CLASSES] : CODE_AREA_CLASSES)}>${inner}</pre></div>`,
+        `<div${env.rootAttrs(block)}>${header}<pre${env.classList(hasFilename ? [...CODE_AREA_CLASSES, ...CODE_CAPTIONED_AREA_CLASSES] : CODE_AREA_CLASSES)}${env.ltrAttr}>${inner}</pre></div>`,
         block,
         env
       );
@@ -510,13 +512,13 @@ export const builtinEmitters: Record<string, Emitter> = {
     /** `html-to-blocks.ts` reads this figure shape back into `filename`. */
     if (hasFilename) {
       return trail(
-        `<figure${env.rootAttrs(block)}><figcaption>${env.escape(filename)}</figcaption><pre>${inner}</pre></figure>`,
+        `<figure${env.rootAttrs(block)}><figcaption>${env.escape(filename)}</figcaption><pre${env.ltrAttr}>${inner}</pre></figure>`,
         block,
         env
       );
     }
 
-    return trail(`<pre${env.rootAttrs(block)}>${inner}</pre>`, block, env);
+    return trail(`<pre${env.rootAttrs(block)}${env.ltrAttr}>${inner}</pre>`, block, env);
   },
 
   /**

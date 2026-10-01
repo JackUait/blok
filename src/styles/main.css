@@ -358,11 +358,10 @@
 /**
  * Content alignment
  * Applies horizontal alignment to block content based on the editor's contentAlign setting.
- * 'left' and 'right' mean the inline start and end, so an RTL editor mirrors.
  * Left alignment overrides the mx-auto Tailwind class on [data-blok-element-content].
  */
 [data-blok-content-align="left"] [data-blok-element-content] {
-  margin-inline-start: 0;
+  margin-left: 0;
 }
 
 [data-blok-content-align="center"] [data-blok-element-content] {
@@ -371,10 +370,23 @@
 }
 
 [data-blok-content-align="right"] [data-blok-element-content] {
-  margin-inline-start: auto;
-  /* The base class is mx-auto — without zeroing the end margin the rule
+  margin-left: auto;
+  /* The base class is mx-auto — without zeroing margin-right the rule
      collapses into centering. */
-  margin-inline-end: 0;
+  margin-right: 0;
+}
+
+/* In an RTL editor 'left' and 'right' mean the inline start and end. Keyed on
+ * the wrapper, not logical margins: each block's content carries its own dir,
+ * and the column must follow the EDITOR's direction. */
+[data-blok-rtl="true"][data-blok-content-align="left"] [data-blok-element-content] {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+[data-blok-rtl="true"][data-blok-content-align="right"] [data-blok-element-content] {
+  margin-left: 0;
+  margin-right: auto;
 }
 
 /**
@@ -537,15 +549,24 @@
   --blok-block-indent-step: 0px;
 }
 
-/* A collapsed toggle chevron points toward the inline end. The open state is an
- * inline rotate(90deg) (down), which overrides this. The second rule restores
- * an LTR block (or editor) that sits inside an RTL one. */
-[dir="rtl"] [data-blok-toggle-arrow] > svg {
-  transform: rotate(180deg);
+/*
+ * Reading-direction sign for transforms logical CSS cannot express. A custom
+ * property inherits, so the NEAREST [dir] wins: a block's own dir beats the
+ * editor's. `[dir="rtl"] x` alone would match any RTL ancestor.
+ */
+:where([data-blok-interface=blok][dir="rtl"], [data-blok-interface=blok] [dir="rtl"]) {
+  --_blok-inline-sign: -1;
 }
 
-[dir="rtl"] [dir="ltr"] [data-blok-toggle-arrow] > svg {
-  transform: none;
+:where([data-blok-interface=blok] [dir="ltr"]) {
+  --_blok-inline-sign: 1;
+}
+
+/* A collapsed toggle chevron points toward the inline end. The open state is an
+ * inline rotate(90deg) (down), which overrides this. Scoped under an RTL
+ * ancestor so an all-LTR editor keeps `transform: none`. */
+[dir="rtl"] [data-blok-toggle-arrow] > svg {
+  transform: rotate(calc((1 - var(--_blok-inline-sign, 1)) * 90deg));
 }
 
 /**

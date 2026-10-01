@@ -206,11 +206,12 @@ const matchesView = (selector, root) => {
  *
  * The radius nesting channels are the same kind of component state: a
  * container publishes `--blok-radius-inner` for its own children and core
- * writes `--blok-radius-frame` per block. Neither is theme surface, so a rule
- * carrying only those prunes by its selector too.
+ * writes `--blok-radius-frame` per block. `--_blok-inline-sign` follows each
+ * [dir] element. None is theme surface, so a rule carrying only those prunes
+ * by its selector too.
  * @param rule - a postcss rule
  */
-const COMPONENT_CHANNELS = new Set(['--blok-radius-inner', '--blok-radius-frame']);
+const COMPONENT_CHANNELS = new Set(['--blok-radius-inner', '--blok-radius-frame', '--_blok-inline-sign']);
 
 const isTokenCarrier = (rule) => {
   if (rule.selector.includes('.')) {

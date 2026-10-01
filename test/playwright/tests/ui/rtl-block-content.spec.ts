@@ -244,12 +244,29 @@ test.describe('RTL block content mirrors LTR', () => {
     await createBlok(page, blocks, 'rtl');
     expect(await read()).toEqual({ closed: -1, open: 0 });
 
-    // An LTR block inside the RTL editor keeps the LTR chevron. Polled: the
-    // svg transitions its transform.
-    await page.evaluate(() => {
-      document.querySelector('[data-blok-id="tc"]')?.setAttribute('dir', 'ltr');
-    });
+    // A block carries its own dir on its content wrapper (per-block direction).
+    // An English toggle in an RTL editor points right; an Arabic toggle in an
+    // LTR editor points left. Polled: the svg transitions its transform.
+    const stamp = async (dir: Direction): Promise<void> => page.evaluate((d) => {
+      document.querySelector('[data-blok-id="tc"] [data-blok-element-content]')?.setAttribute('dir', d);
+    }, dir);
+
+    await stamp('ltr');
     await expect.poll(read).toEqual({ closed: 1, open: 0 });
+
+    await createBlok(page, blocks, 'ltr');
+    await stamp('rtl');
+    await expect.poll(read).toEqual({ closed: -1, open: 0 });
+
+    // Same, with the LTR editor on an RTL host page: the nearest dir still wins.
+    await page.evaluate(() => document.documentElement.setAttribute('dir', 'rtl'));
+    try {
+      await createBlok(page, blocks, 'ltr');
+      await stamp('rtl');
+      await expect.poll(read).toEqual({ closed: -1, open: 0 });
+    } finally {
+      await page.evaluate(() => document.documentElement.removeAttribute('dir'));
+    }
   });
 
   test('code body stays LTR with the gutter on the left', async ({ page }) => {
@@ -290,6 +307,17 @@ test.describe('RTL block content mirrors LTR', () => {
       // The column is narrower than the holder, so alignment is observable.
       expect(ltr.column[0]).not.toBe(ltr.column[1]);
       expect(rtl.column).toEqual(ltr.column);
+
+      // The column follows the EDITOR's direction, not a block's own dir: an
+      // English block in an RTL editor (and an Arabic one in an LTR editor)
+      // must not jump to the other side.
+      for (const [editorDir, blockDir, expected] of [ [ 'rtl', 'ltr', rtl ], [ 'ltr', 'rtl', ltr ] ] as const) {
+        await createBlok(page, blocks, editorDir, { contentAlign });
+        await page.evaluate((d) => {
+          document.querySelector('[data-blok-id="p1"] [data-blok-element-content]')?.setAttribute('dir', d);
+        }, blockDir);
+        expect(await measureLogical(page, probes), `${blockDir} block in ${editorDir} editor`).toEqual(expected);
+      }
     });
   }
 });

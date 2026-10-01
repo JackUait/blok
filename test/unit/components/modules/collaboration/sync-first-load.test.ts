@@ -413,6 +413,7 @@ interface BootOptions {
   offlineScope?: string;
   user?: { name: string; color?: string };
   editor?: { id: string; name?: string };
+  loader?: BlokConfig['loader'];
 }
 
 const boot = async (options: BootOptions = {}): Promise<Harness> => {
@@ -450,6 +451,7 @@ const boot = async (options: BootOptions = {}): Promise<Harness> => {
     },
     data: options.data,
     readOnly: options.readOnly,
+    ...(options.loader === undefined ? {} : { loader: options.loader }),
     ...(options.editor === undefined ? {} : { user: options.editor }),
     ...(options.collaboration === false
       ? {}
@@ -763,6 +765,103 @@ describe('collaboration — sync-first load', () => {
       await waitFor(() => blockTexts(harness.core).join() === 'server truth', 'server truth on screen');
 
       expect(harness.core.moduleInstances.BlockManager.blocks.length).toBe(1);
+    }, 20_000);
+  });
+
+  describe('boot skeleton', () => {
+    const SKELETON = '[data-blok-loading-skeleton]';
+
+    const wrapperOf = (core: Core): HTMLElement => core.moduleInstances.UI.nodes.wrapper;
+
+    const skeletonGone = (core: Core): boolean =>
+      wrapperOf(core).querySelector(SKELETON) === null && !wrapperOf(core).hasAttribute('aria-busy');
+
+    it('shows while the first sync is pending, without holding isReady', async () => {
+      const harness = await boot({ loader: { delay: 0 } });
+
+      // boot() already awaited isReady, and no socket has even opened.
+      expect(harness.socket().readyState).toBe(0);
+      await waitFor(() => wrapperOf(harness.core).querySelector(SKELETON) !== null, 'the skeleton');
+      expect(wrapperOf(harness.core).getAttribute('aria-busy')).toBe('true');
+    });
+
+    it('hands off to the remote blocks once arbitration has settled them', async () => {
+      const harness = await boot({ loader: { delay: 0 } });
+      const { UI, BlockManager } = harness.core.moduleInstances;
+
+      await waitFor(() => wrapperOf(harness.core).querySelector(SKELETON) !== null, 'the skeleton');
+
+      const atHide: { count: number; connected: boolean; readOnly: boolean }[] = [];
+      const realHide = UI.hideLoading.bind(UI);
+
+      vi.spyOn(UI, 'hideLoading').mockImplementation(async () => {
+        atHide.push({
+          count: BlockManager.blocks.length,
+          connected: BlockManager.blocks.every(({ holder }) => holder.isConnected),
+          readOnly: harness.core.moduleInstances.ReadOnly.isEnabled,
+        });
+
+        return realHide();
+      });
+
+      firstSync(harness, [
+        { type: 'plain', data: { text: 'from the server' } },
+        { type: 'plain', data: { text: 'and another' } },
+      ]);
+
+      await waitFor(() => skeletonGone(harness.core), 'the skeleton to hand off', 5000);
+
+      // Read-only lifted means arbitration ran before the hide measured its targets.
+      expect(atHide[0]).toEqual({ count: 2, connected: true, readOnly: false });
+      expect(blockTexts(harness.core)).toEqual(['from the server', 'and another']);
+    }, 20_000);
+
+    it('goes away when the session ends in error with nothing to show', async () => {
+      const harness = await boot({ loader: { delay: 0 } });
+
+      await waitFor(() => wrapperOf(harness.core).querySelector(SKELETON) !== null, 'the skeleton');
+
+      harness.socket().open();
+      harness.socket().serverClose(4403, 'forbidden');
+
+      await waitFor(() => collabAttr(harness.core) === 'error', 'the terminal');
+      await waitFor(() => skeletonGone(harness.core), 'the skeleton to go', 5000);
+
+      expect(harness.core.moduleInstances.BlockManager.blocks.length).toBe(0);
+    }, 20_000);
+
+    it('never shows on a boot that adopted the offline cache', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const first = await boot({ offline: true });
+
+      firstSync(first, [{ type: 'paragraph', data: { text: 'synced once' } }]);
+      await waitFor(() => !first.core.moduleInstances.ReadOnly.isEnabled, 'editable');
+      await waitForCachedDocument();
+
+      destroyCore(booted.splice(booted.indexOf(first.core), 1)[0]);
+
+      let busy = false;
+      const observer = new MutationObserver((records) => {
+        busy ||= records.some((record) => record.attributeName === 'aria-busy'
+          || [...record.addedNodes].some((node) => node instanceof Element
+            && (node.matches(SKELETON) || node.querySelector(SKELETON) !== null)));
+      });
+
+      observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-busy'] });
+
+      try {
+        const reloaded = await boot({ offline: true, loader: { delay: 0 } });
+
+        await waitFor(() => reloaded.core.moduleInstances.BlockManager.blocks.length === 1, 'cached blocks');
+        // The socket never opens, so a skeleton armed here would never be hidden.
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        expect(busy).toBe(false);
+        expect(wrapperOf(reloaded.core).querySelector(SKELETON)).toBeNull();
+      } finally {
+        observer.disconnect();
+      }
     }, 20_000);
   });
 

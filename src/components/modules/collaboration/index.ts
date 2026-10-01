@@ -802,6 +802,11 @@ export class Collaboration extends Module {
     // it restores have to be on screen before the first frame can race them.
     const adopted = await this.adoptCache(settings);
 
+    // An adopted cache is already on screen. Armed before connect(), so no status can reach a hide first.
+    if (!this.cacheAdopted) {
+      this.Blok.UI.showLoading();
+    }
+
     this.provider = createCollabProvider({
       url: settings.url,
       docId: settings.doc,
@@ -1276,14 +1281,18 @@ export class Collaboration extends Module {
     // with the transition.
     void this.refreshSave();
 
+    // Hide after arbitration: lifting read-only can re-render the blocks the hide measures.
     if (isFirstSync) {
       this.seedEmptyDocument();
+      void this.Blok.UI.hideLoading();
 
       return;
     }
 
     if (status === 'offline' || status === 'error') {
       await this.renderLastKnown();
+      // Unconditional: with no last-known content there is nothing to wait for.
+      void this.Blok.UI.hideLoading();
     }
   }
 

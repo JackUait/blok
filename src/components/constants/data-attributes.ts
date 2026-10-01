@@ -33,6 +33,13 @@ export const DATA_ATTR = {
    *  inserting blocks into the DOM; removed while a re-render is in flight.
    *  Acts as a stable render-readiness gate for consumers (e.g. E2E waits). */
   rendered: 'data-blok-rendered',
+  /** Present on the editor wrapper while the loading skeleton owns it.
+   *  Public styling hook. */
+  loading: 'data-blok-loading',
+  /** The loading skeleton overlay (a wrapper child, never inside the redactor). */
+  loadingSkeleton: 'data-blok-loading-skeleton',
+  /** One skeleton row; the value is its kind: heading | paragraph | list. */
+  skeletonBar: 'data-blok-skeleton-bar',
   /** Blok version number stamped on the editor wrapper (e.g. '1.10.0', 'dev').
    *  Consumed by browser extensions to identify the running version. */
   version: 'data-blok-version',

@@ -2980,6 +2980,21 @@ describe('Toolbox', () => {
       expect(items[2].element?.textContent).toBe('toolbox.sectionMedia');
     });
 
+    it('paints section labels in the warm label gray with room below', () => {
+      const tools = createToolsCollection([
+        ['paragraph', makeTool('paragraph', { title: 'Text', icon: svg, section: 'basic' })],
+      ]);
+
+      new Toolbox({ api: mocks.api, tools, i18nLabels, i18n: mockI18n });
+
+      const items = lastPopoverItems.value as Array<{ element?: HTMLElement }>;
+      const header = items[0].element;
+
+      expect(header?.classList.contains('text-menu-section-label')).toBe(true);
+      expect(header?.classList.contains('text-gray-text')).toBe(false);
+      expect(header?.classList.contains('pb-2')).toBe(true);
+    });
+
     it('renders section labels in sentence case, not all-caps', () => {
       const tools = createToolsCollection([
         ['paragraph', makeTool('paragraph', { title: 'Text', icon: svg, section: 'basic' })],

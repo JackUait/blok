@@ -925,6 +925,7 @@
   --blok-selection-highlight: rgba(46, 170, 220, 0.2);
   --blok-bg-light: #eff2f5;
   --blok-gray-text: #646a79;
+  --blok-menu-section-label: #73726e;
   --blok-dark: #1d202b;
   --blok-active-icon: #2383e2;
   --blok-link: #1b6fc2;
@@ -1240,6 +1241,7 @@
   --blok-selection-highlight: rgba(35, 131, 226, 0.25);
   --blok-bg-light: rgba(255, 255, 255, 0.08);
   --blok-gray-text: #a39e98;
+  --blok-menu-section-label: #9b9a97;
   --blok-dark: #191918;
   --blok-active-icon: #529cca;
   --blok-link: #529cca;
@@ -1401,6 +1403,7 @@
   --blok-selection-highlight: rgba(35, 131, 226, 0.25);
   --blok-bg-light: rgba(255, 255, 255, 0.08);
   --blok-gray-text: #a39e98;
+  --blok-menu-section-label: #9b9a97;
   --blok-dark: #191918;
   --blok-active-icon: #529cca;
   --blok-link: #529cca;

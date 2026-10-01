@@ -5,6 +5,7 @@
   --color-selection-highlight: var(--blok-selection-highlight);
   --color-bg-light: var(--blok-bg-light);
   --color-gray-text: var(--blok-gray-text);
+  --color-menu-section-label: var(--blok-menu-section-label);
   --color-dark: var(--blok-dark);
   --color-active-icon: var(--blok-active-icon);
   --color-link: var(--blok-link);
@@ -93,6 +94,8 @@
     #a39e98 below already clears 5.7:1 everywhere and is unchanged.
   */
   --blok-gray-text: #646a79;
+  /* Warm menu section labels, Notion-like. 4.82:1 on the popover; 4.5:1 is the floor. */
+  --blok-menu-section-label: #73726e;
   --blok-dark: #1d202b;
   --blok-active-icon: #2383e2;
   /* Link text needs 4.5:1 on white; --blok-active-icon uses the 3:1 icon bar. */
@@ -548,6 +551,7 @@
     --blok-selection-highlight: rgba(35, 131, 226, 0.25);
     --blok-bg-light: rgba(255, 255, 255, 0.08);
     --blok-gray-text: #a39e98;
+    --blok-menu-section-label: #9b9a97;
     --blok-dark: #191918;
     --blok-active-icon: #529cca;
     --blok-link: #529cca;
@@ -743,6 +747,7 @@
   --blok-selection-highlight: rgba(35, 131, 226, 0.25);
   --blok-bg-light: rgba(255, 255, 255, 0.08);
   --blok-gray-text: #a39e98;
+  --blok-menu-section-label: #9b9a97;
   --blok-dark: #191918;
   --blok-active-icon: #529cca;
   --blok-link: #529cca;

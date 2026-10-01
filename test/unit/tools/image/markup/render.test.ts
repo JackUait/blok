@@ -254,6 +254,23 @@ describe('marks', () => {
       await vi.waitFor(() => expect(copy(svg)?.hasAttribute('filter')).toBe(false));
     });
 
+    it.each(['lens 1', 'a)b', 'x"y'])('keeps its clip and filter for a saved id like %j, which a url(#…) cannot hold', (id) => {
+      const { svg, photo } = planeWith([]);
+
+      photo.style.setProperty('filter', 'grayscale(1)');
+      updateMarkupLayer(svg, [{ ...lens(), id }], O);
+      const node = svg.querySelector(`[data-markup-id="${CSS.escape(id)}"]`);
+      // A browser drops the whole reference when the id has a space, quote or bracket: the lens would lose its clip.
+      const target = (attr: string, el: Element | null | undefined): Element | null => {
+        const ref = /^url\(#([\w-]+)\)$/.exec(el?.getAttribute(attr) ?? '')?.[1];
+
+        return ref === undefined ? null : svg.querySelector(`[id="${ref}"]`);
+      };
+
+      expect(target('clip-path', node?.querySelector('[clip-path]'))?.localName).toBe('clipPath');
+      expect(target('filter', node?.querySelector('image'))?.localName).toBe('filter');
+    });
+
     it('rings the lens', () => {
       const { svg } = planeWith([lens()]);
       const ring = mark(svg, 'mg').querySelector('circle[stroke]');

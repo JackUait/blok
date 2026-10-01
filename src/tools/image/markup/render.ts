@@ -36,7 +36,7 @@ const BG_PAD_Y = 0.2;
 
 interface LayerState { seq: number; size: string }
 
-const counter = { layers: 0 };
+const counter = { layers: 0, loupes: 0 };
 const layers = new WeakMap<SVGSVGElement, LayerState>();
 /** What each mark node was drawn from; reused while the data is the same. */
 const drawn = new WeakMap<Element, { item: ImageMarkup; json: string }>();
@@ -220,14 +220,16 @@ const watchPhoto = (svg: SVGSVGElement, o: Size): void => {
  * SVG all the way down: WebKit paints HTML in a foreignObject above the clip and the
  * other marks, so a foreignObject img would cover the whole image.
  */
-const drawLoupe = (item: ImageMarkupShape, o: Size, c: Point, r: number, state: LayerState): SVGElement[] => {
-  const clipId = `blok-markup-loupe-${state.seq}-${item.id}`;
+const drawLoupe = (o: Size, c: Point, r: number): SVGElement[] => {
+  // Minted, never the mark id: a saved id may hold a space or a bracket, which breaks url(#…).
+  counter.loupes += 1;
+  const clipId = `blok-markup-loupe-${counter.loupes}`;
   const clip = svgEl('clipPath', { id: clipId });
   const lens = svgEl('g', { 'clip-path': `url(#${clipId})` });
   const zoom = svgEl('g', { transform: `translate(${fmt(c.x)} ${fmt(c.y)}) scale(${LOUPE_ZOOM}) translate(${fmt(-c.x)} ${fmt(-c.y)})` });
   const copy = svgEl('image', { 'data-markup-loupe-photo': '', preserveAspectRatio: 'none' });
   const paint = svgEl('filter', {
-    id: `blok-markup-loupe-paint-${state.seq}-${item.id}`, 'color-interpolation-filters': 'sRGB',
+    id: `blok-markup-loupe-paint-${counter.loupes}`, 'color-interpolation-filters': 'sRGB',
     x: '0', y: '0', width: '1', height: '1',
   });
   const ring = Math.max(LOUPE_RING_MIN, LOUPE_RING * Math.min(o.w, o.h));
@@ -247,7 +249,7 @@ const drawLoupe = (item: ImageMarkupShape, o: Size, c: Point, r: number, state: 
   ];
 };
 
-const drawShape = (item: ImageMarkupShape, o: Size, width: number, color: string, state: LayerState): SVGElement[] => {
+const drawShape = (item: ImageMarkupShape, o: Size, width: number, color: string): SVGElement[] => {
   const a = { x: item.x1 * o.w, y: item.y1 * o.h };
   const b = { x: item.x2 * o.w, y: item.y2 * o.h };
 
@@ -269,7 +271,7 @@ const drawShape = (item: ImageMarkupShape, o: Size, width: number, color: string
     return [svgEl('path', { d: `${d}Z`, ...paint })];
   }
   if (item.type === 'rect') return [svgEl('rect', { x: fmt(x), y: fmt(y), width: fmt(w), height: fmt(h), ...paint })];
-  if (item.type === 'magnifier') return drawLoupe(item, o, { x: x + w / 2, y: y + h / 2 }, Math.min(w, h) / 2, state);
+  if (item.type === 'magnifier') return drawLoupe(o, { x: x + w / 2, y: y + h / 2 }, Math.min(w, h) / 2);
   // The layer's one dim sheet paints it; this box only gives selection and the erase fade a size.
   if (item.type === 'spotlight') return [svgEl('rect', { x: fmt(x), y: fmt(y), width: fmt(w), height: fmt(h), fill: 'none', stroke: 'none' })];
 
@@ -322,7 +324,7 @@ const drawMark = (item: ImageMarkup, o: Size, state: LayerState): SVGGElement =>
 
   if (isStroke(item)) g.appendChild(drawStroke(item, o, px, color));
   else if (isText(item)) g.appendChild(drawText(item, o, px, color, state));
-  else g.append(...drawShape(item, o, px, color, state));
+  else g.append(...drawShape(item, o, px, color));
 
   drawn.set(g, { item, json: JSON.stringify(item) });
 

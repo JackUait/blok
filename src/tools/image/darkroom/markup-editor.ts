@@ -4,7 +4,7 @@ import { prefersReducedMotion, type SpringClock } from '../../../components/util
 import type { I18nInstance } from '../../../components/utils/tools';
 import { tr } from '../i18n';
 import {
-  commitMarkupItem, contrastInk, eraseMarkup, HIGHLIGHTER_SCALE, hitTest, MARKUP_SIZES, markupBounds, moveMarkup, newMarkupId,
+  commitMarkupItem, contrastInk, eraseMarkup, HIGHLIGHTER_SCALE, hitTest, isClosedShape, MARKUP_SIZES, markupBounds, moveMarkup, newMarkupId,
   resizeMarkup, TEXT_LINE_HEIGHT, textBoxSize,
 } from '../markup/model';
 import { smoothStroke, strokeOutline } from '../markup/freehand';
@@ -87,7 +87,7 @@ const OUTLINE_WIDTH = 0.16;
 const BG_PAD_X = 0.08;
 const BG_PAD_Y = 0.2;
 const FONT_FAMILY = "system-ui, -apple-system, 'Segoe UI', sans-serif";
-const SHAPES = new Set<MarkupTool>(['rect', 'ellipse', 'arrow', 'line']);
+const SHAPES = new Set<MarkupTool>(['rect', 'rounded-rect', 'ellipse', 'arrow', 'line', 'bubble', 'star', 'polygon']);
 
 const rafClock: SpringClock = {
   now: () => performance.now(),
@@ -96,7 +96,7 @@ const rafClock: SpringClock = {
 };
 
 const isText = (m: ImageMarkup): m is ImageMarkupText => m.type === 'text';
-const isBoxShape = (m: ImageMarkup): boolean => m.type === 'rect' || m.type === 'ellipse';
+const isBoxShape = (m: ImageMarkup): boolean => isClosedShape(m.type);
 
 const easeOutBack = (t: number): number => {
   const c1 = 1.70158;
@@ -678,7 +678,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
 
   const shapeEnds = (type: ImageMarkupShape['type'], a: Point, b: Point, e: MouseEvent): [Point, Point] => {
     const raw = { x: b.x - a.x, y: b.y - a.y };
-    const box = type === 'rect' || type === 'ellipse';
+    const box = isClosedShape(type);
     const d = ((): Point => {
       if (!e.shiftKey) return raw;
       if (box) {
@@ -704,7 +704,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
       size: sizeFor(g.type, st.state.size),
     };
 
-    if ((g.type === 'rect' || g.type === 'ellipse') && st.state.fill) item.fill = true;
+    if (isClosedShape(g.type) && st.state.fill) item.fill = true;
 
     return item;
   };
@@ -967,7 +967,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
       const ends = ((): [Point, Point] => {
         if (g.moved) return shapeEnds(g.type, g.from, toO(e.clientX, e.clientY), e);
         const half = (DEFAULT_SHAPE * Math.min(size.w, size.h)) / 2;
-        const box = g.type === 'rect' || g.type === 'ellipse';
+        const box = isClosedShape(g.type);
 
         return [{ x: g.from.x - half, y: g.from.y - (box ? half : 0) }, { x: g.from.x + half, y: g.from.y + (box ? half : 0) }];
       })();

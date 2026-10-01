@@ -1,7 +1,7 @@
 import type { ImageMarkup, ImageMarkupShape, ImageMarkupStroke, ImageMarkupText } from '../../../../types/tools/image';
 import type { Point, Size } from '../darkroom/camera';
 import { smoothStroke, strokeOutline } from './freehand';
-import { ARROW_HEAD_HALF_WIDTH, TEXT_LINE_HEIGHT, arrowHeadLength, contrastInk, isMarkupColor } from './model';
+import { ARROW_HEAD_HALF_WIDTH, TEXT_LINE_HEIGHT, arrowHeadLength, contrastInk, isMarkupColor, shapeOutline } from './model';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const FONT_FAMILY = "system-ui, -apple-system, 'Segoe UI', sans-serif";
@@ -148,6 +148,13 @@ const drawShape = (item: ImageMarkupShape, o: Size, width: number, color: string
   const w = Math.abs(b.x - a.x);
   const h = Math.abs(b.y - a.y);
 
+  const outline = shapeOutline(item, o);
+
+  if (outline !== null) {
+    const d = outline.map((p, i) => `${i === 0 ? 'M' : 'L'}${fmt(p.x)} ${fmt(p.y)}`).join('');
+
+    return [svgEl('path', { d: `${d}Z`, ...paint })];
+  }
   if (item.type === 'rect') return [svgEl('rect', { x: fmt(x), y: fmt(y), width: fmt(w), height: fmt(h), ...paint })];
 
   return [svgEl('ellipse', { cx: fmt(x + w / 2), cy: fmt(y + h / 2), rx: fmt(w / 2), ry: fmt(h / 2), ...paint })];

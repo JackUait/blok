@@ -23,6 +23,11 @@ const LABELS: Record<string, string> = {
   'tools.image.markupEllipse': 'Ellipse',
   'tools.image.markupArrow': 'Arrow',
   'tools.image.markupLine': 'Line',
+  'tools.image.markupShapes': 'Shapes',
+  'tools.image.markupRoundedRectangle': 'Rounded rectangle',
+  'tools.image.markupSpeechBubble': 'Speech bubble',
+  'tools.image.markupStar': 'Star',
+  'tools.image.markupPolygon': 'Polygon',
   'tools.image.markupEraser': 'Eraser',
   'tools.image.markupColors': 'Colors',
   'tools.image.markupColorWhite': 'White',
@@ -53,7 +58,9 @@ const i18n: I18nInstance = {
 };
 
 /** Visual rail order, which is also the arrow-key order. */
-const RAIL: MarkupTool[] = ['select', 'pen', 'highlighter', 'eraser', 'text', 'rect', 'ellipse', 'arrow', 'line'];
+const RAIL = ['select', 'pen', 'highlighter', 'eraser', 'text', 'shapes'] as const;
+/** Apple's grid order, two to a row. */
+const SHAPE_GRID: MarkupTool[] = ['line', 'arrow', 'rect', 'rounded-rect', 'ellipse', 'bubble', 'star', 'polygon'];
 
 const COLOR_NAMES = ['White', 'Black', 'Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple', 'Pink'];
 
@@ -92,7 +99,20 @@ describe('markup panel', () => {
     return el;
   };
 
-  const tool = (t: MarkupTool): HTMLElement => q(`markup-tool-${t}`);
+  const tool = (t: MarkupTool | 'shapes'): HTMLElement => q(`markup-tool-${t}`);
+  const picker = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-blok-testid="markup-shapes"]');
+  const shapeItem = (t: MarkupTool): HTMLElement => {
+    const el = document.querySelector<HTMLElement>(`[data-blok-testid="markup-shape-${t}"]`);
+
+    if (el === null) throw new Error(`no shape ${t}`);
+
+    return el;
+  };
+  /** Opens the shape picker and picks `t`, as a user would. */
+  const pickShape = (t: MarkupTool): void => {
+    if (picker() === null) tool('shapes').click();
+    shapeItem(t).click();
+  };
   const swatch = (hex: string): HTMLElement => q(`markup-color-${hex.slice(1)}`);
   const size = (n: number): HTMLElement => q(`markup-size-${n}`);
   const textStyle = (s: string): HTMLElement => q(`markup-text-style-${s}`);
@@ -155,23 +175,28 @@ describe('markup panel', () => {
       const radios = [...rail.querySelectorAll<HTMLElement>('[role="radio"]')];
 
       expect(radios.map((r) => r.getAttribute('data-tool'))).toEqual(RAIL);
-      expect(radios.map((r) => r.getAttribute('aria-label'))).toEqual(
-        ['Select', 'Pen', 'Highlighter', 'Eraser', 'Text', 'Rectangle', 'Ellipse', 'Arrow', 'Line']
-      );
+      expect(radios.map((r) => r.getAttribute('aria-label'))).toEqual(['Select', 'Pen', 'Highlighter', 'Eraser', 'Text', 'Shapes']);
       radios.forEach((r) => expect(r.querySelector('svg')).not.toBeNull());
     });
 
     it('shows each tool shortcut letter in its title and aria-keyshortcuts', () => {
       make();
-      const letters: Record<MarkupTool, string> = {
+      const letters: Partial<Record<MarkupTool, string>> = {
         select: 'V', pen: 'P', highlighter: 'H', eraser: 'E', text: 'T', rect: 'R', ellipse: 'O', arrow: 'A', line: 'L',
       };
 
-      RAIL.forEach((t) => {
+      (['select', 'pen', 'highlighter', 'eraser', 'text'] as const).forEach((t) => {
         expect(tool(t).getAttribute('aria-keyshortcuts')).toBe(letters[t]);
         expect(tool(t).title).toContain(letters[t]);
       });
       expect(tool('pen').title).toContain('Pen');
+      tool('shapes').click();
+      SHAPE_GRID.forEach((t) => {
+        const letter = letters[t];
+
+        expect(shapeItem(t).getAttribute('aria-keyshortcuts')).toBe(letter ?? null);
+        if (letter !== undefined) expect(shapeItem(t).title).toContain(letter);
+      });
     });
 
     it('splits the rail into four groups with three hairlines', () => {
@@ -181,7 +206,7 @@ describe('markup panel', () => {
         .filter((c) => c.hasAttribute('data-tool') || c.classList.contains('blok-darkroom__markup-sep'))
         .map((c) => c.getAttribute('data-tool') ?? '|');
 
-      expect(order).toEqual(['select', '|', 'pen', 'highlighter', 'eraser', '|', 'text', '|', 'rect', 'ellipse', 'arrow', 'line']);
+      expect(order).toEqual(['select', '|', 'pen', 'highlighter', 'eraser', '|', 'text', '|', 'shapes']);
       rail.querySelectorAll('.blok-darkroom__markup-sep').forEach((s) => expect(s.getAttribute('aria-hidden')).toBe('true'));
     });
 
@@ -280,11 +305,11 @@ describe('markup panel', () => {
   describe('picking', () => {
     it('reports a tool pick with the full next state', () => {
       make();
-      tool('rect').click();
+      pickShape('rect');
 
       expect(onChange).toHaveBeenCalledTimes(1);
       expect(onChange).toHaveBeenCalledWith({ ...DEFAULT_MARKUP_STATE, tool: 'rect' }, 'tool');
-      expect(tool('rect').getAttribute('aria-checked')).toBe('true');
+      expect(tool('shapes').getAttribute('aria-checked')).toBe('true');
     });
 
     it('ignores a click on the current tool, colour or size', () => {
@@ -343,12 +368,78 @@ describe('markup panel', () => {
 
     it('hands back a copy, so the caller cannot mutate panel state', () => {
       make();
-      tool('line').click();
+      pickShape('line');
       const [next] = onChange.mock.calls[0];
 
       next.tool = 'pen';
       swatch(GREEN).click();
       expect(onChange.mock.calls[1][0].tool).toBe('line');
+    });
+  });
+
+  describe('shape picker', () => {
+    it('opens a labelled grid of every shape in Apple\'s order, the current one checked', () => {
+      make({ tool: 'star' });
+      tool('shapes').click();
+      const items = [...(picker()?.querySelectorAll<HTMLElement>('[role="radio"]') ?? [])];
+
+      expect(picker()?.querySelector('[role="radiogroup"]')?.getAttribute('aria-label')).toBe('Shapes');
+      expect(items.map((b) => b.getAttribute('data-tool'))).toEqual(SHAPE_GRID);
+      expect(items.map((b) => b.getAttribute('aria-label'))).toEqual(
+        ['Line', 'Arrow', 'Rectangle', 'Rounded rectangle', 'Ellipse', 'Speech bubble', 'Star', 'Polygon']
+      );
+      items.forEach((b) => expect(b.querySelector('svg')).not.toBeNull());
+      expect(shapeItem('star').getAttribute('aria-checked')).toBe('true');
+      expect(shapeItem('star')).toHaveFocus();
+      expect(tool('shapes').getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('a pick closes the picker and the rail button shows that shape', () => {
+      make();
+      pickShape('bubble');
+
+      expect(picker()).toBeNull();
+      expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ tool: 'bubble' }), 'tool');
+      expect(tool('shapes').getAttribute('data-shape')).toBe('bubble');
+      expect(tool('shapes').getAttribute('aria-expanded')).toBe('false');
+      expect(tool('shapes')).toHaveFocus();
+    });
+
+    it('opening it alone does not change the tool', () => {
+      make();
+      tool('shapes').click();
+
+      expect(onChange).not.toHaveBeenCalled();
+      expect(tool('pen').getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('Escape closes only the picker', () => {
+      make();
+      tool('shapes').click();
+      key(shapeItem('rect'), 'Escape');
+
+      expect(picker()).toBeNull();
+      expect(onChange).not.toHaveBeenCalled();
+      expect(tool('shapes')).toHaveFocus();
+    });
+
+    it('the rail button follows a shape picked elsewhere, like a tool key', () => {
+      make();
+      panel.pickTool('ellipse');
+
+      expect(tool('shapes').getAttribute('data-shape')).toBe('ellipse');
+      expect(tool('shapes').getAttribute('aria-checked')).toBe('true');
+      panel.pickTool('pen');
+      expect(tool('shapes').getAttribute('data-shape')).toBe('ellipse');
+      expect(tool('shapes').getAttribute('aria-checked')).toBe('false');
+    });
+
+    it('destroy closes an open picker', () => {
+      make();
+      tool('shapes').click();
+      panel.destroy();
+
+      expect(picker()).toBeNull();
     });
   });
 
@@ -365,7 +456,7 @@ describe('markup panel', () => {
 
     it('keeps the current colour for tools without a default', () => {
       make({ tool: 'pen', color: RED });
-      tool('arrow').click();
+      pickShape('arrow');
 
       expect(onChange).toHaveBeenLastCalledWith({ ...DEFAULT_MARKUP_STATE, tool: 'arrow', color: RED }, 'tool');
     });
@@ -385,7 +476,7 @@ describe('markup panel', () => {
     it('does not learn colours from set()', () => {
       make({ tool: 'pen', color: RED });
       panel.set({ ...DEFAULT_MARKUP_STATE, tool: 'pen', color: GREEN });
-      tool('rect').click();
+      pickShape('rect');
       tool('pen').click();
 
       expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ tool: 'pen', color: RED }), 'tool');
@@ -396,7 +487,7 @@ describe('markup panel', () => {
     it('keeps one tab stop per group on the checked radio', () => {
       make({ tool: 'rect', color: BLUE, size: 0 });
 
-      expect(tool('rect').getAttribute('tabindex')).toBe('0');
+      expect(tool('shapes').getAttribute('tabindex')).toBe('0');
       expect(tool('pen').getAttribute('tabindex')).toBe('-1');
       expect(swatch(BLUE).getAttribute('tabindex')).toBe('0');
       expect(swatch(RED).getAttribute('tabindex')).toBe('-1');
@@ -410,8 +501,9 @@ describe('markup panel', () => {
       expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ tool: 'eraser' }), 'tool');
       expect(tool('eraser')).toHaveFocus();
       key(tool('eraser'), 'End');
-      expect(tool('line')).toHaveFocus();
-      key(tool('line'), 'ArrowRight');
+      expect(tool('shapes')).toHaveFocus();
+      expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ tool: 'rect' }), 'tool');
+      key(tool('shapes'), 'ArrowRight');
       expect(tool('select')).toHaveFocus();
     });
 
@@ -461,6 +553,11 @@ describe('markup panel', () => {
       { tool: 'ellipse', sel: null, color: true, style: false, fill: true, del: false },
       { tool: 'arrow', sel: null, color: true, style: false, fill: false, del: false },
       { tool: 'line', sel: null, color: true, style: false, fill: false, del: false },
+      { tool: 'rounded-rect', sel: null, color: true, style: false, fill: true, del: false },
+      { tool: 'bubble', sel: null, color: true, style: false, fill: true, del: false },
+      { tool: 'star', sel: null, color: true, style: false, fill: true, del: false },
+      { tool: 'polygon', sel: null, color: true, style: false, fill: true, del: false },
+      { tool: 'select', sel: 'star', color: true, style: false, fill: true, del: true },
       { tool: 'select', sel: 'pen', color: true, style: false, fill: false, del: true },
       { tool: 'select', sel: 'highlighter', color: true, style: false, fill: false, del: true },
       { tool: 'select', sel: 'text', color: true, style: true, fill: false, del: true },
@@ -567,7 +664,7 @@ describe('markup panel', () => {
       q('markup-reset').focus();
       panel.setHasMarkup(false);
 
-      expect(tool('arrow')).toHaveFocus();
+      expect(tool('shapes')).toHaveFocus();
     });
   });
 
@@ -575,7 +672,7 @@ describe('markup panel', () => {
     it('detaches handlers', () => {
       make();
       panel.destroy();
-      tool('rect').click();
+      tool('shapes').click();
       swatch(GREEN).click();
       key(size(1), 'ArrowRight');
 

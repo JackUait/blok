@@ -35,6 +35,7 @@ const SELECTED = [
   '.blok-darkroom__markup-size[aria-checked="true"]',
   '.blok-darkroom__markup-style[aria-checked="true"]',
   '.blok-darkroom__markup-fill[aria-pressed="true"]',
+  '.blok-darkroom__markup-shape[aria-checked="true"]',
 ];
 
 describe('markup-panel.css', () => {
@@ -52,6 +53,15 @@ describe('markup-panel.css', () => {
     expect(rule).toMatch(/--blok-icon-active-bg:\s*rgba\(255, 255, 255, 0?\.\d+\)/);
     expect(rule).toMatch(/--blok-text-primary:\s*var\(--blok-darkroom-ink\)/);
     expect(rule).toMatch(/--blok-icon-active-text:\s*var\(--blok-text-primary\)/);
+  });
+
+  it('the shape picker is a two-column glass grid', () => {
+    expect(body(css, '.blok-darkroom__markup-shapes')).toMatch(/background:\s*var\(--blok-darkroom-pill-bg\)/);
+    expect(body(css, '.blok-darkroom__markup-shape-grid')).toMatch(/grid-template-columns:\s*repeat\(2,/);
+  });
+
+  it('the shape button chevron is small and muted next to the shape', () => {
+    expect(body(css, '.blok-darkroom__markup-shapes-chevron')).toMatch(/width:\s*1[0-2]px/);
   });
 
   it('eraser size dots are hollow rings, not the last ink colour', () => {

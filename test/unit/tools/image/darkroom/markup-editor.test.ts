@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ImageMarkup, ImageMarkupShape, ImageMarkupStroke, ImageMarkupText } from '../../../../../types/tools/image';
 import {
   createMarkupEditor,
+  stateForMark,
   type MarkupEditor,
   type MarkupEditorOptions,
 } from '../../../../../src/tools/image/darkroom/markup-editor';
@@ -344,6 +345,38 @@ describe('createMarkupEditor', () => {
       const r = lastCommit(onCommit)[0] as ImageMarkupShape;
 
       expect((r.x2 - r.x1) * O.w).toBeCloseTo((r.y2 - r.y1) * O.h, 3);
+    });
+
+    it.each(['rounded-rect', 'star', 'polygon', 'bubble'] as const)('a %s runs corner to corner, squares with Shift and takes the fill', (type) => {
+      const { layer, onCommit, editor } = setup();
+
+      editor.setState({ ...BASE, tool: type, fill: true });
+      drag(layer, [150, 100], [250, 130], { shiftKey: true });
+
+      const r = lastCommit(onCommit)[0] as ImageMarkupShape;
+
+      expect(r).toMatchObject({ type, x1: 0.1, y1: 0.2, fill: true });
+      expect((r.x2 - r.x1) * O.w).toBeCloseTo((r.y2 - r.y1) * O.h, 3);
+    });
+
+    it('a bubble is drawn with its tail while it is dragged out, before it lands', () => {
+      const { layer, plane, editor, advance } = setup();
+
+      editor.setState({ ...BASE, tool: 'bubble' });
+      fire(layer, 'pointerdown', 150, 100);
+      fire(layer, 'pointermove', 250, 150);
+      advance(16);
+      const d = plane.querySelector('[data-markup-type="bubble"] path')?.getAttribute('d') ?? '';
+      const ys = Array.from(d.matchAll(/[ML][\d.]+ ([\d.]+)/g), (m) => Number(m[1]));
+
+      // Box bottom is O y 200; the tail reaches below it.
+      expect(Math.max(...ys)).toBeGreaterThan(220);
+    });
+
+    it.each(['rounded-rect', 'star', 'polygon', 'bubble'] as const)('a selected %s shows its fill in the panel', (type) => {
+      const item: ImageMarkupShape = { id: 's', type, color: '#0a84ff', x1: 0.2, y1: 0.2, x2: 0.4, y2: 0.6, size: 0.012, fill: true };
+
+      expect(stateForMark({ ...BASE, fill: false }, item).fill).toBe(true);
     });
 
     it('Alt draws the ellipse out from its centre', () => {

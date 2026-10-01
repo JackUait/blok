@@ -2,24 +2,33 @@ import type { ImageMarkup, ImageMarkupTextStyle } from '../../../../types/tools/
 import {
   IconArrowDiagonal,
   IconCheck,
+  IconChevronDown,
   IconCursor,
   IconEllipse,
+  IconEmojiStar,
   IconEraser,
   IconFill,
+  IconHexagon,
   IconHighlighter,
   IconLineDiagonal,
+  IconMessage,
   IconPencil,
   IconRectangle,
+  IconRoundedRectangle,
   IconText,
   IconTrash,
 } from '../../../components/icons';
+import { openModalDialog, type ModalDialogHandle } from '../../../components/utils/modal-dialog';
+import { createPositionTracker, positionFixedAnchored } from '../../../components/utils/popover/anchored-position';
 import type { I18nInstance } from '../../../components/utils/tools';
 import { rovingRadioGroup } from '../../../components/utils/roving-radio-group';
 import type { RovingRadioGroup } from '../../../components/utils/roving-radio-group';
 import { tr } from '../i18n';
-import { contrastInk, MARKUP_COLORS } from '../markup/model';
+import { contrastInk, isClosedShape, MARKUP_COLORS } from '../markup/model';
 
-export type MarkupTool = 'select' | 'pen' | 'highlighter' | 'text' | 'rect' | 'ellipse' | 'arrow' | 'line' | 'eraser';
+export type MarkupTool =
+  | 'select' | 'pen' | 'highlighter' | 'text' | 'eraser'
+  | 'rect' | 'rounded-rect' | 'ellipse' | 'arrow' | 'line' | 'bubble' | 'star' | 'polygon';
 export type MarkupSizeIndex = 0 | 1 | 2;
 
 export interface MarkupPanelState {
@@ -77,10 +86,29 @@ export function defaultColorFor(tool: MarkupTool): string | null {
   return DEFAULT_COLORS[tool] ?? null;
 }
 
-interface ToolDef { tool: MarkupTool; key: string; icon: string; letter: string }
+interface ToolDef { tool: MarkupTool; key: string; icon: string; letter?: string }
+
+/** Apple's shape grid order, two to a row. */
+const SHAPE_DEFS: ToolDef[] = [
+  { tool: 'line', key: 'markupLine', icon: IconLineDiagonal, letter: 'L' },
+  { tool: 'arrow', key: 'markupArrow', icon: IconArrowDiagonal, letter: 'A' },
+  { tool: 'rect', key: 'markupRectangle', icon: IconRectangle, letter: 'R' },
+  { tool: 'rounded-rect', key: 'markupRoundedRectangle', icon: IconRoundedRectangle },
+  { tool: 'ellipse', key: 'markupEllipse', icon: IconEllipse, letter: 'O' },
+  { tool: 'bubble', key: 'markupSpeechBubble', icon: IconMessage },
+  { tool: 'star', key: 'markupStar', icon: IconEmojiStar },
+  { tool: 'polygon', key: 'markupPolygon', icon: IconHexagon },
+];
+
+const isShapeTool = (t: MarkupTool): boolean => SHAPE_DEFS.some((d) => d.tool === t);
+
+/** The rail's one button for every shape; it shows the last shape picked. */
+const SHAPES_SLOT = 'shapes';
+
+type Slot = ToolDef | typeof SHAPES_SLOT;
 
 /** Visual order, split into groups by hairlines. Arrow keys follow it. */
-const RAIL: ToolDef[][] = [
+const RAIL: Slot[][] = [
   [{ tool: 'select', key: 'markupSelect', icon: IconCursor, letter: 'V' }],
   [
     { tool: 'pen', key: 'markupPen', icon: IconPencil, letter: 'P' },
@@ -88,15 +116,12 @@ const RAIL: ToolDef[][] = [
     { tool: 'eraser', key: 'markupEraser', icon: IconEraser, letter: 'E' },
   ],
   [{ tool: 'text', key: 'markupText', icon: IconText, letter: 'T' }],
-  [
-    { tool: 'rect', key: 'markupRectangle', icon: IconRectangle, letter: 'R' },
-    { tool: 'ellipse', key: 'markupEllipse', icon: IconEllipse, letter: 'O' },
-    { tool: 'arrow', key: 'markupArrow', icon: IconArrowDiagonal, letter: 'A' },
-    { tool: 'line', key: 'markupLine', icon: IconLineDiagonal, letter: 'L' },
-  ],
+  [SHAPES_SLOT],
 ];
 
-const TOOLS = RAIL.flat();
+const SLOTS = RAIL.flat();
+
+const slotHolds = (slot: Slot, tool: MarkupTool): boolean => (slot === SHAPES_SLOT ? isShapeTool(tool) : slot.tool === tool);
 
 /** Same order as MARKUP_COLORS. */
 const COLOR_KEYS = [
@@ -123,15 +148,13 @@ const TEXT_STYLE_DEFS: { style: ImageMarkupTextStyle; key: string }[] = [
   { style: 'background', key: 'tools.image.markupTextBackground' },
 ];
 
-const BOX_KINDS: readonly MarkupSelectionKind[] = ['rect', 'ellipse'];
-
 /** Tools whose colour the panel remembers per tool. */
 const remembers = (t: MarkupTool): boolean => defaultColorFor(t) !== null;
 
 export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
   const t = (key: string): string => tr(o.i18n, key);
   const st: MarkupPanelState = { ...o.state };
-  const ui: { selection: MarkupSelectionKind } = { selection: null };
+  const ui: { selection: MarkupSelectionKind; shape: MarkupTool } = { selection: null, shape: isShapeTool(o.state.tool) ? o.state.tool : 'rect' };
   const picked: Partial<Record<MarkupTool, string>> = {};
   // The eraser keeps its own size, so picking a big eraser never thickens the pen.
   const sizes: { ink: MarkupSizeIndex; eraser: MarkupSizeIndex } = { ink: st.size, eraser: st.tool === 'eraser' ? st.size : 1 };
@@ -186,22 +209,46 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
   puck.setAttribute('aria-hidden', 'true');
   rail.appendChild(puck);
 
-  const toolBtns = RAIL.flatMap((defs, g) => {
+  const titled = (btn: HTMLElement, d: ToolDef): void => {
+    const label = t(`tools.image.${d.key}`);
+
+    btn.setAttribute('data-tool', d.tool);
+    btn.setAttribute('title', d.letter === undefined ? label : `${label} (${d.letter})`);
+    if (d.letter !== undefined) btn.setAttribute('aria-keyshortcuts', d.letter);
+    btn.insertAdjacentHTML('beforeend', d.icon);
+  };
+
+  const shapeIcon = document.createElement('span');
+  const toolBtns = RAIL.flatMap((slots, g) => {
     if (g > 0) rail.appendChild(makeSep());
 
-    return defs.map((d) => {
-      const label = t(`tools.image.${d.key}`);
-      const btn = makeRadio('blok-darkroom__markup-tool', `markup-tool-${d.tool}`, label);
+    return slots.map((slot) => {
+      if (slot === SHAPES_SLOT) {
+        const label = t('tools.image.markupShapes');
+        const btn = makeRadio('blok-darkroom__markup-tool blok-darkroom__markup-shapes-btn', 'markup-tool-shapes', label);
+        const chevron = document.createElement('span');
 
-      btn.setAttribute('data-tool', d.tool);
-      btn.setAttribute('aria-keyshortcuts', d.letter);
-      btn.title = `${label} (${d.letter})`;
-      btn.innerHTML = d.icon;
+        btn.setAttribute('data-tool', SHAPES_SLOT);
+        btn.setAttribute('aria-haspopup', 'dialog');
+        btn.setAttribute('aria-expanded', 'false');
+        btn.title = label;
+        shapeIcon.className = 'blok-darkroom__markup-shapes-icon';
+        chevron.className = 'blok-darkroom__markup-shapes-chevron';
+        chevron.innerHTML = IconChevronDown;
+        btn.append(shapeIcon, chevron);
+        rail.appendChild(btn);
+
+        return btn;
+      }
+      const btn = makeRadio('blok-darkroom__markup-tool', `markup-tool-${slot.tool}`, t(`tools.image.${slot.key}`));
+
+      titled(btn, slot);
       rail.appendChild(btn);
 
       return btn;
     });
   });
+  const shapesBtn = toolBtns[SLOTS.indexOf(SHAPES_SLOT)];
 
   /* Row 2: colour + size, then the contextual cluster */
 
@@ -298,7 +345,8 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
 
   /* State → DOM */
 
-  const checkedTool = (): HTMLElement => toolBtns[TOOLS.findIndex((d) => d.tool === st.tool)];
+  const slotOf = (tool: MarkupTool): number => SLOTS.findIndex((slot) => slotHolds(slot, tool));
+  const checkedTool = (): HTMLElement => toolBtns[slotOf(st.tool)];
 
   /** A browser drops focus to <body> from a hidden control; hand it to the checked tool. */
   const rescueFocus = (gone: HTMLElement): void => {
@@ -317,11 +365,17 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
   };
 
   const render = (): void => {
-    const toolIndex = TOOLS.findIndex((d) => d.tool === st.tool);
-    const groupIndex = RAIL.findIndex((defs) => defs.some((d) => d.tool === st.tool));
+    const toolIndex = slotOf(st.tool);
+    const groupIndex = RAIL.findIndex((slots) => slots.some((slot) => slotHolds(slot, st.tool)));
     const sel = ui.selection;
 
     check(toolBtns, (i) => i === toolIndex);
+    if (isShapeTool(st.tool)) ui.shape = st.tool;
+    if (shapesBtn.getAttribute('data-shape') !== ui.shape) {
+      shapesBtn.setAttribute('data-shape', ui.shape);
+      shapeIcon.innerHTML = SHAPE_DEFS.find((d) => d.tool === ui.shape)?.icon ?? '';
+    }
+    picker.items.forEach((b, i) => b.setAttribute('aria-checked', String(SHAPE_DEFS[i]?.tool === st.tool)));
     rail.style.setProperty('--blok-markup-puck-i', String(toolIndex));
     rail.style.setProperty('--blok-markup-puck-s', String(groupIndex));
     check(swatchBtns, (i) => MARKUP_COLORS[i] === st.color);
@@ -334,7 +388,7 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
     const showColors = sel !== null || (st.tool !== 'eraser' && st.tool !== 'select');
     const showPaint = showColors || st.tool === 'eraser';
     const showStyles = st.tool === 'text' || sel === 'text';
-    const showFill = st.tool === 'rect' || st.tool === 'ellipse' || BOX_KINDS.includes(sel);
+    const showFill = isClosedShape(st.tool) || (sel !== null && isClosedShape(sel));
     const showDelete = sel !== null;
 
     root.setAttribute('data-tool', st.tool);
@@ -347,6 +401,68 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
     setShown(extra, showStyles || showFill || showDelete);
     root.toggleAttribute('data-context-empty', !showPaint && !showStyles && !showFill && !showDelete);
     rovings.forEach((r) => r.refresh());
+  };
+
+  const picker: { handle: ModalDialogHandle | null; items: HTMLElement[]; roving: RovingRadioGroup | null } = {
+    handle: null, items: [], roving: null,
+  };
+
+  const closePicker = (): void => picker.handle?.close();
+
+  const openPicker = (): void => {
+    if (picker.handle) return;
+    const content = document.createElement('div');
+    const grid = makeGroup('blok-darkroom__markup-shape-grid', 'tools.image.markupShapes');
+
+    content.className = 'blok-darkroom__markup-shapes';
+    content.setAttribute('data-blok-testid', 'markup-shapes');
+    picker.items = SHAPE_DEFS.map((d) => {
+      const btn = makeRadio('blok-darkroom__markup-shape', `markup-shape-${d.tool}`, t(`tools.image.${d.key}`));
+
+      titled(btn, d);
+      btn.setAttribute('aria-checked', String(d.tool === st.tool));
+      btn.addEventListener('click', () => {
+        pickTool(d.tool);
+        closePicker();
+      });
+      grid.appendChild(btn);
+
+      return btn;
+    });
+    content.appendChild(grid);
+    picker.roving = rovingRadioGroup({
+      radios: picker.items,
+      orientation: 'both',
+      getSelectedIndex: () => SHAPE_DEFS.findIndex((d) => d.tool === st.tool),
+      onSelect: (i) => pickTool(SHAPE_DEFS[i].tool),
+    });
+    const reposition = (): void => {
+      positionFixedAnchored(content, shapesBtn, { side: 'top', align: 'center', offset: 8 });
+    };
+    const tracker = createPositionTracker(content, reposition);
+
+    picker.handle = openModalDialog({
+      content,
+      // Inside the panel, so it inherits the dark-glass tokens; the top layer still lifts it.
+      container: root,
+      label: t('tools.image.markupShapes'),
+      anchor: shapesBtn,
+      initialFocus: () => picker.items[Math.max(0, SHAPE_DEFS.findIndex((d) => d.tool === ui.shape))] ?? null,
+      onDismiss: closePicker,
+      onClose: () => {
+        tracker.detach();
+        picker.roving?.destroy();
+        picker.roving = null;
+        picker.items = [];
+        picker.handle = null;
+        shapesBtn.setAttribute('aria-expanded', 'false');
+        // A click does not focus a button in Safari, so focus restore alone could land on body.
+        if (shapesBtn.isConnected) shapesBtn.focus({ preventScroll: true });
+      },
+    });
+    shapesBtn.setAttribute('aria-expanded', 'true');
+    reposition();
+    tracker.attach();
   };
 
   const emit = (changed: keyof MarkupPanelState): void => {
@@ -373,6 +489,12 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
     emit('color');
   };
 
+  const pickSlot = (i: number): void => {
+    const slot = SLOTS[i];
+
+    if (slot !== undefined) pickTool(slot === SHAPES_SLOT ? ui.shape : slot.tool);
+  };
+
   const pickSize = (size: MarkupSizeIndex): void => {
     if (size === st.size) return;
     st.size = size;
@@ -388,8 +510,8 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
   const rovings: RovingRadioGroup[] = [
     rovingRadioGroup({
       radios: toolBtns,
-      getSelectedIndex: () => TOOLS.findIndex((d) => d.tool === st.tool),
-      onSelect: (i) => pickTool(TOOLS[i].tool),
+      getSelectedIndex: () => slotOf(st.tool),
+      onSelect: (i) => pickSlot(i),
     }),
     rovingRadioGroup({
       radios: swatchBtns,
@@ -408,7 +530,7 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
     }),
   ];
 
-  toolBtns.forEach((b, i) => listen(b, () => pickTool(TOOLS[i].tool)));
+  toolBtns.forEach((b, i) => listen(b, () => (b === shapesBtn ? openPicker() : pickSlot(i))));
   swatchBtns.forEach((b, i) => listen(b, () => pickColor(MARKUP_COLORS[i])));
   sizeBtns.forEach((b, i) => listen(b, () => pickSize(SIZES[i].size)));
   styleBtns.forEach((b, i) => listen(b, () => pickStyle(TEXT_STYLE_DEFS[i].style)));
@@ -438,6 +560,7 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
       if (!has) rescueFocus(reset);
     },
     destroy(): void {
+      closePicker();
       rovings.forEach((r) => r.destroy());
       cleanups.splice(0).forEach((fn) => fn());
     },

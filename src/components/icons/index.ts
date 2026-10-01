@@ -1177,6 +1177,20 @@ export const IconRectangle = `
 </svg>
 `;
 
+// The Panel frame with the corners rounded twice as far as IconRectangle's.
+export const IconRoundedRectangle = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="3" y="4" width="14" height="12" rx="4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Corners on the standalone circle (r 6.5), one at the top.
+export const IconHexagon = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M10 3.5L15.63 6.75L15.63 13.25L10 16.5L4.37 13.25L4.37 6.75Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // As wide as the Panel; kept flatter than the standalone circle.
 export const IconEllipse = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

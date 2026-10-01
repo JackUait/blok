@@ -162,6 +162,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   // "Media" is the standard Finnish loanword for media content.
   fi: new Set(['notifier.ok', 'toolbox.sectionMedia']),
   fil: new Set([
+    // "Spotlight" is the Filipino/Taglish loanword for the dim-around effect.
+    'tools.image.markupSpotlight',
     'tools.link.emailAddress',
     'tools.code.autoDetected',
     // "Superscript"/"Subscript" are the established Filipino office terms
@@ -373,6 +375,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   // "Media" is the standard Albanian loanword for media content.
   sq: new Set(['searchTerms.program', 'tools.image.cropRatioOval', 'toolbox.sectionMedia']),
   sv: new Set([
+    // "Polygon" is the standard Swedish geometry noun.
+    'tools.image.markupPolygon',
     'toolNames.text',
     // "Media" is the standard Swedish term for media content.
     'toolbox.sectionMedia',

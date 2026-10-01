@@ -136,6 +136,20 @@ describe('marks', () => {
     expect(rect.getAttribute('fill')).toBe('none');
   });
 
+  it.each(['rounded-rect', 'star', 'polygon', 'bubble'] as const)('draws a %s as a closed outline path', (type) => {
+    const item = shape({ id: 'x', type, ...(type === 'bubble' ? { tx: 0.1, ty: 0.9 } : {}) });
+    const path = child(mark(createMarkupLayer([item], O), 'x'), 'path');
+
+    expect(path.getAttribute('d')).toMatch(/^M[\d. ]+(L[\d. -]+)+Z$/);
+    expect(path.getAttribute('stroke')).toBe('#0a84ff');
+    expect(num(path, 'stroke-width')).toBe(5);
+    expect(path.getAttribute('fill')).toBe('none');
+    const filled = child(mark(createMarkupLayer([{ ...item, fill: true }], O), 'x'), 'path');
+
+    expect(filled.getAttribute('fill')).toBe('#0a84ff');
+    expect(filled.getAttribute('fill-opacity')).toBe('0.2');
+  });
+
   it('fills a rect and an ellipse with a translucent wash of their colour', () => {
     const svg = createMarkupLayer([shape({ fill: true }), shape({ id: 'e', type: 'ellipse', fill: true })], O);
     const rect = child(mark(svg, 's1'), 'rect');

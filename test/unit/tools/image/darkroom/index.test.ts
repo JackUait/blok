@@ -1944,7 +1944,8 @@ describe('openDarkroom markup', () => {
     tab('markup');
     key(stageEl(), { key: 'r' });
 
-    expect(q('[data-blok-testid="markup-tool-rect"]').getAttribute('aria-checked')).toBe('true');
+    expect(q('[data-blok-testid="markup-tool-shapes"]').getAttribute('aria-checked')).toBe('true');
+    expect(q('[data-blok-testid="markup-tool-shapes"]').getAttribute('data-shape')).toBe('rect');
   });
 
   it('the eraser key swaps in the eraser size and the pen key swaps the pen size back', () => {

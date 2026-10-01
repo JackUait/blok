@@ -159,9 +159,57 @@
   }
 }
 
+/* Shapes: the rail button shows the last shape picked and opens a grid. */
+.blok-darkroom__markup-shapes-icon {
+  display: contents;
+}
+
+.blok-darkroom__markup-shapes-chevron {
+  position: absolute;
+  inset-inline-end: 1px;
+  bottom: 3px;
+  display: flex;
+  width: 10px;
+  height: 10px;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.blok-darkroom__markup-shapes-chevron svg {
+  width: 100%;
+  height: 100%;
+}
+
+/*
+  Top-layer promoted, so it re-asserts the box the [data-blok-top-layer][popover]
+  reset strips, and the dark ink the :where([data-blok-top-layer]) tokens reset.
+*/
+.blok-darkroom__markup-shapes,
+.blok-darkroom__markup-shapes[data-blok-top-layer][popover] {
+  --blok-icon-active-bg: rgba(255, 255, 255, 0.14);
+  --blok-text-primary: var(--blok-darkroom-ink);
+  --blok-icon-active-text: var(--blok-text-primary);
+  --blok-markup-hit: 40px;
+  margin: 0;
+  padding: var(--blok-space-2);
+  border: 0;
+  border-radius: var(--blok-radius-surface);
+  background: var(--blok-darkroom-pill-bg);
+  box-shadow: inset 0 0 0 0.5px var(--blok-darkroom-pill-edge), 0 8px 24px var(--blok-darkroom-pill-shadow);
+  backdrop-filter: blur(20px) saturate(1.6);
+  color: var(--blok-darkroom-ink);
+}
+
+.blok-darkroom__markup-shape-grid {
+  display: grid;
+  grid-template-columns: repeat(2, var(--blok-markup-hit));
+  gap: var(--blok-space-1);
+}
+
 /* Controls */
 
 .blok-darkroom__markup-tool,
+.blok-darkroom__markup-shape,
 .blok-darkroom__markup-swatch,
 .blok-darkroom__markup-size,
 .blok-darkroom__markup-style,
@@ -194,6 +242,7 @@
 
 /* 20px at the base hit; grows with the rail. */
 .blok-darkroom__markup-tool svg,
+.blok-darkroom__markup-shape svg,
 .blok-darkroom__markup-btn svg {
   width: calc(var(--blok-markup-hit) * 5 / 9);
   height: calc(var(--blok-markup-hit) * 5 / 9);
@@ -202,11 +251,13 @@
 }
 
 .blok-darkroom__markup-tool:hover,
+.blok-darkroom__markup-shape:hover,
 .blok-darkroom__markup-size:hover,
 .blok-darkroom__markup-style:hover,
 .blok-darkroom__markup-btn:hover { color: var(--blok-darkroom-ink); }
 
 .blok-darkroom__markup-tool:not([aria-checked="true"]):hover,
+.blok-darkroom__markup-shape:not([aria-checked="true"]):hover,
 .blok-darkroom__markup-size:not([aria-checked="true"]):hover,
 .blok-darkroom__markup-style:not([aria-checked="true"]):hover,
 .blok-darkroom__markup-btn:not([aria-pressed="true"]):hover { background: var(--blok-darkroom-btn-hover-bg); }
@@ -314,6 +365,7 @@
 }
 
 .blok-darkroom__markup-size[aria-checked="true"],
+.blok-darkroom__markup-shape[aria-checked="true"],
 .blok-darkroom__markup-style[aria-checked="true"],
 .blok-darkroom__markup-fill[aria-pressed="true"] {
   background: var(--blok-icon-active-bg);

@@ -21,6 +21,7 @@ import {
   arrowHeadLength,
   eraseMarkup,
   MAX_MARKUP_ITEMS,
+  shapeOutline,
 } from '../../../../../src/tools/image/markup/model';
 
 const O: Size = { w: 1000, h: 500 };
@@ -36,8 +37,7 @@ const text = (over: Partial<ImageMarkupText> = {}): ImageMarkupText => ({
 });
 
 const isStroke = (m: ImageMarkup | undefined): m is ImageMarkupStroke => m?.type === 'pen' || m?.type === 'highlighter';
-const isShape = (m: ImageMarkup | undefined): m is ImageMarkupShape =>
-  m?.type === 'rect' || m?.type === 'ellipse' || m?.type === 'line' || m?.type === 'arrow';
+const isShape = (m: ImageMarkup | undefined): m is ImageMarkupShape => m !== undefined && !isStroke(m) && m.type !== 'text';
 const isText = (m: ImageMarkup | undefined): m is ImageMarkupText => m?.type === 'text';
 
 const asStroke = (m: ImageMarkup | undefined | null): ImageMarkupStroke => {
@@ -629,6 +629,99 @@ describe('eraseMarkup', () => {
     const out = eraseMarkup([across({ points: [0.1, 0.2, 0.3, 0.4, 0.3, 0.6, 0.9, 0.2, 0.7] })], { x: 400, y: 150 }, 20, O);
 
     expect(readMarkup(out)).toEqual(out);
+  });
+});
+
+describe('outlined shapes', () => {
+  type Outlined = 'rounded-rect' | 'star' | 'polygon' | 'bubble';
+  const OUTLINED: Outlined[] = ['rounded-rect', 'star', 'polygon', 'bubble'];
+  // Box (100, 100)..(500, 300) px on O 1000 × 500.
+  const box = (type: Outlined, over: Partial<ImageMarkupShape> = {}): ImageMarkupShape =>
+    shape({ id: type, type, x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6, ...(type === 'bubble' ? { tx: 0.15, ty: 0.8 } : {}), ...over });
+  const outline = (m: ImageMarkupShape, o: Size = O): { x: number; y: number }[] => shapeOutline(m, o) ?? [];
+  const sameSet = (a: { x: number; y: number }[], b: { x: number; y: number }[]): void => {
+    const key = (p: { x: number; y: number }): string => `${Math.round(p.x)},${Math.round(p.y)}`;
+
+    expect(a.map(key).sort()).toEqual(b.map(key).sort());
+  };
+
+  it.each(OUTLINED)('%s survives a save and load', (type) => {
+    const m = box(type, type === 'star' ? { rotation: 90 } : {});
+
+    expect(readMarkup([m])).toEqual([m]);
+  });
+
+  it('a star and a polygon keep their key order with a turn', () => {
+    expect(Object.keys(readMarkup([box('star', { rotation: 90, fill: true })])[0] ?? {}))
+      .toEqual(['id', 'type', 'color', 'x1', 'y1', 'x2', 'y2', 'size', 'fill', 'rotation']);
+    expect(Object.keys(readMarkup([box('bubble')])[0] ?? {})).toEqual(['id', 'type', 'color', 'x1', 'y1', 'x2', 'y2', 'size', 'tx', 'ty']);
+  });
+
+  it('a bubble saved without a tail gets one below its box', () => {
+    const { tx: _x, ty: _y, ...bare } = box('bubble');
+    const read = asShape(readMarkup([bare])[0]);
+
+    expect(read.ty).toBeGreaterThan(0.6);
+    expect(read.tx).toBeGreaterThan(0.1);
+    expect(read.tx).toBeLessThan(0.5);
+  });
+
+  it('draws a five-point star with its top point on the top edge', () => {
+    const pts = outline(box('star'));
+
+    expect(pts).toHaveLength(10);
+    expect(pts[0]?.x).toBeCloseTo(300, 6);
+    expect(pts[0]?.y).toBeCloseTo(100, 6);
+  });
+
+  it('draws a hexagon with a point at the top', () => {
+    const pts = outline(box('polygon'));
+
+    expect(pts).toHaveLength(6);
+    expect(pts[0]?.y).toBeCloseTo(100, 6);
+    expect(Math.max(...pts.map((p) => p.y))).toBeCloseTo(300, 6);
+  });
+
+  it('rounds the corners of a rounded rect inside its box', () => {
+    const pts = outline(box('rounded-rect'));
+
+    expect(pts.every((p) => p.x >= 100 - 1e-6 && p.x <= 500 + 1e-6 && p.y >= 100 - 1e-6 && p.y <= 300 + 1e-6)).toBe(true);
+    expect(Math.min(...pts.map((p) => Math.hypot(p.x - 100, p.y - 100)))).toBeGreaterThan(10);
+  });
+
+  it('gives a bubble a tail that reaches its tip', () => {
+    const pts = outline(box('bubble'));
+
+    expect(pts.some((p) => Math.abs(p.x - 150) < 1e-6 && Math.abs(p.y - 400) < 1e-6)).toBe(true);
+  });
+
+  it.each(OUTLINED)('%s is hit on its outline, and inside only when filled', (type) => {
+    const m = box(type);
+    const edge = outline(m)[0] ?? { x: 0, y: 0 };
+
+    expect(hitTest([m], edge, O, 2)?.id).toBe(type);
+    expect(hitTest([m], { x: 300, y: 200 }, O, 2)).toBeNull();
+    expect(hitTest([box(type, { fill: true })], { x: 300, y: 200 }, O, 2)?.id).toBe(type);
+  });
+
+  it('bounds a bubble around its tail too', () => {
+    const b = markupBounds(box('bubble'), O);
+
+    expect(b.y + b.h).toBeGreaterThanOrEqual(400);
+  });
+
+  it.each(['star', 'polygon', 'bubble'] as const)('%s turns with the image, not just its box', (type) => {
+    const m = box(type, { rotation: type === 'bubble' ? undefined : 30 });
+    const turned = asShape(turnMarkupLeft([m])[0]);
+
+    sameSet(outline(turned, { w: 500, h: 1000 }), outline(m).map((p) => ({ x: p.y, y: 1000 - p.x })));
+  });
+
+  it.each(['star', 'polygon', 'bubble'] as const)('%s mirrors with the image', (type) => {
+    const m = box(type, { rotation: type === 'bubble' ? undefined : 30 });
+    const flipped = asShape(flipMarkup([m])[0]);
+
+    sameSet(outline(flipped), outline(m).map((p) => ({ x: 1000 - p.x, y: p.y })));
   });
 });
 

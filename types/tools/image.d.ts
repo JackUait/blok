@@ -70,17 +70,25 @@ export interface ImageMarkupStroke extends ImageMarkupBase {
   cut?: 'start' | 'end' | 'both';
 }
 
-/** A shape between two corner points. Rect and ellipse fill the box they span; line and arrow join the points. */
+/**
+ * A shape between two corner points. Line and arrow join the points; every other
+ * shape fills the box they span.
+ */
 export interface ImageMarkupShape extends ImageMarkupBase {
-  type: 'rect' | 'ellipse' | 'line' | 'arrow';
+  type: 'rect' | 'rounded-rect' | 'ellipse' | 'line' | 'arrow' | 'bubble' | 'star' | 'polygon';
   x1: number;
   y1: number;
   x2: number;
   y2: number;
   /** Stroke width. */
   size: number;
-  /** Rect and ellipse only: a translucent fill of `color`. Omitted for false. */
+  /** Closed shapes only: a translucent fill of `color`. Omitted for false. */
   fill?: boolean;
+  /** Star and polygon only: clockwise degrees, so they turn with the image. Omitted for 0. */
+  rotation?: number;
+  /** Bubble only: where the tail points, in the same fractions as the corners. */
+  tx?: number;
+  ty?: number;
 }
 
 /** How a text mark is painted. */

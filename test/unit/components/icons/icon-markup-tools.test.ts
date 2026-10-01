@@ -43,6 +43,30 @@ describe('Blok Line markup tool icons', () => {
     expect(['x', 'y', 'width', 'height', 'rx'].map(attribute => num(rect, attribute))).toEqual([3, 4, 14, 12, 2]);
   });
 
+  it('rounded rectangle is the Panel frame with corners round enough to tell it from the rectangle', () => {
+    const svg = svgOf('IconRoundedRectangle');
+    const rect = svg.querySelector('rect');
+    const plain = svgOf('IconRectangle').querySelector('rect');
+
+    expect(svg.children).toHaveLength(1);
+    expect(['x', 'y', 'width', 'height'].map(attribute => num(rect, attribute))).toEqual([3, 4, 14, 12]);
+    expect(num(rect, 'rx')).toBeGreaterThanOrEqual(2 * num(plain, 'rx'));
+    expect(num(rect, 'rx')).toBeLessThanOrEqual(6);
+  });
+
+  it('hexagon sits on the standalone circle, point up', () => {
+    const svg = svgOf('IconHexagon');
+    const pts = numbers(svg.querySelector('path'));
+    const corners = Array.from({ length: pts.length / 2 }, (_, i) => ({ x: pts[i * 2], y: pts[i * 2 + 1] }));
+
+    expect(svg.children).toHaveLength(1);
+    expect(corners).toHaveLength(6);
+    expect(corners[0]).toEqual({ x: 10, y: 3.5 });
+    for (const c of corners) {
+      expect(Math.hypot(c.x - 10, c.y - 10)).toBeCloseTo(6.5, 1);
+    }
+  });
+
   it('ellipse is a horizontal ellipse as wide as the Panel, centered on the canvas', () => {
     const svg = svgOf('IconEllipse');
     const ellipse = svg.querySelector('ellipse');

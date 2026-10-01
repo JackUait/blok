@@ -364,3 +364,35 @@ test('Reset crop clears the crop and turn but keeps the filter', async ({ page }
   expect(data.rotation).toBeUndefined();
   expect(data.filter).toBe('mono');
 });
+
+test('switching tabs never grows the frame outline into a screen-wide flash', async ({ page }) => {
+  const { dialog } = await openDarkroom(page);
+
+  // Samples every frame: a transition between unequal shadow lists only shows mid-flight.
+  await page.evaluate(() => {
+    const frame = document.querySelector('[data-role="darkroom-frame"]');
+    const spreads: number[] = [];
+    const tick = (): void => {
+      if (frame) {
+        const first = getComputedStyle(frame).boxShadow.split(/,(?![^(]*\))/)[0] ?? '';
+        const px = [...first.matchAll(/(-?[\d.]+)px/g)].map((m) => Number(m[1]));
+
+        spreads.push(px[3] ?? 0);
+      }
+      requestAnimationFrame(tick);
+    };
+
+    requestAnimationFrame(tick);
+    Object.assign(window, { __spreads: spreads });
+  });
+  const spreads = (): Promise<number[]> => page.evaluate(() => (window as unknown as { __spreads: number[] }).__spreads);
+
+  await dialog.getByRole('tab', { name: 'Adjust' }).click();
+  await expect.poll(async () => (await spreads()).length).toBeGreaterThan(30);
+  const before = (await spreads()).length;
+
+  await dialog.getByRole('tab', { name: 'Crop' }).click();
+  await expect.poll(async () => (await spreads()).length).toBeGreaterThan(before + 30);
+
+  expect(Math.max(...await spreads())).toBeLessThanOrEqual(1.5);
+});

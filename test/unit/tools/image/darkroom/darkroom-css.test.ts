@@ -125,16 +125,41 @@ describe('darkroom.css', () => {
       return hit[2];
     };
 
-    it('handles and the thirds grid are gone', () => {
-      expect(offCrop('.blok-darkroom__handle')).toMatch(/display:\s*none/);
+    // Split a box-shadow value on its top-level commas only.
+    const layers = (body: string): string[] => {
+      const value = /box-shadow:\s*([^;]+);/.exec(body)?.[1] ?? '';
+
+      return value.split(/,(?![^(]*\))/).map((x) => x.trim());
+    };
+
+    it('handles fade out instead of vanishing, and take no press while gone', () => {
+      const handle = offCrop('.blok-darkroom__handle');
+
+      expect(handle).not.toMatch(/display:\s*none/);
+      expect(handle).toMatch(/opacity:\s*0/);
+      expect(handle).toMatch(/visibility:\s*hidden/);
+      expect(handle).toMatch(/pointer-events:\s*none/);
+      expect(rule('.blok-darkroom__handle')).toMatch(/transition:[^;]*opacity[^;]*visibility/);
       expect(offCrop('.blok-darkroom__grid')).toMatch(/display:\s*none/);
     });
 
-    it('the frame drops its outline and the mask goes opaque', () => {
-      const frame = offCrop('.blok-darkroom__frame');
+    it('every frame state has the same two shadow layers, so a tab switch never pairs the outline with the 9999px mask', () => {
+      const states = [rule('.blok-darkroom__frame'), rule('.blok-darkroom__surface[data-peek] .blok-darkroom__frame'), offCrop('.blok-darkroom__frame')];
 
-      expect(frame).toMatch(/box-shadow:\s*0 0 0 9999px var\(--blok-darkroom-bg-edge\)/);
-      expect(frame).not.toMatch(/1\.5px/);
+      states.forEach((body) => {
+        const [outline, mask] = layers(body);
+
+        expect(layers(body)).toHaveLength(2);
+        expect(outline).not.toMatch(/9999px/);
+        expect(mask).toMatch(/^0 0 0 9999px /);
+      });
+    });
+
+    it('the frame drops its outline and the mask goes opaque', () => {
+      const [outline, mask] = layers(offCrop('.blok-darkroom__frame'));
+
+      expect(outline).toBe('0 0 0 0 transparent');
+      expect(mask).toBe('0 0 0 9999px var(--blok-darkroom-bg-edge)');
       expect(rule('.blok-darkroom')).toMatch(/--blok-darkroom-bg-edge:\s*#[0-9a-f]{6};/);
     });
 

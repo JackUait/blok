@@ -188,6 +188,8 @@
   height: 28px;
   pointer-events: auto;
   touch-action: none;
+  /* Visibility waits for the fade on the way out and flips at once on the way in. */
+  transition: opacity 180ms ease, visibility 0s linear 180ms;
 }
 
 .blok-darkroom__handle--corner::before {
@@ -231,13 +233,23 @@
 .blok-darkroom__handle--w::before { width: var(--blok-darkroom-stroke); height: 22px; }
 
 /* Adjust and Filters preview the cropped result: no crop chrome, nothing outside the crop. */
-.blok-darkroom__surface:not([data-mode="crop"]) .blok-darkroom__handle,
+.blok-darkroom__surface[data-mode="crop"] .blok-darkroom__handle {
+  transition: opacity 180ms ease, visibility 0s;
+}
+
+.blok-darkroom__surface:not([data-mode="crop"]) .blok-darkroom__handle {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .blok-darkroom__surface:not([data-mode="crop"]) .blok-darkroom__grid {
   display: none;
 }
 
+/* Same two layers as the base rule: a shorter list would pair the outline with the 9999px mask and flash the screen white. */
 .blok-darkroom__surface:not([data-mode="crop"]) .blok-darkroom__frame {
-  box-shadow: 0 0 0 9999px var(--blok-darkroom-bg-edge);
+  box-shadow: 0 0 0 0 transparent, 0 0 0 9999px var(--blok-darkroom-bg-edge);
 }
 
 .blok-darkroom__surface:not([data-mode="crop"]) .blok-darkroom__stage {
@@ -400,7 +412,9 @@
   .blok-darkroom__bar,
   .blok-darkroom__dock,
   .blok-darkroom__grid,
-  .blok-darkroom__frame { transition: none; }
+  .blok-darkroom__frame,
+  .blok-darkroom__handle,
+  .blok-darkroom__surface[data-mode="crop"] .blok-darkroom__handle { transition: none; }
 }
 
 /* Panels: dial, mode tabs, adjust, filters */

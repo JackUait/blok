@@ -64,6 +64,8 @@ interface EmojiPickerOptions {
    * mode. Pickers that do not edit a callout (a page icon) turn it off.
    */
   curated?: boolean;
+  /** How far the picker starts before the anchor's start edge, in px. Defaults to 8. */
+  startInset?: number;
 }
 
 interface ReelRow {
@@ -165,6 +167,7 @@ export class EmojiPicker {
   private readonly _locale: string;
   private readonly _inline: boolean;
   private readonly _curated: boolean;
+  private readonly _startInset: number;
   private _localeData: EmojiLocaleData | null = null;
   private _localeLoad: Promise<void> | null = null;
   private _hasKeywords = false;
@@ -226,6 +229,7 @@ export class EmojiPicker {
     this._locale = options.locale;
     this._inline = options.inline ?? false;
     this._curated = options.curated ?? !this._inline;
+    this._startInset = options.startInset ?? 8;
     this._element = this.buildElement();
 
     const body = this._element.querySelector<HTMLElement>('[data-emoji-picker-body]');
@@ -1710,8 +1714,10 @@ export class EmojiPicker {
     const above = rect.bottom + height + 4 > viewportHeight - 8 && rect.top > viewportHeight - rect.bottom;
     const preferredTop = above ? rect.top - height - 4 : rect.bottom + 4;
     const top = Math.max(8, Math.min(preferredTop, viewportHeight - height - 8));
-    // Starts 8px before the anchor's start edge: its right edge in RTL.
-    const preferredLeft = getElementDirection(this._element) === 'rtl' ? rect.right + 8 - width : rect.left - 8;
+    // Starts before the anchor's start edge: its right edge in RTL.
+    const preferredLeft = getElementDirection(this._element) === 'rtl'
+      ? rect.right + this._startInset - width
+      : rect.left - this._startInset;
     const left = Math.max(8, Math.min(preferredLeft, viewportWidth - width - 8));
 
     this._element.style.top = `${top}px`;

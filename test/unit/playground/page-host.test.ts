@@ -224,6 +224,29 @@ describe('root page header', () => {
     vi.unstubAllGlobals();
   });
 
+  it('the page icon picker starts where the icon starts', async () => {
+    const pages = new PageRegistry(seed());
+    const host = document.createElement('header');
+    const i18n: I18n = { t: (key) => key, has: () => false, getEnglishTranslation: (key) => key, getLocale: () => 'en' };
+
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false })));
+    pages.setIcon(null, '😭');
+    document.body.append(host);
+    renderPageHeader(host, { ...headerOptions(pages, null), i18n: vi.fn(() => ({ i18n, locale: 'en' })) });
+
+    const button = host.querySelector('button');
+
+    if (button === null) throw new Error('no icon button');
+    button.getBoundingClientRect = () => new DOMRect(120, 40, 78, 78);
+    button.click();
+    await vi.waitFor(() => expect(document.body.querySelector('[data-emoji-section-deferred]')).not.toBeNull());
+
+    expect(document.body.querySelector<HTMLElement>('[data-emoji-picker-header]')?.closest<HTMLElement>('[style*="left"]')?.style.left).toBe('120px');
+
+    document.body.replaceChildren();
+    vi.unstubAllGlobals();
+  });
+
   it('the icon stays marked as open while its picker is open', async () => {
     const pages = new PageRegistry(seed());
     const host = document.createElement('header');

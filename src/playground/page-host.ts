@@ -667,7 +667,7 @@ const openIconPicker = (
   // Each editor has its own i18n; a picker built for a destroyed one is dropped.
   if (pickerSlot.current === null || pickerSlot.current.i18n !== i18n || pickerSlot.current.locale !== locale) {
     disposeIconPicker();
-    pickerSlot.current = { instance: new EmojiPicker({ onSelect, onRemove, i18n, locale, curated: false }), i18n, locale };
+    pickerSlot.current = { instance: new EmojiPicker({ onSelect, onRemove, i18n, locale, curated: false, startInset: 0 }), i18n, locale };
   }
 
   const element = pickerSlot.current.instance.getElement();

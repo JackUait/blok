@@ -10323,6 +10323,11 @@ span[data-blok-slash-search] {
   fill: color-mix(in srgb, var(--blok-color-yellow-text) 40%, var(--blok-text-on-dark));
 }
 
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='range-back'] {
+  fill: color-mix(in srgb, var(--blok-color-pink-text) 55%, var(--blok-text-on-dark));
+  opacity: 0.35;
+}
+
 [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='range-far'] {
   fill: color-mix(in srgb, var(--blok-color-purple-text) 72%, var(--blok-color-pink-text));
 }
@@ -10345,6 +10350,75 @@ span[data-blok-slash-search] {
 
 [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='shore'] {
   fill: color-mix(in srgb, var(--blok-color-purple-text) 24%, var(--blok-overlay-dark));
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='star'] {
+  fill: none;
+  stroke: var(--blok-text-on-dark);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  opacity: 0.7;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='cloud'] {
+  fill: none;
+  stroke: color-mix(in srgb, var(--blok-color-pink-text) 45%, var(--blok-text-on-dark));
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  opacity: 0.5;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='bird'] {
+  fill: none;
+  stroke: color-mix(in srgb, var(--blok-color-purple-text) 30%, var(--blok-overlay-dark));
+  stroke-width: 0.8;
+  stroke-linecap: round;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='snow'] {
+  fill: color-mix(in srgb, var(--blok-color-pink-text) 25%, var(--blok-text-on-dark));
+  opacity: 0.85;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='castle'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='cliff'] {
+  fill: color-mix(in srgb, var(--blok-color-purple-text) 36%, var(--blok-overlay-dark));
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='window'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='church'] {
+  fill: color-mix(in srgb, var(--blok-color-yellow-text) 40%, var(--blok-text-on-dark));
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='lake-deep'] {
+  fill: var(--blok-overlay-dark);
+  opacity: 0.22;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='ripple'] {
+  fill: none;
+  stroke: var(--blok-text-on-dark);
+  stroke-width: 0.8;
+  stroke-linecap: round;
+  opacity: 0.3;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='island'] {
+  fill: color-mix(in srgb, var(--blok-color-purple-text) 30%, var(--blok-overlay-dark));
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='island-reflection'] {
+  fill: color-mix(in srgb, var(--blok-color-purple-text) 30%, var(--blok-overlay-dark));
+  opacity: 0.35;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='boat'], [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='pine'] {
+  fill: color-mix(in srgb, var(--blok-color-purple-text) 20%, var(--blok-overlay-dark));
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='reed'] {
+  fill: none;
+  stroke: color-mix(in srgb, var(--blok-color-purple-text) 24%, var(--blok-overlay-dark));
+  stroke-width: 0.8;
+  stroke-linecap: round;
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='image'] [data-part='caption'] {

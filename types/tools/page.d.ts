@@ -116,6 +116,13 @@ export declare class Page implements BlockTool {
    */
   static acceptsChildren?: boolean;
 
+  /**
+   * A link to the page: the absolute `config.href` url and the cached title.
+   * Copy, Duplicate and Alt-drag carry it instead of a second block for the
+   * same page. Null without `href`.
+   */
+  static copyAsLink(data: PageData, config: PageConfig): { url: string; text: string } | null;
+
   constructor(options: PageConstructorOptions);
 
   /**

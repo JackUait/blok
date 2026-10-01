@@ -106,6 +106,14 @@ export interface BlockAPI {
   readonly preservedTunes: { [name: string]: BlockTuneData };
 
   /**
+   * The url a copy of this block links to, from its tool's `copyAsLink`
+   * (a page block gives its page url). Null for every other block.
+   * Optional only so a hand-built BlockAPI double still type-checks; Blok
+   * always sets it.
+   */
+  readonly copyLink?: string | null;
+
+  /**
    * True if Block has inputs to be focused
    */
   readonly focusable: boolean;

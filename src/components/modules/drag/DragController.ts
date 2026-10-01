@@ -28,6 +28,7 @@ import { getListItemDepth } from './utils/depthUtils';
 import { resolveStructuralParent } from './utils/structuralParent';
 import { acceptsChildren } from '../../utils/child-tools';
 import { findOwn } from '../../utils/own-element';
+import { linkToBlock } from '../../utils/copy-as-link';
 import {
   areSourceRootsChildrenOf,
   isCollapsedToggleBlock,
@@ -109,7 +110,12 @@ export class DragController extends Module {
     this.operations = new DragOperations(
       this.Blok.BlockManager,
       this.Blok.YjsManager,
-      this.Blok.BlockSelection
+      this.Blok.BlockSelection,
+      (toolName, data) => {
+        const link = this.Blok.Tools.blockTools.get(toolName)?.copyAsLink(data);
+
+        return link === undefined || link === null ? null : linkToBlock(link, this.Blok.Tools.defaultTool);
+      }
     );
 
     this.a11y = new DragA11y(

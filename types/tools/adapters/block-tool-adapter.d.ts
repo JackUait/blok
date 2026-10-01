@@ -65,6 +65,15 @@ interface BlockToolAdapter extends BaseToolAdapter<ToolType.Block, BlockTool>{
   acceptsChildren: boolean;
 
   /**
+   * The link a copy of this block carries, from the Tool's
+   * `static copyAsLink` — see {@link BlockToolConstructable.copyAsLink}.
+   * Undefined when the Tool declares none; null when it has nothing to link to
+   * or the hook throws.
+   * @param data - the block's saved data
+   */
+  copyAsLink(data: BlockToolData): { url: string; text: string } | null | undefined;
+
+  /**
    * Returns true if Tool supports linebreaks
    */
   isLineBreaksEnabled: boolean;

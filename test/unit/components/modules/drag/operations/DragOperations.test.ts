@@ -659,6 +659,34 @@ describe('DragOperations', () => {
     });
   });
 
+  describe('duplicateBlocks - a block that copies as a link', () => {
+    it('inserts the link entry instead of a second page block', async () => {
+      const page = createMockBlock('page-1', 'page', { pageId: 'p1', cache: { title: 'Plans' } });
+      const para = createMockBlock('para-1', 'paragraph', { text: 'x' });
+      const asLink = vi.fn((toolName: string, data: Record<string, unknown>) =>
+        toolName === 'page' ? { tool: 'paragraph', data: { text: `<a href="https://x.test/${String(data.pageId)}">Plans</a>` } } : null
+      );
+      const ops = new DragOperations(mockBlockManager, mockYjsManager, mockBlockSelection, asLink);
+
+      configureBlockOrder([page, para]);
+      mockBlockManager.insert = vi.fn((config: { tool: string; data: Record<string, unknown> }) =>
+        createMockBlock(`dup-${config.tool}`, config.tool, config.data));
+
+      const result = await ops.duplicateBlocks([page, para], para, 'bottom');
+      const inserts = vi.mocked(mockBlockManager.insert).mock.calls.map(([config]) => config);
+
+      expect(inserts.some((config) => config.tool === 'page')).toBe(false);
+      expect(inserts[0]).toMatchObject({
+        tool: 'paragraph',
+        data: { text: '<a href="https://x.test/p1">Plans</a>' },
+        tunes: {},
+        index: 2,
+      });
+      expect(inserts[1]).toMatchObject({ tool: 'paragraph', data: { text: 'x' }, index: 3 });
+      expect(result.duplicatedBlocks).toHaveLength(2);
+    });
+  });
+
   describe('duplicateBlocks', () => {
     it('should duplicate blocks at target position', async () => {
       const block1 = createMockBlock('block-1', 'paragraph', { text: '1' });

@@ -268,7 +268,7 @@ describe('BlockEvents', () => {
       await copySelectedBlocks.mock.results[0].value;
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(copySelectedBlocks).toHaveBeenCalledWith(event);
+      expect(copySelectedBlocks).toHaveBeenCalledWith(event, { cut: true });
       expect(deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledTimes(1);
       expect(setToBlock).toHaveBeenCalledWith(insertedBlock, 'start-position');
       expect(clearSelection).toHaveBeenCalledWith(event);

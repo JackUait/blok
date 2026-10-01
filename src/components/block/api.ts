@@ -135,6 +135,14 @@ const BlockAPIConstructor = function BlockAPI(
     },
 
     /**
+     * The url a copy of this block links to (tools with `copyAsLink`), else null
+     * @returns {string | null}
+     */
+    get copyLink(): string | null {
+      return block.tool.copyAsLink(block.preservedData)?.url ?? null;
+    },
+
+    /**
      * Set Block's stretch state
      * @param {boolean} state — state to set
      */

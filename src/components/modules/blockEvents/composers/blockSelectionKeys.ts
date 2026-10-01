@@ -677,7 +677,7 @@ export class BlockSelectionKeys extends BlockEventComposer {
       return;
     }
 
-    BlockSelection.copySelectedBlocks(event).then(() => {
+    BlockSelection.copySelectedBlocks(event, { cut: true }).then(() => {
       const nestedContainer = findCommonNestedContainer(BlockManager.blocks.filter((block) => block.selected));
 
       const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();

@@ -984,4 +984,32 @@ describe('Page tool', () => {
       expect(() => tool.setReadOnly(true)).not.toThrow();
     });
   });
+
+  describe('copyAsLink (copy, duplicate and paste carry a link, not a second block)', () => {
+    it('links to the absolute page url with the cached title', () => {
+      const link = PageTool.copyAsLink(
+        { pageId: 'p1', cache: { title: 'Plans' } },
+        { href: (pageId) => `/editor/page/${pageId}` }
+      );
+
+      expect(link).toEqual({ url: new URL('/editor/page/p1', document.baseURI).href, text: 'Plans' });
+      expect(link?.url.startsWith('http')).toBe(true);
+    });
+
+    it('uses an empty text for an untitled page', () => {
+      expect(PageTool.copyAsLink({ pageId: 'p1' }, { href: () => 'https://x.test/p1' })).toEqual({
+        url: 'https://x.test/p1',
+        text: '',
+      });
+    });
+
+    it('returns null without an href config', () => {
+      expect(PageTool.copyAsLink({ pageId: 'p1' }, {})).toBeNull();
+    });
+
+    it('returns null for an unsafe href or an empty page id', () => {
+      expect(PageTool.copyAsLink({ pageId: 'p1' }, { href: () => 'javascript:alert(1)' })).toBeNull();
+      expect(PageTool.copyAsLink({ pageId: '' }, { href: () => 'https://x.test/' })).toBeNull();
+    });
+  });
 });

@@ -187,6 +187,26 @@ describe('BlockAPI', () => {
     expect(activeToolboxEntry).toBe(toolboxEntry);
   });
 
+  it('exposes the url a copy links to for a tool with copyAsLink', () => {
+    const { block, preservedData } = createMockBlock();
+    const copyAsLink = vi.fn(() => ({ url: 'https://x.test/p1', text: 'P' }));
+
+    Object.assign(block, { tool: { copyAsLink } });
+
+    expect(new BlockAPIConstructor(block, apiStub).copyLink).toBe('https://x.test/p1');
+    expect(copyAsLink).toHaveBeenCalledWith(preservedData);
+  });
+
+  it('has no copy link when the tool declares no copyAsLink or has nothing to link', () => {
+    const { block } = createMockBlock();
+
+    Object.assign(block, { tool: { copyAsLink: () => undefined } });
+    expect(new BlockAPIConstructor(block, apiStub).copyLink).toBeNull();
+
+    Object.assign(block, { tool: { copyAsLink: () => null } });
+    expect(new BlockAPIConstructor(block, apiStub).copyLink).toBeNull();
+  });
+
   it('returns the block preservedData for synchronous access to cached tool data', () => {
     const { block, preservedData } = createMockBlock();
     const blockAPI = new BlockAPIConstructor(block, apiStub);

@@ -63,19 +63,28 @@ export interface BlockSelectionAdapter {
   selectBlock(block: Block): void;
 }
 
+/**
+ * The block to insert instead of a copy of a `copyAsLink` block (a page must
+ * exist once), or null to copy the block itself.
+ */
+export type CopyAsLinkResolver = (toolName: string, data: Record<string, unknown>) => { tool: string; data: Record<string, unknown> } | null;
+
 export class DragOperations {
   private blockManager: BlockManagerAdapter;
   private yjsManager?: YjsManagerAdapter;
   private blockSelection?: BlockSelectionAdapter;
+  private asLink?: CopyAsLinkResolver;
 
   constructor(
     blockManager: BlockManagerAdapter,
     yjsManager?: YjsManagerAdapter,
-    blockSelection?: BlockSelectionAdapter
+    blockSelection?: BlockSelectionAdapter,
+    asLink?: CopyAsLinkResolver
   ) {
     this.blockManager = blockManager;
     this.yjsManager = yjsManager;
     this.blockSelection = blockSelection;
+    this.asLink = asLink;
   }
 
   /**
@@ -248,16 +257,20 @@ export class DragOperations {
     // A copy whose children are copied with it is inserted as 'paste' (it brings
     // its own children), so a container like callout does not seed a body.
     const copiedParentIds = new Set(prep.sortedBlocks.map(block => block.parentId));
-    const duplicatedBlocks = prep.validResults.map(({ saved, toolName }, index) =>
-      this.blockManager.insert({
-        tool: toolName,
-        data: structuredClone(saved.data),
-        tunes: structuredClone(saved.tunes),
+    // A `copyAsLink` block (a page) is copied as its link. One insert per
+    // result either way: callers pair duplicatedBlocks with sortedBlocks by index.
+    const duplicatedBlocks = prep.validResults.map(({ saved, toolName }, index) => {
+      const link = this.asLink?.(toolName, saved.data) ?? null;
+
+      return this.blockManager.insert({
+        tool: link?.tool ?? toolName,
+        data: link?.data ?? structuredClone(saved.data),
+        tunes: link === null ? structuredClone(saved.tunes) : {},
         index: prep.baseInsertIndex + index,
         needToFocus: false,
         origin: copiedParentIds.has(prep.sortedBlocks[index].id) ? 'paste' : undefined,
-      })
-    );
+      });
+    });
 
     // Re-establish internal parent-child relationships among duplicated blocks.
     // Build a map: original block id → duplicated block id, so children whose

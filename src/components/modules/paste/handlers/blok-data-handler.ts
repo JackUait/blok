@@ -2,7 +2,10 @@ import type { SanitizerConfig } from '../../../../../types/configs/sanitizer-con
 import type { SavedData } from '../../../../../types/data-formats';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import type { Block } from '../../../block';
+import { convertBlockDataToString, convertStringToBlockData } from '../../../utils/blocks';
+import { linkToBlock, takeCut, type CopyLink } from '../../../utils/copy-as-link';
 import { sanitizeBlocks } from '../../../utils/sanitizer';
+import { safeHref } from '../../../utils/sanitize-url';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
 import type { ToolRegistry } from '../tool-registry';
 import type { HandlerContext, PatternMatch } from '../types';
@@ -18,6 +21,10 @@ import { PatternHandler } from './pattern-handler';
 interface BlokClipboardBlock extends Pick<SavedData, 'id' | 'data' | 'tool'> {
   parentId?: string | null;
   contentIds?: string[];
+  /** Set by a cut of a `copyAsLink` block: its first paste may recreate it. */
+  cut?: string;
+  /** The link a `copyAsLink` block stood for when it was cut. */
+  link?: CopyLink;
 }
 
 
@@ -127,6 +134,92 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
   }
 
   /**
+   * A `copyAsLink` block (a page) must exist once, so a pasted one becomes its
+   * link. Only the first paste of a cut from this tab recreates the block, and
+   * only while no live block links to the same url. This holds for any
+   * payload: another tab, an older build, a hand-written one.
+   *
+   * With no link at all the entry becomes the tool's exported text, or is
+   * dropped when that is empty.
+   * @param entries - the parsed clipboard entries
+   */
+  private linksForSingletons(entries: BlokClipboardBlock[]): BlokClipboardBlock[] {
+    const { Tools, BlockManager } = this.Blok;
+    // Built on first need: most pastes hold no such block.
+    const live = { urls: undefined as Set<string> | undefined };
+    const liveUrls = (): Set<string> => {
+      live.urls ??= new Set(
+        BlockManager.blocks
+          .map((block) => block.tool.copyAsLink(block.preservedData)?.url)
+          .filter((url): url is string => url !== undefined)
+      );
+
+      return live.urls;
+    };
+    // Each token is taken once per paste, so every entry of one cut agrees.
+    const cuts = new Map<string, boolean>();
+    const isFreshCut = (token: unknown): boolean => {
+      if (typeof token !== 'string') {
+        return false;
+      }
+      if (!cuts.has(token)) {
+        cuts.set(token, takeCut(token));
+      }
+
+      return cuts.get(token) === true;
+    };
+
+    // Entries replaced by a link, and so their subtrees. Entries come parents first.
+    const replaced = new Set<string>();
+
+    return entries.flatMap((entry): BlokClipboardBlock[] => {
+      if (typeof entry.parentId === 'string' && replaced.has(entry.parentId)) {
+        replaced.add(entry.id);
+
+        return [];
+      }
+
+      const tool = Tools.blockTools.get(entry.tool);
+      const built = tool?.copyAsLink?.(entry.data);
+
+      if (tool === undefined || built === undefined) {
+        return [entry];
+      }
+
+      const link = isCopyLink(entry.link) ? entry.link : built;
+      // The cut is taken even when a live block wins, so a later paste of it links too.
+      const fresh = isFreshCut(entry.cut);
+
+      if (fresh && (link === null || !liveUrls().has(link.url))) {
+        if (link !== null) {
+          liveUrls().add(link.url);
+        }
+
+        return [entry];
+      }
+
+      const shape = { id: entry.id, parentId: entry.parentId };
+
+      replaced.add(entry.id);
+
+      if (link !== null) {
+        return [{ ...shape, ...linkToBlock(link, Tools.defaultTool) }];
+      }
+
+      const exported: unknown = convertBlockDataToString(entry.data, tool.conversionConfig);
+      const text = typeof exported === 'string' ? exported : '';
+
+      if (text.trim() === '') {
+        return [];
+      }
+
+      const { defaultTool } = Tools;
+
+      return [{ ...shape, tool: defaultTool.name, data: convertStringToBlockData(text, defaultTool.conversionConfig, defaultTool.settings) }];
+    });
+  }
+
+  /**
    * Insert Blok JSON blocks using a two-pass approach:
    *
    * Pass 1 — TABLE cell children (blocks whose parentId is a pasted table) are
@@ -157,7 +250,7 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     // on the children themselves. Backfill parentId before classification so
     // those children get adopted by the table during the two-pass insert
     // instead of becoming detached top-level paragraphs.
-    const blocks = backfillTableChildParents(rawBlocks);
+    const blocks = backfillTableChildParents(this.linksForSingletons(rawBlocks));
     const sanitizedBlocks = sanitizeBlocks(
       blocks,
       (name) => Tools.blockTools.get(name)?.sanitizeConfig ?? {},
@@ -316,6 +409,15 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
     }
   }
 }
+
+/** Any page can write this payload, so a carried url must be a safe href. */
+const isCopyLink = (value: unknown): value is CopyLink =>
+  typeof value === 'object' &&
+  value !== null &&
+  typeof (value as { url?: unknown }).url === 'string' &&
+  (value as { url: string }).url !== '' &&
+  safeHref((value as { url: string }).url) !== null &&
+  typeof (value as { text?: unknown }).text === 'string';
 
 /**
  * Records each cell-referenced child id under its owning table.

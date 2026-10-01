@@ -5,6 +5,7 @@ import type { BlokModules } from '../../../../../src/types-internal/blok-modules
 import type { ToolRegistry } from '../../../../../src/components/modules/paste/tool-registry';
 import type { SanitizerConfigBuilder } from '../../../../../src/components/modules/paste/sanitizer-config';
 import type { Block } from '../../../../../src/components/block';
+import { rememberCut } from '../../../../../src/components/utils/copy-as-link';
 
 /**
  * Creates a minimal mock of BlokModules for testing BlokDataHandler
@@ -684,6 +685,154 @@ describe('BlokDataHandler', () => {
 
       // With no hierarchy (no children), the first root block SHOULD apply replace
       expect(insertedBlocks[0].replace).toBe(true);
+    });
+  });
+
+  describe('a block that copies as a link (page) never pastes as a second block', () => {
+    const urlOf = (pageId: unknown): string => `https://x.test/editor/page/${String(pageId)}`;
+    const linkText = (pageId: string, title: string): string => `<a href="${urlOf(pageId)}">${title}</a>`;
+
+    const pageAdapter = (copyAsLink: (data: Record<string, unknown>) => { url: string; text: string } | null) => ({
+      name: 'page',
+      sanitizeConfig: {},
+      conversionConfig: {
+        export: (data: Record<string, unknown>): string => String((data.cache as { title?: string } | undefined)?.title ?? ''),
+      },
+      copyAsLink,
+    });
+
+    const setup = (options: {
+      liveBlocks?: Array<{ name: string; preservedData: Record<string, unknown> }>;
+      copyAsLink?: (data: Record<string, unknown>) => { url: string; text: string } | null;
+    } = {}): { handler: BlokDataHandler; insertedBlocks: Array<{ tool: string; data: Record<string, unknown> }>; live: Array<{ name: string; preservedData: Record<string, unknown>; tool: unknown }> } => {
+      const { modules, insertedBlocks } = createBlokModulesMock();
+      const page = pageAdapter(options.copyAsLink ?? ((data) => ({ url: urlOf(data.pageId), text: String((data.cache as { title?: string } | undefined)?.title ?? '') })));
+      const paragraph = { name: 'paragraph', sanitizeConfig: {}, conversionConfig: { import: 'text', export: 'text' }, settings: {}, copyAsLink: () => undefined };
+      const live = (options.liveBlocks ?? []).map((block) => ({ ...block, tool: block.name === 'page' ? page : paragraph }));
+
+      Object.assign(modules.Tools, {
+        defaultTool: paragraph,
+        blockTools: { get: vi.fn((name: string) => (name === 'page' ? page : paragraph)) },
+      });
+      Object.assign(modules.BlockManager, { blocks: live });
+
+      return {
+        handler: new BlokDataHandler(modules, createToolRegistryMock(), createSanitizerBuilderMock(), { sanitizer: {} }),
+        insertedBlocks,
+        live,
+      };
+    };
+
+    const pageEntry = (extra: Record<string, unknown> = {}): Record<string, unknown> => ({
+      id: 'old-page',
+      tool: 'page',
+      data: { pageId: 'p1', cache: { title: 'Plans' } },
+      ...extra,
+    });
+
+    it('turns a page entry with no cut token (another tab, an old build) into a link paragraph', async () => {
+      const { handler, insertedBlocks } = setup();
+
+      await handler.handle(JSON.stringify([pageEntry()]), { canReplaceCurrentBlock: false });
+
+      expect(insertedBlocks.some((block) => block.tool === 'page')).toBe(false);
+      expect(insertedBlocks).toEqual([expect.objectContaining({ tool: 'paragraph', data: { text: linkText('p1', 'Plans') } })]);
+    });
+
+    it('recreates the page on the first paste of a cut, and links on the second', async () => {
+      const { handler, insertedBlocks } = setup();
+      const payload = JSON.stringify([pageEntry({ cut: rememberCut(), link: { url: urlOf('p1'), text: 'Plans' } })]);
+
+      await handler.handle(payload, { canReplaceCurrentBlock: false });
+      await handler.handle(payload, { canReplaceCurrentBlock: false });
+
+      expect(insertedBlocks[1]).toEqual(expect.objectContaining({ tool: 'paragraph', data: { text: linkText('p1', 'Plans') } }));
+      expect(insertedBlocks[0]).toEqual(expect.objectContaining({ tool: 'page', data: { pageId: 'p1', cache: { title: 'Plans' } } }));
+    });
+
+    it('links when a block for the same page is still live (cut, then undo), and the cut stays spent', async () => {
+      const { handler, insertedBlocks, live } = setup({ liveBlocks: [{ name: 'page', preservedData: { pageId: 'p1' } }] });
+      const payload = JSON.stringify([pageEntry({ cut: rememberCut(), link: { url: urlOf('p1'), text: 'Plans' } })]);
+
+      await handler.handle(payload, { canReplaceCurrentBlock: false });
+      live.splice(0, live.length);
+      await handler.handle(payload, { canReplaceCurrentBlock: false });
+
+      expect(insertedBlocks.map((block) => block.tool)).toEqual(['paragraph', 'paragraph']);
+    });
+
+    it('does not count a different live page as the same page', async () => {
+      const { handler, insertedBlocks } = setup({ liveBlocks: [{ name: 'page', preservedData: { pageId: 'other' } }] });
+
+      await handler.handle(JSON.stringify([pageEntry({ cut: rememberCut() })]), { canReplaceCurrentBlock: false });
+
+      expect(insertedBlocks[0].tool).toBe('page');
+    });
+
+    it('recreates each page of a cut once, even when two entries point at the same page', async () => {
+      const { handler, insertedBlocks } = setup();
+      const token = rememberCut();
+      const payload = JSON.stringify([
+        pageEntry({ id: 'a', cut: token }),
+        pageEntry({ id: 'b', cut: token }),
+        pageEntry({ id: 'c', cut: token, data: { pageId: 'p2', cache: { title: 'Two' } } }),
+      ]);
+
+      await handler.handle(payload, { canReplaceCurrentBlock: false });
+
+      expect(insertedBlocks.map((block) => block.tool)).toEqual(['page', 'paragraph', 'page']);
+      expect(insertedBlocks[1].data).toEqual({ text: linkText('p1', 'Plans') });
+    });
+
+    it('drops the subtree of an entry that became a link', async () => {
+      const { handler, insertedBlocks } = setup();
+
+      await handler.handle(
+        JSON.stringify([
+          pageEntry({ contentIds: ['kid'] }),
+          { id: 'kid', tool: 'paragraph', data: { text: 'Kid' }, parentId: 'old-page' },
+          { id: 'grandkid', tool: 'paragraph', data: { text: 'Grandkid' }, parentId: 'kid' },
+          { id: 'after', tool: 'paragraph', data: { text: 'After' } },
+        ]),
+        { canReplaceCurrentBlock: false }
+      );
+
+      expect(insertedBlocks.map((block) => block.data)).toEqual([{ text: linkText('p1', 'Plans') }, { text: 'After' }]);
+    });
+
+    it('never pastes an unsafe carried link url', async () => {
+      const { handler, insertedBlocks } = setup();
+
+      await handler.handle(
+        JSON.stringify([pageEntry({ link: { url: 'javascript:alert(1)', text: 'x' } })]),
+        { canReplaceCurrentBlock: false }
+      );
+
+      expect(JSON.stringify(insertedBlocks)).not.toContain('javascript:');
+      expect(insertedBlocks[0].data).toEqual({ text: linkText('p1', 'Plans') });
+    });
+
+    it('prefers the link the cut carried over one built from the data', async () => {
+      const { handler, insertedBlocks } = setup();
+
+      await handler.handle(
+        JSON.stringify([pageEntry({ link: { url: 'https://carried.test/p1', text: 'Carried' } })]),
+        { canReplaceCurrentBlock: false }
+      );
+
+      expect(insertedBlocks[0].data).toEqual({ text: '<a href="https://carried.test/p1">Carried</a>' });
+    });
+
+    it('falls back to the exported text when there is nothing to link to, and skips an empty one', async () => {
+      const { handler, insertedBlocks } = setup({ copyAsLink: () => null });
+
+      await handler.handle(
+        JSON.stringify([pageEntry(), pageEntry({ id: 'untitled', data: { pageId: 'p3' } })]),
+        { canReplaceCurrentBlock: false }
+      );
+
+      expect(insertedBlocks.some((block) => block.tool === 'page')).toBe(false);
+      expect(insertedBlocks).toEqual([expect.objectContaining({ tool: 'paragraph', data: { text: 'Plans' } })]);
     });
   });
 });

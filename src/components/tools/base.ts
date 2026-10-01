@@ -104,6 +104,11 @@ export enum InternalBlockToolSettings {
    */
   AcceptsChildren = 'acceptsChildren',
   /**
+   * The link a copy carries instead of the block (a page must exist once).
+   * Copy, Duplicate and Alt-drag insert it; a paste turns the block into it.
+   */
+  CopyAsLink = 'copyAsLink',
+  /**
    * Enter on this Tool's empty LAST child stays INSIDE the container instead of
    * escaping it (a column, a card) — per-tool policy the DOM cannot express,
    * since a callout renders the same nested-blocks slot yet wants the escape

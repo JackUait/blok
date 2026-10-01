@@ -422,6 +422,46 @@ describe('BlockToolAdapter', () => {
     });
   });
 
+  describe('copy as link', () => {
+    it('calls the static copyAsLink with the data and the tool config', () => {
+      const copyAsLink = vi.fn(() => ({ url: 'https://x.test/p/1', text: 'One' }));
+      const { tool } = createBlockTool({ constructable: createConstructable({ copyAsLink }) });
+
+      expect(tool.copyAsLink({ pageId: '1' })).toEqual({ url: 'https://x.test/p/1', text: 'One' });
+      expect(copyAsLink).toHaveBeenCalledWith({ pageId: '1' }, { option1: 'option1', option2: 'option2' });
+    });
+
+    it('returns undefined when the tool declares no copyAsLink', () => {
+      const { tool } = createBlockTool();
+
+      expect(tool.copyAsLink({ text: 'x' })).toBeUndefined();
+    });
+
+    it('passes a null link through', () => {
+      const { tool } = createBlockTool({ constructable: createConstructable({ copyAsLink: () => null }) });
+
+      expect(tool.copyAsLink({})).toBeNull();
+    });
+
+    it('returns null for an unsafe url, so no copy carries a script link', () => {
+      const constructable = createConstructable({ copyAsLink: () => ({ url: 'javascript:alert(1)', text: 'x' }) });
+      const { tool } = createBlockTool({ constructable });
+
+      expect(tool.copyAsLink({})).toBeNull();
+    });
+
+    it('returns null when copyAsLink throws, so a copy still writes the clipboard', () => {
+      const constructable = createConstructable({
+        copyAsLink: () => {
+          throw new Error('bad host href');
+        },
+      });
+      const { tool } = createBlockTool({ constructable });
+
+      expect(tool.copyAsLink({})).toBeNull();
+    });
+  });
+
   describe('data upgrade hook', () => {
     it('runs the static upgradeData over incoming data when the tool declares one', () => {
       const constructable = createConstructable({

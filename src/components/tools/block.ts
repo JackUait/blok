@@ -1,6 +1,7 @@
 import { composeBaseSanitizeConfig } from '../../shared/sanitize-schema';
 import { isEmpty, isObject } from '../utils';
 import { log } from '../utils/logger';
+import { safeHref } from '../utils/sanitize-url';
 
 import { BaseToolAdapter,  InternalBlockToolSettings, UserSettings  } from './base';
 import { ToolsCollection } from './collection';
@@ -21,6 +22,14 @@ import type {
 } from '@/types';
 import type { BlockToolAdapter as BlockToolAdapterInterface } from '@/types/tools/adapters/block-tool-adapter';
 import { ToolType } from '@/types/tools/adapters/tool-type';
+
+/** A tool's link reaches an href on copy, paste and the copy-link tune. */
+const isLink = (value: unknown): value is { url: string; text: string } =>
+  isObject(value) &&
+  typeof value.url === 'string' &&
+  value.url !== '' &&
+  safeHref(value.url) !== null &&
+  typeof value.text === 'string';
 
 /**
  * Class to work with Block tools constructables
@@ -146,6 +155,30 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
    */
   public get acceptsChildren(): boolean {
     return (this.constructable as unknown as Record<string, boolean | undefined>)[InternalBlockToolSettings.AcceptsChildren] !== false;
+  }
+
+  /**
+   * The link a copy of this block carries, or undefined when the Tool declares
+   * no `copyAsLink`. A throwing hook gives null, so a copy still writes the
+   * clipboard.
+   * @param data - the block's saved data
+   */
+  public copyAsLink(data: BlockToolData): { url: string; text: string } | null | undefined {
+    const copyAsLink = (this.constructable as unknown as Record<string, unknown>)[InternalBlockToolSettings.CopyAsLink];
+
+    if (typeof copyAsLink !== 'function') {
+      return undefined;
+    }
+
+    try {
+      const link: unknown = copyAsLink.call(this.constructable, data, this.settings);
+
+      return isLink(link) ? link : null;
+    } catch (error) {
+      log(`Tool «${this.name}» copyAsLink() threw; copying the block without a link.`, 'warn', error);
+
+      return null;
+    }
   }
 
   /**

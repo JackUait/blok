@@ -68,6 +68,8 @@ type DupSetup = {
   selectBlock: Mock;
   moveAndOpen: Mock;
   blockSelection: { selectedBlocks: Block[]; clearSelection: Mock; selectBlock: Mock };
+  tools: Record<string, unknown> & { blockTools: Map<string, unknown> };
+  insert: Mock;
 };
 
 const createSetup = (dups: Block | Block[]): DupSetup => {
@@ -126,8 +128,8 @@ const createSetup = (dups: Block | Block[]): DupSetup => {
   };
 
   // Side (left/right) drops are gated on the columns tool being registered.
-  const tools = {
-    blockTools: new Map([['column_list', {}], ['column', {}]]),
+  const tools: DupSetup['tools'] = {
+    blockTools: new Map<string, unknown>([['column_list', {}], ['column', {}]]),
   };
 
   const state = {
@@ -149,7 +151,7 @@ const createSetup = (dups: Block | Block[]): DupSetup => {
   dragManager.state = state;
   void dragManager.prepare();
 
-  return { dragManager, blocks, caret, clearSelection, selectBlock, moveAndOpen, blockSelection };
+  return { dragManager, blocks, caret, clearSelection, selectBlock, moveAndOpen, blockSelection, tools, insert: blockManager.insert };
 };
 
 describe('duplicateBlocksInPlace caret placement (BUG #9)', () => {
@@ -173,6 +175,26 @@ describe('duplicateBlocksInPlace caret placement (BUG #9)', () => {
     // caret lands at the end of the new copy ready to edit (Notion parity).
     expect(clearSelection).toHaveBeenCalled();
     expect(caret.setToBlock).toHaveBeenCalledWith(dup, caret.positions.END);
+  });
+
+  it('duplicates a page block as a link paragraph, never a second page block', async () => {
+    const dup = createBlockStub('dup-1');
+    const { dragManager, blocks, tools, insert } = createSetup(dup);
+
+    Object.assign(blocks[0], {
+      name: 'page',
+      save: vi.fn().mockResolvedValue({ data: { pageId: 'p1' }, tunes: {} }),
+    });
+    tools.blockTools.set('page', { copyAsLink: (data: { pageId: string }) => ({ url: `https://x.test/${data.pageId}`, text: 'Plans' }) });
+    tools.defaultTool = { name: 'paragraph', conversionConfig: { import: 'text' }, settings: {} };
+
+    await dragManager.duplicateBlocksInPlace(blocks[0]);
+
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(insert.mock.calls[0][0]).toMatchObject({
+      tool: 'paragraph',
+      data: { text: '<a href="https://x.test/p1">Plans</a>' },
+    });
   });
 
   it('briefly highlights the duplicated copy as just-added (blue arrival pulse)', async () => {

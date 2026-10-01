@@ -19,6 +19,7 @@ import { announce } from '../utils/announcer';
 import { Shortcuts } from '../utils/shortcuts';
 import { translateToolName, translateToolTitle } from '../utils/tools';
 import { ownClone } from '../utils/own-element';
+import { linkToBlock, linkToHtml, rememberCut, type CopyLink } from '../utils/copy-as-link';
 import { TOOL_NAME as LIST_TOOL_NAME } from '../../tools/list/constants';
 import { buildSemanticListHtml, type SemanticListItem } from '../../tools/list/dom-builder';
 import { TOOL_NAME as CODE_TOOL_NAME } from '../../tools/code/constants';
@@ -34,6 +35,20 @@ import type { ListItemStyle } from '../../tools/list/types';
 type ClipboardSegment =
   | { type: 'list'; items: Block[] }
   | { type: 'other'; block: Block };
+
+/** One block in the `application/x-blok` payload. */
+interface ClipboardEntry {
+  id: string;
+  tool: string;
+  data: Record<string, unknown>;
+  tunes: Record<string, unknown>;
+  parentId: string | null;
+  contentIds?: string[];
+  indent: number;
+  /** A cut of a `copyAsLink` block: the token lets its first paste recreate it. */
+  cut?: string;
+  link?: CopyLink;
+}
 
 /**
  * Throttle window (ms) for per-step navigation-mode position announcements.
@@ -437,9 +452,11 @@ export class BlockSelection extends Module {
   /**
    * Reduce each Block and copy its content
    * @param {ClipboardEvent} e - copy/cut event
+   * @param options - `cut` when the blocks are about to be deleted
+   * @param options.cut - a `copyAsLink` block then travels as itself, once
    * @returns {Promise<void>}
    */
-  public async copySelectedBlocks(e: ClipboardEvent): Promise<void> {
+  public async copySelectedBlocks(e: ClipboardEvent, options: { cut?: boolean } = {}): Promise<void> {
     /**
      * Prevent default copy
      */
@@ -465,8 +482,14 @@ export class BlockSelection extends Module {
      * (e.g. when a collapsed toggle is copied — its hidden children must travel with it
      * so paste can restore the full toggle with its children).
      */
-    const copiedBlocks = this.collectBlocksForClipboard(this.selectedBlocks);
-    const savedData = this.serializeBlocksForClipboard(copiedBlocks);
+    const allBlocks = this.collectBlocksForClipboard(this.selectedBlocks);
+    const links = this.copyLinksOf(allBlocks);
+    // A linked block stands alone: its descendants are not part of the link.
+    const copiedBlocks = this.withoutLinkedDescendants(allBlocks, links);
+    const linkedData = this.serializeBlocksForClipboard(copiedBlocks, links);
+    const savedData = options.cut === true && links.size > 0
+      ? this.serializeBlocksForClipboard(allBlocks, links, rememberCut())
+      : linkedData;
 
     /**
      * List blocks render as non-semantic `<div role="listitem">` with a marker
@@ -479,7 +502,14 @@ export class BlockSelection extends Module {
     const segments = this.groupBlocksForClipboard(this.withoutTableCellBlocks(copiedBlocks));
 
     segments.forEach((segment) => {
-      if (segment.type === 'list') {
+      const link = segment.type === 'other' ? links.get(segment.block) : undefined;
+
+      if (link !== undefined) {
+        const paragraph = $.make('p');
+
+        paragraph.innerHTML = linkToHtml(link);
+        fakeClipboard.appendChild(paragraph);
+      } else if (segment.type === 'list') {
         this.appendSemanticList(segment.items, fakeClipboard);
       } else {
         this.appendNonListBlock(segment.block, fakeClipboard);
@@ -495,7 +525,7 @@ export class BlockSelection extends Module {
      * ({@link copySelectedBlocksAsMarkdown}, bound to Cmd/Ctrl+Shift+C) emits the
      * same Markdown but writes it via navigator.clipboard.writeText.
      */
-    const textPlain = blocksToMarkdown(savedData);
+    const textPlain = blocksToMarkdown(linkedData);
 
     resolvePresetColors(fakeClipboard);
 
@@ -642,8 +672,9 @@ export class BlockSelection extends Module {
       return;
     }
 
-    const savedData = this.serializeBlocksForClipboard(this.collectBlocksForClipboard(blocks));
-    const markdown = blocksToMarkdown(savedData);
+    const collected = this.collectBlocksForClipboard(blocks);
+    const links = this.copyLinksOf(collected);
+    const markdown = blocksToMarkdown(this.serializeBlocksForClipboard(this.withoutLinkedDescendants(collected, links), links));
 
     const { clipboard } = navigator;
 
@@ -768,19 +799,79 @@ export class BlockSelection extends Module {
 
   /**
    * Serialize Blocks into the plain shape used for clipboard payloads.
+   * A block with a link becomes a default block holding the link, unless a
+   * cut token is given: then it stays itself and carries the token.
    * @param blocks - the blocks from {@link collectBlocksForClipboard}
+   * @param links - the links from {@link copyLinksOf}
+   * @param cut - the token of a cut
    * @returns serialized block data in document order
    */
-  private serializeBlocksForClipboard(blocks: Block[]): Array<{ id: string; tool: string; data: Record<string, unknown>; tunes: Record<string, unknown>; parentId: string | null; contentIds: string[]; indent: number }> {
-    return blocks.map((block) => ({
-      id: block.id,
-      tool: block.name,
-      data: block.preservedData,
-      tunes: block.preservedTunes,
-      parentId: block.parentId,
-      contentIds: block.contentIds,
-      indent: this.Blok.BlockManager.getBlockDepth(block),
-    }));
+  private serializeBlocksForClipboard(blocks: Block[], links: Map<Block, CopyLink>, cut?: string): ClipboardEntry[] {
+    return blocks.map((block) => {
+      const link = links.get(block);
+      const shape = {
+        id: block.id,
+        parentId: block.parentId,
+        indent: this.Blok.BlockManager.getBlockDepth(block),
+      };
+
+      if (link !== undefined && cut === undefined) {
+        return { ...shape, ...linkToBlock(link, this.Blok.Tools.defaultTool), tunes: {} };
+      }
+
+      return {
+        ...shape,
+        tool: block.name,
+        data: block.preservedData,
+        tunes: block.preservedTunes,
+        contentIds: block.contentIds,
+        ...(link !== undefined && { cut, link }),
+      };
+    });
+  }
+
+  /**
+   * The links of the blocks whose tool declares `copyAsLink` and has one.
+   * @param blocks - the copied blocks
+   */
+  private copyLinksOf(blocks: Block[]): Map<Block, CopyLink> {
+    const links = new Map<Block, CopyLink>();
+
+    for (const block of blocks) {
+      // Test doubles and half-built blocks may have no tool.
+      const link = (block.tool as Block['tool'] | undefined)?.copyAsLink(block.preservedData);
+
+      if (link !== undefined && link !== null) {
+        links.set(block, link);
+      }
+    }
+
+    return links;
+  }
+
+  /**
+   * Drop the descendants of linked blocks.
+   * @param blocks - the copied blocks, parents first
+   * @param links - the links from {@link copyLinksOf}
+   */
+  private withoutLinkedDescendants(blocks: Block[], links: Map<Block, CopyLink>): Block[] {
+    if (links.size === 0) {
+      return blocks;
+    }
+
+    const dropped = new Set<string>();
+
+    return blocks.filter((block) => {
+      const parentId = block.parentId;
+      const parent = parentId === null ? undefined : blocks.find((candidate) => candidate.id === parentId);
+      const isDropped = parent !== undefined && (dropped.has(parent.id) || links.has(parent));
+
+      if (isDropped) {
+        dropped.add(block.id);
+      }
+
+      return !isDropped;
+    });
   }
 
   /**

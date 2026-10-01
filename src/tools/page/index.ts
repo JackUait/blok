@@ -143,6 +143,25 @@ export class PageTool implements BlockTool {
     return false;
   }
 
+  /**
+   * A page exists once, so a copy carries a link to it. The url is absolute:
+   * a relative href means nothing once pasted into another app.
+   */
+  public static copyAsLink(data: PageData, config: PageConfig): { url: string; text: string } | null {
+    const pageId = typeof data.pageId === 'string' ? data.pageId : '';
+    const href = config.href === undefined || pageId === '' ? null : safeHref(config.href(pageId));
+
+    if (href === null) {
+      return null;
+    }
+
+    try {
+      return { url: new URL(href, document.baseURI).href, text: readCache(data.cache)?.title ?? '' };
+    } catch {
+      return null;
+    }
+  }
+
   /** Turn into text keeps the title as literal text. */
   public static get conversionConfig(): ConversionConfig {
     return {

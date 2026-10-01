@@ -731,12 +731,11 @@ export class EmojiPicker {
 
     const tracks = getComputedStyle(grid).gridTemplateColumns;
     const columns = tracks && tracks !== 'none' ? tracks.split(' ').length : 10;
-    const horizontal = logicalArrow(event.key, getElementDirection(this._element));
     const steps: Record<string, number> = {
-      ArrowUp: -columns, ArrowDown: columns,
+      forward: 1, backward: -1, ArrowUp: -columns, ArrowDown: columns,
       Home: -index, End: this._emojiButtons.length - 1 - index,
     };
-    const step = horizontal === null ? steps[event.key] : (horizontal === 'forward' ? 1 : -1);
+    const step = steps[logicalArrow(event.key, getElementDirection(this._element)) ?? event.key];
 
     if (step === undefined) {
       return;
@@ -793,8 +792,8 @@ export class EmojiPicker {
       }
 
       const index = this._skinToneButtons.indexOf(target);
-      const horizontal = logicalArrow(event.key, getElementDirection(popover));
-      const direction = horizontal === null ? 0 : (horizontal === 'forward' ? 1 : -1);
+      const steps: Record<string, number> = { forward: 1, backward: -1 };
+      const direction = steps[logicalArrow(event.key, getElementDirection(popover)) ?? ''] ?? 0;
 
       if (index < 0 || direction === 0) {
         return;

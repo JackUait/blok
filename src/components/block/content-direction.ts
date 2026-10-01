@@ -10,10 +10,10 @@ const EDITABLE_FIELD_SELECTOR = '[contenteditable]:not([contenteditable="false"]
 const READ_ONLY_FIELD_SELECTOR = '[contenteditable]';
 
 /**
- * Text hidden from assistive tech is chrome (a list marker "a.", a readout),
- * not content, in either mode.
+ * Chrome, not content, in either mode: text hidden from assistive tech (a list
+ * marker "a.", a readout) and elements tools mark as chrome.
  */
-const HIDDEN_SELECTOR = '[aria-hidden="true"]';
+const NON_CONTENT_SELECTOR = `[aria-hidden="true"], [${DATA_ATTR.chrome}]`;
 
 /**
  * First strong letter in one field. Skips nested blocks, `dir` islands (a
@@ -32,7 +32,7 @@ const fieldDirection = (field: HTMLElement, holder: HTMLElement): 'ltr' | 'rtl' 
       const skip = (element !== holder && element.hasAttribute(DATA_ATTR.element))
         || element.hasAttribute('dir')
         || element.getAttribute('contenteditable') === 'false'
-        || element.matches(HIDDEN_SELECTOR);
+        || element.matches(NON_CONTENT_SELECTOR);
 
       return skip ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_SKIP;
     },
@@ -64,7 +64,7 @@ const ownTextDirection = (toolRoot: HTMLElement, holder: HTMLElement, readOnly: 
 
   for (const field of fields) {
     const pinned = field.closest('[dir]');
-    const hidden = field.closest(HIDDEN_SELECTOR);
+    const hidden = field.closest(NON_CONTENT_SELECTOR);
 
     if (
       field.closest(`[${DATA_ATTR.element}]`) !== holder

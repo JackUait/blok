@@ -104,6 +104,17 @@ class LabelledTool {
   }
 }
 
+/** Same, with the label marked as tool chrome. */
+class ChromeLabelledTool extends LabelledTool {
+  public render(): HTMLElement {
+    const root = super.render();
+
+    root.firstElementChild?.setAttribute('data-blok-chrome', '');
+
+    return root;
+  }
+}
+
 const tools = {
   paragraph: Paragraph,
   header: Header,
@@ -117,6 +128,7 @@ const tools = {
   'database-row': DatabaseRowTool,
   pinned: PinnedTool,
   labelled: LabelledTool,
+  chromeLabelled: ChromeLabelledTool,
 };
 
 const P = (id: string, text: string, parent?: string): OutputBlockData => ({
@@ -360,6 +372,12 @@ describe('per-block content direction', () => {
 
     it('ignores non-editable chrome text while editing', async () => {
       await boot([{ id: 'lab', type: 'labelled', data: { text: 'مرحبا' } }]);
+
+      expect(content('lab').getAttribute('dir')).toBe('rtl');
+    });
+
+    it('ignores chrome-marked text in a read-only editor', async () => {
+      await boot([{ id: 'lab', type: 'chromeLabelled', data: { text: 'مرحبا' } }], { readOnly: true });
 
       expect(content('lab').getAttribute('dir')).toBe('rtl');
     });

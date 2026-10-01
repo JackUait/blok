@@ -222,14 +222,23 @@ export const findBestPositionInRange = (
     return start + Math.min(Math.round(relativeX / avgCharWidth), text.length);
   }
 
-  // Distance from the inline start to the caret before each character.
-  const caretOffsets = Array.from({ length: text.length + 1 }, (_, index) => measure(text.slice(0, index)));
-  const nearest = caretOffsets.reduce(
-    (best, offset, index) => Math.abs(offset - relativeX) < Math.abs(caretOffsets[best] - relativeX) ? index : best,
-    0
-  );
+  // Prefix widths only grow: binary-search the first caret at or past the
+  // target, then take the nearer of it and the one before.
+  const caretOffset = (index: number): number => measure(text.slice(0, index));
+  const firstAtOrPast = (low: number, high: number): number => {
+    if (low >= high) {
+      return low;
+    }
 
-  return start + nearest;
+    const middle = Math.floor((low + high) / 2);
+
+    return caretOffset(middle) >= relativeX ? firstAtOrPast(low, middle) : firstAtOrPast(middle + 1, high);
+  };
+  const after = firstAtOrPast(1, text.length);
+  const before = after - 1;
+  const isAfterNearer = Math.abs(caretOffset(after) - relativeX) < relativeX - caretOffset(before);
+
+  return start + (isAfterNearer ? after : before);
 };
 
 /**

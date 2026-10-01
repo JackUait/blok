@@ -3,6 +3,8 @@
 @import './popover-animation.css';
 @import './keyframes.css';
 @import '../tools/image/darkroom/darkroom.css';
+@import '../tools/image/darkroom/markup-panel.css';
+@import '../tools/image/darkroom/markup-editor.css';
 @import '../tools/image/alt-popover.css';
 
 /*

@@ -262,7 +262,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 505 + 128 + 61 + 4 closure for all 698 keys', () => {
+  it('rebuilds a disjoint 530 + 121 + 43 + 4 closure for all 698 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -298,13 +298,14 @@ describe('current English catalog lifecycle coverage', () => {
       // (tools.callout.noEmojisFound) — see CATALOG_ONLY_KEYS above.
       // +7: the darkroom's local reset keys (tools.image.reset*) are called by literal.
       // +1: tools.code.filename. +1: tools.code.suggested.
-      'executable-literal': 505,
-      'finite-dynamic': 128,
+      // +18: image markup keys called by literal. +7: the markup swatches name
+      // their colours with tools.colorPicker.color.* at a literal call site.
+      'executable-literal': 530,
+      'finite-dynamic': 121,
       // 12 of the 20 image darkroom keys are called by literal. The 8 filter
       // names stay here: filter-strip.ts builds them from the preset name.
-      // +27: the image markup keys have no literal caller yet. Each one moves
-      // to executable-literal once the markup UI calls it by literal.
-      'registered-namespace-compatible': 61,
+      // +9: the markup tool names; markup-panel.ts builds them from a short key.
+      'registered-namespace-compatible': 43,
       'catalog-only': 4,
     });
     expect(

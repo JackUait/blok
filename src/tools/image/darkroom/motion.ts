@@ -1,11 +1,11 @@
-import type { ImageAdjust, ImageCrop, ImageFilterPreset } from '../../../../types/tools/image';
+import type { ImageAdjust, ImageCrop, ImageFilterPreset, ImageMarkup } from '../../../../types/tools/image';
 import { createSpring, SPRING_SOFT, type SpringClock } from '../../../components/utils/spring';
 import { promoteToTopLayer } from '../../../components/utils/top-layer';
 import { IDENTITY, orientedSize, type Geometry } from '../geometry';
 import { applyImageFilter, buildPlane, sizePlane } from '../image-view';
 import { rectToCamera, type Box, type Size } from './camera';
 
-/** Sizes the plane to O in px so the camera transform maps O px to stage px. */
+/** Sizes the plane to O in px so the camera transform maps O px to stage px. Also draws the plane's marks at O. */
 export function fitCameraPlane(plane: HTMLElement, img: HTMLImageElement, n: Size, g: Geometry): void {
   const o = orientedSize(n, g);
 
@@ -15,8 +15,8 @@ export function fitCameraPlane(plane: HTMLElement, img: HTMLImageElement, n: Siz
 }
 
 /** The shared renderer plane, moved by a camera instead of laid out in flow. Without `n`, call fitCameraPlane once known. */
-export function cameraPlane(img: HTMLImageElement, n: Size | null, g: Geometry): HTMLElement {
-  const plane = buildPlane(img, n, g);
+export function cameraPlane(img: HTMLImageElement, n: Size | null, g: Geometry, markup?: ImageMarkup[]): HTMLElement {
+  const plane = buildPlane(img, n, g, { markup });
 
   // buildPlane lays the plane out in flow; the camera places it from its parent's corner (left/top live in darkroom.css).
   plane.style.position = 'absolute';
@@ -65,6 +65,7 @@ export interface FlyOutOptions {
   geometry?: Geometry;
   filter?: ImageFilterPreset;
   adjust?: ImageAdjust;
+  markup?: ImageMarkup[];
   from: Box;
   fromRound: number;
   target: HTMLElement | null;
@@ -105,7 +106,7 @@ export function flyOut(opts: FlyOutOptions): void {
   img.src = opts.url;
   img.alt = '';
   applyImageFilter(img, opts.filter ?? 'none', opts.adjust ?? {});
-  const plane = cameraPlane(img, opts.natural, geometry);
+  const plane = cameraPlane(img, opts.natural, geometry, opts.markup);
 
   shell.appendChild(plane);
   document.body.appendChild(shell);

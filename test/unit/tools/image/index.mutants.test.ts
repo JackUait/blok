@@ -1544,7 +1544,7 @@ const cropModalOptions = (): CropModalOptions => {
   return call[0];
 };
 
-/** What Done hands back: the crop plus untouched geometry, filter and adjust unless overridden. */
+/** What Done hands back: the crop plus untouched geometry, filter, adjust and markup unless overridden. */
 const darkroomResult = (
   crop: ImageCrop | null,
   over: Partial<Omit<DarkroomResult, 'crop'>> = {}
@@ -1553,6 +1553,7 @@ const darkroomResult = (
   geometry: { rotation: 0, flipX: false, straighten: 0 },
   filter: 'none',
   adjust: { brightness: 0, contrast: 0, saturation: 0 },
+  markup: [],
   ...over,
 });
 

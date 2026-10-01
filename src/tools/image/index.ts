@@ -58,6 +58,7 @@ import {
 } from './ui';
 import { openDarkroom, type DarkroomResult } from './darkroom';
 import { naturalOf, pickEdits, type ImageEdits } from './image-view';
+import { markupFields, readMarkup } from './markup/model';
 import { openAltPopover } from './alt-popover';
 import { probeImageDimensions } from './probe-dimensions';
 import { renderUploadingState, type UploadingStateElement } from './uploading-state';
@@ -118,7 +119,10 @@ export class ImageTool implements BlockTool {
     this.block = options.block;
     this.config = options.config ?? {};
     this.readOnly = options.readOnly;
-    this.data = { ...options.data, url: options.data?.url ?? '', variants: readVariants(options.data?.variants) };
+    const { markup, ...rest } = options.data ?? { url: '' };
+
+    // Read once here: readMarkup mints a new id for an item without one, so save() must not be the first to read.
+    this.data = { ...rest, url: rest.url ?? '', variants: readVariants(rest.variants), ...markupFields(readMarkup(markup)) };
     this.state = this.data.url ? 'RENDERED' : 'EMPTY';
     this.uploader = new Uploader(this.config, this.api.uploader, () => this.api.config?.media);
   }
@@ -169,7 +173,7 @@ export class ImageTool implements BlockTool {
       }
     }
     const { filter, adjust } = readAdjust(this.data);
-    Object.assign(out, geometryFields(readGeometry(this.data)), adjustFields(filter, adjust));
+    Object.assign(out, geometryFields(readGeometry(this.data)), adjustFields(filter, adjust), markupFields(readMarkup(this.data.markup)));
     return out;
   }
 
@@ -196,6 +200,8 @@ export class ImageTool implements BlockTool {
       caption: PLAINTEXT,
       alt: PLAINTEXT,
       fileName: PLAINTEXT,
+      // Applies to every string inside the items too: the sanitizer passes the rule down.
+      markup: PLAINTEXT,
     };
   }
 
@@ -858,6 +864,7 @@ export class ImageTool implements BlockTool {
       initialGeometry: readGeometry(this.data),
       initialFilter: readAdjust(this.data).filter,
       initialAdjust: readAdjust(this.data).adjust,
+      initialMarkup: readMarkup(this.data.markup),
       onApply: (result) => this.applyCrop(result),
       onCancel: () => this.cancelCrop(),
       i18n: this.api.i18n,
@@ -873,7 +880,7 @@ export class ImageTool implements BlockTool {
       ?? null;
   }
 
-  private applyCrop({ crop: rect, geometry, filter, adjust }: DarkroomResult): void {
+  private applyCrop({ crop: rect, geometry, filter, adjust, markup }: DarkroomResult): void {
     this.cropDetach = null;
     const prevCrop = this.data.crop;
     const prevGeometry = readGeometry(this.data);
@@ -900,7 +907,8 @@ export class ImageTool implements BlockTool {
     delete this.data.straighten;
     delete this.data.filter;
     delete this.data.adjust;
-    Object.assign(this.data, geometryFields(geometry), adjustFields(filter, adjust));
+    delete this.data.markup;
+    Object.assign(this.data, geometryFields(geometry), adjustFields(filter, adjust), markupFields(readMarkup(markup)));
     this.block.dispatchChange();
     this.renderState();
   }

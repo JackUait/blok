@@ -721,6 +721,7 @@ const imagePresentationLosses = (data: BlockToolData): string[] => {
   return [
     /** The export shows the UNCROPPED image, so a crop is lost content, not chrome. */
     isRecord(data.crop) ? 'crop' : '',
+    Array.isArray(data.markup) && data.markup.length > 0 ? 'markup' : '',
     typeof data.rotation === 'number' && data.rotation !== 0 ? 'rotation' : '',
     data.flipX === true ? 'mirror' : '',
     typeof data.straighten === 'number' && data.straighten !== 0 ? 'straighten' : '',

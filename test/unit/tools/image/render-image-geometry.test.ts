@@ -1,11 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ImageData } from '../../../../types/tools/image';
+import type { ImageData, ImageMarkup } from '../../../../types/tools/image';
 import { openLightbox, renderImage } from '../../../../src/tools/image/ui';
 import { planeImageStyle } from '../../../../src/tools/image/geometry';
 
 const N = { w: 400, h: 300 };
 const sized = { naturalWidth: 400, naturalHeight: 300 };
 const VARIANTS: ImageData['variants'] = [{ url: 'x.avif', mimeType: 'image/avif' }, { url: 'x.png', mimeType: 'image/png' }];
+
+const MARKUP: ImageMarkup[] = [{ id: 'p', type: 'pen', color: '#ff3b30', points: [0.1, 0.1, 0.5, 0.9, 0.9, 0.5], size: 0.012 }];
+const layer = (root: HTMLElement): SVGSVGElement | null => root.querySelector<SVGSVGElement>('svg[data-role="image-markup"]');
 
 const ratio = (el: HTMLElement | null | undefined): string => (el?.style.aspectRatio ?? '').replace(/\s+/g, '');
 const parts = (root: HTMLElement): { frame: HTMLElement | null; plane: HTMLElement | null; img: HTMLImageElement | null } => ({
@@ -120,6 +123,37 @@ describe('renderImage geometry', () => {
   });
 });
 
+describe('renderImage markup', () => {
+  it('frames an unturned image to draw its marks over it', () => {
+    const root = renderImage({ url: 'x.png', markup: MARKUP, ...sized });
+    const { frame, plane, img } = parts(root);
+
+    expect(frame?.style.width).toBe('100%');
+    expect(ratio(frame)).toBe('40000/30000');
+    expect(img?.parentElement).toBe(plane);
+    expect(layer(root)?.parentElement).toBe(plane);
+    expect(layer(root)?.getAttribute('viewBox')).toBe('0 0 400 300');
+    expect(layer(root)?.querySelector('[data-markup-id="p"]')).not.toBeNull();
+  });
+
+  it('crops an unturned marked image to the same window the flat crop wrapper shows', () => {
+    const crop = { x: 10, y: 20, w: 50, h: 40 };
+    const { frame, plane } = parts(renderImage({ url: 'x.png', crop, markup: MARKUP, ...sized }));
+
+    expect(frame?.getAttribute('data-role')).toBe('image-crop');
+    expect(ratio(frame)).toBe('20000/12000');
+    expect(plane?.style.width).toBe('200%');
+    expect(plane?.style.transform).toBe('translate(-10%, -20%)');
+  });
+
+  it('ignores marks that do not validate and keeps the flat DOM', () => {
+    const flat = renderImage({ url: 'x.png', alt: 'a' }).outerHTML;
+
+    expect(renderImage({ url: 'x.png', alt: 'a', markup: [] }).outerHTML).toBe(flat);
+    expect(renderImage({ url: 'x.png', alt: 'a', markup: [{ id: 'x', type: 'pen', color: 'red', points: [], size: 1 }] }).outerHTML).toBe(flat);
+  });
+});
+
 describe('openLightbox geometry parity', () => {
   const dialog = (): HTMLElement => {
     const el = document.body.querySelector<HTMLElement>('.blok-image-lightbox');
@@ -189,6 +223,17 @@ describe('openLightbox geometry parity', () => {
     expect(plane).not.toBeNull();
     expect(img?.style.transform).toBe('rotate(180deg)');
     expect(img?.style.filter).toBe('grayscale(1) contrast(1.4) brightness(0.9)');
+    close();
+  });
+
+  it('draws the marks on an unturned image', () => {
+    const close = openLightbox({ url: 'x.png', markup: MARKUP, ...sized });
+    const { frame, plane } = parts(dialog());
+
+    expect(frame?.getAttribute('data-role')).toBe('lightbox-crop');
+    expect(frame?.style.getPropertyValue('--blok-image-frame-width')).toBe('400px');
+    expect(layer(dialog())?.parentElement).toBe(plane);
+    expect(layer(dialog())?.getAttribute('viewBox')).toBe('0 0 400 300');
     close();
   });
 });

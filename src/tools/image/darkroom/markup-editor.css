@@ -1,0 +1,133 @@
+/* Markup tab stage: live drawing, selection box, text editor. */
+
+.blok-markup-layer {
+  --blok-markup-handle: 10px;
+  --blok-markup-handle-hit: 28px;
+  --blok-markup-box-ink: rgba(255, 255, 255, 0.92);
+  --blok-markup-box-shade: rgba(0, 0, 0, 0.35);
+  --blok-markup-handle-shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 0 0 0.5px rgba(0, 0, 0, 0.25);
+  --blok-markup-handle-fill: #fff;
+  --blok-markup-eraser-cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='8' fill='rgba(255,255,255,0.25)' stroke='white' stroke-width='1.5'/%3E%3Ccircle cx='12' cy='12' r='8.75' fill='none' stroke='rgba(0,0,0,0.5)' stroke-width='0.5'/%3E%3C/svg%3E") 12 12, cell;
+  position: absolute;
+  inset: 0;
+  /* Above the photo and frame, below the bar and dock (z-index 2). */
+  z-index: 1;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: crosshair;
+}
+
+.blok-markup-layer[hidden] { display: none; }
+.blok-markup-layer[data-tool="select"] { cursor: default; }
+.blok-markup-layer[data-tool="text"] { cursor: text; }
+.blok-markup-layer[data-tool="eraser"] { cursor: var(--blok-markup-eraser-cursor); }
+
+/* Hairline box in screen px: the same weight at any zoom. */
+.blok-markup-selection {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px solid var(--blok-markup-box-ink);
+  box-shadow: 0 0 0 1px var(--blok-markup-box-shade), inset 0 0 0 1px var(--blok-markup-box-shade);
+  pointer-events: none;
+  transform-origin: center;
+  animation: blok-markup-selection-in 160ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes blok-markup-selection-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.blok-markup-selection__handle {
+  position: absolute;
+  width: var(--blok-markup-handle-hit);
+  height: var(--blok-markup-handle-hit);
+  margin: calc(var(--blok-markup-handle-hit) / -2) 0 0 calc(var(--blok-markup-handle-hit) / -2);
+  pointer-events: auto;
+  touch-action: none;
+}
+
+/* The visible dot is small; the press target around it is finger sized. */
+.blok-markup-selection__handle::after {
+  content: '';
+  position: absolute;
+  inset: calc((var(--blok-markup-handle-hit) - var(--blok-markup-handle)) / 2);
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-markup-handle-fill);
+  box-shadow: var(--blok-markup-handle-shadow);
+  transition: transform 140ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.blok-markup-selection__handle:hover::after,
+.blok-markup-selection__handle:active::after { transform: scale(1.35); }
+
+.blok-markup-selection__handle[data-markup-handle="nw"] { left: 0; top: 0; cursor: nwse-resize; }
+.blok-markup-selection__handle[data-markup-handle="n"] { left: 50%; top: 0; cursor: ns-resize; }
+.blok-markup-selection__handle[data-markup-handle="ne"] { left: 100%; top: 0; cursor: nesw-resize; }
+.blok-markup-selection__handle[data-markup-handle="e"] { left: 100%; top: 50%; cursor: ew-resize; }
+.blok-markup-selection__handle[data-markup-handle="se"] { left: 100%; top: 100%; cursor: nwse-resize; }
+.blok-markup-selection__handle[data-markup-handle="s"] { left: 50%; top: 100%; cursor: ns-resize; }
+.blok-markup-selection__handle[data-markup-handle="sw"] { left: 0; top: 100%; cursor: nesw-resize; }
+.blok-markup-selection__handle[data-markup-handle="w"] { left: 0; top: 50%; cursor: ew-resize; }
+
+.blok-markup-selection__handle[data-markup-handle="rotate"] {
+  left: 50%;
+  top: -28px;
+  cursor: grab;
+}
+
+/* The stem from the box to the rotate knob. */
+.blok-markup-selection__handle[data-markup-handle="rotate"]::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1px;
+  height: 28px;
+  background: var(--blok-markup-box-ink);
+  box-shadow: 0 0 0 0.5px var(--blok-markup-box-shade);
+}
+
+.blok-markup-selection__handle[data-markup-handle="rotate"]:active { cursor: grabbing; }
+
+/* Sits exactly on the drawn text; markup-editor.ts sets size, colour and turn to match render.ts. */
+.blok-markup-text-editor {
+  position: absolute;
+  box-sizing: content-box;
+  min-width: 2px;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  white-space: pre;
+  text-align: center;
+  font-weight: 700;
+  letter-spacing: normal;
+  background: transparent;
+  transform-origin: center;
+  paint-order: stroke fill;
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+  animation: blok-markup-text-in 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.blok-markup-text-editor::placeholder {
+  color: currentColor;
+  opacity: 0.55;
+  -webkit-text-stroke: 0;
+}
+
+@keyframes blok-markup-text-in {
+  from { opacity: 0.4; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blok-markup-selection,
+  .blok-markup-text-editor { animation: none; }
+  .blok-markup-selection__handle::after { transition: none; }
+}

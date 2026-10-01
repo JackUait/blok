@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ImageCrop } from '../../../../../types/tools/image';
+import type { ImageCrop, ImageMarkup } from '../../../../../types/tools/image';
 import { openDarkroom, type DarkroomResult, type OpenDarkroomOptions } from '../../../../../src/tools/image/darkroom';
 import { cameraToRect, fitFrame } from '../../../../../src/tools/image/darkroom/camera';
 import { coverCrop } from '../../../../../src/tools/image/geometry';
@@ -874,6 +874,7 @@ describe('openDarkroom geometry, adjust and filters', () => {
     geometry: { rotation: 0, flipX: false, straighten: 0 },
     filter: 'none',
     adjust: { brightness: 0, contrast: 0, saturation: 0 },
+    markup: [],
   };
   const undo = (): void => key(dialog(), { key: 'z', metaKey: true });
   const result = (onApply: ReturnType<typeof vi.fn>): DarkroomResult => {
@@ -900,13 +901,13 @@ describe('openDarkroom geometry, adjust and filters', () => {
   };
 
   describe('mode tabs', () => {
-    it('a tablist of Crop, Adjust and Filters, each tab controlling its panel', () => {
+    it('a tablist of Crop, Adjust, Filters and Markup, each tab controlling its panel', () => {
       open();
       const list = q('[role="tablist"]');
       const tabs = [...list.querySelectorAll<HTMLElement>('[role="tab"]')];
 
       expect(list.getAttribute('aria-label')).toBe('Edit modes');
-      expect(tabs.map((t) => t.textContent)).toEqual(['Crop', 'Adjust', 'Filters']);
+      expect(tabs.map((t) => t.textContent)).toEqual(['Crop', 'Adjust', 'Filters', 'Markup']);
       tabs.forEach((tab) => {
         const panel = document.getElementById(tab.getAttribute('aria-controls') ?? '');
 
@@ -953,7 +954,7 @@ describe('openDarkroom geometry, adjust and filters', () => {
   describe('outside Crop mode', () => {
     const tab = (mode: string): void => q<HTMLButtonElement>(`[role="tab"][data-mode="${mode}"]`).click();
 
-    it.each(['adjust', 'filters'])('the surface says it is in %s mode, and Crop again on return', (mode) => {
+    it.each(['adjust', 'filters', 'markup'])('the surface says it is in %s mode, and Crop again on return', (mode) => {
       open();
 
       expect(dialog().getAttribute('data-mode')).toBe('crop');
@@ -1282,7 +1283,7 @@ describe('openDarkroom geometry, adjust and filters', () => {
       button('done').click();
 
       expect(result(onApply)).toEqual({
-        crop: initial, geometry: initialGeometry, filter: 'warm', adjust: { brightness: 5, contrast: 0, saturation: -10 },
+        crop: initial, geometry: initialGeometry, filter: 'warm', adjust: { brightness: 5, contrast: 0, saturation: -10 }, markup: [],
       });
     });
   });
@@ -1551,6 +1552,7 @@ describe('openDarkroom local resets', () => {
         geometry: { rotation: 0, flipX: false, straighten: 0 },
         filter: 'noir',
         adjust: edited.initialAdjust,
+        markup: [],
       });
     });
 
@@ -1563,7 +1565,7 @@ describe('openDarkroom local resets', () => {
       advance(3000);
       button('done').click();
 
-      expect(result(onApply)).toEqual({ crop: edited.initial, geometry: edited.initialGeometry, filter: 'noir', adjust: edited.initialAdjust });
+      expect(result(onApply)).toEqual({ crop: edited.initial, geometry: edited.initialGeometry, filter: 'noir', adjust: edited.initialAdjust, markup: [] });
     });
 
     it('shows after a rotate alone', () => {
@@ -1647,7 +1649,7 @@ describe('openDarkroom local resets', () => {
       advance(3000);
       button('done').click();
 
-      expect(result(onApply)).toEqual({ crop: edited.initial, geometry: edited.initialGeometry, filter: 'noir', adjust: { brightness: 0, contrast: 0, saturation: 0 } });
+      expect(result(onApply)).toEqual({ crop: edited.initial, geometry: edited.initialGeometry, filter: 'noir', adjust: { brightness: 0, contrast: 0, saturation: 0 }, markup: [] });
     });
 
     it('a focused Reset adjustments that disappears hands focus to the adjust dial', () => {
@@ -1677,7 +1679,7 @@ describe('openDarkroom local resets', () => {
       advance(3000);
       button('done').click();
 
-      expect(result(onApply)).toEqual({ crop: edited.initial, geometry: edited.initialGeometry, filter: 'none', adjust: edited.initialAdjust });
+      expect(result(onApply)).toEqual({ crop: edited.initial, geometry: edited.initialGeometry, filter: 'none', adjust: edited.initialAdjust, markup: [] });
     });
 
     it('a focused reset that disappears hands focus to the selected preset', () => {
@@ -1729,5 +1731,302 @@ describe('openDarkroom frame room', () => {
 
     expect(frame.y + frame.h).toBeLessThanOrEqual(480);
     expect(frame.y).toBeGreaterThanOrEqual(60);
+  });
+});
+
+describe('openDarkroom markup', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    stubPopover();
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 1200, 800));
+  });
+
+  afterEach(() => {
+    closers.splice(0).forEach((close) => close());
+    document.body.replaceChildren();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  // Every rect is 1200 × 800 at the origin and O is 800 × 534: screen px are O px × 1.5.
+  const S = 1.5;
+  const PEN: ImageMarkup = { id: 'p1', type: 'pen', color: '#ff3b30', points: [0.1, 0.1, 0.5, 0.2, 0.2, 0.5], size: 0.012 };
+  const RECT: ImageMarkup = { id: 'r1', type: 'rect', color: '#0a84ff', x1: 0.25, y1: 0.25, x2: 0.5, y2: 0.5, size: 0.012 };
+
+  const q = <T extends Element = HTMLElement>(selector: string): T => {
+    const found = document.querySelector<T>(selector);
+
+    if (!found) throw new Error(`no ${selector}`);
+
+    return found;
+  };
+  const tab = (mode: string): void => q<HTMLButtonElement>(`[role="tab"][data-mode="${mode}"]`).click();
+  const layer = (): HTMLElement => q('[data-role="markup-layer"]');
+  const at = (type: string, x: number, y: number, init: PointerEventInit = {}): void => {
+    layer().dispatchEvent(new PointerEvent(type, {
+      bubbles: true, pointerId: 1, pointerType: 'mouse', button: 0, pressure: 0.5, clientX: x * S, clientY: y * S, ...init,
+    }));
+  };
+  const strokeO = (from: [number, number], to: [number, number]): void => {
+    at('pointerdown', ...from);
+    at('pointermove', (from[0] + to[0]) / 2, (from[1] + to[1]) / 2);
+    at('pointermove', ...to);
+    at('pointerup', ...to);
+  };
+  const clickO = (x: number, y: number): void => {
+    at('pointerdown', x, y);
+    at('pointerup', x, y);
+  };
+  const tool = (name: string): void => q<HTMLButtonElement>(`[data-blok-testid="markup-tool-${name}"]`).click();
+  const result = (onApply: ReturnType<typeof vi.fn>): DarkroomResult => {
+    const call: unknown = onApply.mock.calls.at(-1)?.[0];
+
+    if (typeof call !== 'object' || call === null || !('markup' in call)) throw new Error('no result');
+
+    return call as DarkroomResult;
+  };
+  const planeMarks = (): Element[] => [...document.querySelectorAll('[data-role="darkroom-stage"] svg[data-role="image-markup"] [data-markup-id]')];
+  const textarea = (): HTMLTextAreaElement | null => document.querySelector('[data-role="markup-text-editor"]');
+  const typeText = (value: string): void => {
+    const ta = textarea();
+
+    if (!ta) throw new Error('no text editor');
+    ta.value = value;
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+  const openText = (x: number, y: number): void => {
+    tool('text');
+    clickO(x, y);
+  };
+
+  it('Markup mode gives the stage its own label, and Crop gives the crop label back', () => {
+    open();
+    tab('markup');
+    expect(stageEl()?.getAttribute('aria-label')).toContain('V selects, P pen');
+    tab('crop');
+
+    expect(stageEl()?.getAttribute('aria-label')).toContain('Arrow keys move');
+  });
+
+  it('the drawing layer takes pointers only in Markup mode', () => {
+    open();
+    expect(layer().hidden).toBe(true);
+    tab('markup');
+
+    expect(layer().hidden).toBe(false);
+  });
+
+  it('the saved marks show on the photo in every mode', () => {
+    open({ initialMarkup: [PEN] });
+
+    expect(planeMarks().map((m) => m.getAttribute('data-markup-id'))).toEqual(['p1']);
+  });
+
+  it('Done with no marks returns an empty markup list', () => {
+    const { onApply } = open();
+
+    button('done').click();
+
+    expect(result(onApply).markup).toEqual([]);
+  });
+
+  it('a pen stroke lands in the result and leaves the crop alone', () => {
+    const { onApply } = open();
+
+    tab('markup');
+    strokeO([100, 100], [300, 200]);
+    button('done').click();
+
+    const r = result(onApply);
+
+    expect(r.crop).toBeNull();
+    expect(r.markup).toHaveLength(1);
+    expect(r.markup[0]).toMatchObject({ type: 'pen', color: '#ff3b30' });
+  });
+
+  it('each mark is one undo step, and redo brings it back', () => {
+    open();
+    tab('markup');
+    strokeO([100, 100], [300, 200]);
+    strokeO([100, 300], [300, 400]);
+    expect(planeMarks()).toHaveLength(2);
+    key(dialog(), { key: 'z', metaKey: true });
+    expect(planeMarks()).toHaveLength(1);
+    key(dialog(), { key: 'z', metaKey: true, shiftKey: true });
+
+    expect(planeMarks()).toHaveLength(2);
+  });
+
+  it('rotate left and flip move the marks with the picture', () => {
+    const { onApply, advance } = open({ initialMarkup: [RECT] });
+
+    button('rotate-left').click();
+    advance(3000);
+    button('flip').click();
+    advance(3000);
+    button('done').click();
+
+    // Rotate: (x, y) → (y, 1 − x); flip: (x, y) → (1 − x, y).
+    expect(result(onApply).markup[0]).toMatchObject({ x1: 0.5, y1: 0.5, x2: 0.75, y2: 0.75 });
+  });
+
+  it('Reset clears the marks in one undo step; Reset crop keeps them', () => {
+    const { onApply } = open({ initialMarkup: [PEN] });
+
+    button('reset-crop').click();
+    expect(planeMarks()).toHaveLength(1);
+    button('reset').click();
+    expect(planeMarks()).toHaveLength(0);
+    key(dialog(), { key: 'z', metaKey: true });
+    expect(planeMarks()).toHaveLength(1);
+    button('reset').click();
+    button('done').click();
+
+    expect(result(onApply).markup).toEqual([]);
+  });
+
+  it('the Clear markup reset clears every mark in one step', () => {
+    open({ initialMarkup: [PEN, RECT] });
+    tab('markup');
+    q<HTMLButtonElement>('[data-blok-testid="markup-reset"]').click();
+    expect(planeMarks()).toHaveLength(0);
+    key(dialog(), { key: 'z', metaKey: true });
+
+    expect(planeMarks()).toHaveLength(2);
+  });
+
+  it('Cancel flies back with the marks the block still has', () => {
+    const target = document.createElement('div');
+
+    document.body.appendChild(target);
+    const { advance, onCancel } = open({ getTargetEl: () => target, initialMarkup: [PEN] });
+
+    tab('markup');
+    strokeO([100, 100], [300, 200]);
+    button('cancel').click();
+    advance(16);
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    const flown = [...document.querySelectorAll('[data-role="darkroom-flight"] [data-markup-id]')];
+
+    expect(flown.map((m) => m.getAttribute('data-markup-id'))).toEqual(['p1']);
+  });
+
+  it('Done flies out with the new marks', () => {
+    const target = document.createElement('div');
+
+    document.body.appendChild(target);
+    const { advance } = open({ getTargetEl: () => target });
+
+    tab('markup');
+    strokeO([100, 100], [300, 200]);
+    button('done').click();
+    advance(16);
+
+    expect(document.querySelectorAll('[data-role="darkroom-flight"] [data-markup-type="pen"]')).toHaveLength(1);
+  });
+
+  it('a photo that fails to load hides the markup panel and the drawing layer', () => {
+    open();
+    tab('markup');
+    const photo = q<HTMLImageElement>('[data-role="darkroom-photo"]');
+    const panel = q('[data-blok-testid="markup-tool-pen"]');
+
+    photo.dispatchEvent(new Event('error'));
+
+    expect(panel.closest('[hidden]')).not.toBeNull();
+    expect(document.querySelector('[data-role="markup-layer"]:not([hidden])')).toBeNull();
+  });
+
+  it('a tool key on the stage picks the tool in the panel', () => {
+    open();
+    tab('markup');
+    key(stageEl(), { key: 'r' });
+
+    expect(q('[data-blok-testid="markup-tool-rect"]').getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('selecting a mark shows its colour in the panel, and the Delete button removes it', () => {
+    open({ initialMarkup: [RECT] });
+    tab('markup');
+    tool('select');
+    clickO(200, 200);
+    expect(q('[data-blok-testid="markup-color-0a84ff"]').getAttribute('aria-checked')).toBe('true');
+    q<HTMLButtonElement>('[data-blok-testid="markup-delete"]').click();
+
+    expect(planeMarks()).toHaveLength(0);
+  });
+
+  it('leaving Markup mode commits an open text and drops the selection', () => {
+    const { onApply } = open();
+
+    tab('markup');
+    openText(400, 267);
+    typeText('Hello');
+    tab('crop');
+    expect(textarea()).toBeNull();
+    expect(document.querySelector('[data-role="markup-selection"]')).toBeNull();
+    button('done').click();
+
+    expect(result(onApply).markup[0]).toMatchObject({ type: 'text', text: 'Hello' });
+  });
+
+  describe('the text editor owns its keys', () => {
+    it('Enter in the text editor types a newline and does not close the darkroom', () => {
+      const { onApply } = open();
+
+      tab('markup');
+      openText(400, 267);
+      typeText('Hi');
+      textarea()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+
+      expect(onApply).not.toHaveBeenCalled();
+      expect(textarea()).not.toBeNull();
+    });
+
+    it('Cmd+Z in the text editor does not run the darkroom undo', () => {
+      open();
+      tab('markup');
+      strokeO([100, 100], [300, 200]);
+      openText(400, 400);
+      typeText('Hi');
+      textarea()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true, cancelable: true }));
+
+      expect(planeMarks()).toHaveLength(1);
+      expect(textarea()).not.toBeNull();
+    });
+
+    it('Escape commits the text, a second Escape deselects, a third cancels', () => {
+      const { onCancel, onApply } = open();
+
+      tab('markup');
+      openText(400, 267);
+      typeText('Hi');
+      key(dialog(), { key: 'Escape' });
+      expect(textarea()).toBeNull();
+      expect(document.querySelector('[data-role="markup-selection"]')).not.toBeNull();
+      expect(onCancel).not.toHaveBeenCalled();
+      key(dialog(), { key: 'Escape' });
+      expect(document.querySelector('[data-role="markup-selection"]')).toBeNull();
+      expect(onCancel).not.toHaveBeenCalled();
+      key(dialog(), { key: 'Escape' });
+
+      expect(onCancel).toHaveBeenCalledTimes(1);
+      expect(onApply).not.toHaveBeenCalled();
+    });
+
+    it('Cmd+Enter in the text editor commits the text, not the darkroom', () => {
+      const { onApply } = open();
+
+      tab('markup');
+      openText(400, 267);
+      typeText('Hi');
+      textarea()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', metaKey: true, bubbles: true, cancelable: true }));
+
+      expect(textarea()).toBeNull();
+      expect(onApply).not.toHaveBeenCalled();
+      expect(planeMarks()).toHaveLength(1);
+    });
   });
 });

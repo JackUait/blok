@@ -30,6 +30,7 @@ import { applyRubberBand } from './spring';
 import { readAdjust } from './adjust';
 import { isIdentity, orientedSize, readGeometry } from './geometry';
 import { applyImageFilter, buildFrame, naturalOf, pickEdits, type ImageEdits } from './image-view';
+import { readMarkup } from './markup/model';
 import { downloadImage } from './download';
 import { tr } from './i18n';
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
@@ -110,10 +111,12 @@ export function renderImage(
   const geometry = readGeometry(data);
   const { filter, adjust } = readAdjust(data);
 
+  const markup = readMarkup(data.markup);
+
   applyImageFilter(img, filter, adjust);
 
-  if (!isIdentity(geometry)) {
-    const frame = buildFrame(img, { natural: naturalOf(data), geometry, crop: data.crop, content });
+  if (!isIdentity(geometry) || markup.length > 0) {
+    const frame = buildFrame(img, { natural: naturalOf(data), geometry, crop: data.crop, content, markup });
 
     frame.style.width = '100%';
     figure.appendChild(frame);
@@ -384,12 +387,14 @@ export function openLightbox(opts: LightboxOptions): () => void {
     const geometry = readGeometry(edits);
     const { filter, adjust } = readAdjust(edits);
     applyImageFilter(el, filter, adjust);
-    if (!isIdentity(geometry)) {
+    const markup = readMarkup(edits.markup);
+    if (!isIdentity(geometry) || markup.length > 0) {
       const { w, h } = crop ?? { w: 100, h: 100 };
       return buildFrame(el, {
         natural: naturalOf(edits),
         geometry,
         crop,
+        markup,
         className: 'blok-image-lightbox__image blok-image-lightbox__crop',
         role: 'lightbox-crop',
         // The img is absolute, so the frame has no content size of its own. Fit it like the

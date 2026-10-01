@@ -564,6 +564,30 @@ describe('blocksToMarkdown (view)', () => {
       ]);
     });
 
+    it('reports marks right after the crop, since both are lost content', () => {
+      const { warnings } = blocksToMarkdownWithReport(doc([
+        {
+          type: 'image',
+          data: { url: 'https://i/x.png',
+            rotation: 90,
+            crop: { x: 10, y: 10, w: 50, h: 50 },
+            markup: [{ id: 'a', type: 'line', color: '#111111', x1: 0, y1: 0, x2: 1, y2: 1, size: 0.01 }] },
+        },
+      ]));
+
+      expect(warnings).toEqual([
+        { construct: 'image',
+          action: 'degraded',
+          detail: 'image is rendered as a plain Markdown image; its crop, markup and rotation are lost' },
+      ]);
+    });
+
+    it('stays silent for an image with an empty markup list', () => {
+      expect(blocksToMarkdownWithReport(doc([
+        { type: 'image', data: { url: 'https://i/x.png', markup: [] } },
+      ])).warnings).toEqual([]);
+    });
+
     it('stays silent for an image whose geometry and adjust fields hold their defaults', () => {
       expect(blocksToMarkdownWithReport(doc([
         { type: 'image',

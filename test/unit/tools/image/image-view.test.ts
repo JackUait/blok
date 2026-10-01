@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ImageData, ImageRotation } from '../../../../types/tools/image';
+import type { ImageData, ImageMarkup, ImageRotation } from '../../../../types/tools/image';
 import {
   applyImageFilter,
   buildFrame,
@@ -26,6 +26,12 @@ const setNatural = (img: HTMLImageElement, w: number, h: number, complete: boole
 };
 
 const ratio = (el: HTMLElement): string => el.style.aspectRatio.replace(/\s+/g, '');
+
+const MARKUP: ImageMarkup[] = [
+  { id: 'r', type: 'rect', color: '#ff3b30', x1: 0.1, y1: 0.1, x2: 0.5, y2: 0.5, size: 0.012 },
+];
+
+const layerOf = (root: Element): SVGSVGElement | null => root.querySelector<SVGSVGElement>('svg[data-role="image-markup"]');
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -153,6 +159,101 @@ describe('buildFrame', () => {
   });
 });
 
+describe('markup layer', () => {
+  it('puts the marks after the img inside the plane, sized to the oriented box', () => {
+    const img = makeImg();
+    const plane = buildPlane(img, N, { rotation: 90, flipX: false, straighten: 0 }, { markup: MARKUP });
+    const svg = layerOf(plane);
+
+    expect(svg?.parentElement).toBe(plane);
+    expect(plane.lastElementChild).toBe(svg);
+    expect(img.nextElementSibling).toBe(svg);
+    expect(svg?.getAttribute('viewBox')).toBe('0 0 300 400');
+    expect(svg?.querySelector('[data-markup-id="r"]')).not.toBeNull();
+  });
+
+  it('puts the marks after a <picture> wrapper, not inside it', () => {
+    const img = makeImg();
+    const picture = document.createElement('picture');
+
+    picture.appendChild(img);
+    const plane = buildPlane(img, N, { rotation: 0, flipX: false, straighten: 0 }, { content: picture, markup: MARKUP });
+
+    expect(picture.nextElementSibling).toBe(layerOf(plane));
+    expect(layerOf(picture)).toBeNull();
+  });
+
+  it('adds no layer without marks', () => {
+    for (const markup of [undefined, []]) {
+      const plane = buildPlane(makeImg(), N, { rotation: 90, flipX: false, straighten: 0 }, { markup });
+
+      expect(plane.children).toHaveLength(1);
+    }
+  });
+
+  it('draws the marks once the natural size loads', () => {
+    const img = makeImg();
+    const plane = buildPlane(img, null, { rotation: 0, flipX: false, straighten: 0 }, { markup: MARKUP });
+    const svg = layerOf(plane);
+
+    expect(svg?.hasAttribute('viewBox')).toBe(false);
+    setNatural(img, 400, 300, true);
+    img.dispatchEvent(new Event('load'));
+    expect(svg?.getAttribute('viewBox')).toBe('0 0 400 300');
+    expect(svg?.querySelector('[data-markup-id="r"]')).not.toBeNull();
+  });
+
+  it('stands in a 1000 px long side with the rendered aspect for an image with no natural size', () => {
+    const img = makeImg();
+    const onNatural = vi.fn();
+
+    Object.defineProperty(img, 'width', { value: 200, configurable: true });
+    Object.defineProperty(img, 'height', { value: 100, configurable: true });
+    const plane = buildPlane(img, null, { rotation: 0, flipX: false, straighten: 0 }, { markup: MARKUP, onNatural });
+
+    setNatural(img, 0, 0, true);
+    img.dispatchEvent(new Event('load'));
+
+    expect(ratio(plane)).toBe('1000/500');
+    expect(img.style.visibility).toBe('');
+    expect(layerOf(plane)?.getAttribute('viewBox')).toBe('0 0 1000 500');
+    expect(onNatural).toHaveBeenCalledWith({ w: 1000, h: 500 });
+  });
+
+  it('stands in a square when the sizeless image has no rendered box either', () => {
+    const img = makeImg();
+
+    setNatural(img, 0, 0, true);
+    const plane = buildPlane(img, null, { rotation: 90, flipX: false, straighten: 0 }, { markup: MARKUP });
+
+    expect(ratio(plane)).toBe('1000/1000');
+    expect(layerOf(plane)?.getAttribute('viewBox')).toBe('0 0 1000 1000');
+  });
+
+  it('buildFrame with identity geometry and a crop clips like the flat crop wrapper and keeps the marks in the plane', () => {
+    const img = makeImg();
+    const frame = buildFrame(img, {
+      natural: N,
+      geometry: { rotation: 0, flipX: false, straighten: 0 },
+      crop: { x: 10, y: 20, w: 50, h: 40 },
+      markup: MARKUP,
+    });
+    const plane = frame.querySelector<HTMLElement>('[data-role="image-plane"]');
+
+    expect(frame.getAttribute('data-role')).toBe('image-crop');
+    expect(frame.className).toBe('blok-image-crop');
+    // Same visible window as the flat wrapper: img width 200%, shifted by x/y percent of itself.
+    expect(plane?.style.width).toBe('200%');
+    expect(plane?.style.transform).toBe('translate(-10%, -20%)');
+    expect(ratio(frame)).toBe('20000/12000');
+    expect(img.style.width).toBe('100%');
+    expect(img.style.height).toBe('100%');
+    expect(img.style.transform).toBe('rotate(0deg)');
+    expect(layerOf(frame)?.parentElement).toBe(plane);
+    expect(layerOf(frame)?.getAttribute('viewBox')).toBe('0 0 400 300');
+  });
+});
+
 describe('applyImageFilter', () => {
   it('sets the CSS filter for a preset and adjustments', () => {
     const img = makeImg();
@@ -191,6 +292,7 @@ describe('pickEdits', () => {
       adjust: { contrast: 10 },
       naturalWidth: 10,
       naturalHeight: 20,
+      markup: MARKUP,
       alt: 'a',
     };
 
@@ -202,6 +304,7 @@ describe('pickEdits', () => {
       adjust: { contrast: 10 },
       naturalWidth: 10,
       naturalHeight: 20,
+      markup: MARKUP,
     });
   });
 

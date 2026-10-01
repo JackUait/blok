@@ -7,6 +7,7 @@ const snap = (x: number, ratioKey = 'free', over: Partial<Snapshot> = {}): Snaps
   geometry: { rotation: 0, flipX: false, straighten: 0 },
   filter: 'none',
   adjust: { brightness: 0, contrast: 0, saturation: 0 },
+  markup: [],
   ...over,
 });
 
@@ -85,5 +86,16 @@ describe('darkroom history', () => {
     expect(h.undo()).toEqual(snap(10, 'free', turned));
     expect(h.undo()).toEqual(snap(10));
     expect(h.undo()).toEqual(snap(0));
+  });
+
+  it('a markup change is its own step, and the same marks again are not', () => {
+    const pen = { id: 'm1', type: 'pen' as const, color: '#ff3b30', points: [0.1, 0.1, 0.5], size: 0.012 };
+    const h = createHistory(snap(0));
+
+    h.push(snap(0, 'free', { markup: [pen] }));
+    h.push(snap(0, 'free', { markup: [{ ...pen, points: [0.1, 0.1, 0.5] }] }));
+
+    expect(h.undo()).toEqual(snap(0));
+    expect(h.undo()).toBeNull();
   });
 });

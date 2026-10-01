@@ -1,6 +1,7 @@
-import type { ImageAdjust, ImageCrop, ImageFilterPreset } from '../../../../types/tools/image';
+import type { ImageAdjust, ImageCrop, ImageFilterPreset, ImageMarkup } from '../../../../types/tools/image';
 import { ADJUST_KEYS } from '../adjust';
 import type { Geometry } from '../geometry';
+import { sameMarkup } from '../markup/model';
 
 export interface Snapshot {
   rect: ImageCrop;
@@ -8,6 +9,7 @@ export interface Snapshot {
   geometry: Geometry;
   filter: ImageFilterPreset;
   adjust: Required<ImageAdjust>;
+  markup: ImageMarkup[];
 }
 
 export interface CropHistory {
@@ -25,7 +27,8 @@ const same = (a: Snapshot, b: Snapshot): boolean => a.ratioKey === b.ratioKey
   && a.geometry.rotation === b.geometry.rotation && a.geometry.flipX === b.geometry.flipX
   && Math.abs(a.geometry.straighten - b.geometry.straighten) < SAME
   && Math.abs(a.rect.x - b.rect.x) < SAME && Math.abs(a.rect.y - b.rect.y) < SAME
-  && Math.abs(a.rect.w - b.rect.w) < SAME && Math.abs(a.rect.h - b.rect.h) < SAME;
+  && Math.abs(a.rect.w - b.rect.w) < SAME && Math.abs(a.rect.h - b.rect.h) < SAME
+  && sameMarkup(a.markup, b.markup);
 
 export function createHistory(initial: Snapshot): CropHistory {
   const entries: Snapshot[] = [initial];

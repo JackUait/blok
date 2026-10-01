@@ -746,6 +746,7 @@ const editor = new Blok({
   straighten?: number;     // Fine turn in degrees, -45 to 45, after rotation
   filter?: 'none' | 'vivid' | 'dramatic' | 'warm' | 'mono' | 'noir' | 'fade' | 'sepia';
   adjust?: { brightness?: number; contrast?: number; saturation?: number }; // Each -100 to 100
+  markup?: ImageMarkup[];  // Drawings, shapes and text over the image, back to front
   alt?: string;            // Alt text for screen readers
   fileName?: string;       // Original filename, when known
   naturalWidth?: number;   // Intrinsic pixel width of the source (cached)

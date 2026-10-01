@@ -182,6 +182,11 @@ const savedData: Record<string, Record<string, unknown>> = {
     rotation: 90, flipX: true, straighten: 5, filter: 'warm',
     adjust: { brightness: 10, contrast: 20, saturation: 30 },
     variants: [{ url: 'https://example.com/a.avif', mimeType: 'image/avif' }, { url: 'https://example.com/a.png', mimeType: 'image/png' }],
+    markup: [
+      { id: 'm1', type: 'pen', color: '#ff3b30', points: [0.1, 0.1, 0.5, 0.2, 0.2, 0.8], size: 0.012 },
+      { id: 'm2', type: 'rect', color: '#0a84ff', x1: 0.1, y1: 0.1, x2: 0.5, y2: 0.5, size: 0.012, fill: true },
+      { id: 'm3', type: 'text', color: '#ffffff', x: 0.5, y: 0.5, text: 'Hi', size: 0.06, style: 'outline', rotation: 15 },
+    ],
   })).save(),
 
   file: new FileTool(options({
@@ -299,6 +304,25 @@ describe('blokDocumentSchema', () => {
       expect(props.adjust?.additionalProperties).toBe(false);
       expect(Object.keys(props.adjust?.properties ?? {}).sort()).toEqual(['brightness', 'contrast', 'saturation']);
       Object.values(props.adjust?.properties ?? {}).forEach(p => expect(p).toMatchObject({ minimum: -100, maximum: 100 }));
+    });
+
+    it('image: each markup item branch declares exactly what a saved item of that type carries', () => {
+      type Branch = JsonSchema & { properties: Record<string, { const?: string; enum?: string[] }> };
+      const markup = (defs.image.properties?.markup ?? {}) as JsonSchema & { items?: { anyOf?: Branch[] } };
+      const branches = markup.items?.anyOf ?? [];
+      const saved = (savedData.image.markup ?? []) as Array<Record<string, unknown> & { type: string }>;
+
+      expect(saved).toHaveLength(3);
+      saved.forEach((item) => {
+        const branch = branches.find(b => b.properties.type.enum?.includes(item.type));
+
+        expect(branch, `no branch for "${item.type}"`).toBeDefined();
+        expect(branch?.additionalProperties).toBe(false);
+        expect(Object.keys(branch?.properties ?? {}).sort()).toEqual(Object.keys(item).sort());
+        (branch?.required ?? []).forEach(key => expect(item).toHaveProperty(key));
+      });
+      expect(branches.flatMap(b => b.properties.type.enum ?? []).sort())
+        .toEqual(['arrow', 'ellipse', 'highlighter', 'line', 'pen', 'rect', 'text']);
     });
 
     it.each(Object.keys(defaultBlockTools))('%s: every required field is actually saved', (name) => {

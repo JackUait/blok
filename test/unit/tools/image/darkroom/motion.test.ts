@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CHROME_BACK_DELAY_MS, createDissolve, createVeil, flyOut } from '../../../../../src/tools/image/darkroom/motion';
+import type { ImageMarkup } from '../../../../../types/tools/image';
+import { CHROME_BACK_DELAY_MS, cameraPlane, createDissolve, createVeil, fitCameraPlane, flyOut } from '../../../../../src/tools/image/darkroom/motion';
 import { fakeFrameClock } from '../../../helpers/fake-frame-clock';
 
 describe('darkroom motion', () => {
@@ -158,5 +159,34 @@ describe('darkroom motion', () => {
     expect(img?.style.transform).toBe('rotate(90deg) scaleX(-1)');
     expect(img?.style.filter).toBe('grayscale(1) brightness(1.1)');
   });
-});
 
+  it('the fly-out clone carries the marks over the photo, in the oriented box', () => {
+    const { clock } = fakeFrameClock();
+    const markup: ImageMarkup[] = [{ id: 't', type: 'text', color: '#ffffff', x: 0.5, y: 0.5, text: 'Hi', size: 0.06 }];
+
+    flyOut({
+      url: 'x.png', natural: { w: 800, h: 400 }, rect: { x: 0, y: 0, w: 100, h: 100 },
+      from: { x: 0, y: 0, w: 400, h: 400 }, fromRound: 0, target: null, targetRound: 0,
+      clock, reducedMotion: () => false, geometry: { rotation: 90, flipX: false, straighten: 0 }, markup,
+    });
+    const plane = document.querySelector<HTMLElement>('[data-role="darkroom-flight"] [data-role="image-plane"]');
+    const svg = plane?.querySelector('svg[data-role="image-markup"]');
+
+    expect(plane?.lastElementChild).toBe(svg);
+    expect(svg?.getAttribute('viewBox')).toBe('0 0 400 800');
+    expect(svg?.textContent).toBe('Hi');
+  });
+
+  it('a camera plane built before the natural size draws its marks when fitted', () => {
+    const img = document.createElement('img');
+    const g = { rotation: 0 as const, flipX: false, straighten: 0 };
+    const markup: ImageMarkup[] = [{ id: 'l', type: 'line', color: '#111111', x1: 0, y1: 0, x2: 1, y2: 1, size: 0.01 }];
+    const plane = cameraPlane(img, null, g, markup);
+    const svg = plane.querySelector('svg[data-role="image-markup"]');
+
+    expect(svg?.hasAttribute('viewBox')).toBe(false);
+    fitCameraPlane(plane, img, { w: 640, h: 480 }, g);
+    expect(svg?.getAttribute('viewBox')).toBe('0 0 640 480');
+    expect(svg?.querySelector('[data-markup-id="l"]')).not.toBeNull();
+  });
+});

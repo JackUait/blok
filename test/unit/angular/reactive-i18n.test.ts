@@ -86,4 +86,24 @@ describe('BlokEditorComponent reactive i18n', () => {
 
     expect(blokRegistry.last.i18n.update).not.toHaveBeenCalled();
   });
+
+  it('clears the direction when the host drops it', async () => {
+    const fixture = await mountAndReady({ i18n: { locale: 'en', direction: 'rtl' } });
+    const editor = blokRegistry.last;
+
+    fixture.componentRef.setInput('i18n', { locale: 'en' });
+    fixture.detectChanges();
+
+    expect(editor.i18n.update).toHaveBeenLastCalledWith({ locale: 'en', direction: null });
+  });
+
+  it('clears the direction when the host drops the whole i18n input', async () => {
+    const fixture = await mountAndReady({ i18n: { direction: 'rtl' } });
+    const editor = blokRegistry.last;
+
+    fixture.componentRef.setInput('i18n', undefined);
+    fixture.detectChanges();
+
+    expect(editor.i18n.update).toHaveBeenLastCalledWith({ direction: null });
+  });
 });

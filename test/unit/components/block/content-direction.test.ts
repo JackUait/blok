@@ -251,6 +251,27 @@ describe('per-block content direction', () => {
       expect(content('empty').hasAttribute('dir')).toBe(false);
     });
 
+    // A database is layout, not text: its title must not flip the whole grid.
+    it('lets a database title carry its own direction without flipping the database', async () => {
+      await boot([
+        {
+          id: 'db',
+          type: 'database',
+          data: {
+            title: 'المهام',
+            schema: [{ id: 'p-title', name: 'Name', type: 'title', position: 'a0' }],
+            views: [{ id: 'v-list', name: 'List', type: 'list', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+            activeViewId: 'v-list',
+          },
+        },
+      ]);
+
+      const title = content('db').querySelector<HTMLElement>('[contenteditable]');
+
+      expect(content('db').hasAttribute('dir')).toBe(false);
+      expect(title?.getAttribute('dir')).toBe('auto');
+    });
+
     it('stamps a read-only editor too', async () => {
       await boot([P('ar', 'مرحبا'), P('en', 'Hello')], { readOnly: true });
 

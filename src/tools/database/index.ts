@@ -183,6 +183,9 @@ export class DatabaseTool implements BlockTool {
     titleEl.style.cursor = 'text';
     titleEl.style.wordBreak = 'break-word';
 
+    // Own dir: the title follows its text, and core then skips it, so an RTL
+    // title does not flip the whole database grid.
+    titleEl.setAttribute('dir', 'auto');
     titleEl.className = getPlaceholderClasses('always').join(' ');
     setupPlaceholder(titleEl, this.api.i18n.t('tools.database.titlePlaceholder'));
 

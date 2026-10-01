@@ -36,7 +36,13 @@ export const renderCodePreview = (): HTMLElement => {
     h(
       'div',
       { 'data-card': '' },
-      h('div', { 'data-header': '' }, 'TypeScript'),
+      h(
+        'div',
+        { 'data-header': '' },
+        h('span', { 'data-dot': '' }),
+        h('span', { 'data-lang': '' }, 'TypeScript'),
+        h('span', { 'data-file': '' }, 'cup.ts')
+      ),
       h('div', { 'data-body': '' }, ...lines)
     )
   );

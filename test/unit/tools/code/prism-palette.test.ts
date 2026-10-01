@@ -2,12 +2,37 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { LIGHT_RULES, DARK_RULES } from '../../../../src/tools/code/prism-applier';
+import { ACTIVE_LINE_STYLES } from '../../../../src/tools/code/constants';
 
 const COLORS_CSS = readFileSync(resolve(__dirname, '../../../../src/styles/colors.css'), 'utf8');
 
 /** Every `--blok-code-bg` declaration in colors.css: the light root first, then the dark theme blocks. */
 const codeSurfaces = (): string[] =>
   Array.from(COLORS_CSS.matchAll(/--blok-code-bg:\s*(#[0-9a-f]{6})\s*;/gi), (m) => m[1]);
+
+/** Every `--blok-item-hover-bg` rgba in colors.css, in the same theme order as the surfaces. */
+const hoverTints = (): Array<[number, number, number, number]> =>
+  Array.from(COLORS_CSS.matchAll(/--blok-item-hover-bg:\s*rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/g), (m) => [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])]);
+
+/** The active-line band's share of the hover tint, read from its class. */
+const bandShare = (): number => {
+  const match = /var\(--blok-item-hover-bg\)_(\d+)%/.exec(ACTIVE_LINE_STYLES);
+
+  if (!match) {
+    throw new Error('active-line band no longer mixes --blok-item-hover-bg');
+  }
+
+  return Number(match[1]) / 100;
+};
+
+/** The surface under the caret's line: the band composited over the code surface. */
+const underBand = (surface: string, [r, g, b, a]: [number, number, number, number]): string => {
+  const alpha = a * bandShare();
+  const mix = (at: number, over: number): string =>
+    Math.round(parseInt(surface.slice(at, at + 2), 16) * (1 - alpha) + over * alpha).toString(16).padStart(2, '0');
+
+  return `#${mix(1, r)}${mix(3, g)}${mix(5, b)}`;
+};
 
 const channel = (hex: string, at: number): number => {
   const c = parseInt(hex.slice(at, at + 2), 16) / 255;
@@ -48,16 +73,18 @@ describe('code syntax palette', () => {
     expect(codeSurfaces()).toHaveLength(3);
   });
 
-  it('keeps every light token at WCAG AA on the light code surface', () => {
+  it('keeps every light token at WCAG AA on the light code surface and under the active-line band', () => {
     const [light] = codeSurfaces();
-    const failing = tokenColors(LIGHT_RULES).filter((t) => contrast(t.hex, light) < 4.5);
+    const band = underBand(light, hoverTints()[0]);
+    const failing = tokenColors(LIGHT_RULES).filter((t) => contrast(t.hex, light) < 4.5 || contrast(t.hex, band) < 4.5);
 
     expect(failing).toStrictEqual([]);
   });
 
-  it('keeps every dark token at WCAG AA on the dark code surface', () => {
+  it('keeps every dark token at WCAG AA on the dark code surface and under the active-line band', () => {
     const [, dark] = codeSurfaces();
-    const failing = tokenColors(DARK_RULES).filter((t) => contrast(t.hex, dark) < 4.5);
+    const band = underBand(dark, hoverTints()[1]);
+    const failing = tokenColors(DARK_RULES).filter((t) => contrast(t.hex, dark) < 4.5 || contrast(t.hex, band) < 4.5);
 
     expect(failing).toStrictEqual([]);
   });

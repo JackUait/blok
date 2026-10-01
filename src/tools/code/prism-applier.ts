@@ -10,16 +10,16 @@ export const LIGHT_RULES = `
 .blok-code .token.comment,
 .blok-code .token.prolog,
 .blok-code .token.doctype,
-.blok-code .token.cdata { color: var(--blok-code-comment, #75716a); }
+.blok-code .token.cdata { color: var(--blok-code-comment, #6b6760); }
 
 .blok-code .token.keyword,
 .blok-code .token.operator,
-.blok-code .token.important { color: var(--blok-code-keyword, #8a3ffc); }
+.blok-code .token.important { color: var(--blok-code-keyword, #7f35ec); }
 
 .blok-code .token.string,
 .blok-code .token.attr-value,
 .blok-code .token.char,
-.blok-code .token.regex { color: var(--blok-code-string, #0d7d6c); }
+.blok-code .token.regex { color: var(--blok-code-string, #0b7263); }
 
 .blok-code .token.number,
 .blok-code .token.boolean,
@@ -51,7 +51,7 @@ export const LIGHT_RULES = `
 .blok-code .token.regex-literal,
 .blok-code .token.import,
 .blok-code .token.url,
-.blok-code .token.code { color: var(--blok-code-string, #0d7d6c); }
+.blok-code .token.code { color: var(--blok-code-string, #0b7263); }
 
 /* function / class-name family (blue) — namespaces, definitions, code structures, types */
 .blok-code .token.namespace,
@@ -79,9 +79,9 @@ export const LIGHT_RULES = `
 .blok-code .token.generics,
 .blok-code .token.rule,
 .blok-code .token.instruction,
-.blok-code .token.code-language { color: var(--blok-code-keyword, #8a3ffc); }
-.blok-code .token.bold { color: var(--blok-code-keyword, #8a3ffc); font-weight: 700; }
-.blok-code .token.italic { color: var(--blok-code-keyword, #8a3ffc); font-style: italic; }
+.blok-code .token.code-language { color: var(--blok-code-keyword, #7f35ec); }
+.blok-code .token.bold { color: var(--blok-code-keyword, #7f35ec); font-weight: 700; }
+.blok-code .token.italic { color: var(--blok-code-keyword, #7f35ec); font-style: italic; }
 
 /* pure syntax wrapper — match default text so it is covered without changing appearance */
 .blok-code .token.php { color: var(--blok-code-plain, #37352f); }
@@ -106,7 +106,7 @@ export const DARK_RULES = `
 .dark .blok-code .token.comment,
 .dark .blok-code .token.prolog,
 .dark .blok-code .token.doctype,
-.dark .blok-code .token.cdata { color: var(--blok-code-comment, #8f8b84); }
+.dark .blok-code .token.cdata { color: var(--blok-code-comment, #9a968f); }
 
 .dark .blok-code .token.keyword,
 .dark .blok-code .token.operator,

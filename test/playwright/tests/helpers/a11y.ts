@@ -89,6 +89,15 @@ export const runA11yScan = async (page: Page, options: A11yScanOptions = {}): Pr
     builder = builder.disableRules(disabled);
   }
 
+  // color-contrast blends in ancestor opacity, so a scan taken mid-fade (e.g.
+  // hover/focus chrome fading in after autofocus) reads a color no user settles
+  // on. Only finite CSS transitions are awaited; looping animations never end.
+  await page.waitForFunction(
+    () => document.getAnimations().every((animation) => !(animation instanceof CSSTransition) || animation.playState !== 'running'),
+    undefined,
+    { timeout: 2000 }
+  );
+
   const { violations } = await builder.analyze();
 
   return violations;

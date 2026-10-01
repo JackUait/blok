@@ -23,7 +23,7 @@ import { twMerge } from '../../components/utils/tw';
 
 import { TableCellBlocks, CELL_BLOCKS_ATTR } from './table-cell-blocks';
 import type { InitCellContent } from './table-cell-blocks';
-import { ALLOWED_MARK_STYLE_PROPS, readPastedCellStyle } from './table-cell-clipboard';
+import { ALLOWED_MARK_STYLE_PROPS, pastedGridDirection, readPastedCellStyle } from './table-cell-clipboard';
 import { TableGrid, ROW_ATTR, CELL_ATTR, CELL_ROW_ATTR, CELL_COL_ATTR } from './table-core';
 import {
   applyCellColors,
@@ -516,7 +516,8 @@ export class Table implements BlockTool {
       // single-row tables) must survive the whole-document sanitize pass so
       // the HTML handler can expand the table into column blocks.
       tags: [
-        { TABLE: { 'data-blok-columns-candidate': true } },
+        // dir tells which side a pasted text-align: left/right means.
+        { TABLE: { 'data-blok-columns-candidate': true, dir: true } },
         'TR',
         { TH: { style: true, colspan: true, rowspan: true } },
         { TD: { style: true, colspan: true, rowspan: true } },
@@ -1384,7 +1385,8 @@ export class Table implements BlockTool {
     const rows = content.querySelectorAll('tr');
     // Logical grid: spans are honoured, covered slots carry mergedInto and
     // colors sit at their logical (not physical) coordinates.
-    const tableContent = parsePastedTable(rows, cell => readPastedCellStyle(cell.getAttribute('style') ?? ''));
+    const direction = pastedGridDirection(content);
+    const tableContent = parsePastedTable(rows, cell => readPastedCellStyle(cell.getAttribute('style') ?? '', direction));
 
     const hasTheadHeadings = content.querySelector('thead') !== null;
     const hasThHeadings = rows[0]?.querySelector('th') !== null;

@@ -10,6 +10,7 @@ import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-san
 import { resolvePresetColorVars, resolvePresetColors } from '../../components/shared/resolve-preset-colors';
 import { parseUntrustedHtml } from '../../components/utils/inert-html';
 import { trimTrailingBreaks } from '../../components/utils/trailing-breaks';
+import type { TextDirection } from '../../components/utils/direction';
 
 /** Attribute name used to embed clipboard data on the HTML table element. */
 const DATA_ATTR = 'data-blok-table-cells';
@@ -194,24 +195,35 @@ export function renderNonTextBlock(block: ClipboardBlockData): ExternalBlockRend
   return { html: `<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>`, text: label };
 }
 
+/** Horizontal alignment keywords Blok's placement can express. */
+const HORIZONTAL_ALIGNMENTS = ['left', 'center', 'right'] as const;
+/** Vertical alignment keywords Blok's placement can express. */
+const VERTICAL_ALIGNMENTS = ['top', 'middle', 'bottom'] as const;
+
+/**
+ * Placement left/right mean the grid's start/end, while text-align in the
+ * exported HTML is physical: an RTL grid swaps them.
+ */
+const MIRRORED_SIDE = { left: 'right', center: 'center', right: 'left' } as const;
+
+function mirrorSide<Side extends keyof typeof MIRRORED_SIDE>(side: Side, direction: TextDirection): Side | typeof MIRRORED_SIDE[Side] {
+  return direction === 'rtl' ? MIRRORED_SIDE[side] : side;
+}
+
 /**
  * Inline styles carrying a cell's 9-way placement into external apps
  * (Word/Docs read text-align + vertical-align on the <td>).
  */
-function placementStyles(placement: CellPlacement | undefined): string[] {
+function placementStyles(placement: CellPlacement | undefined, direction: TextDirection): string[] {
   if (placement === undefined) {
     return [];
   }
 
   const [vertical, horizontal] = placement.split('-');
+  const side = HORIZONTAL_ALIGNMENTS.find(value => value === horizontal) ?? 'left';
 
-  return [`text-align: ${horizontal}`, `vertical-align: ${vertical}`];
+  return [`text-align: ${mirrorSide(side, direction)}`, `vertical-align: ${vertical}`];
 }
-
-/** Horizontal alignment keywords Blok's placement can express. */
-const HORIZONTAL_ALIGNMENTS = ['left', 'center', 'right'] as const;
-/** Vertical alignment keywords Blok's placement can express. */
-const VERTICAL_ALIGNMENTS = ['top', 'middle', 'bottom'] as const;
 
 /**
  * Inverse of {@link placementStyles}: map a pasted cell's `text-align` /
@@ -221,8 +233,10 @@ const VERTICAL_ALIGNMENTS = ['top', 'middle', 'bottom'] as const;
 export function placementFromAlignment(
   textAlign: string | undefined,
   verticalAlign: string | undefined,
+  direction: TextDirection = 'ltr',
 ): CellPlacement | undefined {
-  const horizontal = HORIZONTAL_ALIGNMENTS.find(value => value === textAlign?.trim().toLowerCase()) ?? 'left';
+  const physical = HORIZONTAL_ALIGNMENTS.find(value => value === textAlign?.trim().toLowerCase());
+  const horizontal = physical === undefined ? 'left' : mirrorSide(physical, direction);
   const vertical = VERTICAL_ALIGNMENTS.find(value => value === verticalAlign?.trim().toLowerCase()) ?? 'top';
 
   if (horizontal === 'left' && vertical === 'top') {
@@ -338,7 +352,7 @@ function resolveCellContentColors(html: string): string {
  * External apps receive a clean HTML table, while Blok's paste handler can
  * detect and extract the structured JSON.
  */
-export function buildClipboardHtml(payload: TableCellsClipboard): string {
+export function buildClipboardHtml(payload: TableCellsClipboard, direction: TextDirection = 'ltr'): string {
   // Use single-quoted attribute so JSON double quotes don't break the HTML.
   // Escape any literal single quotes inside the JSON with &#39;.
   const json = JSON.stringify(payload).replace(/'/g, '&#39;');
@@ -358,7 +372,7 @@ export function buildClipboardHtml(payload: TableCellsClipboard): string {
           const styles = resolvePresetColorVars([
             cell.color ? `background-color: ${cell.color}` : '',
             cell.textColor ? `color: ${cell.textColor}` : '',
-            ...placementStyles(cell.placement),
+            ...placementStyles(cell.placement, direction),
           ].filter(Boolean).join('; '));
 
           const styleAttr = styles ? ` style="${styles}"` : '';
@@ -373,7 +387,9 @@ export function buildClipboardHtml(payload: TableCellsClipboard): string {
     })
     .join('');
 
-  return `<table ${DATA_ATTR}='${json}'>${rowsHtml}</table>`;
+  const dirAttr = direction === 'rtl' ? ' dir="rtl"' : '';
+
+  return `<table${dirAttr} ${DATA_ATTR}='${json}'>${rowsHtml}</table>`;
 }
 
 /**
@@ -635,10 +651,22 @@ function pastedBackground(style: string): string | undefined {
 }
 
 /**
+ * Column order of a pasted table, from the nearest `dir` at or above it.
+ * Pasted HTML is inert (no computed style), so the attribute is all there is.
+ * A cell's own `dir` is its text's, not the grid's, so start at the table.
+ */
+export function pastedGridDirection(table: Element): TextDirection {
+  return table.closest('[dir]')?.getAttribute('dir')?.trim().toLowerCase() === 'rtl' ? 'rtl' : 'ltr';
+}
+
+/**
  * Cell-level colors and placement from a pasted `<td>`/`<th>` inline style.
  * Shared by paste-into-cells and paste-as-new-table so the two cannot drift.
  */
-export function readPastedCellStyle(style: string): Pick<TableClipboardCell, 'color' | 'textColor' | 'placement'> {
+export function readPastedCellStyle(
+  style: string,
+  direction: TextDirection = 'ltr',
+): Pick<TableClipboardCell, 'color' | 'textColor' | 'placement'> {
   const result: Pick<TableClipboardCell, 'color' | 'textColor' | 'placement'> = {};
   const background = pastedBackground(style);
 
@@ -659,6 +687,7 @@ export function readPastedCellStyle(style: string): Pick<TableClipboardCell, 'co
   const placement = placementFromAlignment(
     /(?<![a-z-])text-align\s*:\s*([^;]+)/i.exec(style)?.[1],
     /vertical-align\s*:\s*([^;]+)/i.exec(style)?.[1],
+    direction,
   );
 
   if (placement !== undefined) {
@@ -676,7 +705,8 @@ export function readPastedCellStyle(style: string): Pick<TableClipboardCell, 'co
  */
 function buildCellPayloadFromTd(td: Element): TableClipboardCell {
   const blocks: ClipboardBlockData[] = parseCellContentToBlocks(sanitizeCellHtml(td));
-  const cell: TableClipboardCell = { blocks, ...readPastedCellStyle(td.getAttribute('style') ?? '') };
+  const direction = pastedGridDirection(td.closest('table') ?? td);
+  const cell: TableClipboardCell = { blocks, ...readPastedCellStyle(td.getAttribute('style') ?? '', direction) };
 
   return cell;
 }

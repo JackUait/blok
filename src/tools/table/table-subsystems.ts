@@ -1130,7 +1130,7 @@ export class TableSubsystems {
 
     const payload = serializeCellsToClipboard(entries);
 
-    clipboardData.setData('text/html', buildClipboardHtml(payload));
+    clipboardData.setData('text/html', buildClipboardHtml(payload, getElementDirection(this.host.gridElement)));
     clipboardData.setData('text/plain', buildClipboardPlainText(payload));
   }
 
@@ -1142,7 +1142,7 @@ export class TableSubsystems {
     }
 
     const payload = serializeCellsToClipboard(entries);
-    const html = buildClipboardHtml(payload);
+    const html = buildClipboardHtml(payload, getElementDirection(this.host.gridElement));
     const plainText = buildClipboardPlainText(payload);
 
     const htmlBlob = new Blob([html], { type: 'text/html' });

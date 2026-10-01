@@ -73,7 +73,7 @@ const settle = (ms = 0): Promise<void> => new Promise(resolve => {
   setTimeout(resolve, ms);
 });
 
-const boot = async (data: OutputData, onChange?: () => void): Promise<TestEditor> => {
+const boot = async (data: OutputData, onChange?: () => void, direction?: 'ltr' | 'rtl'): Promise<TestEditor> => {
   const instance = new Blok({
     holder,
     tools: {
@@ -90,6 +90,7 @@ const boot = async (data: OutputData, onChange?: () => void): Promise<TestEditor
     },
     data,
     ...(onChange === undefined ? {} : { onChange }),
+    ...(direction === undefined ? {} : { i18n: { direction } }),
   }) as unknown as TestEditor;
 
   blok = instance;
@@ -311,6 +312,36 @@ describe('table cells through a real Blok', { timeout: 30_000 }, () => {
     expect(savedCell(saved, 'dst', 0, 0).colspan).toBe(2);
     expect(savedCell(saved, 'dst', 0, 2).placement).toBe('bottom-right');
   });
+
+  for (const direction of ['ltr', 'rtl'] as const) {
+    it(`${direction}: copied placement shows on the side the table shows it, and pastes back unchanged`, async () => {
+      const editor = await boot({
+        blocks: [
+          ...cellsTable('src', [[{ id: 's1', placement: 'bottom-right' }, { id: 's2', placement: 'middle-left' }]]),
+          cellParagraph('s1', 'src', 'end'),
+          cellParagraph('s2', 'src', 'start'),
+          ...cellsTable('dst', [[{ id: 'd1' }, { id: 'd2' }]]),
+          cellParagraph('d1', 'dst', ''),
+          cellParagraph('d2', 'dst', ''),
+        ],
+      }, undefined, direction);
+
+      const html = copyRow('src', 0);
+      const [end, start] = direction === 'rtl' ? ['left', 'right'] : ['right', 'left'];
+
+      expect(html).toContain(`text-align: ${end}; vertical-align: bottom`);
+      expect(html).toContain(`text-align: ${start}; vertical-align: middle`);
+      expect(html.startsWith('<table dir="rtl"')).toBe(direction === 'rtl');
+
+      pasteHtml(cellEditable('dst', 0, 0), html);
+      await settle();
+
+      const saved = await editor.save();
+
+      expect(savedCell(saved, 'dst', 0, 0).placement).toBe('bottom-right');
+      expect(savedCell(saved, 'dst', 0, 1).placement).toBe('middle-left');
+    });
+  }
 
   it('changing a cell placement reports a change by itself', async () => {
     const onChange = vi.fn();

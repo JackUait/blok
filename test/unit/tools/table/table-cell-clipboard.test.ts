@@ -1391,6 +1391,72 @@ describe('table-cell-clipboard', () => {
     });
   });
 
+  // Placement left/right means the grid's start/end, so an RTL grid exports
+  // the side the user sees and marks the table dir="rtl".
+  describe('buildClipboardHtml — placement in an RTL grid', () => {
+    const placed = (placement: TableCellsClipboard['cells'][number][number]['placement']): TableCellsClipboard => ({
+      rows: 1,
+      cols: 1,
+      cells: [[{ blocks: [{ tool: 'paragraph', data: { text: 'x' } }], placement }]],
+    });
+    const stripJson = (html: string): string => html.replace(/ data-blok-table-cells='[^']*'/, '');
+
+    it('exports *-right as text-align: left and *-left as text-align: right on a dir="rtl" table', () => {
+      const end = buildClipboardHtml(placed('bottom-right'), 'rtl');
+      const start = buildClipboardHtml(placed('middle-left'), 'rtl');
+
+      expect(end).toContain('text-align: left; vertical-align: bottom');
+      expect(start).toContain('text-align: right; vertical-align: middle');
+      expect(end).toMatch(/^<table dir="rtl" /);
+      expect(buildClipboardHtml(placed('top-center'), 'rtl')).toContain('text-align: center');
+    });
+
+    it('keeps the LTR export unchanged', () => {
+      const payload = placed('bottom-right');
+
+      expect(buildClipboardHtml(payload, 'ltr')).toBe(buildClipboardHtml(payload));
+      expect(buildClipboardHtml(payload)).not.toContain('dir=');
+      expect(buildClipboardHtml(payload)).toContain('text-align: right');
+    });
+
+    for (const direction of ['ltr', 'rtl'] as const) {
+      for (const placement of ['top-left', 'middle-right', 'bottom-center', 'bottom-left'] as const) {
+        it(`${direction}: ${placement} survives the external flavor round trip`, () => {
+          const external = stripJson(buildClipboardHtml(placed(placement), direction));
+          const expected = placement === 'top-left' ? undefined : placement;
+
+          expect(parseGenericHtmlTable(external)?.cells[0][0].placement).toBe(expected);
+        });
+
+        it(`${direction}: ${placement} survives the Blok JSON round trip`, () => {
+          const html = buildClipboardHtml(placed(placement), direction);
+
+          expect(parseClipboardHtml(html)?.cells[0][0].placement).toBe(placement);
+        });
+      }
+    }
+
+    it('reads a right-aligned cell of an external RTL table as the grid start', () => {
+      const result = parseGenericHtmlTable(
+        '<table dir="rtl"><tr>'
+        + '<td style="text-align: right">A</td>'
+        + '<td style="text-align: left">B</td>'
+        + '</tr></table>'
+      );
+
+      expect(result?.cells[0][0].placement).toBeUndefined();
+      expect(result?.cells[0][1].placement).toBe('top-right');
+    });
+
+    it('takes the grid direction from an ancestor of the pasted table', () => {
+      const result = parseGenericHtmlTable(
+        '<div dir="rtl"><table><tr><td style="text-align: left">A</td></tr></table></div>'
+      );
+
+      expect(result?.cells[0][0].placement).toBe('top-right');
+    });
+  });
+
   // ---------------------------------------------------------------------------
   // Loss #3: clipboard HTML never emits colspan/rowspan, and merge-covered
   // positions emit phantom empty <td>s (external apps lose the merge).

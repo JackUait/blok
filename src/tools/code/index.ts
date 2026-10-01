@@ -52,7 +52,15 @@ import { renderLatex } from '../../shared/katex';
 import { renderMermaid } from './mermaid-loader';
 import { tokenizePrism, isHighlightable } from './prism-loader';
 import { applyPrismHighlight, disposePrismStyles, ensurePrismStyles } from './prism-applier';
-import { buildLanguagePickerItems as buildPickerItems, readRecentLanguages, rememberLanguage } from './language-picker';
+import {
+  buildLanguagePickerItems as buildPickerItems,
+  loadLanguageLogos,
+  loadedLanguageLogos,
+  readRecentLanguages,
+  rememberLanguage,
+  repaintBadges,
+  resolvePickerTheme,
+} from './language-picker';
 import { detectLanguage } from './language-detector';
 import { renderCodePreview } from './preview';
 import { normalizeFenceLang } from '../../markdown/fence-language';
@@ -264,10 +272,7 @@ export class CodeTool implements BlockTool {
 
       // Suggestions depend on recent picks in other blocks and on the filename,
       // so the rows are rebuilt on every open.
-      this._picker?.destroy();
-      this._picker = null;
-      this.ensureLanguagePicker();
-      this._picker?.show();
+      this.rebuildLanguagePicker()?.show();
       this.setLanguagePickerExpanded(true);
     });
 
@@ -490,6 +495,13 @@ export class CodeTool implements BlockTool {
     display.replaceWith(input);
     input.focus();
     input.select();
+  }
+
+  private rebuildLanguagePicker(): PopoverDesktop | null {
+    this._picker?.destroy();
+    this._picker = this._dom ? this.buildLanguagePicker(this._dom.languageButton, this._dom.wrapper) : null;
+
+    return this._picker;
   }
 
   private ensureLanguagePicker(): void {
@@ -725,6 +737,8 @@ export class CodeTool implements BlockTool {
 
   private buildLanguagePickerItems(): PopoverItemParams[] {
     return buildPickerItems({
+      theme: resolvePickerTheme(),
+      logos: loadedLanguageLogos(),
       selectedId: this._data.language,
       detectedId: this._detectedLanguage,
       filename: this._data.filename ?? '',
@@ -767,6 +781,13 @@ export class CodeTool implements BlockTool {
     picker.onCurrentItemChange((current) => {
       void this.previewLanguage(current?.name ?? null);
     });
+
+    if (loadedLanguageLogos() === null) {
+      // First open: rows show mono marks, then swap to logos in place.
+      void loadLanguageLogos()
+        .then((logos) => repaintBadges(picker.getElement(), { theme: resolvePickerTheme(), logos }))
+        .catch(() => { /* logos unavailable: the monograms stay */ });
+    }
 
     this.setLanguagePickerExpanded(false);
 

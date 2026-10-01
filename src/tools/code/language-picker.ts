@@ -2,6 +2,7 @@ import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import { IconCheck } from '../../components/icons';
 import { extToPrismLang } from '../file/code-languages';
+import type { LanguageLogo } from './language-logos';
 import {
   AUTO_DETECTED_KEY,
   DEFAULT_LANGUAGE,
@@ -93,8 +94,13 @@ export const RECENT_LANGUAGES_STORAGE_KEY = 'blok:code:recent-languages';
 const RECENT_LIMIT = 3;
 const KNOWN_IDS = new Set(LANGUAGES.map((lang) => lang.id));
 
-const INK_DARK = '#1b1a17';
-const INK_LIGHT = '#ffffff';
+export type PickerTheme = 'light' | 'dark';
+
+/** The popover surface each theme paints (`--blok-popover-bg` in colors.css). */
+const MENU_BG: Readonly<Record<PickerTheme, string>> = { light: '#ffffff', dark: '#252525' };
+
+/** WCAG 1.4.11: a graphic needs 3:1 against what is behind it. */
+const GRAPHIC_CONTRAST = 3;
 
 const channel = (hex: string, at: number): number => {
   const c = parseInt(hex.slice(at, at + 2), 16) / 255;
@@ -104,88 +110,185 @@ const channel = (hex: string, at: number): number => {
 
 const luminance = (hex: string): number => 0.2126 * channel(hex, 1) + 0.7152 * channel(hex, 3) + 0.0722 * channel(hex, 5);
 
-const ratio = (a: number, b: number): number => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+const contrast = (a: string, b: string): number => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
 
-const toHex = (value: number): string => Math.round(value).toString(16).padStart(2, '0');
+  return (hi + 0.05) / (lo + 0.05);
+};
 
-/** `hex` mixed toward black by `share` (0..1). */
-const deepen = (hex: string, share: number): string =>
-  `#${[1, 3, 5].map((at) => toHex(parseInt(hex.slice(at, at + 2), 16) * (1 - share))).join('')}`;
+/** `hex` mixed toward `toward` by `share` (0..1). */
+const mix = (hex: string, toward: string, share: number): string =>
+  `#${[1, 3, 5].map((at) => Math.round(parseInt(hex.slice(at, at + 2), 16) * (1 - share) + parseInt(toward.slice(at, at + 2), 16) * share).toString(16).padStart(2, '0')).join('')}`;
+
+/**
+ * The brand color, shifted only as far as it must to reach 3:1 on the menu:
+ * toward black on light, toward white on dark.
+ */
+const legibleOn = (hex: string, theme: PickerTheme, share = 0): string => {
+  // A black mark (Rust, JSON, Markdown…) is shown near-white on dark, as its brand does.
+  if (share === 0 && theme === 'dark' && luminance(hex) < 0.01) {
+    return mix(hex, '#ffffff', 0.85);
+  }
+
+  const color = share === 0 ? hex : mix(hex, theme === 'dark' ? '#ffffff' : '#000000', share);
+
+  return contrast(color, MENU_BG[theme]) >= GRAPHIC_CONTRAST || share >= 0.9 ? color : legibleOn(hex, theme, share + 0.05);
+};
+
+/** Same rule Blok's ThemeManager follows: the attribute wins, else the OS. */
+export function resolvePickerTheme(): PickerTheme {
+  const attr = document.documentElement.getAttribute('data-blok-theme');
+
+  if (attr === 'dark' || attr === 'light') {
+    return attr;
+  }
+
+  return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+/** Logos load on first use; the picker shows mono marks until they arrive. */
+const logosState: {
+  promise: Promise<Readonly<Record<string, LanguageLogo>>> | null;
+  loaded: Readonly<Record<string, LanguageLogo>> | null;
+} = { promise: null, loaded: null };
+
+export function loadLanguageLogos(): Promise<Readonly<Record<string, LanguageLogo>>> {
+  logosState.promise ??= import('./language-logos').then((module) => {
+    logosState.loaded = module.LANGUAGE_LOGOS;
+
+    return module.LANGUAGE_LOGOS;
+  });
+
+  return logosState.promise;
+}
+
+/** The logos if they have already loaded, else null. */
+export function loadedLanguageLogos(): Readonly<Record<string, LanguageLogo>> | null {
+  return logosState.loaded;
+}
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+const logoSvg = (logo: LanguageLogo): SVGSVGElement => {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('width', '18');
+  svg.setAttribute('height', '18');
+  svg.setAttribute('aria-hidden', 'true');
+
+  if (logo.inner !== undefined) {
+    // Sits inside the square, under the cut-out letters.
+    const backing = document.createElementNS(SVG_NS, 'rect');
+
+    backing.setAttribute('x', '2');
+    backing.setAttribute('y', '2');
+    backing.setAttribute('width', '20');
+    backing.setAttribute('height', '20');
+    backing.setAttribute('fill', logo.inner);
+    svg.appendChild(backing);
+  }
+
+  const path = document.createElementNS(SVG_NS, 'path');
+
+  path.setAttribute('d', logo.path);
+  path.setAttribute('fill', 'currentColor');
+  svg.appendChild(path);
+
+  return svg;
+};
+
+const BADGE_STYLES = [
+  'inline-flex size-5 shrink-0 items-center justify-center select-none',
+  'motion-safe:transition-transform motion-safe:duration-150 motion-safe:ease-out',
+  'motion-safe:in-[[data-blok-popover-item]:hover]:scale-110 motion-safe:in-[[data-blok-focused=true]]:scale-110',
+].join(' ');
+
+/** Laid out like the TS logo: a square with bold letters in its bottom-right corner. */
+const MONOGRAM_STYLES = 'inline-flex size-[18px] items-end justify-end rounded-(--blok-radius-mark) pr-[1.5px] pb-px font-sans text-[8.5px] font-bold leading-none tracking-[-0.02em]';
 
 const AA = 4.5;
 
 /**
- * Tile color and mark ink. White or near-black, whichever reads; a mid-tone
- * that neither clears at AA is deepened in 4% steps until white does.
+ * Square and letter colors for a monogram: white or near-black ink, whichever
+ * reads; a mid-tone that clears AA with neither is deepened until white does.
  */
-const tileAndInk = (hex: string, share = 0): { tile: string; ink: string } => {
-  const tile = share === 0 ? hex : deepen(hex, share);
-  const lum = luminance(tile);
-  const onLight = ratio(lum, luminance(INK_LIGHT));
-  const onDark = ratio(lum, luminance(INK_DARK));
+const monogramColors = (hex: string, share = 0): { square: string; ink: string } => {
+  const square = share === 0 ? hex : mix(hex, '#000000', share);
+  const onWhite = contrast(square, '#ffffff');
+  const onInk = contrast(square, '#1b1a17');
 
-  if (Math.max(onLight, onDark) >= AA || share >= 0.6) {
-    return { tile, ink: onLight >= onDark ? INK_LIGHT : INK_DARK };
+  if (Math.max(onWhite, onInk) >= AA || share >= 0.6) {
+    return { square, ink: onWhite >= onInk ? '#ffffff' : '#1b1a17' };
   }
 
-  return tileAndInk(hex, share + 0.04);
+  return monogramColors(hex, share + 0.04);
 };
 
-/**
- * Lift with the row: hover or keyboard focus. `motion-safe:` rather than a
- * `motion-reduce:` reset, which would tie with these on specificity.
- */
-const BADGE_MOTION = [
-  'transition-[translate,box-shadow,filter] duration-150 ease-out motion-reduce:transition-none',
-  'motion-safe:in-[[data-blok-popover-item]:hover]:-translate-y-px motion-safe:in-[[data-blok-focused=true]]:-translate-y-px',
-].join(' ');
+const monogram = (mark: string, hex: string): HTMLElement => {
+  const square = document.createElement('span');
+  const { square: fill, ink } = monogramColors(hex);
 
-const BADGE_BASE = 'relative inline-flex size-6 shrink-0 overflow-hidden rounded-(--blok-radius-control) font-mono leading-none select-none';
-// Set bottom-right like the JS and TS logos.
-const BADGE_MARK = 'items-end justify-end pr-[3px] pb-[2.5px] text-[9.5px] font-bold tracking-[-0.04em]';
+  square.setAttribute('data-monogram', '');
+  square.className = MONOGRAM_STYLES;
+  square.style.setProperty('background-color', fill);
+  square.style.setProperty('color', ink);
+  square.textContent = mark;
 
-/** Full-color tile: top-lit gradient, a hairline highlight, a rim that reads in both themes and a shadow in its own color. */
-const BADGE_COLORED = [
-  'text-(--blok-code-lang-ink)',
-  'bg-[linear-gradient(160deg,color-mix(in_srgb,var(--blok-code-lang)_72%,white)_0%,var(--blok-code-lang)_52%,color-mix(in_srgb,var(--blok-code-lang)_84%,black)_100%)]',
-  '[box-shadow:inset_0_1px_0_rgb(255_255_255/0.35),inset_0_0_0_1px_color-mix(in_srgb,var(--blok-text-primary)_14%,transparent),0_1px_2px_color-mix(in_srgb,var(--blok-code-lang)_40%,transparent)]',
-  'in-[[data-blok-popover-item]:hover]:brightness-110 in-[[data-blok-focused=true]]:brightness-110',
-  'in-[[data-blok-popover-item]:hover]:[box-shadow:inset_0_1px_0_rgb(255_255_255/0.45),inset_0_0_0_1px_color-mix(in_srgb,var(--blok-text-primary)_14%,transparent),0_3px_8px_color-mix(in_srgb,var(--blok-code-lang)_50%,transparent)]',
-  'in-[[data-blok-focused=true]]:[box-shadow:inset_0_1px_0_rgb(255_255_255/0.45),inset_0_0_0_1px_color-mix(in_srgb,var(--blok-text-primary)_14%,transparent),0_3px_8px_color-mix(in_srgb,var(--blok-code-lang)_50%,transparent)]',
-].join(' ');
+  return square;
+};
 
-/** "No language": a frosted neutral tile, so it never reads as a gray language. */
-const BADGE_NEUTRAL = [
-  'text-text-secondary',
-  'bg-[linear-gradient(160deg,color-mix(in_srgb,var(--blok-text-primary)_4%,transparent),color-mix(in_srgb,var(--blok-text-primary)_10%,transparent))]',
-  '[box-shadow:inset_0_1px_0_rgb(255_255_255/0.4),inset_0_0_0_1px_color-mix(in_srgb,var(--blok-text-primary)_12%,transparent)]',
-].join(' ');
+export interface BadgeOptions {
+  theme: PickerTheme;
+  /** null while the logos module is still loading. */
+  logos: Readonly<Record<string, LanguageLogo>> | null;
+}
 
-/**
- * A small app-icon tile: the language's color with its mark set bottom-right,
- * the way the JS and TS logos sit. The name sits next to it, so the tile is
- * decoration only.
- */
-export function languageBadge(id: string): HTMLElement {
-  const badge = document.createElement('span');
-  const color = LANGUAGE_COLORS[id];
+/** Fill `badge` for `id`: the real logo when one is vendored, else a mono mark. */
+export function paintBadge(badge: HTMLElement, id: string, { theme, logos }: BadgeOptions): void {
+  const logo = logos?.[id];
+  const brand = logo?.hex ?? LANGUAGE_COLORS[id];
 
-  badge.textContent = LANGUAGE_MARKS[id] ?? id.slice(0, 2);
-  badge.setAttribute('aria-hidden', 'true');
-  badge.setAttribute('data-blok-testid', 'code-language-badge');
+  const mark = LANGUAGE_MARKS[id] ?? id.slice(0, 2);
 
-  if (color === undefined) {
+  if (brand === undefined) {
     badge.setAttribute('data-neutral', 'true');
-    badge.className = [BADGE_BASE, BADGE_NEUTRAL, 'items-center justify-center text-[11px] font-semibold'].join(' ');
+    badge.setAttribute('class', `${BADGE_STYLES} text-[13px] text-text-secondary`);
+    badge.style.removeProperty('color');
+    badge.replaceChildren(mark);
 
-    return badge;
+    return;
   }
 
-  const { tile, ink } = tileAndInk(color);
+  badge.setAttribute('class', BADGE_STYLES);
 
-  badge.style.setProperty('--blok-code-lang', tile);
-  badge.style.setProperty('--blok-code-lang-ink', ink);
-  badge.className = [BADGE_BASE, BADGE_MARK, BADGE_COLORED, BADGE_MOTION].join(' ');
+  if (logo === undefined) {
+    badge.style.removeProperty('color');
+    badge.replaceChildren(monogram(mark, brand));
+
+    return;
+  }
+
+  // A square mark with filled letter holes carries its own contrast.
+  badge.style.setProperty('color', logo.inner !== undefined ? brand : legibleOn(brand, theme));
+  badge.replaceChildren(logoSvg(logo));
+}
+
+/** Repaint every badge under `root`, e.g. once the logos arrive while the picker is open. */
+export function repaintBadges(root: HTMLElement, options: BadgeOptions): void {
+  root.querySelectorAll<HTMLElement>('[data-blok-testid="code-language-badge"]').forEach((badge) => {
+    paintBadge(badge, badge.getAttribute('data-language') ?? '', options);
+  });
+}
+
+/** A language's mark for a picker row. The name sits next to it, so it is decoration only. */
+export function languageBadge(id: string, options: BadgeOptions): HTMLElement {
+  const badge = document.createElement('span');
+
+  badge.setAttribute('aria-hidden', 'true');
+  badge.setAttribute('data-blok-testid', 'code-language-badge');
+  badge.setAttribute('data-language', id);
+  paintBadge(badge, id, options);
 
   return badge;
 }
@@ -267,7 +370,7 @@ function sectionDivider(): PopoverItemParams {
   return { type: PopoverItemType.Html, element };
 }
 
-export interface LanguagePickerOptions {
+export interface LanguagePickerOptions extends BadgeOptions {
   selectedId: string;
   detectedId: string | null;
   filename: string;
@@ -283,7 +386,7 @@ export interface LanguagePickerOptions {
  * repeated below, so search never shows it twice.
  */
 export function buildLanguagePickerItems(options: LanguagePickerOptions): PopoverItemParams[] {
-  const { selectedId, detectedId, filename, recent, nameOf, t, onPick } = options;
+  const { selectedId, detectedId, filename, recent, nameOf, t, onPick, theme, logos } = options;
   const suggested = [languageForFilename(filename), detectedId, ...recent]
     .filter((id): id is string => id !== null && id !== selectedId && KNOWN_IDS.has(id))
     .filter((id, index, all) => all.indexOf(id) === index);
@@ -291,7 +394,7 @@ export function buildLanguagePickerItems(options: LanguagePickerOptions): Popove
   const row = (id: string): PopoverItemParams => ({
     title: nameOf(id),
     name: id,
-    icon: languageBadge(id),
+    icon: languageBadge(id, { theme, logos }),
     secondaryLabel: id === detectedId && suggested.includes(id) ? t(AUTO_DETECTED_KEY) : undefined,
     trailingIcon: id === selectedId ? IconCheck : undefined,
     // One shared toggle group makes the rows a radio group, so assistive tech hears which is chosen.

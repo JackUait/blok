@@ -10,6 +10,7 @@ import {
   RECENT_LANGUAGES_STORAGE_KEY,
 } from '../../../../src/tools/code/language-picker';
 import { LANGUAGES } from '../../../../src/tools/code/constants';
+import { LANGUAGE_LOGOS } from '../../../../src/tools/code/language-logos';
 
 const NAMES: Record<string, string> = { 'plain text': 'Plain text' };
 const nameOf = (id: string): string => NAMES[id] ?? LANGUAGES.find((l) => l.id === id)?.name ?? id;
@@ -17,6 +18,8 @@ const t = (key: string): string => ({ 'tools.code.suggested': 'Suggested' }[key]
 
 const build = (overrides: Partial<Parameters<typeof buildLanguagePickerItems>[0]> = {}): PopoverItemParams[] =>
   buildLanguagePickerItems({
+    theme: 'light',
+    logos: LANGUAGE_LOGOS,
     selectedId: 'plain text',
     detectedId: null,
     filename: '',
@@ -48,68 +51,99 @@ const contrast = (a: string, b: string): number => {
   return (hi + 0.05) / (lo + 0.05);
 };
 
+const LIGHT_MENU = '#ffffff';
+const DARK_MENU = '#252525';
+
+const rgbToHex = (rgb: string): string =>
+  `#${(rgb.match(/\d+/g) ?? []).slice(0, 3).map((n) => Number(n).toString(16).padStart(2, '0')).join('')}`;
+
 describe('language badge', () => {
-  it('carries a short mark on the full language color, hidden from assistive tech', () => {
-    const badge = languageBadge('typescript');
+  it('draws the real logo, flat, in its brand color', () => {
+    const badge = languageBadge('typescript', { theme: 'light', logos: LANGUAGE_LOGOS });
+    const path = badge.querySelector('svg path');
 
-    expect(badge.textContent).toBe('TS');
-    expect(badge.style.getPropertyValue('--blok-code-lang')).toBe('#3178c6');
+    expect(path?.getAttribute('d')).toBe(LANGUAGE_LOGOS.typescript.path);
+    expect(rgbToHex(badge.style.color)).toBe('#3178c6');
     expect(badge.getAttribute('aria-hidden')).toBe('true');
-    // A solid tile, not a pale wash.
-    expect(badge.className).not.toMatch(/var\(--blok-code-lang\)_1\d%,transparent/);
+    // No tile, gradient or glow around the mark.
+    expect(badge.className).not.toMatch(/gradient|shadow|bg-/);
   });
 
-  it('gives every listed language a mark of at most three characters', () => {
-    const marks = LANGUAGES.map((lang) => languageBadge(lang.id).textContent ?? '');
+  it('fills the JS letter holes black, like the real mark', () => {
+    const badge = languageBadge('javascript', { theme: 'light', logos: LANGUAGE_LOGOS });
 
-    expect(marks.every((mark) => mark.length >= 1 && mark.length <= 3)).toBe(true);
+    expect(badge.querySelector('svg rect')?.getAttribute('fill')).toBe('#000000');
+    // A square mark carries its own contrast, so its yellow is never darkened.
+    expect(rgbToHex(badge.style.color)).toBe('#f7df1e');
   });
 
-  it('inks each mark white or near-black, whichever reads on its color: black JS, white TS', () => {
-    expect(languageBadge('javascript').style.getPropertyValue('--blok-code-lang-ink')).toBe('#1b1a17');
-    expect(languageBadge('typescript').style.getPropertyValue('--blok-code-lang-ink')).toBe('#ffffff');
+  it('gives a language with no vendored logo a flat square monogram, like the JS and TS marks', () => {
+    const badge = languageBadge('rust', { theme: 'light', logos: LANGUAGE_LOGOS });
+    const square = badge.querySelector<HTMLElement>('[data-monogram]');
+
+    expect(badge.querySelector('svg')).toBeNull();
+    expect(square?.textContent).toBe('Rs');
+    expect(square?.className).not.toMatch(/gradient|shadow/);
   });
 
-  it('deepens a mid-tone color just enough for white to pass, keeping its hue', () => {
-    const java = languageBadge('java');
-
-    expect(java.style.getPropertyValue('--blok-code-lang-ink')).toBe('#ffffff');
-    expect(java.style.getPropertyValue('--blok-code-lang')).not.toBe('#b07219');
-  });
-
-  it('keeps every colored mark at WCAG AA on its tile', () => {
+  it('inks every monogram at WCAG AA on its square', () => {
     const failing = LANGUAGES
-      .filter((lang) => lang.id !== 'plain text')
+      .filter((lang) => lang.id !== 'plain text' && LANGUAGE_LOGOS[lang.id] === undefined)
       .map((lang) => {
-        const badge = languageBadge(lang.id);
+        const square = languageBadge(lang.id, { theme: 'light', logos: LANGUAGE_LOGOS }).querySelector<HTMLElement>('[data-monogram]');
 
-        return {
-          id: lang.id,
-          ratio: contrast(badge.style.getPropertyValue('--blok-code-lang'), badge.style.getPropertyValue('--blok-code-lang-ink')),
-        };
+        return { id: lang.id, ratio: contrast(rgbToHex(square?.style.backgroundColor ?? ''), rgbToHex(square?.style.color ?? '')) };
       })
       .filter(({ ratio }) => ratio < 4.5);
 
     expect(failing).toStrictEqual([]);
   });
 
-  it('gives plain text a neutral frosted tile instead of a language color', () => {
-    const badge = languageBadge('plain text');
+  it('shows the monogram until the logos have loaded', () => {
+    const badge = languageBadge('typescript', { theme: 'light', logos: null });
 
-    expect(badge.style.getPropertyValue('--blok-code-lang')).toBe('');
-    expect(badge.getAttribute('data-neutral')).toBe('true');
-    // Centered, not set in the corner like a language mark.
-    expect(badge.className.split(' ')).toEqual(expect.arrayContaining(['items-center', 'justify-center']));
-    expect(badge.className.split(' ')).not.toContain('items-end');
+    expect(badge.querySelector('svg')).toBeNull();
+    expect(badge.querySelector('[data-monogram]')?.textContent).toBe('TS');
   });
 
-  it('lifts with its row on hover and keyboard focus, and holds still under reduced motion', () => {
-    const { className } = languageBadge('go');
+  it('keeps every mark at 3:1 against the menu in both themes', () => {
+    const failing = (['light', 'dark'] as const).flatMap((theme) =>
+      LANGUAGES
+        .filter((lang) => LANGUAGE_LOGOS[lang.id] !== undefined && LANGUAGE_LOGOS[lang.id].inner === undefined)
+        .map((lang) => {
+          const color = rgbToHex(languageBadge(lang.id, { theme, logos: LANGUAGE_LOGOS }).style.color);
 
-    expect(className).toContain('motion-safe:in-[[data-blok-popover-item]:hover]:-translate-y-px');
-    expect(className).toContain('motion-safe:in-[[data-blok-focused=true]]:-translate-y-px');
-    expect(className).toContain('motion-reduce:transition-none');
-    expect(className).not.toMatch(/(^| )in-\[[^ ]*translate/);
+          return { id: lang.id, theme, ratio: contrast(color, theme === 'dark' ? DARK_MENU : LIGHT_MENU) };
+        })
+        .filter(({ ratio }) => ratio < 3));
+
+    expect(failing).toStrictEqual([]);
+  });
+
+  it('lifts a black logo to a light ink in dark mode', () => {
+    const color = rgbToHex(languageBadge('json', { theme: 'dark', logos: LANGUAGE_LOGOS }).style.color);
+
+    expect(luminance(color)).toBeGreaterThan(luminance('#808080'));
+  });
+
+  it('gives every listed language a mark of at most three characters', () => {
+    const marks = LANGUAGES.map((lang) => languageBadge(lang.id, { theme: 'light', logos: null }).textContent ?? '');
+
+    expect(marks.every((mark) => mark.length >= 1 && mark.length <= 3)).toBe(true);
+  });
+
+  it('gives plain text a neutral ¶', () => {
+    const badge = languageBadge('plain text', { theme: 'light', logos: LANGUAGE_LOGOS });
+
+    expect(badge.textContent).toBe('¶');
+    expect(badge.getAttribute('data-neutral')).toBe('true');
+  });
+
+  it('grows a touch with its row on hover and keyboard focus, only when motion is welcome', () => {
+    const { className } = languageBadge('go', { theme: 'light', logos: LANGUAGE_LOGOS });
+
+    expect(className).toContain('motion-safe:in-[[data-blok-popover-item]:hover]:scale-110');
+    expect(className).toContain('motion-safe:in-[[data-blok-focused=true]]:scale-110');
   });
 });
 

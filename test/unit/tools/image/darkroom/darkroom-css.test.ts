@@ -126,6 +126,13 @@ describe('darkroom.css', () => {
     expect(rule('.blok-darkroom__dock > .blok-darkroom__tabs')).toMatch(/grid-row:\s*2/);
   });
 
+  it('the adjust resets stack above the chip row, whose backdrop-filter paints it like a positioned box', () => {
+    const layer = rule('.blok-darkroom__adjust-resets');
+
+    expect(layer).toMatch(/position:\s*relative/);
+    expect(layer).toMatch(/z-index:\s*1/);
+  });
+
   describe('outside Crop mode the photo shows as the cropped result', () => {
     // The body of the rule whose selector list names this selector, grouped or not.
     const offCrop = (target: string): string => {

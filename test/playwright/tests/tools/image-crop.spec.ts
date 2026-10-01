@@ -414,3 +414,25 @@ test('the bottom dock never covers the frame, and the frame keeps its place acro
   await expect(page.locator('[data-role="darkroom-stage"][data-settled]')).toHaveCount(1);
   expect(await frame.boundingBox()).toStrictEqual(frameBox);
 });
+
+test('a changed adjust tool shows its reset on top of the chip row, where a click reaches it', async ({ page }) => {
+  const { dialog } = await openDarkroom(page);
+
+  await dialog.getByRole('tab', { name: 'Adjust' }).click();
+  await dialog.getByRole('slider', { name: 'Brightness' }).focus();
+  await page.keyboard.press('ArrowRight');
+  const reset = dialog.getByRole('button', { name: 'Reset brightness' });
+
+  await expect(reset).toBeVisible();
+  // The chip row's backdrop-filter paints it like a positioned box, over any unpositioned sibling.
+  const onTop = await reset.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+
+    return hit !== null && el.contains(hit);
+  });
+
+  expect(onTop).toBe(true);
+  await reset.click();
+  await expect(reset).toBeHidden();
+});

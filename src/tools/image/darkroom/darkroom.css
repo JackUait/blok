@@ -510,7 +510,10 @@
   grid-template-columns: repeat(3, 1fr);
 }
 
+/* backdrop-filter paints the chip row like a positioned box, so an unpositioned layer would sit under it. */
 .blok-darkroom__adjust-resets {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--blok-darkroom-pill-gap);

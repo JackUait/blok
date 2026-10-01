@@ -121,7 +121,8 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
         keyCodes.RIGHT,
         keyCodes.LEFT,
       ],
-      // ArrowLeft mirrors the header back button: step out of a nested page.
+      // The arrow toward the inline start (ArrowLeft, ArrowRight in RTL) mirrors
+      // the header back button: step out of a nested page.
       onArrowLeft: () => this.navigateBack(),
     });
   }

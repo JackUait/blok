@@ -538,6 +538,38 @@ describe('Flipper — mutation coverage', () => {
       flipper.deactivate();
     });
 
+    it('in RTL, ArrowLeft opens the nested menu and ArrowRight goes back', () => {
+      const items = createItems(['One', 'Two', 'Three']);
+      const clicked: number[] = [];
+      const onArrowLeft = vi.fn();
+
+      items.forEach((item, index) => {
+        item.style.direction = 'rtl';
+        item.addEventListener('click', () => clicked.push(index));
+      });
+      items[1].setAttribute('data-blok-has-children', '');
+
+      const flipper = new Flipper({
+        focusedItemClass: focusedClass,
+        items,
+        onArrowLeft,
+      });
+
+      flipper.activate();
+      flipper.focusItem(1);
+      flipper.handleExternalKeydown(createKeyboardEvent('ArrowLeft'));
+
+      expect(clicked).toStrictEqual([1]);
+      expect(onArrowLeft.mock.calls).toStrictEqual([]);
+
+      flipper.handleExternalKeydown(createKeyboardEvent('ArrowRight'));
+
+      expect(onArrowLeft.mock.calls).toStrictEqual([[]]);
+      expect(clicked).toStrictEqual([1]);
+
+      flipper.deactivate();
+    });
+
     it('ArrowRight does nothing for an item without children', () => {
       const items = createItems(['One', 'Two', 'Three']);
       const clicked: number[] = [];

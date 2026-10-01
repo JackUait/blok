@@ -115,9 +115,9 @@ export interface PopoverCurrentItem {
 
 /**
  * Desktop popover.
- * On desktop devices popover behaves like a floating element. Nested popover appears at right or left side.
+ * On desktop devices popover behaves like a floating element. Nested popovers
+ * open toward the inline end: right, or left in RTL.
  * @internal
- * @todo support rtl for nested popovers and search
  */
 export class PopoverDesktop extends PopoverAbstract {
   /**
@@ -770,7 +770,6 @@ export class PopoverDesktop extends PopoverAbstract {
       viewportSize,
       scrollOffset: { x: window.scrollX, y: window.scrollY },
       offset: 0,
-      direction: getElementDirection(this.nodes.popover),
     });
 
     this.nodes.popover.style.setProperty(CSSVariables.PopoverTop, openTop
@@ -1555,6 +1554,7 @@ export class PopoverDesktop extends PopoverAbstract {
     // root (its offset parent), so viewport coordinates are converted into
     // that local coordinate space.
     const parentRect = this.nodes.popoverContainer.getBoundingClientRect();
+    const isRtl = getElementDirection(this.nodes.popover) === 'rtl';
     // Coordinates are relative to the container's containing block: the
     // pinned top-layer mount (the viewport origin), or else the parent root.
     const parentRootRect = this.nestedInTopLayer
@@ -1583,7 +1583,11 @@ export class PopoverDesktop extends PopoverAbstract {
         ? nestedContainer.offsetHeight
         : this.nestedPopover?.size.height ?? 0;
 
-      const anchorLeft = triggerItem.getElement()?.getBoundingClientRect().left ?? parentRect.left;
+      // In RTL the card's right edge lines up with the trigger's right edge.
+      const triggerRect = triggerItem.getElement()?.getBoundingClientRect();
+      const anchorLeft = isRtl
+        ? (triggerRect?.right ?? parentRect.right) - nestedWidth
+        : triggerRect?.left ?? parentRect.left;
       const { left, top, side } = resolveNestedPopoverBelowPlacement({
         parentRect: { left: anchorLeft, top: parentRect.top, bottom: parentRect.bottom },
         nestedWidth,
@@ -1618,19 +1622,20 @@ export class PopoverDesktop extends PopoverAbstract {
     // (0.25rem = 4px).
     const overlap = 4;
 
-    // Submenus otherwise ALWAYS open on the right of their parent, regardless
-    // of the parent's own side or the space available — a side that flips with
-    // geometry made the same menu open left or right on different blocks.
-    // Horizontal: place the submenu beside the parent, overlapping its trailing
-    // edge by `overlap` px, then convert to parent-root-relative pixels.
-    const viewportLeft = parentRect.right - overlap;
-
-    // The side never flips, but a wide submenu (the 320px convert menu) opened
-    // near the right edge would run off-screen, so slide it back in. A submenu
-    // wider than the viewport keeps its left margin instead of hanging left.
+    // Submenus otherwise ALWAYS open toward the inline end of their parent
+    // (right, or left in RTL), regardless of the parent's own side or the
+    // space available — a side that flips with geometry made the same menu
+    // open on different sides on different blocks. The submenu overlaps the
+    // parent's trailing edge by `overlap` px.
+    // A wide submenu (the 320px convert menu) near the viewport edge would
+    // run off-screen, so slide it back in. A submenu wider than the viewport
+    // keeps its left margin instead of hanging left.
     const nestedWidth = nestedContainer.offsetWidth > 0
       ? nestedContainer.offsetWidth
       : this.nestedPopover?.size.width ?? 0;
+    const viewportLeft = isRtl
+      ? parentRect.left + overlap - nestedWidth
+      : parentRect.right - overlap;
     const rightLimit = window.innerWidth - NESTED_POPOVER_VIEWPORT_MARGIN - nestedWidth;
     const clampedLeft = nestedWidth > 0
       ? Math.max(NESTED_POPOVER_VIEWPORT_MARGIN, Math.min(viewportLeft, rightLimit))
@@ -1640,7 +1645,7 @@ export class PopoverDesktop extends PopoverAbstract {
 
     // Stamp the resolved side/align so CSS/animation can key off it, mirroring
     // the root popover's data-side/data-align contract.
-    actualPopoverEl.setAttribute('data-side', 'right');
+    actualPopoverEl.setAttribute('data-side', isRtl ? 'left' : 'right');
     actualPopoverEl.setAttribute('data-align', 'center');
 
     // Center nested popover vertically on the trigger item, then clamp

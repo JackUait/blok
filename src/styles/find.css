@@ -308,6 +308,11 @@
   transform: rotate(90deg);
 }
 
+/* Collapsed, the toggle points toward the inline end: left in RTL. */
+[data-blok-find][dir="rtl"] [data-blok-find-bar]:not([data-blok-find-open]) [data-blok-find-replace-toggle] svg {
+  transform: scaleX(-1);
+}
+
 [data-blok-find-replace-toggle] {
   width: 20px;
 }

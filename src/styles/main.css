@@ -670,6 +670,12 @@
   @apply p-0 m-0 min-h-[1.6em];
 }
 
+/* Submenus open toward the inline end, so the chevron points left in RTL.
+   Every popover root carries `dir` (syncPortalDirection). */
+[data-blok-popover][dir="rtl"] [data-blok-popover-item-icon-chevron-right] svg {
+  transform: scaleX(-1);
+}
+
 @import './tables.css';
 @import './slash-search.css';
 @import './emoji-picker.css';

@@ -54,6 +54,13 @@ describe('markup-panel.css', () => {
     expect(rule).toMatch(/--blok-icon-active-text:\s*var\(--blok-text-primary\)/);
   });
 
+  it('eraser size dots are hollow rings, not the last ink colour', () => {
+    const rule = body(css, '.blok-darkroom__markup[data-tool="eraser"] .blok-darkroom__markup-dot');
+
+    expect(rule).toMatch(/background:\s*transparent/);
+    expect(rule).not.toMatch(/--blok-markup-color/);
+  });
+
   it.each(SELECTED)('%s is styled and never blue', (selector) => {
     const rule = body(css, selector);
 

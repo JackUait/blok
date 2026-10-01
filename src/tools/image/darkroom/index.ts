@@ -255,7 +255,8 @@ export function openDarkroom(opts: OpenDarkroomOptions): () => void {
       if (item) setMarkupState(stateForMark(st.markupState, item));
       markupPanel.setSelection(kind);
     },
-    onStateChange: (next) => setMarkupState(next),
+    // Through the panel, so a tool key swaps colour and size like a click.
+    onStateChange: (next) => (next.tool === st.markupState.tool ? setMarkupState(next) : markupPanel.pickTool(next.tool)),
   });
   const setMarkupState = (next: MarkupPanelState): void => {
     st.markupState = next;

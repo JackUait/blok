@@ -449,6 +449,8 @@ describe('markup panel', () => {
 
     interface Case { tool: MarkupTool; sel: MarkupSelectionKind; color: boolean; style: boolean; fill: boolean; del: boolean }
 
+    const sizeShown = (c: Case): boolean => c.color || (c.tool === 'eraser' && c.sel === null);
+
     const CASES: Case[] = [
       { tool: 'pen', sel: null, color: true, style: false, fill: false, del: false },
       { tool: 'highlighter', sel: null, color: true, style: false, fill: false, del: false },
@@ -473,11 +475,11 @@ describe('markup panel', () => {
       panel.setSelection(c.sel);
 
       expect(shown(colors())).toBe(c.color);
-      expect(shown(sizes())).toBe(c.color);
+      expect(shown(sizes())).toBe(sizeShown(c));
       expect(shown(styles())).toBe(c.style);
       expect(shown(q('markup-fill'))).toBe(c.fill);
       expect(shown(q('markup-delete'))).toBe(c.del);
-      expect(panel.el.hasAttribute('data-context-empty')).toBe(!c.color && !c.style && !c.fill && !c.del);
+      expect(panel.el.hasAttribute('data-context-empty')).toBe(!sizeShown(c) && !c.style && !c.fill && !c.del);
     });
 
     it('flags an empty context row as the user picks, so the rail can take its room', () => {
@@ -487,6 +489,28 @@ describe('markup panel', () => {
       expect(panel.el.hasAttribute('data-context-empty')).toBe(true);
       panel.setSelection('rect');
       expect(panel.el.hasAttribute('data-context-empty')).toBe(false);
+    });
+
+    it('offers the eraser its sizes, without colours', () => {
+      make({ tool: 'pen' });
+      tool('eraser').click();
+
+      expect(shown(sizes())).toBe(true);
+      expect(shown(colors())).toBe(false);
+      expect(panel.el.getAttribute('data-tool')).toBe('eraser');
+    });
+
+    it('keeps the eraser size apart from the pen size', () => {
+      make({ tool: 'pen', size: 0 });
+      tool('eraser').click();
+      size(2).click();
+
+      expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ tool: 'eraser', size: 2 }), 'size');
+      tool('pen').click();
+      expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ tool: 'pen', size: 0 }), 'tool');
+      expect(size(0).getAttribute('aria-checked')).toBe('true');
+      tool('eraser').click();
+      expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ tool: 'eraser', size: 2 }), 'tool');
     });
 
     it('follows the tool as the user picks', () => {

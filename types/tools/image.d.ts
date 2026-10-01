@@ -66,6 +66,8 @@ export interface ImageMarkupStroke extends ImageMarkupBase {
   points: number[];
   /** Nominal stroke width. */
   size: number;
+  /** Ends the eraser cut. A cut pen end is blunt, not tapered. Omitted when none. */
+  cut?: 'start' | 'end' | 'both';
 }
 
 /** A shape between two corner points. Rect and ellipse fill the box they span; line and arrow join the points. */

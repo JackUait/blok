@@ -779,6 +779,71 @@ describe('createMarkupEditor', () => {
       expect(lastCommit(onCommit).map((m) => m.id)).toStrictEqual(['t1']);
     });
 
+    it('a drag across the middle of a stroke erases only what it passed over', () => {
+      // O (100, 100) to (900, 100); size 0.012 of 500 is 6 px wide.
+      const line: ImageMarkupStroke = { id: 'p1', type: 'pen', color: '#ff3b30', points: [0.1, 0.2, 0.5, 0.9, 0.2, 0.5], size: 0.012 };
+      const { layer, editor, onCommit, plane, advance } = setup({ markup: [line] });
+
+      editor.setState({ ...BASE, tool: 'eraser' });
+      // Screen (350, 90)..(350, 110) is O (500, 80)..(500, 120): straight down through the stroke.
+      fire(layer, 'pointerdown', 350, 90);
+      fire(layer, 'pointermove', 350, 100);
+      advance(16);
+      expect(plane.querySelectorAll('[data-markup-id]')).toHaveLength(2);
+      fire(layer, 'pointermove', 350, 110);
+      fire(layer, 'pointerup', 350, 110);
+
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      const out = lastCommit(onCommit).filter((m): m is ImageMarkupStroke => m.type === 'pen');
+      const xs = out.map((m) => m.points.filter((_, i) => i % 3 === 0).map((v) => v * O.w));
+
+      expect(out).toHaveLength(2);
+      expect(out[0]?.id).toBe('p1');
+      // The eraser is 8 screen px = 16 O px; the ink reaches 3 px past the centreline.
+      expect(Math.max(...(xs[0] ?? []))).toBeCloseTo(481, 0);
+      expect(Math.min(...(xs[1] ?? []))).toBeCloseTo(519, 0);
+    });
+
+    it('a bigger eraser size cuts a wider gap', () => {
+      const line: ImageMarkupStroke = { id: 'p1', type: 'pen', color: '#ff3b30', points: [0.1, 0.2, 0.5, 0.9, 0.2, 0.5], size: 0.012 };
+      const { layer, editor, onCommit } = setup({ markup: [line] });
+
+      editor.setState({ ...BASE, tool: 'eraser', size: 2 });
+      drag(layer, [350, 90], [350, 110]);
+
+      const out = lastCommit(onCommit).filter((m): m is ImageMarkupStroke => m.type === 'pen');
+      const xs = out.map((m) => m.points.filter((_, i) => i % 3 === 0).map((v) => v * O.w));
+
+      // Thick is 16 screen px = 32 O px, plus 3 px of ink.
+      expect(Math.max(...(xs[0] ?? []))).toBeCloseTo(465, 0);
+      expect(Math.min(...(xs[1] ?? []))).toBeCloseTo(535, 0);
+    });
+
+    it('the cursor ring follows the eraser size', () => {
+      const { layer, editor } = setup();
+
+      editor.setState({ ...BASE, tool: 'eraser', size: 0 });
+      expect(layer.getAttribute('data-size')).toBe('0');
+      editor.setState({ ...BASE, tool: 'eraser', size: 2 });
+      expect(layer.getAttribute('data-size')).toBe('2');
+    });
+
+    it('undoing the cut is one step: the gesture commits once', () => {
+      const line: ImageMarkupStroke = { id: 'p1', type: 'pen', color: '#ff3b30', points: [0.1, 0.2, 0.5, 0.9, 0.2, 0.5], size: 0.012 };
+      const { layer, editor, onCommit } = setup({ markup: [line] });
+
+      editor.setState({ ...BASE, tool: 'eraser' });
+      fire(layer, 'pointerdown', 200, 90);
+      fire(layer, 'pointermove', 200, 110);
+      // Along O y = 120, clear of the ink: 16 px of eraser + 3 px of ink is under 20.
+      fire(layer, 'pointermove', 400, 110);
+      fire(layer, 'pointermove', 400, 90);
+      fire(layer, 'pointerup', 400, 90);
+
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      expect(lastCommit(onCommit)).toHaveLength(3);
+    });
+
     it('a drag over nothing commits nothing', () => {
       const { layer, editor, onCommit } = setup({ markup: [rect()] });
 

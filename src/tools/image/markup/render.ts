@@ -79,7 +79,11 @@ const centreline = (pts: number[]): string => {
 const drawStroke = (item: ImageMarkupStroke, o: Size, width: number, color: string): SVGElement => {
   const pts = smoothStroke(pointsPx(item, o));
 
-  if (item.type === 'pen') return svgEl('path', { d: strokeOutline(pts, width, { taper: true }), fill: color });
+  if (item.type === 'pen') {
+    const taper = { start: item.cut !== 'start' && item.cut !== 'both', end: item.cut !== 'end' && item.cut !== 'both' };
+
+    return svgEl('path', { d: strokeOutline(pts, width, { taper }), fill: color });
+  }
 
   const d = centreline(pts);
   const g = svgEl('g', {});

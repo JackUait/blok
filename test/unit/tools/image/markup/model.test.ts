@@ -19,6 +19,8 @@ import {
   hitTest,
   contrastInk,
   arrowHeadLength,
+  eraseMarkup,
+  MAX_MARKUP_ITEMS,
 } from '../../../../../src/tools/image/markup/model';
 
 const O: Size = { w: 1000, h: 500 };
@@ -192,6 +194,22 @@ describe('readMarkup', () => {
     expect(readMarkup([text({ rotation: 540 })])[0]).toMatchObject({ rotation: 180 });
     expect(readMarkup([text({ rotation: 360 })])[0]).not.toHaveProperty('rotation');
     expect(readMarkup([text({ rotation: Number.NaN })])[0]).not.toHaveProperty('rotation');
+  });
+});
+
+describe('readMarkup cut ends', () => {
+  it('keeps a valid cut and drops anything else', () => {
+    expect(readMarkup([pen({ cut: 'both' })])[0]).toEqual(pen({ cut: 'both' }));
+    expect(Object.keys(readMarkup([pen({ cut: 'end' })])[0] ?? {})).toEqual(['id', 'type', 'color', 'points', 'size', 'cut']);
+    expect(readMarkup([{ ...pen(), cut: 'middle' }])[0]).toEqual(pen());
+  });
+
+  it('keeps the cut through a turn, a flip and a move', () => {
+    const m = pen({ cut: 'start' });
+
+    expect(turnMarkupLeft([m])[0]).toHaveProperty('cut', 'start');
+    expect(flipMarkup([m])[0]).toHaveProperty('cut', 'start');
+    expect(moveMarkup(m, 0.1, 0)).toHaveProperty('cut', 'start');
   });
 });
 
@@ -485,6 +503,132 @@ describe('hitTest', () => {
     expect(hitTest([label], { x: 545, y: 250 }, O, 0)).toBeNull();
     expect(hitTest([{ ...label, rotation: 90 }], { x: 500, y: 285 }, O, 0)?.id).toBe('t1');
     expect(hitTest([{ ...label, rotation: 90 }], { x: 535, y: 250 }, O, 0)).toBeNull();
+  });
+});
+
+describe('eraseMarkup', () => {
+  // O 1000 × 500, so a pen of size 0.01 is 5 px wide and 2.5 px from centre to edge at pressure 0.5.
+  const across = (over: Partial<ImageMarkupStroke> = {}): ImageMarkupStroke =>
+    pen({ points: [0.1, 0.2, 0.5, 0.9, 0.2, 0.5], ...over });
+  const strokes = (list: ImageMarkup[]): ImageMarkupStroke[] => list.filter(isStroke);
+  const xs = (m: ImageMarkupStroke): number[] => m.points.filter((_, i) => i % 3 === 0).map((v) => v * O.w);
+
+  it('cuts a hole in a stroke and keeps the ink on both sides', () => {
+    const out = strokes(eraseMarkup([across()], { x: 500, y: 100 }, 20, O));
+
+    expect(out).toHaveLength(2);
+    const [left, right] = out;
+
+    if (!left || !right) throw new Error('no pieces');
+    // The round cap of each piece stops at the eraser's edge: 20 px + 2.5 px of ink.
+    expect(Math.max(...xs(left))).toBeCloseTo(477.5, 0);
+    expect(Math.min(...xs(right))).toBeCloseTo(522.5, 0);
+    expect(Math.min(...xs(left))).toBeCloseTo(100, 5);
+    expect(Math.max(...xs(right))).toBeCloseTo(900, 5);
+  });
+
+  it('cuts on the line as drawn, so the ink left over does not move', () => {
+    // The renderer smooths the middle point from y 125 down to 137.5; a cut on the raw corner would jump up.
+    const peak = pen({ points: [0.1, 0.3, 0.5, 0.5, 0.25, 0.5, 0.9, 0.3, 0.5] });
+    const [left] = strokes(eraseMarkup([peak], { x: 500, y: 137.5 }, 20, O));
+    const n = left?.points.length ?? 0;
+    const x = (left?.points[n - 3] ?? 0) * O.w;
+    const y = (left?.points[n - 2] ?? 0) * O.h;
+
+    expect(Math.abs(y - (150 - (12.5 * (x - 100)) / 400))).toBeLessThan(0.5);
+  });
+
+  it('cuts between two far-apart points, where no point is under the eraser', () => {
+    const out = strokes(eraseMarkup([across()], { x: 300, y: 105 }, 10, O));
+
+    expect(out).toHaveLength(2);
+  });
+
+  it('keeps the id on the first piece and gives the rest new ones', () => {
+    const out = eraseMarkup([across()], { x: 500, y: 100 }, 20, O);
+
+    expect(out[0]?.id).toBe('p1');
+    expect(out[1]?.id).not.toBe('p1');
+    expect(out[1]?.id).toMatch(/^.{12}$/);
+  });
+
+  it('marks the cut ends, so they render blunt', () => {
+    const [left, right] = strokes(eraseMarkup([across()], { x: 500, y: 100 }, 20, O));
+
+    expect(left?.cut).toBe('end');
+    expect(right?.cut).toBe('start');
+  });
+
+  it('keeps an earlier cut when the other end is cut too', () => {
+    const [piece] = strokes(eraseMarkup([across({ cut: 'start' })], { x: 900, y: 100 }, 20, O));
+
+    expect(piece?.cut).toBe('both');
+  });
+
+  it('shortens a stroke from one end without splitting it', () => {
+    const out = strokes(eraseMarkup([across()], { x: 900, y: 100 }, 20, O));
+
+    expect(out).toHaveLength(1);
+    expect(out[0]?.id).toBe('p1');
+    expect(Math.max(...xs(out[0] ?? across()))).toBeCloseTo(877.5, 0);
+  });
+
+  it('removes a stroke the eraser covers whole', () => {
+    expect(eraseMarkup([pen({ points: [0.5, 0.5, 0.5, 0.51, 0.5, 0.5] })], { x: 505, y: 250 }, 20, O)).toEqual([]);
+  });
+
+  it('removes a one-point stroke under the eraser', () => {
+    expect(eraseMarkup([pen({ points: [0.5, 0.5, 0.5] })], { x: 520, y: 250 }, 18, O)).toEqual([]);
+  });
+
+  it('reaches as far as the highlighter ink, which is wider than the pen', () => {
+    // 0.03 × 500 = 15 px wide: 7.5 px from centre to edge.
+    const hi = across({ type: 'highlighter', size: 0.03 });
+
+    expect(eraseMarkup([hi], { x: 500, y: 126 }, 20, O)).not.toEqual([hi]);
+    expect(eraseMarkup([hi], { x: 500, y: 128 }, 20, O)).toEqual([hi]);
+  });
+
+  it('interpolates pressure at a cut', () => {
+    const ramp = pen({ points: [0.1, 0.2, 0.2, 0.9, 0.2, 0.8] });
+    const [left] = strokes(eraseMarkup([ramp], { x: 500, y: 100 }, 20, O));
+    const p = left?.points[left.points.length - 1] ?? 0;
+
+    expect(p).toBeGreaterThan(0.45);
+    expect(p).toBeLessThan(0.5);
+  });
+
+  it('returns the same list when the eraser touches nothing', () => {
+    const list = [across(), shape()];
+
+    expect(eraseMarkup(list, { x: 950, y: 480 }, 10, O)).toBe(list);
+  });
+
+  it('removes a shape or a text it touches, whole', () => {
+    const list = [shape(), text({ x: 0.8, y: 0.8 })];
+
+    expect(eraseMarkup(list, { x: 100, y: 300 }, 4, O).map((m) => m.id)).toEqual(['t1']);
+    expect(eraseMarkup(list, { x: 800, y: 400 }, 4, O).map((m) => m.id)).toEqual(['s1']);
+  });
+
+  it('keeps the list in paint order, pieces where the stroke was', () => {
+    const out = eraseMarkup([shape({ id: 'a', x1: 0.95, x2: 0.99 }), across(), shape({ id: 'b', x1: 0.95, x2: 0.99 })], { x: 500, y: 100 }, 20, O);
+
+    expect(out.map((m) => m.type)).toEqual(['rect', 'pen', 'pen', 'rect']);
+  });
+
+  it('never splits past the saved-item cap, which would drop marks on the next load', () => {
+    const filler = Array.from({ length: MAX_MARKUP_ITEMS - 1 }, (_, i) => shape({ id: `f${i}`, x1: 0.95, x2: 0.99, y1: 0.95, y2: 0.99 }));
+    const out = eraseMarkup([...filler, across()], { x: 500, y: 100 }, 20, O);
+
+    expect(out.length).toBeLessThanOrEqual(MAX_MARKUP_ITEMS);
+    expect(readMarkup(out)).toHaveLength(out.length);
+  });
+
+  it('writes pieces that survive a save and load unchanged', () => {
+    const out = eraseMarkup([across({ points: [0.1, 0.2, 0.3, 0.4, 0.3, 0.6, 0.9, 0.2, 0.7] })], { x: 400, y: 150 }, 20, O);
+
+    expect(readMarkup(out)).toEqual(out);
   });
 });
 

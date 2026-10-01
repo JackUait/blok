@@ -91,6 +91,19 @@ describe('marks', () => {
     expect(path.hasAttribute('stroke')).toBe(false);
   });
 
+  it('draws an eraser-cut pen end blunt, so the cut is as wide as the ink', () => {
+    const straight = { points: [0.1, 0.2, 0.5, 0.5, 0.2, 0.5], size: 0.02 };
+    const cut = child(mark(createMarkupLayer([pen({ ...straight, cut: 'start' })], O), 'p1'), 'path').getAttribute('d') ?? '';
+    const whole = child(mark(createMarkupLayer([pen(straight)], O), 'p1'), 'path').getAttribute('d') ?? '';
+    const reachAt = (d: string, x: number): number =>
+      Math.max(0, ...Array.from(d.matchAll(/(-?\d*\.?\d+) (-?\d*\.?\d+)/g), (m) => [Number(m[1]), Number(m[2])])
+        .filter(([px]) => Math.abs((px ?? 0) - x) <= 3).map(([, py]) => Math.abs((py ?? 0) - 100)));
+
+    expect(reachAt(cut, 103)).toBeGreaterThan(4.5);
+    expect(reachAt(whole, 103)).toBeLessThan(4);
+    expect(reachAt(cut, 497)).toBeLessThan(4);
+  });
+
   it('draws a highlighter as a flat stroke in two passes: multiply keeps ink dark, screen keeps it bright on dark photos', () => {
     const svg = createMarkupLayer([pen({ id: 'h', type: 'highlighter', color: '#ffcc00', size: 0.03 })], O);
     const paths = Array.from(mark(svg, 'h').querySelectorAll('path'));

@@ -1947,6 +1947,18 @@ describe('openDarkroom markup', () => {
     expect(q('[data-blok-testid="markup-tool-rect"]').getAttribute('aria-checked')).toBe('true');
   });
 
+  it('the eraser key swaps in the eraser size and the pen key swaps the pen size back', () => {
+    open();
+    tab('markup');
+    q<HTMLButtonElement>('[data-blok-testid="markup-size-2"]').click();
+    key(stageEl(), { key: 'e' });
+    expect(q('[data-blok-testid="markup-size-1"]').getAttribute('aria-checked')).toBe('true');
+    expect(document.querySelector('[data-role="markup-layer"]')?.getAttribute('data-size')).toBe('1');
+    key(stageEl(), { key: 'p' });
+
+    expect(q('[data-blok-testid="markup-size-2"]').getAttribute('aria-checked')).toBe('true');
+  });
+
   it('selecting a mark shows its colour in the panel, and the Delete button removes it', () => {
     open({ initialMarkup: [RECT] });
     tab('markup');

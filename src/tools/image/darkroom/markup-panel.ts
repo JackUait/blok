@@ -50,6 +50,8 @@ export interface MarkupPanel {
   /** Updates every control without callbacks. */
   set(state: MarkupPanelState): void;
   setSelection(kind: MarkupSelectionKind): void;
+  /** Picks a tool as a click on the rail would, colour and size included. */
+  pickTool(tool: MarkupTool): void;
   /** Shows or hides the Clear markup reset. */
   setHasMarkup(has: boolean): void;
   destroy(): void;
@@ -131,6 +133,8 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
   const st: MarkupPanelState = { ...o.state };
   const ui: { selection: MarkupSelectionKind } = { selection: null };
   const picked: Partial<Record<MarkupTool, string>> = {};
+  // The eraser keeps its own size, so picking a big eraser never thickens the pen.
+  const sizes: { ink: MarkupSizeIndex; eraser: MarkupSizeIndex } = { ink: st.size, eraser: st.tool === 'eraser' ? st.size : 1 };
   const cleanups: (() => void)[] = [];
 
   const listen = (node: HTMLElement, fn: () => void): void => {
@@ -214,7 +218,7 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
     return btn;
   });
 
-  const sizes = makeGroup('blok-darkroom__markup-sizes', 'tools.image.markupSizes');
+  const sizeGroup = makeGroup('blok-darkroom__markup-sizes', 'tools.image.markupSizes');
   const sizeBtns = SIZES.map(({ size, key }) => {
     const btn = makeRadio('blok-darkroom__markup-size', `markup-size-${size}`, t(key));
     const dot = document.createElement('span');
@@ -222,7 +226,7 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
     btn.setAttribute('data-size', String(size));
     dot.className = 'blok-darkroom__markup-dot';
     btn.appendChild(dot);
-    sizes.appendChild(btn);
+    sizeGroup.appendChild(btn);
 
     return btn;
   });
@@ -230,7 +234,9 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
   const paint = document.createElement('div');
 
   paint.className = 'blok-darkroom__markup-cluster blok-darkroom__markup-ctl';
-  paint.append(swatches, makeSep(), sizes);
+  const paintSep = makeSep();
+
+  paint.append(swatches, paintSep, sizeGroup);
 
   const styles = makeGroup('blok-darkroom__markup-styles blok-darkroom__markup-ctl', 'tools.image.markupTextStyles');
   const styleBtns = TEXT_STYLE_DEFS.map(({ style, key }) => {
@@ -325,12 +331,16 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
     root.style.setProperty('--blok-markup-color', st.color);
     root.style.setProperty('--blok-markup-ink', contrastInk(st.color));
 
-    const showPaint = sel !== null || (st.tool !== 'eraser' && st.tool !== 'select');
+    const showColors = sel !== null || (st.tool !== 'eraser' && st.tool !== 'select');
+    const showPaint = showColors || st.tool === 'eraser';
     const showStyles = st.tool === 'text' || sel === 'text';
     const showFill = st.tool === 'rect' || st.tool === 'ellipse' || BOX_KINDS.includes(sel);
     const showDelete = sel !== null;
 
+    root.setAttribute('data-tool', st.tool);
     setShown(paint, showPaint);
+    setShown(swatches, showColors);
+    setShown(paintSep, showColors);
     setShown(styles, showStyles);
     setShown(fillBtn, showFill);
     setShown(deleteBtn, showDelete);
@@ -346,7 +356,10 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
 
   const pickTool = (tool: MarkupTool): void => {
     if (tool === st.tool) return;
+    if (st.tool === 'eraser') sizes.eraser = st.size;
+    else sizes.ink = st.size;
     st.tool = tool;
+    st.size = tool === 'eraser' ? sizes.eraser : sizes.ink;
     const color = picked[tool] ?? defaultColorFor(tool);
 
     if (color !== null) st.color = color;
@@ -418,6 +431,7 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
       ui.selection = kind;
       render();
     },
+    pickTool,
     setHasMarkup(has: boolean): void {
       // An attribute, not [hidden]: the reset keeps its box so the panel never jumps.
       reset.setAttribute('data-shown', String(has));

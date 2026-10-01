@@ -4,7 +4,7 @@ import { prefersReducedMotion, type SpringClock } from '../../../components/util
 import type { I18nInstance } from '../../../components/utils/tools';
 import { tr } from '../i18n';
 import {
-  commitMarkupItem, contrastInk, HIGHLIGHTER_SCALE, hitTest, MARKUP_SIZES, markupBounds, moveMarkup, newMarkupId,
+  commitMarkupItem, contrastInk, eraseMarkup, HIGHLIGHTER_SCALE, hitTest, MARKUP_SIZES, markupBounds, moveMarkup, newMarkupId,
   resizeMarkup, TEXT_LINE_HEIGHT, textBoxSize,
 } from '../markup/model';
 import { smoothStroke, strokeOutline } from '../markup/freehand';
@@ -61,6 +61,8 @@ const NUDGES: Record<string, [number, number]> = {
 const SLOP_PX = 4;
 /** Hit reach around a mark, in screen px. */
 const HIT_PX = 8;
+/** Eraser radius per size, in screen px. markup-editor.css draws a cursor ring of each. */
+export const ERASER_PX: Readonly<Record<MarkupSizeIndex, number>> = { 0: 4, 1: 8, 2: 16 };
 const NUDGE_BIG = 10;
 const KEY_IDLE_MS = 250;
 /** A click-placed shape spans this share of the short side. */
@@ -156,7 +158,7 @@ type Gesture =
   | { kind: 'resize'; id: number; touch: boolean; item: ImageMarkup; handle: HandleName; box: Box; from: Point }
   | { kind: 'text-scale'; id: number; touch: boolean; item: ImageMarkupText; dist: number }
   | { kind: 'rotate'; id: number; touch: boolean; item: ImageMarkupText; angle: number }
-  | { kind: 'erase'; id: number; touch: boolean; last: Point; erased: Set<string> }
+  | { kind: 'erase'; id: number; touch: boolean; last: Point; list: ImageMarkup[]; faded: Set<string> }
   | { kind: 'text'; id: number; touch: boolean; at: Point; target: ImageMarkupText | null }
   | { kind: 'idle'; id: number; touch: boolean };
 
@@ -672,6 +674,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
   /* ---------- gestures ---------- */
 
   const tolerance = (): number => HIT_PX / st.map.scale;
+  const eraserRadius = (): number => ERASER_PX[st.state.size] / st.map.scale;
 
   const shapeEnds = (type: ImageMarkupShape['type'], a: Point, b: Point, e: MouseEvent): [Point, Point] => {
     const raw = { x: b.x - a.x, y: b.y - a.y };
@@ -715,24 +718,33 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
 
   const pressureOf = (e: PointerEvent, pen: boolean): number => (pen && e.pressure > 0 ? e.pressure : 0.5);
 
-  /** Erases every mark on the segment from the last point to `p`, not just under the samples. */
+  /** Erases along the segment from the last point to `p`, not just under the samples. */
   const eraseAlong = (p: Point): void => {
     const g = st.gesture;
 
     if (g?.kind !== 'erase') return;
     const from = g.last;
-    const n = Math.max(1, Math.ceil(Math.hypot(p.x - from.x, p.y - from.y) / Math.max(1, tolerance() / 2)));
+    const before = g.list;
+    const n = Math.max(1, Math.ceil(Math.hypot(p.x - from.x, p.y - from.y) / Math.max(1, eraserRadius() / 2)));
 
     Array.from({ length: n }, (_, k) => (k + 1) / n).forEach((t) => {
       const at = { x: from.x + (p.x - from.x) * t, y: from.y + (p.y - from.y) * t };
-      const hit = hitTest(st.markup.filter((m) => !g.erased.has(m.id)), at, o(), tolerance());
+      const next = eraseMarkup(g.list, at, eraserRadius(), o());
 
-      if (!hit) return;
-      g.erased.add(hit.id);
-      st.preview = st.markup.filter((m) => !g.erased.has(m.id));
-      fadeOut(hit);
+      if (next === g.list) return;
+      const kept = new Set(next.map((m) => m.id));
+
+      // Only a mark gone whole fades; a cut stroke keeps its node under the same id.
+      for (const gone of g.list.filter((m) => !kept.has(m.id))) {
+        g.faded.add(gone.id);
+        fadeOut(gone);
+      }
+      g.list = next;
     });
     g.last = p;
+    if (g.list === before) return;
+    st.preview = g.list;
+    scheduleDraw();
   };
 
   const appendSamples = (g: Extract<Gesture, { kind: 'stroke' }>, e: PointerEvent): void => {
@@ -838,7 +850,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
       return;
     }
     if (tool === 'eraser') {
-      st.gesture = { ...base, kind: 'erase', last: p, erased: new Set() };
+      st.gesture = { ...base, kind: 'erase', last: p, list: st.markup, faded: new Set() };
       eraseAlong(p);
 
       return;
@@ -932,7 +944,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
     st.dead = true;
     cancelFrame();
     if (g?.kind === 'erase') {
-      for (const id of g.erased) anims.get(`erase:${id}`)?.();
+      for (const id of g.faded) anims.get(`erase:${id}`)?.();
       ghosts.replaceChildren();
     }
     draw();
@@ -967,7 +979,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
       return;
     }
     if (g.kind === 'erase') {
-      if (g.erased.size > 0) commit(st.markup.filter((m) => !g.erased.has(m.id)));
+      if (g.list !== st.markup) commit(g.list);
 
       return;
     }
@@ -1042,6 +1054,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
     st.state = { ...next };
     if (next.tool !== prev.tool && next.tool !== 'select' && !edit.current) select(null);
     layer.setAttribute('data-tool', next.tool);
+    layer.setAttribute('data-size', String(next.size));
     const keys = (['color', 'size', 'textStyle', 'fill'] as const).filter((k) => next[k] !== prev[k]);
     const target = edit.current ? edit.current.item : find(st.selected, st.markup);
 
@@ -1113,6 +1126,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
   layer.addEventListener('dblclick', onDblClick);
   opts.stage.addEventListener('keydown', onKey);
   layer.setAttribute('data-tool', st.state.tool);
+  layer.setAttribute('data-size', String(st.state.size));
   draw();
 
   const flush = (): void => {

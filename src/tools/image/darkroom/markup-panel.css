@@ -308,6 +308,11 @@
 
 .blok-darkroom__markup-size:hover .blok-darkroom__markup-dot { transform: scale(1.15); }
 
+.blok-darkroom__markup[data-tool="eraser"] .blok-darkroom__markup-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+
 .blok-darkroom__markup-size[aria-checked="true"],
 .blok-darkroom__markup-style[aria-checked="true"],
 .blok-darkroom__markup-fill[aria-pressed="true"] {

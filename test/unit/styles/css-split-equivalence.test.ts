@@ -630,8 +630,10 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // against 944b5b9f. The playing video scene (pan, clock, meteor) adds
     // 3_616, measured against de4b6d9d; its night caravan and oasis camp add
     // 13_685, measured against b971b4f2; the detailed camp, palms, pond and
-    // the one-way camera move add 7_245, measured against f951b47f.
-    const TOOLBOX_HOVER_PREVIEWS_BYTES = 94_491 + 14_740 + 3_616 + 13_685 + 7_245;
+    // the one-way camera move add 7_245, measured against f951b47f; the
+    // moonlit dune crest, ripples, scrub and spindrift add 1_346, measured
+    // against 9cf72649.
+    const TOOLBOX_HOVER_PREVIEWS_BYTES = 94_491 + 14_740 + 3_616 + 13_685 + 7_245 + 1_346;
     // Show's spotlight: spotlight.css (a Notion-style warm background flash on
     // the failed block's card, reduced-motion steady tint) and its @import.
     const SPOTLIGHT_BYTES = 1_245;

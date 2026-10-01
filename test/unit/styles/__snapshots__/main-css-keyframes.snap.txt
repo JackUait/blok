@@ -630,10 +630,6 @@
   from { opacity: 0; transform: translateY(4px) }
 }
 
-@keyframes blok-preview-media-sand {
-  to { transform: translateX(-60px) }
-}
-
 @keyframes blok-preview-media-shimmer {
   to { transform: translateX(100%) }
 }
@@ -641,6 +637,12 @@
 @keyframes blok-preview-media-smoke {
   from { opacity: 0.55; transform: translateY(1px) }
   to { opacity: 0; transform: translateY(-3px) }
+}
+
+@keyframes blok-preview-media-spindrift {
+  from { opacity: 0; transform: scaleX(0.5) }
+  25% { opacity: 0.6 }
+  to { opacity: 0; transform: translate(-16px, -2.5px) scaleX(1.4) }
 }
 
 @keyframes blok-preview-media-stride {

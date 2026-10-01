@@ -234,13 +234,50 @@ const SCENE = `
     <circle data-part="firefly" style="--i:3" cx="171" cy="61" r=".4"/>
   </g>
   <g data-part="layer-front">
-    <path data-part="dune-front" d="M-40 75C0 69.5 30 69.5 60 72S120 78 160 75 220 71 240 73V110H-40Z"/>
-    <g transform="translate(12 70.6)"><path data-part="tuft" d="M0 0-1.4-3.2M0 0 .2-3.8M0 0 1.6-3"/></g>
-    <g transform="translate(70 72.6)"><path data-part="tuft" style="--i:1" d="M0 0-1.2-2.8M0 0 .3-3.4M0 0 1.4-2.6"/></g>
-    <g transform="translate(186 71.6)"><path data-part="tuft" style="--i:2" d="M0 0-1.4-3M0 0 .2-3.6M0 0 1.5-2.8"/></g>
-    <g data-part="sand">
-      <path data-part="sand-grain" d="M-60 69.6h.1M-51 71.8h.1M-43 68.9h.1M-34 72.6h.1M-27 70.4h.1M-16 69.2h.1M-8 71.2h.1M0 69.6h.1M9 71.8h.1M17 68.9h.1M26 72.6h.1M33 70.4h.1M44 69.2h.1M52 71.2h.1M60 69.6h.1M69 71.8h.1M77 68.9h.1M86 72.6h.1M93 70.4h.1M104 69.2h.1M112 71.2h.1M120 69.6h.1M129 71.8h.1M137 68.9h.1M146 72.6h.1M153 70.4h.1M164 69.2h.1M172 71.2h.1M180 69.6h.1M189 71.8h.1M197 68.9h.1M206 72.6h.1M213 70.4h.1M224 69.2h.1M232 71.2h.1M240 69.6h.1M249 71.8h.1M257 68.9h.1M266 72.6h.1M273 70.4h.1M284 69.2h.1M292 71.2h.1"/>
-      <path data-part="sand-streak" d="M-56 70.6h7M-24 72h5M4 70.6h7M36 72h5M64 70.6h7M96 72h5M124 70.6h7M156 72h5M184 70.6h7M216 72h5M244 70.6h7M276 72h5"/>
+    <path data-part="dune-crest" d="M-40 75C0 69.5 30 69.5 60 72S120 78 160 75 220 71 240 73V110H-40Z"/>
+    <path data-part="dune-front" transform="translate(0 1.4)" d="M-40 75C0 69.5 30 69.5 60 72S120 78 160 75 220 71 240 73V110H-40Z"/>
+    <path data-part="wind-ripple" d="M-30 76.3Q-18 74.3 -6 74M4 74Q17 72.9 30 73.6M38 73.5Q48 73.2 58 74.6M80 76.7Q94 77.1 108 78.6M124 78.7Q137 78 150 78.2M166 77.5Q179 75.9 192 75.8M200 75.2Q213 74.1 226 74.9M-18 78Q-2 76.1 14 76.1M22 76.8Q37 76.3 52 77.8M66 78.3Q81 78.9 96 80.8M112 81.8Q126 81.4 140 82M150 81Q164 79.4 178 79.1M188 79.3Q205 77.7 222 78.2M0 80Q13 78.8 26 79.4M46 80.4Q60 80.7 74 82.6M98 83.9Q112 83.9 126 84.9M140 85.2Q153 84 166 83.7M176 82.8Q191 81.2 206 81.2"/>
+    <g transform="translate(12 70.9)">
+      <g data-part="scrub" style="--i:0">
+      <path data-part="tuft" d="M0 0Q-1.6-1.2-2.6-2.6M0 0Q-.9-1.8-1.1-3.6M0 0Q.1-2.2.6-4M0 0Q.9-1.6 2.2-3M0 0Q1.4-.8 2.8-1.6"/>
+      <path data-part="twig" d="M-2.6-2.6l-.4-.3M.6-4l.1-.5M2.2-3l.4-.2M-1.1-3.6l-.2-.4"/>
+      </g>
+    </g>
+    <g transform="translate(74 73.6)">
+      <g data-part="scrub" style="--i:1">
+      <path data-part="tuft" d="M0 0Q-1.6-1.2-2.6-2.6M0 0Q-.9-1.8-1.1-3.6M0 0Q.1-2.2.6-4M0 0Q.9-1.6 2.2-3M0 0Q1.4-.8 2.8-1.6"/>
+      <path data-part="twig" d="M-2.6-2.6l-.4-.3M.6-4l.1-.5M2.2-3l.4-.2M-1.1-3.6l-.2-.4"/>
+      </g>
+    </g>
+    <g transform="translate(186 73.6)">
+      <g data-part="scrub" style="--i:2">
+      <path data-part="tuft" d="M0 0Q-1.6-1.2-2.6-2.6M0 0Q-.9-1.8-1.1-3.6M0 0Q.1-2.2.6-4M0 0Q.9-1.6 2.2-3M0 0Q1.4-.8 2.8-1.6"/>
+      <path data-part="twig" d="M-2.6-2.6l-.4-.3M.6-4l.1-.5M2.2-3l.4-.2M-1.1-3.6l-.2-.4"/>
+      </g>
+    </g>
+    <g transform="translate(24 70.2)">
+      <g data-part="spindrift" style="--i:0">
+        <path data-part="spindrift-streak" d="M0 0Q-4-.9-9-.5M1-.5Q-2.5-1.6-6.5-1.5"/>
+        <path data-part="spindrift-grain" d="M-10.6-.4h.1M-8-1.6h.1M-12.4-1.1h.1"/>
+      </g>
+    </g>
+    <g transform="translate(66 72.3)">
+      <g data-part="spindrift" style="--i:1">
+        <path data-part="spindrift-streak" d="M0 0Q-4-.9-9-.5M1-.5Q-2.5-1.6-6.5-1.5"/>
+        <path data-part="spindrift-grain" d="M-10.6-.4h.1M-8-1.6h.1M-12.4-1.1h.1"/>
+      </g>
+    </g>
+    <g transform="translate(150 75.4)">
+      <g data-part="spindrift" style="--i:2">
+        <path data-part="spindrift-streak" d="M0 0Q-4-.9-9-.5M1-.5Q-2.5-1.6-6.5-1.5"/>
+        <path data-part="spindrift-grain" d="M-10.6-.4h.1M-8-1.6h.1M-12.4-1.1h.1"/>
+      </g>
+    </g>
+    <g transform="translate(204 72)">
+      <g data-part="spindrift" style="--i:3">
+        <path data-part="spindrift-streak" d="M0 0Q-4-.9-9-.5M1-.5Q-2.5-1.6-6.5-1.5"/>
+        <path data-part="spindrift-grain" d="M-10.6-.4h.1M-8-1.6h.1M-12.4-1.1h.1"/>
+      </g>
     </g>
   </g>
 </svg>`;

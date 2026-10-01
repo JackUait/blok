@@ -717,31 +717,54 @@
   fill: color-mix(in srgb, var(--blok-color-yellow-text) 60%, var(--blok-color-green-text));
 }
 
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='dune-crest'] {
+  /* Shows as a moonlit band: the dark dune is the same shape, 1.4 units lower. */
+  fill: color-mix(in srgb, var(--blok-color-purple-text) 30%, var(--blok-overlay-dark));
+}
+
 [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='dune-front'] {
   fill: color-mix(in srgb, var(--blok-color-purple-text) 6%, var(--blok-overlay-dark));
 }
 
-[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='tuft'] {
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='wind-ripple'] {
   fill: none;
-  stroke: color-mix(in srgb, var(--blok-color-purple-text) 6%, var(--blok-overlay-dark));
-  stroke-width: 0.5;
+  stroke: color-mix(in srgb, var(--blok-color-purple-text) 30%, var(--blok-overlay-dark));
+  stroke-width: 0.35;
+  stroke-linecap: round;
+  opacity: 0.55;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='tuft'],
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='twig'] {
+  fill: none;
+  stroke: color-mix(in srgb, var(--blok-color-orange-text) 14%, var(--blok-overlay-dark));
+  stroke-width: 0.4;
   stroke-linecap: round;
 }
 
-[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='sand-grain'] {
-  fill: none;
-  stroke: color-mix(in srgb, var(--blok-color-orange-text) 25%, var(--blok-text-on-dark));
-  stroke-width: 0.6;
-  stroke-linecap: round;
-  opacity: 0.4;
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='twig'] {
+  stroke: color-mix(in srgb, var(--blok-color-orange-text) 30%, var(--blok-overlay-dark));
+  stroke-width: 0.3;
 }
 
-[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='sand-streak'] {
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='spindrift'] {
+  /* Hidden at rest; a gust only shows while the video plays. */
+  opacity: 0;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='spindrift-streak'] {
   fill: none;
-  stroke: color-mix(in srgb, var(--blok-color-orange-text) 25%, var(--blok-text-on-dark));
-  stroke-width: 0.25;
+  stroke: color-mix(in srgb, var(--blok-color-orange-text) 20%, var(--blok-text-on-dark));
+  stroke-width: 0.3;
   stroke-linecap: round;
-  opacity: 0.12;
+  opacity: 0.7;
+}
+
+[data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='spindrift-grain'] {
+  fill: none;
+  stroke: color-mix(in srgb, var(--blok-color-orange-text) 20%, var(--blok-text-on-dark));
+  stroke-width: 0.45;
+  stroke-linecap: round;
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='caravan'] {
@@ -1461,7 +1484,8 @@
   }
 
   [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='lantern-glow'] {
-    animation: blok-preview-media-flicker 1.4s linear infinite;
+    /* Not the flicker: its keyframes force opacity 1, which turns the glow into a solid disc. */
+    animation: blok-preview-media-glow 0.7s ease-in-out infinite alternate;
   }
 
   [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='crown'] {
@@ -1522,14 +1546,17 @@
     animation: blok-preview-media-blink 1.1s ease-in-out calc(var(--i) * -0.6s) infinite alternate;
   }
 
-  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='tuft'] {
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='scrub'] {
     transform-box: fill-box;
     transform-origin: 50% 100%;
-    animation: blok-preview-media-sway 2.4s ease-in-out calc(var(--i, 0) * -0.8s) infinite alternate;
+    animation: blok-preview-media-sway 2.4s ease-in-out calc(var(--i) * -0.8s) infinite alternate;
   }
 
-  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='sand'] {
-    animation: blok-preview-media-sand 2.6s linear infinite;
+  [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='spindrift'] {
+    /* Uneven lengths and offsets, so the gusts never fall into a rhythm. */
+    transform-box: fill-box;
+    transform-origin: 100% 50%;
+    animation: blok-preview-media-spindrift calc(2.4s + var(--i) * 0.9s) ease-out calc(var(--i) * -1.7s) infinite;
   }
 
   [data-blok-interface='block-preview'] [data-blok-preview='video'] [data-part='layer-far'] {
@@ -1909,7 +1936,7 @@ from {
   }
 }
 
-/* Smoke leans left with the wind that blows the sand. */
+/* Smoke leans left, with the wind that lifts the spindrift. */
 @keyframes blok-preview-media-puff {
 from {
     opacity: 0;
@@ -1926,14 +1953,23 @@ from {
   }
 }
 
-/* One 60-unit period of the sand pattern, so the loop is seamless. */
-@keyframes blok-preview-media-sand {
-to {
-    transform: translateX(-60px);
+@keyframes blok-preview-media-spindrift {
+from {
+    opacity: 0;
+    transform: scaleX(0.5);
+  }
+
+  25% {
+    opacity: 0.6;
+  }
+
+  to {
+    opacity: 0;
+    transform: translate(-16px, -2.5px) scaleX(1.4);
   }
 }
 
-/* Overhangs: far 30, mid and near 40, front 40 (sand 60). Each --pan must stay below its layer's. */
+/* Overhangs: far 30, mid, near and front 40. Each --pan must stay below its layer's. */
 @keyframes blok-preview-media-truck {
 from {
     transform: translateX(var(--pan));

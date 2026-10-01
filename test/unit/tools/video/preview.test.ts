@@ -49,7 +49,10 @@ describe('video toolbox preview', () => {
       'flame',
       'ember',
       'tuft',
-      'sand-grain',
+      'dune-crest',
+      'wind-ripple',
+      'spindrift-streak',
+      'twig',
       'tent-lit',
       'guy-rope',
       'stone',
@@ -77,6 +80,14 @@ describe('video toolbox preview', () => {
     });
   });
 
+  // A repeating grain pattern reads as dotted UI chrome, not sand.
+  it('blows sand as wisps off the crest, not a marching dot pattern', () => {
+    const preview = renderVideoPreview();
+
+    expect(preview.querySelector("[data-part='sand-grain']")).toBeNull();
+    expect(preview.querySelectorAll("[data-part='spindrift']").length).toBeGreaterThanOrEqual(4);
+  });
+
   it('shows the elapsed time apart from the duration, so the clock can run', () => {
     const preview = renderVideoPreview();
 
@@ -88,7 +99,7 @@ describe('video toolbox preview', () => {
 describe('video toolbox preview motion', () => {
   it.each([
     'star', 'sparkle', 'moon', 'cloud', 'meteor', 'bat', 'bat-wing', 'caravan', 'leg', 'lantern',
-    'crown', 'flame', 'flame-mid', 'fire-glow', 'ember', 'puff', 'scarf', 'glint', 'firefly', 'reflection', 'tuft', 'sand',
+    'crown', 'flame', 'flame-mid', 'fire-glow', 'ember', 'puff', 'scarf', 'glint', 'firefly', 'reflection', 'scrub', 'spindrift',
     'layer-far', 'layer-mid', 'layer-near', 'layer-front',
   ])(
     'moves the %s in the scene only when motion is allowed',
@@ -114,8 +125,13 @@ describe('video toolbox preview motion', () => {
     }
   );
 
-  it.each([ 'meteor', 'ember', 'puff' ])('hides the %s in the still frame', (part) => {
+  it.each([ 'meteor', 'ember', 'puff', 'spindrift' ])('hides the %s in the still frame', (part) => {
     expect(still.match(ruleFor(part))?.[1]).toMatch(/opacity:\s*0;/);
+  });
+
+  // The flicker keyframes pin opacity to 1, which turns a faint glow into a solid disc.
+  it.each([ 'lantern-glow', 'fire-glow' ])('never flickers the %s up to full opacity', (part) => {
+    expect(motionRule(part)).not.toContain('blok-preview-media-flicker');
   });
 
   it.each([ 'fill', 'head' ])('keeps the %s of the progress bar moving, playing on loop', (part) => {

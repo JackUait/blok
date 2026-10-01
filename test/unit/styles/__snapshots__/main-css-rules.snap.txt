@@ -9793,7 +9793,9 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='quote'] {
-  padding-top: var(--blok-preview-space-18);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   font-size: 13px;
 }
 
@@ -10198,6 +10200,12 @@ span[data-blok-slash-search] {
   font-size: 10px;
 }
 
+[data-blok-interface='block-preview'] [data-blok-preview='spacer'] {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
 [data-blok-interface='block-preview'] [data-blok-preview='spacer'] [data-para] {
   margin: 0;
 }
@@ -10214,7 +10222,6 @@ span[data-blok-slash-search] {
   border-radius: var(--blok-radius-control-sm);
   background: var(--blok-color-gray-bg);
   opacity: 0.6;
-  transform-origin: top;
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='spacer'] [data-edge] {
@@ -10271,6 +10278,10 @@ span[data-blok-slash-search] {
 
 [@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='spacer'] [data-fill] {
   animation: blok-preview-structure-fill 1.4s ease-in-out infinite alternate;
+}
+
+[@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='spacer'] > [data-para], [data-blok-interface='block-preview'] [data-blok-preview='spacer'] [data-edge='top'] {
+  animation: blok-preview-structure-pull 1.4s ease-in-out infinite alternate;
 }
 
 [@media (prefers-reduced-motion: no-preference)] [data-blok-interface='block-preview'] [data-blok-preview='spacer'] [data-edge='bottom'], [data-blok-interface='block-preview'] [data-blok-preview='spacer'] [data-below] {

@@ -316,6 +316,7 @@ test.describe('Toolbox hover preview', () => {
         'audio', 'bookmark', 'callout', 'code', 'columns-2', 'columns-3', 'columns-4', 'columns-5', 'database',
         'board', 'divider', 'embed', 'file', 'header-1', 'header-2', 'header-3', 'header-4', 'header-5', 'header-6',
         'toggle-header-1', 'toggle-header-2', 'toggle-header-3', 'toggle-header-4', 'toggle-header-5', 'toggle-header-6',
+        'quote', 'spacer',
       ]);
       const problems: string[] = [];
 

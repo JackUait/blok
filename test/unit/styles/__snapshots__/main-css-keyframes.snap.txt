@@ -548,8 +548,12 @@
   from, to { opacity: 0 }
 }
 
+@keyframes blok-preview-structure-pull {
+  to { transform: translateY(-9px) }
+}
+
 @keyframes blok-preview-structure-push {
-  to { transform: translateY(18px) }
+  to { transform: translateY(9px) }
 }
 
 @keyframes blok-preview-structure-split {

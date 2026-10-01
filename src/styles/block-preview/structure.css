@@ -232,6 +232,12 @@
 
 /* ─── Spacer ────────────────────────────────────────── */
 
+[data-blok-interface='block-preview'] [data-blok-preview='spacer'] {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
 [data-blok-interface='block-preview'] [data-blok-preview='spacer'] [data-para] {
   margin: 0;
 }
@@ -248,7 +254,6 @@
   border-radius: var(--blok-radius-control-sm);
   background: var(--blok-color-gray-bg);
   opacity: 0.6;
-  transform-origin: top;
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='spacer'] [data-edge] {
@@ -315,9 +320,14 @@
     animation: blok-preview-structure-split 900ms var(--blok-preview-ease-spring) 220ms both;
   }
 
-  /* Spacer: the gap breathes open and closed, pushing the next block. */
+  /* Spacer: the gap breathes open from its middle, so the drawing stays centered. */
   [data-blok-interface='block-preview'] [data-blok-preview='spacer'] [data-fill] {
     animation: blok-preview-structure-fill 1.4s ease-in-out infinite alternate;
+  }
+
+  [data-blok-interface='block-preview'] [data-blok-preview='spacer'] > [data-para],
+  [data-blok-interface='block-preview'] [data-blok-preview='spacer'] [data-edge='top'] {
+    animation: blok-preview-structure-pull 1.4s ease-in-out infinite alternate;
   }
 
   [data-blok-interface='block-preview'] [data-blok-preview='spacer'] [data-edge='bottom'],
@@ -373,8 +383,15 @@
   }
 }
 
+/* 22px gap x 1.818 = 40px: each side moves half of the 18px it grows. */
+@keyframes blok-preview-structure-pull {
+  to {
+    transform: translateY(-9px);
+  }
+}
+
 @keyframes blok-preview-structure-push {
   to {
-    transform: translateY(18px);
+    transform: translateY(9px);
   }
 }

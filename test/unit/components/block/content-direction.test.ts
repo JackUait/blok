@@ -17,6 +17,8 @@ import { ColumnList } from '../../../../src/tools/column-list';
 import { Column } from '../../../../src/tools/column';
 import { Table } from '../../../../src/tools/table';
 import { ListItem } from '../../../../src/tools/list';
+import { DatabaseTool } from '../../../../src/tools/database';
+import { DatabaseRowTool } from '../../../../src/tools/database-row';
 import type { OutputBlockData, OutputData } from '../../../../types';
 
 interface TestEditor {
@@ -68,6 +70,8 @@ const tools = {
   column: Column,
   table: Table,
   list: ListItem,
+  database: DatabaseTool,
+  'database-row': DatabaseRowTool,
   pinned: PinnedTool,
 };
 
@@ -387,6 +391,41 @@ describe('per-block content direction', () => {
 
       expect(onChange).not.toHaveBeenCalled();
       expect(onSave).not.toHaveBeenCalled();
+      expect(docUpdates.count()).toBe(0);
+      expect(instance.history.canUndo()).toBe(canUndoBefore);
+    });
+
+    it('writing dir inside a database fires nothing', async () => {
+      const onChange = vi.fn();
+      const instance = await boot([
+        {
+          id: 'db',
+          type: 'database',
+          data: {
+            title: 'Tasks',
+            schema: [{ id: 'p-title', name: 'Name', type: 'title', position: 'a0' }],
+            views: [{ id: 'v-list', name: 'List', type: 'list', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+            activeViewId: 'v-list',
+          },
+          content: ['r1'],
+        },
+        { id: 'r1', type: 'database-row', data: { properties: { 'p-title': 'one' }, position: 'a0', title: 'one' }, parent: 'db' },
+      ], { onChange });
+      const docUpdates = countDocUpdates();
+
+      await settle();
+      onChange.mockClear();
+
+      const canUndoBefore = instance.history.canUndo();
+      // The database's own content element plus any row content inside it.
+      const contents = Array.from(holder.querySelectorAll<HTMLElement>('[data-blok-id="db"] [data-blok-element-content]'));
+
+      expect(contents.length).toBeGreaterThan(0);
+
+      contents.forEach(element => element.setAttribute('dir', 'rtl'));
+      await settle();
+
+      expect(onChange).not.toHaveBeenCalled();
       expect(docUpdates.count()).toBe(0);
       expect(instance.history.canUndo()).toBe(canUndoBefore);
     });

@@ -916,7 +916,7 @@
 }
 
 .blok-darkroom__markup[data-context-empty] {
-  --blok-markup-grow: 6px;
+  --blok-markup-grow: 14px;
   --blok-markup-drop: calc((var(--blok-markup-row) + var(--blok-space-3)) / 2);
 }
 

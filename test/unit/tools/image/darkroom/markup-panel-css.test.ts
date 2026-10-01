@@ -101,7 +101,7 @@ describe('markup-panel.css', () => {
     const rail = body(css, '.blok-darkroom__markup-rail');
 
     // Declared on the panel, so the drop reads the base row, not the grown one.
-    expect(empty).toMatch(/--blok-markup-grow:\s*[1-9]\d*px/);
+    expect(empty).toMatch(/--blok-markup-grow:\s*14px/);
     expect(empty).toMatch(/--blok-markup-drop:\s*calc\(\(var\(--blok-markup-row\) \+ var\(--blok-space-3\)\) \/ 2\)/);
     expect(rail).toMatch(/--blok-markup-hit:\s*calc\(var\(--blok-markup-size\) \+ var\(--blok-markup-grow\)\)/);
     expect(rail).toMatch(/translate:\s*0 var\(--blok-markup-drop\)/);

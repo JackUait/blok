@@ -35,7 +35,10 @@ const TEXT: Record<Direction, string> = {
   ltr: 'hello beautiful world here',
 };
 
-const createBlok = async (page: Page, direction: Direction): Promise<void> => {
+// Same text box as a paragraph: inherited font, no padding, border or margin.
+const ALIGNED_FIELD_TOOL = FIELD_TOOL.replace('width:100%;font-size:16px;padding:0 4px;border:0', 'width:100%;font:inherit;padding:0;border:0;margin:0;background:none');
+
+const createBlok = async (page: Page, direction: Direction, fieldTool = FIELD_TOOL): Promise<void> => {
   await page.evaluate(async ({ dir, text, toolCode }) => {
     const holder = document.createElement('div');
 
@@ -57,7 +60,7 @@ const createBlok = async (page: Page, direction: Direction): Promise<void> => {
       },
     });
     await window.blokInstance.isReady;
-  }, { dir: direction, text: TEXT[direction], toolCode: FIELD_TOOL });
+  }, { dir: direction, text: TEXT[direction], toolCode: fieldTool });
 };
 
 /** Clicks the paragraph text at a fraction of its width, measured from the inline start. */
@@ -106,5 +109,45 @@ for (const direction of ['rtl', 'ltr'] as const) {
     expect(fromStart).toBe(0);
     expect(fromMiddle).toBeGreaterThan(0);
     expect(fromMiddle).toBeLessThan(TEXT[direction].length);
+  });
+}
+
+for (const direction of ['rtl', 'ltr'] as const) {
+  test(`ArrowDown into a native input lands under the same character in ${direction}`, async ({ page }) => {
+    await createBlok(page, direction, ALIGNED_FIELD_TOOL);
+
+    // Line the input's text up with the paragraph's, so a column maps to the
+    // same character index in both.
+    const misalignment = await page.evaluate((dir) => {
+      const paragraph = document.querySelector('[data-blok-tool="paragraph"]');
+      const input = document.querySelector<HTMLInputElement>('[data-blok-testid="native-field"]');
+
+      if (!paragraph || !input) {
+        throw new Error('no blocks');
+      }
+
+      const range = document.createRange();
+      const startOf = (rect: DOMRect): number => dir === 'rtl' ? -rect.right : rect.left;
+
+      range.selectNodeContents(paragraph);
+      const shift = startOf(range.getBoundingClientRect()) - startOf(input.getBoundingClientRect());
+
+      input.style.marginInlineStart = `${shift}px`;
+      input.style.width = `calc(100% - ${shift}px)`;
+
+      return Math.abs(startOf(range.getBoundingClientRect()) - startOf(input.getBoundingClientRect()));
+    }, direction);
+
+    expect(misalignment).toBeLessThanOrEqual(0.5);
+
+    for (const fraction of [0.3, 0.6, 0.9]) {
+      await clickParagraphAt(page, direction, fraction);
+
+      const column = await page.evaluate(() => window.getSelection()?.anchorOffset ?? -1);
+
+      await page.keyboard.press('ArrowDown');
+
+      expect(Math.abs((await fieldCaret(page) ?? -1) - column), `at ${fraction}: paragraph offset ${column}`).toBeLessThanOrEqual(1);
+    }
   });
 }

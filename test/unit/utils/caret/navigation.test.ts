@@ -402,5 +402,50 @@ describe('caret/navigation', () => {
       expect(findBestPositionInRange(input, 0, input.value.length, 100 + 10)).toBe(0);
       expect(findBestPositionInRange(input, 0, input.value.length, 100 + 10 + 48)).toBe(5);
     });
+
+    describe('with a canvas to measure text', () => {
+      // A font where every glyph is 7px wide, so the 0.6em (9.6px) guess is wrong.
+      const measuredFont = { font: '', letterSpacing: '', measureText: (text: string) => ({ width: text.length * 7 }) };
+
+      beforeEach(() => {
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(measuredFont as unknown as CanvasRenderingContext2D);
+      });
+
+      it('picks the character whose measured edge is nearest in an RTL input', () => {
+        const input = mountInput('rtl');
+
+        // 70px in from the right padding: ten 7px glyphs.
+        expect(findBestPositionInRange(input, 0, input.value.length, 300 - 10 - 70)).toBe(10);
+        expect(findBestPositionInRange(input, 0, input.value.length, 300 - 10 - 73)).toBe(10);
+        expect(findBestPositionInRange(input, 0, input.value.length, 300 - 10 - 74)).toBe(11);
+      });
+
+      it('picks the character whose measured edge is nearest in an LTR input', () => {
+        const input = mountInput('ltr');
+
+        expect(findBestPositionInRange(input, 0, input.value.length, 100 + 10 + 70)).toBe(10);
+        expect(findBestPositionInRange(input, 0, input.value.length, 100 + 10 + 1000)).toBe(input.value.length);
+      });
+
+      it('measures the font from the input longhands', () => {
+        const input = mountInput('ltr');
+
+        input.style.fontStyle = 'italic';
+        input.style.fontWeight = '700';
+        input.style.fontFamily = 'Georgia';
+        findBestPositionInRange(input, 0, input.value.length, 150);
+
+        expect(measuredFont.font).toBe('italic 700 16px Georgia');
+      });
+
+      it('adds the scrolled-away text of an input scrolled toward its end', () => {
+        const input = mountInput('rtl');
+
+        Object.defineProperty(input, 'scrollLeft', { value: -21, configurable: true });
+
+        // 49px on screen plus 21px scrolled out of view: 70px, ten glyphs.
+        expect(findBestPositionInRange(input, 0, input.value.length, 300 - 10 - 49)).toBe(10);
+      });
+    });
   });
 });

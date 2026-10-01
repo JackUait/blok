@@ -7,7 +7,7 @@
 
 import { Dom as $ } from '../../dom';
 
-import { getElementDirection, inlineStartOffset } from '../direction';
+import { getElementDirection, inlineStartOffset, scrollFromInlineStart } from '../direction';
 import { setSelectionToElement } from './focus';
 
 /**
@@ -167,7 +167,26 @@ export const setCaretAtXPositionInContentEditable = (
 };
 
 /**
- * Binary search to find the character position closest to target X in a native input.
+ * Measures text in the input's font, or returns null when the browser cannot
+ * (no 2D canvas, as in jsdom).
+ */
+const createInputTextMeasurer = (style: CSSStyleDeclaration): ((text: string) => number) | null => {
+  const context = document.createElement('canvas').getContext('2d');
+
+  if (context === null) {
+    return null;
+  }
+
+  // Longhands: the `font` shorthand reads back empty when a part is not
+  // expressible in it (e.g. a non-normal font-stretch).
+  context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+  context.letterSpacing = style.letterSpacing === 'normal' ? '0px' : style.letterSpacing;
+
+  return (text: string): number => context.measureText(text).width;
+};
+
+/**
+ * Finds the character position in a native input closest to a target X.
  *
  * @param input - The native input element
  * @param start - Start position for search
@@ -181,31 +200,36 @@ export const findBestPositionInRange = (
   end: number,
   targetX: number
 ): number => {
-  /**
-   * For native inputs, we approximate position based on character width
-   * This is not perfect but provides reasonable behavior
-   */
   const inputRect = input.getBoundingClientRect();
   const style = window.getComputedStyle(input);
   const direction = getElementDirection(input);
   const paddingStart = parseFloat(direction === 'rtl' ? style.paddingRight : style.paddingLeft) || 0;
-  const relativeX = inlineStartOffset(targetX, inputRect, direction) - paddingStart;
+  const borderStart = parseFloat(direction === 'rtl' ? style.borderRightWidth : style.borderLeftWidth) || 0;
+  const relativeX = inlineStartOffset(targetX, inputRect, direction) - borderStart - paddingStart
+    + scrollFromInlineStart(input, direction);
 
   if (relativeX <= 0) {
     return start;
   }
 
-  /**
-   * Estimate character width and find approximate position
-   */
   const text = input.value.substring(start, end);
-  const fontSize = parseFloat(style.fontSize) || 16;
-  const avgCharWidth = fontSize * 0.6; // Approximate average character width
+  const measure = createInputTextMeasurer(style);
 
-  const estimatedPosition = Math.round(relativeX / avgCharWidth);
-  const clampedPosition = Math.min(Math.max(estimatedPosition, 0), text.length);
+  if (measure === null) {
+    // Without a canvas, assume an average glyph of 0.6em.
+    const avgCharWidth = (parseFloat(style.fontSize) || 16) * 0.6;
 
-  return start + clampedPosition;
+    return start + Math.min(Math.round(relativeX / avgCharWidth), text.length);
+  }
+
+  // Distance from the inline start to the caret before each character.
+  const caretOffsets = Array.from({ length: text.length + 1 }, (_, index) => measure(text.slice(0, index)));
+  const nearest = caretOffsets.reduce(
+    (best, offset, index) => Math.abs(offset - relativeX) < Math.abs(caretOffsets[best] - relativeX) ? index : best,
+    0
+  );
+
+  return start + nearest;
 };
 
 /**

@@ -489,6 +489,24 @@ describe('DatabaseTabBar', () => {
       el.remove();
     });
 
+    it('gives the overflow dropdown the tab bar direction', () => {
+      const views = Array.from({ length: 6 }, (_, i) =>
+        makeView({ id: `v${i}`, position: `a${i}`, name: `Board ${i}` })
+      );
+      const bar = createTabBar(views, 'v0');
+      const el = bar.render();
+      el.style.direction = 'rtl';
+      document.body.appendChild(el);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (bar as any).handleOverflow(3);
+      (el.querySelector('[data-blok-database-tab-more]') as HTMLElement).click();
+
+      expect(document.querySelector('[data-blok-database-tab-overflow-dropdown]')?.getAttribute('dir')).toBe('rtl');
+
+      bar.destroy();
+    });
+
     it('opens dropdown listing all views when "N more…" is clicked', () => {
       const views = Array.from({ length: 6 }, (_, i) =>
         makeView({ id: `v${i}`, position: `a${i}`, name: `Board ${i}` })

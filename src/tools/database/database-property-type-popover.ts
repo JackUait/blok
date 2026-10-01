@@ -1,3 +1,4 @@
+import { syncPortalDirection } from '../../components/utils/portal-direction';
 import {
   IconText,
   IconHash,
@@ -84,6 +85,7 @@ export class DatabasePropertyTypePopover {
     }
 
     document.body.appendChild(popover);
+    syncPortalDirection(popover, { source: anchor });
     this.popoverEl = popover;
 
     const reposition = (): void => {

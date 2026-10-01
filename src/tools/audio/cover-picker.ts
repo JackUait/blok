@@ -1,4 +1,5 @@
 import { matchesMime } from '../../components/utils/mime-match';
+import { syncPortalDirection } from '../../components/utils/portal-direction';
 import type { I18nInstance } from '../../components/utils/tools';
 import { tr } from './i18n';
 import { COVER_TYPES, COVER_MAX_SIZE } from './constants';
@@ -83,6 +84,7 @@ export function openCoverPicker(opts: OpenCoverPickerOptions): CoverPickerHandle
   const previouslyFocused = document.activeElement;
 
   document.body.appendChild(dialog);
+  syncPortalDirection(dialog, { source: opts.anchor });
   promoteToTopLayer(dialog);
 
   // Anchored positioning via the shared engine: prefers the space below the

@@ -135,6 +135,28 @@ describe('ToolboxPreview', () => {
     expect(left + PREVIEW_CARD_WIDTH).toBeLessThanOrEqual(1200 - 300 - 20);
   });
 
+  it('in RTL, takes the menu direction and sits to the left of the menu', () => {
+    const { surface, item } = makeAnchors(600);
+
+    surface.style.direction = 'rtl';
+    preview.show({ item, surface, config: config(), source: 'keyboard' });
+
+    const root = cardRoot();
+
+    expect(root?.getAttribute('dir')).toBe('rtl');
+    expect(parseFloat(root?.style.left ?? '') + PREVIEW_CARD_WIDTH).toBeLessThanOrEqual(600);
+    expect(root?.getAttribute('data-blok-preview-side')).toBe('left');
+  });
+
+  it('in RTL, flips to the right of the menu when the left side has no room', () => {
+    const { surface, item } = makeAnchors(20);
+
+    surface.style.direction = 'rtl';
+    preview.show({ item, surface, config: config(), source: 'keyboard' });
+
+    expect(parseFloat(cardRoot()?.style.left ?? '')).toBeGreaterThanOrEqual(320);
+  });
+
   it('stays closed when neither side has room', () => {
     vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(320);
     const { surface, item } = makeAnchors(10);

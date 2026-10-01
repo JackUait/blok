@@ -1,4 +1,5 @@
 import { generateKeyBetween } from 'fractional-indexing';
+import { syncPortalDirection } from '../../components/utils/portal-direction';
 import { IconBoard, IconList, IconPencil, IconCopy, IconTrash, IconPlus } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import { PopoverDesktop } from '../../components/utils/popover';
@@ -503,6 +504,7 @@ export class DatabaseTabBar {
     dropdown.appendChild(newViewBtn);
 
     document.body.appendChild(dropdown);
+    syncPortalDirection(dropdown, { source: anchor });
     this.overflowDropdownEl = dropdown;
 
     const reposition = (): void => {

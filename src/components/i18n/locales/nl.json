@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Regelterugloop",
   "tools.code.searchLanguage": "Talen zoeken…",
   "tools.code.lineNumbers": "Regelnummers",
+  "tools.code.filename": "Bestandsnaam",
   "searchTerms.code": "code",
   "searchTerms.snippet": "fragment",
   "searchTerms.program": "programma",

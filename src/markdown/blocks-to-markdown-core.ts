@@ -907,7 +907,24 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
     }
     case 'code': {
       const language = asString(data.language).trim();
-      const info = language === PLAIN_TEXT_LANGUAGE ? '' : language;
+      const plain = language === PLAIN_TEXT_LANGUAGE || language === '';
+      /** The info string is one line, so a line break in the name becomes a space. */
+      const filename = asString(data.filename).replace(/\r\n|\r|\n/g, ' ');
+      const hasFilename = filename.trim() !== '';
+      /**
+       * The first info word is the language, so a titled plain block needs one:
+       * `text`, which the importer maps back to plain text when a title is there.
+       * The parser decodes escapes and entities in the info string, so `\` and
+       * `&` are backslash-escaped, and an escaped quote reaches the importer as
+       * a bare one. So the quote is single when the name holds a double one.
+       */
+      const quote = filename.includes('"') && !filename.includes("'") ? "'" : '"';
+      const escaped = filename.replace(quote === '"' ? /[\\"&]/g : /[\\&]/g, '\\$&');
+      const title = hasFilename ? ` title=${quote}${escaped}${quote}` : '';
+      const word = plain ? '' : language;
+      const info = `${word === '' && hasFilename ? 'text' : word}${title}`;
+      /** A backtick fence's info string may not hold a backtick; a tilde fence's may. */
+      const fence = hasFilename && filename.includes('`') ? '~~~' : '```';
       /**
        * `data.code` is LITERAL text — the code tool saves the code element's
        * `textContent` — so it is emitted verbatim, every `<`, `>` and `&`
@@ -919,7 +936,7 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
       const literal = asString(data.code);
       const body = literal !== '' ? literal : decodeCharacterReferences(asString(data.text));
 
-      return `${flatIndent}\`\`\`${info}\n${body}\n\`\`\``;
+      return `${flatIndent}${fence}${info}\n${body}\n${fence}`;
     }
     /** `delimiter` is the Editor.js name for the same block; imported documents still carry it. */
     case 'divider':

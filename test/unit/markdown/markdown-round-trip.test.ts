@@ -227,3 +227,132 @@ describe('markdown import: GitHub alerts become callouts', () => {
     expect(children.every((block) => block.parent === callout.id)).toBe(true);
   });
 });
+
+describe('markdown round trip: code block filename', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const codeBlock = (data: Record<string, unknown>): SerializableBlock[] => [{ tool: 'code', data: { code: 'x', ...data } }];
+
+  /**
+   * Export, re-import, and return the one code block's data.
+   * @param data - code block data to round-trip
+   */
+  const roundTrip = async (data: Record<string, unknown>): Promise<Record<string, unknown>> => {
+    const { blocks } = await reimport(exportBoth(codeBlock(data)));
+
+    expect(blocks.map((block) => block.type)).toEqual(['code']);
+
+    return blocks[0].data;
+  };
+
+  it('puts the filename in the fence info string as a title attribute', () => {
+    expect(exportBoth(codeBlock({ language: 'typescript', filename: 'block.ts' })))
+      .toBe('```typescript title="block.ts"\nx\n```');
+  });
+
+  it('exports a block without a filename exactly as before', () => {
+    expect(exportBoth(codeBlock({ language: 'typescript' }))).toBe('```typescript\nx\n```');
+    expect(exportBoth(codeBlock({ language: 'plain text' }))).toBe('```\nx\n```');
+  });
+
+  it('treats an empty or blank filename as no filename', () => {
+    expect(exportBoth(codeBlock({ language: 'typescript', filename: '' }))).toBe('```typescript\nx\n```');
+    expect(exportBoth(codeBlock({ language: 'typescript', filename: '   ' }))).toBe('```typescript\nx\n```');
+  });
+
+  it('keeps the filename and language through export and import', async () => {
+    expect(await roundTrip({ language: 'typescript', filename: 'block.ts' }))
+      .toEqual({ code: 'x', language: 'typescript', filename: 'block.ts' });
+  });
+
+  it('names plain text "text" when a filename needs a language word, and reads it back as plain text', async () => {
+    expect(exportBoth(codeBlock({ language: 'plain text', filename: 'notes.txt' })))
+      .toBe('```text title="notes.txt"\nx\n```');
+    expect(await roundTrip({ language: 'plain text', filename: 'notes.txt' }))
+      .toEqual({ code: 'x', language: 'plain text', filename: 'notes.txt' });
+  });
+
+  it('keeps spaces, backslashes and entity-like text in the filename', async () => {
+    const filename = 'my file\\v2 &amp; more.ts';
+
+    expect(exportBoth(codeBlock({ language: 'typescript', filename })))
+      .toBe('```typescript title="my file\\\\v2 \\&amp; more.ts"\nx\n```');
+    expect(await roundTrip({ language: 'typescript', filename }))
+      .toEqual({ code: 'x', language: 'typescript', filename });
+  });
+
+  it('quotes a filename holding double quotes with single quotes', async () => {
+    const filename = 'say "hi" there.ts';
+
+    expect(exportBoth(codeBlock({ language: 'typescript', filename })))
+      .toBe('```typescript title=\'say "hi" there.ts\'\nx\n```');
+    expect(await roundTrip({ language: 'typescript', filename }))
+      .toEqual({ code: 'x', language: 'typescript', filename });
+  });
+
+  it('keeps a filename holding both quote kinds when no quote is followed by a space', async () => {
+    expect(await roundTrip({ language: 'typescript', filename: 'a"b\'c.ts' }))
+      .toEqual({ code: 'x', language: 'typescript', filename: 'a"b\'c.ts' });
+  });
+
+  /** Known limit: the parser decodes `\"` before the importer sees it, so this case cannot round-trip. */
+  it('cuts a filename holding both quote kinds at a double quote followed by a space', async () => {
+    expect(await roundTrip({ language: 'typescript', filename: 'it\'s "x" y.ts' }))
+      .toEqual({ code: 'x', language: 'typescript', filename: 'it\'s "x' });
+  });
+
+  it('switches to a tilde fence when the filename has a backtick', async () => {
+    expect(exportBoth(codeBlock({ language: 'typescript', filename: 'a`b.ts' })))
+      .toBe('~~~typescript title="a`b.ts"\nx\n~~~');
+    expect(await roundTrip({ language: 'typescript', filename: 'a`b.ts' }))
+      .toEqual({ code: 'x', language: 'typescript', filename: 'a`b.ts' });
+  });
+
+  it('folds a line break in the filename into a space, since the info string is one line', async () => {
+    expect(await roundTrip({ language: 'typescript', filename: 'a\nb.ts' }))
+      .toEqual({ code: 'x', language: 'typescript', filename: 'a b.ts' });
+  });
+});
+
+describe('markdown import: code fence title', () => {
+  const importCode = async (markdown: string): Promise<Record<string, unknown>> => {
+    const { blocks } = await reimport(markdown);
+
+    expect(blocks.map((block) => block.type)).toEqual(['code']);
+
+    return blocks[0].data;
+  };
+
+  it('reads single-quoted and bare titles', async () => {
+    expect(await importCode("```ts title='x y.ts'\nx\n```")).toEqual({ code: 'x', language: 'typescript', filename: 'x y.ts' });
+    expect(await importCode('```ts title=bare.ts\nx\n```')).toEqual({ code: 'x', language: 'typescript', filename: 'bare.ts' });
+  });
+
+  it('reads a title among other fence attributes', async () => {
+    expect(await importCode('```ts {1,3} title="a.ts" showLineNumbers\nx\n```'))
+      .toEqual({ code: 'x', language: 'typescript', filename: 'a.ts' });
+  });
+
+  it('stops a quoted title at its own closing quote, not a later attribute\'s', async () => {
+    expect(await importCode('```ts title="a.ts" frame="none"\nx\n```'))
+      .toEqual({ code: 'x', language: 'typescript', filename: 'a.ts' });
+    expect(await importCode("```ts title='a.ts' frame='none'\nx\n```"))
+      .toEqual({ code: 'x', language: 'typescript', filename: 'a.ts' });
+  });
+
+  it('adds no filename key when the fence has no title', async () => {
+    expect(await importCode('```ts\nx\n```')).toEqual({ code: 'x', language: 'typescript' });
+    expect(await importCode('```ts {1,3}\nx\n```')).toEqual({ code: 'x', language: 'typescript' });
+    expect(await importCode('```ts title=""\nx\n```')).toEqual({ code: 'x', language: 'typescript' });
+  });
+
+  it('keeps a bare text fence as language "text", as before', async () => {
+    expect(await importCode('```text\nx\n```')).toEqual({ code: 'x', language: 'text' });
+  });
+});

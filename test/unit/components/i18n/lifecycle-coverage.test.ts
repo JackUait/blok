@@ -262,7 +262,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 484 + 128 + 46 + 4 closure for all 662 keys', () => {
+  it('rebuilds a disjoint 490 + 128 + 41 + 4 closure for all 663 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -276,7 +276,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(662);
+    expect(lifecycle.size).toBe(663);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -296,12 +296,13 @@ describe('current English catalog lifecycle coverage', () => {
       // trigger's menu is now the real EmojiPicker (Task 6b), whose own
       // empty state already renders through NO_EMOJIS_FOUND_KEY
       // (tools.callout.noEmojisFound) — see CATALOG_ONLY_KEYS above.
-      'executable-literal': 484,
+      'executable-literal': 490,
       'finite-dynamic': 128,
       // The 20 image editor keys (tools.image.editMode*, adjust*, filter*, ...) count
       // here until src/tools/image calls them by literal; each one that does
-      // moves 1 from this count to executable-literal.
-      'registered-namespace-compatible': 46,
+      // moves 1 from this count to executable-literal. 5 do so far: adjustTools,
+      // adjustBrightness, adjustContrast, adjustSaturation, filterPresets.
+      'registered-namespace-compatible': 41,
       'catalog-only': 4,
     });
     expect(

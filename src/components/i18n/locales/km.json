@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "រុំបន្ទាត់",
   "tools.code.searchLanguage": "ស្វែងរកភាសា…",
   "tools.code.lineNumbers": "លេខបន្ទាត់",
+  "tools.code.filename": "ឈ្មោះឯកសារ",
   "searchTerms.code": "កូដ",
   "searchTerms.snippet": "កំណាត់កូដ",
   "searchTerms.program": "កម្មវិធី",

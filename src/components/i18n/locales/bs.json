@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Prelom redova",
   "tools.code.searchLanguage": "Pretraži jezike…",
   "tools.code.lineNumbers": "Brojevi redova",
+  "tools.code.filename": "Naziv datoteke",
   "searchTerms.code": "kod",
   "searchTerms.snippet": "isječak",
   "searchTerms.program": "programiranje",

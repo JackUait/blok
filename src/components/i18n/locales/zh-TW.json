@@ -289,6 +289,7 @@
   "tools.code.previewTab": "預覽",
   "tools.code.sideBySide": "並排",
   "tools.code.lineNumbers": "行號",
+  "tools.code.filename": "檔案名稱",
   "searchTerms.code": "程式碼",
   "searchTerms.snippet": "程式碼片段",
   "searchTerms.program": "程式",

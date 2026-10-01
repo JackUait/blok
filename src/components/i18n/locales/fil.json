@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "I-wrap ang mga linya",
   "tools.code.searchLanguage": "Maghanap ng wika…",
   "tools.code.lineNumbers": "Mga numero ng linya",
+  "tools.code.filename": "Pangalan ng file",
   "searchTerms.code": "kodigo",
   "searchTerms.snippet": "piraso ng code",
   "searchTerms.program": "programa",

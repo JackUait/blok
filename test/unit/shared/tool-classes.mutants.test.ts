@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { CALLOUT_CHILDREN_CLASSES, CALLOUT_WRAPPER_CLASSES } from '../../../src/shared/tool-classes/callout';
-import { CODE_AREA_CLASSES, CODE_WRAPPER_CLASSES } from '../../../src/shared/tool-classes/code';
+import { CODE_AREA_CLASSES, CODE_FILENAME_CLASSES, CODE_HEADER_CLASSES, CODE_WRAPPER_CLASSES } from '../../../src/shared/tool-classes/code';
 import { DIVIDER_WRAPPER_CLASSES, DIVIDER_RULE_CLASSES } from '../../../src/shared/tool-classes/divider';
 import { SPACER_WRAPPER_CLASSES } from '../../../src/shared/tool-classes/spacer';
 import {
@@ -99,10 +99,21 @@ describe('shared tool classes mutants', () => {
         'rounded-(--blok-radius-block)',
         'border',
         'border-border-secondary',
-        'bg-bg-secondary',
+        'bg-code-bg',
         'overflow-hidden',
         'my-2',
       ]);
+    });
+
+    it('splits the header from the code with a hairline on its own surface', () => {
+      expect(CODE_HEADER_CLASSES).toContain('border-b');
+      expect(CODE_HEADER_CLASSES).toContain('border-border-secondary');
+      expect(CODE_HEADER_CLASSES).toContain('bg-bg-secondary');
+    });
+
+    it('sets the filename in the code font so it reads as a path', () => {
+      expect(CODE_FILENAME_CLASSES).toContain('font-mono');
+      expect(CODE_FILENAME_CLASSES).toContain('truncate');
     });
 
     it('reads its font size from the host hook, so per-block sizing reaches it', () => {

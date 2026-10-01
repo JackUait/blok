@@ -1,4 +1,4 @@
-import { CODE_AREA_CLASSES, CODE_WRAPPER_CLASSES } from '../../shared/tool-classes/code';
+import { CODE_AREA_CLASSES, CODE_FILENAME_CLASSES, CODE_HEADER_CLASSES, CODE_WRAPPER_CLASSES } from '../../shared/tool-classes/code';
 
 export const TOOL_NAME = 'code';
 
@@ -10,6 +10,7 @@ export const COPY_CODE_KEY = 'tools.code.copyCode';
 export const SEARCH_LANGUAGE_KEY = 'tools.code.searchLanguage';
 export const AUTO_DETECTED_KEY = 'tools.code.autoDetected';
 export const PLAIN_TEXT_KEY = 'tools.code.plainText';
+export const FILENAME_KEY = 'tools.code.filename';
 
 // Default values
 export const DEFAULT_LANGUAGE = 'plain text';
@@ -55,6 +56,41 @@ export const LANGUAGES: LanguageEntry[] = [
   { id: 'lua', name: 'Lua' },
 ];
 
+/** Language dots use each language's GitHub Linguist color; a dot is a swatch, not a selected state. */
+export const LANGUAGE_COLORS: Readonly<Record<string, string>> = {
+  javascript: '#f1e05a',
+  typescript: '#3178c6',
+  python: '#3572a5',
+  java: '#b07219',
+  c: '#555555',
+  cpp: '#f34b7d',
+  csharp: '#178600',
+  go: '#00add8',
+  rust: '#dea584',
+  ruby: '#701516',
+  php: '#4f5d95',
+  swift: '#f05138',
+  kotlin: '#a97bff',
+  latex: '#3d6117',
+  mermaid: '#ff3670',
+  sql: '#e38c00',
+  html: '#e34c26',
+  css: '#663399',
+  json: '#cbcb41',
+  yaml: '#cb171e',
+  markdown: '#083fa1',
+  bash: '#89e051',
+  shell: '#89e051',
+  dockerfile: '#384d54',
+  xml: '#0060ac',
+  graphql: '#e10098',
+  r: '#198ce7',
+  scala: '#c22d40',
+  dart: '#00b4ab',
+  lua: '#000080',
+};
+export const LANGUAGE_DOT_FALLBACK = 'var(--blok-gray-text)';
+
 // CSS — Tailwind classes
 /**
  * Static presentational classes live in `src/shared/tool-classes/code.ts` so the
@@ -67,25 +103,36 @@ export const WRAPPER_STYLES = ['group/code', ...CODE_WRAPPER_CLASSES].join(' ');
  * Publishes the corner radius for the header controls: the card's block
  * radius minus its 1px border and this row's `py-1.5`.
  */
-export const HEADER_STYLES = 'flex items-center gap-1 px-3 py-1.5 text-xs text-gray-text [--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-block)-var(--blok-border-width-hairline)-var(--blok-space-1-5)))]';
-export const LANGUAGE_BUTTON_STYLES = 'inline-flex items-center px-1.5 py-0.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer bg-transparent border-0 text-xs text-gray-text font-medium transition-colors can-hover:hover:bg-item-hover-bg select-none';
+export const HEADER_STYLES = [...CODE_HEADER_CLASSES, '[--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-block)-var(--blok-border-width-hairline)-var(--blok-space-1-5)))]'].join(' ');
+export const LANGUAGE_BUTTON_STYLES = 'inline-flex shrink-0 items-center gap-1.5 px-1.5 py-0.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer bg-transparent border-0 text-xs text-gray-text font-medium transition-colors can-hover:hover:bg-item-hover-bg select-none';
 /** Read-only has no picker to open — the language label is plain, unfocusable text there. */
-export const LANGUAGE_LABEL_STYLES = 'inline-flex items-center px-1.5 py-0.5 bg-transparent border-0 text-xs text-gray-text font-medium';
-export const HEADER_CONTROLS_STYLES = 'flex items-center gap-1 opacity-0 group-hover/code:opacity-100 transition-opacity';
+export const LANGUAGE_LABEL_STYLES = 'inline-flex shrink-0 items-center gap-1.5 px-1.5 py-0.5 bg-transparent border-0 text-xs text-gray-text font-medium';
+export const LANGUAGE_DOT_STYLES = 'size-2 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)]';
+/** Placeholder only shows while the block is hovered or focused, so filename-less blocks stay quiet. */
+export const FILENAME_BUTTON_STYLES = [
+  ...CODE_FILENAME_CLASSES,
+  'flex-1 text-left px-1.5 py-0.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-text bg-transparent border-0 transition-colors can-hover:hover:bg-item-hover-bg',
+  'data-[empty=true]:text-gray-text data-[empty=true]:font-sans data-[empty=true]:opacity-0 group-hover/code:data-[empty=true]:opacity-100 group-focus-within/code:data-[empty=true]:opacity-100 focus-visible:opacity-100',
+].join(' ');
+export const FILENAME_LABEL_STYLES = [...CODE_FILENAME_CLASSES, 'flex-1 px-1.5 py-0.5'].join(' ');
+export const FILENAME_INPUT_STYLES = [
+  ...CODE_FILENAME_CLASSES,
+  'flex-1 px-1.5 py-0.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) bg-item-hover-bg border-0 outline-hidden placeholder:text-gray-text placeholder:font-sans',
+].join(' ');
+export const HEADER_CONTROLS_STYLES = 'flex shrink-0 items-center gap-1 opacity-0 group-hover/code:opacity-100 group-focus-within/code:opacity-100 transition-opacity';
 /**
  * `h-*`/`min-w-*` pin the box: the copy button swaps its 20px icon for a
  * text-xs "Copied!" label, which would otherwise shrink it below the height of
  * its own icon state and of the neighbouring view-mode buttons.
  */
-export const HEADER_BUTTON_STYLES = 'p-1 h-7 min-w-7 rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
-export const HEADER_BUTTON_MATCHED_STYLES = 'p-1.5 h-8.5 min-w-8.5 rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
+export const HEADER_BUTTON_STYLES = 'gap-1 px-1.5 h-7 min-w-7 text-xs font-medium rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
+export const HEADER_BUTTON_MATCHED_STYLES = 'gap-1 px-2 h-8.5 min-w-8.5 text-xs font-medium rounded-(--blok-radius-inner,var(--blok-radius-control)) cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
 /**
  * Static classes live in `src/shared/tool-classes/code.ts`. `outline-hidden` and
  * `caret-text-primary` stay here — a static render has no focus ring and no
  * caret.
  */
 export const CODE_AREA_STYLES = [...CODE_AREA_CLASSES, 'outline-hidden', 'caret-text-primary'].join(' ');
-export const COPIED_FEEDBACK_STYLES = 'text-xs text-gray-text font-medium select-none';
 
 // Languages that support preview rendering
 export const PREVIEWABLE_LANGUAGES = new Set(['latex', 'mermaid']);
@@ -122,12 +169,14 @@ export const HIGHLIGHTABLE_LANGUAGES = new Set(
 );
 
 // CSS — line number gutter
-export const CODE_BODY_STYLES = 'flex overflow-hidden';
+export const CODE_BODY_STYLES = 'relative flex overflow-hidden';
+/** Sits behind the gutter and code (both `relative`, so they paint above it). */
+export const ACTIVE_LINE_STYLES = 'absolute inset-x-0 top-0 pointer-events-none bg-[color-mix(in_srgb,var(--blok-item-hover-bg)_55%,transparent)] transition-[transform,height] duration-75 ease-out motion-reduce:transition-none';
 /**
  * The line-number gutter. Its type scale MUST track the code area's — the two
  * columns are separate elements whose lines only align while their font size
  * and line height match — so it reads the same host hook
  * (`config.style.fontSize.code`) with the same `text-sm` fallback.
  */
-export const GUTTER_STYLES = 'select-none text-right pl-4 pr-3 py-3 font-mono text-[length:var(--blok-code-font-size,0.875rem)] leading-relaxed text-gray-text shrink-0';
-export const GUTTER_LINE_STYLES = 'leading-relaxed cursor-text';
+export const GUTTER_STYLES = 'relative select-none text-right pl-4 pr-3 py-3 font-mono text-[length:var(--blok-code-font-size,0.875rem)] leading-relaxed text-gray-text/70 tabular-nums shrink-0';
+export const GUTTER_LINE_STYLES = 'leading-relaxed cursor-text transition-colors data-[active=true]:text-text-primary';

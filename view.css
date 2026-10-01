@@ -190,8 +190,8 @@
   .border-current {
     border-color: currentcolor;
   }
-  .bg-bg-secondary {
-    background-color: var(--blok-bg-secondary);
+  .bg-code-bg {
+    background-color: var(--blok-code-bg);
   }
   .blok-block {
     padding-inline: var(--blok-block-padding-inline,2px);
@@ -598,6 +598,7 @@
   --blok-swatch-ring-active: rgba(0, 0, 0, 0.3);
   --blok-bg-secondary: #f7f8fa;
   --blok-border-secondary: rgba(55, 53, 47, 0.09);
+  --blok-code-bg: #fbfaf9;
   --blok-bg-primary: #ffffff;
   --blok-bg-hover: rgba(15, 15, 14, 0.04);
   --blok-border-subtle: #eceae6;
@@ -916,6 +917,7 @@
     --blok-swatch-ring-active: rgba(255, 255, 255, 0.35);
     --blok-bg-secondary: rgba(255, 255, 255, 0.04);
     --blok-border-secondary: rgba(255, 255, 255, 0.08);
+    --blok-code-bg: #222221;
     --blok-bg-primary: #1d1d1c;
     --blok-bg-hover: rgba(255, 255, 255, 0.04);
     --blok-border-subtle: #2a2a28;
@@ -1078,6 +1080,7 @@
   --blok-swatch-ring-active: rgba(255, 255, 255, 0.35);
   --blok-bg-secondary: rgba(255, 255, 255, 0.04);
   --blok-border-secondary: rgba(255, 255, 255, 0.08);
+  --blok-code-bg: #222221;
   --blok-bg-primary: #1d1d1c;
   --blok-bg-hover: rgba(255, 255, 255, 0.04);
   --blok-border-subtle: #2a2a28;

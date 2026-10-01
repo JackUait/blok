@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "行の折り返し",
   "tools.code.searchLanguage": "言語を検索…",
   "tools.code.lineNumbers": "行番号",
+  "tools.code.filename": "ファイル名",
   "searchTerms.code": "コード",
   "searchTerms.snippet": "スニペット",
   "searchTerms.program": "プログラム",

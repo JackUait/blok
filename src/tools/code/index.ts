@@ -1,6 +1,7 @@
 import type {
   API,
   BlockTool,
+  BlockAPI,
   BlockToolConstructorOptions,
   PasteConfig,
   PasteEvent,
@@ -10,8 +11,9 @@ import type {
 } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import type { CodeData } from '../../../types/tools/code';
-import { IconCodeBlock, IconCheck, IconWand } from '../../components/icons';
-import { buildCodeDOM, setActiveViewMode } from './dom-builder';
+import { IconCodeBlock, IconCheck, IconCopy, IconWand } from '../../components/icons';
+import { buildCodeDOM, setActiveViewMode, setFilenameDisplay } from './dom-builder';
+import { caretLineIndex, measureLineRows, rowHeight } from './line-geometry';
 import type { CodeDOMRefs } from './dom-builder';
 import { handleCodeKeydown } from './code-keyboard';
 import { PopoverDesktop } from '../../components/utils/popover';
@@ -30,7 +32,10 @@ import {
   SEARCH_LANGUAGE_KEY,
   AUTO_DETECTED_KEY,
   PLAIN_TEXT_KEY,
-  COPIED_FEEDBACK_STYLES,
+  FILENAME_KEY,
+  FILENAME_INPUT_STYLES,
+  LANGUAGE_COLORS,
+  LANGUAGE_DOT_FALLBACK,
   LANGUAGE_BUTTON_STYLES,
   LANGUAGE_LABEL_STYLES,
   PREVIEWABLE_LANGUAGES,
@@ -82,6 +87,7 @@ function findTextPosition(root: Node, targetOffset: number): { node: Node; offse
 
 export class CodeTool implements BlockTool {
   private api: API;
+  private block: BlockAPI | undefined;
   private readOnly: boolean;
   private _data: CodeData;
   private _dom: CodeDOMRefs | null = null;
@@ -94,14 +100,20 @@ export class CodeTool implements BlockTool {
   private _detectionTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private _highlightCleanup: (() => void) | null = null;
   private _highlightedLang: string | null = null;
+  private _lineRows: number[] = [];
+  private _resizeObserver: ResizeObserver | null = null;
+  private _copiedTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private readonly onSelectionChange = (): void => this.updateActiveLine();
 
-  constructor({ data, api, readOnly }: BlockToolConstructorOptions<CodeData>) {
+  constructor({ data, api, readOnly, block }: BlockToolConstructorOptions<CodeData>) {
     this.api = api;
+    this.block = block;
     this.readOnly = readOnly;
     this._data = {
       code: data?.code ?? '',
       language: data?.language ?? DEFAULT_LANGUAGE,
       lineNumbers: data?.lineNumbers,
+      ...(data?.filename ? { filename: data.filename } : {}),
     };
     this._lineNumbers = data?.lineNumbers ?? true;
   }
@@ -112,6 +124,9 @@ export class CodeTool implements BlockTool {
     const dom = buildCodeDOM({
       code: this._data.code,
       languageName: this.getLanguageName(this._data.language),
+      languageColor: CodeTool.languageColor(this._data.language),
+      filename: this._data.filename ?? '',
+      filenamePlaceholder: this.api.i18n.t(FILENAME_KEY),
       readOnly: this.readOnly,
       copyLabel: this.api.i18n.t(COPY_CODE_KEY),
       previewable: this.readOnly ? false : isPreviewable,
@@ -201,6 +216,19 @@ export class CodeTool implements BlockTool {
         this.scheduleDetection();
       });
 
+      // One document listener per focused block, not per rendered block.
+      dom.codeElement.addEventListener('focus', () => {
+        document.addEventListener('selectionchange', this.onSelectionChange);
+        this.updateActiveLine();
+      });
+
+      dom.codeElement.addEventListener('blur', () => {
+        document.removeEventListener('selectionchange', this.onSelectionChange);
+        this.updateActiveLine();
+      });
+
+      this.wireFilenameEditing(dom.filenameElement);
+
       // Chrome skips the `input` event on native paste into a plaintext-only
       // contenteditable that already holds syntax-highlight spans — the DOM
       // mutates but our gutter/highlight/detection refresh never runs.
@@ -216,7 +244,6 @@ export class CodeTool implements BlockTool {
     }
 
     dom.copyButton.addEventListener('click', () => this.copyCode());
-    tooltipOnHover(dom.copyButton, this.api.i18n.t(COPY_CODE_KEY), { placement: 'bottom' });
 
     dom.languageButton.addEventListener('click', () => {
       if (this.readOnly) {
@@ -251,6 +278,14 @@ export class CodeTool implements BlockTool {
 
   public rendered(): void {
     void this.highlightCode();
+
+    if (this._dom && typeof ResizeObserver !== 'undefined') {
+      // Width changes rewrap lines, which moves every gutter number below.
+      this._resizeObserver = new ResizeObserver(() => this.syncLineGeometry());
+      this._resizeObserver.observe(this._dom.codeElement);
+    }
+
+    this.syncLineGeometry();
   }
 
   private setViewMode(mode: CodeViewMode): void {
@@ -348,6 +383,102 @@ export class CodeTool implements BlockTool {
 
     // The chevron advertises an openable picker — there is none in read-only
     this._dom.languageChevron.hidden = state;
+
+    const filenameElement = document.createElement(state ? 'span' : 'button');
+
+    filenameElement.setAttribute('data-blok-testid', 'code-filename');
+    this._dom.filenameElement.replaceWith(filenameElement);
+    this._dom.filenameElement = filenameElement;
+    this.renderFilename();
+
+    if (!state) {
+      this.wireFilenameEditing(filenameElement);
+    }
+
+    this.updateActiveLine();
+  }
+
+  private renderFilename(): void {
+    if (!this._dom) {
+      return;
+    }
+
+    setFilenameDisplay(this._dom.filenameElement, this._data.filename ?? '', this.api.i18n.t(FILENAME_KEY), this.readOnly);
+  }
+
+  private wireFilenameEditing(display: HTMLElement): void {
+    display.addEventListener('click', () => this.startFilenameEdit());
+  }
+
+  /**
+   * Swap the filename button for an input while editing. The input owns its
+   * keys: Enter commits and moves into the code, Escape reverts.
+   */
+  private startFilenameEdit(): void {
+    const dom = this._dom;
+
+    if (!dom || this.readOnly) {
+      return;
+    }
+
+    const display = dom.filenameElement;
+    const input = document.createElement('input');
+    const previous = this._data.filename ?? '';
+    // Chrome blurs the input synchronously while replaceWith removes it; the
+    // flag keeps that nested blur from finishing a second time.
+    const state = { done: false };
+    const finish = (commit: boolean, focusCode: boolean): void => {
+      if (state.done) {
+        return;
+      }
+
+      state.done = true;
+
+      const next = commit ? input.value.trim() : previous;
+
+      input.replaceWith(display);
+
+      if (next) {
+        this._data.filename = next;
+      } else {
+        delete this._data.filename;
+      }
+
+      this.renderFilename();
+
+      if (next !== previous) {
+        this.block?.dispatchChange();
+      }
+
+      if (focusCode) {
+        dom.codeElement.focus();
+      }
+    };
+
+    input.type = 'text';
+    input.value = previous;
+    input.className = FILENAME_INPUT_STYLES;
+    input.placeholder = this.api.i18n.t(FILENAME_KEY);
+    input.setAttribute('aria-label', this.api.i18n.t(FILENAME_KEY));
+    input.setAttribute('spellcheck', 'false');
+    input.setAttribute('autocomplete', 'off');
+    input.setAttribute(DATA_ATTR.keyboardOwner, '');
+    input.setAttribute('data-blok-testid', 'code-filename-input');
+
+    input.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        finish(true, true);
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        finish(false, false);
+      }
+    });
+    input.addEventListener('blur', () => finish(true, false));
+
+    display.replaceWith(input);
+    input.focus();
+    input.select();
   }
 
   private ensureLanguagePicker(): void {
@@ -363,6 +494,8 @@ export class CodeTool implements BlockTool {
       code: this._dom?.codeElement.textContent ?? '',
       language: this._data.language,
       lineNumbers: this._lineNumbers,
+      // Omitted when empty so documents without one keep their saved shape.
+      ...(this._data.filename ? { filename: this._data.filename } : {}),
     };
   }
 
@@ -376,11 +509,14 @@ export class CodeTool implements BlockTool {
       code: newData.code ?? '',
       language: newData.language ?? DEFAULT_LANGUAGE,
       lineNumbers: newData.lineNumbers,
+      ...(newData.filename ? { filename: newData.filename } : {}),
     };
 
     if (!this._dom) {
       return true;
     }
+
+    this.renderFilename();
 
     this._dom.codeElement.textContent = this._data.code;
     this.syncTrailingBr();
@@ -408,11 +544,7 @@ export class CodeTool implements BlockTool {
       return;
     }
 
-    const textSpan = this._dom.languageButton.querySelector('span');
-
-    if (textSpan) {
-      textSpan.textContent = this.getLanguageName(languageId);
-    }
+    this.renderLanguageLabel(languageId);
 
     const isPreviewable = PREVIEWABLE_LANGUAGES.has(languageId);
 
@@ -548,12 +680,7 @@ export class CodeTool implements BlockTool {
     const isPreviewable = PREVIEWABLE_LANGUAGES.has(id);
 
     if (this._dom) {
-      // Update the text span inside the language button (first child)
-      const textSpan = this._dom.languageButton.querySelector('span');
-
-      if (textSpan) {
-        textSpan.textContent = this.getLanguageName(id);
-      }
+      this.renderLanguageLabel(id);
 
       // Show or hide the view mode segmented control based on previewability
       if (this._dom.viewModeContainer) {
@@ -667,6 +794,24 @@ export class CodeTool implements BlockTool {
     this._dom.languageButton.setAttribute('aria-expanded', expanded ? 'true' : 'false');
   }
 
+  private renderLanguageLabel(id: string): void {
+    if (!this._dom) {
+      return;
+    }
+
+    const textSpan = this._dom.languageDot.nextElementSibling;
+
+    if (textSpan) {
+      textSpan.textContent = this.getLanguageName(id);
+    }
+
+    this._dom.languageDot.style.backgroundColor = CodeTool.languageColor(id);
+  }
+
+  private static languageColor(id: string): string {
+    return LANGUAGE_COLORS[id] ?? LANGUAGE_DOT_FALLBACK;
+  }
+
   private getLanguageName(id: string): string {
     if (id === DEFAULT_LANGUAGE) {
       return this.api.i18n.t(PLAIN_TEXT_KEY);
@@ -685,15 +830,30 @@ export class CodeTool implements BlockTool {
         return;
       }
 
-      const btn = this._dom.copyButton;
-      const originalHTML = btn.innerHTML;
+      this.setCopied(true);
 
-      btn.innerHTML = `<span class="${COPIED_FEEDBACK_STYLES}">${this.api.i18n.t(COPIED_KEY)}</span>`;
+      if (this._copiedTimeoutId !== null) {
+        clearTimeout(this._copiedTimeoutId);
+      }
 
-      setTimeout(() => {
-        btn.innerHTML = originalHTML;
+      this._copiedTimeoutId = setTimeout(() => {
+        this._copiedTimeoutId = null;
+        this.setCopied(false);
       }, COPIED_FEEDBACK_DURATION);
     }).catch(() => { /* clipboard unavailable */ });
+  }
+
+  private setCopied(copied: boolean): void {
+    if (!this._dom) {
+      return;
+    }
+
+    const { copyButton, copyLabel } = this._dom;
+
+    copyButton.querySelector('svg')?.remove();
+    copyButton.insertAdjacentHTML('afterbegin', copied ? IconCheck : IconCopy);
+    copyButton.setAttribute('data-copied', String(copied));
+    copyLabel.textContent = this.api.i18n.t(copied ? COPIED_KEY : COPY_CODE_KEY);
   }
 
   private updateGutter(): void {
@@ -706,9 +866,19 @@ export class CodeTool implements BlockTool {
     const gutter = this._dom.gutterElement;
     const currentCount = gutter.children.length;
 
-    if (currentCount === lineCount) {
+    if (currentCount !== lineCount) {
+      this.rebuildGutter(lineCount);
+    }
+
+    this.syncLineGeometry();
+  }
+
+  private rebuildGutter(lineCount: number): void {
+    if (!this._dom) {
       return;
     }
+
+    const gutter = this._dom.gutterElement;
 
     // Rebuild gutter lines
     gutter.innerHTML = '';
@@ -719,6 +889,71 @@ export class CodeTool implements BlockTool {
       lineEl.setAttribute('data-line-index', String(idx));
       gutter.appendChild(lineEl);
     });
+    this._lineRows = [];
+  }
+
+  /**
+   * Give each gutter number the height of its wrapped line, then move the
+   * active-line band. Reads layout, so it runs after the DOM settles.
+   */
+  private syncLineGeometry(): void {
+    if (!this._dom) {
+      return;
+    }
+
+    const rows = measureLineRows(this._dom.codeElement);
+    const changed = rows.length !== this._lineRows.length || rows.some((r, i) => r !== this._lineRows[i]);
+
+    if (changed) {
+      const row = rowHeight(this._dom.codeElement);
+
+      Array.from(this._dom.gutterElement.children).forEach((line, index) => {
+        if (line instanceof HTMLElement) {
+          if ((rows[index] ?? 1) > 1) {
+            line.style.setProperty('height', `${rows[index] * row}px`);
+          } else {
+            line.style.removeProperty('height');
+          }
+        }
+      });
+      this._lineRows = rows;
+    }
+
+    this.updateActiveLine();
+  }
+
+  private updateActiveLine(): void {
+    const dom = this._dom;
+
+    if (!dom) {
+      return;
+    }
+
+    const isFocused = dom.codeElement.ownerDocument.activeElement === dom.codeElement;
+    const index = isFocused && !this.readOnly ? caretLineIndex(dom.codeElement) : null;
+
+    Array.from(dom.gutterElement.children).forEach((line, lineIndex) => {
+      line.setAttribute('data-active', String(lineIndex === index));
+    });
+
+    if (!dom.activeLine) {
+      return;
+    }
+
+    if (index === null || dom.preElement.hidden) {
+      dom.activeLine.hidden = true;
+
+      return;
+    }
+
+    const row = rowHeight(dom.codeElement);
+    const rows = this._lineRows.length > 0 ? this._lineRows : measureLineRows(dom.codeElement);
+    const rowsBefore = rows.slice(0, index).reduce((sum, r) => sum + r, 0);
+    const paddingTop = parseFloat(getComputedStyle(dom.codeElement).paddingTop || '0');
+
+    dom.activeLine.style.transform = `translateY(${paddingTop + rowsBefore * row}px)`;
+    dom.activeLine.style.height = `${(rows[index] ?? 1) * row}px`;
+    dom.activeLine.hidden = false;
   }
 
   /**
@@ -843,6 +1078,7 @@ export class CodeTool implements BlockTool {
     // sentinel that the keydown handler installed. Without it, a final
     // newline collapses and the caret has no line box on the new line.
     this.syncTrailingBr();
+    this.syncLineGeometry();
   }
 
   /**
@@ -887,6 +1123,15 @@ export class CodeTool implements BlockTool {
   }
 
   public removed(): void {
+    document.removeEventListener('selectionchange', this.onSelectionChange);
+    this._resizeObserver?.disconnect();
+    this._resizeObserver = null;
+
+    if (this._copiedTimeoutId !== null) {
+      clearTimeout(this._copiedTimeoutId);
+      this._copiedTimeoutId = null;
+    }
+
     if (this._highlightCleanup) {
       this._highlightCleanup();
       this._highlightCleanup = null;
@@ -940,6 +1185,7 @@ export class CodeTool implements BlockTool {
        * anything shaped like a stray end tag — irrecoverable corruption.
        */
       code: PLAINTEXT,
+      filename: PLAINTEXT,
     };
   }
 

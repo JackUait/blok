@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Radbrytning",
   "tools.code.searchLanguage": "Sök språk…",
   "tools.code.lineNumbers": "Radnummer",
+  "tools.code.filename": "Filnamn",
   "searchTerms.code": "kod",
   "searchTerms.snippet": "kodsnutt",
   "searchTerms.program": "programkod",

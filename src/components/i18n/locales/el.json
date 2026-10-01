@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Αναδίπλωση γραμμών",
   "tools.code.searchLanguage": "Αναζήτηση γλωσσών…",
   "tools.code.lineNumbers": "Αριθμοί γραμμών",
+  "tools.code.filename": "Όνομα αρχείου",
   "searchTerms.code": "κώδικας",
   "searchTerms.snippet": "απόσπασμα",
   "searchTerms.program": "πρόγραμμα",

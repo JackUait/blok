@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Zalamovat řádky",
   "tools.code.searchLanguage": "Hledat jazyky…",
   "tools.code.lineNumbers": "Čísla řádků",
+  "tools.code.filename": "Název souboru",
   "searchTerms.code": "kód",
   "searchTerms.snippet": "úryvek",
   "searchTerms.program": "programování",

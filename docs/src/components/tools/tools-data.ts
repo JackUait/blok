@@ -637,6 +637,7 @@ const editor = new Blok({
   code: string;          // Raw code text (not HTML)
   language: string;      // Language identifier, e.g. "javascript", "plain text"
   lineNumbers?: boolean; // Whether to show line numbers in the gutter
+  filename?: string;     // File name shown above the code, e.g. "block.ts"
 }`,
     saveDataExample: `{
   "id": "cod001",

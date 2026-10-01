@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "التفاف الأسطر",
   "tools.code.searchLanguage": "ابحث عن لغة…",
   "tools.code.lineNumbers": "أرقام الأسطر",
+  "tools.code.filename": "اسم الملف",
   "searchTerms.code": "كود",
   "searchTerms.snippet": "مقتطف",
   "searchTerms.program": "برنامج",

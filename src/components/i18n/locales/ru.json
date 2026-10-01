@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Перенос строк",
   "tools.code.searchLanguage": "Поиск языков…",
   "tools.code.lineNumbers": "Номера строк",
+  "tools.code.filename": "Имя файла",
   "searchTerms.code": "код",
   "searchTerms.snippet": "фрагмент",
   "searchTerms.program": "программа",

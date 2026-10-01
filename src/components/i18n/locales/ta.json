@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "வரிகளை மடக்கு",
   "tools.code.searchLanguage": "மொழிகளைத் தேடு…",
   "tools.code.lineNumbers": "வரி எண்கள்",
+  "tools.code.filename": "கோப்பின் பெயர்",
   "searchTerms.code": "குறியீடு",
   "searchTerms.snippet": "குறியீட்டுத் துணுக்கு",
   "searchTerms.program": "நிரல்",

@@ -39,7 +39,7 @@ describe('buildCodeDOM', () => {
     expect(preElement.contains(codeElement)).toBe(true);
   });
 
-  it('header contains languageButton, spacer, and controls container', async () => {
+  it('header contains languageButton, filename, and controls container', async () => {
     const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
     const { wrapper, languageButton } = buildCodeDOM({
       code: '',
@@ -49,7 +49,7 @@ describe('buildCodeDOM', () => {
     });
 
     const header = wrapper.children[0];
-    // [language] [spacer] [controls]
+    // [language] [filename] [controls]
     expect(header.children).toHaveLength(3);
     expect(header.children[0]).toBe(languageButton);
   });
@@ -64,7 +64,7 @@ describe('buildCodeDOM', () => {
     });
 
     // Language name is in the first span child
-    expect(languageButton.querySelector('span')!.textContent).toBe('TypeScript');
+    expect(languageButton.querySelector('[data-blok-testid="code-language-name"]')!.textContent).toBe('TypeScript');
   });
 
   it('language button contains a chevron-down SVG icon', async () => {
@@ -374,8 +374,8 @@ describe('buildCodeDOM', () => {
         viewModeLabels: { code: 'Code', preview: 'Preview', split: 'Side by side' },
       });
 
-      // Copy button should have p-1.5 to visually match the segmented control
-      expect(copyButton.className).toContain('p-1.5');
+      // Taller copy button to visually match the segmented control
+      expect(copyButton.className).toContain('h-8.5');
     });
 
     it('copy button keeps standard padding when not previewable', async () => {
@@ -387,9 +387,8 @@ describe('buildCodeDOM', () => {
         copyLabel: 'Copy code',
       });
 
-      // Standard copy button should NOT have the larger padding
-      expect(copyButton.className).not.toContain('p-1.5');
-      expect(copyButton.className).toContain('p-1');
+      expect(copyButton.className).not.toContain('h-8.5');
+      expect(copyButton.className).toContain('h-7');
     });
 
     it('view mode container is in the controls before copy button', async () => {
@@ -426,7 +425,7 @@ describe('buildCodeDOM', () => {
     it('wrapper has a background color class', async () => {
       const { WRAPPER_STYLES } = await import('../../../../src/tools/code/constants');
 
-      expect(WRAPPER_STYLES).toContain('bg-bg-secondary');
+      expect(WRAPPER_STYLES).toContain('bg-code-bg');
     });
 
     it('wrapper has rounded corners and overflow hidden', async () => {
@@ -488,7 +487,7 @@ describe('buildCodeDOM', () => {
       expect(gutterElement.parentElement).not.toBeNull();
     });
 
-    it('gutter is the first child and pre is the second child of code body', async () => {
+    it('gutter and pre follow the active-line band in the code body', async () => {
       const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
       const { gutterElement, preElement } = buildCodeDOM({
         code: 'hello',
@@ -498,8 +497,9 @@ describe('buildCodeDOM', () => {
       });
 
       const codeBody = gutterElement.parentElement!;
-      expect(codeBody.children[0]).toBe(gutterElement);
-      expect(codeBody.children[1]).toBe(preElement);
+      expect(codeBody.children[0].getAttribute('data-blok-testid')).toBe('code-active-line');
+      expect(codeBody.children[1]).toBe(gutterElement);
+      expect(codeBody.children[2]).toBe(preElement);
     });
 
     it('gutter renders one child div per line of code', async () => {

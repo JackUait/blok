@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "A capo automatico",
   "tools.code.searchLanguage": "Cerca linguaggi…",
   "tools.code.lineNumbers": "Numeri di riga",
+  "tools.code.filename": "Nome file",
   "searchTerms.code": "codice",
   "searchTerms.snippet": "frammento",
   "searchTerms.program": "programma",

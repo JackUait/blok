@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Ombryd linjer",
   "tools.code.searchLanguage": "Søg efter sprog…",
   "tools.code.lineNumbers": "Linjenumre",
+  "tools.code.filename": "Filnavn",
   "searchTerms.code": "kode",
   "searchTerms.snippet": "uddrag",
   "searchTerms.program": "programmering",

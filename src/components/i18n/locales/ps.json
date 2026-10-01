@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "کرښې ونغاړئ",
   "tools.code.searchLanguage": "ژبې ولټوئ…",
   "tools.code.lineNumbers": "د کرښو شمېرې",
+  "tools.code.filename": "د فایل نوم",
   "searchTerms.code": "کوډ",
   "searchTerms.snippet": "ټوټه",
   "searchTerms.program": "پروګرام",

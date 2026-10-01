@@ -31,7 +31,30 @@ export const CODE_WRAPPER_CLASSES: readonly string[] = [
   'rounded-(--blok-radius-block)',
   'border',
   'border-border-secondary',
-  'bg-bg-secondary',
+  'bg-code-bg',
   'overflow-hidden',
   'my-2',
+];
+
+/** The header row: language, filename and controls sit above a hairline. */
+export const CODE_HEADER_CLASSES: readonly string[] = [
+  'flex',
+  'items-center',
+  'gap-1',
+  'min-h-10',
+  'px-2',
+  'py-1.5',
+  'border-b',
+  'border-border-secondary',
+  'bg-bg-secondary',
+  'text-xs',
+  'text-gray-text',
+];
+
+export const CODE_FILENAME_CLASSES: readonly string[] = [
+  'min-w-0',
+  'truncate',
+  'font-mono',
+  'text-xs',
+  'text-text-primary',
 ];

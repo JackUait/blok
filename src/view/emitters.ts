@@ -15,7 +15,7 @@
 import { normalizeHeadingAnchor } from '../shared/heading-anchor';
 import { readVariants } from '../shared/read-variants';
 import { CALLOUT_CHILDREN_CLASSES } from '../shared/tool-classes/callout';
-import { CODE_AREA_CLASSES } from '../shared/tool-classes/code';
+import { CODE_AREA_CLASSES, CODE_FILENAME_CLASSES, CODE_HEADER_CLASSES } from '../shared/tool-classes/code';
 import { DIVIDER_RULE_CLASSES } from '../shared/tool-classes/divider';
 import {
   LIST_CHECKBOX_CLASSES,
@@ -443,9 +443,25 @@ export const builtinEmitters: Record<string, Emitter> = {
      * code area, so collapsing both onto the `<pre>` would mix the box with the
      * text padding.
      */
+    const filename = str(block.data, 'filename');
+    const hasFilename = filename.trim() !== '';
+
     if (env.classesEnabled) {
+      const header = hasFilename
+        ? `<div${env.classList(CODE_HEADER_CLASSES)}><span${env.classList(CODE_FILENAME_CLASSES)}>${env.escape(filename)}</span></div>`
+        : '';
+
       return trail(
-        `<div${env.rootAttrs(block)}><pre${env.classList(CODE_AREA_CLASSES)}>${inner}</pre></div>`,
+        `<div${env.rootAttrs(block)}>${header}<pre${env.classList(CODE_AREA_CLASSES)}>${inner}</pre></div>`,
+        block,
+        env
+      );
+    }
+
+    /** `html-to-blocks.ts` reads this figure shape back into `filename`. */
+    if (hasFilename) {
+      return trail(
+        `<figure${env.rootAttrs(block)}><figcaption>${env.escape(filename)}</figcaption><pre>${inner}</pre></figure>`,
         block,
         env
       );

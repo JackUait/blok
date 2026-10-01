@@ -289,6 +289,7 @@
   "tools.code.wrapLines": "ओळी रॅप करा",
   "tools.code.searchLanguage": "भाषा शोधा…",
   "tools.code.lineNumbers": "ओळ क्रमांक",
+  "tools.code.filename": "फाइलचे नाव",
   "searchTerms.code": "कोड",
   "searchTerms.snippet": "कोडचा तुकडा",
   "searchTerms.program": "कार्यक्रम",

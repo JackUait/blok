@@ -318,6 +318,7 @@ export type BlokMessageKey =
   | 'tools.code.codeTab'
   | 'tools.code.copied'
   | 'tools.code.copyCode'
+  | 'tools.code.filename'
   | 'tools.code.language'
   | 'tools.code.lineNumbers'
   | 'tools.code.placeholder'

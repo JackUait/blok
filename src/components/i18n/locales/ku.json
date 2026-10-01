@@ -289,6 +289,7 @@
   "tools.code.wrapLines": "پەچانەوەی دێڕەکان",
   "tools.code.searchLanguage": "بەدوای زمانەکاندا بگەڕێ…",
   "tools.code.lineNumbers": "ژمارەی دێڕەکان",
+  "tools.code.filename": "ناوی فایل",
   "searchTerms.code": "کۆد",
   "searchTerms.snippet": "پارچە کۆد",
   "searchTerms.program": "بەرنامە",

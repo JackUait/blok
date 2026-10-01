@@ -107,7 +107,7 @@ describe('CodeTool', () => {
         children: { items: Array<{ title: string }> };
       }>;
 
-      expect(btn?.querySelector('span')?.textContent).toBe('Texte brut');
+      expect(btn?.querySelector('[data-blok-testid="code-language-name"]')?.textContent).toBe('Texte brut');
       expect(settings[0].children.items[0].title).toBe('Texte brut');
     });
 
@@ -156,7 +156,7 @@ describe('CodeTool', () => {
       const btn = el.querySelector('[data-blok-testid="code-language-btn"]')!;
 
       // Language button now contains a text span + chevron SVG
-      expect(btn.querySelector('span')!.textContent).toBe('JavaScript');
+      expect(btn.querySelector('[data-blok-testid="code-language-name"]')!.textContent).toBe('JavaScript');
     });
 
     it('language button creates a popover for language selection', async () => {
@@ -849,7 +849,7 @@ describe('CodeTool', () => {
 
       // Verify observable behavior: language button text updates to the new language
       const langBtn = el.querySelector('[data-blok-testid="code-language-btn"]')!;
-      expect(langBtn.querySelector('span')!.textContent).toBe('Python');
+      expect(langBtn.querySelector('[data-blok-testid="code-language-name"]')!.textContent).toBe('Python');
     });
 
     it('disposes highlights in removed() and re-renders cleanly', async () => {
@@ -946,7 +946,7 @@ describe('CodeTool', () => {
       expect(mockCleanupJs).toHaveBeenCalled();
       // Observable outcome: the language switch is reflected in save data and the language button label.
       expect(tool.save(el).language).toBe('python');
-      expect(el.querySelector('[data-blok-testid="code-language-btn"] span')!.textContent).toBe('Python');
+      expect(el.querySelector('[data-blok-testid="code-language-name"]')!.textContent).toBe('Python');
     });
   });
 

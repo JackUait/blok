@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Prelomi vrstice",
   "tools.code.searchLanguage": "Poišči jezike…",
   "tools.code.lineNumbers": "Številke vrstic",
+  "tools.code.filename": "Ime datoteke",
   "searchTerms.code": "koda",
   "searchTerms.snippet": "izsek",
   "searchTerms.program": "programiranje",

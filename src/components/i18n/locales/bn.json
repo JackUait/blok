@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "লাইন মোড়ানো",
   "tools.code.searchLanguage": "ভাষা খুঁজুন…",
   "tools.code.lineNumbers": "লাইন নম্বর",
+  "tools.code.filename": "ফাইলের নাম",
   "searchTerms.code": "কোড",
   "searchTerms.snippet": "স্নিপেট",
   "searchTerms.program": "প্রোগ্রাম",

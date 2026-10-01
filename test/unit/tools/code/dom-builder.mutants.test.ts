@@ -95,14 +95,15 @@ describe('buildCodeDOM — attributes the code tool reads back', () => {
     expect(languageChevron.getAttribute('data-blok-testid')).toBe('code-language-chevron');
   });
 
-  it('pushes the controls to the right with a growing spacer', () => {
-    const header = headerOf(build());
+  it('pushes the controls to the right with a growing filename slot', () => {
+    const dom = build();
 
-    expect(header.children[1].className).toBe('flex-1');
+    expect(headerOf(dom).children[1]).toBe(dom.filenameElement);
+    expect(dom.filenameElement.className.split(' ')).toContain('flex-1');
   });
 
-  it('lets the pre element fill the code body width', () => {
-    expect(build().preElement.className).toBe('flex-1 min-w-0');
+  it('lets the pre element fill the code body width above the active-line band', () => {
+    expect(build().preElement.className).toBe('relative flex-1 min-w-0');
   });
 });
 

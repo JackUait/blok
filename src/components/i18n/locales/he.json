@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "גלישת שורות",
   "tools.code.searchLanguage": "חפש שפות…",
   "tools.code.lineNumbers": "מספרי שורות",
+  "tools.code.filename": "שם קובץ",
   "searchTerms.code": "קוד",
   "searchTerms.snippet": "קטע קוד",
   "searchTerms.program": "תוכנית",

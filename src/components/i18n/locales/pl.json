@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Zawijaj wiersze",
   "tools.code.searchLanguage": "Szukaj języków…",
   "tools.code.lineNumbers": "Numery wierszy",
+  "tools.code.filename": "Nazwa pliku",
   "searchTerms.code": "kod",
   "searchTerms.snippet": "fragment",
   "searchTerms.program": "programowanie",

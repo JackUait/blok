@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Переносити рядки",
   "tools.code.searchLanguage": "Шукати мову…",
   "tools.code.lineNumbers": "Номери рядків",
+  "tools.code.filename": "Назва файлу",
   "searchTerms.code": "код",
   "searchTerms.snippet": "фрагмент",
   "searchTerms.program": "програма",

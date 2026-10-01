@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Sətirləri ekrana sığdır",
   "tools.code.searchLanguage": "Dillər axtarın…",
   "tools.code.lineNumbers": "Sətir nömrələri",
+  "tools.code.filename": "Fayl adı",
   "searchTerms.code": "kod",
   "searchTerms.snippet": "fraqment",
   "searchTerms.program": "proqram",

@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Sorok tördelése",
   "tools.code.searchLanguage": "Nyelvek keresése…",
   "tools.code.lineNumbers": "Sorszámok",
+  "tools.code.filename": "Fájlnév",
   "searchTerms.code": "kód",
   "searchTerms.snippet": "kódrészlet",
   "searchTerms.program": "programozás",

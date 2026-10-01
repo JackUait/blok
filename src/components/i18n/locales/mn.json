@@ -289,6 +289,7 @@
   "tools.code.wrapLines": "Мөр шилжүүлэх",
   "tools.code.searchLanguage": "Хэл хайх…",
   "tools.code.lineNumbers": "Мөрийн дугаарууд",
+  "tools.code.filename": "Файлын нэр",
   "searchTerms.code": "код",
   "searchTerms.snippet": "кодын хэсэг",
   "searchTerms.program": "програм",

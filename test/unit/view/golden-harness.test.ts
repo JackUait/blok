@@ -458,6 +458,14 @@ const EDIT_CHROME_CLASSES = new Set<string>([
   'text-gray-text',
   'opacity-0',
   'transition-opacity',
+  /** Header surface and size; a view draws its header only for a filename. */
+  'bg-bg-secondary',
+  'border-b',
+  'min-h-10',
+  'px-2',
+  'shrink-0',
+  /** Lifts the gutter and code above the editor-only active-line band. */
+  'relative',
   /** The header bar's corner radius for its buttons (it sits in the card's corner). */
   '[--blok-radius-inner:max(var(--blok-radius-floor),calc(var(--blok-radius-block)-var(--blok-border-width-hairline)-var(--blok-space-1-5)))]',
   /** The code block's line-number gutter, also editor-only. */
@@ -479,7 +487,7 @@ const EDIT_CHROME_CLASSES = new Set<string>([
  * @param cls - single class name
  */
 const isEditChromeClass = (cls: string): boolean =>
-  EDIT_CHROME_CLASSES.has(cls) || cls.startsWith('group-hover/') || cls.includes('can-hover:');
+  EDIT_CHROME_CLASSES.has(cls) || cls.startsWith('group-hover/') || cls.startsWith('group-focus-within/') || cls.includes('can-hover:');
 
 /**
  * Classes the VIEW legitimately adds that the editor has no equivalent for.

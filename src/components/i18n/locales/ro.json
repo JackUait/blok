@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Încadrare text",
   "tools.code.searchLanguage": "Căutați limbaje…",
   "tools.code.lineNumbers": "Numere de linie",
+  "tools.code.filename": "Nume fișier",
   "searchTerms.code": "cod",
   "searchTerms.snippet": "fragment",
   "searchTerms.program": "program",

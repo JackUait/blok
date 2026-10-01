@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Bungkus baris",
   "tools.code.searchLanguage": "Cari bahasa…",
   "tools.code.lineNumbers": "Nomor baris",
+  "tools.code.filename": "Nama berkas",
   "searchTerms.code": "kode",
   "searchTerms.snippet": "cuplikan",
   "searchTerms.program": "pemrograman",

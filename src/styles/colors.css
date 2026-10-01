@@ -63,6 +63,7 @@
   /* Surface tokens (code blocks, secondary containers) */
   --color-bg-secondary: var(--blok-bg-secondary);
   --color-border-secondary: var(--blok-border-secondary);
+  --color-code-bg: var(--blok-code-bg);
 
 }
 
@@ -203,6 +204,11 @@
   /* Surface tokens (code blocks, secondary containers) */
   --blok-bg-secondary: #f7f8fa;
   --blok-border-secondary: rgba(55, 53, 47, 0.09);
+
+  /* Code block surface. Syntax colors are --blok-code-<role> hooks with
+     per-theme fallbacks in src/tools/code/prism-applier.ts; their AA
+     contrast is measured against this (prism-palette.test.ts). */
+  --blok-code-bg: #fbfaf9;
 
   /* Generic surface / text / accent tokens (image tool + reusable). */
   --blok-bg-primary: #ffffff;
@@ -649,6 +655,8 @@
     --blok-bg-secondary: rgba(255, 255, 255, 0.04);
     --blok-border-secondary: rgba(255, 255, 255, 0.08);
 
+    --blok-code-bg: #222221;
+
     /* Generic surface / text / accent tokens (image tool + reusable). */
     --blok-bg-primary: #1d1d1c;
     --blok-bg-hover: rgba(255, 255, 255, 0.04);
@@ -844,6 +852,8 @@
   /* Surface tokens (code blocks, secondary containers) */
   --blok-bg-secondary: rgba(255, 255, 255, 0.04);
   --blok-border-secondary: rgba(255, 255, 255, 0.08);
+
+  --blok-code-bg: #222221;
 
   /* Generic surface / text / accent tokens (image tool + reusable). */
   --blok-bg-primary: #1d1d1c;

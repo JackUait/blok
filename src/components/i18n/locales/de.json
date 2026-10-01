@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Zeilenumbruch",
   "tools.code.searchLanguage": "Sprachen suchen…",
   "tools.code.lineNumbers": "Zeilennummern",
+  "tools.code.filename": "Dateiname",
   "searchTerms.code": "Code",
   "searchTerms.snippet": "Codeausschnitt",
   "searchTerms.program": "Programm",

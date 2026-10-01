@@ -172,7 +172,7 @@ const savedData: Record<string, Record<string, unknown>> = {
     contentElement('Wise words') as unknown as HTMLQuoteElement
   ),
 
-  code: new Code(options({ code: 'x = 1', language: 'python', lineNumbers: true })).save(contentElement('')),
+  code: new Code(options({ code: 'x = 1', language: 'python', lineNumbers: true, filename: 'main.py' })).save(contentElement('')),
 
   image: new ImageTool(options({
     url: 'https://example.com/a.png', caption: 'Cap', width: 50, alignment: 'left',

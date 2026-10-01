@@ -15,6 +15,8 @@ export interface CodeData extends BlockToolData {
   language: string;
   /** Whether to show line numbers in the gutter */
   lineNumbers?: boolean;
+  /** File name shown above the code, e.g. "block.ts". Omitted when empty. */
+  filename?: string;
 }
 
 /**

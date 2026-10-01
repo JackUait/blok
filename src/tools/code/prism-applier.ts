@@ -10,34 +10,34 @@ export const LIGHT_RULES = `
 .blok-code .token.comment,
 .blok-code .token.prolog,
 .blok-code .token.doctype,
-.blok-code .token.cdata { color: #6b7280; }
+.blok-code .token.cdata { color: var(--blok-code-comment, #75716a); }
 
 .blok-code .token.keyword,
 .blok-code .token.operator,
-.blok-code .token.important { color: #7c3aed; }
+.blok-code .token.important { color: var(--blok-code-keyword, #8a3ffc); }
 
 .blok-code .token.string,
 .blok-code .token.attr-value,
 .blok-code .token.char,
-.blok-code .token.regex { color: #047857; }
+.blok-code .token.regex { color: var(--blok-code-string, #0d7d6c); }
 
 .blok-code .token.number,
 .blok-code .token.boolean,
 .blok-code .token.constant,
-.blok-code .token.symbol { color: #b45309; }
+.blok-code .token.symbol { color: var(--blok-code-number, #b25000); }
 
 .blok-code .token.function,
-.blok-code .token.class-name { color: #2563eb; }
+.blok-code .token.class-name { color: var(--blok-code-function, #2e5fd3); }
 
 .blok-code .token.builtin,
 .blok-code .token.tag,
-.blok-code .token.selector { color: #be185d; }
+.blok-code .token.selector { color: var(--blok-code-builtin, #c0266f); }
 
 .blok-code .token.attr-name,
 .blok-code .token.property,
-.blok-code .token.variable { color: #c2410c; }
+.blok-code .token.variable { color: var(--blok-code-property, #a8481b); }
 
-.blok-code .token.punctuation { color: #374151; }
+.blok-code .token.punctuation { color: var(--blok-code-punctuation, #5c5852); }
 
 /* --- Extended coverage: token classes Prism emits that the base palette missed.
  * Grouped into the same hue families above so highlighting stays coherent
@@ -51,7 +51,7 @@ export const LIGHT_RULES = `
 .blok-code .token.regex-literal,
 .blok-code .token.import,
 .blok-code .token.url,
-.blok-code .token.code { color: #047857; }
+.blok-code .token.code { color: var(--blok-code-string, #0d7d6c); }
 
 /* function / class-name family (blue) — namespaces, definitions, code structures, types */
 .blok-code .token.namespace,
@@ -60,12 +60,12 @@ export const LIGHT_RULES = `
 .blok-code .token.scalar,
 .blok-code .token.code-block,
 .blok-code .token.base-clause,
-.blok-code .token.generic-function { color: #2563eb; }
+.blok-code .token.generic-function { color: var(--blok-code-function, #2e5fd3); }
 
 /* builtin family (pink) — decorators, package markers, markup entities */
 .blok-code .token.decorator,
 .blok-code .token.entity,
-.blok-code .token.package { color: #be185d; }
+.blok-code .token.package { color: var(--blok-code-builtin, #c0266f); }
 
 /* attr-name / property family (orange) — interpolation, parameters, attributes, mapping keys */
 .blok-code .token.interpolation,
@@ -73,18 +73,18 @@ export const LIGHT_RULES = `
 .blok-code .token.attribute,
 .blok-code .token.atrule,
 .blok-code .token.key,
-.blok-code .token.property-query { color: #c2410c; }
+.blok-code .token.property-query { color: var(--blok-code-property, #a8481b); }
 
 /* keyword family (purple) — generics, at-rules, instructions, emphasis */
 .blok-code .token.generics,
 .blok-code .token.rule,
 .blok-code .token.instruction,
-.blok-code .token.code-language { color: #7c3aed; }
-.blok-code .token.bold { color: #7c3aed; font-weight: 700; }
-.blok-code .token.italic { color: #7c3aed; font-style: italic; }
+.blok-code .token.code-language { color: var(--blok-code-keyword, #8a3ffc); }
+.blok-code .token.bold { color: var(--blok-code-keyword, #8a3ffc); font-weight: 700; }
+.blok-code .token.italic { color: var(--blok-code-keyword, #8a3ffc); font-style: italic; }
 
 /* pure syntax wrapper — match default text so it is covered without changing appearance */
-.blok-code .token.php { color: #000000; }
+.blok-code .token.php { color: var(--blok-code-plain, #37352f); }
 
 /* Mermaid-specific tokens — scoped to lang-mermaid to avoid polluting other languages.
  * Colors use Atom One Light palette:
@@ -92,11 +92,11 @@ export const LIGHT_RULES = `
  *   @hue-6-2 = #8a5d01 (amber/gold — node IDs)
  *   @hue-4 = #417a40  (green — edge labels)
  */
-.blok-code.lang-mermaid .token.diagram-name { color: #0369a1; }
-.blok-code.lang-mermaid .token.node-bracket { color: #0369a1; }
-.blok-code.lang-mermaid .token.edge-delimiter { color: #0369a1; }
-.blok-code.lang-mermaid .token.edge-label { color: #417a40; }
-.blok-code.lang-mermaid .token.variable { color: #8a5d01; }
+.blok-code.lang-mermaid .token.diagram-name { color: var(--blok-code-mermaid-node, #0369a1); }
+.blok-code.lang-mermaid .token.node-bracket { color: var(--blok-code-mermaid-node, #0369a1); }
+.blok-code.lang-mermaid .token.edge-delimiter { color: var(--blok-code-mermaid-node, #0369a1); }
+.blok-code.lang-mermaid .token.edge-label { color: var(--blok-code-mermaid-label, #417a40); }
+.blok-code.lang-mermaid .token.variable { color: var(--blok-code-mermaid-id, #8a5d01); }
 .blok-code.lang-mermaid .token.keyword,
 .blok-code.lang-mermaid .token.operator,
 .blok-code.lang-mermaid .token.string { color: inherit; }
@@ -106,34 +106,34 @@ export const DARK_RULES = `
 .dark .blok-code .token.comment,
 .dark .blok-code .token.prolog,
 .dark .blok-code .token.doctype,
-.dark .blok-code .token.cdata { color: #9ca3af; }
+.dark .blok-code .token.cdata { color: var(--blok-code-comment, #8f8b84); }
 
 .dark .blok-code .token.keyword,
 .dark .blok-code .token.operator,
-.dark .blok-code .token.important { color: #a78bfa; }
+.dark .blok-code .token.important { color: var(--blok-code-keyword, #c6a8ff); }
 
 .dark .blok-code .token.string,
 .dark .blok-code .token.attr-value,
 .dark .blok-code .token.char,
-.dark .blok-code .token.regex { color: #34d399; }
+.dark .blok-code .token.regex { color: var(--blok-code-string, #7fd4bf); }
 
 .dark .blok-code .token.number,
 .dark .blok-code .token.boolean,
 .dark .blok-code .token.constant,
-.dark .blok-code .token.symbol { color: #fbbf24; }
+.dark .blok-code .token.symbol { color: var(--blok-code-number, #f2b56b); }
 
 .dark .blok-code .token.function,
-.dark .blok-code .token.class-name { color: #60a5fa; }
+.dark .blok-code .token.class-name { color: var(--blok-code-function, #8db4ff); }
 
 .dark .blok-code .token.builtin,
 .dark .blok-code .token.tag,
-.dark .blok-code .token.selector { color: #f472b6; }
+.dark .blok-code .token.selector { color: var(--blok-code-builtin, #f590b8); }
 
 .dark .blok-code .token.attr-name,
 .dark .blok-code .token.property,
-.dark .blok-code .token.variable { color: #fb923c; }
+.dark .blok-code .token.variable { color: var(--blok-code-property, #f5a882); }
 
-.dark .blok-code .token.punctuation { color: #d1d5db; }
+.dark .blok-code .token.punctuation { color: var(--blok-code-punctuation, #b9b5ae); }
 
 /* --- Extended coverage (dark) — mirrors the light-theme groups above. */
 
@@ -145,7 +145,7 @@ export const DARK_RULES = `
 .dark .blok-code .token.regex-literal,
 .dark .blok-code .token.import,
 .dark .blok-code .token.url,
-.dark .blok-code .token.code { color: #34d399; }
+.dark .blok-code .token.code { color: var(--blok-code-string, #7fd4bf); }
 
 /* function / class-name family (blue) */
 .dark .blok-code .token.namespace,
@@ -154,12 +154,12 @@ export const DARK_RULES = `
 .dark .blok-code .token.scalar,
 .dark .blok-code .token.code-block,
 .dark .blok-code .token.base-clause,
-.dark .blok-code .token.generic-function { color: #60a5fa; }
+.dark .blok-code .token.generic-function { color: var(--blok-code-function, #8db4ff); }
 
 /* builtin family (pink) */
 .dark .blok-code .token.decorator,
 .dark .blok-code .token.entity,
-.dark .blok-code .token.package { color: #f472b6; }
+.dark .blok-code .token.package { color: var(--blok-code-builtin, #f590b8); }
 
 /* attr-name / property family (orange) */
 .dark .blok-code .token.interpolation,
@@ -167,18 +167,18 @@ export const DARK_RULES = `
 .dark .blok-code .token.attribute,
 .dark .blok-code .token.atrule,
 .dark .blok-code .token.key,
-.dark .blok-code .token.property-query { color: #fb923c; }
+.dark .blok-code .token.property-query { color: var(--blok-code-property, #f5a882); }
 
 /* keyword family (purple) */
 .dark .blok-code .token.generics,
 .dark .blok-code .token.rule,
 .dark .blok-code .token.instruction,
-.dark .blok-code .token.code-language { color: #a78bfa; }
-.dark .blok-code .token.bold { color: #a78bfa; font-weight: 700; }
-.dark .blok-code .token.italic { color: #a78bfa; font-style: italic; }
+.dark .blok-code .token.code-language { color: var(--blok-code-keyword, #c6a8ff); }
+.dark .blok-code .token.bold { color: var(--blok-code-keyword, #c6a8ff); font-weight: 700; }
+.dark .blok-code .token.italic { color: var(--blok-code-keyword, #c6a8ff); font-style: italic; }
 
 /* pure syntax wrapper — match dark default text */
-.dark .blok-code .token.php { color: #e2e0dc; }
+.dark .blok-code .token.php { color: var(--blok-code-plain, #e6e3de); }
 
 /* Mermaid-specific tokens — dark mode.
  * Colors use Atom One Dark palette:
@@ -186,11 +186,11 @@ export const DARK_RULES = `
  *   @hue-6-2 = #e4bf7a (amber/yellow — node IDs)
  *   @hue-4 = #97c279  (green — edge labels)
  */
-.dark .blok-code.lang-mermaid .token.diagram-name { color: #56b5c2; }
-.dark .blok-code.lang-mermaid .token.node-bracket { color: #56b5c2; }
-.dark .blok-code.lang-mermaid .token.edge-delimiter { color: #56b5c2; }
-.dark .blok-code.lang-mermaid .token.edge-label { color: #97c279; }
-.dark .blok-code.lang-mermaid .token.variable { color: #e4bf7a; }
+.dark .blok-code.lang-mermaid .token.diagram-name { color: var(--blok-code-mermaid-node, #56b5c2); }
+.dark .blok-code.lang-mermaid .token.node-bracket { color: var(--blok-code-mermaid-node, #56b5c2); }
+.dark .blok-code.lang-mermaid .token.edge-delimiter { color: var(--blok-code-mermaid-node, #56b5c2); }
+.dark .blok-code.lang-mermaid .token.edge-label { color: var(--blok-code-mermaid-label, #97c279); }
+.dark .blok-code.lang-mermaid .token.variable { color: var(--blok-code-mermaid-id, #e4bf7a); }
 .dark .blok-code.lang-mermaid .token.keyword,
 .dark .blok-code.lang-mermaid .token.operator,
 .dark .blok-code.lang-mermaid .token.string { color: inherit; }

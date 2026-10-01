@@ -115,6 +115,23 @@ function convertNode(
 }
 
 /**
+ * The `title` a fence's meta carries (`title="a.ts"`, `title='a.ts'`,
+ * `title=a.ts`), or undefined when there is none.
+ *
+ * The parser has already decoded backslash escapes in the meta, so an escaped
+ * quote is a bare one by now. A quoted title therefore ends at the first
+ * matching quote followed by a space or the end: that keeps `a"b.ts` whole and
+ * still stops before a later `frame="none"`.
+ * @param meta - the fence's meta string
+ */
+function fenceTitle(meta: string | null | undefined): string | undefined {
+  const match = /(?:^|\s)title=(?:"(.*?)"(?=\s|$)|'(.*?)'(?=\s|$)|(\S+))/.exec(meta ?? '');
+  const title = match?.[1] ?? match?.[2] ?? match?.[3] ?? '';
+
+  return title === '' ? undefined : title;
+}
+
+/**
  * Handle built-in node types. Returns undefined if node type is not built-in.
  */
 function handleBuiltInNode(
@@ -148,12 +165,16 @@ function handleBuiltInNode(
 
   if (node.type === 'code') {
     const rawLang = node.lang ?? '';
+    const filename = fenceTitle(node.meta);
+    // Export writes a titled plain-text block as `text`; only then is it plain text.
+    const lang = filename !== undefined && rawLang === 'text' ? '' : rawLang;
 
     return [makeBlock('code', {
       code: node.value,
       // Unknown languages keep their raw label rather than collapsing to
       // "plain text" — the fence still says what the snippet is.
-      language: normalizeFenceLang(rawLang) ?? (rawLang || 'plain text'),
+      language: normalizeFenceLang(lang) ?? (lang || 'plain text'),
+      ...(filename === undefined ? {} : { filename }),
     }, ctx.generateId)];
   }
 

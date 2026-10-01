@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "ตัดบรรทัด",
   "tools.code.searchLanguage": "ค้นหาภาษา…",
   "tools.code.lineNumbers": "เลขบรรทัด",
+  "tools.code.filename": "ชื่อไฟล์",
   "searchTerms.code": "โค้ด",
   "searchTerms.snippet": "ส่วนของโค้ด",
   "searchTerms.program": "โปรแกรม",

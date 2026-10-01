@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Пренасяне на редове",
   "tools.code.searchLanguage": "Търсене на езици…",
   "tools.code.lineNumbers": "Номера на редове",
+  "tools.code.filename": "Име на файл",
   "searchTerms.code": "код",
   "searchTerms.snippet": "фрагмент",
   "searchTerms.program": "програма",

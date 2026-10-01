@@ -71,6 +71,26 @@ describe('htmlToBlocks — structure', () => {
     ]);
   });
 
+  it('reads a figcaption above a pre as the code block\'s filename', () => {
+    expect(shape(htmlToBlocks('<figure><figcaption>block.ts</figcaption><pre><code class="language-ts">x</code></pre></figure>'))).toEqual([
+      { type: 'code', data: { code: 'x', language: 'typescript', filename: 'block.ts' } },
+    ]);
+  });
+
+  it('round-trips a code block filename through the view HTML', () => {
+    const blocks: OutputBlockData[] = [{ id: 'c1', type: 'code', data: { code: 'a < b', language: 'typescript', filename: 'my "x" <y>.ts' } }];
+
+    expect(shape(htmlToBlocks(blocksToHtml({ blocks })))).toEqual([
+      { type: 'code', data: { code: 'a < b', language: 'typescript', filename: 'my "x" <y>.ts' } },
+    ]);
+  });
+
+  it('adds no filename to a plain pre', () => {
+    expect(shape(htmlToBlocks(blocksToHtml({ blocks: [{ id: 'c1', type: 'code', data: { code: 'x', language: 'typescript' } }] })))).toEqual([
+      { type: 'code', data: { code: 'x', language: 'typescript' } },
+    ]);
+  });
+
   it('falls back to plain text for a pre with no language', () => {
     expect(shape(htmlToBlocks('<pre>raw</pre>'))).toEqual([
       { type: 'code', data: { code: 'raw', language: 'plain text' } },

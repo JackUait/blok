@@ -523,6 +523,23 @@ const codeLanguage = (element: P5Element): string => {
   return normalizeFenceLang(raw) ?? (raw === '' ? 'plain text' : raw);
 };
 
+/**
+ * Convert a `pre` into a code block.
+ * @param ctx - conversion state
+ * @param element - the `pre` element
+ * @param filename - the file name a wrapping figure gave it
+ */
+const emitCode = (ctx: Ctx, element: P5Element, filename?: string): void => {
+  push(ctx, 'code', {
+    code: rawText(element.childNodes).replace(/\n$/, ''),
+    language: codeLanguage(element),
+    ...(filename === undefined || filename === '' ? {} : { filename }),
+  });
+  // `rawText` reads text nodes only, so an image inside the block follows it
+  // rather than disappearing.
+  emitNestedImages(ctx, element.childNodes);
+};
+
 /** Elements a blockquote unwraps into its own text, the way a browser lays them out. */
 const QUOTE_UNWRAPPED = new Set([...TRANSPARENT, 'p']);
 
@@ -941,6 +958,16 @@ const convertCell = (ctx: Ctx, cell: P5Element): void => {
  * @param element - the `figure` element
  */
 const emitFigure = (ctx: Ctx, element: P5Element): void => {
+  const parts = element.childNodes.filter((node) => isElement(node) || rawText([node]).trim() !== '');
+  const [label, pre] = parts;
+
+  /** The view's code shape: a figcaption naming the file, then the `pre`. */
+  if (parts.length === 2 && isElement(label) && label.tagName === 'figcaption' && isElement(pre) && pre.tagName === 'pre') {
+    emitCode(ctx, pre, rawText(label.childNodes).trim());
+
+    return;
+  }
+
   const images: P5Element[] = [];
   const found: { caption: P5Element | undefined } = { caption: undefined };
 
@@ -1038,10 +1065,7 @@ const convertElement = (ctx: Ctx, element: P5Element): void => {
 
       return;
     case 'pre':
-      push(ctx, 'code', { code: rawText(element.childNodes).replace(/\n$/, ''), language: codeLanguage(element) });
-      // `rawText` reads text nodes only, so an image inside the block follows it
-      // rather than disappearing.
-      emitNestedImages(ctx, element.childNodes);
+      emitCode(ctx, element);
 
       return;
     case 'blockquote':

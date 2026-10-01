@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "లైన్‌లను చుట్టు",
   "tools.code.searchLanguage": "భాషలను వెతకండి…",
   "tools.code.lineNumbers": "లైన్ నంబర్‌లు",
+  "tools.code.filename": "ఫైల్ పేరు",
   "searchTerms.code": "కోడ్",
   "searchTerms.snippet": "కోడ్ స్నిప్పెట్",
   "searchTerms.program": "ప్రోగ్రామ్",

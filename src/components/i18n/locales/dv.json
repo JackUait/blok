@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "ފޮޅުވަތް ލަނބާ",
   "tools.code.searchLanguage": "ބަސް ހޯދާ…",
   "tools.code.lineNumbers": "ފޮޅުވަތް ނަންބަރު",
+  "tools.code.filename": "ފައިލްގެ ނަން",
   "searchTerms.code": "ކޯޑް",
   "searchTerms.snippet": "ތަންކޮޅެއް",
   "searchTerms.program": "ޕްރޮގްރާމް",

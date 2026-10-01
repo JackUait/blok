@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "شکستن خطوط",
   "tools.code.searchLanguage": "جستجوی زبان‌ها…",
   "tools.code.lineNumbers": "شماره خطوط",
+  "tools.code.filename": "نام فایل",
   "searchTerms.code": "کد",
   "searchTerms.snippet": "قطعه کد",
   "searchTerms.program": "برنامه",

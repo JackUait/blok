@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "სტრიქონების გადატანა",
   "tools.code.searchLanguage": "ენების ძიება…",
   "tools.code.lineNumbers": "სტრიქონების ნომრები",
+  "tools.code.filename": "ფაილის სახელი",
   "searchTerms.code": "კოდი",
   "searchTerms.snippet": "ნაწყვეტი",
   "searchTerms.program": "პროგრამა",

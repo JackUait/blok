@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { blocksToHtml, blocksToViewNodes, defineBlokSchema } from '../../../src/view';
 import { TableModel } from '../../../src/tools/table/table-model';
+import { CODE_FILENAME_CLASSES, CODE_HEADER_CLASSES, CODE_WRAPPER_CLASSES } from '../../../src/shared/tool-classes/code';
 
 import type { LooseOutputData, OutputBlockData, OutputData } from '../../../types';
 import type { LegacyCellContent } from '../../../src/tools/table/types';
@@ -206,6 +207,38 @@ describe('blocksToHtml', () => {
 
     it('omits the language class when no language is stored', () => {
       expect(blocksToHtml(doc([{ type: 'code', data: { code: 'x' } }]))).toBe('<pre><code>x</code></pre>');
+    });
+
+    it('puts the filename in a figcaption above the code when one is set', () => {
+      const html = blocksToHtml(doc([{ id: 'c1', type: 'code', data: { code: 'x', language: 'ts', filename: 'block.ts' } }]), { blockIds: true });
+
+      expect(html).toBe('<figure data-blok-id="c1"><figcaption>block.ts</figcaption><pre><code class="language-ts">x</code></pre></figure>');
+    });
+
+    it('renders an empty or blank filename exactly like no filename', () => {
+      expect(blocksToHtml(doc([{ type: 'code', data: { code: 'x', filename: '' } }]))).toBe('<pre><code>x</code></pre>');
+      expect(blocksToHtml(doc([{ type: 'code', data: { code: 'x', filename: '  ' } }]))).toBe('<pre><code>x</code></pre>');
+    });
+
+    it('escapes markup in the filename', () => {
+      const html = blocksToHtml(doc([{ type: 'code', data: { code: 'x', filename: '<script>alert("x")</script>.ts' } }]));
+
+      expect(html).not.toContain('<script>');
+      expect(html).toContain('<figcaption>&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;.ts</figcaption>');
+    });
+
+    it('under classes, puts a header row with the filename before the code area', () => {
+      const header = CODE_HEADER_CLASSES.join(' ');
+      const name = CODE_FILENAME_CLASSES.join(' ');
+      const html = blocksToHtml(doc([{ type: 'code', data: { code: 'x', filename: '<b>a</b>.ts' } }]), { classes: true });
+
+      expect(html).toContain(`<div class="${CODE_WRAPPER_CLASSES.join(' ')}"><div class="${header}"><span class="${name}">&lt;b&gt;a&lt;/b&gt;.ts</span></div><pre class="`);
+    });
+
+    it('under classes, adds no header row without a filename', () => {
+      const html = blocksToHtml(doc([{ type: 'code', data: { code: 'x' } }]), { classes: true });
+
+      expect(html).not.toContain(CODE_HEADER_CLASSES.join(' '));
     });
   });
 

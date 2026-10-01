@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Преломи редове",
   "tools.code.searchLanguage": "Претражи језике…",
   "tools.code.lineNumbers": "Бројеви редова",
+  "tools.code.filename": "Име датотеке",
   "searchTerms.code": "код",
   "searchTerms.snippet": "исечак",
   "searchTerms.program": "програм",

@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Ngắt dòng",
   "tools.code.searchLanguage": "Tìm ngôn ngữ...",
   "tools.code.lineNumbers": "Số dòng",
+  "tools.code.filename": "Tên tệp",
   "searchTerms.code": "mã",
   "searchTerms.snippet": "đoạn mã",
   "searchTerms.program": "chương trình",

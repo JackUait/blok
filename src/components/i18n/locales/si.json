@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "පේළි එතීම",
   "tools.code.searchLanguage": "භාෂා සොයන්න…",
   "tools.code.lineNumbers": "පේළි අංක",
+  "tools.code.filename": "ගොනුවේ නම",
   "searchTerms.code": "කේතය",
   "searchTerms.snippet": "කේත කොටස",
   "searchTerms.program": "වැඩසටහන",

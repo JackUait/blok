@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "سطریں لپیٹیں",
   "tools.code.searchLanguage": "زبان تلاش کریں...",
   "tools.code.lineNumbers": "سطر نمبر",
+  "tools.code.filename": "فائل کا نام",
   "searchTerms.code": "کوڈ",
   "searchTerms.snippet": "ٹکڑا",
   "searchTerms.program": "پروگرام",

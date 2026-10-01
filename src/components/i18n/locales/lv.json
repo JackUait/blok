@@ -289,6 +289,7 @@
   "tools.code.wrapLines": "Aplauzt rindas",
   "tools.code.searchLanguage": "Meklēt valodas…",
   "tools.code.lineNumbers": "Rindu numuri",
+  "tools.code.filename": "Faila nosaukums",
   "searchTerms.code": "kods",
   "searchTerms.snippet": "fragments",
   "searchTerms.program": "programma",

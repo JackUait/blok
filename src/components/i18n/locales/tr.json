@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Satırları kaydır",
   "tools.code.searchLanguage": "Dil ara...",
   "tools.code.lineNumbers": "Satır numaraları",
+  "tools.code.filename": "Dosya adı",
   "searchTerms.code": "kod",
   "searchTerms.snippet": "parça",
   "searchTerms.program": "program",

@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Murra read",
   "tools.code.searchLanguage": "Otsi keelt…",
   "tools.code.lineNumbers": "Reanumbrid",
+  "tools.code.filename": "Faili nimi",
   "searchTerms.code": "kood",
   "searchTerms.snippet": "koodilõik",
   "searchTerms.program": "programm",

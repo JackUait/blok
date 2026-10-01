@@ -289,6 +289,7 @@
   "tools.code.wrapLines": "ຕັດແຖວ",
   "tools.code.searchLanguage": "ຄົ້ນຫາພາສາ…",
   "tools.code.lineNumbers": "ເລກແຖວ",
+  "tools.code.filename": "ຊື່ໄຟລ໌",
   "searchTerms.code": "ໂຄດ",
   "searchTerms.snippet": "ສ່ວນໂຄດ",
   "searchTerms.program": "ໂປຣແກຣມ",

@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Ajustar líneas",
   "tools.code.searchLanguage": "Buscar lenguajes…",
   "tools.code.lineNumbers": "Números de línea",
+  "tools.code.filename": "Nombre de archivo",
   "searchTerms.code": "código",
   "searchTerms.snippet": "fragmento",
   "searchTerms.program": "programa",

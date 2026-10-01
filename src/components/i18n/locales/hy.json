@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Տողադարձ",
   "tools.code.searchLanguage": "Որոնել լեզու…",
   "tools.code.lineNumbers": "Տողերի համարներ",
+  "tools.code.filename": "Ֆայլի անուն",
   "searchTerms.code": "կոդ",
   "searchTerms.snippet": "հատված",
   "searchTerms.program": "ծրագիր",

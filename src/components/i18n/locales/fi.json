@@ -278,6 +278,7 @@
   "tools.code.wrapLines": "Rivitä",
   "tools.code.searchLanguage": "Hae kieliä…",
   "tools.code.lineNumbers": "Rivinumerot",
+  "tools.code.filename": "Tiedostonimi",
   "searchTerms.code": "koodi",
   "searchTerms.snippet": "koodinpätkä",
   "searchTerms.program": "ohjelma",

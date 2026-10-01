@@ -289,6 +289,7 @@
   "tools.code.wrapLines": "Balut baris",
   "tools.code.searchLanguage": "Cari bahasa…",
   "tools.code.lineNumbers": "Nombor baris",
+  "tools.code.filename": "Nama fail",
   "searchTerms.code": "kod",
   "searchTerms.snippet": "coretan kod",
   "searchTerms.program": "atur cara",

@@ -302,4 +302,87 @@ test.describe('Toolbox hover preview', () => {
 
     await page.evaluate(() => document.querySelectorAll('[data-preview-fit-probe]').forEach((el) => el.remove()));
   });
+
+  test('card-like drawings keep room on every side of the paper', async ({ page }) => {
+    const MIN_ROOM = 12;
+
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+
+    const cramped = await page.evaluate((minRoom) => {
+      type Entry = { name?: string; preview?: { render: () => HTMLElement } };
+      const tools = (window as unknown as { defaultBlockTools: Record<string, { class: { toolbox?: Entry | Entry[] } }> }).defaultBlockTools;
+      const names = new Set([ 'audio', 'bookmark', 'callout', 'code', 'columns-2', 'columns-3', 'columns-4', 'columns-5', 'database' ]);
+      const problems: string[] = [];
+
+      Object.values(tools).flatMap(({ class: tool }) => {
+        const toolbox = tool.toolbox ?? [];
+
+        return Array.isArray(toolbox) ? toolbox : [ toolbox ];
+      }).forEach((entry) => {
+        if (entry.preview === undefined) {
+          return;
+        }
+
+        const root = document.createElement('div');
+        const card = document.createElement('div');
+        const paper = document.createElement('div');
+        const drawing = entry.preview.render();
+        const name = drawing.getAttribute('data-blok-preview') ?? '';
+
+        if (!names.has(name)) {
+          return;
+        }
+
+        root.setAttribute('data-blok-interface', 'block-preview');
+        root.style.position = 'static';
+        card.setAttribute('data-blok-preview-card', '');
+        paper.setAttribute('data-blok-preview-paper', '');
+        paper.appendChild(drawing);
+        card.appendChild(paper);
+        root.appendChild(card);
+        document.body.appendChild(root);
+
+        const bounds = paper.getBoundingClientRect();
+        const rects: DOMRect[] = [];
+        const walker = document.createTreeWalker(paper, NodeFilter.SHOW_TEXT);
+
+        for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+          if (node.textContent?.trim() !== '') {
+            const range = document.createRange();
+
+            range.selectNodeContents(node);
+            rects.push(...Array.from(range.getClientRects()));
+          }
+        }
+
+        // Painted boxes count too: a panel or card edge crowds the paper like text does.
+        paper.querySelectorAll('*').forEach((el) => {
+          const style = getComputedStyle(el);
+
+          if (style.backgroundColor !== 'rgba(0, 0, 0, 0)' || style.boxShadow !== 'none' || style.borderTopWidth !== '0px') {
+            rects.push(el.getBoundingClientRect());
+          }
+        });
+
+        const room = Math.min(...rects.filter((rect) => rect.width > 0.5 && rect.height > 0.5).flatMap((rect) => [
+          rect.left - bounds.left,
+          rect.top - bounds.top,
+          bounds.right - rect.right,
+          bounds.bottom - rect.bottom,
+        ]));
+
+        if (room < minRoom - 0.5) {
+          problems.push(`${name}: ${Math.round(room)}px`);
+        }
+
+        root.remove();
+      });
+
+      return problems;
+    }, MIN_ROOM);
+
+    await page.emulateMedia({ reducedMotion: null });
+
+    expect(cramped).toEqual([]);
+  });
 });

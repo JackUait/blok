@@ -38,7 +38,7 @@ export const renderAudioPreview = (): HTMLElement => {
           { 'data-part': 'row' },
           play,
           h('span', { 'data-part': 'time' }, '1:12'),
-          h('span', { 'data-part': 'time' }, '-2:36')
+          h('span', { 'data-part': 'time' }, '−2:36')
         )
       )
     )

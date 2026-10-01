@@ -10032,6 +10032,13 @@ span[data-blok-slash-search] {
   font-weight: 600;
 }
 
+[data-blok-interface='block-preview'] [data-blok-preview='code'] {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-block: var(--blok-preview-space-12);
+}
+
 [data-blok-interface='block-preview'] [data-blok-preview='code'] [data-card] {
   border: 1px solid var(--blok-border-secondary);
   border-radius: var(--blok-radius-block);
@@ -10047,10 +10054,10 @@ span[data-blok-slash-search] {
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='code'] [data-body] {
-  padding: var(--blok-preview-space-4) 0 var(--blok-preview-space-10);
+  padding: var(--blok-preview-space-4) 0 var(--blok-preview-space-8);
   font-family: var(--font-mono);
   font-size: 11px;
-  line-height: 1.75;
+  line-height: 1.65;
   color: var(--blok-text-primary);
 }
 
@@ -10107,7 +10114,7 @@ span[data-blok-slash-search] {
 
 [data-blok-interface='block-preview'] [data-blok-preview='columns-2'] [data-page-title], [data-blok-interface='block-preview'] [data-blok-preview='columns-3'] [data-page-title], [data-blok-interface='block-preview'] [data-blok-preview='columns-4'] [data-page-title], [data-blok-interface='block-preview'] [data-blok-preview='columns-5'] [data-page-title] {
   margin-bottom: var(--blok-preview-space-12);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.01em;
   line-height: 1.3;
@@ -11020,7 +11027,7 @@ span[data-blok-slash-search] {
   display: grid;
   grid-template-columns: 88px 62px 54px;
   align-items: center;
-  height: 22px;
+  height: 20px;
   border-bottom: 1px solid color-mix(in srgb, currentColor 7%, transparent);
   white-space: nowrap;
 }
@@ -11051,7 +11058,7 @@ span[data-blok-slash-search] {
 [data-blok-interface='block-preview'] [data-blok-preview='database'] [data-cell]:not(:first-child) {
   padding-left: var(--blok-preview-space-6);
   border-left: 1px solid color-mix(in srgb, currentColor 7%, transparent);
-  line-height: 21px;
+  line-height: 19px;
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='database'] [data-row] [data-cell='title'] {

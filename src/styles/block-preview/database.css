@@ -103,7 +103,7 @@
   display: grid;
   grid-template-columns: 88px 62px 54px;
   align-items: center;
-  height: 22px;
+  height: 20px;
   border-bottom: 1px solid color-mix(in srgb, currentColor 7%, transparent);
   white-space: nowrap;
 }
@@ -134,7 +134,7 @@
 [data-blok-interface='block-preview'] [data-blok-preview='database'] [data-cell]:not(:first-child) {
   padding-left: var(--blok-preview-space-6);
   border-left: 1px solid color-mix(in srgb, currentColor 7%, transparent);
-  line-height: 21px;
+  line-height: 19px;
 }
 
 [data-blok-interface='block-preview'] [data-blok-preview='database'] [data-row] [data-cell='title'] {

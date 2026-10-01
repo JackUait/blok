@@ -16,7 +16,7 @@ export const renderCalloutPreview = (): HTMLElement =>
         { 'data-text': '' },
         'Type ',
         h('kbd', {}, '/'),
-        ' anywhere to add a block. Tables, toggles, even videos.'
+        ' anywhere to add a block.'
       )
     ),
     h('p', { 'data-after': '' }, 'Now go make something lovely.')

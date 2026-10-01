@@ -1,4 +1,5 @@
 import type { I18n } from '../../../types/api';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconPlus } from '../../components/icons';
 import { createTooltipContent } from '../../components/modules/toolbar/tooltip';
 import { hide as hideTooltip, onHover, show as showTooltip } from '../../components/utils/tooltip';
@@ -693,6 +694,7 @@ export class TableAddControls {
     btn.className = twMerge(HIT_AREA_CLASSES, 'group/add', 'items-start', 'cursor-row-resize');
     btn.setAttribute(ADD_ROW_ATTR, '');
     btn.setAttribute('contenteditable', 'false');
+    btn.setAttribute(DATA_ATTR.mutationFree, 'true');
     this.attachKeyboardAffordance(btn, 'row');
     btn.style.opacity = '0';
     btn.style.pointerEvents = 'none';
@@ -725,6 +727,7 @@ export class TableAddControls {
     btn.className = twMerge(HIT_AREA_CLASSES, 'group/add', 'justify-start', 'cursor-col-resize');
     btn.setAttribute(ADD_COL_ATTR, '');
     btn.setAttribute('contenteditable', 'false');
+    btn.setAttribute(DATA_ATTR.mutationFree, 'true');
     this.attachKeyboardAffordance(btn, 'col');
     btn.style.opacity = '0';
     btn.style.pointerEvents = 'none';

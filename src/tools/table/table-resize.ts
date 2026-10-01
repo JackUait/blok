@@ -291,6 +291,14 @@ export class TableResize {
     return Math.max(0, Math.min(centred, gridWidth - HANDLE_HIT_WIDTH));
   }
 
+  /**
+   * Re-place the handles after a direction flip. Moves them in place: a
+   * rebuild adds and removes DOM in the block, which counts as an edit.
+   */
+  public reposition(): void {
+    this.updateHandlePositions();
+  }
+
   private updateHandlePositions(): void {
     this.handles.forEach((handle, i) => {
       const handleEl: HTMLElement = handle;

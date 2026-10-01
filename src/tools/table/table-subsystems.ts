@@ -245,7 +245,9 @@ export class TableSubsystems {
       }
 
       state.direction = direction;
-      this.refreshResize(gridEl);
+      this.resize?.reposition();
+      this.rowColControls?.positionGrips();
+      this.addControls?.syncRowButtonWidth();
       this.cornerDrag?.syncPosition();
       this.scrollHaze?.update();
       this.cellSelection?.reposition();

@@ -1,4 +1,5 @@
 import type { I18n } from '../../../types/api';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { getElementDirection } from '../../components/utils/direction';
 import { twMerge } from '../../components/utils/tw';
 
@@ -373,6 +374,8 @@ export class TableRowColControls {
     grip.setAttribute(GRIP_ATTR, '');
     grip.setAttribute(type === 'col' ? GRIP_COL_ATTR : GRIP_ROW_ATTR, String(index));
     grip.setAttribute('contenteditable', 'false');
+    // Chrome, not content: moving it (scroll, direction flip) is not an edit.
+    grip.setAttribute(DATA_ATTR.mutationFree, 'true');
     grip.setAttribute('role', 'button');
     grip.setAttribute('tabindex', '0');
     grip.setAttribute('aria-haspopup', 'menu');

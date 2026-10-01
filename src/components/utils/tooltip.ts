@@ -289,7 +289,8 @@ class Tooltip {
      * Refresh on every show so simultaneous RTL and LTR editors cannot leak a
      * stale direction into one another.
      */
-    syncPortalDirection(this.nodes.wrapper, { source: element });
+    // A flip moves the anchor; the bubble goes rather than float at the old spot.
+    syncPortalDirection(this.nodes.wrapper, { source: element, onResync: () => this.hide() });
 
     const resolvedPlacement = this.resolvePlacement(element, showingOptions.placement ?? 'bottom');
 

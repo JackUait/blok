@@ -189,6 +189,7 @@ describe('root page header', () => {
 
     renderPageHeader(host, options);
     host.querySelector<HTMLButtonElement>('button[aria-label="Add icon"]')?.click();
+    await vi.waitFor(() => expect(pages.root().icon).toBeDefined());
 
     const icon = pages.root().icon;
 
@@ -199,6 +200,25 @@ describe('root page header', () => {
     expect(document.body.querySelector('[data-emoji-picker-random]')).not.toBeNull();
     // The open finishes async and still reads matchMedia.
     await vi.waitFor(() => expect(document.body.querySelector('[data-emoji-section-deferred]')).not.toBeNull());
+
+    document.body.replaceChildren();
+    vi.unstubAllGlobals();
+  });
+
+  it('the page icon picker has no Callout section', async () => {
+    const pages = new PageRegistry(seed());
+    const host = document.createElement('header');
+    const i18n: I18n = { t: (key) => key, has: () => false, getEnglishTranslation: (key) => key, getLocale: () => 'en' };
+
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false })));
+    pages.setIcon(null, '😭');
+    document.body.append(host);
+    renderPageHeader(host, { ...headerOptions(pages, null), i18n: vi.fn(() => ({ i18n, locale: 'en' })) });
+    host.querySelector('button')?.click();
+    await vi.waitFor(() => expect(document.body.querySelector('[data-emoji-section-deferred]')).not.toBeNull());
+
+    expect(document.body.querySelector('[data-emoji-section="callout"]')).toBeNull();
+    expect(document.body.querySelector('[data-emoji-section]')?.getAttribute('data-emoji-section')).toBe('people');
 
     document.body.replaceChildren();
     vi.unstubAllGlobals();

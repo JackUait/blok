@@ -2,7 +2,7 @@ import type { I18n, OutputBlockData } from '../../types';
 import type { PageInfo } from '../../types/tools/page';
 import { IconEmojiSmile } from '../components/icons';
 import { EmojiPicker } from '../tools/callout/emoji-picker';
-import { CURATED_CALLOUT_EMOJIS, loadEmojiGrid } from '../components/utils/emoji/emoji-data';
+import { loadEmojiGrid } from '../components/utils/emoji/emoji-data';
 import seedPages from '../../playground-pages.json';
 
 /**
@@ -529,18 +529,27 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
     options.changed();
   };
 
-  iconButton.addEventListener('click', () => {
-    if (currentIcon() === undefined) {
-      setIcon(randomIcon());
-    }
-
+  const openPicker = (): void => {
     const { i18n, locale } = options.i18n();
 
     openIconPicker(iconButton, i18n, locale, (native) => setIcon(native), () => setIcon(undefined));
+  };
+
+  iconButton.addEventListener('click', () => {
+    if (currentIcon() !== undefined) {
+      openPicker();
+
+      return;
+    }
+    void randomIcon().then((icon) => {
+      setIcon(icon);
+      openPicker();
+    }, openPicker);
   });
   drawIcon();
   if (currentIcon() === undefined) {
-    warmRandomIcons();
+    // Loaded now so the click's random pick resolves at once.
+    void loadEmojiGrid().catch(() => undefined);
   }
   iconRow.append(iconButton);
 
@@ -635,19 +644,15 @@ const trashBanner = (trashed: PageRecord & { id: string }, pageId: string, optio
 
 /* ----------------------------------------------------------- icon picker */
 
-// The full set loads async; a click before it lands draws from this short list.
-const randomIconPool: { current: readonly string[] } = { current: CURATED_CALLOUT_EMOJIS };
+const randomIcon = async (): Promise<string> => {
+  const emojis = await loadEmojiGrid();
+  const emoji = emojis[Math.floor(Math.random() * emojis.length)];
 
-const warmRandomIcons = (): void => {
-  void loadEmojiGrid().then((emojis) => {
-    randomIconPool.current = emojis.map((emoji) => emoji.native);
-  }).catch(() => undefined);
-};
+  if (emoji === undefined) {
+    throw new Error('No emojis to pick from');
+  }
 
-const randomIcon = (): string => {
-  const pool = randomIconPool.current;
-
-  return pool[Math.floor(Math.random() * pool.length)] ?? CURATED_CALLOUT_EMOJIS[0];
+  return emoji.native;
 };
 
 const pickerSlot: { current: { instance: EmojiPicker; i18n: I18n; locale: string } | null } = { current: null };
@@ -662,7 +667,7 @@ const openIconPicker = (
   // Each editor has its own i18n; a picker built for a destroyed one is dropped.
   if (pickerSlot.current === null || pickerSlot.current.i18n !== i18n || pickerSlot.current.locale !== locale) {
     disposeIconPicker();
-    pickerSlot.current = { instance: new EmojiPicker({ onSelect, onRemove, i18n, locale }), i18n, locale };
+    pickerSlot.current = { instance: new EmojiPicker({ onSelect, onRemove, i18n, locale, curated: false }), i18n, locale };
   }
 
   const element = pickerSlot.current.instance.getElement();

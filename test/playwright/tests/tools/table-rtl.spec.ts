@@ -15,6 +15,7 @@ import { expect, gotoTestPage, test } from '../helpers/shared-page';
 declare global {
   interface Window {
     blokInstance?: Blok;
+    tableChanges?: string[];
   }
 }
 
@@ -42,7 +43,20 @@ const createBlok = async (page: Page, data: OutputData, direction: Direction): P
     container.style.margin = '0 auto';
     document.body.appendChild(container);
 
-    const blok = new window.Blok({ holder, data: initialData, i18n: { direction: dir } });
+    window.tableChanges = [];
+
+    const blok = new window.Blok({
+      holder,
+      data: initialData,
+      i18n: { direction: dir },
+      onChange: (_api: unknown, event: CustomEvent | CustomEvent[]) => {
+        for (const one of Array.isArray(event) ? event : [event]) {
+          const target = (one.detail as { target?: { name?: string } } | undefined)?.target;
+
+          window.tableChanges?.push(`${one.type}:${target?.name ?? ''}`);
+        }
+      },
+    });
 
     window.blokInstance = blok;
     await blok.isReady;
@@ -105,11 +119,42 @@ const selectedCols = async (page: Page): Promise<number[]> =>
 const inlineEndX = (cellBox: Box, direction: Direction): number =>
   direction === 'rtl' ? cellBox.x : cellBox.x + cellBox.width;
 
+/** Longer than the 400ms onChange batch window: absence needs a fixed wait. */
+const outlastChangeBatch = (page: Page): Promise<void> =>
+  page.evaluate(() => new Promise<void>(resolve => {
+    setTimeout(resolve, 600);
+  }));
+
+/** Waits out the onChange batch window, then reads what it reported. */
+const changesAfterSettle = async (page: Page): Promise<string[]> => {
+  await outlastChangeBatch(page);
+
+  return page.evaluate(() => window.tableChanges ?? []);
+};
+
+const clearChanges = async (page: Page): Promise<void> => {
+  await outlastChangeBatch(page);
+  await page.evaluate(() => {
+    window.tableChanges = [];
+  });
+};
+
+const cellDirections = async (page: Page, row: number, col: number): Promise<{ grid: string; text: string | null }> =>
+  page.evaluate(({ r, c }) => {
+    const grid = document.querySelector('[data-blok-table-scroll] > table');
+    const cellEl = document.querySelector(`[data-blok-table-cell][data-blok-table-cell-row="${r}"][data-blok-table-cell-col="${c}"]`);
+
+    return {
+      grid: grid === null ? '' : getComputedStyle(grid).direction,
+      text: cellEl?.querySelector('[data-blok-element-content]')?.getAttribute('dir') ?? null,
+    };
+  }, { r: row, c: col });
+
 const center = (b: Box): { x: number; y: number } => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
 
 /**
- * Arrows follow the caret block's own text direction, so RTL arrow tests need
- * RTL text in the cells.
+ * The edge check follows the caret text's direction and the neighbour cell
+ * follows the grid's, so the pure cases use text matching the table.
  */
 const cellText = (direction: 'ltr' | 'rtl'): string[][] => direction === 'rtl'
   ? [['أ', 'ب', 'ج'], ['د', 'ه', 'و']]
@@ -428,4 +473,107 @@ test.describe('table in RTL', () => {
       return Math.abs(center(corner).x - grid.x) <= 20;
     }).toBe(true);
   });
+  test('a live direction flip is not an edit', async ({ page }) => {
+    await createBlok(page, tableData([['A', 'B', 'C'], ['D', 'E', 'F']]), 'ltr');
+    await clearChanges(page);
+
+    const unguarded = await page.evaluate(async () => {
+      const root = document.querySelector('[data-blok-tool="table"]');
+      const seen = new Set<string>();
+      const observer = new MutationObserver((records) => {
+        for (const record of records) {
+          const el = record.target instanceof Element ? record.target : record.target.parentElement;
+
+          if (el !== null && el.closest('[data-blok-mutation-free]') === null) {
+            const attrs = Array.from(el.attributes).map(a => a.name).filter(n => n.startsWith('data-blok-table')).join(',');
+
+            seen.add(`${el.tagName}[${attrs}] ${record.type}:${record.attributeName ?? ''}`);
+          }
+        }
+      });
+
+      if (root !== null) {
+        observer.observe(root, { attributes: true, childList: true, subtree: true, characterData: true });
+      }
+
+      await window.blokInstance?.i18n.update({ direction: 'rtl' });
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      observer.disconnect();
+
+      return Array.from(seen);
+    });
+
+    expect(await changesAfterSettle(page), unguarded.join('\n')).toEqual([]);
+  });
+
+  test('ltr: a horizontal scroll that toggles the haze is not an edit', async ({ page }) => {
+    const wide = Array.from({ length: 8 }, (_, i) => `C${i}`);
+
+    await createBlok(page, tableData([wide, wide], Array(8).fill(200)), 'ltr');
+    await expect(page.locator('[data-blok-table-haze="right"]')).toHaveAttribute('data-blok-table-haze-visible', '');
+    await clearChanges(page);
+
+    await page.evaluate(() => {
+      const sc = document.querySelector<HTMLElement>('[data-blok-table-scroll]');
+
+      if (sc) {
+        sc.scrollLeft = sc.scrollWidth;
+      }
+    });
+
+    await expect(page.locator('[data-blok-table-haze="left"]')).toHaveAttribute('data-blok-table-haze-visible', '');
+    expect(await changesAfterSettle(page)).toEqual([]);
+  });
+
+  /**
+   * Mixed direction: the arrow must reach the cell that is visually on its
+   * side, whatever direction the cell's text reads in.
+   */
+  const mixed = [
+    { table: 'rtl', text: 'ltr', content: [['A', 'B', 'C'], ['D', 'E', 'F']] },
+    { table: 'ltr', text: 'rtl', content: [['أ', 'ب', 'ج'], ['د', 'ه', 'و']] },
+  ] as const;
+
+  for (const { table, text, content } of mixed) {
+    test(`${table} table with ${text} text: arrows at a cell edge move to the visually adjacent cell`, async ({ page }) => {
+      await createBlok(page, tableData(content.map(row => [...row])), table);
+
+      expect(await cellDirections(page, 0, 1)).toEqual({ grid: table, text });
+
+      const middle = center(await box(page, cell(0, 1)));
+      // The text's end is on the right for LTR text and on the left for RTL.
+      const towardEnd = text === 'ltr' ? 'ArrowRight' : 'ArrowLeft';
+      const towardStart = text === 'ltr' ? 'ArrowLeft' : 'ArrowRight';
+      const sideOf = (key: string): 'left' | 'right' => key === 'ArrowRight' ? 'right' : 'left';
+
+      for (const [edge, key] of [['End', towardEnd], ['Home', towardStart]] as const) {
+        await page.locator(`${cell(0, 1)} [contenteditable="true"]`).first().click();
+        await page.keyboard.press(edge);
+        await page.keyboard.press(key);
+
+        await expect.poll(() => caretCol(page)).not.toBe('1');
+
+        const landed = center(await box(page, cell(0, Number(await caretCol(page)))));
+
+        expect(landed.x > middle.x ? 'right' : 'left').toBe(sideOf(key));
+      }
+    });
+
+    test(`${table} table with ${text} text: Shift+arrow at a cell edge extends toward the visually adjacent cell`, async ({ page }) => {
+      await createBlok(page, tableData(content.map(row => [...row])), table);
+
+      const towardEnd = text === 'ltr' ? 'ArrowRight' : 'ArrowLeft';
+      // In both cases the visually adjacent cell on the text's end side is column 0.
+      await page.locator(`${cell(0, 1)} [contenteditable="true"]`).first().click();
+      await page.keyboard.press('End');
+      await page.keyboard.press(`Shift+${towardEnd}`);
+
+      await expect.poll(() => selectedCols(page)).toEqual([0, 1]);
+
+      const zero = center(await box(page, cell(0, 0)));
+      const one = center(await box(page, cell(0, 1)));
+
+      expect(zero.x > one.x ? 'ArrowRight' : 'ArrowLeft').toBe(towardEnd);
+    });
+  }
 });

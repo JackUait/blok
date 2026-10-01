@@ -250,24 +250,30 @@ export class TableCellBlocks {
   }
 
   /**
-   * Left/Right in the caret text's reading order: in RTL ArrowLeft moves forward.
+   * Left/Right at the cell's text edge. The edge follows the caret text's
+   * direction; the neighbour follows the grid's, so the caret always lands on
+   * the cell that is visually on the arrow's side (RTL table, English text).
    */
   private handleInlineArrow(event: KeyboardEvent, position: CellPosition, caretInput: HTMLElement | null): void {
     const source = caretInput ?? (event.target instanceof Element ? event.target : null);
+    const textStep = logicalArrow(event.key, getElementDirection(source));
+    const gridStep = logicalArrow(event.key, getElementDirection(this.gridElement));
 
-    if (logicalArrow(event.key, getElementDirection(source)) === 'forward') {
-      if (caretInput !== null && !(isCaretAtEndOfInput(caretInput) && this.isCaretInLastCellBlock(caretInput))) {
+    if (caretInput !== null) {
+      const atEdge = textStep === 'forward'
+        ? isCaretAtEndOfInput(caretInput) && this.isCaretInLastCellBlock(caretInput)
+        : isCaretAtStartOfInput(caretInput) && this.isCaretInFirstCellBlock(caretInput);
+
+      if (!atEdge) {
         return;
       }
+    }
 
+    if (gridStep === 'forward') {
       const next = this.findAdjacentLogicalCell(position, 1);
 
       this.commitArrowNavigation(event, () => next ? this.navigateToCell(next) : this.exitTableForward());
 
-      return;
-    }
-
-    if (caretInput !== null && !(isCaretAtStartOfInput(caretInput) && this.isCaretInFirstCellBlock(caretInput))) {
       return;
     }
 

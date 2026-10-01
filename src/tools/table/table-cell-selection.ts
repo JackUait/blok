@@ -95,15 +95,15 @@ const VERTICAL_ARROWS: Record<string, ArrowDirection> = {
 /**
  * Resolve the plain (unmodified except Shift) arrow direction of a keydown.
  * Cmd/Ctrl/Alt+Shift+Arrow are native or block-movement gestures and are left alone.
+ * 'left'/'right' are column order, so they follow the grid: in an RTL grid
+ * ArrowLeft steps to the next column.
  */
-const resolveArrowDirection = (e: KeyboardEvent, fallback: Element): ArrowDirection | null => {
+const resolveArrowDirection = (e: KeyboardEvent, grid: Element): ArrowDirection | null => {
   if (!e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) {
     return null;
   }
 
-  // 'left'/'right' are column order: in RTL text ArrowLeft reads forward.
-  const source = e.target instanceof Element ? e.target : fallback;
-  const inline = logicalArrow(e.key, getElementDirection(source));
+  const inline = logicalArrow(e.key, getElementDirection(grid));
 
   if (inline !== null) {
     return inline === 'forward' ? 'right' : 'left';
@@ -759,7 +759,7 @@ export class TableCellSelection {
     const arrow = resolveArrowDirection(e, this.grid);
 
     if (arrow !== null) {
-      if (this.tryExtendKeyboardSelection(arrow)) {
+      if (this.tryExtendKeyboardSelection(arrow, e.key)) {
         e.preventDefault();
         e.stopPropagation();
       }
@@ -799,7 +799,7 @@ export class TableCellSelection {
    * Create or extend the keyboard rectangle in the given direction.
    * Returns true when the gesture was claimed (caller prevents/stops the event).
    */
-  private tryExtendKeyboardSelection(direction: ArrowDirection): boolean {
+  private tryExtendKeyboardSelection(direction: ArrowDirection, key: string): boolean {
     /**
      * A block selection inside the grid (e.g. Cmd+A on a cell line) owns
      * Shift+Arrow — it extends that intra-cell line selection. A whole-cell
@@ -809,7 +809,7 @@ export class TableCellSelection {
       return false;
     }
 
-    const origin = this.resolveKeyboardOrigin(direction);
+    const origin = this.resolveKeyboardOrigin(direction, key);
 
     if (origin === null) {
       return false;
@@ -853,7 +853,7 @@ export class TableCellSelection {
    * - an existing pointer rectangle is adopted (corner-to-corner)
    * - otherwise the caret's cell, but only at the cell's text boundary
    */
-  private resolveKeyboardOrigin(direction: ArrowDirection): { anchor: CellCoord; extent: CellCoord } | null {
+  private resolveKeyboardOrigin(direction: ArrowDirection, key: string): { anchor: CellCoord; extent: CellCoord } | null {
     if (this.hasSelection && this.keyboardAnchor !== null && this.keyboardExtent !== null) {
       return { anchor: this.keyboardAnchor, extent: this.keyboardExtent };
     }
@@ -876,7 +876,7 @@ export class TableCellSelection {
 
     const caret = this.resolveCaretCell();
 
-    if (caret === null || !this.isCaretAtCellBoundary(caret.input, direction)) {
+    if (caret === null || !this.isCaretAtCellBoundary(caret.input, direction, key)) {
       return null;
     }
 
@@ -910,10 +910,12 @@ export class TableCellSelection {
    * True when the caret sits at the far edge of the whole CELL (not merely of
    * its own block): the last block's end when moving right/down, the first
    * block's start when moving left/up. Anywhere else, Shift+Arrow stays a normal
-   * text/line gesture inside the cell.
+   * text/line gesture inside the cell. Left/Right read the edge from the
+   * text's own direction, not the grid's.
    */
-  private isCaretAtCellBoundary(input: HTMLElement, direction: ArrowDirection): boolean {
-    const towardsEnd = direction === 'right' || direction === 'down';
+  private isCaretAtCellBoundary(input: HTMLElement, direction: ArrowDirection, key: string): boolean {
+    const inline = logicalArrow(key, getElementDirection(input));
+    const towardsEnd = inline === null ? direction === 'down' : inline === 'forward';
     const container = input.closest<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
     const blockHolder = input.closest<HTMLElement>('[data-blok-id]');
 

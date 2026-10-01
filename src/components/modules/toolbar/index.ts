@@ -531,9 +531,13 @@ export class Toolbar extends Module<ToolbarNodes> {
    * the hovered block's holder; a nested child's holder sits in its parent's
    * content, which carries the parent's own `dir`. Without this the dock side,
    * the settings menu side and the drag gutter would follow that text.
+   * Reads the editor's `dir` attribute, not computed style: the toolbar may be
+   * drawn while the editor is still detached, where computed direction is empty.
    */
   public syncDirection(): void {
-    this.nodes.wrapper?.setAttribute('dir', getElementDirection(this.Blok.UI.nodes.wrapper));
+    const direction = this.Blok.UI.nodes.wrapper.getAttribute('dir') === 'rtl' ? 'rtl' : 'ltr';
+
+    this.nodes.wrapper?.setAttribute('dir', direction);
   }
 
   /**

@@ -200,3 +200,48 @@ test.describe('a nested child\'s toolbar follows the editor, not its parent bloc
     expect(actions.left).toBeGreaterThanOrEqual(content.right - 1);
   });
 });
+
+test('RTL editor booted detached: the toolbar still docks right once attached', async ({ page }) => {
+  await page.evaluate(async ({ holder, text }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
+    }
+    document.getElementById(holder)?.remove();
+
+    const container = document.createElement('div');
+
+    container.id = holder;
+    container.style.width = '720px';
+    container.style.margin = '0 auto';
+
+    const blok = new window.Blok({
+      holder: container,
+      data: { blocks: [{ id: 'p1', type: 'paragraph', data: { text } }] },
+      i18n: { direction: 'rtl' },
+    });
+
+    window.blokInstance = blok;
+    await blok.isReady;
+    // The toolbar is drawn on idle; let that happen while still detached.
+    await new Promise<void>((resolve) => {
+      const check = (): void => {
+        if (container.querySelector('[data-blok-toolbar]')) {
+          resolve();
+        } else {
+          window.requestIdleCallback(check);
+        }
+      };
+
+      check();
+    });
+    document.body.appendChild(container);
+  }, { holder: HOLDER_ID, text: ARABIC });
+
+  await hoverBlock(page, 'p1', `[data-blok-id="p1"] [data-blok-tool="paragraph"]`);
+
+  const content = await box(page, blockContent('p1'));
+  const actions = await box(page, ACTIONS);
+
+  expect(actions.left).toBeGreaterThanOrEqual(content.right - 1);
+});

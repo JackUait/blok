@@ -426,6 +426,20 @@ describe('Toolbar — public surface', () => {
       expect(dockUnderBlockDir('rtl', 'ltr')).toStrictEqual({ dir: 'rtl', physicallyRight: true });
     });
 
+    // The toolbar is drawn on idle, possibly before the host attaches the
+    // editor; a detached element has no computed direction.
+    it('reads the editor dir even while the editor is detached', () => {
+      const h = createHarness();
+
+      h.editorWrapper.remove();
+      h.editorWrapper.setAttribute('dir', 'rtl');
+      vi.spyOn(window, 'getComputedStyle').mockReturnValue({ direction: '' } as CSSStyleDeclaration);
+
+      h.toolbar.syncDirection();
+
+      expect(h.wrapper.getAttribute('dir')).toBe('rtl');
+    });
+
     it('does nothing before the toolbar is drawn', () => {
       const h = createHarness({ omitWrapper: true });
 

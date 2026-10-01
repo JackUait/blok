@@ -11,8 +11,8 @@ const line = (text: string): { bullet: boolean; text: string } => ({ bullet: fal
 
 const HEADINGS: Record<number, HeadingSample> = {
   1: { title: 'How?', body: [ line('Start with the question.') ] },
-  2: { title: 'Our Values', body: [ bullet('Ship small, learn fast'), bullet('Leave it better than you found it') ] },
-  3: { title: 'Tuesday standup', body: [ line('Design review moved to 3pm. Bring the prototype, not the slides.') ] },
+  2: { title: 'Our Values', body: [ bullet('Ship small, learn fast'), bullet('Leave it better') ] },
+  3: { title: 'Tuesday standup', body: [ line('Design review moved to 3pm. Bring the prototype.') ] },
   4: { title: 'Open questions', body: [ bullet('Who owns onboarding?'), bullet('Dark mode on day one?') ] },
   5: { title: 'Ingredients', body: [ bullet('2 cups flour'), bullet('1 tsp sea salt'), bullet('A little patience') ] },
   6: { title: 'Footnotes', body: [ line('¹ March survey, 212 replies.'), line('² Rounded to whole percent.') ] },
@@ -20,9 +20,9 @@ const HEADINGS: Record<number, HeadingSample> = {
 
 const TOGGLES: Record<number, HeadingSample> = {
   1: { title: 'Roadmap', body: [ bullet('Q3 — offline mode'), bullet('Q4 — shared templates'), bullet('2027 — a surprise') ] },
-  2: { title: 'Meeting notes', body: [ bullet('Ship on Friday'), bullet('Priya owns the launch post'), bullet('Cake, obviously') ] },
+  2: { title: 'Meeting notes', body: [ bullet('Ship on Friday'), bullet('Priya writes the post'), bullet('Cake, obviously') ] },
   3: { title: 'Spoilers ahead', body: [ line('The butler didn’t do it.'), line('The cat did.') ] },
-  4: { title: 'What’s in the box?', body: [ bullet('One keyboard, two cables'), bullet('A very small screwdriver') ] },
+  4: { title: 'What’s in the box?', body: [ bullet('A keyboard, two cables'), bullet('A very small screwdriver') ] },
   5: { title: 'Changelog', body: [ bullet('Search is twice as fast'), bullet('Fewer clicks to share'), bullet('Dark mode, finally') ] },
   6: { title: 'Details', body: [ line('Build 4.2.1 · 12 MB'), line('Updated yesterday by Sam') ] },
 };

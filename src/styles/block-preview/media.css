@@ -343,6 +343,7 @@
 [data-blok-interface='block-preview'] [data-blok-preview='file'] {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: var(--blok-space-2);
 }
 
@@ -417,6 +418,7 @@
 [data-blok-interface='block-preview'] [data-blok-preview='bookmark'] {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: var(--blok-space-2);
 }
 

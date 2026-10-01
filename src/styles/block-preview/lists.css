@@ -266,7 +266,9 @@
 /* ─── Divider ───────────────────────────────────────────── */
 
 [data-blok-interface='block-preview'] [data-blok-preview='divider'] {
-  padding-top: var(--blok-preview-space-18);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   font-size: 13px;
 }
 

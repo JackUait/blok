@@ -303,15 +303,20 @@ test.describe('Toolbox hover preview', () => {
     await page.evaluate(() => document.querySelectorAll('[data-preview-fit-probe]').forEach((el) => el.remove()));
   });
 
-  test('card-like drawings keep room on every side of the paper', async ({ page }) => {
+  test('drawings keep room on every side of the paper and sit centered', async ({ page }) => {
     const MIN_ROOM = 12;
+    const MAX_TILT = 8;
 
     await page.emulateMedia({ reducedMotion: 'reduce' });
 
-    const cramped = await page.evaluate((minRoom) => {
+    const cramped = await page.evaluate(({ minRoom, maxTilt }) => {
       type Entry = { name?: string; preview?: { render: () => HTMLElement } };
       const tools = (window as unknown as { defaultBlockTools: Record<string, { class: { toolbox?: Entry | Entry[] } }> }).defaultBlockTools;
-      const names = new Set([ 'audio', 'bookmark', 'callout', 'code', 'columns-2', 'columns-3', 'columns-4', 'columns-5', 'database' ]);
+      const names = new Set([
+        'audio', 'bookmark', 'callout', 'code', 'columns-2', 'columns-3', 'columns-4', 'columns-5', 'database',
+        'board', 'divider', 'embed', 'file', 'header-1', 'header-2', 'header-3', 'header-4', 'header-5', 'header-6',
+        'toggle-header-1', 'toggle-header-2', 'toggle-header-3', 'toggle-header-4', 'toggle-header-5', 'toggle-header-6',
+      ]);
       const problems: string[] = [];
 
       Object.values(tools).flatMap(({ class: tool }) => {
@@ -364,22 +369,34 @@ test.describe('Toolbox hover preview', () => {
           }
         });
 
-        const room = Math.min(...rects.filter((rect) => rect.width > 0.5 && rect.height > 0.5).flatMap((rect) => [
-          rect.left - bounds.left,
-          rect.top - bounds.top,
-          bounds.right - rect.right,
-          bounds.bottom - rect.bottom,
-        ]));
+        const shown = rects.filter((rect) => rect.width > 0.5 && rect.height > 0.5);
+        const left = Math.min(...shown.map((rect) => rect.left - bounds.left));
+        const top = Math.min(...shown.map((rect) => rect.top - bounds.top));
+        const right = Math.min(...shown.map((rect) => bounds.right - rect.right));
+        const bottom = Math.min(...shown.map((rect) => bounds.bottom - rect.bottom));
+        const room = Math.min(left, top, right, bottom);
 
         if (room < minRoom - 0.5) {
-          problems.push(`${name}: ${Math.round(room)}px`);
+          problems.push(`${name}: ${Math.round(room)}px of room`);
+        }
+
+        if (Math.abs(top - bottom) > maxTilt) {
+          problems.push(`${name}: ${Math.round(top)}px above, ${Math.round(bottom)}px below`);
+        }
+
+        // Headings start where their body starts, as they do in the editor.
+        const heading = paper.querySelector('[data-part="title"]');
+        const body = paper.querySelector('[data-part="line"], [data-part="item"]');
+
+        if (heading !== null && body !== null && Math.abs(heading.getBoundingClientRect().left - body.getBoundingClientRect().left) > 1) {
+          problems.push(`${name}: heading is not start-aligned`);
         }
 
         root.remove();
       });
 
       return problems;
-    }, MIN_ROOM);
+    }, { minRoom: MIN_ROOM, maxTilt: MAX_TILT });
 
     await page.emulateMedia({ reducedMotion: null });
 

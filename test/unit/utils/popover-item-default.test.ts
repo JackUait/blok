@@ -74,7 +74,7 @@ describe('PopoverItemDefault', () => {
     const secondary = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-secondary-title"]');
 
     expect(icon?.innerHTML).toBe(params.icon);
-    expect(title?.textContent).toBe(params.title);
+    expect(title?.innerHTML).toBe(params.title);
     expect(secondary?.textContent).toBe(secondaryLabel);
   });
 
@@ -295,12 +295,14 @@ describe('PopoverItemDefault', () => {
     expect(parts.filter((node) => physical.test(node.className)).map((node) => node.className)).toStrictEqual([]);
   });
 
+  // CSS isolation, not a wrapper: the title stays a plain text node, so
+  // lookups by text land on the title element itself.
   it('isolates a string title so a Latin name keeps its order inside an RTL menu', () => {
     const { element } = createItem({ title: 'C++' });
     const title = element.querySelector(`[${DATA_ATTR.popoverItemTitle}]`);
 
-    expect(title?.firstElementChild?.tagName).toBe('BDI');
-    expect(title?.textContent).toBe('C++');
+    expect(title?.innerHTML).toBe('C++');
+    expect(title?.classList.contains('[unicode-bidi:plaintext]')).toBe(true);
   });
 
   it('exposes toggle, title and disabled getters', () => {

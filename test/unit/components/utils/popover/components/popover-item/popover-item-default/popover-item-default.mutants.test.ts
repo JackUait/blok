@@ -213,11 +213,14 @@ describe('PopoverItemDefault — title, icon and label elements', () => {
     expect(titleEl.classList.contains('grow')).toBe(false);
   });
 
-  it('switches the title class when a secondary label shares the row', () => {
+  // A stretched title would let plaintext bidi push Latin text to the far
+  // side of an RTL row, so the title stays as wide as its text.
+  it('keeps the title as wide as its text when a secondary label shares the row', () => {
     const item = makeItem({ title: 'Delete', secondaryLabel: '⌘ + D', onActivate: () => {} });
     const root = getElement(item);
 
-    expect(el(root, 'popover-item-title').classList.contains('grow')).toBe(true);
+    expect(el(root, 'popover-item-title').classList.contains('grow')).toBe(false);
+    expect(el(root, 'popover-item-title').classList.contains('me-auto')).toBe(true);
   });
 
   it('appends a live title host element with its node identity preserved', () => {

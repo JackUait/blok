@@ -299,9 +299,9 @@ export class PopoverItemDefault extends PopoverItem {
     if (title !== undefined || titleHost !== undefined) {
       const titleEl = document.createElement('div');
 
-      titleEl.className = params.secondaryLabel
-        ? 'grow whitespace-nowrap text-[13px] font-medium leading-5'
-        : 'me-auto whitespace-nowrap text-[13px] font-medium leading-5';
+      // plaintext: the title takes its direction from its text, so "C++" keeps
+      // its order in an RTL menu. Only safe while the box is as wide as the text.
+      titleEl.className = 'me-auto whitespace-nowrap text-[13px] font-medium leading-5 [unicode-bidi:plaintext]';
       titleEl.setAttribute(DATA_ATTR.popoverItemTitle, '');
       titleEl.setAttribute('data-blok-testid', 'popover-item-title');
       PopoverItemDefault.setTitleContent(titleEl, titleHost ?? title ?? '');
@@ -426,18 +426,7 @@ export class PopoverItemDefault extends PopoverItem {
    * @param title - title text or live host element
    */
   private static setTitleContent(container: HTMLElement, title: string | HTMLElement): void {
-    if (title instanceof HTMLElement) {
-      container.replaceChildren(title);
-
-      return;
-    }
-
-    // `<bdi>` takes its direction from the text, so a Latin name such as
-    // "C++" keeps its order inside an RTL menu while the row stays start-aligned.
-    const isolate = document.createElement('bdi');
-
-    isolate.textContent = title;
-    container.replaceChildren(isolate);
+    container.replaceChildren(title instanceof HTMLElement ? title : document.createTextNode(title));
   }
 
   /**

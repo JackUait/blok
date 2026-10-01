@@ -352,10 +352,11 @@
 /**
  * Content alignment
  * Applies horizontal alignment to block content based on the editor's contentAlign setting.
+ * 'left' and 'right' mean the inline start and end, so an RTL editor mirrors.
  * Left alignment overrides the mx-auto Tailwind class on [data-blok-element-content].
  */
 [data-blok-content-align="left"] [data-blok-element-content] {
-  margin-left: 0;
+  margin-inline-start: 0;
 }
 
 [data-blok-content-align="center"] [data-blok-element-content] {
@@ -364,10 +365,10 @@
 }
 
 [data-blok-content-align="right"] [data-blok-element-content] {
-  margin-left: auto;
-  /* The base class is mx-auto — without zeroing margin-right the rule
+  margin-inline-start: auto;
+  /* The base class is mx-auto — without zeroing the end margin the rule
      collapses into centering. */
-  margin-right: 0;
+  margin-inline-end: 0;
 }
 
 /**

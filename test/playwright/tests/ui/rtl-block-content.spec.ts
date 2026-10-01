@@ -216,4 +216,20 @@ test.describe('RTL block content mirrors LTR', () => {
     await createBlok(page, blocks, 'rtl');
     expect(await read()).toEqual({ direction: 'ltr', gutterLeftOfCode: true });
   });
+  for (const contentAlign of [ 'left', 'right' ] as const) {
+    test(`contentAlign '${contentAlign}' means the inline ${contentAlign === 'left' ? 'start' : 'end'}`, async ({ page }) => {
+      const blocks: OutputData['blocks'] = [ { id: 'p1', type: 'paragraph', data: { text: 'Aligned' } } ];
+      const probes = { column: '[data-blok-id="p1"] [data-blok-element-content]' };
+
+      await createBlok(page, blocks, 'ltr', { contentAlign });
+      const ltr = await measureLogical(page, probes);
+
+      await createBlok(page, blocks, 'rtl', { contentAlign });
+      const rtl = await measureLogical(page, probes);
+
+      // The column is narrower than the holder, so alignment is observable.
+      expect(ltr.column[0]).not.toBe(ltr.column[1]);
+      expect(rtl.column).toEqual(ltr.column);
+    });
+  }
 });

@@ -1154,7 +1154,9 @@ export interface BlokMountOptions {
 
     /**
      * Global content alignment within the editor.
-     * Controls whether block content is left-aligned, centered, or right-aligned.
+     * Controls whether block content sits at the start, center or end of the line.
+     * 'left' and 'right' follow the reading direction: in an RTL editor 'left'
+     * puts the column on the right (the inline start).
      * @default 'left'
      */
     contentAlign?: 'left' | 'center' | 'right';

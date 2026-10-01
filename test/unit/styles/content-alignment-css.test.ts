@@ -28,8 +28,8 @@ const ruleBody = (align: string): string => {
 };
 
 describe('content alignment CSS', () => {
-  it('left pins the content to the left edge', () => {
-    expect(ruleBody('left')).toMatch(/margin-left:\s*0/);
+  it('left pins the content to the inline-start edge', () => {
+    expect(ruleBody('left')).toMatch(/margin-inline-start:\s*0/);
   });
 
   it('center sets both horizontal margins to auto', () => {
@@ -38,9 +38,9 @@ describe('content alignment CSS', () => {
     expect(body).toMatch(/margin-right:\s*auto/);
   });
 
-  it('right zeroes margin-right so it does not collapse into centering', () => {
+  it('right zeroes the inline-end margin so it does not collapse into centering', () => {
     const body = ruleBody('right');
-    expect(body).toMatch(/margin-left:\s*auto/);
-    expect(body).toMatch(/margin-right:\s*0/);
+    expect(body).toMatch(/margin-inline-start:\s*auto/);
+    expect(body).toMatch(/margin-inline-end:\s*0/);
   });
 });

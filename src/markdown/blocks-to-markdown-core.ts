@@ -16,6 +16,7 @@
 import type { BlockToolData } from '../../types';
 import { orderByContent } from '../shared/content-order';
 import { claimedCellTexts, leadingCellText, repairedTableRows } from '../shared/table-grid';
+import { isPagePointer } from '../shared/page-pointer';
 
 export interface SerializableBlock {
   /**
@@ -861,7 +862,10 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
     ? LIST_INDENT.repeat(Math.max(Number(block.indent ?? 0), 0))
     : '';
 
-  switch (block.tool) {
+  // A consumer's own `page` tool is not Blok's pointer, so it takes the default branch.
+  const branch = block.tool === 'page' && !isPagePointer(block.tool, data) ? '' : block.tool;
+
+  switch (branch) {
     case 'header': {
       const level = Math.min(Math.max(Number(data.level) || 1, 1), 6);
 

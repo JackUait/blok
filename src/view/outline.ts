@@ -13,6 +13,7 @@ import type { DocumentModel, ViewBlock } from './document-model';
 import { htmlTextContent } from './html-text';
 
 import type { LooseOutputData, OutputData } from '../../types';
+import { isPagePointer } from '../shared/page-pointer';
 
 /**
  * One entry in a document outline.
@@ -86,7 +87,7 @@ export const outlineFromOutputData = (
       collectHeader(block);
 
       /** A page's body lives in another document; children here are malformed. */
-      if (block.type !== 'page') {
+      if (!isPagePointer(block.type, block.data)) {
         model.childrenOf(block.id).forEach(visit);
       }
     } finally {

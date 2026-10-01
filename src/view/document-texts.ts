@@ -15,6 +15,7 @@
  */
 import type { OutputData } from '../../types';
 import { repairedTableRows, sourceCellsInDisplayOrder, tableRows } from './table-grid';
+import { isPagePointer } from '../shared/page-pointer';
 
 /** Options shared by extraction and injection — they must match, or the counts will not. */
 export interface DocumentTextsOptions {
@@ -257,7 +258,7 @@ const collectSlots = (blocks: unknown[], options: DocumentTextsOptions): TextSlo
       walkTable(data);
     }
 
-    if (entry.type === 'page' && isRecord(data.cache)) {
+    if (isPagePointer(entry.type, data) && isRecord(data.cache)) {
       pushSlot(data.cache, 'title');
     }
 

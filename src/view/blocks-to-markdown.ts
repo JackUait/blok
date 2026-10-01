@@ -17,6 +17,7 @@ import type { ViewBlock } from './document-model';
 import { needsTokenizing, parseInlineFragment } from './html-text';
 
 import type { LooseOutputData, OutputData } from '../../types';
+import { isPagePointer } from '../shared/page-pointer';
 
 export type { MarkdownDegradation } from '../markdown/blocks-to-markdown-core';
 
@@ -167,7 +168,7 @@ const flattenDocument = (data: OutputData | LooseOutputData | null | undefined):
       seen.add(block.id);
     }
 
-    const isPage = block.type === 'page';
+    const isPage = isPagePointer(block.type, block.data);
     const unresolvedChildIds = isPage ? [] : model.unresolvedContentOf(block.id);
 
     out.push({ ...(block.id === undefined ? {} : { id: block.id }),

@@ -710,12 +710,12 @@ describe('blocksToHtml', () => {
       expect(html).toBe(`<div><span>${ICON}<span>T</span></span></div>`);
     });
 
-    it('does not call pageHref when pageId is missing', () => {
+    it('treats a page block with no pageId as an unknown tool', () => {
       const pageHref = vi.fn(() => '/x');
       const html = blocksToHtml(doc([page({ cache: { title: 'T' } })]), { pageHref });
 
       expect(pageHref).not.toHaveBeenCalled();
-      expect(html).toBe(`<div><span>${ICON}<span>T</span></span></div>`);
+      expect(html).toBe('');
     });
 
     it('routes the href through transformUrl with blockType "page"', () => {

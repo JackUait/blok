@@ -23,6 +23,7 @@ import type { ViewInlineRenderer } from './inline-renderers';
 import { escapeHtml, sanitizeHtmlFragment } from './sanitize';
 
 import type { LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData, SanitizerConfig } from '../../types';
+import { isPagePointer } from '../shared/page-pointer';
 
 /**
  * Services handed to a custom block renderer so it composes safely with the
@@ -431,7 +432,9 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
       return custom(block.data, ctxFor(block));
     }
 
-    const emitter = builtinEmitters[block.type];
+    const emitter = block.type === 'page' && !isPagePointer(block.type, block.data)
+      ? undefined
+      : builtinEmitters[block.type];
 
     if (emitter !== undefined) {
       const bare = BARE_CONTAINER_TOOLS.has(block.type);

@@ -15,6 +15,7 @@ import { htmlTextContent } from './html-text';
 import { claimedCellTexts, isSyntheticCell, leadingCellText, repairedTableRows } from './table-grid';
 
 import type { LooseOutputData, OutputData } from '../../types';
+import { isPagePointer } from '../shared/page-pointer';
 
 /**
  * Narrow an unknown value to a plain record.
@@ -221,7 +222,7 @@ export const blocksToPlainTextWithReport = (
         return mediaText(block.data, ['title', 'url'], ['title', 'description', 'url']);
       /** The title is plain text; an untitled page reads as nothing, not as a placeholder. */
       case 'page':
-        return isRecord(block.data.cache) ? firstString(block.data.cache, ['title']) : '';
+        return isPagePointer(block.type, block.data) && isRecord(block.data.cache) ? firstString(block.data.cache, ['title']) : '';
       default:
         /** divider, spacer, columns, database, unknown tools… carry no own text. */
         return '';
@@ -245,7 +246,7 @@ export const blocksToPlainTextWithReport = (
     try {
       noteUnreadable(block);
 
-      const children = block.type === 'page' ? [] : model.childrenOf(block.id);
+      const children = isPagePointer(block.type, block.data) ? [] : model.childrenOf(block.id);
       const parts = [ownText(block), ...children.map(deepText)];
 
       return parts.filter((part) => part !== '').join('\n');
@@ -373,7 +374,7 @@ export const blocksToPlainTextWithReport = (
         : undefined;
 
       /** A page's body lives in another document; children here are malformed and stay unread. */
-      if (block.type === 'page' && renderers[block.type] === undefined) {
+      if (isPagePointer(block.type, block.data) && renderers[block.type] === undefined) {
         return;
       }
 

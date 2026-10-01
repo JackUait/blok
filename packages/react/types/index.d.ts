@@ -1243,6 +1243,8 @@ export interface BlokViewProps extends Omit<React.HTMLAttributes<HTMLDivElement>
    * semantic markup.
    */
   classes?: BlocksToHtmlOptions['classes'];
+  /** Document direction: set as `dir` on the wrapper, and each block follows its own text. */
+  direction?: BlocksToHtmlOptions['direction'];
 }
 
 /**

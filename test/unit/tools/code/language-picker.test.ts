@@ -13,7 +13,7 @@ import { LANGUAGES } from '../../../../src/tools/code/constants';
 
 const NAMES: Record<string, string> = { 'plain text': 'Plain text' };
 const nameOf = (id: string): string => NAMES[id] ?? LANGUAGES.find((l) => l.id === id)?.name ?? id;
-const t = (key: string): string => ({ 'tools.code.suggested': 'Suggested', 'tools.code.allLanguages': 'All languages' }[key] ?? key);
+const t = (key: string): string => ({ 'tools.code.suggested': 'Suggested' }[key] ?? key);
 
 const build = (overrides: Partial<Parameters<typeof buildLanguagePickerItems>[0]> = {}): PopoverItemParams[] =>
   buildLanguagePickerItems({
@@ -32,9 +32,9 @@ const isDefault = (item: PopoverItemParams): item is PopoverItemDefaultParams =>
 
 const namesIn = (items: PopoverItemParams[]): string[] => items.filter(isDefault).map((item) => item.name ?? '');
 
-/** Text of each section header, in order. */
+/** Each non-option row, in order: a header's text, or '—' for a divider. */
 const headers = (items: PopoverItemParams[]): string[] =>
-  items.flatMap((item) => (item.type === PopoverItemType.Html ? [item.element.textContent ?? ''] : []));
+  items.flatMap((item) => (item.type === PopoverItemType.Html ? [item.element.textContent || '—'] : []));
 
 const channel = (hex: string, at: number): number => {
   const c = parseInt(hex.slice(at, at + 2), 16) / 255;
@@ -174,10 +174,10 @@ describe('recent languages', () => {
 });
 
 describe('buildLanguagePickerItems', () => {
-  it('lists every language once under "All languages" when there is nothing to suggest', () => {
+  it('lists every language once, with no header, when there is nothing to suggest', () => {
     const items = build();
 
-    expect(headers(items)).toStrictEqual(['All languages']);
+    expect(headers(items)).toStrictEqual([]);
     expect(namesIn(items)).toStrictEqual(LANGUAGES.map((lang) => lang.id));
   });
 
@@ -185,7 +185,8 @@ describe('buildLanguagePickerItems', () => {
     const items = build({ filename: 'app.py', detectedId: 'rust', recent: ['go', 'python'] });
     const names = namesIn(items);
 
-    expect(headers(items)).toStrictEqual(['Suggested', 'All languages']);
+    // A divider, not an "All languages" label, ends the suggestions.
+    expect(headers(items)).toStrictEqual(['Suggested', '—']);
     expect(names.slice(0, 3)).toStrictEqual(['python', 'rust', 'go']);
     expect(names.filter((name) => name === 'python')).toHaveLength(1);
     expect(names).toHaveLength(LANGUAGES.length);
@@ -200,7 +201,7 @@ describe('buildLanguagePickerItems', () => {
   it('does not suggest the language that is already selected', () => {
     const items = build({ selectedId: 'go', recent: ['go'] });
 
-    expect(headers(items)).toStrictEqual(['All languages']);
+    expect(headers(items)).toStrictEqual([]);
   });
 
   it('marks the selected language with a check and as the chosen radio', () => {

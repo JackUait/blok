@@ -262,7 +262,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 506 + 128 + 34 + 4 closure for all 672 keys', () => {
+  it('rebuilds a disjoint 505 + 128 + 34 + 4 closure for all 671 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -276,7 +276,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(672);
+    expect(lifecycle.size).toBe(671);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -297,8 +297,8 @@ describe('current English catalog lifecycle coverage', () => {
       // empty state already renders through NO_EMOJIS_FOUND_KEY
       // (tools.callout.noEmojisFound) — see CATALOG_ONLY_KEYS above.
       // +7: the darkroom's local reset keys (tools.image.reset*) are called by literal.
-      // +1: tools.code.filename. +2: tools.code.suggested, tools.code.allLanguages.
-      'executable-literal': 506,
+      // +1: tools.code.filename. +1: tools.code.suggested.
+      'executable-literal': 505,
       'finite-dynamic': 128,
       // 12 of the 20 image darkroom keys are called by literal. The 8 filter
       // names stay here: filter-strip.ts builds them from the preset name.

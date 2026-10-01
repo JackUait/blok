@@ -121,13 +121,13 @@ test.describe('code language picker', () => {
     const sections = page.getByTestId('code-language-section').filter({ visible: true });
     const options = page.getByRole('menuitemradio').filter({ visible: true });
 
-    await expect(sections).toHaveText(['Suggested', 'All languages']);
+    await expect(sections).toHaveText(['Suggested']);
     await expect(options.first()).toContainText('Rust');
 
     await page.getByRole('menuitemradio', { name: /Kotlin/ }).click();
     await openPicker(page, 1);
 
-    await expect(sections).toHaveText(['Suggested', 'All languages']);
+    await expect(sections).toHaveText(['Suggested']);
     await expect(options.first()).toContainText('Kotlin');
   });
 });

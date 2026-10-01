@@ -3,7 +3,6 @@ import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import { IconCheck } from '../../components/icons';
 import { extToPrismLang } from '../file/code-languages';
 import {
-  ALL_LANGUAGES_KEY,
   AUTO_DETECTED_KEY,
   DEFAULT_LANGUAGE,
   LANGUAGE_COLORS,
@@ -242,13 +241,28 @@ export function rememberLanguage(id: string): void {
  * A section label row. role="presentation" because the popover's listbox may
  * only own options; search hides Html rows on its own.
  */
-function sectionHeader(label: string, isFirst: boolean): PopoverItemParams {
+function sectionHeader(label: string): PopoverItemParams {
   const element = document.createElement('div');
 
-  element.className = `pl-2 pr-3 ${isFirst ? 'pt-0.5' : 'pt-2.5'} pb-1.5 text-xs font-medium text-menu-section-label cursor-default`;
+  element.className = 'pl-2 pr-3 pt-0.5 pb-1.5 text-xs font-medium text-menu-section-label cursor-default';
   element.setAttribute('role', 'presentation');
   element.setAttribute('data-blok-testid', 'code-language-section');
   element.textContent = label;
+
+  return { type: PopoverItemType.Html, element };
+}
+
+/** The line between the suggestions and the full list. role="presentation" for the same listbox reason. */
+function sectionDivider(): PopoverItemParams {
+  const element = document.createElement('div');
+  const line = document.createElement('div');
+
+  element.className = 'py-1.5';
+  element.setAttribute('role', 'presentation');
+  element.setAttribute('data-blok-testid', 'code-language-divider');
+  line.className = 'h-px -mx-1 bg-popover-border/60';
+  line.setAttribute('aria-hidden', 'true');
+  element.appendChild(line);
 
   return { type: PopoverItemType.Html, element };
 }
@@ -265,7 +279,7 @@ export interface LanguagePickerOptions {
 
 /**
  * Picker rows: a "Suggested" section (filename language, detected language,
- * recent picks) and then every other language. A suggested language is not
+ * recent picks), a divider, and then every other language, unlabelled. A suggested language is not
  * repeated below, so search never shows it twice.
  */
 export function buildLanguagePickerItems(options: LanguagePickerOptions): PopoverItemParams[] {
@@ -291,8 +305,7 @@ export function buildLanguagePickerItems(options: LanguagePickerOptions): Popove
   const rest = LANGUAGES.map((lang) => lang.id).filter((id) => !suggested.includes(id));
 
   return [
-    ...(suggested.length > 0 ? [sectionHeader(t(SUGGESTED_KEY), true), ...suggested.map(row)] : []),
-    sectionHeader(t(ALL_LANGUAGES_KEY), suggested.length === 0),
+    ...(suggested.length > 0 ? [sectionHeader(t(SUGGESTED_KEY)), ...suggested.map(row), sectionDivider()] : []),
     ...rest.map(row),
   ];
 }

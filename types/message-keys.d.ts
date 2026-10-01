@@ -314,7 +314,6 @@ export type BlokMessageKey =
   | 'tools.callout.placeholder'
   | 'tools.callout.removeEmoji'
   | 'tools.callout.skinTone'
-  | 'tools.code.allLanguages'
   | 'tools.code.autoDetected'
   | 'tools.code.codeTab'
   | 'tools.code.copied'

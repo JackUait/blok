@@ -15,6 +15,7 @@ import { PopoverAbstract } from './popover-abstract';
 import { CSSVariables, css as popoverCss } from './popover.const';
 import { clampNestedPopoverTop, NESTED_POPOVER_VIEWPORT_MARGIN, resolveNestedPopoverBelowPlacement } from './popover-nested-position';
 import { resolvePosition } from './popover-position';
+import { getElementDirection } from '../direction';
 import { createPositionTracker, resolveBoundaryRect, type PositionTracker } from './anchored-position';
 import { promoteToTopLayer, removeFromTopLayer, stripPopoverAttribute } from '../top-layer';
 import { twMerge } from '../tw';
@@ -591,6 +592,8 @@ export class PopoverDesktop extends PopoverAbstract {
       document.body.appendChild(mountTarget);
     }
 
+    this.syncDirection();
+
     if (hasAnchor) {
       const { top, left, openTop, openLeft } = this.calculatePosition();
       this.nodes.popover.style.position = 'absolute';
@@ -743,8 +746,11 @@ export class PopoverDesktop extends PopoverAbstract {
     this.setOpenTop(openTop);
     this.setOpenLeft(openLeft);
 
+    // `data-align` is logical: in RTL the start edge is the right one.
+    const opensTowardEnd = openLeft === (getElementDirection(this.nodes.popover) === 'ltr');
+
     this.nodes.popover.setAttribute('data-side', openTop ? 'top' : 'bottom');
-    this.nodes.popover.setAttribute('data-align', openLeft ? 'end' : 'start');
+    this.nodes.popover.setAttribute('data-align', opensTowardEnd ? 'end' : 'start');
   }
 
   /**
@@ -764,6 +770,7 @@ export class PopoverDesktop extends PopoverAbstract {
       viewportSize,
       scrollOffset: { x: window.scrollX, y: window.scrollY },
       offset: 0,
+      direction: getElementDirection(this.nodes.popover),
     });
 
     this.nodes.popover.style.setProperty(CSSVariables.PopoverTop, openTop
@@ -835,6 +842,7 @@ export class PopoverDesktop extends PopoverAbstract {
       scrollOffset: { x: window.scrollX, y: window.scrollY },
       offset: 8,
       leftAlignRect,
+      direction: getElementDirection(this.nodes.popover),
       placeLeftOfAnchor: this.placeLeftOfAnchor,
       asideSide: this.asideSide,
       viewportMargin: this.viewportMargin,

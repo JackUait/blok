@@ -157,9 +157,10 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   }
 
   /**
-   * Open popover
+   * Carries the owner's direction onto the popover root. Safe to call more
+   * than once; placement math calls it first so it reads the right direction.
    */
-  public show(): void {
+  protected syncDirection(): void {
     const mountTarget = this.nodes.popover;
     const connectedParent = mountTarget.isConnected
       && mountTarget.parentElement !== document.body
@@ -180,6 +181,15 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       direction: this.params.direction,
       source: directionSource,
     });
+  }
+
+  /**
+   * Open popover
+   */
+  public show(): void {
+    const mountTarget = this.nodes.popover;
+
+    this.syncDirection();
 
     if (mountTarget !== null && !mountTarget.isConnected) {
       document.body.appendChild(mountTarget);

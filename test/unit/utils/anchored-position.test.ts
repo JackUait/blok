@@ -103,6 +103,19 @@ describe('anchored-position', () => {
       expect(content.dataset.align).toBe('end');
     });
 
+    it('aligns RTL content to the anchor right edge and reports align=start', () => {
+      const content = document.createElement('div');
+
+      stubSize(content, 200, 150);
+      content.style.direction = 'rtl';
+      document.body.appendChild(content);
+
+      const result = positionAnchored(content, rect({ top: 100, bottom: 140, left: 500, right: 600, width: 100, height: 40 }));
+
+      expect(result.left).toBe(400);
+      expect(content.getAttribute('data-align')).toBe('start');
+    });
+
     it('does not mutate content styles when apply is false but still returns coords', () => {
       const content = document.createElement('div');
 

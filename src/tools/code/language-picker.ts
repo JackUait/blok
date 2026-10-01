@@ -3,6 +3,10 @@ import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import { IconCheck } from '../../components/icons';
 import { extToPrismLang } from '../file/code-languages';
 import type { LanguageLogo } from './language-logos';
+import type { DrawnLogo } from './language-logos-own';
+
+export type AnyLogo = LanguageLogo | DrawnLogo;
+type LogoMap = Readonly<Record<string, AnyLogo>>;
 import {
   AUTO_DETECTED_KEY,
   DEFAULT_LANGUAGE,
@@ -126,7 +130,7 @@ const mix = (hex: string, toward: string, share: number): string =>
  */
 const legibleOn = (hex: string, theme: PickerTheme, share = 0): string => {
   // A black mark (Rust, JSON, Markdown…) is shown near-white on dark, as its brand does.
-  if (share === 0 && theme === 'dark' && luminance(hex) < 0.01) {
+  if (share === 0 && theme === 'dark' && luminance(hex) < 0.03) {
     return mix(hex, '#ffffff', 0.85);
   }
 
@@ -148,34 +152,58 @@ export function resolvePickerTheme(): PickerTheme {
 
 /** Logos load on first use; the picker shows mono marks until they arrive. */
 const logosState: {
-  promise: Promise<Readonly<Record<string, LanguageLogo>>> | null;
-  loaded: Readonly<Record<string, LanguageLogo>> | null;
+  promise: Promise<LogoMap> | null;
+  loaded: LogoMap | null;
 } = { promise: null, loaded: null };
 
-export function loadLanguageLogos(): Promise<Readonly<Record<string, LanguageLogo>>> {
-  logosState.promise ??= import('./language-logos').then((module) => {
-    logosState.loaded = module.LANGUAGE_LOGOS;
+export function loadLanguageLogos(): Promise<LogoMap> {
+  logosState.promise ??= Promise.all([import('./language-logos'), import('./language-logos-own')]).then(([vendored, own]) => {
+    const logos: LogoMap = { ...vendored.LANGUAGE_LOGOS, ...own.OWN_LANGUAGE_LOGOS };
 
-    return module.LANGUAGE_LOGOS;
+    logosState.loaded = logos;
+
+    return logos;
   });
 
   return logosState.promise;
 }
 
 /** The logos if they have already loaded, else null. */
-export function loadedLanguageLogos(): Readonly<Record<string, LanguageLogo>> | null {
+export function loadedLanguageLogos(): LogoMap | null {
   return logosState.loaded;
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-const logoSvg = (logo: LanguageLogo): SVGSVGElement => {
+/** Mask ids are document-global, so every drawn badge needs its own. */
+const maskCounter = { next: 0 };
+
+/**
+ * A drawn logo: `body` clipped by a mask where `cuts` are holes, then `over`.
+ * The markup is Blok's own constant artwork, never user data.
+ */
+const drawnSvg = (svg: SVGSVGElement, logo: DrawnLogo): SVGSVGElement => {
+  const maskId = `blok-code-logo-${maskCounter.next++}`;
+  const masked = logo.cuts === undefined
+    ? logo.body
+    : `<defs><mask id="${maskId}" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff"/>${logo.cuts}</mask></defs><g mask="url(#${maskId})">${logo.body}</g>`;
+
+  svg.insertAdjacentHTML('beforeend', masked + (logo.over ?? ''));
+
+  return svg;
+};
+
+const logoSvg = (logo: AnyLogo): SVGSVGElement => {
   const svg = document.createElementNS(SVG_NS, 'svg');
 
   svg.setAttribute('viewBox', '0 0 24 24');
   svg.setAttribute('width', '18');
   svg.setAttribute('height', '18');
   svg.setAttribute('aria-hidden', 'true');
+
+  if ('body' in logo) {
+    return drawnSvg(svg, logo);
+  }
 
   if (logo.inner !== undefined) {
     // Sits inside the square, under the cut-out letters.
@@ -241,7 +269,7 @@ const monogram = (mark: string, hex: string): HTMLElement => {
 export interface BadgeOptions {
   theme: PickerTheme;
   /** null while the logos module is still loading. */
-  logos: Readonly<Record<string, LanguageLogo>> | null;
+  logos: LogoMap | null;
 }
 
 /** Fill `badge` for `id`: the real logo when one is vendored, else a mono mark. */
@@ -270,7 +298,7 @@ export function paintBadge(badge: HTMLElement, id: string, { theme, logos }: Bad
   }
 
   // A square mark with filled letter holes carries its own contrast.
-  badge.style.setProperty('color', logo.inner !== undefined ? brand : legibleOn(brand, theme));
+  badge.style.setProperty('color', 'inner' in logo && logo.inner !== undefined ? brand : legibleOn(brand, theme));
   badge.replaceChildren(logoSvg(logo));
 }
 

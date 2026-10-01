@@ -5,7 +5,6 @@
  * strong letter (empty, "123") carries no `dir` and follows the editor.
  */
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import * as Y from 'yjs';
 
 import { Blok } from '../../../../src/blok';
 import { modificationsObserverBatchTimeout } from '../../../../src/components/constants';
@@ -19,6 +18,8 @@ import { Table } from '../../../../src/tools/table';
 import { ListItem } from '../../../../src/tools/list';
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
+import { DocumentStore } from '../../../../src/components/modules/yjs/document-store';
+import { YBlockSerializer } from '../../../../src/components/modules/yjs/serializer';
 import type { OutputBlockData, OutputData } from '../../../../types';
 
 interface TestEditor {
@@ -28,7 +29,14 @@ interface TestEditor {
   readOnly: { toggle: (state?: boolean) => Promise<boolean> };
   blocks: { update: (id: string, data: Record<string, unknown>) => Promise<unknown> };
   history: { undo: () => void; redo: () => void; canUndo: () => boolean };
-  module: { yjsManager: { stopCapturing: () => void } };
+  module: {
+    yjsManager: {
+      stopCapturing: () => void;
+      applyRemoteUpdate: (update: Uint8Array) => void;
+      encodeStateAsUpdate: (stateVector?: Uint8Array) => Uint8Array;
+      getStateVector: () => Uint8Array;
+    };
+  };
 }
 
 /**
@@ -61,6 +69,41 @@ class PinnedTool {
   }
 }
 
+/**
+ * A tool with a non-editable label before its text field, the way chrome
+ * text sits inside some tools.
+ */
+class LabelledTool {
+  public static isReadOnlySupported = true;
+
+  private readonly text: string;
+
+  private readonly readOnly: boolean;
+
+  public constructor({ data, readOnly }: { data: { text?: string }; readOnly: boolean }) {
+    this.text = data.text ?? '';
+    this.readOnly = readOnly;
+  }
+
+  public render(): HTMLElement {
+    const root = document.createElement('div');
+    const label = document.createElement('span');
+    const text = document.createElement('div');
+
+    label.contentEditable = 'false';
+    label.textContent = 'Label';
+    text.contentEditable = this.readOnly ? 'false' : 'true';
+    text.textContent = this.text;
+    root.append(label, text);
+
+    return root;
+  }
+
+  public save(): { text: string } {
+    return { text: this.text };
+  }
+}
+
 const tools = {
   paragraph: Paragraph,
   header: Header,
@@ -73,6 +116,7 @@ const tools = {
   database: DatabaseTool,
   'database-row': DatabaseRowTool,
   pinned: PinnedTool,
+  labelled: LabelledTool,
 };
 
 const P = (id: string, text: string, parent?: string): OutputBlockData => ({
@@ -269,6 +313,12 @@ describe('per-block content direction', () => {
       expect(content('pin').hasAttribute('dir')).toBe(false);
     });
 
+    it('ignores non-editable chrome text while editing', async () => {
+      await boot([{ id: 'lab', type: 'labelled', data: { text: 'مرحبا' } }]);
+
+      expect(content('lab').getAttribute('dir')).toBe('rtl');
+    });
+
     it('never puts dir into saved data', async () => {
       const instance = await boot([P('ar', 'مرحبا')]);
       const saved = await instance.save();
@@ -306,6 +356,21 @@ describe('per-block content direction', () => {
       expect(content('p').getAttribute('dir')).toBe('rtl');
     });
 
+    it('re-stamps after a peer changes the text', async () => {
+      const instance = await boot([P('p', 'Hello')]);
+      const yjs = instance.module.yjsManager;
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      peer.applyRemoteUpdate(yjs.encodeStateAsUpdate(peer.getStateVector()));
+      peer.updateBlockData('p', 'text', 'مرحبا');
+      yjs.applyRemoteUpdate(peer.encodeStateAsUpdate(yjs.getStateVector()));
+      await settle();
+
+      expect(field('p').textContent).toBe('مرحبا');
+      expect(content('p').getAttribute('dir')).toBe('rtl');
+      peer.destroy();
+    });
+
     it('re-stamps after undo and redo', async () => {
       const instance = await boot([P('p', 'Hello')]);
 
@@ -333,20 +398,9 @@ describe('per-block content direction', () => {
    * lives where a write is not an edit.
    */
   describe('the stamp is not an edit', () => {
-    const countDocUpdates = (): { count: () => number } => {
-      const original = Y.Doc.prototype.emit;
-      let updates = 0;
-
-      vi.spyOn(Y.Doc.prototype, 'emit').mockImplementation(function (this: Y.Doc, name: string, args: unknown[]) {
-        if (name === 'update' || name === 'updateV2') {
-          updates += 1;
-        }
-
-        return original.call(this, name as 'update', args as never);
-      });
-
-      return { count: () => updates };
-    };
+    /** Any Yjs op advances the doc's state vector, so comparing it detects one. */
+    const docVersion = (instance: TestEditor): string =>
+      Array.from(instance.module.yjsManager.getStateVector()).join(',');
 
     it('writing dir on top-level and nested content elements fires nothing', async () => {
       const onChange = vi.fn();
@@ -369,15 +423,17 @@ describe('per-block content direction', () => {
           content: ['in-tbl'],
         },
         P('in-tbl', 'x', 'tbl'),
+        { id: 'th', type: 'header', data: { text: 'x', level: 2, isToggleable: true, isOpen: true }, content: ['in-th'] },
+        P('in-th', 'x', 'th'),
       ], { onChange, onSave });
-      const docUpdates = countDocUpdates();
 
       await settle();
       onChange.mockClear();
       onSave.mockClear();
 
+      const versionBefore = docVersion(instance);
       const canUndoBefore = instance.history.canUndo();
-      const ids = ['top', 't', 'in-t', 'call', 'in-call', 'cl', 'c1', 'in-c1', 'in-c2', 'tbl', 'in-tbl'];
+      const ids = ['top', 't', 'in-t', 'call', 'in-call', 'cl', 'c1', 'in-c1', 'in-c2', 'tbl', 'in-tbl', 'th', 'in-th'];
 
       for (const id of ids) {
         content(id).setAttribute('dir', 'rtl');
@@ -391,7 +447,7 @@ describe('per-block content direction', () => {
 
       expect(onChange).not.toHaveBeenCalled();
       expect(onSave).not.toHaveBeenCalled();
-      expect(docUpdates.count()).toBe(0);
+      expect(docVersion(instance)).toBe(versionBefore);
       expect(instance.history.canUndo()).toBe(canUndoBefore);
     });
 
@@ -411,11 +467,11 @@ describe('per-block content direction', () => {
         },
         { id: 'r1', type: 'database-row', data: { properties: { 'p-title': 'one' }, position: 'a0', title: 'one' }, parent: 'db' },
       ], { onChange });
-      const docUpdates = countDocUpdates();
 
       await settle();
       onChange.mockClear();
 
+      const versionBefore = docVersion(instance);
       const canUndoBefore = instance.history.canUndo();
       // The database's own content element plus any row content inside it.
       const contents = Array.from(holder.querySelectorAll<HTMLElement>('[data-blok-id="db"] [data-blok-element-content]'));
@@ -426,22 +482,31 @@ describe('per-block content direction', () => {
       await settle();
 
       expect(onChange).not.toHaveBeenCalled();
-      expect(docUpdates.count()).toBe(0);
+      expect(docVersion(instance)).toBe(versionBefore);
       expect(instance.history.canUndo()).toBe(canUndoBefore);
     });
 
+    /**
+     * Also the positive control for the guards above: the same counters DO
+     * see a real edit in this harness.
+     */
     it('typing a letter that flips the block is one change and one undo step', async () => {
       const onChange = vi.fn();
-      const instance = await boot([P('p', '')], { onChange });
+      const onSave = vi.fn();
+      const instance = await boot([P('p', '')], { onChange, onSave });
 
       await settle();
       onChange.mockClear();
+
+      const versionBefore = docVersion(instance);
 
       await typeInto('p', 'ب');
       await settle();
 
       expect(content('p').getAttribute('dir')).toBe('rtl');
       expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onSave).toHaveBeenCalled();
+      expect(docVersion(instance)).not.toBe(versionBefore);
 
       instance.history.undo();
       await settle();

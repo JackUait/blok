@@ -752,6 +752,9 @@ export class Block extends EventsDispatcher<BlockEvents> {
     if (typeof (this.toolInstance as unknown as { setReadOnly?: unknown }).setReadOnly === 'function') {
       (this.toolInstance as unknown as { setReadOnly: (s: boolean) => void }).setReadOnly(state);
     }
+
+    // Which elements count as text depends on the mode.
+    this.syncContentDirection();
   }
 
   /**
@@ -1085,7 +1088,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
       return;
     }
 
-    syncContentDirection(contentElement, toolRenderedElement, this.holder);
+    syncContentDirection(contentElement, toolRenderedElement, this.holder, this.readOnly);
   }
 
   /**

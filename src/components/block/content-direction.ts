@@ -2,10 +2,12 @@ import { firstStrongDirection } from '../../shared/text-direction';
 import { DATA_ATTR } from '../constants/data-attributes';
 
 /**
- * Text fields, editable or not: read-only tools keep `contenteditable="false"`
- * on the same element, so the stamp survives read-only.
+ * Text fields. While editing, a `contenteditable="false"` element is chrome (a
+ * label, a widget), not text. Read-only tools turn their fields into
+ * `contenteditable="false"`, so then those count.
  */
-const FIELD_SELECTOR = '[contenteditable]';
+const EDITABLE_FIELD_SELECTOR = '[contenteditable]:not([contenteditable="false"])';
+const READ_ONLY_FIELD_SELECTOR = '[contenteditable]';
 
 /**
  * First strong letter in one field. Skips nested blocks, `dir` islands (a
@@ -46,10 +48,12 @@ const fieldDirection = (field: HTMLElement, holder: HTMLElement): 'ltr' | 'rtl' 
  * fields of nested blocks and fields the tool pinned with its own `dir`.
  * @param toolRoot - element the tool rendered
  * @param holder - the block's holder
+ * @param readOnly - whether the block is read-only
  */
-const ownTextDirection = (toolRoot: HTMLElement, holder: HTMLElement): 'ltr' | 'rtl' | null => {
-  const nested = Array.from(toolRoot.querySelectorAll<HTMLElement>(FIELD_SELECTOR));
-  const fields = toolRoot.matches(FIELD_SELECTOR) ? [toolRoot, ...nested] : nested;
+const ownTextDirection = (toolRoot: HTMLElement, holder: HTMLElement, readOnly: boolean): 'ltr' | 'rtl' | null => {
+  const selector = readOnly ? READ_ONLY_FIELD_SELECTOR : EDITABLE_FIELD_SELECTOR;
+  const nested = Array.from(toolRoot.querySelectorAll<HTMLElement>(selector));
+  const fields = toolRoot.matches(selector) ? [toolRoot, ...nested] : nested;
 
   for (const field of fields) {
     const pinned = field.closest('[dir]');
@@ -79,13 +83,15 @@ const ownTextDirection = (toolRoot: HTMLElement, holder: HTMLElement): 'ltr' | '
  * @param contentElement - the block's `[data-blok-element-content]`
  * @param toolRoot - element the tool rendered
  * @param holder - the block's holder
+ * @param readOnly - whether the block is read-only
  */
 export const syncContentDirection = (
   contentElement: HTMLElement,
   toolRoot: HTMLElement,
-  holder: HTMLElement
+  holder: HTMLElement,
+  readOnly: boolean
 ): void => {
-  const direction = ownTextDirection(toolRoot, holder);
+  const direction = ownTextDirection(toolRoot, holder, readOnly);
 
   if (direction === null) {
     if (contentElement.hasAttribute('dir')) {

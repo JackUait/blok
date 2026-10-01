@@ -7,7 +7,6 @@ import {
   AUTO_DETECTED_KEY,
   DEFAULT_LANGUAGE,
   LANGUAGE_COLORS,
-  LANGUAGE_DOT_FALLBACK,
   LANGUAGES,
   SUGGESTED_KEY,
 } from './constants';
@@ -95,22 +94,99 @@ export const RECENT_LANGUAGES_STORAGE_KEY = 'blok:code:recent-languages';
 const RECENT_LIMIT = 3;
 const KNOWN_IDS = new Set(LANGUAGES.map((lang) => lang.id));
 
+const INK_DARK = '#1b1a17';
+const INK_LIGHT = '#ffffff';
+
+const channel = (hex: string, at: number): number => {
+  const c = parseInt(hex.slice(at, at + 2), 16) / 255;
+
+  return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+};
+
+const luminance = (hex: string): number => 0.2126 * channel(hex, 1) + 0.7152 * channel(hex, 3) + 0.0722 * channel(hex, 5);
+
+const ratio = (a: number, b: number): number => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+
+const toHex = (value: number): string => Math.round(value).toString(16).padStart(2, '0');
+
+/** `hex` mixed toward black by `share` (0..1). */
+const deepen = (hex: string, share: number): string =>
+  `#${[1, 3, 5].map((at) => toHex(parseInt(hex.slice(at, at + 2), 16) * (1 - share))).join('')}`;
+
+const AA = 4.5;
+
 /**
- * A small tile with the language's mark, tinted by its color. The name sits
- * next to it, so the tile is decoration only.
+ * Tile color and mark ink. White or near-black, whichever reads; a mid-tone
+ * that neither clears at AA is deepened in 4% steps until white does.
+ */
+const tileAndInk = (hex: string, share = 0): { tile: string; ink: string } => {
+  const tile = share === 0 ? hex : deepen(hex, share);
+  const lum = luminance(tile);
+  const onLight = ratio(lum, luminance(INK_LIGHT));
+  const onDark = ratio(lum, luminance(INK_DARK));
+
+  if (Math.max(onLight, onDark) >= AA || share >= 0.6) {
+    return { tile, ink: onLight >= onDark ? INK_LIGHT : INK_DARK };
+  }
+
+  return tileAndInk(hex, share + 0.04);
+};
+
+/**
+ * Lift with the row: hover or keyboard focus. `motion-safe:` rather than a
+ * `motion-reduce:` reset, which would tie with these on specificity.
+ */
+const BADGE_MOTION = [
+  'transition-[translate,box-shadow,filter] duration-150 ease-out motion-reduce:transition-none',
+  'motion-safe:in-[[data-blok-popover-item]:hover]:-translate-y-px motion-safe:in-[[data-blok-focused=true]]:-translate-y-px',
+].join(' ');
+
+const BADGE_BASE = 'relative inline-flex size-6 shrink-0 overflow-hidden rounded-(--blok-radius-control) font-mono leading-none select-none';
+// Set bottom-right like the JS and TS logos.
+const BADGE_MARK = 'items-end justify-end pr-[3px] pb-[2.5px] text-[9.5px] font-bold tracking-[-0.04em]';
+
+/** Full-color tile: top-lit gradient, a hairline highlight, a rim that reads in both themes and a shadow in its own color. */
+const BADGE_COLORED = [
+  'text-(--blok-code-lang-ink)',
+  'bg-[linear-gradient(160deg,color-mix(in_srgb,var(--blok-code-lang)_72%,white)_0%,var(--blok-code-lang)_52%,color-mix(in_srgb,var(--blok-code-lang)_84%,black)_100%)]',
+  '[box-shadow:inset_0_1px_0_rgb(255_255_255/0.35),inset_0_0_0_1px_color-mix(in_srgb,var(--blok-text-primary)_14%,transparent),0_1px_2px_color-mix(in_srgb,var(--blok-code-lang)_40%,transparent)]',
+  'in-[[data-blok-popover-item]:hover]:brightness-110 in-[[data-blok-focused=true]]:brightness-110',
+  'in-[[data-blok-popover-item]:hover]:[box-shadow:inset_0_1px_0_rgb(255_255_255/0.45),inset_0_0_0_1px_color-mix(in_srgb,var(--blok-text-primary)_14%,transparent),0_3px_8px_color-mix(in_srgb,var(--blok-code-lang)_50%,transparent)]',
+  'in-[[data-blok-focused=true]]:[box-shadow:inset_0_1px_0_rgb(255_255_255/0.45),inset_0_0_0_1px_color-mix(in_srgb,var(--blok-text-primary)_14%,transparent),0_3px_8px_color-mix(in_srgb,var(--blok-code-lang)_50%,transparent)]',
+].join(' ');
+
+/** "No language": a frosted neutral tile, so it never reads as a gray language. */
+const BADGE_NEUTRAL = [
+  'text-text-secondary',
+  'bg-[linear-gradient(160deg,color-mix(in_srgb,var(--blok-text-primary)_4%,transparent),color-mix(in_srgb,var(--blok-text-primary)_10%,transparent))]',
+  '[box-shadow:inset_0_1px_0_rgb(255_255_255/0.4),inset_0_0_0_1px_color-mix(in_srgb,var(--blok-text-primary)_12%,transparent)]',
+].join(' ');
+
+/**
+ * A small app-icon tile: the language's color with its mark set bottom-right,
+ * the way the JS and TS logos sit. The name sits next to it, so the tile is
+ * decoration only.
  */
 export function languageBadge(id: string): HTMLElement {
   const badge = document.createElement('span');
+  const color = LANGUAGE_COLORS[id];
 
   badge.textContent = LANGUAGE_MARKS[id] ?? id.slice(0, 2);
-  badge.style.setProperty('--blok-code-lang', LANGUAGE_COLORS[id] ?? LANGUAGE_DOT_FALLBACK);
   badge.setAttribute('aria-hidden', 'true');
   badge.setAttribute('data-blok-testid', 'code-language-badge');
-  badge.className = [
-    'inline-flex size-5.5 shrink-0 items-center justify-center rounded-(--blok-radius-control) font-mono text-[9px] font-semibold leading-none tracking-tight',
-    'bg-[color-mix(in_srgb,var(--blok-code-lang)_16%,transparent)] text-[color-mix(in_srgb,var(--blok-code-lang)_62%,var(--blok-text-primary))]',
-    'shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--blok-code-lang)_22%,transparent)]',
-  ].join(' ');
+
+  if (color === undefined) {
+    badge.setAttribute('data-neutral', 'true');
+    badge.className = [BADGE_BASE, BADGE_NEUTRAL, 'items-center justify-center text-[11px] font-semibold'].join(' ');
+
+    return badge;
+  }
+
+  const { tile, ink } = tileAndInk(color);
+
+  badge.style.setProperty('--blok-code-lang', tile);
+  badge.style.setProperty('--blok-code-lang-ink', ink);
+  badge.className = [BADGE_BASE, BADGE_MARK, BADGE_COLORED, BADGE_MOTION].join(' ');
 
   return badge;
 }

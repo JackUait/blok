@@ -61,6 +61,10 @@ describe('image toolbox preview', () => {
       'firefly',
       'footpath',
       'sparkle',
+      'range-shade',
+      'gully',
+      'roof',
+      'sign-text',
     ]));
   });
 

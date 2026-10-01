@@ -19,9 +19,9 @@ Every claim in those reports has a `file:line`, a URL, or a label (unverified / 
 
 ## 1. The answer in one paragraph
 
-Make each page its own document. The page block in the parent is a small block with `type: 'page'`. Its id is the page id. It shows the page's icon and title, and it opens the page. The page's body is ordinary blocks in the page's own document. The host loads and saves that document by page id, the same way it loads and saves one document today. Blok never stores pages (the ownership line holds). Navigation belongs to the host, through a new `pages` config with `href` and `open`.
+Make each page its own document. The page block in the parent is a small block with `type: 'page'`. It names the page by id. It shows the page's icon and title, and it opens the page. The page's body is ordinary blocks in the page's own document. The host loads and saves that document by page id, the same way it loads and saves one document today. Blok never stores pages (the ownership line holds). Navigation belongs to the host, through a new `pages` config with `href` and `open`.
 
-This is what Notion does in effect, and what every open-source peer does. The one rule that it bends is our own "a page is a block with children" law. That is decision D1 below, and it is yours to make.
+This is what every open-source peer does (section 3). Notion itself keeps one store and lazy-loads from it, which a library cannot copy (section 2). The one rule that it bends is our own "a page is a block with children" law. That is decision D1 below, and it is yours to make.
 
 ---
 
@@ -91,11 +91,14 @@ From the reports, not re-checked here:
 The page block in the parent document is a leaf. It has no `content`:
 
 ```json
-{ "id": "p1", "type": "page", "data": { "title": "Roadmap", "icon": { "type": "emoji", "value": "🗺" } } }
+{ "id": "b7", "type": "page", "data": { "pageId": "p1", "title": "Roadmap", "icon": { "type": "emoji", "value": "🗺" } } }
 ```
 
-- Page id = block id. One id names the block, the room, the ticket and the consumer's record.
+- Lean: an explicit `data.pageId`. One page id names the room, the ticket and the consumer's record. **D9.**
+  - Why not reuse the block id: paste inserts every block with a new id (`src/components/modules/paste/handlers/blok-data-handler.ts:239-244`, `BlockManager.insert` with no id). A pasted pointer would then name no page.
+  - `data.pageId` survives paste, undo and duplicate unchanged. Paste must still not create a second owner (§6.4).
 - The page's own document is a normal `OutputData`. Its top-level blocks are the page body. Its root is the page.
+- `OutputData` has no "this document is page X" field and no place for the page's own title (`types/data-formats/output-data.d.ts:109-124`, report 6 §0). Where the canonical title lives is **D2**.
 - `title` is a top-level plain-text key. It is already merged per character on the client (`serializer.ts:36`) and on the server (`YDocConverter.cs:97`) (report 6 §6).
 - Icon is a union (emoji or image). A cover (`coverUrl`, following audio's precedent) can wait. Note: a cover outside `data.url` is not visible to asset discovery (report 6 §6).
 
@@ -106,12 +109,14 @@ pages?: {
   href(pageId: string): string;                       // required: links, view output, middle-click
   open?(pageId: string, ctx: { mode: 'full' | 'peek'; source: 'block' | 'mention'; event?: MouseEvent }): void;
   resolve?(pageId: string): PageInfo | Promise<PageInfo | null> | null | undefined; // fresh title/icon
-  create?(init: { parentId: string; blocks: OutputBlockData[] }): Promise<{ id: string }>; // turn-into / drop-onto
+  create?(init: { parentId: string; blocks: OutputBlockData[] }): Promise<{ id: string }>; // /page, turn-into
+  insert?(pageId: string, blocks: OutputBlockData[]): Promise<void>;                           // drop onto an existing page
 }
 ```
 
 - If `open` is set, the host handles every page click. If not, Blok follows `href`.
-- `create` exists because "turn into page" and "drop onto page" write into a document Blok does not hold.
+- `create` and `insert` exist because "turn into page" and "drop onto page" write into a document Blok does not hold.
+- Without `create`, the `/page` toolbox entry and "Turn into page" are hidden. Without `insert`, a page block is not a drop target.
 - The page body loads through the existing `persistence` / collab config of the editor the host mounts for that page. No new load API is needed for v1.
 - The shape follows `persistence`, `resolveUser` and `onImageFailure` (report 6 §3, candidate 1).
 
@@ -122,7 +127,7 @@ pages?: {
 | `/page`, toolbox | Call `pages.create`, insert the page block, then `open` it. |
 | Click / Enter / Cmd+Enter on the block | `pages.open(id)`, else go to `href`. |
 | Turn into page | `create` the page with the block's children, wait for success, then replace the block with a page block. Never delete first (report 5, "patterns to avoid"). |
-| Drag a block onto a page block | Same as turn-into: copy into the target with the same ids, confirm, then remove from the source. |
+| Drag a block onto a page block | `pages.insert` into the target with the same ids, confirm, then remove from the source. |
 | Delete the page block | Delete the pointer only. Undo restores it. The host decides when the page document goes to trash or is purged. |
 | Copy / paste the page block | Must not create a second owner. Paste becomes a link-to-page, or the host duplicates the page. **D6.** |
 | Find (Cmd+F) | Searches the open page only. That is automatic under B. |
@@ -146,13 +151,18 @@ Under B, the drawer's nested editor is the right mechanism. Only its storage is 
 ## 7. Decisions for you
 
 1. **D1, the law.** B reads "a page is a block with children" as "a page's body is blocks, living in the page's own document, whose root is the page." Accept that reading and update CLAUDE.md, or keep the literal law and choose A (no per-page sharing, no lazy load).
-2. **D2, where the title lives.** Lean: the page's own document is canonical and the pointer holds a cached copy (AppFlowy and AFFiNE do this; moving a page then moves only the pointer). The alternative is Notion's single record: the title lives only on the pointer, and the page view must open the parent document to edit its own title.
+2. **D2, where the title lives.** Lean: the page's own document is canonical and the pointer holds a cached copy (AppFlowy and AFFiNE do this; moving a page then moves only the pointer). That needs a home in the page document, which `OutputData` lacks today. Two ways:
+   - a new additive top-level field, e.g. `OutputData.page = { id, title, icon }` (lean: one id in one document);
+   - a single root `page` block inside the page document whose children are the body (report 6 option 2: the same page described in two documents, synced by someone).
+
+   The alternative to the lean is Notion's single record: the title lives only on the pointer, and the page view must open the parent document to edit its own title.
 3. **D3, ownership.** Lean: consumer-side `pages` contract (variant 1), which keeps the locked line. Alternatives: Blok's service stores pages (reverses a "dropped, not deferred" decision), or `blok_` tables in the consumer's database (design only). Note: the two database docs disagree on who answers `queryRows` (`database-block-architecture.md:3-5` vs `:127-130`).
 4. **D4, navigation.** Host routing only in v1 (`open` / `href`), with side and center peek later. Or an in-editor peek from day one, which reuses the drawer.
 5. **D5, cross-page moves.** Accept "duplicate on failure" and "concurrent typing in the moved block is lost"? Or require a lock? Ship an `ICollabOperationStore` journal so retries are safe?
 6. **D6, copy and paste of a page block.** Paste as a link-to-page, or ask the host to duplicate (deep copy with new ids)?
 7. **D7, row bodies.** Read-compatible migration or a BREAKING change.
 8. **D8, scope of v1.** Proposed v1: page tool, `pages` contract, open / turn-into / delete / view / paste. Later: cover, peek, link-to-page and mentions, backlinks (host index), trash UI, permissions UI.
+9. **D9, page id.** Lean: `data.pageId`, because paste mints new block ids (§6.1). The alternative, page id = block id, requires every copy, paste, duplicate and undo path to keep ids unchanged.
 
 ## 8. Build order (once D1-D3 are decided)
 

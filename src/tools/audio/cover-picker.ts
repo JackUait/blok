@@ -83,17 +83,21 @@ export function openCoverPicker(opts: OpenCoverPickerOptions): CoverPickerHandle
   // mid-session (an isConnected guard covers that on close).
   const previouslyFocused = document.activeElement;
 
-  document.body.appendChild(dialog);
-  syncPortalDirection(dialog, { source: opts.anchor });
-  promoteToTopLayer(dialog);
-
+  const state = { detached: false };
   // Anchored positioning via the shared engine: prefers the space below the
   // anchor, flips above when the viewport bottom would clip the picker, and
   // clamps horizontally. Coordinates are document-relative → absolute.
-  dialog.style.position = 'absolute';
   const reposition = (): void => {
-    positionAnchored(dialog, opts.anchor, { side: 'bottom', offset: 8 });
+    if (!state.detached) {
+      positionAnchored(dialog, opts.anchor, { side: 'bottom', offset: 8 });
+    }
   };
+
+  document.body.appendChild(dialog);
+  // The anchor mirrors with the editor, so a flip re-places the picker.
+  syncPortalDirection(dialog, { source: opts.anchor, onResync: reposition });
+  promoteToTopLayer(dialog);
+  dialog.style.position = 'absolute';
   reposition();
 
   // The picker is an anchored, non-modal dialog, so it advertises its open state
@@ -105,13 +109,9 @@ export function openCoverPicker(opts: OpenCoverPickerOptions): CoverPickerHandle
   // Pull focus into the picker so keyboard + screen-reader users land inside it.
   getTabbables(dialog)[0]?.focus();
 
-  const state = { detached: false };
-
   // Keep the picker glued to the anchor across scroll / resize / own-size
   // changes (shared autoUpdate-style tracker).
-  const tracker = createPositionTracker(dialog, () => {
-    if (!state.detached) reposition();
-  });
+  const tracker = createPositionTracker(dialog, reposition);
   tracker.attach();
 
   const detach = (): void => {

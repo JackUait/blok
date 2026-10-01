@@ -85,12 +85,13 @@ export class DatabasePropertyTypePopover {
     }
 
     document.body.appendChild(popover);
-    syncPortalDirection(popover, { source: anchor });
-    this.popoverEl = popover;
-
     const reposition = (): void => {
       positionFixedAnchored(popover, anchor, { side: 'bottom', offset: 4 });
     };
+
+    // The anchor mirrors with the editor, so a flip re-places the menu.
+    syncPortalDirection(popover, { source: anchor, onResync: reposition });
+    this.popoverEl = popover;
 
     reposition();
     this.positionTracker = createPositionTracker(popover, reposition);

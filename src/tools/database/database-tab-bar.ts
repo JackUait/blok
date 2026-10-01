@@ -504,12 +504,13 @@ export class DatabaseTabBar {
     dropdown.appendChild(newViewBtn);
 
     document.body.appendChild(dropdown);
-    syncPortalDirection(dropdown, { source: anchor });
-    this.overflowDropdownEl = dropdown;
-
     const reposition = (): void => {
       positionFixedAnchored(dropdown, anchor, { side: 'bottom', offset: 4 });
     };
+
+    // The anchor mirrors with the editor, so a flip re-places the dropdown.
+    syncPortalDirection(dropdown, { source: anchor, onResync: reposition });
+    this.overflowDropdownEl = dropdown;
 
     reposition();
     this.overflowPositionTracker = createPositionTracker(dropdown, reposition);

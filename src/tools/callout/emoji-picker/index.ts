@@ -309,7 +309,7 @@ export class EmojiPicker {
     this._clearSearchButton.hidden = true;
     this._element.setAttribute('data-theme', this.resolveTheme());
     // One picker serves every callout and editor, so re-read the direction on each open.
-    syncPortalDirection(this._element, { source: anchor });
+    syncPortalDirection(this._element, { source: anchor, onResync: () => this.onDirectionResync() });
 
     const storedTone = loadSkinTone();
     const toneChanged = storedTone !== this._skinTone;
@@ -418,6 +418,17 @@ export class EmojiPicker {
       .finally(() => {
         this._keywordsLoad = null;
       });
+  }
+
+  /**
+   * Re-places the open picker for the new direction. Inline mode reuses the
+   * caret rect captured on open. Closing here instead would desync the ":"
+   * trigger, which owns the inline picker's open state.
+   */
+  private onDirectionResync(): void {
+    if (this._open && this._anchorEl !== null) {
+      this.position(this._anchorEl);
+    }
   }
 
   public close(): void {

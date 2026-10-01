@@ -167,6 +167,9 @@ export interface OpenModalDialogOptions {
    */
   directionSource?: Element | null;
 
+  /** Re-places an anchored dialog after its editor flips direction. */
+  onDirectionResync?: () => void;
+
   /** Whether Escape dismisses the dialog. Defaults to `true`. */
   escape?: boolean;
 
@@ -313,7 +316,10 @@ export const openModalDialog = (options: OpenModalDialogOptions): ModalDialogHan
   // Resolved at open time: presses inside the dialog overwrite the tracker.
   const pointerOpener = focusableOpener(lastPointerPress.target);
 
-  syncPortalDirection(content, { source: options.directionSource ?? options.anchor });
+  syncPortalDirection(content, {
+    source: options.directionSource ?? options.anchor,
+    onResync: options.onDirectionResync,
+  });
 
   if (container !== null) {
     container.appendChild(content);

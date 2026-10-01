@@ -303,10 +303,6 @@ export class Flipper {
   }
 
   /**
-   * Checks if current focused item has children (nested menu)
-   * Looks for data-blok-has-children attribute on the current item
-   */
-  /**
    * Toward the inline end opens the focused item's submenu; toward the start
    * runs the back callback. Mirrors in RTL, where submenus open on the left.
    * @param event - keydown event
@@ -328,6 +324,10 @@ export class Flipper {
     }
   }
 
+  /**
+   * Checks if current focused item has children (nested menu)
+   * Looks for data-blok-has-children attribute on the current item
+   */
   private currentItemHasChildren(): boolean {
     const currentItem = this.iterator?.currentItem;
 

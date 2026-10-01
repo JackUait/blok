@@ -406,15 +406,15 @@ export class TableCellSelection {
   }
 
   /**
-   * Return the currently painted selection range, or null if nothing is selected.
-   */
-  /**
    * Re-fit the overlay after the layout moved under it (a direction flip).
    */
   public reposition(): void {
     this.repositionOverlay();
   }
 
+  /**
+   * Return the currently painted selection range, or null if nothing is selected.
+   */
   public getSelectedRange(): SelectionRange | null {
     return this.hasSelection ? this.lastPaintedRange : null;
   }

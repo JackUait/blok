@@ -714,13 +714,9 @@ test.describe('table in RTL', () => {
       await createBlok(page, tableData(content.map(row => [...row])), table);
 
       const towardEnd = text === 'ltr' ? 'ArrowRight' : 'ArrowLeft';
-      // Same-direction cells only pin the forward key: a backward step lands at
-      // the cell's logical start today, which is not this test's concern.
-      const keys = table === text ? [towardEnd] : ['ArrowLeft', 'ArrowRight'] as const;
 
-      for (const key of keys) {
+      for (const key of ['ArrowLeft', 'ArrowRight'] as const) {
         // Put the caret on the middle cell's visual edge on the key's side.
-
         await page.locator(`${cell(0, 1)} [contenteditable="true"]`).first().click();
         await page.keyboard.press(key === towardEnd ? 'End' : 'Home');
         await page.keyboard.press(key);

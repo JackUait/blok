@@ -686,12 +686,10 @@ export class TableCellBlocks {
     }
 
     const target = focusLast ? editables[editables.length - 1] : editables[0];
-    const targetDirection = getElementDirection(target);
 
-    // Text that runs against the grid is entered on the edge facing the source
-    // cell. Same-direction cells keep plain focus().
-    if (facingEdge !== undefined && targetDirection !== getElementDirection(this.gridElement)) {
-      const atStart = (facingEdge === 'left') === (targetDirection === 'ltr');
+    if (facingEdge !== undefined) {
+      // The edge facing the source cell is the text's start or end by its own direction.
+      const atStart = (facingEdge === 'left') === (getElementDirection(target) === 'ltr');
 
       focus(atStart ? editables[0] : editables[editables.length - 1], atStart);
     } else {

@@ -5,6 +5,8 @@ import { searchEmojisRanked } from '../../../components/utils/emoji/emoji-search
 import { loadEmojiLocale, type EmojiLocaleData } from '../../../components/utils/emoji/emoji-locale';
 import { hide as hideTooltip, onHover } from '../../../components/utils/tooltip';
 import { DATA_ATTR } from '../../../components/constants';
+import { getElementDirection, logicalArrow } from '../../../components/utils/direction';
+import { syncPortalDirection } from '../../../components/utils/portal-direction';
 import { getTabbables } from '../../../components/utils/modal-dialog';
 import { createPositionTracker, type PositionTracker } from '../../../components/utils/popover/anchored-position';
 import {
@@ -306,6 +308,8 @@ export class EmojiPicker {
     this._filterInput.value = '';
     this._clearSearchButton.hidden = true;
     this._element.setAttribute('data-theme', this.resolveTheme());
+    // One picker serves every callout and editor, so re-read the direction on each open.
+    syncPortalDirection(this._element, { source: anchor });
 
     const storedTone = loadSkinTone();
     const toneChanged = storedTone !== this._skinTone;
@@ -727,11 +731,12 @@ export class EmojiPicker {
 
     const tracks = getComputedStyle(grid).gridTemplateColumns;
     const columns = tracks && tracks !== 'none' ? tracks.split(' ').length : 10;
+    const horizontal = logicalArrow(event.key, getElementDirection(this._element));
     const steps: Record<string, number> = {
-      ArrowLeft: -1, ArrowRight: 1, ArrowUp: -columns, ArrowDown: columns,
+      ArrowUp: -columns, ArrowDown: columns,
       Home: -index, End: this._emojiButtons.length - 1 - index,
     };
-    const step = steps[event.key];
+    const step = horizontal === null ? steps[event.key] : (horizontal === 'forward' ? 1 : -1);
 
     if (step === undefined) {
       return;
@@ -772,7 +777,7 @@ export class EmojiPicker {
 
     popover.setAttribute('data-emoji-picker-skin-tone', '');
     popover.className = [
-      'absolute right-0 top-full mt-1.5 z-20',
+      'absolute end-0 top-full mt-1.5 z-20',
       'flex items-center gap-0.5 p-1',
       'bg-white border border-neutral-200/70 shadow-lg',
       'theme-dark:bg-neutral-800 theme-dark:border-neutral-700/50',
@@ -788,8 +793,8 @@ export class EmojiPicker {
       }
 
       const index = this._skinToneButtons.indexOf(target);
-      const directions: Record<string, number> = { ArrowRight: 1, ArrowLeft: -1 };
-      const direction = directions[event.key] ?? 0;
+      const horizontal = logicalArrow(event.key, getElementDirection(popover));
+      const direction = horizontal === null ? 0 : (horizontal === 'forward' ? 1 : -1);
 
       if (index < 0 || direction === 0) {
         return;
@@ -1692,7 +1697,9 @@ export class EmojiPicker {
     const above = rect.bottom + height + 4 > viewportHeight - 8 && rect.top > viewportHeight - rect.bottom;
     const preferredTop = above ? rect.top - height - 4 : rect.bottom + 4;
     const top = Math.max(8, Math.min(preferredTop, viewportHeight - height - 8));
-    const left = Math.max(8, Math.min(rect.left - 8, viewportWidth - width - 8));
+    // Starts 8px before the anchor's start edge: its right edge in RTL.
+    const preferredLeft = getElementDirection(this._element) === 'rtl' ? rect.right + 8 - width : rect.left - 8;
+    const left = Math.max(8, Math.min(preferredLeft, viewportWidth - width - 8));
 
     this._element.style.top = `${top}px`;
     this._element.style.left = `${left}px`;

@@ -880,6 +880,21 @@ export interface BlokMountOptions {
   minHeight?: number;
 
   /**
+   * Skeleton shown while the editor waits for `persistence.load()` or the
+   * first collaboration sync. It never shows when `data` is passed directly.
+   * `false` turns it off.
+   * @default true
+   * @example
+   * loader: { skeleton: ['heading', 'paragraph', 'list'], delay: 200 }
+   */
+  loader?: boolean | {
+    /** Rows top to bottom. Default: heading, 3 paragraphs, 2 list rows. */
+    skeleton?: Array<'heading' | 'paragraph' | 'list'>;
+    /** Ms to wait before showing, so fast loads never flash. Default 150. */
+    delay?: number;
+  };
+
+  /**
    * Opt-in: clicks on the host page below the editor append a block, with zero
    * layout footprint. Typically paired with `minHeight: 0` to remove the
    * bottom zone entirely.

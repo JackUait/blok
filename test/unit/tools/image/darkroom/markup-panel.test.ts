@@ -28,6 +28,7 @@ const LABELS: Record<string, string> = {
   'tools.image.markupSpeechBubble': 'Speech bubble',
   'tools.image.markupStar': 'Star',
   'tools.image.markupPolygon': 'Polygon',
+  'tools.image.markupSpotlight': 'Spotlight',
   'tools.image.markupEraser': 'Eraser',
   'tools.image.markupColors': 'Colors',
   'tools.image.markupColorWhite': 'White',
@@ -60,7 +61,7 @@ const i18n: I18nInstance = {
 /** Visual rail order, which is also the arrow-key order. */
 const RAIL = ['select', 'pen', 'highlighter', 'eraser', 'text', 'shapes'] as const;
 /** Apple's grid order, two to a row. */
-const SHAPE_GRID: MarkupTool[] = ['line', 'arrow', 'rect', 'rounded-rect', 'ellipse', 'bubble', 'star', 'polygon'];
+const SHAPE_GRID: MarkupTool[] = ['line', 'arrow', 'rect', 'rounded-rect', 'ellipse', 'bubble', 'star', 'polygon', 'spotlight'];
 
 const COLOR_NAMES = ['White', 'Black', 'Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple', 'Pink'];
 
@@ -386,12 +387,21 @@ describe('markup panel', () => {
       expect(picker()?.querySelector('[role="radiogroup"]')?.getAttribute('aria-label')).toBe('Shapes');
       expect(items.map((b) => b.getAttribute('data-tool'))).toEqual(SHAPE_GRID);
       expect(items.map((b) => b.getAttribute('aria-label'))).toEqual(
-        ['Line', 'Arrow', 'Rectangle', 'Rounded rectangle', 'Ellipse', 'Speech bubble', 'Star', 'Polygon']
+        ['Line', 'Arrow', 'Rectangle', 'Rounded rectangle', 'Ellipse', 'Speech bubble', 'Star', 'Polygon', 'Spotlight']
       );
       items.forEach((b) => expect(b.querySelector('svg')).not.toBeNull());
       expect(shapeItem('star').getAttribute('aria-checked')).toBe('true');
       expect(shapeItem('star')).toHaveFocus();
       expect(tool('shapes').getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('sets the tools that frame the photo apart from the drawn shapes by a hairline', () => {
+      make();
+      tool('shapes').click();
+      const grid = picker()?.querySelector('[role="radiogroup"]');
+      const order = [...(grid?.children ?? [])].map((c) => c.getAttribute('data-tool') ?? '|');
+
+      expect(order.slice(-2)).toEqual(['|', 'spotlight']);
     });
 
     it('a pick closes the picker and the rail button shows that shape', () => {
@@ -403,6 +413,15 @@ describe('markup panel', () => {
       expect(tool('shapes').getAttribute('data-shape')).toBe('bubble');
       expect(tool('shapes').getAttribute('aria-expanded')).toBe('false');
       expect(tool('shapes')).toHaveFocus();
+    });
+
+    it('shows no focus ring on open, only after a navigation key', () => {
+      make();
+      tool('shapes').click();
+
+      expect(picker()?.hasAttribute('data-blok-keyboard-navigated')).toBe(false);
+      key(shapeItem('rect'), 'ArrowRight');
+      expect(picker()?.hasAttribute('data-blok-keyboard-navigated')).toBe(true);
     });
 
     it('opening it alone does not change the tool', () => {
@@ -558,6 +577,8 @@ describe('markup panel', () => {
       { tool: 'star', sel: null, color: true, style: false, fill: true, del: false },
       { tool: 'polygon', sel: null, color: true, style: false, fill: true, del: false },
       { tool: 'select', sel: 'star', color: true, style: false, fill: true, del: true },
+      { tool: 'spotlight', sel: null, color: false, style: false, fill: false, del: false },
+      { tool: 'select', sel: 'spotlight', color: false, style: false, fill: false, del: true },
       { tool: 'select', sel: 'pen', color: true, style: false, fill: false, del: true },
       { tool: 'select', sel: 'highlighter', color: true, style: false, fill: false, del: true },
       { tool: 'select', sel: 'text', color: true, style: true, fill: false, del: true },

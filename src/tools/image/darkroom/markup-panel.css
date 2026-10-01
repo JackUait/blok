@@ -206,6 +206,13 @@
   gap: var(--blok-space-1);
 }
 
+.blok-darkroom__markup-shape-grid .blok-darkroom__markup-sep {
+  grid-column: 1 / -1;
+  width: auto;
+  height: 1px;
+  margin: var(--blok-space-1) 0;
+}
+
 /* Controls */
 
 .blok-darkroom__markup-tool,
@@ -406,6 +413,11 @@
 .blok-darkroom__markup button:focus-visible {
   outline: 2px solid var(--blok-focus-ring);
   outline-offset: 1px;
+}
+
+/* The picker focuses a shape as it opens; the ring waits for a navigation key. */
+.blok-darkroom__markup-shapes:not([data-blok-keyboard-navigated]) button:focus-visible {
+  outline: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

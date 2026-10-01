@@ -15,6 +15,7 @@ export const HIGHLIGHTER_PASSES: readonly { blend: string; opacity: string }[] =
   { blend: 'screen', opacity: '0.4' },
 ];
 const FILL_OPACITY = '0.2';
+const SPOTLIGHT_DIM = '0.55';
 const OUTLINE_WIDTH = 0.16;
 /** The head's concave back, in head lengths. */
 const HEAD_BACK_PULL = 0.55;
@@ -156,6 +157,8 @@ const drawShape = (item: ImageMarkupShape, o: Size, width: number, color: string
     return [svgEl('path', { d: `${d}Z`, ...paint })];
   }
   if (item.type === 'rect') return [svgEl('rect', { x: fmt(x), y: fmt(y), width: fmt(w), height: fmt(h), ...paint })];
+  // The layer's one dim sheet paints it; this box only gives selection and the erase fade a size.
+  if (item.type === 'spotlight') return [svgEl('rect', { x: fmt(x), y: fmt(y), width: fmt(w), height: fmt(h), fill: 'none', stroke: 'none' })];
 
   return [svgEl('ellipse', { cx: fmt(x + w / 2), cy: fmt(y + h / 2), rx: fmt(w / 2), ry: fmt(h / 2), ...paint })];
 };
@@ -266,6 +269,31 @@ const syncFilters = (defs: Element, markup: ImageMarkup[], state: LayerState): v
   }
 };
 
+/** One dim sheet over the whole box with a hole per spotlight; null when there is none. */
+const syncSpotlight = (svg: SVGSVGElement, markup: ImageMarkup[], o: Size): Element | null => {
+  const old = svg.querySelector(':scope > [data-role="markup-spotlight"]');
+  const holes = markup.flatMap((m) => {
+    if (m.type !== 'spotlight') return [];
+    const x = Math.min(m.x1, m.x2) * o.w;
+    const y = Math.min(m.y1, m.y2) * o.h;
+
+    return [`M${fmt(x)} ${fmt(y)}H${fmt(Math.max(m.x1, m.x2) * o.w)}V${fmt(Math.max(m.y1, m.y2) * o.h)}H${fmt(x)}Z`];
+  });
+
+  if (holes.length === 0) {
+    old?.remove();
+
+    return null;
+  }
+  const sheet = old ?? svgEl('path', {
+    'data-role': 'markup-spotlight', fill: '#000', 'fill-opacity': SPOTLIGHT_DIM, 'fill-rule': 'evenodd', 'pointer-events': 'none',
+  });
+
+  sheet.setAttribute('d', `M0 0H${fmt(o.w)}V${fmt(o.h)}H0Z${holes.join('')}`);
+
+  return sheet;
+};
+
 /** Draws `markup` into `svg`, reusing the node of every mark whose data and box are unchanged. */
 export function updateMarkupLayer(svg: SVGSVGElement, markup: ImageMarkup[], o: Size): void {
   const state = layers.get(svg) ?? { seq: ++counter.layers, size: '' };
@@ -296,7 +324,8 @@ export function updateMarkupLayer(svg: SVGSVGElement, markup: ImageMarkup[], o: 
 
     return old !== undefined && unchanged(old, item) ? old : drawMark(item, o, state);
   });
-  const keep = new Set<Node>([defs, ...nodes]);
+  const sheet = syncSpotlight(svg, markup, o);
+  const keep = new Set<Node>([defs, ...(sheet ? [sheet] : []), ...nodes]);
 
   for (const stale of Array.from(svg.childNodes).filter((n) => !keep.has(n))) stale.remove();
 
@@ -306,7 +335,13 @@ export function updateMarkupLayer(svg: SVGSVGElement, markup: ImageMarkup[], o: 
     svg.insertBefore(node, cursor);
 
     return cursor;
-  }, defs.nextSibling);
+  }, ((): ChildNode | null => {
+    // The sheet goes first, under every mark.
+    if (sheet === null) return defs.nextSibling;
+    if (defs.nextSibling !== sheet) svg.insertBefore(sheet, defs.nextSibling);
+
+    return sheet.nextSibling;
+  })());
 
   syncFilters(defs, markup, state);
 }

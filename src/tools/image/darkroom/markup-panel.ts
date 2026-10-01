@@ -15,6 +15,7 @@ import {
   IconPencil,
   IconRectangle,
   IconRoundedRectangle,
+  IconSpotlight,
   IconText,
   IconTrash,
 } from '../../../components/icons';
@@ -24,11 +25,11 @@ import type { I18nInstance } from '../../../components/utils/tools';
 import { rovingRadioGroup } from '../../../components/utils/roving-radio-group';
 import type { RovingRadioGroup } from '../../../components/utils/roving-radio-group';
 import { tr } from '../i18n';
-import { contrastInk, isClosedShape, MARKUP_COLORS } from '../markup/model';
+import { contrastInk, MARKUP_COLORS, takesFill } from '../markup/model';
 
 export type MarkupTool =
   | 'select' | 'pen' | 'highlighter' | 'text' | 'eraser'
-  | 'rect' | 'rounded-rect' | 'ellipse' | 'arrow' | 'line' | 'bubble' | 'star' | 'polygon';
+  | 'rect' | 'rounded-rect' | 'ellipse' | 'arrow' | 'line' | 'bubble' | 'star' | 'polygon' | 'spotlight';
 export type MarkupSizeIndex = 0 | 1 | 2;
 
 export interface MarkupPanelState {
@@ -98,12 +99,19 @@ const SHAPE_DEFS: ToolDef[] = [
   { tool: 'bubble', key: 'markupSpeechBubble', icon: IconMessage },
   { tool: 'star', key: 'markupStar', icon: IconEmojiStar },
   { tool: 'polygon', key: 'markupPolygon', icon: IconHexagon },
+  { tool: 'spotlight', key: 'markupSpotlight', icon: IconSpotlight },
 ];
+
+/** These frame the photo instead of drawing on it: no ink to pick, and a hairline above them in the grid. */
+const FRAMING_TOOLS: readonly MarkupTool[] = ['spotlight'];
+const isFraming = (t: MarkupTool | MarkupSelectionKind): boolean => FRAMING_TOOLS.some((f) => f === t);
 
 const isShapeTool = (t: MarkupTool): boolean => SHAPE_DEFS.some((d) => d.tool === t);
 
 /** The rail's one button for every shape; it shows the last shape picked. */
 const SHAPES_SLOT = 'shapes';
+
+const NAV_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Tab']);
 
 type Slot = ToolDef | typeof SHAPES_SLOT;
 
@@ -385,10 +393,10 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
     root.style.setProperty('--blok-markup-color', st.color);
     root.style.setProperty('--blok-markup-ink', contrastInk(st.color));
 
-    const showColors = sel !== null || (st.tool !== 'eraser' && st.tool !== 'select');
+    const showColors = sel !== null ? !isFraming(sel) : st.tool !== 'eraser' && st.tool !== 'select' && !isFraming(st.tool);
     const showPaint = showColors || st.tool === 'eraser';
     const showStyles = st.tool === 'text' || sel === 'text';
-    const showFill = isClosedShape(st.tool) || (sel !== null && isClosedShape(sel));
+    const showFill = sel !== null ? takesFill(sel) : takesFill(st.tool);
     const showDelete = sel !== null;
 
     root.setAttribute('data-tool', st.tool);
@@ -416,6 +424,10 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
 
     content.className = 'blok-darkroom__markup-shapes';
     content.setAttribute('data-blok-testid', 'markup-shapes');
+    // The focus ring waits for a navigation key: opening the picker is not navigating.
+    content.addEventListener('keydown', (e) => {
+      if (NAV_KEYS.has(e.key)) content.setAttribute('data-blok-keyboard-navigated', '');
+    });
     picker.items = SHAPE_DEFS.map((d) => {
       const btn = makeRadio('blok-darkroom__markup-shape', `markup-shape-${d.tool}`, t(`tools.image.${d.key}`));
 
@@ -425,6 +437,7 @@ export function createMarkupPanel(o: MarkupPanelOptions): MarkupPanel {
         pickTool(d.tool);
         closePicker();
       });
+      if (d.tool === FRAMING_TOOLS[0]) grid.appendChild(makeSep());
       grid.appendChild(btn);
 
       return btn;

@@ -1184,6 +1184,14 @@ export const IconRoundedRectangle = `
 </svg>
 `;
 
+// The Panel frame around the box it lights; the gap between them is the dimmed area.
+export const IconSpotlight = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="6.5" y="7.5" width="7" height="5" rx="1" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Corners on the standalone circle (r 6.5), one at the top.
 export const IconHexagon = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

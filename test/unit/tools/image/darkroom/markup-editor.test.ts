@@ -359,6 +359,20 @@ describe('createMarkupEditor', () => {
       expect((r.x2 - r.x1) * O.w).toBeCloseTo((r.y2 - r.y1) * O.h, 3);
     });
 
+    it('a spotlight dims the photo while it is dragged out and lands without a fill', () => {
+      const { layer, plane, editor, onCommit, advance } = setup();
+
+      editor.setState({ ...BASE, tool: 'spotlight', fill: true });
+      fire(layer, 'pointerdown', 150, 100);
+      fire(layer, 'pointermove', 250, 150);
+      advance(16);
+      expect(plane.querySelector('[data-role="markup-spotlight"]')).not.toBeNull();
+      fire(layer, 'pointerup', 250, 150);
+
+      expect(lastCommit(onCommit)[0]).toMatchObject({ type: 'spotlight', x1: 0.1, y1: 0.2, x2: 0.3, y2: 0.4 });
+      expect(lastCommit(onCommit)[0]).not.toHaveProperty('fill');
+    });
+
     it('a bubble is drawn with its tail while it is dragged out, before it lands', () => {
       const { layer, plane, editor, advance } = setup();
 

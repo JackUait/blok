@@ -72,17 +72,18 @@ export interface ImageMarkupStroke extends ImageMarkupBase {
 
 /**
  * A shape between two corner points. Line and arrow join the points; every other
- * shape fills the box they span.
+ * shape fills the box they span. A spotlight dims the image outside its box and
+ * ignores its colour and size.
  */
 export interface ImageMarkupShape extends ImageMarkupBase {
-  type: 'rect' | 'rounded-rect' | 'ellipse' | 'line' | 'arrow' | 'bubble' | 'star' | 'polygon';
+  type: 'rect' | 'rounded-rect' | 'ellipse' | 'line' | 'arrow' | 'bubble' | 'star' | 'polygon' | 'spotlight';
   x1: number;
   y1: number;
   x2: number;
   y2: number;
   /** Stroke width. */
   size: number;
-  /** Closed shapes only: a translucent fill of `color`. Omitted for false. */
+  /** Closed shapes but the spotlight: a translucent fill of `color`. Omitted for false. */
   fill?: boolean;
   /** Star and polygon only: clockwise degrees, so they turn with the image. Omitted for 0. */
   rotation?: number;

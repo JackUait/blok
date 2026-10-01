@@ -46,7 +46,9 @@ const SIMPLIFY_PRESSURE = 0.08;
 type Shape = ImageMarkupShape['type'];
 type Cut = NonNullable<ImageMarkupStroke['cut']>;
 
-const SHAPES: readonly Shape[] = ['rect', 'rounded-rect', 'ellipse', 'line', 'arrow', 'bubble', 'star', 'polygon'];
+const SHAPES: readonly Shape[] = ['rect', 'rounded-rect', 'ellipse', 'line', 'arrow', 'bubble', 'star', 'polygon', 'spotlight'];
+/** Box shapes that frame the image rather than draw on it: no fill. */
+const FRAMING: readonly Shape[] = ['spotlight'];
 /** Shapes whose outline turns with the image: they keep a rotation. */
 const TURNING: readonly Shape[] = ['star', 'polygon'];
 
@@ -96,8 +98,11 @@ const isStroke = (m: ImageMarkup): m is ImageMarkupStroke => m.type === 'pen' ||
 const isText = (m: ImageMarkup): m is ImageMarkupText => m.type === 'text';
 const isBox = (type: Shape): boolean => type !== 'line' && type !== 'arrow';
 
-/** A shape that encloses its box, so it can take a fill. */
+/** A shape that spans a box: Shift squares it, a click places a default one. */
 export const isClosedShape = (type: string): boolean => SHAPES.some((s) => s === type && isBox(s));
+
+/** A box shape drawn in ink, so it can take a fill. */
+export const takesFill = (type: string): boolean => isClosedShape(type) && !FRAMING.some((s) => s === type);
 
 export function newMarkupId(): string {
   return nanoid(12);
@@ -123,7 +128,7 @@ const buildShape = (src: Omit<ImageMarkupShape, 'size' | 'fill'> & { size: numbe
   };
   const rotation = isNum(src.rotation) ? normaliseRotation(src.rotation) : 0;
 
-  if (box && src.fill === true) out.fill = true;
+  if (takesFill(src.type) && src.fill === true) out.fill = true;
   if (TURNING.includes(src.type) && rotation !== 0) out.rotation = rotation;
   if (src.type === 'bubble') {
     const tip = tailTip({ x1, y1, x2, y2, tx: src.tx, ty: src.ty });
@@ -627,7 +632,7 @@ const hits = (item: ImageMarkup, p: Point, o: Size, tolerance: number): boolean 
   const top = Math.min(a.y, b.y);
   const bottom = Math.max(a.y, b.y);
 
-  if (item.type === 'rect') {
+  if (item.type === 'rect' || item.type === 'spotlight') {
     const outside = Math.max(left - p.x, p.x - right, top - p.y, p.y - bottom);
 
     return item.fill === true ? outside <= reach : Math.abs(outside) <= reach;

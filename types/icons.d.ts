@@ -148,6 +148,7 @@ export declare const IconCursor: string;
 export declare const IconHighlighter: string;
 export declare const IconRectangle: string;
 export declare const IconRoundedRectangle: string;
+export declare const IconSpotlight: string;
 export declare const IconHexagon: string;
 export declare const IconEllipse: string;
 export declare const IconArrowDiagonal: string;

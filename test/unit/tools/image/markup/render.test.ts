@@ -150,6 +150,37 @@ describe('marks', () => {
     expect(filled.getAttribute('fill-opacity')).toBe('0.2');
   });
 
+  describe('spotlight', () => {
+    const spot = (id: string, x1: number, y1: number): ImageMarkupShape =>
+      shape({ id, type: 'spotlight', x1, y1, x2: x1 + 0.2, y2: y1 + 0.2 });
+    const sheet = (svg: SVGSVGElement): Element | null => svg.querySelector('[data-role="markup-spotlight"]');
+
+    it('dims the whole box once, with a hole for every spotlight', () => {
+      const svg = createMarkupLayer([spot('a', 0.1, 0.1), pen(), spot('b', 0.6, 0.5)], O);
+      const d = sheet(svg)?.getAttribute('d') ?? '';
+
+      expect(d.startsWith('M0 0H1000V500H0Z')).toBe(true);
+      expect(d.match(/M/g)).toHaveLength(3);
+      expect(sheet(svg)?.getAttribute('fill-rule')).toBe('evenodd');
+      expect(sheet(svg)?.getAttribute('pointer-events')).toBe('none');
+    });
+
+    it('sits under every mark, so the marks stay bright', () => {
+      const svg = createMarkupLayer([pen(), spot('a', 0.1, 0.1)], O);
+      const kids = Array.from(svg.children).filter((c) => c.localName !== 'defs');
+
+      expect(kids[0]).toBe(sheet(svg));
+    });
+
+    it('draws nothing of its own in the mark node, and leaves when the last spotlight goes', () => {
+      const svg = createMarkupLayer([spot('a', 0.1, 0.1)], O);
+
+      expect(mark(svg, 'a').querySelector('[stroke]:not([stroke="none"])')).toBeNull();
+      updateMarkupLayer(svg, [pen()], O);
+      expect(sheet(svg)).toBeNull();
+    });
+  });
+
   it('fills a rect and an ellipse with a translucent wash of their colour', () => {
     const svg = createMarkupLayer([shape({ fill: true }), shape({ id: 'e', type: 'ellipse', fill: true })], O);
     const rect = child(mark(svg, 's1'), 'rect');

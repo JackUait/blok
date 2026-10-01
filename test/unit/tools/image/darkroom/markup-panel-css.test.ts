@@ -60,6 +60,19 @@ describe('markup-panel.css', () => {
     expect(body(css, '.blok-darkroom__markup-shape-grid')).toMatch(/grid-template-columns:\s*repeat\(2,/);
   });
 
+  it('the shape picker hides its focus ring until the user navigates with the keyboard', () => {
+    const rule = body(css, '.blok-darkroom__markup-shapes:not([data-blok-keyboard-navigated]) button:focus-visible');
+
+    expect(rule).toMatch(/outline:\s*none/);
+  });
+
+  it('the hairline in the shape grid runs across both columns', () => {
+    const rule = body(css, '.blok-darkroom__markup-shape-grid .blok-darkroom__markup-sep');
+
+    expect(rule).toMatch(/grid-column:\s*1\s*\/\s*-1/);
+    expect(rule).toMatch(/height:\s*1px/);
+  });
+
   it('the shape button chevron is small and muted next to the shape', () => {
     expect(body(css, '.blok-darkroom__markup-shapes-chevron')).toMatch(/width:\s*1[0-2]px/);
   });

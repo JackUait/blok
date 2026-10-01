@@ -54,6 +54,19 @@ describe('Blok Line markup tool icons', () => {
     expect(num(rect, 'rx')).toBeLessThanOrEqual(6);
   });
 
+  it('spotlight is the Panel frame around a centred inner box, one stroke clear of it', () => {
+    const [outer, inner] = Array.from(svgOf('IconSpotlight').querySelectorAll('rect'));
+    const box = (r: Element | undefined): number[] => ['x', 'y', 'width', 'height'].map(attribute => num(r, attribute));
+    const [ox, oy, ow, oh] = box(outer);
+    const [ix, iy, iw, ih] = box(inner);
+
+    expect([ox, oy, ow, oh]).toEqual([3, 4, 14, 12]);
+    expect(ix + iw / 2).toBe(10);
+    expect(iy + ih / 2).toBe(10);
+    expect(ix - ox).toBeGreaterThanOrEqual(2 * STROKE);
+    expect(iy - oy).toBeGreaterThanOrEqual(2 * STROKE);
+  });
+
   it('hexagon sits on the standalone circle, point up', () => {
     const svg = svgOf('IconHexagon');
     const pts = numbers(svg.querySelector('path'));

@@ -4,7 +4,7 @@ import { prefersReducedMotion, type SpringClock } from '../../../components/util
 import type { I18nInstance } from '../../../components/utils/tools';
 import { tr } from '../i18n';
 import {
-  commitMarkupItem, contrastInk, eraseMarkup, HIGHLIGHTER_SCALE, hitTest, isClosedShape, MARKUP_SIZES, markupBounds, moveMarkup, newMarkupId,
+  commitMarkupItem, contrastInk, eraseMarkup, HIGHLIGHTER_SCALE, hitTest, isClosedShape, takesFill, MARKUP_SIZES, markupBounds, moveMarkup, newMarkupId,
   resizeMarkup, TEXT_LINE_HEIGHT, textBoxSize,
 } from '../markup/model';
 import { smoothStroke, strokeOutline } from '../markup/freehand';
@@ -87,7 +87,7 @@ const OUTLINE_WIDTH = 0.16;
 const BG_PAD_X = 0.08;
 const BG_PAD_Y = 0.2;
 const FONT_FAMILY = "system-ui, -apple-system, 'Segoe UI', sans-serif";
-const SHAPES = new Set<MarkupTool>(['rect', 'rounded-rect', 'ellipse', 'arrow', 'line', 'bubble', 'star', 'polygon']);
+const SHAPES = new Set<MarkupTool>(['rect', 'rounded-rect', 'ellipse', 'arrow', 'line', 'bubble', 'star', 'polygon', 'spotlight']);
 
 const rafClock: SpringClock = {
   now: () => performance.now(),
@@ -96,7 +96,7 @@ const rafClock: SpringClock = {
 };
 
 const isText = (m: ImageMarkup): m is ImageMarkupText => m.type === 'text';
-const isBoxShape = (m: ImageMarkup): boolean => isClosedShape(m.type);
+const isBoxShape = (m: ImageMarkup): boolean => takesFill(m.type);
 
 const easeOutBack = (t: number): number => {
   const c1 = 1.70158;
@@ -704,7 +704,7 @@ export function createMarkupEditor(opts: MarkupEditorOptions): MarkupEditor {
       size: sizeFor(g.type, st.state.size),
     };
 
-    if (isClosedShape(g.type) && st.state.fill) item.fill = true;
+    if (takesFill(g.type) && st.state.fill) item.fill = true;
 
     return item;
   };

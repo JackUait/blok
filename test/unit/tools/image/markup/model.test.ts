@@ -22,6 +22,8 @@ import {
   eraseMarkup,
   MAX_MARKUP_ITEMS,
   shapeOutline,
+  isClosedShape,
+  takesFill,
 } from '../../../../../src/tools/image/markup/model';
 
 const O: Size = { w: 1000, h: 500 };
@@ -722,6 +724,28 @@ describe('outlined shapes', () => {
     const flipped = asShape(flipMarkup([m])[0]);
 
     sameSet(outline(flipped), outline(m).map((p) => ({ x: 1000 - p.x, y: p.y })));
+  });
+});
+
+describe('spotlight', () => {
+  const spot = (over: Partial<ImageMarkupShape> = {}): ImageMarkupShape =>
+    shape({ id: 'sp', type: 'spotlight', x1: 0.1, y1: 0.2, x2: 0.5, y2: 0.6, ...over });
+
+  it('survives a save and load, and never keeps a fill', () => {
+    expect(readMarkup([spot()])).toEqual([spot()]);
+    expect(readMarkup([spot({ fill: true })])).toEqual([spot()]);
+  });
+
+  it('is a box shape that takes no fill', () => {
+    expect(isClosedShape('spotlight')).toBe(true);
+    expect(takesFill('spotlight')).toBe(false);
+    expect(takesFill('star')).toBe(true);
+    expect(takesFill('line')).toBe(false);
+  });
+
+  it('is hit on its edge, not inside the lit area where the marks it frames are', () => {
+    expect(hitTest([spot()], { x: 100, y: 200 }, O, 2)?.id).toBe('sp');
+    expect(hitTest([spot()], { x: 300, y: 200 }, O, 2)).toBeNull();
   });
 });
 

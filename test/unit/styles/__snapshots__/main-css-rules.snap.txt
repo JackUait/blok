@@ -1059,6 +1059,13 @@
   gap: var(--blok-space-1);
 }
 
+.blok-darkroom__markup-shape-grid .blok-darkroom__markup-sep {
+  grid-column: 1 / -1;
+  width: auto;
+  height: 1px;
+  margin: var(--blok-space-1) 0;
+}
+
 .blok-darkroom__markup-tool, .blok-darkroom__markup-shape, .blok-darkroom__markup-swatch, .blok-darkroom__markup-size, .blok-darkroom__markup-style, .blok-darkroom__markup-btn {
   appearance: none;
   position: relative;
@@ -1216,6 +1223,10 @@
 .blok-darkroom__markup button:focus-visible {
   outline: 2px solid var(--blok-focus-ring);
   outline-offset: 1px;
+}
+
+.blok-darkroom__markup-shapes:not([data-blok-keyboard-navigated]) button:focus-visible {
+  outline: none;
 }
 
 [@media (prefers-reduced-motion: reduce)] .blok-darkroom__markup-rail, .blok-darkroom__markup-tool svg, .blok-darkroom__markup-btn svg, .blok-darkroom__markup-puck, .blok-darkroom__markup-ctl, .blok-darkroom__markup-tool, .blok-darkroom__markup-swatch, .blok-darkroom__markup-size, .blok-darkroom__markup-style, .blok-darkroom__markup-btn, .blok-darkroom__markup-swatch::before, .blok-darkroom__markup-swatch svg, .blok-darkroom__markup-dot, .blok-darkroom__markup-aa {

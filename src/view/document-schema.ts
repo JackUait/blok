@@ -100,6 +100,7 @@ export const blokDocumentSchema = {
           { if: { required: ['type'], properties: { type: { const: 'column' } } }, then: { properties: { data: { $ref: '#/$defs/column' } } } },
           { if: { required: ['type'], properties: { type: { const: 'embed' } } }, then: { properties: { data: { $ref: '#/$defs/embed' } } } },
           { if: { required: ['type'], properties: { type: { const: 'bookmark' } } }, then: { properties: { data: { $ref: '#/$defs/bookmark' } } } },
+          { if: { required: ['type'], properties: { type: { const: 'page' } } }, then: { properties: { data: { $ref: '#/$defs/page' } } } },
         ],
       },
     },
@@ -607,6 +608,40 @@ export const blokDocumentSchema = {
         image: { type: 'string', description: 'Preview image URL.' },
         favicon: { type: 'string' },
         domain: { type: 'string' },
+      },
+    },
+
+    page: {
+      type: 'object',
+      description: 'A link to a sub-page. The page body lives in a separate document named by `pageId`, not in this one, so the block has no children.',
+      required: ['pageId'],
+      additionalProperties: false,
+      properties: {
+        pageId: { type: 'string', description: 'Id of the separate document that holds the page.' },
+        cache: {
+          type: 'object',
+          description: 'Copy of the page\'s title and icon, for display without loading the page. May be stale.',
+          additionalProperties: false,
+          properties: {
+            title: { type: 'string', description: 'Plain text. Absent or empty means untitled.' },
+            icon: {
+              oneOf: [
+                {
+                  type: 'object',
+                  required: ['type', 'value'],
+                  additionalProperties: false,
+                  properties: { type: { const: 'emoji' }, value: { type: 'string' } },
+                },
+                {
+                  type: 'object',
+                  required: ['type', 'url'],
+                  additionalProperties: false,
+                  properties: { type: { const: 'image' }, url: { type: 'string' } },
+                },
+              ],
+            },
+          },
+        },
       },
     },
   },

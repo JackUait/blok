@@ -149,6 +149,40 @@ describe('blocksToMarkdown (view)', () => {
     expect(md).toBe('- Step one\n\n    More about step one');
   });
 
+  /**
+   * `blocksToMarkdown` takes no options, so it has no way to build the page's
+   * link: a page exports as its title line.
+   */
+  describe('page', () => {
+    it('exports the cached title, verbatim', () => {
+      const md = blocksToMarkdown(doc([
+        { type: 'paragraph', data: { text: 'Before' } },
+        { type: 'page', data: { pageId: 'p1', cache: { title: 'Q3 <plan> & notes' } } },
+      ]));
+
+      expect(md).toBe('Before\n\nQ3 <plan> & notes');
+    });
+
+    it('exports an untitled page as "Untitled", like the rendered card', () => {
+      expect(blocksToMarkdown(doc([{ type: 'page', data: { pageId: 'p1' } }]))).toBe('Untitled');
+    });
+
+    it('never exports children a malformed document hangs off a page', () => {
+      const md = blocksToMarkdown(doc([
+        { id: 'pg', type: 'page', data: { pageId: 'p1', cache: { title: 'T' } }, content: ['c1'] },
+        { id: 'c1', type: 'paragraph', parent: 'pg', data: { text: 'Leaked body' } },
+      ]));
+
+      expect(md).toBe('T');
+    });
+
+    it('does not report the page as dropped', () => {
+      const { warnings } = blocksToMarkdownWithReport(doc([{ type: 'page', data: { pageId: 'p1' } }]));
+
+      expect(warnings.filter(warning => warning.action === 'dropped')).toEqual([]);
+    });
+  });
+
   describe('containers that own their children', () => {
     it('renders a callout as a blockquote carrying its emoji and its children', () => {
       const md = blocksToMarkdown(doc([

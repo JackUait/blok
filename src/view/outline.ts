@@ -84,7 +84,11 @@ export const outlineFromOutputData = (
 
     try {
       collectHeader(block);
-      model.childrenOf(block.id).forEach(visit);
+
+      /** A page's body lives in another document; children here are malformed. */
+      if (block.type !== 'page') {
+        model.childrenOf(block.id).forEach(visit);
+      }
     } finally {
       if (block.id !== undefined) {
         active.delete(block.id);

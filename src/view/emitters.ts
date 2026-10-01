@@ -51,6 +51,12 @@ export interface EmitterEnv {
    */
   url(name: 'href' | 'src', value: unknown, blockType: string): string;
   /**
+   * Build the ` href="…"` attribute for a page block from the `pageHref`
+   * option, gated like {@link EmitterEnv.url}. Empty when the option is absent,
+   * the id is not a non-empty string, or the URL is unsafe.
+   */
+  pageHrefAttr(pageId: unknown): string;
+  /**
    * Build the ` data-blok-id="<id>"` attribute for a block when the `blockIds`
    * option is on and the block carries an id; empty string otherwise.
    */
@@ -375,6 +381,33 @@ const emitTable = (block: ViewBlock, env: EmitterEnv): string => {
 };
 
 /**
+ * Page emitter: a one-line card (icon + title) pointing at a SEPARATE
+ * document. It is a link only when the consumer supplies `pageHref`.
+ *
+ * Deliberately never renders children: the page body is not in this
+ * document, so any child a malformed document hangs off a page would
+ * publish content the reader never sees in the editor.
+ * @param block - page block
+ * @param env - emitter environment
+ */
+const emitPage = (block: ViewBlock, env: EmitterEnv): string => {
+  const cache = isRecord(block.data.cache) ? block.data.cache : {};
+  const icon = isRecord(cache.icon) ? cache.icon : {};
+  const title = str(cache, 'title');
+  const emoji = icon.type === 'emoji' ? str(icon, 'value') : '';
+  const src = icon.type === 'image' ? env.url('src', icon.url, block.type) : '';
+  const emojiGlyph = emoji === '' ? '' : `<span>${env.escape(emoji)}</span>`;
+  const glyph = src === '' ? emojiGlyph : `<img${src} alt="">`;
+  /** Matches the editor's placeholder; the view has no i18n layer. */
+  const label = `<span>${env.escape(title === '' ? 'Untitled' : title)}</span>`;
+  const href = env.pageHrefAttr(block.data.pageId);
+
+  return href === ''
+    ? `<div><span>${glyph}${label}</span></div>`
+    : `<div><a${href}>${glyph}${label}</a></div>`;
+};
+
+/**
  * The built-in tool emitters, keyed by tool name as registered in
  * `defaultBlockTools`. `list` never reaches this map — list runs are grouped
  * by the dispatcher and rendered via {@link renderListRun}.
@@ -586,4 +619,6 @@ export const builtinEmitters: Record<string, Emitter> = {
 
   database: childrenOnly,
   'database-row': childrenOnly,
+
+  page: emitPage,
 };

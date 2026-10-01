@@ -564,4 +564,21 @@ describe('extractTexts / injectTexts', () => {
       blocks: [{ type: 'quote', data: { text: 'Мудрые слова', caption: 'Ада Лавлейс' } }],
     });
   });
+
+  it('extracts a page block\'s cached title and injects its translation back', () => {
+    const data = {
+      blocks: [
+        { type: 'page', data: { pageId: 'p1', cache: { title: 'Roadmap', icon: { type: 'emoji', value: '🗺' } } } },
+        { type: 'page', data: { pageId: 'p2' } },
+      ],
+    };
+
+    expect(extractTexts(data)).toEqual(['Roadmap']);
+    expect(injectTexts(data, ['Дорожная карта'])).toEqual({
+      blocks: [
+        { type: 'page', data: { pageId: 'p1', cache: { title: 'Дорожная карта', icon: { type: 'emoji', value: '🗺' } } } },
+        { type: 'page', data: { pageId: 'p2' } },
+      ],
+    });
+  });
 });

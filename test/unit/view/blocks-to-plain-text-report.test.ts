@@ -29,6 +29,10 @@ describe('blocksToPlainTextWithReport', () => {
     expect(blocksToPlainTextWithReport(document).text).toBe(blocksToPlainText(document));
   });
 
+  it('knows the page block, even untitled', () => {
+    expect(blocksToPlainTextWithReport(doc([{ type: 'page', data: { pageId: 'p1' } }])).warnings).toEqual([]);
+  });
+
   /**
    * The whole reason this exists: a document of tools the reader does not know
    * reads as `''`, exactly like an empty one, and the caller could not tell

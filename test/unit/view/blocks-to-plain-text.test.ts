@@ -306,6 +306,46 @@ describe('blocksToPlainText', () => {
   });
 
   /**
+   * A page block points at a separate document. Its title is all of it that
+   * lives here, and nothing below it may be read as this document's text.
+   */
+  describe('page', () => {
+    it('reads the cached title as plain text, verbatim', () => {
+      expect(blocksToPlainText(doc([
+        { type: 'paragraph', data: { text: 'Before' } },
+        { type: 'page', data: { pageId: 'p1', cache: { title: 'Q3 <plan> & notes' } } },
+      ]))).toBe('Before\n\nQ3 <plan> & notes');
+    });
+
+    it('reads an untitled page as nothing, not as a placeholder', () => {
+      expect(blocksToPlainText(doc([
+        { type: 'page', data: { pageId: 'p1' } },
+        { type: 'paragraph', data: { text: 'After' } },
+      ]))).toBe('After');
+    });
+
+    it('never reads children a malformed document hangs off a page', () => {
+      const blocks = [
+        { id: 'pg', type: 'page', data: { pageId: 'p1', cache: { title: 'T' } }, content: ['c1'] },
+        { id: 'c1', type: 'paragraph', parent: 'pg', data: { text: 'Leaked body' } },
+      ] as OutputBlockData[];
+
+      expect(blocksToPlainText(doc(blocks))).toBe('T');
+      expect(blocksToPlainText(doc(blocks), { includeHiddenText: true })).toBe('T');
+    });
+
+    it('never reads a page\'s children inside a table cell', () => {
+      const blocks = [
+        { id: 't', type: 'table', data: { content: [[{ blocks: ['pg'] }]] }, content: ['pg'] },
+        { id: 'pg', type: 'page', parent: 't', data: { pageId: 'p1', cache: { title: 'T' } }, content: ['c1'] },
+        { id: 'c1', type: 'paragraph', parent: 'pg', data: { text: 'Leaked body' } },
+      ] as OutputBlockData[];
+
+      expect(blocksToPlainText(doc(blocks))).toBe('T');
+    });
+  });
+
+  /**
    * The default reader emits the FIRST non-empty label of a media block, which
    * is what the editor paints. A search index needs the rest — an image's alt,
    * a bookmark's description, the URLs a person pastes back verbatim.

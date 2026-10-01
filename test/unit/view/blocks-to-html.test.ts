@@ -642,6 +642,116 @@ describe('blocksToHtml', () => {
     });
   });
 
+  describe('page', () => {
+    const page = (data: Record<string, unknown>, extra: Partial<OutputBlockData> = {}): OutputBlockData =>
+      ({ id: 'pg', type: 'page', data, ...extra });
+
+    it('renders a non-link card with emoji icon and title when no pageHref is given', () => {
+      const html = blocksToHtml(doc([
+        page({ pageId: 'p1', cache: { title: 'Roadmap', icon: { type: 'emoji', value: '🗺' } } }),
+      ]));
+
+      expect(html).toBe('<div><span><span>🗺</span><span>Roadmap</span></span></div>');
+    });
+
+    it('links the card through pageHref', () => {
+      const pageHref = vi.fn((pageId: string) => `/pages/${pageId}`);
+      const html = blocksToHtml(doc([page({ pageId: 'p1', cache: { title: 'Roadmap' } })]), { pageHref });
+
+      expect(html).toBe('<div><a href="/pages/p1"><span>Roadmap</span></a></div>');
+      expect(pageHref).toHaveBeenCalledWith('p1');
+    });
+
+    it('falls back to "Untitled" when the cache has no title', () => {
+      expect(blocksToHtml(doc([page({ pageId: 'p1' })]))).toBe('<div><span><span>Untitled</span></span></div>');
+      expect(blocksToHtml(doc([page({ pageId: 'p1', cache: { title: '' } })]))).toContain('<span>Untitled</span>');
+    });
+
+    it('escapes the title and the emoji', () => {
+      const html = blocksToHtml(doc([
+        page({ pageId: 'p1', cache: { title: '<img src=x onerror=alert(1)>', icon: { type: 'emoji', value: '<b>' } } }),
+      ]));
+
+      expect(html).not.toContain('<img');
+      expect(html).not.toContain('<b>');
+      expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    });
+
+    it('renders an image icon through the URL gate', () => {
+      const safe = blocksToHtml(doc([
+        page({ pageId: 'p1', cache: { title: 'T', icon: { type: 'image', url: 'https://cdn.x/i.png' } } }),
+      ]));
+      const unsafe = blocksToHtml(doc([
+        page({ pageId: 'p1', cache: { title: 'T', icon: { type: 'image', url: 'javascript:alert(1)' } } }),
+      ]));
+
+      expect(safe).toBe('<div><span><img src="https://cdn.x/i.png" alt=""><span>T</span></span></div>');
+      expect(unsafe).not.toContain('javascript:');
+      expect(unsafe).not.toContain('<img');
+    });
+
+    it('drops the link when pageHref returns an unsafe URL', () => {
+      const html = blocksToHtml(doc([page({ pageId: 'p1', cache: { title: 'T' } })]), {
+        pageHref: () => 'javascript:alert(1)',
+      });
+
+      expect(html).toBe('<div><span><span>T</span></span></div>');
+    });
+
+    it('does not call pageHref when pageId is missing', () => {
+      const pageHref = vi.fn(() => '/x');
+      const html = blocksToHtml(doc([page({ cache: { title: 'T' } })]), { pageHref });
+
+      expect(pageHref).not.toHaveBeenCalled();
+      expect(html).toBe('<div><span><span>T</span></span></div>');
+    });
+
+    it('routes the href through transformUrl with blockType "page"', () => {
+      const transformUrl = vi.fn((url: string) => `https://site.test${url}`);
+      const html = blocksToHtml(doc([page({ pageId: 'p1', cache: { title: 'T' } })]), {
+        pageHref: (id) => `/p/${id}`,
+        transformUrl,
+      });
+
+      expect(html).toContain('href="https://site.test/p/p1"');
+      expect(transformUrl).toHaveBeenCalledWith('/p/p1', { attr: 'href', blockType: 'page' });
+    });
+
+    it('never renders children, even from a malformed document', () => {
+      const blocks: OutputBlockData[] = [
+        page({ pageId: 'p1', cache: { title: 'T' } }, { content: ['c1'] }),
+        { id: 'c1', type: 'paragraph', parent: 'pg', data: { text: 'Leaked body' } },
+      ];
+
+      expect(blocksToHtml(doc(blocks))).not.toContain('Leaked body');
+      expect(blocksToHtml(doc(blocks), { onUnknownBlock: 'comment' })).not.toContain('Leaked body');
+    });
+
+    it('never renders a child claimed only through the page\'s content list', () => {
+      const html = blocksToHtml(doc([
+        page({ pageId: 'p1', cache: { title: 'T' } }, { content: ['c1'] }),
+        { id: 'c1', type: 'paragraph', data: { text: 'Leaked body' } },
+      ]));
+
+      expect(html).toBe('<div><span><span>T</span></span></div>');
+    });
+
+    it('carries the tool and id hooks on the card root', () => {
+      const html = blocksToHtml(doc([page({ pageId: 'p1', cache: { title: 'T' } })]), {
+        toolAttributes: true,
+        blockIds: true,
+      });
+
+      expect(html).toBe('<div data-blok-tool="page" data-blok-id="pg"><span><span>T</span></span></div>');
+    });
+
+    it('lets a custom renderer win', () => {
+      const html = blocksToHtml(doc([page({ pageId: 'p1' })]), { renderers: { page: () => '<i>mine</i>' } });
+
+      expect(html).toBe('<i>mine</i>');
+    });
+  });
+
   describe('unknown blocks', () => {
     it('skips unknown tools by default', () => {
       const html = blocksToHtml(doc([

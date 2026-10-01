@@ -41,6 +41,7 @@ export { Column } from './column';
 export { Columns } from './columns';
 export { Embed } from './link/embed';
 export { Bookmark } from './link/bookmark';
+export { PageTool as Page } from './page';
 
 // Embed-registry lookup. The registry itself stays private — these two are the
 // whole contract a host needs to turn a stored legacy URL into exactly the

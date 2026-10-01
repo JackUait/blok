@@ -160,6 +160,13 @@ export interface BlocksToHtmlOptions {
    * `<BlokView>` enables it internally, so React consumers get parity for free.
    */
   classes?: boolean;
+  /**
+   * Build the link for a `page` block from its `pageId`. The page body lives in
+   * a separate document, so the view renders a page as a one-line card; it is a
+   * link only when this is given. The result still passes through
+   * {@link BlocksToHtmlOptions.transformUrl} and the unsafe-scheme strip.
+   */
+  pageHref?: (pageId: string) => string;
 }
 
 /**
@@ -277,6 +284,8 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
   const inlineRenderers = options.inlineRenderers ?? {};
   const hasInlineRenderers = Object.keys(inlineRenderers).length > 0;
 
+  const pageHref = options.pageHref;
+
   const env: EmitterEnv = {
     inline: (value) => {
       const sanitized = sanitizeHtmlFragment(typeof value === 'string' ? value : '', inlineConfig, inlineUrlTransform);
@@ -310,6 +319,11 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
 
       return ` ${name}="${escapeHtml(resolved)}"`;
     },
+    pageHrefAttr: (pageId) => (
+      pageHref === undefined || typeof pageId !== 'string' || pageId === ''
+        ? ''
+        : env.url('href', pageHref(pageId), 'page')
+    ),
     idAttr: (block) => (blockIds && block.id !== undefined ? ` data-blok-id="${escapeHtml(block.id)}"` : ''),
     rootAttrs: (block) => {
       const list = classes ? classesFor(block.type, block.data) : [];

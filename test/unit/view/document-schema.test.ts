@@ -27,6 +27,7 @@ import {
   Header,
   Image as ImageTool,
   List,
+  Page,
   Paragraph,
   Quote,
   Spacer,
@@ -40,6 +41,7 @@ import { blokDocumentSchema } from '../../../src/view/document-schema';
 import type { API, BlockToolConstructorOptions, OutputData } from '../../../types';
 
 type JsonSchema = {
+  description?: string;
   properties?: Record<string, unknown>;
   required?: string[];
   additionalProperties?: boolean;
@@ -164,6 +166,8 @@ const savedData: Record<string, Record<string, unknown>> = {
   'database-row': new DatabaseRow(options({ properties: { p1: 'Ship it' }, position: 'a0', title: 'Ship it' }))
     .save(contentElement('')),
 
+  page: new Page(options({ pageId: 'p1', cache: { title: 'Roadmap', icon: { type: 'emoji', value: '🗺' } } })).save(),
+
   divider: new Divider(options({})).save(),
 
   spacer: new Spacer(options({ height: 40 })).save(),
@@ -263,6 +267,37 @@ describe('blokDocumentSchema', () => {
       Object.keys(defaultBlockTools).forEach((name) => {
         expect(routed[name]).toBe(`#/$defs/${name}`);
       });
+    });
+  });
+
+  /**
+   * A page block is a pointer: its body is a separate document, so the def
+   * describes only the id and the cached title/icon.
+   */
+  describe('page', () => {
+    it('describes the pointer and its cached title and icon', () => {
+      const page = defs.page;
+
+      expect(page.required).toEqual(['pageId']);
+      expect(page.additionalProperties).toBe(false);
+      expect(Object.keys(page.properties ?? {}).sort()).toEqual(['cache', 'pageId']);
+      expect(page.description).toMatch(/separate document/);
+
+      const cache = page.properties?.cache as JsonSchema;
+
+      expect(cache.additionalProperties).toBe(false);
+      expect(Object.keys(cache.properties ?? {}).sort()).toEqual(['icon', 'title']);
+    });
+
+    it('routes the page type to its def', () => {
+      const branches = (blockSchema.items as unknown as { allOf?: Array<{
+        if: { properties: { type: { const: string } } };
+        then: { properties: { data: { $ref: string } } };
+      }> }).allOf ?? [];
+
+      expect(branches.some(branch =>
+        branch.if.properties.type.const === 'page' && branch.then.properties.data.$ref === '#/$defs/page'
+      )).toBe(true);
     });
   });
 

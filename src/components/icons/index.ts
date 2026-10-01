@@ -1103,6 +1103,16 @@ export const IconFile = `
 </svg>
 `;
 
+// Page block — IconFile's sheet with a solid fold, so it reads apart from the
+// File block's glyph next to it in the toolbox.
+export const IconPage = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M5 5a2 2 0 0 1 2-2h4l4 4v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M11 3v4h4Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7.5 10.5h5M7.5 13.5h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
 // ============================================================================
 // File-type icons (20×20 / 1.25 house spec) — chosen by File block per
 // extension/MIME category. Monochrome currentColor; the File block tints them

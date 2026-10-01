@@ -7,12 +7,13 @@
  * declaration is wrong.
  */
 
-import type { defaultBlockTools, Columns, Embed, Bookmark, Image, File, Audio, Video, ClearFormat, mountChildBlocks } from '../../../types/tools-entry';
+import type { defaultBlockTools, Columns, Embed, Bookmark, Page, Image, File, Audio, Video, ClearFormat, mountChildBlocks } from '../../../types/tools-entry';
 import type {
   ImageData, ImageConfig, ImageUploader,
   FileData, FileConfig, FileUploader,
   AudioData, AudioConfig, AudioUploader,
   VideoData, VideoConfig, VideoUploader,
+  PageData, PageConfig, PageInfo, PageIcon,
 } from '../../../types/tools-entry';
 
 // defaultBlockTools must include 'database' and 'database-row' entries
@@ -27,6 +28,10 @@ const _columns: typeof Columns = {} as typeof Columns;
 // won't typecheck for consumers.
 const _embed: typeof Embed = {} as typeof Embed;
 const _bookmark: typeof Bookmark = {} as typeof Bookmark;
+
+// Page is exported from the runtime tools entry.
+const _page: typeof Page = {} as typeof Page;
+const _pageTypes: [PageData, PageConfig, PageInfo, PageIcon] = [] as never;
 
 // defaultBlockTools must include the 'embed' and 'bookmark' entries the runtime emits
 const _embedDefault: typeof defaultBlockTools.embed = {} as const;
@@ -66,6 +71,8 @@ void _dbRow;
 void _columns;
 void _embed;
 void _bookmark;
+void _page;
+void _pageTypes;
 void _embedDefault;
 void _bookmarkDefault;
 void _image;

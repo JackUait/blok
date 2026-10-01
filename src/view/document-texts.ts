@@ -55,6 +55,8 @@ const PROSE_FIELDS: Record<string, string[]> = {
   callout: ['title'],
   /** Legacy only: the editor migrates a warning to a callout with these as paragraphs. */
   warning: ['title', 'message'],
+  /** The title is nested in `cache`; `walkBlock` reads it there. */
+  page: [],
 };
 
 /** Types whose LEGACY data nests item text in `data.items[]`. Current list blocks are flat. */
@@ -253,6 +255,10 @@ const collectSlots = (blocks: unknown[], options: DocumentTextsOptions): TextSlo
 
     if (entry.type === 'table') {
       walkTable(data);
+    }
+
+    if (entry.type === 'page' && isRecord(data.cache)) {
+      pushSlot(data.cache, 'title');
     }
 
     if (LEGACY_ITEM_TYPES.has(entry.type) && Array.isArray(data.items)) {

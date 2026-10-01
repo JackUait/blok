@@ -166,6 +166,19 @@ export interface BlocksToHtmlOptions {
    * wrapper elements.
    */
   classes?: boolean;
+  /**
+   * Build the link for a `page` block from its `pageId`.
+   *
+   * A page's body lives in a separate document, so the view renders a page
+   * block as a one-line card (icon + title) and never renders children under
+   * it. The card is a link only when this is given. The returned URL still
+   * passes through {@link transformUrl} (with `blockType: 'page'`) and the
+   * unsafe-scheme strip, so a `javascript:` result renders a plain card.
+   *
+   * @example
+   * blocksToHtml(data, { pageHref: (pageId) => `/pages/${pageId}` });
+   */
+  pageHref?: (pageId: string) => string;
 }
 
 /**

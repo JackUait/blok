@@ -219,6 +219,9 @@ export const blocksToPlainTextWithReport = (
         return mediaText(block.data, ['caption', 'fileName'], ['caption', 'fileName', 'url']);
       case 'bookmark':
         return mediaText(block.data, ['title', 'url'], ['title', 'description', 'url']);
+      /** The title is plain text; an untitled page reads as nothing, not as a placeholder. */
+      case 'page':
+        return isRecord(block.data.cache) ? firstString(block.data.cache, ['title']) : '';
       default:
         /** divider, spacer, columns, database, unknown tools… carry no own text. */
         return '';
@@ -242,7 +245,8 @@ export const blocksToPlainTextWithReport = (
     try {
       noteUnreadable(block);
 
-      const parts = [ownText(block), ...model.childrenOf(block.id).map(deepText)];
+      const children = block.type === 'page' ? [] : model.childrenOf(block.id);
+      const parts = [ownText(block), ...children.map(deepText)];
 
       return parts.filter((part) => part !== '').join('\n');
     } finally {
@@ -367,6 +371,11 @@ export const blocksToPlainTextWithReport = (
       const referenced = block.type === 'table' && renderers[block.type] === undefined
         ? referencedCellIds(block)
         : undefined;
+
+      /** A page's body lives in another document; children here are malformed and stay unread. */
+      if (block.type === 'page' && renderers[block.type] === undefined) {
+        return;
+      }
 
       model.childrenOf(block.id)
         .filter((child) => referenced === undefined || child.id === undefined || !referenced.has(child.id))

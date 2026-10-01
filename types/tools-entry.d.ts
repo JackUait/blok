@@ -91,6 +91,7 @@ export { Video, VideoConstructorOptions } from './tools/video';
 export { Code, CodeConstructorOptions } from './tools/code';
 export { Embed, EmbedConstructorOptions } from './tools/embed';
 export { Bookmark, BookmarkConstructorOptions } from './tools/bookmark';
+export { Page, PageConstructorOptions } from './tools/page';
 /**
  * Columns group manifest: a single registration handle that expands to the
  * `column_list` and `column` block tools. Register as `tools: { columns: Columns }`.
@@ -119,6 +120,7 @@ export { EmbedData, EmbedKind, EmbedAlignment, EmbedMatch, EmbedServiceType } fr
 // Embed-registry lookup for migrating stored links; the registry data stays private.
 export { matchEmbedService, buildEmbedUrl } from './tools/embed';
 export { BookmarkData, BookmarkConfig, BookmarkMeta } from './tools/bookmark';
+export { PageData, PageConfig, PageInfo, PageIcon, PageCache } from './tools/page';
 export { MediaSource } from './tools/media-source';
 export { MediaUploadError, MediaUploadErrorCode, UploadErrorHandler } from './tools/upload-error';
 export { ColumnListData } from './tools/column-list';
@@ -148,6 +150,7 @@ import { ColumnListData as _ColumnListData } from './tools/column-list';
 import { ColumnData as _ColumnData } from './tools/column';
 import { EmbedData as _EmbedData } from './tools/embed';
 import { BookmarkData as _BookmarkData } from './tools/bookmark';
+import { PageData as _PageData } from './tools/page';
 
 /**
  * Registry mapping a block's saved `type` string to the shape of its `data`.
@@ -188,6 +191,7 @@ export interface BlokBlockDataMap {
   column: _ColumnData;
   embed: _EmbedData;
   bookmark: _BookmarkData;
+  page: _PageData;
 }
 
 /**

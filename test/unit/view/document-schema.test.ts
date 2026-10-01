@@ -179,6 +179,8 @@ const savedData: Record<string, Record<string, unknown>> = {
     alt: 'Alt', fileName: 'a.png', size: 'md', frame: 'border', rounded: true,
     captionVisible: true, naturalWidth: 800, naturalHeight: 600,
     crop: { x: 10, y: 10, w: 50, h: 50, shape: 'circle' },
+    rotation: 90, flipX: true, straighten: 5, filter: 'warm',
+    adjust: { brightness: 10, contrast: 20, saturation: 30 },
     variants: [{ url: 'https://example.com/a.avif', mimeType: 'image/avif' }, { url: 'https://example.com/a.png', mimeType: 'image/png' }],
   })).save(),
 
@@ -286,6 +288,17 @@ describe('blokDocumentSchema', () => {
       const [[cell]] = (savedData.table as { content: Record<string, unknown>[][] }).content;
 
       Object.keys(cell).forEach(key => expect(Object.keys(cellDef?.properties ?? {})).toContain(key));
+    });
+
+    it('image: geometry and adjust fields carry their ranges', () => {
+      const props = (defs.image.properties ?? {}) as Record<string, { enum?: unknown[]; minimum?: number; maximum?: number; additionalProperties?: boolean; properties?: Record<string, { minimum?: number; maximum?: number }> }>;
+
+      expect(props.rotation?.enum).toEqual([0, 90, 180, 270]);
+      expect(props.straighten).toMatchObject({ minimum: -45, maximum: 45 });
+      expect(props.filter?.enum).toEqual(['none', 'vivid', 'dramatic', 'warm', 'mono', 'noir', 'fade', 'sepia']);
+      expect(props.adjust?.additionalProperties).toBe(false);
+      expect(Object.keys(props.adjust?.properties ?? {}).sort()).toEqual(['brightness', 'contrast', 'saturation']);
+      Object.values(props.adjust?.properties ?? {}).forEach(p => expect(p).toMatchObject({ minimum: -100, maximum: 100 }));
     });
 
     it.each(Object.keys(defaultBlockTools))('%s: every required field is actually saved', (name) => {

@@ -2601,3 +2601,48 @@ describe('ImageTool — retrying a broken image', () => {
     expect(root.querySelector('[data-role="error-state"]')?.hasAttribute('data-unmended')).toBe(false);
   });
 });
+
+describe('ImageTool — save() geometry and adjust', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('keeps rotation, mirror, straighten, filter and adjust', () => {
+    const tool = new ImageTool(createOptions({
+      url: 'https://x/y.png',
+      rotation: 90,
+      flipX: true,
+      straighten: 12.34,
+      filter: 'mono',
+      adjust: { brightness: 20, contrast: 0, saturation: -150 },
+    }));
+
+    expect(tool.save()).toEqual({
+      url: 'https://x/y.png',
+      rotation: 90,
+      flipX: true,
+      straighten: 12.3,
+      filter: 'mono',
+      adjust: { brightness: 20, saturation: -100 },
+    });
+  });
+
+  it('drops default and invalid values', () => {
+    const bad: unknown = {
+      url: 'https://x/y.png',
+      rotation: 45,
+      flipX: 'yes',
+      straighten: 0,
+      filter: 'lomo',
+      adjust: { brightness: 0, contrast: 0, saturation: 0 },
+    };
+    const tool = new ImageTool(createOptions(bad as Partial<ImageData>));
+
+    expect(tool.save()).toEqual({ url: 'https://x/y.png' });
+  });
+
+  it('omits every new key for an old document', () => {
+    const saved = new ImageTool(createOptions({ url: 'https://x/y.png' })).save();
+
+    expect(Object.keys(saved)).toEqual(['url']);
+  });
+});

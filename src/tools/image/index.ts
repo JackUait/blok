@@ -45,6 +45,8 @@ import { ImageError } from './errors';
 import { alignmentFraction, attachResizeHandle, edgePositionPercent, type ResizeEdge } from './resizer';
 import { resizeFloorPx } from './resize-floor';
 import { widthForAspectChange } from './crop-math';
+import { readGeometry, geometryFields } from './geometry';
+import { readAdjust, adjustFields } from './adjust';
 import {
   applyAutoFull,
   openLightbox,
@@ -165,6 +167,8 @@ export class ImageTool implements BlockTool {
         out.crop = isShaped ? { x, y, w, h, shape } : { x, y, w, h };
       }
     }
+    const { filter, adjust } = readAdjust(this.data);
+    Object.assign(out, geometryFields(readGeometry(this.data)), adjustFields(filter, adjust));
     return out;
   }
 

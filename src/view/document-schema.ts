@@ -407,7 +407,7 @@ export const blokDocumentSchema = {
         naturalHeight: { type: 'number' },
         crop: {
           type: 'object',
-          description: 'Non-destructive crop, in percent of the intrinsic image. Omitted for an uncropped rectangle.',
+          description: 'Non-destructive crop, in percent of the intrinsic image. Omitted for an uncropped rectangle. With `rotation`, `flipX` or `straighten` set, it is in percent of the turned image\'s box.',
           required: ['x', 'y', 'w', 'h'],
           additionalProperties: false,
           properties: {
@@ -416,6 +416,24 @@ export const blokDocumentSchema = {
             w: { type: 'number' },
             h: { type: 'number' },
             shape: { type: 'string', enum: ['rect', 'circle', 'ellipse'] },
+          },
+        },
+        rotation: { type: 'number', enum: [0, 90, 180, 270], description: 'Clockwise quarter turn, applied after the mirror. Omitted for 0.' },
+        flipX: { type: 'boolean', description: 'Mirror left to right, before the turn. Omitted for false.' },
+        straighten: { type: 'number', minimum: -45, maximum: 45, description: 'Clockwise degrees, after the turn. Omitted for 0.' },
+        filter: {
+          type: 'string',
+          enum: ['none', 'vivid', 'dramatic', 'warm', 'mono', 'noir', 'fade', 'sepia'],
+          description: 'Colour preset. Omitted for "none".',
+        },
+        adjust: {
+          type: 'object',
+          description: 'Colour adjustments, each -100..100. Zero entries are omitted, and so is an empty object.',
+          additionalProperties: false,
+          properties: {
+            brightness: { type: 'number', minimum: -100, maximum: 100 },
+            contrast: { type: 'number', minimum: -100, maximum: 100 },
+            saturation: { type: 'number', minimum: -100, maximum: 100 },
           },
         },
       },

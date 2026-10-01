@@ -19,7 +19,7 @@ export type ImageFrame = 'none' | 'border' | 'shadow';
 /** Crop mask shape. Defaults to 'rect'. */
 export type ImageCropShape = 'rect' | 'circle' | 'ellipse';
 
-/** Non-destructive crop rectangle, in percent of intrinsic image (0–100). */
+/** Non-destructive crop rectangle, in percent (0–100) of the image box: the source file, or the turned image when rotation, flipX or straighten is set. */
 export interface ImageCrop {
   x: number;
   y: number;

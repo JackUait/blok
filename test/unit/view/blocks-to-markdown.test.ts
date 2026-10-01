@@ -542,6 +542,35 @@ describe('blocksToMarkdown (view)', () => {
       ]);
     });
 
+    it('reports the turn, mirror, straighten, filter and adjustments right after the crop', () => {
+      const { warnings } = blocksToMarkdownWithReport(doc([
+        {
+          type: 'image',
+          data: { url: 'https://i/x.png',
+            width: 50,
+            crop: { x: 10, y: 10, w: 50, h: 50 },
+            rotation: 90,
+            flipX: true,
+            straighten: -3.5,
+            filter: 'mono',
+            adjust: { brightness: 0, contrast: 20 } },
+        },
+      ]));
+
+      expect(warnings).toEqual([
+        { construct: 'image',
+          action: 'degraded',
+          detail: 'image is rendered as a plain Markdown image; its crop, rotation, mirror, straighten, filter, adjustments and width are lost' },
+      ]);
+    });
+
+    it('stays silent for an image whose geometry and adjust fields hold their defaults', () => {
+      expect(blocksToMarkdownWithReport(doc([
+        { type: 'image',
+          data: { url: 'https://i/x.png', rotation: 0, flipX: false, straighten: 0, filter: 'none', adjust: { brightness: 0, contrast: 0, saturation: 0 } } },
+      ])).warnings).toEqual([]);
+    });
+
     it('stays silent for an image whose presentation fields hold their defaults', () => {
       expect(blocksToMarkdownWithReport(doc([
         { type: 'image', data: { url: 'https://i/x.png', width: 100, alignment: 'center', rounded: true } },

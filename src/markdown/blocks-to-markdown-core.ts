@@ -715,10 +715,17 @@ const imagePresentationLosses = (data: BlockToolData): string[] => {
   const width = typeof data.width === 'number' && data.width !== 100;
   const alignment = typeof data.alignment === 'string' && data.alignment !== 'center';
   const frame = typeof data.frame === 'string' && data.frame !== 'none';
+  const adjusted = isRecord(data.adjust)
+    && Object.values(data.adjust).some((value) => typeof value === 'number' && value !== 0);
 
   return [
     /** The export shows the UNCROPPED image, so a crop is lost content, not chrome. */
     isRecord(data.crop) ? 'crop' : '',
+    typeof data.rotation === 'number' && data.rotation !== 0 ? 'rotation' : '',
+    data.flipX === true ? 'mirror' : '',
+    typeof data.straighten === 'number' && data.straighten !== 0 ? 'straighten' : '',
+    typeof data.filter === 'string' && data.filter !== 'none' ? 'filter' : '',
+    adjusted ? 'adjustments' : '',
     width ? 'width' : '',
     alignment ? 'alignment' : '',
     typeof data.size === 'string' && data.size !== '' ? 'size preset' : '',

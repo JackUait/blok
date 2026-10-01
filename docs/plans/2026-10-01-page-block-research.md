@@ -91,7 +91,7 @@ From the reports, not re-checked here:
 The page block in the parent document is a leaf. It has no `content`:
 
 ```json
-{ "id": "b7", "type": "page", "data": { "pageId": "p1", "title": "Roadmap", "icon": { "type": "emoji", "value": "🗺" } } }
+{ "id": "b7", "type": "page", "data": { "pageId": "p1", "cache": { "title": "Roadmap", "icon": { "type": "emoji", "value": "🗺" } } } }
 ```
 
 - Lean: an explicit `data.pageId`. One page id names the room, the ticket and the consumer's record. **D9.**
@@ -99,7 +99,7 @@ The page block in the parent document is a leaf. It has no `content`:
   - `data.pageId` survives paste, undo and duplicate unchanged. Paste must still not create a second owner (§6.4).
 - The page's own document is a normal `OutputData`. Its top-level blocks are the page body. Its root is the page.
 - `OutputData` has no "this document is page X" field and no place for the page's own title (`types/data-formats/output-data.d.ts:109-124`, report 6 §0). Where the canonical title lives is **D2**.
-- `title` is a top-level plain-text key. It is already merged per character on the client (`serializer.ts:36`) and on the server (`YDocConverter.cs:97`) (report 6 §6).
+- **Superseded:** an earlier draft put a top-level `title` on the pointer. That key merges per character (`serializer.ts:36`, `YDocConverter.cs:97`), so two clients refreshing the same cached copy could double the text. The pointer holds a plain `cache` object instead. See `2026-10-01-page-block-notion-parity.md` §2.3.
 - Icon is a union (emoji or image). A cover (`coverUrl`, following audio's precedent) can wait. Note: a cover outside `data.url` is not visible to asset discovery (report 6 §6).
 
 ### 6.2 Host contract (consumer-side; the ownership line holds)
@@ -154,6 +154,8 @@ Under B, the drawer's nested editor is the right mechanism. Only its storage is 
 2. **D2, where the title lives.** Lean: the page's own document is canonical and the pointer holds a cached copy (AppFlowy and AFFiNE do this; moving a page then moves only the pointer). That needs a home in the page document, which `OutputData` lacks today. Two ways:
    - a new additive top-level field, e.g. `OutputData.page = { id, title, icon }` (lean: one id in one document);
    - a single root `page` block inside the page document whose children are the body (report 6 option 2: the same page described in two documents, synced by someone).
+
+   Caveat: the sidecar exports only `time` and `blocks` (`CollabDocConverter.cs:38-46`), so a new `OutputData` field needs a matching server change or it is dropped on every collab export.
 
    The alternative to the lean is Notion's single record: the title lives only on the pointer, and the page view must open the parent document to edit its own title.
 3. **D3, ownership.** Lean: consumer-side `pages` contract (variant 1), which keeps the locked line. Alternatives: Blok's service stores pages (reverses a "dropped, not deferred" decision), or `blok_` tables in the consumer's database (design only). Note: the two database docs disagree on who answers `queryRows` (`database-block-architecture.md:3-5` vs `:127-130`).

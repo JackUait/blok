@@ -1,6 +1,6 @@
 import { DATA_ATTR } from '../../../constants';
 import { getElementDirection, logicalArrow } from '../../../utils/direction';
-import { EDITABLE_INPUT_SELECTOR, KEYBOARD_EVENT_KEY_TO_KEY_CODE_MAP, PRINTABLE_SPECIAL_KEYS } from '../constants';
+import { KEYBOARD_EVENT_KEY_TO_KEY_CODE_MAP, PRINTABLE_SPECIAL_KEYS } from '../constants';
 
 /**
  * True when a keyboard event originated inside a subtree a Tool claimed with
@@ -48,10 +48,13 @@ export const isPrintableKeyEvent = (event: KeyboardEvent): boolean => {
   return event.key.length === 1 || PRINTABLE_SPECIAL_KEYS.has(event.key);
 }
 
+// Includes `plaintext-only`: the code block editable can run LTR in an RTL editor.
+const DIRECTION_HOST_SELECTOR = '[contenteditable="true"], [contenteditable="plaintext-only"], textarea, input';
+
 const editableOf = (node: Node | null | undefined): Element | null => {
   const element = node instanceof Element ? node : node?.parentElement;
 
-  return element?.closest(EDITABLE_INPUT_SELECTOR) ?? null;
+  return element?.closest(DIRECTION_HOST_SELECTOR) ?? null;
 };
 
 /**

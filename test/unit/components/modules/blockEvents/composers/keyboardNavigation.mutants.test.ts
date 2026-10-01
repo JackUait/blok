@@ -1060,6 +1060,19 @@ describe('KeyboardNavigation — reading direction', () => {
     expect(harness.navigateNext).toHaveBeenCalledWith(false, false);
   });
 
+  it('a plain-text LTR editable (code block) inside an RTL editor keeps ArrowRight as forward', () => {
+    const block = createBlock();
+    const harness = createHarness({ currentBlock: block, navigated: true });
+    const target = mountInput(block, 'ltr', 'rtl');
+
+    target.setAttribute('contenteditable', 'plaintext-only');
+    harness.blok.UI.nodes = { wrapper: target.closest('[dir="rtl"]') } as BlokModules['UI']['nodes'];
+
+    harness.nav.handleArrowRightAndDown(createKeyboardEvent({ key: 'ArrowRight', keyCode: keyCodes.RIGHT, target }));
+
+    expect(harness.navigateNext).toHaveBeenCalledWith(false, false);
+  });
+
   it('a right-to-left block inside a left-to-right editor reads ArrowLeft as forward', () => {
     const block = createBlock();
     const harness = createHarness({ currentBlock: block, navigated: true });

@@ -157,10 +157,10 @@ describe('root page header', () => {
     expect(host.querySelector('h1')?.textContent).toBe('Playground');
     expect(host.querySelector('button')?.getAttribute('aria-label')).toBe('Add icon');
     expect(host.querySelector('[role="status"]')).toBeNull();
-    expect([...host.querySelectorAll('.pg-crumb-text')].map((el) => el.textContent)).toEqual(['Playground']);
+    expect(host.querySelector('nav')).toBeNull();
   });
 
-  it('a root title typed in the header is saved and renames the breadcrumb', () => {
+  it('a root title typed in the header is saved', () => {
     const pages = new PageRegistry(seed());
     const host = document.createElement('header');
     const options = headerOptions(pages, null);
@@ -174,8 +174,24 @@ describe('root page header', () => {
     title.dispatchEvent(new Event('input'));
 
     expect(pages.root().title).toBe('Workspace');
-    expect(host.querySelector('.pg-crumb-text')?.textContent).toBe('Workspace');
     expect(options.changed).toHaveBeenCalled();
+  });
+
+  it('clicking Add icon sets a random icon at once, without opening the picker', () => {
+    const pages = new PageRegistry(seed());
+    const host = document.createElement('header');
+    const options = headerOptions(pages, null);
+
+    renderPageHeader(host, options);
+    host.querySelector<HTMLButtonElement>('button[aria-label="Add icon"]')?.click();
+
+    const icon = pages.root().icon;
+
+    expect(icon).toMatch(/\p{Extended_Pictographic}/u);
+    expect(host.querySelector('button')?.getAttribute('aria-label')).toBe('Change icon');
+    expect(host.querySelector('button')?.textContent).toBe(icon);
+    expect(options.changed).toHaveBeenCalled();
+    expect(options.i18n).not.toHaveBeenCalled();
   });
 
   it('keeps the root title and icon in localStorage, and reset brings back the default', () => {

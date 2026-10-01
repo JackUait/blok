@@ -2,6 +2,7 @@ import type { I18n, OutputBlockData } from '../../types';
 import type { PageInfo } from '../../types/tools/page';
 import { IconEmojiSmile } from '../components/icons';
 import { EmojiPicker } from '../tools/callout/emoji-picker';
+import { CURATED_CALLOUT_EMOJIS, loadEmojiGrid } from '../components/utils/emoji/emoji-data';
 import seedPages from '../../playground-pages.json';
 
 /**
@@ -522,11 +523,20 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
   };
 
   iconButton.addEventListener('click', () => {
+    if (currentIcon() === undefined) {
+      setIcon(randomIcon());
+
+      return;
+    }
+
     const { i18n, locale } = options.i18n();
 
     openIconPicker(iconButton, i18n, locale, (native) => setIcon(native), () => setIcon(undefined));
   });
   drawIcon();
+  if (currentIcon() === undefined) {
+    warmRandomIcons();
+  }
   iconRow.append(iconButton);
 
   const title = document.createElement('h1');
@@ -580,7 +590,9 @@ export const renderPageHeader = (host: HTMLElement, options: PageHeaderOptions):
   const trashed = pageId === null ? null : pages.trashedIn(pageId);
   const banner = pageId === null || trashed === null ? [] : [trashBanner(trashed, pageId, options)];
 
-  host.replaceChildren(...banner, nav, iconRow, title);
+  const crumbs = pageId === null ? [] : [nav];
+
+  host.replaceChildren(...banner, ...crumbs, iconRow, title);
 };
 
 const trashBanner = (trashed: PageRecord & { id: string }, pageId: string, options: PageHeaderOptions): HTMLElement => {
@@ -617,6 +629,21 @@ const trashBanner = (trashed: PageRecord & { id: string }, pageId: string, optio
 };
 
 /* ----------------------------------------------------------- icon picker */
+
+// The full set loads async; a click before it lands draws from this short list.
+const randomIconPool: { current: readonly string[] } = { current: CURATED_CALLOUT_EMOJIS };
+
+const warmRandomIcons = (): void => {
+  void loadEmojiGrid().then((emojis) => {
+    randomIconPool.current = emojis.map((emoji) => emoji.native);
+  }).catch(() => undefined);
+};
+
+const randomIcon = (): string => {
+  const pool = randomIconPool.current;
+
+  return pool[Math.floor(Math.random() * pool.length)] ?? CURATED_CALLOUT_EMOJIS[0];
+};
 
 const pickerSlot: { current: { instance: EmojiPicker; i18n: I18n; locale: string } | null } = { current: null };
 

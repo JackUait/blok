@@ -658,6 +658,10 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Darkroom projects 2-3: mode tabs, straighten/adjust dial with a typed-value
     // field, adjust and filter panels, local resets. darkroom.css 10_212 -> 19_716.
     const DARKROOM_EDIT_PANELS_BYTES = 9_504;
+    // Darkroom Markup tab: markup-panel.css (tool rail, sliding puck, swatches,
+    // sizes, text styles) and markup-editor.css (cursors, selection handles,
+    // text editor), plus their two imports in main.css.
+    const DARKROOM_MARKUP_BYTES = 15_598;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_437 + 952
       + CONVERSION_TYPOGRAPHY_PICKER_BYTES + REMOTE_SELECTION_SHADE_BYTES + EQUATION_EDITING_CHIP_BYTES + INLINE_MENU_MOTION_BYTES
       + SLASH_PILL_SPAN_BYTES
@@ -679,6 +683,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
       + MEDIA_RADIUS_ROLES_BYTES
       + RADIUS_SYSTEM_BYTES
       + DARKROOM_EDIT_PANELS_BYTES
+      + DARKROOM_MARKUP_BYTES
       + TOOLBOX_HOVER_PREVIEWS_BYTES;
     const actual = localImportedByteBudget(ENTRY);
 

@@ -972,10 +972,12 @@ export class DropTargetDetector {
 
     // The cursor's horizontal position, snapped to a discrete indent step,
     // overrides the auto-promotion when a nesting predecessor exists. The depth-0
-    // anchor is the editor content's inline-start edge (right in RTL).
+    // anchor is the content's inline-start edge in the TARGET's text direction:
+    // a list item indents from its own start, which may oppose the editor's.
+    const targetContent = targetBlock.holder.querySelector(createSelector(DATA_ATTR.elementContent));
     const pointerDepth = clientX !== undefined
       ? selectPointerDepth(
-        inlineStartOffset(clientX, this.ui.contentRect, getElementDirection(targetBlock.holder)),
+        inlineStartOffset(clientX, this.ui.contentRect, getElementDirection(targetContent ?? targetBlock.holder)),
         0,
         INDENT_PER_LEVEL
       )

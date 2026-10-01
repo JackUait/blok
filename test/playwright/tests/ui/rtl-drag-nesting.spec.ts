@@ -41,7 +41,12 @@ type DropResult = {
  * Drags "Mover item" onto the bottom edge of "Head item" with the pointer
  * `offset` px in from the content's inline-start edge, then drops.
  */
-const dropAtOffset = async (page: Page, direction: Direction, offset: number): Promise<DropResult> => {
+const dropAtOffset = async (
+  page: Page,
+  direction: Direction,
+  offset: number,
+  textDirection: Direction = direction
+): Promise<DropResult> => {
   await page.evaluate(async ({ dir, blocks }) => {
     const blok = window.blokInstance;
 
@@ -51,7 +56,7 @@ const dropAtOffset = async (page: Page, direction: Direction, offset: number): P
 
     await blok.i18n.update({ direction: dir });
     await blok.render({ blocks });
-  }, { dir: direction, blocks: blocksFor(direction) });
+  }, { dir: direction, blocks: blocksFor(textDirection) });
 
   // The previous drop parks the pointer inside the editor; if it already sits
   // where hover() aims, no mousemove fires and the toolbar never shows.
@@ -80,7 +85,7 @@ const dropAtOffset = async (page: Page, direction: Direction, offset: number): P
     throw new Error('no handle box');
   }
 
-  const x = direction === 'rtl' ? geometry.right - offset : geometry.left + offset;
+  const x = textDirection === 'rtl' ? geometry.right - offset : geometry.left + offset;
 
   await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
   await page.mouse.down();
@@ -158,5 +163,45 @@ test.describe('RTL drag-to-nest measures from the inline start', () => {
     expect([ rtlRoot.lead[1], rtlRoot.lead[0] ]).toEqual(ltrRoot.lead);
     expect([ rtlNested.line[1], rtlNested.line[0] ]).toEqual(ltrNested.line);
     expect([ rtlNested.lead[1], rtlNested.lead[0] ]).toEqual(ltrNested.lead);
+  });
+
+  test('a list whose text runs against the editor nests from its own inline start', async ({ page }) => {
+    test.slow();
+    await page.evaluate(async ({ holder, blocks }) => {
+      document.getElementById(holder)?.remove();
+
+      const container = document.createElement('div');
+
+      container.id = holder;
+      container.style.width = '900px';
+      document.body.appendChild(container);
+
+      const blok = new window.Blok({ holder, data: { blocks } });
+
+      window.blokInstance = blok;
+      await blok.isReady;
+    }, { holder: HOLDER_ID, blocks: BLOCKS });
+
+    // RTL items in an LTR editor, then LTR items in an RTL editor.
+    const rtlTextRoot = await dropAtOffset(page, 'ltr', 6, 'rtl');
+    const rtlTextNested = await dropAtOffset(page, 'ltr', 34, 'rtl');
+    const ltrTextRoot = await dropAtOffset(page, 'rtl', 6, 'ltr');
+    const ltrTextNested = await dropAtOffset(page, 'rtl', 34, 'ltr');
+
+    const root = [[ 'Head item', 0, null ], [ 'Mover item', 0, null ], [ 'Spacer paragraph', 0, null ]];
+    const nested = [[ 'Head item', 0, null ], [ 'Mover item', 1, 'a' ], [ 'Spacer paragraph', 0, null ]];
+
+    expect(rtlTextRoot.saved).toEqual(root);
+    expect(rtlTextNested.saved).toEqual(nested);
+    expect(ltrTextRoot.saved).toEqual(root);
+    expect(ltrTextNested.saved).toEqual(nested);
+
+    // The line tucks in on the items' own inline-start side when nesting.
+    const px = (value: string): number => parseFloat(value);
+
+    expect(px(rtlTextNested.line[1])).toBeGreaterThan(px(rtlTextRoot.line[1]));
+    expect(px(rtlTextNested.line[0])).toBe(px(rtlTextRoot.line[0]));
+    expect(px(ltrTextNested.line[0])).toBeGreaterThan(px(ltrTextRoot.line[0]));
+    expect(px(ltrTextNested.line[1])).toBe(px(ltrTextRoot.line[1]));
   });
 });

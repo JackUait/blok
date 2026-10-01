@@ -900,6 +900,29 @@ describe('DropTargetDetector', () => {
         rtlRoot.remove();
       });
 
+      it('measures the indent from the target text inline start when it runs against the editor', () => {
+        // An RTL item in an LTR editor indents from the right, so depth 0 sits
+        // at the right edge even though the editor reads left to right.
+        const previousBlock = createMockListBlock('prev', 0);
+        const targetBlock = createMockListBlock('target', 0);
+        const sourceBlock = createMockListBlock('source', 0);
+        const content = document.createElement('div');
+
+        content.setAttribute('data-blok-element-content', '');
+        content.setAttribute('dir', 'rtl');
+        content.append(...targetBlock.holder.childNodes);
+        targetBlock.holder.appendChild(content);
+        document.body.append(previousBlock.holder, targetBlock.holder);
+        mockBlockManager.getBlockIndex = vi.fn(() => 0);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => (index === 0 ? previousBlock : undefined));
+
+        expect(detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock, 745)).toBe(0);
+        expect(detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock, 720)).toBe(1);
+
+        previousBlock.holder.remove();
+        targetBlock.holder.remove();
+      });
+
       it('falls back to auto-resolution when clientX is omitted', () => {
         const previousBlock = createMockListBlock('prev', 0);
         const targetBlock = createMockListBlock('target', 0);

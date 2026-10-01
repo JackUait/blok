@@ -816,6 +816,45 @@ describe('collaboration — sync-first load', () => {
       expect(blockTexts(harness.core)).toEqual(['from the server', 'and another']);
     }, 20_000);
 
+    it('stays up through a failed first connect with nothing to show, until the sync lands', async () => {
+      const harness = await boot({ loader: { delay: 0 } });
+
+      await waitFor(() => wrapperOf(harness.core).querySelector(SKELETON) !== null, 'the skeleton');
+
+      harness.socket().open();
+      // Before any control frame: nothing was ever synced, and there is no config.data.
+      harness.socket().serverClose(1001, 'gone');
+
+      await waitFor(() => collabAttr(harness.core) === 'offline', 'offline');
+      // Longer than a hide takes, so a hide started on 'offline' would have finished.
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      expect(wrapperOf(harness.core).querySelector(SKELETON)).not.toBeNull();
+      expect(wrapperOf(harness.core).getAttribute('aria-busy')).toBe('true');
+
+      await waitFor(() => harness.sockets.length === 2, 'reconnect', 6000);
+      firstSync(harness, [{ type: 'paragraph', data: { text: 'server truth' } }]);
+
+      await waitFor(() => skeletonGone(harness.core), 'the skeleton to hand off', 5000);
+      expect(blockTexts(harness.core)).toEqual(['server truth']);
+    }, 20_000);
+
+    it('goes away when the first connect fails and last-known content is shown', async () => {
+      const harness = await boot({
+        loader: { delay: 0 },
+        data: { blocks: [{ type: 'paragraph', data: { text: 'last known' } }] },
+      });
+
+      await waitFor(() => wrapperOf(harness.core).querySelector(SKELETON) !== null, 'the skeleton');
+
+      harness.socket().open();
+      harness.socket().serverClose(1001, 'gone');
+
+      await waitFor(() => blockTexts(harness.core).join() === 'last known', 'degraded render');
+      await waitFor(() => skeletonGone(harness.core), 'the skeleton to go', 5000);
+      expect(blockTexts(harness.core)).toEqual(['last known']);
+    }, 20_000);
+
     it('goes away when the session ends in error with nothing to show', async () => {
       const harness = await boot({ loader: { delay: 0 } });
 

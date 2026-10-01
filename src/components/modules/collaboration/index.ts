@@ -1291,8 +1291,11 @@ export class Collaboration extends Module {
 
     if (status === 'offline' || status === 'error') {
       await this.renderLastKnown();
-      // Unconditional: with no last-known content there is nothing to wait for.
-      void this.Blok.UI.hideLoading();
+
+      // An offline that showed nothing keeps the skeleton: a hide cannot be undone, and a reconnect may still sync.
+      if (status === 'error' || this.degradeRendered) {
+        void this.Blok.UI.hideLoading();
+      }
     }
   }
 

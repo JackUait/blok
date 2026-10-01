@@ -46,6 +46,7 @@ export const BlokEditor = defineComponent({
     tools: { type: Object as PropType<BlokConfig['tools']>, default: undefined },
     data: { type: Object as PropType<OutputData>, default: undefined },
     minHeight: { type: Number, default: undefined },
+    loader: { type: [Boolean, Object] as PropType<BlokConfig['loader']>, default: undefined },
     logLevel: { type: String as PropType<BlokConfig['logLevel']>, default: undefined },
     // [Boolean, Object]: the object form ({ hideControls }) must not be dropped
     // or dev-warned — it always means read-only enabled (reactive contract).

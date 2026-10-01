@@ -23,6 +23,7 @@ export const USE_BLOK_CONFIG_KEYS = [
   'tools',
   'data',
   'minHeight',
+  'loader',
   'logLevel',
   'readOnly',
   'i18n',

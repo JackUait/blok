@@ -8107,7 +8107,7 @@ span[data-blok-slash-search] {
   border: 1px solid var(--blok-border-subtle);
   border-radius: var(--blok-radius-block);
   box-shadow: var(--blok-image-shadow-resting);
-  text-align: left;
+  text-align: start;
   transition: box-shadow var(--blok-duration-base) ease, border-color var(--blok-duration-base) ease;
 }
 
@@ -8368,7 +8368,7 @@ span[data-blok-slash-search] {
 [data-blok-tool="audio"] .blok-audio-controls button[data-role="audio-play"] {
   width: var(--blok-audio-play-size);
   height: var(--blok-audio-play-size);
-  margin-right: var(--blok-space-0-5);
+  margin-inline-end: var(--blok-space-0-5);
   background: var(--blok-text-primary);
   color: var(--blok-bg-primary);
   box-shadow: var(--blok-image-shadow-resting);
@@ -8391,7 +8391,7 @@ span[data-blok-slash-search] {
 
 [data-blok-tool="audio"] .blok-audio-controls__time {
   flex-shrink: 0;
-  margin-right: auto;
+  margin-inline-end: auto;
   font-size: var(--blok-font-size-ui-compact);
   font-weight: var(--blok-font-weight-medium);
   font-variant-numeric: tabular-nums;
@@ -8646,11 +8646,11 @@ span[data-blok-slash-search] {
   align-items: center;
   color: var(--blok-text-primary);
   font-family: var(--blok-font-family, var(--blok-font-sans));
-  text-align: left;
+  text-align: start;
 }
 
 [data-blok-tool="audio"] .blok-audio-retry {
-  margin-left: auto;
+  margin-inline-start: auto;
   flex-shrink: 0;
   appearance: none;
   padding: var(--blok-space-1-5) var(--blok-space-3);
@@ -8966,7 +8966,7 @@ span[data-blok-slash-search] {
   justify-content: center;
   height: 16px;
   max-width: 0;
-  margin-left: 0;
+  margin-inline-start: 0;
   padding: var(--blok-space-0-25) var(--blok-space-0, 0) var(--blok-space-0, 0);
   font: inherit;
   font-size: 11px;
@@ -8978,12 +8978,12 @@ span[data-blok-slash-search] {
   overflow: hidden;
   opacity: 0;
   transform: translateX(-4px);
-  transition: max-width .2s ease, margin-left .2s ease, padding .2s ease, opacity .15s ease .05s, transform .2s ease;
+  transition: max-width .2s ease, margin-inline-start .2s ease, padding .2s ease, opacity .15s ease .05s, transform .2s ease;
 }
 
 .blok-embed-empty__bar[data-valid="true"] .blok-embed-empty__kbd {
   max-width: 40px;
-  margin-left: var(--blok-space-1-5);
+  margin-inline-start: var(--blok-space-1-5);
   padding: var(--blok-space-0-25) var(--blok-space-1) var(--blok-space-0, 0);
   opacity: 1;
   transform: translateX(0);
@@ -9244,7 +9244,7 @@ span[data-blok-slash-search] {
   flex: 0 0 auto;
   width: 1.33333em;
   height: 1.33333em;
-  margin-right: var(--bookmark-gap);
+  margin-inline-end: var(--bookmark-gap);
 }
 
 [data-blok-tool="bookmark"] .blok-bookmark__url {
@@ -9916,7 +9916,7 @@ span[data-blok-slash-search] {
 }
 
 .blok-file-preview-md ul, .blok-file-preview-md ol {
-  padding-left: 1.5em;
+  padding-inline-start: 1.5em;
 }
 
 .blok-file-preview-md li {
@@ -9929,8 +9929,8 @@ span[data-blok-slash-search] {
 
 .blok-file-preview-md blockquote {
   padding-block: var(--blok-space-1);
-  padding-left: var(--blok-space-4);
-  border-left: 3px solid var(--blok-border-strong);
+  padding-inline-start: var(--blok-space-4);
+  border-inline-start: 3px solid var(--blok-border-strong);
   color: var(--blok-text-secondary);
 }
 
@@ -10060,7 +10060,7 @@ span[data-blok-slash-search] {
 
 .blok-md-alert {
   padding: var(--blok-space-3) var(--blok-space-4);
-  border-left: 3px solid var(--blok-color-blue-text);
+  border-inline-start: 3px solid var(--blok-color-blue-text);
   border-radius: var(--blok-radius-block);
   background: var(--blok-color-blue-bg);
 }
@@ -10076,7 +10076,7 @@ span[data-blok-slash-search] {
 }
 
 .blok-md-alert-tip {
-  border-left-color: var(--blok-color-green-text);
+  border-inline-start-color: var(--blok-color-green-text);
   background: var(--blok-color-green-bg);
 }
 
@@ -10085,7 +10085,7 @@ span[data-blok-slash-search] {
 }
 
 .blok-md-alert-important {
-  border-left-color: var(--blok-color-purple-text);
+  border-inline-start-color: var(--blok-color-purple-text);
   background: var(--blok-color-purple-bg);
 }
 
@@ -10094,7 +10094,7 @@ span[data-blok-slash-search] {
 }
 
 .blok-md-alert-warning {
-  border-left-color: var(--blok-color-yellow-text);
+  border-inline-start-color: var(--blok-color-yellow-text);
   background: var(--blok-color-yellow-bg);
 }
 
@@ -10103,7 +10103,7 @@ span[data-blok-slash-search] {
 }
 
 .blok-md-alert-caution {
-  border-left-color: var(--blok-color-red-text);
+  border-inline-start-color: var(--blok-color-red-text);
   background: var(--blok-color-red-bg);
 }
 

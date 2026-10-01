@@ -138,6 +138,15 @@ describe('video controls — structure', () => {
     expect(q(h.controls, '[data-action="fullscreen"]')).toBeTruthy();
   });
 
+  // A native range reverses in RTL while its painted fill and the scrub math
+  // run left to right, so every slider reads LTR like the timeline.
+  it('pins every slider to LTR', () => {
+    const ranges = Array.from(h.controls.querySelectorAll('input[type="range"]'));
+
+    expect(ranges.length).toBeGreaterThanOrEqual(2);
+    expect(ranges.map((range) => range.getAttribute('dir'))).toEqual(ranges.map(() => 'ltr'));
+  });
+
   it('renders a centre play affordance, shown while paused at the start', () => {
     const center = q<HTMLButtonElement>(h.controls, '[data-role="center-play"]');
     expect(center.hidden).toBe(false);

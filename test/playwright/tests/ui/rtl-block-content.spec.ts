@@ -142,6 +142,32 @@ test.describe('RTL block content mirrors LTR', () => {
     }
   });
 
+  test('bookmark and audio rows mirror', async ({ page }) => {
+    const favicon = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16"/></svg>')}`;
+    const blocks: OutputData['blocks'] = [
+      { id: 'bm', type: 'bookmark', data: { url: 'https://example.com', title: 'Example', description: 'Desc', favicon, domain: 'example.com' } },
+      { id: 'au', type: 'audio', data: { url: 'https://example.com/a.mp3', title: 'Song', artist: 'Artist' } },
+    ];
+    const probes = {
+      favicon: '[data-blok-id="bm"] .blok-bookmark__favicon',
+      bookmarkUrl: '[data-blok-id="bm"] .blok-bookmark__url',
+      play: '[data-blok-id="au"] [data-role="audio-play"]',
+      time: '[data-blok-id="au"] .blok-audio-controls__time',
+    };
+
+    await createBlok(page, blocks, 'ltr');
+    await expect(page.locator(probes.time)).toBeVisible();
+    const ltr = await measureLogical(page, probes);
+
+    await createBlok(page, blocks, 'rtl');
+    await expect(page.locator(probes.time)).toBeVisible();
+    const rtl = await measureLogical(page, probes);
+
+    for (const name of Object.keys(probes)) {
+      expect.soft(rtl[name], name).toEqual(ltr[name]);
+    }
+  });
+
   test('quote rule sits on the inline-start side', async ({ page }) => {
     const read = async (): Promise<{ left: string; right: string }> => page.evaluate(() => {
       const el = document.querySelector('[data-blok-id="q"] [contenteditable="true"]')?.closest('blockquote')

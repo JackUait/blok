@@ -100,7 +100,7 @@
   border: 1px solid var(--blok-border-subtle);
   border-radius: var(--blok-radius-block);
   box-shadow: var(--blok-image-shadow-resting);
-  text-align: left;
+  text-align: start;
   transition: box-shadow var(--blok-duration-base) ease, border-color var(--blok-duration-base) ease;
 }
 [data-blok-tool="audio"] .blok-audio-inner:hover {
@@ -479,7 +479,7 @@
 [data-blok-tool="audio"] .blok-audio-controls button[data-role="audio-play"] {
   width: var(--blok-audio-play-size);
   height: var(--blok-audio-play-size);
-  margin-right: var(--blok-space-0-5);
+  margin-inline-end: var(--blok-space-0-5);
   background: var(--blok-text-primary);
   color: var(--blok-bg-primary);
   box-shadow: var(--blok-image-shadow-resting);
@@ -500,7 +500,7 @@
 /* time readout */
 [data-blok-tool="audio"] .blok-audio-controls__time {
   flex-shrink: 0;
-  margin-right: auto;
+  margin-inline-end: auto;
   font-size: var(--blok-font-size-ui-compact);
   font-weight: var(--blok-font-weight-medium);
   font-variant-numeric: tabular-nums;
@@ -760,10 +760,10 @@
   display: flex; gap: var(--blok-space-3); align-items: center;
   color: var(--blok-text-primary);
   font-family: var(--blok-font-family, var(--blok-font-sans));
-  text-align: left;
+  text-align: start;
 }
 [data-blok-tool="audio"] .blok-audio-retry {
-  margin-left: auto;
+  margin-inline-start: auto;
   flex-shrink: 0;
   appearance: none;
   padding: var(--blok-space-1-5) var(--blok-space-3);

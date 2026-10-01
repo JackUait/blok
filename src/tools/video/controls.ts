@@ -170,6 +170,8 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
 
   const seek = document.createElement('input');
   seek.type = 'range';
+  // Native ranges reverse in RTL; the fill gradient and pointer math run LTR.
+  seek.dir = 'ltr';
   seek.min = '0';
   seek.max = '0';
   seek.step = 'any';
@@ -223,6 +225,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
 
   const volume = document.createElement('input');
   volume.type = 'range';
+  volume.dir = 'ltr';
   volume.min = '0';
   volume.max = '1';
   volume.step = '0.05';
@@ -851,6 +854,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
 
   const speedSlider = document.createElement('input');
   speedSlider.type = 'range';
+  speedSlider.dir = 'ltr';
   speedSlider.className = 'blok-video-controls__speed-slider';
   speedSlider.setAttribute('data-role', 'speed-slider');
   speedSlider.min = String(SPEED_MIN);

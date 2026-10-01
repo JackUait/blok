@@ -245,7 +245,7 @@
   justify-content: center;
   height: 16px;
   max-width: 0;
-  margin-left: 0;
+  margin-inline-start: 0;
   padding: var(--blok-space-0-25) var(--blok-space-0, 0) var(--blok-space-0, 0);
   font: inherit;
   font-size: 11px;
@@ -257,11 +257,11 @@
   overflow: hidden;
   opacity: 0;
   transform: translateX(-4px);
-  transition: max-width .2s ease, margin-left .2s ease, padding .2s ease, opacity .15s ease .05s, transform .2s ease;
+  transition: max-width .2s ease, margin-inline-start .2s ease, padding .2s ease, opacity .15s ease .05s, transform .2s ease;
 }
 .blok-embed-empty__bar[data-valid="true"] .blok-embed-empty__kbd {
   max-width: 40px;
-  margin-left: var(--blok-space-1-5);
+  margin-inline-start: var(--blok-space-1-5);
   padding: var(--blok-space-0-25) var(--blok-space-1) var(--blok-space-0, 0);
   opacity: 1;
   transform: translateX(0);

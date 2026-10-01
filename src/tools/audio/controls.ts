@@ -146,6 +146,8 @@ export function attachControls({
 
   const volumeInput = document.createElement('input');
   volumeInput.type = 'range';
+  // Native ranges reverse in RTL; the fill gradient and pointer math run LTR.
+  volumeInput.dir = 'ltr';
   volumeInput.min = '0';
   volumeInput.max = '1';
   volumeInput.step = '0.05';
@@ -252,6 +254,7 @@ export function attachControls({
 
   const speedSlider = document.createElement('input');
   speedSlider.type = 'range';
+  speedSlider.dir = 'ltr';
   speedSlider.className = 'blok-audio-controls__speed-slider';
   speedSlider.min = String(SPEED_MIN);
   speedSlider.max = String(SPEED_MAX);

@@ -138,6 +138,35 @@ test.describe('block toolbar in RTL', () => {
   });
 });
 
+test('RTL with no start gutter: controls are clamped back on screen and stay clickable', async ({ page }) => {
+  // Desktop layout, but the content column fills the viewport.
+  await page.setViewportSize({ width: 700, height: 600 });
+  await page.addStyleTag({ content: '#blok [data-blok-interface] { --blok-editor-gutter-start: 0px; }' });
+  await createBlok(page, { direction: 'rtl' });
+  await page.evaluate(holder => {
+    const container = document.getElementById(holder);
+
+    if (container) {
+      container.style.width = '100%';
+      container.style.margin = '0';
+    }
+  }, HOLDER_ID);
+  await hoverFirstBlock(page);
+
+  const plus = await box(page, '[data-blok-testid="plus-button"]');
+  const drag = await box(page, '[data-blok-testid="settings-toggler"]');
+
+  expect(plus.right).toBeLessThanOrEqual(700);
+
+  const hitIsToggler = await page.evaluate(({ x, y }) => {
+    const hit = document.elementFromPoint(x, y);
+
+    return hit?.closest('[data-blok-testid="settings-toggler"]') !== null && hit !== null;
+  }, { x: (drag.left + drag.right) / 2, y: (drag.top + drag.bottom) / 2 });
+
+  expect(hitIsToggler).toBe(true);
+});
+
 test.describe('block toolbar in LTR stays put', () => {
   test('default position: controls in the left gutter, menu opens leftwards', async ({ page }) => {
     await createBlok(page);

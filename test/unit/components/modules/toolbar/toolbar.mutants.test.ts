@@ -1948,6 +1948,24 @@ describe('Toolbar — public surface', () => {
       expect(h.content.style.marginLeft).toBe('324px');
       expect(h.content.style.maxWidth).toBe('400px');
     });
+
+    it('pulls the end-docked bar back on screen when the content fills the viewport', () => {
+      // No gutter and no slack: the column must shift left by the bar's width.
+      const h = alignFixture('right', {
+        wrapper: {
+          left: 0,
+          right: 1024,
+          width: 1024,
+        },
+        content: {
+          left: 0,
+          width: 1024,
+        },
+        actionsWidth: 50,
+      });
+
+      expect(h.content.style.marginLeft).toBe('-50px');
+    });
   });
 
 });

@@ -864,7 +864,9 @@ export class Toolbar extends Module<ToolbarNodes> {
     const overhang = Math.max(0, actionsWidth - slackRight);
     const maxOffset = wrapperRect.width - contentWidth - overhang;
 
-    return Math.max(0, Math.min(visualOffset, maxOffset));
+    // No zero floor: with no gutter the column must shift past the wrapper's
+    // left edge, or the bar is pushed off-screen.
+    return Math.min(visualOffset, maxOffset);
   }
 
   /**

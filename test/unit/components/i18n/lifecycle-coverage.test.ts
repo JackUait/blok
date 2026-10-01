@@ -262,7 +262,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 536 + 122 + 65 + 4 closure for all 727 keys', () => {
+  it('rebuilds a disjoint 536 + 117 + 70 + 4 closure for all 727 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -305,13 +305,16 @@ describe('current English catalog lifecycle coverage', () => {
       // +1: tools.image.filterStrength names the strength slider by literal.
       'executable-literal': 536,
       // +1: toolNames.page comes from the page tool's titleKey.
-      'finite-dynamic': 122,
+      // -5: tools.video.back/on/off/speedDecrease/speedIncrease left i18nLabel
+      // when the video settings became one pane (1b400077); still shipped.
+      'finite-dynamic': 117,
       // 12 of the 20 image darkroom keys are called by literal. The 8 filter
       // names stay here: filter-strip.ts builds them from the preset name.
       // +9: the markup tool names; markup-panel.ts builds them from a short key.
       // +6: the new shape names, built the same way.
       // +16: the new filter names, built from the preset name like the first 8.
-      'registered-namespace-compatible': 65,
+      // +5: the video keys above.
+      'registered-namespace-compatible': 70,
       'catalog-only': 4,
     });
     expect(

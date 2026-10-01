@@ -2212,6 +2212,9 @@
           },
           "reloadAttempts": {
             "description": "How many times a rendered image silently re-fetches its `src` after a load error before showing the broken-image state. Set 0 to disable auto-retry."
+          },
+          "filters": {
+            "description": "The looks the image editor's Filters tab offers, in order. Original always comes first.\n\n- A string picks a built-in, such as `'vivid'`, `'noir'` or `'film'`. There are 23.\n- An object `{ name, title, css }` adds your own look. `name` is saved in `filter`, `title` is the label, and `css` is a CSS filter value.\n  - Only `brightness`, `contrast`, `saturate`, `grayscale`, `sepia`, `invert` and `hue-rotate` are kept.\n  - Reusing a built-in name retunes that built-in.\n- `[]` hides the Filters tab.\n\nA built-in you leave out still renders on images that already use it. A saved name this editor does not know renders unfiltered and is kept on save."
           }
         }
       },

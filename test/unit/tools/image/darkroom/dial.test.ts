@@ -386,6 +386,15 @@ describe('createDial', () => {
       expect(onCommit.mock.calls).toEqual([[1], [0]]);
     });
 
+    it('a double-click returns to resetTo when set, so a strength dial goes back to full, not off', () => {
+      make({ min: 0, max: 100, value: 40, resetTo: 100 });
+
+      dial.el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+      expect(dial.el.getAttribute('aria-valuenow')).toBe('100');
+      expect(onCommit).toHaveBeenCalledWith(100);
+    });
+
     it('a double-click on the dial resets to 0', () => {
       makeWithReset(-7);
 

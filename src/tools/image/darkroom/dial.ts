@@ -19,6 +19,8 @@ export interface DialOptions {
   onCommit(v: number): void;
   /** Adds a reset-to-0 button with this accessible name, shown while the value is off 0. */
   resetLabel?: string;
+  /** Where a double-click goes. Default 0. */
+  resetTo?: number;
 }
 
 export type DialSetup = Pick<DialOptions, 'min' | 'max' | 'label' | 'valueText' | 'resetLabel'> & { value: number };
@@ -170,12 +172,14 @@ export function createDial(o: DialOptions): Dial {
     }
   };
 
-  // One step: drops a pending key burst, then commits 0 at once.
-  const resetToZero = (): void => {
-    if (st.value === 0) return;
+  // One step: drops a pending key burst, then commits the rest value at once.
+  const resetToRest = (): void => {
+    const rest = o.resetTo ?? 0;
+
+    if (st.value === rest) return;
     flush();
-    change(0);
-    o.onCommit(0);
+    change(rest);
+    o.onCommit(rest);
   };
 
   // Reads what a person types: a typographic minus, a plus sign, a decimal comma.
@@ -288,8 +292,8 @@ export function createDial(o: DialOptions): Dial {
   root.addEventListener('pointermove', onMove);
   root.addEventListener('pointerup', onEnd);
   root.addEventListener('pointercancel', onEnd);
-  root.addEventListener('dblclick', resetToZero);
-  reset?.addEventListener('click', resetToZero);
+  root.addEventListener('dblclick', resetToRest);
+  reset?.addEventListener('click', resetToRest);
   const onLabelClick = (): void => openEditor(String(st.value));
 
   label.addEventListener('click', onLabelClick);
@@ -323,8 +327,8 @@ export function createDial(o: DialOptions): Dial {
       root.removeEventListener('pointermove', onMove);
       root.removeEventListener('pointerup', onEnd);
       root.removeEventListener('pointercancel', onEnd);
-      root.removeEventListener('dblclick', resetToZero);
-      reset?.removeEventListener('click', resetToZero);
+      root.removeEventListener('dblclick', resetToRest);
+      reset?.removeEventListener('click', resetToRest);
     },
   };
 }

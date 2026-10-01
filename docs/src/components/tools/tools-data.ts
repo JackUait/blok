@@ -730,6 +730,13 @@ const editor = new Blok({
         description:
           'How many times a rendered image silently re-fetches its `src` after a load error before showing the broken-image state. Set 0 to disable auto-retry.',
       },
+      {
+        option: 'filters',
+        type: 'Array<ImageFilterPreset | ImageFilterDefinition>',
+        default: 'every built-in',
+        description:
+          'The looks the image editor\'s Filters tab offers, in order. Original always comes first.\n\n- A string picks a built-in, such as `\'vivid\'`, `\'noir\'` or `\'film\'`. There are 23.\n- An object `{ name, title, css }` adds your own look. `name` is saved in `filter`, `title` is the label, and `css` is a CSS filter value.\n  - Only `brightness`, `contrast`, `saturate`, `grayscale`, `sepia`, `invert` and `hue-rotate` are kept.\n  - Reusing a built-in name retunes that built-in.\n- `[]` hides the Filters tab.\n\nA built-in you leave out still renders on images that already use it. A saved name this editor does not know renders unfiltered and is kept on save.',
+      },
     ],
     saveDataShape: `interface ImageData {
   url: string;             // Image source URL — http(s) or blob:
@@ -744,7 +751,8 @@ const editor = new Blok({
   rotation?: 0 | 90 | 180 | 270; // Clockwise quarter turn (omitted for 0)
   flipX?: boolean;         // Mirrored left to right, before rotation
   straighten?: number;     // Fine turn in degrees, -45 to 45, after rotation
-  filter?: 'none' | 'vivid' | 'dramatic' | 'warm' | 'mono' | 'noir' | 'fade' | 'sepia';
+  filter?: ImageFilterPreset | string; // A built-in look or a host filter name (omitted for 'none')
+  filterStrength?: number; // How strongly filter applies, 0 to 100 (omitted for 100)
   adjust?: { brightness?: number; contrast?: number; saturation?: number }; // Each -100 to 100
   markup?: ImageMarkup[];  // Drawings, shapes and text over the image, back to front
   alt?: string;            // Alt text for screen readers

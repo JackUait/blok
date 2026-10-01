@@ -230,6 +230,13 @@ describe('createFilterStrip', () => {
     vi.useRealTimers();
   });
 
+  it('a double-click on the slider brings the look back to full strength', () => {
+    make('noir', { strength: 40 });
+
+    slider().dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    expect(onStrengthCommit).toHaveBeenLastCalledWith(100);
+  });
+
   it('set() moves the slider silently', () => {
     make('noir');
 

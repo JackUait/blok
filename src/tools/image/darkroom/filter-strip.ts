@@ -77,6 +77,7 @@ export function createFilterStrip(o: FilterStripOptions): FilterStrip {
     value: o.strength,
     label: tr(o.i18n, 'tools.image.filterStrength'),
     valueText: String,
+    resetTo: FULL,
     onInput: (v) => o.onStrengthInput(v),
     onCommit: (v) => o.onStrengthCommit(v),
   });

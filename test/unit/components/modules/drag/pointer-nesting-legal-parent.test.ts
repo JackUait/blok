@@ -62,7 +62,7 @@ const previewedDepth = (
     getBlockIndex: (block: Block) => blocks.indexOf(block),
     getBlockById: (id: string) => blocks.find(b => b.id === id),
   };
-  const detector = new DropTargetDetector({ contentRect: { left: CONTENT_LEFT } }, blockManager);
+  const detector = new DropTargetDetector({ contentRect: { left: CONTENT_LEFT, right: CONTENT_LEFT + 650 } }, blockManager);
 
   detector.setSourceBlocks([source]);
 

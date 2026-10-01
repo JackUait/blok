@@ -2539,6 +2539,11 @@
   background-color: var(--blok-dnd-drop-indicator-lead-bg);
 }
 
+[data-drop-indicator-lead="right"]::after {
+  left: calc(100% - var(--drop-indicator-side-right, 0px) - 2px);
+  right: 0;
+}
+
 [data-drop-indicator-lead][data-drop-indicator="bottom"]::after {
   transform: translateY(50%);
 }

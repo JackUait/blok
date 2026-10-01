@@ -96,7 +96,7 @@ const makeBlockManager = (blocks: Block[]): BlockManagerAdapter => ({
   getBlockById: (id: string) => blocks.find(block => block.id === id),
 });
 
-const makeUI = (left: number): UIAdapter => ({ contentRect: { left } });
+const makeUI = (left: number): UIAdapter => ({ contentRect: { left, right: left + 650 } });
 
 /** An element that belongs to no block holder — the cursor is over bare editor. */
 const bareElement = (): HTMLElement => {

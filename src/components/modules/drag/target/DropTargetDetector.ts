@@ -12,6 +12,7 @@ import { acceptsChildren } from '../../../utils/child-tools';
 import { areSourceRootsChildrenOf, isOpenToggleBlock } from '../utils/toggleState';
 import { resolveTargetDepth, selectPointerDepth } from '../../../../tools/list/depth-validator';
 import { INDENT_PER_LEVEL } from '../../../../tools/list/constants';
+import { getElementDirection, inlineStartOffset } from '../../../utils/direction';
 
 export interface DropTarget {
   block: Block;
@@ -22,6 +23,7 @@ export interface DropTarget {
 
 export interface ContentRect {
   left: number;
+  right: number;
 }
 
 export interface UIAdapter {
@@ -906,7 +908,7 @@ export class DropTargetDetector {
    *
    * When `clientX` is supplied, the cursor's horizontal position picks the
    * nesting depth (Notion's drag-to-indent): it snaps to a discrete indent step
-   * relative to the editor content's left edge and is clamped to the legal range
+   * relative to the editor content's inline-start edge and is clamped to the legal range
    * by {@link resolveTargetDepth}. Omitting `clientX` (unit tests, the parity
    * guard) falls back to the neighbour-based auto-resolution unchanged.
    *
@@ -966,9 +968,13 @@ export class DropTargetDetector {
 
     // The cursor's horizontal position, snapped to a discrete indent step,
     // overrides the auto-promotion when a nesting predecessor exists. The depth-0
-    // anchor is the editor content's left edge (this.ui.contentRect.left).
+    // anchor is the editor content's inline-start edge (right in RTL).
     const pointerDepth = clientX !== undefined
-      ? selectPointerDepth(clientX, this.ui.contentRect.left, INDENT_PER_LEVEL)
+      ? selectPointerDepth(
+        inlineStartOffset(clientX, this.ui.contentRect, getElementDirection(targetBlock.holder)),
+        0,
+        INDENT_PER_LEVEL
+      )
       : undefined;
 
     const resolvedDepth = resolveTargetDepth({

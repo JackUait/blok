@@ -267,7 +267,7 @@
 
 /*
  * Grayish lead-in for a list-item drop line: same-thickness rule from the
- * editor's left edge to where the coloured line starts. Underlaps it by 2px a
+ * editor's inline-start edge to where the coloured line starts. Underlaps it by 2px a
  * layer below, so the two read as one rule transitioning gray -> blue. Shown
  * only via the controller-set `data-drop-indicator-lead` attribute (lists).
  */
@@ -279,6 +279,12 @@
   left: 0;
   right: calc(100% - var(--drop-line-start) - 2px);
   background-color: var(--blok-dnd-drop-indicator-lead-bg);
+}
+
+/* RTL list: the marker is on the right, so the lead grows from the right edge. */
+[data-drop-indicator-lead="right"]::after {
+  left: calc(100% - var(--drop-indicator-side-right, 0px) - 2px);
+  right: 0;
 }
 
 [data-drop-indicator-lead][data-drop-indicator="bottom"]::after {

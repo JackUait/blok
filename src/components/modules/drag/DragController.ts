@@ -28,6 +28,7 @@ import { getListItemDepth } from './utils/depthUtils';
 import { resolveStructuralParent } from './utils/structuralParent';
 import { acceptsChildren } from '../../utils/child-tools';
 import { findOwn } from '../../utils/own-element';
+import { getElementDirection } from '../../utils/direction';
 import {
   areSourceRootsChildrenOf,
   isCollapsedToggleBlock,
@@ -90,8 +91,11 @@ export class DragController extends Module {
       return; // Already initialized
     }
 
+    const { UI } = this.Blok;
+
     this.targetDetector = new DropTargetDetector(
-      { contentRect: this.Blok.UI.contentRect },
+      // A getter: the rect changes on resize and direction flips after init.
+      { get contentRect() { return UI.contentRect; } },
       this.Blok.BlockManager,
       {
         isColumnsEnabled: () => {
@@ -543,11 +547,12 @@ export class DragController extends Module {
   }
 
   /**
-   * Aligns the horizontal drop indicator with a list item: `--drop-indicator-
-   * side-left` to the item's start (the marker, at the predicted nesting depth)
-   * and `--drop-indicator-side-right` to the text end. The full indent is baked
-   * into the left offset, so `--drop-indicator-depth` is zeroed to cancel the
-   * CSS depth multiplier. No-op for non-list blocks.
+   * Aligns the horizontal drop indicator with a list item: one side offset to
+   * the item's start (the marker, at the predicted nesting depth) and the other
+   * to the text end — `--drop-indicator-side-left` is the start in LTR and the
+   * text end in RTL. The full indent is baked into the start offset, so
+   * `--drop-indicator-depth` is zeroed to cancel the CSS depth multiplier.
+   * No-op for non-list blocks.
    *
    * @param block - The drop target block
    * @param holderRect - The block holder's bounding rect (already measured)
@@ -565,53 +570,59 @@ export class DragController extends Module {
     }
 
     // The blue line starts at the very beginning of the list item — the marker
-    // (bullet/number/checkbox) — which is the left edge of the listitem element.
-    // It falls back to the text container if the listitem wrapper is missing.
+    // (bullet/number/checkbox) — which is the inline-start edge of the listitem
+    // element. It falls back to the text container if the listitem wrapper is missing.
     const item = findOwn(block.holder, '[role="listitem"]');
-    const startRect = item instanceof HTMLElement
-      ? item.getBoundingClientRect()
-      : container.getBoundingClientRect();
+    const startElement = item instanceof HTMLElement ? item : container;
+    const startRect = startElement.getBoundingClientRect();
+    const isRtl = getElementDirection(startElement) === 'rtl';
 
     const containerRect = container.getBoundingClientRect();
 
     // Shift the line to the PREDICTED depth relative to the target item's own
-    // depth. The shift is signed: a deeper predicted depth pushes the line right
-    // (nest), a shallower one (e.g. a block landing at root next to a nested
-    // item) pulls it back toward the editor edge — without this, the indicator
-    // would tuck under the nested item yet the block would land at root, the
-    // exact indicator-vs-drop mismatch this whole path exists to prevent.
+    // depth. The shift is signed: a deeper predicted depth pushes the line toward
+    // the inline end (nest), a shallower one (e.g. a block landing at root next to
+    // a nested item) pulls it back toward the editor edge — without this, the
+    // indicator would tuck under the nested item yet the block would land at root,
+    // the exact indicator-vs-drop mismatch this whole path exists to prevent.
     const targetDepth = getListItemDepth(block) ?? 0;
     const depthShift = (predictedDepth - targetDepth) * INDENT_PER_LEVEL;
 
-    const textRight = this.measureTextRight(container) ?? containerRect.right;
-    const left = Math.max(0, startRect.left - holderRect.left + depthShift);
-    const right = Math.max(0, holderRect.right - textRight);
+    const textRect = this.measureTextRect(container);
+    // Distances from the holder edges: `start` to where the line begins (the
+    // marker side), `end` to where the text ends.
+    const start = Math.max(0, isRtl
+      ? holderRect.right - startRect.right + depthShift
+      : startRect.left - holderRect.left + depthShift);
+    const end = Math.max(0, isRtl
+      ? (textRect?.left ?? containerRect.left) - holderRect.left
+      : holderRect.right - (textRect?.right ?? containerRect.right));
 
-    block.holder.style.setProperty('--drop-indicator-side-left', `${left}px`);
-    block.holder.style.setProperty('--drop-indicator-side-right', `${right}px`);
+    block.holder.style.setProperty('--drop-indicator-side-left', `${isRtl ? end : start}px`);
+    block.holder.style.setProperty('--drop-indicator-side-right', `${isRtl ? start : end}px`);
     block.holder.style.setProperty('--drop-indicator-depth', '0');
 
     // Enable the grayish lead-in segment (editor edge → blue line start) only
-    // when the line is actually offset from the editor edge (left > 0). A list
-    // reorder always tucks under the marker (left = the bullet/number gap), so it
-    // keeps the lead even at depth 0; a block landing flush at root (left = 0) is
+    // when the line is actually offset from the editor edge (start > 0). A list
+    // reorder always tucks under the marker (start = the bullet/number gap), so it
+    // keeps the lead even at depth 0; a block landing flush at root (start = 0) is
     // full-width and gets no lead — leaving it on would falsely preview a nest.
-    if (left > 0) {
-      block.holder.setAttribute('data-drop-indicator-lead', '');
+    // The value names the physical edge the lead grows from.
+    if (start > 0) {
+      block.holder.setAttribute('data-drop-indicator-lead', isRtl ? 'right' : '');
     } else {
       block.holder.removeAttribute('data-drop-indicator-lead');
     }
   }
 
   /**
-   * Returns the x-coordinate where the rendered text inside a container ends, by
-   * measuring its content range. Returns null when the range has no measurable
-   * width (empty text, or environments without layout) so callers can fall back
-   * to the container edge.
+   * Returns the box of the rendered text inside a container, from its content
+   * range. Returns null when the range has no measurable width (empty text, or
+   * environments without layout) so callers can fall back to the container edge.
    *
    * @param container - The contenteditable text container of a list item
    */
-  private measureTextRight(container: HTMLElement): number | null {
+  private measureTextRect(container: HTMLElement): DOMRect | null {
     const range = document.createRange();
 
     range.selectNodeContents(container);
@@ -622,7 +633,7 @@ export class DragController extends Module {
 
     const rect = range.getBoundingClientRect();
 
-    return rect.width > 0 ? rect.right : null;
+    return rect.width > 0 ? rect : null;
   }
 
   /**

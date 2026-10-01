@@ -93,7 +93,7 @@ describe('DropTargetDetector — the seam between two blocks', () => {
     };
 
     detector = new DropTargetDetector(
-      { contentRect: { left: CONTENT_LEFT } },
+      { contentRect: { left: CONTENT_LEFT, right: CONTENT_LEFT + 650 } },
       blockManager,
       { isColumnsEnabled: () => false }
     );

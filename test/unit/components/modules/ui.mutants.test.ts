@@ -2625,6 +2625,23 @@ describe('UI module — mutants', () => {
       expect(ui.contentRect).toBe(measured);
       expect(blockContent.getBoundingClientRect).toHaveBeenCalledTimes(2);
     });
+
+    // The content column mirrors when the direction flips, so drag-to-nest must
+    // not keep measuring from the old side.
+    it('re-measures after the direction changes', () => {
+      const { ui, wrapper } = createMadeUI();
+      const blockContent = document.createElement('div');
+
+      blockContent.setAttribute('data-blok-testid', 'block-content');
+      vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue({ width: 777 } as DOMRect);
+      wrapper.appendChild(blockContent);
+
+      void ui.contentRect;
+      ui.setDirection('rtl');
+      void ui.contentRect;
+
+      expect(blockContent.getBoundingClientRect).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('checkEmptiness, width mode and direction', () => {

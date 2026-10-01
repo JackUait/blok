@@ -497,6 +497,8 @@ export class UI extends Module<UINodes> {
 
     this.nodes.wrapper.classList.toggle('[direction:rtl]', isRtl);
     this.nodes.wrapper.setAttribute('dir', direction);
+    // The content column mirrors, so the cached rect is on the old side.
+    this.contentRectCache = null;
 
     if (isRtl) {
       this.nodes.wrapper.setAttribute(DATA_ATTR.rtl, 'true');

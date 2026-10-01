@@ -87,7 +87,7 @@ const indicatorDepth = (previous: Neighbour, next: Neighbour, sourceDepth: numbe
     getBlockIndex: () => 0,
     getBlockById: () => undefined,
   };
-  const detector = new DropTargetDetector({ contentRect: { left: 0 } }, blockManager);
+  const detector = new DropTargetDetector({ contentRect: { left: 0, right: 650 } }, blockManager);
 
   return detector.calculateTargetDepth(previousBlock, 'bottom', source);
 };

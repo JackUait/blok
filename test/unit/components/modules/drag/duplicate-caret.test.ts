@@ -115,7 +115,7 @@ const createSetup = (dups: Block | Block[]): DupSetup => {
 
   const ui = {
     nodes: { wrapper, redactor: document.createElement('div'), holder: document.createElement('div') },
-    contentRect: { left: 0 },
+    contentRect: { left: 0, right: 650 },
   };
 
   const i18n = { t: vi.fn((key: string) => key), has: vi.fn(() => false) };

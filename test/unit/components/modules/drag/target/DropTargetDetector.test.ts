@@ -14,7 +14,7 @@ describe('DropTargetDetector', () => {
     getBlockByIndex: Mock<(index: number) => Block | undefined>;
     getBlockIndex: Mock<(block: Block) => number>;
   };
-  let mockUI: { contentRect: { left: number } };
+  let mockUI: { contentRect: { left: number; right: number } };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -27,7 +27,7 @@ describe('DropTargetDetector', () => {
     };
 
     mockUI = {
-      contentRect: { left: 100 },
+      contentRect: { left: 100, right: 750 },
     };
 
     detector = new DropTargetDetector(mockUI, mockBlockManager);
@@ -115,7 +115,7 @@ describe('DropTargetDetector', () => {
 
   describe('findBlockInLeftDropZone', () => {
     it('should return null when cursor is to the right of content', () => {
-      mockUI.contentRect = { left: 100 };
+      mockUI.contentRect = { left: 100, right: 750 };
 
       const result = detector.findBlockInLeftDropZone(150, 50);
 
@@ -123,7 +123,7 @@ describe('DropTargetDetector', () => {
     });
 
     it('should return null when cursor is too far left', () => {
-      mockUI.contentRect = { left: 100 };
+      mockUI.contentRect = { left: 100, right: 750 };
 
       const result = detector.findBlockInLeftDropZone(40, 50); // 60px from edge, more than 50px zone
 
@@ -147,7 +147,7 @@ describe('DropTargetDetector', () => {
       });
 
       mockBlockManager.blocks = [block1, block2];
-      mockUI.contentRect = { left: 100 };
+      mockUI.contentRect = { left: 100, right: 750 };
 
       const result = detector.findBlockInLeftDropZone(70, 75);
 
@@ -183,7 +183,7 @@ describe('DropTargetDetector', () => {
 
       mockBlockManager.blocks = [block1, block2];
       detector.setSourceBlocks([block1]);
-      mockUI.contentRect = { left: 100 };
+      mockUI.contentRect = { left: 100, right: 750 };
 
       // Cursor at block1's Y position, but block1 is a source block
       const result = detector.findBlockInLeftDropZone(70, 75);
@@ -207,7 +207,7 @@ describe('DropTargetDetector', () => {
       });
 
       mockBlockManager.blocks = [block1];
-      mockUI.contentRect = { left: 100 };
+      mockUI.contentRect = { left: 100, right: 750 };
 
       // Cursor at Y position with no block
       const result = detector.findBlockInLeftDropZone(70, 150);
@@ -854,6 +854,29 @@ describe('DropTargetDetector', () => {
         expect(detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock, 700)).toBe(1);
       });
 
+      it('measures the indent from the inline-start (right) edge in an RTL editor', () => {
+        // contentRect 100..750. In RTL depth 0 sits at the right edge and nesting
+        // grows leftward, so a cursor near the right edge must stay at root.
+        const rtlRoot = document.createElement('div');
+
+        rtlRoot.setAttribute('dir', 'rtl');
+        document.body.appendChild(rtlRoot);
+
+        const previousBlock = createMockListBlock('prev', 0);
+        const targetBlock = createMockListBlock('target', 0);
+        const sourceBlock = createMockListBlock('source', 0);
+
+        rtlRoot.append(previousBlock.holder, targetBlock.holder);
+        mockBlockManager.getBlockIndex = vi.fn(() => 0);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => (index === 0 ? previousBlock : undefined));
+
+        expect(detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock, 745)).toBe(0);
+        // 30px in from the right edge ≈ one indent step.
+        expect(detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock, 720)).toBe(1);
+
+        rtlRoot.remove();
+      });
+
       it('falls back to auto-resolution when clientX is omitted', () => {
         const previousBlock = createMockListBlock('prev', 0);
         const targetBlock = createMockListBlock('target', 0);
@@ -905,8 +928,8 @@ describe('DropTargetDetector', () => {
       getBlockById: (id: string) => blocks.find(b => b.id === id),
     });
 
-    const createToggleUIAdapter = (): { contentRect: { left: number } } => ({
-      contentRect: { left: 0 },
+    const createToggleUIAdapter = (): { contentRect: { left: number; right: number } } => ({
+      contentRect: { left: 0, right: 650 },
     });
 
     afterEach(() => {
@@ -1413,8 +1436,8 @@ describe('DropTargetDetector', () => {
       getBlockById: (id: string) => blocks.find(b => b.id === id),
     });
 
-    const createSideUIAdapter = (): { contentRect: { left: number } } => ({
-      contentRect: { left: 0 },
+    const createSideUIAdapter = (): { contentRect: { left: number; right: number } } => ({
+      contentRect: { left: 0, right: 650 },
     });
 
     /**
@@ -2371,8 +2394,8 @@ describe('DropTargetDetector', () => {
       getBlockById: (id: string) => blocks.find(b => b.id === id),
     });
 
-    const createToggleUIAdapter = (): { contentRect: { left: number } } => ({
-      contentRect: { left: 0 },
+    const createToggleUIAdapter = (): { contentRect: { left: number; right: number } } => ({
+      contentRect: { left: 0, right: 650 },
     });
 
     afterEach(() => {
